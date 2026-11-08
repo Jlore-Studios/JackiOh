@@ -16981,12 +16981,17 @@
       "last_findings": [],
       "live": "fixing-ci",
       "merge_owner": "claude-7",
+      "paused": {
+        "at": "2026-11-08T21:54:25Z",
+        "interrupt": "usage",
+        "provider": "claude-8"
+      },
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
       "queued_at": "2026-11-08T18:36:52Z",
       "requested_by": "jgoetzmann-bot",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "42526840139",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
