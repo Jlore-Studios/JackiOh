@@ -17061,6 +17061,8 @@
       }
     },
     "3437": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-08T13:01:49Z",
@@ -17074,8 +17076,11 @@
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395; git status --short | head; git log --oneline -3; git show origin/main:apps/web/src/fx/fx.css > /tmp/ref/fx-main.css 2>/dev/null || git show MER\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/ref /tmp/scripts; cd /home/runner/work/_temp/work/item-3395; git show origin/main:apps/web/src/fx/fx.css > /tmp/ref/fx-main.css; cat > /tmp/scripts/surf.mjs <<'EOF'\\nimport\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395; git log --oneline -6 -L '/\\\"fx\\\\/fx.css\\\":/,+0:apps/web/src/surfaces.test.ts' origin/main | grep -E \\\"^[0-9a-f]{10}|fx/fx.css\\\" | head -20\", \"d\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395; for c in $(git log --format=%h -12 origin/main -- apps/web/src/surfaces.test.ts); do echo \\\"$c $(git show $c:apps/web/src/surfaces.test.ts | gr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395/apps/web/src/fx && python3 - <<'EOF'\\np='fx.css'\\ns=open(p).read()\\ndef rep(a,b):\\n global s\\n assert s.count(a)==1, a[:80]\\n s=s.replace(a,b)\\n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395; ls apps/web/src/wasm/pkg >/dev/null 2>&1 && echo wasm-ok || echo no-wasm\", \"description\": \"Check wasm pkg presence\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395; sh scripts/build-wasm.sh > /tmp/wasm-build.log 2>&1; echo \\\"exit $?\\\" >> /tmp/wasm-build.log; tail -2 /tmp/wasm-build.log\", \"description\": \"Bui\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395; python3 - <<'EOF'\\np='apps/web/src/fx/cards/stinkyscape/aZoth.ts'\\ns=open(p).read()\\na='''// back) onto a red echo ring as its `summoned` lands\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395; grep -n \\\"\\\\\\\"scripts\\\\\\\"\\\" -A 15 package.json | head -20; grep -n \\\"\\\\\\\"lint\\\\|format\\\\|prettier\\\" apps/web/package.json | head\", \"description\u2026\n- Bash: {\"command\": \"timeout 1700 bash -c 'until grep -q \\\"^exit\\\" /tmp/wasm-build.log 2>/dev/null; do sleep 10; done'; tail -2 /tmp/wasm-build.log\", \"description\": \"Wait for the wasm build\", \"timeout\": 1750\u2026\n- said: Wasm rebuilt. Running the CSS-related tests, then the full web suite in the background.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395; timeout 900 pnpm --dir apps/web exec vitest run src/surfaces.test.ts src/palette.test.ts src/fx/css.test.ts src/fx/dom.test.ts src/fx/takeover.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395; timeout 3000 pnpm --dir apps/web exec vitest run > /tmp/web-full.log 2>&1; echo \\\"exit $?\\\" >> /tmp/web-full.log; grep -E \\\"FAIL|Test Files|Tes\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395; timeout 900 pnpm typecheck 2>&1 | tail -5; timeout 900 pnpm exec eslint apps/web e2e 2>&1 | tail -10; timeout 900 cargo jackioh spec check 2>&1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395; for i in 006 007 016 018 026 034 035 037 039 044 058 059 060 061 066 070 071 073 074 080 085 086 087 088; do grep \\\"^| \\\\`stinkyscape-$i\\\\`\\\" a\u2026\n- Bash: {\"command\": \"timeout 3000 bash -c 'until grep -q \\\"^exit\\\" /tmp/web-full.log 2>/dev/null; do sleep 15; done'; grep -E \\\"FAIL|Test Files|Tests |\\u00d7\\\" /tmp/web-full.log | grep -v \\\"::error\\\" | head \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395; grep -E \\\"Test timed out|timed out\\\" /tmp/web-full.log | head -5; timeout 900 pnpm --dir apps/web exec vitest run src/net/ci-scope.test.ts src/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395/apps/web/src; python3 - <<'EOF'\\np='routes/dev/fx.test.tsx'\\ns=open(p).read()\\na=''' render(<FxGallery />);\\n const select = screen.getByTestId(\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395; git status --short; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace('''gradients); reworked them into flat fills, borders, \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395; git ls-files | grep -c zz-diag; git diff origin/main --stat | tail -3\", \"description\": \"Confirm no diag file and get diff size\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3395; awk -F' \\\\\\\\| ' '{w=$4; sub(/ \\\\|$/,\\\"\\\",w); sub(/^Signature \\\\(R3395000\\\\): /,\\\"\\\",w); print \\\"| \\\"$1\\\" | \\\"$2\\\" | \\\"w\\\" |\\\"}' /tmp/ref/rows.t\u2026\n- Bash: {\"command\": \"cat /tmp/ref/table.md | sed -n 3,24p\", \"description\": \"Show the rest of the verdict table\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a signature animation for every Stinkyscape (cards 1 to 90) Legendary and Mythic, one concept per card\"} --> ## Summary All 24 cards in #3395's table now have a signature of their own and are off `SIGNATURE_PENDING`. Olivian Expanse and Drone Core X bel\u2026"
       },
       "issue": 3395,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-08T13:53:19Z",
         "from_run": "42482984601",
         "gates": [
           {
@@ -17167,7 +17172,11 @@
         "source": "build",
         "until": "2026-11-08T14:22:21Z"
       },
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-08T13:52:21Z",
+      "run_id": "pending:c81e4af8-1794145975",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17186,6 +17195,9 @@
         "provider": "claude-7",
         "run": "42482984601"
       },
+      "started_at": "2026-11-08T13:53:19Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17199,9 +17211,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T13:37:56Z",
+    "at": "2026-11-08T13:53:19Z",
     "url": "",
-    "what": "review #3426 on claude-2"
+    "what": "review #3437 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-08T13:45:39Z",
