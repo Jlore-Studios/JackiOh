@@ -18487,9 +18487,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T07:20:07Z",
+    "at": "2026-11-08T08:00:30Z",
     "url": "",
-    "what": "build #3407 on claude-8"
+    "what": "suggestions on agy"
   },
   "last_sweep": {
     "at": "2026-11-08T07:52:15Z",
@@ -36720,11 +36720,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-08T07:27:52Z",
-    "last_run": "2026-11-06T05:31:24Z",
-    "provider": null,
+    "idle_since": "2026-11-08T08:00:30Z",
+    "last_run": "2026-11-08T08:00:30Z",
+    "provider": "agy",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:aac43dc0-1794124805",
     "taken_asks": []
   },
   "usage": null,
