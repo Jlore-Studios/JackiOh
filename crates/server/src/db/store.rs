@@ -971,16 +971,6 @@ pub struct BotRow {
     pub cosmetics: Option<BotCosmetics>,
 }
 
-impl BotRow {
-    /// R2778000: the bot's rating on `ladder`.
-    pub fn rating_on(&self, ladder: Ladder) -> f64 {
-        match ladder {
-            Ladder::Constructed => self.rating,
-            Ladder::Random => self.random_rating,
-        }
-    }
-}
-
 /// R1555000: what the kickoff reads of a bot before it loads any (no decks, trio or cosmetics).
 /// Server-only.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

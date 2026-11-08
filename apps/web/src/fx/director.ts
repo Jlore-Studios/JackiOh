@@ -23,7 +23,7 @@ import { dropPointOfTestid } from "../game/drag/landing.ts";
 import { landingBox, mountDomEffect, mountHold, type DomEffect, type DomEffectBoxes } from "./dom.ts";
 import { createFrameLoop, type FxFrame } from "./loop.ts";
 import { createParticleSystem } from "./particles.ts";
-import { artBoxOf, pointIn } from "./anchors.ts";
+import { artBoxOf, atOf, pointIn } from "./anchors.ts";
 import { createRng } from "./rng.ts";
 import { createShake } from "./shake.ts";
 import type { FxSurface } from "./surface.ts";
@@ -33,7 +33,6 @@ import type {
   FxCue,
   FxDomCue,
   FxFrameSource,
-  FxPoint,
   FxShakeSink,
   FxStageCue,
   FxVisibility,
@@ -148,10 +147,6 @@ function isCanvasCue(cue: FxCue): boolean {
   return (
     cue.kind === "burst" || cue.kind === "projectile" || cue.kind === "shot" || cue.kind === "crack" || cue.kind === "ring"
   );
-}
-
-function atOf(anchor: FxAnchor): FxPoint | undefined {
-  return anchor.kind === "testid" ? anchor.at : undefined;
 }
 
 export function createFxDirector(options: FxDirectorOptions): FxDirector {

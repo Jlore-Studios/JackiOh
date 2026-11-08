@@ -11,10 +11,8 @@ import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { HIDDEN_ID, animTestid, targetFor, type AnimationEntry, type SetPieceClaim } from "../game/animations.ts";
 import { sideOf, testid } from "../game/contract.ts";
-import { frac, ringCue, raysCue, shakeCues, tid, tunedBurst } from "./build.ts";
+import { bannerCue as bannerOf, frac, ghostCue as ghostOf, raysCue, ringCue, shakeCues, tid, tunedBurst, viewportCenter as center } from "./build.ts";
 import {
-  FX_BANNER_TAIL_MS,
-  FX_CENTER,
   FX_CRACK_TAIL_MS,
   FX_JADE_SCALE_MAX,
   FX_JADE_SCALE_STEP,
@@ -90,10 +88,6 @@ function viewportAt(x: number, y: number): FxAnchor {
   return { kind: "viewport", at: { x, y } };
 }
 
-function center(): FxAnchor {
-  return viewportAt(FX_CENTER.x, FX_CENTER.y);
-}
-
 function heroSide(view: PlayerView, player: Parameters<typeof sideOf>[1]): FxAnchor {
   return tid(testid.hero(sideOf(view, player)));
 }
@@ -101,14 +95,6 @@ function heroSide(view: PlayerView, player: Parameters<typeof sideOf>[1]): FxAnc
 /** A gold coin flight that lands inside the entry (R200). */
 function coinFlight(intensity: number, from: FxAnchor, to: FxAnchor, D: number): FxCue {
   return { kind: "projectile", preset: "gold", from, to, delayMs: 0, flightMs: frac(FX_PROJECTILE_FLIGHT_FRACTION, D), density: intensity };
-}
-
-function ghostOf(D: number, from: FxAnchor, to: FxAnchor): FxCue {
-  return { kind: "ghost", from, to, delayMs: 0, durationMs: D };
-}
-
-function bannerOf(D: number, text: string, tone: FxBannerTone): FxCue {
-  return { kind: "banner", text, tone, delayMs: 0, durationMs: D + FX_BANNER_TAIL_MS };
 }
 
 export type SystemPlan = { cues: FxCue[]; replaces: ReadonlySet<GameEvent> };

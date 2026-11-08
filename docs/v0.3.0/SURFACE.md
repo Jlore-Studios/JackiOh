@@ -176,7 +176,7 @@ Crate edges (path dependencies; every crate also takes the third-party crates it
 | `jackioh-engine` | — (features: `testkit`, `ts` = `dep:ts-rs`) | `jackioh-cards` (golden traces, hotseat fixture) |
 | `jackioh-cards` | `jackioh-engine` | `jackioh-engine` with `features = ["testkit"]` |
 | `jackioh-ai` | `jackioh-engine` | `jackioh-cards`, `jackioh-engine` with `testkit` |
-| `jackioh-wasm` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | — |
+| `jackioh-wasm` | `jackioh-cards`, `jackioh-wasm-core` | — |
 | `jackioh-server` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-shared` | `jackioh-engine` with `testkit` |
 | `jackioh-tools` | `jackioh-engine` with `testkit` (fuzz's invariant monitor), `jackioh-cards`, `jackioh-ai` | — |
 | `jackioh-shared` | `jackioh-engine`, `jackioh-ai` (features: `ts` = `dep:ts-rs`, #3098); the server and `jackioh-wasm-core` depend on it, no pure crate does | `jackioh-cards` (#3101: the host machine's tests play on the real catalog), `serde_json` |

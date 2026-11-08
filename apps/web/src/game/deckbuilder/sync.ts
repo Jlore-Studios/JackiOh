@@ -42,6 +42,7 @@ import { isRecord } from "../../wire/json.ts";
 import { pickedDeckCosmetics, type DeckCosmeticFields } from "../../cards/cosmetics.ts";
 import { deckVersionsFrom } from "./deckHistory.ts";
 import { messageOf } from "../../net/errors.ts";
+import { localStorageOrNull } from "../../net/storage.ts";
 
 // The shapes
 
@@ -212,13 +213,9 @@ export function mirrorKey(profileId: string): string {
   return `${DECK_MIRROR_PREFIX}${profileId}`;
 }
 
+/** The browser's localStorage, or null where reading it throws (#2160's one reader). */
 export function browserStorage(): StorageLike | null {
-  try {
-    if (typeof window === "undefined") return null;
-    return window.localStorage ?? null;
-  } catch {
-    return null;
-  }
+  return localStorageOrNull();
 }
 
 /** The mirror's format version, so a later shape can tell an old value apart and drop it. */

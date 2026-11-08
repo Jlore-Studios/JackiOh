@@ -26,6 +26,7 @@ import {
   SETTINGS_SYNC_STORAGE_KEY,
   __resetSettingsSyncForTests,
   readSettingsSyncState,
+  requestQueue,
   startSettingsAccountSync,
   useSettingsAccountSync,
   type SettingsAccountApi,
@@ -669,5 +670,24 @@ describe("R634 the hook: one sync for the page, only for an active account", () 
     }
     expect(vi.getTimerCount(), "the release came due").toBe(0);
     expect(readSettingsSyncState().phase, "and stopped nothing on a page that is gone").toBe("saved");
+  });
+});
+
+describe("requestQueue", () => {
+  it("runs requests in order, a failure skipped, and settles after the last", async () => {
+    const { enqueue, settled } = requestQueue();
+    const seen: string[] = [];
+    enqueue(async () => {
+      // Slower than the last: run side by side, "c" would land first.
+      await Promise.resolve();
+      await Promise.resolve();
+      seen.push("a");
+    });
+    enqueue(() => Promise.reject(new Error("refused")));
+    enqueue(async () => {
+      seen.push("c");
+    });
+    await settled();
+    expect(seen).toEqual(["a", "c"]);
   });
 });
