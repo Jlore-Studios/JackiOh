@@ -16631,13 +16631,18 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
+      "paused": {
+        "at": "2026-11-08T16:11:54Z",
+        "interrupt": "usage",
+        "provider": "claude-6"
+      },
       "pending_request": false,
       "provider": "claude-6",
       "question": "",
       "queued_at": "2026-11-08T14:20:48Z",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "42498018883",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -16645,7 +16650,7 @@
       "started_at": "2026-11-08T16:04:34Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [],
         "builder": "claude",
