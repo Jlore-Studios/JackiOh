@@ -15519,6 +15519,11 @@
       "owner": "claude-8",
       "owner_since": "2026-11-08T21:03:51Z",
       "owner_why": "it plans it",
+      "paused": {
+        "at": "2026-11-08T22:52:48Z",
+        "interrupt": "usage",
+        "provider": "claude-8"
+      },
       "pending_request": false,
       "planned_at": "2026-11-08T21:25:16Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -15528,7 +15533,7 @@
       "provider": "claude-8",
       "queued_at": "2026-11-07T17:06:29Z",
       "requested_by": "jgoetzmann",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "42531327611",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-08T22:39:32Z",
