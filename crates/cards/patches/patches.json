@@ -22871,5 +22871,62 @@
       "stinkyscape-t-anomaly-found"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.5.12r",
+    "date": "2026-11-08",
+    "title": "Patch: Starship moments that feel epic: pieces docking as they fuse, a full-screen launch, broadsides from its own guns, and a wreck when it falls",
+    "source": "#3334",
+    "notes": "Part of #3330. The Starship's moments, drawn from its own picture (#3333) and keyed only on public events. A fused piece's module flies from where the piece died to its own hardpoint, clamps on and welds, its hum rising with the ship's count, several in one action docking in order (R3334000). A Dormant Starship with pieces idles in its shipyard, a dock light sweeping and welding sparks, in one of the board's moving-art slots (R3334000). A held launch at Big moments full is a cinematic: the board dims, the ship's picture fills the screen, the camera passes each module, its engines light in turn, its name stamps across the hull in its design's lettering and it climbs out of frame; Big moments short and off, and Reduce Motion, show a still title card of its picture and name; the 3-2-1 countdown is gone; a War Doctrine cast is announced over the launched ship in its own look (R3334001). A launched Starship's attack is a broadside, each mounted weapon firing by its kind (beams sweep, repeaters stutter, cannons recoil, flak bursts, launchers lob what they carry), and one with no weapons rams prow first (R3334002). A destroyed Starship's newest modules blow off, its hull breaks in two, debris drifts over its backrow and a scorch settles on its tile (R3334003). Ten sounds made in code go with them. The Dormant Starship, Starfleet Commander and Preemptive Strike wear signatures of their own (R3334004). How cards look and sound only: nothing plays differently.",
+    "player": {
+      "title": "Starship moments that feel epic",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "When a Starship Piece fuses, its part flies to its own spot on the ship and is welded on, the hum rising as the ship fills up.",
+        "A Dormant Starship with pieces shows its shipyard at work: a sweeping dock light and welding sparks.",
+        "A Starship's launch is now a full-screen moment: the camera sweeps along the hull past each part, the engines light one by one, the ship's name is stamped across it and it climbs out of view.",
+        "With Big moments set to short or off, or Reduce Motion on, the launch shows a title card with the ship and its name instead.",
+        "A War Doctrine cast after a launch is announced over the Starship, with its own look for Land, Sea, Air and Space.",
+        "A launched Starship attacks with its own guns: beams sweep, repeaters stutter, cannons kick back, flak bursts in clouds and launchers lob what they carry.",
+        "A Starship with no weapons rams its target prow first.",
+        "A destroyed Starship is wrecked: its parts blow off one by one, the hull breaks in two and a scorch is left on its tile.",
+        "Each of these moments has its own sound.",
+        "The Dormant Starship, Starfleet Commander and Preemptive Strike have signature animations of their own."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "add37b58df54093e9d91e5ac157bb8595fd0c787"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12s",
+    "date": "2026-11-08",
+    "title": "Patch: every Classic+ card drawn as what it is: a scene of its own for each, richer the rarer",
+    "source": "#3390",
+    "notes": "Classic+'s picture pass (#3330, #3331's foundation). Every Classic+ entry, its 38 tokens included, draws from a scene recipe of its own, from a brief per card, in Classic's temple-stone look, base and Radiant (R3390000): a Common one clear subject in a simple setting, a Rare its props, an Epic a scene with a foreground, a middle and a background, a Legendary or Mythic every layer. Each humanoid Unit is a figure dressed as who it is, four Units are drawn as a creature or a machine (the Snake, the Book Worm, the J15 Fighter, the Mulch Muncher), a scene may stand crowds and companions as figures and mark props that move on a full-art card's props beat, and the figure kit and the scene kit grow by the parts the briefs name. All 116 entries clear their rarity's detail floor and leave the short list, whose cap falls to 445 (R3331001). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every Classic+ card drawn as a scene",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Classic+ card and token now shows a scene of its own, more detailed the rarer it is: its Units as the characters they are, its Spells as real places and moments."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "b01bbd555cba846961161b376ac5bbe08c769e58"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
