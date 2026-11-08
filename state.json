@@ -36756,7 +36756,8 @@
       "2026-11-08T07:33:08Z,claude-8,refusal,call,42458365205,100,2026-11-08T08:10:00Z,,,rejected,100,,2026-11-08T08:10:00Z"
     ],
     "runs": [
-      "2026-11-08T07:12:50Z,42454035705,claude-4,opus,build,3392,hard,interrupted,5-hour cap,51.3,0,0,0,9.3853,0,50,,,808.8,claude-4,resumed,,1"
+      "2026-11-08T07:12:50Z,42454035705,claude-4,opus,build,3392,hard,interrupted,5-hour cap,51.3,0,0,0,9.3853,0,50,,,808.8,claude-4,resumed,,1",
+      "2026-11-08T07:33:09Z,42458365205,claude-8,opus,build,3407,hard,interrupted,refusal,11.3,101,77638,15169661,18.3952,86,100,,,854.5,claude-8,resumed,,1"
     ]
   },
   "version": 1
