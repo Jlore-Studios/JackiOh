@@ -92,7 +92,8 @@ export const OWN_TAKEOVER_LOOKS: Readonly<Record<OwnTakeoverLook, true>> = {
   rod: true,
   wire: true,
   whiteDwarf: true,
-  forge: true, };
+  forge: true,
+};
 
 function isOwnTakeoverLook(look: string): look is OwnTakeoverLook {
   return Object.prototype.hasOwnProperty.call(OWN_TAKEOVER_LOOKS, look);

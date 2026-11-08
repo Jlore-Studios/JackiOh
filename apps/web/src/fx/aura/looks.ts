@@ -58,7 +58,8 @@ export const AURA_SIGNATURE_LOOK_NAMES = [
   // R3395001: Stinkyscape 001 to 090's three Field Spells'.
   "laserGrid",
   "silverRise",
-  "labHaze",] as const;
+  "labHaze",
+] as const;
 
 /** A shared look, any entry's to wear. */
 export type AuraSharedLook = (typeof AURA_LOOK_NAMES)[number];
