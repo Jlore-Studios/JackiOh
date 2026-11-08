@@ -55,14 +55,16 @@ import type { FxCue, FxPlanEnv } from "../types.ts";
 
 /**
  * R3402000: a gallery play's events, split into the actions a game deals them in: the play itself, and
- * each later hook it runs as an action of its own, a Trap's firing and a trigger's or an Activate's
- * marker (a Death's too). A Cry's marker resolves inside its play and stays in it.
+ * each later hook it runs as an action of its own, a Trap's firing, a trigger's marker (a Death's too) and
+ * an Activate, from its `activated`, which the engine sends before its hook's marker (activate.rs), or from
+ * its marker alone. A Cry's marker resolves inside its play and stays in it.
  */
 function actionsOf(events: readonly GameEvent[]): GameEvent[][] {
   const actions: GameEvent[][] = [];
   for (const event of events) {
-    const later = event.type === "trapFired" || (event.type === "hookResolving" && event.hook !== "cry");
     const last = actions[actions.length - 1];
+    const marked = event.type === "hookResolving" && event.hook === "activate" && last?.[0]?.type === "activated" && last[0].instanceId === event.sourceId;
+    const later = event.type === "trapFired" || event.type === "activated" || (event.type === "hookResolving" && event.hook !== "cry" && !marked);
     if (last === undefined || (later && last.length > 0)) actions.push([event]);
     else last.push(event);
   }

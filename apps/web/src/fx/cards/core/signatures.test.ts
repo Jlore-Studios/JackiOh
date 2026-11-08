@@ -58,8 +58,9 @@ const resolve: EntranceResolver = (defId) => {
 function actionsOf(events: readonly GameEvent[]): GameEvent[][] {
   const actions: GameEvent[][] = [];
   for (const event of events) {
-    const later = event.type === "trapFired" || (event.type === "hookResolving" && event.hook !== "cry");
     const last = actions[actions.length - 1];
+    const marked = event.type === "hookResolving" && event.hook === "activate" && last?.[0]?.type === "activated" && last[0].instanceId === event.sourceId;
+    const later = event.type === "trapFired" || event.type === "activated" || (event.type === "hookResolving" && event.hook !== "cry" && !marked);
     if (last === undefined || (later && last.length > 0)) actions.push([event]);
     else last.push(event);
   }
@@ -322,14 +323,23 @@ describe("R3402001 Core's signatures", () => {
     const id = "fx-pedestal";
     const view = fieldOf("core-098", fullBoardView(), id);
     view.you.units[1] = null;
+    // In the engine's order: `activated` first, then the hook's marker (activate.rs), as a game deals them.
     const powers: GameEvent[] = [
-      { type: "hookResolving", sourceId: id, defId: "core-098", controller: "p1", hook: "activate" },
       { type: "activated", player: "p1", instanceId: id, defId: "core-098", ability: "power" },
+      { type: "hookResolving", sourceId: id, defId: "core-098", controller: "p1", hook: "activate" },
       { type: "damage", sourceId: id, targetId: "hero-p2", amount: 2, combat: false },
       { type: "summoned", player: "p1", instanceId: "fx-sprinter", defId: "core-003", row: "units", lane: 2 },
       { type: "drawn", player: "p1", instanceId: "fx-drawn", defId: "core-003" },
     ];
     const rest = all(planOut(powers, withEvents(view, powers)));
+    expect(rest.filter((cue) => cue.kind === "ring" && cue.preset === "holy" && JSON.stringify(cue.at) === JSON.stringify(tid(testid.card(id))))).toHaveLength(1);
+    // Its `activated` alone, no hook of it open yet (the engine's marker comes after it), still flares the
+    // pedestal, in place of the shared arcane flare; another card's Activate flares nothing of it.
+    const alone: GameEvent[] = [powers[0] as GameEvent];
+    const flared = all(planOut(alone, withEvents(view, alone)));
+    expect(flared.filter((cue) => cue.kind === "ring").map((cue) => cue.kind === "ring" && `${cue.preset} ${JSON.stringify(cue.at)}`)).toEqual([`holy ${JSON.stringify(tid(testid.card(id)))}`]);
+    const other: GameEvent[] = [{ type: "activated", player: "p1", instanceId: "fx-other", defId: "core-004", ability: "power" }];
+    expect(all(planOut(other, withEvents(view, other))).some((cue) => cue.kind === "ring" && cue.preset === "holy")).toBe(false);
     expect(rest.find((cue) => cue.kind === "shot" && cue.preset === "fire")).toMatchObject({ from: tid(testid.card(id)), to: tid(testid.hero("opponent")) });
     expect(rest.some((cue) => cue.kind === "shot" && cue.preset === "dust" && JSON.stringify(cue.from) === JSON.stringify(tid(testid.card(id))))).toBe(true);
     expect(rest.some((cue) => cue.kind === "ghost" && JSON.stringify(cue.to) === JSON.stringify(tid(animTestid.hand("you"))))).toBe(true);

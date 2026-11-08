@@ -579,9 +579,10 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
     const fired: GameEvent = { type: "trapFired", instanceId, defId: "core-096", controller: player, row: "backrow", lane: GALLERY_TRAP_LANE };
     return foe === undefined ? [fired] : [fired, { type: "attackCancelled", attackerId: foe.instanceId, targetId: `hero-${player}`, byInstanceId: instanceId }];
   },
+  // In the engine's order: an Activate's `activated` comes before its hook's marker (activate.rs).
   heroicDoors: (_view, instanceId, player) => [
-    { type: "hookResolving", sourceId: instanceId, defId: "core-098", controller: player, hook: "activate" },
     { type: "activated", player, instanceId, defId: "core-098", ability: "power" },
+    { type: "hookResolving", sourceId: instanceId, defId: "core-098", controller: player, hook: "activate" },
     { type: "drawn", player, instanceId: "fx-power-drawn", defId: "core-003" },
   ],
 };

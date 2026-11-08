@@ -3,10 +3,11 @@
 // "heroicDoors" and a `pedestal` aura on its zone (R3402000). As the hall folds down it lands as a crystal
 // pedestal in its zone: holy rays, a ring and a burst of light, and a diamond glint for its Indestructible.
 // Its Discover's doors open in the prompt, for the caster alone. Each Activate is a beat of its own (a later
-// action than its play): on its `activated` the pedestal flares and launches the power, and the power's own
-// events show where it went, each kind at most FX_SIGNATURE_BURSTS_MAX times an entry: a fire dart to a
-// `damage`'s target, a dust sprinter to a `summoned` Unit's zone and a card back into the hand pile on a
-// `drawn` or an `addedToHand`. It anchors on its zone, the piles and readable targets and names no card (R202).
+// action than its play): on its `activated`, which the engine sends before the Activate's hook opens, the
+// pedestal flares, and inside the hook the power's own events launch it from the pedestal, each kind at
+// most FX_SIGNATURE_BURSTS_MAX times an entry: a fire dart to a `damage`'s target, a dust sprinter to a
+// `summoned` Unit's zone and a card back into the hand pile on a `drawn` or an `addedToHand`. It anchors on
+// its zone, the piles and readable targets and names no card (R202).
 
 import { animTestid, locateInstance, targetFor } from "../../../game/animations.ts";
 import { sideOf } from "../../../game/contract.ts";
@@ -48,15 +49,18 @@ function launch(from: FxAnchor, to: FxAnchor, preset: "fire" | "dust", delayMs: 
 }
 
 export const heroicDoors: CardRecipe = (event, p, play) => {
-  if (play.hook !== "activate") return null;
   const i = p.env.intensity;
   const t = timesOf(p.D);
   const own = locateInstance(p.view, play.instanceId);
   const pedestal = own === null ? heroOf(p.view, play) : tid(own);
+  // The engine sends `activated` before the Activate's `hookResolving` marker opens its hook, so the flare
+  // keys on the card's own `activated` whichever entry is open: a game's reaches it as the card's signature
+  // claim (cardFx.ts `signatureFallback`, `sourceIdOf`), the gallery's inside its play. It replaces the
+  // shared arcane flare an Activate draws on its card (fx/cues.ts).
   if (event.type === "activated" && event.instanceId === play.instanceId) {
-    return { cues: [ringCue(p.D, "holy", pedestal, t.G), { ...tunedBurst(i, "holy", pedestal, "ring", t.T, TUNING.flare), colors: HOLY.colors }], row: "keep" };
+    return { cues: [ringCue(p.D, "holy", pedestal, t.G), { ...tunedBurst(i, "holy", pedestal, "ring", t.T, TUNING.flare), colors: HOLY.colors }], row: "replace" };
   }
-  if (!withinBursts(event, p)) return null;
+  if (play.hook !== "activate" || !withinBursts(event, p)) return null;
   const cues = ((): FxCue[] => {
     switch (event.type) {
       case "damage": {

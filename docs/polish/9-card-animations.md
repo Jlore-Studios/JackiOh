@@ -579,7 +579,7 @@ motifs most of them played; #3332 laid the frame (R3332000) and each set's pass 
   | #95 Call to Chaos | bespoke `chaosReels` | a slot-wheel's rays and ring, three reels blurring in sparks | on `chaosRolled` the roll's reveal stands `FX_REELS_MS` with a gold ring and its jackpot shake |
   | #96 My Pawn | bespoke `pawnStrings`, takeover `pawn` | its takeover at its `trapFired`; strings from the top of the screen to every enemy Unit and hero | on `attackCancelled` the attack shatters into shards at the attacker |
   | #97 Zephrys | bespoke `perfectWish`, takeover `genie` | its takeover; silk gathering at the centre | on `addedToHand` a card back gusts from the far hero into the caster's hand pile |
-  | #98 Heroic Power | entrance `heroicPedestal`, bespoke `heroicDoors`, takeover `rotunda`, aura `pedestal` zone | its takeover; a crystal pedestal landing in holy light, a diamond glint | each Activate's `activated` flares the pedestal; its power flies to where it went |
+  | #98 Heroic Power | entrance `heroicPedestal`, bespoke `heroicDoors`, takeover `rotunda`, aura `pedestal` zone | its takeover; a crystal pedestal landing in holy light, a diamond glint | each Activate's `activated` flares the pedestal (keyed on the card's own `activated`, which the engine sends before the Activate's `hookResolving` marker); inside the hook its power flies to where it went |
   | #99 Craft a Card | bespoke `fusionForge`, takeover `forge` | its takeover; two card backs riding in from the board's edges | the hand pile rings as the card is added; on `fused` it flies from the forge into the hand pile |
 
   Each sounds its own sound once, on its first beat (`audio/signatureCues.ts`: a Trap's firing, Silly
