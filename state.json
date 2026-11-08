@@ -36077,37 +36077,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-08T01:08:04Z,claude-6,ping,before,42432729831,31,2026-11-08T01:40:00Z,,,allowed,100,,",
-      "2026-11-08T01:08:25Z,claude-6,stream,call,42432729831,32,2026-11-08T01:40:00Z,,,allowed,100,,",
-      "2026-11-08T01:08:55Z,claude-6,stream,call,42432729831,33,2026-11-08T01:40:00Z,,,allowed,100,,",
-      "2026-11-08T01:12:10Z,claude-6,stream,call,42432729831,35,2026-11-08T01:40:00Z,,,allowed,100,,",
-      "2026-11-08T01:12:25Z,claude-6,stream,call,42432729831,36,2026-11-08T01:40:00Z,,,allowed,100,,",
-      "2026-11-08T01:13:11Z,claude-6,stream,call,42432729831,37,2026-11-08T01:40:00Z,,,allowed,100,,",
-      "2026-11-08T01:13:47Z,claude-6,stream,call,42432729831,38,2026-11-08T01:40:00Z,,,allowed,100,,",
-      "2026-11-08T01:07:06Z,claude-4,ping,before,42432665319,94,2026-11-08T01:10:00Z,,,allowed_warning,50,,",
-      "2026-11-08T00:13:48Z,claude-7,ping,before,42428635273,11,2026-11-08T02:50:00Z,,,allowed,50,,",
-      "2026-11-08T00:14:24Z,claude-7,stream,call,42428635273,12,2026-11-08T02:50:00Z,,,allowed,50,,",
-      "2026-11-08T00:20:25Z,claude-7,stream,call,42428635273,13,2026-11-08T02:50:00Z,,,allowed,50,,",
-      "2026-11-08T01:16:00Z,claude-7,stream,call,42428635273,14,2026-11-08T02:50:00Z,,,allowed,50,,",
-      "2026-11-08T01:25:05Z,claude-7,ping,before,42434003303,14,2026-11-08T02:50:00Z,,,allowed,50,,",
-      "2026-11-08T00:15:33Z,claude-1,ping,before,42428701628,5,2026-11-08T04:50:00Z,,,allowed,40,,",
-      "2026-11-08T00:16:06Z,claude-1,stream,call,42428701628,6,2026-11-08T04:50:00Z,,,allowed,40,,",
-      "2026-11-08T00:16:51Z,claude-1,stream,call,42428701628,7,2026-11-08T04:50:00Z,,,allowed,40,,",
-      "2026-11-08T00:27:37Z,claude-1,stream,call,42428701628,8,2026-11-08T04:50:00Z,,,allowed,40,,",
-      "2026-11-08T00:44:23Z,claude-1,stream,call,42428701628,9,2026-11-08T04:50:00Z,,,allowed,40,,",
-      "2026-11-08T01:01:21Z,claude-1,stream,call,42428701628,9,2026-11-08T04:50:00Z,,,allowed,40,,",
-      "2026-11-08T01:23:54Z,claude-1,stream,call,42428701628,10,2026-11-08T04:50:00Z,,,allowed,40,,",
-      "2026-11-08T01:24:09Z,claude-1,stream,call,42428701628,11,2026-11-08T04:50:00Z,,,allowed,40,,"
-    ],
-    "runs": [
-      "2026-11-08T01:13:51Z,42432729831,claude-6,sonnet,review,3380,medium,approved,,5.6,40,14761,2221740,0.8069,31,38,,,2.2,claude-6,none,,1",
-      "2026-11-08T01:07:06Z,42432665319,claude-4,opus,review,3375,hard,interrupted,5-hour cap,0,0,0,0,,94,94,,,2.5,claude-4,none,,0",
-      "2026-11-08T01:16:10Z,42428635273,claude-7,sonnet,review,3386,medium,approved,,16,64,20123,2874319,1.2976,11,14,,,1.4,claude-7,fresh,,3",
-      "2026-11-08T01:25:24Z,42434003303,claude-7,sonnet+opus,revise,3386,medium,built,,0,0,0,0,,14,14,,,0.7,claude-7,none,,0",
-      "2026-11-08T01:25:12Z,42428701628,claude-1,opus,revise,3382,hard,approved,,47,86,19035,4211064,2.6793,5,11,,,57.2,claude-7,fresh,other,2"
-    ]
-  },
   "version": 1
 }
