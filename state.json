@@ -13857,12 +13857,8 @@
       "runs_on": "night-vm-agy",
       "started_at": "2026-11-07T21:19:12Z",
       "stop_requested": false,
-      "strike_log": [
-        "`claude-8` (claude, opus) rejected it: `apps/web/src/game/Card.tsx:302`: The board-card guard 'never while the animation queue is draining' reads isHeld() once during render and does not subscribe to ",
-        "`claude-8` (claude, opus) rejected it: `apps/web/src/fx/types.ts:175`: The takeover cue now holds the card's identity behind a closure (`card: () => FxTakeoverCard`), which hides the defId from the re",
-        "`claude-8` (claude, opus) rejected it: `apps/web/src/cards/fullscreen.css:29`: The per-plane tilt parallax in the full-screen view never takes effect, because each plane's `animation` keyframes set `t"
-      ],
-      "strikes": 3,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 0
     },
