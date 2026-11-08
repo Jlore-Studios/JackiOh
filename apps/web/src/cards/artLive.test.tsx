@@ -325,6 +325,19 @@ describe("R3340000 motion pauses and the settings still rule", () => {
     expect(motionOf(first)).toBe("animated");
   });
 
+  it("R3340000 returning on screen does not make an old face the newest", () => {
+    vi.stubGlobal("IntersectionObserver", FakeObserver);
+    writeCardLevel(GARY, VERSION_ANIMATED_ID);
+    const { container } = render(<Board specs={Array.from({ length: MAX + 1 }, () => ({ id: GARY }))} />);
+    const faces = minions(container);
+    const oldest = faces[0] as HTMLElement;
+    expect(motions(container)).toEqual(["static", ...Array<string>(MAX).fill("animated")]);
+    observerFor(oldest).report(false);
+    expect(motionOf(oldest)).toBe("static");
+    observerFor(oldest).report(true);
+    expect(motions(container), "its original age survives the off-screen pause").toEqual(["static", ...Array<string>(MAX).fill("animated")]);
+  });
+
   it("R3340000 a moving cosmetic follows the face's rank, visibility and Fx setting", () => {
     vi.stubGlobal("IntersectionObserver", FakeObserver);
     writeCardPick(COMMON, "foil", "foil-holo-sweep");

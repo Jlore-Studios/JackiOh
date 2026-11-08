@@ -135,6 +135,26 @@ describe("R3340000 a re-rank keeps a face's age", () => {
     // Left again, it is the oldest still: it was not made the newest by being hovered.
     expect(holders(container)).toEqual(Array.from({ length: MAX }, (_unused, index) => index + 1));
   });
+
+  it("R3340000 an off-screen pause and return keeps a face's age instead of making it newest", () => {
+    const shown = (oldest: boolean): ReactElement =>
+      createElement(
+        "div",
+        null,
+        Array.from({ length: MAX + 1 }, (_unused, id) => createElement(Slot, { key: id, id, wanted: id !== 0 || oldest })),
+      );
+    const { container, rerender } = render(shown(true));
+    expect(holders(container)).toEqual(Array.from({ length: MAX }, (_unused, index) => index + 1));
+    act(() => {
+      rerender(shown(false));
+    });
+    expect(holders(container)).toEqual(Array.from({ length: MAX }, (_unused, index) => index + 1));
+    act(() => {
+      rerender(shown(true));
+    });
+    // Face 0 is still the oldest after returning; reacquiring its claim must not displace face 1 as a fresh newest face.
+    expect(holders(container)).toEqual(Array.from({ length: MAX }, (_unused, index) => index + 1));
+  });
 });
 
 describe("R3340000 the page's visibility", () => {

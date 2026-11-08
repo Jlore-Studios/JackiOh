@@ -9,6 +9,7 @@
 
 import { CATALOG } from "@jackioh/cards";
 import type { UnitView } from "@jackioh/shared";
+import type { CSSProperties } from "react";
 
 import { MinionFace, faceModel } from "../../../apps/web/src/cards/index.ts";
 import { CARD_SLOT_KINDS, resetCosmeticsForTests, writeCardPick } from "../../../apps/web/src/cards/cosmetics.ts";
@@ -35,6 +36,11 @@ const VIEWPORTS = [
 const BOX_ASPECT = 7 / 5;
 /** How far a Buffed unit's attack stands over its printed one. */
 const BUFF = 3;
+/** The component attack's target vector, inherited by the subject as the live board's director writes it on the attacker. */
+const ATTACK_TARGET_X_PX = 60;
+const ATTACK_TARGET_Y_PX = -80;
+/** The `cf-art-swing` keyframe at which its target-directed translate and scale are greatest. */
+const ATTACK_PEAK_PROGRESS = 0.45;
 const STAGE = '[data-which="stage"]';
 const FACE = `${STAGE} .cf--minion`;
 const ART = `${FACE} .cf-art`;
@@ -60,13 +66,16 @@ function Stage({ id, box, over = {}, buffed = false, attacking = false }: { id: 
     radiant: false,
     live: { attack: u.attack, health: u.health, maxHealth: u.maxHealth, keywords: u.keywords },
   });
+  const attackVector = attacking
+    ? ({ "--fx-lunge-x": `${String(ATTACK_TARGET_X_PX)}px`, "--fx-lunge-y": `${String(ATTACK_TARGET_Y_PX)}px` } as CSSProperties)
+    : {};
   return (
     <div style={{ display: "flex", padding: 16, background: "#1b1f2b" }}>
       <div
         className="card cf-host"
         data-which="stage"
         tabIndex={0}
-        style={{ width: box, height: box * BOX_ASPECT, flex: "none", position: "relative", display: "block", maxWidth: "none", padding: 0, border: 0, background: "none", boxShadow: "none", overflow: "visible" }}
+        style={{ width: box, height: box * BOX_ASPECT, flex: "none", position: "relative", display: "block", maxWidth: "none", padding: 0, border: 0, background: "none", boxShadow: "none", overflow: "visible", ...attackVector }}
       >
         <MinionFace face={face} unit={u} worn attacking={attacking} />
       </div>
@@ -84,6 +93,13 @@ function computed(el: HTMLElement): CSSStyleDeclaration {
 /** A computed individual transform property as a number: `none` is its rest, 1 for scale, 0 for rotate. */
 function number(value: string, rest: number): number {
   return value === "none" ? rest : Number.parseFloat(value);
+}
+
+/** A computed individual `translate` property as its horizontal and vertical pixel components. */
+function translation(value: string): { x: number; y: number } {
+  if (value === "none") return { x: 0, y: 0 };
+  const [x = "0", y = "0"] = value.split(/\s+/u);
+  return { x: Number.parseFloat(x), y: Number.parseFloat(y) };
 }
 
 /** The viewport as Chrome painted it, saved under `name`. */
@@ -155,7 +171,21 @@ for (const viewport of VIEWPORTS) {
         cy.get(FACE).should("have.attr", "data-art-attacking", "true").and("have.attr", "data-art-motion", "animated");
         cy.get(`${ART}[data-art-live="true"]`).should("exist");
         cy.get(`${ART} > .cf-art-subject`).should(($subject) => {
-          expect(computed($subject[0] as HTMLElement).animationName, "the subject swings").to.eq("cf-art-swing");
+          const subject = $subject[0] as HTMLElement;
+          const style = computed(subject);
+          expect(style.animationName, "the subject swings").to.eq("cf-art-swing");
+          const swing = subject.getAnimations().find((animation) => (animation as CSSAnimation).animationName === "cf-art-swing");
+          expect(swing, "the subject's swing animation").not.to.equal(undefined);
+          const duration = swing?.effect?.getTiming().duration;
+          expect(duration, "the swing's duration").to.be.a("number");
+          if (swing === undefined || typeof duration !== "number") return;
+          swing.pause();
+          swing.currentTime = duration * ATTACK_PEAK_PROGRESS;
+          const peak = computed(subject);
+          const toward = translation(peak.translate);
+          expect(toward.x, "the subject moves right toward the target").to.be.greaterThan(0);
+          expect(toward.y, "the subject moves up toward the target").to.be.lessThan(0);
+          expect(number(peak.scale, 1), "the subject grows into the swing").to.be.greaterThan(1);
         });
         cy.get(`${ART} > .cf-art-motes`).should(($motes) => {
           expect(computed($motes[0] as HTMLElement).animationName, "the motes fire").to.eq("cf-art-fire");

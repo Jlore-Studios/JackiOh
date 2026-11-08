@@ -2,8 +2,9 @@
 // (R1295000, R2715001): a face that wants to move claims a slot when it mounts and gives it back when it unmounts or stops
 // wanting one, and the slots are no longer first come first served. They go to, in order, the face under the pointer or
 // holding focus (`rank.hovered`); the Mythics, the newest first; the Legendaries; then every other face, newest first, a
-// face's age being the time it first claimed (`seq`), which a re-rank keeps. A release hands its slot to the next face in
-// the same tick. The hand and the board share the one budget. The page hidden pauses every face (`usePageVisible`).
+// face's age being fixed when that mounted face is created (`seq`), which a re-rank or a visibility pause keeps. A release
+// hands its slot to the next face in the same tick. The hand and the board share the one budget. The page hidden pauses
+// every face (`usePageVisible`) without making one newly visible the newest.
 //
 // Presentation only (CLAUDE.md rule 7).
 
@@ -65,9 +66,13 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-function claim(token: symbol, rank: SlotRank): void {
+function nextSequence(): number {
   counter += 1;
-  claims.set(token, { token, rank, seq: counter });
+  return counter;
+}
+
+function claim(token: symbol, rank: SlotRank, seq: number): void {
+  claims.set(token, { token, rank, seq });
   refresh();
 }
 
@@ -86,22 +91,23 @@ function rerank(token: symbol, rank: SlotRank): void {
 
 /**
  * R3340000: whether this face holds a motion slot now: it `wanted` one (claiming when it mounts or starts to want, releasing
- * when it stops or unmounts) and its `rank` puts it among the first `COSMETIC_FOIL_ANIMATED_MAX`. A change of rank keeps
- * the face's age.
+ * when it stops or unmounts) and its `rank` puts it among the first `COSMETIC_FOIL_ANIMATED_MAX`. Its age is assigned once
+ * for this mounted face, so changes of rank and releases caused by a hidden tab or an off-screen face keep it.
  */
 export function useMotionSlot(wanted: boolean, rank: SlotRank): boolean {
   const [token] = useState(() => Symbol("motion-slot"));
+  const [seq] = useState(nextSequence);
   const standing = useRef(rank);
   useEffect(() => {
     standing.current = rank;
   });
   useEffect(() => {
     if (!wanted) return undefined;
-    claim(token, standing.current);
+    claim(token, standing.current, seq);
     return () => {
       release(token);
     };
-  }, [wanted, token]);
+  }, [wanted, token, seq]);
   useEffect(() => {
     rerank(token, { hovered: rank.hovered, rarity: rank.rarity });
   }, [token, rank.hovered, rank.rarity]);
