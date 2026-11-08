@@ -18239,6 +18239,8 @@
       "waiting_comment": 6717583581
     },
     "3427": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-08T03:15:09Z",
@@ -18252,8 +18254,11 @@
         "trail": "ne`). T\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Monitor: {\"command\": \"until grep -qE \\\"Test Files\\\" /tmp/web.txt; do sleep 5; done; grep -E \\\"Test Files|Tests |FAIL\\\" /tmp/web.txt | head -20\", \"description\": \"web vitest run finishing\", \"timeout_ms\": 600000}\n- tool error: This Bash command contains multiple operations. The following part requires approval: until grep -qE \"Test Files\" /tmp/web.txt; do sleep 5; done; grep -E \"Test Files|Tests |FAIL\" /tmp/web.txt\n- Bash: {\"command\": \"until grep -qE \\\"Test Files\\\" /tmp/web.txt; do sleep 5; done; grep -E \\\"Test Files|Tests |FAIL\\\" /tmp/web.txt | head -20\", \"timeout\": 600000}\n- Bash: {\"command\": \"tail -15 /tmp/cargo-checks.txt; tail -5 /tmp/web.txt; grep -cE \\\"\\u2713|\\u276f\\\" /tmp/web.txt\"}\n- TaskStop: {\"task_id\": \"bknv17yuy\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390; echo \\\"- pass 2: spec/patches/classify green; web --changed run killed at 10 min (ran beside the cargo build), rerunning\\\" >> .bot-notes.md; pn\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390; ls ~/.cache/Cypress 2>&1 | head; head -12 e2e/cypress/component/classicplus-scenes.cy.tsx; grep -n \\\"test:component\\\" e2e/package.json\"}\n- said: Cypress is installed; I'll run the component spec once the web suite finishes.\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/web.txt; do sleep 10; done; grep -E \\\"Test Files|Tests |FAIL|^exit\\\" /tmp/web.txt | head -20\", \"timeout\": 3600000, \"run_in_background\": true}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390; python3 - <<'EOF'\\ns=open('.bot-notes.md').read()\\ni=s.index('## Log')\\nstate='''## State\\n\\nPass 2 (opus) 2026-11-08: the 15 missing recipes o\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/web.txt; do sleep 10; done; grep -E \\\"Test Files|Tests |FAIL|^exit\\\" /tmp/web.txt | head -20\", \"timeout\": 600000}\n- TaskStop: {\"task_id\": \"b6l87ram0\"}\n- Bash: {\"command\": \"grep -c \\\"\\u2713\\\\|passed\\\" /tmp/web.txt; grep -oE \\\"src/[a-zA-Z0-9/._-]+\\\\.test\\\\.tsx?\\\" /tmp/web.txt | sort -u | wc -l; tail -c 600 /tmp/web.txt; ps aux | grep -c \\\"[v]itest\\\"\"}\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/web.txt; do sleep 15; done; grep -E \\\"Test Files|Tests |FAIL|^exit\\\" /tmp/web.txt | head -30\", \"timeout\": 3600000, \"run_in_background\": true}\n- said: The full web run is still going (well past 20 minutes). It reports nothing until it finishes, so I'm waiting for it to end before I start the Cypress component spec.\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/web.txt; do sleep 15; done; echo done\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -E \\\"Test Files|Tests |FAIL|^exit|Duration\\\" /tmp/web.txt | head -30\"}\n- said: The harness's web command passes: 304 files and 6029 tests, plus 109 skipped tests that are not from this change. Now running the Cypress component spec.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390; echo \\\"- pass 2: web --changed green (304 files, 6029 passed); running cypress component spec\\\" >> .bot-notes.md; E2E_COMPONENT_PORT=5281 timeo\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/cy.txt; do sleep 10; done; grep -E \\\"\\u2713|\\u2716|passing|failing|Error|exit|R3390000\\\" /tmp/cy.txt | head -30\", \"timeout\": 600000}\n- said: The component spec fails: its selector finds more elements than the faces it mounts. Reading the spec to find out why.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390; sed -n 12,170p e2e/cypress/component/classicplus-scenes.cy.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390; grep -n \\\"cf-art\\\" e2e/cypress/component/scene-proofs.cy.tsx | head; grep -rn '\\\"cf-art\\\\b\\\\|cf-art ' apps/web/src/cards/*.tsx | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390; grep -n 'className={`cf-art\\\\|className=\\\"cf-art\\\\|cf-plane\\\\|\\\"cf-art\\\"' apps/web/src/cards/CardFace.tsx apps/web/src/cards/*.tsx | grep -v te\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390; sed -n 545,565p apps/web/src/cards/CardFace.tsx; git log --oneline -3 -- apps/web/src/cards/CardFace.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390; grep -rln \\\"cf-art\\\" apps/web/src/cards/*.tsx apps/web/src/cards/art/*.tsx 2>/dev/null | grep -v test; grep -rn \\\"classList\\\\|className\\\" apps/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390; f=e2e/cypress/component/classicplus-scenes.cy.tsx; sed -i 's/doc.querySelector(`\\\\[data-face=\\\"${name}\\\"\\\\] .cf-art`)/doc.querySelector(`[data-\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390; sed -i \\\"s/not a depth plane's (R3383000's planes over an Epic and up)/not one of the depth planes #3383 stacks over an Epic and up/\\\" e2e/cypr\u2026\n- said: The component spec passes now, 5 of 5. Checking one screenshot and that no artifacts landed in the tree.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390; git status --short | grep -v \\\"^ D .scratch\\\\|zz-\\\" ; find e2e/cypress/screenshots -name \\\"classicplus-scenes-desktop-deep-1*\\\" | head -2\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390; find . -name \\\"classicplus-scenes-desktop-deep-1*.png\\\" -not -path \\\"*/node_modules/*\\\" 2>/dev/null | head -2\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3390/e2e/artifacts/component/screenshots/classicplus-scenes.cy.tsx/classicplus-scenes-desktop-deep-1.png\"}\n- said: The cards read well at hand size. A last eslint pass on the edited spec:\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390; pnpm exec eslint e2e/cypress/component/classicplus-scenes.cy.tsx apps/web/src/cards/art/ ; echo eslint $?; cargo fmt --check >/dev/null 2>&1; e\u2026\n- Bash: {\"command\": \"cat /tmp/cp/pr-table.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every Classic+ card drawn as what it is: a scene of its own for each, richer the rarer\"} --> ## Every Classic+ card drawn as what it is Every one of the 116 Classic+ entries (78 cards and 38 tokens) now draws from a scene recipe of its own, base and Rad\u2026"
       },
       "issue": 3390,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-08T05:42:26Z",
         "from_run": "42441926819",
         "gates": [
           {
@@ -18345,8 +18350,15 @@
         "source": "build",
         "until": "2026-11-08T06:10:55Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-08T05:40:55Z",
+      "run_id": "pending:edf8b54d-1794116500",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "started_at": "2026-11-08T05:42:26Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18360,9 +18372,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T05:30:50Z",
+    "at": "2026-11-08T05:42:26Z",
     "url": "",
-    "what": "review #3425 on claude-6"
+    "what": "review #3427 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-08T05:26:45Z",
