@@ -81,4 +81,4 @@ export {
   type FullScreenState,
   type FullScreenTriggerOptions,
 } from "./fullscreen.ts";
-export { FullScreenArt, FullScreenArtHost, type FullScreenArtProps } from "./FullScreenArt.tsx";
+export { FullScreenArt, FullScreenArtHost, FullScreenButton, type FullScreenArtProps } from "./FullScreenArt.tsx";

@@ -7,10 +7,10 @@ import { createPortal } from "react-dom";
 import { getMusicPlayer } from "../audio/music.ts";
 import { MUSIC_CARDS } from "../audio/musicData.ts";
 import { DialogClose } from "../game/Dialog.tsx";
-import { useLocale } from "../i18n/i18n.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import { useModalKeys } from "../together/modalKeys.ts";
 import { ART_PLANES, artPlaneBackground } from "./art/pictures.ts";
-import { closeFullScreenArt, useFullScreenArt } from "./fullscreen.ts";
+import { closeFullScreenArt, openFullScreenArt, useCanOpenFullScreen, useFullScreenArt, type FullScreenState } from "./fullscreen.ts";
 import { useCardSettings } from "./settings.ts";
 import { devicePose, glareOf, pointerPose, tiltDegrees } from "./tilt.ts";
 
@@ -165,4 +165,31 @@ export function FullScreenArtHost(): ReactElement | null {
   const isLeader = hosts.size === 0 || Array.from(hosts)[0] === id;
   if (!isLeader || state === null) return null;
   return createPortal(<FullScreenArt {...state} onClose={closeFullScreenArt} />, document.body);
+}
+
+/**
+ * R3345000: the tap-opened way into the view, for a card that can open it (`useCanOpenFullScreen`): no pointer is held
+ * to release, so a tap pauses the view, and a second tap or the ✕ closes it. The hold opens the same view,
+ * and its release closes it.
+ */
+export function FullScreenButton({
+  card,
+  worn = false,
+}: {
+  card: NonNullable<FullScreenState> & { rarity?: string | null; printedRarity?: string | null };
+  worn?: boolean;
+}): ReactElement | null {
+  useLocale();
+  const can = useCanOpenFullScreen(card, card.defId, worn);
+  if (!can) return null;
+  return (
+    <button
+      type="button"
+      className="fullscreen-art-open"
+      data-testid="fullscreen-art-open"
+      onClick={() => openFullScreenArt({ defId: card.defId, radiant: card.radiant, name: card.name, heldPointerId: null })}
+    >
+      {t("Full screen")}
+    </button>
+  );
 }

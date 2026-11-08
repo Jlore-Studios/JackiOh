@@ -15,6 +15,7 @@ import { faceModel, type FaceModel } from "../model.ts";
 import { locWords } from "./locWords.ts";
 import { RulesText } from "../RulesText.tsx";
 import { RefsInteractive } from "../refContext.tsx";
+import { FullScreenButton } from "../FullScreenArt.tsx";
 import { useFullScreenTrigger } from "../fullscreen.ts";
 import { watermarkOf } from "../setMark.ts";
 import { useCardSettings } from "../settings.ts";
@@ -174,6 +175,7 @@ export function CardDetail({
               <p className="inspect-meta" data-loc={def.loc}>
                 {detailMetaLine(def)}
               </p>
+              <FullScreenButton card={base} worn={own} />
               <DetailRules base={base} radiant={radiant} />
               <Glossary entries={glossary} />
               <Flavour defId={def.id} easter={easter} />

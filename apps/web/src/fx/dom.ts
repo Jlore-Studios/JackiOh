@@ -6,13 +6,13 @@
 // over its box, never a card.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
-import { ART_PLANES, artPlaneBackground } from "../cards/art/pictures.ts";
+import { ART_PLANES } from "../cards/art/pictures.ts";
 import { fragmentRef, signatureLength, signatureSize } from "../cards/FullArtSignature.tsx";
-import { SIGNATURE_FACES, signatureFaceOf } from "../cards/signatureFaces.ts";
+import { SIGNATURE_FACES } from "../cards/signatureFaces.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
 import { pointIn } from "./anchors.ts";
 import { takeoverArtParts } from "./takeoverArt.ts";
-import type { FxAnchor, FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxPoint, FxRollCue, FxSplatTone, FxTakeoverCard, FxTimedPoint, FxTint, SetPieceShape } from "./types.ts";
+import type { FxAnchor, FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxPoint, FxRollCue, FxSplatTone, FxTakeoverStage, FxTimedPoint, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
 
 export type DomEffectBoxes = { at?: FxBox | null; from?: FxBox | null; to?: FxBox | null };
@@ -70,22 +70,22 @@ let takeoverSigns = 0;
  * R3345000: the full-window stage of a takeover that holds a set piece: the card's art in its depth planes
  * and its name signing across the bottom.
  */
-function takeoverStage(doc: Document, card: FxTakeoverCard): HTMLElement {
+function takeoverStage(doc: Document, card: FxTakeoverStage): HTMLElement {
   const stage = doc.createElement("div");
   stage.className = "fx-takeover-stage";
 
   const planes = doc.createElement("div");
   planes.className = "fx-takeover-planes";
-  for (const plane of ART_PLANES) {
+  ART_PLANES.forEach((plane, i) => {
     const p = doc.createElement("div");
     p.className = "fx-takeover-plane";
     p.setAttribute("data-plane", plane);
-    p.style.backgroundImage = artPlaneBackground(card.defId, plane, card.radiant);
+    p.style.backgroundImage = card.planes[i] ?? "";
     planes.appendChild(p);
-  }
+  });
   stage.appendChild(planes);
 
-  const signatureFace = signatureFaceOf(card.defId);
+  const signatureFace = card.face;
   // R2715002, R3345000: the name in its set's hand (`.cf-signature[data-signature-face]` sets the face),
   // uncovered left to right as a pen would write it: a clip path whose rect slides in (fx.css).
   const signature = doc.createElement("div");
@@ -452,7 +452,7 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       tintVars(el, cue.tint);
       el.style.setProperty("--fx-land", `${Math.max(0, cue.landMs)}ms`);
 
-      const stage = cue.stage ? takeoverStage(doc, cue.card()) : null;
+      const stage = cue.stage === null ? null : takeoverStage(doc, cue.stage);
 
       for (const part of TAKEOVER_PARTS) {
         const child = doc.createElement("div");

@@ -22,6 +22,8 @@
 // plunging into violet dark.
 
 import { HIDDEN_ID, leadMs, type AnimationEntry } from "../game/animations.ts";
+import { ART_PLANES, artPlaneBackground } from "../cards/art/pictures.ts";
+import { signatureFaceOf } from "../cards/signatureFaces.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { frac, raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
 import { entranceKeyOf } from "./cardFx.ts";
@@ -137,8 +139,7 @@ export function entranceCues(entry: AnimationEntry, env: Pick<FxPlanEnv, "intens
   // R3400000: a signature Spell's own takeover fills the screen from its middle, as its recipe draws at the board's centre.
   const takeover: FxTakeoverCue = {
     kind: "takeover",
-    card: () => ({ defId, name, radiant }),
-    stage: entry.setPiece !== undefined,
+    stage: entry.setPiece === undefined ? null : { planes: ART_PLANES.map((plane) => artPlaneBackground(defId, plane, radiant)), name, face: signatureFaceOf(defId) },
     look,
     tint: TAKEOVER_TINTS[look],
     at: own ? CENTER : at,

@@ -266,9 +266,11 @@ describe("R3345000 Mythic takeover in depth planes", () => {
       const cues = planFx(found, p1, env());
       const takeover = takeoverOf(cues);
       expect(takeover, mythic.id).toBeDefined();
-      expect(takeover?.card().defId).toBe(mythic.id);
-      // R202: the cue's own data names no card; its card is behind the function.
-      expect(Object.keys(JSON.parse(JSON.stringify(takeover)) as object), mythic.id).not.toContain("card");
+      // R202: the cue is plain data holding the card's picture and name, never its definition, so a second plan equals it.
+      expect(takeover?.stage?.planes.length, mythic.id).toBe(ART_PLANES.length);
+      expect(takeover?.stage?.name, mythic.id).toBe(mythic.name);
+      expect(JSON.stringify(takeover?.stage).includes(mythic.id), mythic.id).toBe(false);
+      expect(takeoverOf(planFx(found, p1, env())), mythic.id).toEqual(takeover);
 
       // Mount into DOM and verify depth planes & signature
       const root = document.createElement("div");

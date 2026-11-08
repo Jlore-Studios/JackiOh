@@ -101,3 +101,26 @@
     animation: none;
   }
 }
+
+/* R3345000: the button that opens the view with no hold, in the inspect sheet and the detail view. */
+.fullscreen-art-open {
+  align-self: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--line-bright);
+  border-radius: 999px;
+  background: var(--bg-sunken);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: var(--cursor-glove-point, pointer);
+}
+
+.fullscreen-art-open:hover {
+  border-color: var(--text-dim);
+}
+
+.fullscreen-art-open:focus-visible {
+  outline: 2px solid var(--selected);
+  outline-offset: 2px;
+}

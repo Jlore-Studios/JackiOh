@@ -4,6 +4,8 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { CATALOG } from "@jackioh/cards";
+
 import Card from "../game/Card.tsx";
 import { WearerProvider } from "../game/wearer.ts";
 import { card as cardView, unit as unitView } from "../test/fixtures.ts";
@@ -16,6 +18,8 @@ import {
   useFullScreenTrigger,
 } from "./fullscreen.ts";
 import { FullScreenArt, FullScreenArtHost } from "./FullScreenArt.tsx";
+import { InspectSheet } from "./inspect/InspectSheet.tsx";
+import { faceModel } from "./model.ts";
 import { FullArtShown } from "./fullArt.ts";
 import { VERSION_ALT_FULL_ART_ID } from "./versions.ts";
 import { isHeld, resetTiltForTests, useTiltHold } from "./tilt.ts";
@@ -94,6 +98,37 @@ describe("R3345000 FullScreenArt rendering and depth planes", () => {
     // Double tap / quick second tap closes
     fireEvent.click(dialog, { detail: 2 });
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("R3345000 opened by a tap from the inspect sheet, a tap pauses and resumes it and no release closes it", () => {
+    const sheet = (defId: string) => (
+      <InspectSheet face={faceModel({ defId, def: CATALOG[defId], radiant: false })} onClose={() => undefined} />
+    );
+    // A Common that prints no full art has no way in; a Mythic has the button.
+    const common = render(sheet("core-003"));
+    expect(screen.queryByTestId("fullscreen-art-open")).toBeNull();
+    common.unmount();
+    render(
+      <>
+        {sheet("core-100")}
+        <FullScreenArtHost />
+      </>,
+    );
+    fireEvent.click(screen.getByTestId("fullscreen-art-open"));
+    const dialog = screen.getByTestId("fullscreen-art");
+    // No pointer is held, so a release of any pointer leaves it open.
+    fireEvent.pointerUp(window, { pointerId: 1 });
+    expect(dialog).toBeInTheDocument();
+    fireEvent.click(dialog, { detail: 1 });
+    expect(dialog).toHaveAttribute("data-paused", "true");
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    fireEvent.click(dialog, { detail: 1 });
+    expect(dialog).not.toHaveAttribute("data-paused");
+    // A second tap closes it.
+    fireEvent.click(dialog, { detail: 2 });
+    expect(screen.queryByTestId("fullscreen-art")).toBeNull();
   });
 
   it("R3345000 releasing held pointer closes the view", () => {
