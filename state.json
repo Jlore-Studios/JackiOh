@@ -15491,15 +15491,8 @@
       "waiting_comment": 6720100108
     },
     "3397": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42523272193",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-08T21:25:24Z",
-        "until": "2026-11-08T21:55:24Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15511,10 +15504,9 @@
         "reason": "planned on opus",
         "trail": "; grep -n \u2026\n- Bash: {\"command\": \"cd apps/web/src/cards/art && grep -n \\\" it(\\\" scene.test.ts | head -40\", \"description\": \"List scene.test.ts tests\"}\n- Bash: {\"command\": \"cd apps/web/src/cards/art && sed -n 171,210p scene.test.ts\", \"description\": \"Read scene palette/gold-window test\"}\n- tool error: Exit code 1 /bin/bash: line 1: cd: apps/web/src/cards/art: No such file or directory\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3397 && sed -n 171,210p apps/web/src/cards/art/scene.test.ts\", \"description\": \"Read scene palette/gold-window test\"}\n- Bash: {\"command\": \"grep -n \\\"^const ENTRIES\\\\|^import { CATALOG\\\" apps/web/src/cards/art/classicPlusScenes.test.ts; sed -n 1,40p apps/web/src/test/artPicture.ts | grep -n \\\"export function\\\" \", \"descriptio\u2026\n- Bash: {\"command\": \"ls apps/web/src/wasm/pkg 2>/dev/null | head -3; cd apps/web && timeout 300 pnpm exec vitest run src/cards/art/classicPlusAltScenes.test.tsx 2>&1 | tail -15\", \"description\": \"Run the Clas\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3397/apps/web/src/cards/art && for p in chain-length strings rope-cordon plank-rug tree bird awning house mill footprints paw-prints ice-floor snowfi\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3397 && grep -rn \\\"layout:report\\\" e2e/cypress.config.ts | head -3; grep -n \\\"layout:report\\\" -A 12 e2e/cypress.config.ts | head -25\", \"description\":\u2026\n- Bash: {\"command\": \"grep -rn '\\\"TG\\\"\\\\|\\\"M+\\\"' crates/tools/src/*.rs crates/tools/src/**/*.rs 2>/dev/null | head -5\", \"description\": \"Confirm spec check accepts TG and M+ set abbreviations\"}\n- Bash: {\"command\": \"grep -rln \\\"Meditative+\\\\|\\\\\\\"C+\\\\\\\"\\\" crates/tools/src | head; grep -rn \\\"TG\\\\b\\\" crates/tools/src/spec*.rs crates/tools/src/spec/*.rs 2>/dev/null | head -5\", \"description\": \"Locate set\u2026\n- Bash: {\"command\": \"sed -n 100,160p crates/tools/src/spec.rs\", \"description\": \"Read spec.rs set abbreviation table\"}\n- Bash: {\"command\": \"grep -rln \\\"meditativeplus-0\\\\(01\\\\|06\\\\|08\\\\|10\\\\|12\\\\|13\\\\|14\\\\|15\\\\|17\\\\|19\\\\|20\\\\|24\\\\|25\\\\|26\\\\)\\\\|traininggrounds-0\\\\(01\\\\|02\\\\|03\\\\|04\\\\|05\\\\|08\\\\|10\\\\|11\\\\|15\\\\|16\\\\|17\\\\|22\\\\|25\u2026\n- Bash: {\"command\": \"grep -n \\\"alt\\\" apps/web/src/cards/variantLevels.test.tsx apps/web/src/cards/fullArtTiers.test.tsx apps/web/src/cards/depth.test.tsx apps/web/src/cards/radiantDiff.test.ts apps/web/src/c\u2026\n- Bash: {\"command\": \"grep -rn \\\"\\\\\\\"alt\\\\\\\"\\\\|'alt'\\\\|artSeedOf(.*alt\\\" apps/web/src --include=*.test.ts --include=*.test.tsx -l | head -20; ls apps/web/src/cards/art/fixtures/\", \"description\": \"List tests u\u2026\n- Bash: {\"command\": \"ls spec/rulings/R3397* 2>/dev/null; ls spec/pending/; grep -n \\\"Amended by\\\" spec/rulings/R2940001.md spec/rulings/R3393000.md | head\", \"description\": \"Confirm ruling number free and ame\u2026\n- Bash: {\"command\": \"grep -n \\\"SCENE_LINES\\\" -A 14 apps/web/src/cards/art/scene.ts | head -24\", \"description\": \"Read SCENE_LINES family ink table\"}\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Decisions so far\\n- New files: meditativePlusAltRecipes.ts (14), trainingGroundsAltRecipes.ts (22), setAltScenes.test.tsx,\\n e2e/cypress/component/set-a\u2026\n- Bash: {\"command\": \"sed -n 1,12p apps/web/src/cards/art/sceneKitPlaces.ts; sed -n 1215,1260p apps/web/src/cards/art/sceneKitPlaces.ts | grep -n \\\"R3396000\\\\|category: \\\\\\\"architecture\\\\\\\"\\\\|category: \\\\\\\"te\u2026\n- Bash: {\"command\": \"sed -n 78,88p apps/web/src/cards/art/ART.md | grep -n -i \\\"alt\\\" ; sed -n 467,507p apps/web/src/cards/art/ART.md | grep -n -i \\\"alt\\\\|seed\\\"\", \"description\": \"Check ART.md TG sections fo\u2026\n- Bash: {\"command\": \"cat > .bot-plan.md <<'EOF'\\n## Goal\\n\\nEach of the 36 Meditative+ and Training Grounds cards offered `version-alt-art` (14 M+ and 22 TG, the issue's table, confirmed against `apps/web/sr\u2026\n- Bash: {\"command\": \"grep -n \\\"export type ArtMotion\\\\b\\\\|export type ArtMotion =\\\" apps/web/src/cards/art/motion.ts; grep -n \\\"export function compositionFor\\\\|export function compositionOf\\\" apps/web/src/c\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = {\\n\\\"\\\"\\\"- **Other tests reading `ALT_SCENE_RECIPES` whole.** Step 6 covers every reader found (`grep -rn ALT_SCEN\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = {\\n\\\"\\\"\\\"1. **Kit parts.** Add 13 parts to the existing modules. Do not create a new module: the count tests in `setScenes.te\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3397/.bot-plan.md\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = {\\n\\\"\\\"\\\"title \\\"Every Meditative+ and Training Grounds card offered Alt art draws an alt scene recipe of its own, its subjec\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = {\\n\\\"\\\"\\\"Every picture changes at least `ALT_PICTURE_CHANGE_MIN` (0.6, already in `sceneRecipes.ts`) of the normal window's s\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = {\\n\\\"\\\"\\\"It adds a vitest suite, a component spec with screenshots, ruling R3397000, a `--visual` fragment, and a per-card ve\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = {\\n\\\"\\\"\\\" - Nature: `goat` (creatures, mountain goat standing), `deer` (creatures), `duck` (creatures, paddling, waterline), \u2026\n- Bash: {\"command\": \"grep -n \\\"A Classic+ card offered Alt art draws an alt recipe of its own instead\\\" apps/web/src/cards/art/ART.md; sed -n 8,11p apps/web/src/cards/art/scene.ts; sed -n 44p apps/web/src/ca\u2026\n- Bash: {\"command\": \"sed -i 's/10. \\\\*\\\\*`ART.md`.\\\\*\\\\* Line 139 becomes:/10. **`ART.md`.** Line 142 becomes:/; s/In the header (lines 9\\u201311) and the `sceneRecipeOf` doc/In the header (lines 9\\u201310) \u2026\n- said: ## Goal Each of the 36 Meditative+ and Training Grounds cards offered `version-alt-art` gets an **alt scene recipe** written from its brief. That is 14 Meditative+ (M+) and 22 Training Grounds (TG) cards, checked against `wire/generated/cosmetics.ts`. Each recipe keeps the card's subject and moves \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-08T21:03:51Z",
       "owner_why": "it plans it",
@@ -15527,9 +15519,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-07T17:06:29Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42523272193",
+      "run_id": "pending:c825f84a-1794173168",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-08T21:03:51Z",
+      "started_at": "2026-11-08T21:26:44Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17576,9 +17568,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T21:03:51Z",
+    "at": "2026-11-08T21:26:44Z",
     "url": "",
-    "what": "plan #3397 on claude-8"
+    "what": "build #3397 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-08T21:10:59Z",
