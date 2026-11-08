@@ -17180,6 +17180,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 150,
       "started_at": "2026-11-08T17:43:24Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -35438,9 +35439,33 @@
         "title": "Patch: every Classic+ card drawn as what it is: a scene of its own for each, richer the rarer",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-4"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "e8f7c3bd5dfd3dcee6c83d017831f2d24f140a52",
+        "issue": 3393,
+        "merged_at": "2026-11-08T19:36:29Z",
+        "n": 150,
+        "pr": 3438,
+        "queued_at": "2026-11-08T19:36:29Z",
+        "sha": "3ea20043dddfe1aae9f1ead4b497b690512d4b3e",
+        "status": "queued",
+        "title": "Patch: every Meditative+ and Training Grounds card drawn as what it is: a scene of its own for each, richer the rarer",
+        "tries": 0
       }
     ],
-    "count": 149
+    "count": 150
   },
   "statistics": {
     "at": "2026-11-08T19:29:01Z"
