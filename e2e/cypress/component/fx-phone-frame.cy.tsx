@@ -381,21 +381,22 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
   });
 
   it("R2803000 a board with 4 auras holds the phone frame budget", () => {
-  cy.viewport(PHONE.width, PHONE.height);
-  const view = fullBoardView();
-  view.you.backrow = [
-    faceUpBackrow("p1", { defId: "core-014", type: "Field Spell" }),
-    faceUpBackrow("p1", { defId: "classic-042", type: "Field Spell" }),
-    faceUpBackrow("p1", { defId: "classic-075", type: "Field Spell" }),
-    faceUpBackrow("p1", { defId: "meditative-040", type: "Field Spell" }),
-    faceUpBackrow("p1", { defId: "core-084", type: "Trap", radiant: true }),
-  ];
-  expect(planAuras(view, new Map()).map((aura) => aura.defId)).to.have.length(4);
-  holdsBudget("Four auras", () => {
-    mountScene(view, view, []);
-    cy.get(`[data-aura-look]`, { timeout: 4_000 }).should("have.length.greaterThan", 0);
-    cy.get(CANVAS).should("exist");
-    return sampleFrames();
+    cy.viewport(PHONE.width, PHONE.height);
+    const view = fullBoardView();
+    view.you.backrow = [
+      faceUpBackrow("p1", { defId: "core-014", type: "Field Spell" }),
+      faceUpBackrow("p1", { defId: "classic-042", type: "Field Spell" }),
+      faceUpBackrow("p1", { defId: "classic-075", type: "Field Spell" }),
+      faceUpBackrow("p1", { defId: "meditative-040", type: "Field Spell" }),
+      faceUpBackrow("p1", { defId: "core-084", type: "Trap", radiant: true }),
+    ];
+    expect(planAuras(view, new Map()).map((aura) => aura.defId)).to.have.length(4);
+    holdsBudget("Four auras", () => {
+      mountScene(view, view, []);
+      cy.get(`[data-aura-look]`, { timeout: 4_000 }).should("have.length.greaterThan", 0);
+      cy.get(CANVAS).should("exist");
+      return sampleFrames();
+    });
   });
 
   it("R3342000 a full board of tile auras holds the phone frame budget", () => {
@@ -408,5 +409,4 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       return sampleFrames();
     });
   });
-});
 });
