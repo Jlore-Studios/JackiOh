@@ -9,13 +9,15 @@
 // Pad's canvas, Goetzmann Game Design's napkin) shows that art at rest behind the card, the same parts
 // the live takeover mounts, painted by fx.css and never a card face (R202).
 // R3389000: it wears its card's own takeover look (`data-takeover-look`), In Too Deep's abyss among them.
+// R3407000: a Mythic whose takeover draws its own picture (`takeoverArtOf`) shows that picture filling the
+// screen behind the rays, still, as its takeover's still form.
 
 import { useContext, useEffect, type ReactElement } from "react";
 
 import type { PlayerView } from "@jackioh/shared";
 
 import { CardFace } from "../cards/index.ts";
-import { takeoverLookOf } from "../fx/takeover.ts";
+import { takeoverArtOf, takeoverLookOf } from "../fx/takeover.ts";
 import { takeoverArtParts } from "../fx/takeoverArt.ts";
 import { CatalogContext } from "./catalog.ts";
 import { namedFace } from "./faces.ts";
@@ -42,8 +44,10 @@ export default function TakeoverStill({ defId, instanceId, view, onDone }: Takeo
   if (face === null) return null;
   const look = takeoverLookOf(defId);
   const art = takeoverArtParts(look);
+  const picture = takeoverArtOf(defId);
   return (
     <div className="takeover-still" data-testid="takeover-still" data-takeover-def={defId} data-takeover-look={look} aria-hidden="true">
+      {picture === undefined ? null : <img className="takeover-still-art" src={picture} alt="" aria-hidden="true" draggable={false} decoding="async" />}
       {art.length > 0 ? (
         <span className="takeover-art" data-look={look} data-still="true" aria-hidden="true">
           {art.map((part) => (

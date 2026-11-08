@@ -8,6 +8,13 @@
 // palette.css name, none in Radiant's gold window.
 // R3390000: the Classic+ scenes (#3390) added six poses (spread, strike, run, sit, flex, kneel), eight
 // heads, five hairs and headgears, twelve outfits and fourteen held items, each drawn as the first ones are.
+// R3392000: Core's scenes (#3392) added the poses, heads, headgear, outfits and items their briefs name, each
+// after the old ones of its kind.
+// R3393000: the Meditative+ and Training Grounds scenes (#3393) added four poses (post, treads, lift, hips), three
+// heads, six hairs, headgears and glasses, eight outfits (the living potions' flask, the dummy's straw, the totem,
+// the sluice gate, the Golem's posts, the Shredder's machine among them) and ten held items; its lab coat
+// and club are #3392's (`outfit-labcoat`, `item-club`), its tree-trunk club `item-trunk-club`.
+// R3401000: the Meditative scenes (#3401) added six hairs and headgears, four outfits and ten held items.
 
 import type { Tag } from "@jackioh/shared";
 
@@ -18,7 +25,28 @@ import { local, type Local } from "./sceneKit.ts";
 
 type Point = readonly [number, number];
 
-export type PoseId = "pose-stand" | "pose-guard" | "pose-raise" | "pose-spread" | "pose-strike" | "pose-run" | "pose-sit" | "pose-flex" | "pose-kneel";
+export type PoseId =
+  | "pose-stand"
+  | "pose-guard"
+  | "pose-raise"
+  | "pose-spread"
+  | "pose-strike"
+  | "pose-run"
+  | "pose-sit"
+  | "pose-flex"
+  | "pose-kneel"
+  | "pose-lunge"
+  | "pose-stride"
+  | "pose-perch"
+  | "pose-genuflect"
+  | "pose-cast"
+  | "pose-point"
+  | "pose-hold"
+  | "pose-block"
+  | "pose-post"
+  | "pose-treads"
+  | "pose-lift"
+  | "pose-hips";
 export type HeadId =
   | "head-human"
   | "head-felinor"
@@ -32,7 +60,16 @@ export type HeadId =
   | "head-golem"
   | "head-automaton"
   | "head-goblin"
-  | "head-mummy";
+  | "head-mummy"
+  | "head-lizard"
+  | "head-robot"
+  | "head-stone"
+  | "head-ghoul"
+  | "head-lantern"
+  | "head-cloud"
+  | "head-eyes"
+  | "head-sack"
+  | "head-ogre";
 export type HairId =
   | "hair-short"
   | "hair-long"
@@ -46,7 +83,29 @@ export type HairId =
   | "hat-brim"
   | "goggles"
   | "helm"
-  | "tonsure";
+  | "tonsure"
+  | "steel-helmet"
+  | "horns"
+  | "cap-feather"
+  | "bucket-hat"
+  | "spectacles"
+  | "headband"
+  | "face-mask"
+  | "wild-goggles"
+  | "veil"
+  | "fedora"
+  | "hair-spiky"
+  | "beard"
+  | "flap-cap"
+  | "scholar-cap"
+  | "sweatband"
+  | "glasses"
+  | "headphones"
+  | "beanie"
+  | "pompadour"
+  | "conductor-cap"
+  | "tall-hat"
+  | "hair-bun";
 export type OutfitId =
   | "outfit-tunic"
   | "outfit-armor"
@@ -68,7 +127,33 @@ export type OutfitId =
   | "outfit-cardigan"
   | "outfit-leaves"
   | "outfit-patched"
-  | "outfit-stone";
+  | "outfit-stone"
+  | "outfit-layered-plate"
+  | "outfit-waistcoat"
+  | "outfit-sweater"
+  | "outfit-labcoat"
+  | "outfit-tutor-cardigan"
+  | "outfit-bomber"
+  | "outfit-work-apron"
+  | "outfit-hoodie"
+  | "outfit-rags"
+  | "outfit-rock"
+  | "outfit-gown"
+  | "outfit-blazer"
+  | "outfit-stripes"
+  | "outfit-lantern"
+  | "outfit-flask"
+  | "outfit-straw"
+  | "outfit-totem"
+  | "outfit-sluice"
+  | "outfit-posts"
+  | "outfit-machine"
+  | "outfit-parka"
+  | "outfit-vest"
+  | "outfit-overalls"
+  | "outfit-kaftan"
+  | "outfit-tailcoat"
+  | "outfit-silks";
 export type ItemId =
   | "item-sword"
   | "item-shield"
@@ -88,7 +173,44 @@ export type ItemId =
   | "item-scroll"
   | "item-hourglass"
   | "item-sack"
-  | "item-tower-shield";
+  | "item-tower-shield"
+  | "item-rapier"
+  | "item-knife"
+  | "item-pavise"
+  | "item-silver-coin"
+  | "item-card"
+  | "item-stopwatch"
+  | "item-chalk"
+  | "item-cone"
+  | "item-map"
+  | "item-clipboard"
+  | "item-trumpet"
+  | "item-binoculars"
+  | "item-spade"
+  | "item-light-stick"
+  | "item-club"
+  | "item-twig-spear"
+  | "item-broom"
+  | "item-axe"
+  | "item-boulder"
+  | "item-wand"
+  | "item-ladle"
+  | "item-purse"
+  | "item-brush"
+  | "item-oar"
+  | "item-pointer"
+  | "item-lance"
+  | "item-trunk-club"
+  | "item-lantern"
+  | "item-phone"
+  | "item-key"
+  | "item-baton"
+  | "item-ink-brush"
+  | "item-loupe"
+  | "item-fan"
+  | "item-twin-blades"
+  | "item-rod"
+  | "item-comb";
 export type FigurePartId = PoseId | HeadId | HairId | OutfitId | ItemId;
 
 /** The parts a figure wears, and the two paints its look lays on them. */
@@ -117,12 +239,24 @@ export const POSE_ANCHORS: Readonly<Record<PoseId, { readonly neck: Point; reado
   "pose-stand": { neck: [0, -44], hand: [9, -23.4], hip: [0, -24] },
   "pose-guard": { neck: [0, -43], hand: [8.5, -31], hip: [0, -23] },
   "pose-raise": { neck: [0, -44], hand: [11, -56.2], hip: [0, -24] },
+  "pose-lunge": { neck: [0, -42], hand: [17, -31], hip: [0, -22] },
+  "pose-stride": { neck: [0, -44], hand: [9, -30], hip: [0, -24] },
+  "pose-perch": { neck: [0, -33], hand: [8, -15], hip: [0, -13] },
+  "pose-genuflect": { neck: [0, -35], hand: [9, -27], hip: [0, -15] },
+  "pose-cast": { neck: [0, -44], hand: [14, -34], hip: [0, -24] },
+  "pose-point": { neck: [0, -44], hand: [13, -41], hip: [0, -24] },
+  "pose-hold": { neck: [0, -44], hand: [6, -30], hip: [0, -24] },
+  "pose-block": { neck: [0, -44], hand: [17, -37], hip: [0, -24] },
   "pose-spread": { neck: [0, -44], hand: [17.9, -48.4], hip: [0, -24] },
   "pose-strike": { neck: [0, -43], hand: [-2.9, -58.3], hip: [0, -23] },
   "pose-run": { neck: [2, -43], hand: [14, -37.8], hip: [0, -23] },
   "pose-sit": { neck: [0, -34], hand: [10.8, -16.4], hip: [0, -14] },
   "pose-flex": { neck: [0, -44], hand: [11, -49.6], hip: [0, -24] },
   "pose-kneel": { neck: [0, -36], hand: [17.3, -42.3], hip: [0, -16] },
+  "pose-post": { neck: [0, -44], hand: [9, -34], hip: [0, -24] },
+  "pose-treads": { neck: [0, -34], hand: [12, -24], hip: [0, -14] },
+  "pose-lift": { neck: [0, -44], hand: [0, -62.4], hip: [0, -24] },
+  "pose-hips": { neck: [0, -44], hand: [7.8, -25.6], hip: [0, -24] },
 };
 
 type Flags = { readonly inked?: boolean; readonly main?: boolean; readonly skin?: boolean };
@@ -212,6 +346,142 @@ function poseRaise(at: PartPlace, rng: Rng): KitShape[] {
     [
       [[-6.6, -41], [-10, -48], [-11 - reach, -55]],
       [[6.6, -41], [10, -48], [11, -55]],
+    ],
+  );
+}
+
+/** A fencer's lunge toward the facing side: front knee bent, back leg stretched, near arm thrust level. */
+function poseLunge(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const reach = between(rng, -0.6, 0.6);
+  return limbs(
+    f,
+    [
+      [[-2.4, -22], [-9, -11.5], [-16, -1.5]],
+      [[2.4, -22], [10, -16], [10, -1.5]],
+    ],
+    [
+      [[-6.6, -39.5], [-11, -36], [-13.5, -31]],
+      [[6.6, -39.5], [12, -35.5 + reach * 0.4], [17, -31]],
+    ],
+  );
+}
+
+/** Mid-stride: front knee up, back foot pushing off, arms pumping. */
+function poseStride(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const pump = between(rng, -0.6, 0.6);
+  return limbs(
+    f,
+    [
+      [[-2.4, -24], [-8, -13], [-14, -2.5]],
+      [[2.4, -24], [9, -17], [7, -6.5]],
+    ],
+    [
+      [[-6.6, -41], [-11, -37 + pump], [-12, -31]],
+      [[6.6, -41], [10.5, -36 + pump], [9, -30]],
+    ],
+  );
+}
+
+/** Seated at hip height: thighs forward, shins down, hands forward. */
+function posePerch(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const lap = between(rng, -0.5, 0.5);
+  return limbs(
+    f,
+    [
+      [[-2.4, -13], [4.4, -13.4], [6.6, -1.5]],
+      [[2.4, -13], [6.4, -13.4], [8, -1.5]],
+    ],
+    [
+      [[-6.6, -30], [-4.6, -22], [2 + lap, -16]],
+      [[6.6, -30], [9.6, -22], [8, -15]],
+    ],
+  );
+}
+
+/** One knee down: the front foot flat, the back knee on the ground, the near arm raised forward. */
+function poseGenuflect(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const reach = between(rng, -0.5, 0.5);
+  return limbs(
+    f,
+    [
+      [[-2.4, -15], [-3, -2], [-11, -2]],
+      [[2.4, -15], [9, -14], [9, -1.5]],
+    ],
+    [
+      [[-6.6, -32], [-4, -25], [3, -19]],
+      [[6.6, -32], [11, -30 + reach], [9, -27]],
+    ],
+  );
+}
+
+/** Both arms thrown forward at shoulder height, feet planted wide. */
+function poseCast(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const spread = between(rng, 0, 1);
+  return limbs(
+    f,
+    [
+      [[-2.6, -24], [-5.4 - spread, -12], [-7 - spread, -1.5]],
+      [[2.6, -24], [4.6 + spread, -12], [6 + spread, -1.5]],
+    ],
+    [
+      [[-6.6, -41], [3, -39.5], [12, -36.5]],
+      [[6.6, -41], [10.4, -37.4], [14, -34]],
+    ],
+  );
+}
+
+/** The near arm up and forward, pointing; the far hand on the hip. */
+function posePoint(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const lift = between(rng, -0.6, 0.6);
+  return limbs(
+    f,
+    [
+      [[-2.4, -24], [-2.8, -12], [-3.2, -1.5]],
+      [[2.4, -24], [3.2, -12], [4.4, -1.5]],
+    ],
+    [
+      [[-6.6, -41], [-10, -32], [-4.4, -25]],
+      [[6.6, -41], [10, -42.4 + lift], [13, -41]],
+    ],
+  );
+}
+
+/** Both arms cradling at the chest. */
+function poseHold(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const hug = between(rng, -0.4, 0.4);
+  return limbs(
+    f,
+    [
+      [[-2.4, -24], [-2.6, -12], [-3.2, -1.5]],
+      [[2.4, -24], [2.9, -12], [3.6, -1.5]],
+    ],
+    [
+      [[-6.6, -41], [-8.2, -34.6], [-1.6 + hug, -29.4]],
+      [[6.6, -41], [9, -35], [6, -30]],
+    ],
+  );
+}
+
+/** Arms spread wide to block, feet apart. */
+function poseBlock(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const stance = between(rng, 0, 1);
+  return limbs(
+    f,
+    [
+      [[-2.6, -24], [-5.4 - stance, -12], [-7 - stance, -1.5]],
+      [[2.6, -24], [5 + stance, -12], [6.6 + stance, -1.5]],
+    ],
+    [
+      [[-6.6, -41], [-12, -39], [-17, -37]],
+      [[6.6, -41], [12, -39], [17, -37]],
     ],
   );
 }
@@ -431,6 +701,204 @@ function robe(at: PartPlace, rng: Rng): KitShape[] {
     shape(f.poly([[-2.6, SHOULDER + 1], [2.6, SHOULDER + 1], [3.6, HEM - 3], [-3.6, HEM - 3]]), "black", 0.9),
     shape(f.circle(-1.2, -8, 0.35) + f.circle(1.4, -3.4, 0.3) + f.circle(-0.6, 2.6, 0.4) + f.circle(1, 9, 0.3) + f.circle(-1.6, 14, 0.35), "violet-300", 0.85),
     shape(f.band([[-7, SHOULDER + 0.4], [-8.2, 4], [-9.4, HEM - 0.6]], 0.6) + f.band([[7, SHOULDER + 0.4], [8.2, 4], [9.4, HEM - 0.6]], 0.6), "purple-400", 0.6),
+  ];
+}
+
+/** Layered plate on the torso, big pauldrons and a tasset skirt, in the look's cloth. */
+function outfitLayeredPlate(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const lift = between(rng, -0.3, 0.3);
+  return [
+    shape(f.poly([[-7, SHOULDER], [7, SHOULDER], [6.2, 0], [-6.2, 0]]), "slate-400", 1, MAIN_INKED),
+    shape(f.band([[-6.6, -12], [6.6, -12]], 0.6) + f.band([[-6.4, -7.2], [6.4, -7.2]], 0.6) + f.band([[-6.2, -2.6], [6.2, -2.6]], 0.6), "slate-900", 0.4),
+    shape(f.ellipse(-7.4, SHOULDER + 0.8 + lift, 3.4, 2.5) + f.ellipse(7.4, SHOULDER + 0.8 - lift, 3.4, 2.5), "slate-400", 1, MAIN_INKED),
+    shape(f.poly([[-6.4, 0.6], [-2.2, 0.6], [-2.8, 7.8], [-7, 7.2]]) + f.poly([[-1.6, 0.6], [1.6, 0.6], [1.4, 8.4], [-1.4, 8.4]]) + f.poly([[2.2, 0.6], [6.4, 0.6], [7, 7.2], [2.8, 7.8]]), "slate-400", 1, MAIN_INKED),
+    shape(f.poly([[-6.5, -1.4], [6.5, -1.4], [6.4, 0.8], [-6.4, 0.8]]), "wood-700", 1, INKED),
+    shape(f.circle(-7.4, SHOULDER + 0.6, 0.45) + f.circle(7.4, SHOULDER + 0.6, 0.45) + f.circle(-4, -0.3, 0.4) + f.circle(0, -0.3, 0.4) + f.circle(4, -0.3, 0.4), "slate-100", 1),
+  ];
+}
+
+/** A loud checked waistcoat over a white shirt, with a watch chain. */
+function outfitWaistcoat(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const sag = between(rng, 0.4, 1.2);
+  const checks: string[] = [];
+  for (let row = 0; row < 4; row++) for (let col = 0; col < 2; col++) {
+    const y = -14.4 + row * 3.2;
+    const left = -5.6 + col * 1.6 + (row % 2) * 1.6;
+    if (left < -2.6) checks.push(f.poly([[left, y], [left + 1.6, y], [left + 1.6, y + 1.6], [left, y + 1.6]]));
+    const right = 2.4 + col * 1.6 + (row % 2) * 1.6;
+    if (right + 1.6 < 6) checks.push(f.poly([[right, y], [right + 1.6, y], [right + 1.6, y + 1.6], [right, y + 1.6]]));
+  }
+  return [
+    shape(f.poly([[-7, SHOULDER], [7, SHOULDER], [6.4, 1.2], [-6.4, 1.2]]), "white", 1, INKED),
+    shape(f.poly([[-6.6, SHOULDER], [-2.4, SHOULDER], [0, -8], [2.4, SHOULDER], [6.6, SHOULDER], [6.2, 1.2], [-6.2, 1.2]]), "red-600", 1, MAIN_INKED),
+    shape(checks.join(""), "slate-900", 0.5),
+    shape(f.band([[-4.6, -4], [-1, -2.2 + sag], [2.4, -4.4]], 0.35), "slate-100", 1),
+    shape(f.circle(-4.8, -4, 0.7), "slate-100", 1, INKED),
+  ];
+}
+
+/** A plain sweater: ribbed collar and hem, cable lines down the front. */
+function outfitSweater(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const twist = between(rng, 0.5, 0.9);
+  const cable = (x: number): string => f.band([[x, -14], [x + twist, -11.5], [x, -9], [x + twist, -6.5], [x, -4]], 0.5);
+  return [
+    shape(f.poly([[-7.2, SHOULDER], [7.2, SHOULDER], [7, 0.4], [-7, 0.4]]), "stone-500", 1, MAIN_INKED),
+    shape(f.poly([[-3, SHOULDER], [3, SHOULDER], [2.4, SHOULDER + 1.6], [-2.4, SHOULDER + 1.6]]), "slate-900", 0.4),
+    shape(f.poly([[-7.1, 0.4], [7.1, 0.4], [7, 2.8], [-7, 2.8]]), "stone-500", 1, MAIN_INKED),
+    shape([-5.6, -3.6, -1.6, 0.4, 2.4, 4.4, 6.2].map((x) => f.band([[x, 0.6], [x, 2.6]], 0.3)).join(""), "slate-900", 0.4),
+    shape(cable(-3.6) + cable(2.6), "slate-900", 0.3),
+  ];
+}
+
+/** A long open white coat to the hem, the shirt beneath in the look's cloth, two pockets. */
+function outfitLabcoat(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const swing = between(rng, -0.6, 0.6);
+  return [
+    shape(f.poly([[-2.8, SHOULDER], [2.8, SHOULDER], [2.6, 2], [-2.6, 2]]), "blue-700", 1, MAIN_INKED),
+    shape(f.poly([[-7, SHOULDER], [-2.4, SHOULDER], [-3 + swing, HEM], [-9.4, HEM], [-7, 2]]) + f.poly([[2.4, SHOULDER], [7, SHOULDER], [7, 2], [9.4, HEM], [3 - swing, HEM]]), "white", 1, INKED),
+    shape(f.poly([[-2.4, SHOULDER], [-4.2, SHOULDER - 0.8], [-3, SHOULDER + 5]]) + f.poly([[2.4, SHOULDER], [4.2, SHOULDER - 0.8], [3, SHOULDER + 5]]), "slate-400", 0.6),
+    shape(f.poly([[-6.4, -2], [-3.6, -2], [-3.6, 2.6], [-6.4, 2.6]]) + f.poly([[3.6, -2], [6.4, -2], [6.4, 2.6], [3.6, 2.6]]), "slate-400", 0.55, INKED),
+    shape(f.band([[-6, 5], [-6.4, HEM - 1]], 0.4) + f.band([[6, 5], [6.4, HEM - 1]], 0.4), "slate-400", 0.35),
+  ];
+}
+
+/** A cardigan over a white shirt and tie, buttoned, with faint chalk dust. */
+function outfitTutorCardigan(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const dust = (): number => between(rng, -0.5, 0.5);
+  return [
+    shape(f.poly([[-3, SHOULDER], [3, SHOULDER], [2.6, 1.4], [-2.6, 1.4]]), "white", 1, INKED),
+    shape(f.poly([[-0.8, SHOULDER + 0.6], [0.8, SHOULDER + 0.6], [1.1, -8], [0, -4.4], [-1.1, -8]]), "blue-900", 1),
+    shape(f.poly([[-7, SHOULDER], [-2.2, SHOULDER], [-1.8, 1.8], [-7, 1.8]]) + f.poly([[2.2, SHOULDER], [7, SHOULDER], [7, 1.8], [1.8, 1.8]]), "wood-700", 1, MAIN_INKED),
+    shape(f.circle(-2.8, -9, 0.5) + f.circle(-2.8, -4.6, 0.5) + f.circle(-2.8, -0.2, 0.5), "slate-100", 1),
+    shape(f.circle(-5.2 + dust(), -10.6, 0.5) + f.circle(5 + dust(), -8 + dust(), 0.45) + f.circle(-4 + dust(), -2.6, 0.4) + f.circle(3.8, -12.4 + dust(), 0.4) + f.circle(5.6, -2.2 + dust(), 0.35), "white", 0.3),
+  ];
+}
+
+/** A bomber jacket: ribbed hem, collar and zip, white and sky-blue sequin dots. */
+function outfitBomber(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const dot = (x: number, y: number): [number, number] => [x + between(rng, -0.4, 0.4), y + between(rng, -0.4, 0.4)];
+  const a = [dot(-4.8, -13), dot(-1.4, -10.4), dot(3.4, -12.2), dot(-4, -5.4), dot(5, -6.4)];
+  const b = [dot(-2.2, -14.4), dot(4.6, -9.4), dot(-5.6, -9.6), dot(0.8, -6), dot(-1.6, -2.4)];
+  return [
+    shape(f.poly([[-7.4, SHOULDER], [7.4, SHOULDER], [7.2, 0.2], [-7.2, 0.2]]), "slate-700", 1, MAIN_INKED),
+    shape(f.poly([[-7.2, 0.2], [7.2, 0.2], [6.8, 2.8], [-6.8, 2.8]]) + f.poly([[-3.4, SHOULDER], [3.4, SHOULDER], [2.6, SHOULDER + 1.8], [-2.6, SHOULDER + 1.8]]), "slate-900", 0.55, INKED),
+    shape(f.band([[0, SHOULDER + 1.8], [0, 0.2]], 0.35), "slate-100", 0.7),
+    shape(a.map(([x, y]) => f.circle(x, y, 0.45)).join(""), "white", 0.9),
+    shape(b.map(([x, y]) => f.circle(x, y, 0.45)).join(""), "sky-300", 0.9),
+  ];
+}
+
+/** A stone canvas apron with a pocket over a shirt in the look's cloth. */
+function outfitWorkApron(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const flare = between(rng, 5.4, 6.2);
+  return [
+    shape(f.poly([[-7, SHOULDER], [7, SHOULDER], [6.4, 1.6], [-6.4, 1.6]]), "blue-700", 1, MAIN_INKED),
+    shape(f.band([[-3.6, SHOULDER + 1.4], [-2.6, SHOULDER]], 0.8) + f.band([[3.6, SHOULDER + 1.4], [2.6, SHOULDER]], 0.8), "stone-500", 1),
+    shape(f.poly([[-3.8, SHOULDER + 1.4], [3.8, SHOULDER + 1.4], [5, -4], [flare, 7.4], [-flare, 7.4], [-5, -4]]), "stone-500", 1, INKED),
+    shape(f.poly([[-3, -2.2], [3, -2.2], [3, 3], [-3, 3]]), "slate-900", 0.25, INKED),
+    shape(f.band([[-3, -2.2], [3, -2.2]], 0.4), "slate-100", 0.5),
+  ];
+}
+
+/** An oversized hoodie: hood behind the neck, pouch pocket, drawstrings. */
+function outfitHoodie(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const string = between(rng, -0.4, 0.4);
+  return [
+    shape(f.poly([[-6.2, SHOULDER + 0.6], [-4.8, SHOULDER - 3.2], [0, SHOULDER - 3.8], [4.8, SHOULDER - 3.2], [6.2, SHOULDER + 0.6]]), "stone-500", 1, MAIN_INKED),
+    shape(f.poly([[-8, SHOULDER], [8, SHOULDER], [8.6, 3], [-8.6, 3]]), "stone-500", 1, MAIN_INKED),
+    shape(f.poly([[-3.4, SHOULDER], [3.4, SHOULDER], [2.2, SHOULDER + 2.4], [-2.2, SHOULDER + 2.4]]), "slate-900", 0.4),
+    shape(f.poly([[-4.8, -6.4], [4.8, -6.4], [5.4, -0.6], [-5.4, -0.6]]) + f.poly([[-8.6, 1.4], [8.6, 1.4], [8.6, 3], [-8.6, 3]]), "slate-900", 0.25),
+    shape(f.band([[-1.5, SHOULDER + 1.4], [-1.6 + string, -10]], 0.4) + f.band([[1.5, SHOULDER + 1.4], [1.6 - string, -10]], 0.4), "white", 0.9),
+  ];
+}
+
+/** Torn rags with a jagged hem, bandage wraps across the chest. */
+function outfitRags(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const j = (): number => between(rng, -1.2, 1.2);
+  const hem: Point[] = [[6.8, 3], [5.4, 7 + j()], [4, 3.6], [2.4, 8 + j()], [0.8, 3.4], [-0.8, 7 + j()], [-2.4, 3.2], [-4, 8.4 + j()], [-5.4, 3.6], [-6.8, 6.4 + j()]];
+  return [
+    shape(f.poly([[-7, SHOULDER], [7, SHOULDER], ...hem, [-6.8, 3]]), "stone-500", 1, MAIN_INKED),
+    shape(f.poly([[-4, -6.4], [-2.6, -4.6], [-4.6, -2.6]]) + f.poly([[3.6, -12.4], [5.4, -9.6], [2.6, -9.2]]), "slate-900", 0.35),
+    shape(f.band([[-7, -13], [7, -5.4]], 1.5), "slate-100", 0.95, INKED),
+    shape(f.band([[7, -14.4], [-6.6, -6.2]], 1.5), "slate-100", 0.95, INKED),
+    shape(f.band([[-5.8, -9.4], [5.6, -13.2]], 0.3), "slate-400", 0.5),
+  ];
+}
+
+/** A torso of stacked rock in the look's skin, with glowing seams. */
+function outfitRock(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const j = (): number => between(rng, -0.5, 0.5);
+  return [
+    shape(f.poly([[-7.4, SHOULDER], [7.4, SHOULDER], [7.8 + j(), -11.6], [-7.6 + j(), -11.2]]) + f.poly([[-7.8, -10.4], [7.6, -10.6], [7.2 + j(), -5.4], [-7.4 + j(), -5]]), "stone-500", 1, SKIN_INKED),
+    shape(f.poly([[-7, -3.8], [7.2, -4], [6.6 + j(), 1.6], [-6.8, 1.8]]) + f.poly([[-5.6, 2.6], [5.8, 2.4], [5 + j(), 6.4], [-5.2, 6.6]]), "stone-500", 1, SKIN_INKED),
+    shape(f.band([[-7.6, -11], [-3, -10.6], [1, -11.2], [7.6, -10.6]], 1) + f.band([[-7.2, -4.4], [-1, -4.8], [3.4, -4], [7, -4.2]], 1) + f.band([[-5.6, 2], [0, 2.8], [5.6, 2.2]], 1), "ember-500", 0.45),
+    shape(f.band([[-7.6, -11], [-3, -10.6], [1, -11.2], [7.6, -10.6]], 0.45) + f.band([[-7.2, -4.4], [-1, -4.8], [3.4, -4], [7, -4.2]], 0.45) + f.band([[-5.6, 2], [0, 2.8], [5.6, 2.2]], 0.45), "orange-400", 1),
+    shape(f.poly([[-6, SHOULDER + 1.2], [-2.6, SHOULDER + 1.2], [-3.2, -12.4], [-6.4, -12.4]]), "white", 0.15),
+  ];
+}
+
+/** A long white robe to the hem with soft folds and a sky-blue sash. */
+function gown(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const j = (): number => between(rng, -0.6, 0.6);
+  const hem: Point[] = [[9.2, HEM], [6.6, HEM - 1.8 + j()], [3.8, HEM], [1, HEM - 1.6 + j()], [-1.8, HEM], [-4.6, HEM - 1.8 + j()], [-7, HEM], [-9.2, HEM - 0.4]];
+  return [
+    shape(f.poly([[-7, SHOULDER], [7, SHOULDER], [8.2, 4], ...hem, [-8.2, 4]]), "white", 1, MAIN_INKED),
+    shape(f.band([[-3.4, -6], [-4.2, 6], [-5, HEM - 2]], 0.7) + f.band([[1.4, -6], [1.8, 8], [2.6, HEM - 2]], 0.7) + f.band([[4.8, -8], [6, 6], [7, HEM - 2]], 0.6), "slate-900", 0.12),
+    shape(f.poly([[-2.6, SHOULDER + 1], [2.6, SHOULDER + 1], [1.6, -11], [0, -9.4], [-1.6, -11]]), "slate-900", 0.14),
+    shape(f.poly([[-7.2, -5], [7.2, -5], [7.4, -2.2], [-7.4, -2.2]]), "sky-300", 1, INKED),
+    shape(f.poly([[2.2, -2.2], [4, -2.2], [4.6, 5.4], [3, 5.6]]), "sky-300", 1, INKED),
+  ];
+}
+
+/** A plain suit jacket: lapels, a white shirt and a dark tie. */
+function outfitBlazer(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const hem = between(rng, 1.8, 2.8);
+  return [
+    shape(f.poly([[-7, SHOULDER], [7, SHOULDER], [6.6, hem], [-6.6, hem]]), "slate-700", 1, MAIN_INKED),
+    shape(f.poly([[-2.8, SHOULDER], [2.8, SHOULDER], [0, -7]]), "white", 1),
+    shape(f.poly([[-0.7, SHOULDER + 0.8], [0.7, SHOULDER + 0.8], [1, -9], [0, -6.4], [-1, -9]]), "slate-900", 1),
+    shape(f.poly([[-2.8, SHOULDER], [-4.8, SHOULDER - 1.2], [-0.2, -6.4]]) + f.poly([[2.8, SHOULDER], [4.8, SHOULDER - 1.2], [0.2, -6.4]]), "slate-900", 0.45),
+    shape(f.circle(1.6, -3.4, 0.5), "slate-900", 1),
+  ];
+}
+
+/** A striped suit with a bow tie. */
+function outfitStripes(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, -0.2, 0.2);
+  return [
+    shape(f.poly([[-7, SHOULDER], [7, SHOULDER], [6.4, 1.4], [-6.4, 1.4]]), "slate-700", 1, MAIN_INKED),
+    shape([-6, -3.8, -1.4, 1.4, 3.8, 6].map((x) => f.band([[x, SHOULDER + 1], [x * 0.95, 1]], 0.5)).join(""), "white", 0.55),
+    shape(f.poly([[-2.4, SHOULDER], [2.4, SHOULDER], [0, -8]]), "white", 1),
+    shape(f.poly([[0, -16.4 + tilt], [-2.8, -17.8], [-2.8, -15]]) + f.poly([[0, -16.4 + tilt], [2.8, -17.8], [2.8, -15]]), "red-600", 1, INKED),
+    shape(f.circle(0, -16.4 + tilt, 0.65), "red-900", 1),
+  ];
+}
+
+/** A lantern-bodied chest: a cloth-coloured metal frame round glass panes, a blazing flame inside. */
+function outfitLantern(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const flick = between(rng, -0.5, 0.5);
+  const flame = `M${f.p(0, -3)}Q${f.p(-3.2, -6.4)} ${f.p(-0.6 + flick, -12.6)}Q${f.p(0.4, -9.6)} ${f.p(1.2, -10.4)}Q${f.p(3.4, -6.6)} ${f.p(0, -3)}Z`;
+  return [
+    shape(f.poly([[-6.6, SHOULDER], [6.6, SHOULDER], [6.2, 1.4], [-6.2, 1.4]]) + f.poly([[-5, SHOULDER + 1.8], [-5, -0.4], [5, -0.4], [5, SHOULDER + 1.8]]), "slate-700", 1, MAIN_INKED),
+    shape(f.poly([[-5, SHOULDER + 1.8], [5, SHOULDER + 1.8], [5, -0.4], [-5, -0.4]]), "sky-300", 0.5),
+    shape(f.circle(0, -7.4, 5.6), "orange-400", 0.3),
+    shape(flame, "orange-400", 1),
+    shape(`M${f.p(0, -3.6)}Q${f.p(-1.4, -6)} ${f.p(0, -9)}Q${f.p(1.6, -6)} ${f.p(0, -3.6)}Z`, "white", 0.9),
+    shape(f.band([[-1.8, SHOULDER + 1.8], [-1.8, -0.4]], 0.5) + f.band([[1.8, SHOULDER + 1.8], [1.8, -0.4]], 0.5), "slate-700", 1, MAIN),
   ];
 }
 
@@ -687,6 +1155,70 @@ function stoneBody(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+/** R3401000: denim overalls (blue-800), bib and shorts in one, on straps with brass buttons over a shirt in the look's cloth. */
+function outfitOveralls(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const roll = between(rng, -0.4, 0.4);
+  return [
+    shape(f.poly([[-7.2, SHOULDER], [7.2, SHOULDER], [6.8, 1.6], [-6.8, 1.6]]), "red-400", 1, MAIN_INKED),
+    shape(
+      f.poly([[-4.2, -11.6], [4.2, -11.6], [4.6, -0.4], [6.8, 0.4], [7, 8.6 + roll], [1, 8.6 - roll], [0, 4.6], [-1, 8.6 - roll], [-7, 8.6 + roll], [-6.8, 0.4], [-4.6, -0.4]]),
+      "blue-800",
+      1,
+      INKED,
+    ),
+    shape(f.band([[-3.6, -11.4], [-4.8, SHOULDER + 0.2]], 1.1) + f.band([[3.6, -11.4], [4.8, SHOULDER + 0.2]], 1.1), "blue-800", 1, INKED),
+    shape(f.poly([[-2.4, -9], [2.4, -9], [2.2, -5.4], [-2.2, -5.4]]) + f.band([[-6.4, 7.4], [-1.4, 7.4]], 0.5) + f.band([[1.4, 7.4], [6.4, 7.4]], 0.5), "slate-900", 0.3),
+    shape(f.circle(-3.4, -10.8, 0.6) + f.circle(3.4, -10.8, 0.6), "brass-600", 1),
+    shape(f.band([[-0.2, -11], [0, 3.6]], 0.3), "slate-100", 0.4),
+  ];
+}
+
+/** R3401000: a long kaftan to the ankle in the look's cloth, a brass-embroidered placket down its front and a wide red-900 sash at the waist. */
+function outfitKaftan(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const j = (): number => between(rng, -0.5, 0.5);
+  return [
+    shape(f.poly([[-7, SHOULDER], [7, SHOULDER], [7.8, 4], [8.8, HEM - 1 + j()], [-8.8, HEM - 1 + j()], [-7.8, 4]]), "slate-800", 1, MAIN_INKED),
+    shape(f.poly([[-2.6, SHOULDER], [2.6, SHOULDER], [0, SHOULDER + 4.6]]), "slate-900", 0.5),
+    shape(f.band([[0, SHOULDER + 4.4], [0.2, -1.6]], 1) + f.band([[0.2, 1.4], [0.6, HEM - 1.4]], 1), "brass-600", 0.85),
+    shape(f.poly([[-7.4, -2], [7.4, -2], [7.6, 1.6], [-7.6, 1.6]]) + f.poly([[-3.2, 1.6], [-1.6, 1.6], [-2.2, 7.4 + j()], [-3.8, 7]]), "red-900", 1, INKED),
+    shape(f.band([[-4.4, 3], [-5.4, HEM - 2]], 0.6) + f.band([[4, 3], [5.2, HEM - 2]], 0.6), "slate-900", 0.2),
+  ];
+}
+
+/** R3401000: an evening tailcoat in the look's cloth, cut away in front, its two tails hanging behind to the knee, over a white shirt front and a black bow tie. */
+function outfitTailcoat(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const swing = between(rng, -0.6, 0.6);
+  return [
+    shape(f.poly([[-6.4, -1.2], [-2, 0], [-3 + swing, 13], [-5.2 + swing, 14.6], [-7.8 + swing, 12.4]]), "slate-900", 1, MAIN_INKED),
+    shape(f.poly([[-7, SHOULDER], [7, SHOULDER], [6.4, -1.4], [3.8, 1.2], [0.6, -3], [-6.4, 0.4]]), "slate-900", 1, MAIN_INKED),
+    shape(f.poly([[-2.4, SHOULDER], [2.4, SHOULDER], [1.4, -4.4], [-1.2, -4.4]]), "white", 1, INKED),
+    shape(f.poly([[-2.4, SHOULDER], [-4.4, SHOULDER + 1.2], [-1.2, -6]]) + f.poly([[2.4, SHOULDER], [4.4, SHOULDER + 1.2], [1.2, -6]]), "black", 0.45),
+    shape(f.poly([[0, SHOULDER + 1.4], [-2, SHOULDER + 0.4], [-2, SHOULDER + 2.4]]) + f.poly([[0, SHOULDER + 1.4], [2, SHOULDER + 0.4], [2, SHOULDER + 2.4]]), "black", 1),
+    shape(f.circle(0.2, -11, 0.35) + f.circle(0.3, -8, 0.35), "slate-900", 0.9),
+  ];
+}
+
+/** R3401000: loose silks in the look's cloth, a cross collar and a sash, their hem and the sash's ends blown back hard the way the figure does not face. */
+function outfitSilks(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const gust = between(rng, -1, 1);
+  return [
+    shape(f.poly([[-6.4, -1.4], [-12.6, -4.2 + gust], [-14.6, -2.6 + gust], [-12, -0.8], [-6.4, 0.8]]), "slate-100", 0.85, INKED),
+    shape(
+      f.poly([[-7.4, SHOULDER], [7.4, SHOULDER], [8.4, 2], [8, 9], [4, 12.6], [-1.6, 12.4 + gust * 0.5], [-7.4, 14.2 + gust], [-12.8 + gust, 12], [-9.4, 7.6], [-8.6, 2]]),
+      "slate-400",
+      1,
+      MAIN_INKED,
+    ),
+    shape(f.band([[-3, SHOULDER], [2.6, -7]], 0.8) + f.band([[3, SHOULDER], [0.6, -10.6]], 0.6), "slate-900", 0.4),
+    shape(f.poly([[-7.6, -1.8], [7.8, -1.8], [7.9, 0.8], [-7.7, 0.8]]), "slate-100", 0.9, INKED),
+    shape(f.band([[3.6, 2.4], [-1.4, 10.4]], 0.5) + f.band([[-2, 2.4], [-8.6, 10.6 + gust * 0.5]], 0.5) + f.band([[6.4, 3], [5, 9]], 0.4), "slate-900", 0.18),
+  ];
+}
+
 // Heads, drawn at the neck
 
 function headHuman(at: PartPlace, rng: Rng): KitShape[] {
@@ -748,6 +1280,105 @@ function headVoid(at: PartPlace, rng: Rng): KitShape[] {
     shape(f.ellipse(0, c + 0.4, HEAD_R * 0.86, HEAD_R), "black", 0.95, SKIN),
     shape(f.circle(-1.5 + gaze, c, 1.4) + f.circle(1.5 + gaze, c, 1.4), "purple-400", 0.35),
     shape(f.ellipse(-1.5 + gaze, c, 0.7, 0.45) + f.ellipse(1.5 + gaze, c, 0.7, 0.45), "violet-300", 1),
+  ];
+}
+
+/** A lizard's head in skin: a long snout toward the facing side, a slit eye, a crest of spines. */
+function headLizard(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const spine = between(rng, 0, 0.8);
+  return [
+    shape(f.band([[0, 1.5], [0, -1.5]], 2.6), "green-500", 1, SKIN),
+    shape(f.poly([[-3.4, c - 2.4], [-5.2, c - 5.4 - spine], [-2.2, c - 3.8], [-3.6, c - 7 - spine], [-0.6, c - 4.6], [-1.2, c - 7.6 - spine], [1.2, c - 4.4]]), "green-500", 1, SKIN_INKED),
+    shape(f.ellipse(-0.4, c, 4.4, 4), "green-500", 1, SKIN_INKED),
+    shape(f.poly([[1.4, c - 2.2], [8.8, c - 0.8], [8.8, c + 1.8], [1.4, c + 3]]), "green-500", 1, SKIN_INKED),
+    shape(f.band([[3, c + 2.2], [8.4, c + 1.2]], 0.3) + f.circle(8, c - 0.2, 0.3), "slate-900", 0.7),
+    shape(f.ellipse(1.6, c - 1.4, 0.95, 0.8), "lime-400", 1),
+    shape(f.ellipse(1.6, c - 1.4, 0.2, 0.75), "black", 1),
+  ];
+}
+
+/** A boxy chrome head: two glowing eyes and a toothy grille mouth. */
+function headRobot(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const flick = between(rng, 0.8, 1);
+  return [
+    shape(f.band([[0, 1.5], [0, -1.5]], 2.6), "slate-400", 1, SKIN),
+    shape(f.poly([[-4.6, c - 4.4], [4.6, c - 4.4], [4.6, c + 4.2], [-4.6, c + 4.2]]), "slate-400", 1, SKIN_INKED),
+    shape(f.band([[0, c - 4.4], [0, c - 6.4]], 0.4) + f.circle(0, c - 6.8, 0.7), "slate-700", 1),
+    shape(f.poly([[-4, c - 2.6], [4, c - 2.6], [4, c + 0.2], [-4, c + 0.2]]), "slate-900", 0.55),
+    shape(f.circle(-1.9, c - 1.2, 1.6) + f.circle(1.9, c - 1.2, 1.6), "cyan-400", 0.3),
+    shape(f.circle(-1.9, c - 1.2, 0.85) + f.circle(1.9, c - 1.2, 0.85), "cyan-400", flick),
+    shape(f.poly([[-3, c + 1.6], [3, c + 1.6], [3, c + 3.4], [-3, c + 3.4]]), "slate-900", 1),
+    shape([-2, -0.7, 0.7, 2].map((x) => f.band([[x, c + 1.7], [x, c + 3.3]], 0.35)).join(""), "white", 0.8),
+  ];
+}
+
+/** A rough boulder head: glowing orange eyes and cracks. */
+function headStone(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const j = (): number => between(rng, -0.4, 0.4);
+  return [
+    shape(f.band([[0, 1.5], [0, -1.5]], 2.8), "stone-500", 1, SKIN),
+    shape(f.poly([[-4.4, c - 2.4 + j()], [-2.4, c - 4.8], [1.4 + j(), c - 5.2], [4.2, c - 3.2], [5, c + 0.6 + j()], [3.6, c + 4], [-0.6, c + 4.8], [-3.8, c + 3.6], [-5.2, c + 0.6]]), "stone-500", 1, SKIN_INKED),
+    shape(f.poly([[-3.4, c - 3.6], [0.4, c - 4.4], [-1, c - 2.8]]), "white", 0.25),
+    shape(f.circle(-1.8, c - 0.2, 1.5) + f.circle(1.8, c - 0.2, 1.5), "orange-400", 0.3),
+    shape(f.ellipse(-1.8, c - 0.2, 0.9, 0.6) + f.ellipse(1.8, c - 0.2, 0.9, 0.6), "orange-400", 1),
+    shape(f.band([[1.4, c - 4.8], [0.6, c - 3], [1.6, c - 1.8]], 0.3) + f.band([[-3.8, c + 1.8], [-2.4, c + 2.8], [-2.8, c + 4.2]], 0.3) + f.band([[2.4, c + 2], [3.6, c + 3.2]], 0.3), "slate-900", 0.7),
+  ];
+}
+
+/** A gaunt head: sunken dark eyes with pale pupils, a wide toothy grin. */
+function headGhoul(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const gaze = between(rng, -0.3, 0.3);
+  return [
+    shape(f.band([[0, 1.5], [0, -1.5]], 2.2), "stone-500", 1, SKIN),
+    shape(f.ellipse(0, c + 0.2, 4, 5), "stone-500", 1, SKIN_INKED),
+    shape(f.poly([[-3.8, c + 1], [-2.4, c + 2.6], [-3.6, c + 3.4]]) + f.poly([[3.8, c + 1], [2.4, c + 2.6], [3.6, c + 3.4]]), "slate-900", 0.3),
+    shape(f.circle(-1.8, c - 0.8, 1.3) + f.circle(1.8, c - 0.8, 1.3), "slate-900", 1),
+    shape(f.circle(-1.8 + gaze, c - 0.8, 0.45) + f.circle(1.8 + gaze, c - 0.8, 0.45), "slate-100", 1),
+    shape(f.poly([[-3, c + 2.2], [3, c + 2.2], [2.6, c + 3.8], [-2.6, c + 3.8]]), "slate-900", 1),
+    shape([-2, -0.7, 0.7, 2].map((x) => f.band([[x, c + 2.3], [x, c + 3.5]], 0.4)).join(""), "slate-100", 1),
+  ];
+}
+
+/** A glass lantern head: metal cap and base, translucent panes, a blazing flame. */
+function headLantern(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const flick = between(rng, -0.4, 0.4);
+  const flame = `M${f.p(0, c + 2.6)}Q${f.p(-2.6, c)} ${f.p(-0.4 + flick, c - 3.6)}Q${f.p(0.4, c - 1.8)} ${f.p(1, c - 2.2)}Q${f.p(2.8, c + 0.2)} ${f.p(0, c + 2.6)}Z`;
+  return [
+    shape(f.band([[0, 1.5], [0, -1.5]], 2.6), "slate-700", 1, SKIN),
+    shape(f.poly([[-4.4, c - 3.6], [4.4, c - 3.6], [4.4, c + 3.6], [-4.4, c + 3.6]]), "sky-300", 0.45, INKED),
+    shape(f.circle(0, c, 3.8), "orange-400", 0.3),
+    shape(flame, "orange-400", 1),
+    shape(`M${f.p(0, c + 1.8)}Q${f.p(-1.1, c + 0.2)} ${f.p(0, c - 1.6)}Q${f.p(1.2, c + 0.2)} ${f.p(0, c + 1.8)}Z`, "white", 0.95),
+    shape(f.poly([[-3.6, c - 4.8], [3.6, c - 4.8], [4.6, c - 3.4], [-4.6, c - 3.4]]) + f.poly([[-4.6, c + 3.4], [4.6, c + 3.4], [3.8, c + 5], [-3.8, c + 5]]), "slate-700", 1, SKIN_INKED),
+    shape(f.band([[0, c - 4.8], [0, c - 6.4]], 0.5) + f.band([[-4, c - 3.6], [-4, c + 3.6]], 0.45) + f.band([[4, c - 3.6], [4, c + 3.6]], 0.45), "slate-700", 1, SKIN),
+  ];
+}
+
+/** A puffy cloud head: a furrowed brow over calm blue eyes. */
+function headCloud(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const puff = between(rng, 0, 0.5);
+  return [
+    shape(f.band([[0, 1.5], [0, -1.5]], 2.4), "slate-100", 1, SKIN),
+    shape(f.circle(-3.6, c + 0.4, 2.8), "slate-100", 1, SKIN),
+    shape(f.circle(3.6, c + 0.4, 2.8), "slate-100", 1, SKIN),
+    shape(f.circle(-1.8, c - 2.8, 3 + puff), "slate-100", 1, SKIN),
+    shape(f.circle(2.2, c - 2.8, 2.8), "slate-100", 1, SKIN),
+    shape(f.circle(0, c + 0.4, 3.9), "slate-100", 1, SKIN_INKED),
+    shape(f.ellipse(0, c + 3.8, 3.6, 1), "slate-900", 0.12),
+    shape(f.band([[-3, c - 2.3], [-1, c - 1.5]], 0.5) + f.band([[3, c - 2.3], [1, c - 1.5]], 0.5) + f.band([[-0.6, c - 3.4], [0.6, c - 3.4]], 0.3), "slate-700", 0.9),
+    shape(f.circle(-1.6, c - 0.2, 0.55) + f.circle(1.6, c - 0.2, 0.55), "blue-800", 1),
   ];
 }
 
@@ -1008,6 +1639,140 @@ function leafCrown(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+/** A steel helmet with cheek guards, over the head at the neck. */
+function steelHelmet(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const shine = between(rng, -0.6, 0.6);
+  return [
+    shape(`M${f.p(-5.4, c + 1.2)}C${f.p(-5.8, c - 7.8)} ${f.p(5.8, c - 7.8)} ${f.p(5.4, c + 1.2)}L${f.p(5.2, c - 1.4)}L${f.p(-5.2, c - 1.4)}Z`, "slate-400", 1, INKED),
+    shape(f.poly([[-5.4, c - 1.6], [5.4, c - 1.6], [5.4, c - 0.6], [-5.4, c - 0.6]]), "slate-700", 1),
+    shape(f.poly([[-5.2, c - 0.6], [-3.8, c - 0.6], [-3.4, c + 3.6], [-4.8, c + 3]]) + f.poly([[3.8, c - 0.6], [5.2, c - 0.6], [4.8, c + 3], [3.4, c + 3.6]]), "slate-400", 1, INKED),
+    shape(f.poly([[-0.6, c - 1.6], [0.6, c - 1.6], [0.5, c + 1.6], [-0.5, c + 1.6]]), "slate-400", 1),
+    shape(f.poly([[-3.4 + shine, c - 5.4], [-1.8 + shine, c - 5.6], [-3.2 + shine, c - 2.6], [-4.2 + shine, c - 2.6]]), "white", 0.45),
+  ];
+}
+
+/** Two coiled horns over the temples, no hair. */
+function horns(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const curl = between(rng, -0.6, 0.6);
+  const side = (s: number): Point[] => [[s * 3.2, c - 3.4], [s * 6.2, c - 4.6], [s * 7.6, c - 8 + curl], [s * 5.6, c - 10.4]];
+  const tip = (s: number): Point[] => [[s * 7.6, c - 8 + curl], [s * 5.6, c - 10.4]];
+  return [
+    shape(f.band(side(-1), 1.6) + f.band(side(1), 1.6), "stone-500", 1, INKED),
+    shape(f.band(tip(-1), 0.9) + f.band(tip(1), 0.9), "slate-100", 1),
+    shape(f.band([[-3.4, c - 3.6], [-5.6, c - 4.4]], 0.5) + f.band([[3.4, c - 3.6], [5.6, c - 4.4]], 0.5), "slate-900", 0.35),
+  ];
+}
+
+/** A cap in the look's cloth with a long white feather. */
+function capFeather(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const sweep = between(rng, -1, 1);
+  const feather = `M${f.p(-2.6, c - 4.6)}Q${f.p(-6 + sweep, c - 8)} ${f.p(-9.4 + sweep, c - 9)}Q${f.p(-6.4, c - 5.4)} ${f.p(-2.6, c - 4.6)}Z`;
+  return [
+    shape(feather, "white", 1, INKED),
+    shape(f.band([[-2.8, c - 4.6], [-8.6 + sweep, c - 8.6]], 0.3), "slate-400", 0.9),
+    shape(`M${f.p(-5, c - 0.8)}C${f.p(-5.4, c - 7.6)} ${f.p(5.4, c - 7.6)} ${f.p(5, c - 0.8)}Z`, "blue-800", 1, MAIN_INKED),
+    shape(f.poly([[0, c - 2.6], [7, c - 2], [7, c - 1], [0, c - 1.4]]), "blue-800", 1, MAIN_INKED),
+  ];
+}
+
+/** An oversized bucket hat in the look's cloth, wide brim all round. */
+function bucketHat(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const tilt = between(rng, -0.4, 0.4);
+  return [
+    shape(f.ellipse(0, c - 2.6 + tilt, 8.6, 1.9), "stone-500", 1, MAIN_INKED),
+    shape(f.poly([[-4.8, c - 3], [-4.2, c - 8.4], [4.2, c - 8.4], [4.8, c - 3]]), "stone-500", 1, MAIN_INKED),
+    shape(f.poly([[-4.7, c - 3.4], [4.7, c - 3.4], [4.6, c - 4.6], [-4.6, c - 4.6]]), "slate-900", 0.35),
+    shape(f.ellipse(0, c - 8.4, 4.2, 0.7), "slate-900", 0.25),
+  ];
+}
+
+/** Neat side-parted wood-brown hair and round glasses with white glints. */
+function spectacles(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const part = between(rng, -1.6, -0.8);
+  const ring = (x: number): string => f.circle(x, c + 0.2, 1.6) + f.circle(x, c + 0.2, 1.15);
+  return [
+    shape(`M${f.p(-5, c + 0.5)}C${f.p(-5.4, c - 6.8)} ${f.p(5.4, c - 6.8)} ${f.p(5, c + 0.5)}Q${f.p(2.4, c - 2.6)} ${f.p(part, c - 2.6)}Q${f.p(-2.4, c - 2)} ${f.p(-5, c + 0.5)}Z`, "wood-800", 1, INKED),
+    shape(f.poly([[part - 0.2, c - 2.8], [part + 3, c - 4.4], [part + 1.6, c - 2]]), "wood-800", 1),
+    shape(ring(-1.8) + ring(1.8) + f.band([[-0.2, c + 0.1], [0.2, c + 0.1]], 0.35) + f.band([[-3.4, c + 0.1], [-4.8, c - 0.2]], 0.3) + f.band([[3.4, c + 0.1], [4.8, c - 0.2]], 0.3), "slate-900", 1),
+    shape(f.circle(-2.4, c - 0.4, 0.35) + f.circle(1.2, c - 0.4, 0.35), "white", 0.9),
+  ];
+}
+
+/** A red headband with trailing ends over short hair. */
+function headband(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const flutter = between(rng, -0.8, 0.8);
+  return [
+    shape(`M${f.p(-5, c + 0.5)}C${f.p(-5.4, c - 6.6)} ${f.p(5.4, c - 6.6)} ${f.p(5, c + 0.5)}Q${f.p(2, c - 2.8)} ${f.p(0, c - 2.8)}Q${f.p(-2.4, c - 2.4)} ${f.p(-5, c + 0.5)}Z`, "wood-950", 1, INKED),
+    shape(f.poly([[-4.9, c - 2.4], [4.9, c - 2.4], [5, c - 0.8], [-5, c - 0.8]]), "red-500", 1, INKED),
+    shape(f.poly([[-4.8, c - 1.8], [-8.6, c - 3.4 + flutter], [-8.2, c - 1.6 + flutter], [-4.8, c - 1.2]]) + f.poly([[-4.8, c - 1.2], [-9, c + 0.6 + flutter], [-7.8, c + 1.6 + flutter], [-4.8, c - 0.6]]), "red-500", 1, INKED),
+  ];
+}
+
+/** A blue surgical mask over the lower face with ear loops, short greying hair. */
+function faceMask(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const part = between(rng, -1, 1);
+  return [
+    shape(`M${f.p(-5, c + 0.5)}C${f.p(-5.4, c - 6.6)} ${f.p(5.4, c - 6.6)} ${f.p(5, c + 0.5)}Q${f.p(2, c - 2.6)} ${f.p(part, c - 2.4)}Q${f.p(-2.4, c - 2.2)} ${f.p(-5, c + 0.5)}Z`, "slate-400", 1, INKED),
+    shape(f.band([[-3.8, c + 1], [-5, c - 0.2]], 0.3) + f.band([[3.8, c + 1], [5, c - 0.2]], 0.3), "white", 0.8),
+    shape(f.poly([[-3.9, c + 0.6], [3.9, c + 0.6], [3.5, c + 3.4], [0, c + 4.4], [-3.5, c + 3.4]]), "blue-200", 1, INKED),
+    shape(f.band([[-3.4, c + 1.8], [3.4, c + 1.8]], 0.3) + f.band([[-3, c + 2.9], [3, c + 2.9]], 0.3), "slate-400", 0.6),
+  ];
+}
+
+/** Goggles pushed up on the forehead over wild white hair. */
+function wildGoggles(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const wild = between(rng, 0, 1.2);
+  return [
+    shape(f.poly([[-5.2, c + 0.8], [-6.6, c - 3], [-4.6 - wild, c - 4.4], [-5 - wild, c - 8.2], [-2, c - 6], [-0.6, c - 9 - wild], [1.2, c - 6.2], [3.6 + wild, c - 8.6], [3.6, c - 5], [6.4, c - 4.2], [5.2, c - 0.4], [5.2, c + 0.8], [4, c - 2.4], [-4, c - 2.4]]), "slate-100", 1, INKED),
+    shape(f.poly([[-5, c - 3.6], [5, c - 3.6], [5, c - 2.6], [-5, c - 2.6]]), "slate-700", 1, INKED),
+    shape(f.circle(-2, c - 3.4, 2) + f.circle(2.6, c - 3.4, 2), "slate-700", 1, INKED),
+    shape(f.circle(-2, c - 3.4, 1.4) + f.circle(2.6, c - 3.4, 1.4), "cyan-400", 0.9),
+    shape(f.circle(-2.5, c - 3.9, 0.4) + f.circle(2.1, c - 3.9, 0.4), "white", 0.8),
+  ];
+}
+
+/** A long white veil from the crown to the shoulders, a pale circlet on the brow. */
+function veil(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const sway = between(rng, -0.6, 0.6);
+  const outer = `M${f.p(0, c - 5.8)}C${f.p(-7.4, c - 5.6)} ${f.p(-6.8, c + 2)} ${f.p(-8.4 + sway, c + 10)}L${f.p(8.4 + sway, c + 10)}C${f.p(6.8, c + 2)} ${f.p(7.4, c - 5.6)} ${f.p(0, c - 5.8)}Z`;
+  return [
+    shape(outer + f.ellipse(0, c + 0.2, 3.9, 4.8), "white", 0.95, INKED),
+    shape(f.band([[-6, c], [-6.8 + sway, c + 8]], 0.5) + f.band([[6, c], [6.8 + sway, c + 8]], 0.5), "slate-400", 0.25),
+    shape(f.band([[-4.4, c - 3], [0, c - 3.8], [4.4, c - 3]], 0.9), "slate-100", 1, INKED),
+    shape(f.circle(0, c - 3.9, 0.55), "sky-300", 1),
+  ];
+}
+
+/** A fedora: slate crown, wide brim, a darker band. */
+function fedora(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const dent = between(rng, 0.4, 1);
+  return [
+    shape(f.ellipse(0, c - 3, 7.4, 1.5), "slate-700", 1, INKED),
+    shape(`M${f.p(-4.4, c - 3.2)}C${f.p(-4.8, c - 8)} ${f.p(-1.2, c - 8.6 + dent)} ${f.p(0, c - 7.6)}C${f.p(1.2, c - 8.6 + dent)} ${f.p(4.8, c - 8)} ${f.p(4.4, c - 3.2)}Z`, "slate-700", 1, INKED),
+    shape(f.poly([[-4.5, c - 3.8], [4.5, c - 3.8], [4.6, c - 5.2], [-4.6, c - 5.2]]), "slate-900", 1),
+  ];
+}
+
 /** A headscarf (red-600, never the look's cloth, which paints the outfit) over the crown to the brow, white-spotted, knotted at the back with two tails flying. */
 function kerchief(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
@@ -1082,6 +1847,90 @@ function tonsure(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+/** R3401000: an over-ear headset: a thin band over the crown and slate cups low at the sides (so a cat-folk's ears still show), their pads lit cyan, a mic boom forward. */
+function headphones(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const boom = between(rng, -0.4, 0.4);
+  return [
+    shape(f.band([[-5.4, c + 0.4], [-5.4, c - 3.4], [-2.6, c - 5.8], [0, c - 6.2], [2.6, c - 5.8], [5.4, c - 3.4], [5.4, c + 0.4]], 0.8), "slate-800", 1, INKED),
+    shape(f.band([[5.6, c + 1.8], [4.6, c + 3.6 + boom], [2.2, c + 3.8 + boom]], 0.4) + f.circle(1.8, c + 3.8 + boom, 0.6), "slate-800", 1),
+    shape(f.ellipse(-5.4, c + 0.8, 1.7, 2.4) + f.ellipse(5.4, c + 0.8, 1.7, 2.4), "slate-700", 1, INKED),
+    shape(f.ellipse(-5.4, c + 0.8, 0.8, 1.3) + f.ellipse(5.4, c + 0.8, 0.8, 1.3), "cyan-400", 0.85),
+    shape(f.circle(5.4, c + 0.8, 3), "cyan-400", 0.15),
+  ];
+}
+
+/** R3401000: a knitted beanie (green-700) pulled down to the brow: a folded cuff, ribbing and a small bobble on top. */
+function beanie(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const slouch = between(rng, -0.6, 0.6);
+  return [
+    shape(`M${f.p(-5.2, c - 1.2)}C${f.p(-5.6, c - 8.4)} ${f.p(5.6 + slouch, c - 8.8)} ${f.p(5.2, c - 1.2)}Z`, "green-700", 1, INKED),
+    shape(f.circle(-0.6 + slouch, c - 7.6, 1.2), "slate-100", 1, INKED),
+    shape(f.poly([[-5.5, c - 2], [5.5, c - 2], [5.6, c + 0.4], [-5.6, c + 0.4]]), "green-900", 1, INKED),
+    shape(f.band([[-2.4, c - 2.2], [-2.6, c - 6.4]], 0.3) + f.band([[0, c - 2.2], [0, c - 7]], 0.3) + f.band([[2.4, c - 2.2], [2.6, c - 6.4]], 0.3), "slate-900", 0.3),
+  ];
+}
+
+/** R3401000: slick black hair swept up into a tall forward quiff over the brow, with short sideburns and a white shine. */
+function pompadour(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const rise = between(rng, -0.6, 0.6);
+  return [
+    shape(
+      `M${f.p(-5, c + 1.2)}C${f.p(-5.8, c - 5.6)} ${f.p(-2, c - 9.4 - rise)} ${f.p(2.4, c - 9 - rise)}C${f.p(5.6, c - 8.8 - rise)} ${f.p(7.4, c - 6.4)} ${f.p(5.6, c - 4.4)}Q${f.p(4.6, c - 3.4)} ${f.p(3, c - 3.4)}Q${f.p(-1, c - 3)} ${f.p(-3.6, c - 1.4)}L${f.p(-3.8, c + 1.6)}Z`,
+      "slate-900",
+      1,
+      INKED,
+    ),
+    shape(`M${f.p(-2.4, c - 6.6 - rise)}Q${f.p(1.6, c - 9.2 - rise)} ${f.p(5, c - 7)}Q${f.p(1.6, c - 8 - rise)} ${f.p(-2.4, c - 6.6 - rise)}Z`, "white", 0.4),
+    shape(f.poly([[3.6, c - 0.6], [4.6, c - 0.8], [4.4, c + 2], [3.6, c + 2]]), "slate-900", 1),
+  ];
+}
+
+/** R3401000: a railway conductor's navy peaked cap (blue-900): a flat crown, a dark band, a black peak forward and a brass badge. */
+function conductorCap(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const tilt = between(rng, -0.4, 0.4);
+  return [
+    shape(f.poly([[-4.9, c - 2.6], [-5.8, c - 7 + tilt], [5.8, c - 7.4 - tilt], [4.9, c - 2.6]]), "blue-900", 1, INKED),
+    shape(f.poly([[-5, c - 2.4], [5, c - 2.4], [5.1, c - 4], [-5.1, c - 4]]), "slate-900", 1),
+    shape(f.poly([[1.4, c - 2.8], [7.6, c - 1.8], [7.2, c - 0.9], [1.2, c - 1.8]]), "black", 1, INKED),
+    shape(f.circle(0.8, c - 5.2, 0.9), "brass-600", 1, INKED),
+    shape(f.circle(0.6, c - 5.4, 0.3), "white", 0.8),
+  ];
+}
+
+/** R3401000: a mayor's tall black top hat: a narrow curled brim, a tall crown widening a little upward, a red-900 band and a white sheen. */
+function tallHat(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const lean = between(rng, -0.5, 0.5);
+  return [
+    shape(f.poly([[-4.2, c - 3.4], [-4.6 + lean, c - 15], [4.6 + lean, c - 15], [4.2, c - 3.4]]), "slate-900", 1, INKED),
+    shape(f.ellipse(0, c - 3.4, 7, 1.4), "slate-900", 1, INKED),
+    shape(f.poly([[-4.2, c - 3.8], [4.2, c - 3.8], [4.3, c - 5.8], [-4.3, c - 5.8]]), "red-900", 1),
+    shape(f.poly([[-2.6, c - 6.4], [-1.6, c - 6.4], [-1.6 + lean, c - 14.4], [-2.6 + lean, c - 14.4]]), "white", 0.22),
+  ];
+}
+
+/** R3401000: smooth black hair drawn up into a topknot bun on the crown, a jade pin through it. */
+function hairBun(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const tip = between(rng, -0.6, 0.6);
+  return [
+    shape(f.circle(-0.4, c - 7.4, 2.3), "slate-900", 1, INKED),
+    shape(`M${f.p(-5, c + 0.6)}C${f.p(-5.4, c - 6.4)} ${f.p(5.4, c - 6.4)} ${f.p(5, c + 0.6)}Q${f.p(2.6, c - 2.6)} ${f.p(0, c - 2.8)}Q${f.p(-2.6, c - 2.6)} ${f.p(-5, c + 0.6)}Z`, "slate-900", 1, INKED),
+    shape(f.band([[-3.6, c - 6.4 + tip], [3, c - 8.6 - tip]], 0.5), "jade-400", 1),
+    shape(f.ellipse(-1.4, c - 8.2, 0.9, 0.5) + f.ellipse(-2, c - 4.4, 1.2, 0.5), "white", 0.3),
+  ];
+}
+
 // Items, drawn at the hand
 
 function sword(at: PartPlace, rng: Rng): KitShape[] {
@@ -1138,6 +1987,222 @@ function blaster(at: PartPlace, rng: Rng): KitShape[] {
     shape(f.poly([[-2.2, -2.6], [4.2, -2.6], [4.2, -0.4], [-2.2, -0.4]]), "slate-700", 1, INKED),
     shape(f.poly([[4.2, -2], [7, -2], [7, -1], [4.2, -1]]), "slate-400", 1),
     shape(f.circle(7.6, -1.5, 1), "cyan-400", charge),
+  ];
+}
+
+/** A needle-thin rapier held level forward: cup hilt, grip, pommel, about 17 long. */
+function rapier(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const rise = between(rng, -1.2, 0.4);
+  return [
+    shape(f.poly([[2.4, -0.3], [17, -0.15 + rise], [18.6, rise], [17, 0.15 + rise], [2.4, 0.3]]), "slate-100", 1, INKED),
+    shape(f.ellipse(2.2, 0, 1.1, 2.8), "brass-600", 1, INKED),
+    shape(f.band([[-2.2, 0], [1.4, 0]], 0.9), "wood-700", 1),
+    shape(f.circle(-2.8, 0, 0.8), "brass-600", 1),
+  ];
+}
+
+/** A short dagger held point up, about 10 long. */
+function knife(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 6, 18) * DEGREES;
+  const T = ([dx, dy]: Point): Point => [dx * Math.cos(tilt) - dy * Math.sin(tilt), dx * Math.sin(tilt) + dy * Math.cos(tilt)];
+  const poly = (points: readonly Point[]): string => f.poly(points.map(T));
+  return [
+    shape(poly([[-1, -1.4], [-0.8, -8], [0, -10], [0.8, -8], [1, -1.4]]), "slate-100", 1, INKED),
+    shape(poly([[-2, -1.6], [2, -1.6], [2, -0.8], [-2, -0.8]]), "brass-600", 1, INKED),
+    shape(f.band([T([0, -0.8]), T([0, 1.4])], 0.9), "wood-700", 1),
+    shape(f.circle(...T([0, 2]), 0.6), "brass-600", 1),
+  ];
+}
+
+/** A tall rectangular shield held before the figure, 18 tall and 7 wide at scale 1, centred on the hand. */
+function pavise(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const w = 3.5 * between(rng, 0.95, 1.05);
+  const rim = (inset: number): string => f.poly([[2 - w + inset, -9 + inset], [2 + w - inset, -9 + inset], [2 + w - inset, 9 - inset], [2 - w + inset, 9 - inset]]);
+  return [
+    shape(rim(0), "blue-800", 1, INKED),
+    shape(rim(0) + rim(0.8), "slate-400", 1),
+    shape(f.band([[0.4, -7], [0.4, 7]], 0.7), "white", 0.2),
+    shape(f.circle(2, 0, 1.5), "slate-400", 1, INKED),
+    shape(f.circle(2, 0, 0.6), "slate-100", 1),
+  ];
+}
+
+/** A silver coin held up, 5 across. */
+function silverCoin(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const r = between(rng, 2.4, 2.8);
+  return [
+    shape(f.circle(1, -1.4, r), "slate-100", 1, INKED),
+    shape(f.circle(1, -1.4, r * 0.75) + f.circle(1, -1.4, r * 0.6), "slate-400", 0.7),
+    shape(f.poly([[0.4, -2.4], [1.6, -2.4], [1.6, -0.4], [0.4, -0.4]]), "slate-400", 0.6),
+    shape(f.ellipse(0, -2.4, 0.9, 0.5), "white", 0.7),
+  ];
+}
+
+/** A playing card held up, 4.4 by 6.4: blue back, white border. */
+function card(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 8, 20) * DEGREES;
+  const T = ([dx, dy]: Point): Point => [dx * Math.cos(tilt) - dy * Math.sin(tilt), dx * Math.sin(tilt) + dy * Math.cos(tilt)];
+  const rect = (w: number, h: number): string => f.poly(([[-w, -h - 2.4], [w, -h - 2.4], [w, h - 2.4], [-w, h - 2.4]] as Point[]).map(T));
+  return [
+    shape(rect(2.2, 3.2), "white", 1, INKED),
+    shape(rect(1.6, 2.6), "blue-800", 1),
+    shape(f.poly(([[0, -4.8], [1, -2.4], [0, 0], [-1, -2.4]] as Point[]).map(T)), "slate-100", 0.6),
+  ];
+}
+
+/** A stopwatch held up, 6 across: slate case, pale face, crown on top. */
+function stopwatch(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const hand = between(rng, -1, 1);
+  return [
+    shape(f.poly([[-0.6, -6.8], [0.6, -6.8], [0.6, -5.6], [-0.6, -5.6]]), "slate-400", 1, INKED),
+    shape(f.circle(0, -3, 3.1), "slate-700", 1, INKED),
+    shape(f.circle(0, -3, 2.4), "slate-100", 1),
+    shape(f.band([[0, -3], [0, -5]], 0.3) + f.band([[0, -3], [1.4 + hand, -2.4]], 0.3), "slate-900", 1),
+  ];
+}
+
+/** A stick of white chalk with a dust puff at its tip, 5 long. */
+function chalk(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const puff = between(rng, 0.8, 1.2);
+  return [
+    shape(f.band([[-1.4, 0.8], [2.6, -1.2]], 1.4), "white", 1, INKED),
+    shape(f.circle(3.8, -1.8, 1.4 * puff), "white", 0.4),
+    shape(f.circle(5, -3, 0.6) + f.circle(3.2, -3.6, 0.45) + f.circle(5.4, -1.2, 0.4), "white", 0.5),
+  ];
+}
+
+/** An ice cream cone held up, 12 tall: a brass wafer under a pale scoop. */
+function cone(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const drip = between(rng, 0.8, 1.6);
+  return [
+    shape(f.poly([[-2.2, -2], [2.2, -2], [0, 5.4]]), "brass-500", 1, INKED),
+    shape(f.band([[-1.4, -1], [1, 2.6]], 0.3) + f.band([[1.4, -1], [-1, 2.6]], 0.3), "brass-800", 0.6),
+    shape(f.circle(0, -4.2, 2.8), "slate-100", 1, INKED),
+    shape(f.circle(-0.2, -7, 1.2), "slate-100", 1, INKED),
+    shape(f.poly([[-2.6, -2.6], [-1.8, -2.6], [-1.8, -2.6 + drip], [-2.6, -2.6 + drip]]), "slate-100", 1),
+    shape(f.ellipse(-1.1, -5.2, 0.8, 0.5), "white", 0.7),
+  ];
+}
+
+/** A folded map held up, 9 by 6: pale paper with blue sea and green land. */
+function map(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, -0.4, 0.4);
+  return [
+    shape(f.poly([[-4.4, -2 + tilt], [-1.5, -3.4], [1.5, -2.2], [4.4, -3.6 + tilt], [4.4, 2], [1.5, 3.4], [-1.5, 2.2], [-4.4, 3.6 + tilt]]), "slate-100", 1, INKED),
+    shape(f.poly([[-4, -1.4 + tilt], [-1.7, -2.6], [-1.7, 1.6], [-4, 2.8 + tilt]]), "blue-600", 0.85),
+    shape(f.poly([[-1.3, -2.4], [1.3, -1.4], [1.3, 2.4], [-1.3, 1.4]]), "green-400", 0.85),
+    shape(f.poly([[1.7, -1.6], [4, -2.8 + tilt], [4, 1.2], [1.7, 2.6]]), "blue-600", 0.6),
+    shape(f.band([[-1.5, -3.4], [-1.5, 2.2]], 0.25) + f.band([[1.5, -2.2], [1.5, 3.4]], 0.25), "slate-400", 0.7),
+  ];
+}
+
+/** A clipboard held up, 6 by 8: wood board, white sheet. */
+function clipboard(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 6, 14) * DEGREES;
+  const T = ([dx, dy]: Point): Point => [dx * Math.cos(tilt) - dy * Math.sin(tilt), dx * Math.sin(tilt) + dy * Math.cos(tilt)];
+  const rect = (x0: number, y0: number, x1: number, y1: number): string => f.poly(([[x0, y0], [x1, y0], [x1, y1], [x0, y1]] as Point[]).map(T));
+  return [
+    shape(rect(-3, -8, 3, 0), "wood-600", 1, INKED),
+    shape(rect(-2.4, -7, 2.4, -0.6), "white", 1),
+    shape(rect(-1.2, -8.6, 1.2, -7.2), "slate-400", 1, INKED),
+    shape([-5.6, -4.2, -2.8].map((y) => f.band([T([-1.6, y]), T([1.6, y])], 0.25)).join(""), "slate-400", 0.8),
+  ];
+}
+
+/** A trumpet held level, its bell pointing forward, about 11 long. */
+function trumpet(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const rise = between(rng, -0.8, 0.2);
+  return [
+    shape(f.band([[-2.6, 0], [4, rise]], 1.1), "brass-600", 1, INKED),
+    shape(f.poly([[4, -0.8 + rise], [8.4, -3.4 + rise], [8.4, 3.4 + rise], [4, 0.8 + rise]]), "brass-600", 1, INKED),
+    shape(f.band([[-0.6, 0], [-0.6, -2]], 0.5) + f.band([[0.8, 0], [0.8, -2]], 0.5) + f.band([[2.2, 0], [2.2, -2]], 0.5), "brass-500", 1),
+    shape(f.band([[-3.2, 0], [-2.2, 0]], 0.9), "slate-400", 1),
+    shape(f.ellipse(8.4, rise, 0.7, 3), "white", 0.25),
+  ];
+}
+
+/** A pair of binoculars held forward, 7 long. */
+function binoculars(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const aim = between(rng, -0.4, 0.4);
+  return [
+    shape(f.band([[-2.2, -1.5], [3.6, -1.5 + aim]], 2.2), "slate-900", 1, INKED),
+    shape(f.band([[-2.2, 1.1], [3.6, 1.1 + aim]], 2.2), "slate-900", 1, INKED),
+    shape(f.band([[0, -2.4], [0, 2.2]], 1), "slate-900", 1),
+    shape(f.ellipse(3.8, -1.5 + aim, 0.6, 1.2) + f.ellipse(3.8, 1.1 + aim, 0.6, 1.2), "slate-400", 0.9),
+    shape(f.band([[-1.6, -2.4], [2.4, -2.4]], 0.3), "white", 0.3),
+  ];
+}
+
+/** A gravedigger's spade standing on the ground below the hand, about 31 tall at scale 1. */
+function spade(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const lean = between(rng, -0.5, 0.5);
+  return [
+    shape(f.band([[0, -8], [lean, 17]], 0.9), "wood-600", 1, INKED),
+    shape(f.poly([[-1.8, -8.6], [1.8, -8.6], [1.8, -7.6], [-1.8, -7.6]]), "wood-600", 1, INKED),
+    shape(f.poly([[lean - 2.6, 16.6], [lean + 2.6, 16.6], [lean + 2.4, 21.6], [lean, 23.4], [lean - 2.4, 21.6]]), "slate-400", 1, INKED),
+    shape(f.band([[lean - 1.4, 17.6], [lean - 1.4, 21]], 0.5), "white", 0.35),
+  ];
+}
+
+/** A heart-shaped light stick with a red glow, 11 tall. */
+function lightStick(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const glow = between(rng, 0.3, 0.45);
+  const heart = `M${f.p(0, -3)}C${f.p(-4.4, -5.6)} ${f.p(-2.8, -9.4)} ${f.p(0, -7.2)}C${f.p(2.8, -9.4)} ${f.p(4.4, -5.6)} ${f.p(0, -3)}Z`;
+  return [
+    shape(f.circle(0, -6, 5.4), "red-300", glow),
+    shape(f.band([[0, 2.4], [0, -3]], 1), "slate-700", 1, INKED),
+    shape(heart, "red-400", 1, INKED),
+    shape(f.ellipse(-1.6, -6.6, 0.8, 0.5), "white", 0.7),
+  ];
+}
+
+/** A raised wooden club, 15 long. */
+function club(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const lean = between(rng, -0.8, 0.8);
+  return [
+    shape(f.poly([[-0.8, 2.6], [0.8, 2.6], [2.4 + lean, -8], [2.2 + lean, -12.4], [-1.4 + lean, -12.6], [-2 + lean, -8]]), "wood-700", 1, INKED),
+    shape(f.circle(0.4 + lean, -9, 0.45) + f.circle(-0.6 + lean, -11.6, 0.35), "slate-900", 0.4),
+    shape(f.band([[1.6 + lean, -10], [1.2 + lean, -4]], 0.4), "white", 0.15),
+  ];
+}
+
+/** A twig spear, 22 long, its tip whittled. */
+function twigSpear(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const lean = between(rng, -0.08, 0.08);
+  const top: Point = [-lean * 24, -20];
+  return [
+    shape(f.band([[lean * 6, 6], top], 0.8), "wood-600", 1, INKED),
+    shape(f.poly([[top[0] - 0.8, top[1]], [top[0], top[1] - 4.2], [top[0] + 0.8, top[1]]]), "wood-600", 1, INKED),
+    shape(f.band([[lean * 2, -4], [3 + lean * 2, -7]], 0.4), "wood-600", 1),
+    shape(f.band([[top[0] - 1, top[1] + 1.6], [top[0] + 1, top[1] + 1.6]], 0.5), "wood-800", 1),
+  ];
+}
+
+/** A broom standing on the ground below the hand: wood handle, brass bristles, about 33 tall. */
+function broom(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const lean = between(rng, -0.6, 0.6);
+  return [
+    shape(f.band([[0, -10], [lean, 13]], 0.9), "wood-600", 1, INKED),
+    shape(f.poly([[lean - 0.7, 12], [lean + 0.7, 12], [lean + 3.6, 22.4], [lean - 3.6, 22.4]]), "brass-500", 1, INKED),
+    shape(f.band([[lean - 1.2, 13.4], [lean + 1.2, 13.4]], 0.7), "wood-800", 1),
+    shape(f.band([[lean - 0.8, 14.4], [lean - 1.8, 22]], 0.25) + f.band([[lean + 0.8, 14.4], [lean + 1.8, 22]], 0.25), "brass-800", 0.6),
   ];
 }
 
@@ -1392,16 +2457,749 @@ function towerShield(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+// R3393000: the Meditative+ and Training Grounds scenes' parts: things that stand as Units (a potion, a dummy, a
+// totem, a sluice gate, a golem of posts, a shredder) and the people the briefs name.
+
+/** No legs or arms: a wooden stake planted in a little mound of earth up to the hip (a dummy's, a totem's, a gate's); its hand beside the shoulder. */
+function posePost(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const lean = between(rng, -0.6, 0.6);
+  const heap = between(rng, 1.6, 2.6);
+  return [
+    shape(`M${f.p(-7.4, 0.4)}Q${f.p(-3, -heap)} ${f.p(0, -heap)}Q${f.p(3.4, -heap)} ${f.p(7.4, 0.4)}Z`, "wood-800", 1, INKED),
+    shape(f.band([[lean, -0.6], [0, -25]], 3.2), "wood-700", 1, INKED),
+    shape(f.band([[lean + 0.9, -1], [0.9, -24.6]], 0.8), "wood-900", 0.4),
+    shape(f.band([[lean - 0.8, -4], [-0.6, -12]], 0.4) + f.band([[lean - 0.4, -15], [-0.3, -21]], 0.4), "wood-600", 0.6),
+    shape(f.poly([[-6, 0.2], [-5.4, -2.6], [-4.6, -0.4], [-4, -3], [-3.2, 0]]) + f.poly([[3.6, 0], [4.4, -2.4], [5, -0.2], [5.8, -2.8], [6.4, 0.2]]), "green-700", 0.9),
+  ];
+}
+
+/** Tank treads for legs: a track about 29 long and 9 tall round four wheels, its teeth below it, and a mount (main) up to the hip 14 above the ground; its hand out in front. */
+function poseTreads(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const phase = between(rng, 0, 2.4);
+  const r = fmt(f.r(4.5));
+  const track = `M${f.p(-10, -9)}L${f.p(10, -9)}A${r} ${r} 0 0 ${f.sweep(1)} ${f.p(10, 0)}L${f.p(-10, 0)}A${r} ${r} 0 0 ${f.sweep(1)} ${f.p(-10, -9)}Z`;
+  let teeth = "";
+  for (let x = -10 + phase; x < 10; x += 2.4) teeth += f.poly([[x - 0.6, -0.2], [x + 0.6, -0.2], [x + 0.6, 0.9], [x - 0.6, 0.9]]);
+  const axles = [-9, -3, 3, 9];
+  return [
+    shape(f.poly([[-5, -8.6], [5, -8.6], [4, -15], [-4, -15]]), "slate-700", 1, MAIN_INKED),
+    shape(track, "slate-800", 1, INKED),
+    shape(teeth, "slate-900", 0.9),
+    shape(axles.map((x) => f.circle(x, -4.5, 2.6)).join(""), "slate-400", 1, INKED),
+    shape(axles.map((x) => f.circle(x, -4.5, 0.9)).join(""), "slate-900", 1),
+    shape(f.band([[-9.6, -8.2], [9.6, -8.2]], 0.5), "white", 0.25),
+  ];
+}
+
+/** Legs braced wide and both arms straight up, the hands together over the crown, holding something up (a boulder, a plough, a stone); its hand 62 up. */
+function poseLift(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const brace = between(rng, 0, 1.2);
+  const strain = between(rng, -0.6, 0.6);
+  return limbs(
+    f,
+    [
+      [[-2.6, -24], [-6.4 - brace * 0.5, -12.4], [-8.4 - brace, -1.5]],
+      [[2.6, -24], [6.4 + brace * 0.5, -12.4], [8.4 + brace, -1.5]],
+    ],
+    [
+      [[-6.6, -41], [-9.4 - strain, -50.6], [-2.6, -61.4]],
+      [[6.6, -41], [9.4 + strain, -50.6], [2.6, -61.4]],
+    ],
+  );
+}
+
+/** Feet planted apart and both fists on the hips, the elbows jutting out to each side (arms akimbo: a toll-keeper's, a bruiser's); its hand at the near hip. */
+function poseHips(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const stance = between(rng, 0, 1.2);
+  const jut = between(rng, -0.6, 0.6);
+  return limbs(
+    f,
+    [
+      [[-2.6, -24], [-4.2 - stance * 0.4, -12], [-5.4 - stance, -1.5]],
+      [[2.6, -24], [4.2 + stance * 0.4, -12], [5.4 + stance, -1.5]],
+    ],
+    [
+      [[-6.6, -41], [-12 - jut, -33], [-7.8, -25.6]],
+      [[6.6, -41], [12 + jut, -33], [7.8, -25.6]],
+    ],
+  );
+}
+
+/** A living potion's body: a round glass bottle from 12 below the hip (its pose's legs showing under it, stubby) up a short neck to a cork just over the neck, about 21 wide, its liquid (main) filling it to a wavy level, bubbles and a glint. */
+function flaskBody(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const [cy, rx, ry] = [-1, 10.5, 13];
+  const level = between(rng, -6, -2);
+  const w = rx * Math.sqrt(1 - ((level - cy) / ry) ** 2);
+  const arc = `A${fmt(f.r(rx))} ${fmt(f.r(ry))} 0 1 ${f.sweep(0)} `;
+  const bubbles = [0, 1, 2].map(() => f.circle(between(rng, -5, 5), between(rng, level + 2.4, 8), between(rng, 0.45, 0.9))).join("");
+  return [
+    shape(f.ellipse(0, cy, rx, ry), "slate-100", 0.55, INKED),
+    shape(`M${f.p(-w, level)}${arc}${f.p(w, level)}Q${f.p(w / 2, level - 1)} ${f.p(0, level)}Q${f.p(-w / 2, level + 1)} ${f.p(-w, level)}Z`, "blue-600", 1, MAIN),
+    shape(bubbles, "white", 0.55),
+    shape(f.poly([[-2.6, -13.6], [2.6, -13.6], [2.6, -18.6], [-2.6, -18.6]]), "slate-100", 0.6, INKED),
+    shape(f.band([[-3.2, -18.4], [3.2, -18.4]], 1), "slate-400", 1, INKED),
+    shape(f.poly([[-2.2, -18.8], [2.2, -18.8], [2.6, -21.8], [-2.6, -21.8]]), "wood-600", 1, INKED),
+    shape(f.ellipse(-6, -4, 1.2, 3.6), "white", 0.7),
+    shape(f.ellipse(3.6, 8.4, 4.2, 1.4), "slate-900", 0.18),
+  ];
+}
+
+/** A training dummy's body: a crossbar through its shoulders for arms (about 26 across, straw bursting from its ends) and a stuffed burlap torso (main) to 3 below the hip, roped at the chest and waist, a patch stitched on, straw poking from its hem. */
+function strawBody(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const S = SHOULDER;
+  const sag = between(rng, -0.6, 0.6);
+  const tuft = (x: number, y: number, dir: number): string =>
+    f.poly([[x, y - 1.4], [x + dir * 3.2, y - 2.6], [x + dir * 1.8, y - 0.6], [x + dir * 3.6, y + 0.4], [x + dir * 1.8, y + 0.8], [x + dir * 2.8, y + 2.4], [x, y + 1.4]]);
+  const hem: Point[] = [[6.4, 3], [5, 5.6], [3.6, 3.6], [2, 6], [0.4, 3.8], [-1.4, 6.2], [-3, 3.8], [-4.6, 5.8], [-6.2, 3.4]];
+  return [
+    shape(f.band([[-13, S + 2 + sag], [13, S + 2 - sag]], 1.8), "wood-700", 1, INKED),
+    shape(tuft(-13, S + 2 + sag, -1) + tuft(13, S + 2 - sag, 1), "brass-500", 1, INKED),
+    shape(f.poly(hem), "brass-500", 1),
+    shape(`M${f.p(-6.4, S)}Q${f.p(0, S - 1.6)} ${f.p(6.4, S)}Q${f.p(8, -6)} ${f.p(6.4, 3.4)}L${f.p(-6.2, 3.4)}Q${f.p(-8, -6)} ${f.p(-6.4, S)}Z`, "brass-600", 1, MAIN_INKED),
+    shape(f.band([[-6.8, S + 5], [6.8, S + 5]], 0.8) + f.band([[-7.2, -1], [7.2, -1]], 0.8), "wood-800", 1),
+    shape(f.poly([[1.4, -10], [4.6, -10.4], [4.8, -6.8], [1.6, -6.6]]), "stone-500", 0.9, INKED),
+    shape(f.band([[1.2, -10.8], [2, -9.6]], 0.3) + f.band([[3.6, -11], [4.2, -9.8]], 0.3) + f.band([[4.4, -6.2], [5.2, -7.4]], 0.3), "wood-950", 0.7),
+    shape(f.poly([[3, S + 0.4], [6.4, S], [7.8, -6], [6.2, 3.4], [3.6, 3.4]]), "slate-900", 0.18),
+  ];
+}
+
+/** A squat carved-cedar totem standing on the ground: three stacked blocks (main) from 2 above the neck to the ground, about 18 wide, red wing boards jutting from the top one, a peaked cap, carved grooves at the seams and chevrons down the foot. */
+function totemBody(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const flare = between(rng, -1.2, 1.2);
+  const top = -21.6;
+  const chevrons = [7.4, 11.4, 15.4].map((y) => f.band([[-6.6, y], [0, y + 2.6], [6.6, y]], 0.8)).join("");
+  return [
+    shape(f.poly([[-8.6, 4], [8.6, 4], [9.4, 23], [-9.4, 23]]), "wood-600", 1, MAIN_INKED),
+    shape(f.poly([[-8, -14.2], [8, -14.2], [8.6, 4], [-8.6, 4]]), "wood-600", 1, MAIN_INKED),
+    shape(f.poly([[-7.4, top], [7.4, top], [8, -14.2], [-8, -14.2]]), "wood-600", 1, MAIN_INKED),
+    shape(f.poly([[-7.6, -19.6], [-15, -22.4 - flare], [-14, -16.4 - flare], [-7.8, -15.4]]) + f.poly([[7.6, -19.6], [15, -22.4 - flare], [14, -16.4 - flare], [7.8, -15.4]]), "red-600", 1, INKED),
+    shape(f.band([[-13.6, -20 - flare], [-8.4, -18.2]], 0.4) + f.band([[13.6, -20 - flare], [8.4, -18.2]], 0.4), "slate-900", 0.45),
+    shape(f.poly([[-8.4, top + 0.4], [0, top - 4], [8.4, top + 0.4]]), "red-600", 1, INKED),
+    shape(f.ellipse(-3.6, -17.6, 2.2, 1.4) + f.ellipse(3.6, -17.6, 2.2, 1.4), "slate-900", 0.5),
+    shape(f.band([[-8.1, -14.2], [8.1, -14.2]], 0.7) + f.band([[-8.7, 4], [8.7, 4]], 0.7), "wood-900", 0.6),
+    shape(chevrons, "wood-900", 0.45),
+    shape(f.poly([[4.4, top], [7.4, top], [9.4, 23], [5.4, 23]]), "slate-900", 0.16),
+  ];
+}
+
+/** A living sluice gate standing in its channel: a wide timber panel (main) about 23 wide from 2 above the shoulders to the ground between two frame posts, three iron bands riveted across it and cracks spurting jets of water. */
+function sluiceBody(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const S = SHOULDER;
+  const j = (): number => between(rng, -0.6, 0.6);
+  const crackA = between(rng, -7, -2);
+  const crackB = between(rng, 2, 7);
+  const bands = [S + 2.4, -4, 12];
+  const rivets = bands.flatMap((y) => [-9, -3, 3, 9].map((x) => f.circle(x, y, 0.45))).join("");
+  return [
+    shape(f.band([[-12.6, S - 4.4], [-12.6, 23]], 2.2) + f.band([[12.6, S - 4.4], [12.6, 23]], 2.2), "wood-800", 1, INKED),
+    shape(f.poly([[-11.4, S - 2], [11.4, S - 2], [11.4, 23], [-11.4, 23]]), "wood-700", 1, MAIN_INKED),
+    shape([-5.7, 0, 5.7].map((x) => f.band([[x, S - 1.6], [x, 22.6]], 0.35)).join(""), "wood-950", 0.45),
+    shape(f.poly([[4, S - 2], [11.4, S - 2], [11.4, 23], [4, 23]]), "slate-900", 0.15),
+    shape(bands.map((y) => f.band([[-11.6, y], [11.6, y]], 1.6)).join(""), "slate-700", 1, INKED),
+    shape(rivets, "slate-400", 1),
+    shape(f.band([[crackA, 2], [crackA + 1.2 + j(), 5.6], [crackA - 0.4, 9]], 0.5) + f.band([[crackB, 14.4], [crackB - 1 + j(), 18], [crackB + 0.6, 21]], 0.5), "wood-950", 0.85),
+    shape(f.band([[crackA + 0.6, 5.6], [crackA - 3, 7.6], [crackA - 6.4, 12.6 + j()]], 0.9) + f.band([[crackB - 0.6, 18], [crackB + 3.4, 19.4], [crackB + 6.6, 23]], 0.9), "sky-300", 0.85),
+    shape(f.circle(crackA - 7, 14.4, 0.6) + f.circle(crackA - 5, 15.8, 0.45) + f.circle(crackB + 7.6, 21.4, 0.5), "blue-200", 0.8),
+  ];
+}
+
+/** A golem's body of lashed training posts: three upright posts (main) from the shoulders to 6 below the hip, a crossbeam through the shoulders with its end grain showing (about 30 across), rope lashings at the joints and a round practice shield strapped to the chest. */
+function postsBody(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const S = SHOULDER;
+  const j = (): number => between(rng, -0.4, 0.4);
+  const lash = (x: number, y: number): string => f.band([[x - 1.6, y - 1.4], [x + 1.6, y + 0.4]], 0.6) + f.band([[x - 1.6, y + 0.8], [x + 1.6, y + 2.6]], 0.6);
+  const grain = (x: number): string => f.circle(x, S + 1.6, 0.9) + f.circle(x, S + 1.6, 0.45);
+  return [
+    shape([-4.6, 0, 4.6].map((x) => f.band([[x + j(), S - 1], [x, 6]], 3.6)).join(""), "wood-700", 1, MAIN_INKED),
+    shape(f.band([[-13.4, S + 1.6], [13.4, S + 1.6]], 3.4), "wood-600", 1, INKED),
+    shape(f.circle(-13.4, S + 1.6, 1.7) + f.circle(13.4, S + 1.6, 1.7), "wood-800", 1, INKED),
+    shape(grain(-13.4) + grain(13.4), "brass-500", 0.6),
+    shape(f.band([[-7.6, 4.4], [7.6, 4.4]], 2.2), "wood-600", 1, INKED),
+    shape(lash(-4.6, S - 0.6) + lash(4.6, S - 0.6) + lash(-4.6, 2.4) + lash(4.6, 2.4), "brass-500", 1),
+    shape(f.circle(0.4, -7.4, 5.2), "blue-700", 1, INKED),
+    shape(f.circle(0.4, -7.4, 5.2) + f.circle(0.4, -7.4, 4.2), "slate-400", 1),
+    shape(f.circle(0.4, -7.4, 1.3), "slate-100", 1, INKED),
+    shape(f.band([[-0.6, -11.8], [-3.4, -9]], 0.6), "white", 0.3),
+  ];
+}
+
+/** A shredder machine's body: a riveted steel box (main) about 20 wide from the shoulders to 5 below the hip, a hopper on top, a hazard-striped plate and a red gauge, and two saw-toothed blade discs spinning at its front. */
+function machineBody(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const S = SHOULDER;
+  const spin = between(rng, 0, 18);
+  const saw = (cx: number, cy: number, r: number): string => {
+    const points: Point[] = [];
+    for (let k = 0; k < 20; k += 1) {
+      const angle = (spin + k * 18) * DEGREES;
+      const reach = k % 2 === 0 ? r : r * 0.78;
+      points.push([cx + reach * Math.cos(angle), cy + reach * Math.sin(angle)]);
+    }
+    return f.poly(points);
+  };
+  const blur = (cx: number, cy: number, r: number): string => {
+    const points: Point[] = [];
+    for (let k = 0; k <= 6; k += 1) {
+      const angle = (spin - 70 + k * 15) * DEGREES;
+      points.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
+    }
+    return f.band(points, 0.45);
+  };
+  const rivets = ([[-8.6, S + 1.4], [8.6, S + 1.4], [-8.6, 3.6], [0, S + 1.4], [-3, 3.6]] as const).map(([x, y]) => f.circle(x, y, 0.5)).join("");
+  const stripes = [-6.6, -3.8, -1, 1.8].map((x) => f.poly([[x, 4.2], [x + 1.4, 4.2], [x + 2.6, 1.6], [x + 1.2, 1.6]])).join("");
+  return [
+    shape(f.poly([[-5.6, S - 5.4], [5.6, S - 5.4], [3.6, S], [-3.6, S]]), "slate-800", 1, INKED),
+    shape(f.poly([[-10, S], [10, S], [10, 5], [-10, 5]]), "slate-700", 1, MAIN_INKED),
+    shape(f.poly([[3.6, S], [10, S], [10, 5], [3.6, 5]]), "slate-900", 0.18),
+    shape(f.poly([[-7.4, 1.2], [5.6, 1.2], [5.6, 4.6], [-7.4, 4.6]]), "slate-900", 1),
+    shape(stripes, "orange-400", 1),
+    shape(rivets, "slate-400", 1),
+    shape(f.circle(-6, -2.4, 1.6), "red-400", 1, INKED),
+    shape(saw(10.6, -9.4, 5) + saw(10.6, 0.6, 3.8), "slate-100", 1, INKED),
+    shape(f.circle(10.6, -9.4, 1.4) + f.circle(10.6, 0.6, 1.1), "slate-900", 1),
+    shape(blur(10.6, -9.4, 6.4) + blur(10.6, 0.6, 5), "white", 0.35),
+  ];
+}
+
+/** A face on a thing (a bottle's, a totem's, a gate's, a machine's body): two round eyes about 9 below the neck, their pupils glancing and glinting, blushing cheeks (skin) and a small grin; no skull and no hair. */
+function headEyes(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const glance = between(rng, -0.4, 0.5);
+  const grin = between(rng, 0.6, 1.4);
+  const y = 8.6;
+  return [
+    shape(f.ellipse(-2.4, y, 1.7, 2) + f.ellipse(2.4, y, 1.7, 2), "white", 1, INKED),
+    shape(f.circle(-2.4 + glance, y + 0.3, 0.95) + f.circle(2.4 + glance, y + 0.3, 0.95), "slate-900", 1),
+    shape(f.circle(-2.7 + glance, y - 0.2, 0.3) + f.circle(2.1 + glance, y - 0.2, 0.3), "white", 0.9),
+    shape(f.ellipse(-4.6, y + 2.8, 1.1, 0.6) + f.ellipse(4.6, y + 2.8, 1.1, 0.6), "red-300", 0.6, SKIN),
+    shape(`M${f.p(-1.6, y + 3)}Q${f.p(0, y + 3 + grin * 2)} ${f.p(1.6, y + 3)}Q${f.p(0, y + 3 + grin)} ${f.p(-1.6, y + 3)}Z`, "slate-900", 1),
+  ];
+}
+
+/** A training dummy's head: a burlap sack (skin) stuffed round and tied off at the neck with a rope, a seam stitched down it, one button eye and one stitched cross, straw poking from its crown. */
+function headSack(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const lop = between(rng, -0.8, 0.8);
+  return [
+    shape(f.poly([[-2.4, 1.6], [-1.6, -1.2], [1.6, -1.2], [2.4, 1.6], [0.8, 0.8], [0, 1.8], [-0.8, 0.8]]), "brass-600", 1, SKIN_INKED),
+    shape(f.poly([[-0.8, c - 4.6], [-1.6 + lop, c - 7.8], [-0.2, c - 5.6], [0.6 + lop, c - 8.4], [1, c - 5.4], [2.6 + lop, c - 7.2], [1.8, c - 4.4]]), "brass-500", 1, INKED),
+    shape(`M${f.p(-4.8, c + 2.6)}C${f.p(-6.2, c - 4)} ${f.p(-2, c - 6.6 + lop * 0.4)} ${f.p(0.6, c - 5.6)}C${f.p(4.4, c - 6.4)} ${f.p(6, c - 2)} ${f.p(4.8, c + 2.6)}Q${f.p(0, c + 4.6)} ${f.p(-4.8, c + 2.6)}Z`, "brass-600", 1, SKIN_INKED),
+    shape(f.poly([[1.6, c - 5.4], [4.6, c - 3], [4.8, c + 2.6], [2.4, c + 3.6]]), "slate-900", 0.18),
+    shape(f.band([[0.6, c - 5.6], [0.1, c - 1], [0.4, c + 3.6]], 0.35), "wood-800", 0.7),
+    shape(f.band([[-2.6, 0.2], [2.6, 0.2]], 1) + f.band([[1.6, 0.8], [2.4, 2.8]], 0.5), "wood-800", 1, INKED),
+    shape(f.circle(-2.2, c - 0.6, 1.1) + f.circle(-2.5, c - 0.8, 0.22) + f.circle(-1.9, c - 0.4, 0.22), "slate-700", 1),
+    shape(f.band([[1.8, c - 1.6], [3.6, c + 0.2]], 0.45), "slate-900", 1),
+    shape(f.band([[3.6, c - 1.6], [1.8, c + 0.2]], 0.45), "slate-900", 1),
+  ];
+}
+
+/** An ogre's big head (skin, grey hide), about 14 wide: small pointed ears, a heavy brow shading small dark eyes, a broad flat nose and an underbite with two tusks jutting up. */
+function headOgre(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE - 0.6;
+  const scowl = between(rng, 0, 0.8);
+  const tusk = between(rng, 1.6, 2.4);
+  return [
+    shape(f.band([[0, 2], [0, -1.6]], 4.6), "grey-500", 1, SKIN),
+    shape(f.poly([[-6.2, c - 0.6], [-9, c - 3.4], [-6.4, c + 1.6]]) + f.poly([[6.2, c - 0.6], [9, c - 3.4], [6.4, c + 1.6]]), "grey-500", 1, SKIN_INKED),
+    shape(
+      `M${f.p(-6.6, c + 1)}C${f.p(-7.4, c - 7.4)} ${f.p(7.4, c - 7.4)} ${f.p(6.6, c + 1)}C${f.p(7, c + 5.6)} ${f.p(3.6, c + 6.6)} ${f.p(0, c + 6.6)}C${f.p(-3.6, c + 6.6)} ${f.p(-7, c + 5.6)} ${f.p(-6.6, c + 1)}Z`,
+      "grey-500",
+      1,
+      SKIN_INKED,
+    ),
+    shape(`M${f.p(-6, c - 1.4)}Q${f.p(0, c - 3.6 + scowl)} ${f.p(6, c - 1.4)}L${f.p(5.6, c - 0.2)}Q${f.p(0, c - 1.8 + scowl)} ${f.p(-5.6, c - 0.2)}Z`, "slate-900", 0.45),
+    shape(f.circle(-2.4, c + 0.4, 0.65) + f.circle(2.4, c + 0.4, 0.65), "slate-900", 1),
+    shape(f.circle(-2.6, c + 0.2, 0.22) + f.circle(2.2, c + 0.2, 0.22), "white", 0.8),
+    shape(f.ellipse(0, c + 2.4, 1.8, 1.1), "slate-900", 0.3),
+    shape(f.band([[-3.6, c + 4.4], [0, c + 4.9], [3.6, c + 4.4]], 0.5), "slate-900", 0.8),
+    shape(f.poly([[-3.2, c + 4.6], [-2.2, c + 4.6 - tusk], [-1.8, c + 4.8]]) + f.poly([[1.8, c + 4.8], [2.2, c + 4.6 - tusk], [3.2, c + 4.6]]), "white", 1, INKED),
+    shape(f.ellipse(-3, c - 4, 2.2, 0.9), "white", 0.18),
+  ];
+}
+
+/** Spiky hair: seven stiff spikes of different lengths standing out round the crown over a jagged fringe. */
+function hairSpiky(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const rim = HEAD_R + 0.2;
+  const points: Point[] = [[-5, c + 0.5]];
+  for (let k = 0; k < 7; k += 1) {
+    const tip = (196 + k * 24.7) * DEGREES;
+    const valley = (208 + k * 24.7) * DEGREES;
+    const reach = rim + between(rng, 2.6, 5);
+    points.push([reach * Math.cos(tip), c + reach * Math.sin(tip)]);
+    if (k < 6) points.push([(rim - 0.4) * Math.cos(valley), c + (rim - 0.4) * Math.sin(valley)]);
+  }
+  points.push([5, c + 0.5], [3.6, c - 1.4], [2.2, c - 2.8], [0.8, c - 1.8], [-0.8, c - 3], [-2.4, c - 1.8], [-3.8, c - 2.6]);
+  return [
+    shape(f.poly(points), "wood-800", 1, INKED),
+    shape(f.band([[-2.6, c - 4.4], [-1, c - 5.6], [1.4, c - 5.4]], 0.5), "brass-800", 0.8),
+  ];
+}
+
+/** A long white beard and moustache (slate-100) from the cheeks to about 9 below the chin, wavy at its point, bushy white hair round the crown and two bushy brows: a hermit's or an old master's. */
+function beard(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const sway = between(rng, -0.8, 0.8);
+  const length = between(rng, 8, 10.5);
+  return [
+    shape(
+      `M${f.p(-5.6, c + 1.4)}C${f.p(-7, c - 3)} ${f.p(-5, c - 7.4)} ${f.p(0, c - 6.6)}C${f.p(5, c - 7.4)} ${f.p(7, c - 3)} ${f.p(5.6, c + 1.4)}Q${f.p(4.6, c - 2.4)} ${f.p(2.4, c - 3.4)}Q${f.p(0, c - 2)} ${f.p(-2.4, c - 3.4)}Q${f.p(-4.6, c - 2.4)} ${f.p(-5.6, c + 1.4)}Z`,
+      "slate-100",
+      1,
+      INKED,
+    ),
+    shape(
+      `M${f.p(-4.6, c + 0.6)}Q${f.p(-5.6, c + 5.6)} ${f.p(-3.2 + sway, c + length)}L${f.p(-1.4 + sway, c + length - 1.6)}L${f.p(sway, c + length + 2)}L${f.p(1.4 + sway, c + length - 1.4)}L${f.p(3.4 + sway, c + length + 0.4)}Q${f.p(5.6, c + 5.6)} ${f.p(4.6, c + 0.6)}Q${f.p(0, c + 2.6)} ${f.p(-4.6, c + 0.6)}Z`,
+      "slate-100",
+      1,
+      INKED,
+    ),
+    shape(f.band([[-2.6, c + 4], [-2.2 + sway, c + length - 1.4]], 0.3) + f.band([[0.4, c + 4.6], [0.6 + sway, c + length]], 0.3) + f.band([[2.8, c + 4], [2.8 + sway, c + length - 1]], 0.3), "slate-400", 0.7),
+    shape(`M${f.p(0, c + 2.2)}Q${f.p(-2.4, c + 1.4)} ${f.p(-4, c + 3.4)}Q${f.p(-2, c + 3)} ${f.p(0, c + 3.2)}Q${f.p(2, c + 3)} ${f.p(4, c + 3.4)}Q${f.p(2.4, c + 1.4)} ${f.p(0, c + 2.2)}Z`, "slate-400", 1, INKED),
+    shape(f.band([[-3, c - 1.2], [-1, c - 1.6]], 0.7) + f.band([[1, c - 1.6], [3, c - 1.2]], 0.7), "slate-100", 1, INKED),
+  ];
+}
+
+/** A fur-lined winter cap with ear flaps (green-900): a padded crown, a turned-up fur brim (stone-500) across the brow, a flap over each ear furred along its edge and a button on top. */
+function flapCap(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const flap = between(rng, -0.6, 0.6);
+  const ear = (side: number): string => f.poly([[side * 4.4, c - 1.6], [side * 6.2, c - 1.2], [side * (6.4 + flap * 0.3), c + 4.6 + flap], [side * 4.6, c + 5.2 + flap], [side * 3.8, c + 1]]);
+  const fur = (side: number): string => f.band([[side * 6.3, c - 0.6], [side * (6.5 + flap * 0.3), c + 4.8 + flap]], 1.1);
+  return [
+    shape(ear(-1) + ear(1), "green-900", 1, INKED),
+    shape(fur(-1) + fur(1), "stone-500", 1),
+    shape(`M${f.p(-5.4, c - 1.6)}C${f.p(-5.8, c - 8.4)} ${f.p(5.8, c - 8.4)} ${f.p(5.4, c - 1.6)}Z`, "green-900", 1, INKED),
+    shape(f.band([[-2.4, c - 6.4], [-0.6, c - 4.4]], 0.4) + f.band([[2.4, c - 6.4], [0.6, c - 4.4]], 0.4), "slate-900", 0.3),
+    shape(f.band([[-5.8, c - 2.2], [0, c - 3], [5.8, c - 2.2]], 1.8), "stone-500", 1, INKED),
+    shape(f.circle(-3.4, c - 2.4, 0.3) + f.circle(-1.2, c - 2.9, 0.3) + f.circle(1.4, c - 2.9, 0.3) + f.circle(3.8, c - 2.4, 0.3), "wood-700", 0.5),
+    shape(f.circle(0, c - 7.3, 0.9), "green-900", 1, INKED),
+  ];
+}
+
+/** An oversized scholar's cap: a flat black board about 20 across, seen a little from above, over a skullcap, a red tassel hanging from its button over one side, tufts of short hair at the temples. */
+function scholarCap(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const tilt = between(rng, -0.8, 0.8);
+  const swing = between(rng, -0.6, 0.6);
+  return [
+    shape(f.poly([[-5.2, c + 0.6], [-4.4, c - 1.8], [-3.4, c + 0.2]]) + f.poly([[5.2, c + 0.6], [4.4, c - 1.8], [3.4, c + 0.2]]), "wood-800", 1, INKED),
+    shape(`M${f.p(-5, c - 1.2)}C${f.p(-5.2, c - 5.6)} ${f.p(5.2, c - 5.6)} ${f.p(5, c - 1.2)}Q${f.p(0, c - 2.4)} ${f.p(-5, c - 1.2)}Z`, "slate-900", 1, INKED),
+    shape(f.poly([[-10, c - 5.4 + tilt], [-0.2, c - 3], [10.4, c - 5.6 - tilt], [10.4, c - 4.8 - tilt], [-0.2, c - 2.2], [-10, c - 4.6 + tilt]]), "slate-700", 1, INKED),
+    shape(f.poly([[-10, c - 5.4 + tilt], [0.6, c - 8.6], [10.4, c - 5.6 - tilt], [-0.2, c - 3]]), "slate-900", 1, INKED),
+    shape(f.poly([[-6, c - 5.6], [0.4, c - 7.6], [1.4, c - 7.2], [-5, c - 5]]), "white", 0.15),
+    shape(f.band([[0.2, c - 5.8], [6.4, c - 5], [7.6 + swing, c - 1.6]], 0.4), "red-600", 1),
+    shape(f.poly([[7 + swing, c - 2], [8.2 + swing, c - 2], [8.6 + swing, c + 1.6], [6.6 + swing, c + 1.6]]), "red-600", 1, INKED),
+    shape(f.circle(0.2, c - 5.8, 0.7), "red-600", 1, INKED),
+  ];
+}
+
+/** Short dark hair under a red sweatband round the brow, its knot's two tails flying at the back. */
+function sweatband(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const flutter = between(rng, -0.6, 0.6);
+  return [
+    shape(`M${f.p(-5, c - 0.6)}C${f.p(-5.4, c - 7)} ${f.p(5.4, c - 7)} ${f.p(5, c - 0.6)}Q${f.p(2, c - 3.4)} ${f.p(0, c - 3.2)}Q${f.p(-2.4, c - 3)} ${f.p(-5, c - 0.6)}Z`, "wood-800", 1, INKED),
+    shape(f.poly([[-1.4, c - 5.4], [-0.4, c - 7.4], [0.4, c - 5.6], [1.6, c - 7], [1.8, c - 5]]), "wood-800", 1, INKED),
+    shape(f.poly([[-5, c - 1.6], [-8, c - 0.2 + flutter], [-7.6, c + 1 + flutter], [-5, c - 0.6]]) + f.poly([[-5, c - 0.4], [-7.2, c + 2.4 - flutter], [-6.4, c + 3.2 - flutter], [-4.6, c + 0.4]]), "red-600", 1, INKED),
+    shape(f.band([[-5.1, c - 1.2], [0, c - 2.4], [5.1, c - 1.2]], 1.5), "red-600", 1, INKED),
+    shape(f.band([[-4, c - 1.6], [-1, c - 2.3]], 0.35), "white", 0.4),
+  ];
+}
+
+/** Round wire spectacles over short hair: two faintly blue lenses in dark rims, a bridge and arms back to the ears, a glint on one lens. */
+function glasses(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const part = between(rng, -1, 1);
+  const y = c + 0.2;
+  const rims = [-1.9, 1.9].map((x) => f.circle(x, y, 1.5) + f.circle(x, y, 1.1)).join("");
+  return [
+    shape(`M${f.p(-5, c + 0.5)}C${f.p(-5.4, c - 6.6)} ${f.p(5.4, c - 6.6)} ${f.p(5, c + 0.5)}Q${f.p(2, c - 2.6)} ${f.p(part, c - 2.4)}Q${f.p(-2.4, c - 2.2)} ${f.p(-5, c + 0.5)}Z`, "wood-800", 1, INKED),
+    shape(f.circle(-1.9, y, 1.5) + f.circle(1.9, y, 1.5), "sky-300", 0.35),
+    shape(rims, "slate-900", 1),
+    shape(f.band([[-0.5, y - 0.3], [0.5, y - 0.3]], 0.35) + f.band([[-3.3, y - 0.2], [-4.9, y - 0.8]], 0.35) + f.band([[3.3, y - 0.2], [4.9, y - 0.8]], 0.35), "slate-900", 1),
+    shape(f.ellipse(-2.3, y - 0.5, 0.45, 0.3), "white", 0.8),
+  ];
+}
+
+/** A fur-lined army parka (main), puffy and quilted from the shoulders to 7 below the hip: a fur ruff (stone-500) round the neck and along its hem, a zip and two flapped pockets; about 19 wide. */
+function parka(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const S = SHOULDER;
+  const puff = between(rng, 0, 0.8);
+  const hem = 7;
+  const ruff: Point[] = [];
+  for (let k = 0; k <= 10; k += 1) {
+    const x = -6.4 + k * 1.28;
+    ruff.push([x, S - 0.8 + Math.abs(x) * 0.12 - (k % 2 === 0 ? 0.8 : 0)]);
+  }
+  for (let k = 10; k >= 0; k -= 1) {
+    const x = -6.4 + k * 1.28;
+    ruff.push([x * 0.8, S + 2.6 - Math.abs(x) * 0.18 + (k % 2 === 0 ? 0.6 : 0)]);
+  }
+  const trim: Point[] = [[-8.6, hem - 1.4], [8.6, hem - 1.4]];
+  for (let x = 8.6; x >= -8.6; x -= 1.72) trim.push([x, hem + 0.4], [x - 0.86, hem + 1.4]);
+  const flap = (x: number): string => f.poly([[x, -0.4], [x + 4, -0.4], [x + 4, 0.8], [x + 2, 1.6], [x, 0.8]]);
+  return [
+    shape(`M${f.p(-7.6, S + 0.4)}L${f.p(7.6, S + 0.4)}Q${f.p(9.4 + puff, -4)} ${f.p(8.4, hem)}L${f.p(-8.4, hem)}Q${f.p(-9.4 - puff, -4)} ${f.p(-7.6, S + 0.4)}Z`, "green-700", 1, MAIN_INKED),
+    shape(f.band([[-8, S + 6.4], [8, S + 6.4]], 0.4) + f.band([[-8.6, -5.4], [8.6, -5.4]], 0.4) + f.band([[-8.8, -1.6], [8.8, -1.6]], 0.4), "slate-900", 0.22),
+    shape(f.poly([[3, S + 0.6], [7.6, S + 0.4], [9.2 + puff, -4], [8.4, hem], [4, hem]]), "slate-900", 0.15),
+    shape(f.poly([[-6.6, -0.4], [-2.6, -0.4], [-2.6, 4.4], [-6.6, 4.4]]) + f.poly([[2.6, -0.4], [6.6, -0.4], [6.6, 4.4], [2.6, 4.4]]), "slate-900", 0.22),
+    shape(flap(-6.6) + flap(2.6), "green-700", 1, MAIN_INKED),
+    shape(f.band([[0, S + 2.4], [0, hem - 0.6]], 0.5), "slate-400", 0.9),
+    shape(f.poly(trim), "stone-500", 1, INKED),
+    shape(f.poly(ruff), "stone-500", 1, INKED),
+    shape(f.band([[-4.4, S + 1.4], [-3.6, S + 0.2]], 0.3) + f.band([[-1.2, S + 2], [-0.6, S + 0.6]], 0.3) + f.band([[2.4, S + 1.8], [3, S + 0.4]], 0.3), "wood-700", 0.45),
+  ];
+}
+
+/** A spiked leather vest (main) open over a grey shirt from the shoulders to 2 below the hip: steel spikes bristling along its shoulders and sides, studs down its front and a belt with a buckle; about 16 wide, 22 with its spikes. */
+function spikedVest(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const S = SHOULDER;
+  const j = (): number => between(rng, -0.3, 0.3);
+  const spike = (x: number, y: number, dx: number, dy: number): string => f.poly([[x - dy * 0.5, y + dx * 0.5], [x + dx, y + dy], [x + dy * 0.5, y - dx * 0.5]]);
+  const spikes = [
+    spike(-3.4, S, j(), -2.4),
+    spike(3.4, S, j(), -2.4),
+    spike(-6.2, S + 0.4, -0.9, -2.2),
+    spike(6.2, S + 0.4, 0.9, -2.2),
+    spike(-7.6, S + 3, -2.3, -0.6 + j()),
+    spike(7.6, S + 3, 2.3, -0.6 + j()),
+    spike(-7.6, -8, -2.3, 0),
+    spike(7.6, -8, 2.3, 0),
+    spike(-7.4, -3, -2.2, 0.3),
+    spike(7.4, -3, 2.2, 0.3),
+  ].join("");
+  const panel = (side: number): string => f.poly([[side * 7.2, S], [side * 2.4, S], [side * 1.6, -6], [side * 2.6, 2], [side * 7, 2]]);
+  return [
+    shape(f.poly([[-7, S], [7, S], [6.6, 2], [-6.6, 2]]), "slate-400", 1, INKED),
+    shape(spikes, "slate-100", 1, INKED),
+    shape(panel(-1) + panel(1), "wood-700", 1, MAIN_INKED),
+    shape([-4.8, -4.4, -4, 4.8, 4.4, 4].map((x, k) => f.circle(x, S + 3 + (k % 3) * 5, 0.45)).join(""), "slate-400", 1),
+    shape(f.band([[-6.8, 0.8], [6.8, 0.8]], 1.4), "wood-900", 1, INKED),
+    shape(f.poly([[-1.2, -0.2], [1.2, -0.2], [1.2, 1.8], [-1.2, 1.8]]), "slate-400", 1, INKED),
+    shape(f.poly([[3.6, S + 0.4], [7.2, S], [7, 2], [3.4, 2]]), "slate-900", 0.18),
+  ];
+}
+
+/** A tree-trunk club about 22 long, swelling from the fist to a knotted head, a broken branch stub and bark lines. */
+function trunkClub(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 4, 16);
+  const poly = (points: readonly Point[]): string => f.poly(points.map((p) => turned(p, tilt)));
+  return [
+    shape(poly([[-1, 4], [1, 4], [2.6, -10], [3.4, -17], [0.4, -19.4], [-3.2, -17.6], [-2.8, -10]]), "wood-700", 1, INKED),
+    shape(poly([[0.6, 2], [1.2, 2], [2.4, -10], [3, -16], [1.8, -16.4], [1.4, -10]]), "wood-900", 0.35),
+    shape(poly([[2.4, -12], [5, -14.6], [5.4, -13.6], [2.8, -10.6]]), "wood-600", 1, INKED),
+    shape(f.circle(...turned([-0.6, -14.8], tilt), 0.9) + f.circle(...turned([0.6, -8.4], tilt), 0.6), "wood-900", 0.7),
+  ];
+}
+
+/** A broad war axe on a short haft, its bearded blade about 7 tall, a chain swinging from the pommel in three links. */
+function axe(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, -12, 6);
+  const swing = between(rng, -1.4, 1.4);
+  const T = (p: Point): Point => turned(p, tilt);
+  const poly = (points: readonly Point[]): string => f.poly(points.map(T));
+  const link = (x: number, y: number): string => f.ellipse(...T([x, y]), 0.7, 1);
+  return [
+    shape(f.band([T([0, 4]), T([0, -15])], 0.8), "wood-800", 1, INKED),
+    shape(poly([[0.6, -15.4], [3.4, -17.8], [6, -15.8], [6.4, -11.6], [5, -8.6], [3.2, -11.2], [0.6, -11.6]]), "slate-400", 1, INKED),
+    shape(poly([[4.8, -16.8], [6, -15.8], [6.4, -11.6], [5, -8.6], [5.4, -11.8]]), "white", 0.55),
+    shape(link(swing * 0.4, 5.6) + link(swing * 0.8, 7.8) + link(swing * 1.2, 10), "slate-700", 1, INKED),
+  ];
+}
+
+/** A grey boulder for a fist, about 11 across, cracked and chipped, a lighter top. */
+function boulderFist(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const r = between(rng, 4.8, 5.8);
+  return [
+    shape(f.poly([[-r, 0.4], [-r * 0.7, -r * 0.8], [r * 0.1, -r * 1.05], [r * 0.9, -r * 0.6], [r, r * 0.4], [r * 0.4, r], [-r * 0.6, r * 0.9]]), "stone-500", 1, INKED),
+    shape(f.poly([[-r * 0.6, -r * 0.6], [r * 0.1, -r * 0.9], [r * 0.7, -r * 0.5], [r * 0.1, -r * 0.3]]), "slate-100", 0.3),
+    shape(f.band([[-r * 0.3, -r * 0.2], [r * 0.1, r * 0.3], [r * 0.5, r * 0.2]], 0.3), "slate-900", 0.6),
+  ];
+}
+
+/** A thin willow wand about 13 long, a fork at its tip and teal sparks spun off it. */
+function wand(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 14, 30);
+  const T = (p: Point): Point => turned(p, tilt);
+  const [tx, ty] = T([0, -13]);
+  return [
+    shape(f.band([T([0, 2]), T([0.4, -7]), T([0, -13])], 0.45), "wood-600", 1, INKED),
+    shape(f.band([T([0.2, -8]), T([1.8, -10])], 0.25), "green-500", 1),
+    shape(f.circle(tx, ty, 2.2), "cyan-400", 0.3),
+    shape(sparkle(f, tx, ty, 1.6) + sparkle(f, tx + 3, ty + 1.6, 0.9) + sparkle(f, tx - 2.4, ty - 2.6, 0.8), "cyan-400", 1),
+  ];
+}
+
+/** A long ladle, its bowl about 4 across at the end of a handle 12 below the fist, held out to serve, soup steaming in it. */
+function ladle(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 50, 70);
+  const T = (p: Point): Point => turned(p, tilt);
+  const [bx, by] = T([0, -12]);
+  return [
+    shape(f.band([T([0, 1.6]), T([0, -10.6])], 0.5), "slate-400", 1, INKED),
+    shape(`M${f.p(bx - 2.4, by)}Q${f.p(bx, by + 4)} ${f.p(bx + 2.4, by)}Z`, "slate-400", 1, INKED),
+    shape(`M${f.p(bx - 2, by + 0.2)}Q${f.p(bx, by + 1)} ${f.p(bx + 2, by + 0.2)}Z`, "orange-400", 1),
+    shape(f.band([[bx - 0.6, by - 1], [bx + 0.4, by - 3], [bx - 0.4, by - 5]], 0.35), "white", 0.4),
+  ];
+}
+
+/** A small leather coin purse dangling from the fist on its drawstring, a coin peeking from its mouth. */
+function purse(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const sway = between(rng, -0.8, 0.8);
+  const body = `M${f.p(sway - 1.2, 3)}Q${f.p(sway - 3.8, 4.4)} ${f.p(sway - 3, 7.4)}Q${f.p(sway, 9.2)} ${f.p(sway + 3, 7.4)}Q${f.p(sway + 3.8, 4.4)} ${f.p(sway + 1.2, 3)}Z`;
+  return [
+    shape(f.band([[0, 0], [sway, 3]], 0.25), "wood-900", 1),
+    shape(body, "wood-600", 1, INKED),
+    shape(f.band([[sway - 1.4, 3.2], [sway + 1.4, 3.2]], 0.5), "red-600", 1),
+    shape(f.circle(sway + 0.6, 2.4, 0.9), "slate-400", 1, INKED),
+  ];
+}
+
+/** A calligraphy brush about 11 long held up and forward, its tuft dipped black at the tip. */
+function brush(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 20, 40);
+  const poly = (points: readonly Point[]): string => f.poly(points.map((p) => turned(p, tilt)));
+  return [
+    shape(f.band([turned([0, 3], tilt), turned([0, -7], tilt)], 0.55), "wood-700", 1, INKED),
+    shape(poly([[-0.8, -7], [0.8, -7], [0.5, -9.6], [0, -11.2], [-0.5, -9.6]]), "white", 1, INKED),
+    shape(poly([[-0.5, -9.6], [0.5, -9.6], [0, -11.2]]), "black", 1),
+  ];
+}
+
+/** A boat oar held two-handed for stirring, its shaft from 10 above the fist to its broad blade 20 below it. */
+function oar(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 14, 26);
+  const T = (p: Point): Point => turned(p, tilt);
+  const poly = (points: readonly Point[]): string => f.poly(points.map(T));
+  return [
+    shape(f.band([T([0, -10]), T([0, 13])], 0.8), "wood-600", 1, INKED),
+    shape(poly([[-0.8, 13], [0.8, 13], [2.2, 16], [2, 21], [0, 22.4], [-2, 21], [-2.2, 16]]), "wood-700", 1, INKED),
+    shape(poly([[0.2, 14], [0.8, 14], [1.8, 16.4], [1.6, 20.6], [0.2, 21.4]]), "wood-900", 0.3),
+  ];
+}
+
+/** A long thin pointer stick about 18 long, raised up and forward to tap a board, its tip chalk-white. */
+function pointer(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 40, 56);
+  const T = (p: Point): Point => turned(p, tilt);
+  return [
+    shape(f.band([T([0, 2]), T([0, -17])], 0.4), "wood-700", 1, INKED),
+    shape(f.band([T([0, -16]), T([0, -18.4])], 0.45), "white", 1),
+    shape(f.circle(...T([0, 2.4]), 0.6), "wood-900", 1),
+  ];
+}
+
+/** A jousting lance held upright, about 32 tall, a cone-shaped hand guard at the fist and a painted spiral up the shaft. */
+function lance(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, -4, 4);
+  const T = (p: Point): Point => turned(p, tilt);
+  const poly = (points: readonly Point[]): string => f.poly(points.map(T));
+  return [
+    shape(poly([[-1.2, 6], [1.2, 6], [0.3, -26], [-0.3, -26]]), "white", 1, INKED),
+    shape(poly([[-1, 0], [1, -3], [0.9, -5], [-0.9, -2]]) + poly([[-0.8, -10], [0.8, -13], [0.7, -15], [-0.7, -12]]) + poly([[-0.6, -20], [0.5, -22.6], [0.4, -24], [-0.5, -21.6]]), "red-600", 1),
+    shape(poly([[-0.8, -2], [0.8, -2], [3, 2], [-3, 2]]), "slate-400", 1, INKED),
+  ];
+}
+
+/** R3401000: an iron hand lantern hanging from the hand by its bail, a flame behind its bars and an orange glow about it; about 4 wide and 9 tall. */
+function handLantern(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const flicker = between(rng, -0.3, 0.3);
+  return [
+    shape(f.circle(0, 5.6, 6), "orange-400", 0.22),
+    shape(`M${f.p(-1.6, 2.6)}Q${f.p(0, -1.4)} ${f.p(1.6, 2.6)}L${f.p(1.1, 2.6)}Q${f.p(0, -0.4)} ${f.p(-1.1, 2.6)}Z`, "slate-900", 1),
+    shape(f.poly([[-2.2, 2.4], [2.2, 2.4], [2.6, 3.4], [-2.6, 3.4]]) + f.poly([[-2.4, 8.2], [2.4, 8.2], [1.8, 9.2], [-1.8, 9.2]]), "slate-700", 1, INKED),
+    shape(f.poly([[-1.9, 3.4], [1.9, 3.4], [1.9, 8.2], [-1.9, 8.2]]), "orange-400", 0.95, INKED),
+    shape(`M${f.p(flicker, 4.2)}Q${f.p(1, 5.8)} ${f.p(0, 7)}Q${f.p(-1, 5.8)} ${f.p(flicker, 4.2)}Z`, "white", 0.9),
+    shape(f.poly([[-0.8, 3.4], [-0.45, 3.4], [-0.45, 8.2], [-0.8, 8.2]]) + f.poly([[0.45, 3.4], [0.8, 3.4], [0.8, 8.2], [0.45, 8.2]]), "slate-900", 0.85),
+  ];
+}
+
+/** R3401000: a phone held up in the hand, its screen lit cyan and glowing, a red record light at its top; about 3.6 wide and 6.8 tall. */
+function phone(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, -14, -4);
+  const poly = (points: readonly Point[]): string => f.poly(points.map((p) => turned(p, tilt)));
+  const [gx, gy] = turned([0, -4], tilt);
+  return [
+    shape(f.circle(gx, gy, 4.6), "sky-300", 0.22),
+    shape(poly([[-1.8, -7.6], [1.8, -7.6], [1.8, 0.4], [-1.8, 0.4]]), "slate-900", 1, INKED),
+    shape(poly([[-1.3, -7], [1.3, -7], [1.3, -0.4], [-1.3, -0.4]]), "cyan-400", 0.9),
+    shape(poly([[-0.9, -6.2], [0.4, -6.2], [0.4, -5.5], [-0.9, -5.5]]) + poly([[-0.9, -4.6], [0.9, -4.6], [0.9, -3.9], [-0.9, -3.9]]), "white", 0.6),
+    shape(f.circle(...turned([1.1, -7.1], tilt), 0.3), "red-400", 1),
+  ];
+}
+
+/** R3401000: a large iron key held up by its ring bow, its shaft about 12 long, its toothed bit at the top in a faint jade glow. */
+function ironKey(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 10, 24);
+  const T = (p: Point): Point => turned(p, tilt);
+  const [bx, by] = T([0, -12]);
+  return [
+    shape(f.circle(bx, by, 3.6), "jade-400", 0.22),
+    shape(f.circle(...T([0, 0.6]), 2) + f.circle(...T([0, 0.6]), 1.1), "slate-700", 1, INKED),
+    shape(f.band([T([0, -1.4]), T([0, -13])], 1), "slate-700", 1, INKED),
+    shape(f.poly([T([0.4, -13]), T([3, -13]), T([3, -11.8]), T([2, -11.8]), T([2, -10.8]), T([0.4, -10.8])]) + f.poly([T([0.4, -9.8]), T([2.4, -9.8]), T([2.4, -8.8]), T([0.4, -8.8])]), "slate-700", 1, INKED),
+    shape(f.band([T([-0.2, -2]), T([-0.2, -12])], 0.25), "slate-100", 0.45),
+  ];
+}
+
+/** R3401000: a conductor's thin white baton raised from the hand, its cork grip in the fist; about 10 long. */
+function baton(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 20, 40);
+  const T = (p: Point): Point => turned(p, tilt);
+  return [
+    shape(f.band([T([0, -0.4]), T([0, -10.4])], 0.45), "white", 1, INKED),
+    shape(f.ellipse(...T([0, 0.4]), 0.9, 1.5), "wood-700", 1, INKED),
+    shape(f.circle(...T([0, -10.8]), 1.1), "white", 0.3),
+  ];
+}
+
+/** R3401000: a calligraphy brush held upright, a bamboo handle with nodes, a white ferrule and a black ink-loaded tip below the fist; about 10 long. */
+function calligraphyBrush(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, -10, 6);
+  const T = (p: Point): Point => turned(p, tilt);
+  const [tx, ty] = T([0, 6.8]);
+  return [
+    shape(f.band([T([0, -6.4]), T([0, 2.4])], 0.9), "wood-600", 1, INKED),
+    shape(f.band([T([-0.5, -3.6]), T([0.5, -3.6])], 0.35) + f.band([T([-0.5, -0.6]), T([0.5, -0.6])], 0.35), "wood-800", 0.9),
+    shape(f.poly([T([-0.6, 2.4]), T([0.6, 2.4]), T([0.6, 3.2]), T([-0.6, 3.2])]), "slate-100", 1, INKED),
+    shape(`M${f.p(...T([-0.8, 3.2]))}Q${f.p(...T([-1, 5.4]))} ${f.p(tx, ty)}Q${f.p(...T([1, 5.4]))} ${f.p(...T([0.8, 3.2]))}Z`, "slate-900", 1, INKED),
+    shape(f.circle(tx + 0.4, ty + 1.6, 0.45), "slate-900", 0.8),
+  ];
+}
+
+/** R3401000: a fishing rod held out and up from the fist, slender and bowed, a reel by the grip and its line hanging from the tip; the rod about 22 long, the line about 18. */
+function fishingRod(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const bow = between(rng, 0.6, 1.6);
+  const drop = between(rng, 17, 19);
+  const sway = between(rng, -0.6, 0.6);
+  return [
+    shape(f.band([[0, 0], [6, -5 - bow * 0.6], [12, -9 - bow * 0.4], [18, -12]], 0.5), "wood-700", 1, INKED),
+    shape(f.band([[-2.6, 3.4], [0.4, -0.4]], 1.2), "wood-900", 1, INKED),
+    shape(f.circle(1.6, 1.2, 0.9), "slate-700", 1, INKED),
+    shape(f.band([[18, -12], [18.4 + sway, -12 + drop * 0.5], [18.8, -12 + drop]], 0.18), "slate-100", 0.85),
+  ];
+}
+
+/** R3401000: a pocket comb raised in the fist to the hair, its spine and a row of teeth; about 6.4 long. */
+function pocketComb(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, -24, -10);
+  const T = (p: Point): Point => turned(p, tilt);
+  const spine: Point[] = [[-3.2, -0.6], [3.2, -0.6], [3.2, 0.8], [-3.2, 0.8]];
+  const teeth = Array.from({ length: 7 }, (_, k) => f.band([T([-2.7 + k * 0.9, 0.6]), T([-2.7 + k * 0.9, 2.2])], 0.32)).join("");
+  return [
+    shape(f.poly(spine.map(T)), "slate-900", 1, INKED),
+    shape(teeth, "slate-900", 1),
+    shape(f.band([T([-2.8, -0.1]), T([2.8, -0.1])], 0.25), "slate-400", 0.7),
+  ];
+}
+
+/** R3401000: a jeweller's loupe raised to the eye-side of the hand and a small torch in the fist casting a pale beam forward and down. */
+function loupe(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const aim = between(rng, -0.8, 0.8);
+  return [
+    shape(f.poly([[3, -1.8], [12, 0.6 + aim], [11, 5 + aim], [3, -0.2]]), "white", 0.3),
+    shape(f.band([[-1.4, 0.6], [3, -1]], 1.4), "slate-700", 1, INKED),
+    shape(f.circle(3.2, -1, 0.7), "white", 0.9),
+    shape(f.circle(-0.6, -4.6, 1.7) + f.circle(-0.6, -4.6, 1), "slate-900", 1, INKED),
+    shape(f.circle(-0.6, -4.6, 1), "sky-300", 0.55),
+  ];
+}
+
+/** R3401000: a folding fan opened from its pivot in the hand: pale paper ribs over a jade wash along its edge, its guards dark; about 14 across. */
+function foldingFan(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, -12, 12);
+  const R = 7.4;
+  const arc = (r: number): Point[] => Array.from({ length: 9 }, (_, k) => turned([0, -r], tilt - 60 + k * 15));
+  const outer = arc(R);
+  const inner = arc(R * 0.62);
+  const base = arc(1.2);
+  const ribs = [1, 3, 5, 7].map((k) => f.band([base[k] ?? [0, 0], outer[k] ?? [0, 0]], 0.2)).join("");
+  return [
+    shape(f.poly([...base, ...[...outer].reverse()]), "slate-100", 1, INKED),
+    shape(f.poly([...inner, ...[...outer].reverse()]), "jade-400", 0.45),
+    shape(ribs, "slate-900", 0.35),
+    shape(f.band([[0, 0.8], base[0] ?? [0, 0], outer[0] ?? [0, 0]], 0.5) + f.band([[0, 0.8], base[8] ?? [0, 0], outer[8] ?? [0, 0]], 0.5), "wood-800", 1),
+    shape(f.circle(0, 0.6, 0.6), "brass-600", 1),
+  ];
+}
+
+/** R3401000: twin curved blades from the fist, one sweeping up forward, the other back over the shoulder, steel with dark grips. */
+function twinBlades(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const flare = between(rng, -0.8, 0.8);
+  const forward = `M${f.p(0.4, -1.4)}Q${f.p(6, -7.4)} ${f.p(3.4 + flare, -14.6)}Q${f.p(3, -7.8)} ${f.p(-0.6, -1.4)}Z`;
+  const back = `M${f.p(-0.4, -1.6)}Q${f.p(-2.4, -11.4)} ${f.p(-10.2, -11.6 - flare)}Q${f.p(-5.2, -6)} ${f.p(-1.4, -0.6)}Z`;
+  return [
+    shape(forward + back, "slate-100", 1, INKED),
+    shape(`M${f.p(1.6, -3)}Q${f.p(4.8, -7.6)} ${f.p(3.4 + flare, -14.6)}Q${f.p(3.8, -8)} ${f.p(1.6, -3)}Z`, "sky-300", 0.55),
+    shape(f.band([[0, -1.6], [0.2, 1.8]], 1) + f.band([[-0.6, -1.4], [-1.8, 1.4]], 1), "wood-800", 1, INKED),
+    shape(f.band([[-1.6, -1.6], [1.8, -1.4]], 0.6), "brass-600", 1),
+  ];
+}
+
 /** R3331000: the figure parts, by id, each with its kind. */
 export const FIGURE_KIT: Readonly<Record<FigurePartId, KitPart>> = {
   "pose-stand": { category: "pose", draw: poseStand },
   "pose-guard": { category: "pose", draw: poseGuard },
   "pose-raise": { category: "pose", draw: poseRaise },
+  "pose-lunge": { category: "pose", draw: poseLunge },
+  "pose-stride": { category: "pose", draw: poseStride },
+  "pose-perch": { category: "pose", draw: posePerch },
+  "pose-genuflect": { category: "pose", draw: poseGenuflect },
+  "pose-cast": { category: "pose", draw: poseCast },
+  "pose-point": { category: "pose", draw: posePoint },
+  "pose-hold": { category: "pose", draw: poseHold },
+  "pose-block": { category: "pose", draw: poseBlock },
   "head-human": { category: "head", draw: headHuman },
   "head-felinor": { category: "head", draw: headFelinor },
   "head-pancake": { category: "head", draw: headPancake },
   "head-fruit": { category: "head", draw: headFruit },
   "head-void": { category: "head", draw: headVoid },
+  "head-lizard": { category: "head", draw: headLizard },
+  "head-robot": { category: "head", draw: headRobot },
+  "head-stone": { category: "head", draw: headStone },
+  "head-ghoul": { category: "head", draw: headGhoul },
+  "head-lantern": { category: "head", draw: headLantern },
+  "head-cloud": { category: "head", draw: headCloud },
   "hair-short": { category: "hair", draw: hairShort },
   "hair-long": { category: "hair", draw: hairLong },
   hood: { category: "hair", draw: hood },
@@ -1410,6 +3208,16 @@ export const FIGURE_KIT: Readonly<Record<FigurePartId, KitPart>> = {
   visor: { category: "hair", draw: visor },
   toque: { category: "hair", draw: toque },
   "leaf-crown": { category: "hair", draw: leafCrown },
+  "steel-helmet": { category: "hair", draw: steelHelmet },
+  horns: { category: "hair", draw: horns },
+  "cap-feather": { category: "hair", draw: capFeather },
+  "bucket-hat": { category: "hair", draw: bucketHat },
+  spectacles: { category: "hair", draw: spectacles },
+  headband: { category: "hair", draw: headband },
+  "face-mask": { category: "hair", draw: faceMask },
+  "wild-goggles": { category: "hair", draw: wildGoggles },
+  veil: { category: "hair", draw: veil },
+  fedora: { category: "hair", draw: fedora },
   "outfit-tunic": { category: "outfit", draw: tunic },
   "outfit-armor": { category: "outfit", draw: armor },
   "outfit-coat": { category: "outfit", draw: coat },
@@ -1419,11 +3227,42 @@ export const FIGURE_KIT: Readonly<Record<FigurePartId, KitPart>> = {
   "outfit-stack": { category: "outfit", draw: stack },
   "outfit-peel": { category: "outfit", draw: peel },
   "outfit-void": { category: "outfit", draw: robe },
+  "outfit-layered-plate": { category: "outfit", draw: outfitLayeredPlate },
+  "outfit-waistcoat": { category: "outfit", draw: outfitWaistcoat },
+  "outfit-sweater": { category: "outfit", draw: outfitSweater },
+  "outfit-labcoat": { category: "outfit", draw: outfitLabcoat },
+  "outfit-tutor-cardigan": { category: "outfit", draw: outfitTutorCardigan },
+  "outfit-bomber": { category: "outfit", draw: outfitBomber },
+  "outfit-work-apron": { category: "outfit", draw: outfitWorkApron },
+  "outfit-hoodie": { category: "outfit", draw: outfitHoodie },
+  "outfit-rags": { category: "outfit", draw: outfitRags },
+  "outfit-rock": { category: "outfit", draw: outfitRock },
+  "outfit-gown": { category: "outfit", draw: gown },
+  "outfit-blazer": { category: "outfit", draw: outfitBlazer },
+  "outfit-stripes": { category: "outfit", draw: outfitStripes },
+  "outfit-lantern": { category: "outfit", draw: outfitLantern },
   "item-sword": { category: "item", draw: sword },
   "item-shield": { category: "item", draw: shield },
   "item-staff": { category: "item", draw: staff },
   "item-book": { category: "item", draw: book },
   "item-blaster": { category: "item", draw: blaster },
+  "item-rapier": { category: "item", draw: rapier },
+  "item-knife": { category: "item", draw: knife },
+  "item-pavise": { category: "item", draw: pavise },
+  "item-silver-coin": { category: "item", draw: silverCoin },
+  "item-card": { category: "item", draw: card },
+  "item-stopwatch": { category: "item", draw: stopwatch },
+  "item-chalk": { category: "item", draw: chalk },
+  "item-cone": { category: "item", draw: cone },
+  "item-map": { category: "item", draw: map },
+  "item-clipboard": { category: "item", draw: clipboard },
+  "item-trumpet": { category: "item", draw: trumpet },
+  "item-binoculars": { category: "item", draw: binoculars },
+  "item-spade": { category: "item", draw: spade },
+  "item-light-stick": { category: "item", draw: lightStick },
+  "item-club": { category: "item", draw: club },
+  "item-twig-spear": { category: "item", draw: twigSpear },
+  "item-broom": { category: "item", draw: broom },
   // R3390000: the Classic+ scenes' parts, after the first ones so their order holds.
   "pose-spread": { category: "pose", draw: poseSpread },
   "pose-strike": { category: "pose", draw: poseStrike },
@@ -1470,6 +3309,59 @@ export const FIGURE_KIT: Readonly<Record<FigurePartId, KitPart>> = {
   "item-hourglass": { category: "item", draw: hourglass },
   "item-sack": { category: "item", draw: sack },
   "item-tower-shield": { category: "item", draw: towerShield },
+  // R3393000: the Meditative+ and Training Grounds scenes' parts.
+  "pose-post": { category: "pose", draw: posePost },
+  "pose-treads": { category: "pose", draw: poseTreads },
+  "pose-lift": { category: "pose", draw: poseLift },
+  "pose-hips": { category: "pose", draw: poseHips },
+  "head-eyes": { category: "head", draw: headEyes },
+  "head-sack": { category: "head", draw: headSack },
+  "head-ogre": { category: "head", draw: headOgre },
+  "outfit-flask": { category: "outfit", draw: flaskBody },
+  "outfit-straw": { category: "outfit", draw: strawBody },
+  "outfit-totem": { category: "outfit", draw: totemBody },
+  "outfit-sluice": { category: "outfit", draw: sluiceBody },
+  "outfit-posts": { category: "outfit", draw: postsBody },
+  "outfit-machine": { category: "outfit", draw: machineBody },
+  "hair-spiky": { category: "hair", draw: hairSpiky },
+  beard: { category: "hair", draw: beard },
+  "flap-cap": { category: "hair", draw: flapCap },
+  "scholar-cap": { category: "hair", draw: scholarCap },
+  sweatband: { category: "hair", draw: sweatband },
+  glasses: { category: "hair", draw: glasses },
+  "outfit-parka": { category: "outfit", draw: parka },
+  "outfit-vest": { category: "outfit", draw: spikedVest },
+  "item-trunk-club": { category: "item", draw: trunkClub },
+  "item-axe": { category: "item", draw: axe },
+  "item-boulder": { category: "item", draw: boulderFist },
+  "item-wand": { category: "item", draw: wand },
+  "item-ladle": { category: "item", draw: ladle },
+  "item-purse": { category: "item", draw: purse },
+  "item-brush": { category: "item", draw: brush },
+  "item-oar": { category: "item", draw: oar },
+  "item-pointer": { category: "item", draw: pointer },
+  "item-lance": { category: "item", draw: lance },
+  // R3401000: the Meditative scenes' parts, after the others so their order holds.
+  headphones: { category: "hair", draw: headphones },
+  beanie: { category: "hair", draw: beanie },
+  pompadour: { category: "hair", draw: pompadour },
+  "conductor-cap": { category: "hair", draw: conductorCap },
+  "tall-hat": { category: "hair", draw: tallHat },
+  "hair-bun": { category: "hair", draw: hairBun },
+  "outfit-overalls": { category: "outfit", draw: outfitOveralls },
+  "outfit-kaftan": { category: "outfit", draw: outfitKaftan },
+  "outfit-tailcoat": { category: "outfit", draw: outfitTailcoat },
+  "outfit-silks": { category: "outfit", draw: outfitSilks },
+  "item-lantern": { category: "item", draw: handLantern },
+  "item-phone": { category: "item", draw: phone },
+  "item-key": { category: "item", draw: ironKey },
+  "item-baton": { category: "item", draw: baton },
+  "item-ink-brush": { category: "item", draw: calligraphyBrush },
+  "item-loupe": { category: "item", draw: loupe },
+  "item-fan": { category: "item", draw: foldingFan },
+  "item-twin-blades": { category: "item", draw: twinBlades },
+  "item-rod": { category: "item", draw: fishingRod },
+  "item-comb": { category: "item", draw: pocketComb },
 };
 
 /** The look of a card with none of `FIGURE_LOOKS`' tags: a hooded traveller in a plain tunic. */
@@ -1486,6 +3378,9 @@ export const FIGURE_LOOKS: readonly (readonly [Tag, FigureLook])[] = [
   ["Jlockeed", { head: "head-human", hair: "visor", outfit: "outfit-suit", item: "item-blaster", skin: "red-300", cloth: "slate-700" }],
   ["Human", { head: "head-human", hair: "hair-short", outfit: "outfit-tunic", item: "item-sword", skin: "red-300", cloth: "blue-700" }],
 ];
+
+/** R3392000: KY, the chalk-dusted tutor in a cardigan, as Core's KY cards draw him (#31, #51, #57, #82). */
+export const KY_TUTOR_LOOK: FigureLook = { head: "head-human", hair: "spectacles", outfit: "outfit-tutor-cardigan", item: "item-chalk", skin: "red-300", cloth: "wood-700" };
 
 /** The look of the first of `FIGURE_LOOKS`' tags that `tags` holds, else the default. */
 export function figureLookFor(tags: readonly Tag[]): FigureLook {

@@ -27,6 +27,7 @@ import { SCENE_KIT } from "./sceneKit.ts";
 import { NATURE_KIT } from "./sceneKitNature.ts";
 import { OBJECTS_KIT } from "./sceneKitObjects.ts";
 import { PLACES_KIT } from "./sceneKitPlaces.ts";
+import { ALT_SCENE_RECIPES } from "./sceneRecipes.ts";
 import { proceduralArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
 
@@ -42,8 +43,8 @@ const CREATURE_UNITS: Readonly<Record<string, string>> = {
   "classicplus-051": "jet",
   "classicplus-064": "boar",
 };
-/** The first kit's parts (#3331), which sceneKit.ts draws itself. */
-const FIRST_KIT_PARTS = 56;
+/** The parts sceneKit.ts draws itself: the first kit's 56 (#3331) and the 199 Core's scenes added beside them (R3392000). */
+const FIRST_KIT_PARTS = 56 + 199;
 /** Where an emblem may stand and how big it may be: inside the band every face's window shows (motifs.test.ts's). */
 const EMBLEM_BAND = { left: 10, right: 90, top: 22, bottom: 84, size: 8 } as const;
 
@@ -208,7 +209,11 @@ describe("R3390000 Classic+ drawn as scenes", () => {
   });
 
   it("R3390000 Alt art grows the same parts from its own seed", () => {
-    for (const card of ENTRIES) {
+    // R3396000: the 40 offered Alt art draw an alt recipe of their own instead (classicPlusAltScenes.test.tsx).
+    const reseeded = ENTRIES.filter((card) => !Object.hasOwn(ALT_SCENE_RECIPES, card.id));
+    expect(reseeded).toHaveLength(ENTRIES.length - Object.keys(ALT_SCENE_RECIPES).length);
+    expect(reseeded).toHaveLength(76);
+    for (const card of reseeded) {
       const scene = recipe(card.id);
       const normal = composeScene(scene, card.id);
       const seed = artSeedOf(card.id, "alt");
@@ -234,7 +239,8 @@ describe("R3390000 Classic+ drawn as scenes", () => {
     expect(new Set(added.map(([id]) => id)).size, "no id in two modules").toBe(added.length);
     for (const entries of modules) expect(entries.length).toBeGreaterThan(0);
     for (const [id, part] of added) expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);
-    // None takes the place of one of the first kit's parts.
-    expect(Object.keys(SCENE_KIT)).toHaveLength(FIRST_KIT_PARTS + added.length);
+    // None takes the place of one of the first kit's parts: they follow its own in order (the modules #3393 and #3401
+    // added follow them, and meditativeScenes.test.ts counts the whole kit).
+    expect(Object.keys(SCENE_KIT).slice(FIRST_KIT_PARTS, FIRST_KIT_PARTS + added.length)).toEqual(added.map(([id]) => id));
   });
 });

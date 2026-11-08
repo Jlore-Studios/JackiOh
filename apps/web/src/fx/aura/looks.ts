@@ -3,12 +3,33 @@
 // card's palette (FLAVOR_LOOKS); these numbers are the look's motion and weight (CLAUDE.md rule 9).
 // R3400000: a Unit's aura may stand on its own `tile`, its unit zone, the nearest scope; and three looks
 // join for the Units whose signatures wear one there: Bob's snow `flurry`, Tutorial Master's `chalk`
-// dust and the Training-Grounds Golem's `timber` dust.
-// R3389000: a signature's own looks beside the shared twelve, each worn by one signature alone (the
+// dust and the Training-Grounds Golem's `timber` dust. R3405000: five more for Meditative's signatures:
+// Introspection's slow `ripple`, the `orbit` of a ring circling its card (keys, brushes, a coin), a bronze
+// cauldron's or a jade mist's `steam`, Devin Bot's rising `incense` of hologram lines and Yile's Virus's `glitch`.
+// R3389000: a signature's own looks beside the shared seventeen, each worn by one signature alone (the
 // loader fails one on any other entry, tables.ts) and each within AURA_SIGNATURE_MAX_INTENSITY.
+// R3407000: fifteen more join them, each one Stinkyscape card's own "on its tile" (part two).
 
-/** The twelve looks, as a card's table entry or an Anomaly's backdrop (`fx/anomaly.ts`, R3337003) names them. */
-export const AURA_LOOK_NAMES = ["ember", "frost", "bloom", "void", "storm", "holy", "toxic", "arcane", "drift", "flurry", "chalk", "timber"] as const;
+/** The seventeen looks, as a card's table entry or an Anomaly's backdrop (`fx/anomaly.ts`, R3337003) names them. */
+export const AURA_LOOK_NAMES = [
+  "ember",
+  "frost",
+  "bloom",
+  "void",
+  "storm",
+  "holy",
+  "toxic",
+  "arcane",
+  "drift",
+  "flurry",
+  "chalk",
+  "timber",
+  "ripple",
+  "orbit",
+  "steam",
+  "incense",
+  "glitch",
+] as const;
 
 /** What an aura covers, nearest first: a Unit's own tile, its card's own zone, its lane, its side or the whole board. The index is its stacking rank. */
 export const AURA_SCOPES = ["tile", "zone", "lane", "side", "board"] as const;
@@ -21,7 +42,36 @@ export const AURA_FIELD_TYPES = ["Field Spell", "Field Trap"] as const;
  * InfiniScepter's loop, Second Wind's breeze over the graveyard, Joro's web, Nature Titan's moss, Spell
  * Tyrant's crown-sigil, BOOM! Big Max's crater smoke, King Wagtoggle's cloak and In Too Deep's whirlpool.
  */
-export const AURA_SIGNATURE_LOOK_NAMES = ["seeingIris", "sceptreLoop", "graveBreeze", "silkWeb", "mossCreep", "crownSigil", "craterSmoke", "cloakShimmer", "abyssWhirl"] as const;
+export const AURA_SIGNATURE_LOOK_NAMES = [
+  "seeingIris",
+  "sceptreLoop",
+  "graveBreeze",
+  "silkWeb",
+  "mossCreep",
+  "crownSigil",
+  "craterSmoke",
+  "cloakShimmer",
+  "abyssWhirl",
+  // R3407000: Stinkyscape part two's: the MAGI's scan line, heartbeat and glint, xxFreshJack's pixel crawl,
+  // iKwzki's halo, Shockwave447's arcs, Job Application's step lights, Scornboi's searchlight, Megabase's
+  // rings, IN33DH3's wisp, Prime's crown, the Wardrum Blob's drumbeat, Alteran Reach's star path, the
+  // Stinkyscape Golem's vapour and Sanctum's pages.
+  "scanline",
+  "heartbeat",
+  "glint",
+  "pixelcrawl",
+  "duohalo",
+  "arcflick",
+  "steplights",
+  "searchlight",
+  "stationrings",
+  "aiwisp",
+  "crownpulse",
+  "drumbeat",
+  "starpath",
+  "stinkvapour",
+  "pages",
+] as const;
 
 /** A shared look, any entry's to wear. */
 export type AuraSharedLook = (typeof AURA_LOOK_NAMES)[number];
@@ -81,6 +131,12 @@ export const AURA_LOOKS: Readonly<Record<AuraSharedLook, AuraLookSpec>> = {
   flurry: { vx: [-8, 8], vy: [4, 12], size: [1.5, 3], life: [2600, 4200], alpha: 0.55, tint: 0.06, glow: 8, edge: 0.35, blend: L },
   chalk: { vx: [-6, 6], vy: [-8, -2], size: [1.5, 3], life: [2400, 4000], alpha: 0.45, tint: 0.05, glow: 6, edge: 0.3, blend: S },
   timber: { vx: [-3, 3], vy: [6, 14], size: [1.5, 3], life: [2000, 3400], alpha: 0.4, tint: 0.07, glow: 8, edge: 0.4, blend: S },
+  // R3405000: Meditative's signatures'.
+  ripple: { vx: [-3, 3], vy: [-3, 3], size: [4, 7], life: [3200, 5200], alpha: 0.4, tint: 0.06, glow: 12, edge: 0.4, blend: L },
+  orbit: { vx: [10, 18], vy: [-2, 2], size: [1.5, 3], life: [2800, 4400], alpha: 0.6, tint: 0.05, glow: 8, edge: 0.35, blend: L },
+  steam: { vx: [-4, 4], vy: [-12, -4], size: [4, 8], life: [2600, 4200], alpha: 0.35, tint: 0.07, glow: 10, edge: 0.35, blend: S },
+  incense: { vx: [-1, 1], vy: [-16, -8], size: [1, 2], life: [1800, 3000], alpha: 0.5, tint: 0.05, glow: 6, edge: 0.4, blend: L },
+  glitch: { vx: [-24, 24], vy: [-6, 6], size: [1.5, 3], life: [500, 900], alpha: 0.6, tint: 0.06, glow: 6, edge: 0.45, blend: L },
 };
 
 /**
@@ -106,6 +162,36 @@ export const AURA_SIGNATURE_LOOKS: Readonly<Record<AuraSignatureLook, AuraLookSp
   cloakShimmer: { vx: [8, 16], vy: [-2, 2], size: [1.5, 3], life: [1400, 2400], alpha: 0.65, tint: 0.07, glow: 12, edge: 0.5, blend: L },
   // In Too Deep: a slow whirlpool of black-blue water, a faint light at its bottom.
   abyssWhirl: { vx: [-14, 14], vy: [-14, 14], size: [3, 6], life: [2400, 4000], alpha: 0.5, tint: 0.16, glow: 18, edge: 0.55, blend: S },
+  // R3407000: MELCHIOR's scan line sweeping its zone, counting.
+  scanline: { vx: [30, 50], vy: [-1, 1], size: [1.5, 2.5], life: [800, 1400], alpha: 0.7, tint: 0.08, glow: 10, edge: 0.55, blend: L },
+  // BALTHASAR's gentle heartbeat pulsing along its zone's edge.
+  heartbeat: { vx: [-3, 3], vy: [-3, 3], size: [3, 5], life: [900, 1300], alpha: 0.65, tint: 0.1, glow: 14, edge: 0.6, blend: L },
+  // CASPER's rose glint drifting across a mirror sheen.
+  glint: { vx: [14, 24], vy: [-6, -2], size: [2, 3], life: [1400, 2400], alpha: 0.75, tint: 0.07, glow: 12, edge: 0.5, blend: L },
+  // xxFreshJack's pixel shimmer crawling up his edge, like an unstable patch.
+  pixelcrawl: { vx: [-2, 2], vy: [-30, -16], size: [2, 2.5], life: [700, 1300], alpha: 0.7, tint: 0.06, glow: 8, edge: 0.5, blend: L },
+  // iKwzki's slow halo of motes.
+  duohalo: { vx: [-6, 6], vy: [-6, 6], size: [2.5, 4], life: [3000, 4600], alpha: 0.65, tint: 0.08, glow: 16, edge: 0.55, blend: L },
+  // Shockwave447's thin arcs flicking between his keywords.
+  arcflick: { vx: [-40, 40], vy: [-30, 30], size: [1, 2], life: [250, 600], alpha: 0.8, tint: 0.06, glow: 12, edge: 0.65, blend: L },
+  // Job Application's step lights over its door, blinking softly where they stand.
+  steplights: { vx: [0, 0], vy: [0, 0], size: [3, 4], life: [1200, 1800], alpha: 0.7, tint: 0.08, glow: 10, edge: 0.5, blend: L },
+  // Scornboi's slow crimson searchlight sweeping out from his zone.
+  searchlight: { vx: [18, 30], vy: [-2, 2], size: [4, 7], life: [2000, 3000], alpha: 0.5, tint: 0.12, glow: 18, edge: 0.6, blend: S },
+  // Megabase's slow-turning rings, its shuttles circling and its windows twinkling.
+  stationrings: { vx: [-8, 8], vy: [-3, 3], size: [1.5, 3], life: [2400, 4000], alpha: 0.7, tint: 0.1, glow: 14, edge: 0.55, blend: L },
+  // IN33DH3's AI wisp orbiting his head, blinking as it thinks.
+  aiwisp: { vx: [-14, 14], vy: [-14, 4], size: [2.5, 4], life: [1000, 1800], alpha: 0.75, tint: 0.07, glow: 12, edge: 0.5, blend: L },
+  // IN33DH3 Prime's slow pulse circling his neural crown.
+  crownpulse: { vx: [-5, 5], vy: [-12, -4], size: [2, 3.5], life: [1600, 2600], alpha: 0.7, tint: 0.08, glow: 16, edge: 0.6, blend: L },
+  // Wardrum Blob's soft wobble in time to a slow drumbeat.
+  drumbeat: { vx: [-4, 4], vy: [-8, 8], size: [4, 7], life: [800, 1000], alpha: 0.6, tint: 0.12, glow: 12, edge: 0.5, blend: S },
+  // Alteran Reach's faint star path across its zone.
+  starpath: { vx: [6, 12], vy: [-2, 2], size: [1.5, 3], life: [2600, 4200], alpha: 0.75, tint: 0.1, glow: 12, edge: 0.55, blend: L },
+  // Stinkyscape Golem's lazy green stink vapour curling off its stones.
+  stinkvapour: { vx: [-6, 6], vy: [-16, -6], size: [5, 9], life: [2400, 3800], alpha: 0.5, tint: 0.12, glow: 12, edge: 0.45, blend: S },
+  // Sanctum's silver motes drifting up like turning pages.
+  pages: { vx: [-6, 6], vy: [-20, -8], size: [2, 3.5], life: [2200, 3600], alpha: 0.7, tint: 0.08, glow: 14, edge: 0.55, blend: L },
 };
 
 /** R3389000: any look's spec, shared or a signature's own. */

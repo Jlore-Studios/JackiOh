@@ -220,9 +220,11 @@ or board it covers wears a quiet looping look in the card's palette, a tint, a s
 an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, palette?, scope } }`.
 
 - **Looks** (`fx/aura/looks.ts`, `AURA_LOOKS`): `ember`, `frost`, `bloom`, `void`, `storm`, `holy`,
-  `toxic`, `arcane`, (R3337003) `drift` (an asteroid field's) and (R3400000) `flurry` (snow), `chalk`
-  (chalk dust) and `timber` (sawdust), the twelve each a mote velocity, size and life range, a mote, tint
-  and edge opacity, a glow spread and a blend. `palette` is a flavor's look or a sub-look
+  `toxic`, `arcane`, (R3337003) `drift` (an asteroid field's), (R3400000) `flurry` (snow), `chalk`
+  (chalk dust) and `timber` (sawdust), and (R3405000) `ripple` (a still pool's), `orbit` (a ring circling
+  its card), `steam`, `incense` (rising hologram lines) and `glitch` (pixel spots); the seventeen each a
+  mote velocity, size and life range, a mote, tint and edge opacity, a glow spread and a blend, as each
+  signature look below is too. `palette` is a flavor's look or a sub-look
   (`"Tech/rocket"`), the card's own by default, as a motif's.
 - **Scopes**, nearest first: `tile` (R3400000: a Unit's own unit zone), `zone` (the card's own backrow
   zone), `lane` (the lane's four zones, both seats), `side` (its seat's ten zones) and `board` (all
@@ -230,8 +232,11 @@ an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, pale
   only a Unit may name `tile`; the loader fails any other card's.
 - **Signature looks** (R3389000, `AURA_SIGNATURE_LOOKS`): `seeingIris`, `sceptreLoop`, `graveBreeze`,
   `silkWeb`, `mossCreep`, `crownSigil`, `craterSmoke`, `cloakShimmer` and `abyssWhirl`, each one
-  Classic signature's own, within `AURA_SIGNATURE_MAX_INTENSITY`; the loader fails one on any entry
-  that is no signature, and `auraLookSpec` reads either kind.
+  Classic signature's own, and (R3407000) fifteen more, each one Stinkyscape part two card's own:
+  `scanline`, `heartbeat`, `glint`, `pixelcrawl`, `duohalo`, `arcflick`, `steplights`, `searchlight`,
+  `stationrings`, `aiwisp`, `crownpulse`, `drumbeat`, `starpath`, `stinkvapour` and `pages`; all within
+  `AURA_SIGNATURE_MAX_INTENSITY`. The loader fails one on any entry that is no signature, and
+  `auraLookSpec` reads either kind.
 - **What wears one** (`fx/aura/plan.ts`, read off the shown view alone): every face-up Field Spell or
   Field Trap whose entry has an aura, every face-up Unit whose entry has a `tile` aura (R3400000), and every modifier the view lists that a readable play added
   (the play resolving when its `modifierChanged` came, with no trap fired inside it), on its seat's
@@ -261,16 +266,16 @@ Ten Field Spells wear one as the pattern for the set passes:
 | Classic #42 Transmutable Toxins | `toxic`, board |
 | Classic #75 Argusland | `holy`, side |
 | Classic+ #34 Memory Leak | `frost`, lane, palette Tech |
-| Meditative #40 Feng Shui | `bloom`, board |
+| Meditative #40 Feng Shui | `orbit`, zone (R3405001; `bloom`, board before its signature) |
 | Meditative+ #9 Magic Amplifier | `arcane`, board |
 | Stinkyscape #46 Circadian Halfcycler | `storm`, lane |
 | Stinkyscape #155 Comet Crash | `ember`, zone |
 | Training Grounds #19 Extra Rations | `bloom`, zone |
 
 No modifier example is wired yet. A bespoke entry may wear an aura beside its recipe (R3400000), as
-Bob's and Tutorial Master's signatures do on their tiles, and Classic's nine permanents' signatures
-each wear their own look (R3389000); a modifier a Unit's play installs wears no tile aura, which stands
-with the Unit.
+Bob's and Tutorial Master's signatures do on their tiles, Meditative's signature Field Spells on
+their zones and lanes (R3405001), and Classic's nine permanents' signatures each wear their own look
+(R3389000); a modifier a Unit's play installs wears no tile aura, which stands with the Unit.
 
 ### Tile auras
 
@@ -531,6 +536,19 @@ motifs most of them played; #3332 laid the frame (R3332000) and each set's pass 
   - **TG #40 Goetzmann Game Design** (`gameDesign`, takeover `napkin`): a napkin under lamplight, a pencil
     sketching, card silhouettes spiralling up; pixels at the hold's end; the sketch dealt as a card back
     in place of the hand's row. Sound `pencilArpeggio`.
+- **Stinkyscape part two** (#3407, R3407000, R3407001): its 23 Legendaries and Mythics, tokens by their
+  printed rarity (the three MAGI, #109 to #116, IN33DH3 and his two tokens, Alteran Reach and Edge of the
+  Universe, Wildar, both Calls to Chaos and their Golem, Sanctum, Stimmycheck and the two Narcors), one
+  module a card or a line of cards in `fx/cards/stinkyscape/`, each with its test; `stinkyscape-2.md`'s
+  Signatures table says what each plays and what moved. Its six Mythics (`freshJack`, `ikwzki`,
+  `shockwave`, `alteran`, `edge`, `redNarcor`) take takeover looks of `TAKEOVER_ART_LOOKS`, which draw the
+  card's own picture filling the screen (`takeoverArtOf`, an `<img>` under the sweep) and stand still
+  behind Reduce Motion's card; fifteen aura looks join, each one card's own; a summon both a card's own
+  entrance and the readable play's recipe claim draws both (the MAGI under Imitated Instrumentality); a
+  Mythic Field Spell's own takeover sweeps into the zone it lands in; and a Field Spell's sound plays as it
+  lands face up in the backrow. Beats a gallery play cannot hold within
+  its ceiling (a Call's outcome, Edge of the Universe's fleeing, Paycheck's mana and Credits) are proven
+  within it from their own entries.
 - **The frame they need** (R3400000): a bespoke entry may wear an aura; a Unit's may stand on its `tile`;
   `summit`, `canvas` and `napkin` are takeover looks with art (`fx/takeoverArt.ts`), the same parts
   standing still behind Reduce Motion's card; and a signature Spell's own cast (`ownCast`) draws no
@@ -552,6 +570,17 @@ motifs most of them played; #3332 laid the frame (R3332000) and each set's pass 
   in place of the shared rays; a permanent's standing look of its own on its zone, a Unit's on its
   tile; In Too Deep's own takeover, `abyss`, and its still. `fx/cards/classic.md` ("Signatures") lists
   each card's beats, what moved and its verdict; `classic/signatures.test.ts` plays them, from both seats.
+- **Meditative** (#3405, R3405000, R3405001): every Meditative Legendary and Mythic, its tokens by their
+  printed rarity among them, is a signature after its concept, in `fx/cards/meditative/`: a Unit's
+  entrance of its own, then its text's beat and a standing look on its tile; a Spell's cast of its own; a
+  Field Spell's entrance as it lands face up, its text's beat and a look on its zone or lane. Each of its
+  thirteen Mythics takes over in a look of its own with art (twelve new looks, and YileGPT's `ai` draws
+  art now), the same parts standing still under Reduce Motion; a Mythic's entrance starts after its
+  takeover's hold (`leadMs`); a Mythic takes over once an action, so a flood of Yile's Viruses takes over
+  once; and The Cane, which Pareto Optimality puts onto the field face up, enters as it lands. Five shared
+  aura looks join (`ripple`, `orbit`, `steam`, `incense`, `glitch`). Each sounds its own effect
+  (`audio/signatureCues.ts`), The Cane as it lands face up in the backrow. `fx/cards/meditative.md` gives each card's
+  beats; `meditative/signatures*.test.ts` plays them, from both seats.
 
 ## Set pieces
 
@@ -576,8 +605,8 @@ the removals sound once, condensed, as it ends.
 | `farewell` | lamp: a lamp swings over the table, every card it exiles lifts into its light and fades in turn, then a slow exhale and no shake (R3338000) | 2.8 s | Dark | Stinkyscape #4.1 Farewell |
 
 The clears of one side, or too small to hold the game, take `wipe` on their hook: Classic+ #32.2
-Brawl (it spares a Unit), both Calls to Chaos (Classic+ #73, Stinkyscape #151: one random effect of
-theirs clears one side), the Anomaly Found! token (its caster's side) and Training Grounds #30
+Brawl (it spares a Unit), Classic+ #73 Call to Chaos (one random effect of it clears one side; Stinkyscape
+#151's took `wipe` too until its signature, R3407000), the Anomaly Found! token (its caster's side) and Training Grounds #30
 Floodgates (`death: wipe`, its own side, from its Death's marker). Stinkyscape
 #12.3 Psychic Scream takes `wipe` too and draws nothing yet: its cards leave by `shuffledIn`, whose
 ids R97 hides on both seats.

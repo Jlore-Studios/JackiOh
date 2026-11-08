@@ -6,15 +6,16 @@
 // the Radiant face, which only repaints, keeps every shape. `withScene` lays a composed scene into the
 // procedural painter's `ArtSpec`, so every painter that hands it a recipe card prints, moves, splits
 // (Out of frame) and restyles it as it does any other picture. A card with no recipe never reaches
-// here and draws its picture byte for byte. Presentation only (CLAUDE.md rule 7): the art reads a
-// card's id, never anything hidden.
+// here and draws its picture byte for byte. R3396000: a Classic+ card offered Alt art draws an alt
+// recipe of its own (sceneRecipes.ts `ALT_SCENE_RECIPES`) under its Alt art seed alone. Presentation
+// only (CLAUDE.md rule 7): the art reads a card's id, never anything hidden.
 
 import { hashId, round2, seededRandom } from "./hash.ts";
 import { drawFigure, type FigureLook, type PoseId, type FigurePartId } from "./figureKit.ts";
 import type { ShowcaseFamily } from "./pictures.ts";
 import type { ArtSpec, RidgeRole } from "./procedural.ts";
 import { SCENE_KIT, type SceneryPartId } from "./sceneKit.ts";
-import { SCENE_RECIPES } from "./sceneRecipes.ts";
+import { ALT_SCENE_RECIPES, SCENE_RECIPES } from "./sceneRecipes.ts";
 import { mixHex, RADIANT_MIX, RADIANT_PALETTE } from "./themes.ts";
 
 export type Rng = () => number;
@@ -140,9 +141,14 @@ export type ScenePlacement = {
   readonly paint?: PaletteName;
   /** R3390000: its shapes move on the props beat (R2715001), as a painter's glyphs do; never in the subject layer. */
   readonly props?: true;
+  /** R3393000: scales every shape's opacity, for a ghost, a copy or a far thing half seen. */
+  readonly fade?: number;
 };
 
-/** The figure a recipe's subject layer draws in front of its own parts, standing on x, y. */
+/**
+ * The figure a recipe's subject layer draws in front of its own parts, standing on x, y. R3393000: `fade` scales
+ * its shapes' opacity, for a ghost, a copy or a recruit flickering into being.
+ */
 export type FigureRecipe = {
   readonly x: number;
   readonly y: number;
@@ -150,6 +156,7 @@ export type FigureRecipe = {
   readonly flip?: 1 | -1;
   readonly pose: PoseId;
   readonly look: FigureLook;
+  readonly fade?: number;
 };
 
 /** R3390000: a further figure (a crowd, a companion, a rival), drawn in front of its layer's own parts, after the main figure in the subject layer. */
@@ -181,6 +188,8 @@ export type SceneShape = KitShape & { readonly layer: SceneLayer; readonly part:
 export const SCENE_SALT = 0x5ce7e331;
 /** What ends a card's id in a picture's own seed (`core-002#alt`, pictures.ts `artSeedOf`). */
 export const SCENE_SEED_SEPARATOR = "#";
+/** R3396000: the picture whose seed (`<id>#alt`, pictures.ts `artSeedOf`) reads the card's alt recipe. */
+export const SCENE_ALT_PICTURE = "alt";
 /** How far a Radiant face mixes each layer's paint toward its gold. */
 export const SCENE_RADIANT_MIX = 0.5;
 /** How much brighter a Radiant face's glow is, as the painter's is. */
@@ -216,10 +225,20 @@ function between(rng: Rng, low: number, high: number): number {
   return low + (high - low) * rng();
 }
 
-/** The card's recipe, read by its id alone (a picture's own seed keeps the card's), or null. */
+/** R3393000: `shape` with its opacity scaled by `fade`, or `shape` itself when there is none. */
+function faded<T extends KitShape>(shape: T, fade: number | undefined): T {
+  return fade === undefined ? shape : { ...shape, opacity: shape.opacity * fade };
+}
+
+/**
+ * The card's recipe, read by its id alone (a picture's own seed keeps the card's), or null. R3396000: a card with an
+ * alt recipe draws it under its Alt art seed (`<id>#alt`) alone; every other seed of it, a repaint's among them, keeps
+ * its recipe.
+ */
 export function sceneRecipeOf(seedId: string): SceneRecipe | null {
   const cut = seedId.indexOf(SCENE_SEED_SEPARATOR);
   const id = cut < 0 ? seedId : seedId.slice(0, cut);
+  if (cut >= 0 && seedId.slice(cut + SCENE_SEED_SEPARATOR.length) === SCENE_ALT_PICTURE && Object.hasOwn(ALT_SCENE_RECIPES, id)) return ALT_SCENE_RECIPES[id] ?? null;
   return Object.hasOwn(SCENE_RECIPES, id) ? (SCENE_RECIPES[id] ?? null) : null;
 }
 
@@ -238,16 +257,17 @@ export function composeScene(recipe: SceneRecipe, seedId: string): SceneShape[] 
         const s = (placed.scale ?? 1) * (1 + between(rng, -SCENE_SCALE_JITTER, SCENE_SCALE_JITTER));
         for (const shape of kit.draw({ x, y, s, flip: placed.flip ?? 1 }, rng)) {
           const paint = shape.main === true && placed.paint !== undefined ? placed.paint : shape.paint;
-          out.push({ ...shape, paint, layer, part: placed.part, ...(placed.props === true ? { props: true as const } : {}) });
+          out.push({ ...faded(shape, placed.fade), paint, layer, part: placed.part, ...(placed.props === true ? { props: true as const } : {}) });
         }
       }
     }
     // The figure stands in front of the subject layer's own parts.
     if (layer === "subject" && recipe.figure !== undefined) {
-      for (const shape of drawFigure(recipe.figure, rng)) out.push({ ...shape, layer });
+      for (const shape of drawFigure(recipe.figure, rng)) out.push({ ...faded(shape, recipe.figure.fade), layer });
     }
-    // R3390000: the scene's other figures stand in front of their layers' parts, after the main figure.
-    for (const extra of recipe.extras ?? []) if (extra.layer === layer) for (const shape of drawFigure(extra, rng)) out.push({ ...shape, layer });
+    // R3390000: the scene's other figures stand in front of their layers' parts, after the main figure. R3393000: a fade
+    // scales a placement's or a figure's opacity; one with none draws as it did.
+    for (const extra of recipe.extras ?? []) if (extra.layer === layer) for (const shape of drawFigure(extra, rng)) out.push({ ...faded(shape, extra.fade), layer });
   }
   return out;
 }

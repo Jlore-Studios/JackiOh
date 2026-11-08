@@ -7,13 +7,17 @@
 // `hookResolving` opened, a Trap's `cast` by the one its `trapFired` opened (memory.ts). R3332000: the
 // entrance a card lands with is its entry's `entrance`, whatever the entry's kind (`entranceKeyOf`): a
 // set piece's (R2800000, setPieces.ts) and a Field Spell's landing face up in the backrow among them.
-// R200: every delay lands inside the entry and trails off within FX_MAX_TAIL_MS.
+// R200: every delay lands inside the entry and trails off within FX_MAX_TAIL_MS. R3405000: an entrance is
+// passed its entry's lead (`leadMs`), so one that reads it starts after a Mythic's takeover hold, and a
+// signature's recipe draws its play's or hook's events in a sweep, out of its fog (`planSignatureSweep`).
 // R3389000: a signature's `{ bespoke }` recipe also claims what its card does outside its own play's
 // window, when the play resolving draws nothing of it: first a cast its play makes (Spell Tyrant's, the
 // innermost readable play around the one resolving), then an event that names its card as the source
 // (a redirect's or a counter's card, an Activate's, a quest's: `sourceIdOf`), found face up on the board
 // or in a readable event remembered (`signaturePlayOf`). Neither reads a hidden card (R202). It draws
 // beside a whole pile's one wave too (`planSignatureZone`).
+// R3407000: an entrance and the readable play's own recipe both draw on the `summoned` they both claim (a
+// MAGI's own entrance inside Imitated Instrumentality's boots); the fallback above never joins an entrance.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
@@ -83,7 +87,7 @@ function planEntrance(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string
   const tgt = targetFor(landing, p.view);
   if (tgt === null) return null;
   const lead = leadMs(p.entry);
-  return { cues: ENTRANCES[key]({ D: p.D, tgt, intensity: p.env.intensity, view: p.view, landing, landMs: lead + frac(FX_SLAM_AT, p.D - lead) }), row: "replace" };
+  return { cues: ENTRANCES[key]({ D: p.D, tgt, intensity: p.env.intensity, view: p.view, landing, leadMs: lead, landMs: lead + frac(FX_SLAM_AT, p.D - lead) }), row: "replace" };
 }
 
 /** R3389000: the recipe of `defId`'s signature, a `{ bespoke }` entry with `signature: true`, if any. */
@@ -168,13 +172,38 @@ export function planSignatureZone(entry: AnimationEntry, view: PlayerView, env: 
   return key === undefined ? [] : (CARD_RECIPES[key](first, { entry, view, env, D: entry.durationMs }, play)?.cues ?? []);
 }
 
+/**
+ * R3405000: a signature's recipe over a sweep's one entry (a run of hits or heals reaching every Unit on a
+ * side, which plays the board's fog and no event's row): the readable play or hook resolving now, if its
+ * card's signature is a `{ bespoke }`, is asked about each of the run's events, as its motif would be, and
+ * those it replaces leave the fog (Introspection's mends and thought-darts at its start of turn).
+ */
+export function planSignatureSweep(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): MotifResult {
+  const play = env.memory.resolving();
+  const key = entry.sweep === undefined || play === undefined || play.instanceId === HIDDEN_ID ? undefined : signatureRecipeOf(play.defId, table);
+  const cues: FxCue[] = [];
+  const replaces = new Set<GameEvent>();
+  if (play === undefined || key === undefined) return { cues, replaces };
+  for (const event of entry.events) {
+    const result = CARD_RECIPES[key](event, { entry, view, env, D: entry.durationMs }, play);
+    if (result === null) continue;
+    cues.push(...result.cues);
+    if (result.row === "replace") replaces.add(event);
+  }
+  return { cues, replaces };
+}
+
 export function planCardFx(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): CardFxResult | null {
   const entrance = planEntrance(event, p, table);
-  if (entrance !== null) return entrance;
   const play = p.env.memory.resolving();
   const key = play === undefined || play.defId === HIDDEN_ID ? undefined : bespokeOf(play.defId, table);
   const own = play === undefined || key === undefined ? null : CARD_RECIPES[key](event, p, play);
-  return own ?? signatureFallback(event, p, table);
+  if (entrance === null) return own ?? signatureFallback(event, p, table);
+  if (own === null) return entrance;
+  // R3407000: an entrance inside a recipe that claims the same summon draws both (a MAGI's own entrance
+  // under Imitated Instrumentality's boots, Sanctum's echoes as it rises). The fallback (R3389000) never
+  // joins an entrance: a summon with one draws it, as before.
+  return { cues: [...entrance.cues, ...own.cues], row: "replace" };
 }
 
 /** A motif's cues for one entry, and the entry's events it drew in place of their own row recipe. */
