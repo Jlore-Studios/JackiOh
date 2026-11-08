@@ -7,7 +7,7 @@
 // server's, at the room.
 //
 // It opens on the last mode and deck (or trio) a challenge was sent with from this browser
-// (`challengeChoice.ts`, #1831), so a repeat challenge is Challenge and Send. R2031000: All Random
+// (`challengeChoice.ts`, #1831), so a repeat challenge is Challenge and Send. R2031000: All random
 // offers "More cards from" (R924000) on the device's online pick, once the engine is in (#778).
 //
 // R3221000: an alertdialog on the one Dialog, as the board's confirms are (R3220000): Cancel first,

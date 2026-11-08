@@ -7,7 +7,8 @@
 
 import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP, IMPACT_HEADROOM } from "./constants.ts";
 import type { SfxId, SfxParams, SfxTimbre } from "./types.ts";
-import { damageTier, SLAM_PITCH_SPREAD, UNIT_SLAM } from "../game/damageFeel.ts";
+import { isAnomalyCode, type AnomalyCode } from "../cards/anomalies.ts";
+import { damageTier, PLAY_IMPACT_TIERS, SLAM_PITCH_SPREAD, UNIT_SLAM } from "../game/damageFeel.ts";
 import { createRng } from "../fx/rng.ts";
 
 export const SFX_IDS: readonly SfxId[] = [
@@ -26,6 +27,13 @@ export const SFX_IDS: readonly SfxId[] = [
   "pickUp", "dragOver", "drop", "returnToHand", "deal", "riffle",
   "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
   "organ",
+  "anomaly",
+  "playImpact", "trapSnap",
+  "auraTouch",
+  "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
+  "ballotBeep", "lullabySigh", "compactTut", "glitchDrop", "harpGliss", "markerThunder", "stampTrill", "tillRattle",
+  "gavelSlam", "dockingChime", "keyboardPing", "synthSnap", "blobDrum", "warpSparkle", "tearChoir", "cackleThunder",
+  "kazooRatchet", "thrusterSniff", "marbleGong", "sanctumBell", "cashWhistle", "whisperClink", "crystalRise",
 ];
 
 /** Every card family a summon or spell may be given (types.ts SfxTimbre), for the tests. */
@@ -438,6 +446,66 @@ const impact: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
+/**
+ * R3346000: the impact under a play, by the mana it cost (`playTier`, its weight `t` from
+ * PLAY_IMPACT_TIERS) and coloured by the card's type (`playType`): a Unit is a body landing, a Spell a
+ * charge and release, a Field Spell the ground settling. Each grows with `t` in length and in voices
+ * (a boom under a heavy Unit or Spell, a sub under a massive Field Spell). Its parts peak together
+ * under IMPACT_HEADROOM, as `impact` does (B15), and it ends within 0.5 s.
+ */
+const playImpact: SfxRecipe = (ctx, out, at, params) => {
+  const t = PLAY_IMPACT_TIERS[params.playTier ?? "light"].weight;
+  const heavy = t >= PLAY_IMPACT_TIERS.heavy.weight;
+  const massive = t >= PLAY_IMPACT_TIERS.massive.weight;
+  const peak = (0.4 + 0.4 * t) * IMPACT_HEADROOM;
+  switch (params.playType ?? "unit") {
+    case "unit": {
+      const len = 0.14 + 0.3 * t;
+      const k = kit(ctx, out, at, len);
+      const body = tone(k, out, "triangle", 200 - 90 * t, 0, 0.004, 0.5 * peak, len);
+      glide(k, body.frequency, (200 - 90 * t) * 0.45, len);
+      const thwack = noiseSource(k);
+      chain(thwack, biquad(k, "lowpass", 2400 - 1600 * t, 0), envelope(k, 0, 0.003, 0.35 * peak, 0.05), out);
+      run(k, thwack, 0, 0.05);
+      if (heavy) {
+        const boom = tone(k, out, "sine", 55, 0, 0.006, 0.45 * peak, len);
+        glide(k, boom.frequency, 35, len);
+      }
+      return len;
+    }
+    case "spell": {
+      const charge = 0.03 + 0.07 * t;
+      const len = charge + 0.1 + 0.28 * t;
+      const k = kit(ctx, out, at, len);
+      const soften = biquad(k, "lowpass", 3000, 0);
+      soften.connect(out);
+      const rise = tone(k, soften, "sawtooth", 300, 0, charge * 0.9, 0.3 * peak, charge + 0.02);
+      glide(k, rise.frequency, 1400, charge);
+      const crack = noiseSource(k);
+      const crackEnd = charge + 0.06 + 0.1 * t;
+      chain(crack, biquad(k, "highpass", 1500 - 800 * t, 0), envelope(k, charge, 0.003, 0.6 * peak, crackEnd), out);
+      run(k, crack, charge, crackEnd);
+      if (heavy) {
+        const boom = tone(k, out, "sine", 90, charge, 0.004, 0.55 * peak, len);
+        glide(k, boom.frequency, 45, len);
+      } else if (t <= PLAY_IMPACT_TIERS.light.weight) {
+        fmBell(k, out, 1760, 2, 200, charge, 0.003, 0.3 * peak, len);
+      }
+      return len;
+    }
+    case "field": {
+      const len = 0.18 + 0.3 * t;
+      const k = kit(ctx, out, at, len);
+      tone(k, out, "sine", 110 - 30 * t, 0, 0.06 + 0.06 * t, 0.4 * peak, len);
+      const rumble = noiseSource(k);
+      chain(rumble, biquad(k, "lowpass", 600 - 300 * t, 0), envelope(k, 0, 0.04, 0.4 * peak, len), out);
+      run(k, rumble, 0, len);
+      if (massive) tone(k, out, "sine", 40, 0, 0.05, 0.35 * peak, len);
+      return len;
+    }
+  }
+};
+
 const shieldShatter: SfxRecipe = (ctx, out, at) => {
   const len = 0.48;
   const k = kit(ctx, out, at, len);
@@ -534,6 +602,18 @@ const trapSting: SfxRecipe = (ctx, out, at) => {
     run(k, sq, 0, len);
   }
   tone(k, out, "sine", 1245, 0, 0.003, 0.43, 0.5);
+  return len;
+};
+
+/** R3346000: a trap firing: a sharp click and a short twang, the counterpart of `trapSet`'s soft click. */
+const trapSnap: SfxRecipe = (ctx, out, at) => {
+  const len = 0.2;
+  const k = kit(ctx, out, at, len);
+  const click = noiseSource(k);
+  chain(click, biquad(k, "highpass", 2500, 0), envelope(k, 0, 0.002, 0.6, 0.05), out);
+  run(k, click, 0, 0.05);
+  const twang = tone(k, out, "triangle", 880, 0, 0.003, 0.35, len);
+  glide(k, twang.frequency, 440, len);
   return len;
 };
 
@@ -827,6 +907,17 @@ const tapAstral: SfxRecipe = (ctx, out, at, params) => {
   fmBell(k, out, hz, 3.5, 180, 0, 0.003, 0.2 + build * 0.02, len);
   tone(k, out, "sine", hz * 2, 0.05, 0.002, 0.06, len);
   tone(k, out, "sine", hz * 3, 0.1, 0.002, 0.04, len);
+  return len;
+};
+
+const AURA_NOTES_HZ = [523.25, 587.33, 659.25, 783.99, 880, 1046.5] as const;
+const auraTouch: SfxRecipe = (ctx, out, at, params) => {
+  const len = 0.2;
+  const k = kit(ctx, out, at, len);
+  const hue = (((params.hue ?? 0) % 360) + 360) % 360;
+  const hz = AURA_NOTES_HZ[Math.floor(hue / 60) % AURA_NOTES_HZ.length] ?? 523.25;
+  fmBell(k, out, hz, 3.5, 160, 0, 0.003, 0.16, len);
+  tone(k, out, "sine", hz * 2, 0.04, 0.002, 0.04, len);
   return len;
 };
 
@@ -1841,6 +1932,996 @@ const organ: SfxRecipe = (ctx, out, at, params) => {
   }
   return len;
 };
+// R3337003: a Stinkyscape Anomaly laid (R3337000's `boardReplaced.anomaly`), one sting per board.
+// Each voice's numbers are one table: times in seconds from the sting's start, frequencies in Hz,
+// peaks as gains into `out`.
+
+/** R3337003: the Wormhole's hum: a sine swept up an octave, a soft triangle an octave above it, wobbling. */
+const WORMHOLE_HUM = {
+  len: 1.1,
+  fromHz: 55,
+  toHz: 110,
+  sweepEnd: 0.85,
+  attack: 0.3,
+  peak: 0.6,
+  holdUntil: 0.75,
+  holdLevel: 0.42,
+  wobbleHz: 4,
+  wobbleDepthHz: 2,
+  overtoneRatio: 2,
+  overtoneCutHz: 700,
+  overtonePeak: 0.16,
+} as const;
+
+const wormholeHum: SfxRecipe = (ctx, out, at) => {
+  const s = WORMHOLE_HUM;
+  const k = kit(ctx, out, at, s.len);
+  const hum = oscillator(k, "sine", s.fromHz);
+  glide(k, hum.frequency, s.toHz, s.sweepEnd);
+  vibrato(k, hum.frequency, s.wobbleHz, s.wobbleDepthHz, 0, s.len);
+  chain(hum, heldEnvelope(k, 0, s.attack, s.peak, s.holdUntil, s.holdLevel, s.len), out);
+  run(k, hum, 0, s.len);
+  const overtone = oscillator(k, "triangle", s.fromHz * s.overtoneRatio);
+  glide(k, overtone.frequency, s.toHz * s.overtoneRatio, s.sweepEnd);
+  chain(overtone, biquad(k, "lowpass", s.overtoneCutHz, 0), envelope(k, 0, s.attack, s.overtonePeak, s.len), out);
+  run(k, overtone, 0, s.len);
+  return s.len;
+};
+
+/** R3337003: an Asteroid Field's rumbling rock: low-passed noise tumbling as its cutoff falls, a sub thud, rocks knocking. */
+type RockRumble = {
+  len: number;
+  fromHz: number;
+  toHz: number;
+  q: number;
+  attack: number;
+  peak: number;
+  holdUntil: number;
+  holdLevel: number;
+  tumbleHz: number;
+  thudHz: number;
+  thudPeak: number;
+  thudStop: number;
+  knocks: readonly number[];
+  knockHz: number;
+  knockPeak: number;
+};
+
+/** R3337003: what every Asteroid Field's rumble shares: its tumble's swing, its thud's fall, its knocks' band and decay. */
+const ROCK_SHAPE = { tumbleBase: 0.65, tumbleDepth: 0.35, thudAttack: 0.008, thudDrop: 0.6, knockQ: 3, knockDecay: 0.05 } as const;
+
+/** R3337003: each Asteroid Field's rumble: Large's long and deep, Small's short and gritty, Narcour's and Axnit's under their chime and ring. */
+const ROCK_RUMBLES: { readonly [C in Extract<AnomalyCode, "AL" | "AT" | "AN" | "AA">]: RockRumble } = {
+  AL: {
+    len: 1.15, fromHz: 420, toHz: 120, q: 4, attack: 0.06, peak: 1.1, holdUntil: 0.7, holdLevel: 0.8, tumbleHz: 7,
+    thudHz: 62, thudPeak: 0.28, thudStop: 0.5, knocks: [0.18, 0.31, 0.47, 0.6, 0.78], knockHz: 700, knockPeak: 0.8,
+  },
+  AT: {
+    len: 0.7, fromHz: 900, toHz: 260, q: 2, attack: 0.02, peak: 0.9, holdUntil: 0.35, holdLevel: 0.6, tumbleHz: 13,
+    thudHz: 110, thudPeak: 0.2, thudStop: 0.25, knocks: [0.06, 0.12, 0.17, 0.25, 0.3, 0.38, 0.46], knockHz: 1600, knockPeak: 0.7,
+  },
+  AN: {
+    len: 1, fromHz: 600, toHz: 180, q: 3, attack: 0.04, peak: 1, holdUntil: 0.5, holdLevel: 0.7, tumbleHz: 9,
+    thudHz: 80, thudPeak: 0.24, thudStop: 0.4, knocks: [0.12, 0.27, 0.4], knockHz: 1000, knockPeak: 0.7,
+  },
+  AA: {
+    len: 1.1, fromHz: 520, toHz: 150, q: 3, attack: 0.05, peak: 1, holdUntil: 0.55, holdLevel: 0.7, tumbleHz: 8,
+    thudHz: 70, thudPeak: 0.24, thudStop: 0.45, knocks: [0.15, 0.33, 0.52], knockHz: 850, knockPeak: 0.7,
+  },
+};
+
+/** R3337003: Narcour's chime over its rumble: an FM bell at 880 Hz. */
+const NARCOUR_CHIME = { hz: 880, ratio: 3.5, indexHz: 240, start: 0.22, attack: 0.004, peak: 0.24, stop: 0.95 } as const;
+
+/** R3337003: Axnit's ring over its rumble: 660 Hz and its octave, shimmering as they fade. */
+const AXNIT_RING = {
+  hz: 660,
+  octave: 2,
+  start: 0.2,
+  attack: 0.004,
+  peak: 0.2,
+  octavePeak: 0.07,
+  stop: 1.05,
+  shimmerHz: 6,
+  shimmerDepth: 0.2,
+} as const;
+
+/** R3337003: an Asteroid Field's sting: its rumble, and whatever rings `over` it. */
+function asteroidField(r: RockRumble, over?: (k: Kit) => void): SfxRecipe {
+  return (ctx, out, at) => {
+    const k = kit(ctx, out, at, r.len);
+    const noise = noiseSource(k);
+    const rock = biquad(k, "lowpass", r.fromHz, r.q);
+    glide(k, rock.frequency, r.toHz, r.len);
+    const tumble = modulatedGain(k, "sine", r.tumbleHz, ROCK_SHAPE.tumbleBase, ROCK_SHAPE.tumbleDepth);
+    chain(noise, rock, tumble, heldEnvelope(k, 0, r.attack, r.peak, r.holdUntil, r.holdLevel, r.len), out);
+    run(k, noise, 0, r.len);
+    const thud = tone(k, out, "sine", r.thudHz, 0, ROCK_SHAPE.thudAttack, r.thudPeak, r.thudStop);
+    glide(k, thud.frequency, r.thudHz * ROCK_SHAPE.thudDrop, r.thudStop);
+    clickTrain(k, out, r.knocks, r.knockHz, ROCK_SHAPE.knockQ, r.knockPeak, ROCK_SHAPE.knockDecay);
+    over?.(k);
+    return r.len;
+  };
+}
+
+function narcourChime(k: Kit): void {
+  const s = NARCOUR_CHIME;
+  fmBell(k, k.out, s.hz, s.ratio, s.indexHz, s.start, s.attack, s.peak, s.stop);
+}
+
+function axnitRing(k: Kit): void {
+  const s = AXNIT_RING;
+  const shimmer = tremolo(k, s.shimmerHz, s.shimmerDepth);
+  chain(shimmer, k.out);
+  tone(k, shimmer, "sine", s.hz, s.start, s.attack, s.peak, s.stop);
+  tone(k, shimmer, "sine", s.hz * s.octave, s.start, s.attack, s.octavePeak, s.stop);
+}
+
+/** R3337003: the Battlefields' metallic clank: two ring-modulated strikes, a scrape on each, the metal ringing after. */
+const BATTLEFIELD_CLANK = {
+  len: 0.8,
+  hits: [0, 0.15],
+  carrierHz: 233,
+  modulatorHz: 351,
+  bandHz: 1900,
+  bandQ: 3,
+  hitAttack: 0.002,
+  hitPeak: 0.9,
+  hitStop: 0.16,
+  scrapeHz: 3800,
+  scrapeQ: 2,
+  scrapePeak: 0.6,
+  scrapeDecay: 0.035,
+  ringHz: 1245,
+  ringRatio: 1.41,
+  ringIndexHz: 520,
+  ringPeak: 0.15,
+} as const;
+
+const battlefieldClank: SfxRecipe = (ctx, out, at) => {
+  const s = BATTLEFIELD_CLANK;
+  const k = kit(ctx, out, at, s.len);
+  for (const start of s.hits) {
+    const ring = level(k, 0, start);
+    const carrier = oscillator(k, "square", s.carrierHz, start);
+    const modulator = oscillator(k, "square", s.modulatorHz, start);
+    chain(carrier, ring);
+    modulator.connect(ring.gain);
+    chain(ring, biquad(k, "bandpass", s.bandHz, s.bandQ), envelope(k, start, s.hitAttack, s.hitPeak, start + s.hitStop), out);
+    run(k, carrier, start, start + s.hitStop);
+    run(k, modulator, start, start + s.hitStop);
+  }
+  clickTrain(k, out, s.hits, s.scrapeHz, s.scrapeQ, s.scrapePeak, s.scrapeDecay);
+  fmBell(k, out, s.ringHz, s.ringRatio, s.ringIndexHz, 0, s.hitAttack, s.ringPeak, s.len);
+  return s.len;
+};
+
+/** R3337003: the Wrecked Spice Platform's falling hiss: noise through a band sliding down, a groan falling under it. */
+const SPICE_HISS = {
+  len: 0.95,
+  fromHz: 7000,
+  toHz: 450,
+  q: 1.4,
+  attack: 0.03,
+  peak: 0.7,
+  holdUntil: 0.55,
+  holdLevel: 0.55,
+  groanFromHz: 330,
+  groanToHz: 70,
+  groanStart: 0.12,
+  groanAttack: 0.05,
+  groanPeak: 0.2,
+} as const;
+
+const spiceHiss: SfxRecipe = (ctx, out, at) => {
+  const s = SPICE_HISS;
+  const k = kit(ctx, out, at, s.len);
+  const noise = noiseSource(k);
+  const band = biquad(k, "bandpass", s.fromHz, s.q);
+  glide(k, band.frequency, s.toHz, s.len);
+  chain(noise, band, heldEnvelope(k, 0, s.attack, s.peak, s.holdUntil, s.holdLevel, s.len), out);
+  run(k, noise, 0, s.len);
+  const groan = tone(k, out, "sine", s.groanFromHz, s.groanStart, s.groanAttack, s.groanPeak, s.len);
+  glide(k, groan.frequency, s.groanToHz, s.len);
+  return s.len;
+};
+
+/** R3337003: the Monument's bell: an FM bell at 98 Hz, its octave fading sooner, a stone strike on it. */
+const MONUMENT_BELL = {
+  len: 1.15,
+  hz: 98,
+  ratio: 1.4,
+  indexHz: 260,
+  attack: 0.004,
+  peak: 0.45,
+  octave: 2,
+  octaveIndexHz: 180,
+  octavePeak: 0.15,
+  octaveStop: 0.75,
+  strikeHz: 1800,
+  strikeQ: 1.5,
+  strikeAttack: 0.001,
+  strikePeak: 0.4,
+  strikeStop: 0.03,
+} as const;
+
+const monumentBell: SfxRecipe = (ctx, out, at) => {
+  const s = MONUMENT_BELL;
+  const k = kit(ctx, out, at, s.len);
+  fmBell(k, out, s.hz, s.ratio, s.indexHz, 0, s.attack, s.peak, s.len);
+  fmBell(k, out, s.hz * s.octave, s.ratio, s.octaveIndexHz, 0, s.attack, s.octavePeak, s.octaveStop);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "bandpass", s.strikeHz, s.strikeQ), envelope(k, 0, s.strikeAttack, s.strikePeak, s.strikeStop), out);
+  run(k, noise, 0, s.strikeStop);
+  return s.len;
+};
+
+/** R3337003: the Drone Hideouts' buzz: two saws a hair apart, rising a little, through a low-pass, a fast tremolo on them. */
+const DRONE_BUZZ = {
+  len: 0.9,
+  hz: [147, 150],
+  rise: 1.12,
+  riseEnd: 0.5,
+  cutHz: 1700,
+  q: 3,
+  attack: 0.04,
+  peak: 0.2,
+  holdUntil: 0.65,
+  holdLevel: 0.15,
+  tremoloHz: 24,
+  tremoloDepth: 0.4,
+} as const;
+
+const droneBuzz: SfxRecipe = (ctx, out, at) => {
+  const s = DRONE_BUZZ;
+  const k = kit(ctx, out, at, s.len);
+  const buzz = biquad(k, "lowpass", s.cutHz, s.q);
+  chain(buzz, tremolo(k, s.tremoloHz, s.tremoloDepth), heldEnvelope(k, 0, s.attack, s.peak, s.holdUntil, s.holdLevel, s.len), out);
+  for (const hz of s.hz) {
+    const saw = oscillator(k, "sawtooth", hz);
+    glide(k, saw.frequency, hz * s.rise, s.riseEnd);
+    chain(saw, buzz);
+    run(k, saw, 0, s.len);
+  }
+  return s.len;
+};
+
+/** R3337003: the Frontier Outpost's chime: C then the G above it (523 and 784 Hz), warm FM bells. */
+const FRONTIER_CHIME = {
+  len: 1,
+  notes: [
+    [0, 523],
+    [0.14, 784],
+  ],
+  ratio: 2,
+  indexHz: 260,
+  attack: 0.004,
+  peak: 0.3,
+  ring: 0.8,
+} as const;
+
+const frontierChime: SfxRecipe = (ctx, out, at) => {
+  const s = FRONTIER_CHIME;
+  const k = kit(ctx, out, at, s.len);
+  for (const [start, hz] of s.notes) fmBell(k, out, hz, s.ratio, s.indexHz, start, s.attack, s.peak, Math.min(s.len, start + s.ring));
+  return s.len;
+};
+
+/** R3337003: each Anomaly's sting, by the code its `boardReplaced` names (cards/anomalies.ts). */
+const ANOMALY_STINGS: { readonly [C in AnomalyCode]: SfxRecipe } = {
+  WH: wormholeHum,
+  BF: battlefieldClank,
+  AL: asteroidField(ROCK_RUMBLES.AL),
+  AT: asteroidField(ROCK_RUMBLES.AT),
+  SP: spiceHiss,
+  MT: monumentBell,
+  DH: droneBuzz,
+  FO: frontierChime,
+  AN: asteroidField(ROCK_RUMBLES.AN, narcourChime),
+  AA: asteroidField(ROCK_RUMBLES.AA, axnitRing),
+};
+
+/** R3337003: an Anomaly is laid: its board's sting; with no code, or one this build does not know, the plain whoosh. */
+const anomaly: SfxRecipe = (ctx, out, at, params) =>
+  (isAnomalyCode(params.anomaly) ? ANOMALY_STINGS[params.anomaly] : whoosh)(ctx, out, at, params);
+
+// R3400001: the signature sounds of Meditative+'s and Training Grounds' Legendaries and Mythics, one each
+// (audio/signatureCues.ts plays them), every one layering its card's three sounds in a graph of its own.
+
+/** Bob's Plan: a brush slapped on paper, one war-drum hit, a satisfied grunt. */
+const inkSummit: SfxRecipe = (ctx, out, at) => {
+  const len = 1.1;
+  const k = kit(ctx, out, at, len);
+  // Each noise its own source, started as its envelope opens (a gain is 1 until its envelope sets it).
+  const slap = noiseSource(k);
+  chain(slap, biquad(k, "bandpass", 2600, 0.9), envelope(k, 0, 0.003, 0.32, 0.12), out);
+  run(k, slap, 0, 0.12);
+  const drum = tone(k, out, "sine", 64, 0.1, 0.006, 0.5, 0.55);
+  glide(k, drum.frequency, 42, 0.45);
+  const skin = noiseSource(k);
+  chain(skin, biquad(k, "lowpass", 160, 0), envelope(k, 0.1, 0.004, 0.35, 0.2), out);
+  run(k, skin, 0.1, 0.2);
+  const muffle = biquad(k, "lowpass", 800, 0.8);
+  chain(muffle, out);
+  const grunt = oscillator(k, "sawtooth", 150, 0.55);
+  glide(k, grunt.frequency, 175, 0.7);
+  glide(k, grunt.frequency, 120, len);
+  chain(grunt, heldEnvelope(k, 0.55, 0.05, 0.24, 0.8, 0.12, len), muffle);
+  run(k, grunt, 0.55, len);
+  return len;
+};
+
+/** Bob: a snowplow's engine revving, a grunt of effort, a deep thud. */
+const plowHeave: SfxRecipe = (ctx, out, at) => {
+  const len = 1.3;
+  const k = kit(ctx, out, at, len);
+  const throat = biquad(k, "lowpass", 380, 1.4);
+  chain(throat, tremolo(k, 22, 0.35), out);
+  const engine = oscillator(k, "sawtooth", 48, 0);
+  glide(k, engine.frequency, 96, 0.45);
+  glide(k, engine.frequency, 60, 0.75);
+  chain(engine, heldEnvelope(k, 0, 0.08, 0.34, 0.6, 0.2, 0.8), throat);
+  run(k, engine, 0, 0.8);
+  const muffle = biquad(k, "lowpass", 950, 0.8);
+  chain(muffle, out);
+  const effort = oscillator(k, "sawtooth", 210, 0.35);
+  glide(k, effort.frequency, 260, 0.55);
+  glide(k, effort.frequency, 170, 0.75);
+  chain(effort, envelope(k, 0.35, 0.04, 0.22, 0.78), muffle);
+  run(k, effort, 0.35, 0.78);
+  const thud = tone(k, out, "sine", 56, 0.78, 0.005, 0.55, len);
+  glide(k, thud.frequency, 34, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "lowpass", 140, 0), envelope(k, 0.78, 0.004, 0.4, 1), out);
+  run(k, noise, 0.78, 1);
+  return len;
+};
+
+/** Scratch Pad: a soft cursor tick, keys clattering into silence, paper tearing. */
+const cursorTear: SfxRecipe = (ctx, out, at) => {
+  const len = 1.4;
+  const k = kit(ctx, out, at, len);
+  clickTrain(k, out, [0], 3200, 6, 0.4, 0.03);
+  clickTrain(k, out, [0.22, 0.27, 0.31, 0.38, 0.42, 0.5, 0.57, 0.67], 1900, 3, 0.55, 0.035);
+  const noise = noiseSource(k);
+  const band = biquad(k, "bandpass", 1800, 1.1);
+  glide(k, band.frequency, 4200, len);
+  chain(noise, band, tremolo(k, 34, 0.45), heldEnvelope(k, 0.85, 0.03, 0.7, 1.15, 0.4, len), out);
+  run(k, noise, 0.85, len);
+  return len;
+};
+
+/** Seance: a low murmured chant, candles guttering, a ghostly exhale. */
+const seanceChant: SfxRecipe = (ctx, out, at) => {
+  const len = 1.5;
+  const k = kit(ctx, out, at, len);
+  const murmur = biquad(k, "lowpass", 600, 0.9);
+  chain(murmur, out);
+  for (const [hz, rate] of [[110, 4], [165, 5]] as const) {
+    const voice = oscillator(k, "triangle", hz, 0);
+    vibrato(k, voice.frequency, rate, 3, 0, 1);
+    chain(voice, heldEnvelope(k, 0, 0.2, 0.2, 0.8, 0.14, 1), murmur);
+    run(k, voice, 0, 1);
+  }
+  const flame = noiseSource(k);
+  chain(flame, biquad(k, "bandpass", 900, 2), modulatedGain(k, "square", 13, 0.5, 0.45), envelope(k, 0.1, 0.1, 0.14, 0.9), out);
+  run(k, flame, 0.1, 0.9);
+  const exhale = noiseSource(k);
+  const breath = biquad(k, "bandpass", 1300, 0.8);
+  glide(k, breath.frequency, 380, len);
+  chain(exhale, breath, heldEnvelope(k, 0.85, 0.12, 0.3, 1.1, 0.1, len), out);
+  run(k, exhale, 0.85, len);
+  return len;
+};
+
+/** Tutorial Master: a pointer rapped on slate, a weary sigh, a chalk squeak. */
+const slateRap: SfxRecipe = (ctx, out, at) => {
+  const len = 1.3;
+  const k = kit(ctx, out, at, len);
+  clickTrain(k, out, [0, 0.16], 1500, 4, 0.56, 0.06);
+  const noise = noiseSource(k);
+  const band = biquad(k, "bandpass", 650, 0.8);
+  glide(k, band.frequency, 380, 0.95);
+  chain(noise, band, heldEnvelope(k, 0.32, 0.18, 0.31, 0.65, 0.11, 0.95), out);
+  run(k, noise, 0.32, 0.95);
+  const sigh = oscillator(k, "sine", 300, 0.32);
+  glide(k, sigh.frequency, 170, 0.95);
+  chain(sigh, heldEnvelope(k, 0.32, 0.15, 0.17, 0.65, 0.07, 0.95), out);
+  run(k, sigh, 0.32, 0.95);
+  const squeak = tone(k, out, "triangle", 2300, 1.0, 0.01, 0.17, len);
+  glide(k, squeak.frequency, 2750, len);
+  vibrato(k, squeak.frequency, 28, 60, 1.0, len);
+  return len;
+};
+
+/** Call to Chaos (Training-Grounds Edition): wooden dice clattering, a held breath, a gong for the result. */
+const diceGong: SfxRecipe = (ctx, out, at) => {
+  const len = 1.6;
+  const k = kit(ctx, out, at, len);
+  clickTrain(k, out, [0, 0.07, 0.11, 0.2, 0.24, 0.33, 0.38, 0.44], 1100, 3, 0.34, 0.05);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "lowpass", 500, 0.7), heldEnvelope(k, 0.5, 0.2, 0.06, 0.78, 0.06, 0.8), out);
+  run(k, noise, 0.5, 0.8);
+  fmBell(k, out, 98, 1.41, 260, 0.8, 0.008, 0.42, len);
+  fmBell(k, out, 196, 2.76, 120, 0.8, 0.008, 0.14, len);
+  return len;
+};
+
+/** The Training-Grounds Golem: timber creaking, ropes snapping taut, a hollow wooden thump. */
+const timberLash: SfxRecipe = (ctx, out, at) => {
+  const len = 1.2;
+  const k = kit(ctx, out, at, len);
+  const grain = biquad(k, "bandpass", 620, 6);
+  chain(grain, out);
+  const creak = oscillator(k, "sawtooth", 88, 0);
+  glide(k, creak.frequency, 70, 0.5);
+  vibrato(k, creak.frequency, 7, 9, 0, 0.55);
+  chain(creak, heldEnvelope(k, 0, 0.12, 0.4, 0.4, 0.2, 0.55), grain);
+  run(k, creak, 0, 0.55);
+  for (const start of [0.5, 0.62]) {
+    const snap = noiseSource(k);
+    chain(snap, biquad(k, "highpass", 2400, 0.7), envelope(k, start, 0.002, 0.28, start + 0.05), out);
+    run(k, snap, start, start + 0.05);
+    const twang = tone(k, out, "triangle", 760, start, 0.002, 0.14, start + 0.12);
+    glide(k, twang.frequency, 520, start + 0.12);
+  }
+  const thump = tone(k, out, "triangle", 150, 0.8, 0.004, 0.42, len);
+  glide(k, thump.frequency, 92, len);
+  const hollow = noiseSource(k);
+  chain(hollow, biquad(k, "bandpass", 320, 1.5), envelope(k, 0.8, 0.003, 0.3, 1), out);
+  run(k, hollow, 0.8, 1);
+  return len;
+};
+
+/** Goetzmann Game Design: a pencil scratching, a napkin rustle, a bright rising arpeggio. */
+const pencilArpeggio: SfxRecipe = (ctx, out, at) => {
+  const len = 1.4;
+  const k = kit(ctx, out, at, len);
+  const scratch = noiseSource(k);
+  chain(scratch, biquad(k, "bandpass", 3400, 2.2), tremolo(k, 17, 0.45), heldEnvelope(k, 0, 0.03, 0.3, 0.45, 0.22, 0.55), out);
+  run(k, scratch, 0, 0.55);
+  const rustle = noiseSource(k);
+  chain(rustle, biquad(k, "highpass", 2800, 0.7), envelope(k, 0.55, 0.04, 0.2, 0.75), out);
+  run(k, rustle, 0.55, 0.75);
+  const bright = biquad(k, "lowpass", 5200, 0.7);
+  chain(bright, out);
+  // Each note held until the next, the last ringing out, so the notes barely overlap.
+  const notes = [523, 659, 784, 1047];
+  for (const [n, hz] of notes.entries()) {
+    const start = 0.62 + n * 0.13;
+    const last = n === notes.length - 1;
+    const stop = last ? len : start + 0.16;
+    const note = oscillator(k, "triangle", hz, start);
+    chain(note, heldEnvelope(k, start, 0.008, 0.28, last ? start + 0.3 : start + 0.11, 0.22, stop), bright);
+    run(k, note, start, stop);
+  }
+  return len;
+};
+
+// R3407001: the signature sounds of Stinkyscape's signature cards, one each (audio/signatureCues.ts plays
+// them), every one layering its card's sounds in a graph of its own within the Legendary's 1.6 s.
+
+/** MELCHIOR: a sterile beep count, a ballot clacking into its box, a rising tone. */
+const ballotBeep: SfxRecipe = (ctx, out, at) => {
+  const len = 1.3;
+  const k = kit(ctx, out, at, len);
+  for (const start of [0, 0.16, 0.32]) {
+    const beep = oscillator(k, "sine", 1000, start);
+    chain(beep, heldEnvelope(k, start, 0.003, 0.24, start + 0.08, 0.22, start + 0.1), out);
+    run(k, beep, start, start + 0.1);
+  }
+  clickTrain(k, out, [0.5, 0.54], 900, 2.5, 0.6, 0.07);
+  const box = tone(k, out, "triangle", 220, 0.5, 0.003, 0.3, 0.64);
+  glide(k, box.frequency, 130, 0.62);
+  const rise = oscillator(k, "sine", 440, 0.74);
+  glide(k, rise.frequency, 880, 1.16);
+  chain(rise, heldEnvelope(k, 0.74, 0.04, 0.26, 1.16, 0.22, len), out);
+  run(k, rise, 0.74, len);
+  return len;
+};
+
+/** BALTHASAR: a soft monitor blip, a lullaby hummed, a worried sigh. */
+const lullabySigh: SfxRecipe = (ctx, out, at) => {
+  const len = 1.5;
+  const k = kit(ctx, out, at, len);
+  tone(k, out, "sine", 1320, 0, 0.006, 0.18, 0.14);
+  const hum = biquad(k, "lowpass", 900, 0.7);
+  chain(hum, out);
+  for (const [start, hz, stop] of [[0.18, 392, 0.42], [0.42, 330, 0.64], [0.64, 349, 0.92]] as const) {
+    const note = oscillator(k, "triangle", hz, start);
+    vibrato(k, note.frequency, 5, 3, start, stop);
+    chain(note, heldEnvelope(k, start, 0.05, 0.32, stop - 0.05, 0.24, stop), hum);
+    run(k, note, start, stop);
+  }
+  const breath = noiseSource(k);
+  const band = biquad(k, "bandpass", 1100, 0.8);
+  band.frequency.setValueAtTime(1100, time(k, 0.95));
+  glide(k, band.frequency, 420, len);
+  chain(breath, band, heldEnvelope(k, 0.95, 0.1, 0.3, 1.2, 0.1, len), out);
+  run(k, breath, 0.95, len);
+  const sigh = oscillator(k, "sine", 280, 0.95);
+  glide(k, sigh.frequency, 180, len);
+  chain(sigh, heldEnvelope(k, 0.95, 0.1, 0.14, 1.2, 0.05, len), out);
+  run(k, sigh, 0.95, len);
+  return len;
+};
+
+/** CASPER: a compact snapping shut, a sultry chime, a tut-tut. */
+const compactTut: SfxRecipe = (ctx, out, at) => {
+  const len = 1.3;
+  const k = kit(ctx, out, at, len);
+  clickTrain(k, out, [0, 0.03], 3400, 3, 0.64, 0.04);
+  tone(k, out, "triangle", 2480, 0.03, 0.002, 0.14, 0.16);
+  const sultry = tremolo(k, 5, 0.2);
+  chain(sultry, out);
+  fmBell(k, sultry, 523, 1.5, 180, 0.22, 0.03, 0.28, 0.95);
+  fmBell(k, sultry, 622, 1.5, 140, 0.34, 0.03, 0.21, 1.0);
+  clickTrain(k, out, [1.05, 1.2], 2600, 1.5, 0.58, 0.03);
+  return len;
+};
+
+/** xxFreshJack: a glitch stutter, a crowd roar, a bass drop. */
+const glitchDrop: SfxRecipe = (ctx, out, at) => {
+  const len = 1.5;
+  const k = kit(ctx, out, at, len);
+  for (const [n, hz] of [880, 1760, 660, 1320, 990].entries()) {
+    const start = 0.045 * n;
+    crushedBlip(k, out, hz, start, start + 0.035, 0.2);
+  }
+  const stutter = noiseSource(k);
+  chain(stutter, biquad(k, "highpass", 2500, 0.7), modulatedGain(k, "square", 22, 0.5, 0.5), envelope(k, 0, 0.005, 0.25, 0.24), out);
+  run(k, stutter, 0, 0.24);
+  const crowd = noiseSource(k);
+  chain(crowd, biquad(k, "bandpass", 900, 0.6), tremolo(k, 7, 0.15), heldEnvelope(k, 0.25, 0.3, 0.34, 0.8, 0.24, 1.0), out);
+  run(k, crowd, 0.25, 1.0);
+  const drop = oscillator(k, "sine", 140, 0.86);
+  glide(k, drop.frequency, 38, 1.36);
+  chain(drop, heldEnvelope(k, 0.86, 0.01, 0.5, 1.2, 0.35, len), out);
+  run(k, drop, 0.86, len);
+  const grit = oscillator(k, "sawtooth", 70, 0.86);
+  glide(k, grit.frequency, 32, 1.36);
+  chain(grit, biquad(k, "lowpass", 260, 0.8), envelope(k, 0.86, 0.01, 0.2, len), out);
+  run(k, grit, 0.86, len);
+  return len;
+};
+
+/** iKwzki: a harp glissando up the strings, then a warm two-note chime. */
+const harpGliss: SfxRecipe = (ctx, out, at) => {
+  const len = 1.5;
+  const k = kit(ctx, out, at, len);
+  const strings = biquad(k, "lowpass", 4200, 0.7);
+  chain(strings, out);
+  for (const [n, hz] of [262, 294, 330, 392, 440, 523, 587, 659, 784, 880, 1047].entries()) {
+    const start = 0.04 * n;
+    tone(k, strings, "triangle", hz, start, 0.003, 0.14, start + 0.4);
+  }
+  fmBell(k, out, 523, 2, 90, 0.6, 0.01, 0.26, 1.1);
+  fmBell(k, out, 784, 2, 70, 0.85, 0.01, 0.22, len);
+  return len;
+};
+
+/** Shockwave447: chatter fast-forwarded, a marker squeaking twice, an electric thunderclap. */
+const markerThunder: SfxRecipe = (ctx, out, at) => {
+  const len = 1.5;
+  const k = kit(ctx, out, at, len);
+  const chatter = oscillator(k, "sawtooth", 600, 0);
+  for (const [n, hz] of [900, 520, 1100, 700, 1300, 640, 980, 760, 1200].entries()) {
+    chatter.frequency.setValueAtTime(hz, time(k, 0.04 * (n + 1)));
+  }
+  chain(chatter, biquad(k, "bandpass", 1600, 2), modulatedGain(k, "square", 18, 0.5, 0.5), heldEnvelope(k, 0, 0.02, 0.45, 0.34, 0.35, 0.42), out);
+  run(k, chatter, 0, 0.42);
+  for (const start of [0.5, 0.66]) {
+    const squeak = tone(k, out, "sine", 2900, start, 0.008, 0.16, start + 0.12);
+    glide(k, squeak.frequency, 3400, start + 0.1);
+    vibrato(k, squeak.frequency, 35, 90, start, start + 0.12);
+  }
+  const zap = tone(k, out, "square", 1800, 0.86, 0.002, 0.12, 1.0);
+  glide(k, zap.frequency, 90, 0.98);
+  const crack = noiseSource(k);
+  chain(crack, biquad(k, "highpass", 1200, 0.5), modulatedGain(k, "square", 47, 0.5, 0.5), envelope(k, 0.86, 0.003, 0.6, 1.12), out);
+  run(k, crack, 0.86, 1.12);
+  const rumble = noiseSource(k);
+  chain(rumble, biquad(k, "lowpass", 180, 0.7), heldEnvelope(k, 0.88, 0.02, 0.5, 1.1, 0.3, len), out);
+  run(k, rumble, 0.88, len);
+  return len;
+};
+
+/** Job Application: a pneumatic tube's thunk, a desk phone's trill, a rubber stamp pressed and peeled. */
+const stampTrill: SfxRecipe = (ctx, out, at) => {
+  const len = 1.4;
+  const k = kit(ctx, out, at, len);
+  const tube = noiseSource(k);
+  const suck = biquad(k, "bandpass", 300, 1.5);
+  glide(k, suck.frequency, 1400, 0.16);
+  chain(tube, suck, envelope(k, 0, 0.1, 0.45, 0.2), out);
+  run(k, tube, 0, 0.2);
+  const thunk = tone(k, out, "sine", 120, 0.18, 0.004, 0.55, 0.36);
+  glide(k, thunk.frequency, 60, 0.32);
+  // The trill: two pitches swapping every 30 ms, in two rings.
+  const handset = biquad(k, "bandpass", 1400, 2.5);
+  chain(handset, out);
+  for (const ring of [0.42, 0.66]) {
+    const trill = oscillator(k, "square", 1250, ring);
+    for (const n of [1, 2, 3, 4, 5]) trill.frequency.setValueAtTime(n % 2 === 0 ? 1250 : 1560, time(k, ring + 0.03 * n));
+    chain(trill, heldEnvelope(k, ring, 0.008, 0.22, ring + 0.16, 0.2, ring + 0.18), handset);
+    run(k, trill, ring, ring + 0.18);
+  }
+  const press = tone(k, out, "triangle", 180, 1.0, 0.003, 0.5, 1.22);
+  glide(k, press.frequency, 90, 1.16);
+  const pad = noiseSource(k);
+  chain(pad, biquad(k, "lowpass", 900, 0.7), envelope(k, 1.0, 0.002, 0.45, 1.12), out);
+  run(k, pad, 1.0, 1.12);
+  const peel = noiseSource(k);
+  chain(peel, biquad(k, "bandpass", 2400, 1), envelope(k, 1.22, 0.02, 0.16, 1.34), out);
+  run(k, peel, 1.22, 1.34);
+  return len;
+};
+
+/** Paycheck: paper feeding through, a roulette ball rattling to rest, a till drawer sliding open with its ching. */
+const tillRattle: SfxRecipe = (ctx, out, at) => {
+  const len = 1.6;
+  const k = kit(ctx, out, at, len);
+  const paper = noiseSource(k);
+  chain(paper, biquad(k, "bandpass", 3800, 1.5), modulatedGain(k, "square", 38, 0.5, 0.5), heldEnvelope(k, 0, 0.02, 0.34, 0.28, 0.26, 0.34), out);
+  run(k, paper, 0, 0.34);
+  const motor = oscillator(k, "sawtooth", 95, 0);
+  chain(motor, biquad(k, "lowpass", 300, 0.7), heldEnvelope(k, 0, 0.03, 0.1, 0.28, 0.08, 0.34), out);
+  run(k, motor, 0, 0.34);
+  // The ball rattles round the wheel, slowing as it settles.
+  const bounces: number[] = [];
+  for (let t = 0.4, gap = 0.03; t < 1.0; gap *= 1.18) {
+    bounces.push(t);
+    t += gap;
+  }
+  clickTrain(k, out, bounces, 3000, 4, 0.55, 0.025);
+  const slide = noiseSource(k);
+  const rail = biquad(k, "bandpass", 1800, 2);
+  rail.frequency.setValueAtTime(1800, time(k, 1.04));
+  glide(k, rail.frequency, 700, 1.24);
+  chain(slide, rail, envelope(k, 1.04, 0.04, 0.32, 1.26), out);
+  run(k, slide, 1.04, 1.26);
+  tone(k, out, "sine", 110, 1.24, 0.003, 0.42, 1.4);
+  fmBell(k, out, 2093, 3.5, 300, 1.27, 0.002, 0.24, len);
+  return len;
+};
+
+/** Scornboi: a gavel's crack, a scoff, a heavy hatch slammed shut. */
+const gavelSlam: SfxRecipe = (ctx, out, at) => {
+  const len = 1.4;
+  const k = kit(ctx, out, at, len);
+  clickTrain(k, out, [0], 1300, 3, 0.7, 0.05);
+  const knock = tone(k, out, "triangle", 420, 0, 0.002, 0.35, 0.12);
+  glide(k, knock.frequency, 300, 0.1);
+  const nose = biquad(k, "bandpass", 750, 2.5);
+  chain(nose, out);
+  const scoff = oscillator(k, "sawtooth", 240, 0.3);
+  glide(k, scoff.frequency, 150, 0.48);
+  chain(scoff, envelope(k, 0.3, 0.015, 0.35, 0.5), nose);
+  run(k, scoff, 0.3, 0.5);
+  const huff = noiseSource(k);
+  chain(huff, biquad(k, "bandpass", 1600, 1), envelope(k, 0.3, 0.01, 0.2, 0.46), out);
+  run(k, huff, 0.3, 0.46);
+  const slam = tone(k, out, "sine", 70, 0.7, 0.004, 0.55, 1.2);
+  glide(k, slam.frequency, 40, 1.1);
+  fmBell(k, out, 147, 2.83, 220, 0.7, 0.003, 0.2, len);
+  const clang = noiseSource(k);
+  chain(clang, biquad(k, "lowpass", 600, 1), envelope(k, 0.7, 0.003, 0.4, 0.86), out);
+  run(k, clang, 0.7, 0.86);
+  return len;
+};
+
+/** Megabase: a deep docking clank, a lobby's three-note chime, a cascade of coins. */
+const dockingChime: SfxRecipe = (ctx, out, at) => {
+  const len = 1.6;
+  const k = kit(ctx, out, at, len);
+  for (const start of [0, 0.14]) {
+    const clamp = tone(k, out, "sine", 62, start, 0.004, 0.42, start + 0.3);
+    glide(k, clamp.frequency, 44, start + 0.25);
+    fmBell(k, out, 110, 3.17, 160, start, 0.003, 0.14, start + 0.32);
+  }
+  for (const [start, hz] of [[0.5, 784], [0.66, 988], [0.82, 1175]] as const) fmBell(k, out, hz, 2, 60, start, 0.006, 0.22, start + 0.5);
+  const coins = [3520, 4186, 3951, 4699];
+  for (const [n, start] of [0.96, 1.01, 1.05, 1.11, 1.14, 1.2, 1.25, 1.31, 1.37, 1.43].entries()) {
+    tone(k, out, "sine", coins[n % coins.length] ?? 3520, start, 0.002, 0.1, start + 0.12);
+  }
+  return len;
+};
+
+/** IN33DH3: a flurry of keys, a chirpy AI ping, a smug click. */
+const keyboardPing: SfxRecipe = (ctx, out, at) => {
+  const len = 1.2;
+  const k = kit(ctx, out, at, len);
+  clickTrain(k, out, [0, 0.05, 0.08, 0.14, 0.17, 0.22, 0.26, 0.29, 0.35, 0.39, 0.42, 0.48], 2400, 2, 0.7, 0.025);
+  crushedBlip(k, out, 1568, 0.58, 0.64, 0.22);
+  const chirp = tone(k, out, "sine", 1760, 0.64, 0.004, 0.34, 0.82);
+  glide(k, chirp.frequency, 2637, 0.72);
+  clickTrain(k, out, [1.0], 1700, 6, 0.85, 0.03);
+  tone(k, out, "triangle", 880, 1.0, 0.002, 0.18, 1.1);
+  return len;
+};
+
+/** IN33DH3 Prime: a low synth swell opening up, a confident finger snap, a drum tap. */
+const synthSnap: SfxRecipe = (ctx, out, at) => {
+  const len = 1.4;
+  const k = kit(ctx, out, at, len);
+  const sweep = biquad(k, "lowpass", 180, 2);
+  glide(k, sweep.frequency, 1600, 0.6);
+  glide(k, sweep.frequency, 500, 0.8);
+  chain(sweep, heldEnvelope(k, 0, 0.5, 0.22, 0.62, 0.16, 0.8), out);
+  for (const hz of [55, 55.6]) {
+    const saw = oscillator(k, "sawtooth", hz, 0);
+    chain(saw, sweep);
+    run(k, saw, 0, 0.8);
+  }
+  const snap = noiseSource(k);
+  chain(snap, biquad(k, "bandpass", 2300, 1.8), envelope(k, 0.84, 0.002, 0.7, 0.92), out);
+  run(k, snap, 0.84, 0.92);
+  const tap = tone(k, out, "sine", 190, 1.08, 0.003, 0.5, 1.35);
+  glide(k, tap.frequency, 110, 1.3);
+  const skin = noiseSource(k);
+  chain(skin, biquad(k, "lowpass", 1200, 0.7), envelope(k, 1.08, 0.002, 0.25, 1.14), out);
+  run(k, skin, 1.08, 1.14);
+  return len;
+};
+
+/** Wardrum Blob: a squishy plop, a two-beat hand drum, a happy hum. */
+const blobDrum: SfxRecipe = (ctx, out, at) => {
+  const len = 1.5;
+  const k = kit(ctx, out, at, len);
+  const plop = tone(k, out, "sine", 420, 0, 0.004, 0.45, 0.16);
+  glide(k, plop.frequency, 110, 0.12);
+  const squish = noiseSource(k);
+  const wet = biquad(k, "bandpass", 1200, 5);
+  glide(k, wet.frequency, 300, 0.14);
+  chain(squish, wet, envelope(k, 0, 0.01, 0.35, 0.16), out);
+  run(k, squish, 0, 0.16);
+  for (const [start, hz, peak] of [[0.3, 160, 0.5], [0.48, 130, 0.42]] as const) {
+    const hit = tone(k, out, "sine", hz, start, 0.003, peak, start + 0.22);
+    glide(k, hit.frequency, hz * 0.62, start + 0.18);
+    const slap = noiseSource(k);
+    chain(slap, biquad(k, "bandpass", 900, 1.2), envelope(k, start, 0.002, peak * 0.5, start + 0.05), out);
+    run(k, slap, start, start + 0.05);
+  }
+  const hum = biquad(k, "lowpass", 1100, 0.7);
+  chain(hum, out);
+  for (const [start, hz, stop] of [[0.8, 392, 1.02], [1.02, 494, 1.24], [1.24, 587, len]] as const) {
+    const note = oscillator(k, "triangle", hz, start);
+    vibrato(k, note.frequency, 6, 4, start, stop);
+    chain(note, heldEnvelope(k, start, 0.03, 0.28, stop - 0.04, 0.22, stop), hum);
+    run(k, note, start, stop);
+  }
+  return len;
+};
+
+/** Alteran Reach: a warp whoosh, then a sparkling chime for each node along the map. */
+const warpSparkle: SfxRecipe = (ctx, out, at) => {
+  const len = 1.6;
+  const k = kit(ctx, out, at, len);
+  const warp = noiseSource(k);
+  const tunnel = biquad(k, "bandpass", 220, 2);
+  glide(k, tunnel.frequency, 4200, 0.5);
+  glide(k, tunnel.frequency, 900, 0.7);
+  chain(warp, tunnel, heldEnvelope(k, 0, 0.35, 0.67, 0.5, 0.37, 0.7), out);
+  run(k, warp, 0, 0.7);
+  const shift = oscillator(k, "sine", 180, 0);
+  glide(k, shift.frequency, 1200, 0.5);
+  chain(shift, envelope(k, 0, 0.4, 0.12, 0.62), out);
+  run(k, shift, 0, 0.62);
+  const sparkle = tremolo(k, 16, 0.2);
+  chain(sparkle, out);
+  for (const [n, hz] of [1319, 1568, 1976, 2349, 2637].entries()) {
+    const start = 0.62 + 0.14 * n;
+    fmBell(k, sparkle, hz, 3.5, 200, start, 0.002, 0.22, Math.min(len, start + 0.4));
+  }
+  return len;
+};
+
+/** Edge of the Universe: paper tearing, a long-held choir note cut off, then silence. */
+const tearChoir: SfxRecipe = (ctx, out, at) => {
+  const len = 1.5;
+  const k = kit(ctx, out, at, len);
+  const paper = noiseSource(k);
+  const rip = biquad(k, "bandpass", 1500, 1.2);
+  glide(k, rip.frequency, 3800, 0.34);
+  chain(paper, rip, modulatedGain(k, "square", 41, 0.55, 0.45), envelope(k, 0, 0.02, 0.8, 0.36), out);
+  run(k, paper, 0, 0.36);
+  // The choir sings "ah" through two formants, held, then cut: past it, silence to the end.
+  const voices = heldEnvelope(k, 0.32, 0.25, 0.19, 1.15, 0.17, 1.2);
+  for (const hz of [700, 1150]) chain(voices, biquad(k, "bandpass", hz, 4), out);
+  for (const hz of [220, 277, 330, 440]) {
+    const voice = oscillator(k, "sawtooth", hz, 0.32);
+    vibrato(k, voice.frequency, 5.5, hz * 0.012, 0.32, 1.2);
+    chain(voice, voices);
+    run(k, voice, 0.32, 1.2);
+  }
+  return len;
+};
+
+/** Wildar: a cackle, a crack of thunder rolling off, two coins flicked. */
+const cackleThunder: SfxRecipe = (ctx, out, at) => {
+  const len = 1.6;
+  const k = kit(ctx, out, at, len);
+  const throat = biquad(k, "bandpass", 1400, 1.5);
+  chain(throat, out);
+  for (const [n, start] of [0, 0.09, 0.18, 0.27, 0.36].entries()) {
+    const cackle = oscillator(k, "sawtooth", 820 - 50 * n, start);
+    glide(k, cackle.frequency, 620 - 40 * n, start + 0.07);
+    vibrato(k, cackle.frequency, 28, 30, start, start + 0.08);
+    chain(cackle, envelope(k, start, 0.006, 0.35, start + 0.08), throat);
+    run(k, cackle, start, start + 0.08);
+  }
+  const crack = noiseSource(k);
+  chain(crack, biquad(k, "highpass", 900, 0.6), envelope(k, 0.52, 0.002, 0.6, 0.66), out);
+  run(k, crack, 0.52, 0.66);
+  const roll = noiseSource(k);
+  chain(roll, biquad(k, "lowpass", 220, 0.8), modulatedGain(k, "sine", 6, 0.75, 0.25), heldEnvelope(k, 0.54, 0.03, 0.55, 0.8, 0.35, 1.2), out);
+  run(k, roll, 0.54, 1.2);
+  for (const start of [1.22, 1.38]) {
+    const stop = Math.min(len, start + 0.2);
+    const flick = tone(k, out, "sine", 2200, start, 0.002, 0.18, stop);
+    glide(k, flick.frequency, 2900, start + 0.05);
+    fmBell(k, out, 3300, 2.4, 300, start, 0.002, 0.08, stop);
+  }
+  return len;
+};
+
+/** Call to Chaos (Stinky Edition): a wet squelch, a ratchet spinning, a kazoo fanfare. */
+const kazooRatchet: SfxRecipe = (ctx, out, at) => {
+  const len = 1.6;
+  const k = kit(ctx, out, at, len);
+  const squelch = noiseSource(k);
+  const gut = biquad(k, "lowpass", 1400, 9);
+  glide(k, gut.frequency, 180, 0.22);
+  chain(squelch, gut, envelope(k, 0, 0.01, 0.48, 0.24), out);
+  run(k, squelch, 0, 0.24);
+  const ratchet: number[] = [];
+  for (let t = 0.28; t < 0.74; t += 0.028) ratchet.push(t);
+  clickTrain(k, out, ratchet, 1700, 6, 0.72, 0.018);
+  // The kazoo's buzz: each note's saw through one nasal band, chopped by a fast square.
+  const buzz = biquad(k, "bandpass", 1100, 1.2);
+  chain(buzz, modulatedGain(k, "square", 31, 0.6, 0.4), out);
+  for (const [start, hz, stop] of [[0.8, 392, 0.95], [0.97, 392, 1.12], [1.14, 523, len]] as const) {
+    const kazoo = oscillator(k, "sawtooth", hz, start);
+    vibrato(k, kazoo.frequency, 7, 6, start, stop);
+    chain(kazoo, heldEnvelope(k, start, 0.02, 0.48, stop - 0.05, 0.38, stop), buzz);
+    run(k, kazoo, start, stop);
+  }
+  return len;
+};
+
+/** The Stinkyscape Golem: rock grinding into a thud, a thruster's roar, a loud sniff. */
+const thrusterSniff: SfxRecipe = (ctx, out, at) => {
+  const len = 1.6;
+  const k = kit(ctx, out, at, len);
+  const grind = noiseSource(k);
+  chain(grind, biquad(k, "lowpass", 500, 1.2), modulatedGain(k, "sawtooth", 19, 0.6, 0.4), heldEnvelope(k, 0, 0.04, 0.5, 0.2, 0.35, 0.3), out);
+  run(k, grind, 0, 0.3);
+  const thud = tone(k, out, "sine", 75, 0.22, 0.004, 0.6, 0.5);
+  glide(k, thud.frequency, 38, 0.45);
+  const jet = noiseSource(k);
+  const plume = biquad(k, "bandpass", 400, 0.7);
+  plume.frequency.setValueAtTime(400, time(k, 0.45));
+  glide(k, plume.frequency, 1300, 0.95);
+  chain(jet, plume, heldEnvelope(k, 0.45, 0.2, 0.5, 0.95, 0.4, 1.1), out);
+  run(k, jet, 0.45, 1.1);
+  const burn = oscillator(k, "sawtooth", 42, 0.45);
+  glide(k, burn.frequency, 58, 0.95);
+  chain(burn, biquad(k, "lowpass", 200, 0.7), heldEnvelope(k, 0.45, 0.2, 0.25, 0.95, 0.2, 1.1), out);
+  run(k, burn, 0.45, 1.1);
+  const sniff = noiseSource(k);
+  const nostril = biquad(k, "bandpass", 1800, 2.5);
+  nostril.frequency.setValueAtTime(1800, time(k, 1.18));
+  glide(k, nostril.frequency, 3600, 1.45);
+  chain(sniff, nostril, heldEnvelope(k, 1.18, 0.06, 0.6, 1.4, 0.45, 1.5), out);
+  run(k, sniff, 1.18, 1.5);
+  return len;
+};
+
+/** Call to Chaos (Scape Edition): the world tilting with a deep groan, marbles rolling, a cosmic gong. */
+const marbleGong: SfxRecipe = (ctx, out, at) => {
+  const len = 1.6;
+  const k = kit(ctx, out, at, len);
+  const hull = biquad(k, "lowpass", 260, 5);
+  glide(k, hull.frequency, 140, 0.5);
+  chain(hull, out);
+  const groan = oscillator(k, "sawtooth", 58, 0);
+  glide(k, groan.frequency, 41, 0.5);
+  vibrato(k, groan.frequency, 3, 2.5, 0, 0.55);
+  chain(groan, heldEnvelope(k, 0, 0.12, 0.45, 0.4, 0.3, 0.55), hull);
+  run(k, groan, 0, 0.55);
+  clickTrain(k, out, [0.36, 0.41, 0.43, 0.5, 0.55, 0.58, 0.64, 0.7, 0.73, 0.8], 4200, 8, 0.45, 0.03);
+  const roll = noiseSource(k);
+  chain(roll, biquad(k, "bandpass", 2200, 1), tremolo(k, 9, 0.4), envelope(k, 0.36, 0.05, 0.12, 0.84), out);
+  run(k, roll, 0.36, 0.84);
+  const cosmos = tremolo(k, 3, 0.25);
+  chain(cosmos, out);
+  fmBell(k, cosmos, 73, 1.53, 180, 0.86, 0.01, 0.42, len);
+  fmBell(k, cosmos, 219, 3.11, 140, 0.86, 0.02, 0.12, len);
+  return len;
+};
+
+/** Sanctum: a hushed choir's breath, a page turned, a soft bell. */
+const sanctumBell: SfxRecipe = (ctx, out, at) => {
+  const len = 1.6;
+  const k = kit(ctx, out, at, len);
+  const breath = noiseSource(k);
+  const hush = heldEnvelope(k, 0, 0.3, 0.36, 0.55, 0.24, 0.75);
+  chain(breath, hush);
+  for (const hz of [500, 900, 1400]) chain(hush, biquad(k, "bandpass", hz, 6), out);
+  run(k, breath, 0, 0.75);
+  const pad = oscillator(k, "sine", 262, 0);
+  chain(pad, heldEnvelope(k, 0, 0.3, 0.1, 0.55, 0.07, 0.75), out);
+  run(k, pad, 0, 0.75);
+  const page = noiseSource(k);
+  const leaf = biquad(k, "bandpass", 1600, 1.4);
+  leaf.frequency.setValueAtTime(1600, time(k, 0.7));
+  glide(k, leaf.frequency, 3600, 0.8);
+  glide(k, leaf.frequency, 2000, 0.92);
+  chain(page, leaf, modulatedGain(k, "square", 24, 0.6, 0.4), envelope(k, 0.7, 0.03, 0.42, 0.94), out);
+  run(k, page, 0.7, 0.94);
+  fmBell(k, out, 880, 2, 110, 0.98, 0.015, 0.26, len);
+  fmBell(k, out, 1320, 2, 60, 0.98, 0.02, 0.07, len);
+  return len;
+};
+
+/** Stimmycheck: a cash drawer's ping, then a whistle rising slowly, as prices do. */
+const cashWhistle: SfxRecipe = (ctx, out, at) => {
+  const len = 1.6;
+  const k = kit(ctx, out, at, len);
+  clickTrain(k, out, [0, 0.04], 2000, 3, 0.4, 0.03);
+  fmBell(k, out, 2637, 3.5, 320, 0.05, 0.002, 0.3, 0.55);
+  fmBell(k, out, 3520, 3.5, 200, 0.07, 0.002, 0.14, 0.5);
+  const whistle = oscillator(k, "sine", 880, 0.45);
+  glide(k, whistle.frequency, 1760, 1.5);
+  vibrato(k, whistle.frequency, 5, 12, 0.7, len);
+  chain(whistle, heldEnvelope(k, 0.45, 0.25, 0.24, 1.45, 0.24, len), out);
+  run(k, whistle, 0.45, len);
+  const air = noiseSource(k);
+  const lip = biquad(k, "bandpass", 880, 8);
+  lip.frequency.setValueAtTime(880, time(k, 0.45));
+  glide(k, lip.frequency, 1760, 1.5);
+  chain(air, lip, heldEnvelope(k, 0.45, 0.25, 0.25, 1.45, 0.25, len), out);
+  run(k, air, 0.45, len);
+  return len;
+};
+
+/** Narcor: a whispered breath, a shimmer, a soft clink of glass. */
+const whisperClink: SfxRecipe = (ctx, out, at) => {
+  const len = 1.2;
+  const k = kit(ctx, out, at, len);
+  const breath = noiseSource(k);
+  const whisper = biquad(k, "bandpass", 2600, 1.6);
+  glide(k, whisper.frequency, 1700, 0.5);
+  chain(breath, whisper, heldEnvelope(k, 0, 0.18, 0.62, 0.35, 0.39, 0.5), out);
+  run(k, breath, 0, 0.5);
+  const shimmer = tremolo(k, 11, 0.3);
+  chain(shimmer, out);
+  for (const [n, hz] of [2093, 2637, 3136].entries()) tone(k, shimmer, "sine", hz, 0.38 + 0.04 * n, 0.08, 0.11, 0.9);
+  tone(k, out, "sine", 3729, 0.86, 0.002, 0.25, len);
+  tone(k, out, "sine", 5588, 0.86, 0.002, 0.12, 1.05);
+  return len;
+};
+
+/** Red Narcor: a deep resonant hum rising until it rings as bright crystal. */
+const crystalRise: SfxRecipe = (ctx, out, at) => {
+  const len = 1.6;
+  const k = kit(ctx, out, at, len);
+  const body = biquad(k, "lowpass", 300, 6);
+  glide(k, body.frequency, 2400, 0.85);
+  chain(body, out);
+  const hum = oscillator(k, "sawtooth", 65, 0);
+  glide(k, hum.frequency, 520, 0.85);
+  chain(hum, heldEnvelope(k, 0, 0.25, 0.22, 0.75, 0.25, 0.9), body);
+  run(k, hum, 0, 0.9);
+  const core = oscillator(k, "sine", 65, 0);
+  glide(k, core.frequency, 520, 0.85);
+  chain(core, heldEnvelope(k, 0, 0.25, 0.3, 0.75, 0.2, 0.9), out);
+  run(k, core, 0, 0.9);
+  fmBell(k, out, 2093, 2.76, 380, 0.84, 0.002, 0.3, len);
+  fmBell(k, out, 3136, 3.01, 200, 0.86, 0.002, 0.12, len);
+  tone(k, out, "sine", 4186, 0.9, 0.003, 0.08, 1.4);
+  return len;
+};
 
 export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   draw: { recipe: draw, durationMs: 180, gain: 1 },
@@ -1937,6 +3018,46 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   deckShear: { recipe: deckShear, durationMs: 550, gain: 0.7 },
   // R3338000: the bed under a Terminus set piece, at the gain of the entrance that ends it.
   organ: { recipe: organ, durationMs: 2000, gain: 0.6 },
+  // R3337003: an Anomaly's sting; each of the ten ends within durationMs.
+  anomaly: { recipe: anomaly, durationMs: 1200, gain: 0.7 },
+  // R3346000: a play's cost impact and a firing trap's snap, level with the thud and the set click.
+  playImpact: { recipe: playImpact, durationMs: 500, gain: 0.8 },
+  trapSnap: { recipe: trapSnap, durationMs: 200, gain: 0.8 },
+  // R3342000: the tile aura bell, pitched by its hue.
+  auraTouch: { recipe: auraTouch, durationMs: 200, gain: 0.4 },
+  // R3400001: Meditative+'s and Training Grounds' signatures, each at most 1.6 s and gain 0.8, at a routine card's level (B57).
+  inkSummit: { recipe: inkSummit, durationMs: 1100, gain: 0.53 },
+  plowHeave: { recipe: plowHeave, durationMs: 1300, gain: 0.48 },
+  cursorTear: { recipe: cursorTear, durationMs: 1400, gain: 0.8 },
+  seanceChant: { recipe: seanceChant, durationMs: 1500, gain: 0.44 },
+  slateRap: { recipe: slateRap, durationMs: 1300, gain: 0.8 },
+  diceGong: { recipe: diceGong, durationMs: 1600, gain: 0.4 },
+  timberLash: { recipe: timberLash, durationMs: 1200, gain: 0.7 },
+  pencilArpeggio: { recipe: pencilArpeggio, durationMs: 1400, gain: 0.47 },
+  // R3407001: Stinkyscape's signatures, each at most 1.6 s and gain 0.8, trimmed to the eight's routine level (B57).
+  ballotBeep: { recipe: ballotBeep, durationMs: 1300, gain: 0.37 },
+  lullabySigh: { recipe: lullabySigh, durationMs: 1500, gain: 0.4 },
+  compactTut: { recipe: compactTut, durationMs: 1300, gain: 0.8 },
+  glitchDrop: { recipe: glitchDrop, durationMs: 1500, gain: 0.25 },
+  harpGliss: { recipe: harpGliss, durationMs: 1500, gain: 0.8 },
+  markerThunder: { recipe: markerThunder, durationMs: 1500, gain: 0.66 },
+  stampTrill: { recipe: stampTrill, durationMs: 1400, gain: 0.4 },
+  tillRattle: { recipe: tillRattle, durationMs: 1600, gain: 0.79 },
+  gavelSlam: { recipe: gavelSlam, durationMs: 1400, gain: 0.3 },
+  dockingChime: { recipe: dockingChime, durationMs: 1600, gain: 0.73 },
+  keyboardPing: { recipe: keyboardPing, durationMs: 1200, gain: 0.8 },
+  synthSnap: { recipe: synthSnap, durationMs: 1400, gain: 0.52 },
+  blobDrum: { recipe: blobDrum, durationMs: 1500, gain: 0.38 },
+  warpSparkle: { recipe: warpSparkle, durationMs: 1600, gain: 0.8 },
+  tearChoir: { recipe: tearChoir, durationMs: 1500, gain: 0.72 },
+  cackleThunder: { recipe: cackleThunder, durationMs: 1600, gain: 0.76 },
+  kazooRatchet: { recipe: kazooRatchet, durationMs: 1600, gain: 0.8 },
+  thrusterSniff: { recipe: thrusterSniff, durationMs: 1600, gain: 0.46 },
+  marbleGong: { recipe: marbleGong, durationMs: 1600, gain: 0.32 },
+  sanctumBell: { recipe: sanctumBell, durationMs: 1600, gain: 0.8 },
+  cashWhistle: { recipe: cashWhistle, durationMs: 1600, gain: 0.37 },
+  whisperClink: { recipe: whisperClink, durationMs: 1200, gain: 0.8 },
+  crystalRise: { recipe: crystalRise, durationMs: 1600, gain: 0.23 },
 };
 
 /** R655: runs `id`'s recipe shifted by `pitch` (a frequency ratio, 1 as written); returns the unshifted length in seconds. */

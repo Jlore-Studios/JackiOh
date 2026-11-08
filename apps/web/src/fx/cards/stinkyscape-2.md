@@ -43,15 +43,15 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-106` | Warpfield Amplifier | Unit | none: Starship part | — | none: vanilla | its only hook is When launched, which the Starship part draws (#2782) |
 | `stinkyscape-107` | RR-5000 | Unit | trigger bless Tech/laser | 1.28 | bolt | trigger: the census's bolt is noise in its start-of-turn window (draws, fatigue); its own effect is buffed, which bless reads; Tech/laser for its gun |
 | `stinkyscape-108` | Trila 3 | Unit | none: vanilla | — | none: no motif reads questProgressed | keywords only (Ranged, Windfury); the census's questProgressed is another card's |
-| `stinkyscape-109` | xxFreshJack | Unit | none: the card it casts plays its own entry | — | none: no motif reads summoned | the census's summoned are the cast card's; that card plays as its own play (R70), with its own entry |
-| `stinkyscape-110` | iKwzki | Unit | bespoke duoBond | 1.86 | none: no motif reads marked | bespoke: its Duo is a bond between two cards, and no motif reads `marked` |
-| `stinkyscape-111` | Shockwave447 | Unit | cry send | 2.00 | none: no motif reads addedToHand | cry: no census family reads addedToHand and shuffledIn, which send (#2793) reads: both hands refilled |
-| `stinkyscape-112` | Job Application | Field Spell | cast conjure Hustle/cash; trigger bless Hustle/cash; activate tether Hustle/cash; aura holy zone Hustle/cash | 1.51 | bolt | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; trigger: no census family reads upgraded, its reward's Buff, which bless reads; activate: no census family reads held, its resume sent in, which tether reads; Hustle/cash for its pay |
-| `stinkyscape-112-1` | Paycheck | Spell | cast mana Hustle/cash | 0.90 | bolt | cast: the census's bolt is its gamble's fatigue; its own effect is manaChanged, which mana reads; Hustle/cash for its pay |
+| `stinkyscape-109` | xxFreshJack | Unit | bespoke freshJackComet; aura pixelcrawl tile Tech/glitch | 2.00 | none: no motif reads summoned | signature (R3407000), Mythic |
+| `stinkyscape-110` | iKwzki | Unit | bespoke duoBond; aura duohalo tile Spirit | 1.86 | none: no motif reads marked | signature (R3407000), Mythic |
+| `stinkyscape-111` | Shockwave447 | Unit | bespoke shockwaveLecture; aura arcflick tile Tech | 2.00 | none: no motif reads addedToHand | signature (R3407000), Mythic |
+| `stinkyscape-112` | Job Application | Field Spell | bespoke jobInterview; aura steplights zone Hustle/cash | 1.51 | bolt | signature (R3407000) |
+| `stinkyscape-112-1` | Paycheck | Spell | bespoke payday | 0.90 | bolt | signature (R3407000) |
 | `stinkyscape-113` | A Very Dandy Lad | Unit | cry wipe | 1.65 | offering | cry: the census's offering reads its Tribute 2; its Aura exiles every cheap permanent as it lands (exiled 51), which wipe draws as one wave, a set-piece candidate |
 | `stinkyscape-114` | Arctic Citadel | Unit | none: no motif reads fused | — | none: no motif reads fused | the census agrees: its Cry's fuse is `fused`, which no motif reads |
-| `stinkyscape-115` | Scornboi | Unit | cry wipe | 1.85 | offering | cry: the census's offering reads its Tribute 3; its Aura exiles every Unit but Humans and the Starship's as it lands, which wipe draws as one wave, a set-piece candidate |
-| `stinkyscape-116` | Megabase | Unit | none: no motif reads marketCreditsChanged | — | bolt | its Activate and Death only change Credits (marketCreditsChanged), which no motif reads; the census's bolt is its Death window's noise |
+| `stinkyscape-115` | Scornboi | Unit | bespoke scornSweep; aura searchlight tile Dark/blood | 1.85 | offering | signature (R3407000) |
+| `stinkyscape-116` | Megabase | Unit | bespoke giftShop; aura stationrings tile Tech/starfield | 1.51 | bolt | signature (R3407000) |
 | `stinkyscape-117` | Core System | Spell | setPiece vortex | 1.55 | vanish | kept: #2800's `vortex` set piece (R2800000); the census's vanish reads its bounces, which the set piece draws as one beat |
 | `stinkyscape-118` | Secure System | Spell | cast curse Tech/hologram | 1.55 | none: no motif reads buffed | cast: no census family reads buffed, its Attack set to 0, which curse reads; Tech/hologram for its security screen |
 | `stinkyscape-119` | Unsecure System | Spell | cast bless Tech/glitch | 1.55 | none: no motif reads keywordGranted | cast: no census family reads buffed and keywordGranted, which bless reads; Tech/glitch for its hack |
@@ -87,17 +87,17 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-144` | Prepare For Liftoff | Trap | cast snap | 1.08 | none: vanilla | cast: a Trap's cast is its firing, which plans nothing until firings open a window; snap reads its trapFired then |
 | `stinkyscape-145` | Fortify Flesh | Spell | cast bless | 1.45 | none: vanilla | cast: a hero's Armor gain sends no event, so the census sees nothing; ward folded into the rows (R2803000), so cast names bless, its nearest motif |
 | `stinkyscape-146` | Flash Freeze | Spell | bespoke flashFreeze | 1.10 | none: no motif reads marked | bespoke: it freezes the whole board in one breath, and no motif reads `marked` |
-| `stinkyscape-147` | IN33DH3 | Unit | death send | 1.40 | bolt | death: the census's vanish is one exile in its window; its own Death is shuffledIn, which send reads; its Cry shows nothing |
-| `stinkyscape-147-1` | IN33DH3 Prime | Unit | cry conjure Tech/hologram | 1.19 | none: no motif reads summoned | cry: no census family reads summoned, which conjure reads; Tech/hologram for its AI |
-| `stinkyscape-147-2` | Wardrum Blob | Field Spell | trigger conjure Tech/hologram; aura arcane zone Tech/hologram | 1.04 | vanish | trigger: the census's vanish is the few exiles its random help made; most of its help summons, which conjure reads; Tech/hologram for its AI; it is never played, so no cast |
-| `stinkyscape-148` | Alteran Reach | Field Spell | cast conjure Tech/starfield; activate bolt Tech/starfield; aura void side Tech/starfield | 1.60 | bolt | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; activate: the census agrees (bolt): its rewards' damage; Tech/starfield for its starscape |
-| `stinkyscape-148-1` | Edge of the Universe | Spell | none: token | — | not in census | a token the census never played; its win is the game-over sequence's |
-| `stinkyscape-149` | Wildar | Spell | cast send | 1.74 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
-| `stinkyscape-150` | Call to Chaos (Stinky Edition) | Spell | cast send | 1.85 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads: three of its ten effects add cards to the hand |
-| `stinkyscape-150-1` | Stinkyscape Golem | Unit | none: vanilla | — | not in census | a token the census never played: keywords only, which the keyword beats draw |
-| `stinkyscape-151` | Call to Chaos (Scape Edition) | Spell | cast wipe | 1.85 | vanish | kept: #2800's `wipe` for a one-sided clear; the census's vanish reads its Anomaly's exiles, which wipe flares |
-| `stinkyscape-152` | Sanctum | Field Spell | cast conjure; aura holy side | 1.85 | none: vanilla | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it |
-| `stinkyscape-153` | Stimmycheck | Spell | cast mana Hustle/cash | 1.40 | none: no motif reads manaChanged | cast: no census family reads manaChanged and manaSpent, which mana (#2786) reads; Hustle/cash for its stimmy |
+| `stinkyscape-147` | IN33DH3 | Unit | bespoke dataPacket; aura aiwisp tile Tech/hologram | 1.40 | bolt | signature (R3407000) |
+| `stinkyscape-147-1` | IN33DH3 Prime | Unit | bespoke primeConduct; aura crownpulse tile Tech/hologram | 1.19 | none: no motif reads summoned | signature (R3407000) |
+| `stinkyscape-147-2` | Wardrum Blob | Field Spell | bespoke blobDrum; aura drumbeat zone Tech/hologram | 1.04 | vanish | signature (R3407000) |
+| `stinkyscape-148` | Alteran Reach | Field Spell | bespoke starscapeJump; aura starpath zone Tech/starfield | 1.60 | bolt | signature (R3407000), Mythic |
+| `stinkyscape-148-1` | Edge of the Universe | Spell | bespoke edgeFlee | 0.90 | not in census | signature (R3407000), Mythic |
+| `stinkyscape-149` | Wildar | Spell | bespoke chaosOrb | 1.74 | none: no motif reads addedToHand | signature (R3407000) |
+| `stinkyscape-150` | Call to Chaos (Stinky Edition) | Spell | bespoke stinkCloud | 1.85 | none: no motif reads addedToHand | signature (R3407000) |
+| `stinkyscape-150-1` | Stinkyscape Golem | Unit | signature; entrance golemCrash; aura stinkvapour tile Toxic | 1.19 | not in census | signature (R3407000) |
+| `stinkyscape-151` | Call to Chaos (Scape Edition) | Spell | bespoke tabletopTilt | 1.85 | vanish | signature (R3407000) |
+| `stinkyscape-152` | Sanctum | Field Spell | bespoke sanctumEcho; aura pages zone Holy | 1.85 | none: vanilla | signature (R3407000) |
+| `stinkyscape-153` | Stimmycheck | Spell | bespoke stimmyDrop | 1.40 | none: no motif reads manaChanged | signature (R3407000) |
 | `stinkyscape-154` | Dice of Doom | Spell | setPiece diceOfDoom | 1.60 | bolt | set piece (R3338000): its d100 tumbles across the board onto its `rolled` result; on a 67 the board goes dark and every Terminus card's star rains into the hand, on a miss the die crumbles, and a Lucky reroll keeps a glint; its End of turn return plays its own `addedToHand` row |
 | `stinkyscape-155` | Comet Crash | Field Spell | cast bind; death send Hustle/ore; aura ember zone | 1.28 | none: no motif reads locked | cast: no census family reads locked, its Crater, which bind reads; death: no census family reads addedToHand and shuffledIn, which send (#2793) reads; Hustle/ore for its Resources; its aura is #2787's example |
 | `stinkyscape-156` | Catalyst Comet | Spell | cast send | 1.35 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads: it adds a card and shuffles itself in |
@@ -110,8 +110,8 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-163` | Swear Loyalities | Spell | cast vanish | 1.10 | vanish | cast: the census agrees (vanish): every card of another faction exiled |
 | `stinkyscape-164` | The Syndicate | Field Spell | cast conjure Hustle/cash; trigger vanish Hustle/cash; aura arcane side Hustle/cash | 1.25 | vanish | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; trigger: the census agrees (vanish): its trades' exiles; Hustle/cash for its trades |
 | `stinkyscape-165` | The Trade Union | Field Spell | cast conjure Hustle/cash; aura bloom side Hustle/cash | 1.10 | none: vanilla | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; Hustle/cash for its trades |
-| `stinkyscape-166` | Scanning Probe Mk1 | Spell | cast send Tech/starfield | 1.08 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads; Tech/starfield for its scan of space |
-| `stinkyscape-167` | Scanning Probe Mk2 | Spell | cast send Tech/starfield | 1.28 | bolt | cast: the census's bolt is one damage in its window; its own effect is addedToHand, which send reads; Tech/starfield for its scan of space |
+| `stinkyscape-166` | Scanning Probe Mk1 | Spell | bespoke probeScan | 1.08 | none: no motif reads addedToHand | bespoke: its scan is a radar sweep from its caster's hand, and a find pings on the board and flies into its owner's hand, a flash for a Radiant one (`probeScan`, R3337002); the other seat sees the sweep alone (R202) |
+| `stinkyscape-167` | Scanning Probe Mk2 | Spell | bespoke probeScan | 1.28 | bolt | bespoke: Mk1's `probeScan` (R3337002); the census's bolt is one damage in its window, where its own effect is the scan's `addedToHand` |
 | `stinkyscape-168` | Drone Hanger | Field Spell | cast conjure Tech/rocket; trigger conjure Tech/rocket; aura storm zone Tech/rocket | 1.36 | bolt | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; trigger: the census's bolt is noise in its start-of-turn window; its own effect is summoned, which conjure reads; Tech/rocket for its drones |
 | `stinkyscape-169` | Tiny Asteroid | Unit | death send Hustle/ore; activate bolt Hustle/ore | 1.08 | bolt | death: no census family reads addedToHand and shuffledIn, which send (#2793) reads; activate: the census agrees (bolt): the damage it costs; Hustle/ore for its Resources |
 | `stinkyscape-170` | Medium Asteroid | Unit | death send Hustle/ore; activate bolt Hustle/ore | 1.08 | bolt | death: no census family reads addedToHand and shuffledIn, which send (#2793) reads; activate: the census agrees (bolt): the damage it costs; Hustle/ore for its Resources |
@@ -132,9 +132,9 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-t-korrelite` | Korrelite | Spell | cast bolt Hustle/ore | 0.90 | bolt | cast: the census agrees (bolt); Hustle/ore for its Resource |
 | `stinkyscape-t-gellium` | Gellium | Spell | cast mend Hustle/ore | 0.90 | bolt | cast: the census's bolt is noise in its window; its own effect is healed, which mend (#2793) reads; Hustle/ore for its Resource |
 | `stinkyscape-t-axnit` | Axnit | Spell | cast nova Hustle/ore | 0.90 | nova | cast: the census agrees (nova); Hustle/ore for its Resource |
-| `stinkyscape-t-narcor` | Narcor | Spell | cast send Hustle/ore | 0.90 | none: no motif reads addedToHand | cast: the census's marketCreditsChanged is the Resource's sale; its own effect is addedToHand, which send reads; Hustle/ore for its Resource |
-| `stinkyscape-t-red-narcor` | Red Narcor | Spell | cast mana Hustle/ore | 0.90 | bolt | cast: the census's bolt is fatigue in its window; its own effect is manaChanged, which mana reads; Hustle/ore for its Resource |
-| `stinkyscape-t-anomaly-found` | Anomaly Found! | Spell | cast wipe | 1.19 | vanish | kept: #2800's `wipe` for its one-sided clear; the census's vanish reads the exiles, which wipe flares |
+| `stinkyscape-t-narcor` | Narcor | Spell | bespoke narcorDust | 0.90 | none: no motif reads addedToHand | signature (R3407000) |
+| `stinkyscape-t-red-narcor` | Red Narcor | Spell | bespoke redNarcorHum | 0.90 | bolt | signature (R3407000), Mythic |
+| `stinkyscape-t-anomaly-found` | Anomaly Found! | Spell | bespoke anomalyCall | 1.19 | vanish | bespoke: its lay is an Anomaly's set piece (`fx/anomaly.ts`, R3337003), which draws the census's exiles; `anomalyCall` gathers a void ring and stars where the rift tears |
 | `stinkyscape-t-ai-01` | Escort Protocol | Unit | cry conjure Tech/hologram | 0.97 | none: no motif reads summoned | cry: no census family reads summoned, which conjure reads; Tech/hologram for its AI |
 | `stinkyscape-t-ai-02` | Mining Subroutine | Spell | cast send Hustle/ore | 0.90 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads; Hustle/ore for its Resource |
 | `stinkyscape-t-ai-03` | Route Optimizer | Spell | cast send Tech/hologram | 0.97 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads; Tech/hologram for its AI |
@@ -156,11 +156,18 @@ rendering (`fx/cards/stinkyscape/`), drawn over the event rows (`keep`).
 | #110 iKwzki | `duoBond` | its Duo is a bond between two cards, and no motif reads `marked` | a gather on iKwzki (its caster's hero when it is off the board), a beam to the permanent it Duos with, and there Radiant rays, a ring and a burst, in the Duo mark's gold |
 | #146 Flash Freeze | `flashFreeze` | it freezes the whole board in one breath, and no motif reads `marked` | at its first freeze a frost wave across both sides lane by lane into one ring over the board, and a sheen and a burst on each Unit it freezes, in the freeze mark's cyan |
 | #158 Stratos Swarm | `stratosSwarm` | conjure's circle lands one Unit, where the Swarm fills the board | each Stratos streaking in on a rocket trail (`Tech/rocket`) from its caster's hero to the zone it fills, a burst, a ring and exhaust smoke there, one shake a play |
+| #166 Scanning Probe Mk1, #167 Mk2 | `probeScan` | no motif reads a scan; a find is the start of an Anomaly (R3337002) | a radar sweep across the board from its caster's hand in Tech's starfield, on both seats; on its owner's a find's star ring and ping on the board, the card flying from it into the hand and, Radiant, rays, a prismatic burst and a shake there; the other seat's find plays its own row (R202) |
+| Anomaly Found! | `anomalyCall` | its lay is a set piece of its own (R3337003), which draws the exiles and the landing | as its `boardReplaced` opens the rift, a void ring and a burst of stars over the middle of its caster's side |
 
-No Legendary entrance or Mythic takeover is restyled, so R2722001 stands as it is: #109 xxFreshJack,
-#110 iKwzki, #111 Shockwave447 and #148 Alteran Reach keep the shared takeover (#154 Dice of Doom's yields to its
-own set piece, R3338000), and
-the range's Legendaries the shared Legendary entrance (#2803 reworks both).
+R3407000 (#3407) gives the range's Legendaries and Mythics left to it a signature each: #109 xxFreshJack,
+#110 iKwzki, #111 Shockwave447, #148 Alteran Reach, Edge of the Universe and Red Narcor a takeover look of their
+own that draws the card's own picture filling the screen (`takeoverArtOf`), and every one an entrance or a
+cast of its own, its text's beats and, a permanent, its own standing look on its tile or zone (the
+Signatures section at the end). #154 Dice of Doom's yields to its own set piece (R3338000), and the cards #3334,
+#3336, #3337 and #3338 own keep the shared ones until theirs. Anomaly Found!, a token
+printed Mythic, yields its takeover to the rift its play lays, as a Mythic yields to its own wipe
+(R3337003, R2800000), and none of the three cards above is a signature (R3332000): the probes are
+Common and Rare, and the rift's hold is longer than a Mythic Spell's signature budget.
 
 ## The Starship parts
 

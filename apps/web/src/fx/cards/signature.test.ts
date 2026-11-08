@@ -28,22 +28,16 @@ const SIGNATURE_PENDING: readonly string[] = [
   "meditative-049-2", "meditative-049-3", "meditative-051", "meditative-063", "meditative-065", "meditative-071", "meditative-071-1",
   "meditative-075", "meditative-079", "meditative-080", "meditative-086", "meditative-087", "meditative-095", "meditative-095-1", "meditative-097",
   "meditative-097-8", "meditative-097-9",
-  // Meditative+
-  "meditativeplus-001", "meditativeplus-024", "meditativeplus-026",
   // Stinkyscape
   "stinkyscape-004", "stinkyscape-004-1", "stinkyscape-004-2", "stinkyscape-004-3", "stinkyscape-004-4", "stinkyscape-004-5", "stinkyscape-004-6",
-  "stinkyscape-006", "stinkyscape-007", "stinkyscape-016", "stinkyscape-018", "stinkyscape-018-1", "stinkyscape-018-2", "stinkyscape-018-3",
+  "stinkyscape-006", "stinkyscape-007", "stinkyscape-016", "stinkyscape-018",
   "stinkyscape-026", "stinkyscape-034", "stinkyscape-035", "stinkyscape-036", "stinkyscape-037", "stinkyscape-039", "stinkyscape-044",
   "stinkyscape-058", "stinkyscape-059", "stinkyscape-060", "stinkyscape-061", "stinkyscape-066", "stinkyscape-070", "stinkyscape-071",
   "stinkyscape-073", "stinkyscape-074", "stinkyscape-080", "stinkyscape-085", "stinkyscape-086", "stinkyscape-087", "stinkyscape-088",
-  "stinkyscape-109", "stinkyscape-110", "stinkyscape-111", "stinkyscape-112", "stinkyscape-112-1", "stinkyscape-115", "stinkyscape-116",
-  "stinkyscape-137", "stinkyscape-137-1", "stinkyscape-137-2", "stinkyscape-137-3", "stinkyscape-137-4", "stinkyscape-147", "stinkyscape-147-1",
-  "stinkyscape-147-2", "stinkyscape-148", "stinkyscape-148-1", "stinkyscape-149", "stinkyscape-150", "stinkyscape-150-1", "stinkyscape-151",
-  "stinkyscape-152", "stinkyscape-153", "stinkyscape-154", "stinkyscape-176", "stinkyscape-t-dormant-starship", "stinkyscape-t-shield-layer",
-  "stinkyscape-t-propagation-layer", "stinkyscape-t-meltdown-layer", "stinkyscape-t-narcor", "stinkyscape-t-red-narcor",
+  "stinkyscape-137", "stinkyscape-137-1", "stinkyscape-137-2", "stinkyscape-137-3", "stinkyscape-137-4",
+  "stinkyscape-154", "stinkyscape-176", "stinkyscape-t-dormant-starship", "stinkyscape-t-shield-layer",
+  "stinkyscape-t-propagation-layer", "stinkyscape-t-meltdown-layer",
   "stinkyscape-t-anomaly-found",
-  // Training Grounds
-  "traininggrounds-037", "traininggrounds-038", "traininggrounds-039", "traininggrounds-039-1", "traininggrounds-040",
 ];
 
 /** Every Legendary and Mythic of the catalog, tokens by the rarity they print, in catalog order. */

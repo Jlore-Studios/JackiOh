@@ -836,14 +836,15 @@
 
 /* A phone (390x844 and up): everything fits whole, with no scroll inside the hub. The brand and the
    panels' step headings go to screen readers only, the three modes stand side by side, the four ways
-   are one row and the room's explanation goes. A screen shorter than that scrolls `.play-layout`,
-   the one scroller, never the setup panel inside it. */
+   are one row and the room's explanation goes. The hero holds the brand alone, so it leaves the flow
+   with it: an empty box would still spend the board's gap twice (#3381). A screen shorter than that
+   scrolls `.play-layout`, the one scroller, never the setup panel inside it. */
 @media (max-width: 600px) {
   .tavern.play-screen.play-hub {
     padding-bottom: 10px;
   }
 
-  .tavern.play-screen.play-hub .play-hero .brand,
+  .tavern.play-screen.play-hub .play-hero,
   .tavern.play-screen.play-hub .play-panel--queue .play-panel__heading,
   .tavern.play-screen.play-hub .play-panel--room .play-panel__heading,
   .tavern.play-screen.play-hub .play-panel__heading--sub,

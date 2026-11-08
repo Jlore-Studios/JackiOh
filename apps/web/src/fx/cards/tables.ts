@@ -13,8 +13,9 @@
 // Legendary's or a Mythic's, which must name its first beat: a Unit's entrance, a Field Spell's entrance
 // or cast of its own, any other card's cast of its own (`{ bespoke }` or `{ setPiece }`). A token's
 // rarity here is the one it prints (B2.5), as its entrance's (game/animations.ts `EntranceResolver`).
-// R3407000: a `{ bespoke }` entry may carry an `aura` beside its recipe and frame, and a Unit's aura may be
-// `zone`, standing in its own unit zone while it holds (fx/aura/plan.ts); `lane` stays a Field card's.
+// R3400000: a `{ bespoke }` entry may wear an `aura` too, and a Unit's aura may stand on its own `tile`
+// (its unit zone, fx/aura/plan.ts); "summit", "canvas" and "napkin" join the Mythics' own takeover looks.
+// R3407000: Stinkyscape part two's six Mythics' own takeover looks join them.
 
 import JSON5 from "json5";
 
@@ -72,6 +73,9 @@ export const OWN_TAKEOVER_LOOKS: Readonly<Record<OwnTakeoverLook, true>> = {
   pawn: true,
   genie: true,
   ai: true,
+  summit: true,
+  canvas: true,
+  napkin: true,
   // R3407000: Stinkyscape's six Mythics of part two.
   freshJack: true,
   ikwzki: true,
@@ -134,10 +138,11 @@ function parseAura(value: unknown, type: string, fail: (problem: string) => neve
   const { look, palette, scope } = value;
   if (typeof look !== "string" || !isAuraLook(look)) fail(`unknown aura look "${String(look)}"`);
   if (typeof scope !== "string" || !isAuraScope(scope)) fail(`unknown aura scope "${String(scope)}"`);
-  // R3407000: a Unit's own zone may wear its aura too; a lane stays a Field card's.
-  if ((scope === "zone" || scope === "lane") && !isAuraFieldType(type) && !(scope === "zone" && type === "Unit")) {
-    fail(`a ${scope} aura stands in a zone; this card is a ${type}, whose aura is ${type === "Unit" ? "zone, " : ""}side or board`);
+  if ((scope === "zone" || scope === "lane") && !isAuraFieldType(type)) {
+    fail(`a ${scope} aura stands in a zone; this card is a ${type}, whose aura is side or board`);
   }
+  // R3400000: a tile is a Unit's own unit zone.
+  if (scope === "tile" && type !== "Unit") fail(`a tile aura stands on a Unit's own tile; this card is a ${type}`);
   const spec: FxAuraSpec = { look, scope };
   if (palette !== undefined) {
     if (typeof palette !== "string" || !isPalette(palette)) fail(`unknown palette "${String(palette)}" in aura`);
@@ -189,15 +194,11 @@ function checkSignature(frame: FxCardFrame, kind: "bespoke" | "setPiece" | "hook
   }
 }
 
-/** A `{ bespoke }` or `{ setPiece }` entry's fields: its key and the frame, nothing else; R3407000: a bespoke entry's aura too. */
+/** A `{ bespoke }` or `{ setPiece }` entry's fields: its key and the frame, nothing else (R3400000: a bespoke entry's aura besides). */
 function onlyKeyAndFrame(value: Record<string, unknown>, kind: "bespoke" | "setPiece", fail: (problem: string) => never): void {
   for (const field of Object.keys(value)) {
-    if (field === kind || FRAME_FIELDS.includes(field)) continue;
-    if (kind === "bespoke") {
-      if (field !== "aura") fail("a bespoke entry holds nothing else but its frame and aura");
-    } else {
-      fail(`a ${kind} entry holds nothing else but its frame`);
-    }
+    if (field === kind || FRAME_FIELDS.includes(field) || (kind === "bespoke" && field === "aura")) continue;
+    fail(kind === "bespoke" ? "a bespoke entry holds nothing else but its frame and its aura" : `a ${kind} entry holds nothing else but its frame`);
   }
 }
 
@@ -273,11 +274,6 @@ export function parseFxCardTable(file: string, source: string, catalog: Readonly
 /** R3332000: whether `entry` is its card's signature (`signature: true`, its first beat named). */
 export function isSignature(entry: FxCardEntry | undefined): boolean {
   return entry !== undefined && entry.kind !== "none" && entry.signature === true;
-}
-
-/** R2787000, R3407000: the standing look `entry` names, a hooks entry's or a bespoke one's; none for any other. */
-export function auraOf(entry: FxCardEntry | undefined): FxAuraSpec | undefined {
-  return entry?.kind === "hooks" || entry?.kind === "bespoke" ? entry.aura : undefined;
 }
 
 /** Every card's entry, all eight files merged. */

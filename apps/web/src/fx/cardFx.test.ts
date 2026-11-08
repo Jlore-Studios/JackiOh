@@ -355,6 +355,25 @@ describe("R502 the per-card table", () => {
     expect(planCardFx({ ...landing, defId: "hidden", instanceId: "hidden" }, { entry, view, env, D }, table)).toBeNull();
   });
 
+  it("R3407000 a MAGI's own entrance and Imitated Instrumentality's boot both draw on the summon they both claim", () => {
+    const view = fullBoardView();
+    const landing: GameEvent = { type: "summoned", player: "p1", instanceId: "m1", defId: "stinkyscape-018-1", row: "backrow", lane: 2 };
+    const events: GameEvent[] = [played("p1", "ii", "stinkyscape-018"), landing];
+    const entry: AnimationEntry = { ...planEntries(events, withEvents(view, events), false)[0]!, events };
+    const D = entry.durationMs;
+    const env = envOf();
+    env.memory.remember([events[0]!]);
+    const both = planCardFx(landing, { entry, view, env, D });
+    // The entrance alone (no play resolving) and the boot alone (a table whose MELCHIOR has no entrance).
+    const entrance = planCardFx(landing, { entry, view, env: envOf(), D });
+    const table = new Map(FX_CARD_TABLE);
+    table.set("stinkyscape-018-1", { kind: "hooks", hooks: {} });
+    const boot = planCardFx(landing, { entry, view, env, D }, table);
+    expect(entrance?.cues.length).toBeGreaterThan(0);
+    expect(boot?.cues.length).toBeGreaterThan(0);
+    expect(both).toEqual({ cues: [...(entrance?.cues ?? []), ...(boot?.cues ?? [])], row: "replace" });
+  });
+
   it("R200 every cue the cast on draw and the per-card recipes plan starts inside its entry and ends within FX_MAX_TAIL_MS of its end, for short and long entries", () => {
     for (const D of [120, 200, 400, 732, 1400]) {
       const results = [

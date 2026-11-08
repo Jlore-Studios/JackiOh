@@ -8,6 +8,7 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { SettingsButton } from "../settings/index.ts";
 import { FriendsButton } from "../together/FriendsButton.tsx";
+import { ArrowIcon } from "./ArrowIcon.tsx";
 import { PageTitle } from "./PageTitle.tsx";
 import "./top-bar.css";
 
@@ -68,7 +69,8 @@ export function BackLink({
           navigate(to);
         }}
       >
-        {label === undefined ? t("← Back") : t(label)}
+        <ArrowIcon direction="back" />
+        {label === undefined ? t("Back") : t(label)}
       </button>
       {title === undefined && children === undefined ? null : (
         <div className="screen-nav__line">

@@ -10,13 +10,14 @@ import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import { fullBoardView } from "../../test/fixtures.ts";
+import { describeEntry } from "../../test/setPass.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { planCardFx, planCardMotif } from "../cardFx.ts";
 import { FX_INTENSITY_SCALE, FX_SET_PASS_FLOOR } from "../constants.ts";
 import { createFxMemory } from "../memory.ts";
 import { motifScale } from "../motifs/build.ts";
 import { galleryEntry, motifFixture, RECIPE_FIXTURES } from "../motifs/gallery.ts";
-import { FX_CARD_HOOKS, isDrawnMotif } from "../motifs/names.ts";
+import { isDrawnMotif } from "../motifs/names.ts";
 import type { FxPlanEnv } from "../types.ts";
 import { isCardRecipeKey } from "./bespoke.ts";
 import rawTable from "./stinkyscape-2.md?raw";
@@ -53,27 +54,6 @@ function entryOf(id: string): FxCardEntry {
   return entry;
 }
 
-/** An entry as stinkyscape-2.md's Entry column writes it. */
-function describeEntry(entry: FxCardEntry): string {
-  switch (entry.kind) {
-    case "none":
-      return `none: ${entry.reason}`;
-    case "bespoke":
-      return `bespoke ${entry.key}`;
-    case "setPiece":
-      return `setPiece ${entry.key}`;
-    case "hooks": {
-      const parts: string[] = [];
-      for (const hook of FX_CARD_HOOKS) {
-        const spec = entry.hooks[hook];
-        if (spec === undefined) continue;
-        parts.push([hook, spec.motif, spec.palette, spec.row === "keep" ? "keep" : undefined].filter((part) => part !== undefined).join(" "));
-      }
-      if (entry.aura !== undefined) parts.push(["aura", entry.aura.look, entry.aura.scope, entry.aura.palette].filter((part) => part !== undefined).join(" "));
-      return parts.join("; ");
-    }
-  }
-}
 
 function envOf(): FxPlanEnv {
   return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
@@ -106,7 +86,8 @@ function recipeCues(defId: string, key: string, instanceId: string): number {
   const view = fullBoardView();
   const env = envOf();
   env.memory.remember([played("p1", instanceId, defId)]);
-  return RECIPE_FIXTURES[key](view, instanceId, "p1").reduce((n, event) => {
+  // R3407000: a signature's fixture is told the card it plays, so a hook's marker names it.
+  return RECIPE_FIXTURES[key](view, instanceId, "p1", defId).reduce((n, event) => {
     env.memory.remember([event]);
     const entry = { ...galleryEntry([event], view), durationMs: 400 };
     return n + (planCardFx(event, { entry, view, env, D: 400 })?.cues.length ?? 0);
@@ -133,7 +114,8 @@ describe("R2784000 #2798 Stinkyscape's card animation pass, part two", () => {
     for (const id of RANGE) {
       const type = CATALOG[id]?.type;
       const entry = entryOf(id);
-      if (type === "Field Spell") expect(entry.kind === "hooks" ? entry.aura : undefined, id).toBeDefined();
+      // R3407000: a signature's bespoke entry wears its aura beside its recipe.
+      if (type === "Field Spell") expect(entry.kind === "hooks" || entry.kind === "bespoke" ? entry.aura : undefined, id).toBeDefined();
       if (type === "Unit" || CATALOG[id]?.token === true || STARSHIP_PARTS.includes(id)) continue;
       const plays = entry.kind === "bespoke" || entry.kind === "setPiece" || (entry.kind === "hooks" && entry.hooks.cast !== undefined);
       expect(plays, `${id} (${String(type)})`).toBe(true);

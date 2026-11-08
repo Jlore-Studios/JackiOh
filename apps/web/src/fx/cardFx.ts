@@ -100,10 +100,11 @@ export type MotifResult = { cues: FxCue[]; replaces: ReadonlySet<GameEvent> };
  * card); R2797000: of the readable hook running now, on the hook its entry is (`FxPlay.hook`: a
  * `death`, a `trigger`, an `activate`, or a Trap's firing's `cast`). A hidden play or hook, a card with
  * no hooks, a motif not drawn yet and a run over a whole pile plan nothing here, so the event rows
- * play alone.
+ * play alone; nor does an Anomaly's rift, which its set piece draws (R3337003).
  */
 export function planCardMotif(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): MotifResult | null {
-  if (entry.zone !== undefined) return null;
+  // R3337003: an Anomaly's rift is its own set piece (anomaly.ts), whichever card laid it (#151's entry too).
+  if (entry.zone !== undefined || entry.rift !== undefined) return null;
   const play = env.memory.resolving();
   if (play === undefined || play.defId === HIDDEN_ID) return null; // R202
   const card = table.get(play.defId);

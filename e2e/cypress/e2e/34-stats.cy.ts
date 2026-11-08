@@ -145,14 +145,14 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
     cy.get(ts(landingTestid.root)).should("be.visible");
 
     // R661: the landing's calls to action carry no Stats link; the site footer is the way in
-    cy.get(ts(landingTestid.root)).find(".landing-ctas").should("not.contain.text", "Stats");
+    cy.get(ts(landingTestid.root)).find(".landing-ctas").should("not.contain.text", "Statistics");
     cy.get(ts(landingTestid.root)).find(".landing-ctas a[href='/stats']").should("not.exist");
 
     // The footer's Stats link sits right after Card almanac
     cy.get(ts(SITE_FOOTER))
       .find(ts(SITE_FOOTER_STATS))
       .should("have.attr", "href", "/stats")
-      .and("contain.text", "Stats")
+      .and("contain.text", "Statistics")
       .prev()
       .should("have.attr", "data-testid", SITE_FOOTER_ALMANAC);
 

@@ -14,7 +14,7 @@ import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { animationRow, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry, type EntrySlam } from "../game/animations.ts";
 import { sideOf, testid, type Side } from "../game/contract.ts";
-import { armorTookHalf, damageFeel, damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
+import { armorTookHalf, damageFeel, damageTier, playTier, UNIT_SLAM, type PlayTier } from "../game/damageFeel.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx, planCardMotif } from "./cardFx.ts";
@@ -32,6 +32,7 @@ import type { MotifSpec } from "./motifs/build.ts";
 import { planMotif } from "./motifs/index.ts";
 import { shieldCues } from "./shield.ts";
 import { planBeats } from "./motifs/beats.ts";
+import { planAnomaly } from "./anomaly.ts";
 import { planSetPiece } from "./setPieces.ts";
 import { planBattleship } from "./battleship.ts";
 import { planTerminus, planTerminusFollow } from "./terminus/index.ts";
@@ -67,6 +68,8 @@ import {
   FX_MIND_CONTROL_FLIGHT_FRACTION,
   FX_MOTIF_PHASES,
   FX_OVERFLOW_FIZZLE_AT,
+  FX_PLAY_HEAVY_TRAUMA,
+  FX_PLAY_MASSIVE_TRAUMA,
   FX_PROJECTILE_FLIGHT_FRACTION,
   FX_RADIANT_BURST_AT,
   FX_RAYS_TAIL_MS,
@@ -1208,14 +1211,17 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   const starship = planStarship(entry, view, env);
   // R3336000: and the Drone Battleship's layers, the Shield's redirect and absorbed hits.
   const battleship = planBattleship(entry, view, env);
+  // R3337003: and an Anomaly's rift, its side's cards going and its board's coming.
+  const anomaly = planAnomaly(entry, view, env);
   const replaced = (event: GameEvent): boolean =>
     
     motif?.replaces.has(event) === true ||
     setPiece?.replaces.has(event) === true ||
     terminus?.replaces.has(event) === true ||
     starship?.replaces.has(event) === true ||
-    battleship?.replaces.has(event) === true;
-  const cues: FxCue[] = [...(motif?.cues ?? []), ...(setPiece?.cues ?? []), ...(terminus?.cues ?? []), ...(starship?.cues ?? []), ...(battleship?.cues ?? [])];
+    battleship?.replaces.has(event) === true ||
+    anomaly?.replaces.has(event) === true;
+  const cues: FxCue[] = [...(motif?.cues ?? []), ...(setPiece?.cues ?? []), ...(terminus?.cues ?? []), ...(starship?.cues ?? []), ...(battleship?.cues ?? []), ...(anomaly?.cues ?? [])];
   if (entry.sweep !== undefined) {
     cues.push(...sweepCues(motif === null ? entry : { ...entry, events: entry.events.filter((event) => !replaced(event)) }, view, env));
     return cues;
@@ -1237,6 +1243,7 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
     ...(terminus?.replaces ?? []),
     ...(starship?.replaces ?? []),
     ...(battleship?.replaces ?? []),
+    ...(anomaly?.replaces ?? []),
     ...beats.replaces,
   ]);
   const system = planSystemMoment(entry, view, env, systemSkip);
@@ -1258,8 +1265,33 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   }
   // R3338000: the turn a Terminus card owed opening, and The Big Crunch's point over its play.
   cues.push(...planTerminusFollow(entry, view, env));
+  // R3346000: a heavy or massive play shakes the board by the mana it cost.
+  cues.push(...playWeightCues(entry, env));
   // R2722001: a Legendary's or a Mythic's entrance, and a Mythic's takeover of the board (takeover.ts).
   cues.push(...entranceCues(entry, env, entry.durationMs));
+  return cues;
+}
+
+/** R3346000: the shake under a play of this tier, before the intensity scales it: only a heavy or massive play shakes. */
+export function playTrauma(tier: PlayTier): number {
+  if (tier === "massive") return FX_PLAY_MASSIVE_TRAUMA;
+  return tier === "heavy" ? FX_PLAY_HEAVY_TRAUMA : 0;
+}
+
+/**
+ * R3346000 (#3346): the board answers a heavy play with a brief shake and a massive one with a hard one, by
+ * the mana it cost. Only a play the viewer can read as a Unit, Spell or Field Spell shakes it: a hidden
+ * card, a Trap's set and a card cast as it is drawn do not (R203, R502), and `costPaid` is public.
+ */
+function playWeightCues(entry: AnimationEntry, env: FxPlanEnv): FxCue[] {
+  const cues: FxCue[] = [];
+  for (const event of entry.events) {
+    if (event.type !== "cardPlayed" || event.formerId !== undefined || event.defId === HIDDEN_ID) continue;
+    const type = env.card(event.defId)?.type;
+    if (type === undefined || type === "Trap" || type === "Field Trap") continue;
+    if (env.memory.castOnDraw(event)) continue;
+    pushShake(cues, env.intensity, playTrauma(playTier(event.costPaid)), 0);
+  }
   return cues;
 }
 

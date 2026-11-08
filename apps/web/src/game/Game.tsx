@@ -29,6 +29,7 @@ import type { ActionBody, Aim, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerVi
 
 import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import type { SeatLoadouts } from "../cards/loadouts.ts";
+import { useTiltHold } from "../cards/tilt.ts";
 import type { EmoteShow } from "../emotes/session.ts";
 import type { HeroEmotes } from "./Hero.tsx";
 import type { ChoiceHover } from "./choiceHover.ts";
@@ -75,6 +76,7 @@ import { getAudioEngine } from "../audio/engine.ts";
 import AuraLayer from "../fx/aura/AuraLayer.tsx";
 import { hasSetPiece, setPieceShapeOf, signatureClaim, signatureRunOf, wipeClaim } from "../fx/setPieces.ts";
 import { questClaim } from "../fx/systemMoments.ts";
+import { anomalyClaim } from "../fx/anomaly.ts";
 import { starshipClaim } from "../fx/starship.ts";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { WearerProvider } from "./wearer.ts";
@@ -305,6 +307,8 @@ export default function Game({
    * the view does not render (a destroyed card), and "no element is animating" is not "caught up".
    */
   const [inFlight, setInFlight] = useState<AnimationEntry | null>(null);
+  // R3344001: no card tilts while the queue is draining an entry.
+  useTiltHold(inFlight !== null);
   const inFlightDamage = inFlight?.events.find(
     (event): event is Extract<GameEvent, { type: "damage" }> => event.type === "damage",
   );
@@ -449,7 +453,7 @@ export default function Game({
       wipeOf: hasSetPiece,
       // R3338000: a Terminus card's signature run is one entry its set piece claims.
       signatureOf: signatureRunOf,
-      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry) ?? signatureClaim(entry) ?? questClaim(entry) ?? starshipClaim(entry),
+      setPieceOf: (entry) =>  setPieceOfRef.current?.(entry) ?? wipeClaim(entry) ?? signatureClaim(entry) ?? questClaim(entry) ?? starshipClaim(entry) ?? anomalyClaim(entry),
       onSettled: () => {
         setShown(latest.current);
       },
@@ -606,9 +610,11 @@ export default function Game({
         const slams = slamEntries(planEntries(fresh, previous, true), slamResolver, true);
         triggerHitStopMs(slams.reduce((ms, entry) => Math.max(ms, entry.slam?.hitStopMs ?? 0), 0));
         // R2722001: a Mythic's entrance is a still card instead of a takeover: the viewer's own (the
-        // other seat's is up in the showcase already), once per card.
+        // other seat's is up in the showcase already), once per card. R3337003: a play that lays an
+        // Anomaly yields it to the Anomaly's still title card, as its takeover yields to the rift.
+        const rifted = new Set(slams.flatMap((entry) => entry.rift?.sourceId ?? []));
         const mythic = entranceEntries(slams, entranceResolver, { seen: stillSeen.current }).find(
-          (entry) => entry.entrance?.tier === "mythic" && entry.entrance.player === previous.viewer,
+          (entry) => entry.entrance?.tier === "mythic" && entry.entrance.player === previous.viewer && !rifted.has(entry.entrance.instanceId),
         )?.entrance;
         if (mythic !== undefined) setStill({ defId: mythic.defId, instanceId: mythic.instanceId, view: previous });
       }

@@ -4,8 +4,8 @@
 //
 // - MELCHIOR (`melchiorBoot`, `melchiorTally`, aura `scanline`): a cyan core column boots in its zone, a
 //   white scan line sweeps the board and a hologram figure blinks on over each of its side's lanes. Its
-//   ballot ticks each face-up Unit of both sides, then stamps a cyan ballot on its zone; its Activate pins
-//   each keyword it grants on the Unit it lands on (`keywordGranted`, the keyword's own callout).
+//   ballot ticks each face-up Unit of both sides, then stamps a cyan ballot on its zone; its Activate beams
+//   from its zone to each Unit it grants a keyword (`keywordGranted`), whose own callout pins the icon.
 // - BALTHASAR (`balthasarLamp`, `balthasarCradle`, aura `heartbeat`): a rose core warms on like a nursery
 //   lamp and a heart-monitor line traces out to its owner's hero. Its ballot drops in rose with the line
 //   back to the hero; its Activate cradles a card back from its zone into its owner's hand pile.
@@ -22,7 +22,6 @@ import { ALLURE_MARK, ALLURE_MARK_COLOR } from "../../../cards/marks.ts";
 import { HIDDEN_ID, locateInstance } from "../../../game/animations.ts";
 import { LANES, sideOf, testid } from "../../../game/contract.ts";
 import { frac, raysCue, shakeCues, tid } from "../../build.ts";
-import { FX_STINKY_SIGNATURES } from "../../constants.ts";
 import { motifBurst, motifRing, motifShot, type CueSpec } from "../../motifs/build.ts";
 import type { FxAnchor, FxCue, FxPlay, FxPoint } from "../../types.ts";
 import { ENTRANCE_TRAUMA, FOOT, type CardRecipe, type Entrance } from "../recipe.ts";
@@ -37,6 +36,16 @@ const TUNING = {
   lamp: { count: 12, power: 0.6 },
   flicker: { count: 6, power: 0.5 },
   won: { count: 14, power: 1 },
+} as const;
+
+/** Each beat's moments as fractions of its entry's D (an entrance's of its motion after its hold). */
+const TIMING = {
+  melchiorBoot: { columnAt: 0.1, scanAt: 0.2, figuresAt: 0.25, figureStep: 0.06 },
+  melchiorTally: { tickAt: 0.05, tickStep: 0.03, ballotAt: 0.4, grantAt: 0.15 },
+  balthasarLamp: { warmAt: 0.1, lineAt: 0.3 },
+  balthasarCradle: { ballotAt: 0.2, lineAt: 0.25, sendAt: 0.15, sendFor: 0.7 },
+  casperMirror: { flickerAt: 0.1, flickerStep: 0.2, glintAt: 0.3 },
+  casperKiss: { ballotAt: 0.2, kissAt: 0.1, kissLand: 0.35, wonAt: 0.15 },
 } as const;
 
 /** The palettes: the MAGI's hologram, BALTHASAR's rose and CASPER's violet. */
@@ -73,7 +82,7 @@ function ownVote(event: GameEvent, play: FxPlay): event is Extract<GameEvent, { 
 export const melchiorBoot: Entrance = (p) => {
   const spec = entranceSpec(p, HOLOGRAM);
   const { at, slam } = entranceTimes(p);
-  const T = FX_STINKY_SIGNATURES.melchiorBoot;
+  const T = TIMING.melchiorBoot;
   const zone = tid(p.tgt);
   const cues: FxCue[] = [
     motifBurst(spec, tid(p.tgt, FOOT), "area", at(T.columnAt), TUNING.column),
@@ -92,7 +101,7 @@ export const melchiorBoot: Entrance = (p) => {
 
 export const melchiorTally: CardRecipe = (event, p, play) => {
   const spec = sigSpec(p, play, HOLOGRAM);
-  const T = FX_STINKY_SIGNATURES.melchiorTally;
+  const T = TIMING.melchiorTally;
   if (ownVote(event, play)) {
     const cues: FxCue[] = faceUpUnits(p.view).map((unit, k) => motifBurst(spec, unit, "point", frac(T.tickAt + k * T.tickStep, p.D), TUNING.tick));
     cues.push(...ballot(spec, p.D, standing(p.view, play), frac(T.ballotAt, p.D)));
@@ -101,8 +110,9 @@ export const melchiorTally: CardRecipe = (event, p, play) => {
   if (event.type === "keywordGranted" && play.hook === "activate") {
     const at = locateInstance(p.view, event.instanceId);
     if (at === null) return null;
+    // The core's scan pins the keyword: a hologram beam from its zone to the Unit, whose own callout still plays.
     const delayMs = frac(T.grantAt, p.D);
-    return { cues: [{ kind: "callout", keyword: event.keyword.kind, at: tid(at), delayMs, durationMs: p.D - delayMs }], row: "replace" };
+    return { cues: [motifShot(spec, "beam", standing(p.view, play), tid(at), 0, delayMs), motifRing(spec, p.D, tid(at), delayMs)], row: "keep" };
   }
   return null;
 };
@@ -113,7 +123,7 @@ export const balthasarLamp: Entrance = (p) => {
   const spec = entranceSpec(p, ROSE);
   const teal = entranceSpec(p, HOLOGRAM);
   const { at, slam } = entranceTimes(p);
-  const T = FX_STINKY_SIGNATURES.balthasarLamp;
+  const T = TIMING.balthasarLamp;
   const zone = tid(p.tgt);
   const cues: FxCue[] = [
     raysCue(p.D, "holy", zone, at(T.warmAt)),
@@ -128,7 +138,7 @@ export const balthasarLamp: Entrance = (p) => {
 };
 
 export const balthasarCradle: CardRecipe = (event, p, play) => {
-  const T = FX_STINKY_SIGNATURES.balthasarCradle;
+  const T = TIMING.balthasarCradle;
   if (ownVote(event, play)) {
     const spec = sigSpec(p, play, ROSE);
     const from = standing(p.view, play);
@@ -151,7 +161,7 @@ export const casperMirror: Entrance = (p) => {
   const spec = entranceSpec(p, VIOLET);
   const rose = entranceSpec(p, ROSE);
   const { at, slam } = entranceTimes(p);
-  const T = FX_STINKY_SIGNATURES.casperMirror;
+  const T = TIMING.casperMirror;
   const zone = tid(p.tgt);
   return [
     motifBurst(spec, zone, "point", at(T.flickerAt), TUNING.flicker),
@@ -164,7 +174,7 @@ export const casperMirror: Entrance = (p) => {
 };
 
 export const casperKiss: CardRecipe = (event, p, play) => {
-  const T = FX_STINKY_SIGNATURES.casperKiss;
+  const T = TIMING.casperKiss;
   if (ownVote(event, play)) return { cues: ballot(sigSpec(p, play, VIOLET), p.D, standing(p.view, play), frac(T.ballotAt, p.D)), row: "replace" };
   const spec: CueSpec = sigSpec(p, play, ROSE);
   if (event.type === "marked" && event.added && event.mark === ALLURE_MARK) {
@@ -198,13 +208,26 @@ const marker = (instanceId: string, player: PlayerId, defId: string, hook: "star
 
 const vote = (instanceId: string, player: PlayerId, defId: string): GameEvent => ({ type: "voteCast", player, instanceId, defId, votes: 1, needed: 3 });
 
-/** R3407000: MELCHIOR's Start of turn: it counts both sides and casts its ballot. */
-export function melchiorTallyFixture(_view: PlayerView, instanceId: string, player: PlayerId, defId = "stinkyscape-018-1"): GameEvent[] {
-  return [marker(instanceId, player, defId, START_OF_TURN), vote(instanceId, player, defId)];
+/**
+ * R3407000: MELCHIOR's Activate: its controller's first face-up Unit gains a combat keyword (one grant
+ * stands for each, so the run fits its ceiling). Its ballot
+ * (`magiBallotFixture`) is the module test's: the shared vote moment (systemMoments.ts) draws under it,
+ * and the two do not fit after its entrance in one Legendary's ceiling.
+ */
+export function melchiorTallyFixture(view: PlayerView, instanceId: string, player: PlayerId, defId = "stinkyscape-018-1"): GameEvent[] {
+  const own = player === view.viewer ? view.you : view.opponent;
+  const unit = own.units.find((u) => u !== null && u.defId !== HIDDEN_ID);
+  const granted: GameEvent[] = unit === undefined || unit === null ? [] : [{ type: "keywordGranted", instanceId: unit.instanceId, keyword: { kind: "Taunt" } }];
+  return [marker(instanceId, player, defId, "activate"), ...granted];
 }
 
-/** R3407000: BALTHASAR's Start of turn: its hero under half, it casts its ballot. */
+/** R3407000: BALTHASAR's Activate: a copy of the last card played is added to its controller's hand. */
 export function balthasarCradleFixture(_view: PlayerView, instanceId: string, player: PlayerId, defId = "stinkyscape-018-2"): GameEvent[] {
+  return [marker(instanceId, player, defId, "activate"), { type: "addedToHand", player, instanceId: "fx-cradled", defId: "core-003" }];
+}
+
+/** R3407000: a MAGI's Start of turn ballot (its vote), the beat each module test proves beside its gallery play. */
+export function magiBallotFixture(instanceId: string, player: PlayerId, defId: string): GameEvent[] {
   return [marker(instanceId, player, defId, START_OF_TURN), vote(instanceId, player, defId)];
 }
 

@@ -2,9 +2,10 @@
 // "voidCollapse", #80 BOOM! Big Max "bigBoom", #45 Nature Titan "titanBloom", #56 Spell Tyrant "tyrantSigil"),
 // in place of its rarity's (cues.ts `summon`) for a card whose entry in its set's effects table names it
 // as its `entrance` (R2784000, R3332000, fx/cards/tables.ts); each recipe is its card's own file in
-// fx/cards/<set>/. R3332001: #92 Felinor Fiender "felinorAssembly", the first signature's (R3407000:
-// Stinkyscape part two's beside it, fx/cards/stinkyscape/). R3332000: a
-// Field Spell's own entrance plays as it lands face up in the backrow. It keys off the `summoned` event's
+// fx/cards/<set>/. R3332001: #92 Felinor Fiender "felinorAssembly", the first signature's. R3332000: a
+// Field Spell's own entrance plays as it lands face up in the backrow. R3400001: Meditative+ #24 Bob's
+// "snowplowHeave", Training Grounds #38 Tutorial Master's "chalkboardLesson" and #39.1 the Training-Grounds
+// Golem's "golemLashing". R3407000: Stinkyscape part two's (fx/cards/stinkyscape/). It keys off the `summoned` event's
 // own `defId`, which a hidden summon never has (R202), and decorates the entry the runner already timed,
 // so it paces nothing (R200, R201).
 //
@@ -19,7 +20,20 @@ import { titanBloom } from "./cards/classic/natureTitan.ts";
 import { tyrantSigil } from "./cards/classic/spellTyrant.ts";
 import { voidCollapse } from "./cards/core/ceaselessVoid.ts";
 import { felinorAssembly } from "./cards/core/felinorFiender.ts";
+import { snowplowHeave } from "./cards/meditativeplus/bobSoldier.ts";
+import { golemLashing } from "./cards/traininggrounds/trainingGolem.ts";
+import { chalkboardLesson } from "./cards/traininggrounds/tutorialMaster.ts";
+import { alteranDive } from "./cards/stinkyscape/alteranReach.ts";
+import { golemCrash } from "./cards/stinkyscape/chaosCalls.ts";
+import { freshJackVault } from "./cards/stinkyscape/freshJack.ts";
+import { ikwzkiDawn } from "./cards/stinkyscape/ikwzki.ts";
+import { blobPlop, in33dh3Drop, primeCrown } from "./cards/stinkyscape/in33dh3.ts";
+import { resumeTube } from "./cards/stinkyscape/jobApplication.ts";
 import { balthasarLamp, casperMirror, melchiorBoot } from "./cards/stinkyscape/magi.ts";
+import { megabaseDock } from "./cards/stinkyscape/megabase.ts";
+import { sanctumRise } from "./cards/stinkyscape/sanctum.ts";
+import { scornGate } from "./cards/stinkyscape/scornboi.ts";
+import { shockwaveRing } from "./cards/stinkyscape/shockwave447.ts";
 import { FOOT, type Entrance, type EntranceKey } from "./cards/recipe.ts";
 import { FX_CRACK_TAIL_MS, FX_FLAVOR_LIVE, FX_SUMMON_BRUTE_TRAUMA, FX_SUMMON_FLAVOR_TUNING } from "./constants.ts";
 import { chaosFlavor, FLAVOR_LOOKS } from "./flavors.ts";
@@ -35,10 +49,25 @@ export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = {
   titanBloom,
   tyrantSigil,
   felinorAssembly,
+  snowplowHeave,
+  chalkboardLesson,
+  golemLashing,
   // R3407000: Stinkyscape part two's signatures (fx/cards/stinkyscape/).
   melchiorBoot,
   balthasarLamp,
   casperMirror,
+  freshJackVault,
+  ikwzkiDawn,
+  shockwaveRing,
+  resumeTube,
+  scornGate,
+  megabaseDock,
+  in33dh3Drop,
+  primeCrown,
+  blobPlop,
+  alteranDive,
+  golemCrash,
+  sanctumRise,
 };
 
 /* #1445: one summon entrance per flavor */

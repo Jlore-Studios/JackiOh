@@ -1,11 +1,14 @@
 // R2787000: the standing looks a card's `aura` may wear (docs/polish/9-card-animations.md, Auras), and
 // the scopes it may cover. Each look is a tint, a slow drift of motes and an edge glow, drawn in the
 // card's palette (FLAVOR_LOOKS); these numbers are the look's motion and weight (CLAUDE.md rule 9).
-// R3407000: the signature looks are one card's each (Stinkyscape part two's "on its tile"), within
-// AURA_SIGNATURE_MAX_INTENSITY in their opacities; the shared eight are any card's.
+// R3400000: a Unit's aura may stand on its own `tile`, its unit zone, the nearest scope; and three looks
+// join for the Units whose signatures wear one there: Bob's snow `flurry`, Tutorial Master's `chalk`
+// dust and the Training-Grounds Golem's `timber` dust.
+// R3407000: fifteen signature looks join, each one Stinkyscape card's own "on its tile" (part two), within
+// AURA_SIGNATURE_MAX_INTENSITY in their opacities.
 
-/** The eight shared looks, as a card's table entry names them. */
-export const AURA_SHARED_LOOK_NAMES = ["ember", "frost", "bloom", "void", "storm", "holy", "toxic", "arcane"] as const;
+/** The twelve looks before R3407000's, as a card's table entry or an Anomaly's backdrop (`fx/anomaly.ts`, R3337003) names them. */
+export const AURA_SHARED_LOOK_NAMES = ["ember", "frost", "bloom", "void", "storm", "holy", "toxic", "arcane", "drift", "flurry", "chalk", "timber"] as const;
 
 /** R3407000: the signature looks, each one card's own standing look. */
 export const AURA_SIGNATURE_LOOK_NAMES = [
@@ -26,13 +29,13 @@ export const AURA_SIGNATURE_LOOK_NAMES = [
   "pages",
 ] as const;
 
-/** Every look a table entry may name. */
+/** Every look a table entry may name: the twelve, then R3407000's fifteen. */
 export const AURA_LOOK_NAMES = [...AURA_SHARED_LOOK_NAMES, ...AURA_SIGNATURE_LOOK_NAMES] as const;
 
-/** What an aura covers, nearest first: its card's own zone, its lane, its side or the whole board. The index is its stacking rank. */
-export const AURA_SCOPES = ["zone", "lane", "side", "board"] as const;
+/** What an aura covers, nearest first: a Unit's own tile, its card's own zone, its lane, its side or the whole board. The index is its stacking rank. */
+export const AURA_SCOPES = ["tile", "zone", "lane", "side", "board"] as const;
 
-/** The card types that stand in a zone while they hold, so the only ones whose aura may cover their own lane; R3407000: a Unit's may cover its own zone too. */
+/** The card types that stand in a zone while they hold, so the only ones whose aura may cover their own zone or lane. */
 export const AURA_FIELD_TYPES = ["Field Spell", "Field Trap"] as const;
 
 export type AuraLook = (typeof AURA_LOOK_NAMES)[number];
@@ -79,6 +82,11 @@ export const AURA_LOOKS: Readonly<Record<AuraLook, AuraLookSpec>> = {
   holy: { vx: [-4, 4], vy: [-18, -6], size: [2, 4], life: [2200, 3800], alpha: 0.75, tint: 0.1, glow: 16, edge: 0.6, blend: L },
   toxic: { vx: [-4, 4], vy: [-14, -4], size: [3, 6], life: [2000, 3400], alpha: 0.6, tint: 0.13, glow: 12, edge: 0.5, blend: S },
   arcane: { vx: [-12, 12], vy: [-12, 12], size: [2, 3.5], life: [1600, 3000], alpha: 0.8, tint: 0.09, glow: 14, edge: 0.6, blend: L },
+  // R3337003: an asteroid field's slow sideways drift.
+  drift: { vx: [4, 10], vy: [-3, 3], size: [3, 7], life: [3600, 6000], alpha: 0.5, tint: 0.06, glow: 10, edge: 0.35, blend: S },
+  flurry: { vx: [-8, 8], vy: [4, 12], size: [1.5, 3], life: [2600, 4200], alpha: 0.55, tint: 0.06, glow: 8, edge: 0.35, blend: L },
+  chalk: { vx: [-6, 6], vy: [-8, -2], size: [1.5, 3], life: [2400, 4000], alpha: 0.45, tint: 0.05, glow: 6, edge: 0.3, blend: S },
+  timber: { vx: [-3, 3], vy: [6, 14], size: [1.5, 3], life: [2000, 3400], alpha: 0.4, tint: 0.07, glow: 8, edge: 0.4, blend: S },
   // R3407000: MELCHIOR's scan line sweeping its zone, counting.
   scanline: { vx: [30, 50], vy: [-1, 1], size: [1.5, 2.5], life: [800, 1400], alpha: 0.7, tint: 0.08, glow: 10, edge: 0.55, blend: L },
   // BALTHASAR's gentle heartbeat pulsing along its zone's edge.

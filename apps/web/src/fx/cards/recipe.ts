@@ -2,6 +2,7 @@
 // from. A card recipe claims events of its own play's resolution (cardFx.ts); an entrance replaces a
 // marquee Unit's rarity entrance (entrances.ts). Each card's recipe is its own file beside its set's table.
 // R3332000: an entrance is an entry's `entrance`, beside any entry of a Unit or a Field Spell, or alone.
+// R3400001: Bob's "snowplowHeave", Tutorial Master's "chalkboardLesson" and the Training-Grounds Golem's "golemLashing".
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
@@ -33,10 +34,26 @@ export const ENTRANCE_TRAUMA = {
   titanBloom: FX_LEGENDARY_TRAUMA,
   tyrantSigil: FX_LEGENDARY_TRAUMA,
   felinorAssembly: FX_LEGENDARY_TRAUMA,
+  // R3400001: Meditative+'s and Training Grounds' signature Units, inside SIGNATURE_PERMANENT_MAX_TRAUMA.
+  snowplowHeave: 0.75,
+  chalkboardLesson: FX_LEGENDARY_TRAUMA,
+  golemLashing: 0.75,
   // R3407000: Stinkyscape part two's (fx/cards/stinkyscape/), each within SIGNATURE_PERMANENT_MAX_TRAUMA.
   melchiorBoot: 0.3,
   balthasarLamp: 0.2,
   casperMirror: 0.25,
+  freshJackVault: 0.6,
+  ikwzkiDawn: 0.3,
+  shockwaveRing: 0.7,
+  resumeTube: 0.3,
+  scornGate: 0.6,
+  megabaseDock: 0.7,
+  in33dh3Drop: 0.4,
+  primeCrown: 0.4,
+  blobPlop: 0.3,
+  alteranDive: 0.5,
+  golemCrash: 0.7,
+  sanctumRise: 0.35,
 } as const;
 
 /** Where Big Max's fuse sparks, as a fraction of the entry, before the slam at FX_SLAM_AT. */

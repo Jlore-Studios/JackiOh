@@ -15,15 +15,16 @@
 
 import type { CardType, Tag } from "@jackioh/shared";
 
+import type { AnomalyCode } from "../anomalies.ts";
 import { EMBLEM_BOX, EMBLEMS } from "./emblems.ts";
 import { fmt } from "./hash.ts";
 import { CENTER_ORIGIN, FIGURE_SUBJECT_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion, type ArtRole } from "./motion.ts";
 import type { MotifId } from "./motifs.ts";
-import { restyledSvg, type ArtPart, type ArtRestyle } from "./pictures.ts";
+import { partDraws, partHolds, restyledSvg, type ArtPart, type ArtRestyle } from "./pictures.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
 import { sceneRecipeOf } from "./scene.ts";
 import { starshipArtKey, type StarshipArt } from "./starshipHulls.ts";
-import { starshipModuleIconSvg, starshipSvg, stinkyscapeSvg, type ShipArt } from "./stinkyscape.ts";
+import { ANOMALY_SEED_PREFIX, anomalySvg, starshipModuleIconSvg, starshipSvg, stinkyscapeSvg, type ShipArt } from "./stinkyscape.ts";
 import { legacySvg, trainingGroundsSvg } from "./traininggrounds.ts";
 import { compositionFor, RADIANT_PALETTE, themeFor, type ArtThemeId, type Composition } from "./themes.ts";
 
@@ -84,7 +85,8 @@ function rayPath(cx: number, cy: number, angle: number, width: number): string {
 
 /**
  * The SVG document, unencoded; R2715001: moving as `motion` says, its particles placed by `defId`. R2943001: `part`
- * "backdrop" leaves out the subject (its subject ridges and emblem), and "subject" draws those alone.
+ * "backdrop" leaves out the subject (its subject ridges and emblem), and "subject" draws those alone. R3344000: a depth
+ * plane draws the layers of its roles (pictures.ts `partDraws`) and what is held in no role (`partHolds`).
  */
 function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string, part: ArtPart = "whole"): string {
   const { sky, glow, emblem } = spec;
@@ -117,13 +119,10 @@ function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string, part: Ar
   );
   parts.push("</defs>");
   parts.push(motionStyle(motion, spec.composition === "figure" ? FIGURE_SUBJECT_ORIGIN : CENTER_ORIGIN));
-  const subject = part !== "backdrop";
-  const backdrop = part !== "subject";
+  if (partHolds(part, "far")) parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#s)"/>`);
+  if (partDraws(part, "light")) parts.push(moving("light", `<circle cx="${fmt(glow.cx)}" cy="${fmt(glow.cy)}" r="${fmt(glow.r)}" fill="url(#g)"/>`, motion));
 
-  if (backdrop) parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#s)"/>`);
-  if (backdrop) parts.push(moving("light", `<circle cx="${fmt(glow.cx)}" cy="${fmt(glow.cy)}" r="${fmt(glow.r)}" fill="url(#g)"/>`, motion));
-
-  if (backdrop && spec.rays.length > 0) {
+  if (partHolds(part, "far") && spec.rays.length > 0) {
     parts.push(`<g fill="${RADIANT_PALETTE.ray}">`);
     for (const ray of spec.rays) {
       parts.push(`<path d="${rayPath(glow.cx, glow.cy, ray.angle, ray.width)}" opacity="${fmt(ray.opacity)}"/>`);
@@ -131,13 +130,12 @@ function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string, part: Ar
     parts.push("</g>");
   }
 
-  // R2715001: each run of ridges of one role moves as one layer. R2943001: a part draws the runs that are its own.
-  const drawn = (role: ArtRole): boolean => (role === "subject" ? subject : backdrop);
+  // R2715001: each run of ridges of one role moves as one layer. R2943001, R3344000: a part draws the runs that are its own.
   let run: string[] = [];
   let runRole: ArtRole | null = null;
   for (const ridge of spec.ridges) {
     if (ridge.role !== runRole && runRole !== null) {
-      if (drawn(runRole)) parts.push(moving(runRole, run.join(""), motion));
+      if (partDraws(part, runRole)) parts.push(moving(runRole, run.join(""), motion));
       run = [];
     }
     runRole = ridge.role;
@@ -148,18 +146,18 @@ function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string, part: Ar
         : ` stroke="${ridge.stroke}" stroke-width="${fmt(ridge.strokeWidth ?? 0)}" stroke-linejoin="round"`;
     run.push(`<path d="${ridge.d}" fill="${ridge.fill}" opacity="${fmt(ridge.opacity)}" fill-rule="evenodd"${ink}/>`);
   }
-  if (runRole !== null && drawn(runRole)) parts.push(moving(runRole, run.join(""), motion));
+  if (runRole !== null && partDraws(part, runRole)) parts.push(moving(runRole, run.join(""), motion));
 
   // R503: the motif's glyphs sit over the composition and under the emblem.
-  if (backdrop) spec.motifGlyphs.forEach((placed, index) => parts.push(moving("props", glyphMarkup(placed, placed.opacity), motion, index)));
+  if (partDraws(part, "props")) spec.motifGlyphs.forEach((placed, index) => parts.push(moving("props", glyphMarkup(placed, placed.opacity), motion, index)));
 
-  if (subject) parts.push(moving("subject", glyphMarkup(emblem, 1), motion));
-  if (backdrop && spec.accent !== null) parts.push(moving("props", glyphMarkup(spec.accent, ACCENT_OPACITY), motion, spec.motifGlyphs.length));
+  if (partDraws(part, "subject")) parts.push(moving("subject", glyphMarkup(emblem, 1), motion));
+  if (partDraws(part, "props") && spec.accent !== null) parts.push(moving("props", glyphMarkup(spec.accent, ACCENT_OPACITY), motion, spec.motifGlyphs.length));
 
-  if (backdrop) spec.motes.forEach((mote, index) => parts.push(moving("motes", moteMarkup(mote, spec.moteShape), motion, index)));
+  if (partDraws(part, "motes")) spec.motes.forEach((mote, index) => parts.push(moving("motes", moteMarkup(mote, spec.moteShape), motion, index)));
 
-  if (backdrop) parts.push(particleMarkup(motion, defId));
-  if (backdrop) parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#v)"/>`);
+  if (partHolds(part, "nearest")) parts.push(particleMarkup(motion, defId));
+  if (partHolds(part, "far")) parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#v)"/>`);
   parts.push("</svg>");
   return parts.join("");
 }
@@ -252,6 +250,38 @@ export function starshipModuleIconUri(defId: string, radiant: boolean): string {
   const uri = `${DATA_PREFIX}${encodeSvg(starshipModuleIconSvg(defId, radiant))}`;
   proceduralCache.set(key, uri);
   return uri;
+}
+
+/**
+ * R3337001: an Anomaly Found!'s art for the board its code names (stinkyscape.ts `anomalySvg`), cached on its code and
+ * face; a restyle's strokes grow from the board's own seed.
+ */
+export function anomalyArtUri(code: AnomalyCode, radiant: boolean, restyle: ArtRestyle | null = null): string {
+  const key = `anomaly|${code}|${radiant}${restyleKey(restyle)}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const uri = `${DATA_PREFIX}${encodeSvg(restyled(anomalySvg(code, radiant), restyle, radiant, `${ANOMALY_SEED_PREFIX}${code}`))}`;
+  proceduralCache.set(key, uri);
+  return uri;
+}
+
+/** R3337003: where an inlined picture names an id: its `id` attributes and the `url(#…)` paints that point at them. */
+const INLINE_ID = /(?<=\s)id="|url\(#/g;
+
+/**
+ * R3337003: the same picture as SVG markup the effects layer draws in place (the title card's, fx/dom.ts), no image
+ * (B27); its ids are scoped to its board and face so they meet no other drawing's in the page. Cached apart.
+ */
+export function anomalyMarkup(code: AnomalyCode, radiant: boolean): string {
+  const key = `anomaly-markup|${code}|${radiant}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const scope = `${ANOMALY_SEED_PREFIX}${code}-${radiant ? "radiant" : "base"}-`;
+  const markup = anomalySvg(code, radiant).replace(INLINE_ID, (head) => `${head}${scope}`);
+  proceduralCache.set(key, markup);
+  return markup;
 }
 
 /**

@@ -1955,6 +1955,30 @@ button.modifier-badge[data-open="true"] {
   }
 }
 
+/* R3337003: an Anomaly's rift (fx/anomaly.ts). Every card its caster's side loses is drawn into the
+   rift's centre from its tear (10% of the hold, ANOMALY_TEAR_AT) and swallowed by its flare (55%,
+   ANOMALY_FLARE_AT), where the effects layer conceals it. None of it plays under Reduce motion. */
+.game:not([data-reduced-motion="true"])[data-set-piece="anomaly"] .board .card[data-fx-pulled] {
+  animation: anomaly-rift-pull var(--set-piece-hold, 0ms) var(--ease-in) both;
+  animation-delay: 0ms;
+}
+
+@keyframes anomaly-rift-pull {
+  0%,
+  10% {
+    transform: none;
+    opacity: 1;
+  }
+  48% {
+    opacity: 0.85;
+  }
+  55%,
+  100% {
+    transform: translate(var(--fx-pull-x, 0px), var(--fx-pull-y, 0px)) rotate(-300deg) scale(0);
+    opacity: 0;
+  }
+}
+
 .game:not([data-reduced-motion="true"])[data-slam-tier] [data-animating="summoned"],
 .game:not([data-reduced-motion="true"])[data-slam-tier] [data-animating="animated"] {
   animation-delay: calc(var(--slam-anticipation, 0ms) + var(--set-piece-hold, 0ms));
@@ -2044,6 +2068,12 @@ button.modifier-badge[data-open="true"] {
 
 .takeover-still-card {
   width: min(46vmin, 300px);
+}
+
+/* R3400000: a Mythic's own takeover art at rest behind the card, filling the still (fx.css draws its parts). */
+.takeover-still .takeover-art {
+  position: absolute;
+  inset: 0;
 }
 
 .takeover-still-ring {

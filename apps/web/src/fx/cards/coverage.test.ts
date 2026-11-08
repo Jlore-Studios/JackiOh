@@ -44,7 +44,8 @@ describe("R2803000 the audit's coverage", () => {
     expect(fields.length).toBeGreaterThan(0);
     for (const id of fields) {
       const entry = entryOf(id);
-      expect(entry.kind === "hooks" ? entry.aura : undefined, id).toBeDefined();
+      // R3407000: a bespoke entry's aura counts.
+      expect(entry.kind === "hooks" || entry.kind === "bespoke" ? entry.aura : undefined, id).toBeDefined();
     }
   });
 

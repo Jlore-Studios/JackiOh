@@ -15,12 +15,14 @@ import {
   SIGNATURE_MYTHIC_MAX_MS,
   SIGNATURE_SPELL_SHARE,
 } from "../fx/constants.ts";
+import { FX_CARD_TABLE } from "../fx/cards/tables.ts";
 import { planFx } from "../fx/cues.ts";
 import { createFxMemory } from "../fx/memory.ts";
+import { galleryBoardOf, galleryCardEvents, galleryFieldView, galleryPlayOf } from "../fx/motifs/gallery.ts";
 import { hasSetPiece, wipeClaim } from "../fx/setPieces.ts";
 import type { FxCue, FxPlanEnv } from "../fx/types.ts";
 import { CATALOG } from "../wire/cards.ts";
-import { withEvents } from "./fixtures.ts";
+import { fullBoardView, withEvents } from "./fixtures.ts";
 
 export function envOf(intensity: number = FX_INTENSITY_SCALE.normal): FxPlanEnv {
   return { intensity, card: () => undefined, memory: createFxMemory() };
@@ -95,4 +97,33 @@ export function expectR200(run: readonly PlannedEntry[], where: string): void {
       expect(endOf(cue), `${where} ${cue.kind}`).toBeLessThanOrEqual(entry.durationMs + FX_MAX_TAIL_MS);
     }
   }
+}
+
+/**
+ * R3407000: `defId`'s gallery play over its own board, as tiers.test.ts plans it (its play, its landing, its
+ * recipe's fixture and its resolve; held as the queue holds it at speed 1 with Big moments full): the run
+ * and the events it planned.
+ */
+export function galleryRun(defId: string, env: FxPlanEnv = envOf(), view: PlayerView = fullBoardView()): { run: PlannedEntry[]; events: GameEvent[] } {
+  const entry = FX_CARD_TABLE.get(defId);
+  const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+  if (play === null) throw new Error(`${defId} has no gallery play`);
+  const board = galleryBoardOf(defId, view);
+  const events = galleryCardEvents(defId, play, board, 1);
+  return { run: planWithOffsets(events, galleryFieldView(defId, board), env), events };
+}
+
+/** R3332000, R200: `defId`'s gallery run draws, ends within its signature ceiling and keeps R200 in every entry. */
+export function expectGalleryWithinCeiling(defId: string): void {
+  const { run } = galleryRun(defId);
+  expect(cuesOfRun(run).length, `${defId} draws`).toBeGreaterThan(0);
+  expect(latestEnd(run), `${defId} within its ceiling`).toBeLessThanOrEqual(ceilingOf(defId));
+  expectR200(run, defId);
+}
+
+/** A run's entries as lines, for a failing test's message: each entry's offset, D, events and cues. */
+export function describeRun(run: readonly PlannedEntry[]): string {
+  return run
+    .map(({ entry, offset, cues }) => `@${String(offset)} D${String(entry.durationMs)} [${entry.events.map((e) => e.type).join(",")}] ${cues.map((c) => `${c.kind}@${String(c.delayMs)}~${String(endOf(c))}`).join(" ")}`)
+    .join("\n");
 }

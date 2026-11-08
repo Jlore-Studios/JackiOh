@@ -5,11 +5,13 @@
 
 import { describe, expect, it } from "vitest";
 
+import { PLAY_TIERS_ASCENDING, type PlayType } from "../game/damageFeel.ts";
 import { CHAOS_REVEAL_MAX, EFFECT_PITCH_JITTER, IMPACT_AMOUNT_CAP } from "./constants.ts";
 import { SFX, SFX_IDS, SFX_TIMBRES, noiseBuffer, renderSfx, type SfxRecipe, type SfxSpec } from "./sfx.ts";
 import { FakeAudio, FakeNode, type FakeParam, type ParamEvent } from "./test/fakeAudio.ts";
 import type { SfxId, SfxParams } from "./types.ts";
 import { CARD_AUDIO } from "./voiceData.ts";
+import { ANOMALY_CODES, type AnomalyCode } from "../cards/anomalies.ts";
 
 /** The SfxId union, in its declared order. */
 const UNION_ORDER: SfxId[] = [
@@ -36,6 +38,17 @@ const UNION_ORDER: SfxId[] = [
   "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
   // R3338000: the Terminus set pieces' organ.
   "organ",
+  // R3337003: an Anomaly's sting.
+  "anomaly",
+  "playImpact", "trapSnap",
+  // R3342000: the tile aura bell.
+  "auraTouch",
+  // R3400001: the signatures of Meditative+'s and Training Grounds' Legendaries and Mythics.
+  "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
+  // R3407001: the signatures of Stinkyscape's signature cards.
+  "ballotBeep", "lullabySigh", "compactTut", "glitchDrop", "harpGliss", "markerThunder", "stampTrill", "tillRattle",
+  "gavelSlam", "dockingChime", "keyboardPing", "synthSnap", "blobDrum", "warpSparkle", "tearChoir", "cackleThunder",
+  "kazooRatchet", "thrusterSniff", "marbleGong", "sanctumBell", "cashWhistle", "whisperClink", "crystalRise",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -137,6 +150,46 @@ const DURATION_MS: Record<SfxId, number> = {
   deckShear: 550,
   // R3338000.
   organ: 2000,
+  // R3337003.
+  anomaly: 1200,
+  // R3346000.
+  playImpact: 500,
+  trapSnap: 200,
+  // R3342000.
+  auraTouch: 200,
+  // R3400001.
+  inkSummit: 1100,
+  plowHeave: 1300,
+  cursorTear: 1400,
+  seanceChant: 1500,
+  slateRap: 1300,
+  diceGong: 1600,
+  timberLash: 1200,
+  pencilArpeggio: 1400,
+  // R3407001: each a fixed length, its real upper bound.
+  ballotBeep: 1300,
+  lullabySigh: 1500,
+  compactTut: 1300,
+  glitchDrop: 1500,
+  harpGliss: 1500,
+  markerThunder: 1500,
+  stampTrill: 1400,
+  tillRattle: 1600,
+  gavelSlam: 1400,
+  dockingChime: 1600,
+  keyboardPing: 1200,
+  synthSnap: 1400,
+  blobDrum: 1500,
+  warpSparkle: 1600,
+  tearChoir: 1500,
+  cackleThunder: 1600,
+  kazooRatchet: 1600,
+  thrusterSniff: 1600,
+  marbleGong: 1600,
+  sanctumBell: 1600,
+  cashWhistle: 1600,
+  whisperClink: 1200,
+  crystalRise: 1600,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];
@@ -627,6 +680,73 @@ describe("R669 the play sting", () => {
   });
 });
 
+describe("R3346000 the play impact and the trap snap", () => {
+  const TYPES: readonly PlayType[] = ["unit", "spell", "field"];
+  const impactRun = (playTier: (typeof PLAY_TIERS_ASCENDING)[number], playType: PlayType): Run =>
+    runRecipe(`playImpact ${playTier} ${playType}`, SFX.playImpact.recipe, SFX.playImpact.durationMs, { playTier, playType });
+  const runs = [
+    ...TYPES.flatMap((type) => PLAY_TIERS_ASCENDING.map((tier) => impactRun(tier, type))),
+    runRecipe("playImpact {}", SFX.playImpact.recipe, SFX.playImpact.durationMs, {}),
+    runRecipe("trapSnap", SFX.trapSnap.recipe, SFX.trapSnap.durationMs, {}),
+  ];
+
+  it("R3346000 every tier of every type, and the trap snap, keep every clause of the recipe contract", () => {
+    expect([
+      ...runs.flatMap(subsetProblems),
+      ...runs.flatMap(lengthProblems),
+      ...runs.flatMap(scheduleProblems),
+      ...runs.flatMap(stopProblems),
+      ...runs.flatMap(wiringProblems),
+      ...runs.flatMap(rampProblems),
+    ]).toEqual([]);
+  });
+
+  it("R3346000 each type grows with the tier: a longer sound, and from medium up no fewer voices, a boom or sub at the top", () => {
+    for (const type of TYPES) {
+      const tiers = PLAY_TIERS_ASCENDING.map((tier) => impactRun(tier, type));
+      const lengths = tiers.map(returnedSeconds);
+      for (let i = 1; i < lengths.length; i += 1) {
+        expect(lengths[i], `${type}: ${PLAY_TIERS_ASCENDING[i] ?? ""} outlasts the tier below`).toBeGreaterThan(lengths[i - 1] ?? Infinity);
+      }
+      // A Spell's light flick has its bell (two voices), which its medium play drops for a longer charge.
+      const voices = tiers.map((run) => run.made.filter((n) => n.started).length);
+      for (let i = 2; i < voices.length; i += 1) {
+        expect(voices[i], `${type}: ${PLAY_TIERS_ASCENDING[i] ?? ""} has no fewer voices`).toBeGreaterThanOrEqual(voices[i - 1] ?? Infinity);
+      }
+      // A heavy Unit's or Spell's boom and a massive Field Spell's sub are voices the medium play has not got.
+      expect(voices[3], `${type}: a massive play has more voices than a medium one`).toBeGreaterThan(voices[1] ?? Infinity);
+    }
+  });
+
+  it("R3346000 the three types are three different sounds at the same tier", () => {
+    for (const tier of PLAY_TIERS_ASCENDING) {
+      const shapes = TYPES.map((type) => {
+        const run = impactRun(tier, type);
+        return JSON.stringify({ kinds: run.made.map((n) => n.kind), length: returnedSeconds(run) });
+      });
+      expect(new Set(shapes).size, `${tier}: no two types build the same graph`).toBe(TYPES.length);
+    }
+  });
+
+  it("R3346000 a missing tier or type is a light Unit", () => {
+    const plain = runRecipe("playImpact {}", SFX.playImpact.recipe, SFX.playImpact.durationMs, {});
+    const light = impactRun("light", "unit");
+    expect(plain.made.map((n) => n.kind)).toEqual(light.made.map((n) => n.kind));
+    expect(returnedSeconds(plain)).toBe(returnedSeconds(light));
+  });
+
+  it("R3346000 gain and pan change nothing in the recipe: the engine trims and pans", () => {
+    const plain = impactRun("heavy", "spell");
+    const trimmed = runRecipe("trimmed", SFX.playImpact.recipe, SFX.playImpact.durationMs, { playTier: "heavy", playType: "spell", gain: 0.6, pan: 0.5 });
+    expect(trimmed.made.map((n) => n.kind)).toEqual(plain.made.map((n) => n.kind));
+    expect(returnedSeconds(trimmed)).toBe(returnedSeconds(plain));
+  });
+
+  it("R3346000 every tier of every type fits the 500 ms row", () => {
+    for (const run of runs) expect(returnedSeconds(run), run.label).toBeLessThanOrEqual(SFX.playImpact.durationMs / 1000);
+  });
+});
+
 describe("R1345 MN03's fourteen emoji sounds", () => {
   const NEW_EMOJI: readonly SfxId[] = [
     "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
@@ -790,5 +910,69 @@ describe("R3338000 the Terminus organ", () => {
     expect(held?.value, "a level hold").toBe(swelled?.value);
     expect(released?.time ?? Infinity).toBeLessThanOrEqual(AT + SFX.organ.durationMs / 1000 + EPS);
     expect(returnedSeconds(run)).toBeLessThanOrEqual(SFX.organ.durationMs / 1000);
+  });
+});
+describe("R3337003 each Anomaly's sting", () => {
+  /** `code`'s sting through `renderSfx` at `pitch`, as the engine plays it. */
+  const stingOf = (code: AnomalyCode, pitch = 1): Run =>
+    runRecipe(
+      `anomaly ${code} at pitch ${String(pitch)}`,
+      (c, out, at, p) => renderSfx("anomaly", c, out, at, p, pitch),
+      SFX.anomaly.durationMs,
+      { anomaly: code },
+    );
+  const problems = (runs: readonly Run[]): string[] => [
+    ...runs.flatMap(subsetProblems),
+    ...runs.flatMap(lengthProblems),
+    ...runs.flatMap(scheduleProblems),
+    ...runs.flatMap(stopProblems),
+    ...runs.flatMap(wiringProblems),
+    ...runs.flatMap(rampProblems),
+  ];
+  const shapeOf = (run: Run): string =>
+    JSON.stringify([
+      run.made.map((node) => [node.kind, node.type]),
+      run.paramEvents.map(({ event }) => [event.method, "value" in event ? event.value : null]),
+    ]);
+  const plainWhoosh = (): string => shapeOf(runRecipe("whoosh", SFX.whoosh.recipe, SFX.whoosh.durationMs, {}));
+  /** Every frequency the run's oscillators are set to or glide to. */
+  const pitchesOf = (run: Run): number[] =>
+    run.made
+      .filter((node) => node.kind === "oscillator")
+      .flatMap((node) =>
+        node.param("frequency").events.flatMap((e) => (e.method === "setValueAtTime" || e.method === "exponentialRampToValueAtTime" ? [e.value] : [])),
+      );
+
+  it("R3337003 every code keeps every clause of the recipe contract, as written and at the bank's lowest and highest pitch", () => {
+    expect(problems(ANOMALY_CODES.flatMap((code) => [stingOf(code), stingOf(code, 0.25), stingOf(code, 4)]))).toEqual([]);
+  });
+
+  it("R3337003 no two codes build the same graph, and none is the plain whoosh", () => {
+    const shapes = ANOMALY_CODES.map((code) => shapeOf(stingOf(code)));
+    expect(new Set(shapes).size).toBe(ANOMALY_CODES.length);
+    expect(shapes).not.toContain(plainWhoosh());
+  });
+
+  it("R3337003 with no code, or one this build does not know, it plays the plain whoosh and never throws", () => {
+    for (const params of [{}, { anomaly: "ZZ" }, { anomaly: "wh" }] as unknown as SfxParams[]) {
+      const run = runRecipe(`anomaly ${JSON.stringify(params)}`, SFX.anomaly.recipe, SFX.anomaly.durationMs, params);
+      expect(run.threw, JSON.stringify(params)).toBeNull();
+      expect(shapeOf(run), JSON.stringify(params)).toBe(plainWhoosh());
+    }
+  });
+
+  it("R3337003 each sounds what its board is: the Wormhole's sweep, the rocks' rumble, the bell, the buzz and the chimes", () => {
+    const pitches = (code: AnomalyCode): number[] => pitchesOf(stingOf(code));
+    expect(pitches("WH")).toEqual(expect.arrayContaining([55, 110]));
+    expect(pitches("MT")).toContain(98);
+    expect(pitches("FO")).toEqual(expect.arrayContaining([523, 784]));
+    expect(pitches("AN")).toContain(880);
+    expect(pitches("AA")).toContain(660);
+    for (const code of ["AL", "AT", "AN", "AA"] as const) {
+      const run = stingOf(code);
+      expect(run.made.some((node) => node.kind === "bufferSource"), `${code} rumbles on noise`).toBe(true);
+      expect(run.made.some((node) => node.kind === "biquad" && node.type === "lowpass"), `${code} low-passes it`).toBe(true);
+    }
+    expect(stingOf("DH").made.some((node) => node.kind === "oscillator" && node.type === "sawtooth"), "the drones buzz").toBe(true);
   });
 });

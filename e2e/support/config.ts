@@ -151,6 +151,9 @@ export const constants = {
 /** R201: spec 25 seeds effects settings so its screenshot catches a notice. */
 export const FX_SETTINGS_KEY = "jackioh.fx.v1";
 
+/** `CARD_SETTINGS_KEY` in apps/web/src/cards/settings.ts: a spec that reads a Mythic's words seeds `fullArt: false` (R3343001). */
+export const CARD_SETTINGS_KEY = "jackioh.cards.settings.v1";
+
 /**
  * R1310004: `E2E_FULL_ART_GATED_KEY` in apps/web/src/cards/fullArt.ts. A development build gates full
  * art on ownership (R1313000) only when this key holds "1" as the page loads; only spec 45 sets it.

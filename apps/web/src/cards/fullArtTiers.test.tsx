@@ -5,7 +5,8 @@
 // do. The pixels are e2e's cypress/component/full-art-tiers.cy.tsx and animated-art.cy.tsx; this
 // file holds the DOM. R3015005 (#3015): each tier's pick wears the level it maps to, owned through the retired full art
 // that maps to it (R3015006), else the highest owned level below it; R3015002: a signed level is Full art's own picture,
-// moving, with the signature.
+// moving, with the signature. R3343001 (#3343): a card's Default levels draw its default look, a Mythic's Full art and
+// a Legendary's Extended art, so their normal face is that look (`defaultTierOf`).
 
 import { cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
@@ -57,10 +58,12 @@ import {
   VERSION_FULL_ART_ANIMATED_ID,
   VERSION_FULL_ART_ID,
   VERSION_FULL_ART_SIGNED_ID,
+  defaultLookOf,
   impliedBy,
   isFullBleed,
   lookOfLevel,
 } from "./versions.ts";
+import { facePicture } from "../test/artPicture.ts";
 import { legacyText } from "../test/faceData.ts";
 
 /** R2655001: the fifteen cards #2655 adds to the six hero portraits' cards. */
@@ -132,9 +135,18 @@ function tierOf(cf: HTMLElement): string | null {
   return cf.getAttribute("data-full-art-tier");
 }
 
+/**
+ * R3343001: the tier `id`'s Default level prints, still or `moving`: a Mythic's, whose Default draws Full art, Full art's
+ * (the Epic's, the Legendary's moving); any other card's the normal face's (none, the Animated art moving).
+ */
+function defaultTierOf(id: string, moving = false): string | null {
+  if (isFullBleed(defaultLookOf(fullArtSource(id)))) return moving ? "Legendary" : "Epic";
+  return moving ? "Animated" : null;
+}
+
 /** The art window's picture, decoded: what its CSS background draws. */
 function pictureOf(cf: HTMLElement): string {
-  return decodeURIComponent(cf.querySelector<HTMLElement>(".cf-art")?.style.backgroundImage ?? "");
+  return facePicture(cf);
 }
 
 /** A seat's loadout whose cards' own picks are `cards`, every slot its default. */
@@ -169,11 +181,11 @@ describe("R2655001 the registry is the list of full-art cards", () => {
       writeCardFullArt(id, idOf(id, "Mythic"));
       expect(tierOf(drawn(id, { owned: owning([id], ["Mythic"]) })), id).toBe("Mythic");
       cleanup();
-      // Not owned, or picked off: its normal face, its words back.
-      expect(tierOf(drawn(id, { owned: NO_FULL_ART })), id).toBeNull();
+      // Not owned, or picked off: its normal face, its words back (R3343001: a Mythic's Default, its Full art).
+      expect(tierOf(drawn(id, { owned: NO_FULL_ART })), id).toBe(defaultTierOf(id));
       cleanup();
       writeCardFullArt(id, false);
-      expect(tierOf(drawn(id, { owned: owning([id]) })), id).toBeNull();
+      expect(tierOf(drawn(id, { owned: owning([id]) })), id).toBe(defaultTierOf(id));
       cleanup();
     }
   });
@@ -429,13 +441,18 @@ describe("R2715000 the Animated art", () => {
       expect(animated, id).toBe(`animated-${idOf(id, "Epic").slice("full-art-".length)}`);
       writeCardFullArt(id, fullArtPickOf(id, animated));
       const cf = drawn(id, { owned: owning([id], ["Animated"]) });
-      // Its normal face: the frame, its type line and rules box, no full art, nothing signed or swept.
-      expect(tierOf(cf), id).toBe("Animated");
-      expect(cf.getAttribute("data-full-art"), id).toBeNull();
-      expect(cf.querySelector(".card-text"), id).not.toBeNull();
-      expect(cf.querySelector(".cf-art.cf-art--full"), id).toBeNull();
-      expect(cf.classList.contains("cf-full-art--animated"), id).toBe(false);
-      expect(cf.querySelector(".cf-signature, .cf-full-art-sweep"), id).toBeNull();
+      // Its normal face: the frame, its type line and rules box, no full art, nothing signed or swept. R3343001: the
+      // Default's animated level draws its default look moving: a Legendary's Extended art, its picture past its window,
+      // and a Mythic's Full art, swept as an animated full art is.
+      const shown = defaultLookOf(id);
+      const full = isFullBleed(shown);
+      expect(tierOf(cf), id).toBe(defaultTierOf(id, true));
+      expect(cf.getAttribute("data-full-art"), id).toBe(full ? "true" : null);
+      expect(cf.querySelector(".card-text") === null, id).toBe(full);
+      expect(cf.querySelector(".cf-art.cf-art--full") !== null, id).toBe(shown !== null);
+      expect(cf.classList.contains("cf-full-art--animated"), id).toBe(full);
+      expect(cf.querySelector(".cf-signature"), id).toBeNull();
+      expect(cf.querySelector(".cf-full-art-sweep") !== null, id).toBe(full);
       // Its art moving in its window.
       expect(cf.getAttribute("data-art-motion"), id).toBe("animated");
       expect(cf.querySelector('.cf-art[data-art-moving="true"]'), id).not.toBeNull();
@@ -443,7 +460,7 @@ describe("R2715000 the Animated art", () => {
       cleanup();
       // Unowned, only its still Epic owned: the normal face, still.
       const still = drawn(id, { owned: owning([id], ["Epic"]) });
-      expect(tierOf(still), id).toBeNull();
+      expect(tierOf(still), id).toBe(defaultTierOf(id));
       expect(still.getAttribute("data-art-motion"), id).toBeNull();
       expect(still.querySelector('.cf-art[data-art-moving="true"]'), id).toBeNull();
       expect(pictureOf(still), id).not.toContain("art-m-");
@@ -451,7 +468,7 @@ describe("R2715000 the Animated art", () => {
       // R3015006: a Legendary or a Mythic owns the Default's animated level, so the pick moves with either.
       for (const tier of ["Legendary", "Mythic"] as const) {
         const moving = drawn(id, { owned: owning([id], [tier]) });
-        expect(tierOf(moving), `${id} ${tier}`).toBe("Animated");
+        expect(tierOf(moving), `${id} ${tier}`).toBe(defaultTierOf(id, true));
         expect(moving.getAttribute("data-art-motion"), `${id} ${tier}`).toBe("animated");
         cleanup();
       }
@@ -463,7 +480,8 @@ describe("R2715000 the Animated art", () => {
     const theirs = (cards: Record<string, CardPicks>) => (face: ReactElement) => <TheirCopy loadout={loadout(cards)}>{face}</TheirCopy>;
     for (const id of [VANILLA, "classicplus-046", "stinkyscape-154"]) {
       const cf = drawn(id, { worn: false, owned: NO_FULL_ART, wrap: theirs({ [id]: { fullArt: idOf(id, "Animated") } }) });
-      expect(tierOf(cf), id).toBe("Animated");
+      // R3343001: Dice of Doom, a Mythic, moves its Default's Full art.
+      expect(tierOf(cf), id).toBe(defaultTierOf(id, true));
       expect(cf.getAttribute("data-art-motion"), id).toBe("animated");
       cleanup();
     }
@@ -559,11 +577,12 @@ describe("R2715001 the moving art", () => {
 
 describe("R2725000 R3015000 a card's level on its face", () => {
   /**
-   * R2725001: two Units and two Spells offered every level of Full art and the Default's animated one: The Mother
-   * Pancake and Dice of Doom, two of the 21, and Carnivorous Cube (an Epic Unit) and Transmogulate (a Legendary Spell),
-   * which have no retired full art.
+   * R2725001: three Units and a Spell offered every level of Full art and the Default's animated one: "Miss" Mrow and
+   * API Key Fishing, two of the 21, and Carnivorous Cube and Corpse Eater (Epic Units), which have no retired full art.
+   * R3343001: each below Legendary, so its Default is the normal face (a Mythic's draws Full art, a Legendary's
+   * Extended art; cards/defaultLooks.test.tsx).
    */
-  const CARDS = ["classicplus-012", "stinkyscape-154", "core-022", "core-083"] as const;
+  const CARDS = ["core-086", "meditative-021", "core-022", "core-089"] as const;
   /** R3015000: every level of part 1's two ladders: the normal face, the Default's animated level, and Full art's three. */
   const LEVELS: readonly (string | null)[] = [null, VERSION_ANIMATED_ID, VERSION_FULL_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_SIGNED_ID];
 
@@ -766,7 +785,8 @@ describe("R2725000 R3015000 a card's level on its face", () => {
         const normal = faceIn(id, radiant);
         const normalMarkup = normal.outerHTML;
         const stillPicture = pictureOf(normal);
-        expect(normal.getAttribute("data-full-art"), where).toBeNull();
+        // R3343001: but a Mythic's Default draws its Full art.
+        expect(normal.getAttribute("data-full-art"), where).toBe(isFullBleed(defaultLookOf(id)) ? "true" : null);
         cleanup();
         if (fullArt.includes(id)) {
           writeCardLevel(id, VERSION_FULL_ART_ID);
@@ -799,7 +819,9 @@ describe("R2725000 R3015000 a card's level on its face", () => {
   it("R2949000 R3015000 Full art's signed level is offered in every set that ships, only on cards offered Full art and its animated level", () => {
     expect([...SIGNED_BY_SET.keys()].sort()).toEqual([...SHIPPED_SETS].sort());
     const fullArtAnimated = new Set(COSMETIC_OFFERS[VERSION_FULL_ART_ANIMATED_ID] ?? []);
-    for (const id of OFFERED_SIGNED) expect(OFFERED_FULL_ART.includes(id) && fullArtAnimated.has(id) && OFFERED_ANIMATED.has(id), id).toBe(true);
+    // R3343000: Full art's first level counts where it is the card's default look, a Mythic's, offered nowhere there.
+    const fullArtThere = (id: string): boolean => OFFERED_FULL_ART.includes(id) || defaultLookOf(id) === VERSION_FULL_ART_ID;
+    for (const id of OFFERED_SIGNED) expect(fullArtThere(id) && fullArtAnimated.has(id) && OFFERED_ANIMATED.has(id), id).toBe(true);
   });
 
   /** How many signed cards one test draws (ten faces each), so that no test nears the timeout on a loaded runner. */
