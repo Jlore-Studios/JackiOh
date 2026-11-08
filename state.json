@@ -14563,9 +14563,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-08T01:22:26Z",
-      "owner_why": "its own review was handed off to its final audit: `claude-4` is busy: its lanes are all taken",
+      "owner": "claude-6",
+      "owner_since": "2026-11-08T01:23:42Z",
+      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-4` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-07T09:17:35Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -16163,7 +16163,7 @@
       }
     },
     "3375": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -16204,15 +16204,15 @@
       "issue": 3334,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-6",
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-6",
       "question": "",
       "queued_at": "2026-11-08T01:23:14Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "",
-      "run_id": "42432665319",
+      "run_id": "pending:3e1231c2-1794100980",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16233,7 +16233,7 @@
         "run": "42428776677"
       },
       "source": "conflict",
-      "started_at": "2026-11-08T01:04:49Z",
+      "started_at": "2026-11-08T01:23:42Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17955,9 +17955,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T01:22:45Z",
+    "at": "2026-11-08T01:23:42Z",
     "url": "",
-    "what": "revise #3386 on claude-7"
+    "what": "revise #3375 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-08T01:00:49Z",
