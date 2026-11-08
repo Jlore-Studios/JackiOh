@@ -16772,11 +16772,6 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
-      "paused": {
-        "at": "2026-11-08T16:11:54Z",
-        "interrupt": "usage",
-        "provider": "claude-6"
-      },
       "pending_request": false,
       "provider": "claude-6",
       "question": "",
