@@ -17301,6 +17301,7 @@
       "planned_at": "2026-11-08T17:51:15Z",
       "planned_by": "`claude-1` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-1",
+      "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-1",
       "round_tier": "",
