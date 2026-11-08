@@ -16185,10 +16185,16 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-08T22:40:18Z",
       "owner_why": "it took it up; released from its hold: `claude-3` has no runner free where it runs",
+      "paused": {
+        "at": "2026-11-08T23:01:19Z",
+        "interrupt": "usage",
+        "provider": "claude-1"
+      },
       "pending_request": false,
       "planned_at": "2026-11-08T14:41:24Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -16196,11 +16202,13 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-1",
+      "round_tier": "strong",
       "run_id": "42531391974",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-08T22:40:18Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "waiting_comment": 6718519684
     },
     "3424": {
