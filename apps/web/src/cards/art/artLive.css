@@ -3,7 +3,8 @@
  * backdrop on `.cf-art` itself, the subject (`.cf-art-subject`) and the motes (`.cf-art-motes`) over it, each an image
  * of the one picture, so the subject can lean, flinch and swing and the motes scatter without the picture's own loops
  * (inside the images, motion.ts) stopping. The reactions answer what the face says of its pointer (`data-art-hover`,
- * `data-art-press`, `--art-aim-x` and `--art-aim-y`, artLive.ts) and of the game (`data-art-attacking`, MinionFace); they
+ * `data-art-press`, `--art-aim-x` and `--art-aim-y`, artLive.ts) and of the game (`data-art-attacking`, MinionFace), only
+ * while the face's motion settings permit a response (`data-art-response`, useArtMotion); they
  * move transform properties (`rotate`, `translate`, `scale`) and opacity alone, every one inside the reduced-motion gate
  * and under `:root:not([data-reduce-motion="true"])`, as cards.css gates its own, and take their times and curves from
  * motion.css. The marks of state (cracks, glow, frost: ArtWear.tsx) are still drawings outside the gate, so a face under
@@ -67,7 +68,7 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  :root:not([data-reduce-motion="true"]) .cf-art-subject {
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"] .cf-art-subject {
     transform-origin: 50% 85%;
     transition:
       rotate var(--motion-fast) var(--ease-out),
@@ -80,40 +81,40 @@
   }
 
   /* Hover or focus: the subject turns and leans toward the pointer; the motes scatter and settle. */
-  :root:not([data-reduce-motion="true"]) .cf[data-art-hover="true"] .cf-art-subject {
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-hover="true"] .cf-art-subject {
     rotate: calc(var(--art-aim-x, 0) * 4deg);
     translate: calc(var(--art-aim-x, 0) * 3%) calc(var(--art-aim-y, 0) * 2%);
   }
 
-  :root:not([data-reduce-motion="true"]) .cf[data-art-hover="true"] .cf-art-motes {
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-hover="true"] .cf-art-motes {
     animation: cf-art-scatter var(--motion-slow) var(--ease-out) 1;
   }
 
   /* Press: the subject flinches inward; the overshoot curve springs it back. */
-  :root:not([data-reduce-motion="true"]) .cf[data-art-press="true"] .cf-art-subject {
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-press="true"] .cf-art-subject {
     scale: 0.92;
   }
 
   /* Attacking (`attackDeclared` in flight): the subject swings toward its target on the lunge's own aim, the motes fire. */
-  :root:not([data-reduce-motion="true"]) .cf[data-art-attacking="true"] .cf-art-subject {
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-attacking="true"] .cf-art-subject {
     animation: cf-art-swing var(--motion-base) var(--ease-out) 1;
   }
 
-  :root:not([data-reduce-motion="true"]) .cf[data-art-attacking="true"] .cf-art-motes {
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-attacking="true"] .cf-art-motes {
     animation: cf-art-fire var(--motion-base) var(--ease-out) 1;
   }
 
   /* Art that is one image (a delivered file, a restyle, a Starship's, a Legacy card's, a face holding no slot) answers a
      hover and a press as a whole. */
-  :root:not([data-reduce-motion="true"]) .cf[data-art-hover] .cf-art:not([data-art-live]) {
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-hover] .cf-art:not([data-art-live]) {
     transition: scale var(--motion-fast) var(--ease-out);
   }
 
-  :root:not([data-reduce-motion="true"]) .cf[data-art-hover="true"] .cf-art:not([data-art-live]) {
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-hover="true"] .cf-art:not([data-art-live]) {
     scale: 1.03;
   }
 
-  :root:not([data-reduce-motion="true"]) .cf[data-art-press="true"] .cf-art:not([data-art-live]) {
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-press="true"] .cf-art:not([data-art-live]) {
     scale: 0.97;
   }
 

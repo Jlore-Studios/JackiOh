@@ -42,7 +42,7 @@ import { CardStates } from "./CardStates.tsx";
 import { costDigits, hasCrest } from "./CardFace.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useArtLive } from "./artLive.ts";
-import { useArtMotion, useCosmeticAttributes } from "./cosmetics.ts";
+import { cosmeticAttributes, useArtMotion, useCosmeticAppearance } from "./cosmetics.ts";
 import { slotRarityOf } from "./motionSlots.ts";
 import { useFitText } from "./fit.ts";
 import { artMotionOf, boardLookOf, boardNameOf, useCardLook } from "./fullArt.ts";
@@ -158,7 +158,6 @@ function fxAttributesOf(plan: readonly KeywordFxPlan[], kind: Keyword["kind"]): 
 export function MinionFace({ face, unit, className, worn = false, keywordsOffFace = false, attacking = false }: MinionFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
-  const cosmetics = useCosmeticAttributes(face, worn, settings.animatedFoil);
   const stamp = useCardStamp(face, worn);
   const plan = keywordFxPlan(unit);
   // R3046000, R3339000: the look a full-art unit wears, still (null: the art up to the frame).
@@ -177,17 +176,19 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
   // attack in flight first, then its rarity (motionSlots.ts); a hovered or attacking unit claims one to answer in.
   const faceRef = useRef<HTMLSpanElement>(null);
   const rarity = frameRarity(face);
+  const cosmeticAppearance = useCosmeticAppearance(face, worn);
   const artMoves = cardLook.animated || rarity === "Mythic";
   const live = useArtLive(faceRef, true);
   const engaged = live.hovered || attacking;
   // R3334000, R3340000: the shipyard idle is another use of this face's one ranked, visible motion decision, not a
   // second unranked claim of its own. A populated Dormant Starship is Legendary, so it remains eligible at Fx Low.
   const shipyardIdle = face.starship !== null && !face.starship.launched && face.starship.list.length > 0;
-  const artMotion = useArtMotion((artMoves || engaged || shipyardIdle) && settings.animatedFoil && live.onScreen, {
-    hovered: engaged,
-    rarity: slotRarityOf(rarity),
-  });
-  const motion = artMotion && (artMoves || engaged) ? artMotionOf(face.defId) : null;
+  const faceMotion = useArtMotion(
+    (artMoves || engaged || shipyardIdle || cosmeticAppearance.animates) && settings.animatedFoil && live.onScreen,
+    { hovered: engaged, rarity: slotRarityOf(rarity) },
+  );
+  const motion = faceMotion.moving && (artMoves || engaged) ? artMotionOf(face.defId) : null;
+  const cosmetics = cosmeticAttributes(cosmeticAppearance, faceMotion.moving);
   // R3340000: what its art wears: cracks for the health it is missing, a glow when buffed, frost when frozen (the view's own).
   const damage = damageLevel(unit.health, unit.maxHealth);
   const buffed = attackTone === "buffed" || healthTone === "buffed";
@@ -206,8 +207,9 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
       data-full-art={look === null ? undefined : "true"}
       data-art-first={artFirst ? "true" : undefined}
       data-version={look?.version ?? undefined}
-      data-art-motion={artMoves || engaged ? (artMotion ? "animated" : "static") : undefined}
+      data-art-motion={artMoves || engaged ? (faceMotion.moving ? "animated" : "static") : undefined}
       data-art-hover={live.hovered ? "true" : "false"}
+      data-art-response={faceMotion.enabled ? "true" : undefined}
       data-art-attacking={attacking ? "true" : undefined}
       data-taunt={hasKeyword(unit.keywords, "Taunt") ? "true" : undefined}
       data-flying={hasKeyword(unit.keywords, "Flying") && unit.position !== "DEF" ? "true" : undefined}
@@ -233,7 +235,7 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             wear={wear}
           />
           {/* R3334000, R3340000: the Dormant Starship's shipyard uses this face's one ranked, on-screen motion slot. */}
-          {face.starship != null && !face.starship.launched ? <ShipyardIdle list={face.starship.list} moving={artMotion} /> : null}
+          {face.starship != null && !face.starship.launched ? <ShipyardIdle list={face.starship.list} moving={faceMotion.moving} /> : null}
         </span>
 
         <KeywordFx plan={plan} />

@@ -115,7 +115,7 @@ import { useArtLive } from "./artLive.ts";
 import { useImmersiveShift } from "./immersive.ts";
 import { slotRarityOf } from "./motionSlots.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { useArtMotion, useCosmeticAttributes } from "./cosmetics.ts";
+import { cosmeticAttributes, useArtMotion, useCosmeticAppearance } from "./cosmetics.ts";
 import {
   CARD_DEPTH_STEP_CQW,
   CARD_FRAME_BREAK_PX,
@@ -374,6 +374,7 @@ export function CardFace({
 
   const scales = { "--cf-name-scale": String(TIER_SCALE[names]), "--cf-text-scale": String(TIER_SCALE[texts]) } as CSSProperties;
   const rarity = frameRarity(face);
+  const cosmeticAppearance = useCosmeticAppearance({ ...face, rarity }, worn);
   const stamp = useCardStamp(face, worn);
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
@@ -400,13 +401,13 @@ export function CardFace({
   // for a Mythic; a hovered or focused one claims a slot to answer in, ranked first (motionSlots.ts).
   const board = !full && onBoard;
   const artMoves = full ? look.animated : board && (cardLook.animated || rarity === "Mythic");
-  const live = useArtLive(faceRef, artMoves || board);
+  const live = useArtLive(faceRef, artMoves || board || immersive || cosmeticAppearance.animates);
   const engaged = board && live.hovered;
-  const artMotion = useArtMotion((artMoves || immersive || engaged) && settings.animatedFoil && !lazyArt && live.onScreen, {
-    hovered: live.hovered,
-    rarity: slotRarityOf(rarity),
-  });
-  useImmersiveShift(faceRef, immersive && artMotion);
+  const faceMotion = useArtMotion(
+    (artMoves || immersive || engaged || cosmeticAppearance.animates) && settings.animatedFoil && !lazyArt && live.onScreen,
+    { hovered: live.hovered, rarity: slotRarityOf(rarity) },
+  );
+  useImmersiveShift(faceRef, immersive && faceMotion.moving);
   // R2942001: Extended art's picture runs past its window across the face; Pixel sets the name in its pixel face, when
   // the face has every character of it and it is short enough to read (`PIXEL_NAME_MAX_GLYPHS`; a small face prints
   // it in the normal face, cards.css).
@@ -418,7 +419,7 @@ export function CardFace({
   const outOfFrame = look.version === VERSION_OUT_OF_FRAME_ID && !fullArt && !glitch && hasArtParts(face.defId, starship, anomaly);
   // R3015002: one picture per variant at every level, and its own motion at every animated one.
   const picture = artPictureOf(look.version, face.set);
-  const motion = artMotion && (artMoves || engaged) ? artMotionOf(face.defId) : null;
+  const motion = faceMotion.moving && (artMoves || engaged) ? artMotionOf(face.defId) : null;
   // R3344000: an Epic or rarer face, or a full-art one, draws its picture as depth planes unless the viewer's motion
   // settings ask for the flat picture, which also holds its foil still under the fx intensity off.
   const { flat, fxOff } = useDepthMotion();
@@ -428,9 +429,10 @@ export function CardFace({
   const breaks = depth && breaksFrame(rarity, ownHand, tilt);
   useCardTilt(faceRef, depth ? tilt : "off", !flat);
   // R1295000: what the face wears, judged by the rarity its frame shows as its rarity foil is.
-  // R1956000: a grid's faces hold theirs still, so the slots stay with the card a player opens.
+  // R1956000: a grid's faces hold theirs still, so the slots stay with the card a player opens. R3340000: every moving
+  // cosmetic uses the same ranked, visible face-level decision as the art above.
   const foilMoves = settings.animatedFoil && !(fxOff && wantsDepth);
-  const cosmetics = useCosmeticAttributes({ ...face, rarity }, worn, foilMoves && !lazyArt);
+  const cosmetics = cosmeticAttributes(cosmeticAppearance, faceMotion.moving && foilMoves && !lazyArt);
   const glare = glareFor(cosmetics["data-cosmetic-foil"], face.radiant);
   const style = depth
     ? ({
@@ -467,9 +469,10 @@ export function CardFace({
       data-level={look.level ?? undefined}
       data-showcase={showcase ?? undefined}
       data-full-art-motion={moving || signed ? (settings.animatedFoil ? "animated" : "static") : undefined}
-      data-art-motion={artMoves || engaged ? (artMotion ? "animated" : "static") : undefined}
+      data-art-motion={artMoves || engaged ? (faceMotion.moving ? "animated" : "static") : undefined}
       data-art-hover={board ? (live.hovered ? "true" : "false") : undefined}
-      data-immersive-motion={immersive ? (artMotion ? "animated" : "static") : undefined}
+      data-art-response={board && faceMotion.enabled ? "true" : undefined}
+      data-immersive-motion={immersive ? (faceMotion.moving ? "animated" : "static") : undefined}
       data-depth={depth ? "true" : undefined}
       data-frame-break={breaks ? "true" : undefined}
       {...cosmetics}

@@ -599,7 +599,7 @@ export function useOwnsAccountCosmetic(): (id: string) => boolean {
 }
 
 /**
- * R1833000: the finishes and borders that move (cosmetics.css), each taking a foil's slot: the
+ * R1833000: the finishes and borders that move (cosmetics.css), each using its face's foil slot: the
  * Legendary and Mythic ones (R1953001: Gilded edge among them).
  */
 export const MOVING_FINISHES_AND_BORDERS: ReadonlySet<string> = new Set([
@@ -615,27 +615,26 @@ export function isChaseCosmetic(id: string): boolean {
   return COSMETICS.find((cosmetic) => cosmetic.id === id)?.chase === true;
 }
 
-/** Whether this face's foil may move now: it wants to, and holds one of the slots (motionSlots.ts). */
-function useFoilSlot(wanted: boolean): boolean {
-  return useMotionSlot(wanted, REST_RANK);
-}
-
 /**
- * R2715001: whether a face's moving art may move now: it wants to (CardFace: an Animated, Legendary or
- * Mythic face, full layout, Animated foil on, not a lazy grid face), neither the Reduce motion setting
- * nor the system asks for reduced motion, and it holds one of the foil's slots. R2944002: or an Immersive
- * face's depth, in the same slot, one per face whether it is Animated or not. Its hooks run on every face.
- * R3340000: the slots are ranked by `rank` (motionSlots.ts), the hand's and the board's alike; a hidden tab holds every
- * face still, so frees its slots; Fx intensity "Off" and the Effects setting's Reduce motion do too, and at "Low" only a
- * face that ranks first, a Mythic or a Legendary may claim.
+ * R2715001: whether a face may move now: it wants to move some art or cosmetic, neither the Reduce motion setting nor
+ * the system asks for reduced motion, and it holds one of the slots. R2944002: Immersive's depth uses the same slot.
+ * R3340000: every moving part of one face (art, foil, finish, border and a Starship's shipyard) shares this one claim,
+ * ranked by `rank` (motionSlots.ts), the hand's and the board's alike. A hidden tab holds every face still, so frees its
+ * slot; Fx intensity "Off" and the Effects setting's Reduce motion do too, and at "Low" only a face that ranks first, a
+ * Mythic or a Legendary may claim. `enabled` keeps the settings verdict apart from `moving`, so whole-art pointer
+ * reactions may answer on a permitted face without a slot while every setting that says still remains final.
  */
-export function useArtMotion(wanted: boolean, rank: SlotRank = REST_RANK): boolean {
+export type FaceMotion = { enabled: boolean; moving: boolean };
+
+export function useArtMotion(wanted: boolean, rank: SlotRank = REST_RANK): FaceMotion {
   const panel = useSetting("reduceMotion");
   const system = useOsReducedMotion();
   const visible = usePageVisible();
   const [{ intensity, motion }] = useFxSettings();
-  const allowed = motion === "reduce" || intensity === "off" ? false : intensity === "low" ? rank.hovered || rank.rarity !== null : true;
-  return useMotionSlot(wanted && !panel && !system && visible && allowed, rank);
+  const intensityAllows =
+    motion === "reduce" || intensity === "off" ? false : intensity === "low" ? rank.hovered || rank.rarity !== null : true;
+  const enabled = wanted && !panel && !system && visible && intensityAllows;
+  return { enabled, moving: useMotionSlot(enabled, rank) };
 }
 
 /** The attributes a face wears for its cosmetics: none at all for the defaults. */
@@ -646,13 +645,20 @@ export type CosmeticAttributes = {
   "data-frame"?: CosmeticId;
 };
 
+/** The cosmetics a face wears before its one face-level motion decision is applied. */
+export type CosmeticAppearance = {
+  attributes: Omit<CosmeticAttributes, "data-cosmetic-motion">;
+  animates: boolean;
+};
+
 /**
  * A face's cosmetic attributes: when `worn`, the card's own picks (R1655000) where owned, over its kinds'
  * defaults (R1953001); a Created card's are its generator's (R1956001). Below a `TheirCopy` and not `worn`:
  * that seat's picks, all owned (R1834001, R1834004). Rarity rules hold over both; `animatedFoil` stills a
- * foil and a moving finish or border (R1833000). Its hooks run on every face, worn or not.
+ * foil and a moving finish or border (R1833000). It claims no slot: CardFace or MinionFace combines `animates` with
+ * every other moving part of the face and makes one ranked claim (R3340000). Its hooks run on every face, worn or not.
  */
-export function useCosmeticAttributes(face: FaceModel, worn: boolean, animatedFoil: boolean): CosmeticAttributes {
+export function useCosmeticAppearance(face: FaceModel, worn: boolean): CosmeticAppearance {
   const { rarityFoil } = useCardSettings();
   const source = face.createdBy ?? face.defId;
   const card = useCardPicks(source);
@@ -664,16 +670,25 @@ export function useCosmeticAttributes(face: FaceModel, worn: boolean, animatedFo
       : wornCosmetics(face, worn ? DEFAULT_CARD_COSMETICS : null, card, (id) => ownsCosmetic(owned, source, id), rarityFoil);
   const foiled = wears.foil !== DEFAULT_CARD_COSMETICS.foil;
   const animates = foiled || MOVING_FINISHES_AND_BORDERS.has(wears.finish) || MOVING_FINISHES_AND_BORDERS.has(wears.border);
-  const moves = useFoilSlot(animates && animatedFoil);
   return {
-    ...(foiled ? { "data-cosmetic-foil": wears.foil } : {}),
-    ...(animates ? { "data-cosmetic-motion": moves ? "animated" : "static" } : {}),
-    ...(wears.finish === DEFAULT_CARD_COSMETICS.finish ? {} : { "data-finish": wears.finish }),
-    ...(wears.border === DEFAULT_CARD_COSMETICS.border ? {} : { "data-frame": wears.border }),
+    animates,
+    attributes: {
+      ...(foiled ? { "data-cosmetic-foil": wears.foil } : {}),
+      ...(wears.finish === DEFAULT_CARD_COSMETICS.finish ? {} : { "data-finish": wears.finish }),
+      ...(wears.border === DEFAULT_CARD_COSMETICS.border ? {} : { "data-frame": wears.border }),
+    },
   };
 }
 
-/** Test seam: drops the in-memory picks, the cards' among them, the listeners, the storage listener and every foil slot. */
+/** R3340000: applies this face's one motion result to the cosmetics it wears. */
+export function cosmeticAttributes(appearance: CosmeticAppearance, moving: boolean): CosmeticAttributes {
+  return {
+    ...appearance.attributes,
+    ...(appearance.animates ? { "data-cosmetic-motion": moving ? "animated" : "static" } : {}),
+  };
+}
+
+/** Test seam: drops the in-memory picks, the cards' among them, the listeners, the storage listener and every motion slot. */
 export function resetCosmeticsForTests(): void {
   current = null;
   listeners.clear();

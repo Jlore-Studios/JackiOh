@@ -19,7 +19,7 @@ import { THEME_PALETTES, type ArtThemeId } from "./art/themes.ts";
 import { PARTICLE_COUNT } from "./art/motion.ts";
 import { CardFace } from "./CardFace.tsx";
 import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
-import { resetCosmeticsForTests, writeCardLevel } from "./cosmetics.ts";
+import { resetCosmeticsForTests, writeCardLevel, writeCardPick } from "./cosmetics.ts";
 import { FullArtOwned } from "./fullArt.ts";
 import { MinionFace } from "./MinionFace.tsx";
 import { faceModel } from "./model.ts";
@@ -275,6 +275,17 @@ describe("R3340000 the slots go by rank, in one budget the hand shares", () => {
     expect(board[0]?.querySelector("[data-art-moving]")).toBeNull();
   });
 
+  it("R3340000 one ranked face slot moves its art and its foil together", () => {
+    writeCardPick(MYTHICS[0], "foil", "foil-holo-sweep");
+    const specs = Array.from({ length: MAX }, (_unused, index) => ({ id: MYTHICS[index % MYTHICS.length] as string }));
+    const { container } = render(<Board specs={specs} />);
+    const faces = minions(container);
+    expect(faces).toHaveLength(MAX);
+    expect(faces.map(motionOf)).toEqual(Array<string>(MAX).fill("animated"));
+    expect(faces[0]?.getAttribute("data-cosmetic-motion"), "the foil uses the Mythic face's art slot").toBe("animated");
+    expect(faces[0]?.querySelector('[data-art-moving="true"]'), "the same face's art moves too").not.toBeNull();
+  });
+
   it("R3340000 a slot freed by a face leaving passes to the next face at once", () => {
     writeCardLevel(GARY, VERSION_ANIMATED_ID);
     const { container, rerender } = render(<Board specs={Array.from({ length: MAX + 1 }, () => ({ id: GARY }))} />);
@@ -312,6 +323,37 @@ describe("R3340000 motion pauses and the settings still rule", () => {
     expect(motionOf(second)).toBe("animated");
     observerFor(first).report(true);
     expect(motionOf(first)).toBe("animated");
+  });
+
+  it("R3340000 a moving cosmetic follows the face's rank, visibility and Fx setting", () => {
+    vi.stubGlobal("IntersectionObserver", FakeObserver);
+    writeCardPick(COMMON, "foil", "foil-holo-sweep");
+    setFxSettings({ intensity: "low" });
+    const { container } = render(<Board specs={[{ id: COMMON }]} />);
+    const face = minions(container)[0] as HTMLElement;
+    expect(face.getAttribute("data-cosmetic-motion"), "an unranked Common holds still at Low").toBe("static");
+    fire(host(face), "pointerenter");
+    expect(face.getAttribute("data-cosmetic-motion"), "hover ranks the same cosmetic claim first").toBe("animated");
+    fire(host(face), "pointerleave");
+    expect(face.getAttribute("data-cosmetic-motion")).toBe("static");
+
+    act(() => {
+      setFxSettings({ intensity: "normal" });
+    });
+    expect(face.getAttribute("data-cosmetic-motion")).toBe("animated");
+    observerFor(face).report(false);
+    expect(face.getAttribute("data-cosmetic-motion"), "off screen").toBe("static");
+    observerFor(face).report(true);
+    expect(face.getAttribute("data-cosmetic-motion")).toBe("animated");
+    act(() => {
+      setVisibility("hidden");
+    });
+    expect(face.getAttribute("data-cosmetic-motion"), "in a hidden tab").toBe("static");
+    act(() => {
+      setVisibility("visible");
+      setFxSettings({ intensity: "off" });
+    });
+    expect(face.getAttribute("data-cosmetic-motion"), "at Fx Off").toBe("static");
   });
 
   it("R3340000 a Dormant Starship's shipyard uses its face's one ranked, on-screen slot", () => {
@@ -355,6 +397,7 @@ describe("R3340000 motion pauses and the settings still rule", () => {
       const [worn] = minions(container) as [HTMLElement, HTMLElement];
       expect(motions(container), why).toEqual(["static", "static"]);
       expect(container.querySelector("[data-art-moving], [data-art-live]"), why).toBeNull();
+      expect(worn.hasAttribute("data-art-response"), `${why}: the whole-art fallback is still too`).toBe(false);
       // Damage, a buff and frost are still marks.
       expect(worn.querySelectorAll(".cf-art-cracks path"), why).toHaveLength(3);
       expect(worn.querySelector(".cf-art-glow"), why).not.toBeNull();
@@ -422,6 +465,7 @@ describe("R3340000 cards that answer", () => {
     expect(cf.querySelector("[data-art-live]")).toBeNull();
     fire(host(cf), "pointerenter");
     expect(motionOf(cf)).toBe("animated");
+    expect(cf.getAttribute("data-art-response")).toBe("true");
     expect(cf.querySelector('.cf-art[data-art-live="true"]')).not.toBeNull();
     fire(host(cf), "pointerleave");
     expect(cf.hasAttribute("data-art-motion")).toBe(false);
@@ -547,7 +591,15 @@ describe("R3340000 the stylesheet", () => {
   });
 
   it("R3340000 the reactions answer hover, press and attack, and the marks stay outside the gate", () => {
-    for (const selector of ['[data-art-hover="true"] .cf-art-subject', '[data-art-press="true"] .cf-art-subject', '[data-art-attacking="true"] .cf-art-subject', '[data-art-attacking="true"] .cf-art-motes', '[data-art-hover="true"] .cf-art-motes']) {
+    for (const selector of [
+      '[data-art-response="true"][data-art-hover="true"] .cf-art-subject',
+      '[data-art-response="true"][data-art-press="true"] .cf-art-subject',
+      '[data-art-response="true"][data-art-attacking="true"] .cf-art-subject',
+      '[data-art-response="true"][data-art-attacking="true"] .cf-art-motes',
+      '[data-art-response="true"][data-art-hover="true"] .cf-art-motes',
+      '[data-art-response="true"][data-art-hover="true"] .cf-art:not([data-art-live])',
+      '[data-art-response="true"][data-art-press="true"] .cf-art:not([data-art-live])',
+    ]) {
       expect(css).toContain(selector);
     }
     expect(css).toContain("--art-aim-x");
