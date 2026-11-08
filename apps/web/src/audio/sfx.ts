@@ -30,6 +30,8 @@ export const SFX_IDS: readonly SfxId[] = [
   "anomaly",
   "playImpact", "trapSnap",
   "auraTouch",
+  "starshipDock", "starshipIgnite", "starshipRoar", "starshipBeam", "starshipRepeater", "starshipCannon",
+  "starshipFlak", "starshipLauncher", "starshipRam", "starshipWreck",
   "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
 ];
 
@@ -2222,6 +2224,241 @@ const ANOMALY_STINGS: { readonly [C in AnomalyCode]: SfxRecipe } = {
 const anomaly: SfxRecipe = (ctx, out, at, params) =>
   (isAnomalyCode(params.anomaly) ? ANOMALY_STINGS[params.anomaly] : whoosh)(ctx, out, at, params);
 
+// The Starship's moments (R3334000–R3334003)
+
+/**
+ * R3334000: a docking module's hum, by `amount` (the ship's pieces once it has docked): G2 for one
+ * piece, `stepCents` higher for each more, held from `pieces` on (fx/starship.ts STARSHIP_DOCK.humFull).
+ */
+const DOCK_HUM = { rootHz: 98, stepCents: 200, pieces: 8 } as const;
+
+/**
+ * R3334000: a module docks on its hardpoint: a clank and its latch as it clamps on, a weld's crackling
+ * hiss along the seam, and the ship's hum under them, a step higher for each piece it holds.
+ */
+const starshipDock: SfxRecipe = (ctx, out, at, params) => {
+  const len = 0.44;
+  const weld = 0.1;
+  const k = kit(ctx, out, at, len);
+  // The clank: two squares ring-modulated, as Armor's is, struck, then latched.
+  const ring = level(k, 0);
+  const carrier = oscillator(k, "square", 180);
+  const modulator = oscillator(k, "square", 267);
+  chain(carrier, ring);
+  modulator.connect(ring.gain);
+  chain(ring, biquad(k, "lowpass", 1400, 2), envelope(k, 0, 0.002, 0.34, 0.16), out);
+  run(k, carrier, 0, 0.16);
+  run(k, modulator, 0, 0.16);
+  clickTrain(k, out, [0, 0.06], 2400, 2, 0.9, 0.03);
+  const thud = tone(k, out, "sine", 150, 0, 0.003, 0.25, 0.14);
+  glide(k, thud.frequency, 80, 0.12);
+  const noise = noiseSource(k);
+  const crackle = modulatedGain(k, "square", 31, 0.5, 0.5);
+  chain(noise, biquad(k, "highpass", 3500, 0), crackle, envelope(k, weld, 0.03, 0.45, len), out);
+  run(k, noise, weld, len);
+  const amount = params.amount ?? 1;
+  const pieces = Number.isNaN(amount) ? 1 : Math.min(DOCK_HUM.pieces, Math.max(1, Math.round(amount)));
+  const hum = oscillator(k, "triangle", DOCK_HUM.rootHz * 2 ** (((pieces - 1) * DOCK_HUM.stepCents) / CENTS_PER_OCTAVE), 0.08);
+  chain(hum, heldEnvelope(k, 0.08, 0.06, 0.24, 0.32, 0.16, len), out);
+  run(k, hum, 0.08, len);
+  return len;
+};
+
+/**
+ * R3334001: the engines ignite as the cinematic lights them: the igniters tick, the fuel catches with a
+ * whump, and the flame builds over a low rumble.
+ */
+const starshipIgnite: SfxRecipe = (ctx, out, at) => {
+  const len = 0.68;
+  const catchAt = 0.14;
+  const k = kit(ctx, out, at, len);
+  clickTrain(k, out, [0, 0.05, 0.1], 3200, 4, 0.9, 0.02);
+  const whump = tone(k, out, "sine", 75, catchAt, 0.01, 0.4, 0.5);
+  glide(k, whump.frequency, 42, 0.45);
+  const noise = noiseSource(k);
+  const flame = biquad(k, "lowpass", 300, 0);
+  glide(k, flame.frequency, 2400, 0.4);
+  chain(noise, flame, heldEnvelope(k, catchAt, 0.04, 0.7, 0.45, 0.5, len), out);
+  run(k, noise, catchAt, len);
+  const rumble = oscillator(k, "sawtooth", 55, catchAt);
+  glide(k, rumble.frequency, 80, len);
+  chain(rumble, biquad(k, "lowpass", 240, 0), heldEnvelope(k, catchAt, 0.15, 0.22, 0.5, 0.18, len), out);
+  run(k, rumble, catchAt, len);
+  return len;
+};
+
+/**
+ * R3334001: the launch's roar as the ship climbs out of frame: a crackling rumble swelling as it lifts,
+ * its band opening with the climb and closing as it pulls away, a hiss of exhaust and a sub under it.
+ */
+const starshipRoar: SfxRecipe = (ctx, out, at) => {
+  const len = 1.15;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const band = biquad(k, "lowpass", 400, 0);
+  glide(k, band.frequency, 2000, 0.35);
+  glide(k, band.frequency, 350, len);
+  const crackle = modulatedGain(k, "square", 17, 0.75, 0.25);
+  chain(noise, band, crackle, heldEnvelope(k, 0, 0.12, 0.6, 0.6, 0.45, len), out);
+  chain(noise, biquad(k, "highpass", 4500, 0), envelope(k, 0, 0.12, 0.14, 0.7), out);
+  run(k, noise, 0, len);
+  const sub = oscillator(k, "sine", 46);
+  glide(k, sub.frequency, 30, len);
+  chain(sub, heldEnvelope(k, 0, 0.1, 0.3, 0.6, 0.22, len), out);
+  run(k, sub, 0, len);
+  return len;
+};
+
+/** R3334002: a beam sweeps its target: a charging whine, then a buzzing ray whose band sweeps up across it and back. */
+const starshipBeam: SfxRecipe = (ctx, out, at) => {
+  const len = 0.38;
+  const fire = 0.04;
+  const k = kit(ctx, out, at, len);
+  const whine = tone(k, out, "sine", 1200, 0, 0.005, 0.14, 0.08);
+  glide(k, whine.frequency, 2400, 0.06);
+  const ray = biquad(k, "bandpass", 900, 2.5);
+  glide(k, ray.frequency, 3600, 0.2);
+  glide(k, ray.frequency, 1400, len);
+  chain(ray, tremolo(k, 40, 0.3), heldEnvelope(k, fire, 0.02, 0.9, 0.3, 0.6, len), out);
+  const core = oscillator(k, "sine", 660, fire);
+  glide(k, core.frequency, 1320, 0.2);
+  glide(k, core.frequency, 880, len);
+  chain(core, heldEnvelope(k, fire, 0.02, 0.22, 0.3, 0.16, len), out);
+  run(k, core, fire, len);
+  for (const hz of [440, 446]) {
+    const saw = oscillator(k, "sawtooth", hz, fire);
+    chain(saw, ray);
+    run(k, saw, fire, len);
+  }
+  return len;
+};
+
+/** R3334002: a repeater's bolts, one after another (fx/starship.ts STARSHIP_BROADSIDE.repeaterShots). */
+const REPEATER_SHOTS: readonly number[] = [0, 0.07, 0.14, 0.21];
+
+/** R3334002: a repeater's stutter: each bolt a crack and a falling zap. */
+const starshipRepeater: SfxRecipe = (ctx, out, at) => {
+  const len = 0.32;
+  const k = kit(ctx, out, at, len);
+  clickTrain(k, out, REPEATER_SHOTS, 1800, 1.5, 1.5, 0.04);
+  const bright = biquad(k, "lowpass", 3000, 0);
+  chain(bright, out);
+  for (const start of REPEATER_SHOTS) {
+    const zap = tone(k, bright, "square", 900, start, 0.002, 0.28, start + 0.08);
+    glide(k, zap.frequency, 300, start + 0.06);
+  }
+  return len;
+};
+
+/** R3334002: a cannon's heavy boom: a sharp crack, a blast closing down, and a deep thump falling away. */
+const starshipCannon: SfxRecipe = (ctx, out, at) => {
+  const len = 0.58;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "highpass", 3000, 0), envelope(k, 0, 0.001, 0.22, 0.03), out);
+  const blast = biquad(k, "lowpass", 2500, 0);
+  glide(k, blast.frequency, 180, len);
+  chain(noise, blast, envelope(k, 0, 0.004, 0.5, len), out);
+  run(k, noise, 0, len);
+  const thump = tone(k, out, "sine", 90, 0, 0.004, 0.48, len);
+  glide(k, thump.frequency, 32, len * 0.8);
+  return len;
+};
+
+/** R3334002: flak's bursts in the air (fx/starship.ts STARSHIP_BROADSIDE.flakClouds). */
+const FLAK_POPS: readonly number[] = [0.08, 0.17, 0.27];
+
+/** R3334002: flak's pops: a dull launch, then each burst a puff of noise over a soft thump. */
+const starshipFlak: SfxRecipe = (ctx, out, at) => {
+  const len = 0.46;
+  const k = kit(ctx, out, at, len);
+  const launch = tone(k, out, "sine", 220, 0, 0.003, 0.2, 0.07);
+  glide(k, launch.frequency, 110, 0.06);
+  clickTrain(k, out, FLAK_POPS, 900, 0.9, 1.1, 0.12);
+  for (const start of FLAK_POPS) {
+    const pop = tone(k, out, "sine", 170, start, 0.003, 0.25, start + 0.12);
+    glide(k, pop.frequency, 80, start + 0.1);
+  }
+  return len;
+};
+
+/** R3334002: a launcher's hollow thunk as it lobs its load, and the whoosh of it flying. */
+const starshipLauncher: SfxRecipe = (ctx, out, at) => {
+  const len = 0.42;
+  const k = kit(ctx, out, at, len);
+  const thunk = tone(k, out, "triangle", 150, 0, 0.002, 0.55, 0.12);
+  glide(k, thunk.frequency, 70, 0.1);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "bandpass", 600, 3), envelope(k, 0, 0.002, 1.2, 0.05), out);
+  // The whoosh rises from silence under the thunk (a gain is 1 until its first event, so it starts at once).
+  const air = biquad(k, "bandpass", 500, 1.2);
+  glide(k, air.frequency, 3000, len);
+  chain(noise, air, envelope(k, 0, 0.2, 1.4, len), out);
+  run(k, noise, 0, len);
+  return len;
+};
+
+/** R3334002: the debris a ram rattles off. */
+const RAM_DEBRIS: readonly number[] = [0.12, 0.17, 0.23, 0.3, 0.38];
+
+/** R3334002: an unarmed Starship rams prow first: a crunch of hull on hull, a heavy thud, a screech of metal and debris. */
+const starshipRam: SfxRecipe = (ctx, out, at) => {
+  const len = 0.48;
+  const scrape = 0.02;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const crunch = modulatedGain(k, "square", 41, 0.5, 0.5);
+  chain(noise, biquad(k, "bandpass", 600, 1), crunch, envelope(k, 0, 0.003, 1.2, 0.3), out);
+  run(k, noise, 0, 0.3);
+  const thud = tone(k, out, "sine", 100, 0, 0.004, 0.4, len);
+  glide(k, thud.frequency, 40, len);
+  const screech = biquad(k, "bandpass", 1500, 4);
+  chain(screech, envelope(k, scrape, 0.01, 0.12, 0.35), out);
+  for (const hz of [1240, 1310]) {
+    const saw = oscillator(k, "sawtooth", hz, scrape);
+    glide(k, saw.frequency, 900, 0.35);
+    chain(saw, screech);
+    run(k, saw, scrape, 0.35);
+  }
+  clickTrain(k, out, RAM_DEBRIS, 2600, 3, 0.8, 0.03);
+  return len;
+};
+
+/** R3334003: the hull's creaks before it breaks. */
+const WRECK_CREAKS: readonly number[] = [0.05, 0.11, 0.2, 0.26, 0.31];
+
+/**
+ * R3334003: a Starship's hull breaks: a long metal groan sinking under its creaks, the snap as it breaks
+ * in two, a boom and the rumble of it coming apart.
+ */
+const starshipWreck: SfxRecipe = (ctx, out, at) => {
+  const len = 1.05;
+  const snap = 0.34;
+  const k = kit(ctx, out, at, len);
+  const groan = biquad(k, "bandpass", 320, 2.5);
+  glide(k, groan.frequency, 680, 0.45);
+  glide(k, groan.frequency, 260, len);
+  const voices = level(k, 0.5);
+  chain(voices, groan, heldEnvelope(k, 0, 0.25, 0.9, 0.8, 0.55, len), out);
+  for (const hz of [72, 75.6]) {
+    const saw = oscillator(k, "sawtooth", hz);
+    glide(k, saw.frequency, hz * 0.6, len);
+    vibrato(k, saw.frequency, 3.5, 4, 0, len);
+    chain(saw, voices);
+    run(k, saw, 0, len);
+  }
+  clickTrain(k, out, WRECK_CREAKS, 1300, 5, 0.9, 0.03);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "highpass", 2200, 0), envelope(k, snap, 0.002, 0.3, snap + 0.08), out);
+  const rumble = biquad(k, "lowpass", 400, 0);
+  glide(k, rumble.frequency, 150, len);
+  chain(noise, rumble, envelope(k, snap, 0.02, 0.9, len), out);
+  run(k, noise, snap, len);
+  const boom = tone(k, out, "sine", 70, snap, 0.004, 0.35, len);
+  glide(k, boom.frequency, 30, len);
+  return len;
+};
+
 // R3400001: the signature sounds of Meditative+'s and Training Grounds' Legendaries and Mythics, one each
 // (audio/signatureCues.ts plays them), every one layering its card's three sounds in a graph of its own.
 
@@ -2497,6 +2734,17 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   trapSnap: { recipe: trapSnap, durationMs: 200, gain: 0.8 },
   // R3342000: the tile aura bell, pitched by its hue.
   auraTouch: { recipe: auraTouch, durationMs: 200, gain: 0.4 },
+  // R3334000–R3334003: the Starship's moments, its heaviest (the roar, the cannon, the ram, the wreck) loudest.
+  starshipDock: { recipe: starshipDock, durationMs: 450, gain: 0.8 },
+  starshipIgnite: { recipe: starshipIgnite, durationMs: 700, gain: 0.8 },
+  starshipRoar: { recipe: starshipRoar, durationMs: 1200, gain: 0.9 },
+  starshipBeam: { recipe: starshipBeam, durationMs: 400, gain: 0.6 },
+  starshipRepeater: { recipe: starshipRepeater, durationMs: 350, gain: 0.6 },
+  starshipCannon: { recipe: starshipCannon, durationMs: 600, gain: 0.85 },
+  starshipFlak: { recipe: starshipFlak, durationMs: 500, gain: 0.7 },
+  starshipLauncher: { recipe: starshipLauncher, durationMs: 450, gain: 0.6 },
+  starshipRam: { recipe: starshipRam, durationMs: 500, gain: 0.85 },
+  starshipWreck: { recipe: starshipWreck, durationMs: 1100, gain: 0.85 },
   // R3400001: Meditative+'s and Training Grounds' signatures, each at most 1.6 s and gain 0.8, at a routine card's level (B57).
   inkSummit: { recipe: inkSummit, durationMs: 1100, gain: 0.53 },
   plowHeave: { recipe: plowHeave, durationMs: 1300, gain: 0.48 },

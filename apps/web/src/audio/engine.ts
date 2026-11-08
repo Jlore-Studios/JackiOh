@@ -19,6 +19,7 @@ import {
   PICKUP_MIN_GAP_MS,
   QUIET_SFX_GAIN,
   RAPID_SFX,
+  SCHEDULED_SFX,
   SFX_DUCK_ATTACK_TC_S,
   SFX_DUCK_RELEASE_TC_S,
   SFX_MAX_VOICES,
@@ -506,8 +507,10 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
       // A field tap is a fidget surface: every physical tap gets its own crunch, even in a burst
       // faster than the retrigger guard.
       const rapid = RAPID_SFX.has(id);
+      // R3334000: a run's scheduled sound is guarded at the time it sounds; every other at the time it is sent.
+      const sounds = SCHEDULED_SFX.has(id) ? t + delay : t;
       const last = lastSfxAt.get(id);
-      if (!rapid && last !== undefined && t - last < SFX_RETRIGGER_MS) return false;
+      if (!rapid && last !== undefined && Math.abs(sounds - last) < SFX_RETRIGGER_MS) return false;
       sfxEnds = sfxEnds.filter((end) => end > t);
       if (!rapid && sfxEnds.length >= SFX_MAX_VOICES) return false;
 
@@ -518,7 +521,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
       const lengthMs = spec.recipe(ctx, cue, ctx.currentTime + delay / 1000, params ?? {}) * 1000;
 
       if (!rapid) {
-        lastSfxAt.set(id, t);
+        lastSfxAt.set(id, sounds);
         // A field tap's short voices stay out of the gameplay polyphony budget.
         sfxEnds.push(t + delay + lengthMs);
       }
