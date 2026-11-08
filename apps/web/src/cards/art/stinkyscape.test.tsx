@@ -30,6 +30,7 @@ import { anomalySvg, isStinkyscapeArt,
   type StinkyFamily,
 } from "./stinkyscape.ts";
 import { sceneRecipeOf } from "./scene.ts";
+import { STINKYSCAPE_RECIPES } from "./stinkyscapeRecipes.ts";
 import { anomalyArtUri, proceduralArtUri, stinkyscapeArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
 
@@ -529,12 +530,12 @@ describe("R503 R3331002: a shipped Stinkyscape card keeps the picture v0.5.0 shi
       expect(hashId(shown(card, true)), card.id).toBe(radiant);
       unchanged += 1;
     }
-    expect(unchanged).toBe(SET.length - 1);
+    expect(unchanged).toBe(SET.length - Object.keys(STINKYSCAPE_RECIPES).length);
   });
 
   it("R3331002 a Stinkyscape card with a scene recipe draws a picture v0.5.0 did not, on both faces", () => {
     const scenes = SET.filter((card) => sceneRecipeOf(card.id) !== null);
-    expect(scenes.map((card) => card.id)).toEqual(["stinkyscape-015"]);
+    expect(scenes.map((card) => card.id).sort()).toEqual(Object.keys(STINKYSCAPE_RECIPES).sort());
     for (const card of scenes) {
       const [base, radiant] = recorded[card.id] ?? [];
       expect(hashId(shown(card, false)), card.id).not.toBe(base);

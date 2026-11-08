@@ -7,7 +7,10 @@
 // procedural painter's `ArtSpec`, so every painter that hands it a recipe card prints, moves, splits
 // (Out of frame) and restyles it as it does any other picture. A card with no recipe never reaches
 // here and draws its picture byte for byte. Presentation only (CLAUDE.md rule 7): the art reads a
-// card's id, never anything hidden.
+// card's id, never anything hidden. R3391000: a seventh kind of scenery, craft (ships, drones and
+// vehicles); a placement may turn a pointing part (`rotate`); and a recipe may stand further figures
+// (`extras`) in any layer, each after that layer's parts and before the main figure. A recipe with
+// neither draws from its stream exactly as before.
 
 import { hashId, round2, seededRandom } from "./hash.ts";
 import { drawFigure, type FigureLook, type PoseId, type FigurePartId } from "./figureKit.ts";
@@ -92,7 +95,7 @@ export const SCENE_PALETTE = {
 
 export type PaletteName = keyof typeof SCENE_PALETTE;
 
-/** What a kit part is: six kinds of scenery and the five of a figure. */
+/** What a kit part is: seven kinds of scenery (craft are ships, drones and vehicles, R3391000) and the five of a figure. */
 export type KitCategory =
   | "terrain"
   | "architecture"
@@ -100,6 +103,7 @@ export type KitCategory =
   | "creatures"
   | "objects"
   | "weather"
+  | "craft"
   | "pose"
   | "head"
   | "hair"
@@ -120,8 +124,11 @@ export type KitShape = {
   readonly skin?: boolean;
 };
 
-/** Where a part is drawn: its anchor, its scale and which way it faces. */
-export type PartPlace = { readonly x: number; readonly y: number; readonly s: number; readonly flip: 1 | -1 };
+/**
+ * Where a part is drawn: its anchor, its scale and which way it faces; a pointing part (a beam, a meteor)
+ * also turns by `rotate` degrees clockwise about its anchor (R3391000), which every other part ignores.
+ */
+export type PartPlace = { readonly x: number; readonly y: number; readonly s: number; readonly flip: 1 | -1; readonly rotate?: number };
 
 export type KitPart = { readonly category: KitCategory; draw(at: PartPlace, rng: Rng): readonly KitShape[] };
 
@@ -138,6 +145,8 @@ export type ScenePlacement = {
   readonly count?: number;
   readonly spread?: readonly [number, number];
   readonly paint?: PaletteName;
+  /** R3391000: how far a pointing part turns, in degrees clockwise; none leaves it as drawn. */
+  readonly rotate?: number;
 };
 
 /** The figure a recipe's subject layer draws in front of its own parts, standing on x, y. */
@@ -150,6 +159,9 @@ export type FigureRecipe = {
   readonly look: FigureLook;
 };
 
+/** R3391000: a further figure and the layer it stands in, after that layer's parts. */
+export type SceneFigure = FigureRecipe & { readonly layer: SceneLayer };
+
 export type SceneRecipe = {
   readonly family: ShowcaseFamily;
   /** The sky's gradient, top to bottom. */
@@ -159,6 +171,11 @@ export type SceneRecipe = {
   /** Where the card's emblem stands in the scene; with none, where the painter's composition put it. */
   readonly emblem?: { readonly x: number; readonly y: number; readonly size: number; readonly rotate: number };
   readonly figure?: FigureRecipe;
+  /**
+   * R3391000: further figures (a crew behind its defender, a dreamer in her bunk), each drawn in its own layer
+   * after that layer's parts, in order; in the subject layer, before the main figure, which stands in front.
+   */
+  readonly extras?: readonly SceneFigure[];
   /**
    * The painter's own subject (its spec's `subjectRidges`, drawn by the card's composition: Ceaseless Void's
    * giant, R3338001) stands in the subject layer in front of the layer's parts, in place of a figure.
@@ -229,11 +246,15 @@ export function composeScene(recipe: SceneRecipe, seedId: string): SceneShape[] 
         const x = copy === 0 ? placed.x : placed.x + between(rng, -dx, dx);
         const y = copy === 0 ? placed.y : placed.y + between(rng, -dy, dy);
         const s = (placed.scale ?? 1) * (1 + between(rng, -SCENE_SCALE_JITTER, SCENE_SCALE_JITTER));
-        for (const shape of kit.draw({ x, y, s, flip: placed.flip ?? 1 }, rng)) {
+        for (const shape of kit.draw({ x, y, s, flip: placed.flip ?? 1, rotate: placed.rotate }, rng)) {
           const paint = shape.main === true && placed.paint !== undefined ? placed.paint : shape.paint;
           out.push({ ...shape, paint, layer, part: placed.part });
         }
       }
+    }
+    // R3391000: the layer's further figures stand after its parts, in order.
+    for (const extra of recipe.extras ?? []) {
+      if (extra.layer === layer) for (const shape of drawFigure(extra, rng)) out.push({ ...shape, layer });
     }
     // The figure stands in front of the subject layer's own parts.
     if (layer === "subject" && recipe.figure !== undefined) {

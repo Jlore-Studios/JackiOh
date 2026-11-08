@@ -45,13 +45,14 @@ import {
 } from "./scene.ts";
 import { SCENE_KIT } from "./sceneKit.ts";
 import { SCENE_RECIPES } from "./sceneRecipes.ts";
+import { STINKYSCAPE_RECIPES } from "./stinkyscapeRecipes.ts";
 import { proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { compositionFor, compositionOf, themeFor } from "./themes.ts";
 import { legacySvg } from "./traininggrounds.ts";
 
 const SVG_PREFIX = "data:image/svg+xml,";
 const PROOFS = ["classic-074", "core-002", "core-098", "core-100", "stinkyscape-015"] as const;
-const SCENERY: readonly KitCategory[] = ["terrain", "architecture", "plants", "creatures", "objects", "weather"];
+const SCENERY: readonly KitCategory[] = ["terrain", "architecture", "plants", "creatures", "objects", "weather", "craft"];
 /** The seeds every part is drawn from, enough to reach each branch its stream picks. */
 const SEEDS = 40;
 const PATH = /^M[-\d. MLQCAZ]+$/;
@@ -147,21 +148,22 @@ describe("R3331000 the scene kits", () => {
   });
 
   it("R3331000 every part draws clean shapes from any seed", () => {
+    // R3391000: the kits' parts grew past what an expect per shape checks in the test's time, so problems are gathered and checked once.
+    const palette = new Set<string>(Object.keys(SCENE_PALETTE));
+    const problems: string[] = [];
     for (const [id, part] of PARTS) {
       for (let seed = 1; seed <= SEEDS; seed += 1) {
         const flip = seed % 2 === 0 ? 1 : -1;
         const shapes = part.draw({ x: 50, y: 60, s: 0.5 + (seed % 5) * 0.25, flip }, stream(seed));
-        expect(shapes.length, id).toBeGreaterThanOrEqual(1);
-        expect(shapes.length, id).toBeLessThanOrEqual(12);
+        if (shapes.length < 1 || shapes.length > 12) problems.push(`${id} seed ${seed}: ${shapes.length} shapes`);
         for (const shape of shapes) {
-          expect(shape.d, id).toMatch(PATH);
-          expect(shape.d, id).not.toMatch(/NaN|Infinity|undefined/);
-          expect(Object.keys(SCENE_PALETTE), id).toContain(shape.paint);
-          expect(shape.opacity, id).toBeGreaterThan(0);
-          expect(shape.opacity, id).toBeLessThanOrEqual(1);
+          if (!PATH.test(shape.d) || /NaN|Infinity|undefined/.test(shape.d)) problems.push(`${id} seed ${seed}: path ${shape.d.slice(0, 40)}`);
+          if (!palette.has(shape.paint)) problems.push(`${id} seed ${seed}: paint ${shape.paint}`);
+          if (!(shape.opacity > 0 && shape.opacity <= 1)) problems.push(`${id} seed ${seed}: opacity ${shape.opacity}`);
         }
       }
     }
+    expect(problems).toEqual([]);
   });
 
   it("R3331000 SCENE_PALETTE is palette.css's, and no base-face scene colour is in Radiant's gold window", () => {
@@ -186,9 +188,9 @@ describe("R3331000 the scene kits", () => {
       painted.add(scene.sky[1]);
       painted.add(scene.light.paint);
       for (const layer of SCENE_LAYERS) for (const placed of scene.layers[layer] ?? []) if (placed.paint !== undefined) painted.add(placed.paint);
-      if (scene.figure !== undefined) {
-        painted.add(scene.figure.look.skin);
-        painted.add(scene.figure.look.cloth);
+      for (const figure of [...(scene.figure === undefined ? [] : [scene.figure]), ...(scene.extras ?? [])]) {
+        painted.add(figure.look.skin);
+        painted.add(figure.look.cloth);
       }
     }
     for (const name of painted) expect(inRadiantGold(SCENE_PALETTE[name]), name).toBe(false);
@@ -229,7 +231,8 @@ describe("R3331000 the scene kits", () => {
 describe("R3331000 the five proof cards", () => {
   it("R3331000 the five proof cards draw their scenes, base and Radiant, with one geometry", () => {
     expect(SCENE_BOX).toBe(ART_BOX);
-    expect(Object.keys(SCENE_RECIPES).sort()).toEqual([...PROOFS].sort());
+    // R3391000: the proofs and each set pass's recipes (Stinkyscape's holds Arg Arg Defender's).
+    expect(Object.keys(SCENE_RECIPES).sort()).toEqual([...new Set([...PROOFS, ...Object.keys(STINKYSCAPE_RECIPES)])].sort());
     for (const id of PROOFS) {
       const card = def(id);
       const shapes = composeScene(recipe(id), id);
@@ -320,7 +323,7 @@ describe("R3331000 the five proof cards", () => {
       for (const radiant of [false, true]) expect(specOf(card, radiant), card.id).toEqual(specOf(card, radiant, null));
       checked += 1;
     }
-    expect(checked).toBe(Object.keys(CATALOG).length - PROOFS.length);
+    expect(checked).toBe(Object.keys(CATALOG).length - Object.keys(SCENE_RECIPES).length);
     // Only a recipe card's id, or a picture's own seed of one, finds a recipe.
     for (const id of ["t-12", "", "core-0021", "core-002-1", "#core-002", "classic-074x"]) expect(sceneRecipeOf(id), id).toBeNull();
     expect(sceneRecipeOf("core-002#tarot")).toBe(recipe("core-002"));

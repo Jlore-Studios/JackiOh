@@ -1,5 +1,7 @@
-// R3331000: the scene recipes, data per card (ART.md, "Scene recipes and kits"): the five proof cards
-// that set the bar each set's picture pass meets (#3331). A card listed here draws its picture from its
+// R3331000: the scene recipes, data per card (ART.md, "Scene recipes and kits"): the four proof cards
+// left here of the five that set the bar each set's picture pass meets (#3331), and each set pass's own
+// recipes, in a file of its own (R3391000: Stinkyscape's, stinkyscapeRecipes.ts, the fifth proof, Arg
+// Arg Defender, among them). A card listed here draws its picture from its
 // recipe, on every face, in every painter that hands it one (scene.ts `sceneRecipeOf`); a card not
 // listed keeps its picture byte for byte until its set's pass lists it. Each recipe is placed in the
 // 100-unit box: a face's window shows about y 18 to 82 of it and a Unit's portrait 12 to 88, so each
@@ -8,6 +10,7 @@
 
 import { figureLookFor } from "./figureKit.ts";
 import type { SceneRecipe } from "./scene.ts";
+import { STINKYSCAPE_RECIPES } from "./stinkyscapeRecipes.ts";
 
 /** Corpse Plantation (Classic #74, Epic): a moonlit graveyard farm under its bone scarecrow. */
 const CORPSE_PLANTATION: SceneRecipe = {
@@ -167,37 +170,11 @@ const CEASELESS_VOID: SceneRecipe = {
   },
 };
 
-/** Arg Arg Defender (Stinkyscape #15, Common): an armoured defender with shield raised among the stars. */
-const ARG_ARG_DEFENDER: SceneRecipe = {
-  family: "stinkyscape",
-  sky: ["black", "slate-900"],
-  light: { x: 68, y: 30, r: 30, paint: "cyan-400", opacity: 0.3 },
-  emblem: { x: 60.2, y: 52.8, size: 8, rotate: 0 },
-  figure: {
-    x: 50,
-    y: 86,
-    scale: 1.05,
-    pose: "pose-guard",
-    look: { ...figureLookFor(["Human"]), outfit: "outfit-armor", item: "item-shield", cloth: "slate-400" },
-  },
-  layers: {
-    sky: [
-      { part: "stars", x: 50, y: 30, scale: 2 },
-      { part: "nebula", x: 30, y: 30 },
-      { part: "planet", x: 78, y: 22, scale: 0.8 },
-    ],
-    mid: [
-      { part: "asteroid", x: 18, y: 62, scale: 1.4 },
-      { part: "crate", x: 76, y: 88, scale: 1.1 },
-    ],
-  },
-};
-
-/** R3331000: the cards that draw from a scene, by id: the five proof cards. */
+/** R3331000: the cards that draw from a scene, by id: the proof cards and each set pass's (R3391000: Stinkyscape's). */
 export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   "classic-074": CORPSE_PLANTATION,
   "core-002": SPECIESIST,
   "core-098": HEROIC_POWER,
   "core-100": CEASELESS_VOID,
-  "stinkyscape-015": ARG_ARG_DEFENDER,
+  ...STINKYSCAPE_RECIPES,
 };

@@ -53,7 +53,9 @@ cards have a look of their own (R3142002): a Human Unit whose name holds "drone"
 the `drone` family; and the Stinkyscape Golem, which prints no Starship Piece, is the `fleet` family's `golem`,
 a stone-plated humanoid with engine nozzles, wing fins and a cockpit visor, found by its name (`FLEET_NAMES`)
 and no longer by `STARSHIP_PIECES`, which `stinkyscape.test.tsx` holds to the catalog's. A card with a scene
-recipe draws its scene instead (R3331000, below): Arg Arg Defender is the first.
+recipe draws its scene instead (R3331000, below): since #3391 the 64 cards of its table, every card numbered 1 to
+90 but the Starship Pieces (#3333's) and Olivian Expanse (#3338's), each draw a scene of their own (R3391000,
+"Stinkyscape's scenes" below).
 
 The Drone Battleship's three layers (`stinkyscape-t-meltdown-layer`, `-propagation-layer`, `-shield-layer`) are the
 decks of one ship (R3336000): the reactor keel with its core glowing through the vents, the hangar decks with their
@@ -343,7 +345,10 @@ and a palette name that repaints the part's main shapes. `composeScene` draws ev
 seeded by the card's id (or by a picture's own seed, `core-002#alt`, so Alt art and the repaints grow the same
 parts apart), and never reads the face: the Radiant face draws the same shapes, each mixed toward its layer's
 gold (`SCENE_RADIANT_GOLD`), with the painter's rays. The figure stands in front of its subject layer's own
-parts. `withScene` lays the scene into the procedural painter's `ArtSpec` (`artSpec`'s last argument, read
+parts. R3391000: a recipe may stand further figures (`extras`), each in the layer it names after that layer's
+parts (in the subject layer, before the main figure), and a placement may turn a pointing part (`rotate`, in
+degrees clockwise: a beam, a light ribbon, a spotlight, a meteor, a smoke trail or a comet, each extending along
++x unturned); every other part ignores the turn, and a recipe with neither draws exactly as before. `withScene` lays the scene into the procedural painter's `ArtSpec` (`artSpec`'s last argument, read
 from the card's id), so it prints, moves (each layer on its role's beat: `back`, `subject`, `over`, `light`,
 `motes`), splits for Out of frame (the subject layer and the emblem) and restyles as every procedural
 picture does, and keeps the card's theme, layout, backdrop, sky scheme, emblem glyph and motif. The
@@ -351,25 +356,49 @@ Stinkyscape and Training Grounds painters hand a recipe card to it (`svg.ts` `sc
 card keeps its Core card's old subject.
 
 The **scene kit** (`sceneKit.ts`, `SCENE_KIT`) holds the scenery, at least `SCENE_KIT_MIN_PER_CATEGORY` of
-each kind: terrain (fields, furrows, grave-mounds, cliffs, floors, rooms, streets, hills, asteroids),
-architecture (fences, posts, gates, ruins, towers, columns, arches, tombstones), plants, creatures, objects
-and tools, and weather and light (moons, stars, clouds, mist, shafts, halos, rays, sparks, embers, motes, a
-void, lightning, nebulae, planets, a rim light). The **figure kit** (`figureKit.ts`, `FIGURE_KIT`) replaces
-the painter's one silhouette: three poses, five heads, eight hairs and headgears, nine outfits by tag and
-five held items, put together by a look (`FIGURE_LOOKS`, `figureLookFor`), so a Unit reads as who it is: a
-Terminus, a CN or KY character, a Felinor, a Pancake, a Fruit, Jlockeed's people or a Human. The two kits
+each kind: terrain (fields, furrows, grave-mounds, cliffs, floors, rooms, streets, hills, asteroids; ship decks,
+corridors, regolith, lava flats, floating platforms), architecture (fences, posts, gates, ruins, towers, columns,
+arches, tombstones; stations, docks, hangars, vaults, server cores, cells, consoles, masts, bunks, seats,
+cockpits, portholes, cases, stalls, disruptor beacons, conveyors, reactors), plants, creatures, objects
+and tools, weather and light (moons, stars, clouds, mist, shafts, halos, rays, sparks, embers, motes, a
+void, lightning, nebulae, planets, a rim light; beams, ribbons, spotlights, meteors, smoke, comets, shockwaves,
+star glare, gas giants, shattered space, light grids, rifts, frost, missiles, flame, hex shields), and craft
+(R3391000: fighters, a scout, a walker, a skiff, drones (a helper with arms among them) and their corvette and battleship, a gunship, miners and
+a barge, a trader, a flagship, a frame, a fused hull, wrecks, a ghost ship, a rocket, a tram, a ring of guns),
+each facing +x about its anchor. The **figure kit** (`figureKit.ts`, `FIGURE_KIT`) replaces
+the painter's one silhouette: six poses, seven heads, thirteen hairs and headgears, fourteen outfits and
+twelve held items, put together by a look (`FIGURE_LOOKS`, `figureLookFor`), so a Unit reads as who it is: a
+Terminus, a CN or KY character, a Felinor, a Pancake, a Fruit, Jlockeed's people or a Human; a set's pass
+dresses a look further for one card (`{ ...figureLookFor(tags), outfit, item, cloth }`). The two kits
 hold at least `SCENE_KIT_MIN_PARTS` parts; each part draws one to twelve filled shapes, a line drawn as a
 thin band.
 
-Five proof cards draw from recipes today and set the bar each set's pass meets: Corpse Plantation (Classic
+Five proof cards set the bar each set's pass meets: Corpse Plantation (Classic
 #74), Speciesist (Core #2), Heroic Power (Core #98), Ceaseless Void (Core #100) and Arg Arg Defender
-(Stinkyscape #15). Ceaseless Void's recipe keeps its painter's own subject (`ownSubject`), the giant its
+(Stinkyscape #15, redrawn to its brief by Stinkyscape's pass, whose recipes are in a file of their own). Ceaseless Void's recipe keeps its painter's own subject (`ownSubject`), the giant its
 composition draws (R3338001), in place of a figure. Every other card draws its picture byte for byte as
 before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
 old pictures now, not pins (R3331002), each holding every card with no recipe to its old hash and each card
 with one to a new picture. A set's pass adds its cards' recipes from its own per-card brief table, takes them
 off the detail floor's short list, and tunes them by eye on `scene-proofs.cy.tsx`'s kind of screenshot, at
 hand size and at board size.
+
+## Stinkyscape's scenes (R3391000)
+
+Each of the 64 Stinkyscape cards of #3391's table draws from a recipe of its own (`stinkyscapeRecipes.ts`,
+`STINKYSCAPE_RECIPES`, spread into `SCENE_RECIPES`), drawn from its brief: the subject, the setting and the idea
+the brief names, a part it named that the kit lacked added to the kit. A person is the figure kit's, its look
+starting from its tag's (a Human's head, a Felinor's) and dressed for the card; a ship Unit's character is its own
+craft part in the subject layer (Stratos' boxy fighter, Falcon's needle, Paragon-X's blade, Ozark's barge), and
+Imprisoned Cosmality is its creature. The bible's palette is the set's base, and a brief's own colours are drawn
+in palette.css's nearest names (pink `red-300` and `purple-400`, teal `cyan-400` or `jade-400`, crimson `red-600`
+or `red-900`, rust `wood-700`, amber `orange-400`). Each card clears its rarity's floor, the median rising from
+Common to Mythic (Commons about 40 drawn elements, Rares about 60, Epics about 85, Legendaries about 115 and
+Mythics 150 to 160), and each Mythic places a part no other card does: Tylannt's skiff, Rod of Ages' rod, Drone
+Core X's battleship, Great Paperclip Theory's wire, Paragon-X's blade fighter and Prototype-X2's fused hull. The
+Starship Pieces, the Dormant Starship (#3333) and Olivian Expanse (#3338) keep their pictures.
+`stinkyscapeScenes.test.ts` holds the pass to its table, and `e2e/cypress/component/stinkyscape-scenes.cy.tsx`
+shows it at hand size and on a contact sheet, at desktop size and at 390x844.
 
 ## The detail floor (R3331001)
 
