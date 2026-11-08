@@ -17907,6 +17907,36 @@
     "3424": {
       "action": "review",
       "asks": [],
+      "decision": {
+        "asked_at": "2026-11-08T03:51:49Z",
+        "assigned": [
+          "jgoetzmann",
+          "MaxGoetzmann"
+        ],
+        "default": 1,
+        "ends": "2026-11-09T03:51:49Z",
+        "hours": 24,
+        "kind": "revise",
+        "model": "opus",
+        "options": [
+          {
+            "change": "Amend R3332000 so the budget counts only a signature's own cues (entrance, recipe or motif, takeover, set piece), each from the start of the entry it plays in. The takeover is checked against the Mythic ceiling with no Spell share. `tiers.test.ts` switches to this measure, which the branch's per-beat `#3399` test in `classicplus/signatures.test.ts` already applies, and all 35 pass it.",
+            "tradeoff": "The budget no longer bounds a play's total length, shared event rows included. A card whose text emits many events could run long overall, though each of its own beats stays short."
+          },
+          {
+            "change": "Keep the whole-play measure and set new ceilings in `config.ts`, high enough for a Legendary Spell's text events and a Mythic Spell's shared takeover (about 2,100 ms or more for Mythic Spells; Legendary Spells about 2,200 ms, since the shared rows end 900\u20132,100 ms after their own entry starts). R3332000 is amended to say so.",
+            "tradeoff": "Higher ceilings loosen the limit for every set's signatures, not only Classic+. The numbers would be set to fit the shared rows, not chosen for how a signature should feel."
+          },
+          {
+            "change": "Ship nothing until the measure is settled: hold this pull request (or take the Classic+ cards back to `SIGNATURE_PENDING`) and open a follow-up for the measure.",
+            "tradeoff": "The issue's goal of a signature for every card waits, and the work on the branch goes stale against `main`."
+          }
+        ],
+        "problem": "Every Classic+ Legendary and Mythic now has its own signature animation. But one test, `tiers.test.ts`'s `R3332000 every signature ends within its rarity's and type's ceiling\u2026`, fails on this branch. I ran it again in this pass: `classicplus-012-1 burst at 400: expected 1388 to be less than or equal to 1200`. Last pass's report said CI's `web` job would go red and hold the pull request for a person. That was wrong. `ci.yml:983` leaves `src/fx` out of the pull request's tests, and only the daily `super.yml:395` runs it. So all five required checks can pass, auto-merge can land the branch, and the next daily run on `main` goes red.\n\nThe test cannot pass as #3332 measures it. It times every cue of a card's whole play from the play's start, including the event animations every card shares. A Legendary Spell's text events start after its 400 ms cast, and any burst there ends past its 1,200 ms ceiling, signature or not. A Mythic Spell's shared takeover alone runs 2,100 ms against a 1,950 ms ceiling. 25 of the 35 cards fail it this way.\n\nThe only ways to green are to change how the test measures or to change its ceilings. Either one rewrites a check to get green, and the issue says to keep #3332's budgets. A person has to choose. I made no code change this pass.",
+        "provider": "claude-4",
+        "question": "How should R3332000's signature budget be measured, so the 35 Classic+ signatures can pass it?",
+        "why": "it is what the plan proposed and what the branch's per-beat test already enforces, every card's own beats stay inside #3332's ceilings unchanged, and it stops cues every card shares from counting against a signature's budget"
+      },
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-08T00:14:18Z",
@@ -17924,6 +17954,7 @@
       "live": "reviewing",
       "pending_request": false,
       "provider": "claude-4",
+      "question": "How should R3332000's signature budget be measured, so the 35 Classic+ signatures can pass it?",
       "queued_at": "2026-11-08T02:23:52Z",
       "run_id": "42438501202",
       "runs_on": "ubuntu-latest",
