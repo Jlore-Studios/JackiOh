@@ -16873,6 +16873,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-08T00:45:51Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 0,
       "waiting_comment": 6710910019
