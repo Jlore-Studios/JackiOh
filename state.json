@@ -22335,12 +22335,8 @@
       }
     },
     "claude-3": {
-      "refused_until": "2026-11-08T04:00:00Z",
+      "refused_until": "2026-11-08T09:00:00Z",
       "spent": [
-        {
-          "at": "2026-10-31T20:08:48Z",
-          "minutes": 5.3
-        },
         {
           "at": "2026-10-31T20:27:00Z",
           "minutes": 9.3
@@ -23136,16 +23132,13 @@
         {
           "at": "2026-11-08T04:36:06Z",
           "minutes": 21.2
+        },
+        {
+          "at": "2026-11-08T04:47:06Z",
+          "minutes": 2.2
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-10-30T18:33:18Z",
-          "cache": 18768427,
-          "cost": 7.37,
-          "input": 266,
-          "output": 69359
-        },
         {
           "at": "2026-10-30T18:44:41Z",
           "cache": 3074477,
@@ -24538,15 +24531,23 @@
           "cost": 7.1929,
           "input": 169,
           "output": 97939
+        },
+        {
+          "at": "2026-11-08T04:47:06Z",
+          "cache": 821007,
+          "cost": 0.8252,
+          "input": 36,
+          "output": 11287
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-08T09:00:00Z",
-          "utilization": 0.78
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-08T04:36:06Z",
-        "status": "allowed"
+        "observed_at": "2026-11-08T04:47:06Z",
+        "rejected_resets_at": "2026-11-08T09:00:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
@@ -36266,6 +36267,14 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-08T04:41:21Z,claude-3,stream,call,42447677954,96,2026-11-08T09:00:00Z,,,allowed_warning,,,",
+      "2026-11-08T04:42:06Z,claude-3,stream,call,42447677954,97,2026-11-08T09:00:00Z,,,allowed_warning,,,",
+      "2026-11-08T04:42:21Z,claude-3,stream,call,42447677954,98,2026-11-08T09:00:00Z,,,allowed_warning,,,",
+      "2026-11-08T04:43:17Z,claude-3,refusal,call,42447677954,100,2026-11-08T09:00:00Z,,,rejected,,,2026-11-08T09:00:00Z"
+    ]
   },
   "version": 1
 }
