@@ -67,9 +67,10 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     // layer's activate is in fx/battleship.ts, leaving its table entry none); R2797000: Stinkyscape
     // 001 to 090's 94; R2794000: Classic's 79 (its plays' motifs, its hooks' on their markers, its three
     // Flourishes, Plague Nuke's set piece and its two marquee entrances); #2799: Training Grounds' 51.
-    // R3338000: Event Horizon's and The Big Crunch's set pieces, which were `none`. R3400001: the
+    // R3338000: Event Horizon's and The Big Crunch's set pieces, which were `none`; R3334004: the Dormant
+    // Starship's, Starfleet Commander's and Preemptive Strike's signatures, which were `none`. R3400001: the
     // Training-Grounds Golem's signature, which was `none`.
-    expect(cards).toHaveLength(648);
+    expect(cards).toHaveLength(651);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
@@ -289,8 +290,9 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
   it("R2784000 #2798 the gallery has a play for every Stinkyscape part-two entry other than none, and each plays its motif, recipe, set piece or aura", () => {
     const file = FX_CARD_FILES.find((candidate) => candidate.file === "stinkyscape-2.json5");
     if (file === undefined) throw new Error("no stinkyscape-2.json5");
-    // R2801000: the pass's 83 and the Starship part's six; R3336000: Propagation layer is none.
-    expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 88);
+    // R2801000: the pass's 83 and the Starship part's six; R3336000: Propagation layer is none; R3334004: the
+    // Starship's three signatures.
+    expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 91);
   });
 
   it("R2784000 #2799 the gallery has a play for every Training Grounds entry other than none, and each plays its motif or recipe", () => {

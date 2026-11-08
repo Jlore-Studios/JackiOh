@@ -31,7 +31,6 @@ import {
   FX_INTENSITY_SCALE,
   FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
-  FX_STARSHIP_COUNT_AT,
   FX_STARSHIP_FUSE_LAND_AT,
   FX_STARSHIP_FUSE_STAGGER_MS,
   FX_STARSHIP_FUSE_TRAUMA,
@@ -43,7 +42,7 @@ import { planFx } from "./cues.ts";
 import { FLAVOR_SUB_LOOKS } from "./flavors.ts";
 import { createFxMemory } from "./memory.ts";
 import { STARSHIP_TUNING, dormantStarshipOf, planStarship, planStarshipStill, starshipClaim, starshipSizeOf } from "./starship.ts";
-import type { FxBurstCue, FxCue, FxLaunchCue, FxPlanEnv, FxProjectileCue } from "./types.ts";
+import type { FxBurstCue, FxCue, FxLaunchCue, FxModuleCue, FxPlanEnv, FxProjectileCue } from "./types.ts";
 
 const HULL = "stinkyscape-t-dormant-starship";
 const LAUNCHERS = ["stinkyscape-140", "stinkyscape-141", "stinkyscape-142", "stinkyscape-143"] as const;
@@ -118,7 +117,7 @@ const shakesOf = (cues: readonly FxCue[]): { trauma: number; delayMs: number }[]
   cues.flatMap((c) => (c.kind === "shake" ? [{ trauma: c.trauma, delayMs: c.delayMs }] : []));
 
 describe("R2801000 the fuse run", () => {
-  it("R2801000 fuse ghosts land FX_STARSHIP_FUSE_STAGGER_MS apart with spark, ring, shake", () => {
+  it("R2801000 R3334000 fuse modules dock FX_STARSHIP_FUSE_STAGGER_MS apart with weld, spark, ring, shake", () => {
     const pieces = [piece("a"), piece("b", LAUNCHERS[1]), piece("c", LAUNCHERS[2])];
     const view = board(pieces);
     const entry = fuseEntry(pieces, view);
@@ -126,16 +125,19 @@ describe("R2801000 the fuse run", () => {
     const plan = planStarship(entry, view, env());
     const cues = plan?.cues ?? [];
     const ship = { kind: "testid", testid: testid.card("ship") };
-    const ghosts = cues.filter((c) => c.kind === "ghost");
+    const docks = cues.filter((c): c is FxModuleCue => c.kind === "module");
     const flight = Math.round(STARSHIP_FUSE_MS * FX_STARSHIP_FUSE_LAND_AT);
-    expect(ghosts).toEqual(
-      pieces.map((p, k) => ({ kind: "ghost", from: { kind: "testid", testid: testid.card(p.instanceId) }, to: ship, delayMs: k * FX_STARSHIP_FUSE_STAGGER_MS, durationMs: flight })),
-    );
+    expect(docks.map((c) => c.from)).toEqual(pieces.map((p) => ({ kind: "testid", testid: testid.card(p.instanceId) })));
+    expect(docks.map((c) => c.delayMs)).toEqual(pieces.map((_, k) => k * FX_STARSHIP_FUSE_STAGGER_MS));
+    expect(docks.map((c) => c.landMs)).toEqual(pieces.map(() => flight));
+    expect(docks.every((c) => c.motion === "dock" && c.to.kind === "testid" && c.to.testid === testid.card("ship") && c.to.art === "picture")).toBe(true);
     for (let k = 0; k < pieces.length; k += 1) {
       const land = k * FX_STARSHIP_FUSE_STAGGER_MS + flight;
       const at = cues.filter((c) => c.delayMs === land).map((c) => (c.kind === "burst" ? `burst:${c.preset}` : c.kind));
-      expect(at, `piece ${String(k)}`).toEqual(["burst:spark", "ring", "shake"]);
+      expect(at, `piece ${String(k)}`).toEqual(["weld", "burst:spark", "burst:spark", "ring", "shake"]);
     }
+    // The ship's own spark, ring and shake as each bolts on, as before.
+    expect(cues.filter((c) => c.kind === "ring").map((c) => (c.kind === "ring" ? c.at : null))).toEqual(pieces.map(() => ship));
     expect(shakesOf(cues).map((s) => s.trauma)).toEqual(pieces.map(() => FX_STARSHIP_FUSE_TRAUMA));
     expect(cues.filter((c): c is FxBurstCue => c.kind === "burst").every((c) => c.colors === ROCKET)).toBe(true);
     // It draws the fusions in place of their rows: planFx adds no transmute of the `fused`.
@@ -151,8 +153,8 @@ describe("R2801000 the fuse run", () => {
     // A piece the board does not show flies from its owner's graveyard; the budget's squeeze keeps the shares.
     const gone = board([]);
     const squeezed = { ...fuseEntry(pieces, gone), durationMs: Math.round(starshipFuseMs(3) / 2) };
-    const fromGrave = (planStarship(squeezed, gone, env())?.cues ?? []).filter((c) => c.kind === "ghost");
-    expect(fromGrave.map((c) => (c.kind === "ghost" ? c.from : null))).toEqual(pieces.map(() => ({ kind: "testid", testid: animTestid.graveyard("you") })));
+    const fromGrave = (planStarship(squeezed, gone, env())?.cues ?? []).filter((c): c is FxModuleCue => c.kind === "module");
+    expect(fromGrave.map((c) => c.from)).toEqual(pieces.map(() => ({ kind: "testid", testid: animTestid.graveyard("you") })));
     expect(fromGrave.map((c) => c.delayMs)).toEqual(pieces.map((_, k) => Math.round(k * FX_STARSHIP_FUSE_STAGGER_MS * 0.5)));
   });
 });
@@ -179,28 +181,29 @@ describe("R2801000 the launch", () => {
     expect(plans.map((cues) => launchOf(cues)?.size)).toEqual(["small", "medium", "large"]);
   });
 
-  it("R2801000 held: three counts, each shake harder; unheld: none", () => {
+  it("R2801000 R3334001 held: no countdown", () => {
     const H = STARSHIP_LAUNCH_HOLD_MS;
     const entry = launchEntry(4, H);
     const D = entry.durationMs;
     expect(D).toBe(ANIMATIONS.starshipLaunched.durationMs + H);
     const cues = planStarship(entry, board(), env())?.cues ?? [];
     const launch = launchOf(cues);
-    const countsMs = FX_STARSHIP_COUNT_AT.map((at) => Math.round(at * H));
+    // The countdown is gone: the cinematic fills the hold (starshipMoments.test.ts), the tile keeps its flame.
     expect(launch).toEqual({
       kind: "launch",
       at: { kind: "testid", testid: testid.card("ship") },
       tint: { glow: ROCKET?.[0], rim: ROCKET?.[1], core: ROCKET?.[2] },
       size: "medium",
-      countsMs,
+      countsMs: [],
       igniteMs: Math.round(FX_STARSHIP_IGNITE_AT * H),
       delayMs: 0,
       durationMs: D + FX_STARSHIP_TAIL_MS,
     });
-    const onCounts = shakesOf(cues).filter((s) => s.delayMs < H);
-    expect(onCounts.map((s) => s.delayMs)).toEqual(countsMs);
+    expect(cues.filter((c) => c.kind === "cinematic")).toHaveLength(1);
+    // The hold's shakes are the engines' as each lights, the last as hard as the climb's.
     const tune = STARSHIP_TUNING.medium.trauma;
-    expect(onCounts.map((s) => s.trauma)).toEqual(countsMs.map((_, k) => (tune * (k + 1)) / countsMs.length));
+    const inHold = shakesOf(cues).filter((s) => s.delayMs < H);
+    expect(Math.max(...inHold.map((s) => s.trauma))).toBe(tune);
     // The ignition's exhaust at its time, the lift-off's as the hold ends, the contrail from it.
     expect(exhaustOf(cues).map((c) => c.delayMs)).toEqual([launch?.igniteMs, H]);
     expect(contrailOf(cues)?.delayMs).toBe(H);
@@ -235,7 +238,7 @@ describe("R2801000 the launch", () => {
       const D = entry.durationMs;
       for (const cue of planStarship(entry, board(pieces), env())?.cues ?? []) {
         expect(cue.delayMs).toBeLessThanOrEqual(D);
-        if (cue.kind === "ghost") expect(cue.delayMs + cue.durationMs).toBeLessThanOrEqual(D);
+        if (cue.kind === "module") expect(cue.delayMs + cue.landMs).toBeLessThanOrEqual(D);
         expect(endOf(cue)).toBeLessThanOrEqual(D + FX_MAX_TAIL_MS);
       }
     }
@@ -243,13 +246,15 @@ describe("R2801000 the launch", () => {
 
   it("R2801000 R202 no cue names a defId; intensity 0 plans nothing", () => {
     const pieces = [piece("a"), piece("b", LAUNCHERS[3])];
-    const all = [
-      ...(planStarship(fuseEntry(pieces), board(pieces), env())?.cues ?? []),
+    const fuses = planStarship(fuseEntry(pieces), board(pieces), env())?.cues ?? [];
+    const launches = [
       ...(planStarship(launchEntry(8, STARSHIP_LAUNCH_HOLD_MS), board(), env())?.cues ?? []),
       ...planStarshipStill(launchEntry(8), board(), env()),
     ];
-    const text = JSON.stringify(all);
-    for (const id of [HULL, ...LAUNCHERS, "core-008", "Ember of Departure"]) expect(text).not.toContain(id);
+    for (const id of [HULL, ...LAUNCHERS, "core-008"]) expect(JSON.stringify([...fuses, ...launches])).not.toContain(id);
+    // R3334001: the launch's cinematic carries the name `starshipLaunched` makes public, and only the launch does.
+    expect(JSON.stringify(fuses)).not.toContain("Ember of Departure");
+    expect(JSON.stringify(launches)).toContain("Ember of Departure");
     expect(planStarship(launchEntry(8, STARSHIP_LAUNCH_HOLD_MS), board(), env(0))).toBeNull();
     expect(planStarship(fuseEntry(pieces), board(pieces), env(0))).toBeNull();
     expect(planFx(launchEntry(8, STARSHIP_LAUNCH_HOLD_MS), board(), env(0))).toEqual([]);
@@ -262,23 +267,24 @@ describe("R2801000 the launch", () => {
     expect(still === undefined ? "none" : planStarship(still, board(), env())).toBeNull();
   });
 
-  it("R2801000 planStarshipStill is one still cue", () => {
+  it("R2801000 R3334001 planStarshipStill is the title card", () => {
     const still = planEntries([launched(8)], board(), true, createPlayTracker())[0];
     if (still === undefined) throw new Error("no entry");
-    expect(planStarshipStill(still, board(), env())).toEqual([
-      {
-        kind: "launch",
-        at: { kind: "testid", testid: testid.card("ship") },
-        tint: { glow: ROCKET?.[0], rim: ROCKET?.[1], core: ROCKET?.[2] },
-        size: "large",
-        countsMs: [],
-        igniteMs: 0,
-        delayMs: 0,
-        durationMs: FX_STARSHIP_STILL_MS,
-        still: true,
-      },
-    ]);
-    // Anything but a launch has no still frame.
+    const cues = planStarshipStill(still, board(), env());
+    expect(cues).toHaveLength(1);
+    expect(cues[0]).toMatchObject({
+      kind: "cinematic",
+      at: { kind: "testid", testid: testid.card("ship") },
+      tint: { glow: ROCKET?.[0], rim: ROCKET?.[1], core: ROCKET?.[2] },
+      name: "Ember of Departure",
+      size: "large",
+      sparks: 0,
+      delayMs: 0,
+      durationMs: FX_STARSHIP_STILL_MS,
+      still: true,
+    });
+    expect(cues[0]?.kind === "cinematic" ? cues[0].art : "").toMatch(/^data:image\/svg\+xml/);
+    // Anything but a launch has no still form.
     expect(planStarshipStill(fuseEntry([piece("a")]), board([piece("a")]), env())).toEqual([]);
   });
 });
@@ -298,7 +304,8 @@ describe("R2801000 the cards that touch the Starship", () => {
     expect(FX_CARD_TABLE.get(SEQUENCER)).toEqual({ kind: "hooks", hooks: { cast: { motif: "tithe", palette: "Tech/rocket" } } });
     expect(FX_CARD_TABLE.get(RETROFIT)).toEqual({ kind: "hooks", hooks: { cast: { motif: "send", palette: "Tech/rocket" } } });
     for (const id of LAUNCHERS) expect(FX_CARD_TABLE.get(id), id).toEqual({ kind: "hooks", hooks: { cry: { motif: "conjure", palette: "Tech/rocket" } } });
-    expect(FX_CARD_TABLE.get(HULL)).toMatchObject({ kind: "none" });
+    // R3334004: the Dormant Starship rolls out of its shipyard, its signature; its fuse and launch stay the Starship's own.
+    expect(FX_CARD_TABLE.get(HULL)).toMatchObject({ kind: "hooks", hooks: {}, signature: true, entrance: "shipyardRollout" });
   });
 
   it("R2801000 Launch Sequencer's tithe glints modifiers-you and the Starship", () => {

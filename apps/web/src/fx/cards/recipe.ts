@@ -65,6 +65,10 @@ export const ENTRANCE_TRAUMA = {
   titanBloom: FX_LEGENDARY_TRAUMA,
   tyrantSigil: FX_LEGENDARY_TRAUMA,
   felinorAssembly: FX_LEGENDARY_TRAUMA,
+  // R3334004: the Dormant Starship rolls out of its shipyard quieter than a Legendary lands (its launch is
+  // its loud moment); Starfleet Commander's order lands at the Legendary's weight.
+  shipyardRollout: 0.5,
+  fleetCommand: FX_LEGENDARY_TRAUMA,
   // R3400001: Meditative+'s and Training Grounds' signature Units, inside SIGNATURE_PERMANENT_MAX_TRAUMA.
   snowplowHeave: 0.75,
   chalkboardLesson: FX_LEGENDARY_TRAUMA,

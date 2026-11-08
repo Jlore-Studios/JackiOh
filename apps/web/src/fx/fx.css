@@ -4599,6 +4599,615 @@
   }
 }
 
+/* ------------------------------------------- the Starship's moments: dock, launch, broadside, wreck --- */
+
+/* R3334000: a Starship module (fx/starship.ts), its picture without its plate, flying from `--fx-x/y` by
+   `--fx-dx/dy`: `dock` flies onto its hardpoint by `--fx-land` and holds there while it is welded on;
+   `recoil` kicks back where it stands (a cannon firing); `blowOff` is torn off a wrecked hull, tumbling
+   `--fx-spin` turns away. It names no card (R202). */
+
+.fx-module {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: var(--fx-size);
+  height: var(--fx-size);
+  translate: -50% -50%;
+  animation: fx-module-in var(--fx-ms) linear both;
+}
+
+.fx-module-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: brightness(1.15);
+}
+
+.fx-module[data-motion="dock"] .fx-module-img {
+  animation: fx-module-dock var(--fx-land) var(--ease-in-out) both;
+}
+
+.fx-module[data-motion="recoil"] .fx-module-img {
+  animation: fx-module-recoil var(--fx-land) var(--ease-out) both;
+}
+
+.fx-module[data-motion="blowOff"] .fx-module-img {
+  animation: fx-module-blow var(--fx-land) var(--ease-out) both;
+}
+
+@keyframes fx-module-in {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fx-module-dock {
+  0% {
+    transform: translate(0, 0) scale(0.55) rotate(-24deg);
+  }
+  55% {
+    transform: translate(calc(var(--fx-dx) * 0.6), calc(var(--fx-dy) * 0.6 - 24px)) scale(1.3) rotate(-6deg);
+  }
+  88% {
+    transform: translate(var(--fx-dx), var(--fx-dy)) scale(1.12) rotate(0deg);
+  }
+  100% {
+    transform: translate(var(--fx-dx), var(--fx-dy)) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes fx-module-recoil {
+  0% {
+    transform: none;
+  }
+  25% {
+    transform: translateX(-22%) scale(1.06);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes fx-module-blow {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  100% {
+    transform: translate(var(--fx-dx), var(--fx-dy)) rotate(calc(var(--fx-spin) * 540deg)) scale(0.7);
+  }
+}
+
+/* R3334000: a docked module's weld: a clamp either side closing on it and the weld's flash between them,
+   growing with the hum (`--fx-hum`, its ship's pieces toward full). */
+
+.fx-weld {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: calc(var(--card-w, 82px) * 0.34);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  scale: calc(0.85 + var(--fx-hum) * 0.4);
+  animation: fx-weld-in var(--fx-ms) linear both;
+}
+
+.fx-weld-clamp {
+  position: absolute;
+  top: 18%;
+  bottom: 18%;
+  width: 18%;
+  border-radius: var(--radius-xs);
+  background: var(--fx-steel);
+  animation: fx-weld-clamp var(--fx-ms) var(--ease-overshoot) both;
+}
+
+.fx-weld-clamp[data-side="0"] {
+  left: 0;
+  --fx-clamp-dir: -1;
+}
+
+.fx-weld-clamp[data-side="1"] {
+  right: 0;
+  --fx-clamp-dir: 1;
+}
+
+.fx-weld-flash {
+  position: absolute;
+  inset: 26%;
+  border-radius: var(--radius-round);
+  background: var(--fx-gold-pale);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--fx-gold) 85%, transparent);
+  animation: fx-weld-flash var(--fx-ms) steps(5) both;
+}
+
+@keyframes fx-weld-in {
+  0% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fx-weld-clamp {
+  0% {
+    transform: translateX(calc(var(--fx-clamp-dir) * 140%));
+    opacity: 0;
+  }
+  35% {
+    transform: none;
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes fx-weld-flash {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* R3334001: a Starship's launch as a cinematic over the whole layer, through its set piece's hold. The
+   board dims; the ship's own picture fills the screen (a square at least as wide and as tall as it, the
+   camera's points kept where the zoomed picture still covers it, starship.ts `cameraPoint`), the camera
+   (`--fx-zoom` close) panning from its stern (`--fx-cam-x0/y0`) to its bow (`--fx-cam-x1/y1`) from
+   `--fx-pan-at` for `--fx-pan-ms`, each
+   module's mark lighting as it passes (`.fx-cinematic-stop`, at its `--fx-at`); then it pulls back to the
+   whole ship, its engines light one after another, throwing sparks, its public name stamps across the
+   hull at `--fx-stamp` in its design's lettering (`data-font`), and at `--fx-climb` it climbs out of frame
+   as the ship lifts off its tile. Under Reduce Motion, and Big moments short or off, it is `data-still`:
+   the title card, the picture in a centred square with the name under it, nothing moving. */
+
+.fx-cinematic {
+  inset: 0;
+  animation: fx-cinematic-in var(--fx-ms) linear both;
+}
+
+.fx-cinematic-dim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--fx-ink) 84%, transparent);
+}
+
+.fx-cinematic-climb {
+  position: absolute;
+  inset: 0;
+  animation: fx-cinematic-climb var(--fx-climb-ms) var(--ease-in) var(--fx-climb) both;
+}
+
+.fx-cinematic-camera {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100vw, 100vh);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 48px color-mix(in srgb, var(--fx-tint-glow) 45%, transparent);
+  animation:
+    fx-cinematic-pan var(--fx-pan-ms) var(--ease-in-out) var(--fx-pan-at) both,
+    fx-cinematic-pull var(--fx-pull-ms) var(--ease-out) calc(var(--fx-pan-at) + var(--fx-pan-ms)) forwards;
+}
+
+.fx-cinematic-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.fx-cinematic-stop {
+  position: absolute;
+  left: var(--fx-px);
+  top: var(--fx-py);
+  width: 7%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border: 2px solid var(--fx-tint-glow);
+  border-radius: var(--radius-round);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--fx-tint-glow) 80%, transparent);
+  opacity: 0;
+  animation: fx-cinematic-stop calc(var(--fx-ms) * 0.16) var(--ease-out) var(--fx-at) both;
+}
+
+.fx-cinematic-engine {
+  position: absolute;
+  left: var(--fx-px);
+  top: var(--fx-py);
+  width: 9%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  background: var(--fx-tint-core);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--fx-tint-glow) 90%, transparent);
+  opacity: 0;
+  animation: fx-cinematic-engine var(--fx-rest) steps(12) var(--fx-at) both;
+}
+
+.fx-cinematic-spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-round);
+  background: var(--fx-tint-glow);
+  rotate: calc((var(--fx-spark) / max(1, var(--fx-sparks) - 1) - 0.5) * 70deg);
+  animation: fx-cinematic-spark calc(var(--fx-ms) * 0.09) linear calc(var(--fx-at) + var(--fx-ms) * 0.009 * var(--fx-spark)) infinite;
+}
+
+.fx-cinematic-name {
+  position: absolute;
+  left: 50%;
+  top: 66%;
+  translate: -50% -50%;
+  opacity: 0;
+  animation: fx-cinematic-stamp calc(var(--fx-ms) * 0.08) var(--ease-overshoot) var(--fx-stamp) both;
+}
+
+.fx-cinematic-name::before {
+  content: attr(data-text);
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: var(--fx-letter-weight, 800);
+  letter-spacing: var(--fx-letter-tracking, 0);
+  font-size: clamp(var(--type-2xl), 7vmin, var(--type-4xl));
+  line-height: 1;
+  color: var(--fx-letter-fill);
+  -webkit-text-stroke: 2px var(--fx-letter-edge);
+  text-shadow: 0 0 18px var(--fx-tint-rim);
+}
+
+.fx-cinematic-name[data-italic="true"]::before {
+  font-style: italic;
+}
+
+.fx-cinematic-name[data-font="text"]::before {
+  font-family: var(--font-text);
+}
+
+.fx-cinematic-name[data-font="mono"]::before {
+  font-family: var(--font-mono);
+}
+
+.fx-cinematic-name[data-font="signature"]::before {
+  font-family: var(--font-signature);
+}
+
+.fx-cinematic-name[data-font="brush"]::before {
+  font-family: var(--font-signature-brush);
+}
+
+.fx-cinematic-name[data-font="copperplate"]::before {
+  font-family: var(--font-signature-copperplate);
+}
+
+.fx-cinematic-name[data-font="marker"]::before {
+  font-family: var(--font-signature-marker);
+}
+
+@keyframes fx-cinematic-in {
+  0% {
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fx-cinematic-pan {
+  0% {
+    transform: scale(var(--fx-zoom)) translate(calc((0.5 - var(--fx-cam-x0)) * 100%), calc((0.5 - var(--fx-cam-y0)) * 100%));
+  }
+  100% {
+    transform: scale(var(--fx-zoom)) translate(calc((0.5 - var(--fx-cam-x1)) * 100%), calc((0.5 - var(--fx-cam-y1)) * 100%));
+  }
+}
+
+@keyframes fx-cinematic-pull {
+  0% {
+    transform: scale(var(--fx-zoom)) translate(calc((0.5 - var(--fx-cam-x1)) * 100%), calc((0.5 - var(--fx-cam-y1)) * 100%));
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes fx-cinematic-stop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  35% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-cinematic-engine {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  8% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-cinematic-spark {
+  0% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-520%) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-cinematic-stamp {
+  0% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(0.94);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-cinematic-climb {
+  0% {
+    transform: none;
+  }
+  100% {
+    transform: translateY(-115vh) scale(0.55);
+  }
+}
+
+/* R3334001: the title card: the picture in a centred square, the name under it, the board half dimmed. */
+.fx-cinematic[data-still="true"],
+.fx-cinematic[data-still="true"] * {
+  animation: none;
+}
+
+.fx-cinematic[data-still="true"] .fx-cinematic-dim {
+  opacity: 0.7;
+}
+
+.fx-cinematic[data-still="true"] .fx-cinematic-camera {
+  top: 44%;
+  width: min(70vw, 60vh);
+}
+
+.fx-cinematic[data-still="true"] :is(.fx-cinematic-stop, .fx-cinematic-engine) {
+  visibility: hidden;
+}
+
+.fx-cinematic[data-still="true"] .fx-cinematic-name {
+  top: calc(44% + min(35vw, 30vh) + 6vmin);
+  opacity: 1;
+}
+
+/* R3334001: a War Doctrine announced over its Starship: an insignia in its doctrine's shape and tint
+   (`data-doctrine`), stamping in, its card's public name under it. */
+
+.fx-doctrine {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: calc(var(--card-w, 82px) * 1.5);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  animation: fx-doctrine-in var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-doctrine-insignia {
+  position: absolute;
+  inset: 14%;
+  border: 3px solid var(--fx-tint-rim);
+  border-radius: var(--radius-round);
+  background: color-mix(in srgb, var(--fx-tint-glow) 55%, transparent);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--fx-tint-glow) 75%, transparent);
+}
+
+.fx-doctrine[data-doctrine="land"] .fx-doctrine-insignia {
+  border-radius: var(--radius-sm) var(--radius-sm) var(--radius-round) var(--radius-round);
+}
+
+.fx-doctrine[data-doctrine="sea"] .fx-doctrine-insignia {
+  border-radius: var(--radius-round) var(--radius-round) var(--radius-sm) var(--radius-sm);
+}
+
+.fx-doctrine[data-doctrine="air"] .fx-doctrine-insignia {
+  inset: 20%;
+  rotate: 45deg;
+  border-radius: var(--radius-xs);
+}
+
+.fx-doctrine[data-doctrine="space"] .fx-doctrine-insignia {
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+.fx-doctrine::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  translate: -50% 0;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--type-lg);
+  color: var(--fx-tint-core);
+  -webkit-text-stroke: 1px var(--fx-ink);
+  text-shadow: 0 0 12px var(--fx-tint-glow);
+}
+
+@keyframes fx-doctrine-in {
+  0% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+  22% {
+    transform: scale(0.95);
+    opacity: 1;
+  }
+  30% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  85% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.06);
+    opacity: 0;
+  }
+}
+
+/* R3334003: a Starship's wreck over its art: at `--fx-break` the hull breaks in two, each half its
+   picture's fore or aft, drifting apart and turning `--fx-turn` away as the card under it is hidden. */
+
+.fx-wreck {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: var(--fx-w);
+  height: var(--fx-h);
+  animation: fx-wreck-in var(--fx-ms) linear both;
+}
+
+.fx-wreck-half {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-round);
+  object-fit: cover;
+  opacity: 0;
+  animation: fx-wreck-break var(--fx-break-ms) var(--ease-in) var(--fx-break) forwards;
+}
+
+.fx-wreck-half[data-half="fore"] {
+  --fx-half-dir: 1;
+  clip-path: polygon(52% 0, 100% 0, 100% 100%, 46% 100%, 51% 62%, 45% 40%);
+}
+
+.fx-wreck-half[data-half="aft"] {
+  --fx-half-dir: -1;
+  clip-path: polygon(0 0, 52% 0, 45% 40%, 51% 62%, 46% 100%, 0 100%);
+}
+
+@keyframes fx-wreck-in {
+  0% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fx-wreck-break {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(var(--fx-half-dir) * 24%), 16%) rotate(calc(var(--fx-half-dir) * var(--fx-turn)));
+    opacity: 0;
+  }
+}
+
+/* R3334003: the scorch a wreck leaves on its zone, settling and fading. */
+
+.fx-scorch {
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: var(--fx-w);
+  height: var(--fx-h);
+  animation: fx-scorch-in var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-scorch::before {
+  content: "";
+  position: absolute;
+  inset: 14%;
+  border-radius: var(--radius-round);
+  background: color-mix(in srgb, var(--fx-ink) 72%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--fx-damage) 55%, transparent);
+}
+
+@keyframes fx-scorch-in {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.04);
+    opacity: 0;
+  }
+}
+
 /* ------------------------------------------------------------------------ reduced motion --- */
 
 /* R200: under prefers-reduced-motion no effect is drawn at all but R2789000's still callout. FxLayer
@@ -4620,11 +5229,12 @@
 
   /* R2789000: a keyword's still callout is the one effect drawn under reduced motion, its motion dropped;
      R2801000: so is a Starship launch's still frame; R3338000: and a Terminus set piece's. R3336000: a ship cue has no still, so the rule above hides it.
-     R3337003: and an Anomaly's still title card. */
+     R3337003: and an Anomaly's still title card; R3334001: and a Starship's title card. */
   .fx-dom > .fx-callout[data-still="true"],
   .fx-dom > .fx-launch[data-still="true"],
   .fx-dom > .fx-setPiece[data-still="true"],
-  .fx-dom > .fx-anomalyTitle[data-still="true"] {
+  .fx-dom > .fx-anomalyTitle[data-still="true"],
+  .fx-dom > .fx-cinematic[data-still="true"] {
     visibility: visible;
   }
 }

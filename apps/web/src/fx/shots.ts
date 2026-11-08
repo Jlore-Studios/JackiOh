@@ -82,7 +82,13 @@ const SPRITE_PX: Readonly<Record<FxShotSprite, number>> = {
   bill: 20,
   heart: 16,
   emoji: 18,
+  token: 16,
+  fruit: 16,
+  jade: 14,
 };
+
+/** R3334002: the Starship launchers' loads keep their own colors whatever the shot's: a red fruit on a green leaf, a jade orb. */
+const LOAD_COLORS = { fruit: "#d8342f", leaf: "#3f9e3a", jade: "#2fbf7a", jadeCore: "#d6ffe9" } as const;
 
 /** The outline every sprite wears, so it reads on a light or a dark board. */
 const INK = "#2b1d18";
@@ -128,6 +134,17 @@ const SPRITE_SHAPE = {
   emojiSmileFrom: 0.15,
   emojiSmileTo: 0.85,
   emojiSmilePx: 1.2,
+  tokenRim: 0.7,
+  tokenRimPx: 1.6,
+  tokenNotches: 6,
+  tokenNotch: 0.16,
+  fruitLeafX: 0.2,
+  fruitLeafY: 0.95,
+  fruitLeaf: 0.42,
+  fruitLeafAspect: 0.45,
+  fruitLeafTurn: -0.6,
+  jadeCore: 0.45,
+  jadeCoreAt: 0.2,
 } as const;
 
 /** Anything within this of its end time has ended, so summed frame steps cannot strand a shot. */
@@ -397,6 +414,54 @@ export function createShots(options: { particles: ParticleSystem; rng: FxRng }):
         ctx.beginPath();
         ctx.arc(0, 0, r * S.emojiSmile, Math.PI * S.emojiSmileFrom, Math.PI * S.emojiSmileTo);
         ctx.stroke();
+        return;
+      }
+      case "token": {
+        // R3334002: a Rush Launcher's load, a rimmed chip notched round its edge.
+        ctx.fillStyle = body(fl);
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, TAU);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = hot(fl);
+        ctx.lineWidth = S.tokenRimPx;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * S.tokenRim, 0, TAU);
+        ctx.stroke();
+        ctx.fillStyle = glow(fl);
+        for (let k = 0; k < S.tokenNotches; k++) {
+          const angle = (k / S.tokenNotches) * TAU;
+          ctx.beginPath();
+          ctx.arc(Math.cos(angle) * r, Math.sin(angle) * r, r * S.tokenNotch, 0, TAU);
+          ctx.fill();
+        }
+        return;
+      }
+      case "fruit": {
+        // R3334002: a Fruit Launcher's load, a red fruit with its leaf.
+        ctx.fillStyle = LOAD_COLORS.fruit;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, TAU);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = LOAD_COLORS.leaf;
+        ctx.beginPath();
+        ctx.ellipse(r * S.fruitLeafX, -r * S.fruitLeafY, r * S.fruitLeaf, r * S.fruitLeaf * S.fruitLeafAspect, S.fruitLeafTurn, 0, TAU);
+        ctx.fill();
+        ctx.stroke();
+        return;
+      }
+      case "jade": {
+        // R3334002: a Jade Launcher's load, a green orb lit from within.
+        ctx.fillStyle = LOAD_COLORS.jade;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, TAU);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = LOAD_COLORS.jadeCore;
+        ctx.beginPath();
+        ctx.arc(-r * S.jadeCoreAt, -r * S.jadeCoreAt, r * S.jadeCore, 0, TAU);
+        ctx.fill();
         return;
       }
     }

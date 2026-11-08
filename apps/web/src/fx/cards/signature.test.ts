@@ -33,9 +33,9 @@ const SIGNATURE_PENDING: readonly string[] = [
   "stinkyscape-058", "stinkyscape-059", "stinkyscape-060", "stinkyscape-061", "stinkyscape-066", "stinkyscape-070", "stinkyscape-071",
   "stinkyscape-073", "stinkyscape-074", "stinkyscape-080", "stinkyscape-085", "stinkyscape-086", "stinkyscape-087", "stinkyscape-088",
   "stinkyscape-109", "stinkyscape-110", "stinkyscape-111", "stinkyscape-112", "stinkyscape-112-1", "stinkyscape-115", "stinkyscape-116",
-  "stinkyscape-137", "stinkyscape-137-1", "stinkyscape-137-2", "stinkyscape-137-3", "stinkyscape-137-4", "stinkyscape-147", "stinkyscape-147-1",
+  "stinkyscape-137-1", "stinkyscape-137-2", "stinkyscape-137-3", "stinkyscape-137-4", "stinkyscape-147", "stinkyscape-147-1",
   "stinkyscape-147-2", "stinkyscape-148", "stinkyscape-148-1", "stinkyscape-149", "stinkyscape-150", "stinkyscape-150-1", "stinkyscape-151",
-  "stinkyscape-152", "stinkyscape-153", "stinkyscape-154", "stinkyscape-176", "stinkyscape-t-dormant-starship", "stinkyscape-t-shield-layer",
+  "stinkyscape-152", "stinkyscape-153", "stinkyscape-154", "stinkyscape-t-shield-layer",
   "stinkyscape-t-propagation-layer", "stinkyscape-t-meltdown-layer", "stinkyscape-t-narcor", "stinkyscape-t-red-narcor",
   "stinkyscape-t-anomaly-found",
 ];
