@@ -33310,10 +33310,10 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-08T23:20:00Z",
-          "utilization": 0.85
+          "utilization": 0.96
         },
-        "observed_at": "2026-11-08T21:54:53Z",
-        "status": "allowed"
+        "observed_at": "2026-11-08T22:52:38Z",
+        "status": "allowed_warning"
       }
     },
     "devin": {
@@ -35988,6 +35988,11 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-08T22:42:15Z,claude-8,ping,before,42531327611,96,2026-11-08T23:20:00Z,,,allowed_warning,85,,"
+    ]
   },
   "version": 1
 }
