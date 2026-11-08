@@ -16942,9 +16942,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-08T06:47:09Z",
-      "owner_why": "its own review was handed off to its final audit: `claude-1` 5-hour usage is 102%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-08T09:50:00Z; it can start again only in 3h 02m, more than the 120 minutes an item waits for its owner",
+      "owner": "claude-7",
+      "owner_since": "2026-11-08T08:17:55Z",
+      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-1` 5-hour usage is 102%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-08T09:50:00Z; it can start again only in 3h 02m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
       "planned_at": "2026-11-07T19:16:44Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -18448,7 +18448,7 @@
       "stop_requested": false
     },
     "3431": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "difficulty": "hard",
       "failures": 0,
@@ -18464,15 +18464,15 @@
       },
       "issue": 3391,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-7",
       "queued_at": "2026-11-08T06:54:31Z",
-      "run_id": "42455433671",
+      "run_id": "pending:f6c2dec3-1794125844",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-11-08T06:36:14Z",
+      "started_at": "2026-11-08T08:17:55Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18488,9 +18488,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T08:17:08Z",
+    "at": "2026-11-08T08:17:55Z",
     "url": "",
-    "what": "build #3407 on claude-8"
+    "what": "revise #3431 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-08T08:07:15Z",
