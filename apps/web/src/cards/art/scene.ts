@@ -138,9 +138,15 @@ export type ScenePlacement = {
   readonly count?: number;
   readonly spread?: readonly [number, number];
   readonly paint?: PaletteName;
+  /** R3393000: scales every shape's opacity, for a ghost, a copy or a far thing half seen. */
+  readonly fade?: number;
 };
 
-/** The figure a recipe's subject layer draws in front of its own parts, standing on x, y. */
+/**
+ * The figure a recipe's subject layer draws in front of its own parts, standing on x, y. R3393000: a crowd
+ * figure (`SceneRecipe.crowd`) stands at the end of its own `layer` (the subject layer's unless it names one),
+ * and `fade` scales its shapes' opacity, for a ghost, a copy or a recruit flickering into being.
+ */
 export type FigureRecipe = {
   readonly x: number;
   readonly y: number;
@@ -148,6 +154,8 @@ export type FigureRecipe = {
   readonly flip?: 1 | -1;
   readonly pose: PoseId;
   readonly look: FigureLook;
+  readonly layer?: SceneLayer;
+  readonly fade?: number;
 };
 
 export type SceneRecipe = {
@@ -159,6 +167,8 @@ export type SceneRecipe = {
   /** Where the card's emblem stands in the scene; with none, where the painter's composition put it. */
   readonly emblem?: { readonly x: number; readonly y: number; readonly size: number; readonly rotate: number };
   readonly figure?: FigureRecipe;
+  /** R3393000: the scene's other characters, each drawn at the end of its layer, before the figure in the subject layer. */
+  readonly crowd?: readonly FigureRecipe[];
   /**
    * The painter's own subject (its spec's `subjectRidges`, drawn by the card's composition: Ceaseless Void's
    * giant, R3338001) stands in the subject layer in front of the layer's parts, in place of a figure.
@@ -209,6 +219,11 @@ function between(rng: Rng, low: number, high: number): number {
   return low + (high - low) * rng();
 }
 
+/** R3393000: `shape` with its opacity scaled by `fade`, or `shape` itself when there is none. */
+function faded<T extends KitShape>(shape: T, fade: number | undefined): T {
+  return fade === undefined ? shape : { ...shape, opacity: shape.opacity * fade };
+}
+
 /** The card's recipe, read by its id alone (a picture's own seed keeps the card's), or null. */
 export function sceneRecipeOf(seedId: string): SceneRecipe | null {
   const cut = seedId.indexOf(SCENE_SEED_SEPARATOR);
@@ -231,13 +246,15 @@ export function composeScene(recipe: SceneRecipe, seedId: string): SceneShape[] 
         const s = (placed.scale ?? 1) * (1 + between(rng, -SCENE_SCALE_JITTER, SCENE_SCALE_JITTER));
         for (const shape of kit.draw({ x, y, s, flip: placed.flip ?? 1 }, rng)) {
           const paint = shape.main === true && placed.paint !== undefined ? placed.paint : shape.paint;
-          out.push({ ...shape, paint, layer, part: placed.part });
+          out.push({ ...faded(shape, placed.fade), paint, layer, part: placed.part });
         }
       }
     }
+    // R3393000: the crowd stands in front of its layer's parts; a recipe with none draws as it did.
+    for (const extra of recipe.crowd ?? []) if ((extra.layer ?? "subject") === layer) for (const shape of drawFigure(extra, rng)) out.push({ ...faded(shape, extra.fade), layer });
     // The figure stands in front of the subject layer's own parts.
     if (layer === "subject" && recipe.figure !== undefined) {
-      for (const shape of drawFigure(recipe.figure, rng)) out.push({ ...shape, layer });
+      for (const shape of drawFigure(recipe.figure, rng)) out.push({ ...faded(shape, recipe.figure.fade), layer });
     }
   }
   return out;

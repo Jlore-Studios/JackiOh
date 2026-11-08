@@ -1,7 +1,8 @@
 // R2202000: the Training Grounds set's own art (issue #2202, traininggrounds.ts). Each family draws
 // one look, both faces share their geometry, the Legacy cards draw their Core card's subject in the
 // yard with a touch of their own (R2724000), and no other set's card reaches any of it, so every
-// picture R503 pinned stays as it was.
+// picture R503 pinned stays as it was. R3393000, R3393001: every card of the set now draws its scene
+// recipe first, so the yard painter and `legacySvg` tested here draw only a card with none.
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -316,8 +317,11 @@ describe("R2724000: no other card's picture moves", () => {
     expect(unchanged).toBe(KEPT.length - SCENES.length);
   });
 
-  it("R3331002 the Core cards with a scene recipe no longer draw the picture art-before-2724 records", () => {
-    expect(SCENES.map((card) => card.id).sort()).toEqual(["core-002", "core-098", "core-100"]);
+  it("R3331002 R3393000 the cards with a scene recipe no longer draw the picture art-before-2724 records", () => {
+    // R3393000: the three Core proofs, and every Training Grounds card of the set's own, the Golem token's included.
+    const own = Object.values(CATALOG).filter((card) => isTrainingGroundsArt(card.id)).map((card) => card.id);
+    expect(own).toHaveLength(41);
+    expect(SCENES.map((card) => card.id).sort()).toEqual(["core-002", "core-098", "core-100", ...own].sort());
     for (const card of SCENES) {
       const pair = recorded[card.id] ?? (() => { throw new Error(`no fixture for ${card.id}`); })();
       expect(hashId(pictureOf(card, false)), card.id).not.toBe(pair[0]);

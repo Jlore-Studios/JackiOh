@@ -18,6 +18,7 @@ import { CardDefsProvider } from "./refContext.tsx";
 import { CardArt, hasArtPlanes } from "./art/CardArt.tsx";
 import { artMotionFor, type ArtMotion } from "./art/motion.ts";
 import { ART_PLANES, PLANE_OF_ROLE, partDraws, partHolds, type ArtPart, type ArtPlane } from "./art/pictures.ts";
+import { trainingGroundsSvg } from "./art/traininggrounds.ts";
 import { CARD_PERSPECTIVE_PX, CARD_FRAME_BREAK_PX, CARD_FRAME_BREAK_SCALE, CARD_DEPTH_STEP_CQW } from "./constants.ts";
 import { CardFace } from "./CardFace.tsx";
 import { DEFAULT_CARD_COSMETICS, cosmeticsOf, resetCosmeticsForTests, writeCardLevel, writeCardPick } from "./cosmetics.ts";
@@ -63,6 +64,14 @@ const MYTHIC = "core-100";
 const COMMON = "core-002";
 const LEGACY = "traininggrounds-044";
 const STARSHIP = "stinkyscape-t-dormant-starship";
+
+/** The roles a picture's own layers move in, not the style that names every role it moves. */
+function rolesOf(svg: string): Set<string> {
+  const body = svg.slice(svg.indexOf("</defs>"));
+  const found = new Set<string>();
+  for (const match of body.replace(/<style>[\s\S]*?<\/style>/, "").matchAll(/class="art-m-([a-z]+)"/g)) found.add(match[1] ?? "");
+  return found;
+}
 
 function faceModelOf(id: string, radiant: boolean, inPlay?: Parameters<typeof faceModel>[0]["inPlay"]): ReturnType<typeof faceModel> {
   const def = CATALOG[id];
@@ -277,13 +286,17 @@ describe("R3344000 an Epic or rarer face draws its picture as depth planes", () 
       );
       const svg = decodeURIComponent(container.querySelector<HTMLElement>(".cf-art")?.style.backgroundImage ?? "");
       cleanup();
-      // The layers of the picture itself, not the style that names every role it moves.
-      const body = svg.slice(svg.indexOf("</defs>"));
-      const found = new Set<string>();
-      for (const match of body.replace(/<style>[\s\S]*?<\/style>/, "").matchAll(/class="art-m-([a-z]+)"/g)) found.add(match[1] ?? "");
-      return found;
+      return rolesOf(svg);
     };
-    for (const id of [EPIC, LEGENDARY, MYTHIC, "classic-040"]) {
+    // R3393000: every Training Grounds card now draws its scene, so the yard painter, which draws only a card
+    // with no recipe, is read straight from traininggrounds.ts.
+    const yardClasses = (part: ArtPlane, id: string): Set<string> => {
+      const def = CATALOG[id];
+      if (def === undefined) throw new Error(`no ${id}`);
+      return rolesOf(trainingGroundsSvg(def.id, def.name, def.tags, def.type, false, motion, def.id, part));
+    };
+    // R3393000: Training Grounds #40 is a scene, its light, over and motes nearest as every scene's are.
+    for (const id of [EPIC, LEGENDARY, MYTHIC, "classic-040", "traininggrounds-040"]) {
       const byPlane = new Map(ART_PLANES.map((plane) => [plane, classes(plane, id)] as const));
       const roles = new Set([...byPlane.values()].flatMap((found) => [...found]));
       expect(roles.has("back"), id).toBe(true);
@@ -297,8 +310,8 @@ describe("R3344000 an Epic or rarer face draws its picture as depth planes", () 
       expect(ART_PLANES.filter((plane) => byPlane.get(plane)?.has("particle") === true), id).toEqual(["nearest"]);
     }
     // Stinkyscape's and Training Grounds': the background far, the subject near, nothing between.
-    for (const id of ["stinkyscape-154", "traininggrounds-040"]) {
-      const byPlane = new Map(ART_PLANES.map((plane) => [plane, classes(plane, id)] as const));
+    for (const [id, read] of [["stinkyscape-154", classes], ["traininggrounds-040", yardClasses]] as const) {
+      const byPlane = new Map(ART_PLANES.map((plane) => [plane, read(plane, id)] as const));
       expect([...(byPlane.get("far") ?? [])], id).toEqual(["back"]);
       expect([...(byPlane.get("middle") ?? [])], id).toEqual([]);
       expect([...(byPlane.get("near") ?? [])], id).toEqual(["subject"]);

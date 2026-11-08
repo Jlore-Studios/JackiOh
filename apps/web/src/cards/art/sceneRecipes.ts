@@ -4,10 +4,15 @@
 // listed keeps its picture byte for byte until its set's pass lists it. Each recipe is placed in the
 // 100-unit box: a face's window shows about y 18 to 82 of it and a Unit's portrait 12 to 88, so each
 // keeps its subject within x 30 to 70 and y 25 to 85 and reaches its rarity's floor
-// (richness.ts `ART_DETAIL_MIN`) with its placements' counts.
+// (richness.ts `ART_DETAIL_MIN`) with its placements' counts. R3393000: the Meditative+ and Training Grounds
+// passes keep their recipes in files of their own (sceneRecipesMeditativePlus.ts, sceneRecipesTrainingGrounds.ts and,
+// for the Legacy cards, sceneRecipesLegacy.ts, R3393001), spread in after the proofs.
 
 import { figureLookFor } from "./figureKit.ts";
 import type { SceneRecipe } from "./scene.ts";
+import { LEGACY_RECIPES } from "./sceneRecipesLegacy.ts";
+import { MEDITATIVE_PLUS_RECIPES } from "./sceneRecipesMeditativePlus.ts";
+import { TRAINING_GROUNDS_RECIPES } from "./sceneRecipesTrainingGrounds.ts";
 
 /** Corpse Plantation (Classic #74, Epic): a moonlit graveyard farm under its bone scarecrow. */
 const CORPSE_PLANTATION: SceneRecipe = {
@@ -193,11 +198,14 @@ const ARG_ARG_DEFENDER: SceneRecipe = {
   },
 };
 
-/** R3331000: the cards that draw from a scene, by id: the five proof cards. */
+/** R3331000: the cards that draw from a scene, by id: the five proof cards; R3393000: and every Meditative+ and Training Grounds entry. */
 export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   "classic-074": CORPSE_PLANTATION,
   "core-002": SPECIESIST,
   "core-098": HEROIC_POWER,
   "core-100": CEASELESS_VOID,
   "stinkyscape-015": ARG_ARG_DEFENDER,
+  ...MEDITATIVE_PLUS_RECIPES,
+  ...TRAINING_GROUNDS_RECIPES,
+  ...LEGACY_RECIPES,
 };

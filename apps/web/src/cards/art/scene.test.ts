@@ -2,7 +2,8 @@
 // (figureKit.ts), by the recipes of sceneRecipes.ts: the kits are whole and clean and keep out of
 // Radiant's gold window, the five proof cards draw their scenes on both faces with one geometry and
 // clear their floors, and every card with no recipe draws the spec it drew before. The pixels are
-// e2e/cypress/component/scene-proofs.cy.tsx's.
+// e2e/cypress/component/scene-proofs.cy.tsx's. R3393000: the recipes are the proofs' and every Meditative+
+// and Training Grounds entry's (setScenes.test.ts holds those), and none of them paints in the gold window.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -45,7 +46,7 @@ import {
 } from "./scene.ts";
 import { SCENE_KIT } from "./sceneKit.ts";
 import { SCENE_RECIPES } from "./sceneRecipes.ts";
-import { proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
+import { legacyArtUri, proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { compositionFor, compositionOf, themeFor } from "./themes.ts";
 import { legacySvg } from "./traininggrounds.ts";
 
@@ -186,14 +187,15 @@ describe("R3331000 the scene kits", () => {
       painted.add(scene.sky[1]);
       painted.add(scene.light.paint);
       for (const layer of SCENE_LAYERS) for (const placed of scene.layers[layer] ?? []) if (placed.paint !== undefined) painted.add(placed.paint);
-      if (scene.figure !== undefined) {
-        painted.add(scene.figure.look.skin);
-        painted.add(scene.figure.look.cloth);
+      // R3393000: the figure's look and each crowd figure's.
+      for (const figure of [...(scene.figure === undefined ? [] : [scene.figure]), ...(scene.crowd ?? [])]) {
+        painted.add(figure.look.skin);
+        painted.add(figure.look.cloth);
       }
     }
     for (const name of painted) expect(inRadiantGold(SCENE_PALETTE[name]), name).toBe(false);
-    // And what each proof card's base face prints: every fill and stroke, its sky and its glow.
-    for (const id of PROOFS) {
+    // And what each recipe card's base face prints: every fill and stroke, its sky and its glow.
+    for (const id of Object.keys(SCENE_RECIPES)) {
       const spec = specOf(def(id), false);
       const colors = [spec.sky.from, spec.sky.to, spec.glow.color, ...spec.ridges.flatMap((ridge) => [ridge.fill, ...(ridge.stroke === undefined ? [] : [ridge.stroke])])];
       for (const hex of colors) expect(inRadiantGold(hex), `${id}: ${hex}`).toBe(false);
@@ -229,7 +231,9 @@ describe("R3331000 the scene kits", () => {
 describe("R3331000 the five proof cards", () => {
   it("R3331000 the five proof cards draw their scenes, base and Radiant, with one geometry", () => {
     expect(SCENE_BOX).toBe(ART_BOX);
-    expect(Object.keys(SCENE_RECIPES).sort()).toEqual([...PROOFS].sort());
+    // R3393000: and every Meditative+ and Training Grounds entry, each drawn as setScenes.test.ts proves.
+    const passes = Object.values(CATALOG).filter((card) => card.set === "Meditative+" || card.set === "Training Grounds").map((card) => card.id);
+    expect(Object.keys(SCENE_RECIPES).sort()).toEqual([...PROOFS, ...passes].sort());
     for (const id of PROOFS) {
       const card = def(id);
       const shapes = composeScene(recipe(id), id);
@@ -320,15 +324,24 @@ describe("R3331000 the five proof cards", () => {
       for (const radiant of [false, true]) expect(specOf(card, radiant), card.id).toEqual(specOf(card, radiant, null));
       checked += 1;
     }
-    expect(checked).toBe(Object.keys(CATALOG).length - PROOFS.length);
+    expect(checked).toBe(Object.keys(CATALOG).length - Object.keys(SCENE_RECIPES).length);
     // Only a recipe card's id, or a picture's own seed of one, finds a recipe.
     for (const id of ["t-12", "", "core-0021", "core-002-1", "#core-002", "classic-074x"]) expect(sceneRecipeOf(id), id).toBeNull();
     expect(sceneRecipeOf("core-002#tarot")).toBe(recipe("core-002"));
   });
 
-  it("R3331000 a Legacy card keeps its Core card's old subject", () => {
+  it("R3331000 R3393001 a Legacy card never draws its Core card's scene", () => {
+    // R3393001: Legacy: Speciesist draws a scene of its own; its Core card's scene is Speciesist's, never on its face.
     const legacy = def("traininggrounds-041");
     const core = def("core-002");
+    const own = composeScene(recipe(legacy.id), legacy.id);
+    expect(own.length).toBeGreaterThan(0);
+    for (const radiant of [false, true]) {
+      const svg = svgOf(legacyArtUri(legacy.id, core.id, core.name, legacy.tags, legacy.type, radiant));
+      for (const shape of own) expect(svg).toContain(`d="${shape.d}"`);
+      for (const shape of composeScene(recipe(core.id), core.id)) expect(svg).not.toContain(`d="${shape.d}"`);
+    }
+    // The old picture, its Core card's frozen subject in the yard, is the fallback for a Legacy card with no recipe.
     const theme = themeFor(core.tags, core.type);
     for (const radiant of [false, true]) {
       const svg = legacySvg(legacy.id, core.id, core.name, core.tags, core.type, radiant);

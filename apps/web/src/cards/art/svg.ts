@@ -19,7 +19,7 @@ import type { AnomalyCode } from "../anomalies.ts";
 import { EMBLEM_BOX, EMBLEMS } from "./emblems.ts";
 import { fmt } from "./hash.ts";
 import { CENTER_ORIGIN, FIGURE_SUBJECT_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion, type ArtRole } from "./motion.ts";
-import type { MotifId } from "./motifs.ts";
+import { motifFor, type MotifId } from "./motifs.ts";
 import { partDraws, partHolds, restyledSvg, type ArtPart, type ArtRestyle } from "./pictures.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
 import { sceneRecipeOf } from "./scene.ts";
@@ -347,13 +347,28 @@ export function trainingGroundsArtUri(
   return uri;
 }
 
-/** R2724000: a Legacy face's picture (traininggrounds.ts), memoised as the set's own are. */
+/**
+ * R3393001: a Legacy card's own scene, wearing its Core card's frozen emblem: the Core card's spec is built as
+ * `legacySvg` builds it (its scene never read, R3331000), so its emblem is the one it wore before any recipe.
+ * A Legacy card stays one picture: no motion, no parts and no seed of its own. Null for a card with no recipe.
+ */
+function legacySceneSvg(defId: string, coreId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean): string | null {
+  const scene = sceneRecipeOf(defId);
+  if (scene === null) return null;
+  const theme = themeFor(tags, type);
+  const core = artSpec(coreId, theme, compositionFor(type), radiant, motifFor(name, theme), null);
+  const own = artSpec(defId, theme, compositionFor(type), radiant, null, scene);
+  const { glyph, fill, stroke } = core.emblem;
+  return artSvg({ ...own, emblem: { ...own.emblem, glyph, fill, stroke } }, null, defId);
+}
+
+/** R2724000: a Legacy face's picture (traininggrounds.ts), memoised as the set's own are. R3393001: its own scene first. */
 export function legacyArtUri(defId: string, coreId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean, restyle: ArtRestyle | null = null): string {
   const key = `${defId}|${radiant}|legacy|${coreId}|${name ?? ""}|${tags.join(",")}|${type}${restyleKey(restyle)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = `${DATA_PREFIX}${encodeSvg(restyled(legacySvg(defId, coreId, name, tags, type, radiant), restyle, radiant, defId))}`;
+  const uri = `${DATA_PREFIX}${encodeSvg(restyled(legacySceneSvg(defId, coreId, name, tags, type, radiant) ?? legacySvg(defId, coreId, name, tags, type, radiant), restyle, radiant, defId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
