@@ -136,7 +136,7 @@ still a pure function of the card's id, name, tags and type. The cache keys the 
 served for another's. The normal picture's seed is the card's id alone, so every still picture and
 golden hash stands. A later version with a picture of its own adds its own name to `ArtPicture`, so it
 draws apart from every other. A Starship's art, a Legacy card's and a delivered file keep their one picture.
-A Classic+ card offered Alt art draws an alt recipe of its own instead (R3396000, below).
+A Classic+ or Core card offered Alt art draws an alt recipe of its own instead (R3396000 and R3398000, below).
 
 ## One picture per variant (R3015002)
 
@@ -457,6 +457,26 @@ that differ from the normal window, base and Radiant, sampled on card-versions.c
 threshold for a point that differs. `classicPlusAltScenes.test.tsx` holds every recipe to the rules and every Alt art
 level's face to its picture and its Radiant marks, and `classicplus-alt-scenes.cy.tsx` measures each window's share
 and screenshots each normal face beside its Alt art face.
+
+## Core's Alt art restaged (R3398000)
+
+Each of the 61 Core cards offered Alt art draws an alt recipe of its own, written from #3398's brief for it, under
+Classic+'s rules above: the same subject and idea in another place, time or story moment, in Core's family. The
+recipes are three files in id order, `coreAltRecipes1.ts` (#3 to #35), `coreAltRecipes2.ts` (#37 to #65) and
+`coreAltRecipes3.ts` (#68 to #100), spread into `ALT_SCENE_RECIPES` after Classic+'s, and read as theirs are, under the
+card's Alt art seed alone, at every level of Alt art. A figure both pictures draw is the normal one's person
+(`normalCoreLookOf`), and Duplicating Felinors, Carnivorous Cube and True Strike keep their people
+(`normalCoreExtraLookOf`). Where a brief changes who is in the picture, an extra figure stands for the new person
+(Conjure KY's students, Masochism Mask's wanderer, Unlicensed Experimentation's golem, Combo-Index's cleaner,
+Collateral Damage's inspector). Ceaseless Void's alt recipe is the void before it wakes: its swirl and a black pearl
+in a tide pool, drawn from the kits, with no giant, so `ownSubject` stays its normal recipe's alone (R3338001).
+
+The briefs' places added ten parts: a palm and a camel (`sceneKitNature.ts`), a crater and a van
+(`sceneKitPlaces.ts`), and a hay bale, a picnic blanket, a rug, a hammock, a sleeping bag and a teapot
+(`sceneKitObjects.ts`); a brief's smaller details stand in with parts the kits hold, each named in its recipe's doc
+comment, and the sleepers sit. `coreAltScenes.test.tsx` holds every recipe to the rules and every Alt art level's
+face to its picture and its Radiant marks, and `core-alt-scenes.cy.tsx` measures each window's share against
+`ALT_PICTURE_CHANGE_MIN` and screenshots each normal face beside its Alt art face.
 
 ## The detail floor (R3331001)
 

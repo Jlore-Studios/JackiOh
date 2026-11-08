@@ -40,8 +40,10 @@ import { proceduralArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
 
 const SVG_PREFIX = "data:image/svg+xml,";
-/** The cards with an alt recipe, in id order. */
-const ALT_IDS: readonly string[] = Object.keys(ALT_SCENE_RECIPES).sort();
+/** The Classic+ cards with an alt recipe, in id order (R3398000's Core cards are coreAltScenes.test.tsx's). */
+const ALT_IDS: readonly string[] = Object.keys(ALT_SCENE_RECIPES)
+  .filter((id) => id.startsWith("classicplus-"))
+  .sort();
 /** The rarer than Rare: a scene with a foreground, a middle and a background. */
 const DEEP: readonly Rarity[] = ["Epic", "Legendary", "Mythic"];
 /** R3017002's repaints, each a picture of its own under its treatment, which keep the card's normal recipe. */

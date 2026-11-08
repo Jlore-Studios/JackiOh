@@ -211,7 +211,7 @@ describe("R3390000 Classic+ drawn as scenes", () => {
   it("R3390000 Alt art grows the same parts from its own seed", () => {
     // R3396000: the 40 offered Alt art draw an alt recipe of their own instead (classicPlusAltScenes.test.tsx).
     const reseeded = ENTRIES.filter((card) => !Object.hasOwn(ALT_SCENE_RECIPES, card.id));
-    expect(reseeded).toHaveLength(ENTRIES.length - Object.keys(ALT_SCENE_RECIPES).length);
+    expect(reseeded).toHaveLength(ENTRIES.length - Object.keys(ALT_SCENE_RECIPES).filter((id) => id.startsWith("classicplus-")).length);
     expect(reseeded).toHaveLength(76);
     for (const card of reseeded) {
       const scene = recipe(card.id);
