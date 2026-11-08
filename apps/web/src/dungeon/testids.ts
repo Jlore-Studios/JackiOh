@@ -1,4 +1,4 @@
-// The Dungeon Run page's and its start screen's `data-testid` vocabulary (DR14 part D, #2705): every
+// The Dungeon run page's and its start screen's `data-testid` vocabulary (DR14 part D, #2705): every
 // id is prefixed `dungeon-`, as each part of the dungeon run keeps its own in its directory.
 
 export const dungeonTestid = {

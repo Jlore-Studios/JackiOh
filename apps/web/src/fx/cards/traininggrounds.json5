@@ -5,7 +5,10 @@
 //   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
 //   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
-//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
+//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000),
+//                                           or beside a bespoke; a Unit's on its own `tile` (R3400000).
+//   + entrance: "<key>"                     beside any entry but "none", or alone: a Unit's or a Field Spell's entrance (fx/entrances.ts, R3332000);
+//   + takeover: "<look>", signature: true   a Mythic's own takeover look (fx/takeover.ts); a Legendary's or Mythic's signature (R3332000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
 // `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
@@ -47,11 +50,11 @@
   "traininggrounds-034": { bespoke: "dinoStomp" }, // Dino-size
   "traininggrounds-035": { cast: { motif: "conjure" }, trigger: { motif: "conjure" }, aura: { look: "void", scope: "board" } }, // Corpse Recycler
   "traininggrounds-036": { death: { motif: "send" } }, // Training Dummy
-  "traininggrounds-037": { cast: { motif: "send" } }, // Seance
-  "traininggrounds-038": { cry: { motif: "send", palette: "Nerd/chalk" }, death: { motif: "send", palette: "Nerd/chalk" } }, // Tutorial Master
-  "traininggrounds-039": { cast: { motif: "conjure" } }, // Call to Chaos (Training-Grounds Edition)
-  "traininggrounds-039-1": "none: vanilla", // Training-Grounds Golem
-  "traininggrounds-040": { bespoke: "gameDesign" }, // Goetzmann Game Design
+  "traininggrounds-037": { bespoke: "seance", signature: true }, // Seance
+  "traininggrounds-038": { bespoke: "tutorialMaster", entrance: "chalkboardLesson", aura: { look: "chalk", palette: "Nerd/chalk", scope: "tile" }, signature: true }, // Tutorial Master
+  "traininggrounds-039": { bespoke: "chaosDice", signature: true }, // Call to Chaos (Training-Grounds Edition)
+  "traininggrounds-039-1": { signature: true, entrance: "golemLashing", aura: { look: "timber", scope: "tile" } }, // Training-Grounds Golem
+  "traininggrounds-040": { bespoke: "gameDesign", takeover: "napkin", signature: true }, // Goetzmann Game Design
   "traininggrounds-041": { cry: { motif: "bolt" } }, // Legacy: Speciesist
   "traininggrounds-042": { cast: { motif: "flight" } }, // Legacy: Stockpile
   "traininggrounds-043": "none: vanilla", // Legacy: Mr. Vanilla

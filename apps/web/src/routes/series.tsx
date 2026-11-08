@@ -440,7 +440,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
                         setConfirming(false);
                       }}
                     >
-                      {t("Keep playing")}
+                      {t("Stay")}
                     </button>
                     <button type="button" data-testid={seriesTestid.forfeitConfirm} disabled={busy} onClick={onForfeit}>
                       {t("Forfeit")}

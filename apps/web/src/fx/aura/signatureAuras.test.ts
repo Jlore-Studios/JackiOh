@@ -1,6 +1,6 @@
 // R3389000: a signature's own aura looks (looks.ts `AURA_SIGNATURE_LOOKS`), each within the signature
-// tier's cap and worn by one signature alone, and a Unit's `zone` aura standing on its own unit zone
-// (plan.ts), never for a hidden Unit and never again on what it installs.
+// tier's cap and worn by one signature alone, and Classic's signature Units wearing theirs on their own
+// tile (R3400000, plan.ts), never for a hidden Unit and never again on what it installs.
 
 import { describe, expect, it } from "vitest";
 
@@ -29,7 +29,7 @@ describe("R3389000 a signature's own aura", () => {
         expect(opacity, name).toBeLessThanOrEqual(AURA_SIGNATURE_MAX_INTENSITY);
       }
     }
-    // The shared nine stay shared, and no look, shared or a signature's, has another's numbers.
+    // The shared twelve stay shared, and no look, shared or a signature's, has another's numbers.
     for (const name of AURA_LOOK_NAMES) {
       expect(isSignatureAuraLook(name), name).toBe(false);
       expect(auraLookSpec(name), name).toBe(AURA_LOOKS[name]);
@@ -67,7 +67,7 @@ describe("R3389000 a signature's own aura", () => {
     });
   });
 
-  it("R3389000 a Unit's zone aura stands on its own unit zone, never hidden or on its modifiers", () => {
+  it("R3389000 a signature Unit's own look stands on its own tile, never hidden or on its modifiers", () => {
     const titan = unit("p1", { defId: "classic-045", instanceId: "titan" });
     const theirs = unit("p2", { defId: "classic-080", instanceId: "max" });
     const hidden = unit("p2", { defId: "hidden", instanceId: "hidden" });
@@ -76,10 +76,10 @@ describe("R3389000 a signature's own aura", () => {
       opponent: emptySide("p2", { units: [theirs, null, hidden, null, null] }),
     });
     const planned = planAuras(view, new Map());
-    expect(planned.map((aura) => [aura.key, aura.side, aura.lane, aura.scope, aura.look, aura.row])).toEqual([
-      ["field-deep", "you", 1, "zone", "abyssWhirl", undefined],
-      ["unit-titan", "you", 2, "zone", "mossCreep", "units"],
-      ["unit-max", "opponent", 1, "zone", "craterSmoke", "units"],
+    expect(planned.map((aura) => [aura.key, aura.side, aura.lane, aura.scope, aura.look])).toEqual([
+      ["field-deep", "you", 1, "zone", "abyssWhirl"],
+      ["unit-titan", "you", 2, "tile", "mossCreep"],
+      ["unit-max", "opponent", 1, "tile", "craterSmoke"],
     ]);
     // It covers its own unit zone alone, as a Field card's covers its backrow zone.
     const [field, mine, other] = planned;
@@ -114,7 +114,7 @@ describe("R3389000 a signature's own aura", () => {
     expect(CATALOG["classic-006"]?.type).toBe("Unit");
     const plain = baseView({ you: emptySide("p1", { units: [unit("p1", { defId: "classic-006", instanceId: "toe" }), null, null, null, null] }) });
     expect(planAuras(plain, new Map())).toEqual([]);
-    // A Field card standing in a unit zone (Animated, R383) is no Unit: its zone aura is its backrow zone's alone.
+    // A Field card standing in a unit zone (Animated, R383) wears no tile: its zone aura is its backrow zone's alone.
     expect(CATALOG["core-040"]?.type).toBe("Field Spell");
     const animated = baseView({ you: emptySide("p1", { units: [unit("p1", { defId: "core-040", instanceId: "echo" }), null, null, null, null] }) });
     expect(planAuras(animated, new Map())).toEqual([]);

@@ -1,6 +1,6 @@
 // R670: Spell Tyrant (`classic-056`, entrance "tyrantSigil"): an arcane sigil that flares as it lands.
 // R3389001: grown into its signature (R3389000): entrance "tyrantSigil", bespoke "tyrantCommand" and its
-// aura "crownSigil" on its own zone. A jagged violet crown-sigil slams onto its zone, its points cracking
+// aura "crownSigil" on its own tile (R3400000). A jagged violet crown-sigil slams onto its zone, its points cracking
 // the stone, and the Tyrant rises through it, its robe of scrolls flaring. Its Cry casts Spells from its
 // graveyard: each rises from the graveyard pile as a ghost, a card back, to bow at its crown (the cast's
 // own `cardPlayed`, inside its play: R3389000's claim of the casts a signature's play makes), casts on

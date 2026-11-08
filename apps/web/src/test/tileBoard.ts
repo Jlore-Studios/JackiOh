@@ -14,7 +14,7 @@ export function tileBoardView(): PlayerView {
 
   for (const [id, def] of Object.entries(CATALOG)) {
     if (tierOf(def) === null) continue;
-    // A card's own aura replaces its tile aura (R3389000: a signature bespoke's too).
+    // A card's own aura replaces its tile aura (R3400000: a bespoke entry's too).
     if (entryAura(FX_CARD_TABLE.get(id)) !== undefined) continue;
 
     if (def.type === "Unit" && eligibleUnits.length < 10) {

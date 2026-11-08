@@ -1,5 +1,5 @@
 // R3389001: Classic #33 Joro (`classic-033`), a Unit's signature: entrance "silkDrop", bespoke
-// "webRedirect" and its aura "silkWeb" on its own zone (R3389000). Nothing shows while it waits in a hand
+// "webRedirect" and its aura "silkWeb" on its own tile (R3389000, R3400000). Nothing shows while it waits in a hand
 // (R202). When an enemy Spell targets a friendly unit, a silver thread drops from above into its zone
 // and it swings down on it, upside-down, landing with a ring of silk; then a web strand snaps from the
 // Spell's aim to it (`redirected`, by it): the Spell's light bends off its first target and strikes

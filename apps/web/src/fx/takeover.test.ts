@@ -2,8 +2,9 @@
 // planned from the entry's `entrance` (game/animations.ts `entranceEntries`), held as its set piece
 // (`setPieceEntries`, R2785000) and bounded by R200.
 // R2722002: a hidden card's at its reveal, centred on the zone that flipped. R3332000: a Mythic's own
-// look is its effects table entry's `takeover`. R3389000: In Too Deep's is "abyss", and a Spell's or a
-// Trap's signature cast of its own stands in for the shared Legendary rays, burst and ring.
+// look is its effects table entry's `takeover`. R3400000: a signature Spell's cast of its own draws in place
+// of the shared rays, burst and rings, its takeover's tail FX_SIGNATURE_TAKEOVER_TAIL_MS; three own looks join.
+// R3389000: In Too Deep's is "abyss", and Classic's Spell's and Trap's signature casts draw no shared rays.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -23,7 +24,7 @@ import {
 import { baseView, emptySide } from "../test/fixtures.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { FX_CARD_TABLE, parseFxCardTable } from "./cards/tables.ts";
-import { FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_TAKEOVER_TAIL_MS, FX_TAKEOVER_TRAUMA } from "./constants.ts";
+import { FX_CENTER, FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_SIGNATURE_TAKEOVER_TAIL_MS, FX_TAKEOVER_TAIL_MS, FX_TAKEOVER_TRAUMA } from "./constants.ts";
 import { planFx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
 import { entranceCues, entranceLandMs, ownCast, TAKEOVER_TINTS, takeoverLookOf } from "./takeover.ts";
@@ -41,6 +42,9 @@ const CARDS: Record<string, { type: CardType; rarity: string }> = {
   "classic-090": { type: "Field Spell", rarity: "Mythic" },
   "classic-044": { type: "Spell", rarity: "Legendary" },
   "classic-009": { type: "Trap", rarity: "Legendary" },
+  "traininggrounds-040": { type: "Spell", rarity: "Mythic" },
+  "traininggrounds-037": { type: "Spell", rarity: "Legendary" },
+  "traininggrounds-038": { type: "Unit", rarity: "Legendary" },
 };
 const resolve: EntranceResolver = (defId) => CARDS[defId] ?? null;
 /** The effects layer's stylesheet, for the takeover looks' art. */
@@ -99,10 +103,10 @@ describe("R2722001 a Mythic takes over the board", () => {
     expect(takeoverOf(planFx(entry([play("core-097")]), p1, env()))?.look).toBe("genie");
     expect(takeoverOf(planFx(entry([play("meditative-049"), summon("meditative-049")]), p1, env()))?.look).toBe("ai");
     expect(takeoverOf(planFx(entry([play("meditative-008")]), p1, env()))?.look).toBe("prismatic");
-    // R3332000: exactly the four marquee Mythics name a look of their own in the effects table; R3389000
-    // and Classic's In Too Deep, its signature's.
+    // R3332000: the four marquee Mythics name a look of their own in the effects table; R3400000: and three
+    // signatures; R3389000: and Classic's In Too Deep, its signature's.
     const own = [...FX_CARD_TABLE].flatMap(([defId, card]) => (card.kind !== "none" && card.takeover !== undefined ? [defId] : []));
-    expect(own).toEqual(["core-096", "core-097", "core-100", "classic-090", "meditative-049"]);
+    expect(own).toEqual(["core-096", "core-097", "core-100", "classic-090", "meditative-049", "meditativeplus-001", "meditativeplus-026", "traininggrounds-040"]);
     for (const defId of own) expect(CATALOG[defId]?.printedRarity ?? CATALOG[defId]?.rarity, defId).toBe("Mythic");
     for (const events of [[play("core-052"), summon("core-052")], [play("core-083")], [fired("core-085")]]) {
       const e = entry(events);
@@ -130,6 +134,47 @@ describe("R2722001 a Mythic takes over the board", () => {
     const e = entry([play("meditative-008")]);
     expect(takeoverOf(entranceCues(e, env(), e.durationMs, table))?.look).toBe("genie");
     expect(takeoverOf(entranceCues(e, env(), e.durationMs))?.look).toBe("prismatic");
+  });
+
+  it("R3400000 a signature Spell draws no shared rays, burst or ring, its takeover ending FX_SIGNATURE_TAKEOVER_TAIL_MS after its entry", () => {
+    expect(ownCast("traininggrounds-040", "Spell")).toBe(true);
+    expect(ownCast("traininggrounds-037", "Spell")).toBe(true);
+    // A Unit's signature is its entrance, and a card with no signature has no cast of its own.
+    expect(ownCast("traininggrounds-038", "Unit")).toBe(false);
+    expect(ownCast("core-097", "Spell")).toBe(false);
+    expect(ownCast("traininggrounds-040", undefined)).toBe(false);
+    // The Mythic: its own look, its tail shorter, no shared rings, burst, rays or shake.
+    const mythic = entry([play("traininggrounds-040")]);
+    const D = mythic.durationMs;
+    expect(mythic.setPiece?.holdMs).toBeGreaterThan(0);
+    const cues = entranceCues(mythic, env(), D);
+    expect(cues.map((c) => c.kind)).toEqual(["takeover"]);
+    expect(takeoverOf(cues)).toMatchObject({ look: "napkin", tint: TAKEOVER_TINTS.napkin, landMs: entranceLandMs(mythic, D), delayMs: 0, durationMs: D + FX_SIGNATURE_TAKEOVER_TAIL_MS });
+    // Centred on the screen, as its recipe draws at the board's centre, whatever card element its play left.
+    expect(takeoverOf(cues)?.at).toEqual({ kind: "viewport", at: { x: FX_CENTER.x, y: FX_CENTER.y } });
+    expect(FX_SIGNATURE_TAKEOVER_TAIL_MS).toBeLessThan(FX_TAKEOVER_TAIL_MS);
+    // The Legendary: nothing shared at all; its recipe draws its cast.
+    const legend = entry([play("traininggrounds-037")]);
+    expect(legend.entrance?.tier).toBe("legendary");
+    expect(entranceCues(legend, env(), legend.durationMs)).toEqual([]);
+    // Off the signature tier (a table that names the same card's recipe alone), the shared entrance plays.
+    const plain = parseFxCardTable("test.json5", `{ "traininggrounds-040": { bespoke: "gameDesign", takeover: "napkin" }, "traininggrounds-037": { bespoke: "seance" } }`);
+    const shared = entranceCues(mythic, env(), D, plain);
+    expect(shared.map((c) => c.kind).sort()).toEqual(["burst", "rays", "ring", "ring", "ring", "shake", "shake", "takeover"]);
+    expect(takeoverOf(shared)?.durationMs).toBe(D + FX_TAKEOVER_TAIL_MS);
+    expect(entranceCues(legend, env(), legend.durationMs, plain).map((c) => c.kind).sort()).toEqual(["burst", "rays", "ring", "ring", "shake"]);
+    // Within R200 either way.
+    for (const cue of [...cues, ...shared]) if ("durationMs" in cue) expect(cue.delayMs + cue.durationMs).toBeLessThanOrEqual(D + FX_MAX_TAIL_MS);
+  });
+
+  it("R3400000 summit, canvas and napkin have their own tints", () => {
+    const looks = ["summit", "canvas", "napkin"] as const;
+    const tints = looks.map((look) => JSON.stringify(TAKEOVER_TINTS[look]));
+    expect(new Set([...tints, JSON.stringify(TAKEOVER_TINTS.prismatic)]).size).toBe(looks.length + 1);
+    expect(TAKEOVER_TINTS.summit.rim, "Bob's red brushstroke").toBe("#dc2626");
+    expect(TAKEOVER_TINTS.canvas.rim, "Scratch Pad's cyan cursor").toBe("#22d3ee");
+    expect(TAKEOVER_TINTS.napkin.rim, "the napkin's magenta pixels").toBe("#e879f9");
+    expect([takeoverLookOf("meditativeplus-001"), takeoverLookOf("meditativeplus-026"), takeoverLookOf("traininggrounds-040")]).toEqual([...looks]);
   });
 
   it("R2722001 intensity 0 plans none", () => {
@@ -178,17 +223,17 @@ describe("R2722002 a hidden card's entrance centres on the zone that flipped", (
     expect(fxCss).toContain("@keyframes fx-takeover-plunge");
 
     // A Spell's and a Trap's own cast: no shared rays, gold burst or ring; a Legendary with none keeps them.
-    expect(ownCast("classic-044")).toBe(true);
-    expect(ownCast("classic-009")).toBe(true);
-    expect(ownCast("classic-090")).toBe(false);
-    expect(ownCast("core-083")).toBe(false);
+    expect(ownCast("classic-044", "Spell")).toBe(true);
+    expect(ownCast("classic-009", "Trap")).toBe(true);
+    expect(ownCast("classic-090", "Field Spell")).toBe(false);
+    expect(ownCast("core-083", "Spell")).toBe(false);
     expect(entranceCues(entry([play("classic-044")]), env(), 400)).toEqual([]);
     expect(entranceCues(entry([fired("classic-009")]), env(), 400)).toEqual([]);
     expect(entranceCues(entry([play("core-083")]), env(), 400).some((cue) => cue.kind === "rays")).toBe(true);
     expect(entranceCues(entry([fired("core-085")]), env(), 400).some((cue) => cue.kind === "rays")).toBe(true);
     // A table that gives the Spell no signature: it takes the shared entrance again.
     const table = parseFxCardTable("test.json5", `{ "classic-044": { bespoke: "graveRise" } }`);
-    expect(ownCast("classic-044", table)).toBe(false);
+    expect(ownCast("classic-044", "Spell", table)).toBe(false);
     expect(entranceCues(entry([play("classic-044")]), env(), 400, table).some((cue) => cue.kind === "rays")).toBe(true);
   });
 });

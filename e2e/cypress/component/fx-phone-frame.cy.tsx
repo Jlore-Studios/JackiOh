@@ -7,7 +7,8 @@
 // R3332001: Felinor Fiender's signature, the first, over the gallery's board with its three Felinors.
 // R3389001: Classic's two heaviest signatures, In Too Deep's (its own abyss takeover) and BOOM! Big Max's.
 // R3338000: Ceaseless Void's fold and Dice of Doom's 67. R3344001: a hand with one face tilted under a pointer that
-// keeps moving over it, its planes parallaxing under its glare.
+// keeps moving over it, its planes parallaxing under its glare. R3400001: Goetzmann Game Design's and Bob's Plan's
+// signatures, the two heaviest of Meditative+'s and Training Grounds', their takeovers drawing full-screen art.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-phone-frame.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -268,6 +269,27 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
     });
     cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
   });
+
+  // R3400001: the group's two heaviest, its Mythic Spells with full-screen art over their takeovers.
+  for (const [defId, name, look] of [
+    ["traininggrounds-040", "Goetzmann Game Design", "napkin"],
+    ["meditativeplus-001", "Bob's Plan", "summit"],
+  ] as const) {
+    it(`R3400001 ${name}'s signature holds the phone frame budget mid-flight`, () => {
+      cy.viewport(PHONE.width, PHONE.height);
+      const entry = FX_CARD_TABLE.get(defId);
+      const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${defId} has no gallery play`);
+      const board = galleryBoardOf(defId, fullBoardView());
+      holdsBudget(`${name}'s signature`, () => {
+        mountScene(board, galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
+        cy.get(GAME).should("have.attr", "data-takeover", "mythic");
+        cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art`).should("have.attr", "data-look", look);
+        return sampleFrames();
+      });
+      cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+    });
+  }
 
   for (const [defId, name] of [
     ["classic-090", "In Too Deep"],

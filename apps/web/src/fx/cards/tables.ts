@@ -13,8 +13,10 @@
 // Legendary's or a Mythic's, which must name its first beat: a Unit's entrance, a Field Spell's entrance
 // or cast of its own, any other card's cast of its own (`{ bespoke }` or `{ setPiece }`). A token's
 // rarity here is the one it prints (B2.5), as its entrance's (game/animations.ts `EntranceResolver`).
-// R3389000: a signature's `{ bespoke }` may wear an `aura` too, a Unit's (a hooks entry's as well) a
-// `zone` one on its own unit zone, and a signature look (fx/aura/looks.ts) is a signature's alone.
+// R3400000: a `{ bespoke }` entry may wear an `aura` too, and a Unit's aura may stand on its own `tile`
+// (its unit zone, fx/aura/plan.ts); "summit", "canvas" and "napkin" join the Mythics' own takeover looks.
+// R3389000: a signature look (fx/aura/looks.ts) is a signature's alone, and "abyss" is In Too Deep's own
+// takeover look.
 
 import JSON5 from "json5";
 
@@ -67,7 +69,7 @@ export type FxAuraSpec = { look: AuraLook; palette?: FxPalette; scope: AuraScope
 export type OwnTakeoverLook = Exclude<TakeoverLook, "prismatic">;
 
 /** R3332000: every look `OwnTakeoverLook` holds; a missing one fails `typecheck`. */
-export const OWN_TAKEOVER_LOOKS: Readonly<Record<OwnTakeoverLook, true>> = { void: true, pawn: true, genie: true, ai: true, abyss: true };
+export const OWN_TAKEOVER_LOOKS: Readonly<Record<OwnTakeoverLook, true>> = { void: true, pawn: true, genie: true, ai: true, abyss: true, summit: true, canvas: true, napkin: true };
 
 function isOwnTakeoverLook(look: string): look is OwnTakeoverLook {
   return Object.prototype.hasOwnProperty.call(OWN_TAKEOVER_LOOKS, look);
@@ -115,8 +117,8 @@ function parseHook(value: unknown, hook: FxCardHook, fail: (problem: string) => 
 }
 
 /**
- * R2787000: an aura's look, palette and scope; a `zone` or `lane` one stands in a Field card's zone.
- * R3389000: a Unit's may be `zone` too, on its own unit zone, and a signature look only a signature's.
+ * R2787000: an aura's look, palette and scope; a `zone` or `lane` one stands in a Field card's zone, a
+ * `tile` one on a Unit's own unit zone (R3400000). R3389000: a signature look is a signature's alone.
  */
 function parseAura(value: unknown, type: string, signature: boolean, fail: (problem: string) => never): FxAuraSpec {
   if (!isRecord(value)) fail("aura must be { look, palette?, scope }");
@@ -127,11 +129,11 @@ function parseAura(value: unknown, type: string, signature: boolean, fail: (prob
   if (typeof look !== "string" || !isAuraLook(look)) fail(`unknown aura look "${String(look)}"`);
   if (isSignatureAuraLook(look) && !signature) fail(`aura look "${look}" is a signature's own`);
   if (typeof scope !== "string" || !isAuraScope(scope)) fail(`unknown aura scope "${String(scope)}"`);
-  if (type === "Unit") {
-    if (scope === "lane") fail("a lane aura stands in a zone; this card is a Unit, whose aura is zone, side or board");
-  } else if ((scope === "zone" || scope === "lane") && !isAuraFieldType(type)) {
+  if ((scope === "zone" || scope === "lane") && !isAuraFieldType(type)) {
     fail(`a ${scope} aura stands in a zone; this card is a ${type}, whose aura is side or board`);
   }
+  // R3400000: a tile is a Unit's own unit zone.
+  if (scope === "tile" && type !== "Unit") fail(`a tile aura stands on a Unit's own tile; this card is a ${type}`);
   const spec: FxAuraSpec = { look, scope };
   if (palette !== undefined) {
     if (typeof palette !== "string" || !isPalette(palette)) fail(`unknown palette "${String(palette)}" in aura`);
@@ -183,10 +185,11 @@ function checkSignature(frame: FxCardFrame, kind: "bespoke" | "setPiece" | "hook
   }
 }
 
-/** A `{ bespoke }` or `{ setPiece }` entry's fields: its key, the frame and `extra` (R3389000: a signature bespoke's `aura`), nothing else. */
-function onlyKeyAndFrame(value: Record<string, unknown>, kind: "bespoke" | "setPiece", fail: (problem: string) => never, extra: readonly string[] = []): void {
+/** A `{ bespoke }` or `{ setPiece }` entry's fields: its key and the frame, nothing else (R3400000: a bespoke entry's aura besides). */
+function onlyKeyAndFrame(value: Record<string, unknown>, kind: "bespoke" | "setPiece", fail: (problem: string) => never): void {
   for (const field of Object.keys(value)) {
-    if (field !== kind && !FRAME_FIELDS.includes(field) && !extra.includes(field)) fail(`a ${kind} entry holds nothing else but its frame`);
+    if (field === kind || FRAME_FIELDS.includes(field) || (kind === "bespoke" && field === "aura")) continue;
+    fail(kind === "bespoke" ? "a bespoke entry holds nothing else but its frame and its aura" : `a ${kind} entry holds nothing else but its frame`);
   }
 }
 
@@ -199,12 +202,11 @@ function parseEntry(value: unknown, card: CardFacts, fail: (problem: string) => 
   if (!isRecord(value)) fail(`must be "none: <reason>", { bespoke }, { setPiece } or hooks`);
   if (has(value, "bespoke")) {
     const key = value.bespoke;
-    // R3389000: a signature's recipe may wear an aura of its own beside it.
-    onlyKeyAndFrame(value, "bespoke", fail, value.signature === true ? ["aura"] : []);
+    onlyKeyAndFrame(value, "bespoke", fail);
     if (typeof key !== "string" || !isCardRecipeKey(key)) fail(`unknown bespoke "${String(key)}"`);
+    const aura = has(value, "aura") ? parseAura(value.aura, type, value.signature === true, fail) : undefined;
     const frame = parseFrame(value, card, fail);
     checkSignature(frame, "bespoke", type, fail);
-    const aura = has(value, "aura") ? parseAura(value.aura, type, true, fail) : undefined;
     return { kind: "bespoke", key, ...(aura === undefined ? {} : { aura }), ...frame };
   }
   if (has(value, "setPiece")) {
@@ -260,7 +262,7 @@ export function parseFxCardTable(file: string, source: string, catalog: Readonly
   return entries;
 }
 
-/** R2787000, R3389000: the standing look `entry` wears, a hooks entry's or a signature bespoke's. */
+/** R2787000, R3400000: the standing look `entry` wears, a hooks entry's or a bespoke one's. */
 export function entryAura(entry: FxCardEntry | undefined): FxAuraSpec | undefined {
   return entry?.kind === "hooks" || entry?.kind === "bespoke" ? entry.aura : undefined;
 }

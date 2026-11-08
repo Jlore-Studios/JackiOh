@@ -1,7 +1,7 @@
 // R670: Nature Titan (`classic-045`, entrance "titanBloom"): a column of light and a bloom where it lands.
 // R3389001: grown into its signature (R3389000): entrance "titanBloom", bespoke "titanLeaf" and its aura
-// "mossCreep" on its own zone. Its Tribute sinks into the soil, roots crack through its zone, a moss
-// boulder heaves up into the Titan and wildflowers burst open in a ring round its foot. Its Cry draws a
+// "mossCreep" on its own tile (R3400000). Its Tribute sinks into the soil, roots crack through its zone,
+// a moss boulder heaves up into the Titan and wildflowers burst open in a ring round its foot. Its Cry draws a
 // card on a leaf, a card back from the deck pile to its hand (the face is its owner's alone, R202), and a
 // seed of green light flies to its hero, blooming there as it heals. Standing, moss creeps over its frame.
 // Moved: the same beats when it attacks, which open no hook of its card (R2797000).

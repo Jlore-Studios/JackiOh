@@ -220,22 +220,22 @@ or board it covers wears a quiet looping look in the card's palette, a tint, a s
 an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, palette?, scope } }`.
 
 - **Looks** (`fx/aura/looks.ts`, `AURA_LOOKS`): `ember`, `frost`, `bloom`, `void`, `storm`, `holy`,
-  `toxic` and `arcane`, each a mote velocity, size and life range, a mote, tint and edge opacity, a
-  glow spread and a blend. `palette` is a flavor's look or a sub-look (`"Tech/rocket"`), the card's
-  own by default, as a motif's.
-- **Scopes**, nearest first: `zone` (the card's own backrow zone), `lane` (the lane's four zones,
-  both seats), `side` (its seat's ten zones) and `board` (all twenty). Only a Field Spell or a Field
-  Trap stands in a backrow zone, so only it may name `lane`; a Unit may name `zone` (R3389000), its own
-  unit zone while it holds it; the loader fails any other card's.
+  `toxic`, `arcane`, (R3337003) `drift` (an asteroid field's) and (R3400000) `flurry` (snow), `chalk`
+  (chalk dust) and `timber` (sawdust), the twelve each a mote velocity, size and life range, a mote, tint
+  and edge opacity, a glow spread and a blend. `palette` is a flavor's look or a sub-look
+  (`"Tech/rocket"`), the card's own by default, as a motif's.
+- **Scopes**, nearest first: `tile` (R3400000: a Unit's own unit zone), `zone` (the card's own backrow
+  zone), `lane` (the lane's four zones, both seats), `side` (its seat's ten zones) and `board` (all
+  twenty). Only a Field Spell or a Field Trap stands in a zone, so only it may name `zone` or `lane`, and
+  only a Unit may name `tile`; the loader fails any other card's.
 - **Signature looks** (R3389000, `AURA_SIGNATURE_LOOKS`): `seeingIris`, `sceptreLoop`, `graveBreeze`,
   `silkWeb`, `mossCreep`, `crownSigil`, `craterSmoke`, `cloakShimmer` and `abyssWhirl`, each one
   Classic signature's own, within `AURA_SIGNATURE_MAX_INTENSITY`; the loader fails one on any entry
   that is no signature, and `auraLookSpec` reads either kind.
 - **What wears one** (`fx/aura/plan.ts`, read off the shown view alone): every face-up Field Spell or
-  Field Trap whose entry has an aura, every face-up Unit whose entry's aura is `zone`, on its unit zone
-  (`unit-<instanceId>`, R3389000), and every modifier the view lists that a readable play added
+  Field Trap whose entry has an aura, every face-up Unit whose entry has a `tile` aura (R3400000), and every modifier the view lists that a readable play added
   (the play resolving when its `modifierChanged` came, with no trap fired inside it), on its seat's
-  side, but a Unit's zone aura, which stands with the Unit. A face-down card, the viewer's own
+  side, but a Unit's tile aura, which stands with the Unit. A face-down card, the viewer's own
   unrevealed Field Trap, a hidden Unit, a Field card standing in a unit zone and a Unit in a backrow
   zone wear none (R202). The view's modifiers carry no source (R169), so a modifier whose play left the event
   window before the layer saw it (a reload, a hand-over) wears none.
@@ -267,8 +267,10 @@ Ten Field Spells wear one as the pattern for the set passes:
 | Stinkyscape #155 Comet Crash | `ember`, zone |
 | Training Grounds #19 Extra Rations | `bloom`, zone |
 
-No modifier example is wired yet. A bespoke entry takes an aura only as a signature's (R3389000):
-Hinder's rider still cannot, and Classic's nine permanents' signatures each wear their own look.
+No modifier example is wired yet. A bespoke entry may wear an aura beside its recipe (R3400000), as
+Bob's and Tutorial Master's signatures do on their tiles, and Classic's nine permanents' signatures
+each wear their own look (R3389000); a modifier a Unit's play installs wears no tile aura, which stands
+with the Unit.
 
 ### Tile auras
 
@@ -282,8 +284,9 @@ under the card (`fx/aura/TileAura.tsx`, `tile.css`).
   (`TILE_MOTES_LEGENDARY`). Mythic gets a richer pattern chosen by its set's look (circuitry for
   Core, runes for Classic, ink for Meditative, starfield for Stinkyscape, roots for Training Grounds),
   a wider edge glow and motes (`TILE_MOTES_MYTHIC`).
-- **Signature replacement:** a card whose entry carries an `aura` (such as Feng Shui, or a signature's
-  `{ bespoke }`, R3389000) uses that standing aura in `AuraLayer` instead.
+- **Signature replacement:** a card whose entry carries an `aura` (such as Feng Shui, or R3400000 a
+  bespoke entry's, Bob's, Tutorial Master's and Classic's signatures') uses that standing aura in
+  `AuraLayer` instead.
 - **Interactions:** hover, press or tap sends a ripple, plays a bell in its hue (`auraTouch`) and
   buzzes on a phone (`Haptics.touch()`). Being picked as a target brightens the glow; damage or
   divine shield loss flickers it; Dormant, Frozen or Silenced dims it; destroyed or exiled fades
@@ -389,7 +392,7 @@ recipe is asked (a cast its play makes: Spell Tyrant's), then the card the event
 `instanceId`), found face up on the board or in a readable landing the memory holds
 (`signaturePlayOf`); and a whole pile's one entry asks the resolving play's signature recipe too
 (`planSignatureZone`), beside its wave. An entrance is told when its card lands after any hold
-(`landMs`), and a Spell's or a Trap's own cast stands in for the shared Legendary rays (`ownCast`).
+(`landMs`); a Spell's or a Trap's own cast stands in for the shared Legendary rays (`ownCast`, R3400000).
 
 ## Constraints
 
@@ -469,7 +472,7 @@ not `none` (`galleryPlayOf`, `fx/motifs/gallery.ts`), as that card's play, in on
 | aura | an `aura` alone | the card's play alone, the card standing face up in the viewer's first backrow zone, where its aura shows |
 
 A Field Spell or Field Trap of any play stands in that zone as it plays (`galleryFieldView`), so its
-aura shows too, and a Unit whose aura is `zone` stands in the unit zone its entrance lands in (R3389000). A marquee Unit whose entrance stands beside its hooks (`entrance`, R2794000) lands the
+aura shows too, and a Unit whose aura is `tile` stands in the unit zone its entrance lands in (R3400000). A marquee Unit whose entrance stands beside its hooks (`entrance`, R2794000) lands the
 same way before its play's motif, so Nature Titan's entrance plays before its Cry. "Play as a
 set piece" plays the same card as the fixture set piece (R2785000): its play's entry holds the board for
 `SET_PIECE_HOLD_MS`, scaled and capped as every set piece, until a tap, a click or Space skips it.
@@ -500,17 +503,54 @@ motifs most of them played; #3332 laid the frame (R3332000) and each set's pass 
   side shows face up streaks cat light into its zone (`FX_FELINOR_STREAK_AT`, `FX_FELINOR_STREAK_STEP`,
   at most `FX_FELINOR_STREAKS_MAX`), all landing at the slam in a ring, a gathering burst and a gold
   crown. A Felinor buried under a Stack is face down and sends nothing (R202).
+- **Meditative+ and Training Grounds** (#3400, R3400000, R3400001): every Legendary and Mythic of both,
+  each built from its concept, drawn with figures (`fx/figures.ts`: shapes in a tint over their
+  anchor's box, never a card face) and sounding its own effect (`audio/signatureCues.ts`):
+  - **M+ #1 Bob's Plan** (`bobsPlan`, takeover `summit`): Bob's ink-wash range, a red brushstroke climbing
+    to the summit flag; ink at the hold's end; a scroll and a card back for each card it adds, the
+    plan's smaller. Sound `inkSummit`.
+  - **M+ #24 Bob, Wisconsin's Strongest Soldier** (entrance `snowplowHeave`, `bobSoldier`, `flurry` on his
+    tile): a snowplow heaved and slammed, frost into the enemy's zone of his lane; frost over every enemy
+    Unit at the first freeze, a mitten for a stolen Unit, Coins from his hero, a Discovered card's sheen
+    for its owner alone, a copied card's backs fanning in. Sound `plowHeave`.
+  - **M+ #26 Scratch Pad** (`scratchPad`, takeover `canvas`): blank paper, faint peaks, a cyan cursor and
+    ink rows; pixels at the hold's end; the scaffold folding into a card back; the paper tearing as it
+    exiles itself. Sound `cursorTear`.
+  - **TG #37 Seance** (`seance`): candles ring the announced tile (the centre for a face-down card) as the
+    board dims to plum, a spirit rises; its copy drifts from there as a card back. Sound `seanceChant`.
+  - **TG #38 Tutorial Master** (entrance `chalkboardLesson`, `tutorialMaster`, `chalk` on his tile): a
+    chalkboard swings down, two raps, a chalk outline; each card his Cry or Death adds slides in as a
+    card back, the first along a chalk arrow, his outline erasing first at his Death. Sound `slateRap`.
+  - **TG #39 Call to Chaos (Training-Grounds Edition)** (`chaosDice`): two dice tumble in and stop in
+    sparks; at its roll a face lights while R436's panel names the clause, capped at
+    `FX_CHAOS_DICE_PANEL_MS`; a Call it casts rolls smaller dice. Sound `diceGong`.
+  - **TG #39.1 Training-Grounds Golem** (entrance `golemLashing`, `timber` on its tile): posts fly in from
+    the yard's four edges and lash together at the slam, then its keywords lock on (plank, shield,
+    palisade, Rush, splinter). Sound `timberLash`.
+  - **TG #40 Goetzmann Game Design** (`gameDesign`, takeover `napkin`): a napkin under lamplight, a pencil
+    sketching, card silhouettes spiralling up; pixels at the hold's end; the sketch dealt as a card back
+    in place of the hand's row. Sound `pencilArpeggio`.
+- **The frame they need** (R3400000): a bespoke entry may wear an aura; a Unit's may stand on its `tile`;
+  `summit`, `canvas` and `napkin` are takeover looks with art (`fx/takeoverArt.ts`), the same parts
+  standing still behind Reduce Motion's card; and a signature Spell's own cast (`ownCast`) draws no
+  shared rays, burst, rings or shake, its Mythic takeover ending `FX_SIGNATURE_TAKEOVER_TAIL_MS` after its
+  entry.
+- **Budget rules the recipes keep:** a Mythic Spell bursts only in its cast's entry, at most at its hold's
+  end (its 1000 ms hold, then its 400 ms cast: a burst there ends at 1900 ms, inside 1950); a Legendary
+  Spell bursts only in its cast's entry, at most 300 ms in; a Unit bursts in its entrance and at the start
+  of its first text beat; every later entry draws only figures, card backs and sheens, each ending with
+  its entry; every beat replaces its event's row; a Spell shakes at most 1, a Unit at most 0.8.
 - **Sound** (R3332002): a Legendary's or Mythic's play sting is its own intro, played whole with
   dynamic music on, its opening cut to `MUSIC_STING_S` on the effects bus otherwise; the shared
-  `entrance` sting plays only for one with no intro. R3389000: a signature lays a bed of its own
+  `entrance` sting plays only for one with no intro. R3389000: a Classic signature lays a bed of its own
   (`audio/signatureBeds.ts`, at most `SIGNATURE_BED_MAX_STEPS` existing effects) over the entry its card
   makes its entrance in.
 - **Classic** (#3389, R3389000, R3389001): every Classic Legendary and Mythic is a signature, each a
   `{ bespoke }` recipe in `fx/cards/classic/` after its concept: a Unit's entrance of its own (six new
   entrances, the three marquees' grown), then its text's beat; a Spell's or a Trap's cast of its own,
-  in place of the shared rays; a permanent's standing look of its own on its zone; In Too Deep's own
-  takeover, `abyss`, and its still. `fx/cards/classic.md` ("Signatures") lists each card's beats, what
-  moved and its verdict; `classic/signatures.test.ts` plays them, from both seats.
+  in place of the shared rays; a permanent's standing look of its own on its zone, a Unit's on its
+  tile; In Too Deep's own takeover, `abyss`, and its still. `fx/cards/classic.md` ("Signatures") lists
+  each card's beats, what moved and its verdict; `classic/signatures.test.ts` plays them, from both seats.
 
 ## Set pieces
 

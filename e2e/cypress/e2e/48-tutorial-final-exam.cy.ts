@@ -106,7 +106,7 @@ describe("48 — tutorial lesson 5, the final exam, played to a win by following
       storedProgress().then((stored) => {
         expect(stored, `localStorage["${TUTORIAL_PROGRESS_KEY}"]`).to.deep.include({ v: TUTORIAL_PROGRESS_VERSION });
         expect((stored as { completed?: unknown }).completed, "every lesson won").to.include(LESSON_ID);
-        expect((stored as { found?: unknown }).found, "the discoveries reached the Field Guide (R2205002)").to.include("quickdraw");
+        expect((stored as { found?: unknown }).found, "the discoveries reached the Field guide (R2205002)").to.include("quickdraw");
       });
 
       debugSnapshot().then((debug) => {
@@ -120,7 +120,7 @@ describe("48 — tutorial lesson 5, the final exam, played to a win by following
         });
       });
 
-      // The Field Guide: what the exam found is there with its rule.
+      // The Field guide: what the exam found is there with its rule.
       cy.visit(PRACTICE_PATH);
       cy.get(ts(FIELD_GUIDE_PATH), { timeout: TUTORIAL_BOOT_TIMEOUT }).click();
       cy.get(ts(FIELD_GUIDE)).should("be.visible");

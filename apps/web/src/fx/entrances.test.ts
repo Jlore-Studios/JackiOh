@@ -18,7 +18,7 @@ import { ENTRANCES, ENTRANCE_TRAUMA, type EntranceKey } from "./entrances.ts";
 import { createFxMemory } from "./memory.ts";
 import type { FxCardFacts, FxCue, FxPlanEnv } from "./types.ts";
 
-type CatalogEntry = { name: string; type: string; rarity: string };
+type CatalogEntry = { name: string; type: string; rarity: string; printedRarity?: string };
 const CATALOG = catalogJson as unknown as Record<string, CatalogEntry>;
 
 /** Every card with an entrance of its own, a Unit's or a Field Spell's. */
@@ -82,7 +82,8 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
       const def = CATALOG[defId];
       expect(def, defId).toBeDefined();
       expect(def?.type, defId).toBe("Unit");
-      expect(["Legendary", "Mythic"], defId).toContain(def?.rarity);
+      // A token by the rarity it prints (B2.5): R3400001's Training-Grounds Golem.
+      expect(["Legendary", "Mythic"], defId).toContain(def?.printedRarity ?? def?.rarity);
       expect(typeof ENTRANCES[key]).toBe("function");
     }
     // Each entrance is its own: no two cards share one. R3389001: every other is a Legendary or Mythic Field Spell's.
@@ -95,13 +96,20 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
 
   it("R670 a marquee summoned into a unit zone plans its own entrance in place of the rarity's rays and gold", () => {
     for (const [defId, key] of MARQUEE) {
-      const event = summoned("p1", "m1", defId);
-      const view = emptyLane("you", "units", 3);
-      const cues = planAll([event], envOf(), undefined, view);
+      const landing = summoned("p1", "m1", defId);
+      const cues = planAll([landing], envOf(), undefined, emptyLane("you", "units", 3));
       const D = ANIMATIONS.summoned.durationMs;
-      // R3389000: the planner hands an entrance the board and its landing, which BOOM! Big Max's fuse reads.
-      const landing = event.type === "summoned" ? event : undefined;
-      const expected = ENTRANCES[key]({ D, tgt: testid.zone("you", "units", 3), intensity: FX_INTENSITY_SCALE.normal, view, landing, landMs: Math.round(FX_SLAM_AT * D) });
+      // R3332001, R3400001: an entrance that reads the board and its landing (its side, its lane) is given both;
+      // R3389000: and when in the entry its card lands.
+      const view = withEvents(emptyLane("you", "units", 3), [landing]);
+      const expected = ENTRANCES[key]({
+        D,
+        tgt: testid.zone("you", "units", 3),
+        intensity: FX_INTENSITY_SCALE.normal,
+        view,
+        landing: landing.type === "summoned" ? landing : undefined,
+        landMs: Math.round(FX_SLAM_AT * D),
+      });
       expect(cues, defId).toEqual(expected);
       expect(cues.some((cue) => cue.kind === "burst" && cue.preset === "gold" && cue.spread === "area"), defId).toBe(false);
       const shakes = cues.filter((cue) => cue.kind === "shake");

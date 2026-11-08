@@ -1,4 +1,4 @@
-// The Dungeon Run page's tests' fixtures (DR14 part D, #2705): the run's numbers and content as `crates/run`
+// The Dungeon run page's tests' fixtures (DR14 part D, #2705): the run's numbers and content as `crates/run`
 // states them, a run's state, and the browser's run bindings (part C's `wasm/index.ts`) as scripted
 // stand-ins. The tests mock `../wasm/index.ts` with `wasmBindings`, so the page's own code runs on
 // answers the test controls; the run's real rules are proved in `crates/run`.

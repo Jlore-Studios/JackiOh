@@ -8,7 +8,7 @@
 //   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
 //   + entrance: "<key>"                     beside any entry but "none", or alone: a Unit's or a Field Spell's entrance (fx/entrances.ts, R3332000);
 //   + takeover: "<look>", signature: true   a Mythic's own takeover look (fx/takeover.ts); a Legendary's or Mythic's signature (R3332000).
-//   + aura beside a signature's { bespoke }  its own standing look, a Unit's `zone` one on its own unit zone (R3389000).
+//   + aura beside a { bespoke }             its own standing look, a Unit's `tile` one on its own unit zone (R3400000), a signature look a signature's alone (R3389000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
 // `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
@@ -46,7 +46,7 @@
   "classic-030": { bespoke: "recycleLoop" }, // Recycle
   "classic-031": { cry: { motif: "conjure" } }, // Cookie Guild
   "classic-032": { cast: { motif: "tether", palette: "Beast/felinor" } }, // Felinor Feelings
-  "classic-033": { bespoke: "webRedirect", entrance: "silkDrop", aura: { look: "silkWeb", scope: "zone" }, signature: true }, // Joro
+  "classic-033": { bespoke: "webRedirect", entrance: "silkDrop", aura: { look: "silkWeb", scope: "tile" }, signature: true }, // Joro
   "classic-034": { cast: { motif: "recall", palette: "Nerd/ink" } }, // Ancient Acquisition
   "classic-035": { cast: { motif: "flight" } }, // Prep
   "classic-036": { cast: { motif: "bolt" } }, // Burn
@@ -58,7 +58,7 @@
   "classic-042": { cast: { motif: "tally" }, activate: { motif: "tally" }, aura: { look: "toxic", scope: "board" } }, // Transmutable Toxins
   "classic-043": { setPiece: "vortex" }, // Plague Nuke
   "classic-044": { bespoke: "graveRise", signature: true }, // Back from the GY
-  "classic-045": { bespoke: "titanLeaf", entrance: "titanBloom", aura: { look: "mossCreep", scope: "zone" }, signature: true }, // Nature Titan
+  "classic-045": { bespoke: "titanLeaf", entrance: "titanBloom", aura: { look: "mossCreep", scope: "tile" }, signature: true }, // Nature Titan
   "classic-046": { cast: { motif: "flight" } }, // Divine Favor
   "classic-047": { trigger: { motif: "recall", palette: "Beast/felinor" } }, // Recurring Felinor
   "classic-048": { cry: { motif: "bolt" } }, // Hired Shrimp
@@ -69,7 +69,7 @@
   "classic-053": { cry: { motif: "tally" }, trigger: { motif: "flight" } }, // Plague Crawler
   "classic-054": { cast: { motif: "transmute" } }, // Rewind
   "classic-055": { cast: { motif: "bolt", palette: "Fire" } }, // Book of Wildfire
-  "classic-056": { bespoke: "tyrantCommand", entrance: "tyrantSigil", aura: { look: "crownSigil", scope: "zone" }, signature: true }, // Spell Tyrant
+  "classic-056": { bespoke: "tyrantCommand", entrance: "tyrantSigil", aura: { look: "crownSigil", scope: "tile" }, signature: true }, // Spell Tyrant
   "classic-057": { cast: { motif: "bolt" } }, // Echo
   "classic-058": { cast: { motif: "flight" }, trigger: { motif: "flight" }, aura: { look: "bloom", scope: "side" } }, // Common Resources
   "classic-059": { cry: { motif: "bolt" } }, // Plague Doctor
@@ -93,12 +93,12 @@
   "classic-077": "none: vanilla", // Anti-Magic Monkey
   "classic-078": { cast: { motif: "vanish" }, activate: { motif: "vanish" }, aura: { look: "arcane", scope: "zone" } }, // Mutate Spell
   "classic-079": { cast: { motif: "vanish" } }, // Risky Die
-  "classic-080": { bespoke: "craterLock", entrance: "bigBoom", aura: { look: "craterSmoke", palette: "Fire", scope: "zone" }, signature: true }, // BOOM! Big Max
+  "classic-080": { bespoke: "craterLock", entrance: "bigBoom", aura: { look: "craterSmoke", palette: "Fire", scope: "tile" }, signature: true }, // BOOM! Big Max
   "classic-081": { cast: { motif: "flight" }, activate: { motif: "flight" }, aura: { look: "bloom", scope: "side" } }, // The Power to Thrive
   "classic-082": { death: { motif: "flight", palette: "Beast/wool" } }, // Sheeople
   "classic-083": { cast: { motif: "lance" } }, // Flame Lance
   "classic-084": { cast: { motif: "bind", palette: "Dark/curse" }, trigger: { motif: "bind", palette: "Dark/curse" }, aura: { look: "frost", palette: "Dark/curse", scope: "board" } }, // Lockdown
-  "classic-085": { bespoke: "crownSwap", entrance: "royalCloak", aura: { look: "cloakShimmer", scope: "zone" }, signature: true }, // King Wagtoggle
+  "classic-085": { bespoke: "crownSwap", entrance: "royalCloak", aura: { look: "cloakShimmer", scope: "tile" }, signature: true }, // King Wagtoggle
   "classic-086": "none: vanilla", // Genn
   "classic-087": { cast: { motif: "negate" }, trigger: { motif: "negate" }, aura: { look: "void", scope: "zone" } }, // Plague Chalice
   "classic-088": { cast: { motif: "curse" } }, // Siphon Squad

@@ -56,7 +56,7 @@ gallery plays every entry.
 | `classic-030` | Recycle | Spell | bespoke recycleLoop | 1.19 | none: no motif reads shuffledIn | bespoke: its graveyard visibly loops into the deck, where #2793's send flies a made card from the caster's hero |
 | `classic-031` | Cookie Guild | Unit | cry conjure | 1.16 | none: no motif reads summoned | cry: no census family reads summoned, which conjure (#2786) reads |
 | `classic-032` | Felinor Feelings | Spell | cast tether Beast/felinor | 1.28 | none: vanilla | cast: its steal found no free lane in the census's games; tether draws a steal; felinor sub-look |
-| `classic-033` | Joro | Unit | signature; entrance silkDrop; bespoke webRedirect; aura silkWeb zone | 1.40 | none: vanilla | signature (#3389): nothing shows in the hand; a thread drops and it swings down into its zone, and a web snaps from the Spell's aim to it as it takes the target; a faint web in its zone |
+| `classic-033` | Joro | Unit | signature; entrance silkDrop; bespoke webRedirect; aura silkWeb tile | 1.40 | none: vanilla | signature (#3389): nothing shows in the hand; a thread drops and it swings down into its zone, and a web snaps from the Spell's aim to it as it takes the target; a faint web in its zone |
 | `classic-034` | Ancient Acquisition | Spell | cast recall Nerd/ink | 1.19 | none: no motif reads addedToHand | cast: a card back from the graveyard, which recall (R2794000) reads; #2793's send flies a made card from the hero; ink sub-look |
 | `classic-035` | Prep | Spell | cast flight | 1.00 | none: no motif reads modifierChanged | cast: its Embiggened draw, which flight (#2786) reads |
 | `classic-036` | Burn | Spell | cast bolt | 1.00 | bolt | cast: the census agrees (bolt) |
@@ -68,7 +68,7 @@ gallery plays every entry.
 | `classic-042` | Transmutable Toxins | Field Spell | cast tally; activate tally; aura toxic board | 1.28 | wipe | cast and activate: it places counters, which tally (#2786) reads; the census's wipe read the deaths they cause |
 | `classic-043` | Plague Nuke | Spell | setPiece vortex | 1.65 | wipe | kept: #2800's `vortex` set piece (R2800000), which draws its wipe as one beat |
 | `classic-044` | Back from the GY | Spell | signature; bespoke graveRise | 1.85 | rise | signature (#3389): a lantern flare over the graveyard and cracks along the row, each Unit clawing up through its zone, the Spell crumbling to ash into exile; a Spell wears no aura |
-| `classic-045` | Nature Titan | Unit | signature; entrance titanBloom; bespoke titanLeaf; aura mossCreep zone | 1.62 | bolt | signature (#3389): its `titanBloom` (R670) grown: roots crack, a moss boulder heaves up, wildflowers ring its foot; its Cry draws on a leaf and a seed heals its hero; moss creeps over its zone |
+| `classic-045` | Nature Titan | Unit | signature; entrance titanBloom; bespoke titanLeaf; aura mossCreep tile | 1.62 | bolt | signature (#3389): its `titanBloom` (R670) grown: roots crack, a moss boulder heaves up, wildflowers ring its foot; its Cry draws on a leaf and a seed heals its hero; moss creeps over its zone |
 | `classic-046` | Divine Favor | Spell | cast flight | 1.19 | bolt | cast: fatigue; it draws, which flight (#2786) reads |
 | `classic-047` | Recurring Felinor | Unit | trigger recall Beast/felinor | 1.28 | none: vanilla | trigger: from the graveyard to the hand, which recall (R2794000) reads; felinor sub-look |
 | `classic-048` | Hired Shrimp | Unit | cry bolt | 1.16 | bolt | cry: the census agrees (bolt) |
@@ -79,7 +79,7 @@ gallery plays every entry.
 | `classic-053` | Plague Crawler | Unit | cry tally; trigger flight | 1.08 | none: no motif reads promptAnswered | cry: it places counters, which tally (#2786) reads; trigger: it draws, which flight reads |
 | `classic-054` | Rewind | Spell | cast transmute | 1.08 | none: vanilla | cast: the repeated Cry plays as its own card's, which transmute draws (R2803000: mirror folded into transmute) |
 | `classic-055` | Book of Wildfire | Spell | cast bolt Fire | 1.35 | bolt | cast: the census agrees (bolt); Fire sets it apart from Book of Flame's scorch |
-| `classic-056` | Spell Tyrant | Unit | signature; entrance tyrantSigil; bespoke tyrantCommand; aura crownSigil zone | 1.85 | none: no motif reads promptAnswered | signature (#3389): its `tyrantSigil` (R670) grown: a crown-sigil slams, cracking the stone; each Spell its Cry casts rises to its crown, then burns into exile; a crown-sigil turns above it |
+| `classic-056` | Spell Tyrant | Unit | signature; entrance tyrantSigil; bespoke tyrantCommand; aura crownSigil tile | 1.85 | none: no motif reads promptAnswered | signature (#3389): its `tyrantSigil` (R670) grown: a crown-sigil slams, cracking the stone; each Spell its Cry casts rises to its crown, then burns into exile; a crown-sigil turns above it |
 | `classic-057` | Echo | Spell | cast bolt | 1.35 | bolt | cast: the census agrees (bolt) |
 | `classic-058` | Common Resources | Field Spell | cast flight; trigger flight; aura bloom side | 1.16 | none: vanilla | cast and trigger: its start-of-turn draw, which flight (#2786) reads; its play shows nothing, so its cast takes its hook's motif |
 | `classic-059` | Plague Doctor | Unit | cry bolt | 1.08 | bolt | cry: the census agrees (bolt) |
@@ -103,12 +103,12 @@ gallery plays every entry.
 | `classic-077` | Anti-Magic Monkey | Unit | none: vanilla | — | bolt | the census's bolt is one stray damage; its Aura taxes Spells, with no moment to draw |
 | `classic-078` | Mutate Spell | Field Spell | cast vanish; activate vanish; aura arcane zone | 1.19 | vanish | cast and activate: the census agrees (vanish) |
 | `classic-079` | Risky Die | Spell | cast vanish | 1.08 | vanish | cast: the census agrees (vanish) |
-| `classic-080` | BOOM! Big Max | Unit | signature; entrance bigBoom; bespoke craterLock; aura craterSmoke zone Fire | 1.85 | offering | signature (#3389): its `bigBoom` (R670) grown: a fuse along the row, the drop, the blast down its lane; its Crater cracks and clamps its zone; smoke curls from the crater |
+| `classic-080` | BOOM! Big Max | Unit | signature; entrance bigBoom; bespoke craterLock; aura craterSmoke tile Fire | 1.85 | offering | signature (#3389): its `bigBoom` (R670) grown: a fuse along the row, the drop, the blast down its lane; its Crater cracks and clamps its zone; smoke curls from the crater |
 | `classic-081` | The Power to Thrive | Field Spell | cast flight; activate flight; aura bloom side | 1.28 | bolt | cast and activate: fatigue; its Activate draws or heals, and flight (#2786) reads the draw |
 | `classic-082` | Sheeople | Unit | death flight Beast/wool | 1.08 | bolt | death: fatigue; its Death draws, which flight (#2786) reads; wool sub-look |
 | `classic-083` | Flame Lance | Spell | cast lance | 1.24 | lance | cast: the census agrees (lance) |
 | `classic-084` | Lockdown | Field Spell | cast bind Dark/curse; trigger bind Dark/curse; aura frost board Dark/curse | 1.28 | none: vanilla | cast and trigger: no census family reads locked, which bind (#2786) reads; curse sub-look |
-| `classic-085` | King Wagtoggle | Unit | signature; entrance royalCloak; bespoke crownSwap; aura cloakShimmer zone | 1.85 | none: no motif reads swapped | signature (#3389): a velvet cloak sweeps in and he tips his crown; the two decks cross under a crown, and its Radiant Recruit leaps out of its new deck; a crimson shimmer runs along its cloak |
+| `classic-085` | King Wagtoggle | Unit | signature; entrance royalCloak; bespoke crownSwap; aura cloakShimmer tile | 1.85 | none: no motif reads swapped | signature (#3389): a velvet cloak sweeps in and he tips his crown; the two decks cross under a crown, and its Radiant Recruit leaps out of its new deck; a crimson shimmer runs along its cloak |
 | `classic-086` | Genn | Unit | none: vanilla | — | none: vanilla | the census agrees: no text |
 | `classic-087` | Plague Chalice | Field Spell | cast negate; trigger negate; aura void zone | 1.55 | negate | cast and trigger: the census agrees (negate) |
 | `classic-088` | Siphon Squad | Field Trap | cast curse | 1.36 | bolt | cast: the census's bolt is noise; its Aura weakens, which curse draws |
@@ -143,9 +143,10 @@ Every Classic Legendary and Mythic has a signature of its own (R3389000, R338900
 budget by `tiers.test.ts` and played card by card by `classic/signatures.test.ts`, `/dev/fx` and
 `e2e/cypress/component/fx-signature-classic.cy.tsx`. A Unit plays an entrance of its own, then its text's
 beat; a Spell or a Trap a cast of its own, which stands in for the shared Legendary rays; a permanent
-also wears a standing aura of its own on its zone (a signature look, `fx/aura/looks.ts`). Each lays a
-sound bed of its own over its entrance's entry (`audio/signatureBeds.ts`). A beat the issue's concept
-asked for and the view's events cannot carry, or that would break its budget, moved, as the issue allows.
+also wears a standing aura of its own on its zone, a Unit's on its tile (R3400000; a signature look,
+`fx/aura/looks.ts`). Each lays a sound bed of its own over its entrance's entry
+(`audio/signatureBeds.ts`). A beat the issue's concept asked for and the view's events cannot carry, or
+that would break its budget, moved, as the issue allows.
 
 | Card | Entrance or cast | Its text's beat | On its zone | Sound | What moved | Verdict |
 |---|---|---|---|---|---|---|

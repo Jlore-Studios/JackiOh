@@ -1,6 +1,6 @@
 // R670: BOOM! Big Max (`classic-080`, entrance "bigBoom"): a fuse, then a blast where it lands.
 // R3389001: grown into its signature (R3389000): entrance "bigBoom", bespoke "craterLock" and its aura
-// "craterSmoke" on its own zone. As its three Tributes sink, a fuse burns along its row lane by lane;
+// "craterSmoke" on its own tile (R3400000). As its three Tributes sink, a fuse burns along its row lane by lane;
 // it drops from above and lands fist-first in a white-orange blast that throws dust down its lane to the
 // other side. As it lands its Crater Locks its zone (its own `locked`): the zone cracks into a smoking
 // crater and an iron clamp rings shut on it. Standing, smoke curls from the crater's rim and embers tick

@@ -13,7 +13,7 @@ import { BACKDROP_PARTICLE_MAX } from "../../game/config.ts";
 import { testid } from "../../game/contract.ts";
 import { baseView, emptySide, faceUpBackrow, unit } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
-import { entryAura, FX_CARD_TABLE, parseFxCardTable } from "../cards/tables.ts";
+import { FX_CARD_TABLE, parseFxCardTable } from "../cards/tables.ts";
 import { FX_PARTICLE_CAP_MOBILE } from "../constants.ts";
 import {
   TILE_FADE_OUT_MS,
@@ -40,6 +40,7 @@ describe("R3342000 tile aura planner", () => {
       const tier = tierOf(def);
       if (tier === null) continue;
       if (def.type !== "Unit" && def.type !== "Field Spell" && def.type !== "Field Trap" && def.type !== "Trap") continue;
+      const tableEntry = FX_CARD_TABLE.get(id);
       const isUnit = def.type === "Unit";
       const view = baseView({
         you: emptySide("p1", {
@@ -49,8 +50,8 @@ describe("R3342000 tile aura planner", () => {
       });
 
       const planned = planTileAura(view, "you", isUnit ? "units" : "backrow", 1);
-      // A card's own aura replaces the default (R3389000: a signature bespoke's too), so it plans none.
-      if (entryAura(FX_CARD_TABLE.get(id)) !== undefined) {
+      // A card whose table entry wears its own aura (R3400000: a bespoke entry's too) wears that in its place.
+      if ((tableEntry?.kind === "hooks" || tableEntry?.kind === "bespoke") && tableEntry.aura !== undefined) {
         expect(planned, id).toBeNull();
         covered += 1;
         continue;
@@ -283,6 +284,17 @@ describe("R3342000 tile aura planner", () => {
     // With signature table: plans null
     const signatureTable = parseFxCardTable("test.json5", '{ "core-052": { aura: { look: "void", scope: "side" } } }');
     expect(planTileAura(silasView, "you", "units", 1, signatureTable)).toBeNull();
+  });
+
+  it("R3400000 a signature Unit's own tile aura, on a hooks or a bespoke entry, replaces the default", () => {
+    for (const defId of ["meditativeplus-024", "traininggrounds-038", "traininggrounds-039-1"]) {
+      const view = baseView({ you: emptySide("p1", { units: [unit("p1", { defId, instanceId: "u1" })] }) });
+      expect(planTileAura(view, "you", "units", 1), defId).toBeNull();
+      expect(planTileAura(view, "you", "units", 1, new Map()), defId).not.toBeNull();
+    }
+    const bespoke = parseFxCardTable("test.json5", '{ "meditativeplus-024": { bespoke: "bobSoldier", aura: { look: "flurry", scope: "tile" } } }');
+    const bob = baseView({ you: emptySide("p1", { units: [unit("p1", { defId: "meditativeplus-024", instanceId: "u1" })] }) });
+    expect(planTileAura(bob, "you", "units", 1, bespoke)).toBeNull();
   });
 
   it("R3342000 dim for slumber, frozen, frozenForever, and vanilla statuses", () => {

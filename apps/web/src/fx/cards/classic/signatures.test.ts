@@ -111,12 +111,12 @@ describe("R3389001 Classic's signatures", () => {
       "classic-007": { kind: "bespoke", key: "sceptreLocket", entrance: "sceptrePlant", aura: { look: "sceptreLoop", scope: "zone" }, signature: true },
       "classic-009": { kind: "bespoke", key: "taxSeizure", signature: true },
       "classic-028": { kind: "bespoke", key: "secondGust", entrance: "galeBurst", aura: { look: "graveBreeze", palette: "Physical/wind", scope: "zone" }, signature: true },
-      "classic-033": { kind: "bespoke", key: "webRedirect", entrance: "silkDrop", aura: { look: "silkWeb", scope: "zone" }, signature: true },
+      "classic-033": { kind: "bespoke", key: "webRedirect", entrance: "silkDrop", aura: { look: "silkWeb", scope: "tile" }, signature: true },
       "classic-044": { kind: "bespoke", key: "graveRise", signature: true },
-      "classic-045": { kind: "bespoke", key: "titanLeaf", entrance: "titanBloom", aura: { look: "mossCreep", scope: "zone" }, signature: true },
-      "classic-056": { kind: "bespoke", key: "tyrantCommand", entrance: "tyrantSigil", aura: { look: "crownSigil", scope: "zone" }, signature: true },
-      "classic-080": { kind: "bespoke", key: "craterLock", entrance: "bigBoom", aura: { look: "craterSmoke", palette: "Fire", scope: "zone" }, signature: true },
-      "classic-085": { kind: "bespoke", key: "crownSwap", entrance: "royalCloak", aura: { look: "cloakShimmer", scope: "zone" }, signature: true },
+      "classic-045": { kind: "bespoke", key: "titanLeaf", entrance: "titanBloom", aura: { look: "mossCreep", scope: "tile" }, signature: true },
+      "classic-056": { kind: "bespoke", key: "tyrantCommand", entrance: "tyrantSigil", aura: { look: "crownSigil", scope: "tile" }, signature: true },
+      "classic-080": { kind: "bespoke", key: "craterLock", entrance: "bigBoom", aura: { look: "craterSmoke", palette: "Fire", scope: "tile" }, signature: true },
+      "classic-085": { kind: "bespoke", key: "crownSwap", entrance: "royalCloak", aura: { look: "cloakShimmer", scope: "tile" }, signature: true },
       "classic-090": { kind: "bespoke", key: "shrineDescent", entrance: "abyssSurface", aura: { look: "abyssWhirl", palette: "Dark/shadow", scope: "zone" }, takeover: "abyss", signature: true },
     });
     // The Legendaries and Mythics of Classic are exactly these.
@@ -141,14 +141,11 @@ describe("R3389001 Classic's signatures", () => {
       expect(beat.length, `${defId} beat`).toBeGreaterThan(0);
       expect(beat.some((claim) => claim.cues.length > 0), `${defId} beat`).toBe(true);
       for (const fixture of RECIPE_FIXTURES[entry.key](view, "fx-gallery-card-1", view.viewer)) expect(events, defId).toContainEqual(fixture);
-      // Its aura stands on its own zone, a Unit's in the unit zone it lands in; a Spell and a Trap wear none.
+      // Its aura stands on its own zone, a Unit's on the tile it lands in (R3400000); a Spell and a Trap wear none.
       const aura = entryAura(entry);
       const auras = planAuras(view, new Map()).filter((spec) => spec.defId === defId);
       if (aura === undefined) expect(auras, defId).toEqual([]);
-      else {
-        expect(auras.map((spec) => [spec.look, spec.scope]), defId).toEqual([[aura.look, "zone"]]);
-        expect(auras[0]?.row, defId).toBe(CATALOG[defId]?.type === "Unit" ? "units" : undefined);
-      }
+      else expect(auras.map((spec) => [spec.look, spec.scope]), defId).toEqual([[aura.look, CATALOG[defId]?.type === "Unit" ? "tile" : "zone"]]);
       // R202: no cue names the card.
       expect(JSON.stringify(planned.map((p) => p.cues)), defId).not.toMatch(NAMES_A_CARD);
     }

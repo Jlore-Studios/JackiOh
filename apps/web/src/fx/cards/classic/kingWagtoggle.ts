@@ -2,7 +2,7 @@
 // decks, each Deck pile lifts in Hustle's light, two card backs cross the board to the other pile, and a
 // gold crown of sparks lands on each with a ring and a shake. The swap's own row still plays (`keep`).
 // R3389001: grown into its signature (R3389000): entrance "royalCloak", bespoke "crownSwap" and its aura
-// "cloakShimmer" on its own zone. A velvet cloak sweeps in over its zone as it lands, and the King tips
+// "cloakShimmer" on its own tile (R3400000). A velvet cloak sweeps in over its zone as it lands, and the King tips
 // his crown to the far side, a glint over the zone across his lane. As the decks swap, the two piles bow
 // and cross under a crown ringed at the middle of the board, card backs only (R202); on the Radiant face,
 // the card it Recruits leaps from its new deck into play (a `summoned` of its own player inside its play).

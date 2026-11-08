@@ -5,6 +5,8 @@
 
 import { describe, expect, it } from "vitest";
 import { readSheet } from "../test/setup.ts";
+import { FX_FIGURES } from "./figures.ts";
+import { TAKEOVER_ART_PARTS } from "./takeoverArt.ts";
 
 /* Reading and parsing */
 
@@ -190,6 +192,7 @@ const DOM_KINDS = {
   anomalyTitle: "fx-anomaly-title-in",
   radar: "fx-radar-in",
   ship: "fx-ship-in",
+  figure: "fx-figure-in",
 } as const;
 
 const POP_GATE = normSelector('.game:has(> .fx-layer[data-fx="on"])');
@@ -321,6 +324,27 @@ describe("B40 — fx.css", () => {
         `.fx-${kind} runs for var(--fx-ms)`,
       ).toBe(true);
     }
+  });
+
+  it("R3400001 every figure and art part has a rule", () => {
+    // Each figure is drawn by its own ::before (and maybe ::after), animated by keyframes fx.css defines.
+    for (const figure of FX_FIGURES) {
+      const before = declsFor(fx, `.fx-figure[data-figure="${figure}"]::before`);
+      expect(before.size, `${figure}'s ::before`).toBeGreaterThan(0);
+      for (const [, value] of before) expect(value, figure).not.toMatch(/url\(/);
+    }
+    // R3400000: each takeover look's art parts, at rest under `.takeover-art-<part>` and the motion only under `.fx-takeover`.
+    const parts = Object.values(TAKEOVER_ART_PARTS).flat();
+    expect(parts.length).toBeGreaterThan(0);
+    for (const part of parts) expect(declsFor(fx, `.takeover-art-${part}`).size, part).toBeGreaterThan(0);
+    const still = fx.rules.filter((rule) => !isReduced(rule) && rule.selectors.some((s) => /^\.takeover-art-[\w-]+$/.test(normSelector(s))));
+    for (const rule of still) expect(rule.decls.has("animation"), rule.selectors.join(", ")).toBe(false);
+    for (const look of Object.keys(TAKEOVER_ART_PARTS)) {
+      expect(declsFor(fx, `.fx-takeover[data-look="${look}"] .fx-takeover-sweep`).get("display"), look).toBe("none");
+    }
+    // Under the mirror and the second card's size the figure scales, flipped for the other seat.
+    expect(declsFor(fx, '.fx-figure[data-side="opponent"]').get("scale")).toBe("1 -1");
+    expect(declsFor(fx, '.fx-figure[data-size="small"]').get("scale")).toBe("0.6");
   });
 
   it("B40 the splat is a clip-path starburst and the rays a repeating conic gradient", () => {

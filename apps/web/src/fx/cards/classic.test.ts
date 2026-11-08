@@ -191,8 +191,8 @@ describe("R2794000 Classic's card animations", () => {
       "classic-090": "abyssSurface",
     });
     // R670's three keep their entrances; Nature Titan's Cry is its own recipe now, its moss its own aura.
-    expect(FX_CARD_TABLE.get("classic-045")).toEqual({ kind: "bespoke", key: "titanLeaf", entrance: "titanBloom", aura: { look: "mossCreep", scope: "zone" }, signature: true });
-    expect(entryAura(FX_CARD_TABLE.get("classic-045"))).toEqual({ look: "mossCreep", scope: "zone" });
+    expect(FX_CARD_TABLE.get("classic-045")).toEqual({ kind: "bespoke", key: "titanLeaf", entrance: "titanBloom", aura: { look: "mossCreep", scope: "tile" }, signature: true });
+    expect(entryAura(FX_CARD_TABLE.get("classic-045"))).toEqual({ look: "mossCreep", scope: "tile" });
   });
 
   it("R2794000 every Classic hook names a drawn motif", () => {
