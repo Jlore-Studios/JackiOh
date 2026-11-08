@@ -16862,6 +16862,13 @@
     "3436": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-08T14:40:46Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "No line of the hard rule holds: the change is one dead path in the server crate's build.rs, one server test, a comment in run.sh and one README sentence, about 4 files, no engine rules, AI, cross-crate design or migration; the rules fingerprint it computes is verified unchanged."
+      },
       "kind": "build",
       "live": "planning",
       "owner": "claude-3",
