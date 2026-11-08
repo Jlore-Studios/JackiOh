@@ -3,9 +3,9 @@
 // zone and lets out a crimson shockwave, one ring at its zone and one rippling across both sides from the
 // board's middle. Its Cry calls the fallen back: each Cry Unit bursts from the caster's graveyard pile (a card
 // back) onto a red echo ring as its `summoned` lands, and as each one's own Cry replays its ring pulses again
-// over that Unit and over each target the replayed Cry hits, the Cry's own events drawing their rows beneath. It keys on its play and the Units' public
-// ids, never on a card's definition (R202). Moved: the shockwave pulsing from its maw on its tile is a red
-// storm of motes.
+// over that Unit and over each target the replayed Cry hits, the Cry's own events drawing their rows
+// beneath. It keys on its play and the Units' public ids, never on a card's definition (R202). Moved: the
+// shockwave pulsing from its maw on its tile is a red storm of motes.
 
 import { animTestid } from "../../../game/animations.ts";
 import { sideOf, testid } from "../../../game/contract.ts";

@@ -249,19 +249,25 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     const ids = ["006", "007", "016", "018", "026", "034", "035", "037", "039", "044", "058", "059", "060", "061", "066", "070", "071", "073", "074", "080", "085", "086", "087", "088"].map((n) => `stinkyscape-${n}`);
     const stinkyscape = gallerySignatures().find((group) => group.set === "Stinkyscape")?.cards.map((card) => card.defId) ?? [];
     expect(stinkyscape.filter((defId) => ids.includes(defId))).toEqual(ids);
-    render(<FxGallery />);
-    const select = screen.getByTestId(fxGalleryTestid.signature);
     for (const defId of ids) {
-      fireEvent.change(select, { target: { value: defId } });
-      fireEvent.click(screen.getByTestId(fxGalleryTestid.playSignature));
-      // The card plays: the board animates it.
-      expect(screen.getByTestId("game").querySelector("[data-animating]"), defId).not.toBeNull();
       // Its aura stands where its gallery play lands it: a Unit's on its tile, a Field Spell's in its zone, a Spell's nowhere.
       const auras = planAuras(galleryFieldView(defId, galleryBoardOf(defId, fullBoardView())), new Map()).filter((aura) => aura.defId === defId);
       const type = CATALOG[defId]?.type;
       if (type === "Unit") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["tile", 3]]);
       else if (type === "Field Spell") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["zone", 1]]);
       else expect(auras, defId).toEqual([]);
+    }
+    // The rendered gallery offers all 24 and plays one of each kind (fx/cards/stinkyscape/signatures.test.ts plans
+    // every one, fx-signature-stinkyscape.cy.tsx draws every one): a Mythic Unit's takeover and entrance, a Field
+    // Spell's landing, a Spell's cast and an entrance alone.
+    render(<FxGallery />);
+    const select = screen.getByTestId(fxGalleryTestid.signature);
+    const offered = [...select.querySelectorAll("option")].map((option) => option.value);
+    for (const defId of ids) expect(offered, defId).toContain(defId);
+    for (const defId of ["stinkyscape-006", "stinkyscape-007", "stinkyscape-034", "stinkyscape-073"]) {
+      fireEvent.change(select, { target: { value: defId } });
+      fireEvent.click(screen.getByTestId(fxGalleryTestid.playSignature));
+      expect(screen.getByTestId("game").querySelector("[data-animating]"), defId).not.toBeNull();
     }
   });
 
