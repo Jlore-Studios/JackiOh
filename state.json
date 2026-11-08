@@ -15194,13 +15194,6 @@
     },
     "3352": {
       "action": "plan",
-      "archived": {
-        "at": "2026-11-07T18:22:36Z",
-        "branch": "",
-        "head": "",
-        "pr": null,
-        "why": "none. One plan, one pull request, no split (see Open questions)."
-      },
       "asks": [
         "c:6712090776"
       ],
