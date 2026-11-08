@@ -17794,7 +17794,9 @@
     },
     "42485887599": {
       "at": "2026-11-08T13:46:37Z",
+      "done": true,
       "ref": "faefae8a-1794145032",
+      "status": "interrupted",
       "tries": 1
     }
   },
