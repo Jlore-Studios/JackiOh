@@ -16138,7 +16138,7 @@
       "taken_asks": []
     },
     "3419": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -16164,19 +16164,11 @@
       "failures": 0,
       "feedback_since": "2026-11-08T04:16:47Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-08T12:55:12Z",
-        "lifted": "2026-11-08T12:10:35Z",
-        "owner": "claude-8",
-        "since": "2026-11-08T10:55:12Z",
-        "until": "2026-11-08T12:10:00Z",
-        "why": "5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "interruptions": 0,
       "issue": 3345,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
@@ -16186,7 +16178,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "42458313905",
+      "run_id": "pending:72799c10-1794139967",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16207,7 +16199,7 @@
         "run": "42458313905"
       },
       "source": "ci",
-      "started_at": "2026-11-08T07:19:21Z",
+      "started_at": "2026-11-08T12:13:34Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 4,
@@ -17078,9 +17070,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T12:12:30Z",
+    "at": "2026-11-08T12:13:34Z",
     "url": "",
-    "what": "review #3432 on claude-8"
+    "what": "revise #3419 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-08T11:47:53Z",
