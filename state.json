@@ -17236,20 +17236,21 @@
         "reason": "`claude-2` stops mid-call: 5-hour usage is 90%, at or over its 90% cap; it resets at 2026-11-08T23:40:00Z",
         "trail": "stic: board back to 600 px centred, terms line 2 lines, submit bottom 380.3. Removing the diagnostic and running the full spec plus the unit tests.\n- Bash: {\"command\": \"rm /tmp/sa-auth/e2e/cypress/component/zz-diag-auth.cy.tsx && cd /tmp/sa-auth && git status --short && git diff\", \"description\": \"Delete diagnostic spec and show the diff\"}\n- tool error: Exit code 128 fatal: not a git repository (or any of the parent directories): .git\n- Bash: {\"command\": \"ls /tmp/sa-auth/e2e/cypress/component/zz* 2>&1; diff -u /home/runner/work/_temp/work/item-3439/apps/web/src/auth/tavern.css /tmp/sa-auth/apps/web/src/auth/tavern.css; diff -rq /home/runn\u2026\n- Bash: {\"command\": \"cd /tmp/sa-auth/e2e && E2E_COMPONENT_PORT=5293 E2E_ARTIFACTS=/tmp/sa-auth-artifacts pnpm exec cypress run --component --browser chrome --spec cypress/component/landing-and-code-field.cy.\u2026\n- Bash: {\"command\": \"cd /tmp/sa-auth/apps/web && timeout 900 pnpm exec vitest run src/spacing.test.ts src/auth 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | tail -25\", \"description\": \"Run spacing and auth unit tests\"\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3439/.bot-plan.md\", \"content\": \"# Draft plan #3439 (opus planner, run 4) \\u2014 work in progress\\n\\nRun 4 started 2026-11-08 ~19:00 UTC on a FRESH mac\u2026\n- Bash: {\"command\": \"sed -n 1,40p e2e/cypress/e2e/38-accessibility.cy.ts | grep -n \\\"import\\\\|from\\\" ; grep -n \\\"function practiceUrl\\\\|cy.settled();\\\\|it(\\\\\\\"/practice board\\\\|it(\\\\\\\"hotseat board\\\\|board\\\"\u2026\n- Bash: {\"command\": \"sed -n 16,32p e2e/cypress/e2e/38-accessibility.cy.ts; sed -n 55,64p e2e/cypress/e2e/38-accessibility.cy.ts; sed -n 186,212p e2e/cypress/e2e/38-accessibility.cy.ts; sed -n 276,300p e2e/cy\u2026\n- Bash: {\"command\": \"sed -n 285,305p e2e/support/commands.ts; grep -n \\\"animation:\\\" e2e/support/config.ts\", \"description\": \"Read cy.settled and the animation timeout\"}\n- Bash: {\"command\": \"cp /tmp/sa-dl-spec.orig /tmp/sa-dl/e2e/cypress/component/default-looks.cy.tsx && diff -u /home/runner/work/_temp/work/item-3439/e2e/cypress/component/default-looks.cy.tsx /tmp/sa-dl/e2e/\u2026\n- Read: {\"file_path\": \"/tmp/sa-dl-artifacts/component/screenshots/default-looks.cy.tsx/R3343002-default-looks-collection-core-052-phone.png\"}\n- Read: {\"file_path\": \"/tmp/sa-dl/apps/web/src/cards/fit.test.tsx\", \"offset\": 364, \"limit\": 6}\n- Bash: {\"command\": \"grep -n \\\"before(\\\\|beforeEach(\\\\|after(\\\\|describe(\\\" e2e/cypress/e2e/38-accessibility.cy.ts | head -20; sed -n 1,80p .github/actions/e2e-shard/action.yml | grep -n \\\"run:\\\\|preview\\\\|s\u2026\n- Bash: {\"command\": \"cd /tmp/sa-dl/apps/web/src; grep -n \\\"FIT_FLOOR_PX\\\\|FIT_MIN\\\\b\\\\|FIT_STEPS\\\" cards/constants.ts | head\", \"description\": \"Check fit constants\"}\n- Bash: {\"command\": \"uptime; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy-full.log | grep -aE \\\"Running:|passing|failing\\\" | tail -4; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/sa-me-run1.log | grep -aE \\\"Running:|passing|fail\u2026\n- Bash: {\"command\": \"cd /tmp/sa-db/e2e/cypress/component && python3 - <<'EOF'\\np='zz-diag-db.cy.tsx'\\ns=open(p).read()\\nold_variants = s[s.index(' const VARIANTS'):s.index(' for (const width')]\\ns=s.replace(\u2026\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/sa-auth-run.log | grep -E \\\"\\u2713|\\u2716|passing|failing|pending|Tests:|Passing:|Failing:|All specs|landing-and-code\\\" | head -60; ls -la /tmp/sa-auth/a\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/tmp/sa-dl/apps/web/src/cards/fit.test.tsx\", \"old_string\": \" });\\n});\\n\\ndescribe(\\\"a face the browser skips waits for it (#263)\\\", () => {\", \"new_string\": \" });\\\u2026\n- Bash: {\"command\": \"cd /tmp/sa-dl/apps/web && timeout 600 pnpm exec vitest run src/cards/fit.test.tsx src/cards/CardFace.test.tsx 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | tail -15\", \"description\": \"Run fit and \u2026\n- Bash: {\"command\": \"grep -n \\\"runs-on\\\" .github/workflows/super.yml | head -20; sed -n 318,336p .github/workflows/super.yml\", \"description\": \"Check runners and the e2e matrix in super.yml\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3439; git status --short | head; ls -la --time-style=full-iso apps/web/node_modules | head -8; ls -la --time-style=full-iso apps/web/node_modules/.mo\u2026\n- Bash: {\"command\": \"grep -n \\\"e2e-component\\\" -A30 .github/workflows/ci.yml | sed -n 1,45p\", \"description\": \"Read ci.yml's e2e-component job\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3439; ls -la apps/web/node_modules/@testing-library/ apps/web/node_modules/ | grep -- \\\"->\\\" | head -12; grep -n \\\"virtualStoreDir\\\\|^layoutVersion\\\\\u2026\n- Bash: {\"command\": \"grep -n \\\"component\\\\|shard\\\" e2e/README.md | head -30\", \"description\": \"Find the component and shard text in the e2e README\"}\n- Bash: {\"command\": \"sed -n 50,100p e2e/README.md\", \"description\": \"Read the e2e README's CI section\"}\n- Bash: {\"command\": \"ls -ld --time-style=full-iso /tmp/sa-dl /tmp/sa-dl/node_modules /tmp/sa-dl/node_modules/.pnpm /tmp/sa-dl/node_modules/.modules.yaml 2>&1; ls -la /tmp/sa-dl 2>/dev/null | grep node_module\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"typecheck\\\\\\\"\\\" apps/web/package.json; cd /tmp/sa-me/apps/web && (timeout 900 ./node_modules/.bin/tsc -p tsconfig.json --noEmit > /tmp/sa-me-tsc.log 2>&1; echo \\\"EXIT $?\\\" \u2026\n- Bash: {\"command\": \"until grep -q \\\"^EXIT\\\" /tmp/sa-me-tsc.log; do sleep 5; done; tail -5 /tmp/sa-me-tsc.log\", \"description\": \"Wait for the web typecheck\", \"timeout\": 900000}\n- Bash: {\"command\": \"cd /tmp/sa-auth/apps/web/src; grep -rln \\\"tavern.css\\\\|\\\\.css\\\\\\\")\\\" --include=*.test.ts --include=*.test.tsx . | head -20\", \"description\": \"Find unit tests that read stylesheets\"}\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/sa-me-run1.log | grep -aE \\\"Running:|passing|failing|pending|[0-9]+\\\\) |Error|EXIT|\\u2716|\\u2502 .*\\\\.cy\\\\.tsx\\\" | tail -30\", \"description\": \"Read the th\u2026\n- Bash: {\"command\": \"cd /tmp/sa-auth/apps/web/src; grep -rln \\\"tavern\\\\.css\\\\|readdirSync\\\\|\\\\*\\\\*/\\\\*\\\\.css\\\\|glob.*css\\\" --include=*.test.ts --include=*.test.tsx . | grep -v \\\"^./cards/\\\" | head -20\", \"des\u2026\n- tool error: Exit code 137\n- tool error: Exit code 137"
       },
+      "in_lane": true,
       "kind": "build",
       "live": "planning",
-      "owner": "claude-2",
-      "owner_since": "2026-11-08T18:56:28Z",
-      "owner_why": "it plans it; released from its hold: `claude-1` has no runner free where it runs",
+      "owner": "claude-1",
+      "owner_since": "2026-11-08T19:23:58Z",
+      "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
       "pending_request": false,
       "planned_at": "2026-11-08T17:51:15Z",
       "planned_by": "`claude-1` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-1",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-2",
+      "provider": "claude-1",
       "round_tier": "",
-      "run_id": "42512484642",
+      "run_id": "pending:54dc4065-1794165815",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -17268,7 +17269,7 @@
         "provider": "claude-2",
         "run": "42512484642"
       },
-      "started_at": "2026-11-08T18:56:28Z",
+      "started_at": "2026-11-08T19:23:58Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on sonnet wrote no plan: timed out after 9000s"
@@ -17429,9 +17430,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T19:23:24Z",
+    "at": "2026-11-08T19:23:58Z",
     "url": "",
-    "what": "review #3442 on claude-8"
+    "what": "plan #3439 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-08T19:09:34Z",
