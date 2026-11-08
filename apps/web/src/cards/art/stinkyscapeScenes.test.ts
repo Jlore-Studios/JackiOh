@@ -64,7 +64,7 @@ const BRIEF_PARTS: Readonly<Record<string, readonly string[]>> = {
   "stinkyscape-005": ["cockpit-frame", "cracked-mask", "light-stream"],
   "stinkyscape-006": ["skiff", "station", "vault-door", "credit-chips", "duffel", "pose-reach", "item-drill"],
   "stinkyscape-007": ["vault-door", "credit-chips", "rope", "comet", "light-grid"],
-  "stinkyscape-008": ["deck-floor", "cracker", "war-drum", "herb-sprig", "outfit-work-apron"],
+  "stinkyscape-008": ["deck-floor", "cracker", "drum", "herb-sprig", "outfit-work-apron"],
   "stinkyscape-009": ["scout", "regolith", "boot-clamp", "spotlight"],
   "stinkyscape-010": ["deck-floor", "gloved-hand", "rift", "flame-column", "hex-shield"],
   "stinkyscape-011": ["deck-floor", "lectern", "rift", "frost-shard", "missiles", "flame-column"],
@@ -83,7 +83,7 @@ const BRIEF_PARTS: Readonly<Record<string, readonly string[]>> = {
   "stinkyscape-024": ["disruptor-beacon", "gas-giant", "space-shards"],
   "stinkyscape-025": ["deck-floor", "debris", "light-grid", "pose-reach", "outfit-labcoat", "item-stylus"],
   "stinkyscape-026": ["rocket", "station", "deck-floor", "gas-giant", "pose-reach", "hair-silver", "outfit-academic", "item-chart"],
-  "stinkyscape-027": ["blank-card", "drone", "regolith", "drone-core", "debris"],
+  "stinkyscape-027": ["card", "drone", "regolith", "drone-core", "debris"],
   "stinkyscape-028": ["drone", "drone-core", "gloved-hand"],
   "stinkyscape-029": ["drone", "regolith", "drone-core"],
   "stinkyscape-030": ["drone", "antenna-mast", "drone-core"],
@@ -121,7 +121,7 @@ const BRIEF_PARTS: Readonly<Record<string, readonly string[]>> = {
   "stinkyscape-086": ["fused-hull", "debris", "smoke-trail"],
   "stinkyscape-087": ["station", "hover-platform", "light-stream", "pose-reach", "shades"],
   "stinkyscape-088": ["corridor", "item-venom-blade"],
-  "stinkyscape-089": ["market-stall", "credit-chips", "scale"],
+  "stinkyscape-089": ["market-stall", "credit-chips", "scales"],
 };
 
 function def(id: string): CardDef {

@@ -231,7 +231,7 @@ const CONJURE_ROSEMARY_TRISCUIT: SceneRecipe = {
     subject: [{ part: "herb-sprig", x: 34, y: 34, scale: 1.2 }],
     near: [
       { part: "crate", x: 76, y: 92, scale: 1.3 },
-      { part: "war-drum", x: 74, y: 78, scale: 1 },
+      { part: "drum", x: 74, y: 78, scale: 0.65 },
       { part: "cracker", x: 60, y: 32, scale: 1.3 },
     ],
     light: [
@@ -705,7 +705,7 @@ const DRONE_CORE_I: SceneRecipe = {
       { part: "drone-core", x: 46, y: 62, scale: 1.8, paint: "orange-400" },
       { part: "drone", x: 68, y: 42, scale: 1.3 },
     ],
-    near: [{ part: "blank-card", x: 34, y: 54, scale: 1.2 }],
+    near: [{ part: "card", x: 34, y: 59, scale: 1, paint: "slate-100" }],
     light: [{ part: "halo", x: 46, y: 62, scale: 1.2, paint: "orange-400" }],
   },
 };
@@ -1797,7 +1797,7 @@ const SPICE: SceneRecipe = {
     mid: [{ part: "hover-platform", x: 50, y: 82, scale: 1.8, paint: "wood-700" }],
     subject: [
       { part: "crate", x: 40, y: 78, scale: 1.6, paint: "orange-400" },
-      { part: "scale", x: 64, y: 78, scale: 1.2 },
+      { part: "scales", x: 64, y: 78, scale: 0.95, paint: "slate-400" },
       { part: "credit-chips", x: 60, y: 54, count: 2, spread: [6, 4] },
     ],
     light: [

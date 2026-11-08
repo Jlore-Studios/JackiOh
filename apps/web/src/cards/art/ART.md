@@ -427,7 +427,10 @@ Starship Pieces, the Dormant Starship (#3333) and Olivian Expanse (#3338) keep t
 `stinkyscapeScenes.test.ts` holds the pass to its table, and `e2e/cypress/component/stinkyscape-scenes.cy.tsx`
 shows it at hand size and on a contact sheet, at desktop size and at 390x844. Its further figures (a crew, a
 squad, a rival on a leash) are R3390000's `extras`, and it wears the parts that pass added where a brief names
-the same thing: the spread and seated poses, the goggles, the lectern and the shockwave.
+the same thing: the spread and seated poses, the goggles, the lectern, the shockwave, the drum, the playing card
+and the scales. A part of its own that looks like one of that pass's draws something else or turns where that
+one does not (a light stream and a smoke trail that point, a meteor, a column of flame, a computer core, credit
+chips).
 
 ## The detail floor (R3331001)
 

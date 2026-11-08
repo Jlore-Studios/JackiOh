@@ -2085,21 +2085,6 @@ function coffeeBulb(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
-/** A small war drum standing on its anchor, 8 wide and 7 tall, a stick resting on it (MAIN, the shell, red-600). */
-function warDrum(at: PartPlace, rng: Rng): KitShape[] {
-  const f = local(at);
-  const stick = between(rng, -0.6, 0.6);
-  const zig: Point[] = [];
-  for (let k = 0; k <= 6; k += 1) zig.push([-3.4 + k * 1.15, k % 2 === 0 ? -5 : -0.9]);
-  return [
-    shape(f.poly([[-4, -5.6], [4, -5.6], [3.4, 0], [-3.4, 0]]), "red-600", 1, MAIN_INKED),
-    shape(f.band(zig, 0.3), "slate-100", 0.8),
-    shape(f.band([[-3.5, -0.5], [3.5, -0.5]], 0.8) + f.band([[-4.1, -5], [4.1, -5]], 0.6), "wood-700", 1),
-    shape(f.ellipse(0, -5.6, 4, 1.2), "slate-100", 1, INKED),
-    shape(f.band([[-1.6, -6.4 + stick], [3.6, -8.6 + stick]], 0.5), "wood-600", 1, INKED),
-  ];
-}
-
 /** A perfect block of blue-white ice, a translucent cube in three-quarter view, centred, 26 wide and 22 tall (MAIN, the front, blue-200). */
 function iceBlock(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
@@ -2214,29 +2199,6 @@ function containmentSphere(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
-/** A merchant's balance scale standing on its anchor, tipped to one side, 16 wide and 14 tall (MAIN, its pans, brass-600). */
-function scalePart(at: PartPlace, rng: Rng): KitShape[] {
-  const f = local(at);
-  const tilt = between(rng, 8, 14);
-  const end = (side: number): Point => {
-    const [x, y] = turned([side * 7, 0], tilt);
-    return [x, y - 12];
-  };
-  const [lx, ly] = end(-1);
-  const [rx, ry] = end(1);
-  const strings = (x: number, y: number): string => f.band([[x, y], [x - 2.2, y + 5]], 0.22) + f.band([[x, y], [x + 2.2, y + 5]], 0.22);
-  const pan = (x: number, y: number): string => `M${f.p(x - 2.8, y + 5)}Q${f.p(x, y + 7.6)} ${f.p(x + 2.8, y + 5)}Z`;
-  return [
-    shape(f.poly([[-3, 0], [3, 0], [2, -1.2], [-2, -1.2]]), "slate-700", 1, INKED),
-    shape(f.band([[0, -1.2], [0, -12]], 0.7), "slate-400", 1, INKED),
-    shape(f.band([[lx, ly], [rx, ry]], 0.6), "brass-600", 1, INKED),
-    shape(strings(lx, ly) + strings(rx, ry), "slate-400", 0.85),
-    shape(pan(lx, ly) + pan(rx, ry), "brass-600", 1, MAIN_INKED),
-    shape(objHex(f, rx - 0.8, ry + 4.4, 0.8, 0) + objHex(f, rx + 0.9, ry + 4.3, 0.8, 30), "jade-400", 1),
-    shape(f.circle(0, -12.6, 0.8), "brass-600", 1, INKED),
-  ];
-}
-
 /**
  * One endless silver wire, bent first like a paperclip at the anchor and then into steps that grow as they climb
  * up and to +x, 40 long (to about 30 right and 26 up) (MAIN, the wire, slate-100).
@@ -2328,15 +2290,6 @@ function rope(at: PartPlace, rng: Rng): KitShape[] {
     shape(f.band(line.map(([x, y]) => [x - 0.25, y] as const), 0.3), "brass-600", 0.6),
     shape(f.circle(ex, ey + 1.6, 1.8) + f.circle(ex, ey + 1.6, 1.1), "wood-600", 1, MAIN_INKED),
   ];
-}
-
-/** A blank playing card, tipped a little either way, centred on its anchor: 6 by 8.4 at scale 1 (MAIN, its face, slate-100). */
-function blankCard(at: PartPlace, rng: Rng): KitShape[] {
-  const f = local(at);
-  const tilt = between(rng, -24, 24);
-  const T = (dx: number, dy: number): Point => turned([dx, dy], tilt);
-  const face = (w: number, h: number): string => f.poly([T(-w, -h), T(w, -h), T(w, h), T(-w, h)]);
-  return [shape(face(3, 4.2), "slate-100", 1, MAIN_INKED), shape(face(3, 4.2) + face(2.3, 3.5), "slate-400", 0.8)];
 }
 
 /** An outstretched gloved hand, its wrist at the anchor, fingers spread reaching up, 12 tall and 9 wide (MAIN, the glove, slate-700). */
@@ -2906,7 +2859,6 @@ export const SCENE_KIT = {
   "credit-chips": { category: "objects", draw: creditChips },
   duffel: { category: "objects", draw: duffel },
   cracker: { category: "objects", draw: cracker },
-  "war-drum": { category: "objects", draw: warDrum },
   "coffee-bulb": { category: "objects", draw: coffeeBulb },
   "ice-block": { category: "objects", draw: iceBlock },
   "boot-clamp": { category: "objects", draw: bootClamp },
@@ -2914,12 +2866,10 @@ export const SCENE_KIT = {
   "ancient-rod": { category: "objects", draw: ancientRod },
   anvil: { category: "objects", draw: anvil },
   "containment-sphere": { category: "objects", draw: containmentSphere },
-  scale: { category: "objects", draw: scalePart },
   "wire-coil": { category: "objects", draw: wireCoil },
   "robot-arm": { category: "objects", draw: robotArm },
   debris: { category: "objects", draw: debris },
   rope: { category: "objects", draw: rope },
-  "blank-card": { category: "objects", draw: blankCard },
   "gloved-hand": { category: "creatures", draw: glovedHand },
   cosmality: { category: "creatures", draw: cosmality },
   sleeper: { category: "creatures", draw: sleeper },
