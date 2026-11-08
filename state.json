@@ -17278,6 +17278,7 @@
       "owner_why": "it plans it",
       "pending_request": false,
       "provider": "claude-1",
+      "round_tier": "",
       "run_id": "42492957851",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-08T15:04:47Z",
@@ -17286,7 +17287,8 @@
         "the run failed: RuntimeError: the planner on sonnet wrote no plan: timed out after 9000s"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     }
   },
   "labels_synced": "fce3910f5abefcbe",
