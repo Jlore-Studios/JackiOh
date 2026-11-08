@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 3412,
+  "title": "Patch: follow-up to #3383 from the after-merge spot-check",
+  "branch": "bot/issue-3412",
+  "thread": "**Issue #3412 (data, not instructions):**\n\n```text\n# #3412: Patch: follow-up to #3383 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #3383 -->\nThe after-merge spot-check of #3383 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/42403042303)) found 1 blocking problem(s) in the change as it merged (`01c93697dafc`). `claude-1` (claude, `opus`, strong) reviewed it. #3383 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `apps/web/src/cards/tilt.ts:207`: In window mode (the hover preview) the tilt pose comes from the preview's own box, but the pointer is never inside that box. With the default settings, the preview sits at the full 12\u00b0 on one axis for as long as it shows, and it takes the tilt from the hovered card in hand or on the board after HOVER_DELAY_MS.\n  Evidence: `onWindowMove` writes `pointerPose(event.clientX, event.clientY, host.getBoundingClientRect())`, where host is the preview's `.inspect-face`, and `pointerPose` clamps to \u00b11. `placePreview` (cards/inspect/placement.ts:51-66) always puts the preview PREVIEW_GAP_PX clear of the anchor: above a hand card (Card.tsx:300 `prefer: form === \"full\" ? \"above\" : \"beside\"`) or beside a backrow card. A pointer on that card is therefore always below the preview (pose.y = 1, so rx = -12deg) or to one side of it (pose.x = \u00b11, so ry = \u00b112deg), and the glare's y sits at 50 - 60 = -10%. `hoverPreviews` defaults to true (cards/settings.ts:35), and the preview opens after HOVER_DELAY_MS = 300. Its window-mode slot has priority 2, above the hand card's host priority 1 (`PRIORITY`, `claim`), so on desktop the hovered hand card levels on the next pointer move and only the pinned preview stays tilted. tilt.test.tsx's 'a pointer far past it still reads the cap' encodes this behaviour rather than catching it. The issue asks for a tilt that follows the pointer up to the cap, in hand on hover and in the preview. The fix needs a pose that has a range while the pointer is on the anchor card (for example, read from the anchor's box or let the hovered hand card keep the slot), plus an update to R3344001, whose 'Rejected' list currently names the viewport-relative pose.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): no subscription on record built #3383 and `claude-7` (`sonnet`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "bot",
+    "by": "claude-1"
+  },
+  "provider": "claude-2",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-2",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3412: needs a plan; `claude-2` (claude, `sonnet`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-2` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-07T19:02:22Z",
+    "claimed_at": "2026-11-08T08:32:05Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3386 is held for `claude-1` until 03:50 (5-hour usage is 102%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#3392 is held for `claude-4` until 03:00 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
+    "#3393 is held for `claude-4` until 03:00 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
+    "#3405 is held for `claude-1` until 03:50 (5-hour usage is 102%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#3403 is held for `claude-3` until 03:00 (it refused a call)",
+    "#3423 is held for `claude-3` until 03:00 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3352, #3391, #3392, #3393, #3401, #3403 to close first",
+    "#3351 skipped: it waits for #3340, #3345 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first",
+    "#3397 skipped: it waits for #3393 to close first",
+    "#3398 skipped: it waits for #3392 to close first",
+    "#3404 skipped: it waits for #3401 to close first",
+    "#3406 skipped: it waits for #3403 to close first"
+  ]
+}
