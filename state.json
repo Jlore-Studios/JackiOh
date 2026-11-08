@@ -17143,7 +17143,13 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 6723738531
+      "waiting_comment": 6723738531,
+      "wip": {
+        "at": "2026-11-08T19:21:38Z",
+        "provider": "claude-2",
+        "sha": "506b1f60b8074805ae6d42b4dd64198ceb31c112",
+        "start": "79ba917c663cd0d218f8c1172fe0c4bedb21727c"
+      }
     },
     "3438": {
       "action": "review",
