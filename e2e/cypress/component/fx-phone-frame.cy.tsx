@@ -5,7 +5,8 @@
 // cinematic), the Drone Battleship's arrival (R3336000), a Mythic takeover (fewer Mythic-burst particles, a
 // softer shake, and takeover rays trimmed to the same visible disc), a board with 4 auras, and R3337003's
 // Anomaly cast (its rift, flare, title card and landing). R3332001: Felinor Fiender's signature, the first,
-// over the gallery's board with its three Felinors. R3402001: the heaviest of Core's other signatures, each a
+// over the gallery's board with its three Felinors. R3389001: Classic's two heaviest signatures, In Too Deep's
+// (its own abyss takeover) and BOOM! Big Max's. R3402001: the heaviest of Core's other signatures, each a
 // Mythic takeover with its own art (R3402000): My Pawn's and Craft a Card's, which plan the most particles of
 // the ten (its strings and its forge), and Heroic Power's, whose rotunda draws the most shapes. R3338000:
 // Ceaseless Void's fold and Dice of Doom's 67. R3344001: a hand with one face tilted under a pointer that
@@ -324,6 +325,27 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
     });
   }
+
+  for (const [defId, name] of [
+    ["classic-090", "In Too Deep"],
+    ["classic-080", "BOOM! Big Max"],
+  ] as const) {
+    it(`R3389001 ${name}'s signature holds the phone frame budget mid-flight`, () => {
+      cy.viewport(PHONE.width, PHONE.height);
+      const entry = FX_CARD_TABLE.get(defId);
+      const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${name} has no gallery play`);
+      const board = galleryBoardOf(defId, fullBoardView());
+      holdsBudget(`${name}'s signature`, () => {
+        mountScene(board, galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
+        cy.get(GAME).find("[data-animating]").should("exist");
+        cy.get(CANVAS).should("exist");
+        return sampleFrames();
+      });
+      cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+    });
+  }
+
   // R3402001: Core's two heaviest by particles, and Heroic Power's rotunda, the most shapes of its art.
   for (const [defId, name] of [
     ["core-096", "My Pawn"],

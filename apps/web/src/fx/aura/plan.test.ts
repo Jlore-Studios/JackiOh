@@ -25,7 +25,7 @@ import {
 import type { AnomalyCode } from "../../cards/anomalies.ts";
 import { FLAVOR_LOOKS, FLAVOR_SUB_LOOKS, paletteLook } from "../flavors.ts";
 import { createFxMemory } from "../memory.ts";
-import { AURA_LOOK_NAMES, AURA_LOOKS, AURA_SCOPES, type AuraLook, type AuraScope } from "./looks.ts";
+import { AURA_LOOK_NAMES, AURA_LOOKS, AURA_SCOPES, AURA_SIGNATURE_LOOKS, isSignatureAuraLook, type AuraLook, type AuraScope } from "./looks.ts";
 import {
   attributeModifiers,
   auraBudget,
@@ -101,7 +101,7 @@ function tracked(key: string, scope: AuraScope, seen: number, phase: AuraPhase =
 const keys = (auras: readonly { spec: AuraSpec }[]): string[] => auras.map((aura) => aura.spec.key);
 
 describe("R2787000 what wears an aura", () => {
-  it("R2787000 R3400000 every face-up Field Spell, Field Trap and tile-aura Unit with an aura wears it, in all twelve of its looks and all five scopes, in its own or its entry's palette", () => {
+  it("R2787000 R3400000 every face-up Field Spell, Field Trap and tile-aura Unit with an aura wears it, in all twelve looks and all five scopes, in its own or its entry's palette", () => {
     resetIds();
     const you = ["core-014", "core-046", "classic-042", "classic-075", "meditative-040"].map((defId) => field("p1", defId));
     const opponent = [field("p2", "meditativeplus-009"), field("p2", "core-018"), field("p2", "core-020"), field("p2", "stinkyscape-155")];
@@ -127,9 +127,7 @@ describe("R2787000 what wears an aura", () => {
       ["stinkyscape-155", "opponent", 4, "side", "drift"],
       ["traininggrounds-039-1", "opponent", 3, "tile", "timber"],
     ]);
-    // Every look but R3402000's three, which Core's signatures wear below.
-    const coreLooks: readonly string[] = ["mirrorball", "stadium", "pedestal"];
-    expect(new Set(planned.map((aura) => aura.look))).toEqual(new Set(AURA_LOOK_NAMES.filter((look) => !coreLooks.includes(look))));
+    expect(new Set(planned.map((aura) => aura.look))).toEqual(new Set(AURA_LOOK_NAMES));
     expect(new Set(planned.map((aura) => aura.scope))).toEqual(new Set(AURA_SCOPES));
     expect(planned[0]?.key).toBe(`field-${you[0] && !you[0].faceDown ? you[0].instanceId : ""}`);
     expect(planned[7]?.key).toBe("mod-p1-m5");
@@ -326,10 +324,10 @@ describe("R3402000 Core's signature auras", () => {
     expect(planAuras(view, new Map(), FX_CARD_TABLE).some((aura) => aura.scope === "tile")).toBe(false);
   });
 
-  it("R3402000 the three signature looks stay within a signature aura's cap", () => {
+  it("R3402000 the three are signature looks, within a signature aura's cap", () => {
     for (const name of ["mirrorball", "stadium", "pedestal"] as const) {
-      expect(AURA_LOOK_NAMES).toContain(name);
-      const look = AURA_LOOKS[name];
+      expect(isSignatureAuraLook(name), name).toBe(true);
+      const look = AURA_SIGNATURE_LOOKS[name];
       for (const value of [look.alpha, look.tint, look.edge]) expect(value, name).toBeLessThanOrEqual(AURA_SIGNATURE_MAX_INTENSITY);
     }
   });

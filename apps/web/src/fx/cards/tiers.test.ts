@@ -8,9 +8,10 @@
 // SIGNATURE_MYTHIC_MAX_MS, a takeover's hold included), a Spell's within SIGNATURE_SPELL_SHARE of it;
 // every shake stays within its type's (SIGNATURE_SPELL_MAX_TRAUMA, SIGNATURE_PERMANENT_MAX_TRAUMA), and a
 // signature's aura within AURA_SIGNATURE_MAX_INTENSITY. Each is planned over its gallery board (`galleryBoardOf`).
+// R3389000: a signature bespoke's aura is held to it too (`entryAura`), its own look's numbers (`auraLookSpec`).
 // R3402000: each action of its gallery play is timed from its own start (`actionsOf`): a Trap's firing
 // comes a turn or more after its set, a trigger at a turn's end and an Activate on a later click, so
-// each is an action of its own in a game, as the queue holds it; a `{ bespoke }` entry's aura is held too.
+// each is an action of its own in a game, as the queue holds it.
 
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -30,8 +31,8 @@ import {
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { planCardFx, planCardMotif } from "../cardFx.ts";
-import { FX_CARD_TABLE, entryAura, isSignature } from "./tables.ts";
-import { AURA_LOOKS } from "../aura/looks.ts";
+import { entryAura, FX_CARD_TABLE, isSignature } from "./tables.ts";
+import { auraLookSpec } from "../aura/looks.ts";
 import {
   AURA_SIGNATURE_MAX_INTENSITY,
   FX_HOLD_MAX_MS,
@@ -205,9 +206,10 @@ describe("R3332000 every signature keeps its loudness budget", () => {
         }
       }
       expect(drawn, `${defId}'s signature plans`).toBe(true);
+      // R3389000: a signature bespoke's aura too (R3400000), its own look among them.
       const aura = entryAura(entry);
       if (aura !== undefined) {
-        const look = AURA_LOOKS[aura.look];
+        const look = auraLookSpec(aura.look);
         for (const value of [look.alpha, look.tint, look.edge]) expect(value, `${defId} aura ${aura.look}`).toBeLessThanOrEqual(AURA_SIGNATURE_MAX_INTENSITY);
       }
     }

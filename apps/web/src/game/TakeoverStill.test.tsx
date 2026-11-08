@@ -2,8 +2,12 @@
 // (`data-takeover`, and since R2785000 its set piece's `data-set-piece` and `--set-piece-hold`); under
 // Reduce motion there is no hold, no shake and no flash, and a still card stands over the board for
 // TAKEOVER_STILL_MS instead. R3337003: a Mythic play that lays an Anomaly (Anomaly Found!) yields both to
-// the Anomaly's rift and its still title card. R3402000: a Mythic whose takeover has art of its own shows it
-// at rest there.
+// the Anomaly's rift and its still title card. R3389000: the still wears its card's own takeover look.
+// R3402000: a Mythic whose takeover has art of its own shows it at rest there.
+
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent } from "@jackioh/shared";
@@ -21,6 +25,8 @@ import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, withEvents } from "../test/fixtures.ts";
 
 const lookup = lookupFromDefs(CATALOG);
+/** The board's stylesheet, for the stills' looks. */
+const boardCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "board.css"), "utf8");
 /** #97 Zephrys, a Mythic Spell; #52 Silly Silas, a Legendary Unit. */
 const ZEPHRYS = "core-097";
 /** R3402000: #98 Heroic Power, a Mythic whose takeover has its own art; Meditative #8 Reach the Summit, a Mythic on the shared look. */
@@ -81,6 +87,27 @@ describe("R2722001 a Mythic's takeover on the board", () => {
       vi.advanceTimersByTime(TAKEOVER_STILL_MS);
     });
     expect(screen.queryByTestId("takeover-still")).toBeNull();
+  });
+
+  it("R3389000 the still wears its card's own look", () => {
+    writeSettings({ reduceMotion: true });
+    // In Too Deep, a Mythic Field Spell, lands face up in the backrow: its still wears its abyss.
+    playOut("classic-090", [{ type: "summoned", player: "p1", instanceId: "i-classic-090", defId: "classic-090", row: "backrow", lane: 1 }]);
+    const still = screen.getByTestId("takeover-still");
+    expect(still).toHaveAttribute("data-takeover-def", "classic-090");
+    expect(still).toHaveAttribute("data-takeover-look", "abyss");
+    expect(still.querySelector("[data-animating]")).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(TAKEOVER_STILL_MS);
+    });
+    cleanup();
+    // Zephrys wears its genie; the shared look is "prismatic".
+    playOut(ZEPHRYS);
+    expect(screen.getByTestId("takeover-still")).toHaveAttribute("data-takeover-look", "genie");
+    // The abyss still is drawn at rest: its rules animate nothing.
+    const rules = boardCss.split("}").filter((rule) => rule.includes('.takeover-still[data-takeover-look="abyss"]'));
+    expect(rules.length).toBeGreaterThan(0);
+    for (const rule of rules) expect(rule).not.toMatch(/animation|transition/);
   });
 
   it("R3400000 under reduced motion each Mythic with art shows it still", () => {

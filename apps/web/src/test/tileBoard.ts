@@ -4,7 +4,7 @@
 import type { PlayerView } from "@jackioh/shared";
 
 import { tierOf } from "../fx/aura/tile.ts";
-import { FX_CARD_TABLE, entryAura } from "../fx/cards/tables.ts";
+import { entryAura, FX_CARD_TABLE } from "../fx/cards/tables.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { baseView, emptySide, faceUpBackrow, unit } from "./fixtures.ts";
 
@@ -14,7 +14,7 @@ export function tileBoardView(): PlayerView {
 
   for (const [id, def] of Object.entries(CATALOG)) {
     if (tierOf(def) === null) continue;
-    // A signature aura replaces the tile's (R3342000), a `{ bespoke }` entry's too (R3402000).
+    // A card's own aura replaces its tile aura (R3400000: a bespoke entry's too).
     if (entryAura(FX_CARD_TABLE.get(id)) !== undefined) continue;
 
     if (def.type === "Unit" && eligibleUnits.length < 10) {
