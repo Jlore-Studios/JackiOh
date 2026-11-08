@@ -16613,7 +16613,7 @@
       "taken_asks": []
     },
     "3431": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cross_rounds": 1,
@@ -16633,10 +16633,12 @@
       },
       "interruptions": 0,
       "issue": 3391,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "revising",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-08T11:55:11Z",
         "from_run": "42470692633",
         "gates": [
           {
@@ -16735,7 +16737,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "42470692633",
+      "run_id": "pending:656684f9-1794138870",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16756,7 +16758,7 @@
         "run": "42470692633"
       },
       "source": "",
-      "started_at": "2026-11-08T10:15:59Z",
+      "started_at": "2026-11-08T11:55:11Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17048,9 +17050,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T11:40:17Z",
+    "at": "2026-11-08T11:55:11Z",
     "url": "",
-    "what": "review #3386 on gpt"
+    "what": "review #3431 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-08T11:33:44Z",
