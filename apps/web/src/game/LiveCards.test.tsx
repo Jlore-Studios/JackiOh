@@ -7,9 +7,10 @@
 import { CATALOG } from "@jackioh/cards";
 import { fillParams, type BackrowView, type CardDef, type GameEvent, type HeroPowerView, type PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  CARD_SETTINGS_DEFAULTS,
   CardDetail,
   INSPECT_DETAIL,
   INSPECT_FACE_BASE,
@@ -17,6 +18,7 @@ import {
   INSPECT_HOVER,
   INSPECT_PRINTED,
   closeInspect,
+  writeCardSettings,
 } from "../cards/index.ts";
 import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
@@ -36,6 +38,7 @@ afterEach(() => {
   vi.useRealTimers();
   resetFxSettingsForTests();
   __resetSettingsForTests();
+  writeCardSettings(CARD_SETTINGS_DEFAULTS);
 });
 
 function def(id: string): CardDef {
@@ -256,6 +259,12 @@ describe("R243 a hand card shows the stats it has now", () => {
 /* #98 Heroic Power */
 
 describe("R752 a Heroic Power in play prints the one power it rolled", () => {
+  // R3343001: a Mythic's Default prints full art while the Full-art cards setting is on, so the setting is off to read
+  // Heroic Power's text on its faces.
+  beforeEach(() => {
+    writeCardSettings({ ...CARD_SETTINGS_DEFAULTS, fullArt: false });
+  });
+
   it("in hand: only the rolled power, its name and its X, and the card's (0) on the gem", () => {
     renderBoard(
       baseView({ you: emptySide("p1", { hand: [card({ instanceId: "h1", defId: "core-098", cost: 0, power: "recruit" })] }) }),

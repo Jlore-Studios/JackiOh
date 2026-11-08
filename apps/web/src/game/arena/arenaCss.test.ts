@@ -61,6 +61,8 @@ describe("R3348001 arena.css and config.ts agree", () => {
 
   it("R3348001 a tall phone's field keeps a --hit-min strip above and below its lanes for the props", () => {
     const strip = CODE.match(/@media\s*\(max-width: 600px\) and \(min-height: 840px\)\s*\{\s*\.board \.field\s*\{([^}]*)\}/);
-    expect(strip?.[1]).toMatch(/padding-block:\s*calc\(var\(--hit-min\) \+ var\(--space-2\) \* 2\)/);
+    // A prop and the one inset it keeps from the field's edge (--corner-inset): it stands against the first row.
+    expect(strip?.[1]).toMatch(/padding-block:\s*calc\(var\(--hit-min\) \+ var\(--space-2\)\);/);
+    expect(CODE).toMatch(/--corner-inset:\s*var\(--space-2\)/);
   });
 });

@@ -1,6 +1,6 @@
 //! R1367000 (amends R654): a card's statistics window, and the one function every reader of public
-//! card figures calls (`windowed_card_stats`): `GET /api/stats/cards` (and so the stats page),
-//! `cargo jackioh stats report --window` and `cargo jackioh winrates`.
+//! card figures calls (`windowed_card_stats`): `GET /api/stats/cards` (and so the stats page and the
+//! win-rate snapshot a match starts with, R3049000) and `cargo jackioh stats report --window`.
 //!
 //! A card's window at a version runs from whichever came later: the start of its X (the newest major
 //! or patch), or the last micro whose plays hold the card's family. A major or a patch opens a new
@@ -340,7 +340,8 @@ struct Part {
 /// R1367000 (amends R654): every card's figures, each over its own window at `query.at`: R377's
 /// breakdowns summed over the versions and sources its window counts (`card_window`), with the
 /// games and decks of those records. Every caller of public card figures reads them here:
-/// `GET /api/stats/cards`, `cargo jackioh stats report --window` and `cargo jackioh winrates`.
+/// `GET /api/stats/cards` (and the win-rate snapshot a match starts with, R3049000) and `cargo jackioh
+/// stats report --window`.
 pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> WindowedReport {
     let collapsed = collapse_gameless(query.history, |version| totals.games(version));
     let (history, at) = resolve(&collapsed, query.at);

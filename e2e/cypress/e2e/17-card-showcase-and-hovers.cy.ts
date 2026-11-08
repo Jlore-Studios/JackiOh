@@ -3,7 +3,7 @@
 // Run it against a built client (`pnpm build:e2e`, then `vite preview`) with `--browser chrome`.
 
 import { CARD_NAMES } from "../../support/cards.ts";
-import { seedFor, timeouts } from "../../support/config.ts";
+import { CARD_SETTINGS_KEY, seedFor, timeouts } from "../../support/config.ts";
 import {
   BOARD,
   BROWSABLE,
@@ -504,7 +504,16 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
   const inHand = (defId: string): string => `[data-testid^="hand-card-"][data-def-id="${defId}"]`;
 
   it("R247 R831004 Heroic Power prints its Cry until it holds a power, Call to Chaos reads ???, and KY's Trial Discovers a set, then three numbers", () => {
-    cy.seedGame({ seed: LIVE_SEED, a: LIVE_DECK_A, b: LIVE_DECK_B });
+    // R3343001: a Mythic's Default prints full art, with no rules box, while the Full-art cards setting is on, so the
+    // setting is off to read Heroic Power's (a Mythic's) words on its hand face.
+    cy.seedGame({
+      seed: LIVE_SEED,
+      a: LIVE_DECK_A,
+      b: LIVE_DECK_B,
+      onBeforeLoad(win) {
+        win.localStorage.setItem(CARD_SETTINGS_KEY, JSON.stringify({ fullArt: false }));
+      },
+    });
     cy.jackioh().then((handle) => {
       if (handle.seat !== "p1") cy.handOver();
     });

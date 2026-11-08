@@ -4,12 +4,14 @@
 // vortex spiral with its mask retuned to the same visible arms), the Starship launch, the Drone
 // Battleship's arrival (R3336000), a Mythic takeover (fewer Mythic-burst particles, a softer shake, and takeover rays trimmed to the same
 // visible disc), and a board with 4 auras. R3332001: Felinor Fiender's signature, the first, over the
-// gallery's board with its three Felinors. R3338000: Ceaseless Void's fold and Dice of Doom's 67.
+// gallery's board with its three Felinors. R3338000: Ceaseless Void's fold and Dice of Doom's 67. R3344001: a hand with
+// one face tilted under a pointer that keeps moving over it, its planes parallaxing under its glare.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-phone-frame.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
 
 import { planAuras } from "../../../apps/web/src/fx/aura/plan.ts";
+import { planTileAuras } from "../../../apps/web/src/fx/aura/tile.ts";
 import { FX_CARD_TABLE } from "../../../apps/web/src/fx/cards/tables.ts";
 import { FX_PARTICLE_CAP_MOBILE, FX_PHONE_FRAME_BUDGET_MS } from "../../../apps/web/src/fx/constants.ts";
 import { capacityFor } from "../../../apps/web/src/fx/director.ts";
@@ -18,6 +20,7 @@ import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catal
 import Game from "../../../apps/web/src/game/Game.tsx";
 import {
   baseView,
+  card,
   dormantStarship,
   emptySide,
   faceUpBackrow,
@@ -25,6 +28,7 @@ import {
   unit,
   withEvents,
 } from "../../../apps/web/src/test/fixtures.ts";
+import { tileBoardView } from "../../../apps/web/src/test/tileBoard.ts";
 
 type PlayerView = ReturnType<typeof fullBoardView>;
 type GameEvent = Parameters<typeof withEvents>[1][number];
@@ -38,6 +42,9 @@ const GAME = '[data-testid="game"]';
 const SAMPLE_MS = 2_000;
 /** How many fresh mounts of a scene may be sampled before its budget is called broken (see `holdsBudget`). */
 const FRAME_ATTEMPTS = 3;
+/** R3344001: a pointer circles over the tilted card, one turn each CIRCLE_TURN_MS, at this share of the card's box from its middle. */
+const CIRCLE_TURN_MS = 2_500;
+const CIRCLE_REACH = 0.45;
 
 /** rAF deltas over SAMPLE_MS in the browser: what the player feels, as the director's adapt loop sees it. */
 function sampleFrames(): Cypress.Chainable<number[]> {
@@ -277,6 +284,63 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
     cy.get(GAME).should("not.have.attr", "data-set-piece");
   });
 
+  it("R3344001 a hand with one tilted face holds the phone frame budget", () => {
+    cy.viewport(PHONE.width, PHONE.height);
+    // A Mythic leads the hand, so its face has depth; the pointer circles over it for the whole sample, so the face
+    // tilts, its four planes shift and its glare moves on every frame. R3343001: a Mythic's Default is its Full art, which
+    // has depth; a Legendary's is Extended art, which keeps to one picture (R3344000), and this scene wears no picks.
+    const TILTED = "hand-card-fx-tilt";
+    const view = fullBoardView();
+    const hand = [
+      card({ instanceId: "fx-tilt", defId: "core-100", cost: 3 }),
+      card({ instanceId: "fx-hand-2", defId: "core-019", cost: 3, radiant: true }),
+      card({ instanceId: "fx-hand-3", defId: "core-055", cost: 0 }),
+      card({ instanceId: "fx-hand-4", defId: "core-077", cost: 6 }),
+    ];
+    const shown: PlayerView = { ...view, you: { ...view.you, hand } };
+    holdsBudget("A hand with one tilted face", () => {
+      mountScene(shown, shown, []);
+      cy.get(`[data-testid="${TILTED}"] .cf[data-depth="true"] .cf-plane`).should("have.length", 3);
+      let stop = (): void => undefined;
+      cy.get(`[data-testid="${TILTED}"]`).then(($card) => {
+        const element = $card[0] as HTMLElement;
+        const win = element.ownerDocument.defaultView as Window & typeof globalThis;
+        let frame = 0;
+        let running = true;
+        const circle = (time: number): void => {
+          if (!running) return;
+          const box = element.getBoundingClientRect();
+          const angle = (2 * Math.PI * time) / CIRCLE_TURN_MS;
+          element.dispatchEvent(
+            new win.PointerEvent("pointermove", {
+              bubbles: true,
+              pointerType: "mouse",
+              clientX: box.left + box.width * (0.5 + CIRCLE_REACH * Math.cos(angle)),
+              clientY: box.top + box.height * (0.5 + CIRCLE_REACH * Math.sin(angle)),
+            }),
+          );
+          frame = win.requestAnimationFrame(circle);
+        };
+        element.dispatchEvent(new win.PointerEvent("pointerenter", { pointerType: "mouse" }));
+        frame = win.requestAnimationFrame(circle);
+        stop = () => {
+          running = false;
+          win.cancelAnimationFrame(frame);
+        };
+      });
+      cy.get(`[data-testid="${TILTED}"] .cf`).should("have.attr", "data-tilt", "on");
+      return sampleFrames().then((deltas) => {
+        stop();
+        return deltas;
+      });
+    });
+    // Still tilted by the last pose until the pointer leaves, then back to level.
+    cy.get(`[data-testid="${TILTED}"]`).then(($card) => {
+      $card[0]?.dispatchEvent(new Event("pointerleave"));
+    });
+    cy.get(`[data-testid="${TILTED}"] .cf`).should("not.have.attr", "data-tilt");
+  });
+
   it("R2803000 a board with 4 auras holds the phone frame budget", () => {
     cy.viewport(PHONE.width, PHONE.height);
     const view = fullBoardView();
@@ -292,6 +356,17 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       mountScene(view, view, []);
       cy.get(`[data-aura-look]`, { timeout: 4_000 }).should("have.length.greaterThan", 0);
       cy.get(CANVAS).should("exist");
+      return sampleFrames();
+    });
+  });
+
+  it("R3342000 a full board of tile auras holds the phone frame budget", () => {
+    cy.viewport(PHONE.width, PHONE.height);
+    const view = tileBoardView();
+    expect(planTileAuras(view)).to.have.length(20);
+    holdsBudget("Twenty tile auras", () => {
+      mountScene(view, view, []);
+      cy.get(".tile-aura", { timeout: 4_000 }).should("have.length", 20);
       return sampleFrames();
     });
   });

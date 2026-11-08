@@ -602,6 +602,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
                 seats,
                 mode: None,
                 stake: None,
+                win_rates: None,
             },
         )
         .await

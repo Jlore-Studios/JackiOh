@@ -44,7 +44,9 @@ use jackioh_engine::wire::stats::{
     patch_windows, seen, sources_of, stats_field, tier_of, wilson_interval, win_rate, windowed_card_stats,
     windowed_game_figures,
 };
-use jackioh_engine::{CardCost, CardDef, CardDefs, Pilot, made_by_a_rule};
+use jackioh_engine::{
+    CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
+};
 
 use crate::api::catalog::load_patch_versions;
 use crate::api::collection::caller_profile;
@@ -893,6 +895,30 @@ async fn kept_window(
     window.history.clone_from(&shared.history);
     window.patches.clone_from(&shared.patches);
     Ok(Arc::new(window))
+}
+
+/// R3049000: the win-rate snapshot a match starts with: each card's in-deck wins and games over its
+/// own window at this build's version, the figures `/api/stats/cards` shows by default (every seat,
+/// every mode, R654's gate), read off the same kept report (`CARD_STATS_CACHE_TTL_SECONDS`). A store
+/// that cannot answer leaves the empty table, which names no card, and says so in the log.
+pub async fn win_rate_snapshot(app: &App) -> WinRateTable {
+    let history = patch_history();
+    match kept_window(
+        app,
+        &history,
+        &app.catalog.version,
+        SourceParam::Default,
+        PublicStatsPilot::Merged,
+        PublicStatsMode::All,
+    )
+    .await
+    {
+        Ok(kept) => win_rates_from_report(&kept.report),
+        Err(error) => {
+            tracing::warn!(event = "stats.win_rates.unavailable", message = %error.message);
+            WinRateTable::default()
+        }
+    }
 }
 
 /// R978000, R654: computes patch report for requested filters and optional drill-downs.
