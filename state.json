@@ -35742,6 +35742,9 @@
     "readings": [
       "2026-11-08T17:19:00Z,claude-8,ping,before,42504072872,85,2026-11-08T18:10:00Z,,,allowed,100,,",
       "2026-11-08T18:08:31Z,claude-8,refusal,call,42504072872,101,2026-11-08T18:10:00Z,,,rejected,100,,2026-11-08T18:10:00Z"
+    ],
+    "runs": [
+      "2026-11-08T18:08:31Z,42504072872,claude-8,sonnet,review,3419,medium,interrupted,refusal,0,0,0,0,,85,101,,,133.1,claude-8,none,,1"
     ]
   },
   "version": 1
