@@ -18492,10 +18492,12 @@
     "what": "build #3407 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-08T07:41:17Z",
+    "at": "2026-11-08T07:52:15Z",
     "notes": [
+      "#3386 is held for `claude-1` until 03:50 (5-hour usage is 102%, too close to its 100% cap to start a long run (it starts under 95%))",
       "#3392 is held for `claude-4` until 03:00 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
       "#3393 is held for `claude-4` until 03:00 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
+      "#3405 is held for `claude-1` until 03:50 (5-hour usage is 102%, too close to its 100% cap to start a long run (it starts under 95%))",
       "#3407 is held for `claude-8` until 02:10 (it refused a call)",
       "#3403 is held for `claude-3` until 03:00 (it refused a call)",
       "#3423 is held for `claude-3` until 03:00 (it refused a call)"
@@ -19204,7 +19206,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-08T07:41:17Z",
+  "loop_tick": "2026-11-08T07:52:15Z",
   "machine_disk": {
     "issue": null,
     "reading": {
