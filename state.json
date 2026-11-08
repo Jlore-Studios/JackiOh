@@ -17094,12 +17094,13 @@
     "what": "build #3405 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-08T17:22:46Z",
+    "at": "2026-11-08T17:29:25Z",
     "notes": [
       "#3437 is held for `claude-7` until 12:00 (5-hour usage is 70%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
       "#3401 is held for `claude-3` until 13:10 (it refused a call)",
       "#3423 is held for `claude-3` until 13:10 (it refused a call)",
-      "#3436 is held for `claude-3` until 13:10 (it refused a call)"
+      "#3436 is held for `claude-3` until 13:10 (it refused a call)",
+      "delivered build #3405 on claude-8 (run 42504123408): interrupted"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17805,7 +17806,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-08T17:22:46Z",
+  "loop_tick": "2026-11-08T17:29:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
