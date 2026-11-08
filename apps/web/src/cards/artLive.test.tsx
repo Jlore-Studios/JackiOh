@@ -9,12 +9,15 @@ import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import type { UnitView } from "@jackioh/shared";
+import type { BackrowView, PlayerView, Row, UnitView } from "@jackioh/shared";
 
 import { setFxSettings, resetFxSettingsForTests } from "../fx/settings.ts";
+import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
+import type { Side } from "../game/contract.ts";
+import Zone from "../game/Zone.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { readSheet, resetVisibility, setReducedMotion, setVisibility } from "../test/setup.ts";
-import { unit } from "../test/fixtures.ts";
+import { baseView, emptySide, faceUpBackrow, unit } from "../test/fixtures.ts";
 import { THEME_PALETTES, type ArtThemeId } from "./art/themes.ts";
 import { PARTICLE_COUNT } from "./art/motion.ts";
 import { CardFace } from "./CardFace.tsx";
@@ -36,6 +39,12 @@ const COMMON = "core-002";
 const GARY = "core-004";
 const DORMANT_STARSHIP = "stinkyscape-t-dormant-starship";
 const STARSHIP_PIECE = "stinkyscape-058";
+const LOOKUP = lookupFromDefs(CATALOG);
+const LANE_SLOTS: readonly { side: Side; lane: number }[] = [
+  ...Array.from({ length: 5 }, (_unused, index) => ({ side: "you" as const, lane: index + 1 })),
+  { side: "opponent", lane: 1 },
+  { side: "opponent", lane: 2 },
+];
 
 function defOf(id: string) {
   const def = CATALOG[id];
@@ -80,6 +89,36 @@ function Board({ specs }: { specs: readonly Spec[] }): ReactElement {
         <Minion key={index} {...spec} />
       ))}
     </FullArtOwned>
+  );
+}
+
+/** Seven occupied real board lanes, oldest first: enough equal-rank faces to leave the first without a slot. */
+function LaneBoard({ row, ids, defId }: { row: Row; ids: readonly string[]; defId: string }): ReactElement {
+  const pad = <T,>(occupants: T[]): (T | null)[] => [...occupants, ...Array.from({ length: 5 - occupants.length }, () => null)];
+  let view: PlayerView;
+  if (row === "units") {
+    const occupants = (owner: "p1" | "p2", instanceIds: readonly string[]): (UnitView | null)[] =>
+      pad(instanceIds.map((instanceId) => unit(owner, { instanceId, defId })));
+    view = baseView({
+      you: emptySide("p1", { units: occupants("p1", ids.slice(0, 5)) }),
+      opponent: emptySide("p2", { hand: { count: 0 }, units: occupants("p2", ids.slice(5)) }),
+    });
+  } else {
+    const occupants = (owner: "p1" | "p2", instanceIds: readonly string[]): BackrowView[] =>
+      pad(instanceIds.map((instanceId) => faceUpBackrow(owner, { instanceId, defId, type: defOf(defId).type })));
+    view = baseView({
+      you: emptySide("p1", { backrow: occupants("p1", ids.slice(0, 5)) }),
+      opponent: emptySide("p2", { hand: { count: 0 }, backrow: occupants("p2", ids.slice(5)) }),
+    });
+  }
+  return (
+    <CatalogContext.Provider value={LOOKUP}>
+      <FullArtOwned owned="every">
+        {LANE_SLOTS.map(({ side, lane }) => (
+          <Zone key={`${side}-${row}-${String(lane)}`} view={view} side={side} row={row} lane={lane} />
+        ))}
+      </FullArtOwned>
+    </CatalogContext.Provider>
   );
 }
 
@@ -294,6 +333,36 @@ describe("R3340000 the slots go by rank, in one budget the hand shares", () => {
       rerender(<Board specs={Array.from({ length: MAX }, () => ({ id: GARY }))} />);
     });
     expect(motions(container)).toEqual(Array<string>(MAX).fill("animated"));
+  });
+
+  it("R3340000 a same-lane unit or backrow replacement is the newest face instead of inheriting the departed face's age", () => {
+    const ids = Array.from({ length: MAX + 1 }, (_unused, index) => `old-${String(index)}`);
+    const mythicSpell = Object.values(CATALOG).find((def) => def.rarity === "Mythic" && def.type === "Spell" && !def.token);
+    if (mythicSpell === undefined) throw new Error("no Mythic Spell");
+    for (const [row, defId] of [
+      ["units", MYTHICS[0]],
+      ["backrow", mythicSpell.id],
+    ] as const) {
+      const { container, rerender } = render(<LaneBoard row={row} ids={ids} defId={defId} />);
+      const laneMotions = (): (string | null)[] =>
+        [...container.querySelectorAll<HTMLElement>(".cf")].map((face) => face.getAttribute("data-art-motion"));
+      expect(laneMotions(), `${row}: the oldest face initially holds still`).toEqual([
+        "static",
+        ...Array<string>(MAX).fill("animated"),
+      ]);
+
+      act(() => {
+        rerender(<LaneBoard row={row} ids={["replacement", ...ids.slice(1)]} defId={defId} />);
+      });
+      expect(laneMotions(), `${row}: the replacement entered last`).toEqual([
+        "animated",
+        "static",
+        ...Array<string>(MAX - 1).fill("animated"),
+      ]);
+      expect(container.querySelector(`[data-testid="card-replacement"]`), `${row}: the replacement is rendered`).not.toBeNull();
+      cleanup();
+      resetCosmeticsForTests();
+    }
   });
 });
 
@@ -617,6 +686,10 @@ describe("R3340000 the stylesheet", () => {
     }
     expect(css).toContain("--art-aim-x");
     expect(css).toContain("--fx-lunge-x");
+    expect(css, "the sheet uses relative lengths and the shared lunge distance, never a raw px or rem length").not.toMatch(
+      /(?<![\w.])\d*\.?\d+(?:px|rem)\b/u,
+    );
+    expect(css).toContain("var(--lunge-distance)");
     const gate = css.indexOf("@media (prefers-reduced-motion: no-preference)");
     for (const mark of [".cf-art-cracks path", ".cf-art-glow {", ".cf-art-frost {"]) {
       const at = css.indexOf(mark);
