@@ -48,8 +48,15 @@ const EXPECTED_IDS = [
   "playImpact", "trapSnap",
   // R3342000: the tile aura bell.
   "auraTouch",
+  "starshipDock", "starshipIgnite", "starshipRoar", "starshipBeam", "starshipRepeater", "starshipCannon",
+  "starshipFlak", "starshipLauncher", "starshipRam", "starshipWreck",
   // R3400001: Meditative+'s and Training Grounds' signatures.
   "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
+  // R3405001: Meditative's signatures.
+  "bowlBreath", "peakFlute", "ticketHorn", "forgeQuench", "brushGuzheng", "wellGush", "minePick", "jadeZither",
+  "windChime", "marketGong", "chalkHush", "porcelainRoar", "bronzeGulp", "modemGuqin", "serverChoir", "dialupStutter",
+  "holoBow", "synthPops", "skullMutter", "keyJangle", "caneCrack", "caneThunder", "rootCreak", "chalkGasp",
+  "frostPages", "coinCheer", "totemDrums", "templeDie", "golemStomp", "klaxonSlam", "cellSlam", "hangarRev",
 ] as const;
 
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
@@ -158,6 +165,18 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   trapSnap: 200,
   // R3342000: the tile aura bell.
   auraTouch: 200,
+  // R3334000–R3334003: the Starship's moments.
+  starshipDock: 450,
+  starshipIgnite: 700,
+  starshipRoar: 1200,
+  starshipBeam: 400,
+  starshipRepeater: 350,
+  starshipCannon: 600,
+  starshipFlak: 500,
+  starshipLauncher: 450,
+  starshipRam: 500,
+  starshipWreck: 1100,
+  // R3400001.
   inkSummit: 1100,
   plowHeave: 1300,
   cursorTear: 1400,
@@ -166,6 +185,39 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   diceGong: 1600,
   timberLash: 1200,
   pencilArpeggio: 1400,
+  // R3405001.
+  bowlBreath: 1500,
+  peakFlute: 1500,
+  ticketHorn: 1300,
+  forgeQuench: 1500,
+  brushGuzheng: 1500,
+  wellGush: 1400,
+  minePick: 1500,
+  jadeZither: 1500,
+  windChime: 1600,
+  marketGong: 1500,
+  chalkHush: 1500,
+  porcelainRoar: 1600,
+  bronzeGulp: 1500,
+  modemGuqin: 1400,
+  serverChoir: 1600,
+  dialupStutter: 1200,
+  holoBow: 1300,
+  synthPops: 1200,
+  skullMutter: 1400,
+  keyJangle: 1400,
+  caneCrack: 1100,
+  caneThunder: 1600,
+  rootCreak: 1500,
+  chalkGasp: 1300,
+  frostPages: 1500,
+  coinCheer: 1400,
+  totemDrums: 1400,
+  templeDie: 1400,
+  golemStomp: 1500,
+  klaxonSlam: 1600,
+  cellSlam: 1500,
+  hangarRev: 1600,
 };
 
 /** B14 parameter sets used here too. */
@@ -403,6 +455,15 @@ const ROUTINE: readonly Cue[] = [
   ),
   // R3400001: the signatures, each a card's own moment at a routine level.
   ...(["inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio"] as const).map((id): Cue => ({ id, params: {} })),
+  // R3405001: Meditative's signatures, at the same level.
+  ...(
+    [
+      "bowlBreath", "peakFlute", "ticketHorn", "forgeQuench", "brushGuzheng", "wellGush", "minePick", "jadeZither",
+      "windChime", "marketGong", "chalkHush", "porcelainRoar", "bronzeGulp", "modemGuqin", "serverChoir", "dialupStutter",
+      "holoBow", "synthPops", "skullMutter", "keyJangle", "caneCrack", "caneThunder", "rootCreak", "chalkGasp",
+      "frostPages", "coinCheer", "totemDrums", "templeDie", "golemStomp", "klaxonSlam", "cellSlam", "hangarRev",
+    ] as const
+  ).map((id): Cue => ({ id, params: {} })),
 ];
 const ROUTINE_BAND = [-12, -4] as const;
 const UI_BANDS: Readonly<Record<"uiClick" | "uiHover", readonly [number, number]>> = { uiClick: [-15, -9], uiHover: [-22, -15] };

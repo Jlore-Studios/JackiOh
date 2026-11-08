@@ -5,12 +5,13 @@
 // a card back from where he stands into each backrow zone a Trap is set in: a set is a face-down summon
 // whose face this seat never sees, so it is drawn at its zone and named nowhere (R202). Then, at the first
 // card it destroys (on the Radiant face, exiles), a chalk shockwave rolls out from him, and every other CN
-// or KY permanent the board shows crumbles in chalk; a face-down one the viewer cannot read crumbles unseen.
-// It keys on his play and what that play has seen (`seen`), never on a card's definition (R202).
+// or KY permanent the board shows crumbles in chalk; one it does not show (a face-down card, which no view
+// places) keeps its own row, at its owner's pile. It keys on his play and what that play has seen (`seen`),
+// never on a card's definition (R202).
 
 import type { GameEvent } from "@jackioh/shared";
 
-import { locateInstance } from "../../../game/animations.ts";
+import { HIDDEN_ID, locateInstance } from "../../../game/animations.ts";
 import { sideOf, testid } from "../../../game/contract.ts";
 import { frac, raysCue, ringCue, shakeCues, tid, tunedBurst } from "../../build.ts";
 import { FX_CRACK_TAIL_MS, FX_SLAM_AT } from "../../constants.ts";
@@ -46,8 +47,6 @@ const REMOVALS: readonly GameEvent["type"][] = ["destroyed", "exiled"];
 
 /** The backrow lane the gallery's Cry sets its Trap in. */
 const FIXTURE_TRAP_LANE = 3;
-
-const HIDDEN_ID = "hidden";
 
 export const maskSplit: Entrance = ({ D, tgt, intensity: i, view, landing, leadMs }) => {
   const look = paletteLook(PRIME_PALETTE) ?? FLAVOR_LOOKS.Nerd;
@@ -89,11 +88,11 @@ export const breakerPrime: CardRecipe = (event, p, play) => {
     const from = standingAt(p, play);
     cues.push(figureCue("chalkWave", from, figureTint(look), 0, p.D + TIMING.waveTailMs, { side: sideOf(p.view, play.player) }), ringCue(p.D, look.particle, from, 0));
   }
+  // R202: a card no view places (face down, or hidden) keeps its row, which draws it at its owner's pile.
   const card = event.instanceId === HIDDEN_ID ? null : locateInstance(p.view, event.instanceId);
-  if (card !== null) {
-    const at = tid(card);
-    cues.push({ ...tunedBurst(i, look.particle, at, "area", 0, TUNING.crumble), colors: look.colors }, { kind: "crack", at, delayMs: 0, durationMs: p.D + FX_CRACK_TAIL_MS });
-  }
+  if (card === null) return { cues, row: "keep" };
+  const at = tid(card);
+  cues.push({ ...tunedBurst(i, look.particle, at, "area", 0, TUNING.crumble), colors: look.colors }, { kind: "crack", at, delayMs: 0, durationMs: p.D + FX_CRACK_TAIL_MS });
   return { cues, row: "replace" };
 };
 

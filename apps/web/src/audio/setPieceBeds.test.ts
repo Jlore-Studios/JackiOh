@@ -10,8 +10,8 @@ import { describe, expect, it } from "vitest";
 
 import { SET_PIECE_KEYS, hasSetPiece, wipeClaim, type SetPieceKey } from "../fx/setPieces.ts";
 import type { FxBigMoments } from "../fx/settings.ts";
-import { FX_STARSHIP_COUNT_AT, FX_STARSHIP_IGNITE_AT, FX_STARSHIP_LAND_AT } from "../fx/constants.ts";
-import { starshipClaim } from "../fx/starship.ts";
+import { FX_STARSHIP_LAND_AT } from "../fx/constants.ts";
+import { STARSHIP_CINEMATIC, starshipClaim, starshipFuseLandMs } from "../fx/starship.ts";
 import {
   ANIMATIONS,
   STARSHIP_LAUNCH_HOLD_MS,
@@ -26,7 +26,7 @@ import { lookupFromDefs } from "../game/catalog.ts";
 import { createPlayTracker } from "../game/runs.ts";
 import { baseView, dormantStarship, emptySide, fullBoardView, unit, withEvents } from "../test/fixtures.ts";
 import { createSoundDirector } from "./director.ts";
-import { SET_PIECE_BEDS, STARSHIP_BEEP_AMOUNT, STARSHIP_LAUNCH_BED, setPieceBed } from "./setPieceBeds.ts";
+import { SET_PIECE_BEDS, STARSHIP_LAUNCH_BED, setPieceBed } from "./setPieceBeds.ts";
 import { SFX_IDS } from "./sfx.ts";
 import type { CardHook, PlayableLineKind, SfxId, SoundSink } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
@@ -179,20 +179,23 @@ describe("R2801000 a Starship launch's sound bed", () => {
 
   const LAUNCH: GameEvent[] = [{ type: "starshipLaunched", player: "p1", instanceId: "ship", defId: HULL, name: "Ember of Departure", pieces: PIECES }];
 
-  it("R2801000 the launch's bed: three ticks, burn, landing after the hold; its own entrance at the hold's end", () => {
+  it("R3334001 bed: ignition, roar, landing", () => {
     const holdMs = STARSHIP_LAUNCH_HOLD_MS;
     const motionMs = ANIMATIONS.starshipLaunched.durationMs;
     const bed = setPieceBed({ setPiece: { key: STARSHIP_SET_PIECE, holdMs }, durationMs: holdMs + motionMs });
+    // The engines ignite as the cinematic lights them, the roar as the ship climbs out, and, after the
+    // hold, the landing's heavy thud.
     expect(bed).toEqual([
-      ...FX_STARSHIP_COUNT_AT.map((at, k) => ({ kind: "sfx", id: "clockTick", params: { amount: STARSHIP_BEEP_AMOUNT + k }, delayMs: Math.round(at * holdMs) })),
-      { kind: "sfx", id: "burn", delayMs: Math.round(FX_STARSHIP_IGNITE_AT * holdMs) },
+      { kind: "sfx", id: "starshipIgnite", delayMs: Math.round(STARSHIP_CINEMATIC.enginesFrom * holdMs) },
+      { kind: "sfx", id: "starshipRoar", delayMs: Math.round(STARSHIP_CINEMATIC.climbAt * holdMs) },
       { kind: "sfx", id: "summon", params: { slamTier: "huge" }, delayMs: Math.round(holdMs + FX_STARSHIP_LAND_AT * motionMs) },
     ]);
     for (const step of STARSHIP_LAUNCH_BED) expect(SFX_IDS).toContain(step.id);
-    // Each beep is higher than the one before.
-    const beeps = STARSHIP_LAUNCH_BED.flatMap((step) => (step.id === "clockTick" ? [step.params?.amount ?? 0] : []));
-    expect(beeps).toEqual([...beeps].sort((a, b) => a - b));
-    expect(new Set(beeps).size).toBe(FX_STARSHIP_COUNT_AT.length);
+    // The countdown is gone, and with it its ticks; the ignition and the roar sound inside the hold.
+    expect(STARSHIP_LAUNCH_BED.map((step) => step.id)).not.toContain("clockTick");
+    const held = STARSHIP_LAUNCH_BED.filter((step) => step.after !== true).map((step) => step.at);
+    expect(held).toEqual([...held].sort((a, b) => a - b));
+    for (const at of held) expect(at).toBeLessThanOrEqual(1);
 
     // On the board: the bed as the held launch starts, then its own roar (`entrance`) as the hold ends.
     const { entry, sent } = voiceStarship(LAUNCH);
@@ -207,16 +210,21 @@ describe("R2801000 a Starship launch's sound bed", () => {
     expect(off.sent).toEqual([{ kind: "sfx", id: "entrance", delayMs: 0 }]);
   });
 
-  it("R2801000 a fuse run sounds once", () => {
+  it("R2801000 R3334000 a fuse run sounds its rows once and docks each piece", () => {
     const fusion = (piece: string, pieces: number): GameEvent[] => [
       { type: "fused", instanceIds: ["ship", `${piece}-copy`], resultInstanceId: "ship", defId: HULL },
       { type: "starshipFused", player: "p1", instanceId: "ship", pieceId: piece, defId: PIECES[0] ?? HULL, pieces },
     ];
     const { entry, sent } = voiceStarship([...fusion("a", 3), ...fusion("b", 4), ...fusion("c", 5)]);
     expect(entry.fuse?.pieces).toHaveLength(3);
-    const sfx = sent.flatMap((s) => (s.kind === "sfx" ? [s.id] : []));
+    // Each piece docks with a clank of its own as it lands (starshipSounds.ts) ...
+    const docks = sent.filter((s) => s.kind === "sfx" && s.id === "starshipDock");
+    expect(docks.map((s) => s.delayMs)).toEqual([0, 1, 2].map((k) => starshipFuseLandMs(k, 3, entry.durationMs)));
+    // ... and the run's rows sound once, condensed: one of each, the starshipFused row's buff among them.
+    const sfx = sent.flatMap((s) => (s.kind === "sfx" && s.id !== "starshipDock" ? [s.id] : []));
     expect(sfx.length).toBeGreaterThan(0);
     expect(new Set(sfx).size).toBe(sfx.length);
+    expect(sfx).toContain("buff");
   });
 });
 

@@ -190,6 +190,10 @@ describe("R3331000 the scene kits", () => {
         painted.add(scene.figure.look.skin);
         painted.add(scene.figure.look.cloth);
       }
+      for (const extra of scene.extras ?? []) {
+        painted.add(extra.look.skin);
+        painted.add(extra.look.cloth);
+      }
     }
     for (const name of painted) expect(inRadiantGold(SCENE_PALETTE[name]), name).toBe(false);
     // And what each proof card's base face prints: every fill and stroke, its sky and its glow.
@@ -229,7 +233,8 @@ describe("R3331000 the scene kits", () => {
 describe("R3331000 the five proof cards", () => {
   it("R3331000 the five proof cards draw their scenes, base and Radiant, with one geometry", () => {
     expect(SCENE_BOX).toBe(ART_BOX);
-    expect(Object.keys(SCENE_RECIPES).sort()).toEqual([...PROOFS].sort());
+    // The proofs and every Classic+ entry (R3390000, classicPlusScenes.test.ts).
+    expect(Object.keys(SCENE_RECIPES).filter((id) => !id.startsWith("classicplus-")).sort()).toEqual([...PROOFS].sort());
     for (const id of PROOFS) {
       const card = def(id);
       const shapes = composeScene(recipe(id), id);
@@ -320,7 +325,7 @@ describe("R3331000 the five proof cards", () => {
       for (const radiant of [false, true]) expect(specOf(card, radiant), card.id).toEqual(specOf(card, radiant, null));
       checked += 1;
     }
-    expect(checked).toBe(Object.keys(CATALOG).length - PROOFS.length);
+    expect(checked).toBe(Object.keys(CATALOG).length - Object.keys(SCENE_RECIPES).length);
     // Only a recipe card's id, or a picture's own seed of one, finds a recipe.
     for (const id of ["t-12", "", "core-0021", "core-002-1", "#core-002", "classic-074x"]) expect(sceneRecipeOf(id), id).toBeNull();
     expect(sceneRecipeOf("core-002#tarot")).toBe(recipe("core-002"));

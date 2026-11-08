@@ -8,7 +8,7 @@ import { AURA_BURST_DECAY, AURA_BURST_SPEED, AURA_FADE_OUT_MS } from "../constan
 import type { FlavorColors } from "../flavors.ts";
 import type { FxRng } from "../rng.ts";
 import type { FxBox } from "../types.ts";
-import { AURA_LOOKS, type AuraLook } from "./looks.ts";
+import { auraLookSpec, type AuraLook } from "./looks.ts";
 import type { AuraPhase } from "./plan.ts";
 
 const MS_PER_SECOND = 1000;
@@ -46,7 +46,7 @@ export function createAuraDrift(options: { rng: FxRng }): AuraDrift {
 
   /** A mote of `item` at a random place in its box (or its centre, bursting), at `age`. */
   const spawn = (item: AuraDriftItem, burst: boolean, age: number | null): Mote => {
-    const look = AURA_LOOKS[item.look];
+    const look = auraLookSpec(item.look);
     const { box } = item;
     const life = between(look.life);
     const angle = rng() * TAU;
@@ -122,7 +122,7 @@ export function createAuraDrift(options: { rng: FxRng }): AuraDrift {
       const alpha = ctx.globalAlpha;
       const blend = ctx.globalCompositeOperation;
       for (const aura of auras.values()) {
-        const look = AURA_LOOKS[aura.item.look];
+        const look = auraLookSpec(aura.item.look);
         const fade = fadeOf(aura);
         if (fade <= 0) continue;
         ctx.globalCompositeOperation = look.blend;

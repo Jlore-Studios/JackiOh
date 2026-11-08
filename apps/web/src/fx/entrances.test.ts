@@ -1,7 +1,9 @@
 // R670: the bespoke entrances of the marquee Legendary and Mythic Units (entrances.ts), planned the
 // way FxLayer plans them. A card whose entry is a set piece lands with its set piece's entrance (R2800000).
-// R3405000: a signature Field Spell's entrance plays as it lands face up in its backrow zone, never as it is
-// set face down, and Meditative's Mythics' entrances start after their entry's hold (`leadMs`).
+// R3389001: a Field Spell's own entrance (Classic's signatures') lands face up in the backrow, which
+// fx/cards/classic/signatures.test.ts plays card by card. R3405000: here every signature Field Spell's
+// entrance plays as it lands face up in its backrow zone, never as it is set face down, and Meditative's
+// Mythics' entrances start after their entry's hold (`leadMs`).
 
 import catalogJson from "@jackioh/cards/catalog.json";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
@@ -21,12 +23,13 @@ import type { FxCardFacts, FxCue, FxPlanEnv } from "./types.ts";
 type CatalogEntry = { name: string; type: string; rarity: string; printedRarity?: string };
 const CATALOG = catalogJson as unknown as Record<string, CatalogEntry>;
 
+/** Every card with an entrance of its own, a Unit's or a Field Spell's. */
 const ENTERING: readonly (readonly [string, EntranceKey])[] = [...FX_CARD_TABLE.keys()].flatMap((defId) => {
   const key = entranceKeyOf(defId);
   return key === undefined ? [] : [[defId, key] as const];
 });
 
-/** R3405000: the Units' entrances, which land in a unit zone, and the Field Spells', which land face up in the backrow (R3332000). */
+/** The Units among them, which land in a unit zone, and (R3405000) the Field Spells, which land face up in the backrow (R3332000). */
 const MARQUEE = ENTERING.filter(([defId]) => CATALOG[defId]?.type === "Unit");
 const FIELDS = ENTERING.filter(([defId]) => CATALOG[defId]?.type === "Field Spell");
 
@@ -87,8 +90,12 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
       expect(["Legendary", "Mythic"], defId).toContain(def?.printedRarity ?? def?.rarity);
       expect(typeof ENTRANCES[key]).toBe("function");
     }
-    // Each entrance is its own: no two marquee cards share one.
+    // Each entrance is its own: no two cards share one. R3389001: every other is a Legendary or Mythic Field Spell's.
     expect(new Set(ENTERING.map(([, key]) => key)).size).toBe(ENTERING.length);
+    for (const [defId] of ENTERING.filter(([id]) => CATALOG[id]?.type !== "Unit")) {
+      expect(CATALOG[defId]?.type, defId).toBe("Field Spell");
+      expect(["Legendary", "Mythic"], defId).toContain(CATALOG[defId]?.rarity);
+    }
   });
 
   it("R670 a marquee summoned into a unit zone plans its own entrance in place of the rarity's rays and gold", () => {
@@ -96,9 +103,17 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
       const landing = summoned("p1", "m1", defId);
       const cues = planAll([landing], envOf(), undefined, emptyLane("you", "units", 3));
       const D = ANIMATIONS.summoned.durationMs;
-      // R3332001, R3400001: an entrance that reads the board and its landing (its side, its lane) is given both.
+      // R3332001, R3400001: an entrance that reads the board and its landing (its side, its lane) is given both;
+      // R3389000: and when in the entry its card lands.
       const view = withEvents(emptyLane("you", "units", 3), [landing]);
-      const expected = ENTRANCES[key]({ D, tgt: testid.zone("you", "units", 3), intensity: FX_INTENSITY_SCALE.normal, view, landing: landing.type === "summoned" ? landing : undefined });
+      const expected = ENTRANCES[key]({
+        D,
+        tgt: testid.zone("you", "units", 3),
+        intensity: FX_INTENSITY_SCALE.normal,
+        view,
+        landing: landing.type === "summoned" ? landing : undefined,
+        landMs: Math.round(FX_SLAM_AT * D),
+      });
       expect(cues, defId).toEqual(expected);
       expect(cues.some((cue) => cue.kind === "burst" && cue.preset === "gold" && cue.spread === "area"), defId).toBe(false);
       const shakes = cues.filter((cue) => cue.kind === "shake");
@@ -117,10 +132,16 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
     const pair = [played("p1", "m1", defId), summoned("p1", "m1", defId)];
     // The pair is one entry, with the duration the runner gives the pair.
     const D = planEntries(pair, withEvents(fullBoardView(), pair), false)[0]?.durationMs ?? 0;
-    const mine = planAll(pair, envOf(), undefined, emptyLane("you", "units", 3));
-    expect(mine).toEqual(ENTRANCES[key]({ D, tgt: testid.zone("you", "units", 3), intensity: FX_INTENSITY_SCALE.normal }));
-    const theirs = planAll([played("p2", "m2", defId), summoned("p2", "m2", defId, "units", 2)], envOf(), undefined, emptyLane("opponent", "units", 2));
-    expect(theirs).toEqual(ENTRANCES[key]({ D, tgt: testid.zone("opponent", "units", 2), intensity: FX_INTENSITY_SCALE.normal }));
+    const landMs = Math.round(FX_SLAM_AT * D);
+    const mineView = emptyLane("you", "units", 3);
+    const mine = planAll(pair, envOf(), undefined, mineView);
+    const own = pair[1]?.type === "summoned" ? pair[1] : undefined;
+    expect(mine).toEqual(ENTRANCES[key]({ D, tgt: testid.zone("you", "units", 3), intensity: FX_INTENSITY_SCALE.normal, view: mineView, landing: own, landMs }));
+    const theirLanding = summoned("p2", "m2", defId, "units", 2);
+    const theirView = emptyLane("opponent", "units", 2);
+    const theirs = planAll([played("p2", "m2", defId), theirLanding], envOf(), undefined, theirView);
+    const other = theirLanding.type === "summoned" ? theirLanding : undefined;
+    expect(theirs).toEqual(ENTRANCES[key]({ D, tgt: testid.zone("opponent", "units", 2), intensity: FX_INTENSITY_SCALE.normal, view: theirView, landing: other, landMs }));
     // R202: no cue carries a definition or a name.
     const text = JSON.stringify(theirs);
     expect(text).not.toContain(defId);

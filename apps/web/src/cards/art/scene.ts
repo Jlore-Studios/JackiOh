@@ -138,6 +138,8 @@ export type ScenePlacement = {
   readonly count?: number;
   readonly spread?: readonly [number, number];
   readonly paint?: PaletteName;
+  /** R3390000: its shapes move on the props beat (R2715001), as a painter's glyphs do; never in the subject layer. */
+  readonly props?: true;
 };
 
 /** The figure a recipe's subject layer draws in front of its own parts, standing on x, y. */
@@ -150,6 +152,9 @@ export type FigureRecipe = {
   readonly look: FigureLook;
 };
 
+/** R3390000: a further figure (a crowd, a companion, a rival), drawn in front of its layer's own parts, after the main figure in the subject layer. */
+export type ExtraFigure = FigureRecipe & { readonly layer: SceneLayer };
+
 export type SceneRecipe = {
   readonly family: ShowcaseFamily;
   /** The sky's gradient, top to bottom. */
@@ -159,6 +164,8 @@ export type SceneRecipe = {
   /** Where the card's emblem stands in the scene; with none, where the painter's composition put it. */
   readonly emblem?: { readonly x: number; readonly y: number; readonly size: number; readonly rotate: number };
   readonly figure?: FigureRecipe;
+  /** R3390000: the scene's other figures, each in its own layer. */
+  readonly extras?: readonly ExtraFigure[];
   /**
    * The painter's own subject (its spec's `subjectRidges`, drawn by the card's composition: Ceaseless Void's
    * giant, R3338001) stands in the subject layer in front of the layer's parts, in place of a figure.
@@ -168,7 +175,7 @@ export type SceneRecipe = {
 };
 
 /** A composed shape: the layer it lies in and the part it came from. */
-export type SceneShape = KitShape & { readonly layer: SceneLayer; readonly part: SceneryPartId | FigurePartId };
+export type SceneShape = KitShape & { readonly layer: SceneLayer; readonly part: SceneryPartId | FigurePartId; readonly props?: true };
 
 /** Salts the scene's stream, so it shares no draw with the painter's own. */
 export const SCENE_SALT = 0x5ce7e331;
@@ -231,7 +238,7 @@ export function composeScene(recipe: SceneRecipe, seedId: string): SceneShape[] 
         const s = (placed.scale ?? 1) * (1 + between(rng, -SCENE_SCALE_JITTER, SCENE_SCALE_JITTER));
         for (const shape of kit.draw({ x, y, s, flip: placed.flip ?? 1 }, rng)) {
           const paint = shape.main === true && placed.paint !== undefined ? placed.paint : shape.paint;
-          out.push({ ...shape, paint, layer, part: placed.part });
+          out.push({ ...shape, paint, layer, part: placed.part, ...(placed.props === true ? { props: true as const } : {}) });
         }
       }
     }
@@ -239,6 +246,8 @@ export function composeScene(recipe: SceneRecipe, seedId: string): SceneShape[] 
     if (layer === "subject" && recipe.figure !== undefined) {
       for (const shape of drawFigure(recipe.figure, rng)) out.push({ ...shape, layer });
     }
+    // R3390000: the scene's other figures stand in front of their layers' parts, after the main figure.
+    for (const extra of recipe.extras ?? []) if (extra.layer === layer) for (const shape of drawFigure(extra, rng)) out.push({ ...shape, layer });
   }
   return out;
 }
@@ -254,7 +263,8 @@ export function sceneUse(shapes: readonly SceneShape[]): { layers: number; parts
  * theme, layout, backdrop, sky scheme, emblem glyph, motif and rays stay, so R503's variety and the
  * Radiant rays read as before. A Radiant face mixes each shape toward its layer's gold. A recipe with
  * `ownSubject` keeps the spec's subject ridges, painted as the painter paints them on that face, in front
- * of its subject layer's parts.
+ * of its subject layer's parts. R3390000: a placement marked `props` moves on the props beat, in place of
+ * the glyphs and accent the scene drops.
  */
 export function withScene(spec: ArtSpec, recipe: SceneRecipe, seedId: string, radiant: boolean): ArtSpec {
   const shapes = composeScene(recipe, seedId);
@@ -262,7 +272,8 @@ export function withScene(spec: ArtSpec, recipe: SceneRecipe, seedId: string, ra
   const paint = (name: PaletteName, layer: SceneLayer): string =>
     radiant ? mixHex(SCENE_PALETTE[name], SCENE_RADIANT_GOLD[layer], SCENE_RADIANT_MIX) : SCENE_PALETTE[name];
   const drawn: ArtSpec["ridges"][number][] = shapes.map((shape) => {
-    const ridge = { d: shape.d, fill: paint(shape.paint, shape.layer), opacity: round2(shape.opacity), role: SCENE_LAYER_ROLES[shape.layer] };
+    const role = shape.props === true ? "props" : SCENE_LAYER_ROLES[shape.layer];
+    const ridge = { d: shape.d, fill: paint(shape.paint, shape.layer), opacity: round2(shape.opacity), role };
     return shape.inked === true && line !== null ? { ...ridge, stroke: SCENE_PALETTE[line.paint], strokeWidth: line.width } : ridge;
   });
   const own = recipe.ownSubject === true ? spec.ridges.slice(spec.subjectRidges[0], spec.subjectRidges[1]) : [];

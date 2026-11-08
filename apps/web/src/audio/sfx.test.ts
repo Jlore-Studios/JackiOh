@@ -43,8 +43,16 @@ const UNION_ORDER: SfxId[] = [
   "playImpact", "trapSnap",
   // R3342000: the tile aura bell.
   "auraTouch",
+  // R3334000–R3334003: the Starship's moments.
+  "starshipDock", "starshipIgnite", "starshipRoar", "starshipBeam", "starshipRepeater", "starshipCannon",
+  "starshipFlak", "starshipLauncher", "starshipRam", "starshipWreck",
   // R3400001: the signatures of Meditative+'s and Training Grounds' Legendaries and Mythics.
   "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
+  // R3405001: the signatures of Meditative's Legendaries and Mythics.
+  "bowlBreath", "peakFlute", "ticketHorn", "forgeQuench", "brushGuzheng", "wellGush", "minePick", "jadeZither",
+  "windChime", "marketGong", "chalkHush", "porcelainRoar", "bronzeGulp", "modemGuqin", "serverChoir", "dialupStutter",
+  "holoBow", "synthPops", "skullMutter", "keyJangle", "caneCrack", "caneThunder", "rootCreak", "chalkGasp",
+  "frostPages", "coinCheer", "totemDrums", "templeDie", "golemStomp", "klaxonSlam", "cellSlam", "hangarRev",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -153,6 +161,17 @@ const DURATION_MS: Record<SfxId, number> = {
   trapSnap: 200,
   // R3342000.
   auraTouch: 200,
+  // R3334000–R3334003.
+  starshipDock: 450,
+  starshipIgnite: 700,
+  starshipRoar: 1200,
+  starshipBeam: 400,
+  starshipRepeater: 350,
+  starshipCannon: 600,
+  starshipFlak: 500,
+  starshipLauncher: 450,
+  starshipRam: 500,
+  starshipWreck: 1100,
   // R3400001.
   inkSummit: 1100,
   plowHeave: 1300,
@@ -162,6 +181,39 @@ const DURATION_MS: Record<SfxId, number> = {
   diceGong: 1600,
   timberLash: 1200,
   pencilArpeggio: 1400,
+  // R3405001.
+  bowlBreath: 1500,
+  peakFlute: 1500,
+  ticketHorn: 1300,
+  forgeQuench: 1500,
+  brushGuzheng: 1500,
+  wellGush: 1400,
+  minePick: 1500,
+  jadeZither: 1500,
+  windChime: 1600,
+  marketGong: 1500,
+  chalkHush: 1500,
+  porcelainRoar: 1600,
+  bronzeGulp: 1500,
+  modemGuqin: 1400,
+  serverChoir: 1600,
+  dialupStutter: 1200,
+  holoBow: 1300,
+  synthPops: 1200,
+  skullMutter: 1400,
+  keyJangle: 1400,
+  caneCrack: 1100,
+  caneThunder: 1600,
+  rootCreak: 1500,
+  chalkGasp: 1300,
+  frostPages: 1500,
+  coinCheer: 1400,
+  totemDrums: 1400,
+  templeDie: 1400,
+  golemStomp: 1500,
+  klaxonSlam: 1600,
+  cellSlam: 1500,
+  hangarRev: 1600,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];
@@ -884,6 +936,67 @@ describe("R3338000 the Terminus organ", () => {
     expect(returnedSeconds(run)).toBeLessThanOrEqual(SFX.organ.durationMs / 1000);
   });
 });
+
+describe("R3334000 the Starship's moments", () => {
+  /** The design's gain column for the ten, in the SfxId union's order (their durationMs is DURATION_MS's). */
+  const STARSHIP_GAIN = {
+    starshipDock: 0.8,
+    starshipIgnite: 0.8,
+    starshipRoar: 0.9,
+    starshipBeam: 0.6,
+    starshipRepeater: 0.6,
+    starshipCannon: 0.85,
+    starshipFlak: 0.7,
+    starshipLauncher: 0.6,
+    starshipRam: 0.85,
+    starshipWreck: 0.85,
+  } as const satisfies Partial<Record<SfxId, number>>;
+  const IDS = Object.keys(STARSHIP_GAIN) as (keyof typeof STARSHIP_GAIN)[];
+  const SHIP_SIZE_MAX = 8;
+  const starshipRun = (id: SfxId, params: SfxParams): Run => runRecipe(`${id} ${JSON.stringify(params)}`, SFX[id].recipe, SFX[id].durationMs, params);
+  /** The dock's hum: its one triangle, the pitch it holds. */
+  const hum = (amount: number): number =>
+    starshipRun("starshipDock", { amount }).made.find((n) => n.kind === "oscillator" && n.type === "triangle")?.param("frequency").settled() ?? 0;
+
+  it("R3334000 ten sounds keep the contract and differ", () => {
+    expect(IDS).toHaveLength(10);
+    // Registered as one run in the union's order, wherever later sounds join it.
+    const first = UNION_ORDER.indexOf(IDS[0] ?? "starshipDock");
+    expect(UNION_ORDER.slice(first, first + IDS.length)).toEqual(IDS);
+    const runs: Run[] = [];
+    for (const id of IDS) {
+      expect(SFX[id].durationMs, id).toBe(DURATION_MS[id]);
+      expect(SFX[id].gain, id).toBe(STARSHIP_GAIN[id]);
+      for (const params of [...PARAM_SETS, { amount: SHIP_SIZE_MAX }, { amount: Number.NaN }, { pan: -0.6 }]) runs.push(starshipRun(id, params));
+    }
+    // Every count of pieces a dock may name, and past it.
+    for (let amount = 0; amount <= SHIP_SIZE_MAX + 1; amount += 1) runs.push(starshipRun("starshipDock", { amount }));
+    expect([
+      ...runs.flatMap(subsetProblems),
+      ...runs.flatMap(lengthProblems),
+      ...runs.flatMap(scheduleProblems),
+      ...runs.flatMap(stopProblems),
+      ...runs.flatMap(wiringProblems),
+      ...runs.flatMap(rampProblems),
+    ]).toEqual([]);
+
+    // Each is a sound of its own: no two build the same graph.
+    const shapes = IDS.map((id) => {
+      const run = starshipRun(id, {});
+      return JSON.stringify([run.made.map((node) => node.kind), run.paramEvents.map(({ event }) => [event.method, "value" in event ? event.value : null])]);
+    });
+    expect(new Set(shapes).size).toBe(IDS.length);
+
+    // The dock's hum rises with the ship's pieces, a step for each, held past the largest.
+    expect(hum(SHIP_SIZE_MAX)).toBeGreaterThan(hum(1));
+    const hums = Array.from({ length: SHIP_SIZE_MAX }, (_, i) => hum(i + 1));
+    for (let i = 1; i < SHIP_SIZE_MAX; i += 1) expect(hums[i] ?? 0, `${String(i + 1)} pieces hum higher`).toBeGreaterThan(hums[i - 1] ?? Infinity);
+    expect(hum(SHIP_SIZE_MAX + 4)).toBe(hum(SHIP_SIZE_MAX));
+    expect(hum(0)).toBe(hum(1));
+    expect(hum(Number.NaN)).toBe(hum(1));
+  });
+});
+
 describe("R3337003 each Anomaly's sting", () => {
   /** `code`'s sting through `renderSfx` at `pitch`, as the engine plays it. */
   const stingOf = (code: AnomalyCode, pitch = 1): Run =>

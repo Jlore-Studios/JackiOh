@@ -1,5 +1,5 @@
 // R3405001: Meditative's 32 signatures together (each card's own beats are its batch's tests beside this
-// one: signatures.spells, .fields, .mythics, .units-a and .units-b): every card's entry is its signature,
+// one: signatures.spells, .fields, .units-a and .units-b): every card's entry is its signature,
 // as the issue's table sets it; from the caster's opponent's seat no beat of any of them names a card,
 // shows a face or flies more than a card back (R202); and every cue starts inside its entry and is gone
 // within FX_MAX_TAIL_MS of its end, its entrance's included, while nothing draws with the effects off (R200).
@@ -8,7 +8,7 @@ import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import { animTestid } from "../../../game/animations.ts";
-import { testid } from "../../../game/contract.ts";
+import { LANES, testid } from "../../../game/contract.ts";
 import { fullBoardView } from "../../../test/fixtures.ts";
 import { HOLD, castOf, endOf, played, run } from "../../../test/signatures.ts";
 import { FX_INTENSITY_SCALE, FX_MAX_TAIL_MS } from "../../constants.ts";
@@ -126,6 +126,8 @@ describe("R3405001 Meditative's signatures", () => {
       expect(text, defId).not.toContain(`"${HIDDEN}"`);
       expect(cues.some((cue) => cue.kind === "sheen"), defId).toBe(false);
       const piles = new Set([animTestid.hand("opponent"), animTestid.library("opponent"), animTestid.hand("you"), animTestid.library("you"), animTestid.graveyard("you"), animTestid.graveyard("opponent"), animTestid.exile("you"), animTestid.exile("opponent")]);
+      // Or, set face down (Knowledge Breaker Prime's Cry), into a backrow zone.
+      for (const side of ["you", "opponent"] as const) for (const lane of LANES) piles.add(testid.zone(side, "backrow", lane));
       for (const cue of cues) {
         if (cue.kind !== "ghost") continue;
         // A card flies only as a card back, to a pile.

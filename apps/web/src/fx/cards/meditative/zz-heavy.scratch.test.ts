@@ -1,6 +1,7 @@
 // SCRATCH (#3405 builder): delete before delivery. Counts every cue each Meditative signature's gallery play plans.
 
 import { it } from "vitest";
+import { writeFileSync } from "node:fs";
 
 import { entranceEntries, planEntries, setPieceEntries, takeoverClaim, type EntranceResolver } from "../../../game/animations.ts";
 import { fullBoardView, withEvents } from "../../../test/fixtures.ts";
@@ -41,5 +42,5 @@ it("counts", () => {
     rows.push([defId, cues, particles]);
   }
   rows.sort((a, b) => b[1] - a[1]);
-  console.log(rows.map((r) => r.join(" ")).join("\n"));
+  writeFileSync("/tmp/heavy.txt", rows.map((r) => r.join(" ")).join("\n"));
 });

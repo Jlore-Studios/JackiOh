@@ -7,7 +7,7 @@
 // opponent's deck pile instead. It keys on a fusion its own card is in (the turn hook's in a game, its play's
 // in the gallery), never on a card's definition, and draws card backs alone (R202).
 
-import { animTestid, locateInstance } from "../../../game/animations.ts";
+import { HIDDEN_ID, animTestid, locateInstance } from "../../../game/animations.ts";
 import { sideOf } from "../../../game/contract.ts";
 import { frac, ringCue, shakeCues, tid, tunedBurst } from "../../build.ts";
 import { FX_SLAM_AT } from "../../constants.ts";
@@ -41,8 +41,6 @@ const TIMING = { eyesAt: 0.85, dragAt: 0.15, swallowAt: 0.55, cauldronTailMs: 30
 
 /** Where its eyes kindle on its zone: on the face risen over the cauldron. */
 const EYES: FxPoint = { x: 0.5, y: 0.4 };
-
-const HIDDEN_ID = "hidden";
 
 export const bronzeCauldron: Entrance = ({ D, tgt, intensity: i, view, landing, leadMs }) => {
   const look = paletteLook(TAOTIE_PALETTE) ?? FLAVOR_LOOKS.Toxic;
