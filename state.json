@@ -16733,7 +16733,7 @@
       "failures": 0,
       "feedback_since": "2026-11-08T01:35:55Z",
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "issue": 3340,
       "kind": "revise",
       "last_findings": [],
