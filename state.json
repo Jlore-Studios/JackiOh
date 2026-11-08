@@ -13676,9 +13676,10 @@
       "started_at": "2026-11-07T14:55:10Z",
       "stop_requested": false,
       "strike_log": [
-        "`gpt` (codex, gpt-5.6-sol) rejected it: `apps/web/src/cards/MinionFace.tsx:178`: Printed-Mythic tokens consume a Mythic-priority motion slot and report animated while their art remains still."
+        "`gpt` (codex, gpt-5.6-sol) rejected it: `apps/web/src/cards/MinionFace.tsx:178`: Printed-Mythic tokens consume a Mythic-priority motion slot and report animated while their art remains still.",
+        "`gpt` (codex, gpt-5.6-sol) rejected it: `apps/web/src/cards/motionSlots.ts:68`: Slot age is reassigned after visibility or off-screen pauses, so priority no longer reflects the newest Mythic played."
       ],
-      "strikes": 1,
+      "strikes": 2,
       "taken_asks": [],
       "verdict_rounds": 1,
       "waiting_comment": 6708292349
