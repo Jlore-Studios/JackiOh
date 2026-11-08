@@ -220,10 +220,10 @@ or board it covers wears a quiet looping look in the card's palette, a tint, a s
 an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, palette?, scope } }`.
 
 - **Looks** (`fx/aura/looks.ts`, `AURA_LOOKS`): `ember`, `frost`, `bloom`, `void`, `storm`, `holy`,
-  `toxic` and `arcane`, and (R3400000) `flurry` (snow), `chalk` (chalk dust) and `timber` (sawdust), the
-  eleven each a mote velocity, size and life range, a mote, tint and edge opacity, a
-  glow spread and a blend. `palette` is a flavor's look or a sub-look (`"Tech/rocket"`), the card's
-  own by default, as a motif's.
+  `toxic`, `arcane`, (R3337003) `drift` (an asteroid field's) and (R3400000) `flurry` (snow), `chalk`
+  (chalk dust) and `timber` (sawdust), the twelve each a mote velocity, size and life range, a mote, tint
+  and edge opacity, a glow spread and a blend. `palette` is a flavor's look or a sub-look
+  (`"Tech/rocket"`), the card's own by default, as a motif's.
 - **Scopes**, nearest first: `tile` (R3400000: a Unit's own unit zone), `zone` (the card's own backrow
   zone), `lane` (the lane's four zones, both seats), `side` (its seat's ten zones) and `board` (all
   twenty). Only a Field Spell or a Field Trap stands in a zone, so only it may name `zone` or `lane`, and

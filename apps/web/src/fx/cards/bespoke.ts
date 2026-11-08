@@ -4,9 +4,10 @@
 // Flourishes (Rollback, KY's Constant, Book of Pain) join Crushing Walls.
 // R2794000: Classic's three Flourishes, pageMend, recycleLoop and crownSwap, are card recipes. R2797000:
 // Stinkyscape's three of part one (fx/cards/stinkyscape/), beside part two's (#2798). R3338000: Olivian
-// Expanse's rift is its set piece now (fx/terminus/). R3400001: the signatures of Meditative+'s and
-// Training Grounds' Legendaries and Mythics (Bob's Plan, Bob, Scratch Pad, Seance, Tutorial Master, Call to
-// Chaos (Training-Grounds Edition); Goetzmann Game Design's grows from its flourish).
+// Expanse's rift is its set piece now (fx/terminus/). R3337002's and R3337003's Scanning Probes' scan and
+// Anomaly Found!'s call (#3337). R3400001: the signatures of Meditative+'s and Training Grounds' Legendaries
+// and Mythics (Bob's Plan, Bob, Scratch Pad, Seance, Tutorial Master, Call to Chaos (Training-Grounds
+// Edition); Goetzmann Game Design's grows from its flourish).
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
@@ -25,10 +26,12 @@ import { bobSoldier } from "./meditativeplus/bobSoldier.ts";
 import { bobsPlan } from "./meditativeplus/bobsPlan.ts";
 import { harmonyWave } from "./meditativeplus/harmonySpirit.ts";
 import { scratchPad } from "./meditativeplus/scratchPad.ts";
+import { anomalyCall } from "./stinkyscape/anomalyCall.ts";
 import { battleshipWarp } from "./stinkyscape/battleshipWarp.ts";
 import { duoBond } from "./stinkyscape/duoBond.ts";
 import { flashFreeze } from "./stinkyscape/flashFreeze.ts";
 import { magiBoot } from "./stinkyscape/magiBoot.ts";
+import { probeScan } from "./stinkyscape/probeScan.ts";
 import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
 import { celestialCall } from "./traininggrounds/celestialCaller.ts";
 import { chaosDice } from "./traininggrounds/chaosDice.ts";
@@ -62,6 +65,8 @@ export const CARD_RECIPES = {
   duoBond,
   flashFreeze,
   stratosSwarm,
+  probeScan,
+  anomalyCall,
   celestialCall,
   dinoStomp,
   gameDesign,

@@ -16,6 +16,7 @@ import { CardFace, faceText } from "./CardFace.tsx";
 import { Extended } from "./inspect/Extended.tsx";
 import { faceModel } from "./model.ts";
 import { CardDefsProvider } from "./refContext.tsx";
+import { defaultLookOf, isFullBleed } from "./versions.ts";
 import { markedText, radiantMarks } from "../test/faceData.ts";
 
 afterEach(cleanup);
@@ -142,13 +143,14 @@ describe("R277 every Radiant face renders its marks gold, bold and underlined", 
       const expected = marks(fillParams(card, "base"), fillParams(card, "radiant"));
       // Inside the catalog, so the names its refs link are references and nest with the marks. A face
       // that prints less than its whole text (a short form, or full art's none) prints it, marks and
-      // all, in its extended description (#1017, R1017001).
+      // all, in its extended description (#1017, R1017001). R3343001: a Mythic's Default prints full art while the
+      // Full-art cards setting is on, so a Mythic's words are read there as a full-art card's are.
       const face = faceModel({ defId: card.id, def: card, radiant: true });
+      const whole = faceText(face).shown.full === face.text.full && !isFullBleed(defaultLookOf(card.id));
       const { container, unmount } = render(
         createElement(CardDefsProvider, {
           defs: CATALOG,
-          children:
-            faceText(face).shown.full === face.text.full ? createElement(CardFace, { face, layout: "full" }) : createElement(Extended, { face }),
+          children: whole ? createElement(CardFace, { face, layout: "full" }) : createElement(Extended, { face }),
         }),
       );
       // A mark a reference's end splits ("Rush Tokens. Each": the mark runs out of the name) is one

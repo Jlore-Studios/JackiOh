@@ -1744,12 +1744,18 @@ describe("B20 turn banners", () => {
 
 /* B21: R202, the redacted stream only */
 
-/** Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`, a callout's or a launch's `still` (R2789000, R2801000), and a figure's `side` and `size` (R3400001). */
+/**
+ * Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`, a callout's, a launch's or an Anomaly's
+ * title card's `still` (R2789000, R2801000, R3337003), a ghost's `spin` (R3337003), and a figure's `side` and `size`
+ * (R3400001).
+ */
 const CUE_OPTIONAL_KEYS: Partial<Record<FxCue["kind"], readonly string[]>> = {
   burst: ["scale", "colors"],
   callout: ["still"],
   launch: ["still"],
   figure: ["side", "size"],
+  anomalyTitle: ["still"],
+  ghost: ["spin"],
 };
 
 const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
@@ -1784,6 +1790,9 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   ship: ["kind", "move", "at", "tint", "count", "lit", "delayMs", "durationMs"],
   figure: ["kind", "figure", "at", "tint", "delayMs", "durationMs"],
   pull: ["kind", "testid", "to", "delayMs", "durationMs"],
+  rift: ["kind", "at", "side", "tint", "tearMs", "flareMs", "delayMs", "durationMs"],
+  anomalyTitle: ["kind", "at", "text", "picture", "tint", "delayMs", "durationMs"],
+  radar: ["kind", "at", "side", "tint", "delayMs", "durationMs"],
 };
 
 const ANCHOR_KEYS: Record<FxAnchor["kind"], { required: readonly string[]; optional: readonly string[] }> = {
