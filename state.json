@@ -13910,6 +13910,11 @@
       "owner": "claude-5",
       "owner_since": "2026-11-08T23:04:12Z",
       "owner_why": "handed off from `claude-7`: `claude-7` is busy: its lanes are all taken",
+      "paused": {
+        "at": "2026-11-08T23:12:46Z",
+        "interrupt": "usage",
+        "provider": "claude-5"
+      },
       "pending_request": false,
       "planned_at": "2026-11-07T18:22:23Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -13919,7 +13924,7 @@
       "question": "none. One plan, one pull request, no split (see Open questions).",
       "queued_at": "2026-11-07T19:38:59Z",
       "requested_by": "jgoetzmann",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "42533336499",
       "runs_on": "ubuntu-latest",
       "session": {
