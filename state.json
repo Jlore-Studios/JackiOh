@@ -17664,11 +17664,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-07T19:02:22Z",
+        "at": "2026-11-08T08:41:18Z",
         "difficulty": "medium",
-        "provider": "claude-1",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #3383, a medium change"
+        "provider": "claude-2",
+        "tier": "medium",
+        "why": "A web-only presentation fix in one hook, one component prop, a ruling amendment and tests (about 8 files). It touches no engine, AI, cross-crate contract or migration (none of rule lines 1-5)."
       },
       "failures": 0,
       "forced": false,
