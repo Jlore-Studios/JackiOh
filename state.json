@@ -17290,7 +17290,7 @@
       "planned_tier": "strong",
       "provider": "claude-4",
       "round_tier": "strong",
-      "run_id": "pending:385011c8-1794096822",
+      "run_id": "42428835048",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
