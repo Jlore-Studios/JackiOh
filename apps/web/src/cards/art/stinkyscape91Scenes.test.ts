@@ -26,6 +26,14 @@ import { SCENE_KIT } from "./sceneKit.ts";
 import { COSMOS_KIT } from "./sceneKitCosmos.ts";
 import { CRAFT_KIT } from "./sceneKitCraft.ts";
 import { GEAR_KIT } from "./sceneKitGear.ts";
+import { INK_BUILDINGS_KIT } from "./sceneKitInkBuildings.ts";
+import { INK_CHARACTERS_KIT } from "./sceneKitInkCharacters.ts";
+import { INK_CREATURES_KIT } from "./sceneKitInkCreatures.ts";
+import { INK_CURIOS_KIT } from "./sceneKitInkCurios.ts";
+import { INK_MACHINES_KIT } from "./sceneKitInkMachines.ts";
+import { INK_NATURE_KIT } from "./sceneKitInkNature.ts";
+import { INK_OBJECTS_KIT } from "./sceneKitInkObjects.ts";
+import { INK_PLACES_KIT } from "./sceneKitInkPlaces.ts";
 import { MOUNTAIN_KIT } from "./sceneKitMountain.ts";
 import { NATURE_KIT } from "./sceneKitNature.ts";
 import { OBJECTS_KIT } from "./sceneKitObjects.ts";
@@ -80,7 +88,6 @@ const MACHINE_UNITS: Readonly<Record<string, string>> = {
 
 /** The figure parts #3403 added, each worn or held by at least one of its scenes. */
 const FIGURE_PARTS_ADDED: readonly FigurePartId[] = [
-  "headset",
   "neural-crown",
   "space-helmet",
   "hair-silver",
@@ -105,6 +112,8 @@ const SCENERY: readonly KitCategory[] = ["terrain", "architecture", "plants", "c
 const DEEP: readonly Rarity[] = ["Epic", "Legendary", "Mythic"];
 /** Where an emblem may stand and how big it may be: inside the band every face's window shows (motifs.test.ts's). */
 const EMBLEM_BAND = { left: 10, right: 90, top: 22, bottom: 84, size: 8 } as const;
+/** #3401's modules of ink-wash parts, spread into `SCENE_KIT` before the ones #3403 added. */
+const INK_MODULES = [INK_PLACES_KIT, INK_BUILDINGS_KIT, INK_OBJECTS_KIT, INK_CURIOS_KIT, INK_MACHINES_KIT, INK_NATURE_KIT, INK_CREATURES_KIT, INK_CHARACTERS_KIT];
 /** The modules of parts #3403 added. */
 const STINKY_KITS = [SPACE_KIT, CRAFT_KIT, GEAR_KIT, COSMOS_KIT] as const;
 
@@ -302,10 +311,12 @@ describe("R3403000 Stinkyscape's later cards drawn as scenes", () => {
     const added = STINKY_KITS.flatMap((kit) => Object.entries(kit));
     expect(added.length).toBeGreaterThan(0);
     expect(new Set(added.map(([id]) => id)).size, "no id in two modules").toBe(added.length);
-    const older = new Set([PLACES_KIT, OBJECTS_KIT, NATURE_KIT, MOUNTAIN_KIT, YARD_KIT, TOUCHES_KIT].flatMap((kit) => Object.keys(kit)));
+    const older = new Set(
+      [PLACES_KIT, OBJECTS_KIT, NATURE_KIT, MOUNTAIN_KIT, YARD_KIT, TOUCHES_KIT, ...INK_MODULES].flatMap((kit) => Object.keys(kit)),
+    );
     for (const [id, part] of added) {
       expect(SCENERY, id).toContain(part.category);
-      expect(older.has(id), `${id} is one of #3390's or #3393's parts`).toBe(false);
+      expect(older.has(id), `${id} is one of #3390's, #3393's or #3401's parts`).toBe(false);
       expect(Object.hasOwn(FIGURE_KIT, id), `${id} is a figure part`).toBe(false);
       // Each joins the kit as itself, so none takes the place of another part.
       expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);

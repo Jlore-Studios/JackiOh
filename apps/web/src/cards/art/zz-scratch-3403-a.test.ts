@@ -1,31 +1,29 @@
 import { it } from "vitest";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, mkdirSync } from "node:fs";
 import { CATALOG } from "@jackioh/cards";
 import { proceduralCardArtUri } from "../../patches/cardArt.ts";
 import { artElements } from "./richness.ts";
-import { composeScene, sceneUse, SCENE_LAYERS } from "./scene.ts";
-import { SCENE_KIT } from "./sceneKit.ts";
-import { seededRandom } from "./hash.ts";
+import { composeScene, sceneUse } from "./scene.ts";
 import { STINKYSCAPE_91_RECIPES_1 as R } from "./stinkyscape91Recipes1.ts"; // your file
+const DETAIL = (process.env.DETAIL ?? "").split(",").filter(Boolean);
 it("measure", () => {
   const rows: string[] = [];
-  for (const [id, part] of Object.entries(SCENE_KIT)) {
-    const shapes = part.draw({ x: 50, y: 50, s: 1, flip: 1 }, seededRandom(7));
-    rows.push(`${id} ${shapes.length} ${shapes.reduce((n, s) => n + s.d.length, 0)} main=${[...new Set(shapes.filter((s) => s.main).map((s) => s.paint))].join(",")} all=${[...new Set(shapes.map((s) => s.paint))].join(",")}`);
-  }
-  writeFileSync("/tmp/scratch3403a/parts.txt", rows.join("\n") + "\n");
-  const out: string[] = [];
+  mkdirSync("/tmp/s3403a/svg", { recursive: true });
   for (const [id, recipe] of Object.entries(R)) {
     const card = CATALOG[id]!;
     const base = proceduralCardArtUri(card, false), rad = proceduralCardArtUri(card, true);
     const svg = decodeURIComponent(base.slice("data:image/svg+xml,".length));
+    writeFileSync(`/tmp/s3403a/svg/${id}.svg`, svg);
     const shapes = composeScene(recipe, id);
-    writeFileSync(`/tmp/scratch3403a/svg/${id}.svg`, svg);
-    const per = SCENE_LAYERS.map((l) => `${l[0]}${shapes.filter((s) => s.layer === l).length}`).join(" ");
-    const cost = new Map<string, number>();
-    for (const sh of shapes) cost.set(sh.part, (cost.get(sh.part) ?? 0) + encodeURIComponent(sh.d).length + 100);
-    const top = [...cost.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([p, n]) => `${p}:${(n / 1000).toFixed(1)}k`).join(" ");
-    out.push(`${id} ${card.rarity} el ${artElements(svg)} layers ${sceneUse(shapes).layers} bytes ${base.length} ${rad.length} [${per}] ${top}`);
+    const cap = base.length > 44000 || rad.length > 44000 ? " OVER44K" : "";
+    const layers = [...new Set(shapes.map((s) => s.layer))].join("/");
+    rows.push([id, card.rarity, "el", artElements(svg), "layers", sceneUse(shapes).layers, layers, "bytes", base.length, rad.length].join(" ") + cap);
+    if (DETAIL.includes(id) || DETAIL.includes("all")) {
+      const by = new Map<string, [number, number]>();
+      let total = 0;
+      for (const s of shapes) { const k = `${s.layer}:${s.part}`; const c = encodeURIComponent(s.d).length + 70; total += c; const v = by.get(k) ?? [0, 0]; by.set(k, [v[0] + 1, v[1] + c]); }
+      rows.push(`   overhead≈${base.length - total} ` + [...by].map(([k, [n, b]]) => `${k}=${n}/${b}`).join(" "));
+    }
   }
-  writeFileSync("/tmp/scratch3403a/measure.txt", out.join("\n") + "\n");
+  throw new Error("MEASURE\n" + rows.join("\n")); // vitest prints the message; console.log output is swallowed
 });

@@ -1723,7 +1723,7 @@ export const SPACE_KIT = {
   turret: { category: "architecture", draw: turret },
   "space-station": { category: "architecture", draw: spaceStation },
   reactor: { category: "architecture", draw: reactor },
-  crane: { category: "architecture", draw: crane },
+  "shipyard-crane": { category: "architecture", draw: crane },
   "colony-dome": { category: "architecture", draw: colonyDome },
   "lamp-tent": { category: "architecture", draw: tent },
   "spice-tower": { category: "architecture", draw: spiceTower },

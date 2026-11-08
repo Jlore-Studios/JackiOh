@@ -508,7 +508,7 @@ export const COSMOS_KIT = {
   "surf-wave": { category: "weather", draw: wave },
   "lens-flare": { category: "weather", draw: lensFlare },
   wormhole: { category: "weather", draw: wormhole },
-  rift: { category: "weather", draw: rift },
+  "space-rift": { category: "weather", draw: rift },
   galaxy: { category: "weather", draw: galaxy },
   "stink-cloud": { category: "weather", draw: stinkCloud },
 } as const satisfies Readonly<Record<string, KitPart>>;

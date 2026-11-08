@@ -380,8 +380,10 @@ Five proof cards drew from recipes first and set the bar each set's pass meets: 
 (Stinkyscape #15). Ceaseless Void's recipe keeps its painter's own subject (`ownSubject`), the giant its
 composition draws (R3338001), in place of a figure. Classic+'s pass draws every Classic+ entry from a recipe
 of its own (below, R3390000), Core's pass every Core entry but Ceaseless Void, Speciesist's and Heroic
-Power's redrawn from their briefs (Core's scenes, below, R3392000), and the Meditative+ and Training Grounds
-pass every entry of those two sets (below, R3393000), and Stinkyscape's later cards theirs (below, R3403000). Every other card draws its picture byte for byte as before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
+Power's redrawn from their briefs (Core's scenes, below, R3392000), the Meditative+ and Training Grounds
+pass every entry of those two sets (below, R3393000), Meditative's every Meditative entry (below, R3401000), and
+Stinkyscape's later cards theirs (below, R3403000).
+Every other card draws its picture byte for byte as before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
 old pictures now, not pins (R3331002), each holding every card with no recipe to its old hash and each card
 with one to a new picture. A set's pass adds its cards' recipes from its own per-card brief table, takes them
 off the detail floor's short list, and tunes them by eye on `scene-proofs.cy.tsx`'s kind of screenshot, at
@@ -507,6 +509,44 @@ and is off the short list, whose cap fell from 337 to 289; `setScenes.test.ts` h
 and `set-scenes.cy.tsx` shows every Epic, Legendary and Mythic entry at hand size and the rest as a contact
 sheet, at desktop size and at 390x844.
 
+## Meditative drawn as scenes (R3401000)
+
+Meditative's pass draws every Meditative entry from a recipe of its own: its 102 cards and 30 tokens, each from its
+brief (#3401's table), in the art bible's ink-wash look, base and Radiant. The recipes are five files in id order,
+spread into `SCENE_RECIPES` after Classic+'s: `meditativeRecipes1.ts` (#1 to #14), `meditativeRecipes2.ts` (#15 to
+#30 with #19's, #22's, #28's and #30's tokens), `meditativeRecipes3.ts` (#31 to #49 with #39's, #45's and #49's),
+`meditativeRecipes4.ts` (#50 to #79 with #70's and #71's) and `meditativeRecipes5.ts` (#80 to #102 with #91's, #93's,
+#95's, #96's and #97's). Each keeps its brief's subject, setting and idea and Classic+'s rules (its main subject within x 30
+to 70 and y 25 to 85, its foreground near, its middle in the mid and subject layers, its background far, its emblem
+small on its subject inside the band every face shows), and the family's: pale paper and mist skies or the brief's
+hour in soft washes, ink-wash peaks and cloud behind, a high and distant camera that sees a small subject in a large
+space, and **one red seal** (`ink-seal`, a red chop of abstract strokes with no glyph) in the near layer of every
+picture, unrepainted, where a painter would stamp a scroll.
+
+Each of the 43 Units that are a person is a figure whose look starts from its tag's people and is dressed as who it is,
+no two alike; the 21 that are no person draw their part of the scene kit as their subject, with no figure: the
+rhino, the clockwork sentry, the pea vine, the Shade-iris, the taotie, Yile's Virus, Devin Bot, the Sentient Cat
+Ears, the Montaña Giant, Volatility's jar, Tatches the Totem, the True Sheep and the nine buildings of Jlockeed's
+Evil Blueprints. The people round a subject are small brush figures (`ink-person`), a rival or companion who matters
+an extra figure, and a foreground hand a hand of the kit (`hand-open`, `hand-hold`). API Key Fishing and Tatches the
+Totem, whose full-art motions move their props (R2715001), mark the near-layer placements that move with them
+(`props`). The parts the briefs named joined the kits: the figure kit's new headgear (headphones, a beanie, a
+pompadour, a conductor's cap, a tall hat, a topknot), outfits (overalls, a kaftan, a tailcoat, wind-blown silks)
+and held items (a lantern, a phone, a key, a baton, a brush, a loupe and torch, a fan, twin blades, a fishing rod, a comb), and eight scenery
+modules beside Classic+'s, drawing with the same helpers (`kitDraw.ts`): ink-world terrain and architecture
+(`sceneKitInkPlaces.ts`: peaks, terraces, still water, pagodas, pavilions, gates, wells), buildings
+(`sceneKitInkBuildings.ts`), objects (`sceneKitInkObjects.ts`: the seal, paper lanterns, brushes, an abacus, a go
+board), curios (`sceneKitInkCurios.ts`: jade, a bottle, a horned skull, a melon, drifting hearts, a torn ticket stub), machines
+(`sceneKitInkMachines.ts`), plants and weather (`sceneKitInkNature.ts`: the pea vine, lotus, plum blossom, a great
+tree, a trellis, ink cloud, a rift in the air, thought-shapes), creatures, people and hands
+(`sceneKitInkCreatures.ts`) and the Units' characters (`sceneKitInkCharacters.ts`). Where an earlier pass had
+already taken a name, the ink part took another (`ink-sheep` beside `sheep`, `ink-pavilion` beside `pavilion`,
+`ink-card-fan` beside `card-fan`, `temple-bell`, `envelope-drift`, `booster-sack`, `peak-fortress`), so no old
+picture changes; `ink-seal`, `ink-round-window` and the figure kit's `item-ink-brush` keep clear of the names
+Meditative+'s and Training Grounds' pass (#3438) gave its own. Every entry clears its rarity's floor and is off the short list, whose cap fell from 289 to 157;
+`meditativeScenes.test.ts` holds the set to all of it, and `meditative-scenes.cy.tsx` shows every Epic, Legendary
+and Mythic entry at hand size and the rest as a contact sheet, at desktop size and at 390x844.
+
 ## Stinkyscape's later cards drawn as scenes (R3403000)
 
 Each of the 103 entries of #3403's table, Stinkyscape #91 to #176 and their tokens with the tokens of the early
@@ -524,19 +564,20 @@ Each humanoid Unit is a figure dressed as who it is, no two alike; fourteen Unit
 or a machine of the kit as their subject: the Wasp and the Hornet, Megabase, the Sack, the Stinkyscape Golem, the
 four Asteroids, the Spice Tower, the Drone Interceptor and Corvette, Escort Protocol and Combat Subroutine. Crews,
 crowds and rivals are `extras`. The parts the briefs named joined the kits: the figure kit's space headgear (a
-headset, a neural crown, a bubble helmet, silver hair, a top hat), its flight suit, greatcoat, sleeveless vest,
-plated parka, frock coat, cloak and harness, and its shock-axe, dart, orb, slate, torch and vial, after #3393's; and
-four scene-kit modules of space beside #3390's and #3393's, drawing with `kitDraw.ts` and spread into `SCENE_KIT`:
+neural crown, a bubble helmet, silver hair, a top hat), its flight suit, greatcoat, sleeveless vest,
+plated parka, frock coat, cloak and harness, and its shock-axe, dart, orb, slate, torch and vial, after #3401's; and
+four scene-kit modules of space beside #3390's, #3393's and #3401's, drawing with `kitDraw.ts` and spread into `SCENE_KIT`:
 `sceneKitSpace.ts` (decks, bulkheads, regolith, craters, ducts, a planet's limb, stations, gates, pads, windows and
 their fittings), `sceneKitCraft.ts` (starships, fighters, freighters, shuttles, rockets, probes, drones, robots,
 mechs, a wasp, a golem, an alien, a crew), `sceneKitGear.ts` (consoles, a diagram of light, cables, ore, wreckage,
 credit chips, a roulette table, capsules, a kicking sack, pages, a blueprint, a reset lever, a drill, the chaos egg,
 and the beams, bolts, lasers, walls, plumes and flashes of energy) and `sceneKitCosmos.ts` (comets, frost and ice, a
 planet's ring, alarms, streaks, waves, flares, wormholes, rifts, galaxies, stink clouds). The pointing pose and the
-hoodie are Core's; a part named as the kit names one already is named for what sets it apart (`outfit-sleeveless`,
+hoodie are Core's and the headset Meditative's (`headphones`); a part named as the kit names one already is named for what sets it apart (`outfit-sleeveless`,
 `outfit-plated-parka`, `item-shock-axe`, `obs-bench`, `lamp-tent`, `ticker-tape`, `speed-streaks`, `surf-wave`,
-`crew-crowd`, `kicking-sack`), so no module's spread replaces another's. Every entry clears its rarity's floor and is
-off the short list, whose cap fell from 289 to 261; `stinkyscape91Scenes.test.ts` holds the pass to all of it, and
+`crew-crowd`, `kicking-sack`, and beside the Meditative pass's crane, rift and blueprint `shipyard-crane`, `space-rift`
+and `holo-blueprint`), so no module's spread replaces another's. Every entry clears its rarity's floor and is
+off the short list, whose cap fell from 157 to 129; `stinkyscape91Scenes.test.ts` holds the pass to all of it, and
 `stinkyscape91-scenes.cy.tsx` shows every Epic, Legendary and Mythic entry at hand size and the rest as a contact
 sheet, at desktop size and at 390x844.
 

@@ -45,6 +45,14 @@ import type { KitPart, KitShape, PaletteName, PartPlace, Rng } from "./scene.ts"
 import { COSMOS_KIT } from "./sceneKitCosmos.ts";
 import { CRAFT_KIT } from "./sceneKitCraft.ts";
 import { GEAR_KIT } from "./sceneKitGear.ts";
+import { INK_BUILDINGS_KIT } from "./sceneKitInkBuildings.ts";
+import { INK_CHARACTERS_KIT } from "./sceneKitInkCharacters.ts";
+import { INK_CREATURES_KIT } from "./sceneKitInkCreatures.ts";
+import { INK_CURIOS_KIT } from "./sceneKitInkCurios.ts";
+import { INK_MACHINES_KIT } from "./sceneKitInkMachines.ts";
+import { INK_NATURE_KIT } from "./sceneKitInkNature.ts";
+import { INK_OBJECTS_KIT } from "./sceneKitInkObjects.ts";
+import { INK_PLACES_KIT } from "./sceneKitInkPlaces.ts";
 import { MOUNTAIN_KIT } from "./sceneKitMountain.ts";
 import { NATURE_KIT } from "./sceneKitNature.ts";
 import { OBJECTS_KIT } from "./sceneKitObjects.ts";
@@ -5151,6 +5159,15 @@ export const SCENE_KIT = {
   ...MOUNTAIN_KIT,
   ...YARD_KIT,
   ...TOUCHES_KIT,
+  // R3401000: the parts the Meditative scenes added.
+  ...INK_PLACES_KIT,
+  ...INK_BUILDINGS_KIT,
+  ...INK_OBJECTS_KIT,
+  ...INK_CURIOS_KIT,
+  ...INK_MACHINES_KIT,
+  ...INK_NATURE_KIT,
+  ...INK_CREATURES_KIT,
+  ...INK_CHARACTERS_KIT,
   // R3403000: the parts the Stinkyscape scenes added.
   ...SPACE_KIT,
   ...CRAFT_KIT,
