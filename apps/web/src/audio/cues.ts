@@ -11,6 +11,7 @@
 // never as it is set (`revealSting`, game/entrance.ts). R3332002: a Legendary's or Mythic's own intro is
 // its sting (`entranceSting`), so the shared entrance sting rings only for one with no intro. R3336000:
 // the Drone Battleship's layers and drones add their own sounds after the row's (`battleshipCues`, unpanned).
+// R3400001: so do Meditative+'s and Training Grounds' signature cards (`signatureCues`, unpanned).
 
 import type {
   CardType,
@@ -24,6 +25,7 @@ import type {
   UnitView,
 } from "@jackioh/shared";
 
+import { isAnomalyCode } from "../cards/anomalies.ts";
 import { themeFor } from "../cards/art/themes.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { armorTookHalf, damageTier, playTier, UNIT_SLAM, type PlayTier, type PlayType } from "../game/damageFeel.ts";
@@ -62,6 +64,7 @@ import type {
 } from "./types.ts";
 import { entryFor, hookFor } from "./voiceData.ts";
 import { battleshipCues } from "./battleshipCues.ts";
+import { signatureCues } from "./signatureCues.ts";
 
 /** R1088: the defId the view reads on `instanceId`, or undefined when it shows the card nowhere. */
 function defIdOfInstance(view: PlayerView, instanceId: string): string | undefined {
@@ -696,7 +699,12 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
 
   // Issue #1855: Anomalies, the board swap (R1855000)
   // The old board whooshes away; the `exiled` and `summoned` behind it sound the cards going and coming.
-  boardReplaced: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+  // R3337003: a Stinkyscape Anomaly's lay (R3337000's `anomaly`, public as the board is) sounds its own
+  // sting instead; any other replacement, or a code this build does not know, keeps the whoosh.
+  boardReplaced: {
+    sfx: "whoosh",
+    cues: (event) => (isAnomalyCode(event.anomaly) ? [sfx("anomaly", { anomaly: event.anomaly })] : [sfx("whoosh")]),
+  },
 
   // ---- Issue #2652: coin flips and die rolls (R2652001) ----
   // The batch spins as the slot machine's reel does, before the outcome sounds its own result.
@@ -790,5 +798,5 @@ function panned(event: GameEvent, ctx: CueContext, cues: readonly SoundCue[]): r
 export function cuesFor(event: GameEvent, ctx: CueContext): readonly SoundCue[] {
   const row = soundRow(event.type);
   if (row === undefined) return NONE;
-  return [...panned(event, ctx, row.cues(event, ctx)), ...battleshipCues(event, ctx)];
+  return [...panned(event, ctx, row.cues(event, ctx)), ...battleshipCues(event, ctx), ...signatureCues(event)];
 }

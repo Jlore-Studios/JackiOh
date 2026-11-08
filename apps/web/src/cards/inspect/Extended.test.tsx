@@ -74,6 +74,9 @@ describe("R1017000 the extended description", () => {
   });
 
   it("R1017000 R280 a Summit in a game previews its next Ascent line, the whole ladder on its left", () => {
+    // R3343001: a Mythic's Default prints full art while the Full-art cards setting is on, so the setting is off to
+    // read Reach the Summit's face.
+    writeCardSettings({ ...CARD_SETTINGS_DEFAULTS, fullArt: false });
     const face = faceModel({
       defId: SUMMIT_DEF_ID,
       def: def(SUMMIT_DEF_ID),

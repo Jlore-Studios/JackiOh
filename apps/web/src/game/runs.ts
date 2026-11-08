@@ -1,9 +1,10 @@
-// CLAUDE.md rule 7: the runner derives casts (§6.3, R70), pile impacts, sweeps, wipes and the Starship's fuse runs and
-// launches (R2801000) from redacted events and PlayerView.
+// CLAUDE.md rule 7: the runner derives casts (§6.3, R70), pile impacts, sweeps, wipes, the Starship's fuse runs and
+// launches (R2801000) and an Anomaly's rift (R3337003) from redacted events and PlayerView.
 // R97, R202, R242, and R440 forbid hidden-card inference; `HIDDEN_PILE_OF` uses only public card text.
 
 import type { GameEvent, PlayerId, PlayerView, Row } from "@jackioh/shared";
 
+import { isAnomalyCode, type AnomalyCode } from "../cards/anomalies.ts";
 import { flavorSourceOf } from "../fx/flavorSource.ts";
 import { sideOf, testid, type Side } from "./contract";
 
@@ -536,4 +537,41 @@ export function launchAt(events: readonly GameEvent[], at: number, view: PlayerV
     pieces: event.pieces.length,
     name: event.name,
   };
+}
+
+// An Anomaly
+
+/**
+ * R3337003: an Anomaly laid on `player`'s side, as the runner plays it: its code (R3337000), the side it
+ * lands on, each card the board's `summoned` lays, in order, as the zone it lands in and its row, and
+ * `sourceId`, the play open as it lands (Anomaly Found!'s own, or #151's), or null for none.
+ */
+export type AnomalyRift = {
+  player: PlayerId;
+  code: AnomalyCode;
+  side: Side;
+  landings: readonly { zone: string; row: Row }[];
+  sourceId: string | null;
+};
+
+/** R3337003: what ends a rift: the next hook (a laid Cry firing, R1855001), a question, a Trap, the play's end, another replacement, the game's or the turn's end. */
+const RIFT_ENDS = new Set<GameEvent["type"]>(["hookResolving", "promptOpened", "trapFired", "cardResolved", "boardReplaced", "gameOver", "turnEnded"]);
+
+/**
+ * R3337003: the rift at `at`, or null: a `boardReplaced` naming an Anomaly (R3337000), with every event
+ * after it up to the first of `RIFT_ENDS`: the old side's `exiled` and the board's `summoned` among
+ * them. A replacement naming none plays as its own row. The code and the zones are public (R202): the
+ * laid board is, and a face-down card's landing names only its zone.
+ */
+export function riftAt(events: readonly GameEvent[], at: number, view: PlayerView, play?: OpenPlay): { rift: AnomalyRift; length: number } | null {
+  const head = events[at];
+  if (head?.type !== "boardReplaced" || !isAnomalyCode(head.anomaly)) return null;
+  const side = sideOf(view, head.player);
+  const landings: { zone: string; row: Row }[] = [];
+  let i = at + 1;
+  for (let event = events[i]; event !== undefined && !RIFT_ENDS.has(event.type); event = events[i]) {
+    if (event.type === "summoned" && event.player === head.player) landings.push({ zone: testid.zone(side, event.row, event.lane), row: event.row });
+    i += 1;
+  }
+  return { rift: { player: head.player, code: head.anomaly, side, landings, sourceId: play?.instanceId ?? null }, length: i - at };
 }

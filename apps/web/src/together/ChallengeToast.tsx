@@ -3,7 +3,7 @@
 // Friends button's badge and Play together share).
 //
 // AN INCOMING CHALLENGE is a toast with its mode and a picker of the player's deck (or trio), starting on the
-// last one used (`challengeChoice.ts`); for All Random, "More cards from" (R924000) on the device's online
+// last one used (`challengeChoice.ts`); for All random, "More cards from" (R924000) on the device's online
 // pick (R2031000), shown once the engine is in (#778). Accept joins the room by its code, which accepts the
 // challenge (B49), in one press (R1831000). A screen holding unsaved work asks first (R1754000). A
 // refused join is shown in the server's words, with "Open in lobby", as a room link opens `/play` (R767).
@@ -154,7 +154,7 @@ export function ChallengeToast(): ReactElement {
     return pickDeck(saved.decks, chosen ?? remembered.deckId)?.id ?? null;
   };
 
-  /** R2031000: the pick an All Random `challenge` joins with, read afresh until one is made in its toast. */
+  /** R2031000: the pick an All random `challenge` joins with, read afresh until one is made in its toast. */
   const leanFor = (challenge: Challenge): LeanPick | null => {
     const chosen = leans[challenge.challengeId];
     return chosen === undefined ? readPlayLean() : chosen;

@@ -2,6 +2,7 @@
 
 import type { CardType, GameEvent, KeywordKind, PlayerId, PlayerView, Rarity, Row, Tag } from "@jackioh/shared";
 import type { Side } from "../game/contract.ts";
+import type { FxFigure } from "./figures.ts";
 import type { FxCardHook } from "./motifs/names.ts";
 
 /** A point in fractions of a box's width and height. */
@@ -98,8 +99,8 @@ export type FxShakeCue = { kind: "shake"; trauma: number; delayMs: number };
 export type FxSplatCue = { kind: "splat"; tone: FxSplatTone; amount: number; at: FxAnchor; delayMs: number; durationMs: number };
 export type FxRaysCue = { kind: "rays"; tone: FxRayTone; at: FxAnchor; delayMs: number; durationMs: number };
 export type FxSheenCue = { kind: "sheen"; at: FxAnchor; delayMs: number; durationMs: number };
-/** A card BACK flying between two anchors. It never carries a card identity (R202). */
-export type FxGhostCue = { kind: "ghost"; from: FxAnchor; to: FxAnchor; delayMs: number; durationMs: number };
+/** A card BACK flying between two anchors. It never carries a card identity (R202). R3337003: `spin` tumbles it as it flies (an asteroid out of a rift). */
+export type FxGhostCue = { kind: "ghost"; from: FxAnchor; to: FxAnchor; delayMs: number; durationMs: number; spin?: true };
 /**
  * R2789000: a combat keyword's icon popping over `at` for `durationMs` (the shared callout of the keyword
  * beats, fx/motifs/callout.ts). `still` draws it as a static icon, for reduced motion.
@@ -153,9 +154,10 @@ export type FxFogCue = {
  * R2722001: a Mythic's takeover, its look a marquee card's own or the shared prismatic one. The board
  * darkens, a card-shaped silhouette (never a face, R202) sweeps across it into `at`, light rays turn
  * and a shockwave crosses both sides when it lands at `landMs`, all inside the entry and gone within
- * the effects' tail (R200).
+ * the effects' tail (R200). R3400000: "summit", "canvas" and "napkin" draw art of their own over the dark
+ * (takeoverArt.ts), the same art Reduce Motion's still shows (game/TakeoverStill.tsx).
  */
-export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai";
+export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai" | "summit" | "canvas" | "napkin";
 /**
  * R3345000: the card whose own art a takeover draws. It is public: a takeover plans only for a readable play (R202).
  * The cue holds it behind a function, so the cue's own data names no card (`tiers.test.ts`' R202 check reads that).
@@ -231,6 +233,53 @@ export type FxShipCue = {
   delayMs: number;
   durationMs: number;
 };
+/**
+ * R3400001: one of a signature's drawn figures (figures.ts) covering `at`'s box in `tint`: a scroll, a
+ * snowplow, a chalkboard, a die. `side` mirrors it for the other seat's play; `small` draws it at a second
+ * card's size. A figure is a shape, never a card face (R202).
+ */
+export type FxFigureCue = {
+  kind: "figure";
+  figure: FxFigure;
+  at: FxAnchor;
+  tint: FxTint;
+  delayMs: number;
+  durationMs: number;
+  side?: "you" | "opponent";
+  size?: "small";
+};
+/**
+ * R3337003: an Anomaly's rift down the middle of `side`'s half of the field, centred on `at`: it tears
+ * open at `tearMs`, every card it takes is drawn into it (the stage's `pull`), and it flares white at
+ * `flareMs`. It names no card (R202).
+ */
+export type FxRiftCue = {
+  kind: "rift";
+  at: FxAnchor;
+  side: "you" | "opponent";
+  tint: FxTint;
+  tearMs: number;
+  flareMs: number;
+  delayMs: number;
+  durationMs: number;
+};
+/**
+ * R3337003: an Anomaly's title card stamped across the screen at `at`: its name (`text`, the board's own,
+ * which is public) over its picture (`picture`, the SVG markup of `cards/art` `anomalyMarkup`, which the
+ * layer draws in place, no image: B27). `still` draws it without motion, for reduced motion.
+ */
+export type FxAnomalyTitleCue = {
+  kind: "anomalyTitle";
+  at: FxAnchor;
+  text: string;
+  picture: string;
+  tint: FxTint;
+  delayMs: number;
+  durationMs: number;
+  still?: true;
+};
+/** R3337002: a Scanning Probe's radar sweep across the board from `at`, the hand of `side`: one wedge turning. It names no card (R202). */
+export type FxRadarCue = { kind: "radar"; at: FxAnchor; side: "you" | "opponent"; tint: FxTint; delayMs: number; durationMs: number };
 export type FxZoneCue = {
   kind: "zone";
   at: FxAnchor;
@@ -297,7 +346,11 @@ export type FxDomCue =
   | FxTakeoverCue
   | FxSetPieceCue
   | FxLaunchCue
-  | FxShipCue;
+  | FxShipCue
+  | FxRiftCue
+  | FxAnomalyTitleCue
+  | FxRadarCue
+  | FxFigureCue;
 export type FxStageCue = FxHoldCue | FxConcealCue | FxLungeCue | FxPullCue;
 export type FxCue = FxCanvasCue | FxShakeCue | FxDomCue | FxStageCue;
 

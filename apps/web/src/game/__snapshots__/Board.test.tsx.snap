@@ -3640,8 +3640,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
             data-art-first="true"
             data-card-type="Unit"
             data-foil="none"
+            data-full-art="true"
             data-layout="minion"
             data-rarity="Mythic"
+            data-version="version-full-art"
           >
             <span
               class="cf-scale"

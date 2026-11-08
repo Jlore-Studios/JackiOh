@@ -1449,8 +1449,9 @@ async fn r2940000_a_token_refuses_a_version_not_offered() {
 #[tokio::test]
 async fn r2942000_an_epic_token_refuses_a_version_not_offered() {
     let (app, token) = setup().await;
-    // Spell Tyrant, a Legendary Unit, is offered all three of #2942's versions; Speciesist, a Common Unit, none.
-    let card = "classic-056".to_string();
+    // Scratch Pad, a Mythic Spell, is offered all three of #2942's versions (R3343000: a Legendary's Default draws
+    // Extended art, offered it nowhere); Speciesist, a Common Unit, none.
+    let card = "meditativeplus-026".to_string();
     let bare = "core-002".to_string();
     own(&app, &[card.clone(), bare.clone()]).await;
     grant_item(&app, InventoryItem::CosmeticToken, "Epic", 3).await;
@@ -1709,4 +1710,48 @@ async fn r3015004_a_token_buys_only_the_next_level() {
     // Its signed level is a Mythic, the next level now, which no token buys (R2728000): a 409.
     let (status, answer) = redeem("Legendary", "version-sketch-full-art-signed").await;
     assert_eq!(status, 409, "{answer}");
+}
+
+#[tokio::test]
+async fn r3343000_a_token_refuses_a_default_look_and_buys_the_level_above_it_with_nothing_owned() {
+    let (app, token) = setup().await;
+    // R3343000: Silly Silas, a Legendary Unit, is offered Extended art's ladder, but its Default draws the first level:
+    // offered it nowhere, and owned there by every account with no row, so its animated level is the next one.
+    let card = "core-052".to_string();
+    let animated = "version-extended-art-animated";
+    own(&app, std::slice::from_ref(&card)).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Epic", 1).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Legendary", 1).await;
+    let redeem = |tier: &str, id: &str| {
+        let (app, token) = (app.clone(), token.clone());
+        let body = json!({ "token": tier, "cosmeticId": id, "cardId": card });
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/tokens/redeem-cosmetic", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    // The default look, with an Epic token, its tier: a 400, and nothing written or spent.
+    let before = everything(&app).await;
+    let (status, answer) = redeem("Epic", VERSION_EXTENDED_ART_ID).await;
+    assert_eq!(
+        (status, answer["error"]["message"].clone()),
+        (400, json!("that cosmetic is not offered on that card")),
+        "{answer}"
+    );
+    assert_eq!(everything(&app).await, before);
+    assert!(ledger(&app).await.cosmetics.is_empty());
+    // With nothing owned on the card, a Legendary token buys the level above it, a Legendary chase (R2728000), and
+    // writes that row alone: no row of the default look.
+    let (status, answer) = redeem("Legendary", animated).await;
+    assert_eq!(status, 200, "{answer}");
+    let rows: Vec<(Option<String>, String)> = ledger(&app)
+        .await
+        .cosmetics
+        .iter()
+        .map(|row| (row.card_id.clone(), row.cosmetic_id.clone()))
+        .collect();
+    assert_eq!(rows, vec![(Some(card.clone()), animated.to_string())]);
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Legendary").await, 0);
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Epic").await, 1);
 }

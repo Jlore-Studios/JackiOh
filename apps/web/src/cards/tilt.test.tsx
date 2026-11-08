@@ -16,10 +16,11 @@ import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { CardDefsProvider } from "./refContext.tsx";
 import { CARD_GLARE_TRAVEL_PCT, CARD_TILT_MAX_DEG } from "./constants.ts";
 import { CardFace } from "./CardFace.tsx";
-import { resetCosmeticsForTests } from "./cosmetics.ts";
+import { resetCosmeticsForTests, writeCardLevel } from "./cosmetics.ts";
 import { faceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, readCardSettings, writeCardSettings } from "./settings.ts";
 import { devicePose, glareOf, pointerPose, resetTiltForTests, tiltDegrees, useTiltHold, type TiltMode } from "./tilt.ts";
+import { VERSION_ALT_ART_ID } from "./versions.ts";
 
 const LEGENDARY = "core-052";
 const MYTHIC = "core-100";
@@ -89,6 +90,9 @@ beforeEach(() => {
   resetCosmeticsForTests();
   resetTiltForTests();
   writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
+  // R3343001: a Legendary's Default draws Extended art, which draws no planes and so never tilts (R3344000); the
+  // Legendary under test wears Alt art, the painter's own picture in the normal frame.
+  writeCardLevel(LEGENDARY, VERSION_ALT_ART_ID);
 });
 
 afterEach(() => {

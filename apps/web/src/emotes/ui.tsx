@@ -17,7 +17,7 @@ import "./emotes.css";
 
 export const VOICE_LABEL: Record<VoiceEmoteId, string> = {
   greetings: "Greetings",
-  wellPlayed: "Well Played",
+  wellPlayed: "Well played",
   oops: "Oops",
   thanks: "Thanks",
   threaten: "Threaten",

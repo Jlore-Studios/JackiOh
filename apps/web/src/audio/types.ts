@@ -3,6 +3,7 @@
 
 import type { VoiceEmoteId } from "@jackioh/shared";
 
+import type { AnomalyCode } from "../cards/anomalies.ts";
 import type { PlayTier, PlayType } from "../game/damageFeel.ts";
 
 import type { CARD_HOOKS } from "./constants.ts";
@@ -32,10 +33,14 @@ export type SfxId =
   | "horn" | "domeFlare" | "bayDoor" | "reactorPulse" | "deckShear"
   // R3338000: the organ each Terminus set piece's bed opens with (R1883000's Terminus family).
   | "organ"
+  // R3337003: a Stinkyscape Anomaly laid, one sting per board (`SfxParams.anomaly`).
+  | "anomaly"
   // R3346000: a play's impact by the mana it cost, and a firing trap's snap.
   | "playImpact" | "trapSnap"
   // R3342000: the tile aura touch bell.
-  | "auraTouch";
+  | "auraTouch"
+  // R3400001: Meditative+'s and Training Grounds' signature Legendaries and Mythics, one each (signatureCues.ts).
+  | "inkSummit" | "plowHeave" | "cursorTear" | "seanceChant" | "slateRap" | "diceGong" | "timberLash" | "pencilArpeggio";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains
@@ -81,6 +86,11 @@ export type SfxParams = {
   /** A field tap's rolling four-way texture (sand's grain, every playmat's voice) and the amount built up by sustained tapping. */
   sandVariant?: number;
   sandBuild?: number;
+  /**
+   * R3337003: anomaly: the code of the Anomaly laid (`boardReplaced.anomaly`), which picks its sting.
+   * Absent, or a code this build does not know: the plain whoosh.
+   */
+  anomaly?: AnomalyCode;
   /** auraTouch: the aura's hue, 0-360. */
   hue?: number;
   /** A cue turned down to QUIET_SFX_GAIN: the arena's corner props answer this softly while the animation queue drains (R3348001). The engine scales; no recipe reads it. */

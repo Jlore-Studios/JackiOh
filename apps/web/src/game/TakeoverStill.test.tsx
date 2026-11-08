@@ -1,17 +1,19 @@
 // R2722001: a Mythic's entrance on the board. With motion, the entry in flight holds for the takeover
 // (`data-takeover`, and since R2785000 its set piece's `data-set-piece` and `--set-piece-hold`); under
 // Reduce motion there is no hold, no shake and no flash, and a still card stands over the board for
-// TAKEOVER_STILL_MS instead.
+// TAKEOVER_STILL_MS instead. R3337003: a Mythic play that lays an Anomaly (Anomaly Found!) yields both to
+// the Anomaly's rift and its still title card.
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent } from "@jackioh/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TAKEOVER_HOLD_MS, TAKEOVER_SET_PIECE } from "./animations.ts";
+import { ANOMALY_SET_PIECE, TAKEOVER_HOLD_MS, TAKEOVER_SET_PIECE } from "./animations.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Game from "./Game.tsx";
 import { TAKEOVER_STILL_MS } from "./TakeoverStill.tsx";
+import { TAKEOVER_ART_PARTS } from "../fx/takeoverArt.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, withEvents } from "../test/fixtures.ts";
 
@@ -32,7 +34,7 @@ afterEach(() => {
   __resetSettingsForTests();
 });
 
-function playOut(defId: string): void {
+function playOut(defId: string, after: GameEvent[] = []): void {
   const before = withEvents(baseView(), START);
   const { rerender } = render(
     <CatalogContext.Provider value={lookup}>
@@ -41,7 +43,7 @@ function playOut(defId: string): void {
   );
   rerender(
     <CatalogContext.Provider value={lookup}>
-      <Game view={withEvents(baseView(), [...START, cast(defId)])} legal={[]} onAction={vi.fn()} />
+      <Game view={withEvents(baseView(), [...START, cast(defId), ...after])} legal={[]} onAction={vi.fn()} />
     </CatalogContext.Provider>,
   );
 }
@@ -75,11 +77,63 @@ describe("R2722001 a Mythic's takeover on the board", () => {
     expect(screen.queryByTestId("takeover-still")).toBeNull();
   });
 
+  it("R3400000 under reduced motion each Mythic with art shows it still", () => {
+    writeSettings({ reduceMotion: true });
+    for (const [defId, look] of [["meditativeplus-001", "summit"], ["meditativeplus-026", "canvas"], ["traininggrounds-040", "napkin"]] as const) {
+      playOut(defId);
+      const still = screen.getByTestId("takeover-still");
+      expect(still).toHaveAttribute("data-takeover-def", defId);
+      const art = still.querySelector(".takeover-art");
+      expect(art, defId).not.toBeNull();
+      expect(art).toHaveAttribute("data-look", look);
+      expect(art).toHaveAttribute("data-still", "true");
+      expect([...(art?.children ?? [])].map((part) => part.className), defId).toEqual(TAKEOVER_ART_PARTS[look]?.map((part) => `takeover-art-${part}`));
+      // Shapes only: no text, and nothing in it animates.
+      expect(art?.textContent, defId).toBe("");
+      expect(still.querySelector("[data-animating]")).toBeNull();
+      cleanup();
+    }
+    // A Mythic with no art of its own shows the still card alone.
+    playOut(ZEPHRYS);
+    expect(screen.getByTestId("takeover-still").querySelector(".takeover-art")).toBeNull();
+  });
+
   it("R2722001 a Legendary takes neither the hold nor the still", () => {
     writeSettings({ reduceMotion: true });
     playOut("core-083");
     expect(screen.queryByTestId("takeover-still")).toBeNull();
     expect(screen.getByTestId("game")).not.toHaveAttribute("data-takeover");
+  });
+});
+
+/** Anomaly Found!, a token Spell that prints Mythic, and the Wormhole it lays (R3337000). */
+const ANOMALY_FOUND = "stinkyscape-t-anomaly-found";
+const LAID: GameEvent[] = [
+  { type: "boardReplaced", player: "p1", anomaly: "WH" },
+  { type: "cardResolved", player: "p1", instanceId: `i-${ANOMALY_FOUND}`, defId: ANOMALY_FOUND, permanent: false, costPaid: 3 },
+];
+
+describe("R3337003 a Mythic play that lays an Anomaly yields its takeover to the rift", () => {
+  it("R3337003 with motion the play holds no takeover, and the rift holds as the action's set piece", () => {
+    playOut(ANOMALY_FOUND, LAID);
+    const game = screen.getByTestId("game");
+    const seen = new Set<string>();
+    for (let step = 0; step < 80 && screen.queryByTestId("animation-queue") !== null; step += 1) {
+      const key = game.getAttribute("data-set-piece");
+      if (key !== null) seen.add(key);
+      expect(game).not.toHaveAttribute("data-takeover");
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+    }
+    expect([...seen]).toEqual([ANOMALY_SET_PIECE]);
+  });
+
+  it("R3337003 under reduced motion it stands no still Mythic card", () => {
+    writeSettings({ reduceMotion: true });
+    playOut(ANOMALY_FOUND, LAID);
+    expect(screen.queryByTestId("takeover-still")).toBeNull();
+    expect(screen.getByTestId("game")).not.toHaveAttribute("data-set-piece");
   });
 
   it("R3345000 under reduced motion an opponent's public Mythic play shows TakeoverStill with the card's own picture", () => {

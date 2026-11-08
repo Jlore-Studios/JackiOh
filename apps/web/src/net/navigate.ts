@@ -266,7 +266,7 @@ export const paths = {
   shop: "/shop",
   /** #1665, R1665000: the odds and pity of every pack, public like the terms; the account's counters need a session. */
   purchases: "/purchases",
-  /** #2705, docs/dungeon-run.md DR14: the Dungeon Run, a single-player run played offline in the Sandbox. */
+  /** #2705, docs/dungeon-run.md DR14: the Dungeon run, a single-player run played offline in the Sandbox. */
   dungeon: "/dungeon",
   /** #2705: the Sandbox's stats and leaderboards, on the device. */
   dungeonStats: "/dungeon/stats",

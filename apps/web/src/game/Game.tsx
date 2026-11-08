@@ -78,6 +78,7 @@ import { getAudioEngine } from "../audio/engine.ts";
 import AuraLayer from "../fx/aura/AuraLayer.tsx";
 import { hasSetPiece, setPieceShapeOf, signatureClaim, signatureRunOf, wipeClaim } from "../fx/setPieces.ts";
 import { questClaim } from "../fx/systemMoments.ts";
+import { anomalyClaim } from "../fx/anomaly.ts";
 import { starshipClaim } from "../fx/starship.ts";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { WearerProvider } from "./wearer.ts";
@@ -454,7 +455,7 @@ export default function Game({
       wipeOf: hasSetPiece,
       // R3338000: a Terminus card's signature run is one entry its set piece claims.
       signatureOf: signatureRunOf,
-      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry) ?? signatureClaim(entry) ?? questClaim(entry) ?? starshipClaim(entry),
+      setPieceOf: (entry) =>  setPieceOfRef.current?.(entry) ?? wipeClaim(entry) ?? signatureClaim(entry) ?? questClaim(entry) ?? starshipClaim(entry) ?? anomalyClaim(entry),
       onSettled: () => {
         setShown(latest.current);
       },
@@ -611,9 +612,11 @@ export default function Game({
         const slams = slamEntries(planEntries(fresh, previous, true), slamResolver, true);
         triggerHitStopMs(slams.reduce((ms, entry) => Math.max(ms, entry.slam?.hitStopMs ?? 0), 0));
         // R2722001, R3345000: a public Mythic's entrance under reduced motion shows TakeoverStill with
-        // the card's own picture for both seats (hidden play shows nothing, R202).
+        // the card's own picture for both seats (hidden play shows nothing, R202). R3337003: a play that
+        // lays an Anomaly yields it to the Anomaly's still title card, as its takeover yields to the rift.
+        const rifted = new Set(slams.flatMap((entry) => entry.rift?.sourceId ?? []));
         const mythic = entranceEntries(slams, entranceResolver, { seen: stillSeen.current }).find(
-          (entry) => entry.entrance?.tier === "mythic" && entry.entrance.defId !== HIDDEN_ID,
+          (entry) => entry.entrance?.tier === "mythic" && entry.entrance.defId !== HIDDEN_ID && !rifted.has(entry.entrance.instanceId),
         )?.entrance;
         if (mythic !== undefined) setStill({ defId: mythic.defId, instanceId: mythic.instanceId, view: previous });
       }

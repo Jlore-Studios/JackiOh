@@ -9,6 +9,7 @@ import type { CatalogSnapshot, Collection, LoadoutError } from "@jackioh/validat
 import { portraitOrDefault } from "@jackioh/shared";
 
 import { PortraitPicker } from "../../emotes/PortraitPicker.tsx";
+import { ArrowIcon } from "../../routes/ArrowIcon.tsx";
 import { closeInspect } from "../../cards/index.ts";
 import { readerName } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
@@ -336,7 +337,8 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const head = (
     <div className="ws-editor-head">
       <button type="button" className="ws-back" data-testid={WORKSHOP_BACK} onClick={onBack}>
-        {t("← All decks")}
+        <ArrowIcon direction="back" />
+        {t("Back to decks")}
       </button>
       {/* Issue §8: the deck's portrait. The picker holds the portraits the account owns (R1827000)
           and the previews; picking one saves like any edit. `null` in the store reads `vanilla` (R641). */}
