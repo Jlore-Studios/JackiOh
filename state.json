@@ -17273,6 +17273,13 @@
     "3439": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-08T17:51:13Z",
+        "difficulty": "hard",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "Rule 1: the fuzz failure is a bug in the engine's crafted-trap trigger (crates/engine/src/subsystems/craft.rs), an engine rules fix; the rest is e2e test work."
+      },
       "failures": 1,
       "handoff": {
         "at": "2026-11-08T17:36:32Z",
