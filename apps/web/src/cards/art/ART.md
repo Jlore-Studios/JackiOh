@@ -136,6 +136,7 @@ still a pure function of the card's id, name, tags and type. The cache keys the 
 served for another's. The normal picture's seed is the card's id alone, so every still picture and
 golden hash stands. A later version with a picture of its own adds its own name to `ArtPicture`, so it
 draws apart from every other. A Starship's art, a Legacy card's and a delivered file keep their one picture.
+A Classic+ card offered Alt art draws an alt recipe of its own instead (R3396000, below).
 
 ## One picture per variant (R3015002)
 
@@ -427,6 +428,35 @@ taken a name for a part of its own, Core's drawing took another (`sea` beside `w
 `coreScenes.test.ts` holds the recipes to this, and
 `core-scenes.cy.tsx` draws every Epic, Legendary and Mythic scene at hand size and a contact sheet of the rest, at
 a desktop's size and a phone's.
+
+## Classic+'s Alt art restaged (R3396000)
+
+Each of the 40 Classic+ cards offered Alt art draws an alt recipe of its own, written from #3396's brief for it:
+the same subject and idea in another place, time or story moment. The recipes are two files in id order,
+`classicPlusAltRecipes1.ts` (#2 to #36) and `classicPlusAltRecipes2.ts` (#37 to #78), spread into
+`ALT_SCENE_RECIPES` (sceneRecipes.ts). `sceneRecipeOf` reads one under the card's Alt art seed (`<id>#alt`,
+`SCENE_ALT_PICTURE`) alone: the card's id, a repaint's seed and any other seed keep the normal recipe, and every
+level of Alt art draws the one alt picture (R3015002). Each recipe keeps these rules:
+
+- **Place and palette.** Classic's family, the brief's place, time and palette, a sky sharing no colour with the
+  normal recipe's and a light that suits the hour.
+- **The same subject.** A Unit drawn as a figure keeps one; a figure both pictures draw is the normal one's person
+  (`normalLookOf`: its head and outfit kept, only its cloth, headgear or held item changed); League of Losers keeps
+  its five (`normalExtraLookOf`); the J15 Fighter stays the jet; a subject that is a part stays in the subject layer.
+- **A new camera.** A close-up scales the subject up, a figure to about 1.6 to 1.9 standing below the window; a wide
+  or distant view shrinks it, a figure to about 0.6 or less; a view from above lays ground across the box under small
+  subjects. Either way the subject (its figure, else its subject layer's first part) moves at least 8 units, changes
+  scale by at least a quarter, or a figure comes or goes.
+- **Detail, emblem and props.** The rarity's floor and the byte ceiling (R3331001) on both faces, the emblem small
+  inside the band every face shows, no props in the subject layer, and the props the full-art motions move
+  (League of Losers, Felinor Flagbearer, J-lease J-Jungle EX-plorer) marked outside it.
+
+The briefs' places added six parts: a boat, a tent and a waterfall (`sceneKitPlaces.ts`), and bamboo, a cactus and a
+fox (`sceneKitNature.ts`). `ALT_PICTURE_CHANGE_MIN` (0.6) is the least share of an Alt art window's sampled points
+that differ from the normal window, base and Radiant, sampled on card-versions.cy.tsx's grid and counted with its
+threshold for a point that differs. `classicPlusAltScenes.test.tsx` holds every recipe to the rules and every Alt art
+level's face to its picture and its Radiant marks, and `classicplus-alt-scenes.cy.tsx` measures each window's share
+and screenshots each normal face beside its Alt art face.
 
 ## The detail floor (R3331001)
 

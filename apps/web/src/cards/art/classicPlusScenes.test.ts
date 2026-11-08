@@ -27,6 +27,7 @@ import { SCENE_KIT } from "./sceneKit.ts";
 import { NATURE_KIT } from "./sceneKitNature.ts";
 import { OBJECTS_KIT } from "./sceneKitObjects.ts";
 import { PLACES_KIT } from "./sceneKitPlaces.ts";
+import { ALT_SCENE_RECIPES } from "./sceneRecipes.ts";
 import { proceduralArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
 
@@ -208,7 +209,11 @@ describe("R3390000 Classic+ drawn as scenes", () => {
   });
 
   it("R3390000 Alt art grows the same parts from its own seed", () => {
-    for (const card of ENTRIES) {
+    // R3396000: the 40 offered Alt art draw an alt recipe of their own instead (classicPlusAltScenes.test.tsx).
+    const reseeded = ENTRIES.filter((card) => !Object.hasOwn(ALT_SCENE_RECIPES, card.id));
+    expect(reseeded).toHaveLength(ENTRIES.length - Object.keys(ALT_SCENE_RECIPES).length);
+    expect(reseeded).toHaveLength(76);
+    for (const card of reseeded) {
       const scene = recipe(card.id);
       const normal = composeScene(scene, card.id);
       const seed = artSeedOf(card.id, "alt");
