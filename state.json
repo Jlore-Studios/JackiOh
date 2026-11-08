@@ -17024,6 +17024,8 @@
       }
     },
     "3438": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-08T13:00:47Z",
@@ -17037,8 +17039,11 @@
         "trail": "2.ts'\\ns=open(p).read()\\na='{ part: \\\"moon-wall\\\", x: 50, y: 78, scale: \u2026\n- Read: {\"file_path\": \"/tmp/artview/me/cards.png\"}\n- Bash: {\"command\": \"tail -15 /tmp/webtests.log\", \"description\": \"Check the web test run\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393; E2E_COMPONENT_PORT=5281 timeout 1700 pnpm --dir e2e exec cypress run --component --browser chrome --spec cypress/component/set-scenes.cy.tsx > \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393; sed -i 's/^meditativeplus-012|.*/meditativeplus-012|kept (a steel-grey flask in an iron-grey hut, no separate plates)/' /tmp/verdicts-forks.txt\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393; git diff 197311a554 --stat | tail -3; git status --short; grep -rn 'TODO\\\\|FIXME\\\\|XXX\\\\|console\\\\.' apps/web/src/cards/art/sceneKit{Mountain,Y\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393/apps/web/src/cards/art; grep -n '[0-9]\\\\+ parts\\\\|[0-9]\\\\+ poses\\\\|parts in\\\\b' ART.md | head; grep -c '^function' sceneKitMountain.ts sceneKitY\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393/apps/web/src/cards/art; python3 - <<'EOF'\\np='figureKit.ts'\\ns=open(p).read()\\na=\\\"// heads, five hairs and headgears, twelve outfits and fourte\u2026\n- Bash: {\"command\": \"until grep -q '^EXIT' /tmp/cy.log; do sleep 15; done; grep -E '\\u2713|[0-9]+\\\\) R33|passing|failing|EXIT' /tmp/cy.log | head -12; tail -4 /tmp/webtests.log\", \"description\": \"Wait for the\u2026\n- Bash: {\"command\": \"grep -n -A5 'differs from its base one\\\\|AssertionError\\\\|Timed out' /tmp/cy.log | head -30\", \"description\": \"Show the rerun's failure messages\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393; python3 - <<'EOF'\\np='e2e/cypress/component/set-scenes.cy.tsx'\\ns=open(p).read()\\na=''' .then((shares) => {\\n for (const { id, share } of share\u2026\n- Bash: {\"command\": \"cd apps/web/src/cards/art; sed -n '/^\\\\/\\\\*\\\\* Living Health Potion/,/^};/p' sceneRecipesMeditativePlus2.ts\", \"description\": \"Read the Living Health Potion recipe\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393/apps/web/src/cards/art; python3 - <<'EOF'\\np='sceneRecipesMeditativePlus2.ts'\\ns=open(p).read()\\ni=s.index('const LIVING_HEALTH_POTION'); j=s.in\u2026\n- Read: {\"file_path\": \"/tmp/artview/me/cards.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393; tail -8 /tmp/webtests.log | grep -v 'Not implemented'; E2E_COMPONENT_PORT=5281 timeout 1700 pnpm --dir e2e exec cypress run --component --brows\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393; find e2e -name 'set-scenes-*.png' -newer /tmp/cy.log -o -name 'set-scenes-*.png' -mmin -5 | sort | head -30; git status --short e2e\", \"descript\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3393/e2e/artifacts/component/screenshots/set-scenes.cy.tsx/set-scenes-desktop-deep-1.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3393/e2e/artifacts/component/screenshots/set-scenes.cy.tsx/set-scenes-desktop-deep-2.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3393/e2e/artifacts/component/screenshots/set-scenes.cy.tsx/set-scenes-desktop-deep-3.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3393/e2e/artifacts/component/screenshots/set-scenes.cy.tsx/set-scenes-desktop-sheet-1.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3393/e2e/artifacts/component/screenshots/set-scenes.cy.tsx/set-scenes-desktop-sheet-2.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3393/e2e/artifacts/component/screenshots/set-scenes.cy.tsx/set-scenes-phone-deep-1.png\"}\n- Bash: {\"command\": \"grep -E 'Test Files|Tests |EXIT|FAIL|\\u00d7' /tmp/webtests.log | head -20\", \"description\": \"Check the web test run result\"}\n- Bash: {\"command\": \"wc -l /tmp/webtests.log; grep -v 'Not implemented' /tmp/webtests.log | tail -15; ps aux | grep -c '[v]itest'\", \"description\": \"Look at the web test run's progress\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393/apps/web/src/cards/art; grep -rn 'ART_DETAIL_SHORT_MAX' --include=*.ts . | grep -v '^./richness.ts:' | head; python3 -c \\\"import json;print(len(\u2026\n- Bash: {\"command\": \"until grep -q '^EXIT' /tmp/webtests.log; do sleep 20; done; grep -E 'Test Files|Tests |EXIT|FAIL|\\u00d7' /tmp/webtests.log | head -30\", \"description\": \"Wait for the harness web test run \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393; rm -f apps/web/src/cards/art/zz-setcheck.test.ts apps/web/src/cards/art/zz-artview.test.ts; git status --short; echo \\\"- run4: web suite (harne\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393; (cd apps/web && timeout 900 pnpm exec vitest run src/cards/art src/cards/depth.test.tsx 2>&1 | grep -E '\\u00d7|FAIL|Test Files|Tests ' | head -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393; J=/home/runner/work/JackiOh/JackiOh/target/release/jackioh; $J spec check 2>&1 | tail -2; $J patches check 2>&1 | tail -2; $J classify --base o\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393/apps/web/src/cards/art; head -12 sceneRecipesTrainingGrounds2.ts; head -12 sceneRecipesMeditativePlus2.ts | tail -8; grep -n 'RECIPES_2' sceneRe\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393; sed -i 's/^meditativeplus-013|.*/meditativeplus-013|kept (a grey stone inn at dusk, so the Radiant face gilds it plainly)/' /tmp/verdicts-forks\u2026\n- Bash: {\"command\": \"cat /tmp/verdict-table.md\", \"description\": \"Print the verdict table\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3393; echo \\\"- run4 14:1xZ: final checks all green; writing the final report.\\\" >> .bot-notes.md; git status --short | wc -l; git diff 197311a554 --s\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every Meditative+ and Training Grounds card drawn as what it is: a scene of its own for each, richer the rarer\"} --> ## What changed All 94 entries of Meditative+ and Training Grounds now draw a scene of their own, built from their brief, on both the ba\u2026"
       },
       "issue": 3393,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-08T14:30:21Z",
         "from_run": "42482898630",
         "gates": [
           {
@@ -17130,8 +17135,15 @@
         "source": "build",
         "until": "2026-11-08T14:58:48Z"
       },
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-08T14:28:48Z",
+      "run_id": "pending:59d63b22-1794148197",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "started_at": "2026-11-08T14:30:21Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17145,9 +17157,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T14:29:44Z",
+    "at": "2026-11-08T14:30:21Z",
     "url": "",
-    "what": "review #3426 on claude-3"
+    "what": "review #3438 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-08T14:19:51Z",
