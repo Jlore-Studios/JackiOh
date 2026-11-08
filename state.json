@@ -36110,7 +36110,8 @@
       "2026-11-08T01:13:51Z,42432729831,claude-6,sonnet,review,3380,medium,approved,,5.6,40,14761,2221740,0.8069,31,38,,,2.2,claude-6,none,,1",
       "2026-11-08T01:07:06Z,42432665319,claude-4,opus,review,3375,hard,interrupted,5-hour cap,0,0,0,0,,94,94,,,2.5,claude-4,none,,0",
       "2026-11-08T01:16:10Z,42428635273,claude-7,sonnet,review,3386,medium,approved,,16,64,20123,2874319,1.2976,11,14,,,1.4,claude-7,fresh,,3",
-      "2026-11-08T01:25:24Z,42434003303,claude-7,sonnet+opus,revise,3386,medium,built,,0,0,0,0,,14,14,,,0.7,claude-7,none,,0"
+      "2026-11-08T01:25:24Z,42434003303,claude-7,sonnet+opus,revise,3386,medium,built,,0,0,0,0,,14,14,,,0.7,claude-7,none,,0",
+      "2026-11-08T01:25:12Z,42428701628,claude-1,opus,revise,3382,hard,approved,,47,86,19035,4211064,2.6793,5,11,,,57.2,claude-7,fresh,other,2"
     ]
   },
   "version": 1
