@@ -35610,5 +35610,10 @@
     "issue": 2890,
     "pinned": true
   },
+  "usage_spool": {
+    "runs": [
+      "2026-11-08T15:12:16Z,42490075289,claude-3,opus,review,3426,hard,interrupted,refusal,0,0,0,0,,,,,,1.8,claude-3,none,,0"
+    ]
+  },
   "version": 1
 }
