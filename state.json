@@ -15173,11 +15173,11 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "42480415558",
+      "run_id": "pending:df8ac1b2-1794143776",
       "runs_on": "night-vm-gpt",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-08T12:28:18Z",
+      "started_at": "2026-11-08T13:16:58Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -17165,9 +17165,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T13:16:01Z",
+    "at": "2026-11-08T13:16:58Z",
     "url": "",
-    "what": "revise #3419 on claude-8"
+    "what": "review #3386 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-08T12:54:28Z",
