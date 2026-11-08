@@ -17,9 +17,9 @@ use jackioh_server::config::{
 use jackioh_server::cosmetics::{
     AUGMENT_ANIMATED_ID, Cosmetic, CosmeticKind, CosmeticRarity, FLEET_CAPSTONE, JLORIOUS_CARD_BACK,
     JLORIOUS_STARSHIP, OfferClause, VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_COMIC_ID,
-    VERSION_EXTENDED_ART_ID, VERSION_FULL_ART_ID, VERSION_IMMERSIVE_ID, VERSION_OUT_OF_FRAME_ID,
-    VERSION_PIXEL_ID, VERSION_PRISMATIC_ID, VERSION_SET_SHOWCASE_ID, VERSION_SKETCH_ID, VERSION_TAROT_ID,
-    shipped,
+    VERSION_EXTENDED_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_ID, VERSION_IMMERSIVE_ID,
+    VERSION_OUT_OF_FRAME_ID, VERSION_PIXEL_ID, VERSION_PRISMATIC_ID, VERSION_SET_SHOWCASE_ID,
+    VERSION_SKETCH_ID, VERSION_TAROT_ID, shipped,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::cosmetic_packs::{
@@ -1781,8 +1781,9 @@ async fn r2940000_the_chase_refuses_alt_full_art_where_it_is_not_offered() {
 #[tokio::test]
 async fn r2942000_the_chase_refuses_part_three_versions() {
     let (app, token) = setup().await;
-    // Spell Tyrant, a Legendary Unit, is offered all three of #2942's versions; Speciesist, a Common Unit, none.
-    let card = "classic-056".to_string();
+    // Scratch Pad, a Mythic Spell, is offered all three of #2942's versions (R3343000: a Legendary's Default draws
+    // Extended art, offered it nowhere); Speciesist, a Common Unit, none.
+    let card = "meditativeplus-026".to_string();
     let bare = "core-002".to_string();
     set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
     own(&app, &[card.clone(), bare.clone()]).await;
@@ -2011,4 +2012,49 @@ async fn r3015004_the_chase_shard_buys_only_the_next_level() {
         assert!(owns_cosmetic(&app, Some(&card), bought).await, "{bought}");
         assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 0, "{bought}");
     }
+}
+
+#[tokio::test]
+async fn r3343000_the_chase_refuses_a_default_look_and_buys_the_level_above_it_with_nothing_owned() {
+    let (app, token) = setup().await;
+    // R3343000: Ceaseless Void, a Mythic Unit, is offered Full art's ladder, but its Default draws the first level:
+    // offered it nowhere, and owned there by every account with no row, so its animated level is the next one.
+    let card = "core-100".to_string();
+    set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
+    own(&app, std::slice::from_ref(&card)).await;
+    let chase = |id: &str| {
+        let (app, token) = (app.clone(), token.clone());
+        let body = json!({ "cosmeticId": id, "cardId": card });
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/cosmetic-packs/chase", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    // The default look, a Legendary chase: a 400. Nothing is written, and the bar stays full.
+    let before = everything(&app).await;
+    let (status, answer) = chase(VERSION_FULL_ART_ID).await;
+    assert_eq!(
+        (status, answer["error"]["message"].clone()),
+        (400, json!("that cosmetic is not offered on that card")),
+        "{answer}"
+    );
+    assert_eq!(everything(&app).await, before);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
+    assert!(ledger(&app).await.cosmetics.is_empty());
+    // With nothing owned on the card, the full bar buys the level above it, a Mythic chase, and empties, writing that
+    // row alone: no row of the default look.
+    let (status, answer) = chase(VERSION_FULL_ART_ANIMATED_ID).await;
+    assert_eq!(status, 200, "{answer}");
+    let rows: Vec<(Option<String>, String)> = ledger(&app)
+        .await
+        .cosmetics
+        .iter()
+        .map(|row| (row.card_id.clone(), row.cosmetic_id.clone()))
+        .collect();
+    assert_eq!(
+        rows,
+        vec![(Some(card.clone()), VERSION_FULL_ART_ANIMATED_ID.to_string())]
+    );
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 0);
 }

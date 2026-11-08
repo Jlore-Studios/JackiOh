@@ -256,14 +256,17 @@
   }
 }
 
-/* A tall phone, 390x844 and over: the lanes have height to spare (a card there is width-bound, so each
-   zone is taller than its card), so the field keeps a strip of mat above its first row and below its
-   last, one --hit-min tall, and each half's two props sit in theirs: a corner each, outside the lanes.
-   The strips come out of the zones' spare height; a shorter phone has none to give, so it gets no strip
-   and the fit check hides its props rather than shrink a card (R3348001, "Where they sit"). */
+/* A tall phone, 390x844 and over: the field keeps a strip of mat above its first row and below its last,
+   and each half's two props sit in theirs: a corner each, outside the lanes. A strip is a prop, --hit-min
+   tall, and the one --space-2 the props keep from the field's edge (--corner-inset), so a prop stands
+   against its first row and covers none of it. The strips come out of the zones' height, and a 390x844
+   phone has little spare: a card there loses a few px, less than the rows' floor below gives up (#3381
+   took each strip down from two insets to one so a card keeps room for its Activate control over a
+   turned card, #3257). A shorter phone has none to give, so it gets no strip and the fit check hides its
+   props rather than shrink a card (R3348001, "Where they sit"). */
 @media (max-width: 600px) and (min-height: 840px) {
   .board .field {
-    padding-block: calc(var(--hit-min) + var(--space-2) * 2);
+    padding-block: calc(var(--hit-min) + var(--space-2));
   }
 
   /* A row's floor is its card's height (board.css), which the strips' share would push the page past:

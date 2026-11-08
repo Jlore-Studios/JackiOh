@@ -68,6 +68,7 @@ fn test_registry() -> Vec<Cosmetic> {
             variant: "full-art".to_owned(),
             rank: 1,
             adds: LevelAdds::FullArt,
+            default_on: Vec::new(),
         }),
         ..entry(VERSION_FULL_ART_ID, CosmeticKind::Version, false, false)
     });

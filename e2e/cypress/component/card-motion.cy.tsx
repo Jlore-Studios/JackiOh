@@ -19,6 +19,7 @@ import { fullBoardView, withEvents } from "../../../apps/web/src/test/fixtures.t
 type PlayerView = ReturnType<typeof fullBoardView>;
 
 const GAME = '[data-testid="game"]';
+const FX_LAYER = '[data-testid="fx-layer"]';
 const VIEWPORTS = [
   { width: 1280, height: 720 },
   { width: 390, height: 844 },
@@ -55,7 +56,11 @@ function mount(initial: PlayerView, next?: PlayerView, legal: readonly ActionBod
     </CatalogContext.Provider>
   );
   cy.mount(board(initial)).then(({ rerender }) => {
-    if (next !== undefined) cy.then(() => rerender(board(next)));
+    if (next === undefined) return;
+    // The board's effects layer is up before the next view arrives, as battleship.cy.tsx waits for it:
+    // a view that lands on a board still mounting plays no entry.
+    cy.get(FX_LAYER).should("have.attr", "data-fx", "on");
+    cy.then(() => rerender(board(next)));
   });
 }
 

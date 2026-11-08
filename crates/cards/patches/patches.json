@@ -22702,5 +22702,143 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.12l",
+    "date": "2026-11-07",
+    "title": "Patch: the card, pile, stack and hero sheets close by the same ✕ as every dialog",
+    "source": "#3377",
+    "notes": "Follow-up to #3367's after-merge spot-check: the inspect overlay's other modal sheets (a card's touch sheet, a pile's list, a face-down card, the Stack's wheel and hero inspect) take DialogClose, the ✕ every dialog closes by, in place of their text Close, and R3221000 drops their exception. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "The same close on every sheet",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A card's sheet, a pile's list, a face-down card, the stack and a hero's view close by the same ✕ at the top right as every other dialog."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "e744b19539b0ee38b242061af76b83c9baf1ff76"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12m",
+    "date": "2026-11-07",
+    "title": "Patch: an art bible and scene kits: each set's look written down, pictures composed as scenes, and more detail the rarer the card",
+    "source": "#3331",
+    "notes": "The foundation of #3330's per-set picture passes. ART.md gains an art bible: each set family's home, palette in palette.css names, light, line, camera and what each rarity adds. A card's picture can now be composed as a scene from a recipe of seven layers of kit parts (sceneRecipes.ts, sceneKit.ts, figureKit.ts: 86 parts, a figure kit of poses, heads, headgear, outfits by tag and held items), seeded by its id, the Radiant face repainting the same shapes (R3331000). Five proof cards draw from recipes: Corpse Plantation (Classic #74), Speciesist (Core #2), Heroic Power (Core #98), Ceaseless Void (Core #100) and Arg Arg Defender (Stinkyscape #15); every other card's picture is byte for byte unchanged. A detail floor per rarity (Common 30 drawn elements up to Mythic 140) starts as a ratchet of the 561 cards under it today, under a 48 KiB ceiling per picture (R3331001). R503's pin on Core's v0.1 pictures is lifted by the owner's decision of 2026-11-06: the three golden fixtures are records, holding every card with no recipe (R3331002). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Richer card pictures, starting with five",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Five cards now show a picture composed as a whole scene, more detailed the rarer the card: Corpse Plantation, Speciesist, Heroic Power, Ceaseless Void and Arg Arg Defender.",
+        "Every other card keeps its picture for now. Each set's pictures, Core's included, are redrawn as scenes in the patches to come."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "14687f5f0d97a0b9de2e5da15240cfed7894dc24"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12n",
+    "date": "2026-11-07",
+    "title": "Patch: quasi-3D cards: a picture's layers stand at depths and tilt with the pointer and the phone, under a glare that follows the light, for every Epic and up",
+    "source": "#3344",
+    "notes": "How cards look only: nothing plays differently. A face that is Epic or rarer, or prints full art at any level, draws its picture as four planes by its painter's roles (the background far, the props in the middle, the subject near, what lies over it, its light and its motes nearest); a delivered art file, a Starship in play, a Legacy card, a restyled picture, Immersive, Out of frame and Extended art stay as they were. Such a face tilts toward the pointer up to CARD_TILT_MAX_DEG, its planes shifting by their depth (CARD_DEPTH_STEP_PX), under a white glare that lies opposite the tilt and is blended by area (color-dodge over the art, overlay over the frame), each foil catching it by area and a Radiant frame none (R2725004). It runs in hand and on the board under the card's own pointer or touch, in the hover preview under the window's pointer, in inspect under that and a touch drag, and in the Collection; it follows the phone's orientation once the new device-only setting Tilt with my phone is on; one face tilts at a time and none while the animation queue drains. A Legendary or Mythic face in hand and in inspect lets its subject break the window's top edge (CARD_FRAME_BREAK_PX). Reduced motion, the system's setting and the fx intensity off draw the flat picture with the foil still. R3344000, R3344001.",
+    "player": {
+      "title": "Quasi-3D cards",
+      "new": [
+        "Epic, Legendary and Mythic cards, and every full-art card, now have depth: the picture is built from layers, with the background far back and the subject and what floats in front of it nearer.",
+        "Move the pointer over one of these cards, in your hand, in the preview, in the Collection or in inspect, and it tilts toward you, its layers sliding past each other.",
+        "A glare moves across the card as it tilts, and each foil catches the light in its own way, on the art and on the frame; a Radiant frame keeps its gold.",
+        "On a phone, press or drag a card in inspect to tilt it; turn on Tilt with my phone in the settings and the cards tilt as you tilt the phone.",
+        "A Legendary or Mythic card's subject may step over the top edge of its picture in your hand and in inspect."
+      ],
+      "balance": [],
+      "changes": [
+        "Reduce motion, your system's reduced-motion setting and effects intensity Off show the flat picture with the foil standing still.",
+        "A new switch, Tilt with my phone, in the visuals settings; your phone asks once to allow it."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "01c93697dafcb1fc844ce336569801d193f53798"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12o",
+    "date": "2026-11-07",
+    "title": "Patch: CN Tech and NA Tech read live win rates from the server's cached card stats, and the compiled table retires",
+    "source": "#3049",
+    "notes": "M #50 CN Tech and M+ #2 NA Tech read the win rates /stats shows instead of a table compiled into the build: the server takes a snapshot of its cached card stats as a match starts and hands it to the game, which keeps the rows each end can name, and the match row keeps the same, so every fold picks the same cards (R3049000). The leader is the card with the highest lower 95% Wilson bound and the trailer the lowest upper bound, in integers, so a few lucky games no longer lead (R3049001). A game handed none (practice, the hotseat, the Sandbox, the run, Duos) reads its version's frozen table, else none, and the cards fall back to Lunar Eclipse and Infinite Reserves; older games fold against the table their version shipped with, ranked by its exact rate as before, so they pick the cards they picked. The ladder bots' decks lean on the same snapshot (R3049002). The compiled table, cargo jackioh winrates and the fragment's table claim retire. Plays: CN Tech and NA Tech, and C+ #38 Solarius, whose Solarius Prime's random casts can cast either, as classify finds them (R1370000).",
+    "player": {
+      "title": "CN Tech and NA Tech read live win rates",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "CN Tech and NA Tech now read the win rates the Statistics page shows, taken as each online match starts, not a fixed table that never changed.",
+        "The highest win rate card is the one whose rate is surest to be high, so a card that won a few lucky games no longer leads; the lowest is read the same way.",
+        "Offline games (practice, hotseat, the Sandbox and the dungeon run) have no live figures, so CN Tech adds Lunar Eclipse and NA Tech fuses Infinite Reserves and Lunar Eclipse there."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "a3bc9af756384ae358c03eb4cbf365c8983ff1b4"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classicplus-038",
+      "meditative-050",
+      "meditativeplus-002"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12p",
+    "date": "2026-11-07",
+    "title": "Patch: Mythics arrive in full art, Prismatic is full art, and Legendaries default to Extended art",
+    "source": "#3343",
+    "notes": "Default looks by rarity (R3343000): the registry marks a variant's first level as a card rarity's default look (defaultOn), which the Default variant draws, a token by its printed rarity: Full art's first level on every Mythic and Extended art's on every Legendary. Every account owns it there with no ledger row, it is offered there nowhere (a pick, a token or the Chase Shard bar naming it is a 400, and no roll, pack or dev fill places it), and its variant's ladder starts at the level above it, next with nothing owned; rows held before stay and still count. A Mythic's Default prints full art while the Full-art cards setting is on and its normal face otherwise; a Legendary's prints Extended art, its words kept, and keeps its window on the board (R3343001). Prismatic's first level adds the full-art frame, so both its levels print full art, chrome across the face and never gold, and a Radiant face keeps every mark (R2725004). The Collection names and pictures a Mythic's and a Legendary's Default by that look and lists the ladders from the level above it (R3343002). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Mythics arrive in full art",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Mythic card now shows in full art by default, its picture across the whole card. Turn off Full-art cards in the settings to see its text instead.",
+        "Every Legendary card now shows in Extended art by default, its picture running past its window behind the card's text.",
+        "Prismatic is now a full art at both its levels: the chrome picture covers the whole card.",
+        "On a Mythic, Full art now starts at its animated level, and on a Legendary, Extended art at its animated level: you can earn those next with nothing else owned.",
+        "If you already owned Full art on a Mythic or Extended art on a Legendary, you keep it. Radiant cards keep their gold frame and marks under every look."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "310f4412060f6d35c981d165267417e220a20e99"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

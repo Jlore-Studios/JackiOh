@@ -65,6 +65,12 @@
 //! ([`VERSION_TAROT_ID`]), Epic. R3017001: they make three pairs, each splitting every card between its two by one
 //! seed, a sample's `from` ([`OfferSample`]) taking the cards the other's percent leaves, so every card, Legacy ones
 //! included, is offered at least `VARIANT_MIN_PER_CARD` variants besides the Default.
+//!
+//! R3343000: a first level may be a rarity's **default look** ([`VariantLevel::default_on`]): on a card whose face
+//! prints that rarity (a token by its printed one) the Default variant draws it ([`default_look`], R3343001), so it
+//! is offered nowhere there and owned there by every account with no row ([`is_default_look`], [`offered`],
+//! [`owns`]), and its variant's ladder starts at the level above it. Full art's is the Mythics', Extended art's the
+//! Legendaries'. R3343001: Prismatic's first level adds the full-art frame, so both its levels print full art.
 
 use std::collections::BTreeSet;
 use std::fmt;
@@ -456,6 +462,10 @@ pub struct VariantLevel {
     pub variant: String,
     pub rank: u8,
     pub adds: LevelAdds,
+    /// R3343000: the card rarities whose Default variant draws this level's look ([`is_default_look`]), a token's by
+    /// its printed rarity; only a variant's first level has any. An opening's log written before #3343 holds none.
+    #[serde(default, rename = "defaultOn", skip_serializing_if = "Vec::is_empty")]
+    pub default_on: Vec<Rarity>,
 }
 
 /// R2725001: one clause of an offer. It takes a non-token card of the catalog when each field it fills lists
@@ -541,7 +551,9 @@ pub fn shipped_defs() -> &'static CardDefs {
 /// R2725001: whether `cosmetic` may be owned and worn on `card` (on the account, or every card, when `None`).
 /// A full art on its own card alone (R1313000); a version or an augment on a non-token card of the shipped
 /// catalog that a clause of its offer takes; any other cosmetic anywhere. R3015000: a level that moves never on a
-/// Legacy card, whose picture never moves (R2724000), so its ladders stop before animated.
+/// Legacy card, whose picture never moves (R2724000), so its ladders stop before animated. R3343000: a level never
+/// on a card whose Default already draws its look ([`is_default_look`]), so no pick, token, chase or drop names it
+/// there and its variant's ladder starts at the level above it.
 pub fn offered(cosmetic: &Cosmetic, card: Option<&str>) -> bool {
     match cosmetic.kind {
         CosmeticKind::FullArt => cosmetic.card.as_deref() == card,
@@ -550,10 +562,41 @@ pub fn offered(cosmetic: &Cosmetic, card: Option<&str>) -> bool {
                 !def.is_token()
                     && !(moves(cosmetic) && def.tags.contains(&Tag::Legacy))
                     && cosmetic.offer.iter().any(|clause| clause.takes(card, def))
-            })
+            }) && !is_default_look(cosmetic, card)
         }),
         _ => true,
     }
+}
+
+/// R3343000: the rarity a card's face prints: a token's printed rarity (none when it prints none), any other card's
+/// own, as the engine reads it for the tutorial's bar (`state::is_tutorial_card`).
+fn face_rarity(def: &CardDef) -> Option<Rarity> {
+    if def.rarity == Rarity::Token {
+        def.printed_rarity
+            .and_then(|printed| printed.as_str().parse::<Rarity>().ok())
+    } else {
+        Some(def.rarity)
+    }
+}
+
+/// R3343000: whether `cosmetic` is the look the Default variant draws on `card`: a level whose `default_on` lists the
+/// rarity the card's face prints ([`VariantLevel::default_on`]; a token's printed one). Every account owns it there
+/// with no row ([`owns`]), and it is offered nowhere there ([`offered`]). R3343001: the Default's every level draws
+/// it on that card.
+pub fn is_default_look(cosmetic: &Cosmetic, card: &str) -> bool {
+    cosmetic.level.as_ref().is_some_and(|level| {
+        !level.default_on.is_empty()
+            && shipped_defs()
+                .get(card)
+                .and_then(face_rarity)
+                .is_some_and(|rarity| level.default_on.contains(&rarity))
+    })
+}
+
+/// R3343000: the level `card`'s Default variant draws in `registry` ([`is_default_look`]), none for a card whose
+/// Default draws the normal face.
+pub fn default_look<'r>(registry: &'r [Cosmetic], card: &str) -> Option<&'r Cosmetic> {
+    registry.iter().find(|cosmetic| is_default_look(cosmetic, card))
 }
 
 /// R3015000: whether `cosmetic` is a level that moves ([`LevelAdds::moves`]).
@@ -955,9 +998,12 @@ fn fleet_problems(cosmetics: &[Cosmetic], out: &mut Vec<String>) {
 /// the normal face); its levels add, in rank order, an art level, then a full-art one (at least one of the two, and
 /// neither in the Default variant), then animated, then signed only above a full art; each is rarer than the one
 /// below it but at Mythic, and a signed one is Mythic; each is offered as its variant's first level is; and the
-/// Default variant's offer takes every non-token card, so every card has at least the Default ladder.
+/// Default variant's offer takes every non-token card, so every card has at least the Default ladder. R3343000: a
+/// default look (`default_on`) is a first level outside the Default variant, of rarities a card prints, and no rarity
+/// has two.
 fn level_problems(cosmetics: &[Cosmetic], out: &mut Vec<String>) {
     let mut variants: Vec<&str> = Vec::new();
+    let mut default_looks: Vec<(Rarity, &str)> = Vec::new();
     for cosmetic in cosmetics {
         let id = cosmetic.id.as_str();
         match (&cosmetic.level, cosmetic.kind == CosmeticKind::Version) {
@@ -975,6 +1021,24 @@ fn level_problems(cosmetics: &[Cosmetic], out: &mut Vec<String>) {
                 }
                 if !variants.contains(&level.variant.as_str()) {
                     variants.push(&level.variant);
+                }
+                if !level.default_on.is_empty() && (level.rank != 1 || level.variant == DEFAULT_VARIANT) {
+                    out.push(format!(
+                        "the level {id:?} is a default look but not a first level outside the Default variant"
+                    ));
+                }
+                for rarity in &level.default_on {
+                    if *rarity == Rarity::Token {
+                        out.push(format!(
+                            "the level {id:?} is the default look of Token, which no card's face prints"
+                        ));
+                    }
+                    match default_looks.iter().find(|(seen, _)| seen == rarity) {
+                        Some((_, other)) => out.push(format!(
+                            "the rarity {rarity:?} has two default looks, {other:?} and {id:?}"
+                        )),
+                        None => default_looks.push((*rarity, id)),
+                    }
                 }
             }
             (None, false) => {}
@@ -1099,9 +1163,14 @@ pub fn default_of(registry: &[Cosmetic], kind: CosmeticKind) -> &str {
 /// the card `card`, or on the account when `card` is `None`. A kind's default and a starter are
 /// owned everywhere (§14.2); any other by a ledger row, on that card for a per-card kind (no
 /// account row names one) and on the account for an account kind. R2725002: a row of a retired full
-/// art owns what it implies there ([`row_owns`]).
+/// art owns what it implies there ([`row_owns`]). R3343000: a card's default look ([`is_default_look`]) is owned
+/// there by every account with no row, as every Default is, so the level above it is next ([`is_next`]); a row of it
+/// written before #3343 still stands.
 pub fn owns(cosmetic: &Cosmetic, card: Option<&str>, owned: &OwnedCosmetics) -> bool {
     if cosmetic.default || cosmetic.starter {
+        return true;
+    }
+    if card.is_some_and(|card| is_default_look(cosmetic, card)) {
         return true;
     }
     if !cosmetic.kind.is_per_card() {
@@ -2287,8 +2356,13 @@ mod tests {
             if !R2725000_NEW.iter().any(|(id, _, _)| *id == cosmetic.id) {
                 continue;
             }
+            // R3343000: but where the card's Default already draws it, the three Mythics' Full art.
             for (card, _) in R2655001_CARDS {
-                assert!(on.contains(&card), "{} on {card}", cosmetic.id);
+                assert!(
+                    on.contains(&card) || is_default_look(cosmetic, card),
+                    "{} on {card}",
+                    cosmetic.id
+                );
             }
             // R2725003: Animated never on a Legacy card, whose picture never moves (R2724000); the version there
             // as on any Rare Unit its sample takes, and R2949000: Signature, which needs Animated, not.
@@ -2427,10 +2501,11 @@ mod tests {
             };
             for level in &levels {
                 let id = level.id.as_str();
-                // Owned on its own card exactly where it maps, and never on another card.
+                // Owned on its own card exactly where it maps (R3343000: or where it is the card's default look, which
+                // every account owns), and never on another card.
                 assert_eq!(
                     owns(level, Some(card), &owned),
-                    implied.contains(&id),
+                    implied.contains(&id) || is_default_look(level, card),
                     "{held} → {id}"
                 );
                 assert_eq!(row_owns(held, id), implied.contains(&id), "{held} → {id}");
@@ -2697,13 +2772,21 @@ mod tests {
         assert!(on(full_art).is_subset(&on(&unsampled)));
         assert!(on(full_art).len() < on(&unsampled).len());
         assert_ne!(on(full_art), on(animated));
-        // The 21 with retired full arts always among them, so every pick worn today stays worn.
+        // The 21 with retired full arts always among them, so every pick worn today stays worn (R3343000: on the three
+        // Mythics as their Default, which draws it).
         for (card, _) in R2655001_CARDS {
-            assert!(on(full_art).contains(card), "{card}");
+            assert!(
+                on(full_art).contains(card) || is_default_look(full_art, card),
+                "{card}"
+            );
         }
-        // Signature exactly where both are offered.
+        // Signature exactly where both are offered, but on a card whose Default draws Full art (R3343000).
         let both: BTreeSet<&str> = on(full_art).intersection(&on(animated)).copied().collect();
-        assert_eq!(on(signature), both);
+        let signed: BTreeSet<&str> = on(signature)
+            .into_iter()
+            .filter(|card| !is_default_look(full_art, card))
+            .collect();
+        assert_eq!(signed, both);
     }
 
     #[test]
@@ -2978,8 +3061,9 @@ mod tests {
         }
 
         // check_pick refuses each where it is not offered, owned or not, and takes it where it is offered and owned.
+        // R3343000: a Mythic, since a Legendary's Default draws Extended art, offered it nowhere.
         const BARE: &str = "core-002";
-        const ALL_THREE: &str = "classic-056";
+        const ALL_THREE: &str = "meditativeplus-026";
         let owned = OwnedCosmetics {
             cards: R2942000_NEW
                 .iter()
@@ -4496,7 +4580,8 @@ mod tests {
     type TableLevel = (&'static str, LevelAdds, CosmeticRarity);
 
     /// R3015000, R3015001: every variant's ladder as the registry ships it, lowest level first: each level's id,
-    /// what it adds and its rarity. The Default variant's first level, the normal face, names no entry.
+    /// what it adds and its rarity. The Default variant's first level, the normal face, names no entry. R3343001:
+    /// Prismatic's first level adds the full-art frame.
     const R3015000_LADDERS: [(&str, &[TableLevel]); 11] = [
         (DEFAULT_VARIANT, &[(VERSION_ANIMATED_ID, Animated, Epic)]),
         (
@@ -4570,7 +4655,7 @@ mod tests {
         (
             "prismatic",
             &[
-                (VERSION_PRISMATIC_ID, Art, Mythic),
+                (VERSION_PRISMATIC_ID, FullArt, Mythic),
                 ("version-prismatic-animated", Animated, Mythic),
             ],
         ),
@@ -4713,7 +4798,7 @@ mod tests {
                 .all(|cosmetic| cosmetic.level.is_some() == (cosmetic.kind == CosmeticKind::Version))
         );
         // Every card has at least the Default ladder, and each level is offered where its variant's first is, but
-        // a level that moves never on a Legacy card.
+        // a level that moves never on a Legacy card, and (R3343000) a card's default look never on it.
         let defs = shipped_defs();
         let default_first = cosmetics
             .iter()
@@ -4734,7 +4819,7 @@ mod tests {
                     let moves = level.level.as_ref().is_some_and(|at| at.adds.moves());
                     assert_eq!(
                         offered(level, Some(card)),
-                        first && !(legacy && moves),
+                        first && !(legacy && moves) && !is_default_look(level, card),
                         "{} on {card}",
                         level.id
                     );
@@ -4795,6 +4880,7 @@ mod tests {
                 variant: DEFAULT_VARIANT.to_owned(),
                 rank: 2,
                 adds: Animated,
+                default_on: Vec::new(),
             }),
             ..entry(VERSION_ANIMATED_ID, CosmeticKind::Version, false)
         });
@@ -4816,6 +4902,7 @@ mod tests {
                 variant: variant.to_owned(),
                 rank,
                 adds,
+                default_on: Vec::new(),
             }),
             ..entry(id, CosmeticKind::Version, false)
         };
@@ -5328,6 +5415,237 @@ mod tests {
                     cosmetic.id
                 );
             }
+        }
+    }
+
+    /// R3343000: the rarity each card's face prints, a token's printed one.
+    fn face_of(card: &str) -> Option<Rarity> {
+        shipped_defs().get(card).and_then(face_rarity)
+    }
+
+    #[test]
+    fn r3343000_a_mythic_defaults_to_full_art_and_a_legendary_to_extended_art_by_its_face_s_rarity() {
+        let mut seen = (0, 0);
+        for card in shipped_defs().keys() {
+            let expected = match face_of(card) {
+                Some(Rarity::Mythic) => Some(VERSION_FULL_ART_ID),
+                Some(Rarity::Legendary) => Some(VERSION_EXTENDED_ART_ID),
+                _ => None,
+            };
+            assert_eq!(
+                default_look(registry(), card).map(|look| look.id.as_str()),
+                expected,
+                "{card}"
+            );
+            seen.0 += usize::from(expected == Some(VERSION_FULL_ART_ID));
+            seen.1 += usize::from(expected == Some(VERSION_EXTENDED_ART_ID));
+        }
+        assert!(seen.0 > 0 && seen.1 > 0);
+        // A token by the rarity it prints: YileGPT Prime a Mythic, the Classic Golem a Legendary.
+        assert_eq!(
+            default_look(registry(), "meditative-049-1").map(|look| look.id.as_str()),
+            Some(VERSION_FULL_ART_ID)
+        );
+        assert_eq!(
+            default_look(registry(), "classicplus-073-1").map(|look| look.id.as_str()),
+            Some(VERSION_EXTENDED_ART_ID)
+        );
+        // None for an Epic or a card the catalog does not hold.
+        assert!(default_look(registry(), "core-022").is_none());
+        assert!(default_look(registry(), "core-999").is_none());
+    }
+
+    #[test]
+    fn r3343000_a_default_look_is_offered_nowhere_on_its_cards_and_every_other_card_keeps_its_offer() {
+        let by_id = |id: &str| {
+            registry()
+                .iter()
+                .find(|cosmetic| cosmetic.id == id)
+                .unwrap_or_else(|| panic!("{id} ships"))
+        };
+        for (card, def) in shipped_defs() {
+            for cosmetic in registry().iter().filter(|cosmetic| cosmetic.level.is_some()) {
+                // What the offer's clauses take, as before #3343.
+                let clauses = !def.is_token()
+                    && !(moves(cosmetic) && def.tags.contains(&Tag::Legacy))
+                    && cosmetic.offer.iter().any(|clause| clause.takes(card, def));
+                let default = is_default_look(cosmetic, card);
+                assert_eq!(
+                    offered(cosmetic, Some(card)),
+                    clauses && !default,
+                    "{} on {card}",
+                    cosmetic.id
+                );
+                // Below Legendary, every level keeps its offer.
+                if !matches!(face_of(card), Some(Rarity::Legendary | Rarity::Mythic)) {
+                    assert!(!default, "{} on {card}", cosmetic.id);
+                }
+            }
+        }
+        // Full art stays offered on a Legendary its share takes, and Extended art on a Mythic.
+        let full_art = by_id(VERSION_FULL_ART_ID);
+        let extended = by_id(VERSION_EXTENDED_ART_ID);
+        assert!(offered(full_art, Some("classicplus-012")));
+        assert!(offered(extended, Some("meditativeplus-026")));
+        assert!(!offered(extended, Some("core-052")) && !offered(full_art, Some("core-100")));
+        // The three Mythics of the 21 full-art cards: the clause naming them still takes them, but the Default draws
+        // Full art there, so no pick names it, `true` among them (R2655000).
+        for card in ["stinkyscape-154", "classic-090", "traininggrounds-040"] {
+            let def = &shipped_defs()[card];
+            assert!(
+                full_art.offer.iter().any(|clause| clause.takes(card, def)),
+                "{card}"
+            );
+            assert!(
+                is_default_look(full_art, card) && !offered(full_art, Some(card)),
+                "{card}"
+            );
+            assert_eq!(
+                worn_level(
+                    registry(),
+                    level_of_pick(registry(), card, Some(&FullArtPick::On(true)), &[]),
+                    |level| offered(level, Some(card)),
+                ),
+                None,
+                "{card}"
+            );
+        }
+    }
+
+    #[test]
+    fn r3343000_every_account_owns_a_default_look_and_the_level_above_it_is_next() {
+        let nothing = OwnedCosmetics::default();
+        let by_id = |id: &str| {
+            registry()
+                .iter()
+                .find(|cosmetic| cosmetic.id == id)
+                .unwrap_or_else(|| panic!("{id} ships"))
+        };
+        let nothing = &nothing;
+        let held = |card: &'static str| move |cosmetic: &Cosmetic| owns(cosmetic, Some(card), nothing);
+        let full_art = by_id(VERSION_FULL_ART_ID);
+        let extended = by_id(VERSION_EXTENDED_ART_ID);
+        // Ceaseless Void, a Mythic, owns its Full art with no row; Speciesist, a Common, does not.
+        assert!(owns(full_art, Some("core-100"), nothing));
+        assert!(!owns(full_art, Some("core-002"), nothing));
+        assert!(!owns(full_art, None, nothing));
+        // Silly Silas, a Legendary, owns its Extended art, and not Ceaseless Void's Full art's role.
+        assert!(owns(extended, Some("core-052"), nothing));
+        assert!(!owns(extended, Some("core-100"), nothing));
+        assert!(!owns(full_art, Some("core-052"), nothing));
+        // So the level above each is next with nothing owned, and the one above that is not.
+        let full_animated = by_id(VERSION_FULL_ART_ANIMATED_ID);
+        let full_signed = by_id(VERSION_FULL_ART_SIGNED_ID);
+        let extended_animated = by_id("version-extended-art-animated");
+        assert!(offered(full_animated, Some("core-100")) && offered(extended_animated, Some("core-052")));
+        assert!(is_next(registry(), full_animated, held("core-100")));
+        assert!(!is_next(registry(), full_signed, held("core-100")));
+        assert!(is_next(registry(), extended_animated, held("core-052")));
+        assert!(!is_next(registry(), full_animated, held("core-002")));
+        // And a pick of the default look is no pick: it is offered nowhere there.
+        assert_eq!(
+            check_pick(
+                registry(),
+                nothing,
+                CosmeticKind::Version,
+                VERSION_FULL_ART_ID,
+                Some("core-100")
+            ),
+            Err(PickRefusal::NotOffered)
+        );
+        assert_eq!(
+            check_pick(
+                registry(),
+                nothing,
+                CosmeticKind::Version,
+                VERSION_EXTENDED_ART_ID,
+                Some("core-052")
+            ),
+            Err(PickRefusal::NotOffered)
+        );
+        // A row written before #3343 still stands, and still owns only what it did.
+        let row = OwnedCosmetics {
+            cards: vec![CardCosmetic {
+                card_id: "core-100".to_owned(),
+                cosmetic_id: VERSION_FULL_ART_ID.to_owned(),
+            }],
+            account: Vec::new(),
+        };
+        assert!(owns(full_art, Some("core-100"), &row));
+        assert!(!owns(full_animated, Some("core-100"), &row));
+    }
+
+    #[test]
+    fn r3343000_the_check_holds_a_default_look_to_a_first_level_and_one_per_rarity() {
+        assert!(problems(registry()).is_empty());
+        let with = |id: &str, default_on: Vec<Rarity>| {
+            let mut cosmetics = registry().to_vec();
+            for cosmetic in &mut cosmetics {
+                if cosmetic.id == id
+                    && let Some(level) = &mut cosmetic.level
+                {
+                    level.default_on = default_on.clone();
+                }
+            }
+            problems(&cosmetics)
+        };
+        // Not on a level above a first one, nor on the Default variant's.
+        for id in [VERSION_FULL_ART_ANIMATED_ID, VERSION_ANIMATED_ID] {
+            assert_eq!(
+                with(id, vec![Rarity::Epic]),
+                vec![format!(
+                    "the level {id:?} is a default look but not a first level outside the Default variant"
+                )]
+            );
+        }
+        // Not of Token, which no card's face prints.
+        assert_eq!(
+            with(VERSION_ALT_ART_ID, vec![Rarity::Token]),
+            vec![format!(
+                "the level {VERSION_ALT_ART_ID:?} is the default look of Token, which no card's face prints"
+            )]
+        );
+        // Not two of one rarity.
+        assert_eq!(
+            with(VERSION_EXTENDED_ART_ID, vec![Rarity::Legendary, Rarity::Mythic]),
+            vec![format!(
+                "the rarity Mythic has two default looks, {VERSION_FULL_ART_ID:?} and {VERSION_EXTENDED_ART_ID:?}"
+            )]
+        );
+        // The registry's text reads it as `defaultOn`, and a level without one reads as none.
+        assert_eq!(
+            registry()
+                .iter()
+                .find(|cosmetic| cosmetic.id == VERSION_FULL_ART_ID)
+                .and_then(|cosmetic| cosmetic.level.as_ref())
+                .map(|level| level.default_on.as_slice()),
+            Some([Rarity::Mythic].as_slice())
+        );
+        assert!(COSMETICS_JSON.contains(r#""defaultOn": ["Legendary"]"#));
+    }
+
+    #[test]
+    fn r3343001_prismatic_is_a_full_art_at_both_its_levels() {
+        let levels = ladder(registry(), "prismatic");
+        assert_eq!(
+            levels
+                .iter()
+                .map(|cosmetic| cosmetic
+                    .level
+                    .as_ref()
+                    .map(|level| (cosmetic.id.as_str(), level.adds)))
+                .collect::<Vec<_>>(),
+            [
+                Some((VERSION_PRISMATIC_ID, LevelAdds::FullArt)),
+                Some(("version-prismatic-animated", LevelAdds::Animated)),
+            ]
+        );
+        // Still offered on every Mythic card, and neither level is a default look anywhere.
+        for (card, def) in shipped_defs() {
+            if !def.is_token() && def.rarity == Rarity::Mythic {
+                assert!(offered(levels[0], Some(card)), "{card}");
+            }
+            assert!(levels.iter().all(|level| !is_default_look(level, card)), "{card}");
         }
     }
 }

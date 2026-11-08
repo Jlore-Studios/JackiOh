@@ -6,14 +6,15 @@ use indexmap::IndexMap;
 use serde_json::{Value, json};
 
 use jackioh_engine::config::MAX_COPIES;
-use jackioh_engine::set_ships;
+use jackioh_engine::{Rarity, set_ships};
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{
     CARD_TOKEN_BAR_SIZE, FLEET_TRACK_LEVELS, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS,
 };
 use jackioh_server::cosmetics::{
     ANIMATED_ART_ID_PREFIX, AUGMENT_ID_PREFIX, Cosmetic, CosmeticKind, JLORIOUS_CARD_BACK,
-    JLORIOUS_COSMETICS, VERSION_ID_PREFIX, offered, shipped,
+    JLORIOUS_COSMETICS, VERSION_EXTENDED_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_ID,
+    VERSION_ID_PREFIX, is_default_look, offered, owns, shipped,
 };
 use jackioh_server::db::fake::OnCall;
 use jackioh_server::db::store::{CollectionEntry, CollectionGrant};
@@ -747,6 +748,68 @@ async fn r2715000_fill_grants_each_full_art_card_its_animated_art() {
         .map(|row| (row.reason == EconomyReason::Dev, row.dev))
         .collect();
     assert_eq!(rows, vec![(true, true); animated.len()]);
+}
+
+#[tokio::test]
+async fn r3343000_dev_fill_writes_no_default_look_and_owns_it_by_rule() {
+    let (app, dev, _other) = dev_app().await;
+    let registry = shipped().expect("the registry parses");
+    let by_id = |id: &str| {
+        registry
+            .iter()
+            .find(|cosmetic| cosmetic.id == id)
+            .unwrap_or_else(|| panic!("{id} ships"))
+    };
+    let (full_art, extended) = (by_id(VERSION_FULL_ART_ID), by_id(VERSION_EXTENDED_ART_ID));
+    let rarity = |card: &str| app.catalog.defs.get(card).map(|def| def.rarity);
+    assert_eq!(rarity("core-100"), Some(Rarity::Mythic));
+    assert_eq!(rarity("core-052"), Some(Rarity::Legendary));
+    ok(&app, "/api/dev/fill", &dev, json!({})).await;
+    let held = holdings(&app, DEV).await;
+    let row = |card: &str, id: &str| {
+        held.cosmetics
+            .cards
+            .iter()
+            .any(|owned| owned.card_id == card && owned.cosmetic_id == id)
+    };
+    // R3343000: a Mythic's Default draws Full art's first level and a Legendary's Extended art's, so the fill writes
+    // neither there, as nothing offered would, nor any other card's default look.
+    let defaults: Vec<(&str, &str)> = held
+        .cosmetics
+        .cards
+        .iter()
+        .filter(|owned| match rarity(&owned.card_id) {
+            Some(Rarity::Mythic) => owned.cosmetic_id == VERSION_FULL_ART_ID,
+            Some(Rarity::Legendary) => owned.cosmetic_id == VERSION_EXTENDED_ART_ID,
+            _ => false,
+        })
+        .chain(held.cosmetics.cards.iter().filter(|owned| {
+            registry
+                .iter()
+                .any(|cosmetic| cosmetic.id == owned.cosmetic_id && is_default_look(cosmetic, &owned.card_id))
+        }))
+        .map(|owned| (owned.card_id.as_str(), owned.cosmetic_id.as_str()))
+        .collect();
+    assert_eq!(defaults, Vec::<(&str, &str)>::new());
+    // Where they are no default look, it writes them as ever: Full art on The Mother Pancake, a Legendary Unit, and
+    // Extended art on Scratch Pad, a Mythic Spell.
+    assert!(row("classicplus-012", VERSION_FULL_ART_ID));
+    assert!(row("meditativeplus-026", VERSION_EXTENDED_ART_ID));
+    // Yet the account owns each default look there by rule, as one with no row at all does, so the level above it,
+    // which the fill wrote, has every level below it owned (R3015004).
+    for owned in [&held.cosmetics, &OwnedCosmetics::default()] {
+        assert!(owns(full_art, Some("core-100"), owned));
+        assert!(owns(extended, Some("core-052"), owned));
+    }
+    assert!(row("core-100", VERSION_FULL_ART_ANIMATED_ID));
+    assert!(row("core-052", "version-extended-art-animated"));
+    for card in collectable(&app) {
+        match rarity(&card) {
+            Some(Rarity::Mythic) => assert!(owns(full_art, Some(&card), &held.cosmetics), "{card}"),
+            Some(Rarity::Legendary) => assert!(owns(extended, Some(&card), &held.cosmetics), "{card}"),
+            _ => {}
+        }
+    }
 }
 
 // Clear

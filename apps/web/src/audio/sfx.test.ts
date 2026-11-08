@@ -38,6 +38,8 @@ const UNION_ORDER: SfxId[] = [
   // R3338000: the Terminus set pieces' organ.
   "organ",
   "playImpact", "trapSnap",
+  // R3342000: the tile aura bell.
+  "auraTouch",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -142,6 +144,8 @@ const DURATION_MS: Record<SfxId, number> = {
   // R3346000.
   playImpact: 500,
   trapSnap: 200,
+  // R3342000.
+  auraTouch: 200,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];

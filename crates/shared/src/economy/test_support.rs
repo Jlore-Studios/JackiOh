@@ -41,6 +41,7 @@ pub(crate) fn level(id: &str, variant: &str, rank: u8, adds: LevelAdds, rarity: 
             variant: variant.to_owned(),
             rank,
             adds,
+            default_on: Vec::new(),
         }),
         ..foil(id, rarity)
     }

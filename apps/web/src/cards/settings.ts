@@ -72,7 +72,8 @@ export const CARD_SETTINGS_FIELDS: readonly CardSettingsField[] = [
     key: "fullArt",
     section: "visuals",
     label: "Full-art cards",
-    description: "The heroes' cards show only their art and name; hover or click one to read it. Off shows their text like any card.",
+    // R3343001: every Mythic's Default prints full art while it is on.
+    description: "The heroes' cards and every Mythic show only their art and name; hover or click one to read it. Off shows their text like any card.",
   },
   {
     key: "setWatermarks",
