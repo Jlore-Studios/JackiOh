@@ -11,12 +11,12 @@ import { describe, expect, it } from "vitest";
 import { faceUpBackrow, fullBoardView } from "../../../test/fixtures.ts";
 import { asTheirsAll, CARD_ID, cuesOfRun, planWithOffsets } from "../../../test/signaturePass.ts";
 import { CATALOG } from "../../../wire/cards.ts";
-import { AURA_SIGNATURE_LOOK_NAMES } from "../../aura/looks.ts";
+import { isSignatureAuraLook } from "../../aura/looks.ts";
 import { auraZones, planAuras } from "../../aura/plan.ts";
 import { galleryBoardOf, galleryCardEvents, galleryPlayOf } from "../../motifs/gallery.ts";
 import { TAKEOVER_ART_LOOKS } from "../../takeover.ts";
 import { testid } from "../../../game/contract.ts";
-import { FX_CARD_TABLE, isSignature } from "../tables.ts";
+import { entryAura, FX_CARD_TABLE, isSignature } from "../tables.ts";
 import { STINKYSCAPE_TWO_SIGNATURES } from "./signature.ts";
 
 const HIDDEN = "hidden";
@@ -51,7 +51,7 @@ describe("R3407000 Stinkyscape part two's signatures", () => {
       if (entry === undefined || entry.kind === "none" || entry.kind === "setPiece") throw new Error(`${defId} has no signature entry`);
       expect(isSignature(entry), defId).toBe(true);
       const type = typeOf(defId);
-      const aura = entry.aura;
+      const aura = entryAura(entry);
       if (type === "Spell") {
         expect(entry.kind, defId).toBe("bespoke");
         expect(entry.entrance, defId).toBeUndefined();
@@ -64,8 +64,10 @@ describe("R3407000 Stinkyscape part two's signatures", () => {
       if (rarityOf(defId) === "Mythic") expect(TAKEOVER_ART_LOOKS.has(entry.takeover ?? "prismatic"), defId).toBe(true);
       else expect(entry.takeover, defId).toBeUndefined();
     }
-    // Each signature look is one card's own.
-    expect([...looks].sort()).toEqual([...AURA_SIGNATURE_LOOK_NAMES].sort());
+    // Each wears a signature look of its own (R3389000: fx/aura/signatureAuras.test.ts holds each to one card).
+    for (const look of looks) expect(isSignatureAuraLook(look), look).toBe(true);
+    expect(new Set(looks).size).toBe(looks.length);
+    expect(looks).toHaveLength(15);
   });
 
   it("R3407000 every Unit wears its look on its own tile and every Field Spell on its own zone, face up only", () => {
@@ -74,7 +76,7 @@ describe("R3407000 Stinkyscape part two's signatures", () => {
       if (type === "Spell") continue;
       const view = fullBoardView();
       const entry = FX_CARD_TABLE.get(defId);
-      const aura = entry?.kind === "bespoke" || entry?.kind === "hooks" ? entry.aura : undefined;
+      const aura = entryAura(entry);
       if (type === "Unit") {
         const unit = view.you.units[0];
         if (unit === null || unit === undefined) throw new Error("no unit to stand in");

@@ -26,6 +26,7 @@ import type { FxAnchor, FxCue } from "../../types.ts";
 import { ENTRANCE_TRAUMA } from "../recipe.ts";
 import { FX_CARD_TABLE } from "../tables.ts";
 import { freshJackCometFixture } from "./freshJack.ts";
+import { landMsAfter } from "./signature.ts";
 
 const FRESH_JACK = "stinkyscape-109";
 const DS = [120, 200, 400, 732, 1400] as const;
@@ -53,7 +54,7 @@ describe("R3407000 xxFreshJack's signature", () => {
     expect(cues.slice(2, 5).every((cue) => cue.kind === "burst" && cue.at.kind === "testid" && cue.at.testid === tgt)).toBe(true);
     expect(cues.at(-1)).toEqual({ kind: "shake", trauma: ENTRANCE_TRAUMA.freshJackVault, delayMs: slam });
     const wait = 1000;
-    const held = ENTRANCES.freshJackVault({ D: 1400, tgt, intensity: 1, wait });
+    const held = ENTRANCES.freshJackVault({ D: 1400, tgt, intensity: 1, landMs: landMsAfter(wait, 1400) });
     for (const cue of held) expect(cue.delayMs, cue.kind).toBeGreaterThanOrEqual(wait);
     expect(held.at(-1)?.delayMs).toBe(wait + frac(FX_SLAM_AT, 1400 - wait));
   });

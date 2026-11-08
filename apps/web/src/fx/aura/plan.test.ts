@@ -23,7 +23,7 @@ import {
 import type { AnomalyCode } from "../../cards/anomalies.ts";
 import { FLAVOR_LOOKS, FLAVOR_SUB_LOOKS, paletteLook } from "../flavors.ts";
 import { createFxMemory } from "../memory.ts";
-import { AURA_LOOK_NAMES, AURA_LOOKS, AURA_SCOPES, AURA_SHARED_LOOK_NAMES, type AuraLook, type AuraScope } from "./looks.ts";
+import { AURA_LOOK_NAMES, AURA_LOOKS, AURA_SCOPES, type AuraLook, type AuraScope } from "./looks.ts";
 import {
   attributeModifiers,
   auraBudget,
@@ -125,8 +125,7 @@ describe("R2787000 what wears an aura", () => {
       ["stinkyscape-155", "opponent", 4, "side", "drift"],
       ["traininggrounds-039-1", "opponent", 3, "tile", "timber"],
     ]);
-    // R3407000: the signature looks each stand on their own card's zone or tile (fx/cards/stinkyscape/signatures.test.ts).
-    expect(new Set(planned.map((aura) => aura.look))).toEqual(new Set(AURA_SHARED_LOOK_NAMES));
+    expect(new Set(planned.map((aura) => aura.look))).toEqual(new Set(AURA_LOOK_NAMES));
     expect(new Set(planned.map((aura) => aura.scope))).toEqual(new Set(AURA_SCOPES));
     expect(planned[0]?.key).toBe(`field-${you[0] && !you[0].faceDown ? you[0].instanceId : ""}`);
     expect(planned[7]?.key).toBe("mod-p1-m5");

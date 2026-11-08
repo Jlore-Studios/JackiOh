@@ -7,6 +7,7 @@
 // R2785000: it plays a card as the fixture set piece, which holds the board until a click skips it.
 // R3332000: it lists every signature by set; R3332001 plays Felinor Fiender's over its Felinors.
 // R3400001: Meditative+'s and Training Grounds' eight signatures, each tile aura standing as its Unit lands.
+// R3389001: Classic's eleven.
 // R3407000: Stinkyscape part two's 23, each Unit's look on its tile and each Field Spell's on its zone.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -18,7 +19,7 @@ import { fakeAudioEngine } from "../../audio/test/fakeAudio.ts";
 import { planAuras } from "../../fx/aura/plan.ts";
 import { entranceKeyOf, planCardFx, planCardMotif } from "../../fx/cardFx.ts";
 import { STINKYSCAPE_TWO_SIGNATURES } from "../../fx/cards/stinkyscape/signature.ts";
-import { FX_CARD_FILES, FX_CARD_TABLE, parseFxCardTable } from "../../fx/cards/tables.ts";
+import { entryAura, FX_CARD_FILES, FX_CARD_TABLE, parseFxCardTable } from "../../fx/cards/tables.ts";
 import { FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx/constants.ts";
 import { planFx } from "../../fx/cues.ts";
 import { FLAVOR_SUB_LOOKS, FX_PALETTES } from "../../fx/flavors.ts";
@@ -221,6 +222,31 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     expect(screen.getByTestId("game").querySelector("[data-animating]")).not.toBeNull();
   });
 
+  it("R3389001 the gallery lists and plays Classic's eleven signatures", () => {
+    const classic = gallerySignatures().find((group) => group.set === "Classic");
+    const ids = ["classic-004", "classic-007", "classic-009", "classic-028", "classic-033", "classic-044", "classic-045", "classic-056", "classic-080", "classic-085", "classic-090"];
+    expect(classic?.cards.map((card) => card.defId)).toEqual(ids);
+    // Each is its recipe's play, on its fixture, over its own board.
+    for (const card of classic?.cards ?? []) expect(card.play.kind, card.defId).toBe("recipe");
+    render(<FxGallery />);
+    const select = screen.getByTestId(fxGalleryTestid.signature);
+    const group = [...select.querySelectorAll("optgroup")].find((candidate) => candidate.getAttribute("label") === "Classic");
+    expect([...(group?.querySelectorAll("option") ?? [])].map((option) => option.value)).toEqual(ids);
+    for (const defId of ids) {
+      fireEvent.change(select, { target: { value: defId } });
+      fireEvent.click(screen.getByTestId(fxGalleryTestid.playSignature));
+      // The card plays: the board animates it.
+      expect(screen.getByTestId("game").querySelector("[data-animating]"), defId).not.toBeNull();
+      // The view it lands in shows its aura on its own zone, a Unit's on the tile it lands in (R3400000).
+      const shown = galleryFieldView(defId, galleryBoardOf(defId, fullBoardView()));
+      const auras = planAuras(shown, new Map()).filter((aura) => aura.defId === defId);
+      const type = CATALOG[defId]?.type;
+      if (type === "Unit") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["tile", 3]]);
+      else if (type === "Field Spell") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["zone", 1]]);
+      else expect(auras, defId).toEqual([]);
+    }
+  });
+
   it("R3400001 the gallery lists the eight signatures by set and stands each tile aura", () => {
     const signatures = gallerySignatures();
     const of = (set: string): string[] => signatures.find((group) => group.set === set)?.cards.map((card) => card.defId) ?? [];
@@ -283,7 +309,7 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       });
       expect(cues.length, defId).toBeGreaterThan(0);
       // Its standing look: a Unit's on its tile where its entrance lands, a Field Spell's on its zone.
-      const aura = entry !== undefined && (entry.kind === "bespoke" || entry.kind === "hooks") ? entry.aura : undefined;
+      const aura = entryAura(entry);
       if (aura === undefined) continue;
       const worn = planAuras(fielded, new Map()).filter((spec) => spec.defId === defId).map((spec) => [spec.side, spec.lane, spec.scope, spec.look]);
       expect(worn, defId).toEqual([["you", aura.scope === "tile" ? 3 : 1, aura.scope, aura.look]]);

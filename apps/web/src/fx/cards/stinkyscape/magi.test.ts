@@ -30,6 +30,7 @@ import type { FxAnchor, FxCue, FxPlanEnv } from "../../types.ts";
 import { ENTRANCE_TRAUMA, FOOT } from "../recipe.ts";
 import { FX_CARD_TABLE } from "../tables.ts";
 import { balthasarCradleFixture, casperKissFixture, magiBallotFixture, melchiorTallyFixture } from "./magi.ts";
+import { landMsAfter } from "./signature.ts";
 
 const MELCHIOR = "stinkyscape-018-1";
 const BALTHASAR = "stinkyscape-018-2";
@@ -110,7 +111,7 @@ describe("R3407000 the MAGI's signatures", () => {
     const tgt = testid.zone("you", "backrow", 2);
     for (const defId of MAGI) {
       const key = ENTRANCE_OF[defId];
-      const held = ENTRANCES[key]({ D, tgt, intensity: 1, view, landing: landing("p1", "m", defId), wait });
+      const held = ENTRANCES[key]({ D, tgt, intensity: 1, view, landing: landing("p1", "m", defId), landMs: landMsAfter(wait, D) });
       for (const cue of held) expect(cue.delayMs, `${key} ${cue.kind}`).toBeGreaterThanOrEqual(wait);
       const shake = held.find((cue) => cue.kind === "shake");
       expect(shake?.delayMs, key).toBe(wait + frac(FX_SLAM_AT, D - wait));

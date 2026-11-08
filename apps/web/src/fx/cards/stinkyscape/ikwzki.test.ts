@@ -16,6 +16,7 @@ import { ENTRANCES } from "../../entrances.ts";
 import type { FxAnchor, FxCue } from "../../types.ts";
 import { ENTRANCE_TRAUMA } from "../recipe.ts";
 import { FX_CARD_TABLE } from "../tables.ts";
+import { landMsAfter } from "./signature.ts";
 
 const IKWZKI = "stinkyscape-110";
 const DS = [120, 200, 400, 732, 1400] as const;
@@ -41,7 +42,7 @@ describe("R3407000 iKwzki's signature", () => {
     expect(cues[9]).toMatchObject({ kind: "rays", at: tid(tgt), delayMs: slam });
     expect(cues.at(-1)).toEqual({ kind: "shake", trauma: ENTRANCE_TRAUMA.ikwzkiDawn, delayMs: slam });
     const wait = 1000;
-    const held = ENTRANCES.ikwzkiDawn({ D: 1400, tgt, intensity: 1, wait });
+    const held = ENTRANCES.ikwzkiDawn({ D: 1400, tgt, intensity: 1, landMs: landMsAfter(wait, 1400) });
     for (const cue of held) expect(cue.delayMs, cue.kind).toBeGreaterThanOrEqual(wait);
     expect(held.at(-1)?.delayMs).toBe(wait + frac(FX_SLAM_AT, 1400 - wait));
   });

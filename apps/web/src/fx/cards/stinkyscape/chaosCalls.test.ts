@@ -37,6 +37,7 @@ import { ENTRANCE_TRAUMA, FOOT } from "../recipe.ts";
 import { FX_CARD_TABLE } from "../tables.ts";
 import { markLook } from "./markLook.ts";
 import { SCAPE_GALLERY_EFFECT, STINKY_GALLERY_EFFECT, STINKYSCAPE_GOLEM_ID, stinkCloudFixture, tabletopTiltFixture } from "./chaosCalls.ts";
+import { landMsAfter } from "./signature.ts";
 
 const STINKY = "stinkyscape-150";
 const GOLEM = STINKYSCAPE_GOLEM_ID;
@@ -134,7 +135,7 @@ describe("R3407000 Stinkyscape's Calls to Chaos and their Golem", () => {
     expect(ENTRANCE_TRAUMA.golemCrash).toBeLessThanOrEqual(SIGNATURE_PERMANENT_MAX_TRAUMA);
     // Its hold first: every beat after it, the slam FX_SLAM_AT of what follows.
     const wait = 150;
-    const held = ENTRANCES.golemCrash({ D, tgt, intensity: FX_INTENSITY_SCALE.normal, wait });
+    const held = ENTRANCES.golemCrash({ D, tgt, intensity: FX_INTENSITY_SCALE.normal, landMs: landMsAfter(wait, D) });
     for (const cue of held) expect(cue.delayMs, cue.kind).toBeGreaterThanOrEqual(wait);
     expect(held[5]).toMatchObject({ delayMs: wait + frac(FX_SLAM_AT, D - wait) });
   });
@@ -302,7 +303,7 @@ describe("R3407000 Stinkyscape's Calls to Chaos and their Golem", () => {
         expectR200(run, `D ${String(D)}`);
       }
       for (const wait of [0, D / 2, D]) {
-        const cues = ENTRANCES.golemCrash({ D, tgt, intensity: FX_INTENSITY_SCALE.normal, wait });
+        const cues = ENTRANCES.golemCrash({ D, tgt, intensity: FX_INTENSITY_SCALE.normal, landMs: landMsAfter(wait, D) });
         for (const cue of cues) {
           expect(cue.delayMs, `golemCrash D ${String(D)} wait ${String(wait)} ${cue.kind}`).toBeGreaterThanOrEqual(0);
           expect(cue.delayMs, `golemCrash D ${String(D)} wait ${String(wait)} ${cue.kind}`).toBeLessThanOrEqual(D);

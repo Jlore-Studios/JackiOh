@@ -22,6 +22,7 @@ import type { FxCue, FxPlanEnv } from "../../types.ts";
 import { ENTRANCE_TRAUMA, FOOT } from "../recipe.ts";
 import { FX_CARD_TABLE } from "../tables.ts";
 import { blobDrumFixture, dataPacketFixture, primeConductFixture } from "./in33dh3.ts";
+import { landMsAfter } from "./signature.ts";
 
 const IN33DH3 = "stinkyscape-147";
 const PRIME = "stinkyscape-147-1";
@@ -141,7 +142,7 @@ describe("R3407000 IN33DH3, IN33DH3 Prime and the Wardrum Blob", () => {
       ["blobPlop", testid.zone("you", "backrow", 1), fieldLanding("p1", "bl", BLOB)],
     ] as const;
     for (const [key, tgt, landing] of plans) {
-      const cues = ENTRANCES[key]({ D, tgt, intensity: 1, view, landing, wait: WAIT });
+      const cues = ENTRANCES[key]({ D, tgt, intensity: 1, view, landing, landMs: landMsAfter(WAIT, D) });
       for (const cue of cues) expect(cue.delayMs, `${key} ${cue.kind}`).toBeGreaterThanOrEqual(WAIT);
       expect(cues.find((cue) => cue.kind === "shake")?.delayMs, key).toBe(WAIT + frac(FX_SLAM_AT, D - WAIT));
       expectInside(cues, D, key);
@@ -173,7 +174,7 @@ describe("R3407000 IN33DH3, IN33DH3 Prime and the Wardrum Blob", () => {
     const landing = unitLanding("p1", "in", IN33DH3);
     const own = planEach([played("p1", "in", IN33DH3), landing, resolved("p1", "in", IN33DH3)], D, [], view);
     expect(own[0]).toEqual({ cues: [], row: undefined });
-    expect(own[1]).toEqual({ cues: ENTRANCES.in33dh3Drop({ D, tgt: testid.zone("you", "units", 3), intensity: 1, view, landing, wait: 0 }), row: "replace" });
+    expect(own[1]).toEqual({ cues: ENTRANCES.in33dh3Drop({ D, tgt: testid.zone("you", "units", 3), intensity: 1, view, landing }), row: "replace" });
     expect(own[2]).toEqual({ cues: [], row: undefined });
   });
 
@@ -183,7 +184,7 @@ describe("R3407000 IN33DH3, IN33DH3 Prime and the Wardrum Blob", () => {
     const zone = tid(testid.zone("you", "backrow", 2));
     const plan = (before: readonly GameEvent[], from: ReturnType<typeof tid>): void => {
       const [cry] = planEach([blob], D, before, view);
-      const entrance = ENTRANCES.blobPlop({ D, tgt: testid.zone("you", "backrow", 2), intensity: 1, view, landing: blob, wait: 0 });
+      const entrance = ENTRANCES.blobPlop({ D, tgt: testid.zone("you", "backrow", 2), intensity: 1, view, landing: blob });
       expect(cry?.row).toBe("replace");
       expect(cry?.cues.slice(0, entrance.length)).toEqual(entrance);
       const recipe = cry?.cues.slice(entrance.length) ?? [];
@@ -200,7 +201,7 @@ describe("R3407000 IN33DH3, IN33DH3 Prime and the Wardrum Blob", () => {
     plan([played("p1", "pr", PRIME)], tid(testid.hero("you")));
     // His own landing is his entrance alone; the other player's backrow summon and his units' draw nothing of the Cry.
     const own = planEach([unitLanding("p1", "pr", PRIME)], D, [played("p1", "pr", PRIME)], view);
-    expect(own[0]?.cues).toEqual(ENTRANCES.primeCrown({ D, tgt: testid.zone("you", "units", 3), intensity: 1, view, landing: unitLanding("p1", "pr", PRIME), wait: 0 }));
+    expect(own[0]?.cues).toEqual(ENTRANCES.primeCrown({ D, tgt: testid.zone("you", "units", 3), intensity: 1, view, landing: unitLanding("p1", "pr", PRIME) }));
     const theirs = planEach([{ type: "summoned", player: "p2", instanceId: "x", defId: "core-020", row: "backrow", lane: 2 }], D, [played("p1", "pr", PRIME)], view);
     expect(theirs[0]).toEqual({ cues: [], row: undefined });
   });

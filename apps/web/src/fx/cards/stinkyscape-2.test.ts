@@ -35,7 +35,7 @@ import { hasSetPiece, wipeClaim } from "../setPieces.ts";
 import type { FxCue, FxPlanEnv } from "../types.ts";
 import { isCardRecipeKey } from "./bespoke.ts";
 import rawTable from "./stinkyscape-2.md?raw";
-import { FX_CARD_FILES, isSignature, parseFxCardTable, type FxCardEntry } from "./tables.ts";
+import { entryAura, FX_CARD_FILES, isSignature, parseFxCardTable, type FxCardEntry } from "./tables.ts";
 
 const FILE = FX_CARD_FILES.find((candidate) => candidate.file === "stinkyscape-2.json5");
 if (FILE === undefined) throw new Error("no stinkyscape-2.json5");
@@ -186,7 +186,7 @@ describe("R2784000 #2798 Stinkyscape's card animation pass, part two", () => {
       const type = CATALOG[id]?.type;
       const entry = entryOf(id);
       // R3407000: a signature's bespoke entry wears its aura beside its recipe.
-      if (type === "Field Spell") expect(entry.kind === "hooks" || entry.kind === "bespoke" ? entry.aura : undefined, id).toBeDefined();
+      if (type === "Field Spell") expect(entryAura(entry), id).toBeDefined();
       if (type === "Unit" || CATALOG[id]?.token === true || STARSHIP_PARTS.includes(id)) continue;
       const plays = entry.kind === "bespoke" || entry.kind === "setPiece" || (entry.kind === "hooks" && entry.hooks.cast !== undefined);
       expect(plays, `${id} (${String(type)})`).toBe(true);

@@ -65,15 +65,23 @@ export function entranceSpec(p: EntrancePlan, palette: FxPalette): CueSpec {
   return { look: lookOf(palette), scale: p.intensity, row: "keep" };
 }
 
+/** R3407000: when an entrance's card lands after a hold of `wait` (planEntrance's `landMs`): at FX_SLAM_AT of the motion after it. */
+export function landMsAfter(wait: number, D: number): number {
+  return wait + frac(FX_SLAM_AT, D - wait);
+}
+
 /**
  * R3407000: an entrance's moments: `wait`, its entry's hold before the motion (a Mythic's takeover), and
- * `at(x)`, x of the motion after it; `slam` is when its card lands, FX_SLAM_AT of the motion, with the
- * takeover's landing (takeover.ts `entranceLandMs`).
+ * `at(x)`, x of the motion after it; `slam` is when its card lands, the plan's `landMs` (R3389000: the
+ * hold plus FX_SLAM_AT of the motion, takeover.ts `entranceLandMs`), the hold read back from it.
  */
 export function entranceTimes(p: EntrancePlan): { wait: number; at: (x: number) => number; slam: number } {
-  const wait = Math.min(Math.max(0, p.wait ?? 0), p.D);
+  const slam = Math.min(Math.max(0, p.landMs ?? frac(FX_SLAM_AT, p.D)), p.D);
+  const guess = Math.round((slam - FX_SLAM_AT * p.D) / (1 - FX_SLAM_AT));
+  const exact = [guess, guess - 1, guess + 1, guess - 2, guess + 2].find((w) => landMsAfter(w, p.D) === slam);
+  const wait = Math.min(Math.max(0, exact ?? guess), p.D);
   const at = (x: number): number => wait + frac(x, p.D - wait);
-  return { wait, at, slam: at(FX_SLAM_AT) };
+  return { wait, at, slam };
 }
 
 /** The piles a player's cards are reached through: never a card in them (R202). */

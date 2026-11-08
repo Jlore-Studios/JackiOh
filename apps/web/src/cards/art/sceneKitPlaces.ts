@@ -4,7 +4,8 @@
 // a bridge, an altar, a lectern, shelves, a table, a statue, a menhir, a portcullis, a hearth, a server
 // obelisk, a dome, a fallen column, a throne, a fountain, a cot, a market stall); the rings and wheels
 // centred on it (a portal ring, a rune circle, a fortune wheel, a clock face); and three big things (a jet in
-// flight, a hand cart, a chest of drawers). sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a
+// flight, a hand cart, a chest of drawers). R3396000: the Classic+ Alt art scenes (#3396) added a waterfall, a
+// tent and a sailing boat. sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a
 // palette.css name, none in Radiant's gold window; a glow is a stack of translucent shapes, never a
 // gradient; shapes are filled even-odd, so a hole is a second sub-path and no two sub-paths of one shape
 // overlap otherwise.
@@ -1138,6 +1139,78 @@ function cabinet(at: PartPlace, rng: Rng): KitShape[] {
   return out;
 }
 
+// R3396000: the places the Classic+ Alt art scenes added.
+
+/** A wooden sailing boat afloat, its waterline on the anchor: a hull curving up at bow and stern, a cabin, a mast and its sail (main), a square sail or a triangle, and a pennant; about 22 wide and 20 tall at scale 1. */
+function boat(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const bow = between(rng, 5, 6.2);
+  const cabin = between(rng, 4, 5.6);
+  const sail =
+    rng() < 0.5
+      ? `M${f.p(-3.6, -18)}Q${f.p(2, -16.8)} ${f.p(7.6, -18)}Q${f.p(8.6, -12.4)} ${f.p(7.6, -6.8)}Q${f.p(2, -8)} ${f.p(-3.6, -6.8)}Q${f.p(-2.6, -12.4)} ${f.p(-3.6, -18)}Z`
+      : `M${f.p(2.5, -19.2)}Q${f.p(8.6, -12.4)} ${f.p(9.6, -4.4)}L${f.p(2.5, -4.4)}Z`;
+  const out = [
+    shape(f.ellipse(0, 1, 12, 0.9), "black", 0.2),
+    shape(`M${f.p(-11, -bow)}Q${f.p(-9.4, -0.4)} ${f.p(-6, 1.2)}L${f.p(6, 1.2)}Q${f.p(9.8, -0.4)} ${f.p(11.4, -bow - 0.4)}L${f.p(8.2, -3.2)}L${f.p(-8.2, -3.2)}Z`, "wood-700", 1, INKED),
+    shape(f.band([[-9.6, -1.4], [9.8, -1.4]], 0.3) + f.band([[-7.6, 0.2], [7.8, 0.2]], 0.3), "wood-800", 0.6),
+    shape(f.band([[-10.8, -bow + 0.3], [-8.2, -3.2], [8.2, -3.2], [11, -bow]], 0.5), "wood-600", 1, INKED),
+    shape(rect(f, -7, -3.2 - cabin * 0.62, -7 + cabin, -3.2), "stone-500", 1, INKED),
+    shape(f.circle(-7 + cabin / 2, -3.2 - cabin * 0.32, 0.55), "slate-900", 0.8),
+    shape(f.band([[2.2, -3.2], [2.2, -19.8]], 0.6), "wood-800", 1, INKED),
+    shape(sail, "white", 1, MAIN_INKED),
+    shape(f.band([[2.6, -14.4], [7.4, -14.6]], 0.25) + f.band([[2.6, -10.2], [8, -10.4]], 0.25), "slate-400", 0.45),
+    shape(f.poly([[2.5, -19.8], [5.6 + between(rng, -0.4, 0.6), -19.2], [2.5, -18.4]]), rng() < 0.5 ? "red-600" : "blue-600", 1, INKED),
+    shape(f.band([[-9, 0.7], [9.2, 0.7]], 0.4), "white", 0.45),
+  ];
+  return out;
+}
+
+/** A ridge tent pitched on the anchor: its front gable and its side slope (both main) on two poles, an open flap folded back from a dark doorway, guy ropes pegged out and often a stripe or two; about 20 wide and 13 tall at scale 1. */
+function tent(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const ridge = between(rng, -13, -11.8);
+  const back = ridge + between(rng, 0.6, 1.2);
+  const out = [
+    shape(f.ellipse(0.6, 0.3, 11.4, 0.8), "black", 0.25),
+    shape(f.band([[-3, ridge - 0.8], [-12.4, 0]], 0.18) + f.band([[6, back - 0.8], [14, 0]], 0.18), "wood-600", 0.8),
+    shape(f.poly([[-3, ridge], [6, back], [10.6, 0], [4, 0]]), "red-600", 1, MAIN_INKED),
+    shape(f.poly([[-3, ridge], [6, back], [10.6, 0], [4, 0]]), "black", 0.18),
+    shape(f.poly([[-3, ridge], [-10, 0], [4, 0]]), "red-600", 1, MAIN_INKED),
+    shape(f.poly([[-3, ridge + 2.6], [-5.8, 0], [-0.4, 0]]), "slate-900", 0.85),
+    shape(f.poly([[-3, ridge + 2.6], [-0.4, 0], [1.6, -1.4]]), "slate-100", 0.9, INKED),
+    shape(f.band([[-3, ridge], [-3, ridge - 1.6]], 0.45) + f.band([[6, back], [6, back - 1.4]], 0.45), "wood-800", 1, INKED),
+  ];
+  if (rng() < 0.6) out.push(shape(f.band([[0.6, ridge + 4.6], [7.2, back + 4.8]], 0.5) + f.band([[2.2, ridge + 8.8], [8.8, back + 9.2]], 0.5), "slate-100", 0.35));
+  if (rng() < 0.5) out.push(shape(f.poly([[-3, ridge - 1.6], [-0.4, ridge - 1.2], [-3, ridge - 0.8]]), "blue-600", 1));
+  return out;
+}
+
+/** A waterfall whose foot is on the anchor: two rock lips beside a falling sheet of pale water (main), streaks down it, mist and foam where it lands, often moss on the rocks; about 18 wide and 30 tall at scale 1. */
+function waterfall(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const lip = between(rng, -31, -29);
+  const streaks = whole(rng, 4, 6);
+  let lines = "";
+  for (let k = 0; k < streaks; k += 1) {
+    const x = -3.2 + (6.4 * (k + 0.5)) / streaks + between(rng, -0.3, 0.3);
+    lines += f.band([[x, lip + between(rng, 2, 6)], [x + between(rng, -0.3, 0.3), between(rng, -9, -3)]], 0.3);
+  }
+  const out = [
+    shape(f.poly([[-9, 0], [-10, -21], [-7.6, lip - 0.4], [-3.6, lip], [-4.4, -14], [-3.8, 0]]), "stone-500", 1, INKED),
+    shape(f.poly([[9.4, 0], [10, -19], [7.6, lip + 1], [3.8, lip], [4.6, -12], [4.2, 0]]), "slate-700", 1, INKED),
+    shape(`M${f.p(-4, lip)}Q${f.p(-4.7, -15)} ${f.p(-4.4, 0)}L${f.p(4.4, 0)}Q${f.p(4.9, -15)} ${f.p(4, lip)}Z`, "sky-300", 1, MAIN),
+    shape(lines, "white", 0.55),
+    shape(f.band([[-4, lip + 0.4], [4, lip + 0.4]], 0.7), "white", 0.6),
+    shape(f.ellipse(0, -2.2, 8, 2.8), "white", 0.25),
+    shape(f.ellipse(0, -0.2, 6.4, 1.5), "white", 0.9),
+    shape(f.circle(-5.6, -1.6, 1.3) + f.circle(5.8, -1.8, 1.2), "white", 0.5),
+    shape(f.band([[-8.6, 1.2], [8.8, 1.2]], 0.4), "blue-200", 0.5),
+  ];
+  if (rng() < 0.7) out.push(shape(f.band([[-9.6, -20], [-7.4, lip + 0.4], [-4.2, lip + 0.6]], 0.9) + f.band([[9.6, -18], [7.4, lip + 1.6]], 0.8), "green-700", 0.8));
+  return out;
+}
+
 /** R3390000: the places the Classic+ scenes added, by id, each with its kind. */
 export const PLACES_KIT = {
   water: { category: "terrain", draw: water },
@@ -1172,4 +1245,8 @@ export const PLACES_KIT = {
   jet: { category: "objects", draw: jet },
   cart: { category: "objects", draw: cart },
   cabinet: { category: "objects", draw: cabinet },
+  // R3396000: the Alt art scenes' boat, tent and waterfall.
+  waterfall: { category: "terrain", draw: waterfall },
+  tent: { category: "architecture", draw: tent },
+  boat: { category: "objects", draw: boat },
 } as const satisfies Readonly<Record<string, KitPart>>;

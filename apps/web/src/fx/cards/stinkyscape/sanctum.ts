@@ -26,7 +26,7 @@ import { frac, raysCue, shakeCues, tid } from "../../build.ts";
 import { motifBurst, motifRing, motifShot, type CueSpec } from "../../motifs/build.ts";
 import type { FxCue } from "../../types.ts";
 import { ENTRANCE_TRAUMA, FOOT, type CardRecipe, type Entrance } from "../recipe.ts";
-import { entranceSpec, entranceTimes, lookOf, pileOf, sigSpec } from "./signature.ts";
+import { entranceSpec, entranceTimes, landMsAfter, lookOf, pileOf, sigSpec } from "./signature.ts";
 
 /** Every particle count the Sanctum throws at scale 1 (rule 9). */
 const TUNING = {
@@ -76,7 +76,7 @@ export const sanctumEcho: CardRecipe = (event, p, play) => {
     const spec = silver(sigSpec(p, play, HOLY));
     const zone = testid.zone(sideOf(p.view, event.player), event.row, event.lane);
     // After any hold its entry opens with, as the entrance it lands with times its own.
-    const { at } = entranceTimes({ D: p.D, tgt: zone, intensity: p.env.intensity, wait: leadMs(p.entry) });
+    const { at } = entranceTimes({ D: p.D, tgt: zone, intensity: p.env.intensity, landMs: landMsAfter(leadMs(p.entry), p.D) });
     const leave = at(T.echoAt);
     const land = at(T.echoLand);
     const piles = [pileOf(p.view, event.player, "graveyard"), pileOf(p.view, event.player, "library")];

@@ -5,7 +5,8 @@
 // cinematic), the Drone Battleship's arrival (R3336000), a Mythic takeover (fewer Mythic-burst particles, a
 // softer shake, and takeover rays trimmed to the same visible disc), a board with 4 auras, and R3337003's
 // Anomaly cast (its rift, flare, title card and landing). R3332001: Felinor Fiender's signature, the first,
-// over the gallery's board with its three Felinors. R3338000: Ceaseless Void's fold and Dice of Doom's 67.
+// over the gallery's board with its three Felinors. R3389001: Classic's two heaviest signatures, In Too Deep's
+// (its own abyss takeover) and BOOM! Big Max's. R3338000: Ceaseless Void's fold and Dice of Doom's 67.
 // R3344001: a hand with one face tilted under a pointer that keeps moving over it, its planes parallaxing
 // under its glare. R3334002: a launched Starship's broadside of eight guns, at the slowest effects speed.
 // R3400001: Goetzmann Game Design's and Bob's Plan's signatures, the two heaviest of Meditative+'s and Training
@@ -319,6 +320,26 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
         mountScene(board, galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
         cy.get(GAME).should("have.attr", "data-takeover", "mythic");
         cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art`).should("have.attr", "data-look", look);
+        return sampleFrames();
+      });
+      cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+    });
+  }
+
+  for (const [defId, name] of [
+    ["classic-090", "In Too Deep"],
+    ["classic-080", "BOOM! Big Max"],
+  ] as const) {
+    it(`R3389001 ${name}'s signature holds the phone frame budget mid-flight`, () => {
+      cy.viewport(PHONE.width, PHONE.height);
+      const entry = FX_CARD_TABLE.get(defId);
+      const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${name} has no gallery play`);
+      const board = galleryBoardOf(defId, fullBoardView());
+      holdsBudget(`${name}'s signature`, () => {
+        mountScene(board, galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
+        cy.get(GAME).find("[data-animating]").should("exist");
+        cy.get(CANVAS).should("exist");
         return sampleFrames();
       });
       cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");

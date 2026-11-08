@@ -164,7 +164,7 @@ export type FxFogCue = {
  * the effects' tail (R200). R3400000: "summit", "canvas" and "napkin" draw art of their own over the dark
  * (takeoverArt.ts), the same art Reduce Motion's still shows (game/TakeoverStill.tsx).
  */
-export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai" | "freshJack" | "ikwzki" | "shockwave" | "alteran" | "edge" | "redNarcor" | "summit" | "canvas" | "napkin";
+export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai" | "abyss" | "freshJack" | "ikwzki" | "shockwave" | "alteran" | "edge" | "redNarcor" | "summit" | "canvas" | "napkin";
 /**
  * R3407000: `art`, a look of its own that draws its card's picture over the dark (`TAKEOVER_ART_LOOKS`), the
  * picture's URI: only ever a card the seat's own event names (R202).
@@ -512,6 +512,8 @@ export type FxMemory = {
   casterOf(instanceId: string): PlayerId | undefined;
   trapZoneOf(instanceId: string): FxTrapZone | undefined;
   resolving(): FxPlay | undefined;
+  /** R3389000: every play and hook entry still open, outermost first (`resolving()` is the last). */
+  plays(): readonly FxPlay[];
   /** R502: whether this very `cardPlayed` (the object remembered) was a cast on draw. */
   castOnDraw(event: GameEvent): boolean;
   /** R2789000: the last FX_MEMORY_RECENT events, the planned entry's last. */

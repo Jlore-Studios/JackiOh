@@ -30,6 +30,7 @@ import type { FxAnchor, FxCue } from "../../types.ts";
 import { ENTRANCE_TRAUMA } from "../recipe.ts";
 import { FX_CARD_TABLE } from "../tables.ts";
 import { edgeFleeFixture, starscapeJumpFixture } from "./alteranReach.ts";
+import { landMsAfter } from "./signature.ts";
 
 const REACH = "stinkyscape-148";
 const EDGE = "stinkyscape-148-1";
@@ -68,7 +69,7 @@ describe("R3407000 Alteran Reach's and Edge of the Universe's signatures", () =>
     expect(cues.at(-1)).toEqual({ kind: "shake", trauma: ENTRANCE_TRAUMA.alteranDive, delayMs: slam });
     // After its takeover's hold, every beat waits for it.
     const wait = 1000;
-    const held = ENTRANCES.alteranDive({ D: 1400, tgt, intensity: 1, wait });
+    const held = ENTRANCES.alteranDive({ D: 1400, tgt, intensity: 1, landMs: landMsAfter(wait, 1400) });
     for (const cue of held) expect(cue.delayMs, cue.kind).toBeGreaterThanOrEqual(wait);
     expect(held.at(-1)?.delayMs).toBe(wait + frac(FX_SLAM_AT, 1400 - wait));
   });

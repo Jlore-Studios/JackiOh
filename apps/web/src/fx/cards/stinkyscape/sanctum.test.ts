@@ -21,6 +21,7 @@ import type { FxCue, FxPlanEnv } from "../../types.ts";
 import { ENTRANCE_TRAUMA, FOOT } from "../recipe.ts";
 import { FX_CARD_TABLE } from "../tables.ts";
 import { sanctumEchoFixture } from "./sanctum.ts";
+import { landMsAfter } from "./signature.ts";
 
 const SANCTUM = "stinkyscape-152";
 const D = 400;
@@ -82,7 +83,7 @@ describe("R3407000 Sanctum", () => {
   });
 
   it("R3407000 its entrance follows its entry's hold, landing at the slam of the motion after it", () => {
-    const cues = ENTRANCES.sanctumRise({ D, tgt: testid.zone("you", "backrow", 1), intensity: 1, view: fullBoardView(), landing: landing("p1", "sa"), wait: WAIT });
+    const cues = ENTRANCES.sanctumRise({ D, tgt: testid.zone("you", "backrow", 1), intensity: 1, view: fullBoardView(), landing: landing("p1", "sa"), landMs: landMsAfter(WAIT, D) });
     for (const cue of cues) expect(cue.delayMs, cue.kind).toBeGreaterThanOrEqual(WAIT);
     expect(cues.find((cue) => cue.kind === "shake")?.delayMs).toBe(WAIT + frac(FX_SLAM_AT, D - WAIT));
     expectInside(cues, D, "sanctumRise");
@@ -95,7 +96,7 @@ describe("R3407000 Sanctum", () => {
     const graveyard = tid(animTestid.graveyard("you"));
     const deck = tid(animTestid.library("you"));
     const [, landed] = planEach([played("p1", "sa"), lands], D, [], view);
-    const entrance = ENTRANCES.sanctumRise({ D, tgt: testid.zone("you", "backrow", 2), intensity: 1, view, landing: lands, wait: 0 });
+    const entrance = ENTRANCES.sanctumRise({ D, tgt: testid.zone("you", "backrow", 2), intensity: 1, view, landing: lands });
     expect(landed?.row).toBe("replace");
     expect(landed?.cues.slice(0, entrance.length)).toEqual(entrance);
     const echo = landed?.cues.slice(entrance.length) ?? [];

@@ -1299,7 +1299,11 @@ export function entranceEntries(
       opts.seen.add(card.instanceId);
       const tier = rarity === "Mythic" ? "mythic" : "legendary";
       // A played Unit lands in the zone its own summoned names in the same entry: the entrance centres there.
-      const landing = entry.events.find((e) => e.type === "summoned" && e.row === "units" && e.instanceId === card.instanceId);
+      // R3389000: so does a Field Spell landing face up in its backrow zone (R3332000), never one set face down.
+      const field = resolve(card.defId)?.type === "Field Spell";
+      const landing = entry.events.find(
+        (e) => e.type === "summoned" && e.instanceId === card.instanceId && (e.row === "units" || (field && e.row === "backrow" && e.formerId === undefined)),
+      );
       const anchor = targetFor(landing ?? event, entry.view);
       return { ...entry, entrance: { tier, ...card, anchor } };
     }

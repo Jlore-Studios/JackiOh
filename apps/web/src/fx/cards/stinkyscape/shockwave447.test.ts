@@ -30,6 +30,7 @@ import type { FxAnchor, FxCue } from "../../types.ts";
 import { ENTRANCE_TRAUMA } from "../recipe.ts";
 import { FX_CARD_TABLE } from "../tables.ts";
 import { shockwaveLectureFixture } from "./shockwave447.ts";
+import { landMsAfter } from "./signature.ts";
 
 const SHOCKWAVE = "stinkyscape-111";
 const DS = [120, 200, 400, 732, 1400] as const;
@@ -70,7 +71,7 @@ describe("R3407000 Shockwave447's signature", () => {
     // A landing the view does not show pops no callout.
     expect(kinds(ENTRANCES.shockwaveRing({ D, tgt, intensity: 1, view, landing: { ...landing, instanceId: "elsewhere" } }))).not.toContain("callout");
     const wait = 1000;
-    const held = ENTRANCES.shockwaveRing({ D: 1400, tgt, intensity: 1, view, landing, wait });
+    const held = ENTRANCES.shockwaveRing({ D: 1400, tgt, intensity: 1, view, landing, landMs: landMsAfter(wait, 1400) });
     for (const cue of held) expect(cue.delayMs, cue.kind).toBeGreaterThanOrEqual(wait);
   });
 

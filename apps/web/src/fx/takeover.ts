@@ -18,7 +18,8 @@
 // R3400000: so does a signature Spell's (or Trap's) cast of its own (`ownCast`): its recipe draws its play,
 // and a Mythic's takeover keeps only its own look, centred on the screen and ending
 // FX_SIGNATURE_TAKEOVER_TAIL_MS after its entry, with no shared rings or shake, so the whole cast fits the
-// Mythic Spell's ceiling (R3332000).
+// Mythic Spell's ceiling (R3332000). R3389000: In Too Deep's takeover is its own, "abyss": a spiral shaft
+// plunging into violet dark.
 // R3407000: a look of `TAKEOVER_ART_LOOKS` also draws its card's own picture filling the screen behind the
 // sweep (`takeoverArtOf`, the cue's `art`), the picture the card's face shows; every other look draws none.
 
@@ -38,7 +39,7 @@ import type { FxAnchor, FxCue, FxPlanEnv, FxTakeoverCue, FxTint, TakeoverLook } 
  * R670, R2722001, R3332000: a Mythic's takeover look: its table entry's `takeover` (#100 Ceaseless Void's
  * "void", #96 My Pawn's "pawn", #97 Zephrys's "genie", Meditative #49 YileGPT's "ai"; R3400000 Meditative+
  * #1 Bob's Plan's "summit", #26 Scratch Pad's "canvas", Training Grounds #40 Goetzmann Game Design's
- * "napkin"), else the shared "prismatic".
+ * "napkin"; R3389000 Classic #90 In Too Deep's "abyss"), else the shared "prismatic".
  */
 export function takeoverLookOf(defId: string, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): TakeoverLook {
   const entry = table.get(defId);
@@ -56,6 +57,8 @@ export const TAKEOVER_TINTS: Readonly<Record<TakeoverLook, FxTint>> = {
   summit: { rim: "#dc2626", core: "#f5f5f4", glow: "#57534e" },
   canvas: { rim: "#22d3ee", core: "#fafaf9", glow: "#a8a29e" },
   napkin: { rim: "#e879f9", core: "#fef3c7", glow: "#22d3ee" },
+  // R3389000: In Too Deep's black-blue water over violet dark.
+  abyss: { rim: "#1e3a8a", core: "#0b1026", glow: "#7c3aed" },
   // R3407000: Stinkyscape's Mythics of part two, each its own.
   freshJack: { rim: "#2dd4bf", core: "#fdf4ff", glow: "#e879f9" },
   ikwzki: { rim: "#fb7185", core: "#fff1f2", glow: "#67e8f9" },

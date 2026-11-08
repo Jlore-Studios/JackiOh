@@ -7,8 +7,9 @@
 // Expanse's rift is its set piece now (fx/terminus/). R3337002's and R3337003's Scanning Probes' scan and
 // Anomaly Found!'s call (#3337). R3334004: #176 Preemptive Strike's signature. R3400001: the signatures of
 // Meditative+'s and Training Grounds' Legendaries and Mythics (Bob's Plan, Bob, Scratch Pad, Seance, Tutorial
-// Master, Call to Chaos (Training-Grounds Edition); Goetzmann Game Design's grows from its flourish). R3407000:
-// Stinkyscape part two's signatures.
+// Master, Call to Chaos (Training-Grounds Edition); Goetzmann Game Design's grows from its flourish).
+// R3389001: Classic's eleven signatures' recipes (#3389), King Wagtoggle's crownSwap grown among them.
+// R3407000: Stinkyscape part two's signatures.
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
@@ -54,9 +55,19 @@ import { dinoStomp } from "./traininggrounds/dinoSize.ts";
 import { gameDesign } from "./traininggrounds/goetzmannGameDesign.ts";
 import { seance } from "./traininggrounds/seance.ts";
 import { tutorialMaster } from "./traininggrounds/tutorialMaster.ts";
+import { graveRise } from "./classic/backFromTheGy.ts";
+import { craterLock } from "./classic/bigMax.ts";
 import { pageMend } from "./classic/bookOfHeal.ts";
+import { taxSeizure } from "./classic/incomeTax.ts";
+import { sceptreLocket } from "./classic/infiniScepter.ts";
+import { shrineDescent } from "./classic/inTooDeep.ts";
+import { webRedirect } from "./classic/joro.ts";
 import { crownSwap } from "./classic/kingWagtoggle.ts";
+import { titanLeaf } from "./classic/natureTitan.ts";
+import { palantirGaze } from "./classic/palantir.ts";
 import { recycleLoop } from "./classic/recycle.ts";
+import { secondGust } from "./classic/secondWind.ts";
+import { tyrantCommand } from "./classic/spellTyrant.ts";
 
 export const CARD_RECIPES = {
   manaCrack,
@@ -114,6 +125,16 @@ export const CARD_RECIPES = {
   pageMend,
   recycleLoop,
   crownSwap,
+  palantirGaze,
+  sceptreLocket,
+  taxSeizure,
+  secondGust,
+  webRedirect,
+  graveRise,
+  titanLeaf,
+  tyrantCommand,
+  craterLock,
+  shrineDescent,
 } as const satisfies Readonly<Record<string, CardRecipe>>;
 
 export type CardRecipeKey = keyof typeof CARD_RECIPES;

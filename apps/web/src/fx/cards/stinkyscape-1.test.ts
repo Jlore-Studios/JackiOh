@@ -24,7 +24,7 @@ import { isDrawnMotif } from "../motifs/names.ts";
 import { hasSetPiece, signatureRunOf } from "../setPieces.ts";
 import type { FxPlanEnv } from "../types.ts";
 import rawTable from "./stinkyscape-1.md?raw";
-import { FX_CARD_FILES, parseFxCardTable, type FxCardEntry } from "./tables.ts";
+import { entryAura, FX_CARD_FILES, parseFxCardTable, type FxCardEntry } from "./tables.ts";
 
 /** The card types whose play is a `cast` the pass holds to one. */
 const CAST_TYPES: ReadonlySet<string> = new Set(["Spell", "Field Spell", "Trap", "Field Trap"]);
@@ -105,7 +105,7 @@ describe("R2797000 #2797 Stinkyscape 001 to 090's card animation pass", () => {
       const def = CATALOG[id];
       const entry = entryOf(id);
       // R3407000: a signature's bespoke entry wears its aura beside its recipe.
-      if (def?.type === "Field Spell") expect(entry.kind === "hooks" || entry.kind === "bespoke" ? entry.aura : undefined, id).toBeDefined();
+      if (def?.type === "Field Spell") expect(entryAura(entry), id).toBeDefined();
       if (def === undefined || def.token || !CAST_TYPES.has(def.type)) continue;
       const plays = entry.kind === "bespoke" || entry.kind === "setPiece" || (entry.kind === "hooks" && entry.hooks.cast !== undefined);
       expect(plays, `${id} (${def.type})`).toBe(true);
