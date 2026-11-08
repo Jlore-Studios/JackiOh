@@ -16761,7 +16761,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-08T01:35:55Z",
+      "feedback_since": "2026-11-08T04:56:40Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-08T04:10:18Z",
@@ -16804,11 +16804,11 @@
         "provider": "claude-1",
         "run": "42440243587"
       },
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-08T04:56:40Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "claude"
