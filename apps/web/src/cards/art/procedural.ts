@@ -91,9 +91,10 @@ export const ART_BOX = 100;
  * R2715001: what part of the picture a ridge is: behind the subject (the backdrop, a family twist's
  * under layer, a circuits pattern, a figure's hills), the subject itself (the rest of the composition),
  * or over it (a waves pattern, a twist's over layer). R3331000: a scene's light and particles are
- * ridges too, each moving on its own beat (scene.ts `SCENE_LAYER_ROLES`).
+ * ridges too, each moving on its own beat (scene.ts `SCENE_LAYER_ROLES`); R3390000: so are a scene's props, its
+ * placements marked to move on the props beat as a painter's glyphs do.
  */
-export type RidgeRole = "back" | "subject" | "over" | "light" | "motes";
+export type RidgeRole = "back" | "subject" | "over" | "light" | "props" | "motes";
 const RAY_COUNT_MIN = 7;
 const RAY_COUNT_MAX = 11;
 const RADIANT_SALT = 0x9e3779b9;

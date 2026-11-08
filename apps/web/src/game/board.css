@@ -2056,6 +2056,21 @@ button.modifier-badge[data-open="true"] {
   opacity: 0.5;
 }
 
+/* R3389000: a Mythic whose takeover has a look of its own stills in it: In Too Deep's "abyss", the spiral
+   shaft's shrine lights in rings of violet over black-blue water. Static: nothing here animates. */
+.takeover-still[data-takeover-look="abyss"] {
+  background: color-mix(in srgb, var(--pal-blue-900) 55%, transparent);
+}
+
+.takeover-still[data-takeover-look="abyss"] .takeover-still-rays {
+  background: repeating-radial-gradient(
+    circle,
+    color-mix(in srgb, var(--pal-violet-500) 40%, transparent) 0 2%,
+    transparent 3% 9%
+  );
+  opacity: 0.6;
+}
+
 .takeover-still-card {
   width: min(46vmin, 300px);
 }

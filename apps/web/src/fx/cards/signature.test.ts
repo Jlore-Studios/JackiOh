@@ -3,6 +3,7 @@
 // (fx/cards/<set>.json5) is not yet its signature (`signature: true`, tables.ts), in catalog order. A
 // set's signature pass takes each card off as it gives it one; the list only shrinks, and the last pass
 // empties it. A new Legendary or Mythic comes with its signature, or joins the list where the catalog puts it.
+// R3389001: Classic's pass (#3389) took its eleven off.
 
 import { describe, expect, it } from "vitest";
 
@@ -13,9 +14,6 @@ import { FX_CARD_TABLE, isSignature } from "./tables.ts";
 const SIGNATURE_PENDING: readonly string[] = [
   // Core
   "core-052", "core-083", "core-085", "core-087", "core-093", "core-095", "core-096", "core-097", "core-098", "core-099", "core-100",
-  // Classic
-  "classic-004", "classic-007", "classic-009", "classic-028", "classic-033", "classic-044", "classic-045", "classic-056", "classic-080",
-  "classic-085", "classic-090",
   // Classic+
   "classicplus-012", "classicplus-012-1", "classicplus-012-2", "classicplus-012-3", "classicplus-012-4", "classicplus-012-5", "classicplus-012-6",
   "classicplus-012-7", "classicplus-012-8", "classicplus-013", "classicplus-019", "classicplus-019-1", "classicplus-019-2", "classicplus-019-3",
@@ -35,9 +33,9 @@ const SIGNATURE_PENDING: readonly string[] = [
   "stinkyscape-058", "stinkyscape-059", "stinkyscape-060", "stinkyscape-061", "stinkyscape-066", "stinkyscape-070", "stinkyscape-071",
   "stinkyscape-073", "stinkyscape-074", "stinkyscape-080", "stinkyscape-085", "stinkyscape-086", "stinkyscape-087", "stinkyscape-088",
   "stinkyscape-109", "stinkyscape-110", "stinkyscape-111", "stinkyscape-112", "stinkyscape-112-1", "stinkyscape-115", "stinkyscape-116",
-  "stinkyscape-137", "stinkyscape-137-1", "stinkyscape-137-2", "stinkyscape-137-3", "stinkyscape-137-4", "stinkyscape-147", "stinkyscape-147-1",
+  "stinkyscape-137-1", "stinkyscape-137-2", "stinkyscape-137-3", "stinkyscape-137-4", "stinkyscape-147", "stinkyscape-147-1",
   "stinkyscape-147-2", "stinkyscape-148", "stinkyscape-148-1", "stinkyscape-149", "stinkyscape-150", "stinkyscape-150-1", "stinkyscape-151",
-  "stinkyscape-152", "stinkyscape-153", "stinkyscape-154", "stinkyscape-176", "stinkyscape-t-dormant-starship", "stinkyscape-t-shield-layer",
+  "stinkyscape-152", "stinkyscape-153", "stinkyscape-154", "stinkyscape-t-shield-layer",
   "stinkyscape-t-propagation-layer", "stinkyscape-t-meltdown-layer", "stinkyscape-t-narcor", "stinkyscape-t-red-narcor",
   "stinkyscape-t-anomaly-found",
 ];
@@ -74,6 +72,13 @@ describe("R3332000 the signature ratchet", () => {
     // Felinor Fiender's is the first signature (R3332001).
     expect(isSignature(FX_CARD_TABLE.get("core-092"))).toBe(true);
     expect(SIGNATURE_PENDING).not.toContain("core-092");
+  });
+
+  it("R3389001 Classic's eleven Legendaries and Mythics are all signatures, so none of its cards is pending", () => {
+    const classic = legendsAndMythics().filter((id) => CATALOG[id]?.set === "Classic");
+    expect(classic).toEqual(["classic-004", "classic-007", "classic-009", "classic-028", "classic-033", "classic-044", "classic-045", "classic-056", "classic-080", "classic-085", "classic-090"]);
+    for (const id of classic) expect(isSignature(FX_CARD_TABLE.get(id)), id).toBe(true);
+    expect(SIGNATURE_PENDING.filter((id) => id.startsWith("classic-"))).toEqual([]);
   });
 
 });

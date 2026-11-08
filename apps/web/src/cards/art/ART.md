@@ -339,13 +339,15 @@ names, top to bottom), the light behind it, where its emblem stands, an optional
 back to front, `sky`, `far`, `mid`, `subject`, `near`, `light` and `particles` (`SCENE_LAYERS`), each a list
 of placements. A placement names a part of the kit, where it stands, its scale and facing, how many copies
 (`count`, each but the first offset by up to `spread`, every copy's scale jittered by `SCENE_SCALE_JITTER`)
-and a palette name that repaints the part's main shapes. `composeScene` draws every part from one stream,
+and a palette name that repaints the part's main shapes; a placement marked `props` (R3390000) moves on the
+props beat, as a painter's motif glyphs and accent do, and never stands in the subject layer. `composeScene` draws every part from one stream,
 seeded by the card's id (or by a picture's own seed, `core-002#alt`, so Alt art and the repaints grow the same
 parts apart), and never reads the face: the Radiant face draws the same shapes, each mixed toward its layer's
 gold (`SCENE_RADIANT_GOLD`), with the painter's rays. The figure stands in front of its subject layer's own
-parts. `withScene` lays the scene into the procedural painter's `ArtSpec` (`artSpec`'s last argument, read
+parts, and a recipe's further figures (`extras`, R3390000: a crowd, a companion, a rival) each in front of its
+own layer's parts, after the main figure in the subject layer. `withScene` lays the scene into the procedural painter's `ArtSpec` (`artSpec`'s last argument, read
 from the card's id), so it prints, moves (each layer on its role's beat: `back`, `subject`, `over`, `light`,
-`motes`), splits for Out of frame (the subject layer and the emblem) and restyles as every procedural
+`motes`, and its marked placements `props`), splits for Out of frame (the subject layer and the emblem) and restyles as every procedural
 picture does, and keeps the card's theme, layout, backdrop, sky scheme, emblem glyph and motif. The
 Stinkyscape and Training Grounds painters hand a recipe card to it (`svg.ts` `sceneArtSvg`), and a Legacy
 card keeps its Core card's old subject.
@@ -361,15 +363,39 @@ Terminus, a CN or KY character, a Felinor, a Pancake, a Fruit, Jlockeed's people
 hold at least `SCENE_KIT_MIN_PARTS` parts; each part draws one to twelve filled shapes, a line drawn as a
 thin band.
 
-Five proof cards draw from recipes today and set the bar each set's pass meets: Corpse Plantation (Classic
+Five proof cards drew from recipes first and set the bar each set's pass meets: Corpse Plantation (Classic
 #74), Speciesist (Core #2), Heroic Power (Core #98), Ceaseless Void (Core #100) and Arg Arg Defender
 (Stinkyscape #15). Ceaseless Void's recipe keeps its painter's own subject (`ownSubject`), the giant its
-composition draws (R3338001), in place of a figure. Every other card draws its picture byte for byte as
-before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
+composition draws (R3338001), in place of a figure. Classic+'s pass draws every Classic+ entry from a recipe
+of its own (below, R3390000). Every other card draws its picture byte for byte as before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
 old pictures now, not pins (R3331002), each holding every card with no recipe to its old hash and each card
 with one to a new picture. A set's pass adds its cards' recipes from its own per-card brief table, takes them
 off the detail floor's short list, and tunes them by eye on `scene-proofs.cy.tsx`'s kind of screenshot, at
 hand size and at board size.
+
+## Classic+ drawn as scenes (R3390000)
+
+Classic+ is the first set whose every entry draws from a recipe of its own: its 78 cards and 38 tokens, each
+from its brief (#3390's table), in Classic's temple-stone look, base and Radiant. The recipes are three files in
+id order, spread into `SCENE_RECIPES` after the proofs: `classicPlusRecipes1.ts` (#1 to #26 with #12's and
+#19's tokens), `classicPlusRecipes2.ts` (#27 to #52 with #32's, #36's, #38's, #42's and #46's) and
+`classicPlusRecipes3.ts` (#53 to #78, #65's, #73's, #75's and #76's tokens and T-AI-1 to 10). Each keeps its
+brief's subject, setting and idea, its subject within x 30 to 70 and y 25 to 85, its foreground near, its middle
+in the mid and subject layers and its background far, and stands its emblem small (size 8 at most) inside the
+band every face shows.
+
+Each humanoid Unit is a figure whose look starts from its tag's people and is dressed as who it is, no two
+alike; the Second Amendment Snake, the Book Worm, Jlockeed's J15 Fighter and the Mulch Muncher are no person
+and draw a creature or a machine of the scene kit as their subject. Crowds, companions and rivals are `extras`,
+figures in their own layers (League of Losers' five, the Flagbearer's cat warriors, KY's students). The full-art
+cards whose motions move their props (R2715001) mark the placements that move with them (`props`): banners,
+coins, gears, weights, relics. The parts the briefs named joined the kits: the figure kit's new poses, heads,
+headgear, outfits and items, and the scene kit's new terrain, buildings and furniture (`sceneKitPlaces.ts`),
+objects (`sceneKitObjects.ts`) and living things, food and weather (`sceneKitNature.ts`), the three drawing
+with the first kit's helpers (`kitDraw.ts`). Every entry clears its rarity's floor and is off the short list,
+whose cap fell from 561 to 445; `classicPlusScenes.test.ts` holds the set to all of it, and
+`classicplus-scenes.cy.tsx` shows every Epic, Legendary and Mythic entry at hand size and the rest as a contact
+sheet, at desktop size and at 390x844.
 
 ## The detail floor (R3331001)
 

@@ -7,6 +7,7 @@
 // R2785000: it plays a card as the fixture set piece, which holds the board until a click skips it.
 // R3332000: it lists every signature by set; R3332001 plays Felinor Fiender's over its Felinors.
 // R3400001: Meditative+'s and Training Grounds' eight signatures, each tile aura standing as its Unit lands.
+// R3389001: Classic's eleven.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -66,9 +67,10 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     // layer's activate is in fx/battleship.ts, leaving its table entry none); R2797000: Stinkyscape
     // 001 to 090's 94; R2794000: Classic's 79 (its plays' motifs, its hooks' on their markers, its three
     // Flourishes, Plague Nuke's set piece and its two marquee entrances); #2799: Training Grounds' 51.
-    // R3338000: Event Horizon's and The Big Crunch's set pieces, which were `none`. R3400001: the
+    // R3338000: Event Horizon's and The Big Crunch's set pieces, which were `none`; R3334004: the Dormant
+    // Starship's, Starfleet Commander's and Preemptive Strike's signatures, which were `none`. R3400001: the
     // Training-Grounds Golem's signature, which was `none`.
-    expect(cards).toHaveLength(648);
+    expect(cards).toHaveLength(651);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
@@ -217,6 +219,31 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     expect(screen.getByTestId("game").querySelector("[data-animating]")).not.toBeNull();
   });
 
+  it("R3389001 the gallery lists and plays Classic's eleven signatures", () => {
+    const classic = gallerySignatures().find((group) => group.set === "Classic");
+    const ids = ["classic-004", "classic-007", "classic-009", "classic-028", "classic-033", "classic-044", "classic-045", "classic-056", "classic-080", "classic-085", "classic-090"];
+    expect(classic?.cards.map((card) => card.defId)).toEqual(ids);
+    // Each is its recipe's play, on its fixture, over its own board.
+    for (const card of classic?.cards ?? []) expect(card.play.kind, card.defId).toBe("recipe");
+    render(<FxGallery />);
+    const select = screen.getByTestId(fxGalleryTestid.signature);
+    const group = [...select.querySelectorAll("optgroup")].find((candidate) => candidate.getAttribute("label") === "Classic");
+    expect([...(group?.querySelectorAll("option") ?? [])].map((option) => option.value)).toEqual(ids);
+    for (const defId of ids) {
+      fireEvent.change(select, { target: { value: defId } });
+      fireEvent.click(screen.getByTestId(fxGalleryTestid.playSignature));
+      // The card plays: the board animates it.
+      expect(screen.getByTestId("game").querySelector("[data-animating]"), defId).not.toBeNull();
+      // The view it lands in shows its aura on its own zone, a Unit's on the tile it lands in (R3400000).
+      const shown = galleryFieldView(defId, galleryBoardOf(defId, fullBoardView()));
+      const auras = planAuras(shown, new Map()).filter((aura) => aura.defId === defId);
+      const type = CATALOG[defId]?.type;
+      if (type === "Unit") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["tile", 3]]);
+      else if (type === "Field Spell") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["zone", 1]]);
+      else expect(auras, defId).toEqual([]);
+    }
+  });
+
   it("R3400001 the gallery lists the eight signatures by set and stands each tile aura", () => {
     const signatures = gallerySignatures();
     const of = (set: string): string[] => signatures.find((group) => group.set === set)?.cards.map((card) => card.defId) ?? [];
@@ -263,8 +290,9 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
   it("R2784000 #2798 the gallery has a play for every Stinkyscape part-two entry other than none, and each plays its motif, recipe, set piece or aura", () => {
     const file = FX_CARD_FILES.find((candidate) => candidate.file === "stinkyscape-2.json5");
     if (file === undefined) throw new Error("no stinkyscape-2.json5");
-    // R2801000: the pass's 83 and the Starship part's six; R3336000: Propagation layer is none.
-    expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 88);
+    // R2801000: the pass's 83 and the Starship part's six; R3336000: Propagation layer is none; R3334004: the
+    // Starship's three signatures.
+    expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 91);
   });
 
   it("R2784000 #2799 the gallery has a play for every Training Grounds entry other than none, and each plays its motif or recipe", () => {
