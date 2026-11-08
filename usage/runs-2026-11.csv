@@ -1224,3 +1224,8 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-08T12:15:55Z,42477979425,gpt,gpt-5.6-sol,revise,3386,medium,built,,18,16760997,31335,0,,,,60,60,7.5,gpt,none,,1
 2026-11-08T12:37:35Z,42480490447,claude-8,opus+sonnet,review,3419,medium,reviewed,,5.1,78,36211,4192019,1.3925,86,90,,,3.7,claude-8,none,,2
 2026-11-08T12:26:40Z,42474296613,claude-6,opus,build,3396,hard,built,,31.4,118,39932,7441627,3.4311,70,82,,,1080.6,claude-6,fresh,,1
+2026-11-08T12:50:37Z,42481421822,claude-6,opus,review,3434,hard,approved,,6.1,37,8604,2310163,1.6025,2,5,,,1.6,,none,,1
+2026-11-08T12:50:49Z,42479308056,claude-7,opus,build,3395,hard,interrupted,refusal,34.2,170,85931,49727667,41.6543,71,100,,,1148.6,claude-7,resumed,,1
+2026-11-08T12:50:00Z,42479157198,claude-8,opus,review,3432,hard,interrupted,5-hour cap,3.5,0,0,0,,86,100,,,119,claude-8,none,,1
+2026-11-08T13:05:02Z,42480415558,gpt,gpt-5.6-sol,review,3386,medium,built,,35.7,30953916,85632,0,,,,70,93,1.6,gpt,none,,5
+2026-11-08T12:57:38Z,42474226391,claude-6,opus,revise,3426,hard,built,,60.7,99,45401,14233624,13.0488,70,2,,,137.7,claude-6,resumed,,1
