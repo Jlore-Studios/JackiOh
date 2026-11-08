@@ -6,17 +6,18 @@
 // the Radiant face, which only repaints, keeps every shape. `withScene` lays a composed scene into the
 // procedural painter's `ArtSpec`, so every painter that hands it a recipe card prints, moves, splits
 // (Out of frame) and restyles it as it does any other picture. A card with no recipe never reaches
-// here and draws its picture byte for byte. Presentation only (CLAUDE.md rule 7): the art reads a
-// card's id, never anything hidden. R3391000: a seventh kind of scenery, craft (ships, drones and
-// vehicles), and a placement may turn a pointing part (`rotate`); a placement with none draws from its
-// stream exactly as before.
+// here and draws its picture byte for byte. R3396000: a Classic+ card offered Alt art draws an alt
+// recipe of its own (sceneRecipes.ts `ALT_SCENE_RECIPES`) under its Alt art seed alone. R3391000: a
+// seventh kind of scenery, craft (ships, drones and vehicles), and a placement may turn a pointing part
+// (`rotate`); a placement with none draws from its stream exactly as before. Presentation only
+// (CLAUDE.md rule 7): the art reads a card's id, never anything hidden.
 
 import { hashId, round2, seededRandom } from "./hash.ts";
 import { drawFigure, type FigureLook, type PoseId, type FigurePartId } from "./figureKit.ts";
 import type { ShowcaseFamily } from "./pictures.ts";
 import type { ArtSpec, RidgeRole } from "./procedural.ts";
 import { SCENE_KIT, type SceneryPartId } from "./sceneKit.ts";
-import { SCENE_RECIPES } from "./sceneRecipes.ts";
+import { ALT_SCENE_RECIPES, SCENE_RECIPES } from "./sceneRecipes.ts";
 import { mixHex, RADIANT_MIX, RADIANT_PALETTE } from "./themes.ts";
 
 export type Rng = () => number;
@@ -189,6 +190,8 @@ export type SceneShape = KitShape & { readonly layer: SceneLayer; readonly part:
 export const SCENE_SALT = 0x5ce7e331;
 /** What ends a card's id in a picture's own seed (`core-002#alt`, pictures.ts `artSeedOf`). */
 export const SCENE_SEED_SEPARATOR = "#";
+/** R3396000: the picture whose seed (`<id>#alt`, pictures.ts `artSeedOf`) reads the card's alt recipe. */
+export const SCENE_ALT_PICTURE = "alt";
 /** How far a Radiant face mixes each layer's paint toward its gold. */
 export const SCENE_RADIANT_MIX = 0.5;
 /** How much brighter a Radiant face's glow is, as the painter's is. */
@@ -224,10 +227,15 @@ function between(rng: Rng, low: number, high: number): number {
   return low + (high - low) * rng();
 }
 
-/** The card's recipe, read by its id alone (a picture's own seed keeps the card's), or null. */
+/**
+ * The card's recipe, read by its id alone (a picture's own seed keeps the card's), or null. R3396000: a card with an
+ * alt recipe draws it under its Alt art seed (`<id>#alt`) alone; every other seed of it, a repaint's among them, keeps
+ * its recipe.
+ */
 export function sceneRecipeOf(seedId: string): SceneRecipe | null {
   const cut = seedId.indexOf(SCENE_SEED_SEPARATOR);
   const id = cut < 0 ? seedId : seedId.slice(0, cut);
+  if (cut >= 0 && seedId.slice(cut + SCENE_SEED_SEPARATOR.length) === SCENE_ALT_PICTURE && Object.hasOwn(ALT_SCENE_RECIPES, id)) return ALT_SCENE_RECIPES[id] ?? null;
   return Object.hasOwn(SCENE_RECIPES, id) ? (SCENE_RECIPES[id] ?? null) : null;
 }
 

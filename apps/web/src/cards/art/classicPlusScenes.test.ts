@@ -27,6 +27,7 @@ import { SCENE_KIT } from "./sceneKit.ts";
 import { NATURE_KIT } from "./sceneKitNature.ts";
 import { OBJECTS_KIT } from "./sceneKitObjects.ts";
 import { PLACES_KIT } from "./sceneKitPlaces.ts";
+import { ALT_SCENE_RECIPES } from "./sceneRecipes.ts";
 import { proceduralArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
 
@@ -42,10 +43,10 @@ const CREATURE_UNITS: Readonly<Record<string, string>> = {
   "classicplus-051": "jet",
   "classicplus-064": "boar",
 };
-/** The first kit's parts (#3331), which sceneKit.ts draws itself. */
-const FIRST_KIT_PARTS = 56;
+/** The parts sceneKit.ts draws itself: the first kit's 56 (#3331) and the 199 Core's scenes added beside them (R3392000). */
+const FIRST_KIT_PARTS = 56 + 199;
 /** The parts Stinkyscape's pass (#3391, R3391000) added to sceneKit.ts itself, after the first kit's. */
-const STINKYSCAPE_KIT_PARTS = 82;
+const STINKYSCAPE_KIT_PARTS = 81;
 /** Where an emblem may stand and how big it may be: inside the band every face's window shows (motifs.test.ts's). */
 const EMBLEM_BAND = { left: 10, right: 90, top: 22, bottom: 84, size: 8 } as const;
 
@@ -210,7 +211,11 @@ describe("R3390000 Classic+ drawn as scenes", () => {
   });
 
   it("R3390000 Alt art grows the same parts from its own seed", () => {
-    for (const card of ENTRIES) {
+    // R3396000: the 40 offered Alt art draw an alt recipe of their own instead (classicPlusAltScenes.test.tsx).
+    const reseeded = ENTRIES.filter((card) => !Object.hasOwn(ALT_SCENE_RECIPES, card.id));
+    expect(reseeded).toHaveLength(ENTRIES.length - Object.keys(ALT_SCENE_RECIPES).length);
+    expect(reseeded).toHaveLength(76);
+    for (const card of reseeded) {
       const scene = recipe(card.id);
       const normal = composeScene(scene, card.id);
       const seed = artSeedOf(card.id, "alt");

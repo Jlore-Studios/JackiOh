@@ -24,7 +24,7 @@ import { artSpec } from "./procedural.ts";
 import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } from "./richness.ts";
 import { composeScene, SCENE_LAYERS, SCENE_PALETTE, sceneRecipeOf, sceneUse, type PaletteName, type SceneLayer, type ScenePlacement, type SceneRecipe } from "./scene.ts";
 import { SCENE_KIT, type SceneryPartId } from "./sceneKit.ts";
-import { SCENE_RECIPES } from "./sceneRecipes.ts";
+import { ALT_SCENE_RECIPES, SCENE_RECIPES } from "./sceneRecipes.ts";
 import { isStinkyscapeArt, STARSHIP_PIECES } from "./stinkyscape.ts";
 import { STINKYSCAPE_RECIPES } from "./stinkyscapeRecipes.ts";
 import { compositionFor, themeFor } from "./themes.ts";
@@ -52,7 +52,7 @@ const MYTHIC_PARTS: Readonly<Record<string, SceneryPartId>> = {
   "stinkyscape-086": "fused-hull",
 };
 /** The parts that turn with their placement's `rotate`. */
-const POINTING: readonly SceneryPartId[] = ["beam", "light-stream", "spotlight", "meteor", "smoke-trail", "comet"];
+const POINTING: readonly SceneryPartId[] = ["beam", "light-stream", "light-cone", "meteor", "smoke-trail", "comet"];
 const PATH = /^M[-\d. MLQCAZ]+$/;
 /** The seeds every part is drawn from (scene.test.ts's). */
 const SEEDS = 40;
@@ -65,15 +65,15 @@ const BRIEF_PARTS: Readonly<Record<string, readonly string[]>> = {
   "stinkyscape-006": ["skiff", "station", "vault-door", "credit-chips", "duffel", "pose-reach", "item-drill"],
   "stinkyscape-007": ["vault-door", "credit-chips", "rope", "space-window", "comet", "porthole", "light-grid"],
   "stinkyscape-008": ["deck-floor", "cracker", "drum", "herb-sprig", "outfit-work-apron"],
-  "stinkyscape-009": ["scout", "regolith", "boot-clamp", "spotlight"],
+  "stinkyscape-009": ["scout", "regolith", "boot-clamp", "light-cone"],
   "stinkyscape-010": ["deck-floor", "gloved-hand", "rift", "flame-column", "hex-shield"],
   "stinkyscape-011": ["deck-floor", "lectern", "rift", "frost-shard", "missiles", "flame-column"],
   "stinkyscape-012": ["bunk-pod", "space-window", "porthole", "sleeper", "shockwave", "rift"],
-  "stinkyscape-013": ["corridor", "helmet"],
+  "stinkyscape-013": ["corridor", "space-helmet"],
   "stinkyscape-014": ["deck-floor", "outfit-hydraulic"],
   "stinkyscape-015": ["hangar-wall", "deck-floor", "pose-spread"],
   "stinkyscape-016": ["hover-platform", "ancient-rod", "debris", "light-stream"],
-  "stinkyscape-017": ["cell-bars", "deck-floor", "anvil", "outfit-work-apron", "item-hammer"],
+  "stinkyscape-017": ["cell-bars", "deck-floor", "anvil", "axe-head", "outfit-work-apron", "item-hammer"],
   "stinkyscape-018": ["server-core", "deck-floor", "beam"],
   "stinkyscape-019": ["containment-sphere", "cosmality"],
   "stinkyscape-020": ["station", "deck-floor", "beam", "pose-reach", "item-scanner"],
@@ -87,13 +87,13 @@ const BRIEF_PARTS: Readonly<Record<string, readonly string[]>> = {
   "stinkyscape-028": ["drone", "drone-core", "gloved-hand"],
   "stinkyscape-029": ["drone", "regolith", "drone-core"],
   "stinkyscape-030": ["drone", "antenna-mast", "drone-core"],
-  "stinkyscape-031": ["drone-corvette", "dock-gantry", "drone-core", "spotlight"],
+  "stinkyscape-031": ["drone-corvette", "dock-gantry", "drone-core", "light-cone"],
   "stinkyscape-032": ["drone", "drone-core", "light-stream"],
   "stinkyscape-033": ["drone", "drone-corvette", "drone-core", "comet"],
   "stinkyscape-034": ["drone", "dock-gantry", "conveyor", "reactor", "drone-core", "robot-arm"],
   "stinkyscape-035": ["drone-corvette", "lava-flats", "drone-core", "debris", "smoke-trail"],
   "stinkyscape-036": ["drone", "drone-battleship", "dock-gantry", "drone-core"],
-  "stinkyscape-037": ["fighter", "station", "hover-platform", "light-stream", "spotlight", "headset"],
+  "stinkyscape-037": ["fighter", "station", "hover-platform", "light-stream", "light-cone", "headset"],
   "stinkyscape-039": ["glass-case", "outfit-labcoat"],
   "stinkyscape-041": ["helper-drone", "tram", "drone-core"],
   "stinkyscape-042": ["console", "deck-floor", "drone-core", "goggles", "outfit-labcoat"],
@@ -103,7 +103,7 @@ const BRIEF_PARTS: Readonly<Record<string, readonly string[]>> = {
   "stinkyscape-047": ["drone-corvette", "console", "pilot-seat", "porthole", "robot-arm", "sleeper"],
   "stinkyscape-068": ["fighter", "dock-gantry", "deck-floor"],
   "stinkyscape-069": ["needle-fighter", "hangar-wall", "deck-floor"],
-  "stinkyscape-070": ["wreck", "ghost-ship", "debris", "head-lantern", "outfit-wreck"],
+  "stinkyscape-070": ["wreck", "ghost-ship", "debris", "head-wraith", "outfit-wreck"],
   "stinkyscape-071": ["wreck", "debris", "shockwave", "star-glare", "pose-spread", "head-horn", "outfit-wreck"],
   "stinkyscape-072": ["arrow-fighter", "beam", "gas-giant"],
   "stinkyscape-073": ["arrow-fighter", "beam", "hex-shield"],
@@ -117,7 +117,7 @@ const BRIEF_PARTS: Readonly<Record<string, readonly string[]>> = {
   "stinkyscape-082": ["gunship", "debris", "smoke-trail"],
   "stinkyscape-083": ["fighter", "gun-ring", "pilot-seat", "cockpit-frame", "pose-sit"],
   "stinkyscape-084": ["reactor", "debris"],
-  "stinkyscape-085": ["frame-ship", "wreck", "antenna-mast", "regolith", "smoke-trail", "spotlight"],
+  "stinkyscape-085": ["frame-ship", "wreck", "antenna-mast", "regolith", "smoke-trail", "light-cone"],
   "stinkyscape-086": ["fused-hull", "debris", "smoke-trail"],
   "stinkyscape-087": ["station", "hover-platform", "light-stream", "pose-reach", "shades"],
   "stinkyscape-088": ["corridor", "item-venom-blade"],
@@ -317,7 +317,7 @@ describe("R3391000 Stinkyscape's scenes", () => {
     }
   });
 
-  it("R3391000 a placement turns a pointing part only when it says so, and the proofs left in sceneRecipes.ts place no turn", () => {
+  it("R3391000 a placement turns a pointing part only when it says so, and no other recipe places a turn", () => {
     // A turn of 0 draws a pointing part as it is drawn unturned, and a turn on a part that does not point changes nothing.
     for (const id of PASS) {
       const scene = recipe(id);
@@ -325,11 +325,12 @@ describe("R3391000 Stinkyscape's scenes", () => {
       const layers = Object.fromEntries(SCENE_LAYERS.map((layer) => [layer, (scene.layers[layer] ?? []).map(turnedEverywhere)]));
       expect(composeScene({ ...scene, layers }, id), id).toEqual(composeScene(scene, id));
     }
-    // So the four proofs left in sceneRecipes.ts, which place no turn, draw as they always did.
-    for (const id of ["classic-074", "core-002", "core-098", "core-100"]) {
-      const scene = recipe(id);
-      for (const layer of SCENE_LAYERS) for (const placed of scene.layers[layer] ?? []) expect(placed.rotate, `${id} ${placed.part}`).toBeUndefined();
-    }
+    // So every other recipe (the proofs left in sceneRecipes.ts, the other sets' passes' and the Alt art's), none of
+    // which places a turn, draws as it always did.
+    const others = [...Object.entries(SCENE_RECIPES).filter(([id]) => !PASS.includes(id)), ...Object.entries(ALT_SCENE_RECIPES)];
+    expect(others.map(([id]) => id)).toEqual(expect.arrayContaining(["classic-074", "core-002", "core-098", "core-100"]));
+    const turned = others.flatMap(([id, scene]) => SCENE_LAYERS.flatMap((layer) => (scene.layers[layer] ?? []).filter((placed) => placed.rotate !== undefined).map((placed) => `${id} ${placed.part}`)));
+    expect(turned).toEqual([]);
   });
 
   it("R3391000 every part draws clean shapes at any turn; the pointing parts turn, the rest ignore it", () => {
