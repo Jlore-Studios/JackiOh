@@ -17170,11 +17170,8 @@
     "what": "review #3438 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-08T14:40:01Z",
-    "notes": [
-      "delivered plan #3436 on claude-3 (run 42488720616): planned",
-      "delivered plan #3423 on claude-3 (run 42488669226): planned"
-    ],
+    "at": "2026-11-08T14:47:53Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17879,7 +17876,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-08T14:40:01Z",
+  "loop_tick": "2026-11-08T14:47:53Z",
   "machine_disk": {
     "issue": null,
     "reading": {
