@@ -66,7 +66,7 @@ const TABLE = parseFxCardTable(
 
 type Slot = BackrowView | null;
 
-/** R3395001: the looks Stinkyscape's three signature Field Spells wear, beside a bespoke recipe each. */
+/** R3395001: the signature looks Stinkyscape's three signature Field Spells wear, beside a bespoke recipe each. */
 const R3395001_LOOKS: readonly AuraLook[] = ["laserGrid", "silverRise", "labHaze"];
 
 function field(owner: PlayerId, defId: string, over: Partial<Extract<BackrowView, { faceDown: false }>> = {}): BackrowView {
@@ -128,8 +128,7 @@ describe("R2787000 what wears an aura", () => {
       ["stinkyscape-155", "opponent", 4, "side", "drift"],
       ["traininggrounds-039-1", "opponent", 3, "tile", "timber"],
     ]);
-    // R3395001's three looks stand in their own test below.
-    expect(new Set(planned.map((aura) => aura.look))).toEqual(new Set(AURA_LOOK_NAMES.filter((look) => !R3395001_LOOKS.includes(look))));
+    expect(new Set(planned.map((aura) => aura.look))).toEqual(new Set(AURA_LOOK_NAMES));
     expect(new Set(planned.map((aura) => aura.scope))).toEqual(new Set(AURA_SCOPES));
     expect(planned[0]?.key).toBe(`field-${you[0] && !you[0].faceDown ? you[0].instanceId : ""}`);
     expect(planned[7]?.key).toBe("mod-p1-m5");
@@ -148,9 +147,9 @@ describe("R2787000 what wears an aura", () => {
     const table = parseFxCardTable(
       "aura.json5",
       `{
-        "stinkyscape-007": { bespoke: "heistLocks", aura: { look: "laserGrid", palette: "Hustle/cash", scope: "zone" } },
-        "stinkyscape-016": { bespoke: "rodBands", aura: { look: "silverRise", palette: "Physical/blade", scope: "zone" } },
-        "stinkyscape-039": { bespoke: "narcorCases", aura: { look: "labHaze", palette: "Dark/curse", scope: "zone" } },
+        "stinkyscape-007": { bespoke: "heistLocks", aura: { look: "laserGrid", palette: "Hustle/cash", scope: "zone" }, signature: true },
+        "stinkyscape-016": { bespoke: "rodBands", aura: { look: "silverRise", palette: "Physical/blade", scope: "zone" }, signature: true },
+        "stinkyscape-039": { bespoke: "narcorCases", aura: { look: "labHaze", palette: "Dark/curse", scope: "zone" }, signature: true },
       }`,
     );
     const view = board([field("p1", "stinkyscape-007"), null, field("p1", "stinkyscape-016")], [null, field("p2", "stinkyscape-039")]);

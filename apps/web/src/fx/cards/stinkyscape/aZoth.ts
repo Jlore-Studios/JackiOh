@@ -3,7 +3,7 @@
 // zone and lets out a crimson shockwave, one ring at its zone and one rippling across both sides from the
 // board's middle. Its Cry calls the fallen back: each Cry Unit bursts from the caster's graveyard pile (a card
 // back) onto a red echo ring as its `summoned` lands, and as each one's own Cry replays its ring pulses again
-// over that Unit, the Cry's own events then drawing their rows. It keys on its play and the Units' public
+// over that Unit and over each target the replayed Cry hits, the Cry's own events drawing their rows beneath. It keys on its play and the Units' public
 // ids, never on a card's definition (R202). Moved: the shockwave pulsing from its maw on its tile is a red
 // storm of motes.
 
@@ -51,6 +51,11 @@ export const echoRings: CardRecipe = (event, p, play) => {
     // A called Unit's Cry replays: its ring pulses again over it; the Cry's own events draw their rows.
     const unit = placeOf(p.view, event.sourceId);
     return unit === null ? null : { cues: [ringCue(p.D, "blood", tid(unit), 0)], row: "keep" };
+  }
+  if (event.type === "damage" && (play.seen.hookResolving ?? 0) > 0) {
+    // A replayed Cry's hit on its random target pulses the echo there, over the hit's own row (A'Zoth deals none).
+    const target = placeOf(p.view, event.targetId);
+    return target === null ? null : { cues: [ringCue(p.D, "blood", tid(target), 0)], row: "keep" };
   }
   return null;
 };

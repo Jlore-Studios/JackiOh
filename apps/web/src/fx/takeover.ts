@@ -18,7 +18,8 @@
 // R3400000: so does a signature Spell's (or Trap's) cast of its own (`ownCast`): its recipe draws its play,
 // and a Mythic's takeover keeps only its own look, centred on the screen and ending
 // FX_SIGNATURE_TAKEOVER_TAIL_MS after its entry, with no shared rings or shake, so the whole cast fits the
-// Mythic Spell's ceiling (R3332000).
+// Mythic Spell's ceiling (R3332000). R3389000: In Too Deep's takeover is its own, "abyss": a spiral shaft
+// plunging into violet dark.
 
 import { HIDDEN_ID, leadMs, type AnimationEntry } from "../game/animations.ts";
 import { CATALOG } from "../wire/cards.ts";
@@ -33,8 +34,9 @@ import type { FxAnchor, FxCue, FxPlanEnv, FxTakeoverCue, FxTint, TakeoverLook } 
  * R670, R2722001, R3332000: a Mythic's takeover look: its table entry's `takeover` (#100 Ceaseless Void's
  * "void", #96 My Pawn's "pawn", #97 Zephrys's "genie", Meditative #49 YileGPT's "ai"; R3400000 Meditative+
  * #1 Bob's Plan's "summit", #26 Scratch Pad's "canvas", Training Grounds #40 Goetzmann Game Design's
- * "napkin"; R3395001 Stinkyscape #6 Tylannt's "vault", #16 Rod of Ages' "rod", #44 Great Paperclip Theory's
- * "wire", #74 Paragon-X's "whiteDwarf", #86 Prototype-X2's "forge"), else the shared "prismatic".
+ * "napkin"; R3389000 Classic #90 In Too Deep's "abyss"; R3395001 Stinkyscape #6 Tylannt's "vault", #16 Rod of
+ * Ages' "rod", #44 Great Paperclip Theory's "wire", #74 Paragon-X's "whiteDwarf", #86 Prototype-X2's "forge"),
+ * else the shared "prismatic".
  */
 export function takeoverLookOf(defId: string, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): TakeoverLook {
   const entry = table.get(defId);
@@ -52,6 +54,8 @@ export const TAKEOVER_TINTS: Readonly<Record<TakeoverLook, FxTint>> = {
   summit: { rim: "#dc2626", core: "#f5f5f4", glow: "#57534e" },
   canvas: { rim: "#22d3ee", core: "#fafaf9", glow: "#a8a29e" },
   napkin: { rim: "#e879f9", core: "#fef3c7", glow: "#22d3ee" },
+  // R3389000: In Too Deep's black-blue water over violet dark.
+  abyss: { rim: "#1e3a8a", core: "#0b1026", glow: "#7c3aed" },
   // R3395001: Tylannt's steel vault and its green gap, Rod of Ages' pale bands in an indigo gulf, the paperclip's silver wire
   // and blue cores, Paragon-X's white dwarf, Prototype-X2's molten forge.
   vault: { rim: "#94a3b8", core: "#e2e8f0", glow: "#22c55e" },

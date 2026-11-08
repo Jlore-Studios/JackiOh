@@ -7,8 +7,8 @@
 // Allures the first enemy Unit; The Narcor Project's Activate feeds a Narcor back and lowers its Brittle;
 // Great Paperclip Theory adds Drone Core I and sets its rule; Beam v5 hits the middle enemy Unit and Cleaves
 // its neighbours, Repeater v5 and Cannon v5 hit it, Flak v5's first wave hits the first two enemy Units and
-// Miner v5 gains a Narcor; Z'Zoth raises two of the side's Units and grants the first Reborn; A'Zoth calls one
-// back and replays its Cry; Galaxy and Prototype-X1 Equip two picks, Prototype-X2 three; Siva 1 Allures the
+// Miner v5 gains a Narcor; Z'Zoth raises two Units from its graveyard; A'Zoth calls one back and replays its
+// Cry on the first enemy Unit; Galaxy and Prototype-X1 Equip two picks, Prototype-X2 three; Siva 1 Allures the
 // first enemy Unit; Siva 2's Radiant Cry adds three Speciesists.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
@@ -41,12 +41,39 @@ const BRITTLE_AFTER = 3;
 const mine = (view: PlayerView, player: PlayerId): PlayerView["you"] => (player === view.viewer ? view.you : view.opponent);
 const theirs = (view: PlayerView, player: PlayerId): PlayerView["you"] => (player === view.viewer ? view.opponent : view.you);
 const unitsOf = (side: PlayerView["you"]): Unit[] => side.units.filter((unit): unit is Unit => unit !== null);
-const laneOf = (side: PlayerView["you"], unit: Unit | undefined): number => (unit === undefined ? 1 : side.units.indexOf(unit) + 1);
 const marker = (instanceId: string, defId: string, player: PlayerId, hook: "whenever" | "activate" | "endOfTurn"): GameEvent => ({ type: "hookResolving", sourceId: instanceId, defId, controller: player, hook });
 const allure = (unit: Unit | undefined): GameEvent[] => (unit === undefined ? [] : [{ type: "marked", instanceId: unit.instanceId, mark: ALLURE_MARK, color: ALLURE_MARK_COLOR, added: true }]);
 const hit = (instanceId: string, unit: Unit | undefined, amount: number): GameEvent[] => (unit === undefined ? [] : [{ type: "damage", sourceId: instanceId, targetId: unit.instanceId, amount, combat: false }]);
 const fusedPicks = (instanceId: string, defId: string, picks: readonly string[]): GameEvent[] =>
   picks.map((_pick, k) => ({ type: "fused", instanceIds: [instanceId, `fx-pick-${String(k + 1)}`], resultInstanceId: instanceId, defId }));
+
+/** `view` with the viewer's `row` zones of `lanes` emptied, so the gallery's summons land in open zones (§3.2). */
+function clearing(row: "units" | "backrow", lanes: readonly number[]): (view: PlayerView) => PlayerView {
+  return (view) => {
+    const cleared = <T>(slots: readonly (T | null)[]): (T | null)[] => slots.map((slot, k) => (lanes.includes(k + 1) ? null : slot));
+    return { ...view, you: row === "units" ? { ...view.you, units: cleared(view.you.units) } : { ...view.you, backrow: cleared(view.you.backrow) } };
+  };
+}
+
+/** The lanes Z'Zoth raises into and A'Zoth calls into. */
+const RISEN_LANES = [2, 4] as const;
+const CALLED_LANE = 2;
+/** The fallen the gallery raises: Units its graveyard holds. */
+const RISEN = ["core-003", "core-005"] as const;
+
+/**
+ * R3395000: the boards the summoning signatures play over, the zones their fixtures fill left open, as a
+ * summon needs (§3.2): the MAGI's three backrow zones, the Interceptors', the Corvettes', the University's,
+ * the risen and the called Units' (motifs/gallery.ts `RECIPE_BOARDS`).
+ */
+export const STINKYSCAPE_SIGNATURE_BOARDS = {
+  magiBoot: clearing("backrow", [3, 4, 5]),
+  droneConveyor: clearing("units", INTERCEPTOR_LANES),
+  seedPod: clearing("units", CORVETTE_LANES),
+  campusLaunch: clearing("units", [CAMPUS_LANE]),
+  ghostHulls: clearing("units", RISEN_LANES),
+  echoRings: clearing("units", [CALLED_LANE]),
+} as const;
 
 export const STINKYSCAPE_SIGNATURE_FIXTURES = {
   vaultHeist: ((view, _instanceId, player) => {
@@ -94,24 +121,14 @@ export const STINKYSCAPE_SIGNATURE_FIXTURES = {
     return [marker(instanceId, "stinkyscape-061", player, "activate"), ...hit(instanceId, foes[0], HITS.flak), ...hit(instanceId, foes[1], HITS.flak)];
   }) satisfies Fixture,
   asteroidCrunch: ((_view, instanceId, player) => [marker(instanceId, "stinkyscape-066", player, "activate"), { type: "addedToHand", player, instanceId: "fx-resource", defId: NARCOR }]) satisfies Fixture,
-  ghostHulls: ((view, _instanceId, player) => {
-    const side = mine(view, player);
-    const risen = [unitsOf(side)[1], unitsOf(side)[3]].filter((unit): unit is Unit => unit !== undefined);
-    const first = risen[0];
-    return [
-      ...risen.map((unit): GameEvent => ({ type: "summoned", player, instanceId: unit.instanceId, defId: unit.defId, row: "units", lane: laneOf(side, unit) })),
-      ...(first === undefined ? [] : [{ type: "keywordGranted", instanceId: first.instanceId, keyword: { kind: "Reborn" } } satisfies GameEvent]),
-    ];
-  }) satisfies Fixture,
-  echoRings: ((view, _instanceId, player) => {
-    const side = mine(view, player);
-    const called = unitsOf(side)[1];
-    if (called === undefined) return [];
-    return [
-      { type: "summoned", player, instanceId: called.instanceId, defId: called.defId, row: "units", lane: laneOf(side, called) },
-      { type: "hookResolving", sourceId: called.instanceId, defId: called.defId, controller: player, hook: "cry" },
-    ];
-  }) satisfies Fixture,
+  ghostHulls: ((_view, _instanceId, player) =>
+    RISEN_LANES.map((lane, k): GameEvent => ({ type: "summoned", player, instanceId: `fx-risen-${String(k + 1)}`, defId: RISEN[k] ?? "core-003", row: "units", lane }))) satisfies Fixture,
+  echoRings: ((view, _instanceId, player) => [
+    { type: "summoned", player, instanceId: "fx-called", defId: "core-005", row: "units", lane: CALLED_LANE },
+    { type: "hookResolving", sourceId: "fx-called", defId: "core-005", controller: player, hook: "cry" },
+    // Its Cry replayed with a random target: the first enemy Unit.
+    ...hit("fx-called", unitsOf(theirs(view, player))[0], 1),
+  ]) satisfies Fixture,
   bellyBay: ((_view, instanceId) => fusedPicks(instanceId, "stinkyscape-080", MINERS)) satisfies Fixture,
   wingMount: ((_view, instanceId) => fusedPicks(instanceId, "stinkyscape-085", WEAPONS.slice(0, 2))) satisfies Fixture,
   spineWeld: ((_view, instanceId) => fusedPicks(instanceId, "stinkyscape-086", WEAPONS)) satisfies Fixture,

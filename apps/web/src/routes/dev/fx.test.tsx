@@ -7,6 +7,7 @@
 // R2785000: it plays a card as the fixture set piece, which holds the board until a click skips it.
 // R3332000: it lists every signature by set; R3332001 plays Felinor Fiender's over its Felinors.
 // R3400001: Meditative+'s and Training Grounds' eight signatures, each tile aura standing as its Unit lands.
+// R3389001: Classic's eleven. R3395000: Stinkyscape 001 to 090's 24.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -217,6 +218,51 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       expect(document.querySelector(`[data-testid="zone-you-units-${String(lane)}"] [data-def-id="${defId}"]`), `lane ${String(lane)}`).not.toBeNull();
     }
     expect(screen.getByTestId("game").querySelector("[data-animating]")).not.toBeNull();
+  });
+
+  it("R3389001 the gallery lists and plays Classic's eleven signatures", () => {
+    const classic = gallerySignatures().find((group) => group.set === "Classic");
+    const ids = ["classic-004", "classic-007", "classic-009", "classic-028", "classic-033", "classic-044", "classic-045", "classic-056", "classic-080", "classic-085", "classic-090"];
+    expect(classic?.cards.map((card) => card.defId)).toEqual(ids);
+    // Each is its recipe's play, on its fixture, over its own board.
+    for (const card of classic?.cards ?? []) expect(card.play.kind, card.defId).toBe("recipe");
+    render(<FxGallery />);
+    const select = screen.getByTestId(fxGalleryTestid.signature);
+    const group = [...select.querySelectorAll("optgroup")].find((candidate) => candidate.getAttribute("label") === "Classic");
+    expect([...(group?.querySelectorAll("option") ?? [])].map((option) => option.value)).toEqual(ids);
+    for (const defId of ids) {
+      fireEvent.change(select, { target: { value: defId } });
+      fireEvent.click(screen.getByTestId(fxGalleryTestid.playSignature));
+      // The card plays: the board animates it.
+      expect(screen.getByTestId("game").querySelector("[data-animating]"), defId).not.toBeNull();
+      // The view it lands in shows its aura on its own zone, a Unit's on the tile it lands in (R3400000).
+      const shown = galleryFieldView(defId, galleryBoardOf(defId, fullBoardView()));
+      const auras = planAuras(shown, new Map()).filter((aura) => aura.defId === defId);
+      const type = CATALOG[defId]?.type;
+      if (type === "Unit") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["tile", 3]]);
+      else if (type === "Field Spell") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["zone", 1]]);
+      else expect(auras, defId).toEqual([]);
+    }
+  });
+
+  it("R3395000 the gallery lists and plays Stinkyscape 001 to 090's 24 signatures, each aura on its own tile or zone", () => {
+    const ids = ["006", "007", "016", "018", "026", "034", "035", "037", "039", "044", "058", "059", "060", "061", "066", "070", "071", "073", "074", "080", "085", "086", "087", "088"].map((n) => `stinkyscape-${n}`);
+    const stinkyscape = gallerySignatures().find((group) => group.set === "Stinkyscape")?.cards.map((card) => card.defId) ?? [];
+    expect(stinkyscape.filter((defId) => ids.includes(defId))).toEqual(ids);
+    render(<FxGallery />);
+    const select = screen.getByTestId(fxGalleryTestid.signature);
+    for (const defId of ids) {
+      fireEvent.change(select, { target: { value: defId } });
+      fireEvent.click(screen.getByTestId(fxGalleryTestid.playSignature));
+      // The card plays: the board animates it.
+      expect(screen.getByTestId("game").querySelector("[data-animating]"), defId).not.toBeNull();
+      // Its aura stands where its gallery play lands it: a Unit's on its tile, a Field Spell's in its zone, a Spell's nowhere.
+      const auras = planAuras(galleryFieldView(defId, galleryBoardOf(defId, fullBoardView())), new Map()).filter((aura) => aura.defId === defId);
+      const type = CATALOG[defId]?.type;
+      if (type === "Unit") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["tile", 3]]);
+      else if (type === "Field Spell") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["zone", 1]]);
+      else expect(auras, defId).toEqual([]);
+    }
   });
 
   it("R3400001 the gallery lists the eight signatures by set and stands each tile aura", () => {

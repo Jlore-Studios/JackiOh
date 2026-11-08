@@ -19,12 +19,21 @@ import { CATALOG } from "../../wire/cards.ts";
 import { isAuraFieldType } from "../aura/looks.ts";
 import { entranceKeyOf } from "../cardFx.ts";
 import type { CardRecipeKey } from "../cards/bespoke.ts";
+import { graveRiseFixture } from "../cards/classic/backFromTheGy.ts";
 import { pageMendFixture } from "../cards/classic/bookOfHeal.ts";
+import { taxSeizureFixture } from "../cards/classic/incomeTax.ts";
+import { sceptreLocketFixture } from "../cards/classic/infiniScepter.ts";
+import { shrineDescentFixture } from "../cards/classic/inTooDeep.ts";
+import { webRedirectFixture } from "../cards/classic/joro.ts";
 import { crownSwapFixture } from "../cards/classic/kingWagtoggle.ts";
+import { titanLeafFixture } from "../cards/classic/natureTitan.ts";
+import { palantirGazeFixture } from "../cards/classic/palantir.ts";
 import { recycleLoopFixture } from "../cards/classic/recycle.ts";
+import { secondGustFixture } from "../cards/classic/secondWind.ts";
+import { tyrantCommandFixture } from "../cards/classic/spellTyrant.ts";
 import { felinorBoard } from "../cards/core/felinorFiender.ts";
 import type { EntranceKey } from "../cards/recipe.ts";
-import { STINKYSCAPE_SIGNATURE_FIXTURES } from "../cards/stinkyscape/signatureFixtures.ts";
+import { STINKYSCAPE_SIGNATURE_BOARDS, STINKYSCAPE_SIGNATURE_FIXTURES } from "../cards/stinkyscape/signatureFixtures.ts";
 import { fleetBoard } from "../cards/stinkyscape/starshipSignatures.ts";
 import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
 import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
@@ -520,6 +529,18 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   pageMend: pageMendFixture,
   recycleLoop: recycleLoopFixture,
   crownSwap: crownSwapFixture,
+  // R3389001: Classic's signatures, each on its own fixture (fx/cards/classic/); BOOM! Big Max's Crater
+  // Locks the zone the gallery lands it in.
+  palantirGaze: palantirGazeFixture,
+  sceptreLocket: sceptreLocketFixture,
+  taxSeizure: taxSeizureFixture,
+  secondGust: secondGustFixture,
+  webRedirect: webRedirectFixture,
+  graveRise: graveRiseFixture,
+  titanLeaf: titanLeafFixture,
+  tyrantCommand: tyrantCommandFixture,
+  craterLock: (_view, _instanceId, player) => [{ type: "locked", player, row: "units", lane: GALLERY_ENTRANCE_LANE }],
+  shrineDescent: shrineDescentFixture,
   ...STINKYSCAPE_SIGNATURE_FIXTURES,
 };
 
@@ -640,10 +661,22 @@ const GALLERY_FIELD_ENTRANCE_LANE = 1;
 /** R3332001: the board an entrance reads, for one that reads it (Felinor Fiender's Felinors; R3334004 Starfleet Commander's Dormant Starship). */
 const ENTRANCE_BOARDS: Partial<Record<EntranceKey, (view: PlayerView) => PlayerView>> = { felinorAssembly: felinorBoard, fleetCommand: fleetBoard };
 
-/** R3332001: the board the gallery plays `defId` over: its entrance's own (`ENTRANCE_BOARDS`), else `view` itself. */
-export function galleryBoardOf(defId: string, view: PlayerView): PlayerView {
-  const key = entranceKeyOf(defId);
-  const board = key === undefined ? undefined : ENTRANCE_BOARDS[key];
+/** R3389001: Back from the GY's board: its caster's first unit zone open, so the Unit it raises lands alone there, no Stack. */
+function openFirstZone(view: PlayerView): PlayerView {
+  return { ...view, you: { ...view.you, units: view.you.units.map((unit, k) => (k === 0 ? null : unit)) } };
+}
+
+/** R3389001: the board a recipe reads, for one that reads it. R3395000: and one whose fixture summons, its zones open. */
+const RECIPE_BOARDS: Partial<Record<CardRecipeKey, (view: PlayerView) => PlayerView>> = { graveRise: openFirstZone, ...STINKYSCAPE_SIGNATURE_BOARDS };
+
+/**
+ * R3332001: the board the gallery plays `defId` over: its entrance's own (`ENTRANCE_BOARDS`), R3389001
+ * else its recipe's (`RECIPE_BOARDS`), else `view` itself.
+ */
+export function galleryBoardOf(defId: string, view: PlayerView, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): PlayerView {
+  const key = entranceKeyOf(defId, table);
+  const entry = table.get(defId);
+  const board = (key === undefined ? undefined : ENTRANCE_BOARDS[key]) ?? (entry?.kind === "bespoke" ? RECIPE_BOARDS[entry.key] : undefined);
   return board === undefined ? view : board(view);
 }
 

@@ -17,7 +17,7 @@ import { sideOf, testid, type Side } from "../game/contract.ts";
 import { armorTookHalf, damageFeel, damageTier, playTier, UNIT_SLAM, type PlayTier } from "../game/damageFeel.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { brandCues } from "./brand.ts";
-import { castOnDrawCues, planCardFx, planCardMotif, resolvingSignature } from "./cardFx.ts";
+import { castOnDrawCues, planCardFxClaim, planCardMotif, planSignatureZone } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
 import { rollCues } from "./rolls.ts";
 import { planSystemMoment, transmuteCues } from "./systemMoments.ts";
@@ -1226,7 +1226,8 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
     cues.push(...sweepCues(motif === null ? entry : { ...entry, events: entry.events.filter((event) => !replaced(event)) }, view, env));
     return cues;
   }
-  if (entry.zone !== undefined) return zoneCues(entry, view, env);
+  // R3389000: a signature's recipe draws beside a whole pile's one wave (Second Wind's deck blown away).
+  if (entry.zone !== undefined) return [...zoneCues(entry, view, env), ...planSignatureZone(entry, view, env)];
   if (entry.cast !== undefined) {
     // R3338000: a cast a Terminus card's signature holds (The Big Crunch's first) flares once the hold is over.
     const wait = entry.signature === undefined ? 0 : (entry.setPiece?.holdMs ?? 0);
@@ -1239,8 +1240,8 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   // entry minus what a card motif, a set piece or a beat already draws, holding nothing.
   // R3395001: a signature's own beat (cardFx.ts) draws each event it replaces in place of that event's system
   // moment too, as it does the event's row: Tylannt's dial for the quest's, a Prototype's weld for the fusion's.
-  const signatures = new Map(entry.events.map((event) => [event, planCardFx(event, { entry, view, env, D: entry.durationMs })] as const));
-  const ownMoments = resolvingSignature(env) ? [...signatures].flatMap(([event, result]) => (result?.row === "replace" ? [event] : [])) : [];
+  const signatures = new Map(entry.events.map((event) => [event, planCardFxClaim(event, { entry, view, env, D: entry.durationMs })] as const));
+  const ownMoments = [...signatures].flatMap(([event, claim]) => (claim.signature && claim.result?.row === "replace" ? [event] : []));
   const systemSkip = new Set<GameEvent>([
     ...ownMoments,
     ...(motif?.replaces ?? []),
@@ -1256,7 +1257,7 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   const systemReplaced = (event: GameEvent): boolean =>
     replaced(event) || beats.replaces.has(event) || system.replaces.has(event);
   for (const event of entry.events) {
-    const signature = signatures.get(event) ?? null;
+    const signature = signatures.get(event)?.result ?? null;
     if (signature !== null) {
       cues.push(...signature.cues);
       if (signature.row === "replace") continue;

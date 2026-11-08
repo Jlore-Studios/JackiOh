@@ -6,7 +6,9 @@
 // Dormant Starship's "shipyardRollout" and #137 Starfleet Commander's "fleetCommand". R3332000: a
 // Field Spell's own entrance plays as it lands face up in the backrow. R3400001: Meditative+ #24 Bob's
 // "snowplowHeave", Training Grounds #38 Tutorial Master's "chalkboardLesson" and #39.1 the Training-Grounds
-// Golem's "golemLashing". R3395000: Stinkyscape 001 to 090's signature Units and Field Spells, from #6
+// Golem's "golemLashing". R3389001: Classic's signatures' six (#4 Palantir "seeingOrb", #7 InfiniScepter
+// "sceptrePlant", #28 Second Wind "galeBurst", #33 Joro "silkDrop", #85 King Wagtoggle "royalCloak", #90 In
+// Too Deep "abyssSurface"). R3395000: Stinkyscape 001 to 090's signature Units and Field Spells, from #6
 // Tylannt's "vaultStride" to #88 Siva 2's "venomStep" (fx/cards/stinkyscape/). It keys off the `summoned` event's
 // own `defId`, which a hidden summon never has (R202), and decorates the entry the runner already timed,
 // so it paces nothing (R200, R201).
@@ -18,7 +20,13 @@ import type { Flavor, GameEvent, PlayerView } from "@jackioh/shared";
 
 import { raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
 import { bigBoom } from "./cards/classic/bigMax.ts";
+import { sceptrePlant } from "./cards/classic/infiniScepter.ts";
+import { abyssSurface } from "./cards/classic/inTooDeep.ts";
+import { silkDrop } from "./cards/classic/joro.ts";
+import { royalCloak } from "./cards/classic/kingWagtoggle.ts";
 import { titanBloom } from "./cards/classic/natureTitan.ts";
+import { seeingOrb } from "./cards/classic/palantir.ts";
+import { galeBurst } from "./cards/classic/secondWind.ts";
 import { tyrantSigil } from "./cards/classic/spellTyrant.ts";
 import { voidCollapse } from "./cards/core/ceaselessVoid.ts";
 import { felinorAssembly } from "./cards/core/felinorFiender.ts";
@@ -86,6 +94,12 @@ export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = {
   forgeBurst,
   redCarpet,
   venomStep,
+  seeingOrb,
+  sceptrePlant,
+  galeBurst,
+  silkDrop,
+  royalCloak,
+  abyssSurface,
 };
 
 /* #1445: one summon entrance per flavor */

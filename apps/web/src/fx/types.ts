@@ -170,8 +170,7 @@ export type TakeoverLook =
   | "void"
   | "pawn"
   | "genie"
-  | "ai"
-  | "summit"
+  | "ai" | "abyss" | "summit"
   | "canvas"
   | "napkin"
   | "vault"
@@ -513,6 +512,8 @@ export type FxMemory = {
   casterOf(instanceId: string): PlayerId | undefined;
   trapZoneOf(instanceId: string): FxTrapZone | undefined;
   resolving(): FxPlay | undefined;
+  /** R3389000: every play and hook entry still open, outermost first (`resolving()` is the last). */
+  plays(): readonly FxPlay[];
   /** R502: whether this very `cardPlayed` (the object remembered) was a cast on draw. */
   castOnDraw(event: GameEvent): boolean;
   /** R2789000: the last FX_MEMORY_RECENT events, the planned entry's last. */

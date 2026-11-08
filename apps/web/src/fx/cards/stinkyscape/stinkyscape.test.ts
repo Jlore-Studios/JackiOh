@@ -25,6 +25,7 @@ import { motifScale, timesOf } from "../../motifs/build.ts";
 import type { FxAnchor, FxCue, FxPlanEnv } from "../../types.ts";
 import { CARD_RECIPES } from "../bespoke.ts";
 import { FX_CARD_TABLE } from "../tables.ts";
+import { STINKYSCAPE_SIGNATURE_BOARDS } from "./signatureFixtures.ts";
 
 const MAGI = "stinkyscape-018";
 const WARP = "stinkyscape-036";
@@ -107,7 +108,8 @@ describe("R2797000 Stinkyscape's Flourishes", () => {
   });
 
   it("R3395000 magiBoot raises three cores behind the caster's hero as it is cast, then boots each MAGI in its zone in its own hue, replacing its summon's row", () => {
-    const view = fullBoardView();
+    // Over the gallery's board, its three backrow zones open (a summon lands in an empty zone, §3.2).
+    const view = STINKYSCAPE_SIGNATURE_BOARDS.magiBoot(fullBoardView());
     const results = planAll(PLAYS[MAGI]?.("p1", "ex") ?? [], view);
     const hero = tid(testid.hero("you"));
     // The cast: the cores' figure, a hologram burst and a ring behind the hero.

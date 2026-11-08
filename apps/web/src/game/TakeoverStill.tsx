@@ -8,6 +8,7 @@
 // R3400000: a Mythic whose own takeover look draws art (fx/takeoverArt.ts: Bob's Plan's summit, Scratch
 // Pad's canvas, Goetzmann Game Design's napkin) shows that art at rest behind the card, the same parts
 // the live takeover mounts, painted by fx.css and never a card face (R202).
+// R3389000: it wears its card's own takeover look (`data-takeover-look`), In Too Deep's abyss among them.
 
 import { useContext, useEffect, type ReactElement } from "react";
 
@@ -42,7 +43,7 @@ export default function TakeoverStill({ defId, instanceId, view, onDone }: Takeo
   const look = takeoverLookOf(defId);
   const art = takeoverArtParts(look);
   return (
-    <div className="takeover-still" data-testid="takeover-still" data-takeover-def={defId} aria-hidden="true">
+    <div className="takeover-still" data-testid="takeover-still" data-takeover-def={defId} data-takeover-look={look} aria-hidden="true">
       {art.length > 0 ? (
         <span className="takeover-art" data-look={look} data-still="true" aria-hidden="true">
           {art.map((part) => (
