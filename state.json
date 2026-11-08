@@ -32774,7 +32774,7 @@
           "resets_at": "2026-11-08T13:10:00Z",
           "utilization": 0.86
         },
-        "observed_at": "2026-11-08T10:53:30Z",
+        "observed_at": "2026-11-08T12:25:15Z",
         "status": "allowed"
       }
     },
@@ -35381,7 +35381,8 @@
   },
   "usage_spool": {
     "readings": [
-      "2026-11-08T12:17:23Z,claude-7,ping,before,42479384548,79,2026-11-08T13:00:00Z,,,allowed,70,,"
+      "2026-11-08T12:17:23Z,claude-7,ping,before,42479384548,79,2026-11-08T13:00:00Z,,,allowed,70,,",
+      "2026-11-08T12:15:34Z,claude-8,ping,before,42479235353,86,2026-11-08T13:10:00Z,,,allowed,100,,"
     ],
     "runs": [
       "2026-11-08T12:17:23Z,42479384548,claude-7,opus,build,3393,hard,interrupted,5-hour cap,0,0,0,0,,79,79,,,1167.9,claude-8,none,other,0"
