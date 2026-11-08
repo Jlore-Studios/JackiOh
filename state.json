@@ -17279,6 +17279,8 @@
       "waiting_comment": 6725525447
     },
     "3442": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-08T18:18:48Z",
@@ -17292,8 +17294,11 @@
         "trail": "bc63 -- apps/web e2e; git ls-files --others --exclude-standard -- apps/web e2e) | sort -u | grep -E \\\"\\\\.(\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405/apps/web; timeout 1200 pnpm exec vitest run src/fx src/audio src/routes/dev/fx.test.tsx src/motion.test.ts src/surfaces.test.ts src/palette.test\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405; echo \\\"- 18:40 typecheck + eslint (86 files) green; vitest src/fx src/audio routes/dev/fx motion surfaces palette: 108 files, 2001 passed, 5 sk\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405; echo \\\"- 18:50 src/game 133 files / 2259 passed. Building tools.\\\" >> .bot-notes.md; timeout 1700 cargo build --release -p jackioh-tools -j 2 >\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405; J=/home/runner/work/JackiOh/JackiOh/target/release/jackioh; $J spec check 2>&1 | tail -8; echo \\\"---\\\"; git fetch -q origin main 2>/dev/null; $\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405; J=/home/runner/work/JackiOh/JackiOh/target/release/jackioh; $J patches check 2>&1 | tail -3; $J catalog check 2>&1 | tail -2; echo \\\"- 18:58 sp\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405; git rev-parse --short origin/main; timeout 1700 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405; git diff e82bd5bc63 -- apps/web/src/fx apps/web/src/audio apps/web/src/game apps/web/src/routes apps/web/src/test e2e | grep -E \\\"^\\\\+.*(\\\\.ski\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405; E2E_COMPONENT_PORT=5281 timeout 1500 pnpm --dir e2e test:component --spec cypress/component/fx-signature.cy.tsx > /tmp/cy-sig.log 2>&1; echo \\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405; grep -n \\\"\\\\\\\"typecheck\\\\\\\"\\\\|\\\\\\\"tsc\\\\|lint\\\" e2e/package.json package.json apps/web/package.json | head; python3 - <<'EOF'\\np='.bot-notes.md'\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405; timeout 900 pnpm --dir e2e typecheck:component > /tmp/tc-e2e.log 2>&1; echo exit $?; grep \\\"error TS\\\" /tmp/tc-e2e.log | head\", \"description\": \u2026\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/cy-sig.log; do sleep 10; done; grep -E \\\"Tests:|Passing:|Failing:|exit|\\u2716|failing|passing\\\" /tmp/cy-sig.log | tail -12\", \"description\": \"Wait for the compo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405; echo \\\"- 19:15 fx-signature.cy.tsx: 82 passing. e2e typecheck:component green. Running fx-phone-frame + audio-recipes.\\\" >> .bot-notes.md; git \u2026\n- Bash: {\"command\": \"grep -nE \\\"[0-9]+\\\\) |Error|AssertionError|expected\\\" /tmp/cy-pf.log | head -20\", \"description\": \"Read the phone-frame failure\"}\n- Bash: {\"command\": \"sed -n 30,75p /tmp/cy-pf.log; cd /home/runner/work/_temp/work/item-3405; grep -n \\\"R3342000 a full board of tile auras\\\" -A30 e2e/cypress/component/fx-phone-frame.cy.tsx | head -45\", \"de\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405; grep -n \\\"function tileBoardView\\\" -A25 e2e/cypress/component/fx-phone-frame.cy.tsx | head -35; grep -rn \\\"export function planTileAuras\\\" -A25\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405; grep -rn \\\"tileBoardView\\\" e2e/cypress/component/*.tsx e2e/cypress/support/*.ts* 2>/dev/null | head -3; grep -rn \\\"export function tileBoardVie\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405/apps/web/src; grep -rn \\\"tileBoardView\\\" --include=*.ts --include=*.tsx . | grep -v \\\"^./test/tileBoard.ts\\\" | head; sed -n 1,10p test/tileBoard\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405/apps/web; cat > /tmp/tb.test.ts <<'EOF'\\nimport { it } from \\\"vitest\\\";\\nimport { tierOf } from \\\"../src/fx/aura/tile.ts\\\";\\nimport { entryAura,\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405/apps/web; sed 's#\\\\.\\\\./src/#../#' /tmp/tb.test.ts > src/zz-tb.scratch.test.ts && timeout 300 pnpm exec vitest run src/zz-tb.scratch.test.ts 2>&\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405/apps/web; sed 's#\\\\.\\\\./src/#./#' /tmp/tb.test.ts > src/zz-tb.scratch.test.ts && timeout 300 pnpm exec vitest run src/zz-tb.scratch.test.ts 2>&1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405/apps/web; sed 's#\\\\.\\\\./src/#./#; s#console.log(\\\"ELIGIBLE\\\", f.join(\\\",\\\"));#writeFileSync(\\\"/tmp/elig.txt\\\", f.join(\\\",\\\"));#; 1i import { wri\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405/apps/web; git show e82bd5bc63:apps/web/src/fx/cards/meditative.json5 > /tmp/med-base.json5; cat > src/zz-tb.scratch.test.ts <<'EOF'\\nimport { re\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405/apps/web/src/test; python3 - <<'EOF'\\np='tileBoard.ts'\\ns=open(p).read()\\nold_y=''' backrow: eligibleFields.slice(0, 5).map((defId, i) =>\\n face\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405/apps/web/src/test; python3 - <<'EOF'\\np='tileBoard.ts'\\ns=open(p).read()\\nold=''' // R3405001: since the signatures gave most Legendary and Myth\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405; echo \\\"- 19:30 fx-phone-frame: R3342000 tile-aura scene failed (fixture found 2 eligible Field Spells; same 2 under main's table, so pre-existi\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405; /home/runner/work/JackiOh/JackiOh/target/release/jackioh spec check 2>&1 | tail -2; git status --short; git diff --stat e82bd5bc63 -- . ':!apps\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3405; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## Goal')\\nnew='''## State\\n\\n(run 9, ~19:35) DONE. E\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a signature animation for every Meditative Legendary and Mythic, one concept per card\"} --> ## What changed All 32 cards in the issue's table now have a signature of their own. The work follows the frame that Meditative+ (#3421, R3400000/R3400001) and C\u2026"
       },
       "issue": 3405,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-08T19:23:24Z",
         "from_run": "42509373532",
         "gates": [
           {
@@ -17385,7 +17390,11 @@
         "source": "build",
         "until": "2026-11-08T19:52:30Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-08T19:22:30Z",
+      "run_id": "pending:eda9d7e7-1794165781",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17404,6 +17413,9 @@
         "provider": "claude-8",
         "run": "42509373532"
       },
+      "started_at": "2026-11-08T19:23:24Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17417,9 +17429,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T19:13:44Z",
+    "at": "2026-11-08T19:23:24Z",
     "url": "",
-    "what": "build #3401 on claude-1"
+    "what": "review #3442 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-08T19:09:34Z",
