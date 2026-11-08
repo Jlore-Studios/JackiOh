@@ -17099,13 +17099,7 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 6723738531,
-      "wip": {
-        "at": "2026-11-08T21:13:00Z",
-        "provider": "claude-4",
-        "sha": "7c193d034fea50c66ec6095737632f327febeb14",
-        "start": "79ba917c663cd0d218f8c1172fe0c4bedb21727c"
-      }
+      "waiting_comment": 6723738531
     },
     "3438": {
       "action": "review",
