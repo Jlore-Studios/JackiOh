@@ -17391,11 +17391,19 @@
     "what": "build #3352 on claude-5"
   },
   "last_sweep": {
-    "at": "2026-11-08T22:51:38Z",
+    "at": "2026-11-08T22:59:44Z",
     "notes": [
-      "#3403 is held for `claude-7` until 17:00 (5-hour usage is 100%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
-      "#3352 is held for `claude-7` until 17:00 (5-hour usage is 100%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
-      "delivered build #3397 on claude-8 (run 42531327611): interrupted"
+      "#3397 is held for `claude-8` until 17:20 (5-hour usage is 96%, too close to its 85% cap to start a long run (it starts under 80%))",
+      "#3403: `claude-7` can start again, so its hold is lifted",
+      "#3352: `claude-7` can start again, so its hold is lifted",
+      "#3424 waits for no decision any more",
+      "delivered build #3423 on claude-1 (run 42531391974): interrupted",
+      "started build #3403 on claude-7 (run 42533195787)",
+      "started build #3418 on claude-5 (run 42533265903)",
+      "started build #3352 on claude-5 (run 42533336499)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 96%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-08T23:20:00Z; it can start a build or a plan again in 14m; `claude-1` 5-hour usage is 45%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-09T01:00:00Z; it can start a build or a plan again in 1h 54m; `claude-4` is busy; `claude-6` is busy; `claude-5` is busy; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` 5-hour usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-08T23:40:00Z; it can start a build or a plan again in 34m",
+      "pruned 2 plan file(s) older than 7 days",
+      "#3445: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18101,7 +18109,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-08T22:51:38Z",
+  "loop_tick": "2026-11-08T22:59:44Z",
   "machine_disk": {
     "issue": null,
     "reading": {
