@@ -18074,7 +18074,7 @@
       },
       "issue": 3389,
       "kind": "revise",
-      "queued_at": "2026-11-08T03:31:54Z",
+      "queued_at": "2026-11-08T03:32:34Z",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -18093,6 +18093,8 @@
         "provider": "claude-6",
         "run": "42431244257"
       },
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [],
         "builder": "claude",
