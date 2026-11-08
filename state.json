@@ -14604,9 +14604,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-7",
-      "owner_since": "2026-11-07T20:56:16Z",
-      "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-07T23:00:00Z; it can start again only in 2h 03m, more than the 120 minutes an item waits for its owner",
+      "owner": "claude-1",
+      "owner_since": "2026-11-08T00:12:29Z",
+      "owner_why": "handed off from `claude-7`: `claude-7` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-07T09:16:58Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -16579,11 +16579,11 @@
         "sha": "a929e686f20cc2c49a1238850ff0c64979045f8b"
       },
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-1",
       "question": "",
       "queued_at": "2026-11-07T23:15:15Z",
       "round_tier": "strong",
-      "run_id": "42413432782",
+      "run_id": "pending:95b6a17d-1794096713",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16604,7 +16604,7 @@
         "run": "42413432782"
       },
       "source": "conflict",
-      "started_at": "2026-11-07T20:56:16Z",
+      "started_at": "2026-11-08T00:12:29Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -18156,9 +18156,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T00:11:37Z",
+    "at": "2026-11-08T00:12:29Z",
     "url": "",
-    "what": "review #3386 on claude-7"
+    "what": "revise #3382 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-07T23:47:45Z",
