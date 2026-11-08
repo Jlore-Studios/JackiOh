@@ -26,7 +26,7 @@ import {
   TILE_PARTICLE_SHARE,
   TILE_VARIANTS,
 } from "./config.ts";
-import { AURA_LOOKS, type AuraLook } from "./looks.ts";
+import { auraLookSpec, type AuraLook } from "./looks.ts";
 
 export type TileTier = "Legendary" | "Mythic";
 
@@ -329,7 +329,7 @@ export type TileMote = {
 export function tileMotes(spec: TileAuraSpec, count: number): readonly TileMote[] {
   if (count <= 0) return [];
   const rng = createRng(hashId(spec.defId));
-  const look = AURA_LOOKS[spec.look];
+  const look = auraLookSpec(spec.look);
   const out: TileMote[] = [];
   for (let i = 0; i < count; i += 1) {
     const x = Math.round(rng() * 100);

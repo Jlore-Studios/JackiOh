@@ -379,10 +379,11 @@ Engine semantics, all observable through `state()`, `log()`, `contextsCreated()`
   logs cues, flagged (`suspended: true` on an sfx entry, outcome `"suspended"` on a line), so a
   headless browser with no audio device still logs, but **schedules nothing** (review fix, B46): its
   clock stands still, and everything scheduled on it would start at once when it resumed.
-- **SFX.** A cue is refused if the same id was accepted less than `SFX_RETRIGGER_MS` ago, or if
-  `SFX_MAX_VOICES` accepted cues are still sounding (end = accept time + delay + recipe length, by
-  `now()`). Otherwise the engine creates a per-cue GainNode (`SFX[id].gain`) into the sfx bus and
-  calls the recipe at `currentTime + delayMs / 1000`.
+- **SFX.** A cue is refused if the same id was accepted less than `SFX_RETRIGGER_MS` ago (an id in
+  `SCHEDULED_SFX`, a fuse run's docks sent at once each delayed to its landing, compares the times
+  they sound instead, R3334000), or if `SFX_MAX_VOICES` accepted cues are still sounding (end =
+  accept time + delay + recipe length, by `now()`). Otherwise the engine creates a per-cue GainNode
+  (`SFX[id].gain`) into the sfx bus and calls the recipe at `currentTime + delayMs / 1000`.
 - **Voice.** One channel with priorities (review fix, B47–B49): `playVoice(defId, line, delayMs,
   priority = VOICE_PRIORITY.play)`. A request more important than the line holding the channel cuts
   in (a line still loading is logged `"dropped"`, one speaking fades out over `VOICE_FADE_S` or has

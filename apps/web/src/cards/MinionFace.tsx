@@ -29,6 +29,7 @@
 // ranked by the pointer, focus and the attack in flight (`useArtMotion`, motionSlots.ts), and answers the pointer, a press and
 // `attackDeclared` (artLive.ts, `data-art-hover`, `data-art-attacking`); its art wears cracks for the health it is missing, a
 // glow in its card's colours when buffed and frost when frozen (`wear`, art/ArtWear.tsx), from the view's numbers and keywords alone.
+// R3334000: a Dormant Starship with pieces idles in its shipyard over its picture (ShipyardIdle.tsx).
 
 import { useRef, type ReactElement } from "react";
 
@@ -55,6 +56,7 @@ import { foilFor, frameRarity } from "./frame.ts";
 import type { FaceModel, StateBadgeKind } from "./model.ts";
 import { ProficiencyStamp } from "./ProficiencyStamp.tsx";
 import { useCardSettings } from "./settings.ts";
+import { ShipyardIdle } from "./ShipyardIdle.tsx";
 import { artPictureOf } from "./versions.ts";
 import { useCardStamp } from "./stamps.ts";
 
@@ -227,6 +229,8 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             live={motion !== null}
             wear={wear}
           />
+          {/* R3334000: a Dormant Starship's shipyard idles over its picture, in one of the moving-art slots. */}
+          {face.starship != null && !face.starship.launched ? <ShipyardIdle list={face.starship.list} animated={settings.animatedFoil} /> : null}
         </span>
 
         <KeywordFx plan={plan} />

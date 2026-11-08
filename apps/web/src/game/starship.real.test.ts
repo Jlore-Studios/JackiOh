@@ -114,9 +114,10 @@ describe("R2801000 against the real engine: the Starship", () => {
       // The wipe holds this action; the fuse run holds nothing.
       expect(run?.setPiece, seat).toBeUndefined();
       expect(entries.filter((entry) => entry.setPiece !== undefined), seat).toHaveLength(1);
-      // Each piece's card back flies to the Starship and bolts on.
+      // R3334000: each piece's module flies to its hardpoint on the Starship and is welded on.
       const cues = run === undefined ? [] : planFx(run, before, { intensity: 1, card: () => undefined, memory: createFxMemory() });
-      expect(cues.filter((cue) => cue.kind === "ghost"), seat).toHaveLength(2);
+      expect(cues.filter((cue) => cue.kind === "module" && cue.motion === "dock"), seat).toHaveLength(2);
+      expect(cues.filter((cue) => cue.kind === "weld"), seat).toHaveLength(2);
     }
 
     const launched = game.launch();
@@ -132,7 +133,12 @@ describe("R2801000 against the real engine: the Starship", () => {
       const at = launch === undefined ? -1 : entries.indexOf(launch);
       expect(entries[at - 1]?.type, seat).toBe("awakened");
       const cues = launch === undefined ? [] : planFx(launch, before, { intensity: 1, card: () => undefined, memory: createFxMemory() });
-      expect(cues.find((cue) => cue.kind === "launch"), seat).toMatchObject({ size: "small", countsMs: [0, 600, 1200] });
+      // R3334001: no countdown; the cinematic shows the ship's picture and the name it launched under.
+      expect(cues.find((cue) => cue.kind === "launch"), seat).toMatchObject({ size: "small", countsMs: [] });
+      const launchedEvent = launch?.events.find((event) => event.type === "starshipLaunched");
+      const name = launchedEvent?.type === "starshipLaunched" ? launchedEvent.name : undefined;
+      expect(name, seat).toBeTruthy();
+      expect(cues.find((cue) => cue.kind === "cinematic"), seat).toMatchObject({ name, size: "small" });
     }
   });
 });
