@@ -1,4 +1,4 @@
-// B13 (DR14 part D, #2705): `/dungeon` opens the Dungeon Run and `/dungeon/stats` its stats, both in the
+// B13 (DR14 part D, #2705): `/dungeon` opens the Dungeon run and `/dungeon/stats` its stats, both in the
 // route table (a title, a chunk the engine's module comes with) and in the shell. The Play hub's and the
 // command menu's links to it are proved beside theirs (`routes/play.test.tsx`, `routes/command-menu.test.tsx`).
 // The run's bindings are the fixtures' scripted ones; the screens of parts E, F and G are stand-ins.
@@ -45,7 +45,7 @@ afterEach(() => {
   at("/");
 });
 
-describe("B13 the Dungeon Run's route", () => {
+describe("B13 the Dungeon run's route", () => {
   it("B13 /dungeon and /dungeon/stats open their chunks and have non-404 titles", async () => {
     expect(paths.dungeon).toBe("/dungeon");
     expect(paths.dungeonStats).toBe("/dungeon/stats");
@@ -60,30 +60,30 @@ describe("B13 the Dungeon Run's route", () => {
     expect(load).toHaveBeenCalledTimes(1);
 
     // Neither is a page that does not exist.
-    expect(documentTitleFor(paths.dungeon)).toBe("Dungeon Run · JackiOh");
-    expect(documentTitleFor(paths.dungeonStats)).toBe("Dungeon Run stats · JackiOh");
+    expect(documentTitleFor(paths.dungeon)).toBe("Dungeon run · JackiOh");
+    expect(documentTitleFor(paths.dungeonStats)).toBe("Dungeon run stats · JackiOh");
     expect(canonicalUrlFor(paths.dungeon, "https://jackioh.example")).toBe("https://jackioh.example/dungeon");
     expect(canonicalUrlFor(paths.dungeonStats, "https://jackioh.example")).toBe("https://jackioh.example/dungeon/stats");
     expect(documentTitleFor("/dungeon/extra")).toContain("Page not found");
   });
 
-  it("B13 /dungeon opens the Dungeon Run screen, with no account", async () => {
+  it("B13 /dungeon opens the Dungeon run screen, with no account", async () => {
     at(paths.dungeon);
     render(<App />);
 
     expect(await screen.findByTestId(dungeonTestid.start)).toBeInTheDocument();
     expect(screen.getByTestId(dungeonTestid.screen)).toBeInTheDocument();
     expect(window.location.pathname).toBe("/dungeon");
-    expect(document.title).toBe("Dungeon Run · JackiOh");
+    expect(document.title).toBe("Dungeon run · JackiOh");
   });
 
-  it("B13 /dungeon/stats opens the Dungeon Run's stats, with no account", async () => {
+  it("B13 /dungeon/stats opens the Dungeon run's stats, with no account", async () => {
     at(paths.dungeonStats);
     render(<App />);
 
     expect(await screen.findByTestId("stand-in-stats")).toBeInTheDocument();
     expect(screen.queryByTestId(dungeonTestid.start)).toBeNull();
     expect(window.location.pathname).toBe("/dungeon/stats");
-    expect(document.title).toBe("Dungeon Run stats · JackiOh");
+    expect(document.title).toBe("Dungeon run stats · JackiOh");
   });
 });

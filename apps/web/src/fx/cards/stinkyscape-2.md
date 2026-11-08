@@ -110,8 +110,8 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-163` | Swear Loyalities | Spell | cast vanish | 1.10 | vanish | cast: the census agrees (vanish): every card of another faction exiled |
 | `stinkyscape-164` | The Syndicate | Field Spell | cast conjure Hustle/cash; trigger vanish Hustle/cash; aura arcane side Hustle/cash | 1.25 | vanish | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; trigger: the census agrees (vanish): its trades' exiles; Hustle/cash for its trades |
 | `stinkyscape-165` | The Trade Union | Field Spell | cast conjure Hustle/cash; aura bloom side Hustle/cash | 1.10 | none: vanilla | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; Hustle/cash for its trades |
-| `stinkyscape-166` | Scanning Probe Mk1 | Spell | cast send Tech/starfield | 1.08 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads; Tech/starfield for its scan of space |
-| `stinkyscape-167` | Scanning Probe Mk2 | Spell | cast send Tech/starfield | 1.28 | bolt | cast: the census's bolt is one damage in its window; its own effect is addedToHand, which send reads; Tech/starfield for its scan of space |
+| `stinkyscape-166` | Scanning Probe Mk1 | Spell | bespoke probeScan | 1.08 | none: no motif reads addedToHand | bespoke: its scan is a radar sweep from its caster's hand, and a find pings on the board and flies into its owner's hand, a flash for a Radiant one (`probeScan`, R3337002); the other seat sees the sweep alone (R202) |
+| `stinkyscape-167` | Scanning Probe Mk2 | Spell | bespoke probeScan | 1.28 | bolt | bespoke: Mk1's `probeScan` (R3337002); the census's bolt is one damage in its window, where its own effect is the scan's `addedToHand` |
 | `stinkyscape-168` | Drone Hanger | Field Spell | cast conjure Tech/rocket; trigger conjure Tech/rocket; aura storm zone Tech/rocket | 1.36 | bolt | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it; trigger: the census's bolt is noise in its start-of-turn window; its own effect is summoned, which conjure reads; Tech/rocket for its drones |
 | `stinkyscape-169` | Tiny Asteroid | Unit | death send Hustle/ore; activate bolt Hustle/ore | 1.08 | bolt | death: no census family reads addedToHand and shuffledIn, which send (#2793) reads; activate: the census agrees (bolt): the damage it costs; Hustle/ore for its Resources |
 | `stinkyscape-170` | Medium Asteroid | Unit | death send Hustle/ore; activate bolt Hustle/ore | 1.08 | bolt | death: no census family reads addedToHand and shuffledIn, which send (#2793) reads; activate: the census agrees (bolt): the damage it costs; Hustle/ore for its Resources |
@@ -134,7 +134,7 @@ adds a rider) and #145 Fortify Flesh (a hero's Armor gain sends no event).
 | `stinkyscape-t-axnit` | Axnit | Spell | cast nova Hustle/ore | 0.90 | nova | cast: the census agrees (nova); Hustle/ore for its Resource |
 | `stinkyscape-t-narcor` | Narcor | Spell | cast send Hustle/ore | 0.90 | none: no motif reads addedToHand | cast: the census's marketCreditsChanged is the Resource's sale; its own effect is addedToHand, which send reads; Hustle/ore for its Resource |
 | `stinkyscape-t-red-narcor` | Red Narcor | Spell | cast mana Hustle/ore | 0.90 | bolt | cast: the census's bolt is fatigue in its window; its own effect is manaChanged, which mana reads; Hustle/ore for its Resource |
-| `stinkyscape-t-anomaly-found` | Anomaly Found! | Spell | cast wipe | 1.19 | vanish | kept: #2800's `wipe` for its one-sided clear; the census's vanish reads the exiles, which wipe flares |
+| `stinkyscape-t-anomaly-found` | Anomaly Found! | Spell | bespoke anomalyCall | 1.19 | vanish | bespoke: its lay is an Anomaly's set piece (`fx/anomaly.ts`, R3337003), which draws the census's exiles; `anomalyCall` gathers a void ring and stars where the rift tears |
 | `stinkyscape-t-ai-01` | Escort Protocol | Unit | cry conjure Tech/hologram | 0.97 | none: no motif reads summoned | cry: no census family reads summoned, which conjure reads; Tech/hologram for its AI |
 | `stinkyscape-t-ai-02` | Mining Subroutine | Spell | cast send Hustle/ore | 0.90 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads; Hustle/ore for its Resource |
 | `stinkyscape-t-ai-03` | Route Optimizer | Spell | cast send Tech/hologram | 0.97 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads; Tech/hologram for its AI |
@@ -156,11 +156,16 @@ rendering (`fx/cards/stinkyscape/`), drawn over the event rows (`keep`).
 | #110 iKwzki | `duoBond` | its Duo is a bond between two cards, and no motif reads `marked` | a gather on iKwzki (its caster's hero when it is off the board), a beam to the permanent it Duos with, and there Radiant rays, a ring and a burst, in the Duo mark's gold |
 | #146 Flash Freeze | `flashFreeze` | it freezes the whole board in one breath, and no motif reads `marked` | at its first freeze a frost wave across both sides lane by lane into one ring over the board, and a sheen and a burst on each Unit it freezes, in the freeze mark's cyan |
 | #158 Stratos Swarm | `stratosSwarm` | conjure's circle lands one Unit, where the Swarm fills the board | each Stratos streaking in on a rocket trail (`Tech/rocket`) from its caster's hero to the zone it fills, a burst, a ring and exhaust smoke there, one shake a play |
+| #166 Scanning Probe Mk1, #167 Mk2 | `probeScan` | no motif reads a scan; a find is the start of an Anomaly (R3337002) | a radar sweep across the board from its caster's hand in Tech's starfield, on both seats; on its owner's a find's star ring and ping on the board, the card flying from it into the hand and, Radiant, rays, a prismatic burst and a shake there; the other seat's find plays its own row (R202) |
+| Anomaly Found! | `anomalyCall` | its lay is a set piece of its own (R3337003), which draws the exiles and the landing | as its `boardReplaced` opens the rift, a void ring and a burst of stars over the middle of its caster's side |
 
 No Legendary entrance or Mythic takeover is restyled, so R2722001 stands as it is: #109 xxFreshJack,
 #110 iKwzki, #111 Shockwave447 and #148 Alteran Reach keep the shared takeover (#154 Dice of Doom's yields to its
 own set piece, R3338000), and
-the range's Legendaries the shared Legendary entrance (#2803 reworks both).
+the range's Legendaries the shared Legendary entrance (#2803 reworks both). Anomaly Found!, a token
+printed Mythic, yields its takeover to the rift its play lays, as a Mythic yields to its own wipe
+(R3337003, R2800000), and none of the three cards above is a signature (R3332000): the probes are
+Common and Rare, and the rift's hold is longer than a Mythic Spell's signature budget.
 
 ## The Starship parts
 

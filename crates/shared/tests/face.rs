@@ -804,3 +804,44 @@ fn r3134001_the_faces_the_balance_pass_put_over_the_limit_clamp() {
     // Training Grounds #38's text is one short line since issue #3139.
     assert_eq!(short_form_of("traininggrounds-038", true), None);
 }
+
+#[test]
+fn r3337001_an_anomaly_found_holding_a_board_names_it() {
+    const ANOMALY_FOUND: &str = "stinkyscape-t-anomaly-found";
+    let held = in_play(
+        ANOMALY_FOUND,
+        false,
+        Locale::En,
+        json!({ "inPlay": { "label": "WH" } }),
+    );
+    assert_eq!(
+        held.anomaly.as_deref(),
+        Some("WH"),
+        "its art draws the board it holds"
+    );
+    let rich = in_play(
+        ANOMALY_FOUND,
+        true,
+        Locale::En,
+        json!({ "inPlay": { "label": "FO" } }),
+    );
+    assert_eq!(rich.anomaly.as_deref(), Some("FO"));
+    assert_eq!(
+        printed(ANOMALY_FOUND, false, Locale::En).anomaly,
+        None,
+        "a printed face holds none"
+    );
+    assert_eq!(
+        in_play(ANOMALY_FOUND, false, Locale::En, json!({})).anomaly,
+        None,
+        "nor one that holds no board (an opponent's, R202)"
+    );
+    // Any other card with a label (Heroic Power's word, say) draws its own art.
+    let other = in_play(
+        "stinkyscape-166",
+        false,
+        Locale::En,
+        json!({ "inPlay": { "label": "WH" } }),
+    );
+    assert_eq!(other.anomaly, None);
+}

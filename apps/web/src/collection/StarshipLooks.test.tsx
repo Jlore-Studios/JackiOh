@@ -81,7 +81,7 @@ describe("R3335000 the Starship looks", () => {
     fireEvent.click(within(corsair).getByRole("button"));
     expect(readCosmetics().starshipHull).toBe("starship-hull-scout");
     expect(within(screen.getByTestId(T.tile("starship-hull-jlorious"))).getByTestId(T.tileEarn("starship-hull-jlorious"))).toHaveTextContent(
-      "Reach Jlorious",
+      "Jlorious on the ladder",
     );
     expect(document.querySelector('[data-testid^="collection-token-offer-"]')).toBeNull();
   });

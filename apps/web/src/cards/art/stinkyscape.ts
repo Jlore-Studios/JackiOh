@@ -7,6 +7,7 @@
 
 import type { CardType, Tag, UnitView } from "@jackioh/shared";
 
+import type { AnomalyCode } from "../anomalies.ts";
 import type { EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, seededRandom } from "./hash.ts";
 import { CENTER_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion } from "./motion.ts";
@@ -21,7 +22,8 @@ import {
   MODULE_BOX, moduleCenter, moduleMarkup, modulePaint, STARSHIP_MODULE_IDS, starshipModuleOf, type Hangar, type StarshipModule,
 } from "./starshipModules.ts";
 import {
-  at, between, circle, DEGREES, ellipse, FULL_TURN, glyph, group, inked, line, mirror, OUTLINE, path, poly, rect, STROKE, twinkle, whole,
+  at, between, circle, DEGREES, ellipse, FULL_TURN, glyph, group, inked, line, mirror, OUTLINE, path, points, poly, rect, STROKE, twinkle,
+  whole,
   type Paint, type Rng,
 } from "./stinkyDraw.ts";
 import { mixHex, RADIANT_PALETTE, turnHue } from "./themes.ts";
@@ -2337,6 +2339,492 @@ export function starshipSvg(ship: StarshipArt): string {
     streaks +
     (ship.radiant ? rays(seed) : "") +
     group(at(SUBJECT_X, SUBJECT_Y, ship.launched ? STARSHIP_TILT_LAUNCHED : 0, cls.zoom), body.join("")) +
+    rect(0, 0, BOX, BOX, "url(#v)") +
+    "</svg>"
+  );
+}
+
+// R3337001: an Anomaly Found!'s own art, the board its code names (anomalies.ts)
+
+/** R3337001: what a board's art grows from, before its code, so a board keeps one look on every card that holds it. */
+export const ANOMALY_SEED_PREFIX = "anomaly-";
+
+/**
+ * R3337001: the family whose paint a board wears, the kind (`KIND_COLORS`) that colors its ore or its plumes, and
+ * whether a planet may hang in its sky.
+ */
+type AnomalyLook = { family: StinkyFamily; kind: string | null; planet: boolean };
+
+/** R3337001: each board's look: the wormhole's own violet, a battle's red, the asteroid fields' rock, a drone's teal. */
+const ANOMALY_LOOKS: { readonly [C in AnomalyCode]: AnomalyLook } = {
+  WH: { family: "anomaly", kind: null, planet: false },
+  BF: { family: "weapon", kind: null, planet: true },
+  AL: { family: "resource", kind: null, planet: true },
+  AT: { family: "resource", kind: null, planet: false },
+  SP: { family: "resource", kind: "spice", planet: true },
+  MT: { family: "terminus", kind: null, planet: false },
+  DH: { family: "drone", kind: null, planet: true },
+  FO: { family: "fleet", kind: null, planet: true },
+  AN: { family: "resource", kind: "red-narcor", planet: true },
+  AA: { family: "resource", kind: "axnit", planet: true },
+};
+
+/** R3337001: a board's faintest layer, a haze of light. */
+const ANOMALY_HAZE = 0.16;
+/** R3337001: a board's shaded layer. */
+const ANOMALY_SHADE = 0.35;
+/** R3337001: a board's wash of light. */
+const ANOMALY_WASH = 0.6;
+/** R3337001: a board's part lit in full. */
+const ANOMALY_LIT = 0.92;
+
+/** WH: how many rings the Wormhole's tunnel folds through, mouth to throat. */
+const WORMHOLE_RINGS = 9;
+/** WH: its mouth's half-width and half-height. */
+const WORMHOLE_MOUTH: readonly [number, number] = [40, 26];
+/** WH: the share of the mouth's size its throat loses. */
+const WORMHOLE_NARROWING = 0.9;
+/** WH: where its throat opens, off the mouth's middle. */
+const WORMHOLE_THROAT: readonly [number, number] = [10, -6];
+/** WH: the streaks of light running down its wall. */
+const WORMHOLE_STREAKS = 16;
+/** WH: the stroke its outermost ring takes beyond the set's ink line. */
+const WORMHOLE_STROKE = 1.6;
+/** WH: the radius of the light at its end. */
+const WORMHOLE_LIGHT = 4.5;
+
+/** WH: rings folding into a tunnel of light, each narrower and deeper than the last. */
+function wormholeBoard(p: Paint): string {
+  const [rx, ry] = WORMHOLE_MOUTH;
+  const [tx, ty] = WORMHOLE_THROAT;
+  const out: string[] = [ellipse(0, 0, rx, ry, p.glow, { opacity: ANOMALY_HAZE })];
+  for (let i = 0; i < WORMHOLE_STREAKS; i += 1) {
+    const a = (i * FULL_TURN * DEGREES) / WORMHOLE_STREAKS;
+    out.push(line(rx * Math.cos(a), ry * Math.sin(a), tx, ty, p.light, STROKE / 2, { opacity: ANOMALY_SHADE }));
+  }
+  for (let i = 0; i < WORMHOLE_RINGS; i += 1) {
+    const t = i / (WORMHOLE_RINGS - 1);
+    const left = 1 - t * WORMHOLE_NARROWING;
+    out.push(
+      ellipse(tx * t, ty * t, rx * left, ry * left, p.dark, {
+        "fill-opacity": ANOMALY_HAZE,
+        stroke: i % 2 === 0 ? p.glow : p.accent,
+        "stroke-width": STROKE + WORMHOLE_STROKE * left,
+        "stroke-opacity": ANOMALY_LIT - t * ANOMALY_SHADE,
+      }),
+    );
+  }
+  out.push(circle(tx, ty, WORMHOLE_LIGHT * 2, p.glow, { opacity: ANOMALY_WASH }));
+  out.push(twinkle(tx, ty, WORMHOLE_LIGHT * 2, "#ffffff", ANOMALY_LIT));
+  out.push(circle(tx, ty, WORMHOLE_LIGHT, "#ffffff", { opacity: ANOMALY_LIT }));
+  return out.join("");
+}
+
+/** R3337001: how far a broken thing's clip reaches past it, every way, so its halves cover all of it. */
+const BREAK_REACH = 70;
+/** R3337001: the clip paths a broken thing's halves draw through: the part that stays, the part that drifts off. */
+const BREAK_KEEP_ID = "wk";
+const BREAK_CHUNK_ID = "wc";
+
+/**
+ * R3337001: `drawn` broken along `edge` (a run of points, top to bottom, in its own frame), the part right of the edge
+ * drifted off by `drift`: across, down and turned.
+ */
+function broken(drawn: string, edge: readonly (readonly [number, number])[], drift: readonly [number, number, number], defs: Defs): string {
+  const [topX] = edge[0] ?? [0, 0];
+  const [bottomX] = edge[edge.length - 1] ?? [0, 0];
+  const keep: (readonly [number, number])[] = [[-BREAK_REACH, -BREAK_REACH], [topX, -BREAK_REACH], ...edge, [bottomX, BREAK_REACH], [-BREAK_REACH, BREAK_REACH]];
+  const chunk: (readonly [number, number])[] = [[topX, -BREAK_REACH], ...edge, [bottomX, BREAK_REACH], [BREAK_REACH, BREAK_REACH], [BREAK_REACH, -BREAK_REACH]];
+  defs.push(
+    `<clipPath id="${BREAK_KEEP_ID}"><polygon points="${points(keep)}"/></clipPath>`,
+    `<clipPath id="${BREAK_CHUNK_ID}"><polygon points="${points(chunk)}"/></clipPath>`,
+  );
+  const [dx, dy, turn] = drift;
+  return (
+    `<g clip-path="url(#${BREAK_KEEP_ID})">${drawn}</g>` +
+    group(at(dx, dy, turn), `<g clip-path="url(#${BREAK_CHUNK_ID})">${drawn}</g>`)
+  );
+}
+
+/** BF: the wrecked battleship: where it drifts, its tilt and its size. */
+const BATTLEFIELD_WRECK = { x: -4, y: 0, turn: 24, scale: 0.92 } as const;
+/** BF: the break that splits its hull, top to bottom, in the hull's own frame. */
+const BATTLEFIELD_BREAK: readonly (readonly [number, number])[] = [[4, -18], [8, -8], [2, -2], [9, 5], [3, 18]];
+/** BF: how far its bow drifts from its stern: across, down and turned. */
+const BATTLEFIELD_DRIFT: readonly [number, number, number] = [7, 5, 14];
+/** BF: the shards strewn about it: where each drifts, its tilt and its size. */
+const BATTLEFIELD_SHARDS: readonly (readonly [number, number, number, number])[] = [
+  [-34, -22, 20, 5],
+  [30, -28, -35, 6],
+  [36, 22, 60, 4.5],
+  [-32, 24, -15, 6.5],
+  [8, 32, 80, 3.5],
+  [-12, -34, 45, 3.2],
+  [40, -6, 10, 3],
+];
+/** BF: a shard's outline, as shares of its size. */
+const SHARD_SHAPE: readonly (readonly [number, number])[] = [[-1, -0.4], [0.2, -0.7], [1, -0.1], [0.3, 0.6], [-0.6, 0.4]];
+/** BF: the fires still burning on the wreck and at its break: where each is and its radius. */
+const BATTLEFIELD_FIRES: readonly (readonly [number, number, number])[] = [[-14, -6, 3], [4, 2, 3.4], [16, 10, 2.4], [26, -4, 1.8]];
+
+/** BF: wreck-strewn space: a battleship broken in two, its shards drifting and its fires still burning. */
+function battlefieldBoard(rng: Rng, p: Paint, defs: Defs): string {
+  const out: string[] = [];
+  for (const [x, y, turn, size] of BATTLEFIELD_SHARDS) {
+    out.push(group(at(x, y, turn, size), poly(SHARD_SHAPE, "url(#hl)", p.line, { "stroke-width": STROKE / size })));
+  }
+  const { x, y, turn, scale } = BATTLEFIELD_WRECK;
+  out.push(group(at(x, y, turn, scale), broken(hull(rng, p, "battleship"), BATTLEFIELD_BREAK, BATTLEFIELD_DRIFT, defs)));
+  for (const [fx, fy, r] of BATTLEFIELD_FIRES) {
+    out.push(circle(fx, fy, r * 2, p.glow, { opacity: ANOMALY_HAZE }));
+    out.push(twinkle(fx, fy, r * 1.5, p.glow, ANOMALY_LIT));
+    out.push(circle(fx, fy, r / 2, "#ffffff", { opacity: ANOMALY_LIT }));
+  }
+  return out.join("");
+}
+
+/** The dust drifting between a field's rocks: how many grains. */
+const FIELD_DUST = 12;
+/** How far from a field's middle its dust and its scattered rocks reach. */
+const FIELD_REACH = 40;
+/** A grain of a field's dust: its least and its greatest radius. */
+const FIELD_DUST_RADII: readonly [number, number] = [0.4, 1.2];
+
+function dust(rng: Rng, p: Paint): string {
+  const out: string[] = [];
+  for (let i = 0; i < FIELD_DUST; i += 1) {
+    const [low, high] = FIELD_DUST_RADII;
+    out.push(circle(between(rng, -FIELD_REACH, FIELD_REACH), between(rng, -FIELD_REACH, FIELD_REACH), between(rng, low, high), p.light, { opacity: ANOMALY_SHADE }));
+  }
+  return out.join("");
+}
+
+/** R3337001: asteroids, each where it drifts and its radius. */
+function rocks(rng: Rng, p: Paint, list: readonly (readonly [number, number, number])[]): string {
+  return list.map(([x, y, r]) => group(at(x, y), asteroid(rng, p, r))).join("");
+}
+
+/** AL: the great rocks of the large field: where each drifts and its radius. */
+const LARGE_FIELD_ROCKS: readonly (readonly [number, number, number])[] = [[22, -24, 11], [20, 15, 16], [-12, -4, 22]];
+
+/** AL: two or three great asteroids. */
+function largeFieldBoard(rng: Rng, p: Paint): string {
+  return dust(rng, p) + rocks(rng, p, LARGE_FIELD_ROCKS);
+}
+
+/** AT: how many pebbles the small field scatters. */
+const SMALL_FIELD_ROCKS = 16;
+/** AT: a pebble's least and greatest radius. */
+const SMALL_FIELD_RADII: readonly [number, number] = [2.6, 6.5];
+
+/** AT: many small asteroids, the smaller behind. */
+function smallFieldBoard(rng: Rng, p: Paint): string {
+  const [low, high] = SMALL_FIELD_RADII;
+  const list: (readonly [number, number, number])[] = [];
+  for (let i = 0; i < SMALL_FIELD_ROCKS; i += 1) {
+    list.push([between(rng, -FIELD_REACH, FIELD_REACH), between(rng, -FIELD_REACH, FIELD_REACH), between(rng, low, high)]);
+  }
+  list.sort((a, b) => a[2] - b[2]);
+  return dust(rng, p) + rocks(rng, p, list);
+}
+
+/** AN: the cluster of red narcour crystals in the field's middle: where its rock sits and its size. */
+const NARCOUR_ORE = { x: 0, y: 4, scale: 0.9 } as const;
+/** AN: the glow its crystals cast, its radius. */
+const NARCOUR_GLOW = 28;
+/** AN: the rocks ringing it: where each drifts and its radius. */
+const NARCOUR_ROCKS: readonly (readonly [number, number, number])[] = [[-30, -22, 9], [30, -20, 11], [-30, 22, 7], [32, 24, 8], [4, -34, 5]];
+
+/** AN: asteroids ringing a cluster of red narcour crystals. */
+function narcourBoard(rng: Rng, p: Paint): string {
+  const { x, y, scale } = NARCOUR_ORE;
+  return (
+    dust(rng, p) +
+    rocks(rng, p, NARCOUR_ROCKS) +
+    circle(x, y, NARCOUR_GLOW, p.accent, { opacity: ANOMALY_HAZE }) +
+    group(at(x, y, 0, scale), resource(rng, p, "red-narcor", ""))
+  );
+}
+
+/** AA: the axnit-veined rock: where it drifts and its radius. */
+const AXNIT_ROCK: readonly [number, number, number] = [-4, 8, 25];
+/** AA: the veins of axnit through it, each a run of points in the rock's frame. */
+const AXNIT_VEINS: readonly (readonly (readonly [number, number])[])[] = [
+  [[-18, -6], [-8, -2], [-4, 6], [6, 10], [14, 17]],
+  [[-6, -18], [-2, -8], [8, -4], [18, 2]],
+  [[-15, 12], [-6, 8], [-4, 6]],
+];
+/** AA: a vein's stroke. */
+const AXNIT_VEIN = 1.2;
+/** AA: the stroke of a vein's glow. */
+const AXNIT_VEIN_GLOW = 3.4;
+/** AA: the ore breaking out of the rock: where it sits and its size. */
+const AXNIT_ORE = { x: 12, y: -12, scale: 0.5 } as const;
+/** AA: the rocks that drift with it: where each drifts and its radius. */
+const AXNIT_ROCKS: readonly (readonly [number, number, number])[] = [[32, 26, 7], [-33, -26, 6], [33, -28, 5]];
+
+function trail(list: readonly (readonly [number, number])[]): string {
+  return list.map(([x, y], index) => `${index === 0 ? "M" : "L"}${fmt(x)} ${fmt(y)}`).join("");
+}
+
+/** AA: a great asteroid veined with axnit, its ore breaking out of it. */
+function axnitBoard(rng: Rng, p: Paint): string {
+  const [x, y, r] = AXNIT_ROCK;
+  const veins = AXNIT_VEINS.map(
+    (vein) =>
+      path(trail(vein), "none", { stroke: p.accent, "stroke-width": AXNIT_VEIN_GLOW, "stroke-linejoin": "round", "stroke-linecap": "round", opacity: ANOMALY_SHADE }) +
+      path(trail(vein), "none", { stroke: p.accent, "stroke-width": AXNIT_VEIN, "stroke-linejoin": "round", "stroke-linecap": "round", opacity: ANOMALY_LIT }),
+  ).join("");
+  const ore = AXNIT_ORE;
+  return (
+    dust(rng, p) +
+    rocks(rng, p, AXNIT_ROCKS) +
+    group(at(x, y), asteroid(rng, p, r) + veins) +
+    group(at(ore.x, ore.y, 0, ore.scale), resource(rng, p, "axnit", ""))
+  );
+}
+
+/** SP: the platform's break, top to bottom, in its own frame. */
+const SPICE_PLATFORM_BREAK: readonly (readonly [number, number])[] = [[16, -24], [20, -12], [14, -4], [22, 3], [17, 10], [21, 18]];
+/** SP: how far its broken end drifts: across, down and turned. */
+const SPICE_PLATFORM_DRIFT: readonly [number, number, number] = [9, 7, 16];
+/** SP: the plumes of spice it vents: where each leaves it, its heading and its length. */
+const SPICE_PLUMES: readonly (readonly [number, number, number, number])[] = [[19, -6, -20, 24], [19, 8, 30, 20], [-32, 2, 190, 14], [0, -22, -95, 16]];
+/** SP: a plume's half-width where it leaves the platform. */
+const SPICE_PLUME_WIDTH = 1.6;
+/** SP: how wide a plume fans out, as a share of its length. */
+const SPICE_PLUME_FAN = 0.32;
+/** SP: how far a plume's rounded tip reaches past its length, as a share of it. */
+const SPICE_PLUME_TIP = 1.12;
+/** SP: the share of a plume its bright core fills. */
+const SPICE_PLUME_CORE = 0.55;
+/** SP: the grains of spice drifting off the plumes. */
+const SPICE_GRAINS = 20;
+/** SP: how far along a plume a grain drifts, as shares of its length. */
+const SPICE_GRAIN_REACH: readonly [number, number] = [0.4, 1.3];
+/** SP: a grain's least and greatest radius. */
+const SPICE_GRAIN_RADII: readonly [number, number] = [0.4, 1.2];
+
+function plume(length: number, fan: number, width: number): (readonly [number, number])[] {
+  return [[0, -width], [length, -length * fan], [length * SPICE_PLUME_TIP, 0], [length, length * fan], [0, width]];
+}
+
+/** SP: a broken station venting plumes of spice from its wound. */
+function spicePlatformBoard(rng: Rng, p: Paint, defs: Defs): string {
+  const out: string[] = [broken(station(p), SPICE_PLATFORM_BREAK, SPICE_PLATFORM_DRIFT, defs)];
+  for (const [x, y, heading, length] of SPICE_PLUMES) {
+    out.push(
+      group(
+        at(x, y, heading),
+        poly(plume(length, SPICE_PLUME_FAN, SPICE_PLUME_WIDTH), p.accent, "none", { opacity: ANOMALY_WASH }) +
+          poly(plume(length * SPICE_PLUME_CORE, SPICE_PLUME_FAN * SPICE_PLUME_CORE, SPICE_PLUME_WIDTH / 2), "#ffffff", "none", { opacity: ANOMALY_SHADE }),
+      ),
+    );
+  }
+  for (let i = 0; i < SPICE_GRAINS; i += 1) {
+    const [x, y, heading, length] = SPICE_PLUMES[whole(rng, 0, SPICE_PLUMES.length - 1)] ?? [0, 0, 0, 0];
+    const along = length * between(rng, SPICE_GRAIN_REACH[0], SPICE_GRAIN_REACH[1]);
+    const across = along * SPICE_PLUME_FAN * between(rng, -1, 1);
+    const a = heading * DEGREES;
+    out.push(
+      circle(x + along * Math.cos(a) - across * Math.sin(a), y + along * Math.sin(a) + across * Math.cos(a), between(rng, SPICE_GRAIN_RADII[0], SPICE_GRAIN_RADII[1]), p.accent, {
+        opacity: between(rng, ANOMALY_WASH, 1),
+      }),
+    );
+  }
+  return out.join("");
+}
+
+/** MT: the Monument's slab, a tall stone narrowing from its foot to its crown. */
+const MONUMENT_SLAB: readonly (readonly [number, number])[] = [[-14, 36], [-10, -26], [-5, -38], [5, -38], [10, -26], [14, 36]];
+/** MT: the slab's lit flank. */
+const MONUMENT_FLANK: readonly (readonly [number, number])[] = [[-14, 36], [-10, -26], [-5, -38], [-1, -38], [-2, 36]];
+/** MT: the runes glowing down its face: each one's corner, width and height. */
+const MONUMENT_RUNES: readonly (readonly [number, number, number, number])[] = [
+  [-5, -28, 10, 1.6],
+  [-6, -20, 3, 7],
+  [3, -20, 3, 7],
+  [-1.5, -9, 3, 3],
+  [-6, -1, 12, 1.6],
+  [-4, 6, 2, 10],
+  [2, 6, 2, 10],
+  [-5, 22, 10, 1.6],
+];
+/** MT: how far a rune's glow spreads past its edge. */
+const MONUMENT_RUNE_BLOOM = 0.8;
+/** MT: the halo of its light: its half-width and half-height. */
+const MONUMENT_HALO: readonly [number, number] = [30, 50];
+/** MT: where its crown is, and the radius of the light on it. */
+const MONUMENT_CROWN: readonly [number, number, number] = [0, -38, 4];
+/** MT: the beam its crown throws up into the void: its half-width at the crown and at its end, and its reach. */
+const MONUMENT_BEAM: readonly [number, number, number] = [4, 12, 30];
+/** MT: the rubble that floats about it: where each drifts and its radius. */
+const MONUMENT_RUBBLE: readonly (readonly [number, number, number])[] = [[-26, 20, 4], [24, 28, 3], [22, -14, 2.4], [-24, -24, 2]];
+
+/** MT: a colossal monolith, its runes glowing, in the void. */
+function monumentBoard(rng: Rng, p: Paint): string {
+  const [hx, hy] = MONUMENT_HALO;
+  const [cx, cy, cr] = MONUMENT_CROWN;
+  const [beamNear, beamFar, beamReach] = MONUMENT_BEAM;
+  const out: string[] = [
+    ellipse(0, 0, hx, hy, p.glow, { opacity: ANOMALY_HAZE }),
+    ellipse(0, 0, hx / 2, hy, p.glow, { opacity: ANOMALY_HAZE }),
+    poly([[cx - beamNear, cy], [cx - beamFar, cy - beamReach], [cx + beamFar, cy - beamReach], [cx + beamNear, cy]], p.glow, "none", { opacity: ANOMALY_HAZE }),
+    rocks(rng, p, MONUMENT_RUBBLE),
+    poly(MONUMENT_SLAB, p.dark, p.glow),
+    poly(MONUMENT_FLANK, p.hull, "none", { opacity: ANOMALY_SHADE }),
+  ];
+  for (const [x, y, w, h] of MONUMENT_RUNES) {
+    out.push(rect(x - MONUMENT_RUNE_BLOOM, y - MONUMENT_RUNE_BLOOM, w + MONUMENT_RUNE_BLOOM * 2, h + MONUMENT_RUNE_BLOOM * 2, p.glow, { opacity: ANOMALY_SHADE }));
+    out.push(rect(x, y, w, h, p.accent, { opacity: ANOMALY_LIT }));
+  }
+  out.push(circle(cx, cy, cr * 2, p.glow, { opacity: ANOMALY_WASH }));
+  out.push(twinkle(cx, cy, cr * 2, "#ffffff", ANOMALY_LIT));
+  out.push(circle(cx, cy, cr / 2, "#ffffff"));
+  return out.join("");
+}
+
+/** DH: the rock the drones hide in, its radius. */
+const HIDEOUT_ROCK = 32;
+/** DH: the step between the holes honeycombing it. */
+const HIDEOUT_STEP = 9;
+/** DH: how far from its middle the holes reach. */
+const HIDEOUT_REACH = 24;
+/** DH: a hole's radius. */
+const HIDEOUT_HOLE = 3.4;
+/** DH: a drone's eye in its hole, its radius. */
+const HIDEOUT_EYE = 2;
+/** DH: an eye's pupil, as a share of it. */
+const HIDEOUT_PUPIL = 0.45;
+/** DH: the chance a hole's drone is awake, its eye lit. */
+const HIDEOUT_AWAKE = 0.7;
+/** DH: a honeycomb's rows lie this share of its step apart. */
+const HEX_ROW = Math.sqrt(3) / 2;
+/** DH: the drones out on patrol: where each flies and its size. */
+const HIDEOUT_PATROLS: readonly (readonly [number, number, number])[] = [[33, -28, 0.42], [-34, 27, 0.34]];
+/** DH: a patrolling drone's radius, before its size. */
+const HIDEOUT_DRONE = 11;
+
+/** DH: a rock honeycombed with holes, a drone's glowing eye in each. */
+function hideoutBoard(rng: Rng, p: Paint): string {
+  const out: string[] = [circle(0, 0, HIDEOUT_ROCK, p.glow, { opacity: ANOMALY_HAZE }), asteroid(rng, p, HIDEOUT_ROCK)];
+  const rowStep = HIDEOUT_STEP * HEX_ROW;
+  const rows = Math.floor(HIDEOUT_REACH / rowStep);
+  const cols = Math.ceil(HIDEOUT_REACH / HIDEOUT_STEP);
+  for (let row = -rows; row <= rows; row += 1) {
+    for (let col = -cols; col <= cols; col += 1) {
+      const x = col * HIDEOUT_STEP + (Math.abs(row) % 2 === 1 ? HIDEOUT_STEP / 2 : 0);
+      const y = row * rowStep;
+      if (Math.hypot(x, y) > HIDEOUT_REACH) continue;
+      out.push(circle(x, y, HIDEOUT_HOLE, p.dark, inked(p)));
+      if (rng() < HIDEOUT_AWAKE) {
+        out.push(circle(x, y, HIDEOUT_EYE * 2, p.glow, { opacity: ANOMALY_HAZE }));
+        out.push(circle(x, y, HIDEOUT_EYE, p.glow));
+        out.push(circle(x, y, HIDEOUT_EYE * HIDEOUT_PUPIL, p.dark));
+      }
+    }
+  }
+  for (const [x, y, size] of HIDEOUT_PATROLS) out.push(group(at(x, y, 0, size), droneBody(p, HIDEOUT_DRONE, 2)));
+  return out.join("");
+}
+
+/** FO: where the outpost's station stands, and its size. */
+const OUTPOST_STATION = { x: -6, y: 0, scale: 0.8 } as const;
+/** FO: the warm light around it, its radius. */
+const OUTPOST_GLOW = 30;
+/** FO: how many lights ring it. */
+const OUTPOST_LIGHTS = 20;
+/** FO: the ring of its lights: its half-width and half-height. */
+const OUTPOST_RING: readonly [number, number] = [40, 22];
+/** FO: one light's radius. */
+const OUTPOST_LIGHT = 1.1;
+/**
+ * FO: the map's edge it stands at, a curve right of it: where it runs at its ends, where it bulges, how far it reaches
+ * up and down, and how far the unmapped dark beyond it runs.
+ */
+const OUTPOST_EDGE = { x: 36, bulge: 52, reach: 46, beyond: 70 } as const;
+/** FO: the frontier's dash. */
+const OUTPOST_EDGE_DASH = "3 2";
+/** FO: the beacons along the frontier. */
+const OUTPOST_BEACONS = 5;
+
+/** FO: a lit station ringed with lights, at the edge of the map. */
+function outpostBoard(p: Paint): string {
+  const { x, y, scale } = OUTPOST_STATION;
+  const { x: edgeX, bulge, reach, beyond } = OUTPOST_EDGE;
+  const curve = `M${fmt(edgeX)} ${fmt(-reach)}Q${fmt(bulge)} 0 ${fmt(edgeX)} ${fmt(reach)}`;
+  const out: string[] = [
+    path(`${curve}L${fmt(beyond)} ${fmt(reach)}L${fmt(beyond)} ${fmt(-reach)}Z`, p.dark, { opacity: ANOMALY_WASH }),
+    path(curve, "none", { stroke: p.accent, "stroke-width": STROKE * 2, "stroke-dasharray": OUTPOST_EDGE_DASH, opacity: ANOMALY_LIT }),
+  ];
+  for (let i = 0; i < OUTPOST_BEACONS; i += 1) {
+    const t = (i + 1) / (OUTPOST_BEACONS + 1);
+    const bx = (1 - t) * (1 - t) * edgeX + 2 * (1 - t) * t * bulge + t * t * edgeX;
+    const by = (2 * t - 1) * reach;
+    out.push(twinkle(bx, by, OUTPOST_LIGHT * 3, p.glow, ANOMALY_LIT));
+  }
+  out.push(circle(x, y, OUTPOST_GLOW, p.glow, { opacity: ANOMALY_HAZE }));
+  const [rx, ry] = OUTPOST_RING;
+  for (let i = 0; i < OUTPOST_LIGHTS; i += 1) {
+    const a = (i * FULL_TURN * DEGREES) / OUTPOST_LIGHTS;
+    const lx = x + rx * Math.cos(a);
+    const ly = y + ry * Math.sin(a);
+    out.push(circle(lx, ly, OUTPOST_LIGHT * 2, p.glow, { opacity: ANOMALY_SHADE }));
+    out.push(circle(lx, ly, OUTPOST_LIGHT, p.glow));
+    out.push(circle(lx, ly, OUTPOST_LIGHT / 2, "#ffffff"));
+  }
+  out.push(group(at(x, y, 0, scale), station(p)));
+  return out.join("");
+}
+
+function anomalyBoard(rng: Rng, p: Paint, code: AnomalyCode, defs: Defs): string {
+  switch (code) {
+    case "WH":
+      return wormholeBoard(p);
+    case "BF":
+      return battlefieldBoard(rng, p, defs);
+    case "AL":
+      return largeFieldBoard(rng, p);
+    case "AT":
+      return smallFieldBoard(rng, p);
+    case "SP":
+      return spicePlatformBoard(rng, p, defs);
+    case "MT":
+      return monumentBoard(rng, p);
+    case "DH":
+      return hideoutBoard(rng, p);
+    case "FO":
+      return outpostBoard(p);
+    case "AN":
+      return narcourBoard(rng, p);
+    case "AA":
+      return axnitBoard(rng, p);
+  }
+}
+
+/**
+ * R3337001: the art an Anomaly Found! in play wears for the board its code names (anomalies.ts), drawn as the
+ * Starship's is: its own seed, the set's space behind it, gilded with the rays on the Radiant face.
+ */
+export function anomalySvg(code: AnomalyCode, radiant: boolean): string {
+  const look = ANOMALY_LOOKS[code];
+  const seed = hashId(`${ANOMALY_SEED_PREFIX}${code}`);
+  const family = FAMILY_PAINTS[look.family];
+  const base: Paint = look.kind === null ? family : { ...family, accent: KIND_COLORS[look.kind] ?? family.accent };
+  const p = radiant ? gild(base) : base;
+  const behind = seededRandom((seed ^ BACKDROP_SALT) >>> 0);
+  const ahead = seededRandom((seed ^ SUBJECT_SALT) >>> 0);
+  const tilt = between(ahead, -SUBJECT_TILT_JITTER, SUBJECT_TILT_JITTER);
+  const defs: Defs = [];
+  gradients(p, defs);
+  const sky = backdrop(behind, p, look.family, look.planet, defs);
+  const body = anomalyBoard(ahead, p, code, defs);
+  return (
+    `<svg viewBox="0 0 ${BOX} ${BOX}" width="${BOX}" height="${BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">` +
+    `<defs>${defs.join("")}</defs>` +
+    sky +
+    (radiant ? rays(seed) : "") +
+    group(at(SUBJECT_X, SUBJECT_Y, tilt), body) +
     rect(0, 0, BOX, BOX, "url(#v)") +
     "</svg>"
   );

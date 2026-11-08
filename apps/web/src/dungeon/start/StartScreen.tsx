@@ -1,4 +1,4 @@
-// The Dungeon Run's start screen (DR1–DR3, DR8, DR9; DR14 part D, #2705): the mode, the seed, the
+// The Dungeon run's start screen (DR1–DR3, DR8, DR9; DR14 part D, #2705): the mode, the seed, the
 // starting deck, its relics and curses, the Embers that raise its level, and the run under way that
 // can be picked up again or given up (R2972000: giving it up asks first).
 //
@@ -457,7 +457,7 @@ export function StartScreen({ dungeon, onEnter }: StartScreenProps): ReactElemen
   const unfinished = dungeon.run !== null && !runFinished(dungeon.run);
   return (
     <div className="app-shell tavern dungeon-screen" data-testid={dungeonTestid.start}>
-      <BackLink to={paths.play} title={t("Dungeon Run")} />
+      <BackLink to={paths.play} title={t("Dungeon run")} />
       <section className="panel panel--auth dungeon-panel">
         <Wordmark />
         <Progress dungeon={dungeon} />

@@ -34,7 +34,7 @@ describe("R3335001 the Fleet track panel", () => {
     expect(bar).toHaveAttribute("value", "500");
     expect(bar.closest(".fill-bar")).toHaveAttribute("data-state", "resting");
     expect(within(panel).getByTestId(T.fleetXp)).toHaveTextContent("300 XP to the next level");
-    expect(within(panel).getByTestId(T.fleetToday)).toHaveTextContent(`Today: 450 of ${FLEET_TRACK_XP_DAILY_MAX.toLocaleString("en-US")} Fleet XP`);
+    expect(within(panel).getByTestId(T.fleetToday)).toHaveTextContent(`Fleet XP today: 450 of ${FLEET_TRACK_XP_DAILY_MAX.toLocaleString("en-US")}`);
 
     // The next rewards, nearest first, each its look and name: a card back as a back, a Starship one as a Starship.
     const rewards = within(within(panel).getByTestId(T.fleetRewards)).getAllByRole("listitem");

@@ -7,10 +7,10 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::anomalies::{
-    AIM_DAMAGE, ASK_DAMAGE, FLIER_DAMAGE, MODE_THREE, MODE_TWO, aimer, anomaly, asker, banisher, crowd,
-    exodus, field, fleet, flier, found, greeter, grunt, hangar, lucky_probe, mine, misfit, modal, parley,
-    planner, polite, probe, register_anomaly_fixtures, scheme, spinner, trap, wall, ward, welcome, whirl,
-    wipe,
+    AIM_DAMAGE, ASK_DAMAGE, CHARTED_ANOMALY, FLIER_DAMAGE, MODE_THREE, MODE_TWO, aimer, anomaly, asker,
+    banisher, charted, crowd, exodus, field, fleet, flier, found, greeter, grunt, hangar, lucky_probe, mine,
+    misfit, modal, parley, planner, polite, probe, register_anomaly_fixtures, scheme, spinner, trap, wall,
+    ward, welcome, whirl, wipe,
 };
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::resources::{ASTEROID, ASTEROID_YIELD, MYTHIC};
@@ -132,16 +132,23 @@ mod r1855000_a_board_replacement_exiles_its_casters_side_and_lays_the_preset {
 
         let events = s.last_events();
         let replaced = first_of(events, GameEventType::BoardReplaced).expect("boardReplaced");
-        assert_eq!(events[replaced], GameEvent::BoardReplaced { player: P1 });
+        assert_eq!(
+            events[replaced],
+            GameEvent::BoardReplaced {
+                player: P1,
+                anomaly: None
+            }
+        );
         assert!(
             replaced < first_of(events, GameEventType::Exiled).expect("exiled"),
             "boardReplaced comes before the cards go"
         );
         for viewer in [P1, P2] {
             assert!(
-                s.view(viewer)
-                    .events
-                    .contains(&GameEvent::BoardReplaced { player: P1 }),
+                s.view(viewer).events.contains(&GameEvent::BoardReplaced {
+                    player: P1,
+                    anomaly: None
+                }),
                 "{viewer:?} sees the replacement"
             );
         }
@@ -726,5 +733,83 @@ mod r1879002_a_stacked_preset_entry_tops_the_card_laid_before_it {
         .expect("its zone");
         assert_eq!(pile.len(), 1, "nothing is stacked onto it");
         assert_eq!(s.unit(P1, 4).expect("the lone grunt").def_id, grunt.id);
+    }
+}
+
+/// R3337000: a replacement that lays an Anomaly names its code on `boardReplaced`, which both seats read;
+/// any other names none, and an older log's event, which names none, folds as it was written.
+mod r3337000_board_replaced_names_its_anomaly {
+    use super::*;
+
+    /// The `boardReplaced` events `events` holds.
+    fn replaced(events: &[GameEvent]) -> Vec<GameEvent> {
+        events
+            .iter()
+            .filter(|event| event.event_type() == GameEventType::BoardReplaced)
+            .cloned()
+            .collect()
+    }
+
+    #[test]
+    fn r3337000_the_code_reaches_both_seats() {
+        let mut s = board("r3337000-charted", json!({ "hand": [charted.id] }), json!({}));
+        s.play(charted.id.as_str(), json!({}));
+
+        let named = GameEvent::BoardReplaced {
+            player: P1,
+            anomaly: Some(CHARTED_ANOMALY.to_string()),
+        };
+        assert_eq!(replaced(s.last_events()), vec![named.clone()]);
+        assert_eq!(
+            serde_json::to_value(&named).expect("serializes")["anomaly"],
+            json!(CHARTED_ANOMALY)
+        );
+        for viewer in [P1, P2] {
+            assert_eq!(
+                replaced(&s.view(viewer).events),
+                vec![named.clone()],
+                "{viewer:?} reads the code"
+            );
+        }
+        assert_eq!(
+            s.unit(P1, 1).expect("the grunt").def_id,
+            grunt.id,
+            "the preset is laid as ever"
+        );
+    }
+
+    #[test]
+    fn r3337000_a_plain_replacement_names_none() {
+        let mut s = board("r3337000-plain", json!({ "hand": [anomaly.id] }), json!({}));
+        s.play(anomaly.id.as_str(), json!({}));
+
+        let events = replaced(s.last_events());
+        assert_eq!(
+            events,
+            vec![GameEvent::BoardReplaced {
+                player: P1,
+                anomaly: None
+            }]
+        );
+        let written = serde_json::to_value(&events[0]).expect("serializes");
+        assert!(written.get("anomaly").is_none(), "no code is written: {written}");
+    }
+
+    #[test]
+    fn r3337000_an_old_log_event_folds_unchanged() {
+        let old = r#"{"type":"boardReplaced","player":"p1"}"#;
+        let event: GameEvent = serde_json::from_str(old).expect("an older log's event parses");
+        assert_eq!(
+            event,
+            GameEvent::BoardReplaced {
+                player: P1,
+                anomaly: None
+            }
+        );
+        assert_eq!(
+            serde_json::to_string(&event).expect("serializes"),
+            old,
+            "written back byte for byte"
+        );
     }
 }

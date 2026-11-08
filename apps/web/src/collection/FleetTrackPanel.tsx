@@ -44,7 +44,7 @@ export default function FleetTrackPanel({ fleet }: { fleet: FleetTrackView }): R
         <span data-testid={T.fleetXp}>{t("Last level reached.")}</span>
       )}
       <span data-testid={T.fleetToday}>
-        {t("Today: {xp} of {max} Fleet XP", { xp: formatNumber(xpToday), max: formatNumber(FLEET_TRACK_XP_DAILY_MAX) })}
+        {t("Fleet XP today: {xp} of {max}", { xp: formatNumber(xpToday), max: formatNumber(FLEET_TRACK_XP_DAILY_MAX) })}
       </span>
       {nextRewards.length === 0 ? (
         <span data-testid={T.fleetRewards}>{t("All rewards claimed.")}</span>

@@ -335,7 +335,7 @@ export function earnWords(cosmetic: {
   readonly track?: string | null | undefined;
   readonly trackLevel?: number | null | undefined;
 }): string | null {
-  if (cosmetic.jlorious === true) return t("Reach Jlorious");
+  if (cosmetic.jlorious === true) return t("Jlorious on the ladder");
   if (cosmetic.track === "fleet" && typeof cosmetic.trackLevel === "number") {
     return t("Fleet track level {level}", { level: formatNumber(cosmetic.trackLevel) });
   }

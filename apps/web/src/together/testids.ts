@@ -103,7 +103,7 @@ export const challengeToastTestid = {
   decline: "challenge-decline",
   /** The deck or trio the toast joins with. */
   deck: "challenge-toast-deck",
-  /** R2031000: an All Random challenge's "More cards from" (R924000), a select. */
+  /** R2031000: an All random challenge's "More cards from" (R924000), a select. */
   lean: "challenge-toast-lean",
   /** R767: `/play` with the room's code filled in, after a refused join. */
   lobby: "challenge-toast-lobby",
