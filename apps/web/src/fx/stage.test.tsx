@@ -20,6 +20,7 @@ import {
   FX_MIND_CONTROL_FLIGHT_FRACTION,
   FX_PARTICLE_CAP,
   FX_SLAM_AT,
+  FX_STARSHIP_RAM_TURN_DEG,
 } from "./constants.ts";
 import { createFxDirector, type FxDirectorOptions } from "./director.ts";
 import { landingBox, standInCopy } from "./dom.ts";
@@ -633,6 +634,26 @@ describe("B48 aiming the lunge in the page", () => {
     h.director.release();
     expect(attacker.style.getPropertyValue("--fx-lunge-lift")).toBe("");
     expect(attacker.style.getPropertyValue("--fx-lunge-x")).toBe("");
+  });
+
+  it("R3334002 a ram turns prow first toward its target, and release clears the turn", () => {
+    const attacker = boardElement(`card-${MINE}`, { x: 300, y: 300, width: 60, height: 82 });
+    boardElement(`card-${ENEMY}`, ENEMY_BOX);
+    boardElement("card-below", { x: 300, y: 600, width: 60, height: 82 });
+    const h = directorHarness();
+    // Any other lunge turns nothing: jk-lunge's turn falls back to 0deg.
+    h.director.play([{ kind: "lunge", attacker: `card-${MINE}`, target: `card-${ENEMY}`, delayMs: 0, durationMs: 350 }]);
+    expect(attacker.style.getPropertyValue("--fx-lunge-turn")).toBe("");
+    h.director.release();
+    // A target above turns the ship's prow (its right) up, counterclockwise; one below, clockwise.
+    h.director.play([{ kind: "lunge", attacker: `card-${MINE}`, target: `card-${ENEMY}`, delayMs: 0, durationMs: 350, ram: true }]);
+    expect(attacker.style.getPropertyValue("--fx-lunge-turn")).toBe(`${String(-FX_STARSHIP_RAM_TURN_DEG)}deg`);
+    h.director.release();
+    expect(attacker.style.getPropertyValue("--fx-lunge-turn")).toBe("");
+    h.director.play([{ kind: "lunge", attacker: `card-${MINE}`, target: "card-below", delayMs: 0, durationMs: 350, ram: true }]);
+    expect(attacker.style.getPropertyValue("--fx-lunge-turn")).toBe(`${String(FX_STARSHIP_RAM_TURN_DEG)}deg`);
+    h.director.release();
+    expect(attacker.style.getPropertyValue("--fx-lunge-turn")).toBe("");
   });
 
   it("B48 the aim is at least the BUILD lunge distance and at most FX_LUNGE_MAX_PX", () => {

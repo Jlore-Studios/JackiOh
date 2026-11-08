@@ -3,13 +3,14 @@
 // than `none`; every Spell, Field Spell, Trap and Field Trap has a `cast` (or a recipe or set piece
 // of its own, or the one `none` a Starship part may wear; R3332000: a Field Spell's own `entrance`, which
 // draws its play's landing); every Field Spell wears an `aura`; and every frame sits on a card that may
-// carry it, every `entrance` a Unit's or a Field Spell's and every `takeover` a Mythic's.
+// carry it, every `entrance` a Unit's or a Field Spell's and every `takeover` a Mythic's. R3400000,
+// R3389000: a `{ bespoke }` may wear the aura beside its recipe (`entryAura`), as Classic's Field Spells' signatures do.
 
 import { describe, expect, it } from "vitest";
 
 import { entryOf } from "../../test/setPass.ts";
 import { CATALOG } from "../../wire/cards.ts";
-import { FX_CARD_TABLE } from "./tables.ts";
+import { entryAura, FX_CARD_TABLE } from "./tables.ts";
 import { FX_COVERAGE_FLOOR } from "../constants.ts";
 
 /** The catalog's non-token cards, in catalog order. */
@@ -44,8 +45,15 @@ describe("R2803000 the audit's coverage", () => {
     expect(fields.length).toBeGreaterThan(0);
     for (const id of fields) {
       const entry = entryOf(id);
-      expect(entry.kind === "hooks" ? entry.aura : undefined, id).toBeDefined();
+      // R3400000: a `{ bespoke }` may wear it (R3389000: Classic's Field Spells' signatures).
+      expect(entryAura(entry), id).toBeDefined();
     }
+  });
+
+  it("R3389000 every Field Spell whose entry is a recipe wears its aura beside it", () => {
+    const recipes = CARDS.filter((id) => CATALOG[id]?.type === "Field Spell" && entryOf(id).kind === "bespoke");
+    expect(recipes).toEqual(["classic-004", "classic-007", "classic-028", "classic-090"]);
+    for (const id of recipes) expect(entryAura(entryOf(id)), id).toBeDefined();
   });
 
   it("R3332000 every entrance is a Unit's or a Field Spell's, every takeover a Mythic's and every signature a Legendary's or a Mythic's", () => {

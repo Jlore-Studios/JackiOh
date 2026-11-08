@@ -8,6 +8,9 @@
 // passes keep their recipes in files of their own (sceneRecipesMeditativePlus.ts, sceneRecipesTrainingGrounds.ts and,
 // for the Legacy cards, sceneRecipesLegacy.ts, R3393001), spread in after the proofs.
 
+import { CLASSIC_PLUS_RECIPES_1 } from "./classicPlusRecipes1.ts";
+import { CLASSIC_PLUS_RECIPES_2 } from "./classicPlusRecipes2.ts";
+import { CLASSIC_PLUS_RECIPES_3 } from "./classicPlusRecipes3.ts";
 import { figureLookFor } from "./figureKit.ts";
 import type { SceneRecipe } from "./scene.ts";
 import { LEGACY_RECIPES } from "./sceneRecipesLegacy.ts";
@@ -198,7 +201,7 @@ const ARG_ARG_DEFENDER: SceneRecipe = {
   },
 };
 
-/** R3331000: the cards that draw from a scene, by id: the five proof cards; R3393000: and every Meditative+ and Training Grounds entry. */
+/** R3331000: the cards that draw from a scene, by id: the five proof cards, R3390000 every Classic+ entry, and R3393000 every Meditative+ and Training Grounds entry. */
 export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   "classic-074": CORPSE_PLANTATION,
   "core-002": SPECIESIST,
@@ -208,4 +211,7 @@ export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   ...MEDITATIVE_PLUS_RECIPES,
   ...TRAINING_GROUNDS_RECIPES,
   ...LEGACY_RECIPES,
+  ...CLASSIC_PLUS_RECIPES_1,
+  ...CLASSIC_PLUS_RECIPES_2,
+  ...CLASSIC_PLUS_RECIPES_3,
 };

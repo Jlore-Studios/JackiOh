@@ -1,7 +1,7 @@
 // R3393000, R3393001: every Meditative+ and Training Grounds entry, tokens included, drawn as a scene of its own
 // from its brief in issue #3393's table (sceneRecipesMeditativePlus.ts, sceneRecipesTrainingGrounds.ts,
 // sceneRecipesLegacy.ts): each draws its recipe on both faces with one geometry, in its family's look, clears its
-// rarity's floor and is off `ART_DETAIL_SHORT`; every Unit is a figure-kit character; a crowd figure and a fade draw
+// rarity's floor and is off `ART_DETAIL_SHORT`; every Unit is a figure-kit character; a fade draws
 // as scene.ts says, and the proof cards draw what they drew before. A Legacy card draws its own scene with its yard
 // touch, wearing its Core card's frozen emblem. The pixels are e2e/cypress/component/set-scenes.cy.tsx's.
 
@@ -54,7 +54,7 @@ const UNCLEAN = /NaN|undefined|Infinity|<text|<title|href|<image/;
 
 /**
  * R3393000: each proof card's base and Radiant picture as `main` drew it before this pass (`hashId` of its data URI),
- * so the crowd and the fade leave every recipe that uses neither as it was.
+ * so a fade leaves every recipe that uses none as it was.
  */
 const PROOF_PINS: Readonly<Record<string, readonly [number, number]>> = {
   "classic-074": [1210823500, 2735167760],
@@ -183,7 +183,7 @@ describe("R3393000 Meditative+ and Training Grounds drawn as scenes", () => {
       const scene = recipe(card.id);
       const parts = (scene.layers.subject ?? []).map((placed) => placed.part).sort();
       const figure = scene.figure === undefined ? null : [scene.figure.pose, scene.figure.look];
-      const key = JSON.stringify([parts, figure, (scene.crowd ?? []).map((extra) => [extra.pose, extra.look])]);
+      const key = JSON.stringify([parts, figure, (scene.extras ?? []).map((extra) => [extra.pose, extra.look])]);
       expect(subjects.get(key), `${card.id} draws the subject of ${subjects.get(key) ?? ""}`).toBeUndefined();
       subjects.set(key, card.id);
     }
@@ -206,40 +206,32 @@ describe("R3393000 Meditative+ and Training Grounds drawn as scenes", () => {
     }
   });
 
-  it("R3393000 a crowd figure stands at the end of its layer, a fade scales opacity, and the proofs draw what they drew before", () => {
+  it("R3393000 a fade scales a placement's, a figure's and an extra figure's opacity, keeping every shape, and the proofs draw what they drew before", () => {
     const standing: FigureRecipe = { x: 30, y: 80, scale: 0.6, pose: "pose-stand", look: FIGURE_DEFAULT_LOOK };
-    const extra: FigureRecipe = { ...standing, layer: "mid" };
     const plain: SceneRecipe = {
       family: "core",
       sky: ["blue-800", "sky-300"],
       light: { x: 50, y: 50, r: 30, paint: "white", opacity: 0.3 },
-      crowd: [extra],
+      figure: { ...standing, x: 60, pose: "pose-guard" },
+      extras: [{ ...standing, layer: "mid" }],
       layers: { mid: [{ part: "hills", x: 50, y: 70 }], subject: [{ part: "crate", x: 50, y: 80 }] },
     };
-    const ghostly: SceneRecipe = { ...plain, crowd: [{ ...extra, fade: 0.5 }], layers: { ...plain.layers, mid: [{ part: "hills", x: 50, y: 70, fade: 0.5 }] } };
-    const drawn = composeScene(plain, "crowd-proof");
-    const faded = composeScene(ghostly, "crowd-proof");
-    const hills = drawn.filter((shape) => shape.part === "hills").length;
-    const crowd = drawn.filter((shape) => shape.part === "pose-stand" || lookParts(FIGURE_DEFAULT_LOOK).includes(shape.part)).length;
-    expect(hills).toBeGreaterThan(0);
-    expect(crowd).toBeGreaterThan(0);
-    // The hills, then the crowd figure, both in the middle layer, then the subject layer's crate.
-    expect(drawn.slice(0, hills).every((shape) => shape.part === "hills" && shape.layer === "mid")).toBe(true);
-    expect(drawn.slice(hills, hills + crowd).every((shape) => shape.part !== "hills" && shape.part !== "crate" && shape.layer === "mid")).toBe(true);
-    expect(drawn.slice(hills + crowd).every((shape) => shape.part === "crate" && shape.layer === "subject")).toBe(true);
-    // A fade keeps every shape and halves its opacity.
+    const ghostly: SceneRecipe = {
+      ...plain,
+      figure: { ...standing, x: 60, pose: "pose-guard", fade: 0.5 },
+      extras: [{ ...standing, layer: "mid", fade: 0.5 }],
+      layers: { ...plain.layers, mid: [{ part: "hills", x: 50, y: 70, fade: 0.5 }] },
+    };
+    const drawn = composeScene(plain, "fade-proof");
+    const faded = composeScene(ghostly, "fade-proof");
+    expect(new Set(drawn.map((shape) => shape.part))).toEqual(new Set(["hills", "crate", "pose-stand", "pose-guard", ...lookParts(FIGURE_DEFAULT_LOOK)]));
+    // A fade keeps every shape and scales its opacity; the crate, which fades not, keeps its own.
     expect(faded.map((shape) => shape.d)).toEqual(drawn.map((shape) => shape.d));
     faded.forEach((shape, k) => {
       const was = drawn[k];
       if (was === undefined) throw new Error(`no shape ${k}`);
-      expect(shape.opacity).toBeCloseTo(shape.part === "crate" ? was.opacity : was.opacity / 2);
+      expect(shape.opacity, `${shape.part} #${k}`).toBeCloseTo(shape.part === "crate" ? was.opacity : was.opacity / 2);
     });
-    // A crowd figure in the subject layer stands before the recipe's own figure.
-    const both = composeScene({ ...plain, crowd: [standing], figure: { ...standing, x: 60, pose: "pose-guard" } }, "crowd-proof");
-    const first = both.findIndex((shape) => shape.part === "pose-stand");
-    const figure = both.findIndex((shape) => shape.part === "pose-guard");
-    expect(both.slice(0, first).some((shape) => shape.part === "crate")).toBe(true);
-    expect(first).toBeLessThan(figure);
     // The proofs, which use neither, draw what they drew before this pass.
     for (const [id, [base, radiant]] of Object.entries(PROOF_PINS)) {
       const card = CATALOG[id];

@@ -39,6 +39,10 @@ export type SfxId =
   | "playImpact" | "trapSnap"
   // R3342000: the tile aura touch bell.
   | "auraTouch"
+  // R3334000–R3334003: the Starship's moments: a module docking, the launch's ignition and roar, a
+  // broadside's weapons by kind, an unarmed ship's ram and its wreck.
+  | "starshipDock" | "starshipIgnite" | "starshipRoar" | "starshipBeam" | "starshipRepeater" | "starshipCannon"
+  | "starshipFlak" | "starshipLauncher" | "starshipRam" | "starshipWreck"
   // R3400001: Meditative+'s and Training Grounds' signature Legendaries and Mythics, one each (signatureCues.ts).
   | "inkSummit" | "plowHeave" | "cursorTear" | "seanceChant" | "slateRap" | "diceGong" | "timberLash" | "pencilArpeggio";
 
@@ -57,7 +61,8 @@ export type SfxParams = {
    * clockTick: how far into the last ten seconds (1 at ten left, 10 at one left). chaosRoll: how
    * many effects the roll names, one ding each, clamped to [0, CHAOS_REVEAL_MAX] (default 1).
    * reactorPulse: how close the Battleship's Meltdown layer is to its blast, 1 (a tick) to 10 (the blast).
-   * organ (R3338000): which Terminus set piece's root, 1 to 9, clamped (default 1).
+   * organ (R3338000): which Terminus set piece's root, 1 to 9, clamped (default 1). starshipDock (R3334000):
+   * the ship's pieces once the module has docked, its hum a step higher for each, clamped (default 1).
    */
   amount?: number;
   /** true when the event is the viewer's own (turnStart, mana): a brighter variant. */

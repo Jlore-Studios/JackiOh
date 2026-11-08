@@ -23,7 +23,7 @@ import {
 } from "../game/animations.ts";
 import { CatalogContext, type CardLookup } from "../game/catalog.ts";
 import { boardShakeSink, resolveAnchor } from "./anchors.ts";
-import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE, FX_NEXT_REFRESH_MODIFIER_ID } from "./constants.ts";
+import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE, FX_MOBILE_WIDTH, FX_NEXT_REFRESH_MODIFIER_ID } from "./constants.ts";
 import { delayCues, planFx, planHandover, planLethal, planResult } from "./cues.ts";
 import { planStillCallouts } from "./motifs/beats.ts";
 import { planAnomalyStill } from "./anomaly.ts";
@@ -146,8 +146,9 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
 
   // What the runner's listener reads: a ref, so the subscription is made once per queue and never
   // torn down between two entries of one burst.
-  const live = useRef({ enabled, still, intensity, lookup, seams, view, latest: latest ?? view });
-  live.current = { enabled, still, intensity, lookup, seams, view, latest: latest ?? view };
+  const bigMoments = settings.bigMoments;
+  const live = useRef({ enabled, still, intensity, lookup, seams, view, latest: latest ?? view, bigMoments });
+  live.current = { enabled, still, intensity, lookup, seams, view, latest: latest ?? view, bigMoments };
 
   const planEnv = (): FxPlanEnv => {
     const current = live.current;
@@ -157,6 +158,9 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
       card: override ?? ((defId: string) => catalogFacts(live.current.lookup, defId)),
       memory: memory.current!,
       next: current.latest,
+      // R3334001: the Starship's cinematic plays at Big moments "full" only, and a phone's throws fewer particles.
+      bigMoments: current.bigMoments,
+      compact: (current.seams?.viewportWidth?.() ?? window.innerWidth) < FX_MOBILE_WIDTH,
     };
   };
 

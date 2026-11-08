@@ -192,6 +192,10 @@ describe("R3331000 the scene kits", () => {
         painted.add(figure.look.skin);
         painted.add(figure.look.cloth);
       }
+      for (const extra of scene.extras ?? []) {
+        painted.add(extra.look.skin);
+        painted.add(extra.look.cloth);
+      }
     }
     for (const name of painted) expect(inRadiantGold(SCENE_PALETTE[name]), name).toBe(false);
     // And what each recipe card's base face prints: every fill and stroke, its sky and its glow.
@@ -231,9 +235,10 @@ describe("R3331000 the scene kits", () => {
 describe("R3331000 the five proof cards", () => {
   it("R3331000 the five proof cards draw their scenes, base and Radiant, with one geometry", () => {
     expect(SCENE_BOX).toBe(ART_BOX);
-    // R3393000: and every Meditative+ and Training Grounds entry, each drawn as setScenes.test.ts proves.
+    // The proofs, every Classic+ entry (R3390000, classicPlusScenes.test.ts) and every Meditative+ and Training Grounds
+    // entry (R3393000, setScenes.test.ts).
     const passes = Object.values(CATALOG).filter((card) => card.set === "Meditative+" || card.set === "Training Grounds").map((card) => card.id);
-    expect(Object.keys(SCENE_RECIPES).sort()).toEqual([...PROOFS, ...passes].sort());
+    expect(Object.keys(SCENE_RECIPES).filter((id) => !id.startsWith("classicplus-")).sort()).toEqual([...PROOFS, ...passes].sort());
     for (const id of PROOFS) {
       const card = def(id);
       const shapes = composeScene(recipe(id), id);

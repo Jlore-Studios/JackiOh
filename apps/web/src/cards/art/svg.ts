@@ -24,7 +24,7 @@ import { partDraws, partHolds, restyledSvg, type ArtPart, type ArtRestyle } from
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
 import { sceneRecipeOf } from "./scene.ts";
 import { starshipArtKey, type StarshipArt } from "./starshipHulls.ts";
-import { ANOMALY_SEED_PREFIX, anomalySvg, starshipModuleIconSvg, starshipSvg, stinkyscapeSvg, type ShipArt } from "./stinkyscape.ts";
+import { ANOMALY_SEED_PREFIX, anomalySvg, starshipModuleIconSvg, starshipModuleSvg, starshipSvg, stinkyscapeSvg, type ShipArt } from "./stinkyscape.ts";
 import { legacySvg, trainingGroundsSvg } from "./traininggrounds.ts";
 import { compositionFor, RADIANT_PALETTE, themeFor, type ArtThemeId, type Composition } from "./themes.ts";
 
@@ -248,6 +248,17 @@ export function starshipModuleIconUri(defId: string, radiant: boolean): string {
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
   const uri = `${DATA_PREFIX}${encodeSvg(starshipModuleIconSvg(defId, radiant))}`;
+  proceduralCache.set(key, uri);
+  return uri;
+}
+
+/** R3334000: a piece's module alone (stinkyscape.ts `starshipModuleSvg`), the docking sprite, as a data URI, cached by the piece and its face. */
+export function starshipModuleUri(defId: string, radiant: boolean): string {
+  const key = `starship-sprite|${defId}|${radiant}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const uri = `${DATA_PREFIX}${encodeSvg(starshipModuleSvg(defId, radiant))}`;
   proceduralCache.set(key, uri);
   return uri;
 }

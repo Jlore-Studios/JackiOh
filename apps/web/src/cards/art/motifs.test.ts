@@ -49,6 +49,13 @@ function faceSpec(card: CardDef, radiant: boolean): ArtSpec {
   return artSpec(card.id, theme, compositionOf(card.id, type), radiant, motifFor(card.name, theme));
 }
 
+/** The procedural painter's own picture of a face, which every card with no scene recipe draws (R3390000: Classic+ draws scenes). */
+function paintedSpec(card: CardDef, radiant: boolean): ArtSpec {
+  const type: CardType = (radiant ? card.radiant.type : card.base.type) ?? card.type;
+  const theme = themeFor(card.tags, type);
+  return artSpec(card.id, theme, compositionOf(card.id, type), radiant, motifFor(card.name, theme), null);
+}
+
 function svgOf(spec: ArtSpec): string {
   return decodeURIComponent(artDataUri(spec).slice(SVG_PREFIX.length));
 }
@@ -104,20 +111,20 @@ describe("R503 the Book, Pancake and AI families", () => {
   });
 
   it("R503 each family's twist: a Book card's pages and ink drops, a Pancake card's syrup, an AI card's traces and pixels", () => {
-    const book = faceSpec(def("classicplus-054"), false);
+    const book = paintedSpec(def("classicplus-054"), false);
     expect(book.moteShape).toBe("drop");
     expect(svgOf(book)).toMatch(/<path d="M[\d.]+ [\d.]+L[\d.]+ [\d.]+A[\d.]+ [\d.]+ 0 1 1/);
 
-    const pancake = faceSpec(def("classicplus-012-1"), false);
+    const pancake = paintedSpec(def("classicplus-012-1"), false);
     // Syrup along the top edge: a layer that starts with a band across the whole top of the box.
     expect(pancake.ridges.some((ridge) => ridge.d.startsWith("M0 0L100 0"))).toBe(true);
 
-    const ai = faceSpec(def("classicplus-t-ai-08"), false);
+    const ai = paintedSpec(def("classicplus-t-ai-08"), false);
     expect(ai.moteShape).toBe("pixel");
     const svg = svgOf(ai);
     expect(svg).toContain("<rect x=");
     // A plain Trap of the same composition draws fewer layers: the traces, glitch and scanlines are the family's.
-    const plain = artSpec("classicplus-t-ai-08", "trap", "sigil", false, null);
+    const plain = artSpec("classicplus-t-ai-08", "trap", "sigil", false, null, null);
     expect(ai.ridges.length).toBe(plain.ridges.length + 3);
   });
 
@@ -310,7 +317,7 @@ describe("R503 how a motif is drawn", () => {
   });
 
   it("R503 a tribe keeps its emblem and carries a hero motif in a top corner, where the accent would go", () => {
-    const flagbearer = faceSpec(def("classicplus-046"), false);
+    const flagbearer = paintedSpec(def("classicplus-046"), false);
     expect(flagbearer.theme).toBe("felinor");
     expect(EMBLEM_POOLS.felinor).toContain(flagbearer.emblem.glyph);
     expect(flagbearer.accent).toBeNull();
@@ -351,8 +358,8 @@ describe("R503 how a motif is drawn", () => {
   });
 
   it("R503 the circuits and waves motifs draw a pattern as well", () => {
-    const datacenter = faceSpec(def("classicplus-078"), false);
-    const bare = artSpec("classicplus-078", "field-spell", "landscape", false, null);
+    const datacenter = paintedSpec(def("classicplus-078"), false);
+    const bare = artSpec("classicplus-078", "field-spell", "landscape", false, null, null);
     expect(datacenter.ridges.length).toBe(bare.ridges.length + 1);
     const deep = faceSpec(def("classic-090"), false);
     const shallow = artSpec("classic-090", "quickdraw", "landscape", false, null);

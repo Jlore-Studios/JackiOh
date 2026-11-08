@@ -2,6 +2,8 @@
 // Glowy Jelly Bean and Classic+ #24 Crushing Walls (cardFx.ts), planned the way FxLayer plans them,
 // from the redacted stream alone. The last block drives the real engine (audio/test/realGame.ts).
 // R3332000: every entrance an entry names is a recipe, and a Field Spell's plays as it lands face up.
+// R3389000: a signature's recipe claims what its card does outside its own play: a cast its play makes,
+// an event naming it as the source, and a whole pile's one entry; never for a hidden card (R202).
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -11,7 +13,7 @@ import { testid, type Side } from "../game/contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
 import { castOnDrawViews } from "../audio/test/realGame.ts";
 import { CATALOG } from "../wire/cards.ts";
-import { entranceKeyOf, planCardFx } from "./cardFx.ts";
+import { entranceKeyOf, planCardFx, planSignatureZone, signaturePlayOf, sourceIdOf } from "./cardFx.ts";
 import { CARD_RECIPES } from "./cards/bespoke.ts";
 import { FX_CARD_TABLE, parseFxCardTable } from "./cards/tables.ts";
 import { ENTRANCES } from "./entrances.ts";
@@ -449,5 +451,84 @@ describe("R502 real games, both seats", () => {
     const said = JSON.stringify(theirs?.cues);
     expect(said).not.toContain(named?.instanceId ?? "");
     expect(said).not.toContain(named?.defId ?? "");
+  });
+});
+
+describe("R3389000 a signature's recipe outside its own play", () => {
+  /** Each event of `events` the card recipes claim, planned as the layer plans them: remember, then plan. */
+  function claims(events: readonly GameEvent[], view: PlayerView, env: FxPlanEnv = envOf()): { event: GameEvent; cues: FxCue[]; row: string }[] {
+    return planEntries(events, withEvents(view, [...events]), false).flatMap((entry) => {
+      env.memory.remember(entry.events);
+      return entry.events.flatMap((event) => {
+        const claim = planCardFx(event, { entry, view: entry.view, env, D: entry.durationMs });
+        return claim === null ? [] : [{ event, ...claim }];
+      });
+    });
+  }
+  const play = (player: PlayerId, instanceId: string, defId: string, costPaid = 2): GameEvent => ({ type: "cardPlayed", player, instanceId, defId, costPaid });
+
+  it("R3389000 a signature's recipe claims nested casts and events naming it; a hidden source keys none", () => {
+    const view = fullBoardView();
+    // The memory lists every open play, outermost first, each a copy.
+    const env = envOf();
+    env.memory.remember([play("p1", "tyr", "classic-056", 4), play("p1", "c1", "core-016", 0)]);
+    expect(env.memory.plays().map((open) => open.instanceId)).toEqual(["tyr", "c1"]);
+    expect(env.memory.plays().at(-1)).toEqual(env.memory.resolving());
+    (env.memory.plays()[0]?.seen as Record<string, number>).cardPlayed = 99;
+    expect(env.memory.plays()[0]?.seen.cardPlayed).toBe(1);
+
+    // (a) A cast Spell Tyrant's play makes is its recipe's: the cast's own entry draws nothing of it.
+    const cast = claims([play("p1", "tyr", "classic-056", 4), play("p1", "c1", "core-016", 0), { type: "exiled", instanceId: "c1", defId: "core-016", owner: "p1" }], view);
+    expect(cast.map((claim) => [claim.event.type, claim.row])).toEqual([
+      ["cardPlayed", "keep"],
+      ["exiled", "replace"],
+    ]);
+    // Around a hidden play, or a play whose card has no signature recipe (Recycle's is no signature), nothing claims it.
+    expect(claims([play("p2", "hidden", "hidden"), play("p2", "c2", "core-016", 0), { type: "exiled", instanceId: "c2", defId: "core-016", owner: "p2" }], view)).toEqual([]);
+    expect(FX_CARD_TABLE.get("classic-030")).toEqual({ kind: "bespoke", key: "recycleLoop" });
+    expect(claims([play("p1", "rec", "classic-030"), play("p1", "c3", "core-016", 0), { type: "shuffledIn", player: "p1", instanceId: "s1", defId: "core-003", position: 0 }], view)).toEqual([]);
+
+    // (b) An event naming its card as the source: a redirect's, a counter's, an Activate's, a quest's.
+    expect(sourceIdOf({ type: "redirected", what: "target", fromId: "a", toId: "j", byInstanceId: "j" })).toBe("j");
+    expect(sourceIdOf({ type: "countered", player: "p2", instanceId: "s", defId: "core-016", byInstanceId: null, to: "graveyard" })).toBeNull();
+    expect(sourceIdOf({ type: "activated", player: "p1", instanceId: "rod", defId: "classic-007", ability: "activate" })).toBe("rod");
+    expect(sourceIdOf({ type: "questCompleted", player: "p1", instanceId: "deep", quest: "q1" })).toBe("deep");
+    expect(sourceIdOf({ type: "damage", sourceId: "x", targetId: "y", amount: 1, combat: false })).toBeNull();
+    // Found face up on the board, or in a readable landing the memory holds, as a hook of its own.
+    const deep = fullBoardView();
+    const field = deep.you.backrow[0];
+    if (field === null || field === undefined || field.faceDown) throw new Error("a face-up Field Spell");
+    deep.you.backrow[0] = { ...field, instanceId: "deep", defId: "classic-090" };
+    expect(signaturePlayOf("deep", deep, createFxMemory())).toEqual({ player: "p1", instanceId: "deep", defId: "classic-090", castOnDraw: false, step: 0, seen: {}, hook: "trigger" });
+    const quest = claims([{ type: "questProgressed", player: "p1", instanceId: "deep", quest: "q1", progress: 1, goal: 3 }], deep);
+    expect(quest.map((claim) => claim.event.type)).toEqual(["questProgressed"]);
+    const remembered = createFxMemory();
+    remembered.remember([{ type: "summoned", player: "p2", instanceId: "joro", defId: "classic-033", row: "units", lane: 2 }]);
+    expect(signaturePlayOf("joro", view, remembered)?.defId).toBe("classic-033");
+    const aim = view.opponent.units[0]?.instanceId ?? "";
+    const web = claims([play("p1", "hit", "core-016"), { type: "summoned", player: "p2", instanceId: "joro", defId: "classic-033", row: "units", lane: 3 }, { type: "redirected", what: "target", fromId: aim, toId: "joro", byInstanceId: "joro" }], view);
+    expect(web.map((claim) => claim.event.type)).toEqual(["summoned", "redirected"]);
+
+    // R202: a hidden source, a face-down card and a sentinel landing key none.
+    expect(signaturePlayOf("hidden", view, remembered)).toBeUndefined();
+    const sentinel = createFxMemory();
+    sentinel.remember([{ type: "trapFired", instanceId: "tax", defId: "hidden", controller: "p2", row: "backrow", lane: 2 }]);
+    expect(signaturePlayOf("tax", view, sentinel)).toBeUndefined();
+    expect(claims([{ type: "redirected", what: "target", fromId: aim, toId: "hidden", byInstanceId: "hidden" }], view)).toEqual([]);
+    expect(claims([{ type: "activated", player: "p2", instanceId: "nobody", defId: "hidden", ability: "activate" }], view)).toEqual([]);
+    expect(JSON.stringify([...cast, ...quest, ...web].map((claim) => claim.cues))).not.toMatch(/classic-\d{3}|hidden/);
+
+    // (c) A whole pile's one entry: Second Wind's backs fly beside the wave; another card's play draws nothing there.
+    const wind = createFxMemory();
+    wind.remember([play("p1", "wind", "classic-028", 0)]);
+    const exiles = [0, 1, 2].map((k): GameEvent => ({ type: "exiled", instanceId: `deck-${String(k)}`, defId: "core-003", owner: "p1" }));
+    const zone: AnimationEntry = { events: exiles, type: "exiled", durationMs: 600, frames: new Map(), view, zone: { side: "you", pile: "library", count: 3, events: 3 } };
+    wind.remember(exiles);
+    const backs = planSignatureZone(zone, view, envOf({ memory: wind }));
+    expect(backs.filter((cue) => cue.kind === "ghost")).toHaveLength(3);
+    const other = createFxMemory();
+    other.remember([play("p1", "c4", "core-016"), ...exiles]);
+    expect(planSignatureZone(zone, view, envOf({ memory: other }))).toEqual([]);
+    expect(planSignatureZone({ ...zone, zone: undefined }, view, envOf({ memory: wind }))).toEqual([]);
   });
 });
