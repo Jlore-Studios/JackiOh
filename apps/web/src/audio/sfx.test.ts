@@ -46,6 +46,8 @@ const UNION_ORDER: SfxId[] = [
   // R3334000–R3334003: the Starship's moments.
   "starshipDock", "starshipIgnite", "starshipRoar", "starshipBeam", "starshipRepeater", "starshipCannon",
   "starshipFlak", "starshipLauncher", "starshipRam", "starshipWreck",
+  // R3400001: the signatures of Meditative+'s and Training Grounds' Legendaries and Mythics.
+  "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -165,6 +167,15 @@ const DURATION_MS: Record<SfxId, number> = {
   starshipLauncher: 450,
   starshipRam: 500,
   starshipWreck: 1100,
+  // R3400001.
+  inkSummit: 1100,
+  plowHeave: 1300,
+  cursorTear: 1400,
+  seanceChant: 1500,
+  slateRap: 1300,
+  diceGong: 1600,
+  timberLash: 1200,
+  pencilArpeggio: 1400,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];
@@ -911,7 +922,9 @@ describe("R3334000 the Starship's moments", () => {
 
   it("R3334000 ten sounds keep the contract and differ", () => {
     expect(IDS).toHaveLength(10);
-    expect(UNION_ORDER.slice(-IDS.length)).toEqual(IDS);
+    // Registered as one run in the union's order, wherever later sounds join it.
+    const first = UNION_ORDER.indexOf(IDS[0] ?? "starshipDock");
+    expect(UNION_ORDER.slice(first, first + IDS.length)).toEqual(IDS);
     const runs: Run[] = [];
     for (const id of IDS) {
       expect(SFX[id].durationMs, id).toBe(DURATION_MS[id]);

@@ -42,7 +42,9 @@ export type SfxId =
   // R3334000–R3334003: the Starship's moments: a module docking, the launch's ignition and roar, a
   // broadside's weapons by kind, an unarmed ship's ram and its wreck.
   | "starshipDock" | "starshipIgnite" | "starshipRoar" | "starshipBeam" | "starshipRepeater" | "starshipCannon"
-  | "starshipFlak" | "starshipLauncher" | "starshipRam" | "starshipWreck";
+  | "starshipFlak" | "starshipLauncher" | "starshipRam" | "starshipWreck"
+  // R3400001: Meditative+'s and Training Grounds' signature Legendaries and Mythics, one each (signatureCues.ts).
+  | "inkSummit" | "plowHeave" | "cursorTear" | "seanceChant" | "slateRap" | "diceGong" | "timberLash" | "pencilArpeggio";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains

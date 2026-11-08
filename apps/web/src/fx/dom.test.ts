@@ -9,6 +9,7 @@ import { ANOMALY_CODES } from "../cards/anomalies.ts";
 import { anomalyMarkup } from "../cards/art/svg.ts";
 import { FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
 import { mountDomEffect, mountHold, type DomEffect } from "./dom.ts";
+import { TAKEOVER_ART_PARTS } from "./takeoverArt.ts";
 import type { FxBox, FxDomCue, FxHoldCue } from "./types.ts";
 
 const AT: FxBox = { x: 100, y: 200, width: 80, height: 120 }; // center (140, 260)
@@ -222,6 +223,51 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect(folded.getAttribute("data-side")).toBe("both");
     expect([...folded.children].map((child) => child.className)).toEqual(["fx-setPiece-edges", "fx-setPiece-light"]);
     expect(mountDomEffect(root, fold, {})).toBeNull();
+  });
+
+  it("R3400000 a takeover with art mounts its parts; prismatic none", () => {
+    const takeover: FxDomCue = { kind: "takeover", look: "napkin", tint: TINT, at: anchor, landMs: 1240, delayMs: 0, durationMs: 1800 };
+    const el = expectMounted(mountDomEffect(root, takeover, { at: AT }), takeover);
+    expect(el.getAttribute("data-look")).toBe("napkin");
+    expect(cssVar(el, "--fx-land")).toBe("1240ms");
+    // The art sits over the dark and under the sweep, the rays and the wave, one element a part.
+    expect([...el.children].map((child) => child.className)).toEqual(["fx-takeover-dark", "takeover-art", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+    const art = el.querySelector(".takeover-art");
+    expect(art?.getAttribute("data-look")).toBe("napkin");
+    expect([...(art?.children ?? [])].map((child) => child.className)).toEqual(TAKEOVER_ART_PARTS.napkin?.map((part) => `takeover-art-${part}`));
+    expect(textNodeCount(el)).toBe(0);
+    el.remove();
+    for (const look of ["summit", "canvas"] as const) {
+      const own = expectMounted(mountDomEffect(root, { ...takeover, look }, { at: AT }), { ...takeover, look });
+      expect([...(own.querySelector(".takeover-art")?.children ?? [])].map((child) => child.className), look).toEqual(TAKEOVER_ART_PARTS[look]?.map((part) => `takeover-art-${part}`));
+      own.remove();
+    }
+    // A look without art mounts the four layers alone.
+    const shared: FxDomCue = { ...takeover, look: "prismatic" };
+    const plain = expectMounted(mountDomEffect(root, shared, { at: AT }), shared);
+    expect([...plain.children].map((child) => child.className)).toEqual(["fx-takeover-dark", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+    expect(plain.querySelector(".takeover-art")).toBeNull();
+  });
+
+  it("R3400001 a figure covers its box with its figure, tint, side and size", () => {
+    const figure: FxDomCue = { kind: "figure", figure: "chalkboard", at: anchor, tint: TINT, delayMs: 0, durationMs: 700 };
+    const el = expectMounted(mountDomEffect(root, figure, { at: AT }), figure);
+    expectCovering(el, AT);
+    expect(el.getAttribute("data-figure")).toBe("chalkboard");
+    expect(cssVar(el, "--fx-tint-rim")).toBe(TINT.rim);
+    expect(cssVar(el, "--fx-tint-core")).toBe(TINT.core);
+    expect(cssVar(el, "--fx-tint-glow")).toBe(TINT.glow);
+    expect(el.hasAttribute("data-side")).toBe(false);
+    expect(el.hasAttribute("data-size")).toBe(false);
+    // A shape alone: no child and no text, so it names no card (R202).
+    expect(el.childElementCount).toBe(0);
+    el.remove();
+    const mirrored: FxDomCue = { ...figure, figure: "die", side: "opponent", size: "small" };
+    const small = expectMounted(mountDomEffect(root, mirrored, { at: AT }), mirrored);
+    expect(small.getAttribute("data-side")).toBe("opponent");
+    expect(small.getAttribute("data-size")).toBe("small");
+    small.remove();
+    expect(mountDomEffect(root, figure, {})).toBeNull();
   });
 
   it("R2801000 launch mounts its counts, flame and trail; still when asked", () => {

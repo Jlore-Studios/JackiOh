@@ -2,6 +2,7 @@
 
 import type { CardType, GameEvent, KeywordKind, PlayerId, PlayerView, Rarity, Row, Tag } from "@jackioh/shared";
 import type { Side } from "../game/contract.ts";
+import type { FxFigure } from "./figures.ts";
 import type { FxCardHook } from "./motifs/names.ts";
 import type { FxBigMoments } from "./settings.ts";
 
@@ -160,9 +161,10 @@ export type FxFogCue = {
  * R2722001: a Mythic's takeover, its look a marquee card's own or the shared prismatic one. The board
  * darkens, a card-shaped silhouette (never a face, R202) sweeps across it into `at`, light rays turn
  * and a shockwave crosses both sides when it lands at `landMs`, all inside the entry and gone within
- * the effects' tail (R200).
+ * the effects' tail (R200). R3400000: "summit", "canvas" and "napkin" draw art of their own over the dark
+ * (takeoverArt.ts), the same art Reduce Motion's still shows (game/TakeoverStill.tsx).
  */
-export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai";
+export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai" | "summit" | "canvas" | "napkin";
 export type FxTakeoverCue = { kind: "takeover"; look: TakeoverLook; tint: FxTint; at: FxAnchor; landMs: number; delayMs: number; durationMs: number };
 /**
  * R2800000: a board clear's set piece over the whole layer, centred on `at`: a `vortex` (the board
@@ -295,6 +297,21 @@ export type FxShipCue = {
   durationMs: number;
 };
 /**
+ * R3400001: one of a signature's drawn figures (figures.ts) covering `at`'s box in `tint`: a scroll, a
+ * snowplow, a chalkboard, a die. `side` mirrors it for the other seat's play; `small` draws it at a second
+ * card's size. A figure is a shape, never a card face (R202).
+ */
+export type FxFigureCue = {
+  kind: "figure";
+  figure: FxFigure;
+  at: FxAnchor;
+  tint: FxTint;
+  delayMs: number;
+  durationMs: number;
+  side?: "you" | "opponent";
+  size?: "small";
+};
+/**
  * R3337003: an Anomaly's rift down the middle of `side`'s half of the field, centred on `at`: it tears
  * open at `tearMs`, every card it takes is drawn into it (the stage's `pull`), and it flares white at
  * `flareMs`. It names no card (R202).
@@ -403,7 +420,8 @@ export type FxDomCue =
   | FxCinematicCue
   | FxDoctrineCue
   | FxWreckCue
-  | FxScorchCue;
+  | FxScorchCue
+  | FxFigureCue;
 export type FxStageCue = FxHoldCue | FxConcealCue | FxLungeCue | FxPullCue;
 export type FxCue = FxCanvasCue | FxShakeCue | FxDomCue | FxStageCue;
 

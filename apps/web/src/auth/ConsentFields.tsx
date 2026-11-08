@@ -152,11 +152,11 @@ export function TermsAgree({
         <label htmlFor={boxId}>
           {before}
           <a className="consent-link" href={paths.terms} target="_blank" rel="noopener noreferrer">
-            {t("Terms")}
+            {t("Terms of service")}
           </a>
           {between}
           <a className="consent-link" href={paths.privacy} target="_blank" rel="noopener noreferrer">
-            {t("Privacy Policy")}
+            {t("Privacy policy")}
           </a>
           {after}
         </label>

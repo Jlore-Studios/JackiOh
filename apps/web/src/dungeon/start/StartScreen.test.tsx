@@ -1,4 +1,4 @@
-// B14–B19 (DR14 part D, #2705): the Dungeon Run's start screen. The run's rules are `crates/run`'s, so
+// B14–B19 (DR14 part D, #2705): the Dungeon run's start screen. The run's rules are `crates/run`'s, so
 // `../wasm/index.ts`'s run bindings are the fixtures' scripted ones and the `Dungeon` is a plain object
 // whose verbs record what the screen sends them; the store's own behavior is `../store.test.ts`'s.
 // Time is frozen at a known UTC day so the daily seed is the one the fixtures' `runDailySeed` makes.
@@ -87,7 +87,7 @@ describe("B14 the modes", () => {
 describe("R3223000 the start screen's title", () => {
   it("R3223000 the screen has one visible h1, the PageTitle", () => {
     show();
-    expectOnePageTitle("Dungeon Run");
+    expectOnePageTitle("Dungeon run");
     expect(screen.queryByRole("heading", { name: "JackiOh" })).toBeNull();
   });
 });

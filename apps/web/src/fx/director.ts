@@ -252,7 +252,8 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       case "cinematic":
       case "doctrine":
       case "wreck":
-      case "scorch": {
+      case "scorch":
+      case "figure": {
         const box = measure(cue.at);
         if (box === null) return;
         boxes = { at: box };

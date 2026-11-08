@@ -42,7 +42,7 @@ export const RELEASES: readonly Release[] = [
     summary: "The first set: 100 cards and 9 tokens, joined by The Coin in v0.1.0c and the Ghoul Token in v0.1.1.",
     technical: [
       "Hearthstone-style mana, combat and keywords on five lanes, with a backrow where Traps wait face-down.",
-      "Online play in Best of 1, Conquest (three decks, with a sealed deck pick before each game) and All Random.",
+      "Online play in Best of 1, Conquest (three decks, with a sealed deck pick before each game) and All random.",
       "Practice against an AI with three difficulties, with no account, and a four-lesson tutorial with a coach.",
       "Procedural sound effects and a voice line for every card.",
     ],
