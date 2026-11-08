@@ -17342,7 +17342,7 @@
       "started_at": "2026-11-07T22:11:12Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 2,
       "waiting_comment": 6711729065
     },
     "3401": {
