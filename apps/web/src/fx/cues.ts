@@ -17,7 +17,7 @@ import { sideOf, testid, type Side } from "../game/contract.ts";
 import { armorTookHalf, damageFeel, damageTier, playTier, UNIT_SLAM, type PlayTier } from "../game/damageFeel.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { brandCues } from "./brand.ts";
-import { castOnDrawCues, planCardFx, planCardMotif } from "./cardFx.ts";
+import { castOnDrawCues, planCardFx, planCardMotif, planSignatureZone } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
 import { rollCues } from "./rolls.ts";
 import { planSystemMoment, transmuteCues } from "./systemMoments.ts";
@@ -1226,7 +1226,8 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
     cues.push(...sweepCues(motif === null ? entry : { ...entry, events: entry.events.filter((event) => !replaced(event)) }, view, env));
     return cues;
   }
-  if (entry.zone !== undefined) return zoneCues(entry, view, env);
+  // R3389000: a signature's recipe draws beside a whole pile's one wave (Second Wind's deck blown away).
+  if (entry.zone !== undefined) return [...zoneCues(entry, view, env), ...planSignatureZone(entry, view, env)];
   if (entry.cast !== undefined) {
     // R3338000: a cast a Terminus card's signature holds (The Big Crunch's first) flares once the hold is over.
     const wait = entry.signature === undefined ? 0 : (entry.setPiece?.holdMs ?? 0);

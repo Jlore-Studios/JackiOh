@@ -6,19 +6,20 @@
 // its hooks (Nature Titan's, beside its Cry). R3332000: the frame, an `entrance` beside any entry of a Unit
 // or a Field Spell or alone, a `takeover` beside a Mythic's and a `signature` naming its first beat, and
 // the eight marquee cards' entrances and looks folded into it. R3400000: a bespoke entry's aura, a Unit's
-// `tile` aura, and Meditative+'s and Training Grounds' takeover looks and entrances among them.
+// `tile` aura, and Meditative+'s and Training Grounds' takeover looks and entrances among them. R3389000: a
+// signature look a signature's alone, and In Too Deep's "abyss".
 
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "../../wire/cards.ts";
-import { AURA_LOOK_NAMES, AURA_SCOPES } from "../aura/looks.ts";
+import { AURA_LOOK_NAMES, AURA_SCOPES, AURA_SIGNATURE_LOOK_NAMES } from "../aura/looks.ts";
 import { entranceKeyOf } from "../cardFx.ts";
 import { ENTRANCES } from "../entrances.ts";
 import { FX_PALETTES } from "../flavors.ts";
 import { FX_MOTIF_NAMES } from "../motifs/names.ts";
 import { SET_PIECE_KEYS } from "../setPieceKeys.ts";
 import { takeoverLookOf } from "../takeover.ts";
-import { FX_CARD_FILES, FX_CARD_TABLE, FX_STINKYSCAPE_SPLIT, OWN_TAKEOVER_LOOKS, isSignature, parseFxCardTable, type FxCardFile } from "./tables.ts";
+import { FX_CARD_FILES, FX_CARD_TABLE, FX_STINKYSCAPE_SPLIT, OWN_TAKEOVER_LOOKS, entryAura, isSignature, parseFxCardTable, type FxCardFile } from "./tables.ts";
 
 const IDS = Object.keys(CATALOG);
 const SPLIT = IDS.indexOf(FX_STINKYSCAPE_SPLIT);
@@ -145,10 +146,11 @@ describe("R2784000 the per-set effects tables", () => {
       "classicplus-024": { kind: "bespoke", key: "crushingWalls" },
     };
     for (const [defId, entry] of Object.entries(bespoke)) expect(FX_CARD_TABLE.get(defId), defId).toEqual(entry);
-    // R3332000: an entrance alone is a hooks entry of no hook, no longer a `{ bespoke }`.
-    expect(FX_CARD_TABLE.get("classic-056")).toEqual({ kind: "hooks", hooks: {}, entrance: "tyrantSigil" });
-    expect(FX_CARD_TABLE.get("classic-080")).toEqual({ kind: "hooks", hooks: {}, entrance: "bigBoom" });
-    expect(FX_CARD_TABLE.get("classic-045")).toEqual({ kind: "hooks", hooks: { cry: { motif: "flight" } }, entrance: "titanBloom" });
+    // R3332000: an entrance stands beside an entry's kind; R3389001 the three Classic marquees' grew into
+    // signatures, each its entrance beside a recipe of its own.
+    expect(FX_CARD_TABLE.get("classic-056")).toMatchObject({ kind: "bespoke", key: "tyrantCommand", entrance: "tyrantSigil", signature: true });
+    expect(FX_CARD_TABLE.get("classic-080")).toMatchObject({ kind: "bespoke", key: "craterLock", entrance: "bigBoom", signature: true });
+    expect(FX_CARD_TABLE.get("classic-045")).toMatchObject({ kind: "bespoke", key: "titanLeaf", entrance: "titanBloom", signature: true });
     expect(entranceKeyOf("classic-045")).toBe("titanBloom");
     expect(FX_CARD_TABLE.get("core-100")).toEqual({ kind: "setPiece", key: "voidFold", entrance: "voidCollapse", takeover: "void" });
     expect(entranceKeyOf("core-100")).toBe("voidCollapse");
@@ -246,12 +248,58 @@ describe("R2784000 the per-set effects tables", () => {
     expect(parse(`"core-087": { setPiece: "vortex", signature: true }`).get("core-087")).toEqual({ kind: "setPiece", key: "vortex", signature: true });
   });
 
-  it("R3332000 R3400000 the eight marquee cards keep their entrances and looks, beside the signatures'", () => {
+  it("R3389000 a signature's bespoke wears its own look, a Unit's on its tile; a signature look off a signature fails", () => {
+    const parse = (body: string) => parseFxCardTable("test.json5", `{ ${body} }`);
+    const says = (body: string, problem: RegExp): void => {
+      expect(() => parse(body)).toThrow(problem);
+    };
+    // A signature's recipe wears its own look, a Unit's on its own tile (R3400000).
+    expect(parse(`"classic-045": { bespoke: "titanLeaf", entrance: "titanBloom", aura: { look: "mossCreep", scope: "tile" }, signature: true }`).get("classic-045")).toEqual({
+      kind: "bespoke",
+      key: "titanLeaf",
+      entrance: "titanBloom",
+      aura: { look: "mossCreep", scope: "tile" },
+      signature: true,
+    });
+    // A Unit's signature hooks entry may wear one too.
+    expect(entryAura(parse(`"core-092": { entrance: "felinorAssembly", aura: { look: "silkWeb", scope: "tile" }, signature: true }`).get("core-092"))).toEqual({ look: "silkWeb", scope: "tile" });
+    // Every signature look parses on a signature and fails anywhere else, a hooks entry's or a recipe's.
+    for (const look of AURA_SIGNATURE_LOOK_NAMES) {
+      expect(entryAura(parse(`"classic-007": { bespoke: "sceptreLocket", entrance: "sceptrePlant", aura: { look: "${look}", scope: "zone" }, signature: true }`).get("classic-007")), look).toEqual({ look, scope: "zone" });
+      says(`"core-018": { aura: { look: "${look}", scope: "zone" } }`, new RegExp(`core-018: aura look "${look}" is a signature's own$`));
+      says(`"core-021": { bespoke: "manaCrack", aura: { look: "${look}", scope: "side" } }`, new RegExp(`core-021: aura look "${look}" is a signature's own$`));
+      says(`"core-004": { cry: { motif: "bolt" }, aura: { look: "${look}", scope: "tile" } }`, new RegExp(`core-004: aura look "${look}" is a signature's own$`));
+    }
+    // A set piece still holds nothing but its frame, and a Trap's aura no zone.
+    says(`"core-087": { setPiece: "vortex", aura: { look: "frost", scope: "side" }, signature: true }`, /core-087: a setPiece entry holds nothing else but its frame$/);
+    says(`"classic-009": { bespoke: "taxSeizure", aura: { look: "storm", scope: "zone" }, signature: true }`, /classic-009: a zone aura stands in a zone; this card is a Trap, whose aura is side or board$/);
+    // `entryAura` reads a hooks entry's and a bespoke's, and nothing else.
+    expect(entryAura(FX_CARD_TABLE.get("classic-090"))).toEqual({ look: "abyssWhirl", palette: "Dark/shadow", scope: "zone" });
+    expect(entryAura(FX_CARD_TABLE.get("classic-045"))).toEqual({ look: "mossCreep", scope: "tile" });
+    expect(entryAura(FX_CARD_TABLE.get("core-014"))).toEqual({ look: "storm", scope: "side" });
+    expect(entryAura(FX_CARD_TABLE.get("core-021"))).toBeUndefined();
+    expect(entryAura(undefined)).toBeUndefined();
+    // In Too Deep's takeover is its own.
+    expect(parse(`"classic-090": { bespoke: "shrineDescent", entrance: "abyssSurface", takeover: "abyss", signature: true }`).get("classic-090")).toMatchObject({ takeover: "abyss" });
+    expect(OWN_TAKEOVER_LOOKS.abyss).toBe(true);
+  });
+
+  it("R3332000 R3400000 R3389001 the eight marquee cards keep their entrances and looks, beside the signatures'", () => {
     const entrances = { "core-100": "voidCollapse", "classic-080": "bigBoom", "classic-045": "titanBloom", "classic-056": "tyrantSigil" };
     for (const [defId, key] of Object.entries(entrances)) expect(entranceKeyOf(defId), defId).toBe(key);
     // R3400000: the signature Units' entrances and the signature Mythics' own looks.
     const signatureEntrances = { "core-092": "felinorAssembly", "meditativeplus-024": "snowplowHeave", "traininggrounds-038": "chalkboardLesson", "traininggrounds-039-1": "golemLashing" };
     for (const [defId, key] of Object.entries(signatureEntrances)) expect(entranceKeyOf(defId), defId).toBe(key);
+    // R3389001: Classic's signatures' six new entrances, and In Too Deep's own takeover.
+    const classicEntrances = {
+      "classic-004": "seeingOrb",
+      "classic-007": "sceptrePlant",
+      "classic-028": "galeBurst",
+      "classic-033": "silkDrop",
+      "classic-085": "royalCloak",
+      "classic-090": "abyssSurface",
+    };
+    for (const [defId, key] of Object.entries(classicEntrances)) expect(entranceKeyOf(defId), defId).toBe(key);
     const looks = {
       "core-100": "void",
       "core-096": "pawn",
@@ -260,17 +308,20 @@ describe("R2784000 the per-set effects tables", () => {
       "meditativeplus-001": "summit",
       "meditativeplus-026": "canvas",
       "traininggrounds-040": "napkin",
+      "classic-090": "abyss",
     };
     for (const [defId, look] of Object.entries(looks)) expect(takeoverLookOf(defId), defId).toBe(look);
     expect(Object.keys(OWN_TAKEOVER_LOOKS).sort()).toEqual(Object.values(looks).sort());
-    // Every entrance the table names is a recipe, and the four marquees', the signature Units' and (R3334004) the
-    // Dormant Starship's and Starfleet Commander's are all of them.
+    // Every entrance the table names is a recipe, and the four marquees', the signature Units', (R3334004) the
+    // Dormant Starship's and Starfleet Commander's and Classic's signatures' are all of them.
     const named = [...FX_CARD_TABLE.keys()].flatMap((defId) => {
       const key = entranceKeyOf(defId);
       return key === undefined ? [] : [key];
     });
     for (const key of named) expect(typeof ENTRANCES[key], key).toBe("function");
-    expect(new Set(named)).toEqual(new Set([...Object.values(entrances), ...Object.values(signatureEntrances), "shipyardRollout", "fleetCommand"]));
+    expect(new Set(named)).toEqual(
+      new Set([...Object.values(entrances), ...Object.values(signatureEntrances), ...Object.values(classicEntrances), "shipyardRollout", "fleetCommand"]),
+    );
     expect(Object.keys(ENTRANCES).sort()).toEqual([...new Set(named)].sort());
   });
 
