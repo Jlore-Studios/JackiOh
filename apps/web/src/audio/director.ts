@@ -11,7 +11,10 @@
 // PLAYS IN PROGRESS (R506): a cue reads the innermost open play (`playing`), as #21 Hinder's rider and
 // #27's Radiant cards do. A sentinel play opens a frame no moment matches, and a sentinel draw marks nothing.
 // SET PIECES (R2800000): a board clear's held entry sends its bed as it starts (setPieceBeds.ts), and its
-// wipe's removals sound once, condensed, after the hold.
+// wipe's removals sound once, condensed, after the hold. THE STARSHIP (R3334000–R3334003): an entry of
+// its fuse run, broadside or wreck sends its own sounds as it starts, read off the view the entry shows
+// (starshipSounds.ts), and only the events they were sent for leave their row's swing or sting out
+// (`starshipSounded`): what is flushed unstarted (Reduce Motion) keeps it.
 
 import type { GameEvent, PlayerId, PlayerView, UnitView } from "@jackioh/shared";
 
@@ -26,6 +29,7 @@ import {
 } from "./constants.ts";
 import { cuesFor, type CueCard, type CueContext, type PlayFrame } from "./cues.ts";
 import { setPieceBed } from "./setPieceBeds.ts";
+import { starshipSounds } from "./starshipSounds.ts";
 import type { CardAudioTable, SoundCue, SoundSink } from "./types.ts";
 import { CARD_AUDIO } from "./voiceData.ts";
 
@@ -100,6 +104,8 @@ export function createSoundDirector(
    * too: only its own public cast names it (fx/castOnDraw.ts), and its sting names nothing.
    */
   let drawnLast: { instanceId: string; player: PlayerId } | null = null;
+  /** R3334002, R3334003: the events whose Starship sound has been sent in place of their row's. */
+  const starshipSent = new WeakSet<GameEvent>();
 
   function ctx(view: PlayerView, castOnDraw: string | null): CueContext {
     return {
@@ -112,6 +118,7 @@ export function createSoundDirector(
       playing: () => plays[plays.length - 1] ?? null,
       castOnDraw: (instanceId) => castOnDraw !== null && instanceId === castOnDraw,
       random: rng,
+      starshipSounded: (event) => starshipSent.has(event),
       ...(card === undefined ? {} : { card }),
     };
   }
@@ -250,6 +257,10 @@ export function createSoundDirector(
       if (at > 0) flush(owed.splice(0, at));
       // R2800000: a set piece's bed, laid across its hold.
       for (const cue of setPieceBed(entry)) send(cue, cue.delayMs);
+      // R3334000–R3334003: the Starship's own sounds, each at its beat of what the board draws.
+      const ship = starshipSounds(entry, entry.view);
+      for (const cue of ship.cues) send(cue, cue.delayMs);
+      for (const event of ship.standsFor) starshipSent.add(event);
 
       // Issue #124: a sweep or a whole-pile impact stands for many events, so voicing each would
       // stack a sound per card; condense the entry to one of each sfx and its most important line.

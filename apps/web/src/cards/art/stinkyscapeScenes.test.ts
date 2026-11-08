@@ -1,8 +1,8 @@
 // R3391000: Stinkyscape's scenes (stinkyscapeRecipes.ts). Each card of #3391's table, and no other Stinkyscape
 // card, draws from a recipe of its own that places every part its brief names; a Unit draws its character; each
 // clears its rarity's floor, richer the rarer; both faces share one geometry under the ceiling and outside
-// Radiant's gold window; no two pictures are alike; and the kit's new reach (craft, a placement's turn, further
-// figures) leaves every older recipe as it drew. The pixels are e2e/cypress/component/stinkyscape-scenes.cy.tsx's.
+// Radiant's gold window; no two pictures are alike; and the kit's new reach (craft and a placement's turn)
+// leaves every older recipe as it drew. The pixels are e2e/cypress/component/stinkyscape-scenes.cy.tsx's.
 
 import { describe, expect, it } from "vitest";
 
@@ -22,7 +22,7 @@ import { seededRandom } from "./hash.ts";
 import { artSeedOf } from "./pictures.ts";
 import { artSpec } from "./procedural.ts";
 import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } from "./richness.ts";
-import { composeScene, SCENE_LAYERS, SCENE_PALETTE, sceneRecipeOf, sceneUse, type PaletteName, type SceneLayer, type SceneRecipe } from "./scene.ts";
+import { composeScene, SCENE_LAYERS, SCENE_PALETTE, sceneRecipeOf, sceneUse, type PaletteName, type SceneLayer, type ScenePlacement, type SceneRecipe } from "./scene.ts";
 import { SCENE_KIT, type SceneryPartId } from "./sceneKit.ts";
 import { SCENE_RECIPES } from "./sceneRecipes.ts";
 import { isStinkyscapeArt, STARSHIP_PIECES } from "./stinkyscape.ts";
@@ -52,7 +52,7 @@ const MYTHIC_PARTS: Readonly<Record<string, SceneryPartId>> = {
   "stinkyscape-086": "fused-hull",
 };
 /** The parts that turn with their placement's `rotate`. */
-const POINTING: readonly SceneryPartId[] = ["beam", "light-ribbon", "spotlight", "meteor", "smoke-trail", "comet"];
+const POINTING: readonly SceneryPartId[] = ["beam", "light-stream", "spotlight", "meteor", "smoke-trail", "comet"];
 const PATH = /^M[-\d. MLQCAZ]+$/;
 /** The seeds every part is drawn from (scene.test.ts's). */
 const SEEDS = 40;
@@ -61,19 +61,19 @@ const BRIEF_PARTS: Readonly<Record<string, readonly string[]>> = {
   "stinkyscape-001": ["fighter", "dock-gantry", "ray-gun", "beam", "frost-shard"],
   "stinkyscape-002": ["scout", "ice-block", "star-glare", "frost-shard"],
   "stinkyscape-003": ["walker", "wreck", "regolith", "shockwave", "meteor", "smoke-trail"],
-  "stinkyscape-005": ["cockpit-frame", "cracked-mask", "light-ribbon"],
+  "stinkyscape-005": ["cockpit-frame", "cracked-mask", "light-stream"],
   "stinkyscape-006": ["skiff", "station", "vault-door", "credit-chips", "duffel", "pose-reach", "item-drill"],
   "stinkyscape-007": ["vault-door", "credit-chips", "rope", "comet", "light-grid"],
-  "stinkyscape-008": ["deck-floor", "cracker", "war-drum", "herb-sprig", "outfit-apron"],
+  "stinkyscape-008": ["deck-floor", "cracker", "war-drum", "herb-sprig", "outfit-work-apron"],
   "stinkyscape-009": ["scout", "regolith", "boot-clamp", "spotlight"],
   "stinkyscape-010": ["deck-floor", "gloved-hand", "rift", "flame-column", "hex-shield"],
   "stinkyscape-011": ["deck-floor", "lectern", "rift", "frost-shard", "missiles", "flame-column"],
   "stinkyscape-012": ["bunk-pod", "porthole", "sleeper", "shockwave", "rift"],
   "stinkyscape-013": ["corridor", "helmet"],
   "stinkyscape-014": ["deck-floor", "outfit-hydraulic"],
-  "stinkyscape-015": ["hangar-wall", "deck-floor", "pose-wide"],
-  "stinkyscape-016": ["hover-platform", "ancient-rod", "debris", "light-ribbon"],
-  "stinkyscape-017": ["cell-bars", "deck-floor", "anvil", "outfit-apron", "item-hammer"],
+  "stinkyscape-015": ["hangar-wall", "deck-floor", "pose-spread"],
+  "stinkyscape-016": ["hover-platform", "ancient-rod", "debris", "light-stream"],
+  "stinkyscape-017": ["cell-bars", "deck-floor", "anvil", "outfit-work-apron", "item-hammer"],
   "stinkyscape-018": ["server-core", "deck-floor", "beam"],
   "stinkyscape-019": ["containment-sphere", "cosmality"],
   "stinkyscape-020": ["station", "deck-floor", "beam", "pose-reach", "item-scanner"],
@@ -82,18 +82,18 @@ const BRIEF_PARTS: Readonly<Record<string, readonly string[]>> = {
   "stinkyscape-023": ["fighter", "disruptor-beacon", "shockwave"],
   "stinkyscape-024": ["disruptor-beacon", "gas-giant", "space-shards"],
   "stinkyscape-025": ["deck-floor", "debris", "light-grid", "pose-reach", "outfit-labcoat", "item-stylus"],
-  "stinkyscape-026": ["rocket", "station", "deck-floor", "gas-giant", "pose-reach", "hair-silver", "outfit-robes", "item-chart"],
+  "stinkyscape-026": ["rocket", "station", "deck-floor", "gas-giant", "pose-reach", "hair-silver", "outfit-academic", "item-chart"],
   "stinkyscape-027": ["blank-card", "drone", "regolith", "drone-core", "debris"],
   "stinkyscape-028": ["drone", "drone-core", "gloved-hand"],
   "stinkyscape-029": ["drone", "regolith", "drone-core"],
   "stinkyscape-030": ["drone", "antenna-mast", "drone-core"],
   "stinkyscape-031": ["drone-corvette", "dock-gantry", "drone-core", "spotlight"],
-  "stinkyscape-032": ["drone", "drone-core", "light-ribbon"],
+  "stinkyscape-032": ["drone", "drone-core", "light-stream"],
   "stinkyscape-033": ["drone", "drone-corvette", "drone-core", "comet"],
   "stinkyscape-034": ["drone", "dock-gantry", "conveyor", "reactor", "drone-core", "robot-arm"],
   "stinkyscape-035": ["drone-corvette", "lava-flats", "drone-core", "debris", "smoke-trail"],
   "stinkyscape-036": ["drone", "drone-battleship", "dock-gantry", "drone-core"],
-  "stinkyscape-037": ["fighter", "station", "hover-platform", "light-ribbon", "spotlight", "headset"],
+  "stinkyscape-037": ["fighter", "station", "hover-platform", "light-stream", "spotlight", "headset"],
   "stinkyscape-039": ["glass-case", "outfit-labcoat"],
   "stinkyscape-041": ["helper-drone", "tram", "drone-core"],
   "stinkyscape-042": ["console", "deck-floor", "drone-core", "goggles", "outfit-labcoat"],
@@ -104,7 +104,7 @@ const BRIEF_PARTS: Readonly<Record<string, readonly string[]>> = {
   "stinkyscape-068": ["fighter", "dock-gantry", "deck-floor"],
   "stinkyscape-069": ["needle-fighter", "hangar-wall", "deck-floor"],
   "stinkyscape-070": ["wreck", "ghost-ship", "debris", "head-lantern", "outfit-wreck"],
-  "stinkyscape-071": ["wreck", "debris", "shockwave", "star-glare", "pose-wide", "head-horn", "outfit-wreck"],
+  "stinkyscape-071": ["wreck", "debris", "shockwave", "star-glare", "pose-spread", "head-horn", "outfit-wreck"],
   "stinkyscape-072": ["arrow-fighter", "beam", "gas-giant"],
   "stinkyscape-073": ["arrow-fighter", "beam", "hex-shield"],
   "stinkyscape-074": ["blade-fighter", "wreck", "regolith", "beam", "smoke-trail", "star-glare", "hex-shield"],
@@ -119,7 +119,7 @@ const BRIEF_PARTS: Readonly<Record<string, readonly string[]>> = {
   "stinkyscape-084": ["reactor", "debris"],
   "stinkyscape-085": ["frame-ship", "wreck", "antenna-mast", "regolith", "smoke-trail", "spotlight"],
   "stinkyscape-086": ["fused-hull", "debris", "smoke-trail"],
-  "stinkyscape-087": ["station", "hover-platform", "light-ribbon", "pose-reach", "shades"],
+  "stinkyscape-087": ["station", "hover-platform", "light-stream", "pose-reach", "shades"],
   "stinkyscape-088": ["corridor", "item-venom-blade"],
   "stinkyscape-089": ["market-stall", "credit-chips", "scale"],
 };
@@ -317,29 +317,18 @@ describe("R3391000 Stinkyscape's scenes", () => {
     }
   });
 
-  it("R3391000 extras stand in their own layers before the main figure, and a recipe without them composes as before", () => {
-    const speciesist = recipe("core-002");
-    expect(speciesist.extras).toBeUndefined();
-    expect(composeScene({ ...speciesist, extras: [] }, "core-002")).toEqual(composeScene(speciesist, "core-002"));
-    const look = figureLookFor(["Human"]);
-    const crew = { ...speciesist, extras: [{ x: 30, y: 80, scale: 0.6, pose: "pose-stand" as const, look, layer: "mid" as const }, { x: 70, y: 84, scale: 0.7, pose: "pose-wide" as const, look, layer: "subject" as const }] };
-    const shapes = composeScene(crew, "core-002");
-    const layerOf = shapes.map((shape) => SCENE_LAYERS.indexOf(shape.layer));
-    layerOf.slice(1).forEach((value, k) => expect(value, `shape ${k + 1}`).toBeGreaterThanOrEqual(layerOf[k] ?? 0));
-    // The mid layer's figure stands after the mid layer's parts.
-    const mid = shapes.filter((shape) => shape.layer === "mid");
-    const firstMidFigure = mid.findIndex((shape) => Object.hasOwn(FIGURE_KIT, shape.part));
-    expect(firstMidFigure).toBeGreaterThan(0);
-    expect(mid.slice(firstMidFigure).every((shape) => Object.hasOwn(FIGURE_KIT, shape.part))).toBe(true);
-    // The subject layer's extra stands before the main figure: two runs of poses, the extra's wide and the figure's guard.
-    const poses = shapes.filter((shape) => shape.layer === "subject" && shape.part.startsWith("pose-")).map((shape) => shape.part);
-    expect(poses[0]).toBe("pose-wide");
-    expect(poses[poses.length - 1]).toBe("pose-guard");
-    // A recipe with no rotate draws as it always did: the four proofs left in sceneRecipes.ts place none.
+  it("R3391000 a placement turns a pointing part only when it says so, and the proofs left in sceneRecipes.ts place no turn", () => {
+    // A turn of 0 draws a pointing part as it is drawn unturned, and a turn on a part that does not point changes nothing.
+    for (const id of PASS) {
+      const scene = recipe(id);
+      const turnedEverywhere = (placed: ScenePlacement): ScenePlacement => (POINTING.includes(placed.part) ? { ...placed, rotate: placed.rotate ?? 0 } : { ...placed, rotate: 90 });
+      const layers = Object.fromEntries(SCENE_LAYERS.map((layer) => [layer, (scene.layers[layer] ?? []).map(turnedEverywhere)]));
+      expect(composeScene({ ...scene, layers }, id), id).toEqual(composeScene(scene, id));
+    }
+    // So the four proofs left in sceneRecipes.ts, which place no turn, draw as they always did.
     for (const id of ["classic-074", "core-002", "core-098", "core-100"]) {
       const scene = recipe(id);
       for (const layer of SCENE_LAYERS) for (const placed of scene.layers[layer] ?? []) expect(placed.rotate, `${id} ${placed.part}`).toBeUndefined();
-      expect(scene.extras, id).toBeUndefined();
     }
   });
 

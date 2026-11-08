@@ -8,9 +8,8 @@
 // (Out of frame) and restyles it as it does any other picture. A card with no recipe never reaches
 // here and draws its picture byte for byte. Presentation only (CLAUDE.md rule 7): the art reads a
 // card's id, never anything hidden. R3391000: a seventh kind of scenery, craft (ships, drones and
-// vehicles); a placement may turn a pointing part (`rotate`); and a recipe may stand further figures
-// (`extras`) in any layer, each after that layer's parts and before the main figure. A recipe with
-// neither draws from its stream exactly as before.
+// vehicles), and a placement may turn a pointing part (`rotate`); a placement with none draws from its
+// stream exactly as before.
 
 import { hashId, round2, seededRandom } from "./hash.ts";
 import { drawFigure, type FigureLook, type PoseId, type FigurePartId } from "./figureKit.ts";
@@ -145,6 +144,8 @@ export type ScenePlacement = {
   readonly count?: number;
   readonly spread?: readonly [number, number];
   readonly paint?: PaletteName;
+  /** R3390000: its shapes move on the props beat (R2715001), as a painter's glyphs do; never in the subject layer. */
+  readonly props?: true;
   /** R3391000: how far a pointing part turns, in degrees clockwise; none leaves it as drawn. */
   readonly rotate?: number;
 };
@@ -159,8 +160,8 @@ export type FigureRecipe = {
   readonly look: FigureLook;
 };
 
-/** R3391000: a further figure and the layer it stands in, after that layer's parts. */
-export type SceneFigure = FigureRecipe & { readonly layer: SceneLayer };
+/** R3390000: a further figure (a crowd, a companion, a rival), drawn in front of its layer's own parts, after the main figure in the subject layer. */
+export type ExtraFigure = FigureRecipe & { readonly layer: SceneLayer };
 
 export type SceneRecipe = {
   readonly family: ShowcaseFamily;
@@ -171,11 +172,8 @@ export type SceneRecipe = {
   /** Where the card's emblem stands in the scene; with none, where the painter's composition put it. */
   readonly emblem?: { readonly x: number; readonly y: number; readonly size: number; readonly rotate: number };
   readonly figure?: FigureRecipe;
-  /**
-   * R3391000: further figures (a crew behind its defender, a dreamer in her bunk), each drawn in its own layer
-   * after that layer's parts, in order; in the subject layer, before the main figure, which stands in front.
-   */
-  readonly extras?: readonly SceneFigure[];
+  /** R3390000: the scene's other figures, each in its own layer. */
+  readonly extras?: readonly ExtraFigure[];
   /**
    * The painter's own subject (its spec's `subjectRidges`, drawn by the card's composition: Ceaseless Void's
    * giant, R3338001) stands in the subject layer in front of the layer's parts, in place of a figure.
@@ -185,7 +183,7 @@ export type SceneRecipe = {
 };
 
 /** A composed shape: the layer it lies in and the part it came from. */
-export type SceneShape = KitShape & { readonly layer: SceneLayer; readonly part: SceneryPartId | FigurePartId };
+export type SceneShape = KitShape & { readonly layer: SceneLayer; readonly part: SceneryPartId | FigurePartId; readonly props?: true };
 
 /** Salts the scene's stream, so it shares no draw with the painter's own. */
 export const SCENE_SALT = 0x5ce7e331;
@@ -248,18 +246,16 @@ export function composeScene(recipe: SceneRecipe, seedId: string): SceneShape[] 
         const s = (placed.scale ?? 1) * (1 + between(rng, -SCENE_SCALE_JITTER, SCENE_SCALE_JITTER));
         for (const shape of kit.draw({ x, y, s, flip: placed.flip ?? 1, rotate: placed.rotate }, rng)) {
           const paint = shape.main === true && placed.paint !== undefined ? placed.paint : shape.paint;
-          out.push({ ...shape, paint, layer, part: placed.part });
+          out.push({ ...shape, paint, layer, part: placed.part, ...(placed.props === true ? { props: true as const } : {}) });
         }
       }
-    }
-    // R3391000: the layer's further figures stand after its parts, in order.
-    for (const extra of recipe.extras ?? []) {
-      if (extra.layer === layer) for (const shape of drawFigure(extra, rng)) out.push({ ...shape, layer });
     }
     // The figure stands in front of the subject layer's own parts.
     if (layer === "subject" && recipe.figure !== undefined) {
       for (const shape of drawFigure(recipe.figure, rng)) out.push({ ...shape, layer });
     }
+    // R3390000: the scene's other figures stand in front of their layers' parts, after the main figure.
+    for (const extra of recipe.extras ?? []) if (extra.layer === layer) for (const shape of drawFigure(extra, rng)) out.push({ ...shape, layer });
   }
   return out;
 }
@@ -275,7 +271,8 @@ export function sceneUse(shapes: readonly SceneShape[]): { layers: number; parts
  * theme, layout, backdrop, sky scheme, emblem glyph, motif and rays stay, so R503's variety and the
  * Radiant rays read as before. A Radiant face mixes each shape toward its layer's gold. A recipe with
  * `ownSubject` keeps the spec's subject ridges, painted as the painter paints them on that face, in front
- * of its subject layer's parts.
+ * of its subject layer's parts. R3390000: a placement marked `props` moves on the props beat, in place of
+ * the glyphs and accent the scene drops.
  */
 export function withScene(spec: ArtSpec, recipe: SceneRecipe, seedId: string, radiant: boolean): ArtSpec {
   const shapes = composeScene(recipe, seedId);
@@ -283,7 +280,8 @@ export function withScene(spec: ArtSpec, recipe: SceneRecipe, seedId: string, ra
   const paint = (name: PaletteName, layer: SceneLayer): string =>
     radiant ? mixHex(SCENE_PALETTE[name], SCENE_RADIANT_GOLD[layer], SCENE_RADIANT_MIX) : SCENE_PALETTE[name];
   const drawn: ArtSpec["ridges"][number][] = shapes.map((shape) => {
-    const ridge = { d: shape.d, fill: paint(shape.paint, shape.layer), opacity: round2(shape.opacity), role: SCENE_LAYER_ROLES[shape.layer] };
+    const role = shape.props === true ? "props" : SCENE_LAYER_ROLES[shape.layer];
+    const ridge = { d: shape.d, fill: paint(shape.paint, shape.layer), opacity: round2(shape.opacity), role };
     return shape.inked === true && line !== null ? { ...ridge, stroke: SCENE_PALETTE[line.paint], strokeWidth: line.width } : ridge;
   });
   const own = recipe.ownSubject === true ? spec.ridges.slice(spec.subjectRidges[0], spec.subjectRidges[1]) : [];

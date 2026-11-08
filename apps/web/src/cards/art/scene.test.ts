@@ -188,9 +188,13 @@ describe("R3331000 the scene kits", () => {
       painted.add(scene.sky[1]);
       painted.add(scene.light.paint);
       for (const layer of SCENE_LAYERS) for (const placed of scene.layers[layer] ?? []) if (placed.paint !== undefined) painted.add(placed.paint);
-      for (const figure of [...(scene.figure === undefined ? [] : [scene.figure]), ...(scene.extras ?? [])]) {
-        painted.add(figure.look.skin);
-        painted.add(figure.look.cloth);
+      if (scene.figure !== undefined) {
+        painted.add(scene.figure.look.skin);
+        painted.add(scene.figure.look.cloth);
+      }
+      for (const extra of scene.extras ?? []) {
+        painted.add(extra.look.skin);
+        painted.add(extra.look.cloth);
       }
     }
     for (const name of painted) expect(inRadiantGold(SCENE_PALETTE[name]), name).toBe(false);
@@ -231,8 +235,9 @@ describe("R3331000 the scene kits", () => {
 describe("R3331000 the five proof cards", () => {
   it("R3331000 the five proof cards draw their scenes, base and Radiant, with one geometry", () => {
     expect(SCENE_BOX).toBe(ART_BOX);
-    // R3391000: the proofs and each set pass's recipes (Stinkyscape's holds Arg Arg Defender's).
-    expect(Object.keys(SCENE_RECIPES).sort()).toEqual([...new Set([...PROOFS, ...Object.keys(STINKYSCAPE_RECIPES)])].sort());
+    // The proofs and each set pass's recipes: every Classic+ entry (R3390000, classicPlusScenes.test.ts) and
+    // Stinkyscape's, which hold Arg Arg Defender's (R3391000, stinkyscapeScenes.test.ts).
+    expect(Object.keys(SCENE_RECIPES).filter((id) => !id.startsWith("classicplus-")).sort()).toEqual([...new Set([...PROOFS, ...Object.keys(STINKYSCAPE_RECIPES)])].sort());
     for (const id of PROOFS) {
       const card = def(id);
       const shapes = composeScene(recipe(id), id);

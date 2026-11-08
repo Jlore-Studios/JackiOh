@@ -1,13 +1,16 @@
 // R3331000: the scene recipes, data per card (ART.md, "Scene recipes and kits"): the four proof cards
 // left here of the five that set the bar each set's picture pass meets (#3331), and each set pass's own
-// recipes, in a file of its own (R3391000: Stinkyscape's, stinkyscapeRecipes.ts, the fifth proof, Arg
-// Arg Defender, among them). A card listed here draws its picture from its
-// recipe, on every face, in every painter that hands it one (scene.ts `sceneRecipeOf`); a card not
-// listed keeps its picture byte for byte until its set's pass lists it. Each recipe is placed in the
-// 100-unit box: a face's window shows about y 18 to 82 of it and a Unit's portrait 12 to 88, so each
-// keeps its subject within x 30 to 70 and y 25 to 85 and reaches its rarity's floor
-// (richness.ts `ART_DETAIL_MIN`) with its placements' counts.
+// recipes, in files of their own (R3390000: Classic+'s, classicPlusRecipes1.ts to 3; R3391000:
+// Stinkyscape's, stinkyscapeRecipes.ts, the fifth proof, Arg Arg Defender, among them). A card listed
+// here draws its picture from its recipe, on every face, in every painter that hands it one (scene.ts
+// `sceneRecipeOf`); a card not listed keeps its picture byte for byte until its set's pass lists it.
+// Each recipe is placed in the 100-unit box: a face's window shows about y 18 to 82 of it and a Unit's
+// portrait 12 to 88, so each keeps its subject within x 30 to 70 and y 25 to 85 and reaches its
+// rarity's floor (richness.ts `ART_DETAIL_MIN`) with its placements' counts.
 
+import { CLASSIC_PLUS_RECIPES_1 } from "./classicPlusRecipes1.ts";
+import { CLASSIC_PLUS_RECIPES_2 } from "./classicPlusRecipes2.ts";
+import { CLASSIC_PLUS_RECIPES_3 } from "./classicPlusRecipes3.ts";
 import { figureLookFor } from "./figureKit.ts";
 import type { SceneRecipe } from "./scene.ts";
 import { STINKYSCAPE_RECIPES } from "./stinkyscapeRecipes.ts";
@@ -170,11 +173,14 @@ const CEASELESS_VOID: SceneRecipe = {
   },
 };
 
-/** R3331000: the cards that draw from a scene, by id: the proof cards and each set pass's (R3391000: Stinkyscape's). */
+/** R3331000: the cards that draw from a scene, by id: the four proof cards left here, R3391000 every Stinkyscape entry of its pass and R3390000 every Classic+ entry. */
 export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   "classic-074": CORPSE_PLANTATION,
   "core-002": SPECIESIST,
   "core-098": HEROIC_POWER,
   "core-100": CEASELESS_VOID,
   ...STINKYSCAPE_RECIPES,
+  ...CLASSIC_PLUS_RECIPES_1,
+  ...CLASSIC_PLUS_RECIPES_2,
+  ...CLASSIC_PLUS_RECIPES_3,
 };

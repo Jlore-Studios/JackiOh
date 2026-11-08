@@ -97,7 +97,7 @@ const METEOR: SceneRecipe = {
       { part: "debris", x: 74, y: 90, scale: 1.2 },
     ],
     light: [
-      { part: "shockwave", x: 52, y: 66, scale: 1.4, paint: "orange-400" },
+      { part: "shockwave", x: 52, y: 66, scale: 0.95, paint: "orange-400" },
       { part: "halo", x: 52, y: 58, scale: 2, paint: "ember-500" },
     ],
     particles: [
@@ -120,7 +120,7 @@ const MASOCHISM_UNMASKED: SceneRecipe = {
     subject: [{ part: "cracked-mask", x: 44, y: 50, scale: 1.6 }],
     near: [{ part: "debris", x: 18, y: 82 }],
     light: [
-      { part: "light-ribbon", x: 50, y: 46, scale: 0.9, rotate: -28, paint: "red-500" },
+      { part: "light-stream", x: 50, y: 46, scale: 0.9, rotate: -28, paint: "red-500" },
       { part: "halo", x: 44, y: 50, scale: 1.4, paint: "red-600" },
     ],
     particles: [
@@ -221,7 +221,7 @@ const CONJURE_ROSEMARY_TRISCUIT: SceneRecipe = {
   sky: ["slate-900", "wood-800"],
   light: { x: 58, y: 40, r: 28, paint: "orange-400", opacity: 0.4 },
   emblem: { x: 46, y: 60, size: 4, rotate: 0 },
-  figure: { x: 46, y: 86, scale: 0.95, pose: "pose-raise", look: human({ hair: "toque", outfit: "outfit-apron", item: null, cloth: "slate-100" }) },
+  figure: { x: 46, y: 86, scale: 0.95, pose: "pose-raise", look: human({ hair: "toque", outfit: "outfit-work-apron", item: null, cloth: "slate-100" }) },
   layers: {
     far: [
       { part: "room-wall", x: 50, y: 70, paint: "slate-700" },
@@ -319,7 +319,7 @@ const OTHERWORLDLY_MAGIC: SceneRecipe = {
       { part: "missiles", x: 52, y: 50, scale: 0.9 },
       { part: "flame-column", x: 66, y: 60, scale: 0.6 },
     ],
-    near: [{ part: "lectern", x: 50, y: 92, scale: 1.4 }],
+    near: [{ part: "lectern", x: 50, y: 92, scale: 1.8, paint: "slate-700" }],
     light: [{ part: "halo", x: 50, y: 40, scale: 1.8, paint: "cyan-400" }],
     particles: [
       { part: "embers", x: 66, y: 46, count: 2, spread: [6, 6] },
@@ -349,7 +349,7 @@ const OTHERWORLDLY_NIGHTMARE: SceneRecipe = {
       { part: "bunk-pod", x: 50, y: 66, scale: 1.3 },
       { part: "sleeper", x: 50, y: 66, scale: 1 },
       { part: "pale-hand", x: 36, y: 50, scale: 1.2, flip: -1, paint: "slate-900" },
-      { part: "shockwave", x: 62, y: 46, scale: 0.6, paint: "violet-300" },
+      { part: "shockwave", x: 62, y: 46, scale: 0.4, paint: "violet-300" },
     ],
     near: [{ part: "deck-floor", x: 50, y: 86, paint: "slate-900" }],
     light: [{ part: "halo", x: 46, y: 28, scale: 1.6, paint: "purple-400" }],
@@ -393,7 +393,7 @@ const ARG_ARG_DEFENDER: SceneRecipe = {
   sky: ["black", "slate-900"],
   light: { x: 50, y: 44, r: 30, paint: "orange-400", opacity: 0.3 },
   emblem: { x: 50, y: 54, size: 4, rotate: 0 },
-  figure: { x: 50, y: 86, scale: 1, pose: "pose-wide", look: human({ outfit: "outfit-armor", item: "item-shield", cloth: "orange-400" }) },
+  figure: { x: 50, y: 86, scale: 1, pose: "pose-spread", look: human({ outfit: "outfit-armor", item: "item-shield", cloth: "orange-400" }) },
   extras: [
     { x: 30, y: 80, scale: 0.6, pose: "pose-stand", look: human({ outfit: "outfit-jacket", item: null, cloth: "slate-700" }), layer: "subject" },
     { x: 72, y: 80, scale: 0.6, flip: -1, pose: "pose-stand", look: human({ hair: "hair-long", outfit: "outfit-jacket", item: null, cloth: "blue-800" }), layer: "subject" },
@@ -434,8 +434,8 @@ const ROD_OF_AGES: SceneRecipe = {
     near: [{ part: "debris", x: 14, y: 88, scale: 1.2, count: 2, spread: [6, 4] }],
     light: [
       { part: "light-shaft", x: 50, y: -2, scale: 1.2 },
-      { part: "light-ribbon", x: 50, y: 70, scale: 0.4, rotate: -80, paint: "slate-100" },
-      { part: "light-ribbon", x: 48, y: 72, scale: 0.4, rotate: -110, paint: "slate-100" },
+      { part: "light-stream", x: 50, y: 70, scale: 0.4, rotate: -80, paint: "slate-100" },
+      { part: "light-stream", x: 48, y: 72, scale: 0.4, rotate: -110, paint: "slate-100" },
       { part: "halo", x: 50, y: 60, scale: 1.6, paint: "slate-100" },
       { part: "rim-light", x: 50, y: 44, scale: 1.6, paint: "slate-100" },
     ],
@@ -452,7 +452,7 @@ const IMPRISONED_SHIP_SMITH: SceneRecipe = {
   sky: ["slate-900", "slate-800"],
   light: { x: 62, y: 70, r: 24, paint: "red-500", opacity: 0.4 },
   emblem: { x: 42, y: 58, size: 4, rotate: 0 },
-  figure: { x: 42, y: 86, scale: 0.95, pose: "pose-raise", look: human({ outfit: "outfit-apron", item: "item-hammer", cloth: "wood-700" }) },
+  figure: { x: 42, y: 86, scale: 0.95, pose: "pose-raise", look: human({ outfit: "outfit-work-apron", item: "item-hammer", cloth: "wood-700" }) },
   layers: {
     mid: [{ part: "deck-floor", x: 50, y: 74, paint: "slate-800" }],
     subject: [{ part: "anvil", x: 62, y: 84, scale: 1.2 }],
@@ -605,7 +605,7 @@ const WARP_DISRUPTOR: SceneRecipe = {
     ],
     subject: [{ part: "disruptor-beacon", x: 50, y: 50, scale: 1.6 }],
     light: [
-      { part: "shockwave", x: 50, y: 52, scale: 1.6, paint: "purple-400" },
+      { part: "shockwave", x: 50, y: 52, scale: 1.1, paint: "purple-400" },
       { part: "halo", x: 50, y: 50, scale: 1.6, paint: "violet-300" },
     ],
     particles: [{ part: "motes", x: 50, y: 50, scale: 1.4, paint: "violet-300" }],
@@ -665,7 +665,7 @@ const ZOLARKETH: SceneRecipe = {
   sky: ["blue-900", "sky-400"],
   light: { x: 70, y: 70, r: 34, paint: "blue-200", opacity: 0.4 },
   emblem: { x: 44, y: 56, size: 4, rotate: 0 },
-  figure: { x: 44, y: 88, scale: 0.92, pose: "pose-reach", look: human({ hair: "hair-silver", outfit: "outfit-robes", item: "item-chart", cloth: "blue-800" }) },
+  figure: { x: 44, y: 88, scale: 0.92, pose: "pose-reach", look: human({ hair: "hair-silver", outfit: "outfit-academic", item: "item-chart", cloth: "blue-800" }) },
   layers: {
     sky: [{ part: "stars", x: 40, y: 14, scale: 1.4 }],
     far: [
@@ -824,7 +824,7 @@ const DRONE_CORE_VI: SceneRecipe = {
       { part: "drone", x: 80, y: 30, scale: 1 },
     ],
     near: [{ part: "frost-shard", x: 16, y: 90, scale: 1.4 }],
-    light: [{ part: "light-ribbon", x: 30, y: 72, scale: 1.3, rotate: -40, paint: "cyan-400" }],
+    light: [{ part: "light-stream", x: 30, y: 72, scale: 1.3, rotate: -40, paint: "cyan-400" }],
     particles: [{ part: "motes", x: 50, y: 50, scale: 1.4, paint: "cyan-400" }],
   },
 };
@@ -1002,8 +1002,8 @@ const KWZKA: SceneRecipe = {
     light: [
       { part: "spotlight", x: 10, y: 0, scale: 1.2, rotate: 56, paint: "red-300" },
       { part: "spotlight", x: 90, y: 0, scale: 1.2, rotate: 124, paint: "purple-400" },
-      { part: "light-ribbon", x: 56, y: 44, scale: 0.9, rotate: 30, paint: "red-300" },
-      { part: "light-ribbon", x: 46, y: 44, scale: 0.9, rotate: 150, paint: "purple-400" },
+      { part: "light-stream", x: 56, y: 44, scale: 0.9, rotate: 30, paint: "red-300" },
+      { part: "light-stream", x: 46, y: 44, scale: 0.9, rotate: 150, paint: "purple-400" },
       { part: "halo", x: 50, y: 44, scale: 1.6, paint: "red-300" },
     ],
     particles: [
@@ -1295,7 +1295,7 @@ const A_ZOTH: SceneRecipe = {
   sky: ["black", "red-900"],
   light: { x: 50, y: 30, r: 36, paint: "red-400", opacity: 0.45 },
   emblem: { x: 50, y: 52, size: 5, rotate: 0 },
-  figure: { x: 50, y: 88, scale: 1.2, pose: "pose-wide", look: human({ head: "head-horn", hair: "hood", outfit: "outfit-wreck", item: null, skin: "slate-100", cloth: "slate-100" }) },
+  figure: { x: 50, y: 88, scale: 1.2, pose: "pose-spread", look: human({ head: "head-horn", hair: "hood", outfit: "outfit-wreck", item: null, skin: "slate-100", cloth: "slate-100" }) },
   layers: {
     sky: [
       { part: "stars", x: 50, y: 14, scale: 1.4 },
@@ -1310,10 +1310,10 @@ const A_ZOTH: SceneRecipe = {
       { part: "ruin-wall", x: 16, y: 86, scale: 1, paint: "slate-700" },
       { part: "ruin-wall", x: 84, y: 86, scale: 1, flip: -1, paint: "slate-700" },
     ],
-    subject: [{ part: "shockwave", x: 64, y: 24, scale: 0.9, paint: "red-300" }],
+    subject: [{ part: "shockwave", x: 64, y: 24, scale: 0.6, paint: "red-300" }],
     near: [{ part: "debris", x: 84, y: 92, scale: 1.3, count: 2, spread: [6, 3] }],
     light: [
-      { part: "shockwave", x: 62, y: 24, scale: 1.5, paint: "white" },
+      { part: "shockwave", x: 62, y: 24, scale: 1, paint: "white" },
       { part: "halo", x: 50, y: 16, scale: 2, paint: "red-500" },
       { part: "rim-light", x: 50, y: 56, scale: 2, paint: "red-300" },
     ],
@@ -1739,7 +1739,7 @@ const SIVA_1: SceneRecipe = {
     subject: [{ part: "hover-platform", x: 40, y: 80, scale: 1.1, paint: "red-600" }],
     near: [{ part: "mist", x: 50, y: 92, scale: 1.2, paint: "purple-400" }],
     light: [
-      { part: "light-ribbon", x: 52, y: 52, scale: 0.55, rotate: 18, paint: "purple-400" },
+      { part: "light-stream", x: 52, y: 52, scale: 0.55, rotate: 18, paint: "purple-400" },
       { part: "halo", x: 20, y: 30, scale: 0.6, paint: "white" },
       { part: "halo", x: 84, y: 40, scale: 0.6, paint: "white" },
       { part: "halo", x: 64, y: 20, scale: 0.5, paint: "white" },

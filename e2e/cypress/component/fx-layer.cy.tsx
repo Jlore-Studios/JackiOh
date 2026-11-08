@@ -2,7 +2,8 @@
 // R2722001: a Mythic's takeover of the board, caught mid-flight and at rest.
 // R2785000: a set piece (that takeover) skipped by Space and by a click, and the board caught up at once.
 // R2800000: each board clear's set piece (Twisting Nether's vortex, Ceaseless Void's fold, the shared vortex), mid-flight and at rest.
-// R2801000: a Starship's fuse run and its launch, mid-flight and at rest.
+// R2801000: a Starship's fuse run and its launch, mid-flight and at rest; R3334000: each fused piece's module
+// docks in place of the card back that flew there, and R3334001: the launch is a cinematic, its countdown gone.
 // The watcher must see the splat before synchronous `getImageData`: a later read can miss R200's brief effect.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-layer.cy.tsx
 
@@ -414,7 +415,7 @@ describe("R2801000 a Starship on a real board", () => {
     });
   }
 
-  it("R2801000 a fuse run of two pieces mid-flight and at rest", () => {
+  it("R2801000 R3334000 a fuse run of two pieces mid-flight and at rest", () => {
     cy.viewport(1280, 720);
     const before = starshipBoard(LAUNCHERS, [HULL]);
     const after = starshipBoard([], [HULL, ...LAUNCHERS]);
@@ -428,19 +429,21 @@ describe("R2801000 a Starship on a real board", () => {
       );
     });
     mountWith(before, after, events);
-    // Mid-flight: a dead piece's card back flies to the Starship.
+    // Mid-flight: a dead piece's module (no card back, R3334000) flies to its hardpoint on the Starship.
     cy.get('[data-testid="card-fx-ship"][data-animating="starshipFused"]', { timeout: 4_000 }).should("exist");
-    cy.get(`${FX_DOM} [data-fx="ghost"]`).should("exist");
+    cy.get(`${FX_DOM} [data-fx="module"]`).should("exist");
+    cy.get(`${FX_DOM} [data-fx="ghost"]`).should("not.exist");
     cy.screenshot("starship-fuse-mid", { capture: "viewport", overwrite: true });
     // At rest: the board shows the Starship with a plate for each of its three pieces.
     cy.get("[data-animating]", { timeout: 8_000 }).should("not.exist");
     cy.get('[data-testid="card-fx-ship"] .cf-starship-plate').should("have.length", 3);
-    cy.get(`${FX_DOM} [data-fx="ghost"]`, { timeout: 4_000 }).should("not.exist");
+    cy.get(`${FX_DOM} [data-fx="module"]`, { timeout: 4_000 }).should("not.exist");
+    cy.get(`${FX_DOM} [data-fx="weld"]`).should("not.exist");
     cy.screenshot("starship-fuse-rest", { capture: "viewport", overwrite: true });
     cy.get('[data-testid="card-fx-ship"]').screenshot("starship-hull-rest", { overwrite: true });
   });
 
-  it("R2801000 a launch mid-flight and at rest", () => {
+  it("R2801000 R3334001 a launch mid-flight and at rest", () => {
     cy.viewport(1280, 720);
     const fused = [HULL, ...LAUNCHERS];
     const before = starshipBoard([], fused);
@@ -450,14 +453,18 @@ describe("R2801000 a Starship on a real board", () => {
       { type: "starshipLaunched", player: "p1", instanceId: "fx-ship", defId: HULL, name: "Ember of Departure", pieces: fused },
     ];
     mountWith(before, after, events);
-    // Mid-flight: the queue holds the launch, and its countdown stands over the Starship.
+    // Mid-flight: the queue holds the launch, its cinematic over the board (R3334001) and its engines over
+    // the Starship, with no countdown.
     cy.get(GAME, { timeout: 4_000 }).should("have.attr", "data-set-piece", "starship");
-    cy.get(`${FX_DOM} [data-fx="launch"] .fx-launch-count`).should("have.length", 3);
+    cy.get(`${FX_DOM} [data-fx="cinematic"]`).should("exist");
+    cy.get(`${FX_DOM} [data-fx="launch"]`).should("exist");
+    cy.get(`${FX_DOM} .fx-launch-count`).should("not.exist");
     cy.screenshot("starship-launch-mid", { capture: "viewport", overwrite: true });
     // At rest: nothing animating, the hold over, and the launch gone; the Starship wears no hull plates.
     cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
     cy.get(GAME).should("not.have.attr", "data-set-piece");
     cy.get(`${FX_DOM} [data-fx="launch"]`, { timeout: 4_000 }).should("not.exist");
+    cy.get(`${FX_DOM} [data-fx="cinematic"]`).should("not.exist");
     cy.get('[data-testid="card-fx-ship"] .cf-starship-hull').should("not.exist");
     cy.screenshot("starship-launch-rest", { capture: "viewport", overwrite: true });
   });
