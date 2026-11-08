@@ -18650,7 +18650,7 @@
         "provider": "claude-8",
         "round_tier": "strong",
         "rounds_on": 3407,
-        "rounds_used": 0,
+        "rounds_used": 1,
         "since": "2026-11-08T10:13:30Z",
         "source": "build",
         "until": "2026-11-08T10:53:43Z"
