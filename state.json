@@ -17773,21 +17773,14 @@
         "reason": "`claude-8` stops mid-call: 5-hour usage is 86%, at or over its 85% cap; it resets at 2026-11-08T08:10:00Z",
         "trail": "web/src\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"cd apps/web/src; grep -n \\\"useCardLook\\\\|export function wearsFullArt\\\\|export function useFullArt\\\\b\\\" -n cards/fullArt.ts | head; sed -n 120,330p cards/fullArt.ts | grep -n \\\"export\\\" \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419; git status --short | head; sed -n 255,300p apps/web/src/cards/fullArt.ts; sed -n 380,392p apps/web/src/cards/fullArt.ts; grep -n \\\"export funct\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419/apps/web/src; grep -n \\\"CosmeticLook\\\" -r --include=*.tsx . | head; grep -n \\\"look\\\" packs/PackOpening.tsx | head -30; grep -n \\\"worn\\\\b\\\\|const\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419/apps/web/src; python3 - <<'EOF'\\nimport re\\np='cards/fullscreen.ts'\\ns=open(p).read()\\ns=s.replace('''import { FULLSCREEN_HOLD_MS, FULLSCREEN_SL\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419/apps/web/src; grep -n \\\"defId\\\\|rarity\\\\|printedRarity\\\" wire/generated/FaceModel.ts | head; sed -n 70,82p cards/index.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419/apps/web/src; python3 - <<'EOF'\\np='cards/index.ts'\\ns=open(p).read()\\ns=s.replace(\\\" useFullScreenArt,\\\\n useFullScreenTrigger,\\\",\\\" useCanOpen\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419/apps/web/src; sed -n 1,35p cards/fullscreen.test.tsx; sed -n 125,175p cards/fullscreen.test.tsx; grep -n \\\"FullArtShown\\\" -r cards/*.test.tsx | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419/apps/web/src; sed -n 655,690p cards/fullArtTiers.test.tsx; grep -n \\\"VANILLA\\\\b =\\\" cards/fullArtTiers.test.tsx; grep -n \\\"^import\\\" cards/fullA\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419/apps/web/src; python3 - <<'EOF'\\np='cards/fullscreen.test.tsx'\\ns=open(p).read()\\ns=s.replace('''import { FullScreenArt, FullScreenArtHost } fro\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419/apps/web/src; sed -n 225,250p cards/fullscreen.test.tsx; cat > /tmp/probe.test.ts <<'EOF'\\nimport { it } from \\\"vitest\\\";\\nimport { CATALOG } fr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419; pnpm --dir apps/web exec vitest run src/cards/zz_probe.test.ts 2>&1 | tail -20; ls apps/web/src/cards/zz* 2>&1\"}\n- tool error: Exit code 2 \u001b[33m(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite: - JSON import \"../../..\u2026\n- said: I removed the probe too early; rerun it properly.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419; cp /tmp/probe.test.ts apps/web/src/cards/zz_probe.test.ts; pnpm --dir apps/web exec vitest run src/cards/zz_probe.test.ts 2>&1 | grep -E \\\"NOFA\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419; cp /tmp/probe.test.ts apps/web/src/cards/zz_probe.test.ts; pnpm --dir apps/web exec vitest run src/cards/zz_probe.test.ts 2>&1 | tail -25; rm a\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419; sed -i 's|console.log(\\\"NOFA\\\", out, \\\"WEARS-NOT-ARTCARD\\\", w, FULL_ART_CARDS.size);|throw new Error(\\\"NOFA \\\" + JSON.stringify(out) + \\\" WNA \\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419/apps/web/src; sed -i 's/core-008/core-003/g' cards/fullscreen.test.tsx; sed -i 's/<TriggerCard card={{ defId: \\\"core-001\\\", rarity: \\\"Common\\\" }\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419; pnpm --dir apps/web test src/cards/fullscreen.test.tsx 2>&1 | grep -E \\\"fullscreen.test.tsx:[0-9]+\\\" | head -3; grep -n \\\"export function level\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419/apps/web/src; sed -i 's|<FullArtShown defId=\\\"core-003\\\" pick={true}>|<FullArtShown defId=\\\"core-003\\\" pick={VERSION_FULL_ART_ID}>|; s|import { \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419; cat > apps/web/src/cards/zz_probe.test.ts <<'EOF'\\nimport { it } from \\\"vitest\\\";\\nimport { COSMETIC_LEVELS } from \\\"../wire/generated/cosmetic\u2026\n- said: Full art itself isn't offered on core-003; its offered level is `version-alt-full-art`. Use that.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419/apps/web/src; grep -n \\\"alt-full-art\\\" cards/versions.ts | head -5\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419/apps/web/src; sed -i 's/VERSION_FULL_ART_ID/VERSION_ALT_FULL_ART_ID/g; s|(here Full art, a pick|(here Alt full art, a pick|' cards/fullscreen.te\u2026\n- said: Now the broader checks.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419; (pnpm --dir apps/web typecheck 2>&1 | tail -8; pnpm exec eslint apps/web/src/cards apps/web/src/game apps/web/src/collection apps/web/src/packs\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419; git stash list | head -2; pnpm --dir apps/web exec vitest run src/collection/LooksScreen.test.tsx src/collection/TokenOffer.test.tsx 2>&1 | gre\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419/apps/web/src/collection; sed -n 270,295p LooksScreen.test.tsx; sed -n 500,515p TokenOffer.test.tsx; sed -n 545,570p TokenOffer.test.tsx; grep -n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419/apps/web/src; grep -rn \\\"export function usePreviewHold\\\" -A45 collection/ | head -80\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419/apps/web/src; python3 - <<'EOF'\\np='collection/OwnedCards.tsx'\\ns=open(p).read()\\ns=s.replace(''' const hold = usePreviewHold(`card-${def.id}`, \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3419; cargo jackioh spec check 2>&1 | tail -3; pnpm --dir apps/web exec vitest run src/game src/packs src/cards 2>&1 | grep -E \\\"Tests |Test Files|FA\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a Mythic takes the whole screen: its own full art fills the window as it is played, the camera flies through its layers, and a press-and-hold opens it full screen anywhere\"} --> ## Summary Closes #3345. The takeover and press-and-hold behaviour was buil\u2026"
       },
-      "hold": {
-        "ends": "2026-11-08T08:47:04Z",
-        "lifted": "2026-11-08T07:17:17Z",
-        "owner": "claude-8",
-        "since": "2026-11-08T06:47:04Z",
-        "until": "2026-11-08T07:10:00Z",
-        "why": "5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "interruptions": 0,
       "issue": 3345,
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-08T05:29:59Z",
+        "claimed": true,
+        "claimed_at": "2026-11-08T07:19:21Z",
         "from_run": "42446161587",
         "gates": [
           {
@@ -17887,7 +17880,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "42451003579",
+      "run_id": "pending:d1ef07e2-1794122323",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17908,7 +17901,7 @@
         "run": "42451003579"
       },
       "source": "",
-      "started_at": "2026-11-08T05:29:59Z",
+      "started_at": "2026-11-08T07:19:21Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -18481,9 +18474,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T07:06:56Z",
+    "at": "2026-11-08T07:19:21Z",
     "url": "",
-    "what": "revise #3382 on claude-7"
+    "what": "review #3419 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-08T07:02:08Z",
