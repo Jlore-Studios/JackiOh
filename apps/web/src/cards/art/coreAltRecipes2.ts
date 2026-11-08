@@ -194,7 +194,7 @@ const BIG_FELINOR_ALT: SceneRecipe = {
       { part: "palm", x: 92, y: 78, scale: 1.4, flip: -1 },
     ],
     near: [
-      { part: "hammock", x: 50, y: 88, scale: 2.6 },
+      { part: "beach-hammock", x: 50, y: 88, scale: 2.6 },
       { part: "house-cat", x: 44, y: 66, scale: 1.3, paint: "orange-400" },
       { part: "house-cat", x: 56, y: 65, scale: 1.1, flip: -1, paint: "slate-100" },
     ],

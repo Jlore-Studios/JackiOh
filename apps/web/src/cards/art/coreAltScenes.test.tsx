@@ -112,7 +112,7 @@ const NEW_PARTS: Readonly<Record<string, readonly string[]>> = {
   "hay-bale": ["core-011"],
   "picnic-blanket": ["core-018", "core-076"],
   rug: ["core-048"],
-  hammock: ["core-043"],
+  "beach-hammock": ["core-043"],
   "sleeping-bag": ["core-050"],
   teapot: ["core-086"],
 };
