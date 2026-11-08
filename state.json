@@ -16869,14 +16869,6 @@
         "reason": "`claude-8` stops mid-call: 5-hour usage is 102%, at or over its 100% cap; it resets at 2026-11-08T03:10:00Z",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390/apps/web/src/cards/art && sed -n 300,360p sceneKitPlaces.ts; sed -n 697,725p sceneKitPlaces.ts\", \"description\": \"Read temple and hearth part cod\u2026\n- said: Now let me write the full recipe file.\n- said: Typecheck and eslint are clean for figureKit. Now let me render the heads.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390 && KIT_LOOKS='[{\\\"head\\\":\\\"head-bat\\\",\\\"hair\\\":null,\\\"outfit\\\":\\\"outfit-jacket\\\",\\\"item\\\":\\\"item-dagger\\\",\\\"skin\\\":\\\"slate-700\\\",\\\"cloth\\\":\\\"red\u2026\n- Read: {\"file_path\": \"/tmp/kit/heads.png\"}\n- Bash: {\"command\": \"which convert magick python3; python3 -c \\\"import PIL; print(PIL.__version__)\\\" 2>&1\", \"description\": \"Check image tools available\"}\n- tool error: Exit code 1 /usr/bin/python3 Traceback (most recent call last): File \"<string>\", line 1, in <module> import PIL; print(PIL.__version__) ^^^^^^^^^^ ModuleNotFoundError: No module named 'PIL'\n- Bash: {\"command\": \"mkdir -p /tmp/kitscripts && cat > /tmp/kitscripts/zoom.sh <<'EOF'\\n#!/bin/sh\\n# zoom.sh <sheet> <x> <y> <w> <h> <out> : crop the sheet's viewBox and render it 1200 wide\\nsheet=$1; x=$2; \u2026\n- Read: {\"file_path\": \"/tmp/kit/hz1.png\"}\n- Bash: {\"command\": \"/tmp/kitscripts/zoom.sh heads 20 15 160 45 fk-z1 && /tmp/kitscripts/zoom.sh heads 220 15 160 45 fk-z2\", \"description\": \"Render closer crops of the bat and skull\"}\n- Read: {\"file_path\": \"/tmp/kit/fk-z1.png\"}\n- Read: {\"file_path\": \"/tmp/kit/fk-z2.png\"}\n- Bash: {\"command\": \"/tmp/kitscripts/zoom.sh heads 820 15 160 45 fk-z3 && /tmp/kitscripts/zoom.sh heads 1020 15 160 45 fk-z4\", \"description\": \"Render crops of golem and automaton\"}\n- Bash: {\"command\": \"/tmp/kitscripts/zoom.sh heads 420 15 160 45 fk-z3 && /tmp/kitscripts/zoom.sh heads 20 115 160 45 fk-z4\", \"description\": \"Render crops of golem, automaton, goblin, mummy\"}\n- Read: {\"file_path\": \"/tmp/kit/fk-z3.png\"}\n- Read: {\"file_path\": \"/tmp/kit/fk-z4.png\"}\n- said: Heads read well. I'll add necks to the heads that float (bat, skull, mushroom, sun, goblin, mummy) and widen the sun's rays.\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='figureKit.ts'\\ns=open(p).read()\\nneck=' shape(f.band([[0, 1.5], [0, -1.5]], 2.6), \\\"%s\\\", 1, SKIN),\\\\n'\\ndef add(fn, paint, marker):\\n global s\\n i=s.ind\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390 && KIT_LOOKS='[{\\\"head\\\":\\\"head-human\\\",\\\"hair\\\":\\\"kerchief\\\",\\\"outfit\\\":\\\"outfit-poncho\\\",\\\"item\\\":\\\"item-sling\\\",\\\"skin\\\":\\\"red-300\\\",\\\"cloth\\\u2026\n- Read: {\"file_path\": \"/tmp/kit/fk-hairs.png\"}\n- Bash: {\"command\": \"/tmp/kitscripts/zoom.sh fk-hairs 30 15 140 60 fk-h1 && /tmp/kitscripts/zoom.sh fk-hairs 230 15 140 60 fk-h2 && /tmp/kitscripts/zoom.sh fk-hairs 430 15 140 60 fk-h3\", \"description\": \"Rend\u2026\n- Read: {\"file_path\": \"/tmp/kit/fk-h1.png\"}\n- Read: {\"file_path\": \"/tmp/kit/fk-h2.png\"}\n- Read: {\"file_path\": \"/tmp/kit/fk-h3.png\"}\n- Bash: {\"command\": \"/tmp/kitscripts/zoom.sh fk-hairs 30 115 140 60 fk-h4 && /tmp/kitscripts/zoom.sh fk-hairs 230 115 140 60 fk-h5 && /tmp/kitscripts/zoom.sh fk-hairs 430 105 140 60 fk-h6\", \"description\": \"R\u2026\n- Read: {\"file_path\": \"/tmp/kit/fk-h4.png\"}\n- Read: {\"file_path\": \"/tmp/kit/fk-h5.png\"}\n- Read: {\"file_path\": \"/tmp/kit/fk-h6.png\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3390/apps/web/src/cards/art/classicPlusRecipes3.ts\", \"content\": \"// R3390000: Classic+'s scene recipes, part 3 of three (#53 to #78, #65's, #73's, #75\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390/apps/web/src/cards/art; wc -l sceneKitObjects.ts; sed -n 905,960p figureKit.ts | grep -c '\\\"'; grep -o '\\\"pose-[a-z]*\\\": {' figureKit.ts | tr '\\\u2026\n- said: Hair, headgear and these items all read. Now the remaining items in `pose-strike` (overhead) and `pose-guard` (in front).\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390 && KIT_LOOKS='[{\\\"head\\\":\\\"head-golem\\\",\\\"hair\\\":null,\\\"outfit\\\":\\\"outfit-muscle\\\",\\\"item\\\":\\\"item-mallet\\\",\\\"skin\\\":\\\"stone-500\\\",\\\"cloth\\\":\\\"r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3390/apps/web/src/cards/art; awk '/^export const FIGURE_KIT/,/^};/' figureKit.ts | grep -o '^ \\\"\\\\?[a-z-]*\\\"\\\\?:' | tr -d ' :\\\"' | tr '\\\\n' ' '\", \"de\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3390/apps/web/src/cards/art/classicPlusRecipes2.ts\", \"content\": \"// R3390000: Classic+'s scene recipes, part 2 of three (#27 to #52 with #32's, #36's,\u2026\n- said: You've hit your 5-hour limit \u00b7 resets 3:10am (UTC)\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3390/apps/web/src/cards/art/classicPlusRecipes3.ts\", \"old_string\": \"/** One plump grape: a shiny orb with no leaf. */\\n/** Two G\u2026\n- said: You've hit your 5-hour limit \u00b7 resets 3:10am (UTC)\n- said: You've hit your 5-hour limit \u00b7 resets 3:10am (UTC)\n- Bash: {\"command\": \"P=classicplus; CP_IDS=$P-058,$P-059,$P-063,$P-064,$P-067,$P-068,$P-076,$P-065-1,$P-065-2,$P-065-3,$P-065-5,$P-t-ai-02 CP_SHEET=p3a pnpm --dir apps/web exec vitest run src/cards/art/zz-sh\u2026\n- said: You've hit your 5-hour limit \u00b7 resets 3:10am (UTC)"
       },
-      "hold": {
-        "ends": "2026-11-08T04:25:08Z",
-        "lifted": "2026-11-08T03:13:14Z",
-        "owner": "claude-8",
-        "since": "2026-11-08T02:25:08Z",
-        "until": "2026-11-08T03:10:00Z",
-        "why": "5-hour usage is 102%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
@@ -16899,7 +16891,7 @@
       "queued_at": "2026-11-07T16:46:16Z",
       "requested_by": "jgoetzmann",
       "round_tier": "strong",
-      "run_id": "42436552200",
+      "run_id": "pending:2ee344ef-1794107680",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -16918,7 +16910,7 @@
         "provider": "claude-8",
         "run": "42436552200"
       },
-      "started_at": "2026-11-08T01:58:59Z",
+      "started_at": "2026-11-08T03:15:09Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -18093,9 +18085,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T03:14:25Z",
+    "at": "2026-11-08T03:15:09Z",
     "url": "",
-    "what": "review #3419 on claude-8"
+    "what": "build #3390 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-08T03:01:32Z",
