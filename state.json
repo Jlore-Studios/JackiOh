@@ -17868,7 +17868,7 @@
         "provider": "claude-8",
         "round_tier": "medium",
         "rounds_on": 3419,
-        "rounds_used": 0,
+        "rounds_used": 1,
         "since": "2026-11-08T05:27:51Z",
         "source": "conflict",
         "until": "2026-11-08T06:45:52Z"
