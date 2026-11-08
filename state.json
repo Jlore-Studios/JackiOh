@@ -16744,7 +16744,7 @@
       }
     },
     "3386": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_early": true,
@@ -16786,9 +16786,9 @@
       },
       "interruptions": 0,
       "issue": 3340,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "resolving",
+      "live": "reviewing",
       "merge_owner": "claude-1",
       "pending_request": false,
       "provider": "gpt",
@@ -16796,11 +16796,11 @@
       "queued_at": "2026-11-08T11:04:14Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "42469629844",
+      "run_id": "pending:ef9e0723-1794136022",
       "runs_on": "night-vm-gpt",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-08T10:01:21Z",
+      "started_at": "2026-11-08T11:07:48Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -18671,9 +18671,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T11:06:46Z",
+    "at": "2026-11-08T11:07:48Z",
     "url": "",
-    "what": "build #3396 on claude-6"
+    "what": "review #3386 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-08T10:50:55Z",
