@@ -149,9 +149,14 @@ export type ScenePlacement = {
   readonly props?: true;
   /** R3391000: how far a pointing part turns, in degrees clockwise; none leaves it as drawn. */
   readonly rotate?: number;
+  /** R3393000: scales every shape's opacity, for a ghost, a copy or a far thing half seen. */
+  readonly fade?: number;
 };
 
-/** The figure a recipe's subject layer draws in front of its own parts, standing on x, y. */
+/**
+ * The figure a recipe's subject layer draws in front of its own parts, standing on x, y. R3393000: `fade` scales
+ * its shapes' opacity, for a ghost, a copy or a recruit flickering into being.
+ */
 export type FigureRecipe = {
   readonly x: number;
   readonly y: number;
@@ -159,6 +164,7 @@ export type FigureRecipe = {
   readonly flip?: 1 | -1;
   readonly pose: PoseId;
   readonly look: FigureLook;
+  readonly fade?: number;
 };
 
 /** R3390000: a further figure (a crowd, a companion, a rival), drawn in front of its layer's own parts, after the main figure in the subject layer. */
@@ -227,6 +233,11 @@ function between(rng: Rng, low: number, high: number): number {
   return low + (high - low) * rng();
 }
 
+/** R3393000: `shape` with its opacity scaled by `fade`, or `shape` itself when there is none. */
+function faded<T extends KitShape>(shape: T, fade: number | undefined): T {
+  return fade === undefined ? shape : { ...shape, opacity: shape.opacity * fade };
+}
+
 /**
  * The card's recipe, read by its id alone (a picture's own seed keeps the card's), or null. R3396000: a card with an
  * alt recipe draws it under its Alt art seed (`<id>#alt`) alone; every other seed of it, a repaint's among them, keeps
@@ -254,16 +265,17 @@ export function composeScene(recipe: SceneRecipe, seedId: string): SceneShape[] 
         const s = (placed.scale ?? 1) * (1 + between(rng, -SCENE_SCALE_JITTER, SCENE_SCALE_JITTER));
         for (const shape of kit.draw({ x, y, s, flip: placed.flip ?? 1, rotate: placed.rotate }, rng)) {
           const paint = shape.main === true && placed.paint !== undefined ? placed.paint : shape.paint;
-          out.push({ ...shape, paint, layer, part: placed.part, ...(placed.props === true ? { props: true as const } : {}) });
+          out.push({ ...faded(shape, placed.fade), paint, layer, part: placed.part, ...(placed.props === true ? { props: true as const } : {}) });
         }
       }
     }
     // The figure stands in front of the subject layer's own parts.
     if (layer === "subject" && recipe.figure !== undefined) {
-      for (const shape of drawFigure(recipe.figure, rng)) out.push({ ...shape, layer });
+      for (const shape of drawFigure(recipe.figure, rng)) out.push({ ...faded(shape, recipe.figure.fade), layer });
     }
-    // R3390000: the scene's other figures stand in front of their layers' parts, after the main figure.
-    for (const extra of recipe.extras ?? []) if (extra.layer === layer) for (const shape of drawFigure(extra, rng)) out.push({ ...shape, layer });
+    // R3390000: the scene's other figures stand in front of their layers' parts, after the main figure. R3393000: a fade
+    // scales a placement's or a figure's opacity; one with none draws as it did.
+    for (const extra of recipe.extras ?? []) if (extra.layer === layer) for (const shape of drawFigure(extra, rng)) out.push({ ...faded(shape, extra.fade), layer });
   }
   return out;
 }

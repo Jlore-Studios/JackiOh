@@ -221,8 +221,10 @@ an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, pale
 
 - **Looks** (`fx/aura/looks.ts`, `AURA_LOOKS`): `ember`, `frost`, `bloom`, `void`, `storm`, `holy`,
   `toxic`, `arcane`, (R3337003) `drift` (an asteroid field's), (R3400000) `flurry` (snow), `chalk`
-  (chalk dust) and `timber` (sawdust); each a mote velocity, size and life range, a mote, tint and edge
-  opacity, a glow spread and a blend, as each signature look below is too. `palette` is a flavor's look or a sub-look
+  (chalk dust) and `timber` (sawdust), and (R3405000) `ripple` (a still pool's), `orbit` (a ring circling
+  its card), `steam`, `incense` (rising hologram lines) and `glitch` (pixel spots); the seventeen each a
+  mote velocity, size and life range, a mote, tint and edge opacity, a glow spread and a blend, as each
+  signature look below is too. `palette` is a flavor's look or a sub-look
   (`"Tech/rocket"`), the card's own by default, as a motif's.
 - **Scopes**, nearest first: `tile` (R3400000: a Unit's own unit zone), `zone` (the card's own backrow
   zone), `lane` (the lane's four zones, both seats), `side` (its seat's ten zones) and `board` (all
@@ -264,16 +266,16 @@ Ten Field Spells wear one as the pattern for the set passes:
 | Classic #42 Transmutable Toxins | `toxic`, board |
 | Classic #75 Argusland | `holy`, side |
 | Classic+ #34 Memory Leak | `frost`, lane, palette Tech |
-| Meditative #40 Feng Shui | `bloom`, board |
+| Meditative #40 Feng Shui | `orbit`, zone (R3405001; `bloom`, board before its signature) |
 | Meditative+ #9 Magic Amplifier | `arcane`, board |
 | Stinkyscape #46 Circadian Halfcycler | `storm`, lane |
 | Stinkyscape #155 Comet Crash | `ember`, zone |
 | Training Grounds #19 Extra Rations | `bloom`, zone |
 
 No modifier example is wired yet. A bespoke entry may wear an aura beside its recipe (R3400000), as
-Bob's and Tutorial Master's signatures do on their tiles, and Classic's nine permanents' signatures
-each wear their own look (R3389000); a modifier a Unit's play installs wears no tile aura, which stands
-with the Unit.
+Bob's and Tutorial Master's signatures do on their tiles, Meditative's signature Field Spells on
+their zones and lanes (R3405001), and Classic's nine permanents' signatures each wear their own look
+(R3389000); a modifier a Unit's play installs wears no tile aura, which stands with the Unit.
 
 ### Tile auras
 
@@ -568,6 +570,17 @@ motifs most of them played; #3332 laid the frame (R3332000) and each set's pass 
   in place of the shared rays; a permanent's standing look of its own on its zone, a Unit's on its
   tile; In Too Deep's own takeover, `abyss`, and its still. `fx/cards/classic.md` ("Signatures") lists
   each card's beats, what moved and its verdict; `classic/signatures.test.ts` plays them, from both seats.
+- **Meditative** (#3405, R3405000, R3405001): every Meditative Legendary and Mythic, its tokens by their
+  printed rarity among them, is a signature after its concept, in `fx/cards/meditative/`: a Unit's
+  entrance of its own, then its text's beat and a standing look on its tile; a Spell's cast of its own; a
+  Field Spell's entrance as it lands face up, its text's beat and a look on its zone or lane. Each of its
+  thirteen Mythics takes over in a look of its own with art (twelve new looks, and YileGPT's `ai` draws
+  art now), the same parts standing still under Reduce Motion; a Mythic's entrance starts after its
+  takeover's hold (`leadMs`); a Mythic takes over once an action, so a flood of Yile's Viruses takes over
+  once; and The Cane, which Pareto Optimality puts onto the field face up, enters as it lands. Five shared
+  aura looks join (`ripple`, `orbit`, `steam`, `incense`, `glitch`). Each sounds its own effect
+  (`audio/signatureCues.ts`), The Cane as it lands face up in the backrow. `fx/cards/meditative.md` gives each card's
+  beats; `meditative/signatures*.test.ts` plays them, from both seats.
 
 ## Set pieces
 
