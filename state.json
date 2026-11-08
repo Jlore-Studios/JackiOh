@@ -16778,11 +16778,6 @@
       "last_findings": [],
       "live": "resolving",
       "merge_owner": "claude-7",
-      "paused": {
-        "at": "2026-11-08T04:15:27Z",
-        "interrupt": "usage",
-        "provider": "claude-1"
-      },
       "pending_request": false,
       "provider": "claude-1",
       "question": "",
