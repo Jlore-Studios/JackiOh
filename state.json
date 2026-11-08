@@ -16130,14 +16130,10 @@
         "approvals": [],
         "builder": "claude",
         "built_by": "claude-8",
-        "rejections": [
-          "claude"
-        ],
+        "rejections": [],
         "reviews": [],
-        "sha": "ae0ec818145e44eb0a6714e6fc8d3c01b97466a9",
-        "tiers": {
-          "claude": "medium"
-        }
+        "sha": "eccd50573b36273e48ed023636d181469797e334",
+        "tiers": {}
       },
       "waiting_comment": 6716284547
     },
