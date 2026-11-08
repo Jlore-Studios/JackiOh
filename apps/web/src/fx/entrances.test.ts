@@ -1,5 +1,7 @@
 // R670: the bespoke entrances of the marquee Legendary and Mythic Units (entrances.ts), planned the
 // way FxLayer plans them. A card whose entry is a set piece lands with its set piece's entrance (R2800000).
+// R3332000, R3395000: a Field Spell's own entrance plays as it lands face up in the backrow (Stinkyscape's
+// The Greatest Heist, Rod of Ages and The Narcor Project), so each card lands where its type stands.
 
 import catalogJson from "@jackioh/cards/catalog.json";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
@@ -56,6 +58,15 @@ function emptyLane(side: "you" | "opponent", row: "units" | "backrow", lane: num
   return view;
 }
 
+/** The plain card of each entrance's type a marquee is held against: a Legendary Unit, an Epic Field Spell. */
+const PLAIN: Readonly<Record<string, string>> = { Unit: "core-052", "Field Spell": "stinkyscape-046" };
+
+/** Where `defId` lands as it is played: a Field Spell in backrow lane 3, any other card in unit lane 3. */
+function landingOf(defId: string, player: "p1" | "p2" = "p1", instanceId = "m1", lane = 3): Extract<GameEvent, { type: "summoned" }> {
+  const row = CATALOG[defId]?.type === "Field Spell" ? "backrow" : "units";
+  return { type: "summoned", player, instanceId, defId, row, lane };
+}
+
 function endOf(cue: FxCue): number {
   switch (cue.kind) {
     case "burst":
@@ -75,7 +86,7 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
     for (const [defId, key] of MARQUEE) {
       const def = CATALOG[defId];
       expect(def, defId).toBeDefined();
-      expect(def?.type, defId).toBe("Unit");
+      expect(["Unit", "Field Spell"], defId).toContain(def?.type);
       // A token by the rarity it prints (B2.5): R3400001's Training-Grounds Golem.
       expect(["Legendary", "Mythic"], defId).toContain(def?.printedRarity ?? def?.rarity);
       expect(typeof ENTRANCES[key]).toBe("function");
@@ -86,12 +97,14 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
 
   it("R670 a marquee summoned into a unit zone plans its own entrance in place of the rarity's rays and gold", () => {
     for (const [defId, key] of MARQUEE) {
-      const landing = summoned("p1", "m1", defId);
-      const cues = planAll([landing], envOf(), undefined, emptyLane("you", "units", 3));
+      // R3395000: a Field Spell lands in its backrow zone.
+      const landing = landingOf(defId);
+      const board = emptyLane("you", landing.row, 3);
+      const cues = planAll([landing], envOf(), undefined, board);
       const D = ANIMATIONS.summoned.durationMs;
       // R3332001, R3400001: an entrance that reads the board and its landing (its side, its lane) is given both.
-      const view = withEvents(emptyLane("you", "units", 3), [landing]);
-      const expected = ENTRANCES[key]({ D, tgt: testid.zone("you", "units", 3), intensity: FX_INTENSITY_SCALE.normal, view, landing: landing.type === "summoned" ? landing : undefined });
+      const view = withEvents(board, [landing]);
+      const expected = ENTRANCES[key]({ D, tgt: testid.zone("you", landing.row, 3), intensity: FX_INTENSITY_SCALE.normal, view, landing });
       expect(cues, defId).toEqual(expected);
       expect(cues.some((cue) => cue.kind === "burst" && cue.preset === "gold" && cue.spread === "area"), defId).toBe(false);
       const shakes = cues.filter((cue) => cue.kind === "shake");
@@ -124,16 +137,21 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
     const hidden = planAll([summoned("p2", "hidden", "hidden")]);
     expect(hidden.some((cue) => cue.kind === "rays" || cue.kind === "crack" || cue.kind === "shake")).toBe(false);
     for (const [defId] of MARQUEE) {
-      const set = planAll([summoned("p1", "m1", defId, "backrow")], envOf(), undefined, emptyLane("you", "backrow", 3));
-      expect(set.map((cue) => cue.kind), defId).toEqual(["burst"]);
+      // R3395000: a Field Spell set face down carries its former id (R227) and lands as a plain one of its type does.
+      const field = CATALOG[defId]?.type === "Field Spell";
+      const setOf = (id: string): GameEvent => ({ ...summoned("p1", "m1", id, "backrow"), ...(field ? { formerId: "f0" } : {}) });
+      const set = planAll([setOf(defId)], envOf(), undefined, emptyLane("you", "backrow", 3));
+      const plain = field ? planAll([setOf(PLAIN["Field Spell"] ?? "")], envOf(), undefined, emptyLane("you", "backrow", 3)).map((cue) => cue.kind) : ["burst"];
+      expect(set.map((cue) => cue.kind), defId).toEqual(plain);
     }
   });
 
   it("R670 R201 an entrance paces nothing: the entry's duration is the summon's, marquee or not", () => {
     for (const [defId] of MARQUEE) {
       const view = fullBoardView();
-      const marquee = planEntries([played("p1", "m1", defId), summoned("p1", "m1", defId)], view, false);
-      const plain = planEntries([played("p1", "m1", "core-052"), summoned("p1", "m1", "core-052")], view, false);
+      const other = PLAIN[CATALOG[defId]?.type ?? "Unit"] ?? "core-052";
+      const marquee = planEntries([played("p1", "m1", defId), landingOf(defId)], view, false);
+      const plain = planEntries([played("p1", "m1", other), landingOf(other)], view, false);
       expect(marquee.map((entry) => entry.durationMs)).toEqual(plain.map((entry) => entry.durationMs));
     }
   });
@@ -141,7 +159,7 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
   it("R200 every entrance cue starts inside its entry and ends within FX_MAX_TAIL_MS of its end, for short and long entries", () => {
     for (const D of [120, 250, 400, 732, 1400]) {
       for (const [defId] of MARQUEE) {
-        const cues = planAll([summoned("p1", "m1", defId)], envOf(), D);
+        const cues = planAll([landingOf(defId)], envOf(), D);
         expect(cues.length).toBeGreaterThan(3);
         for (const cue of cues) {
           const label = `${defId} ${cue.kind} at D=${String(D)}`;
@@ -155,6 +173,6 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
   });
 
   it("R200 intensity 0 (the effects off, or reduced motion) plans none of it", () => {
-    for (const [defId] of MARQUEE) expect(planAll([summoned("p1", "m1", defId)], envOf({ intensity: 0 }))).toEqual([]);
+    for (const [defId] of MARQUEE) expect(planAll([landingOf(defId)], envOf({ intensity: 0 }))).toEqual([]);
   });
 });

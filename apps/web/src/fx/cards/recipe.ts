@@ -3,6 +3,7 @@
 // marquee Unit's rarity entrance (entrances.ts). Each card's recipe is its own file beside its set's table.
 // R3332000: an entrance is an entry's `entrance`, beside any entry of a Unit or a Field Spell, or alone.
 // R3400001: Bob's "snowplowHeave", Tutorial Master's "chalkboardLesson" and the Training-Grounds Golem's "golemLashing".
+// R3395000: Stinkyscape 001 to 090's signature Units' and Field Spells' (fx/cards/stinkyscape/).
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
@@ -42,6 +43,28 @@ export const ENTRANCE_TRAUMA = {
   snowplowHeave: 0.75,
   chalkboardLesson: FX_LEGENDARY_TRAUMA,
   golemLashing: 0.75,
+  // R3395000: Stinkyscape 001 to 090's signature Units and Field Spells, a Legendary's at FX_LEGENDARY_TRAUMA and a
+  // Mythic's (Tylannt, Rod of Ages, Paragon-X, Prototype-X2) a step louder, inside SIGNATURE_PERMANENT_MAX_TRAUMA.
+  vaultStride: 0.75,
+  heistDrop: FX_LEGENDARY_TRAUMA,
+  rodRise: 0.75,
+  lecternRise: FX_LEGENDARY_TRAUMA,
+  spotlightKiss: FX_LEGENDARY_TRAUMA,
+  labVault: FX_LEGENDARY_TRAUMA,
+  emitterBloom: FX_LEGENDARY_TRAUMA,
+  barrelSpin: FX_LEGENDARY_TRAUMA,
+  breechLock: FX_LEGENDARY_TRAUMA,
+  turretScan: FX_LEGENDARY_TRAUMA,
+  intakeMaw: FX_LEGENDARY_TRAUMA,
+  wraithGather: FX_LEGENDARY_TRAUMA,
+  heraldHorn: FX_LEGENDARY_TRAUMA,
+  paragonStreak: FX_LEGENDARY_TRAUMA,
+  paragonDive: 0.75,
+  flagshipDescent: FX_LEGENDARY_TRAUMA,
+  testLurch: FX_LEGENDARY_TRAUMA,
+  forgeBurst: 0.75,
+  redCarpet: FX_LEGENDARY_TRAUMA,
+  venomStep: FX_LEGENDARY_TRAUMA,
 } as const;
 
 /** Where Big Max's fuse sparks, as a fraction of the entry, before the slam at FX_SLAM_AT. */

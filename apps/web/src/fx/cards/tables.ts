@@ -15,6 +15,7 @@
 // rarity here is the one it prints (B2.5), as its entrance's (game/animations.ts `EntranceResolver`).
 // R3400000: a `{ bespoke }` entry may wear an `aura` too, and a Unit's aura may stand on its own `tile`
 // (its unit zone, fx/aura/plan.ts); "summit", "canvas" and "napkin" join the Mythics' own takeover looks.
+// R3395001: so do Stinkyscape's "vault", "rod", "wire", "whiteDwarf" and "forge".
 
 import JSON5 from "json5";
 
@@ -67,7 +68,20 @@ export type FxAuraSpec = { look: AuraLook; palette?: FxPalette; scope: AuraScope
 export type OwnTakeoverLook = Exclude<TakeoverLook, "prismatic">;
 
 /** R3332000: every look `OwnTakeoverLook` holds; a missing one fails `typecheck`. */
-export const OWN_TAKEOVER_LOOKS: Readonly<Record<OwnTakeoverLook, true>> = { void: true, pawn: true, genie: true, ai: true, summit: true, canvas: true, napkin: true };
+export const OWN_TAKEOVER_LOOKS: Readonly<Record<OwnTakeoverLook, true>> = {
+  void: true,
+  pawn: true,
+  genie: true,
+  ai: true,
+  summit: true,
+  canvas: true,
+  napkin: true,
+  vault: true,
+  rod: true,
+  wire: true,
+  whiteDwarf: true,
+  forge: true,
+};
 
 function isOwnTakeoverLook(look: string): look is OwnTakeoverLook {
   return Object.prototype.hasOwnProperty.call(OWN_TAKEOVER_LOOKS, look);

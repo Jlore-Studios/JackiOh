@@ -6,7 +6,8 @@
 // Dormant Starship's "shipyardRollout" and #137 Starfleet Commander's "fleetCommand". R3332000: a
 // Field Spell's own entrance plays as it lands face up in the backrow. R3400001: Meditative+ #24 Bob's
 // "snowplowHeave", Training Grounds #38 Tutorial Master's "chalkboardLesson" and #39.1 the Training-Grounds
-// Golem's "golemLashing". It keys off the `summoned` event's
+// Golem's "golemLashing". R3395000: Stinkyscape 001 to 090's signature Units and Field Spells, from #6
+// Tylannt's "vaultStride" to #88 Siva 2's "venomStep" (fx/cards/stinkyscape/). It keys off the `summoned` event's
 // own `defId`, which a hidden summon never has (R202), and decorates the entry the runner already timed,
 // so it paces nothing (R200, R201).
 //
@@ -24,6 +25,26 @@ import { felinorAssembly } from "./cards/core/felinorFiender.ts";
 import { snowplowHeave } from "./cards/meditativeplus/bobSoldier.ts";
 import { golemLashing } from "./cards/traininggrounds/trainingGolem.ts";
 import { chalkboardLesson } from "./cards/traininggrounds/tutorialMaster.ts";
+import { vaultStride } from "./cards/stinkyscape/tylannt.ts";
+import { heistDrop } from "./cards/stinkyscape/greatestHeist.ts";
+import { rodRise } from "./cards/stinkyscape/rodOfAges.ts";
+import { lecternRise } from "./cards/stinkyscape/zolarKeth.ts";
+import { spotlightKiss } from "./cards/stinkyscape/kwzka.ts";
+import { labVault } from "./cards/stinkyscape/narcorProject.ts";
+import { emitterBloom } from "./cards/stinkyscape/beamV5.ts";
+import { barrelSpin } from "./cards/stinkyscape/repeaterV5.ts";
+import { breechLock } from "./cards/stinkyscape/cannonV5.ts";
+import { turretScan } from "./cards/stinkyscape/flakV5.ts";
+import { intakeMaw } from "./cards/stinkyscape/minerV5.ts";
+import { wraithGather } from "./cards/stinkyscape/zZoth.ts";
+import { heraldHorn } from "./cards/stinkyscape/aZoth.ts";
+import { paragonStreak } from "./cards/stinkyscape/paragonMk2.ts";
+import { paragonDive } from "./cards/stinkyscape/paragonX.ts";
+import { flagshipDescent } from "./cards/stinkyscape/galaxy.ts";
+import { testLurch } from "./cards/stinkyscape/prototypeX1.ts";
+import { forgeBurst } from "./cards/stinkyscape/prototypeX2.ts";
+import { redCarpet } from "./cards/stinkyscape/siva1.ts";
+import { venomStep } from "./cards/stinkyscape/siva2.ts";
 import { FOOT, type Entrance, type EntranceKey } from "./cards/recipe.ts";
 import { fleetCommand, shipyardRollout } from "./cards/stinkyscape/starshipSignatures.ts";
 import { FX_CRACK_TAIL_MS, FX_FLAVOR_LIVE, FX_SUMMON_BRUTE_TRAUMA, FX_SUMMON_FLAVOR_TUNING } from "./constants.ts";
@@ -45,6 +66,26 @@ export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = {
   snowplowHeave,
   chalkboardLesson,
   golemLashing,
+  vaultStride,
+  heistDrop,
+  rodRise,
+  lecternRise,
+  spotlightKiss,
+  labVault,
+  emitterBloom,
+  barrelSpin,
+  breechLock,
+  turretScan,
+  intakeMaw,
+  wraithGather,
+  heraldHorn,
+  paragonStreak,
+  paragonDive,
+  flagshipDescent,
+  testLurch,
+  forgeBurst,
+  redCarpet,
+  venomStep,
 };
 
 /* #1445: one summon entrance per flavor */

@@ -8,6 +8,8 @@
 // Anomaly Found!'s call (#3337). R3334004: #176 Preemptive Strike's signature. R3400001: the signatures of
 // Meditative+'s and Training Grounds' Legendaries and Mythics (Bob's Plan, Bob, Scratch Pad, Seance, Tutorial
 // Master, Call to Chaos (Training-Grounds Edition); Goetzmann Game Design's grows from its flourish).
+// R3395000: the signatures of Stinkyscape 001 to 090's Legendaries and Mythics (fx/cards/stinkyscape/;
+// Imitated Instrumentality's magiBoot grows from its flourish).
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
@@ -34,6 +36,27 @@ import { magiBoot } from "./stinkyscape/magiBoot.ts";
 import { preemptiveStrike } from "./stinkyscape/preemptiveStrike.ts";
 import { probeScan } from "./stinkyscape/probeScan.ts";
 import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
+import { echoRings } from "./stinkyscape/aZoth.ts";
+import { beamCharge } from "./stinkyscape/beamV5.ts";
+import { cannonShell } from "./stinkyscape/cannonV5.ts";
+import { droneConveyor } from "./stinkyscape/droneCoreEight.ts";
+import { seedPod } from "./stinkyscape/droneCoreNine.ts";
+import { flakWaves } from "./stinkyscape/flakV5.ts";
+import { bellyBay } from "./stinkyscape/galaxy.ts";
+import { heistLocks } from "./stinkyscape/greatestHeist.ts";
+import { allureRibbon } from "./stinkyscape/kwzka.ts";
+import { asteroidCrunch } from "./stinkyscape/minerV5.ts";
+import { narcorCases } from "./stinkyscape/narcorProject.ts";
+import { paperclipLink } from "./stinkyscape/paperclipTheory.ts";
+import { wingMount } from "./stinkyscape/prototypeX1.ts";
+import { spineWeld } from "./stinkyscape/prototypeX2.ts";
+import { repeaterBurst } from "./stinkyscape/repeaterV5.ts";
+import { rodBands } from "./stinkyscape/rodOfAges.ts";
+import { glowLeash } from "./stinkyscape/siva1.ts";
+import { venomHand } from "./stinkyscape/siva2.ts";
+import { vaultHeist } from "./stinkyscape/tylannt.ts";
+import { ghostHulls } from "./stinkyscape/zZoth.ts";
+import { campusLaunch } from "./stinkyscape/zolarKeth.ts";
 import { celestialCall } from "./traininggrounds/celestialCaller.ts";
 import { chaosDice } from "./traininggrounds/chaosDice.ts";
 import { dinoStomp } from "./traininggrounds/dinoSize.ts";
@@ -62,6 +85,27 @@ export const CARD_RECIPES = {
   bobSoldier,
   scratchPad,
   magiBoot,
+  vaultHeist,
+  heistLocks,
+  rodBands,
+  campusLaunch,
+  droneConveyor,
+  seedPod,
+  allureRibbon,
+  narcorCases,
+  paperclipLink,
+  beamCharge,
+  repeaterBurst,
+  cannonShell,
+  flakWaves,
+  asteroidCrunch,
+  ghostHulls,
+  echoRings,
+  bellyBay,
+  wingMount,
+  spineWeld,
+  glowLeash,
+  venomHand,
   battleshipWarp,
   duoBond,
   flashFreeze,

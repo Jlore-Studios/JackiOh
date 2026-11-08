@@ -68,8 +68,9 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     // Flourishes, Plague Nuke's set piece and its two marquee entrances); #2799: Training Grounds' 51.
     // R3338000: Event Horizon's and The Big Crunch's set pieces, which were `none`; R3334004: the Dormant
     // Starship's, Starfleet Commander's and Preemptive Strike's signatures, which were `none`. R3400001: the
-    // Training-Grounds Golem's signature, which was `none`.
-    expect(cards).toHaveLength(651);
+    // Training-Grounds Golem's signature, which was `none`. R3395000: Tylannt's, Paragon Mk2's and Siva 2's
+    // signatures, which were `none` (Stinkyscape 001 to 090's 97).
+    expect(cards).toHaveLength(654);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });

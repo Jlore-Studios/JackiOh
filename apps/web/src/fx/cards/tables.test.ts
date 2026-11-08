@@ -6,7 +6,8 @@
 // its hooks (Nature Titan's, beside its Cry). R3332000: the frame, an `entrance` beside any entry of a Unit
 // or a Field Spell or alone, a `takeover` beside a Mythic's and a `signature` naming its first beat, and
 // the eight marquee cards' entrances and looks folded into it. R3400000: a bespoke entry's aura, a Unit's
-// `tile` aura, and Meditative+'s and Training Grounds' takeover looks and entrances among them.
+// `tile` aura, and Meditative+'s and Training Grounds' takeover looks and entrances among them. R3395001:
+// Stinkyscape 001 to 090's signature entrances, its five Mythics' own looks and its Field Spells' three auras.
 
 import { describe, expect, it } from "vitest";
 
@@ -250,7 +251,33 @@ describe("R2784000 the per-set effects tables", () => {
     const entrances = { "core-100": "voidCollapse", "classic-080": "bigBoom", "classic-045": "titanBloom", "classic-056": "tyrantSigil" };
     for (const [defId, key] of Object.entries(entrances)) expect(entranceKeyOf(defId), defId).toBe(key);
     // R3400000: the signature Units' entrances and the signature Mythics' own looks.
-    const signatureEntrances = { "core-092": "felinorAssembly", "meditativeplus-024": "snowplowHeave", "traininggrounds-038": "chalkboardLesson", "traininggrounds-039-1": "golemLashing" };
+    const signatureEntrances = {
+      "core-092": "felinorAssembly",
+      "meditativeplus-024": "snowplowHeave",
+      "traininggrounds-038": "chalkboardLesson",
+      "traininggrounds-039-1": "golemLashing",
+      // R3395001: Stinkyscape 001 to 090's signature Units and Field Spells.
+      "stinkyscape-006": "vaultStride",
+      "stinkyscape-007": "heistDrop",
+      "stinkyscape-016": "rodRise",
+      "stinkyscape-026": "lecternRise",
+      "stinkyscape-037": "spotlightKiss",
+      "stinkyscape-039": "labVault",
+      "stinkyscape-058": "emitterBloom",
+      "stinkyscape-059": "barrelSpin",
+      "stinkyscape-060": "breechLock",
+      "stinkyscape-061": "turretScan",
+      "stinkyscape-066": "intakeMaw",
+      "stinkyscape-070": "wraithGather",
+      "stinkyscape-071": "heraldHorn",
+      "stinkyscape-073": "paragonStreak",
+      "stinkyscape-074": "paragonDive",
+      "stinkyscape-080": "flagshipDescent",
+      "stinkyscape-085": "testLurch",
+      "stinkyscape-086": "forgeBurst",
+      "stinkyscape-087": "redCarpet",
+      "stinkyscape-088": "venomStep",
+    };
     for (const [defId, key] of Object.entries(signatureEntrances)) expect(entranceKeyOf(defId), defId).toBe(key);
     const looks = {
       "core-100": "void",
@@ -260,6 +287,12 @@ describe("R2784000 the per-set effects tables", () => {
       "meditativeplus-001": "summit",
       "meditativeplus-026": "canvas",
       "traininggrounds-040": "napkin",
+      // R3395001: Stinkyscape's five Mythics.
+      "stinkyscape-006": "vault",
+      "stinkyscape-016": "rod",
+      "stinkyscape-044": "wire",
+      "stinkyscape-074": "whiteDwarf",
+      "stinkyscape-086": "forge",
     };
     for (const [defId, look] of Object.entries(looks)) expect(takeoverLookOf(defId), defId).toBe(look);
     expect(Object.keys(OWN_TAKEOVER_LOOKS).sort()).toEqual(Object.values(looks).sort());
@@ -364,6 +397,24 @@ describe("R2784000 the per-set effects tables", () => {
     says(`"traininggrounds-037": { bespoke: "seance", takeover: "summit" }`, /traininggrounds-037: a takeover is a Mythic's; this card is Legendary$/);
     expect(FX_CARD_TABLE.get("meditativeplus-024")).toMatchObject({ aura: { look: "flurry", scope: "tile" } });
     expect(FX_CARD_TABLE.get("traininggrounds-038")).toMatchObject({ aura: { look: "chalk", scope: "tile" } });
+  });
+
+  it("R3395001 Stinkyscape's signature Field Spells wear laserGrid, silverRise and labHaze in their zones, and its signature Units an aura on their tiles", () => {
+    const parse = (body: string) => parseFxCardTable("test.json5", `{ ${body} }`);
+    for (const look of ["laserGrid", "silverRise", "labHaze"] as const) expect(AURA_LOOK_NAMES, look).toContain(look);
+    expect(FX_CARD_TABLE.get("stinkyscape-007")).toMatchObject({ kind: "bespoke", key: "heistLocks", aura: { look: "laserGrid", palette: "Hustle/cash", scope: "zone" } });
+    expect(FX_CARD_TABLE.get("stinkyscape-016")).toMatchObject({ kind: "bespoke", key: "rodBands", aura: { look: "silverRise", palette: "Physical/blade", scope: "zone" } });
+    expect(FX_CARD_TABLE.get("stinkyscape-039")).toMatchObject({ kind: "bespoke", key: "narcorCases", aura: { look: "labHaze", palette: "Dark/curse", scope: "zone" } });
+    // A Field Spell's zone look is no Unit's tile look, nor a tile a Field Spell's.
+    expect(() => parse(`"stinkyscape-007": { bespoke: "heistLocks", aura: { look: "laserGrid", scope: "tile" } }`)).toThrow(/a tile aura stands on a Unit's own tile; this card is a Field Spell$/);
+    expect(() => parse(`"stinkyscape-006": { bespoke: "vaultHeist", aura: { look: "laserGrid", scope: "zone" } }`)).toThrow(/a zone aura stands in a zone; this card is a Unit/);
+    // Every signature Unit of the range stands on a tile aura of its own.
+    const units = [...FX_CARD_TABLE].filter(([defId, entry]) => /^stinkyscape-0[0-8]\d$|^stinkyscape-090$/.test(defId) && isSignature(entry) && CATALOG[defId]?.type === "Unit");
+    expect(units.length).toBe(17);
+    for (const [defId, entry] of units) {
+      const aura = entry.kind === "hooks" || entry.kind === "bespoke" ? entry.aura : undefined;
+      expect(aura?.scope, defId).toBe("tile");
+    }
   });
 
   it("R2787000 R2794000 the ten example Field Spells across the sets wear their auras", () => {

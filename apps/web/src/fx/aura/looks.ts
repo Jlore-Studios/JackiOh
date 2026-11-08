@@ -3,10 +3,28 @@
 // card's palette (FLAVOR_LOOKS); these numbers are the look's motion and weight (CLAUDE.md rule 9).
 // R3400000: a Unit's aura may stand on its own `tile`, its unit zone, the nearest scope; and three looks
 // join for the Units whose signatures wear one there: Bob's snow `flurry`, Tutorial Master's `chalk`
-// dust and the Training-Grounds Golem's `timber` dust.
+// dust and the Training-Grounds Golem's `timber` dust. R3395001: three join for Stinkyscape's signature
+// Field Spells: The Greatest Heist's sweeping green `laserGrid`, Rod of Ages' rising `silverRise` and The
+// Narcor Project's slow `labHaze`.
 
-/** The twelve looks, as a card's table entry or an Anomaly's backdrop (`fx/anomaly.ts`, R3337003) names them. */
-export const AURA_LOOK_NAMES = ["ember", "frost", "bloom", "void", "storm", "holy", "toxic", "arcane", "drift", "flurry", "chalk", "timber"] as const;
+/** The fifteen looks, as a card's table entry or an Anomaly's backdrop (`fx/anomaly.ts`, R3337003) names them. */
+export const AURA_LOOK_NAMES = [
+  "ember",
+  "frost",
+  "bloom",
+  "void",
+  "storm",
+  "holy",
+  "toxic",
+  "arcane",
+  "drift",
+  "flurry",
+  "chalk",
+  "timber",
+  "laserGrid",
+  "silverRise",
+  "labHaze",
+] as const;
 
 /** What an aura covers, nearest first: a Unit's own tile, its card's own zone, its lane, its side or the whole board. The index is its stacking rank. */
 export const AURA_SCOPES = ["tile", "zone", "lane", "side", "board"] as const;
@@ -63,4 +81,8 @@ export const AURA_LOOKS: Readonly<Record<AuraLook, AuraLookSpec>> = {
   flurry: { vx: [-8, 8], vy: [4, 12], size: [1.5, 3], life: [2600, 4200], alpha: 0.55, tint: 0.06, glow: 8, edge: 0.35, blend: L },
   chalk: { vx: [-6, 6], vy: [-8, -2], size: [1.5, 3], life: [2400, 4000], alpha: 0.45, tint: 0.05, glow: 6, edge: 0.3, blend: S },
   timber: { vx: [-3, 3], vy: [6, 14], size: [1.5, 3], life: [2000, 3400], alpha: 0.4, tint: 0.07, glow: 8, edge: 0.4, blend: S },
+  // R3395001: a vault's laser glints sweeping sideways, a rod's silver motes rising, a lab's slow haze.
+  laserGrid: { vx: [-16, 16], vy: [-2, 2], size: [1, 2], life: [1800, 3000], alpha: 0.6, tint: 0.06, glow: 12, edge: 0.5, blend: L },
+  silverRise: { vx: [-2, 2], vy: [-16, -8], size: [1.5, 3], life: [2600, 4200], alpha: 0.6, tint: 0.08, glow: 12, edge: 0.5, blend: L },
+  labHaze: { vx: [-5, 5], vy: [-8, -2], size: [4, 7], life: [3000, 5000], alpha: 0.45, tint: 0.12, glow: 12, edge: 0.45, blend: S },
 };

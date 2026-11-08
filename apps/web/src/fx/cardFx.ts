@@ -7,7 +7,8 @@
 // `hookResolving` opened, a Trap's `cast` by the one its `trapFired` opened (memory.ts). R3332000: the
 // entrance a card lands with is its entry's `entrance`, whatever the entry's kind (`entranceKeyOf`): a
 // set piece's (R2800000, setPieces.ts) and a Field Spell's landing face up in the backrow among them.
-// R200: every delay lands inside the entry and trails off within FX_MAX_TAIL_MS.
+// R200: every delay lands inside the entry and trails off within FX_MAX_TAIL_MS. R3395001: a signature's
+// beat that replaces its event's row replaces its system moment too (`resolvingSignature`, cues.ts).
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
@@ -19,7 +20,7 @@ import { raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
 import { CARD_RECIPES, type CardRecipeKey } from "./cards/bespoke.ts";
 import type { EntranceKey } from "./cards/recipe.ts";
 import type { CardFxPlan, CardFxResult } from "./cards/recipe.ts";
-import { FX_CARD_TABLE, type FxCardEntry } from "./cards/tables.ts";
+import { FX_CARD_TABLE, isSignature, type FxCardEntry } from "./cards/tables.ts";
 import { FX_CAST_ON_DRAW_TRAUMA } from "./constants.ts";
 import { ENTRANCES, entranceEvent } from "./entrances.ts";
 import { FLAVOR_LOOKS, paletteLook } from "./flavors.ts";
@@ -86,6 +87,15 @@ export function planCardFx(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<s
   if (play === undefined || play.defId === HIDDEN_ID) return null;
   const key = bespokeOf(play.defId, table);
   return key === undefined ? null : CARD_RECIPES[key](event, p, play);
+}
+
+/**
+ * R3395001: whether the readable play or hook resolving now is a signature's (R3332000), whose own beats
+ * draw the events they replace in place of those events' system moments too (cues.ts), as they do the rows.
+ */
+export function resolvingSignature(env: FxPlanEnv, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): boolean {
+  const play = env.memory.resolving();
+  return play !== undefined && play.defId !== HIDDEN_ID && isSignature(table.get(play.defId));
 }
 
 /** A motif's cues for one entry, and the entry's events it drew in place of their own row recipe. */

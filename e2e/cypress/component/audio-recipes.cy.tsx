@@ -52,6 +52,10 @@ const EXPECTED_IDS = [
   "starshipFlak", "starshipLauncher", "starshipRam", "starshipWreck",
   // R3400001: Meditative+'s and Training Grounds' signatures.
   "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
+  // R3395000: Stinkyscape 001 to 090's signatures.
+  "vaultHiss", "safeChirp", "stoneChime", "magiChord", "lectureRumble", "pressStamp", "corvetteRoar", "popGasp",
+  "geigerHum", "wireRatchet", "beamWhine", "rattleSteam", "breechBoom", "flakWind", "crunchJackpot", "choirHulls",
+  "hornEcho", "jetSnap", "whiteRing", "hullDrills", "klaxonSputter", "moltenSnarl", "shutterPurr", "venomDrip",
 ] as const;
 
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
@@ -180,6 +184,31 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   diceGong: 1600,
   timberLash: 1200,
   pencilArpeggio: 1400,
+  // R3395000.
+  vaultHiss: 1400,
+  safeChirp: 1200,
+  stoneChime: 1600,
+  magiChord: 1500,
+  lectureRumble: 1600,
+  pressStamp: 1300,
+  corvetteRoar: 1450,
+  popGasp: 1200,
+  geigerHum: 1400,
+  wireRatchet: 1600,
+  beamWhine: 1450,
+  rattleSteam: 1350,
+  breechBoom: 1500,
+  flakWind: 1600,
+  crunchJackpot: 1500,
+  choirHulls: 1600,
+  hornEcho: 1500,
+  jetSnap: 1300,
+  whiteRing: 1600,
+  hullDrills: 1500,
+  klaxonSputter: 1600,
+  moltenSnarl: 1500,
+  shutterPurr: 1400,
+  venomDrip: 1400,
 };
 
 /** B14 parameter sets used here too. */
@@ -417,6 +446,14 @@ const ROUTINE: readonly Cue[] = [
   ),
   // R3400001: the signatures, each a card's own moment at a routine level.
   ...(["inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio"] as const).map((id): Cue => ({ id, params: {} })),
+  // R3395000: Stinkyscape 001 to 090's signatures, at the same level.
+  ...(
+    [
+      "vaultHiss", "safeChirp", "stoneChime", "magiChord", "lectureRumble", "pressStamp", "corvetteRoar", "popGasp",
+      "geigerHum", "wireRatchet", "beamWhine", "rattleSteam", "breechBoom", "flakWind", "crunchJackpot", "choirHulls",
+      "hornEcho", "jetSnap", "whiteRing", "hullDrills", "klaxonSputter", "moltenSnarl", "shutterPurr", "venomDrip",
+    ] as const
+  ).map((id): Cue => ({ id, params: {} })),
 ];
 const ROUTINE_BAND = [-12, -4] as const;
 const UI_BANDS: Readonly<Record<"uiClick" | "uiHover", readonly [number, number]>> = { uiClick: [-15, -9], uiHover: [-22, -15] };

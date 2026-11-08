@@ -24,6 +24,7 @@ import { crownSwapFixture } from "../cards/classic/kingWagtoggle.ts";
 import { recycleLoopFixture } from "../cards/classic/recycle.ts";
 import { felinorBoard } from "../cards/core/felinorFiender.ts";
 import type { EntranceKey } from "../cards/recipe.ts";
+import { STINKYSCAPE_SIGNATURE_FIXTURES } from "../cards/stinkyscape/signatureFixtures.ts";
 import { fleetBoard } from "../cards/stinkyscape/starshipSignatures.ts";
 import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
 import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
@@ -384,7 +385,8 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * Edition) rolls its Golem. R2794000: Classic's Flourishes take their own
  * fixtures (fx/cards/classic/): Book of Heal heals the viewer's first unit, Recycle shuffles two cards
  * into the deck and draws one, and King Wagtoggle swaps the decks. R3334004: Preemptive Strike wakes its
- * player's Dormant Starship, which the board does not show, so its brand falls on the hero.
+ * player's Dormant Starship, which the board does not show, so its brand falls on the hero. R3395000:
+ * Stinkyscape 001 to 090's signatures take theirs from fx/cards/stinkyscape/signatureFixtures.ts.
  */
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
@@ -518,6 +520,7 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   pageMend: pageMendFixture,
   recycleLoop: recycleLoopFixture,
   crownSwap: crownSwapFixture,
+  ...STINKYSCAPE_SIGNATURE_FIXTURES,
 };
 
 /** R2794000: the lane of the viewer's unit row a gallery entrance lands in. */

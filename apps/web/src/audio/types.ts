@@ -44,7 +44,11 @@ export type SfxId =
   | "starshipDock" | "starshipIgnite" | "starshipRoar" | "starshipBeam" | "starshipRepeater" | "starshipCannon"
   | "starshipFlak" | "starshipLauncher" | "starshipRam" | "starshipWreck"
   // R3400001: Meditative+'s and Training Grounds' signature Legendaries and Mythics, one each (signatureCues.ts).
-  | "inkSummit" | "plowHeave" | "cursorTear" | "seanceChant" | "slateRap" | "diceGong" | "timberLash" | "pencilArpeggio";
+  | "inkSummit" | "plowHeave" | "cursorTear" | "seanceChant" | "slateRap" | "diceGong" | "timberLash" | "pencilArpeggio"
+  // R3395000: Stinkyscape 001 to 090's signature Legendaries and Mythics, one each (signatureCues.ts).
+  | "vaultHiss" | "safeChirp" | "stoneChime" | "magiChord" | "lectureRumble" | "pressStamp" | "corvetteRoar" | "popGasp"
+  | "geigerHum" | "wireRatchet" | "beamWhine" | "rattleSteam" | "breechBoom" | "flakWind" | "crunchJackpot" | "choirHulls"
+  | "hornEcho" | "jetSnap" | "whiteRing" | "hullDrills" | "klaxonSputter" | "moltenSnarl" | "shutterPurr" | "venomDrip";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains
