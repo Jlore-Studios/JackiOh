@@ -13657,7 +13657,7 @@
       "last_findings": [],
       "live": "building",
       "owner": "gpt",
-      "owner_since": "2026-11-08T11:22:40Z",
+      "owner_since": "2026-11-08T11:49:40Z",
       "owner_why": "its final audit of `2b9e189e5395` asked for changes, and the auditor fixes its own findings",
       "pending_request": false,
       "planned_at": "2026-11-07T14:35:17Z",
