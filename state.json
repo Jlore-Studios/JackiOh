@@ -15110,7 +15110,7 @@
       "stop_requested": false
     },
     "3386": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_early": true,
@@ -15153,11 +15153,13 @@
       },
       "interruptions": 0,
       "issue": 3340,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "revising",
+      "live": "reviewing",
       "merge_owner": "claude-1",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-08T12:28:18Z",
         "from_run": "42477979425",
         "gates": [
           {
@@ -15224,11 +15226,11 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "42477979425",
+      "run_id": "pending:9760096b-1794140843",
       "runs_on": "night-vm-gpt",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-08T11:57:09Z",
+      "started_at": "2026-11-08T12:28:18Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17075,9 +17077,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T12:15:28Z",
+    "at": "2026-11-08T12:28:18Z",
     "url": "",
-    "what": "build #3393 on claude-7"
+    "what": "review #3386 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-08T12:09:57Z",
