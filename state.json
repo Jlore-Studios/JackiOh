@@ -16790,10 +16790,10 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "built_by": "claude-1",
+        "built_by": "claude-6",
         "rejections": [],
         "reviews": [],
-        "sha": "772a3495b8516a526a04b18e0486053a5ce6a61e",
+        "sha": "9cd6e106b139df0c64402997b7c8a844f40f4a58",
         "tiers": {}
       },
       "waiting_comment": 6722170318
