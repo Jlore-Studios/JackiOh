@@ -38,7 +38,9 @@ export type SfxId =
   // R3346000: a play's impact by the mana it cost, and a firing trap's snap.
   | "playImpact" | "trapSnap"
   // R3342000: the tile aura touch bell.
-  | "auraTouch";
+  | "auraTouch"
+  // R3400001: Meditative+'s and Training Grounds' signature Legendaries and Mythics, one each (signatureCues.ts).
+  | "inkSummit" | "plowHeave" | "cursorTear" | "seanceChant" | "slateRap" | "diceGong" | "timberLash" | "pencilArpeggio";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains

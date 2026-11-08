@@ -207,9 +207,9 @@ export function planTileAura(
   const tier = tierOf(def);
   if (tier === null) return null;
 
-  // Signature aura replaces the default.
+  // Signature aura replaces the default (R3400000: a bespoke entry's too, Bob's and Tutorial Master's tiles).
   const tableEntry = table.get(live.defId);
-  if (tableEntry?.kind === "hooks" && tableEntry.aura !== undefined) return null;
+  if ((tableEntry?.kind === "hooks" || tableEntry?.kind === "bespoke") && tableEntry.aura !== undefined) return null;
 
   const radiant = live.radiant ?? false;
   const rawColors = pictureColors(live.defId, def, radiant);
