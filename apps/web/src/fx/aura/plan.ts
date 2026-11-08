@@ -8,6 +8,9 @@
 // begins as it appears and ends as it leaves, and at most AURA_MAX_PER_ZONE cover a zone, nearest scope
 // first and then newest.
 //
+// R3389000: a face-up Unit whose entry (a signature's) wears a `zone` aura wears it over its own unit
+// zone (`row: "units"`, key `unit-<instanceId>`), never on what it installs; a hidden Unit wears none.
+//
 // R3337003: while an Anomaly's board stands, its caster's side wears its backdrop (`ANOMALY_FX`), a side
 // aura keyed `anomaly-<player>` (testid `aura-anomaly-p1`) after that seat's Field cards and modifiers.
 // Which board stands is the layer's memory of the public `boardReplaced` events (`noteAnomalies`): until
@@ -21,7 +24,7 @@ import { laneZoneTestids } from "../../game/actions.ts";
 import { LANES, sideView, testid, type Side } from "../../game/contract.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { ANOMALY_FX } from "../anomaly.ts";
-import { FX_CARD_TABLE, type FxAuraSpec, type FxCardEntry } from "../cards/tables.ts";
+import { entryAura, FX_CARD_TABLE, type FxAuraSpec, type FxCardEntry } from "../cards/tables.ts";
 import { AURA_FADE_IN_MS, AURA_FADE_OUT_MS, AURA_MAX_PER_ZONE, AURA_MOTES_PER_AURA, AURA_PARTICLE_SHARE, AURA_SOURCES_LIMIT } from "../constants.ts";
 import { FLAVOR_LOOKS, paletteLook, type FlavorColors } from "../flavors.ts";
 import { flavorLookOf } from "../flavorSource.ts";
@@ -33,13 +36,18 @@ const SIDES: readonly Side[] = ["you", "opponent"];
 
 /** One aura as planned: what it covers and how it looks. `defId` is the planner's; it never reaches the page (R202). */
 export type AuraSpec = {
-  /** `field-<instanceId>` for a Field card, `mod-<player>-<modifierId>` for a modifier, `anomaly-<player>` for an Anomaly's backdrop. */
+  /**
+   * `field-<instanceId>` for a Field card, `unit-<instanceId>` for a Unit's own zone (R3389000),
+   * `mod-<player>-<modifierId>` for a modifier, `anomaly-<player>` for an Anomaly's backdrop.
+   */
   key: string;
   defId: string;
   instanceId: string;
   side: Side;
-  /** The Field card's backrow lane; null for a modifier, whose `zone` or `lane` scope is its side. */
+  /** The Field card's backrow lane (a Unit's unit lane); null for a modifier, whose `zone` or `lane` scope is its side. */
   lane: number | null;
+  /** R3389000: a Unit's zone aura stands in its unit zone; absent, the backrow's. */
+  row?: "units";
   scope: AuraScope;
   look: AuraLook;
   colors: FlavorColors;
@@ -69,8 +77,7 @@ function specOf(key: string, defId: string, instanceId: string, side: Side, lane
 }
 
 function auraOf(table: ReadonlyMap<string, FxCardEntry>, defId: string): FxAuraSpec | undefined {
-  const entry = table.get(defId);
-  return entry?.kind === "hooks" ? entry.aura : undefined;
+  return entryAura(table.get(defId));
 }
 
 /** R3337003: `code`'s backdrop over `side`, in its set piece's palette. */
@@ -99,6 +106,14 @@ export function planAuras(
       const aura = auraOf(table, slot.defId);
       if (aura !== undefined) out.push(specOf(`field-${slot.instanceId}`, slot.defId, slot.instanceId, side, index + 1, aura, view));
     });
+    // R3389000: a Unit's zone aura stands on its own unit zone, a hidden one's never (R202), nor a Field
+    // card's Animated into a unit zone (R383), whose aura is its backrow zone's.
+    seat.units.forEach((unit, index) => {
+      if (unit === null || unit === undefined || unit.defId === HIDDEN_ID) return;
+      if ((CATALOG[unit.defId] ?? view.defs?.[unit.defId])?.type !== "Unit") return;
+      const aura = auraOf(table, unit.defId);
+      if (aura?.scope === "zone") out.push({ ...specOf(`unit-${unit.instanceId}`, unit.defId, unit.instanceId, side, index + 1, aura, view), row: "units" });
+    });
     for (const modifier of seat.modifiers) {
       const source = sources.get(sourceKey(seat.player, modifier.id));
       if (source === undefined) continue;
@@ -106,6 +121,8 @@ export function planAuras(
       const type = (CATALOG[source.defId] ?? view.defs?.[source.defId])?.type;
       if (type !== undefined && isAuraFieldType(type)) continue;
       const aura = auraOf(table, source.defId);
+      // R3389000: so does a Unit's zone aura.
+      if (type === "Unit" && aura?.scope === "zone") continue;
       if (aura !== undefined) out.push(specOf(`mod-${seat.player}-${modifier.id}`, source.defId, source.instanceId, side, null, aura, view));
     }
     const code = view.result === null ? anomalies.get(seat.player) : undefined;
@@ -158,11 +175,11 @@ function sideZones(side: Side): string[] {
 }
 
 /** The zones an aura covers, by testid. */
-export function auraZones(spec: Pick<AuraSpec, "scope" | "side" | "lane">): string[] {
+export function auraZones(spec: Pick<AuraSpec, "scope" | "side" | "lane" | "row">): string[] {
   if (spec.scope === "board") return [...sideZones("you"), ...sideZones("opponent")];
   if (spec.scope === "side" || spec.lane === null) return sideZones(spec.side);
   if (spec.scope === "lane") return laneZoneTestids(spec.lane);
-  return [testid.zone(spec.side, "backrow", spec.lane)];
+  return [testid.zone(spec.side, spec.row ?? "backrow", spec.lane)];
 }
 
 /** `begin` while it fades in with its burst, `standing` while it holds, `end` while it fades out. */

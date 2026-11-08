@@ -15,7 +15,7 @@ import { LANES, laneIndex, sideView, testid, type AnimatingMap, type Highlight, 
 import { CATALOG } from "../../wire/cards.ts";
 import type { PublicBackrowView } from "../../wire/generated/PublicBackrowView.ts";
 import type { UnitView } from "../../wire/generated/UnitView.ts";
-import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
+import { entryAura, FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
 import { capacityFor } from "../director.ts";
 import { createRng } from "../rng.ts";
 import {
@@ -26,7 +26,7 @@ import {
   TILE_PARTICLE_SHARE,
   TILE_VARIANTS,
 } from "./config.ts";
-import { AURA_LOOKS, type AuraLook } from "./looks.ts";
+import { auraLookSpec, type AuraLook } from "./looks.ts";
 
 export type TileTier = "Legendary" | "Mythic";
 
@@ -207,9 +207,8 @@ export function planTileAura(
   const tier = tierOf(def);
   if (tier === null) return null;
 
-  // Signature aura replaces the default.
-  const tableEntry = table.get(live.defId);
-  if (tableEntry?.kind === "hooks" && tableEntry.aura !== undefined) return null;
+  // Signature aura replaces the default (R3389000: a signature bespoke's too).
+  if (entryAura(table.get(live.defId)) !== undefined) return null;
 
   const radiant = live.radiant ?? false;
   const rawColors = pictureColors(live.defId, def, radiant);
@@ -329,7 +328,7 @@ export type TileMote = {
 export function tileMotes(spec: TileAuraSpec, count: number): readonly TileMote[] {
   if (count <= 0) return [];
   const rng = createRng(hashId(spec.defId));
-  const look = AURA_LOOKS[spec.look];
+  const look = auraLookSpec(spec.look);
   const out: TileMote[] = [];
   for (let i = 0; i < count; i += 1) {
     const x = Math.round(rng() * 100);

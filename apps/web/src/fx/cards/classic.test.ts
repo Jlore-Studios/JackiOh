@@ -4,7 +4,9 @@
 // play the seat cannot read (R202), planned the way FxLayer plans them: remember, then plan. As a set's
 // pass asks (docs/polish/9-card-animations.md, "A set's pass"), every hook names a drawn motif, every play's
 // motif draws on its gallery fixture as that card's play (none for a hidden one), and classic.md, the pass's
-// per-card table, holds one row per Classic card that matches the catalog and the table.
+// per-card table, holds one row per Classic card that matches the catalog and the table. R3389001: its
+// eleven Legendaries and Mythics are signatures (classic/signatures.test.ts plays them), nine of them with
+// an entrance of their own, King Wagtoggle's crownSwap among its Flourishes still.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -22,7 +24,7 @@ import { FX_CARD_HOOKS, isDrawnMotif, type DrawnMotif } from "../motifs/names.ts
 import type { FxCue, FxPlanEnv } from "../types.ts";
 import { CARD_RECIPES, type CardRecipeKey } from "./bespoke.ts";
 import rawTable from "./classic.md?raw";
-import { FX_CARD_FILES, FX_CARD_TABLE, parseFxCardTable, type FxCardEntry } from "./tables.ts";
+import { entryAura, FX_CARD_FILES, FX_CARD_TABLE, parseFxCardTable, type FxCardEntry } from "./tables.ts";
 
 /** Every Classic catalog card, its token included, in catalog order. */
 const CLASSIC = Object.keys(CATALOG).filter((id) => CATALOG[id]?.set === "Classic");
@@ -43,13 +45,23 @@ function entryOf(id: string): FxCardEntry {
   return entry;
 }
 
-/** An entry as classic.md's Entry column writes it: core.md's, a marquee entrance first. */
+/**
+ * An entry as classic.md's Entry column writes it: core.md's, a marquee entrance first. R3389001: a
+ * signature's recipe as `signature; [entrance <e>; ]bespoke <k>[; aura <look> <scope>[ <palette>]][; takeover <look>]`.
+ */
 function describeEntry(entry: FxCardEntry): string {
   switch (entry.kind) {
     case "none":
       return `none: ${entry.reason}`;
-    case "bespoke":
-      return `bespoke ${entry.key}`;
+    case "bespoke": {
+      if (entry.signature !== true) return `bespoke ${entry.key}`;
+      const parts = ["signature"];
+      if (entry.entrance !== undefined) parts.push(`entrance ${entry.entrance}`);
+      parts.push(`bespoke ${entry.key}`);
+      if (entry.aura !== undefined) parts.push(["aura", entry.aura.look, entry.aura.scope, entry.aura.palette].filter((part) => part !== undefined).join(" "));
+      if (entry.takeover !== undefined) parts.push(`takeover ${entry.takeover}`);
+      return parts.join("; ");
+    }
     case "setPiece":
       return `setPiece ${entry.key}`;
     case "hooks": {
@@ -161,13 +173,26 @@ describe("R2794000 Classic's card animations", () => {
   it("R2794000 every Field Spell wears an aura", () => {
     const fields = classicCards().filter(([defId]) => CATALOG[defId]?.type === "Field Spell");
     expect(fields).toHaveLength(16);
-    for (const [defId, entry] of fields) expect(entry.kind === "hooks" ? entry.aura : undefined, defId).toBeDefined();
+    // R3389000: a signature's `{ bespoke }` wears its own beside its recipe.
+    for (const [defId, entry] of fields) expect(entryAura(entry), defId).toBeDefined();
   });
 
-  it("R2794000 R670 the three marquee entrances keep their recipes, Nature Titan's beside its Cry", () => {
+  it("R3389001 Classic's nine entrances: the three marquees' keep their recipes, grown, beside six of the signatures' own", () => {
     const marquee = Object.fromEntries(classicCards().flatMap(([defId]) => (entranceKeyOf(defId) === undefined ? [] : [[defId, entranceKeyOf(defId)]])));
-    expect(marquee).toEqual({ "classic-045": "titanBloom", "classic-056": "tyrantSigil", "classic-080": "bigBoom" });
-    expect(FX_CARD_TABLE.get("classic-045")).toEqual({ kind: "hooks", hooks: { cry: { motif: "flight" } }, entrance: "titanBloom" });
+    expect(marquee).toEqual({
+      "classic-004": "seeingOrb",
+      "classic-007": "sceptrePlant",
+      "classic-028": "galeBurst",
+      "classic-033": "silkDrop",
+      "classic-045": "titanBloom",
+      "classic-056": "tyrantSigil",
+      "classic-080": "bigBoom",
+      "classic-085": "royalCloak",
+      "classic-090": "abyssSurface",
+    });
+    // R670's three keep their entrances; Nature Titan's Cry is its own recipe now, its moss its own aura.
+    expect(FX_CARD_TABLE.get("classic-045")).toEqual({ kind: "bespoke", key: "titanLeaf", entrance: "titanBloom", aura: { look: "mossCreep", scope: "zone" }, signature: true });
+    expect(entryAura(FX_CARD_TABLE.get("classic-045"))).toEqual({ look: "mossCreep", scope: "zone" });
   });
 
   it("R2794000 every Classic hook names a drawn motif", () => {
@@ -218,7 +243,7 @@ describe("R2794000 Classic's card animations", () => {
 describe("R2794000 Classic's Flourishes", () => {
   for (const [key, defId] of FLOURISHES) {
     it(`R2794000 ${key} draws on its play's events`, () => {
-      expect(FX_CARD_TABLE.get(defId)).toEqual({ kind: "bespoke", key });
+      expect(FX_CARD_TABLE.get(defId)).toMatchObject({ kind: "bespoke", key });
       const view = fullBoardView();
       const fixture = RECIPE_FIXTURES[key](view, "ex", "p1");
       expect(fixture.length).toBeGreaterThan(0);

@@ -13,7 +13,7 @@ import { BACKDROP_PARTICLE_MAX } from "../../game/config.ts";
 import { testid } from "../../game/contract.ts";
 import { baseView, emptySide, faceUpBackrow, unit } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
-import { FX_CARD_TABLE, parseFxCardTable } from "../cards/tables.ts";
+import { entryAura, FX_CARD_TABLE, parseFxCardTable } from "../cards/tables.ts";
 import { FX_PARTICLE_CAP_MOBILE } from "../constants.ts";
 import {
   TILE_FADE_OUT_MS,
@@ -40,9 +40,6 @@ describe("R3342000 tile aura planner", () => {
       const tier = tierOf(def);
       if (tier === null) continue;
       if (def.type !== "Unit" && def.type !== "Field Spell" && def.type !== "Field Trap" && def.type !== "Trap") continue;
-      const tableEntry = FX_CARD_TABLE.get(id);
-      if (tableEntry?.kind === "hooks" && tableEntry.aura !== undefined) continue;
-
       const isUnit = def.type === "Unit";
       const view = baseView({
         you: emptySide("p1", {
@@ -52,6 +49,12 @@ describe("R3342000 tile aura planner", () => {
       });
 
       const planned = planTileAura(view, "you", isUnit ? "units" : "backrow", 1);
+      // A card's own aura replaces the default (R3389000: a signature bespoke's too), so it plans none.
+      if (entryAura(FX_CARD_TABLE.get(id)) !== undefined) {
+        expect(planned, id).toBeNull();
+        covered += 1;
+        continue;
+      }
       expect(planned).not.toBeNull();
       expect(planned?.tier).toBe(tier);
       if (tier === "Mythic") {

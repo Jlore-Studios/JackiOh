@@ -10,7 +10,8 @@
 // kept, so every hidden card looks the same to the planner. R3338000: a Terminus card that owes its
 // controller a turn (Event Horizon, Last Word: a `modifierChanged` added as it resolves) is owed its
 // follow-up, which the next turn that player starts opens (`opening`), and `openPlay` finds the outermost
-// play of a card still resolving (The Big Crunch's, around its casts).
+// play of a card still resolving (The Big Crunch's, around its casts). R3389000: `plays` lists every
+// open entry, outermost first, so a signature's recipe can claim the casts it makes (Spell Tyrant's).
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 
@@ -157,6 +158,9 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
       const play = resolving[resolving.length - 1];
       if (play === undefined) return undefined;
       return { ...play, seen: { ...play.seen }, ...(play.hits === undefined ? {} : { hits: [...play.hits] }) };
+    },
+    plays(): readonly FxPlay[] {
+      return resolving.map((play) => ({ ...play, seen: { ...play.seen }, ...(play.hits === undefined ? {} : { hits: [...play.hits] }) }));
     },
     castOnDraw(event: GameEvent): boolean {
       return castOnDraw.has(event);

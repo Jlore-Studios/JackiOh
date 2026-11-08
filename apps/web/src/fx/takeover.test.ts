@@ -2,7 +2,12 @@
 // planned from the entry's `entrance` (game/animations.ts `entranceEntries`), held as its set piece
 // (`setPieceEntries`, R2785000) and bounded by R200.
 // R2722002: a hidden card's at its reveal, centred on the zone that flipped. R3332000: a Mythic's own
-// look is its effects table entry's `takeover`.
+// look is its effects table entry's `takeover`. R3389000: In Too Deep's is "abyss", and a Spell's or a
+// Trap's signature cast of its own stands in for the shared Legendary rays, burst and ring.
+
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import type { CardType, GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -21,7 +26,7 @@ import { FX_CARD_TABLE, parseFxCardTable } from "./cards/tables.ts";
 import { FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_TAKEOVER_TAIL_MS, FX_TAKEOVER_TRAUMA } from "./constants.ts";
 import { planFx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
-import { entranceCues, entranceLandMs, takeoverLookOf } from "./takeover.ts";
+import { entranceCues, entranceLandMs, ownCast, TAKEOVER_TINTS, takeoverLookOf } from "./takeover.ts";
 import type { FxCue, FxPlanEnv, FxTakeoverCue } from "./types.ts";
 
 const CARDS: Record<string, { type: CardType; rarity: string }> = {
@@ -33,8 +38,13 @@ const CARDS: Record<string, { type: CardType; rarity: string }> = {
   "core-052": { type: "Unit", rarity: "Legendary" },
   "core-083": { type: "Spell", rarity: "Legendary" },
   "core-085": { type: "Trap", rarity: "Legendary" },
+  "classic-090": { type: "Field Spell", rarity: "Mythic" },
+  "classic-044": { type: "Spell", rarity: "Legendary" },
+  "classic-009": { type: "Trap", rarity: "Legendary" },
 };
 const resolve: EntranceResolver = (defId) => CARDS[defId] ?? null;
+/** The effects layer's stylesheet, for the takeover looks' art. */
+const fxCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "fx.css"), "utf8");
 const p1 = baseView();
 const p2 = baseView({ viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") });
 
@@ -89,9 +99,10 @@ describe("R2722001 a Mythic takes over the board", () => {
     expect(takeoverOf(planFx(entry([play("core-097")]), p1, env()))?.look).toBe("genie");
     expect(takeoverOf(planFx(entry([play("meditative-049"), summon("meditative-049")]), p1, env()))?.look).toBe("ai");
     expect(takeoverOf(planFx(entry([play("meditative-008")]), p1, env()))?.look).toBe("prismatic");
-    // R3332000: exactly the four marquee Mythics name a look of their own in the effects table.
+    // R3332000: exactly the four marquee Mythics name a look of their own in the effects table; R3389000
+    // and Classic's In Too Deep, its signature's.
     const own = [...FX_CARD_TABLE].flatMap(([defId, card]) => (card.kind !== "none" && card.takeover !== undefined ? [defId] : []));
-    expect(own).toEqual(["core-096", "core-097", "core-100", "meditative-049"]);
+    expect(own).toEqual(["core-096", "core-097", "core-100", "classic-090", "meditative-049"]);
     for (const defId of own) expect(CATALOG[defId]?.printedRarity ?? CATALOG[defId]?.rarity, defId).toBe("Mythic");
     for (const events of [[play("core-052"), summon("core-052")], [play("core-083")], [fired("core-085")]]) {
       const e = entry(events);
@@ -144,5 +155,40 @@ describe("R2722002 a hidden card's entrance centres on the zone that flipped", (
     // The sentinel's firing, and a Field Trap firing again, make no entrance.
     expect(planFx(entry([fired("hidden")], p2), p2, env()).some((c) => c.kind === "rays" || c.kind === "takeover")).toBe(false);
     expect(planFx(entry([fired("core-096", true)]), p1, env()).some((c) => c.kind === "rays" || c.kind === "takeover")).toBe(false);
+  });
+
+  it("R3389000 In Too Deep's takeover wears abyss; a Spell's own cast drops the shared rays", () => {
+    // In Too Deep lands face up in the backrow under a takeover of its own, its tint its look's.
+    const deep = entry([play("classic-090"), { type: "summoned", player: "p1", instanceId: "i-classic-090", defId: "classic-090", row: "backrow", lane: 2 }]);
+    const cues = planFx(deep, p1, env());
+    const takeover = takeoverOf(cues);
+    expect(takeover?.look).toBe("abyss");
+    // It centres on the backrow zone it lands in, as a Unit's on its unit zone.
+    expect(deep.entrance?.anchor).toBe("zone-you-backrow-2");
+    expect(takeover?.at).toEqual({ kind: "testid", testid: "zone-you-backrow-2" });
+    expect(takeover?.tint).toEqual(TAKEOVER_TINTS.abyss);
+    expect(takeoverLookOf("classic-090")).toBe("abyss");
+    // Its own entrance lands with the takeover, after the hold, at the same moment: its shake at the takeover's landing.
+    const landMs = entranceLandMs(deep, deep.durationMs);
+    expect(takeover?.landMs).toBe(landMs);
+    expect(landMs).toBeGreaterThan(deep.setPiece?.holdMs ?? 0);
+    expect(cues.some((cue) => cue.kind === "shake" && cue.delayMs === landMs && cue.trauma === 0.5)).toBe(true);
+    // Its art: a spiral shaft, rushing water and shrine lights, each its own rule.
+    for (const part of ["dark::after", "sweep", "rays"]) expect(fxCss, part).toContain(`.fx-takeover[data-look="abyss"] .fx-takeover-${part}`);
+    expect(fxCss).toContain("@keyframes fx-takeover-plunge");
+
+    // A Spell's and a Trap's own cast: no shared rays, gold burst or ring; a Legendary with none keeps them.
+    expect(ownCast("classic-044")).toBe(true);
+    expect(ownCast("classic-009")).toBe(true);
+    expect(ownCast("classic-090")).toBe(false);
+    expect(ownCast("core-083")).toBe(false);
+    expect(entranceCues(entry([play("classic-044")]), env(), 400)).toEqual([]);
+    expect(entranceCues(entry([fired("classic-009")]), env(), 400)).toEqual([]);
+    expect(entranceCues(entry([play("core-083")]), env(), 400).some((cue) => cue.kind === "rays")).toBe(true);
+    expect(entranceCues(entry([fired("core-085")]), env(), 400).some((cue) => cue.kind === "rays")).toBe(true);
+    // A table that gives the Spell no signature: it takes the shared entrance again.
+    const table = parseFxCardTable("test.json5", `{ "classic-044": { bespoke: "graveRise" } }`);
+    expect(ownCast("classic-044", table)).toBe(false);
+    expect(entranceCues(entry([play("classic-044")]), env(), 400, table).some((cue) => cue.kind === "rays")).toBe(true);
   });
 });

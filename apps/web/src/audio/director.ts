@@ -12,6 +12,8 @@
 // #27's Radiant cards do. A sentinel play opens a frame no moment matches, and a sentinel draw marks nothing.
 // SET PIECES (R2800000): a board clear's held entry sends its bed as it starts (setPieceBeds.ts), and its
 // wipe's removals sound once, condensed, after the hold.
+// SIGNATURES (R3389000): the entry a signature's card makes its entrance in sends its bed as it starts
+// (signatureBeds.ts), beside its intro sting and its events' own sounds.
 
 import type { GameEvent, PlayerId, PlayerView, UnitView } from "@jackioh/shared";
 
@@ -26,6 +28,7 @@ import {
 } from "./constants.ts";
 import { cuesFor, type CueCard, type CueContext, type PlayFrame } from "./cues.ts";
 import { setPieceBed } from "./setPieceBeds.ts";
+import { signatureBed } from "./signatureBeds.ts";
 import type { CardAudioTable, SoundCue, SoundSink } from "./types.ts";
 import { CARD_AUDIO } from "./voiceData.ts";
 
@@ -250,6 +253,8 @@ export function createSoundDirector(
       if (at > 0) flush(owed.splice(0, at));
       // R2800000: a set piece's bed, laid across its hold.
       for (const cue of setPieceBed(entry)) send(cue, cue.delayMs);
+      // R3389000: a signature's bed, laid across the entry its card makes its entrance in.
+      for (const cue of signatureBed(entry)) send(cue, cue.delayMs);
 
       // Issue #124: a sweep or a whole-pile impact stands for many events, so voicing each would
       // stack a sound per card; condense the entry to one of each sfx and its most important line.

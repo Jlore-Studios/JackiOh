@@ -5,7 +5,8 @@
 // every Stinkyscape part-two one, #2799 every Training Grounds one, R2794000 every Classic one, a
 // marquee Unit's entrance as it lands, and R2797000 a Death, trigger or Activate from its hook's marker.
 // R2785000: it plays a card as the fixture set piece, which holds the board until a click skips it.
-// R3332000: it lists every signature by set; R3332001 plays Felinor Fiender's over its Felinors.
+// R3332000: it lists every signature by set; R3332001 plays Felinor Fiender's over its Felinors; R3389001
+// Classic's eleven.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -213,6 +214,31 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       expect(document.querySelector(`[data-testid="zone-you-units-${String(lane)}"] [data-def-id="${defId}"]`), `lane ${String(lane)}`).not.toBeNull();
     }
     expect(screen.getByTestId("game").querySelector("[data-animating]")).not.toBeNull();
+  });
+
+  it("R3389001 the gallery lists and plays Classic's eleven signatures", () => {
+    const classic = gallerySignatures().find((group) => group.set === "Classic");
+    const ids = ["classic-004", "classic-007", "classic-009", "classic-028", "classic-033", "classic-044", "classic-045", "classic-056", "classic-080", "classic-085", "classic-090"];
+    expect(classic?.cards.map((card) => card.defId)).toEqual(ids);
+    // Each is its recipe's play, on its fixture, over its own board.
+    for (const card of classic?.cards ?? []) expect(card.play.kind, card.defId).toBe("recipe");
+    render(<FxGallery />);
+    const select = screen.getByTestId(fxGalleryTestid.signature);
+    const group = [...select.querySelectorAll("optgroup")].find((candidate) => candidate.getAttribute("label") === "Classic");
+    expect([...(group?.querySelectorAll("option") ?? [])].map((option) => option.value)).toEqual(ids);
+    for (const defId of ids) {
+      fireEvent.change(select, { target: { value: defId } });
+      fireEvent.click(screen.getByTestId(fxGalleryTestid.playSignature));
+      // The card plays: the board animates it.
+      expect(screen.getByTestId("game").querySelector("[data-animating]"), defId).not.toBeNull();
+      // The view it lands in shows its aura on its own zone, a Unit's in the unit zone it lands in (R3389000).
+      const shown = galleryFieldView(defId, galleryBoardOf(defId, fullBoardView()));
+      const auras = planAuras(shown, new Map()).filter((aura) => aura.defId === defId);
+      const type = CATALOG[defId]?.type;
+      if (type === "Unit") expect(auras.map((aura) => [aura.row, aura.lane]), defId).toEqual([["units", 3]]);
+      else if (type === "Field Spell") expect(auras.map((aura) => [aura.row, aura.lane]), defId).toEqual([[undefined, 1]]);
+      else expect(auras, defId).toEqual([]);
+    }
   });
 
   it("R2784000 #2798 the gallery has a play for every Stinkyscape part-two entry other than none, and each plays its motif, recipe, set piece or aura", () => {

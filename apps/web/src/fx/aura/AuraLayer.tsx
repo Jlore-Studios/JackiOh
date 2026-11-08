@@ -30,7 +30,7 @@ import { useFxSettings } from "../settings.ts";
 import { createSurface, type FxSurface } from "../surface.ts";
 import type { FxBox, FxFrameSource, FxMemory, FxVisibility } from "../types.ts";
 import { createAuraDrift, type AuraDrift } from "./drift.ts";
-import { AURA_LOOKS } from "./looks.ts";
+import { auraLookSpec } from "./looks.ts";
 import {
   attributeModifiers,
   auraBudget,
@@ -266,7 +266,7 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
       {[...shown].reverse().map((aura) => {
         const box = boxes.get(aura.spec.key);
         if (box === undefined) return null;
-        const look = AURA_LOOKS[aura.spec.look];
+        const look = auraLookSpec(aura.spec.look);
         const [, body, glow] = aura.spec.colors;
         const { anomaly } = aura.spec;
         const style = {

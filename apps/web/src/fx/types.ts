@@ -155,7 +155,7 @@ export type FxFogCue = {
  * and a shockwave crosses both sides when it lands at `landMs`, all inside the entry and gone within
  * the effects' tail (R200).
  */
-export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai";
+export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai" | "abyss";
 export type FxTakeoverCue = { kind: "takeover"; look: TakeoverLook; tint: FxTint; at: FxAnchor; landMs: number; delayMs: number; durationMs: number };
 /**
  * R2800000: a board clear's set piece over the whole layer, centred on `at`: a `vortex` (the board
@@ -394,6 +394,8 @@ export type FxMemory = {
   casterOf(instanceId: string): PlayerId | undefined;
   trapZoneOf(instanceId: string): FxTrapZone | undefined;
   resolving(): FxPlay | undefined;
+  /** R3389000: every play and hook entry still open, outermost first (`resolving()` is the last). */
+  plays(): readonly FxPlay[];
   /** R502: whether this very `cardPlayed` (the object remembered) was a cast on draw. */
   castOnDraw(event: GameEvent): boolean;
   /** R2789000: the last FX_MEMORY_RECENT events, the planned entry's last. */

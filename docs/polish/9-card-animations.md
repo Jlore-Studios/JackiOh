@@ -225,12 +225,19 @@ an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, pale
   own by default, as a motif's.
 - **Scopes**, nearest first: `zone` (the card's own backrow zone), `lane` (the lane's four zones,
   both seats), `side` (its seat's ten zones) and `board` (all twenty). Only a Field Spell or a Field
-  Trap stands in a zone, so only it may name `zone` or `lane`; the loader fails any other card's.
+  Trap stands in a backrow zone, so only it may name `lane`; a Unit may name `zone` (R3389000), its own
+  unit zone while it holds it; the loader fails any other card's.
+- **Signature looks** (R3389000, `AURA_SIGNATURE_LOOKS`): `seeingIris`, `sceptreLoop`, `graveBreeze`,
+  `silkWeb`, `mossCreep`, `crownSigil`, `craterSmoke`, `cloakShimmer` and `abyssWhirl`, each one
+  Classic signature's own, within `AURA_SIGNATURE_MAX_INTENSITY`; the loader fails one on any entry
+  that is no signature, and `auraLookSpec` reads either kind.
 - **What wears one** (`fx/aura/plan.ts`, read off the shown view alone): every face-up Field Spell or
-  Field Trap whose entry has an aura, and every modifier the view lists that a readable play added
+  Field Trap whose entry has an aura, every face-up Unit whose entry's aura is `zone`, on its unit zone
+  (`unit-<instanceId>`, R3389000), and every modifier the view lists that a readable play added
   (the play resolving when its `modifierChanged` came, with no trap fired inside it), on its seat's
-  side. A face-down card, the viewer's own unrevealed Field Trap and a Unit in a backrow zone wear
-  none (R202). The view's modifiers carry no source (R169), so a modifier whose play left the event
+  side, but a Unit's zone aura, which stands with the Unit. A face-down card, the viewer's own
+  unrevealed Field Trap, a hidden Unit, a Field card standing in a unit zone and a Unit in a backrow
+  zone wear none (R202). The view's modifiers carry no source (R169), so a modifier whose play left the event
   window before the layer saw it (a reload, a hand-over) wears none.
 - **Begin and end:** an aura the board starts to show fades in over `AURA_FADE_IN_MS` with a burst
   of motes from its box's centre; one it stops showing fades out over `AURA_FADE_OUT_MS`. Both follow
@@ -260,7 +267,8 @@ Ten Field Spells wear one as the pattern for the set passes:
 | Stinkyscape #155 Comet Crash | `ember`, zone |
 | Training Grounds #19 Extra Rations | `bloom`, zone |
 
-No modifier example is wired yet, and a bespoke entry (Hinder's rider) cannot take an aura.
+No modifier example is wired yet. A bespoke entry takes an aura only as a signature's (R3389000):
+Hinder's rider still cannot, and Classic's nine permanents' signatures each wear their own look.
 
 ### Tile auras
 
@@ -274,8 +282,8 @@ under the card (`fx/aura/TileAura.tsx`, `tile.css`).
   (`TILE_MOTES_LEGENDARY`). Mythic gets a richer pattern chosen by its set's look (circuitry for
   Core, runes for Classic, ink for Meditative, starfield for Stinkyscape, roots for Training Grounds),
   a wider edge glow and motes (`TILE_MOTES_MYTHIC`).
-- **Signature replacement:** a card whose entry carries an `aura` (such as Feng Shui) uses that
-  standing aura in `AuraLayer` instead.
+- **Signature replacement:** a card whose entry carries an `aura` (such as Feng Shui, or a signature's
+  `{ bespoke }`, R3389000) uses that standing aura in `AuraLayer` instead.
 - **Interactions:** hover, press or tap sends a ripple, plays a bell in its hue (`auraTouch`) and
   buzzes on a phone (`Haptics.touch()`). Being picked as a target brightens the glow; damage or
   divine shield loss flickers it; Dormant, Frozen or Silenced dims it; destroyed or exiled fades
@@ -374,6 +382,15 @@ play already keys it. The hook's entry ends at the next marker or firing, a `car
 `countered`, an attack, a turn's end or start and the game's end; a hidden marker keys nothing
 (R202), and a modifier a hook adds wears no aura (R2787000).
 
+A signature's `{ bespoke }` recipe (R3389000) claims more than its window: when the play resolving
+draws nothing of an event, the innermost readable play open around it whose card has a signature
+recipe is asked (a cast its play makes: Spell Tyrant's), then the card the event names as its source
+(`sourceIdOf`: a `redirected`'s or `countered`'s `byInstanceId`, an `activated`'s or a quest event's
+`instanceId`), found face up on the board or in a readable landing the memory holds
+(`signaturePlayOf`); and a whole pile's one entry asks the resolving play's signature recipe too
+(`planSignatureZone`), beside its wave. An entrance is told when its card lands after any hold
+(`landMs`), and a Spell's or a Trap's own cast stands in for the shared Legendary rays (`ownCast`).
+
 ## Constraints
 
 - **R200:** every cue starts inside its entry and is gone within `FX_MAX_TAIL_MS` of its end, through
@@ -446,13 +463,13 @@ not `none` (`galleryPlayOf`, `fx/motifs/gallery.ts`), as that card's play, in on
 |---|---|---|
 | board | a drawn motif on `cast` or `cry` | the card resolves over the motif's fixture through the real board's effects layer |
 | hook | a drawn motif on `death`, `trigger` or `activate` only | the hook's marker under the card's play, then the motif's fixture, through the real board's effects layer (R2797000) |
-| recipe | a card recipe (`bespoke`) | the card resolves over the recipe's fixture (`RECIPE_FIXTURES`; Classic's Flourishes' fixtures sit beside their recipes in `fx/cards/classic/`) |
+| recipe | a card recipe (`bespoke`) | the card resolves over the recipe's fixture (`RECIPE_FIXTURES`; Classic's Flourishes' and signatures' fixtures sit beside their recipes in `fx/cards/classic/`), landing first when it names an entrance, over the board its recipe reads (`galleryBoardOf`: Back from the GY's first zone open) |
 | entrance | an `entrance` alone (R2794000, R3332000) | the card lands in the viewer's unit row as it plays (a Field Spell face up in the first backrow zone), so its entrance plays, over the board its entrance reads (`galleryBoardOf`: Felinor Fiender's three Felinors) |
 | set piece | `setPiece` | the card's hook marker, then wipe's fixture, which its set piece holds; a Terminus card's own run (`SET_PIECE_FIXTURES`, R3338000) |
 | aura | an `aura` alone | the card's play alone, the card standing face up in the viewer's first backrow zone, where its aura shows |
 
 A Field Spell or Field Trap of any play stands in that zone as it plays (`galleryFieldView`), so its
-aura shows too. A marquee Unit whose entrance stands beside its hooks (`entrance`, R2794000) lands the
+aura shows too, and a Unit whose aura is `zone` stands in the unit zone its entrance lands in (R3389000). A marquee Unit whose entrance stands beside its hooks (`entrance`, R2794000) lands the
 same way before its play's motif, so Nature Titan's entrance plays before its Cry. "Play as a
 set piece" plays the same card as the fixture set piece (R2785000): its play's entry holds the board for
 `SET_PIECE_HOLD_MS`, scaled and capped as every set piece, until a tap, a click or Space skips it.
@@ -485,7 +502,15 @@ motifs most of them played; #3332 laid the frame (R3332000) and each set's pass 
   crown. A Felinor buried under a Stack is face down and sends nothing (R202).
 - **Sound** (R3332002): a Legendary's or Mythic's play sting is its own intro, played whole with
   dynamic music on, its opening cut to `MUSIC_STING_S` on the effects bus otherwise; the shared
-  `entrance` sting plays only for one with no intro.
+  `entrance` sting plays only for one with no intro. R3389000: a signature lays a bed of its own
+  (`audio/signatureBeds.ts`, at most `SIGNATURE_BED_MAX_STEPS` existing effects) over the entry its card
+  makes its entrance in.
+- **Classic** (#3389, R3389000, R3389001): every Classic Legendary and Mythic is a signature, each a
+  `{ bespoke }` recipe in `fx/cards/classic/` after its concept: a Unit's entrance of its own (six new
+  entrances, the three marquees' grown), then its text's beat; a Spell's or a Trap's cast of its own,
+  in place of the shared rays; a permanent's standing look of its own on its zone; In Too Deep's own
+  takeover, `abyss`, and its still. `fx/cards/classic.md` ("Signatures") lists each card's beats, what
+  moved and its verdict; `classic/signatures.test.ts` plays them, from both seats.
 
 ## Set pieces
 
