@@ -14807,9 +14807,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-2",
-      "owner_since": "2026-11-08T09:40:40Z",
-      "owner_why": "it took it up; released from its hold: `claude-1` has no runner free where it runs",
+      "owner": "gpt",
+      "owner_since": "2026-11-08T10:01:21Z",
+      "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
       "pending_request": false,
       "planned_at": "2026-11-07T14:35:17Z",
       "planned_by": "`claude-4` (claude, `sonnet`, medium)",
@@ -16787,13 +16787,13 @@
         "provider": "claude-2"
       },
       "pending_request": false,
-      "provider": "claude-2",
+      "provider": "gpt",
       "question": "",
       "queued_at": "2026-11-08T06:06:57Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "",
-      "run_id": "42468196777",
-      "runs_on": "ubuntu-latest",
+      "run_id": "pending:a9132ebb-1794132028",
+      "runs_on": "night-vm-gpt",
       "self_check_findings": [],
       "session": {
         "action": "revise",
@@ -16813,7 +16813,7 @@
         "run": "42448802653"
       },
       "source": "conflict",
-      "started_at": "2026-11-08T09:40:40Z",
+      "started_at": "2026-11-08T10:01:21Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -18583,9 +18583,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T10:00:11Z",
+    "at": "2026-11-08T10:01:21Z",
     "url": "",
-    "what": "review #3431 on claude-1"
+    "what": "revise #3386 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-08T09:33:36Z",
