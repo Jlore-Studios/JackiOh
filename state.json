@@ -16181,12 +16181,10 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "at": "2026-11-07T22:50:13Z",
+        "at": "2026-11-08T03:52:45Z",
         "built_by": "claude-6",
         "by": "`claude` (strong)",
-        "carried_from": "a2fbc9f0eb05f1bea2e2ca86034e235482ec1ab1",
-        "resolved_by": "`claude` (strong)",
-        "sha": "2d94022917faaefed46d3665a99b7a01ee81e721"
+        "sha": "85cfad9b3b5c0b5656db4059088a7a5d820c4494"
       },
       "died": 0,
       "difficulty": "hard",
