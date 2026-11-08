@@ -17884,6 +17884,18 @@
       "action": "review",
       "asks": [],
       "audit_tier": "",
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-8",
+          "tier": "medium"
+        },
+        "at": "2026-11-08T10:25:11Z",
+        "built_by": "claude-8",
+        "by": "`claude` (medium)",
+        "sha": "ae0ec818145e44eb0a6714e6fc8d3c01b97466a9"
+      },
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
@@ -17904,6 +17916,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
+      "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
