@@ -106,9 +106,9 @@
 .fullscreen-art-open {
   align-self: center;
   min-height: 44px;
-  padding: 0 18px;
+  padding: 0 var(--space-8);
   border: 1px solid var(--line-bright);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg-sunken);
   color: var(--text);
   font: inherit;
