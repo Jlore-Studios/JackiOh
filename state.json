@@ -18645,6 +18645,7 @@
           }
         ],
         "head": "b71873f0af44c2cfb2a5116c4145223e7f4db525",
+        "interruptions": 0,
         "kind": "build",
         "model": "opus",
         "provider": "claude-8",
