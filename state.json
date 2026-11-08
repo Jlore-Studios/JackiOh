@@ -17455,14 +17455,6 @@
         "reason": "`claude-8` stops mid-call: 5-hour usage is 85%, at or over its 85% cap; it resets at 2026-11-08T08:10:00Z",
         "trail": " sed -n 122,240p apps/web/src/audio/signatureCues.test.ts | grep -n 'it(' ; grep -n 'gain\\\\|0\\\\.8\\\\|SIGNATURE' apps/web/src/audio/sfx.ts | grep \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src && sed -n 820,840p fx/cues.ts; grep -n 'FX_BANNER_TAIL_MS =' fx/constants.ts; grep -n 'export function leadMs' -A 10 game/animation\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407 && sed -n 1,80p crates/cards/src/scripts/stinkyscape/c111_shockwave447.rs\", \"description\": \"Read Shockwave447 script\"}\n- said: Let me write a first version of the module, then probe the runs to tune the timings.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src && sed -n 1,80p test/fixtures.ts | head -80; grep -n 'export function withEvents\\\\|export function faceUpBackrow\\\\|export function \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src && sed -n 20,40p fx/memory.ts; grep -o '\\\"type\\\": \\\"hookResolving\\\"[^|]*' wire/generated/GameEvent.ts; cat wire/generated/HookKind.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/crates/engine/src && grep -rn \\\"HookResolving\\\" --include=*.rs . | grep -v \\\"^./wire\\\" | head -20; grep -rn \\\"fn fire_delayed\\\\|fn run_delayed\\\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src && grep -n \\\"export type FxAnchor\\\" -A12 fx/types.ts; grep -n \\\"export const animTestid\\\" -A12 game/animations.ts; grep -n \\\"export\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3407/spec/rulings/R3407001.md\", \"content\": \"---\\nid: R3407001\\ntitle: \\\"Stinkyscape part two's signature sounds: each of the 23 cards sounds a recipe \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/crates/engine/src && sed -n 53,110p turn.rs; sed -n 60,95p hook_marks.rs\", \"description\": \"Read run_delayed and hook marker emission\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/crates/engine/src && sed -n 1,58p hook_marks.rs; grep -n \\\"fn run_due_entry\\\" -A 40 turn.rs | grep -n \\\"mark\\\\|hook\\\" \", \"description\": \"Read ho\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407; sed -n 60,130p e2e/cypress/component/fx-signature-stinkyscape.cy.tsx; sed -n 280,370p e2e/cypress/component/fx-phone-frame.cy.tsx\", \"descriptio\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src; grep -n 'case \\\"takeover\\\"' -A30 fx/dom.ts | head -45; sed -n 1,30p fx/takeoverArt.ts | head -40\", \"description\": \"Read the DOM ta\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src; grep -n 'export function takeoverArtOf' -B6 -A14 fx/takeover.ts; grep -n 'TAKEOVER_ART_LOOKS' -A3 fx/takeover.ts | head -8\", \"desc\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3407/apps/web/src/fx/cards/stinkyscape/freshJack.test.ts\", \"content\": \"import { it } from \\\"vitest\\\";\\nimport type { GameEvent } from \\\"@jackioh/share\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src && cat fx/cards/stinkyscape/freshJack.test.ts fx/cards/stinkyscape/jobApplication.test.ts; grep -n \\\"FX_SLAM_AT =\\\" fx/constants.ts\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407 && timeout 600 pnpm --dir apps/web exec vitest run src/fx/cards/stinkyscape/freshJack.test.ts > /tmp/probe3407-fj.txt 2>&1; grep -n \\\"^FJ\\\\|^SW\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407; cat >> .bot-notes.md <<'EOF'\\n- run 4: wasm built; zzscratch deleted; md stale sections fixed (set-piece candidates, #151, tokens 24); drafted \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src/wire/generated; grep -o '{ \\\"type\\\": \\\"\\\\(quest[A-Za-z]*\\\\|held\\\\|addedToHand\\\\|drawn\\\\|exiled\\\\|marketCreditsChanged\\\\|manaChanged\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src/wire/generated; grep -o '\\\"type\\\": \\\"\\\\(drawn\\\\|hookResolving\\\\|summoned\\\\|destroyed\\\\|cardPlayed\\\\|cardResolved\\\\)\\\"[^}]*}' GameEv\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/probe3407n && cd /home/runner/work/_temp/work/item-3407/apps/web/src/fx/cards/stinkyscape && cat > narcor.test.ts <<'EOF'\\nimport { expect, it } from \\\"vitest\\\";\\nimport ty\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src/wire/generated; grep -o '\\\"type\\\": \\\"drawn\\\"[^|]*' GameEvent.ts | head -2; grep -o '\\\"type\\\": \\\"hookResolving\\\"[^|]*' GameEvent.ts \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src && grep -n 'backrow\\\\b\\\\|backrow:' game/contract.ts | head; grep -n 'export function locateInstance' -A 20 game/animations.ts\", \"de\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src/fx; sed -n 1,200p memory.ts; sed -n 480,520p types.ts\", \"description\": \"Read fx memory and FxPlay type\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src/fx/cards/stinkyscape && sed -i 's/ console.log(out.join(\\\"\\\\\\\\n\\\"));\\\\n expect(1).toBe(1);//' narcor.test.ts && python3 - <<'EOF'\\n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src && grep -n '`backrow-\\\\|\\\"backrow-\\\\|zone:\\\\|card:\\\\|hero:\\\\|handCard:\\\\|board:' game/contract.ts | head\", \"description\": \"Check te\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src; grep -n 'export function\\\\|export const' test/fixtures.ts | head -40; grep -n 'GALLERY_FIELD_ENTRANCE_LANE\\\\|GALLERY_ENTRANCE_LANE\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src/fx/cards/stinkyscape; cat signature.ts | sed -n 1,200p\", \"description\": \"Read the shared signature helpers\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src && sed -n 55,110p game/contract.ts; grep -rn 'backrow-\\\\${' --include=*.tsx game | head -5\", \"description\": \"Read the testid map\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3407/apps/web/src; grep -n 'export const animTestid' -A16 game/animations.ts; grep -n 'export function heroOf\\\\|export const FOOT\\\\|export function p\u2026"
       },
-      "hold": {
-        "ends": "2026-11-08T08:15:46Z",
-        "lifted": "2026-11-08T07:17:23Z",
-        "owner": "claude-8",
-        "since": "2026-11-08T06:15:46Z",
-        "until": "2026-11-08T07:10:00Z",
-        "why": "5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "interruptions": 2,
       "kind": "build",
       "last_findings": [],
@@ -17487,7 +17479,7 @@
       "queued_at": "2026-11-07T17:05:40Z",
       "requested_by": "jgoetzmann",
       "round_tier": "strong",
-      "run_id": "42452855849",
+      "run_id": "pending:ba2de51c-1794122376",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -17506,7 +17498,7 @@
         "provider": "claude-8",
         "run": "42452855849"
       },
-      "started_at": "2026-11-08T05:58:57Z",
+      "started_at": "2026-11-08T07:20:07Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -18474,9 +18466,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T07:19:21Z",
+    "at": "2026-11-08T07:20:07Z",
     "url": "",
-    "what": "review #3419 on claude-8"
+    "what": "build #3407 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-08T07:02:08Z",
