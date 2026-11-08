@@ -6,6 +6,7 @@
 // marquee Unit's entrance as it lands, and R2797000 a Death, trigger or Activate from its hook's marker.
 // R2785000: it plays a card as the fixture set piece, which holds the board until a click skips it.
 // R3332000: it lists every signature by set; R3332001 plays Felinor Fiender's over its Felinors.
+// R3400001: Meditative+'s and Training Grounds' eight signatures, each tile aura standing as its Unit lands.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -65,8 +66,9 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     // layer's activate is in fx/battleship.ts, leaving its table entry none); R2797000: Stinkyscape
     // 001 to 090's 94; R2794000: Classic's 79 (its plays' motifs, its hooks' on their markers, its three
     // Flourishes, Plague Nuke's set piece and its two marquee entrances); #2799: Training Grounds' 51.
-    // R3338000: Event Horizon's and The Big Crunch's set pieces, which were `none`.
-    expect(cards).toHaveLength(647);
+    // R3338000: Event Horizon's and The Big Crunch's set pieces, which were `none`. R3400001: the
+    // Training-Grounds Golem's signature, which was `none`.
+    expect(cards).toHaveLength(648);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
@@ -215,6 +217,49 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     expect(screen.getByTestId("game").querySelector("[data-animating]")).not.toBeNull();
   });
 
+  it("R3400001 the gallery lists the eight signatures by set and stands each tile aura", () => {
+    const signatures = gallerySignatures();
+    const of = (set: string): string[] => signatures.find((group) => group.set === set)?.cards.map((card) => card.defId) ?? [];
+    expect(of("Meditative+")).toEqual(["meditativeplus-001", "meditativeplus-024", "meditativeplus-026"]);
+    expect(of("Training Grounds")).toEqual(["traininggrounds-037", "traininggrounds-038", "traininggrounds-039", "traininggrounds-039-1", "traininggrounds-040"]);
+    const base = fullBoardView();
+    for (const defId of [...of("Meditative+"), ...of("Training Grounds")]) {
+      const entry = FX_CARD_TABLE.get(defId);
+      const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${defId} has no gallery play`);
+      expect(play.kind, defId).toBe(defId === "traininggrounds-039-1" ? "entrance" : "recipe");
+      // Its play draws, every beat a shape or a card back, naming no card (R202).
+      const board = galleryBoardOf(defId, base);
+      const events = galleryCardEvents(defId, play, board, 1);
+      const env: FxPlanEnv = { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
+      const cues = planEntries(events, withEvents(galleryFieldView(defId, board), events), false).flatMap((planned) => {
+        env.memory.remember(planned.events);
+        return planFx(planned, planned.view, env);
+      });
+      expect(cues.length, defId).toBeGreaterThan(0);
+      expect(JSON.stringify(cues), defId).not.toContain(defId);
+      // A Unit's tile aura stands on its own unit zone, where its gallery entrance lands.
+      const aura = entry !== undefined && entry.kind !== "none" && "aura" in entry ? entry.aura : undefined;
+      if (aura?.scope !== "tile") continue;
+      const fielded = galleryFieldView(defId, board);
+      expect(fielded.you.units[2]?.defId, defId).toBe(defId);
+      expect(fielded.you.units[2]?.instanceId, defId).toBe(base.you.units[2]?.instanceId);
+      expect(planAuras(fielded, new Map()).filter((spec) => spec.defId === defId).map((spec) => [spec.side, spec.lane, spec.scope, spec.look]), defId).toEqual([["you", 3, "tile", aura.look]]);
+    }
+    expect(of("Meditative+").concat(of("Training Grounds")).filter((defId) => {
+      const entry = FX_CARD_TABLE.get(defId);
+      return entry !== undefined && entry.kind !== "none" && "aura" in entry && entry.aura?.scope === "tile";
+    })).toEqual(["meditativeplus-024", "traininggrounds-038", "traininggrounds-039-1"]);
+
+    // The rendered gallery offers each under its set, and plays Bob's.
+    render(<FxGallery />);
+    const select = screen.getByTestId(fxGalleryTestid.signature);
+    for (const set of ["Meditative+", "Training Grounds"]) expect([...select.querySelectorAll("optgroup")].map((group) => group.getAttribute("label"))).toContain(set);
+    fireEvent.change(select, { target: { value: "meditativeplus-024" } });
+    fireEvent.click(screen.getByTestId(fxGalleryTestid.playSignature));
+    expect(screen.getByTestId("game").querySelector("[data-animating]")).not.toBeNull();
+  });
+
   it("R2784000 #2798 the gallery has a play for every Stinkyscape part-two entry other than none, and each plays its motif, recipe, set piece or aura", () => {
     const file = FX_CARD_FILES.find((candidate) => candidate.file === "stinkyscape-2.json5");
     if (file === undefined) throw new Error("no stinkyscape-2.json5");
@@ -225,7 +270,8 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
   it("R2784000 #2799 the gallery has a play for every Training Grounds entry other than none, and each plays its motif or recipe", () => {
     const file = FX_CARD_FILES.find((candidate) => candidate.file === "traininggrounds.json5");
     if (file === undefined) throw new Error("no traininggrounds.json5");
-    expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 51);
+    // R3400001: the Training-Grounds Golem's signature joins them.
+    expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 52);
   });
 
   it("R2784000 #2796 the gallery plays every Meditative and Meditative+ entry", () => {

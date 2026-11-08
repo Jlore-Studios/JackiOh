@@ -245,7 +245,8 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       case "ship":
       case "rift":
       case "anomalyTitle":
-      case "radar": {
+      case "radar":
+      case "figure": {
         const box = measure(cue.at);
         if (box === null) return;
         boxes = { at: box };

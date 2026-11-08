@@ -3,6 +3,8 @@
 // Felinors, Felinor Fiender lands and its streaks of cat light draw on the canvas, at desktop size and on
 // a phone. apps/web's vitest suite proves the cues (felinorFiender.test.ts) and their budget
 // (fx/cards/tiers.test.ts); what only a browser can say is that the scene draws, captured here.
+// R3400001: Meditative+'s and Training Grounds' eight signatures, each played as the gallery plays it, at
+// both sizes: a Mythic's own takeover draws its art, the rest their figures or their canvas.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-signature.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -19,6 +21,18 @@ import { fullBoardView, withEvents } from "../../../apps/web/src/test/fixtures.t
 type PlayerView = ReturnType<typeof fullBoardView>;
 
 const FIENDER = "core-092";
+/** R3400001: the eight signatures, each with its Mythic's own takeover look. */
+const SIGNATURES: readonly { defId: string; name: string; look?: string }[] = [
+  { defId: "meditativeplus-001", name: "Bob's Plan", look: "summit" },
+  { defId: "meditativeplus-024", name: "Bob, Wisconsin's Strongest Soldier" },
+  { defId: "meditativeplus-026", name: "Scratch Pad", look: "canvas" },
+  { defId: "traininggrounds-037", name: "Seance" },
+  { defId: "traininggrounds-038", name: "Tutorial Master" },
+  { defId: "traininggrounds-039", name: "Call to Chaos (Training-Grounds Edition)" },
+  { defId: "traininggrounds-039-1", name: "Training-Grounds Golem" },
+  { defId: "traininggrounds-040", name: "Goetzmann Game Design", look: "napkin" },
+];
+const FX_DOM = '[data-testid="fx-dom"]';
 const LAYER = '[data-testid="fx-layer"]';
 const CANVAS = '[data-testid="fx-canvas"]';
 const GAME = '[data-testid="game"]';
@@ -114,5 +128,45 @@ describe("R3332001 Felinor Fiender's signature in a real browser", () => {
       });
       cy.screenshot(`fx-signature-felinor-fiender-${String(w)}x${String(h)}`, { capture: "viewport", overwrite: true });
     });
+  }
+});
+
+describe("R3400001 Meditative+'s and Training Grounds' signatures in a real browser", () => {
+  before(() => {
+    Cypress.config("defaultCommandTimeout", 20_000);
+  });
+  after(() => {
+    Cypress.config("defaultCommandTimeout", 4_000);
+  });
+  afterEach(() => {
+    setFxSettings({ ...DEFAULT_FX_SETTINGS });
+    window.localStorage.removeItem(FX_SETTINGS_KEY);
+  });
+
+  for (const { defId, name, look } of SIGNATURES) {
+    for (const { width: w, height: h } of VIEWPORTS) {
+      it(`R3400001 ${name}'s signature at ${String(w)}x${String(h)}`, () => {
+        cy.viewport(w, h);
+        // At the slowest effects speed the signature outlasts the command queue, so the capture is mid-flight.
+        cy.then(() => {
+          setFxSettings({ speed: FX_SPEED_MIN });
+        });
+        const entry = FX_CARD_TABLE.get(defId);
+        const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+        if (play === null) throw new Error(`${defId} has no gallery play`);
+        const board = galleryBoardOf(defId, fullBoardView());
+        mountShown(board, withEvents(galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1)));
+        cy.get(GAME).find("[data-animating]").should("exist");
+        if (look !== undefined) {
+          // A Mythic's own takeover, its art drawn over the dark.
+          cy.get(`${FX_DOM} [data-fx="takeover"]`).should("have.attr", "data-look", look);
+          cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art`).should("have.attr", "data-look", look);
+        } else {
+          // Its own figure: a snowplow, candles, a chalkboard, the dice, the Golem's plank.
+          cy.get(`${FX_DOM} [data-fx="figure"]`).should("exist");
+        }
+        cy.screenshot(`fx-signature-${defId}-${String(w)}x${String(h)}`, { capture: "viewport", overwrite: true });
+      });
+    }
   }
 });
