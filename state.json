@@ -16923,7 +16923,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-08T14:13:04Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 6724520976
     },
     "3437": {
       "action": "review",
