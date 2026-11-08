@@ -16733,8 +16733,8 @@
     "3431": {
       "action": "review",
       "asks": [],
-      "audit_tier": "",
-      "cross_rounds": 1,
+      "audit_tier": "strong",
+      "cross_rounds": 2,
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -16751,13 +16751,20 @@
       },
       "interruptions": 0,
       "issue": 3391,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The pull request's per-card verdict table and its 'What changed' and 'Decisions' sections describe the code as it was before the last revise pass (the merge of #3392/#3396 at 9cd6e106), not the code that ships: several part ids in the table do not exist, several element counts are wrong, and the stated short-list maximum is wrong.",
+          "evidence": "Checked against HEAD 9cd6e106. Table #70 says `head-lantern`, but stinkyscapeRecipes.ts uses `head-wraith`. #15 and #71 say `pose-wide`; no such pose exists in figureKit.ts, and the recipes use `pose-spread`. #26 says `outfit-robes`; the code uses `outfit-academic`. #13 and #83 say `helmet`; the code uses `space-helmet`. #8 and #17 say `outfit-apron`; the code uses Core's `outfit-work-apron`. The body says the pass added `blank-card` (not in any kit: #27 places Classic+'s `card`) and that `spotlight` and 'light ribbon' turn. The turning parts are actually `light-cone` and `light-stream` (POINTING in stinkyscapeScenes.test.ts:55). It omits the new `space-window` and `axe-head` parts. It says 85 scenery parts and 22 figure parts (3 poses); the diff registers 81 (classicPlusScenes.test.ts STINKYSCAPE_KIT_PARTS = 81) and 17 (1 pose). It says the short list's maximum 'stays at 561'; richness.ts:52 has ART_DETAIL_SHORT_MAX = 337, R3392000's, which R3391000 itself correctly cites. It says scene.test.ts's gathered-faults rewrite is this PR's; per the merge notes it is main's, and this PR's scene.test.ts diff is 8 lines. The builder's own run-8 notes record 7 cards' counts changing in the merge (#8 66, #17 47, #25 86, #34 146, #42 59, #44 156), while the table still shows 65, 43, 84, 148, 58, 157. docs/issues-and-patches.md 'A task over every card' makes this table the deliverable that proves the pass, and the issue's acceptance requires it. The previous review on this same head raised the same blocker, and its fix was cut off at the usage cap (journal, 19:08).",
+          "severity": "blocking",
+          "where": "task"
+        }
+      ],
       "live": "reviewing",
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
-      "queued_at": "2026-11-08T19:12:20Z",
+      "queued_at": "2026-11-08T19:31:17Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
@@ -16781,7 +16788,7 @@
         "provider": "claude-6",
         "run": "42511459356"
       },
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-11-08T19:13:08Z",
       "stop_requested": false,
       "taken_asks": [],
