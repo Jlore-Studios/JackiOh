@@ -7,6 +7,7 @@
 
 import { figureLookFor, type FigureLook } from "./figureKit.ts";
 import type { PaletteName, ScenePlacement, SceneRecipe } from "./scene.ts";
+import { TRAINING_GROUNDS_RECIPES_2 } from "./sceneRecipesTrainingGrounds2.ts";
 
 /** The yard's spiked palisade across the back of a scene, its foot at `y`, in two runs. */
 function palisadeAt(y: number, paint: PaletteName = "wood-700", scale = 1): ScenePlacement[] {
@@ -18,6 +19,207 @@ function palisadeAt(y: number, paint: PaletteName = "wood-700", scale = 1): Scen
 
 /** A recruit of the yard: short hair, a blue tunic, no weapon. */
 const RECRUIT: FigureLook = { ...figureLookFor(["Human"]), item: null };
+
+/** Spikey Steven (Training Grounds #1, Common): a lanky recruit in a leather vest bristling with spikes, hair to match, glares over the spiked palisade at the yard's edge; noon. */
+const SPIKEY_STEVEN: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["sky-400", "blue-200"],
+  light: { x: 80, y: 22, r: 30, paint: "white", opacity: 0.35 },
+  emblem: { x: 48, y: 62, size: 6, rotate: 0 },
+  figure: { x: 48, y: 88, scale: 0.88, pose: "pose-hips", look: { ...figureLookFor(["Human"]), hair: "hair-spiky", outfit: "outfit-vest", item: null, cloth: "wood-700" } },
+  layers: {
+    sky: [
+      { part: "sun", x: 82, y: 20, scale: 0.7 },
+      { part: "cloud", x: 24, y: 26, scale: 0.8, paint: "white" },
+    ],
+    far: [{ part: "hills", x: 50, y: 60, paint: "green-700" }],
+    mid: [...palisadeAt(76, "wood-700", 1.7), { part: "sand", x: 50, y: 76 }],
+    near: [
+      { part: "weapon-rack", x: 86, y: 96, scale: 1.3 },
+      { part: "grass-tuft", x: 12, y: 96, count: 2, spread: [5, 1], paint: "wood-600" },
+    ],
+    particles: [{ part: "dust", x: 30, y: 90, scale: 1.1, paint: "stone-500" }],
+  },
+};
+
+/** Personal Trainer (Training Grounds #2, Common): a barrel-chested coach with a whistle and sweatband spots a straining recruit at the log-lift bench, roaring encouragement; sweaty morning light. */
+const PERSONAL_TRAINER: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["orange-400", "sky-300"],
+  light: { x: 78, y: 26, r: 34, paint: "white", opacity: 0.35 },
+  emblem: { x: 62, y: 64, size: 6, rotate: 0 },
+  figure: { x: 62, y: 88, scale: 0.86, flip: -1, pose: "pose-spread", look: { ...figureLookFor(["Human"]), hair: "sweatband", outfit: "outfit-jacket", item: null, cloth: "red-600" } },
+  extras: [{ layer: "subject", x: 36, y: 84, scale: 0.62, pose: "pose-lift", look: { ...RECRUIT, cloth: "blue-800" } }],
+  layers: {
+    sky: [{ part: "sun", x: 84, y: 24, scale: 0.7 }],
+    far: palisadeAt(66, "wood-800"),
+    mid: [
+      { part: "sand", x: 50, y: 66 },
+      { part: "weights", x: 84, y: 74, scale: 1.2 },
+    ],
+    subject: [
+      { part: "bench", x: 36, y: 86, scale: 1.6 },
+      { part: "log", x: 36, y: 45, scale: 1.1 },
+    ],
+    near: [{ part: "barrel", x: 10, y: 98, scale: 1.3 }],
+    particles: [{ part: "sparks", x: 36, y: 42, scale: 0.8, paint: "white" }],
+  },
+};
+
+/** Group leader (Training Grounds #3, Common): a cheerful recruit jogs out in front of a column of trainees on the yard's perimeter track, a plain pennant pole held high; dusty late-afternoon light. */
+const GROUP_LEADER: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["orange-400", "red-300"],
+  light: { x: 80, y: 40, r: 34, paint: "orange-400", opacity: 0.3 },
+  emblem: { x: 56, y: 62, size: 6, rotate: 0 },
+  figure: { x: 56, y: 88, scale: 0.84, pose: "pose-run", look: { ...RECRUIT, item: "item-banner", cloth: "green-700" } },
+  extras: [
+    { layer: "mid", x: 34, y: 80, scale: 0.5, pose: "pose-run", look: RECRUIT },
+    { layer: "mid", x: 22, y: 77, scale: 0.44, pose: "pose-run", look: { ...RECRUIT, hair: "hair-long" } },
+    { layer: "mid", x: 12, y: 75, scale: 0.4, pose: "pose-run", look: RECRUIT },
+  ],
+  layers: {
+    sky: [{ part: "sun", x: 84, y: 40, scale: 0.8 }],
+    far: palisadeAt(66, "wood-800"),
+    mid: [
+      { part: "sand", x: 50, y: 66 },
+      { part: "dust", x: 24, y: 78, scale: 1.3, paint: "brass-600" },
+    ],
+    near: [{ part: "fence-post", x: 90, y: 98, scale: 1.3, flip: -1 }],
+    particles: [{ part: "dust", x: 40, y: 92, scale: 1.4, paint: "brass-600" }],
+  },
+};
+
+/** Boulder Fist Ogre (Training Grounds #4, Common): a grey-hided ogre with two boulders for fists bursts through the yard's wooden main gate at a full charge, splinters flying; stormy and thunderous. */
+const BOULDER_FIST_OGRE: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["slate-900", "slate-700"],
+  light: { x: 50, y: 56, r: 32, paint: "white", opacity: 0.2 },
+  emblem: { x: 50, y: 62, size: 6, rotate: 0 },
+  figure: { x: 50, y: 88, scale: 0.92, pose: "pose-run", look: { ...figureLookFor([]), head: "head-ogre", hair: null, outfit: "outfit-muscle", item: "item-boulder", skin: "stone-500", cloth: "wood-800" } },
+  layers: {
+    sky: [
+      { part: "cloud", x: 30, y: 22, scale: 1.1, count: 2, spread: [30, 4], paint: "slate-700" },
+      { part: "lightning", x: 78, y: 18, scale: 1 },
+    ],
+    far: palisadeAt(70, "wood-900", 1.4),
+    mid: [
+      { part: "sand", x: 50, y: 74, paint: "wood-600" },
+      { part: "yard-gate", x: 50, y: 74, scale: 1.5 },
+    ],
+    near: [
+      { part: "boulder", x: 41, y: 61, scale: 0.55 },
+      { part: "splinters", x: 22, y: 90, scale: 1.4 },
+    ],
+    particles: [{ part: "splinters", x: 62, y: 46, scale: 1.6 }],
+  },
+};
+
+/** Midlane Menace (Training Grounds #5, Common): a stocky brawler planted squarely in the middle of the yard's three sand lanes, arms folded, a toll pail at his feet; orange evening glare. */
+const MIDLANE_MENACE: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["red-900", "orange-400"],
+  light: { x: 84, y: 54, r: 34, paint: "orange-400", opacity: 0.4 },
+  emblem: { x: 50, y: 64, size: 6, rotate: 0 },
+  figure: { x: 50, y: 88, scale: 1, pose: "pose-hips", look: { ...figureLookFor(["Human"]), hair: "tonsure", outfit: "outfit-wraps", item: null, cloth: "red-900" } },
+  layers: {
+    sky: [{ part: "sun", x: 86, y: 54, scale: 0.9 }],
+    far: palisadeAt(60, "wood-900"),
+    mid: [{ part: "lanes", x: 50, y: 60 }],
+    subject: [{ part: "pail", x: 64, y: 90, scale: 1.3 }],
+    near: [{ part: "fence-post", x: 10, y: 98, scale: 1.3 }],
+    light: [{ part: "rim-light", x: 50, y: 62, scale: 1.2, paint: "orange-400" }],
+  },
+};
+
+/** Chosen by the Sun (Training Grounds #6, Common): a young fighter on the parade ground lit by a single shaft of white-hot sunlight, a shimmering shield bubble around them; bright coral morning. */
+const CHOSEN_BY_THE_SUN: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["red-300", "sky-300"],
+  light: { x: 50, y: 50, r: 34, paint: "white", opacity: 0.4 },
+  emblem: { x: 50, y: 64, size: 6, rotate: 0 },
+  figure: { x: 50, y: 86, scale: 0.72, pose: "pose-stand", look: { ...figureLookFor([]), hair: "hair-long", outfit: "outfit-tabard", item: "item-sword", cloth: "red-400" } },
+  layers: {
+    sky: [{ part: "sun", x: 80, y: 18, scale: 0.9 }],
+    far: [
+      ...palisadeAt(66, "wood-800"),
+      { part: "banner", x: 18, y: 66, scale: 0.9 },
+      { part: "banner", x: 82, y: 66, scale: 0.9, flip: -1 },
+    ],
+    mid: [{ part: "sand", x: 50, y: 66 }],
+    subject: [{ part: "shield-bubble", x: 50, y: 86, scale: 1.75 }],
+    near: [{ part: "grass-tuft", x: 86, y: 96, count: 2, spread: [5, 1], paint: "wood-600" }],
+    light: [{ part: "light-shaft", x: 50, y: 88, scale: 2 }],
+    particles: [{ part: "motes", x: 50, y: 50, scale: 1.2, paint: "white" }],
+  },
+};
+
+/** Chosen by the Moon (Training Grounds #7, Common): a heavy-set guard in thick plate behind a tower shield, standing firm by the yard's well under a full silver moon; deep blue night. */
+const CHOSEN_BY_THE_MOON: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["blue-900", "blue-800"],
+  light: { x: 76, y: 22, r: 32, paint: "blue-200", opacity: 0.35 },
+  emblem: { x: 46, y: 62, size: 6, rotate: 0 },
+  figure: { x: 44, y: 88, scale: 0.88, pose: "pose-guard", look: { ...figureLookFor([]), hair: "helm", outfit: "outfit-plate", item: "item-tower-shield", cloth: "slate-400" } },
+  layers: {
+    sky: [
+      { part: "moon", x: 76, y: 22, scale: 1 },
+      { part: "stars", x: 30, y: 22, scale: 1.3 },
+    ],
+    far: palisadeAt(66, "wood-900"),
+    mid: [
+      { part: "sand", x: 50, y: 66, paint: "slate-700" },
+      { part: "well", x: 74, y: 82, scale: 1.7 },
+    ],
+    near: [{ part: "lantern", x: 12, y: 92, scale: 1.3 }],
+    light: [{ part: "rim-light", x: 44, y: 60, scale: 1.2, paint: "blue-200" }],
+  },
+};
+
+/** Clobberer (Training Grounds #8, Common): a hulking brute smashes a straw dummy to splinters with a tree-trunk club, his one-page manual, one drawn fist, nailed to the post; red fury. */
+const CLOBBERER: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["red-900", "red-500"],
+  light: { x: 62, y: 50, r: 30, paint: "red-500", opacity: 0.35 },
+  emblem: { x: 40, y: 64, size: 6, rotate: 0 },
+  figure: { x: 40, y: 88, scale: 0.92, pose: "pose-strike", look: { ...figureLookFor(["Human"]), hair: null, outfit: "outfit-muscle", item: "item-club", cloth: "wood-800" } },
+  layers: {
+    sky: [{ part: "sun", x: 84, y: 24, scale: 0.7 }],
+    far: palisadeAt(64, "wood-900"),
+    mid: [
+      { part: "sand", x: 50, y: 64, paint: "wood-600" },
+      { part: "fence-post", x: 82, y: 80, scale: 2.4, flip: -1 },
+      { part: "poster", x: 81, y: 70, scale: 0.8 },
+    ],
+    subject: [{ part: "straw-dummy", x: 64, y: 86, scale: 1.5 }],
+    near: [{ part: "straw-heap", x: 14, y: 98, scale: 1.3 }],
+    particles: [{ part: "splinters", x: 62, y: 62, scale: 1.4 }],
+  },
+};
+
+/** Ravager (Training Grounds #9, Common): a wild-eyed warrior with chained axes stands atop a heap of broken sparring dummies at the scrap pile, veins bulging, ready for more; blood-orange sunset. */
+const RAVAGER: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["red-900", "orange-400"],
+  light: { x: 84, y: 58, r: 34, paint: "red-500", opacity: 0.35 },
+  emblem: { x: 50, y: 56, size: 6, rotate: 0 },
+  figure: { x: 50, y: 78, scale: 0.78, pose: "pose-spread", look: { ...figureLookFor(["Human"]), hair: "hair-long", outfit: "outfit-armor", item: "item-axe", cloth: "red-900" } },
+  layers: {
+    sky: [{ part: "sun", x: 86, y: 58, scale: 1 }],
+    far: palisadeAt(64, "wood-900"),
+    mid: [
+      { part: "sand", x: 50, y: 66, paint: "wood-600" },
+      { part: "crate", x: 82, y: 78, scale: 1.4 },
+    ],
+    subject: [
+      { part: "straw-heap", x: 50, y: 86, scale: 2.4 },
+      { part: "straw-dummy", x: 34, y: 86, scale: 1, flip: -1 },
+      { part: "splinters", x: 66, y: 84, scale: 1 },
+    ],
+    near: [{ part: "straw-heap", x: 90, y: 100, scale: 1.4 }],
+    particles: [{ part: "embers", x: 50, y: 50, scale: 1.2 }],
+  },
+};
 
 /** Fan of Knives (Training Grounds #10, Common): a dozen knives fan out from a spinning blur on the knife-throwing range, every target along the fence struck at once; steel-blue morning. */
 const FAN_OF_KNIVES: SceneRecipe = {
@@ -147,13 +349,101 @@ const IN_A_HURRY: SceneRecipe = {
   },
 };
 
+/** Celestial Caller (Training Grounds #16, Rare): a robed caller atop the yard's carved central pole, arms wide, a blazing sun at her left and a pale moon at her right; a split sky. */
+const CELESTIAL_CALLER: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["blue-900", "orange-400"],
+  light: { x: 50, y: 40, r: 34, paint: "white", opacity: 0.3 },
+  emblem: { x: 50, y: 40, size: 5, rotate: 0 },
+  figure: { x: 50, y: 56, scale: 0.56, pose: "pose-spread", look: { ...figureLookFor([]), hair: "hair-long", outfit: "outfit-robe", item: null, cloth: "violet-700" } },
+  extras: [
+    { layer: "mid", x: 22, y: 84, scale: 0.4, pose: "pose-raise", look: RECRUIT },
+    { layer: "mid", x: 78, y: 84, scale: 0.4, flip: -1, pose: "pose-raise", look: { ...RECRUIT, cloth: "green-700" } },
+  ],
+  layers: {
+    sky: [
+      { part: "stars", x: 22, y: 22, scale: 1.2 },
+      { part: "moon", x: 20, y: 30, scale: 1 },
+      { part: "sun", x: 80, y: 30, scale: 1.2 },
+    ],
+    far: palisadeAt(72, "wood-900"),
+    mid: [{ part: "sand", x: 50, y: 74 }],
+    subject: [{ part: "carved-pole", x: 50, y: 95, scale: 1.02 }],
+    near: [
+      { part: "banner", x: 8, y: 98, scale: 1.2 },
+      { part: "banner", x: 92, y: 98, scale: 1.2, flip: -1 },
+    ],
+    light: [
+      { part: "god-rays", x: 80, y: 30, scale: 1.2, paint: "orange-400" },
+      { part: "halo", x: 20, y: 30, scale: 1.3, paint: "blue-200" },
+    ],
+    particles: [{ part: "motes", x: 50, y: 40, scale: 1.2, paint: "white" }],
+  },
+};
+
+/** Flaming Felinor (Training Grounds #17, Rare): a cat-folk brawler whose fur burns in licking flames, a ring of scorched sand spreading round her beside the smithy forge; searing red heat. */
+const FLAMING_FELINOR: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["red-900", "red-500"],
+  light: { x: 48, y: 60, r: 34, paint: "orange-400", opacity: 0.4 },
+  emblem: { x: 48, y: 64, size: 6, rotate: 0 },
+  figure: { x: 48, y: 86, scale: 0.82, pose: "pose-guard", look: { ...figureLookFor(["Felinor"]), item: null, cloth: "red-600" } },
+  layers: {
+    sky: [{ part: "smoke", x: 24, y: 28, scale: 1.4, paint: "slate-700" }],
+    far: palisadeAt(66, "wood-900"),
+    mid: [
+      { part: "sand", x: 50, y: 66, paint: "wood-600" },
+      { part: "forge", x: 80, y: 80, scale: 2 },
+    ],
+    subject: [
+      { part: "shockwave", x: 48, y: 87, scale: 1.4, paint: "wood-900" },
+      { part: "flames", x: 40, y: 72, scale: 1.4 },
+      { part: "flames", x: 57, y: 70, scale: 1.3, flip: -1 },
+    ],
+    near: [{ part: "flames", x: 48, y: 90, scale: 1.8 }],
+    light: [{ part: "halo", x: 48, y: 62, scale: 1.8, paint: "orange-400" }],
+    particles: [{ part: "embers", x: 50, y: 50, scale: 1.4 }],
+  },
+};
+
+/** Knife Juggler (Training Grounds #18, Rare): a grinning juggler on a barrel in the courtyard square tosses knives high, an apple balanced on a nervous dummy's head; bright carnival afternoon. */
+const KNIFE_JUGGLER: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["sky-400", "blue-200"],
+  light: { x: 80, y: 22, r: 30, paint: "white", opacity: 0.35 },
+  emblem: { x: 40, y: 58, size: 5, rotate: 0 },
+  figure: { x: 40, y: 72, scale: 0.6, pose: "pose-raise", look: { ...figureLookFor(["Human"]), hair: "kerchief", outfit: "outfit-tabard", item: "item-dagger", cloth: "red-600" } },
+  layers: {
+    sky: [
+      { part: "sun", x: 84, y: 20, scale: 0.7 },
+      { part: "cloud", x: 24, y: 24, scale: 0.8, paint: "white" },
+    ],
+    far: [
+      ...palisadeAt(64, "wood-800"),
+      { part: "banner", x: 14, y: 64, scale: 0.9 },
+      { part: "banner", x: 86, y: 64, scale: 0.9, flip: -1 },
+    ],
+    mid: [{ part: "sand", x: 50, y: 64 }],
+    subject: [
+      { part: "barrel", x: 40, y: 88, scale: 1 },
+      { part: "straw-dummy", x: 66, y: 86, scale: 1.3, flip: -1 },
+      { part: "apple", x: 66, y: 55, scale: 1.4 },
+      { part: "knife", x: 34, y: 30, scale: 0.9 },
+      { part: "knife", x: 46, y: 26, scale: 0.9, flip: -1 },
+      { part: "knife", x: 52, y: 34, scale: 0.9 },
+    ],
+    near: [{ part: "crate", x: 88, y: 98, scale: 1.4 }],
+    particles: [{ part: "sparks", x: 44, y: 30, scale: 1, paint: "white" }],
+  },
+};
+
 /** Extra Rations (Training Grounds #19, Rare): the yard's mess hall: long carved tables, steaming pots, a ladle mid-pour and towers of bread for second helpings; warm hearth glow, cheerful clatter. */
 const EXTRA_RATIONS: SceneRecipe = {
   family: "training-grounds",
   sky: ["wood-900", "wood-700"],
   light: { x: 50, y: 52, r: 40, paint: "orange-400", opacity: 0.4 },
   emblem: { x: 50, y: 70, size: 5, rotate: 0 },
-  extras: [{ layer: "subject", x: 64, y: 84, scale: 0.5, flip: -1, pose: "pose-raise", look: { ...RECRUIT, outfit: "outfit-apron", item: "item-spoon", cloth: "white" } }],
+  extras: [{ layer: "subject", x: 64, y: 84, scale: 0.5, flip: -1, pose: "pose-raise", look: { ...RECRUIT, outfit: "outfit-apron", item: "item-ladle", cloth: "white" } }],
   layers: {
     far: [
       { part: "room-wall", x: 50, y: 64, paint: "wood-700" },
@@ -497,17 +787,15 @@ const GOETZMANN_GAME_DESIGN: SceneRecipe = {
   layers: {
     sky: [
       { part: "stars", x: 50, y: 24, scale: 1.4 },
-      { part: "pixels", x: 50, y: 26, scale: 1.2, count: 2, spread: [24, 4] },
+      { part: "pixels", x: 50, y: 26, scale: 1.2 },
     ],
     far: [
       ...palisadeAt(60, "wood-900"),
-      { part: "carved-pole", x: 84, y: 62, scale: 0.6 },
       { part: "barracks", x: 18, y: 62, scale: 0.8, paint: "wood-800" },
     ],
     mid: [
       { part: "sand", x: 50, y: 62, paint: "wood-700" },
       { part: "straw-dummy", x: 72, y: 74, scale: 0.6 },
-      { part: "target", x: 28, y: 74, scale: 0.6 },
     ],
     subject: [
       { part: "card", x: 50, y: 74, scale: 1.4 },
@@ -532,7 +820,7 @@ const GOETZMANN_GAME_DESIGN: SceneRecipe = {
       { part: "light-ribbon", x: 50, y: 50, scale: 0.6, paint: "violet-300" },
     ],
     particles: [
-      { part: "pixels", x: 50, y: 44, scale: 1, count: 2, spread: [16, 10] },
+      { part: "pixels", x: 50, y: 44, scale: 1 },
       { part: "sparks", x: 50, y: 70, scale: 1 },
     ],
   },
@@ -540,12 +828,24 @@ const GOETZMANN_GAME_DESIGN: SceneRecipe = {
 
 /** R3393000: the Training Grounds cards' recipes, by id, the Legacy cards' aside (sceneRecipesLegacy.ts). */
 export const TRAINING_GROUNDS_RECIPES: Readonly<Record<string, SceneRecipe>> = {
+  "traininggrounds-001": SPIKEY_STEVEN,
+  "traininggrounds-002": PERSONAL_TRAINER,
+  "traininggrounds-003": GROUP_LEADER,
+  "traininggrounds-004": BOULDER_FIST_OGRE,
+  "traininggrounds-005": MIDLANE_MENACE,
+  "traininggrounds-006": CHOSEN_BY_THE_SUN,
+  "traininggrounds-007": CHOSEN_BY_THE_MOON,
+  "traininggrounds-008": CLOBBERER,
+  "traininggrounds-009": RAVAGER,
   "traininggrounds-010": FAN_OF_KNIVES,
   "traininggrounds-011": THWOMP,
   "traininggrounds-012": FORTIFY,
   "traininggrounds-013": EXPLOSIVE_RUNES,
   "traininggrounds-014": EXPLOSIVE_TRAP,
   "traininggrounds-015": IN_A_HURRY,
+  "traininggrounds-016": CELESTIAL_CALLER,
+  "traininggrounds-017": FLAMING_FELINOR,
+  "traininggrounds-018": KNIFE_JUGGLER,
   "traininggrounds-019": EXTRA_RATIONS,
   "traininggrounds-020": RECRUITMENT_POSTERS,
   "traininggrounds-024": GOLIATH_SITUATION,
@@ -557,4 +857,5 @@ export const TRAINING_GROUNDS_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   "traininggrounds-037": SEANCE,
   "traininggrounds-039": CALL_TO_CHAOS,
   "traininggrounds-040": GOETZMANN_GAME_DESIGN,
+  ...TRAINING_GROUNDS_RECIPES_2,
 };

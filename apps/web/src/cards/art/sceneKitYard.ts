@@ -605,6 +605,102 @@ function pixels(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+/** A training log lying level, centred on the anchor: bark, a pale cut end with its rings, a knot and two rope grips; about 18 long and 4 thick at scale 1. */
+function log(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const w = between(rng, 8.4, 9.6);
+  return [
+    shape(rect(f, -w, -2, w, 2), "wood-700", 1, MAIN_INKED),
+    shape(rect(f, -w, 0.6, w, 2), "wood-900", 0.35),
+    shape(f.band([[-w + 2, -0.8], [w - 3, -0.6]], 0.25) + f.circle(between(rng, -3, 3), 0.4, 0.6), "wood-900", 0.6),
+    shape(f.ellipse(w, 0, 1.2, 2), "wood-600", 1, INKED),
+    shape(ring(f, w, 0, 0.9, 0.5), "wood-800", 0.6),
+    shape(rect(f, -w * 0.5 - 0.6, -2.2, -w * 0.5 + 0.6, 2.2) + rect(f, w * 0.5 - 0.6, -2.2, w * 0.5 + 0.6, 2.2), "brass-600", 1),
+  ];
+}
+
+/** A wooden toll pail on the anchor heaped with silver coins, a rope handle and iron hoops, one coin dropped beside it; about 9 wide and 8 tall at scale 1. */
+function pail(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const rim = -6.4;
+  const coins = (row: readonly (readonly [number, number])[]): string => row.map(([x, y]) => f.ellipse(x, rim + y + between(rng, -0.3, 0.3), 1.1, 0.6)).join("");
+  return [
+    shape(f.ellipse(0, 0.3, 5.4, 0.8), "black", 0.22),
+    shape(f.band([[-4, rim], [-2.6, rim - 4.4], [2.6, rim - 4.4], [4, rim]], 0.4), "wood-800", 1),
+    shape(coins([[-2.4, 0], [0, -0.4], [2.4, 0]]), "slate-400", 1, INKED),
+    shape(coins([[-1.2, -1.5], [1.2, -1.6]]), "slate-400", 1, INKED),
+    shape(f.poly([[-4.2, rim], [4.2, rim], [3.4, 0], [-3.4, 0]]), "wood-600", 1, MAIN_INKED),
+    shape(f.band([[-4, rim + 1.4], [4, rim + 1.4]], 0.6) + f.band([[-3.5, -1.3], [3.5, -1.3]], 0.6), "slate-700", 1, INKED),
+    shape(f.ellipse(6, -0.2, 1.3, 0.6) + sparkle(f, 0.6, rim - 1.8, 1.1), "slate-100", 0.9),
+  ];
+}
+
+/** The yard's main gate burst open, its foot at the anchor: two timber posts under a lintel beam, one door leaf hanging askew and one knocked flat, a cracked plank and iron straps; about 30 wide and 28 tall at scale 1. */
+function yardGate(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const hang = between(rng, 14, 24);
+  const leaf = (points: readonly Point[]): string => f.poly(spun(points, hang).map(([x, y]): Point => [x - 11, y - 24]));
+  return [
+    shape(rect(f, -15, -28, -11, 0) + rect(f, 11, -28, 15, 0), "wood-800", 1, MAIN_INKED),
+    shape(rect(f, -16, -30, 16, -26), "wood-700", 1, MAIN_INKED),
+    shape(leaf([[0, 0], [9, 0], [9, 22], [0, 22]]), "wood-600", 1, INKED),
+    shape(leaf([[0, 4], [9, 4], [9, 5.4], [0, 5.4]]) + leaf([[0, 16], [9, 16], [9, 17.4], [0, 17.4]]), "slate-700", 1),
+    shape(f.poly([[3, 0], [14, -1.4], [14.6, 0.4], [3.4, 1.6]]), "wood-600", 1, INKED),
+    shape(leaf([[3, 7], [5, 10.4], [4, 10.4], [6, 14], [2.6, 9.4], [3.6, 9.4]]), "wood-900", 0.7),
+  ];
+}
+
+/** A plank lane torn up and dragged like a rug, lying from the anchor back the way it faces away from, rucked up in the middle, a chalk line down it and a rope rising from its front end to a dragger's hand; about 40 long at scale 1. */
+function plankRug(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = between(rng, -24, -18);
+  const h = between(rng, 6, 9);
+  const top = `M${f.p(-40, -1.8)}L${f.p(c - 7, -1.8)}Q${f.p(c, -h * 2)} ${f.p(c + 7, -2)}L${f.p(-1, -3.2)}L${f.p(-1, 0.8)}L${f.p(c + 7, 1.4)}Q${f.p(c, -h * 2 + 4)} ${f.p(c - 7, 1.6)}L${f.p(-40, 1.8)}Z`;
+  const seams = [-36, -31, c - 10, c + 11, c + 16].map((x) => f.band([[x, -1.8], [x - 0.3, 1.6]], 0.25)).join("");
+  return [
+    shape(f.ellipse(-20, 2, 21, 1.4), "black", 0.2),
+    shape(top, "wood-600", 1, MAIN_INKED),
+    shape(`M${f.p(c, -h + 0.2)}Q${f.p(c + 3.5, -h * 0.5 - 1)} ${f.p(c + 7, -2)}L${f.p(c + 7, 1.4)}Q${f.p(c + 3.5, -h * 0.5 + 1.4)} ${f.p(c, -h + 2.2)}Z`, "wood-900", 0.4),
+    shape(seams, "wood-900", 0.6),
+    shape(f.band([[-39, 0], [c - 8, 0]], 0.3) + f.band([[c + 8, -0.3], [-2, -1.1]], 0.3), "white", 0.5),
+    shape(f.band([[-0.6, -1.4], [3, -6.4], [6, -12]], 0.4), "wood-900", 1),
+    shape(f.circle(-41.6, 0, 1.6) + f.circle(-38.6, -2.6, 1.1), "stone-500", 0.4),
+  ];
+}
+
+/** A shimmering shield dome blooming over the anchor: a translucent half-bubble about 18 wide and 13 tall, a brighter rim, its ring on the ground, facet lines and a glint. */
+function shieldDome(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const w = between(rng, 8.4, 9.6);
+  const h = between(rng, 11.5, 13.5);
+  const dome = (rx: number, ry: number): string => `M${f.p(-rx, 0)}A${f.r(rx)} ${f.r(ry)} 0 0 ${f.sweep(1)} ${f.p(rx, 0)}Z`;
+  return [
+    shape(dome(w, h), "cyan-400", 0.16),
+    shape(dome(w, h) + dome(w - 0.8, h - 0.8), "cyan-400", 0.55),
+    shape(f.ellipse(0, 0, w, 1.6), "cyan-400", 0.3),
+    shape(f.band([[-w * 0.5, -h * 0.25], [0, -h * 0.5], [w * 0.5, -h * 0.25]], 0.2) + f.band([[0, -h * 0.5], [0, -h * 0.9]], 0.2), "white", 0.3),
+    shape(f.band([[-w * 0.66, -h * 0.4], [-w * 0.48, -h * 0.66], [-w * 0.2, -h * 0.85]], 0.45), "white", 0.45),
+    shape(sparkle(f, -w * 0.42, -h * 0.72, 1.4), "white", 0.85),
+  ];
+}
+
+/** A spear snapped in two: its butt half planted aslant in the ground on the anchor, splintered at the top, and its head half lying beside it, a red binding at the steel head; about 20 wide and 12 tall at scale 1. */
+function brokenSpear(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 12, 24);
+  const jag = (x: number, y: number): Point[] => [[x, y - 0.5], [x + 1.2, y - 0.9], [x + 0.6, y - 0.2], [x + 1.6, y + 0.1], [x + 0.6, y + 0.4], [x, y + 0.4]];
+  return [
+    shape(f.ellipse(-5, 0.5, 11, 1.1), "black", 0.2),
+    shape(f.band([turned([0, 0.6], tilt), turned([0, -11], tilt)], 0.9), "wood-700", 1, INKED),
+    shape(f.poly(spun([[-0.5, -11], [-0.3, -13], [0, -11.6], [0.3, -13.6], [0.5, -11]], tilt)), "wood-600", 1),
+    shape(f.band([[-14, -0.6], [-3.6, -0.7]], 0.9), "wood-700", 1, INKED),
+    shape(f.poly(jag(-3.6, -0.7)), "wood-600", 1),
+    shape(f.poly([[-14, -1.7], [-18.8, -0.6], [-14, 0.5]]), "slate-100", 1, INKED),
+    shape(f.band([[-13.3, -1.5], [-13.3, 0.3]], 1.1), "red-600", 1),
+    shape(f.band([[-14.4, -0.9], [-17.4, -0.6]], 0.25), "white", 0.6),
+  ];
+}
+
 /** R3393000: the Training Grounds parts, by id, each with its kind. */
 export const YARD_KIT = {
   sand: { category: "terrain", draw: sand },
@@ -636,4 +732,10 @@ export const YARD_KIT = {
   sandbags: { category: "objects", draw: sandbags },
   splinters: { category: "weather", draw: splinters },
   pixels: { category: "weather", draw: pixels },
+  log: { category: "objects", draw: log },
+  "yard-gate": { category: "architecture", draw: yardGate },
+  pail: { category: "objects", draw: pail },
+  "plank-rug": { category: "objects", draw: plankRug },
+  "shield-dome": { category: "weather", draw: shieldDome },
+  "broken-spear": { category: "objects", draw: brokenSpear },
 } as const satisfies Readonly<Record<string, KitPart>>;

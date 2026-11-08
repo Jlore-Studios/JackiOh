@@ -407,8 +407,10 @@ sheet, at desktop size and at 390x844.
 
 Every Meditative+ entry (#1 to #26 and their seven tokens) and every Training Grounds entry (#1 to #60 and the
 Golem token) draws from a recipe of its own, each from its brief (#3393's table), base and Radiant. The recipes
-are three files in id order, spread into `SCENE_RECIPES` after the proofs: `sceneRecipesMeditativePlus.ts`,
-`sceneRecipesTrainingGrounds.ts` (#1 to #40 and #39's token) and `sceneRecipesLegacy.ts` (#41 to #60).
+are in id order in three tables spread into `SCENE_RECIPES` after the proofs: `sceneRecipesMeditativePlus.ts`
+(#1 to #11, spreading `sceneRecipesMeditativePlus2.ts`'s #12 to #26), `sceneRecipesTrainingGrounds.ts` (#1 to
+#40, spreading `sceneRecipesTrainingGrounds2.ts`'s Units from #21 on and #39's Golem token) and
+`sceneRecipesLegacy.ts` (#41 to #60), each set's table split in two files as the Classic+ pass split its own.
 Meditative+ paints in the Meditative family's ink wash: layered `peaks` in mist behind, a high and distant
 camera, and exactly one red `seal` in the near layer. Training Grounds paints in carved wood: the yard's
 `palisade` and `sand` wherever its brief is set in the yard, the sun from the upper right but at night. Each
@@ -420,9 +422,9 @@ hooded traveller; a Unit that is a thing is built from figure parts too: the liv
 eyes (`outfit-flask`, `head-eyes`) on stubby legs, Flame Tongue Totem, Floodgates and the Training Dummy on a
 post (`pose-post`), the Golem of lashed posts with a sack head, the Shredder on treads. A brief's other
 characters are `extras`, and a ghost, a copy or a flicker a `fade`. The parts the briefs named joined the kits,
-in modules of their own beside the first: the mountains' (`sceneKitMountain.ts`), the yard's
-(`sceneKitYard.ts`) and the Legacy cards' yard touches and props (`sceneKitTouches.ts`), and the figure kit's new
-poses, heads, headgear, outfits and items.
+in modules of their own beside the first: the mountains' 38 (`sceneKitMountain.ts`), the yard's 35
+(`sceneKitYard.ts`) and the Legacy cards' 14 yard touches and props (`sceneKitTouches.ts`), and the figure kit's
+four new poses, three heads, six hairs and headgears, nine outfits and ten held items.
 
 A Legacy card (R3393001) draws its own brief's scene and places its yard touch (`LEGACY_TOUCHES`) once, as the
 kit part `LEGACY_TOUCH_PARTS` names; its face wears its Core card's frozen emblem, the glyph and paint of the

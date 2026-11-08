@@ -874,6 +874,20 @@ function parachute(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+/** A soft shield bubble resting on the anchor: a translucent sphere about 28 across at scale 1 (its body `main`), a brighter rim, a curved sheen at its upper left, a glint and its glow pooled on the ground. */
+function shieldBubble(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const r = 14 * between(rng, 0.94, 1.06);
+  const sheen = between(rng, -0.6, 0.6);
+  return [
+    shape(f.ellipse(0, 0, r * 0.9, r * 0.16), "white", 0.25),
+    shape(f.circle(0, -r, r), "sky-300", 0.16, MAIN),
+    shape(f.circle(0, -r, r) + f.circle(0, -r, r * 0.92), "slate-100", 0.5),
+    shape(`M${f.p(-r * 0.72, -r * 1.42)}Q${f.p(-r * 0.3 + sheen, -r * 1.86)} ${f.p(r * 0.2, -r * 1.84)}Q${f.p(-r * 0.3 + sheen, -r * 1.7)} ${f.p(-r * 0.72, -r * 1.42)}Z`, "white", 0.55),
+    shape(sparkle(f, r * 0.62, -r * 1.5, 1.4) + sparkle(f, -r * 0.8, -r * 0.5, 0.9), "white", 0.8),
+  ];
+}
+
 /** R3393000: the Meditative+ parts, by id, each with its kind. */
 export const MOUNTAIN_KIT = {
   peaks: { category: "terrain", draw: peaks },
@@ -913,4 +927,5 @@ export const MOUNTAIN_KIT = {
   summit: { category: "terrain", draw: summit },
   "moon-wall": { category: "architecture", draw: moonWall },
   parachute: { category: "objects", draw: parachute },
+  "shield-bubble": { category: "weather", draw: shieldBubble },
 } as const satisfies Readonly<Record<string, KitPart>>;

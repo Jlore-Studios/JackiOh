@@ -31,6 +31,12 @@ import {
   type SceneRecipe,
 } from "./scene.ts";
 import { SCENE_KIT } from "./sceneKit.ts";
+import { MOUNTAIN_KIT } from "./sceneKitMountain.ts";
+import { NATURE_KIT } from "./sceneKitNature.ts";
+import { OBJECTS_KIT } from "./sceneKitObjects.ts";
+import { PLACES_KIT } from "./sceneKitPlaces.ts";
+import { TOUCHES_KIT } from "./sceneKitTouches.ts";
+import { YARD_KIT } from "./sceneKitYard.ts";
 import { SCENE_RECIPES } from "./sceneRecipes.ts";
 import { LEGACY_RECIPES, LEGACY_TOUCH_PARTS } from "./sceneRecipesLegacy.ts";
 import { MEDITATIVE_PLUS_RECIPES } from "./sceneRecipesMeditativePlus.ts";
@@ -203,6 +209,19 @@ describe("R3393000 Meditative+ and Training Grounds drawn as scenes", () => {
         expect(sceneUse(own), `${card.id} ${picture}`).toEqual(sceneUse(normal));
         expect(own.map((shape) => shape.d), `${card.id} ${picture}`).not.toEqual(normal.map((shape) => shape.d));
       }
+    }
+  });
+
+  it("R3393000 the kit modules #3393 added each hold parts of their own, every one in SCENE_KIT", () => {
+    const modules = [MOUNTAIN_KIT, YARD_KIT, TOUCHES_KIT].map((kit) => Object.entries(kit));
+    const added = modules.flat();
+    const before = [PLACES_KIT, OBJECTS_KIT, NATURE_KIT].flatMap((kit) => Object.keys(kit));
+    expect(new Set(added.map(([id]) => id)).size, "no id in two modules").toBe(added.length);
+    for (const entries of modules) expect(entries.length).toBeGreaterThan(0);
+    for (const [id, part] of added) {
+      expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);
+      // None takes the place of a part the kit held before.
+      expect(before, id).not.toContain(id);
     }
   });
 

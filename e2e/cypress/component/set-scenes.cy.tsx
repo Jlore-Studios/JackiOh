@@ -1,6 +1,6 @@
 // R3393000, R3393001: every Meditative+ and Training Grounds entry, tokens and Legacy cards included, drawn from its
-// scene recipe (apps/web/src/cards/art/sceneRecipesMeditativePlus.ts, sceneRecipesTrainingGrounds.ts and
-// sceneRecipesLegacy.ts), base and Radiant, in a real browser, at desktop size and at 390x844. Every Epic, Legendary
+// scene recipe (apps/web/src/cards/art/sceneRecipesMeditativePlus.ts and …2.ts, sceneRecipesTrainingGrounds.ts and
+// …2.ts, sceneRecipesLegacy.ts), base and Radiant, in a real browser, at desktop size and at 390x844. Every Epic, Legendary
 // and Mythic entry is shown at hand size, the rest as a contact sheet at a smaller size, a page at a time, each page
 // fitting the viewport. apps/web's vitest suite proves each scene's shapes, floors, geometry and colours
 // (cards/art/setScenes.test.ts, artRichness.test.ts); here every picture paints, each Radiant face's picture differs
@@ -137,7 +137,9 @@ function showPages(screen: Screen, ids: readonly string[], box: Box, kind: "deep
         ),
       )
       .then((shares) => {
-        for (const { id, share } of shares) expect(share, `${id}'s Radiant picture differs from its base one`).to.be.at.least(MIN_CHANGED_SHARE);
+        // Every face of the page that differs too little, named at once.
+        const flat = shares.filter(({ share }) => share < MIN_CHANGED_SHARE).map(({ id, share }) => `${id}: ${share.toFixed(3)}`);
+        expect(flat, "the Radiant pictures that differ from their base ones by less than MIN_CHANGED_SHARE").to.deep.equal([]);
       });
     cy.screenshot(`set-scenes-${screen.label}-${kind}-${n + 1}`, { capture: "viewport", overwrite: true });
   });

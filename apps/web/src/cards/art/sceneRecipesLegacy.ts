@@ -218,6 +218,35 @@ const LEGACY_MIDRANGE_MENACE: SceneRecipe = {
   },
 };
 
+/** Legacy: Jlockeed Shredder-10 (Training Grounds #48, Common): a clanking shredder on treads, its blades spinning, chews straw dummies beside the hay barn, sparks and straw flying; red evening. */
+const LEGACY_JLOCKEED_SHREDDER: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["red-900", "orange-400"],
+  light: { x: 80, y: 30, r: 34, paint: "orange-400", opacity: 0.35 },
+  emblem: { x: 46, y: 58, size: 6, rotate: 0 },
+  figure: {
+    x: 46,
+    y: 83,
+    scale: 1.1,
+    pose: "pose-treads",
+    look: { ...figureLookFor(["Jlockeed"]), head: "head-automaton", hair: null, outfit: "outfit-machine", item: null, skin: "slate-400", cloth: "slate-700" },
+  },
+  layers: {
+    sky: [{ part: "sun", x: 82, y: 30, scale: 0.6, paint: "red-300" }],
+    far: [
+      { part: "house", x: 18, y: 64, scale: 1.3, paint: "red-900" },
+      { part: "palisade", x: 76, y: 64, scale: 1.2, paint: "wood-800" },
+    ],
+    mid: [{ part: "sand", x: 50, y: 66, paint: "wood-600" }],
+    subject: [{ part: "straw-dummy", x: 70, y: 82, scale: 1, flip: -1 }],
+    near: [{ part: "straw-heap", x: 18, y: 96, scale: 1.4 }],
+    particles: [
+      { part: "sparks", x: 56, y: 64, scale: 1.1 },
+      { part: "splinters", x: 64, y: 70, scale: 1, paint: "brass-600" },
+    ],
+  },
+};
+
 /** Legacy: Reoccurring Dream (Training Grounds #49, Rare): a recruit asleep in a hammock strung between two posts in the orchard corner, dreaming of a card turning bright above him; soft lilac dusk. */
 const LEGACY_REOCCURRING_DREAM: SceneRecipe = {
   family: "training-grounds",
@@ -293,6 +322,96 @@ const LEGACY_BIG_FELINOR: SceneRecipe = {
     ],
     light: [{ part: "rim-light", x: 44, y: 62, scale: 1.4, paint: "orange-400" }],
     particles: [{ part: "motes", x: 50, y: 50, scale: 1, paint: "red-300" }],
+  },
+};
+
+/** Legacy: Snom Bunny Mind Control (Training Grounds #52, Rare): a fluffy white bunny with swirling hypnotic eyes leads a dazed ogre by the ear past a carrot bucket in the vegetable patch; pastel haze. */
+const LEGACY_SNOM_BUNNY_MIND_CONTROL: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["violet-300", "blue-200"],
+  light: { x: 36, y: 60, r: 30, paint: "violet-300", opacity: 0.4 },
+  emblem: { x: 60, y: 60, size: 6, rotate: 0 },
+  figure: {
+    x: 60,
+    y: 84,
+    scale: 0.8,
+    flip: -1,
+    pose: "pose-stand",
+    look: { ...figureLookFor(["Legacy"]), head: "head-ogre", hair: null, outfit: "outfit-fur", item: null, skin: "green-500", cloth: "wood-700" },
+  },
+  layers: {
+    sky: [{ part: "cloud", x: 30, y: 24, scale: 0.8, count: 2, spread: [30, 4], paint: "white" }],
+    far: [
+      { part: "hills", x: 50, y: 58, paint: "green-200" },
+      { part: "fence", x: 50, y: 62, scale: 1, paint: "wood-600" },
+    ],
+    mid: [
+      { part: "furrows", x: 50, y: 64, paint: "wood-600" },
+      { part: "sprout", x: 16, y: 72, count: 3, spread: [10, 3] },
+      { part: "sprout", x: 84, y: 74, count: 2, spread: [8, 3] },
+    ],
+    subject: [
+      { part: "bunny", x: 38, y: 84, scale: 2.5 },
+      { part: "void-swirl", x: 42, y: 66, scale: 0.45, paint: "violet-500" },
+      { part: "void-swirl", x: 60, y: 38, scale: 0.35, paint: "violet-300" },
+    ],
+    near: [
+      { part: "bucket", x: 80, y: 96, scale: 1.5 },
+      { part: "mist", x: 50, y: 92, scale: 1, paint: "white" },
+    ],
+    particles: [{ part: "motes", x: 46, y: 60, scale: 0.9, paint: "violet-300" }],
+  },
+};
+
+/** Legacy: Prejudiced Postdoc (Training Grounds #53, Rare): a bespectacled postdoc in a lab coat at the medical tent lifts a plain, featureless copy of a human recruit; chalk stick figures, sterile white. */
+const LEGACY_PREJUDICED_POSTDOC: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["slate-400", "white"],
+  light: { x: 54, y: 40, r: 34, paint: "white", opacity: 0.45 },
+  emblem: { x: 42, y: 62, size: 6, rotate: 0 },
+  figure: { x: 42, y: 84, scale: 0.85, pose: "pose-raise", look: { ...figureLookFor(["Human"]), hair: "glasses", outfit: "outfit-labcoat", item: null, cloth: "white" } },
+  extras: [{ layer: "subject", x: 52, y: 41, scale: 0.36, pose: "pose-stand", fade: 0.6, look: { ...figureLookFor(["Human"]), hair: null, item: null, skin: "slate-100", cloth: "slate-100" } }],
+  layers: {
+    far: [
+      { part: "tent", x: 50, y: 66, scale: 2, paint: "slate-100" },
+      { part: "palisade", x: 88, y: 64, scale: 1, paint: "wood-700" },
+    ],
+    mid: [
+      { part: "sand", x: 50, y: 68, paint: "stone-500" },
+      { part: "cot", x: 80, y: 78, scale: 0.9 },
+    ],
+    subject: [{ part: "flask", x: 28, y: 86, scale: 0.9 }],
+    near: [{ part: "slate-board", x: 76, y: 98, scale: 1.6 }],
+    light: [{ part: "rim-light", x: 42, y: 62, scale: 1.2, paint: "white" }],
+    particles: [{ part: "motes", x: 56, y: 46, scale: 0.8, paint: "white" }],
+  },
+};
+
+/** Legacy: The Rock (Training Grounds #54, Common): a man of living granite, cracked and mossy, lifts a round training stone overhead in the strongman corner, cooking nothing at all; flat grey noon. */
+const LEGACY_THE_ROCK: SceneRecipe = {
+  family: "training-grounds",
+  sky: ["slate-400", "slate-100"],
+  light: { x: 78, y: 20, r: 32, paint: "white", opacity: 0.3 },
+  emblem: { x: 48, y: 64, size: 6, rotate: 0 },
+  figure: {
+    x: 48,
+    y: 85,
+    scale: 0.9,
+    pose: "pose-lift",
+    look: { ...figureLookFor(["Human"]), head: "head-golem", hair: null, outfit: "outfit-stone", item: null, skin: "stone-500", cloth: "stone-500" },
+  },
+  layers: {
+    sky: [{ part: "cloud", x: 30, y: 22, scale: 0.9, count: 2, spread: [24, 3], paint: "slate-100" }],
+    far: [{ part: "palisade", x: 50, y: 62, scale: 2, paint: "wood-700" }],
+    mid: [
+      { part: "sand", x: 50, y: 66 },
+      { part: "weights", x: 18, y: 78, scale: 1 },
+      { part: "bench", x: 82, y: 78, scale: 0.9 },
+    ],
+    near: [
+      { part: "lifting-stone", x: 48, y: 31, scale: 1.7 },
+      { part: "grass-tuft", x: 86, y: 94, count: 2, spread: [5, 1], paint: "green-700" },
+    ],
   },
 };
 
@@ -492,9 +611,13 @@ export const LEGACY_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   "traininggrounds-045": LEGACY_JLOCKEEDS_WEAPONS,
   "traininggrounds-046": LEGACY_HIT_JOB,
   "traininggrounds-047": LEGACY_MIDRANGE_MENACE,
+  "traininggrounds-048": LEGACY_JLOCKEED_SHREDDER,
   "traininggrounds-049": LEGACY_REOCCURRING_DREAM,
   "traininggrounds-050": LEGACY_GLOWY_JELLY_BEAN,
   "traininggrounds-051": LEGACY_BIG_FELINOR,
+  "traininggrounds-052": LEGACY_SNOM_BUNNY_MIND_CONTROL,
+  "traininggrounds-053": LEGACY_PREJUDICED_POSTDOC,
+  "traininggrounds-054": LEGACY_THE_ROCK,
   "traininggrounds-055": LEGACY_REMINISCE,
   "traininggrounds-056": LEGACY_CORPSE_EATER,
   "traininggrounds-057": LEGACY_RECYCLING_INITIATIVE,

@@ -148,21 +148,23 @@ describe("R3331000 the scene kits", () => {
   });
 
   it("R3331000 every part draws clean shapes from any seed", () => {
+    // R3393000: the same checks as ever, each flaw gathered and the list asserted once, since the kits grown by
+    // #3393 draw some 80,000 shapes here and an expect a shape took longer than the test may run.
+    const palette = new Set<string>(Object.keys(SCENE_PALETTE));
+    const flaws: string[] = [];
     for (const [id, part] of PARTS) {
       for (let seed = 1; seed <= SEEDS; seed += 1) {
         const flip = seed % 2 === 0 ? 1 : -1;
         const shapes = part.draw({ x: 50, y: 60, s: 0.5 + (seed % 5) * 0.25, flip }, stream(seed));
-        expect(shapes.length, id).toBeGreaterThanOrEqual(1);
-        expect(shapes.length, id).toBeLessThanOrEqual(12);
+        if (shapes.length < 1 || shapes.length > 12) flaws.push(`${id} (seed ${seed}) draws ${shapes.length} shapes`);
         for (const shape of shapes) {
-          expect(shape.d, id).toMatch(PATH);
-          expect(shape.d, id).not.toMatch(/NaN|Infinity|undefined/);
-          expect(Object.keys(SCENE_PALETTE), id).toContain(shape.paint);
-          expect(shape.opacity, id).toBeGreaterThan(0);
-          expect(shape.opacity, id).toBeLessThanOrEqual(1);
+          if (!PATH.test(shape.d) || /NaN|Infinity|undefined/.test(shape.d)) flaws.push(`${id} (seed ${seed}) draws the path ${shape.d}`);
+          if (!palette.has(shape.paint)) flaws.push(`${id} (seed ${seed}) paints ${shape.paint}`);
+          if (!(shape.opacity > 0 && shape.opacity <= 1)) flaws.push(`${id} (seed ${seed}) has the opacity ${shape.opacity}`);
         }
       }
     }
+    expect(flaws).toEqual([]);
   });
 
   it("R3331000 SCENE_PALETTE is palette.css's, and no base-face scene colour is in Radiant's gold window", () => {

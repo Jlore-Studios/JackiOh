@@ -8,6 +8,9 @@
 // palette.css name, none in Radiant's gold window.
 // R3390000: the Classic+ scenes (#3390) added six poses (spread, strike, run, sit, flex, kneel), eight
 // heads, five hairs and headgears, twelve outfits and fourteen held items, each drawn as the first ones are.
+// R3393000: the Meditative+ and Training Grounds scenes (#3393) added four poses (post, treads, lift, hips), three
+// heads, six hairs, headgears and glasses, nine outfits (the living potions' flask, the dummy's straw, the totem,
+// the sluice gate, the Golem's posts, the Shredder's machine among them) and ten held items.
 
 import type { Tag } from "@jackioh/shared";
 
@@ -106,7 +109,17 @@ export type ItemId =
   | "item-scroll"
   | "item-hourglass"
   | "item-sack"
-  | "item-tower-shield";
+  | "item-tower-shield"
+  | "item-club"
+  | "item-axe"
+  | "item-boulder"
+  | "item-wand"
+  | "item-ladle"
+  | "item-purse"
+  | "item-brush"
+  | "item-oar"
+  | "item-pointer"
+  | "item-lance";
 export type FigurePartId = PoseId | HeadId | HairId | OutfitId | ItemId;
 
 /** The parts a figure wears, and the two paints its look lays on them. */
@@ -1875,6 +1888,137 @@ function labCoat(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+/** A tree-trunk club about 22 long, swelling from the fist to a knotted head, a broken branch stub and bark lines. */
+function club(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 4, 16);
+  const poly = (points: readonly Point[]): string => f.poly(points.map((p) => turned(p, tilt)));
+  return [
+    shape(poly([[-1, 4], [1, 4], [2.6, -10], [3.4, -17], [0.4, -19.4], [-3.2, -17.6], [-2.8, -10]]), "wood-700", 1, INKED),
+    shape(poly([[0.6, 2], [1.2, 2], [2.4, -10], [3, -16], [1.8, -16.4], [1.4, -10]]), "wood-900", 0.35),
+    shape(poly([[2.4, -12], [5, -14.6], [5.4, -13.6], [2.8, -10.6]]), "wood-600", 1, INKED),
+    shape(f.circle(...turned([-0.6, -14.8], tilt), 0.9) + f.circle(...turned([0.6, -8.4], tilt), 0.6), "wood-900", 0.7),
+  ];
+}
+
+/** A broad war axe on a short haft, its bearded blade about 7 tall, a chain swinging from the pommel in three links. */
+function axe(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, -12, 6);
+  const swing = between(rng, -1.4, 1.4);
+  const T = (p: Point): Point => turned(p, tilt);
+  const poly = (points: readonly Point[]): string => f.poly(points.map(T));
+  const link = (x: number, y: number): string => f.ellipse(...T([x, y]), 0.7, 1);
+  return [
+    shape(f.band([T([0, 4]), T([0, -15])], 0.8), "wood-800", 1, INKED),
+    shape(poly([[0.6, -15.4], [3.4, -17.8], [6, -15.8], [6.4, -11.6], [5, -8.6], [3.2, -11.2], [0.6, -11.6]]), "slate-400", 1, INKED),
+    shape(poly([[4.8, -16.8], [6, -15.8], [6.4, -11.6], [5, -8.6], [5.4, -11.8]]), "white", 0.55),
+    shape(link(swing * 0.4, 5.6) + link(swing * 0.8, 7.8) + link(swing * 1.2, 10), "slate-700", 1, INKED),
+  ];
+}
+
+/** A grey boulder for a fist, about 11 across, cracked and chipped, a lighter top. */
+function boulderFist(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const r = between(rng, 4.8, 5.8);
+  return [
+    shape(f.poly([[-r, 0.4], [-r * 0.7, -r * 0.8], [r * 0.1, -r * 1.05], [r * 0.9, -r * 0.6], [r, r * 0.4], [r * 0.4, r], [-r * 0.6, r * 0.9]]), "stone-500", 1, INKED),
+    shape(f.poly([[-r * 0.6, -r * 0.6], [r * 0.1, -r * 0.9], [r * 0.7, -r * 0.5], [r * 0.1, -r * 0.3]]), "slate-100", 0.3),
+    shape(f.band([[-r * 0.3, -r * 0.2], [r * 0.1, r * 0.3], [r * 0.5, r * 0.2]], 0.3), "slate-900", 0.6),
+  ];
+}
+
+/** A thin willow wand about 13 long, a fork at its tip and teal sparks spun off it. */
+function wand(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 14, 30);
+  const T = (p: Point): Point => turned(p, tilt);
+  const [tx, ty] = T([0, -13]);
+  return [
+    shape(f.band([T([0, 2]), T([0.4, -7]), T([0, -13])], 0.45), "wood-600", 1, INKED),
+    shape(f.band([T([0.2, -8]), T([1.8, -10])], 0.25), "green-500", 1),
+    shape(f.circle(tx, ty, 2.2), "cyan-400", 0.3),
+    shape(sparkle(f, tx, ty, 1.6) + sparkle(f, tx + 3, ty + 1.6, 0.9) + sparkle(f, tx - 2.4, ty - 2.6, 0.8), "cyan-400", 1),
+  ];
+}
+
+/** A long ladle, its bowl about 4 across at the end of a handle 12 below the fist, held out to serve, soup steaming in it. */
+function ladle(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 50, 70);
+  const T = (p: Point): Point => turned(p, tilt);
+  const [bx, by] = T([0, -12]);
+  return [
+    shape(f.band([T([0, 1.6]), T([0, -10.6])], 0.5), "slate-400", 1, INKED),
+    shape(`M${f.p(bx - 2.4, by)}Q${f.p(bx, by + 4)} ${f.p(bx + 2.4, by)}Z`, "slate-400", 1, INKED),
+    shape(`M${f.p(bx - 2, by + 0.2)}Q${f.p(bx, by + 1)} ${f.p(bx + 2, by + 0.2)}Z`, "orange-400", 1),
+    shape(f.band([[bx - 0.6, by - 1], [bx + 0.4, by - 3], [bx - 0.4, by - 5]], 0.35), "white", 0.4),
+  ];
+}
+
+/** A small leather coin purse dangling from the fist on its drawstring, a coin peeking from its mouth. */
+function purse(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const sway = between(rng, -0.8, 0.8);
+  const body = `M${f.p(sway - 1.2, 3)}Q${f.p(sway - 3.8, 4.4)} ${f.p(sway - 3, 7.4)}Q${f.p(sway, 9.2)} ${f.p(sway + 3, 7.4)}Q${f.p(sway + 3.8, 4.4)} ${f.p(sway + 1.2, 3)}Z`;
+  return [
+    shape(f.band([[0, 0], [sway, 3]], 0.25), "wood-900", 1),
+    shape(body, "wood-600", 1, INKED),
+    shape(f.band([[sway - 1.4, 3.2], [sway + 1.4, 3.2]], 0.5), "red-600", 1),
+    shape(f.circle(sway + 0.6, 2.4, 0.9), "slate-400", 1, INKED),
+  ];
+}
+
+/** A calligraphy brush about 11 long held up and forward, its tuft dipped black at the tip. */
+function brush(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 20, 40);
+  const poly = (points: readonly Point[]): string => f.poly(points.map((p) => turned(p, tilt)));
+  return [
+    shape(f.band([turned([0, 3], tilt), turned([0, -7], tilt)], 0.55), "wood-700", 1, INKED),
+    shape(poly([[-0.8, -7], [0.8, -7], [0.5, -9.6], [0, -11.2], [-0.5, -9.6]]), "white", 1, INKED),
+    shape(poly([[-0.5, -9.6], [0.5, -9.6], [0, -11.2]]), "black", 1),
+  ];
+}
+
+/** A boat oar held two-handed for stirring, its shaft from 10 above the fist to its broad blade 20 below it. */
+function oar(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 14, 26);
+  const T = (p: Point): Point => turned(p, tilt);
+  const poly = (points: readonly Point[]): string => f.poly(points.map(T));
+  return [
+    shape(f.band([T([0, -10]), T([0, 13])], 0.8), "wood-600", 1, INKED),
+    shape(poly([[-0.8, 13], [0.8, 13], [2.2, 16], [2, 21], [0, 22.4], [-2, 21], [-2.2, 16]]), "wood-700", 1, INKED),
+    shape(poly([[0.2, 14], [0.8, 14], [1.8, 16.4], [1.6, 20.6], [0.2, 21.4]]), "wood-900", 0.3),
+  ];
+}
+
+/** A long thin pointer stick about 18 long, raised up and forward to tap a board, its tip chalk-white. */
+function pointer(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 40, 56);
+  const T = (p: Point): Point => turned(p, tilt);
+  return [
+    shape(f.band([T([0, 2]), T([0, -17])], 0.4), "wood-700", 1, INKED),
+    shape(f.band([T([0, -16]), T([0, -18.4])], 0.45), "white", 1),
+    shape(f.circle(...T([0, 2.4]), 0.6), "wood-900", 1),
+  ];
+}
+
+/** A jousting lance held upright, about 32 tall, a cone-shaped hand guard at the fist and a painted spiral up the shaft. */
+function lance(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, -4, 4);
+  const T = (p: Point): Point => turned(p, tilt);
+  const poly = (points: readonly Point[]): string => f.poly(points.map(T));
+  return [
+    shape(poly([[-1.2, 6], [1.2, 6], [0.3, -26], [-0.3, -26]]), "white", 1, INKED),
+    shape(poly([[-1, 0], [1, -3], [0.9, -5], [-0.9, -2]]) + poly([[-0.8, -10], [0.8, -13], [0.7, -15], [-0.7, -12]]) + poly([[-0.6, -20], [0.5, -22.6], [0.4, -24], [-0.5, -21.6]]), "red-600", 1),
+    shape(poly([[-0.8, -2], [0.8, -2], [3, 2], [-3, 2]]), "slate-400", 1, INKED),
+  ];
+}
+
 /** R3331000: the figure parts, by id, each with its kind. */
 export const FIGURE_KIT: Readonly<Record<FigurePartId, KitPart>> = {
   "pose-stand": { category: "pose", draw: poseStand },
@@ -1976,6 +2120,16 @@ export const FIGURE_KIT: Readonly<Record<FigurePartId, KitPart>> = {
   "outfit-parka": { category: "outfit", draw: parka },
   "outfit-vest": { category: "outfit", draw: spikedVest },
   "outfit-labcoat": { category: "outfit", draw: labCoat },
+  "item-club": { category: "item", draw: club },
+  "item-axe": { category: "item", draw: axe },
+  "item-boulder": { category: "item", draw: boulderFist },
+  "item-wand": { category: "item", draw: wand },
+  "item-ladle": { category: "item", draw: ladle },
+  "item-purse": { category: "item", draw: purse },
+  "item-brush": { category: "item", draw: brush },
+  "item-oar": { category: "item", draw: oar },
+  "item-pointer": { category: "item", draw: pointer },
+  "item-lance": { category: "item", draw: lance },
 };
 
 /** The look of a card with none of `FIGURE_LOOKS`' tags: a hooded traveller in a plain tunic. */
