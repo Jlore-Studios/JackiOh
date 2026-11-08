@@ -17293,7 +17293,7 @@
       "pending_request": false,
       "provider": "claude-1",
       "round_tier": "",
-      "run_id": "42492957851",
+      "run_id": "pending:09dfc804-1794159815",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -17312,7 +17312,7 @@
         "provider": "claude-1",
         "run": "42492957851"
       },
-      "started_at": "2026-11-08T15:04:47Z",
+      "started_at": "2026-11-08T17:43:57Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on sonnet wrote no plan: timed out after 9000s"
@@ -17324,9 +17324,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T17:43:24Z",
+    "at": "2026-11-08T17:43:57Z",
     "url": "",
-    "what": "review #3438 on claude-4"
+    "what": "plan #3439 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-08T17:29:25Z",
