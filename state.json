@@ -17306,23 +17306,6 @@
       "round_tier": "",
       "run_id": "42506420380",
       "runs_on": "ubuntu-latest",
-      "session": {
-        "action": "plan",
-        "artifact": 13627302501,
-        "artifact_bytes": 1060670,
-        "artifact_name": "work",
-        "at": "2026-11-08T17:42:10Z",
-        "bytes": 1399856,
-        "cwd": "/home/runner/work/_temp/work/item-3439",
-        "ended": "failed: RuntimeError: the planner on sonnet wrote no plan: timed out after 9000s",
-        "head": "7336cf5731447720c4f8400e1490c69909f70eb6",
-        "id": "438b9d97-a7f4-494f-91af-091a9b0d8736",
-        "kind": "plan",
-        "model": "sonnet",
-        "project": "-home-runner-work--temp-work-item-3439",
-        "provider": "claude-1",
-        "run": "42492957851"
-      },
       "started_at": "2026-11-08T17:43:57Z",
       "stop_requested": false,
       "strike_log": [
