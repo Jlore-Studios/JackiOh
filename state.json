@@ -18237,6 +18237,14 @@
         "tiers": {}
       },
       "waiting_comment": 6717583581
+    },
+    "3427": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-08T03:15:09Z",
+      "issue": 3390,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
