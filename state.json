@@ -17431,13 +17431,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-1",
         "rejections": [],
-        "reviews": [],
-        "sha": "a4a32a32d559e35afa21edf28e8856273ec651b3",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-1",
+            "run": "42523196748",
+            "tier": "strong"
+          }
+        ],
+        "sha": "43de577125371e036caa5e04ce53037f1ce478ef",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     }
   },
