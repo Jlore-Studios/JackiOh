@@ -73,9 +73,9 @@ function holdsAi(display: CoachDisplay): boolean {
 }
 
 export type CoachOptions = {
-  /** The entries the player's Field Guide holds as the lesson starts (R2205002). */
+  /** The entries the player's Field guide holds as the lesson starts (R2205002). */
   known?: readonly string[];
-  /** Each entry as the game first shows it found, for the device's Field Guide (R2205002). */
+  /** Each entry as the game first shows it found, for the device's Field guide (R2205002). */
   onFound?: (ids: readonly string[]) => void;
 };
 

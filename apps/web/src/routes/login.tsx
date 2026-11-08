@@ -999,7 +999,7 @@ export default function LoginRoute(): ReactElement {
     else if (pressType === "magiclink") title = t("Sign in");
     else if (pressType === "email_change") title = t("Confirm your new email");
     else title = t("Confirm your email");
-  } else if (signingUp) title = t("Create an account");
+  } else if (signingUp) title = t("Create account");
   else if (forgot || claiming) title = t("Reset your password");
   else if (emailCode) title = t("Sign in with an email code");
   else if (secondFactor) title = t("Two-step sign-in");

@@ -103,6 +103,9 @@ beforeEach(() => {
   localStorage.clear();
   resetCosmeticsForTests();
   writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
+  // R3343001: a Legendary's Default draws Extended art, which keeps a geometry of its own and draws no planes (above), so
+  // the Legendary under test wears Alt art, the painter's own picture in the normal frame.
+  writeCardLevel(LEGENDARY, VERSION_ALT_ART_ID);
 });
 
 afterEach(() => {
@@ -119,6 +122,31 @@ describe("R3344000 the cards under test", () => {
   it("R3344000 are the rarities the tests name, and none is a full-art card", () => {
     expect([EPIC, LEGENDARY, MYTHIC, COMMON].map((id) => CATALOG[id]?.rarity)).toEqual(["Epic", "Legendary", "Mythic", "Common"]);
     for (const id of [EPIC, LEGENDARY, MYTHIC, COMMON, LEGACY, STARSHIP]) expect(isFullArtCard(id), id).toBe(false);
+  });
+
+  it("R3343001 a Legendary's Default, Extended art, has no depth, and in Alt art it has depth and breaks the frame in hand; a Mythic's Full art has depth", () => {
+    expect(offeredOn(VERSION_ALT_ART_ID, LEGENDARY)).toBe(true);
+    writeCardLevel(LEGENDARY, null);
+    for (const options of [{}, { ownHand: true, tilt: "host" }, { tilt: "window" }, { tilt: "drag" }] as const) {
+      const where = JSON.stringify(options);
+      const extended = faceIn(LEGENDARY, options);
+      expect(extended.getAttribute("data-version"), where).toBe(VERSION_EXTENDED_ART_ID);
+      expect(extended.hasAttribute("data-depth"), where).toBe(false);
+      expect(extended.hasAttribute("data-frame-break"), where).toBe(false);
+      expect(extended.querySelector(".cf-planes"), where).toBeNull();
+      expect(extended.querySelector(".cf-glare"), where).toBeNull();
+      cleanup();
+    }
+    writeCardLevel(LEGENDARY, VERSION_ALT_ART_ID);
+    const alt = faceIn(LEGENDARY, { ownHand: true, tilt: "host" });
+    expect(alt.getAttribute("data-version")).toBe(VERSION_ALT_ART_ID);
+    expect(alt.getAttribute("data-depth")).toBe("true");
+    expect(alt.getAttribute("data-frame-break")).toBe("true");
+    cleanup();
+    const mythic = faceIn(MYTHIC);
+    expect(mythic.getAttribute("data-version")).toBe(VERSION_FULL_ART_ID);
+    expect(mythic.getAttribute("data-full-art")).toBe("true");
+    expect(mythic.getAttribute("data-depth")).toBe("true");
   });
 });
 
@@ -676,6 +704,8 @@ describe("R3344000 the depth stylesheet's perspective, planes and spring", () =>
   it("R3344000 CardFace imports its stylesheet and the art draws the plane shape without a full-art mark", () => {
     const source = readFileSync(join(HERE, "CardFace.tsx"), "utf8");
     expect(source).toContain('import "./depth.css";');
+    // R3343001: a Mythic's Default prints full art while the Full-art cards setting is on, its normal face otherwise.
+    writeCardSettings({ ...CARD_SETTINGS_DEFAULTS, fullArt: false });
     const cf = faceIn(MYTHIC);
     // A plane's picture is a `cf-art--plane`, never a `cf-art--full`, which marks a face printing full art.
     expect(cf.querySelectorAll(".cf-art--plane")).toHaveLength(3);

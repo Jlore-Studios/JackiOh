@@ -13,6 +13,8 @@
 // level prints the full-art layout (`wearsFullArt`, `isFullBleed`).
 // R3046000: a board face prints full art too, a Unit's `MinionFace` and a face-up backrow card's compact `CardFace`: the
 // art across the face, still, with the name in a band below it (`boardLookOf`).
+// R3343001: a Default level draws the card's default look (versions.ts `lookOn`): a Mythic's Full art while the setting
+// is on (so `wearsFullArt`), a Legendary's Extended art whatever it is.
 
 import { createContext, createElement, useContext, type ReactElement, type ReactNode } from "react";
 
@@ -37,13 +39,15 @@ import { CARD_SETTINGS_DEFAULTS, readCardSettings, useCardSettings, type BoardNa
 import { isGlitch } from "./glitch.ts";
 import { getStored } from "../net/storage.ts";
 import {
+  DEFAULT_VARIANT,
   NORMAL_LOOK,
   VERSION_ANIMATED_ID,
   VERSION_FULL_ART_ID,
+  defaultLookOf,
   isFullBleed,
   levelOf,
   levelOfPick,
-  lookOfLevel,
+  lookOn,
   offeredOn,
   wornLevel,
   type CardLook,
@@ -133,11 +137,14 @@ const FULL_ART_LEVELS: readonly string[] = Object.entries(COSMETIC_LEVELS)
 /**
  * R2725000: whether a copy of `defId` may wear full art at all: a full-art card, or one offered a level that adds the
  * full-art frame (R2940001: Alt full art; R3015002: the Sketch's full art), every level above it wearing it too;
- * never the Glitch.
+ * R3343001: or one whose default look is full bleed (a Mythic's Full art); never the Glitch.
  */
 export function wearsFullArt(defId: string): boolean {
   const source = fullArtSource(defId);
-  return isFullArtCard(defId) || (!isGlitch(defId) && FULL_ART_LEVELS.some((id) => offeredOn(id, source)));
+  return (
+    isFullArtCard(defId) ||
+    (!isGlitch(defId) && (isFullBleed(defaultLookOf(source)) || FULL_ART_LEVELS.some((id) => offeredOn(id, source))))
+  );
 }
 
 /**
@@ -254,7 +261,8 @@ export function FullArtShown({
  * setting is on, a full-art card's Full art), worn where offered and owned (R1313000, R2725001), else the highest below
  * it that is (`wornLevel`), as the server freezes it (R1834002). Any other copy wears the setting's, where every
  * cosmetic counts as owned. R1310004: with no ownership above it every level counts as owned on the cards it is
- * offered. R2655002: a listed token reads its parent's (`fullArtSource`).
+ * offered. R2655002: a listed token reads its parent's (`fullArtSource`). R3343001: a Default level draws the card's
+ * default look (`lookOn`), a full-bleed one only while the setting is on, every copy alike.
  */
 export function useCardLook(defId: string, worn: boolean = false): CardLook {
   const { fullArt } = useCardSettings();
@@ -268,25 +276,27 @@ export function useCardLook(defId: string, worn: boolean = false): CardLook {
   if (!allowed || isGlitch(defId)) return NORMAL_LOOK;
   const own = worn || ownCopy;
   if (!own && theirs !== null) {
-    if (!fullArt) return NORMAL_LOOK;
+    if (!fullArt) return lookOn(source, null, false);
     const entry = theirs.cards[source];
-    return lookOfLevel(wornLevel(levelOfPick(source, entry?.fullArt, entry?.augments), (id) => offeredOn(id, source)));
+    return lookOn(source, wornLevel(levelOfPick(source, entry?.fullArt, entry?.augments), (id) => offeredOn(id, source)), fullArt);
   }
   const showing = shown?.defId === source;
   const pick = own ? (showing ? shown.pick : stored.fullArt) : undefined;
   const augments = own ? ((showing ? shown.augments : stored.augments) ?? []) : [];
   const wears = (id: string): boolean => offeredOn(id, source) && (owned === "every" || (own && ownsCosmetic(owned, source, id)));
-  return lookOfLevel(wornLevel(levelOfPick(source, pick ?? fullArt, augments), wears));
+  return lookOn(source, wornLevel(levelOfPick(source, pick ?? fullArt, augments), wears), fullArt);
 }
 
 /**
  * R2725002: the tier a look printed as before #2725, the face's `data-full-art-tier`: the Full art version the Epic,
  * with Animated the Legendary and with both augments the Mythic; the normal face with Animated the Animated art; null
- * for the normal face otherwise.
+ * for the normal face otherwise. R3343001: a Default level drawing a default look reads as that look: a Mythic's Full
+ * art as Full art's, a Legendary's Extended art, moving, as the Animated art.
  */
 export function tierOfLook(look: CardLook): FullArtTier | null {
   if (look.version === VERSION_FULL_ART_ID) return look.animated ? (look.signed ? "Mythic" : "Legendary") : "Epic";
-  return look.version === null && look.animated ? "Animated" : null;
+  const defaultLevel = look.level === null || levelOf(look.level)?.variant === DEFAULT_VARIANT;
+  return defaultLevel && look.animated ? "Animated" : null;
 }
 
 /**

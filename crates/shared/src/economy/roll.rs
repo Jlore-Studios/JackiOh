@@ -16,8 +16,8 @@ use crate::config::{
     PACK_FLOOR_RARITY, PACK_FLOORED_SLOT, PACK_SLOTS, PACK_UNOWNED_WEIGHTS,
 };
 use crate::cosmetics::{
-    CardCosmetic, Cosmetic, CosmeticRarity, global_cosmetics, is_next, levels_below, offered, pack_cosmetics,
-    row_owns,
+    CardCosmetic, Cosmetic, CosmeticRarity, global_cosmetics, is_default_look, is_next, levels_below,
+    offered, pack_cosmetics, row_owns,
 };
 use crate::economy::ledger::InventoryItem;
 use crate::economy::math::{PityCounters, apply_pity};
@@ -281,6 +281,9 @@ pub fn draw_card<'p>(
 /// next is open at the tier, one draw below `TIER_WEIGHT_TOTAL` comes first: below `LEVEL_SKIP_WEIGHT` the pick is
 /// among those, uniform (one draw), and grants it and every unowned level below it (`below`); at or past it, and
 /// with none open, the pick is among the in-order ones.
+///
+/// R3343000: the card's default look is held with no row, so it is never open nor among `below`, and the level above
+/// it drops in order.
 pub fn duplicate_grant(
     card_id: &str,
     cosmetic_rarity: CosmeticRarity,
@@ -289,9 +292,10 @@ pub fn duplicate_grant(
     rng: &mut Rng,
 ) -> SlotGrant {
     let held = |cosmetic: &Cosmetic| {
-        owned
-            .iter()
-            .any(|row| row.card_id == card_id && row_owns(&row.cosmetic_id, &cosmetic.id))
+        is_default_look(cosmetic, card_id)
+            || owned
+                .iter()
+                .any(|row| row.card_id == card_id && row_owns(&row.cosmetic_id, &cosmetic.id))
     };
     let (in_order, skips): (Vec<&Cosmetic>, Vec<&Cosmetic>) = droppable
         .iter()
@@ -1609,5 +1613,38 @@ mod tests {
             out_of_order * 100 <= in_order * LEVEL_SKIP_MAX_PERCENT_OF_IN_ORDER,
             "{out_of_order} out of order against {in_order} in order"
         );
+    }
+
+    #[test]
+    fn r3343000_a_duplicate_never_grants_a_default_look_and_grants_the_level_above_it_in_order() {
+        use crate::cosmetics::{VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_ID, registry};
+        let droppable = pack_cosmetics(registry());
+        // Ceaseless Void, a Mythic whose Default draws Full art, owning nothing on it.
+        let card = "core-100";
+        let mut animated = 0;
+        for seed in 0..400 {
+            for tier in [CosmeticRarity::Legendary, CosmeticRarity::Mythic] {
+                let mut rng = Rng::new("r3343000", seed);
+                match duplicate_grant(card, tier, &droppable, &[], &mut rng) {
+                    SlotGrant::Cosmetic {
+                        cosmetic_id, below, ..
+                    } => {
+                        assert_ne!(cosmetic_id, VERSION_FULL_ART_ID, "seed {seed}");
+                        assert!(
+                            !below.iter().any(|id| id == VERSION_FULL_ART_ID),
+                            "seed {seed}: {below:?}"
+                        );
+                        // Full art's animated level is next with nothing owned, so it drops in order.
+                        if cosmetic_id == VERSION_FULL_ART_ANIMATED_ID {
+                            assert!(below.is_empty(), "seed {seed}: {below:?}");
+                            animated += 1;
+                        }
+                    }
+                    SlotGrant::Bars { .. } => {}
+                    other => panic!("seed {seed}: {other:?}"),
+                }
+            }
+        }
+        assert!(animated > 0);
     }
 }

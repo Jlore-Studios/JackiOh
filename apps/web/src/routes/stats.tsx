@@ -211,7 +211,7 @@ function sortOf(params: URLSearchParams): { col: SortColumn; dir: SortDirection 
 
 /**
  * R2777004: the match types the page reads. Every mode together comes first and is what the page opens on, then
- * Constructed (Best of 1 and Conquest together, R2777001), All Random, and each constructed mode alone.
+ * Constructed (Best of 1 and Conquest together, R2777001), All random, and each constructed mode alone.
  */
 const MODES = ["all", "constructed", "random", "bo1", "bo3"] as const;
 type StatsMode = (typeof MODES)[number];
@@ -219,7 +219,7 @@ const DEFAULT_MODE: StatsMode = "all";
 const MODE_LABELS: Record<StatsMode, string> = {
   all: "All modes",
   constructed: "Constructed",
-  random: "All Random",
+  random: "All random",
   bo1: "Best of 1",
   bo3: "Conquest",
 };

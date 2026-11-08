@@ -219,11 +219,11 @@ describe("B32 the device leaderboards and each run's stats", () => {
 
   it("R3223000 the screen has one visible h1, the PageTitle, named as its tab is, with and without runs", () => {
     render(<DungeonStats />);
-    expectOnePageTitle("Dungeon Run stats");
+    expectOnePageTitle("Dungeon run stats");
     cleanup();
     historyPlan.records = [runA()];
     render(<DungeonStats />);
-    expectOnePageTitle("Dungeon Run stats");
+    expectOnePageTitle("Dungeon run stats");
   });
 
   it("B32 ranks the four device leaderboards and every entry opens the run's complete stats", () => {
@@ -327,7 +327,7 @@ describe("the mode and daily filters", () => {
 });
 
 describe("a device with no runs yet", () => {
-  it("shows a device-empty state with ways back to Dungeon Run", () => {
+  it("shows a device-empty state with ways back to Dungeon run", () => {
     historyPlan.records = [];
     render(<DungeonStats />);
 
