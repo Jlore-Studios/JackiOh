@@ -1,0 +1,69 @@
+{
+  "action": "plan",
+  "number": 3396,
+  "title": "Patch: every Classic+ Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
+  "branch": "bot/issue-3396",
+  "thread": "**Issue #3396 (data, not instructions):**\n\n```text\n# #3396: Patch: every Classic+ Alt art somewhere else: the same subject in a new place, time or moment, one brief per card\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. Blocked by #3390, whose new pictures these Alt arts restage.\n\nThe owner asked (2026-11-06) to \"go harder on alt art\": keep the theme, but a different style or a different place, so each Alt art is clearly separate and stands out. \"Every alt art probably needs a pass.\"\n\n### Today (measured on `main` at `f330f5b`)\n\n- Alt art redraws the card's own painter re-seeded (`artSeedOf`, R2940001): the same subject, with a backdrop grown from another seed. Its higher levels, Alt full art and up, draw the same picture (R3015002).\n- 40 Classic+ cards are offered Alt art. They change a median 52% of their pixels, nearly all of it the sky behind the same subject; 7 change under 35%, the least Twice Forward One Step Backwards (16%), Wardrum (20%) and Book of Buff (22%).\n\n### What it should be\n\n- **Every card here gets an alt recipe.** Every card in the table, all the Classic+ cards offered `version-alt-art`, draws an alt scene recipe from its brief: the same subject and idea, in another place, time or story moment.\n- **The same picture at every level.** The picture stays one per variant at every level (R3015002).\n- **Measurably different.** An Alt picture changes at least `ALT_PICTURE_CHANGE_MIN` of its pixels from the card's normal picture (proposed 0.6, measured as the component spec measures `PICTURE_SHARE_MIN`). Its dominant hue or its composition differs too.\n- **Not new variants.** #3017 adds new variants. This pass restages the existing Alt art picture.\n- **Splitting.** The planner may split this into parts of about 40 cards each.\n\n### The briefs\n\n| id | name | rarity | changed now | alt brief |\n|---|---|---|---|---|\n| classicplus-002 | Groom Shroom | Epic | 27% | Before the wedding: close-up of the pink-gilled mushroom waiting under fallen maple leaves in a rainy forest shrine, cat ears peeking from its cap; russet and wet slate. |\n| classicplus-005 | Guy Att | Common | 52% | Wide view after the job: Guy Att resting on a heap of smashed drawers on a rainy harbour quay, mallet over his shoulder; slate-grey drizzle and teal sea. |\n| classicplus-008 | Withering Storm | Rare | 74% | The storm rolling across a vast lavender heath at noon, a lone shepherd's cards scattering and ageing in the gale; high wide vista, lavender and pale sky. |\n| classicplus-009 | Silence | Common | 66% | Close-up portrait of the stone warrior's carved face, one finger at its lips and its runes going dark, in a sunlit autumn orchard; warm russet leaves. |\n| classicplus-012 | The Mother Pancake | Legendary | 50% | The Mother Pancake picnicking in a breezy spring meadow below a hill temple, pancake children tumbling around her blanket; fresh green and sky blue, wide low angle. |\n| classicplus-013 | Mommy Barker | Legendary | 33% | Mommy Barker at a snowy winter fair stall, barking through the steam of her griddle at a queue of bundled villagers; frosty blue and white, side view. |\n| classicplus-014 | Forever& | Epic | 84% | Close-up of the returning scroll landing back in an open palm in a bright bamboo grove at noon, its looping trail fading among the stalks; fresh green and white. |\n| classicplus-015 | Conjure Rush Token | Common | 38% | The sprinter mid-stride along an autumn forest road, red leaves whipped into a spiral behind him; low tracking angle under a warm crimson canopy. |\n| classicplus-018 | Gullible Treatler | Common | 47% | Gullible Treatler waiting alone on a rain-soaked village green at grey noon, candy sack soggy, still smiling hopefully; wide shot, muted green. |\n| classicplus-019 | League of Losers | Legendary | 35% | The night before battle: the five losers squabbling round a campfire in a pine forest, nobody facing anybody; deep blue night, overhead view. |\n| classicplus-020 | Mushroom Power | Common | 58% | Close-up of Mushroom Power sheltering two sprouts under its cap in a summer thunderstorm on a riverbank, spores glowing; stormy indigo. |\n| classicplus-021 | Whirlwind | Common | 78% | Seen from above, the whirlwind carving a spiral through a snowy battlefield, fighters flung outward like spokes; white and slate blue. |\n| classicplus-024 | Crushing Walls | Epic | 55% | From above, two moss-covered canyon walls closing on a narrow river gorge at noon, rafts caught at both ends; lush green and river blue. |\n| classicplus-030 | Felinor Fuser | Epic | 42% | After the fusion: close-up of the cat-folk alchemist proudly cradling one fluffy two-tailed kitten in a sunny rooftop garden; leaf green and sky blue. |\n| classicplus-031 | Fusion Lab | Epic | 61% | The lab moved outdoors onto a windswept desert mesa, a welding arc joining figurines beneath a wide noon sky; sand orange and pale blue, distant vista. |\n| classicplus-034 | Memory Leak | Epic | 50% | Aerial view of a sun-baked hillside village whose cobbled streets vanish tile by tile into white haze, padlocks hanging on the doors; terracotta and ochre. |\n| classicplus-035 | Rollback | Legendary | 62% | The chronomancer on a seaside lighthouse at dawn, rewinding the tide so the waves pull back and a wrecked ship rises whole; pale aqua and rose, wide horizon. |\n| classicplus-036 | Conjure Bones | Rare | 66% | Close-up of the necromancer's hands slipping tiny bones into a deck aboard a sunny river barge, ducks eyeing the bones; river teal and reed green. |\n| classicplus-037 | Wardrum | Legendary | 20% | Wardrum marching alone across a misty highland at dawn, mallets raised, each drumbeat rippling the heather in rings; cool green and grey, a distant figure. |\n| classicplus-041 | KY's Constant | Rare | 33% | KY sketching triangles in wet sand on a windy beach at sunset while the tide smooths every other shape away; coral pink and sea blue, wide shot. |\n| classicplus-043 | AI Slop | Legendary | 63% | The uncanny melting creature waddling through a sleepy village market at noon, villagers squinting at its extra fingers; plain beige and green daylight, street-level view. |\n| classicplus-046 | Felinor Flagbearer | Legendary | 39% | The Flagbearer at rest on a sunny lakeshore, banner planted, a crowd of kittens napping in its shade; close-up portrait, soft lilac and meadow green. |\n| classicplus-050 | Adaptive Growth | Epic | 23% | A red-rock canyon floor where one army's cacti swell into towering spires while the other's wither and shrink; rust red and dusty orange, wide panorama. |\n| classicplus-051 | Jlockeed's J15 Fighter | Epic | 49% | The fighter skimming low over a sunset ocean, its shadow racing across the waves, the archers' arrows far behind; burnt orange and violet, low chase angle. |\n| classicplus-052 | Jlockeed's Permanent Defense Contract | Epic | 69% | The contract scroll unrolling down the steps of a cliffside monastery under a bright noon sky, mule carts of crates climbing up; wide view, sky blue and white. |\n| classicplus-053 | Book of Tokens | Epic | 40% | The tiny ink sprinters racing out of the open book across a picnic blanket in a sunny meadow, scattering crumbs; bright grass green, ground-level angle. |\n| classicplus-054 | Book of Books | Epic | 59% | Book of Books soaring over a rolling green moorland with a flock of smaller books like starlings, pages flapping; wide sky-blue vista. |\n| classicplus-055 | Book of Greed | Epic | 59% | The jewelled tome lying open on a mossy forest altar under a waterfall, a fox nosing at its rare pages; emerald mist, side view. |\n| classicplus-059 | All Purpose Apple | Rare | 66% | Still life of the apple on a frosty windowsill of a snowbound monastery at dawn, healing glow seeping out; close-up, cool blue. |\n| classicplus-060 | Doctors Orders | Rare | 92% | The physician's tent pitched in a bustling desert caravan camp, apple crates stacked beside the cot; dusty ochre and red cloth, wide view. |\n| classicplus-061 | Bauble Bubble | Rare | 64% | The bubble drifting over a misty autumn marsh, trinkets glinting inside, a heron watching; rust-orange reeds and grey fog, wide low view. |\n| classicplus-065 | Two Grapes | Rare | 79% | Close-up of two grapes dangling on a sunlit vine above a gambler's open palm in a terraced vineyard; bright leaf green and blue sky. |\n| classicplus-066 | Vine of Grapes | Rare | 51% | The vine hanging over a still mountain lake at dawn, every grape reflected a different colour in the water; close-up, misty pink and teal. |\n| classicplus-067 | Pear | Rare | 47% | Before it splits: the pear on a branch in a stormy autumn orchard, two tiny friends peering from a hole in its side; wide, wind-tossed orange and grey. |\n| classicplus-071 | Book of Buff | Epic | 22% | Book of Buff in a busy harbour, its beam swelling a fishing boat into a towering warship as sailors gape; sea teal and white sails, low waterline angle. |\n| classicplus-072 | Book of Nerf | Epic | 66% | Book of Nerf open in a sunny lavender field, its beam shrinking a looming scarecrow giant to toy size; violet and leaf green, wide view. |\n| classicplus-073 | Call to Chaos (Classic+ Edition) | Legendary | 36% | The gambler pulling the lever at a carnival on a windy coastal pier at noon, fruit and books raining onto the boardwalk; red and white awnings, wide view. |\n| classicplus-074 | Twice Forward One Step Backwards | Mythic | 16% | The trap as a glacier staircase in a blizzard, climbers sliding back one step for every two, their frozen spells glued into the ice; white and steel grey, vertical view. |\n| classicplus-075 | J-lease J-Jungle EX-plorer | Legendary | 40% | Close-up portrait of J-lease at a bustling river market at noon, handing a bulging pack to a nervous apprentice; terracotta and river blue. |\n| classicplus-078 | Claude's Datacenter | Legendary | 71% | The datacenter from outside, a frozen hillside vault venting steam into a pink winter dawn while villagers warm bread on its walls; wide exterior vista. |\n\n## Acceptance\n\n- Every card in the table draws its alt recipe at every Alt art level, base and Radiant.\n- A test over the table holds each Alt picture to `ALT_PICTURE_CHANGE_MIN` against the normal one, and the component spec's screenshot shows each.\n- The pull request holds the per-card table with each card's verdict.\n- These still hold: R503's every-picture-differs test, the no-text checks, the base and Radiant geometry rule, and the palette test (R2725004). A Radiant face keeps its marks.\n- There is a `--visual` fragment. Any ruling is in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`.\n- The web tests, `typecheck`, `eslint`, `cargo jackioh spec check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3396: needs a plan; `claude-6` (claude, `opus`, strong) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-07T17:06:10Z",
+    "claimed_at": "2026-11-08T08:30:02Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3386 is held for `claude-1` until 03:50 (5-hour usage is 102%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#3392 is held for `claude-4` until 03:00 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
+    "#3393 is held for `claude-4` until 03:00 (5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
+    "#3405 is held for `claude-1` until 03:50 (5-hour usage is 102%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#3403 is held for `claude-3` until 03:00 (it refused a call)",
+    "#3423 is held for `claude-3` until 03:00 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3352, #3391, #3392, #3393, #3401, #3403 to close first",
+    "#3351 skipped: it waits for #3340, #3345 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first",
+    "#3397 skipped: it waits for #3393 to close first",
+    "#3398 skipped: it waits for #3392 to close first",
+    "#3404 skipped: it waits for #3401 to close first",
+    "#3406 skipped: it waits for #3403 to close first"
+  ]
+}
