@@ -298,6 +298,22 @@ describe("R2784000 the per-set effects tables", () => {
       "meditativeplus-024": "snowplowHeave",
       "traininggrounds-038": "chalkboardLesson",
       "traininggrounds-039-1": "golemLashing",
+      // R3407000: Stinkyscape part two's.
+      "stinkyscape-018-1": "melchiorBoot",
+      "stinkyscape-018-2": "balthasarLamp",
+      "stinkyscape-018-3": "casperMirror",
+      "stinkyscape-109": "freshJackVault",
+      "stinkyscape-110": "ikwzkiDawn",
+      "stinkyscape-111": "shockwaveRing",
+      "stinkyscape-112": "resumeTube",
+      "stinkyscape-115": "scornGate",
+      "stinkyscape-116": "megabaseDock",
+      "stinkyscape-147": "in33dh3Drop",
+      "stinkyscape-147-1": "primeCrown",
+      "stinkyscape-147-2": "blobPlop",
+      "stinkyscape-148": "alteranDive",
+      "stinkyscape-150-1": "golemCrash",
+      "stinkyscape-152": "sanctumRise",
     };
     for (const [defId, key] of Object.entries(signatureEntrances)) expect(entranceKeyOf(defId), defId).toBe(key);
     // R3389001: Classic's signatures' six new entrances, and In Too Deep's own takeover.
@@ -321,6 +337,13 @@ describe("R2784000 the per-set effects tables", () => {
       "meditativeplus-026": "canvas",
       "traininggrounds-040": "napkin",
       "classic-090": "abyss",
+      // R3407000: Stinkyscape part two's six Mythics.
+      "stinkyscape-109": "freshJack",
+      "stinkyscape-110": "ikwzki",
+      "stinkyscape-111": "shockwave",
+      "stinkyscape-148": "alteran",
+      "stinkyscape-148-1": "edge",
+      "stinkyscape-t-red-narcor": "redNarcor",
     };
     for (const [defId, look] of Object.entries(looks)) expect(takeoverLookOf(defId), defId).toBe(look);
     expect(Object.keys(OWN_TAKEOVER_LOOKS).sort()).toEqual(Object.values(looks).sort());

@@ -55,6 +55,10 @@ const EXPECTED_IDS = [
   // R3402001: the ten Core signatures.
   "silasScratch", "crucibleChoir", "hatchWeld", "pocketZip", "stadiumCheer", "jackpotReels", "pawnWaltz",
   "wishWind", "heroicFanfare", "forgeAnvil",
+  // R3407001: Stinkyscape's signatures.
+  "ballotBeep", "lullabySigh", "compactTut", "glitchDrop", "harpGliss", "markerThunder", "stampTrill", "tillRattle",
+  "gavelSlam", "dockingChime", "keyboardPing", "synthSnap", "blobDrum", "warpSparkle", "tearChoir", "cackleThunder",
+  "kazooRatchet", "thrusterSniff", "marbleGong", "sanctumBell", "cashWhistle", "whisperClink", "crystalRise",
 ] as const;
 
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
@@ -194,6 +198,30 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   wishWind: 1900,
   heroicFanfare: 2500,
   forgeAnvil: 1900,
+  // R3407001: Stinkyscape's signatures.
+  ballotBeep: 1300,
+  lullabySigh: 1500,
+  compactTut: 1300,
+  glitchDrop: 1500,
+  harpGliss: 1500,
+  markerThunder: 1500,
+  stampTrill: 1400,
+  tillRattle: 1600,
+  gavelSlam: 1400,
+  dockingChime: 1600,
+  keyboardPing: 1200,
+  synthSnap: 1400,
+  blobDrum: 1500,
+  warpSparkle: 1600,
+  tearChoir: 1500,
+  cackleThunder: 1600,
+  kazooRatchet: 1600,
+  thrusterSniff: 1600,
+  marbleGong: 1600,
+  sanctumBell: 1600,
+  cashWhistle: 1600,
+  whisperClink: 1200,
+  crystalRise: 1600,
 };
 
 /** B14 parameter sets used here too. */
@@ -435,6 +463,14 @@ const ROUTINE: readonly Cue[] = [
   ...(["silasScratch", "crucibleChoir", "hatchWeld", "pocketZip", "stadiumCheer", "jackpotReels", "pawnWaltz", "wishWind", "heroicFanfare", "forgeAnvil"] as const).map(
     (id): Cue => ({ id, params: {} }),
   ),
+  // R3407001: Stinkyscape's signatures, at the same routine level.
+  ...(
+    [
+      "ballotBeep", "lullabySigh", "compactTut", "glitchDrop", "harpGliss", "markerThunder", "stampTrill", "tillRattle",
+      "gavelSlam", "dockingChime", "keyboardPing", "synthSnap", "blobDrum", "warpSparkle", "tearChoir", "cackleThunder",
+      "kazooRatchet", "thrusterSniff", "marbleGong", "sanctumBell", "cashWhistle", "whisperClink", "crystalRise",
+    ] as const
+  ).map((id): Cue => ({ id, params: {} })),
 ];
 const ROUTINE_BAND = [-12, -4] as const;
 const UI_BANDS: Readonly<Record<"uiClick" | "uiHover", readonly [number, number]>> = { uiClick: [-15, -9], uiHover: [-22, -15] };

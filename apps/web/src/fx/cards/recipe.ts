@@ -86,6 +86,22 @@ export const ENTRANCE_TRAUMA = {
   silasSpotlight: 0.6,
   comboStadium: 0.5,
   heroicPedestal: FX_LEGENDARY_TRAUMA,
+  // R3407000: Stinkyscape part two's (fx/cards/stinkyscape/), each within SIGNATURE_PERMANENT_MAX_TRAUMA.
+  melchiorBoot: 0.3,
+  balthasarLamp: 0.2,
+  casperMirror: 0.25,
+  freshJackVault: 0.6,
+  ikwzkiDawn: 0.3,
+  shockwaveRing: 0.7,
+  resumeTube: 0.3,
+  scornGate: 0.6,
+  megabaseDock: 0.7,
+  in33dh3Drop: 0.4,
+  primeCrown: 0.4,
+  blobPlop: 0.3,
+  alteranDive: 0.5,
+  golemCrash: 0.7,
+  sanctumRise: 0.35,
 } as const;
 
 /** R3389001: the shake of each Classic signature recipe that shakes the board, on top of nothing (rule 9). */

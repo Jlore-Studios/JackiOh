@@ -11,13 +11,15 @@
 // R3389000: it wears its card's own takeover look (`data-takeover-look`), In Too Deep's abyss among them.
 // R3402000: a Mythic whose takeover has a scene of its own (fx/takeoverArt.ts) shows it at rest behind
 // all of that, painted from its look's tint (board.css) and naming no card.
+// R3407000: a Mythic whose takeover draws its own picture (`takeoverArtOf`) shows that picture filling the
+// screen behind the rays, still, as its takeover's still form.
 
 import { createElement, useContext, useEffect, type CSSProperties, type ReactElement } from "react";
 
 import type { PlayerView } from "@jackioh/shared";
 
 import { CardFace } from "../cards/index.ts";
-import { TAKEOVER_TINTS, takeoverLookOf } from "../fx/takeover.ts";
+import { TAKEOVER_TINTS, takeoverArtOf, takeoverLookOf } from "../fx/takeover.ts";
 import { TAKEOVER_ART, TAKEOVER_ART_ASPECT, TAKEOVER_ART_VIEWBOX, takeoverArtParts } from "../fx/takeoverArt.ts";
 import type { TakeoverLook } from "../fx/types.ts";
 import { CatalogContext } from "./catalog.ts";
@@ -66,9 +68,11 @@ export default function TakeoverStill({ defId, instanceId, view, onDone }: Takeo
   if (face === null) return null;
   const look = takeoverLookOf(defId);
   const art = takeoverArtParts(look);
+  const picture = takeoverArtOf(defId);
   return (
     <div className="takeover-still" data-testid="takeover-still" data-takeover-def={defId} data-takeover-look={look} aria-hidden="true">
       <StillArt look={look} />
+      {picture === undefined ? null : <img className="takeover-still-art" src={picture} alt="" aria-hidden="true" draggable={false} decoding="async" />}
       {art.length > 0 ? (
         <span className="takeover-art" data-look={look} data-still="true" aria-hidden="true">
           {art.map((part) => (

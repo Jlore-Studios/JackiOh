@@ -68,6 +68,22 @@ describe("R3389000 a signature's own aura", () => {
       "core-052": "mirrorball",
       "core-093": "stadium",
       "core-098": "pedestal",
+      // R3407000: Stinkyscape part two's.
+      "stinkyscape-018-1": "scanline",
+      "stinkyscape-018-2": "heartbeat",
+      "stinkyscape-018-3": "glint",
+      "stinkyscape-109": "pixelcrawl",
+      "stinkyscape-110": "duohalo",
+      "stinkyscape-111": "arcflick",
+      "stinkyscape-112": "steplights",
+      "stinkyscape-115": "searchlight",
+      "stinkyscape-116": "stationrings",
+      "stinkyscape-147": "aiwisp",
+      "stinkyscape-147-1": "crownpulse",
+      "stinkyscape-147-2": "drumbeat",
+      "stinkyscape-148": "starpath",
+      "stinkyscape-150-1": "stinkvapour",
+      "stinkyscape-152": "pages",
     });
   });
 

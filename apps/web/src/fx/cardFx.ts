@@ -14,6 +14,8 @@
 // (a redirect's or a counter's card, an Activate's, a quest's: `sourceIdOf`), found face up on the board
 // or in a readable event remembered (`signaturePlayOf`). Neither reads a hidden card (R202). It draws
 // beside a whole pile's one wave too (`planSignatureZone`).
+// R3407000: an entrance and the readable play's own recipe both draw on the `summoned` they both claim (a
+// MAGI's own entrance inside Imitated Instrumentality's boots); the fallback above never joins an entrance.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
@@ -170,11 +172,15 @@ export function planSignatureZone(entry: AnimationEntry, view: PlayerView, env: 
 
 export function planCardFx(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): CardFxResult | null {
   const entrance = planEntrance(event, p, table);
-  if (entrance !== null) return entrance;
   const play = p.env.memory.resolving();
   const key = play === undefined || play.defId === HIDDEN_ID ? undefined : bespokeOf(play.defId, table);
   const own = play === undefined || key === undefined ? null : CARD_RECIPES[key](event, p, play);
-  return own ?? signatureFallback(event, p, table);
+  if (entrance === null) return own ?? signatureFallback(event, p, table);
+  if (own === null) return entrance;
+  // R3407000: an entrance inside a recipe that claims the same summon draws both (a MAGI's own entrance
+  // under Imitated Instrumentality's boots, Sanctum's echoes as it rises). The fallback (R3389000) never
+  // joins an entrance: a summon with one draws it, as before.
+  return { cues: [...entrance.cues, ...own.cues], row: "replace" };
 }
 
 /** A motif's cues for one entry, and the entry's events it drew in place of their own row recipe. */

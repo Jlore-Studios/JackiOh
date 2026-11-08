@@ -12,6 +12,7 @@
 // R3402001: Core's signatures add Silly Silas's mirrorball shuffle, Unlicensed Experimentation's clamp weld,
 // Pocket Chaos's swap, Combo-Index's grade rings, Call to Chaos's reels, My Pawn's strings and Heroic Power's
 // doors.
+// R3407000: Stinkyscape part two's signatures.
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
@@ -42,7 +43,20 @@ import { battleshipWarp } from "./stinkyscape/battleshipWarp.ts";
 import { duoBond } from "./stinkyscape/duoBond.ts";
 import { flashFreeze } from "./stinkyscape/flashFreeze.ts";
 import { magiBoot } from "./stinkyscape/magiBoot.ts";
+import { edgeFlee, starscapeJump } from "./stinkyscape/alteranReach.ts";
+import { stinkCloud, tabletopTilt } from "./stinkyscape/chaosCalls.ts";
+import { freshJackComet } from "./stinkyscape/freshJack.ts";
+import { blobDrum, dataPacket, primeConduct } from "./stinkyscape/in33dh3.ts";
+import { jobInterview, payday } from "./stinkyscape/jobApplication.ts";
+import { balthasarCradle, casperKiss, melchiorTally } from "./stinkyscape/magi.ts";
+import { giftShop } from "./stinkyscape/megabase.ts";
+import { narcorDust, redNarcorHum } from "./stinkyscape/narcor.ts";
 import { preemptiveStrike } from "./stinkyscape/preemptiveStrike.ts";
+import { sanctumEcho } from "./stinkyscape/sanctum.ts";
+import { scornSweep } from "./stinkyscape/scornboi.ts";
+import { shockwaveLecture } from "./stinkyscape/shockwave447.ts";
+import { stimmyDrop } from "./stinkyscape/stimmycheck.ts";
+import { chaosOrb } from "./stinkyscape/wildar.ts";
 import { probeScan } from "./stinkyscape/probeScan.ts";
 import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
 import { celestialCall } from "./traininggrounds/celestialCaller.ts";
@@ -97,6 +111,28 @@ export const CARD_RECIPES = {
   preemptiveStrike,
   probeScan,
   anomalyCall,
+  // R3407000: Stinkyscape part two's signatures.
+  melchiorTally,
+  balthasarCradle,
+  casperKiss,
+  freshJackComet,
+  shockwaveLecture,
+  jobInterview,
+  payday,
+  scornSweep,
+  giftShop,
+  dataPacket,
+  primeConduct,
+  blobDrum,
+  starscapeJump,
+  edgeFlee,
+  chaosOrb,
+  stinkCloud,
+  tabletopTilt,
+  sanctumEcho,
+  stimmyDrop,
+  narcorDust,
+  redNarcorHum,
   celestialCall,
   dinoStomp,
   gameDesign,

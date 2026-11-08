@@ -47,7 +47,11 @@ export type SfxId =
   | "inkSummit" | "plowHeave" | "cursorTear" | "seanceChant" | "slateRap" | "diceGong" | "timberLash" | "pencilArpeggio"
   // R3402001: ten Core Legendaries' and Mythics' signatures, one each (signatureCues.ts).
   | "silasScratch" | "crucibleChoir" | "hatchWeld" | "pocketZip" | "stadiumCheer" | "jackpotReels" | "pawnWaltz"
-  | "wishWind" | "heroicFanfare" | "forgeAnvil";
+  | "wishWind" | "heroicFanfare" | "forgeAnvil"
+  // R3407001: Stinkyscape's signature cards, one each (signatureCues.ts).
+  | "ballotBeep" | "lullabySigh" | "compactTut" | "glitchDrop" | "harpGliss" | "markerThunder" | "stampTrill" | "tillRattle"
+  | "gavelSlam" | "dockingChime" | "keyboardPing" | "synthSnap" | "blobDrum" | "warpSparkle" | "tearChoir" | "cackleThunder"
+  | "kazooRatchet" | "thrusterSniff" | "marbleGong" | "sanctumBell" | "cashWhistle" | "whisperClink" | "crystalRise";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains

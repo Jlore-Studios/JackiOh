@@ -33,6 +33,19 @@ import { recycleLoopFixture } from "../cards/classic/recycle.ts";
 import { secondGustFixture } from "../cards/classic/secondWind.ts";
 import { tyrantCommandFixture } from "../cards/classic/spellTyrant.ts";
 import { felinorBoard } from "../cards/core/felinorFiender.ts";
+import { edgeFleeFixture, starscapeJumpFixture } from "../cards/stinkyscape/alteranReach.ts";
+import { stinkCloudFixture, tabletopTiltFixture } from "../cards/stinkyscape/chaosCalls.ts";
+import { freshJackCometFixture } from "../cards/stinkyscape/freshJack.ts";
+import { blobDrumFixture, dataPacketFixture, primeConductFixture } from "../cards/stinkyscape/in33dh3.ts";
+import { jobInterviewFixture, paydayFixture } from "../cards/stinkyscape/jobApplication.ts";
+import { balthasarCradleFixture, casperKissFixture, melchiorTallyFixture } from "../cards/stinkyscape/magi.ts";
+import { giftShopFixture } from "../cards/stinkyscape/megabase.ts";
+import { narcorDustFixture, redNarcorHumFixture } from "../cards/stinkyscape/narcor.ts";
+import { sanctumEchoFixture } from "../cards/stinkyscape/sanctum.ts";
+import { scornSweepFixture } from "../cards/stinkyscape/scornboi.ts";
+import { shockwaveLectureFixture } from "../cards/stinkyscape/shockwave447.ts";
+import { stimmyDropFixture } from "../cards/stinkyscape/stimmycheck.ts";
+import { chaosOrbFixture } from "../cards/stinkyscape/wildar.ts";
 import type { EntranceKey } from "../cards/recipe.ts";
 import { fleetBoard } from "../cards/stinkyscape/starshipSignatures.ts";
 import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
@@ -400,11 +413,13 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * player a hidden card; Combo-Index's end-of-turn trigger raises its grade (the engine's `counterChanged` of
  * it) and adds a card; Call to Chaos rolls a draw; My Pawn fires and cancels the other side's first unit's
  * attack; and Heroic Power is activated, drawing its caster a card (its dart and its sprinter are the other
- * powers, which its tests plan).
+ * powers, which its tests plan). R3407000: Stinkyscape part two's signatures take their modules' own
+ * (fx/cards/stinkyscape/), each told the card it plays (`defId`), so a hook's marker names it.
  */
 /** R3402001: the grade Combo-Index's gallery trigger raises it to, D (the engine counts E as 1, combo_index.rs). */
 const GALLERY_GRADE_D = 2;
-export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
+
+export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId, defId?: string) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
   bloodDrain: (view, instanceId, player) => [...motifFixture("radiance", view, instanceId, player), { type: "healthLost", player, amount: 3 }],
   crushingWalls: (view, instanceId, player) => motifFixture("wipe", view, instanceId, player),
@@ -585,6 +600,28 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
     { type: "hookResolving", sourceId: instanceId, defId: "core-098", controller: player, hook: "activate" },
     { type: "drawn", player, instanceId: "fx-power-drawn", defId: "core-003" },
   ],
+  // R3407000: Stinkyscape part two's signatures, each on its module's own fixture (fx/cards/stinkyscape/).
+  melchiorTally: melchiorTallyFixture,
+  balthasarCradle: balthasarCradleFixture,
+  casperKiss: casperKissFixture,
+  freshJackComet: freshJackCometFixture,
+  shockwaveLecture: shockwaveLectureFixture,
+  jobInterview: jobInterviewFixture,
+  payday: paydayFixture,
+  scornSweep: scornSweepFixture,
+  giftShop: giftShopFixture,
+  dataPacket: dataPacketFixture,
+  primeConduct: primeConductFixture,
+  blobDrum: blobDrumFixture,
+  starscapeJump: starscapeJumpFixture,
+  edgeFlee: edgeFleeFixture,
+  chaosOrb: chaosOrbFixture,
+  stinkCloud: stinkCloudFixture,
+  tabletopTilt: tabletopTiltFixture,
+  sanctumEcho: sanctumEchoFixture,
+  stimmyDrop: stimmyDropFixture,
+  narcorDust: narcorDustFixture,
+  redNarcorHum: redNarcorHumFixture,
 };
 
 /** R2794000: the lane of the viewer's unit row a gallery entrance lands in. */
@@ -759,7 +796,7 @@ export function galleryCardEvents(defId: string, play: GalleryCardPlay, view: Pl
         return play.motif === "snap" ? [fired] : [fired, ...motifFixture(play.motif, view, instanceId, player)];
       }
       case "recipe":
-        return RECIPE_FIXTURES[play.key](view, instanceId, player);
+        return RECIPE_FIXTURES[play.key](view, instanceId, player, defId);
       case "setPiece":
         return SET_PIECE_FIXTURES[play.key](view, instanceId, player, defId);
       case "hook":

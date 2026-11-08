@@ -317,7 +317,8 @@ describe("R2724000: no other card's picture moves", () => {
   });
 
   it("R3331002 the Core cards with a scene recipe no longer draw the picture art-before-2724 records", () => {
-    expect(SCENES.map((card) => card.id).sort()).toEqual(["core-002", "core-098", "core-100"]);
+    // R3392000: every Core card the record keeps draws a scene.
+    expect(SCENES.map((card) => card.id).sort()).toEqual(KEPT.filter((card) => card.set === "Core").map((card) => card.id).sort());
     for (const card of SCENES) {
       const pair = recorded[card.id] ?? (() => { throw new Error(`no fixture for ${card.id}`); })();
       expect(hashId(pictureOf(card, false)), card.id).not.toBe(pair[0]);

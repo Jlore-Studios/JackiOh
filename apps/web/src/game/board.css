@@ -2041,6 +2041,16 @@ button.modifier-badge[data-open="true"] {
   background: color-mix(in srgb, var(--pal-black) 45%, transparent);
 }
 
+/* R3407000: a Mythic's own picture filling the screen behind the rays, as its takeover draws it, still. */
+.takeover-still-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+}
+
 .takeover-still-rays {
   position: absolute;
   width: 140vmin;
@@ -2094,8 +2104,9 @@ button.modifier-badge[data-open="true"] {
 
 /* R3402000: a Mythic's own takeover scene at rest (fx/takeoverArt.ts), first in the still and so behind
    its rays, card and ring: each part painted from the look's tint (`--takeover-rim`, `--takeover-core`,
-   `--takeover-glow`, TakeoverStill.tsx) as fx.css paints the takeover's own. Nothing in it animates. */
-.takeover-still-art {
+   `--takeover-glow`, TakeoverStill.tsx) as fx.css paints the takeover's own. Nothing in it animates. It is
+   an `svg`, beside R3407000's picture (an `img` of the same class, above). */
+svg.takeover-still-art {
   position: absolute;
   inset: 0;
   width: 100%;

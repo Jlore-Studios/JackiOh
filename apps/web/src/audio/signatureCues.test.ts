@@ -5,6 +5,8 @@
 // is the card's first beat (a Trap's firing, a Unit's landing, every other card's play), each sound within the
 // card's signature ceiling (fx/constants.ts), and none for a card the viewer cannot read (R203), a face-down
 // set or another card.
+// R3407001: Stinkyscape's 23 signature cards join them, a Field Spell sounding as it lands face up in the
+// backrow, each with a recipe of its own.
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -17,6 +19,7 @@ import { HIDDEN_DEF_ID } from "./constants.ts";
 import { cuesFor, type CueContext } from "./cues.ts";
 import { SFX, SFX_IDS } from "./sfx.ts";
 import { SIGNATURE_SFX, signatureCues } from "./signatureCues.ts";
+import { FakeAudio } from "./test/fakeAudio.ts";
 import type { SfxId, SoundCue } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
 import { CARD_AUDIO } from "./voiceData.ts";
@@ -167,10 +170,37 @@ const EIGHT = [
   "traininggrounds-040",
 ];
 
+/** R3407001: Stinkyscape's signature cards, in the table's order. */
+const STINKYSCAPE = [
+  "stinkyscape-018-1",
+  "stinkyscape-018-2",
+  "stinkyscape-018-3",
+  "stinkyscape-109",
+  "stinkyscape-110",
+  "stinkyscape-111",
+  "stinkyscape-112",
+  "stinkyscape-112-1",
+  "stinkyscape-115",
+  "stinkyscape-116",
+  "stinkyscape-147",
+  "stinkyscape-147-1",
+  "stinkyscape-147-2",
+  "stinkyscape-148",
+  "stinkyscape-148-1",
+  "stinkyscape-149",
+  "stinkyscape-150",
+  "stinkyscape-150-1",
+  "stinkyscape-151",
+  "stinkyscape-152",
+  "stinkyscape-153",
+  "stinkyscape-t-narcor",
+  "stinkyscape-t-red-narcor",
+];
+
 describe("R3400001 the signature sounds", () => {
   it("R3400001 each card sounds its own effect once, a Spell on its play and a Unit on its summon", () => {
     // R3402001: Core's ten follow them (above).
-    expect(Object.keys(SIGNATURE_SFX).filter((defId) => !defId.startsWith("core-"))).toEqual(EIGHT);
+    expect(Object.keys(SIGNATURE_SFX).slice(0, EIGHT.length)).toEqual(EIGHT);
     const sounds = EIGHT.map((defId) => SIGNATURE_SFX[defId]?.sfx);
     expect(new Set(sounds).size, "each sound is its own").toBe(EIGHT.length);
     for (const defId of EIGHT) {
@@ -213,5 +243,113 @@ describe("R3400001 the signature sounds", () => {
       expect(all.slice(all.length - own.length), event.type).toEqual(own);
     }
     expect(withRow(played("core-002")).some((cue) => cue.kind === "sfx" && Object.values(SIGNATURE_SFX).some((own) => own.sfx === cue.id))).toBe(false);
+  });
+});
+
+/** The graph a recipe builds on the fake context: its nodes' kinds and types and every automation it schedules. */
+function graphOf(id: SfxId): string {
+  const audio = new FakeAudio({ state: "running", currentTime: 0 });
+  const out = audio.context.createGain();
+  const firstNode = audio.nodes.length;
+  const firstParam = audio.paramLog.length;
+  SFX[id].recipe(audio.context, out, 0, {});
+  return JSON.stringify([
+    audio.nodes.slice(firstNode).map((node) => [node.kind, node.type]),
+    audio.paramLog.slice(firstParam).map(({ event }) => [event.method, "value" in event ? event.value : null]),
+  ]);
+}
+
+/** Each card's three moments: the play, a landing in a unit zone and a landing in the backrow. */
+const moments = (defId: string): { played: GameEvent; units: GameEvent; backrow: GameEvent } => ({
+  played: played(defId),
+  units: summoned(defId),
+  backrow: summoned(defId, { row: "backrow" }),
+});
+
+describe("R3407001 Stinkyscape's signature sounds", () => {
+  it("R3407001 the table holds the eight and then Stinkyscape's 23, each with a sound of its own", () => {
+    // R3402001: Core's ten sit between them.
+    const core = SIGNATURES.map(([defId]) => defId);
+    expect(Object.keys(SIGNATURE_SFX)).toEqual([...EIGHT, ...core, ...STINKYSCAPE]);
+    const sounds = Object.values(SIGNATURE_SFX).map((own) => own.sfx);
+    expect(new Set(sounds).size, "no two cards share a sound").toBe(EIGHT.length + core.length + STINKYSCAPE.length);
+  });
+
+  it("R3407001 each of the 23 sounds once on its own moment: a Spell's play, a Unit's landing in a unit zone, a Field Spell's in the backrow", () => {
+    for (const defId of STINKYSCAPE) {
+      const own = SIGNATURE_SFX[defId];
+      const type = CATALOG[defId]?.type;
+      expect(type, defId).toBeDefined();
+      const moment = type === "Unit" ? "units" : type === "Field Spell" ? "backrow" : "played";
+      expect(own, defId).toEqual(
+        moment === "played" ? { sfx: own?.sfx, on: "cardPlayed" } : { sfx: own?.sfx, on: "summoned", row: moment },
+      );
+      const events = moments(defId);
+      for (const at of ["played", "units", "backrow"] as const) {
+        const expected = at === moment ? [{ kind: "sfx", id: own?.sfx, delayMs: 0 }] : [];
+        // On its moment it sounds once; on either other event of the same card, none.
+        expect(signatureCues(events[at]), `${defId} ${at}`).toEqual(expected);
+      }
+    }
+  });
+
+  it("R3407001 a Field Spell sounds as it lands face up in the backrow, never on its play or in a unit zone", () => {
+    const fields = STINKYSCAPE.filter((defId) => CATALOG[defId]?.type === "Field Spell");
+    expect(fields).toEqual([
+      "stinkyscape-018-1",
+      "stinkyscape-018-2",
+      "stinkyscape-018-3",
+      "stinkyscape-112",
+      "stinkyscape-147-2",
+      "stinkyscape-148",
+      "stinkyscape-152",
+    ]);
+    for (const defId of fields) {
+      const own = SIGNATURE_SFX[defId];
+      expect(signatureCues(summoned(defId, { row: "backrow", lane: 1 })), defId).toEqual([{ kind: "sfx", id: own?.sfx, delayMs: 0 }]);
+      expect(signatureCues(played(defId)), defId).toEqual([]);
+      expect(signatureCues(summoned(defId)), defId).toEqual([]);
+    }
+  });
+
+  it("R3407001 R202 a face-down or hidden one never sounds", () => {
+    expect(signatureCues(summoned(HIDDEN_DEF_ID, { instanceId: HIDDEN_DEF_ID, row: "backrow" }))).toEqual([]);
+    for (const defId of STINKYSCAPE) {
+      // R227: a card the event set face down, wherever it lands and however it was played.
+      for (const event of [
+        played(defId, { formerId: "old" }),
+        summoned(defId, { formerId: "old" }),
+        summoned(defId, { formerId: "old", row: "backrow" }),
+      ]) {
+        expect(signatureCues(event), `${defId} ${event.type}`).toEqual([]);
+      }
+    }
+    // Other events of the 23 sound nothing more.
+    expect(signatureCues({ type: "addedToHand", player: "p1", instanceId: "x", defId: "stinkyscape-153" })).toEqual([]);
+  });
+
+  it("R3407001 cuesFor appends it after the row, a Field Spell's landing included", () => {
+    for (const event of [played("stinkyscape-149"), summoned("stinkyscape-109"), summoned("stinkyscape-152", { row: "backrow" })]) {
+      const all = cuesFor(event, ctx);
+      const own = signatureCues(event);
+      expect(own, event.type).toHaveLength(1);
+      expect(all.length, event.type).toBeGreaterThan(own.length);
+      expect(all.slice(all.length - own.length), event.type).toEqual(own);
+    }
+  });
+
+  it("R3407001 the 23 recipes are distinct from each other and from the eight's, each within the Legendary's 1.6 s and gain 0.8", () => {
+    const eight = EIGHT.flatMap((defId) => SIGNATURE_SFX[defId]?.sfx ?? []);
+    const stinky = STINKYSCAPE.flatMap((defId) => SIGNATURE_SFX[defId]?.sfx ?? []);
+    expect(stinky).toHaveLength(STINKYSCAPE.length);
+    for (const id of stinky) {
+      expect(eight, id).not.toContain(id);
+      expect(SFX[id].durationMs, id).toBeLessThanOrEqual(1600);
+      expect(SFX[id].gain, id).toBeLessThanOrEqual(0.8);
+    }
+    // No two build the same graph, nor share a recipe.
+    const all = [...eight, ...stinky];
+    expect(new Set(all.map((id) => SFX[id].recipe)).size).toBe(all.length);
+    expect(new Set(all.map(graphOf)).size).toBe(all.length);
   });
 });

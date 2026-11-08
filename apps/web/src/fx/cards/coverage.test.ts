@@ -53,7 +53,8 @@ describe("R2803000 the audit's coverage", () => {
   it("R3389000 every Field Spell whose entry is a recipe wears its aura beside it", () => {
     const recipes = CARDS.filter((id) => CATALOG[id]?.type === "Field Spell" && entryOf(id).kind === "bespoke");
     // R3402000: Core's Combo-Index and Heroic Power too.
-    expect(recipes).toEqual(["core-093", "core-098", "classic-004", "classic-007", "classic-028", "classic-090"]);
+    // R3407000: and Stinkyscape part two's Job Application, Alteran Reach and Sanctum.
+    expect(recipes).toEqual(["core-093", "core-098", "classic-004", "classic-007", "classic-028", "classic-090", "stinkyscape-112", "stinkyscape-148", "stinkyscape-152"]);
     for (const id of recipes) expect(entryAura(entryOf(id)), id).toBeDefined();
   });
 
