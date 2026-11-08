@@ -36453,7 +36453,8 @@
     "runs": [
       "2026-11-08T04:43:18Z,42447677954,claude-3,opus,plan,3423,hard,interrupted,refusal,2.2,36,11287,821007,0.8252,96,100,,,192.6,,fresh,,1",
       "2026-11-08T04:38:07Z,42446217161,claude-3,opus,plan,3403,hard,planned,,18.3,181,105607,17767325,7.942,43,93,,,666.4,,fresh,,1",
-      "2026-11-08T04:51:04Z,42445425065,claude-3,opus,build,3391,hard,interrupted,refusal,42.8,0,0,0,23.2497,3,100,,,679.5,claude-3,fresh,cap,1"
+      "2026-11-08T04:51:04Z,42445425065,claude-3,opus,build,3391,hard,interrupted,refusal,42.8,0,0,0,23.2497,3,100,,,679.5,claude-3,fresh,cap,1",
+      "2026-11-08T04:56:06Z,42447635747,claude-7,opus,review,3426,hard,interrupted,5-hour cap,15.5,46,15504,2604325,9.0911,24,50,,,1.1,,fresh,,2"
     ]
   },
   "version": 1
