@@ -15,11 +15,11 @@ use jackioh_server::config::{
     SPEND_BUSY_RETRY_AFTER_MS,
 };
 use jackioh_server::cosmetics::{
-    AUGMENT_ANIMATED_ID, Cosmetic, CosmeticKind, CosmeticRarity, JLORIOUS_CARD_BACK, OfferClause,
-    VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_COMIC_ID, VERSION_EXTENDED_ART_ID,
-    VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_ID, VERSION_IMMERSIVE_ID, VERSION_OUT_OF_FRAME_ID,
-    VERSION_PIXEL_ID, VERSION_PRISMATIC_ID, VERSION_SET_SHOWCASE_ID, VERSION_SKETCH_ID, VERSION_TAROT_ID,
-    shipped,
+    AUGMENT_ANIMATED_ID, Cosmetic, CosmeticKind, CosmeticRarity, FLEET_CAPSTONE, JLORIOUS_CARD_BACK,
+    JLORIOUS_STARSHIP, OfferClause, VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_COMIC_ID,
+    VERSION_EXTENDED_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_ID, VERSION_IMMERSIVE_ID,
+    VERSION_OUT_OF_FRAME_ID, VERSION_PIXEL_ID, VERSION_PRISMATIC_ID, VERSION_SET_SHOWCASE_ID,
+    VERSION_SKETCH_ID, VERSION_TAROT_ID, shipped,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::cosmetic_packs::{
@@ -251,6 +251,8 @@ fn cosmetic(id: &str, kind: CosmeticKind, rarity: CosmeticRarity) -> Cosmetic {
         card: None,
         offer: Vec::new(),
         level: None,
+        track: None,
+        track_level: None,
     }
 }
 
@@ -1350,7 +1352,8 @@ async fn r2755000_a_full_shard_bar_cannot_buy_the_jlorious_card_back() {
     assert_eq!(status, 200, "{body}");
     assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
 
-    // Mythic as it is, only reaching Jlorious grants it: the full bar is refused and stays full.
+    // Mythic as it is, only reaching Jlorious grants it: the full bar is refused and stays full. R3335002: as
+    // every earned-only cosmetic is, a 400 that spends nothing, before the bar is read.
     let before = ledger(&app).await;
     let (status, _, answer) = call(
         &app,
@@ -1361,13 +1364,57 @@ async fn r2755000_a_full_shard_bar_cannot_buy_the_jlorious_card_back() {
     )
     .await;
     assert_eq!(
-        (status, answer["error"]["code"].clone()),
-        (409, json!("conflict")),
+        (status, answer["error"]["message"].clone()),
+        (400, json!("that cosmetic is earned only, never bought")),
         "{answer}"
     );
     assert!(!owns_cosmetic(&app, None, JLORIOUS_CARD_BACK).await);
     assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
     assert_eq!(ledger(&app).await.cosmetics.len(), before.cosmetics.len());
+}
+
+#[tokio::test]
+async fn r3335002_a_full_shard_bar_buys_no_fleet_reward_or_jlorious_starship() {
+    let (app, token) = setup().await;
+    grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
+    nearly_full(&app).await;
+    let (status, _, body) = call(
+        &app,
+        "POST",
+        "/api/cosmetic-packs/open",
+        Some(&token),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
+
+    // A Legendary and a Mythic Fleet reward, the capstone and the Jlorious Starship: a chase's rarity, none a
+    // chase, each refused with the bar left full and nothing written.
+    let before = ledger(&app).await;
+    for cosmetic in [
+        "starship-trail-stardust",
+        "starship-livery-supernova",
+        FLEET_CAPSTONE,
+        JLORIOUS_STARSHIP,
+    ] {
+        let (status, _, answer) = call(
+            &app,
+            "POST",
+            "/api/cosmetic-packs/chase",
+            Some(&token),
+            json!({ "cosmeticId": cosmetic }),
+        )
+        .await;
+        assert_eq!(
+            (status, answer["error"]["message"].clone()),
+            (400, json!("that cosmetic is earned only, never bought")),
+            "{cosmetic}: {answer}"
+        );
+        assert!(!owns_cosmetic(&app, None, cosmetic).await, "{cosmetic}");
+    }
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
+    assert_eq!(ledger(&app).await, before);
 }
 
 #[tokio::test]

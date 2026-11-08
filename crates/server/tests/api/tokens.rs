@@ -15,11 +15,12 @@ use jackioh_server::config::{
     ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, PACK_PRICE_JLORE, SPEND_BUSY_RETRY_AFTER_MS,
 };
 use jackioh_server::cosmetics::{
-    AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, Cosmetic, CosmeticKind, CosmeticRarity, OfferClause,
-    VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_ANIMATED_ID, VERSION_COMIC_ID,
-    VERSION_EXTENDED_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_ID, VERSION_FULL_ART_SIGNED_ID,
-    VERSION_IMMERSIVE_ID, VERSION_NIGHT_ID, VERSION_OUT_OF_FRAME_ID, VERSION_PIXEL_ID, VERSION_PRISMATIC_ID,
-    VERSION_SET_SHOWCASE_ID, VERSION_SKETCH_ID, VERSION_STAINED_GLASS_ID, VERSION_TAROT_ID,
+    AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, Cosmetic, CosmeticKind, CosmeticRarity, FLEET_CAPSTONE,
+    JLORIOUS_STARSHIP, OfferClause, VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_ANIMATED_ID,
+    VERSION_COMIC_ID, VERSION_EXTENDED_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_ID,
+    VERSION_FULL_ART_SIGNED_ID, VERSION_IMMERSIVE_ID, VERSION_NIGHT_ID, VERSION_OUT_OF_FRAME_ID,
+    VERSION_PIXEL_ID, VERSION_PRISMATIC_ID, VERSION_SET_SHOWCASE_ID, VERSION_SKETCH_ID,
+    VERSION_STAINED_GLASS_ID, VERSION_TAROT_ID,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::idempotency::{RequestKey, Spent};
@@ -232,6 +233,8 @@ fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         card: None,
         offer: Vec::new(),
         level: None,
+        track: None,
+        track_level: None,
     }
 }
 
@@ -1326,6 +1329,43 @@ async fn r2655000_r2725001_a_token_refuses_an_unoffered_card_and_a_retired_full_
     let (status, answer) =
         redeem(json!({ "token": "Mythic", "cosmeticId": VERSION_FULL_ART_SIGNED_ID, "cardId": card })).await;
     assert_eq!(status, 400, "{answer}");
+    assert_eq!(everything(&app).await, before);
+}
+
+#[tokio::test]
+async fn r3335002_no_token_buys_a_fleet_reward() {
+    let (app, token) = setup().await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Rare", 1).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Epic", 1).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Legendary", 1).await;
+    let before = everything(&app).await;
+    // Fleet rewards an Epic or a Legendary token would reach by tier (a livery, the Stinkyscape card back and
+    // table, a Legendary trail), the capstone and the Jlorious Starship: each a 400 that spends nothing, whatever
+    // the token.
+    for cosmetic in [
+        "starship-livery-hazard",
+        "card-back-stinkyscape",
+        "table-stinkyscape",
+        "starship-trail-stardust",
+        FLEET_CAPSTONE,
+        JLORIOUS_STARSHIP,
+    ] {
+        for tier in ["Rare", "Epic", "Legendary"] {
+            let (status, _, answer) = call(
+                &app,
+                "POST",
+                "/api/tokens/redeem-cosmetic",
+                Some(&token),
+                json!({ "token": tier, "cosmeticId": cosmetic }),
+            )
+            .await;
+            assert_eq!(
+                (status, answer["error"]["message"].clone()),
+                (400, json!("that cosmetic is earned only, never bought")),
+                "{cosmetic} for {tier}: {answer}"
+            );
+        }
+    }
     assert_eq!(everything(&app).await, before);
 }
 

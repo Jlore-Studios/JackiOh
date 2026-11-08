@@ -158,6 +158,25 @@ describe("#1309 the shop model", () => {
     // The shipped Mythic card back that drops is still offered beside it.
     expect(shipped).toContain("card-back-nebula");
   });
+
+  it("R3335002 the Chase Shard offers no Fleet reward or the Jlorious Starship", () => {
+    const quantities = quantitiesOf(collectionOf());
+    const nothing = ownedCosmeticsOf({ cards: [], account: [] });
+    const shipped = chaseCandidates(nothing, quantities).map((entry) => entry.id);
+    // Not one of the thirty Fleet rewards, the Legendary and Mythic ones among them, nor the Jlorious hull.
+    const earned = REGISTRY.filter((entry) => entry.track !== undefined || entry.jlorious === true);
+    expect(earned.filter((entry) => entry.rarity === "Legendary" || entry.rarity === "Mythic").length).toBeGreaterThan(0);
+    expect(earned.map((entry) => entry.id)).toContain("starship-hull-jlorious");
+    for (const entry of earned) expect(shipped, entry.id).not.toContain(entry.id);
+    expect(shipped.filter((id) => id.startsWith("starship-"))).toEqual([]);
+    // A registry's Legendary Fleet reward is no chase however it is marked, and a Legendary one beside it still is.
+    const registry: RegistryCosmetic[] = [
+      { id: "fleet-trail", kind: "starshipTrail", name: "Fleet trail", rarity: "Legendary", default: false, starter: false, chase: true, track: "fleet", trackLevel: 14 },
+      { id: "jlorious-hull", kind: "starshipHull", name: "Jlorious hull", rarity: "Mythic", default: false, starter: false, chase: true, jlorious: true },
+      { id: "legendary-table", kind: "table", name: "Legendary table", rarity: "Legendary", default: false, starter: false, chase: true },
+    ];
+    expect(chaseCandidates(nothing, quantities, registry).map((entry) => entry.id)).toEqual(["legendary-table"]);
+  });
 });
 
 /** The shop's reads, answered from the fixtures unless a test says otherwise. */
