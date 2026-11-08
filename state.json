@@ -17384,10 +17384,16 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-08T05:58:19Z",
       "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
+      "paused": {
+        "at": "2026-11-08T06:34:02Z",
+        "interrupt": "usage",
+        "provider": "claude-1"
+      },
       "pending_at": "2026-11-07T17:17:51Z",
       "pending_by": "jgoetzmann",
       "pending_request": false,
@@ -17399,11 +17405,13 @@
       "provider": "claude-1",
       "queued_at": "2026-11-07T17:04:36Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "strong",
       "run_id": "42452819651",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-08T05:58:19Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "waiting_comment": 6710911227
     },
     "3406": {
