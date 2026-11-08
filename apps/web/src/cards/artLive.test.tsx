@@ -314,6 +314,28 @@ describe("R3340000 the slots go by rank, in one budget the hand shares", () => {
     expect(board[0]?.querySelector("[data-art-moving]")).toBeNull();
   });
 
+  it("R3340000 R2715001 a full art's drift, sweep and signature move only in its face's slot: past the budget the oldest holds them still", () => {
+    writeCardLevel(GARY, VERSION_FULL_ART_SIGNED_ID);
+    const gary = faceModel({ defId: GARY, def: defOf(GARY), radiant: false });
+    const { container } = render(
+      <FullArtOwned owned="every">
+        {Array.from({ length: MAX + 1 }, (_unused, index) => (
+          <CardFace key={index} face={gary} layout="full" worn />
+        ))}
+      </FullArtOwned>,
+    );
+    const faces = [...container.querySelectorAll<HTMLElement>(".cf--full")];
+    expect(faces).toHaveLength(MAX + 1);
+    // The newest faces hold the slots; the oldest draws its picture, band and signature still (cosmetics.css gates them on
+    // `data-full-art-motion`), keeping its classes and its signature.
+    const oneStill = ["static", ...Array<string>(MAX).fill("animated")];
+    expect(faces.map(motionOf)).toEqual(oneStill);
+    expect(faces.map((cf) => cf.getAttribute("data-full-art-motion"))).toEqual(oneStill);
+    expect(faces[0]?.classList.contains("cf-full-art--animated")).toBe(true);
+    expect(faces[0]?.classList.contains("cf-full-art--signed")).toBe(true);
+    expect(faces[0]?.querySelector(".cf-signature")).not.toBeNull();
+  });
+
   it("R3340000 one ranked face slot moves its art and its foil together", () => {
     writeCardPick(MYTHICS[0], "foil", "foil-holo-sweep");
     const specs = Array.from({ length: MAX }, (_unused, index) => ({ id: MYTHICS[index % MYTHICS.length] as string }));

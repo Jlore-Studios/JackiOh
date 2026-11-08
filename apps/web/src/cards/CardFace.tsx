@@ -401,10 +401,11 @@ export function CardFace({
   // for a Mythic; a hovered or focused one claims a slot to answer in, ranked first (motionSlots.ts).
   const board = !full && onBoard;
   const artMoves = full ? look.animated : board && (cardLook.animated || rarity === "Mythic");
-  const live = useArtLive(faceRef, artMoves || board || immersive || cosmeticAppearance.animates);
+  // R2715001, R3340000: a full art's drift, band sweep and signature move in the same one ranked slot as its art's layers.
+  const live = useArtLive(faceRef, artMoves || moving || signed || board || immersive || cosmeticAppearance.animates);
   const engaged = board && live.hovered;
   const faceMotion = useArtMotion(
-    (artMoves || immersive || engaged || cosmeticAppearance.animates) && settings.animatedFoil && !lazyArt && live.onScreen,
+    (artMoves || moving || signed || immersive || engaged || cosmeticAppearance.animates) && settings.animatedFoil && !lazyArt && live.onScreen,
     { hovered: live.hovered, rarity: slotRarityOf(rarity) },
   );
   useImmersiveShift(faceRef, immersive && faceMotion.moving);
@@ -468,7 +469,7 @@ export function CardFace({
       data-version={look.version ?? undefined}
       data-level={look.level ?? undefined}
       data-showcase={showcase ?? undefined}
-      data-full-art-motion={moving || signed ? (settings.animatedFoil ? "animated" : "static") : undefined}
+      data-full-art-motion={moving || signed ? (faceMotion.moving ? "animated" : "static") : undefined}
       data-art-motion={artMoves || engaged ? (faceMotion.moving ? "animated" : "static") : undefined}
       data-art-hover={board ? (live.hovered ? "true" : "false") : undefined}
       data-art-response={board && faceMotion.enabled ? "true" : undefined}
