@@ -36751,7 +36751,8 @@
     ],
     "runs": [
       "2026-11-08T06:25:18Z,42452819651,claude-1,opus,build,3405,hard,interrupted,5-hour cap,24.8,0,0,0,,10,101,,,773.7,claude-2,fresh,other,1",
-      "2026-11-08T06:28:23Z,42448841031,claude-1,opus,build,3391,hard,built,,42.9,137,42125,9563370,4.0917,1,8,,,730.7,claude-3,fresh,cap,1"
+      "2026-11-08T06:28:23Z,42448841031,claude-1,opus,build,3391,hard,built,,42.9,137,42125,9563370,4.0917,1,8,,,730.7,claude-3,fresh,cap,1",
+      "2026-11-08T06:39:46Z,42455481931,claude-1,opus,revise,3382,hard,interrupted,5-hour cap,0,0,0,0,,102,102,,,29.9,claude-1,none,,0"
     ]
   },
   "version": 1
