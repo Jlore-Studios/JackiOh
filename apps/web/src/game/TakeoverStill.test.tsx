@@ -17,6 +17,7 @@ import { ANOMALY_SET_PIECE, TAKEOVER_HOLD_MS, TAKEOVER_SET_PIECE } from "./anima
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Game from "./Game.tsx";
 import { TAKEOVER_STILL_MS } from "./TakeoverStill.tsx";
+import { takeoverArtOf } from "../fx/takeover.ts";
 import { TAKEOVER_ART_PARTS } from "../fx/takeoverArt.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, withEvents } from "../test/fixtures.ts";
@@ -123,6 +124,27 @@ describe("R2722001 a Mythic's takeover on the board", () => {
     // A Mythic with no art of its own shows the still card alone.
     playOut(ZEPHRYS);
     expect(screen.getByTestId("takeover-still").querySelector(".takeover-art")).toBeNull();
+  });
+
+  it("R3407000 under reduced motion each Stinkyscape Mythic Spell shows its own picture still, behind the rays", () => {
+    writeSettings({ reduceMotion: true });
+    for (const defId of ["stinkyscape-148-1", "stinkyscape-t-red-narcor"]) {
+      playOut(defId);
+      const still = screen.getByTestId("takeover-still");
+      expect(still).toHaveAttribute("data-takeover-def", defId);
+      const picture = still.querySelector("img.takeover-still-art");
+      expect(picture, defId).not.toBeNull();
+      expect(picture).toHaveAttribute("src", takeoverArtOf(defId));
+      expect(picture).toHaveAttribute("alt", "");
+      expect(picture).toHaveAttribute("aria-hidden", "true");
+      // Behind the rays disc, and nothing in the still animates.
+      expect(still.firstElementChild, defId).toBe(picture);
+      expect(still.querySelector("[data-animating]")).toBeNull();
+      cleanup();
+    }
+    // A Mythic whose look draws no picture of its own shows none.
+    playOut(ZEPHRYS);
+    expect(screen.getByTestId("takeover-still").querySelector("img.takeover-still-art")).toBeNull();
   });
 
   it("R2722001 a Legendary takes neither the hold nor the still", () => {

@@ -5,6 +5,7 @@
 // look is its effects table entry's `takeover`. R3400000: a signature Spell's cast of its own draws in place
 // of the shared rays, burst and rings, its takeover's tail FX_SIGNATURE_TAKEOVER_TAIL_MS; three own looks join.
 // R3389000: In Too Deep's is "abyss", and Classic's Spell's and Trap's signature casts draw no shared rays.
+// R3407000: Stinkyscape part two's six Mythics take looks of their own, each drawing its card's own picture.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -25,6 +26,7 @@ import {
 } from "../game/animations.ts";
 import { ART_PLANES } from "../cards/art/index.ts";
 import { signatureFaceOf } from "../cards/signatureFaces.ts";
+import { testid } from "../game/contract.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { FX_CARD_TABLE, parseFxCardTable } from "./cards/tables.ts";
@@ -32,7 +34,7 @@ import { FX_CENTER, FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_SIGNATURE_TAKEOVER_TA
 import { planFx } from "./cues.ts";
 import { mountDomEffect } from "./dom.ts";
 import { createFxMemory } from "./memory.ts";
-import { entranceCues, entranceLandMs, ownCast, TAKEOVER_TINTS, takeoverLookOf } from "./takeover.ts";
+import { entranceCues, entranceLandMs, ownCast, TAKEOVER_ART_LOOKS, TAKEOVER_TINTS, takeoverArtOf, takeoverLookOf } from "./takeover.ts";
 import type { FxCue, FxPlanEnv, FxTakeoverCue } from "./types.ts";
 
 const CARDS: Record<string, { type: CardType; rarity: string }> = {
@@ -50,6 +52,12 @@ const CARDS: Record<string, { type: CardType; rarity: string }> = {
   "traininggrounds-040": { type: "Spell", rarity: "Mythic" },
   "traininggrounds-037": { type: "Spell", rarity: "Legendary" },
   "traininggrounds-038": { type: "Unit", rarity: "Legendary" },
+  "stinkyscape-109": { type: "Unit", rarity: "Mythic" },
+  "stinkyscape-110": { type: "Unit", rarity: "Mythic" },
+  "stinkyscape-111": { type: "Unit", rarity: "Mythic" },
+  "stinkyscape-148": { type: "Field Spell", rarity: "Mythic" },
+  "stinkyscape-148-1": { type: "Spell", rarity: "Mythic" },
+  "stinkyscape-t-red-narcor": { type: "Spell", rarity: "Mythic" },
 };
 const resolve: EntranceResolver = (defId) => CARDS[defId] ?? null;
 /** The effects layer's stylesheet, for the takeover looks' art. */
@@ -111,7 +119,23 @@ describe("R2722001 a Mythic takes over the board", () => {
     // R3332000: the four marquee Mythics name a look of their own in the effects table; R3400000: and three
     // signatures; R3389000: and Classic's In Too Deep, its signature's.
     const own = [...FX_CARD_TABLE].flatMap(([defId, card]) => (card.kind !== "none" && card.takeover !== undefined ? [defId] : []));
-    expect(own).toEqual(["core-096", "core-097", "core-100", "classic-090", "meditative-049", "meditativeplus-001", "meditativeplus-026", "traininggrounds-040"]);
+    // R3407000: and Stinkyscape part two's six.
+    expect(own).toEqual([
+      "core-096",
+      "core-097",
+      "core-100",
+      "classic-090",
+      "meditative-049",
+      "meditativeplus-001",
+      "meditativeplus-026",
+      "stinkyscape-109",
+      "stinkyscape-110",
+      "stinkyscape-111",
+      "stinkyscape-148",
+      "stinkyscape-148-1",
+      "stinkyscape-t-red-narcor",
+      "traininggrounds-040",
+    ]);
     for (const defId of own) expect(CATALOG[defId]?.printedRarity ?? CATALOG[defId]?.rarity, defId).toBe("Mythic");
     for (const events of [[play("core-052"), summon("core-052")], [play("core-083")], [fired("core-085")]]) {
       const e = entry(events);
@@ -180,6 +204,45 @@ describe("R2722001 a Mythic takes over the board", () => {
     expect(TAKEOVER_TINTS.canvas.rim, "Scratch Pad's cyan cursor").toBe("#22d3ee");
     expect(TAKEOVER_TINTS.napkin.rim, "the napkin's magenta pixels").toBe("#e879f9");
     expect([takeoverLookOf("meditativeplus-001"), takeoverLookOf("meditativeplus-026"), takeoverLookOf("traininggrounds-040")]).toEqual([...looks]);
+  });
+
+  it("R3407000 Stinkyscape part two's six Mythics take their own looks and tints, each drawing its card's own picture; no other look draws one", () => {
+    const looks = {
+      "stinkyscape-109": "freshJack",
+      "stinkyscape-110": "ikwzki",
+      "stinkyscape-111": "shockwave",
+      "stinkyscape-148": "alteran",
+      "stinkyscape-148-1": "edge",
+      "stinkyscape-t-red-narcor": "redNarcor",
+    } as const;
+    expect([...TAKEOVER_ART_LOOKS].sort()).toEqual(Object.values(looks).sort());
+    const tints = new Set(Object.values(TAKEOVER_TINTS).map((tint) => JSON.stringify(tint)));
+    expect(tints.size, "every look its own tint").toBe(Object.keys(TAKEOVER_TINTS).length);
+    for (const [defId, look] of Object.entries(looks)) {
+      expect(takeoverLookOf(defId), defId).toBe(look);
+      const art = takeoverArtOf(defId);
+      expect(art, defId).toMatch(/^data:image\/svg\+xml/);
+      const events = CARDS[defId]?.type === "Unit" ? [play(defId), summon(defId)] : [play(defId)];
+      const e = entry(events);
+      expect(takeoverOf(entranceCues(e, env(), e.durationMs)), defId).toMatchObject({ look, tint: TAKEOVER_TINTS[look], art });
+    }
+    // The Mythics' pictures are each their own.
+    expect(new Set(Object.keys(looks).map((defId) => takeoverArtOf(defId))).size).toBe(Object.keys(looks).length);
+    // Every older look draws no picture, the hidden sentinel none (R202), and a table without the look none.
+    for (const defId of ["core-100", "core-097", "meditative-049", "meditative-008", "traininggrounds-040", "hidden", "not-a-card"]) {
+      expect(takeoverArtOf(defId), defId).toBeUndefined();
+    }
+    const e = entry([play("core-097")]);
+    expect(takeoverOf(entranceCues(e, env(), e.durationMs))).not.toHaveProperty("art");
+    const plain = parseFxCardTable("test.json5", `{ "stinkyscape-109": { bespoke: "freshJackComet", entrance: "freshJackVault" } }`);
+    expect(takeoverArtOf("stinkyscape-109", plain)).toBeUndefined();
+  });
+
+  it("R3407000 a Mythic Field Spell landing with its own entrance sweeps its takeover into the zone it lands in, not the hand card it left", () => {
+    const reach = "stinkyscape-148";
+    const landed: GameEvent = { type: "summoned", player: "p1", instanceId: `i-${reach}`, defId: reach, row: "backrow", lane: 3 };
+    const e = entry([play(reach), landed]);
+    expect(takeoverOf(entranceCues(e, env(), e.durationMs))).toMatchObject({ look: "alteran", at: { kind: "testid", testid: testid.zone("you", "backrow", 3) } });
   });
 
   it("R2722001 intensity 0 plans none", () => {

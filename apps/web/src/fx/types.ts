@@ -165,13 +165,17 @@ export type FxFogCue = {
  * the effects' tail (R200). R3400000: "summit", "canvas" and "napkin" draw art of their own over the dark
  * (takeoverArt.ts), the same art Reduce Motion's still shows (game/TakeoverStill.tsx).
  */
-export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai" | "abyss" | "summit" | "canvas" | "napkin";
+export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai" | "abyss" | "freshJack" | "ikwzki" | "shockwave" | "alteran" | "edge" | "redNarcor" | "summit" | "canvas" | "napkin";
 /**
  * R3345000: what a takeover's set piece shows of the card: its own picture, one CSS `background-image` per depth plane
  * (`ART_PLANES` order, far to nearest), its name and the hand it signs in (R2715002). It is the picture and the
  * name, never the definition, so the cue names no card (R202; a takeover plans only for a readable play).
  */
 export type FxTakeoverStage = { planes: readonly string[]; name: string; face: SignatureFace };
+/**
+ * R3407000: `art`, a look of its own that draws its card's picture over the dark (`TAKEOVER_ART_LOOKS`), the
+ * picture's URI: only ever a card the seat's own event names (R202).
+ */
 export type FxTakeoverCue = {
   kind: "takeover";
   /** R3345000: the card's art that takes the window while the entry holds a set piece; null without one (Big moments off, the cap): only the board's darkening and the sweep play. */
@@ -182,6 +186,7 @@ export type FxTakeoverCue = {
   landMs: number;
   delayMs: number;
   durationMs: number;
+  art?: string;
 };
 /**
  * R2800000: a board clear's set piece over the whole layer, centred on `at`: a `vortex` (the board

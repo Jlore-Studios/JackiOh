@@ -6,7 +6,7 @@ import type { CardDef, CardDefs, GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ANIMATIONS, BURST_BUDGET_MS, SET_PIECE_HOLD_MS, STARSHIP_SET_PIECE, createAnimationQueue, type AnimationQueue } from "../game/animations.ts";
+import { ANIMATIONS, BURST_BUDGET_MS, animTestid, SET_PIECE_HOLD_MS, STARSHIP_SET_PIECE, createAnimationQueue, type AnimationQueue } from "../game/animations.ts";
 import { CatalogContext, lookupFromDefs, type CardLookup } from "../game/catalog.ts";
 import Game from "../game/Game.tsx";
 import { resultRevealMs } from "../game/Result.tsx";
@@ -433,6 +433,30 @@ describe("B36 — FxLayer follows the runner without pacing it", () => {
     fx.pump(300);
     expect(fx.testids()).toContain("card-u1");
     expect(fx.testids()).not.toContain("hero-opponent");
+  });
+
+  it("R3407002 a hook's marker plays nothing but opens its entry: IN33DH3's Death draws its recipe on the shuffle that follows it", () => {
+    // R2797000: the Death's `hookResolving` lasts 0 ms, so only the layer's memory sees it; without it the
+    // shuffle is no hook's and draws its plain row alone. The dissolve leaves his graveyard pile (R3407000).
+    const graveyard = animTestid.graveyard("you");
+    const marker: GameEvent = { type: "hookResolving", sourceId: "gone", defId: "stinkyscape-147", controller: "p1", hook: "death" };
+    const shuffle: GameEvent = { type: "shuffledIn", player: "p1", instanceId: "prime", defId: "stinkyscape-147-1", position: 0 };
+    const view = fullBoardView();
+    const drawn = (events: readonly GameEvent[]): string[] => {
+      const sched = fakeSchedule();
+      const queue = queueWith(sched);
+      const fx = fakeSeams();
+      const m = mountLayer(queue, view, fx);
+      act(() => queue.enqueue(events, view));
+      fx.pump(50);
+      const ids = fx.testids();
+      m.show(view);
+      act(() => sched.flush());
+      cleanup();
+      return ids;
+    };
+    expect(drawn([marker, shuffle])).toContain(graveyard);
+    expect(drawn([shuffle])).not.toContain(graveyard);
   });
 
   it("B36 drain() forgets what the layer remembered", () => {

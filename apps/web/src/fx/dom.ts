@@ -460,6 +460,16 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
         el.appendChild(child);
         // R3345000: the card's own full-art stage sits over the dark, under the sweep, rays and wave.
         if (part === "dark" && stage !== null) el.appendChild(stage);
+        // R3407000: a look of its own may draw its card's picture filling the screen, over the dark and under the sweep.
+        if (part === "dark" && cue.art !== undefined) {
+          const picture = doc.createElement("img");
+          picture.className = "fx-takeover-art";
+          picture.alt = "";
+          picture.draggable = false;
+          picture.decoding = "async";
+          picture.src = cue.art;
+          el.appendChild(picture);
+        }
         // R3400000: a look with art of its own draws it over the dark, under the sweep, rays and wave, one element a part.
         const parts = part === "dark" ? takeoverArtParts(cue.look) : [];
         if (parts.length === 0) continue;

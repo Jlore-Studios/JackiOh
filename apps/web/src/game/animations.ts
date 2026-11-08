@@ -1658,6 +1658,12 @@ export type RunnerSignal =
    */
   | { kind: "still"; entry: AnimationEntry }
   /**
+   * R3407002: an entry whose row has no duration either (a hook's `hookResolving` marker, an emote, the
+   * game's end). It draws nothing, but the effects layer remembers its events, so the hook entry a marker
+   * opens (R2797000) is open for the events after it, as it is for every entry that plays.
+   */
+  | { kind: "pass"; entry: AnimationEntry }
+  /**
    * drain() ran. `entries` are the ones it cut short, in order: the entry in flight, then every one
    * still waiting. A drained game over never plays its killing blow, so the effects layer replays it.
    */
@@ -1885,7 +1891,7 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
         return;
       }
       if (next.durationMs <= 0) {
-        if ((animationRow(next.type)?.durationMs ?? 0) > 0) signal({ kind: "still", entry: next });
+        signal({ kind: (animationRow(next.type)?.durationMs ?? 0) > 0 ? "still" : "pass", entry: next });
         continue;
       }
       current = next;
