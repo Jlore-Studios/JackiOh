@@ -5,11 +5,17 @@
 // so nothing begins at mount. Reduced motion leaves the tint and the edge still, with no canvas and no
 // loop; the effects intensity `off` draws nothing. Components take the view and nothing else (CLAUDE.md
 // rule 7): no definition reaches the page (R202).
+//
+// R3337003: an Anomaly's backdrop is a side aura that also carries its board's code (`data-anomaly`) and
+// its faint picture, the card art's own (cards/art `CardArt`, never an image of this layer's, B27), both
+// public (R202); reduced motion plans none.
 
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
-import type { PlayerView } from "@jackioh/shared";
+import type { PlayerId, PlayerView, Tag } from "@jackioh/shared";
 
+import { ANOMALIES, ANOMALY_FOUND_ID, type AnomalyCode } from "../../cards/anomalies.ts";
+import { CardArt } from "../../cards/art/CardArt.tsx";
 import { newEventsSince, reducedMotionNow } from "../../game/animations.ts";
 import { byTestid } from "../../game/contract.ts";
 import { useSetting } from "../../settings/store.ts";
@@ -31,6 +37,7 @@ import {
   auraTestid,
   auraZones,
   NO_AURAS,
+  noteAnomalies,
   planAuras,
   reconcileAuras,
   settleAuras,
@@ -64,6 +71,8 @@ export type AuraLayerProps = {
 
 export const AURA_LAYER_TESTID = "aura-layer";
 export const AURA_CANVAS_TESTID = "aura-canvas";
+/** R3337003: an Anomaly's backdrop draws its board, which no tag details. */
+const NO_TAGS: readonly Tag[] = [];
 
 /** The union of the zones' boxes, or null while one of them is not on the page or it is empty. */
 export function measureZones(testids: readonly string[]): FxBox | null {
@@ -118,11 +127,13 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
   const now = (): number => (live.current.now ?? defaultNow)();
   const measure = (testids: readonly string[]): FxBox | null => (live.current.measure ?? measureZones)(testids);
 
-  // Which play added each modifier, read off the newest view's events as they arrive. A viewer change
-  // starts over from the new viewer's window, as the board's runner does (Game.tsx).
+  // Which play added each modifier, and (R3337003) which Anomaly each side stands as, read off the newest
+  // view's events as they arrive. A viewer change starts over from the new viewer's window, as the
+  // board's runner does (Game.tsx).
   const memory = useRef<FxMemory | null>(null);
   if (memory.current === null) memory.current = createFxMemory();
   const sources = useRef<AuraSources>(new Map());
+  const anomalies = useRef(new Map<PlayerId, AnomalyCode>());
   const seenLatest = useRef<PlayerView | null>(null);
   const newest = latest ?? view;
   useLayoutEffect(() => {
@@ -133,9 +144,13 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
     if (previous === null || previous.viewer !== newest.viewer) {
       remembered.clear();
       sources.current.clear();
+      anomalies.current.clear();
       attributeModifiers(newest.events, remembered, sources.current);
+      noteAnomalies(newest.events, anomalies.current);
     } else {
-      attributeModifiers(newEventsSince(previous.events, newest.events), remembered, sources.current);
+      const events = newEventsSince(previous.events, newest.events);
+      attributeModifiers(events, remembered, sources.current);
+      noteAnomalies(events, anomalies.current);
     }
   }, [newest]);
 
@@ -149,7 +164,8 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
       setTrack(NO_AURAS);
       return;
     }
-    const planned = planAuras(view, sources.current, live.current.table ?? FX_CARD_TABLE);
+    // R3337003: an Anomaly's backdrop is off under reduced motion.
+    const planned = planAuras(view, sources.current, live.current.table ?? FX_CARD_TABLE, still ? new Map() : anomalies.current);
     const t = now();
     setTrack((prev) => reconcileAuras(settleAuras(prev, t), planned, t, !still));
     // `now` reads a ref only, so the plan depends on the view and the two switches alone.
@@ -252,6 +268,7 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
         if (box === undefined) return null;
         const look = AURA_LOOKS[aura.spec.look];
         const [, body, glow] = aura.spec.colors;
+        const { anomaly } = aura.spec;
         const style = {
           left: box.x,
           top: box.y,
@@ -273,8 +290,13 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
             data-aura-look={aura.spec.look}
             data-aura-scope={aura.spec.scope}
             data-aura-phase={aura.phase}
+            data-anomaly={anomaly}
             style={style}
-          />
+          >
+            {anomaly === undefined ? null : (
+              <CardArt className="aura-picture" defId={ANOMALY_FOUND_ID} anomaly={anomaly} radiant={ANOMALIES[anomaly].rich} tags={NO_TAGS} type="Spell" shape="full" />
+            )}
+          </div>
         );
       })}
     </div>

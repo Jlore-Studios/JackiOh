@@ -673,7 +673,7 @@ export function App(): ReactElement {
         </EngineGate>
       );
     }
-    // #2705: the Dungeon Run's Sandbox is offline and open to anyone, so, as practice, it has no gate.
+    // #2705: the Dungeon run's Sandbox is offline and open to anyone, so, as practice, it has no gate.
     if (path === paths.dungeon) {
       return (
         <EngineGate>

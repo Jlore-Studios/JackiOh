@@ -39,9 +39,10 @@ not the client's to reword.
 
 ## Consistent
 
-- Sentence case: "Find a match", "Patch notes". Capitals only on the first word, on names (JackiOh,
-  Jlore, a card, a set, a mode, a screen such as the Almanac) and on the game's terms as the cards
-  print them (Unit, Spell, Trap, Tribute, Radiant). `src/wording.test.ts` holds the game's words.
+- Sentence case: "Find a match", "Patch notes". Capitals only on the first word, on proper names (JackiOh,
+  Jlore, a card, a set) and on the game's terms as the cards print them (Unit, Spell, Trap, Tribute,
+  Radiant). Mode, feature and page names follow sentence case ("All random", "Dungeon run", "Almanac").
+  `src/wording.test.ts` and `src/writing.test.ts` hold the words.
 - A full stop ends a sentence; a button, a heading or a label has none.
 - The straight apostrophe: can't, you're, as the cards, the engine and the server print it.
 - Curly double quotes around a name or a phrase the player typed or will see: Delete “Aggro”?
@@ -54,3 +55,61 @@ not the client's to reword.
 
 Every sentence has an entry in `src/i18n/zh-CN.json`. Reword the English and you rename its key,
 reword the Chinese as plainly, and drop the old key.
+
+## Glossary
+
+The client follows shared conventions for names, actions, and directional controls.
+
+### Case and names
+
+Sentence case governs every label, heading, button, page and mode name. Only the first word is capitalized, except:
+- A card's or keyword's catalog spelling (e.g. `Taunt`, `Charge`, card names).
+- The game's terms as cards print them (e.g. `Unit`, `Spell`, `Trap`, `Tribute`, `Radiant`, `Health`, `Attack`, `Defense`, `Cost`).
+- Currencies and tickets (`Credits`, `Tickets`, `Coins`, `Embers`).
+- Proper nouns (`JackiOh`, `Jlore`), sets (`Classic`, `Core`, `Meditative`, `Stinkyscape`, `Training Grounds`), and acronyms (`2FA`, `AI`).
+
+Each page has exactly one name, shared across its heading (`PageTitle`), the command menu, the footer, and `<title>`:
+
+| Page | One name |
+|---|---|
+| `/almanac` | Almanac |
+| `/stats` | Statistics |
+| `/privacy` | Privacy policy |
+| `/terms` | Terms of service |
+| `/account` | Account |
+| `/ai` | How JackiOh uses AI |
+| `/dungeon` | Dungeon run |
+| `/play` | Play |
+
+### Verbs and actions
+
+One verb names each action across all dialogs and screens:
+
+| Verb | Action |
+|---|---|
+| Back | Leave an inner screen or return to the previous view. |
+| Close | The name of a dialog's or sheet's ✕ (never a text label on a button: R3221000). |
+| Dismiss | Take an inline notice or panel away: the practice game's earning notice, the Conquest explainer. |
+| Cancel | Dismiss a modal confirmation without taking the action. |
+| Leave | Abandon or exit an ongoing match, practice game, or dungeon fight. |
+| Stay | Remain in the game when prompted to leave or concede. |
+| Create account | Submit the account registration form. |
+| Done | Complete card selection or multi-step picker flow. |
+| Got it | Acknowledge a tutorial tip or discovery banner. |
+
+"Leave without saving" is kept where Save and leave sits beside it or when abandoning a saved practice session.
+
+### Navigation and back
+
+Top bar navigation displays "Back" with `ArrowIcon`. When naming a destination explicitly, use "Back to <place>":
+
+| Destination | Label |
+|---|---|
+| Top bar default | Back |
+| Play together | Back to Play together |
+| Lobby | Back to the lobby |
+| Lessons | Back to lessons |
+| Sign-in screen | Back to sign in |
+| Decks / Workshop | Back to decks |
+
+Directional arrow characters (`←`, `→`, `↑`, `↓`) must never start or end translated strings; arrows are rendered using `ArrowIcon` (`ArrowIcon direction="back"` or `direction="forward"`).

@@ -166,7 +166,7 @@ describe("R2803000 every table entry ends within FX_MAX_TAIL_MS", () => {
 });
 
 describe("R3332000 every signature keeps its loudness budget", () => {
-  it("R3332000 every signature ends within its rarity's and type's ceiling, shakes within its type's, and its aura within AURA_SIGNATURE_MAX_INTENSITY", () => {
+  it("R3332000 R3402000 every signature ends within its rarity's and type's ceiling, each action from its own start, shakes within its type's, and its aura within AURA_SIGNATURE_MAX_INTENSITY", () => {
     const view = fullBoardView();
     const signatures = [...FX_CARD_TABLE].filter(([, entry]) => isSignature(entry));
     expect(signatures.length).toBeGreaterThan(0);

@@ -181,7 +181,7 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     expectGalleryPlays(new Set(Object.keys(CATALOG).filter((id) => CATALOG[id]?.set === "Core")), 92);
   });
 
-  it("R3332000 R3332001 the gallery lists every signature by set and plays Felinor Fiender's over its Felinors", () => {
+  it("R3332000 R3332001 R3402001 the gallery lists every signature by set, Core's eleven among them, and plays Felinor Fiender's over its Felinors", () => {
     // Every signature of the table, grouped by its set in the tables' order; Core's Felinor Fiender the first.
     const signatures = gallerySignatures();
     const signed = [...FX_CARD_TABLE].flatMap(([defId, entry]) => (entry.kind !== "none" && entry.signature === true ? [defId] : []));

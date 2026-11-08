@@ -1,5 +1,7 @@
 // R670: the bespoke entrances of the marquee Legendary and Mythic Units (entrances.ts), planned the
 // way FxLayer plans them. A card whose entry is a set piece lands with its set piece's entrance (R2800000).
+// R3402000: a Field Spell's own entrance (Combo-Index's, Heroic Power's) lands in the backrow, which
+// cardFx.test.ts and fx/cards/core/signatures.test.ts prove; these rows are the Units'.
 
 import catalogJson from "@jackioh/cards/catalog.json";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
@@ -21,7 +23,7 @@ const CATALOG = catalogJson as unknown as Record<string, CatalogEntry>;
 
 const MARQUEE: readonly (readonly [string, EntranceKey])[] = [...FX_CARD_TABLE.keys()].flatMap((defId) => {
   const key = entranceKeyOf(defId);
-  return key === undefined ? [] : [[defId, key] as const];
+  return key === undefined || CATALOG[defId]?.type !== "Unit" ? [] : [[defId, key] as const];
 });
 
 const LEGENDARY_FACTS: FxCardFacts = { rarity: "Legendary", attack: 6, health: 6 };
@@ -96,7 +98,8 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
   });
 
   it("R670 a plain Legendary still gets the rarity entrance", () => {
-    const cues = planAll([summoned("p1", "m1", "core-052")]);
+    // #33 Joro, a Classic Legendary Unit with no entrance of its own.
+    const cues = planAll([summoned("p1", "m1", "classic-033")]);
     expect(cues.some((cue) => cue.kind === "rays" && cue.tone === "legendary")).toBe(true);
     expect(cues.some((cue) => cue.kind === "burst" && cue.preset === "gold" && cue.spread === "area")).toBe(true);
   });

@@ -26,8 +26,9 @@ export const fusionForge: CardRecipe = (event, p, play) => {
   const hand = tid(animTestid.hand(sideOf(p.view, play.player)));
   if (isFirstBeat(event, play)) {
     const edge = (x: number): FxAnchor => tid(testid.board, { x, y: FX_CENTER.y });
-    // The halves ride in through the takeover's hold and meet before its card lands.
-    const hold = leadMs(p.entry);
+    // The halves ride in through the takeover's hold and meet before its card lands; with Big moments
+    // off there is no hold, and they meet as the entry lands.
+    const hold = Math.max(leadMs(p.entry), t.L);
     const ride = Math.round(hold / 2);
     return {
       cues: [

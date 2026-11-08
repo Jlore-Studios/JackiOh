@@ -9,8 +9,10 @@
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
+import { ANOMALY_FOUND_ID } from "../../cards/anomalies.ts";
 import { DUO_MARK, DUO_MARK_COLOR } from "../../cards/marks.ts";
 import { animationRow, scaleForSpeed, SET_PIECE_HOLD_MS, type AnimationEntry, type SetPieceClaimer } from "../../game/animations.ts";
+import { printedCost } from "../../game/decks.ts";
 import { FROZEN_MARK, FROZEN_MARK_COLOR } from "../../stats/config.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { isAuraFieldType } from "../aura/looks.ts";
@@ -378,7 +380,7 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * that unit onto the viewer's second; Pocket Chaos swaps the boards and hands the other player a hidden
  * card; Combo-Index's end-of-turn trigger progresses its grade and adds a card; Call to Chaos rolls a
  * draw; My Pawn fires and cancels the other side's first unit's attack; and Heroic Power is activated,
- * dealing 2 to the enemy hero.
+ * drawing its caster a card (its dart and its sprinter are the other powers, which its tests plan).
  */
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
@@ -434,6 +436,9 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
       { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "attack", value: 3 },
       { type: "numberChanged", instanceId: unit.instanceId, defId: unit.defId, key: "health", value: 3 },
     ]),
+  // R3337002: a find, which the owner's seat reads as Anomaly Found!; R3337003: the call, and the Wormhole it lays.
+  probeScan: (_view, _instanceId, player) => [{ type: "addedToHand", player, instanceId: "fx-anomaly-found", defId: ANOMALY_FOUND_ID }],
+  anomalyCall: (_view, _instanceId, player) => [{ type: "boardReplaced", player, anomaly: "WH" }],
   magiBoot: (_view, _instanceId, player) =>
     (["stinkyscape-018-1", "stinkyscape-018-2", "stinkyscape-018-3"] as const).map((defId, k) => ({
       type: "summoned" as const,
@@ -524,7 +529,7 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   heroicDoors: (_view, instanceId, player) => [
     { type: "hookResolving", sourceId: instanceId, defId: "core-098", controller: player, hook: "activate" },
     { type: "activated", player, instanceId, defId: "core-098", ability: "power" },
-    { type: "damage", sourceId: instanceId, targetId: `hero-${player === "p1" ? "p2" : "p1"}`, amount: 2, combat: false },
+    { type: "drawn", player, instanceId: "fx-power-drawn", defId: "core-003" },
   ],
 };
 
@@ -650,6 +655,18 @@ export function galleryBoardOf(defId: string, view: PlayerView): PlayerView {
   const key = entranceKeyOf(defId);
   const board = key === undefined ? undefined : ENTRANCE_BOARDS[key];
   return board === undefined ? view : board(view);
+}
+
+/**
+ * R3402001: the board a gallery play is shown over until it resolves: its n-th play's card still in the
+ * viewer's hand, as a game shows it there until the play's burst ends (Game plans against the view it
+ * still shows), so what anchors on the played card, a Spell's entrance and a Mythic Spell's takeover
+ * among them, finds it. A hand the view hides stays as it is.
+ */
+export function galleryHandView(defId: string, view: PlayerView, n = 0): PlayerView {
+  const hand = view.you.hand;
+  if (!Array.isArray(hand)) return view;
+  return { ...view, you: { ...view.you, hand: [...hand, { instanceId: galleryPlayId(n), defId, radiant: false, cost: printedCost(CATALOG[defId]?.cost ?? 0) }] } };
 }
 
 /**

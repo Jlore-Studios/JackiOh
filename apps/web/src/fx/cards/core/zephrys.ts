@@ -22,8 +22,9 @@ export const perfectWish: CardRecipe = (event, p, play) => {
   const t = timesOf(p.D);
   if (isFirstBeat(event, play)) {
     const centre = tid(testid.board, FX_CENTER);
-    // Through the takeover's hold, before its card lands, so the silk has settled by then.
-    const hold = leadMs(p.entry);
+    // Through the takeover's hold, before its card lands, so the silk has settled by then; with Big
+    // moments off there is no hold, and it settles as the entry lands.
+    const hold = Math.max(leadMs(p.entry), t.L);
     return {
       cues: [
         motifBurst(spec, centre, "area", t.G, MOTIF_TUNING.gather, "sparkle"),

@@ -6,7 +6,8 @@
 // the music director over the events the sound director resolves. R3332002: a Legendary's or a
 // Mythic's sting is its own intro, whole on p1's board (dynamic music on) and cut to its opening on p2's
 // (dynamic music off), so neither takes the shared entrance sting, and a sting keys on a hidden card no
-// more than an intro does.
+// more than an intro does. R3402000: a signature whose first beat is its own firing (Unlicensed
+// Experimentation's hatch, R3402001) draws that in place of the shared rays, and sounds its own sound.
 
 import type { Action, ActionBody, CardType, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -304,7 +305,7 @@ describe("R2722002 against the real engine: a hidden card's entrance is at its r
     expect(must(summit).heard.p2.play).toEqual(must(cracker).heard.p2.play);
   });
 
-  it("R2722002 R3332002 the reveal plays the full entrance on both seats, its own intro its sting", () => {
+  it("R2722002 R3332002 R3402000 the reveal plays the full entrance on both seats, its own intro its sting", () => {
     // p1's board plays the intro whole, p2's its opening as the sting; neither the shared entrance sting.
     const opening = (viewer: PlayerId, id: string): string => (viewer === "p1" ? `intro:${id}` : `sting:${id}`);
     for (const viewer of SEATS) {
@@ -317,10 +318,17 @@ describe("R2722002 against the real engine: a hidden card's entrance is at its r
       );
       expect(grandCues(cloaked.reveals.cracker[viewer]), `Toe Cracker on ${viewer}`).toEqual(["sfx:sting"]);
     }
-    // The Legendary Trap's first firing, which names it to both seats (R2734000): its intro, its
-    // entrance and its rays. (The rarity sting is the Common Unit's play that fires it.)
+    // The Legendary Trap's first firing, which names it to both seats (R2734000): its intro and its
+    // entrance. (The rarity sting is the Common Unit's play that fires it.) R3402000: its signature's own
+    // firing, the hatch bursting open, stands in for the shared rays, and its own sound plays once; its
+    // face-down set sounded and drew none of it.
     for (const viewer of SEATS) {
-      expect(grandCues(trap.fire[viewer]), `the Trap on ${viewer}`).toEqual([opening(viewer, "intro-core-085"), "entrance:legendary:false", "rays:legendary", "sfx:sting"].sort());
+      const fire = trap.fire[viewer];
+      expect(grandCues(fire), `the Trap on ${viewer}`).toEqual([opening(viewer, "intro-core-085"), "entrance:legendary:false", "sfx:sting"].sort());
+      expect(fire.fx.some((cue) => cue.kind === "fracture"), `the hatch on ${viewer}`).toBe(true);
+      expect(fire.sfx.filter((s) => s.id === "hatchWeld"), `its sound on ${viewer}`).toHaveLength(1);
+      expect(trap.set[viewer].sfx.some((s) => s.id === "hatchWeld"), `its set on ${viewer}`).toBe(false);
+      expect(trap.set[viewer].fx.some((cue) => cue.kind === "fracture"), `its set on ${viewer}`).toBe(false);
     }
   });
 });

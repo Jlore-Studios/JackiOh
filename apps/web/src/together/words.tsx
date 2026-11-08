@@ -13,7 +13,7 @@ export const CHALLENGE_MODES: readonly QueueMode[] = ["bo1", "bo3", "random"];
 export const MODE_WORDS: Readonly<Record<QueueMode, string>> = {
   bo1: "Best of 1",
   bo3: "Conquest",
-  random: "All Random",
+  random: "All random",
 };
 
 /** A friend's status (B47) in a player's words; wrapped in `t()` where shown. */

@@ -1203,7 +1203,7 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             ],
         )),
         // R1855000: whose board an Anomaly replaced; the cards' `exiled` and `summoned` lines follow.
-        GameEvent::BoardReplaced { player } => {
+        GameEvent::BoardReplaced { player, .. } => {
             cap(s("{whose} board was replaced", vec![p("whose", whose(*player))]))
         }
         // R676: what a Glitch did, under its corrupted name (face/glitch.rs).

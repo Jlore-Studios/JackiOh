@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 
 import { SET_PIECE_HOLD_CAP_MS, TAKEOVER_HOLD_MS } from "../game/animations.ts";
+import { LANES } from "../game/contract.ts";
 import { AURA_LOOKS } from "./aura/looks.ts";
 import * as constants from "./constants.ts";
 
@@ -574,6 +575,21 @@ describe("R3332000 the signature budgets", () => {
     for (const [name, look] of Object.entries(AURA_LOOKS)) {
       for (const value of [look.alpha, look.tint, look.edge]) expect(value, name).toBeLessThanOrEqual(constants.AURA_SIGNATURE_MAX_INTENSITY);
     }
+  });
+
+  it("R3402001 Core's signature shakes sit inside their type's caps, and a Spell's takeover tail and roll inside a Spell's budget", () => {
+    const { SIGNATURE_LEGENDARY_MAX_MS, SIGNATURE_SPELL_SHARE, SIGNATURE_SPELL_MAX_TRAUMA, SIGNATURE_PERMANENT_MAX_TRAUMA } = constants;
+    // Transmogulate's crucible, Pocket Chaos's pocket and Call to Chaos's reels are Spells'; the rest a permanent's.
+    for (const trauma of [constants.FX_CRUCIBLE_TRAUMA, constants.FX_POCKET_TRAUMA, constants.FX_REELS_TRAUMA]) expect(trauma).toBeLessThanOrEqual(SIGNATURE_SPELL_MAX_TRAUMA);
+    for (const trauma of [constants.FX_CLAMP_TRAUMA, constants.FX_PAWN_TRAUMA, constants.FX_GRADE_TRAUMA]) expect(trauma).toBeLessThanOrEqual(SIGNATURE_PERMANENT_MAX_TRAUMA);
+    // R3402000: a Spell's takeover fades sooner than a permanent's, and the reels' reveal fits a Legendary Spell's share.
+    expect(constants.FX_TAKEOVER_SPELL_TAIL_MS).toBeGreaterThan(0);
+    expect(constants.FX_TAKEOVER_SPELL_TAIL_MS).toBeLessThan(constants.FX_TAKEOVER_TAIL_MS);
+    expect(constants.FX_REELS_MS).toBeLessThan(SIGNATURE_LEGENDARY_MAX_MS * SIGNATURE_SPELL_SHARE);
+    // At most one follow-up beat per unit zone, and one string per enemy piece (five Units and the hero).
+    expect(constants.FX_SIGNATURE_BURSTS_MAX).toBeGreaterThan(0);
+    expect(constants.FX_PAWN_STRINGS_MAX).toBeLessThanOrEqual(LANES.length + 1);
+    expect(constants.TAKEOVER_ART_MAX_SHAPES).toBeGreaterThan(0);
   });
 
   it("R3332001 Felinor Fiender's streaks all leave before its slam", () => {

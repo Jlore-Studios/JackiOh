@@ -10,7 +10,8 @@ const noop = (): void => undefined;
 
 /**
  * Four Legendary and Mythic permanents that wear the default tile aura: a signature aura replaces it
- * (R3342000), so neither Silly Silas's mirrorball nor a Field Spell's aura stands here (R3402000).
+ * (R3342000), a `{ bespoke }` entry's too (R3402000), so the board takes Felinor Fiender and two Classic+
+ * Field Spell tokens that wear none in place of Silly Silas, Combo-Index and Heroic Power.
  */
 function fourTileBoard() {
   return baseView({
@@ -27,8 +28,8 @@ function fourTileBoard() {
     opponent: emptySide("p2", {
       units: [null, null, null, null, null],
       backrow: [
-        faceUpBackrow("p2", { defId: "core-085", instanceId: "b-leg-2", type: "Trap" }),
-        faceUpBackrow("p2", { defId: "core-096", instanceId: "b-myth-2", type: "Trap" }),
+        faceUpBackrow("p2", { defId: "classicplus-012-8", instanceId: "b-leg-2", type: "Field Spell" }),
+        faceUpBackrow("p2", { defId: "classicplus-042-1", instanceId: "b-leg-3", type: "Field Spell" }),
         null,
         null,
         null,

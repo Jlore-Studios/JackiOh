@@ -37,6 +37,7 @@ import {
   galleryCues,
   galleryEntry,
   galleryFieldView,
+  galleryHandView,
   galleryPlayId,
   galleryPlayOf,
   gallerySetPiece,
@@ -198,9 +199,11 @@ export default function FxGallery(): ReactElement {
     plays.current += 1;
     setSetPieceId(asSetPiece ? galleryPlayId(plays.current) : null);
     // R3332001: a board of the entrance's own goes up first, with no new events, so the board plans the
-    // play against it (Game plans against the view it still shows).
+    // play against it (Game plans against the view it still shows); R3402001 with the played card still
+    // in the hand, where a Spell's entrance and a Mythic Spell's takeover anchor.
     const board = galleryBoardOf(card.defId, base);
-    if (board !== base) flushSync(() => setShown(board));
+    const before = galleryHandView(card.defId, board, plays.current);
+    if (before !== base) flushSync(() => setShown(before));
     setShown(withEvents(galleryFieldView(card.defId, board), galleryCardEvents(card.defId, card.play, board, plays.current)));
   };
   // R2784000: every system moment through the real planner, on the gallery director.

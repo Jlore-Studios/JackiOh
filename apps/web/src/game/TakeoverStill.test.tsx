@@ -1,14 +1,16 @@
 // R2722001: a Mythic's entrance on the board. With motion, the entry in flight holds for the takeover
 // (`data-takeover`, and since R2785000 its set piece's `data-set-piece` and `--set-piece-hold`); under
 // Reduce motion there is no hold, no shake and no flash, and a still card stands over the board for
-// TAKEOVER_STILL_MS instead. R3402000: a Mythic whose takeover has art of its own shows it at rest there.
+// TAKEOVER_STILL_MS instead. R3337003: a Mythic play that lays an Anomaly (Anomaly Found!) yields both to
+// the Anomaly's rift and its still title card. R3402000: a Mythic whose takeover has art of its own shows it
+// at rest there.
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent } from "@jackioh/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TAKEOVER_HOLD_MS, TAKEOVER_SET_PIECE } from "./animations.ts";
+import { ANOMALY_SET_PIECE, TAKEOVER_HOLD_MS, TAKEOVER_SET_PIECE } from "./animations.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Game from "./Game.tsx";
 import TakeoverStill, { TAKEOVER_STILL_MS } from "./TakeoverStill.tsx";
@@ -37,7 +39,7 @@ afterEach(() => {
   __resetSettingsForTests();
 });
 
-function playOut(defId: string): void {
+function playOut(defId: string, after: GameEvent[] = []): void {
   const before = withEvents(baseView(), START);
   const { rerender } = render(
     <CatalogContext.Provider value={lookup}>
@@ -46,7 +48,7 @@ function playOut(defId: string): void {
   );
   rerender(
     <CatalogContext.Provider value={lookup}>
-      <Game view={withEvents(baseView(), [...START, cast(defId)])} legal={[]} onAction={vi.fn()} />
+      <Game view={withEvents(baseView(), [...START, cast(defId), ...after])} legal={[]} onAction={vi.fn()} />
     </CatalogContext.Provider>,
   );
 }
@@ -115,10 +117,49 @@ describe("R2722001 a Mythic's takeover on the board", () => {
     expect(still.querySelector(".takeover-still-card")).not.toBeNull();
     cleanup();
 
+    // Each Core Mythic's own scene stands still under its card.
+    for (const [defId, look] of [["core-096", "pawn"], ["core-097", "genie"], ["core-099", "forge"]] as const) {
+      const own = stand(defId).querySelector(".takeover-still-art");
+      expect(own?.getAttribute("data-look"), defId).toBe(look);
+      expect(own?.children.length, defId).toBe(TAKEOVER_ART[look]?.length);
+      cleanup();
+    }
+
     // A Mythic on the shared prismatic look keeps the still as it was.
     expect(takeoverLookOf(PRISMATIC_MYTHIC)).toBe("prismatic");
     const plain = stand(PRISMATIC_MYTHIC);
     expect(plain.querySelector(".takeover-still-art")).toBeNull();
     expect(plain.firstElementChild?.classList.contains("takeover-still-rays")).toBe(true);
+  });
+});
+
+/** Anomaly Found!, a token Spell that prints Mythic, and the Wormhole it lays (R3337000). */
+const ANOMALY_FOUND = "stinkyscape-t-anomaly-found";
+const LAID: GameEvent[] = [
+  { type: "boardReplaced", player: "p1", anomaly: "WH" },
+  { type: "cardResolved", player: "p1", instanceId: `i-${ANOMALY_FOUND}`, defId: ANOMALY_FOUND, permanent: false, costPaid: 3 },
+];
+
+describe("R3337003 a Mythic play that lays an Anomaly yields its takeover to the rift", () => {
+  it("R3337003 with motion the play holds no takeover, and the rift holds as the action's set piece", () => {
+    playOut(ANOMALY_FOUND, LAID);
+    const game = screen.getByTestId("game");
+    const seen = new Set<string>();
+    for (let step = 0; step < 80 && screen.queryByTestId("animation-queue") !== null; step += 1) {
+      const key = game.getAttribute("data-set-piece");
+      if (key !== null) seen.add(key);
+      expect(game).not.toHaveAttribute("data-takeover");
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+    }
+    expect([...seen]).toEqual([ANOMALY_SET_PIECE]);
+  });
+
+  it("R3337003 under reduced motion it stands no still Mythic card", () => {
+    writeSettings({ reduceMotion: true });
+    playOut(ANOMALY_FOUND, LAID);
+    expect(screen.queryByTestId("takeover-still")).toBeNull();
+    expect(screen.getByTestId("game")).not.toHaveAttribute("data-set-piece");
   });
 });

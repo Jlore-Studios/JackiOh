@@ -1,4 +1,4 @@
-// B15, B18–B21 (DR14 part D, #2705): the Dungeon Run's device store. The run's rules are `crates/run`'s:
+// B15, B18–B21 (DR14 part D, #2705): the Dungeon run's device store. The run's rules are `crates/run`'s:
 // `../wasm/index.ts`'s run bindings are the fixtures' scripted ones (a Go enters a fight, an abandon or a
 // lost fight ends the run), so what is proved here is what the store does with their answers: what it
 // keeps on the device, folds back, settles and refuses.

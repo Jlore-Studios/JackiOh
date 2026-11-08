@@ -21,9 +21,11 @@ import {
   launchAt,
   pileOf,
   pileRunAt,
+  riftAt,
   sweepAt,
   volleyAt,
   wipeAt,
+  type AnomalyRift,
   signatureRunAt,
   type Signature,
   type Pile,
@@ -991,6 +993,8 @@ export type AnimationEntry = {
   fuse?: StarshipFuse;
   /** R2801000: a Starship launched, which the Starship's set piece claims (`starshipClaim`). */
   launch?: StarshipLaunch;
+  /** R3337003: an Anomaly laid, its side's cards going and its board's coming, which its set piece claims (`anomalyClaim`). */
+  rift?: AnomalyRift;
   /** #185: a Unit the viewer can see lands in this entry, this hard (`slamEntries`). */
   slam?: EntrySlam;
   /** R2722001: a Legendary or Mythic card the viewer can read makes its entrance in this entry (`entranceEntries`). */
@@ -1098,6 +1102,8 @@ export function landingOf(event: GameEvent): LandingEvent | null {
 export function slamEntries(entries: readonly AnimationEntry[], slamOf: SlamResolver, reducedMotion: boolean): AnimationEntry[] {
   const left: { hitStopMs: number; shakePx: number; anticipationMs: number } = { ...SLAM_BURST };
   return entries.map((entry) => {
+    // R3337003: an Anomaly's cards land out of its rift, the set piece's own landing, not a slam.
+    if (entry.rift !== undefined) return entry;
     for (const event of entry.events) {
       const landing = landingOf(event);
       const tier = landing === null ? null : slamOf(landing);
@@ -1150,6 +1156,11 @@ export const TAKEOVER_SET_PIECE = "takeover";
 /** R2801000: the key of a Starship's launch, and the beat it asks for at speed 1 (the cap still bounds it). */
 export const STARSHIP_SET_PIECE = "starship";
 export const STARSHIP_LAUNCH_HOLD_MS = 2_400;
+/** R3337003: the key of an Anomaly's rift, and the beat it asks for at speed 1: the tear, the pull, the flare and the title card (under the cap). */
+export const ANOMALY_SET_PIECE = "anomaly";
+export const ANOMALY_RIFT_HOLD_MS = 2_800;
+/** R3337003: a rift entry's own motion after its hold: the new board's cards falling out of the rift onto their zones. */
+export const ANOMALY_LAND_MS = 900;
 
 /**
  * R2785000: an entry's set piece. `holdMs` is its beat as held, inside the entry's `durationMs` and
@@ -1178,7 +1189,7 @@ export type EntryEntrance = {
   anchor: string | null;
   /**
    * R2800000: this Mythic's own wipe in the same action is the action's set piece, so its takeover
-   * yields to it: the entrance claims no hold and draws no takeover.
+   * yields to it: the entrance claims no hold and draws no takeover. R3337003: so is the rift its play lays.
    */
   yielded?: true;
 };
@@ -1222,11 +1233,12 @@ export function setPieceEntries(
   opts: { reduced: boolean; bigMoments: FxBigMoments; speed: number },
 ): AnimationEntry[] {
   let held = 0;
-  // R2800000, R3338000: a Mythic whose own wipe or signature in this action is a set piece yields its takeover to it.
+  // R2800000, R3338000: a Mythic whose own wipe or signature in this action is a set piece yields its takeover to it;
+  // R3337003: and so does one whose play lays an Anomaly, to its rift (Anomaly Found! prints Mythic).
   const own = new Set(
     entries.flatMap((entry) => {
-      const sourceId = entry.wipe?.sourceId ?? entry.signature?.sourceId;
-      return sourceId !== undefined && claimOf(entry) !== null ? [sourceId] : [];
+      const sourceId = entry.wipe?.sourceId ?? entry.signature?.sourceId ?? entry.rift?.sourceId ?? null;
+      return sourceId !== null && claimOf(entry) !== null ? [sourceId] : [];
     }),
   );
   return entries.map((given) => {
@@ -1312,6 +1324,7 @@ function pinned(entry: AnimationEntry): boolean {
     entry.zone !== undefined ||
     entry.sweep !== undefined ||
     entry.wipe !== undefined ||
+    entry.rift !== undefined ||
     entry.type === "rolled" ||
     entry.setPiece !== undefined ||
     entry.signature !== undefined
@@ -1465,6 +1478,23 @@ export function planEntries(
         launch,
       });
       i += 1;
+      continue;
+    }
+
+    // R3337003: an Anomaly's lay, its side's cards going and its board's coming, plays as one pinned
+    // entry its set piece claims. The board's own swap motion yields to it (no frame for the board).
+    const rifted = riftAt(events, i, view, plays.current());
+    if (rifted !== null) {
+      const run = take(i, rifted.length);
+      out.push({
+        events: run,
+        type: event.type,
+        durationMs: timed(ANOMALY_LAND_MS),
+        frames: frameMap(run.slice(1).map((e) => [frameFor(e, view, plays), e.type] as const)),
+        view,
+        rift: rifted.rift,
+      });
+      i += rifted.length;
       continue;
     }
 

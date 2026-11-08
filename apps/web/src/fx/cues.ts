@@ -32,6 +32,7 @@ import type { MotifSpec } from "./motifs/build.ts";
 import { planMotif } from "./motifs/index.ts";
 import { shieldCues } from "./shield.ts";
 import { planBeats } from "./motifs/beats.ts";
+import { planAnomaly } from "./anomaly.ts";
 import { planSetPiece } from "./setPieces.ts";
 import { planBattleship } from "./battleship.ts";
 import { planTerminus, planTerminusFollow } from "./terminus/index.ts";
@@ -1210,14 +1211,17 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   const starship = planStarship(entry, view, env);
   // R3336000: and the Drone Battleship's layers, the Shield's redirect and absorbed hits.
   const battleship = planBattleship(entry, view, env);
+  // R3337003: and an Anomaly's rift, its side's cards going and its board's coming.
+  const anomaly = planAnomaly(entry, view, env);
   const replaced = (event: GameEvent): boolean =>
     
     motif?.replaces.has(event) === true ||
     setPiece?.replaces.has(event) === true ||
     terminus?.replaces.has(event) === true ||
     starship?.replaces.has(event) === true ||
-    battleship?.replaces.has(event) === true;
-  const cues: FxCue[] = [...(motif?.cues ?? []), ...(setPiece?.cues ?? []), ...(terminus?.cues ?? []), ...(starship?.cues ?? []), ...(battleship?.cues ?? [])];
+    battleship?.replaces.has(event) === true ||
+    anomaly?.replaces.has(event) === true;
+  const cues: FxCue[] = [...(motif?.cues ?? []), ...(setPiece?.cues ?? []), ...(terminus?.cues ?? []), ...(starship?.cues ?? []), ...(battleship?.cues ?? []), ...(anomaly?.cues ?? [])];
   if (entry.sweep !== undefined) {
     cues.push(...sweepCues(motif === null ? entry : { ...entry, events: entry.events.filter((event) => !replaced(event)) }, view, env));
     return cues;
@@ -1239,6 +1243,7 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
     ...(terminus?.replaces ?? []),
     ...(starship?.replaces ?? []),
     ...(battleship?.replaces ?? []),
+    ...(anomaly?.replaces ?? []),
     ...beats.replaces,
   ]);
   const system = planSystemMoment(entry, view, env, systemSkip);

@@ -1248,7 +1248,9 @@ strings go in and out; the state is an opaque JSON object the client hands back 
 Every word the client shows a player follows [`WRITING.md`](WRITING.md), the client's voice guide.
 `src/writing.test.ts` holds what a machine can check of it: no word from its list in a sentence the
 client shows (a string or JSX text in a source that `src/i18n/zh-CN.json` translates), no curly
-apostrophe there or in a dictionary key, and no straight double quote there.
+apostrophe there or in a dictionary key, and no straight double quote there. Its glossary sets
+sentence case, one name per page, one verb per action, and bans arrow characters in translations,
+held by guards against Title Case labels outside their allowlist.
 
 ## Internationalisation
 

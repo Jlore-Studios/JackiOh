@@ -346,7 +346,7 @@ describe("R2784000 the per-set effects tables", () => {
     says(`"core-083": { bespoke: "legendaryTide", aura: { look: "ember", scope: "zone" } }`, /core-083: a zone aura stands in a zone; this card is a Spell, whose aura is side or board$/);
     says(`"core-083": { bespoke: "legendaryTide", aura: { look: "sparkle", scope: "side" } }`, /core-083: unknown aura look "sparkle"$/);
     // `entryAura` reads either kind's, and none of a set piece, a `none` or a missing entry.
-    expect(entryAura(FX_CARD_TABLE.get("core-052"))).toEqual({ look: "mirrorball", scope: "zone" });
+    expect(entryAura(FX_CARD_TABLE.get("core-052"))).toEqual({ look: "mirrorball", palette: "Tech/hologram", scope: "zone" });
     expect(entryAura(FX_CARD_TABLE.get("core-014"))).toEqual({ look: "storm", scope: "side" });
     expect(entryAura(FX_CARD_TABLE.get("core-088"))).toBeUndefined();
     expect(entryAura(FX_CARD_TABLE.get("core-003"))).toBeUndefined();

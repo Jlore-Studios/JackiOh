@@ -5,8 +5,8 @@
 // `mirrorball` (quick small glints sweeping across), Combo-Index's `stadium` (large slow motes rising like
 // lit rings) and Heroic Power's `pedestal` (a few slow glints over its crystal).
 
-/** The eleven looks, as a card's table entry names them. */
-export const AURA_LOOK_NAMES = ["ember", "frost", "bloom", "void", "storm", "holy", "toxic", "arcane", "mirrorball", "stadium", "pedestal"] as const;
+/** The twelve looks, as a card's table entry or an Anomaly's backdrop (`fx/anomaly.ts`, R3337003) names them. */
+export const AURA_LOOK_NAMES = ["ember", "frost", "bloom", "void", "storm", "holy", "toxic", "arcane", "drift", "mirrorball", "stadium", "pedestal"] as const;
 
 /** What an aura covers, nearest first: its card's own zone, its lane, its side or the whole board. The index is its stacking rank. */
 export const AURA_SCOPES = ["zone", "lane", "side", "board"] as const;
@@ -58,6 +58,8 @@ export const AURA_LOOKS: Readonly<Record<AuraLook, AuraLookSpec>> = {
   holy: { vx: [-4, 4], vy: [-18, -6], size: [2, 4], life: [2200, 3800], alpha: 0.75, tint: 0.1, glow: 16, edge: 0.6, blend: L },
   toxic: { vx: [-4, 4], vy: [-14, -4], size: [3, 6], life: [2000, 3400], alpha: 0.6, tint: 0.13, glow: 12, edge: 0.5, blend: S },
   arcane: { vx: [-12, 12], vy: [-12, 12], size: [2, 3.5], life: [1600, 3000], alpha: 0.8, tint: 0.09, glow: 14, edge: 0.6, blend: L },
+  // R3337003: an asteroid field's slow sideways drift.
+  drift: { vx: [4, 10], vy: [-3, 3], size: [3, 7], life: [3600, 6000], alpha: 0.5, tint: 0.06, glow: 10, edge: 0.35, blend: S },
   mirrorball: { vx: [18, 40], vy: [-6, 6], size: [1.5, 3], life: [700, 1400], alpha: 0.8, tint: 0.08, glow: 12, edge: 0.55, blend: L },
   stadium: { vx: [-3, 3], vy: [-12, -4], size: [4, 7], life: [2800, 4400], alpha: 0.5, tint: 0.1, glow: 16, edge: 0.55, blend: L },
   pedestal: { vx: [-2, 2], vy: [-6, -2], size: [2.5, 4.5], life: [3000, 4800], alpha: 0.7, tint: 0.09, glow: 18, edge: 0.6, blend: L },

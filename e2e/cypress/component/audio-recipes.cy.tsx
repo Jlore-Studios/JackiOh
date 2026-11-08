@@ -11,6 +11,7 @@ import { buildMix } from "../../../apps/web/src/audio/mix.ts";
 import { DEFAULT_AUDIO_SETTINGS } from "../../../apps/web/src/audio/settings.ts";
 import { SFX, SFX_IDS, SFX_TIMBRES, type SfxRecipe } from "../../../apps/web/src/audio/sfx.ts";
 import { CARD_AUDIO, lineFor } from "../../../apps/web/src/audio/voiceData.ts";
+import { ANOMALY_CODES } from "../../../apps/web/src/cards/anomalies.ts";
 
 type SfxId = (typeof SFX_IDS)[number];
 type SfxParams = Parameters<SfxRecipe>[3];
@@ -43,6 +44,7 @@ const EXPECTED_IDS = [
   "pickUp", "dragOver", "drop", "returnToHand", "deal", "riffle",
   "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
   "organ",
+  "anomaly",
   "playImpact", "trapSnap",
   // R3342000: the tile aura bell.
   "auraTouch",
@@ -150,6 +152,8 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   deckShear: 550,
   // R3338000: the Terminus set pieces' organ.
   organ: 2000,
+  // R3337003: an Anomaly's sting, one voice per board.
+  anomaly: 1200,
   // R3346000: a play's cost impact and a firing trap's snap.
   playImpact: 500,
   trapSnap: 200,
@@ -260,6 +264,8 @@ describe("polish 2 — SFX recipes rendered by a real browser", () => {
       { id: "chaosRoll", params: { amount: 3 } },
       { id: "brand", params: { release: true } },
       { id: "clockTick", params: { amount: 10 } },
+      // R3337003: each Anomaly's own sting.
+      ...ANOMALY_CODES.map((anomaly): { id: SfxId; params: SfxParams } => ({ id: "anomaly", params: { anomaly } })),
     ];
     const renders = Promise.all(cases.map(async ({ id, params }) => ({ id, params, samples: await render(id, params) })));
     cy.wrap(renders, { timeout: RENDER_TIMEOUT_MS, log: false }).then((results) => {

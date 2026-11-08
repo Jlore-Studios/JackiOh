@@ -1,5 +1,5 @@
 // Device-local tutorial progress (SPEC §9.9, §9.10; R294, R320, R321, R322); `accountSync.ts` merges the
-// account's copy in through `adoptTutorialProgress`. R2205002: the Field Guide's found entries ride in the
+// account's copy in through `adoptTutorialProgress`. R2205002: the Field guide's found entries ride in the
 // same record, never the account's, and a lesson won anywhere counts its entries found.
 // R2434000: an id of the lessons before #2434 reads as the lesson in its place on the path, so nothing
 // won is un-won. R2434002: a conceded lesson is kept as lost, on the device only, until it is won.
@@ -20,7 +20,7 @@ export type TutorialHiddenChoice = {
 export type TutorialProgress = {
   readonly completed: readonly string[];
   readonly hiddenChoice: TutorialHiddenChoice | null;
-  /** R2205002: the Field Guide entries found on this device, in the guide's order. */
+  /** R2205002: the Field guide entries found on this device, in the guide's order. */
   readonly found: readonly string[];
   /** R2434002: the conceded lessons not won, in path order. */
   readonly lost: readonly string[];
@@ -176,7 +176,7 @@ export function markFound(ids: readonly string[]): TutorialProgress {
 }
 
 /**
- * R2205002: what the Field Guide shows as met: the entries found on this device and every entry of a
+ * R2205002: what the Field guide shows as met: the entries found on this device and every entry of a
  * lesson won (on any device), since a win names whatever its game did not show found (R314).
  */
 export function fieldGuideOf(progress: TutorialProgressLike, lessons: readonly TutorialLesson[] = TUTORIAL_LESSONS): readonly string[] {

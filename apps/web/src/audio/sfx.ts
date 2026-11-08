@@ -7,6 +7,7 @@
 
 import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP, IMPACT_HEADROOM } from "./constants.ts";
 import type { SfxId, SfxParams, SfxTimbre } from "./types.ts";
+import { isAnomalyCode, type AnomalyCode } from "../cards/anomalies.ts";
 import { damageTier, PLAY_IMPACT_TIERS, SLAM_PITCH_SPREAD, UNIT_SLAM } from "../game/damageFeel.ts";
 import { createRng } from "../fx/rng.ts";
 
@@ -26,6 +27,7 @@ export const SFX_IDS: readonly SfxId[] = [
   "pickUp", "dragOver", "drop", "returnToHand", "deal", "riffle",
   "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
   "organ",
+  "anomaly",
   "playImpact", "trapSnap",
   "auraTouch",
   "silasScratch", "crucibleChoir", "hatchWeld", "pocketZip", "stadiumCheer", "jackpotReels", "pawnWaltz",
@@ -1928,6 +1930,298 @@ const organ: SfxRecipe = (ctx, out, at, params) => {
   }
   return len;
 };
+// R3337003: a Stinkyscape Anomaly laid (R3337000's `boardReplaced.anomaly`), one sting per board.
+// Each voice's numbers are one table: times in seconds from the sting's start, frequencies in Hz,
+// peaks as gains into `out`.
+
+/** R3337003: the Wormhole's hum: a sine swept up an octave, a soft triangle an octave above it, wobbling. */
+const WORMHOLE_HUM = {
+  len: 1.1,
+  fromHz: 55,
+  toHz: 110,
+  sweepEnd: 0.85,
+  attack: 0.3,
+  peak: 0.6,
+  holdUntil: 0.75,
+  holdLevel: 0.42,
+  wobbleHz: 4,
+  wobbleDepthHz: 2,
+  overtoneRatio: 2,
+  overtoneCutHz: 700,
+  overtonePeak: 0.16,
+} as const;
+
+const wormholeHum: SfxRecipe = (ctx, out, at) => {
+  const s = WORMHOLE_HUM;
+  const k = kit(ctx, out, at, s.len);
+  const hum = oscillator(k, "sine", s.fromHz);
+  glide(k, hum.frequency, s.toHz, s.sweepEnd);
+  vibrato(k, hum.frequency, s.wobbleHz, s.wobbleDepthHz, 0, s.len);
+  chain(hum, heldEnvelope(k, 0, s.attack, s.peak, s.holdUntil, s.holdLevel, s.len), out);
+  run(k, hum, 0, s.len);
+  const overtone = oscillator(k, "triangle", s.fromHz * s.overtoneRatio);
+  glide(k, overtone.frequency, s.toHz * s.overtoneRatio, s.sweepEnd);
+  chain(overtone, biquad(k, "lowpass", s.overtoneCutHz, 0), envelope(k, 0, s.attack, s.overtonePeak, s.len), out);
+  run(k, overtone, 0, s.len);
+  return s.len;
+};
+
+/** R3337003: an Asteroid Field's rumbling rock: low-passed noise tumbling as its cutoff falls, a sub thud, rocks knocking. */
+type RockRumble = {
+  len: number;
+  fromHz: number;
+  toHz: number;
+  q: number;
+  attack: number;
+  peak: number;
+  holdUntil: number;
+  holdLevel: number;
+  tumbleHz: number;
+  thudHz: number;
+  thudPeak: number;
+  thudStop: number;
+  knocks: readonly number[];
+  knockHz: number;
+  knockPeak: number;
+};
+
+/** R3337003: what every Asteroid Field's rumble shares: its tumble's swing, its thud's fall, its knocks' band and decay. */
+const ROCK_SHAPE = { tumbleBase: 0.65, tumbleDepth: 0.35, thudAttack: 0.008, thudDrop: 0.6, knockQ: 3, knockDecay: 0.05 } as const;
+
+/** R3337003: each Asteroid Field's rumble: Large's long and deep, Small's short and gritty, Narcour's and Axnit's under their chime and ring. */
+const ROCK_RUMBLES: { readonly [C in Extract<AnomalyCode, "AL" | "AT" | "AN" | "AA">]: RockRumble } = {
+  AL: {
+    len: 1.15, fromHz: 420, toHz: 120, q: 4, attack: 0.06, peak: 1.1, holdUntil: 0.7, holdLevel: 0.8, tumbleHz: 7,
+    thudHz: 62, thudPeak: 0.28, thudStop: 0.5, knocks: [0.18, 0.31, 0.47, 0.6, 0.78], knockHz: 700, knockPeak: 0.8,
+  },
+  AT: {
+    len: 0.7, fromHz: 900, toHz: 260, q: 2, attack: 0.02, peak: 0.9, holdUntil: 0.35, holdLevel: 0.6, tumbleHz: 13,
+    thudHz: 110, thudPeak: 0.2, thudStop: 0.25, knocks: [0.06, 0.12, 0.17, 0.25, 0.3, 0.38, 0.46], knockHz: 1600, knockPeak: 0.7,
+  },
+  AN: {
+    len: 1, fromHz: 600, toHz: 180, q: 3, attack: 0.04, peak: 1, holdUntil: 0.5, holdLevel: 0.7, tumbleHz: 9,
+    thudHz: 80, thudPeak: 0.24, thudStop: 0.4, knocks: [0.12, 0.27, 0.4], knockHz: 1000, knockPeak: 0.7,
+  },
+  AA: {
+    len: 1.1, fromHz: 520, toHz: 150, q: 3, attack: 0.05, peak: 1, holdUntil: 0.55, holdLevel: 0.7, tumbleHz: 8,
+    thudHz: 70, thudPeak: 0.24, thudStop: 0.45, knocks: [0.15, 0.33, 0.52], knockHz: 850, knockPeak: 0.7,
+  },
+};
+
+/** R3337003: Narcour's chime over its rumble: an FM bell at 880 Hz. */
+const NARCOUR_CHIME = { hz: 880, ratio: 3.5, indexHz: 240, start: 0.22, attack: 0.004, peak: 0.24, stop: 0.95 } as const;
+
+/** R3337003: Axnit's ring over its rumble: 660 Hz and its octave, shimmering as they fade. */
+const AXNIT_RING = {
+  hz: 660,
+  octave: 2,
+  start: 0.2,
+  attack: 0.004,
+  peak: 0.2,
+  octavePeak: 0.07,
+  stop: 1.05,
+  shimmerHz: 6,
+  shimmerDepth: 0.2,
+} as const;
+
+/** R3337003: an Asteroid Field's sting: its rumble, and whatever rings `over` it. */
+function asteroidField(r: RockRumble, over?: (k: Kit) => void): SfxRecipe {
+  return (ctx, out, at) => {
+    const k = kit(ctx, out, at, r.len);
+    const noise = noiseSource(k);
+    const rock = biquad(k, "lowpass", r.fromHz, r.q);
+    glide(k, rock.frequency, r.toHz, r.len);
+    const tumble = modulatedGain(k, "sine", r.tumbleHz, ROCK_SHAPE.tumbleBase, ROCK_SHAPE.tumbleDepth);
+    chain(noise, rock, tumble, heldEnvelope(k, 0, r.attack, r.peak, r.holdUntil, r.holdLevel, r.len), out);
+    run(k, noise, 0, r.len);
+    const thud = tone(k, out, "sine", r.thudHz, 0, ROCK_SHAPE.thudAttack, r.thudPeak, r.thudStop);
+    glide(k, thud.frequency, r.thudHz * ROCK_SHAPE.thudDrop, r.thudStop);
+    clickTrain(k, out, r.knocks, r.knockHz, ROCK_SHAPE.knockQ, r.knockPeak, ROCK_SHAPE.knockDecay);
+    over?.(k);
+    return r.len;
+  };
+}
+
+function narcourChime(k: Kit): void {
+  const s = NARCOUR_CHIME;
+  fmBell(k, k.out, s.hz, s.ratio, s.indexHz, s.start, s.attack, s.peak, s.stop);
+}
+
+function axnitRing(k: Kit): void {
+  const s = AXNIT_RING;
+  const shimmer = tremolo(k, s.shimmerHz, s.shimmerDepth);
+  chain(shimmer, k.out);
+  tone(k, shimmer, "sine", s.hz, s.start, s.attack, s.peak, s.stop);
+  tone(k, shimmer, "sine", s.hz * s.octave, s.start, s.attack, s.octavePeak, s.stop);
+}
+
+/** R3337003: the Battlefields' metallic clank: two ring-modulated strikes, a scrape on each, the metal ringing after. */
+const BATTLEFIELD_CLANK = {
+  len: 0.8,
+  hits: [0, 0.15],
+  carrierHz: 233,
+  modulatorHz: 351,
+  bandHz: 1900,
+  bandQ: 3,
+  hitAttack: 0.002,
+  hitPeak: 0.9,
+  hitStop: 0.16,
+  scrapeHz: 3800,
+  scrapeQ: 2,
+  scrapePeak: 0.6,
+  scrapeDecay: 0.035,
+  ringHz: 1245,
+  ringRatio: 1.41,
+  ringIndexHz: 520,
+  ringPeak: 0.15,
+} as const;
+
+const battlefieldClank: SfxRecipe = (ctx, out, at) => {
+  const s = BATTLEFIELD_CLANK;
+  const k = kit(ctx, out, at, s.len);
+  for (const start of s.hits) {
+    const ring = level(k, 0, start);
+    const carrier = oscillator(k, "square", s.carrierHz, start);
+    const modulator = oscillator(k, "square", s.modulatorHz, start);
+    chain(carrier, ring);
+    modulator.connect(ring.gain);
+    chain(ring, biquad(k, "bandpass", s.bandHz, s.bandQ), envelope(k, start, s.hitAttack, s.hitPeak, start + s.hitStop), out);
+    run(k, carrier, start, start + s.hitStop);
+    run(k, modulator, start, start + s.hitStop);
+  }
+  clickTrain(k, out, s.hits, s.scrapeHz, s.scrapeQ, s.scrapePeak, s.scrapeDecay);
+  fmBell(k, out, s.ringHz, s.ringRatio, s.ringIndexHz, 0, s.hitAttack, s.ringPeak, s.len);
+  return s.len;
+};
+
+/** R3337003: the Wrecked Spice Platform's falling hiss: noise through a band sliding down, a groan falling under it. */
+const SPICE_HISS = {
+  len: 0.95,
+  fromHz: 7000,
+  toHz: 450,
+  q: 1.4,
+  attack: 0.03,
+  peak: 0.7,
+  holdUntil: 0.55,
+  holdLevel: 0.55,
+  groanFromHz: 330,
+  groanToHz: 70,
+  groanStart: 0.12,
+  groanAttack: 0.05,
+  groanPeak: 0.2,
+} as const;
+
+const spiceHiss: SfxRecipe = (ctx, out, at) => {
+  const s = SPICE_HISS;
+  const k = kit(ctx, out, at, s.len);
+  const noise = noiseSource(k);
+  const band = biquad(k, "bandpass", s.fromHz, s.q);
+  glide(k, band.frequency, s.toHz, s.len);
+  chain(noise, band, heldEnvelope(k, 0, s.attack, s.peak, s.holdUntil, s.holdLevel, s.len), out);
+  run(k, noise, 0, s.len);
+  const groan = tone(k, out, "sine", s.groanFromHz, s.groanStart, s.groanAttack, s.groanPeak, s.len);
+  glide(k, groan.frequency, s.groanToHz, s.len);
+  return s.len;
+};
+
+/** R3337003: the Monument's bell: an FM bell at 98 Hz, its octave fading sooner, a stone strike on it. */
+const MONUMENT_BELL = {
+  len: 1.15,
+  hz: 98,
+  ratio: 1.4,
+  indexHz: 260,
+  attack: 0.004,
+  peak: 0.45,
+  octave: 2,
+  octaveIndexHz: 180,
+  octavePeak: 0.15,
+  octaveStop: 0.75,
+  strikeHz: 1800,
+  strikeQ: 1.5,
+  strikeAttack: 0.001,
+  strikePeak: 0.4,
+  strikeStop: 0.03,
+} as const;
+
+const monumentBell: SfxRecipe = (ctx, out, at) => {
+  const s = MONUMENT_BELL;
+  const k = kit(ctx, out, at, s.len);
+  fmBell(k, out, s.hz, s.ratio, s.indexHz, 0, s.attack, s.peak, s.len);
+  fmBell(k, out, s.hz * s.octave, s.ratio, s.octaveIndexHz, 0, s.attack, s.octavePeak, s.octaveStop);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "bandpass", s.strikeHz, s.strikeQ), envelope(k, 0, s.strikeAttack, s.strikePeak, s.strikeStop), out);
+  run(k, noise, 0, s.strikeStop);
+  return s.len;
+};
+
+/** R3337003: the Drone Hideouts' buzz: two saws a hair apart, rising a little, through a low-pass, a fast tremolo on them. */
+const DRONE_BUZZ = {
+  len: 0.9,
+  hz: [147, 150],
+  rise: 1.12,
+  riseEnd: 0.5,
+  cutHz: 1700,
+  q: 3,
+  attack: 0.04,
+  peak: 0.2,
+  holdUntil: 0.65,
+  holdLevel: 0.15,
+  tremoloHz: 24,
+  tremoloDepth: 0.4,
+} as const;
+
+const droneBuzz: SfxRecipe = (ctx, out, at) => {
+  const s = DRONE_BUZZ;
+  const k = kit(ctx, out, at, s.len);
+  const buzz = biquad(k, "lowpass", s.cutHz, s.q);
+  chain(buzz, tremolo(k, s.tremoloHz, s.tremoloDepth), heldEnvelope(k, 0, s.attack, s.peak, s.holdUntil, s.holdLevel, s.len), out);
+  for (const hz of s.hz) {
+    const saw = oscillator(k, "sawtooth", hz);
+    glide(k, saw.frequency, hz * s.rise, s.riseEnd);
+    chain(saw, buzz);
+    run(k, saw, 0, s.len);
+  }
+  return s.len;
+};
+
+/** R3337003: the Frontier Outpost's chime: C then the G above it (523 and 784 Hz), warm FM bells. */
+const FRONTIER_CHIME = {
+  len: 1,
+  notes: [
+    [0, 523],
+    [0.14, 784],
+  ],
+  ratio: 2,
+  indexHz: 260,
+  attack: 0.004,
+  peak: 0.3,
+  ring: 0.8,
+} as const;
+
+const frontierChime: SfxRecipe = (ctx, out, at) => {
+  const s = FRONTIER_CHIME;
+  const k = kit(ctx, out, at, s.len);
+  for (const [start, hz] of s.notes) fmBell(k, out, hz, s.ratio, s.indexHz, start, s.attack, s.peak, Math.min(s.len, start + s.ring));
+  return s.len;
+};
+
+/** R3337003: each Anomaly's sting, by the code its `boardReplaced` names (cards/anomalies.ts). */
+const ANOMALY_STINGS: { readonly [C in AnomalyCode]: SfxRecipe } = {
+  WH: wormholeHum,
+  BF: battlefieldClank,
+  AL: asteroidField(ROCK_RUMBLES.AL),
+  AT: asteroidField(ROCK_RUMBLES.AT),
+  SP: spiceHiss,
+  MT: monumentBell,
+  DH: droneBuzz,
+  FO: frontierChime,
+  AN: asteroidField(ROCK_RUMBLES.AN, narcourChime),
+  AA: asteroidField(ROCK_RUMBLES.AA, axnitRing),
+};
+
+/** R3337003: an Anomaly is laid: its board's sting; with no code, or one this build does not know, the plain whoosh. */
+const anomaly: SfxRecipe = (ctx, out, at, params) =>
+  (isAnomalyCode(params.anomaly) ? ANOMALY_STINGS[params.anomaly] : whoosh)(ctx, out, at, params);
 
 // Ten Core signatures (R3402001): a Legendary's or Mythic's own sound on its first beat (signatureCues.ts),
 // each over within its rarity's signature ceiling (fx/constants.ts SIGNATURE_LEGENDARY_MAX_MS,
@@ -2376,6 +2670,8 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   deckShear: { recipe: deckShear, durationMs: 550, gain: 0.7 },
   // R3338000: the bed under a Terminus set piece, at the gain of the entrance that ends it.
   organ: { recipe: organ, durationMs: 2000, gain: 0.6 },
+  // R3337003: an Anomaly's sting; each of the ten ends within durationMs.
+  anomaly: { recipe: anomaly, durationMs: 1200, gain: 0.7 },
   // R3346000: a play's cost impact and a firing trap's snap, level with the thud and the set click.
   playImpact: { recipe: playImpact, durationMs: 500, gain: 0.8 },
   trapSnap: { recipe: trapSnap, durationMs: 200, gain: 0.8 },

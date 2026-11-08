@@ -217,20 +217,25 @@ The new canvas presets (#2792, drawn in code in `fx/presets.ts` and `fx/sprites.
 
 `aura` (#2787, R2787000) is the one persistent motif: while a card's effect holds, the zone, lane, side
 or board it covers wears a quiet looping look in the card's palette, a tint, a slow drift of motes and
-an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, palette?, scope } }`.
+an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, palette?, scope } }`,
+and since R3402000 beside a `{ bespoke }` recipe too (`entryAura` reads either).
 
 - **Looks** (`fx/aura/looks.ts`, `AURA_LOOKS`): `ember`, `frost`, `bloom`, `void`, `storm`, `holy`,
   `toxic` and `arcane`, each a mote velocity, size and life range, a mote, tint and edge opacity, a
-  glow spread and a blend. `palette` is a flavor's look or a sub-look (`"Tech/rocket"`), the card's
+  glow spread and a blend. R3402000 adds three signature looks, each within
+  `AURA_SIGNATURE_MAX_INTENSITY`: `mirrorball` (quick small glints sweeping across), `stadium` (large
+  slow motes rising like lit rings) and `pedestal` (a few slow glints). `palette` is a flavor's look or a sub-look (`"Tech/rocket"`), the card's
   own by default, as a motif's.
-- **Scopes**, nearest first: `zone` (the card's own backrow zone), `lane` (the lane's four zones,
-  both seats), `side` (its seat's ten zones) and `board` (all twenty). Only a Field Spell or a Field
-  Trap stands in a zone, so only it may name `zone` or `lane`; the loader fails any other card's.
+- **Scopes**, nearest first: `zone` (the card's own zone), `lane` (the lane's four zones,
+  both seats), `side` (its seat's ten zones) and `board` (all twenty). A Field Spell or a Field Trap
+  stands in a backrow zone and may name `zone` or `lane`; a Unit stands in its unit zone and may name
+  `zone`, its own (R3402000); the loader fails any other card's, and a Unit's `lane`.
 - **What wears one** (`fx/aura/plan.ts`, read off the shown view alone): every face-up Field Spell or
   Field Trap whose entry has an aura, and every modifier the view lists that a readable play added
   (the play resolving when its `modifierChanged` came, with no trap fired inside it), on its seat's
-  side. A face-down card, the viewer's own unrevealed Field Trap and a Unit in a backrow zone wear
-  none (R202). The view's modifiers carry no source (R169), so a modifier whose play left the event
+  side, and every face-up Unit whose entry's aura is a `zone` one, on its own unit zone (key
+  `unit-<instanceId>`, R3402000). A face-down card, a hidden Unit, the viewer's own unrevealed Field
+  Trap and a Unit in a backrow zone wear none (R202). The view's modifiers carry no source (R169), so a modifier whose play left the event
   window before the layer saw it (a reload, a hand-over) wears none.
 - **Begin and end:** an aura the board starts to show fades in over `AURA_FADE_IN_MS` with a burst
   of motes from its box's centre; one it stops showing fades out over `AURA_FADE_OUT_MS`. Both follow
@@ -260,7 +265,9 @@ Ten Field Spells wear one as the pattern for the set passes:
 | Stinkyscape #155 Comet Crash | `ember`, zone |
 | Training Grounds #19 Extra Rations | `bloom`, zone |
 
-No modifier example is wired yet, and a bespoke entry (Hinder's rider) cannot take an aura.
+No modifier example is wired yet. Since R3402000 a bespoke entry may take one: Core #52 Silly Silas
+wears `mirrorball` on his own unit zone, #93 Combo-Index `stadium` and #98 Heroic Power `pedestal` on
+theirs ([Signatures](#signatures)).
 
 ### Tile auras
 
@@ -274,8 +281,8 @@ under the card (`fx/aura/TileAura.tsx`, `tile.css`).
   (`TILE_MOTES_LEGENDARY`). Mythic gets a richer pattern chosen by its set's look (circuitry for
   Core, runes for Classic, ink for Meditative, starfield for Stinkyscape, roots for Training Grounds),
   a wider edge glow and motes (`TILE_MOTES_MYTHIC`).
-- **Signature replacement:** a card whose entry carries an `aura` (such as Feng Shui) uses that
-  standing aura in `AuraLayer` instead.
+- **Signature replacement:** a card whose entry carries an `aura` (such as Feng Shui, or since
+  R3402000 a `{ bespoke }` entry's, Silly Silas's) uses that standing aura in `AuraLayer` instead.
 - **Interactions:** hover, press or tap sends a ripple, plays a bell in its hue (`auraTouch`) and
   buzzes on a phone (`Haptics.touch()`). Being picked as a target brightens the glow; damage or
   divine shield loss flickers it; Dormant, Frozen or Silenced dims it; destroyed or exiled fades
@@ -486,6 +493,37 @@ motifs most of them played; #3332 laid the frame (R3332000) and each set's pass 
 - **Sound** (R3332002): a Legendary's or Mythic's play sting is its own intro, played whole with
   dynamic music on, its opening cut to `MUSIC_STING_S` on the effects bus otherwise; the shared
   `entrance` sting plays only for one with no intro.
+- **Own cast** (R3402000): a signature whose first beat is a cast of its own (`{ bespoke }` or
+  `{ setPiece }`) draws its arrival in place of the shared Legendary or Mythic rays, burst and ring,
+  as an entrance does; a Mythic's takeover still plays, a Spell's fading within
+  `FX_TAKEOVER_SPELL_TAIL_MS` of its entry. Each later action of a gallery play (a Trap's firing, a
+  trigger, an Activate) is timed against the budget from its own start, as a game deals it.
+- **Takeover art** (R3402000, `fx/takeoverArt.ts`): a Mythic's own look may draw a scene of its own over
+  the board's dark, shapes on a 100 × 100 view sliced to cover the screen, at most
+  `TAKEOVER_ART_MAX_SHAPES`, painted and moved by part in `fx.css` (transform and opacity alone) from the
+  look's tint. Under Reduce Motion `TakeoverStill` draws the same scene at rest (`board.css`). A scene is
+  shapes only, no text and no card's face or name (R202): `pawn` (a hooded hand over a glass chessboard,
+  strings snapping taut), `genie` (a wind spirit in a cyclone of silk, card backs orbiting), `rotunda` (a
+  marble hall of thirteen glowing doors) and `forge` (two rails converging on an anvil under a hammer,
+  gears overhead).
+- **Core** (#3402, R3402001): every Core Legendary and Mythic has its signature; Ceaseless Void (#100)
+  is the set's last on the ratchet, owned by #3338. Each recipe is its card's file in `fx/cards/core/`:
+
+  | Card | Entry | First beat | What its text does |
+  |---|---|---|---|
+  | #52 Silly Silas | entrance `silasSpotlight`, bespoke `mirrorballShuffle`, aura `mirrorball` zone | a pirouette down a spotlight, a crater and a hat-tip glint | on `rotated` a mirrorball ring and confetti, a sheen on each occupied unit zone; a brand in the new owner's colour on `controlChanged` |
+  | #83 Transmogulate | bespoke `legendaryTide` | a crucible over the caster's hero: a poison gather, rays, a ring, prismatic vials | its first `transformed` washes the Deck and hand piles; a readable hand card takes a sheen, an Embiggened Unit a ripple |
+  | #85 Unlicensed Experimentation | bespoke `clampWeld` | at its `trapFired`, a hatch fracturing open in green arc light and smoke | on `fused` a ring at the seized card, a seam, a sheen and a flash at the result |
+  | #87 Pocket Chaos | bespoke `pocketSwap` | a pocket at the board's centre, both heroes' light tugged in, a dice cloud | on `swapped` the pair trades places (heroes, the middle unit zones or the Deck piles); a card back to the other hand pile |
+  | #93 Combo-Index | entrance `comboStadium`, bespoke `gradeRings`, aura `stadium` zone | three rings rising, radiant rays, confetti | each trigger's `questProgressed` lights a ring; its grade's events show (a card back to hand, gold tags, a burn, a spark, a beam) |
+  | #95 Call to Chaos | bespoke `chaosReels` | a slot-wheel's rays and ring, three reels blurring in sparks | on `chaosRolled` the roll's reveal stands `FX_REELS_MS` with a gold ring and its jackpot shake |
+  | #96 My Pawn | bespoke `pawnStrings`, takeover `pawn` | its takeover at its `trapFired`; strings from the top of the screen to every enemy Unit and hero | on `attackCancelled` the attack shatters into shards at the attacker |
+  | #97 Zephrys | bespoke `perfectWish`, takeover `genie` | its takeover; silk gathering at the centre | on `addedToHand` a card back gusts from the far hero into the caster's hand pile |
+  | #98 Heroic Power | entrance `heroicPedestal`, bespoke `heroicDoors`, takeover `rotunda`, aura `pedestal` zone | its takeover; a crystal pedestal landing in holy light, a diamond glint | each Activate's `activated` flares the pedestal; its power flies to where it went |
+  | #99 Craft a Card | bespoke `fusionForge`, takeover `forge` | its takeover; two card backs riding in from the board's edges | the hand pile rings as the card is added; on `fused` it flies from the forge into the hand pile |
+
+  Each sounds its own sound once, on its first beat (`audio/signatureCues.ts`), never for a card the
+  seat cannot read (R203).
 
 ## Set pieces
 

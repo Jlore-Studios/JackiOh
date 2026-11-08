@@ -1,0 +1,24 @@
+{
+  "title": "Patch: a signature animation for every Core Legendary and Mythic, one concept per card",
+  "sources": "#3402",
+  "notes": "Core's ten Legendaries and Mythics get their signatures (R3402001): an entrance or cast of each card's own, its text's beat, a permanent's own aura, a Mythic's takeover with full-screen art, and a sound each; a bespoke recipe may wear an aura and a signature's own cast replaces the shared rays (R3402000).",
+  "player": {
+    "title": "Core's Legendaries and Mythics, each its own",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Every Core Legendary and Mythic now has an animation of its own, each built from what the card does.",
+      "Silly Silas pirouettes down a spotlight, and his Cry spins the field under a mirrorball.",
+      "Transmogulate tips a crucible over your hero, and Pocket Chaos swaps its pair through a velvet pocket.",
+      "Unlicensed Experimentation bursts open into a hatch and welds its catch; Call to Chaos spins a slot-wheel.",
+      "My Pawn, Zephrys, Heroic Power and Craft a Card take over the screen with art of their own.",
+      "With Reduce Motion on, that art stands still behind the card.",
+      "Silly Silas, Combo-Index and Heroic Power wear a glow of their own while they stay on the board.",
+      "Each of the ten has a sound of its own. Your opponent's face-down traps and hidden cards still show nothing."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

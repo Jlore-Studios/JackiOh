@@ -2,8 +2,8 @@
 // `artPictureOf`, `artPartOf`; the Default's the normal one, the Sketch's full art the sketch), and a level adds only the
 // full-art frame, its picture's own motion (R2715001) and a signature: a signed level is its variant's full art, moving,
 // signed, with no picture of its own (R2949000's Signature look is gone). R2725004 holds at every level: a Radiant face
-// keeps its marks. The ladders themselves are versions.test.ts's (R3015000); the pixels are e2e's
-// cypress/component/variant-ladders.cy.tsx.
+// keeps its marks. R3343001 (#3343): a Default level draws the card's default look, a Mythic's Full art. The ladders
+// themselves are versions.test.ts's (R3015000); the pixels are e2e's cypress/component/variant-ladders.cy.tsx.
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -15,7 +15,7 @@ import { resetCosmeticsForTests, writeCardLevel } from "./cosmetics.ts";
 import { faceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
-import { DEFAULT_VARIANT, artPartOf, artPictureOf, isFullBleed, ladderOf, levelsOn, lookOfLevel, variantsOn } from "./versions.ts";
+import { DEFAULT_VARIANT, artPartOf, artPictureOf, defaultLookOf, isFullBleed, ladderOf, levelsOn, lookOfLevel, variantsOn } from "./versions.ts";
 
 /**
  * Three cards offered many variants, one of each painter: Transmogulate (procedural, a Legendary Spell), xxFreshJack
@@ -24,10 +24,14 @@ import { DEFAULT_VARIANT, artPartOf, artPictureOf, isFullBleed, ladderOf, levels
  */
 const CARDS = ["core-083", "stinkyscape-109", "traininggrounds-040"] as const;
 
-/** The levels of `variant` `defId` wears, lowest first: the Default's with its first level, the normal face (null). */
+/**
+ * The levels of `variant` `defId` wears, lowest first: the Default's with its first level, the normal face (null).
+ * R3343001: a variant whose first level is the card's default look, offered nowhere there (R3343000), starts at the
+ * Default's still level (null), which draws that look.
+ */
 function levelsOf(defId: string, variant: string): (string | null)[] {
   const levels = levelsOn(defId, variant);
-  return variant === DEFAULT_VARIANT ? [null, ...levels] : [...levels];
+  return variant === DEFAULT_VARIANT || ladderOf(variant)[0] === defaultLookOf(defId) ? [null, ...levels] : [...levels];
 }
 
 /** The level whose picture every level of `id`'s variant draws: its variant's first, the normal face for the Default. */
@@ -107,8 +111,10 @@ describe("R3015002 one picture per variant", () => {
             // The variant's picture and part, at every level.
             expect(art?.getAttribute("data-art-picture") ?? "normal", where).toBe(picture);
             if (artPartOf(first) === "subject") expect(cf.querySelector(".cf-art--cutout")?.getAttribute("data-art-part"), where).toBe("subject");
-            // What a level adds: the full-art frame, its picture's motion, a signature.
-            expect(cf.getAttribute("data-full-art"), where).toBe(isFullBleed(level) ? "true" : null);
+            // What a level adds: the full-art frame, its picture's motion, a signature. R3343001: a Default level draws the
+            // card's default look, a Mythic's Full art (the setting on), so its frame is that look's.
+            const frame = level === null || variant === DEFAULT_VARIANT ? defaultLookOf(id) : level;
+            expect(cf.getAttribute("data-full-art"), where).toBe(isFullBleed(frame) ? "true" : null);
             expect(cf.getAttribute("data-art-motion"), where).toBe(look.animated ? "animated" : null);
             expect(cf.querySelector(".cf-signature") !== null, where).toBe(look.signed);
             // R2725004: a Radiant face keeps its gold frame and its art's Radiant paint at every level.

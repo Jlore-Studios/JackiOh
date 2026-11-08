@@ -1067,3 +1067,63 @@ async fn r3015005_a_pick_names_one_owned_offered_level() {
     assert!(loadout.card(OFFERED).is_some_and(|card| card.augments.is_empty()));
     assert_eq!(loadout.card(BARE), None);
 }
+
+/// R3343000: a card whose Default draws Full art's first level: Ceaseless Void, a Mythic Unit.
+const MYTHIC: &str = "core-100";
+/// R3343000: a card whose Default draws Extended art's first level: Silly Silas, a Legendary Unit.
+const LEGENDARY: &str = "core-052";
+/// R3343000: one of the 21 full-art cards that is a Mythic, whose `true` names Full art's first level (R2655000):
+/// Dice of Doom, a Mythic Spell.
+const MYTHIC_FULL_ART_CARD: &str = "stinkyscape-154";
+/// Its still Epic full art (`cosmetics.json`'s `full-art-dice-of-doom`).
+const FULL_ART_OF_DICE_OF_DOOM: &str = "full-art-dice-of-doom";
+
+#[tokio::test]
+async fn r3343000_a_default_look_is_no_pick_and_its_owners_keep_their_rows() {
+    let app = test_app().await;
+    let profile = profile_id_of(&app, USER).await;
+    let nothing = json!({ "cards": [] });
+    // Rows of each card's default look, as written before #3343, and Dice of Doom's still Epic full art, which owns
+    // Full art's first level there (R3015006).
+    own(&app, &profile, MYTHIC, "version-full-art").await;
+    own(&app, &profile, LEGENDARY, "version-extended-art").await;
+    own(&app, &profile, MYTHIC_FULL_ART_CARD, FULL_ART_OF_DICE_OF_DOOM).await;
+    // The Default already draws it there, so no pick names it, owned as it is: a 400, and nothing is written.
+    for body in [
+        json!({ "cardId": MYTHIC, "fullArt": "version-full-art" }),
+        json!({ "cardId": LEGENDARY, "fullArt": "version-extended-art" }),
+        json!({ "cardId": MYTHIC_FULL_ART_CARD, "fullArt": true }),
+    ] {
+        assert_eq!(
+            refusal(put(&app, TOKEN, body.clone()).await),
+            NOT_OFFERED,
+            "{body}"
+        );
+        assert_eq!(get(&app, Some(TOKEN)).await, (200, nothing.clone()), "{body}");
+    }
+    // Their rows stand, and the account reads them as it did (R1313000).
+    let (status, _, owned) = call(&app, "GET", "/api/cosmetics", Some(TOKEN), Value::Null).await;
+    assert_eq!(
+        (status, owned),
+        (
+            200,
+            json!({ "cards": [
+                { "cardId": LEGENDARY, "cosmeticId": "version-extended-art" },
+                { "cardId": MYTHIC, "cosmeticId": "version-full-art" },
+                { "cardId": MYTHIC_FULL_ART_CARD, "cosmeticId": FULL_ART_OF_DICE_OF_DOOM },
+            ], "account": [] })
+        )
+    );
+    // The level above the default look is a pick once it is owned, and not before.
+    let animated = json!({ "cardId": MYTHIC, "fullArt": "version-full-art-animated" });
+    assert_eq!(refusal(put(&app, TOKEN, animated.clone()).await), NOT_OWNED);
+    assert_eq!(get(&app, Some(TOKEN)).await, (200, nothing));
+    own(&app, &profile, MYTHIC, "version-full-art-animated").await;
+    let (status, body) = put(&app, TOKEN, animated).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(
+        body,
+        json!({ "cards": [{ "cardId": MYTHIC, "fullArt": "version-full-art-animated" }] })
+    );
+    assert_eq!(get(&app, Some(TOKEN)).await, (200, body));
+}
