@@ -16806,10 +16806,10 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "built_by": "claude-1",
+        "built_by": "claude-8",
         "rejections": [],
         "reviews": [],
-        "sha": "ab2b7554d5584132d08a3afadbde3e40eaecde46",
+        "sha": "f6244e499d3ece17c95a4e28695199fdb3c9cd2a",
         "tiers": {}
       },
       "waiting_comment": 6722171675
