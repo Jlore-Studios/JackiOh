@@ -15107,7 +15107,7 @@
     "3386": {
       "action": "review",
       "asks": [],
-      "audit_tier": "",
+      "audit_tier": "medium",
       "ci_early": true,
       "ci_fixed_head": "8f48d5183237c36948b48a8441f660e6bc175e82",
       "ci_fixes": 2,
@@ -15131,7 +15131,7 @@
         "resolved_by": "`claude` (strong)",
         "sha": "c3624b4e40e043a63cee7aaadc2a67e4c2f0bc39"
       },
-      "cross_rounds": 1,
+      "cross_rounds": 2,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -15139,14 +15139,39 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3340,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "Slot age is reassigned after visibility or off-screen pauses, so priority no longer reflects the newest Mythic played.",
+          "evidence": "claim() always increments counter and assigns a new seq, while useMotionSlot releases whenever wanted becomes false. Hidden or off-screen faces therefore lose their age and reacquire in React effect order. R3340000 lines 20-23 simultaneously promise newest-played priority and acknowledge this reset; existing visibility tests stay below the cap and do not verify ordering after reacquisition.",
+          "severity": "blocking",
+          "where": "apps/web/src/cards/motionSlots.ts:68"
+        },
+        {
+          "claim": "The new ruling is not linked from the specification section it changes.",
+          "evidence": "R3340000 declares \u00a710.10 in its cards field and changes board rendering, animation allocation, and state marks, but \u00a710.10 has no R3340000 link and this file is unchanged. spec/README.md:56 requires editing and linking every section changed by a new ruling.",
+          "severity": "blocking",
+          "where": "spec/10-engine-guide.md:230"
+        },
+        {
+          "claim": "The attack component test does not prove that the subject transforms toward its target.",
+          "evidence": "The test supplies no --fx-lunge-x/y vector and asserts only animationName for the subject and motes. It never samples or asserts translate, scale, or direction, despite the task requiring a subject-transform assertion for each reaction and target-directed attack behavior.",
+          "severity": "blocking",
+          "where": "e2e/cypress/component/art-answers.cy.tsx:153"
+        },
+        {
+          "claim": "The PR contains an unrelated rewrite of the repository-wide writing test.",
+          "evidence": "Standalone commit c0a5aa9287 changes TypeScript/JSDoc parsing, parent-node construction, and traversal binding. This file has no relationship to art motion and is absent from the task scope; the builder described transient concurrent load timeouts that passed alone, not a defect requiring this rewrite.",
+          "severity": "blocking",
+          "where": "apps/web/src/writing.test.ts:17"
+        }
+      ],
       "live": "reviewing",
       "merge_owner": "claude-1",
       "pending_request": false,
       "provider": "gpt",
       "question": "",
-      "queued_at": "2026-11-08T11:35:26Z",
+      "queued_at": "2026-11-08T11:49:36Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
@@ -15154,7 +15179,7 @@
       "run_id": "42476772112",
       "runs_on": "night-vm-gpt",
       "self_check_findings": [],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-11-08T11:40:17Z",
       "stop_requested": false,
       "taken_asks": [],
