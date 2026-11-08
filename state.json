@@ -18524,7 +18524,8 @@
     "3431": {
       "action": "review",
       "asks": [],
-      "audit_tier": "",
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -18541,13 +18542,20 @@
       },
       "interruptions": 0,
       "issue": 3391,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The ruling says a part a brief names that R3390000's pass already drew is that pass's part, 'not a second of the same name or kind, so the kit holds one of each', but the diff adds three parts that duplicate Classic+ parts already in SCENE_KIT: `war-drum` (Classic+ has `drum`), `blank-card` (Classic+ has `card`) and `scale` (Classic+ has `scales`).",
+          "evidence": "sceneKitObjects.ts:917 `drum`: 'a round war drum with laced hide and two straps'; sceneKit.ts:2088 `warDrum`: 'A small war drum standing on its anchor'. sceneKitObjects.ts:125 `card`: 'One blank playing card standing tilted'; sceneKit.ts:2333 `blankCard`: 'A blank playing card, tipped a little either way'. sceneKitObjects.ts:973 `scales`: 'A stone balance: a post, a beam tipped... a pan hung from each end'; sceneKit.ts:2217 `scalePart`: 'A merchant's balance scale... tipped to one side'. The revise pass that merged #3427 switched the shockwave, lectern, goggles and spread and seated poses over to Classic+'s parts but missed these three. spec/pending/3391.md ('Rejected: ... two parts of one name or kind') and ART.md's closing sentence of 'Stinkyscape's scenes' repeat the false claim. Fix one way or the other. Either make #8, #27 and #89 place `drum`, `card` and `scales` (repainted, rescaled) and delete the three parts, which means STINKYSCAPE_KIT_PARTS in classicPlusScenes.test.ts goes from 84 to 81 and BRIEF_PARTS changes to match; or rewrite the ruling, the pending paragraph and ART.md so they say only same-named parts were folded in, and name the three kept duplicates with the reason.",
+          "severity": "blocking",
+          "where": "spec/rulings/R3391000.md:39"
+        }
+      ],
       "live": "reviewing",
       "pending_request": false,
       "provider": "claude-1",
       "question": "",
-      "queued_at": "2026-11-08T09:38:13Z",
+      "queued_at": "2026-11-08T10:11:25Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "",
@@ -18571,7 +18579,7 @@
         "provider": "claude-7",
         "run": "42462334731"
       },
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-11-08T10:00:11Z",
       "stop_requested": false,
       "taken_asks": [],
