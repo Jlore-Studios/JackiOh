@@ -18608,6 +18608,14 @@
           "claude": "strong"
         }
       }
+    },
+    "3432": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-08T08:17:08Z",
+      "issue": 3407,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
