@@ -15501,15 +15501,8 @@
       "stop_requested": false
     },
     "3398": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42509422242",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-08T18:41:59Z",
-        "until": "2026-11-08T19:11:59Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15521,10 +15514,9 @@
         "reason": "planned on opus",
         "trail": "rds/art/sceneKit*.ts\", \"descript\u2026\n- Bash: {\"command\": \"sed -n 3378,3400p apps/web/src/cards/art/sceneKit.ts; sed -n 4960,5145p apps/web/src/cards/art/sceneKit.ts | head -60\", \"description\": \"Read the mask part and SCENE_KIT registry\"}\n- Bash: {\"command\": \"sed -n 330,407p apps/web/src/cards/art/scene.test.ts; sed -n 1,30p apps/web/src/cards/art/sceneKitObjects.ts; grep -n \\\"export const OBJECTS_KIT\\\" -A3 apps/web/src/cards/art/sceneKitObje\u2026\n- Bash: {\"command\": \"sed -n 85,130p apps/web/src/cards/art/artRichness.test.ts\", \"description\": \"Read artRichness byte ceiling test\"}\n- Bash: {\"command\": \"grep -n \\\"ART_DETAIL_MIN_\\\\(COMMON\\\\|RARE\\\\|EPIC\\\\|LEGENDARY\\\\|MYTHIC\\\\) =\\\\|ART_DETAIL_MAX_BYTES =\\\" -A1 apps/web/src/cards/art/richness.ts; grep -n \\\"export const SCENE_LAYERS\\\" apps/w\u2026\n- Bash: {\"command\": \"sed -n 20,41p apps/web/src/cards/art/richness.ts\", \"description\": \"Read the rarity floors\"}\n- Bash: {\"command\": \"grep -n -i \\\"component\\\" e2e/README.md | head -20; grep -n \\\"classicplus-alt\\\\|core-scenes\\\" scripts/*.sh e2e/*.json e2e/*.ts 2>/dev/null | head\", \"description\": \"Check how component spe\u2026\n- Bash: {\"command\": \"sed -n 1,30p e2e/README.md | cut -c1-600; grep -n \\\"classicplus-alt-scenes\\\\|core-scenes.cy\\\" e2e/README.md\", \"description\": \"Read e2e README header and component spec list\"}\n- Bash: {\"command\": \"ls spec/rulings | grep \\\"R3398\\\"; ls spec/pending/; grep -n \\\"Amended by\\\" spec/rulings/R3392000.md spec/rulings/R3396000.md spec/rulings/R2940001.md\", \"description\": \"Check ruling block\u2026\n- Bash: {\"command\": \"grep -rln \\\"Alt art\\\" spec/*.md | head; grep -n \\\"R3396000\\\\|Alt art\\\" spec/14*.md | head -20\", \"description\": \"Find spec sections mentioning Alt art\"}\n- Bash: {\"command\": \"sed -n 205,232p apps/web/src/cards/art/classicPlusScenes.test.ts; grep -n \\\"const ENTRIES\\\" apps/web/src/cards/art/classicPlusScenes.test.ts\", \"description\": \"Read Classic+ scenes Alt ar\u2026\n- Bash: {\"command\": \"grep -n \\\"R3396000\\\\|R3392000\\\\|bamboo\\\\|cactus\\\\|fox\\\" apps/web/src/cards/art/sceneKitNature.ts | head -20; grep -n \\\"R339\\\" apps/web/src/cards/art/sceneKitObjects.ts apps/web/src/cards\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Findings (planner run 1)\\n- ALT_SCENE_RECIPES = Classic+ only today. Adding Core keys BREAKS: classicPlusAltScenes.test.tsx (ALT_IDS = all keys, expects\u2026\n- Bash: {\"command\": \"grep -n \\\"^export function drawFigure\\\" -A40 apps/web/src/cards/art/figureKit.ts | head -60\", \"description\": \"Read drawFigure placement math\"}\n- Bash: {\"command\": \"grep -rn \\\"layout:report\\\" e2e/cypress.config.* e2e/cypress/support 2>/dev/null | head -5; grep -n \\\"layout:report\\\" -A12 e2e/cypress.config.ts | head -30\", \"description\": \"Find where la\u2026\n- Bash: {\"command\": \"which google-chrome chromium chromium-browser electron 2>/dev/null; ls ~/.cache/Cypress 2>/dev/null | head\", \"description\": \"Check for a browser Cypress could use\"}\n- Bash: {\"command\": \"grep -n \\\"prettier\\\\|\\\\\\\"lint\\\\|\\\\\\\"format\\\" package.json apps/web/package.json | head; ls .prettierrc* 2>/dev/null; grep -n \\\"printWidth\\\" .prettierrc* package.json 2>/dev/null\", \"descr\u2026\n- tool error: Exit code 2 package.json:13: \"lint\": \"eslint .\",\n- Bash: {\"command\": \"grep -o \\\"^\\\\s*--pal-[a-z0-9-]*\\\" apps/web/src/palette.css | sed 's/ *--pal-//' | tr '\\\\n' ' '\", \"description\": \"List palette colour names\"}\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/cards/art/scene.test.ts | grep -n \\\"import\\\"\", \"description\": \"Check scene.test.ts imports\"}\n- Bash: {\"command\": \"sed -n 30,46p apps/web/src/cards/art/scene.test.ts\", \"description\": \"Read the rest of scene.test.ts imports\"}\n- Bash: {\"command\": \"sed -n 46,56p apps/web/src/cards/art/scene.test.ts | grep -n import\", \"description\": \"Find sceneRecipes import in scene.test.ts\"}\n- Bash: {\"command\": \"sed -n 46,50p apps/web/src/cards/art/scene.test.ts\", \"description\": \"Show scene.test.ts sceneRecipes import line\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3398/.bot-plan.md\", \"content\": \"## Goal\\n\\nAll 61 Core cards offered `version-alt-art` (the issue's table, the same list `COSMETIC_OFFERS` holds) each\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\nstart=s.index(' - 003 F')\\nend=s.index('5. **`sceneRecipes.ts`.**')\\nnew=''' - File 1: 003 F pose-hold, wide, two identi\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3398/.bot-plan.md\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps = [\\n(\\\"All 61 Core cards offered `version-alt-art` (the issue's table, the same list `COSMETIC_OFFERS` holds) each draw an al\u2026\n- Bash: {\"command\": \"grep -rln \\\"alt\\\" apps/web/src --include=*.snap | head; grep -rn \\\"hashId(.*alt\\\\|toMatchSnapshot\\\\|toMatchInlineSnapshot\\\" apps/web/src/cards/variantLevels.test.tsx apps/web/src/cards/d\u2026\n- Bash: {\"command\": \"grep -n \\\"alt\\\" apps/web/src/game/__snapshots__/Board.test.tsx.snap | head -5 | cut -c1-200\", \"description\": \"Check Board snapshot for Alt art content\"}\n- Bash: {\"command\": \"grep -n \\\"alt\\\\b\\\\|\\\\\\\"alt\\\\\\\"\\\\|alt-art\\\\|core-0\\\" apps/web/src/cards/depth.test.tsx apps/web/src/cards/variantLevels.test.tsx apps/web/src/cards/fullArtBoard.test.tsx | head -20\", \"des\u2026\n- Bash: {\"command\": \"sed -n 370,395p apps/web/src/cards/depth.test.tsx; grep -n \\\"function hasArtPlanes\\\" -A15 apps/web/src/cards/*.ts* | head -25\", \"description\": \"Read depth test hasArtPlanes for Alt art o\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\na=\\\"- The existing tests: `classicPlusAltScenes.test.tsx`, `classicPlusScenes.test.ts`, `scene.test.ts`, `coreScenes.test.ts`, `ter\u2026\n- said: ## Goal All 61 Core cards offered `version-alt-art` (the issue's table; `COSMETIC_OFFERS` lists the same 61) each draw an alt scene recipe written from their brief. It shows the same subject in a new place, time or moment, at every Alt art level, base and Radiant (R3015002). Repaints keep the norma\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-08T18:19:23Z",
       "owner_why": "it plans it",
@@ -15537,9 +15529,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-07T17:07:05Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42509422242",
+      "run_id": "pending:7774bd2b-1794163450",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-08T18:19:23Z",
+      "started_at": "2026-11-08T18:44:33Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17453,9 +17445,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T18:43:59Z",
+    "at": "2026-11-08T18:44:33Z",
     "url": "",
-    "what": "review #3431 on claude-6"
+    "what": "build #3398 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-08T18:34:22Z",
