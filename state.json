@@ -16569,27 +16569,16 @@
         ],
         "builder": "claude",
         "built_by": "claude-1",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/collection/collection.ts",
-            "crates/server/tests/api/cosmetic_packs.rs",
-            "crates/server/tests/api/dev.rs",
-            "spec/14-economy.md"
-          ],
-          "from": "a929e686f20cc2c49a1238850ff0c64979045f8b",
-          "main": "15d6be1d15dd86a2c58e4f2a2f36e0b84291673e"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-1",
-            "run": "42428701628",
+            "run": "42434877004",
             "tier": "strong"
           }
         ],
-        "sha": "924d2abe54ac7ffe81fe2ba5ba417ee0a0517ff9",
+        "sha": "b4c938699ceef415369fd203dafce88030db6eb7",
         "tiers": {
           "claude": "strong"
         }
