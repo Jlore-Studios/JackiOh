@@ -76,11 +76,11 @@ export const alternateFate: CardRecipe = (event, p, play) => {
   };
 };
 
-/** Two of its wells, the active side's first: one in its player's fourth backrow zone, one in the other side's second. */
-export const alternateFateFixture: RecipeFixture = (view, _instanceId, player) => {
-  const other = player === view.you.player ? view.opponent.player : view.you.player;
-  return [
-    { type: "summoned", player, instanceId: "fx-well-1", defId: "core-006", row: "backrow", lane: 4 },
-    { type: "summoned", player: other, instanceId: "fx-well-2", defId: "core-006", row: "backrow", lane: 2 },
-  ];
-};
+/**
+ * One of its wells, in its player's fourth backrow zone. R3332000: one alone, since the gallery's board
+ * fills every backrow zone, so a well there lands on a card and plays the Stack beat too, and a second
+ * well's would carry the play past the Legendary's ceiling.
+ */
+export const alternateFateFixture: RecipeFixture = (_view, _instanceId, player) => [
+  { type: "summoned", player, instanceId: "fx-well", defId: "core-006", row: "backrow", lane: 4 },
+];

@@ -2,19 +2,22 @@
 // bespoke "yileVirus", takeover "virus", a glitch on its tile), a Mythic Unit's signature in Tech's glitch.
 // After its takeover's hold (once an action: a flood of them takes over once, R3405000) pixel snow falls on
 // its zone and a boxy virus face, blinking, tumbles into it, booting up at the slam in a ring of pixels. At
-// the start of its turn it sparks: a zap lands on its hero and on each adjacent Unit it hits (its `damage`,
-// whose rows keep the number). Its Activate pops it in a burst of pixels (its own `destroyed`), and as it
-// dies a hand card tears away in a zap at its controller's hand pile (`discarded`, whose row carries the
-// card to the Graveyard): the pile, never the card, so a hand card the viewer cannot read stays unnamed. It
-// keys on its own id as a hit's source or the card destroyed and on the discard's owner, never on a card's
+// the start of its turn it sparks: a zap lands on its hero and on each adjacent Unit it hits (its `damage`),
+// carrying the hit's number and, where Armor took half of it, the Armor's flash, as the row it replaces
+// would (R1363). Its Activate pops it in a burst of pixels (its own `destroyed`), and as it dies a hand card
+// tears away in a zap at its controller's hand pile (`discarded`), a card back flying from that pile to its
+// Graveyard pile: the pile, never the card, so a hand card the viewer cannot read stays unnamed. It keys on
+// its own id as a hit's source or the card destroyed and on the discard's owner, never on a card's
 // definition, and names no card (R202).
 
 import { animTestid, targetFor } from "../../../game/animations.ts";
 import { sideOf } from "../../../game/contract.ts";
+import { armorTookHalf } from "../../../game/damageFeel.ts";
 import { frac, ringCue, shakeCues, tid, tunedBurst } from "../../build.ts";
-import { FX_SLAM_AT } from "../../constants.ts";
+import { FX_SLAM_AT, FX_SPLAT_HOLD_MS } from "../../constants.ts";
 import { figureCue, figureTint } from "../../figures.ts";
 import { FLAVOR_LOOKS, paletteLook } from "../../flavors.ts";
+import { shieldCues } from "../../shield.ts";
 import type { FxCue } from "../../types.ts";
 import { ENTRANCE_TRAUMA, type CardRecipe, type Entrance, type RecipeFixture } from "../recipe.ts";
 
@@ -56,12 +59,15 @@ export const yileVirus: CardRecipe = (event, p, play) => {
   const i = p.env.intensity;
   switch (event.type) {
     case "damage": {
-      // Its start of turn's zaps; their rows keep the number.
+      // Its start of turn's zaps, each with the number its row would pop.
       if (event.sourceId !== play.instanceId) return null;
       const tgt = targetFor(event, p.view);
       if (tgt === null) return null;
       const at = tid(tgt);
-      return { cues: [figureCue("virusZap", at, tint, 0, p.D + TIMING.zapTailMs), { ...tunedBurst(i, "spark", at, "point", 0, TUNING.zap), colors: look.colors }], row: "keep" };
+      const cues: FxCue[] = [figureCue("virusZap", at, tint, 0, p.D + TIMING.zapTailMs), { ...tunedBurst(i, "spark", at, "point", 0, TUNING.zap), colors: look.colors }];
+      if (event.amount > 0) cues.push({ kind: "splat", tone: "damage", amount: event.amount, at, delayMs: 0, durationMs: p.D + FX_SPLAT_HOLD_MS });
+      if (armorTookHalf(event.absorbed, event.amount)) cues.push(...shieldCues("small", at, p.D, 0, i));
+      return { cues, row: "replace" };
     }
     case "destroyed": {
       // Its Activate pops it.
@@ -72,10 +78,18 @@ export const yileVirus: CardRecipe = (event, p, play) => {
       return { cues: [{ ...tunedBurst(i, look.particle, at, "area", 0, TUNING.pop), colors: look.colors }, ringCue(p.D, look.particle, at, 0)], row: "replace" };
     }
     case "discarded": {
-      // Its Death's discard, at its controller's hand pile; the row flies the card to the Graveyard.
+      // Its Death's discard: a zap at its controller's hand pile, and a card back from there to the Graveyard.
       if (event.owner !== play.player) return null;
-      const hand = tid(animTestid.hand(sideOf(p.view, event.owner)));
-      return { cues: [figureCue("virusZap", hand, tint, 0, p.D + TIMING.zapTailMs, { size: "small" }), { ...tunedBurst(i, look.particle, hand, "area", 0, TUNING.tear), colors: look.colors }], row: "keep" };
+      const side = sideOf(p.view, event.owner);
+      const hand = tid(animTestid.hand(side));
+      return {
+        cues: [
+          figureCue("virusZap", hand, tint, 0, p.D + TIMING.zapTailMs, { size: "small" }),
+          { ...tunedBurst(i, look.particle, hand, "area", 0, TUNING.tear), colors: look.colors },
+          { kind: "ghost", from: hand, to: tid(animTestid.graveyard(side)), delayMs: 0, durationMs: p.D },
+        ],
+        row: "replace",
+      };
     }
     default:
       return null;

@@ -23,8 +23,8 @@ import { ENTRANCE_TRAUMA, FOOT, type CardRecipe, type Entrance, type RecipeFixtu
 /** The look its fortress wears: Tech's rocket sub-look, its aura's. */
 const HQ_PALETTE = "Tech/rocket";
 
-/** A plain Unit with no entrance of its own, for its gallery fixture's truck to unload. */
-const GALLERY_UNIT = "core-006";
+/** A plain Jlockeed Unit with no entrance of its own (Core #13 Jlockeed Shredder-10, a Common), for its gallery fixture's truck to unload. */
+const GALLERY_UNIT = "core-013";
 
 /** Its two beacons, the top corners of its zone. */
 const BEACONS: readonly FxPoint[] = [

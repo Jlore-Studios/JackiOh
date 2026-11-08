@@ -6,12 +6,12 @@
 // whose face this seat never sees, so it is drawn at its zone and named nowhere (R202). Then, at the first
 // card it destroys (on the Radiant face, exiles), a chalk shockwave rolls out from him, and every other CN
 // or KY permanent the board shows crumbles in chalk; one it does not show (a face-down card, which no view
-// places) keeps its own row, at its owner's pile. It keys on his play and what that play has seen (`seen`),
-// never on a card's definition (R202).
+// places) crumbles at its owner's pile, where its row would draw it. It keys on his play and what that play
+// has seen (`seen`), never on a card's definition (R202).
 
 import type { GameEvent } from "@jackioh/shared";
 
-import { HIDDEN_ID, locateInstance } from "../../../game/animations.ts";
+import { HIDDEN_ID, locateInstance, targetFor } from "../../../game/animations.ts";
 import { sideOf, testid } from "../../../game/contract.ts";
 import { frac, raysCue, ringCue, shakeCues, tid, tunedBurst } from "../../build.ts";
 import { FX_CRACK_TAIL_MS, FX_SLAM_AT } from "../../constants.ts";
@@ -88,9 +88,13 @@ export const breakerPrime: CardRecipe = (event, p, play) => {
     const from = standingAt(p, play);
     cues.push(figureCue("chalkWave", from, figureTint(look), 0, p.D + TIMING.waveTailMs, { side: sideOf(p.view, play.player) }), ringCue(p.D, look.particle, from, 0));
   }
-  // R202: a card no view places (face down, or hidden) keeps its row, which draws it at its owner's pile.
+  // R202: a card no view places (face down, or hidden) crumbles at its owner's pile, as its row would draw it.
   const card = event.instanceId === HIDDEN_ID ? null : locateInstance(p.view, event.instanceId);
-  if (card === null) return { cues, row: "keep" };
+  if (card === null) {
+    const pile = targetFor(event, p.view);
+    if (pile !== null) cues.push({ ...tunedBurst(i, look.particle, tid(pile), "point", 0, TUNING.crumble), colors: look.colors });
+    return { cues, row: "replace" };
+  }
   const at = tid(card);
   cues.push({ ...tunedBurst(i, look.particle, at, "area", 0, TUNING.crumble), colors: look.colors }, { kind: "crack", at, delayMs: 0, durationMs: p.D + FX_CRACK_TAIL_MS });
   return { cues, row: "replace" };

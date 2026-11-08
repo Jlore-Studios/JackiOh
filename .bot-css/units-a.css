@@ -1,0 +1,694 @@
+/* Devin Bot: a meditation cushion drops into his zone and squashes as he folds onto it, his two eye-lights dimming. */
+.fx-figure[data-figure="cushion"]::before {
+  width: calc(var(--fx-fig) * 0.8);
+  height: calc(var(--fx-fig) * 0.26);
+  top: 82%;
+  border-radius: var(--radius-pill);
+  background:
+    radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--fx-tint-glow) 70%, transparent) 0 30%, transparent 62%),
+    linear-gradient(180deg, var(--fx-tint-rim), var(--fx-tint-core));
+  box-shadow: 0 0 18px color-mix(in srgb, var(--fx-tint-rim) 60%, transparent);
+  transform-origin: 50% 100%;
+  animation: fx-figure-cushion-drop var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="cushion"]::after {
+  width: calc(var(--fx-fig) * 0.34);
+  height: calc(var(--fx-fig) * 0.08);
+  top: 35%;
+  background:
+    radial-gradient(circle at 22% 50%, var(--fx-tint-glow) 0 22%, transparent 26%),
+    radial-gradient(circle at 78% 50%, var(--fx-tint-glow) 0 22%, transparent 26%);
+  animation: fx-figure-cushion-dim var(--fx-ms) var(--ease-in) both;
+}
+
+@keyframes fx-figure-cushion-drop {
+  0% {
+    transform: translateY(-260%) scale(0.8);
+    opacity: 0;
+  }
+  30% {
+    transform: translateY(0) scale(1.15, 0.7);
+    opacity: 1;
+  }
+  42% {
+    transform: translateY(0) scale(0.95, 1.06);
+  }
+  52%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fx-figure-cushion-dim {
+  0%,
+  35% {
+    opacity: 1;
+  }
+  70%,
+  100% {
+    opacity: 0.12;
+  }
+}
+
+/* Devin Bot: a tiny 1/1's hologram wireframe pops into its zone, bounces and solidifies. */
+.fx-figure[data-figure="wireframe"]::before {
+  width: calc(var(--fx-fig) * 0.42);
+  aspect-ratio: 5 / 7;
+  border: 2px dashed var(--fx-tint-rim);
+  border-radius: var(--radius-sm);
+  background:
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--fx-tint-rim) 55%, transparent) 0 1px, transparent 1px 20%),
+    repeating-linear-gradient(180deg, color-mix(in srgb, var(--fx-tint-rim) 55%, transparent) 0 1px, transparent 1px 14%);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent);
+  transform-origin: 50% 100%;
+  animation: fx-figure-wireframe-pop var(--fx-ms) var(--ease-overshoot) both;
+}
+
+.fx-figure[data-figure="wireframe"]::after {
+  width: calc(var(--fx-fig) * 0.42);
+  aspect-ratio: 5 / 7;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--fx-tint-glow) 65%, transparent), color-mix(in srgb, var(--fx-tint-core) 55%, transparent));
+  animation: fx-figure-wireframe-solid var(--fx-ms) var(--ease-in) both;
+}
+
+@keyframes fx-figure-wireframe-pop {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  42% {
+    transform: scale(0.94, 1.04);
+  }
+  52%,
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes fx-figure-wireframe-solid {
+  0%,
+  40% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  55%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+}
+
+/* Keymaster Keenus: a jangling ring of iron keys spins into his zone and unwinds outward as he bows. */
+.fx-figure[data-figure="keyRing"]::before {
+  width: calc(var(--fx-fig) * 0.9);
+  aspect-ratio: 1;
+  border-radius: var(--radius-round);
+  background: repeating-conic-gradient(from 0deg, var(--fx-tint-rim) 0 4deg, var(--fx-tint-core) 4deg 7deg, transparent 7deg 15deg);
+  mask-image: radial-gradient(circle, transparent 0 42%, var(--pal-black) 44% 66%, transparent 68%);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--fx-tint-glow) 50%, transparent);
+  animation: fx-figure-keyRing-spin var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="keyRing"]::after {
+  width: calc(var(--fx-fig) * 0.42);
+  aspect-ratio: 1;
+  border: 3px solid var(--fx-tint-glow);
+  border-radius: var(--radius-round);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--fx-tint-rim) 70%, transparent);
+  animation: fx-figure-keyRing-unwind var(--fx-ms) var(--ease-in-out) both;
+}
+
+@keyframes fx-figure-keyRing-spin {
+  0% {
+    transform: rotate(-540deg) scale(0.3);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  38% {
+    transform: rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(40deg) scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-figure-keyRing-unwind {
+  0% {
+    transform: rotate(0deg) scale(0.3);
+    opacity: 0;
+  }
+  38% {
+    transform: rotate(360deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(420deg) scale(0.2);
+    opacity: 0;
+  }
+}
+
+/* Keymaster Keenus: two iron keys fly up out of him and turn a quarter in unseen locks. */
+.fx-figure[data-figure="keyTurn"]::before,
+.fx-figure[data-figure="keyTurn"]::after {
+  width: calc(var(--fx-fig) * 0.16);
+  height: calc(var(--fx-fig) * 0.48);
+  clip-path: polygon(10% 0, 90% 0, 100% 10%, 100% 30%, 62% 36%, 62% 70%, 100% 72%, 100% 80%, 62% 82%, 62% 88%, 90% 90%, 90% 96%, 62% 100%, 38% 100%, 38% 36%, 0 30%, 0 10%);
+  mask-image: radial-gradient(circle at 50% 16%, transparent 0 18%, var(--pal-black) 20%);
+  background: linear-gradient(90deg, var(--fx-tint-core), var(--fx-tint-glow) 50%, var(--fx-tint-rim));
+  transform-origin: 50% 85%;
+  animation: fx-figure-keyTurn-fly var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="keyTurn"]::before {
+  translate: -170% -60%;
+}
+
+.fx-figure[data-figure="keyTurn"]::after {
+  translate: 70% -60%;
+  scale: -1 1;
+}
+
+@keyframes fx-figure-keyTurn-fly {
+  0% {
+    transform: translateY(60%) scale(0.4) rotate(0deg);
+    opacity: 0;
+  }
+  35% {
+    transform: translateY(-40%) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  55% {
+    transform: translateY(-40%) scale(1) rotate(90deg);
+  }
+  60%,
+  100% {
+    transform: translateY(-40%) scale(1) rotate(84deg);
+    opacity: 1;
+  }
+}
+
+/* Touched by KY: a chalk handprint presses down onto his zone from above, its print left glowing. */
+.fx-figure[data-figure="chalkHand"]::before {
+  width: calc(var(--fx-fig) * 0.62);
+  aspect-ratio: 1;
+  clip-path: polygon(22% 100%, 14% 62%, 2% 44%, 8% 38%, 22% 50%, 20% 12%, 28% 8%, 34% 40%, 38% 2%, 46% 0, 50% 38%, 56% 4%, 64% 6%, 64% 42%, 74% 14%, 82% 18%, 76% 60%, 72% 100%);
+  background: repeating-linear-gradient(115deg, var(--fx-tint-glow) 0 6%, color-mix(in srgb, var(--fx-tint-glow) 70%, transparent) 6% 9%);
+  animation: fx-figure-chalkHand-press var(--fx-ms) var(--ease-in) both;
+}
+
+.fx-figure[data-figure="chalkHand"]::after {
+  width: calc(var(--fx-fig) * 0.62);
+  aspect-ratio: 1;
+  clip-path: polygon(22% 100%, 14% 62%, 2% 44%, 8% 38%, 22% 50%, 20% 12%, 28% 8%, 34% 40%, 38% 2%, 46% 0, 50% 38%, 56% 4%, 64% 6%, 64% 42%, 74% 14%, 82% 18%, 76% 60%, 72% 100%);
+  background: radial-gradient(circle at 46% 60%, color-mix(in srgb, var(--fx-tint-rim) 70%, transparent), transparent 70%);
+  animation: fx-figure-chalkHand-print var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-chalkHand-press {
+  0% {
+    transform: translateY(-130%) scale(1.4);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  38% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  48% {
+    transform: translateY(0) scale(0.97);
+  }
+  100% {
+    transform: translateY(-50%) scale(1.1);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-figure-chalkHand-print {
+  0%,
+  36% {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  44% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+}
+
+/* Touched by KY: his hand pile stretches to its new size in ghostly chalk card outlines. */
+.fx-figure[data-figure="handOutline"]::before {
+  inset: 6% 0;
+  translate: 0 0;
+  border: 2px dashed color-mix(in srgb, var(--fx-tint-glow) 85%, transparent);
+  border-radius: var(--radius-sm);
+  background: repeating-linear-gradient(90deg, transparent 0 calc(12% - 2px), color-mix(in srgb, var(--fx-tint-glow) 60%, transparent) calc(12% - 2px) 12%);
+  transform-origin: 50% 50%;
+  animation: fx-figure-handOutline-stretch var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="handOutline"]::after {
+  inset: 0;
+  translate: 0 0;
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--fx-tint-rim) 55%, transparent);
+  animation: fx-figure-handOutline-ghost var(--fx-ms) var(--ease-in-out) both;
+}
+
+@keyframes fx-figure-handOutline-stretch {
+  0% {
+    transform: scaleX(0.55);
+    opacity: 0;
+  }
+  45% {
+    transform: scaleX(1.14);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scaleX(1.18);
+    opacity: 0.5;
+  }
+}
+
+@keyframes fx-figure-handOutline-ghost {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Mayor Medinamogger: a string of bunting snaps across the top of his zone. */
+.fx-figure[data-figure="bunting"]::before {
+  width: 130%;
+  height: calc(var(--fx-fig) * 0.16);
+  top: 10%;
+  border-top: 2px solid var(--fx-tint-core);
+  background:
+    conic-gradient(from 135deg at 50% 0, var(--fx-tint-rim) 90deg, transparent 0) 0 0 / 16% 100%,
+    conic-gradient(from 135deg at 50% 0, var(--pal-white) 90deg, transparent 0) 8% 0 / 16% 100%;
+  transform-origin: 0 0;
+  animation: fx-figure-bunting-snap var(--fx-ms) var(--ease-overshoot) both;
+}
+
+@keyframes fx-figure-bunting-snap {
+  0% {
+    transform: scaleX(0) rotate(-6deg);
+  }
+  22% {
+    transform: scaleX(1.06) rotate(1deg);
+  }
+  32%,
+  100% {
+    transform: scaleX(1) rotate(0deg);
+  }
+}
+
+/* Mayor Medinamogger: a silver coin flips high and is caught, a compass needle spinning beneath it onto a random pick. */
+.fx-figure[data-figure="silverCoin"]::before {
+  width: calc(var(--fx-fig) * 0.22);
+  aspect-ratio: 1;
+  top: 30%;
+  border: 2px solid var(--pal-slate-400);
+  border-radius: var(--radius-round);
+  background: radial-gradient(circle at 35% 30%, var(--pal-white) 0 18%, var(--pal-slate-100) 40%, var(--pal-grey-500) 100%);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--fx-tint-glow) 60%, transparent);
+  animation: fx-figure-silverCoin-flip var(--fx-ms) var(--ease-in-out) both;
+}
+
+.fx-figure[data-figure="silverCoin"]::after {
+  width: calc(var(--fx-fig) * 0.08);
+  height: calc(var(--fx-fig) * 0.5);
+  top: 62%;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: linear-gradient(180deg, var(--pal-red-500) 0 50%, var(--pal-slate-100) 50%);
+  animation: fx-figure-silverCoin-needle var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-silverCoin-flip {
+  0% {
+    transform: translateY(120%) scaleY(1);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  16% {
+    transform: translateY(-260%) scaleY(-1);
+  }
+  24% {
+    transform: translateY(-160%) scaleY(1);
+  }
+  32% {
+    transform: translateY(0) scaleY(-1);
+  }
+  36%,
+  100% {
+    transform: translateY(0) scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-figure-silverCoin-needle {
+  0% {
+    transform: rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  45% {
+    transform: rotate(1150deg);
+  }
+  55%,
+  100% {
+    transform: rotate(1120deg);
+    opacity: 0.9;
+  }
+}
+
+/* Tatches the Totem: five carved tiers stack up out of the ground in turn, their faces' eyes waking. */
+.fx-figure[data-figure="totem"]::before {
+  width: calc(var(--fx-fig) * 0.38);
+  height: 88%;
+  border-radius: var(--radius-xs);
+  background:
+    repeating-linear-gradient(180deg, transparent 0 17%, var(--pal-wood-900) 17% 20%),
+    linear-gradient(90deg, var(--pal-wood-800), var(--pal-wood-600) 45%, var(--pal-wood-700));
+  box-shadow: 0 0 18px color-mix(in srgb, var(--fx-tint-rim) 55%, transparent);
+  transform-origin: 50% 100%;
+  animation: fx-figure-totem-stack var(--fx-ms) steps(5, end) both;
+}
+
+.fx-figure[data-figure="totem"]::after {
+  width: calc(var(--fx-fig) * 0.38);
+  height: 88%;
+  background:
+    radial-gradient(circle at 34% 50%, var(--fx-tint-glow) 0 7%, transparent 9%) 0 0 / 100% 20%,
+    radial-gradient(circle at 66% 50%, var(--fx-tint-glow) 0 7%, transparent 9%) 0 0 / 100% 20%;
+  animation: fx-figure-totem-wake var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-totem-stack {
+  0% {
+    transform: scaleY(0);
+  }
+  40%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes fx-figure-totem-wake {
+  0%,
+  30% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* CN Golem: carved stone blocks tumble into his zone and lock, red lacquered panels clacking onto his chest. */
+.fx-figure[data-figure="golemBlocks"]::before {
+  width: calc(var(--fx-fig) * 0.8);
+  height: 86%;
+  clip-path: polygon(38% 0, 62% 0, 62% 16%, 92% 18%, 100% 52%, 86% 56%, 80% 34%, 76% 60%, 74% 100%, 56% 100%, 50% 70%, 44% 100%, 26% 100%, 24% 60%, 20% 34%, 14% 56%, 0 52%, 8% 18%, 38% 16%);
+  background:
+    repeating-linear-gradient(90deg, transparent 0 calc(25% - 2px), var(--pal-slate-800) calc(25% - 2px) 25%),
+    repeating-linear-gradient(180deg, var(--pal-stone-500) 0 calc(14% - 2px), var(--pal-slate-800) calc(14% - 2px) 14%);
+  animation: fx-figure-golemBlocks-tumble var(--fx-ms) var(--ease-in) both;
+}
+
+.fx-figure[data-figure="golemBlocks"]::after {
+  width: calc(var(--fx-fig) * 0.4);
+  height: 22%;
+  top: 36%;
+  border: 2px solid var(--pal-gold-300);
+  border-radius: var(--radius-xs);
+  background: repeating-linear-gradient(90deg, var(--pal-red-600) 0 30%, var(--pal-red-900) 30% 34%);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--fx-tint-glow) 60%, transparent);
+  animation: fx-figure-golemBlocks-panel var(--fx-ms) var(--ease-overshoot) both;
+}
+
+@keyframes fx-figure-golemBlocks-tumble {
+  0% {
+    transform: translateY(-140%) rotate(-28deg) scale(0.8);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  36% {
+    transform: translateY(4%) rotate(3deg) scale(1);
+  }
+  42%,
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-figure-golemBlocks-panel {
+  0%,
+  20% {
+    transform: translateX(-160%) rotate(-20deg);
+    opacity: 0;
+  }
+  38% {
+    transform: translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* Prison: iron bars drop around its zone with a clang, a stone cell rising beneath them. */
+.fx-figure[data-figure="prisonBars"]::before {
+  inset: -4% -6% 10%;
+  translate: 0 0;
+  border-top: 5px solid var(--pal-slate-700);
+  border-bottom: 5px solid var(--pal-slate-700);
+  background: repeating-linear-gradient(90deg, transparent 0 9%, var(--pal-slate-700) 9% 13%, var(--fx-tint-rim) 13% 14%, transparent 14% 20%);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--fx-tint-core) 70%, transparent);
+  animation: fx-figure-prisonBars-drop var(--fx-ms) var(--ease-in) both;
+}
+
+.fx-figure[data-figure="prisonBars"]::after {
+  inset: auto -6% -6%;
+  height: 20%;
+  translate: 0 0;
+  transform-origin: 50% 100%;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 calc(20% - 2px), var(--pal-slate-900) calc(20% - 2px) 20%),
+    repeating-linear-gradient(180deg, var(--pal-stone-500) 0 calc(50% - 2px), var(--pal-slate-900) calc(50% - 2px) 50%);
+  animation: fx-figure-prisonBars-cell var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-prisonBars-drop {
+  0% {
+    transform: translateY(-120%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  34% {
+    transform: translateY(0);
+  }
+  38% {
+    transform: translateY(-4%);
+  }
+  42%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-figure-prisonBars-cell {
+  0%,
+  34% {
+    transform: scaleY(0);
+  }
+  55%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+/* Prison: two iron chains lock around the captured Unit in an X and drag it down. */
+.fx-figure[data-figure="chains"]::before,
+.fx-figure[data-figure="chains"]::after {
+  width: 130%;
+  height: calc(var(--fx-fig) * 0.07);
+  border-radius: var(--radius-pill);
+  background: repeating-linear-gradient(90deg, var(--pal-slate-400) 0 6%, var(--pal-slate-800) 6% 8%, var(--fx-tint-glow) 8% 9%, var(--pal-slate-800) 9% 11%);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--fx-tint-core) 80%, transparent);
+  animation: fx-figure-chains-lock var(--fx-ms) var(--ease-in-out) both;
+}
+
+.fx-figure[data-figure="chains"]::before {
+  rotate: 34deg;
+}
+
+.fx-figure[data-figure="chains"]::after {
+  rotate: -34deg;
+}
+
+@keyframes fx-figure-chains-lock {
+  0% {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  25% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  40% {
+    transform: scaleX(0.92);
+  }
+  100% {
+    transform: translateY(60%) scaleX(0.8);
+    opacity: 0;
+  }
+}
+
+/* Jlockeed's Headquarters: a gunmetal fortress shrinks down into its zone, red beacons flashing at its corners. */
+.fx-figure[data-figure="fortress"]::before {
+  width: 110%;
+  height: 72%;
+  top: 58%;
+  clip-path: polygon(0 100%, 0 30%, 6% 30%, 6% 10%, 14% 0, 22% 10%, 22% 30%, 30% 30%, 30% 22%, 36% 22%, 36% 30%, 44% 30%, 44% 22%, 50% 12%, 56% 22%, 56% 30%, 64% 30%, 64% 22%, 70% 22%, 70% 30%, 78% 30%, 78% 10%, 86% 0, 94% 10%, 94% 30%, 100% 30%, 100% 100%);
+  background:
+    repeating-linear-gradient(180deg, transparent 0 14%, color-mix(in srgb, var(--pal-black) 35%, transparent) 14% 16%),
+    linear-gradient(90deg, var(--pal-slate-800), var(--pal-slate-700) 40%, var(--pal-slate-400) 52%, var(--pal-slate-800));
+  transform-origin: 50% 100%;
+  animation: fx-figure-fortress-shrink var(--fx-ms) var(--ease-in-out) both;
+}
+
+.fx-figure[data-figure="fortress"]::after {
+  width: 96%;
+  height: calc(var(--fx-fig) * 0.08);
+  top: 26%;
+  background:
+    radial-gradient(circle at 6% 50%, var(--pal-red-400) 0 35%, transparent 40%),
+    radial-gradient(circle at 94% 50%, var(--pal-red-400) 0 35%, transparent 40%);
+  animation: fx-figure-fortress-beacon var(--fx-ms) steps(6, end) both;
+}
+
+@keyframes fx-figure-fortress-shrink {
+  0% {
+    transform: translateY(-30%) scale(2.6);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  34% {
+    transform: translateY(0) scale(0.96);
+  }
+  40%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-figure-fortress-beacon {
+  0% {
+    opacity: 0;
+  }
+  17% {
+    opacity: 1;
+  }
+  34% {
+    opacity: 0.1;
+  }
+  51% {
+    opacity: 1;
+  }
+  68% {
+    opacity: 0.1;
+  }
+  85%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Jlockeed's Headquarters: its hangar shutter rolls open and a convoy of trucks streams out. */
+.fx-figure[data-figure="convoy"]::before {
+  width: 70%;
+  height: 40%;
+  top: 62%;
+  border: 2px solid var(--pal-slate-400);
+  transform-origin: 50% 0;
+  background: repeating-linear-gradient(180deg, var(--pal-slate-700) 0 12%, var(--pal-slate-900) 12% 16%);
+  animation: fx-figure-convoy-doors var(--fx-ms) var(--ease-in-out) both;
+}
+
+.fx-figure[data-figure="convoy"]::after {
+  width: 90%;
+  height: calc(var(--fx-fig) * 0.14);
+  top: 74%;
+  background:
+    repeating-linear-gradient(90deg, var(--fx-tint-rim) 0 18%, var(--pal-slate-700) 18% 25%, transparent 25% 34%);
+  mask-image: linear-gradient(180deg, transparent 0 20%, var(--pal-black) 20% 80%, transparent 80%);
+  animation: fx-figure-convoy-roll var(--fx-ms) var(--ease-in) both;
+}
+
+@keyframes fx-figure-convoy-doors {
+  0% {
+    transform: scaleY(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  35%,
+  100% {
+    transform: scaleY(0.08);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-figure-convoy-roll {
+  0%,
+  22% {
+    transform: translateX(0) scaleX(0.3);
+    opacity: 0;
+  }
+  35% {
+    transform: translateX(10%) scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(110%) scaleX(1);
+    opacity: 0;
+  }
+}

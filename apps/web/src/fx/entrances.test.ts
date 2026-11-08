@@ -94,7 +94,8 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
     expect(new Set(ENTERING.map(([, key]) => key)).size).toBe(ENTERING.length);
     for (const [defId] of ENTERING.filter(([id]) => CATALOG[id]?.type !== "Unit")) {
       expect(CATALOG[defId]?.type, defId).toBe("Field Spell");
-      expect(["Legendary", "Mythic"], defId).toContain(CATALOG[defId]?.rarity);
+      // A token by the rarity it prints: R3405001's The Cane.
+      expect(["Legendary", "Mythic"], defId).toContain(CATALOG[defId]?.printedRarity ?? CATALOG[defId]?.rarity);
     }
   });
 
