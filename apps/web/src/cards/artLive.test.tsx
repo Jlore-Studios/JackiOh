@@ -34,6 +34,8 @@ const MYTHICS = ["meditative-049", "stinkyscape-074", "stinkyscape-086", "stinky
 const LEGENDARY = "core-092";
 const COMMON = "core-002";
 const GARY = "core-004";
+const DORMANT_STARSHIP = "stinkyscape-t-dormant-starship";
+const STARSHIP_PIECE = "stinkyscape-058";
 
 function defOf(id: string) {
   const def = CATALOG[id];
@@ -42,18 +44,27 @@ function defOf(id: string) {
 }
 
 /** One unit on the board: its card, the view's numbers over its printed ones, its attack when buffed and whether its attack is playing. */
-type Spec = { id: string; over?: Partial<UnitView>; attack?: number; attacking?: boolean };
+type Spec = { id: string; over?: Partial<UnitView>; attack?: number; attacking?: boolean; starship?: readonly string[] };
 
 /** A Unit on the board, in a `.card.cf-host` as Card.tsx sets it, with its printed numbers unless `over` or `attack` change them. */
-function Minion({ id, over = {}, attack, attacking = false }: Spec): ReactElement {
+function Minion({ id, over = {}, attack, attacking = false, starship }: Spec): ReactElement {
   const printed = defOf(id).base;
   const health = printed.health ?? 4;
-  const u = unit("p1", { defId: id, attack: attack ?? printed.attack ?? 0, health, maxHealth: health, ...over });
+  const list = starship?.map((defId) => ({ defId, radiant: false }));
+  const u = unit("p1", {
+    defId: id,
+    attack: attack ?? printed.attack ?? 0,
+    health,
+    maxHealth: health,
+    ...(list === undefined ? {} : { starship: { pieces: list.map(({ defId }) => ({ defId })) }, slumber: {}, canAct: false }),
+    ...over,
+  });
   const face = faceModel({
     defId: id,
     def: defOf(id),
     radiant: false,
     live: { attack: u.attack, health: u.health, maxHealth: u.maxHealth, keywords: u.keywords },
+    ...(list === undefined ? {} : { inPlay: { starship: { pieces: list.length, name: null, list } } }),
   });
   return (
     <div className="card cf-host">
@@ -113,6 +124,13 @@ class FakeObserver {
       this.callback([{ isIntersecting, target: this.targets[0] } as IntersectionObserverEntry], this as unknown as IntersectionObserver);
     });
   }
+}
+
+/** The observer watching `face`. */
+function observerFor(face: HTMLElement): FakeObserver {
+  const found = FakeObserver.all.find((observer) => observer.targets.includes(face));
+  if (found === undefined) throw new Error("no observer");
+  return found;
 }
 
 beforeEach(() => {
@@ -288,17 +306,37 @@ describe("R3340000 motion pauses and the settings still rule", () => {
     const { container } = render(<Board specs={[{ id: MYTHICS[0] }, { id: MYTHICS[1] }]} />);
     const [first, second] = minions(container) as [HTMLElement, HTMLElement];
     expect(motions(container)).toEqual(["animated", "animated"]);
-    const watching = (cf: HTMLElement): FakeObserver => {
-      const found = FakeObserver.all.find((observer) => observer.targets.includes(cf));
-      if (found === undefined) throw new Error("no observer");
-      return found;
-    };
-    watching(first).report(false);
+    observerFor(first).report(false);
     expect(motionOf(first)).toBe("static");
     expect(first.querySelector("[data-art-moving]")).toBeNull();
     expect(motionOf(second)).toBe("animated");
-    watching(first).report(true);
+    observerFor(first).report(true);
     expect(motionOf(first)).toBe("animated");
+  });
+
+  it("R3340000 a Dormant Starship's shipyard uses its face's one ranked, on-screen slot", () => {
+    vi.stubGlobal("IntersectionObserver", FakeObserver);
+    setFxSettings({ intensity: "low" });
+    const ship = { id: DORMANT_STARSHIP, starship: [STARSHIP_PIECE] } as const;
+    const { container, rerender } = render(<Board specs={[ship]} />);
+    let face = minions(container)[0] as HTMLElement;
+    // The Dormant Starship is Legendary, so its ranked face remains eligible at Low intensity.
+    expect(face.querySelector(".cf-shipyard-idle")).not.toBeNull();
+    // The face's observer pauses the same decision, instead of leaving an independent idle claim running off screen.
+    observerFor(face).report(false);
+    expect(face.querySelector(".cf-shipyard-idle")).toBeNull();
+    observerFor(face).report(true);
+    expect(face.querySelector(".cf-shipyard-idle")).not.toBeNull();
+
+    act(() => {
+      setFxSettings({ intensity: "normal" });
+    });
+    rerender(<Board specs={[ship, ...Array.from({ length: MAX - 1 }, () => ({ id: MYTHICS[0] }))]} />);
+    face = minions(container)[0] as HTMLElement;
+    expect(face.querySelector(".cf-shipyard-idle")).not.toBeNull();
+    // Hover re-ranks that same face. A second REST_RANK claim would be displaced by the five Mythics and stop the idle.
+    fire(host(face), "pointerenter");
+    expect(face.querySelector(".cf-shipyard-idle")).not.toBeNull();
   });
 
   it("R3340000 Animated foil off, Reduce motion, the system's and Fx intensity off each hold every face still, its marks of state drawn", () => {
@@ -345,7 +383,7 @@ describe("R3340000 motion pauses and the settings still rule", () => {
 });
 
 describe("R3340000 cards that answer", () => {
-  it("R3340000 hover and focus set the face's hover mark and its aim, and leaving clears them", () => {
+  it("R3340000 hover is the union of pointer and focus, and pointer leaving clears only its aim", () => {
     const { container } = render(<Board specs={[{ id: COMMON }]} />);
     const cf = minions(container)[0] as HTMLElement;
     vi.spyOn(cf, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 100, height: 200, right: 100, bottom: 200, x: 0, y: 0, toJSON: () => ({}) });
@@ -358,13 +396,22 @@ describe("R3340000 cards that answer", () => {
     fire(host(cf), "pointermove", { clientX: 500, clientY: -40 });
     expect(cf.style.getPropertyValue("--art-aim-x")).toBe("1.000");
     expect(cf.style.getPropertyValue("--art-aim-y")).toBe("-1.000");
-    fire(host(cf), "pointerleave");
-    expect(cf.getAttribute("data-art-hover")).toBe("false");
-    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("");
-    // Focus is hover for the keyboard.
+    // Focus keeps the face engaged after its pointer leaves; without a pointer, its aim returns to the middle.
     fire(host(cf), "focusin");
+    fire(host(cf), "pointerleave");
     expect(cf.getAttribute("data-art-hover")).toBe("true");
+    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("");
     fire(host(cf), "focusout");
+    expect(cf.getAttribute("data-art-hover")).toBe("false");
+
+    // The converse holds too: focus leaving does not clear a pointer that is still over the face or its aim.
+    fire(host(cf), "pointerenter");
+    fire(host(cf), "pointermove", { clientX: 75, clientY: 50 });
+    fire(host(cf), "focusin");
+    fire(host(cf), "focusout");
+    expect(cf.getAttribute("data-art-hover")).toBe("true");
+    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("0.500");
+    fire(host(cf), "pointerleave");
     expect(cf.getAttribute("data-art-hover")).toBe("false");
   });
 

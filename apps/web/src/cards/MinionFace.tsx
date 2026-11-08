@@ -180,11 +180,14 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
   const artMoves = cardLook.animated || rarity === "Mythic";
   const live = useArtLive(faceRef, true);
   const engaged = live.hovered || attacking;
-  const artMotion = useArtMotion((artMoves || engaged) && settings.animatedFoil && live.onScreen, {
+  // R3334000, R3340000: the shipyard idle is another use of this face's one ranked, visible motion decision, not a
+  // second unranked claim of its own. A populated Dormant Starship is Legendary, so it remains eligible at Fx Low.
+  const shipyardIdle = face.starship !== null && !face.starship.launched && face.starship.list.length > 0;
+  const artMotion = useArtMotion((artMoves || engaged || shipyardIdle) && settings.animatedFoil && live.onScreen, {
     hovered: engaged,
     rarity: slotRarityOf(rarity),
   });
-  const motion = artMotion ? artMotionOf(face.defId) : null;
+  const motion = artMotion && (artMoves || engaged) ? artMotionOf(face.defId) : null;
   // R3340000: what its art wears: cracks for the health it is missing, a glow when buffed, frost when frozen (the view's own).
   const damage = damageLevel(unit.health, unit.maxHealth);
   const buffed = attackTone === "buffed" || healthTone === "buffed";
@@ -229,8 +232,8 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             live={motion !== null}
             wear={wear}
           />
-          {/* R3334000: a Dormant Starship's shipyard idles over its picture, in one of the moving-art slots. */}
-          {face.starship != null && !face.starship.launched ? <ShipyardIdle list={face.starship.list} animated={settings.animatedFoil} /> : null}
+          {/* R3334000, R3340000: the Dormant Starship's shipyard uses this face's one ranked, on-screen motion slot. */}
+          {face.starship != null && !face.starship.launched ? <ShipyardIdle list={face.starship.list} moving={artMotion} /> : null}
         </span>
 
         <KeywordFx plan={plan} />

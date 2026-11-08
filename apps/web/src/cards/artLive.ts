@@ -42,11 +42,20 @@ export function useArtLive(ref: RefObject<HTMLElement | null>, enabled: boolean)
     const el = ref.current;
     if (!enabled || el === null) return undefined;
     const host = el.closest<HTMLElement>(".cf-host") ?? el;
-    const enter = (): void => {
-      setHovered(true);
+    let pointerInside = false;
+    let focusInside = false;
+    const updateHovered = (): void => {
+      setHovered(pointerInside || focusInside);
     };
-    const leave = (): void => {
-      setHovered(false);
+    const pointerEnter = (): void => {
+      pointerInside = true;
+      updateHovered();
+    };
+    const focusIn = (): void => {
+      focusInside = true;
+      updateHovered();
+    };
+    const clearAim = (): void => {
       el.style.removeProperty(ART_AIM_X_PROPERTY);
       el.style.removeProperty(ART_AIM_Y_PROPERTY);
     };
@@ -61,18 +70,24 @@ export function useArtLive(ref: RefObject<HTMLElement | null>, enabled: boolean)
     const lift = (): void => {
       el.removeAttribute(ART_PRESS_ATTRIBUTE);
     };
-    const out = (): void => {
+    const pointerLeave = (): void => {
       lift();
-      leave();
+      pointerInside = false;
+      clearAim();
+      updateHovered();
     };
-    host.addEventListener("pointerenter", enter);
-    host.addEventListener("focusin", enter);
+    const focusOut = (event: FocusEvent): void => {
+      focusInside = event.relatedTarget instanceof Node && host.contains(event.relatedTarget);
+      updateHovered();
+    };
+    host.addEventListener("pointerenter", pointerEnter);
+    host.addEventListener("focusin", focusIn);
     host.addEventListener("pointermove", move, { passive: true });
     host.addEventListener("pointerdown", press);
     host.addEventListener("pointerup", lift);
     host.addEventListener("pointercancel", lift);
-    host.addEventListener("pointerleave", out);
-    host.addEventListener("focusout", leave);
+    host.addEventListener("pointerleave", pointerLeave);
+    host.addEventListener("focusout", focusOut);
     const observer =
       typeof IntersectionObserver === "function"
         ? new IntersectionObserver((entries) => {
@@ -82,18 +97,17 @@ export function useArtLive(ref: RefObject<HTMLElement | null>, enabled: boolean)
         : null;
     observer?.observe(el);
     return () => {
-      host.removeEventListener("pointerenter", enter);
-      host.removeEventListener("focusin", enter);
+      host.removeEventListener("pointerenter", pointerEnter);
+      host.removeEventListener("focusin", focusIn);
       host.removeEventListener("pointermove", move);
       host.removeEventListener("pointerdown", press);
       host.removeEventListener("pointerup", lift);
       host.removeEventListener("pointercancel", lift);
-      host.removeEventListener("pointerleave", out);
-      host.removeEventListener("focusout", leave);
+      host.removeEventListener("pointerleave", pointerLeave);
+      host.removeEventListener("focusout", focusOut);
       observer?.disconnect();
       lift();
-      el.style.removeProperty(ART_AIM_X_PROPERTY);
-      el.style.removeProperty(ART_AIM_Y_PROPERTY);
+      clearAim();
       setHovered(false);
       setOnScreen(true);
     };
