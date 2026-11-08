@@ -187,10 +187,9 @@ describe("R3331000 the scene kits", () => {
       painted.add(scene.sky[1]);
       painted.add(scene.light.paint);
       for (const layer of SCENE_LAYERS) for (const placed of scene.layers[layer] ?? []) if (placed.paint !== undefined) painted.add(placed.paint);
-      // R3393000: the figure's look and each crowd figure's.
-      for (const figure of [...(scene.figure === undefined ? [] : [scene.figure]), ...(scene.crowd ?? [])]) {
-        painted.add(figure.look.skin);
-        painted.add(figure.look.cloth);
+      if (scene.figure !== undefined) {
+        painted.add(scene.figure.look.skin);
+        painted.add(scene.figure.look.cloth);
       }
       for (const extra of scene.extras ?? []) {
         painted.add(extra.look.skin);
