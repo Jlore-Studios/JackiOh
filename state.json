@@ -20879,6 +20879,10 @@
         {
           "at": "2026-11-08T04:15:14Z",
           "minutes": 33.2
+        },
+        {
+          "at": "2026-11-08T05:56:36Z",
+          "minutes": 6.8
         }
       ],
       "tokens_spent": [
@@ -22008,16 +22012,22 @@
           "cost": 0.4023,
           "input": 42,
           "output": 6885
+        },
+        {
+          "at": "2026-11-08T05:56:36Z",
+          "cache": 1052783,
+          "cost": 1.4731,
+          "input": 29,
+          "output": 6830
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-08T04:50:00Z",
-          "utilization": 1.0
+          "resets_at": "2026-11-08T09:50:00Z",
+          "utilization": 0.1
         },
-        "observed_at": "2026-11-08T04:15:14Z",
-        "rejected_resets_at": "2026-11-08T04:50:00Z",
-        "status": "rejected"
+        "observed_at": "2026-11-08T05:56:36Z",
+        "status": "allowed"
       }
     },
     "claude-2": {
@@ -36511,7 +36521,11 @@
       "2026-11-08T05:44:42Z,claude-8,stream,call,42451819925,57,2026-11-08T08:10:00Z,,,allowed,85,,",
       "2026-11-08T05:45:27Z,claude-8,stream,call,42451819925,58,2026-11-08T08:10:00Z,,,allowed,85,,",
       "2026-11-08T05:50:27Z,claude-8,stream,call,42451819925,59,2026-11-08T08:10:00Z,,,allowed,85,,",
-      "2026-11-08T05:51:12Z,claude-8,stream,call,42451819925,60,2026-11-08T08:10:00Z,,,allowed,85,,"
+      "2026-11-08T05:51:12Z,claude-8,stream,call,42451819925,60,2026-11-08T08:10:00Z,,,allowed,85,,",
+      "2026-11-08T04:58:35Z,claude-1,ping,before,42448802653,0,2026-11-08T09:50:00Z,,,allowed,100,,",
+      "2026-11-08T04:59:08Z,claude-1,stream,call,42448802653,1,2026-11-08T09:50:00Z,,,allowed,100,,",
+      "2026-11-08T05:02:53Z,claude-1,stream,call,42448802653,2,2026-11-08T09:50:00Z,,,allowed,100,,",
+      "2026-11-08T05:49:54Z,claude-1,stream,call,42448802653,10,2026-11-08T09:50:00Z,,,allowed,100,,"
     ],
     "runs": [
       "2026-11-08T05:50:52Z,42451860341,claude-6,opus,review,3425,hard,reviewed,,5.1,82,26996,6270909,2.6846,50,59,,,22.5,claude-6,none,,1",
