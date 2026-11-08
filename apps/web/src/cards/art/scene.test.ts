@@ -199,8 +199,8 @@ describe("R3331000 the scene kits", () => {
       }
     }
     for (const name of painted) expect(inRadiantGold(SCENE_PALETTE[name]), name).toBe(false);
-    // And what each proof card's base face prints: every fill and stroke, its sky and its glow.
-    for (const id of PROOFS) {
+    // And what each recipe card's base face prints: every fill and stroke, its sky and its glow.
+    for (const id of Object.keys(SCENE_RECIPES)) {
       const spec = specOf(def(id), false);
       const colors = [spec.sky.from, spec.sky.to, spec.glow.color, ...spec.ridges.flatMap((ridge) => [ridge.fill, ...(ridge.stroke === undefined ? [] : [ridge.stroke])])];
       for (const hex of colors) expect(inRadiantGold(hex), `${id}: ${hex}`).toBe(false);
@@ -236,8 +236,11 @@ describe("R3331000 the scene kits", () => {
 describe("R3331000 the five proof cards", () => {
   it("R3331000 the five proof cards draw their scenes, base and Radiant, with one geometry", () => {
     expect(SCENE_BOX).toBe(ART_BOX);
-    // The proofs and every Classic+ entry (R3390000, classicPlusScenes.test.ts).
-    expect(Object.keys(SCENE_RECIPES).filter((id) => !id.startsWith("classicplus-")).sort()).toEqual([...PROOFS].sort());
+    // R3392000: the proofs and every Core entry draw from a recipe, and every Classic+ entry (R3390000, which
+    // classicPlusScenes.test.ts checks) and every Meditative entry (R3401000, which meditativeScenes.test.ts checks).
+    const core = Object.values(CATALOG).filter((card) => card.set === "Core").map((card) => card.id);
+    const checkedElsewhere = (id: string): boolean => id.startsWith("classicplus-") || id.startsWith("meditative-");
+    expect(Object.keys(SCENE_RECIPES).filter((id) => !checkedElsewhere(id)).sort()).toEqual([...new Set<string>([...PROOFS, ...core])].sort());
     for (const id of PROOFS) {
       const card = def(id);
       const shapes = composeScene(recipe(id), id);

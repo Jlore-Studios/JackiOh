@@ -735,7 +735,7 @@ export const INK_BUILDINGS_KIT = {
   "campus-hall": { category: "architecture", draw: campusHall },
   "long-wall": { category: "architecture", draw: longWall },
   "sea-prison": { category: "architecture", draw: seaPrison },
-  fortress: { category: "architecture", draw: fortress },
+  "peak-fortress": { category: "architecture", draw: fortress },
   factory: { category: "architecture", draw: factory },
   diner: { category: "architecture", draw: diner },
   station: { category: "architecture", draw: station },

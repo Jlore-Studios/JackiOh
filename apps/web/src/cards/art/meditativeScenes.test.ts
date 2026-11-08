@@ -1,5 +1,5 @@
 // R3401000: every Meditative entry, tokens included, drawn from a scene recipe of its own (meditativeRecipes1.ts to
-// meditativeRecipes4.ts), base and Radiant, in Meditative's ink-wash look, at or above its rarity's detail floor and
+// meditativeRecipes5.ts), base and Radiant, in Meditative's ink-wash look, at or above its rarity's detail floor and
 // off the floor's short list; every Unit a character of its own; one red seal on every picture; the two full-art
 // motions that move props; and the eight kit modules #3401 added beside the first kit and Classic+'s. The pixels are
 // e2e/cypress/component/meditative-scenes.cy.tsx's.
@@ -61,7 +61,7 @@ const CHARACTER_UNITS: Readonly<Record<string, string>> = {
   "meditative-074": "rock-giant",
   "meditative-084": "jar-sprite",
   "meditative-087": "totem",
-  "meditative-088": "sheep",
+  "meditative-088": "ink-sheep",
   "meditative-097-1": "stake-plot",
   "meditative-097-2": "stone-well",
   "meditative-097-3": "schoolhouse",
@@ -70,12 +70,12 @@ const CHARACTER_UNITS: Readonly<Record<string, string>> = {
   "meditative-097-6": "campus-hall",
   "meditative-097-7": "long-wall",
   "meditative-097-8": "sea-prison",
-  "meditative-097-9": "fortress",
+  "meditative-097-9": "peak-fortress",
 };
 /** The kit modules #3401 added, which sceneKit.ts spreads into `SCENE_KIT` after Classic+'s. */
 const INK_MODULES = [INK_PLACES_KIT, INK_BUILDINGS_KIT, INK_OBJECTS_KIT, INK_CURIOS_KIT, INK_MACHINES_KIT, INK_NATURE_KIT, INK_CREATURES_KIT, INK_CHARACTERS_KIT];
-/** The first kit's parts (#3331), which sceneKit.ts draws itself. */
-const FIRST_KIT_PARTS = 56;
+/** The parts sceneKit.ts draws itself: the first kit's (#3331) and the 199 Core's scenes added after them (R3392000). */
+const FIRST_KIT_PARTS = 56 + 199;
 /** Where an emblem or the seal may stand, and how big an emblem may be: inside the band every face's window shows (motifs.test.ts's). */
 const SHOWN_BAND = { left: 10, right: 90, top: 22, bottom: 84, size: 8 } as const;
 

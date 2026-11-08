@@ -673,5 +673,5 @@ export const INK_CURIOS_KIT = {
   "dragon-fruit": { category: "objects", draw: dragonFruit },
   "hand-mirror": { category: "objects", draw: handMirror },
   "heart-bomb": { category: "objects", draw: heartBomb },
-  sack: { category: "objects", draw: sack },
+  "booster-sack": { category: "objects", draw: sack },
 } as const satisfies Readonly<Record<string, KitPart>>;

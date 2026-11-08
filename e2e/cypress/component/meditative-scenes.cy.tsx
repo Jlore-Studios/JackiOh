@@ -1,5 +1,5 @@
 // R3401000: every Meditative entry, tokens included, drawn from its scene recipe (apps/web/src/cards/art/
-// meditativeRecipes1.ts to meditativeRecipes4.ts), base and Radiant, in a real browser, at desktop size and at
+// meditativeRecipes1.ts to meditativeRecipes5.ts), base and Radiant, in a real browser, at desktop size and at
 // 390x844. Every Epic, Legendary and Mythic entry is shown at hand size, the rest as a contact sheet at a smaller
 // size, a page at a time, each page fitting the viewport. apps/web's vitest suite proves each scene's shapes,
 // floors, geometry and colours (cards/art/meditativeScenes.test.ts, artRichness.test.ts); here every picture

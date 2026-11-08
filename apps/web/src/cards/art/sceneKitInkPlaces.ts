@@ -771,7 +771,7 @@ export const INK_PLACES_KIT = {
   tatami: { category: "terrain", draw: tatami },
   "still-water": { category: "terrain", draw: stillWater },
   pagoda: { category: "architecture", draw: pagoda },
-  pavilion: { category: "architecture", draw: pavilion },
+  "ink-pavilion": { category: "architecture", draw: pavilion },
   "moon-bridge": { category: "architecture", draw: moonBridge },
   "paper-screen": { category: "architecture", draw: paperScreen },
   "round-window": { category: "architecture", draw: roundWindow },

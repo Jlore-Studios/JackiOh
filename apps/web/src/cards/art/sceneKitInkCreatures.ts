@@ -450,7 +450,7 @@ export const INK_CREATURES_KIT = {
   crane: { category: "creatures", draw: crane },
   koi: { category: "creatures", draw: koi },
   beetle: { category: "creatures", draw: beetle },
-  sheep: { category: "creatures", draw: sheep },
+  "ink-sheep": { category: "creatures", draw: sheep },
   "lion-dancer": { category: "creatures", draw: lionDancer },
   "ink-person": { category: "creatures", draw: inkPerson },
   "hand-open": { category: "creatures", draw: handOpen },
