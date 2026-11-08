@@ -15676,6 +15676,11 @@
       "owner": "claude-4",
       "owner_since": "2026-11-08T10:28:37Z",
       "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
+      "paused": {
+        "at": "2026-11-08T11:50:26Z",
+        "interrupt": "usage",
+        "provider": "claude-4"
+      },
       "pending_request": false,
       "planned_at": "2026-11-07T23:28:11Z",
       "planned_by": "`claude-2` (claude, `opus`, strong)",
@@ -15685,7 +15690,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-07T17:09:27Z",
       "requested_by": "jgoetzmann",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "42475733290",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-08T11:26:05Z",
