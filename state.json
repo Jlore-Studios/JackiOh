@@ -16208,7 +16208,7 @@
           }
         ],
         "head": "eccd50573b36273e48ed023636d181469797e334",
-        "interruptions": 0,
+        "interruptions": 1,
         "kind": "revise",
         "model": "sonnet",
         "provider": "claude-8",
