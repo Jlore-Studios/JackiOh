@@ -19,6 +19,7 @@ import { devDeck, realPort } from "../audio/test/realGame.ts";
 import type { SfxId, SfxParams, SoundSink } from "../audio/types.ts";
 import { cueCard } from "../audio/useGameAudio.ts";
 import { catalogFacts } from "../fx/FxLayer.tsx";
+import { FX_REELS_MS } from "../fx/constants.ts";
 import { planFx } from "../fx/cues.ts";
 import { createFxMemory } from "../fx/memory.ts";
 import type { FxCue, FxRaysCue, FxTakeoverCue } from "../fx/types.ts";
@@ -43,6 +44,8 @@ const SUMMIT = "meditative-008";
 const TOE_CRACKER = "classic-006";
 /** Core #85 Unlicensed Experimentation: a Legendary Trap that fires on a permanent of a type its controller has. */
 const EXPERIMENT = "core-085";
+/** Core #95 Call to Chaos (Core Edition): a Legendary Spell whose signature slams its reels to the roll. */
+const CHAOS = "core-095";
 
 type Heard = {
   sfx: { id: SfxId; params?: SfxParams }[];
@@ -246,6 +249,25 @@ function cloakedGame() {
   return { sets, destroyed, reveals: { breaker: reveal(breaker.id), summit: reveal(summit.id), cracker: reveal(cracker.id) } };
 }
 
+/**
+ * R3402001: Paranoia lends #95 Call to Chaos (Core Edition) Cloaked; p1 sets it and reveals it. The engine
+ * runs the reveal's cast as its Cry (`reveal_set_spell`), marked `hookResolving` cry after the `trapFired`.
+ */
+function revealedChaosGame(): Record<PlayerId, Heard> {
+  const game = sandboxGame("r3402001-chaos");
+  game.sandbox("p1", { kind: "setMana", player: "p1", current: 10, max: 10 });
+  game.sandbox("p1", { kind: "spawn", player: "p1", defId: PARANOIA, to: { zone: "field", row: "backrow", lane: 1 } });
+  game.sandbox("p1", { kind: "spawn", player: "p1", defId: CHAOS, to: { zone: "hand" } });
+  const card = game.hand("p1").find((c) => c.defId === CHAOS);
+  const play = game.legal("p1").find((a) => a.type === "play" && a.instanceId === card?.instanceId && a.faceDown === "cloaked");
+  if (play === undefined) throw new Error("no face-down play of Call to Chaos");
+  const set = game.act("p1", play).p1.fresh.find((e) => e.type === "cardPlayed" && e.formerId === card?.instanceId);
+  if (set === undefined || set.type !== "cardPlayed") throw new Error("no set of Call to Chaos");
+  const reveal = game.legal("p1").find((a) => a.type === "activate" && a.instanceId === set.instanceId && a.ability === "reveal");
+  if (reveal === undefined) throw new Error("no reveal of Call to Chaos");
+  return game.act("p1", reveal);
+}
+
 /** The Trap game: p1 sets a Legendary Trap and p2's play of a Unit fires it. */
 function trapGame() {
   const game = sandboxGame("r2722002-trap");
@@ -329,6 +351,26 @@ describe("R2722002 against the real engine: a hidden card's entrance is at its r
       expect(fire.sfx.filter((s) => s.id === "hatchWeld"), `its sound on ${viewer}`).toHaveLength(1);
       expect(trap.set[viewer].sfx.some((s) => s.id === "hatchWeld"), `its set on ${viewer}`).toBe(false);
       expect(trap.set[viewer].fx.some((cue) => cue.kind === "fracture"), `its set on ${viewer}`).toBe(false);
+    }
+  });
+});
+
+describe("R3402001 R2722002 against the real engine: a revealed Cloaked signature Spell plays its text's beats", () => {
+  it("R3402001 R2722002 Call to Chaos revealed slams its reels to the roll on both seats", () => {
+    const heard = revealedChaosGame();
+    for (const viewer of SEATS) {
+      const seen = heard[viewer];
+      // The engine's order: the firing, then the Cry's marker of the same card, then the roll.
+      const types = seen.fresh.map((e) => e.type);
+      const fired = types.indexOf("trapFired");
+      const cry = seen.fresh.findIndex((e) => e.type === "hookResolving" && e.hook === "cry");
+      expect(fired, `firing on ${viewer}`).toBeGreaterThanOrEqual(0);
+      expect(cry, `its Cry's marker on ${viewer}`).toBeGreaterThan(fired);
+      expect(types.indexOf("chaosRolled"), `the roll on ${viewer}`).toBeGreaterThan(cry);
+      // chaosReels's own reveal of the roll, not the row's: FX_REELS_MS, a gold ring and its shake.
+      expect(seen.fx.find((cue) => cue.kind === "chaos"), `the reels on ${viewer}`).toMatchObject({ durationMs: FX_REELS_MS });
+      expect(seen.fx.some((cue) => cue.kind === "ring" && cue.preset === "gold"), `the jackpot ring on ${viewer}`).toBe(true);
+      expect(seen.fx.filter((cue) => cue.kind === "burst" && cue.preset === "spark").length, `the reels' sparks on ${viewer}`).toBeGreaterThanOrEqual(3);
     }
   });
 });

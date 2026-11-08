@@ -383,8 +383,17 @@ const OWN_CAST: Readonly<Record<string, (cues: readonly FxCue[]) => boolean>> = 
   "core-099": (cues) => cues.filter((cue) => cue.kind === "ghost" && JSON.stringify(cue.to) === JSON.stringify(CENTRE)).length === 2,
 };
 
+/** R3402001: each signature Spell's text beat, the one its gallery play's later events draw (the tests above). */
+const TEXT_BEAT: Readonly<Record<string, (cues: readonly FxCue[]) => boolean>> = {
+  "core-083": (cues) => anchored(cues, tid(animTestid.library("you"))).some((cue) => cue.kind === "ring"),
+  "core-087": (cues) => cues.some((cue) => cue.kind === "ghost" && JSON.stringify(cue.to) === JSON.stringify(tid(animTestid.hand("opponent")))),
+  "core-095": (cues) => cues.some((cue) => cue.kind === "ring" && cue.preset === "gold"),
+  "core-097": (cues) => cues.some((cue) => cue.kind === "ghost" && JSON.stringify(cue.from) === JSON.stringify(tid(testid.hero("opponent")))),
+  "core-099": (cues) => cues.some((cue) => cue.kind === "ghost" && JSON.stringify(cue.from) === JSON.stringify(CENTRE) && JSON.stringify(cue.to) === JSON.stringify(tid(animTestid.hand("you")))),
+};
+
 describe("R3402001 R2722002 a Cloaked signature Spell of the caster's own", () => {
-  it("R3402001 R2722002 sets face down with no cast of its own, and casts it once at its reveal", () => {
+  it("R3402001 R2722002 sets face down with no cast of its own, and casts it once at its reveal, its text's beats with it", () => {
     const CLOAKED = "cloaked-1";
     for (const [defId, ownCast] of Object.entries(OWN_CAST)) {
       const entry = FX_CARD_TABLE.get(defId);
@@ -392,7 +401,11 @@ describe("R3402001 R2722002 a Cloaked signature Spell of the caster's own", () =
       if (play === null) throw new Error(`${defId} has no gallery play`);
       const board = galleryBoardOf(defId, fullBoardView());
       const events = galleryCardEvents(defId, play, board, 1);
-      expect(ownCast(all(planOut(events, withEvents(board, events)))), `${defId} cast`).toBe(true);
+      const cast = all(planOut(events, withEvents(board, events)));
+      expect(ownCast(cast), `${defId} cast`).toBe(true);
+      const textBeat = TEXT_BEAT[defId];
+      if (textBeat === undefined) throw new Error(`${defId} has no text beat`);
+      expect(textBeat(cast), `${defId} text`).toBe(true);
       // R227: its set, on its controller's seat, a fresh id whose `formerId` is the hand card's.
       const set: GameEvent[] = [
         { type: "cardPlayed", player: "p1", instanceId: CLOAKED, defId, costPaid: 1, formerId: galleryPlayId(1) },
@@ -401,15 +414,19 @@ describe("R3402001 R2722002 a Cloaked signature Spell of the caster's own", () =
       const setCues = all(planOut(set, withEvents(board, set)));
       expect(ownCast(setCues), `${defId} set`).toBe(false);
       expect(setCues.filter((cue) => cue.kind === "shake" || cue.kind === "rays" || cue.kind === "takeover"), `${defId} set`).toEqual([]);
-      // R783006: its Activate: Reveal, then the firing that casts it, then the cast's own beats.
-      const rest = JSON.parse(JSON.stringify(events.filter((event) => event.type !== "cardPlayed")).replaceAll(`"${galleryPlayId(1)}"`, `"${CLOAKED}"`)) as GameEvent[];
+      // R783006: its Activate: Reveal, then the firing that casts it, then, as the engine runs it
+      // (cry_trigger.rs `reveal_set_spell`), its Cry's own marker and the cast's own beats.
+      const rest = JSON.parse(JSON.stringify(events.filter((event) => event.type !== "cardPlayed" && event.type !== "hookResolving")).replaceAll(`"${galleryPlayId(1)}"`, `"${CLOAKED}"`)) as GameEvent[];
       const reveal: GameEvent[] = [
         { type: "activated", player: "p1", instanceId: CLOAKED, defId, ability: "reveal" },
         { type: "trapFired", instanceId: CLOAKED, defId, controller: "p1", row: "backrow", lane: 2 },
+        { type: "hookResolving", sourceId: CLOAKED, defId, controller: "p1", hook: "cry" },
         ...rest,
       ];
       const planned = planOut(reveal, withEvents(board, reveal));
       expect(planned.filter((p) => ownCast(p.cues)).map((p) => p.entry.events[0]?.type), `${defId} reveal`).toEqual(["trapFired"]);
+      // Its Cry's marker leaves the firing's `cast` open, so its text's beats play at the reveal too.
+      expect(textBeat(all(planned)), `${defId} reveal text`).toBe(true);
     }
   });
 });
