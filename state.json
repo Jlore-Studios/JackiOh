@@ -16537,34 +16537,13 @@
       "taken_asks": [],
       "verdict_rounds": 2,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
-        "built_by": "claude-4",
-        "carried": {
-          "by": "`claude` (medium)",
-          "conflicts": [
-            "apps/web/src/i18n/zh-CN.json",
-            "apps/web/src/routes/stats.test.tsx",
-            "apps/web/src/routes/stats.tsx"
-          ],
-          "from": "c4b49657403db0ed3a86b4e61bb984ddc9577360",
-          "main": "0d4105d91211983632f5ed80d8dd6917957a5480"
-        },
+        "built_by": "claude-6",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-4",
-            "run": "42413312196",
-            "tier": "strong"
-          }
-        ],
-        "sha": "59aa868b86623baf79b389e300cf89cb62ef9be0",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "9bbb75cd7291890d92ad242576549c1b6a7375cb",
+        "tiers": {}
       }
     },
     "3381": {
