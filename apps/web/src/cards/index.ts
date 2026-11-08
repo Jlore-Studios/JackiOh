@@ -75,6 +75,7 @@ export {
   canOpenFullScreen,
   closeFullScreenArt,
   openFullScreenArt,
+  useCanOpenFullScreen,
   useFullScreenArt,
   useFullScreenTrigger,
   type FullScreenState,

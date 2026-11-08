@@ -5,6 +5,7 @@ import { useCallback, useRef, useSyncExternalStore } from "react";
 import type { Rarity } from "@jackioh/shared";
 
 import { FULLSCREEN_HOLD_MS, FULLSCREEN_SLOP_PX } from "./constants.ts";
+import { useCardLook } from "./fullArt.ts";
 import { isFullBleed } from "./versions.ts";
 
 export type FullScreenState = {
@@ -53,7 +54,23 @@ export function canOpenFullScreen(card: {
   return false;
 }
 
+/**
+ * R3345000: `canOpenFullScreen` for a copy of `defId` as it prints: the level it wears (`useCardLook`, a viewer's own
+ * copy when `worn`) counts, so a Common wearing a full-art level opens as a Mythic does. A level or version the
+ * caller names itself wins over the worn one.
+ */
+export function useCanOpenFullScreen(
+  card: Parameters<typeof canOpenFullScreen>[0] | null,
+  defId: string,
+  worn: boolean = false,
+): boolean {
+  const look = useCardLook(defId, worn);
+  return card !== null && canOpenFullScreen({ ...card, level: card.level ?? look.level, version: card.version ?? look.version });
+}
+
 export type FullScreenTriggerOptions = {
+  /** The card is the viewer's own copy, so it wears the viewer's picks (R3345000). */
+  worn?: boolean;
   enabled?: boolean;
   onOpen?: () => void;
 };
@@ -73,7 +90,8 @@ export function useFullScreenTrigger(
   } | null,
   options: FullScreenTriggerOptions = {},
 ) {
-  const allowed = card !== null && canOpenFullScreen(card) && (options.enabled ?? true);
+  const wearsIt = useCanOpenFullScreen(card, card?.defId ?? "", options.worn);
+  const allowed = wearsIt && (options.enabled ?? true);
   const timerRef = useRef<number | null>(null);
   const startRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const cardRef = useRef(card);

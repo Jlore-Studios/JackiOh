@@ -89,6 +89,8 @@ function PackSlotFace({ slot, look }: { slot: OpenedPackResponse["slots"][number
     defId: slot.cardId,
     rarity: slot.rarity,
     printedRarity: def?.printedRarity,
+    // A dropped cosmetic's look that is a full-art level opens as a Mythic does.
+    level: look,
     name: def ? readerName(def) : slot.cardId,
   });
   return (

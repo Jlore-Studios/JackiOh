@@ -30,7 +30,7 @@ import {
   REVEAL_AT_NOTE,
   TermTips,
   UNREVEALED_NOTE,
-  canOpenFullScreen,
+  useCanOpenFullScreen,
   faceDownLabel,
   faceModel,
   isHeld,
@@ -303,9 +303,10 @@ export default function Card(props: CardProps): ReactElement {
   // is subscribed, so the hold follows the queue, and the callback asks again as the hold fires.
   const draining = useIsHeld();
   const inHand = props.inOwnHand === true;
+  const opensFullScreen = useCanOpenFullScreen(card === null ? null : face, card?.defId ?? "", worn);
   const canFullScreen =
     card !== null &&
-    canOpenFullScreen(face) &&
+    opensFullScreen &&
     (inHand || (unit !== undefined && unit !== null && worn && !draining));
 
   // Lines of code is a hidden stat in matches.

@@ -16,6 +16,8 @@ import {
   useFullScreenTrigger,
 } from "./fullscreen.ts";
 import { FullScreenArt, FullScreenArtHost } from "./FullScreenArt.tsx";
+import { FullArtShown } from "./fullArt.ts";
+import { VERSION_ALT_FULL_ART_ID } from "./versions.ts";
 import { isHeld, resetTiltForTests, useTiltHold } from "./tilt.ts";
 
 beforeEach(() => {
@@ -144,6 +146,41 @@ describe("R3345000 useFullScreenTrigger hook", () => {
     );
   }
 
+  it("R3345000 a Common wearing a full-art level opens by a hold, its own copy only", () => {
+    // core-003 is no Mythic and prints no full art of its own: only the level its copy wears (here Alt full art, a pick shown as one's own) makes it open.
+    function Wearing({ worn }: { worn: boolean }) {
+      const { handlers } = useFullScreenTrigger({ defId: "core-003", rarity: "Common" }, { worn });
+      return <button type="button" data-testid="card-trigger" {...handlers} />;
+    }
+    const hold = (): void => {
+      fireEvent.pointerDown(screen.getByTestId("card-trigger"), { pointerId: 1, clientX: 100, clientY: 100 });
+      act(() => {
+        vi.advanceTimersByTime(FULLSCREEN_HOLD_MS + 10);
+      });
+    };
+    const { unmount } = render(
+      <>
+        <FullArtShown defId="core-003" pick={VERSION_ALT_FULL_ART_ID}>
+          <Wearing worn={true} />
+        </FullArtShown>
+        <FullScreenArtHost />
+      </>,
+    );
+    hold();
+    expect(screen.getByTestId("fullscreen-art")).toBeInTheDocument();
+    unmount();
+    closeFullScreenArt();
+
+    render(
+      <>
+        <Wearing worn={false} />
+        <FullScreenArtHost />
+      </>,
+    );
+    hold();
+    expect(screen.queryByTestId("fullscreen-art")).toBeNull();
+  });
+
   it("R3345000 holding past FULLSCREEN_HOLD_MS opens full-screen view", () => {
     render(
       <>
@@ -187,7 +224,7 @@ describe("R3345000 useFullScreenTrigger hook", () => {
   it("R3345000 non-mythic card has no handlers and does not open", () => {
     render(
       <>
-        <TriggerCard card={{ defId: "core-001", rarity: "Common" }} />
+        <TriggerCard card={{ defId: "core-002", rarity: "Common" }} />
         <FullScreenArtHost />
       </>,
     );

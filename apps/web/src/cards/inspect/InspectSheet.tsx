@@ -36,7 +36,7 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
   const ascentLevel = face.ascent;
   // R1655000: the viewer's own card's sheet wears its cosmetics, as it prints its full art.
   const own = useOwnCopy();
-  const fs = useFullScreenTrigger(face);
+  const fs = useFullScreenTrigger(face, { worn: own });
 
   return createPortal(
     <div className="inspect-layer inspect-layer--sheet" {...modal.layerProps}>

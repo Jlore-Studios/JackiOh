@@ -136,8 +136,8 @@ export function CardDetail({
   const radiant = faceModel({ defId: def.id, def, radiant: true, chinese: easter });
   const glossary = mergeGlossary(base.glossary, radiant.glossary);
 
-  const fsBase = useFullScreenTrigger(base);
-  const fsRadiant = useFullScreenTrigger(radiant);
+  const fsBase = useFullScreenTrigger(base, { worn: own });
+  const fsRadiant = useFullScreenTrigger(radiant, { worn: own });
 
   return createPortal(
     <div className="inspect-layer inspect-layer--detail" {...modal.layerProps}>
