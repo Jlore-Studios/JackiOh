@@ -46,6 +46,7 @@ import { CATALOG } from "../wire/cards.ts";
 import { frac, ringCue, shakeCues, tid, tunedBurst, type BurstTuning } from "./build.ts";
 import {
   FX_CENTER,
+  FX_HOLD_MAX_MS,
   FX_LUNGE_CONTACT_AT,
   FX_MAX_TAIL_MS,
   FX_STARSHIP_BADGE_AT,
@@ -412,7 +413,7 @@ function planFuse(fuse: StarshipFuse, entry: AnimationEntry, view: PlayerView, n
       },
       { kind: "weld", at: dock, hum: Math.min(1, (fuse.count - n + k + 1) / STARSHIP_DOCK.humFull), delayMs: land, durationMs: weldMs },
       burst(c, "spark", dock, "point", land, STARSHIP_MOMENT_TUNING.weld, look.colors),
-      { ...tunedBurst(i, "spark", to, "point", land, STARSHIP_FUSE_TUNING.spark), colors: look.colors },
+      burst(c, "spark", to, "point", land, STARSHIP_FUSE_TUNING.spark, look.colors),
       ringCue(D, "spark", to, land),
       ...shakeCues(i, FX_STARSHIP_FUSE_TRAUMA, land),
     );
@@ -518,7 +519,7 @@ function planLaunch(launch: StarshipLaunch, entry: AnimationEntry, view: PlayerV
   const foot = tid(launch.anchor, MOTIF_FOOT);
   const igniteMs = frac(FX_STARSHIP_IGNITE_AT, H);
   const landMs = H + frac(FX_STARSHIP_LAND_AT, M);
-  const exhaust = (delayMs: number, spread: "point" | "area"): FxCue => ({ ...tunedBurst(i, "exhaust", foot, spread, delayMs, tune.exhaust), colors: look.colors });
+  const exhaust = (delayMs: number, spread: "point" | "area"): FxCue => burst(c, "exhaust", foot, spread, delayMs, tune.exhaust, look.colors);
   const cinematic = H > 0 && (env.bigMoments ?? "full") === "full";
   const cues: FxCue[] = [launchCue(at, size, igniteMs, D + FX_STARSHIP_TAIL_MS)];
   if (cinematic) {
@@ -543,11 +544,11 @@ function planLaunch(launch: StarshipLaunch, entry: AnimationEntry, view: PlayerV
       flightMs: frac(FX_STARSHIP_LIFT_AT, M),
       density: tune.density * i * c.share,
     },
-    { ...tunedBurst(i, "ember", tid(launch.anchor, FX_STARSHIP_BADGE_AT), "point", H, MOTIF_TUNING.ember), colors: look.colors },
+    burst(c, "ember", tid(launch.anchor, FX_STARSHIP_BADGE_AT), "point", H, MOTIF_TUNING.ember, look.colors),
     ...shakeCues(i, tune.trauma, H),
     // The landing, as its launched self.
     ringCue(D, "dust", at, landMs),
-    tunedBurst(i, "dust", foot, "area", landMs, MOTIF_TUNING.land),
+    burst(c, "dust", foot, "area", landMs, MOTIF_TUNING.land),
     ...shakeCues(i, tune.trauma, landMs),
   );
   const replaces = new Set<GameEvent>(entry.events.filter((event) => event.type === "starshipLaunched"));
@@ -686,7 +687,9 @@ function planWreck(event: Extract<GameEvent, { type: "destroyed" }>, entry: Anim
     { kind: "wreck", art: starshipArtUri(ship), at: { kind: "testid", testid: card, art: "frame" }, breakMs, turn: W.halfTurnDeg, delayMs: 0, durationMs: D + W.tailMs },
     burst(c, "smoke", tid(card), "area", breakMs, STARSHIP_MOMENT_TUNING.wreckSmoke),
     ...shakeCues(i, W.trauma, breakMs),
-    { kind: "conceal", testid: card, mode: "after", delayMs: breakMs, durationMs: D - breakMs + W.tailMs },
+    // Hidden until the board shows the next view, as the stage's own conceal of the dead card (set by 0.9 D, held
+    // FX_HOLD_MAX_MS) is: both write "after", so this one outlasts it, lest its undo un-hide the card the stage still hides.
+    { kind: "conceal", testid: card, mode: "after", delayMs: breakMs, durationMs: D - breakMs + FX_HOLD_MAX_MS },
     burst(c, "dust", tid(testid.zone(found.side, "backrow", found.lane)), "area", debrisMs, STARSHIP_MOMENT_TUNING.debris),
     { kind: "scorch", at: tid(zone), delayMs: scorchMs, durationMs: D - scorchMs + W.scorchTailMs },
   );

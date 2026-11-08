@@ -43,7 +43,7 @@ import {
   starshipClaim,
   starshipFuseLandMs,
 } from "./starship.ts";
-import type { FxCinematicCue, FxCue, FxModuleCue, FxPlanEnv, FxShotCue, FxWeldCue } from "./types.ts";
+import type { FxCinematicCue, FxConcealCue, FxCue, FxModuleCue, FxPlanEnv, FxShotCue, FxWeldCue } from "./types.ts";
 
 const HULL = "stinkyscape-t-dormant-starship";
 const BEAM = "stinkyscape-050";
@@ -73,6 +73,9 @@ function endOf(cue: FxCue): number {
     case "shot":
       return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
     case "shake":
+      return cue.delayMs;
+    case "conceal":
+      // The stage's: the board's next view ends it, FX_HOLD_MAX_MS at the latest (R200); it paints nothing.
       return cue.delayMs;
     default:
       return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
@@ -131,7 +134,18 @@ function launchEntry(pieces: readonly string[], view: PlayerView, bigMoments: "f
 const attack = (targetId = "foe"): GameEvent => ({ type: "attackDeclared", attackerId: "ship", targetId, forced: false });
 const cinematicOf = (cues: readonly FxCue[]): FxCinematicCue | undefined => cues.find((c): c is FxCinematicCue => c.kind === "cinematic");
 const shotsOf = (cues: readonly FxCue[]): FxShotCue[] => cues.filter((c): c is FxShotCue => c.kind === "shot");
-const burstCount = (cues: readonly FxCue[]): number => cues.reduce((sum, c) => sum + (c.kind === "burst" ? c.count : 0), 0);
+/**
+ * R3334001: on a phone every burst of a moment throws `phoneShare` as many particles, never none. Each burst's
+ * count is `max(1, round(tuning·i))` at full size, so the phone's is at most half of it, rounded up: a burst left
+ * at full size (of 2 or more) fails.
+ */
+const expectPhoneShare = (cues: readonly FxCue[], compact: readonly FxCue[], label: string): void => {
+  const counts = (of: readonly FxCue[]) => of.flatMap((c) => (c.kind === "burst" ? [c.count] : []));
+  const [full, phone] = [counts(cues), counts(compact)];
+  expect(phone, label).toHaveLength(full.length);
+  expect(full.length, label).toBeGreaterThan(0);
+  full.forEach((n, k) => expect(phone[k], `${label}: burst ${String(k)} of ${String(n)}`).toBeLessThanOrEqual(Math.max(1, Math.ceil(n * STARSHIP_CINEMATIC.phoneShare))));
+};
 
 describe("R3334000 docking", () => {
   it("R3334000 fuses of 1 and 3 dock in order at their hardpoints, weld, hum rising", () => {
@@ -167,6 +181,10 @@ describe("R3334000 docking", () => {
       expect(hums).toEqual(fused.map((_, k) => Math.min(1, (held.length + k + 1) / STARSHIP_DOCK.humFull)));
       for (let k = 1; k < hums.length; k += 1) expect(hums[k]).toBeGreaterThan(hums[k - 1] ?? 1);
       expectBounded(cues, D, `fuse of ${String(fused.length)}`);
+      // On a phone: the same docks, every spark burst at its share.
+      const compact = planStarship(entry, view, env({ compact: true }))?.cues ?? [];
+      expect(compact.map((c) => `${c.kind}@${String(c.delayMs)}`)).toEqual(cues.map((c) => `${c.kind}@${String(c.delayMs)}`));
+      expectPhoneShare(cues, compact, `fuse of ${String(fused.length)}`);
     }
   });
 
@@ -340,7 +358,7 @@ describe("R3334001 the launch", () => {
       expect(phone?.engines).toEqual(full?.engines);
       // …with fewer particles: half the sparks, and fewer burst particles in all.
       expect(phone?.sparks).toBe(Math.max(1, Math.round((full?.sparks ?? 0) * STARSHIP_CINEMATIC.phoneShare)));
-      expect(burstCount(compact)).toBeLessThanOrEqual(burstCount(cues));
+      expectPhoneShare(cues, compact, `launch of ${String(n)}`);
     }
   });
 
@@ -486,7 +504,13 @@ describe("R3334003 the wreck", () => {
       expect(off.every((c) => c.delayMs < breakMs)).toBe(true);
       // The hull breaks in two over its art as the card is hidden.
       expect(cues.find((c) => c.kind === "wreck")).toMatchObject({ at: { testid: testid.card("ship"), art: "frame" }, breakMs, turn: STARSHIP_WRECK.halfTurnDeg });
-      expect(cues.find((c) => c.kind === "conceal")).toMatchObject({ testid: testid.card("ship"), mode: "after", delayMs: breakMs });
+      const conceal = cues.find((c): c is FxConcealCue => c.kind === "conceal");
+      expect(conceal).toMatchObject({ testid: testid.card("ship"), mode: "after", delayMs: breakMs });
+      // The stage hides the dead card too, in the same mode: the wreck's conceal outlasts it, so its undo never
+      // shows the dead ship again while the board has not yet moved on.
+      const staged = planStage(entry, view, env()).find((c): c is FxConcealCue => c.kind === "conceal" && c.testid === testid.card("ship"));
+      expect(staged).toMatchObject({ mode: "after" });
+      expect((conceal?.delayMs ?? 0) + (conceal?.durationMs ?? 0)).toBeGreaterThanOrEqual((staged?.delayMs ?? 0) + (staged?.durationMs ?? Infinity));
       expect(cues.find((c) => c.kind === "shake")).toMatchObject({ delayMs: breakMs });
       // Debris over its backrow, a scorch on its zone.
       expect(cues.find((c) => c.kind === "burst" && c.preset === "dust")).toMatchObject({ at: { testid: testid.zone("you", "backrow", 3) }, delayMs: Math.round(STARSHIP_WRECK.debrisAt * D) });
