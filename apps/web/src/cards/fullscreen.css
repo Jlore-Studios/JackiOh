@@ -17,6 +17,8 @@
   transition: transform var(--motion-base) var(--ease-out);
 }
 
+/* Each plane's tilt parallax is the standalone `translate` property, which composes with the dolly's
+   `transform` keyframes instead of being replaced by them (R3345000). */
 .fullscreen-art-plane {
   position: absolute;
   inset: 0;
@@ -27,22 +29,22 @@
 }
 
 .fullscreen-art-plane[data-plane="far"] {
-  transform: translate(calc(var(--cf-tilt-x, 0) * -12px), calc(var(--cf-tilt-y, 0) * -12px));
+  translate: calc(var(--cf-tilt-x, 0) * -12px) calc(var(--cf-tilt-y, 0) * -12px);
   animation: fullscreen-dolly-far var(--fs-dolly-period, 12s) var(--ease-in-out) infinite alternate;
 }
 
 .fullscreen-art-plane[data-plane="middle"] {
-  transform: translate(calc(var(--cf-tilt-x, 0) * -4px), calc(var(--cf-tilt-y, 0) * -4px));
+  translate: calc(var(--cf-tilt-x, 0) * -4px) calc(var(--cf-tilt-y, 0) * -4px);
   animation: fullscreen-dolly-middle var(--fs-dolly-period, 12s) var(--ease-in-out) infinite alternate;
 }
 
 .fullscreen-art-plane[data-plane="near"] {
-  transform: translate(calc(var(--cf-tilt-x, 0) * 8px), calc(var(--cf-tilt-y, 0) * 8px));
+  translate: calc(var(--cf-tilt-x, 0) * 8px) calc(var(--cf-tilt-y, 0) * 8px);
   animation: fullscreen-dolly-near var(--fs-dolly-period, 12s) var(--ease-in-out) infinite alternate;
 }
 
 .fullscreen-art-plane[data-plane="nearest"] {
-  transform: translate(calc(var(--cf-tilt-x, 0) * 20px), calc(var(--cf-tilt-y, 0) * 20px));
+  translate: calc(var(--cf-tilt-x, 0) * 20px) calc(var(--cf-tilt-y, 0) * 20px);
   animation: fullscreen-dolly-nearest var(--fs-dolly-period, 12s) var(--ease-in-out) infinite alternate;
 }
 

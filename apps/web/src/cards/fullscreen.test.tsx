@@ -1,6 +1,10 @@
 // R3345000: Mythic full-screen art view, trigger, tilt and depth planes tests.
 // Presentation only (CLAUDE.md rule 7).
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -162,6 +166,24 @@ describe("R3345000 FullScreenArt rendering and depth planes", () => {
     expect(dialog.style.getPropertyValue("--cf-tilt-ry")).toContain("deg");
     expect(dialog.style.getPropertyValue("--cf-glare-x")).toContain("%");
     expect(dialog.style.getPropertyValue("--cf-glare-y")).toContain("%");
+  });
+});
+
+describe("R3345000 the full-screen stylesheet's planes", () => {
+  it("R3345000 each plane's tilt parallax is a translate, so its dolly keyframes' transform does not replace it", () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const css = readFileSync(join(here, "fullscreen.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const plane of ART_PLANES) {
+      const rule = new RegExp(`\\.fullscreen-art-plane\\[data-plane="${plane}"\\]\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? "";
+      // The pointer's or device's pose shifts the plane by its depth, in the standalone property.
+      expect(rule).toMatch(/translate:\s*calc\(var\(--cf-tilt-x, 0\) \* -?\d+px\)\s+calc\(var\(--cf-tilt-y, 0\) \* -?\d+px\)/);
+      // The dolly animates `transform`, so the rule itself must set none for the two to compose.
+      expect(rule).toContain(`animation: fullscreen-dolly-${plane} `);
+      expect(rule).not.toMatch(/(^|[^-])transform:/);
+      const frames = new RegExp(`@keyframes fullscreen-dolly-${plane}\\s*\\{([\\s\\S]*?)\\n\\}`).exec(css)?.[1] ?? "";
+      expect(frames).toContain("transform:");
+      expect(frames).not.toContain("translate:");
+    }
   });
 });
 
