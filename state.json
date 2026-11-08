@@ -16451,7 +16451,7 @@
       "verdict_rounds": 1
     },
     "3426": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "strong",
       "ci_early": false,
@@ -16492,7 +16492,7 @@
           "where": "apps/web/src/fx/cards/core/comboIndex.ts:69"
         }
       ],
-      "live": "reviewing",
+      "live": "revising",
       "merge_owner": "claude-6",
       "pending_request": false,
       "provider": "claude-4",
@@ -16502,7 +16502,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "42499444644",
+      "run_id": "pending:0e9fb6be-1794155966",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16523,7 +16523,7 @@
         "run": "42488567778"
       },
       "source": "cross-review",
-      "started_at": "2026-11-08T16:21:02Z",
+      "started_at": "2026-11-08T16:39:52Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -17174,9 +17174,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T16:21:39Z",
+    "at": "2026-11-08T16:39:52Z",
     "url": "",
-    "what": "revise #3438 on claude-4"
+    "what": "revise #3426 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-08T16:31:17Z",
