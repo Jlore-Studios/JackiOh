@@ -17813,7 +17813,7 @@
       "started_at": "2026-11-08T03:14:25Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [],
         "builder": "claude",
