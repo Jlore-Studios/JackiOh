@@ -5,8 +5,8 @@ import { useCallback, useRef, useSyncExternalStore } from "react";
 import type { Rarity } from "@jackioh/shared";
 
 import { FULLSCREEN_HOLD_MS, FULLSCREEN_SLOP_PX } from "./constants.ts";
-import { useCardLook } from "./fullArt.ts";
-import { isFullBleed } from "./versions.ts";
+import { isFullArtCard, useCardLook } from "./fullArt.ts";
+import { VERSION_FULL_ART_ID, isFullBleed } from "./versions.ts";
 
 export type FullScreenState = {
   defId: string;
@@ -57,7 +57,9 @@ export function canOpenFullScreen(card: {
 /**
  * R3345000: `canOpenFullScreen` for a copy of `defId` as it prints: the level it wears (`useCardLook`, a viewer's own
  * copy when `worn`) counts, so a Common wearing a full-art level opens as a Mythic does. A level or version the
- * caller names itself wins over the worn one.
+ * caller names itself wins over the worn one. What the Full-art cards setting prints alone does not count: a
+ * full-art card's Epic Full art (`isFullArtCard`) is the look it has by default, and a default look's version is not a
+ * level worn, so a card holds only for a level somebody picked.
  */
 export function useCanOpenFullScreen(
   card: Parameters<typeof canOpenFullScreen>[0] | null,
@@ -65,7 +67,8 @@ export function useCanOpenFullScreen(
   worn: boolean = false,
 ): boolean {
   const look = useCardLook(defId, worn);
-  return card !== null && canOpenFullScreen({ ...card, level: card.level ?? look.level, version: card.version ?? look.version });
+  const byDefault = look.level === VERSION_FULL_ART_ID && isFullArtCard(defId);
+  return card !== null && canOpenFullScreen({ ...card, level: card.level ?? (byDefault ? null : look.level) });
 }
 
 export type FullScreenTriggerOptions = {

@@ -181,6 +181,25 @@ describe("R3345000 useFullScreenTrigger hook", () => {
     expect(screen.queryByTestId("fullscreen-art")).toBeNull();
   });
 
+  it("R3345000 a Common the Full-art cards setting prints full art on, with no pick, does not open", () => {
+    // core-008 is a Common that prints full art by the setting alone: the default look is not a level worn, so a hold leaves it to the long press.
+    function Plain() {
+      const { handlers } = useFullScreenTrigger({ defId: "core-008", rarity: "Common" }, { worn: true });
+      return <button type="button" data-testid="card-trigger" {...handlers} />;
+    }
+    render(
+      <WearerProvider seat="p1" viewer="p1">
+        <Plain />
+        <FullScreenArtHost />
+      </WearerProvider>,
+    );
+    fireEvent.pointerDown(screen.getByTestId("card-trigger"), { pointerId: 1, clientX: 100, clientY: 100 });
+    act(() => {
+      vi.advanceTimersByTime(FULLSCREEN_HOLD_MS + 10);
+    });
+    expect(screen.queryByTestId("fullscreen-art")).toBeNull();
+  });
+
   it("R3345000 holding past FULLSCREEN_HOLD_MS opens full-screen view", () => {
     render(
       <>
