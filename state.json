@@ -15675,14 +15675,6 @@
         "reason": "`claude-7` stops mid-call: 5-hour usage is 100%, at or over its 100% cap outside its hours; it resets at 2026-11-08T23:00:00Z",
         "trail": "wels satellite; grep -n \\\"^function deckFloor(\\\" -A 8 \u2026\n- said: Now the first batch of recipes.\n- Grep: {\"pattern\": \"SCENE_KIT|GEAR_KIT|draw\\\\(\", \"path\": \"/home/runner/work/_temp/work/item-3403/apps/web/src/cards/art/classicPlusScenes.test.ts\", \"output_mode\": \"content\", \"-n\": true}\n- Grep: {\"pattern\": \"SCENE_LINES\", \"path\": \"/home/runner/work/_temp/work/item-3403/apps/web/src/cards/art/scene.ts\", \"output_mode\": \"content\", \"-A\": 12, \"head_limit\": 40}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web/src/cards/art && grep -n \\\"^function starship\\\" -A 40 sceneKitCraft.ts | grep \\\"shape(\\\" | head; grep -n \\\"^function fighter\\\" -A 30 sc\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web/src/cards/art && grep -o 'part: \\\"[a-z-]*\\\", x: [0-9.]*, y: [0-9.]*, scale: [0-9.]*' sceneRecipesCore1.ts | head -30; ls\", \"description\u2026\n- said: Now the scratch test and the first batch.\n- Bash: {\"command\": \"cat > /home/runner/work/_temp/work/item-3403/apps/web/src/cards/art/zz-scratch-3403-c.test.ts <<'EOF'\\nimport { it } from \\\"vitest\\\";\\nimport { CATALOG } from \\\"@jackioh/cards\\\";\\nimport\u2026\n- Bash: {\"command\": \"ls /home/runner/work/_temp/work/item-3403/node_modules/.pnpm/sharp@0.35.5_@types+node@24.13.5/node_modules/; mkdir -p /tmp/gearscratch\", \"description\": \"Locate sharp module and make scra\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3403/apps/web/src/cards/art/stinkyscape91Recipes1.ts\", \"content\": \"// R3403000: Stinkyscape's later scene recipes, part 1 of three (#91 to #119 with #\u2026\n- Write: {\"file_path\": \"/tmp/gearscratch/render.mts\", \"content\": \"// Scratch preview: draws each GEAR_KIT part at a few seeds into a PNG grid.\\nimport { readFileSync, writeFileSync } from \\\"node:fs\\\";\\nimport\u2026\n- Bash: {\"command\": \"cd /tmp/gearscratch && node render.mts console,cable /tmp/gearscratch/test.png 2>&1 | tail -5\", \"description\": \"Test the scratch preview renderer\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web/src/cards/art; python3 - <<'EOF'\\np='zz-scratch-3403-a.test.ts'\\ns=open(p).read()\\ns=s.replace(' const shapes = composeScene(recipe, id\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web/src; grep -n \\\"data:image/svg+xml\\\" -r patches/cardArt.ts cards/art/*.ts | grep -v test | head -5\", \"description\": \"Find how the art UR\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web/src/cards/art; grep -n \\\"DATA_PREFIX\\\\|encodeURI\\\\|function encode\\\" svg.ts | head; grep -n \\\"^function encode\\\\|const encode\\\" -A 8 sv\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; ./target/release/jackioh patches check 2>&1 | tail -3; ./target/release/jackioh spec check 2>&1 | tail -5\", \"description\": \"Run patches check a\u2026\n- Bash: {\"command\": \"cd /tmp/scratch3403a/svg; grep -o '<path[^>]*>' stinkyscape-008-1.svg | head -3 | cut -c1-300; grep -o '<path[^>]*>' stinkyscape-008-1.svg | wc -l; grep -o '<[a-zA-Z]*' stinkyscape-008-1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; ls target/release/ | head; cargo metadata --format-version 1 --no-deps 2>/dev/null | python3 -c \\\"import json,sys;print(json.load(sys.stdin)['t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; J=/home/runner/work/JackiOh/JackiOh/target/release/jackioh; ls -la $J; $J patches check 2>&1 | tail -3; $J spec check 2>&1 | tail -5\", \"descrip\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3403/apps/web/src/cards/art/stinkyscape91Recipes3.ts\", \"content\": \"// R3403000: Stinkyscape's later scene recipes, part 3 of three (#160 to #176, the \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web/src/cards/art; python3 - <<'EOF'\\np='zz-scratch-3403-a.test.ts'\\ns=open(p).read()\\ns=s.replace(\\\" out.push(`${id} ${card.rarity}\\\", \\\"\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web && pnpm exec vitest run src/cards/art/zz-scratch-3403-c.test.ts 2>&1 | grep -v \\\"^$\\\" | grep \\\"stinkyscape\\\\|MISSING\\\\|Error\\\\|error\\\\|\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; grep -n '\\\"typecheck' e2e/package.json; timeout 900 pnpm --dir e2e typecheck:component 2>&1 | tail -5\", \"description\": \"Typecheck the e2e compo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web && pnpm exec vitest run src/cards/art/zz-scratch-3403-c.test.ts 2>&1 | tail -40\", \"description\": \"Show scratch output\", \"timeout\": 1800\u2026\n- Bash: {\"command\": \"cd /tmp/scratch3403a; for id in tile-floor checker-floor room-wall tile-wall glass-wall boards stage rock-floor ice-floor snowfield field hills sand window framed-door shelf counter colu\u2026\n- Bash: {\"command\": \"cd /tmp/scratch3403a && node render.mjs png/b1.png stinkyscape-008-1 stinkyscape-010-1 stinkyscape-010-2 stinkyscape-010-3 stinkyscape-011-1 stinkyscape-011-2 stinkyscape-011-3 stinkysca\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web && sed -i 's/console.log(\\\\(.*\\\\));$/process.stdout.write([\\\\1].join(\\\" \\\") + \\\"\\\\\\\\n\\\");/' src/cards/art/zz-scratch-3403-c.test.ts && \u2026\n- Read: {\"file_path\": \"/tmp/scratch3403a/png/b1.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; git status --short | grep -v \\\"^[MAD] \\\" | head\", \"description\": \"Check for unexpected worktree changes\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web && cat >> src/cards/art/zz-scratch-3403-c.test.ts <<'EOF'\\nit(\\\"parts\\\", () => {\\n const want = (process.env.ZZ ?? \\\"\\\").split(\\\",\\\").f\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web/src/cards/art; until [ $(wc -l < sceneKitGear.ts) -gt 400 ]; do sleep 15; done; wc -l sceneKitGear.ts stinkyscape91Recipes*.ts\", \"descr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web && cat >> src/cards/art/zz-scratch-3403-c.test.ts <<'EOF'\\nimport { SCENE_KIT } from \\\"./sceneKit.ts\\\";\\nimport { FIGURE_KIT } from \\\".\u2026\n- said: You've hit your 5-hour limit \u00b7 resets 11pm (UTC)\n- tool error: Exit code 137"
       },
-      "hold": {
-        "ends": "2026-11-09T00:39:12Z",
-        "lifted": "2026-11-08T23:00:18Z",
-        "owner": "claude-7",
-        "since": "2026-11-08T22:39:12Z",
-        "until": "2026-11-08T23:00:00Z",
-        "why": "5-hour usage is 100%, too close to its 50% cap outside its hours to start a long run (it starts under 45%)"
-      },
       "interruptions": 1,
       "kind": "build",
       "last_findings": [],
@@ -15705,7 +15697,7 @@
       "queued_at": "2026-11-07T17:11:09Z",
       "requested_by": "jgoetzmann",
       "round_tier": "strong",
-      "run_id": "42528939471",
+      "run_id": "pending:c8845547-1794178917",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -15724,7 +15716,7 @@
         "provider": "claude-7",
         "run": "42528939471"
       },
-      "started_at": "2026-11-08T22:10:56Z",
+      "started_at": "2026-11-08T23:02:34Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17421,9 +17413,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T22:40:18Z",
+    "at": "2026-11-08T23:02:34Z",
     "url": "",
-    "what": "build #3423 on claude-1"
+    "what": "build #3403 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-08T22:51:38Z",
