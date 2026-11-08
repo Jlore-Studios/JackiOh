@@ -16545,11 +16545,6 @@
         "provider": "claude-1",
         "sha": "b4c938699ceef415369fd203dafce88030db6eb7"
       },
-      "paused": {
-        "at": "2026-11-08T06:44:33Z",
-        "interrupt": "usage",
-        "provider": "claude-1"
-      },
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
