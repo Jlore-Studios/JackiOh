@@ -304,17 +304,16 @@ describe("R2722002 against the real engine: a hidden card's entrance is at its r
     expect(must(summit).heard.p2.play).toEqual(must(cracker).heard.p2.play);
   });
 
-  it("R2722002 R3332002 the reveal plays the full entrance on both seats, its own intro its sting", () => {
+  it("R2722002 R3332002 R3405001 the reveal plays the full entrance on both seats, its own intro its sting", () => {
     // p1's board plays the intro whole, p2's its opening as the sting; neither the shared entrance sting.
     const opening = (viewer: PlayerId, id: string): string => (viewer === "p1" ? `intro:${id}` : `sting:${id}`);
     for (const viewer of SEATS) {
       expect(grandCues(cloaked.reveals.breaker[viewer]), `Knowledge Breaker on ${viewer}`).toEqual(
         [opening(viewer, "intro-meditative-045"), "entrance:legendary:false", "rays:legendary"].sort(),
       );
+      // R3405001: Reach the Summit's signature is a cast of its own, so its reveal draws its own takeover, not the shared rays (R3400000).
       const summit = grandCues(cloaked.reveals.summit[viewer]);
-      expect(summit, `Reach the Summit on ${viewer}`).toEqual(
-        [opening(viewer, "intro-meditative-008"), "entrance:mythic:true", "rays:mythic", "takeover:prismatic"].sort(),
-      );
+      expect(summit, `Reach the Summit on ${viewer}`).toEqual([opening(viewer, "intro-meditative-008"), "entrance:mythic:true", "takeover:ascent"].sort());
       expect(grandCues(cloaked.reveals.cracker[viewer]), `Toe Cracker on ${viewer}`).toEqual(["sfx:sting"]);
     }
     // The Legendary Trap's first firing, which names it to both seats (R2734000): its intro, its
