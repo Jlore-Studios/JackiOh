@@ -17892,12 +17892,12 @@
   "machine_disk": {
     "issue": null,
     "reading": {
-      "at": "2026-11-08T12:15:55Z",
-      "free": 71541989376,
+      "at": "2026-11-08T13:05:02Z",
+      "free": 71500906496,
       "percent": 42,
       "total": 123690532864
     },
-    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42477979425",
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42480415558",
     "runner": "night-vm-gpt",
     "shown": null
   },
