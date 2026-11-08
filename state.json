@@ -16789,10 +16789,14 @@
         "approvals": [],
         "builder": "claude",
         "built_by": "claude-6",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "9cd6e106b139df0c64402997b7c8a844f40f4a58",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       },
       "waiting_comment": 6722170318
     },
