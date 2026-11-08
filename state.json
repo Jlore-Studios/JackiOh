@@ -18179,6 +18179,7 @@
         "resolved_by": "`claude` (strong)",
         "sha": "d639e26ad726a06f3178ea3e77aba2c6186f8b45"
       },
+      "closed_at": "2026-11-08T08:50:47Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "hard",
@@ -18191,6 +18192,7 @@
       "last_findings": [],
       "live": "resolving",
       "merge_owner": "claude-7",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
