@@ -976,13 +976,14 @@ describe("R1655000 a card in context", () => {
     // Spell Tyrant, a Legendary Unit, is offered the Sketch and all three, not Full art (and R2944000 Prismatic); Scratch
     // Pad, a Mythic Spell, Full art, Alt art (R3015000: which took Alt full art's cards) and all three (and R2944000
     // Immersive and Prismatic); Carnivorous Cube and Big D-fender none of the three; Speciesist nothing but, R3017001, its
-    // side of each part 6 pair, as each card has.
+    // side of each part 6 pair, as each card has. R3343002: Spell Tyrant's Default draws Extended art, so its Extended art
+    // ladder starts at its animated level.
     const TYRANT = "classic-056";
     const PAD = "meditativeplus-026";
     expect(firstLevels(TYRANT)).toEqual([
       ["default", NO_FULL_ART_ID, "Common"],
       ["sketch", VERSION_SKETCH_ID, "Rare"],
-      ["extended-art", VERSION_EXTENDED_ART_ID, "Epic"],
+      ["extended-art", `${VERSION_EXTENDED_ART_ID}-animated`, "Legendary"],
       ["pixel", VERSION_PIXEL_ID, "Epic"],
       ["comic", VERSION_COMIC_ID, "Epic"],
       ["prismatic", VERSION_PRISMATIC_ID, "Mythic"],
@@ -1105,11 +1106,12 @@ describe("R1655000 a card in context", () => {
     // Ceaseless Void, a Mythic Unit, is offered both, last, beside Full art, Alt art (R3015000: which took Alt full art's
     // cards), the Sketch, Extended art, Set showcase and Out of frame; Spell Tyrant, a Legendary Unit, Prismatic alone of
     // the two, and BOOM! Big Max Immersive alone; Carnivorous Cube, Big D-fender and Speciesist neither. R3017001: each card
-    // its side of each part 6 pair, last.
+    // its side of each part 6 pair, last. R3343002: Ceaseless Void's Default draws Full art, so its Full art ladder starts
+    // at its animated level.
     const VOID = "core-100";
     expect(firstLevels(VOID)).toEqual([
       ["default", NO_FULL_ART_ID, "Common"],
-      ["full-art", VERSION_FULL_ART_ID, "Legendary"],
+      ["full-art", VERSION_FULL_ART_ANIMATED_ID, "Mythic"],
       ["alt-art", VERSION_ALT_ART_ID, "Rare"],
       ["sketch", VERSION_SKETCH_ID, "Rare"],
       ["extended-art", VERSION_EXTENDED_ART_ID, "Epic"],
@@ -1148,11 +1150,13 @@ describe("R1655000 a card in context", () => {
     expect(large().querySelector(".card-text")).not.toBeNull();
     expect(large().querySelector(".cf-art-frame > .cf-art")?.getAttribute("data-art-part")).toBe("backdrop");
     expect(large().querySelector(".cf-art-frame > .cf-immersive > .cf-art--near")?.getAttribute("data-art-part")).toBe("subject");
-    // Choosing Prismatic draws it in chrome, its words kept.
+    // Choosing Prismatic draws it in chrome, (R3343001) a full art, across the whole face with no words.
     fireEvent.click(rung(VERSION_PRISMATIC_ID));
     expect(readCardPicks(VOID)).toEqual({ fullArt: VERSION_PRISMATIC_ID });
     expect(large().getAttribute("data-version")).toBe(VERSION_PRISMATIC_ID);
-    expect(large().querySelector(".card-text")).not.toBeNull();
+    expect(large().getAttribute("data-full-art")).toBe("true");
+    expect(large().querySelector(".card-text")).toBeNull();
+    expect(large().querySelector(".cf-art")?.classList.contains("cf-art--full")).toBe(true);
     expect(large().querySelector(".cf-art")?.getAttribute("data-art-picture")).toBe("prismatic");
     expect(large().querySelector(".cf-immersive")).toBeNull();
     // R2944002, R3015000: its animated level moves the chrome, and no rung signs it.
@@ -1161,6 +1165,42 @@ describe("R1655000 a card in context", () => {
     expect(large().getAttribute("data-version")).toBe(VERSION_PRISMATIC_ID);
     expect(large().getAttribute("data-art-motion")).not.toBeNull();
     expect(large().querySelector(".cf-signature")).toBeNull();
+  });
+
+  it("R3343002 a Mythic's and a Legendary's Default rung is named and pictured by its default look, and its ladder starts above it", () => {
+    // Ceaseless Void, a Mythic Unit, and Silly Silas, a Legendary Unit, owning nothing.
+    const VOID = "core-100";
+    const SILAS = "core-052";
+    const ladderOn = (defId: string, variant: string) => cardLadders(defId, () => false).find((ladder) => ladder.variant === variant);
+    const rungs = (defId: string, variant: string) => ladderOn(defId, variant)?.rungs.map((each) => [each.id, each.owned, each.next, each.needs]);
+    // Full art on the Mythic starts at its animated level, next with nothing owned; its signed level needs that.
+    expect(ladderOn(VOID, "full-art")?.name).toBe("Full art");
+    expect(rungs(VOID, "full-art")).toEqual([
+      [VERSION_FULL_ART_ANIMATED_ID, false, true, null],
+      [VERSION_FULL_ART_SIGNED_ID, false, false, "Full art, animated"],
+    ]);
+    expect(ladderOn(VOID, "default")?.rungs[0]).toMatchObject({ id: NO_FULL_ART_ID, name: "Full art", owned: true, next: false });
+    // Extended art on the Legendary is its animated level alone, next with nothing owned.
+    expect(ladderOn(SILAS, "extended-art")?.name).toBe("Extended art");
+    expect(rungs(SILAS, "extended-art")).toEqual([[`${VERSION_EXTENDED_ART_ID}-animated`, false, true, null]]);
+    expect(ladderOn(SILAS, "default")?.rungs[0]).toMatchObject({ id: NO_FULL_ART_ID, name: "Extended art", owned: true });
+    // Below Legendary the Default's first rung is the normal face, and Full art starts at its first level.
+    expect(ladderOn(BIG_D, "default")?.rungs[0]?.name).toBe("Normal");
+    expect(ladderOn(BIG_D, "full-art")?.rungs[0]?.id).toBe(VERSION_FULL_ART_ID);
+
+    // The view, owning no cosmetic: the large face wears Full art, and the Default's rungs picture it across the whole face.
+    render(
+      <FullArtOwned owned={new Map()}>
+        <OwnedCards collection={collectionOwning([VOID])} defs={[defOf(VOID)]} />
+      </FullArtOwned>,
+    );
+    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
+    fireEvent.click(screen.getByTestId(T.card(VOID)));
+    expect(large().getAttribute("data-full-art")).toBe("true");
+    expect(large().getAttribute("data-version")).toBe(VERSION_FULL_ART_ID);
+    for (const id of [NO_FULL_ART_ID, VERSION_ANIMATED_ID]) expect(rung(id).querySelector(".collection-strip__picture--full-art"), id).not.toBeNull();
+    expect(screen.queryByTestId(T.rung(VERSION_FULL_ART_ID))).toBeNull();
+    expect(rung(VERSION_FULL_ART_ANIMATED_ID).dataset.next).toBe("true");
   });
 
   it("R3017000 the Collection lists only the part 6 variants a card is offered", () => {

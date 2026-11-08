@@ -302,12 +302,13 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
 
   it("R3344001 a hand with one tilted face holds the phone frame budget", () => {
     cy.viewport(PHONE.width, PHONE.height);
-    // A Legendary leads the hand, so its face has depth; the pointer circles over it for the whole sample, so the face
-    // tilts, its four planes shift and its glare moves on every frame.
+    // A Mythic leads the hand, so its face has depth; the pointer circles over it for the whole sample, so the face
+    // tilts, its four planes shift and its glare moves on every frame. R3343001: a Mythic's Default is its Full art, which
+    // has depth; a Legendary's is Extended art, which keeps to one picture (R3344000), and this scene wears no picks.
     const TILTED = "hand-card-fx-tilt";
     const view = fullBoardView();
     const hand = [
-      card({ instanceId: "fx-tilt", defId: "core-052", cost: 3 }),
+      card({ instanceId: "fx-tilt", defId: "core-100", cost: 3 }),
       card({ instanceId: "fx-hand-2", defId: "core-019", cost: 3, radiant: true }),
       card({ instanceId: "fx-hand-3", defId: "core-055", cost: 0 }),
       card({ instanceId: "fx-hand-4", defId: "core-077", cost: 6 }),
