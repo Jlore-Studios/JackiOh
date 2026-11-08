@@ -15668,9 +15668,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-08T13:36:36Z",
-      "owner_why": "its own review was handed off to its final audit: `claude-6` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-08T17:00:00Z; it can start again only in 2h 23m, more than the 120 minutes an item waits for its owner",
+      "owner": "claude-3",
+      "owner_since": "2026-11-08T14:11:17Z",
+      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-6` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-08T17:00:00Z; it can start again only in 2h 23m, more than the 120 minutes an item waits for its owner",
       "pending_at": "2026-11-07T17:10:42Z",
       "pending_by": "jgoetzmann",
       "pending_request": false,
@@ -16398,7 +16398,7 @@
       "verdict_rounds": 1
     },
     "3426": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -16437,15 +16437,15 @@
       "issue": 3402,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "claude-6",
       "pending_request": false,
-      "provider": "claude-2",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-11-08T13:51:24Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "42485887599",
+      "run_id": "pending:af213d05-1794147050",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16466,7 +16466,7 @@
         "run": "42474226391"
       },
       "source": "ci",
-      "started_at": "2026-11-08T13:37:56Z",
+      "started_at": "2026-11-08T14:11:17Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -17218,9 +17218,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T13:53:19Z",
+    "at": "2026-11-08T14:11:17Z",
     "url": "",
-    "what": "review #3437 on claude-7"
+    "what": "revise #3426 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-08T14:03:09Z",
