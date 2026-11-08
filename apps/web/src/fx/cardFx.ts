@@ -7,12 +7,13 @@
 // `hookResolving` opened, a Trap's `cast` by the one its `trapFired` opened (memory.ts). R3332000: the
 // entrance a card lands with is its entry's `entrance`, whatever the entry's kind (`entranceKeyOf`): a
 // set piece's (R2800000, setPieces.ts) and a Field Spell's landing face up in the backrow among them.
-// R200: every delay lands inside the entry and trails off within FX_MAX_TAIL_MS.
+// R200: every delay lands inside the entry and trails off within FX_MAX_TAIL_MS. R3405000: an entrance is
+// passed its entry's lead (`leadMs`), so one that reads it starts after a Mythic's takeover hold.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { FLAVOR_FALLBACK } from "../cards/flavor.ts";
-import { HIDDEN_ID, animTestid, targetFor, type AnimationEntry } from "../game/animations.ts";
+import { HIDDEN_ID, animTestid, leadMs, targetFor, type AnimationEntry } from "../game/animations.ts";
 import { sideOf } from "../game/contract.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
@@ -76,7 +77,8 @@ function planEntrance(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string
   if (key === undefined) return null;
   const tgt = targetFor(landing, p.view);
   if (tgt === null) return null;
-  return { cues: ENTRANCES[key]({ D: p.D, tgt, intensity: p.env.intensity, view: p.view, landing }), row: "replace" };
+  // R3405000: its entry's lead (a Mythic's takeover hold) too, which an entrance starts after.
+  return { cues: ENTRANCES[key]({ D: p.D, tgt, intensity: p.env.intensity, view: p.view, landing, leadMs: leadMs(p.entry) }), row: "replace" };
 }
 
 export function planCardFx(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): CardFxResult | null {

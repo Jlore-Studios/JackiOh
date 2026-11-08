@@ -22,12 +22,6 @@ const SIGNATURE_PENDING: readonly string[] = [
   "classicplus-019-4", "classicplus-019-5", "classicplus-027", "classicplus-029", "classicplus-035", "classicplus-037", "classicplus-042",
   "classicplus-042-1", "classicplus-043", "classicplus-046", "classicplus-046-1", "classicplus-047", "classicplus-048", "classicplus-065-4",
   "classicplus-065-5", "classicplus-073", "classicplus-073-1", "classicplus-074", "classicplus-075", "classicplus-075-1", "classicplus-078",
-  // Meditative
-  "meditative-007", "meditative-008", "meditative-011", "meditative-017", "meditative-020", "meditative-026", "meditative-039-4", "meditative-039-5",
-  "meditative-040", "meditative-042", "meditative-045", "meditative-045-1", "meditative-047", "meditative-049", "meditative-049-1",
-  "meditative-049-2", "meditative-049-3", "meditative-051", "meditative-063", "meditative-065", "meditative-071", "meditative-071-1",
-  "meditative-075", "meditative-079", "meditative-080", "meditative-086", "meditative-087", "meditative-095", "meditative-095-1", "meditative-097",
-  "meditative-097-8", "meditative-097-9",
   // Stinkyscape
   "stinkyscape-004", "stinkyscape-004-1", "stinkyscape-004-2", "stinkyscape-004-3", "stinkyscape-004-4", "stinkyscape-004-5", "stinkyscape-004-6",
   "stinkyscape-006", "stinkyscape-007", "stinkyscape-016", "stinkyscape-018", "stinkyscape-018-1", "stinkyscape-018-2", "stinkyscape-018-3",

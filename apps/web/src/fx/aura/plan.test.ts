@@ -44,7 +44,8 @@ import {
 
 /**
  * Every look and every scope once: seven Field Spells, a Field Trap (core-018), a Spell (core-035) and, R3400000,
- * three Units on their tiles, one of them a bespoke entry's.
+ * three Units on their tiles, one of them a bespoke entry's; R3405000 Meditative's five new looks, a Field Spell's
+ * ripple and four Units' orbit, steam, glitch and scanline.
  */
 const TABLE = parseFxCardTable(
   "aura.json5",
@@ -61,6 +62,11 @@ const TABLE = parseFxCardTable(
     "meditativeplus-024": { bespoke: "bobSoldier", aura: { look: "flurry", palette: "Physical/wind", scope: "tile" } },
     "traininggrounds-038": { aura: { look: "chalk", scope: "tile" } },
     "traininggrounds-039-1": { aura: { look: "timber", scope: "tile" } },
+    "meditative-007": { aura: { look: "ripple", palette: "Holy", scope: "zone" } },
+    "meditative-065": { aura: { look: "orbit", palette: "Physical/steel", scope: "tile" } },
+    "meditative-047": { aura: { look: "steam", palette: "Toxic", scope: "tile" } },
+    "meditative-049-2": { aura: { look: "glitch", palette: "Tech/glitch", scope: "tile" } },
+    "meditative-051": { aura: { look: "scanline", palette: "Tech/hologram", scope: "tile" } },
   }`,
 );
 
@@ -99,17 +105,17 @@ function tracked(key: string, scope: AuraScope, seen: number, phase: AuraPhase =
 const keys = (auras: readonly { spec: AuraSpec }[]): string[] => auras.map((aura) => aura.spec.key);
 
 describe("R2787000 what wears an aura", () => {
-  it("R2787000 R3400000 every face-up Field Spell, Field Trap and tile-aura Unit with an aura wears it, in all twelve looks and all five scopes, in its own or its entry's palette", () => {
+  it("R2787000 R3400000 R3405000 every face-up Field Spell, Field Trap and tile-aura Unit with an aura wears it, in all seventeen looks and all five scopes, in its own or its entry's palette", () => {
     resetIds();
     const you = ["core-014", "core-046", "classic-042", "classic-075", "meditative-040"].map((defId) => field("p1", defId));
-    const opponent = [field("p2", "meditativeplus-009"), field("p2", "core-018"), field("p2", "core-020"), field("p2", "stinkyscape-155")];
+    const opponent = [field("p2", "meditativeplus-009"), field("p2", "core-018"), field("p2", "core-020"), field("p2", "stinkyscape-155"), field("p2", "meditative-007")];
     const memory = createFxMemory();
     const sources: AuraSources = new Map();
     attributeModifiers([played("p1", "c9", "core-035"), modifier("p1", "m5"), resolved("p1", "c9", "core-035")], memory, sources);
     const view = board(you, opponent);
     view.you.modifiers = [{ id: "m5", label: "Your Spells cost (1) less" }];
     view.you.units = [unit("p1", { defId: "meditativeplus-024" }), unit("p1", { defId: "traininggrounds-038" }), null, null, null];
-    view.opponent.units = [null, null, unit("p2", { defId: "traininggrounds-039-1" }), null, null];
+    view.opponent.units = ["meditative-065", "meditative-047", "traininggrounds-039-1", "meditative-049-2", "meditative-051"].map((defId) => unit("p2", { defId }));
     const planned = planAuras(view, sources, TABLE);
     expect(planned.map((aura) => [aura.defId, aura.side, aura.lane, aura.scope, aura.look])).toEqual([
       ["core-014", "you", 1, "side", "storm"],
@@ -123,7 +129,12 @@ describe("R2787000 what wears an aura", () => {
       ["meditativeplus-009", "opponent", 1, "side", "arcane"],
       ["core-018", "opponent", 2, "zone", "frost"],
       ["stinkyscape-155", "opponent", 4, "side", "drift"],
+      ["meditative-007", "opponent", 5, "zone", "ripple"],
+      ["meditative-065", "opponent", 1, "tile", "orbit"],
+      ["meditative-047", "opponent", 2, "tile", "steam"],
       ["traininggrounds-039-1", "opponent", 3, "tile", "timber"],
+      ["meditative-049-2", "opponent", 4, "tile", "glitch"],
+      ["meditative-051", "opponent", 5, "tile", "scanline"],
     ]);
     expect(new Set(planned.map((aura) => aura.look))).toEqual(new Set(AURA_LOOK_NAMES));
     expect(new Set(planned.map((aura) => aura.scope))).toEqual(new Set(AURA_SCOPES));

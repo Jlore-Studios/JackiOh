@@ -155,9 +155,30 @@ export type FxFogCue = {
  * darkens, a card-shaped silhouette (never a face, R202) sweeps across it into `at`, light rays turn
  * and a shockwave crosses both sides when it lands at `landMs`, all inside the entry and gone within
  * the effects' tail (R200). R3400000: "summit", "canvas" and "napkin" draw art of their own over the dark
- * (takeoverArt.ts), the same art Reduce Motion's still shows (game/TakeoverStill.tsx).
+ * (takeoverArt.ts), the same art Reduce Motion's still shows (game/TakeoverStill.tsx). R3405000: Meditative's
+ * Mythics' twelve, from "ascent" to "fortress", each with art of its own.
  */
-export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai" | "summit" | "canvas" | "napkin";
+export type TakeoverLook =
+  | "prismatic"
+  | "void"
+  | "pawn"
+  | "genie"
+  | "ai"
+  | "summit"
+  | "canvas"
+  | "napkin"
+  | "ascent"
+  | "workshop"
+  | "brush"
+  | "mine"
+  | "quarry"
+  | "pavilion"
+  | "virus"
+  | "dojo"
+  | "studyHall"
+  | "caneRack"
+  | "warRoom"
+  | "fortress";
 export type FxTakeoverCue = { kind: "takeover"; look: TakeoverLook; tint: FxTint; at: FxAnchor; landMs: number; delayMs: number; durationMs: number };
 /**
  * R2800000: a board clear's set piece over the whole layer, centred on `at`: a `vortex` (the board

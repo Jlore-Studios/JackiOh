@@ -220,9 +220,10 @@ or board it covers wears a quiet looping look in the card's palette, a tint, a s
 an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, palette?, scope } }`.
 
 - **Looks** (`fx/aura/looks.ts`, `AURA_LOOKS`): `ember`, `frost`, `bloom`, `void`, `storm`, `holy`,
-  `toxic`, `arcane`, (R3337003) `drift` (an asteroid field's) and (R3400000) `flurry` (snow), `chalk`
-  (chalk dust) and `timber` (sawdust), the twelve each a mote velocity, size and life range, a mote, tint
-  and edge opacity, a glow spread and a blend. `palette` is a flavor's look or a sub-look
+  `toxic`, `arcane`, (R3337003) `drift` (an asteroid field's), (R3400000) `flurry` (snow), `chalk`
+  (chalk dust) and `timber` (sawdust), and (R3405000) `ripple` (a still pool's), `orbit` (a ring circling
+  its card), `steam`, `scanline` (rising hologram lines) and `glitch` (pixel spots), the seventeen each a
+  mote velocity, size and life range, a mote, tint and edge opacity, a glow spread and a blend. `palette` is a flavor's look or a sub-look
   (`"Tech/rocket"`), the card's own by default, as a motif's.
 - **Scopes**, nearest first: `tile` (R3400000: a Unit's own unit zone), `zone` (the card's own backrow
   zone), `lane` (the lane's four zones, both seats), `side` (its seat's ten zones) and `board` (all
@@ -256,14 +257,15 @@ Ten Field Spells wear one as the pattern for the set passes:
 | Classic #42 Transmutable Toxins | `toxic`, board |
 | Classic #75 Argusland | `holy`, side |
 | Classic+ #34 Memory Leak | `frost`, lane, palette Tech |
-| Meditative #40 Feng Shui | `bloom`, board |
+| Meditative #40 Feng Shui | `orbit`, zone (R3405001; `bloom`, board before its signature) |
 | Meditative+ #9 Magic Amplifier | `arcane`, board |
 | Stinkyscape #46 Circadian Halfcycler | `storm`, lane |
 | Stinkyscape #155 Comet Crash | `ember`, zone |
 | Training Grounds #19 Extra Rations | `bloom`, zone |
 
 No modifier example is wired yet. A bespoke entry may wear an aura beside its recipe (R3400000), as
-Bob's and Tutorial Master's signatures do on their tiles; a modifier a Unit's play installs wears no
+Bob's and Tutorial Master's signatures do on their tiles and Meditative's signature Field Spells do on
+their zones and lanes (R3405001); a modifier a Unit's play installs wears no
 tile aura, which stands with the Unit.
 
 ### Tile auras

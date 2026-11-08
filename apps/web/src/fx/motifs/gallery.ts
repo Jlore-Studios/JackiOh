@@ -21,6 +21,36 @@ import { pageMendFixture } from "../cards/classic/bookOfHeal.ts";
 import { crownSwapFixture } from "../cards/classic/kingWagtoggle.ts";
 import { recycleLoopFixture } from "../cards/classic/recycle.ts";
 import { felinorBoard } from "../cards/core/felinorFiender.ts";
+import { brushSealFixture } from "../cards/meditative/aestheticizeTheGame.ts";
+import { aiGirlfriendFixture } from "../cards/meditative/aiGirlfriend.ts";
+import { alternateFateFixture } from "../cards/meditative/alternateFate.ts";
+import { alunethFixture } from "../cards/meditative/aluneth.ts";
+import { jadeDieFixture } from "../cards/meditative/callToChaos.ts";
+import { fleaMarketFixture } from "../cards/meditative/cnFleaMarket.ts";
+import { cnGolemFixture } from "../cards/meditative/cnGolem.ts";
+import { devinBotFixture } from "../cards/meditative/devinBot.ts";
+import { doubleHeaderFixture } from "../cards/meditative/doubleHeader.ts";
+import { everGrowingTreeFixture } from "../cards/meditative/everGrowingTree.ts";
+import { blueprintsFixture } from "../cards/meditative/evilBlueprints.ts";
+import { fengShuiFixture } from "../cards/meditative/fengShui.ts";
+import { introspectionFixture } from "../cards/meditative/introspection.ts";
+import { jadeBeautyFixture } from "../cards/meditative/jadeBeauty.ts";
+import { jlockeedHqFixture } from "../cards/meditative/jlockeedHq.ts";
+import { keenusKeysFixture } from "../cards/meditative/keymasterKeenus.ts";
+import { knowledgeBreakerFixture } from "../cards/meditative/knowledgeBreaker.ts";
+import { breakerPrimeFixture } from "../cards/meditative/knowledgeBreakerPrime.ts";
+import { paretoFixture } from "../cards/meditative/paretoOptimality.ts";
+import { prisonFixture } from "../cards/meditative/prison.ts";
+import { summitAscentFixture } from "../cards/meditative/reachTheSummit.ts";
+import { redJadeFixture } from "../cards/meditative/redJade.ts";
+import { skullJnariFixture } from "../cards/meditative/skullOfJnari.ts";
+import { taotieFixture } from "../cards/meditative/taotie.ts";
+import { tatchesFixture } from "../cards/meditative/tatchesTheTotem.ts";
+import { touchedByKyFixture } from "../cards/meditative/touchedByKy.ts";
+import { trueCraftFixture } from "../cards/meditative/trueCraftACard.ts";
+import { yileGptFixture } from "../cards/meditative/yileGpt.ts";
+import { yilePrimeFixture } from "../cards/meditative/yileGptPrime.ts";
+import { yileVirusFixture } from "../cards/meditative/yilesVirus.ts";
 import type { EntranceKey } from "../cards/recipe.ts";
 import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
 import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
@@ -510,6 +540,37 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   tutorialMaster: (_view, _instanceId, player) =>
     ["core-002", "core-003", "core-055"].map((defId, k) => ({ type: "addedToHand", player, instanceId: `fx-lesson-${String(k + 1)}`, defId })),
   chaosDice: (_view, instanceId, player) => [{ type: "chaosRolled", player, instanceId, defId: "traininggrounds-039", effects: [GALLERY_CHAOS_EFFECT] }],
+  // R3405001: Meditative's signatures' own, each beside its recipe (fx/cards/meditative/).
+  introspection: introspectionFixture,
+  summitAscent: summitAscentFixture,
+  doubleHeader: doubleHeaderFixture,
+  trueCraft: trueCraftFixture,
+  brushSeal: brushSealFixture,
+  alternateFate: alternateFateFixture,
+  redJade: redJadeFixture,
+  jadeBeauty: jadeBeautyFixture,
+  fengShui: fengShuiFixture,
+  fleaMarket: fleaMarketFixture,
+  knowledgeBreaker: knowledgeBreakerFixture,
+  breakerPrime: breakerPrimeFixture,
+  taotie: taotieFixture,
+  yileGpt: yileGptFixture,
+  yilePrime: yilePrimeFixture,
+  yileVirus: yileVirusFixture,
+  aiGirlfriend: aiGirlfriendFixture,
+  devinBot: devinBotFixture,
+  skullJnari: skullJnariFixture,
+  keenusKeys: keenusKeysFixture,
+  pareto: paretoFixture,
+  everGrowingTree: everGrowingTreeFixture,
+  touchedByKy: touchedByKyFixture,
+  aluneth: alunethFixture,
+  tatches: tatchesFixture,
+  jadeDie: jadeDieFixture,
+  cnGolem: cnGolemFixture,
+  blueprints: blueprintsFixture,
+  prison: prisonFixture,
+  jlockeedHq: jlockeedHqFixture,
   pageMend: pageMendFixture,
   recycleLoop: recycleLoopFixture,
   crownSwap: crownSwapFixture,

@@ -246,12 +246,41 @@ describe("R2784000 the per-set effects tables", () => {
     expect(parse(`"core-087": { setPiece: "vortex", signature: true }`).get("core-087")).toEqual({ kind: "setPiece", key: "vortex", signature: true });
   });
 
-  it("R3332000 R3400000 the eight marquee cards keep their entrances and looks, beside the signatures'", () => {
+  it("R3332000 R3400000 R3405000 the eight marquee cards keep their entrances and looks, beside the signatures'", () => {
     const entrances = { "core-100": "voidCollapse", "classic-080": "bigBoom", "classic-045": "titanBloom", "classic-056": "tyrantSigil" };
     for (const [defId, key] of Object.entries(entrances)) expect(entranceKeyOf(defId), defId).toBe(key);
     // R3400000: the signature Units' entrances and the signature Mythics' own looks.
     const signatureEntrances = { "core-092": "felinorAssembly", "meditativeplus-024": "snowplowHeave", "traininggrounds-038": "chalkboardLesson", "traininggrounds-039-1": "golemLashing" };
     for (const [defId, key] of Object.entries(signatureEntrances)) expect(entranceKeyOf(defId), defId).toBe(key);
+    // R3405001: Meditative's signature Units' and Field Spells' entrances.
+    const meditativeEntrances = {
+      "meditative-007": "poolBreath",
+      "meditative-011": "floodlights",
+      "meditative-026": "crackedEarth",
+      "meditative-039-5": "jadeBoulder",
+      "meditative-040": "fiveCompass",
+      "meditative-045": "chalkMask",
+      "meditative-045-1": "maskSplit",
+      "meditative-047": "bronzeCauldron",
+      "meditative-049": "scrollScholar",
+      "meditative-049-1": "pavilionUnfurl",
+      "meditative-049-2": "virusBoot",
+      "meditative-049-3": "dojoBoot",
+      "meditative-051": "cushionDrop",
+      "meditative-063": "skullThud",
+      "meditative-065": "keyRing",
+      "meditative-071": "studyCurve",
+      "meditative-071-1": "caneRise",
+      "meditative-075": "treeSprout",
+      "meditative-079": "chalkHand",
+      "meditative-080": "lanternLight",
+      "meditative-086": "coinFlip",
+      "meditative-087": "totemStack",
+      "meditative-095-1": "golemLock",
+      "meditative-097-8": "prisonBars",
+      "meditative-097-9": "fortressRise",
+    };
+    for (const [defId, key] of Object.entries(meditativeEntrances)) expect(entranceKeyOf(defId), defId).toBe(key);
     const looks = {
       "core-100": "void",
       "core-096": "pawn",
@@ -260,6 +289,19 @@ describe("R2784000 the per-set effects tables", () => {
       "meditativeplus-001": "summit",
       "meditativeplus-026": "canvas",
       "traininggrounds-040": "napkin",
+      // R3405000: Meditative's other Mythics' own looks.
+      "meditative-008": "ascent",
+      "meditative-017": "workshop",
+      "meditative-020": "brush",
+      "meditative-039-4": "mine",
+      "meditative-039-5": "quarry",
+      "meditative-049-1": "pavilion",
+      "meditative-049-2": "virus",
+      "meditative-049-3": "dojo",
+      "meditative-071": "studyHall",
+      "meditative-071-1": "caneRack",
+      "meditative-097": "warRoom",
+      "meditative-097-9": "fortress",
     };
     for (const [defId, look] of Object.entries(looks)) expect(takeoverLookOf(defId), defId).toBe(look);
     expect(Object.keys(OWN_TAKEOVER_LOOKS).sort()).toEqual(Object.values(looks).sort());
@@ -269,7 +311,7 @@ describe("R2784000 the per-set effects tables", () => {
       return key === undefined ? [] : [key];
     });
     for (const key of named) expect(typeof ENTRANCES[key], key).toBe("function");
-    expect(new Set(named)).toEqual(new Set([...Object.values(entrances), ...Object.values(signatureEntrances)]));
+    expect(new Set(named)).toEqual(new Set([...Object.values(entrances), ...Object.values(signatureEntrances), ...Object.values(meditativeEntrances)]));
     expect(Object.keys(ENTRANCES).sort()).toEqual([...new Set(named)].sort());
   });
 
@@ -365,14 +407,15 @@ describe("R2784000 the per-set effects tables", () => {
     expect(FX_CARD_TABLE.get("traininggrounds-038")).toMatchObject({ aura: { look: "chalk", scope: "tile" } });
   });
 
-  it("R2787000 R2794000 the ten example Field Spells across the sets wear their auras", () => {
+  it("R2787000 R2794000 R3405001 the ten example Field Spells across the sets wear their auras", () => {
     const examples = {
       "core-014": { look: "storm", scope: "side" },
       "core-046": { look: "void", scope: "board" },
       "classic-042": { look: "toxic", scope: "board" },
       "classic-075": { look: "holy", scope: "side" },
       "classicplus-034": { look: "frost", palette: "Tech", scope: "lane" },
-      "meditative-040": { look: "bloom", scope: "board" },
+      // R3405001: Feng Shui's signature stands its compass ring on its own zone.
+      "meditative-040": { look: "orbit", scope: "zone" },
       "meditativeplus-009": { look: "arcane", scope: "board" },
       "stinkyscape-046": { look: "storm", scope: "lane" },
       "stinkyscape-155": { look: "ember", scope: "zone" },
@@ -389,9 +432,10 @@ describe("R2784000 the per-set effects tables", () => {
       expect(CATALOG[defId]?.type, defId).toBe("Field Spell");
       // A set's pass may give the card hooks beside its aura (#2793 gave Core #14 and #46 a cast, #2796
       // Meditative #40 and Meditative+ #9, R2795000 Classic+ #34 its bind); the aura stays the example's.
+      // R3400000: or a bespoke recipe of its own beside it (R3405001 Meditative #40's signature).
       const entry = FX_CARD_TABLE.get(defId);
-      expect(entry?.kind, defId).toBe("hooks");
-      expect(entry?.kind === "hooks" ? entry.aura : undefined, defId).toEqual(aura);
+      expect(entry?.kind, defId).toBe(defId === "meditative-040" ? "bespoke" : "hooks");
+      expect(entry?.kind === "hooks" || entry?.kind === "bespoke" ? entry.aura : undefined, defId).toEqual(aura);
       const hooks = hooksOf[defId];
       if (hooks !== undefined) expect(entry, defId).toEqual({ kind: "hooks", hooks, aura });
       const file = FX_CARD_FILES.find((candidate) => parseFxCardTable(candidate.file, candidate.source).has(defId));

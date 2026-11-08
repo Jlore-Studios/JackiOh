@@ -33,7 +33,8 @@ import type { FxAnchor, FxCue, FxPlanEnv, FxTakeoverCue, FxTint, TakeoverLook } 
  * R670, R2722001, R3332000: a Mythic's takeover look: its table entry's `takeover` (#100 Ceaseless Void's
  * "void", #96 My Pawn's "pawn", #97 Zephrys's "genie", Meditative #49 YileGPT's "ai"; R3400000 Meditative+
  * #1 Bob's Plan's "summit", #26 Scratch Pad's "canvas", Training Grounds #40 Goetzmann Game Design's
- * "napkin"), else the shared "prismatic".
+ * "napkin"; R3405000 Meditative's other Mythics' twelve, from #8 Reach the Summit's "ascent" to #97.9
+ * Jlockeed's Headquarters' "fortress"), else the shared "prismatic".
  */
 export function takeoverLookOf(defId: string, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): TakeoverLook {
   const entry = table.get(defId);
@@ -51,6 +52,22 @@ export const TAKEOVER_TINTS: Readonly<Record<TakeoverLook, FxTint>> = {
   summit: { rim: "#dc2626", core: "#f5f5f4", glow: "#57534e" },
   canvas: { rim: "#22d3ee", core: "#fafaf9", glow: "#a8a29e" },
   napkin: { rim: "#e879f9", core: "#fef3c7", glow: "#22d3ee" },
+  // R3405000: Meditative's Mythics': the summit's starlit ink, the workshop's pixel blue, the brush's vermilion
+  // on paper, the mine's red seam, the quarry's jade mist, the pavilion's ink and light, the virus's error red,
+  // the dojo's hologram cyan, the study hall's white curve, the cane's red cord on lacquer, the war room's
+  // blueprint under red lamps and the fortress's gunmetal and beacons.
+  ascent: { rim: "#e0e7ff", core: "#f8fafc", glow: "#64748b" },
+  workshop: { rim: "#38bdf8", core: "#e0f2fe", glow: "#1e3a8a" },
+  brush: { rim: "#dc2626", core: "#fafaf9", glow: "#44403c" },
+  mine: { rim: "#dc2626", core: "#fecaca", glow: "#7f1d1d" },
+  quarry: { rim: "#34d399", core: "#ecfdf5", glow: "#f9a8d4" },
+  pavilion: { rim: "#22d3ee", core: "#f5f5f4", glow: "#ef4444" },
+  virus: { rim: "#ef4444", core: "#fde68a", glow: "#a3e635" },
+  dojo: { rim: "#22d3ee", core: "#ecfeff", glow: "#a78bfa" },
+  studyHall: { rim: "#f5f5f4", core: "#fafaf9", glow: "#78716c" },
+  caneRack: { rim: "#b91c1c", core: "#fef3c7", glow: "#f5f5f4" },
+  warRoom: { rim: "#22d3ee", core: "#e0f2fe", glow: "#dc2626" },
+  fortress: { rim: "#ef4444", core: "#e5e7eb", glow: "#475569" },
 };
 
 /** Every burst an entrance throws, at intensity "normal" (rule 9). R2803000: the Mythic's eased for the phone frame budget. */

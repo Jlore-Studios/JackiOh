@@ -40,7 +40,12 @@ export type SfxId =
   // R3342000: the tile aura touch bell.
   | "auraTouch"
   // R3400001: Meditative+'s and Training Grounds' signature Legendaries and Mythics, one each (signatureCues.ts).
-  | "inkSummit" | "plowHeave" | "cursorTear" | "seanceChant" | "slateRap" | "diceGong" | "timberLash" | "pencilArpeggio";
+  | "inkSummit" | "plowHeave" | "cursorTear" | "seanceChant" | "slateRap" | "diceGong" | "timberLash" | "pencilArpeggio"
+  // R3405001: Meditative's signature Legendaries and Mythics, one each (signatureCues.ts).
+  | "bowlBreath" | "peakFlute" | "ticketHorn" | "forgeQuench" | "brushGuzheng" | "wellGush" | "minePick" | "jadeZither"
+  | "windChime" | "marketGong" | "chalkHush" | "porcelainRoar" | "bronzeGulp" | "modemGuqin" | "serverChoir" | "dialupStutter"
+  | "holoBow" | "synthPops" | "skullMutter" | "keyJangle" | "caneCrack" | "caneThunder" | "rootCreak" | "chalkGasp"
+  | "frostPages" | "coinCheer" | "totemDrums" | "templeDie" | "golemStomp" | "klaxonSlam" | "cellSlam" | "hangarRev";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains

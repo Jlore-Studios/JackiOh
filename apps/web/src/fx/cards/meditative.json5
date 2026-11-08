@@ -5,7 +5,8 @@
 //   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
 //   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
-//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
+//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000),
+//                                           or beside a bespoke; a Unit's on its own `tile` (R3400000).
 //   + entrance: "<key>"                     beside any entry but "none", or alone: a Unit's or a Field Spell's entrance (fx/entrances.ts, R3332000);
 //   + takeover: "<look>", signature: true   a Mythic's own takeover look (fx/takeover.ts); a Legendary's or Mythic's signature (R3332000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
@@ -19,28 +20,28 @@
   "meditative-004": { cast: { motif: "flight" } }, // Juicy Kumquat Melon
   "meditative-005": { cast: { motif: "barrage", palette: "Physical/blade" } }, // Death by 1000 cuts
   "meditative-006": { cast: { motif: "tether", palette: "Hustle/cash" } }, // Me no Likey
-  "meditative-007": { cast: { motif: "nova" }, trigger: { motif: "nova" }, aura: { look: "holy", scope: "side" } }, // Introspection
-  "meditative-008": { cast: { motif: "bolt" } }, // Reach the Summit
+  "meditative-007": { bespoke: "introspection", entrance: "poolBreath", aura: { look: "ripple", palette: "Holy", scope: "zone" }, signature: true }, // Introspection
+  "meditative-008": { bespoke: "summitAscent", takeover: "ascent", signature: true }, // Reach the Summit
   "meditative-009": { cast: { motif: "bless" }, aura: { look: "arcane", palette: "Nerd/ink", scope: "zone" } }, // Joint Filing
   "meditative-010": { cast: { motif: "bless" }, aura: { look: "bloom", palette: "Nerd/ink", scope: "zone" } }, // Double Counting
-  "meditative-011": { cast: { motif: "deal" }, trigger: { motif: "deal" }, aura: { look: "arcane", scope: "side" } }, // Double Header
+  "meditative-011": { bespoke: "doubleHeader", entrance: "floodlights", aura: { look: "arcane", scope: "zone" }, signature: true }, // Double Header
   "meditative-012": "none: no board change of its own (its Cry runs your End of turn hooks, each under its own marker)", // Fear Mongerer
   "meditative-013": { trigger: { motif: "bolt" } }, // Gatling Pea
   "meditative-014": { cast: { motif: "flight", palette: "Nerd/chalk" } }, // Prime Time
   "meditative-015": { cry: { motif: "seal" } }, // Smelly Steven
   "meditative-016": { trigger: { motif: "conjure" } }, // Trenful Trickster
-  "meditative-017": { cast: { motif: "deal", palette: "Nerd/pixel" } }, // True Craft a Card
+  "meditative-017": { bespoke: "trueCraft", takeover: "workshop", signature: true }, // True Craft a Card
   "meditative-018": { cast: { motif: "seal" } }, // Expedition12
   "meditative-019": { cast: { motif: "deal" } }, // Expedition123
   "meditative-019-1": { cast: { motif: "seal" } }, // Temporal Rift
-  "meditative-020": { cast: { motif: "seal" } }, // Aestheticize the Game
+  "meditative-020": { bespoke: "brushSeal", takeover: "brush", signature: true }, // Aestheticize the Game
   "meditative-021": { cast: { motif: "tether", palette: "Tech/glitch" }, trigger: { motif: "deal", palette: "Tech/glitch" } }, // API Key Fishing
   "meditative-022": { cast: { motif: "deal" } }, // Mind Games
   "meditative-022-1": { bespoke: "mindJudge" }, // Fortify Mind
   "meditative-023": { cry: { motif: "transmute", palette: "Beast/wool" } }, // Golly Bob Howdy
   "meditative-024": { cast: { motif: "transmute", palette: "Beast/wool" } }, // Polymorph
   "meditative-025": { cry: { motif: "offering", palette: "Beast/felinor" } }, // Blue-Eyes White Felinor
-  "meditative-026": { cast: { motif: "conjure" }, trigger: { motif: "conjure" }, aura: { look: "void", scope: "board" } }, // Alternate Fate
+  "meditative-026": { bespoke: "alternateFate", entrance: "crackedEarth", aura: { look: "void", scope: "zone" }, signature: true }, // Alternate Fate
   "meditative-027": { trigger: { motif: "bind" } }, // Clip-Farming Lawyer
   "meditative-028": { cry: { motif: "deal", palette: "Dark/curse" } }, // Shade-iris
   "meditative-028-1": { cast: { motif: "bolt", palette: "Dark/curse" } }, // Ancient Curse
@@ -59,24 +60,24 @@
   "meditative-039-1": { bespoke: "jadeCrack" }, // Auspicious Rock
   "meditative-039-2": { cast: { motif: "mana", palette: "Hustle/jade" } }, // Jade
   "meditative-039-3": { cast: { motif: "bolt" } }, // Dud
-  "meditative-039-4": { cast: { motif: "conjure", palette: "Hustle/jade" } }, // Red Jade
-  "meditative-039-5": "none: no motif reads marked (its brand row draws the Allure)", // Jade Beauty
-  "meditative-040": { cast: { motif: "bless" }, aura: { look: "bloom", scope: "board" } }, // Feng Shui
+  "meditative-039-4": { bespoke: "redJade", takeover: "mine", signature: true }, // Red Jade
+  "meditative-039-5": { bespoke: "jadeBeauty", entrance: "jadeBoulder", takeover: "quarry", aura: { look: "steam", palette: "Hustle/jade", scope: "tile" }, signature: true }, // Jade Beauty
+  "meditative-040": { bespoke: "fengShui", entrance: "fiveCompass", aura: { look: "orbit", scope: "zone" }, signature: true }, // Feng Shui
   "meditative-041": { trigger: { motif: "deal", palette: "Hustle/jade" } }, // CN Smuggler
-  "meditative-042": { cast: { motif: "deal", palette: "Hustle/cash" } }, // CN Flea Market
+  "meditative-042": { bespoke: "fleaMarket", signature: true }, // CN Flea Market
   "meditative-043": { cast: { motif: "deal", palette: "Hustle/jade" } }, // CN Jade Market
   "meditative-044": { cast: { motif: "deal", palette: "Hustle/jade" }, trigger: { motif: "deal", palette: "Hustle/jade" }, aura: { look: "frost", palette: "Hustle/jade", scope: "zone" } }, // CN Jade Well
-  "meditative-045": { cry: { motif: "curse", palette: "Nerd/chalk" }, death: { motif: "deal" } }, // Knowledge Breaker
-  "meditative-045-1": { cry: { motif: "wipe" } }, // Knowledge Breaker Prime
+  "meditative-045": { bespoke: "knowledgeBreaker", entrance: "chalkMask", aura: { look: "chalk", scope: "tile" }, signature: true }, // Knowledge Breaker
+  "meditative-045-1": { bespoke: "breakerPrime", entrance: "maskSplit", aura: { look: "storm", palette: "Nerd/chalk", scope: "tile" }, signature: true }, // Knowledge Breaker Prime
   "meditative-046": { cast: { motif: "deal", palette: "Nerd/ink" } }, // Conjure Intellect
-  "meditative-047": { trigger: { motif: "deal" } }, // 饕餮
+  "meditative-047": { bespoke: "taotie", entrance: "bronzeCauldron", aura: { look: "steam", palette: "Toxic", scope: "tile" }, signature: true }, // 饕餮
   "meditative-048": { cast: { motif: "seal" } }, // Tranquility
-  "meditative-049": { cry: { motif: "conjure", palette: "Tech/glitch" }, death: { motif: "deal", palette: "Tech/hologram" }, takeover: "ai" }, // YileGPT
-  "meditative-049-1": { cry: { motif: "curse", palette: "Tech/hologram" } }, // YileGPT Prime
-  "meditative-049-2": { trigger: { motif: "bolt", palette: "Tech/glitch" } }, // Yile's Virus
-  "meditative-049-3": "none: unseen (no census game summoned it)", // AI Girlfriend
+  "meditative-049": { bespoke: "yileGpt", entrance: "scrollScholar", takeover: "ai", aura: { look: "drift", palette: "Tech/hologram", scope: "tile" }, signature: true }, // YileGPT
+  "meditative-049-1": { bespoke: "yilePrime", entrance: "pavilionUnfurl", takeover: "pavilion", aura: { look: "orbit", palette: "Tech/hologram", scope: "tile" }, signature: true }, // YileGPT Prime
+  "meditative-049-2": { bespoke: "yileVirus", entrance: "virusBoot", takeover: "virus", aura: { look: "glitch", palette: "Tech/glitch", scope: "tile" }, signature: true }, // Yile's Virus
+  "meditative-049-3": { bespoke: "aiGirlfriend", entrance: "dojoBoot", takeover: "dojo", aura: { look: "holy", palette: "Tech/hologram", scope: "tile" }, signature: true }, // AI Girlfriend
   "meditative-050": { cast: { motif: "deal", palette: "Tech/hologram" } }, // CN Tech
-  "meditative-051": { cry: { motif: "conjure", palette: "Tech/hologram" } }, // Devin Bot
+  "meditative-051": { bespoke: "devinBot", entrance: "cushionDrop", aura: { look: "scanline", palette: "Tech/hologram", scope: "tile" }, signature: true }, // Devin Bot
   "meditative-052": { cast: { motif: "bless" }, aura: { look: "storm", palette: "Hustle/cash", scope: "board" } }, // Economic Anxiety
   "meditative-053": { cast: { motif: "seal" } }, // Prestige
   "meditative-054": { cast: { motif: "deal", palette: "Hustle/cash" }, trigger: { motif: "deal", palette: "Hustle/cash" }, activate: { motif: "deal", palette: "Hustle/cash" }, aura: { look: "holy", palette: "Hustle/cash", scope: "zone" } }, // Money Machine
@@ -88,33 +89,33 @@
   "meditative-060": { cast: { motif: "conjure" }, trigger: { motif: "conjure" }, aura: { look: "arcane", scope: "zone" } }, // Eschews
   "meditative-061": { trigger: { motif: "bless" } }, // Joon Juicer
   "meditative-062": { cast: { motif: "flight" } }, // Small Time Recruits
-  "meditative-063": { cast: { motif: "conjure" }, trigger: { motif: "conjure" }, aura: { look: "void", scope: "zone" } }, // Skull of J'Nari
+  "meditative-063": { bespoke: "skullJnari", entrance: "skullThud", aura: { look: "ember", palette: "Dark/curse", scope: "zone" }, signature: true }, // Skull of J'Nari
   "meditative-064": { cast: { motif: "snap", palette: "Dark/blood" } }, // Traitorous Blood
-  "meditative-065": "none: vanilla", // Keymaster Keenus
+  "meditative-065": { bespoke: "keenusKeys", entrance: "keyRing", aura: { look: "orbit", palette: "Physical/steel", scope: "tile" }, signature: true }, // Keymaster Keenus
   "meditative-066": { cast: { motif: "rise", palette: "Fire" }, aura: { look: "ember", palette: "Fire", scope: "zone" } }, // Fiery Waraxe
   "meditative-067": { trigger: { motif: "deal", palette: "Beast/felinor" } }, // Sentient Cat Ears
   "meditative-068": { cast: { motif: "snap", palette: "Beast/felinor" } }, // Catnip
   "meditative-069": { activate: { motif: "vanish" } }, // The Maestro
   "meditative-070": { cry: { motif: "conjure", palette: "Dark/curse" } }, // I'M WILL BE YOUR DOOM
   "meditative-070-1": "none: vanilla", // Ready… I'm
-  "meditative-071": { cast: { motif: "conjure" }, trigger: { motif: "lance" }, aura: { look: "holy", scope: "lane" } }, // Pareto Optimality
-  "meditative-071-1": { aura: { look: "storm", scope: "zone" } }, // The Cane
+  "meditative-071": { bespoke: "pareto", entrance: "studyCurve", takeover: "studyHall", aura: { look: "holy", scope: "lane" }, signature: true }, // Pareto Optimality
+  "meditative-071-1": { entrance: "caneRise", takeover: "caneRack", aura: { look: "storm", scope: "zone" }, signature: true }, // The Cane
   "meditative-072": { trigger: { motif: "vanish" } }, // The Banisher
   "meditative-073": { cry: { motif: "bless", palette: "Physical/steel" } }, // Plate Packer
   "meditative-074": "none: the census never saw its End of turn make it Radiant", // Montaña Giant
-  "meditative-075": { cast: { motif: "deal" }, activate: { motif: "deal" }, aura: { look: "bloom", scope: "lane" } }, // Ever Growing Tree
+  "meditative-075": { bespoke: "everGrowingTree", entrance: "treeSprout", aura: { look: "bloom", scope: "lane" }, signature: true }, // Ever Growing Tree
   "meditative-076": { cast: { motif: "tether", palette: "Dark/shadow" } }, // Do or Die
   "meditative-077": { cast: { motif: "deal", palette: "Hustle/cash" } }, // Bulk Booster
   "meditative-078": { cast: { motif: "vanish" } }, // Occidentless Mandate
-  "meditative-079": { cry: { motif: "flight" } }, // Touched by KY
-  "meditative-080": { cast: { motif: "flight" }, trigger: { motif: "flight" }, aura: { look: "frost", palette: "Nerd/ink", scope: "side" } }, // Aluneth
+  "meditative-079": { bespoke: "touchedByKy", entrance: "chalkHand", aura: { look: "chalk", palette: "Holy", scope: "tile" }, signature: true }, // Touched by KY
+  "meditative-080": { bespoke: "aluneth", entrance: "lanternLight", aura: { look: "frost", palette: "Nerd/ink", scope: "zone" }, signature: true }, // Aluneth
   "meditative-081": { cast: { motif: "deal" } }, // Deadman's Hand
   "meditative-082": { cry: { motif: "bless" } }, // Medina Outfitter
   "meditative-083": { trigger: { motif: "bless" } }, // Medina Enforcer
   "meditative-084": "none: vanilla (the census saw its Cry change nothing)", // Volatility
   "meditative-085": { trigger: { motif: "deal" } }, // Playtester
-  "meditative-086": "none: vanilla", // Mayor Medinamogger
-  "meditative-087": { trigger: { motif: "bless" } }, // Tatches the Totem
+  "meditative-086": { entrance: "coinFlip", aura: { look: "orbit", palette: "Hustle/cash", scope: "tile" }, signature: true }, // Mayor Medinamogger
+  "meditative-087": { bespoke: "tatches", entrance: "totemStack", aura: { look: "holy", scope: "tile" }, signature: true }, // Tatches the Totem
   "meditative-088": { cry: { motif: "deal", palette: "Beast/wool" } }, // The True Sheep
   "meditative-089": { cast: { motif: "mana" }, aura: { look: "void", palette: "Hustle/cash", scope: "side" } }, // Jlarna
   "meditative-090": { cast: { motif: "deal" } }, // Spell Basket
@@ -126,11 +127,11 @@
   "meditative-093-2": { death: { motif: "rise", palette: "Beast/felinor" } }, // Growing Felinor Sr Sr
   "meditative-093-3": "none: vanilla", // Growing Felinor Super Senior
   "meditative-094": { death: { motif: "rise", palette: "Beast/felinor" } }, // Shrinking Felinor
-  "meditative-095": { cast: { motif: "deal" } }, // Call to Chaos (Meditative Edition)
-  "meditative-095-1": { trigger: { motif: "deal" } }, // CN Golem
+  "meditative-095": { bespoke: "jadeDie", signature: true }, // Call to Chaos (Meditative Edition)
+  "meditative-095-1": { bespoke: "cnGolem", entrance: "golemLock", aura: { look: "timber", palette: "Toxic", scope: "tile" }, signature: true }, // CN Golem
   "meditative-096": { cast: { motif: "vanish" } }, // Meditative Journey
   "meditative-096-1": { cast: { motif: "deal" } }, // Journey Complete
-  "meditative-097": { cast: { motif: "deal", palette: "Tech/hologram" } }, // Jlockeed's Evil Blueprints
+  "meditative-097": { bespoke: "blueprints", takeover: "warRoom", signature: true }, // Jlockeed's Evil Blueprints
   "meditative-097-1": "none: vanilla", // Empty Plot
   "meditative-097-2": { activate: { motif: "deal" } }, // Wishing Well
   "meditative-097-3": { activate: { motif: "conjure", palette: "Nerd/chalk" } }, // School
@@ -138,8 +139,8 @@
   "meditative-097-5": { cry: { motif: "offering", palette: "Physical/steel" } }, // Bunker
   "meditative-097-6": { activate: { motif: "bless", palette: "Nerd/chalk" } }, // University
   "meditative-097-7": { cry: { motif: "offering" } }, // The Great Wall
-  "meditative-097-8": "none: unseen (no census game summoned it)", // Prison
-  "meditative-097-9": "none: unseen (no census game summoned it)", // Jlockeed's Headquarters
+  "meditative-097-8": { bespoke: "prison", entrance: "prisonBars", aura: { look: "drift", palette: "Dark/shadow", scope: "tile" }, signature: true }, // Prison
+  "meditative-097-9": { bespoke: "jlockeedHq", entrance: "fortressRise", takeover: "fortress", aura: { look: "ember", palette: "Tech/rocket", scope: "tile" }, signature: true }, // Jlockeed's Headquarters
   "meditative-098": { cast: { motif: "bind", palette: "Dark/curse" } }, // Showdown
   "meditative-099": { cast: { motif: "flight" }, aura: { look: "void", palette: "Dark/shadow", scope: "side" } }, // Paranoia
   "meditative-100": "none: vanilla", // Greaser

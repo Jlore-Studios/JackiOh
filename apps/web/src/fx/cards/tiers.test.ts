@@ -183,7 +183,8 @@ describe("R3332000 every signature keeps its loudness budget", () => {
         offset += entryPlanned.durationMs;
       }
       expect(drawn, `${defId}'s signature plans`).toBe(true);
-      const aura = entry.kind === "hooks" ? entry.aura : undefined;
+      // R3400000: a bespoke entry's aura too.
+      const aura = entry.kind === "hooks" || entry.kind === "bespoke" ? entry.aura : undefined;
       if (aura !== undefined) {
         const look = AURA_LOOKS[aura.look];
         for (const value of [look.alpha, look.tint, look.edge]) expect(value, `${defId} aura ${aura.look}`).toBeLessThanOrEqual(AURA_SIGNATURE_MAX_INTENSITY);

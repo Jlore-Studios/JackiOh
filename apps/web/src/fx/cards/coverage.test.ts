@@ -44,7 +44,8 @@ describe("R2803000 the audit's coverage", () => {
     expect(fields.length).toBeGreaterThan(0);
     for (const id of fields) {
       const entry = entryOf(id);
-      expect(entry.kind === "hooks" ? entry.aura : undefined, id).toBeDefined();
+      // R3400000: a bespoke entry wears its aura too (R3405001: Meditative's signature Field Spells).
+      expect(entry.kind === "hooks" || entry.kind === "bespoke" ? entry.aura : undefined, id).toBeDefined();
     }
   });
 
