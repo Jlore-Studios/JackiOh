@@ -16477,7 +16477,7 @@
     "3426": {
       "action": "revise",
       "asks": [],
-      "audit_tier": "strong",
+      "audit_tier": "",
       "ci_early": false,
       "ci_fixed_head": "078753e17b6f11f56e3de0a2c28fa7478196e817",
       "ci_fixes": 1,
@@ -16503,19 +16503,12 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-08T14:11:17Z",
+      "feedback_since": "2026-11-08T16:39:52Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3402,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "Combo-Index's grade beat (the lit ring, the sparkle burst and its only FX_GRADE_TRAUMA shake) waits for a `questProgressed` event, which the engine never sends for this card, so in a real game a trigger never lights a grade.",
-          "evidence": "The engine raises the grade with `GameEvent::CounterChanged { counter: CounterKind::Grade, .. }` (crates/engine/src/subsystems/combo_index.rs:134); `QuestProgressed` is pushed only in subsystems/quests.rs:338, which Combo-Index never calls. The old `tally` motif's gallery fixture fed it `{ type: \"counterChanged\", counter: \"grade\" }` (gallery.ts:208). The new fixture invents `{ type: \"questProgressed\", quest: \"fx-grade\", \u2026 }` (gallery.ts gradeRings), so signatures.test.ts:231-234 passes on an event that never arrives. Fix: key on `counterChanged` with `counter === \"grade\"` and `instanceId === play.instanceId`, change the fixture to match, and correct the same claim in comboIndex.ts's header, core.md and R3402001's #93 bullet (the issue's table named `questProgressed`, but its own rule lets a beat move to the events the view carries).",
-          "severity": "blocking",
-          "where": "apps/web/src/fx/cards/core/comboIndex.ts:69"
-        }
-      ],
+      "last_findings": [],
       "live": "revising",
       "merge_owner": "claude-6",
       "pending_request": false,
@@ -16546,7 +16539,7 @@
         "provider": "claude-3",
         "run": "42488567778"
       },
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-11-08T16:39:52Z",
       "stop_requested": false,
       "taken_asks": [],
