@@ -14613,9 +14613,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-1",
-      "owner_since": "2026-11-08T01:34:36Z",
-      "owner_why": "its approval shipped `924d2abe54ac`, and the last approver owns the merge, so it resolves the conflict",
+      "owner": "claude-7",
+      "owner_since": "2026-11-08T07:06:56Z",
+      "owner_why": "handed off from `claude-1`: `claude-1` 5-hour usage is 102%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-08T09:50:00Z; it can start again only in 2h 43m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
       "planned_at": "2026-11-07T09:16:58Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -16551,11 +16551,11 @@
         "provider": "claude-1"
       },
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-7",
       "question": "",
       "queued_at": "2026-11-08T06:07:01Z",
       "round_tier": "",
-      "run_id": "42455481931",
+      "run_id": "pending:97e00bdf-1794121590",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16576,7 +16576,7 @@
         "run": "42434877004"
       },
       "source": "conflict",
-      "started_at": "2026-11-08T06:36:58Z",
+      "started_at": "2026-11-08T07:06:56Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -18490,9 +18490,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T07:06:15Z",
+    "at": "2026-11-08T07:06:56Z",
     "url": "",
-    "what": "revise #3425 on claude-7"
+    "what": "revise #3382 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-08T06:53:18Z",
