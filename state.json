@@ -16094,10 +16094,12 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "at": "2026-11-07T22:51:21Z",
+        "at": "2026-11-08T00:09:15Z",
         "built_by": "claude-4",
         "by": "`claude` (strong)",
-        "sha": "01da7b145843f35781cf7d86cb7fd03dacd9a4b8"
+        "carried_from": "01da7b145843f35781cf7d86cb7fd03dacd9a4b8",
+        "resolved_by": "`claude` (strong)",
+        "sha": "7a6f318e86e26e5f85fc4d11a8410a03dadb923a"
       },
       "cross_rounds": 0,
       "died": 0,
