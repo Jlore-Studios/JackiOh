@@ -434,6 +434,12 @@
       "lines": [
         "@jgoetzmann-bot I read the logs the hand-off asked for. Both promotions failed on a test timing out, and a different test each time. Make both robust, then plan and build the fix."
       ]
+    },
+    "c:6728331432": {
+      "at": "2026-11-08T22:59:18Z",
+      "lines": [
+        "/harness 1"
+      ]
     }
   },
   "items": {
