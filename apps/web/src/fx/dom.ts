@@ -1,11 +1,13 @@
 // DOM effects for S10/B39: data-only, aria-hidden elements painted by fx.css; no text nodes become Cypress or screen-reader content.
 // No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
 // Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers, R2801000 launches,
-// R3336000 ships, R2800000 set pieces, and R3337002's radar and R3337003's rift and title card.
+// R3336000 ships, R2800000 set pieces, and R3337002's radar and R3337003's rift and title card. R3400000: a
+// takeover's look may draw its art (takeoverArt.ts), R3402000 a Core Mythic's its scene; R3400001: a
+// signature's figures (figures.ts), each a shape over its box, never a card.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
-import { buildTakeoverArt } from "./takeoverArt.ts";
+import { buildTakeoverArt, takeoverArtParts } from "./takeoverArt.ts";
 import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
 
@@ -333,12 +335,35 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
         // R3402000: a look with a scene of its own draws it over the dark, under the sweep (takeoverArt.ts).
         const scene = part === "dark" ? buildTakeoverArt(doc, cue.look) : null;
         if (scene !== null) {
-          const art = doc.createElement("div");
-          art.className = "fx-takeover-art";
-          art.appendChild(scene);
-          el.appendChild(art);
+          const layer = doc.createElement("div");
+          layer.className = "fx-takeover-art";
+          layer.appendChild(scene);
+          el.appendChild(layer);
         }
+        // R3400000: a look with art of its own draws it over the dark, under the sweep, rays and wave, one element a part.
+        const parts = part === "dark" ? takeoverArtParts(cue.look) : [];
+        if (parts.length === 0) continue;
+        const art = doc.createElement("div");
+        art.className = "takeover-art";
+        art.setAttribute("data-look", cue.look);
+        for (const name of parts) {
+          const piece = doc.createElement("div");
+          piece.className = `takeover-art-${name}`;
+          art.appendChild(piece);
+        }
+        el.appendChild(art);
       }
+      break;
+    }
+    case "figure": {
+      // R3400001: a signature's figure over its box, in its tint; mirrored for the other seat, smaller for a second card.
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      cover(el, at);
+      el.setAttribute("data-figure", cue.figure);
+      tintVars(el, cue.tint);
+      if (cue.side !== undefined) el.setAttribute("data-side", cue.side);
+      if (cue.size !== undefined) el.setAttribute("data-size", cue.size);
       break;
     }
     case "setPiece": {

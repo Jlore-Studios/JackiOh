@@ -41,8 +41,6 @@ describe("R3342000 tile aura planner", () => {
       if (tier === null) continue;
       if (def.type !== "Unit" && def.type !== "Field Spell" && def.type !== "Field Trap" && def.type !== "Trap") continue;
       const tableEntry = FX_CARD_TABLE.get(id);
-      if (entryAura(tableEntry) !== undefined) continue;
-
       const isUnit = def.type === "Unit";
       const view = baseView({
         you: emptySide("p1", {
@@ -52,6 +50,12 @@ describe("R3342000 tile aura planner", () => {
       });
 
       const planned = planTileAura(view, "you", isUnit ? "units" : "backrow", 1);
+      // A card whose table entry wears its own aura (R3400000: a bespoke entry's too) wears that in its place.
+      if (entryAura(tableEntry) !== undefined) {
+        expect(planned, id).toBeNull();
+        covered += 1;
+        continue;
+      }
       expect(planned).not.toBeNull();
       expect(planned?.tier).toBe(tier);
       if (tier === "Mythic") {
@@ -282,6 +286,17 @@ describe("R3342000 tile aura planner", () => {
     // With signature table: plans null
     const signatureTable = parseFxCardTable("test.json5", '{ "core-052": { aura: { look: "void", scope: "side" } } }');
     expect(planTileAura(silasView, "you", "units", 1, signatureTable)).toBeNull();
+  });
+
+  it("R3400000 a signature Unit's own tile aura, on a hooks or a bespoke entry, replaces the default", () => {
+    for (const defId of ["meditativeplus-024", "traininggrounds-038", "traininggrounds-039-1"]) {
+      const view = baseView({ you: emptySide("p1", { units: [unit("p1", { defId, instanceId: "u1" })] }) });
+      expect(planTileAura(view, "you", "units", 1), defId).toBeNull();
+      expect(planTileAura(view, "you", "units", 1, new Map()), defId).not.toBeNull();
+    }
+    const bespoke = parseFxCardTable("test.json5", '{ "meditativeplus-024": { bespoke: "bobSoldier", aura: { look: "flurry", scope: "tile" } } }');
+    const bob = baseView({ you: emptySide("p1", { units: [unit("p1", { defId: "meditativeplus-024", instanceId: "u1" })] }) });
+    expect(planTileAura(bob, "you", "units", 1, bespoke)).toBeNull();
   });
 
   it("R3342000 dim for slumber, frozen, frozenForever, and vanilla statuses", () => {

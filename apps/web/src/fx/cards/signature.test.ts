@@ -28,8 +28,6 @@ const SIGNATURE_PENDING: readonly string[] = [
   "meditative-049-2", "meditative-049-3", "meditative-051", "meditative-063", "meditative-065", "meditative-071", "meditative-071-1",
   "meditative-075", "meditative-079", "meditative-080", "meditative-086", "meditative-087", "meditative-095", "meditative-095-1", "meditative-097",
   "meditative-097-8", "meditative-097-9",
-  // Meditative+
-  "meditativeplus-001", "meditativeplus-024", "meditativeplus-026",
   // Stinkyscape
   "stinkyscape-004", "stinkyscape-004-1", "stinkyscape-004-2", "stinkyscape-004-3", "stinkyscape-004-4", "stinkyscape-004-5", "stinkyscape-004-6",
   "stinkyscape-006", "stinkyscape-007", "stinkyscape-016", "stinkyscape-018", "stinkyscape-018-1", "stinkyscape-018-2", "stinkyscape-018-3",
@@ -42,8 +40,6 @@ const SIGNATURE_PENDING: readonly string[] = [
   "stinkyscape-152", "stinkyscape-153", "stinkyscape-154", "stinkyscape-176", "stinkyscape-t-dormant-starship", "stinkyscape-t-shield-layer",
   "stinkyscape-t-propagation-layer", "stinkyscape-t-meltdown-layer", "stinkyscape-t-narcor", "stinkyscape-t-red-narcor",
   "stinkyscape-t-anomaly-found",
-  // Training Grounds
-  "traininggrounds-037", "traininggrounds-038", "traininggrounds-039", "traininggrounds-039-1", "traininggrounds-040",
 ];
 
 /** Every Legendary and Mythic of the catalog, tokens by the rarity they print, in catalog order. */

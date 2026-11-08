@@ -48,6 +48,8 @@ const EXPECTED_IDS = [
   "playImpact", "trapSnap",
   // R3342000: the tile aura bell.
   "auraTouch",
+  // R3400001: Meditative+'s and Training Grounds' signatures.
+  "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
   // R3402001: the ten Core signatures.
   "silasScratch", "crucibleChoir", "hatchWeld", "pocketZip", "stadiumCheer", "jackpotReels", "pawnWaltz",
   "wishWind", "heroicFanfare", "forgeAnvil",
@@ -159,6 +161,14 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   trapSnap: 200,
   // R3342000: the tile aura bell.
   auraTouch: 200,
+  inkSummit: 1100,
+  plowHeave: 1300,
+  cursorTear: 1400,
+  seanceChant: 1500,
+  slateRap: 1300,
+  diceGong: 1600,
+  timberLash: 1200,
+  pencilArpeggio: 1400,
   // R3402001: the ten Core signatures.
   silasScratch: 1250,
   crucibleChoir: 1170,
@@ -405,6 +415,8 @@ const ROUTINE: readonly Cue[] = [
   ...(["armorClank", "armorRing", "overkill", "crumble", "unlock", "steal", "give", "counterspell", "bleat", "fuse", "degrade", "upgrade"] as const).map(
     (id): Cue => ({ id, params: {} }),
   ),
+  // R3400001: the signatures, each a card's own moment at a routine level.
+  ...(["inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio"] as const).map((id): Cue => ({ id, params: {} })),
   // R3402001: the ten Core signatures.
   ...(["silasScratch", "crucibleChoir", "hatchWeld", "pocketZip", "stadiumCheer", "jackpotReels", "pawnWaltz", "wishWind", "heroicFanfare", "forgeAnvil"] as const).map(
     (id): Cue => ({ id, params: {} }),

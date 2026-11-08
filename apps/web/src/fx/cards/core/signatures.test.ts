@@ -274,7 +274,8 @@ describe("R3402001 Core's signatures", () => {
     expect(strings.length).toBe(Math.min(pieces, FX_PAWN_STRINGS_MAX));
     expect(strings.some((cue) => cue.kind === "shot" && JSON.stringify(cue.to) === JSON.stringify(tid(testid.hero("opponent"))))).toBe(true);
     expect(anchored(firing, tid(testid.hero("opponent"))).some((cue) => cue.kind === "sheen")).toBe(true);
-    expect(shakes(firing)).toContain(Math.min(1, FX_TAKEOVER_TRAUMA * I));
+    // R3400000: its own cast keeps its takeover alone, without the shared takeover's shake; its strings stand in.
+    expect(shakes(firing)).not.toContain(Math.min(1, FX_TAKEOVER_TRAUMA * I));
     const foe = board.opponent.units[0]?.instanceId ?? "";
     const shatter = anchored(at(planned, "attackCancelled"), tid(testid.card(foe)));
     expect(shatter.map((cue) => (cue.kind === "ring" || cue.kind === "burst" ? `${cue.kind} ${cue.preset}` : cue.kind)).slice(0, 3)).toEqual(["crack", "ring frost", "burst shard"]);

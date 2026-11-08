@@ -1,4 +1,6 @@
 // #2799: Training Grounds' three bespoke flourishes (celestialCaller.ts, dinoSize.ts, goetzmannGameDesign.ts)
+// R3400001: Goetzmann Game Design's grew into its signature (signatures.test.ts holds the rest of it), its
+// card's beats now replacing the hand's row.
 // pinned on their gallery fixtures (motifs/gallery.ts RECIPE_FIXTURES), each held inside its entry (R200),
 // drawing nothing with the effects off, keyed only by a readable play and naming no hidden id (R202), and
 // each named by its card's table entry (R502).
@@ -154,18 +156,30 @@ describe("#2799 Training Grounds' bespoke flourishes", () => {
     expect(gone).toEqual([]);
   });
 
-  it("R2784000 gameDesign drafts the card at the board's centre in Mythic rays and deals it into the caster's hand pile", () => {
+  it("R2784000 R3400001 gameDesign sketches the card at the board's centre and deals it into the caster's hand pile as a card back, in place of the hand's row", () => {
     const view = fullBoardView();
     const [cues = []] = fixtureCues("traininggrounds-040", "gameDesign");
-    expect(beats(cues)).toEqual(["burst@0", "rays@0", "ring@80", "ghost@80", "burst@240", "burst@300", "shake@240"]);
+    // At D 400: the sketch lifts until 240, its card back leaving at 160.
+    expect(beats(cues)).toEqual(["figure@0", "ghost@160"]);
     const centre = tid(testid.board, FX_CENTER);
     const hand = tid(animTestid.hand("you"));
-    expect(cues.find((cue) => cue.kind === "rays")).toMatchObject({ tone: "mythic", at: centre });
-    expect(cues.find((cue) => cue.kind === "ghost")).toEqual({ kind: "ghost", from: centre, to: hand, delayMs: 80, durationMs: 160 });
-    expect(cues.find((cue) => cue.kind === "burst" && cue.delayMs === 0)).toMatchObject({ colors: paletteLook("Nerd/pixel")?.colors });
-    expect(cues.find((cue) => cue.kind === "burst" && cue.delayMs === 240)).toMatchObject({ preset: "prismatic", at: hand });
-    const scale = motifScale("traininggrounds-040", view, FX_INTENSITY_SCALE.normal);
-    expect(cues.find((cue) => cue.kind === "shake")).toEqual({ kind: "shake", trauma: Math.min(1, FX_GAME_DESIGN_TRAUMA * scale), delayMs: 240 });
+    expect(cues[0]).toMatchObject({ kind: "figure", figure: "sketch", at: centre, durationMs: 240 });
+    expect(cues[1]).toEqual({ kind: "ghost", from: centre, to: hand, delayMs: 160, durationMs: 240 });
+    // Its row is replaced: no hand sparkle (handGlint) beside it.
+    const env = envOf();
+    env.memory.remember([played("p1", "ex", "traininggrounds-040")]);
+    const event = RECIPE_FIXTURES.gameDesign(view, "ex", "p1")[0];
+    if (event === undefined) throw new Error("no fixture");
+    env.memory.remember([event]);
+    const entry = { ...galleryEntry([event], view), durationMs: 400 };
+    expect(planCardFx(event, { entry, view, env, D: 400 })?.row).toBe("replace");
+    expect(planFx(entry, view, env)).toEqual(cues);
+    // Its own play sparks pixels at the board's centre as the takeover's hold ends, with its shake.
+    const cast = CARD_RECIPES.gameDesign(played("p1", "ex", "traininggrounds-040"), { entry: { ...galleryEntry([played("p1", "ex", "traininggrounds-040")], view), setPiece: { key: "takeover", holdMs: 1000 } }, view, env: envOf(), D: 1400 }, { player: "p1", instanceId: "ex", defId: "traininggrounds-040", castOnDraw: false, step: 0, seen: {} });
+    expect(cast?.row).toBe("replace");
+    expect(cast?.cues.map((cue) => `${cue.kind}@${String(cue.delayMs)}`)).toEqual(["burst@1000", "shake@1000"]);
+    expect(cast?.cues[0]).toMatchObject({ at: centre, colors: paletteLook("Tech/glitch")?.colors });
+    expect(cast?.cues.find((cue) => cue.kind === "shake")).toEqual({ kind: "shake", trauma: FX_GAME_DESIGN_TRAUMA, delayMs: 1000 });
     const [theirs = []] = run("traininggrounds-040", [{ type: "addedToHand", player: "p2", instanceId: "hidden", defId: "hidden" }], 400, "p1", view, "gameDesign");
     expect(theirs).toEqual([]);
   });
@@ -188,7 +202,7 @@ describe("#2799 Training Grounds' bespoke flourishes", () => {
     }
   });
 
-  it("R200 every flourish draws nothing with the effects off, and over its event's own row with them on", () => {
+  it("R200 every flourish draws nothing with the effects off, and over its event's own row with them on (R3400001: gameDesign's in its place)", () => {
     const view = fullBoardView();
     for (const [defId, key] of FLOURISHES) {
       const events = RECIPE_FIXTURES[key](view, "ex", "p1");
@@ -204,9 +218,10 @@ describe("#2799 Training Grounds' bespoke flourishes", () => {
       expect(planned(FX_INTENSITY_SCALE.off), key).toEqual([]);
       const on = planned(FX_INTENSITY_SCALE.normal);
       const own = fixtureCues(defId, key).flat();
-      // `keep`: the row's own recipe plays beside the flourish.
-      expect(on.length, key).toBeGreaterThan(own.length);
       for (const cue of own) expect(on, key).toContainEqual(cue);
+      // `keep`: the row's own recipe plays beside the flourish; R3400001: a signature's beats replace it.
+      if (key === "gameDesign") expect(on, key).toEqual(own);
+      else expect(on.length, key).toBeGreaterThan(own.length);
     }
   });
 
@@ -230,7 +245,7 @@ describe("#2799 Training Grounds' bespoke flourishes", () => {
   it("R502 traininggrounds-016, -034 and -040 key their recipes", () => {
     const view = fullBoardView();
     for (const [defId, key] of FLOURISHES) {
-      expect(FX_CARD_TABLE.get(defId), defId).toEqual({ kind: "bespoke", key });
+      expect(FX_CARD_TABLE.get(defId), defId).toMatchObject({ kind: "bespoke", key });
       expect(run(defId, RECIPE_FIXTURES[key](view, "ex", "p1"), 400).flat(), defId).toEqual(fixtureCues(defId, key).flat());
     }
   });

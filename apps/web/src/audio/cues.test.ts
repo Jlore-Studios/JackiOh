@@ -502,7 +502,7 @@ describe("B17 SOUND_CUES is total over GameEvent types", () => {
       const row = SOUND_CUES[type] as unknown as { cues: (e: GameEvent, c: CueContext) => readonly SoundCue[] };
       // Then the card sources it appends: the Battleship's (R3336000) and a signature's (R3402001, the sample
       // trap #96 My Pawn's firing).
-      const appended = [...battleshipCues(event, ctx()), ...signatureCues(event, ctx())];
+      const appended = [...battleshipCues(event, ctx()), ...signatureCues(event)];
       expect(cuesFor(event, ctx()).map(said), type).toEqual([...row.cues(event, ctx()), ...appended].map(said));
     }
   });

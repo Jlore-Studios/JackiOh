@@ -4,9 +4,9 @@ Core's pass over its animation table, `core.json5` (`docs/polish/9-card-animatio
 pass"): one row per Core card, tokens included, in catalog order. `core.test.ts` holds every row's
 name, type, entry and scale to the catalog and the table, and the table to the pass's floor.
 
-- **Entry**: the card's entry in `core.json5`: `none: <reason>`, `bespoke <recipe>`, `setPiece <key>`,
-  or each hook's `<hook> <motif>[ <palette>]`, then `aura <look> <scope>[ <palette>]`; a signature's
-  starts `signature`, then `entrance <key>`, and a `{ bespoke }` entry's aura follows its recipe (R3402000).
+- **Entry**: the card's entry in `core.json5`: `none: <reason>`, `bespoke <recipe>` (R3400000: then
+  `; aura <look> <scope>[ <palette>]`), `setPiece <key>`, or each hook's `<hook> <motif>[ <palette>]`,
+  then `aura <look> <scope>[ <palette>]`.
 - **Scale**: the card's motif scale at intensity 1 (`motifScale`), from its cost and rarity alone; `—`
   for a `none`.
 - **Census**: the "Suggested" cell of `cargo jackioh fx census` (#2788) for the card, run at
@@ -72,7 +72,7 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | `core-050` | K-Pop Fanatic | Unit | none: no motif reads marked, its Allure; the mark's own row plays | — | bolt | the census's bolt is its Allured card's later kills; no motif reads `marked`, its Allure, and the mark's own row plays |
 | `core-051` | KY's Private Tutor | Spell | cast send Nerd/chalk | 1.35 | none: no motif reads promptAnswered | cast: the census reads its prompt; its Discover adds the card to the hand (addedToHand), which send (#2793) reads |
 | `core-051-1` | KY's Empty Notebook | Spell | cast send Nerd/ink | 0.97 | not in census | cast: a token the census never played; its cards shuffle in (shuffledIn), which send (#2793) reads, in Nerd's ink beside its Tutor's chalk |
-| `core-052` | Silly Silas | Unit | signature; entrance silasSpotlight; bespoke mirrorballShuffle; aura mirrorball zone Tech/hologram | 1.85 | vanish | signature (R3402001): he pirouettes down a spotlight into a crater and tips his hat; his rotation spins a mirrorball ring and brands each card it hands over in its new owner's colour; a mirrorball glint stands on his zone |
+| `core-052` | Silly Silas | Unit | bespoke mirrorballShuffle; aura mirrorball tile Tech/hologram | 1.85 | vanish | signature (R3402001): he pirouettes down a spotlight into a crater and tips his hat; his rotation spins a mirrorball ring and brands each card it hands over in its new owner's colour; a mirrorball glint stands on his zone |
 | `core-053` | Reno | Unit | cry mend | 1.24 | none: no motif reads healed | cry: no census family reads healed, which mend (#2793) reads |
 | `core-054` | Straaza | Unit | cry send | 1.32 | none: no motif reads addedToHand | cry: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
 | `core-055` | Lava Golem | Unit | cry offering | 1.36 | offering | cry: the census agrees (offering) |
@@ -104,26 +104,26 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | `core-080` | Zao Gao | Spell | cast conjure | 1.28 | volley | cast: the census's suggestion is noise in its window (fatigue, other cards' events); its own effect is summoned, which conjure reads |
 | `core-081` | Radiant Saintess | Unit | death radiance | 1.45 | none: vanilla | death: no census family reads radiantSet, which radiance (#2793) reads |
 | `core-082` | KY's Trial | Spell | cast send | 1.28 | none: no motif reads promptAnswered | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
-| `core-083` | Transmogulate | Spell | signature; bespoke legendaryTide | 1.62 | none: no motif reads transformed | signature (R3402001): a crucible tips over the caster's hero in rays and prismatic vials; the wave crests over their Deck and hand piles, a sheen on each hand card the owner reads, a ripple on each Unit it re-forms |
+| `core-083` | Transmogulate | Spell | bespoke legendaryTide | 1.62 | none: no motif reads transformed | signature (R3402001): a crucible tips over the caster's hero in rays and prismatic vials; the wave crests over their Deck and hand piles, a sheen on each hand card the owner reads, a ripple on each Unit it re-forms |
 | `core-084` | Going Long | Field Spell | cast conjure; aura holy side | 1.28 | none: vanilla | cast: a Field Spell's play is its own landing in the backrow (`summoned`), which the census leaves out; conjure draws it |
-| `core-085` | Unlicensed Experimentation | Trap | signature; bespoke clampWeld | 1.74 | none: vanilla | signature (R3402001): at its firing a hatch fractures open in green arc light; the seized permanent and the caster's weld in a seam, a sheen and a flash on `fused`; face down it draws nothing (R202) |
+| `core-085` | Unlicensed Experimentation | Trap | bespoke clampWeld | 1.74 | none: vanilla | signature (R3402001): at its firing a hatch fractures open in green arc light; the seized permanent and the caster's weld in a seam, a sheen and a flash on `fused`; face down it draws nothing (R202) |
 | `core-086` | "Miss" Mrow | Unit | death tether Beast/felinor | 1.35 | none: vanilla | death: no census family reads stolen, controlChanged and held, which tether (#2786) reads |
-| `core-087` | Pocket Chaos | Spell | signature; bespoke pocketSwap | 1.85 | vanish | signature (R3402001): a pocket opens at the board's centre, both heroes tugged in; the swapped pair trades places through it, and a card back drops into the other hand pile |
+| `core-087` | Pocket Chaos | Spell | bespoke pocketSwap | 1.85 | vanish | signature (R3402001): a pocket opens at the board's centre, both heroes tugged in; the swapped pair trades places through it, and a card back drops into the other hand pile |
 | `core-088` | Twisting Nether | Spell | setPiece nether | 1.65 | wipe | kept: #2800's `nether` set piece (R2800000), which part F builds; the census's wipe is its removals |
 | `core-089` | Corpse Eater | Unit | none: it grows in hand, with no board change to draw | — | none: vanilla | the census agrees |
 | `core-090` | Super-Virus Injection | Spell | cast send | 1.19 | none: no motif reads shuffledIn | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
 | `core-090-1` | Super-Virus | Spell | cast bolt | 0.97 | bolt | cast: the census agrees (bolt) |
 | `core-091` | Fed Fauci | Unit | trigger mana | 1.28 | none: vanilla | trigger: the census leaves out the events on the card itself; its start-of-turn mana (manaChanged), its one trigger's payoff, mana reads |
 | `core-092` | Felinor Fiender | Unit | signature; entrance felinorAssembly | 1.62 | none: vanilla | signature (R3332001): it assembles from every Felinor it counts |
-| `core-093` | Combo-Index | Field Spell | signature; entrance comboStadium; bespoke gradeRings; aura stadium zone Tech/starfield | 1.74 | bolt | signature (R3402001): a stadium of rings rises in its zone; each trigger's `questProgressed` lights a ring and its grade's events show; stadium motes stand on its zone |
+| `core-093` | Combo-Index | Field Spell | bespoke gradeRings; aura stadium zone Tech/starfield | 1.74 | bolt | signature (R3402001): a stadium of rings rises in its zone; each trigger's `questProgressed` lights a ring and its grade's events show; stadium motes stand on its zone |
 | `core-093-1` | Combo-Fodder | Spell | cast bolt | 0.90 | lance | cast: the census's lance counted its Lifesteal heal as a second target; it deals damage to one, a bolt |
 | `core-094` | Genn's Greed | Spell | cast vanish Hustle/cash | 1.65 | vanish | cast: the census agrees (vanish) |
-| `core-095` | Call to Chaos (Core Edition) | Spell | signature; bespoke chaosReels | 1.85 | vanish | signature (R3402001): a slot-wheel drops in rays and three reels blur in sparks; its `chaosRolled` reveal stands with a jackpot ring, and the effect's rows play |
+| `core-095` | Call to Chaos (Core Edition) | Spell | bespoke chaosReels | 1.85 | vanish | signature (R3402001): a slot-wheel drops in rays and three reels blur in sparks; its `chaosRolled` reveal stands with a jackpot ring, and the effect's rows play |
 | `core-095-1` | Chaos Golem | Unit | none: vanilla | — | not in census | a token the census never played: keywords only, which the keyword beats draw |
-| `core-096` | My Pawn | Trap | signature; bespoke pawnStrings | 1.73 | lance | signature (R3402001): its firing is its indigo takeover, a hooded hand over a chessboard; strings snap from the top of the screen to every enemy piece, and the cancelled attack shatters; face down it draws nothing (R202) |
-| `core-097` | Zephrys | Spell | signature; bespoke perfectWish | 1.73 | none: no motif reads addedToHand | signature (R3402001): its takeover is a wind spirit in a cyclone of silk; the silk gathers at the centre and one card back gusts from the far hero into the caster's hand pile |
-| `core-098` | Heroic Power | Field Spell | signature; entrance heroicPedestal; bespoke heroicDoors; aura pedestal zone Holy | 1.60 | bolt | signature (R3402001): its takeover is a rotunda of thirteen doors folding into a crystal pedestal; each Activate flares it and launches its power where it went; pedestal glints stand on its zone |
-| `core-099` | Craft a Card | Spell | signature; bespoke fusionForge | 2.00 | none: no motif reads promptAnswered | signature (R3402001): its takeover is a crystal forge; two card backs ride the rails to the anvil, the hand pile rings as the card is added, and it flies from the forge into the hand on `fused` |
+| `core-096` | My Pawn | Trap | bespoke pawnStrings | 1.73 | lance | signature (R3402001): its firing is its indigo takeover, a hooded hand over a chessboard; strings snap from the top of the screen to every enemy piece, and the cancelled attack shatters; face down it draws nothing (R202) |
+| `core-097` | Zephrys | Spell | bespoke perfectWish | 1.73 | none: no motif reads addedToHand | signature (R3402001): its takeover is a wind spirit in a cyclone of silk; the silk gathers at the centre and one card back gusts from the far hero into the caster's hand pile |
+| `core-098` | Heroic Power | Field Spell | bespoke heroicDoors; aura pedestal zone Holy | 1.60 | bolt | signature (R3402001): its takeover is a rotunda of thirteen doors folding into a crystal pedestal; each Activate flares it and launches its power where it went; pedestal glints stand on its zone |
+| `core-099` | Craft a Card | Spell | bespoke fusionForge | 2.00 | none: no motif reads promptAnswered | signature (R3402001): its takeover is a crystal forge; two card backs ride the rails to the anvil, the hand pile rings as the card is added, and it flies from the forge into the hand on `fused` |
 | `core-100` | Ceaseless Void | Unit | setPiece voidFold | 2.00 | vanish | kept: #2800's `voidFold` set piece and `voidCollapse` entrance (R2800000, R670), grown by #3338 (R3338000): every other permanent is drawn into its chest in turn and its 10/10 burns in the dark; its takeover yields to it |
 | `core-t-rush` | Rush Token | Unit | none: vanilla | — | none: vanilla | keywords only, which the keyword beats and the attack rows draw |
 | `core-t-sheep` | Sheep Token | Unit | none: vanilla | — | not in census | a token the census never played: vanilla, its Worth a Tribute count |

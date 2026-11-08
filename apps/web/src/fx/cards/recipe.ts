@@ -2,6 +2,7 @@
 // from. A card recipe claims events of its own play's resolution (cardFx.ts); an entrance replaces a
 // marquee Unit's rarity entrance (entrances.ts). Each card's recipe is its own file beside its set's table.
 // R3332000: an entrance is an entry's `entrance`, beside any entry of a Unit or a Field Spell, or alone.
+// R3400001: Bob's "snowplowHeave", Tutorial Master's "chalkboardLesson" and the Training-Grounds Golem's "golemLashing".
 // R3402001: Core's three signature entrances, Silly Silas's spotlight, Combo-Index's stadium and Heroic
 // Power's pedestal, join them.
 
@@ -35,6 +36,11 @@ export const ENTRANCE_TRAUMA = {
   titanBloom: FX_LEGENDARY_TRAUMA,
   tyrantSigil: FX_LEGENDARY_TRAUMA,
   felinorAssembly: FX_LEGENDARY_TRAUMA,
+  // R3400001: Meditative+'s and Training Grounds' signature Units, inside SIGNATURE_PERMANENT_MAX_TRAUMA.
+  snowplowHeave: 0.75,
+  chalkboardLesson: FX_LEGENDARY_TRAUMA,
+  golemLashing: 0.75,
+  // R3402001: Core's signature Unit's and Field Spells' entrances, inside SIGNATURE_PERMANENT_MAX_TRAUMA.
   silasSpotlight: 0.6,
   comboStadium: 0.5,
   heroicPedestal: FX_LEGENDARY_TRAUMA,

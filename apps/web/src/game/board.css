@@ -2060,6 +2060,12 @@ button.modifier-badge[data-open="true"] {
   width: min(46vmin, 300px);
 }
 
+/* R3400000: a Mythic's own takeover art at rest behind the card, filling the still (fx.css draws its parts). */
+.takeover-still .takeover-art {
+  position: absolute;
+  inset: 0;
+}
+
 .takeover-still-ring {
   position: absolute;
   width: min(52vmin, 340px);

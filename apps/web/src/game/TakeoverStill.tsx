@@ -5,6 +5,9 @@
 // the queue, practice's AI and `cy.settled()` never wait for it (R200). The music still plays (R1350).
 // R2803000: the still echoes the reworked takeover at rest: the dark it lands in, a motionless rays
 // disc behind the card and the landing ring around it. Nothing here animates, so it stays still.
+// R3400000: a Mythic whose own takeover look draws art (fx/takeoverArt.ts: Bob's Plan's summit, Scratch
+// Pad's canvas, Goetzmann Game Design's napkin) shows that art at rest behind the card, the same parts
+// the live takeover mounts, painted by fx.css and never a card face (R202).
 // R3402000: a Mythic whose takeover has a scene of its own (fx/takeoverArt.ts) shows it at rest behind
 // all of that, painted from its look's tint (board.css) and naming no card.
 
@@ -14,7 +17,8 @@ import type { PlayerView } from "@jackioh/shared";
 
 import { CardFace } from "../cards/index.ts";
 import { TAKEOVER_TINTS, takeoverLookOf } from "../fx/takeover.ts";
-import { TAKEOVER_ART, TAKEOVER_ART_ASPECT, TAKEOVER_ART_VIEWBOX } from "../fx/takeoverArt.ts";
+import { TAKEOVER_ART, TAKEOVER_ART_ASPECT, TAKEOVER_ART_VIEWBOX, takeoverArtParts } from "../fx/takeoverArt.ts";
+import type { TakeoverLook } from "../fx/types.ts";
 import { CatalogContext } from "./catalog.ts";
 import { namedFace } from "./faces.ts";
 
@@ -31,8 +35,7 @@ export type TakeoverStillProps = {
 };
 
 /** R3402000: the Mythic's own takeover scene at rest, or nothing when its look has none. */
-function StillArt({ defId }: { defId: string }): ReactElement | null {
-  const look = takeoverLookOf(defId);
+function StillArt({ look }: { look: TakeoverLook }): ReactElement | null {
   const shapes = TAKEOVER_ART[look];
   if (shapes === undefined) return null;
   const tint = TAKEOVER_TINTS[look];
@@ -60,9 +63,18 @@ export default function TakeoverStill({ defId, instanceId, view, onDone }: Takeo
   }, [defId, instanceId, onDone]);
   const face = namedFace(lookup, view, { defId, instanceId, radiant: false });
   if (face === null) return null;
+  const look = takeoverLookOf(defId);
+  const art = takeoverArtParts(look);
   return (
     <div className="takeover-still" data-testid="takeover-still" data-takeover-def={defId} aria-hidden="true">
-      <StillArt defId={defId} />
+      <StillArt look={look} />
+      {art.length > 0 ? (
+        <span className="takeover-art" data-look={look} data-still="true" aria-hidden="true">
+          {art.map((part) => (
+            <span key={part} className={`takeover-art-${part}`} />
+          ))}
+        </span>
+      ) : null}
       <span className="takeover-still-rays" aria-hidden="true" />
       <span className="takeover-still-card">
         <CardFace face={face} layout="full" />

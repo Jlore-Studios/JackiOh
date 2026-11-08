@@ -1,6 +1,10 @@
-// R3402001: ten Core Legendaries and Mythics each sound a signature of their own, once, on the event that is
-// the card's first beat (a Trap's firing, every other card's play), each sound within the card's signature
-// ceiling (fx/constants.ts), and none for a card the viewer cannot read (R203), a face-down set or another card.
+// R3400001: Meditative+'s and Training Grounds' signature sounds. Each card sounds its own effect once, a
+// Spell as its play is read and a Unit as it lands face up in a unit zone; a hidden play, a face-down set
+// and every other card sound nothing more (R203), and `cuesFor` appends it after the event's row.
+// R3402001: Core's ten Legendaries and Mythics each sound a signature of their own, once, on the event that
+// is the card's first beat (a Trap's firing, a Unit's landing, every other card's play), each sound within the
+// card's signature ceiling (fx/constants.ts), and none for a card the viewer cannot read (R203), a face-down
+// set or another card.
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -17,8 +21,9 @@ import type { SfxId, SoundCue } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
 import { CARD_AUDIO } from "./voiceData.ts";
 
-const SIGNATURES = Object.entries(SIGNATURE_SFX);
-const SIGNATURE_IDS: ReadonlySet<SfxId> = new Set(SIGNATURES.map(([, signature]) => signature.id));
+/** R3402001: Core's ten, beside R3400001's eight. */
+const SIGNATURES = Object.entries(SIGNATURE_SFX).filter(([defId]) => defId.startsWith("core-"));
+const SIGNATURE_IDS: ReadonlySet<SfxId> = new Set(Object.values(SIGNATURE_SFX).map((signature) => signature.sfx));
 const LOOKUP = lookupFromDefs(CATALOG);
 
 /** The shipped sound table and catalog, as the board reads them, from either seat. */
@@ -45,7 +50,17 @@ const fired = (defId: string, over: Partial<Extract<GameEvent, { type: "trapFire
   lane: 2,
   ...over,
 });
-const beatOf = (defId: string, on: "cardPlayed" | "trapFired"): GameEvent => (on === "cardPlayed" ? played(defId) : fired(defId));
+const summoned = (defId: string, over: Partial<Extract<GameEvent, { type: "summoned" }>> = {}): GameEvent => ({
+  type: "summoned",
+  player: "p1",
+  instanceId: "c1",
+  defId,
+  row: "units",
+  lane: 2,
+  ...over,
+});
+const beatOf = (defId: string, on: "cardPlayed" | "summoned" | "trapFired"): GameEvent =>
+  on === "cardPlayed" ? played(defId) : on === "summoned" ? summoned(defId) : fired(defId);
 
 /** The signature sounds among an event's cues, whatever else it sounds. */
 const signaturesIn = (cues: readonly SoundCue[]): SfxId[] =>
@@ -62,29 +77,30 @@ function ceilingMs(defId: string): number {
 describe("R3402001 ten Core signatures", () => {
   it("R3402001 the ten are ten sounds of their own, each a Legendary's or a Mythic's and within its ceiling", () => {
     expect(SIGNATURES).toHaveLength(10);
-    expect(SIGNATURE_IDS.size, "no two cards share a sound").toBe(SIGNATURES.length);
-    for (const [defId, { id, on }] of SIGNATURES) {
+    expect(SIGNATURE_IDS.size, "no two cards share a sound").toBe(Object.keys(SIGNATURE_SFX).length);
+    for (const [defId, { sfx: id, on }] of SIGNATURES) {
       const def = CATALOG[defId];
       expect(def, defId).toBeDefined();
       expect(["Legendary", "Mythic"], defId).toContain(def?.printedRarity ?? def?.rarity);
       expect(SFX_IDS, defId).toContain(id);
       expect(SFX[id].durationMs, `${defId} ${id}`).toBeLessThanOrEqual(ceilingMs(defId));
-      // A Trap's first beat is its firing: its play is a face-down set that every Trap's sounds like.
-      expect(on, defId).toBe(def?.type === "Trap" ? "trapFired" : "cardPlayed");
+      // A Trap's first beat is its firing: its play is a face-down set that every Trap's sounds like. A Unit's
+      // is its landing face up, as R3400001's are.
+      expect(on, defId).toBe(def?.type === "Trap" ? "trapFired" : def?.type === "Unit" ? "summoned" : "cardPlayed");
     }
   });
 
   it("R3402001 each signature sounds its own sfx once, on its first beat", () => {
-    for (const [defId, { id, on }] of SIGNATURES) {
+    for (const [defId, { sfx: id, on }] of SIGNATURES) {
       const event = beatOf(defId, on);
-      expect(signatureCues(event, ctxFor()), defId).toEqual([{ kind: "sfx", id, delayMs: 0 }]);
+      expect(signatureCues(event), defId).toEqual([{ kind: "sfx", id, delayMs: 0 }]);
       // Through the whole table, from either seat: once, and no other card's.
       for (const viewer of ["p1", "p2"] as const) expect(signaturesIn(cuesFor(event, ctxFor(viewer))), `${defId} to ${viewer}`).toEqual([id]);
     }
   });
 
   it("R3402001 cuesFor sounds the signature after the row's own, unpanned", () => {
-    for (const [defId, { id, on }] of SIGNATURES) {
+    for (const [defId, { sfx: id, on }] of SIGNATURES) {
       const cues = cuesFor(beatOf(defId, on), ctxFor());
       expect(cues.length, defId).toBeGreaterThan(1);
       expect(cues.at(-1), defId).toEqual({ kind: "sfx", id, delayMs: 0 });
@@ -93,7 +109,7 @@ describe("R3402001 ten Core signatures", () => {
 
   it("R3402001 a card the viewer cannot read sounds no signature", () => {
     for (const event of [played(HIDDEN_DEF_ID), fired(HIDDEN_DEF_ID), fired(HIDDEN_DEF_ID, { controller: "p2" })]) {
-      expect(signatureCues(event, ctxFor()), JSON.stringify(event)).toEqual([]);
+      expect(signatureCues(event), JSON.stringify(event)).toEqual([]);
       expect(signaturesIn(cuesFor(event, ctxFor())), JSON.stringify(event)).toEqual([]);
     }
   });
@@ -101,9 +117,14 @@ describe("R3402001 ten Core signatures", () => {
   it("R3402001 a Trap's face-down set, or any card set face down, sounds no signature", () => {
     for (const [defId, { on }] of SIGNATURES) {
       // The owner's own set names the card, but a set sounds as every set does.
-      const sets = on === "trapFired" ? [played(defId)] : [played(defId, { instanceId: "c2", formerId: "c1" })];
+      const sets =
+        on === "trapFired"
+          ? [played(defId)]
+          : on === "summoned"
+            ? [summoned(defId, { instanceId: "c2", formerId: "c1" }), summoned(defId, { row: "backrow" })]
+            : [played(defId, { instanceId: "c2", formerId: "c1" })];
       for (const event of sets) {
-        expect(signatureCues(event, ctxFor()), defId).toEqual([]);
+        expect(signatureCues(event), defId).toEqual([]);
         expect(signaturesIn(cuesFor(event, ctxFor())), defId).toEqual([]);
       }
     }
@@ -117,17 +138,80 @@ describe("R3402001 ten Core signatures", () => {
       played("core-005"),
       fired("core-018"),
       fired("core-018", { again: true }),
-      // A signature card on an event that is not its beat: a Spell never fires, a Unit's arrival is not its play.
+      // A signature card on an event that is not its beat: a Spell never fires, a Unit's play is not its landing.
       fired("core-097"),
-      { type: "summoned", player: "p1", instanceId: "u1", defId: "core-052", row: "units", lane: 2 },
+      played("core-052"),
       { type: "cardResolved", player: "p1", instanceId: "c1", defId: "core-099", permanent: false, costPaid: 4 },
       { type: "destroyed", instanceId: "u1", defId: "core-052", owner: "p1", controller: "p1", attack: 3, maxHealth: 3, killerId: null },
       // A Trap firing again (R2657001) reveals nothing, so its signature has sounded already.
       fired("core-096", { again: true }),
     ];
     for (const event of others) {
-      expect(signatureCues(event, ctxFor()), JSON.stringify(event)).toEqual([]);
+      expect(signatureCues(event), JSON.stringify(event)).toEqual([]);
       expect(signaturesIn(cuesFor(event, ctxFor())), JSON.stringify(event)).toEqual([]);
     }
+  });
+});
+
+const NO_LINES: CueContext["lines"] = { voices: {}, effects: {}, cards: {}, emotes: {} };
+const ctx: CueContext = { view: baseView(), lines: NO_LINES, manaBefore: () => 0 };
+
+const EIGHT = [
+  "meditativeplus-001",
+  "meditativeplus-024",
+  "meditativeplus-026",
+  "traininggrounds-037",
+  "traininggrounds-038",
+  "traininggrounds-039",
+  "traininggrounds-039-1",
+  "traininggrounds-040",
+];
+
+describe("R3400001 the signature sounds", () => {
+  it("R3400001 each card sounds its own effect once, a Spell on its play and a Unit on its summon", () => {
+    // R3402001: Core's ten follow them (above).
+    expect(Object.keys(SIGNATURE_SFX).filter((defId) => !defId.startsWith("core-"))).toEqual(EIGHT);
+    const sounds = EIGHT.map((defId) => SIGNATURE_SFX[defId]?.sfx);
+    expect(new Set(sounds).size, "each sound is its own").toBe(EIGHT.length);
+    for (const defId of EIGHT) {
+      const own = SIGNATURE_SFX[defId];
+      const unit = CATALOG[defId]?.type === "Unit";
+      expect(own?.on, defId).toBe(unit ? "summoned" : "cardPlayed");
+      // Inside the audio budgets: at most 1.6 s, its gain at most 0.8.
+      if (own !== undefined) {
+        expect(SFX[own.sfx].durationMs, defId).toBeLessThanOrEqual(1600);
+        expect(SFX[own.sfx].gain, defId).toBeLessThanOrEqual(0.8);
+      }
+      const on = unit ? summoned(defId) : played(defId);
+      const off = unit ? played(defId) : summoned(defId);
+      expect(signatureCues(on), defId).toEqual([{ kind: "sfx", id: own?.sfx, delayMs: 0 }]);
+      // The other event of the same card sounds none: once per play.
+      expect(signatureCues(off), defId).toEqual([]);
+    }
+  });
+
+  it("R3400001 R202 hidden or face-down plays and other cards sound none", () => {
+    expect(signatureCues(played(HIDDEN_DEF_ID, { instanceId: HIDDEN_DEF_ID }))).toEqual([]);
+    expect(signatureCues(summoned(HIDDEN_DEF_ID, { instanceId: HIDDEN_DEF_ID }))).toEqual([]);
+    // A card set face down (R227), or one landing in the backrow, is no signature's moment.
+    expect(signatureCues(played("traininggrounds-037", { formerId: "old" }))).toEqual([]);
+    expect(signatureCues(summoned("traininggrounds-038", { formerId: "old" }))).toEqual([]);
+    expect(signatureCues(summoned("traininggrounds-038", { row: "backrow" }))).toEqual([]);
+    // Other cards, and other events of the eight, sound nothing more.
+    expect(signatureCues(played("core-002"))).toEqual([]);
+    expect(signatureCues(summoned("core-004"))).toEqual([]);
+    expect(signatureCues({ type: "addedToHand", player: "p1", instanceId: "x", defId: "traininggrounds-040" })).toEqual([]);
+  });
+
+  it("R3400001 cuesFor appends it after the row", () => {
+    const withRow = (event: GameEvent): readonly SoundCue[] => cuesFor(event, ctx);
+    for (const event of [played("traininggrounds-040"), summoned("traininggrounds-039-1")]) {
+      const all = withRow(event);
+      const own = signatureCues(event);
+      expect(own).toHaveLength(1);
+      expect(all.length, event.type).toBeGreaterThan(own.length);
+      expect(all.slice(all.length - own.length), event.type).toEqual(own);
+    }
+    expect(withRow(played("core-002")).some((cue) => cue.kind === "sfx" && Object.values(SIGNATURE_SFX).some((own) => own.sfx === cue.id))).toBe(false);
   });
 });

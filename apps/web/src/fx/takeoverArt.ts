@@ -1,5 +1,11 @@
-// R3402000: each Core Mythic's takeover draws its own full-screen art (issue #3402), over the board's
-// dark and under the sweep (dom.ts): My Pawn's hooded hand over a glass chessboard, its strings snapping
+// R3400000: the art a Mythic's own takeover look draws over the dark, part by part (fx.css's
+// `.takeover-art[data-look]`): Bob's Plan's ink-wash summit, Scratch Pad's blank canvas and Goetzmann
+// Game Design's napkin. The takeover cue mounts them live (dom.ts), timed to its landing; Reduce Motion's
+// still mounts the same parts at rest (game/TakeoverStill.tsx). Shapes only, never a card face (R202).
+//
+// R3402000: each Core Mythic's takeover draws its own full-screen art (issue #3402) as a scene of SVG
+// shapes (`TAKEOVER_ART`, `buildTakeoverArt`) in place of those parts, over the board's dark and under the
+// sweep (dom.ts): My Pawn's hooded hand over a glass chessboard, its strings snapping
 // taut down to the pieces; Zephrys's wind spirit uncoiling in a cyclone of silk, chin on fist, as card
 // backs orbit him; Heroic Power's white marble rotunda of thirteen glowing doors, a hero in one; Craft a
 // Card's floating crystal forge, two glowing rails converging on an anvil under a giant hammer, gears
@@ -264,7 +270,7 @@ const FORGE: readonly ArtShape[] = [
   { tag: "polygon", part: "spark", attrs: { points: "61.5,50.5 62.3,54.2 66,55 62.3,55.8 61.5,59.5 60.7,55.8 57,55 60.7,54.2" } },
 ];
 
-/** R3402000: the scene of each look that has one, the four Core Mythics' own; "void", "ai" and "prismatic" have none. */
+/** R3402000: the scene of each look that has one, the four Core Mythics' own; "void", "ai" and "prismatic" have none, and R3400000's three draw their parts. */
 export const TAKEOVER_ART: Readonly<Partial<Record<TakeoverLook, readonly ArtShape[]>>> = {
   pawn: PAWN,
   genie: GENIE,
@@ -300,4 +306,16 @@ export function buildTakeoverArt(doc: Document, look: TakeoverLook): SVGSVGEleme
     svg.appendChild(el);
   }
   return svg;
+}
+
+/** R3400000: each look whose art is CSS parts, its parts bottom to top; a look not listed draws none. */
+export const TAKEOVER_ART_PARTS: Readonly<Partial<Record<TakeoverLook, readonly string[]>>> = {
+  summit: ["wash", "range", "arrow", "flag"],
+  canvas: ["paper", "peaks", "cursor", "rows"],
+  napkin: ["napkin", "lamp", "pencil", "sketch", "spiral"],
+};
+
+/** The parts `look`'s art draws, none for a look without art. */
+export function takeoverArtParts(look: TakeoverLook): readonly string[] {
+  return TAKEOVER_ART_PARTS[look] ?? [];
 }

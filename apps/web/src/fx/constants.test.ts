@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { SET_PIECE_HOLD_CAP_MS, TAKEOVER_HOLD_MS } from "../game/animations.ts";
+import { animationRow, SET_PIECE_HOLD_CAP_MS, TAKEOVER_HOLD_MS } from "../game/animations.ts";
 import { LANES } from "../game/contract.ts";
 import { AURA_LOOKS } from "./aura/looks.ts";
 import * as constants from "./constants.ts";
@@ -219,7 +219,12 @@ const S2 = {
   FX_FELINOR_STREAK_AT: 0.1,
   FX_FELINOR_STREAK_STEP: 0.08,
   FX_FELINOR_STREAKS_MAX: 5,
-  // Issue #3402: Core's signatures (R3402001) and a Spell's takeover tail (R3402000).
+  // Issue #3400: a signature Spell's takeover tail and Call to Chaos (Training-Grounds Edition)'s panel (R3400000, R3400001), and Bob's Plan's shake.
+  FX_SIGNATURE_TAKEOVER_TAIL_MS: 400,
+  FX_CHAOS_DICE_REEL_MS: 500,
+  FX_CHAOS_DICE_PANEL_MS: 760,
+  FX_BOBS_PLAN_TRAUMA: 0.6,
+  // Issue #3402: Core's signatures (R3402001).
   FX_CRUCIBLE_TRAUMA: 0.4,
   FX_CLAMP_TRAUMA: 0.5,
   FX_POCKET_TRAUMA: 0.45,
@@ -229,7 +234,6 @@ const S2 = {
   FX_SIGNATURE_BURSTS_MAX: 5,
   FX_PAWN_STRINGS_MAX: 6,
   FX_REELS_MS: 800,
-  FX_TAKEOVER_SPELL_TAIL_MS: 500,
   // Issue #2787: the auras (R2787000).
   AURA_MAX_PER_ZONE: 2,
   AURA_MOTES_PER_AURA: 24,
@@ -577,14 +581,29 @@ describe("R3332000 the signature budgets", () => {
     }
   });
 
-  it("R3402001 Core's signature shakes sit inside their type's caps, and a Spell's takeover tail and roll inside a Spell's budget", () => {
+  it("R3400000 a signature Mythic Spell's hold, cast and tail, and the chaos panel after a cast, fit their ceilings", () => {
+    const { SIGNATURE_LEGENDARY_MAX_MS, SIGNATURE_MYTHIC_MAX_MS, SIGNATURE_SPELL_SHARE, SIGNATURE_SPELL_MAX_TRAUMA } = constants;
+    const cast = animationRow("cardPlayed")?.durationMs ?? Infinity;
+    // A Mythic Spell's own takeover lasts its held cast and the shorter tail, inside its ceiling; so does the burst at the hold's end.
+    const mythicSpell = SIGNATURE_MYTHIC_MAX_MS * SIGNATURE_SPELL_SHARE;
+    expect(TAKEOVER_HOLD_MS + cast + constants.FX_SIGNATURE_TAKEOVER_TAIL_MS).toBeLessThanOrEqual(mythicSpell);
+    expect(TAKEOVER_HOLD_MS + constants.FX_MAX_PARTICLE_LIFE_MS).toBeLessThanOrEqual(mythicSpell);
+    expect(constants.FX_SIGNATURE_TAKEOVER_TAIL_MS).toBeLessThan(constants.FX_TAKEOVER_TAIL_MS);
+    expect(constants.FX_SIGNATURE_TAKEOVER_TAIL_MS).toBeGreaterThan(0);
+    // R3400001: Call to Chaos (Training-Grounds Edition)'s panel after its cast, inside the Legendary Spell's ceiling, its reels landing first.
+    const chaos = animationRow("chaosRolled")?.durationMs ?? Infinity;
+    expect(cast + constants.FX_CHAOS_DICE_PANEL_MS).toBeLessThanOrEqual(SIGNATURE_LEGENDARY_MAX_MS * SIGNATURE_SPELL_SHARE);
+    expect(constants.FX_CHAOS_DICE_REEL_MS).toBeLessThan(constants.FX_CHAOS_DICE_PANEL_MS);
+    expect(constants.FX_CHAOS_DICE_PANEL_MS).toBeLessThanOrEqual(chaos + constants.FX_MAX_TAIL_MS);
+    expect(constants.FX_BOBS_PLAN_TRAUMA).toBeLessThanOrEqual(SIGNATURE_SPELL_MAX_TRAUMA);
+  });
+
+  it("R3402001 Core's signature shakes sit inside their type's caps, and its roll inside a Spell's budget", () => {
     const { SIGNATURE_LEGENDARY_MAX_MS, SIGNATURE_SPELL_SHARE, SIGNATURE_SPELL_MAX_TRAUMA, SIGNATURE_PERMANENT_MAX_TRAUMA } = constants;
     // Transmogulate's crucible, Pocket Chaos's pocket and Call to Chaos's reels are Spells'; the rest a permanent's.
     for (const trauma of [constants.FX_CRUCIBLE_TRAUMA, constants.FX_POCKET_TRAUMA, constants.FX_REELS_TRAUMA]) expect(trauma).toBeLessThanOrEqual(SIGNATURE_SPELL_MAX_TRAUMA);
     for (const trauma of [constants.FX_CLAMP_TRAUMA, constants.FX_PAWN_TRAUMA, constants.FX_GRADE_TRAUMA]) expect(trauma).toBeLessThanOrEqual(SIGNATURE_PERMANENT_MAX_TRAUMA);
-    // R3402000: a Spell's takeover fades sooner than a permanent's, and the reels' reveal fits a Legendary Spell's share.
-    expect(constants.FX_TAKEOVER_SPELL_TAIL_MS).toBeGreaterThan(0);
-    expect(constants.FX_TAKEOVER_SPELL_TAIL_MS).toBeLessThan(constants.FX_TAKEOVER_TAIL_MS);
+    // The reels' reveal fits a Legendary Spell's share.
     expect(constants.FX_REELS_MS).toBeLessThan(SIGNATURE_LEGENDARY_MAX_MS * SIGNATURE_SPELL_SHARE);
     // At most one follow-up beat per unit zone, and one string per enemy piece (five Units and the hero).
     expect(constants.FX_SIGNATURE_BURSTS_MAX).toBeGreaterThan(0);

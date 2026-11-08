@@ -1,7 +1,7 @@
 {
   "title": "Patch: a signature animation for every Core Legendary and Mythic, one concept per card",
   "sources": "#3402",
-  "notes": "Core's ten Legendaries and Mythics get their signatures (R3402001): an entrance or cast of each card's own, its text's beat, a permanent's own aura, a Mythic's takeover with full-screen art, and a sound each; a bespoke recipe may wear an aura and a signature's own cast replaces the shared rays (R3402000).",
+  "notes": "Core's ten Legendaries and Mythics get their signatures (R3402001): an entrance or cast of each card's own, its text's beat, a permanent's own aura, a Mythic's takeover with full-screen art, and a sound each, on R3400000's frame; two more takeover looks, their scenes and three aura looks (R3402000).",
   "player": {
     "title": "Core's Legendaries and Mythics, each its own",
     "new": [],

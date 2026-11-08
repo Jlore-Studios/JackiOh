@@ -39,6 +39,8 @@ export type SfxId =
   | "playImpact" | "trapSnap"
   // R3342000: the tile aura touch bell.
   | "auraTouch"
+  // R3400001: Meditative+'s and Training Grounds' signature Legendaries and Mythics, one each (signatureCues.ts).
+  | "inkSummit" | "plowHeave" | "cursorTear" | "seanceChant" | "slateRap" | "diceGong" | "timberLash" | "pencilArpeggio"
   // R3402001: ten Core Legendaries' and Mythics' signatures, one each (signatureCues.ts).
   | "silasScratch" | "crucibleChoir" | "hatchWeld" | "pocketZip" | "stadiumCheer" | "jackpotReels" | "pawnWaltz"
   | "wishWind" | "heroicFanfare" | "forgeAnvil";

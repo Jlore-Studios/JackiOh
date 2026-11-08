@@ -4,7 +4,9 @@
 // as its `entrance` (R2784000, R3332000, fx/cards/tables.ts); each recipe is its card's own file in
 // fx/cards/<set>/. R3332001: #92 Felinor Fiender "felinorAssembly", the first signature's; R3402001: #52
 // Silly Silas "silasSpotlight", #93 Combo-Index "comboStadium" and #98 Heroic Power "heroicPedestal". R3332000: a
-// Field Spell's own entrance plays as it lands face up in the backrow. It keys off the `summoned` event's
+// Field Spell's own entrance plays as it lands face up in the backrow. R3400001: Meditative+ #24 Bob's
+// "snowplowHeave", Training Grounds #38 Tutorial Master's "chalkboardLesson" and #39.1 the Training-Grounds
+// Golem's "golemLashing". It keys off the `summoned` event's
 // own `defId`, which a hidden summon never has (R202), and decorates the entry the runner already timed,
 // so it paces nothing (R200, R201).
 //
@@ -22,6 +24,9 @@ import { comboStadium } from "./cards/core/comboIndex.ts";
 import { felinorAssembly } from "./cards/core/felinorFiender.ts";
 import { heroicPedestal } from "./cards/core/heroicPower.ts";
 import { silasSpotlight } from "./cards/core/sillySilas.ts";
+import { snowplowHeave } from "./cards/meditativeplus/bobSoldier.ts";
+import { golemLashing } from "./cards/traininggrounds/trainingGolem.ts";
+import { chalkboardLesson } from "./cards/traininggrounds/tutorialMaster.ts";
 import { FOOT, type Entrance, type EntranceKey } from "./cards/recipe.ts";
 import { FX_CRACK_TAIL_MS, FX_FLAVOR_LIVE, FX_SUMMON_BRUTE_TRAUMA, FX_SUMMON_FLAVOR_TUNING } from "./constants.ts";
 import { chaosFlavor, FLAVOR_LOOKS } from "./flavors.ts";
@@ -40,6 +45,9 @@ export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = {
   silasSpotlight,
   comboStadium,
   heroicPedestal,
+  snowplowHeave,
+  chalkboardLesson,
+  golemLashing,
 };
 
 /* #1445: one summon entrance per flavor */

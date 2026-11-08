@@ -16,6 +16,7 @@ import Game from "./Game.tsx";
 import TakeoverStill, { TAKEOVER_STILL_MS } from "./TakeoverStill.tsx";
 import { TAKEOVER_TINTS, takeoverLookOf } from "../fx/takeover.ts";
 import { TAKEOVER_ART, TAKEOVER_ART_ASPECT, TAKEOVER_ART_VIEWBOX } from "../fx/takeoverArt.ts";
+import { TAKEOVER_ART_PARTS } from "../fx/takeoverArt.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, withEvents } from "../test/fixtures.ts";
 
@@ -80,6 +81,27 @@ describe("R2722001 a Mythic's takeover on the board", () => {
       vi.advanceTimersByTime(TAKEOVER_STILL_MS);
     });
     expect(screen.queryByTestId("takeover-still")).toBeNull();
+  });
+
+  it("R3400000 under reduced motion each Mythic with art shows it still", () => {
+    writeSettings({ reduceMotion: true });
+    for (const [defId, look] of [["meditativeplus-001", "summit"], ["meditativeplus-026", "canvas"], ["traininggrounds-040", "napkin"]] as const) {
+      playOut(defId);
+      const still = screen.getByTestId("takeover-still");
+      expect(still).toHaveAttribute("data-takeover-def", defId);
+      const art = still.querySelector(".takeover-art");
+      expect(art, defId).not.toBeNull();
+      expect(art).toHaveAttribute("data-look", look);
+      expect(art).toHaveAttribute("data-still", "true");
+      expect([...(art?.children ?? [])].map((part) => part.className), defId).toEqual(TAKEOVER_ART_PARTS[look]?.map((part) => `takeover-art-${part}`));
+      // Shapes only: no text, and nothing in it animates.
+      expect(art?.textContent, defId).toBe("");
+      expect(still.querySelector("[data-animating]")).toBeNull();
+      cleanup();
+    }
+    // A Mythic with no art of its own shows the still card alone.
+    playOut(ZEPHRYS);
+    expect(screen.getByTestId("takeover-still").querySelector(".takeover-art")).toBeNull();
   });
 
   it("R2722001 a Legendary takes neither the hold nor the still", () => {

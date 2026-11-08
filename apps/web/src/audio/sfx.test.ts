@@ -43,6 +43,8 @@ const UNION_ORDER: SfxId[] = [
   "playImpact", "trapSnap",
   // R3342000: the tile aura bell.
   "auraTouch",
+  // R3400001: the signatures of Meditative+'s and Training Grounds' Legendaries and Mythics.
+  "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
   // R3402001: the ten Core signatures.
   "silasScratch", "crucibleChoir", "hatchWeld", "pocketZip", "stadiumCheer", "jackpotReels", "pawnWaltz",
   "wishWind", "heroicFanfare", "forgeAnvil",
@@ -154,6 +156,15 @@ const DURATION_MS: Record<SfxId, number> = {
   trapSnap: 200,
   // R3342000.
   auraTouch: 200,
+  // R3400001.
+  inkSummit: 1100,
+  plowHeave: 1300,
+  cursorTear: 1400,
+  seanceChant: 1500,
+  slateRap: 1300,
+  diceGong: 1600,
+  timberLash: 1200,
+  pencilArpeggio: 1400,
   // R3402001.
   silasScratch: 1250,
   crucibleChoir: 1170,
