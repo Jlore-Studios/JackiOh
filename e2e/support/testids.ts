@@ -34,6 +34,9 @@ export function promptOf(kind: PromptKind): string {
 
 export const ANIMATING = "[data-animating]";
 
+/** #3366: on the game while the opening deal runs, well after `data-animating` clears; only at full motion. */
+export const DEALING = "[data-dealing]";
+
 export function animating(event: EventType): string {
   return `[data-animating="${event}"]`;
 }

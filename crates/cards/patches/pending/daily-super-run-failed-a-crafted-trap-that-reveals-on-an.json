@@ -1,0 +1,17 @@
+{
+  "title": "Patch: daily super run failed: a crafted trap that reveals on an attack ignores a forced one",
+  "sources": "#3439",
+  "notes": "The daily super run on staging (run 42488997384). Fuzz 3/4: a crafted Trap whose reveal hat is 'when your opponent attacks' armed on forced attacks too, which R121 forbids (a forced attack is declared by the effect, not the opponent); in the handicapped game of seed 6091 it summoned a Sheep, Warp Disruptor II forced another attack on it, and the resolution loop never settled. Its trigger (craft.rs reveal_trigger) now refuses a forced AttackDeclared, as Core #96 My Pawn's does. useFitText (fit.ts) refits a box its ResizeObserver reports resized in the next frame, not inside the observer's callback, so an Extended-art rules box that grows with its text no longer raises 'ResizeObserver loop completed with undelivered notifications'. The rest is tests and layout: e2e spec 38 waits for the opening deal before axe, the auth screen's landscape footer takes its own row, the deck builder's 'Back to decks' keeps to one line on a phone, seven component specs follow the cards and looks that moved under them, and shard-specs.mjs splits the component specs (--component) for the super run's component jobs.",
+  "player": {
+    "title": "A crafted trap ignores forced attacks",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "A crafted Trap that reveals when your opponent attacks no longer reveals on an attack another card forces."
+    ]
+  },
+  "cards": [],
+  "visual": true
+}
