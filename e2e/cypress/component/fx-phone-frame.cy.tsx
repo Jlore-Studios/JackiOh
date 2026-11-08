@@ -10,8 +10,8 @@
 // R3344001: a hand with one face tilted under a pointer that keeps moving over it, its planes parallaxing
 // under its glare. R3334002: a launched Starship's broadside of eight guns, at the slowest effects speed.
 // R3400001: Goetzmann Game Design's and Bob's Plan's signatures, the two heaviest of Meditative+'s and Training
-// Grounds', their takeovers drawing full-screen art. R3405001: YileGPT Prime's and Jlockeed's Evil Blueprints',
-// the two heaviest of Meditative's, each over its own takeover's art.
+// Grounds', their takeovers drawing full-screen art. R3405001: Keymaster Keenus's and Jlockeed's Headquarters',
+// the two heaviest of Meditative's, the second over its own takeover's art.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-phone-frame.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -317,19 +317,22 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       const board = galleryBoardOf(defId, fullBoardView());
       holdsBudget(`${name}'s signature`, () => {
         mountScene(board, galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
-        cy.get(GAME).should("have.attr", "data-takeover", "mythic");
-        cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art`).should("have.attr", "data-look", look);
+        if (look === undefined) cy.get(`${FX_DOM} [data-fx="figure"]`).should("exist");
+        else {
+          cy.get(GAME).should("have.attr", "data-takeover", "mythic");
+          cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art`).should("have.attr", "data-look", look);
+        }
         return sampleFrames();
       });
       cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
     });
   }
 
-  // R3405001: Meditative's two heaviest, the signatures whose gallery play plans the most cues, each a Mythic
-  // over its own takeover's full-screen art.
-  for (const [defId, name, look] of [
-    ["meditative-049-1", "YileGPT Prime", "pavilion"],
-    ["meditative-097", "Jlockeed's Evil Blueprints", "warRoom"],
+  // R3405001: Meditative's two heaviest, the signatures whose gallery play plans the most cues: Keymaster
+  // Keenus's keys turning in their locks, and Jlockeed's Headquarters' convoy after its takeover's full-screen art.
+  for (const { defId, name, look } of [
+    { defId: "meditative-065", name: "Keymaster Keenus", look: undefined },
+    { defId: "meditative-097-9", name: "Jlockeed's Headquarters", look: "fortress" },
   ] as const) {
     it(`R3405001 ${name}'s signature holds the phone frame budget mid-flight`, () => {
       cy.viewport(PHONE.width, PHONE.height);
@@ -339,8 +342,11 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       const board = galleryBoardOf(defId, fullBoardView());
       holdsBudget(`${name}'s signature`, () => {
         mountScene(board, galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
-        cy.get(GAME).should("have.attr", "data-takeover", "mythic");
-        cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art`).should("have.attr", "data-look", look);
+        if (look === undefined) cy.get(`${FX_DOM} [data-fx="figure"]`).should("exist");
+        else {
+          cy.get(GAME).should("have.attr", "data-takeover", "mythic");
+          cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art`).should("have.attr", "data-look", look);
+        }
         return sampleFrames();
       });
       cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");

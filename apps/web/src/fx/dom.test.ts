@@ -10,7 +10,7 @@ import { anomalyMarkup } from "../cards/art/svg.ts";
 import { FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
 import { mountDomEffect, mountHold, type DomEffect } from "./dom.ts";
 import { TAKEOVER_ART_PARTS } from "./takeoverArt.ts";
-import type { FxBox, FxDomCue, FxHoldCue } from "./types.ts";
+import type { FxBox, FxDomCue, FxHoldCue, TakeoverLook } from "./types.ts";
 
 const AT: FxBox = { x: 100, y: 200, width: 80, height: 120 }; // center (140, 260)
 const TO: FxBox = { x: 700, y: 40, width: 60, height: 60 }; // center (730, 70)
@@ -237,7 +237,8 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect([...(art?.children ?? [])].map((child) => child.className)).toEqual(TAKEOVER_ART_PARTS.napkin?.map((part) => `takeover-art-${part}`));
     expect(textNodeCount(el)).toBe(0);
     el.remove();
-    for (const look of ["summit", "canvas"] as const) {
+    // R3405000: and every other look with art, Meditative's Mythics' among them.
+    for (const look of Object.keys(TAKEOVER_ART_PARTS).filter((key): key is TakeoverLook => key !== "napkin")) {
       const own = expectMounted(mountDomEffect(root, { ...takeover, look }, { at: AT }), { ...takeover, look });
       expect([...(own.querySelector(".takeover-art")?.children ?? [])].map((child) => child.className), look).toEqual(TAKEOVER_ART_PARTS[look]?.map((part) => `takeover-art-${part}`));
       own.remove();

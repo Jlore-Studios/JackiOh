@@ -3,6 +3,7 @@
 // Reduce motion there is no hold, no shake and no flash, and a still card stands over the board for
 // TAKEOVER_STILL_MS instead. R3337003: a Mythic play that lays an Anomaly (Anomaly Found!) yields both to
 // the Anomaly's rift and its still title card. R3389000: the still wears its card's own takeover look.
+// R3405000: and each Meditative Mythic's still draws its own art.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -17,6 +18,7 @@ import { ANOMALY_SET_PIECE, TAKEOVER_HOLD_MS, TAKEOVER_SET_PIECE } from "./anima
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Game from "./Game.tsx";
 import { TAKEOVER_STILL_MS } from "./TakeoverStill.tsx";
+import { takeoverLookOf } from "../fx/takeover.ts";
 import { TAKEOVER_ART_PARTS } from "../fx/takeoverArt.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, withEvents } from "../test/fixtures.ts";
@@ -123,6 +125,25 @@ describe("R2722001 a Mythic's takeover on the board", () => {
     // A Mythic with no art of its own shows the still card alone.
     playOut(ZEPHRYS);
     expect(screen.getByTestId("takeover-still").querySelector(".takeover-art")).toBeNull();
+  });
+
+  it("R3405000 under reduced motion each Meditative Mythic shows its own art still", () => {
+    writeSettings({ reduceMotion: true });
+    const mythics = Object.values(CATALOG).filter((card) => card.id.startsWith("meditative-") && (card.printedRarity ?? card.rarity) === "Mythic");
+    expect(mythics).toHaveLength(13);
+    for (const card of mythics) {
+      const look = takeoverLookOf(card.id);
+      // A Unit or a Field Spell enters as it lands face up; a Spell at its play.
+      const row = card.type === "Unit" ? "units" : card.type === "Field Spell" ? "backrow" : undefined;
+      playOut(card.id, row === undefined ? [] : [{ type: "summoned", player: "p1", instanceId: `i-${card.id}`, defId: card.id, row, lane: 2 }]);
+      const art = screen.getByTestId("takeover-still").querySelector(".takeover-art");
+      expect(art, card.id).not.toBeNull();
+      expect(art).toHaveAttribute("data-look", look);
+      expect(art).toHaveAttribute("data-still", "true");
+      expect([...(art?.children ?? [])].map((part) => part.className), card.id).toEqual(TAKEOVER_ART_PARTS[look]?.map((part) => `takeover-art-${part}`));
+      expect(art?.textContent, card.id).toBe("");
+      cleanup();
+    }
   });
 
   it("R2722001 a Legendary takes neither the hold nor the still", () => {
