@@ -248,8 +248,10 @@ describe("R3393000 Meditative+ and Training Grounds drawn as scenes", () => {
       expect(before, id).not.toContain(id);
     }
     // Nor of one of sceneKit.ts's own entries, #3392's among them (`sand`, `pine`, `well`, …), which the modules'
-    // spreads would replace without a word: SCENE_KIT holds every one of them beside every module's part.
-    expect(Object.keys(SCENE_KIT)).toHaveLength(SCENE_KIT_OWN_PARTS + before.length + added.length);
+    // spreads would replace without a word: they follow every part before them in order (R3401000's modules follow
+    // them, and meditativeScenes.test.ts counts the whole kit).
+    const start = SCENE_KIT_OWN_PARTS + before.length;
+    expect(Object.keys(SCENE_KIT).slice(start, start + added.length)).toEqual(added.map(([id]) => id));
   });
 
   it("R3393000 a fade scales a placement's, a figure's and an extra figure's opacity, keeping every shape, and the proofs draw what they drew before", () => {
