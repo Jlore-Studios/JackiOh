@@ -378,8 +378,9 @@ Five proof cards drew from recipes first and set the bar each set's pass meets: 
 (Stinkyscape #15). Ceaseless Void's recipe keeps its painter's own subject (`ownSubject`), the giant its
 composition draws (R3338001), in place of a figure. Classic+'s pass draws every Classic+ entry from a recipe
 of its own (below, R3390000), Core's pass every Core entry but Ceaseless Void, Speciesist's and Heroic
-Power's redrawn from their briefs (Core's scenes, below, R3392000), and the Meditative+ and Training Grounds
-pass every entry of those two sets (below, R3393000). Every other card draws its picture byte for byte as before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
+Power's redrawn from their briefs (Core's scenes, below, R3392000), the Meditative+ and Training Grounds
+pass every entry of those two sets (below, R3393000), and Classic's pass every Classic entry but Corpse Plantation
+(below, R3352000). Every other card draws its picture byte for byte as before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
 old pictures now, not pins (R3331002), each holding every card with no recipe to its old hash and each card
 with one to a new picture. A set's pass adds its cards' recipes from its own per-card brief table, takes them
 off the detail floor's short list, and tunes them by eye on `scene-proofs.cy.tsx`'s kind of screenshot, at
@@ -504,6 +505,31 @@ Legacy card's Core card has since Core's pass (R3392000). The yard painter
 and is off the short list, whose cap fell from 337 to 289; `setScenes.test.ts` holds the two sets to all of it,
 and `set-scenes.cy.tsx` shows every Epic, Legendary and Mythic entry at hand size and the rest as a contact
 sheet, at desktop size and at 390x844.
+
+## Classic's scenes (R3352000)
+
+Every Classic entry but Corpse Plantation, #3331's proof, draws a scene recipe of its own, written from its brief in
+#3352's table, in Classic's temple-stone look, base and Radiant: `sceneRecipesClassic1.ts` holds Classic #1 to #30,
+`sceneRecipesClassic2.ts` #31 to #60 and `sceneRecipesClassic3.ts` #61 to #90 with the Glitch, all spread into
+`SCENE_RECIPES`. Each recipe's doc comment gives its brief in a line and any detail changed to fit the kits; the
+subject, the setting and the card's idea stay. Each scene clears its rarity's floor (below) with room, its median
+detail climbing rarity by rarity, and In Too Deep, the set's Mythic, draws a part no other scene does. The Glitch's
+window draws no picture (glitch.css), so its scene shows only where its picture is drawn apart from its face, as
+`classic-scenes.cy.tsx`'s contact sheet draws it.
+
+A Unit's character comes from the kits, never the painter's silhouette: a figure, its look its tags' look
+(`figureLookFor`) with the head, headgear, outfit and item its brief names, no two Classic Units alike, or, when its
+character does not stand like a person (Turtinator, the Pestilent Slime, the Hired Shrimp, the Plague Crawler, the
+Plague Charger and the Lane Eater), a creature part in its subject layer. A scene's other people are its `extras`
+(R3390000). In Too Deep, the one full-art Classic card, marks the placements its props beat moves `props` (R3390000),
+its motion unchanged. The parts the briefs named joined the kits: the figure kit's crouch (`pose-crouch`), three heads
+(`head-nose`, `head-sheep`, `head-ape`), headgear (`jester-cap`, `cat-hood`, `beak-mask`, `king-crown`,
+`tyrant-crown`), four outfits (`outfit-harlequin`, `outfit-cloak`, `outfit-spider`, `outfit-moss`) and seven held
+items, after the old ones of their kinds in `figureKit.ts`, and the scene kit's creatures (`sceneKitBeasts.ts`) and
+places, objects and effects (`sceneKitClassic.ts`), two modules of their own beside the earlier passes', none taking
+an old part's name. Every Classic entry is off the short list, whose cap fell from 289 to 200.
+`classicScenes.test.ts` holds the recipes to this, and `classic-scenes.cy.tsx` draws every Epic, Legendary and Mythic
+scene at hand size and a contact sheet of the rest, at a desktop's size and a phone's.
 
 ## The detail floor (R3331001)
 

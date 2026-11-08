@@ -4,6 +4,7 @@
 // clear their floors, and every card with no recipe draws the spec it drew before. The pixels are
 // e2e/cypress/component/scene-proofs.cy.tsx's. R3393000: the recipes are the proofs' and every Meditative+
 // and Training Grounds entry's (setScenes.test.ts holds those), and none of them paints in the gold window.
+// R3352000: and every Classic entry's (classicScenes.test.ts).
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -239,9 +240,9 @@ describe("R3331000 the five proof cards", () => {
     expect(SCENE_BOX).toBe(ART_BOX);
     // R3392000: the proofs and every Core entry draw from a recipe, and every Classic+ entry (R3390000, which
     // classicPlusScenes.test.ts checks); R3393000: so does every Meditative+ and Training Grounds entry
-    // (setScenes.test.ts).
+    // (setScenes.test.ts); R3352000: and every Classic entry (classicScenes.test.ts).
     const core = Object.values(CATALOG).filter((card) => card.set === "Core").map((card) => card.id);
-    const passes = Object.values(CATALOG).filter((card) => card.set === "Meditative+" || card.set === "Training Grounds").map((card) => card.id);
+    const passes = Object.values(CATALOG).filter((card) => card.set === "Meditative+" || card.set === "Training Grounds" || card.set === "Classic").map((card) => card.id);
     expect(Object.keys(SCENE_RECIPES).filter((id) => !id.startsWith("classicplus-")).sort()).toEqual([...new Set<string>([...PROOFS, ...core, ...passes])].sort());
     for (const id of PROOFS) {
       const card = def(id);

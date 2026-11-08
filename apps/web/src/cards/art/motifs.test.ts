@@ -347,9 +347,10 @@ describe("R503 how a motif is drawn", () => {
   });
 
   it("R503 a figure wears a crown, cat ears or horns when its motif says so", () => {
-    // Felinor Feeler is Human, and no Human wears ears of its own: the ears are its motif's.
-    const feeler = faceSpec(def("classic-067"), false);
-    const human = artSpec("classic-067", "human", "figure", false, null);
+    // Felinor Feeler is Human, and no Human wears ears of its own: the ears are its motif's. R3352000: a Classic card
+    // draws its scene; the motif's headgear is the painter's, drawn for a card with no recipe.
+    const feeler = paintedSpec(def("classic-067"), false);
+    const human = artSpec("classic-067", "human", "figure", false, null, null);
     expect(feeler.motif).toBe("cat");
     expect(feeler.ridges.map((ridge) => ridge.d)).not.toEqual(human.ridges.map((ridge) => ridge.d));
     expect(MOTIFS.cat.headgear).toBe("ears");
@@ -361,8 +362,9 @@ describe("R503 how a motif is drawn", () => {
     const datacenter = paintedSpec(def("classicplus-078"), false);
     const bare = artSpec("classicplus-078", "field-spell", "landscape", false, null, null);
     expect(datacenter.ridges.length).toBe(bare.ridges.length + 1);
-    const deep = faceSpec(def("classic-090"), false);
-    const shallow = artSpec("classic-090", "quickdraw", "landscape", false, null);
+    // R3352000: In Too Deep draws its scene; the pattern is the painter's, drawn for a card with no recipe.
+    const deep = paintedSpec(def("classic-090"), false);
+    const shallow = artSpec("classic-090", "quickdraw", "landscape", false, null, null);
     expect(deep.motif).toBe("waves");
     expect(deep.ridges.length).toBe(shallow.ridges.length + 1);
   });
