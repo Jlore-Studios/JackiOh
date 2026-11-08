@@ -18062,20 +18062,8 @@
     "what": "build #3390 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-08T03:12:51Z",
-    "notes": [
-      "#3419: `claude-8` can start again, so its hold is lifted",
-      "#3390: `claude-8` can start again, so its hold is lifted",
-      "#3391 is held for `claude-3` until 22:00 (it refused a call)",
-      "#3392 is held for `claude-3` until 22:00 (it refused a call)",
-      "#3393 is held for `claude-3` until 22:00 (it refused a call)",
-      "#3405 is held for `claude-3` until 22:00 (it refused a call)",
-      "#3382: green and waiting for a person to merge it, so `claude-1` gives up its claim on it",
-      "started review #3419 on claude-8 (run 42441875069)",
-      "started build #3390 on claude-8 (run 42441926819)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-08T04:00:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 19h 43m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-13T23:59:56Z; it takes reviews only; it can start a build or a plan again in 140h 43m; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` 5-hour usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-08T03:20:00Z; it can start a build or a plan again in 3m",
-      "pruned 1 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-08T03:22:07Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18780,7 +18768,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-08T03:12:51Z",
+  "loop_tick": "2026-11-08T03:22:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
