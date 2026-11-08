@@ -552,7 +552,7 @@ function cane(at: PartPlace, rng: Rng): KitShape[] {
 
 /** R3401000: the objects the Meditative scenes added, by id, each with its kind. */
 export const INK_OBJECTS_KIT = {
-  seal: { category: "objects", draw: seal },
+  "ink-seal": { category: "objects", draw: seal },
   "paper-lantern": { category: "objects", draw: paperLantern },
   "lantern-string": { category: "objects", draw: lanternString },
   "ink-card-fan": { category: "objects", draw: cardFan },

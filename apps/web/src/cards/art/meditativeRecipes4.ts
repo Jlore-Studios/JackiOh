@@ -33,7 +33,7 @@ const CN_TECH: SceneRecipe = {
     ],
     near: [
       { part: "bamboo", x: 92, y: 96, scale: 1.2, flip: -1 },
-      { part: "seal", x: 20, y: 74 },
+      { part: "ink-seal", x: 20, y: 74 },
     ],
     light: [{ part: "light-shaft", x: 50, y: 48, scale: 0.35, paint: "cyan-400" }],
   },
@@ -71,7 +71,7 @@ const DEVIN_BOT: SceneRecipe = {
       { part: "ink-imp", x: 24, y: 88, scale: 1.1 },
       { part: "beetle", x: 60, y: 90, scale: 1.4, flip: -1 },
       { part: "round-bot", x: 40, y: 90, scale: 0.6 },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
     light: [
       { part: "light-shaft", x: 32, y: 20, scale: 1.1 },
@@ -111,7 +111,7 @@ const ECONOMIC_ANXIETY: SceneRecipe = {
     ],
     near: [
       { part: "coins", x: 40, y: 88, scale: 0.9 },
-      { part: "seal", x: 80, y: 82 },
+      { part: "ink-seal", x: 80, y: 82 },
     ],
   },
 };
@@ -136,7 +136,7 @@ const PRESTIGE: SceneRecipe = {
     ],
     near: [
       { part: "sparks", x: 60, y: 56, scale: 1 },
-      { part: "seal", x: 80, y: 76 },
+      { part: "ink-seal", x: 80, y: 76 },
     ],
   },
 };
@@ -166,7 +166,7 @@ const MONEY_MACHINE: SceneRecipe = {
     ],
     near: [
       { part: "coin", x: 40, y: 84, scale: 1, count: 2, spread: [12, 3] },
-      { part: "seal", x: 80, y: 76 },
+      { part: "ink-seal", x: 80, y: 76 },
     ],
   },
 };
@@ -195,7 +195,7 @@ const DRAGON_FRUIT: SceneRecipe = {
     near: [
       { part: "incense", x: 22, y: 88, scale: 1 },
       { part: "incense", x: 78, y: 88, scale: 1, flip: -1 },
-      { part: "seal", x: 80, y: 70 },
+      { part: "ink-seal", x: 80, y: 70 },
     ],
     light: [{ part: "halo", x: 50, y: 56, scale: 0.6, paint: "purple-400" }],
   },
@@ -222,7 +222,7 @@ const HOUSE_PARTY: SceneRecipe = {
     ],
     near: [
       { part: "lantern-string", x: 50, y: 42, scale: 1.3 },
-      { part: "seal", x: 82, y: 78 },
+      { part: "ink-seal", x: 82, y: 78 },
     ],
     particles: [{ part: "confetti", x: 50, y: 44, scale: 1 }],
   },
@@ -254,7 +254,7 @@ const CLIP_FARMING_CRITIKAL: SceneRecipe = {
     ],
     near: [
       { part: "parcel", x: 84, y: 92, scale: 0.8 },
-      { part: "seal", x: 82, y: 58 },
+      { part: "ink-seal", x: 82, y: 58 },
     ],
     light: [{ part: "halo", x: 50, y: 46, scale: 1.2, paint: "white" }],
   },
@@ -286,7 +286,7 @@ const PERMANENT_UNDERCLASSMAN: SceneRecipe = {
     subject: [{ part: "card-imp", x: 68, y: 78, scale: 1 }],
     near: [
       { part: "leaves", x: 30, y: 50, scale: 1.1, count: 2, spread: [16, 10] },
-      { part: "seal", x: 80, y: 76 },
+      { part: "ink-seal", x: 80, y: 76 },
     ],
   },
 };
@@ -314,7 +314,7 @@ const PERMANENT_UPPERCLASSMAN: SceneRecipe = {
     subject: [{ part: "beast", x: 68, y: 87, scale: 2.1, flip: -1, paint: "slate-800" }],
     near: [
       { part: "banner", x: 14, y: 92, scale: 1.2, paint: "blue-800" },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
     particles: [{ part: "confetti", x: 50, y: 34, scale: 0.9 }],
   },
@@ -352,7 +352,7 @@ const ESCHEWS: SceneRecipe = {
     near: [
       { part: "parcel", x: 18, y: 94, scale: 1.2 },
       { part: "envelope-drift", x: 72, y: 92, scale: 1 },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
     light: [{ part: "light-shaft", x: 72, y: 20, scale: 1 }],
     particles: [{ part: "motes", x: 60, y: 52, scale: 1.2 }],
@@ -395,7 +395,7 @@ const JOON_JUICER: SceneRecipe = {
     ],
     near: [
       { part: "apple", x: 30, y: 92, scale: 1.2, count: 3, spread: [6, 1] },
-      { part: "seal", x: 82, y: 72 },
+      { part: "ink-seal", x: 82, y: 72 },
     ],
     light: [{ part: "heal-glow", x: 66, y: 66, scale: 0.8, paint: "jade-400" }],
   },
@@ -432,7 +432,7 @@ const SMALL_TIME_RECRUITS: SceneRecipe = {
     ],
     near: [
       { part: "dust", x: 70, y: 90, scale: 1.2 },
-      { part: "seal", x: 18, y: 74 },
+      { part: "ink-seal", x: 18, y: 74 },
     ],
     particles: [{ part: "sparks", x: 50, y: 70, scale: 1.2 }],
   },
@@ -481,7 +481,7 @@ const SKULL_OF_JNARI: SceneRecipe = {
       { part: "pebbles", x: 72, y: 84, scale: 1.2 },
       { part: "bones", x: 22, y: 90, scale: 1 },
       { part: "candle", x: 80, y: 92, scale: 1.4 },
-      { part: "seal", x: 16, y: 72 },
+      { part: "ink-seal", x: 16, y: 72 },
     ],
     light: [
       { part: "light-shaft", x: 58, y: 8, scale: 0.9, paint: "blue-200" },
@@ -531,7 +531,7 @@ const TRAITOROUS_BLOOD: SceneRecipe = {
     subject: [{ part: "red-thread", x: 34, y: 60, scale: 1.1 }],
     near: [
       { part: "drops", x: 38, y: 66, scale: 0.9, paint: "red-600" },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
   },
 };
@@ -583,7 +583,7 @@ const KEYMASTER_KEENUS: SceneRecipe = {
     near: [
       { part: "candle", x: 12, y: 92, scale: 1.4 },
       { part: "candle", x: 88, y: 92, scale: 1.4 },
-      { part: "seal", x: 82, y: 78 },
+      { part: "ink-seal", x: 82, y: 78 },
     ],
     light: [
       { part: "halo", x: 58, y: 56, scale: 0.7, paint: "jade-400" },
@@ -620,12 +620,12 @@ const FIERY_WARAXE: SceneRecipe = {
     ],
     near: [
       { part: "embers", x: 62, y: 50, scale: 1.4, count: 2, spread: [8, 8] },
-      { part: "seal", x: 20, y: 74 },
+      { part: "ink-seal", x: 20, y: 74 },
     ],
   },
 };
 
-/** Sentient Cat Ears (Meditative #67, Epic Unit): a pair of fluffy living cat ears leaping onto a startled warrior's helmet, little pink hearts drifting off them, a cosy hat shop lined with shelves of hats, warm afternoon light. Changed: the hearts are pink petals, the kit having no heart. */
+/** Sentient Cat Ears (Meditative #67, Epic Unit): a pair of fluffy living cat ears leaping onto a startled warrior's helmet, little pink hearts drifting off them, a cosy hat shop lined with shelves of hats, warm afternoon light. */
 const SENTIENT_CAT_EARS: SceneRecipe = {
   family: "meditative",
   sky: ["orange-400", "slate-100"],
@@ -655,8 +655,8 @@ const SENTIENT_CAT_EARS: SceneRecipe = {
     subject: [{ part: "cat-ears", x: 50, y: 32, scale: 1.4 }],
     near: [
       { part: "hat", x: 82, y: 90, scale: 1.4 },
-      { part: "petals", x: 62, y: 34, scale: 0.8, paint: "red-300" },
-      { part: "seal", x: 18, y: 76 },
+      { part: "ink-hearts", x: 62, y: 30, scale: 0.9 },
+      { part: "ink-seal", x: 18, y: 76 },
     ],
   },
 };
@@ -700,7 +700,7 @@ const CATNIP: SceneRecipe = {
     ],
     near: [
       { part: "cat", x: 64, y: 92, scale: 1.2, flip: -1 },
-      { part: "seal", x: 84, y: 66 },
+      { part: "ink-seal", x: 84, y: 66 },
     ],
     particles: [
       { part: "spores", x: 50, y: 56, scale: 1.6, paint: "lime-400" },
@@ -737,7 +737,7 @@ const THE_MAESTRO: SceneRecipe = {
     ],
     near: [
       { part: "candle", x: 14, y: 90, scale: 1.4, count: 2, spread: [4, 1] },
-      { part: "seal", x: 82, y: 76 },
+      { part: "ink-seal", x: 82, y: 76 },
     ],
     particles: [{ part: "spore-motes", x: 30, y: 56, scale: 1.2, paint: "green-400" }],
   },
@@ -768,7 +768,7 @@ const IM_WILL_BE_YOUR_DOOM: SceneRecipe = {
     subject: [{ part: "goblin", x: 74, y: 78, scale: 1.5 }],
     near: [
       { part: "pebbles", x: 30, y: 90, scale: 1 },
-      { part: "seal", x: 82, y: 66 },
+      { part: "ink-seal", x: 82, y: 66 },
     ],
   },
 };
@@ -796,7 +796,7 @@ const READY_IM: SceneRecipe = {
     ],
     near: [
       { part: "drops", x: 60, y: 70, scale: 0.6, paint: "green-400" },
-      { part: "seal", x: 80, y: 74 },
+      { part: "ink-seal", x: 80, y: 74 },
     ],
   },
 };
@@ -842,7 +842,7 @@ const PARETO_OPTIMALITY: SceneRecipe = {
       { part: "desk", x: 14, y: 94, scale: 2.2 },
       { part: "desk", x: 86, y: 94, scale: 2.2 },
       { part: "zap", x: 46, y: 70, scale: 0.4, flip: -1 },
-      { part: "seal", x: 50, y: 82 },
+      { part: "ink-seal", x: 50, y: 82 },
     ],
     light: [
       { part: "light-shaft", x: 12, y: 30, scale: 0.9, paint: "blue-200" },
@@ -876,7 +876,7 @@ const THE_CANE: SceneRecipe = {
     ],
     near: [
       { part: "sparks", x: 50, y: 50, scale: 1.4, count: 2, spread: [10, 4] },
-      { part: "seal", x: 82, y: 76 },
+      { part: "ink-seal", x: 82, y: 76 },
     ],
   },
 };
@@ -911,7 +911,7 @@ const THE_BANISHER: SceneRecipe = {
     ],
     near: [
       { part: "fallen-column", x: 76, y: 92, scale: 0.8 },
-      { part: "seal", x: 20, y: 70 },
+      { part: "ink-seal", x: 20, y: 70 },
     ],
   },
 };
@@ -943,7 +943,7 @@ const PLATE_PACKER: SceneRecipe = {
     subject: [{ part: "barbell", x: 50, y: 28, scale: 1.1, paint: "slate-700" }],
     near: [
       { part: "incense", x: 84, y: 90, scale: 1 },
-      { part: "seal", x: 20, y: 76 },
+      { part: "ink-seal", x: 20, y: 76 },
     ],
   },
 };
@@ -972,7 +972,7 @@ const MONTANA_GIANT: SceneRecipe = {
       { part: "ink-person", x: 22, y: 90, scale: 1.4 },
       { part: "envelope-drift", x: 30, y: 92, scale: 1.2 },
       { part: "envelope-drift", x: 66, y: 94, scale: 1 },
-      { part: "seal", x: 82, y: 78 },
+      { part: "ink-seal", x: 82, y: 78 },
     ],
   },
 };
@@ -1008,7 +1008,7 @@ const EVER_GROWING_TREE: SceneRecipe = {
     ],
     near: [
       { part: "pebbles", x: 30, y: 92, scale: 1 },
-      { part: "seal", x: 16, y: 72 },
+      { part: "ink-seal", x: 16, y: 72 },
     ],
     light: [
       { part: "halo", x: 50, y: 40, scale: 1.6, paint: "jade-400" },
@@ -1044,7 +1044,7 @@ const DO_OR_DIE: SceneRecipe = {
     ],
     near: [
       { part: "dice", x: 50, y: 86, scale: 1.3 },
-      { part: "seal", x: 82, y: 78 },
+      { part: "ink-seal", x: 82, y: 78 },
     ],
   },
 };
@@ -1077,7 +1077,7 @@ const BULK_BOOSTER: SceneRecipe = {
     ],
     near: [
       { part: "deck", x: 24, y: 90, scale: 1.4 },
-      { part: "seal", x: 84, y: 66 },
+      { part: "ink-seal", x: 84, y: 66 },
     ],
     light: [{ part: "light-shaft", x: 30, y: 18, scale: 0.9 }],
     particles: [{ part: "motes", x: 34, y: 50, scale: 1.1 }],
@@ -1115,7 +1115,7 @@ const OCCIDENTLESS_MANDATE: SceneRecipe = {
     ],
     near: [
       { part: "scroll", x: 50, y: 86, scale: 2.4 },
-      { part: "seal", x: 56, y: 82 },
+      { part: "ink-seal", x: 56, y: 82 },
       { part: "hand-hold", x: 58, y: 76, scale: 1.4 },
     ],
   },
@@ -1154,7 +1154,7 @@ const TOUCHED_BY_KY: SceneRecipe = {
     near: [
       { part: "ink-card-fan", x: 50, y: 70, scale: 1.4 },
       { part: "open-hand", x: 38, y: 24, scale: 0.9, paint: "slate-100" },
-      { part: "seal", x: 82, y: 64 },
+      { part: "ink-seal", x: 82, y: 64 },
     ],
     light: [
       { part: "halo", x: 50, y: 30, scale: 1.1, paint: "cyan-400" },

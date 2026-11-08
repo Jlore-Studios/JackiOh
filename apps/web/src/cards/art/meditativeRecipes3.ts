@@ -37,7 +37,7 @@ const THE_CONDUCTOR: SceneRecipe = {
     ],
     near: [
       { part: "mist", x: 70, y: 88, scale: 0.8 },
-      { part: "seal", x: 80, y: 72 },
+      { part: "ink-seal", x: 80, y: 72 },
     ],
   },
 };
@@ -70,7 +70,7 @@ const SPIRITUALLY_CN: SceneRecipe = {
     near: [
       { part: "hand-open", x: 26, y: 86, scale: 1.3 },
       { part: "ink-card-fan", x: 26, y: 82, scale: 0.7, paint: "red-300" },
-      { part: "seal", x: 82, y: 76 },
+      { part: "ink-seal", x: 82, y: 76 },
     ],
   },
 };
@@ -86,7 +86,7 @@ const FIRST_DAY_OF_SCHOOL: SceneRecipe = {
     y: 86,
     scale: 0.75,
     pose: "pose-hold",
-    look: { ...figureLookFor(["Human"]), hair: "hair-short", outfit: "outfit-tunic", item: "item-brush", cloth: "blue-600" },
+    look: { ...figureLookFor(["Human"]), hair: "hair-short", outfit: "outfit-tunic", item: "item-ink-brush", cloth: "blue-600" },
   },
   layers: {
     far: [
@@ -101,7 +101,7 @@ const FIRST_DAY_OF_SCHOOL: SceneRecipe = {
       { part: "blossom-branch", x: 2, y: 30, scale: 1.3 },
       { part: "blossom-branch", x: 98, y: 38, scale: 1, flip: -1 },
       { part: "petals", x: 62, y: 40, scale: 1, paint: "red-300" },
-      { part: "seal", x: 80, y: 74 },
+      { part: "ink-seal", x: 80, y: 74 },
     ],
   },
 };
@@ -137,7 +137,7 @@ const GAOKAO: SceneRecipe = {
       { part: "dust", x: 18, y: 84, scale: 1.1, paint: "slate-700" },
       { part: "embers", x: 82, y: 80, scale: 1.2, paint: "slate-400" },
       { part: "light-shaft", x: 50, y: 22, scale: 1, paint: "white" },
-      { part: "seal", x: 80, y: 74 },
+      { part: "ink-seal", x: 80, y: 74 },
     ],
   },
 };
@@ -167,7 +167,7 @@ const RCTA_CN: SceneRecipe = {
     subject: [{ part: "light-ribbon", x: 50, y: 62, scale: 0.8, paint: "red-600" }],
     near: [
       { part: "petals", x: 50, y: 56, scale: 0.6, paint: "jade-400" },
-      { part: "seal", x: 56, y: 47, scale: 0.8 },
+      { part: "ink-seal", x: 56, y: 47, scale: 0.8 },
     ],
   },
 };
@@ -197,7 +197,7 @@ const CN_PEPTIDES: SceneRecipe = {
       { part: "hand-hold", x: 34, y: 40, scale: 0.9 },
       { part: "vial", x: 34, y: 40, scale: 1.2, paint: "jade-400" },
       { part: "drops", x: 40, y: 45, scale: 0.6, paint: "jade-400" },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
   },
 };
@@ -236,7 +236,7 @@ const CN_IN_A_BOTTLE: SceneRecipe = {
     near: [
       { part: "bottle", x: 40, y: 79, scale: 2 },
       { part: "pebbles", x: 40, y: 86, scale: 1.4, count: 2, spread: [14, 3] },
-      { part: "seal", x: 82, y: 76 },
+      { part: "ink-seal", x: 82, y: 76 },
     ],
   },
 };
@@ -265,7 +265,7 @@ const H1B_PRINTER: SceneRecipe = {
     ],
     near: [
       { part: "sparks", x: 32, y: 74, scale: 0.6, paint: "jade-400" },
-      { part: "seal", x: 82, y: 76 },
+      { part: "ink-seal", x: 82, y: 76 },
     ],
   },
 };
@@ -301,7 +301,7 @@ const GAMBLING_STONE_ADDICT: SceneRecipe = {
     ],
     near: [
       { part: "dust", x: 20, y: 88, scale: 1.2 },
-      { part: "seal", x: 82, y: 76 },
+      { part: "ink-seal", x: 82, y: 76 },
     ],
   },
 };
@@ -328,7 +328,7 @@ const AUSPICIOUS_ROCK: SceneRecipe = {
     near: [
       { part: "light-shaft", x: 24, y: 34, scale: 1, paint: "white" },
       { part: "motes", x: 40, y: 60, scale: 0.8 },
-      { part: "seal", x: 82, y: 76 },
+      { part: "ink-seal", x: 82, y: 76 },
     ],
   },
 };
@@ -341,7 +341,7 @@ const JADE: SceneRecipe = {
   emblem: { x: 50, y: 58, size: 5, rotate: 0 },
   layers: {
     far: [
-      { part: "round-window", x: 50, y: 40, scale: 1.4 },
+      { part: "ink-round-window", x: 50, y: 40, scale: 1.4 },
       { part: "ink-peaks", x: 50, y: 46, scale: 0.4 },
     ],
     mid: [
@@ -353,7 +353,7 @@ const JADE: SceneRecipe = {
       { part: "hand-open", x: 50, y: 74, scale: 2 },
       { part: "jade-disc", x: 50, y: 64, scale: 1.3 },
     ],
-    near: [{ part: "seal", x: 80, y: 78 }],
+    near: [{ part: "ink-seal", x: 80, y: 78 }],
   },
 };
 
@@ -382,7 +382,7 @@ const DUD: SceneRecipe = {
     ],
     near: [
       { part: "dust", x: 34, y: 88, scale: 1.2 },
-      { part: "seal", x: 82, y: 76 },
+      { part: "ink-seal", x: 82, y: 76 },
     ],
   },
 };
@@ -408,7 +408,7 @@ const RED_JADE: SceneRecipe = {
     near: [
       { part: "lantern", x: 72, y: 36, scale: 1.1 },
       { part: "sparks", x: 52, y: 64, scale: 0.8, paint: "red-300" },
-      { part: "seal", x: 20, y: 76 },
+      { part: "ink-seal", x: 20, y: 76 },
     ],
   },
 };
@@ -440,7 +440,7 @@ const JADE_BEAUTY: SceneRecipe = {
     near: [
       { part: "soldier", x: 20, y: 86, scale: 1 },
       { part: "soldier", x: 80, y: 86, scale: 1, flip: -1 },
-      { part: "seal", x: 82, y: 70 },
+      { part: "ink-seal", x: 82, y: 70 },
     ],
   },
 };
@@ -477,7 +477,7 @@ const FENG_SHUI: SceneRecipe = {
     ],
     near: [
       { part: "light-ribbon", x: 50, y: 70, scale: 1, paint: "jade-400" },
-      { part: "seal", x: 82, y: 78 },
+      { part: "ink-seal", x: 82, y: 78 },
     ],
     light: [
       { part: "light-shaft", x: 50, y: 18, scale: 1.2, paint: "white" },
@@ -520,7 +520,7 @@ const CN_SMUGGLER: SceneRecipe = {
     ],
     near: [
       { part: "mist", x: 30, y: 88, scale: 0.8 },
-      { part: "seal", x: 18, y: 74 },
+      { part: "ink-seal", x: 18, y: 74 },
     ],
   },
 };
@@ -560,7 +560,7 @@ const CN_FLEA_MARKET: SceneRecipe = {
       { part: "paper-lantern", x: 10, y: 24, scale: 1.3 },
       { part: "paper-lantern", x: 90, y: 26, scale: 1.2 },
       { part: "coins", x: 70, y: 88, scale: 0.8 },
-      { part: "seal", x: 82, y: 76 },
+      { part: "ink-seal", x: 82, y: 76 },
     ],
     light: [
       { part: "halo", x: 50, y: 40, scale: 2.4, paint: "red-500" },
@@ -600,7 +600,7 @@ const CN_JADE_MARKET: SceneRecipe = {
       { part: "ink-person", x: 28, y: 88, scale: 1.4 },
       { part: "jade-boulder", x: 28, y: 82, scale: 0.3, paint: "stone-500" },
       { part: "ink-person", x: 70, y: 88, scale: 1.3, flip: -1 },
-      { part: "seal", x: 82, y: 72 },
+      { part: "ink-seal", x: 82, y: 72 },
     ],
   },
 };
@@ -630,7 +630,7 @@ const CN_JADE_WELL: SceneRecipe = {
     ],
     near: [
       { part: "mist", x: 50, y: 86, scale: 0.9 },
-      { part: "seal", x: 80, y: 74 },
+      { part: "ink-seal", x: 80, y: 74 },
     ],
   },
 };
@@ -671,7 +671,7 @@ const KNOWLEDGE_BREAKER: SceneRecipe = {
       { part: "lantern", x: 12, y: 24, scale: 1, paint: "slate-100" },
       { part: "lantern", x: 88, y: 24, scale: 1, paint: "slate-100" },
       { part: "ink-person", x: 14, y: 90, scale: 1.6 },
-      { part: "seal", x: 82, y: 76 },
+      { part: "ink-seal", x: 82, y: 76 },
     ],
     light: [
       { part: "halo", x: 50, y: 50, scale: 3, paint: "slate-100" },
@@ -715,7 +715,7 @@ const KNOWLEDGE_BREAKER_PRIME: SceneRecipe = {
       { part: "embers", x: 76, y: 40, scale: 1.2, paint: "slate-400" },
       { part: "snare", x: 32, y: 86, scale: 1.2 },
       { part: "snare", x: 68, y: 87, scale: 1.1 },
-      { part: "seal", x: 82, y: 70 },
+      { part: "ink-seal", x: 82, y: 70 },
     ],
   },
 };
@@ -750,7 +750,7 @@ const CONJURE_INTELLECT: SceneRecipe = {
       { part: "hand-open", x: 40, y: 82, scale: 2 },
       { part: "hand-open", x: 60, y: 82, scale: 2, flip: -1 },
       { part: "motes", x: 50, y: 66, scale: 0.8, paint: "white" },
-      { part: "seal", x: 82, y: 70 },
+      { part: "ink-seal", x: 82, y: 70 },
     ],
   },
 };
@@ -793,7 +793,7 @@ const TAOTIE: SceneRecipe = {
     near: [
       { part: "smoke", x: 62, y: 70, scale: 1.4, paint: "green-700" },
       { part: "smoke", x: 36, y: 72, scale: 1.2, paint: "green-900" },
-      { part: "seal", x: 20, y: 72 },
+      { part: "ink-seal", x: 20, y: 72 },
     ],
     light: [
       { part: "halo", x: 50, y: 50, scale: 1.6, paint: "jade-400" },
@@ -834,7 +834,7 @@ const TRANQUILITY: SceneRecipe = {
     near: [
       { part: "reed", x: 14, y: 90, scale: 1.4 },
       { part: "reed", x: 86, y: 90, scale: 1.3 },
-      { part: "seal", x: 82, y: 72 },
+      { part: "ink-seal", x: 82, y: 72 },
     ],
   },
 };
@@ -850,7 +850,7 @@ const YILE_GPT: SceneRecipe = {
     y: 84,
     scale: 1,
     pose: "pose-perch",
-    look: { ...figureLookFor(["CN"]), head: "head-void", hair: "hood", outfit: "outfit-robe", item: "item-brush", skin: "slate-900", cloth: "blue-800" },
+    look: { ...figureLookFor(["CN"]), head: "head-void", hair: "hood", outfit: "outfit-robe", item: "item-ink-brush", skin: "slate-900", cloth: "blue-800" },
   },
   layers: {
     sky: [
@@ -880,7 +880,7 @@ const YILE_GPT: SceneRecipe = {
       { part: "scroll", x: 50, y: 74, scale: 0.8 },
       { part: "ink-imp", x: 74, y: 76, scale: 1.4 },
       { part: "streaks", x: 70, y: 74, scale: 0.4 },
-      { part: "seal", x: 18, y: 76 },
+      { part: "ink-seal", x: 18, y: 76 },
     ],
     light: [
       { part: "halo", x: 46, y: 50, scale: 2.4, paint: "cyan-400" },
@@ -905,7 +905,7 @@ const YILE_GPT_PRIME: SceneRecipe = {
     y: 82,
     scale: 1.15,
     pose: "pose-raise",
-    look: { ...figureLookFor(["CN"]), head: "head-void", hair: "hood", outfit: "outfit-gown", item: "item-brush", skin: "slate-900", cloth: "sky-300" },
+    look: { ...figureLookFor(["CN"]), head: "head-void", hair: "hood", outfit: "outfit-gown", item: "item-ink-brush", skin: "slate-900", cloth: "sky-300" },
   },
   layers: {
     far: [
@@ -925,7 +925,7 @@ const YILE_GPT_PRIME: SceneRecipe = {
     ],
     near: [
       { part: "mist", x: 50, y: 88, scale: 1, paint: "sky-300" },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
   },
 };
@@ -950,7 +950,7 @@ const YILES_VIRUS: SceneRecipe = {
     near: [
       { part: "ink-person", x: 16, y: 82, scale: 1.4 },
       { part: "ink-person", x: 84, y: 82, scale: 1.4, flip: -1 },
-      { part: "seal", x: 80, y: 66 },
+      { part: "ink-seal", x: 80, y: 66 },
     ],
   },
 };
@@ -984,7 +984,7 @@ const AI_GIRLFRIEND: SceneRecipe = {
       { part: "ink-person", x: 18, y: 90, scale: 1.7 },
       { part: "ink-person", x: 82, y: 90, scale: 1.7, flip: -1 },
       { part: "glitch", x: 62, y: 44, scale: 0.4 },
-      { part: "seal", x: 82, y: 70 },
+      { part: "ink-seal", x: 82, y: 70 },
     ],
   },
 };

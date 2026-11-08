@@ -197,7 +197,7 @@ describe("R3401000 Meditative drawn as scenes", () => {
   it("R3401000 every Meditative picture stamps one red seal, near and inside the shown band", () => {
     for (const card of ENTRIES) {
       const scene = recipe(card.id);
-      const seals = SCENE_LAYERS.flatMap((layer) => (scene.layers[layer] ?? []).filter((placed) => placed.part === "seal").map((placed) => ({ layer, placed })));
+      const seals = SCENE_LAYERS.flatMap((layer) => (scene.layers[layer] ?? []).filter((placed) => placed.part === "ink-seal").map((placed) => ({ layer, placed })));
       expect(seals, card.id).toHaveLength(1);
       const [seal] = seals;
       if (seal === undefined) continue;
@@ -209,7 +209,7 @@ describe("R3401000 Meditative drawn as scenes", () => {
       expect(seal.placed.x, card.id).toBeLessThanOrEqual(SHOWN_BAND.right);
       expect(seal.placed.y, card.id).toBeGreaterThanOrEqual(SHOWN_BAND.top);
       expect(seal.placed.y, card.id).toBeLessThanOrEqual(SHOWN_BAND.bottom);
-      const shapes = composeScene(scene, card.id).filter((shape) => shape.part === "seal");
+      const shapes = composeScene(scene, card.id).filter((shape) => shape.part === "ink-seal");
       expect(shapes.length, card.id).toBeGreaterThan(0);
       expect(shapes.some((shape) => shape.paint === "red-600"), card.id).toBe(true);
     }

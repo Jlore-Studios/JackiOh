@@ -465,11 +465,11 @@ brief (#3401's table), in the art bible's ink-wash look, base and Radiant. The r
 spread into `SCENE_RECIPES` after Classic+'s: `meditativeRecipes1.ts` (#1 to #14), `meditativeRecipes2.ts` (#15 to
 #30 with #19's, #22's, #28's and #30's tokens), `meditativeRecipes3.ts` (#31 to #49 with #39's, #45's and #49's),
 `meditativeRecipes4.ts` (#50 to #79 with #70's and #71's) and `meditativeRecipes5.ts` (#80 to #102 with #91's, #93's,
-#95's, #96's and #97's). Each keeps its brief's subject, setting and idea and Classic+'s rules (its subject within x 30
+#95's, #96's and #97's). Each keeps its brief's subject, setting and idea and Classic+'s rules (its main subject within x 30
 to 70 and y 25 to 85, its foreground near, its middle in the mid and subject layers, its background far, its emblem
 small on its subject inside the band every face shows), and the family's: pale paper and mist skies or the brief's
 hour in soft washes, ink-wash peaks and cloud behind, a high and distant camera that sees a small subject in a large
-space, and **one red seal** (`seal`, a red chop of abstract strokes with no glyph) in the near layer of every
+space, and **one red seal** (`ink-seal`, a red chop of abstract strokes with no glyph) in the near layer of every
 picture, unrepainted, where a painter would stamp a scroll.
 
 Each of the 43 Units that are a person is a figure whose look starts from its tag's people and is dressed as who it is,
@@ -481,17 +481,18 @@ an extra figure, and a foreground hand a hand of the kit (`hand-open`, `hand-hol
 Totem, whose full-art motions move their props (R2715001), mark the near-layer placements that move with them
 (`props`). The parts the briefs named joined the kits: the figure kit's new headgear (headphones, a beanie, a
 pompadour, a conductor's cap, a tall hat, a topknot), outfits (overalls, a kaftan, a tailcoat, wind-blown silks)
-and held items (a lantern, a phone, a key, a baton, a brush, a loupe, a fan, twin blades), and eight scenery
+and held items (a lantern, a phone, a key, a baton, a brush, a loupe and torch, a fan, twin blades, a fishing rod, a comb), and eight scenery
 modules beside Classic+'s, drawing with the same helpers (`kitDraw.ts`): ink-world terrain and architecture
 (`sceneKitInkPlaces.ts`: peaks, terraces, still water, pagodas, pavilions, gates, wells), buildings
 (`sceneKitInkBuildings.ts`), objects (`sceneKitInkObjects.ts`: the seal, paper lanterns, brushes, an abacus, a go
-board), curios (`sceneKitInkCurios.ts`: jade, a bottle, a horned skull, a melon), machines
+board), curios (`sceneKitInkCurios.ts`: jade, a bottle, a horned skull, a melon, drifting hearts, a torn ticket stub), machines
 (`sceneKitInkMachines.ts`), plants and weather (`sceneKitInkNature.ts`: the pea vine, lotus, plum blossom, a great
 tree, a trellis, ink cloud, a rift in the air, thought-shapes), creatures, people and hands
 (`sceneKitInkCreatures.ts`) and the Units' characters (`sceneKitInkCharacters.ts`). Where an earlier pass had
 already taken a name, the ink part took another (`ink-sheep` beside `sheep`, `ink-pavilion` beside `pavilion`,
 `ink-card-fan` beside `card-fan`, `temple-bell`, `envelope-drift`, `booster-sack`, `peak-fortress`), so no old
-picture changes. Every entry clears its rarity's floor and is off the short list, whose cap fell from 337 to 205;
+picture changes; `ink-seal`, `ink-round-window` and the figure kit's `item-ink-brush` keep clear of the names
+Meditative+'s and Training Grounds' pass (#3438) gave its own. Every entry clears its rarity's floor and is off the short list, whose cap fell from 337 to 205;
 `meditativeScenes.test.ts` holds the set to all of it, and `meditative-scenes.cy.tsx` shows every Epic, Legendary
 and Mythic entry at hand size and the rest as a contact sheet, at desktop size and at 390x844.
 

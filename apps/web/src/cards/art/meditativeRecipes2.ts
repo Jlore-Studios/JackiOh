@@ -39,7 +39,7 @@ const SMELLY_STEVEN: SceneRecipe = {
       { part: "smoke", x: 36, y: 62, scale: 1, paint: "lime-400" },
       { part: "smoke", x: 66, y: 62, scale: 0.9, paint: "green-400" },
       { part: "spore-motes", x: 50, y: 50, scale: 1.2, paint: "lime-400" },
-      { part: "seal", x: 82, y: 70 },
+      { part: "ink-seal", x: 82, y: 70 },
     ],
   },
 };
@@ -72,7 +72,7 @@ const TRENFUL_TRICKSTER: SceneRecipe = {
       { part: "snare", x: 64, y: 84, scale: 1.4 },
       { part: "coin", x: 72, y: 82, scale: 0.8, paint: "brass-600" },
       { part: "paper-lantern", x: 22, y: 26, scale: 1 },
-      { part: "seal", x: 82, y: 72 },
+      { part: "ink-seal", x: 82, y: 72 },
     ],
   },
 };
@@ -88,13 +88,13 @@ const TRUE_CRAFT_A_CARD: SceneRecipe = {
     y: 86,
     scale: 1,
     pose: "pose-cast",
-    look: { ...figureLookFor([]), hair: "goggles", outfit: "outfit-work-apron", item: "item-brush", cloth: "slate-700" },
+    look: { ...figureLookFor([]), hair: "goggles", outfit: "outfit-work-apron", item: "item-ink-brush", cloth: "slate-700" },
   },
   layers: {
     sky: [{ part: "stars", x: 50, y: 16, scale: 1.4 }],
     far: [
       { part: "ink-peaks", x: 66, y: 48, scale: 0.5, paint: "slate-800" },
-      { part: "round-window", x: 66, y: 38, scale: 1.2, paint: "slate-700" },
+      { part: "ink-round-window", x: 66, y: 38, scale: 1.2, paint: "slate-700" },
       { part: "moon", x: 72, y: 32, scale: 0.5 },
     ],
     mid: [
@@ -114,7 +114,7 @@ const TRUE_CRAFT_A_CARD: SceneRecipe = {
     near: [
       { part: "anvil", x: 84, y: 90, scale: 1 },
       { part: "taper", x: 44, y: 78, scale: 1 },
-      { part: "seal", x: 80, y: 74 },
+      { part: "ink-seal", x: 80, y: 74 },
     ],
     light: [
       { part: "halo", x: 58, y: 62, scale: 2.2, paint: "sky-300" },
@@ -155,7 +155,7 @@ const EXPEDITION12: SceneRecipe = {
       { part: "standing-stone", x: 20, y: 92, scale: 1.1, flip: -1 },
       { part: "parcel", x: 20, y: 76, scale: 0.6 },
       { part: "coin", x: 28, y: 84, scale: 0.5, paint: "brass-600" },
-      { part: "seal", x: 82, y: 72 },
+      { part: "ink-seal", x: 82, y: 72 },
     ],
     light: [
       { part: "light-shaft", x: 56, y: 8, scale: 1 },
@@ -195,7 +195,7 @@ const EXPEDITION123: SceneRecipe = {
       { part: "chair", x: 24, y: 96, scale: 0.9 },
       { part: "map", x: 24, y: 82, scale: 1.8 },
       { part: "heal-glow", x: 24, y: 82, scale: 0.8, paint: "cyan-400" },
-      { part: "seal", x: 82, y: 72 },
+      { part: "ink-seal", x: 82, y: 72 },
     ],
   },
 };
@@ -212,11 +212,12 @@ const TEMPORAL_RIFT: SceneRecipe = {
     mid: [
       { part: "still-water", x: 50, y: 62 },
       { part: "cloud", x: 30, y: 74, scale: 0.8 },
+      { part: "pine", x: 80, y: 63, scale: 0.9, count: 2, spread: [7, 1], paint: "slate-800" },
     ],
     subject: [{ part: "rift", x: 50, y: 44, scale: 1.3 }],
     near: [
       { part: "reed", x: 16, y: 88, scale: 1.2 },
-      { part: "seal", x: 80, y: 74 },
+      { part: "ink-seal", x: 80, y: 74 },
     ],
   },
 };
@@ -232,7 +233,7 @@ const AESTHETICIZE_THE_GAME: SceneRecipe = {
     y: 86,
     scale: 0.85,
     pose: "pose-cast",
-    look: { ...figureLookFor([]), hair: "hair-bun", outfit: "outfit-robe", item: "item-brush", cloth: "slate-700" },
+    look: { ...figureLookFor([]), hair: "hair-bun", outfit: "outfit-robe", item: "item-ink-brush", cloth: "slate-700" },
   },
   extras: [{ x: 56, y: 70, scale: 0.55, pose: "pose-raise", look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-armor", cloth: "red-600" }, layer: "mid" }],
   layers: {
@@ -252,7 +253,7 @@ const AESTHETICIZE_THE_GAME: SceneRecipe = {
     ],
     subject: [{ part: "light-ribbon", x: 52, y: 44, scale: 1, paint: "jade-400" }],
     near: [
-      { part: "seal", x: 82, y: 76 },
+      { part: "ink-seal", x: 82, y: 76 },
     ],
     light: [
       { part: "light-shaft", x: 72, y: 20, scale: 1 },
@@ -265,7 +266,7 @@ const AESTHETICIZE_THE_GAME: SceneRecipe = {
   },
 };
 
-/** API Key Fishing (Meditative #21, Rare Spell): a hooded angler on a fog-bound dock casting a line baited with a glowing key toward a rival's fan of cards across the grey water. Changed: the rod is a staff (the figure kit has no fishing rod) and the line a red thread. */
+/** API Key Fishing (Meditative #21, Rare Spell): a hooded angler on a fog-bound dock casting a line baited with a glowing key toward a rival's fan of cards across the grey water. */
 const API_KEY_FISHING: SceneRecipe = {
   family: "meditative",
   sky: ["slate-400", "slate-100"],
@@ -276,7 +277,7 @@ const API_KEY_FISHING: SceneRecipe = {
     y: 84,
     scale: 1,
     pose: "pose-point",
-    look: { ...figureLookFor([]), outfit: "outfit-robe", item: "item-staff", cloth: "slate-700" },
+    look: { ...figureLookFor([]), outfit: "outfit-robe", item: "item-rod", cloth: "slate-700" },
   },
   layers: {
     far: [
@@ -290,11 +291,10 @@ const API_KEY_FISHING: SceneRecipe = {
     ],
     subject: [{ part: "boards", x: 30, y: 76 }],
     near: [
-      { part: "red-thread", x: 42, y: 46, scale: 0.8 },
       { part: "halo", x: 66, y: 50, scale: 1, paint: "sky-300", props: true },
       { part: "key", x: 66, y: 50, scale: 0.9, props: true },
       { part: "mist", x: 60, y: 84, scale: 0.8 },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
   },
 };
@@ -308,7 +308,7 @@ const MIND_GAMES: SceneRecipe = {
   layers: {
     far: [
       { part: "ink-peaks", x: 50, y: 46, scale: 0.4 },
-      { part: "round-window", x: 50, y: 40, scale: 1.1, paint: "slate-700" },
+      { part: "ink-round-window", x: 50, y: 40, scale: 1.1, paint: "slate-700" },
       { part: "paper-screen", x: 18, y: 66, scale: 1.2 },
       { part: "paper-screen", x: 82, y: 66, scale: 1.2, flip: -1 },
     ],
@@ -328,7 +328,7 @@ const MIND_GAMES: SceneRecipe = {
       { part: "folding-fan", x: 18, y: 76, scale: 1.2 },
       { part: "folding-fan", x: 82, y: 76, scale: 1.2, flip: -1 },
       { part: "paper-lantern", x: 50, y: 20, scale: 1 },
-      { part: "seal", x: 24, y: 58 },
+      { part: "ink-seal", x: 24, y: 58 },
     ],
   },
 };
@@ -358,7 +358,7 @@ const FORTIFY_MIND: SceneRecipe = {
     subject: [{ part: "echo-rings", x: 50, y: 50, scale: 1, paint: "sky-300" }],
     near: [
       { part: "halo", x: 50, y: 52, scale: 1.4, paint: "sky-300" },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
     light: [{ part: "thought-shapes", x: 50, y: 50, scale: 0.8 }],
   },
@@ -394,7 +394,7 @@ const GOLLY_BOB_HOWDY: SceneRecipe = {
     ],
     near: [
       { part: "flowers", x: 14, y: 90, scale: 1.2 },
-      { part: "seal", x: 84, y: 70 },
+      { part: "ink-seal", x: 84, y: 70 },
     ],
   },
 };
@@ -420,7 +420,7 @@ const POLYMORPH: SceneRecipe = {
       { part: "tome", x: 22, y: 70, scale: 0.8 },
       { part: "puff", x: 22, y: 64, scale: 0.4, paint: "white" },
       { part: "sparks", x: 50, y: 56, scale: 1.2, paint: "violet-300" },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
   },
 };
@@ -450,7 +450,7 @@ const BLUE_EYES_WHITE_FELINOR: SceneRecipe = {
     near: [
       { part: "leaves", x: 30, y: 50, scale: 1 },
       { part: "leaves", x: 70, y: 56, scale: 0.9 },
-      { part: "seal", x: 82, y: 72 },
+      { part: "ink-seal", x: 82, y: 72 },
     ],
     light: [{ part: "rim-light", x: 50, y: 60, scale: 1.1, paint: "blue-200" }],
     particles: [{ part: "snow", x: 50, y: 44, scale: 0.9 }],
@@ -484,7 +484,7 @@ const ALTERNATE_FATE: SceneRecipe = {
       { part: "ink-person", x: 12, y: 90, scale: 1.8, count: 2, spread: [4, 1] },
       { part: "pebbles", x: 50, y: 92, scale: 1.4 },
       { part: "dust", x: 70, y: 90, scale: 1 },
-      { part: "seal", x: 84, y: 72 },
+      { part: "ink-seal", x: 84, y: 72 },
     ],
     light: [
       { part: "light-shaft", x: 50, y: 14, scale: 1, paint: "violet-300" },
@@ -521,7 +521,7 @@ const CLIP_FARMING_LAWYER: SceneRecipe = {
     near: [
       { part: "key", x: 66, y: 72, scale: 0.4 },
       { part: "coin", x: 38, y: 58, scale: 0.7, paint: "brass-600" },
-      { part: "seal", x: 18, y: 72 },
+      { part: "ink-seal", x: 18, y: 72 },
     ],
   },
 };
@@ -547,7 +547,7 @@ const SHADE_IRIS: SceneRecipe = {
     near: [
       { part: "spore-motes", x: 58, y: 70, scale: 0.6, paint: "violet-300" },
       { part: "grass-tuft", x: 26, y: 92, scale: 1 },
-      { part: "seal", x: 82, y: 70 },
+      { part: "ink-seal", x: 82, y: 70 },
     ],
   },
 };
@@ -572,7 +572,7 @@ const ANCIENT_CURSE: SceneRecipe = {
     near: [
       { part: "smoke", x: 46, y: 68, scale: 1.5, paint: "slate-900" },
       { part: "smoke-billow", x: 54, y: 60, scale: 1.7, paint: "slate-900" },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
   },
 };
@@ -598,7 +598,7 @@ const FORBIDDENOUS_FACTORY: SceneRecipe = {
     near: [
       { part: "crate", x: 20, y: 90, scale: 0.9 },
       { part: "playing-card", x: 30, y: 86, scale: 0.6, count: 2, spread: [4, 2] },
-      { part: "seal", x: 18, y: 66 },
+      { part: "ink-seal", x: 18, y: 66 },
     ],
     particles: [{ part: "spore-motes", x: 50, y: 50, scale: 1.2, paint: "green-400" }],
   },
@@ -632,7 +632,7 @@ const FICKLE_E_KITTEN: SceneRecipe = {
     ],
     near: [
       { part: "ink-card-fan", x: 20, y: 86, scale: 0.6 },
-      { part: "seal", x: 18, y: 66 },
+      { part: "ink-seal", x: 18, y: 66 },
     ],
     particles: [
       { part: "sparks", x: 76, y: 52, scale: 1.2, count: 2, spread: [6, 6], paint: "red-300" },
@@ -664,7 +664,7 @@ const LOVE_BOMB: SceneRecipe = {
     ],
     near: [
       { part: "petals", x: 50, y: 58, scale: 1.2, count: 2, spread: [10, 6], paint: "red-300" },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
   },
 };

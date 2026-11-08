@@ -774,7 +774,7 @@ export const INK_PLACES_KIT = {
   "ink-pavilion": { category: "architecture", draw: pavilion },
   "moon-bridge": { category: "architecture", draw: moonBridge },
   "paper-screen": { category: "architecture", draw: paperScreen },
-  "round-window": { category: "architecture", draw: roundWindow },
+  "ink-round-window": { category: "architecture", draw: roundWindow },
   "red-gate": { category: "architecture", draw: redGate },
   "stone-well": { category: "architecture", draw: stoneWell },
   "tiled-house": { category: "architecture", draw: tiledHouse },

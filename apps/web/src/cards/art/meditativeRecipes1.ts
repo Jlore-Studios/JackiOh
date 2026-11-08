@@ -16,7 +16,7 @@ const DISRUPTIVE_DISRUPTOR: SceneRecipe = {
   emblem: { x: 50, y: 68, size: 5, rotate: 0 },
   layers: {
     far: [
-      { part: "round-window", x: 50, y: 44, scale: 1.2 },
+      { part: "ink-round-window", x: 50, y: 44, scale: 1.2 },
       { part: "ink-peaks", x: 50, y: 52, scale: 0.4 },
     ],
     mid: [
@@ -33,7 +33,7 @@ const DISRUPTIVE_DISRUPTOR: SceneRecipe = {
     ],
     near: [
       { part: "incense", x: 24, y: 84, scale: 1.1 },
-      { part: "seal", x: 80, y: 74 },
+      { part: "ink-seal", x: 80, y: 74 },
     ],
   },
 };
@@ -56,7 +56,7 @@ const RAMPAGING_RHINO: SceneRecipe = {
     near: [
       { part: "spray", x: 32, y: 80, count: 2, spread: [6, 3] },
       { part: "playing-card", x: 68, y: 72, scale: 0.6 },
-      { part: "seal", x: 80, y: 70 },
+      { part: "ink-seal", x: 80, y: 70 },
     ],
   },
 };
@@ -84,7 +84,7 @@ const JLOCKWORK_MACHINE: SceneRecipe = {
     ],
     near: [
       { part: "embers", x: 20, y: 66, scale: 1.2 },
-      { part: "seal", x: 80, y: 76 },
+      { part: "ink-seal", x: 80, y: 76 },
     ],
   },
 };
@@ -101,7 +101,7 @@ const JUICY_KUMQUAT_MELON: SceneRecipe = {
       { part: "terraces", x: 50, y: 48 },
       { part: "fruit-tree", x: 32, y: 50, scale: 0.35 },
       { part: "fruit-tree", x: 66, y: 49, scale: 0.3 },
-      { part: "round-window", x: 50, y: 44, scale: 1.5 },
+      { part: "ink-round-window", x: 50, y: 44, scale: 1.5 },
     ],
     mid: [
       { part: "paper-screen", x: 14, y: 76, scale: 1.6 },
@@ -113,7 +113,7 @@ const JUICY_KUMQUAT_MELON: SceneRecipe = {
     subject: [{ part: "melon", x: 47, y: 79, scale: 1.7 }],
     near: [
       { part: "steam", x: 74, y: 67, scale: 0.8 },
-      { part: "seal", x: 18, y: 72 },
+      { part: "ink-seal", x: 18, y: 72 },
     ],
   },
 };
@@ -145,7 +145,7 @@ const DEATH_BY_1000_CUTS: SceneRecipe = {
     near: [
       { part: "shards", x: 50, y: 56, scale: 1.1, count: 4, spread: [18, 14] },
       { part: "gust", x: 50, y: 50, scale: 1.2, count: 2, spread: [10, 14] },
-      { part: "seal", x: 80, y: 74 },
+      { part: "ink-seal", x: 80, y: 74 },
     ],
   },
 };
@@ -178,7 +178,7 @@ const ME_NO_LIKEY: SceneRecipe = {
     near: [
       { part: "hand-open", x: 40, y: 72, scale: 1.4 },
       { part: "streaks", x: 64, y: 68, scale: 0.4, flip: -1 },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
   },
 };
@@ -217,7 +217,7 @@ const INTROSPECTION: SceneRecipe = {
     near: [
       { part: "reed", x: 10, y: 86, scale: 1.2 },
       { part: "flying-arrow", x: 74, y: 64, scale: 0.6, paint: "white", count: 3, spread: [3, 6] },
-      { part: "seal", x: 88, y: 82 },
+      { part: "ink-seal", x: 88, y: 82 },
     ],
     light: [
       { part: "light-shaft", x: 44, y: 16, scale: 0.9, paint: "white" },
@@ -273,7 +273,7 @@ const REACH_THE_SUMMIT: SceneRecipe = {
     ],
     near: [
       { part: "ink-cloud", x: 24, y: 86, scale: 1.3 },
-      { part: "seal", x: 80, y: 72 },
+      { part: "ink-seal", x: 80, y: 72 },
     ],
     light: [
       { part: "rim-light", x: 50, y: 46, scale: 0.6, paint: "white" },
@@ -309,8 +309,8 @@ const JOINT_FILING: SceneRecipe = {
     far: [
       { part: "ink-peaks", x: 50, y: 54, scale: 0.5 },
       { part: "tiled-house", x: 50, y: 50, scale: 0.8 },
-      { part: "round-window", x: 22, y: 48, scale: 0.9 },
-      { part: "round-window", x: 78, y: 48, scale: 0.9 },
+      { part: "ink-round-window", x: 22, y: 48, scale: 0.9 },
+      { part: "ink-round-window", x: 78, y: 48, scale: 0.9 },
     ],
     mid: [
       { part: "tatami", x: 50, y: 66 },
@@ -322,7 +322,7 @@ const JOINT_FILING: SceneRecipe = {
       { part: "scroll", x: 50, y: 74, scale: 1.5 },
       { part: "brush", x: 43, y: 70, scale: 0.9 },
       { part: "brush", x: 57, y: 70, scale: 0.9, flip: -1 },
-      { part: "seal", x: 82, y: 76 },
+      { part: "ink-seal", x: 82, y: 76 },
     ],
   },
 };
@@ -365,7 +365,7 @@ const DOUBLE_COUNTING: SceneRecipe = {
     near: [
       { part: "abacus", x: 30, y: 82, scale: 1 },
       { part: "abacus", x: 70, y: 82, scale: 1, flip: -1, paint: "slate-400" },
-      { part: "seal", x: 82, y: 70 },
+      { part: "ink-seal", x: 82, y: 70 },
     ],
   },
 };
@@ -393,12 +393,12 @@ const DOUBLE_HEADER: SceneRecipe = {
       { part: "lantern-string", x: 50, y: 34, scale: 1.4 },
     ],
     subject: [
-      { part: "card", x: 40, y: 63, scale: 1.1 },
-      { part: "card", x: 58, y: 59, scale: 1.1, paint: "blue-200" },
+      { part: "ticket-stub", x: 41, y: 73, scale: 1.4 },
+      { part: "ticket-stub", x: 57, y: 66, scale: 1.4, paint: "blue-200" },
       { part: "hand-hold", x: 40, y: 77, scale: 1.6 },
       { part: "hand-open", x: 62, y: 70, scale: 1.5, flip: -1 },
     ],
-    near: [{ part: "seal", x: 84, y: 80 }],
+    near: [{ part: "ink-seal", x: 84, y: 80 }],
     light: [
       { part: "light-shaft", x: 30, y: 18, scale: 0.9, paint: "white" },
       { part: "light-shaft", x: 70, y: 18, scale: 0.9, paint: "white" },
@@ -441,7 +441,7 @@ const FEAR_MONGERER: SceneRecipe = {
     near: [
       { part: "mist", x: 50, y: 82, scale: 0.9 },
       { part: "smoke", x: 61, y: 52, scale: 0.4 },
-      { part: "seal", x: 80, y: 76 },
+      { part: "ink-seal", x: 80, y: 76 },
     ],
   },
 };
@@ -468,7 +468,7 @@ const GATLING_PEA: SceneRecipe = {
     near: [
       { part: "leaves", x: 30, y: 40, scale: 1 },
       { part: "grass-tuft", x: 14, y: 86, scale: 1.2 },
-      { part: "seal", x: 18, y: 74 },
+      { part: "ink-seal", x: 18, y: 74 },
     ],
   },
 };
@@ -499,7 +499,7 @@ const PRIME_TIME: SceneRecipe = {
     ],
     near: [
       { part: "halo", x: 58, y: 58, scale: 0.6, paint: "white" },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
   },
 };

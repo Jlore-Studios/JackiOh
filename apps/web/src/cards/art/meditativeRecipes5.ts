@@ -40,7 +40,7 @@ const ALUNETH: SceneRecipe = {
     ],
     near: [
       { part: "snow", x: 18, y: 70, scale: 0.7 },
-      { part: "seal", x: 18, y: 76 },
+      { part: "ink-seal", x: 18, y: 76 },
     ],
     light: [
       { part: "halo", x: 50, y: 46, scale: 1.1, paint: "sky-300" },
@@ -76,7 +76,7 @@ const DEADMANS_HAND: SceneRecipe = {
       { part: "card-ring", x: 50, y: 74, scale: 0.9 },
       { part: "smoke", x: 22, y: 50, scale: 0.8, paint: "slate-400" },
       { part: "gust", x: 76, y: 40, scale: 0.9 },
-      { part: "seal", x: 80, y: 74 },
+      { part: "ink-seal", x: 80, y: 74 },
     ],
   },
 };
@@ -108,7 +108,7 @@ const MEDINA_OUTFITTER: SceneRecipe = {
     near: [
       { part: "hand-open", x: 68, y: 80, scale: 1, flip: -1 },
       { part: "ink-card-fan", x: 66, y: 76, scale: 0.5 },
-      { part: "seal", x: 18, y: 74 },
+      { part: "ink-seal", x: 18, y: 74 },
     ],
   },
 };
@@ -121,7 +121,7 @@ const VOLATILITY: SceneRecipe = {
   emblem: { x: 50, y: 62, size: 5, rotate: 0 },
   layers: {
     far: [
-      { part: "round-window", x: 50, y: 40, scale: 1.4 },
+      { part: "ink-round-window", x: 50, y: 40, scale: 1.4 },
       { part: "ink-peaks", x: 50, y: 50, scale: 0.4 },
       { part: "bookshelf", x: 14, y: 76, scale: 1.3, paint: "wood-700" },
     ],
@@ -134,7 +134,7 @@ const VOLATILITY: SceneRecipe = {
     subject: [{ part: "jar-sprite", x: 50, y: 77, scale: 2.2 }],
     near: [
       { part: "bubbles", x: 50, y: 40, scale: 0.9, paint: "jade-400" },
-      { part: "seal", x: 18, y: 74 },
+      { part: "ink-seal", x: 18, y: 74 },
     ],
   },
 };
@@ -154,7 +154,7 @@ const PLAYTESTER: SceneRecipe = {
   },
   layers: {
     far: [
-      { part: "round-window", x: 22, y: 40, scale: 1 },
+      { part: "ink-round-window", x: 22, y: 40, scale: 1 },
       { part: "ink-peaks", x: 22, y: 46, scale: 0.25 },
       { part: "paper-screen", x: 84, y: 66, scale: 1.4 },
     ],
@@ -166,7 +166,7 @@ const PLAYTESTER: SceneRecipe = {
       { part: "closed-tome", x: 70, y: 84, scale: 0.6, count: 2, spread: [1, 2] },
       { part: "lantern", x: 74, y: 62, scale: 0.9 },
       { part: "halo", x: 70, y: 82, scale: 0.4, paint: "sky-300" },
-      { part: "seal", x: 18, y: 74 },
+      { part: "ink-seal", x: 18, y: 74 },
     ],
   },
 };
@@ -196,7 +196,7 @@ const THE_TRUE_SHEEP: SceneRecipe = {
     near: [
       { part: "tall-grass", x: 30, y: 90, scale: 1.1 },
       { part: "flowers", x: 70, y: 88, scale: 1.2 },
-      { part: "seal", x: 80, y: 74 },
+      { part: "ink-seal", x: 80, y: 74 },
     ],
     light: [{ part: "halo", x: 50, y: 64, scale: 0.9, paint: "slate-100" }],
   },
@@ -227,7 +227,7 @@ const JLARNA: SceneRecipe = {
     ],
     near: [
       { part: "halo", x: 46, y: 62, scale: 0.5, paint: "sky-300" },
-      { part: "seal", x: 80, y: 72 },
+      { part: "ink-seal", x: 80, y: 72 },
     ],
   },
 };
@@ -256,7 +256,7 @@ const SPELL_BASKET: SceneRecipe = {
     ],
     near: [
       { part: "flowers", x: 70, y: 88, scale: 1.2 },
-      { part: "seal", x: 80, y: 72 },
+      { part: "ink-seal", x: 80, y: 72 },
     ],
   },
 };
@@ -290,7 +290,7 @@ const MEDINA_ENFORCER: SceneRecipe = {
       { part: "ink-card-fan", x: 68, y: 72, scale: 0.55 },
       { part: "sparks", x: 64, y: 66, scale: 0.6, paint: "white" },
       { part: "coins", x: 28, y: 88, scale: 0.8 },
-      { part: "seal", x: 18, y: 72 },
+      { part: "ink-seal", x: 18, y: 72 },
     ],
   },
 };
@@ -324,7 +324,7 @@ const MAYOR_MEDINAMOGGER: SceneRecipe = {
     subject: [{ part: "bunting", x: 50, y: 40, scale: 1.4 }],
     near: [
       { part: "fence", x: 50, y: 96, scale: 1.8, paint: "stone-500" },
-      { part: "seal", x: 82, y: 76 },
+      { part: "ink-seal", x: 82, y: 76 },
     ],
     light: [
       { part: "halo", x: 54, y: 30, scale: 0.6, paint: "white" },
@@ -366,7 +366,7 @@ const TATCHES_THE_TOTEM: SceneRecipe = {
     near: [
       { part: "pebbles", x: 50, y: 88, scale: 1.4, props: true },
       { part: "dust", x: 50, y: 86, scale: 1.4, props: true },
-      { part: "seal", x: 80, y: 72 },
+      { part: "ink-seal", x: 80, y: 72 },
     ],
     light: [
       { part: "light-shaft", x: 50, y: 6, scale: 1, paint: "jade-400" },
@@ -409,7 +409,7 @@ const WINDFAST: SceneRecipe = {
       { part: "tall-grass", x: 16, y: 92, scale: 1.4 },
       { part: "tall-grass", x: 86, y: 92, scale: 1.3 },
       { part: "leaves", x: 66, y: 50, scale: 0.9 },
-      { part: "seal", x: 80, y: 72 },
+      { part: "ink-seal", x: 80, y: 72 },
     ],
   },
 };
@@ -442,7 +442,7 @@ const WINDFURIOUS_PRIME: SceneRecipe = {
     ],
     near: [
       { part: "rain", x: 50, y: 50, scale: 1.3 },
-      { part: "seal", x: 18, y: 72 },
+      { part: "ink-seal", x: 18, y: 72 },
     ],
   },
 };
@@ -476,7 +476,7 @@ const UNAN: SceneRecipe = {
     near: [
       { part: "pebbles", x: 66, y: 44, scale: 0.8 },
       { part: "dust-cloud", x: 70, y: 28, scale: 1 },
-      { part: "seal", x: 80, y: 74 },
+      { part: "ink-seal", x: 80, y: 74 },
     ],
   },
 };
@@ -508,7 +508,7 @@ const GROWING_FELINOR: SceneRecipe = {
     near: [
       { part: "still-water", x: 50, y: 84, scale: 0.9 },
       { part: "teapot", x: 82, y: 90, scale: 0.9 },
-      { part: "seal", x: 80, y: 74 },
+      { part: "ink-seal", x: 80, y: 74 },
     ],
   },
 };
@@ -530,7 +530,7 @@ const GROWING_FELINOR_SR: SceneRecipe = {
     far: [
       { part: "paper-screen", x: 20, y: 70, scale: 1.4 },
       { part: "paper-screen", x: 80, y: 70, scale: 1.4, flip: -1 },
-      { part: "round-window", x: 50, y: 42, scale: 1 },
+      { part: "ink-round-window", x: 50, y: 42, scale: 1 },
       { part: "ink-peaks", x: 50, y: 48, scale: 0.3 },
     ],
     mid: [
@@ -539,7 +539,7 @@ const GROWING_FELINOR_SR: SceneRecipe = {
     ],
     near: [
       { part: "temple-bell", x: 16, y: 30, scale: 0.8 },
-      { part: "seal", x: 18, y: 74 },
+      { part: "ink-seal", x: 18, y: 74 },
     ],
   },
 };
@@ -571,7 +571,7 @@ const GROWING_FELINOR_SR_SR: SceneRecipe = {
     near: [
       { part: "light-shaft", x: 14, y: 30, scale: 1, paint: "white" },
       { part: "motes", x: 30, y: 60, scale: 0.7, paint: "white" },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
   },
 };
@@ -601,7 +601,7 @@ const GROWING_FELINOR_SUPER_SENIOR: SceneRecipe = {
     ],
     near: [
       { part: "petals", x: 50, y: 50, scale: 1, paint: "red-300" },
-      { part: "seal", x: 80, y: 76 },
+      { part: "ink-seal", x: 80, y: 76 },
     ],
   },
 };
@@ -634,7 +634,7 @@ const SHRINKING_FELINOR: SceneRecipe = {
     ],
     near: [
       { part: "mist", x: 30, y: 86, scale: 0.8 },
-      { part: "seal", x: 80, y: 74 },
+      { part: "ink-seal", x: 80, y: 74 },
     ],
   },
 };
@@ -669,7 +669,7 @@ const CALL_TO_CHAOS_MEDITATIVE_EDITION: SceneRecipe = {
     ],
     near: [
       { part: "card-ring", x: 50, y: 52, scale: 1.1 },
-      { part: "seal", x: 82, y: 76 },
+      { part: "ink-seal", x: 82, y: 76 },
     ],
     light: [
       { part: "halo", x: 50, y: 60, scale: 1, paint: "jade-400" },
@@ -707,7 +707,7 @@ const CN_GOLEM: SceneRecipe = {
     near: [
       { part: "dust-cloud", x: 30, y: 82, scale: 1.2, count: 2, spread: [6, 2] },
       { part: "shards", x: 66, y: 44, scale: 0.8, paint: "slate-400" },
-      { part: "seal", x: 80, y: 74 },
+      { part: "ink-seal", x: 80, y: 74 },
     ],
   },
 };
@@ -745,7 +745,7 @@ const MEDITATIVE_JOURNEY: SceneRecipe = {
       { part: "playing-card", x: 18, y: 89, scale: 0.55 },
       { part: "reed", x: 8, y: 92, scale: 1.2 },
       { part: "mist", x: 70, y: 86, scale: 0.7 },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
   },
 };
@@ -774,7 +774,7 @@ const JOURNEY_COMPLETE: SceneRecipe = {
       { part: "hand-open", x: 38, y: 86, scale: 1.3 },
       { part: "hand-open", x: 62, y: 86, scale: 1.3, flip: -1 },
       { part: "halo", x: 50, y: 72, scale: 0.4, paint: "white" },
-      { part: "seal", x: 82, y: 72 },
+      { part: "ink-seal", x: 82, y: 72 },
     ],
   },
 };
@@ -809,7 +809,7 @@ const JLOCKEEDS_EVIL_BLUEPRINTS: SceneRecipe = {
     ],
     subject: [{ part: "blueprint", x: 50, y: 92, scale: 1.3 }],
     near: [
-      { part: "seal", x: 82, y: 70 },
+      { part: "ink-seal", x: 82, y: 70 },
       { part: "lantern", x: 22, y: 26, scale: 1, paint: "red-500" },
       { part: "lantern", x: 78, y: 26, scale: 1, paint: "red-500" },
     ],
@@ -854,7 +854,7 @@ const SHOWDOWN: SceneRecipe = {
     near: [
       { part: "bush", x: 70, y: 86, scale: 0.6, paint: "wood-600" },
       { part: "dust", x: 66, y: 88, scale: 1 },
-      { part: "seal", x: 84, y: 74 },
+      { part: "ink-seal", x: 84, y: 74 },
     ],
   },
 };
@@ -892,7 +892,7 @@ const PARANOIA: SceneRecipe = {
       { part: "red-thread", x: 12, y: 36, scale: 0.4 },
       { part: "red-thread", x: 22, y: 58, scale: 0.3, flip: -1 },
       { part: "red-thread", x: 88, y: 42, scale: 0.35, flip: -1 },
-      { part: "seal", x: 84, y: 76 },
+      { part: "ink-seal", x: 84, y: 76 },
     ],
     light: [{ part: "halo", x: 50, y: 50, scale: 0.8, paint: "green-400" }],
   },
@@ -909,7 +909,7 @@ const GREASER: SceneRecipe = {
     y: 86,
     scale: 1.05,
     pose: "pose-raise",
-    look: { ...figureLookFor([]), head: "head-human", hair: "pompadour", outfit: "outfit-jacket", item: null, cloth: "black" },
+    look: { ...figureLookFor([]), head: "head-human", hair: "pompadour", outfit: "outfit-jacket", item: "item-comb", cloth: "black" },
   },
   layers: {
     far: [
@@ -919,7 +919,7 @@ const GREASER: SceneRecipe = {
     mid: [{ part: "road", x: 50, y: 70 }],
     near: [
       { part: "motorbike", x: 72, y: 88, scale: 1.4, flip: -1 },
-      { part: "seal", x: 18, y: 74 },
+      { part: "ink-seal", x: 18, y: 74 },
     ],
   },
 };
@@ -949,7 +949,7 @@ const GACHAHOLIC: SceneRecipe = {
     near: [
       { part: "jelly-bean", x: 74, y: 84, scale: 0.6, paint: "cyan-400" },
       { part: "halo", x: 68, y: 66, scale: 0.6, paint: "violet-300" },
-      { part: "seal", x: 18, y: 74 },
+      { part: "ink-seal", x: 18, y: 74 },
     ],
   },
 };
@@ -969,7 +969,7 @@ const CATBOY_MAID_SSR: SceneRecipe = {
   },
   layers: {
     far: [
-      { part: "round-window", x: 22, y: 44, scale: 0.9 },
+      { part: "ink-round-window", x: 22, y: 44, scale: 0.9 },
       { part: "paper-lantern", x: 80, y: 30, scale: 1 },
     ],
     mid: [
@@ -981,7 +981,7 @@ const CATBOY_MAID_SSR: SceneRecipe = {
     near: [
       { part: "house-cat", x: 24, y: 88, scale: 1.2 },
       { part: "sparks", x: 50, y: 50, scale: 1.4, count: 2, spread: [14, 10], paint: "white" },
-      { part: "seal", x: 82, y: 72 },
+      { part: "ink-seal", x: 82, y: 72 },
     ],
   },
 };
@@ -1004,7 +1004,7 @@ const EMPTY_PLOT: SceneRecipe = {
     ],
     near: [
       { part: "grass-tuft", x: 20, y: 90, scale: 1, count: 2, spread: [8, 2] },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
   },
 };
@@ -1029,7 +1029,7 @@ const WISHING_WELL: SceneRecipe = {
     near: [
       { part: "halo", x: 50, y: 62, scale: 0.7, paint: "jade-400" },
       { part: "sparks", x: 50, y: 38, scale: 0.8, paint: "white" },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
   },
 };
@@ -1051,7 +1051,7 @@ const SCHOOL: SceneRecipe = {
     ],
     near: [
       { part: "pine", x: 12, y: 88, scale: 1.2 },
-      { part: "seal", x: 84, y: 76 },
+      { part: "ink-seal", x: 84, y: 76 },
     ],
   },
 };
@@ -1074,7 +1074,7 @@ const MEGA_CHURCH: SceneRecipe = {
     near: [
       { part: "ink-person", x: 22, y: 88, scale: 1.2, count: 3, spread: [8, 1] },
       { part: "ink-person", x: 76, y: 88, scale: 1.2, flip: -1, count: 2, spread: [6, 1] },
-      { part: "seal", x: 84, y: 72 },
+      { part: "ink-seal", x: 84, y: 72 },
     ],
     light: [{ part: "god-rays", x: 50, y: 24, scale: 1, paint: "white" }],
   },
@@ -1095,7 +1095,7 @@ const BUNKER: SceneRecipe = {
     subject: [{ part: "bunker", x: 50, y: 80, scale: 1.5 }],
     near: [
       { part: "fence-post", x: 16, y: 90, scale: 1 },
-      { part: "seal", x: 82, y: 74 },
+      { part: "ink-seal", x: 82, y: 74 },
     ],
   },
 };
@@ -1117,7 +1117,7 @@ const UNIVERSITY: SceneRecipe = {
       { part: "ink-person", x: 70, y: 88, scale: 1.3, flip: -1, count: 2, spread: [8, 1] },
       { part: "confetti", x: 50, y: 34, scale: 1, paint: "slate-900" },
       { part: "petals", x: 76, y: 50, scale: 0.8, paint: "red-300" },
-      { part: "seal", x: 84, y: 72 },
+      { part: "ink-seal", x: 84, y: 72 },
     ],
   },
 };
@@ -1135,7 +1135,7 @@ const THE_GREAT_WALL: SceneRecipe = {
     near: [
       { part: "mist", x: 50, y: 76, scale: 1 },
       { part: "soldier", x: 50, y: 88, scale: 1 },
-      { part: "seal", x: 82, y: 76 },
+      { part: "ink-seal", x: 82, y: 76 },
     ],
   },
 };
@@ -1157,7 +1157,7 @@ const PRISON: SceneRecipe = {
     ],
     near: [
       { part: "rain", x: 50, y: 46, scale: 1.4 },
-      { part: "seal", x: 18, y: 76 },
+      { part: "ink-seal", x: 18, y: 76 },
     ],
   },
 };
@@ -1178,7 +1178,7 @@ const JLOCKEEDS_HEADQUARTERS: SceneRecipe = {
     near: [
       { part: "cart", x: 34, y: 88, scale: 0.7 },
       { part: "cart", x: 66, y: 90, scale: 0.8, flip: -1 },
-      { part: "seal", x: 84, y: 74 },
+      { part: "ink-seal", x: 84, y: 74 },
     ],
     light: [{ part: "halo", x: 50, y: 40, scale: 0.6, paint: "red-500" }],
   },

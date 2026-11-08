@@ -136,7 +136,7 @@ function schoolhouse(at: PartPlace, rng: Rng): KitShape[] {
   const rights = [3, 4, 5, 9, 10, 11];
   const lit = [lefts[whole(rng, 0, 5)] ?? 0];
   if (rng() < 0.6) lit.push(rights[whole(rng, 0, 5)] ?? 3);
-  const litWindows = lit.map((k) => windows[k] ?? windows[0] ?? [0, 1, -8.8, -3.4]);
+  const litWindows = lit.map((k) => windows[k] ?? windows[0] ?? ([0, 1, -8.8, -3.4] as const));
   const panes = ([x, h, top, bottom]: readonly [number, number, number, number]): string => {
     const mid = top + (bottom - top) * 0.45;
     return (

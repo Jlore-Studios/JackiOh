@@ -663,6 +663,38 @@ function sack(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** R3401000: the curios the Meditative scenes added, by id, each with its kind. */
+/** A few small pink hearts drifting up and away from the anchor the way it faces, each with a pale highlight; about 13 wide and 9 tall at scale 1, `main` their pink (red-300). */
+function inkHearts(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const heart = (cx: number, cy: number, r: number): string =>
+    `M${f.p(cx, cy - r * 0.5)}C${f.p(cx - r * 0.2, cy - r * 1.3)} ${f.p(cx - r * 1.4, cy - r * 1.4)} ${f.p(cx - r * 1.4, cy - r * 0.3)}` +
+    `C${f.p(cx - r * 1.4, cy + r * 0.4)} ${f.p(cx - r * 0.6, cy + r * 0.9)} ${f.p(cx, cy + r * 1.4)}` +
+    `C${f.p(cx + r * 0.6, cy + r * 0.9)} ${f.p(cx + r * 1.4, cy + r * 0.4)} ${f.p(cx + r * 1.4, cy - r * 0.3)}` +
+    `C${f.p(cx + r * 1.4, cy - r * 1.4)} ${f.p(cx + r * 0.2, cy - r * 1.3)} ${f.p(cx, cy - r * 0.5)}Z`;
+  const spots = Array.from({ length: whole(rng, 3, 4) }, (_, k) => ({ x: -5 + k * 3.6 + between(rng, -0.5, 0.5), y: 2 - k * 2.6 + between(rng, -0.6, 0.6), r: 1.25 - k * 0.12 }));
+  return [
+    shape(spots.map(({ x, y, r }) => heart(x, y, r)).join(""), "red-300", 1, MAIN_INKED),
+    shape(spots.map(({ x, y, r }) => f.circle(x - r * 0.65, y - r * 0.55, r * 0.28)).join(""), "white", 0.8),
+  ];
+}
+
+/** A torn ticket stub centred on the anchor, tilted by the seed: a paper slip (main, slate-100) with a red printed band, two printed lines and a dotted tear line before its ragged torn end; about 9 wide and 4.6 tall at scale 1. */
+function ticketStub(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, -14, 14);
+  const T = (p: Point): Point => turned(p, tilt);
+  const torn: Point[] = Array.from({ length: 6 }, (_, k): Point => [4.4 + (k % 2 === 0 ? 0 : between(rng, 0.4, 0.9)), -2.3 + k * 0.92]);
+  const slip: Point[] = [[-4.4, -2.3], ...torn, [-4.4, 2.3]];
+  const band: Point[] = [[-3.6, -1.6], [2.4, -1.6], [2.4, -0.5], [-3.6, -0.5]];
+  const dots = Array.from({ length: 4 }, (_, k) => f.circle(...T([3.4, -1.6 + k * 1.05]), 0.2)).join("");
+  return [
+    shape(f.poly(slip.map(T)), "slate-100", 1, MAIN_INKED),
+    shape(f.poly(band.map(T)), "red-600", 0.9),
+    shape(f.band([T([-3.6, 0.5]), T([2, 0.5])], 0.3) + f.band([T([-3.6, 1.4]), T([0.8, 1.4])], 0.3), "slate-700", 0.7),
+    shape(dots, "slate-400", 0.9),
+  ];
+}
+
 export const INK_CURIOS_KIT = {
   "jade-boulder": { category: "objects", draw: jadeBoulder },
   "jade-disc": { category: "objects", draw: jadeDisc },
@@ -674,4 +706,6 @@ export const INK_CURIOS_KIT = {
   "hand-mirror": { category: "objects", draw: handMirror },
   "heart-bomb": { category: "objects", draw: heartBomb },
   "booster-sack": { category: "objects", draw: sack },
+  "ink-hearts": { category: "weather", draw: inkHearts },
+  "ticket-stub": { category: "objects", draw: ticketStub },
 } as const satisfies Readonly<Record<string, KitPart>>;

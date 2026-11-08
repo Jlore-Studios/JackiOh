@@ -170,10 +170,12 @@ export type ItemId =
   | "item-phone"
   | "item-key"
   | "item-baton"
-  | "item-brush"
+  | "item-ink-brush"
   | "item-loupe"
   | "item-fan"
-  | "item-twin-blades";
+  | "item-twin-blades"
+  | "item-rod"
+  | "item-comb";
 export type FigurePartId = PoseId | HeadId | HairId | OutfitId | ItemId;
 
 /** The parts a figure wears, and the two paints its look lays on them. */
@@ -2487,6 +2489,34 @@ function calligraphyBrush(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+/** R3401000: a fishing rod held out and up from the fist, slender and bowed, a reel by the grip and its line hanging from the tip; the rod about 22 long, the line about 18. */
+function fishingRod(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const bow = between(rng, 0.6, 1.6);
+  const drop = between(rng, 17, 19);
+  const sway = between(rng, -0.6, 0.6);
+  return [
+    shape(f.band([[0, 0], [6, -5 - bow * 0.6], [12, -9 - bow * 0.4], [18, -12]], 0.5), "wood-700", 1, INKED),
+    shape(f.band([[-2.6, 3.4], [0.4, -0.4]], 1.2), "wood-900", 1, INKED),
+    shape(f.circle(1.6, 1.2, 0.9), "slate-700", 1, INKED),
+    shape(f.band([[18, -12], [18.4 + sway, -12 + drop * 0.5], [18.8, -12 + drop]], 0.18), "slate-100", 0.85),
+  ];
+}
+
+/** R3401000: a pocket comb raised in the fist to the hair, its spine and a row of teeth; about 6.4 long. */
+function pocketComb(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, -24, -10);
+  const T = (p: Point): Point => turned(p, tilt);
+  const spine: Point[] = [[-3.2, -0.6], [3.2, -0.6], [3.2, 0.8], [-3.2, 0.8]];
+  const teeth = Array.from({ length: 7 }, (_, k) => f.band([T([-2.7 + k * 0.9, 0.6]), T([-2.7 + k * 0.9, 2.2])], 0.32)).join("");
+  return [
+    shape(f.poly(spine.map(T)), "slate-900", 1, INKED),
+    shape(teeth, "slate-900", 1),
+    shape(f.band([T([-2.8, -0.1]), T([2.8, -0.1])], 0.25), "slate-400", 0.7),
+  ];
+}
+
 /** R3401000: a jeweller's loupe raised to the eye-side of the hand and a small torch in the fist casting a pale beam forward and down. */
 function loupe(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
@@ -2681,10 +2711,12 @@ export const FIGURE_KIT: Readonly<Record<FigurePartId, KitPart>> = {
   "item-phone": { category: "item", draw: phone },
   "item-key": { category: "item", draw: ironKey },
   "item-baton": { category: "item", draw: baton },
-  "item-brush": { category: "item", draw: calligraphyBrush },
+  "item-ink-brush": { category: "item", draw: calligraphyBrush },
   "item-loupe": { category: "item", draw: loupe },
   "item-fan": { category: "item", draw: foldingFan },
   "item-twin-blades": { category: "item", draw: twinBlades },
+  "item-rod": { category: "item", draw: fishingRod },
+  "item-comb": { category: "item", draw: pocketComb },
 };
 
 /** The look of a card with none of `FIGURE_LOOKS`' tags: a hooded traveller in a plain tunic. */
