@@ -169,7 +169,7 @@ describe("R2116000 prefetching a screen on intent", () => {
     expect(loadWasm).toHaveBeenCalledTimes(1);
   });
 
-  it("B13 intent toward the Dungeon Run and its stats starts their chunks and loadWasm()", () => {
+  it("B13 intent toward the Dungeon run and its stats starts their chunks and loadWasm()", () => {
     const dungeon = vi.spyOn(routeChunks.dungeon, "load").mockResolvedValue(stubModule);
     const stats = vi.spyOn(routeChunks.dungeonStats, "load").mockResolvedValue(stubModule);
     render(

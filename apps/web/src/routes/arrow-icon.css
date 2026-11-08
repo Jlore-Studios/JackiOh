@@ -1,0 +1,18 @@
+/* An inline arrow icon for navigation and external links (#3230, R3230000).
+   The arrow is decorative and aria-hidden; the text label conveys the action. */
+
+.arrow-icon {
+  display: inline-block;
+  flex: none;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+}
+
+.arrow-icon--back {
+  margin-inline-end: 0.4em;
+}
+
+.arrow-icon--forward {
+  margin-inline-start: 0.4em;
+}

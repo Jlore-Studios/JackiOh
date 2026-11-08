@@ -276,7 +276,7 @@ export function DungeonStats(): ReactElement {
 
   return (
     <div className="app-shell tavern one-screen" data-testid={dungeonStatsTestid.root}>
-      <BackLink to={paths.dungeon} title={t("Dungeon Run stats")} />
+      <BackLink to={paths.dungeon} title={t("Dungeon run stats")} />
       <main className="one-screen__body">
         <div className="dungeon-stats">
           {history.length === 0 ? (

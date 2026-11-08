@@ -322,7 +322,7 @@ describe("what the screen opens with", () => {
     };
   }
 
-  const WORKSHOP_BAR = { first: "nav-back", back: "← Back", title: "Decks", last: "settings-open-nav" };
+  const WORKSHOP_BAR = { first: "nav-back", back: "Back", title: "Decks", last: "settings-open-nav" };
 
   it("R3228000 #1524 the loading screens draw the workshop's own bar, the gear included, and the same bar and title stand when the decks land", async () => {
     let land: (body: DecksResponse) => void = () => undefined;

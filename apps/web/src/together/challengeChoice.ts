@@ -3,7 +3,7 @@
 // the lobby's own (`PLAY_CHOICE_KEY`), kept beside the settings and not in them, which sync to the
 // account (R634). CLAUDE.md rule 7: whether a deck may be played is the server's, at the room.
 //
-// R2031000: All Random's "More cards from" pick is kept in the device's online pick
+// R2031000: All random's "More cards from" pick is kept in the device's online pick
 // (`readPlayLean`, `game/LeanNewest.tsx`), not here.
 
 import { DECK_SIZE } from "@jackioh/engine/config";

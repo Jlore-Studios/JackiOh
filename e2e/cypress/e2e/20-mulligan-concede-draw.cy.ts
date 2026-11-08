@@ -400,7 +400,7 @@ describe("20 — both seats mulligan at once, Concede asks first, and a draw off
       .and("have.attr", "aria-modal", "true")
       .and("contain.text", "Concede this game?")
       .and("contain.text", "Your opponent wins and the game ends here.");
-    cy.focused().should("have.attr", "data-testid", CONCEDE_CANCEL).and("have.text", "Keep playing");
+    cy.focused().should("have.attr", "data-testid", CONCEDE_CANCEL).and("have.text", "Stay");
     cy.get(ts(CONCEDE_CONFIRM)).should("have.text", "Concede");
 
     cy.get(ts(CONCEDE_CANCEL)).click();
