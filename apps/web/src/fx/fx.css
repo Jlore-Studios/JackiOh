@@ -2153,22 +2153,18 @@
 }
 
 .fx-takeover-plane[data-plane="far"] {
-  z-index: 1;
   animation: fx-takeover-dolly-far var(--fx-land) var(--ease-out) both;
 }
 
 .fx-takeover-plane[data-plane="middle"] {
-  z-index: 2;
   animation: fx-takeover-dolly-middle var(--fx-land) var(--ease-out) both;
 }
 
 .fx-takeover-plane[data-plane="near"] {
-  z-index: 3;
   animation: fx-takeover-dolly-near var(--fx-land) var(--ease-out) both;
 }
 
 .fx-takeover-plane[data-plane="nearest"] {
-  z-index: 4;
   animation: fx-takeover-dolly-nearest var(--fx-land) var(--ease-out) both;
 }
 
@@ -2217,33 +2213,40 @@
   transform: translateX(-50%);
   width: min(80vw, 480px);
   height: min(18vh, 110px);
-  z-index: 10;
   pointer-events: none;
   filter: drop-shadow(0 2px 8px color-mix(in srgb, var(--pal-black) 80%, transparent));
 }
 
+.fx-takeover-signature .cf-signature {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .fx-takeover-signature svg {
+  display: block;
   width: 100%;
   height: 100%;
   overflow: visible;
 }
 
+/* R2715002: the name is in its set's hand (cosmetics.css `.cf-signature[data-signature-face]`), white over the art. */
 .fx-takeover-signature .cf-signature-text {
   fill: var(--pal-white);
+}
+
+/* R3345000: the pen's wipe: the clip path's rect slides in from the left across the hold, uncovering the name. */
+.fx-takeover-sign-reveal {
+  transform-box: fill-box;
   animation: fx-takeover-sig-wipe var(--fx-land) var(--ease-out) both;
 }
 
 @keyframes fx-takeover-sig-wipe {
   0% {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  20% {
-    opacity: 1;
+    transform: translateX(-100%);
   }
   100% {
-    opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
   }
 }
 

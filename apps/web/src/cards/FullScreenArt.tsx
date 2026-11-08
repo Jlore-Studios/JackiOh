@@ -6,9 +6,10 @@ import { createPortal } from "react-dom";
 
 import { getMusicPlayer } from "../audio/music.ts";
 import { MUSIC_CARDS } from "../audio/musicData.ts";
-import { t, useLocale } from "../i18n/i18n.ts";
+import { DialogClose } from "../game/Dialog.tsx";
+import { useLocale } from "../i18n/i18n.ts";
 import { useModalKeys } from "../together/modalKeys.ts";
-import { ART_PLANES, artPlaneUri } from "./art/pictures.ts";
+import { ART_PLANES, artPlaneBackground } from "./art/pictures.ts";
 import { closeFullScreenArt, useFullScreenArt } from "./fullscreen.ts";
 import { useCardSettings } from "./settings.ts";
 import { devicePose, glareOf, pointerPose, tiltDegrees } from "./tilt.ts";
@@ -133,22 +134,18 @@ export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onC
             key={plane}
             className="fullscreen-art-plane"
             data-plane={plane}
-            style={{ backgroundImage: `url("${artPlaneUri(defId, plane, radiant)}")` }}
+            style={{ backgroundImage: artPlaneBackground(defId, plane, radiant) }}
           />
         ))}
       </div>
-      <button
-        type="button"
-        className="fullscreen-art-close"
-        data-testid="fullscreen-art-close"
-        aria-label={t("Close")}
+      {/* R3221000: the one ✕ every dialog closes by. */}
+      <DialogClose
+        testid="fullscreen-art-close"
         onClick={(e) => {
           e.stopPropagation();
           onClose();
         }}
-      >
-        ✕
-      </button>
+      />
     </div>
   );
 }

@@ -156,11 +156,14 @@ export type FxFogCue = {
  * the effects' tail (R200).
  */
 export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai";
+/**
+ * R3345000: the card whose own art a takeover draws. It is public: a takeover plans only for a readable play (R202).
+ * The cue holds it behind a function, so the cue's own data names no card (`tiers.test.ts`' R202 check reads that).
+ */
+export type FxTakeoverCard = { defId: string; name: string; radiant: boolean };
 export type FxTakeoverCue = {
   kind: "takeover";
-  defId: string;
-  name: string;
-  radiant: boolean;
+  card: () => FxTakeoverCard;
   look: TakeoverLook;
   tint: FxTint;
   at: FxAnchor;

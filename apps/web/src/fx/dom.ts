@@ -4,8 +4,8 @@
 // R3336000 ships and R2800000 set pieces.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
-import { ART_PLANES, artPlaneUri } from "../cards/art/pictures.ts";
-import { signatureLength, signatureSize } from "../cards/FullArtSignature.tsx";
+import { ART_PLANES, artPlaneBackground } from "../cards/art/pictures.ts";
+import { fragmentRef, signatureLength, signatureSize } from "../cards/FullArtSignature.tsx";
 import { SIGNATURE_FACES, signatureFaceOf } from "../cards/signatureFaces.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
 import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTint, SetPieceShape } from "./types.ts";
@@ -59,6 +59,8 @@ function spanOf(a: FxBox, b: FxBox, pad: number): FxBox {
 }
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+/** The takeovers mounted so far: each signature clip path an id of its own. */
+let takeoverSigns = 0;
 
 /** R2722001: a takeover's layers, bottom to top (fx.css). */
 const TAKEOVER_PARTS = ["dark", "sweep", "rays", "wave"] as const;
@@ -325,6 +327,7 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       tintVars(el, cue.tint);
       el.style.setProperty("--fx-land", `${Math.max(0, cue.landMs)}ms`);
 
+      const card = cue.card();
       const stage = doc.createElement("div");
       stage.className = "fx-takeover-stage";
 
@@ -334,36 +337,59 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
         const p = doc.createElement("div");
         p.className = "fx-takeover-plane";
         p.setAttribute("data-plane", plane);
-        p.style.backgroundImage = `url("${artPlaneUri(cue.defId, plane, cue.radiant)}")`;
+        p.style.backgroundImage = artPlaneBackground(card.defId, plane, card.radiant);
         planes.appendChild(p);
       }
       stage.appendChild(planes);
 
-      const signatureFace = signatureFaceOf(cue.defId);
+      const signatureFace = signatureFaceOf(card.defId);
+      // R2715002, R3345000: the name in its set's hand (`.cf-signature[data-signature-face]` sets the face),
+      // uncovered left to right as a pen would write it: a clip path whose rect slides in (fx.css).
       const signature = doc.createElement("div");
       signature.className = "fx-takeover-signature";
-      signature.setAttribute("data-signature-face", signatureFace);
+      const hand = doc.createElement("span");
+      hand.className = "cf-signature";
+      hand.setAttribute("data-signature-face", signatureFace);
+      hand.setAttribute("aria-hidden", "true");
+      signature.appendChild(hand);
 
       const sigSvg = doc.createElementNS(SVG_NS, "svg");
       sigSvg.setAttribute("viewBox", "0 0 200 48");
       sigSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
       sigSvg.setAttribute("focusable", "false");
 
+      const clipId = `fx-takeover-sign-${takeoverSigns++}`;
+      const defs = doc.createElementNS(SVG_NS, "defs");
+      const clip = doc.createElementNS(SVG_NS, "clipPath");
+      clip.setAttribute("id", clipId);
+      const reveal = doc.createElementNS(SVG_NS, "rect");
+      reveal.setAttribute("class", "fx-takeover-sign-reveal");
+      reveal.setAttribute("x", "-10");
+      reveal.setAttribute("y", "-10");
+      reveal.setAttribute("width", "220");
+      reveal.setAttribute("height", "68");
+      clip.appendChild(reveal);
+      defs.appendChild(clip);
+      sigSvg.appendChild(defs);
+
+      const ink = doc.createElementNS(SVG_NS, "g");
+      ink.setAttribute("clip-path", fragmentRef(clipId));
       const text = doc.createElementNS(SVG_NS, "text");
       text.setAttribute("class", "cf-signature-text");
       text.setAttribute("x", "100");
       text.setAttribute("y", "34");
       text.setAttribute("text-anchor", "middle");
       const { charEm } = SIGNATURE_FACES[signatureFace];
-      const size = signatureSize(cue.name, charEm);
-      const length = signatureLength(cue.name, size, charEm);
+      const size = signatureSize(card.name, charEm);
+      const length = signatureLength(card.name, size, charEm);
       text.setAttribute("font-size", String(size));
       text.setAttribute("textLength", String(length));
       text.setAttribute("lengthAdjust", "spacingAndGlyphs");
-      text.textContent = cue.name;
-      sigSvg.appendChild(text);
+      text.textContent = card.name;
+      ink.appendChild(text);
+      sigSvg.appendChild(ink);
 
-      signature.appendChild(sigSvg);
+      hand.appendChild(sigSvg);
       stage.appendChild(signature);
 
       for (const part of TAKEOVER_PARTS) {

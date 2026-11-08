@@ -2,11 +2,10 @@
 .fullscreen-art {
   position: fixed;
   inset: 0;
-  z-index: 1000;
-  background: var(--pal-black, #000);
+  z-index: var(--z-dialog);
+  background: var(--pal-black);
   overflow: hidden;
   user-select: none;
-  cursor: pointer;
   perspective: 1200px;
 }
 
@@ -15,7 +14,7 @@
   inset: -8%;
   transform-style: preserve-3d;
   transform: rotateX(var(--cf-tilt-rx, 0deg)) rotateY(var(--cf-tilt-ry, 0deg));
-  transition: transform var(--motion-base, 250ms) var(--ease-out);
+  transition: transform var(--motion-base) var(--ease-out);
 }
 
 .fullscreen-art-plane {
@@ -28,25 +27,21 @@
 }
 
 .fullscreen-art-plane[data-plane="far"] {
-  z-index: 1;
   transform: translate(calc(var(--cf-tilt-x, 0) * -12px), calc(var(--cf-tilt-y, 0) * -12px));
   animation: fullscreen-dolly-far var(--fs-dolly-period, 12s) var(--ease-in-out) infinite alternate;
 }
 
 .fullscreen-art-plane[data-plane="middle"] {
-  z-index: 2;
   transform: translate(calc(var(--cf-tilt-x, 0) * -4px), calc(var(--cf-tilt-y, 0) * -4px));
   animation: fullscreen-dolly-middle var(--fs-dolly-period, 12s) var(--ease-in-out) infinite alternate;
 }
 
 .fullscreen-art-plane[data-plane="near"] {
-  z-index: 3;
   transform: translate(calc(var(--cf-tilt-x, 0) * 8px), calc(var(--cf-tilt-y, 0) * 8px));
   animation: fullscreen-dolly-near var(--fs-dolly-period, 12s) var(--ease-in-out) infinite alternate;
 }
 
 .fullscreen-art-plane[data-plane="nearest"] {
-  z-index: 4;
   transform: translate(calc(var(--cf-tilt-x, 0) * 20px), calc(var(--cf-tilt-y, 0) * 20px));
   animation: fullscreen-dolly-nearest var(--fs-dolly-period, 12s) var(--ease-in-out) infinite alternate;
 }
@@ -91,28 +86,18 @@
   animation-play-state: paused !important;
 }
 
-.fullscreen-art-close {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  z-index: 100;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 50%;
-  border: 1px solid rgb(255 255 255 / 0.3);
-  background: rgb(0 0 0 / 0.5);
-  color: #fff;
-  font-size: 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
+/* The ✕ is DialogClose's (R3221000); here it sits at the view's top right, over the planes. */
+.fullscreen-art > .dialog__close {
+  z-index: var(--z-content);
 }
 
-:root[data-reduce-motion="true"] .fullscreen-art-plane,
+/* R3345000: Reduce motion holds the planes still, in the one motion gate. */
+:root[data-reduce-motion="true"] .fullscreen-art-plane {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fullscreen-art-plane {
-    animation: none !important;
+    animation: none;
   }
 }

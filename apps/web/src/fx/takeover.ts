@@ -111,9 +111,7 @@ export function entranceCues(entry: AnimationEntry, env: Pick<FxPlanEnv, "intens
   const look = takeoverLookOf(defId, table);
   const takeover: FxTakeoverCue = {
     kind: "takeover",
-    defId,
-    name,
-    radiant,
+    card: () => ({ defId, name, radiant }),
     look,
     tint: TAKEOVER_TINTS[look],
     at,

@@ -18,6 +18,7 @@ import {
   type EntranceResolver,
 } from "../game/animations.ts";
 import { ART_PLANES } from "../cards/art/index.ts";
+import { signatureFaceOf } from "../cards/signatureFaces.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { FX_CARD_TABLE, parseFxCardTable } from "./cards/tables.ts";
@@ -174,7 +175,9 @@ describe("R3345000 Mythic takeover in depth planes", () => {
       const cues = planFx(found, p1, env());
       const takeover = takeoverOf(cues);
       expect(takeover, mythic.id).toBeDefined();
-      expect(takeover?.defId).toBe(mythic.id);
+      expect(takeover?.card().defId).toBe(mythic.id);
+      // R202: the cue's own data names no card; its card is behind the function.
+      expect(Object.keys(JSON.parse(JSON.stringify(takeover)) as object), mythic.id).not.toContain("card");
 
       // Mount into DOM and verify depth planes & signature
       const root = document.createElement("div");
@@ -188,8 +191,16 @@ describe("R3345000 Mythic takeover in depth planes", () => {
         const el = planes?.querySelector(`.fx-takeover-plane[data-plane="${plane}"]`);
         expect(el, `${mythic.id} plane ${plane}`).not.toBeNull();
       }
-      const sig = root.querySelector(".fx-takeover-signature");
-      expect(sig, mythic.id).not.toBeNull();
+      // R2715002: the name signs in the card's set's hand, which cosmetics.css styles under `.cf-signature`.
+      const hand = root.querySelector(".fx-takeover-signature .cf-signature");
+      expect(hand, mythic.id).not.toBeNull();
+      expect(hand?.getAttribute("data-signature-face"), mythic.id).toBe(signatureFaceOf(mythic.id));
+      expect(hand?.querySelector(".cf-signature-text")?.textContent, mythic.id).toBe(mythic.name);
+      // B27: the plane's picture is set through the cards' helper, one per plane.
+      for (const plane of ART_PLANES) {
+        const el = planes?.querySelector<HTMLElement>(`.fx-takeover-plane[data-plane="${plane}"]`);
+        expect(el?.style.backgroundImage, `${mythic.id} plane ${plane} picture`).not.toBe("");
+      }
     }
   });
 

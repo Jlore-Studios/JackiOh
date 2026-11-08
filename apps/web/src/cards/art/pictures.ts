@@ -121,6 +121,11 @@ export function artPlaneUri(defId: string, plane: ArtPlane, radiant: boolean = f
   return proceduralArtUri(defId, theme, compositionOf(defId, type), radiant, motifFor(name, theme), null, null, plane);
 }
 
+/** R3345000: `artPlaneUri` as a CSS `background-image` value (the effects layer holds no `url(` of its own: B27). */
+export function artPlaneBackground(defId: string, plane: ArtPlane, radiant: boolean = false): string {
+  return `url("${artPlaneUri(defId, plane, radiant)}")`;
+}
+
 /**
  * R2943001, R3344000: whether `part` draws a layer of `role`: the whole picture every layer, its backdrop every layer
  * but the subject's, its subject the subject's alone, and a plane the layers of its roles (`PLANE_OF_ROLE`).

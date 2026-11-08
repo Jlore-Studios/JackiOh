@@ -912,30 +912,17 @@
   }
 }
 
-/* R3345000: a Mythic's frame in hand carries a quiet mark that it can be held: a slow edge shimmer in its own colours, not Radiant's gold. */
-.card-hand .cf[data-rarity="Mythic"] {
-  animation: cf-mythic-hand-shimmer var(--motion-slow) var(--ease-in-out) infinite alternate;
-}
-
+/* R3345000: a Mythic's frame in hand carries a quiet mark that it can be held: a slow edge shimmer in its own
+   colours (the rarity's violet, sky and mint), not Radiant's gold. It runs in the motion gate below, still under Reduce motion. */
 @keyframes cf-mythic-hand-shimmer {
   0% {
-    box-shadow: 0 0 4px 1px rgb(255 106 213 / 0.35);
+    box-shadow: 0 0 4px 1px color-mix(in srgb, var(--pal-violet-300) 35%, transparent);
   }
-  33% {
-    box-shadow: 0 0 6px 2px rgb(148 208 255 / 0.35);
-  }
-  66% {
-    box-shadow: 0 0 4px 1px rgb(125 255 198 / 0.35);
+  50% {
+    box-shadow: 0 0 6px 2px color-mix(in srgb, var(--pal-sky-300) 35%, transparent);
   }
   100% {
-    box-shadow: 0 0 6px 2px rgb(255 230 109 / 0.35);
-  }
-}
-
-:root[data-reduce-motion="true"] .card-hand .cf[data-rarity="Mythic"],
-@media (prefers-reduced-motion: reduce) {
-  .card-hand .cf[data-rarity="Mythic"] {
-    animation: none;
+    box-shadow: 0 0 4px 1px color-mix(in srgb, var(--pal-green-200) 35%, transparent);
   }
 }
 
@@ -2634,6 +2621,11 @@
   :root:not([data-reduce-motion="true"]) .cf .cost-gem .cf-cost-drain::before,
   :root:not([data-reduce-motion="true"]) .cf .cost-gem .cf-cost-drain::after {
     transition: transform var(--motion-slow) var(--ease-out);
+  }
+
+  /* R3345000: a Mythic in hand carries its slow edge shimmer (the mark that it can be held). */
+  :root:not([data-reduce-motion="true"]) .card-hand .cf[data-rarity="Mythic"] {
+    animation: cf-mythic-hand-shimmer var(--motion-slow) var(--ease-in-out) infinite alternate;
   }
 }
 
