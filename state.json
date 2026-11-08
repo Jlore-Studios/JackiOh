@@ -16229,35 +16229,13 @@
       "taken_asks": [],
       "verdict_rounds": 2,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
-        "built_by": "claude-6",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/audio/sfx.test.ts",
-            "apps/web/src/audio/sfx.ts",
-            "apps/web/src/audio/types.ts",
-            "e2e/cypress/component/audio-recipes.cy.tsx"
-          ],
-          "from": "a2fbc9f0eb05f1bea2e2ca86034e235482ec1ab1",
-          "main": "03e0cbaf9d4af6778fde7354ca2901650d8bae44"
-        },
+        "built_by": "claude-4",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-6",
-            "run": "42416893876",
-            "tier": "strong"
-          }
-        ],
-        "sha": "2d94022917faaefed46d3665a99b7a01ee81e721",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "14ca5f11120fd6abe1dbba655d30aa575855a10c",
+        "tiers": {}
       },
       "waiting_comment": 6707558352
     },
