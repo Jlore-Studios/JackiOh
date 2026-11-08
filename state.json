@@ -18293,15 +18293,10 @@
     "what": "build #3392 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-08T06:13:19Z",
+    "at": "2026-11-08T06:22:38Z",
     "notes": [
-      "#3429 needs a plan",
-      "#3392: `claude-4` can start again, so its hold is lifted",
-      "#3393: `claude-4` can start again, so its hold is lifted",
-      "delivered build #3407 on claude-8 (run 42452855849): interrupted",
-      "started build #3392 on claude-4 (run 42454035705)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-08T09:00:00Z; `claude-7` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-08T07:50:00Z; it can start a build or a plan again in 33m; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-08T08:10:00Z; it can start a build or a plan again in 53m; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 16h 43m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-13T23:59:56Z; it takes reviews only; it can start a build or a plan again in 137h 43m; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` 5-hour usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-08T08:30:00Z; it can start a build or a plan again in 2h 13m; waiting for their owners: #3407 held for `claude-8` until 01:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "pruned 1 plan file(s) older than 7 days"
+      "#3407 is held for `claude-8` until 01:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
+      "#3386: approved and green, so its strikes are cleared"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19007,7 +19002,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-08T06:13:19Z",
+  "loop_tick": "2026-11-08T06:22:38Z",
   "machine_disk": {
     "issue": null,
     "reading": {
