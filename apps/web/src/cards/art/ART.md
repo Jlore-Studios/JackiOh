@@ -354,12 +354,15 @@ Stinkyscape and Training Grounds painters hand a recipe card to it (`svg.ts` `sc
 card keeps its Core card's old subject.
 
 The **scene kit** (`sceneKit.ts`, `SCENE_KIT`) holds the scenery, at least `SCENE_KIT_MIN_PER_CATEGORY` of
-each kind: terrain (fields, furrows, grave-mounds, cliffs, floors, rooms, streets, hills, asteroids),
-architecture (fences, posts, gates, ruins, towers, columns, arches, tombstones), plants, creatures, objects
-and tools, and weather and light (moons, stars, clouds, mist, shafts, halos, rays, sparks, embers, motes, a
-void, lightning, nebulae, planets, a rim light). The **figure kit** (`figureKit.ts`, `FIGURE_KIT`) replaces
-the painter's one silhouette: three poses, five heads, eight hairs and headgears, nine outfits by tag and
-five held items, put together by a look (`FIGURE_LOOKS`, `figureLookFor`), so a Unit reads as who it is: a
+each kind, 255 parts since Core's pass (R3392000): 27 of terrain (fields, furrows, grave-mounds, cliffs, floors,
+rooms, streets, hills, asteroids, water, sand, snow, stages, a cavern, a chessboard, a floating island...), 39 of
+architecture (fences, posts, gates, ruins, towers, columns, arches, tombstones, windows, doors, houses, a dome, a
+lighthouse, a rotunda...), 15 plants, 30 creatures (a scarab, a gelatin cube, a panther, a dragon, a sheep, a
+loaf, a Rush Token, soldiers, a crowd...), 99 objects and tools, and 45 of weather and light (moons, stars,
+clouds, mist, shafts, halos, rays, sparks, embers, motes, a void, lightning, nebulae, planets, a rim light, waves,
+a rainbow, a cyclone...). The **figure kit** (`figureKit.ts`, `FIGURE_KIT`) replaces the painter's one
+silhouette: eleven poses, eleven heads, eighteen hairs and headgears, 23 outfits and 22 held items, put together
+by a look (`FIGURE_LOOKS`, `figureLookFor`), so a Unit reads as who it is: a
 Terminus, a CN or KY character, a Felinor, a Pancake, a Fruit, Jlockeed's people or a Human. The two kits
 hold at least `SCENE_KIT_MIN_PARTS` parts; each part draws one to twelve filled shapes, a line drawn as a
 thin band.
