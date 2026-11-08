@@ -16860,7 +16860,7 @@
         "provider": "claude-6",
         "round_tier": "strong",
         "rounds_on": 3431,
-        "rounds_used": 0,
+        "rounds_used": 1,
         "since": "2026-11-08T18:43:08Z",
         "source": "conflict",
         "until": "2026-11-08T19:10:49Z"
