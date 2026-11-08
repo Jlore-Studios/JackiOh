@@ -16139,7 +16139,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-08T04:16:47Z",
+      "feedback_since": "2026-11-08T12:13:34Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3345,
@@ -16154,7 +16154,7 @@
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "medium",
+      "round_tier": "",
       "run_id": "42479235353",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -16175,11 +16175,11 @@
         "provider": "claude-8",
         "run": "42458313905"
       },
-      "source": "ci",
+      "source": "",
       "started_at": "2026-11-08T12:13:34Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 4,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
