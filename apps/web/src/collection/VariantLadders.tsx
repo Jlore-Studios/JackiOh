@@ -5,7 +5,8 @@
 // view's `equip`, `writeCardLevel`), and choosing a locked one, or holding any (R2730000), opens its fullscreen
 // preview, where only the next one is offered a held token. It decides nothing (CLAUDE.md rule 7): ownership is the
 // server's (`useCanEquip`), and the server refuses any level past the next (R3015004). R3016001: a rung's `hover`, where
-// given, opens that level's hover preview as well (LookHover.tsx): the card, in hand and on the board.
+// given, opens that level's hover preview as well (LookHover.tsx): the card, in hand and on the board. R3343002: a
+// Default rung of a card with a default look pictures that look (versions.ts `lookOn`).
 
 import type { ReactElement } from "react";
 
@@ -14,7 +15,7 @@ import type { CardDef } from "@jackioh/shared";
 import { CardArt, INSPECT_KEY_SHORTCUT, useCardSettings } from "../cards/index.ts";
 import { normalizeCosmetics, wornCosmetics } from "../cards/cosmetics.ts";
 import type { FaceModel } from "../cards/model.ts";
-import { DEFAULT_VARIANT, artPartOf, artPictureOf, levelOf } from "../cards/versions.ts";
+import { DEFAULT_VARIANT, artPartOf, artPictureOf, levelOf, lookOn } from "../cards/versions.ts";
 import { t } from "../i18n/i18n.ts";
 import { SampleFace } from "./CosmeticLook.tsx";
 import { NO_FULL_ART_ID, collectionTestid as T, type Ladder, type Rung } from "./collection.ts";
@@ -23,11 +24,14 @@ import type { LookHoverTrigger } from "./LookHover.tsx";
 
 /**
  * R3015002: one rung's small picture: its variant's picture across the whole face (every level of a variant draws its
- * first level's), Out of frame's subject alone; the normal face drawn small for the Default's levels.
+ * first level's), Out of frame's subject alone; the normal face drawn small for the Default's levels. R3343002: but the
+ * card's default look across the whole face for those, where the card has one (`lookOn`, the setting's say included).
  */
 export function RungPicture({ def, face, rung }: { def: CardDef; face: FaceModel; rung: Rung }): ReactElement {
-  const { rarityFoil } = useCardSettings();
-  if (rung.id !== NO_FULL_ART_ID && levelOf(rung.id)?.variant !== DEFAULT_VARIANT) {
+  const { rarityFoil, fullArt } = useCardSettings();
+  const variant = rung.id === NO_FULL_ART_ID ? DEFAULT_VARIANT : levelOf(rung.id)?.variant;
+  const look = variant === DEFAULT_VARIANT ? lookOn(def.id, null, fullArt).version : rung.id;
+  if (look !== null) {
     return (
       <span className="collection-strip__picture collection-strip__picture--full-art">
         <CardArt
@@ -37,8 +41,8 @@ export function RungPicture({ def, face, rung }: { def: CardDef; face: FaceModel
           type={def.type}
           name={def.name}
           shape="full"
-          picture={artPictureOf(rung.id, def.set)}
-          part={artPartOf(rung.id)}
+          picture={artPictureOf(look, def.set)}
+          part={artPartOf(look)}
         />
       </span>
     );

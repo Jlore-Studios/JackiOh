@@ -1,8 +1,9 @@
 //! Generates `apps/web/src/wire/generated/cosmetics.ts` from `cosmetics.json` (#1295, SPEC §11, R1295000, R633),
-//! each version's offer as the cards it takes (R2725001) and (R3015000) each level's place on its ladder.
+//! each version's offer as the cards it takes (R2725001), (R3015000) each level's place on its ladder and (R3343000)
+//! each card's default look.
 
 use jackioh_server::config::PLAYER_SETTINGS_TEXT_MAX_LENGTH;
-use jackioh_server::cosmetics::{CosmeticKind, CosmeticRarity, offered, shipped, shipped_defs};
+use jackioh_server::cosmetics::{CosmeticKind, CosmeticRarity, default_look, offered, shipped, shipped_defs};
 
 /// The generated file, relative to this crate.
 const OUTPUT: &str = concat!(
@@ -59,13 +60,24 @@ fn render() -> String {
     out.push_str("};\n");
     // R3015000: each level's variant, rank and what it adds, so the client reads a ladder without a clause.
     out.push_str(
-        "export const COSMETIC_LEVELS: Readonly<Record<string, { readonly variant: string; readonly rank: number; readonly adds: \"art\" | \"fullArt\" | \"animated\" | \"signed\" }>> = {\n",
+        "export const COSMETIC_LEVELS: Readonly<Record<string, { readonly variant: string; readonly rank: number; readonly adds: \"art\" | \"fullArt\" | \"animated\" | \"signed\"; readonly defaultOn?: readonly string[] }>> = {\n",
     );
     for (id, level) in cosmetics
         .iter()
         .filter_map(|cosmetic| cosmetic.level.as_ref().map(|level| (&cosmetic.id, level)))
     {
         out.push_str(&format!("  {}: {},\n", json(id), json(level)));
+    }
+    out.push_str("};\n");
+    // R3343000: each card whose Default draws a level's look, tokens by their printed rarity, to that level, so the
+    // client never reads a card's rarity against `defaultOn` itself.
+    out.push_str("export const COSMETIC_DEFAULT_LOOKS: Readonly<Record<string, string>> = {\n");
+    let mut cards: Vec<&str> = shipped_defs().keys().map(String::as_str).collect();
+    cards.sort_unstable();
+    for card in cards {
+        if let Some(look) = default_look(&cosmetics, card) {
+            out.push_str(&format!("  {}: {},\n", json(&card), json(&look.id)));
+        }
     }
     out.push_str("};\n");
     out
