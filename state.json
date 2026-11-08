@@ -18046,8 +18046,13 @@
     "what": "revise #3375 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-08T03:40:04Z",
-    "notes": [],
+    "at": "2026-11-08T03:50:39Z",
+    "notes": [
+      "delivered review #3424 on claude-4 (run 42438501202): blocked",
+      "delivered revise #3375 on claude-6 (run 42434070619): approved",
+      "started revise #3375 on claude-6 (run 42444613902)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-08T04:00:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-08T04:50:00Z; it can start a build or a plan again in 55m; `claude-4` 5-hour usage is 45%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-08T06:10:00Z; it takes reviews only; it can start a build or a plan again in 1h 15m; `claude-6` is busy; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 19h 05m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-13T23:59:56Z; it takes reviews only; it can start a build or a plan again in 140h 05m; `gpt` it refused a call; its limit resets at 2026-11-08T10:00:17Z; `claude-2` is busy"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18752,7 +18757,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-08T03:40:04Z",
+  "loop_tick": "2026-11-08T03:50:39Z",
   "machine_disk": {
     "issue": null,
     "reading": {
