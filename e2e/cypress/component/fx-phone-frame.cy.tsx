@@ -10,8 +10,9 @@
 // R3344001: a hand with one face tilted under a pointer that keeps moving over it, its planes parallaxing
 // under its glare. R3334002: a launched Starship's broadside of eight guns, at the slowest effects speed.
 // R3400001: Goetzmann Game Design's and Bob's Plan's signatures, the two heaviest of Meditative+'s and Training
-// Grounds', their takeovers drawing full-screen art. R3395000: Prototype-X2's and Tylannt's, the two heaviest of
-// Stinkyscape 001 to 090's, their takeovers drawing their own full-screen art.
+// Grounds', their takeovers drawing full-screen art. R3395000: Flak v5's and Prototype-X2's, the two heaviest of
+// Stinkyscape 001 to 090's, Flak v5's wave blooming over every enemy Unit and Prototype-X2's takeover drawing
+// its own full-screen art.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-phone-frame.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -305,10 +306,11 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
   });
 
   // R3395000: Stinkyscape 001 to 090's two heaviest by burst particles (fx/cards/stinkyscape/signatures.test.ts
-  // HEAVIEST), its Mythic Units landing under full-screen art of their own (R3395001).
+  // HEAVIEST): Flak v5's Activate sweeping every enemy Unit, and its Mythic Unit landing under full-screen art
+  // of its own (R3395001).
   for (const [defId, name, look] of [
+    ["stinkyscape-061", "Flak v5", null],
     ["stinkyscape-086", "Prototype-X2", "forge"],
-    ["stinkyscape-006", "Tylannt", "vault"],
   ] as const) {
     it(`R3395000 ${name}'s signature holds the phone frame budget mid-flight`, () => {
       cy.viewport(PHONE.width, PHONE.height);
@@ -318,8 +320,10 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       const board = galleryBoardOf(defId, fullBoardView());
       holdsBudget(`${name}'s signature`, () => {
         mountScene(board, galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
-        cy.get(GAME).should("have.attr", "data-takeover", "mythic");
-        cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art`).should("have.attr", "data-look", look);
+        if (look !== null) {
+          cy.get(GAME).should("have.attr", "data-takeover", "mythic");
+          cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art`).should("have.attr", "data-look", look);
+        }
         return sampleFrames();
       });
       cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");

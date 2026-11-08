@@ -6,7 +6,7 @@
 // University; Drone Core VIII stamps three Interceptors and Drone Core IX launches three Corvettes; Kwzka
 // Allures the first enemy Unit; The Narcor Project's Activate feeds a Narcor back and lowers its Brittle;
 // Great Paperclip Theory adds Drone Core I and sets its rule; Beam v5 hits the middle enemy Unit and Cleaves
-// its neighbours, Repeater v5 and Cannon v5 hit it, Flak v5's first wave hits the first two enemy Units and
+// its neighbours, Repeater v5 and Cannon v5 hit it, Flak v5's first wave hits every enemy Unit and
 // Miner v5 gains a Narcor; Z'Zoth raises two Units from its graveyard; A'Zoth calls one back and replays its
 // Cry on the first enemy Unit; Galaxy and Prototype-X1 Equip two picks, Prototype-X2 three; Siva 1 Allures the
 // first enemy Unit; Siva 2's Radiant Cry adds three Speciesists.
@@ -117,8 +117,8 @@ export const STINKYSCAPE_SIGNATURE_FIXTURES = {
   repeaterBurst: ((view, instanceId, player) => [marker(instanceId, "stinkyscape-059", player, "activate"), ...hit(instanceId, unitsOf(theirs(view, player))[2], HITS.repeater)]) satisfies Fixture,
   cannonShell: ((view, instanceId, player) => [marker(instanceId, "stinkyscape-060", player, "activate"), ...hit(instanceId, unitsOf(theirs(view, player))[2], HITS.cannon)]) satisfies Fixture,
   flakWaves: ((view, instanceId, player) => {
-    const foes = unitsOf(theirs(view, player));
-    return [marker(instanceId, "stinkyscape-061", player, "activate"), ...hit(instanceId, foes[0], HITS.flak), ...hit(instanceId, foes[1], HITS.flak)];
+    // One wave, as the engine sends it: a hit on every enemy Unit, which the planner draws as one sweep.
+    return [marker(instanceId, "stinkyscape-061", player, "activate"), ...unitsOf(theirs(view, player)).flatMap((foe) => hit(instanceId, foe, HITS.flak))];
   }) satisfies Fixture,
   asteroidCrunch: ((_view, instanceId, player) => [marker(instanceId, "stinkyscape-066", player, "activate"), { type: "addedToHand", player, instanceId: "fx-resource", defId: NARCOR }]) satisfies Fixture,
   ghostHulls: ((_view, _instanceId, player) =>

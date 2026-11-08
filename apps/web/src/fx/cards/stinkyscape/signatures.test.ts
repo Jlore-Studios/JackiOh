@@ -4,7 +4,8 @@
 // no beat names a hidden card or flies more than a card back (R202); with the effects off nothing draws. The
 // beats that read the board (Siva 2's drips to the Humans, Flak v5's first wave, Beam v5's first hit, the
 // Prototype-X2's welds) keep to what the view shows. R3395001: a signature's own beat replaces the event's
-// system moment too (Tylannt's dial in place of the shared quest moment).
+// system moment too (Tylannt's dial in place of the shared quest moment), and draws on a sweep in place of
+// the fog (Flak v5's waves over every enemy Unit).
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -55,7 +56,7 @@ const SIGNATURES: Readonly<Record<string, { bespoke?: string; entrance?: string;
 };
 
 /** The group's two heaviest plays by burst particles, the phone frame spec's (fx-phone-frame.cy.tsx). */
-const HEAVIEST = ["stinkyscape-086", "stinkyscape-006"] as const;
+const HEAVIEST = ["stinkyscape-061", "stinkyscape-086"] as const;
 
 const resolve: EntranceResolver = (defId) => {
   const def = CATALOG[defId];
@@ -226,6 +227,30 @@ describe("R3395000 Stinkyscape 001 to 090's signatures", () => {
     expect(plan("stinkyscape-006").some((cue) => cue.kind === "figure")).toBe(true);
     // A card with no signature keeps the shared quest moment.
     expect(plan("core-002").some((cue) => cue.kind === "banner")).toBe(true);
+  });
+
+  it("R3395001 Flak v5's waves, each a sweep of every enemy Unit, draw its own beat in place of the fog", () => {
+    const view = fullBoardView();
+    const foes = view.opponent.units.flatMap((unit) => (unit === null ? [] : [unit.instanceId]));
+    const wave = (): GameEvent[] => foes.map((targetId): GameEvent => ({ type: "damage", sourceId: "ex", targetId, amount: 1, combat: false }));
+    const plan = (defId: string): { sweep: boolean; cues: FxCue[] }[] => {
+      // Its Activate as the engine sends it: the marker, then two waves over every enemy Unit.
+      const events: GameEvent[] = [{ type: "hookResolving", sourceId: "ex", defId, controller: "p1", hook: "activate" }, ...wave(), ...wave()];
+      const env = envOf();
+      return planEntries(events, withEvents(view, events), false, undefined, hasSetPiece).map((entry) => {
+        env.memory.remember(entry.events);
+        return { sweep: entry.sweep !== undefined, cues: planFx(entry, entry.view, env) };
+      });
+    };
+    const sweeps = plan("stinkyscape-061").filter((entry) => entry.sweep);
+    expect(sweeps).toHaveLength(2);
+    const bursts = (cues: FxCue[], preset: string): number => cues.filter((cue) => cue.kind === "burst" && cue.preset === preset).length;
+    // The first wave blooms shrapnel over each enemy Unit, the second puffs smoke; neither rolls the fog.
+    expect(bursts(sweeps[0]?.cues ?? [], "spark")).toBe(foes.length);
+    expect(bursts(sweeps[1]?.cues ?? [], "smoke")).toBe(foes.length);
+    for (const { cues } of sweeps) expect(cues.some((cue) => cue.kind === "fog")).toBe(false);
+    // A card with no signature keeps the fog.
+    expect(plan("core-002").filter((entry) => entry.sweep).every((entry) => entry.cues.some((cue) => cue.kind === "fog"))).toBe(true);
   });
 
   it("R3395000 the board-reading beats: Siva 2's drips, Flak v5's first wave, Beam v5's first hit, the Prototype-X2's welds, A'Zoth's echo", () => {

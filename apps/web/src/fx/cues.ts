@@ -1223,7 +1223,17 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
     anomaly?.replaces.has(event) === true;
   const cues: FxCue[] = [...(motif?.cues ?? []), ...(setPiece?.cues ?? []), ...(terminus?.cues ?? []), ...(starship?.cues ?? []), ...(battleship?.cues ?? []), ...(anomaly?.cues ?? [])];
   if (entry.sweep !== undefined) {
-    cues.push(...sweepCues(motif === null ? entry : { ...entry, events: entry.events.filter((event) => !replaced(event)) }, view, env));
+    // R3395001: a signature's own beat draws on a sweep too (Flak v5's wave over every enemy Unit), each hit
+    // it replaces leaving the fog's run, which rolls over the rest alone (none, when it replaces every hit).
+    const own = new Set<GameEvent>();
+    for (const event of entry.events) {
+      const claim = planCardFxClaim(event, { entry, view, env, D: entry.durationMs });
+      if (!claim.signature || claim.result === null) continue;
+      cues.push(...claim.result.cues);
+      if (claim.result.row === "replace") own.add(event);
+    }
+    const rest = motif === null && own.size === 0 ? entry : { ...entry, events: entry.events.filter((event) => !replaced(event) && !own.has(event)) };
+    cues.push(...sweepCues(rest, view, env));
     return cues;
   }
   // R3389000: a signature's recipe draws beside a whole pile's one wave (Second Wind's deck blown away).
