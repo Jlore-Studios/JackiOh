@@ -15,6 +15,8 @@
 // its fuse run, broadside or wreck sends its own sounds as it starts, read off the view the entry shows
 // (starshipSounds.ts), and only the events they were sent for leave their row's swing or sting out
 // (`starshipSounded`): what is flushed unstarted (Reduce Motion) keeps it.
+// SIGNATURES (R3389000): the entry a signature's card makes its entrance in sends its bed as it starts
+// (signatureBeds.ts), beside its intro sting and its events' own sounds.
 
 import type { GameEvent, PlayerId, PlayerView, UnitView } from "@jackioh/shared";
 
@@ -29,6 +31,7 @@ import {
 } from "./constants.ts";
 import { cuesFor, type CueCard, type CueContext, type PlayFrame } from "./cues.ts";
 import { setPieceBed } from "./setPieceBeds.ts";
+import { signatureBed } from "./signatureBeds.ts";
 import { starshipSounds } from "./starshipSounds.ts";
 import type { CardAudioTable, SoundCue, SoundSink } from "./types.ts";
 import { CARD_AUDIO } from "./voiceData.ts";
@@ -257,6 +260,8 @@ export function createSoundDirector(
       if (at > 0) flush(owed.splice(0, at));
       // R2800000: a set piece's bed, laid across its hold.
       for (const cue of setPieceBed(entry)) send(cue, cue.delayMs);
+      // R3389000: a signature's bed, laid across the entry its card makes its entrance in.
+      for (const cue of signatureBed(entry)) send(cue, cue.delayMs);
       // R3334000–R3334003: the Starship's own sounds, each at its beat of what the board draws.
       const ship = starshipSounds(entry, entry.view);
       for (const cue of ship.cues) send(cue, cue.delayMs);
