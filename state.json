@@ -19999,6 +19999,10 @@
         {
           "at": "2026-11-08T22:37:46Z",
           "minutes": 38.9
+        },
+        {
+          "at": "2026-11-08T23:01:08Z",
+          "minutes": 12.3
         }
       ],
       "tokens_spent": [
@@ -21217,9 +21221,9 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-09T01:00:00Z",
-          "utilization": 0.16
+          "utilization": 0.45
         },
-        "observed_at": "2026-11-08T22:37:46Z",
+        "observed_at": "2026-11-08T23:01:08Z",
         "status": "allowed"
       }
     },
@@ -35890,7 +35894,16 @@
   },
   "usage_spool": {
     "readings": [
-      "2026-11-08T22:42:15Z,claude-8,ping,before,42531327611,96,2026-11-08T23:20:00Z,,,allowed_warning,85,,"
+      "2026-11-08T22:42:15Z,claude-8,ping,before,42531327611,96,2026-11-08T23:20:00Z,,,allowed_warning,85,,",
+      "2026-11-08T22:44:08Z,claude-1,ping,before,42531391974,16,2026-11-09T01:00:00Z,,,allowed,40,,",
+      "2026-11-08T22:44:40Z,claude-1,stream,call,42531391974,17,2026-11-09T01:00:00Z,,,allowed,40,,",
+      "2026-11-08T22:45:40Z,claude-1,stream,call,42531391974,18,2026-11-09T01:00:00Z,,,allowed,40,,",
+      "2026-11-08T22:46:55Z,claude-1,stream,call,42531391974,19,2026-11-09T01:00:00Z,,,allowed,40,,",
+      "2026-11-08T22:47:55Z,claude-1,stream,call,42531391974,20,2026-11-09T01:00:00Z,,,allowed,40,,",
+      "2026-11-08T22:48:55Z,claude-1,stream,call,42531391974,21,2026-11-09T01:00:00Z,,,allowed,40,,",
+      "2026-11-08T22:52:55Z,claude-1,stream,call,42531391974,22,2026-11-09T01:00:00Z,,,allowed,40,,",
+      "2026-11-08T22:53:10Z,claude-1,stream,call,42531391974,24,2026-11-09T01:00:00Z,,,allowed,40,,",
+      "2026-11-08T22:56:40Z,claude-1,stream,call,42531391974,45,2026-11-09T01:00:00Z,,,allowed,40,,"
     ],
     "runs": [
       "2026-11-08T22:42:15Z,42531327611,claude-8,opus,build,3397,hard,interrupted,5-hour cap,0,0,0,0,,96,96,,,1773,claude-8,none,,0"
