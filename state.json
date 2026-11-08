@@ -16634,14 +16634,6 @@
         "reason": "`claude-1` stops: 5-hour usage is 42%, at or over its 40% cap outside its hours; it resets at 2026-11-08T15:00:00Z",
         "trail": "7 012 018 078; do echo \\\"<img src='file:///tmp/stinkyscape-$id.svg' style=\u2026\n- Read: {\"file_path\": \"/tmp/r7/sheet.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431; rm apps/web/src/cards/art/zz-measure.test.ts; echo \\\"- run 7: fixes applied (space-window part, #7/#12/#18/#78), measured 135/79/115/109, rende\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431; sed -i '364s|cockpits, portholes, cases,|cockpits, portholes and the open space they look out on, cases,|' apps/web/src/cards/art/ART.md; sed -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431/apps/web/src/cards/art; sed -i 's| \\\"stinkyscape-007\\\": \\\\[\\\"vault-door\\\", \\\"credit-chips\\\", \\\"rope\\\", \\\"comet\\\", \\\"light-grid\\\"\\\\],| \\\"stinkysc\u2026\n- said: Art tests pass (243/243). Now typecheck, eslint, the cargo spec checks and the harness's web command.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431; echo \\\"- run 7: art 243/243; running typecheck/eslint/spec/patches/classify\\\" >> .bot-notes.md; pnpm --dir apps/web typecheck 2>&1 | tail -3; e\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431; (cargo jackioh spec check 2>&1 | tail -2; cargo jackioh patches check 2>&1 | tail -2; cargo jackioh classify --base origin/main --claims 2>&1 |\u2026\n- said: Cargo checks pass. Now the harness's web command, then the component spec.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431; echo \\\"- run 7: typecheck/eslint/spec/patches/classify/fmt ok; running harness web cmd\\\" >> .bot-notes.md; (sh scripts/build-wasm.sh >/tmp/r7/w\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431; python3 - <<'EOF'\\np='.bot-notes.md'; s=open(p).read()\\ni=s.index('## Log')\\nstate='''## State\\n\\n- Run 7 (2026-11-08, review pass 2, opus). Al\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until grep -qE \\\"Test Files|EXIT=\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-3431/9eb7c885-77c2-413e-9d72-91521e2562d9/tasks/bsvre1lfw.output 2>/dev/null; do sleep 10; done; ca\u2026\n- said: The harness's web command passed: 308 files. Now the component spec.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431; echo \\\"- run 7: harness web cmd 308 files passed (6061, 109 skipped); running cypress\\\" >> .bot-notes.md; E2E_COMPONENT_PORT=5283 timeout 580 p\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431; ls e2e/artifacts/component/screenshots/*/ 2>/dev/null | head -20; git status --short\", \"description\": \"List screenshots and status\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3431/e2e/artifacts/component/screenshots/stinkyscape-scenes.cy.tsx/stinkyscape-scenes-phone-legendary.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3431/e2e/artifacts/component/screenshots/stinkyscape-scenes.cy.tsx/stinkyscape-scenes-desktop-legendary.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431/apps/web/src; grep -rn \\\"cf-art\\\\b\\\\|\\\\.cf-art {\\\" --include=*.css . | head -5; grep -rn \\\"window every face\\\\|face's window\\\\|ART_WINDOW\\\" card\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431/apps/web/src; sed -n 5,12p cards/art/sceneRecipes.ts; sed -n 470,497p cards/cards.css\", \"description\": \"Read window docs and CSS\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431/apps/web/src/cards/art; python3 - <<'EOF'\\np='stinkyscapeRecipes.ts'; s=open(p).read()\\ndef rep(a,b):\\n global s\\n assert s.count(a)==1, a\\n s=s\u2026\n- Read: {\"file_path\": \"/tmp/r7/sheet.png\"}\n- said: Skylight, comet and rope all now sit inside the face's window. Rerunning the art tests and the component spec on the final files.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431; echo \\\"- run 7: moved #7 skylight to (60,30) (face window shows y 18-82), rope (60,20); 135 elems, radiant 38,035; rerunning art + cypress\\\" >>\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431; E2E_COMPONENT_PORT=5283 timeout 580 pnpm --dir e2e test:component --spec cypress/component/stinkyscape-scenes.cy.tsx > /tmp/r7/cy2.log 2>&1; ec\u2026\n- said: Everything passes. Before writing the report I'll re-measure all 64 cards so the verdict table is current, since earlier passes changed a few of them.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431/apps/web; cat > src/cards/art/zz-measure.test.ts <<'EOF'\\nimport { writeFileSync } from \\\"node:fs\\\";\\nimport { it } from \\\"vitest\\\";\\nimport { C\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431/apps/web/src/cards/art; grep -o 'outfit: \\\"[a-z-]*\\\"\\\\|hair: \\\"[a-z-]*\\\"\\\\|item: \\\"[a-z-]*\\\"\\\\|head: \\\"[a-z-]*\\\"' stinkyscapeRecipes.ts | sort |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431/apps/web/src/cards/art; grep -n 'hair: \\\"visor\\\"\\\\|hair: \\\"hood\\\"\\\\|hair: \\\"helmet\\\"' stinkyscapeRecipes.ts | cut -c1-150; grep -n \\\"^const huma\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431/apps/web; cat > src/cards/art/zz-measure.test.ts <<'EOF'\\nimport { writeFileSync } from \\\"node:fs\\\";\\nimport { it } from \\\"vitest\\\";\\nimport { S\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431; git diff 197311a554a884798356190d0ef4e5143b5e5569 -- apps/web/src/cards/art/scene.ts | head -80; git diff origin/main --stat -- apps/web/src/ca\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431; git diff origin/main -- apps/web/src/cards/art/figureKit.ts | grep -E '^\\\\+ \\\"?[a-z-]+\\\"?: \\\\{ category' | sed 's/{.*category: \\\"\\\\([a-z]*\\\\)\\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3431; python3 - <<'EOF'\\np='.bot-notes.md'; s=open(p).read()\\ns=s.replace(\\\"- Checks: art 243/243, typecheck, eslint, spec/patches/classify, fmt ok. \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every Stinkyscape (cards 1 to 90) card drawn as what it is: a scene of its own for each, richer the rarer\"} --> Closes #3391 ## What changed Each of the 64 Stinkyscape cards in #3391's table now draws a scene recipe of its own, built from its brief, on \u2026"
       },
-      "hold": {
-        "ends": "2026-11-08T18:18:47Z",
-        "lifted": "2026-11-08T17:04:50Z",
-        "owner": "claude-6",
-        "since": "2026-11-08T16:18:47Z",
-        "until": "2026-11-08T17:00:00Z",
-        "why": "5-hour usage is 74%, too close to its 70% cap to start a long run (it starts under 65%)"
-      },
       "interruptions": 0,
       "issue": 3391,
       "kind": "revise",
@@ -16659,11 +16651,11 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "",
-      "run_id": "42498018883",
+      "run_id": "pending:0b7eb80a-1794157532",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-11-08T16:04:34Z",
+      "started_at": "2026-11-08T17:05:57Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17081,9 +17073,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T16:48:10Z",
+    "at": "2026-11-08T17:05:57Z",
     "url": "",
-    "what": "build #3405 on claude-8"
+    "what": "revise #3431 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-08T16:54:42Z",
