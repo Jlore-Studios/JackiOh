@@ -35743,7 +35743,8 @@
       "2026-11-08T18:05:27Z,claude-6,stream,call,42503286335,20,2026-11-08T22:00:00Z,,,allowed,70,,"
     ],
     "runs": [
-      "2026-11-08T18:08:31Z,42504072872,claude-8,sonnet,review,3419,medium,interrupted,refusal,0,0,0,0,,85,101,,,133.1,claude-8,none,,1"
+      "2026-11-08T18:08:31Z,42504072872,claude-8,sonnet,review,3419,medium,interrupted,refusal,0,0,0,0,,85,101,,,133.1,claude-8,none,,1",
+      "2026-11-08T18:13:03Z,42503286335,claude-6,opus,revise,3432,hard,approved,,10.1,4,1235,97196,1.1682,0,20,,,1.6,claude-8,none,other,1"
     ]
   },
   "version": 1
