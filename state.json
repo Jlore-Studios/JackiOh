@@ -15185,10 +15185,14 @@
         "approvals": [],
         "builder": "gpt",
         "built_by": "gpt",
-        "rejections": [],
+        "rejections": [
+          "gpt"
+        ],
         "reviews": [],
         "sha": "837fecd2c463312df6f23c75b38089565dd22751",
-        "tiers": {}
+        "tiers": {
+          "gpt": "medium"
+        }
       },
       "waiting_comment": 6717133241
     },
