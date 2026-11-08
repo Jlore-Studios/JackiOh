@@ -35743,7 +35743,9 @@
           "provider": "claude-7"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-08T00:08:24Z",
         "every": 5,
+        "findings": 0,
         "head": "e5998096be07a66b7209e3c0c85d72e9daf69d70",
         "issue": 3343,
         "last_why": "interrupted: `claude-2` stops mid-call: 5-hour usage is 90%, at or over its 90% cap; it resets at 2026-11-08T03:20:00Z",
@@ -35757,12 +35759,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:acc3b4f5-1794095669",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42427386686",
         "sha": "310f4412060f6d35c981d165267417e220a20e99",
         "started_at": "2026-11-07T23:55:04Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: Mythics arrive in full art: every Mythic's default look is full art, Prismatic is full art at both its levels, and Legendaries default to Extended art",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 140
