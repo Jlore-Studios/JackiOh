@@ -1079,7 +1079,7 @@ function jet(at: PartPlace, rng: Rng): KitShape[] {
     shape(band([[-13, 0.95], [-2, 1.2], [11, 0.55]], 0.7), "slate-700", 0.45),
     shape(band([[1, 0.6], [-2.4, 0.7]], 0.6), "slate-900", 0.7),
     shape(poly([[4, 0.5], [-6, 0.8], [-8.5, 4.2], [-6.2, 4.2]]) + poly([[-11, 0.8], [-14.8, 0.9], [-15.6, 2.6], [-14, 2.6]]), "slate-400", 1, MAIN_INKED),
-    shape(f.poly([[3.2, -1.4], [6, -2.9], [8.4, -2.4], [9.6, -1]].map((point) => turned(point, pitch))), "slate-900", 1, INKED),
+    shape(f.poly(([[3.2, -1.4], [6, -2.9], [8.4, -2.4], [9.6, -1]] as const).map((point) => turned(point, pitch))), "slate-900", 1, INKED),
     shape(poly([[5.4, -2.2], [6.6, -2.7], [7.4, -2.5], [6.2, -2.1]]), "white", 0.85),
   ];
   if (rng() < 0.6) out.push(shape(poly([[-15.2, -0.5], [-17.6, 0.15], [-15.2, 0.8]]), "orange-400", 0.85));

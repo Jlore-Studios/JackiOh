@@ -34,27 +34,25 @@ const ZEPHRYS_ZEALOTISM: SceneRecipe = {
   ],
   layers: {
     sky: [
-      { part: "cloud", x: 22, y: 22, scale: 1.4, count: 4, spread: [34, 5], paint: "slate-700" },
+      { part: "cloud", x: 22, y: 22, scale: 1.4, count: 3, spread: [34, 5], paint: "slate-700" },
       { part: "lightning", x: 84, y: 14, scale: 0.6 },
-      { part: "sun", x: 14, y: 60, scale: 0.9 },
     ],
     far: [
       { part: "mountains", x: 50, y: 72, paint: "slate-800" },
-      { part: "cloud", x: 50, y: 70, scale: 1.7, count: 6, spread: [46, 3], paint: "slate-100" },
+      { part: "cloud", x: 50, y: 70, scale: 1.8, count: 4, spread: [46, 3], paint: "slate-100" },
       { part: "temple", x: 50, y: 70, scale: 1.05, paint: "stone-500" },
     ],
     mid: [
       { part: "rock-floor", x: 50, y: 76, paint: "slate-700" },
       { part: "column", x: 14, y: 84, scale: 1.1 },
-      { part: "column", x: 88, y: 82, scale: 0.9 },
       { part: "tornado", x: 70, y: 76, scale: 1.1, paint: "sky-300" },
-      { part: "card", x: 70, y: 50, scale: 0.6, count: 4, spread: [9, 10], paint: "slate-700" },
+      { part: "card", x: 70, y: 50, scale: 0.6, count: 3, spread: [9, 10], paint: "slate-700" },
     ],
     subject: [{ part: "card", x: 30, y: 62, scale: 0.85, count: 5, spread: [8, 3], paint: "cyan-400" }],
     near: [
       { part: "rune-circle", x: 50, y: 93, scale: 1.3, paint: "cyan-400" },
-      { part: "cloud", x: 50, y: 92, scale: 1.4, count: 3, spread: [8, 2], paint: "white" },
-      { part: "crystal", x: 50, y: 96, scale: 1.2, count: 6, spread: [30, 2], paint: "sky-400" },
+      { part: "cloud", x: 50, y: 88, scale: 1.5, count: 3, spread: [8, 2], paint: "white" },
+      { part: "crystal", x: 50, y: 96, scale: 1.2, count: 4, spread: [30, 2], paint: "sky-400" },
       { part: "banner", x: 6, y: 100, scale: 1.5, paint: "slate-100" },
       { part: "banner", x: 94, y: 100, scale: 1.5, flip: -1, paint: "slate-100" },
     ],
@@ -65,9 +63,9 @@ const ZEPHRYS_ZEALOTISM: SceneRecipe = {
       { part: "rim-light", x: 50, y: 52, scale: 1.4, paint: "orange-400" },
     ],
     particles: [
-      { part: "sparks", x: 30, y: 56, scale: 1.1, count: 3, spread: [10, 6], paint: "cyan-400" },
-      { part: "motes", x: 60, y: 44, scale: 1.4, count: 2, spread: [20, 10], paint: "slate-100" },
-      { part: "dust", x: 70, y: 70, scale: 1.1, paint: "slate-100" },
+      { part: "sparks", x: 30, y: 56, scale: 1.1, count: 2, spread: [10, 6], paint: "cyan-400" },
+      { part: "motes", x: 60, y: 44, scale: 1.4, paint: "slate-100" },
+      { part: "embers", x: 70, y: 56, scale: 1.2, count: 2, spread: [10, 14], paint: "sky-300" },
     ],
   },
 };
@@ -114,24 +112,24 @@ const PORTAL_TO_THE_PAST: SceneRecipe = {
   family: "classic",
   sky: ["slate-900", "slate-800"],
   light: { x: 50, y: 42, r: 36, paint: "brass-500", opacity: 0.5 },
-  emblem: { x: 50, y: 15.5, size: 5, rotate: 0 },
+  emblem: { x: 50, y: 23, size: 5, rotate: 0 },
   extras: [
     {
       layer: "mid",
-      x: 40,
-      y: 50,
-      scale: 0.32,
+      x: 43,
+      y: 54,
+      scale: 0.3,
       pose: "pose-spread",
-      look: { head: "head-human", hair: "helm", outfit: "outfit-armor", item: "item-spear", skin: "brass-500", cloth: "wood-700" },
+      look: { head: "head-human", hair: "helm", outfit: "outfit-armor", item: "item-spear", skin: "brass-600", cloth: "wood-800" },
     },
     {
       layer: "mid",
-      x: 62,
-      y: 44,
-      scale: 0.28,
+      x: 58,
+      y: 46,
+      scale: 0.26,
       flip: -1,
       pose: "pose-strike",
-      look: { head: "head-human", hair: "helm", outfit: "outfit-tabard", item: "item-sword", skin: "brass-500", cloth: "red-900" },
+      look: { head: "head-human", hair: "hair-short", outfit: "outfit-tabard", item: "item-sword", skin: "brass-600", cloth: "red-900" },
     },
   ],
   layers: {
@@ -143,35 +141,33 @@ const PORTAL_TO_THE_PAST: SceneRecipe = {
       { part: "column", x: 10, y: 84, scale: 2.4, paint: "slate-700" },
       { part: "column", x: 90, y: 84, scale: 2.4, paint: "slate-700" },
       { part: "vine", x: 18, y: 50, scale: 1.2, paint: "jade-400" },
-      { part: "vine", x: 82, y: 46, scale: 1.1, flip: -1, paint: "jade-400" },
     ],
     mid: [
       { part: "stairs", x: 50, y: 64, scale: 1.2, paint: "stone-500" },
-      { part: "void-swirl", x: 50, y: 42, scale: 1.75, paint: "brass-600" },
-      { part: "ruin-wall", x: 52, y: 58, scale: 0.7, paint: "wood-700" },
-      { part: "fallen-column", x: 46, y: 34, scale: 0.45, paint: "brass-500" },
-      { part: "banner", x: 34, y: 40, scale: 0.55, paint: "red-600" },
-      { part: "banner", x: 60, y: 34, scale: 0.45, flip: -1, paint: "red-900" },
+      { part: "void-swirl", x: 50, y: 42, scale: 1.5, paint: "brass-600" },
+      { part: "ruin-wall", x: 50, y: 58, scale: 0.6, paint: "wood-700" },
+      { part: "fallen-column", x: 44, y: 33, scale: 0.4, paint: "brass-500" },
+      { part: "banner", x: 36, y: 42, scale: 0.5, paint: "red-600" },
+      { part: "banner", x: 62, y: 36, scale: 0.42, flip: -1, paint: "red-900" },
     ],
-    subject: [{ part: "portal-ring", x: 50, y: 42, scale: 1.45 }],
+    subject: [{ part: "portal-ring", x: 50, y: 42, scale: 1.3 }],
     near: [
       { part: "water", x: 50, y: 84, paint: "blue-800" },
       { part: "pale-hand", x: 52, y: 98, scale: 1.7 },
-      { part: "fallen-column", x: 16, y: 92, scale: 1, flip: -1 },
-      { part: "crystal", x: 84, y: 90, scale: 1.4, count: 3, spread: [8, 2], paint: "cyan-400" },
+      { part: "crystal", x: 84, y: 90, scale: 1.4, count: 2, spread: [8, 2], paint: "cyan-400" },
+      { part: "hourglass", x: 18, y: 92, scale: 0.9 },
     ],
     light: [
-      { part: "halo", x: 50, y: 42, scale: 3.2, paint: "brass-500" },
+      { part: "halo", x: 50, y: 42, scale: 2.2, paint: "brass-500" },
       { part: "light-shaft", x: 52, y: 44, scale: 0.8, paint: "brass-500" },
-      { part: "rim-light", x: 50, y: 42, scale: 1.8, paint: "cyan-400" },
+      { part: "rim-light", x: 50, y: 42, scale: 1.6, paint: "cyan-400" },
       { part: "halo", x: 52, y: 82, scale: 1.6, paint: "cyan-400" },
     ],
     particles: [
-      { part: "dust", x: 50, y: 30, scale: 1, count: 2, spread: [18, 10], paint: "brass-500" },
       { part: "hourglass", x: 24, y: 44, scale: 0.5 },
-      { part: "crystal", x: 50, y: 40, scale: 0.8, count: 5, spread: [30, 22], paint: "brass-500" },
-      { part: "motes", x: 50, y: 50, scale: 1.6, count: 2, spread: [16, 10], paint: "cyan-400" },
-      { part: "sparks", x: 76, y: 30, scale: 1, count: 2, spread: [6, 10], paint: "brass-500" },
+      { part: "crystal", x: 50, y: 40, scale: 0.8, count: 4, spread: [30, 22], paint: "brass-500" },
+      { part: "motes", x: 50, y: 50, scale: 1.6, paint: "cyan-400" },
+      { part: "sparks", x: 76, y: 30, scale: 1, paint: "brass-500" },
     ],
   },
 };
@@ -197,8 +193,8 @@ const FELINOR_FUSER: SceneRecipe = {
     far: [
       { part: "bookshelf", x: 14, y: 70, scale: 1.3, paint: "wood-800" },
       { part: "bookshelf", x: 86, y: 70, scale: 1.3, paint: "wood-800" },
-      { part: "flask", x: 14, y: 52, scale: 0.4, count: 3, spread: [5, 0], paint: "green-400" },
-      { part: "flask", x: 86, y: 52, scale: 0.4, count: 3, spread: [5, 0], paint: "violet-500" },
+      { part: "flask", x: 14, y: 52, scale: 0.4, count: 2, spread: [5, 0], paint: "green-400" },
+      { part: "flask", x: 86, y: 52, scale: 0.4, count: 2, spread: [5, 0], paint: "violet-500" },
     ],
     mid: [
       { part: "tile-floor", x: 50, y: 70, paint: "stone-500" },
@@ -231,7 +227,7 @@ const FUSION_LAB: SceneRecipe = {
   emblem: { x: 50, y: 30, size: 6, rotate: 0 },
   layers: {
     sky: [
-      { part: "room-wall", x: 50, y: 62, paint: "slate-800" },
+      { part: "room-wall", x: 50, y: 62, paint: "green-900" },
       { part: "arch", x: 24, y: 62, scale: 1.6, paint: "slate-700" },
       { part: "arch", x: 76, y: 62, scale: 1.6, paint: "slate-700" },
     ],
@@ -385,7 +381,7 @@ const BRAWL: SceneRecipe = {
     },
   ],
   layers: {
-    sky: [{ part: "room-wall", x: 50, y: 72, paint: "stone-500" }],
+    sky: [{ part: "room-wall", x: 50, y: 72, paint: "wood-700" }],
     far: [
       { part: "doorway", x: 50, y: 72, scale: 3.2 },
       { part: "lantern", x: 22, y: 20, scale: 1.1 },
@@ -400,6 +396,10 @@ const BRAWL: SceneRecipe = {
       { part: "table", x: 14, y: 96, scale: 1.2 },
       { part: "bread", x: 12, y: 87, scale: 0.9 },
       { part: "dice", x: 86, y: 96, scale: 1.2 },
+    ],
+    light: [
+      { part: "halo", x: 22, y: 24, scale: 1.6, paint: "orange-400" },
+      { part: "halo", x: 78, y: 26, scale: 1.6, paint: "orange-400" },
     ],
     particles: [
       { part: "smoke", x: 30, y: 40, scale: 1.2, count: 2, spread: [30, 4], paint: "stone-500" },
@@ -550,27 +550,25 @@ const ROLLBACK: SceneRecipe = {
       scale: 0.42,
       flip: -1,
       pose: "pose-guard",
-      look: { head: "head-human", hair: "helm", outfit: "outfit-armor", item: "item-bow", skin: "red-300", cloth: "slate-400" },
+      look: { head: "head-human", hair: "hood", outfit: "outfit-armor", item: "item-bow", skin: "red-300", cloth: "slate-400" },
     },
   ],
   layers: {
     sky: [{ part: "clock-face", x: 64, y: 32, scale: 2.3 }],
     far: [
-      { part: "temple", x: 22, y: 58, scale: 0.8, paint: "violet-500" },
-      { part: "temple", x: 80, y: 56, scale: 0.75, paint: "violet-500" },
+      { part: "temple", x: 30, y: 60, scale: 1, paint: "violet-500" },
       { part: "temple", x: 50, y: 64, scale: 1.2, paint: "stone-500" },
     ],
     mid: [
       { part: "rock-floor", x: 50, y: 66, paint: "wood-800" },
       { part: "fallen-column", x: 26, y: 72, scale: 0.8 },
       { part: "column", x: 74, y: 76, scale: 0.9 },
-      { part: "arrow", x: 70, y: 56, scale: 0.6, flip: -1, count: 3, spread: [10, 6] },
+      { part: "arrow", x: 70, y: 56, scale: 0.6, flip: -1, count: 2, spread: [10, 6] },
     ],
     subject: [{ part: "light-ribbon", x: 46, y: 60, scale: 0.9, paint: "violet-300" }],
     near: [
-      { part: "fallen-column", x: 82, y: 96, scale: 1.2, flip: -1 },
       { part: "hourglass", x: 14, y: 98, scale: 1.3 },
-      { part: "pebbles", x: 46, y: 98, scale: 1.5 },
+      { part: "crystal", x: 84, y: 97, scale: 1.2, count: 3, spread: [8, 2], paint: "violet-300" },
     ],
     light: [
       { part: "god-rays", x: 64, y: 4, paint: "violet-300" },
@@ -578,9 +576,8 @@ const ROLLBACK: SceneRecipe = {
       { part: "rim-light", x: 44, y: 60, scale: 1.4, paint: "orange-400" },
     ],
     particles: [
-      { part: "dust", x: 50, y: 80, scale: 1.4, count: 2, spread: [24, 4], paint: "violet-300" },
       { part: "motes", x: 50, y: 50, scale: 1.6, paint: "violet-300" },
-      { part: "sparks", x: 64, y: 32, scale: 1.4, count: 3, spread: [14, 10], paint: "white" },
+      { part: "sparks", x: 64, y: 32, scale: 1.4, paint: "white" },
     ],
   },
 };
@@ -601,6 +598,7 @@ const CONJURE_BONES: SceneRecipe = {
   layers: {
     sky: [{ part: "room-wall", x: 50, y: 76, paint: "slate-800" }],
     far: [
+      { part: "tile-floor", x: 50, y: 76, paint: "slate-700" },
       { part: "bones", x: 50, y: 40, scale: 0.9, count: 4, spread: [40, 0] },
       { part: "bones", x: 50, y: 58, scale: 0.9, count: 4, spread: [40, 0] },
     ],
@@ -657,6 +655,7 @@ const BONE_STORM: SceneRecipe = {
       { part: "tornado", x: 42, y: 60, scale: 1.1, paint: "slate-100" },
     ],
     near: [{ part: "bones", x: 18, y: 96, scale: 1.4 }],
+    light: [{ part: "halo", x: 40, y: 70, scale: 1.8, paint: "violet-300" }],
     particles: [
       { part: "bones", x: 54, y: 40, scale: 0.5, count: 4, spread: [18, 12] },
       { part: "dust", x: 60, y: 60, scale: 1.2, paint: "slate-100" },
@@ -697,10 +696,10 @@ const WARDRUM: SceneRecipe = {
     },
   ],
   layers: {
-    sky: [{ part: "smoke", x: 50, y: 30, scale: 1.4, count: 2, spread: [30, 4], paint: "wood-800" }],
+    sky: [{ part: "smoke", x: 30, y: 30, scale: 1.4, paint: "wood-800" }],
     far: [
       { part: "hills", x: 50, y: 52, paint: "slate-800" },
-      { part: "column", x: 50, y: 56, scale: 0.6, count: 6, spread: [46, 1], paint: "stone-500" },
+      { part: "column", x: 50, y: 56, scale: 0.6, count: 4, spread: [46, 1], paint: "stone-500" },
     ],
     mid: [
       { part: "rock-floor", x: 50, y: 72, paint: "wood-800" },
@@ -722,13 +721,12 @@ const WARDRUM: SceneRecipe = {
     ],
     light: [
       { part: "dome", x: 50, y: 88, scale: 1.9, paint: "violet-300" },
-      { part: "light-ribbon", x: 50, y: 46, scale: 1.3, paint: "orange-400" },
       { part: "halo", x: 50, y: 52, scale: 2.4, paint: "ember-500" },
       { part: "rim-light", x: 50, y: 56, scale: 1.6, paint: "orange-400" },
     ],
     particles: [
-      { part: "embers", x: 50, y: 60, scale: 1.6, count: 4, spread: [30, 14] },
-      { part: "sparks", x: 50, y: 30, scale: 1.2, count: 3, spread: [20, 6], paint: "orange-400" },
+      { part: "embers", x: 50, y: 60, scale: 1.6, count: 3, spread: [30, 14] },
+      { part: "sparks", x: 50, y: 30, scale: 1.2, count: 2, spread: [20, 6], paint: "orange-400" },
     ],
   },
 };
@@ -873,8 +871,8 @@ const APPROPRIATIONS: SceneRecipe = {
       { part: "tile-floor", x: 50, y: 66, paint: "stone-500" },
     ],
     mid: [
-      { part: "coins", x: 32, y: 72, scale: 0.6, count: 2, spread: [6, 3] },
-      { part: "coins", x: 68, y: 72, scale: 0.6, count: 2, spread: [6, 3] },
+      { part: "coins", x: 32, y: 74, scale: 0.6 },
+      { part: "coins", x: 68, y: 74, scale: 0.6 },
       { part: "motes", x: 50, y: 74, scale: 1.4, paint: "slate-100" },
     ],
     subject: [
@@ -965,7 +963,7 @@ const KYS_TEST: SceneRecipe = {
       y: 80,
       scale: 0.5,
       pose: "pose-sit",
-      look: { head: "head-human", hair: "kerchief", outfit: "outfit-jacket", item: null, skin: "red-300", cloth: "slate-700" },
+      look: { head: "head-human", hair: "hair-short", outfit: "outfit-jacket", item: null, skin: "red-300", cloth: "slate-700" },
     },
     {
       layer: "mid",
@@ -980,9 +978,7 @@ const KYS_TEST: SceneRecipe = {
   layers: {
     sky: [
       { part: "room-wall", x: 50, y: 64, paint: "slate-700" },
-      { part: "arch", x: 18, y: 64, scale: 1.6, paint: "slate-800" },
-      { part: "arch", x: 50, y: 62, scale: 1.8, paint: "slate-800" },
-      { part: "arch", x: 82, y: 64, scale: 1.6, paint: "slate-800" },
+      { part: "arch", x: 50, y: 64, scale: 2.4, paint: "slate-800" },
     ],
     far: [
       { part: "tile-floor", x: 50, y: 64, paint: "stone-500" },
@@ -1008,9 +1004,8 @@ const KYS_TEST: SceneRecipe = {
       { part: "halo", x: 48, y: 40, scale: 1.6, paint: "green-200" },
     ],
     particles: [
-      { part: "dust", x: 60, y: 50, scale: 1.4, count: 2, spread: [16, 10], paint: "slate-100" },
       { part: "motes", x: 50, y: 50, scale: 1.6, paint: "green-200" },
-      { part: "sparks", x: 12, y: 76, scale: 0.8, count: 2, spread: [3, 3] },
+      { part: "sparks", x: 12, y: 76, scale: 0.8 },
     ],
   },
 };
@@ -1055,8 +1050,8 @@ const AI_SLOP: SceneRecipe = {
     far: [
       { part: "server-rack", x: 18, y: 76, scale: 1.4 },
       { part: "server-rack", x: 82, y: 76, scale: 1.4 },
-      { part: "crystal", x: 30, y: 74, scale: 1.4, count: 3, spread: [4, 1], paint: "cyan-400" },
-      { part: "crystal", x: 70, y: 74, scale: 1.4, count: 3, spread: [4, 1], paint: "purple-400" },
+      { part: "crystal", x: 30, y: 74, scale: 1.4, count: 2, spread: [4, 1], paint: "cyan-400" },
+      { part: "crystal", x: 70, y: 74, scale: 1.4, count: 2, spread: [4, 1], paint: "purple-400" },
     ],
     mid: [
       { part: "rock-floor", x: 50, y: 76, paint: "slate-900" },
@@ -1072,7 +1067,7 @@ const AI_SLOP: SceneRecipe = {
       { part: "glitch", x: 44, y: 64, scale: 1 },
     ],
     near: [
-      { part: "crystal", x: 50, y: 97, scale: 1.4, count: 6, spread: [42, 2], paint: "cyan-400" },
+      { part: "crystal", x: 50, y: 97, scale: 1.4, count: 4, spread: [42, 2], paint: "cyan-400" },
       { part: "bone-hand", x: 86, y: 98, scale: 1.3, flip: -1 },
     ],
     light: [
@@ -1081,8 +1076,8 @@ const AI_SLOP: SceneRecipe = {
       { part: "rim-light", x: 48, y: 64, scale: 1.4, paint: "cyan-400" },
     ],
     particles: [
-      { part: "glitch", x: 50, y: 52, scale: 1, count: 3, spread: [24, 16] },
-      { part: "embers", x: 50, y: 50, scale: 1.6, count: 3, spread: [24, 14], paint: "purple-400" },
+      { part: "glitch", x: 50, y: 52, scale: 1, count: 2, spread: [24, 16] },
+      { part: "embers", x: 50, y: 50, scale: 1.6, count: 2, spread: [24, 14], paint: "purple-400" },
       { part: "sparks", x: 50, y: 44, scale: 1.2, count: 2, spread: [16, 8], paint: "cyan-400" },
     ],
   },
@@ -1175,33 +1170,25 @@ const FELINOR_FLAGBEARER: SceneRecipe = {
       layer: "mid",
       x: 24,
       y: 76,
-      scale: 0.48,
+      scale: 0.46,
       pose: "pose-run",
       look: { head: "head-felinor", hair: null, outfit: "outfit-tabard", item: "item-spear", skin: "orange-400", cloth: "red-900" },
     },
     {
       layer: "mid",
-      x: 34,
-      y: 72,
-      scale: 0.4,
-      pose: "pose-run",
-      look: { head: "head-felinor", hair: null, outfit: "outfit-armor", item: "item-sword", skin: "wood-600", cloth: "slate-400" },
-    },
-    {
-      layer: "mid",
       x: 72,
       y: 72,
-      scale: 0.4,
+      scale: 0.38,
       pose: "pose-raise",
-      look: { head: "head-felinor", hair: null, outfit: "outfit-armor", item: "item-spear", skin: "slate-400", cloth: "slate-400" },
+      look: { head: "head-felinor", hair: null, outfit: "outfit-armor", item: null, skin: "slate-400", cloth: "slate-400" },
     },
     {
       layer: "mid",
       x: 84,
       y: 76,
-      scale: 0.46,
+      scale: 0.44,
       pose: "pose-run",
-      look: { head: "head-felinor", hair: null, outfit: "outfit-tabard", item: "item-sword", skin: "orange-400", cloth: "red-900" },
+      look: { head: "head-felinor", hair: null, outfit: "outfit-tabard", item: "item-sword", skin: "wood-600", cloth: "red-900" },
     },
   ],
   layers: {
@@ -1211,19 +1198,17 @@ const FELINOR_FLAGBEARER: SceneRecipe = {
     ],
     far: [
       { part: "mountains", x: 50, y: 66, paint: "slate-800" },
-      { part: "temple", x: 80, y: 64, scale: 0.7, paint: "stone-500" },
+      { part: "column", x: 64, y: 64, scale: 0.7, paint: "stone-500" },
       { part: "banner", x: 14, y: 62, scale: 0.8, props: true },
-      { part: "banner", x: 60, y: 60, scale: 0.7, props: true },
+      { part: "banner", x: 58, y: 60, scale: 0.7, props: true },
     ],
     mid: [
       { part: "bridge", x: 50, y: 78, scale: 1.7, paint: "stone-500" },
       { part: "fallen-column", x: 70, y: 79, scale: 0.6 },
     ],
     near: [
-      { part: "dust", x: 46, y: 88, scale: 1.8, paint: "stone-500" },
       { part: "banner", x: 10, y: 100, scale: 1.4, props: true },
       { part: "banner", x: 90, y: 100, scale: 1.4, flip: -1, props: true },
-      { part: "pebbles", x: 50, y: 98, scale: 1.6 },
     ],
     light: [
       { part: "light-shaft", x: 30, y: 0, scale: 1.3, count: 2, spread: [12, 0], paint: "sky-300" },
@@ -1231,9 +1216,8 @@ const FELINOR_FLAGBEARER: SceneRecipe = {
       { part: "rim-light", x: 46, y: 58, scale: 1.4, paint: "white" },
     ],
     particles: [
-      { part: "dust", x: 30, y: 80, scale: 1.2, count: 2, spread: [16, 4], paint: "stone-500" },
-      { part: "sparks", x: 50, y: 30, scale: 1.2, count: 3, spread: [20, 8], paint: "sky-300" },
-      { part: "rain", x: 50, y: 34, scale: 1.2 },
+      { part: "dust", x: 40, y: 84, scale: 1.4, paint: "stone-500" },
+      { part: "sparks", x: 50, y: 30, scale: 1.2, count: 2, spread: [20, 8], paint: "sky-300" },
     ],
   },
 };
@@ -1249,7 +1233,7 @@ const FELINOR_FLAGBEARER_PRIME: SceneRecipe = {
     y: 84,
     scale: 1,
     pose: "pose-guard",
-    look: { ...figureLookFor(["Felinor", "Prime", "Token"]), hair: "helm", outfit: "outfit-armor", item: "item-banner", skin: "slate-400", cloth: "blue-800" },
+    look: { ...figureLookFor(["Felinor", "Prime", "Token"]), hair: null, outfit: "outfit-armor", item: "item-banner", skin: "slate-400", cloth: "blue-800" },
   },
   extras: [
     {
@@ -1338,8 +1322,8 @@ const JOGGS_BOX: SceneRecipe = {
       { part: "god-rays", x: 50, y: 64, scale: 0.7, paint: "white" },
     ],
     particles: [
-      { part: "sparks", x: 50, y: 50, scale: 1.4, count: 4, spread: [26, 16], paint: "orange-400" },
-      { part: "sparks", x: 50, y: 50, scale: 1.2, count: 3, spread: [26, 16], paint: "sky-300" },
+      { part: "sparks", x: 50, y: 50, scale: 1.4, count: 3, spread: [26, 16], paint: "orange-400" },
+      { part: "sparks", x: 50, y: 50, scale: 1.2, count: 2, spread: [26, 16], paint: "sky-300" },
       { part: "embers", x: 50, y: 60, scale: 1.4, count: 2, spread: [20, 8], paint: "green-400" },
     ],
   },
@@ -1421,7 +1405,7 @@ const JAY_FUNGUS: SceneRecipe = {
     y: 90,
     scale: 1.05,
     pose: "pose-stand",
-    look: { ...figureLookFor([]), head: "head-mushroom", hair: null, outfit: "outfit-apron", item: "item-coin", skin: "slate-100", cloth: "green-700" },
+    look: { ...figureLookFor([]), head: "head-mushroom", hair: null, outfit: "outfit-apron", item: "item-coin", skin: "red-300", cloth: "green-700" },
   },
   layers: {
     far: [
@@ -1431,13 +1415,14 @@ const JAY_FUNGUS: SceneRecipe = {
     ],
     mid: [{ part: "awning", x: 50, y: 82, scale: 2.4 }],
     near: [
+      { part: "bush", x: 50, y: 49, scale: 0.6, paint: "green-700" },
       { part: "table", x: 50, y: 100, scale: 2.4, paint: "wood-700" },
       { part: "mushroom", x: 26, y: 82, scale: 1.2, count: 3, spread: [5, 0] },
       { part: "basket", x: 74, y: 82, scale: 1 },
       { part: "coins", x: 58, y: 82, scale: 0.7 },
     ],
-    light: [{ part: "halo", x: 50, y: 50, scale: 1.8, paint: "green-200" }],
-    particles: [{ part: "spores", x: 50, y: 40, scale: 1.4, paint: "green-200" }],
+    light: [{ part: "halo", x: 60, y: 76, scale: 1.6, paint: "green-200" }],
+    particles: [{ part: "spores", x: 50, y: 30, scale: 1.4, paint: "green-200" }],
   },
 };
 
@@ -1530,13 +1515,13 @@ const JLOCKEEDS_J15_FIGHTER: SceneRecipe = {
     },
   ],
   layers: {
-    sky: [{ part: "cloud", x: 40, y: 44, scale: 2.2, count: 4, spread: [40, 12], paint: "white" }],
+    sky: [{ part: "cloud", x: 40, y: 60, scale: 2.2, count: 4, spread: [40, 6], paint: "white" }],
     far: [
       { part: "mountains", x: 50, y: 78, paint: "slate-700" },
       { part: "tower", x: 50, y: 74, scale: 0.8, count: 3, spread: [16, 2] },
     ],
     mid: [
-      { part: "mist", x: 30, y: 42, scale: 1.2, count: 2, spread: [8, 2], paint: "white" },
+      { part: "cloud", x: 22, y: 40, scale: 0.4, count: 4, spread: [12, 1], paint: "white" },
       { part: "arrow", x: 40, y: 66, scale: 0.7, count: 3, spread: [16, 6] },
     ],
     subject: [{ part: "jet", x: 58, y: 38, scale: 1.6 }],

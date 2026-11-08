@@ -17,8 +17,8 @@ const BOOK_OF_TOKENS: SceneRecipe = {
   light: { x: 50, y: 48, r: 34, paint: "violet-500", opacity: 0.45 },
   emblem: { x: 50, y: 27, size: 6, rotate: 0 },
   extras: [
-    { layer: "subject", x: 61, y: 42, scale: 0.3, pose: "pose-run", look: INK_SPRINTER },
-    { layer: "subject", x: 72, y: 60, scale: 0.27, pose: "pose-run", look: { ...INK_SPRINTER, cloth: "blue-600" } },
+    { layer: "subject", x: 60, y: 45, scale: 0.34, pose: "pose-run", look: INK_SPRINTER },
+    { layer: "subject", x: 70, y: 69, scale: 0.3, pose: "pose-run", look: { ...INK_SPRINTER, cloth: "blue-600" } },
   ],
   layers: {
     far: [
@@ -31,7 +31,7 @@ const BOOK_OF_TOKENS: SceneRecipe = {
     mid: [
       { part: "tile-floor", x: 50, y: 64, paint: "wood-800" },
       { part: "table", x: 76, y: 80, scale: 1.4 },
-      { part: "scroll", x: 76, y: 69, scale: 0.8 },
+      { part: "scroll", x: 83, y: 70, scale: 0.7 },
     ],
     subject: [
       { part: "lectern", x: 48, y: 88, scale: 3.6 },
@@ -73,8 +73,8 @@ const BOOK_OF_BOOKS: SceneRecipe = {
     ],
     mid: [
       { part: "tile-floor", x: 50, y: 66, paint: "wood-800" },
-      { part: "tome", x: 22, y: 40, scale: 0.6, count: 2, spread: [8, 6], paint: "red-900" },
-      { part: "tome", x: 78, y: 42, scale: 0.6, count: 2, spread: [8, 6], paint: "blue-800" },
+      { part: "tome", x: 30, y: 32, scale: 0.6, count: 2, spread: [8, 6], paint: "red-900" },
+      { part: "tome", x: 70, y: 30, scale: 0.6, count: 2, spread: [8, 6], paint: "blue-800" },
       { part: "throne", x: 50, y: 84, scale: 2.4 },
     ],
     subject: [
@@ -212,7 +212,6 @@ const BOOK_OF_STATS: SceneRecipe = {
     pose: "pose-stand",
     look: { ...figureLookFor(["Human"]), outfit: "outfit-muscle", item: "item-book", cloth: "red-600" },
   },
-  extras: [{ layer: "mid", x: 52, y: 82, scale: 0.62, pose: "pose-stand", look: { ...figureLookFor(["Human"]), item: "item-book", skin: "slate-400", cloth: "slate-400" } }],
   layers: {
     sky: [
       { part: "sun", x: 20, y: 22, scale: 0.9 },
@@ -220,10 +219,8 @@ const BOOK_OF_STATS: SceneRecipe = {
     ],
     far: [
       { part: "column", x: 50, y: 58, scale: 0.8, count: 5, spread: [44, 0] },
-      { part: "statue", x: 12, y: 62, scale: 1.3 },
-      { part: "statue", x: 34, y: 60, scale: 1.1, flip: -1 },
-      { part: "statue", x: 70, y: 60, scale: 1.1 },
-      { part: "statue", x: 90, y: 62, scale: 1.3, flip: -1 },
+      { part: "statue", x: 12, y: 63, scale: 1.4 },
+      { part: "statue", x: 88, y: 63, scale: 1.4, flip: -1 },
     ],
     mid: [
       { part: "tile-floor", x: 50, y: 62, paint: "stone-500" },
@@ -242,7 +239,7 @@ const BOOK_OF_STATS: SceneRecipe = {
     ],
     particles: [
       { part: "sparks", x: 52, y: 40, scale: 1.2, count: 3, spread: [14, 8], paint: "sky-300" },
-      { part: "dust", x: 50, y: 90, scale: 1.2, paint: "stone-500" },
+      { part: "motes", x: 50, y: 74, scale: 1.3, paint: "white" },
     ],
   },
 };
@@ -261,12 +258,12 @@ const FRUIT_BASKET: SceneRecipe = {
       { part: "fruit-tree", x: 14, y: 64, scale: 0.9 },
       { part: "fruit-tree", x: 86, y: 62, scale: 0.8, flip: -1 },
     ],
-    mid: [{ part: "ruin-wall", x: 50, y: 92, scale: 2.6 }],
+    mid: [{ part: "ruin-wall", x: 54, y: 92, scale: 2.6 }],
     subject: [
-      { part: "basket", x: 50, y: 66, scale: 2.4 },
-      { part: "apple", x: 34, y: 66, scale: 1.4 },
-      { part: "pear", x: 66, y: 66, scale: 1.4 },
-      { part: "grapes", x: 62, y: 56, scale: 1 },
+      { part: "basket", x: 51, y: 68, scale: 2.3 },
+      { part: "apple", x: 29, y: 67, scale: 1.4 },
+      { part: "pear", x: 70, y: 73, scale: 1.4 },
+      { part: "grapes", x: 63, y: 58, scale: 1 },
     ],
     near: [
       { part: "grass-tuft", x: 50, y: 96, count: 4, spread: [44, 2] },
@@ -331,8 +328,8 @@ const DOCTORS_ORDERS: SceneRecipe = {
     far: [
       { part: "room-wall", x: 50, y: 64, paint: "slate-100" },
       { part: "fence", x: 50, y: 21, scale: 2, paint: "wood-700" },
-      { part: "grapes", x: 22, y: 20, scale: 1, count: 4, spread: [12, 1], paint: "green-700" },
-      { part: "grapes", x: 74, y: 20, scale: 1, count: 4, spread: [12, 1], paint: "green-700" },
+      { part: "grapes", x: 22, y: 20, scale: 1, count: 2, spread: [10, 1], paint: "green-700" },
+      { part: "grapes", x: 76, y: 20, scale: 1, paint: "green-700" },
     ],
     mid: [
       { part: "tile-floor", x: 50, y: 64, paint: "slate-400" },
@@ -341,10 +338,10 @@ const DOCTORS_ORDERS: SceneRecipe = {
       { part: "cabinet", x: 90, y: 64, scale: 1 },
     ],
     subject: [
-      { part: "table", x: 50, y: 82, scale: 1.5 },
-      { part: "basket", x: 50, y: 70, scale: 1 },
-      { part: "flask", x: 38, y: 70, scale: 0.9 },
-      { part: "scroll", x: 62, y: 70, scale: 0.7 },
+      { part: "table", x: 50, y: 84, scale: 2 },
+      { part: "basket", x: 50, y: 69, scale: 1.4 },
+      { part: "flask", x: 36, y: 69, scale: 1 },
+      { part: "scroll", x: 64, y: 69, scale: 0.8 },
     ],
     near: [
       { part: "flask", x: 12, y: 94, scale: 1.2, paint: "jade-400" },
@@ -352,7 +349,7 @@ const DOCTORS_ORDERS: SceneRecipe = {
     ],
     light: [
       { part: "light-shaft", x: 32, y: 10, scale: 1.2, paint: "white" },
-      { part: "halo", x: 50, y: 66, scale: 1.8, paint: "white" },
+      { part: "halo", x: 66, y: 30, scale: 1.6, paint: "white" },
     ],
     particles: [{ part: "motes", x: 36, y: 50, scale: 1.4, paint: "white" }],
   },
@@ -376,13 +373,13 @@ const BAUBLE_BUBBLE: SceneRecipe = {
       { part: "fountain", x: 86, y: 80, scale: 0.9 },
     ],
     subject: [
-      { part: "crate", x: 44, y: 76, scale: 1, count: 3, spread: [6, 1] },
-      { part: "crate", x: 46, y: 69, scale: 0.8 },
-      { part: "gift-box", x: 58, y: 70, scale: 0.9 },
-      { part: "orb", x: 38, y: 62, scale: 0.35, paint: "red-600" },
-      { part: "orb", x: 60, y: 58, scale: 0.3, paint: "violet-500" },
-      { part: "gems", x: 52, y: 60, scale: 0.7 },
-      { part: "dome", x: 50, y: 82, scale: 1.3 },
+      { part: "crate", x: 44, y: 78, scale: 1.2, count: 3, spread: [6, 1] },
+      { part: "crate", x: 45, y: 70, scale: 1 },
+      { part: "gift-box", x: 60, y: 68, scale: 1.1 },
+      { part: "orb", x: 36, y: 62, scale: 0.5, paint: "red-600" },
+      { part: "orb", x: 62, y: 56, scale: 0.45, paint: "violet-500" },
+      { part: "gems", x: 50, y: 58, scale: 0.9 },
+      { part: "dome", x: 50, y: 84, scale: 1.55 },
     ],
     near: [
       { part: "bubbles", x: 16, y: 90, scale: 1.2 },
@@ -413,26 +410,26 @@ const KYS_PAPAYA: SceneRecipe = {
     ],
     mid: [
       { part: "tile-floor", x: 50, y: 60, paint: "stone-500" },
-      { part: "statue", x: 24, y: 76, scale: 0.9, props: true },
-      { part: "fallen-column", x: 38, y: 80, scale: 0.6 },
-      { part: "statue", x: 74, y: 70, scale: 0.75, flip: -1, props: true },
-      { part: "fallen-column", x: 66, y: 84, scale: 0.6, flip: -1 },
+      { part: "statue", x: 26, y: 70, scale: 0.85, props: true },
+      { part: "fallen-column", x: 28, y: 84, scale: 0.6 },
+      { part: "statue", x: 76, y: 66, scale: 0.75, flip: -1, props: true },
+      { part: "fallen-column", x: 76, y: 74, scale: 0.55, flip: -1 },
     ],
     subject: [
-      { part: "light-ribbon", x: 50, y: 64, scale: 1.1, paint: "orange-400" },
-      { part: "papaya", x: 50, y: 52, scale: 2.8 },
+      { part: "light-ribbon", x: 46, y: 66, scale: 1.15, paint: "orange-400" },
+      { part: "papaya", x: 63, y: 55, scale: 2.4 },
     ],
     near: [
       { part: "slate-board", x: 14, y: 96, scale: 1 },
       { part: "pebbles", x: 80, y: 95, scale: 1.1, paint: "white", props: true },
     ],
     light: [
-      { part: "halo", x: 50, y: 48, scale: 2.6, paint: "orange-400" },
-      { part: "halo", x: 50, y: 64, scale: 2, paint: "green-400" },
+      { part: "halo", x: 64, y: 52, scale: 2.2, paint: "orange-400" },
+      { part: "halo", x: 40, y: 66, scale: 2, paint: "green-400" },
     ],
     particles: [
-      { part: "dust", x: 50, y: 84, scale: 1.4, paint: "white" },
-      { part: "sparks", x: 50, y: 50, scale: 1.1, count: 3, spread: [18, 10], paint: "lime-200" },
+      { part: "dust", x: 22, y: 92, scale: 1, paint: "white" },
+      { part: "sparks", x: 50, y: 62, scale: 1.1, count: 3, spread: [18, 8], paint: "lime-200" },
       { part: "motes", x: 50, y: 40, scale: 1.4, paint: "green-200" },
     ],
   },
@@ -491,12 +488,12 @@ const MULCH_MUNCHER: SceneRecipe = {
       { part: "tree", x: 80, y: 62, scale: 1 },
     ],
     mid: [
-      { part: "field", x: 50, y: 64, paint: "wood-700" },
-      { part: "grave-mound", x: 50, y: 84, scale: 4.2, paint: "wood-800" },
+      { part: "field", x: 50, y: 64, paint: "green-700" },
+      { part: "grave-mound", x: 50, y: 84, scale: 4.4, paint: "wood-900" },
       { part: "fence", x: 50, y: 66, scale: 0.8, paint: "wood-800" },
     ],
     subject: [
-      { part: "boar", x: 46, y: 80, scale: 1.9 },
+      { part: "boar", x: 45, y: 80, scale: 2.1 },
       { part: "papaya", x: 70, y: 82, scale: 0.8 },
       { part: "apple", x: 76, y: 80, scale: 0.9 },
       { part: "pear", x: 64, y: 84, scale: 0.9 },
@@ -591,8 +588,8 @@ const NORMAL_GRAPE: SceneRecipe = {
       { part: "ruin-wall", x: 50, y: 90, scale: 2.8 },
     ],
     subject: [
-      { part: "fern", x: 50, y: 72, scale: 1.4, paint: "green-700" },
-      { part: "orb", x: 50, y: 66, scale: 0.7, paint: "violet-700" },
+      { part: "fern", x: 50, y: 67, scale: 1.8, paint: "green-500" },
+      { part: "orb", x: 50, y: 61, scale: 1, paint: "violet-700" },
     ],
     near: [{ part: "flowers", x: 16, y: 94, scale: 1.2 }],
     particles: [{ part: "motes", x: 50, y: 50, scale: 1.3, paint: "white" }],
@@ -618,7 +615,7 @@ const LARGE_GRAPE: SceneRecipe = {
     mid: [{ part: "street", x: 50, y: 62, paint: "wood-700" }],
     subject: [
       { part: "cart", x: 50, y: 86, scale: 2.4 },
-      { part: "orb", x: 50, y: 58, scale: 1.4, paint: "violet-700" },
+      { part: "orb", x: 50, y: 53, scale: 2.2, paint: "violet-700" },
     ],
     near: [{ part: "grass-tuft", x: 50, y: 97, count: 4, spread: [44, 2] }],
     particles: [{ part: "motes", x: 50, y: 50, scale: 1.4, paint: "orange-400" }],
@@ -633,15 +630,15 @@ const GOLDEN_GRAPE: SceneRecipe = {
   emblem: { x: 18, y: 46, size: 5, rotate: 0 },
   layers: {
     far: [
-      { part: "room-wall", x: 50, y: 62, paint: "blue-900" },
+      { part: "room-wall", x: 50, y: 62, paint: "slate-900" },
       { part: "cabinet", x: 16, y: 62, scale: 1.4 },
       { part: "bookshelf", x: 86, y: 62, scale: 1.3 },
     ],
     mid: [
       { part: "table", x: 50, y: 88, scale: 2.6 },
-      { part: "grave-mound", x: 50, y: 70, scale: 2.6, paint: "blue-800" },
+      { part: "grave-mound", x: 50, y: 70, scale: 2.6, paint: "blue-900" },
     ],
-    subject: [{ part: "orb", x: 50, y: 63, scale: 0.6, paint: "brass-500" }],
+    subject: [{ part: "orb", x: 50, y: 62, scale: 0.75, paint: "brass-500" }],
     near: [
       { part: "gems", x: 22, y: 92, scale: 1.1 },
       { part: "hourglass", x: 82, y: 94, scale: 1 },
@@ -662,9 +659,12 @@ const MYTHIC_GRAPE: SceneRecipe = {
     far: [
       { part: "hills", x: 50, y: 56, paint: "green-900" },
       { part: "vine", x: 50, y: 60, scale: 0.5, count: 6, spread: [44, 1] },
+      { part: "fence", x: 50, y: 70, scale: 2, paint: "stone-500" },
+      { part: "vine", x: 50, y: 70, scale: 0.6, count: 5, spread: [44, 1] },
     ],
     mid: [{ part: "altar", x: 50, y: 84, scale: 1.8 }],
     subject: [
+      { part: "void-swirl", x: 50, y: 46, scale: 1.1, paint: "violet-700" },
       { part: "light-ribbon", x: 50, y: 46, scale: 0.9, paint: "violet-300" },
       { part: "orb", x: 50, y: 46, scale: 0.9, paint: "violet-500" },
     ],
@@ -777,7 +777,7 @@ const ORGANIC_PRODUCE: SceneRecipe = {
       { part: "fence", x: 50, y: 46, scale: 1.2, paint: "stone-500" },
       { part: "fence", x: 50, y: 54, scale: 1.4, paint: "stone-500" },
       { part: "temple", x: 70, y: 38, scale: 0.4 },
-      { part: "bush", x: 30, y: 50, scale: 0.6, count: 3, spread: [24, 2] },
+      { part: "bush", x: 30, y: 50, scale: 0.6, count: 2, spread: [24, 2] },
     ],
     mid: [
       { part: "field", x: 50, y: 60, paint: "green-700" },
@@ -794,16 +794,14 @@ const ORGANIC_PRODUCE: SceneRecipe = {
       { part: "apple", x: 13, y: 82, scale: 1.2, count: 3, spread: [4, 1] },
       { part: "crate", x: 84, y: 98, scale: 2.4 },
       { part: "pear", x: 84, y: 82, scale: 1.2, count: 2, spread: [4, 1] },
-      { part: "grapes", x: 90, y: 80, scale: 1 },
     ],
     light: [
       { part: "halo", x: 50, y: 66, scale: 2.2, paint: "white" },
       { part: "light-shaft", x: 24, y: 0, scale: 1, paint: "white" },
     ],
     particles: [
-      { part: "bee", x: 50, y: 64, scale: 1, count: 5, spread: [30, 10] },
-      { part: "sparks", x: 16, y: 80, scale: 0.8, paint: "white" },
-      { part: "sparks", x: 84, y: 80, scale: 0.8, paint: "white" },
+      { part: "bee", x: 50, y: 64, scale: 1, count: 3, spread: [30, 10] },
+      { part: "sparks", x: 50, y: 80, scale: 0.8, count: 2, spread: [34, 1], paint: "white" },
     ],
   },
 };
@@ -978,7 +976,7 @@ const CALL_TO_CHAOS: SceneRecipe = {
   light: { x: 44, y: 42, r: 40, paint: "violet-500", opacity: 0.5 },
   emblem: { x: 44, y: 44, size: 5, rotate: 0 },
   figure: {
-    x: 84,
+    x: 80,
     y: 86,
     scale: 0.78,
     flip: -1,
@@ -1002,14 +1000,13 @@ const CALL_TO_CHAOS: SceneRecipe = {
       { part: "fortune-wheel", x: 44, y: 44, scale: 1.6 },
       { part: "apple", x: 20, y: 34, scale: 1.4 },
       { part: "pear", x: 68, y: 26, scale: 1.3 },
-      { part: "grapes", x: 24, y: 58, scale: 1 },
       { part: "tome", x: 18, y: 48, scale: 0.6, paint: "blue-800" },
       { part: "tome", x: 70, y: 40, scale: 0.6, paint: "red-900" },
       { part: "knuckles", x: 30, y: 70, scale: 1.6, paint: "stone-500" },
       { part: "card", x: 56, y: 70, scale: 0.8, count: 3, spread: [10, 6] },
     ],
     near: [
-      { part: "dice", x: 24, y: 92, scale: 1.3, count: 3, spread: [16, 3] },
+      { part: "dice", x: 24, y: 92, scale: 1.3, count: 2, spread: [16, 3] },
       { part: "fallen-column", x: 64, y: 96, scale: 0.8 },
       { part: "pebbles", x: 46, y: 97, scale: 1.2 },
     ],
@@ -1057,7 +1054,7 @@ const CLASSIC_GOLEM: SceneRecipe = {
 };
 
 /** The enemy soldiers marching up Twice Forward One Step Backwards' stair. */
-const STAIR_SOLDIER: FigureLook = { ...figureLookFor(["Human"]), hair: "helm", outfit: "outfit-armor", item: "item-spear", skin: "red-300", cloth: "red-900" };
+const STAIR_SOLDIER: FigureLook = { ...figureLookFor(["Human"]), hair: "visor", outfit: "outfit-armor", item: "item-spear", skin: "red-300", cloth: "red-900" };
 
 /** Twice Forward One Step Backwards (Classic+ #74, Mythic): an army marches up a clockwork stair that grinds back, its spells glued into a cracking monolith over the void. */
 const TWICE_FORWARD: SceneRecipe = {
@@ -1070,18 +1067,13 @@ const TWICE_FORWARD: SceneRecipe = {
     { layer: "subject", x: 40, y: 76, scale: 0.36, pose: "pose-run", look: { ...STAIR_SOLDIER, item: "item-sword" } },
     { layer: "subject", x: 64, y: 80, scale: 0.4, flip: -1, pose: "pose-run", look: STAIR_SOLDIER },
     { layer: "subject", x: 70, y: 90, scale: 0.46, flip: -1, pose: "pose-raise", look: { ...STAIR_SOLDIER, item: "item-staff", hair: "hood" } },
-    { layer: "subject", x: 22, y: 94, scale: 0.5, pose: "pose-guard", look: { ...STAIR_SOLDIER, item: "item-shield" } },
   ],
   layers: {
-    sky: [
-      { part: "stars", x: 50, y: 20, scale: 1.8 },
-      { part: "void-swirl", x: 50, y: 70, scale: 3 },
-    ],
+    sky: [{ part: "void-swirl", x: 50, y: 70, scale: 3 }],
     far: [
       { part: "gear", x: 14, y: 30, scale: 2.4, paint: "slate-700" },
       { part: "gear", x: 86, y: 26, scale: 2, paint: "slate-700" },
       { part: "clock-face", x: 50, y: 22, scale: 0.9 },
-      { part: "gear", x: 80, y: 52, scale: 1.2, paint: "slate-800" },
     ],
     mid: [
       { part: "stairs", x: 50, y: 50, paint: "stone-500" },
@@ -1092,13 +1084,10 @@ const TWICE_FORWARD: SceneRecipe = {
       { part: "standing-stone", x: 50, y: 64, scale: 2, paint: "slate-400" },
       { part: "lightning", x: 48, y: 36, scale: 0.6, paint: "cyan-400" },
       { part: "fireball", x: 56, y: 48, scale: 0.5 },
-      { part: "orb", x: 44, y: 52, scale: 0.3, paint: "violet-500" },
-      { part: "light-ribbon", x: 50, y: 50, scale: 0.6, paint: "slate-100" },
+      { part: "lightning", x: 54, y: 52, scale: 0.4, paint: "slate-100" },
     ],
     near: [
-      { part: "gear", x: 10, y: 92, scale: 1.4, paint: "slate-400" },
       { part: "gear", x: 90, y: 94, scale: 1.6, paint: "slate-400" },
-      { part: "pebbles", x: 50, y: 98, scale: 1.2, count: 2, spread: [24, 1] },
     ],
     light: [
       { part: "halo", x: 50, y: 48, scale: 2.4, paint: "cyan-400" },
@@ -1106,9 +1095,8 @@ const TWICE_FORWARD: SceneRecipe = {
       { part: "rim-light", x: 50, y: 50, scale: 1.4, paint: "cyan-400" },
     ],
     particles: [
-      { part: "sparks", x: 50, y: 48, scale: 1.2, count: 4, spread: [20, 14], paint: "cyan-400" },
-      { part: "motes", x: 50, y: 70, scale: 1.6, count: 2, spread: [16, 8], paint: "violet-300" },
-      { part: "embers", x: 50, y: 60, scale: 1.4, count: 3, spread: [24, 10], paint: "cyan-400" },
+      { part: "sparks", x: 50, y: 48, scale: 1.2, paint: "cyan-400" },
+      { part: "embers", x: 50, y: 60, scale: 1.4, paint: "cyan-400" },
     ],
   },
 };
@@ -1121,7 +1109,7 @@ const J_LEASE: SceneRecipe = {
   emblem: { x: 84, y: 54, size: 5, rotate: 0 },
   figure: {
     x: 50,
-    y: 70,
+    y: 64,
     scale: 0.8,
     pose: "pose-spread",
     look: { ...figureLookFor([]), hair: "hat-brim", outfit: "outfit-patched", item: "item-sack", skin: "red-300", cloth: "brass-600" },
@@ -1133,19 +1121,18 @@ const J_LEASE: SceneRecipe = {
       { part: "temple", x: 50, y: 74, scale: 1.3 },
       { part: "statue", x: 14, y: 76, scale: 1.5 },
       { part: "statue", x: 86, y: 74, scale: 1.4, flip: -1 },
-      { part: "monkey", x: 20, y: 40, scale: 1.2, count: 2, spread: [8, 6] },
+      { part: "monkey", x: 18, y: 42, scale: 1.2 },
       { part: "monkey", x: 82, y: 36, scale: 1.1, flip: -1 },
     ],
     mid: [
       { part: "rock-floor", x: 50, y: 76, paint: "green-900" },
-      { part: "fallen-column", x: 30, y: 84, scale: 1 },
       { part: "gems", x: 62, y: 78, scale: 0.8, props: true },
       { part: "coins", x: 68, y: 66, scale: 0.6, props: true },
     ],
-    subject: [{ part: "vine", x: 36, y: 34, scale: 2.4 }],
+    subject: [{ part: "vine", x: 36, y: 26, scale: 2.4, paint: "green-500" }],
     near: [
       { part: "fern", x: 8, y: 98, scale: 2 },
-      { part: "fern", x: 92, y: 98, scale: 2, flip: -1 },
+      { part: "grass-tuft", x: 88, y: 98, scale: 1.4, count: 2, spread: [6, 1] },
       { part: "vine", x: 94, y: 90, scale: 1.4 },
     ],
     light: [
@@ -1154,8 +1141,8 @@ const J_LEASE: SceneRecipe = {
       { part: "rim-light", x: 50, y: 48, scale: 1.2, paint: "lime-200", flip: -1 },
     ],
     particles: [
-      { part: "petals", x: 50, y: 40, scale: 1.4, count: 2, spread: [20, 10], paint: "green-400" },
-      { part: "sparks", x: 64, y: 60, scale: 1, count: 2, spread: [8, 6], paint: "white" },
+      { part: "petals", x: 50, y: 40, scale: 1.4, paint: "green-400" },
+      { part: "sparks", x: 64, y: 30, scale: 1, paint: "white" },
       { part: "motes", x: 40, y: 30, scale: 1.4, paint: "lime-200" },
     ],
   },
