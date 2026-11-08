@@ -22178,7 +22178,7 @@
           "resets_at": "2026-11-08T09:50:00Z",
           "utilization": 1.02
         },
-        "observed_at": "2026-11-08T06:44:27Z",
+        "observed_at": "2026-11-08T06:45:00Z",
         "rejected_resets_at": "2026-11-08T09:50:00Z",
         "status": "rejected"
       }
@@ -36747,7 +36747,8 @@
       "2026-11-08T05:12:09Z,claude-1,stream,call,42448841031,6,2026-11-08T09:50:00Z,,,allowed,100,,",
       "2026-11-08T05:13:09Z,claude-1,stream,call,42448841031,7,2026-11-08T09:50:00Z,,,allowed,100,,",
       "2026-11-08T05:39:56Z,claude-1,stream,call,42448841031,8,2026-11-08T09:50:00Z,,,allowed,100,,",
-      "2026-11-08T06:39:46Z,claude-1,ping,before,42455481931,102,2026-11-08T09:50:00Z,,,rejected,100,,"
+      "2026-11-08T06:39:46Z,claude-1,ping,before,42455481931,102,2026-11-08T09:50:00Z,,,rejected,100,,",
+      "2026-11-08T06:39:05Z,claude-1,ping,before,42455433671,102,2026-11-08T09:50:00Z,,,rejected,100,,"
     ],
     "runs": [
       "2026-11-08T06:25:18Z,42452819651,claude-1,opus,build,3405,hard,interrupted,5-hour cap,24.8,0,0,0,,10,101,,,773.7,claude-2,fresh,other,1",
