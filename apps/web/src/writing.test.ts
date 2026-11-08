@@ -6,7 +6,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import ts from "typescript";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import glossary from "../../../crates/shared/data/glossary.json";
@@ -84,6 +84,12 @@ function marksIn(text: string): string[] {
 }
 
 describe("WRITING.md the client's words for players", () => {
+  // The one pass over every source is setup, not an assertion: it runs here, once, so a loaded runner
+  // does not spend the first test's own budget on it.
+  beforeAll(() => {
+    playerTexts();
+  });
+
   it("no sentence the client shows a player uses a developer word", () => {
     const texts = playerTexts();
     expect(texts.length).toBeGreaterThan(1000);
