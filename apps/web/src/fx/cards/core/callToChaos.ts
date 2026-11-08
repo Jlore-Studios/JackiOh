@@ -35,7 +35,8 @@ const REEL_COLORS = FLAVOR_LOOKS.Chaos.colors;
 const PANEL: FxAnchor = { kind: "viewport", at: { x: FX_CENTER.x, y: FX_CENTER.y } };
 
 export const chaosReels: CardRecipe = (event, p, play) => {
-  if (play.hook !== undefined) return null;
+  // R2722002: a Cloaked copy plays at its reveal, the `cast` its `trapFired` opens.
+  if (play.hook !== undefined && play.hook !== "cast") return null;
   const i = p.env.intensity;
   const t = timesOf(p.D);
   const centre = tid(testid.board, FX_CENTER);

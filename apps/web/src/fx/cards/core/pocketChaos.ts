@@ -32,7 +32,8 @@ function swapEnds(what: "health" | "board" | "library"): [FxAnchor, FxAnchor] {
 }
 
 export const pocketSwap: CardRecipe = (event, p, play) => {
-  if (play.hook !== undefined) return null;
+  // R2722002: a Cloaked copy plays at its reveal, the `cast` its `trapFired` opens.
+  if (play.hook !== undefined && play.hook !== "cast") return null;
   const spec = flourishSpec(p, play);
   const t = timesOf(p.D);
   const centre = tid(testid.board, FX_CENTER);

@@ -17,7 +17,8 @@ import type { CardRecipe } from "../recipe.ts";
 import { flourishSpec, isFirstBeat } from "./flourish.ts";
 
 export const perfectWish: CardRecipe = (event, p, play) => {
-  if (play.hook !== undefined) return null;
+  // R2722002: a Cloaked copy plays at its reveal, the `cast` its `trapFired` opens.
+  if (play.hook !== undefined && play.hook !== "cast") return null;
   const spec = flourishSpec(p, play);
   const t = timesOf(p.D);
   if (isFirstBeat(event, play)) {

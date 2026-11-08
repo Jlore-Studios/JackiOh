@@ -25,11 +25,13 @@ export function flourishSpec(p: CardFxPlan, play: FxPlay): CueSpec {
 
 /**
  * R3402001: whether `event` is the first beat of `play`: its own `cardPlayed` (a Spell's cast, a Field
- * Spell's play), or a Trap's own `trapFired` (its firing, never its face-down set).
+ * Spell's play), or a Trap's own first `trapFired` (its firing, never its face-down set). R2722002: a
+ * Cloaked card's face-down set (its fresh id's `formerId`, R227) is no first beat, and its reveal, a
+ * `trapFired` like a Trap's, is.
  */
 export function isFirstBeat(event: GameEvent, play: FxPlay): boolean {
-  if (event.type === "trapFired") return play.hook === "cast" && event.instanceId === play.instanceId;
-  return event.type === "cardPlayed" && play.hook === undefined && event.instanceId === play.instanceId;
+  if (event.type === "trapFired") return play.hook === "cast" && event.again !== true && event.instanceId === play.instanceId;
+  return event.type === "cardPlayed" && event.formerId === undefined && play.hook === undefined && event.instanceId === play.instanceId;
 }
 
 /** R3402001: whether `event` is among the first FX_SIGNATURE_BURSTS_MAX of its type in `p`'s entry, so a run of them draws a capped few. */
