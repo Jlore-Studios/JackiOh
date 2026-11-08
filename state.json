@@ -15762,7 +15762,8 @@
       },
       "started_at": "2026-11-08T23:14:27Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 6728863310
     },
     "3405": {
       "action": "build",
