@@ -16803,7 +16803,8 @@
         "reviews": [],
         "sha": "772a3495b8516a526a04b18e0486053a5ce6a61e",
         "tiers": {}
-      }
+      },
+      "waiting_comment": 6722170318
     },
     "3432": {
       "action": "review",
