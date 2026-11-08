@@ -17317,12 +17317,9 @@
     "what": "build #3401 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-08T18:26:04Z",
+    "at": "2026-11-08T18:34:22Z",
     "notes": [
-      "delivered revise #3437 on claude-7 (run 42508293931): built",
-      "started build #3401 on claude-7 (run 42510134801)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-08T19:10:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 4h 31m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` 7-day usage is 98%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-15T10:07:24Z; it takes reviews only; it can start a build or a plan again in 159h 38m; `claude-2` 5-hour usage is 91%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-08T18:30:00Z; it can start a build or a plan again in 1m",
-      "pruned 2 plan file(s) older than 7 days"
+      "#3437: `e2e smoke (1/2)` red in CI run 42495100159; its other early jobs have until 2026-11-08T18:35:46Z to report"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18028,7 +18025,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-08T18:26:04Z",
+  "loop_tick": "2026-11-08T18:34:22Z",
   "machine_disk": {
     "issue": null,
     "reading": {
