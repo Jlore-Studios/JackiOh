@@ -17942,6 +17942,8 @@
       }
     },
     "3426": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-08T01:58:09Z",
@@ -17955,8 +17957,11 @@
         "trail": "../apps/web/src/audio/music/ 2>/dev/null | head; ls ../apps/web/public/audio 2>/dev/null | head -3; git -C .. ls-files 'apps/web/**/*.m4a' | head -3; grep -rn \\\"tavern-danger\\\" ../app\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ns=open('cypress/component/tmp-pf.cy.tsx').read()\\na='''mountScene(galleryHandView(defId, board, 1), galleryFieldView(defId, board), galleryCardEvents(defId, play, boar\u2026\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy-pf2.log | grep -c \\\"404\\\"; ls artifacts/component/screenshots/tmp-pf.cy.tsx/ 2>/dev/null | head\", \"description\": \"Count failed fetches in the run log\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3402/e2e/artifacts/component/screenshots/tmp-pf.cy.tsx/R2803000 the phone scenes hold the frame budget -- R3402001 My Pawn's signature holds the phone\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ns=open('cypress/component/tmp-pf.cy.tsx').read()\\na='''mountScene(galleryHandView(defId, board, 1), shown as typeof fv, galleryCardEvents(defId, play, board, 1));'''\\n\u2026\n- Bash: {\"command\": \"cd ../apps/web/src/game; grep -n \\\"hitStop\\\\|HitStop\\\" Game.tsx | head -20\", \"description\": \"Look at the board's hit-stop handling\"}\n- Bash: {\"command\": \"sed -n 596,615p Game.tsx; grep -n \\\"pause()\\\\|resume()\\\" -A14 ../fx/director.ts | sed -n 1,60p | grep -v \\\"^\\\\s*$\\\" | head -50\", \"description\": \"Read the hit-stop trigger and director pa\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3402 && rm -f e2e/cypress/component/tmp-pf.cy.tsx && python3 - <<'EOF'\\ndef edit(p, pairs):\\n s=open(p).read()\\n for a,b in pairs:\\n assert s.count(a\u2026\n- Bash: {\"command\": \"cd apps/web && timeout 900 pnpm exec vitest run src/fx/cards/core/signatures.test.ts src/fx/cards/tiers.test.ts src/routes/dev/fx.test.tsx src/fx/motifs 2>&1 | grep -E \\\"Test Files|Tests\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='src/fx/cards/core/signatures.test.ts'; s=open(p).read()\\na=''' expect(at(planned, \\\"drawn\\\").filter((cue) => cue.kind === \\\"ghost\\\")).toEqual([{ kind: \\\"ghost\\\", fr\u2026\n- Bash: {\"command\": \"grep -n \\\"a full board of tile auras\\\" -A20 cypress/component/fx-phone-frame.cy.tsx | head -25; grep -n \\\"defId\\\" ../apps/web/src/test/tileBoard.ts | head -30\", \"description\": \"Read the \u2026\n- Bash: {\"command\": \"sed -n 1,28p ../apps/web/src/test/tileBoard.ts\", \"description\": \"Read how the tile board picks its cards\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3402/apps/web; grep -rln \\\"tileBoardView\\\" src | head; python3 - <<'EOF'\\np='src/test/tileBoard.ts'; s=open(p).read()\\na=''' const tableEntry = FX_CA\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3402 && echo \\\"- $(date -u +%H:%M) phone frame: Heroic Power wedged the page when its gallery Activate dealt damage in the same batch as its takeover\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3402/apps/web/src/fx; grep -n \\\"step(dt\\\\|step(\\\\s*dt\\\\|function step\\\\|step:\\\" particles.ts | head; grep -n \\\" step(\\\" -A25 particles.ts | head -40\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3402/e2e/cypress/component && python3 - <<'EOF'\\np='fx-signature.cy.tsx'; s=open(p).read()\\ndef rep(a,b):\\n global s\\n assert s.count(a)==1, a; s=s.r\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='fx-signature.cy.tsx'; s=open(p).read()\\na=''' expect(result.dom, `${defId}'s signature mounts its effects`).to.eq(true);\\n expect(result.lit || result.dom, `${defId\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='fx-signature.cy.tsx'; s=open(p).read()\\ns=s.replace('''// sizes, its scene drawing on the canvas, and each Mythic's takeover drawing its own art (R3402000).''','''/\u2026\n- Bash: {\"command\": \"E2E_COMPONENT_PORT=5281 timeout 2400 pnpm test:component --spec cypress/component/audio-recipes.cy.tsx,cypress/component/tile-aura.cy.tsx > /tmp/cy-au.log 2>&1; sed 's/\\\\x1b\\\\[[0-9;]*m//\u2026\n- Bash: {\"command\": \"cd ../apps/web && cat > src/test/tmp_tile.test.ts <<'EOF'\\nimport { it } from \\\"vitest\\\";\\nimport { tileBoardView } from \\\"./tileBoard.ts\\\";\\nit(\\\"count\\\", () => {\\n const v = tileBoardV\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3402; python3 -c \\\"\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nfor k in ['classicplus-012-8','classicplus-042-1']: print(k, c[k]['\u2026\n- Bash: {\"command\": \"cd e2e/cypress/component && python3 - <<'EOF'\\np='tile-aura.cy.tsx'; s=open(p).read()\\ndef rep(a,b):\\n global s\\n assert s.count(a)==1, a; s=s.replace(a,b)\\nrep(''' faceUpBackrow(\\\"p2\\\",\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3402 && echo \\\"- $(date -u +%H:%M) fx-signature 22/22, phone frame green but R3342000 tile-board count, audio-recipes 116/116, tile-aura 2 geometry f\u2026\n- Bash: {\"command\": \"timeout 1800 pnpm exec vitest run src/fx src/audio src/routes src/test src/game/TakeoverStill.test.tsx src/game/entrance.real.test.ts > /tmp/vt-sub.log 2>&1; echo exit $?; grep -E \\\"Test\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3402 && timeout 900 cargo jackioh spec check 2>&1 | tail -1; timeout 600 cargo jackioh patches check 2>&1 | tail -1; git status --short | grep -v \\\"^\u2026\n- Bash: {\"command\": \"git rev-parse origin/main 2>/dev/null; timeout 1500 cargo jackioh classify --base 6ea0b88 --claims 2>&1 | tail -8\", \"description\": \"Run the change classifier against main with claims\", \"\u2026\n- Bash: {\"command\": \"git diff 6ea0b88 --stat -- crates/ | tail -5; timeout 600 cargo jackioh classify --base 6ea0b88 2>&1 | tail -6\", \"description\": \"Check crate diffs against main and classify without claim\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'; s=open(p).read()\\ni=s.index('## State'); j=s.index('## Log')\\ns=s[:i]+'''## State\\n\\n(Build run 2, 2026-11-08, opus.) DONE: all plan items built and\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a signature animation for every Core Legendary and Mythic, one concept per card\"} --> ## What changed The ten Core Legendaries and Mythics in #3402's table now have `signature: true` in `core.json5` and are off `SIGNATURE_PENDING`. Core's only pending c\u2026"
       },
       "issue": 3402,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-08T04:38:31Z",
         "from_run": "42436497927",
         "gates": [
           {
@@ -18048,8 +18053,15 @@
         "source": "build",
         "until": "2026-11-08T05:07:22Z"
       },
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-08T04:37:22Z",
+      "run_id": "pending:fbc8cd5d-1794112685",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "started_at": "2026-11-08T04:38:31Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18063,9 +18075,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T04:17:34Z",
+    "at": "2026-11-08T04:38:31Z",
     "url": "",
-    "what": "plan #3403 on claude-3"
+    "what": "review #3426 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-08T04:28:22Z",
