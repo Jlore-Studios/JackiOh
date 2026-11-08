@@ -2,9 +2,10 @@
 // card's host (`.cf-host`: `.cf` itself takes no pointer) for the pointer and for focus: it is `hovered` while either is on
 // the card, which ranks it first for a motion slot (motionSlots.ts) and sets `data-art-hover`; the pointer's place in the
 // face is written on it as `--art-aim-x` and `--art-aim-y`, -1 to 1 each way (`aimOf`), which artLive.css turns the art's
-// subject toward; a press sets `data-art-press` until it lifts, leaves or is cancelled. An `IntersectionObserver`, where the
-// browser has one, tells the face when it is off screen (`onScreen`), when its art holds still and frees its slot. A listener
-// reads the event alone, and a face that is not enabled listens to nothing and holds none of the marks.
+// subject toward; keyboard focus alone uses a small fixed aim because it has no pointer coordinate, while a pointer inside
+// wins. A press sets `data-art-press` until it lifts, leaves or is cancelled. An `IntersectionObserver`, where the browser
+// has one, tells the face when it is off screen (`onScreen`), when its art holds still and frees its slot. A listener reads
+// the event alone, and a face that is not enabled listens to nothing and holds none of the marks.
 // Presentation only (CLAUDE.md rule 7): nothing here reaches the engine, an action or the log.
 
 import { useEffect, useState, type RefObject } from "react";
@@ -17,6 +18,9 @@ export const ART_PRESS_ATTRIBUTE = "data-art-press";
 
 /** The digits an aim is written with. */
 const AIM_DIGITS = 3;
+/** R3340000: the subtle upper-right turn and lean a keyboard-focused face uses when there is no pointer place to follow. */
+const FOCUS_AIM_X = 0.25;
+const FOCUS_AIM_Y = -0.25;
 
 /** `value` held to -1 to 1, and 0 for no number. */
 function unitClamp(value: number): number {
@@ -51,18 +55,25 @@ export function useArtLive(ref: RefObject<HTMLElement | null>, enabled: boolean)
       pointerInside = true;
       updateHovered();
     };
-    const focusIn = (): void => {
-      focusInside = true;
-      updateHovered();
+    const writeAim = (x: number, y: number): void => {
+      el.style.setProperty(ART_AIM_X_PROPERTY, x.toFixed(AIM_DIGITS));
+      el.style.setProperty(ART_AIM_Y_PROPERTY, y.toFixed(AIM_DIGITS));
     };
     const clearAim = (): void => {
       el.style.removeProperty(ART_AIM_X_PROPERTY);
       el.style.removeProperty(ART_AIM_Y_PROPERTY);
     };
+    const focusAim = (): void => {
+      writeAim(FOCUS_AIM_X, FOCUS_AIM_Y);
+    };
+    const focusIn = (): void => {
+      focusInside = true;
+      if (!pointerInside) focusAim();
+      updateHovered();
+    };
     const move = (event: PointerEvent): void => {
       const aim = aimOf(event.clientX, event.clientY, el.getBoundingClientRect());
-      el.style.setProperty(ART_AIM_X_PROPERTY, aim.x.toFixed(AIM_DIGITS));
-      el.style.setProperty(ART_AIM_Y_PROPERTY, aim.y.toFixed(AIM_DIGITS));
+      writeAim(aim.x, aim.y);
     };
     const press = (): void => {
       el.setAttribute(ART_PRESS_ATTRIBUTE, "true");
@@ -73,11 +84,13 @@ export function useArtLive(ref: RefObject<HTMLElement | null>, enabled: boolean)
     const pointerLeave = (): void => {
       lift();
       pointerInside = false;
-      clearAim();
+      if (focusInside) focusAim();
+      else clearAim();
       updateHovered();
     };
     const focusOut = (event: FocusEvent): void => {
       focusInside = event.relatedTarget instanceof Node && host.contains(event.relatedTarget);
+      if (!focusInside && !pointerInside) clearAim();
       updateHovered();
     };
     host.addEventListener("pointerenter", pointerEnter);

@@ -147,9 +147,11 @@ A card on the board moves its art too, and answers the player (`artLive.ts`, `ar
   card's, a Battleship's) stays one image and answers as a whole. So does a face that draws depth planes (R3344000, an Epic or rarer face):
   its planes are its layers, so its window is not split again.
 - **The reactions.** Hover or focus: the subject turns and leans toward the pointer (`--art-aim-x`/`-y` from
-  `aimOf`), the motes scatter and settle. Press: the subject flinches (`scale`) and springs back on the overshoot
-  curve. `attackDeclared`: the subject swings on the attack's own `--fx-lunge-x/y` and the motes fire. All in
-  `rotate`, `translate`, `scale` and `opacity`, inside the reduced-motion gate, with `motion.css`'s times and curves.
+  `aimOf`), the motes scatter and settle. Keyboard focus alone, which has no pointer coordinate, uses a subtle fixed
+  upper-right pose; the pointer's place wins while both are on the face. Press: the subject flinches (`scale`) and
+  springs back on the overshoot curve. `attackDeclared`: the subject swings on the attack's own `--fx-lunge-x/y` and
+  the motes fire. All in `rotate`, `translate`, `scale` and `opacity`, inside the reduced-motion gate, with
+  `motion.css`'s times and curves.
 - **The marks.** A Unit's art wears cracks for the health it is missing (`wear.ts`: `damageLevel`, one more of
   `ART_WEAR_LEVELS` steps each time, each crack grown from the card's id so a level's cracks start the next
   level's), a glow in its card's theme colour when buffed (`--art-glow`) and frost when frozen

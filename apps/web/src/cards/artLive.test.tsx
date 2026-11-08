@@ -508,11 +508,23 @@ describe("R3340000 motion pauses and the settings still rule", () => {
 });
 
 describe("R3340000 cards that answer", () => {
-  it("R3340000 hover is the union of pointer and focus, and pointer leaving clears only its aim", () => {
+  it("R3340000 hover is the union of pointer and focus, and keyboard focus supplies a turn and lean aim", () => {
     const { container } = render(<Board specs={[{ id: COMMON }]} />);
     const cf = minions(container)[0] as HTMLElement;
     vi.spyOn(cf, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 100, height: 200, right: 100, bottom: 200, x: 0, y: 0, toJSON: () => ({}) });
     expect(cf.getAttribute("data-art-hover")).toBe("false");
+
+    // Keyboard focus has no pointer coordinate, so it supplies a subtle fixed pose with both a turn (x) and a lean (x/y).
+    fire(host(cf), "focusin");
+    expect(cf.getAttribute("data-art-hover")).toBe("true");
+    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("0.250");
+    expect(cf.style.getPropertyValue("--art-aim-y")).toBe("-0.250");
+    expect(cf.querySelector('.cf-art[data-art-live="true"] .cf-art-subject')).not.toBeNull();
+    fire(host(cf), "focusout");
+    expect(cf.getAttribute("data-art-hover")).toBe("false");
+    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("");
+    expect(cf.style.getPropertyValue("--art-aim-y")).toBe("");
+
     fire(host(cf), "pointerenter");
     expect(cf.getAttribute("data-art-hover")).toBe("true");
     fire(host(cf), "pointermove", { clientX: 75, clientY: 50 });
@@ -521,13 +533,16 @@ describe("R3340000 cards that answer", () => {
     fire(host(cf), "pointermove", { clientX: 500, clientY: -40 });
     expect(cf.style.getPropertyValue("--art-aim-x")).toBe("1.000");
     expect(cf.style.getPropertyValue("--art-aim-y")).toBe("-1.000");
-    // Focus keeps the face engaged after its pointer leaves; without a pointer, its aim returns to the middle.
+    // A pointer's real place wins while it is inside; after it leaves, focus keeps the face engaged in its keyboard pose.
     fire(host(cf), "focusin");
+    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("1.000");
     fire(host(cf), "pointerleave");
     expect(cf.getAttribute("data-art-hover")).toBe("true");
-    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("");
+    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("0.250");
+    expect(cf.style.getPropertyValue("--art-aim-y")).toBe("-0.250");
     fire(host(cf), "focusout");
     expect(cf.getAttribute("data-art-hover")).toBe("false");
+    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("");
 
     // The converse holds too: focus leaving does not clear a pointer that is still over the face or its aim.
     fire(host(cf), "pointerenter");
