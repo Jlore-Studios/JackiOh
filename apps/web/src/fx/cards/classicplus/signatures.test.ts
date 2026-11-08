@@ -3,8 +3,8 @@
 // then plan, with the queue's holds), draws its own first beat (a Unit's or a Field Spell's entrance on its
 // `summoned`, a Spell's or a Trap's cast) and its text's beat on the events its recipe claims; its recipe
 // answers nothing outside the hook it is drawn for; no cue names a card (R202); and every own cue (its
-// entrance, its recipe and its takeover) ends within its ceiling of the entry it plays in (#3399's per-beat
-// measure, Open question 1), shaking within its type's. R3399003: played from the other seat, with the
+// entrance, its recipe and its takeover) ends within its ceiling of the entry it plays in (the per-beat
+// measure of R3399005), shaking within its type's. R3399003: played from the other seat, with the
 // events that seat reads (a card added to a hand, shuffled into a deck or stolen, a hand card's cost, Radiance
 // or fusion hidden, a prompt naming only its player), no beat shows a hidden card and no owner-only beat plays.
 

@@ -496,10 +496,12 @@ Issue #3330 asks for an animation of its own for every Legendary and Mythic, in 
 motifs most of them played; #3332 laid the frame (R3332000) and each set's pass writes its cards'.
 
 - **Budgets** (`fx/constants.ts`, `tiers.test.ts`): over its gallery play, held as the queue holds it
-  at speed 1 with Big moments full, every cue of a Legendary's signature ends within
-  `SIGNATURE_LEGENDARY_MAX_MS` (1.6 s) of the play's start, a Mythic's, its takeover's hold included,
-  within `SIGNATURE_MYTHIC_MAX_MS` (2.6 s), and a Spell's, seen only briefly, within
-  `SIGNATURE_SPELL_SHARE` of its rarity's. A Spell's shakes may reach `SIGNATURE_SPELL_MAX_TRAUMA` (1),
+  at speed 1 with Big moments full, each of a signature's own cues (its entrance or takeover, its motif
+  or recipes, its set piece; not the rows every card's events share) ends within its budget of the start
+  of the entry it plays in (R3399005): a Legendary's within `SIGNATURE_LEGENDARY_MAX_MS` (1.6 s), a
+  Mythic's within `SIGNATURE_MYTHIC_MAX_MS` (2.6 s), and a Spell's, seen only briefly, within
+  `SIGNATURE_SPELL_SHARE` of its rarity's, but a Mythic's takeover, its hold included, within the
+  Mythic's whole. A Spell's shakes may reach `SIGNATURE_SPELL_MAX_TRAUMA` (1),
   a permanent's `SIGNATURE_PERMANENT_MAX_TRAUMA` (0.8), and a signature aura's alpha, tint and edge
   stay within `AURA_SIGNATURE_MAX_INTENSITY`. All of it sits inside R200's tail, one set piece per
   action and `SET_PIECE_HOLD_CAP_MS`, and a tap, the speed, the intensity, Big moments and Reduce
@@ -586,9 +588,8 @@ motifs most of them played; #3332 laid the frame (R3332000) and each set's pass 
   see (a Discover's or a test's options) plays on the owner's seat alone, and from the other seat every
   card in a hand or deck flies as a back (R3399003); each card's play or cast names a sound effect of its
   own (R3399004). `classicplus/signatures.test.ts`
-  holds each signature's own cues to its ceiling of the entry it plays in (a per-beat measure, beside
-  `tiers.test.ts`'s whole-play measure, which counts the shared event rows and the takeover too; a person
-  decides which measure holds).
+  holds each signature's own cues to its ceiling of the entry it plays in, the per-beat measure a person
+  chose for every set's signatures, which `tiers.test.ts` applies since (R3399005).
 - **Meditative** (#3405, R3405000, R3405001): every Meditative Legendary and Mythic, its tokens by their
   printed rarity among them, is a signature after its concept, in `fx/cards/meditative/`: a Unit's
   entrance of its own, then its text's beat and a standing look on its tile; a Spell's cast of its own; a
