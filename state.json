@@ -17394,6 +17394,11 @@
       "owner": "claude-1",
       "owner_since": "2026-11-08T03:02:46Z",
       "owner_why": "it took it up; released from its hold: `claude-7` has no runner free where it runs",
+      "paused": {
+        "at": "2026-11-08T03:29:53Z",
+        "interrupt": "usage",
+        "provider": "claude-1"
+      },
       "pending_at": "2026-11-07T17:22:38Z",
       "pending_by": "jgoetzmann",
       "pending_request": false,
