@@ -17242,6 +17242,7 @@
     "3402": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "handoff": {
         "at": "2026-11-07T23:33:57Z",
         "family": "claude",
@@ -17266,7 +17267,9 @@
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 3426,
       "provider": "claude-7",
+      "question": "",
       "round_tier": "strong",
       "run_id": "42436497927",
       "runs_on": "ubuntu-latest",
