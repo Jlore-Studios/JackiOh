@@ -6,7 +6,9 @@
 // own (`SNAPSHOT_ART`, `legacySvg`, R2724000). Presentation only
 // (CLAUDE.md rule 7): a pure function of the card's id, name, tags and type, with geometry drawn from
 // streams the Radiant face shares, so the two faces differ only in their paint and the gold rays.
-// No other set reaches this file, so no shipped card's picture moves (R503).
+// No other set reaches this file, so no shipped card's picture moves (R503). R3393000, R3393001: since
+// every card of the set has a scene recipe, `svg.ts` draws each card's recipe first, and this painter
+// and `legacySvg` draw only a card that has none.
 
 import type { CardType, Tag } from "@jackioh/shared";
 

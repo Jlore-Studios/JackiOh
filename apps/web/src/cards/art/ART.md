@@ -81,7 +81,10 @@ The Training Grounds set's entries (`traininggrounds-…`) draw `traininggrounds
 the same way: a training yard under one subject per family, its dummies, ogres, knives, totems,
 Felinors, runes, posters and Golem each what the card is (R2202000). Its Legacy cards #41–#60
 (`SNAPSHOT_ART`) draw their Core card's subject in the yard, each with a touch of its own
-(`LEGACY_TOUCHES`, R2724000); a delivered file is read by the Legacy card's own id.
+(`LEGACY_TOUCHES`, R2724000); a delivered file is read by the Legacy card's own id. Since #3393 every
+entry of the set, its Legacy cards included, draws a scene recipe of its own first (R3393000, R3393001,
+"Meditative+ and Training Grounds drawn as scenes" below), so this painter and `legacySvg` are the fallback
+for a card with no recipe.
 
 ## A fused card's art (R3045000)
 
@@ -348,12 +351,14 @@ seeded by the card's id (or by a picture's own seed, `core-002#alt`, so Alt art 
 parts apart), and never reads the face: the Radiant face draws the same shapes, each mixed toward its layer's
 gold (`SCENE_RADIANT_GOLD`), with the painter's rays. The figure stands in front of its subject layer's own
 parts, and a recipe's further figures (`extras`, R3390000: a crowd, a companion, a rival) each in front of its
-own layer's parts, after the main figure in the subject layer. `withScene` lays the scene into the procedural painter's `ArtSpec` (`artSpec`'s last argument, read
+own layer's parts, after the main figure in the subject layer; a placement, a figure or a further figure may
+`fade` (R3393000), its shapes' opacity scaled, for a ghost, a copy or a recruit flickering into being. `withScene` lays the scene into the procedural painter's `ArtSpec` (`artSpec`'s last argument, read
 from the card's id), so it prints, moves (each layer on its role's beat: `back`, `subject`, `over`, `light`,
 `motes`, and its marked placements `props`), splits for Out of frame (the subject layer and the emblem) and restyles as every procedural
 picture does, and keeps the card's theme, layout, backdrop, sky scheme, emblem glyph and motif. The
 Stinkyscape and Training Grounds painters hand a recipe card to it (`svg.ts` `sceneArtSvg`), and a Legacy
-card keeps its Core card's old subject.
+card draws its own scene wearing its Core card's frozen emblem (`legacySceneSvg`, R3393001), never its Core
+card's scene.
 
 The **scene kit** (`sceneKit.ts`, `SCENE_KIT`) holds the scenery, at least `SCENE_KIT_MIN_PER_CATEGORY` of
 each kind, 355 parts since Classic+'s pass (R3390000) and Core's (R3392000): 32 of terrain (fields, furrows,
@@ -372,8 +377,9 @@ Five proof cards drew from recipes first and set the bar each set's pass meets: 
 #74), Speciesist (Core #2), Heroic Power (Core #98), Ceaseless Void (Core #100) and Arg Arg Defender
 (Stinkyscape #15). Ceaseless Void's recipe keeps its painter's own subject (`ownSubject`), the giant its
 composition draws (R3338001), in place of a figure. Classic+'s pass draws every Classic+ entry from a recipe
-of its own (below, R3390000), and Core's pass every Core entry but Ceaseless Void, Speciesist's and Heroic
-Power's redrawn from their briefs (Core's scenes, below, R3392000). Every other card draws its picture byte for byte as before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
+of its own (below, R3390000), Core's pass every Core entry but Ceaseless Void, Speciesist's and Heroic
+Power's redrawn from their briefs (Core's scenes, below, R3392000), and the Meditative+ and Training Grounds
+pass every entry of those two sets (below, R3393000). Every other card draws its picture byte for byte as before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
 old pictures now, not pins (R3331002), each holding every card with no recipe to its old hash and each card
 with one to a new picture. A set's pass adds its cards' recipes from its own per-card brief table, takes them
 off the detail floor's short list, and tunes them by eye on `scene-proofs.cy.tsx`'s kind of screenshot, at
@@ -457,6 +463,47 @@ that differ from the normal window, base and Radiant, sampled on card-versions.c
 threshold for a point that differs. `classicPlusAltScenes.test.tsx` holds every recipe to the rules and every Alt art
 level's face to its picture and its Radiant marks, and `classicplus-alt-scenes.cy.tsx` measures each window's share
 and screenshots each normal face beside its Alt art face.
+
+## Meditative+ and Training Grounds drawn as scenes (R3393000, R3393001)
+
+Every Meditative+ entry (#1 to #26 and their seven tokens) and every Training Grounds entry (#1 to #60 and the
+Golem token) draws from a recipe of its own, each from its brief (#3393's table), base and Radiant. The recipes
+are in id order in three tables spread into `SCENE_RECIPES` after the proofs: `sceneRecipesMeditativePlus.ts`
+(#1 to #11, spreading `sceneRecipesMeditativePlus2.ts`'s #12 to #26), `sceneRecipesTrainingGrounds.ts` (#1 to
+#40, spreading `sceneRecipesTrainingGrounds2.ts`'s Units from #21 on and #39's Golem token) and
+`sceneRecipesLegacy.ts` (#41 to #60), each set's table split in two files as the Classic+ pass split its own.
+Meditative+ paints in the Meditative family's ink wash: layered `peaks` in mist behind, a high and distant
+camera, and exactly one red `seal` in the near layer, in a lower corner inside the band a face's window
+shows (y 18 to 82 of the box), so every face shows it. Training Grounds paints in carved wood: the yard's
+`palisade` and `sand` wherever its brief is set in the yard, the sun from the upper right but at night. Each
+keeps its brief's subject, setting and idea, its subject within x 30 to 70 and y 25 to 85, and stands its emblem
+small on its subject.
+
+Every Unit is a figure from the figure kit in a look built from its tags' with its brief's own parts, never the
+hooded traveller; a Unit that is a thing is built from figure parts too: the living potions a flask's body with
+eyes (`outfit-flask`, `head-eyes`) on stubby legs, Flame Tongue Totem, Floodgates and the Training Dummy on a
+post (`pose-post`), the Golem of lashed posts with a sack head, the Shredder on treads. A brief's other
+characters are `extras`, and a ghost, a copy or a flicker a `fade`. The parts the briefs named joined the kits,
+in modules of their own beside the first: the mountains' 38 (`sceneKitMountain.ts`), the yard's 35
+(`sceneKitYard.ts`) and the Legacy cards' 14 yard touches and props (`sceneKitTouches.ts`), and the figure kit's
+four new poses, three heads, six hairs and headgears, eight outfits and ten held items (its lab coat and club
+Core's, `outfit-labcoat` and `item-club`, its tree-trunk club `item-trunk-club`). A part named as the kit names
+one already is named for what sets it apart, so a module's spread never replaces it: the mountains' camp tent
+and waterfall are `camp-tent` and `cascade`, apart from the Alt art scenes' `tent` and `waterfall`, and
+`ink-pine`, `mossy-boulder`, `lacquer-pavilion`, `steam-curl`, `wood-ladder`, `yard-sand`, `yard-well`,
+`smithy`, `plank-bench`, `pale-bean`, `bell-pole`, `target-board` and `hypno-bunny` stand apart from Core's
+`pine`, `boulder`, `pavilion`, `steam`, `ladder`, `sand`, `well`, `forge`, `bench`, `jelly-bean`, `bell`,
+`target` and `bunny`.
+
+A Legacy card (R3393001) draws its own brief's scene and places its yard touch (`LEGACY_TOUCHES`) once, as the
+kit part `LEGACY_TOUCH_PARTS` names; its face wears its Core card's frozen emblem, the glyph and paint of the
+picture its Core card drew before any recipe, so the two still read as one card across the sets. It is still
+one picture (no motion, no parts, no seed of its own) and never draws its Core card's scene, which every
+Legacy card's Core card has since Core's pass (R3392000). The yard painter
+(`traininggrounds.ts`) and `legacySvg` now draw only a card with no recipe. Every entry clears its rarity's floor
+and is off the short list, whose cap fell from 337 to 289; `setScenes.test.ts` holds the two sets to all of it,
+and `set-scenes.cy.tsx` shows every Epic, Legendary and Mythic entry at hand size and the rest as a contact
+sheet, at desktop size and at 390x844.
 
 ## The detail floor (R3331001)
 
