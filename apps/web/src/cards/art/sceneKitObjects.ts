@@ -3,10 +3,10 @@
 // a gift box), tools and machines (a gear, pipes, an hourglass, an astrolabe, a spatula, bellows, a slate board),
 // weapons and training (an axe, a ring of blades, an arrow, a weapon rack, weights, knuckles), potions (a flask, a
 // cauldron), locks and chains (a padlock, a chain, a key), the dead and the humble (a candle, bones, pebbles,
-// bread), a drum, a lyre and a pair of scales. sceneKit.ts spreads the table into `SCENE_KIT`. Each part keeps the
-// kit's rules: one to twelve filled shapes drawn in its own frame (`local`), varied by the scene's stream alone,
-// every colour a palette name out of Radiant's gold window (brass and orange stand for gold), a glow a stack of
-// translucent shapes, and no two sub-paths of one shape overlapping but for a hole.
+// bread), a drum, a lyre, a pair of scales and a bamboo chute. sceneKit.ts spreads the table into `SCENE_KIT`. Each
+// part keeps the kit's rules: one to twelve filled shapes drawn in its own frame (`local`), varied by the scene's
+// stream alone, every colour a palette name out of Radiant's gold window (brass and orange stand for gold), a glow
+// a stack of translucent shapes, and no two sub-paths of one shape overlapping but for a hole.
 
 import { fmt } from "./hash.ts";
 import { between, blob, DEGREES, INKED, local, MAIN, MAIN_INKED, shape, sparkle, spiralArm, turned, whole, type Local, type Point } from "./kitDraw.ts";
@@ -1009,6 +1009,21 @@ function scales(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+/** A bamboo chute sloping down to the right from (-14, -18) to (14, 0), on two stilts, its joints banded, 28 wide and 18 tall at scale 1. */
+function chute(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const sag = between(rng, -0.6, 0.6);
+  const top: Point = [-14, -18];
+  const foot: Point = [14, 0 + sag * 0.3];
+  const joints = [0.25, 0.5, 0.75].map((t): Point => [top[0] + (foot[0] - top[0]) * t, top[1] + (foot[1] - top[1]) * t]);
+  return [
+    shape(`${seg(f, [-9, -14.6], [-9, 0], 1.1)}${seg(f, [3, -6.9 + sag * 0.2], [3, 0], 1.1)}`, "wood-700", 1, INKED),
+    shape(seg(f, top, foot, 3.2), "lime-400", 1, MAIN_INKED),
+    shape(seg(f, offset(top, foot, 0, 0.9), offset(foot, top, 0, -0.9), 0.6), "green-700", 0.8),
+    shape(joints.map((j) => seg(f, offset(j, foot, 0, -1.7), offset(j, foot, 0, 1.7), 0.5)).join(""), "green-700", 1),
+  ];
+}
+
 export const OBJECTS_KIT = {
   scroll: { category: "objects", draw: scroll },
   tome: { category: "objects", draw: tome },
@@ -1044,4 +1059,5 @@ export const OBJECTS_KIT = {
   dice: { category: "objects", draw: dice },
   bread: { category: "objects", draw: bread },
   quill: { category: "objects", draw: quill },
+  chute: { category: "objects", draw: chute },
 } as const satisfies Readonly<Record<string, KitPart>>;

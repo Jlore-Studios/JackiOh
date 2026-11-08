@@ -920,6 +920,426 @@ const CONJURE_RUSH_TOKEN_PLUS: SceneRecipe = {
   },
 };
 
+/** Conjure Rush Token++ (Classic+ #17, Epic): a swaggering sprinter in spiked boots explodes from a tornado ring on a colonnaded racecourse, stone statues cheering behind. */
+const CONJURE_RUSH_TOKEN_PLUS_PLUS: SceneRecipe = {
+  family: "classic",
+  sky: ["blue-900", "blue-700"],
+  light: { x: 50, y: 52, r: 34, paint: "cyan-400", opacity: 0.45 },
+  emblem: { x: 18, y: 34, size: 5, rotate: 0 },
+  figure: {
+    x: 52,
+    y: 74,
+    scale: 0.95,
+    pose: "pose-run",
+    look: { ...figureLookFor([]), hair: "hair-short", outfit: "outfit-jacket", item: null, skin: "red-300", cloth: "blue-600" },
+  },
+  layers: {
+    sky: [
+      { part: "cloud", x: 30, y: 18, scale: 1, count: 2, spread: [14, 3], paint: "slate-700" },
+      { part: "lightning", x: 80, y: 16, scale: 0.7, paint: "cyan-400" },
+    ],
+    far: [
+      { part: "statue", x: 10, y: 62, scale: 0.9, paint: "stone-500" },
+      { part: "statue", x: 26, y: 60, scale: 0.75, flip: -1, paint: "stone-500" },
+      { part: "statue", x: 74, y: 60, scale: 0.75, paint: "stone-500" },
+      { part: "statue", x: 90, y: 62, scale: 0.9, flip: -1, paint: "stone-500" },
+      { part: "column", x: 40, y: 58, scale: 0.8 },
+      { part: "column", x: 60, y: 58, scale: 0.8 },
+    ],
+    mid: [
+      { part: "street", x: 50, y: 62, paint: "stone-500" },
+      { part: "rune-circle", x: 50, y: 82, scale: 1.2, paint: "cyan-400" },
+    ],
+    subject: [{ part: "tornado", x: 50, y: 86, scale: 1.2, paint: "sky-300" }],
+    near: [
+      { part: "pebbles", x: 18, y: 97, scale: 1.2 },
+      { part: "pebbles", x: 82, y: 96, scale: 1.1 },
+      { part: "dust", x: 70, y: 92, scale: 1.2, paint: "stone-500" },
+    ],
+    light: [
+      { part: "halo", x: 52, y: 52, scale: 2, paint: "cyan-400" },
+      { part: "rim-light", x: 50, y: 56, scale: 1.4, paint: "sky-300" },
+    ],
+    particles: [
+      { part: "sparks", x: 42, y: 50, scale: 1.1, count: 2, spread: [14, 6], paint: "cyan-400" },
+      { part: "motes", x: 64, y: 40, scale: 1.2, paint: "sky-300" },
+    ],
+  },
+};
+
+/** Gullible Treatler (Classic+ #18, Common): a wide-eyed man in a patched costume holds out a candy sack before a shuttered shrine gate at lantern-lit dusk. */
+const GULLIBLE_TREATLER: SceneRecipe = {
+  family: "classic",
+  sky: ["violet-700", "orange-400"],
+  light: { x: 30, y: 56, r: 30, paint: "orange-400", opacity: 0.4 },
+  emblem: { x: 80, y: 30, size: 5, rotate: 0 },
+  figure: {
+    x: 40,
+    y: 88,
+    scale: 1,
+    pose: "pose-raise",
+    look: { ...figureLookFor(["Human"]), hair: "hair-short", outfit: "outfit-patched", item: "item-sack", skin: "red-300", cloth: "orange-400" },
+  },
+  layers: {
+    sky: [{ part: "moon", x: 82, y: 20, scale: 0.4, paint: "slate-100" }],
+    far: [{ part: "temple", x: 66, y: 66, scale: 0.8, paint: "stone-500" }],
+    mid: [
+      { part: "street", x: 50, y: 66, paint: "stone-500" },
+      { part: "gate", x: 68, y: 82, scale: 1.4 },
+      { part: "lantern", x: 52, y: 52, scale: 0.9 },
+      { part: "lantern", x: 86, y: 52, scale: 0.9 },
+    ],
+    light: [{ part: "halo", x: 52, y: 58, scale: 1.2, paint: "orange-400" }],
+    particles: [{ part: "motes", x: 40, y: 44, scale: 1, paint: "orange-400" }],
+  },
+};
+
+/** A Loser of the League's own: each mismatched, each into a lane of its own. */
+const TOP_LOSER: FigureLook = { ...figureLookFor([]), hair: "helm", outfit: "outfit-plate", item: "item-tower-shield", skin: "red-300", cloth: "slate-400" };
+const JUNGLE_LOSER: FigureLook = { ...figureLookFor([]), hair: "leaf-crown", outfit: "outfit-leaves", item: "item-spear", skin: "wood-600", cloth: "green-700" };
+const MID_LOSER: FigureLook = { ...figureLookFor([]), hair: "hat-pointed", outfit: "outfit-robe", item: "item-coin", skin: "red-300", cloth: "violet-500" };
+const SUPPORT_LOSER: FigureLook = { ...figureLookFor([]), hair: "hood", outfit: "outfit-robe", item: "item-staff", skin: "red-300", cloth: "white" };
+const BOT_LOSER: FigureLook = { ...figureLookFor([]), hair: "hair-short", outfit: "outfit-tunic", item: "item-bow", skin: "wood-600", cloth: "red-600" };
+
+/** League of Losers (Classic+ #19, Legendary): five mismatched adventurers tumble out of a summoning circle onto a jungle temple causeway, each stumbling into a lane of its own. */
+const LEAGUE_OF_LOSERS: SceneRecipe = {
+  family: "classic",
+  sky: ["orange-400", "red-300"],
+  light: { x: 18, y: 34, r: 36, paint: "orange-400", opacity: 0.45 },
+  emblem: { x: 50, y: 26, size: 5, rotate: 0 },
+  figure: { x: 50, y: 80, scale: 0.72, pose: "pose-raise", look: MID_LOSER },
+  extras: [
+    { layer: "subject", x: 24, y: 70, scale: 0.6, flip: -1, pose: "pose-guard", look: TOP_LOSER },
+    { layer: "subject", x: 76, y: 86, scale: 0.62, pose: "pose-flex", look: BOT_LOSER },
+    { layer: "subject", x: 66, y: 66, scale: 0.5, flip: -1, pose: "pose-kneel", look: SUPPORT_LOSER },
+    { layer: "mid", x: 86, y: 62, scale: 0.42, pose: "pose-sit", look: JUNGLE_LOSER },
+  ],
+  layers: {
+    sky: [
+      { part: "sun", x: 16, y: 24, scale: 0.8 },
+    ],
+    far: [
+      { part: "arch", x: 50, y: 58, scale: 1.4, paint: "stone-500" },
+      { part: "tree", x: 10, y: 60, scale: 1.4, paint: "green-700" },
+    ],
+    mid: [
+      { part: "street", x: 50, y: 60, paint: "stone-500" },
+      { part: "rune-circle", x: 50, y: 78, scale: 1.4, paint: "violet-300" },
+    ],
+    near: [
+      { part: "grass-tuft", x: 50, y: 98, paint: "green-700" },
+      { part: "banner", x: 12, y: 92, scale: 1, props: true },
+      { part: "banner", x: 90, y: 94, scale: 0.9, flip: -1, props: true },
+    ],
+    light: [
+      { part: "light-shaft", x: 18, y: 0, scale: 1.2, paint: "orange-400" },
+      { part: "halo", x: 50, y: 74, scale: 2.2, paint: "violet-300" },
+      { part: "rim-light", x: 50, y: 58, scale: 1.4, paint: "orange-400" },
+    ],
+    particles: [
+      { part: "petals", x: 50, y: 40, scale: 1.4, paint: "red-300" },
+      { part: "sparks", x: 50, y: 62, scale: 1, paint: "violet-300" },
+    ],
+  },
+};
+
+/** Top Loser (Classic+ #19.1, Token): a heavily armoured loner with a tower shield stands alone on a high ruined rampart, his back to everyone, under windy grey overcast. */
+const TOP_LOSER_SCENE: SceneRecipe = {
+  family: "classic",
+  sky: ["slate-700", "slate-400"],
+  light: { x: 24, y: 40, r: 30, paint: "slate-100", opacity: 0.3 },
+  emblem: { x: 18, y: 32, size: 5, rotate: 0 },
+  figure: { x: 52, y: 80, scale: 1, flip: -1, pose: "pose-guard", look: { ...TOP_LOSER, cloth: "slate-700" } },
+  layers: {
+    sky: [{ part: "cloud", x: 60, y: 22, scale: 1.1, count: 2, spread: [18, 4], paint: "slate-400" }],
+    far: [{ part: "mountains", x: 50, y: 72, paint: "slate-700" }],
+    mid: [
+      { part: "ruin-wall", x: 50, y: 88, scale: 2.6, paint: "stone-500" },
+      { part: "tower", x: 86, y: 80, scale: 1.1 },
+    ],
+    particles: [{ part: "mist", x: 30, y: 60, scale: 1, paint: "white" }],
+  },
+};
+
+/** Jungle Loser (Classic+ #19.2, Token): a lazy hunter in leaf camouflage naps in a vine-wrapped temple hollow, one eye half open, his spear propped by him. */
+const JUNGLE_LOSER_SCENE: SceneRecipe = {
+  family: "classic",
+  sky: ["green-900", "green-700"],
+  light: { x: 30, y: 30, r: 30, paint: "lime-400", opacity: 0.3 },
+  emblem: { x: 80, y: 34, size: 5, rotate: 0 },
+  figure: { x: 50, y: 84, scale: 1, pose: "pose-sit", look: { ...JUNGLE_LOSER, cloth: "green-500" } },
+  layers: {
+    far: [{ part: "cave", x: 50, y: 86, scale: 1.1, paint: "stone-500" }],
+    mid: [
+      { part: "rock-floor", x: 50, y: 80, paint: "stone-500" },
+      { part: "vine", x: 20, y: 60, scale: 1.4 },
+      { part: "vine", x: 80, y: 58, scale: 1.3, flip: -1 },
+      { part: "fern", x: 26, y: 86, scale: 1.2 },
+    ],
+    particles: [{ part: "motes", x: 60, y: 40, scale: 1, paint: "lime-200" }],
+  },
+};
+
+/** Mid Loser (Classic+ #19.3, Token): a cocky young mage on a cracked central bridge flips a coin at twilight, his aura half blazing and half drained. */
+const MID_LOSER_SCENE: SceneRecipe = {
+  family: "classic",
+  sky: ["violet-700", "red-300"],
+  light: { x: 50, y: 50, r: 30, paint: "violet-300", opacity: 0.35 },
+  emblem: { x: 82, y: 30, size: 5, rotate: 0 },
+  figure: { x: 50, y: 78, scale: 0.95, pose: "pose-raise", look: { ...MID_LOSER, hair: "hair-short", cloth: "violet-700" } },
+  layers: {
+    sky: [{ part: "stars", x: 50, y: 20, scale: 0.8, paint: "slate-100" }],
+    far: [{ part: "water", x: 50, y: 70, paint: "blue-700" }],
+    mid: [{ part: "bridge", x: 50, y: 76, scale: 1.6, paint: "stone-500" }],
+    light: [
+      { part: "halo", x: 40, y: 54, scale: 1.4, paint: "ember-500" },
+      { part: "halo", x: 60, y: 54, scale: 1.4, paint: "slate-400" },
+    ],
+    particles: [{ part: "sparks", x: 60, y: 34, scale: 0.9, paint: "white" }],
+  },
+};
+
+/** Support Loser (Classic+ #19.4, Token): a weary healer in white robes sighs behind a shimmering shield bubble on mossy river steps, raising a staff of soft mending light. */
+const SUPPORT_LOSER_SCENE: SceneRecipe = {
+  family: "classic",
+  sky: ["sky-400", "blue-200"],
+  light: { x: 50, y: 50, r: 30, paint: "green-200", opacity: 0.35 },
+  emblem: { x: 18, y: 30, size: 5, rotate: 0 },
+  figure: { x: 50, y: 80, scale: 0.95, pose: "pose-raise", look: { ...SUPPORT_LOSER, skin: "wood-600", cloth: "slate-100" } },
+  layers: {
+    far: [{ part: "water", x: 50, y: 66, paint: "blue-600" }],
+    mid: [
+      { part: "stairs", x: 50, y: 76, paint: "stone-500" },
+      { part: "grass-tuft", x: 20, y: 80, count: 2, spread: [6, 1], paint: "green-700" },
+    ],
+    subject: [{ part: "dome", x: 50, y: 82, scale: 1.1, paint: "sky-300" }],
+    particles: [{ part: "motes", x: 56, y: 36, scale: 1, paint: "green-200" }],
+  },
+};
+
+/** Bot Loser (Classic+ #19.5, Token): a boastful archer flexes atop a pile of beaten foes on a riverside causeway at hot sunset, quiver bulging. */
+const BOT_LOSER_SCENE: SceneRecipe = {
+  family: "classic",
+  sky: ["red-600", "orange-400"],
+  light: { x: 30, y: 44, r: 32, paint: "ember-500", opacity: 0.4 },
+  emblem: { x: 82, y: 30, size: 5, rotate: 0 },
+  figure: { x: 50, y: 70, scale: 0.85, pose: "pose-flex", look: { ...BOT_LOSER, cloth: "red-900" } },
+  extras: [
+    { layer: "subject", x: 40, y: 88, scale: 0.5, pose: "pose-kneel", look: { ...figureLookFor([]), item: null, cloth: "slate-700" } },
+    { layer: "subject", x: 62, y: 88, scale: 0.5, flip: -1, pose: "pose-kneel", look: { ...figureLookFor([]), item: null, cloth: "stone-500" } },
+  ],
+  layers: {
+    sky: [{ part: "sun", x: 20, y: 40, scale: 0.9 }],
+    far: [{ part: "water", x: 50, y: 66, paint: "red-900" }],
+    mid: [{ part: "street", x: 50, y: 74, paint: "stone-500" }],
+  },
+};
+
+/** Mushroom Power (Classic+ #20, Common): a cheerful little mushroom sprite puffs glowing green spores onto two neighbouring sprouts on a mossy temple step in morning dew. */
+const MUSHROOM_POWER: SceneRecipe = {
+  family: "classic",
+  sky: ["sky-300", "green-200"],
+  light: { x: 24, y: 34, r: 30, paint: "white", opacity: 0.35 },
+  emblem: { x: 80, y: 30, size: 5, rotate: 0 },
+  figure: { x: 50, y: 82, scale: 0.8, pose: "pose-spread", look: { ...figureLookFor([]), head: "head-mushroom", hair: null, outfit: "outfit-leaves", item: null, skin: "red-300", cloth: "green-500" } },
+  layers: {
+    far: [{ part: "temple", x: 50, y: 60, scale: 0.6, paint: "stone-500" }],
+    mid: [
+      { part: "stairs", x: 50, y: 66, paint: "stone-500" },
+      { part: "sprout", x: 26, y: 82, scale: 1.8 },
+      { part: "sprout", x: 74, y: 82, scale: 1.8 },
+      { part: "grass-tuft", x: 14, y: 90, count: 2, spread: [6, 1], paint: "green-700" },
+    ],
+    particles: [
+      { part: "spores", x: 32, y: 66, scale: 1, paint: "green-400" },
+      { part: "spores", x: 68, y: 66, scale: 1, paint: "green-400" },
+    ],
+  },
+};
+
+/** Whirlwind (Classic+ #21, Common): a whirling warrior's spinning blades whip a tornado of dust and stone through a colonnade, nearby fighters flung spinning in ochre glare. */
+const WHIRLWIND: SceneRecipe = {
+  family: "classic",
+  sky: ["orange-400", "brass-500"],
+  light: { x: 50, y: 50, r: 32, paint: "orange-400", opacity: 0.4 },
+  emblem: { x: 18, y: 30, size: 5, rotate: 0 },
+  figure: { x: 50, y: 82, scale: 0.85, pose: "pose-spread", look: { ...figureLookFor([]), hair: "helm", outfit: "outfit-armor", item: "item-sword", skin: "wood-600", cloth: "red-900" } },
+  extras: [
+    { layer: "mid", x: 18, y: 56, scale: 0.36, flip: -1, pose: "pose-spread", look: { ...figureLookFor([]), item: null, cloth: "slate-700" } },
+    { layer: "mid", x: 82, y: 50, scale: 0.34, pose: "pose-spread", look: { ...figureLookFor([]), item: null, cloth: "stone-500" } },
+  ],
+  layers: {
+    far: [
+      { part: "column", x: 10, y: 64, scale: 1 },
+      { part: "column", x: 90, y: 64, scale: 1 },
+    ],
+    mid: [{ part: "tile-floor", x: 50, y: 64, paint: "stone-500" }],
+    subject: [
+      { part: "tornado", x: 50, y: 88, scale: 1.4, paint: "stone-500" },
+      { part: "blade-ring", x: 50, y: 60, scale: 1.1 },
+    ],
+    particles: [{ part: "dust", x: 50, y: 40, scale: 1.4, paint: "stone-500" }],
+  },
+};
+
+/** Blood Moon (Classic+ #22, Rare): a blood-red moon over a battlefield infirmary in temple ruins, a healer's bandage smouldering into a burn on a wounded raider's arm. */
+const BLOOD_MOON: SceneRecipe = {
+  family: "classic",
+  sky: ["slate-900", "red-900"],
+  light: { x: 70, y: 24, r: 34, paint: "red-600", opacity: 0.45 },
+  emblem: { x: 18, y: 34, size: 5, rotate: 0 },
+  figure: { x: 40, y: 86, scale: 0.85, pose: "pose-kneel", look: { ...RAIDER, hair: null, item: null, outfit: "outfit-wraps" } },
+  extras: [{ layer: "subject", x: 62, y: 84, scale: 0.85, flip: -1, pose: "pose-raise", look: { ...figureLookFor([]), hair: "hood", outfit: "outfit-robe", item: null, skin: "red-300", cloth: "slate-100" } }],
+  layers: {
+    sky: [
+      { part: "moon", x: 72, y: 22, scale: 0.8, paint: "red-600" },
+      { part: "stars", x: 24, y: 18, scale: 0.7, paint: "red-300" },
+    ],
+    far: [
+      { part: "ruin-wall", x: 14, y: 64, scale: 1.2, paint: "slate-700" },
+      { part: "column", x: 86, y: 64, scale: 1 },
+      { part: "fallen-column", x: 70, y: 66, scale: 0.8 },
+    ],
+    mid: [
+      { part: "rock-floor", x: 50, y: 64, paint: "slate-700" },
+      { part: "cot", x: 22, y: 82, scale: 1.2 },
+      { part: "cot", x: 84, y: 80, scale: 1.1, flip: -1 },
+      { part: "candle", x: 12, y: 90, scale: 0.8 },
+    ],
+    subject: [{ part: "flames", x: 48, y: 64, scale: 0.6, paint: "ember-500" }],
+    light: [{ part: "halo", x: 48, y: 62, scale: 1, paint: "red-600" }],
+    particles: [
+      { part: "embers", x: 48, y: 56, scale: 1.2, count: 2, spread: [5, 4], paint: "ember-500" },
+      { part: "smoke", x: 50, y: 50, scale: 0.8, paint: "slate-400" },
+    ],
+  },
+};
+
+/** Dropshipping (Classic+ #23, Epic): flimsy paper-wrapped crates slide down a bamboo chute into a crowded stone river port under drizzle, one splitting open on the quay. */
+const DROPSHIPPING: SceneRecipe = {
+  family: "classic",
+  sky: ["slate-700", "slate-400"],
+  light: { x: 24, y: 30, r: 30, paint: "slate-100", opacity: 0.3 },
+  emblem: { x: 82, y: 30, size: 5, rotate: 0 },
+  figure: { x: 64, y: 82, scale: 0.7, pose: "pose-run", look: { ...figureLookFor(["CN"]), hair: "hat-brim", outfit: "outfit-tunic", item: "item-spear", skin: "red-300", cloth: "blue-800" } },
+  extras: [
+    { layer: "mid", x: 80, y: 70, scale: 0.46, flip: -1, pose: "pose-run", look: { ...figureLookFor(["CN"]), hair: "hat-brim", outfit: "outfit-tunic", item: "item-spear", skin: "red-300", cloth: "slate-700" } },
+    { layer: "mid", x: 22, y: 68, scale: 0.42, pose: "pose-stand", look: { ...figureLookFor(["CN"]), hair: "hat-brim", outfit: "outfit-tunic", item: "item-sack", skin: "red-300", cloth: "wood-700" } },
+  ],
+  layers: {
+    sky: [{ part: "cloud", x: 50, y: 18, scale: 1.2, count: 2, spread: [22, 3], paint: "slate-400" }],
+    far: [
+      { part: "house", x: 16, y: 56, scale: 0.8, paint: "red-600" },
+      { part: "house", x: 50, y: 54, scale: 0.7, paint: "red-600" },
+      { part: "house", x: 86, y: 56, scale: 0.8, flip: -1, paint: "red-600" },
+      { part: "water", x: 50, y: 58, paint: "blue-700" },
+    ],
+    mid: [
+      { part: "street", x: 50, y: 70, paint: "stone-500" },
+      { part: "awning", x: 90, y: 72, scale: 0.8, paint: "red-600" },
+    ],
+    subject: [
+      { part: "chute", x: 42, y: 78, scale: 1.4 },
+      { part: "crate", x: 30, y: 58, scale: 0.9, paint: "slate-100" },
+      { part: "crate", x: 42, y: 66, scale: 0.9, paint: "slate-100" },
+      { part: "crate", x: 56, y: 76, scale: 1, paint: "slate-100" },
+    ],
+    near: [
+      { part: "crate", x: 20, y: 98, scale: 1.6, paint: "slate-100" },
+      { part: "scroll", x: 30, y: 96, scale: 0.8 },
+      { part: "crate", x: 86, y: 98, scale: 1.3 },
+    ],
+    light: [{ part: "halo", x: 24, y: 34, scale: 1.2, paint: "slate-100" }],
+    particles: [
+      { part: "rain", x: 30, y: 30, scale: 1, paint: "slate-100" },
+      { part: "rain", x: 72, y: 34, scale: 1, paint: "slate-100" },
+    ],
+  },
+};
+
+/** Crushing Walls (Classic+ #24, Epic): two carved temple walls grind inward along a long stone hall, crushing the statues and soldiers at either end while the middle rank flinches. */
+const CRUSHING_WALLS: SceneRecipe = {
+  family: "classic",
+  sky: ["slate-900", "slate-700"],
+  light: { x: 50, y: 40, r: 24, paint: "orange-400", opacity: 0.35 },
+  emblem: { x: 50, y: 28, size: 5, rotate: 0 },
+  figure: { x: 50, y: 82, scale: 0.8, pose: "pose-guard", look: { ...RAIDER, cloth: "blue-800" } },
+  extras: [
+    { layer: "subject", x: 38, y: 78, scale: 0.6, pose: "pose-kneel", look: { ...RAIDER, cloth: "slate-700" } },
+    { layer: "subject", x: 62, y: 78, scale: 0.6, flip: -1, pose: "pose-kneel", look: { ...RAIDER, cloth: "wood-700" } },
+  ],
+  layers: {
+    sky: [{ part: "light-shaft", x: 52, y: 0, scale: 0.8, paint: "slate-100" }],
+    far: [
+      { part: "room-wall", x: 50, y: 64, paint: "slate-700" },
+      { part: "arch", x: 50, y: 64, scale: 1.2, paint: "stone-500" },
+    ],
+    mid: [
+      { part: "tile-floor", x: 50, y: 64, paint: "stone-500" },
+      { part: "ruin-wall", x: 6, y: 84, scale: 2.4, paint: "stone-500" },
+      { part: "ruin-wall", x: 94, y: 84, scale: 2.4, flip: -1, paint: "stone-500" },
+      { part: "statue", x: 20, y: 78, scale: 0.9, paint: "stone-500" },
+      { part: "statue", x: 80, y: 78, scale: 0.9, flip: -1, paint: "stone-500" },
+    ],
+    subject: [{ part: "dust", x: 50, y: 82, scale: 1.4, paint: "stone-500" }],
+    near: [
+      { part: "pebbles", x: 30, y: 97, scale: 1.3 },
+      { part: "fallen-column", x: 14, y: 98, scale: 0.9 },
+    ],
+    light: [
+      { part: "halo", x: 14, y: 64, scale: 1, paint: "orange-400" },
+      { part: "halo", x: 86, y: 64, scale: 1, paint: "orange-400" },
+    ],
+    particles: [
+      { part: "dust", x: 20, y: 60, scale: 1.2, paint: "stone-500" },
+      { part: "embers", x: 50, y: 40, scale: 1, count: 2, spread: [20, 6], paint: "orange-400" },
+    ],
+  },
+};
+
+/** Soul Shot (Classic+ #25, Common): a ghostly crossbow bolt streaks through a crowded torchlit barracks to strike one enemy soldier, who dissolves into drifting wisps. */
+const SOUL_SHOT: SceneRecipe = {
+  family: "classic",
+  sky: ["slate-900", "blue-900"],
+  light: { x: 60, y: 50, r: 30, paint: "cyan-400", opacity: 0.35 },
+  emblem: { x: 18, y: 30, size: 5, rotate: 0 },
+  figure: { x: 62, y: 84, scale: 0.85, flip: -1, pose: "pose-spread", look: { ...RAIDER, item: null, cloth: "blue-800" } },
+  layers: {
+    far: [
+      { part: "room-wall", x: 50, y: 66, paint: "slate-700" },
+      { part: "weapon-rack", x: 86, y: 66, scale: 0.9 },
+    ],
+    mid: [
+      { part: "tile-floor", x: 50, y: 66, paint: "slate-700" },
+      { part: "lantern", x: 16, y: 40, scale: 0.9 },
+    ],
+    subject: [{ part: "arrow", x: 36, y: 58, scale: 1.1, paint: "cyan-400" }],
+    particles: [{ part: "wisp", x: 64, y: 50, scale: 1.2, count: 2, spread: [8, 6], paint: "cyan-400" }],
+  },
+};
+
+/** Tommy Tempo (Classic+ #26, Common): Tommy Tempo, a broad-shouldered guard, slams a huge hourglass onto a clocktower's stone floor as the gears behind him grind still. */
+const TOMMY_TEMPO: SceneRecipe = {
+  family: "classic",
+  sky: ["slate-800", "blue-700"],
+  light: { x: 50, y: 40, r: 30, paint: "sky-300", opacity: 0.35 },
+  emblem: { x: 18, y: 30, size: 5, rotate: 0 },
+  figure: { x: 46, y: 86, scale: 1, pose: "pose-strike", look: { ...figureLookFor(["Human"]), hair: "helm", outfit: "outfit-armor", item: "item-hourglass", skin: "red-300", cloth: "blue-800" } },
+  layers: {
+    far: [
+      { part: "room-wall", x: 50, y: 68, paint: "slate-700" },
+      { part: "clock-face", x: 50, y: 30, scale: 1.3 },
+    ],
+    mid: [
+      { part: "tile-floor", x: 50, y: 68, paint: "stone-500" },
+      { part: "gear", x: 14, y: 50, scale: 1.1, props: true },
+      { part: "gear", x: 86, y: 54, scale: 0.9, props: true },
+    ],
+    light: [{ part: "halo", x: 50, y: 30, scale: 1.4, paint: "sky-300" }],
+    particles: [{ part: "dust", x: 50, y: 88, scale: 1, paint: "stone-500" }],
+  },
+};
+
 /** R3390000: Classic+ #1 to #26 with #12's and #19's tokens, by id. */
 export const CLASSIC_PLUS_RECIPES_1: Readonly<Record<string, SceneRecipe>> = {
   "classicplus-001": DOOM_SHROOM,
@@ -946,4 +1366,19 @@ export const CLASSIC_PLUS_RECIPES_1: Readonly<Record<string, SceneRecipe>> = {
   "classicplus-014": FOREVER_AND,
   "classicplus-015": CONJURE_RUSH_TOKEN,
   "classicplus-016": CONJURE_RUSH_TOKEN_PLUS,
+  "classicplus-017": CONJURE_RUSH_TOKEN_PLUS_PLUS,
+  "classicplus-018": GULLIBLE_TREATLER,
+  "classicplus-019": LEAGUE_OF_LOSERS,
+  "classicplus-019-1": TOP_LOSER_SCENE,
+  "classicplus-019-2": JUNGLE_LOSER_SCENE,
+  "classicplus-019-3": MID_LOSER_SCENE,
+  "classicplus-019-4": SUPPORT_LOSER_SCENE,
+  "classicplus-019-5": BOT_LOSER_SCENE,
+  "classicplus-020": MUSHROOM_POWER,
+  "classicplus-021": WHIRLWIND,
+  "classicplus-022": BLOOD_MOON,
+  "classicplus-023": DROPSHIPPING,
+  "classicplus-024": CRUSHING_WALLS,
+  "classicplus-025": SOUL_SHOT,
+  "classicplus-026": TOMMY_TEMPO,
 };

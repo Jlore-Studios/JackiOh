@@ -791,7 +791,7 @@ const ORGANIC_PRODUCE: SceneRecipe = {
     ],
     near: [
       { part: "crate", x: 16, y: 98, scale: 2.4 },
-      { part: "apple", x: 13, y: 82, scale: 1.2, count: 3, spread: [4, 1] },
+      { part: "apple", x: 13, y: 82, scale: 1.2, count: 2, spread: [4, 1] },
       { part: "crate", x: 84, y: 98, scale: 2.4 },
       { part: "pear", x: 84, y: 82, scale: 1.2, count: 2, spread: [4, 1] },
     ],
@@ -1084,7 +1084,6 @@ const TWICE_FORWARD: SceneRecipe = {
       { part: "standing-stone", x: 50, y: 64, scale: 2, paint: "slate-400" },
       { part: "lightning", x: 48, y: 36, scale: 0.6, paint: "cyan-400" },
       { part: "fireball", x: 56, y: 48, scale: 0.5 },
-      { part: "lightning", x: 54, y: 52, scale: 0.4, paint: "slate-100" },
     ],
     near: [
       { part: "gear", x: 90, y: 94, scale: 1.6, paint: "slate-400" },
@@ -1116,13 +1115,12 @@ const J_LEASE: SceneRecipe = {
   },
   extras: [{ layer: "mid", x: 76, y: 88, scale: 0.55, flip: -1, pose: "pose-raise", look: { ...figureLookFor(["Human"]), hair: "kerchief", outfit: "outfit-jacket", item: null, cloth: "wood-600" } }],
   layers: {
-    sky: [{ part: "tree", x: 50, y: 30, scale: 2.4, count: 3, spread: [40, 4], paint: "green-700" }],
+    sky: [{ part: "tree", x: 50, y: 30, scale: 2.4, count: 2, spread: [40, 4], paint: "green-700" }],
     far: [
       { part: "temple", x: 50, y: 74, scale: 1.3 },
       { part: "statue", x: 14, y: 76, scale: 1.5 },
       { part: "statue", x: 86, y: 74, scale: 1.4, flip: -1 },
       { part: "monkey", x: 18, y: 42, scale: 1.2 },
-      { part: "monkey", x: 82, y: 36, scale: 1.1, flip: -1 },
     ],
     mid: [
       { part: "rock-floor", x: 50, y: 76, paint: "green-900" },
@@ -1142,7 +1140,6 @@ const J_LEASE: SceneRecipe = {
     ],
     particles: [
       { part: "petals", x: 50, y: 40, scale: 1.4, paint: "green-400" },
-      { part: "sparks", x: 64, y: 30, scale: 1, paint: "white" },
       { part: "motes", x: 40, y: 30, scale: 1.4, paint: "lime-200" },
     ],
   },
@@ -1289,17 +1286,14 @@ const CLAUDES_DATACENTER: SceneRecipe = {
   layers: {
     sky: [{ part: "room-wall", x: 50, y: 52, paint: "wood-700" }],
     far: [
-      { part: "arch", x: 50, y: 52, scale: 0.7 },
       { part: "arch", x: 50, y: 56, scale: 1.1 },
       { part: "arch", x: 50, y: 64, scale: 1.8 },
       { part: "card", x: 50, y: 50, scale: 0.9, paint: "orange-400" },
     ],
     mid: [
       { part: "tile-floor", x: 50, y: 52, paint: "stone-500" },
-      { part: "server-rack", x: 34, y: 60, scale: 0.7 },
       { part: "server-rack", x: 26, y: 68, scale: 1 },
       { part: "server-rack", x: 14, y: 80, scale: 1.4 },
-      { part: "server-rack", x: 66, y: 60, scale: 0.7 },
       { part: "server-rack", x: 74, y: 68, scale: 1 },
       { part: "server-rack", x: 86, y: 80, scale: 1.4 },
     ],
@@ -1310,13 +1304,10 @@ const CLAUDES_DATACENTER: SceneRecipe = {
     ],
     near: [
       { part: "chain", x: 4, y: 94, scale: 1.2, paint: "slate-900" },
-      { part: "chain", x: 62, y: 96, scale: 1.2, paint: "slate-900" },
       { part: "vine", x: 92, y: 98, scale: 1.2, paint: "slate-800" },
     ],
     light: [
       { part: "halo", x: 50, y: 46, scale: 2.4, paint: "orange-400" },
-      { part: "halo", x: 20, y: 64, scale: 2, paint: "cyan-400" },
-      { part: "halo", x: 80, y: 64, scale: 2, paint: "cyan-400" },
       { part: "rim-light", x: 38, y: 60, scale: 1.1, paint: "orange-400" },
     ],
     particles: [

@@ -68,9 +68,9 @@ function Page({ ids, box }: { ids: readonly string[]; box: Box }) {
   );
 }
 
-/** The painted art URI of the face with this name, or "" when it has none yet. */
+/** The painted art URI of the face with this name, or "" when it has none yet: its window's, not one of the depth planes #3383 stacks over an Epic and up. */
 function pictureOf(doc: Document, name: string): string {
-  const art = doc.querySelector(`[data-face="${name}"] .cf-art`);
+  const art = doc.querySelector(`[data-face="${name}"] .cf-art-frame > .cf-art`);
   if (art === null || !(art instanceof HTMLElement)) return "";
   return /^url\("(data:image\/svg\+xml,[^"]*)"\)$/.exec(getComputedStyle(art).backgroundImage)?.[1] ?? "";
 }
@@ -115,14 +115,14 @@ function showPages(screen: Screen, ids: readonly string[], box: Box, kind: "deep
   cy.viewport(screen.width, screen.height);
   pagesOf(ids, screen, box).forEach((page, n) => {
     cy.mount(<Page ids={page} box={box} />);
-    cy.get("[data-face] .cf-art", { timeout: SETTLE_TIMEOUT_MS }).should("have.length", page.length * 2);
+    cy.get("[data-face] .cf-art-frame > .cf-art", { timeout: SETTLE_TIMEOUT_MS }).should("have.length", page.length * 2);
     cy.get("[data-face] .cf-art[data-art-pending]", { timeout: SETTLE_TIMEOUT_MS }).should("not.exist");
     cy.document().its("fonts.status").should("eq", "loaded");
     cy.document().should((doc) => {
       for (const id of page) {
         for (const face of ["base", "radiant"]) {
           const name = `${id}-${face}`;
-          const shown = doc.querySelector(`[data-face="${name}"] .cf-art`)?.getBoundingClientRect();
+          const shown = doc.querySelector(`[data-face="${name}"] .cf-art-frame > .cf-art`)?.getBoundingClientRect();
           expect(shown?.width ?? 0, `${name} has a window`).to.be.greaterThan(0);
           expect(shown?.bottom ?? Infinity, `${name} fits the ${screen.label} screen`).to.be.at.most(screen.height);
           expect(pictureOf(doc, name), `${name} paints`).not.to.equal("");
