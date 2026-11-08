@@ -341,12 +341,13 @@ jobs:
   # BUILD M5-T1's "without layout overflow at 1280x720 and 390x844": jsdom has no layout engine, so
   # Cypress component testing mounts the 10-unit/10-backrow fixture board in a real browser. No
   # client build and no server: the component dev server compiles apps/web/src itself, on port 5273,
-  # and only needs the WASM module.
+  # and only needs the WASM module. All the specs in one job: 16 minutes on 2026-11-07, cut off at 20
+  # on 2026-11-08 (#3439) as the art and animation specs grew, so it gets 60 until it is sharded.
   component:
     name: e2e component (chrome)
     needs: wasm
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
