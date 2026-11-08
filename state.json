@@ -18162,11 +18162,6 @@
       "last_findings": [],
       "live": "resolving",
       "merge_owner": "claude-6",
-      "paused": {
-        "at": "2026-11-08T07:03:13Z",
-        "interrupt": "usage",
-        "provider": "claude-7"
-      },
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
