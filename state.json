@@ -16932,11 +16932,6 @@
       "owner": "claude-1",
       "owner_since": "2026-11-08T04:57:18Z",
       "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-08T09:00:00Z; it can start again only in 4h 02m, more than the 120 minutes an item waits for its owner",
-      "paused": {
-        "at": "2026-11-08T04:55:44Z",
-        "interrupt": "usage",
-        "provider": "claude-3"
-      },
       "pending_request": false,
       "planned_at": "2026-11-07T19:16:44Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
