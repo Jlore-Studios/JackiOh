@@ -16804,14 +16804,10 @@
         "approvals": [],
         "builder": "gpt",
         "built_by": "gpt",
-        "rejections": [
-          "gpt"
-        ],
+        "rejections": [],
         "reviews": [],
         "sha": "2b9e189e5395848f05ada8381b8d5b6e0ed419a2",
-        "tiers": {
-          "gpt": "medium"
-        }
+        "tiers": {}
       },
       "waiting_comment": 6717133241
     },
