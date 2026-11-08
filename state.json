@@ -17695,7 +17695,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-08T04:04:32Z",
+      "feedback_since": "2026-11-08T04:16:47Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-08T04:07:06Z",
@@ -17717,7 +17717,7 @@
       "queued_at": "2026-11-08T04:16:11Z",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "",
+      "round_tier": "medium",
       "run_id": "42446161587",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -17738,7 +17738,7 @@
         "provider": "claude-8",
         "run": "42427328495"
       },
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-08T04:16:47Z",
       "stop_requested": false,
       "taken_asks": [],
