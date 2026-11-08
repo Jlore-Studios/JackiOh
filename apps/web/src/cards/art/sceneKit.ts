@@ -45,6 +45,9 @@ import type { KitPart, KitShape, PaletteName, PartPlace, Rng } from "./scene.ts"
 import { NATURE_KIT } from "./sceneKitNature.ts";
 import { OBJECTS_KIT } from "./sceneKitObjects.ts";
 import { PLACES_KIT } from "./sceneKitPlaces.ts";
+import { MOUNTAIN_KIT } from "./sceneKitMountain.ts";
+import { TOUCHES_KIT } from "./sceneKitTouches.ts";
+import { YARD_KIT } from "./sceneKitYard.ts";
 
 // The helpers every kit module draws with, where the figure kit and scene.ts have always found them.
 export { bandPath, circlePath, ellipsePath, local, polygonPath, pt, rectPath, SCENE_BOX, type Local };
@@ -5140,6 +5143,10 @@ export const SCENE_KIT = {
   ...PLACES_KIT,
   ...OBJECTS_KIT,
   ...NATURE_KIT,
+  // R3393000: the parts the Meditative+, Training Grounds and Legacy scenes added.
+  ...MOUNTAIN_KIT,
+  ...YARD_KIT,
+  ...TOUCHES_KIT,
 } as const satisfies Readonly<Record<string, KitPart>>;
 
 export type SceneryPartId = keyof typeof SCENE_KIT;
