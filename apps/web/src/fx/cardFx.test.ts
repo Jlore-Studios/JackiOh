@@ -15,6 +15,7 @@ import { castOnDrawViews } from "../audio/test/realGame.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { entranceKeyOf, planCardFx, planSignatureZone, signaturePlayOf, sourceIdOf } from "./cardFx.ts";
 import { CARD_RECIPES } from "./cards/bespoke.ts";
+import { STINKYSCAPE_TWO_SIGNATURES } from "./cards/stinkyscape/signature.ts";
 import { FX_CARD_TABLE, parseFxCardTable } from "./cards/tables.ts";
 import { ENTRANCES } from "./entrances.ts";
 import { entranceCues } from "./takeover.ts";
@@ -355,6 +356,44 @@ describe("R502 the per-card table", () => {
     expect(planCardFx({ ...landing, row: "units", lane: 3 }, { entry, view, env, D }, table)).toBeNull();
     // R202: the hidden sentinel keys nothing.
     expect(planCardFx({ ...landing, defId: "hidden", instanceId: "hidden" }, { entry, view, env, D }, table)).toBeNull();
+  });
+
+  it("R3407000 a MAGI's own entrance and Imitated Instrumentality's boot both draw on the summon they both claim", () => {
+    const view = fullBoardView();
+    const landing: GameEvent = { type: "summoned", player: "p1", instanceId: "m1", defId: "stinkyscape-018-1", row: "backrow", lane: 2 };
+    const events: GameEvent[] = [played("p1", "ii", "stinkyscape-018"), landing];
+    const entry: AnimationEntry = { ...planEntries(events, withEvents(view, events), false)[0]!, events };
+    const D = entry.durationMs;
+    const env = envOf();
+    env.memory.remember([events[0]!]);
+    const both = planCardFx(landing, { entry, view, env, D });
+    // The entrance alone (no play resolving) and the boot alone (a table whose MELCHIOR has no entrance).
+    const entrance = planCardFx(landing, { entry, view, env: envOf(), D });
+    const table = new Map(FX_CARD_TABLE);
+    table.set("stinkyscape-018-1", { kind: "hooks", hooks: {} });
+    const boot = planCardFx(landing, { entry, view, env, D }, table);
+    expect(entrance?.cues.length).toBeGreaterThan(0);
+    expect(boot?.cues.length).toBeGreaterThan(0);
+    expect(both).toEqual({ cues: [...(entrance?.cues ?? []), ...(boot?.cues ?? [])], row: "replace" });
+  });
+
+  it("R3407000 every other signature with an entrance and a recipe lands as before: its entrance alone, the recipe claiming nothing of its own summon", () => {
+    const view = fullBoardView();
+    const others = [...FX_CARD_TABLE].filter(([defId, entry]) => entry.kind === "bespoke" && entry.entrance !== undefined && !(STINKYSCAPE_TWO_SIGNATURES as readonly string[]).includes(defId));
+    // R3389001: Classic's Field Spells (Palantir, InfiniScepter, Second Wind, In Too Deep) and Units among them.
+    expect(others.map(([defId]) => defId)).toEqual(expect.arrayContaining(["classic-004", "classic-007", "classic-028", "classic-090"]));
+    for (const [defId] of others) {
+      const row = CATALOG[defId]?.type === "Unit" ? "units" : "backrow";
+      const landing: GameEvent = { type: "summoned", player: "p1", instanceId: "own", defId, row, lane: 2 };
+      const events: GameEvent[] = [played("p1", "own", defId), landing];
+      const entry: AnimationEntry = { ...planEntries(events, withEvents(view, events), false)[0]!, events };
+      const D = entry.durationMs;
+      const env = envOf();
+      env.memory.remember([events[0]!]);
+      const alone = planCardFx(landing, { entry, view, env: envOf(), D });
+      expect(alone?.cues.length, defId).toBeGreaterThan(0);
+      expect(planCardFx(landing, { entry, view, env, D }), defId).toEqual(alone);
+    }
   });
 
   it("R200 every cue the cast on draw and the per-card recipes plan starts inside its entry and ends within FX_MAX_TAIL_MS of its end, for short and long entries", () => {

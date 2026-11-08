@@ -48,6 +48,10 @@ const UNION_ORDER: SfxId[] = [
   "starshipFlak", "starshipLauncher", "starshipRam", "starshipWreck",
   // R3400001: the signatures of Meditative+'s and Training Grounds' Legendaries and Mythics.
   "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
+  // R3407001: the signatures of Stinkyscape's signature cards.
+  "ballotBeep", "lullabySigh", "compactTut", "glitchDrop", "harpGliss", "markerThunder", "stampTrill", "tillRattle",
+  "gavelSlam", "dockingChime", "keyboardPing", "synthSnap", "blobDrum", "warpSparkle", "tearChoir", "cackleThunder",
+  "kazooRatchet", "thrusterSniff", "marbleGong", "sanctumBell", "cashWhistle", "whisperClink", "crystalRise",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -176,6 +180,30 @@ const DURATION_MS: Record<SfxId, number> = {
   diceGong: 1600,
   timberLash: 1200,
   pencilArpeggio: 1400,
+  // R3407001: each a fixed length, its real upper bound.
+  ballotBeep: 1300,
+  lullabySigh: 1500,
+  compactTut: 1300,
+  glitchDrop: 1500,
+  harpGliss: 1500,
+  markerThunder: 1500,
+  stampTrill: 1400,
+  tillRattle: 1600,
+  gavelSlam: 1400,
+  dockingChime: 1600,
+  keyboardPing: 1200,
+  synthSnap: 1400,
+  blobDrum: 1500,
+  warpSparkle: 1600,
+  tearChoir: 1500,
+  cackleThunder: 1600,
+  kazooRatchet: 1600,
+  thrusterSniff: 1600,
+  marbleGong: 1600,
+  sanctumBell: 1600,
+  cashWhistle: 1600,
+  whisperClink: 1200,
+  crystalRise: 1600,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];

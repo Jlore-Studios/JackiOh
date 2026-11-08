@@ -266,6 +266,11 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
           ]);
           return;
         }
+        case "pass":
+          // R3407002: a hook's marker plays nothing, but its entry opens for the events after it (R2797000).
+          if ((!live.current.enabled && !live.current.still) || director.current === null) return;
+          planEnv().memory.remember(signal.entry.events);
+          return;
         case "idle":
           removeSqueeze(root);
           played.current = [];
