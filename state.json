@@ -17015,6 +17015,13 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- Bash: {\"command\": \"git log --oneline -1; git status --short | head; ls /tmp/probe-3393/apps/web/src/cards/art/zz-measure.test.ts 2>&1\", \"description\": \"Check the branch and the probe file\"}\n- tool error: Exit code 2 310f441206 Patch: Mythics arrive in full art: every Mythic's default look is full art, Prismatic is full art at both its levels, and Legendaries default to Extended art (#3369) ls: cannot\u2026\n- Bash: {\"command\": \"git log --oneline 01c93697da..HEAD | cat; git diff --stat 01c93697da..HEAD -- apps/web/src/cards/art e2e/cypress/component spec/rulings | tail -20; ls /tmp/probe-3393 2>&1 | head -3\", \"d\u2026\n- Bash: {\"command\": \"git diff --stat 01c93697da..HEAD -- apps/web/src/cards/art e2e/cypress/component apps/web/src/cards/depth.test.tsx apps/web/src/patches/cardArt.ts | cat\", \"description\": \"Art-related cha\u2026\n- Bash: {\"command\": \"git diff 01c93697da..HEAD -- apps/web/src/cards/depth.test.tsx | head -60; grep -n '\\\"stinkyscape-154\\\", \\\"traininggrounds-040\\\"' apps/web/src/cards/depth.test.tsx\", \"description\": \"Chec\u2026\n- Bash: {\"command\": \"grep -n -i \\\"pr body\\\\|pull request's body\\\\|description\\\\|summary\\\\|table\\\" bot/go/internal/prompts/build.md | head -20\", \"description\": \"How a build's report reaches the pull request\"}\n- Bash: {\"command\": \"f=$(ls bot/go/internal/prompts/*/build.md bot/go/prompts/build.md bot/prompts/build.md 2>/dev/null | head -1); echo $f; grep -n -i \\\"summary\\\\|pull request\\\\b.*body\\\\|\\\\\\\"body\\\\\\\"\\\\|repo\u2026\n- Bash: {\"command\": \"grep -n -i \\\"summary\\\\|body\\\\|final message\\\\|json\\\" bot/prompts/build.md | head -20\", \"description\": \"Search the build prompt for its final report shape\"}\n- Bash: {\"command\": \"sed -n 35,75p bot/prompts/build.md\", \"description\": \"Read the build's final message format\"}\n- Bash: {\"command\": \"head -6 spec/rulings/R2724000.md; head -5 spec/rulings/R2202000.md; grep -l \\\"M+ #\\\" spec/rulings/*.md | head -2 | xargs -I{} sed -n 4p {}\", \"description\": \"See how ruling notes cite Tra\u2026\n- Bash: {\"command\": \"tail -3 spec/rulings/R2724000.md; tail -2 spec/rulings/R0503.md\", \"description\": \"See how amended rulings note their amendment\"}\n- said: You've hit your 5-hour limit \u00b7 resets 4am (UTC)"
       },
+      "hold": {
+        "ends": "2026-11-08T04:25:23Z",
+        "owner": "claude-3",
+        "since": "2026-11-08T02:25:23Z",
+        "until": "2026-11-08T04:00:00Z",
+        "why": "it refused a call"
+      },
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
