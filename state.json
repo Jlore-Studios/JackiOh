@@ -16748,7 +16748,7 @@
     "3386": {
       "action": "revise",
       "asks": [],
-      "audit_tier": "medium",
+      "audit_tier": "",
       "ci_early": true,
       "ci_fixed_head": "8f48d5183237c36948b48a8441f660e6bc175e82",
       "ci_fixes": 2,
@@ -16776,49 +16776,12 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-08T10:01:21Z",
+      "feedback_since": "2026-11-08T11:24:04Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3340,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "Printed-Mythic tokens consume a Mythic-priority motion slot and report animated while their art remains still.",
-          "evidence": "MinionFace and CardFace use frameRarity(face) to set artMoves and rank the claim, but artMotionOf(face.defId) returns null for tokens such as meditative-039-5 and meditative-049-1/2/3: they are absent from FULL_ART_MOTION, fullArtTokens.json, and the generated version-animated offer. motion.test.ts only checks catalog rarity Legendary/Mythic, missing cards whose rarity is Token and printedRarity is Mythic.",
-          "severity": "blocking",
-          "where": "apps/web/src/cards/MinionFace.tsx:178"
-        },
-        {
-          "claim": "Off-screen and Fx-Off faces can continue their full-art drift, sweep, signature, and built-in foil animations outside the ranked motion decision.",
-          "evidence": "useArtMotion gates faceMotion by visibility and Fx intensity, but data-full-art-motion at line 471 depends only on animatedFoil and data-foil at line 458 (also MinionFace.tsx:205) is likewise independent of faceMotion. cosmetics.css:1011-1048 and cards.css:2554 therefore keep those CSS animations enabled, contradicting R3340000's requirement that an off-screen face or Fx Off hold every face still.",
-          "severity": "blocking",
-          "where": "apps/web/src/cards/CardFace.tsx:458"
-        },
-        {
-          "claim": "Keyboard focus does not make the subject turn or lean as required.",
-          "evidence": "focusIn only sets the shared hovered flag and never writes --art-aim-x/y. artLive.css:84-86 defaults both values to zero, producing rotate: 0deg and translate: 0 0; only the motes react. The unit test checks the hover attribute, and Cypress exercises pointer hover only.",
-          "severity": "blocking",
-          "where": "apps/web/src/cards/artLive.ts:54"
-        },
-        {
-          "claim": "The new ruling changes \u00a710.10 but the affected normative section was not amended or linked to R3340000.",
-          "evidence": "R3340000 lists \u00a710.10 in its cards field and changes that section's existing moving-art and cosmetics statements, while the branch leaves spec/10-engine-guide.md untouched. spec/README.md, Adding a ruling step 3, requires editing every affected section.",
-          "severity": "blocking",
-          "where": "spec/10-engine-guide.md"
-        },
-        {
-          "claim": "The new stylesheet violates the task's explicit prohibition on raw px/rem lengths.",
-          "evidence": "It introduces 1px at line 38 and 0px/26px at line 140. The latter duplicates the established --lunge-distance value instead of using that variable directly; the repository's spacing checker does not inspect these properties, so CI would not catch this requirement miss.",
-          "severity": "blocking",
-          "where": "apps/web/src/cards/art/artLive.css:38"
-        },
-        {
-          "claim": "The branch contains an unrelated rewrite of the repository-wide writing checker.",
-          "evidence": "The change binds TypeScript helpers and changes createSourceFile to disable parent links and JSDoc parsing as a performance optimization. That does not implement card art or motion, and the builder's report records no task decision requiring it; the review rules make unrelated rewrites blocking.",
-          "severity": "blocking",
-          "where": "apps/web/src/writing.test.ts:17"
-        }
-      ],
+      "last_findings": [],
       "live": "revising",
       "merge_owner": "claude-1",
       "pending_request": false,
@@ -16828,15 +16791,15 @@
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "medium",
+      "round_tier": "",
       "run_id": "42475585520",
       "runs_on": "night-vm-gpt",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-11-08T11:24:04Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 3,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [],
         "builder": "gpt",
