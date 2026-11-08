@@ -17242,7 +17242,9 @@
     "3402": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-11-07T23:33:57Z",
         "family": "claude",
