@@ -18255,6 +18255,7 @@
       "run_id": "42451819925",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 145,
       "started_at": "2026-11-08T05:42:26Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36053,9 +36054,33 @@
         "title": "Patch: Mythics arrive in full art: every Mythic's default look is full art, Prismatic is full art at both its levels, and Legendaries default to Extended art",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "f138ac5cc1f004d34712eee309bbe8efda70c7b6",
+        "issue": 3390,
+        "merged_at": "2026-11-08T06:26:39Z",
+        "n": 145,
+        "pr": 3427,
+        "queued_at": "2026-11-08T06:26:39Z",
+        "sha": "b01bbd555cba846961161b376ac5bbe08c769e58",
+        "status": "queued",
+        "title": "Patch: every Classic+ card drawn as what it is: a scene of its own for each, richer the rarer",
+        "tries": 0
       }
     ],
-    "count": 144
+    "count": 145
   },
   "statistics": {
     "at": "2026-11-08T05:49:06Z"
