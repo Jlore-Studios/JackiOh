@@ -17367,14 +17367,6 @@
         "reason": "planned on opus",
         "trail": "yers\"}\n- Bash: {\"command\": \"grep -rn \\\"390\\\" e2e/cypress/component/*.cy.tsx | head -8; ls e2e/cypress/component/ | head -40\", \"description\": \"Find phone-size patterns in component specs\"}\n- Bash: {\"command\": \"sed -n 1,15p e2e/cypress/component/meditative-faces.cy.tsx; sed -n 1,40p e2e/cypress/component/battleship.cy.tsx | grep -n \\\"viewport\\\\|SIZES\\\\|width\\\" | head\", \"description\": \"Peek at m\u2026\n- Bash: {\"command\": \"grep -rn \\\"^#.*10\\\\.10\\\" spec/*.md | head -3; ls spec/ | head -30; cat spec/pending/3346.md | head -5\", \"description\": \"Find spec section 10.10 and pending format\"}\n- Bash: {\"command\": \"grep -n \\\"magic\\\\|max-lines\\\\|complexity\\\" eslint.config.js | head\", \"description\": \"Check eslint for magic number and size rules\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3401/apps/web/src/cards/art/near.ts\"}\n- Bash: {\"command\": \"grep -n \\\"ART_NEAR_MARGIN_PX\\\\|ART_DWELL_MS\\\" apps/web/src/cards/constants.ts; grep -rn \\\"whenNear\\\\|canWatchArt\\\" apps/web/src/cards/art/CardArt.tsx | head -5\", \"description\": \"Read the\u2026\n- Bash: {\"command\": \"sed -n 100,140p apps/web/src/cards/art/CardArt.tsx; grep -n \\\"lazy\\\" apps/web/src/cards/CardFace.tsx | head -5\", \"description\": \"See when CardArt draws lazily\"}\n- Bash: {\"command\": \"grep -rn \\\"HAND_BOX\\\\|PHONE_HAND\\\\|handCard.*width\\\\|--hand-card-w\\\" e2e/cypress/component/*.cy.tsx apps/web/src/game/*.css 2>/dev/null | head -10\", \"description\": \"Find hand card sizes \u2026\n- Bash: {\"command\": \"ls e2e/cypress/component/*.cy.tsx | wc -l; grep -rn \\\"twenty-one component\\\\|component specs\\\" e2e/README.md | cut -c1-120 | head -3; grep -rn \\\"README.*component\\\" scripts/*.mjs e2e/scr\u2026\n- Bash: {\"command\": \"ls apps/web/src/cards/ | grep -i depth; grep -n \\\"it(\\\" apps/web/src/cards/depth*.test.* 2>/dev/null | cut -c1-200 | head -20\", \"description\": \"Check quasi-3D depth tests for per-card as\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3401/apps/web/src/cards/depth.test.tsx\", \"offset\": 95, \"limit\": 125}\n- Bash: {\"command\": \"sed -n 1,94p apps/web/src/cards/depth.test.tsx | grep -n \\\"const EPIC\\\\|const LEGENDARY\\\\|const MYTHIC\\\\|const COMMON\\\\|meditative\\\" \", \"description\": \"Find which cards depth tests use\"}\n- Bash: {\"command\": \"grep -rl \\\"data:image/svg\\\" apps/web/src --include=*.snap | head; grep -rn \\\"meditative\\\" apps/web/src/game/__snapshots__/*.snap | head -3\", \"description\": \"Check snapshots containing ar\u2026\n- Bash: {\"command\": \"git show 14687f5f0d -- apps/web/src/game/__snapshots__/Board.test.tsx.snap | head -30\", \"description\": \"See what #3363 changed in the Board snapshot\"}\n- Bash: {\"command\": \"grep -n \\\"component\\\" .github/workflows/ci.yml | head -8; grep -n \\\"component\\\" .github/workflows/super.yml | head -5\", \"description\": \"Check which workflows run component specs\"}\n- Bash: {\"command\": \"sed -n 20,40p apps/web/src/cards/art/svg.ts | head -5; grep -n \\\"^export function proceduralArtUri\\\\|^export function artDataUri\\\" apps/web/src/cards/art/svg.ts; grep -n \\\"FULL_ART_MOTIO\u2026\n- said: Now I'll write the full plan into the draft file, then return it.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3401/.bot-plan.md\", \"content\": \"## Goal\\n\\nAll 132 Meditative catalog entries (`meditative-*`: 102 cards and 30 tokens) draw their pictures from scene\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md; git status --porcelain\", \"description\": \"Count words in the plan draft\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3401/.bot-plan.md\", \"content\": \"## Goal\\n\\nAll 132 Meditative catalog entries (`meditative-*`: 102 cards and 30 tokens) draw their pictures from scene\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3401/.bot-plan.md\", \"old_string\": \"## Risks\\n\\n- **The proofs' bytes.** Never edit existing part code or the proof recipes. Addi\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3401/.bot-plan.md\", \"old_string\": \"1. **Read.** `ART.md`'s \\\"The art bible\\\" (Meditative), \\\"Scene recipes and kits\\\" and \\\"The \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3401/.bot-plan.md\", \"old_string\": \"## Done when\\n\\n- [ ] All 132 entries draw their own recipes, base and Radiant; the short lis\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3401/.bot-plan.md\", \"old_string\": \" - Keep the brief's subject, setting and idea, and record every changed detail.\\n - Subagents\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3401/.bot-plan.md\", \"old_string\": \" Run it with `SHEET_IDS=\\u2026 pnpm --dir apps/web exec vitest run src/cards/art/sheet.tmp.te\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3401/.bot-plan.md\", \"old_string\": \" - **`ART.md`.** Add \\\"and every Meditative entry (R3401000, below)\\\" to the \\\"Five proof car\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3401/.bot-plan.md\", \"old_string\": \" e. A scene draws no motif glyphs and no accent, so a `props` beat would find nothing to move\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; git status --porcelain\", \"description\": \"Recount words and confirm tree clean\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3401/.bot-plan.md\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3401/.bot-plan.md\", \"old_string\": \"the constant `CHARACTERS` (the twelve creatures `rhino` \\u2026 `sheep` and the nine buildings\u2026\n- said: ## Goal All 132 Meditative catalog entries (`meditative-*`: 102 cards and 30 tokens) draw their pictures from scene recipes of their own. Each recipe is built from the entry's brief in #3401's table, in the art bible's Meditative look (ink wash, a slate-900 brush line, jade washes, one red-600 seal\u2026"
       },
-      "hold": {
-        "ends": "2026-11-08T12:51:33Z",
-        "lifted": "2026-11-08T11:21:24Z",
-        "owner": "claude-4",
-        "since": "2026-11-08T10:51:33Z",
-        "until": "2026-11-08T11:20:00Z",
-        "why": "5-hour usage is 72%, too close to its 70% cap to start a long run (it starts under 65%)"
-      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
@@ -17397,9 +17389,9 @@
       "queued_at": "2026-11-07T17:09:27Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "42471582007",
+      "run_id": "pending:330cb7bb-1794137119",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-08T10:28:37Z",
+      "started_at": "2026-11-08T11:26:05Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -18702,9 +18694,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T11:25:02Z",
+    "at": "2026-11-08T11:26:05Z",
     "url": "",
-    "what": "build #3405 on claude-4"
+    "what": "build #3401 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-08T11:02:07Z",
