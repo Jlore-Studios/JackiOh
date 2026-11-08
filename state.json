@@ -36260,6 +36260,9 @@
       "2026-11-08T03:26:11Z,claude-1,stream,call,42441034330,96,2026-11-08T04:50:00Z,,,allowed_warning,100,,",
       "2026-11-08T03:26:26Z,claude-1,stream,call,42441034330,99,2026-11-08T04:50:00Z,,,allowed_warning,100,,",
       "2026-11-08T03:26:56Z,claude-1,stream,call,42441034330,100,2026-11-08T04:50:00Z,,,rejected,100,,"
+    ],
+    "runs": [
+      "2026-11-08T03:26:57Z,42441034330,claude-1,opus,build,3407,hard,interrupted,5-hour cap,22,0,0,0,37.8423,18,100,,,597.1,claude-7,fresh,cap,1"
     ]
   },
   "version": 1
