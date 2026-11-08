@@ -16243,7 +16243,7 @@
       "verdict_rounds": 1
     },
     "3423": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "handoff": {
         "at": "2026-11-08T14:30:02Z",
@@ -16255,20 +16255,20 @@
         "trail": " -n 26p crates/tools/README.md | cut -c1-2500; grep -n \\\"player\\\" docs/ADDING_CARDS.md | head -8 | cut -c1-200\", \"description\": \"Read the pa\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; sed -n 186,202p docs/ADDING_CARDS.md; grep -n \\\"Patch notes players read\\\" -A12 docs/issues-and-patches.md | head -20 | cut -c1-250\", \"descript\u2026\n- Bash: {\"command\": \"cd /tmp/zr && python3 -c \\\"\\nimport json;d=json.load(open('route_hits.json'));print(len(d), sum(1 for k in d if not k.startswith('WS')))\\\"; grep -c -E '^\\\\s+\\\\(\\\"(GET|POST|PUT|DELETE)\\\",\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; sed -n 40,84p crates/tools/src/claims.rs\", \"description\": \"Read how claims collects head fragments\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; grep -n -E \\\"\\\\\\\"/api/challenges\\\\\\\"|\\\\\\\"/api/chat/unread\\\\\\\"\\\" apps/web/src/together/polling.test.tsx | head -4; grep -n -B2 -A6 \\\"pub async f\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; for p in \\\"auth/signin\\\" \\\"api/catalog/\\\" \\\"stats/ci\\\" \\\"e2e/reseed\\\\|E2E_RESEED_PATH\\\" \\\"readyz\\\" \\\"healthz\\\"; do echo \\\"== git grep -l -e '$p\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\"| `training/ml/jackioh_ml/fit.py` |\\\",\\\"| `crates/cards/patches/pending/<s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423/apps/web; ls src/fx/cues.test.ts src/fx/systemMoments.test.ts src/fx/stage.test.tsx src/fx/director.test.ts src/fx/dom.test.ts src/fx/anchors.te\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; for n in createGame beginGame reduce legalActions viewFor hashState previewSets duosCreate duosReduce duosViewFor; do echo \\\"$n: $(git grep -n \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; git grep -ln \\\"figureKit\\\" -- 'apps/web/src/**/*.test.*' | head -5; git grep -ln \\\"from \\\\\\\"./figureKit.ts\\\\\\\"\\\\|figureKit.ts\\\\\\\"\\\" -- apps/web\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; git grep -n -E \\\"game/hotseat(\\\\.ts)?\\\\\\\"|\\\\./hotseat(\\\\.ts)?\\\\\\\"\\\" -- 'apps/web/src/**' ':!**/*.test.*' | cut -c1-150; git grep -n -E \\\"\\\\bleg\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; grep -n \\\"^import\\\\|^describe\\\\|boardNames\\\" apps/web/src/cards/settings.test.ts | head -20 | cut -c1-170; sed -n 300,312p apps/web/src/setting\u2026\n- said: I found 11 HTTP routes with no production caller in the tree: 5 that only tests call and 6 that only e2e calls. One more check matters more for the issue: beyond the six bindings you named, 27 more browser WASM bindings are never reached by the production web bundle. Nothing was edited; my scripts \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3423/.bot-plan.md\", \"content\": \"## Goal\\n\\nOne pull request, on `main` at 7336cf5731, that removes the dead code this audit found (Rust, TypeScript, P\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; git grep -nE \\\"export (async )?function (putTrio|deleteTrio|putDeck|deleteDeck|getChallenges|getUnread)\\\\b\\\" -- apps/web/src; git grep -nw \\\"pu\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; sed -n 1100,1240p apps/web/src/net/api.ts | grep -n \\\"^export\\\\|^async function\\\\|^function\\\\|^const\\\\|^}\\\\|^/\\\\*\\\\*\\\" | head -30; git grep -n \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; sed -n 1100,1145p apps/web/src/net/api.ts; sed -n 1176,1240p apps/web/src/net/api.ts; sed -n 210,232p apps/web/src/net/readCache.test.ts\", \"des\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; git grep -nw \\\"TrioInput\\\" -- apps | cut -c1-150 | head; grep -n \\\"putTrio\\\\|deleteTrio\\\" apps/web/README.md docs/*.md 2>/dev/null | head -3\", \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"| `apps/web/src/game/faces.ts` | change | delete `isUnitView`, `viewFa\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423/apps/web/src; grep -n \\\"^function tid\\\\|^const frac\\\\|^const HERO_TARGET\\\" fx/stage.ts; grep -n \\\"Rng\\\" cards/art/figureKit.ts | head -4; grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\n# renumber steps 12..26 -> 13..27 (only line-leading \\\"N. \\\")\\ndef bump(m):\\n\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3423/.bot-plan.md\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; grep -n '\\\"--source\\\"\\\\|\\\"--notes\\\"\\\\|\\\"--visual\\\"\\\\|\\\"--sources\\\"' crates/tools/src/*.rs | head -5; grep -n \\\"unknown\\\\|problem\\\" crates/tools\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; sed -n 2220,2245p crates/tools/src/patches.rs; sed -n 749,775p crates/tools/src/patches.rs\", \"description\": \"Read the patches arg parser and pl\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; sed -n 2246,2275p crates/tools/src/patches.rs | grep -n '\\\"source\\\\|\\\"notes\\\\|\\\"cards\\\\|\\\"plays\\\\|\\\"system\\\\|flags.get\\\\|flags.shift_remove\\\\|r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; sed -n 2270,2310p crates/tools/src/patches.rs | grep -n 'get(\\\"' | head\", \"description\": \"Find the remaining flag names read\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; ls -a | grep -i prettier; grep -n \\\"prettier\\\\|max-len\\\\|printWidth\\\" eslint.config.* package.json 2>/dev/null | head -5\", \"description\": \"Chec\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3423; python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\"loses `CHINESE_RARITIES`. Both lost their callers in c8ad63fbed (#3161).\\\"\u2026\n- said: ## Goal One pull request, on `main` at 7336cf5731, that removes the dead code this audit found (in Rust, TypeScript and Python, plus one Cargo dependency) and merges the duplicated helpers that give the same outputs for the same inputs. The builder's final report becomes the pull request body. It c\u2026"
       },
       "kind": "build",
-      "live": "planning",
-      "owner": "",
-      "owner_since": "2026-11-08T18:19:56Z",
-      "owner_why": "released from its hold: `claude-3` has no runner free where it runs",
+      "live": "building",
+      "owner": "claude-1",
+      "owner_since": "2026-11-08T22:40:18Z",
+      "owner_why": "it took it up; released from its hold: `claude-3` has no runner free where it runs",
       "pending_request": false,
       "planned_at": "2026-11-08T14:41:24Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
-      "run_id": "42488669226",
+      "provider": "claude-1",
+      "run_id": "pending:7436108c-1794177585",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-08T14:12:28Z",
+      "started_at": "2026-11-08T22:40:18Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6718519684
@@ -17485,9 +17485,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T22:39:32Z",
+    "at": "2026-11-08T22:40:18Z",
     "url": "",
-    "what": "build #3397 on claude-8"
+    "what": "build #3423 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-08T22:26:09Z",
