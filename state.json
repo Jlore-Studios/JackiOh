@@ -16929,6 +16929,8 @@
       "waiting_comment": 6720602785
     },
     "3433": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-08T10:02:19Z",
@@ -16942,8 +16944,11 @@
         "trail": "ep -E '\\u00d7|FAIL|Test Files|Tests |^exit' /tmp/web.log | head -30\", \"description\": \"Wait for the web suite to finish\", \"timeout\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392; cat crates/cards/patches/pending/*every-core-card-drawn*.json; ls crates/cards/patches/pending/ | grep -i classic\", \"description\": \"Read our pe\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392; python3 - <<'EOF'\\nimport json,glob\\np=glob.glob('crates/cards/patches/pending/*every-core-card-drawn*.json')[0]\\ns=open(p).read()\\nold1=\\\"ever\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392; git diff origin/main -- apps/web/src/cards/art/motifs.test.ts apps/web/src/cards/art/scene.test.ts apps/web/src/cards/art/traininggrounds.test.\u2026\n- Bash: {\"command\": \"until grep -q '^exit ' /tmp/web.log; do sleep 5; done; grep -E '\\u00d7|FAIL|Test Files|Tests |^exit' /tmp/web.log | head -30\", \"description\": \"Wait for the web suite to finish\", \"timeout\u2026\n- Bash: {\"command\": \"grep -n -A20 'FAIL |web| src/wording.test.ts' /tmp/web.log | head -40; grep -n -A14 'FAIL |web| src/net/ci-scope.test.ts > scripts/ci-scope.sh > runs web only' /tmp/web.log | head -30\", \u2026\n- said: Those 8 failures are all 5-second timeouts, and the suite ran while a release cargo build competed for the CPU. Re-running the four files on an idle machine:\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392; timeout 900 pnpm --dir apps/web exec vitest run src/wording.test.ts src/net/ci-scope.test.ts src/routes/landing.test.tsx src/routes/dev/fx.test\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392; timeout 600 pnpm --dir apps/web exec vitest run src/wording.test.ts --reporter=verbose 2>&1 | grep -E 'R373|Duration' | head\", \"description\": \"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392; sed -n 1,80p apps/web/src/wording.test.ts\", \"description\": \"Read the wording test\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392; echo \\\"- web suite: 8 timeouts under cargo-build load (wording, ci-scope x4, landing, fx x2); all 4 files pass alone. Next: cypress\\\" >> .bot-n\u2026\n- said: Both component specs pass (5 tests). Now looking at the screenshots, since the plan asks that they be checked by eye.\n- Bash: {\"command\": \"find /tmp/cy-art -name '*.png' | head; python3 -c \\\"\\nimport struct,sys,glob\\nfor f in glob.glob('/tmp/cy-art/screenshots/**/*.png',recursive=True):\\n d=open(f,'rb').read(24); print(f, s\u2026\n- Read: {\"file_path\": \"/tmp/cy-art/component/screenshots/core-scenes.cy.tsx/core-scenes-desktop-deep.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392; python3 - <<'EOF'\\np='e2e/cypress/component/core-scenes.cy.tsx'\\ns=open(p).read()\\ndef sub(old,new):\\n global s\\n assert s.count(old)==1,old[:6\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392/e2e; rm -rf /tmp/cy-art; E2E_COMPONENT_PORT=5291 E2E_ARTIFACTS=/tmp/cy-art timeout 1500 pnpm exec cypress run --component --spec cypress/compone\u2026\n- Read: {\"file_path\": \"/tmp/cy-art/component/screenshots/core-scenes.cy.tsx/core-scenes-desktop-deep-6.png\"}\n- Read: {\"file_path\": \"/tmp/cy-art/component/screenshots/core-scenes.cy.tsx/core-scenes-desktop-deep-7.png\"}\n- Read: {\"file_path\": \"/tmp/cy-art/component/screenshots/core-scenes.cy.tsx/core-scenes-desktop-sheet-1.png\"}\n- Read: {\"file_path\": \"/tmp/cy-art/component/screenshots/core-scenes.cy.tsx/core-scenes-phone-deep-5.png\"}\n- said: Screenshots look right: each scene is distinct and reads as its brief, at both sizes, base and Radiant. Cleaning up the scratch files and re-running the checks the last edits touch.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392; cp /tmp/core-table.tsv /tmp/core-table.keep.tsv; rm -rf zz-scratch apps/web/src/cards/art/zz-table.test.ts; git status --short | head -30; echo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392; grep -rn '// <<\\\\|// <</\\\\|zz-scratch\\\\|zz-preview' apps/web/src e2e spec crates/cards/patches 2>/dev/null | head; git diff origin/main --stat \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392; git diff origin/main --stat; (timeout 1200 pnpm typecheck > /tmp/tc.log 2>&1; echo \\\"tc exit $?\\\" >> /tmp/tc.log) & (timeout 1200 pnpm exec esl\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392; git diff origin/main -- apps/web/src/cards/art/figureKit.ts | grep '^-' | grep -v '^---'; git diff origin/main -- apps/web/src/cards/art/richne\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392; timeout 600 cargo jackioh patches check 2>&1 | tail -1; timeout 600 cargo jackioh spec check 2>&1 | tail -1; timeout 900 pnpm --dir apps/web ex\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392; echo \\\"- final: typecheck, eslint, patches, spec, art tests green; running harness's --changed web command\\\" >> .bot-notes.md; timeout 1700 pnp\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nrows=[l.rstrip('\\\\n').split('\\\\t') for l in open('/tmp/core-table.keep.tsv')]\\nout=['| id | name | rarity | type | base elements | layers | character | verdict |','|--\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3392; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## Log')\\nstate='''## State\\n\\nWhere the work stands (run 4, 2026-11-08, end\u2026\n- Bash: {\"command\": \"until grep -qE 'Test Files|exit [0-9]' /tmp/changed.log; do sleep 5; done; sleep 2; grep -E '\\u00d7|FAIL|Test Files|Tests ' /tmp/changed.log | head -20\", \"description\": \"Wait for the cha\u2026\n- Bash: {\"command\": \"cat /tmp/core-table.md; echo \\\"- harness --changed web run: 308 files, 6057 passed\\\" >> /home/runner/work/_temp/work/item-3392/.bot-notes.md\", \"description\": \"Print the per-card table fo\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every Core card drawn as what it is: a scene of its own for each, richer the rarer\"} --> ## What changed Every Core entry except Ceaseless Void (`core-100`, which #3338 owns) now draws its picture from a scene recipe of its own. That is 99 cards and 11 \u2026"
       },
       "issue": 3392,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-08T11:56:12Z",
         "from_run": "42469698877",
         "gates": [
           {
@@ -17035,8 +17040,15 @@
         "source": "build",
         "until": "2026-11-08T12:23:42Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-08T11:53:42Z",
+      "run_id": "pending:b9493689-1794138927",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "started_at": "2026-11-08T11:56:12Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17050,9 +17062,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T11:55:11Z",
+    "at": "2026-11-08T11:56:12Z",
     "url": "",
-    "what": "review #3431 on claude-1"
+    "what": "review #3433 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-08T11:33:44Z",
