@@ -17080,7 +17080,16 @@
       "feedback_since": "2026-11-08T13:01:49Z",
       "issue": 3395,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-7",
+        "rejections": [],
+        "reviews": [],
+        "sha": "76f79bdf725bc0051e8b8c2d5178cd83d983bcfa",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
