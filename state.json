@@ -15317,9 +15317,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-08T14:13:40Z",
-      "owner_why": "its own review was handed off to its final audit: `claude-1` has no runner free where it runs",
+      "owner": "claude-8",
+      "owner_since": "2026-11-08T15:05:23Z",
+      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-1` has no runner free where it runs",
       "pending_request": false,
       "planned_at": "2026-11-07T19:31:46Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -16753,7 +16753,7 @@
       }
     },
     "3433": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "difficulty": "hard",
       "failures": 0,
@@ -16769,11 +16769,11 @@
       },
       "issue": 3392,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-8",
       "queued_at": "2026-11-08T14:20:44Z",
-      "run_id": "42477913400",
+      "run_id": "pending:7629030e-1794150298",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16794,7 +16794,7 @@
         "run": "42477913400"
       },
       "source": "conflict",
-      "started_at": "2026-11-08T11:56:12Z",
+      "started_at": "2026-11-08T15:05:23Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17202,9 +17202,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T15:04:47Z",
+    "at": "2026-11-08T15:05:23Z",
     "url": "",
-    "what": "plan #3439 on claude-1"
+    "what": "revise #3433 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-08T14:54:30Z",
