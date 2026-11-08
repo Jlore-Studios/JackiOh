@@ -17180,14 +17180,6 @@
         "reason": "`claude-6` stops mid-call: 5-hour usage is 70%, at or over its 70% cap; it resets at 2026-11-08T12:00:00Z",
         "trail": "\n- tool error: Exit code 1 M apps/web/src/cards/art/classicPlusScenes.test.ts M apps/web/src/cards/art/scene.ts M apps/web/src/cards/art/sceneKitNature.ts M apps/web/src/cards/art/sceneKitPlaces.ts M apps/web/src/c\u2026\n- Bash: {\"command\": \"grep -n 'screenshotsFolder\\\\|screenshot' e2e/cypress.config.ts | head -5; find / -name 'classicplus-alt-scenes-1*.png' -newer spec/rulings/R3390000.md 2>/dev/null | head -5\", \"descriptio\u2026\n- Bash: {\"command\": \"git check-ignore -v e2e/artifacts && ls e2e/artifacts/component/screenshots/classicplus-alt-scenes.cy.tsx/\", \"description\": \"Confirm artifacts are git-ignored\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3396/e2e/artifacts/component/screenshots/classicplus-alt-scenes.cy.tsx/classicplus-alt-scenes-3.png\"}\n- Bash: {\"command\": \"/tmp/w3396/preview.sh \\\"$PWD\\\" /tmp/w3396/p2a.png classicplus-037 classicplus-041 classicplus-043 classicplus-046 classicplus-050 classicplus-051 && echo ok\", \"description\": \"Preview fil\u2026\n- Read: {\"file_path\": \"/tmp/w3396/p2a.png\"}\n- Bash: {\"command\": \"/tmp/w3396/preview.sh \\\"$PWD\\\" /tmp/w3396/p2b.png classicplus-061 classicplus-067 classicplus-071 classicplus-072 classicplus-074 classicplus-078 && echo ok\", \"description\": \"Preview ris\u2026\n- Read: {\"file_path\": \"/tmp/w3396/p2b.png\"}\n- Bash: {\"command\": \"printf '\\\\nAmended by [[R3396000]] (issue #3396): a Classic+ card offered Alt art draws an alt scene recipe of its own, its subject in another place, time or moment, at every Alt art lev\u2026\n- said: Now ART.md.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3396/apps/web/src/cards/art/ART.md\", \"old_string\": \"draws apart from every other. A Starship's art, a Legacy card's and a delive\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3396/apps/web/src/cards/art/ART.md\", \"old_string\": \"`classicplus-scenes.cy.tsx` shows every Epic, Legendary and Mythic entry at \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3396/apps/web/src/cards/art/ART.md\", \"old_string\": \"- **A new camera.** A close-up scales the subject up by half to double, a fi\u2026\n- Bash: {\"command\": \"cargo run --release -q -p jackioh-tools -- patches --help 2>&1 | head -30\", \"description\": \"Check patches command options\", \"timeout\": 900000}\n- Bash: {\"command\": \"grep -rn '\\\"--visual\\\"' crates/tools/src | head -5\", \"description\": \"Confirm the --visual flag exists\"}\n- Bash: {\"command\": \"echo \\\"- run 2: ART.md section written; running cargo jackioh patches --visual for the fragment\\\" >> .bot-notes.md; cargo run --release -q -p jackioh-tools -- patches \\\"Patch: every Clas\u2026\n- Bash: {\"command\": \"cat crates/cards/patches/pending/every-classic-alt-art-somewhere-else-the-same-subject-in-a.json\", \"description\": \"Read the generated fragment\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json\\np='crates/cards/patches/pending/every-classic-alt-art-somewhere-else-the-same-subject-in-a.json'\\ns=open(p).read()\\na=''' \\\"player\\\": {\\n \\\"title\\\": \\\"\\\",\u2026\n- Bash: {\"command\": \"echo \\\"- run 2: fragment written; patches check + spec check ok; running classify, eslint, typecheck\\\" >> .bot-notes.md; git rev-parse --verify origin/main 2>&1 | head -1; timeout 1500 c\u2026\n- Bash: {\"command\": \"timeout 900 pnpm exec eslint apps/web/src/cards/art e2e/cypress/component/classicplus-alt-scenes.cy.tsx 2>&1 | tail -15; echo eslint=$?; timeout 900 pnpm --dir apps/web typecheck 2>&1 | \u2026\n- Bash: {\"command\": \"echo \\\"- run 2: eslint + typecheck ok; running the harness's web tests (vitest --changed origin/main) in background\\\" >> .bot-notes.md; timeout 3000 pnpm exec vitest run --project web --\u2026\n- Bash: {\"command\": \"/tmp/w3396/measure.sh \\\"$PWD\\\" all 2>&1 | awk '{printf \\\"%s %s %s %s\\\\n\\\",$1,$2,$3,$4}' | paste - - | awk '{print $1, $3, $7, $4, $8}'\", \"description\": \"Proxy shares and bytes for all 40\u2026\n- Bash: {\"command\": \"cat > /tmp/w3396/table.mts <<'EOF'\\nimport { readFileSync } from \\\"node:fs\\\";\\nconst ROOT = process.argv[2], R = `${ROOT}/apps/web/src/cards/art`;\\nconst { ALT_SCENE_RECIPES, SCENE_RECIP\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nimport re\\nstart=s.index('## State')\\nend=s.index('## Log')\\ns=s[:start]+'''## State\\n\\n- Run 2 (build, opus, 2026-11-08): everyth\u2026\n- Bash: {\"command\": \"sed -n '1,20p' apps/web/src/cards/art/classicPlusAltRecipes2.ts; grep -n '^/\\\\*\\\\* ' apps/web/src/cards/art/classicPlusAltRecipes2.ts | cut -c1-160; wc -l apps/web/src/cards/art/classicP\u2026\n- Bash: {\"command\": \"sleep 1; tail -c 600 /tmp/w3396/vitest-changed.log\", \"description\": \"Peek at vitest run progress\"}\n- Bash: {\"command\": \"for i in $(seq 1 50); do if grep -q '^exit=' /tmp/w3396/vitest-changed.log; then break; fi; sleep 20; done; grep -E 'Test Files|Tests |exit=|FAIL' /tmp/w3396/vitest-changed.log | head -3\u2026\n- Bash: {\"command\": \"sleep 240; tail -c 400 /tmp/w3396/vitest-changed.log\", \"description\": \"Wait and peek at vitest progress\", \"timeout\": 300000}\n- tool error: <tool_use_error>Blocked: sleep 240 followed by: tail -c 400 /tmp/w3396/vitest-changed.log. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait fo\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"grep -E 'Test Files|Tests |exit=|FAIL|\\u00d7' /tmp/w3396/vitest-changed.log | head -30\", \"description\": \"Summarize the changed-tests run\"}\n- Bash: {\"command\": \"echo \\\"- run 2: harness web tests (vitest --changed origin/main): 308 files, 6098 passed, 109 skipped, exit 0; re-running Cypress on the final recipes\\\" >> .bot-notes.md; E2E_COMPONENT_P\u2026\n- Bash: {\"command\": \"grep -o '{\\\"spec\\\":\\\"classicplus-alt-scenes-[0-9]\\\",\\\"shares\\\":{[^}]*}' /tmp/w3396/cy2.log | python3 -c \\\"\\nimport sys,json\\nd={}\\nfor line in sys.stdin:\\n for k,v in json.loads(line+'}'\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Left: the harness's vitest --changed run (in progress at time of writing), final report with the per-card table.\\\"\u2026"
       },
-      "hold": {
-        "ends": "2026-11-08T11:59:49Z",
-        "lifted": "2026-11-08T11:02:44Z",
-        "owner": "claude-6",
-        "since": "2026-11-08T09:59:49Z",
-        "until": "2026-11-08T11:00:00Z",
-        "why": "5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%)"
-      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
@@ -17210,9 +17202,9 @@
       "queued_at": "2026-11-07T17:06:10Z",
       "requested_by": "jgoetzmann",
       "round_tier": "strong",
-      "run_id": "42464857002",
+      "run_id": "pending:23210f2e-1794135966",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-08T08:53:48Z",
+      "started_at": "2026-11-08T11:06:46Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -18679,9 +18671,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T11:05:50Z",
+    "at": "2026-11-08T11:06:46Z",
     "url": "",
-    "what": "revise #3426 on claude-6"
+    "what": "build #3396 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-08T10:50:55Z",
