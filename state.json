@@ -18030,7 +18030,7 @@
       "started_at": "2026-11-08T07:19:21Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 4,
       "votes": {
         "approvals": [],
         "builder": "claude",
