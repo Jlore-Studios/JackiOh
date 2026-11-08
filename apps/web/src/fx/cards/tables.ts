@@ -16,8 +16,10 @@
 // R3400000: a `{ bespoke }` entry may wear an `aura` too, and a Unit's aura may stand on its own `tile`
 // (its unit zone, fx/aura/plan.ts); "summit", "canvas" and "napkin" join the Mythics' own takeover looks.
 // R3389000: a signature look (fx/aura/looks.ts) is a signature's alone, and "abyss" is In Too Deep's own
-// takeover look. R3405000: Meditative's Mythics' twelve join the own takeover looks ("ascent", "workshop",
-// "brush", "mine", "quarry", "pavilion", "virus", "dojo", "studyHall", "caneRack", "warRoom", "fortress").
+// takeover look.
+// R3407000: Stinkyscape part two's six Mythics' own takeover looks join them. R3405000: Meditative's Mythics'
+// twelve join them too ("ascent", "workshop", "brush", "mine", "quarry", "pavilion", "virus", "dojo",
+// "studyHall", "caneRack", "warRoom", "fortress").
 
 import JSON5 from "json5";
 
@@ -79,6 +81,13 @@ export const OWN_TAKEOVER_LOOKS: Readonly<Record<OwnTakeoverLook, true>> = {
   summit: true,
   canvas: true,
   napkin: true,
+  // R3407000: Stinkyscape's six Mythics of part two.
+  freshJack: true,
+  ikwzki: true,
+  shockwave: true,
+  alteran: true,
+  edge: true,
+  redNarcor: true,
   // R3405000: Meditative's Mythics'.
   ascent: true,
   workshop: true,

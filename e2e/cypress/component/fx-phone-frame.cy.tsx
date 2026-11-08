@@ -10,7 +10,9 @@
 // R3344001: a hand with one face tilted under a pointer that keeps moving over it, its planes parallaxing
 // under its glare. R3334002: a launched Starship's broadside of eight guns, at the slowest effects speed.
 // R3400001: Goetzmann Game Design's and Bob's Plan's signatures, the two heaviest of Meditative+'s and Training
-// Grounds', their takeovers drawing full-screen art. R3405001: Keymaster Keenus's and Jlockeed's Headquarters',
+// Grounds', their takeovers drawing full-screen art.
+// R3407000: xxFreshJack's and Alteran Reach's, the two heaviest of Stinkyscape part two's, their takeovers
+// drawing their cards' own pictures full screen. R3405001: Keymaster Keenus's and Jlockeed's Headquarters',
 // the two heaviest of Meditative's, the second over its own takeover's art.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-phone-frame.cy.tsx
 
@@ -367,6 +369,29 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
         mountScene(board, galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
         cy.get(GAME).find("[data-animating]").should("exist");
         cy.get(CANVAS).should("exist");
+        return sampleFrames();
+      });
+      cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+    });
+  }
+
+  // R3407000: Stinkyscape part two's two heaviest: a Mythic Unit's and a Mythic Field Spell's, each its takeover
+  // over its card's own picture, its own entrance and its text's beat.
+  for (const [defId, name, look] of [
+    ["stinkyscape-109", "xxFreshJack", "freshJack"],
+    ["stinkyscape-148", "Alteran Reach", "alteran"],
+  ] as const) {
+    it(`R3407000 ${name}'s signature holds the phone frame budget mid-flight`, () => {
+      cy.viewport(PHONE.width, PHONE.height);
+      const entry = FX_CARD_TABLE.get(defId);
+      const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${defId} has no gallery play`);
+      const board = galleryBoardOf(defId, fullBoardView());
+      holdsBudget(`${name}'s signature`, () => {
+        mountScene(board, galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
+        cy.get(GAME).should("have.attr", "data-takeover", "mythic");
+        cy.get(`${FX_DOM} [data-fx="takeover"]`).should("have.attr", "data-look", look);
+        cy.get(`${FX_DOM} [data-fx="takeover"] img.fx-takeover-art`).should("exist");
         return sampleFrames();
       });
       cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");

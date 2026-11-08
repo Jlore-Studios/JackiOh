@@ -8,9 +8,9 @@
 // "snowplowHeave", Training Grounds #38 Tutorial Master's "chalkboardLesson" and #39.1 the Training-Grounds
 // Golem's "golemLashing". R3389001: Classic's signatures' six (#4 Palantir "seeingOrb", #7 InfiniScepter
 // "sceptrePlant", #28 Second Wind "galeBurst", #33 Joro "silkDrop", #85 King Wagtoggle "royalCloak", #90 In
-// Too Deep "abyssSurface"). R3405001: Meditative's twenty-five, from #7 Introspection's "poolBreath" to #97.9
-// Jlockeed's Headquarters' "fortressRise", each starting after its entry's lead (`leadMs`, R3405000). It
-// keys off the `summoned` event's
+// Too Deep "abyssSurface"). R3407000: Stinkyscape part two's (fx/cards/stinkyscape/). R3405001: Meditative's
+// twenty-five, from #7 Introspection's "poolBreath" to #97.9 Jlockeed's Headquarters' "fortressRise", each
+// starting after its entry's lead (`leadMs`, R3405000). It keys off the `summoned` event's
 // own `defId`, which a hidden summon never has (R202), and decorates the entry the runner already timed,
 // so it paces nothing (R200, R201).
 //
@@ -59,6 +59,17 @@ import { virusBoot } from "./cards/meditative/yilesVirus.ts";
 import { snowplowHeave } from "./cards/meditativeplus/bobSoldier.ts";
 import { golemLashing } from "./cards/traininggrounds/trainingGolem.ts";
 import { chalkboardLesson } from "./cards/traininggrounds/tutorialMaster.ts";
+import { alteranDive } from "./cards/stinkyscape/alteranReach.ts";
+import { golemCrash } from "./cards/stinkyscape/chaosCalls.ts";
+import { freshJackVault } from "./cards/stinkyscape/freshJack.ts";
+import { ikwzkiDawn } from "./cards/stinkyscape/ikwzki.ts";
+import { blobPlop, in33dh3Drop, primeCrown } from "./cards/stinkyscape/in33dh3.ts";
+import { resumeTube } from "./cards/stinkyscape/jobApplication.ts";
+import { balthasarLamp, casperMirror, melchiorBoot } from "./cards/stinkyscape/magi.ts";
+import { megabaseDock } from "./cards/stinkyscape/megabase.ts";
+import { sanctumRise } from "./cards/stinkyscape/sanctum.ts";
+import { scornGate } from "./cards/stinkyscape/scornboi.ts";
+import { shockwaveRing } from "./cards/stinkyscape/shockwave447.ts";
 import { FOOT, type Entrance, type EntranceKey } from "./cards/recipe.ts";
 import { fleetCommand, shipyardRollout } from "./cards/stinkyscape/starshipSignatures.ts";
 import { FX_CRACK_TAIL_MS, FX_FLAVOR_LIVE, FX_SUMMON_BRUTE_TRAUMA, FX_SUMMON_FLAVOR_TUNING } from "./constants.ts";
@@ -86,6 +97,22 @@ export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = {
   silkDrop,
   royalCloak,
   abyssSurface,
+  // R3407000: Stinkyscape part two's signatures (fx/cards/stinkyscape/).
+  melchiorBoot,
+  balthasarLamp,
+  casperMirror,
+  freshJackVault,
+  ikwzkiDawn,
+  shockwaveRing,
+  resumeTube,
+  scornGate,
+  megabaseDock,
+  in33dh3Drop,
+  primeCrown,
+  blobPlop,
+  alteranDive,
+  golemCrash,
+  sanctumRise,
   // R3405001: Meditative's signature Units' and Field Spells'.
   poolBreath,
   floodlights,

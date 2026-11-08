@@ -250,6 +250,24 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect(plain.querySelector(".takeover-art")).toBeNull();
   });
 
+  it("R3407000 a takeover with its card's picture mounts one image over the dark, under the sweep; without one none", () => {
+    const art = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E";
+    const takeover: FxDomCue = { kind: "takeover", look: "freshJack", tint: TINT, at: anchor, landMs: 1240, delayMs: 0, durationMs: 1800, art };
+    const el = expectMounted(mountDomEffect(root, takeover, { at: AT }), takeover);
+    expect(el.getAttribute("data-look")).toBe("freshJack");
+    expect([...el.children].map((child) => child.className)).toEqual(["fx-takeover-dark", "fx-takeover-art", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+    const picture = el.querySelectorAll("img.fx-takeover-art");
+    expect(picture.length).toBe(1);
+    expect(picture[0]?.getAttribute("src")).toBe(art);
+    expect(picture[0]?.getAttribute("alt")).toBe("");
+    // A picture, never a card face's text (R202).
+    expect(textNodeCount(el)).toBe(0);
+    el.remove();
+    const { art: _none, ...bare } = takeover;
+    const plain = expectMounted(mountDomEffect(root, bare, { at: AT }), bare);
+    expect(plain.querySelector(".fx-takeover-art")).toBeNull();
+  });
+
   it("R3400001 a figure covers its box with its figure, tint, side and size", () => {
     const figure: FxDomCue = { kind: "figure", figure: "chalkboard", at: anchor, tint: TINT, delayMs: 0, durationMs: 700 };
     const el = expectMounted(mountDomEffect(root, figure, { at: AT }), figure);

@@ -8,6 +8,7 @@
 // R3332000: it lists every signature by set; R3332001 plays Felinor Fiender's over its Felinors.
 // R3400001: Meditative+'s and Training Grounds' eight signatures, each tile aura standing as its Unit lands.
 // R3389001: Classic's eleven.
+// R3407000: Stinkyscape part two's 23, each Unit's look on its tile and each Field Spell's on its zone.
 // R3405001: Meditative's 32, each aura standing where its card stands.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -18,6 +19,7 @@ import { setAudioEngineForTests } from "../../audio/engine.ts";
 import { fakeAudioEngine } from "../../audio/test/fakeAudio.ts";
 import { planAuras } from "../../fx/aura/plan.ts";
 import { entranceKeyOf, planCardFx, planCardMotif } from "../../fx/cardFx.ts";
+import { STINKYSCAPE_TWO_SIGNATURES } from "../../fx/cards/stinkyscape/signature.ts";
 import { entryAura, FX_CARD_FILES, FX_CARD_TABLE, parseFxCardTable } from "../../fx/cards/tables.ts";
 import { FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx/constants.ts";
 import { planFx } from "../../fx/cues.ts";
@@ -70,9 +72,11 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     // Flourishes, Plague Nuke's set piece and its two marquee entrances); #2799: Training Grounds' 51.
     // R3338000: Event Horizon's and The Big Crunch's set pieces, which were `none`; R3334004: the Dormant
     // Starship's, Starfleet Commander's and Preemptive Strike's signatures, which were `none`. R3400001: the
-    // Training-Grounds Golem's signature, which was `none`. R3405001: Meditative's six signatures that were
-    // `none` (Jade Beauty, AI Girlfriend, Keymaster Keenus, Mayor Medinamogger, Prison, Jlockeed's Headquarters).
-    expect(cards).toHaveLength(657);
+    // Training-Grounds Golem's signature, which was `none`. R3407000: xxFreshJack's, Megabase's, Edge of the
+    // Universe's and the Stinkyscape Golem's signatures, which were `none`. R3405001: Meditative's six
+    // signatures that were `none` (Jade Beauty, AI Girlfriend, Keymaster Keenus, Mayor Medinamogger, Prison,
+    // Jlockeed's Headquarters).
+    expect(cards).toHaveLength(661);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
@@ -289,12 +293,46 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     expect(screen.getByTestId("game").querySelector("[data-animating]")).not.toBeNull();
   });
 
+  it("R3407000 the gallery lists Stinkyscape part two's 23 signatures under their set, each playing and each permanent's look standing where it lands", () => {
+    const stinkyscape = gallerySignatures().find((group) => group.set === "Stinkyscape")?.cards.map((card) => card.defId) ?? [];
+    const ours = new Set<string>(STINKYSCAPE_TWO_SIGNATURES);
+    expect(stinkyscape.filter((defId) => ours.has(defId))).toEqual([...STINKYSCAPE_TWO_SIGNATURES]);
+    const base = fullBoardView();
+    for (const defId of STINKYSCAPE_TWO_SIGNATURES) {
+      const entry = FX_CARD_TABLE.get(defId);
+      const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${defId} has no gallery play`);
+      const board = galleryBoardOf(defId, base);
+      const events = galleryCardEvents(defId, play, board, 1);
+      const fielded = galleryFieldView(defId, board);
+      const env: FxPlanEnv = { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
+      const cues = planEntries(events, withEvents(fielded, events), false).flatMap((planned) => {
+        env.memory.remember(planned.events);
+        return planFx(planned, planned.view, env);
+      });
+      expect(cues.length, defId).toBeGreaterThan(0);
+      // Its standing look: a Unit's on its tile where its entrance lands, a Field Spell's on its zone.
+      const aura = entryAura(entry);
+      if (aura === undefined) continue;
+      const worn = planAuras(fielded, new Map()).filter((spec) => spec.defId === defId).map((spec) => [spec.side, spec.lane, spec.scope, spec.look]);
+      expect(worn, defId).toEqual([["you", aura.scope === "tile" ? 3 : 1, aura.scope, aura.look]]);
+    }
+    // The rendered gallery offers them, and plays MELCHIOR's.
+    render(<FxGallery />);
+    const select = screen.getByTestId(fxGalleryTestid.signature);
+    expect(optionsOf(fxGalleryTestid.signature)).toEqual(expect.arrayContaining([...STINKYSCAPE_TWO_SIGNATURES]));
+    fireEvent.change(select, { target: { value: "stinkyscape-018-1" } });
+    fireEvent.click(screen.getByTestId(fxGalleryTestid.playSignature));
+    expect(screen.getByTestId("game").querySelector("[data-animating]")).not.toBeNull();
+  });
+
   it("R2784000 #2798 the gallery has a play for every Stinkyscape part-two entry other than none, and each plays its motif, recipe, set piece or aura", () => {
     const file = FX_CARD_FILES.find((candidate) => candidate.file === "stinkyscape-2.json5");
     if (file === undefined) throw new Error("no stinkyscape-2.json5");
     // R2801000: the pass's 83 and the Starship part's six; R3336000: Propagation layer is none; R3334004: the
-    // Starship's three signatures.
-    expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 91);
+    // Starship's three signatures. R3407000: four signatures join them (xxFreshJack, Megabase, Edge of the
+    // Universe, the Stinkyscape Golem).
+    expectGalleryPlays(new Set(parseFxCardTable(file.file, file.source).keys()), 95);
   });
 
   it("R2784000 #2799 the gallery has a play for every Training Grounds entry other than none, and each plays its motif or recipe", () => {

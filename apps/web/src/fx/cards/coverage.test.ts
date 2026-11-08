@@ -52,12 +52,13 @@ describe("R2803000 the audit's coverage", () => {
 
   it("R3389000 every Field Spell whose entry is a recipe wears its aura beside it", () => {
     const recipes = CARDS.filter((id) => CATALOG[id]?.type === "Field Spell" && entryOf(id).kind === "bespoke");
+    // R3407000: and Stinkyscape part two's Job Application, Alteran Reach and Sanctum.
     // R3405001: Meditative's eight signature Field Spells with a recipe (The Cane's is its entrance alone).
     expect(recipes).toEqual([
-      "classic-004",
-      "classic-007",
-      "classic-028",
-      "classic-090",
+    "classic-004",
+    "classic-007",
+    "classic-028",
+    "classic-090",
       "meditative-007",
       "meditative-011",
       "meditative-026",
@@ -66,7 +67,9 @@ describe("R2803000 the audit's coverage", () => {
       "meditative-071",
       "meditative-075",
       "meditative-080",
-    ]);
+      "stinkyscape-112",
+      "stinkyscape-148",
+      "stinkyscape-152",]);
     for (const id of recipes) expect(entryAura(entryOf(id)), id).toBeDefined();
   });
 

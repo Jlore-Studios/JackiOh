@@ -45,7 +45,7 @@ import {
 /**
  * Every look and every scope once: seven Field Spells, a Field Trap (core-018), a Spell (core-035) and, R3400000,
  * three Units on their tiles, one of them a bespoke entry's; R3405000 Meditative's five new looks, a Field Spell's
- * ripple and four Units' orbit, steam, glitch and scanline.
+ * ripple and four Units' orbit, steam, glitch and incense.
  */
 const TABLE = parseFxCardTable(
   "aura.json5",
@@ -66,7 +66,7 @@ const TABLE = parseFxCardTable(
     "meditative-065": { aura: { look: "orbit", palette: "Physical/steel", scope: "tile" } },
     "meditative-047": { aura: { look: "steam", palette: "Toxic", scope: "tile" } },
     "meditative-049-2": { aura: { look: "glitch", palette: "Tech/glitch", scope: "tile" } },
-    "meditative-051": { aura: { look: "scanline", palette: "Tech/hologram", scope: "tile" } },
+    "meditative-051": { aura: { look: "incense", palette: "Tech/hologram", scope: "tile" } },
   }`,
 );
 
@@ -134,7 +134,7 @@ describe("R2787000 what wears an aura", () => {
       ["meditative-047", "opponent", 2, "tile", "steam"],
       ["traininggrounds-039-1", "opponent", 3, "tile", "timber"],
       ["meditative-049-2", "opponent", 4, "tile", "glitch"],
-      ["meditative-051", "opponent", 5, "tile", "scanline"],
+      ["meditative-051", "opponent", 5, "tile", "incense"],
     ]);
     expect(new Set(planned.map((aura) => aura.look))).toEqual(new Set(AURA_LOOK_NAMES));
     expect(new Set(planned.map((aura) => aura.scope))).toEqual(new Set(AURA_SCOPES));

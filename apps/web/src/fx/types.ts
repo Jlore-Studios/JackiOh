@@ -170,7 +170,7 @@ export type TakeoverLook =
   | "void"
   | "pawn"
   | "genie"
-  | "ai" | "abyss" | "summit"
+  | "ai" | "abyss" | "freshJack" | "ikwzki" | "shockwave" | "alteran" | "edge" | "redNarcor" | "summit"
   | "canvas"
   | "napkin"
   | "ascent"
@@ -185,7 +185,20 @@ export type TakeoverLook =
   | "caneRack"
   | "warRoom"
   | "fortress";
-export type FxTakeoverCue = { kind: "takeover"; look: TakeoverLook; tint: FxTint; at: FxAnchor; landMs: number; delayMs: number; durationMs: number };
+/**
+ * R3407000: `art`, a look of its own that draws its card's picture over the dark (`TAKEOVER_ART_LOOKS`), the
+ * picture's URI: only ever a card the seat's own event names (R202).
+ */
+export type FxTakeoverCue = {
+  kind: "takeover";
+  look: TakeoverLook;
+  tint: FxTint;
+  at: FxAnchor;
+  landMs: number;
+  delayMs: number;
+  durationMs: number;
+  art?: string;
+};
 /**
  * R2800000: a board clear's set piece over the whole layer, centred on `at`: a `vortex` (the board
  * twisting into a spiral that swallows what the wipe takes) or a `fold` (its edges folding inward into

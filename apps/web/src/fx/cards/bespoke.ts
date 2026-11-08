@@ -9,6 +9,7 @@
 // Meditative+'s and Training Grounds' Legendaries and Mythics (Bob's Plan, Bob, Scratch Pad, Seance, Tutorial
 // Master, Call to Chaos (Training-Grounds Edition); Goetzmann Game Design's grows from its flourish).
 // R3389001: Classic's eleven signatures' recipes (#3389), King Wagtoggle's crownSwap grown among them.
+// R3407000: Stinkyscape part two's signatures.
 // R3405001: Meditative's Legendaries' and Mythics' signatures (fx/cards/meditative/), every one but The
 // Cane's and Mayor Medinamogger's, whose signatures are their entrances alone.
 
@@ -64,7 +65,20 @@ import { battleshipWarp } from "./stinkyscape/battleshipWarp.ts";
 import { duoBond } from "./stinkyscape/duoBond.ts";
 import { flashFreeze } from "./stinkyscape/flashFreeze.ts";
 import { magiBoot } from "./stinkyscape/magiBoot.ts";
+import { edgeFlee, starscapeJump } from "./stinkyscape/alteranReach.ts";
+import { stinkCloud, tabletopTilt } from "./stinkyscape/chaosCalls.ts";
+import { freshJackComet } from "./stinkyscape/freshJack.ts";
+import { blobDrum, dataPacket, primeConduct } from "./stinkyscape/in33dh3.ts";
+import { jobInterview, payday } from "./stinkyscape/jobApplication.ts";
+import { balthasarCradle, casperKiss, melchiorTally } from "./stinkyscape/magi.ts";
+import { giftShop } from "./stinkyscape/megabase.ts";
+import { narcorDust, redNarcorHum } from "./stinkyscape/narcor.ts";
 import { preemptiveStrike } from "./stinkyscape/preemptiveStrike.ts";
+import { sanctumEcho } from "./stinkyscape/sanctum.ts";
+import { scornSweep } from "./stinkyscape/scornboi.ts";
+import { shockwaveLecture } from "./stinkyscape/shockwave447.ts";
+import { stimmyDrop } from "./stinkyscape/stimmycheck.ts";
+import { chaosOrb } from "./stinkyscape/wildar.ts";
 import { probeScan } from "./stinkyscape/probeScan.ts";
 import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
 import { celestialCall } from "./traininggrounds/celestialCaller.ts";
@@ -143,6 +157,28 @@ export const CARD_RECIPES = {
   preemptiveStrike,
   probeScan,
   anomalyCall,
+  // R3407000: Stinkyscape part two's signatures.
+  melchiorTally,
+  balthasarCradle,
+  casperKiss,
+  freshJackComet,
+  shockwaveLecture,
+  jobInterview,
+  payday,
+  scornSweep,
+  giftShop,
+  dataPacket,
+  primeConduct,
+  blobDrum,
+  starscapeJump,
+  edgeFlee,
+  chaosOrb,
+  stinkCloud,
+  tabletopTilt,
+  sanctumEcho,
+  stimmyDrop,
+  narcorDust,
+  redNarcorHum,
   celestialCall,
   dinoStomp,
   gameDesign,

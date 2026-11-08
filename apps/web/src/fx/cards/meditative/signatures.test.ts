@@ -45,7 +45,7 @@ const TABLE: Readonly<Record<string, Row>> = {
   "meditative-049-1": { b: "yilePrime", e: "pavilionUnfurl", t: "pavilion", a: aura("orbit", "tile", "Tech/hologram") },
   "meditative-049-2": { b: "yileVirus", e: "virusBoot", t: "virus", a: aura("glitch", "tile", "Tech/glitch") },
   "meditative-049-3": { b: "aiGirlfriend", e: "dojoBoot", t: "dojo", a: aura("holy", "tile", "Tech/hologram") },
-  "meditative-051": { b: "devinBot", e: "cushionDrop", a: aura("scanline", "tile", "Tech/hologram") },
+  "meditative-051": { b: "devinBot", e: "cushionDrop", a: aura("incense", "tile", "Tech/hologram") },
   "meditative-063": { b: "skullJnari", e: "skullThud", a: aura("ember", "zone", "Dark/curse") },
   "meditative-065": { b: "keenusKeys", e: "keyRing", a: aura("orbit", "tile", "Physical/steel") },
   "meditative-071": { b: "pareto", e: "studyCurve", t: "studyHall", a: aura("holy", "lane") },

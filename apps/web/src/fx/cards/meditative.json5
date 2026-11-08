@@ -77,7 +77,7 @@
   "meditative-049-2": { bespoke: "yileVirus", entrance: "virusBoot", takeover: "virus", aura: { look: "glitch", palette: "Tech/glitch", scope: "tile" }, signature: true }, // Yile's Virus
   "meditative-049-3": { bespoke: "aiGirlfriend", entrance: "dojoBoot", takeover: "dojo", aura: { look: "holy", palette: "Tech/hologram", scope: "tile" }, signature: true }, // AI Girlfriend
   "meditative-050": { cast: { motif: "deal", palette: "Tech/hologram" } }, // CN Tech
-  "meditative-051": { bespoke: "devinBot", entrance: "cushionDrop", aura: { look: "scanline", palette: "Tech/hologram", scope: "tile" }, signature: true }, // Devin Bot
+  "meditative-051": { bespoke: "devinBot", entrance: "cushionDrop", aura: { look: "incense", palette: "Tech/hologram", scope: "tile" }, signature: true }, // Devin Bot
   "meditative-052": { cast: { motif: "bless" }, aura: { look: "storm", palette: "Hustle/cash", scope: "board" } }, // Economic Anxiety
   "meditative-053": { cast: { motif: "seal" } }, // Prestige
   "meditative-054": { cast: { motif: "deal", palette: "Hustle/cash" }, trigger: { motif: "deal", palette: "Hustle/cash" }, activate: { motif: "deal", palette: "Hustle/cash" }, aura: { look: "holy", palette: "Hustle/cash", scope: "zone" } }, // Money Machine
