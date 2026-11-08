@@ -16095,6 +16095,7 @@
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
+      "ci_fixed_head": "8068af03f967a0319561aaf2d773242ca3f858df",
       "ci_fixes": 2,
       "ci_on_head": true,
       "ci_run_id": 42520037073,
@@ -16115,7 +16116,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-08T13:16:01Z",
+      "feedback_since": "2026-11-08T20:38:29Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3345,
@@ -16130,7 +16131,7 @@
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "medium",
+      "round_tier": "",
       "run_id": "42521163488",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -16151,11 +16152,11 @@
         "provider": "claude-8",
         "run": "42509322133"
       },
-      "source": "ci",
+      "source": "",
       "started_at": "2026-11-08T20:38:29Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 4,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
