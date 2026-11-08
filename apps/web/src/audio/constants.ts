@@ -153,6 +153,12 @@ export const MUSIC_DUCK_SFX: readonly SfxId[] = ["trapSting", "victory", "defeat
 /** The field's taps (game/SandSurface.tsx TAP_SFX, #1954): every press sounds, past SFX_RETRIGGER_MS and SFX_MAX_VOICES. */
 export const RAPID_SFX: ReadonlySet<SfxId> = new Set<SfxId>(["sand", "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral"]);
 /**
+ * R3334000: the sounds a run sends at once, each delayed to its own beat (a fuse run's docks,
+ * starshipSounds.ts): their retrigger guard reads when each sounds, not when it was sent, so two
+ * docks a beat apart both sound and two at one beat do not.
+ */
+export const SCHEDULED_SFX: ReadonlySet<SfxId> = new Set<SfxId>(["starshipDock"]);
+/**
  * #3347: a deck's riffle sounds this long after the shuffle it follows begins, the length of the pile's
  * `shuffledIn` or `traded` motion (game/animations.ts), so the sound lands with the leaves.
  */

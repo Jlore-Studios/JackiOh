@@ -4,7 +4,7 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { boardShakeSink, pointIn, resolveAnchor } from "./anchors.ts";
+import { artBoxOf, boardShakeSink, pointIn, resolveAnchor } from "./anchors.ts";
 import type { FxBox } from "./types.ts";
 
 afterEach(() => {
@@ -55,6 +55,28 @@ describe("S8 resolveAnchor", () => {
     place(byTestid("zone-you-units-3"), CARD);
 
     expect(resolveAnchor({ kind: "testid", testid: "zone-you-units-3", at: { x: 0.5, y: 1 } })).toEqual(CARD);
+  });
+
+  it("R3334000 picture anchor square", () => {
+    mount('<div data-testid="card-ship"><span class="cf-portrait"><span class="cf-art"></span></span></div>');
+    const card = byTestid("card-ship");
+    place(card, CARD);
+    const art = card.querySelector(".cf-art");
+    if (art === null) throw new Error("no art");
+    // A tall oval window: the cover-fit picture is the square as wide as the window is tall, centred on it.
+    place(art, { x: 310, y: 210, width: 70, height: 100 });
+    expect(resolveAnchor({ kind: "testid", testid: "card-ship", art: "frame" })).toEqual({ x: 310, y: 210, width: 70, height: 100 });
+    expect(resolveAnchor({ kind: "testid", testid: "card-ship", art: "picture", at: { x: 0.3, y: 0.6 } })).toEqual({ x: 295, y: 210, width: 100, height: 100 });
+    expect(artBoxOf(card, "picture")).toEqual({ x: 295, y: 210, width: 100, height: 100 });
+    // A wide one: the square is as tall as it is wide.
+    place(art, { x: 300, y: 250, width: 90, height: 40 });
+    expect(artBoxOf(card, "picture")).toEqual({ x: 300, y: 225, width: 90, height: 90 });
+    // No art inside: the element's own box stands in; not laid out: null.
+    mount('<div data-testid="zone-you-units-5"></div>');
+    place(byTestid("zone-you-units-5"), CARD);
+    expect(resolveAnchor({ kind: "testid", testid: "zone-you-units-5", art: "picture" })).toEqual({ x: 282, y: 200, width: 126, height: 126 });
+    mount('<div data-testid="card-unlaid"><span class="cf-art"></span></div>');
+    expect(resolveAnchor({ kind: "testid", testid: "card-unlaid", art: "picture" })).toBeNull();
   });
 
   it("S8 a testid that is not rendered resolves to null", () => {

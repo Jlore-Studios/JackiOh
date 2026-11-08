@@ -397,9 +397,8 @@ export const FX_SYSTEM_TRAUMA = 0.3;
 export const FX_STARSHIP_FUSE_STAGGER_MS = 250;
 export const FX_STARSHIP_FUSE_LAND_AT = 0.6;
 export const FX_STARSHIP_FUSE_TRAUMA = 0.25;
-// R2801000: the launch's countdown, as fractions of its hold, the count shown being the counts left
-// (3, 2, 1); its engines ignite at FX_STARSHIP_IGNITE_AT of the hold.
-export const FX_STARSHIP_COUNT_AT = [0, 0.25, 0.5] as const;
+// R2801000, R3334001: the launch's tile cues ignite its engines at FX_STARSHIP_IGNITE_AT of the hold
+// (R3334001 took out the countdown that ran before it).
 export const FX_STARSHIP_IGNITE_AT = 0.75;
 // R2801000: after the hold, as fractions of the launch's own motion: the contrail's flight up, and the landing.
 export const FX_STARSHIP_LIFT_AT = 0.45;
@@ -410,6 +409,9 @@ export const FX_STARSHIP_BADGE_AT = { x: 0.5, y: 0.36 } as const;
 // Motion its still frame stands this long and holds nothing.
 export const FX_STARSHIP_TAIL_MS = 400;
 export const FX_STARSHIP_STILL_MS = 1_600;
+// R3334002: a launched Starship with no weapons rams prow first, its lunge turned this many degrees
+// toward its target (jk-lunge's `--fx-lunge-turn`).
+export const FX_STARSHIP_RAM_TURN_DEG = 30;
 // R3336000: the Drone Battleship (fx/battleship.ts). The Shield's armor plates glow at most this many; where on
 // each layer's card its dome, its reactor core and its bay doors sit (fractions of the card).
 export const FX_SHIP_PLATES_MAX = 8;

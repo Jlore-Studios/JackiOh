@@ -4,7 +4,8 @@
    The seal sits at z 4 inside the minion's `.cf-scale`, before the state rail in the DOM, which
    paints over it; it never takes a pointer event.
 
-   Motion. Only a part marked `cf-dormant-anim` moves, and only by transform and opacity. Each
+   Motion. Only a part marked `cf-dormant-anim` moves (and a Starship's shipyard idle, below), and only by
+   transform and opacity. Each
    part's still style is its static mark, so when the loop is stopped by reduced motion (the media
    query and the settings panel's `data-reduce-motion`, both blocks at the end) the mark stays. */
 
@@ -104,14 +105,75 @@
     0 0.3cqmin 0.6cqmin color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
+/* R3334000: a Dormant Starship's shipyard idle (ShipyardIdle.tsx), laid over its picture inside the portrait and
+   framed as the picture is: the dock light's cone sweeps about its lamp (the polygon's transform-origin, in the
+   picture's units) and the welding sparks fly out from the newest piece's weld and fade. Only transform and opacity
+   move, for as long as constants.ts says (`SHIPYARD_IDLE_SWEEP_MS`, `SHIPYARD_IDLE_WELD_MS`, read through the idle's
+   custom properties), each spark a share of a flicker behind the last. It is drawn only while it holds a moving-art
+   slot and never under reduced motion; both blocks at the end hold it still all the same. */
+.cf .cf-shipyard-idle {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.cf .cf-shipyard-sweep {
+  transform-box: view-box;
+  animation-name: cf-shipyard-sweep;
+  animation-duration: var(--cf-sweep-ms);
+  animation-timing-function: var(--ease-in-out);
+  animation-iteration-count: infinite;
+}
+
+.cf .cf-shipyard-sparks circle {
+  transform-box: view-box;
+  animation-name: cf-shipyard-weld;
+  animation-duration: var(--cf-weld-ms);
+  animation-timing-function: steps(4);
+  animation-iteration-count: infinite;
+  animation-delay: calc(var(--cf-weld-ms) * var(--cf-spark) / var(--cf-sparks) * -1);
+}
+
+@keyframes cf-shipyard-sweep {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: rotate(-9deg);
+  }
+  50% {
+    opacity: 1;
+    transform: rotate(9deg);
+  }
+}
+
+@keyframes cf-shipyard-weld {
+  from {
+    opacity: 1;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cf .cf-dormant,
-  .cf .cf-dormant * {
+  .cf .cf-dormant *,
+  .cf .cf-shipyard-idle,
+  .cf .cf-shipyard-idle * {
     animation: none !important;
   }
 }
 
 :root[data-reduce-motion="true"] .cf .cf-dormant,
-:root[data-reduce-motion="true"] .cf .cf-dormant * {
+:root[data-reduce-motion="true"] .cf .cf-dormant *,
+:root[data-reduce-motion="true"] .cf .cf-shipyard-idle,
+:root[data-reduce-motion="true"] .cf .cf-shipyard-idle * {
   animation: none !important;
 }

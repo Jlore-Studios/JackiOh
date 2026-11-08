@@ -13,6 +13,9 @@
 // the Drone Battleship's layers and drones add their own sounds after the row's (`battleshipCues`, unpanned).
 // R3400001: so do Meditative+'s and Training Grounds' signature cards (`signatureCues`, unpanned).
 // R3402001: so do Core's ten Legendaries and Mythics, a Trap's at its firing.
+// R3334002, R3334003: a launched Starship's attack and a Starship's death leave their row's sound to the
+// Starship's own (starshipSounds.ts), but only when the director has sent it (`starshipSounded`): one
+// voiced with no entry started (Reduce Motion) swings and dies with the row's sound.
 
 import type {
   CardType,
@@ -130,6 +133,12 @@ export type CueContext = {
    * randomness is never spent on a sound.
    */
   random?: () => number;
+  /**
+   * R3334002, R3334003: true when the director has sent the Starship's own sound for this very event (a
+   * broadside's or a ram's `attackDeclared`, a wreck's `destroyed`; starshipSounds.ts), in place of its
+   * row's. Absent: never, so every row keeps its sound.
+   */
+  starshipSounded?: (event: GameEvent) => boolean;
 };
 
 export type CueRow<K extends GameEventType> = {
@@ -481,13 +490,16 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   },
   divineShieldLost: { sfx: "shieldShatter", cues: () => [sfx("shieldShatter")] },
   // R204: a death line on `destroyed` (R89 carries the defId), tokens included; never on a bounce,
-  // an exile or a transform.
+  // an exile or a transform. R3334003: a Starship's wreck groans as its hull breaks (starshipSounds.ts),
+  // in its death sting's place once the director has sent the groan; its line and effect stay.
   destroyed: {
     sfx: "death",
-    cues: (event, ctx) =>
-      entryFor(ctx.lines, event.defId)?.kind === "unit"
-        ? [sfx("death"), ...hookCues(ctx, event.defId, "death", DEATH_VOICE_DELAY_MS, VOICE_PRIORITY.react)]
-        : [sfx("death")],
+    cues: (event, ctx) => {
+      const sting = ctx.starshipSounded?.(event) === true ? NONE : [sfx("death")];
+      return entryFor(ctx.lines, event.defId)?.kind === "unit"
+        ? [...sting, ...hookCues(ctx, event.defId, "death", DEATH_VOICE_DELAY_MS, VOICE_PRIORITY.react)]
+        : sting;
+    },
   },
   enteredGraveyard: silent("the destroy, discard or resolve that sent it there already sounded"),
   exiled: { sfx: "poof", cues: () => [sfx("poof")] },
@@ -554,7 +566,9 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
             ...hookCues(ctx, event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.react),
           ],
   },
-  attackDeclared: { sfx: "attack", cues: () => [sfx("attack")] },
+  // R3334002: a launched Starship's broadside sounds its weapons, or its ram (starshipSounds.ts), in the
+  // swing's place once the director has sent them.
+  attackDeclared: { sfx: "attack", cues: (event, ctx) => (ctx.starshipSounded?.(event) === true ? NONE : [sfx("attack")]) },
   attackCancelled: { sfx: "cancel", cues: () => [sfx("cancel")] },
   manaChanged: {
     sfx: "mana",
