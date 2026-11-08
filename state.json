@@ -15848,8 +15848,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-8",
-      "owner_since": "2026-11-08T05:58:57Z",
-      "owner_why": "it took it up; released from its hold: `claude-1` has no runner free where it runs",
+      "owner_since": "2026-11-08T17:05:00Z",
+      "owner_why": "its turn came (it waited 120 minutes for #3419, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
       "pending_at": "2026-11-07T17:22:38Z",
       "pending_by": "jgoetzmann",
       "pending_request": false,
@@ -16700,12 +16700,12 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3407,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
-      "queued_at": "2026-11-08T10:13:30Z",
+      "queued_at": "2026-11-08T17:05:00Z",
       "run_id": "42483980583",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -16726,9 +16726,17 @@
         "provider": "claude-8",
         "run": "42483980583"
       },
+      "source": "conflict",
       "started_at": "2026-11-08T13:14:05Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-08T17:05:00Z",
+        "until": "2026-11-08T17:35:00Z",
+        "why": "it waited 120 minutes for #3419, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
+      },
       "votes": {
         "approvals": [
           "claude"
@@ -16749,18 +16757,7 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 6720602785,
-      "waiting_turn": {
-        "behind": [
-          3419
-        ],
-        "ends": "2026-11-08T17:03:18Z",
-        "from_run": "42483980583",
-        "head": "a689038f1a7e5e707c5f957da149ef1a14fa3927",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-08T15:03:18Z"
-      }
+      "waiting_comment": 6720602785
     },
     "3433": {
       "action": "review",
