@@ -16763,6 +16763,18 @@
       "action": "review",
       "asks": [],
       "audit_tier": "",
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "at": "2026-11-08T16:47:21Z",
+        "built_by": "claude-8",
+        "by": "`claude` (strong)",
+        "sha": "f6244e499d3ece17c95a4e28695199fdb3c9cd2a"
+      },
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -16782,6 +16794,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
+      "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
