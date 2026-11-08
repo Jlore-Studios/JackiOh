@@ -16195,7 +16195,9 @@
     },
     "3424": {
       "action": "review",
-      "asks": [],
+      "asks": [
+        "c:6728331432"
+      ],
       "decision": {
         "asked_at": "2026-11-08T03:51:49Z",
         "assigned": [
@@ -16242,12 +16244,13 @@
       },
       "interruptions": 0,
       "issue": 3399,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "pending_request": false,
       "provider": "claude-4",
       "question": "How should R3332000's signature budget be measured, so the 35 Classic+ signatures can pass it?",
-      "queued_at": "2026-11-08T02:23:52Z",
+      "queued_at": "2026-11-08T22:59:26Z",
+      "requested_by": "jgoetzmann",
       "run_id": "42438501202",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -16268,6 +16271,7 @@
         "provider": "claude-4",
         "run": "42438501202"
       },
+      "source": "request",
       "started_at": "2026-11-08T02:25:42Z",
       "stop_requested": false,
       "taken_asks": [],
