@@ -16117,15 +16117,6 @@
       "failures": 0,
       "feedback_since": "2026-11-08T13:16:01Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-08T18:08:31Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\n- Cross-review pass for PR #3419. Two blocking findings, both held:\n  1. takeover cue held `card: () => ...` closure. Now `stage: FxTakeoverStage | null` ({planes: CSS backgrounds in ART_PLANES order, name, face}) = plain data, no defId; cues.test CUE_KEYS.takeover has \"stage\"; takeover.test checks JSON has no defId and a re-plan toEqual.\n  2. Tap-pause unreachable (every opener passed heldPointerId). Added `FullScreenButton` (cards/FullScreenArt.tsx, \"Full screen\") in InspectSheet and CardDetail: opens with heldPointerId null -> tap pauses, 2nd tap/Esc/\u2715 closes. Hold keeps release-close. Test through InspectSheet in fullscreen.test.tsx. R3345000 note updated.\n- Next: run vitest (fx, cards, game, collection, packs), typecheck, eslint, fmt, spec check. wasm build was started in /tmp/wasm.log (fresh worktree).\n## Log\n- wasm build slow; waiting.\n- Done: all checks green (vitest fx/cards/game/collection/packs/ux/motion 311 files, typecheck, eslint, fmt, spec check).\n- Added zh-CN 'Full screen' (i18n check was the red). i18n tests rerun.\n- Pass 2 (this run): exported ART_PLANES from cards/index.ts; removed void/genie stage animation overrides in fx.css (sweep keeps those looks). Cypress card-fullscreen 6/6, fx-phone-frame 17/18 (R3342000 tile auras fails identically on base 7336cf5731: pre-existing). vitest fx/cards/motion 1224 pass, typecheck, eslint ok.\n- Pass 3: fullscreen.css padding/radius -> --space-8/--radius-pill (spacing+surfaces tests); ART_PLANES already exported; typecheck:component ok\n",
-        "provider": "claude-8",
-        "reason": "`claude-8` reached its usage limit",
-        "trail": ""
-      },
       "interruptions": 0,
       "issue": 3345,
       "kind": "review",
