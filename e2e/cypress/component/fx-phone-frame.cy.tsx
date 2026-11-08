@@ -5,7 +5,8 @@
 // Battleship's arrival (R3336000), a Mythic takeover (fewer Mythic-burst particles, a softer shake, and takeover rays trimmed to the same
 // visible disc), and a board with 4 auras. R3332001: Felinor Fiender's signature, the first, over the
 // gallery's board with its three Felinors. R3338000: Ceaseless Void's fold and Dice of Doom's 67. R3344001: a hand with
-// one face tilted under a pointer that keeps moving over it, its planes parallaxing under its glare.
+// one face tilted under a pointer that keeps moving over it, its planes parallaxing under its glare. R3399000:
+// Classic+'s two heaviest signatures (`PHONE_HEAVIEST_SIGNATURES`).
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-phone-frame.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -15,7 +16,14 @@ import { planTileAuras } from "../../../apps/web/src/fx/aura/tile.ts";
 import { FX_CARD_TABLE } from "../../../apps/web/src/fx/cards/tables.ts";
 import { FX_PARTICLE_CAP_MOBILE, FX_PHONE_FRAME_BUDGET_MS } from "../../../apps/web/src/fx/constants.ts";
 import { capacityFor } from "../../../apps/web/src/fx/director.ts";
-import { doomFixture, galleryBoardOf, galleryCardEvents, galleryFieldView, galleryPlayOf } from "../../../apps/web/src/fx/motifs/gallery.ts";
+import {
+  PHONE_HEAVIEST_SIGNATURES,
+  doomFixture,
+  galleryBoardOf,
+  galleryCardEvents,
+  galleryFieldView,
+  galleryPlayOf,
+} from "../../../apps/web/src/fx/motifs/gallery.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import {
@@ -244,6 +252,24 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
     });
     cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
   });
+
+  // R3399000: Classic+'s two heaviest signatures, by the particles their gallery plays plan (PHONE_HEAVIEST_SIGNATURES).
+  for (const defId of PHONE_HEAVIEST_SIGNATURES) {
+    it(`R3399000 ${defId}'s signature holds the phone frame budget mid-flight`, () => {
+      cy.viewport(PHONE.width, PHONE.height);
+      const entry = FX_CARD_TABLE.get(defId);
+      const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${defId} has no gallery play`);
+      const board = galleryBoardOf(defId, fullBoardView());
+      holdsBudget(`${defId}'s signature`, () => {
+        mountScene(board, galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
+        cy.get(GAME).find("[data-animating]").should("exist");
+        cy.get(CANVAS).should("exist");
+        return sampleFrames();
+      });
+      cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+    });
+  }
 
   it("R3338000 Ceaseless Void holds the phone frame budget", () => {
     cy.viewport(PHONE.width, PHONE.height);

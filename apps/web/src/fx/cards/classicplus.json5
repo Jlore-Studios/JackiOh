@@ -80,7 +80,7 @@
   "classicplus-044": { cast: { motif: "vanish", palette: "Tech/glitch" } }, // Simplicity Audit
   "classicplus-045": { cast: { motif: "vanish", palette: "Tech/glitch" } }, // Complexity Audit
   "classicplus-046": { signature: true, entrance: "bannerPlant", bespoke: "bannerFold", aura: { look: "bannerBreeze", palette: "Beast/felinor", scope: "zone" } }, // Felinor Flagbearer
-  "classicplus-046-1": { signature: true, entrance: "greatBanner", bespoke: "bannerShadow", aura: { look: "greatBannerShade", palette: "Beast/felinor", scope: "zone" } }, // Felinor Flagbearer Prime
+  "classicplus-046-1": { signature: true, entrance: "greatBanner", aura: { look: "greatBannerShade", palette: "Beast/felinor", scope: "zone" } }, // Felinor Flagbearer Prime
   "classicplus-047": { signature: true, bespoke: "puzzleBox" }, // Jogg's Box
   "classicplus-048": { signature: true, entrance: "briefcaseStride", bespoke: "sealedEnvelope", aura: { look: "laserDot", palette: "Tech/laser", scope: "zone" } }, // Jlockeed's Lobbyist
   "classicplus-049": { trigger: { motif: "tithe" } }, // Jay Fungus

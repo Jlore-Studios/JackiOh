@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
 import { mountDomEffect, mountHold, type DomEffect } from "./dom.ts";
-import type { FxBox, FxDomCue, FxHoldCue } from "./types.ts";
+import { TAKEOVER_ART } from "./takeoverArt.ts";
+import type { FxBox, FxDomCue, FxHoldCue, TakeoverLook } from "./types.ts";
 
 const AT: FxBox = { x: 100, y: 200, width: 80, height: 120 }; // center (140, 260)
 const TO: FxBox = { x: 700, y: 40, width: 60, height: 60 }; // center (730, 70)
@@ -471,6 +472,46 @@ describe("R2789000 — a keyword's callout", () => {
     // Taunt one, so the iconless probe moves to Cloaked, which neither lane iconified.
     expect(mountDomEffect(root, callout("Cloaked"), { at: AT })).toBeNull();
     expect(root.childElementCount).toBe(0);
+  });
+});
+
+describe("R3399002 — a takeover's own picture", () => {
+  const takeover = (look: TakeoverLook): FxDomCue => ({ kind: "takeover", look, tint: TINT, at: anchor, landMs: 1200, delayMs: 0, durationMs: 2400 });
+  const classesOf = (el: Element): (string | null)[] => [...el.children].map((child) => child.getAttribute("class"));
+
+  it("R3399002 an own-art takeover draws its picture, and prismatic none", () => {
+    for (const look of ["zealot", "portal", "stair", "vineyard"] as const) {
+      const art = TAKEOVER_ART[look];
+      if (art === undefined) throw new Error(`no picture for ${look}`);
+      const cue = takeover(look);
+      const el = expectMounted(mountDomEffect(root, cue, { at: AT }), cue);
+      expectCenteredOn(el, AT);
+      expect(el.getAttribute("data-look")).toBe(look);
+      expect(el.getAttribute("data-art")).toBe("true");
+      // The picture lies over the dark and under the sweep, the rays and the wave.
+      expect(classesOf(el)).toEqual(["fx-takeover-dark", "fx-takeover-art", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+      const svg = el.querySelector(".fx-takeover-art");
+      expect(svg?.namespaceURI).toBe("http://www.w3.org/2000/svg");
+      expect(svg?.getAttribute("viewBox")).toBe(art.viewBox);
+      expect(svg?.getAttribute("preserveAspectRatio")).toBe("xMidYMid slice");
+      expect(svg?.getAttribute("aria-hidden")).toBe("true");
+      const paths = [...(svg?.querySelectorAll("path") ?? [])];
+      expect(paths.map((path) => ({ d: path.getAttribute("d"), fill: path.getAttribute("fill"), part: path.getAttribute("class") }))).toEqual(
+        art.paths.map((path) => ({ d: path.d, fill: path.fill, part: `fx-takeover-art-${path.part}` })),
+      );
+      // Keyed by its look alone: nothing in it names a card (R202).
+      expect(el.outerHTML).not.toMatch(/classicplus-|data-def/);
+      root.innerHTML = "";
+    }
+
+    for (const look of ["prismatic", "void", "pawn", "genie", "ai"] as const) {
+      const cue = takeover(look);
+      const el = expectMounted(mountDomEffect(root, cue, { at: AT }), cue);
+      expect(el.hasAttribute("data-art")).toBe(false);
+      expect(el.querySelector("svg")).toBeNull();
+      expect(classesOf(el)).toEqual(["fx-takeover-dark", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+      root.innerHTML = "";
+    }
   });
 });
 

@@ -217,7 +217,8 @@ The new canvas presets (#2792, drawn in code in `fx/presets.ts` and `fx/sprites.
 
 `aura` (#2787, R2787000) is the one persistent motif: while a card's effect holds, the zone, lane, side
 or board it covers wears a quiet looping look in the card's palette, a tint, a slow drift of motes and
-an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, palette?, scope } }`.
+an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, palette?, scope } }`;
+R3399001: beside a `{ bespoke }` recipe too (`auraOfEntry` reads either).
 
 - **Looks** (`fx/aura/looks.ts`, `AURA_LOOKS`): `ember`, `frost`, `bloom`, `void`, `storm`, `holy`,
   `toxic` and `arcane`, each a mote velocity, size and life range, a mote, tint and edge opacity, a
@@ -226,8 +227,10 @@ an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, pale
 - **Scopes**, nearest first: `zone` (the card's own backrow zone), `lane` (the lane's four zones,
   both seats), `side` (its seat's ten zones) and `board` (all twenty). Only a Field Spell or a Field
   Trap stands in a zone, so only it may name `zone` or `lane`; the loader fails any other card's.
+  R3399001: a Unit's `zone` aura stands on its own unit zone (a Unit's `lane` aura fails).
 - **What wears one** (`fx/aura/plan.ts`, read off the shown view alone): every face-up Field Spell or
-  Field Trap whose entry has an aura, and every modifier the view lists that a readable play added
+  Field Trap whose entry has an aura, every face-up Unit whose entry has one (R3399001, keyed
+  `unit-<instanceId>`; a modifier its own play adds wears no second copy), and every modifier the view lists that a readable play added
   (the play resolving when its `modifierChanged` came, with no trap fired inside it), on its seat's
   side. A face-down card, the viewer's own unrevealed Field Trap and a Unit in a backrow zone wear
   none (R202). The view's modifiers carry no source (R169), so a modifier whose play left the event
@@ -274,8 +277,8 @@ under the card (`fx/aura/TileAura.tsx`, `tile.css`).
   (`TILE_MOTES_LEGENDARY`). Mythic gets a richer pattern chosen by its set's look (circuitry for
   Core, runes for Classic, ink for Meditative, starfield for Stinkyscape, roots for Training Grounds),
   a wider edge glow and motes (`TILE_MOTES_MYTHIC`).
-- **Signature replacement:** a card whose entry carries an `aura` (such as Feng Shui) uses that
-  standing aura in `AuraLayer` instead.
+- **Signature replacement:** a card whose entry carries an `aura` (such as Feng Shui, or beside a
+  bespoke recipe, R3399001: Classic+'s signature permanents) uses that standing aura in `AuraLayer` instead.
 - **Interactions:** hover, press or tap sends a ripple, plays a bell in its hue (`auraTouch`) and
   buzzes on a phone (`Haptics.touch()`). Being picked as a target brightens the glow; damage or
   divine shield loss flickers it; Dormant, Frozen or Silenced dims it; destroyed or exiled fades
@@ -452,7 +455,7 @@ not `none` (`galleryPlayOf`, `fx/motifs/gallery.ts`), as that card's play, in on
 | aura | an `aura` alone | the card's play alone, the card standing face up in the viewer's first backrow zone, where its aura shows |
 
 A Field Spell or Field Trap of any play stands in that zone as it plays (`galleryFieldView`), so its
-aura shows too. A marquee Unit whose entrance stands beside its hooks (`entrance`, R2794000) lands the
+aura shows too, and (R3399001) so does a Unit whose entry wears an aura, standing in its entrance's unit zone. A marquee Unit whose entrance stands beside its hooks (`entrance`, R2794000) lands the
 same way before its play's motif, so Nature Titan's entrance plays before its Cry. "Play as a
 set piece" plays the same card as the fixture set piece (R2785000): its play's entry holds the board for
 `SET_PIECE_HOLD_MS`, scaled and capped as every set piece, until a tap, a click or Space skips it.
@@ -483,6 +486,19 @@ motifs most of them played; #3332 laid the frame (R3332000) and each set's pass 
   side shows face up streaks cat light into its zone (`FX_FELINOR_STREAK_AT`, `FX_FELINOR_STREAK_STEP`,
   at most `FX_FELINOR_STREAKS_MAX`), all landing at the slam in a ring, a gathering burst and a gold
   crown. A Felinor buried under a Stack is face down and sends nothing (R202).
+- **Classic+** (#3399, R3399000): all 35 of its Legendaries and Mythics, tokens by printed rarity, are
+  signatures, each recipe in `fx/cards/classicplus/` and each card's beats, moves and verdict in
+  `fx/cards/classicplus.md`'s Signatures table. A Unit or a Field Spell lands with its own `entrance` and
+  plays its text's beat in its `bespoke` recipe (on its Cry, trigger, Death or Activate, keyed by the
+  hook its marker opens), wearing an aura of its own beside it (R3399001); a Spell's recipe claims its
+  own `cardPlayed` for its cast, then the events its text emits. Its four Mythics take looks of their own
+  whose takeover draws a picture filling the screen (`fx/takeoverArt.ts`), still under Reduce Motion
+  (R3399002); a beat only the owner may see (a Discover's or a test's options) plays on the owner's
+  seat alone, and from the other seat every card in a hand or deck flies as a back (R3399003); each
+  card's play or cast names a sound effect of its own (R3399004). `classicplus/signatures.test.ts`
+  holds each signature's own cues to its ceiling of the entry it plays in (a per-beat measure, since
+  `tiers.test.ts`'s whole-play measure counts the shared event rows and the shared takeover, which no
+  Mythic Spell fits; a person decides which measure holds).
 - **Sound** (R3332002): a Legendary's or Mythic's play sting is its own intro, played whole with
   dynamic music on, its opening cut to `MUSIC_STING_S` on the effects bus otherwise; the shared
   `entrance` sting plays only for one with no intro.

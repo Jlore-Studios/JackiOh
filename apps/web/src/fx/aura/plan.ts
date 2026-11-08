@@ -81,6 +81,8 @@ export function planAuras(view: PlayerView, sources: ReadonlyMap<string, AuraSou
     // R3399001: a face-up Unit on top of its zone wears its entry's aura there (R202: a hidden one none).
     seat.units.forEach((unit, index) => {
       if (unit === null || unit === undefined || unit.defId === HIDDEN_ID) return;
+      // A Unit by its card's type: a Field Spell animated onto the unit row keeps its aura to its backrow.
+      if ((CATALOG[unit.defId] ?? view.defs?.[unit.defId])?.type !== "Unit") return;
       const aura = auraOf(table, unit.defId);
       if (aura !== undefined) out.push(specOf(`unit-${unit.instanceId}`, unit.defId, unit.instanceId, side, "units", index + 1, aura, view));
     });

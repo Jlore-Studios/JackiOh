@@ -1,10 +1,11 @@
 // DOM effects for S10/B39: data-only, aria-hidden elements painted by fx.css; no text nodes become Cypress or screen-reader content.
 // No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
-// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers, R2801000 launches,
+// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers (R3399002 their pictures), R2801000 launches,
 // R3336000 ships and R2800000 set pieces.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
+import { TAKEOVER_ART, type TakeoverArt } from "./takeoverArt.ts";
 import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
 
@@ -103,6 +104,23 @@ function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
     svg.appendChild(path);
     el.appendChild(svg);
   }
+}
+
+/** R3399002: a takeover's picture, one path per part of it, each moved by fx.css as its `part` says. */
+function takeoverArt(doc: Document, art: TakeoverArt): SVGSVGElement {
+  const svg = doc.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("class", "fx-takeover-art");
+  svg.setAttribute("viewBox", art.viewBox);
+  svg.setAttribute("preserveAspectRatio", "xMidYMid slice");
+  svg.setAttribute("aria-hidden", "true");
+  for (const shape of art.paths) {
+    const path = doc.createElementNS(SVG_NS, "path");
+    path.setAttribute("class", `fx-takeover-art-${shape.part}`);
+    path.setAttribute("d", shape.d);
+    path.setAttribute("fill", shape.fill);
+    svg.appendChild(path);
+  }
+  return svg;
 }
 
 function chaosLines(doc: Document, el: HTMLElement, lines: FxChaosCue["lines"]): void {
@@ -315,16 +333,20 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
     case "takeover": {
       // R2722001: the board's darkening, a card-shaped silhouette (never a face, R202) sweeping into
       // `at`, and the rays and the shockwave from there once the card lands at `--fx-land`.
+      // R3399002: a look with a picture of its own paints it over the dark, keyed by the look alone.
       const at = boxes.at ?? null;
       if (at === null) return null;
       placeAtCenter(el, at);
       el.setAttribute("data-look", cue.look);
       tintVars(el, cue.tint);
       el.style.setProperty("--fx-land", `${Math.max(0, cue.landMs)}ms`);
+      const art = TAKEOVER_ART[cue.look];
+      if (art !== undefined) el.setAttribute("data-art", "true");
       for (const part of TAKEOVER_PARTS) {
         const child = doc.createElement("div");
         child.className = `fx-takeover-${part}`;
         el.appendChild(child);
+        if (part === "dark" && art !== undefined) el.appendChild(takeoverArt(doc, art));
       }
       break;
     }

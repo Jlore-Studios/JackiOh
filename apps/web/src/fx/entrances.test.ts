@@ -16,12 +16,13 @@ import { ENTRANCES, ENTRANCE_TRAUMA, type EntranceKey } from "./entrances.ts";
 import { createFxMemory } from "./memory.ts";
 import type { FxCardFacts, FxCue, FxPlanEnv } from "./types.ts";
 
-type CatalogEntry = { name: string; type: string; rarity: string };
+type CatalogEntry = { name: string; type: string; rarity: string; printedRarity?: string };
 const CATALOG = catalogJson as unknown as Record<string, CatalogEntry>;
 
+/** Every Unit's entrance in the tables (R3399000: a Field Spell's lands in the backrow, which R3332000's tests hold). */
 const MARQUEE: readonly (readonly [string, EntranceKey])[] = [...FX_CARD_TABLE.keys()].flatMap((defId) => {
   const key = entranceKeyOf(defId);
-  return key === undefined ? [] : [[defId, key] as const];
+  return key === undefined || CATALOG[defId]?.type !== "Unit" ? [] : [[defId, key] as const];
 });
 
 const LEGENDARY_FACTS: FxCardFacts = { rarity: "Legendary", attack: 6, health: 6 };
@@ -76,7 +77,8 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
       const def = CATALOG[defId];
       expect(def, defId).toBeDefined();
       expect(def?.type, defId).toBe("Unit");
-      expect(["Legendary", "Mythic"], defId).toContain(def?.rarity);
+      // A token by the rarity it prints (B2.5): Classic+'s Losers among them (R3399000).
+      expect(["Legendary", "Mythic"], defId).toContain(def?.printedRarity ?? def?.rarity);
       expect(typeof ENTRANCES[key]).toBe("function");
     }
     // Each entrance is its own: no two marquee cards share one.
@@ -85,9 +87,13 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
 
   it("R670 a marquee summoned into a unit zone plans its own entrance in place of the rarity's rays and gold", () => {
     for (const [defId, key] of MARQUEE) {
-      const cues = planAll([summoned("p1", "m1", defId)], envOf(), undefined, emptyLane("you", "units", 3));
+      const landing = summoned("p1", "m1", defId);
+      if (landing.type !== "summoned") throw new Error("no summon");
+      const view = emptyLane("you", "units", 3);
+      const cues = planAll([landing], envOf(), undefined, view);
       const D = ANIMATIONS.summoned.durationMs;
-      const expected = ENTRANCES[key]({ D, tgt: testid.zone("you", "units", 3), intensity: FX_INTENSITY_SCALE.normal });
+      // R3332001: an entrance that reads the board (Felinor Fiender's, R3399000 Mommy Barker's) reads the one it lands on.
+      const expected = ENTRANCES[key]({ D, tgt: testid.zone("you", "units", 3), intensity: FX_INTENSITY_SCALE.normal, view: withEvents(view, [landing]), landing });
       expect(cues, defId).toEqual(expected);
       expect(cues.some((cue) => cue.kind === "burst" && cue.preset === "gold" && cue.spread === "area"), defId).toBe(false);
       const shakes = cues.filter((cue) => cue.kind === "shake");

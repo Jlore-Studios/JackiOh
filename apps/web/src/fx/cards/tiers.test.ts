@@ -27,7 +27,7 @@ import {
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { planCardFx, planCardMotif } from "../cardFx.ts";
-import { FX_CARD_TABLE, isSignature } from "./tables.ts";
+import { FX_CARD_TABLE, auraOfEntry, isSignature } from "./tables.ts";
 import { AURA_LOOKS } from "../aura/looks.ts";
 import {
   AURA_SIGNATURE_MAX_INTENSITY,
@@ -183,7 +183,8 @@ describe("R3332000 every signature keeps its loudness budget", () => {
         offset += entryPlanned.durationMs;
       }
       expect(drawn, `${defId}'s signature plans`).toBe(true);
-      const aura = entry.kind === "hooks" ? entry.aura : undefined;
+      // R3399001: beside hooks or a bespoke recipe.
+      const aura = auraOfEntry(entry);
       if (aura !== undefined) {
         const look = AURA_LOOKS[aura.look];
         for (const value of [look.alpha, look.tint, look.edge]) expect(value, `${defId} aura ${aura.look}`).toBeLessThanOrEqual(AURA_SIGNATURE_MAX_INTENSITY);

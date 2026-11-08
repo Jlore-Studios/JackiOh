@@ -2,7 +2,8 @@
 // planned from the entry's `entrance` (game/animations.ts `entranceEntries`), held as its set piece
 // (`setPieceEntries`, R2785000) and bounded by R200.
 // R2722002: a hidden card's at its reveal, centred on the zone that flipped. R3332000: a Mythic's own
-// look is its effects table entry's `takeover`.
+// look is its effects table entry's `takeover`. R3399002: Classic+'s four Mythics wear looks of their own, each
+// with a picture of its own (takeoverArt.ts).
 
 import type { CardType, GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -21,8 +22,9 @@ import { FX_CARD_TABLE, parseFxCardTable } from "./cards/tables.ts";
 import { FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_TAKEOVER_TAIL_MS, FX_TAKEOVER_TRAUMA } from "./constants.ts";
 import { planFx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
-import { entranceCues, entranceLandMs, takeoverLookOf } from "./takeover.ts";
-import type { FxCue, FxPlanEnv, FxTakeoverCue } from "./types.ts";
+import { entranceCues, entranceLandMs, TAKEOVER_TINTS, takeoverLookOf } from "./takeover.ts";
+import { TAKEOVER_ART } from "./takeoverArt.ts";
+import type { FxCue, FxPlanEnv, FxTakeoverCue, TakeoverLook } from "./types.ts";
 
 const CARDS: Record<string, { type: CardType; rarity: string }> = {
   "core-100": { type: "Unit", rarity: "Mythic" },
@@ -33,6 +35,10 @@ const CARDS: Record<string, { type: CardType; rarity: string }> = {
   "core-052": { type: "Unit", rarity: "Legendary" },
   "core-083": { type: "Spell", rarity: "Legendary" },
   "core-085": { type: "Trap", rarity: "Legendary" },
+  "classicplus-027": { type: "Spell", rarity: "Mythic" },
+  "classicplus-029": { type: "Spell", rarity: "Mythic" },
+  "classicplus-065-5": { type: "Spell", rarity: "Mythic" },
+  "classicplus-074": { type: "Field Trap", rarity: "Mythic" },
 };
 const resolve: EntranceResolver = (defId) => CARDS[defId] ?? null;
 const p1 = baseView();
@@ -89,9 +95,10 @@ describe("R2722001 a Mythic takes over the board", () => {
     expect(takeoverOf(planFx(entry([play("core-097")]), p1, env()))?.look).toBe("genie");
     expect(takeoverOf(planFx(entry([play("meditative-049"), summon("meditative-049")]), p1, env()))?.look).toBe("ai");
     expect(takeoverOf(planFx(entry([play("meditative-008")]), p1, env()))?.look).toBe("prismatic");
-    // R3332000: exactly the four marquee Mythics name a look of their own in the effects table.
+    // R3332000: exactly the four marquee Mythics name a look of their own in the effects table, and
+    // R3399002: Classic+'s four, in table order.
     const own = [...FX_CARD_TABLE].flatMap(([defId, card]) => (card.kind !== "none" && card.takeover !== undefined ? [defId] : []));
-    expect(own).toEqual(["core-096", "core-097", "core-100", "meditative-049"]);
+    expect(own).toEqual(["core-096", "core-097", "core-100", "classicplus-027", "classicplus-029", "classicplus-065-5", "classicplus-074", "meditative-049"]);
     for (const defId of own) expect(CATALOG[defId]?.printedRarity ?? CATALOG[defId]?.rarity, defId).toBe("Mythic");
     for (const events of [[play("core-052"), summon("core-052")], [play("core-083")], [fired("core-085")]]) {
       const e = entry(events);
@@ -119,6 +126,40 @@ describe("R2722001 a Mythic takes over the board", () => {
     const e = entry([play("meditative-008")]);
     expect(takeoverOf(entranceCues(e, env(), e.durationMs, table))?.look).toBe("genie");
     expect(takeoverOf(entranceCues(e, env(), e.durationMs))?.look).toBe("prismatic");
+  });
+
+  it("R3399002 each Classic+ Mythic's takeover wears its own look", () => {
+    const looks: [GameEvent[], TakeoverLook][] = [
+      [[play("classicplus-027")], "zealot"],
+      [[play("classicplus-029")], "portal"],
+      [[play("classicplus-065-5")], "vineyard"],
+      [[fired("classicplus-074")], "stair"],
+    ];
+    for (const [events, look] of looks) {
+      const takeover = takeoverOf(planFx(entry(events), p1, env()));
+      expect(takeover?.look, JSON.stringify(events)).toBe(look);
+      expect(takeover?.tint).toEqual(TAKEOVER_TINTS[look]);
+      expect(TAKEOVER_ART[look], look).toBeDefined();
+    }
+  });
+
+  it("R3399002 every Classic+ own look has its picture, which names no card, and no other look has one", () => {
+    expect(Object.keys(TAKEOVER_ART).sort()).toEqual(["portal", "stair", "vineyard", "zealot"]);
+    /** What each concept moves: the zealot's cyclone, the portal's vortex and its ruins, the stair, the grape and its vines. */
+    const moving: Record<string, string[]> = { zealot: ["spin"], portal: ["spin", "drift"], stair: ["spin"], vineyard: ["spin", "drift"] };
+    for (const [look, art] of Object.entries(TAKEOVER_ART)) {
+      expect(art.viewBox, look).toBe("0 0 160 90");
+      expect(art.paths.length, look).toBeGreaterThanOrEqual(6);
+      expect(art.paths.length, look).toBeLessThanOrEqual(14);
+      const parts = new Set<string>(art.paths.map((path) => path.part));
+      for (const part of moving[look] ?? []) expect(parts.has(part), `${look} ${part}`).toBe(true);
+      for (const path of art.paths) {
+        expect(path.fill, look).toMatch(/^#[0-9a-f]{6}$/);
+        // Path data alone: commands and numbers, so no word, let alone a card's name or id, can hide in it.
+        expect(path.d, look).toMatch(/^M[MLHVCSQTAZmlhvcsqtaz0-9 .-]+$/);
+      }
+    }
+    expect(JSON.stringify(TAKEOVER_ART)).not.toContain("classicplus-");
   });
 
   it("R2722001 intensity 0 plans none", () => {

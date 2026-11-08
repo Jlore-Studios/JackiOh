@@ -2101,6 +2101,66 @@
   }
 }
 
+/* R3399002: a look with a picture of its own (fx/takeoverArt.ts, `data-art`) paints it over the dark,
+   filling the screen, for the cue's whole run: it fades in, holds and fades out by --fx-ms. Its
+   "spin" paths turn and its "drift" paths swell toward the viewer, each about the centre of its own
+   box; "back" and "subject" hold still. It names no card (R202). Transform and opacity only. */
+.fx-takeover-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  animation: fx-takeover-art var(--fx-ms) linear both;
+}
+
+@keyframes fx-takeover-art {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.85;
+  }
+  75% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.fx-takeover-art-spin,
+.fx-takeover-art-drift {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.fx-takeover-art-spin {
+  animation: fx-takeover-art-spin var(--fx-ms) linear both;
+}
+
+@keyframes fx-takeover-art-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(150deg);
+  }
+}
+
+.fx-takeover-art-drift {
+  animation: fx-takeover-art-drift var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-takeover-art-drift {
+  0% {
+    transform: scale(0.85);
+  }
+  100% {
+    transform: scale(1.3);
+  }
+}
+
 .fx-takeover-sweep {
   position: absolute;
   left: var(--fx-x);

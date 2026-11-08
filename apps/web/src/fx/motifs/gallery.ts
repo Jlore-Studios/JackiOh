@@ -27,7 +27,6 @@ import { printSlotFixture } from "../cards/classicplus/datacenter.ts";
 import { batterBubbleFixture } from "../cards/classicplus/deathBoil.ts";
 import { pancakeMouthFixture } from "../cards/classicplus/devour.ts";
 import { bannerFoldFixture } from "../cards/classicplus/flagbearer.ts";
-import { bannerShadowFixture } from "../cards/classicplus/flagbearerPrime.ts";
 import { doughArmFixture } from "../cards/classicplus/fluffyGrip.ts";
 import { spatulaFlipFixture } from "../cards/classicplus/frostspatula.ts";
 import { whiteoutFixture } from "../cards/classicplus/frozenWastes.ts";
@@ -538,7 +537,6 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   giftBoxes: giftBoxesFixture,
   holoLoom: holoLoomFixture,
   bannerFold: bannerFoldFixture,
-  bannerShadow: bannerShadowFixture,
   puzzleBox: puzzleBoxFixture,
   sealedEnvelope: sealedEnvelopeFixture,
   grapeBounce: grapeBounceFixture,
@@ -549,6 +547,12 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   relicSpill: relicSpillFixture,
   printSlot: printSlotFixture,
 };
+
+/**
+ * R3399000: Classic+'s two signatures whose gallery plays plan the most particles (their bursts' counts summed),
+ * which fx-phone-frame.cy.tsx holds to the phone frame budget; classicplus/signatures.test.ts keeps the pick true.
+ */
+export const PHONE_HEAVIEST_SIGNATURES = ["classicplus-012-7", "classicplus-035"] as const;
 
 /** R2794000: the lane of the viewer's unit row a gallery entrance lands in. */
 export const GALLERY_ENTRANCE_LANE = 3;
@@ -722,6 +726,18 @@ export function galleryCardEvents(defId: string, play: GalleryCardPlay, view: Pl
     ...under,
     { type: "cardResolved", player, instanceId, defId, permanent: false, costPaid: 1 },
   ];
+}
+
+/**
+ * R3399000: `view` with the gallery's play `n` of `defId` in the viewer's hand, as a real play starts: its
+ * cast, a Legendary's rays and a Mythic Spell's takeover rise from the card in hand (`cardPlayed`'s target),
+ * which the board still shows while it plans the play. The card is the viewer's own, so its face is theirs.
+ */
+export function galleryHandOf(defId: string, view: PlayerView, n: number): PlayerView {
+  const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
+  const printed = CATALOG[defId]?.cost ?? 0;
+  const cost = typeof printed === "number" ? printed : printed === "X" ? 0 : printed.base;
+  return { ...view, you: { ...view.you, hand: [...hand, { instanceId: galleryPlayId(n), defId, radiant: false, cost }] } };
 }
 
 /**

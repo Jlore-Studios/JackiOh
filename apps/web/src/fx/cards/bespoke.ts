@@ -23,7 +23,6 @@ import { printSlot } from "./classicplus/datacenter.ts";
 import { batterBubble } from "./classicplus/deathBoil.ts";
 import { pancakeMouth } from "./classicplus/devour.ts";
 import { bannerFold } from "./classicplus/flagbearer.ts";
-import { bannerShadow } from "./classicplus/flagbearerPrime.ts";
 import { doughArm } from "./classicplus/fluffyGrip.ts";
 import { spatulaFlip } from "./classicplus/frostspatula.ts";
 import { whiteout } from "./classicplus/frozenWastes.ts";
@@ -110,7 +109,6 @@ export const CARD_RECIPES = {
   giftBoxes,
   holoLoom,
   bannerFold,
-  bannerShadow,
   puzzleBox,
   sealedEnvelope,
   grapeBounce,

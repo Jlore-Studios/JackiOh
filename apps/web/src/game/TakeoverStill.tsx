@@ -5,12 +5,16 @@
 // the queue, practice's AI and `cy.settled()` never wait for it (R200). The music still plays (R1350).
 // R2803000: the still echoes the reworked takeover at rest: the dark it lands in, a motionless rays
 // disc behind the card and the landing ring around it. Nothing here animates, so it stays still.
+// R3399002: a Mythic whose takeover look has a picture of its own (fx/takeoverArt.ts) shows it still, filling
+// the screen behind the card; the picture carries its look, never the card it is for.
 
 import { useContext, useEffect, type ReactElement } from "react";
 
 import type { PlayerView } from "@jackioh/shared";
 
 import { CardFace } from "../cards/index.ts";
+import { takeoverLookOf } from "../fx/takeover.ts";
+import { TAKEOVER_ART } from "../fx/takeoverArt.ts";
 import { CatalogContext } from "./catalog.ts";
 import { namedFace } from "./faces.ts";
 
@@ -34,8 +38,17 @@ export default function TakeoverStill({ defId, instanceId, view, onDone }: Takeo
   }, [defId, instanceId, onDone]);
   const face = namedFace(lookup, view, { defId, instanceId, radiant: false });
   if (face === null) return null;
+  const look = takeoverLookOf(defId);
+  const art = TAKEOVER_ART[look];
   return (
     <div className="takeover-still" data-testid="takeover-still" data-takeover-def={defId} aria-hidden="true">
+      {art === undefined ? null : (
+        <svg className="takeover-still-art" data-takeover-art={look} viewBox={art.viewBox} preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          {art.paths.map((path, index) => (
+            <path key={index} d={path.d} fill={path.fill} />
+          ))}
+        </svg>
+      )}
       <span className="takeover-still-rays" aria-hidden="true" />
       <span className="takeover-still-card">
         <CardFace face={face} layout="full" />

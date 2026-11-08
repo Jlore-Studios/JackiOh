@@ -1,7 +1,7 @@
 // R2722001: a Mythic's entrance on the board. With motion, the entry in flight holds for the takeover
 // (`data-takeover`, and since R2785000 its set piece's `data-set-piece` and `--set-piece-hold`); under
 // Reduce motion there is no hold, no shake and no flash, and a still card stands over the board for
-// TAKEOVER_STILL_MS instead.
+// TAKEOVER_STILL_MS instead. R3399002: a Mythic whose look has a picture of its own shows it still behind the card.
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent } from "@jackioh/shared";
@@ -12,12 +12,15 @@ import { TAKEOVER_HOLD_MS, TAKEOVER_SET_PIECE } from "./animations.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Game from "./Game.tsx";
 import { TAKEOVER_STILL_MS } from "./TakeoverStill.tsx";
+import { TAKEOVER_ART } from "../fx/takeoverArt.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, withEvents } from "../test/fixtures.ts";
 
 const lookup = lookupFromDefs(CATALOG);
 /** #97 Zephrys, a Mythic Spell; #52 Silly Silas, a Legendary Unit. */
 const ZEPHRYS = "core-097";
+/** Classic+'s Zephrys Zealotism, a Mythic Spell whose takeover wears the "zealot" look (R3399002). */
+const ZEALOTISM = "classicplus-027";
 const START: GameEvent[] = [{ type: "turnStarted", player: "p1", turn: 3 }];
 const cast = (defId: string): GameEvent => ({ type: "cardPlayed", player: "p1", instanceId: `i-${defId}`, defId, costPaid: 3 });
 
@@ -69,6 +72,36 @@ describe("R2722001 a Mythic's takeover on the board", () => {
     // R2803000: the still echoes the takeover at rest: a motionless rays disc and the landing ring.
     expect(still.querySelector(".takeover-still-rays")).not.toBeNull();
     expect(still.querySelector(".takeover-still-ring")).not.toBeNull();
+    // R3399002: #97 Zephrys's "genie" look has no picture of its own, so its still shows none.
+    expect(still.querySelector(".takeover-still-art")).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(TAKEOVER_STILL_MS);
+    });
+    expect(screen.queryByTestId("takeover-still")).toBeNull();
+  });
+
+  it("R3399002 under Reduce motion Zephrys Zealotism's still shows its art and animates nothing", () => {
+    writeSettings({ reduceMotion: true });
+    playOut(ZEALOTISM);
+    const game = screen.getByTestId("game");
+    expect(game).not.toHaveAttribute("data-takeover");
+    expect(game).not.toHaveAttribute("data-animating");
+    const still = screen.getByTestId("takeover-still");
+    const art = still.querySelector("svg.takeover-still-art");
+    const zealot = TAKEOVER_ART.zealot;
+    if (art === null || zealot === undefined) throw new Error("no picture");
+    // First, so the card, the rays and the ring lie over it; it carries its look, never the card (R202).
+    expect(still.firstElementChild).toBe(art);
+    expect(art).toHaveAttribute("data-takeover-art", "zealot");
+    expect(art).toHaveAttribute("viewBox", zealot.viewBox);
+    expect(art).toHaveAttribute("preserveAspectRatio", "xMidYMid slice");
+    expect(art).toHaveAttribute("aria-hidden", "true");
+    expect(art.outerHTML).not.toContain(ZEALOTISM);
+    const paths = [...art.querySelectorAll("path")];
+    expect(paths.map((path) => [path.getAttribute("d"), path.getAttribute("fill")])).toEqual(zealot.paths.map((path) => [path.d, path.fill]));
+    // Nothing in it moves: no effects-layer class, no SMIL, no inline style, no data-animating.
+    expect(art.querySelector("[class], [style], animate, animateTransform, [data-animating]")).toBeNull();
+    expect(still.querySelector("[data-animating]")).toBeNull();
     act(() => {
       vi.advanceTimersByTime(TAKEOVER_STILL_MS);
     });
