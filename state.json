@@ -16731,14 +16731,16 @@
       "cleared": {
         "approver": {
           "family": "claude",
-          "model": "sonnet",
+          "model": "opus",
           "provider": "claude-7",
-          "tier": "medium"
+          "tier": "strong"
         },
-        "at": "2026-11-08T01:20:58Z",
+        "at": "2026-11-08T02:48:24Z",
         "built_by": "claude-7",
         "by": "`claude` (medium)",
-        "sha": "8f48d5183237c36948b48a8441f660e6bc175e82"
+        "carried_from": "8f48d5183237c36948b48a8441f660e6bc175e82",
+        "resolved_by": "`claude` (strong)",
+        "sha": "fedbeaff6a2628007ebd76c1151de504ffbbcac3"
       },
       "died": 0,
       "difficulty": "medium",
