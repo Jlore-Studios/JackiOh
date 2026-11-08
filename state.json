@@ -36180,7 +36180,9 @@
           "provider": "claude-8"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-08T07:03:44Z",
         "every": 5,
+        "findings": 0,
         "head": "f138ac5cc1f004d34712eee309bbe8efda70c7b6",
         "issue": 3390,
         "merged_at": "2026-11-08T06:26:39Z",
@@ -36193,12 +36195,13 @@
           "provider": "claude-7",
           "tier": "strong"
         },
-        "run_id": "pending:706d1d7f-1794120862",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42456646406",
         "sha": "b01bbd555cba846961161b376ac5bbe08c769e58",
         "started_at": "2026-11-08T06:54:49Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: every Classic+ card drawn as what it is: a scene of its own for each, richer the rarer",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 145
