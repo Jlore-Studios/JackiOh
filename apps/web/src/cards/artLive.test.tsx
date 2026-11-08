@@ -577,6 +577,27 @@ describe("R3340000 cards that answer", () => {
     expect(cf.getAttribute("data-art-hover")).toBe("false");
   });
 
+  it("R3340000 the focus a click or a tap gives a card is the pointer's: once the pointer leaves, the face holds no keyboard pose", () => {
+    const { container } = render(<Board specs={[{ id: COMMON }]} />);
+    const cf = minions(container)[0] as HTMLElement;
+    // A press lands, focusing its card (Card.tsx's tabIndex), and lifts; then the pointer (or the finger) leaves.
+    fire(host(cf), "pointerenter");
+    fire(host(cf), "pointerdown");
+    fire(host(cf), "focusin");
+    fire(host(cf), "pointerup");
+    expect(cf.getAttribute("data-art-hover")).toBe("true");
+    fire(host(cf), "pointerleave");
+    expect(cf.getAttribute("data-art-hover")).toBe("false");
+    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("");
+    expect(cf.style.getPropertyValue("--art-aim-y")).toBe("");
+    expect(cf.querySelector("[data-art-live]")).toBeNull();
+    // Keyboard focus, with no press, still takes the keyboard pose.
+    fire(host(cf), "focusout");
+    fire(host(cf), "focusin");
+    expect(cf.getAttribute("data-art-hover")).toBe("true");
+    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("0.250");
+  });
+
   it("R3340000 a hovered face of a normal look takes a slot and draws its art in layers to answer in", () => {
     const { container } = render(<Board specs={[{ id: COMMON }]} />);
     const cf = minions(container)[0] as HTMLElement;

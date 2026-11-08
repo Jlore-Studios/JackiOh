@@ -48,6 +48,8 @@ export function useArtLive(ref: RefObject<HTMLElement | null>, enabled: boolean)
     const host = el.closest<HTMLElement>(".cf-host") ?? el;
     let pointerInside = false;
     let focusInside = false;
+    // A press focuses the card it lands on (Card.tsx's tabIndex); that focus is the pointer's, not the keyboard's.
+    let pressing = false;
     const updateHovered = (): void => {
       setHovered(pointerInside || focusInside);
     };
@@ -67,6 +69,7 @@ export function useArtLive(ref: RefObject<HTMLElement | null>, enabled: boolean)
       writeAim(FOCUS_AIM_X, FOCUS_AIM_Y);
     };
     const focusIn = (): void => {
+      if (pressing) return;
       focusInside = true;
       if (!pointerInside) focusAim();
       updateHovered();
@@ -76,9 +79,11 @@ export function useArtLive(ref: RefObject<HTMLElement | null>, enabled: boolean)
       writeAim(aim.x, aim.y);
     };
     const press = (): void => {
+      pressing = true;
       el.setAttribute(ART_PRESS_ATTRIBUTE, "true");
     };
     const lift = (): void => {
+      pressing = false;
       el.removeAttribute(ART_PRESS_ATTRIBUTE);
     };
     const pointerLeave = (): void => {
