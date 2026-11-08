@@ -17086,14 +17086,6 @@
         "reason": "`claude-4` stops: 5-hour usage is 69%, at or over its 50% cap outside its hours; it resets at 2026-11-08T21:20:00Z",
         "trail": "re-stinkyscape-1.cy.tsx/fx-signature-stinkyscape-006-1280x720.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3437/e2e/artifacts/component/screenshots/fx-signature-stinkyscape-1.cy.tsx/fx-signature-stinkyscape-007-1280x720.png\"}\n- Bash: {\"command\": \"grep -c '^\\\\s*it(' e2e/cypress/component/fx-phone-frame.cy.tsx; grep -n 'for (const \\\\[defId' e2e/cypress/component/fx-phone-frame.cy.tsx | head; echo \\\"- component fx-signature-stinkysc\u2026\n- Bash: {\"command\": \"E2E_COMPONENT_PORT=5281 timeout 2400 pnpm --dir e2e test:component --browser chrome --spec cypress/component/fx-phone-frame.cy.tsx > /tmp/comp-phone.log 2>&1; echo \\\"exit $?\\\" >> /tmp/co\u2026\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/comp-phone.log; do sleep 15; done; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/comp-phone.log | grep -E '\\u2713|\\u2714|\\u2716|^\\\\s+[0-9]+\\\\) |passing|failing|pending|Asse\u2026\n- Bash: {\"command\": \"grep -n 'R3342000 a full board of tile auras' -A40 e2e/cypress/component/fx-phone-frame.cy.tsx | head -60; git diff 41a9e93012 HEAD --stat -- apps/web/src/fx/aura/ apps/web/src/test/\", \"\u2026\n- Bash: {\"command\": \"grep -n 'function tileBoardView' -A30 e2e/cypress/component/fx-phone-frame.cy.tsx; git log --oneline -3 41a9e93012 -- e2e/cypress/component/fx-phone-frame.cy.tsx\", \"description\": \"Read t\u2026\n- Grep: {\"pattern\": \"tileBoardView\", \"path\": \"/home/runner/work/_temp/work/item-3437\", \"output_mode\": \"content\", \"glob\": \"!**/node_modules/**\", \"-n\": true}\n- Bash: {\"command\": \"cat apps/web/src/test/tileBoard.ts; git log --oneline -3 41a9e93012 -- apps/web/src/test/tileBoard.ts; grep -rn 'tileBoard' apps/web/src --include=*.ts --include=*.tsx | grep -v '^apps/w\u2026\n- Bash: {\"command\": \"grep -n 'export function planTileAuras' -A30 apps/web/src/fx/aura/tile.ts | head -45; grep -n 'export function tierOf' -A10 apps/web/src/fx/aura/tile.ts\", \"description\": \"Read planTileAu\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3437/apps/web/src/test/zz-tmp-tileboard.test.ts\", \"content\": \"// TEMPORARY diagnostic (delete before stopping): counts the tile board fixture's eligib\u2026\n- Bash: {\"command\": \"echo \\\"- phone-frame: 20/21; R3395000 018+061 pass; R3342000 tile-board test fails (12 auras, wants 20). Diagnosing with temp test apps/web/src/test/zz-tmp-tileboard.test.ts (DELETE).\\\" \u2026\n- Bash: {\"command\": \"timeout 300 pnpm --dir apps/web exec vitest run src/test/zz-tmp-tileboard.test.ts --silent=false --reporter=verbose 2>&1 | grep -E 'DIAG' | head\", \"description\": \"Re-run the diagnostic s\u2026\n- Bash: {\"command\": \"cp apps/web/src/fx/cards/stinkyscape-1.json5 /tmp/head-stinky1.json5 && git show 41a9e93012:apps/web/src/fx/cards/stinkyscape-1.json5 > apps/web/src/fx/cards/stinkyscape-1.json5 && timeo\u2026\n- Bash: {\"command\": \"unlink apps/web/src/test/zz-tmp-tileboard.test.ts; git status --short; echo \\\"- R3342000 tile-board phone-frame failure is main's: with main's stinkyscape-1.json5 swapped in the fixture \u2026\n- Bash: {\"command\": \"pnpm exec eslint apps/web/src/fx/aura/looks.ts apps/web/src/fx/cards/tables.ts; echo \\\"eslint-exit $?\\\"; git diff\", \"description\": \"Lint the two edited files and show the diff\"}\n- Bash: {\"command\": \"echo \\\"- running harness web-tests command (--changed origin/main, excl audio/fx)\\\" >> .bot-notes.md; (timeout 1800 pnpm exec vitest run --project web --changed origin/main --exclude '**\u2026\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/vt-changed.log; do sleep 15; done; grep -E 'Test Files|Tests |FAIL|\\u00d7|exit' /tmp/vt-changed.log | head -20\", \"description\": \"Wait for changed-files web tes\u2026\n- TaskStop: {\"task_id\": \"bq2dahmwr\"}\n- Bash: {\"command\": \"tail -5 /tmp/vt-changed.log; pgrep -fa 'vitest run --project web' | head -3\", \"description\": \"See how far the killed run got\"}\n- said: The changed-files run was cut off by the 10-minute limit for background commands, not by a test failure. I'm restarting it with a two-hour limit.\n- Bash: {\"command\": \"pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' > /tmp/vt-changed.log 2>&1; \u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold='''- Left: e2e shard 2/2 result; remove the ./target symlink; report.\\n'''\\nnew='''- Also green locally: e2e smoke shard 2/2 (\u2026\n- Monitor: {\"command\": \"until grep -q '^exit' /tmp/vt-changed.log; do sleep 5; done; grep -E 'Test Files|Tests |FAIL|exit' /tmp/vt-changed.log | head -20\", \"description\": \"changed-files web tests finishing\", \"t\u2026\n- tool error: This Bash command contains multiple operations. The following part requires approval: until grep -q '^exit' /tmp/vt-changed.log; do sleep 5; done; grep -E 'Test Files|Tests |FAIL|exit' /tmp/vt-change\u2026\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/vt-changed.log; do sleep 10; done; grep -E 'Test Files|Tests |FAIL|exit' /tmp/vt-changed.log | head -20\", \"description\": \"Wait for the changed-files web tests\"\u2026\n- said: The changed-files web tests are still running (they took about 8 minutes in the harness earlier). I'll report when they finish.\n- Bash: {\"command\": \"grep -c '\\u2713\\\\|passed' /tmp/vt-changed.log; tail -c 400 /tmp/vt-changed.log\", \"description\": \"Peek at the changed-files run progress\"}\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/vt-changed.log; do sleep 10; done; grep -E 'Test Files|Tests |FAIL|exit' /tmp/vt-changed.log | head -20\", \"description\": \"Keep waiting for the changed-files ru\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Left: the harness's web-tests command (--changed origin/main) result; then report.\\\\n\\\",\\n\\\"- Harness web-tests co\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a signature animation for every Stinkyscape (cards 1 to 90) Legendary and Mythic, one concept per card\"} --> ## CI fix (revise, `ci`) The red check was not caused by this branch, and its specs pass locally. The new head is the merge of `main` that the b\u2026"
       },
-      "hold": {
-        "ends": "2026-11-09T00:06:54Z",
-        "lifted": "2026-11-08T22:26:34Z",
-        "owner": "claude-8",
-        "since": "2026-11-08T22:06:54Z",
-        "until": "2026-11-08T22:20:00Z",
-        "why": "5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "interruptions": 0,
       "issue": 3395,
       "kind": "revise",
@@ -17111,7 +17103,7 @@
       "queued_at": "2026-11-08T18:36:52Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "",
-      "run_id": "42526840139",
+      "run_id": "pending:13df0a4a-1794176841",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17132,7 +17124,7 @@
         "run": "42514899344"
       },
       "source": "ci",
-      "started_at": "2026-11-08T21:46:06Z",
+      "started_at": "2026-11-08T22:27:58Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17545,9 +17537,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T22:11:43Z",
+    "at": "2026-11-08T22:27:58Z",
     "url": "",
-    "what": "build #3352 on claude-7"
+    "what": "revise #3437 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-08T22:18:49Z",
