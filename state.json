@@ -16027,7 +16027,7 @@
       "question": "someone needs to read the log of `web (unit 7/8)` on #3415 (run 42407758136, job 128512330727). The red doesn't happen again on the exact history the promotion ships, so I found no change in the repository that fixes it. Then either press \"Re-run failed jobs\" on that run (once green, #3415 merges itself), or close #3418 by hand. Closing it lets the watch in `.github/workflows/patches-ship.yml` ship again from the newer main (03e0cbaf9d or later) and supersede #3415. If the log names a test that fails on its own merits, reopen this issue with the test's name and its failure message.",
       "queued_at": "2026-11-08T22:59:23Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:e17d852f-1794178969",
+      "run_id": "42533265903",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-08T23:03:23Z",
       "stop_requested": false,
