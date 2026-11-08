@@ -16207,7 +16207,6 @@
       "live": "reviewing",
       "merge_owner": "claude-6",
       "own_review": {
-        "claimed": true,
         "claimed_at": "2026-11-08T01:04:49Z",
         "from_run": "42428776677",
         "gates": [
@@ -16298,7 +16297,7 @@
         "rounds_used": 2,
         "since": "2026-11-08T01:02:19Z",
         "source": "ci",
-        "until": "2026-11-08T01:32:19Z"
+        "until": "2026-11-08T01:19:58Z"
       },
       "pending_request": false,
       "provider": "claude-4",
