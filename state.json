@@ -17548,17 +17548,10 @@
     "what": "build #3352 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-08T22:06:28Z",
+    "at": "2026-11-08T22:18:49Z",
     "notes": [
       "#3437 is held for `claude-8` until 16:20 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "#3397 is held for `claude-8` until 16:20 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "delivered revise #3431 on claude-3 (run 42515571748): built",
-      "started review #3431 on claude-3 (run 42528797335)",
-      "started revise #3444 on claude-6 (run 42528871261)",
-      "started build #3403 on claude-7 (run 42528939471)",
-      "started build #3352 on claude-7 (run 42529006953)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-08T23:20:00Z; it can start a build or a plan again in 7m; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-09T09:00:00Z; it can start a build or a plan again in 47m; `muse` it refused a call; its limit resets at 2026-11-09T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` 5-hour usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-08T23:40:00Z; it can start a build or a plan again in 1h 27m; waiting for their owners: #3397 held for `claude-8` until 16:20 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%)); #3437 held for `claude-8` until 16:20 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "pruned 5 plan file(s) older than 7 days"
+      "#3397 is held for `claude-8` until 16:20 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18264,7 +18257,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-08T22:06:28Z",
+  "loop_tick": "2026-11-08T22:18:49Z",
   "machine_disk": {
     "issue": null,
     "reading": {
