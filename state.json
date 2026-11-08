@@ -18003,10 +18003,10 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "built_by": "claude-6",
+        "built_by": "claude-3",
         "rejections": [],
         "reviews": [],
-        "sha": "db924f86f7ae0d79bb9867b35742276ede38ea1c",
+        "sha": "3efb7a06d1b6cce3d9324eff78155bebc0138552",
         "tiers": {}
       }
     },
