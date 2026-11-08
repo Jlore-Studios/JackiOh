@@ -35876,22 +35876,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-08T19:25:51Z,claude-1,ping,before,42514846816,42,2026-11-08T20:00:00Z,,,allowed,40,,",
-      "2026-11-08T19:18:21Z,claude-3,stream,call,42513925044,3,2026-11-09T00:10:00Z,,,allowed,,,",
-      "2026-11-08T19:18:36Z,claude-3,stream,call,42513925044,4,2026-11-09T00:10:00Z,,,allowed,,,",
-      "2026-11-08T19:19:21Z,claude-3,stream,call,42513925044,5,2026-11-09T00:10:00Z,,,allowed,,,",
-      "2026-11-08T19:19:36Z,claude-3,stream,call,42513925044,6,2026-11-09T00:10:00Z,,,allowed,,,",
-      "2026-11-08T19:20:06Z,claude-3,stream,call,42513925044,7,2026-11-09T00:10:00Z,,,allowed,,,",
-      "2026-11-08T19:20:36Z,claude-3,stream,call,42513925044,8,2026-11-09T00:10:00Z,,,allowed,,,",
-      "2026-11-08T19:21:06Z,claude-3,stream,call,42513925044,9,2026-11-09T00:10:00Z,,,allowed,,,",
-      "2026-11-08T19:21:51Z,claude-3,stream,call,42513925044,10,2026-11-09T00:10:00Z,,,allowed,,,"
-    ],
-    "runs": [
-      "2026-11-08T19:25:51Z,42514846816,claude-1,opus,plan,3439,hard,interrupted,5-hour cap,0,0,0,0,,42,42,,,273.2,claude-2,none,other,0",
-      "2026-11-08T19:22:19Z,42513925044,claude-3,opus,review,3431,hard,reviewed,,4.2,82,21544,6104333,2.9099,3,10,,,0.8,claude-6,none,,1"
-    ]
-  },
   "version": 1
 }
