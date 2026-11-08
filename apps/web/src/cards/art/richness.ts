@@ -46,9 +46,10 @@ export const ART_DETAIL_SHORT: ReadonlySet<string> = new Set<string>(SHORT);
 
 /**
  * The most `ART_DETAIL_SHORT` may name: its length as the last pass left it, so it can only shrink (561 after
- * #3331; 453 after #3392, R3392000, which took Core's 108 off).
+ * #3331; 445 after #3390, R3390000, which took Classic+'s 116 off; 337 after #3392, R3392000, which took Core's
+ * 108 off).
  */
-export const ART_DETAIL_SHORT_MAX = 453;
+export const ART_DETAIL_SHORT_MAX = 337;
 
 /** The shapes a picture draws: its paths, circles, rects, ellipses, polygons, polylines and lines, after its `<defs>`. */
 export function artElements(svg: string): number {

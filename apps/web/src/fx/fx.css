@@ -2207,6 +2207,57 @@
   }
 }
 
+/* R3389000: Classic #90 In Too Deep's own takeover, "abyss": the board tips into a spiral shaft plunging
+   into violet dark (the dark, its tint's violet black, and a still spiral over it), black-blue water rushes in and
+   down the shaft in ripples to where the card surfaces (the sweep, `fx-takeover-plunge`), and shrine lights glow in
+   rings down it as it lands (the rays). Only the existing opacity and transform animations move it (R200). */
+.fx-takeover[data-look="abyss"] .fx-takeover-dark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-conic-gradient(
+    from 0deg at var(--fx-x) var(--fx-y),
+    color-mix(in srgb, var(--fx-tint-glow) 22%, transparent) 0deg 9deg,
+    transparent 14deg 30deg
+  );
+}
+
+.fx-takeover[data-look="abyss"] .fx-takeover-sweep {
+  border-radius: var(--radius-round);
+  background: repeating-radial-gradient(
+    circle,
+    color-mix(in srgb, var(--fx-tint-glow) 45%, transparent) 0 6%,
+    color-mix(in srgb, var(--fx-tint-rim) 80%, transparent) 10% 16%,
+    color-mix(in srgb, var(--fx-tint-core) 70%, transparent) 20% 26%
+  );
+  animation-name: fx-takeover-plunge;
+}
+
+@keyframes fx-takeover-plunge {
+  0% {
+    transform: translateY(-80vh) rotate(-120deg) scale(3);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(0) rotate(0deg) scale(0.6);
+    opacity: 0;
+  }
+}
+
+.fx-takeover[data-look="abyss"] .fx-takeover-rays {
+  background: repeating-radial-gradient(
+    circle,
+    color-mix(in srgb, var(--fx-tint-glow) 50%, transparent) 0 1.5%,
+    transparent 2.5% 8%
+  );
+}
+
 .fx-takeover-rays {
   position: absolute;
   left: var(--fx-x);

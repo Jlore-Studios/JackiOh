@@ -1,7 +1,7 @@
 // R3392000: Core's scenes (sceneRecipesCore1.ts to sceneRecipesCore3.ts, ART.md "Core's scenes"). Every Core
 // entry but Ceaseless Void draws a scene recipe of its own in Core's family, on both faces with one geometry, at
 // or above its rarity's floor (R3331001) and under the ceiling; a Unit's character is a figure or a creature part;
-// a scene's cast stands in its own layer; each Mythic draws a part no other scene does; and the scenes this pass
+// a scene's extra figures (R3390000's `extras`) stand in their own layers; each Mythic draws a part no other scene does; and the scenes this pass
 // does not own draw as #3331 left them. The pixels are e2e/cypress/component/core-scenes.cy.tsx's.
 
 import { describe, expect, it } from "vitest";
@@ -123,24 +123,24 @@ describe("R3392000 Core's scenes", () => {
     // KY, wherever Core draws him, wears one look.
     for (const id of KY_SCENES) {
       const scene = recipe(id);
-      const looks = [scene.figure, ...(scene.cast ?? [])].filter((figure) => figure !== undefined).map((figure) => figure.look);
+      const looks = [scene.figure, ...(scene.extras ?? [])].filter((figure) => figure !== undefined).map((figure) => figure.look);
       expect(looks, id).toContainEqual(KY_TUTOR_LOOK);
     }
   });
 
-  it("R3392000 a cast figure stands in its layer, in front of that layer's parts", () => {
+  it("R3392000 a Core scene's extra figures stand in their layers, in front of those layers' parts", () => {
     const base: SceneRecipe = {
       family: "core",
       sky: ["blue-800", "sky-300"],
       light: { x: 50, y: 40, r: 30, paint: "white", opacity: 0.3 },
       layers: { mid: [{ part: "crate", x: 30, y: 80 }], subject: [{ part: "crate", x: 60, y: 80 }] },
     };
-    const cast: SceneRecipe = { ...base, cast: [{ x: 40, y: 86, scale: 0.6, pose: "pose-stand", look: FIGURE_DEFAULT_LOOK, layer: "mid" }] };
-    const without = composeScene(base, "core-cast-test");
-    const shapes = composeScene(cast, "core-cast-test");
+    const withExtra: SceneRecipe = { ...base, extras: [{ x: 40, y: 86, scale: 0.6, pose: "pose-stand", look: FIGURE_DEFAULT_LOOK, layer: "mid" }] };
+    const without = composeScene(base, "core-extras-test");
+    const shapes = composeScene(withExtra, "core-extras-test");
     const mid = shapes.filter((shape) => shape.layer === "mid");
     const crate = without.filter((shape) => shape.layer === "mid");
-    // The mid crate first, as it is drawn with no cast, then the figure's shapes, tagged mid.
+    // The mid crate first, as it is drawn with no extra figure, then the figure's shapes, tagged mid.
     expect(mid.slice(0, crate.length)).toEqual(crate);
     const figure = mid.slice(crate.length);
     expect(figure.length).toBeGreaterThan(0);
@@ -151,18 +151,18 @@ describe("R3392000 Core's scenes", () => {
     const firstSubject = shapes.findIndex((shape) => shape.layer === "subject");
     expect(firstSubject).toBeGreaterThan(lastMid);
     expect(shapes[firstSubject]?.part).toBe("crate");
-    // Every Core cast figure draws its pose in its own layer.
-    let casts = 0;
+    // Every Core extra figure draws its pose in its own layer.
+    let extras = 0;
     for (const card of CORE) {
       const scene = recipe(card.id);
       const drawn = composeScene(scene, card.id);
-      for (const extra of scene.cast ?? []) {
+      for (const extra of scene.extras ?? []) {
         expect(SCENE_LAYERS, card.id).toContain(extra.layer);
         expect(drawn.some((shape) => shape.layer === extra.layer && shape.part === extra.pose), `${card.id} ${extra.pose} in ${extra.layer}`).toBe(true);
-        casts += 1;
+        extras += 1;
       }
     }
-    expect(casts).toBeGreaterThan(0);
+    expect(extras).toBeGreaterThan(0);
   });
 
   it("R3392000 each Mythic's scene holds a part no other scene uses", () => {
@@ -178,7 +178,7 @@ describe("R3392000 Core's scenes", () => {
   });
 
   it("R3392000 the scenes this pass does not own draw as #3331 left them", () => {
-    // Measured on the base of #3392 (1fbbecc): a recipe with no cast draws the same stream, and no kit part changed.
+    // Measured on the base of #3392 (1fbbecc): a recipe with no extra figure draws the same stream, and no kit part changed.
     const pinned: Readonly<Record<string, readonly [number, number]>> = {
       "classic-074": [1210823500, 2735167760],
       "core-100": [894252645, 4246782103],
@@ -187,7 +187,7 @@ describe("R3392000 Core's scenes", () => {
     for (const [id, [base, radiant]] of Object.entries(pinned)) {
       const card = CATALOG[id];
       if (card === undefined) throw new Error(`the catalog has no ${id}`);
-      expect(recipe(id).cast, id).toBeUndefined();
+      expect(recipe(id).extras, id).toBeUndefined();
       expect(hashId(proceduralCardArtUri(card, false)), id).toBe(base);
       expect(hashId(proceduralCardArtUri(card, true)), id).toBe(radiant);
     }

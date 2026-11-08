@@ -20,7 +20,7 @@ const TRANSMOGULATE: SceneRecipe = {
     y: 84,
     scale: 0.85,
     pose: "pose-raise",
-    look: { ...figureLookFor(["Human"]), hair: "goggles", outfit: "outfit-labcoat", item: null, cloth: "slate-100" },
+    look: { ...figureLookFor(["Human"]), hair: "wild-goggles", outfit: "outfit-labcoat", item: null, cloth: "slate-100" },
   },
   layers: {
     sky: [
@@ -76,11 +76,11 @@ const UNLICENSED_EXPERIMENTATION: SceneRecipe = {
     y: 66,
     scale: 0.8,
     pose: "pose-lunge",
-    look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-plate", item: "item-rapier", cloth: "slate-400" },
+    look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-layered-plate", item: "item-rapier", cloth: "slate-400" },
   },
-  cast: [
+  extras: [
     { x: 74, y: 76, scale: 0.9, pose: "pose-guard", look: { ...figureLookFor(["Human"]), head: "head-robot", hair: null, outfit: "outfit-rock", item: "item-club", skin: "slate-400", cloth: "slate-700" }, layer: "mid" },
-    { x: 20, y: 86, scale: 0.8, pose: "pose-raise", look: { ...figureLookFor(["Human"]), hair: "goggles", outfit: "outfit-labcoat", item: null, cloth: "white" }, layer: "near" },
+    { x: 20, y: 86, scale: 0.8, pose: "pose-raise", look: { ...figureLookFor(["Human"]), hair: "wild-goggles", outfit: "outfit-labcoat", item: null, cloth: "white" }, layer: "near" },
   ],
   layers: {
     sky: [
@@ -133,7 +133,7 @@ const POCKET_CHAOS: SceneRecipe = {
     pose: "pose-lunge",
     look: { ...figureLookFor(["Human"]), hair: "cap-feather", outfit: "outfit-blazer", item: "item-rapier", cloth: "blue-700" },
   },
-  cast: [
+  extras: [
     { x: 74, y: 84, scale: 0.95, flip: -1, pose: "pose-lunge", look: { ...figureLookFor(["Human"]), hair: "hair-long", outfit: "outfit-waistcoat", item: "item-rapier", cloth: "red-600" }, layer: "subject" },
   ],
   layers: {
@@ -155,12 +155,12 @@ const POCKET_CHAOS: SceneRecipe = {
       { part: "pocket", x: 50, y: 56, scale: 2.4 },
       { part: "vortex", x: 50, y: 58, scale: 2.2 },
       { part: "deck", x: 36, y: 60, scale: 1.6 },
-      { part: "card", x: 42, y: 56, scale: 1.2, count: 3, spread: [8, 6] },
+      { part: "playing-card", x: 42, y: 56, scale: 1.2, count: 3, spread: [8, 6] },
       { part: "streaks", x: 46, y: 62, scale: 0.8 },
     ],
     near: [
-      { part: "dice", x: 50, y: 66, scale: 2.2, count: 3, spread: [26, 12] },
-      { part: "card", x: 50, y: 72, scale: 1.4, count: 2, spread: [30, 6] },
+      { part: "die", x: 50, y: 66, scale: 2.2, count: 3, spread: [26, 12] },
+      { part: "playing-card", x: 50, y: 72, scale: 1.4, count: 2, spread: [30, 6] },
       { part: "hedge", x: 8, y: 94, scale: 1.4 },
       { part: "hedge", x: 92, y: 94, scale: 1.4 },
     ],
@@ -188,7 +188,7 @@ const FELINOR_FIENDER: SceneRecipe = {
     y: 86,
     scale: 1.05,
     pose: "pose-hold",
-    look: { ...figureLookFor(["Human"]), hair: "hat-brim", outfit: "outfit-coat", item: "item-binoculars", cloth: "slate-800" },
+    look: { ...figureLookFor(["Human"]), hair: "fedora", outfit: "outfit-coat", item: "item-binoculars", cloth: "slate-800" },
   },
   layers: {
     sky: [
@@ -203,15 +203,15 @@ const FELINOR_FIENDER: SceneRecipe = {
     mid: [
       { part: "street", x: 50, y: 76 },
       { part: "column", x: 20, y: 76, scale: 1.1, paint: "slate-400" },
-      { part: "cat", x: 20, y: 52, scale: 1.1 },
+      { part: "house-cat", x: 20, y: 52, scale: 1.1 },
       { part: "streetlamp", x: 12, y: 82, scale: 1.1 },
       { part: "streetlamp", x: 88, y: 82, scale: 1.1, flip: -1 },
     ],
     subject: [
-      { part: "cat", x: 48, y: 36, scale: 1.3 },
-      { part: "cat", x: 52, y: 31, scale: 1.2, flip: -1 },
-      { part: "cat", x: 49, y: 26, scale: 1.1 },
-      { part: "cat", x: 64, y: 62, scale: 1 },
+      { part: "house-cat", x: 48, y: 36, scale: 1.3 },
+      { part: "house-cat", x: 52, y: 31, scale: 1.2, flip: -1 },
+      { part: "house-cat", x: 49, y: 26, scale: 1.1 },
+      { part: "house-cat", x: 64, y: 62, scale: 1 },
     ],
     near: [
       { part: "cloud", x: 30, y: 90, scale: 1.8, paint: "slate-900" },
@@ -240,8 +240,8 @@ const COMBO_INDEX: SceneRecipe = {
     x: 50,
     y: 78,
     scale: 0.7,
-    pose: "pose-spread",
-    look: { ...figureLookFor(["Human"]), hair: "hat-brim", outfit: "outfit-blazer", item: "item-card", cloth: "violet-700" },
+    pose: "pose-block",
+    look: { ...figureLookFor(["Human"]), hair: "fedora", outfit: "outfit-blazer", item: "item-card", cloth: "violet-700" },
   },
   layers: {
     sky: [
@@ -261,7 +261,7 @@ const COMBO_INDEX: SceneRecipe = {
       { part: "stage", x: 50, y: 78 },
       { part: "vortex", x: 50, y: 48, scale: 2.2, paint: "cyan-400" },
       { part: "card-fan", x: 38, y: 62, scale: 1.2 },
-      { part: "card", x: 50, y: 50, scale: 1.3, count: 6, spread: [26, 22] },
+      { part: "playing-card", x: 50, y: 50, scale: 1.3, count: 6, spread: [26, 22] },
     ],
     near: [
       { part: "spotlight", x: 12, y: 4, scale: 1.4 },
@@ -307,18 +307,18 @@ const CALL_TO_CHAOS: SceneRecipe = {
     ],
     mid: [
       { part: "bulbs", x: 50, y: 22, scale: 1.8 },
-      { part: "fountain", x: 82, y: 80, scale: 1.3 },
+      { part: "heal-fountain", x: 82, y: 80, scale: 1.3 },
       { part: "rush-token", x: 66, y: 82, scale: 1.2, flip: -1, count: 2, spread: [10, 4] },
     ],
     subject: [
       { part: "chaos-wheel", x: 50, y: 78, scale: 1.45 },
       { part: "fist", x: 70, y: 52, scale: 2 },
-      { part: "card", x: 36, y: 44, scale: 1.4, count: 4, spread: [8, 14] },
+      { part: "playing-card", x: 36, y: 44, scale: 1.4, count: 4, spread: [8, 14] },
     ],
     near: [
-      { part: "dice", x: 60, y: 92, scale: 2, count: 3, spread: [30, 2] },
+      { part: "die", x: 60, y: 92, scale: 2, count: 3, spread: [30, 2] },
       { part: "coin", x: 30, y: 94, scale: 1.4, count: 3, spread: [40, 2] },
-      { part: "shockwave", x: 66, y: 52, scale: 1.1 },
+      { part: "blast-rings", x: 66, y: 52, scale: 1.1 },
     ],
     light: [
       { part: "burst", x: 50, y: 46, scale: 2.4, paint: "purple-400" },
@@ -339,8 +339,8 @@ const MY_PAWN: SceneRecipe = {
   sky: ["slate-900", "blue-900"],
   light: { x: 50, y: 14, r: 44, paint: "violet-300", opacity: 0.5 },
   emblem: { x: 50, y: 58, size: 5, rotate: 0 },
-  cast: [
-    { x: 56, y: 64, scale: 0.55, flip: -1, pose: "pose-lunge", look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-plate", item: "item-sword", cloth: "slate-700" }, layer: "subject" },
+  extras: [
+    { x: 56, y: 64, scale: 0.55, flip: -1, pose: "pose-lunge", look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-layered-plate", item: "item-sword", cloth: "slate-700" }, layer: "subject" },
     { x: 50, y: 20, scale: 0.4, pose: "pose-stand", look: { head: "head-void", hair: "hood", outfit: "outfit-void", item: null, skin: "black", cloth: "slate-900" }, layer: "far" },
   ],
   layers: {
@@ -350,7 +350,7 @@ const MY_PAWN: SceneRecipe = {
       { part: "moon", x: 84, y: 14, scale: 0.6 },
     ],
     far: [
-      { part: "water", x: 50, y: 70 },
+      { part: "sea", x: 50, y: 70 },
       { part: "skyline", x: 50, y: 70, scale: 1, paint: "slate-800" },
       { part: "cloud", x: 16, y: 56, scale: 1.2, paint: "violet-300" },
       { part: "cloud", x: 86, y: 52, scale: 1.2, paint: "violet-300" },
@@ -397,7 +397,7 @@ const ZEPHRYS: SceneRecipe = {
     y: 64,
     scale: 0.9,
     pose: "pose-hold",
-    look: { head: "head-cloud", hair: null, outfit: "outfit-robe", item: null, skin: "white", cloth: "sky-300" },
+    look: { head: "head-cloud", hair: null, outfit: "outfit-gown", item: null, skin: "white", cloth: "sky-300" },
   },
   layers: {
     sky: [
@@ -408,7 +408,7 @@ const ZEPHRYS: SceneRecipe = {
     far: [
       { part: "mesa", x: 20, y: 72, scale: 1.4 },
       { part: "mesa", x: 86, y: 70, scale: 1, flip: -1 },
-      { part: "standing-stone", x: 62, y: 72, scale: 1.2 },
+      { part: "ring-stone", x: 62, y: 72, scale: 1.2 },
     ],
     mid: [
       { part: "sand", x: 50, y: 72 },
@@ -427,10 +427,10 @@ const ZEPHRYS: SceneRecipe = {
     ],
     near: [
       { part: "open-hand", x: 44, y: 90, scale: 1.8 },
-      { part: "card", x: 50, y: 86, scale: 2, paint: "white" },
-      { part: "dust", x: 20, y: 90, scale: 1.4 },
-      { part: "dust", x: 82, y: 90, scale: 1.4 },
-      { part: "shockwave", x: 50, y: 92, scale: 1.4 },
+      { part: "playing-card", x: 50, y: 86, scale: 2, paint: "white" },
+      { part: "dust-cloud", x: 20, y: 90, scale: 1.4 },
+      { part: "dust-cloud", x: 82, y: 90, scale: 1.4 },
+      { part: "blast-rings", x: 50, y: 92, scale: 1.4 },
     ],
     light: [
       { part: "god-rays", x: 50, y: 20, scale: 2.4, paint: "white" },
@@ -440,7 +440,7 @@ const ZEPHRYS: SceneRecipe = {
     particles: [
       { part: "sparks", x: 50, y: 70, scale: 1.4, count: 3, spread: [24, 12] },
       { part: "motes", x: 50, y: 62, scale: 1.6, paint: "white" },
-      { part: "card", x: 50, y: 50, scale: 0.9, count: 7, spread: [38, 28] },
+      { part: "playing-card", x: 50, y: 50, scale: 0.9, count: 7, spread: [38, 28] },
     ],
   },
 };
@@ -463,7 +463,7 @@ const HEROIC_POWER: SceneRecipe = {
     y: 90,
     scale: 0.8,
     pose: "pose-lunge",
-    look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-plate", item: "item-sword", cloth: "blue-700" },
+    look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-layered-plate", item: "item-sword", cloth: "blue-700" },
   },
   layers: {
     sky: [
@@ -481,12 +481,12 @@ const HEROIC_POWER: SceneRecipe = {
       inDoor(1, "drops", 0.5, 0),
       inDoor(2, "bow", 0.8),
       inDoor(3, "gate", 0.45, 5),
-      inDoor(4, "cat", 0.9, 4),
+      inDoor(4, "house-cat", 0.9, 4),
       inDoor(4, "cup", 0.8, 5),
-      inDoor(5, "arrow", 0.4),
+      inDoor(5, "flying-arrow", 0.4),
       inDoor(7, "doll", 1, 5),
       inDoor(8, "shield", 0.8),
-      inDoor(9, "bee", 0.8, -2),
+      inDoor(9, "honeybee", 0.8, -2),
       inDoor(9, "flame", 0.7, 5),
       inDoor(10, "blackboard", 0.3, 5),
       inDoor(11, "tree", 0.5, 6),
@@ -526,8 +526,8 @@ const CRAFT_A_CARD: SceneRecipe = {
     x: 78,
     y: 72,
     scale: 0.65,
-    pose: "pose-spread",
-    look: { ...figureLookFor(["Human"]), hair: "bucket-hat", outfit: "outfit-apron", item: null, cloth: "orange-400" },
+    pose: "pose-block",
+    look: { ...figureLookFor(["Human"]), hair: "bucket-hat", outfit: "outfit-work-apron", item: null, cloth: "orange-400" },
   },
   layers: {
     sky: [
@@ -536,8 +536,8 @@ const CRAFT_A_CARD: SceneRecipe = {
       { part: "cloud", x: 86, y: 86, scale: 1.2 },
     ],
     far: [
-      { part: "gear", x: 18, y: 22, scale: 2.2 },
-      { part: "gear", x: 82, y: 20, scale: 1.6 },
+      { part: "cog", x: 18, y: 22, scale: 2.2 },
+      { part: "cog", x: 82, y: 20, scale: 1.6 },
       { part: "planet", x: 88, y: 40, scale: 0.7 },
     ],
     mid: [
@@ -555,14 +555,14 @@ const CRAFT_A_CARD: SceneRecipe = {
     ],
     near: [
       { part: "open-hand", x: 72, y: 90, scale: 1.4, flip: -1 },
-      { part: "card", x: 62, y: 86, scale: 1.6 },
-      { part: "gear", x: 16, y: 90, scale: 1.4 },
+      { part: "playing-card", x: 62, y: 86, scale: 1.6 },
+      { part: "cog", x: 16, y: 90, scale: 1.4 },
       { part: "jar", x: 36, y: 90, scale: 1.4 },
     ],
     light: [
       { part: "burst", x: 50, y: 50, scale: 3, paint: "white" },
       { part: "god-rays", x: 50, y: 40, scale: 2.4, paint: "white" },
-      { part: "shockwave", x: 50, y: 56, scale: 1.8 },
+      { part: "blast-rings", x: 50, y: 56, scale: 1.8 },
     ],
     particles: [
       { part: "sparks", x: 50, y: 56, scale: 1.6, count: 3, spread: [28, 14], paint: "cyan-400" },
@@ -585,7 +585,7 @@ const INFINITE_RESERVES: SceneRecipe = {
       { part: "shelf", x: 14, y: 82, scale: 1.2 },
       { part: "shelf", x: 86, y: 82, scale: 1.2 },
       { part: "crate", x: 30, y: 82, scale: 1.4, count: 2, spread: [4, 0] },
-      { part: "card", x: 68, y: 82, scale: 1.2, count: 2, spread: [6, 0] },
+      { part: "playing-card", x: 68, y: 82, scale: 1.2, count: 2, spread: [6, 0] },
     ],
     subject: [{ part: "rush-token", x: 50, y: 82, scale: 1.6 }],
     near: [
@@ -615,13 +615,13 @@ const FIELD_OF_DREAMS: SceneRecipe = {
     mid: [
       { part: "field", x: 50, y: 70 },
       { part: "flower", x: 20, y: 74, scale: 1.4, count: 4, spread: [60, 6] },
-      { part: "ghost", x: 70, y: 70, scale: 0.8 },
+      { part: "ghost-figure", x: 70, y: 70, scale: 0.8 },
     ],
     subject: [
       { part: "open-hand", x: 50, y: 88, scale: 2 },
-      { part: "card", x: 50, y: 74, scale: 2, paint: "slate-100" },
-      { part: "card", x: 40, y: 66, scale: 1.4, paint: "blue-200" },
-      { part: "card", x: 61, y: 58, scale: 1.2, paint: "blue-200" },
+      { part: "playing-card", x: 50, y: 74, scale: 2, paint: "slate-100" },
+      { part: "playing-card", x: 40, y: 66, scale: 1.4, paint: "blue-200" },
+      { part: "playing-card", x: 61, y: 58, scale: 1.2, paint: "blue-200" },
     ],
     near: [{ part: "flower", x: 12, y: 94, scale: 2, count: 2, spread: [76, 3] }],
     light: [{ part: "halo", x: 50, y: 74, scale: 1.4, paint: "blue-200" }],
@@ -645,7 +645,7 @@ const PROFESSOR_CURVATURE: SceneRecipe = {
   layers: {
     sky: [{ part: "cloud", x: 80, y: 16, scale: 1 }],
     far: [
-      { part: "dome", x: 50, y: 76, scale: 1.8 },
+      { part: "glass-dome", x: 50, y: 76, scale: 1.8 },
       { part: "telescope", x: 82, y: 78, scale: 1.6 },
     ],
     mid: [
@@ -670,7 +670,7 @@ const FULLSEND: SceneRecipe = {
     y: 76,
     scale: 0.85,
     pose: "pose-lunge",
-    look: { ...figureLookFor(["Human"]), hair: "goggles", outfit: "outfit-bomber", item: "item-card", cloth: "red-600" },
+    look: { ...figureLookFor(["Human"]), hair: "wild-goggles", outfit: "outfit-bomber", item: "item-card", cloth: "red-600" },
   },
   layers: {
     sky: [
@@ -679,7 +679,7 @@ const FULLSEND: SceneRecipe = {
     ],
     far: [
       { part: "cliff", x: 16, y: 56, scale: 1.2 },
-      { part: "card", x: 60, y: 24, scale: 1.2, count: 3, spread: [24, 10], paint: "orange-400" },
+      { part: "playing-card", x: 60, y: 24, scale: 1.2, count: 3, spread: [24, 10], paint: "orange-400" },
       { part: "flame", x: 56, y: 30, scale: 0.9, count: 2, spread: [20, 8] },
     ],
     mid: [
@@ -695,7 +695,7 @@ const FULLSEND: SceneRecipe = {
     light: [{ part: "halo", x: 28, y: 80, scale: 1.3, paint: "cyan-400" }],
     particles: [
       { part: "confetti", x: 66, y: 66, scale: 1.4 },
-      { part: "card", x: 70, y: 70, scale: 1, count: 4, spread: [18, 10] },
+      { part: "playing-card", x: 70, y: 70, scale: 1, count: 4, spread: [18, 10] },
     ],
   },
 };
@@ -738,7 +738,7 @@ const ZAO_GAO: SceneRecipe = {
     x: 66,
     y: 74,
     scale: 0.5,
-    pose: "pose-run",
+    pose: "pose-stride",
     look: { ...figureLookFor(["CN"]), hair: "headband", outfit: "outfit-tunic", item: "item-shield", cloth: "green-700" },
   },
   layers: {
@@ -773,8 +773,8 @@ const RADIANT_SAINTESS: SceneRecipe = {
     x: 50,
     y: 80,
     scale: 1,
-    pose: "pose-spread",
-    look: { ...figureLookFor(["Human"]), hair: "hair-long", outfit: "outfit-robe", item: null, cloth: "white" },
+    pose: "pose-block",
+    look: { ...figureLookFor(["Human"]), hair: "hair-long", outfit: "outfit-gown", item: null, cloth: "white" },
   },
   layers: {
     sky: [{ part: "light-shaft", x: 50, y: 4, scale: 1.4, paint: "white" }],
@@ -810,7 +810,7 @@ const KYS_TRIAL: SceneRecipe = {
   light: { x: 50, y: 30, r: 38, paint: "white", opacity: 0.45 },
   emblem: { x: 56, y: 70, size: 5, rotate: 0 },
   figure: { x: 58, y: 80, scale: 0.8, pose: "pose-stand", look: KY_TUTOR_LOOK },
-  cast: [
+  extras: [
     { x: 24, y: 90, scale: 0.7, pose: "pose-guard", look: { ...figureLookFor(["Human"]), hair: "hair-short", outfit: "outfit-hoodie", item: null, cloth: "blue-700" }, layer: "near" },
   ],
   layers: {
@@ -821,7 +821,7 @@ const KYS_TRIAL: SceneRecipe = {
     ],
     mid: [{ part: "column", x: 90, y: 72, scale: 1.3 }],
     subject: [
-      { part: "table", x: 54, y: 86, scale: 1.7 },
+      { part: "wide-table", x: 54, y: 86, scale: 1.7 },
       { part: "envelope", x: 40, y: 54, scale: 1.8 },
       { part: "envelope", x: 52, y: 46, scale: 1.8 },
       { part: "envelope", x: 64, y: 54, scale: 1.8 },
@@ -876,9 +876,9 @@ const MISS_MROW: SceneRecipe = {
     y: 88,
     scale: 1,
     pose: "pose-lunge",
-    look: { ...figureLookFor(["Felinor"]), hair: null, outfit: "outfit-cardigan", item: null, cloth: "red-300" },
+    look: { ...figureLookFor(["Felinor"]), hair: null, outfit: "outfit-tutor-cardigan", item: null, cloth: "red-300" },
   },
-  cast: [
+  extras: [
     { x: 68, y: 82, scale: 0.9, flip: -1, pose: "pose-raise", look: { ...figureLookFor(["Human"]), head: "head-ghoul", hair: null, outfit: "outfit-rags", item: "item-club", skin: "green-700", cloth: "wood-700" }, layer: "mid" },
   ],
   layers: {
@@ -886,10 +886,10 @@ const MISS_MROW: SceneRecipe = {
     far: [
       { part: "room-wall", x: 50, y: 70 },
       { part: "window", x: 20, y: 54, scale: 1.1 },
-      { part: "table", x: 78, y: 70, scale: 1.1 },
+      { part: "wide-table", x: 78, y: 70, scale: 1.1 },
       { part: "cup", x: 70, y: 62, scale: 1.4, count: 3, spread: [16, 1] },
     ],
-    mid: [{ part: "chain", x: 40, y: 54, scale: 1.2, paint: "slate-100" }],
+    mid: [{ part: "chain-length", x: 40, y: 54, scale: 1.2, paint: "slate-100" }],
     subject: [{ part: "chair", x: 90, y: 82, scale: 1.2 }],
     near: [
       { part: "cup", x: 52, y: 92, scale: 2.4, count: 3, spread: [30, 2] },
@@ -940,8 +940,8 @@ const CORPSE_EATER: SceneRecipe = {
     x: 50,
     y: 84,
     scale: 1.05,
-    pose: "pose-kneel",
-    look: { ...figureLookFor(["Human"]), head: "head-ghoul", hair: null, outfit: "outfit-apron", item: null, skin: "green-700", cloth: "white" },
+    pose: "pose-genuflect",
+    look: { ...figureLookFor(["Human"]), head: "head-ghoul", hair: null, outfit: "outfit-work-apron", item: null, skin: "green-700", cloth: "white" },
   },
   layers: {
     sky: [{ part: "cloud", x: 70, y: 18, scale: 1.2 }],
@@ -960,7 +960,7 @@ const CORPSE_EATER: SceneRecipe = {
     ],
     near: [{ part: "wheat", x: 14, y: 94, scale: 2, count: 3, spread: [72, 2] }],
     light: [{ part: "halo", x: 50, y: 52, scale: 1.1, paint: "green-200" }],
-    particles: [{ part: "spores", x: 50, y: 60, scale: 1.6, count: 2, spread: [16, 8], paint: "green-400" }],
+    particles: [{ part: "spore-motes", x: 50, y: 60, scale: 1.6, count: 2, spread: [16, 8], paint: "green-400" }],
   },
 };
 
@@ -986,7 +986,7 @@ const SUPER_VIRUS_INJECTION: SceneRecipe = {
       { part: "syringe", x: 56, y: 66, scale: 2.4, paint: "green-400" },
       { part: "open-hand", x: 38, y: 70, scale: 2.2, paint: "white" },
     ],
-    near: [{ part: "spores", x: 68, y: 68, scale: 1.6, paint: "green-400" }],
+    near: [{ part: "spore-motes", x: 68, y: 68, scale: 1.6, paint: "green-400" }],
     light: [{ part: "halo", x: 60, y: 68, scale: 1.2, paint: "green-400" }],
     particles: [{ part: "motes", x: 60, y: 60, scale: 1.2, paint: "green-200" }],
   },
@@ -1007,11 +1007,11 @@ const SUPER_VIRUS: SceneRecipe = {
     mid: [{ part: "bench", x: 24, y: 82, scale: 1.4 }],
     subject: [
       { part: "deck", x: 66, y: 84, scale: 2.4 },
-      { part: "card", x: 44, y: 76, scale: 3, paint: "green-400" },
+      { part: "playing-card", x: 44, y: 76, scale: 3, paint: "green-400" },
     ],
-    near: [{ part: "card", x: 62, y: 62, scale: 1.4, paint: "green-400", count: 4, spread: [22, 16] }],
+    near: [{ part: "playing-card", x: 62, y: 62, scale: 1.4, paint: "green-400", count: 4, spread: [22, 16] }],
     light: [{ part: "spray", x: 52, y: 62, scale: 1.4, paint: "green-400" }],
-    particles: [{ part: "spores", x: 56, y: 62, scale: 1.8, count: 2, spread: [14, 8], paint: "green-400" }],
+    particles: [{ part: "spore-motes", x: 56, y: 62, scale: 1.8, count: 2, spread: [14, 8], paint: "green-400" }],
   },
 };
 
@@ -1077,7 +1077,7 @@ const GENNS_GREED: SceneRecipe = {
     x: 40,
     y: 86,
     scale: 0.95,
-    pose: "pose-spread",
+    pose: "pose-block",
     look: { ...figureLookFor(["Human"]), hair: "cap-feather", outfit: "outfit-fur", item: null, cloth: "violet-700" },
   },
   layers: {
@@ -1090,7 +1090,7 @@ const GENNS_GREED: SceneRecipe = {
       { part: "mirror", x: 64, y: 62, scale: 1.2, flip: -1 },
     ],
     mid: [
-      { part: "table", x: 76, y: 82, scale: 1.1 },
+      { part: "wide-table", x: 76, y: 82, scale: 1.1 },
       { part: "coin", x: 70, y: 72, scale: 1.4, count: 3, spread: [14, 4], paint: "slate-100" },
       { part: "puff", x: 76, y: 66, scale: 0.4 },
     ],
@@ -1126,12 +1126,12 @@ const CHAOS_GOLEM: SceneRecipe = {
     ],
     mid: [
       { part: "field", x: 50, y: 74 },
-      { part: "smoke", x: 22, y: 72, scale: 1.4 },
-      { part: "smoke", x: 80, y: 70, scale: 1.2 },
+      { part: "smoke-billow", x: 22, y: 72, scale: 1.4 },
+      { part: "smoke-billow", x: 80, y: 70, scale: 1.2 },
     ],
     subject: [
-      { part: "dice", x: 36, y: 66, scale: 2.4 },
-      { part: "dice", x: 62, y: 74, scale: 2.4 },
+      { part: "die", x: 36, y: 66, scale: 2.4 },
+      { part: "die", x: 62, y: 74, scale: 2.4 },
     ],
     near: [{ part: "crate", x: 14, y: 92, scale: 1.6 }],
     light: [{ part: "halo", x: 50, y: 62, scale: 2.2, paint: "cyan-400" }],
@@ -1150,7 +1150,7 @@ const RUSH_TOKEN: SceneRecipe = {
       { part: "cloud", x: 24, y: 18, scale: 1.2 },
       { part: "gull", x: 74, y: 28, scale: 1.4 },
     ],
-    far: [{ part: "water", x: 50, y: 54 }],
+    far: [{ part: "sea", x: 50, y: 54 }],
     mid: [{ part: "sand", x: 50, y: 66 }],
     subject: [{ part: "rush-token", x: 52, y: 78, scale: 3 }],
     near: [
@@ -1158,7 +1158,7 @@ const RUSH_TOKEN: SceneRecipe = {
       { part: "spray", x: 80, y: 90, scale: 1 },
     ],
     light: [{ part: "halo", x: 52, y: 62, scale: 1, paint: "white" }],
-    particles: [{ part: "dust", x: 32, y: 84, scale: 1.2 }],
+    particles: [{ part: "dust-cloud", x: 32, y: 84, scale: 1.2 }],
   },
 };
 
@@ -1196,7 +1196,7 @@ const FELINOR_TOKEN: SceneRecipe = {
     y: 90,
     scale: 0.8,
     pose: "pose-hold",
-    look: { ...figureLookFor(["Felinor"]), hair: "steel-helmet", outfit: "outfit-tunic", item: "item-spear", cloth: "violet-700" },
+    look: { ...figureLookFor(["Felinor"]), hair: "steel-helmet", outfit: "outfit-tunic", item: "item-twig-spear", cloth: "violet-700" },
   },
   layers: {
     sky: [{ part: "cloud", x: 76, y: 18, scale: 1.1 }],
@@ -1224,7 +1224,7 @@ const BREAD_TOKEN: SceneRecipe = {
       { part: "window", x: 22, y: 54, scale: 1.1 },
       { part: "shelf", x: 78, y: 48, scale: 1 },
     ],
-    mid: [{ part: "table", x: 40, y: 82, scale: 1.6 }],
+    mid: [{ part: "wide-table", x: 40, y: 82, scale: 1.6 }],
     subject: [{ part: "loaf", x: 56, y: 80, scale: 3 }],
     near: [{ part: "puff", x: 24, y: 90, scale: 0.8, paint: "white" }],
     light: [{ part: "light-shaft", x: 22, y: 4, scale: 1.2, paint: "white" }],
@@ -1242,7 +1242,7 @@ const THE_COIN: SceneRecipe = {
     sky: [{ part: "light-shaft", x: 50, y: 2, scale: 1.4, paint: "white" }],
     far: [{ part: "room-wall", x: 50, y: 72 }],
     mid: [
-      { part: "table", x: 50, y: 88, scale: 2.8 },
+      { part: "wide-table", x: 50, y: 88, scale: 2.8 },
       { part: "coin-stack", x: 82, y: 78, scale: 1.6 },
     ],
     subject: [{ part: "coin", x: 50, y: 58, scale: 6 }],
@@ -1262,8 +1262,8 @@ const GHOUL_TOKEN: SceneRecipe = {
     x: 50,
     y: 84,
     scale: 1.1,
-    pose: "pose-kneel",
-    look: { ...figureLookFor(["Human"]), head: "head-ghoul", hair: null, outfit: "outfit-rags", item: "item-dagger", skin: "green-700", cloth: "wood-700" },
+    pose: "pose-genuflect",
+    look: { ...figureLookFor(["Human"]), head: "head-ghoul", hair: null, outfit: "outfit-rags", item: "item-knife", skin: "green-700", cloth: "wood-700" },
   },
   layers: {
     sky: [{ part: "bulbs", x: 50, y: 8, scale: 1.2 }],
@@ -1274,7 +1274,7 @@ const GHOUL_TOKEN: SceneRecipe = {
     mid: [{ part: "vial", x: 22, y: 78, scale: 1.6, count: 2, spread: [6, 0] }],
     near: [{ part: "bin", x: 50, y: 96, scale: 2.8 }],
     light: [{ part: "halo", x: 50, y: 66, scale: 1, paint: "green-200" }],
-    particles: [{ part: "spores", x: 50, y: 60, scale: 1.2, paint: "green-400" }],
+    particles: [{ part: "spore-motes", x: 50, y: 60, scale: 1.2, paint: "green-400" }],
   },
 };
 

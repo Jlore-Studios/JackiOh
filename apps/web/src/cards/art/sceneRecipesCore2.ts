@@ -61,18 +61,18 @@ const RECYCLING_INITIATIVE: SceneRecipe = {
     ],
     mid: [
       { part: "tile-floor", x: 50, y: 72 },
-      { part: "fern", x: 10, y: 74, scale: 2.2 },
-      { part: "fern", x: 92, y: 74, scale: 2.2, flip: -1 },
+      { part: "fern-sprig", x: 10, y: 74, scale: 2.2 },
+      { part: "fern-sprig", x: 92, y: 74, scale: 2.2, flip: -1 },
       { part: "pipe", x: 44, y: 46, scale: 1.3 },
       { part: "pipe", x: 82, y: 56, scale: 1, flip: -1 },
     ],
     subject: [
-      { part: "chute", x: 32, y: 56, scale: 1.6 },
-      { part: "card", x: 32, y: 60, scale: 0.9, count: 3, spread: [4, 6] },
+      { part: "glow-chute", x: 32, y: 56, scale: 1.6 },
+      { part: "playing-card", x: 32, y: 60, scale: 0.9, count: 3, spread: [4, 6] },
       { part: "card-fan", x: 68, y: 78, scale: 1.6 },
     ],
     near: [
-      { part: "card", x: 22, y: 86, scale: 1.1, count: 3, spread: [8, 3] },
+      { part: "playing-card", x: 22, y: 86, scale: 1.1, count: 3, spread: [8, 3] },
       { part: "conveyor", x: 50, y: 92, scale: 0.9 },
     ],
     light: [{ part: "halo", x: 32, y: 62, scale: 1.2, paint: "cyan-400" }],
@@ -95,17 +95,17 @@ const ECHOES_OF_THE_FORGOTTEN: SceneRecipe = {
     ],
     mid: [
       { part: "tile-floor", x: 50, y: 74 },
-      { part: "ghost", x: 34, y: 76, scale: 1.2 },
-      { part: "ghost", x: 66, y: 76, scale: 1.2 },
-      { part: "ghost", x: 50, y: 70, scale: 0.9 },
+      { part: "ghost-figure", x: 34, y: 76, scale: 1.2 },
+      { part: "ghost-figure", x: 66, y: 76, scale: 1.2 },
+      { part: "ghost-figure", x: 50, y: 70, scale: 0.9 },
     ],
     subject: [
       { part: "light-shaft", x: 20, y: 14, scale: 2.2, paint: "cyan-400" },
       { part: "shards", x: 50, y: 50, scale: 2.4 },
     ],
     near: [
-      { part: "ghost", x: 20, y: 90, scale: 1.4 },
-      { part: "ghost", x: 82, y: 92, scale: 1.4 },
+      { part: "ghost-figure", x: 20, y: 90, scale: 1.4 },
+      { part: "ghost-figure", x: 82, y: 92, scale: 1.4 },
     ],
     light: [{ part: "echo-rings", x: 50, y: 52, scale: 2.2, paint: "cyan-400" }],
     particles: [{ part: "motes", x: 50, y: 60, scale: 1.6, paint: "slate-100" }],
@@ -118,7 +118,7 @@ const SHEEPISH: SceneRecipe = {
   sky: ["sky-400", "blue-200"],
   light: { x: 28, y: 24, r: 38, paint: "white", opacity: 0.4 },
   emblem: { x: 50, y: 85, size: 5, rotate: 0 },
-  figure: { x: 30, y: 82, scale: 0.8, pose: "pose-run", look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-plate", item: "item-sword", cloth: "slate-400" } },
+  figure: { x: 30, y: 82, scale: 0.8, pose: "pose-stride", look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-layered-plate", item: "item-sword", cloth: "slate-400" } },
   layers: {
     sky: [{ part: "cloud", x: 72, y: 20, scale: 0.9 }],
     far: [
@@ -156,7 +156,7 @@ const SELECTIVE_BREEDING: SceneRecipe = {
       { part: "flower", x: 74, y: 76, scale: 2, count: 2, spread: [10, 3] },
     ],
     subject: [
-      { part: "chute", x: 26, y: 64, scale: 1.4 },
+      { part: "glow-chute", x: 26, y: 64, scale: 1.4 },
       { part: "sprout", x: 26, y: 72, scale: 1.2, count: 2, spread: [6, 8] },
     ],
     near: [],
@@ -175,18 +175,18 @@ const BIG_FELINOR: SceneRecipe = {
   layers: {
     sky: [{ part: "cloud", x: 78, y: 22, scale: 0.8 }],
     far: [
-      { part: "house", x: 22, y: 62, scale: 1.4 },
-      { part: "house", x: 80, y: 62, scale: 1.2, flip: -1 },
+      { part: "whitewashed-house", x: 22, y: 62, scale: 1.4 },
+      { part: "whitewashed-house", x: 80, y: 62, scale: 1.2, flip: -1 },
       { part: "well", x: 56, y: 60, scale: 0.9 },
     ],
     mid: [{ part: "cobbles", x: 50, y: 70 }],
     subject: [
-      { part: "cat", x: 39, y: 59, scale: 1.3 },
+      { part: "house-cat", x: 39, y: 59, scale: 1.3 },
       { part: "goblin", x: 77, y: 52, scale: 1.7 },
     ],
     near: [{ part: "crate", x: 16, y: 90, scale: 1.4 }],
     light: [{ part: "burst", x: 72, y: 57, scale: 0.8, paint: "white" }],
-    particles: [{ part: "dust", x: 70, y: 62, scale: 1.2 }],
+    particles: [{ part: "dust-cloud", x: 70, y: 62, scale: 1.2 }],
   },
 };
 
@@ -196,18 +196,18 @@ const TRUE_STRIKE: SceneRecipe = {
   sky: ["sky-300", "blue-200"],
   light: { x: 28, y: 26, r: 38, paint: "white", opacity: 0.4 },
   emblem: { x: 36, y: 38, size: 5, rotate: 0 },
-  cast: [{ x: 20, y: 80, scale: 0.55, flip: -1, pose: "pose-run", look: { ...figureLookFor(["Human"]), hair: "hat-brim", outfit: "outfit-jacket", item: null, cloth: "green-700" }, layer: "mid" }],
+  extras: [{ x: 20, y: 80, scale: 0.55, flip: -1, pose: "pose-stride", look: { ...figureLookFor(["Human"]), hair: "fedora", outfit: "outfit-jacket", item: null, cloth: "green-700" }, layer: "mid" }],
   layers: {
     far: [
       { part: "hills", x: 50, y: 56, paint: "green-700" },
-      { part: "water", x: 50, y: 62 },
+      { part: "sea", x: 50, y: 62 },
       { part: "reed", x: 14, y: 64, scale: 1.5, count: 2, spread: [8, 2] },
     ],
     mid: [{ part: "field", x: 50, y: 74 }],
     subject: [
       { part: "dummy", x: 58, y: 82, scale: 2.1 },
       { part: "shield", x: 58, y: 62, scale: 1.9 },
-      { part: "arrow", x: 70, y: 62, scale: 2.2 },
+      { part: "flying-arrow", x: 70, y: 62, scale: 2.2 },
     ],
     near: [{ part: "grass-tuft", x: 20, y: 92, count: 2, spread: [60, 2] }],
     light: [],
@@ -221,11 +221,11 @@ const DEFT_DUELIST: SceneRecipe = {
   sky: ["sky-400", "blue-200"],
   light: { x: 26, y: 24, r: 38, paint: "white", opacity: 0.4 },
   emblem: { x: 50, y: 56, size: 5, rotate: 0 },
-  figure: { x: 50, y: 84, scale: 1, pose: "pose-lunge", look: { ...figureLookFor(["Human"]), hair: "cap-feather", outfit: "outfit-waistcoat", item: "item-dagger", cloth: "red-600" } },
+  figure: { x: 50, y: 84, scale: 1, pose: "pose-lunge", look: { ...figureLookFor(["Human"]), hair: "cap-feather", outfit: "outfit-waistcoat", item: "item-knife", cloth: "red-600" } },
   layers: {
     sky: [{ part: "gull", x: 22, y: 30, scale: 1.4 }],
     far: [
-      { part: "water", x: 50, y: 52 },
+      { part: "sea", x: 50, y: 52 },
       { part: "ship", x: 76, y: 52, scale: 1 },
     ],
     mid: [
@@ -250,13 +250,13 @@ const SUPPRESSIVE_AURA: SceneRecipe = {
     far: [{ part: "hills", x: 50, y: 52, paint: "slate-700" }],
     mid: [
       { part: "amphitheatre", x: 50, y: 66, scale: 1.2 },
-      { part: "statue", x: 26, y: 64, scale: 1.2 },
-      { part: "statue", x: 74, y: 64, scale: 1.2, flip: -1 },
+      { part: "plinth-statue", x: 26, y: 64, scale: 1.2 },
+      { part: "plinth-statue", x: 74, y: 64, scale: 1.2, flip: -1 },
     ],
     subject: [
       { part: "rune", x: 50, y: 68, scale: 2.4, paint: "violet-500" },
-      { part: "statue", x: 38, y: 76, scale: 1.4 },
-      { part: "statue", x: 62, y: 76, scale: 1.4, flip: -1 },
+      { part: "plinth-statue", x: 38, y: 76, scale: 1.4 },
+      { part: "plinth-statue", x: 62, y: 76, scale: 1.4, flip: -1 },
     ],
     near: [{ part: "mist", x: 50, y: 40, scale: 1.8, count: 2, spread: [14, 6], paint: "slate-400" }],
     light: [{ part: "mist", x: 50, y: 82, scale: 1.8, count: 2, spread: [20, 4], paint: "violet-300" }],
@@ -270,7 +270,7 @@ const FIG_OF_LIFE: SceneRecipe = {
   sky: ["sky-300", "lime-200"],
   light: { x: 28, y: 24, r: 38, paint: "white", opacity: 0.4 },
   emblem: { x: 30, y: 40, size: 5, rotate: 0 },
-  figure: { x: 40, y: 84, scale: 1, pose: "pose-kneel", look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-plate", item: null, cloth: "slate-400" } },
+  figure: { x: 40, y: 84, scale: 1, pose: "pose-genuflect", look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-layered-plate", item: null, cloth: "slate-400" } },
   layers: {
     far: [
       { part: "hills", x: 50, y: 60, paint: "green-500" },
@@ -299,10 +299,10 @@ const FIVE_PEK_CONTROLLER: SceneRecipe = {
   layers: {
     far: [{ part: "room-wall", x: 50, y: 66, paint: "blue-200" }],
     mid: [
-      { part: "dice", x: 84, y: 64, scale: 2.4 },
+      { part: "die", x: 84, y: 64, scale: 2.4 },
     ],
     subject: [
-      { part: "table", x: 50, y: 84, scale: 2.2 },
+      { part: "wide-table", x: 50, y: 84, scale: 2.2 },
       { part: "controller", x: 50, y: 40, scale: 1.5 },
       { part: "soldier", x: 50, y: 68, scale: 1.4, count: 4, spread: [26, 2] },
     ],
@@ -318,7 +318,7 @@ const SNOM_BUNNY_MIND_CONTROL: SceneRecipe = {
   sky: ["sky-300", "slate-100"],
   light: { x: 70, y: 22, r: 38, paint: "white", opacity: 0.45 },
   emblem: { x: 62, y: 60, size: 5, rotate: 0 },
-  figure: { x: 26, y: 80, scale: 0.8, pose: "pose-run", look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-plate", item: "item-sword", cloth: "slate-400" } },
+  figure: { x: 26, y: 80, scale: 0.8, pose: "pose-stride", look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-layered-plate", item: "item-sword", cloth: "slate-400" } },
   layers: {
     sky: [{ part: "cloud", x: 30, y: 20, scale: 0.9 }],
     far: [
@@ -326,7 +326,7 @@ const SNOM_BUNNY_MIND_CONTROL: SceneRecipe = {
       { part: "pine", x: 84, y: 58, scale: 1.6 },
       { part: "pine", x: 92, y: 60, scale: 1.2 },
     ],
-    mid: [{ part: "snow", x: 50, y: 66 }],
+    mid: [{ part: "snowfield", x: 50, y: 66 }],
     subject: [
       { part: "bunny", x: 66, y: 82, scale: 2.1, flip: -1 },
       { part: "vortex", x: 56, y: 62, scale: 0.9, paint: "violet-300" },
@@ -354,7 +354,7 @@ const K_POP_FANATIC: SceneRecipe = {
     ],
     mid: [{ part: "crowd", x: 50, y: 78, scale: 1.4 }],
     subject: [
-      { part: "chest", x: 28, y: 60, scale: 2.4 },
+      { part: "treasure-chest", x: 28, y: 60, scale: 2.4 },
       { part: "sparks", x: 28, y: 62, scale: 1.6, count: 2, spread: [8, 6], paint: "red-300" },
     ],
     near: [{ part: "bulbs", x: 50, y: 92, scale: 1.8 }],
@@ -383,11 +383,11 @@ const KYS_PRIVATE_TUTOR: SceneRecipe = {
     ],
     subject: [
       { part: "card-fan", x: 62, y: 54, scale: 2.2 },
-      { part: "table", x: 70, y: 92, scale: 1.4 },
-      { part: "hourglass", x: 62, y: 74, scale: 2 },
+      { part: "wide-table", x: 70, y: 92, scale: 1.4 },
+      { part: "sand-glass", x: 62, y: 74, scale: 2 },
       { part: "jar", x: 78, y: 74, scale: 1.4 },
     ],
-    near: [{ part: "card", x: 50, y: 40, scale: 1, count: 2, spread: [14, 4] }],
+    near: [{ part: "playing-card", x: 50, y: 40, scale: 1, count: 2, spread: [14, 4] }],
     light: [{ part: "light-shaft", x: 24, y: 8, scale: 1.6, paint: "white" }],
     particles: [{ part: "motes", x: 56, y: 50, scale: 1.4, paint: "white" }],
   },
@@ -411,7 +411,7 @@ const KYS_EMPTY_NOTEBOOK: SceneRecipe = {
       { part: "notebook", x: 50, y: 70, scale: 2.4 },
     ],
     near: [
-      { part: "arrow", x: 70, y: 90, scale: 0.8 },
+      { part: "flying-arrow", x: 70, y: 90, scale: 0.8 },
       { part: "grass-tuft", x: 24, y: 92, count: 2, spread: [14, 2] },
     ],
     light: [{ part: "light-shaft", x: 70, y: 10, scale: 1.6, paint: "white" }],
@@ -425,7 +425,7 @@ const SILLY_SILAS: SceneRecipe = {
   sky: ["slate-900", "violet-700"],
   light: { x: 50, y: 30, r: 44, paint: "violet-300", opacity: 0.5 },
   emblem: { x: 50, y: 56, size: 5, rotate: 0 },
-  figure: { x: 50, y: 78, scale: 1, pose: "pose-spread", look: { ...figureLookFor(["Human"]), hair: "hair-long", outfit: "outfit-stripes", item: null, cloth: "slate-100" } },
+  figure: { x: 50, y: 78, scale: 1, pose: "pose-block", look: { ...figureLookFor(["Human"]), hair: "hair-long", outfit: "outfit-stripes", item: null, cloth: "slate-100" } },
   layers: {
     sky: [{ part: "stars", x: 50, y: 20, scale: 2.2 }],
     far: [
@@ -439,7 +439,7 @@ const SILLY_SILAS: SceneRecipe = {
       { part: "soldier", x: 30, y: 78, scale: 1.4, count: 2, spread: [6, 2] },
     ],
     subject: [
-      { part: "shockwave", x: 52, y: 78, scale: 1.8, paint: "cyan-400" },
+      { part: "blast-rings", x: 52, y: 78, scale: 1.8, paint: "cyan-400" },
       { part: "shards", x: 52, y: 78, scale: 1.4 },
     ],
     near: [{ part: "streaks", x: 60, y: 90, scale: 1.2, count: 2, spread: [10, 3], paint: "violet-300" }],
@@ -461,7 +461,7 @@ const RENO: SceneRecipe = {
   sky: ["slate-100", "blue-200"],
   light: { x: 26, y: 24, r: 38, paint: "white", opacity: 0.45 },
   emblem: { x: 36, y: 58, size: 5, rotate: 0 },
-  figure: { x: 34, y: 86, scale: 0.95, pose: "pose-cast", look: { ...figureLookFor(["Human"]), hair: "hair-short", outfit: "outfit-apron", item: null, cloth: "stone-500" } },
+  figure: { x: 34, y: 86, scale: 0.95, pose: "pose-cast", look: { ...figureLookFor(["Human"]), hair: "hair-short", outfit: "outfit-work-apron", item: null, cloth: "stone-500" } },
   layers: {
     far: [
       { part: "room-wall", x: 50, y: 72, paint: "slate-100" },
@@ -471,7 +471,7 @@ const RENO: SceneRecipe = {
     ],
     mid: [{ part: "tile-floor", x: 50, y: 76 }],
     subject: [
-      { part: "statue", x: 68, y: 80, scale: 1.8, paint: "sky-300" },
+      { part: "plinth-statue", x: 68, y: 80, scale: 1.8, paint: "sky-300" },
       { part: "shards", x: 68, y: 66, scale: 1.4 },
       { part: "zap", x: 50, y: 56, scale: 0.65, paint: "green-400" },
     ],
@@ -490,7 +490,7 @@ const STRAAZA: SceneRecipe = {
   layers: {
     sky: [{ part: "cloud", x: 78, y: 22, scale: 0.9 }],
     far: [
-      { part: "water", x: 50, y: 60 },
+      { part: "sea", x: 50, y: 60 },
       { part: "gull", x: 24, y: 30, scale: 1.4 },
     ],
     mid: [{ part: "mesa", x: 48, y: 90, scale: 1.4, paint: "slate-700" }],
@@ -540,7 +540,7 @@ const JILLIAX: SceneRecipe = {
   sky: ["slate-100", "slate-400"],
   light: { x: 26, y: 24, r: 38, paint: "white", opacity: 0.45 },
   emblem: { x: 52, y: 56, size: 5, rotate: 0 },
-  figure: { x: 52, y: 86, scale: 1.08, pose: "pose-run", look: { ...figureLookFor(["Human"]), head: "head-robot", hair: "visor", outfit: "outfit-plate", item: "item-sword", skin: "slate-400", cloth: "slate-100" } },
+  figure: { x: 52, y: 86, scale: 1.08, pose: "pose-stride", look: { ...figureLookFor(["Human"]), head: "head-robot", hair: "visor", outfit: "outfit-layered-plate", item: "item-sword", skin: "slate-400", cloth: "slate-100" } },
   layers: {
     far: [
       { part: "tile-wall", x: 50, y: 70, paint: "slate-400" },
@@ -567,7 +567,7 @@ const CONJURE_KY: SceneRecipe = {
   figure: { x: 52, y: 80, scale: 0.9, pose: "pose-raise", look: KY_TUTOR_LOOK },
   layers: {
     far: [
-      { part: "water", x: 50, y: 58 },
+      { part: "sea", x: 50, y: 58 },
       { part: "pavilion", x: 80, y: 62, scale: 1.2 },
       { part: "tree", x: 14, y: 60, scale: 1.5 },
     ],
@@ -576,7 +576,7 @@ const CONJURE_KY: SceneRecipe = {
       { part: "rune", x: 54, y: 82, scale: 3.4, paint: "cyan-400" },
       { part: "portal", x: 26, y: 78, scale: 1.7, paint: "blue-600" },
     ],
-    near: [{ part: "arrow", x: 74, y: 44, scale: 1, flip: -1 }],
+    near: [{ part: "flying-arrow", x: 74, y: 44, scale: 1, flip: -1 }],
     light: [],
     particles: [{ part: "vortex", x: 30, y: 62, scale: 0.9, paint: "cyan-400" }],
   },
@@ -601,7 +601,7 @@ const RUSH_TOKEN_FARM: SceneRecipe = {
     ],
     near: [{ part: "fence", x: 50, y: 94, scale: 1.2 }],
     light: [],
-    particles: [{ part: "dust", x: 66, y: 82, scale: 1.2 }],
+    particles: [{ part: "dust-cloud", x: 66, y: 82, scale: 1.2 }],
   },
 };
 
@@ -611,20 +611,20 @@ const UNBIASED_IMMIGRATION: SceneRecipe = {
   sky: ["sky-300", "slate-100"],
   light: { x: 50, y: 40, r: 40, paint: "white", opacity: 0.5 },
   emblem: { x: 50, y: 38, size: 5, rotate: 0 },
-  figure: { x: 50, y: 88, scale: 0.85, pose: "pose-hold", look: { ...figureLookFor(["Human"]), hair: "hat-brim", outfit: "outfit-coat", item: null, cloth: "green-700" } },
-  cast: [
+  figure: { x: 50, y: 88, scale: 0.85, pose: "pose-hold", look: { ...figureLookFor(["Human"]), hair: "fedora", outfit: "outfit-coat", item: null, cloth: "green-700" } },
+  extras: [
     { x: 34, y: 76, scale: 0.55, pose: "pose-hold", look: { ...figureLookFor(["Felinor"]), item: null }, layer: "mid" },
     { x: 68, y: 74, scale: 0.5, flip: -1, pose: "pose-hold", look: { ...figureLookFor(["Human"]), hair: "bucket-hat", outfit: "outfit-sweater", item: null, cloth: "red-600" }, layer: "mid" },
   ],
   layers: {
     far: [
-      { part: "water", x: 50, y: 52 },
+      { part: "sea", x: 50, y: 52 },
       { part: "ship", x: 62, y: 52, scale: 1.1 },
     ],
     mid: [
       { part: "aisle", x: 50, y: 66 },
-      { part: "door", x: 22, y: 76, scale: 3, flip: -1 },
-      { part: "door", x: 78, y: 76, scale: 3 },
+      { part: "framed-door", x: 22, y: 76, scale: 3, flip: -1 },
+      { part: "framed-door", x: 78, y: 76, scale: 3 },
     ],
     subject: [{ part: "gift", x: 55.5, y: 62, scale: 2.4 }],
     near: [],
@@ -646,11 +646,11 @@ const BEAR_HONEYPOT: SceneRecipe = {
       { part: "pine", x: 16, y: 60, scale: 2.2 },
       { part: "pine", x: 30, y: 58, scale: 1.8 },
       { part: "pine", x: 84, y: 60, scale: 2.2 },
-      { part: "bee", x: 66, y: 42, scale: 1.8, count: 3, spread: [12, 6] },
+      { part: "honeybee", x: 66, y: 42, scale: 1.8, count: 3, spread: [12, 6] },
     ],
     mid: [
       { part: "field", x: 50, y: 66 },
-      { part: "fern", x: 20, y: 74, scale: 2.4, count: 3, spread: [10, 3] },
+      { part: "fern-sprig", x: 20, y: 74, scale: 2.4, count: 3, spread: [10, 3] },
     ],
     subject: [
       { part: "bear", x: 36, y: 84, scale: 1.5 },
@@ -658,7 +658,7 @@ const BEAR_HONEYPOT: SceneRecipe = {
       { part: "honeypot", x: 62, y: 70, scale: 2.6 },
       { part: "open-hand", x: 90, y: 62, scale: 2.4, flip: -1 },
     ],
-    near: [{ part: "fern", x: 14, y: 92, scale: 2.6, count: 3, spread: [60, 2] }],
+    near: [{ part: "fern-sprig", x: 14, y: 92, scale: 2.6, count: 3, spread: [60, 2] }],
     light: [],
     particles: [],
   },
@@ -684,7 +684,7 @@ const PREJUDICED_POSTDOC: SceneRecipe = {
     subject: [
       { part: "copier", x: 64, y: 84, scale: 2.1 },
       { part: "soldier", x: 82, y: 84, scale: 1.7, paint: "slate-100" },
-      { part: "card", x: 58, y: 62, scale: 1.2, count: 2, spread: [10, 3] },
+      { part: "playing-card", x: 58, y: 62, scale: 1.2, count: 2, spread: [10, 3] },
     ],
     near: [],
     light: [{ part: "light-shaft", x: 22, y: 10, scale: 1.4, paint: "white" }],
@@ -708,8 +708,8 @@ const FRIEND_OF_FELINORS: SceneRecipe = {
     ],
     subject: [
       { part: "chair", x: 38, y: 80, scale: 1.5, count: 3, spread: [18, 0] },
-      { part: "cat", x: 38, y: 74, scale: 2.6, count: 3, spread: [18, 0] },
-      { part: "table", x: 50, y: 86, scale: 1.9 },
+      { part: "house-cat", x: 38, y: 74, scale: 2.6, count: 3, spread: [18, 0] },
+      { part: "wide-table", x: 50, y: 86, scale: 1.9 },
     ],
     near: [{ part: "grass-tuft", x: 14, y: 92, count: 3, spread: [16, 2] }],
     light: [],
@@ -731,7 +731,7 @@ const PLASTIC_SURGERY: SceneRecipe = {
     ],
     mid: [{ part: "tile-floor", x: 50, y: 80 }],
     subject: [
-      { part: "table", x: 56, y: 82, scale: 2, paint: "slate-100" },
+      { part: "wide-table", x: 56, y: 82, scale: 2, paint: "slate-100" },
       { part: "soldier-fallen", x: 50, y: 64, scale: 1.8 },
       { part: "fist", x: 74, y: 62, scale: 2.4, paint: "red-300" },
       { part: "crystal", x: 78, y: 58, scale: 0.9, paint: "slate-100" },
@@ -757,9 +757,9 @@ const GIFTED_PROGRAM: SceneRecipe = {
     ],
     mid: [
       { part: "boards", x: 50, y: 78 },
-      { part: "table", x: 30, y: 84, scale: 0.8 },
-      { part: "table", x: 82, y: 82, scale: 0.8 },
-      { part: "card", x: 30, y: 74, scale: 1, count: 2, spread: [6, 1] },
+      { part: "wide-table", x: 30, y: 84, scale: 0.8 },
+      { part: "wide-table", x: 82, y: 82, scale: 0.8 },
+      { part: "playing-card", x: 30, y: 74, scale: 1, count: 2, spread: [6, 1] },
     ],
     subject: [],
     near: [{ part: "bunting", x: 50, y: 24, scale: 2 }],
@@ -779,8 +779,8 @@ const MASOCHISM_MASK: SceneRecipe = {
       { part: "room-wall", x: 50, y: 74, paint: "slate-100" },
       { part: "column", x: 16, y: 74, scale: 1.8 },
       { part: "column", x: 84, y: 74, scale: 1.8 },
-      { part: "card", x: 30, y: 44, scale: 1.4, count: 3, spread: [14, 10] },
-      { part: "card", x: 74, y: 44, scale: 1.4, count: 3, spread: [8, 10] },
+      { part: "playing-card", x: 30, y: 44, scale: 1.4, count: 3, spread: [14, 10] },
+      { part: "playing-card", x: 74, y: 44, scale: 1.4, count: 3, spread: [8, 10] },
     ],
     mid: [
       { part: "counter", x: 50, y: 78, scale: 2.1, paint: "slate-100" },
@@ -813,7 +813,7 @@ const SPIKEY_PILLOW: SceneRecipe = {
       { part: "counter", x: 50, y: 84, scale: 1.5, paint: "wood-700" },
       { part: "spiky-pillow", x: 50, y: 70, scale: 1.6 },
     ],
-    near: [{ part: "cat", x: 20, y: 92, scale: 2.6 }],
+    near: [{ part: "house-cat", x: 20, y: 92, scale: 2.6 }],
     light: [{ part: "light-shaft", x: 24, y: 8, scale: 1.6, paint: "white" }],
     particles: [],
   },
@@ -848,7 +848,7 @@ const ZOOMERBIN_OOMEN: SceneRecipe = {
   sky: ["sky-400", "blue-200"],
   light: { x: 28, y: 22, r: 38, paint: "white", opacity: 0.4 },
   emblem: { x: 56, y: 60, size: 5, rotate: 0 },
-  figure: { x: 36, y: 86, scale: 1, pose: "pose-kneel", look: { ...figureLookFor(["Human"]), hair: "bucket-hat", outfit: "outfit-hoodie", item: null, cloth: "violet-700" } },
+  figure: { x: 36, y: 86, scale: 1, pose: "pose-genuflect", look: { ...figureLookFor(["Human"]), hair: "bucket-hat", outfit: "outfit-hoodie", item: null, cloth: "violet-700" } },
   layers: {
     sky: [{ part: "cloud", x: 72, y: 22, scale: 0.8 }],
     far: [
@@ -865,7 +865,7 @@ const ZOOMERBIN_OOMEN: SceneRecipe = {
     ],
     near: [],
     light: [],
-    particles: [{ part: "dust", x: 56, y: 80, scale: 1 }],
+    particles: [{ part: "dust-cloud", x: 56, y: 80, scale: 1 }],
   },
 };
 
@@ -875,7 +875,7 @@ const TWISTED_SORCERER: SceneRecipe = {
   sky: ["slate-800", "blue-800"],
   light: { x: 40, y: 30, r: 40, paint: "cyan-400", opacity: 0.35 },
   emblem: { x: 40, y: 58, size: 5, rotate: 0 },
-  figure: { x: 40, y: 80, scale: 1, pose: "pose-cast", look: { ...figureLookFor(["Human"]), head: "head-ghoul", hair: "horns", outfit: "outfit-robe", item: "item-staff", skin: "slate-400", cloth: "violet-700" } },
+  figure: { x: 40, y: 80, scale: 1, pose: "pose-cast", look: { ...figureLookFor(["Human"]), head: "head-ghoul", hair: "horns", outfit: "outfit-gown", item: "item-staff", skin: "slate-400", cloth: "violet-700" } },
   layers: {
     sky: [{ part: "cloud", x: 30, y: 20, scale: 1.2, paint: "slate-700" }],
     far: [
@@ -896,7 +896,7 @@ const CALL_TO_ARMS: SceneRecipe = {
   sky: ["sky-400", "blue-200"],
   light: { x: 28, y: 22, r: 38, paint: "white", opacity: 0.4 },
   emblem: { x: 50, y: 72, size: 5, rotate: 0 },
-  cast: [{ x: 32, y: 54, scale: 0.65, pose: "pose-cast", look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-armor", item: "item-trumpet", cloth: "red-600" }, layer: "mid" }],
+  extras: [{ x: 32, y: 54, scale: 0.65, pose: "pose-cast", look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-armor", item: "item-trumpet", cloth: "red-600" }, layer: "mid" }],
   layers: {
     sky: [{ part: "cloud", x: 76, y: 22, scale: 0.9 }],
     far: [],
@@ -920,7 +920,7 @@ const SPITEFUL_STAB: SceneRecipe = {
   sky: ["sky-400", "blue-200"],
   light: { x: 70, y: 20, r: 36, paint: "white", opacity: 0.55 },
   emblem: { x: 40, y: 58, size: 5, rotate: 0 },
-  figure: { x: 38, y: 86, scale: 1.05, pose: "pose-lunge", look: { ...figureLookFor(["Human"]), hair: "headband", outfit: "outfit-rags", item: "item-dagger", cloth: "stone-500" } },
+  figure: { x: 38, y: 86, scale: 1.05, pose: "pose-lunge", look: { ...figureLookFor(["Human"]), hair: "headband", outfit: "outfit-rags", item: "item-knife", cloth: "stone-500" } },
   layers: {
     far: [
       { part: "stone-wall", x: 50, y: 62, scale: 2 },
@@ -929,7 +929,7 @@ const SPITEFUL_STAB: SceneRecipe = {
     ],
     mid: [{ part: "sand", x: 50, y: 66 }],
     subject: [{ part: "dagger", x: 72, y: 54, scale: 3 }],
-    near: [{ part: "dust", x: 60, y: 90, scale: 1.4 }],
+    near: [{ part: "dust-cloud", x: 60, y: 90, scale: 1.4 }],
     light: [{ part: "rim-light", x: 38, y: 58, scale: 1.2, paint: "white" }],
     particles: [{ part: "sparks", x: 84, y: 48, scale: 1, count: 2, spread: [4, 6] }],
   },
@@ -941,8 +941,8 @@ const INTERN_STIMMY: SceneRecipe = {
   sky: ["slate-100", "blue-200"],
   light: { x: 28, y: 22, r: 38, paint: "white", opacity: 0.45 },
   emblem: { x: 46, y: 50, size: 5, rotate: 0 },
-  figure: { x: 46, y: 86, scale: 0.95, pose: "pose-run", look: { ...figureLookFor(["Human"]), hair: "spectacles", outfit: "outfit-sweater", item: "item-clipboard", cloth: "green-700" } },
-  cast: [{ x: 70, y: 86, scale: 0.85, flip: -1, pose: "pose-stand", look: { ...figureLookFor(["Human"]), hair: "hair-long", outfit: "outfit-blazer", item: null, cloth: "slate-700" }, layer: "subject" }],
+  figure: { x: 46, y: 86, scale: 0.95, pose: "pose-stride", look: { ...figureLookFor(["Human"]), hair: "spectacles", outfit: "outfit-sweater", item: "item-clipboard", cloth: "green-700" } },
+  extras: [{ x: 70, y: 86, scale: 0.85, flip: -1, pose: "pose-stand", look: { ...figureLookFor(["Human"]), hair: "hair-long", outfit: "outfit-blazer", item: null, cloth: "slate-700" }, layer: "subject" }],
   layers: {
     far: [
       { part: "room-wall", x: 50, y: 74, paint: "slate-100" },
@@ -950,10 +950,10 @@ const INTERN_STIMMY: SceneRecipe = {
     ],
     mid: [
       { part: "tile-floor", x: 50, y: 80 },
-      { part: "door", x: 20, y: 82, scale: 3.6 },
+      { part: "framed-door", x: 20, y: 82, scale: 3.6 },
     ],
     subject: [{ part: "cup", x: 58, y: 54, scale: 2.2 }],
-    near: [{ part: "card", x: 30, y: 90, scale: 1.2, count: 3, spread: [10, 3] }],
+    near: [{ part: "playing-card", x: 30, y: 90, scale: 1.2, count: 3, spread: [10, 3] }],
     light: [],
     particles: [{ part: "streaks", x: 40, y: 76, scale: 1, count: 2, spread: [4, 8], paint: "white" }],
   },
@@ -965,7 +965,7 @@ const REMINISCE: SceneRecipe = {
   sky: ["stone-500", "slate-400"],
   light: { x: 28, y: 24, r: 38, paint: "white", opacity: 0.4 },
   emblem: { x: 58, y: 38, size: 5, rotate: 0 },
-  figure: { x: 38, y: 86, scale: 1, pose: "pose-sit", look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-waistcoat", item: null, cloth: "wood-700" } },
+  figure: { x: 38, y: 86, scale: 1, pose: "pose-perch", look: { ...figureLookFor(["Human"]), hair: "steel-helmet", outfit: "outfit-waistcoat", item: null, cloth: "wood-700" } },
   layers: {
     far: [
       { part: "room-wall", x: 50, y: 76, paint: "stone-500" },
@@ -978,8 +978,8 @@ const REMINISCE: SceneRecipe = {
     ],
     subject: [
       { part: "chair", x: 38, y: 86, scale: 1.9 },
-      { part: "tome", x: 47, y: 72, scale: 2.2 },
-      { part: "card", x: 52, y: 52, scale: 1.8 },
+      { part: "closed-tome", x: 47, y: 72, scale: 2.2 },
+      { part: "playing-card", x: 52, y: 52, scale: 1.8 },
     ],
     near: [],
     light: [
@@ -999,7 +999,7 @@ const ANTI_ONESHOT_ARMOR: SceneRecipe = {
   layers: {
     sky: [{ part: "cloud", x: 24, y: 22, scale: 0.9 }],
     far: [{ part: "hills", x: 50, y: 62, paint: "slate-100" }],
-    mid: [{ part: "snow", x: 50, y: 78 }],
+    mid: [{ part: "snowfield", x: 50, y: 78 }],
     subject: [
       { part: "bastion", x: 40, y: 84, scale: 1.4 },
       { part: "hammer", x: 76, y: 38, scale: 1.8 },
@@ -1025,14 +1025,14 @@ const ADAPTIVE_UI: SceneRecipe = {
     ],
     mid: [
       { part: "tile-floor", x: 50, y: 80 },
-      { part: "gear", x: 16, y: 80, scale: 1.4 },
+      { part: "cog", x: 16, y: 80, scale: 1.4 },
     ],
     subject: [
       { part: "hologram", x: 50, y: 56, scale: 1.9 },
       { part: "zap", x: 34, y: 48, scale: 0.4, paint: "cyan-400" },
       { part: "heal-glow", x: 45, y: 56, scale: 0.9 },
-      { part: "card", x: 57, y: 58, scale: 1.2 },
-      { part: "ghost", x: 69, y: 62, scale: 0.7, paint: "green-400" },
+      { part: "playing-card", x: 57, y: 58, scale: 1.2 },
+      { part: "ghost-figure", x: 69, y: 62, scale: 0.7, paint: "green-400" },
     ],
     near: [],
     light: [{ part: "halo", x: 50, y: 56, scale: 2.4, paint: "cyan-400" }],

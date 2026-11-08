@@ -12,182 +12,42 @@
 // the old ones of its kind.
 
 import { fmt } from "./hash.ts";
+import {
+  bandPath,
+  between,
+  blob,
+  circlePath,
+  crescent,
+  DEGREES,
+  EDGE,
+  ellipsePath,
+  FAR_EDGE,
+  FULL_TURN,
+  groundBand,
+  INKED,
+  leant,
+  local,
+  MAIN,
+  MAIN_INKED,
+  polygonPath,
+  pt,
+  rectPath,
+  SCENE_BOX,
+  shape,
+  sparkle,
+  spiralArm,
+  turned,
+  whole,
+  type Local,
+  type Point,
+} from "./kitDraw.ts";
 import type { KitPart, KitShape, PaletteName, PartPlace, Rng } from "./scene.ts";
+import { NATURE_KIT } from "./sceneKitNature.ts";
+import { OBJECTS_KIT } from "./sceneKitObjects.ts";
+import { PLACES_KIT } from "./sceneKitPlaces.ts";
 
-/** The scene's box (scene.ts re-exports it, and `scene.test.ts` holds it to the painter's `ART_BOX`). */
-export const SCENE_BOX = 100;
-/** Where a terrain band starts and ends: a little past the box, so no seam shows at its edges. */
-const EDGE = -2;
-const FAR_EDGE = SCENE_BOX + 2;
-const FULL_TURN = 360;
-const DEGREES = Math.PI / 180;
-
-type Point = readonly [number, number];
-
-function between(rng: Rng, low: number, high: number): number {
-  return low + (high - low) * rng();
-}
-
-function whole(rng: Rng, low: number, high: number): number {
-  return low + Math.floor(rng() * (high - low + 1));
-}
-
-export function pt(x: number, y: number): string {
-  return `${fmt(x)} ${fmt(y)}`;
-}
-
-export function circlePath(cx: number, cy: number, r: number): string {
-  return `M${pt(cx - r, cy)}A${fmt(r)} ${fmt(r)} 0 1 0 ${pt(cx + r, cy)}A${fmt(r)} ${fmt(r)} 0 1 0 ${pt(cx - r, cy)}Z`;
-}
-
-export function ellipsePath(cx: number, cy: number, rx: number, ry: number): string {
-  return `M${pt(cx - rx, cy)}A${fmt(rx)} ${fmt(ry)} 0 1 0 ${pt(cx + rx, cy)}A${fmt(rx)} ${fmt(ry)} 0 1 0 ${pt(cx - rx, cy)}Z`;
-}
-
-export function rectPath(x: number, y: number, w: number, h: number): string {
-  return `M${pt(x, y)}L${pt(x + w, y)}L${pt(x + w, y + h)}L${pt(x, y + h)}Z`;
-}
-
-export function polygonPath(cx: number, cy: number, sides: number, radius: number, offset: number): string {
-  let d = "";
-  for (let i = 0; i < sides; i += 1) {
-    const angle = (offset + (i * FULL_TURN) / sides) * DEGREES;
-    d += `${i === 0 ? "M" : "L"}${pt(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle))}`;
-  }
-  return `${d}Z`;
-}
-
-/** A band `width` wide along the points: how a kit draws a line, since every shape is filled. */
-export function bandPath(points: readonly Point[], width: number): string {
-  const left: string[] = [];
-  const right: string[] = [];
-  for (let i = 0; i < points.length; i += 1) {
-    const [px, py] = points[Math.max(0, i - 1)] ?? [0, 0];
-    const [nx, ny] = points[Math.min(points.length - 1, i + 1)] ?? [0, 0];
-    const [x, y] = points[i] ?? [0, 0];
-    const length = Math.hypot(nx - px, ny - py) || 1;
-    const ox = (-(ny - py) / length) * (width / 2);
-    const oy = ((nx - px) / length) * (width / 2);
-    left.push(pt(x + ox, y + oy));
-    right.push(pt(x - ox, y - oy));
-  }
-  return `M${left.join("L")}L${right.reverse().join("L")}Z`;
-}
-
-/** A part's own frame: offsets from its anchor, scaled by its `s` and mirrored when it faces left. */
-export type Local = {
-  x(dx: number): number;
-  y(dy: number): number;
-  p(dx: number, dy: number): string;
-  /** A length in the part's frame, scaled. */
-  r(length: number): number;
-  /** An arc's sweep flag, `sweep` as drawn facing right. */
-  sweep(sweep: 0 | 1): 0 | 1;
-  poly(points: readonly Point[]): string;
-  circle(dx: number, dy: number, r: number): string;
-  ellipse(dx: number, dy: number, rx: number, ry: number): string;
-  band(points: readonly Point[], width: number): string;
-};
-
-export function local(at: PartPlace): Local {
-  const x = (dx: number): number => at.x + at.flip * at.s * dx;
-  const y = (dy: number): number => at.y + at.s * dy;
-  const p = (dx: number, dy: number): string => pt(x(dx), y(dy));
-  const r = (length: number): number => at.s * length;
-  return {
-    x,
-    y,
-    p,
-    r,
-    sweep: (sweep) => (at.flip === 1 ? sweep : sweep === 1 ? 0 : 1),
-    poly: (points) => `M${points.map(([dx, dy]) => p(dx, dy)).join("L")}Z`,
-    circle: (dx, dy, radius) => circlePath(x(dx), y(dy), r(radius)),
-    ellipse: (dx, dy, rx, ry) => ellipsePath(x(dx), y(dy), r(rx), r(ry)),
-    band: (points, width) => bandPath(points.map(([dx, dy]) => [x(dx), y(dy)] as const), r(width)),
-  };
-}
-
-type Flags = { readonly inked?: boolean; readonly main?: boolean };
-const MAIN: Flags = { main: true };
-const INKED: Flags = { inked: true };
-const MAIN_INKED: Flags = { main: true, inked: true };
-
-function shape(d: string, paint: PaletteName, opacity: number, flags?: Flags): KitShape {
-  return flags === undefined ? { d, paint, opacity } : { d, paint, opacity, ...flags };
-}
-
-/** `point` turned `degrees` about the part's anchor (clockwise on screen). */
-function turned([dx, dy]: Point, degrees: number): Point {
-  const c = Math.cos(degrees * DEGREES);
-  const s = Math.sin(degrees * DEGREES);
-  return [dx * c - dy * s, dx * s + dy * c];
-}
-
-/** `point` leant by `lean` (a shear): its top moves sideways by `lean` per unit of height. */
-function leant([dx, dy]: Point, lean: number): Point {
-  return [dx - lean * dy, dy];
-}
-
-/** A four-pointed sparkle about a point, `size` its reach. */
-function sparkle(f: Local, cx: number, cy: number, size: number): string {
-  const points: Point[] = [];
-  for (let i = 0; i < 8; i += 1) {
-    const angle = (i * FULL_TURN) / 8 - 90;
-    const reach = i % 2 === 0 ? size : size * 0.28;
-    points.push([cx + reach * Math.cos(angle * DEGREES), cy + reach * Math.sin(angle * DEGREES)]);
-  }
-  return f.poly(points);
-}
-
-/** A wobbly round blob, smoothed through the midpoints of its jittered rim. */
-function blob(f: Local, rng: Rng, cx: number, cy: number, r: number, points: number): string {
-  const rim: Point[] = [];
-  for (let i = 0; i < points; i += 1) {
-    const angle = (i * FULL_TURN) / points;
-    const reach = r * between(rng, 0.75, 1.15);
-    rim.push([cx + reach * Math.cos(angle * DEGREES), cy + reach * Math.sin(angle * DEGREES)]);
-  }
-  const mid = (a: Point, b: Point): string => f.p((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
-  const at = (i: number): Point => rim[i % points] ?? [cx, cy];
-  let d = `M${mid(at(0), at(1))}`;
-  for (let i = 1; i <= points; i += 1) d += `Q${f.p(...at(i))} ${mid(at(i), at(i + 1))}`;
-  return `${d}Z`;
-}
-
-/** The ground from a wavy top edge at `top` down past the box, across all of it. */
-function groundBand(rng: Rng, top: number, amplitude: number, bumps: number): string {
-  const ys: number[] = [];
-  for (let i = 0; i <= bumps; i += 1) ys.push(top + between(rng, -amplitude, amplitude));
-  const xAt = (i: number): number => EDGE + ((FAR_EDGE - EDGE) * i) / bumps;
-  const yAt = (i: number): number => ys[i] ?? top;
-  let d = `M${pt(EDGE, FAR_EDGE)}L${pt(EDGE, yAt(0))}`;
-  for (let i = 1; i < bumps; i += 1) d += `Q${pt(xAt(i), yAt(i))} ${pt((xAt(i) + xAt(i + 1)) / 2, (yAt(i) + yAt(i + 1)) / 2)}`;
-  return `${d}L${pt(FAR_EDGE, yAt(bumps))}L${pt(FAR_EDGE, FAR_EDGE)}Z`;
-}
-
-/** A crescent along the side the part faces: an arc of `r`, hollowed by a narrower one. */
-function crescent(f: Local, r: number, inner: number): string {
-  return (
-    `M${f.p(0, -r)}A${fmt(f.r(r))} ${fmt(f.r(r))} 0 0 ${f.sweep(1)} ${f.p(0, r)}` +
-    `A${fmt(f.r(r * inner))} ${fmt(f.r(r))} 0 0 ${f.sweep(0)} ${f.p(0, -r)}Z`
-  );
-}
-
-/** A tapering spiral arm about the anchor, from `r0` out to `r1`, `sweep` degrees round. */
-function spiralArm(f: Local, start: number, sweep: number, r0: number, r1: number, width: number): string {
-  const steps = 8;
-  const outer: Point[] = [];
-  const inner: Point[] = [];
-  for (let i = 0; i <= steps; i += 1) {
-    const t = i / steps;
-    const r = r0 + (r1 - r0) * t;
-    const half = (width * (1 - t)) / 2 + 0.15;
-    const angle = (start + sweep * t) * DEGREES;
-    outer.push([(r + half) * Math.cos(angle), (r + half) * Math.sin(angle)]);
-    inner.push([Math.max(0.3, r - half) * Math.cos(angle), Math.max(0.3, r - half) * Math.sin(angle)]);
-  }
-  return f.poly([...outer, ...inner.reverse()]);
-}
+// The helpers every kit module draws with, where the figure kit and scene.ts have always found them.
+export { bandPath, circlePath, ellipsePath, local, polygonPath, pt, rectPath, SCENE_BOX, type Local };
 
 // Terrain
 
@@ -384,7 +244,7 @@ function clipKitA(polygon: readonly Point[], nx: number, ny: number, c: number):
 }
 
 /** A sea or lake from the placement's height down: waves and glints. */
-function waterPart(at: PartPlace, rng: Rng): KitShape[] {
+function seaPart(at: PartPlace, rng: Rng): KitShape[] {
   const top = at.y;
   const depth = FAR_EDGE - top;
   const out: KitShape[] = [shape(belowKitA(top), "blue-600", 1, MAIN)];
@@ -417,7 +277,7 @@ function sandPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A snowfield from the placement's height down: drift shadows and a few sparkles. */
-function snowPart(at: PartPlace, rng: Rng): KitShape[] {
+function snowfieldPart(at: PartPlace, rng: Rng): KitShape[] {
   const top = at.y;
   const depth = FAR_EDGE - top;
   const w = local(WORLD_KIT_A);
@@ -965,7 +825,7 @@ function windowPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A door in its frame standing on the anchor, 9 wide and 16 tall at scale 1. */
-function doorPart(at: PartPlace, rng: Rng): KitShape[] {
+function framedDoorPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const lean = between(rng, 0, 0.5);
   return [
@@ -1023,7 +883,7 @@ function counterPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A tidy whitewashed house standing on the anchor, 22 wide and 20 tall at scale 1. */
-function housePart(at: PartPlace, rng: Rng): KitShape[] {
+function whitewashedHousePart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const cx = rng() < 0.5 ? 5.4 : -5.4;
   return [
@@ -1038,7 +898,7 @@ function housePart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A glass dome arching over the anchor, 50 wide and 30 tall at scale 1. */
-function domePart(at: PartPlace, rng: Rng): KitShape[] {
+function glassDomePart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const rise = between(rng, 28.5, 30);
   const rib = (k: number, stop: number): string => {
@@ -1136,7 +996,7 @@ function pedestalPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A rope bridge from 30 left to 30 right of the anchor at the anchor's height, sagging 5 at the middle. */
-function bridgePart(at: PartPlace, rng: Rng): KitShape[] {
+function ropeBridgePart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const sag = 5 * between(rng, 0.92, 1.08);
   const dip = (x: number): number => sag * (1 - (x / 30) ** 2);
@@ -1298,7 +1158,7 @@ function greenhousePart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A tall standing stone on the anchor, 5 wide and 12 tall at scale 1. */
-function standingStonePart(at: PartPlace, rng: Rng): KitShape[] {
+function ringStonePart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const j = (): number => between(rng, -0.25, 0.25);
   return [
@@ -1563,7 +1423,7 @@ function bastionPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A warrior statue on a plinth standing on the anchor, 20 tall at scale 1, its spear on the right. */
-function statuePart(at: PartPlace, rng: Rng): KitShape[] {
+function plinthStatuePart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const o = between(rng, -0.3, 0.3);
   return [
@@ -1718,7 +1578,7 @@ function wheat(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A fern standing on the anchor: five arching fronds, 8 tall at scale 1. */
-function fernPart(at: PartPlace, rng: Rng): KitShape[] {
+function fernSprigPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const tips: readonly (readonly [number, number])[] = [[-7, -4.5], [7, -4.2], [-4, -7], [4, -7.2], [0, -8]];
   return tips.map(([tx, ty], i) => {
@@ -1981,7 +1841,7 @@ function gullPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A small house cat sitting on the anchor, facing the side the part faces, 6 tall at scale 1. */
-function catPart(at: PartPlace, rng: Rng): KitShape[] {
+function houseCatPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const curl = between(rng, -0.4, 0.4);
   return [
@@ -2021,7 +1881,7 @@ function sheepPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A bee, 3 wide, centred on the anchor, facing the side the part faces. */
-function beePart(at: PartPlace, rng: Rng): KitShape[] {
+function honeybeePart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const flap = between(rng, -0.2, 0.2);
   return [
@@ -2386,7 +2246,7 @@ function soldierFallenPart(at: PartPlace): KitShape[] {
 }
 
 /** A faint ghost-figure standing on the anchor, 20 tall at scale 1: a translucent cloaked body with dark eye holes and a wispy hem. */
-function ghostPart(at: PartPlace, rng: Rng): KitShape[] {
+function ghostFigurePart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const sway = between(rng, -0.8, 0.8);
   return [
@@ -2630,7 +2490,7 @@ function dkSwirl(f: Local, cx: number, cy: number, sx: number, start: number, sw
 }
 
 /** A playing card upright on the anchor, 6 wide and 8.4 tall at scale 1, tilted a little. */
-function cardPart(at: PartPlace, rng: Rng): KitShape[] {
+function playingCardPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const t = between(rng, -9, 9);
   const rect = (w: number, h: number): string => f.poly(dkRot(dkBox(-w / 2, -h / 2, w / 2, h / 2), t));
@@ -2717,7 +2577,7 @@ function coinStackPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A table on the anchor (ground level), 30 wide and 12 tall at scale 1, seen in slight perspective. */
-function tablePart(at: PartPlace, rng: Rng): KitShape[] {
+function wideTablePart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const legs = [
     ...[[-14, -12.4], [12.4, 14]].map(([a, b]) => dkBox(a ?? 0, -7.4, b ?? 0, 0)),
@@ -2750,7 +2610,7 @@ function chairPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A big closed book lying on the anchor, 10 wide and 4 tall at scale 1, spine to the left. */
-function tomePart(at: PartPlace, rng: Rng): KitShape[] {
+function closedTomePart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const lock = between(rng, -2.4, -1.6);
   return [
@@ -2821,7 +2681,7 @@ function bladePart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** An arrow in flight, tip at the anchor pointing the side it faces, 16 long at scale 1. */
-function arrowPart(at: PartPlace, rng: Rng): KitShape[] {
+function flyingArrowPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const a = between(rng, -12, 12);
   const r = (pts: readonly Point[]): Point[] => dkRot(pts, a);
@@ -2848,7 +2708,7 @@ function targetPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A treasure chest standing on the anchor, 10 wide and 8 tall at scale 1. */
-function chestPart(at: PartPlace, rng: Rng): KitShape[] {
+function treasureChestPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const plank = between(rng, -2.6, -2);
   return [
@@ -2863,7 +2723,7 @@ function chestPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A die centred on the anchor, 3 wide at scale 1, in three-quarter view and tumbled a little. */
-function dicePart(at: PartPlace, rng: Rng): KitShape[] {
+function diePart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const a = between(rng, -25, 25);
   const r = (pts: readonly Point[]): Point[] => dkRot(pts, a);
@@ -2882,7 +2742,7 @@ function dicePart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A chain from the anchor along the side it faces, 20 long at scale 1, sagging between its ends. */
-function chainPart(at: PartPlace, rng: Rng): KitShape[] {
+function chainLengthPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const sag = between(rng, 3, 5);
   const links: string[] = [];
@@ -2965,7 +2825,7 @@ function pipePart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A gear centred on the anchor, radius 5 at scale 1, turned. */
-function gearPart(at: PartPlace, rng: Rng): KitShape[] {
+function cogPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const rot = between(rng, 0, 36);
   const pts: Point[] = [];
@@ -3249,7 +3109,7 @@ function wreckingBallPart(at: PartPlace, _rng: Rng): KitShape[] {
 }
 
 /** A padlock centred on the anchor, 4 wide and 6 tall at scale 1. */
-function padlockPart(at: PartPlace, _rng: Rng): KitShape[] {
+function lockPart(at: PartPlace, _rng: Rng): KitShape[] {
   const f = local(at);
   const arch: Point[] = [];
   for (let i = 0; i <= 6; i += 1) {
@@ -3265,7 +3125,7 @@ function padlockPart(at: PartPlace, _rng: Rng): KitShape[] {
 }
 
 /** A lit candle standing on the anchor, 2 wide and 5 tall at scale 1. */
-function candlePart(at: PartPlace, rng: Rng): KitShape[] {
+function taperPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const lean = between(rng, -0.1, 0.1);
   return [
@@ -3280,7 +3140,7 @@ function candlePart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A glowing chute: a funnel mouth 16 wide at the anchor narrowing 14 down, at scale 1. */
-function chutePart(at: PartPlace, _rng: Rng): KitShape[] {
+function glowChutePart(at: PartPlace, _rng: Rng): KitShape[] {
   const f = local(at);
   const rivets = [4, 8, 12].map((y) => {
     const e = 8 - (5.8 * y) / 14 - 0.6;
@@ -3375,7 +3235,7 @@ function chessPiecePart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** An hourglass standing on the anchor, 4 wide and 7 tall at scale 1. */
-function hourglassPart(at: PartPlace, rng: Rng): KitShape[] {
+function sandGlassPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const top = between(rng, 0, 0.6);
   return [
@@ -3894,7 +3754,7 @@ function fistPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A healing fountain standing on the anchor, 16 wide and 14 tall at scale 1, in a green glow. */
-function fountainPart(at: PartPlace, rng: Rng): KitShape[] {
+function healFountainPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const k = between(rng, 4.4, 5.4);
   const jet = (sign: number): Point[] => {
@@ -4565,7 +4425,7 @@ function confettiPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** Five to eight bubbles in a column 6 wide and 10 tall about the anchor: rings and glints. */
-function bubblesPart(at: PartPlace, rng: Rng): KitShape[] {
+function bubbleColumnPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const n = whole(rng, 5, 8);
   const slot = 10 / n;
@@ -4584,7 +4444,7 @@ function bubblesPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** Spore dots within 10 of the anchor, each with a faint halo. */
-function sporesPart(at: PartPlace, rng: Rng): KitShape[] {
+function sporeMotesPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const n = whole(rng, 6, 7);
   const start = between(rng, 0, 360);
@@ -4613,7 +4473,7 @@ function rainbowPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A shockwave about the anchor: translucent rings out to radius 14 and short radial streaks. */
-function shockwavePart(at: PartPlace, rng: Rng): KitShape[] {
+function blastRingsPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const r = 14 * between(rng, 0.92, 1);
   let streaks = "";
@@ -4722,7 +4582,7 @@ function streaksPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A dust cloud about 12 wide about the anchor: translucent blobs that never overlap. */
-function dustPart(at: PartPlace, rng: Rng): KitShape[] {
+function dustCloudPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   let low = "";
   for (const x of [-3.8, 0, 3.8]) low += blob(f, rng, x, 0, 1.5, 6);
@@ -4752,7 +4612,7 @@ function steamPart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** Billowing smoke 16 wide about the anchor: pale lobes with dark undersides. */
-function smokePart(at: PartPlace, rng: Rng): KitShape[] {
+function smokeBillowPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   return [
     shape(blob(f, rng, -4.7, -2, 3.4, 8), "slate-400", 0.55, MAIN),
@@ -5008,7 +4868,7 @@ function eclipsePart(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** A bright sun of radius 5 about the anchor, in glow rings. */
-function sunPart(at: PartPlace, rng: Rng): KitShape[] {
+function sunDiscPart(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const r = 5 * between(rng, 0.97, 1.03);
   return [
@@ -5031,9 +4891,9 @@ export const SCENE_KIT = {
   street: { category: "terrain", draw: street },
   hills: { category: "terrain", draw: hills },
   asteroid: { category: "terrain", draw: asteroid },
-  water: { category: "terrain", draw: waterPart },
+  sea: { category: "terrain", draw: seaPart },
   sand: { category: "terrain", draw: sandPart },
-  snow: { category: "terrain", draw: snowPart },
+  snowfield: { category: "terrain", draw: snowfieldPart },
   boards: { category: "terrain", draw: boardsPart },
   stage: { category: "terrain", draw: stagePart },
   road: { category: "terrain", draw: roadPart },
@@ -5057,23 +4917,23 @@ export const SCENE_KIT = {
   arch: { category: "architecture", draw: arch },
   tombstone: { category: "architecture", draw: tombstone },
   window: { category: "architecture", draw: windowPart },
-  door: { category: "architecture", draw: doorPart },
+  "framed-door": { category: "architecture", draw: framedDoorPart },
   shelf: { category: "architecture", draw: shelfPart },
   counter: { category: "architecture", draw: counterPart },
-  house: { category: "architecture", draw: housePart },
-  dome: { category: "architecture", draw: domePart },
+  "whitewashed-house": { category: "architecture", draw: whitewashedHousePart },
+  "glass-dome": { category: "architecture", draw: glassDomePart },
   "stone-wall": { category: "architecture", draw: stoneWallPart },
   battlement: { category: "architecture", draw: battlementPart },
   mirror: { category: "architecture", draw: mirrorPart },
   pedestal: { category: "architecture", draw: pedestalPart },
-  bridge: { category: "architecture", draw: bridgePart },
+  "rope-bridge": { category: "architecture", draw: ropeBridgePart },
   lighthouse: { category: "architecture", draw: lighthousePart },
   well: { category: "architecture", draw: wellPart },
   "glass-wall": { category: "architecture", draw: glassWallPart },
   skyline: { category: "architecture", draw: skylinePart },
   bookcase: { category: "architecture", draw: bookcasePart },
   greenhouse: { category: "architecture", draw: greenhousePart },
-  "standing-stone": { category: "architecture", draw: standingStonePart },
+  "ring-stone": { category: "architecture", draw: ringStonePart },
   fortress: { category: "architecture", draw: fortressPart },
   barn: { category: "architecture", draw: barnPart },
   pavilion: { category: "architecture", draw: pavilionPart },
@@ -5085,7 +4945,7 @@ export const SCENE_KIT = {
   townhouse: { category: "architecture", draw: townhousePart },
   stadium: { category: "architecture", draw: stadiumPart },
   bastion: { category: "architecture", draw: bastionPart },
-  statue: { category: "architecture", draw: statuePart },
+  "plinth-statue": { category: "architecture", draw: plinthStatuePart },
   "paper-tower": { category: "architecture", draw: paperTowerPart },
   sprout: { category: "plants", draw: sprout },
   "grass-tuft": { category: "plants", draw: grassTuft },
@@ -5095,7 +4955,7 @@ export const SCENE_KIT = {
   bush: { category: "plants", draw: bush },
   mushroom: { category: "plants", draw: mushroom },
   wheat: { category: "plants", draw: wheat },
-  fern: { category: "plants", draw: fernPart },
+  "fern-sprig": { category: "plants", draw: fernSprigPart },
   pine: { category: "plants", draw: pinePart },
   reed: { category: "plants", draw: reedPart },
   flower: { category: "plants", draw: flowerPart },
@@ -5110,9 +4970,9 @@ export const SCENE_KIT = {
   worm: { category: "creatures", draw: worm },
   moth: { category: "creatures", draw: moth },
   gull: { category: "creatures", draw: gullPart },
-  cat: { category: "creatures", draw: catPart },
+  "house-cat": { category: "creatures", draw: houseCatPart },
   sheep: { category: "creatures", draw: sheepPart },
-  bee: { category: "creatures", draw: beePart },
+  honeybee: { category: "creatures", draw: honeybeePart },
   scarab: { category: "creatures", draw: scarabPart },
   cube: { category: "creatures", draw: cubePart },
   panther: { category: "creatures", draw: pantherPart },
@@ -5129,7 +4989,7 @@ export const SCENE_KIT = {
   crowd: { category: "creatures", draw: crowdPart },
   soldier: { category: "creatures", draw: soldierPart },
   "soldier-fallen": { category: "creatures", draw: soldierFallenPart },
-  ghost: { category: "creatures", draw: ghostPart },
+  "ghost-figure": { category: "creatures", draw: ghostFigurePart },
   "card-imp": { category: "creatures", draw: cardImpPart },
   "open-hand": { category: "creatures", draw: openHandPart },
   lantern: { category: "objects", draw: lantern },
@@ -5140,28 +5000,28 @@ export const SCENE_KIT = {
   banner: { category: "objects", draw: banner },
   orb: { category: "objects", draw: orb },
   crystal: { category: "objects", draw: crystal },
-  card: { category: "objects", draw: cardPart },
+  "playing-card": { category: "objects", draw: playingCardPart },
   "card-fan": { category: "objects", draw: cardFanPart },
   deck: { category: "objects", draw: deckPart },
   coin: { category: "objects", draw: coinPart },
   "coin-stack": { category: "objects", draw: coinStackPart },
-  table: { category: "objects", draw: tablePart },
+  "wide-table": { category: "objects", draw: wideTablePart },
   chair: { category: "objects", draw: chairPart },
-  tome: { category: "objects", draw: tomePart },
+  "closed-tome": { category: "objects", draw: closedTomePart },
   jar: { category: "objects", draw: jarPart },
   cup: { category: "objects", draw: cupPart },
   dagger: { category: "objects", draw: daggerPart },
   blade: { category: "objects", draw: bladePart },
-  arrow: { category: "objects", draw: arrowPart },
+  "flying-arrow": { category: "objects", draw: flyingArrowPart },
   target: { category: "objects", draw: targetPart },
-  chest: { category: "objects", draw: chestPart },
-  dice: { category: "objects", draw: dicePart },
-  chain: { category: "objects", draw: chainPart },
+  "treasure-chest": { category: "objects", draw: treasureChestPart },
+  die: { category: "objects", draw: diePart },
+  "chain-length": { category: "objects", draw: chainLengthPart },
   rune: { category: "objects", draw: runePart },
   portal: { category: "objects", draw: portalPart },
   spotlight: { category: "objects", draw: spotlightPart },
   pipe: { category: "objects", draw: pipePart },
-  gear: { category: "objects", draw: gearPart },
+  cog: { category: "objects", draw: cogPart },
   shield: { category: "objects", draw: shieldPart },
   dummy: { category: "objects", draw: dummyPart },
   toaster: { category: "objects", draw: toasterPart },
@@ -5177,12 +5037,12 @@ export const SCENE_KIT = {
   blackboard: { category: "objects", draw: blackboardPart },
   pod: { category: "objects", draw: podPart },
   "wrecking-ball": { category: "objects", draw: wreckingBallPart },
-  padlock: { category: "objects", draw: padlockPart },
-  candle: { category: "objects", draw: candlePart },
-  chute: { category: "objects", draw: chutePart },
+  lock: { category: "objects", draw: lockPart },
+  taper: { category: "objects", draw: taperPart },
+  "glow-chute": { category: "objects", draw: glowChutePart },
   controller: { category: "objects", draw: controllerPart },
   "chess-piece": { category: "objects", draw: chessPiecePart },
-  hourglass: { category: "objects", draw: hourglassPart },
+  "sand-glass": { category: "objects", draw: sandGlassPart },
   globe: { category: "objects", draw: globePart },
   notebook: { category: "objects", draw: notebookPart },
   bench: { category: "objects", draw: benchPart },
@@ -5212,7 +5072,7 @@ export const SCENE_KIT = {
   sack: { category: "objects", draw: sackPart },
   "chaos-wheel": { category: "objects", draw: chaosWheelPart },
   fist: { category: "objects", draw: fistPart },
-  fountain: { category: "objects", draw: fountainPart },
+  "heal-fountain": { category: "objects", draw: healFountainPart },
   chandelier: { category: "objects", draw: chandelierPart },
   "puppet-hand": { category: "objects", draw: puppetHandPart },
   anvil: { category: "objects", draw: anvilPart },
@@ -5249,19 +5109,19 @@ export const SCENE_KIT = {
   wave: { category: "weather", draw: wavePart },
   spray: { category: "weather", draw: sprayPart },
   confetti: { category: "weather", draw: confettiPart },
-  bubbles: { category: "weather", draw: bubblesPart },
-  spores: { category: "weather", draw: sporesPart },
+  "bubble-column": { category: "weather", draw: bubbleColumnPart },
+  "spore-motes": { category: "weather", draw: sporeMotesPart },
   rainbow: { category: "weather", draw: rainbowPart },
-  shockwave: { category: "weather", draw: shockwavePart },
+  "blast-rings": { category: "weather", draw: blastRingsPart },
   "echo-rings": { category: "weather", draw: echoRingsPart },
   zap: { category: "weather", draw: zapPart },
   "heal-glow": { category: "weather", draw: healGlowPart },
   flame: { category: "weather", draw: flamePart },
   drops: { category: "weather", draw: dropsPart },
   streaks: { category: "weather", draw: streaksPart },
-  dust: { category: "weather", draw: dustPart },
+  "dust-cloud": { category: "weather", draw: dustCloudPart },
   steam: { category: "weather", draw: steamPart },
-  smoke: { category: "weather", draw: smokePart },
+  "smoke-billow": { category: "weather", draw: smokeBillowPart },
   shards: { category: "weather", draw: shardsPart },
   squares: { category: "weather", draw: squaresPart },
   burst: { category: "weather", draw: burstPart },
@@ -5275,7 +5135,11 @@ export const SCENE_KIT = {
   "card-ring": { category: "weather", draw: cardRingPart },
   cyclone: { category: "weather", draw: cyclonePart },
   eclipse: { category: "weather", draw: eclipsePart },
-  sun: { category: "weather", draw: sunPart },
+  "sun-disc": { category: "weather", draw: sunDiscPart },
+  // R3390000: the parts the Classic+ scenes added.
+  ...PLACES_KIT,
+  ...OBJECTS_KIT,
+  ...NATURE_KIT,
 } as const satisfies Readonly<Record<string, KitPart>>;
 
 export type SceneryPartId = keyof typeof SCENE_KIT;

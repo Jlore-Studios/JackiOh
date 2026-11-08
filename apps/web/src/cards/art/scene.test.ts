@@ -188,10 +188,13 @@ describe("R3331000 the scene kits", () => {
       painted.add(scene.sky[1]);
       painted.add(scene.light.paint);
       for (const layer of SCENE_LAYERS) for (const placed of scene.layers[layer] ?? []) if (placed.paint !== undefined) painted.add(placed.paint);
-      // R3392000: the figure and every figure of its cast.
-      for (const figure of [...(scene.figure === undefined ? [] : [scene.figure]), ...(scene.cast ?? [])]) {
-        painted.add(figure.look.skin);
-        painted.add(figure.look.cloth);
+      if (scene.figure !== undefined) {
+        painted.add(scene.figure.look.skin);
+        painted.add(scene.figure.look.cloth);
+      }
+      for (const extra of scene.extras ?? []) {
+        painted.add(extra.look.skin);
+        painted.add(extra.look.cloth);
       }
     }
     for (const name of painted) expect(inRadiantGold(SCENE_PALETTE[name]), name).toBe(false);
@@ -232,9 +235,10 @@ describe("R3331000 the scene kits", () => {
 describe("R3331000 the five proof cards", () => {
   it("R3331000 the five proof cards draw their scenes, base and Radiant, with one geometry", () => {
     expect(SCENE_BOX).toBe(ART_BOX);
-    // R3392000: the proofs and every Core entry draw from a recipe.
+    // R3392000: the proofs and every Core entry draw from a recipe, and every Classic+ entry (R3390000, which
+    // classicPlusScenes.test.ts checks).
     const core = Object.values(CATALOG).filter((card) => card.set === "Core").map((card) => card.id);
-    expect(Object.keys(SCENE_RECIPES).sort()).toEqual([...new Set<string>([...PROOFS, ...core])].sort());
+    expect(Object.keys(SCENE_RECIPES).filter((id) => !id.startsWith("classicplus-")).sort()).toEqual([...new Set<string>([...PROOFS, ...core])].sort());
     for (const id of PROOFS) {
       const card = def(id);
       const shapes = composeScene(recipe(id), id);
