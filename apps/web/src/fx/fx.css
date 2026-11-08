@@ -2112,15 +2112,8 @@
   animation: fx-takeover-stage var(--fx-ms) linear both;
 }
 
-.fx-takeover[data-look="void"] .fx-takeover-stage {
-  animation-name: fx-takeover-collapse;
-}
-
-.fx-takeover[data-look="genie"] .fx-takeover-stage {
-  animation-direction: reverse;
-  animation-name: fx-takeover-gust;
-}
-
+/* The void's collapse and the genie's gust stay on their own sweep (below): they were drawn for a card-sized sweep,
+   and on a window-sized stage of four planes they would scale it six times over and break the frame budget. */
 @keyframes fx-takeover-stage {
   0% {
     transform: translate(0, 0) scale(1);

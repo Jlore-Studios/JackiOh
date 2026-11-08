@@ -30,7 +30,7 @@ export type { IconName } from "./icons.tsx";
 export { FACE_DOWN_TAG, REVEAL_AT_LABEL, REVEAL_AT_NOTE, UNREVEALED_NOTE, costPhrase, faceDownLabel } from "./faceDown.ts";
 
 // Slice A: art.
-export { CardArt } from "./art/index.ts";
+export { CardArt, ART_PLANES } from "./art/index.ts";
 
 // Slice C: inspect.
 export {
