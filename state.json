@@ -36722,11 +36722,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-08T08:00:30Z",
-    "last_run": "2026-11-08T08:00:30Z",
-    "provider": "agy",
+    "idle_since": "2026-11-08T07:27:52Z",
+    "last_run": "2026-11-06T05:31:24Z",
+    "provider": null,
     "requested": false,
-    "run_id": "42461073951",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": null,
