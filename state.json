@@ -18570,7 +18570,7 @@
       "provider": "claude-7",
       "question": "",
       "queued_at": "2026-11-08T09:24:15Z",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "42467159754",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
