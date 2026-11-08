@@ -17048,11 +17048,6 @@
       "last_findings": [],
       "live": "fixing-ci",
       "merge_owner": "claude-7",
-      "paused": {
-        "at": "2026-11-08T21:54:25Z",
-        "interrupt": "usage",
-        "provider": "claude-8"
-      },
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
