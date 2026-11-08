@@ -221,6 +221,21 @@ describe("R3345000 Mythic takeover in depth planes", () => {
     expect(off[0]?.setPiece).toBeUndefined();
   });
 
+  it("R3345000 a Mythic entry that holds no set piece mounts no full-window stage", () => {
+    const events = [play("core-100"), summon("core-100")];
+    const entered = entranceEntries(planEntries(events, p1, false), resolve, { seen: new Set() });
+    for (const bigMoments of ["off", "full"] as const) {
+      const [held] = setPieceEntries(entered, takeoverClaim, { reduced: false, bigMoments, speed: 1 });
+      const takeover = takeoverOf(planFx(held!, p1, env()));
+      expect(takeover, bigMoments).toBeDefined();
+      const root = document.createElement("div");
+      mountDomEffect(root, takeover!, { at: { x: 0, y: 0, width: 100, height: 100 } });
+      expect(root.querySelector(".fx-takeover-stage") !== null, bigMoments).toBe(bigMoments === "full");
+      expect(root.querySelector(".fx-takeover-dark"), bigMoments).not.toBeNull();
+      expect(root.querySelector(".fx-takeover-sweep"), bigMoments).not.toBeNull();
+    }
+  });
+
   it("R3345000 a hidden play shows no takeover set piece (R202)", () => {
     const hiddenPlay: GameEvent = { type: "cardPlayed", player: "p2", instanceId: "h1", defId: HIDDEN_ID, costPaid: 3 };
     const entered = entranceEntries(planEntries([hiddenPlay], p1, false), resolve, { seen: new Set() });

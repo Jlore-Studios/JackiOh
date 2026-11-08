@@ -8,7 +8,7 @@ import { ART_PLANES, artPlaneBackground } from "../cards/art/pictures.ts";
 import { fragmentRef, signatureLength, signatureSize } from "../cards/FullArtSignature.tsx";
 import { SIGNATURE_FACES, signatureFaceOf } from "../cards/signatureFaces.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
-import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTint, SetPieceShape } from "./types.ts";
+import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTakeoverCard, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
 
 export type DomEffectBoxes = { at?: FxBox | null; from?: FxBox | null; to?: FxBox | null };
@@ -61,6 +61,77 @@ function spanOf(a: FxBox, b: FxBox, pad: number): FxBox {
 const SVG_NS = "http://www.w3.org/2000/svg";
 /** The takeovers mounted so far: each signature clip path an id of its own. */
 let takeoverSigns = 0;
+
+/**
+ * R3345000: the full-window stage of a takeover that holds a set piece: the card's art in its depth planes
+ * and its name signing across the bottom.
+ */
+function takeoverStage(doc: Document, card: FxTakeoverCard): HTMLElement {
+  const stage = doc.createElement("div");
+  stage.className = "fx-takeover-stage";
+
+  const planes = doc.createElement("div");
+  planes.className = "fx-takeover-planes";
+  for (const plane of ART_PLANES) {
+    const p = doc.createElement("div");
+    p.className = "fx-takeover-plane";
+    p.setAttribute("data-plane", plane);
+    p.style.backgroundImage = artPlaneBackground(card.defId, plane, card.radiant);
+    planes.appendChild(p);
+  }
+  stage.appendChild(planes);
+
+  const signatureFace = signatureFaceOf(card.defId);
+  // R2715002, R3345000: the name in its set's hand (`.cf-signature[data-signature-face]` sets the face),
+  // uncovered left to right as a pen would write it: a clip path whose rect slides in (fx.css).
+  const signature = doc.createElement("div");
+  signature.className = "fx-takeover-signature";
+  const hand = doc.createElement("span");
+  hand.className = "cf-signature";
+  hand.setAttribute("data-signature-face", signatureFace);
+  hand.setAttribute("aria-hidden", "true");
+  signature.appendChild(hand);
+
+  const sigSvg = doc.createElementNS(SVG_NS, "svg");
+  sigSvg.setAttribute("viewBox", "0 0 200 48");
+  sigSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  sigSvg.setAttribute("focusable", "false");
+
+  const clipId = `fx-takeover-sign-${takeoverSigns++}`;
+  const defs = doc.createElementNS(SVG_NS, "defs");
+  const clip = doc.createElementNS(SVG_NS, "clipPath");
+  clip.setAttribute("id", clipId);
+  const reveal = doc.createElementNS(SVG_NS, "rect");
+  reveal.setAttribute("class", "fx-takeover-sign-reveal");
+  reveal.setAttribute("x", "-10");
+  reveal.setAttribute("y", "-10");
+  reveal.setAttribute("width", "220");
+  reveal.setAttribute("height", "68");
+  clip.appendChild(reveal);
+  defs.appendChild(clip);
+  sigSvg.appendChild(defs);
+
+  const ink = doc.createElementNS(SVG_NS, "g");
+  ink.setAttribute("clip-path", fragmentRef(clipId));
+  const text = doc.createElementNS(SVG_NS, "text");
+  text.setAttribute("class", "cf-signature-text");
+  text.setAttribute("x", "100");
+  text.setAttribute("y", "34");
+  text.setAttribute("text-anchor", "middle");
+  const { charEm } = SIGNATURE_FACES[signatureFace];
+  const size = signatureSize(card.name, charEm);
+  const length = signatureLength(card.name, size, charEm);
+  text.setAttribute("font-size", String(size));
+  text.setAttribute("textLength", String(length));
+  text.setAttribute("lengthAdjust", "spacingAndGlyphs");
+  text.textContent = card.name;
+  ink.appendChild(text);
+  sigSvg.appendChild(ink);
+
+  hand.appendChild(sigSvg);
+  stage.appendChild(signature);
+  return stage;
+}
 
 /** R2722001: a takeover's layers, bottom to top (fx.css). */
 const TAKEOVER_PARTS = ["dark", "sweep", "rays", "wave"] as const;
@@ -327,76 +398,13 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       tintVars(el, cue.tint);
       el.style.setProperty("--fx-land", `${Math.max(0, cue.landMs)}ms`);
 
-      const card = cue.card();
-      const stage = doc.createElement("div");
-      stage.className = "fx-takeover-stage";
-
-      const planes = doc.createElement("div");
-      planes.className = "fx-takeover-planes";
-      for (const plane of ART_PLANES) {
-        const p = doc.createElement("div");
-        p.className = "fx-takeover-plane";
-        p.setAttribute("data-plane", plane);
-        p.style.backgroundImage = artPlaneBackground(card.defId, plane, card.radiant);
-        planes.appendChild(p);
-      }
-      stage.appendChild(planes);
-
-      const signatureFace = signatureFaceOf(card.defId);
-      // R2715002, R3345000: the name in its set's hand (`.cf-signature[data-signature-face]` sets the face),
-      // uncovered left to right as a pen would write it: a clip path whose rect slides in (fx.css).
-      const signature = doc.createElement("div");
-      signature.className = "fx-takeover-signature";
-      const hand = doc.createElement("span");
-      hand.className = "cf-signature";
-      hand.setAttribute("data-signature-face", signatureFace);
-      hand.setAttribute("aria-hidden", "true");
-      signature.appendChild(hand);
-
-      const sigSvg = doc.createElementNS(SVG_NS, "svg");
-      sigSvg.setAttribute("viewBox", "0 0 200 48");
-      sigSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-      sigSvg.setAttribute("focusable", "false");
-
-      const clipId = `fx-takeover-sign-${takeoverSigns++}`;
-      const defs = doc.createElementNS(SVG_NS, "defs");
-      const clip = doc.createElementNS(SVG_NS, "clipPath");
-      clip.setAttribute("id", clipId);
-      const reveal = doc.createElementNS(SVG_NS, "rect");
-      reveal.setAttribute("class", "fx-takeover-sign-reveal");
-      reveal.setAttribute("x", "-10");
-      reveal.setAttribute("y", "-10");
-      reveal.setAttribute("width", "220");
-      reveal.setAttribute("height", "68");
-      clip.appendChild(reveal);
-      defs.appendChild(clip);
-      sigSvg.appendChild(defs);
-
-      const ink = doc.createElementNS(SVG_NS, "g");
-      ink.setAttribute("clip-path", fragmentRef(clipId));
-      const text = doc.createElementNS(SVG_NS, "text");
-      text.setAttribute("class", "cf-signature-text");
-      text.setAttribute("x", "100");
-      text.setAttribute("y", "34");
-      text.setAttribute("text-anchor", "middle");
-      const { charEm } = SIGNATURE_FACES[signatureFace];
-      const size = signatureSize(card.name, charEm);
-      const length = signatureLength(card.name, size, charEm);
-      text.setAttribute("font-size", String(size));
-      text.setAttribute("textLength", String(length));
-      text.setAttribute("lengthAdjust", "spacingAndGlyphs");
-      text.textContent = card.name;
-      ink.appendChild(text);
-      sigSvg.appendChild(ink);
-
-      hand.appendChild(sigSvg);
-      stage.appendChild(signature);
+      const stage = cue.stage ? takeoverStage(doc, cue.card()) : null;
 
       for (const part of TAKEOVER_PARTS) {
         const child = doc.createElement("div");
         child.className = `fx-takeover-${part}`;
         el.appendChild(child);
-        if (part === "dark") {
+        if (part === "dark" && stage !== null) {
           el.appendChild(stage);
         }
       }

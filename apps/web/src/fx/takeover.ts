@@ -112,6 +112,7 @@ export function entranceCues(entry: AnimationEntry, env: Pick<FxPlanEnv, "intens
   const takeover: FxTakeoverCue = {
     kind: "takeover",
     card: () => ({ defId, name, radiant }),
+    stage: entry.setPiece !== undefined,
     look,
     tint: TAKEOVER_TINTS[look],
     at,

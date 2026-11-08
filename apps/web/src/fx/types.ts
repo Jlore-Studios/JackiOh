@@ -164,6 +164,8 @@ export type FxTakeoverCard = { defId: string; name: string; radiant: boolean };
 export type FxTakeoverCue = {
   kind: "takeover";
   card: () => FxTakeoverCard;
+  /** R3345000: whether the entry holds a set piece, so the card's art takes the window; without one (Big moments off, the cap) only the board's darkening and the sweep play. */
+  stage: boolean;
   look: TakeoverLook;
   tint: FxTint;
   at: FxAnchor;
