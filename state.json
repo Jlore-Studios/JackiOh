@@ -16234,16 +16234,39 @@
         ],
         "builder": "claude",
         "built_by": "claude-6",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/audio/cues.ts",
+            "apps/web/src/audio/sfx.test.ts",
+            "apps/web/src/audio/sfx.ts",
+            "apps/web/src/audio/types.ts",
+            "apps/web/src/fx/cards/bespoke.ts",
+            "apps/web/src/fx/cards/recipe.ts",
+            "apps/web/src/fx/cards/tables.test.ts",
+            "apps/web/src/fx/cues.test.ts",
+            "apps/web/src/fx/director.ts",
+            "apps/web/src/fx/dom.ts",
+            "apps/web/src/fx/entrances.ts",
+            "apps/web/src/fx/motifs/gallery.ts",
+            "apps/web/src/fx/types.ts",
+            "apps/web/src/routes/dev/fx.test.tsx",
+            "e2e/cypress/component/audio-recipes.cy.tsx",
+            "e2e/cypress/component/fx-phone-frame.cy.tsx"
+          ],
+          "from": "85cfad9b3b5c0b5656db4059088a7a5d820c4494",
+          "main": "1fbbecc15e2bf83b6a25c550f9dbec5c977a5ae4"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-6",
-            "run": "42434070619",
+            "run": "42444613902",
             "tier": "strong"
           }
         ],
-        "sha": "85cfad9b3b5c0b5656db4059088a7a5d820c4494",
+        "sha": "e6ced54f021cdc6d63efeb86c6cb46c7b8ba0d85",
         "tiers": {
           "claude": "strong"
         }
