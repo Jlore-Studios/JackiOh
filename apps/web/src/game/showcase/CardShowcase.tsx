@@ -293,6 +293,8 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
       if (signal.kind === "skip") return;
       // R2789000: a still entry (reduced motion) is for the effects layer's callouts alone.
       if (signal.kind === "still") return;
+      // R3407002: nor is an entry that plays nothing (a hook's marker).
+      if (signal.kind === "pass") return;
       if (signal.kind === "start") {
         release((event) => signal.entry.events.some((played) => sameEvent(played, event)));
         refreshGate();

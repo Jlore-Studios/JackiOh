@@ -117,7 +117,8 @@ describe("R2797000 Stinkyscape's Flourishes", () => {
       const t = timesOf(entry.durationMs);
       const zoneId = testid.zone("you", "backrow", 3 + k);
       const zone = tid(zoneId);
-      const beam = cues.find((cue) => cue.kind === "shot");
+      // R3407000: each MAGI's own entrance draws beside the boot, so the boot's beam is the one from the hero.
+      const beam = cues.find((cue) => cue.kind === "shot" && cue.from.kind === "testid" && cue.from.testid === testid.hero("you"));
       expect(beam).toEqual(expect.objectContaining({ shot: { motion: "beam" }, from: tid(testid.hero("you")), to: zone, delayMs: t.T, flightMs: t.L - t.T }));
       expect(cues.some((cue) => cue.kind === "ring" && cue.delayMs === t.L && cue.at.kind === "testid" && cue.at.testid === zoneId)).toBe(true);
       expect(cues.some((cue) => cue.kind === "shake" && cue.delayMs === t.L)).toBe(true);
