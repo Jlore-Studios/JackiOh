@@ -32,6 +32,19 @@ import { recycleLoopFixture } from "../cards/classic/recycle.ts";
 import { secondGustFixture } from "../cards/classic/secondWind.ts";
 import { tyrantCommandFixture } from "../cards/classic/spellTyrant.ts";
 import { felinorBoard } from "../cards/core/felinorFiender.ts";
+import { edgeFleeFixture, starscapeJumpFixture } from "../cards/stinkyscape/alteranReach.ts";
+import { stinkCloudFixture, tabletopTiltFixture } from "../cards/stinkyscape/chaosCalls.ts";
+import { freshJackCometFixture } from "../cards/stinkyscape/freshJack.ts";
+import { blobDrumFixture, dataPacketFixture, primeConductFixture } from "../cards/stinkyscape/in33dh3.ts";
+import { jobInterviewFixture, paydayFixture } from "../cards/stinkyscape/jobApplication.ts";
+import { balthasarCradleFixture, casperKissFixture, melchiorTallyFixture } from "../cards/stinkyscape/magi.ts";
+import { giftShopFixture } from "../cards/stinkyscape/megabase.ts";
+import { narcorDustFixture, redNarcorHumFixture } from "../cards/stinkyscape/narcor.ts";
+import { sanctumEchoFixture } from "../cards/stinkyscape/sanctum.ts";
+import { scornSweepFixture } from "../cards/stinkyscape/scornboi.ts";
+import { shockwaveLectureFixture } from "../cards/stinkyscape/shockwave447.ts";
+import { stimmyDropFixture } from "../cards/stinkyscape/stimmycheck.ts";
+import { chaosOrbFixture } from "../cards/stinkyscape/wildar.ts";
 import type { EntranceKey } from "../cards/recipe.ts";
 import { fleetBoard } from "../cards/stinkyscape/starshipSignatures.ts";
 import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
@@ -393,9 +406,11 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * Edition) rolls its Golem. R2794000: Classic's Flourishes take their own
  * fixtures (fx/cards/classic/): Book of Heal heals the viewer's first unit, Recycle shuffles two cards
  * into the deck and draws one, and King Wagtoggle swaps the decks. R3334004: Preemptive Strike wakes its
- * player's Dormant Starship, which the board does not show, so its brand falls on the hero.
+ * player's Dormant Starship, which the board does not show, so its brand falls on the hero. R3407000:
+ * Stinkyscape part two's signatures take their modules' own (fx/cards/stinkyscape/), each told the card it
+ * plays (`defId`), so a hook's marker names it.
  */
-export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId) => GameEvent[] } = {
+export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId, defId?: string) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
   bloodDrain: (view, instanceId, player) => [...motifFixture("radiance", view, instanceId, player), { type: "healthLost", player, amount: 3 }],
   crushingWalls: (view, instanceId, player) => motifFixture("wipe", view, instanceId, player),
@@ -539,6 +554,28 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   tyrantCommand: tyrantCommandFixture,
   craterLock: (_view, _instanceId, player) => [{ type: "locked", player, row: "units", lane: GALLERY_ENTRANCE_LANE }],
   shrineDescent: shrineDescentFixture,
+  // R3407000: Stinkyscape part two's signatures, each on its module's own fixture (fx/cards/stinkyscape/).
+  melchiorTally: melchiorTallyFixture,
+  balthasarCradle: balthasarCradleFixture,
+  casperKiss: casperKissFixture,
+  freshJackComet: freshJackCometFixture,
+  shockwaveLecture: shockwaveLectureFixture,
+  jobInterview: jobInterviewFixture,
+  payday: paydayFixture,
+  scornSweep: scornSweepFixture,
+  giftShop: giftShopFixture,
+  dataPacket: dataPacketFixture,
+  primeConduct: primeConductFixture,
+  blobDrum: blobDrumFixture,
+  starscapeJump: starscapeJumpFixture,
+  edgeFlee: edgeFleeFixture,
+  chaosOrb: chaosOrbFixture,
+  stinkCloud: stinkCloudFixture,
+  tabletopTilt: tabletopTiltFixture,
+  sanctumEcho: sanctumEchoFixture,
+  stimmyDrop: stimmyDropFixture,
+  narcorDust: narcorDustFixture,
+  redNarcorHum: redNarcorHumFixture,
 };
 
 /** R2794000: the lane of the viewer's unit row a gallery entrance lands in. */
@@ -701,7 +738,7 @@ export function galleryCardEvents(defId: string, play: GalleryCardPlay, view: Pl
         return play.motif === "snap" ? [fired] : [fired, ...motifFixture(play.motif, view, instanceId, player)];
       }
       case "recipe":
-        return RECIPE_FIXTURES[play.key](view, instanceId, player);
+        return RECIPE_FIXTURES[play.key](view, instanceId, player, defId);
       case "setPiece":
         return SET_PIECE_FIXTURES[play.key](view, instanceId, player, defId);
       case "hook":

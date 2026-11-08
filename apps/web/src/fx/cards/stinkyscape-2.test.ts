@@ -35,7 +35,7 @@ import { hasSetPiece, wipeClaim } from "../setPieces.ts";
 import type { FxCue, FxPlanEnv } from "../types.ts";
 import { isCardRecipeKey } from "./bespoke.ts";
 import rawTable from "./stinkyscape-2.md?raw";
-import { FX_CARD_FILES, isSignature, parseFxCardTable, type FxCardEntry } from "./tables.ts";
+import { entryAura, FX_CARD_FILES, isSignature, parseFxCardTable, type FxCardEntry } from "./tables.ts";
 
 const FILE = FX_CARD_FILES.find((candidate) => candidate.file === "stinkyscape-2.json5");
 if (FILE === undefined) throw new Error("no stinkyscape-2.json5");
@@ -147,16 +147,21 @@ function galleryPlan(defId: string, events: readonly GameEvent[], board: PlayerV
   });
 }
 
-/** Each recipe entry's cues over its gallery fixture, the play `defId` resolving, each event its own entry. */
-function recipeCues(defId: string, key: string, instanceId: string): number {
+/**
+ * Each recipe entry's cues over its play and its gallery fixture, the play `defId` resolving, each event its
+ * own entry. R3407000: with `own`, the card's entry alone, so another card's public entrance (the Wardrum Blob
+ * IN33DH3 Prime summons) stays that card's own and is not this play's; and the play's own `cardPlayed` is
+ * planned too, where a signature Spell draws its cast (Edge of the Universe's, whose fixture is empty).
+ */
+function recipeCues(defId: string, key: string, instanceId: string, own: ReadonlyMap<string, FxCardEntry>): number {
   if (!isCardRecipeKey(key)) throw new Error(`${key} is no card recipe`);
   const view = fullBoardView();
   const env = envOf();
-  env.memory.remember([played("p1", instanceId, defId)]);
-  return RECIPE_FIXTURES[key](view, instanceId, "p1").reduce((n, event) => {
+  // R3407000: a signature's fixture is told the card it plays, so a hook's marker names it.
+  return [played("p1", instanceId, defId), ...RECIPE_FIXTURES[key](view, instanceId, "p1", defId)].reduce((n, event) => {
     env.memory.remember([event]);
     const entry = { ...galleryEntry([event], view), durationMs: 400 };
-    return n + (planCardFx(event, { entry, view, env, D: 400 })?.cues.length ?? 0);
+    return n + (planCardFx(event, { entry, view, env, D: 400 }, own)?.cues.length ?? 0);
   }, 0);
 }
 
@@ -180,7 +185,8 @@ describe("R2784000 #2798 Stinkyscape's card animation pass, part two", () => {
     for (const id of RANGE) {
       const type = CATALOG[id]?.type;
       const entry = entryOf(id);
-      if (type === "Field Spell") expect(entry.kind === "hooks" ? entry.aura : undefined, id).toBeDefined();
+      // R3407000: a signature's bespoke entry wears its aura beside its recipe.
+      if (type === "Field Spell") expect(entryAura(entry), id).toBeDefined();
       if (type === "Unit" || CATALOG[id]?.token === true || STARSHIP_PARTS.includes(id)) continue;
       const plays = entry.kind === "bespoke" || entry.kind === "setPiece" || (entry.kind === "hooks" && entry.hooks.cast !== undefined);
       expect(plays, `${id} (${String(type)})`).toBe(true);
@@ -219,7 +225,7 @@ describe("R2784000 #2798 Stinkyscape's card animation pass, part two", () => {
     }
     for (const id of RANGE) {
       const entry = entryOf(id);
-      if (entry.kind === "bespoke") expect(recipeCues(id, entry.key, "ex"), id).toBeGreaterThan(0);
+      if (entry.kind === "bespoke") expect(recipeCues(id, entry.key, "ex", new Map([[id, entry]])), id).toBeGreaterThan(0);
     }
   });
 
@@ -227,7 +233,7 @@ describe("R2784000 #2798 Stinkyscape's card animation pass, part two", () => {
     for (const { id, motif } of playMotifs()) expect(playMotif("hidden", "hidden", motif), `${id} ${motif}`).toBeNull();
     for (const id of RANGE) {
       const entry = entryOf(id);
-      if (entry.kind === "bespoke") expect(recipeCues("hidden", entry.key, "hidden"), id).toBe(0);
+      if (entry.kind === "bespoke") expect(recipeCues("hidden", entry.key, "hidden", new Map([[id, entry]])), id).toBe(0);
     }
   });
 
