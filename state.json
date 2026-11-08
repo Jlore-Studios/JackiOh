@@ -17129,15 +17129,8 @@
       "taken_asks": []
     },
     "3396": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42463192619",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-08T08:52:17Z",
-        "until": "2026-11-08T09:22:17Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17149,10 +17142,9 @@
         "reason": "planned on opus",
         "trail": "URE_KIT\\\" -A 80 figureKit.ts | grep -oE '\\\"?[a-z][a-z0-9-]*\\\"?: \\\\{ category: \\\"[a-z]+\\\"' | sed -E 's/\\\"?([a-z0-9-]+)\\\"?: \\\\{ category: \\\"([a-z]+)\\\"/\\\\2:\\\\1/' \u2026\n- Bash: {\"command\": \"cd /tmp/plan3396 && cat > subj.mts <<'EOF'\\nimport { SCENE_RECIPES } from \\\"/home/runner/work/_temp/work/item-3396/apps/web/src/cards/art/sceneRecipes.ts\\\";\\nconst ids = process.argv.sli\u2026\n- Bash: {\"command\": \"grep -rn \\\"Alt art\\\" spec/*.md | head -20; ls spec/\", \"description\": \"Find spec sections describing Alt art\"}\n- Bash: {\"command\": \"grep -n \\\"classicplus-scenes\\\\|scene-proofs\\\" e2e/README.md apps/web/README.md docs/*.md 2>/dev/null | head; grep -rn \\\"classicplus-scenes\\\" --include=*.md --include=*.ts --include=*.sh \u2026\n- Bash: {\"command\": \"cat vitest.config.ts; cat apps/web/vitest.config.ts 2>/dev/null | head -40\", \"description\": \"Read vitest configuration and timeouts\"}\n- Bash: {\"command\": \"grep -n \\\"classicplus\\\" apps/web/src/cards/versionLooks.test.tsx apps/web/src/cards/versions.test.ts apps/web/src/collection/collection.test.tsx apps/web/src/cards/fullArt*.test.tsx apps\u2026\n- Bash: {\"command\": \"sed -n 150,200p apps/web/src/cards/versionLooks.test.tsx; sed -n 245,290p apps/web/src/cards/versionLooks.test.tsx\", \"description\": \"Read versionLooks tests on classicplus-012\"}\n- Bash: {\"command\": \"grep -n \\\"layout:report\\\" -A 6 e2e/cypress.config.ts | head -20; grep -n \\\"FACE_ASPECT =\\\" -r apps/web/src/cards/*.ts | head -2\", \"description\": \"Check the layout report task and face as\u2026\n- Bash: {\"command\": \"sed -n 140,181p e2e/cypress.config.ts | grep -n \\\"component\\\\|setupNodeEvents\\\\|on(\\\\\\\"task\\\\\\\"\\\" \", \"description\": \"Confirm the task is in the component config\"}\n- Bash: {\"command\": \"grep -n \\\"component:\\\\|e2e:\\\\|setupNodeEvents\\\\|screenshotsFolder\\\" e2e/cypress.config.ts | head\", \"description\": \"Locate the component section of Cypress config\"}\n- Bash: {\"command\": \"cat eslint.config.js | head -60; wc -l apps/web/src/cards/art/classicPlusRecipes*.ts\", \"description\": \"Check lint rules and recipe file sizes\"}\n- Bash: {\"command\": \"mkdir -p /tmp/plan3396b && cat > /tmp/plan3396b/alt-share.mts <<'EOF'\\n// node --experimental-strip-types /tmp/alt-share.mts <repo> > /tmp/alt.html; then chromium --dump-dom it.\\nimport \u2026\n- Bash: {\"command\": \"grep -n \\\"^##\\\" spec/14-economy.md | head; grep -n \\\"cosmetic\\\\|art\\\" docs/issues-and-patches.md | grep -in \\\"visual\\\" | head -5\", \"description\": \"Confirm \\u00a714.2 heading and visual f\u2026\n- Bash: {\"command\": \"sed -n 1018,1032p apps/web/src/cards/art/sceneKit.ts; grep -n \\\"^function water\\\\|^function cart\\\\|^function cot\\\\|^function awning\\\\|^function fern\\\\|^function boar\\\" -B 2 apps/web/src/\u2026\n- Bash: {\"command\": \"python3 -c \\\"\\nimport json;c=json.load(open('/home/runner/work/_temp/work/item-3396/crates/cards/catalog.json'))\\nids='002 005 008 009 012 013 014 015 018 019 020 021 024 030 031 034 035\u2026\n- Bash: {\"command\": \"python3 -c \\\"\\nimport json;c=json.load(open('/home/runner/work/_temp/work/item-3396/crates/cards/catalog.json'))\\nids='002 005 008 009 012 013 014 015 018 019 020 021 024 030 031 034 035\u2026\n- Bash: {\"command\": \"sed -n 1,40p apps/web/src/cards/versionLooks.test.tsx | grep -n \\\"import\\\\|function faceIn\\\\|function pictureOf\\\" ; grep -n \\\"^function faceIn\\\\|^function pictureOf\\\" -A 8 apps/web/src/c\u2026\n- Bash: {\"command\": \"sed -n 25,52p apps/web/src/cards/versionLooks.test.tsx; cat apps/web/src/test/artPicture.ts | head -30\", \"description\": \"Read remaining imports and facePicture helper\"}\n- Bash: {\"command\": \"grep -n \\\"export function facePicture\\\" -B 6 -A 25 apps/web/src/test/artPicture.ts\", \"description\": \"Read facePicture\"}\n- Bash: {\"command\": \"grep -n \\\"RADIANT_GOLD_\\\" apps/web/src/cards/constants.ts | head; cd /tmp/plan3396b && cat > gold.mts <<'EOF'\\nimport { SCENE_PALETTE } from \\\"/home/runner/work/_temp/work/item-3396/apps\u2026\n- Bash: {\"command\": \"grep -n \\\"^export function levelsOn\\\\|^export function ladderOf\\\\|^export function variantsOn\\\" apps/web/src/cards/versions.ts; grep -n \\\"^export function writeCardLevel\\\" apps/web/src/c\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3396/.bot-plan.md\", \"content\": \"## Goal\\n\\nEach of the 40 Classic+ cards offered `version-alt-art` (the issue's table, exactly `COSMETIC_OFFERS[\\\"vers\u2026\n- Bash: {\"command\": \"grep -rn \\\"wholePicture(\\\" apps/web/src --include=*.test.tsx --include=*.test.ts | head -5; wc -w .bot-plan.md\", \"description\": \"Check wholePicture usage and plan length\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3396/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe 40 Classic+ cards offered `version-alt-art` (the issue's table; exactly `COSMETIC_OFFERS[\\\"version-alt-\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; sed -n '/^```ts/,/^```$/p' .bot-plan.md | wc -w; wc -c .bot-plan.md\", \"description\": \"Check the plan's length\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"The 40 Classic+ cards offered `version-alt-art` (the issue's table; exactly `COSMETIC_OFFERS[\\\\\\\"version-alt-art\\\\\\\"]`'s \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"- [ ] 40 alt recipes following their briefs and R1\\u2013R7, and the six new parts.\\\\n- [ ] `sceneRecipeOf` gives the alt \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3396/.bot-plan.md\"}\n- Bash: {\"command\": \"grep -n '\\\"--source\\\"\\\\|\\\"--visual\\\"\\\\|\\\"--notes\\\"' crates/tools/src/patches.rs crates/tools/src/*.rs 2>/dev/null | head\", \"description\": \"Confirm the patches command's flag names\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\" - A Unit whose normal recipe has a `figure` keeps one, `look: { ...normalLookOf(id), \\u2026 }`, changing only `cloth`, `\u2026\n- said: ## Goal The 40 Classic+ cards offered `version-alt-art` each draw an **alt scene recipe** written from their brief. That list is the issue's table, and it matches exactly the Classic+ ids in `COSMETIC_OFFERS[\"version-alt-art\"]`. Today Alt art re-seeds the normal recipe, because `sceneRecipeOf` stri\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-08T08:30:02Z",
       "owner_why": "it plans it",
@@ -17165,9 +17157,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-07T17:06:10Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42463192619",
+      "run_id": "pending:038392f4-1794127986",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-08T08:30:02Z",
+      "started_at": "2026-11-08T08:53:48Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18469,9 +18461,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T08:43:06Z",
+    "at": "2026-11-08T08:53:48Z",
     "url": "",
-    "what": "build #3352 on claude-2"
+    "what": "build #3396 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-08T08:39:53Z",
