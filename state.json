@@ -18309,6 +18309,14 @@
       "queued_at": "2026-11-08T06:16:05Z",
       "requested_by": "jgoetzmann",
       "stop_requested": false
+    },
+    "3431": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-08T04:57:18Z",
+      "issue": 3391,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
