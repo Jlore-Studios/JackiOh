@@ -148,26 +148,27 @@ describe("R3407000 IN33DH3, IN33DH3 Prime and the Wardrum Blob", () => {
     }
   });
 
-  it("R3407000 IN33DH3's Death: he dissolves where he lies at its marker, and the Prime goes deckward as a teal data packet and a card back", () => {
+  it("R3407000 R3407002 IN33DH3's Death: its marker draws nothing, and on the shuffle he dissolves where he lies and the Prime goes deckward as a teal data packet and a card back", () => {
     const view = fullBoardView();
     const graveyard = tid(animTestid.graveyard("you"));
     const deck = tid(animTestid.library("you"));
     // In combat: his `destroyed` comes before the hook opens, inside no play, and draws its own row only.
     const [destroyed, marker, packet] = planEach([{ type: "destroyed", instanceId: "in", defId: IN33DH3, owner: "p1", controller: "p1", attack: 2, maxHealth: 2, killerId: null }, death("p1", "in"), shuffled("p1")], D, [], view);
     expect(destroyed).toEqual({ cues: [], row: undefined });
-    expect(marker?.row).toBe("keep");
-    expect(marker?.cues).toEqual([expect.objectContaining({ kind: "burst", preset: "circuit", spread: "area", at: graveyard, delayMs: 0, colors: HOLOGRAM })]);
+    // R3407002: the marker's entry lasts 0 ms and is only remembered, so nothing of the recipe's is keyed on it.
+    expect(marker).toEqual({ cues: [], row: undefined });
     expect(packet?.row).toBe("replace");
-    expect(beats(packet?.cues ?? [])).toEqual(["shot@40", "ghost@40", "ring@260", "burst@260"]);
-    expect(packet?.cues[0]).toMatchObject({ shot: { motion: "bolt", trail: "circuit" }, from: graveyard, to: deck, flightMs: 220, colors: HOLOGRAM });
-    expect(packet?.cues[1]).toEqual({ kind: "ghost", from: graveyard, to: deck, delayMs: 40, durationMs: 220 });
-    expect(packet?.cues[2]).toMatchObject({ at: deck });
-    expect(packet?.cues[3]).toMatchObject({ preset: "circuit", at: deck });
+    expect(beats(packet?.cues ?? [])).toEqual(["burst@0", "shot@40", "ghost@40", "ring@260", "burst@260"]);
+    expect(packet?.cues[0]).toEqual(expect.objectContaining({ kind: "burst", preset: "circuit", spread: "area", at: graveyard, delayMs: 0, colors: HOLOGRAM }));
+    expect(packet?.cues[1]).toMatchObject({ shot: { motion: "bolt", trail: "circuit" }, from: graveyard, to: deck, flightMs: 220, colors: HOLOGRAM });
+    expect(packet?.cues[2]).toEqual({ kind: "ghost", from: graveyard, to: deck, delayMs: 40, durationMs: 220 });
+    expect(packet?.cues[3]).toMatchObject({ at: deck });
+    expect(packet?.cues[4]).toMatchObject({ preset: "circuit", at: deck });
     // While the view still shows his card, the packet leaves it.
     const him = view.you.units[2]?.instanceId ?? "";
     const shown = planEach([death("p1", him), shuffled("p1")], D, [], view);
-    expect(shown[0]?.cues[0]).toMatchObject({ at: tid(testid.card(him)) });
-    expect(shown[1]?.cues[0]).toMatchObject({ from: tid(testid.card(him)), to: deck });
+    expect(shown[1]?.cues[0]).toMatchObject({ at: tid(testid.card(him)) });
+    expect(shown[1]?.cues[1]).toMatchObject({ from: tid(testid.card(him)), to: deck });
     // His play draws nothing of the recipe's: its landing is his entrance alone.
     const landing = unitLanding("p1", "in", IN33DH3);
     const own = planEach([played("p1", "in", IN33DH3), landing, resolved("p1", "in", IN33DH3)], D, [], view);
@@ -204,19 +205,20 @@ describe("R3407000 IN33DH3, IN33DH3 Prime and the Wardrum Blob", () => {
     expect(theirs[0]).toEqual({ cues: [], row: undefined });
   });
 
-  it("R3407000 the Blob's Start of turn: it drums at its marker, drums again at the helpful cast's announce and ripples to its first shown target, else its controller's hero", () => {
+  it("R3407000 R3407002 the Blob's Start of turn: its marker draws nothing, and the helpful cast's announce drums twice and ripples to its first shown target, else its controller's hero", () => {
     const view = fullBoardView();
     const blobId = firstFieldId(view);
     const zone = tid(testid.card(blobId));
     const foe = view.opponent.units[1]?.instanceId ?? "";
     const [marker, announce] = planEach([turnHook("p1", blobId), announced("p1", [foe])], D, [{ type: "turnStarted", player: "p1", turn: 3 }], view);
-    expect(marker).toEqual({ cues: [expect.objectContaining({ kind: "ring", at: zone, delayMs: 0 }), expect.objectContaining({ kind: "burst", spread: "ring", at: zone, delayMs: 0, colors: HOLOGRAM })], row: "keep" });
+    expect(marker).toEqual({ cues: [], row: undefined });
     expect(announce?.row).toBe("keep");
-    expect(beats(announce?.cues ?? [])).toEqual(["ring@120", "burst@120", "shot@120"]);
-    expect(announce?.cues[2]).toMatchObject({ shot: { motion: "beam" }, from: zone, to: tid(testid.card(foe)), flightMs: 180 });
+    expect(beats(announce?.cues ?? [])).toEqual(["ring@0", "burst@0", "ring@120", "burst@120", "shot@120"]);
+    expect(announce?.cues[1]).toMatchObject({ spread: "ring", at: zone, colors: HOLOGRAM });
+    expect(announce?.cues[4]).toMatchObject({ shot: { motion: "beam" }, from: zone, to: tid(testid.card(foe)), flightMs: 180 });
     // A hero target, none, a hidden one, a hand card's: the hero it names, else its controller's.
     const hand = Array.isArray(view.you.hand) ? (view.you.hand[0]?.instanceId ?? "") : "";
-    const to = (targets: string[]): unknown => planEach([turnHook("p1", blobId), announced("p1", targets)], D, [], view)[1]?.cues[2];
+    const to = (targets: string[]): unknown => planEach([turnHook("p1", blobId), announced("p1", targets)], D, [], view)[1]?.cues[4];
     expect(to(["hero-p2"])).toMatchObject({ to: tid(testid.hero("opponent")) });
     for (const targets of [[], [HIDDEN_ID], [hand], ["gone"]]) expect(to(targets), JSON.stringify(targets)).toMatchObject({ to: tid(testid.hero("you")) });
     // The other player's announce, and the same events inside a play rather than its hook, draw nothing of the drum.
@@ -260,13 +262,11 @@ describe("R3407000 IN33DH3, IN33DH3 Prime and the Wardrum Blob", () => {
       expectInside(ENTRANCES.in33dh3Drop({ D: ms, tgt: testid.zone("you", "units", 3), intensity: 1, view, landing: unitLanding("p1", "in", IN33DH3) }), ms, "in33dh3Drop");
       expectInside(ENTRANCES.primeCrown({ D: ms, tgt: testid.zone("you", "units", 3), intensity: 1, view, landing: unitLanding("p1", "pr", PRIME) }), ms, "primeCrown");
       expectInside(ENTRANCES.blobPlop({ D: ms, tgt: testid.zone("you", "backrow", 1), intensity: 1, view, landing: fieldLanding("p1", "bl", BLOB) }), ms, "blobPlop");
-      const [marker, packet] = planEach(dataPacketFixture(view, "in", "p1"), ms, [], view);
-      expectInside(marker?.cues ?? [], ms, "dataPacket marker");
+      const [, packet] = planEach(dataPacketFixture(view, "in", "p1"), ms, [], view);
       expectInside(packet?.cues ?? [], ms, "dataPacket shuffledIn");
       const [cry] = planEach(primeConductFixture(view, "pr", "p1"), ms, [played("p1", "pr", PRIME), unitLanding("p1", "pr", PRIME)], view);
       expectInside(cry?.cues ?? [], ms, "primeConduct");
-      const [drum, ripple] = planEach(blobDrumFixture(view, blobId, "p1"), ms, [], view);
-      expectInside(drum?.cues ?? [], ms, "blobDrum marker");
+      const [, ripple] = planEach(blobDrumFixture(view, blobId, "p1"), ms, [], view);
       expectInside(ripple?.cues ?? [], ms, "blobDrum announce");
     }
   });
@@ -282,7 +282,7 @@ describe("R3407000 IN33DH3, IN33DH3 Prime and the Wardrum Blob", () => {
     for (const [id, landing, fixture] of plays) {
       const events = [played("p2", "theirs", id), landing, ...redacted(fixture), resolved("p2", "theirs", id)];
       const run = planWithOffsets(events, view);
-      const keyed = run.filter(({ entry }) => entry.events.some((event) => fixture.some((own) => own.type === event.type)));
+      const keyed = run.filter(({ entry }) => entry.durationMs > 0 && entry.events.some((event) => fixture.some((own) => own.type === event.type)));
       expect(keyed.length, id).toBeGreaterThan(0);
       for (const { entry, cues } of keyed) expect(cues.length, `${id} ${entry.events.map((event) => event.type).join(",")}`).toBeGreaterThan(0);
       const json = JSON.stringify(cuesOfRun(run));
@@ -291,6 +291,6 @@ describe("R3407000 IN33DH3, IN33DH3 Prime and the Wardrum Blob", () => {
     }
     // The Prime goes into the other seat's deck as a card back, though its ids are hidden.
     const packet = planEach([death("p2", "theirs"), shuffled("p2", true)], D, [], view)[1];
-    expect(packet?.cues[1]).toEqual({ kind: "ghost", from: tid(animTestid.graveyard("opponent")), to: tid(animTestid.library("opponent")), delayMs: 40, durationMs: 220 });
+    expect(packet?.cues[2]).toEqual({ kind: "ghost", from: tid(animTestid.graveyard("opponent")), to: tid(animTestid.library("opponent")), delayMs: 40, durationMs: 220 });
   });
 });

@@ -4,9 +4,8 @@
 //   Tech/hologram): a headset crackles at the top of his zone and a translucent teal AI companion (the
 //   `spirit` figure, hologram-tinted) materialises first and points a thin beam down at the zone; he drops
 //   in at the slam (dust at his feet, a ring, a light shake) and cracks his knuckles, two sparks. His Death
-//   opens its hook entry: at the marker he dissolves in teal circuit motes where he lies (his card while
-//   the view shows it, else his graveyard pile), and on the `shuffledIn` the Prime goes deckward as a teal
-//   data packet, a circuit bolt beside a card back from there to the library pile, a ring as it lands; it
+//   opens its hook entry: on the `shuffledIn` he dissolves in teal circuit motes where he lies (his card
+//   while the view shows it, else his graveyard pile) and the Prime goes deckward as a teal data packet, a circuit bolt beside a card back from there to the library pile, a ring as it lands; it
 //   draws in place of the shuffle row's own card back. The gallery fixture is that Death.
 // - IN33DH3 Prime (`stinkyscape-147-1`, entrance `primeCrown`, recipe `primeConduct`, tile aura
 //   `crownpulse`): a black command coat sweeps through his zone in smoke, a neural crown lights on his
@@ -17,16 +16,18 @@
 //   Blob's own entrance (`blobPlop`) draws beside it on that `summoned`. The gallery fixture is that summon.
 // - Wardrum Blob (`stinkyscape-147-2`, entrance `blobPlop`, recipe `blobDrum`, zone aura `drumbeat`): a
 //   teal drip falls into its zone, the blob plops down at the slam (a splat at its foot and a ring), wobbles
-//   twice and settles on its pedestal (a sheen on the zone). Its Start of turn: the marker drums once on its
-//   zone (a ring and a burst), and the helpful cast's announce drums a second time and runs a teal ripple
+//   twice and settles on its pedestal (a sheen on the zone). Its Start of turn opens its hook entry, and the helpful cast's
+//   announce drums twice on its zone (each a ring and a burst) and runs a teal ripple
 //   from it to the first target the announce names that the board shows (a Unit, a face-up card or a hero),
 //   else to its controller's hero; the cast's own rows play. The gallery fixture is that turn's hook.
 //
 // What moved from the issue's concept: the companion lighting the Pareto-optimal plays (IN33DH3's Cry) and
 // the Blob's aura doing the same are owner-only state with no event (R1844001: the hand marks them on its
-// owner's view), so neither is drawn. IN33DH3's dissolve plays at his Death's marker, not on `destroyed`:
-// that event comes before the hook opens (in combat, inside no play), so no recipe of his is asked then.
-// The Blob's two drums fall on two entries (its marker's lasts 0 ms, so it cannot hold two beats apart).
+// owner's view), so neither is drawn. IN33DH3's dissolve plays on his Death's `shuffledIn`, not on `destroyed`
+// (that event comes before the hook opens, in combat inside no play, so no recipe of his is asked then) nor
+// on the marker, whose entry lasts 0 ms and draws nothing (R3407002: the effects layer only remembers it).
+// For the same reason both of the Blob's drums fall on the announce: a turn whose hook announces nothing
+// draws no drum.
 //
 // R202: no cue names a card. A deck or a graveyard is only ever its pile (`pileOf`), the Prime going in is a
 // card back, and the `shuffledIn` is read for its player alone (its ids are hidden on the other seat). A
@@ -142,9 +143,6 @@ export const dataPacket: CardRecipe = (event, p, play) => {
   const spec = circuit(sigSpec(p, play, HOLOGRAM));
   // Where he lies: his card while the view still shows it, else his graveyard pile.
   const from = boardCard(p.view, play.instanceId) ?? pileOf(p.view, play.player, "graveyard");
-  if (event.type === "hookResolving" && event.sourceId === play.instanceId) {
-    return { cues: [motifBurst(spec, from, "area", 0, TUNING.dissolve)], row: "keep" };
-  }
   if (event.type === "shuffledIn") {
     // Its ids are hidden on the other seat: the deck is its player's pile (R202).
     const T = TIMING.dataPacket;
@@ -152,7 +150,13 @@ export const dataPacket: CardRecipe = (event, p, play) => {
     const leave = frac(T.leaveAt, p.D);
     const land = frac(T.landAt, p.D);
     return {
-      cues: [motifShot(spec, "bolt", from, deck, leave, land - leave), backTo(from, deck, leave, land - leave), motifRing(spec, p.D, deck, land), motifBurst(spec, deck, "point", land, TUNING.packet)],
+      cues: [
+        motifBurst(spec, from, "area", 0, TUNING.dissolve),
+        motifShot(spec, "bolt", from, deck, leave, land - leave),
+        backTo(from, deck, leave, land - leave),
+        motifRing(spec, p.D, deck, land),
+        motifBurst(spec, deck, "point", land, TUNING.packet),
+      ],
       row: "replace",
     };
   }
@@ -222,14 +226,13 @@ export const blobDrum: CardRecipe = (event, p, play) => {
   if (play.hook !== "trigger") return null;
   const spec = sigSpec(p, play, HOLOGRAM);
   const zone = standing(p, play, tid(animTestid.backrow(sideOf(p.view, play.player))));
-  if (event.type === "hookResolving" && event.sourceId === play.instanceId) return { cues: drum(spec, p.D, zone, 0), row: "keep" };
   if (event.type === "cardAnnounced" && event.player === play.player) {
     const T = TIMING.blobDrum;
     const first = event.targets[0];
     const shown = first === undefined || first === HIDDEN_ID ? null : hitAnchor(p.view, first);
     const to = shown !== null && shown.kind === "testid" && !shown.testid.startsWith("hand-card-") ? shown : heroOf(p.view, play);
     const beat = frac(T.secondAt, p.D);
-    return { cues: [...drum(spec, p.D, zone, beat), motifShot(spec, "beam", zone, to, beat, frac(T.rippleLand, p.D) - beat)], row: "keep" };
+    return { cues: [...drum(spec, p.D, zone, 0), ...drum(spec, p.D, zone, beat), motifShot(spec, "beam", zone, to, beat, frac(T.rippleLand, p.D) - beat)], row: "keep" };
   }
   return null;
 };

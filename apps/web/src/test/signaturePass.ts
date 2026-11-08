@@ -1,6 +1,7 @@
 // R3407000: what the signature passes' tests share (fx/cards/stinkyscape/*.test.ts): a run of events planned
 // the way the board's effects layer plans it (entered, held as the queue holds it at speed 1 with Big
-// moments full, remembered, then planned), each entry's cues at its offset from the run's start, a cue's
+// moments full, remembered, then planned, a zero-length marker remembered alone as FxLayer's `pass` does,
+// R3407002), each entry's cues at its offset from the run's start, a cue's
 // end as R200 counts it, each card's signature ceiling, and R200 held over every entry.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
@@ -66,7 +67,8 @@ export function planWithOffsets(events: readonly GameEvent[], view: PlayerView, 
   let offset = 0;
   return held.map((entry) => {
     env.memory.remember(entry.events);
-    const planned = { entry, offset, cues: planFx(entry, entry.view, env) };
+    // R3407002: an entry of no duration (a hook's marker) is remembered, never planned: the queue starts none.
+    const planned = { entry, offset, cues: entry.durationMs > 0 ? planFx(entry, entry.view, env) : [] };
     offset += entry.durationMs;
     return planned;
   });
