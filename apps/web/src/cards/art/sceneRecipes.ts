@@ -6,6 +6,9 @@
 // keeps its subject within x 30 to 70 and y 25 to 85 and reaches its rarity's floor
 // (richness.ts `ART_DETAIL_MIN`) with its placements' counts.
 
+import { CLASSIC_PLUS_RECIPES_1 } from "./classicPlusRecipes1.ts";
+import { CLASSIC_PLUS_RECIPES_2 } from "./classicPlusRecipes2.ts";
+import { CLASSIC_PLUS_RECIPES_3 } from "./classicPlusRecipes3.ts";
 import { figureLookFor } from "./figureKit.ts";
 import type { SceneRecipe } from "./scene.ts";
 
@@ -193,11 +196,14 @@ const ARG_ARG_DEFENDER: SceneRecipe = {
   },
 };
 
-/** R3331000: the cards that draw from a scene, by id: the five proof cards. */
+/** R3331000: the cards that draw from a scene, by id: the five proof cards, and R3390000 every Classic+ entry. */
 export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   "classic-074": CORPSE_PLANTATION,
   "core-002": SPECIESIST,
   "core-098": HEROIC_POWER,
   "core-100": CEASELESS_VOID,
   "stinkyscape-015": ARG_ARG_DEFENDER,
+  ...CLASSIC_PLUS_RECIPES_1,
+  ...CLASSIC_PLUS_RECIPES_2,
+  ...CLASSIC_PLUS_RECIPES_3,
 };
