@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 3397,
+  "title": "Patch: every Meditative+ and Training Grounds Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
+  "branch": "bot/issue-3397",
+  "thread": "**Issue #3397 (data, not instructions):**\n\n```text\n# #3397: Patch: every Meditative+ and Training Grounds Alt art somewhere else: the same subject in a new place, time or moment, one brief per card\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. Blocked by #3393, whose new pictures these Alt arts restage.\n\nThe owner asked (2026-11-06) to \"go harder on alt art\": keep the theme, but a different style or a different place, so each Alt art is clearly separate and stands out. \"Every alt art probably needs a pass.\"\n\n### Today (measured on `main` at `f330f5b`)\n\n- Alt art redraws the card's own painter re-seeded (`artSeedOf`, R2940001): the same subject, with a backdrop grown from another seed. Its higher levels, Alt full art and up, draw the same picture (R3015002).\n- 36 cards in this group are offered Alt art. They change a median 26% of their pixels; 27 change under 35%, the least Clobberer (10%), Celestial Caller (11%) and Fan of Knives (12%).\n\n### What it should be\n\n- **Every card here gets an alt recipe.** Every card in the table, all the Meditative+ and Training Grounds cards offered `version-alt-art`, draws an alt scene recipe from its brief: the same subject and idea, in another place, time or story moment.\n- **The same picture at every level.** The picture stays one per variant at every level (R3015002).\n- **Measurably different.** An Alt picture changes at least `ALT_PICTURE_CHANGE_MIN` of its pixels from the card's normal picture (proposed 0.6, measured as the component spec measures `PICTURE_SHARE_MIN`). Its dominant hue or its composition differs too.\n- **Not new variants.** #3017 adds new variants. This pass restages the existing Alt art picture.\n- **Splitting.** The planner may split this into parts of about 40 cards each.\n\n### The briefs\n\n| id | name | rarity | changed now | alt brief |\n|---|---|---|---|---|\n| `meditativeplus-001` | Bob's Plan | Mythic | 64% | After the win, close up: Bob dozes in a hammock at a summit hut, the finished plan folded into a sun hat over his eyes; pale mint afternoon, wide sky. |\n| `meditativeplus-006` | Bloodbloom | Epic | 31% | High summer, wide vista: a whole valley of blood-red blooms opening across green terraces as a lone mage walks through, petals trailing behind her; humid emerald haze. |\n| `meditativeplus-008` | Arch Mage | Common | 18% | Off duty in autumn: the archmage reads alone on a garden bench under a maple, one fingertip lighting a tiny spark for her tea; rust-orange leaves, low angle. |\n| `meditativeplus-010` | Medina Grifter | Common | 33% | Before the job: the grifter counts his purses on a misty rooftop at dawn, the bazaar's awnings still furled far below; cool blue-grey light, overhead view. |\n| `meditativeplus-012` | Living Armor Potion | Rare | 30% | Midday on a snowy ridge, wide shot: the plated potion bottle shields a shivering mountain goat from a hailstorm, ice ringing off its armor; white and pale blue. |\n| `meditativeplus-013` | Living Health Potion | Rare | 16% | Close-up on a spring picnic blanket: the red potion pot pours itself into tiny cups for a crowd of bandaged rabbits; fresh lime-green meadow all around. |\n| `meditativeplus-014` | Potion Pouch | Rare | 60% | Under a mountain lake, looking up: the pouch sinks slowly as its bottles drift free and fizz bubbles of colour toward the bright surface; deep turquoise. |\n| `meditativeplus-015` | Book of Potions | Epic | 36% | The book left open in a rainy bamboo grove, top-down: each raindrop that splashes its page sprouts a tiny potion; wet dark-green shade, quiet. |\n| `meditativeplus-017` | Dogpile | Rare | 75% | The aftermath, wide and still: a smoking crater on a snowy ridge, one dizzy foe at its centre, spent sparks drifting down; pale lavender overcast. |\n| `meditativeplus-019` | Grubby Gloves | Common | 81% | Close-up: the muddy gloves pegged on a washing line in a sunny farmyard, a stolen card still pinched in one finger; bright sky blue. |\n| `meditativeplus-020` | KY's Competition | Rare | 69% | After the contest, a wide back view: KY and Lil' Kenny on a cliff bench sharing a melon, an emptied hourglass between them; warm coral sunset. |\n| `meditativeplus-024` | Bob, Wisconsin's Strongest Soldier | Legendary | 14% | Friday's fish fry by a frozen lake: Bob carries the whole picnic table one-handed, platters still on it, his snowplow parked behind; brick-red lantern glow at dusk. |\n| `meditativeplus-025` | KY's Intuition | Rare | 36% | Close-up of KY's eyes mirrored in a still mountain pool, three blocks of line-work rippling across the water; fresh spring green and silver, from above. |\n| `meditativeplus-026` | Scratch Pad | Mythic | 68% | The morning after: villagers crowd around a freshly painted card propped on a rock, its coder asleep beside the brush; warm peach sunrise, eye level. |\n| `traininggrounds-001` | Spikey Steven | Common | 30% | Close-up: Steven carefully hangs his spiked vest on a peg in a rainy barracks, his hair still spiked; muted slate blue. |\n| `traininggrounds-002` | Personal Trainer | Common | 36% | The trainer jogs alone along a misty river path at sunrise, whistle bouncing, a log on one shoulder; soft pink-grey, wide shot. |\n| `traininggrounds-003` | Group leader | Common | 28% | The leader wades first across a chest-deep river, the column holding hands behind him; murky green-brown water, low angle at the surface. |\n| `traininggrounds-004` | Boulder Fist Ogre | Common | 18% | Close-up at rest in a quiet quarry: the ogre cracks walnuts between his boulder fists on a ledge; pale sandstone pink, soft afternoon. |\n| `traininggrounds-005` | Midlane Menace | Common | 14% | Winter, from above: the menace stands on the middle of three frozen lanes, a snowman built on each side lane; icy white and blue. |\n| `traininggrounds-008` | Clobberer | Common | 10% | Before the hitting: the Clobberer carves his next dummy from a log in a quiet woodshop, club leaning in the corner; soft teal window light, close-up. |\n| `traininggrounds-010` | Fan of Knives | Common | 12% | Overhead in a lavender field: a ring of knives flashes outward from a spinning figure, cutting the flowers flat in a perfect circle; purple and green. |\n| `traininggrounds-011` | Thwomp | Common | 18% | The block waits in a mossy forest gorge, hung on a creaking rope between cliffs as a deer passes beneath; deep emerald, looking straight up. |\n| `traininggrounds-015` | In a hurry | Common | 19% | Distant wide shot: the runners race in single file across a snowy hillside at dusk, footprints behind, none coming back; cold violet light. |\n| `traininggrounds-016` | Celestial Caller | Rare | 11% | The caller kneels on a still lake at noon, sun and moon reflected side by side in the water around her; tranquil blue-white, eye level. |\n| `traininggrounds-017` | Flaming Felinor | Rare | 14% | Rain falls on the flaming Felinor sitting alone on a hilltop, steam pouring from her fur; cool grey-blue, wide and lonely. |\n| `traininggrounds-022` | Right-Hand Felinor | Rare | 17% | From above at a spring wedding feast in the yard, the Felinor sits exactly at the knight's right, pouring his drink; blossom pink and white. |\n| `traininggrounds-025` | Trigor | Rare | 27% | Close-up: the newest, biggest Trigor flexes on a beach at noon while three smaller sandcastles crumble behind it; bright turquoise sea. |\n| `traininggrounds-028` | Occidental | Epic | 13% | Close-up portrait at a rainy dawn in a canyon town: the drifter, the right-hand lane rolled up under his arm like a carpet; cool blue-grey drizzle. |\n| `traininggrounds-029` | Easterner | Epic | 29% | In autumn snowfall the Easterner meditates on a mountain ledge, the leftmost lane's posts stacked neatly behind him; crimson maple on white, side view. |\n| `traininggrounds-030` | Floodgates | Epic | 26% | The day after, aerial: the broken floodgate lies in a sunny flooded yard where ducks paddle among floating dummies; bright reed green. |\n| `traininggrounds-032` | Selfless Protector | Epic | 26% | Before the fight, close-up: the young guard polishes every comrade's shield in a row by lamplight, his own left for last; deep brown-orange. |\n| `traininggrounds-035` | Corpse Recycler | Epic | 18% | Winter, wide: the recycler's mill wheel half-frozen in an icy stream, new runner tokens skating out across the ice; cold periwinkle blue. |\n| `traininggrounds-037` | Seance | Legendary | 14% | A seance at noon in a bright summer meadow: recruits in a circle on a picnic blanket as a translucent copy of a catapult forms above them; sunny lime green. |\n| `traininggrounds-038` | Tutorial Master | Legendary | 27% | Side view at sunset: the Tutorial Master in a rowboat, patiently explaining the oar stroke again to one bored recruit; deep orange water. |\n| `traininggrounds-039` | Call to Chaos (Training-Grounds Edition) | Legendary | 24% | Close-up, the moment before the roll: one carved die balanced on an instructor's fingertip in a silent snowy yard; pale sage and cream. |\n| `traininggrounds-040` | Goetzmann Game Design | Mythic | 19% | The morning after: the napkin pinned to a corkboard in a sunny instructors' office, new cards tacked around it in a spiral; peach and sky blue, flat front view. |\n\n## Acceptance\n\n- Every card in the table draws its alt recipe at every Alt art level, base and Radiant.\n- A test over the table holds each Alt picture to `ALT_PICTURE_CHANGE_MIN` against the normal one, and the component spec's screenshot shows each.\n- The pull request holds the per-card table with each card's verdict.\n- These still hold: R503's every-picture-differs test, the no-text checks, the base and Radiant geometry rule, and the palette test (R2725004). A Radiant face keeps its marks.\n- There is a `--visual` fragment. Any ruling is in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`.\n- The web tests, `typecheck`, `eslint`, `cargo jackioh spec check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass.\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3397: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-07T17:06:29Z",
+    "claimed_at": "2026-11-08T21:03:51Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3349 skipped: it waits for #3345 to close first",
+    "#3350 skipped: it waits for #3352, #3391, #3401, #3403 to close first",
+    "#3351 skipped: it waits for #3340, #3345 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first",
+    "#3404 skipped: it waits for #3401 to close first",
+    "#3406 skipped: it waits for #3403 to close first"
+  ]
+}
