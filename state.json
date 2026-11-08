@@ -14792,8 +14792,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-7",
-      "owner_since": "2026-11-07T22:35:37Z",
-      "owner_why": "handed off from `claude-4`: `claude-4` is busy: its lanes are all taken",
+      "owner_since": "2026-11-08T01:22:03Z",
+      "owner_why": "its turn came (it conflicts with `main` now), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-07T14:35:17Z",
       "planned_by": "`claude-4` (claude, `sonnet`, medium)",
@@ -16839,14 +16839,14 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3340,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "live": "reviewing",
       "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
-      "queued_at": "2026-11-08T00:10:15Z",
+      "queued_at": "2026-11-08T01:22:03Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
       "run_id": "42428635273",
@@ -16869,10 +16869,17 @@
         "provider": "claude-7",
         "run": "42428635273"
       },
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-11-08T00:11:37Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "sonnet",
+        "provider": "claude-7",
+        "since": "2026-11-08T01:22:03Z",
+        "until": "2026-11-08T01:52:03Z",
+        "why": "it conflicts with `main` now"
+      },
       "verdict_rounds": 4,
       "votes": {
         "approvals": [
@@ -16893,17 +16900,6 @@
         "tiers": {
           "claude": "medium"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          3380
-        ],
-        "ends": "2026-11-08T03:21:01Z",
-        "from_run": "42428635273",
-        "head": "8f48d5183237c36948b48a8441f660e6bc175e82",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-08T01:21:01Z"
       }
     },
     "3388": {
