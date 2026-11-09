@@ -17660,8 +17660,16 @@
       }
     },
     "3536": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
       "onto": "bot/issue-3534",
-      "part_of": 3534
+      "part_of": 3534,
+      "pending_request": false,
+      "queued_at": "2026-11-09T23:46:53Z",
+      "requested_by": "squishy-squooby",
+      "stop_requested": false
     },
     "3537": {
       "onto": "bot/issue-3534",
