@@ -41,6 +41,8 @@ const LAYER = '[data-testid="fx-layer"]';
 const CANVAS = '[data-testid="fx-canvas"]';
 const FX_DOM = '[data-testid="fx-dom"]';
 const GAME = '[data-testid="game"]';
+/** A Unit's tile aura, the default (R3342000) or its own on its tile in the aura layer (R3400000). */
+const TILE_AURAS = '.tile-aura, .aura[data-aura-scope="tile"]';
 /** Long enough to cross a set piece's hold, short enough to stay mid-flight. */
 const SAMPLE_MS = 2_000;
 /** How many fresh plays of a moment may be sampled before its budget is called broken (see `holdsLivingBudget`). */
@@ -122,8 +124,8 @@ const ROCK = "stinkyscape-169";
 const TILTED = "hand-card-fx-tilt";
 
 /**
- * Two Legendary and three Mythic Units, none wearing an aura of its own, so each wears its tile
- * aura (R3342000): Silly Silas, Felinor Fiender, Tylannt, Paragon-X and Prototype-X2.
+ * Two Legendary and three Mythic Units, each wearing a tile aura: Silly Silas and Felinor Fiender
+ * the default (R3342000), Tylannt, Paragon-X and Prototype-X2 their own on their tiles (R3395001).
  */
 const LIVING_UNITS = ["core-052", "core-092", "stinkyscape-006", "stinkyscape-074", "stinkyscape-086"] as const;
 
@@ -282,12 +284,13 @@ describe("R3351000 the living game holds the phone budget", () => {
       );
       const dormant = livingBoard(0);
       const launched = livingBoard(1);
-      // The five Units wear tile auras and the backrow wears field auras.
-      expect(planTileAuras(dormant).length).to.be.greaterThan(4);
-      expect(planAuras(dormant, new Map()).length).to.be.greaterThan(0);
+      // The five Units wear tile auras, the default or their own, and the backrow wears field auras.
+      const auras = planAuras(dormant, new Map());
+      expect(planTileAuras(dormant).length + auras.filter((aura) => aura.scope === "tile").length).to.be.greaterThan(4);
+      expect(auras.filter((aura) => aura.scope !== "tile").length).to.be.greaterThan(0);
       const { play, rerender } = mountLiving(dormant);
       const tilt = startTilt();
-      cy.get(".tile-aura", { timeout: 4_000 }).should("have.length.greaterThan", 4);
+      cy.get(TILE_AURAS, { timeout: 4_000 }).should("have.length.greaterThan", 4);
       cy.get(CANVAS).should("exist");
       // The scenario starts from a settled board: the mount's opening deal, if any, is over.
       cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
@@ -418,7 +421,7 @@ describe("R3351000 the living game holds the phone budget", () => {
     cy.viewport(390, 844);
     const living = livingBoard(1);
     const { play } = mountLiving(living);
-    cy.get(".tile-aura", { timeout: 4_000 }).should("have.length.greaterThan", 4);
+    cy.get(TILE_AURAS, { timeout: 4_000 }).should("have.length.greaterThan", 4);
     // A Mythic takeover plays its beats through the stages below.
     const takeover = (instanceId: string, lane: number): GameEvent[] => [
       { type: "cardPlayed", player: living.viewer, instanceId, defId: "meditative-049", costPaid: 2 },

@@ -22,15 +22,16 @@ function fourTileBoard() {
     }),
     opponent: emptySide("p2", {
       units: [null, null, null, null, null],
-      // Core #93 and #98 wear auras of their own now (R3400000), which replace the tile aura: a Legendary Field Spell
-      // and a Mythic Flying Unit standing in the backrow (R1081000) wear it instead.
+      // A card's own aura replaces its tile aura (R3400000), and every Legendary and Mythic Field Spell wears one
+      // (R3399001: Frostspatula's frostMist), as Paragon-X does (R3395000): a face-up Legendary Trap and a Mythic
+      // Flying token standing in the backrow (R1081000), neither with an aura of its own, wear it instead.
       backrow: [
-        faceUpBackrow("p2", { defId: "classicplus-012-8", instanceId: "b-leg-2", type: "Field Spell" }),
+        faceUpBackrow("p2", { defId: "core-085", instanceId: "b-leg-2", type: "Trap" }),
         faceUpBackrow("p2", {
-          defId: "stinkyscape-074",
+          defId: "stinkyscape-t-shield-layer",
           instanceId: "b-myth-2",
           type: "Unit",
-          unit: unit("p2", { defId: "stinkyscape-074", instanceId: "b-myth-2" }),
+          unit: unit("p2", { defId: "stinkyscape-t-shield-layer", instanceId: "b-myth-2" }),
         }),
         null,
         null,
