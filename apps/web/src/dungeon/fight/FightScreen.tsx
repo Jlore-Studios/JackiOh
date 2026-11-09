@@ -303,7 +303,7 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
           <strong className="dungeon-fight__enemy" data-testid={fightTestid.enemy}>
             {enemy}
           </strong>
-          <RunTimer startedAt={dungeon.startedAt} />
+          <RunTimer elapsedMs={dungeon.elapsedMs} resumedAt={dungeon.resumedAt} />
           <ThinkIndicator thinking={state.thinking} />
         </span>
       }
