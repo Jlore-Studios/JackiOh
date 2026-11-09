@@ -17971,7 +17971,7 @@
       "asks": [],
       "audit_tier": "",
       "ci_early": true,
-      "ci_fixed_head": "f9b143c60e4e51d71c6370fee03d64ddebaa34c6",
+      "ci_fixed_head": "b053e6312b7af075a5bf0ffb65956cbb9acde19d",
       "ci_fixes": 1,
       "ci_on_head": true,
       "ci_run_id": 42550577258,
