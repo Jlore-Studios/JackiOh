@@ -23154,5 +23154,77 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.13c",
+    "date": "2026-11-09",
+    "title": "Patch: every Meditative Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
+    "source": "#3404",
+    "notes": "Meditative's Alt art pass (#3330, on #3401's scenes). Every Meditative card offered Alt art, 54 of them, now draws an alt scene recipe of its own from a brief per card (R3404000): its subject restaged in another place, time or moment, under a sky sharing no colour with its normal picture's and a new camera (a close-up, a wide or distant view, or one from above or below), where Alt art had redrawn the normal ink-wash scene from another seed. A figure keeps the normal picture's person, and every picture keeps Meditative's one red seal. Every Alt art level draws the one alt picture, base and Radiant; each clears its rarity's detail floor and the byte ceiling, and in a real browser changes at least 60% of the normal window's sampled points (ALT_PICTURE_CHANGE_MIN). Repaints keep the normal recipe. The scene kit gains an oar, a sofa and a tower crane. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every Meditative Alt art restaged",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Meditative card's Alt art now shows its subject somewhere else, a new place, time or moment, clearly apart from its normal art."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "648bc1df4ef740b4e75c807dabc010e4955bfadb"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.13d",
+    "date": "2026-11-09",
+    "title": "Patch: every Core Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
+    "source": "#3398",
+    "notes": "Core's Alt art pass (#3330, on #3392's scenes). Every Core card offered Alt art, 61 of them, now draws an alt scene recipe of its own from a brief per card (R3398000): its subject restaged in another place, time or moment, under a sky sharing no colour with its normal picture's and a new camera (a close-up, a wide or distant view, or one from above or below), where Alt art had redrawn the normal scene from another seed. A figure keeps the normal picture's person, Duplicating Felinors, Carnivorous Cube and True Strike their people; Ceaseless Void's Alt art is the void before it wakes, a black pearl in a tide pool, without its giant. Every Alt art level draws the one alt picture, base and Radiant; each clears its rarity's detail floor and the byte ceiling, and in a real browser changes at least 60% of the normal window's sampled points (ALT_PICTURE_CHANGE_MIN). Repaints keep the normal recipe. The scene kit gains a palm, a camel, a crater, a van, a hay bale, a picnic blanket, a rug, a hammock, a sleeping bag and a teapot. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every Core Alt art restaged",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Core card's Alt art now shows its subject somewhere else, a new place, time or moment, clearly apart from its normal art."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "7dd7704cd32c56df2e4c6016ac6d061fec7d0eb6"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.13e",
+    "date": "2026-11-09",
+    "title": "Patch: audit the codebase for dead code, duplicates and zombie routes, 2026-11-08",
+    "source": "#3423",
+    "notes": "The code audit of 2026-11-08 (#3423, after #2658): dead code removed and duplicated helpers merged. Under apps/web/src/cards/ (R2529000) an unused type goes and the settings, the art kit and two syncs reuse one helper each: how cards look and play is unchanged.",
+    "player": {
+      "title": "Unused code tidied away",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Unused code was removed and repeated helpers were merged. Nothing about how cards look or play changes."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "71ef2a3bd05ce845d7ab98f1734ee9a5894391d3"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

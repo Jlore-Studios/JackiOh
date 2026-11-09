@@ -10,9 +10,9 @@ import { ART_PLANES } from "../cards/art/pictures.ts";
 import { fragmentRef, signatureLength, signatureSize } from "../cards/FullArtSignature.tsx";
 import { SIGNATURE_FACES } from "../cards/signatureFaces.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
-import { pointIn } from "./anchors.ts";
+import { atOf, pointIn } from "./anchors.ts";
 import { TAKEOVER_ART_DRAWINGS, takeoverArtParts, type TakeoverDrawing } from "./takeoverArt.ts";
-import type { FxAnchor, FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxPoint, FxRollCue, FxSplatTone, FxTakeoverStage, FxTimedPoint, FxTint, SetPieceShape } from "./types.ts";
+import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTakeoverStage, FxTimedPoint, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
 
 export type DomEffectBoxes = { at?: FxBox | null; from?: FxBox | null; to?: FxBox | null };
@@ -174,10 +174,6 @@ function ms(value: number): string {
 function placeAtPoint(el: HTMLElement, point: { x: number; y: number }): void {
   el.style.setProperty("--fx-x", px(point.x));
   el.style.setProperty("--fx-y", px(point.y));
-}
-
-function atOf(anchor: FxAnchor): FxPoint | undefined {
-  return anchor.kind === "testid" ? anchor.at : undefined;
 }
 
 /**

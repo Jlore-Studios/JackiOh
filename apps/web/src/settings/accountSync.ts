@@ -16,6 +16,32 @@ export const SETTINGS_SYNC_DEBOUNCE_MS = 600;
 /** How long the sync outlives its last screen, so moving between screens does not restart it. */
 export const SETTINGS_SYNC_GRACE_MS = 1500;
 
+/** Requests that run one after another; a failure is swallowed, so the next still runs. `settled` waits for all. */
+export type RequestQueue = { enqueue: (request: () => Promise<unknown>) => void; settled: () => Promise<void> };
+
+/** The one queue the account syncs (`cards/cardPicksSync.ts`, `cards/proficiencySync.ts`) send their requests through. */
+export function requestQueue(): RequestQueue {
+  let queue: Promise<void> = Promise.resolve();
+  let pending = 0;
+  return {
+    enqueue: (request) => {
+      pending += 1;
+      queue = queue
+        .then(request)
+        .then(
+          () => undefined,
+          () => undefined,
+        )
+        .finally(() => {
+          pending -= 1;
+        });
+    },
+    settled: async () => {
+      while (pending > 0) await queue;
+    },
+  };
+}
+
 /** Injectable, so the tests never touch the network. */
 export type SettingsAccountApi = {
   load(token: string): Promise<PlayerSettingsAccountCopy>;

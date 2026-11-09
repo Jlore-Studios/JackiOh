@@ -9,8 +9,7 @@ use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::config::{AI_DIFFICULTY, DUOS_HUMAN_TEAM, Difficulty, HUMAN_HANDICAP, duos_ai_team};
 use jackioh_engine::duos::{
     DuosReduceResult, DuosReplayInput, DuosReplayResult, DuosState, duos_begin, duos_create,
-    duos_create_recorded, duos_fold, duos_hash, duos_legal_actions, duos_reduce, duos_seats_to_act,
-    duos_view_for,
+    duos_create_recorded, duos_fold, duos_hash, duos_legal_actions, duos_reduce, duos_view_for,
 };
 use jackioh_engine::wire::{
     DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosResult, DuosSeat, DuosView,
@@ -46,12 +45,6 @@ pub fn reduce(pinned: Pinned, state: &DuosState, action: &DuosAction) -> DuosRed
 pub fn legal(pinned: Pinned, state: &DuosState, seat: DuosSeat) -> Vec<DuosActionBody> {
     registered();
     pinned.run(|| duos_legal_actions(state, seat))
-}
-
-/// S4: the seats whose legal actions hold more than a concession.
-pub fn seats_to_act(pinned: Pinned, state: &DuosState) -> Vec<DuosSeat> {
-    registered();
-    pinned.run(|| duos_seats_to_act(state))
 }
 
 /// S2, B23: the only window a seat gets onto the game.

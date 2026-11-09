@@ -402,7 +402,7 @@ and still be the only writers.
 A co-op match (SPEC §13) has an actor of its own, `crates/server/src/duos/`, built as the match actor
 is. It holds a `DuosState` in memory: two plain 1v1 `GameState`s, the duels, and the team life and the
 round between them. It calls the engine only through its Duos functions (`duos_create`, `duos_begin`,
-`duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`, `duos_fold`) and the AI
+`duos_reduce`, `duos_legal_actions`, `duos_view_for`, `duos_fold`) and the AI
 through `jackioh_ai::duos_decide`. Its loop is §5.1's with four seats:
 
 - the seat comes from the verified token: the host is A1 and the guest A2, and B1 and B2, the AI

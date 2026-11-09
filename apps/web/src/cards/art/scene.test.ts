@@ -46,7 +46,7 @@ import {
   type SceneRecipe,
 } from "./scene.ts";
 import { SCENE_KIT } from "./sceneKit.ts";
-import { SCENE_RECIPES, STINKYSCAPE_91_RECIPES } from "./sceneRecipes.ts";
+import { ALT_SCENE_RECIPES, SCENE_RECIPES, STINKYSCAPE_91_RECIPES } from "./sceneRecipes.ts";
 import { legacyArtUri, proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { compositionFor, compositionOf, themeFor } from "./themes.ts";
 import { legacySvg } from "./traininggrounds.ts";
@@ -315,6 +315,11 @@ describe("R3331000 the five proof cards", () => {
       for (const picture of ["alt", "night"] as const) {
         const seed = artSeedOf(id, picture);
         expect(seed, id).not.toBe(id);
+        // R3398000: Heroic Power and Ceaseless Void, offered Alt art, draw an alt recipe of their own under its seed (coreAltScenes.test.tsx).
+        if (picture === "alt" && Object.hasOwn(ALT_SCENE_RECIPES, id)) {
+          expect(sceneRecipeOf(seed), id).toBe(ALT_SCENE_RECIPES[id]);
+          continue;
+        }
         expect(sceneRecipeOf(seed), id).toBe(scene);
         const own = composeScene(scene, seed);
         expect(new Set(own.map((shape) => shape.part)), `${id} ${picture}`).toEqual(new Set(normal.map((shape) => shape.part)));

@@ -5,8 +5,8 @@
 // the size as `--n`, so board.css lays it out without measuring. On the viewer's own hand a tap lifts a card
 // (`data-lifted`) to read it, legal or not: local view state, not an action. Drag to play is
 // game/drag/DragLayer.tsx; the card a drop just played is `data-landing` (drag/landing.ts), out of the fan
-// while the board catches up. A pointer on the viewer's own card is reported upward (`onHover`, #991) so the
-// board can ring what its preview counts.
+// while the board catches up. A pointer on the viewer's own card is reported to the board's hover
+// context (`onHover` overrides it, #991) so the field can ring what its preview counts.
 // R504: an empty hand keeps its place with one card-sized outline (`hand-empty-<side>`, `data-empty="true"`).
 // R434: the game's end reveals both hands (`reveal.ts`): each back turns face up where it lay, read and never
 // played. R1297000, R1834004: the opponent's backs wear their seat's card back (`seat`), and a revealed card
@@ -19,6 +19,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactElement, typ
 import type { CardView, PlayerId, PlayerView } from "@jackioh/shared";
 
 import Card, { isSelected } from "./Card.tsx";
+import { useSetHoveredHandCard } from "./hoveredHandCard.tsx";
 import HandHints from "./HandHints.tsx";
 import type { HandHint } from "./handHints.ts";
 import { testid, type AnimatingMap, type ClickTarget, type Highlight, type Side } from "./contract.ts";
@@ -39,6 +40,10 @@ export type HandProps = {
   highlight?: Highlight;
   animating?: AnimatingMap;
   onClick?: (target: ClickTarget) => void;
+  /**
+   * #3478: where a pointer on the viewer's own card is reported (#991). Absent, the board's hover
+   * context takes it; a test passes its own to override the context.
+   */
   onHover?: (instanceId: string | null) => void;
   /** R318: the card a full hand burned, drawn over the hand (OverflowNotices.tsx `BurnNotice`). */
   notice?: ReactNode;
@@ -102,6 +107,10 @@ export default function Hand(props: HandProps): ReactElement {
   const hoverPreviews = useSetting("hoverPreviews");
   const landing = useLanding();
 
+  // #3478: the board's hover context, so a pointer re-renders the field's rings and nothing else.
+  const contextHover = useSetHoveredHandCard();
+  const report = props.onHover ?? contextHover;
+
   const rootRef = useRef<HTMLDivElement>(null);
   // #3347: the fan springs where it reflows. A card's key is its instance id; a back has only its place.
   useHandSpring(
@@ -157,8 +166,8 @@ export default function Hand(props: HandProps): ReactElement {
           data-lifted={lifted ? "true" : undefined}
           data-landing={yours && landing === card.instanceId ? "true" : undefined}
           onClickCapture={yours ? () => toggle(card.instanceId) : undefined}
-          onPointerEnter={yours ? () => props.onHover?.(card.instanceId) : undefined}
-          onPointerLeave={yours ? () => props.onHover?.(null) : undefined}
+          onPointerEnter={yours ? () => report(card.instanceId) : undefined}
+          onPointerLeave={yours ? () => report(null) : undefined}
         >
           <Card
             testId={handTestid}

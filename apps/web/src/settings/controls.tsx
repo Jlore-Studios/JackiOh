@@ -4,7 +4,7 @@
 
 import { useId, type CSSProperties, type ReactElement } from "react";
 
-import { CARD_SETTINGS_FIELDS, useCardSettings, writeCardSettings, type CardSettings } from "../cards/settings.ts";
+import { CARD_SETTINGS_FIELDS, isBoardNamesOption, useCardSettings, writeCardSettings, type CardSettings } from "../cards/settings.ts";
 import { FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "../fx/constants.ts";
 import { useFxSettings, type FxBigMoments, type FxIntensity } from "../fx/settings.ts";
 import { useHapticsSettings, writeHapticsSettings } from "../haptics/settings.ts";
@@ -291,7 +291,7 @@ export function BoardNamesSelect(): ReactElement {
       value={settings.boardNames}
       options={BOARD_NAMES_OPTIONS}
       onChange={(value) => {
-        if (value === "artFirst" || value === "always" || value === "never") {
+        if (isBoardNamesOption(value)) {
           writeCardSettings({ boardNames: value });
         }
       }}

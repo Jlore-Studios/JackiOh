@@ -24,7 +24,7 @@
 import type { Tag } from "@jackioh/shared";
 
 import { fmt } from "./hash.ts";
-import { blob, leant, sparkle, turned, whole } from "./kitDraw.ts";
+import { between, DEGREES, blob, leant, sparkle, turned, whole } from "./kitDraw.ts";
 import type { FigureRecipe, KitPart, KitShape, PaletteName, PartPlace, Rng } from "./scene.ts";
 import { local, type Local } from "./sceneKit.ts";
 
@@ -272,7 +272,6 @@ const HEAD_R = 4.8;
 const SHOULDER = -17.5;
 /** The ground below the hip, where a long hem ends. */
 const HEM = 22.5;
-const DEGREES = Math.PI / 180;
 
 /** Each pose's neck, hand and hip, as offsets from the feet at scale 1. */
 export const POSE_ANCHORS: Readonly<Record<PoseId, { readonly neck: Point; readonly hand: Point; readonly hip: Point }>> = {
@@ -309,10 +308,6 @@ const SKIN_INKED: Flags = { skin: true, inked: true };
 
 function shape(d: string, paint: PaletteName, opacity: number, flags?: Flags): KitShape {
   return flags === undefined ? { d, paint, opacity } : { d, paint, opacity, ...flags };
-}
-
-function between(rng: Rng, low: number, high: number): number {
-  return low + (high - low) * rng();
 }
 
 /** A pose's limbs: both legs and boots, the far arm, the near arm and both hands. */

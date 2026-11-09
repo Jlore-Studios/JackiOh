@@ -495,7 +495,7 @@ fn tally(outcomes: &[RunOutcome], content: &RunContent) -> Tally {
                 sums.hp_lost += i64::from(fight.hp_before - fight.hp_after);
                 sums.turns += i64::from(fight.turns);
             }
-            if matches!(fight.kind, RunNodeKind::MiniBoss | RunNodeKind::Boss) {
+            if fight.kind.is_boss() {
                 if let Some((hp, reached)) = out.boss_hp.get_mut(bosses) {
                     *hp += i64::from(fight.hp_before);
                     *reached += 1;

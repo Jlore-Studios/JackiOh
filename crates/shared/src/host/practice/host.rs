@@ -28,7 +28,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use serde::{Deserialize, Serialize};
 
-use jackioh_ai::{AI_BUDGET, AiOptions, SearchBudget, ai_to_act};
+use jackioh_ai::{AiOptions, SearchBudget, ai_to_act};
 use jackioh_engine::{
     Action, ActionBody, CreateGameOptions, GameOverReason, GameState, PlayerId, ReplayInput, Rng,
     VERSIONS_SCHEME, outcome_for,
@@ -372,11 +372,6 @@ impl PracticeHost {
                 rng_cursor: ask.rng_cursor,
             },
         }
-    }
-
-    /// [`PracticeHost::decide`] at the AI's own budget.
-    pub fn decide_at_budget(&self, ask: &AiAsk) -> AiMove {
-        self.decide(ask, AI_BUDGET)
     }
 
     // Output

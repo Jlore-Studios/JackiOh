@@ -64,7 +64,7 @@ no rule is restated here. The Conquest series' transitions and projection are `j
 `freeze_stamps`, `worn_stamps`), and `shown_defs`, `cards_due` and the deal they read (`dealt_cards`, which
 `actor/engine.rs` re-exports), called natively by `actor/registry.rs`, `actor/match_actor.rs` and `api/replays.rs`;
 `loadout.rs` keeps the store reads that build their records and names the rest as it always has. A co-op match calls the engine's Duos functions (`duos_create`,
-`duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`,
+`duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_view_for`,
 `duos_fold`) and the AI's `duos_decide` the same way, deciding nothing of its own (§13). The
 catalog and its version are compiled in from `crates/cards`.
 
@@ -1159,7 +1159,7 @@ index is rebuilt over `(season_id, format, ladder)`. `rated_games` records each 
 before being Constructed. In the code the ladder is `ranked::ladder::Ladder`:
 - a game's is its mode's (`db::store::ladder_of_mode`);
 - every ranked store read and write takes it;
-- `Profile::glicko` and `BotRow::rating_on` read a rating on it.
+- `Profile::glicko` and `BotRow`'s `BotRecord::rating_for` (`bots/pool.rs`) read a rating on it.
 
 `tests/sql/12_ranked.sql` checks the columns, keys, checks and the refusal (R2778000).
 
