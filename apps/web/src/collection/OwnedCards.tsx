@@ -14,7 +14,7 @@ import { CATALOG } from "@jackioh/cards";
 import type { CardDef, SetName } from "@jackioh/shared";
 
 import { readerName } from "../cards/chinese.ts";
-import { CardDefsProvider, CardFace, closeInspect, faceModel, INSPECT_KEY_SHORTCUT } from "../cards/index.ts";
+import { useCanOpenFullScreen, CardDefsProvider, CardFace, closeInspect, faceModel, INSPECT_KEY_SHORTCUT, openFullScreenArt } from "../cards/index.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { getCollection, type CollectionResponse } from "../net/api.ts";
 import { quantitiesOf } from "../shop/shop.ts";
@@ -45,7 +45,20 @@ function CollectionCardTile({
   onOpen: () => void;
   onPreview: () => void;
 }): ReactElement {
-  const hold = usePreviewHold(`card-${def.id}`, onPreview);
+  const isFs = useCanOpenFullScreen(def, def.id, owned);
+  const hold = usePreviewHold(`card-${def.id}`, (pointerId) => {
+    // The inspect key (no pointer) keeps the preview, with its equip and buy buttons; only a hold opens the art.
+    if (isFs && pointerId !== undefined) {
+      openFullScreenArt({
+        defId: def.id,
+        name: readerName(def),
+        radiant: false,
+        heldPointerId: pointerId,
+      });
+      return;
+    }
+    onPreview();
+  });
   return (
     <button
       type="button"

@@ -132,8 +132,13 @@ function subscribeHold(listener: () => void): () => void {
   };
 }
 
-function isHeld(): boolean {
+export function isHeld(): boolean {
   return holds > 0;
+}
+
+/** R3345000: `isHeld`, subscribed: a component reading it renders again whenever the queue starts or stops draining. */
+export function useIsHeld(): boolean {
+  return useSyncExternalStore(subscribeHold, isHeld, () => false);
 }
 
 function notifyHold(): void {
@@ -304,7 +309,7 @@ function attach(
  * hover preview's anchor): without one a window face reads its host's box.
  */
 export function useCardTilt(faceRef: RefObject<HTMLElement | null>, mode: TiltMode, allowed: boolean, anchor?: TiltBox): void {
-  const held = useSyncExternalStore(subscribeHold, isHeld, () => false);
+  const held = useIsHeld();
   const { deviceTilt } = useCardSettings();
   const anchorRef = useRef(anchor);
   useLayoutEffect(() => {

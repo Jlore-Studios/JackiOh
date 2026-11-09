@@ -6,6 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ANOMALY_CODES } from "../cards/anomalies.ts";
+import { ART_PLANES } from "../cards/art/index.ts";
 import { anomalyMarkup } from "../cards/art/svg.ts";
 import { FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
 import { mountDomEffect, mountHold, type DomEffect } from "./dom.ts";
@@ -226,7 +227,7 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
   });
 
   it("R3400000 a takeover with art mounts its parts; prismatic none", () => {
-    const takeover: FxDomCue = { kind: "takeover", look: "napkin", tint: TINT, at: anchor, landMs: 1240, delayMs: 0, durationMs: 1800 };
+    const takeover: FxDomCue = { kind: "takeover", stage: null, look: "napkin", tint: TINT, at: anchor, landMs: 1240, delayMs: 0, durationMs: 1800 };
     const el = expectMounted(mountDomEffect(root, takeover, { at: AT }), takeover);
     expect(el.getAttribute("data-look")).toBe("napkin");
     expect(cssVar(el, "--fx-land")).toBe("1240ms");
@@ -248,11 +249,19 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     const plain = expectMounted(mountDomEffect(root, shared, { at: AT }), shared);
     expect([...plain.children].map((child) => child.className)).toEqual(["fx-takeover-dark", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
     expect(plain.querySelector(".takeover-art")).toBeNull();
+    plain.remove();
+    // R3345000: a set piece's full-art stage sits over the dark, under a look's own art.
+    const staged: FxDomCue = { ...takeover, stage: { planes: ART_PLANES.map((plane) => `linear-gradient(${plane})`), name: "Ceaseless Void", face: "ink" } };
+    const full = mountDomEffect(root, staged, { at: AT })?.el;
+    expect(full).toBeDefined();
+    expect([...(full?.children ?? [])].map((child) => child.className)).toEqual(["fx-takeover-dark", "fx-takeover-stage", "takeover-art", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+    // The stage signs the card's name (its one text), which the shared layers never carry.
+    expect(full?.querySelector(".fx-takeover-signature .cf-signature-text")?.textContent).toBe("Ceaseless Void");
   });
 
   it("R3407000 a takeover with its card's picture mounts one image over the dark, under the sweep; without one none", () => {
     const art = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E";
-    const takeover: FxDomCue = { kind: "takeover", look: "freshJack", tint: TINT, at: anchor, landMs: 1240, delayMs: 0, durationMs: 1800, art };
+    const takeover: FxDomCue = { kind: "takeover", stage: null, look: "freshJack", tint: TINT, at: anchor, landMs: 1240, delayMs: 0, durationMs: 1800, art };
     const el = expectMounted(mountDomEffect(root, takeover, { at: AT }), takeover);
     expect(el.getAttribute("data-look")).toBe("freshJack");
     expect([...el.children].map((child) => child.className)).toEqual(["fx-takeover-dark", "fx-takeover-art", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
