@@ -53,6 +53,7 @@ type Client interface {
 	InMergeQueue(nodeID string) bool
 	QueueRemoval(nodeID string) map[string]string
 	Dequeue(nodeID string)
+	QueueOrder(branch string) []int
 	PinIssue(nodeID string)
 	MarkReady(nodeID string)
 	MarkDraft(nodeID string)

@@ -16,6 +16,8 @@ import type { CardType, GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import {
+  HIDDEN_ID,
+  TAKEOVER_HOLD_MS,
   entranceEntries,
   planEntries,
   setPieceEntries,
@@ -23,12 +25,15 @@ import {
   type AnimationEntry,
   type EntranceResolver,
 } from "../game/animations.ts";
+import { ART_PLANES } from "../cards/art/index.ts";
+import { signatureFaceOf } from "../cards/signatureFaces.ts";
 import { testid } from "../game/contract.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { FX_CARD_TABLE, parseFxCardTable } from "./cards/tables.ts";
 import { FX_CENTER, FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_SIGNATURE_TAKEOVER_TAIL_MS, FX_TAKEOVER_TAIL_MS, FX_TAKEOVER_TRAUMA } from "./constants.ts";
 import { planFx } from "./cues.ts";
+import { mountDomEffect } from "./dom.ts";
 import { createFxMemory } from "./memory.ts";
 import { entranceCues, entranceLandMs, ownCast, TAKEOVER_ART_LOOKS, TAKEOVER_TINTS, takeoverArtOf, takeoverLookOf } from "./takeover.ts";
 import { takeoverArtParts } from "./takeoverArt.ts";
@@ -319,5 +324,113 @@ describe("R2722002 a hidden card's entrance centres on the zone that flipped", (
     const table = parseFxCardTable("test.json5", `{ "classic-044": { bespoke: "graveRise" } }`);
     expect(ownCast("classic-044", "Spell", table)).toBe(false);
     expect(entranceCues(entry([play("classic-044")]), env(), 400, table).some((cue) => cue.kind === "rays")).toBe(true);
+  });
+});
+
+describe("R3345000 Mythic takeover in depth planes", () => {
+  it("R3345000 every Mythic in the catalog plans a takeover with its defId and mounts depth planes", () => {
+    const mythics = Object.values(CATALOG).filter((def) => def.rarity === "Mythic" || def.printedRarity === "Mythic");
+    expect(mythics.length).toBeGreaterThan(0);
+    const catalogResolver: EntranceResolver = (defId) => {
+      const def = CATALOG[defId];
+      return def ? { type: def.type, rarity: def.rarity, printedRarity: def.printedRarity } : null;
+    };
+
+    for (const mythic of mythics) {
+      const isTrap = mythic.type === "Trap" || mythic.type === "Field Trap";
+      const events: GameEvent[] = [
+        isTrap ? fired(mythic.id) : play(mythic.id),
+        ...(mythic.type === "Unit" ? [summon(mythic.id)] : []),
+      ];
+      const entered = entranceEntries(planEntries(events, p1, false), catalogResolver, { seen: new Set() });
+      const entries = setPieceEntries(entered, takeoverClaim, { reduced: false, bigMoments: "full", speed: 1 });
+      const found = entries.find((e) => e.entrance !== undefined);
+      expect(found, mythic.id).toBeDefined();
+      if (!found) continue;
+      const cues = planFx(found, p1, env());
+      const takeover = takeoverOf(cues);
+      expect(takeover, mythic.id).toBeDefined();
+      // R202: the cue is plain data holding the card's picture and name, never its definition, so a second plan equals it.
+      expect(takeover?.stage?.planes.length, mythic.id).toBe(ART_PLANES.length);
+      expect(takeover?.stage?.name, mythic.id).toBe(mythic.name);
+      expect(JSON.stringify(takeover?.stage).includes(mythic.id), mythic.id).toBe(false);
+      expect(takeoverOf(planFx(found, p1, env())), mythic.id).toEqual(takeover);
+
+      // Mount into DOM and verify depth planes & signature
+      const root = document.createElement("div");
+      const mounted = mountDomEffect(root, takeover!, { at: { x: 0, y: 0, width: 100, height: 100 } });
+      expect(mounted).not.toBeNull();
+      const stage = root.querySelector(".fx-takeover-stage");
+      expect(stage, mythic.id).not.toBeNull();
+      const planes = root.querySelector(".fx-takeover-planes");
+      expect(planes, mythic.id).not.toBeNull();
+      for (const plane of ART_PLANES) {
+        const el = planes?.querySelector(`.fx-takeover-plane[data-plane="${plane}"]`);
+        expect(el, `${mythic.id} plane ${plane}`).not.toBeNull();
+      }
+      // R2715002: the name signs in the card's set's hand, which cosmetics.css styles under `.cf-signature`.
+      const hand = root.querySelector(".fx-takeover-signature .cf-signature");
+      expect(hand, mythic.id).not.toBeNull();
+      expect(hand?.getAttribute("data-signature-face"), mythic.id).toBe(signatureFaceOf(mythic.id));
+      expect(hand?.querySelector(".cf-signature-text")?.textContent, mythic.id).toBe(mythic.name);
+      // B27: the plane's picture is set through the cards' helper, one per plane.
+      for (const plane of ART_PLANES) {
+        const el = planes?.querySelector<HTMLElement>(`.fx-takeover-plane[data-plane="${plane}"]`);
+        expect(el?.style.backgroundImage, `${mythic.id} plane ${plane} picture`).not.toBe("");
+      }
+    }
+  });
+
+  it("R3345000 bigMoments short gives 500ms hold and off gives 0ms hold", () => {
+    const events = [play("core-100"), summon("core-100")];
+    const entered = entranceEntries(planEntries(events, p1, false), resolve, { seen: new Set() });
+
+    // full: 1000ms
+    const full = setPieceEntries(entered, takeoverClaim, { reduced: false, bigMoments: "full", speed: 1 });
+    expect(full[0]?.setPiece?.holdMs).toBe(TAKEOVER_HOLD_MS);
+
+    // short: 500ms
+    const short = setPieceEntries(entered, takeoverClaim, { reduced: false, bigMoments: "short", speed: 1 });
+    expect(short[0]?.setPiece?.holdMs).toBe(TAKEOVER_HOLD_MS / 2);
+
+    // off: no setPiece (0ms)
+    const off = setPieceEntries(entered, takeoverClaim, { reduced: false, bigMoments: "off", speed: 1 });
+    expect(off[0]?.setPiece).toBeUndefined();
+  });
+
+  it("R3345000 a Mythic entry that holds no set piece mounts no full-window stage", () => {
+    const events = [play("core-100"), summon("core-100")];
+    const entered = entranceEntries(planEntries(events, p1, false), resolve, { seen: new Set() });
+    for (const bigMoments of ["off", "full"] as const) {
+      const [held] = setPieceEntries(entered, takeoverClaim, { reduced: false, bigMoments, speed: 1 });
+      const takeover = takeoverOf(planFx(held!, p1, env()));
+      expect(takeover, bigMoments).toBeDefined();
+      const root = document.createElement("div");
+      mountDomEffect(root, takeover!, { at: { x: 0, y: 0, width: 100, height: 100 } });
+      expect(root.querySelector(".fx-takeover-stage") !== null, bigMoments).toBe(bigMoments === "full");
+      expect(root.querySelector(".fx-takeover-dark"), bigMoments).not.toBeNull();
+      expect(root.querySelector(".fx-takeover-sweep"), bigMoments).not.toBeNull();
+    }
+  });
+
+  it("R3345000 a hidden play shows no takeover set piece (R202)", () => {
+    const hiddenPlay: GameEvent = { type: "cardPlayed", player: "p2", instanceId: "h1", defId: HIDDEN_ID, costPaid: 3 };
+    const entered = entranceEntries(planEntries([hiddenPlay], p1, false), resolve, { seen: new Set() });
+    const entries = setPieceEntries(entered, takeoverClaim, { reduced: false, bigMoments: "full", speed: 1 });
+    expect(entries[0]?.setPiece).toBeUndefined();
+  });
+
+  it("R3345000 an opponent's public Mythic play triggers takeover for both seats", () => {
+    const events = [play("core-100"), summon("core-100")];
+    // p1 view
+    const e1 = entry(events, p1);
+    expect(e1.setPiece?.key).toBe("takeover");
+    expect(takeoverOf(planFx(e1, p1, env()))).toBeDefined();
+
+    // p2 view (opponent played publicly)
+    const entered2 = entranceEntries(planEntries(events, p2, false), resolve, { seen: new Set() });
+    const e2 = setPieceEntries(entered2, takeoverClaim, { reduced: false, bigMoments: "full", speed: 1 })[0];
+    expect(e2?.setPiece?.key).toBe("takeover");
+    expect(takeoverOf(planFx(e2!, p2, env()))).toBeDefined();
   });
 });
