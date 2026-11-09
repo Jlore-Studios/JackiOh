@@ -25,6 +25,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -78,6 +79,27 @@ type Other struct {
 	// slots of the GitHub runners the bots share, first come first served
 	// (`plan.others_on_github`, #1455).
 	Workflow string // default: ""
+	// Marker is the marker its harness puts on everything it writes (its identity's `marker`).
+	// With one, a comment from its account that lacks it was typed by a person working as that
+	// account, and is theirs (#961, #3508); without one, everything from its account is its own.
+	Marker string // default: ""
+}
+
+// Wrote: this bot wrote a comment or review `body` that `login` posted. Its account's, and with
+// its marker when it has one.
+func (o *Other) Wrote(login, body string) bool {
+	return strings.EqualFold(o.Login, login) && (o.Marker == "" || Carries(body, o.Marker))
+}
+
+// Carries: `body` holds `marker` on a line of its own words, not quoted behind `>` (a person
+// quoting a bot keeps its marker there).
+func Carries(body, marker string) bool {
+	for _, line := range py.Splitlines(body) {
+		if strings.Contains(line, marker) && !strings.HasPrefix(strings.TrimLeftFunc(line, unicode.IsSpace), ">") {
+			return true
+		}
+	}
+	return false
 }
 
 // Identity is identity.Identity. Build one with NewIdentity, which sets the night bot's values.
@@ -164,6 +186,7 @@ func other(raw any, where string) (*Other, error) {
 		Home:        py.OrStr(o.Get("home"), ""),
 		TokenEnv:    py.OrStr(o.Get("token_env"), ""),
 		Workflow:    py.OrStr(o.Get("workflow"), ""),
+		Marker:      py.OrStr(o.Get("marker"), ""),
 	}, nil
 }
 
