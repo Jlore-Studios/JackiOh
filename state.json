@@ -18178,7 +18178,22 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 6732641849
+      "waiting_comment": 6732641849,
+      "waiting_turn": {
+        "behind": [
+          3462,
+          3461,
+          3458,
+          3457,
+          3444
+        ],
+        "ends": "2026-11-09T07:58:44Z",
+        "from_run": "42565812608",
+        "head": "c349ffa7ca4e96e3e97e41c1679d976ba3430ddf",
+        "model": "opus",
+        "provider": "claude-3",
+        "since": "2026-11-09T05:58:44Z"
+      }
     },
     "3465": {
       "action": "review",
