@@ -15929,11 +15929,6 @@
       "owner": "claude-5",
       "owner_since": "2026-11-09T10:27:02Z",
       "owner_why": "it plans it",
-      "paused": {
-        "at": "2026-11-09T11:03:15Z",
-        "interrupt": "usage",
-        "provider": "claude-5"
-      },
       "pending_request": false,
       "planned_at": "2026-11-09T10:53:27Z",
       "planned_by": "`claude-5` (claude, `opus`, strong)",
