@@ -16466,6 +16466,13 @@
     "3498": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-09T20:58:11Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Rule 2: the change is to the AI's search (crates/ai/src/decide.rs, simulate.rs). Rule 3: the shared, wasm and server hosts must all agree on the new callback."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
