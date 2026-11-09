@@ -17829,7 +17829,16 @@
       "feedback_since": "2026-11-08T23:48:32Z",
       "issue": 3403,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-2",
+        "rejections": [],
+        "reviews": [],
+        "sha": "17341f107930860d8e93dc2d02b804813eb2743e",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
