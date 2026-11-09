@@ -18487,9 +18487,10 @@
     "what": "review #3462 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-09T07:29:45Z",
+    "at": "2026-11-09T07:37:51Z",
     "notes": [
-      "delivered review #3456 on claude-7 (run 42576548312): approved"
+      "#3460: approved and green, so its strikes are cleared",
+      "delivered review #3458 on claude-6 (run 42573119803): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19195,7 +19196,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T07:29:45Z",
+  "loop_tick": "2026-11-09T07:37:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
