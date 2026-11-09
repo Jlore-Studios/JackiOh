@@ -15709,15 +15709,8 @@
       "waiting_comment": 6718518794
     },
     "3404": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42540853787",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-09T01:00:22Z",
-        "until": "2026-11-09T01:30:22Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15729,10 +15722,9 @@
         "reason": "planned on opus",
         "trail": "rn \\\"it(\\\\\\\"R503\\\\|describe(\\\\\\\"R503\\\" apps/web/src | cut -c1-200 | head -5; grep -n \\\"ART_DETAIL_MIN\\\\b.*=\\\" -A8 apps/web/src/cards/ar\u2026\n- Bash: {\"command\": \"sed -n 165,200p apps/web/src/cards/art/CardArt.test.tsx\", \"description\": \"Read R503 every-picture-differs test\"}\n- Bash: {\"command\": \"ls spec/rulings/R3404* spec/pending/3404.md 2>&1; ls spec/pending/; grep -n \\\"Amended by\\\" spec/rulings/R3401000.md spec/rulings/R2940001.md spec/rulings/R3396000.md | cut -c1-120\", \"des\u2026\n- Bash: {\"command\": \"sed -n 509,546p apps/web/src/cards/art/ART.md | grep -n \\\"Alt\\\\|alt\\\" ; sed -n 439,467p apps/web/src/cards/art/ART.md | head -5\", \"description\": \"Check ART.md Meditative section mentions\u2026\n- Bash: {\"command\": \"ls apps/web/src/cards/art/fixtures/; grep -rln \\\"meditative-0[0-9][0-9]#alt\\\\|#alt\\\\\\\"\\\" apps/web/src e2e/cypress --include=*.ts --include=*.tsx --include=*.json | head\", \"description\": \u2026\n- Bash: {\"command\": \"ls eslint.config.* 2>/dev/null; grep -n \\\"max-lines\\\\|max-len\\\\|complexity\\\" eslint.config.* 2>/dev/null | head; wc -l apps/web/src/cards/art/classicPlusAltRecipes*.ts apps/web/src/cards\u2026\n- Bash: {\"command\": \"grep -n \\\"SCENE_LAYER_ROLES\\\\|export const SCENE_LAYERS\\\" -A12 apps/web/src/cards/art/scene.ts | head -30; grep -n \\\"\\\\\\\"meditative-021\\\\\\\"\\\\|\\\\\\\"meditative-087\\\\\\\"\\\" -A3 apps/web/src/ca\u2026\n- Bash: {\"command\": \"grep -rn \\\"meditative-0\\\" e2e/cypress/component/*.cy.tsx | grep -v \\\"meditative-scenes\\\\|meditative-faces\\\\|meditative-prompts\\\" | cut -c1-180 | head; grep -rln \\\"meditative-0\\\" e2e/cypr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3404/apps/web/src/cards/art && for n in 032 047 095 097 001 100; do grep -h \\\"\\\\\\\"meditative-$n\\\\\\\":\\\" meditativeRecipes*.ts; done\", \"description\": \"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3404 && grep -n \\\"export function levelsOn\\\" -A16 apps/web/src/cards/versions.ts; grep -n \\\"export function ladderOf\\\" -A8 apps/web/src/cards/version\u2026\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json\\nd=json.load(open('crates/shared/cosmetics.json'))\\nfor c in d['cosmetics']:\\n if c.get('level',{}).get('variant')=='alt-art': print(c['id'], c['level'], js\u2026\n- Bash: {\"command\": \"sed -n 505,560p crates/shared/src/cosmetics.rs; python3 -I -c \\\"\\nimport json\\nd=json.load(open('crates/shared/cosmetics.json'))\\nfor c in d['cosmetics']:\\n if c.get('level',{}).get('var\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n- Decided: 3 recipe files of 18 (#1-#38, #40-#71, #72-#100); new kit parts oar, sofa (sceneKitInkObjects.ts), tower-crane (sceneKitInkMachines.ts); one PR; s\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3404/.bot-plan.md\", \"limit\": 5}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3404/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery one of the 54 Meditative cards offered `version-alt-art` draws an alt scene recipe of its own, writte\u2026\n- Bash: {\"command\": \"wc -w -c /home/runner/work/_temp/work/item-3404/.bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Bash: {\"command\": \"tr -s ' \\\\n' '\\\\n' < /home/runner/work/_temp/work/item-3404/.bot-plan.md | grep -vE '^(\\\\||---|\\\\|---\\\\|.*|-|\\\\[|\\\\]|\\\\[ \\\\]|[0-9]+\\\\.)$' | grep -c .\", \"description\": \"Estimate word coun\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3404/.bot-plan.md\", \"old_string\": \"Every one of the 54 Meditative cards offered `version-alt-art` draws an alt scene recipe of i\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3404/.bot-plan.md\", \"old_string\": \"9. **`ART.md`.** Line 142: \\\"A Classic+ or Meditative card offered Alt art draws an alt recip\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3404/.bot-plan.md\", \"old_string\": \"- **Normal pictures and repaints.** The normal pictures and the repaints must not move. Only \u2026\n- Bash: {\"command\": \"tr -s ' \\\\n' '\\\\n' < /home/runner/work/_temp/work/item-3404/.bot-plan.md | grep -vE '^(\\\\||---|\\\\|---\\\\|.*|-|\\\\[|\\\\]|[0-9]+\\\\.)$' | grep -c .; wc -c < /home/runner/work/_temp/work/item-3\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3404/.bot-plan.md\", \"offset\": 25, \"limit\": 20}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3404/.bot-plan.md\", \"old_string\": \"1. **`meditativeAltRecipes1.ts`.** Copy the head of `classicPlusAltRecipes1.ts` (lines 1\\u201\u2026\n- Bash: {\"command\": \"tr -s ' \\\\n' '\\\\n' < /home/runner/work/_temp/work/item-3404/.bot-plan.md | grep -vE '^(\\\\||---|\\\\|---\\\\|.*|-|\\\\[|\\\\]|[0-9]+\\\\.)$' | grep -c .; sed -n '/^## Tests/,/^## Done/p' /home/runn\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3404/.bot-plan.md\", \"old_string\": \"- The rest as copied: subject kept; sky and composition; floor, bytes and no text; geometry a\u2026\n- Bash: {\"command\": \"tr -s ' \\\\n' '\\\\n' < /home/runner/work/_temp/work/item-3404/.bot-plan.md | grep -vE '^(\\\\||---|\\\\|---\\\\|.*|-|\\\\[|\\\\]|[0-9]+\\\\.)$' | grep -c .; sed -n '/^## Done when/,/^## Risks/p' /home\u2026\n- Bash: {\"command\": \"node /tmp/planner3404b/keys.mts $PWD 2>/dev/null | sed -n 2p | tr ' ' '\\\\n' > /tmp/planner3404b/parts.txt; for p in tatami table ink-card-fan red-thread bamboo ink-person still-water rip\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\"| 038 | wide, rooftop |\\\",\\\"| 038 | wide, printer 0.9 on a roof |\\\",1)\\ns=s.replace(\\\"| 056 | wide | K tiled-house\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3404/.bot-plan.md\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3404/.bot-plan.md\", \"old_string\": \"- **Normal pictures and repaints move.** Only\", \"new_string\": \"- **A normal picture or a repa\u2026\n- said: ## Goal Each of the 54 Meditative cards offered `version-alt-art` gets an alt scene recipe drawn from its brief in #3404: the same subject in another place, time or moment. The recipe is read only under the card's Alt art seed (`<id>#alt`), so every Alt art level draws it, base and Radiant (R301500\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-09T00:33:42Z",
       "owner_why": "handed off from `claude-3`: its owner `claude-3` cannot take it now",
@@ -15745,9 +15737,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-07T17:16:41Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42540853787",
+      "run_id": "pending:6b572d0b-1794186175",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-09T00:33:42Z",
+      "started_at": "2026-11-09T01:03:33Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6728863310
@@ -17705,9 +17697,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T01:02:42Z",
+    "at": "2026-11-09T01:03:33Z",
     "url": "",
-    "what": "review #3455 on muse"
+    "what": "build #3404 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-09T00:45:25Z",
