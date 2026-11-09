@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3502,
+  "title": "Patch: a dungeon run's time counts only while it is played, so a run picked up the next day is not timed by the calendar",
+  "branch": "bot/issue-3502",
+  "thread": "**Issue #3502 (data, not instructions):**\n\n```text\n# #3502: Patch: a dungeon run's time counts only while it is played, so a run picked up the next day is not timed by the calendar\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe dungeon keeps a \"fastest win\" board and shows a running timer. A run can now be left and picked up later, but the timer counts the hours you were away. Finish a run you paused overnight and your win is recorded as taking twenty hours, and the on-screen timer says the same. Once this is built, a run's time counts only while the run is open on your screen, as most roguelikes time a run.\n\n## Why\n\n- **The recorded time is wall-clock time.** `apps/web/src/dungeon/store.ts:357` gives a settled run `timeMs: Math.max(DUNGEON_ELAPSED_MIN_MS, now - live.startedAt)`. `startedAt` is kept with the run and restored on reload (`store.ts:93`, `store.ts:155-160`).\n- **The on-screen timer uses it too.** `apps/web/src/dungeon/fight/RunTimer.tsx:20-34` counts from the same `startedAt`.\n- **It feeds a leaderboard.** \u00a715.10 (`spec/15-dungeon-run.md:251`): \"Leaderboards: deepest row, most curse points, top score and fastest win, with an on-screen timer.\" The fastest board ranks by `timeMs` (`DungeonStats.test.tsx:237-252`).\n- **Leaving and coming back is now normal.** #3476 (R2972000) made it the expected path.\n\n## Proposal\n\n- **Keep the time played.** `KeptRun` gains `elapsedMs`.\n  - The store adds the current session's time on every save, and when the page is hidden or closed (`pagehide`, `visibilitychange`).\n  - A reload starts a new session from the kept total, not from `startedAt`.\n  - Time while the tab is hidden does not count.\n- **The timer shows the same total.** `RunTimer` shows the kept total plus the running session.\n- **Older runs.** A kept run from before this change has only `startedAt`; it starts its count at the moment of the change, so no earlier gap is counted again.\n- **Spec and ruling.** A ruling for what a run's time counts: Hearthstone has no run timer, so it follows the roguelike convention of time played. It gets its note and pending paragraph, and \u00a715.10 says it.\n\n## Where it lands\n\n- `apps/web/src/dungeon/store.ts` and `store.test.ts`\n- `apps/web/src/dungeon/fight/RunTimer.tsx` and its test\n- spec \u00a715.10\n\n## Acceptance criteria\n\n- [ ] A store test with a fake clock: a run played 5 minutes, left 10 hours, reloaded and played 5 more minutes settles with 10 minutes.\n- [ ] Time while the page is hidden is not counted; time before a `pagehide` is.\n- [ ] After a reload, `RunTimer` shows the kept total.\n- [ ] `DUNGEON_ELAPSED_MIN_MS` still floors the recorded time.\n- [ ] The ruling's note, test and pending paragraph are in place, and `cargo jackioh spec check` passes.\n\n## Size and risks\n\nSmall: about 4 files plus the ruling. Difficulty medium.\n\n- What counts as a run's time is a design call the maintainer may prefer to make differently.\n- The Campaign's server-checked runs (\u00a715.12, not built yet) will need a rule of their own.\n- \"A dungeon run in progress survives a card patch\" (suggested alongside this one) also edits `KeptRun`, so build the two in turn.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-09T20:34:58Z:\n\nApprovr\n\n---\nComment by @MaxGoetzmann at 2026-11-09T20:35:05Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3502: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T20:35:32Z",
+    "claimed_at": "2026-11-09T20:45:12Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
