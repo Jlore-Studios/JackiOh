@@ -15072,6 +15072,7 @@
         "resolved_by": "`claude` (strong)",
         "sha": "39302bef6060da11f13933a637253733a9b4e0f9"
       },
+      "closed_at": "2026-11-09T11:56:09Z",
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -15083,6 +15084,7 @@
       "last_findings": [],
       "live": "resolving",
       "merge_owner": "claude-8",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
