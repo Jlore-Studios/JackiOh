@@ -1420,3 +1420,12 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-09T15:01:08Z,42639849353,claude-6,opus,plan,3477,hard,planned,,1.3,8,10753,915171,9.5829,54,54,,,66.8,claude-6,resumed,,1
 2026-11-09T15:09:28Z,42639579086,muse,muse-spark-1.3-contributor,review,3489,medium,approved,,12.5,0,0,0,,6,7,7,8,2.6,,none,,1
 2026-11-09T15:13:58Z,42636487069,muse,muse-spark-1.3-contributor,review,3488,medium,approved,,35.9,0,0,0,,5,7,7,8,1.3,,none,,1
+2026-11-09T15:21:11Z,42641609388,claude-6,opus,build,3477,hard,interrupted,5-hour cap,10,0,0,0,,58,70,,,77.2,claude-6,fresh,,1
+2026-11-09T15:23:13Z,42636745230,claude-1,opus,plan,3479,hard,planned,,40,205,92687,16426111,6.9505,13,26,,,45.4,claude-1,fresh,,1
+2026-11-09T15:22:28Z,42636615604,claude-6,opus,build,3486,hard,interrupted,5-hour cap,41.8,0,0,0,,39,70,,,45,claude-6,fresh,,1
+2026-11-09T15:22:39Z,42634316762,claude-4,sonnet+opus,build,3481,medium,built,,14.7,65,27651,2899440,0.9384,11,14,,,34.6,claude-4,fresh,,1
+2026-11-09T15:25:58Z,42634026048,muse,muse-spark-1.3-contributor,build,3476,medium,built,,62.5,0,0,0,,2,7,6,8,30.6,muse,none,,1
+2026-11-09T15:46:09Z,42647147320,claude-8,opus,review,3489,medium,reviewed,,1.4,20,7322,608306,0.6899,0,3,,,,,none,,1
+2026-11-09T15:46:30Z,42646737228,claude-4,sonnet,review,3491,medium,approved,,5.6,12,2951,435839,0.3227,19,20,,,3.4,,none,,1
+2026-11-09T15:50:05Z,42639717297,claude-4,opus,revise,3475,hard,approved,,20.5,19,5804,1019908,4.0347,16,21,,,1.4,claude-4,resumed,,2
+2026-11-09T15:49:54Z,42634168603,muse,muse-spark-1.3-contributor,build,3483,medium,built,,85.9,0,0,0,,2,7,6,8,36.5,muse,none,,1
