@@ -16564,7 +16564,7 @@
     "3507": {
       "action": "build",
       "asks": [],
-      "died": 1,
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
