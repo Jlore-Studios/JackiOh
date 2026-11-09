@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3498,
+  "title": "Patch: an AI decision cut short by the clock still weighs the opponent's reply and every sampled world",
+  "branch": "bot/issue-3498",
+  "thread": "**Issue #3498 (data, not instructions):**\n\n```text\n# #3498: Patch: an AI decision cut short by the clock still weighs the opponent's reply and every sampled world\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe practice AI has 3 seconds to think in the browser. On a phone or a slow laptop, its biggest decisions run out of time while it is still exploring. When that happens it skips the two checks that keep it out of bad trades:\n\n- it no longer imagines your swing back;\n- it judges its move on one guess of your hidden cards instead of three.\n\nSo it plays worst on exactly the busy boards where it matters most, and only on slower devices. Once this is built, it stops exploring a little early so that it always has time left for those checks. Ladder bots, dungeon enemies and the co-op AI team think on a clock too and gain the same.\n\n## Why\n\n- **The reserve is counted in nodes, not time.** `crates/ai/src/decide.rs:475-486` gives the beam search all but a reserve of nodes, `reserve = (remaining / 2).min(finalist_count * per_finalist)`. The reserve pays for the finalists' scores after the opponent's reply (`reply_score`, `decide.rs:517-523`) and on every other sampled world (`decide.rs:538-557`).\n- **When the clock fires, everything after it is refused.**\n  - `crates/ai/src/simulate.rs:129-137`: once `should_stop` fires, the root counter is marked `StoppedBy::Clock` and every later `take()` returns false.\n  - So `reply_score` returns None at once (`crates/ai/src/reply.rs:547-549`) and `replied` stays empty.\n  - The finalists keep their beam scores from world 0 only (`decide.rs:524-533`), and the loop over the other worlds breaks on its first line.\n- **This happens on ordinary devices.**\n  - R2575000: \"In a browser, 600 nodes took 0.6\u20130.9 s.\" The budget is now 1,200 nodes (`AI_BUDGET`).\n  - `docs/polish/3-ai.md:1679-1680` puts a mid-range phone at three to five times slower than that.\n  - The cap is `PRACTICE_AI_CLOCK_MS` = 3,000 (`crates/shared/src/config.rs:1990`).\n  - Ladder bots stop at `BOT_DECISION_DEADLINE_MS` = 4,000 (`config.rs:955`), on the server's quarter of a CPU.\n- **The reply is worth a lot.** `docs/polish/3-ai.md:1619-1627` measured it at 174 against 193 wins of 300 against greedy.\n- **No gate sees this path.** The quality gates and the sweep count nodes, not time (\u00a79.9, Budgets).\n\n## Proposal\n\n- **Give the beam an earlier stop.** `AiOptions` gains a wrap-up callback (or the clock callback learns which phase is asking).\n  - The host fires it at a named share of its limit, a new constant in `crates/ai/src/config.rs`.\n  - The beam's sub-counter stops on it; the reply and the other worlds stop only at the hard limit.\n- **Report the shortfall.** `SearchStats` gains how many finalists were replied and on how many worlds they were scored. The timing gate and `cargo jackioh think` can then report a decision that fell short.\n- **No clock, no change.** The gates, the sweep and the server's fold of a practice claim (R2560000) decide bit for bit as today.\n- **Every host passes the wrap-up:** the practice worker, the dungeon fight, the ladder bots and the Duos AI team. \u00a79.9's Budgets paragraph describes it.\n\n## Where it lands\n\n- `crates/ai/src/decide.rs`, `simulate.rs`, `types.rs` (`SearchStats`) and `config.rs`\n- The practice host's clock in `crates/shared`, the wasm binding, and the server's bot and Duos callers\n- `docs/v0.3.0/SURFACE.md`; spec \u00a79.9 (`spec/09-architecture.md`)\n- Tests in `crates/ai/tests/ai/search.rs`, beside the fake clock that counts polls (about line 1458)\n\n## Acceptance criteria\n\n- [ ] With a fake clock that trips the wrap-up at poll N and the hard stop later, the finalists are scored after the reply on every sampled world, as `SearchStats` shows.\n- [ ] The same test with only the hard stop at poll N reproduces today's behaviour (no reply, one world), so the test fails without the change.\n- [ ] With no clock, every existing AI test decides the same, and `cargo jackioh gate` folds to the same hashes.\n- [ ] The new share is a named constant (CLAUDE.md rule 9) and \u00a79.9 describes it. If it settles something \u00a79.9 does not, it has a ruling note.\n\n## Size and risks\n\nMedium in size, **hard** difficulty: the AI plus its hosts across several crates.\n\n- On a slow device the beam explores a little less, in exchange for the reply the measurement above values more.\n- The wasm binding and SURFACE.md change.\n- Duos and the ladder bots share this path, so their tests must stay green.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-09T20:32:34Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3498: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T20:33:54Z",
+    "claimed_at": "2026-11-09T20:46:51Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
