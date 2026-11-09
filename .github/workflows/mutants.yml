@@ -65,20 +65,20 @@ jobs:
         id: plan
         env:
           EVENT: ${{ github.event_name }}
-          AREA: ${{ inputs.area }}
-          SHARD: ${{ inputs.shard }}
+          INPUT_AREA: ${{ inputs.area }}
+          INPUT_SHARD: ${{ inputs.shard }}
         run: |
           rust='["engine","cards","ai","run","shared","server","tools","wasm"]'
           web='["web-animations","web-effects","web-audio","web-cards","web-drag","web-settings","web-wire","web-wasm","edge"]'
-          case "$AREA$SHARD" in *[!a-z0-9_-]*) echo "area and shard are names and numbers" >&2; exit 1 ;; esac
-          shard=${SHARD:-$(($(date -u +%s) / 604800))}
+          case "$INPUT_AREA$INPUT_SHARD" in *[!a-z0-9_-]*) echo "area and shard are names and numbers" >&2; exit 1 ;; esac
+          shard=${INPUT_SHARD:-$(($(date -u +%s) / 604800))}
           size=
           if [ "$EVENT" = pull_request ]; then
             rust='["run","cards"]' web='["edge"]' shard=0 size=20
-          elif [ -n "$AREA" ]; then
-            case "$AREA" in
-              web-* | edge) rust='[]' web="[\"$AREA\"]" ;;
-              *) rust="[\"$AREA\"]" web='[]' ;;
+          elif [ -n "$INPUT_AREA" ]; then
+            case "$INPUT_AREA" in
+              web-* | edge) rust='[]' web="[\"$INPUT_AREA\"]" ;;
+              *) rust="[\"$INPUT_AREA\"]" web='[]' ;;
             esac
           fi
           {

@@ -36,6 +36,9 @@ export default {
   // A module-level value runs once for a whole test file, so each such mutant would run every test
   // again; left out (and counted as Ignored).
   ignoreStatic: true,
+  // The first, unmutated run of every related test file, instrumented: a layer the board imports
+  // (the drag's) relates most of the web's tests, which took past Stryker's default 5 minutes.
+  dryRunTimeoutMinutes: 60,
   reporters: ["clear-text", "progress", "json", "html"],
   jsonReporter: { fileName: `${process.env.MUTANTS_OUT ?? "reports/mutation"}/mutation.json` },
   htmlReporter: { fileName: `${process.env.MUTANTS_OUT ?? "reports/mutation"}/mutation.html` },
