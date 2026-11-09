@@ -17116,7 +17116,7 @@
         "tier": "strong",
         "why": "Rule 1, engine rules: the fix changes when crafted traps fire in the resolution loop, in crates/engine/src/subsystems/craft.rs"
       },
-      "failures": 1,
+      "failures": 0,
       "handoff": {
         "at": "2026-11-08T23:50:42Z",
         "family": "claude",
@@ -17139,7 +17139,9 @@
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 3456,
       "provider": "claude-3",
+      "question": "",
       "round_tier": "strong",
       "run_id": "42539124031",
       "runs_on": "ubuntu-latest",
