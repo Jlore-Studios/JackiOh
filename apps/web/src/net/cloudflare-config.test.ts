@@ -122,11 +122,14 @@ describe("public/_headers", () => {
       "x-content-type-options",
       "referrer-policy",
       "permissions-policy",
+      "strict-transport-security",
     ]);
     expect(headers.get("x-frame-options")).toBe("DENY");
     expect(headers.get("x-content-type-options")).toBe("nosniff");
     expect(headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
     expect(headers.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
+    // #3485: HSTS pairs with Always Use HTTPS (infra/cloudflare.tf); no `preload`, never submitted.
+    expect(headers.get("strict-transport-security")).toBe("max-age=31536000; includeSubDomains");
     expect(headers.get("content-security-policy")).toBe(CSP);
   });
 

@@ -62,19 +62,22 @@ const FACE_WINDOW = [18, 82] as const;
 const PORTRAIT_WINDOW = [12, 88] as const;
 /** How far in from each side a seal stays, clear of the window's rounded corners. */
 const SEAL_SIDE = 4;
-/** SCENE_KIT's own entries in sceneKit.ts, beside the modules it spreads (classicPlusScenes.test.ts's `FIRST_KIT_PARTS`). */
-const SCENE_KIT_OWN_PARTS = 56 + 199;
+/**
+ * SCENE_KIT's own entries in sceneKit.ts, beside the modules it spreads: the first kit's and, R3391000, Stinkyscape's
+ * pass's (classicPlusScenes.test.ts's `FIRST_KIT_PARTS` and `STINKYSCAPE_KIT_PARTS`).
+ */
+const SCENE_KIT_OWN_PARTS = 56 + 199 + 81;
 
 /**
  * R3393000: each proof card's base and Radiant picture as `main` drew it before this pass (`hashId` of its data URI;
  * Speciesist's and Heroic Power's their Core scenes, R3392000), so a fade leaves every recipe that uses none as it was.
+ * Arg Arg Defender's is no longer a proof's: R3391000 redraws it to its brief (stinkyscapeScenes.test.ts).
  */
 const PROOF_PINS: Readonly<Record<string, readonly [number, number]>> = {
   "classic-074": [1210823500, 2735167760],
   "core-002": [3309088827, 297634420],
   "core-098": [1479159710, 1492068351],
   "core-100": [894252645, 4246782103],
-  "stinkyscape-015": [4157590552, 724339904],
 };
 
 function recipe(id: string): SceneRecipe {

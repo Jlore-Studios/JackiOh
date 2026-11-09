@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import type { CombatForecast } from "@jackioh/shared";
 import { SPECTATOR_EMOTE_HAND_SIZE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
@@ -554,6 +555,33 @@ describe("#1664 a finished view carries the seat's economy", () => {
     h.socket().deliver({ type: "view", view: { round: 2 }, legal: [], economy: { ...ECONOMY, quests: 5 } });
     expect(roundOf(h)).toBe(2);
     expect(h.client.snapshot().economy).toBeNull();
+  });
+});
+
+describe("R3477000 a seat's view carries the forecast of the attacks it is offered", () => {
+  it("R3477000 a view frame's forecast is kept with its view and one without clears it", () => {
+    const forecast: CombatForecast = {
+      attacks: [
+        { attackerId: "u1", targetId: "hero-p2", dealt: 3, taken: 0, kills: false, survives: true, pops: false, attackerSize: 6, targetSize: 0 },
+      ],
+      lethal: false,
+    };
+    const h = connected();
+    expect(h.client.snapshot().forecast).toBeNull();
+    h.socket().deliver({ type: "view", view: { round: 1 }, legal: [], forecast });
+    expect(h.client.snapshot().forecast).toEqual(forecast);
+    // A watcher's frame carries none.
+    h.socket().deliver({ type: "view", view: { round: 2 }, legal: [] });
+    expect(roundOf(h)).toBe(2);
+    expect(h.client.snapshot().forecast).toBeNull();
+    h.socket().deliver({ type: "view", view: { round: 3 }, legal: [], forecast: { attacks: 5 } });
+    expect(roundOf(h)).toBe(3);
+    expect(h.client.snapshot().forecast).toBeNull();
+    expect(parseDuosFrame(JSON.stringify({ type: "view", view: { round: 0 }, legal: [] }))).not.toHaveProperty("forecast");
+    expect(parseDuosFrame(JSON.stringify({ type: "view", view: { round: 0 }, legal: [], forecast }))).toMatchObject({
+      type: "view",
+      forecast,
+    });
   });
 });
 

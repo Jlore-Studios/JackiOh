@@ -272,6 +272,20 @@ func TestDecision_ATrustedReplyRevisesItOnTheLaneThatAsked(t *testing.T) {
 	assertTrue(t, decisionOf(h, 12) == nil, decisionOf(h, 12))
 }
 
+func TestDecision_SquishysWordsAreNoAnswerButAPersonsFromItsAccountIs(t *testing.T) {
+	// #3508: Claude sessions post as squishy-squooby too; only what carries Squishy's marker is
+	// Squishy's.
+	h, _, _ := decisionAsked(t, decisionAsk)
+	h.gh.AddComment(12, "#12 is the night bot's: I leave it alone."+squishysMarker, fakes.Comment{
+		User: squishyUser, Association: "MEMBER", CreatedAt: clock.ISO(testsupport.Night.Add(time.Hour))})
+	assertEqual(t, plan.SyncDecisions(h.ctx), []string{})
+	h.gh.AddComment(12, "Take (A).", fakes.Comment{User: squishyUser, Association: "MEMBER",
+		CreatedAt: clock.ISO(testsupport.Night.Add(2 * time.Hour))})
+	assertEqual(t, plan.SyncDecisions(h.ctx),
+		[]string{"#12: @squishy-squooby answered its question, so it is queued again with the answer"})
+	assertEqual(t, decisionOf(h, 12).Get("answer"), "Take (A).")
+}
+
 func TestDecision_AReplyOfANumberNamesItsOption(t *testing.T) {
 	note := plan.AnswerNote(pyjson.New("question", "Q?", "options", []any{
 		pyjson.New("change", "A", "tradeoff", "x"), pyjson.New("change", "B", "tradeoff", "y")},

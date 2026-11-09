@@ -1,7 +1,7 @@
 //! The practice session's machine (#3099; SPEC §9.9, §9.10, B22, B25, B34, B35, B38, B39, R187, R188, R433,
 //! R508, R668, R677, R679, R768, R923000, R1303000, R1373, R1705005, R2102000, R2560000, R2706000,
-//! R3100000): played on the real catalog, with a `Session` standing in for a host. It keeps what the
-//! machine asks it to store (the save, the kept games), answers the AI's ask with the AI itself and the
+//! R3100000, R3477000): played on the real catalog, with a `Session` standing in for a host. It keeps what
+//! the machine asks it to store (the save, the kept games), answers the AI's ask with the AI itself and the
 //! lethal ask with nothing, and nothing else decides anything.
 
 use jackioh_ai::{AI_BUDGET, AiDeckOptions, build_ai_deck, random_action};
@@ -215,7 +215,11 @@ fn b34_a_start_answers_with_the_humans_view_and_the_ai_on_the_other_seat() {
             snapshot.legal,
             jackioh_engine::legal_actions(session.state(), human)
         );
-        assert!(snapshot.error.is_none() && snapshot.last_board.is_none() && snapshot.forecast.is_none());
+        assert!(snapshot.error.is_none() && snapshot.last_board.is_none());
+        assert_eq!(
+            snapshot.forecast,
+            Some(jackioh_engine::combat_forecast(session.state(), human))
+        );
         assert!(session.log().is_empty());
         // The AI owes its mulligan at once (R265), and the snapshot says so without saying how.
         assert!(snapshot.ai_to_act);
@@ -628,7 +632,7 @@ fn lesson_config(seed: &str) -> PracticeConfig {
 }
 
 #[test]
-fn r3100000_a_lessons_every_snapshot_holds_the_forecast_and_a_free_games_none() {
+fn r3100000_a_lessons_every_snapshot_holds_the_forecast() {
     let mut lesson = Session::start(&lesson_config("practice-r3100000")).expect("starts");
     lesson.answer_mulligans();
     for snapshot in &lesson.snapshots {
@@ -636,11 +640,43 @@ fn r3100000_a_lessons_every_snapshot_holds_the_forecast_and_a_free_games_none() 
     }
     let forecast = lesson.snapshot().forecast.clone().expect("a forecast");
     assert_eq!(forecast, jackioh_engine::combat_forecast(lesson.state(), P2));
-    assert!(
-        started("practice-r3100000-free", P2)
+}
+
+#[test]
+fn r3477000_a_free_games_every_snapshot_holds_the_forecast_of_the_humans_attacks() {
+    let mut session = started("practice-r3477000", P2);
+    let mut human = Rng::new("practice-r3477000:human", 0);
+    let mut forecast_attacks = 0;
+    for _ in 0..MOVE_CAP {
+        if session.host.is_over() {
+            break;
+        }
+        if !session.ai_turn() {
+            let seat = session.host.human_seat();
+            let body = random_action(session.state(), seat, &mut human).expect("the human owes an action");
+            session.act(body);
+        }
+        let forecast = session
             .snapshot()
             .forecast
-            .is_none()
+            .clone()
+            .expect("every snapshot holds one");
+        assert_eq!(
+            forecast,
+            jackioh_engine::combat_forecast(session.state(), session.host.human_seat())
+        );
+        forecast_attacks += forecast.attacks.len();
+    }
+    assert!(session.host.is_over(), "the game ends within {MOVE_CAP} actions");
+    assert!(
+        session
+            .snapshots
+            .iter()
+            .all(|snapshot| snapshot.forecast.is_some())
+    );
+    assert!(
+        forecast_attacks > 0,
+        "the premise: some snapshot forecast an attack"
     );
 }
 

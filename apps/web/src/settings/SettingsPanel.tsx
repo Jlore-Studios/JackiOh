@@ -39,7 +39,7 @@ const SECTIONS: readonly SectionSpec[] = [
   {
     id: "gameplay",
     title: "Gameplay",
-    controls: ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews", "lethalHint"],
+    controls: ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews", "lethalHint", "attackOutcomes"],
   },
   { id: "visuals", title: "Visuals", controls: ["reduceMotion"] },
   { id: "audio", title: "Audio", controls: ["muteOpponentEmotes", "muteSpectatorEmotes"] },
@@ -67,6 +67,11 @@ const CONTROLS: Readonly<Record<SettingKey, { label: string; hint: string }>> = 
   lethalHint: {
     label: "Lethal hint",
     hint: "Against the practice AI, light up the enemy hero and End turn when you can win this turn.",
+  },
+  // R3477000: the engine's forecast on each target of an aimed attack; it reads the face-up board alone.
+  attackOutcomes: {
+    label: "Show attack outcomes",
+    hint: "While you aim an attack, show the damage each target takes, the damage your Unit takes back and whether either is destroyed. A face-down trap can still change it.",
   },
   reduceMotion: {
     label: "Reduce motion",
