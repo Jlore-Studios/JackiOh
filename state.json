@@ -17826,21 +17826,14 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": ""
       },
-      "hold": {
-        "ends": "2026-11-09T07:01:00Z",
-        "lifted": "2026-11-09T05:10:54Z",
-        "owner": "claude-3",
-        "since": "2026-11-09T05:01:00Z",
-        "until": "2026-11-09T05:10:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "issue": 3349,
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-09T04:50:11Z",
+        "claimed": true,
+        "claimed_at": "2026-11-09T05:12:24Z",
         "from_run": "42558456309",
         "gates": [
           {
@@ -17940,7 +17933,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "42563959245",
+      "run_id": "pending:26d120a9-1794201116",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17961,7 +17954,7 @@
         "run": "42558456309"
       },
       "source": "",
-      "started_at": "2026-11-09T04:50:11Z",
+      "started_at": "2026-11-09T05:12:24Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -18499,9 +18492,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T05:11:44Z",
+    "at": "2026-11-09T05:12:24Z",
     "url": "",
-    "what": "review #3426 on claude-4"
+    "what": "review #3460 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-09T04:57:38Z",
