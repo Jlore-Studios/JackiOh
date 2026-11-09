@@ -16416,6 +16416,13 @@
     "3496": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-09T21:02:47Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: no crates/engine or crates/ai change, one binding threaded through existing call sites, KeptRun stays backward-compatible with no migration, ~19 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
