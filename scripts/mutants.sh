@@ -36,13 +36,15 @@ cd "$(dirname "$0")/.."
 ROOT=$(pwd)
 
 # Mutants per shard, sized so one shard fits mutants.yml's five-hour step on a runner's four cores,
-# two mutants at a time. A mutant's time is mostly compiling its package and its tests again: about a
-# minute in run, shared and the cards, three in the engine (the cards are its tests' dev-dependency)
-# and the AI (whose tests play games), four in the server and the tools.
+# two mutants at a time. A mutant's time is mostly compiling its package and its tests again. In the
+# run crate it is 3 s (259 mutants in 13 minutes on #3512's branch), so one shard holds the whole
+# crate; the rest are estimates until a weekly run times them: about a minute in shared and the cards,
+# three in the engine (the cards are its tests' dev-dependency) and the AI (whose tests play games),
+# four in the server and the tools.
 SIZE_ENGINE=150
 SIZE_CARDS=250
 SIZE_AI=120
-SIZE_RUN=400
+SIZE_RUN=1000
 SIZE_SHARED=250
 SIZE_SERVER=80
 SIZE_TOOLS=120
