@@ -34423,6 +34423,12 @@
         "number": 3482,
         "title": "Patch: the cost and stats a card test's comment gives a helper card are held to the catalog",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-09T13:50:00Z",
+        "number": 3480,
+        "title": "Patch: ladder-bot calibration says why each unfinished game stopped, and counts the moves it had to replace",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
