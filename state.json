@@ -17223,10 +17223,12 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "at": "2026-11-09T10:54:19Z",
+        "at": "2026-11-09T11:41:06Z",
         "built_by": "claude-1",
         "by": "`claude` (strong)",
-        "sha": "eaed2ec44c7d9c72129b423f0215e1cd1fa07612"
+        "carried_from": "eaed2ec44c7d9c72129b423f0215e1cd1fa07612",
+        "resolved_by": "`claude` (strong)",
+        "sha": "98d9d2500b4bf027c9137dc94063c373c6fefdc0"
       },
       "died": 0,
       "difficulty": "hard",
