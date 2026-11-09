@@ -36149,7 +36149,9 @@
           "provider": "claude-8"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-09T03:18:00Z",
         "every": 5,
+        "findings": 0,
         "head": "d37fd5eeee5296253a70142dea16d2cba9c0b6ce",
         "issue": 3418,
         "merged_at": "2026-11-09T02:54:33Z",
@@ -36162,12 +36164,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:34c91d42-1794193038",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42553761846",
         "sha": "31af522cf0568cdddd12de8f948b58d0753a8e14",
         "started_at": "2026-11-09T02:57:57Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: promotions stop timing out: the patch source test loads a bounded set of snapshots, and each ci-scope case answers for one file",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 155
