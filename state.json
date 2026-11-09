@@ -18346,9 +18346,11 @@
         "by": "`muse` (medium)",
         "sha": "91d5da3cdfbc19fa3d6b721ac480f49228ea9789"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-09T08:14:49Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-09T08:33:11Z",
         "family": "muse",
@@ -18358,6 +18360,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #3467 from the after-merge spot-check\"} -->\n- All three spot-check findings are fixed as the plan prescribed, with no reverted code and no weakened checks.\n- **What changed**\n- - Shed level lifecycle ([director.ts](/apps/web/src/fx/director.ts)): the director takes a `phone` option (true below `FX_MOBILE_WIDTH`); only a phone director publishes shed stages past full, while desktop keeps its B34 cap halving. `hasWork` now covers `shedStage() > 0`, so an idle board's loop s\u2026\n- - Call sites ([FxLayer.tsx](/apps/web/src/fx/FxLayer.tsx), [PackOpening.tsx](/apps/web/src/packs/PackOpening.tsx), [StatShowcase.tsx](/apps/web/src/stats/StatShowcase.tsx), [routes/dev/fx.tsx](/apps/web/src/routes/dev/fx.tsx)): each passes `phone` from its viewport width at director creation.\n- - Pointer cost ([AuraLayer.tsx](/apps/web/src/fx/aura/AuraLayer.tsx)): the pointer snapshot is stage-gated \u2014 null below stage 2, so pointer-move notifications change nothing and React bails out (no re-render, no `measureAll` forced layout, no drift re-sync). Stage 2+ near/far halving is untouched.\n- - Budget wording ([shed.ts](/apps/web/src/fx/shed.ts), [constants.ts](/apps/web/src/fx/constants.ts), [R3351000.md](/spec/rulings/R3351000.md), [pending/3351.md](/spec/pending/3351.md)): reworded to the actual mechanism \u2014 per-layer phone-scaled budgets (faces via the motion slots, tile/aura motes v\u2026\n- **Tests**\n- - `director.test.ts`: 47 passed \u2014 three existing `R3351000` tests now run with `phone: true`, plus three new ones (dispose resets the level; an idle board with zero effect work drains 3\u21922\u21921\u21920 and the loop sleeps; a desktop director halves its cap but never sheds).\n- - `AuraLayer.test.tsx` (15), `shed.test.ts`, `TileAura.test.tsx`, `motionSlots.test.ts`, `constants.test.ts`: 51 passed, including the new pointer-moves-measure-nothing test; the stage-2 halving test still passes unchanged.\n- - `pnpm typecheck` clean; `cargo jackioh spec check` ok (1864 rulings, 4814 proofs); `cargo fmt --check` and eslint on all touched files clean. Working tree holds exactly the 13 planned files.\n- **Decisions**: the phone-only gate the issue left open is decided as phone-gated shed with desktop cap halving (plan steps 1\u20132, 5\u20136); the budget question is decided as rewording, not a cross-layer counter, since the code has no allocator for one (steps 8\u20139). Recovery reuses the existing healthy-win\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-3468 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-3468/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 3468,
       "kind": "review",
       "live": "reviewing",
