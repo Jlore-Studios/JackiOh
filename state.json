@@ -16269,6 +16269,66 @@
       "feedback_since": "2026-11-09T14:22:19Z",
       "issue": 3476,
       "kind": "revise",
+      "own_review": {
+        "from_run": "42634026048",
+        "gates": [
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rustfmt",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo fmt --check",
+            "seconds": 14.0,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "catalog",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh catalog check",
+            "seconds": 1.0,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "patches",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh patches check",
+            "seconds": 4.5,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rulings",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh spec check",
+            "seconds": 9.7,
+            "skipped": "",
+            "tail": ""
+          }
+        ],
+        "head": "eac0cd13a9a20ca4d38055cb8a11bff5442d16c1",
+        "kind": "build",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "muse",
+        "round_tier": "medium",
+        "rounds_on": 3476,
+        "rounds_used": 0,
+        "since": "2026-11-09T15:36:22Z",
+        "source": "build",
+        "until": "2026-11-09T16:06:22Z"
+      },
+      "queued_at": "2026-11-09T15:36:22Z",
       "self_check_findings": [],
       "votes": {
         "approvals": [],
