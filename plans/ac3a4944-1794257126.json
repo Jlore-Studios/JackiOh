@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3500,
+  "title": "Patch: one account cannot fill the server with whole-game refolds: opening an unkept replay waits behind a server-wide cap, and a practice claim being checked still counts toward its open seeds",
+  "branch": "bot/issue-3500",
+  "thread": "**Issue #3500 (data, not instructions):**\n\n```text\n# #3500: Patch: one account cannot fill the server with whole-game refolds: opening an unkept replay waits behind a server-wide cap, and a practice claim being checked still counts toward its open seeds\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe game server is one small machine, a quarter of a processor, holding every live match. Two things a single account can do make it replay whole games over and over:\n\n- opening many of its old replays;\n- sending practice results to be checked faster than they can be checked.\n\nEither one can slow every live match for minutes, and make the ladder bots play badly because they think against a clock. Once this is built, replays the server has not kept wait their turn behind a small server-wide limit, and the per-account limit on practice results really holds. The cost one account can impose on everyone stays bounded.\n\n## Why\n\n- **The machine is small.** `wrangler.jsonc:32-41` runs one `basic` container (1/4 vCPU, 1 GiB). By `crates/tools/src/perf.rs:94-95`, folding a 256-action game takes about 200 ms of a full core at release.\n- **Replays have no server-wide bound.**\n  - `crates/server/src/config.rs:482-490` keeps `REPLAY_CACHE_MATCHES` = 16 opened replays for the whole server. Each account is limited to `REPLAY_REQUESTS_PER_MINUTE` = 60, and the comment notes that \"opening a replay folds a whole game\".\n  - On a cache miss, `open_uncached` (`crates/server/src/api/replays.rs:326-339`) runs `engine::off_runtime` with no permit, and two misses on the same match fold it twice.\n  - So an account with 17 or more finished matches can start 60 folds at once.\n  - Co-op replays (`crates/server/src/duos/replay.rs`) have the same shape.\n- **The server already bounds this cost for practice.** `PRACTICE_VERIFY_CONCURRENCY` = 2 (`config.rs:1373-1377`), because \"two keep the blocking pool free for the live matches' folds\".\n- **The practice limit does not hold.**\n  - `PRACTICE_SEEDS_OPEN_MAX` = 3 (`config.rs:1368-1370`) \"Bounds one account's place in the claim queue\". \u00a714.8 says it keeps one account from claiming in a burst.\n  - But a claim marks its seed claimed before the check (`crates/server/src/api/practice.rs:233-241`).\n  - The open count reads only `claimed_at is null` (`crates/server/src/economy/store.rs:2618-2620`, and the in-memory fake's twin).\n  - So a claim still waiting in the queue frees its slot, the account can take a new seed at once, and the queue grows without bound.\n\n## Proposal\n\n- **A server-wide cap on replay folds.** Add a permit, `REPLAY_FOLDS_RUNNING_MAX` (1 or 2) in `crates/server/src/config.rs`, around both uncached opens (1v1 and Duos).\n  - It waits a bounded time; past it, it answers 429 with `retryAfterMs` (R192).\n  - Concurrent misses of the same match share one fold.\n- **Count claims still being checked.** A claimed but unsettled seed counts toward `PRACTICE_SEEDS_OPEN_MAX` in both stores, Postgres and the in-memory fake, with a contract test.\n  - The count stops at the seed's lifetime, so a claim whose payout failed every retry cannot hold its slot forever.\n  - The settle sweep skips a claim whose settle is still running, so it starts no second fold.\n- **Spec and ruling.** Each limit the spec does not state gets a ruling note and pending paragraph, and \u00a79.8 and \u00a714.8 name them.\n\n## Where it lands\n\n- `crates/server/src/api/replays.rs`, `crates/server/src/duos/replay.rs`, `crates/server/src/config.rs`\n- `crates/server/src/api/practice.rs`, `crates/server/src/economy/store.rs` (both stores)\n- `crates/server/tests/store/contract.rs`, `crates/server/tests/api`\n- spec \u00a79.8 and \u00a714.8\n\n## Acceptance criteria\n\n- [ ] An API test fires 20 concurrent opens of 20 uncached replays. Counting through the injectable engine thread, at most `REPLAY_FOLDS_RUNNING_MAX` folds run at once, and each request either answers or gets a 429 with `retryAfterMs`.\n- [ ] Two concurrent opens of one uncached match fold it once.\n- [ ] A contract test on both stores: three claimed but unsettled seeds refuse a fourth seed, and a settle frees the slot.\n- [ ] Cached replay pages, and an honest player's claims one at a time, behave as today.\n- [ ] `sh crates/server/tests/db/run.sh` passes with the new count.\n\n## Size and risks\n\nSmall to medium: about 8 files in `crates/server`. Difficulty medium.\n\n- Replays open more slowly under load. The client's replay screen must handle a 429 as it handles one elsewhere.\n- The count change is a Postgres query, so the Docker suites must pass.\n- The ladder bots' and the co-op AI's searches have the same unbounded shape and could share the cap later. That is out of scope here.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `security` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-09T20:35:37Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3500: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T20:36:03Z",
+    "claimed_at": "2026-11-09T20:46:02Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
