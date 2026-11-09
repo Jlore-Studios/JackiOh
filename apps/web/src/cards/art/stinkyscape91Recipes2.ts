@@ -1163,7 +1163,7 @@ const COMET_CRASH: SceneRecipe = {
     ],
     far: [{ part: "regolith", x: 50, y: 60, paint: "grey-500" }],
     subject: [
-      { part: "crater", x: 46, y: 74, scale: 1.9 },
+      { part: "bowl-crater", x: 46, y: 74, scale: 1.9 },
       { part: "ore-chunk", x: 40, y: 76, scale: 0.7, paint: "sky-400" },
       { part: "crystal", x: 52, y: 76, scale: 0.9, paint: "blue-200" },
       { part: "ice-shard", x: 34, y: 74, scale: 0.6 },

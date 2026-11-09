@@ -400,7 +400,7 @@ const LARGE_ASTEROID: SceneRecipe = {
     ],
     subject: [
       { part: "asteroid", x: 40, y: 54, scale: 9.5 },
-      { part: "crater", x: 30, y: 66, scale: 0.5 },
+      { part: "bowl-crater", x: 30, y: 66, scale: 0.5 },
       { part: "crystal", x: 26, y: 34, scale: 1.2, paint: "violet-500" },
       { part: "crystal", x: 52, y: 76, scale: 1, paint: "violet-500" },
       { part: "freighter", x: 90, y: 66, scale: 0.42, flip: -1 },

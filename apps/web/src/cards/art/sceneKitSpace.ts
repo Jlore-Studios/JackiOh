@@ -1699,7 +1699,7 @@ export const SPACE_KIT = {
   "deck-floor": { category: "terrain", draw: deckFloor },
   bulkhead: { category: "terrain", draw: bulkhead },
   regolith: { category: "terrain", draw: regolith },
-  crater: { category: "terrain", draw: crater },
+  "bowl-crater": { category: "terrain", draw: crater },
   honeycomb: { category: "terrain", draw: honeycomb },
   "vent-duct": { category: "terrain", draw: ventDuct },
   "planet-limb": { category: "terrain", draw: planetLimb },
