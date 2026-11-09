@@ -16601,13 +16601,8 @@
     "what": "plan #3501 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-09T19:01:23Z",
-    "notes": [
-      "#3501 needs a plan",
-      "started plan #3501 on claude-6 (run 42679612003)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-09T19:10:19Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17312,7 +17307,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T19:01:23Z",
+  "loop_tick": "2026-11-09T19:10:19Z",
   "machine_disk": {
     "issue": null,
     "reading": {
