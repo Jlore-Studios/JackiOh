@@ -16372,15 +16372,15 @@
       "action": "revise",
       "asks": [],
       "audit_tier": "",
-      "ci_early": false,
+      "ci_early": true,
       "ci_fixed_head": "078753e17b6f11f56e3de0a2c28fa7478196e817",
-      "ci_fixes": 1,
+      "ci_fixes": 2,
       "ci_on_head": true,
       "ci_reruns": {
         "078753e17b6f11f56e3de0a2c28fa7478196e817": 1
       },
-      "ci_run_id": 42483843078,
-      "ci_sha": "078753e17b6f11f56e3de0a2c28fa7478196e817",
+      "ci_run_id": 42551931291,
+      "ci_sha": "2b8fee09a7c2391f2d286f596a169b3dd8e1a0ad",
       "cleared": {
         "approver": {
           "family": "claude",
@@ -16408,7 +16408,7 @@
       "pending_request": false,
       "provider": "claude-4",
       "question": "",
-      "queued_at": "2026-11-09T01:14:59Z",
+      "queued_at": "2026-11-09T03:23:52Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
@@ -16433,7 +16433,7 @@
         "provider": "claude-4",
         "run": "42546008738"
       },
-      "source": "",
+      "source": "ci",
       "started_at": "2026-11-09T01:31:23Z",
       "stop_requested": false,
       "taken_asks": [],
