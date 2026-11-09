@@ -5,7 +5,8 @@
 // beam at the anchor; the things of a scholar's table and a teahouse standing on their anchor (a calligraphy brush
 // on its tip, a teapot, an abacus, a tripod censer and its smoke, a go board, a clepsydra) or lying on it (a drift
 // of sealed envelopes); a hand of cards and a folding fan opened from a pivot at their anchor; and a lacquered cane
-// centred on its anchor. sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a palette.css name, none in
+// centred on its anchor. R3404000: Meditative's Alt art (#3404) added a fisherman's oar lying level, centred on its
+// anchor, and a sofa standing on it. sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a palette.css name, none in
 // Radiant's gold window; a glow is a stack of translucent shapes, never a gradient; shapes are filled even-odd, so
 // a hole is a second sub-path and no two sub-paths of one shape overlap otherwise.
 
@@ -550,7 +551,55 @@ function cane(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
-/** R3401000: the objects the Meditative scenes added, by id, each with its kind. */
+/** R3404000: a fisherman's oar lying level, centred on the anchor, its blade the way it faces: a long shaft and a broad round-tipped blade in one piece (main, wood-700), its wet tip darker, a worn grip, a red cord lashed where the blade meets the shaft and a drop or two falling from it; about 30 long and 4.2 tall at scale 1. */
+function oar(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tip = between(rng, 14.6, 15.4);
+  const neck = between(rng, 5.6, 6.4);
+  const body =
+    `M${f.p(-15, -0.45)}L${f.p(neck, -0.45)}L${f.p(neck + 1.6, -1.9)}L${f.p(tip - 1.2, -2.1)}Q${f.p(tip, -2.1)} ${f.p(tip, 0)}` +
+    `Q${f.p(tip, 2.1)} ${f.p(tip - 1.2, 2.1)}L${f.p(neck + 1.6, 1.9)}L${f.p(neck, 0.45)}L${f.p(-15, 0.45)}Z`;
+  const wet = `M${f.p(tip - 4, -2.05)}L${f.p(tip - 1.2, -2.1)}Q${f.p(tip, -2.1)} ${f.p(tip, 0)}Q${f.p(tip, 2.1)} ${f.p(tip - 1.2, 2.1)}L${f.p(tip - 4, 2.05)}Z`;
+  const lashing = [0, 0.55, 1.1].map((dx) => f.band([[neck - 1.6 + dx, -0.75], [neck - 1.2 + dx, 0.75]], 0.32)).join("");
+  const drops = whole(rng, 1, 2);
+  let falling = "";
+  for (let k = 0; k < drops; k += 1) falling += drop(f, tip - 1.5 - k * 2.2 + between(rng, -0.3, 0.3), 2.8 + k * 1.4, 0.32);
+  return [
+    shape(body, "wood-700", 1, MAIN_INKED),
+    shape(wet, "slate-900", 0.3),
+    shape(f.band([[-14.4, -0.12], [neck - 0.4, -0.12]], 0.22) + f.band([[neck + 2, -1.05], [tip - 1.6, -1.15]], 0.3), "slate-100", 0.4),
+    shape(rect(f, -15, -0.6, -12.4, 0.6), "slate-800", 1),
+    shape(lashing, "red-600", 1),
+    shape(falling, "slate-100", 0.6),
+  ];
+}
+
+/** R3404000: a low sofa standing on the anchor: its back, seat and two rolled arms in one inked piece (main, blue-800), two or three seat cushions marked by their seams, a plump throw cushion at one end, short dark feet and its shadow; about 20.4 wide and 9.2 tall at scale 1. */
+function sofa(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const n = whole(rng, 2, 3);
+  const back = between(rng, -9.4, -8.8);
+  const body = rect(f, -8.4, back, 8.4, -5) + rect(f, -8.4, -5, 8.4, -1.2) + rect(f, -10.2, -6.4, -8.4, -1.2) + rect(f, 8.4, -6.4, 10.2, -1.2);
+  let seams = "";
+  for (let k = 1; k < n; k += 1) {
+    const x = -8.4 + (16.8 * k) / n;
+    seams += f.band([[x, back + 0.5], [x, -5.3]], 0.22) + f.band([[x, -4.8], [x, -1.5]], 0.22);
+  }
+  const side = rng() < 0.5 ? -1 : 1;
+  const cx = side * between(rng, 5.4, 6.4);
+  const cushion = `M${f.p(cx - 2, -7.6)}Q${f.p(cx, -8.4)} ${f.p(cx + 2, -7.6)}Q${f.p(cx + 2.6, -6.1)} ${f.p(cx + 2, -4.6)}Q${f.p(cx, -4)} ${f.p(cx - 2, -4.6)}Q${f.p(cx - 2.6, -6.1)} ${f.p(cx - 2, -7.6)}Z`;
+  return [
+    shape(f.ellipse(0, 0, 10.8, 0.7), "slate-900", 0.25),
+    shape(rect(f, -9.8, -1.2, -8.9, 0) + rect(f, 8.9, -1.2, 9.8, 0), "wood-900", 1),
+    shape(body, "blue-800", 1, MAIN_INKED),
+    shape(f.ellipse(-9.3, -6.4, 0.95, 0.5) + f.ellipse(9.3, -6.4, 0.95, 0.5), "slate-900", 0.3),
+    shape(seams + f.band([[-8.2, -5], [8.2, -5]], 0.3), "slate-900", 0.35),
+    shape(f.band([[-8, back + 0.4], [8, back + 0.4]], 0.3) + f.band([[-8, -4.6], [8, -4.6]], 0.25), "slate-100", 0.3),
+    shape(cushion, "red-600", 1, INKED),
+  ];
+}
+
+/** R3401000: the objects the Meditative scenes added, by id, each with its kind. R3404000: the oar and the sofa the Alt art briefs added after them. */
 export const INK_OBJECTS_KIT = {
   "ink-seal": { category: "objects", draw: seal },
   "paper-lantern": { category: "objects", draw: paperLantern },
@@ -567,4 +616,6 @@ export const INK_OBJECTS_KIT = {
   "red-thread": { category: "objects", draw: redThread },
   "envelope-drift": { category: "objects", draw: envelope },
   cane: { category: "objects", draw: cane },
+  oar: { category: "objects", draw: oar },
+  sofa: { category: "objects", draw: sofa },
 } as const satisfies Readonly<Record<string, KitPart>>;

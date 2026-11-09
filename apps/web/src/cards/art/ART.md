@@ -173,8 +173,8 @@ still a pure function of the card's id, name, tags and type. The cache keys the 
 served for another's. The normal picture's seed is the card's id alone, so every still picture and
 golden hash stands. A later version with a picture of its own adds its own name to `ArtPicture`, so it
 draws apart from every other. A Starship's art, a Legacy card's and a delivered file keep their one picture.
-A Classic+, Meditative+ or Training Grounds card offered Alt art draws an alt recipe of its own instead (R3396000,
-R3397000, below).
+A Classic+, Meditative+, Training Grounds or Meditative card offered Alt art draws an alt recipe of its own instead
+(R3396000, R3397000, R3404000, below).
 
 ## One picture per variant (R3015002)
 
@@ -644,6 +644,35 @@ washing line, a picnic blanket and a hanging rope (`sceneKitObjects.ts`). KY's C
 `melon`. `setAltScenes.test.tsx` holds every recipe to the rules and every Alt art level's face to its picture and
 its Radiant marks, and `set-alt-scenes.cy.tsx` measures each window against `ALT_PICTURE_CHANGE_MIN` and screenshots
 each normal face beside its Alt art face.
+
+## Meditative's Alt art restaged (R3404000)
+
+Each of the 54 Meditative cards offered Alt art draws an alt recipe of its own, written from #3404's brief for it:
+the same subject and idea in another place, time or story moment, as Classic+'s pass did (R3396000). The recipes are
+three files in id order, `meditativeAltRecipes1.ts` (#1 to #38), `meditativeAltRecipes2.ts` (#40 to #71) and
+`meditativeAltRecipes3.ts` (#72 to #100), spread into `ALT_SCENE_RECIPES` after Classic+'s and read under the card's
+Alt art seed alone (`sceneRecipeOf`), at every level of Alt art. Each recipe keeps Classic+'s rules and the family's:
+
+- **Place and palette.** Meditative's family and brush line, the brief's place, time and palette, a sky sharing no
+  colour with the normal recipe's and none of Radiant's gold window (no `gold-*`, `yellow-400` or `parchment`).
+- **One red seal.** Exactly one `ink-seal` in the near layer, unrepainted, inside the band every face shows, as
+  every Meditative picture stamps (R3401000).
+- **The same subject.** A Unit drawn as a figure keeps one; a figure both pictures draw is the normal one's person
+  (`meditativeLookOf`: its head, outfit and skin kept, only its cloth, headgear or held item changed), and a
+  companion it keeps is the normal picture's (`meditativeExtraLookOf`); a subject that is a part (the melon, the
+  abacus, the pea vine, the taotie, the totem and the rest the test names) stays in the subject layer, placed first.
+- **A new camera.** A close-up scales the subject up, a figure to 1.6 to 1.9 standing below the window (y 112 to 118)
+  so its head and shoulders fill it; a wide or distant view shrinks it, a figure to about 0.6 or less; a view from
+  above lays the floor, the sand or the felt across the box. The subject moves at least 8 units, changes scale by at
+  least a quarter, or a figure comes or goes.
+- **Detail, emblem and props.** The rarity's floor and the byte ceiling (R3331001) on both faces (Epic and rarer
+  drawing far, mid, subject and near), the emblem small inside the band, no props in the subject layer, and the props
+  API Key Fishing's and Tatches the Totem's full-art motions move marked outside it.
+
+The briefs added three parts: a fisherman's oar lying level and a sofa (`sceneKitInkObjects.ts`), and a tower crane
+(`sceneKitInkMachines.ts`). `meditativeAltScenes.test.tsx` holds every recipe to the rules and every Alt art level's
+face to its picture and its Radiant marks, and `meditative-alt-scenes.cy.tsx` measures each window's share against
+`ALT_PICTURE_CHANGE_MIN` (0.6) and screenshots each normal face beside its Alt art face.
 
 ## Classic's scenes (R3352000)
 
