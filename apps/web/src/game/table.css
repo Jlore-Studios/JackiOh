@@ -52,13 +52,13 @@
   inset: 50% 0 0;
   z-index: -1;
   overflow: hidden;
-  border-radius: 0 0 16px 16px;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   pointer-events: none;
 }
 
 .board-backdrop[data-half="theirs"] {
   inset: 0 0 50%;
-  border-radius: 16px 16px 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .board-backdrop-particle {
@@ -89,6 +89,29 @@
   height: 16px;
   background: linear-gradient(180deg, transparent, #a9bfdf);
   opacity: 0.7;
+}
+
+/* R3335001: Stinkyscape, a Fleet track reward: rain recolored in the set's deep space, a nebula over a
+   navy that falls to the void, and the streaks of the stars a ship at warp passes, some in its engines'
+   glow. They slant down at rain's pace, on a line of their own (the gate below). */
+.board-backdrop[data-backdrop="field-stinkyscape"] {
+  background:
+    radial-gradient(80% 70% at 72% 18%, color-mix(in srgb, var(--pal-violet-500) 26%, transparent), transparent 72%),
+    linear-gradient(180deg, color-mix(in srgb, var(--pal-slate-900) 42%, transparent), color-mix(in srgb, var(--pal-blue-900) 48%, transparent));
+}
+
+.board-backdrop[data-backdrop="field-stinkyscape"] .board-backdrop-particle {
+  width: 1px;
+  height: 20px;
+  background: var(--pal-slate-100);
+  box-shadow: 0 0 4px 1px color-mix(in srgb, var(--pal-sky-300) 60%, transparent);
+  opacity: 0.75;
+  rotate: -24deg;
+}
+
+.board-backdrop[data-backdrop="field-stinkyscape"] .board-backdrop-particle:nth-child(4n) {
+  background: var(--pal-orange-400);
+  box-shadow: 0 0 5px 1px color-mix(in srgb, var(--pal-orange-400) 55%, transparent);
 }
 
 .board-backdrop[data-backdrop="field-fireflies"] {
@@ -361,12 +384,33 @@
   --table-mark: rgb(0 229 255 / 45%);
 }
 
+/* R3335001: Stinkyscape, a Fleet track reward: the neon grid recolored in the set's deep space, its nebula's
+   blue lines over a navy that falls to black and its lane in the fleet's engine glow. The two share one
+   grid; each mat's own colors sit on its own layer, so neither half's mat reads the other's. */
+.field[data-table="table-stinkyscape"],
+.field[data-their-table="table-stinkyscape"] .zone[data-side="opponent"] {
+  --table-line: color-mix(in srgb, var(--pal-violet-300) 35%, transparent);
+  --table-lane: color-mix(in srgb, var(--pal-orange-400) 75%, transparent);
+  --table-zone: color-mix(in srgb, var(--pal-blue-600) 8%, transparent);
+  --table-slot: color-mix(in srgb, var(--pal-black) 60%, transparent);
+  --table-mark: color-mix(in srgb, var(--pal-violet-300) 45%, transparent);
+}
+
+.field[data-table="table-stinkyscape"]::before,
+.field[data-their-table="table-stinkyscape"] > .field-their-mat {
+  --grid-ink: color-mix(in srgb, var(--pal-blue-600) 34%, transparent);
+  --grid-top: var(--pal-slate-900);
+  --grid-foot: var(--pal-black);
+}
+
 .field[data-table="table-neon-grid"]::before,
-.field[data-their-table="table-neon-grid"] > .field-their-mat {
+.field[data-their-table="table-neon-grid"] > .field-their-mat,
+.field[data-table="table-stinkyscape"]::before,
+.field[data-their-table="table-stinkyscape"] > .field-their-mat {
   background:
-    linear-gradient(rgb(0 229 255 / 30%) 1px, transparent 1px) 0 0 / 28px 28px,
-    linear-gradient(90deg, rgb(0 229 255 / 30%) 1px, transparent 1px) 0 0 / 28px 28px,
-    linear-gradient(180deg, #0b1230, #050920);
+    linear-gradient(var(--grid-ink, rgb(0 229 255 / 30%)) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, var(--grid-ink, rgb(0 229 255 / 30%)) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(180deg, var(--grid-top, #0b1230), var(--grid-foot, #050920));
 }
 
 /* Marble: a pale stone veined in grey, its pads and lines in dark ink to read on it. */
@@ -545,10 +589,16 @@
     animation-delay: var(--delay);
   }
 
-  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-rain"] .board-backdrop-particle {
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-rain"] .board-backdrop-particle,
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-stinkyscape"] .board-backdrop-particle {
     will-change: transform, opacity;
     animation: backdrop-fall 1.8s linear infinite;
     animation-delay: var(--delay);
+  }
+
+  /* R3335001: the warp's streaks keep rain's pace and slant down a line of their own. */
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-stinkyscape"] .board-backdrop-particle {
+    animation-name: backdrop-warp;
   }
 
   :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-fireflies"] .board-backdrop-particle {
@@ -681,6 +731,21 @@
   to {
     transform: translateY(72px);
     opacity: 0.7;
+  }
+}
+
+/* R3335001: a warp streak slants down the line it is tilted to (`rotate: -24deg`), brightest midway. */
+@keyframes backdrop-warp {
+  0% {
+    transform: translate(-12px, -28px);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(32px, 72px);
+    opacity: 0;
   }
 }
 
