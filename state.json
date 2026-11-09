@@ -17217,18 +17217,24 @@
         "approvals": [
           "claude"
         ],
-        "builder": "",
-        "built_by": "",
+        "builder": "claude",
+        "built_by": "claude-1",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [],
+          "from": "269ae59183bc37eb25c960ed1801b7fc4e545c91",
+          "main": "1b69bb256877b86e3332e37959c33b95e2390c1e"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-1",
-            "run": "42554577561",
+            "run": "42571187504",
             "tier": "strong"
           }
         ],
-        "sha": "269ae59183bc37eb25c960ed1801b7fc4e545c91",
+        "sha": "abcf0d8274cc36927e6dbff97185b198e6421cce",
         "tiers": {
           "claude": "strong"
         }
