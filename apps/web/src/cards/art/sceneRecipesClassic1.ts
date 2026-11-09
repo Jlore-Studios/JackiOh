@@ -336,7 +336,7 @@ const PICKLE: SceneRecipe = {
       { part: "barrel", x: 84, y: 80, scale: 0.8 },
     ],
     subject: [
-      { part: "pickle", x: 52, y: 76, scale: 1.3 },
+      { part: "pickle", x: 52, y: 76, scale: 1.3, flip: -1 },
       { part: "drops", x: 58, y: 80, scale: 0.6, paint: "green-400" },
     ],
     near: [

@@ -15,11 +15,14 @@
 // the sluice gate, the Golem's posts, the Shredder's machine among them) and ten held items; its lab coat
 // and club are #3392's (`outfit-labcoat`, `item-club`), its tree-trunk club `item-trunk-club`.
 // R3401000: the Meditative scenes (#3401) added six hairs and headgears, four outfits and ten held items.
+// R3352000: Classic's scenes (#3352) added a pose (crouch), three heads, five headgears (a jester's cap, a cat-eared
+// hood, a plague doctor's beak mask, a king's lopsided crown, a tyrant's jagged one), three outfits (a harlequin's
+// coat, a traveller's cloak, a four-armed spider-folk's vest) and six held items.
 
 import type { Tag } from "@jackioh/shared";
 
 import { fmt } from "./hash.ts";
-import { leant, sparkle, turned } from "./kitDraw.ts";
+import { leant, sparkle, turned, whole } from "./kitDraw.ts";
 import type { FigureRecipe, KitPart, KitShape, PaletteName, PartPlace, Rng } from "./scene.ts";
 import { local, type Local } from "./sceneKit.ts";
 
@@ -109,7 +112,12 @@ export type HairId =
   | "pompadour"
   | "conductor-cap"
   | "tall-hat"
-  | "hair-bun";
+  | "hair-bun"
+  | "jester-cap"
+  | "cat-hood"
+  | "beak-mask"
+  | "king-crown"
+  | "jagged-crown";
 export type OutfitId =
   | "outfit-tunic"
   | "outfit-armor"
@@ -157,7 +165,10 @@ export type OutfitId =
   | "outfit-overalls"
   | "outfit-kaftan"
   | "outfit-tailcoat"
-  | "outfit-silks";
+  | "outfit-silks"
+  | "outfit-harlequin"
+  | "outfit-cloak"
+  | "outfit-spider";
 export type ItemId =
   | "item-sword"
   | "item-shield"
@@ -214,7 +225,13 @@ export type ItemId =
   | "item-fan"
   | "item-twin-blades"
   | "item-rod"
-  | "item-comb";
+  | "item-comb"
+  | "item-card-fan"
+  | "item-rake"
+  | "item-cleaver"
+  | "item-cookie"
+  | "item-grapple"
+  | "item-abacus";
 export type FigurePartId = PoseId | HeadId | HairId | OutfitId | ItemId;
 
 /** The parts a figure wears, and the two paints its look lays on them. */
@@ -3271,6 +3288,330 @@ function twinBlades(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+// R3352000: Classic's scenes' headgear, outfits and held items (#3352), each drawn as the others of its kind.
+
+/** R3352000: a harlequin's three-pointed floppy cap on the crown, at the neck: its side points (main) curling out and down past the ears, its middle one (red) flopping forward, a bell on each tip and a white cuff on the brow; about 22 wide and 12 tall at scale 1. */
+function jesterCap(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const back = between(rng, -1, 1);
+  const front = between(rng, -1, 1);
+  const left: Point = [-10.4, c - 1.4 + back];
+  const right: Point = [10.2, c - 1.8 + front];
+  const mid: Point = [7, c - 8.4 - front];
+  const side = (s: number, [tx, ty]: Point): string => `M${f.p(s * 0.8, c - 7.2)}Q${f.p(s * 8.6, c - 12.6)} ${f.p(tx, ty)}Q${f.p(s * 8, c - 7.2)} ${f.p(s * 4.8, c - 3)}Z`;
+  return [
+    shape(side(-1, left) + side(1, right), "violet-700", 1, MAIN_INKED),
+    shape(`M${f.p(-5.2, c - 0.4)}C${f.p(-5.6, c - 7.6)} ${f.p(5.6, c - 7.6)} ${f.p(5.2, c - 0.4)}Q${f.p(0, c - 2.8)} ${f.p(-5.2, c - 0.4)}Z`, "violet-700", 1, MAIN_INKED),
+    shape(f.poly([[-2.2, c - 1.9], [2.2, c - 1.9], [2.5, c - 5.6], [-2.5, c - 5.6]]), "red-600", 1),
+    shape(`M${f.p(-2.6, c - 5.4)}Q${f.p(-0.4, c - 14.6)} ${f.p(...mid)}Q${f.p(2.8, c - 9.6)} ${f.p(2.8, c - 5.4)}Z`, "red-600", 1, INKED),
+    shape(f.band([[-5.3, c - 0.7], [-2.6, c - 1.8], [0, c - 2.1], [2.6, c - 1.8], [5.3, c - 0.7]], 1.4), "white", 1, INKED),
+    shape(f.circle(...left, 1) + f.circle(...right, 1) + f.circle(...mid, 1), "brass-500", 1, INKED),
+    shape(`M${f.p(...mid)}Q${f.p(2.8, c - 9.6)} ${f.p(2.8, c - 5.4)}L${f.p(1.4, c - 5.4)}Q${f.p(2.2, c - 9.8)} ${f.p(...mid)}Z`, "slate-900", 0.25),
+  ];
+}
+
+/** R3352000: a hood (main) like `hood` with two upright cat ears on top, their insides pink, over the head at the neck; about 13 wide and 18 tall at scale 1. */
+function catHood(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const peak = between(rng, -0.6, 0.6);
+  const prick = between(rng, -0.8, 0.8);
+  const ear = (s: number, k: number): string =>
+    f.poly([[s * (6.6 - k), c - 3.6 - k * 2.8], [s * (5.6 - k * 0.4) + prick * (1 - k * 0.2), c - 12.4 + k * 1.8], [s * (1.6 + k * 1.4), c - 8.2]]);
+  const outer = `M${f.p(-6.4, c + 5.6)}L${f.p(-6.4, c - 1)}C${f.p(-6.4, c - 7.6)} ${f.p(peak, c - 8.6)} ${f.p(peak, c - 8.6)}C${f.p(peak, c - 8.6)} ${f.p(6.4, c - 7.6)} ${f.p(6.4, c - 1)}L${f.p(6.4, c + 5.6)}Z`;
+  return [
+    shape(ear(-1, 0) + ear(1, 0), "stone-500", 1, MAIN_INKED),
+    shape(outer + f.ellipse(0, c + 0.6, 3.9, 4.6), "stone-500", 1, MAIN_INKED),
+    shape(ear(-1, 1) + ear(1, 1), "red-300", 0.85),
+    shape(`M${f.p(-3.8, c)}Q${f.p(0, c - 5.6)} ${f.p(3.8, c)}Q${f.p(0, c - 3.4)} ${f.p(-3.8, c)}Z`, "slate-900", 0.4),
+    shape(`M${f.p(-5.6, c + 5)}L${f.p(-5.6, c - 1)}Q${f.p(-5.4, c - 5.6)} ${f.p(-2.4, c - 7.4)}Q${f.p(-4.4, c - 4.4)} ${f.p(-4.6, c + 5)}Z`, "white", 0.16),
+  ];
+}
+
+/** R3352000: a plague doctor's mask over the whole face, at the neck: a long curved beak jutting forward, two round glass lenses in brass rims and a wide-brimmed hat (main) over it; about 23 wide and 15 tall at scale 1. */
+function beakMask(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const droop = between(rng, -0.8, 0.8);
+  const tilt = between(rng, -4, 4);
+  const tip: Point = [13.6, c + 4.6 + droop];
+  return [
+    shape(f.circle(0, c, HEAD_R + 0.3), "slate-100", 1, INKED),
+    shape(`M${f.p(1.4, c - 0.8)}Q${f.p(9.4, c - 0.6)} ${f.p(...tip)}Q${f.p(8.4, c + 3.4)} ${f.p(1.2, c + 3.4)}Z`, "slate-100", 1, INKED),
+    shape(`M${f.p(1.4, c + 1.8)}Q${f.p(8.8, c + 2.2)} ${f.p(...tip)}Q${f.p(8.4, c + 3.4)} ${f.p(1.2, c + 3.4)}Z`, "slate-900", 0.3),
+    shape(f.circle(-2.4, c - 0.8, 1.5) + f.circle(0.9, c - 1.2, 1.4), "brass-600", 1, INKED),
+    shape(f.circle(-2.4, c - 0.8, 1) + f.circle(0.9, c - 1.2, 0.9), "green-400", 0.9),
+    shape(f.circle(-2.8, c - 1.2, 0.35) + f.circle(0.5, c - 1.6, 0.3), "white", 0.9),
+    shape(f.poly([[-4.6, c - 3.6], [-4, c - 10], [4, c - 10.2], [4.6, c - 3.6]]), "black", 1, MAIN_INKED),
+    shape(f.poly([[-4.5, c - 4], [4.5, c - 4], [4.4, c - 5.4], [-4.4, c - 5.4]]), "slate-700", 1),
+    shape(oval(f, 0, c - 3.6, 9.8, 1.5, tilt), "black", 1, MAIN_INKED),
+    shape(f.poly([[-3.4, c - 5.8], [-2.6, c - 5.8], [-2.4, c - 9.4], [-3.1, c - 9.4]]), "white", 0.18),
+  ];
+}
+
+/** R3352000: a lopsided silver crown on the crown, at the neck, tilted 6 to 14 degrees either way: five points, red and blue gems on its tips and band, over short white tufts of hair at the temples; about 15 wide and 11 tall at scale 1. */
+function kingCrown(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const tilt = between(rng, 6, 14) * (rng() < 0.5 ? -1 : 1);
+  const pivot = c - 3.6;
+  const T = ([x, y]: Point): Point => {
+    const [dx, dy] = turned([x, y - pivot], tilt);
+    return [dx + tilt * 0.05, dy + pivot];
+  };
+  const poly = (points: readonly Point[]): string => f.poly(points.map(T));
+  const dot = (x: number, y: number, r: number): string => f.circle(...T([x, y]), r);
+  const tuft = (s: number): string =>
+    `M${f.p(s * 4, c - 2.6)}Q${f.p(s * 6.2, c - 3.2)} ${f.p(s * 5.9, c - 1.2)}Q${f.p(s * 6.8, c + 0.2)} ${f.p(s * 5.1, c + 1)}Q${f.p(s * 4.6, c - 0.2)} ${f.p(s * 4.3, c - 0.9)}Z`;
+  return [
+    shape(tuft(-1) + tuft(1), "white", 1, INKED),
+    shape(poly([[-4.8, c - 2.4], [-5.6, c - 9.6], [-3.9, c - 6], [-2.6, c - 8], [-1.3, c - 6], [0, c - 10.8], [1.3, c - 6], [2.6, c - 8], [3.9, c - 6], [5.6, c - 9.6], [4.8, c - 2.4]]), "slate-100", 1, INKED),
+    shape(poly([[2.4, c - 2.6], [2.6, c - 8], [3.9, c - 6], [5.6, c - 9.6], [4.8, c - 2.4]]), "slate-400", 0.6),
+    shape(poly([[-5.1, c - 2.2], [5.1, c - 2.2], [5, c - 4.4], [-5, c - 4.4]]), "slate-100", 1, INKED),
+    shape(dot(-5.6, c - 9.6, 0.85) + dot(5.6, c - 9.6, 0.85) + dot(0, c - 3.3, 0.8), "red-600", 1, INKED),
+    shape(dot(0, c - 10.8, 0.9) + dot(-3, c - 3.3, 0.6) + dot(3, c - 3.3, 0.6), "blue-700", 1, INKED),
+    shape(f.band([T([-4, c - 3.6]), T([-4.4, c - 8])], 0.5) + dot(-0.3, c - 11.1, 0.28), "white", 0.7),
+  ];
+}
+
+/** R3352000: a tyrant's tall jagged crown of black iron spikes, at the neck: five spikes of uneven height from a band on the brow, their lit faces (main) violet, and three violet gems glowing on the band; about 12 wide and 10 to 13 tall at scale 1. */
+function jaggedCrown(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const c = -HEAD_RISE;
+  const top = c - 4.6;
+  const rise = [4.6, 6.6, 9, 6.4, 4.4].map((base) => base + between(rng, -1.4, 1.4));
+  const tips: readonly Point[] = [-5.8, -2.6, 0, 2.6, 5.8].map((x, k) => [x, top - (rise[k] ?? 5)]);
+  const valleys = [-3.8, -1.3, 1.3, 3.8];
+  const body: Point[] = [[-5, c - 2.4]];
+  tips.forEach((tip, k) => {
+    body.push(tip);
+    const v = valleys[k];
+    if (v !== undefined) body.push([v, top]);
+  });
+  body.push([5, c - 2.4]);
+  const lit = tips.map(([x, y], k) => f.poly([[valleys[k - 1] ?? -5.2, top + (k === 0 ? 0.4 : 0)], [x, y], [x + 0.3, top + 0.6]])).join("");
+  const gems: readonly Point[] = [[-2.8, c - 3.5], [0, c - 3.5], [2.8, c - 3.5]];
+  return [
+    shape(f.poly(body), "slate-900", 1, INKED),
+    shape(lit, "violet-700", 1, MAIN),
+    shape(f.poly([[-5.2, c - 2.2], [5.2, c - 2.2], [5.3, c - 4.8], [-5.3, c - 4.8]]), "slate-800", 1, INKED),
+    shape(gems.map(([x, y]) => f.circle(x, y, 1.9)).join(""), "violet-500", 0.3),
+    shape(gems.map(([x, y], k) => f.poly([[x, y - (k === 1 ? 1.3 : 0.9)], [x + 0.8, y], [x, y + (k === 1 ? 1.3 : 0.9)], [x - 0.8, y]])).join(""), "purple-400", 1, INKED),
+    shape(gems.map(([x, y]) => f.circle(x - 0.2, y - 0.3, 0.3)).join(""), "white", 0.9),
+  ];
+}
+
+/** R3352000: a harlequin's coat (main) from the shoulders, at the hip, to a hem of points 10 below it: a diamond check in red, three white pompoms down its front and a red and white ruff at the neck; about 15 wide at the shoulders, 19 at its flared points. */
+function outfitHarlequin(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const S = SHOULDER;
+  const flare = between(rng, 8.4, 9.6);
+  const drop = between(rng, 7.6, 9);
+  const [W, H] = [2.05, 3.15];
+  const checks = [-12.8, -6.4, 0, 6.4].flatMap((y) => [-4.2, 0, 4.2].map((x) => f.poly([[x, y - H], [x + W, y], [x, y + H], [x - W, y]]))).join("");
+  const ruff = (rx: number, ry: number, y: number): string => {
+    const at = (k: number, reach: number): string => f.p(Math.cos(k * 36 * DEGREES) * rx * reach, y + Math.sin(k * 36 * DEGREES) * ry * reach);
+    let d = `M${at(0, 1)}`;
+    for (let k = 0; k < 10; k += 1) d += `Q${at(k + 0.5, 1.34)} ${at(k + 1, 1)}`;
+    return `${d}Z`;
+  };
+  const hem: Point[] = [[flare, drop], [6.3, 6.4], [4.2, 9.6], [2.1, 6.4], [0, 9.6], [-2.1, 6.4], [-4.2, 9.6], [-6.3, 6.4], [-flare, drop]];
+  return [
+    shape(f.poly([[-7.2, S], [7.2, S], [6.6, -1], ...hem, [-6.6, -1]]), "violet-700", 1, MAIN_INKED),
+    shape(checks, "red-600", 1),
+    shape(f.poly([[3.6, S], [7.2, S], [6.6, -1], [flare, drop], [6.3, 6.4], [4.2, 9.6], [3.4, 8.3]]), "slate-900", 0.18),
+    shape(ruff(5.6, 2.1, S + 0.2), "red-600", 1, INKED),
+    shape(ruff(4.2, 1.5, S + 0.9), "white", 1, INKED),
+    shape(f.circle(0, -12.8, 0.8) + f.circle(0, -6.4, 0.8) + f.circle(0, 0, 0.8), "white", 1, INKED),
+  ];
+}
+
+/** R3352000: a traveller's long cloak (main) hung from the shoulders, at the hip, to a ragged hem 13 below it (the shins standing, the ground crouched), a short cape over its shoulders, open down the front on a dark belted tunic, a clasp at the neck and folds; about 21 wide at its hem. */
+function outfitCloak(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const S = SHOULDER;
+  const H = 13;
+  const j = (): number => between(rng, -1.6, 0.4);
+  const right: Point[] = [[10.6, H + 0.4], [9, H - 1.4 + j()], [7.4, H + 0.6], [5.6, H - 1 + j()], [3.6, H + 0.4]];
+  const left: Point[] = [[-3.6, H + 0.4], [-5.6, H - 1 + j()], [-7.4, H + 0.6], [-9, H - 1.4 + j()], [-10.6, H + 0.4]];
+  const cloak = `M${f.p(-7.4, S + 1.2)}Q${f.p(-7.6, S - 1)} ${f.p(-4, S - 0.8)}L${f.p(4, S - 0.8)}Q${f.p(7.6, S - 1)} ${f.p(7.4, S + 1.2)}L${right.map(([x, y]) => f.p(x, y)).join("L")}L${f.p(1, S + 3)}L${left.map(([x, y]) => f.p(x, y)).join("L")}Z`;
+  return [
+    shape(f.poly([[-4.4, S + 1], [4.4, S + 1], [4.8, 5], [-4.8, 5]]), "wood-700", 1, INKED),
+    shape(f.band([[-4.6, 0], [4.6, 0]], 1.2), "wood-900", 1),
+    shape(cloak, "slate-800", 1, MAIN_INKED),
+    shape(f.band([[1.4, S + 3.4], [3.2, 4], [4.2, H - 0.2]], 0.8) + f.band([[-1.4, S + 3.4], [-3.2, 4], [-4.2, H - 0.2]], 0.8), "slate-900", 0.35),
+    shape(f.band([[-5.6, S + 2], [-7.4, 2], [-7.6, H - 1.6]], 0.5) + f.band([[5.6, S + 2], [7.2, 2], [7.6, H - 1.6]], 0.5), "slate-900", 0.3),
+    shape(`M${f.p(4, S - 0.8)}Q${f.p(7.6, S - 1)} ${f.p(7.4, S + 1.2)}L${f.p(10.6, H + 0.4)}L${f.p(8, H)}L${f.p(5.4, S + 2)}Z`, "slate-900", 0.2),
+    shape(`M${f.p(-7.4, S + 1.2)}Q${f.p(-7.6, S - 1)} ${f.p(-4, S - 0.8)}L${f.p(-5.2, S + 1.6)}L${f.p(-8.6, H - 2)}L${f.p(-9.6, H - 1)}Z`, "white", 0.14),
+    shape(`M${f.p(-7.6, S + 1.4)}Q${f.p(-7.8, S - 1.2)} ${f.p(-4, S - 1.1)}L${f.p(4, S - 1.1)}Q${f.p(7.8, S - 1.2)} ${f.p(7.6, S + 1.4)}L${f.p(8.8, S + 6.6)}Q${f.p(4.8, S + 7.4)} ${f.p(0.8, S + 4)}L${f.p(-0.8, S + 4)}Q${f.p(-4.8, S + 7.4)} ${f.p(-8.8, S + 6.6)}Z`, "slate-800", 1, MAIN_INKED),
+    shape(f.circle(-1.4, S + 1.6, 1) + f.circle(1.4, S + 1.6, 1), "brass-600", 1, INKED),
+    shape(f.band([[-0.6, S + 1.6], [0.6, S + 1.6]], 0.4), "slate-400", 1),
+  ];
+}
+
+/** R3352000: a spider-folk acrobat's body: a lanky bare torso (skin) under a patched vest (main) from the shoulders, at the hip, to 1 below it, a sash and two more long arms (skin) out of its sides below the pose's own, the far one reaching up and the near one out; about 36 wide with its arms. */
+function outfitSpider(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const S = SHOULDER;
+  const up = between(rng, -1.2, 1.2);
+  const out = between(rng, -1.2, 1.2);
+  const far: Point[] = [[-4.4, -8.6], [-13.8, -8.6], [-15.4 + up * 0.5, -16 + up]];
+  const near: Point[] = [[4.4, -8], [11.2, -3.4], [17.8 + out * 0.4, -5.8 + out]];
+  const end = (arm: readonly Point[]): Point => arm[arm.length - 1] ?? [0, 0];
+  const panel = (s: number): string => f.poly([[s * 7, S], [s * 2.6, S], [s * 1.8, -8], [s * 2.2, 1], [s * 5.4, 1]]);
+  return [
+    shape(f.band(far, 2) + f.band(near, 2), "red-300", 1, SKIN_INKED),
+    shape(f.circle(...end(far), 1.35) + f.circle(...end(near), 1.35), "red-300", 1, SKIN),
+    shape(f.poly([[-6.6, S], [6.6, S], [4.6, 1], [-4.6, 1]]), "red-300", 1, SKIN_INKED),
+    shape(f.band([[-2.6, -12], [0, -11], [2.6, -12]], 0.35) + f.band([[-2.4, -8.6], [0, -7.6], [2.4, -8.6]], 0.35), "slate-900", 0.3),
+    shape(panel(-1) + panel(1), "violet-700", 1, MAIN_INKED),
+    shape(f.poly([[-6.2, -14.4], [-3.4, -14.8], [-3.2, -11.8], [-6, -11.4]]), "green-700", 1, INKED),
+    shape(f.poly([[3.2, -6.4], [5.8, -6.6], [5.9, -3.6], [3.1, -3.4]]), "red-600", 1, INKED),
+    shape(f.band([[-5.6, -13.2], [-4, -13]], 0.35) + f.band([[-4.6, -15.4], [-4.8, -14]], 0.35) + f.band([[4.2, -5.6], [4.4, -4.2]], 0.35) + f.band([[5.2, -7.2], [5.4, -5.8]], 0.35), "slate-900", 0.85),
+    shape(f.band([[-4.9, 0], [0, -0.6], [4.9, 0]], 1.4), "wood-800", 1, INKED),
+    shape(f.poly([[3, S], [7, S], [5.4, 1], [3.2, 1]]), "slate-900", 0.18),
+  ];
+}
+
+/** R3352000: a fanned hand of five playing cards held up from the fist, spread 60 to 80 degrees: four red backs with white borders and a white face in front showing a red heart; about 14 wide and 9 tall at scale 1. */
+function cardFan(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const spread = between(rng, 60, 80);
+  const tilt = between(rng, -8, 12);
+  const angle = (k: number): number => tilt - spread / 2 + (spread * k) / 4;
+  const P = (p: Point, k: number): string => {
+    const [x, y] = turned(p, angle(k));
+    return f.p(x, y + 1);
+  };
+  const card = (k: number): string => `M${P([-2.3, -0.4], k)}L${P([2.3, -0.4], k)}L${P([2.3, -7.4], k)}L${P([-2.3, -7.4], k)}Z`;
+  const border = (k: number): string =>
+    f.band(
+      ([[-1.7, -1.4], [-1.7, -6.8], [1.7, -6.8]] as const).map((p) => {
+        const [x, y] = turned(p, angle(k));
+        return [x, y + 1] as const;
+      }),
+      0.35,
+    );
+  const back = (k: number): KitShape[] => [shape(card(k), "red-600", 1, INKED), shape(border(k), "white", 0.85)];
+  const heart = `M${P([0, -2.6], 4)}C${P([-2.4, -4], 4)} ${P([-1.2, -6], 4)} ${P([0, -4.8], 4)}C${P([1.2, -6], 4)} ${P([2.4, -4], 4)} ${P([0, -2.6], 4)}Z`;
+  return [
+    ...back(0),
+    ...back(1),
+    ...back(2),
+    ...back(3),
+    shape(card(4), "white", 1, INKED),
+    shape(heart, "red-600", 1),
+    shape(f.circle(-0.4, 0.2, 1.1), "red-300", 1, SKIN_INKED),
+  ];
+}
+
+/** R3352000: a long garden rake held in the fist, its handle leant forward from 12 above the hand down to its head at the ground 25 below, seven iron tines pointing down and a leaf caught on them; about 12 wide and 41 tall at scale 1. */
+function gardenRake(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const lean = between(rng, 0.06, 0.16);
+  const [hx, hy] = [lean * 25, 25];
+  const half = 5;
+  const comb: Point[] = [[hx - half, hy - 0.7], [hx + half, hy - 0.7], [hx + half, hy + 0.7]];
+  for (let k = 6; k >= 0; k -= 1) {
+    const x = hx - half + 0.4 + (k * (2 * half - 0.8)) / 6;
+    comb.push([x + 0.32, hy + 0.7], [x + 0.16, hy + 4], [x - 0.16, hy + 4], [x - 0.32, hy + 0.7]);
+  }
+  comb.push([hx - half, hy + 0.7]);
+  return [
+    shape(f.band([[-lean * 12, -12], [hx, hy - 0.6]], 1), "brass-600", 1, INKED),
+    shape(f.band([[-lean * 12 + 0.2, -11.4], [hx + 0.2, hy - 1]], 0.3), "wood-700", 0.45),
+    shape(f.poly(comb), "slate-400", 1, INKED),
+    shape(f.poly([[hx - 1.4, hy - 0.6], [hx - 0.6, hy - 2.6], [hx + 0.6, hy - 2.6], [hx + 1.4, hy - 0.6]]), "slate-700", 1, INKED),
+    shape(f.band([[hx - half + 0.4, hy - 0.4], [hx + half - 0.4, hy - 0.4]], 0.35), "white", 0.4),
+    shape(`M${f.p(hx + 2, hy + 1.2)}Q${f.p(hx + 4.4, hy + 1.4)} ${f.p(hx + 5, hy + 3.6)}Q${f.p(hx + 2.6, hy + 3.6)} ${f.p(hx + 2, hy + 1.2)}Z`, "green-700", 1, INKED),
+  ];
+}
+
+/** R3352000: a heavy butcher's cleaver raised in the fist: a wooden handle with two rivets and a broad steel blade about 6 wide and 11 tall above it, its edge forward and a hole near its spine; leant 6 to 20 degrees forward. */
+function cleaver(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, 6, 20);
+  const T = (p: Point): Point => turned(p, tilt);
+  const poly = (points: readonly Point[]): string => f.poly(points.map(T));
+  return [
+    shape(poly([[-0.8, 4], [0.8, 4], [0.7, -1.6], [-0.7, -1.6]]), "wood-700", 1, INKED),
+    shape(f.circle(...T([0, 0.4]), 0.3) + f.circle(...T([0, 2.6]), 0.3), "slate-100", 0.9),
+    shape(poly([[-0.9, -1.4], [5.8, -1.4], [5.6, -12.6], [-0.9, -12.2]]) + f.circle(...T([0.8, -10.6]), 0.8), "slate-400", 1, INKED),
+    shape(poly([[-0.9, -1.4], [0.1, -1.4], [0.1, -12.3], [-0.9, -12.2]]), "slate-700", 0.5),
+    shape(poly([[4.6, -1.6], [5.6, -1.6], [5.4, -12.4], [4.4, -12.4]]), "white", 0.55),
+    shape(poly([[-1, -0.8], [1, -0.8], [1, -2], [-1, -2]]), "slate-700", 1, INKED),
+  ];
+}
+
+/** R3352000: a round cookie offered on the open palm (skin), about 8 across and 4 above the hand: chocolate chips and a red wax seal pressed into it. */
+function sealedCookie(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const spin = between(rng, 0, 90);
+  const [cx, cy] = [0.4, -4.2];
+  const chip = (p: Point): string => {
+    const [x, y] = turned(p, spin);
+    return f.ellipse(cx + x, cy + y, 0.5, 0.4);
+  };
+  const seal: Point[] = Array.from({ length: 12 }, (_, k) => {
+    const a = (k / 12) * 360 * DEGREES;
+    const reach = k % 2 === 0 ? 1.45 : 1.15;
+    return [cx + 0.9 + Math.cos(a) * reach, cy + 0.7 + Math.sin(a) * reach];
+  });
+  return [
+    shape(f.ellipse(0, 0.2, 2.8, 1.3), "red-300", 1, SKIN_INKED),
+    shape(f.circle(cx, cy, 3.8), "brass-600", 1, INKED),
+    shape(f.circle(cx - 0.4, cy - 0.4, 2.9), "brass-500", 0.55),
+    shape(chip([-1.8, -0.6]) + chip([0.4, -2.2]) + chip([-0.6, 1.8]) + chip([2.2, -1.2]) + chip([-2, 1.4]), "wood-800", 1),
+    shape(f.poly(seal), "red-600", 1, INKED),
+    shape(f.circle(cx + 0.9, cy + 0.7, 0.75) + f.circle(cx + 0.9, cy + 0.7, 0.45), "red-900", 0.8),
+    shape(f.circle(cx + 0.4, cy + 0.2, 0.25), "white", 0.6),
+  ];
+}
+
+/** R3352000: a tinkerer's magnetic grapple on the fist: a gauntlet, a piston thrust forward and a red horseshoe magnet with white tips at its end, sparks jumping off it; about 22 long and 7 tall at scale 1. */
+function magnetGrapple(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, -12, 6);
+  const T = (p: Point): Point => turned(p, tilt);
+  const P = (p: Point): string => f.p(...T(p));
+  const rect = (x0: number, y0: number, x1: number, y1: number): string => f.poly(([[x0, y0], [x1, y0], [x1, y1], [x0, y1]] as Point[]).map(T));
+  const [r1, r3] = [fmt(f.r(1.4)), fmt(f.r(3))];
+  const magnet = `M${P([12.6, -3])}A${r3} ${r3} 0 0 ${f.sweep(0)} ${P([12.6, 3])}L${P([15, 3])}L${P([15, 1.4])}L${P([12.6, 1.4])}A${r1} ${r1} 0 0 ${f.sweep(1)} ${P([12.6, -1.4])}L${P([15, -1.4])}L${P([15, -3])}Z`;
+  return [
+    shape(rect(6.8, -0.6, 9.8, 0.6), "slate-100", 1, INKED),
+    shape(rect(3, -1.2, 7.2, 1.2), "slate-400", 1, INKED),
+    shape(magnet, "red-600", 1, INKED),
+    shape(rect(15, -3, 16.6, -1.4) + rect(15, 1.4, 16.6, 3), "white", 1, INKED),
+    shape(rect(9.2, -1.6, 10.2, 1.6), "slate-700", 1, INKED),
+    shape(rect(-2.2, -2, 3.4, 2), "slate-700", 1, INKED),
+    shape(f.circle(...T([-0.6, -1]), 0.35) + f.circle(...T([1.8, -1]), 0.35) + f.circle(...T([-0.6, 1]), 0.35) + f.circle(...T([1.8, 1]), 0.35) + rect(3.4, -0.9, 6.8, -0.5), "slate-100", 0.8),
+    shape(f.circle(...T([18, 0]), 2.6), "sky-300", 0.22),
+    shape(sparkle(f, ...T([18.4, -2.6]), 1.7) + sparkle(f, ...T([18, 2.6]), 1.1), "white", 0.95),
+  ];
+}
+
+/** R3352000: a small wooden abacus held up over the fist, about 10 wide and 8 tall: four wires of coloured beads, each row split where the rng counts. */
+function abacus(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const tilt = between(rng, -10, 10);
+  const T = (p: Point): Point => turned(p, tilt);
+  const rect = (x0: number, y0: number, x1: number, y1: number): string => f.poly(([[x0, y0], [x1, y0], [x1, y1], [x0, y1]] as Point[]).map(T));
+  const rows = [-6.85, -5.35, -3.85, -2.35];
+  const paints: readonly PaletteName[] = ["red-600", "blue-700", "green-700", "slate-100"];
+  const bead = (x: number, y: number): string => f.poly(([[x, y - 0.6], [x + 0.5, y], [x, y + 0.6], [x - 0.5, y]] as Point[]).map(T));
+  const row = (y: number): string => {
+    const pushed = whole(rng, 0, 4);
+    return [0, 1, 2, 3].map((k) => bead(k < pushed ? -3.3 + k * 1.05 : 3.3 - (3 - k) * 1.05, y)).join("");
+  };
+  return [
+    shape(rect(-4.8, -8.6, 4.8, -0.6) + rect(-3.8, -7.6, 3.8, -1.6), "wood-700", 1, INKED),
+    shape(rows.map((y) => f.band([T([-3.8, y]), T([3.8, y])], 0.25)).join(""), "slate-400", 1),
+    ...rows.map((y, k) => shape(row(y), paints[k] ?? "red-600", 1)),
+    shape(f.band([T([-4.3, -8.1]), T([4.3, -8.1])], 0.35), "white", 0.3),
+  ];
+}
+
 /** R3331000: the figure parts, by id, each with its kind. */
 export const FIGURE_KIT: Readonly<Record<FigurePartId, KitPart>> = {
   "pose-stand": { category: "pose", draw: poseStand },
@@ -3462,6 +3803,20 @@ export const FIGURE_KIT: Readonly<Record<FigurePartId, KitPart>> = {
   "head-sheep": { category: "head", draw: headSheep },
   "head-ape": { category: "head", draw: headApe },
   "head-nose": { category: "head", draw: headNose },
+  "jester-cap": { category: "hair", draw: jesterCap },
+  "cat-hood": { category: "hair", draw: catHood },
+  "beak-mask": { category: "hair", draw: beakMask },
+  "king-crown": { category: "hair", draw: kingCrown },
+  "jagged-crown": { category: "hair", draw: jaggedCrown },
+  "outfit-harlequin": { category: "outfit", draw: outfitHarlequin },
+  "outfit-cloak": { category: "outfit", draw: outfitCloak },
+  "outfit-spider": { category: "outfit", draw: outfitSpider },
+  "item-card-fan": { category: "item", draw: cardFan },
+  "item-rake": { category: "item", draw: gardenRake },
+  "item-cleaver": { category: "item", draw: cleaver },
+  "item-cookie": { category: "item", draw: sealedCookie },
+  "item-grapple": { category: "item", draw: magnetGrapple },
+  "item-abacus": { category: "item", draw: abacus },
 };
 
 /** The look of a card with none of `FIGURE_LOOKS`' tags: a hooded traveller in a plain tunic. */

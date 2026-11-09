@@ -591,7 +591,7 @@ const COOKIE_GUILD: SceneRecipe = {
   sky: ["wood-900", "wood-800"],
   light: { x: 16, y: 60, r: 36, paint: "orange-400", opacity: 0.45 },
   emblem: { x: 84, y: 34, size: 5, rotate: 0 },
-  figure: { x: 42, y: 86, scale: 1, pose: "pose-hold", look: { ...figureLookFor(["Human"]), hair: "toque", outfit: "outfit-robe", item: "item-coin" /*item-cookie*/, cloth: "wood-700" } },
+  figure: { x: 42, y: 86, scale: 1, pose: "pose-hold", look: { ...figureLookFor(["Human"]), hair: "toque", outfit: "outfit-robe", item: "item-cookie", cloth: "wood-700" } },
   extras: [{ layer: "subject", x: 70, y: 86, scale: 0.78, flip: -1, pose: "pose-stand", look: { ...VILLAGER, hair: "hood", cloth: "slate-400" } }],
   layers: {
     far: [
@@ -623,15 +623,15 @@ const JORO: SceneRecipe = {
   sky: ["slate-900", "wood-700"],
   light: { x: 80, y: 48, r: 34, paint: "sky-400", opacity: 0.4 },
   emblem: { x: 31, y: 66, size: 5, rotate: 0 },
-  figure: { x: 52, y: 74, scale: 0.9, pose: "pose-spread", look: { ...figureLookFor([]), head: "head-human", hair: "hair-spiky", outfit: "outfit-vest" /*outfit-spider*/, item: null, skin: "red-300", cloth: "violet-700" } },
+  figure: { x: 52, y: 74, scale: 0.9, pose: "pose-spread", look: { ...figureLookFor([]), head: "head-human", hair: "hair-spiky", outfit: "outfit-spider", item: null, skin: "red-300", cloth: "violet-700" } },
   extras: [{ layer: "subject", x: 24, y: 92, scale: 0.9, pose: "pose-guard", look: { ...WARRIOR, item: "item-shield", cloth: "blue-800" } }],
   layers: {
     sky: [{ part: "round-window", x: 80, y: 30, scale: 1.2, paint: "orange-400" }],
     far: [
       { part: "tile-wall", x: 50, y: 50, paint: "slate-700" },
       { part: "arch", x: 18, y: 62, scale: 1.3, paint: "stone-500" },
-      { part: "rune-circle" /*web*/, x: 14, y: 16, scale: 0.8, paint: "slate-100" },
-      { part: "rune-circle" /*web*/, x: 88, y: 70, scale: 0.7, paint: "slate-100" },
+      { part: "web", x: 14, y: 16, scale: 0.8, paint: "slate-100" },
+      { part: "web", x: 88, y: 70, scale: 0.7, paint: "slate-100" },
     ],
     mid: [
       { part: "boards", x: 50, y: 74, paint: "wood-700" },
@@ -639,7 +639,7 @@ const JORO: SceneRecipe = {
       { part: "ladder", x: 88, y: 84, scale: 1 },
     ],
     subject: [
-      { part: "rune-circle" /*web*/, x: 50, y: 36, scale: 1.4, paint: "slate-100" },
+      { part: "web", x: 50, y: 36, scale: 1.4, paint: "slate-100" },
       { part: "strings", x: 52, y: 32, scale: 0.3, paint: "slate-100" },
       { part: "fireball", x: 76, y: 46, scale: 1.4, flip: -1, paint: "sky-400" },
       { part: "burst", x: 62, y: 46, scale: 1, paint: "sky-300" },
@@ -667,7 +667,7 @@ const MC_TECH: SceneRecipe = {
   sky: ["slate-900", "slate-700"],
   light: { x: 58, y: 50, r: 34, paint: "cyan-400", opacity: 0.4 },
   emblem: { x: 18, y: 68, size: 5, rotate: 0 },
-  figure: { x: 36, y: 86, scale: 1, pose: "pose-cast", look: { ...figureLookFor(["Human"]), hair: "goggles", outfit: "outfit-work-apron", item: "item-rod" /*item-grapple*/, cloth: "wood-600" } },
+  figure: { x: 36, y: 86, scale: 1, pose: "pose-cast", look: { ...figureLookFor(["Human"]), hair: "goggles", outfit: "outfit-work-apron", item: "item-grapple", cloth: "wood-600" } },
   layers: {
     far: [
       { part: "stone-wall", x: 50, y: 62, scale: 2.2, paint: "stone-500" },
@@ -712,12 +712,12 @@ const TRANSMUTABLE_TOXINS: SceneRecipe = {
       { part: "flask", x: 16, y: 78, scale: 1.2 },
     ],
     subject: [
-      { part: "jar" /*vat*/, x: 38, y: 80, scale: 1.6, paint: "green-400" },
-      { part: "jar" /*vat*/, x: 64, y: 80, scale: 1.2, paint: "green-900" },
+      { part: "vat", x: 38, y: 80, scale: 1.6, paint: "green-400" },
+      { part: "vat", x: 64, y: 80, scale: 1.2, paint: "green-900" },
       { part: "bubbles", x: 38, y: 50, scale: 1.2, paint: "lime-400" },
     ],
     near: [
-      { part: "grub" /*slime*/, x: 84, y: 98, scale: 0.5 },
+      { part: "slime", x: 84, y: 98, scale: 0.5 },
       { part: "vial", x: 14, y: 97, scale: 1.2 },
     ],
     light: [
@@ -752,7 +752,7 @@ const PLAGUE_NUKE: SceneRecipe = {
       { part: "soldier-fallen", x: 78, y: 80, scale: 1.2, flip: -1 },
     ],
     subject: [
-      { part: "grave-mound" /*crater*/, x: 50, y: 80, scale: 0.8 },
+      { part: "crater", x: 50, y: 80, scale: 0.8 },
       { part: "smoke-billow", x: 50, y: 66, scale: 2.4, paint: "green-400" },
       { part: "spores", x: 50, y: 44, scale: 1.6, paint: "lime-200" },
     ],
@@ -791,8 +791,8 @@ const BACK_FROM_THE_GY: SceneRecipe = {
     ],
     mid: [
       { part: "field", x: 50, y: 66, paint: "slate-900" },
-      { part: "soldier" /*skeleton*/, x: 20, y: 80, scale: 0.8 },
-      { part: "soldier" /*skeleton*/, x: 80, y: 80, scale: 0.75, flip: -1 },
+      { part: "skeleton", x: 20, y: 80, scale: 0.8 },
+      { part: "skeleton", x: 80, y: 80, scale: 0.75, flip: -1 },
       { part: "grave-mound", x: 20, y: 82, scale: 1.4 },
       { part: "grave-mound", x: 80, y: 82, scale: 1.4 },
       { part: "bone-hand", x: 34, y: 76, scale: 0.9 },
@@ -826,7 +826,7 @@ const NATURE_TITAN: SceneRecipe = {
   sky: ["green-900", "green-200"],
   light: { x: 62, y: 46, r: 34, paint: "green-200", opacity: 0.45 },
   emblem: { x: 84, y: 80, size: 5, rotate: 0 },
-  figure: { x: 50, y: 88, scale: 1.3, pose: "pose-stride", look: { ...figureLookFor([]), head: "head-golem", hair: "leaf-crown", outfit: "outfit-rock" /*outfit-moss*/, item: null, skin: "stone-500", cloth: "green-700" } },
+  figure: { x: 50, y: 88, scale: 1.3, pose: "pose-stride", look: { ...figureLookFor([]), head: "head-golem", hair: "leaf-crown", outfit: "outfit-leaves", item: null, skin: "stone-500", cloth: "green-700" } },
   extras: [{ layer: "near", x: 62, y: 52, scale: 0.28, pose: "pose-sit", look: { ...WARRIOR, item: null, cloth: "red-900" } }],
   layers: {
     sky: [{ part: "mist", x: 50, y: 30, scale: 2.4, paint: "white" }],
@@ -867,7 +867,7 @@ const RECURRING_FELINOR: SceneRecipe = {
   sky: ["slate-900", "jade-400"],
   light: { x: 50, y: 70, r: 32, paint: "cyan-400", opacity: 0.4 },
   emblem: { x: 84, y: 70, size: 5, rotate: 0 },
-  figure: { x: 50, y: 74, scale: 0.95, pose: "pose-run", look: { ...figureLookFor(["Felinor"]), hair: "hood", outfit: "outfit-robe" /*outfit-cloak*/, item: null, skin: "orange-400", cloth: "slate-700" } },
+  figure: { x: 50, y: 74, scale: 0.95, pose: "pose-run", look: { ...figureLookFor(["Felinor"]), hair: "hood", outfit: "outfit-cloak", item: null, skin: "orange-400", cloth: "slate-700" } },
   layers: {
     sky: [{ part: "moon", x: 80, y: 18, scale: 0.8 }],
     far: [
@@ -907,12 +907,12 @@ const HIRED_SHRIMP: SceneRecipe = {
     ],
     mid: [
       { part: "still-water", x: 50, y: 76, scale: 1.2, paint: "sky-300" },
-      { part: "boulder", x: 16, y: 80, scale: 1 },
-      { part: "boulder", x: 82, y: 82, scale: 1.1, flip: -1 },
+      { part: "mossy-boulder", x: 14, y: 82, scale: 0.8, paint: "slate-400" },
+      { part: "mossy-boulder", x: 86, y: 84, scale: 0.9, flip: -1, paint: "slate-400" },
     ],
     subject: [
       { part: "mossy-boulder", x: 50, y: 88, scale: 1.2 },
-      { part: "grub" /*shrimp*/, x: 50, y: 78, scale: 2 },
+      { part: "shrimp", x: 50, y: 80, scale: 2.5 },
     ],
     near: [
       { part: "pebbles", x: 20, y: 97, count: 2, spread: [8, 2] },
@@ -929,7 +929,7 @@ const VOIDWALKER: SceneRecipe = {
   sky: ["slate-700", "grey-500"],
   light: { x: 50, y: 56, r: 34, paint: "slate-400", opacity: 0.35 },
   emblem: { x: 22, y: 64, size: 5, rotate: 0 },
-  figure: { x: 50, y: 86, scale: 1.1, pose: "pose-stride", look: { ...figureLookFor([]), head: "head-void", hair: "hood", outfit: "outfit-robe" /*outfit-cloak*/, item: null, skin: "black", cloth: "slate-900" } },
+  figure: { x: 50, y: 86, scale: 1.1, pose: "pose-stride", look: { ...figureLookFor([]), head: "head-void", hair: "hood", outfit: "outfit-cloak", item: null, skin: "black", cloth: "slate-900" } },
   layers: {
     sky: [{ part: "cloud", x: 70, y: 22, scale: 1, count: 2, spread: [14, 4], paint: "slate-400" }],
     far: [
@@ -972,8 +972,8 @@ const PLAGUE_CRAWLER: SceneRecipe = {
       { part: "barrel", x: 82, y: 80, scale: 0.9 },
     ],
     subject: [
-      { part: "beetle" /*crawler*/, x: 46, y: 80, scale: 1.4 },
-      { part: "tome", x: 60, y: 76, scale: 1.2 },
+      { part: "crawler", x: 48, y: 82, scale: 2.4 },
+      { part: "tome", x: 80, y: 86, scale: 0.8 },
     ],
     near: [
       { part: "closed-tome", x: 14, y: 98, scale: 1.2 },
@@ -1005,8 +1005,8 @@ const BOOK_OF_WILDFIRE: SceneRecipe = {
       { part: "pine", x: 14, y: 72, scale: 1, count: 2, spread: [10, 2], paint: "green-900" },
       { part: "pine", x: 84, y: 72, scale: 1, count: 2, spread: [10, 2], paint: "green-900" },
       { part: "flames", x: 22, y: 70, scale: 1.2 },
-      { part: "flames", x: 80, y: 70, scale: 1.1 },
-      { part: "fox" /*deer*/, x: 70, y: 76, scale: 0.9, flip: -1 },
+      { part: "flames", x: 66, y: 70, scale: 1.1 },
+      { part: "deer", x: 84, y: 76, scale: 1.2 },
     ],
     subject: [
       { part: "tome", x: 50, y: 86, scale: 3, paint: "red-900" },
@@ -1032,7 +1032,7 @@ const SPELL_TYRANT: SceneRecipe = {
   sky: ["slate-900", "violet-700"],
   light: { x: 50, y: 40, r: 40, paint: "violet-500", opacity: 0.45 },
   emblem: { x: 30, y: 74, size: 5, rotate: 0 },
-  figure: { x: 54, y: 86, scale: 1.15, pose: "pose-raise", look: { ...figureLookFor(["Human"]), hair: "horns" /*jagged-crown*/, outfit: "outfit-robe", item: "item-staff", skin: "slate-100", cloth: "violet-700" } },
+  figure: { x: 54, y: 86, scale: 1.15, pose: "pose-raise", look: { ...figureLookFor(["Human"]), hair: "jagged-crown", outfit: "outfit-robe", item: "item-staff", skin: "slate-100", cloth: "violet-700" } },
   layers: {
     sky: [
       { part: "lightning", x: 16, y: 8, scale: 0.8, paint: "violet-300" },
@@ -1076,7 +1076,7 @@ const PLAGUE_DOCTOR: SceneRecipe = {
   sky: ["slate-900", "green-900"],
   light: { x: 22, y: 50, r: 34, paint: "lime-200", opacity: 0.35 },
   emblem: { x: 84, y: 40, size: 5, rotate: 0 },
-  figure: { x: 46, y: 86, scale: 1, pose: "pose-hold", look: { ...figureLookFor(["Human"]), hair: "face-mask" /*beak-mask*/, outfit: "outfit-coat", item: "item-clipboard" /*item-abacus*/, cloth: "black" } },
+  figure: { x: 46, y: 86, scale: 1, pose: "pose-hold", look: { ...figureLookFor(["Human"]), hair: "beak-mask", outfit: "outfit-coat", item: "item-abacus", cloth: "black" } },
   layers: {
     far: [
       { part: "stone-wall", x: 50, y: 62, scale: 2.2, paint: "slate-800" },
@@ -1088,7 +1088,7 @@ const PLAGUE_DOCTOR: SceneRecipe = {
       { part: "cot", x: 16, y: 78, scale: 1.4 },
       { part: "cot", x: 84, y: 78, scale: 1.4, flip: -1 },
     ],
-    subject: [{ part: "seal", x: 36, y: 62, scale: 1, paint: "red-600" }],
+    subject: [{ part: "envelope", x: 37, y: 58, scale: 1.1 }],
     near: [
       { part: "candle", x: 12, y: 98, scale: 1.4 },
       { part: "bucket", x: 86, y: 98, scale: 1.2 },

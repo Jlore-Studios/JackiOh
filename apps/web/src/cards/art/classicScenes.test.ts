@@ -60,13 +60,12 @@ const CLASSIC_FIGURE_PARTS = [
   "outfit-harlequin",
   "outfit-cloak",
   "outfit-spider",
-  "outfit-moss",
   "item-card-fan",
+  "item-rake",
   "item-cleaver",
-  "item-abacus",
   "item-cookie",
   "item-grapple",
-  "item-rake",
+  "item-abacus",
 ] as const;
 /** Where an emblem may stand and how big it may be: inside the band every face's window shows (motifs.test.ts's). */
 const EMBLEM_BAND = { left: 10, right: 90, top: 22, bottom: 84, size: 8 } as const;

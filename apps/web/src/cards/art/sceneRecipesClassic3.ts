@@ -1,6 +1,7 @@
-// R3352000: Classic's scene recipes, part 3 of three (#61 to #90 (Corpse Plantation, #74, is #3331's proof) with the Glitch), one per entry, each drawn from its brief (#3352's
-// table) in Classic's temple-stone look (ART.md, "Classic's scenes"): its subject within x 30 to 70 and y 25 to 85,
-// its foreground near, its middle in the mid and subject layers and its background far, richer the rarer.
+// R3352000: Classic's scene recipes, part 3 of three (#61 to #90 but Corpse Plantation, #74, #3331's proof, with the
+// Glitch), one per entry, each drawn from its brief (#3352's table) in Classic's temple-stone look (ART.md,
+// "Classic's scenes"): its subject within x 30 to 70 and y 25 to 85, its foreground near, its middle in the mid and
+// subject layers and its background far, richer the rarer.
 // Presentation only (CLAUDE.md rule 7): a recipe is read by the card's id alone.
 
 import { figureLookFor, type FigureLook } from "./figureKit.ts";
@@ -274,7 +275,7 @@ const FELINOR_FEELER: SceneRecipe = {
     y: 86,
     scale: 1.15,
     pose: "pose-crouch",
-    look: { ...figureLookFor(["Human"]), hair: "hood" /* TODO-PART cat-hood */, outfit: "outfit-robe", item: null, cloth: "violet-700" },
+    look: { ...figureLookFor(["Human"]), hair: "cat-hood", outfit: "outfit-cloak", item: null, cloth: "violet-700" },
   },
   extras: [
     { layer: "subject", x: 16, y: 86, scale: 0.58, pose: "pose-kneel", look: SHIELD_SOLDIER },
@@ -433,7 +434,7 @@ const LANE_EATER: SceneRecipe = {
       { part: "shards", x: 24, y: 72, scale: 1.2, paint: "stone-500" },
     ],
     subject: [
-      { part: "grave-mound" /* TODO-PART maw */, x: 50, y: 86, scale: 1.3 },
+      { part: "maw", x: 50, y: 86, scale: 1.3 },
       { part: "jade-disc", x: 36, y: 40, scale: 0.8, paint: "slate-100" },
       { part: "jade-disc", x: 66, y: 34, scale: 0.7, paint: "slate-100" },
       { part: "shards", x: 62, y: 50, scale: 1, paint: "stone-500" },
@@ -500,7 +501,7 @@ const NURSE_CLEAVER: SceneRecipe = {
     y: 84,
     scale: 1.05,
     pose: "pose-strike",
-    look: { ...figureLookFor([]), hair: "kerchief", outfit: "outfit-apron", item: "item-axe" /* TODO-PART item-cleaver */, cloth: "white" },
+    look: { ...figureLookFor([]), hair: "kerchief", outfit: "outfit-apron", item: "item-cleaver", cloth: "white" },
   },
   layers: {
     far: [
@@ -564,6 +565,92 @@ const ARGUSLAND: SceneRecipe = {
       { part: "splinters", x: 38, y: 62, scale: 0.8, paint: "wood-600" },
       { part: "mist", x: 50, y: 92, scale: 2.2, paint: "white" },
     ],
+  },
+};
+
+/** Plague Bringer (Classic #76, Rare): a hooded plague rider on a sneezing, mangy mule gallops through a walled town's toll gate, a stolen keepsake swinging from his saddle; sickly haze. */
+const PLAGUE_BRINGER: SceneRecipe = {
+  family: "classic",
+  sky: ["green-900", "slate-700"],
+  light: { x: 22, y: 30, r: 34, paint: "lime-400", opacity: 0.3 },
+  emblem: { x: 64, y: 30, size: 5, rotate: 0 },
+  figure: {
+    x: 48,
+    y: 73,
+    scale: 0.65,
+    pose: "pose-sit",
+    look: { ...figureLookFor(["Plague"]), hair: "hood", outfit: "outfit-poncho", item: null, skin: "green-200", cloth: "slate-800" },
+  },
+  layers: {
+    sky: [
+      { part: "cloud", x: 50, y: 18, scale: 1.4, count: 2, spread: [30, 4], paint: "slate-400" },
+      { part: "mist", x: 50, y: 34, scale: 1.6, paint: "lime-400", fade: 0.5 },
+    ],
+    far: [
+      { part: "stone-wall", x: 50, y: 66, scale: 1.4, paint: "stone-500" },
+      { part: "tower", x: 14, y: 66, scale: 1.1, paint: "slate-400" },
+      { part: "tower", x: 86, y: 66, scale: 1.1, flip: -1, paint: "slate-400" },
+      { part: "gate", x: 50, y: 68, scale: 1.3, paint: "wood-800" },
+      { part: "banner", x: 30, y: 40, scale: 0.7, paint: "green-700" },
+    ],
+    mid: [
+      { part: "cobbles", x: 50, y: 70, paint: "slate-400" },
+      { part: "fence-post", x: 24, y: 78, scale: 1.1, paint: "wood-700" },
+      { part: "lantern", x: 78, y: 54, scale: 0.9 },
+    ],
+    subject: [
+      { part: "mule", x: 50, y: 86, scale: 1.7, paint: "slate-400" },
+      { part: "spores", x: 72, y: 72, scale: 0.9, count: 2, spread: [6, 3], paint: "lime-400" },
+    ],
+    near: [
+      { part: "coins", x: 20, y: 94, scale: 1.1 },
+      { part: "dust", x: 34, y: 92, scale: 1.4, paint: "wood-700" },
+      { part: "pebbles", x: 82, y: 97 },
+    ],
+    particles: [{ part: "spore-motes", x: 50, y: 56, scale: 1.4, paint: "lime-400" }],
+  },
+};
+
+/** Anti-Magic Monkey (Classic #77, Common): a scowling grey ape snatches a spellbook from a startled wizard and rips out its pages; jungle temple ruins, green-dappled light. */
+const ANTI_MAGIC_MONKEY: SceneRecipe = {
+  family: "classic",
+  sky: ["green-900", "jade-400"],
+  light: { x: 26, y: 24, r: 36, paint: "lime-400", opacity: 0.35 },
+  emblem: { x: 18, y: 40, size: 5, rotate: 0 },
+  figure: {
+    x: 42,
+    y: 86,
+    scale: 1.05,
+    pose: "pose-raise",
+    look: { ...figureLookFor([]), head: "head-ape", hair: null, outfit: "outfit-fur", item: "item-book", skin: "grey-500", cloth: "grey-500" },
+  },
+  extras: [
+    {
+      layer: "subject",
+      x: 76,
+      y: 86,
+      scale: 0.7,
+      flip: -1,
+      pose: "pose-block",
+      look: { ...figureLookFor(["Human"]), hair: "hat-pointed", outfit: "outfit-robe", item: null, cloth: "blue-800" },
+    },
+  ],
+  layers: {
+    far: [
+      { part: "temple", x: 50, y: 66, scale: 1.3, paint: "green-900" },
+      { part: "vine", x: 16, y: 36, scale: 1.2, paint: "green-700" },
+      { part: "vine", x: 86, y: 40, scale: 1, flip: -1, paint: "green-700" },
+    ],
+    mid: [
+      { part: "fallen-column", x: 22, y: 78, scale: 0.9, paint: "stone-500" },
+      { part: "fern", x: 88, y: 80, scale: 1.1, paint: "green-700" },
+    ],
+    near: [
+      { part: "fern", x: 10, y: 98, scale: 1.2, paint: "green-900" },
+      { part: "paper-sheet", x: 62, y: 94, scale: 0.5 },
+    ],
+    light: [{ part: "god-rays", x: 30, y: 0, scale: 1, paint: "lime-400" }],
+    particles: [{ part: "paper-sheet", x: 58, y: 36, scale: 0.4, count: 3, spread: [12, 8] }],
   },
 };
 
@@ -722,7 +809,7 @@ const THE_POWER_TO_THRIVE: SceneRecipe = {
       { part: "playing-card", x: 44, y: 40, scale: 1, count: 4, spread: [14, 10] },
       { part: "heal-fountain", x: 32, y: 86, scale: 1.4 },
       { part: "altar", x: 70, y: 86, scale: 1.2 },
-      { part: "boulder", x: 70, y: 72, scale: 0.5, paint: "stone-500" },
+      { part: "lifting-stone", x: 70, y: 60, scale: 0.6, paint: "stone-500" },
     ],
     near: [
       { part: "grass-tuft", x: 14, y: 98, count: 2, spread: [6, 1] },
@@ -735,6 +822,42 @@ const THE_POWER_TO_THRIVE: SceneRecipe = {
     particles: [
       { part: "heal-glow", x: 32, y: 70, scale: 1.2, paint: "green-200" },
       { part: "leaves", x: 56, y: 44, scale: 1, paint: "green-400" },
+    ],
+  },
+};
+
+/** Sheeople (Classic #82, Common): a meek sheep-headed villager in a woolly smock shuffles in line behind the flock, a card dropping behind it; foggy hillside pasture. */
+const SHEEOPLE: SceneRecipe = {
+  family: "classic",
+  sky: ["slate-400", "slate-100"],
+  light: { x: 24, y: 30, r: 34, paint: "white", opacity: 0.35 },
+  emblem: { x: 80, y: 34, size: 5, rotate: 0 },
+  figure: {
+    x: 40,
+    y: 84,
+    scale: 0.85,
+    pose: "pose-hold",
+    look: { ...figureLookFor(["Human"]), head: "head-sheep", hair: null, outfit: "outfit-sweater", item: null, skin: "slate-700", cloth: "slate-100" },
+  },
+  layers: {
+    sky: [{ part: "mist", x: 50, y: 34, scale: 1.8, count: 2, spread: [30, 4], paint: "white" }],
+    far: [
+      { part: "hills", x: 50, y: 62, paint: "green-700" },
+      { part: "fence", x: 50, y: 66, scale: 1.2, paint: "wood-700" },
+    ],
+    mid: [
+      { part: "field", x: 50, y: 70, paint: "green-400" },
+      { part: "mist", x: 50, y: 70, scale: 2, paint: "white", fade: 0.6 },
+    ],
+    subject: [
+      { part: "sheep", x: 64, y: 84, scale: 1.5 },
+      { part: "sheep", x: 86, y: 82, scale: 1.4 },
+      { part: "card", x: 20, y: 72, scale: 1.3, flip: -1 },
+      { part: "streaks", x: 20, y: 64, scale: 0.4, paint: "white" },
+    ],
+    near: [
+      { part: "grass-tuft", x: 14, y: 96, count: 2, spread: [6, 1], paint: "green-700" },
+      { part: "mist", x: 50, y: 92, scale: 2, paint: "white", fade: 0.6 },
     ],
   },
 };
@@ -818,6 +941,69 @@ const LOCKDOWN: SceneRecipe = {
   },
 };
 
+/** King Wagtoggle (Classic #85, Legendary): a round, grinning old king in a patched velvet cloak and a lopsided silver crown shakes a rival's hand across a banquet table while his other hand, behind his back, swaps the two players' decks; courtiers gasp in a warm crimson banquet hall, a sly moment of trade. */
+const KING_WAGTOGGLE: SceneRecipe = {
+  family: "classic",
+  sky: ["red-900", "wood-800"],
+  light: { x: 52, y: 34, r: 40, paint: "red-300", opacity: 0.4 },
+  emblem: { x: 50, y: 26, size: 6, rotate: 0 },
+  figure: {
+    x: 38,
+    y: 84,
+    scale: 1.05,
+    pose: "pose-point",
+    look: { ...figureLookFor(["Human"]), hair: "king-crown", outfit: "outfit-cloak", item: null, skin: "red-300", cloth: "red-600" },
+  },
+  extras: [
+    {
+      layer: "subject",
+      x: 66,
+      y: 84,
+      scale: 0.95,
+      flip: -1,
+      pose: "pose-point",
+      look: { ...figureLookFor(["Human"]), hair: "hair-short", outfit: "outfit-tabard", item: null, cloth: "blue-800" },
+    },
+    { layer: "mid", x: 16, y: 74, scale: 0.42, pose: "pose-block", look: { ...figureLookFor(["Human"]), hair: "hat-brim", outfit: "outfit-gown", item: null, cloth: "violet-700" } },
+    { layer: "mid", x: 84, y: 74, scale: 0.4, flip: -1, pose: "pose-block", look: { ...figureLookFor(["Human"]), hair: "hair-long", outfit: "outfit-coat", item: null, cloth: "green-700" } },
+  ],
+  layers: {
+    sky: [
+      { part: "room-wall", x: 50, y: 66, paint: "red-900" },
+      { part: "arch", x: 50, y: 66, scale: 2.4, paint: "wood-800" },
+    ],
+    far: [
+      { part: "column", x: 8, y: 84, scale: 2.2, paint: "stone-500" },
+      { part: "column", x: 92, y: 84, scale: 2.2, paint: "stone-500" },
+      { part: "banner", x: 28, y: 30, scale: 1, paint: "red-600" },
+      { part: "banner", x: 72, y: 30, scale: 1, flip: -1, paint: "red-600" },
+      { part: "chandelier", x: 50, y: 6, scale: 1.3 },
+    ],
+    mid: [
+      { part: "tile-floor", x: 50, y: 74, paint: "wood-700" },
+    ],
+    subject: [
+      { part: "deck", x: 26, y: 58, scale: 1.2 },
+      { part: "deck", x: 18, y: 62, scale: 1.1, flip: -1 },
+      { part: "streaks", x: 22, y: 58, scale: 0.6, paint: "white" },
+    ],
+    near: [
+      { part: "wide-table", x: 52, y: 98, scale: 1.4, paint: "wood-700" },
+      { part: "bread", x: 40, y: 85, scale: 1 },
+      { part: "cup", x: 52, y: 85, scale: 0.9 },
+      { part: "candle", x: 72, y: 86, scale: 1 },
+    ],
+    light: [
+      { part: "halo", x: 50, y: 6, scale: 1.4, paint: "red-300" },
+      { part: "rim-light", x: 50, y: 56, scale: 1.6, paint: "red-300" },
+      { part: "halo", x: 22, y: 60, scale: 1, paint: "white" },
+    ],
+    particles: [
+      { part: "motes", x: 50, y: 40, scale: 1.4, paint: "red-300" },
+    ],
+  },
+};
+
 /** Genn (Classic #86, Common): Genn, a huge, calm, bald giant in a plain undyed tunic, stands arms folded in an empty quarry, needing nothing else; flat honest daylight; his arms rest on his hips. */
 const GENN: SceneRecipe = {
   family: "classic",
@@ -882,7 +1068,7 @@ const PLAGUE_CHALICE: SceneRecipe = {
     ],
     subject: [
       { part: "altar", x: 50, y: 86, scale: 2.4, paint: "stone-500" },
-      { part: "cauldron", x: 50, y: 66, scale: 1.4, paint: "stone-500" },
+      { part: "chalice", x: 50, y: 66, scale: 1.3, paint: "stone-500" },
       { part: "bubbles", x: 50, y: 52, scale: 1, paint: "green-400" },
     ],
     near: [
@@ -983,6 +1169,54 @@ const PAUL_ALLENS_GHOST: SceneRecipe = {
   },
 };
 
+/** In Too Deep (Classic #90, Mythic): an endless quest-cavern spiralling down, a lone adventurer on a ledge over a bottomless shaft, each level below lit by a glowing quest-shrine whose reward beckons her deeper; ropes, ladders and abandoned packs of earlier adventurers dangle into the dark, black-blue water floods the stairway behind her, violet glow from the depths, a dizzying, irresistible pull downward. */
+const IN_TOO_DEEP: SceneRecipe = {
+  family: "classic",
+  sky: ["slate-900", "blue-900"],
+  light: { x: 58, y: 64, r: 40, paint: "violet-500", opacity: 0.5 },
+  emblem: { x: 50, y: 24, size: 5, rotate: 0 },
+  figure: {
+    x: 26,
+    y: 64,
+    scale: 0.5,
+    pose: "pose-hold",
+    look: { ...figureLookFor(["Human"]), hair: "hair-long", outfit: "outfit-cloak", item: "item-lantern", cloth: "blue-700" },
+  },
+  layers: {
+    sky: [
+      { part: "cavern", x: 50, y: 70, paint: "slate-800" },
+      { part: "stars", x: 50, y: 14, scale: 0.8, count: 2, spread: [20, 4], paint: "violet-300", fade: 0.5 },
+    ],
+    far: [
+      { part: "stairs", x: 14, y: 30, scale: 0.7, paint: "slate-700" },
+      { part: "cascade", x: 12, y: 16, scale: 0.8, paint: "blue-800" },
+      { part: "strings", x: 60, y: 62, scale: 0.8, paint: "wood-600", props: true },
+    ],
+    mid: [
+      { part: "rock-floor", x: 22, y: 62, scale: 0.8, paint: "slate-700" },
+      { part: "ladder", x: 44, y: 96, scale: 0.7, paint: "wood-800", props: true },
+      { part: "sack", x: 12, y: 64, scale: 0.6, paint: "wood-700" },
+    ],
+    subject: [{ part: "spiral-shaft", x: 58, y: 62, scale: 1.05 }],
+    near: [
+      { part: "water", x: 50, y: 92, paint: "blue-900" },
+      { part: "crystal", x: 10, y: 92, scale: 1.3, count: 2, spread: [6, 2], paint: "violet-500" },
+      { part: "ladder", x: 90, y: 100, scale: 0.7, paint: "wood-700", props: true },
+      { part: "pouch", x: 76, y: 96, scale: 1 },
+    ],
+    light: [
+      { part: "halo", x: 58, y: 66, scale: 2.2, paint: "violet-500" },
+      { part: "god-rays", x: 58, y: 68, scale: 1, paint: "violet-300" },
+      { part: "rim-light", x: 26, y: 46, scale: 1, paint: "violet-300" },
+      { part: "halo", x: 30, y: 46, scale: 0.7, paint: "white" },
+    ],
+    particles: [
+      { part: "motes", x: 58, y: 58, scale: 1.6, count: 3, spread: [16, 12], paint: "violet-300" },
+      { part: "crystal", x: 56, y: 50, scale: 0.6, count: 4, spread: [26, 18], paint: "cyan-400" },
+    ],
+  },
+};
+
 /** Glitch (Classic token): a card in a temple niche tears into shifting squares of static, half of it already gone from reality; pale void around it, magenta-cyan flicker. */
 const GLITCH: SceneRecipe = {
   family: "classic",
@@ -1021,15 +1255,20 @@ export const CLASSIC_RECIPES_3: Readonly<Record<string, SceneRecipe>> = {
   "classic-072": GRAND_COUNTERSPELL,
   "classic-073": NURSE_CLEAVER,
   "classic-075": ARGUSLAND,
+  "classic-076": PLAGUE_BRINGER,
+  "classic-077": ANTI_MAGIC_MONKEY,
   "classic-078": MUTATE_SPELL,
   "classic-079": RISKY_DIE,
   "classic-080": BOOM_BIG_MAX,
   "classic-081": THE_POWER_TO_THRIVE,
+  "classic-082": SHEEOPLE,
   "classic-083": FLAME_LANCE,
   "classic-084": LOCKDOWN,
+  "classic-085": KING_WAGTOGGLE,
   "classic-086": GENN,
   "classic-087": PLAGUE_CHALICE,
   "classic-088": SIPHON_SQUAD,
   "classic-089": PAUL_ALLENS_GHOST,
+  "classic-090": IN_TOO_DEEP,
   "classic-t-glitch": GLITCH,
 };
