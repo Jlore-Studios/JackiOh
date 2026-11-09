@@ -16609,8 +16609,14 @@
     "what": "build #3501 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-09T19:10:19Z",
-    "notes": [],
+    "at": "2026-11-09T19:22:21Z",
+    "notes": [
+      "delivered plan #3501 on claude-6 (run 42679612003): planned",
+      "delivered revise #3464 on claude-3 (run 42658885008): approved",
+      "started build #3501 on claude-6 (run 42683277239)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17315,7 +17321,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T19:10:19Z",
+  "loop_tick": "2026-11-09T19:22:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
