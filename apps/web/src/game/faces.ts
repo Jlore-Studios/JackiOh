@@ -9,11 +9,13 @@
 // view carries (R243), else from nothing: the card is drawn by its id. The R97 sentinel names no
 // card, so it has no face, and the callers draw a back.
 
+import { useMemo } from "react";
+
 import type { CardDef, CardType, CardView, PlayerView } from "@jackioh/shared";
 
 import { faceModel, type FaceModel, type RolledPower } from "../cards/index.ts";
 import type { NamedTally } from "../cards/tallies.ts";
-import { getLocale } from "../i18n/i18n.ts";
+import { getLocale, useLocale } from "../i18n/i18n.ts";
 import { face } from "../wasm/index.ts";
 import { lookupFromDefs, matchCardsOf, unknownCard, type CardInfo, type CardLookup } from "./catalog.ts";
 
@@ -58,6 +60,40 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   });
   if (answer.answer !== "face") throw new Error(`the face model answered ${answer.answer} for a card`);
   return answer.face;
+}
+
+/**
+ * #3478: `liveFace` memoized on exactly the inputs it takes: the card's view object (stable while
+ * the view is), its definition (`info` itself is a fresh object per render, so the memo keys on
+ * `info.def`/`info.name`, never `info`), the live facts (`tallies` is a fresh array per render, so
+ * the memo keys on its contents, never the array) and the reader's language (R711000). A hover
+ * re-render performs zero new crossings; a new view recomputes only the changed card's face; a
+ * language switch recomputes every face. `card: null` draws the back's placeholder, as `Card.tsx`
+ * does for a back (no identity to cross for).
+ */
+export function useLiveFace(info: CardInfo, card: CardView | null, facts: LiveFacts = {}): FaceModel {
+  const { type, fieldPower, copied, tallies, inHand } = facts;
+  // A language change recomputes the face, as CardFace's labels redraw.
+  const locale = useLocale();
+  const { def, name } = info;
+  const talliesKey = (tallies ?? []).map((entry) => `${entry.name}\0${entry.value}\0${entry.goal}`).join("\n");
+  return useMemo(
+    () =>
+      card === null
+        ? faceModel({ defId: "", radiant: false })
+        : liveFace(info, card, {
+            ...(type === undefined ? {} : { type }),
+            ...(fieldPower === undefined ? {} : { fieldPower }),
+            ...(copied === undefined ? {} : { copied }),
+            ...(talliesKey === "" ? {} : { tallies }),
+            ...(inHand === undefined ? {} : { inHand }),
+          }),
+    // `info` and the `tallies` array are fresh objects per render; the deps key on their stable
+    // contents (`def`/`name`, `talliesKey`) instead, so an unchanged card never crosses again. The
+    // callback still reads them through `info`/`tallies`, which is sound because a dep change always
+    // recomputes with the latest render's values.
+    [def, name, card, type, fieldPower, copied, talliesKey, inHand, locale],
+  );
 }
 
 function backrowType(card: CardView): CardType | undefined {
