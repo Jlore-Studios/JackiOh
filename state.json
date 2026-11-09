@@ -18211,19 +18211,12 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -50; git diff 1b69bb256877b86e3332e37959c33b95e2390c1e...HEAD --stat | tail -3; git log --oneline -1 origin/main; git merge-base HEAD origin/main\"}\n- Bash: {\"command\": \"git diff 3163b425 HEAD -- apps/web/src/cards/art/ART.md | head -400; echo ----; git show 3163b425:apps/web/src/cards/art/ART.md | grep -n '^## '; echo; grep -n '^## ' apps/web/src/cards/\u2026\n- Bash: {\"command\": \"git diff 3163b425 HEAD -- apps/web/src/cards/art/ART.md | sed -n '400,1000p'; git diff 3163b425 HEAD --stat -- apps/web/src/cards/art/ART.md; git diff 3163b425 origin/main --stat -- apps\u2026\n- Bash: {\"command\": \"cd apps/web/src/cards/art && git show 3163b425:apps/web/src/cards/art/ART.md > /tmp/art_base.md && sed -n 425,445p ART.md && grep -rn \\\"Classic's scenes\\\" --include=*.ts . | head; grep -\u2026\n- Bash: {\"command\": \"grep -n '^ \\\"[a-z-]*\\\":' sceneKitClassic.ts sceneKitClassicProps.ts | head -40; sed -n 15,25p figureKit.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3464 && python3 - <<'EOF'\\ncur=open('apps/web/src/cards/art/ART.md').read()\\nbase=open('/tmp/art_base.md').read()\\nstart_marker=\\\"placements that mov\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/cards/art/ART.md'\\ns=open(p).read()\\nold='''Each of the 28 Units that are a person is a figure whose look starts from its tags' and is dressed as who i\u2026\n- Grep: {\"pattern\": \"ART\\\\.md\", \"glob\": \"*.test.ts*\", \"path\": \"apps/web/src\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"grep -n \\\"ART.md\\\\|readFileSync\\\" apps/web/src/cards/art/convention.test.ts | head; cargo jackioh spec check 2>&1 | tail -3\"}\n- Bash: {\"command\": \"sed -n '/^## Classic.s scenes/,/^## The detail floor/p' apps/web/src/cards/art/ART.md | head -20; git status --short\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/cards/art/ART.md'\\ns=open(p).read()\\nold=\\\"\\\"\\\"no picture; the contact sheet\\nshows it.\\\"\\\"\\\"\\nnew=\\\"\\\"\\\"no picture;\\n`classic-scenes.cy.tsx`'s contact\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every Classic card drawn as what it is: a scene of its own for each, richer the rarer\"} --> Closes #3352 ## The review finding (pass 2) **It held: the ART.md hunk had deleted other sets' documentation.** At the merge base `3163b425`, `ART.md` had three \u2026"
       },
-      "hold": {
-        "ends": "2026-11-09T07:00:54Z",
-        "lifted": "2026-11-09T05:10:50Z",
-        "owner": "claude-3",
-        "since": "2026-11-09T05:00:54Z",
-        "until": "2026-11-09T05:10:00Z",
-        "why": "it refused a call"
-      },
       "issue": 3352,
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-09T04:11:40Z",
+        "claimed": true,
+        "claimed_at": "2026-11-09T05:11:03Z",
         "from_run": "42548668690",
         "gates": [
           {
@@ -18319,7 +18312,7 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-09T04:10:40Z",
-      "run_id": "42560436722",
+      "run_id": "pending:87d363a6-1794201022",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -18339,7 +18332,7 @@
         "provider": "claude-3",
         "run": "42560436722"
       },
-      "started_at": "2026-11-09T04:11:40Z",
+      "started_at": "2026-11-09T05:11:03Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18504,9 +18497,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T05:01:11Z",
+    "at": "2026-11-09T05:11:03Z",
     "url": "",
-    "what": "review #3465 on claude-1"
+    "what": "review #3464 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-09T04:57:38Z",
