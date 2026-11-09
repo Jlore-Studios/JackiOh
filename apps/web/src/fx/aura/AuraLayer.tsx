@@ -10,7 +10,7 @@
 // its faint picture, the card art's own (cards/art `CardArt`, never an image of this layer's, B27), both
 // public (R202); reduced motion plans none.
 
-import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
+import { useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactElement } from "react";
 
 import type { PlayerId, PlayerView, Tag } from "@jackioh/shared";
 
@@ -22,6 +22,7 @@ import { useSetting } from "../../settings/store.ts";
 import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
 import { AURA_FADE_IN_MS, AURA_FADE_OUT_MS, FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../constants.ts";
 import { capacityFor } from "../director.ts";
+import { shedAuraScale, shedLevel, shedPointer, subscribeShed } from "../shed.ts";
 import { defaultFrames, defaultNow, defaultVisibility } from "../FxLayer.tsx";
 import { createFrameLoop } from "../loop.ts";
 import { createFxMemory } from "../memory.ts";
@@ -74,6 +75,11 @@ export const AURA_CANVAS_TESTID = "aura-canvas";
 /** R3337003: an Anomaly's backdrop draws its board, which no tag details. */
 const NO_TAGS: readonly Tag[] = [];
 
+/** R3351000: whether the pointer sits over the aura's box: the aura nearest the pointer. */
+function holdsPointer(box: FxBox, pointer: { x: number; y: number }): boolean {
+  return pointer.x >= box.x && pointer.x <= box.x + box.width && pointer.y >= box.y && pointer.y <= box.y + box.height;
+}
+
 /** The union of the zones' boxes, or null while one of them is not on the page or it is empty. */
 export function measureZones(testids: readonly string[]): FxBox | null {
   let left = Infinity;
@@ -120,6 +126,11 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
   const off = settings.intensity === "off";
   const still = panelReduces || reducedMotionNow(settings);
   const intensity: number = FX_INTENSITY_SCALE[settings.intensity];
+  // R3351000: the shed stage and the pointer it measures far auras by (shed.ts). Below stage 2
+  // the snapshot is always null, so pointer-move notifications change nothing and React bails out:
+  // no re-render, no measureAll forced layout, no drift re-sync.
+  const shed = useSyncExternalStore(subscribeShed, shedLevel, () => 0);
+  const pointer = useSyncExternalStore(subscribeShed, () => (shedAuraScale(shedLevel()) === 1 ? null : shedPointer()), () => null);
 
   // What the effects read: a ref, so a seam object made each render restarts nothing.
   const live = useRef(seams ?? {});
@@ -172,7 +183,7 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
   }, [view, still, off]);
 
   const shown = off ? [] : stackAuras(track.auras);
-  const budget = auraBudget(shown.length, intensity, capacityFor((live.current.viewportWidth ?? (() => window.innerWidth))()));
+  const whole = auraBudget(shown.length, intensity, capacityFor((live.current.viewportWidth ?? (() => window.innerWidth))()));
 
   // The board can move under the auras without this layer rendering (a resize, an orientation change, a
   // scroll), so the boxes are measured after every render and on those events, and set only when one moved.
@@ -246,6 +257,19 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
     };
   }, [moving]);
 
+  // R3351000: each aura's mote budget. At shed stage 2 the auras far from the pointer halve
+  // theirs; the one under it keeps its whole budget, and with no pointer known every aura counts
+  // as far. A box not measured yet keeps its whole budget until the measure lands.
+  const budgetFor = (key: string): number => {
+    if (shedAuraScale(shed) === 1) return whole;
+    if (pointer !== null) {
+      const box = boxes.get(key);
+      if (box === undefined || holdsPointer(box, pointer)) return whole;
+    }
+    return Math.floor(whole * shedAuraScale(shed));
+  };
+  const motes = shown.reduce((sum, aura) => sum + budgetFor(aura.spec.key), 0);
+
   // What the motes cover follows every render: the auras that show, their boxes, budget and phase.
   useLayoutEffect(() => {
     const current = engine.current;
@@ -253,7 +277,7 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
     current.drift.sync(
       shown.flatMap((aura) => {
         const box = boxes.get(aura.spec.key);
-        return box === undefined ? [] : [{ key: aura.spec.key, box, look: aura.spec.look, colors: aura.spec.colors, budget, phase: aura.phase }];
+        return box === undefined ? [] : [{ key: aura.spec.key, box, look: aura.spec.look, colors: aura.spec.colors, budget: budgetFor(aura.spec.key), phase: aura.phase }];
       }),
     );
     current.wake();
@@ -261,7 +285,7 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
 
   if (off || shown.length === 0) return null;
   return (
-    <div className="aura-layer" data-testid={AURA_LAYER_TESTID} data-aura={still ? "still" : "on"} data-aura-motes={still ? 0 : budget * shown.length} aria-hidden="true">
+    <div className="aura-layer" data-testid={AURA_LAYER_TESTID} data-aura={still ? "still" : "on"} data-aura-motes={still ? 0 : motes} aria-hidden="true">
       {still ? null : <canvas ref={canvasRef} className="aura-canvas" data-testid={AURA_CANVAS_TESTID} />}
       {[...shown].reverse().map((aura) => {
         const box = boxes.get(aura.spec.key);

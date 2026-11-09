@@ -14,7 +14,10 @@
 // doors.
 // R3407000: Stinkyscape part two's signatures.
 // R3405001: Meditative's Legendaries' and Mythics' signatures (fx/cards/meditative/), every one but The
-// Cane's and Mayor Medinamogger's, whose signatures are their entrances alone.
+// Cane's and Mayor Medinamogger's, whose signatures are their entrances alone. R3399000: Classic+'s signatures'
+// thirty recipes (#3399), in catalog order.
+// R3395000: the signatures of Stinkyscape 001 to 090's Legendaries and Mythics (fx/cards/stinkyscape/;
+// Imitated Instrumentality's magiBoot grows from its flourish).
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
@@ -33,6 +36,36 @@ import { inkTear } from "./classicplus/bookOfPain.ts";
 import { crushingWalls } from "./classicplus/crushingWalls.ts";
 import { constantStamp } from "./classicplus/kysConstant.ts";
 import { rollbackSweep } from "./classicplus/rollback.ts";
+import { holoLoom } from "./classicplus/aiSlop.ts";
+import { killNotch } from "./classicplus/botLoser.ts";
+import { chaosLever } from "./classicplus/callToChaos.ts";
+import { printSlot } from "./classicplus/datacenter.ts";
+import { batterBubble } from "./classicplus/deathBoil.ts";
+import { pancakeMouth } from "./classicplus/devour.ts";
+import { bannerFold } from "./classicplus/flagbearer.ts";
+import { doughArm } from "./classicplus/fluffyGrip.ts";
+import { spatulaFlip } from "./classicplus/frostspatula.ts";
+import { whiteout } from "./classicplus/frozenWastes.ts";
+import { grapeBounce } from "./classicplus/goldenGrape.ts";
+import { packLob } from "./classicplus/jlease.ts";
+import { relicSpill } from "./classicplus/jleasePack.ts";
+import { puzzleBox } from "./classicplus/joggsBox.ts";
+import { giftBoxes } from "./classicplus/kysGift.ts";
+import { slateTest } from "./classicplus/kysTest.ts";
+import { lineup } from "./classicplus/league.ts";
+import { hungryPot } from "./classicplus/legion.ts";
+import { sealedEnvelope } from "./classicplus/lobbyist.ts";
+import { coinCall } from "./classicplus/midLoser.ts";
+import { pancakeTray } from "./classicplus/mommyBarker.ts";
+import { pancakeFlip } from "./classicplus/motherPancake.ts";
+import { vineRipen } from "./classicplus/mythicGrape.ts";
+import { sepiaPortal } from "./classicplus/portal.ts";
+import { flourCloud } from "./classicplus/powderSpray.ts";
+import { sighMend } from "./classicplus/supportLoser.ts";
+import { stairGlue } from "./classicplus/twiceForward.ts";
+import { waffleGrid } from "./classicplus/waffleShell.ts";
+import { drumBeat } from "./classicplus/wardrum.ts";
+import { zealotCyclone } from "./classicplus/zealotism.ts";
 import { jadeCrack } from "./meditative/auspiciousRock.ts";
 import { mindJudge } from "./meditative/mindJudge.ts";
 import { cnSweep } from "./meditative/spirituallyZhongguo.ts";
@@ -91,6 +124,27 @@ import { stimmyDrop } from "./stinkyscape/stimmycheck.ts";
 import { chaosOrb } from "./stinkyscape/wildar.ts";
 import { probeScan } from "./stinkyscape/probeScan.ts";
 import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
+import { echoRings } from "./stinkyscape/aZoth.ts";
+import { beamCharge } from "./stinkyscape/beamV5.ts";
+import { cannonShell } from "./stinkyscape/cannonV5.ts";
+import { droneConveyor } from "./stinkyscape/droneCoreEight.ts";
+import { seedPod } from "./stinkyscape/droneCoreNine.ts";
+import { flakWaves } from "./stinkyscape/flakV5.ts";
+import { bellyBay } from "./stinkyscape/galaxy.ts";
+import { heistLocks } from "./stinkyscape/greatestHeist.ts";
+import { allureRibbon } from "./stinkyscape/kwzka.ts";
+import { asteroidCrunch } from "./stinkyscape/minerV5.ts";
+import { narcorCases } from "./stinkyscape/narcorProject.ts";
+import { paperclipLink } from "./stinkyscape/paperclipTheory.ts";
+import { wingMount } from "./stinkyscape/prototypeX1.ts";
+import { spineWeld } from "./stinkyscape/prototypeX2.ts";
+import { repeaterBurst } from "./stinkyscape/repeaterV5.ts";
+import { rodBands } from "./stinkyscape/rodOfAges.ts";
+import { glowLeash } from "./stinkyscape/siva1.ts";
+import { venomHand } from "./stinkyscape/siva2.ts";
+import { vaultHeist } from "./stinkyscape/tylannt.ts";
+import { ghostHulls } from "./stinkyscape/zZoth.ts";
+import { campusLaunch } from "./stinkyscape/zolarKeth.ts";
 import { celestialCall } from "./traininggrounds/celestialCaller.ts";
 import { chaosDice } from "./traininggrounds/chaosDice.ts";
 import { dinoStomp } from "./traininggrounds/dinoSize.ts";
@@ -167,6 +221,27 @@ export const CARD_RECIPES = {
   bobSoldier,
   scratchPad,
   magiBoot,
+  vaultHeist,
+  heistLocks,
+  rodBands,
+  campusLaunch,
+  droneConveyor,
+  seedPod,
+  allureRibbon,
+  narcorCases,
+  paperclipLink,
+  beamCharge,
+  repeaterBurst,
+  cannonShell,
+  flakWaves,
+  asteroidCrunch,
+  ghostHulls,
+  echoRings,
+  bellyBay,
+  wingMount,
+  spineWeld,
+  glowLeash,
+  venomHand,
   battleshipWarp,
   duoBond,
   flashFreeze,
@@ -215,6 +290,37 @@ export const CARD_RECIPES = {
   tyrantCommand,
   craterLock,
   shrineDescent,
+  // R3399000: Classic+'s signatures, in catalog order.
+  pancakeFlip,
+  pancakeMouth,
+  batterBubble,
+  doughArm,
+  flourCloud,
+  waffleGrid,
+  whiteout,
+  hungryPot,
+  spatulaFlip,
+  pancakeTray,
+  lineup,
+  coinCall,
+  sighMend,
+  killNotch,
+  zealotCyclone,
+  sepiaPortal,
+  drumBeat,
+  slateTest,
+  giftBoxes,
+  holoLoom,
+  bannerFold,
+  puzzleBox,
+  sealedEnvelope,
+  grapeBounce,
+  vineRipen,
+  chaosLever,
+  stairGlue,
+  packLob,
+  relicSpill,
+  printSlot,
 } as const satisfies Readonly<Record<string, CardRecipe>>;
 
 export type CardRecipeKey = keyof typeof CARD_RECIPES;

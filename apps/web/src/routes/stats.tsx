@@ -6,11 +6,12 @@
 // with the ranges shown, a tier says how much of the card's range is in it (R3184001). The patch bar
 // (R1973002): a patch is the window the cards share (R1973001), so a micro is never a step of its own; each
 // offered patch is a tab, and the newest, short of games, says its data is still being collected (R3324000).
-// The header names the current patch (R3324001). The Cards tab also holds the games panel (R1994000) and the
-// cards made during a game, the Tokens and the Other created cards, two sortable sections that share no row
-// (R2089000, R2370000, R3184002, R3324002); its on/off controls are the Segmented's pressed buttons (R3324003). The
-// card drill-down shows the faces (a full-art card's still Epic while the Full-art cards setting is on,
-// R3011000), patch history, turn curve and co-played synergy.
+// The header names the current patch (R3324001), and the games tile the patch its games were collected on
+// (R3447000). The Cards tab also holds the games panel (R1994000) and the cards made during a game, the Tokens and
+// the Other created cards, two sortable sections that share no row (R2089000, R2370000, R3184002, R3324002); its
+// on/off controls are the Segmented's pressed buttons (R3324003). The card drill-down shows the faces (a full-art
+// card's still Epic while the Full-art cards setting is on, R3011000), patch history, turn curve and co-played
+// synergy.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -447,6 +448,14 @@ export default function StatsRoute(): ReactElement {
   // R3324000: the newest patch, short of games, shows no figures: its Cards and Sets tabs say it is collecting.
   const collecting = isCollecting(patchList, shownPatch);
   const shownPatchName = shownPatch >= 0 ? patchName(patchList[shownPatch]!) : (cardStatsData?.patch ?? "");
+  // R3447000: the patch the figures were collected on: while they are the previous window's (R1367000), the patch
+  // before (the version before, from a server without the list); else the patch shown.
+  const collectedPatchName =
+    cardStatsData?.source === "previous"
+      ? previousWindow
+        ? patchName(previousWindow)
+        : (cardStatsData.previousPatch ?? shownPatchName)
+      : shownPatchName;
 
   // R1966000: the Sets tab reads the patch's every card, whatever the Cards tab filters, then the previous
   // patch's for each set's change; a previous patch that fails to load only leaves the change out.
@@ -700,11 +709,12 @@ export default function StatsRoute(): ReactElement {
         )}
 
         {/* The summary: the patch's games alone (R661); R1646000 took the top and lowest card tiles off the fixed top;
-            a patch still collecting its data shows no count (R3324000) */}
+            a patch still collecting its data shows no count (R3324000); the tile names the patch its games were
+            collected on (R3447000) */}
         {cardStatsData && !collecting && (
           <section className="stats-summary-tiles" data-testid={statsTestid.summaryTiles} aria-label={t("Statistics summary")}>
             <div className="stats-summary-tile" data-testid={statsTestid.summaryTotalGames}>
-              <span className="stats-summary-label">{t("Games on patch {patch}", { patch: shownPatchName })}</span>
+              <span className="stats-summary-label">{t("Games on patch {patch}", { patch: collectedPatchName })}</span>
               <span className="stats-summary-value">{summary ? formatNumber(summary.totalGames) : ""}</span>
             </div>
           </section>

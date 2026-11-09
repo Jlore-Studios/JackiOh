@@ -29,7 +29,7 @@ import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { artPictureOf, isFullBleed, ladderOf, levelsOn, offeredOn, VERSION_ALT_ART_ID } from "../versions.ts";
 import { normalExtraLookOf, normalLookOf } from "./classicPlusAltRecipes1.ts";
 import { motifFor } from "./motifs.ts";
-import { ART_ROLES, FULL_ART_MOTION } from "./motion.ts";
+import { ART_ROLES, FULL_ART_CARD_MOTION, FULL_ART_MOTION } from "./motion.ts";
 import { artSeedOf } from "./pictures.ts";
 import { artSpec, type ArtSpec } from "./procedural.ts";
 import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, artElements } from "./richness.ts";
@@ -40,8 +40,8 @@ import { proceduralArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
 
 const SVG_PREFIX = "data:image/svg+xml,";
-/** The cards with an alt recipe, in id order. */
-const ALT_IDS: readonly string[] = Object.keys(ALT_SCENE_RECIPES).sort();
+/** The Classic+ cards with an alt recipe, in id order. R3397000: the table holds Meditative+'s and Training Grounds' too (setAltScenes.test.tsx); R3404000: and Meditative's (meditativeAltScenes.test.tsx); R3398000: and Core's (coreAltScenes.test.tsx). */
+const ALT_IDS: readonly string[] = Object.keys(ALT_SCENE_RECIPES).filter((id) => CATALOG[id]?.set === "Classic+").sort();
 /** The rarer than Rare: a scene with a foreground, a middle and a background. */
 const DEEP: readonly Rarity[] = ["Epic", "Legendary", "Mythic"];
 /** R3017002's repaints, each a picture of its own under its treatment, which keep the card's normal recipe. */
@@ -335,7 +335,8 @@ describe("R3396000 Classic+ Alt art restaged", () => {
       expect(moving, id).toBe(true);
     }
     // Each Classic+ full-art card offered Alt art moves its Alt picture's every layer its motion names.
-    const fullArt = ALT_IDS.filter((id) => FULL_ART_MOTION[id] !== undefined);
+    // The full-art cards' own motions (R2715001), not R3340000's recipes for every other Legendary and Mythic.
+    const fullArt = ALT_IDS.filter((id) => FULL_ART_CARD_MOTION[id] !== undefined);
     expect(fullArt).toEqual(["classicplus-012", "classicplus-019", "classicplus-046", "classicplus-075"]);
     for (const id of fullArt) {
       const motion = FULL_ART_MOTION[id] ?? null;

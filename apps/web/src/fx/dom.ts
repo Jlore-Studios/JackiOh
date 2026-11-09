@@ -2,17 +2,17 @@
 // No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
 // Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers, R2801000 launches,
 // R3336000 ships, R2800000 set pieces, and R3337002's radar and R3337003's rift and title card. R3400000: a
-// takeover's look may draw its art (takeoverArt.ts), R3402000 a Core Mythic's its scene; R3400001: a
-// signature's figures (figures.ts), each a shape over its box, never a card.
+// takeover's look may draw its art (takeoverArt.ts; R3399002: its parts or a drawing of its own, R3402000 a Core
+// Mythic's a scene of shapes); R3400001: a signature's figures (figures.ts), each a shape over its box, never a card.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { ART_PLANES } from "../cards/art/pictures.ts";
 import { fragmentRef, signatureLength, signatureSize } from "../cards/FullArtSignature.tsx";
 import { SIGNATURE_FACES } from "../cards/signatureFaces.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
-import { pointIn } from "./anchors.ts";
-import { buildTakeoverArt, takeoverArtParts } from "./takeoverArt.ts";
-import type { FxAnchor, FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxPoint, FxRollCue, FxSplatTone, FxTakeoverStage, FxTimedPoint, FxTint, SetPieceShape } from "./types.ts";
+import { atOf, pointIn } from "./anchors.ts";
+import { ART_ATTRS, TAKEOVER_ART_DRAWINGS, takeoverArtParts, type TakeoverDrawing } from "./takeoverArt.ts";
+import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTakeoverStage, FxTimedPoint, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
 
 export type DomEffectBoxes = { at?: FxBox | null; from?: FxBox | null; to?: FxBox | null };
@@ -137,7 +137,7 @@ function takeoverStage(doc: Document, card: FxTakeoverStage): HTMLElement {
   return stage;
 }
 
-/** R2722001: a takeover's layers, bottom to top (fx.css); R3402000: a look's own art goes over the dark. */
+/** R2722001: a takeover's layers, bottom to top (fx.css); R3400000: a look's own art goes over the dark. */
 const TAKEOVER_PARTS = ["dark", "sweep", "rays", "wave"] as const;
 
 /** R2800000: each set piece shape's layers, bottom to top (fx.css). */
@@ -174,10 +174,6 @@ function ms(value: number): string {
 function placeAtPoint(el: HTMLElement, point: { x: number; y: number }): void {
   el.style.setProperty("--fx-x", px(point.x));
   el.style.setProperty("--fx-y", px(point.y));
-}
-
-function atOf(anchor: FxAnchor): FxPoint | undefined {
-  return anchor.kind === "testid" ? anchor.at : undefined;
 }
 
 /**
@@ -232,6 +228,45 @@ function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
     svg.appendChild(path);
     el.appendChild(svg);
   }
+}
+
+/**
+ * R3399002: a takeover's drawing in its art layer, one path a shape, each moved by fx.css under the live takeover as its
+ * `part` says. R3402000: or a scene's shapes, each `takeover-drawing-<part>` with its geometry alone (fx.css paints it
+ * from the look's tint), and its place among its part's shapes (`--fx-art-i` of `--fx-art-n`) for fx.css to stagger them by.
+ */
+function takeoverDrawing(doc: Document, drawing: TakeoverDrawing): SVGSVGElement {
+  const svg = doc.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("class", "takeover-art-drawing");
+  svg.setAttribute("viewBox", drawing.viewBox);
+  svg.setAttribute("preserveAspectRatio", "xMidYMid slice");
+  svg.setAttribute("aria-hidden", "true");
+  if ("paths" in drawing) {
+    for (const shape of drawing.paths) {
+      const path = doc.createElementNS(SVG_NS, "path");
+      path.setAttribute("class", `takeover-drawing-${shape.part}`);
+      path.setAttribute("d", shape.d);
+      path.setAttribute("fill", shape.fill);
+      svg.appendChild(path);
+    }
+    return svg;
+  }
+  const counts = new Map<string, number>();
+  for (const shape of drawing.shapes) counts.set(shape.part, (counts.get(shape.part) ?? 0) + 1);
+  const seen = new Map<string, number>();
+  for (const shape of drawing.shapes) {
+    const el = doc.createElementNS(SVG_NS, shape.tag);
+    el.setAttribute("class", `takeover-drawing-${shape.part}`);
+    for (const name of ART_ATTRS) {
+      const value = shape.attrs[name];
+      if (value !== undefined) el.setAttribute(name, value);
+    }
+    const index = seen.get(shape.part) ?? 0;
+    seen.set(shape.part, index + 1);
+    el.setAttribute("style", `--fx-art-i: ${String(index)}; --fx-art-n: ${String(counts.get(shape.part) ?? 1)}`);
+    svg.appendChild(el);
+  }
+  return svg;
 }
 
 function chaosLines(doc: Document, el: HTMLElement, lines: FxChaosCue["lines"]): void {
@@ -445,6 +480,7 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
     case "takeover": {
       // R2722001, R3345000: the board's darkening, the card's full art in 4 depth planes,
       // dolly camera, set signature hand signing across the bottom, and rays/shockwave.
+      // R3399002: a look drawn as a picture of its own paints it in its art layer, keyed by the look alone.
       const at = boxes.at ?? null;
       if (at === null) return null;
       placeAtCenter(el, at);
@@ -460,14 +496,6 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
         el.appendChild(child);
         // R3345000: the card's own full-art stage sits over the dark, under the sweep, rays and wave.
         if (part === "dark" && stage !== null) el.appendChild(stage);
-        // R3402000: a look with a scene of its own draws it over the dark, under the sweep (takeoverArt.ts).
-        const scene = part === "dark" ? buildTakeoverArt(doc, cue.look) : null;
-        if (scene !== null) {
-          const layer = doc.createElement("div");
-          layer.className = "fx-takeover-art";
-          layer.appendChild(scene);
-          el.appendChild(layer);
-        }
         // R3407000: a look of its own may draw its card's picture filling the screen, over the dark and under the sweep.
         if (part === "dark" && cue.art !== undefined) {
           const picture = doc.createElement("img");
@@ -478,9 +506,11 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
           picture.src = cue.art;
           el.appendChild(picture);
         }
-        // R3400000: a look with art of its own draws it over the dark, under the sweep, rays and wave, one element a part.
+        // R3400000: a look with art of its own draws it over the dark, under the sweep, rays and wave, one element a part;
+        // R3399002: or its drawing, one path a shape (R3402000: or a scene's shapes).
         const parts = part === "dark" ? takeoverArtParts(cue.look) : [];
-        if (parts.length === 0) continue;
+        const drawing = part === "dark" ? TAKEOVER_ART_DRAWINGS[cue.look] : undefined;
+        if (parts.length === 0 && drawing === undefined) continue;
         const art = doc.createElement("div");
         art.className = "takeover-art";
         art.setAttribute("data-look", cue.look);
@@ -489,6 +519,7 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
           piece.className = `takeover-art-${name}`;
           art.appendChild(piece);
         }
+        if (drawing !== undefined) art.appendChild(takeoverDrawing(doc, drawing));
         el.appendChild(art);
       }
       break;

@@ -12,7 +12,8 @@
 // R3407001: Stinkyscape's 23 signature cards joined, one sound each, so that every card with a signature of
 // its own also sounds its own; a Field Spell lands face up in the backrow with a `summoned` of its own, the
 // moment its signature starts, so it sounds there (never on its `cardPlayed`, which would sound it twice),
-// under the same R97 and R227 guards.
+// under the same R97 and R227 guards. R3395000: Stinkyscape 001 to 090's 24 Legendaries' and Mythics'
+// signatures join them on the same terms, its three Field Spells' as they land in the backrow.
 
 import type { GameEvent, Row } from "@jackioh/shared";
 
@@ -166,6 +167,54 @@ export const SIGNATURE_SFX: Readonly<Record<string, SignatureSound>> = {
   "meditative-097-8": { sfx: "cellSlam", on: "summoned", row: "units" },
   // Jlockeed's Headquarters: hydraulic doors grinding, a radar ping, truck engines revving.
   "meditative-097-9": { sfx: "hangarRev", on: "summoned", row: "units" },
+  // R3395000. Tylannt: vault tumblers clicking, then a heavy door's hiss.
+  "stinkyscape-006": { sfx: "vaultHiss", on: "summoned", row: "units" },
+  // The Greatest Heist: safe-dial ticks and a soft alarm chirp.
+  "stinkyscape-007": { sfx: "safeChirp", on: "summoned", row: "backrow" },
+  // Rod of Ages: a deep stone hum, a chime for each band.
+  "stinkyscape-016": { sfx: "stoneChime", on: "summoned", row: "backrow" },
+  // Imitated Instrumentality: three rising boot tones, then a cold electronic chord.
+  "stinkyscape-018": { sfx: "magiChord", on: "cardPlayed" },
+  // ZolarKeth: a lecture-hall bell, then a rocket's distant rumble.
+  "stinkyscape-026": { sfx: "lectureRumble", on: "summoned", row: "units" },
+  // Drone Core VIII: a factory press stamping faster and faster.
+  "stinkyscape-034": { sfx: "pressStamp", on: "cardPlayed" },
+  // Drone Core IX: three deep engine roars, one after another.
+  "stinkyscape-035": { sfx: "corvetteRoar", on: "cardPlayed" },
+  // Kwzka: a crowd's gasp and a bright pop-chorus sting.
+  "stinkyscape-037": { sfx: "popGasp", on: "summoned", row: "units" },
+  // The Narcor Project: glass clinking, a Geiger crackle, a low hum.
+  "stinkyscape-039": { sfx: "geigerHum", on: "summoned", row: "backrow" },
+  // Great Paperclip Theory: a soft metallic twang, then a rising, endless ratchet.
+  "stinkyscape-044": { sfx: "wireRatchet", on: "cardPlayed" },
+  // Beam v5: a rising whine, a deep beam hum, a cooling tick.
+  "stinkyscape-058": { sfx: "beamWhine", on: "summoned", row: "units" },
+  // Repeater v5: rapid rattling bursts rising in pitch, a steam hiss.
+  "stinkyscape-059": { sfx: "rattleSteam", on: "summoned", row: "units" },
+  // Cannon v5: a breech clank and one thunderous boom.
+  "stinkyscape-060": { sfx: "breechBoom", on: "summoned", row: "units" },
+  // Flak v5: three rolls of flak, then silence and a thin wind.
+  "stinkyscape-061": { sfx: "flakWind", on: "summoned", row: "units" },
+  // Miner v5: a grinding crunch, then a bright jackpot chime.
+  "stinkyscape-066": { sfx: "crunchJackpot", on: "summoned", row: "units" },
+  // Z'Zoth: a low choir hum and creaking hulls.
+  "stinkyscape-070": { sfx: "choirHulls", on: "summoned", row: "units" },
+  // A'Zoth: a brassy horn blast echoing back in layers.
+  "stinkyscape-071": { sfx: "hornEcho", on: "summoned", row: "units" },
+  // Paragon Mk2: a jet scream and a shield's glassy snap.
+  "stinkyscape-073": { sfx: "jetSnap", on: "summoned", row: "units" },
+  // Paragon-X: a white-noise roar, then a clean high ring.
+  "stinkyscape-074": { sfx: "whiteRing", on: "summoned", row: "units" },
+  // Galaxy: a deep hull groan, two drills whining up.
+  "stinkyscape-080": { sfx: "hullDrills", on: "summoned", row: "units" },
+  // Prototype-X1: a test-range klaxon and a sputtering engine catching.
+  "stinkyscape-085": { sfx: "klaxonSputter", on: "summoned", row: "units" },
+  // Prototype-X2: a molten roar, shrieking metal, a furious engine snarl.
+  "stinkyscape-086": { sfx: "moltenSnarl", on: "summoned", row: "units" },
+  // Siva 1: camera shutters and a smug purr.
+  "stinkyscape-087": { sfx: "shutterPurr", on: "summoned", row: "units" },
+  // Siva 2: a dark reboot sting and a hissing drip.
+  "stinkyscape-088": { sfx: "venomDrip", on: "summoned", row: "units" },
 };
 
 const NONE: readonly SoundCue[] = [];

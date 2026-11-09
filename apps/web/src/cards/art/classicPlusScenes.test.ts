@@ -18,7 +18,7 @@ import {
 } from "../constants.ts";
 import { FIGURE_KIT, figureLookFor } from "./figureKit.ts";
 import { motifFor } from "./motifs.ts";
-import { ART_ROLES, FULL_ART_MOTION } from "./motion.ts";
+import { ART_ROLES, FULL_ART_CARD_MOTION, FULL_ART_MOTION } from "./motion.ts";
 import { artSeedOf } from "./pictures.ts";
 import { artSpec, type ArtSpec } from "./procedural.ts";
 import { ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } from "./richness.ts";
@@ -180,7 +180,8 @@ describe("R3390000 Classic+ drawn as scenes", () => {
     expect(recipe("classicplus-019").extras?.length ?? 0).toBeGreaterThanOrEqual(4);
     expect(crowds).toBeGreaterThan(1);
     // A Classic+ full-art card moves every layer its motion names (R2715001), its props among them.
-    const fullArt = ENTRIES.filter((card) => FULL_ART_MOTION[card.id] !== undefined);
+    // The full-art cards' own motions (R2715001), not R3340000's recipes for every other Legendary and Mythic.
+    const fullArt = ENTRIES.filter((card) => FULL_ART_CARD_MOTION[card.id] !== undefined);
     expect(fullArt.map((card) => card.id).sort()).toEqual(
       ["classicplus-012", "classicplus-019", "classicplus-026", "classicplus-046", "classicplus-048", "classicplus-062", "classicplus-069", "classicplus-075"].sort(),
     );
@@ -211,7 +212,9 @@ describe("R3390000 Classic+ drawn as scenes", () => {
   it("R3390000 Alt art grows the same parts from its own seed", () => {
     // R3396000: the 40 offered Alt art draw an alt recipe of their own instead (classicPlusAltScenes.test.tsx).
     const reseeded = ENTRIES.filter((card) => !Object.hasOwn(ALT_SCENE_RECIPES, card.id));
-    expect(reseeded).toHaveLength(ENTRIES.length - Object.keys(ALT_SCENE_RECIPES).length);
+    // R3397000: the table holds Meditative+'s and Training Grounds' too (setAltScenes.test.tsx); R3404000: and
+    // Meditative's (meditativeAltScenes.test.tsx).
+    expect(reseeded).toHaveLength(ENTRIES.length - Object.keys(ALT_SCENE_RECIPES).filter((id) => CATALOG[id]?.set === "Classic+").length);
     expect(reseeded).toHaveLength(76);
     for (const card of reseeded) {
       const scene = recipe(card.id);

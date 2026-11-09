@@ -14,7 +14,7 @@ import { proceduralCardArtUri } from "../../patches/cardArt.ts";
 import { FIGURE_KIT, KY_TUTOR_LOOK } from "./figureKit.ts";
 import { hashId } from "./hash.ts";
 import { motifFor } from "./motifs.ts";
-import { ART_ROLES, FULL_ART_MOTION } from "./motion.ts";
+import { ART_ROLES, FULL_ART_CARD_MOTION, FULL_ART_MOTION } from "./motion.ts";
 import { artSpec, type ArtSpec } from "./procedural.ts";
 import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } from "./richness.ts";
 import { composeScene, sceneRecipeOf, sceneUse, SCENE_LAYERS, type SceneLayer, type SceneRecipe } from "./scene.ts";
@@ -147,7 +147,8 @@ describe("R3392000 Core's scenes", () => {
     expect(extras).toBeGreaterThan(0);
     // A full-art Core card moves every layer its motion names (R2715001), its props among them: a scene draws no
     // motif glyph or accent, so its props are placements marked `props` (R3390000), never in the subject layer.
-    const fullArt = CORE.filter((card) => FULL_ART_MOTION[card.id] !== undefined);
+    // The full-art cards' own motions (R2715001), not R3340000's recipes for every other Legendary and Mythic.
+    const fullArt = CORE.filter((card) => FULL_ART_CARD_MOTION[card.id] !== undefined);
     expect(fullArt.map((card) => card.id).sort()).toEqual(["core-001", "core-004", "core-008", "core-011", "core-012", "core-013", "core-018", "core-086"]);
     for (const card of fullArt) {
       const motion = FULL_ART_MOTION[card.id] ?? null;

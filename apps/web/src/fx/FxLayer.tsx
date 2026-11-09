@@ -33,6 +33,7 @@ import { planStage } from "./stage.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "./director.ts";
 import { createFxMemory } from "./memory.ts";
 import { useFxSettings } from "./settings.ts";
+import { setShedPointer } from "./shed.ts";
 import { useSetting } from "../settings/store.ts";
 import { createSurface, type FxSurface } from "./surface.ts";
 import { applyManaMarks, manaMarks } from "./manaMarks.ts";
@@ -190,6 +191,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
       shakeSink: s.shakeSink ?? boardShakeSink(document),
       seed: s.seed ?? FX_DEFAULT_SEED,
       capacity: capacityFor(s.viewportWidth?.() ?? window.innerWidth),
+      phone: (s.viewportWidth?.() ?? window.innerWidth) < FX_MOBILE_WIDTH,
       element: s.element,
     });
     director.current = created;
@@ -340,6 +342,19 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     document.addEventListener("pointerdown", onDown, true);
     return () => {
       document.removeEventListener("pointerdown", onDown, true);
+    };
+  }, []);
+  // R3351000: the pointer the shed order measures far auras by (shed.ts). One passive listener for
+  // the whole layer; the aura layer reads the same store. There was no layer-wide pointer position
+  // before: tilt tracks each face on its own (cards/tilt.ts, R3344001).
+  useEffect(() => {
+    const onMove = (event: PointerEvent): void => {
+      setShedPointer({ x: event.clientX, y: event.clientY });
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      setShedPointer(null);
     };
   }, []);
   const promptForViewer = view.pending !== null && view.pending.forYou;

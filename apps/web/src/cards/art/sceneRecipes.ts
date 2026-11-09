@@ -11,26 +11,45 @@
 // placements' counts. R3393000: the Meditative+ and Training Grounds passes keep their recipes in files of
 // their own (sceneRecipesMeditativePlus.ts, sceneRecipesTrainingGrounds.ts and, for the Legacy cards,
 // sceneRecipesLegacy.ts, R3393001), spread in after the Core scenes. R3396000: a Classic+ card offered Alt
-// art draws an alt recipe of its own (`ALT_SCENE_RECIPES`) under its Alt art seed (scene.ts `sceneRecipeOf`).
+// art draws an alt recipe of its own (`ALT_SCENE_RECIPES`) under its Alt art seed (scene.ts `sceneRecipeOf`);
+// R3397000: so does a Meditative+ or Training Grounds card offered it (meditativePlusAltRecipes.ts,
+// trainingGroundsAltRecipes.ts), and R3404000: so does a Meditative card offered Alt art
+// (meditativeAltRecipes1.ts to meditativeAltRecipes3.ts), and R3398000 a Core card (coreAltRecipes1.ts to
+// coreAltRecipes3.ts), and R3406000 every card of #3406's table, Stinkyscape's later cards
+// (stinkyscape91AltRecipes1.ts to stinkyscape91AltRecipes3.ts).
 
 import { CLASSIC_PLUS_ALT_RECIPES_1 } from "./classicPlusAltRecipes1.ts";
 import { CLASSIC_PLUS_ALT_RECIPES_2 } from "./classicPlusAltRecipes2.ts";
 import { CLASSIC_PLUS_RECIPES_1 } from "./classicPlusRecipes1.ts";
 import { CLASSIC_PLUS_RECIPES_2 } from "./classicPlusRecipes2.ts";
 import { CLASSIC_PLUS_RECIPES_3 } from "./classicPlusRecipes3.ts";
+import { CORE_ALT_RECIPES_1 } from "./coreAltRecipes1.ts";
+import { CORE_ALT_RECIPES_2 } from "./coreAltRecipes2.ts";
+import { CORE_ALT_RECIPES_3 } from "./coreAltRecipes3.ts";
 import { figureLookFor } from "./figureKit.ts";
+import { MEDITATIVE_ALT_RECIPES_1 } from "./meditativeAltRecipes1.ts";
+import { MEDITATIVE_ALT_RECIPES_2 } from "./meditativeAltRecipes2.ts";
+import { MEDITATIVE_ALT_RECIPES_3 } from "./meditativeAltRecipes3.ts";
+import { MEDITATIVE_PLUS_ALT_RECIPES } from "./meditativePlusAltRecipes.ts";
 import { MEDITATIVE_RECIPES_1 } from "./meditativeRecipes1.ts";
 import { MEDITATIVE_RECIPES_2 } from "./meditativeRecipes2.ts";
 import { MEDITATIVE_RECIPES_3 } from "./meditativeRecipes3.ts";
 import { MEDITATIVE_RECIPES_4 } from "./meditativeRecipes4.ts";
 import { MEDITATIVE_RECIPES_5 } from "./meditativeRecipes5.ts";
 import type { SceneRecipe } from "./scene.ts";
+import { STINKYSCAPE_91_ALT_RECIPES_1 } from "./stinkyscape91AltRecipes1.ts";
+import { STINKYSCAPE_91_ALT_RECIPES_2 } from "./stinkyscape91AltRecipes2.ts";
+import { STINKYSCAPE_91_ALT_RECIPES_3 } from "./stinkyscape91AltRecipes3.ts";
+import { STINKYSCAPE_91_RECIPES_1 } from "./stinkyscape91Recipes1.ts";
+import { STINKYSCAPE_91_RECIPES_2 } from "./stinkyscape91Recipes2.ts";
+import { STINKYSCAPE_91_RECIPES_3 } from "./stinkyscape91Recipes3.ts";
 import { CORE_SCENES_1 } from "./sceneRecipesCore1.ts";
 import { CORE_SCENES_2 } from "./sceneRecipesCore2.ts";
 import { CORE_SCENES_3 } from "./sceneRecipesCore3.ts";
 import { LEGACY_RECIPES } from "./sceneRecipesLegacy.ts";
 import { MEDITATIVE_PLUS_RECIPES } from "./sceneRecipesMeditativePlus.ts";
 import { TRAINING_GROUNDS_RECIPES } from "./sceneRecipesTrainingGrounds.ts";
+import { TRAINING_GROUNDS_ALT_RECIPES } from "./trainingGroundsAltRecipes.ts";
 
 /** Corpse Plantation (Classic #74, Epic): a moonlit graveyard farm under its bone scarecrow. */
 const CORPSE_PLANTATION: SceneRecipe = {
@@ -148,7 +167,21 @@ const ARG_ARG_DEFENDER: SceneRecipe = {
   },
 };
 
-/** R3331000: the cards that draw from a scene, by id: the proof cards, R3390000 every Classic+ entry, R3392000 every Core entry, R3393000 every Meditative+ and Training Grounds entry and R3401000 every Meditative entry. */
+/** R3403000: every entry of #3403's table (Stinkyscape #91 to #176 and their tokens, and the early cards' tokens it names), by id. */
+export const STINKYSCAPE_91_RECIPES: Readonly<Record<string, SceneRecipe>> = {
+  ...STINKYSCAPE_91_RECIPES_1,
+  ...STINKYSCAPE_91_RECIPES_2,
+  ...STINKYSCAPE_91_RECIPES_3,
+};
+
+/** R3406000: the alt recipes of #3406's table (Stinkyscape's later cards offered Alt art, the Dormant Starship aside), by id. */
+export const STINKYSCAPE_91_ALT_RECIPES: Readonly<Record<string, SceneRecipe>> = {
+  ...STINKYSCAPE_91_ALT_RECIPES_1,
+  ...STINKYSCAPE_91_ALT_RECIPES_2,
+  ...STINKYSCAPE_91_ALT_RECIPES_3,
+};
+
+/** R3331000: the cards that draw from a scene, by id: the proof cards, R3390000 every Classic+ entry, R3392000 every Core entry, R3393000 every Meditative+ and Training Grounds entry, R3401000 every Meditative entry and R3403000 #3403's Stinkyscape entries. */
 export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   "classic-074": CORPSE_PLANTATION,
   "core-100": CEASELESS_VOID,
@@ -162,6 +195,7 @@ export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   ...CLASSIC_PLUS_RECIPES_1,
   ...CLASSIC_PLUS_RECIPES_2,
   ...CLASSIC_PLUS_RECIPES_3,
+  ...STINKYSCAPE_91_RECIPES,
   ...MEDITATIVE_RECIPES_1,
   ...MEDITATIVE_RECIPES_2,
   ...MEDITATIVE_RECIPES_3,
@@ -172,13 +206,34 @@ export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
 /**
  * R3396000: the alt recipes, by card id: every Classic+ card offered Alt art (`version-alt-art`) draws its subject
  * restaged in another place, time or moment from its brief (classicPlusAltRecipes1.ts and classicPlusAltRecipes2.ts),
- * read under its Alt art seed alone (scene.ts `sceneRecipeOf`), at every Alt art level (R3015002).
+ * read under its Alt art seed alone (scene.ts `sceneRecipeOf`), at every Alt art level (R3015002). R3397000: and so
+ * does every Meditative+ and Training Grounds card offered it (meditativePlusAltRecipes.ts, trainingGroundsAltRecipes.ts).
+ * R3404000: and so does every Meditative card offered Alt art (meditativeAltRecipes1.ts to meditativeAltRecipes3.ts).
+ * R3398000: and every Core card offered it (coreAltRecipes1.ts to coreAltRecipes3.ts). R3406000: and every card of
+ * #3406's table (`STINKYSCAPE_91_ALT_RECIPES`), a Starship Piece's, a Jlockeed weapon's and Dice of Doom's among them,
+ * whose normal face their own painter still draws.
  */
-export const ALT_SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = { ...CLASSIC_PLUS_ALT_RECIPES_1, ...CLASSIC_PLUS_ALT_RECIPES_2 };
+export const ALT_SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
+  ...CLASSIC_PLUS_ALT_RECIPES_1,
+  ...CLASSIC_PLUS_ALT_RECIPES_2,
+  ...MEDITATIVE_ALT_RECIPES_1,
+  ...MEDITATIVE_ALT_RECIPES_2,
+  ...MEDITATIVE_ALT_RECIPES_3,
+  ...MEDITATIVE_PLUS_ALT_RECIPES,
+  ...TRAINING_GROUNDS_ALT_RECIPES,
+  ...CORE_ALT_RECIPES_1,
+  ...CORE_ALT_RECIPES_2,
+  ...CORE_ALT_RECIPES_3,
+  ...STINKYSCAPE_91_ALT_RECIPES,
+};
 
 /**
  * R3396000: the least share of an Alt art window's sampled points that differ from the same card's normal face, base
  * and Radiant: e2e/cypress/component/classicplus-alt-scenes.cy.tsx samples both windows on card-versions.cy.tsx's grid
- * and counts a point as differing as card-versions.cy.tsx does for `PICTURE_SHARE_MIN`.
+ * and counts a point as differing as card-versions.cy.tsx does for `PICTURE_SHARE_MIN`; R3397000: and
+ * e2e/cypress/component/set-alt-scenes.cy.tsx for Meditative+'s and Training Grounds'; R3404000: and
+ * e2e/cypress/component/meditative-alt-scenes.cy.tsx for Meditative's; R3398000: and
+ * e2e/cypress/component/core-alt-scenes.cy.tsx the Core cards' the same way; R3406000: and
+ * e2e/cypress/component/stinkyscape91-alt-scenes.cy.tsx for Stinkyscape's later cards'.
  */
 export const ALT_PICTURE_CHANGE_MIN = 0.6;

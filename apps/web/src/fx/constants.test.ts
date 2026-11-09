@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { animationRow, SET_PIECE_HOLD_CAP_MS, TAKEOVER_HOLD_MS } from "../game/animations.ts";
 import { LANES } from "../game/contract.ts";
+import { COSMETIC_FOIL_ANIMATED_MAX } from "../cards/constants.ts";
 import { AURA_LOOKS } from "./aura/looks.ts";
 import * as constants from "./constants.ts";
 
@@ -183,8 +184,6 @@ const S2 = {
   FX_MIND_JUDGE_TRAUMA: 0.1,
   // Issue #2797: Stinkyscape's Flourishes (R2797000).
   FX_TERMINUS_TRAUMA: 0.5,
-  FX_MAGI_STAGGER: 0.05,
-  FX_MAGI_BOOTS: 3,
   FX_MAGI_TRAUMA: 0.3,
   FX_WARP_TRAUMA: 0.6,
   FX_WARP_FROM: { x: 0.5, y: 0 },
@@ -208,6 +207,8 @@ const S2 = {
   FX_COVERAGE_FLOOR: 0.5,
   FX_MOTIF_MIN_CARDS: 3,
   FX_PHONE_FRAME_BUDGET_MS: 50,
+  FX_PHONE_FRAME_WORST_MS: 120,
+  PHONE_MOTION_BUDGET: 6,
   FX_GALLERY_SCALES: [0.5, 1, 1.5, 2],
   // Issue #3332: the signature budgets (R3332000) and Felinor Fiender's assembly (R3332001).
   SIGNATURE_LEGENDARY_MAX_MS: 1_600,
@@ -426,8 +427,7 @@ describe("S2 the effects constants", () => {
       // R2789000: the beats' stagger cap and a First Strike's break-off.
       constants.FX_BEAT_STAGGER_MAX,
       constants.FX_FIRST_STRIKE_BREAK_AT,
-      // R2797000: Imitated Instrumentality's stagger, and where Drone Core X's Battleship warps in from.
-      constants.FX_MAGI_STAGGER,
+      // R2797000: where Drone Core X's Battleship warps in from.
       constants.FX_WARP_FROM.x,
       // R2801000: a fuse's landing, the launch's ignition, contrail flight and landing.
       constants.FX_STARSHIP_FUSE_LAND_AT,
@@ -487,6 +487,18 @@ describe("S2 the effects constants", () => {
   it("S2 the particle caps shrink from desktop to phone to the adaptive floor", () => {
     expect(constants.FX_PARTICLE_CAP_MIN).toBeLessThan(constants.FX_PARTICLE_CAP_MOBILE);
     expect(constants.FX_PARTICLE_CAP_MOBILE).toBeLessThan(constants.FX_PARTICLE_CAP);
+  });
+
+  it("R3351000 the shared phone motion budget and worst-frame budget", () => {
+    expect(constants.PHONE_MOTION_BUDGET).toBe(6);
+    // The phone budget's faces' share is the motion slots': raising one without the other breaks the
+    // per-layer budget the living game draws its faces from, so the two stay equal.
+    expect(constants.PHONE_MOTION_BUDGET).toBe(COSMETIC_FOIL_ANIMATED_MAX);
+    expect(constants.FX_PHONE_FRAME_WORST_MS).toBe(120);
+    // The worst frame is looser than the mean but still a playing game: past ~8 fps a hitch reads
+    // as a stall, not motion.
+    expect(constants.FX_PHONE_FRAME_WORST_MS).toBeGreaterThan(constants.FX_PHONE_FRAME_BUDGET_MS);
+    expect(constants.FX_PHONE_FRAME_WORST_MS).toBeLessThanOrEqual(250);
   });
 
   it("R2803000 the audit's floors and phone budget hold the finished work", () => {

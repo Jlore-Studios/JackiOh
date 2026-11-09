@@ -64,6 +64,25 @@ describe("R3389000 a signature's own aura", () => {
       "classic-080": "craterSmoke",
       "classic-085": "cloakShimmer",
       "classic-090": "abyssWhirl",
+      // R3399001: Classic+'s.
+      "classicplus-012": "syrup",
+      "classicplus-012-5": "waffleDome",
+      "classicplus-012-8": "frostMist",
+      "classicplus-013": "ovenSteam",
+      "classicplus-019-1": "laneWall",
+      "classicplus-019-2": "snoreLeaves",
+      "classicplus-019-3": "coinGlint",
+      "classicplus-019-4": "staffBreath",
+      "classicplus-019-5": "bowNotch",
+      "classicplus-037": "warHeartbeat",
+      "classicplus-042-1": "appleRibbon",
+      "classicplus-046": "bannerBreeze",
+      "classicplus-046-1": "greatBannerShade",
+      "classicplus-048": "laserDot",
+      "classicplus-073-1": "stoneFaces",
+      "classicplus-074": "stairCracks",
+      "classicplus-075": "jungleLeaves",
+      "classicplus-078": "serverLights",
       // R3402000: Core's three.
       "core-052": "mirrorball",
       "core-093": "stadium",
@@ -84,6 +103,10 @@ describe("R3389000 a signature's own aura", () => {
       "stinkyscape-148": "starpath",
       "stinkyscape-150-1": "stinkvapour",
       "stinkyscape-152": "pages",
+      // R3395001: Stinkyscape's signature Field Spells.
+      "stinkyscape-007": "laserGrid",
+      "stinkyscape-016": "silverRise",
+      "stinkyscape-039": "labHaze",
     });
   });
 

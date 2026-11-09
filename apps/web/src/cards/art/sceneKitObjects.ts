@@ -3,10 +3,14 @@
 // a gift box), tools and machines (a gear, pipes, an hourglass, an astrolabe, a spatula, bellows, a slate board),
 // weapons and training (an axe, a ring of blades, an arrow, a weapon rack, weights, knuckles), potions (a flask, a
 // cauldron), locks and chains (a padlock, a chain, a key), the dead and the humble (a candle, bones, pebbles,
-// bread), a drum, a lyre, a pair of scales and a bamboo chute. sceneKit.ts spreads the table into `SCENE_KIT`. Each
-// part keeps the kit's rules: one to twelve filled shapes drawn in its own frame (`local`), varied by the scene's
-// stream alone, every colour a palette name out of Radiant's gold window (brass and orange stand for gold), a glow
-// a stack of translucent shapes, and no two sub-paths of one shape overlapping but for a hole.
+// bread), a drum, a lyre, a pair of scales and a bamboo chute; R3397000: the Meditative+ and Training Grounds Alt art
+// scenes (#3397) added a cork board, a washing line, a picnic blanket and a hanging rope; R3398000's Core Alt art
+// scenes (#3398) added a hay bale, a gingham blanket (`gingham-blanket`, apart from R3397000's `picnic-blanket`), a
+// rug, a hammock (`beach-hammock`, apart from the Legacy touches' `hammock`), a sleeping bag and a teapot pouring
+// (`pouring-teapot`, apart from the Meditative ink kit's `teapot`). sceneKit.ts spreads the table into `SCENE_KIT`.
+// Each part keeps the kit's rules: one to twelve filled shapes drawn in its own frame (`local`), varied by the
+// scene's stream alone, every colour a palette name out of Radiant's gold window (brass and orange stand for gold), a
+// glow a stack of translucent shapes, and no two sub-paths of one shape overlapping but for a hole.
 
 import { fmt } from "./hash.ts";
 import { between, blob, DEGREES, INKED, local, MAIN, MAIN_INKED, shape, sparkle, spiralArm, turned, whole, type Local, type Point } from "./kitDraw.ts";
@@ -1024,6 +1028,242 @@ function chute(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+// R3397000: the objects the Meditative+ and Training Grounds Alt art scenes added.
+
+/** R3397000: a cork board hung flat, centred on the anchor: a timber frame round its cork (main), the cork's speckle and four to six round pins, red and blue; about 24 wide and 16 tall at scale 1. */
+function corkboard(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  let specks = "";
+  for (let i = 0; i < 5; i += 1) {
+    for (let j = 0; j < 3; j += 1) specks += f.circle(-8.6 + i * 4.3 + between(rng, -1, 1), -4.4 + j * 4.4 + between(rng, -1, 1), 0.3);
+  }
+  const pins = whole(rng, 4, 6);
+  let red = "";
+  let blue = "";
+  let glints = "";
+  for (let k = 0; k < pins; k += 1) {
+    const x = -9 + (18 * (k + 0.5)) / pins + between(rng, -0.6, 0.6);
+    const y = k % 2 === 0 ? between(rng, -5.6, -4.4) : between(rng, 3.4, 5);
+    if (k % 3 === 1) blue += f.circle(x, y, 0.55);
+    else red += f.circle(x, y, 0.55);
+    glints += f.circle(x - 0.18, y - 0.18, 0.16);
+  }
+  return [
+    shape(box(f, -11.4, -7.2, 12.6, 8.8), "black", 0.2),
+    shape(box(f, -12, -8, 12, 8) + box(f, -10.8, -6.8, 10.8, 6.8), "wood-700", 1, INKED),
+    shape(box(f, -10.8, -6.8, 10.8, 6.8), "brass-600", 1, MAIN_INKED),
+    shape(specks, "wood-600", 0.6),
+    shape(red, "red-500", 1, INKED),
+    shape(blue, "blue-600", 1, INKED),
+    shape(glints, "white", 0.7),
+  ];
+}
+
+/** R3397000: a washing line strung between two T-topped posts 28 apart about the anchor, sagging between them, two or three pegs clipped on it; about 30 wide and 16 tall at scale 1. */
+function washingLine(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const sag = between(rng, 2, 4);
+  const on = (t: number): Point => [-14 + 28 * t, -15 + 4 * sag * t * (1 - t)];
+  const line: Point[] = [];
+  for (let i = 0; i <= 12; i += 1) line.push(on(i / 12));
+  const count = whole(rng, 2, 3);
+  let pegs = "";
+  for (let k = 0; k < count; k += 1) {
+    const [px, py] = on((k + 1) / (count + 1) + between(rng, -0.04, 0.04));
+    pegs += box(f, px - 0.3, py - 0.9, px + 0.3, py + 0.8);
+  }
+  return [
+    shape(f.ellipse(-14, 0.2, 1.8, 0.4) + f.ellipse(14, 0.2, 1.8, 0.4), "black", 0.2),
+    shape(seg(f, [-14, 0], [-14, -15.2], 0.9) + seg(f, [14, 0], [14, -15.2], 0.9), "wood-700", 1, MAIN_INKED),
+    shape(seg(f, [-15.4, -15.8], [-12.6, -15.8], 0.6) + seg(f, [12.6, -15.8], [15.4, -15.8], 0.6), "wood-800", 1, INKED),
+    shape(f.band(line, 0.28), "slate-700", 0.9),
+    shape(pegs, "wood-600", 1, INKED),
+  ];
+}
+
+/** R3397000: a checked picnic blanket spread on the ground in perspective, its near edge centred on the anchor: the cloth (main), its red checks, a hem and one corner folded back; about 30 wide and 9 deep at scale 1. */
+function picnicBlanket(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const skew = between(rng, -1.5, 1.5);
+  const tilt = between(rng, -0.6, 0.6);
+  const corners = { nl: [-15, tilt] as Point, nr: [15, -tilt] as Point, fl: [-11 + skew, -9 + tilt] as Point, fr: [11 + skew, -9 - tilt] as Point };
+  const at2 = (u: number, v: number): Point => {
+    const near: Point = [corners.nl[0] + (corners.nr[0] - corners.nl[0]) * u, corners.nl[1] + (corners.nr[1] - corners.nl[1]) * u];
+    const far: Point = [corners.fl[0] + (corners.fr[0] - corners.fl[0]) * u, corners.fl[1] + (corners.fr[1] - corners.fl[1]) * u];
+    return [near[0] + (far[0] - near[0]) * v, near[1] + (far[1] - near[1]) * v];
+  };
+  const cols = 6;
+  const rows = 4;
+  let checks = "";
+  for (let i = 0; i < cols; i += 1) {
+    for (let j = 0; j < rows; j += 1) {
+      if ((i + j) % 2 !== 0) continue;
+      checks += f.poly([at2(i / cols, j / rows), at2((i + 1) / cols, j / rows), at2((i + 1) / cols, (j + 1) / rows), at2(i / cols, (j + 1) / rows)]);
+    }
+  }
+  const { nl, nr, fl, fr } = corners;
+  return [
+    shape(f.poly([[nl[0] + 0.4, nl[1] + 0.8], [nr[0] + 0.4, nr[1] + 0.8], [fr[0], fr[1] + 0.4], [fl[0], fl[1] + 0.4]]), "black", 0.2),
+    shape(f.poly([nl, nr, fr, fl]), "white", 1, MAIN_INKED),
+    shape(checks, "red-500", 0.9),
+    shape(f.band([[nl[0] + 0.6, nl[1] - 0.5], [nr[0] - 0.6, nr[1] - 0.5]], 0.35), "red-600", 0.7),
+    shape(f.poly([[nr[0], nr[1]], [nr[0] - 4.2, nr[1] - 0.2], [nr[0] - 1.6, nr[1] - 2.6]]), "white", 1, INKED),
+  ];
+}
+
+/** R3397000: a rope hanging from the box's top down to the anchor, bowing a little as it takes the weight: its strand (main), a lit side and twists, and a knot with two loose ends at the anchor; about 3 wide at scale 1. */
+function rope(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const top = Math.min(-2, (-2 - at.y) / at.s);
+  const bow = between(rng, -1.2, 1.2);
+  const along = (t: number): Point => [bow * Math.sin(Math.PI * t), top + (-1.4 - top) * t];
+  const strand: Point[] = [];
+  const lit: Point[] = [];
+  for (let i = 0; i <= 10; i += 1) {
+    const [x, y] = along(i / 10);
+    strand.push([x, y]);
+    lit.push([x - 0.3, y]);
+  }
+  const length = -1.4 - top;
+  const marks = Math.max(1, Math.floor(length / 2.4));
+  let twists = "";
+  for (let k = 0; k < marks; k += 1) {
+    const [x, y] = along((k + 0.5) / marks);
+    twists += seg(f, [x - 0.5, y - 0.4], [x + 0.5, y + 0.4], 0.22);
+  }
+  return [
+    shape(f.band(strand, 1.1), "wood-600", 1, MAIN_INKED),
+    shape(f.band(lit, 0.25), "brass-500", 0.45),
+    shape(twists, "wood-800", 0.7),
+    shape(seg(f, [-0.3, 0.4], [-0.6, 2.6], 0.6) + seg(f, [0.4, 0.4], [0.8, 2.2], 0.6), "wood-600", 1, INKED),
+    shape(f.ellipse(0, -0.6, 1.2, 1), "wood-700", 1, INKED),
+  ];
+}
+
+// R3398000: the parts the Core Alt art scenes added.
+
+/** R3398000: a round hay bale lying on the anchor, its curved side (main) and its rolled end facing the way it faces: straw strokes, the end's spiral and two twine bands; about 14 wide and 10 tall at scale 1. */
+function hayBale(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const r = between(rng, 4.7, 5.1);
+  let straw = "";
+  for (let k = 0; k < 6; k += 1) {
+    const x = -6 + k * 1.9 + between(rng, -0.05, 0.05);
+    const y = -2 * r + 1.6 + between(rng, 0, 2 * r - 3.4);
+    straw += seg(f, [x, y], [x + between(rng, 1, 1.6), y + between(rng, -0.4, 0.4)], 0.22);
+  }
+  let spiral = "";
+  for (const k of [0.32, 0.58, 0.82]) spiral += `M${f.p(4.5 - r * k, -r)}A${fmt(f.r(r * k * 0.62))} ${fmt(f.r(r * k))} 0 0 ${f.sweep(1)} ${f.p(4.5, -r - r * k)}L${f.p(4.5, -r - r * k + 0.2)}A${fmt(f.r(r * k * 0.62 - 0.2))} ${fmt(f.r(r * k - 0.2))} 0 0 ${f.sweep(0)} ${f.p(4.5 - r * k + 0.2, -r)}Z`;
+  return [
+    shape(f.ellipse(-0.6, 0.2, 7.4, 0.7), "black", 0.22),
+    shape(`M${f.p(-6.6, 0)}Q${f.p(-7.6, -r)} ${f.p(-6.6, -2 * r)}L${f.p(4.5, -2 * r)}L${f.p(4.5, 0)}Z`, "brass-500", 1, MAIN_INKED),
+    shape(straw, "brass-600", 0.7),
+    shape(f.ellipse(4.5, -r, r * 0.62, r), "brass-600", 1, INKED),
+    shape(spiral, "wood-700", 0.45),
+    shape(seg(f, [-3.4, -2 * r + 0.2], [-3.6, -0.2], 0.4) + seg(f, [0.8, -2 * r + 0.2], [0.6, -0.2], 0.4), "wood-800", 0.75),
+  ];
+}
+
+/** R3398000: a gingham picnic blanket laid flat about the anchor and seen in perspective (main), its far edge narrower than its near one: check bands both ways, darker where they cross, and its near corner folded back; about 30 wide and 8 deep at scale 1. */
+function ginghamBlanket(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const skew = between(rng, -1, 1);
+  const bands = whole(rng, 3, 4);
+  const edge = (t: number, y: number): Point => {
+    const half = 12 + (3 * (y + 4)) / 8;
+    return [-half + 2 * half * t + skew * (4 - y) * 0.12, y];
+  };
+  let along = "";
+  for (let k = 1; k <= bands; k += 1) along += f.band([edge(k / (bands + 1), -4), edge(k / (bands + 1), 4)], 1.3);
+  let across = "";
+  for (const y of [-1.4, 1.6]) across += f.band([edge(0, y), edge(1, y)], 1.2);
+  const corner = edge(1, 4);
+  return [
+    shape(f.poly([edge(0, -4), edge(1, -4), edge(1, 4), edge(0, 4)]), "red-600", 1, MAIN_INKED),
+    shape(along, "white", 0.45),
+    shape(across, "white", 0.45),
+    shape(f.poly([[corner[0] - 4.2, 4], [corner[0] - 1.1, 0.6], [corner[0] - 4.8, 0.9]]), "white", 0.5, INKED),
+    shape(f.band([[corner[0] - 4.2, 4.2], [corner[0] + 0.4, 4.2]], 0.5), "black", 0.2),
+  ];
+}
+
+/** R3398000: a rug laid flat about the anchor and seen in perspective (main), its far edge narrower than its near one: three to five stripes across it in two colours, a border and fringes at its two short ends; about 28 wide and 9 deep at scale 1. */
+function rug(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const stripes = whole(rng, 3, 5);
+  const halfAt = (y: number): number => 12 + (2 * (y + 4.5)) / 9;
+  const strip = (y0: number, y1: number): string => f.poly([[-halfAt(y0), y0], [halfAt(y0), y0], [halfAt(y1), y1], [-halfAt(y1), y1]]);
+  let light = "";
+  let dark = "";
+  for (let k = 0; k < stripes; k += 1) {
+    const y = -3.2 + (6.4 * (k + 0.5)) / stripes;
+    const half = 0.32 + between(rng, 0, 0.18);
+    if (k % 2 === 0) light += strip(y - half, y + half);
+    else dark += strip(y - half, y + half);
+  }
+  let fringe = "";
+  for (let y = -4.2; y <= 4.3; y += 1.05) fringe += seg(f, [-halfAt(y), y], [-halfAt(y) - 1.1, y + 0.15], 0.22) + seg(f, [halfAt(y), y], [halfAt(y) + 1.1, y + 0.15], 0.22);
+  return [
+    shape(strip(-4.5, 4.5), "blue-800", 1, MAIN_INKED),
+    shape(strip(-4.5, -3.8) + strip(3.8, 4.5), "slate-900", 0.35),
+    shape(light, "orange-400", 0.85),
+    shape(dark, "white", 0.6),
+    shape(fringe, "slate-100", 0.85),
+  ];
+}
+
+/** R3398000: a hammock slung between two posts standing on the ground at 13 either side of the anchor: its posts, its ropes, its sagging cloth (main) with stripes along it, the shade of its underside and its shadow; about 26 wide and 10 tall at scale 1. */
+function hammock(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const sag = between(rng, 3, 3.8);
+  const top = -10 + between(rng, -0.6, 0.6);
+  const hang = top + 2;
+  const cloth = (lift: number, deep: number): string =>
+    `M${f.p(-9, hang + lift)}Q${f.p(0, hang + lift + sag * 2)} ${f.p(9, hang + lift)}L${f.p(9, hang + lift + 0.6)}Q${f.p(0, hang + lift + sag * 2 + deep)} ${f.p(-9, hang + lift + 0.6)}Z`;
+  return [
+    shape(f.ellipse(0, 0.2, 10, 0.7), "black", 0.2),
+    shape(seg(f, [-13, 0], [-13, top - 0.6], 0.9) + seg(f, [13, 0], [13, top - 0.6], 0.9), "wood-700", 1, INKED),
+    shape(seg(f, [-13, top], [-9, hang], 0.25) + seg(f, [-13, top + 0.5], [-9, hang + 0.6], 0.25) + seg(f, [13, top], [9, hang], 0.25) + seg(f, [13, top + 0.5], [9, hang + 0.6], 0.25), "wood-800", 0.9),
+    shape(cloth(0, 2.4), "red-600", 1, MAIN_INKED),
+    shape(cloth(0.9, 0.3) + cloth(2, 0.3), "white", 0.5),
+    shape(cloth(1.8, 0.8), "black", 0.18),
+  ];
+}
+
+/** R3398000: a sleeping bag lying on the anchor, its padded length (main) quilted across, a zip along its top with its pull and a rolled hood at the end it faces away from, a dark mouth in the hood; about 22 long and 7 tall at scale 1. */
+function sleepingBag(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const height = between(rng, 5.6, 6.6);
+  let quilt = "";
+  for (let x = -5; x < 9; x += 2.8) quilt += seg(f, [x, -height + 0.5], [x + 0.3, -0.4], 0.3);
+  return [
+    shape(f.ellipse(0, 0.2, 11.4, 0.7), "black", 0.22),
+    shape(`M${f.p(-8, 0)}L${f.p(-8, -height)}L${f.p(9, -height + 0.6)}Q${f.p(11.4, -height * 0.5)} ${f.p(9, 0)}Z`, "blue-700", 1, MAIN_INKED),
+    shape(quilt, "slate-900", 0.35),
+    shape(seg(f, [-7.6, -height + 0.6], [8.6, -height + 1.1], 0.35), "slate-400", 0.9),
+    shape(f.ellipse(between(rng, 3, 7), -height + 1.4, 0.45, 0.7), "slate-400", 0.9),
+    shape(f.ellipse(-8.4, -height * 0.5, 3, height * 0.55), "blue-800", 1, INKED),
+    shape(f.ellipse(-8.2, -height * 0.5, 1.6, height * 0.32), "slate-900", 0.85),
+  ];
+}
+
+/** R3398000: a round teapot standing on the anchor, spout the way it faces: its body (main) and foot, a lid and its knob, a curved spout, a looped handle, a band round its belly, a shine and a translucent stream of tea pouring from the spout; about 12 wide and 10 tall at scale 1. */
+function teapot(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const pour = between(rng, 0.8, 1.6);
+  return [
+    shape(f.ellipse(0, 0.2, 4.6, 0.5), "black", 0.2),
+    shape(`M${f.p(-6.2, -6.2)}Q${f.p(-7.4, -4.2)} ${f.p(-3.4, -2.4)}L${f.p(-3.4, -3.4)}Q${f.p(-6, -4.4)} ${f.p(-5.2, -5.8)}Z`, "slate-400", 1, INKED),
+    shape(`M${f.p(3.4, -3.6)}Q${f.p(5.6, -4)} ${f.p(7.2, -7.4)}L${f.p(7.8, -7.2)}Q${f.p(6.6, -2.8)} ${f.p(3.6, -1.8)}Z`, "slate-400", 1, INKED),
+    shape(`M${f.p(-4.4, -4.2)}Q${f.p(-4.4, -8)} ${f.p(0, -8)}Q${f.p(4.4, -8)} ${f.p(4.4, -4.2)}Q${f.p(4.4, -0.6)} ${f.p(0, -0.6)}Q${f.p(-4.4, -0.6)} ${f.p(-4.4, -4.2)}Z`, "slate-100", 1, MAIN_INKED),
+    shape(f.poly([[-2.4, -0.8], [2.4, -0.8], [2, 0], [-2, 0]]), "slate-400", 1, INKED),
+    shape(f.band([[-4.3, -4.4], [0, -3.4], [4.3, -4.4]], 0.6), "blue-600", 0.8),
+    shape(`M${f.p(-2.6, -7.6)}Q${f.p(0, -9.4)} ${f.p(2.6, -7.6)}Z` + f.circle(0, -9.2, 0.6), "slate-400", 1, INKED),
+    shape(f.ellipse(-2, -5.6, 0.9, 1.4), "white", 0.4),
+    shape(f.band([[7.6, -7.2], [8.4 + pour * 0.5, -5], [8.6 + pour, 0]], 0.55), "orange-400", 0.5),
+  ];
+}
+
 export const OBJECTS_KIT = {
   scroll: { category: "objects", draw: scroll },
   tome: { category: "objects", draw: tome },
@@ -1060,4 +1300,16 @@ export const OBJECTS_KIT = {
   bread: { category: "objects", draw: bread },
   quill: { category: "objects", draw: quill },
   chute: { category: "objects", draw: chute },
+  // R3397000: the Meditative+ and Training Grounds Alt art scenes' cork board, washing line, picnic blanket and rope.
+  corkboard: { category: "objects", draw: corkboard },
+  "washing-line": { category: "objects", draw: washingLine },
+  "picnic-blanket": { category: "objects", draw: picnicBlanket },
+  rope: { category: "objects", draw: rope },
+  // R3398000: the Core Alt art scenes' hay bale, gingham blanket, rug, hammock, sleeping bag and pouring teapot.
+  "hay-bale": { category: "objects", draw: hayBale },
+  "gingham-blanket": { category: "objects", draw: ginghamBlanket },
+  rug: { category: "objects", draw: rug },
+  "beach-hammock": { category: "objects", draw: hammock },
+  "sleeping-bag": { category: "objects", draw: sleepingBag },
+  "pouring-teapot": { category: "objects", draw: teapot },
 } as const satisfies Readonly<Record<string, KitPart>>;

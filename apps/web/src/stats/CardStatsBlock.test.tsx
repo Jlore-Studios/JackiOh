@@ -1,4 +1,4 @@
-// Tests for CardStatsBlock (SPEC §9.11, R654, R3185000).
+// Tests for CardStatsBlock (SPEC §9.11, R654, R3185000, R3447000).
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -142,6 +142,62 @@ describe("R3185000 CardStatsBlock", () => {
     expect(screen.getByTestId(statsTestid.cardStatsTier)).not.toHaveClass("stats-tier");
     expect(screen.getByTestId(statsTestid.cardStatsAdjusted)).toHaveTextContent("—");
     expect(screen.getByText("60%")).toBeInTheDocument();
+  });
+});
+
+describe("R3447000 the panel names the patch its figures were collected on", () => {
+  /** Newest first: 0.7.0, still gathering its games, then 0.6.0 and its micro. */
+  const PATCHES = [
+    { versions: ["0.7.0"], games: 300, liveGames: 300 },
+    { versions: ["0.6.0", "0.6.0b"], games: 4000, liveGames: 2000 },
+  ];
+
+  /** Serves Spark Pup at the newest patch with `cardWindow` as its window, and the patch list when given. */
+  function serveWindow(cardWindow: Record<string, unknown> | undefined, patches?: readonly unknown[]): void {
+    const body = { ...mockStatsResponse({ ...SPARK_PUP, window: cardWindow }), patch: "0.7.0", patches };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status: 200 })));
+  }
+
+  it("R3447000 while a newer patch gathers its games, the previous window's figures name the patch they were collected on", async () => {
+    serveWindow({ from: "0.7.0", liveGames: 300, source: "previous", counted: ["0.6.0", "0.6.0b"] }, PATCHES);
+    render(<CardStatsBlock cardId="core-001" />);
+
+    const patch = await screen.findByTestId(statsTestid.cardStatsPatch, undefined, SLOW);
+    expect(patch).toHaveTextContent("Collected on patch 0.6.0");
+    // Beside the title, above the same five figures, and with no word of where they come from (R661).
+    expect(patch.closest(".inspect-stats-header")).toHaveTextContent("Statistics");
+    expect(figures().map(([label]) => label)).toEqual(["Games", "Tier", "Adjusted win rate", "Win rate", "Play rate"]);
+    expect(screen.getByTestId(INSPECT_STATS).textContent).not.toMatch(/previous|live games/i);
+  });
+
+  it("R3447000 a card's own window names the patch shown", async () => {
+    serveWindow({ from: "0.7.0", liveGames: 1200, source: "live", counted: ["0.7.0"] }, PATCHES);
+    render(<CardStatsBlock cardId="core-001" />);
+
+    expect(await screen.findByTestId(statsTestid.cardStatsPatch, undefined, SLOW)).toHaveTextContent("Collected on patch 0.7.0");
+  });
+
+  it("R3447000 a window a micro opened names the patch the micro is part of", async () => {
+    serveWindow({ from: "0.6.0b", liveGames: 1500, source: "live", counted: ["0.6.0b"] }, PATCHES);
+    render(<CardStatsBlock cardId="core-001" />);
+
+    expect(await screen.findByTestId(statsTestid.cardStatsPatch, undefined, SLOW)).toHaveTextContent("Collected on patch 0.6.0");
+  });
+
+  it("R3447000 from a server with no patch list, the first version the figures count", async () => {
+    serveWindow({ from: "0.7.0", liveGames: 300, source: "previous", counted: ["0.6.0b"] });
+    render(<CardStatsBlock cardId="core-001" />);
+
+    expect(await screen.findByTestId(statsTestid.cardStatsPatch, undefined, SLOW)).toHaveTextContent("Collected on patch 0.6.0b");
+  });
+
+  it("R3447000 a card with no window, as from an older server, names no patch", async () => {
+    serveWindow(undefined, PATCHES);
+    render(<CardStatsBlock cardId="core-001" />);
+
+    await screen.findByText("Adjusted win rate", undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.cardStatsPatch)).toBeNull();
+    expect(screen.queryByText(/Collected on patch/)).toBeNull();
   });
 });
 

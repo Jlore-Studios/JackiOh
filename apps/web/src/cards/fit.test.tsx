@@ -364,6 +364,47 @@ describe("a web font landing (fonts.css)", () => {
   });
 });
 
+describe("a resize refits in the next frame (#3439)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("refits a box the observer reports resized in the frame after, writing nothing inside the observer's callback", () => {
+    // A write inside the callback can resize the observed box again, which the browser reports as a ResizeObserver loop.
+    const callbacks: ResizeObserverCallback[] = [];
+    const frames: FrameRequestCallback[] = [];
+    class StubResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        callbacks.push(callback);
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    vi.stubGlobal("ResizeObserver", StubResizeObserver);
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => frames.push(callback));
+    vi.stubGlobal("cancelAnimationFrame", () => {});
+    const model: Model = { basePx: 10, tierScale: 1, box: 60, longBox: 60, need: 0.4 };
+    const { text, font: before } = fitted(model);
+
+    // The box shrinks, still holding the text above the floor, and the observer reports it twice before the next frame.
+    model.box = 46;
+    for (const callback of callbacks) {
+      callback([], {} as ResizeObserver);
+      callback([], {} as ResizeObserver);
+    }
+    flushFits();
+    expect(fontOf(text, model), "nothing refits inside the callback").toBe(before);
+    expect(frames, "one refit waits for the next frame").toHaveLength(1);
+
+    frames[0]?.(0);
+    flushFits();
+    const after = fontOf(text, model);
+    expect(after, "refitted smaller for the smaller box").toBeLessThan(before);
+    expect(model.need * after * after + 2 * PADDING, "and it fits its box again").toBeLessThanOrEqual(model.box + 1);
+  });
+});
+
 describe("a face the browser skips waits for it (#263)", () => {
   const model: Model = { basePx: 11, tierScale: 0.62, box: 80, longBox: 120, need: 1.2 };
 

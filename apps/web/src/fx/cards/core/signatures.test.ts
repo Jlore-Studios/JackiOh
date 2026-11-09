@@ -348,7 +348,7 @@ describe("R3402001 Core's signatures", () => {
   it("R3402001 Craft a Card forges its two Units", () => {
     const { planned } = galleryPlay("core-099");
     const cast = at(planned, "cardPlayed");
-    expect(cast.find((cue) => cue.kind === "takeover")).toMatchObject({ look: "forge" });
+    expect(cast.find((cue) => cue.kind === "takeover")).toMatchObject({ look: "crystalForge" });
     // The two halves ride the rails in from the board's edges as card backs and meet at the anvil.
     expect(cast.filter((cue) => cue.kind === "ghost").map((cue) => cue.kind === "ghost" && cue.to)).toEqual([CENTRE, CENTRE]);
     expect(anchored(cast, CENTRE).some((cue) => cue.kind === "burst" && cue.preset === "frost")).toBe(true);

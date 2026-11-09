@@ -38,7 +38,7 @@ import "./cosmeticLook.css";
 export const COSMETIC_ATTRIBUTES = ["data-cosmetic-foil", "data-cosmetic-motion", "data-finish", "data-frame"] as const;
 
 /**
- * What `useCosmeticAttributes` gives a face wearing `wears`: nothing for a default; a foil, moving
+ * What `useCosmeticAppearance` gives a face wearing `wears`: nothing for a default; a foil, moving
  * finish or border moves where `moving` says. R1953001: a sample takes none of the
  * COSMETIC_FOIL_ANIMATED_MAX slots of a game's faces, since the samples a screen draws are bounded.
  */

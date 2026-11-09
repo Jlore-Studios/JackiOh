@@ -21,16 +21,15 @@ import {
   createElement,
   useCallback,
   useContext,
-  useEffect,
-  useState,
   useSyncExternalStore,
   type ReactElement,
   type ReactNode,
 } from "react";
 
 import { COSMETIC_ID_MAX_LENGTH, COSMETIC_KINDS, COSMETICS } from "../wire/generated/cosmetics.ts";
-import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
+import { useFxSettings } from "../fx/settings.ts";
 import { useOsReducedMotion } from "../game/useOsReducedMotion.ts";
+import { REST_RANK, resetMotionSlotsForTests, useMotionSlot, usePageVisible, type SlotRank } from "./motionSlots.ts";
 import { useSetting } from "../settings/store.ts";
 import type { SeatLoadout } from "./loadouts.ts";
 import type { StarshipLook } from "./art/starshipLooks.ts";
@@ -662,44 +661,8 @@ export function useStarshipLook(worn: boolean): StarshipLook {
   return wornStarshipLook(worn, account, theirs?.seat ?? null, owns);
 }
 
-// The cap on moving foils. A face that wants its foil to move claims a slot when it mounts and
-// gives it back when it unmounts or stops wanting it; past COSMETIC_FOIL_ANIMATED_MAX it waits in
-// line, first come first served, and moves once a slot passes to it.
-
-const moving = new Set<symbol>();
-const queued: symbol[] = [];
-const slotListeners = new Set<() => void>();
-
-function notifySlots(): void {
-  for (const listener of [...slotListeners]) listener();
-}
-
-function claimSlot(token: symbol): void {
-  if (moving.size < COSMETIC_FOIL_ANIMATED_MAX) moving.add(token);
-  else queued.push(token);
-  notifySlots();
-}
-
-function releaseSlot(token: symbol): void {
-  moving.delete(token);
-  const waiting = queued.indexOf(token);
-  if (waiting >= 0) queued.splice(waiting, 1);
-  while (moving.size < COSMETIC_FOIL_ANIMATED_MAX && queued.length > 0) {
-    const next = queued.shift();
-    if (next !== undefined) moving.add(next);
-  }
-  notifySlots();
-}
-
-function subscribeSlots(listener: () => void): () => void {
-  slotListeners.add(listener);
-  return () => {
-    slotListeners.delete(listener);
-  };
-}
-
 /**
- * R1833000: the finishes and borders that move (cosmetics.css), each taking a foil's slot: the
+ * R1833000: the finishes and borders that move (cosmetics.css), each using its face's foil slot: the
  * Legendary and Mythic ones (R1953001: Gilded edge among them).
  */
 export const MOVING_FINISHES_AND_BORDERS: ReadonlySet<string> = new Set([
@@ -715,34 +678,26 @@ export function isChaseCosmetic(id: string): boolean {
   return COSMETICS.find((cosmetic) => cosmetic.id === id)?.chase === true;
 }
 
-/** Whether this face's foil may move now: it wants to, and holds one of the slots. */
-function useFoilSlot(wanted: boolean): boolean {
-  const [token] = useState(() => Symbol("cosmetic-foil"));
-  useEffect(() => {
-    if (!wanted) return undefined;
-    claimSlot(token);
-    return () => {
-      releaseSlot(token);
-    };
-  }, [wanted, token]);
-  const holds = useSyncExternalStore(
-    subscribeSlots,
-    () => moving.has(token),
-    () => false,
-  );
-  return wanted && holds;
-}
-
 /**
- * R2715001: whether a face's moving art may move now: it wants to (CardFace: an Animated, Legendary or
- * Mythic face, full layout, Animated foil on, not a lazy grid face), neither the Reduce motion setting
- * nor the system asks for reduced motion, and it holds one of the foil's slots. R2944002: or an Immersive
- * face's depth, in the same slot, one per face whether it is Animated or not. Its hooks run on every face.
+ * R2715001: whether a face may move now: it wants to move some art or cosmetic, neither the Reduce motion setting nor
+ * the system asks for reduced motion, and it holds one of the slots. R2944002: Immersive's depth uses the same slot.
+ * R3340000: every moving part of one face (art, foil, finish, border and a Starship's shipyard) shares this one claim,
+ * ranked by `rank` (motionSlots.ts), the hand's and the board's alike. A hidden tab holds every face still, so frees its
+ * slot; Fx intensity "Off" and the Effects setting's Reduce motion do too, and at "Low" only a face that ranks first, a
+ * Mythic or a Legendary may claim. `enabled` keeps the settings verdict apart from `moving`, so whole-art pointer
+ * reactions may answer on a permitted face without a slot while every setting that says still remains final.
  */
-export function useArtMotion(wanted: boolean): boolean {
+export type FaceMotion = { enabled: boolean; moving: boolean };
+
+export function useArtMotion(wanted: boolean, rank: SlotRank = REST_RANK): FaceMotion {
   const panel = useSetting("reduceMotion");
   const system = useOsReducedMotion();
-  return useFoilSlot(wanted && !panel && !system);
+  const visible = usePageVisible();
+  const [{ intensity, motion }] = useFxSettings();
+  const intensityAllows =
+    motion === "reduce" || intensity === "off" ? false : intensity === "low" ? rank.hovered || rank.rarity !== null : true;
+  const enabled = wanted && !panel && !system && visible && intensityAllows;
+  return { enabled, moving: useMotionSlot(enabled, rank) };
 }
 
 /** The attributes a face wears for its cosmetics: none at all for the defaults. */
@@ -753,13 +708,20 @@ export type CosmeticAttributes = {
   "data-frame"?: CosmeticId;
 };
 
+/** The cosmetics a face wears before its one face-level motion decision is applied. */
+export type CosmeticAppearance = {
+  attributes: Omit<CosmeticAttributes, "data-cosmetic-motion">;
+  animates: boolean;
+};
+
 /**
  * A face's cosmetic attributes: when `worn`, the card's own picks (R1655000) where owned, over its kinds'
  * defaults (R1953001); a Created card's are its generator's (R1956001). Below a `TheirCopy` and not `worn`:
  * that seat's picks, all owned (R1834001, R1834004). Rarity rules hold over both; `animatedFoil` stills a
- * foil and a moving finish or border (R1833000). Its hooks run on every face, worn or not.
+ * foil and a moving finish or border (R1833000). It claims no slot: CardFace or MinionFace combines `animates` with
+ * every other moving part of the face and makes one ranked claim (R3340000). Its hooks run on every face, worn or not.
  */
-export function useCosmeticAttributes(face: FaceModel, worn: boolean, animatedFoil: boolean): CosmeticAttributes {
+export function useCosmeticAppearance(face: FaceModel, worn: boolean): CosmeticAppearance {
   const { rarityFoil } = useCardSettings();
   const source = face.createdBy ?? face.defId;
   const card = useCardPicks(source);
@@ -771,16 +733,25 @@ export function useCosmeticAttributes(face: FaceModel, worn: boolean, animatedFo
       : wornCosmetics(face, worn ? DEFAULT_CARD_COSMETICS : null, card, (id) => ownsCosmetic(owned, source, id), rarityFoil);
   const foiled = wears.foil !== DEFAULT_CARD_COSMETICS.foil;
   const animates = foiled || MOVING_FINISHES_AND_BORDERS.has(wears.finish) || MOVING_FINISHES_AND_BORDERS.has(wears.border);
-  const moves = useFoilSlot(animates && animatedFoil);
   return {
-    ...(foiled ? { "data-cosmetic-foil": wears.foil } : {}),
-    ...(animates ? { "data-cosmetic-motion": moves ? "animated" : "static" } : {}),
-    ...(wears.finish === DEFAULT_CARD_COSMETICS.finish ? {} : { "data-finish": wears.finish }),
-    ...(wears.border === DEFAULT_CARD_COSMETICS.border ? {} : { "data-frame": wears.border }),
+    animates,
+    attributes: {
+      ...(foiled ? { "data-cosmetic-foil": wears.foil } : {}),
+      ...(wears.finish === DEFAULT_CARD_COSMETICS.finish ? {} : { "data-finish": wears.finish }),
+      ...(wears.border === DEFAULT_CARD_COSMETICS.border ? {} : { "data-frame": wears.border }),
+    },
   };
 }
 
-/** Test seam: drops the in-memory picks, the cards' among them, the listeners, the storage listener and every foil slot. */
+/** R3340000: applies this face's one motion result to the cosmetics it wears. */
+export function cosmeticAttributes(appearance: CosmeticAppearance, moving: boolean): CosmeticAttributes {
+  return {
+    ...appearance.attributes,
+    ...(appearance.animates ? { "data-cosmetic-motion": moving ? "animated" : "static" } : {}),
+  };
+}
+
+/** Test seam: drops the in-memory picks, the cards' among them, the listeners, the storage listener and every motion slot. */
 export function resetCosmeticsForTests(): void {
   current = null;
   listeners.clear();
@@ -790,7 +761,5 @@ export function resetCosmeticsForTests(): void {
   cardPickWriteListeners.clear();
   if (storageListening) window.removeEventListener("storage", onCosmeticsStorage);
   storageListening = false;
-  moving.clear();
-  queued.length = 0;
-  slotListeners.clear();
+  resetMotionSlotsForTests();
 }

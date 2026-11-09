@@ -17,6 +17,7 @@ import {
   FX_SHOT_SHAKE_TRAUMA,
   FX_SLAM_AT,
 } from "./constants.ts";
+import { frac, tid } from "./build.ts";
 import { flavorLook, type FlavorLook } from "./flavors.ts";
 import { starshipBroadside } from "./starship.ts";
 import type { FxAnchor, FxCue, FxPlanEnv, FxShotCue } from "./types.ts";
@@ -27,12 +28,6 @@ const STAGE_TUNING = {
 } as const;
 
 const HERO_TARGET = /^hero-(p1|p2)$/;
-
-function tid(id: string): FxAnchor {
-  return { kind: "testid", testid: id };
-}
-
-const frac = (fraction: number, D: number): number => Math.round(fraction * D);
 
 function attackTarget(targetId: string, view: PlayerView): string | null {
   const hero = HERO_TARGET.exec(targetId)?.[1];

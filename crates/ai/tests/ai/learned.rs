@@ -753,3 +753,238 @@ fn r3112002_unknown_cards_counts_each_copy_once_and_the_ids_with_no_row() {
         }
     });
 }
+
+/// R3479000: a position of known cards and unknown ones for `p1`, with `hidden` the cards p1 cannot see:
+/// p2's hand, p2's face-down backrow card, p2's library and p1's own library.
+fn board_3479(hand: Value, field: Value, theirs: Value, hidden: (Value, &str, Value, Value)) -> GameState {
+    jackioh_cards::register_all();
+    let (p2_hand, trap, p2_library, p1_library) = hidden;
+    scenario(json!({
+        "seed": "learned-3479",
+        "p1": { "hand": hand, "field": field, "library": p1_library },
+        "p2": {
+            "hand": p2_hand,
+            "field": theirs,
+            "backrow": [{ "def": trap, "faceUp": false }],
+            "library": p2_library,
+        },
+    }))
+    .state()
+    .clone()
+}
+
+/// R3479000: hidden cards the tiny network has rows for, or none of which `p1` can see either way.
+fn core_hidden() -> (Value, &'static str, Value, Value) {
+    (
+        json!(["core-002"]),
+        "core-041",
+        json!(["core-005"]),
+        json!(["core-020", "core-053"]),
+    )
+}
+
+/// R3479000: cards the tiny network (fitted on a catalog before their set) has no row for, which each
+/// test asks it about rather than trusting.
+const FAN_OF_KNIVES: &str = "traininggrounds-010";
+const FORTIFY: &str = "traininggrounds-012";
+const BOULDER_FIST_OGRE: &str = "traininggrounds-004";
+const TRAINING_DUMMY: &str = "traininggrounds-036";
+/// R3479000: a card the tiny network has a row for.
+const FIG_OF_LIFE: &str = "core-047";
+
+/// R3479000: a root whose redacted view names mostly cards the network has no row for sets the root's
+/// fact, and with it every finalist, and every line and open line the reach gives the network, is scored
+/// by the hand eval exactly, though the network moves the same position when it is not set.
+#[test]
+fn r3479000_a_root_that_names_mostly_cards_the_network_lacks_scores_every_line_by_the_hand_eval() {
+    let p1 = PlayerId::P1;
+    let board = board_3479(
+        json!([FAN_OF_KNIVES, FORTIFY, FIG_OF_LIFE]),
+        json!([BOULDER_FIST_OGRE]),
+        json!([TRAINING_DUMMY]),
+        core_hidden(),
+    );
+    assert!(!holds_starship(&board, p1), "no Starship on this board");
+    with_tiny(|network, _| {
+        let net = Learned::Float(*network);
+        let known = net.known_card_ids();
+        for id in [FAN_OF_KNIVES, FORTIFY, BOULDER_FIST_OGRE, TRAINING_DUMMY] {
+            assert!(
+                known.binary_search(&id).is_err(),
+                "the network has no row for {id}"
+            );
+        }
+        assert!(
+            known.binary_search(&FIG_OF_LIFE).is_ok(),
+            "the network knows {FIG_OF_LIFE}"
+        );
+
+        let view = redact(&board, p1);
+        assert_eq!(
+            unknown_cards(&features(&view, p1).sparse, &known),
+            UnknownCards { named: 5, unknown: 4 }
+        );
+        let rooted = Prices {
+            unknown_root: unknown_root(&view, p1, &net),
+            ..Prices::default()
+        };
+        assert!(rooted.unknown_root && !rooted.starship_root);
+
+        let kind = EvalKind::Learned;
+        for next in [NextSwing::Seat, NextSwing::Enemy] {
+            let hand = evaluate(&board, p1, next, &AI_EVAL);
+            assert_ne!(
+                finalist_score_with(&board, p1, next, kind, &net, Prices::NONE),
+                hand,
+                "the network moves this position when the fact is not set"
+            );
+            assert_eq!(finalist_score_with(&board, p1, next, kind, &net, &rooted), hand);
+            for reach in [LearnedReach::Lines, LearnedReach::Beam] {
+                assert_eq!(
+                    line_score_with(&board, p1, next, reach, kind, &net, &rooted),
+                    hand,
+                    "{reach:?}: a complete line"
+                );
+                assert_eq!(
+                    open_score_with(&board, p1, next, reach, kind, &net, &rooted),
+                    hand,
+                    "{reach:?}: an open line"
+                );
+            }
+        }
+    });
+}
+
+/// R3479000: a root of cards the network has rows for sets no fact, so a finalist takes the network's
+/// correction at its share (R1012001), as before.
+#[test]
+fn r3479000_a_core_root_the_network_knows_takes_the_correction_at_its_share() {
+    let p1 = PlayerId::P1;
+    let board = board_3479(
+        json!(["core-047", "core-090"]),
+        json!(["core-013"]),
+        json!(["core-003"]),
+        core_hidden(),
+    );
+    with_tiny(|network, _| {
+        let net = Learned::Float(*network);
+        let view = redact(&board, p1);
+        assert_eq!(
+            unknown_cards(&features(&view, p1).sparse, &net.known_card_ids()),
+            UnknownCards { named: 4, unknown: 0 }
+        );
+        let rooted = Prices {
+            unknown_root: unknown_root(&view, p1, &net),
+            ..Prices::default()
+        };
+        assert_eq!(&rooted, Prices::NONE);
+        for next in [NextSwing::Seat, NextSwing::Enemy] {
+            let hand = evaluate(&board, p1, next, &AI_EVAL);
+            let points = net.points(hand, &features_of(&board, p1));
+            assert_ne!(points, hand, "the network moves this position");
+            let score = finalist_score_with(&board, p1, next, EvalKind::Learned, &net, &rooted);
+            assert_eq!(score, hand + LEARNED_CORRECTION_SHARE * (points - hand));
+        }
+    });
+}
+
+/// R3479000: the fact reads only the redacted view (R185): two states that show the same cards and differ
+/// only in the ones the seat cannot see (the enemy's hand, its face-down card and both libraries) give
+/// the same count and the same fact, under the tiny network and the compiled-in one alike.
+#[test]
+fn r3479000_two_states_that_differ_only_in_hidden_cards_give_the_same_root_fact() {
+    let p1 = PlayerId::P1;
+    let shown = || {
+        (
+            json!([FAN_OF_KNIVES, FIG_OF_LIFE]),
+            json!([BOULDER_FIST_OGRE]),
+            json!([TRAINING_DUMMY]),
+        )
+    };
+    let (hand, field, theirs) = shown();
+    let a = board_3479(hand, field, theirs, core_hidden());
+    let (hand, field, theirs) = shown();
+    let b = board_3479(
+        hand,
+        field,
+        theirs,
+        (
+            json!(["traininggrounds-001"]),
+            // Explosive Runes, a Trap of Sheepish's cost (R351).
+            "traininggrounds-013",
+            json!(["traininggrounds-005"]),
+            json!(["traininggrounds-008", "traininggrounds-009"]),
+        ),
+    );
+    let (view_a, view_b) = (redact(&a, p1), redact(&b, p1));
+    assert_eq!(features(&view_a, p1).sparse, features(&view_b, p1).sparse);
+    with_tiny(|tiny, _| {
+        for network in [Learned::Float(*tiny), LEARNED] {
+            let known = network.known_card_ids();
+            assert_eq!(
+                unknown_cards(&features(&view_a, p1).sparse, &known),
+                unknown_cards(&features(&view_b, p1).sparse, &known)
+            );
+            assert_eq!(
+                unknown_root(&view_a, p1, &network),
+                unknown_root(&view_b, p1, &network)
+            );
+        }
+    });
+}
+
+/// R3479000: a card is unknown by the network's own keys alone, so an id no set holds, which stands for
+/// a set released after the network was fitted, counts as unknown, and the same id counts as known once a
+/// network has a row for it; the switch is a share of the copies named, whatever their number.
+#[test]
+fn r3479000_an_id_no_network_was_fitted_on_counts_as_unknown_and_the_switch_is_a_share() {
+    jackioh_cards::register_all();
+    let future = "zz-future-001";
+    assert!(
+        jackioh_engine::find_def(None, future).is_none(),
+        "no set holds {future}"
+    );
+    with_tiny(|network, _| {
+        let tiny = Learned::Float(*network);
+        let known = tiny.known_card_ids();
+        for lacks in [&known, &LEARNED.known_card_ids()] {
+            assert!(
+                lacks.binary_search(&future).is_err(),
+                "no network has a row for {future}"
+            );
+        }
+        let sparse: Vec<(String, i32)> = vec![
+            (format!("board:own:{future}"), 3),
+            (format!("hand:own:{}", known[0]), 1),
+        ];
+        let found = unknown_cards(&sparse, &known);
+        assert_eq!(found, UnknownCards { named: 4, unknown: 3 });
+        assert!(mostly_unknown(found));
+
+        // The retrain: a network with a row for it knows it, with no other change.
+        let mut retrained = known.clone();
+        retrained.push(future);
+        retrained.sort_unstable();
+        let found = unknown_cards(&sparse, &retrained);
+        assert_eq!(found, UnknownCards { named: 4, unknown: 0 });
+        assert!(!mostly_unknown(found));
+    });
+
+    for named in [1, 4, 10, 1000] {
+        let at = (LEARNED_MAX_UNKNOWN_SHARE * named as f64).floor() as usize;
+        assert!(
+            !mostly_unknown(UnknownCards { named, unknown: at }),
+            "{at} of {named}"
+        );
+        assert!(
+            mostly_unknown(UnknownCards {
+                named,
+                unknown: at + 1
+            }),
+            "{} of {named}",
+            at + 1
+        );
+    }
+    assert!(!mostly_unknown(UnknownCards::default()), "no card named, no fact");
+    assert!(!Prices::NONE.unknown_root);
+}

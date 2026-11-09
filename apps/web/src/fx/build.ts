@@ -1,8 +1,21 @@
-// Small cue builders shared by the recipes outside `cues.ts` (cardFx.ts, brand.ts, chaos.ts and others).
-// They build plain data exactly as `cues.ts` builds its own, so a cue from here is bounded by R200 the same way.
+// Small cue builders shared by the recipes (cues.ts, systemMoments.ts, stage.ts, cardFx.ts, brand.ts, chaos.ts and others).
+// They build plain data, so a cue from here is bounded by R200 the same way wherever it is planned.
 
-import { FX_MAX_TAIL_MS, FX_RAYS_TAIL_MS, FX_RING_MS } from "./constants.ts";
-import type { FxAnchor, FxBurstCue, FxCue, FxPoint, FxPreset, FxRayTone, FxRingCue, FxRaysCue, FxShakeCue, FxSpread } from "./types.ts";
+import { FX_BANNER_TAIL_MS, FX_CENTER, FX_MAX_TAIL_MS, FX_RAYS_TAIL_MS, FX_RING_MS } from "./constants.ts";
+import type {
+  FxAnchor,
+  FxBannerTone,
+  FxBurstCue,
+  FxCue,
+  FxGhostCue,
+  FxPoint,
+  FxPreset,
+  FxRayTone,
+  FxRingCue,
+  FxRaysCue,
+  FxShakeCue,
+  FxSpread,
+} from "./types.ts";
 
 /** A burst's base particle count at intensity "normal" and the power it is thrown with (rule 9). */
 export type BurstTuning = { readonly count: number; readonly power: number };
@@ -40,4 +53,16 @@ export function shakeCues(intensity: number, base: number, delayMs: number): FxC
   if (!(trauma > 0)) return [];
   const cue: FxShakeCue = { kind: "shake", trauma, delayMs };
   return [cue];
+}
+
+export function ghostCue(D: number, from: FxAnchor, to: FxAnchor): FxGhostCue {
+  return { kind: "ghost", from, to, delayMs: 0, durationMs: D };
+}
+
+export function bannerCue(D: number, text: string, tone: FxBannerTone): FxCue {
+  return { kind: "banner", text, tone, delayMs: 0, durationMs: D + FX_BANNER_TAIL_MS };
+}
+
+export function viewportCenter(): FxAnchor {
+  return { kind: "viewport", at: { x: FX_CENTER.x, y: FX_CENTER.y } };
 }

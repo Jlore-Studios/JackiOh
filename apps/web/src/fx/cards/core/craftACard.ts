@@ -1,7 +1,7 @@
 // #2793: #99 Craft a Card (`core-099`, bespoke "fusionForge"), bespoke because its Discovered Units fuse
 // off the board and no motif reads `fused`. R3402001: its signature (R3332000), a Mythic Spell's: its
 // takeover is a floating crystal forge, two glowing rails converging on an anvil under a giant hammer,
-// gears turning overhead (takeover look "forge", takeoverArt.ts), the hammer falling as the card lands.
+// gears turning overhead (takeover look "crystalForge", takeoverArt.ts), the hammer falling as the card lands.
 // Through its hold the two Discovered Units ride the rails in from the board's edges as card backs and
 // meet in frost sparks at its centre (the caster picks them in a prompt only they see). The engine adds
 // the crafted card to the hand before it reports the fuse: the hand pile rings as it does, and on the

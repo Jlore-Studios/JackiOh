@@ -215,7 +215,7 @@ describe("#2793 Core's bespoke flourishes", () => {
     const view = fullBoardView();
     for (const [defId, key] of FLOURISHES) {
       // R3332000: Zephrys's entry also names its takeover look; R3402001 each is its card's signature, Craft a Card's with its own look too.
-      const takeover = defId === "core-097" ? { takeover: "genie" } : defId === "core-099" ? { takeover: "forge" } : {};
+      const takeover = defId === "core-097" ? { takeover: "genie" } : defId === "core-099" ? { takeover: "crystalForge" } : {};
       expect(FX_CARD_TABLE.get(defId), defId).toEqual({ kind: "bespoke", key, ...takeover, signature: true });
       expect(run(defId, RECIPE_FIXTURES[key](view, "ex", "p1"), 400).flat(), defId).toEqual(fixtureCues(defId, key).flat());
     }

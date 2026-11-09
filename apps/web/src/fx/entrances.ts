@@ -11,7 +11,10 @@
 // "sceptrePlant", #28 Second Wind "galeBurst", #33 Joro "silkDrop", #85 King Wagtoggle "royalCloak", #90 In
 // Too Deep "abyssSurface"). R3407000: Stinkyscape part two's (fx/cards/stinkyscape/). R3405001: Meditative's
 // twenty-five, from #7 Introspection's "poolBreath" to #97.9 Jlockeed's Headquarters' "fortressRise", each
-// starting after its entry's lead (`leadMs`, R3405000). It keys off the `summoned` event's
+// starting after its entry's lead (`leadMs`, R3405000). R3399000: Classic+'s signatures' seventeen, from #12
+// The Mother Pancake's "pancakeStack" to #78 Claude's Datacenter's "obeliskRise". R3395000: Stinkyscape 001 to
+// 090's signature Units and Field Spells, from #6 Tylannt's "vaultStride" to #88 Siva 2's "venomStep"
+// (fx/cards/stinkyscape/), each starting after its entry's lead too. It keys off the `summoned` event's
 // own `defId`, which a hidden summon never has (R202), and decorates the entry the runner already timed,
 // so it paces nothing (R200, R201).
 //
@@ -35,6 +38,23 @@ import { comboStadium } from "./cards/core/comboIndex.ts";
 import { felinorAssembly } from "./cards/core/felinorFiender.ts";
 import { heroicPedestal } from "./cards/core/heroicPower.ts";
 import { silasSpotlight } from "./cards/core/sillySilas.ts";
+import { flexBurst } from "./cards/classicplus/botLoser.ts";
+import { templeStack } from "./cards/classicplus/classicGolem.ts";
+import { obeliskRise } from "./cards/classicplus/datacenter.ts";
+import { bannerPlant } from "./cards/classicplus/flagbearer.ts";
+import { greatBanner } from "./cards/classicplus/flagbearerPrime.ts";
+import { griddleFreeze } from "./cards/classicplus/frostspatula.ts";
+import { vineSwing } from "./cards/classicplus/jlease.ts";
+import { vineNap } from "./cards/classicplus/jungleLoser.ts";
+import { giftDesk } from "./cards/classicplus/kysGift.ts";
+import { briefcaseStride } from "./cards/classicplus/lobbyist.ts";
+import { spotlightPose } from "./cards/classicplus/midLoser.ts";
+import { kitchenDoor } from "./cards/classicplus/mommyBarker.ts";
+import { pancakeStack } from "./cards/classicplus/motherPancake.ts";
+import { staffShuffle } from "./cards/classicplus/supportLoser.ts";
+import { shieldPlant } from "./cards/classicplus/topLoser.ts";
+import { waffleIron } from "./cards/classicplus/waffleShell.ts";
+import { drumLeap } from "./cards/classicplus/wardrum.ts";
 import { dojoBoot } from "./cards/meditative/aiGirlfriend.ts";
 import { crackedEarth } from "./cards/meditative/alternateFate.ts";
 import { lanternLight } from "./cards/meditative/aluneth.ts";
@@ -63,6 +83,26 @@ import { virusBoot } from "./cards/meditative/yilesVirus.ts";
 import { snowplowHeave } from "./cards/meditativeplus/bobSoldier.ts";
 import { golemLashing } from "./cards/traininggrounds/trainingGolem.ts";
 import { chalkboardLesson } from "./cards/traininggrounds/tutorialMaster.ts";
+import { vaultStride } from "./cards/stinkyscape/tylannt.ts";
+import { heistDrop } from "./cards/stinkyscape/greatestHeist.ts";
+import { rodRise } from "./cards/stinkyscape/rodOfAges.ts";
+import { lecternRise } from "./cards/stinkyscape/zolarKeth.ts";
+import { spotlightKiss } from "./cards/stinkyscape/kwzka.ts";
+import { labVault } from "./cards/stinkyscape/narcorProject.ts";
+import { emitterBloom } from "./cards/stinkyscape/beamV5.ts";
+import { barrelSpin } from "./cards/stinkyscape/repeaterV5.ts";
+import { breechLock } from "./cards/stinkyscape/cannonV5.ts";
+import { turretScan } from "./cards/stinkyscape/flakV5.ts";
+import { intakeMaw } from "./cards/stinkyscape/minerV5.ts";
+import { wraithGather } from "./cards/stinkyscape/zZoth.ts";
+import { heraldHorn } from "./cards/stinkyscape/aZoth.ts";
+import { paragonStreak } from "./cards/stinkyscape/paragonMk2.ts";
+import { paragonDive } from "./cards/stinkyscape/paragonX.ts";
+import { flagshipDescent } from "./cards/stinkyscape/galaxy.ts";
+import { testLurch } from "./cards/stinkyscape/prototypeX1.ts";
+import { forgeBurst } from "./cards/stinkyscape/prototypeX2.ts";
+import { redCarpet } from "./cards/stinkyscape/siva1.ts";
+import { venomStep } from "./cards/stinkyscape/siva2.ts";
 import { alteranDive } from "./cards/stinkyscape/alteranReach.ts";
 import { golemCrash } from "./cards/stinkyscape/chaosCalls.ts";
 import { freshJackVault } from "./cards/stinkyscape/freshJack.ts";
@@ -98,12 +138,50 @@ export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = {
   snowplowHeave,
   chalkboardLesson,
   golemLashing,
+  vaultStride,
+  heistDrop,
+  rodRise,
+  lecternRise,
+  spotlightKiss,
+  labVault,
+  emitterBloom,
+  barrelSpin,
+  breechLock,
+  turretScan,
+  intakeMaw,
+  wraithGather,
+  heraldHorn,
+  paragonStreak,
+  paragonDive,
+  flagshipDescent,
+  testLurch,
+  forgeBurst,
+  redCarpet,
+  venomStep,
   seeingOrb,
   sceptrePlant,
   galeBurst,
   silkDrop,
   royalCloak,
   abyssSurface,
+  // R3399000: Classic+'s signatures.
+  pancakeStack,
+  waffleIron,
+  griddleFreeze,
+  kitchenDoor,
+  shieldPlant,
+  vineNap,
+  spotlightPose,
+  staffShuffle,
+  flexBurst,
+  drumLeap,
+  giftDesk,
+  bannerPlant,
+  greatBanner,
+  briefcaseStride,
+  templeStack,
+  vineSwing,
+  obeliskRise,
   // R3407000: Stinkyscape part two's signatures (fx/cards/stinkyscape/).
   melchiorBoot,
   balthasarLamp,

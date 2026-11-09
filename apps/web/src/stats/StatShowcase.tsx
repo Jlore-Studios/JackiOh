@@ -26,7 +26,7 @@ import CardMarks from "../cards/CardMarks.tsx";
 import { CardFace, faceModel } from "../cards/index.ts";
 import { markEventOf } from "../cards/marks.ts";
 import { resolveAnchor } from "../fx/anchors.ts";
-import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../fx/constants.ts";
+import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE, FX_MOBILE_WIDTH } from "../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../fx/director.ts";
 import { defaultFrames, defaultNow, defaultVisibility } from "../fx/FxLayer.tsx";
 import { createFxMemory } from "../fx/memory.ts";
@@ -181,6 +181,7 @@ function StatStage({ stat, still, fxOn, intensity }: StatStageProps): ReactEleme
       shakeSink: NO_SHAKE,
       seed: FX_DEFAULT_SEED,
       capacity: capacityFor(window.innerWidth),
+      phone: window.innerWidth < FX_MOBILE_WIDTH,
     });
     director.current = created;
     return () => {

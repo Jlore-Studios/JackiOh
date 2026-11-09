@@ -1894,6 +1894,62 @@ describe("R3324001 the current patch", () => {
   });
 });
 
+describe("R3447000 the games tile names the patch its games were collected on", () => {
+  /** Newest first: 0.7.0, past the tabs' floor and so not collecting, then 0.6.0. */
+  const PATCHES = [
+    { versions: ["0.7.0", "0.7.0b"], games: 1500, liveGames: 300 },
+    { versions: ["0.6.0"], games: 4000, liveGames: 2000 },
+  ];
+
+  /** Answers the newest patch's card statistics, counted from `source`'s window, with `patches` when given. */
+  function serveSource(source: "previous" | "live", patches?: readonly unknown[]): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        if (url.pathname !== "/api/stats/cards") return Promise.resolve(new Response("{}", { status: 200 }));
+        const body = {
+          ...MOCK_CARD_STATS_PROVISIONAL,
+          patch: "0.7.0b",
+          previousPatch: "0.6.0",
+          source,
+          sourceLabel: source === "previous" ? "Live games (previous patch)" : "Live games",
+          patches,
+        };
+        return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+      }),
+    );
+  }
+
+  it("R3447000 while the shown patch's figures are the previous window's, the tile names the patch before, and no source", async () => {
+    serveSource("previous", PATCHES);
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    await waitFor(() => expect(screen.getAllByTestId(statsTestid.patchTab)).toHaveLength(2), SLOW);
+    expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.6.0");
+    // The patch shown is still 0.7.0's tab, and nothing says where the figures come from (R661).
+    const pressed = screen.getAllByTestId(statsTestid.patchTab).filter((tab) => tab.getAttribute("aria-pressed") === "true");
+    expect(pressed.map((tab) => tab.querySelector(".stats-patch-tab-name")?.textContent)).toEqual(["0.7.0"]);
+    expect(document.body.textContent).not.toContain("Live games (previous patch)");
+  });
+
+  it("R3447000 the shown patch's own figures name the patch shown", async () => {
+    serveSource("live", PATCHES);
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    await waitFor(() => expect(screen.getAllByTestId(statsTestid.patchTab)).toHaveLength(2), SLOW);
+    expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.7.0");
+  });
+
+  it("R3447000 a server with no patch list names the version before while the figures are the previous window's", async () => {
+    serveSource("previous");
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.patchBar)).toBeNull();
+    expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.6.0");
+  });
+});
+
 describe("R1973000 the Daily runs tab is gone", () => {
   it("R1973000 the page offers Cards, Sets and Players, asks nothing of /api/stats/ci, and ?tab=ci opens the Cards tab", async () => {
     at("/stats?tab=ci");

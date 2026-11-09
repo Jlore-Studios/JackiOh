@@ -6,8 +6,10 @@
 // of the shared rays, burst and rings, its takeover's tail FX_SIGNATURE_TAKEOVER_TAIL_MS; three own looks join.
 // R3389000: In Too Deep's is "abyss", and Classic's Spell's and Trap's signature casts draw no shared rays.
 // R3402000: two more own looks, "pawn" indigo; R3402001: Core's signature Spells and Traps cast on their own.
+// R3395001: Stinkyscape's five Mythics' own looks, each with art of its own.
 // R3407000: Stinkyscape part two's six Mythics take looks of their own, each drawing its card's own picture.
-// R3405000: each Meditative Mythic wears a look of its own with art.
+// R3405000: each Meditative Mythic wears a look of its own with art. R3399002: Classic+'s four Mythics wear looks
+// of their own, each drawn as a picture of its own (takeoverArt.ts).
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -37,8 +39,8 @@ import { planFx } from "./cues.ts";
 import { mountDomEffect } from "./dom.ts";
 import { createFxMemory } from "./memory.ts";
 import { entranceCues, entranceLandMs, ownCast, TAKEOVER_ART_LOOKS, TAKEOVER_TINTS, takeoverArtOf, takeoverLookOf } from "./takeover.ts";
-import { takeoverArtParts } from "./takeoverArt.ts";
-import type { FxCue, FxPlanEnv, FxTakeoverCue } from "./types.ts";
+import { TAKEOVER_ART_DRAWINGS, takeoverArtParts } from "./takeoverArt.ts";
+import type { FxCue, FxPlanEnv, FxTakeoverCue, TakeoverLook } from "./types.ts";
 
 const CARDS: Record<string, { type: CardType; rarity: string }> = {
   "core-100": { type: "Unit", rarity: "Mythic" },
@@ -59,12 +61,18 @@ const CARDS: Record<string, { type: CardType; rarity: string }> = {
   "traininggrounds-040": { type: "Spell", rarity: "Mythic" },
   "traininggrounds-037": { type: "Spell", rarity: "Legendary" },
   "traininggrounds-038": { type: "Unit", rarity: "Legendary" },
+  "stinkyscape-044": { type: "Spell", rarity: "Mythic" },
+  "stinkyscape-036": { type: "Spell", rarity: "Mythic" },
+  "stinkyscape-137-1": { type: "Spell", rarity: "Legendary" },
   "stinkyscape-109": { type: "Unit", rarity: "Mythic" },
   "stinkyscape-110": { type: "Unit", rarity: "Mythic" },
   "stinkyscape-111": { type: "Unit", rarity: "Mythic" },
   "stinkyscape-148": { type: "Field Spell", rarity: "Mythic" },
   "stinkyscape-148-1": { type: "Spell", rarity: "Mythic" },
   "stinkyscape-t-red-narcor": { type: "Spell", rarity: "Mythic" },
+  "classicplus-027": { type: "Spell", rarity: "Mythic" },
+  "classicplus-065-5": { type: "Spell", rarity: "Mythic" },
+  "classicplus-074": { type: "Field Trap", rarity: "Mythic" },
 };
 const resolve: EntranceResolver = (defId) => CARDS[defId] ?? null;
 /** The effects layer's stylesheet, for the takeover looks' art. */
@@ -128,24 +136,35 @@ describe("R2722001 a Mythic takes over the board", () => {
     expect(takeoverOf(planFx(entry([play("core-100"), summon("core-100")]), p1, env()))?.look).toBe("void");
     expect(takeoverOf(planFx(entry([fired("core-096")]), p1, env()))?.look).toBe("pawn");
     expect(takeoverOf(planFx(entry([play("core-097")]), p1, env()))?.look).toBe("genie");
-    expect(takeoverOf(planFx(entry([play("core-099")]), p1, env()))?.look).toBe("forge");
+    expect(takeoverOf(planFx(entry([play("core-099")]), p1, env()))?.look).toBe("crystalForge");
     expect(takeoverOf(planFx(entry([play("meditative-049"), summon("meditative-049")]), p1, env()))?.look).toBe("ai");
-    expect(takeoverOf(planFx(entry([play("classicplus-029")]), p1, env()))?.look).toBe("prismatic");
+    // Stinkyscape #36 Drone Core X, a Mythic with no signature yet, wears the shared look.
+    expect(takeoverOf(planFx(entry([play("stinkyscape-036")]), p1, env()))?.look).toBe("prismatic");
     // R3332000: the four marquee Mythics name a look of their own in the effects table; R3400000: and three
     // signatures; R3389000: and Classic's In Too Deep, its signature's; R3402000: and Core's two more;
-    // R3405000: and Meditative's Mythics.
+    // R3405000: and Meditative's Mythics; R3399002: and Classic+'s four, in table order.
     const own = [...FX_CARD_TABLE].flatMap(([defId, card]) => (card.kind !== "none" && card.takeover !== undefined ? [defId] : []));
     const meditative = ["008", "017", "020", "039-4", "039-5", "049", "049-1", "049-2", "049-3", "071", "071-1", "097", "097-9"].map((n) => `meditative-${n}`);
-    // R3407000: and Stinkyscape part two's six.
+    // R3395001: and Stinkyscape's five Mythics; R3407000: and Stinkyscape part two's six.
     expect(own).toEqual([
     "core-096",
     "core-097",
-      "core-098",
-      "core-099",
+    "core-098",
+    "core-099",
     "core-100",
-    "classic-090", ...meditative,
+    "classic-090",
+    "classicplus-027",
+    "classicplus-029",
+    "classicplus-065-5",
+    "classicplus-074",
+    ...meditative,
     "meditativeplus-001",
     "meditativeplus-026",
+    "stinkyscape-006",
+    "stinkyscape-016",
+    "stinkyscape-044",
+    "stinkyscape-074",
+    "stinkyscape-086",
     "stinkyscape-109",
     "stinkyscape-110",
     "stinkyscape-111",
@@ -158,9 +177,13 @@ describe("R2722001 a Mythic takes over the board", () => {
       "pawn",
       "genie",
       "rotunda",
-      "forge",
+      "crystalForge",
       "void",
       "abyss",
+      "zealot",
+      "portal",
+      "vineyard",
+      "stair",
       "ascent",
       "workshop",
       "brush",
@@ -176,6 +199,11 @@ describe("R2722001 a Mythic takes over the board", () => {
       "fortress",
       "summit",
       "canvas",
+      "vault",
+      "rod",
+      "wire",
+      "whiteDwarf",
+      "forge",
       "freshJack",
       "ikwzki",
       "shockwave",
@@ -192,8 +220,8 @@ describe("R2722001 a Mythic takes over the board", () => {
     }
     // A Legendary Spell's cast, which no summon draws, takes its rays, gold burst, ring with its
     // echo (R2803000: the two-wave landing, one volume down) and its shake.
-    // Classic+ #35 Rollback, a Legendary Spell with no signature yet.
-    const legend = entranceCues(entry([play("classicplus-035")]), env(), 400);
+    // Stinkyscape #137.1 Land Doctrine, a token Spell printed Legendary with no signature yet.
+    const legend = entranceCues(entry([play("stinkyscape-137-1")]), env(), 400);
     expect(legend.map((c) => c.kind).sort()).toEqual(["burst", "rays", "ring", "ring", "shake"]);
     const rings = legend.filter((c) => c.kind === "ring");
     expect(rings.length).toBe(2);
@@ -202,16 +230,55 @@ describe("R2722001 a Mythic takes over the board", () => {
 
   it("R3332000 takeoverLookOf reads the table, prismatic by default", () => {
     expect(takeoverLookOf("core-100")).toBe("void");
-    expect(takeoverLookOf("classicplus-029")).toBe("prismatic");
+    expect(takeoverLookOf("stinkyscape-036")).toBe("prismatic");
     expect(takeoverLookOf("core-052")).toBe("prismatic");
     expect(takeoverLookOf("not-a-card")).toBe("prismatic");
     // A table that gives a Mythic another look: its takeover wears it.
-    const table = parseFxCardTable("test.json5", `{ "classicplus-029": { cast: { motif: "vanish" }, takeover: "genie" }, "core-100": "none: pending" }`);
-    expect(takeoverLookOf("classicplus-029", table)).toBe("genie");
+    const table = parseFxCardTable("test.json5", `{ "stinkyscape-036": { cast: { motif: "vanish" }, takeover: "genie" }, "core-100": "none: pending" }`);
+    expect(takeoverLookOf("stinkyscape-036", table)).toBe("genie");
     expect(takeoverLookOf("core-100", table)).toBe("prismatic");
-    const e = entry([play("classicplus-029")]);
+    const e = entry([play("stinkyscape-036")]);
     expect(takeoverOf(entranceCues(e, env(), e.durationMs, table))?.look).toBe("genie");
     expect(takeoverOf(entranceCues(e, env(), e.durationMs))?.look).toBe("prismatic");
+  });
+
+  it("R3399002 each Classic+ Mythic's takeover wears its own look", () => {
+    const looks: [GameEvent[], TakeoverLook][] = [
+      [[play("classicplus-027")], "zealot"],
+      [[play("classicplus-029")], "portal"],
+      [[play("classicplus-065-5")], "vineyard"],
+      [[fired("classicplus-074")], "stair"],
+    ];
+    for (const [events, look] of looks) {
+      const takeover = takeoverOf(planFx(entry(events), p1, env()));
+      expect(takeover?.look, JSON.stringify(events)).toBe(look);
+      expect(takeover?.tint).toEqual(TAKEOVER_TINTS[look]);
+      expect(TAKEOVER_ART_DRAWINGS[look], look).toBeDefined();
+    }
+  });
+
+  it("R3399002 R3402000 every Classic+ own look has its drawing, which names no card, and no other look but Core's four scenes has one", () => {
+    // R3402000: Core's four Mythics' looks draw a scene of shapes in the same layer (takeoverArt.test.ts holds them).
+    expect(Object.keys(TAKEOVER_ART_DRAWINGS).sort()).toEqual(["crystalForge", "genie", "pawn", "portal", "rotunda", "stair", "vineyard", "zealot"]);
+    // A drawn look draws no parts beside it (R3400000's), so its art layer holds the drawing alone.
+    for (const look of Object.keys(TAKEOVER_ART_DRAWINGS) as TakeoverLook[]) expect(takeoverArtParts(look), look).toEqual([]);
+    /** What each concept moves: the zealot's cyclone, the portal's vortex and its ruins, the stair, the grape and its vines. */
+    const moving: Record<string, string[]> = { zealot: ["spin"], portal: ["spin", "drift"], stair: ["spin"], vineyard: ["spin", "drift"] };
+    for (const look of ["zealot", "portal", "stair", "vineyard"] as const) {
+      const art = TAKEOVER_ART_DRAWINGS[look];
+      if (art === undefined || !("paths" in art)) throw new Error(`${look} is drawn as paths`);
+      expect(art.viewBox, look).toBe("0 0 160 90");
+      expect(art.paths.length, look).toBeGreaterThanOrEqual(6);
+      expect(art.paths.length, look).toBeLessThanOrEqual(14);
+      const parts = new Set<string>(art.paths.map((path) => path.part));
+      for (const part of moving[look] ?? []) expect(parts.has(part), `${look} ${part}`).toBe(true);
+      for (const path of art.paths) {
+        expect(path.fill, look).toMatch(/^#[0-9a-f]{6}$/);
+        // Path data alone: commands and numbers, so no word, let alone a card's name or id, can hide in it.
+        expect(path.d, look).toMatch(/^M[MLHVCSQTAZmlhvcsqtaz0-9 .-]+$/);
+      }
+    }
+    expect(JSON.stringify(TAKEOVER_ART_DRAWINGS)).not.toContain("classicplus-");
   });
 
   it("R3400000 a signature Spell draws no shared rays, burst or ring, its takeover ending FX_SIGNATURE_TAKEOVER_TAIL_MS after its entry", () => {
@@ -219,7 +286,7 @@ describe("R2722001 a Mythic takes over the board", () => {
     expect(ownCast("traininggrounds-037", "Spell")).toBe(true);
     // A Unit's signature is its entrance, and a card with no signature has no cast of its own.
     expect(ownCast("traininggrounds-038", "Unit")).toBe(false);
-    expect(ownCast("classicplus-029", "Spell")).toBe(false);
+    expect(ownCast("stinkyscape-036", "Spell")).toBe(false);
     expect(ownCast("traininggrounds-040", undefined)).toBe(false);
     // The Mythic: its own look, its tail shorter, no shared rings, burst, rays or shake.
     const mythic = entry([play("traininggrounds-040")]);
@@ -245,13 +312,13 @@ describe("R2722001 a Mythic takes over the board", () => {
     for (const cue of [...cues, ...shared]) if ("durationMs" in cue) expect(cue.delayMs + cue.durationMs).toBeLessThanOrEqual(D + FX_MAX_TAIL_MS);
   });
 
-  it("R3402000 rotunda and forge have their own tints, and pawn turns indigo", () => {
-    const looks = ["pawn", "rotunda", "forge"] as const;
+  it("R3402000 rotunda and crystalForge have their own tints, and pawn turns indigo", () => {
+    const looks = ["pawn", "rotunda", "crystalForge"] as const;
     const tints = looks.map((look) => JSON.stringify(TAKEOVER_TINTS[look]));
     expect(new Set([...tints, JSON.stringify(TAKEOVER_TINTS.prismatic)]).size).toBe(looks.length + 1);
     expect(TAKEOVER_TINTS.pawn.glow, "My Pawn's indigo").toBe("#6366f1");
     expect(TAKEOVER_TINTS.rotunda.rim, "Heroic Power's white marble").toBe("#f8fafc");
-    expect(TAKEOVER_TINTS.forge.rim, "Craft a Card's blue crystal").toBe("#60a5fa");
+    expect(TAKEOVER_TINTS.crystalForge.rim, "Craft a Card's blue crystal").toBe("#60a5fa");
     expect([takeoverLookOf("core-096"), takeoverLookOf("core-098"), takeoverLookOf("core-099")]).toEqual([...looks]);
   });
 
@@ -263,6 +330,30 @@ describe("R2722001 a Mythic takes over the board", () => {
     expect(TAKEOVER_TINTS.canvas.rim, "Scratch Pad's cyan cursor").toBe("#22d3ee");
     expect(TAKEOVER_TINTS.napkin.rim, "the napkin's magenta pixels").toBe("#e879f9");
     expect([takeoverLookOf("meditativeplus-001"), takeoverLookOf("meditativeplus-026"), takeoverLookOf("traininggrounds-040")]).toEqual([...looks]);
+  });
+
+  it("R3395001 vault, rod, wire, whiteDwarf and forge have their own tints and art", () => {
+    const looks = { "stinkyscape-006": "vault", "stinkyscape-016": "rod", "stinkyscape-044": "wire", "stinkyscape-074": "whiteDwarf", "stinkyscape-086": "forge" } as const;
+    const tints = Object.values(looks).map((look) => JSON.stringify(TAKEOVER_TINTS[look]));
+    const others = (["prismatic", "void", "pawn", "genie", "ai", "summit", "canvas", "napkin", "abyss"] as const).map((look) => JSON.stringify(TAKEOVER_TINTS[look]));
+    expect(new Set([...tints, ...others]).size).toBe(tints.length + others.length);
+    expect(TAKEOVER_TINTS.vault.rim, "Tylannt's steel").toBe("#94a3b8");
+    expect(TAKEOVER_TINTS.rod.rim, "Rod of Ages' silver").toBe("#cbd5e1");
+    expect(TAKEOVER_TINTS.wire.rim, "the paperclip's wire").toBe("#d1d5db");
+    expect(TAKEOVER_TINTS.whiteDwarf.rim, "Paragon-X's white dwarf").toBe("#f8fafc");
+    expect(TAKEOVER_TINTS.forge.rim, "Prototype-X2's molten forge").toBe("#f97316");
+    for (const [defId, look] of Object.entries(looks)) {
+      expect(takeoverLookOf(defId), defId).toBe(look);
+      // Each draws art of its own over the dark, parts no other look shares.
+      expect(takeoverArtParts(look).length, look).toBeGreaterThan(0);
+    }
+    const parts = Object.values(looks).flatMap((look) => takeoverArtParts(look));
+    expect(new Set(parts).size).toBe(parts.length);
+    // The Mythic Spell's own cast keeps its takeover inside its ceiling: its own look alone, the shorter tail.
+    const paperclip = entry([play("stinkyscape-044")]);
+    const cues = entranceCues(paperclip, env(), paperclip.durationMs);
+    expect(cues.map((cue) => cue.kind)).toEqual(["takeover"]);
+    expect(takeoverOf(cues)).toMatchObject({ look: "wire", durationMs: paperclip.durationMs + FX_SIGNATURE_TAKEOVER_TAIL_MS });
   });
 
   it("R3407000 Stinkyscape part two's six Mythics take their own looks and tints, each drawing its card's own picture; no other look draws one", () => {
@@ -323,10 +414,10 @@ describe("R2722001 a Mythic takes over the board", () => {
   });
 
   it("R2722001 intensity 0 plans none", () => {
-    const e = entry([play("core-097")]);
-    expect(entranceCues(e, env(FX_INTENSITY_SCALE.off), e.durationMs)).toEqual([]);
-    expect(planFx(e, p1, env(FX_INTENSITY_SCALE.off))).toEqual([]);
-  });
+  const e = entry([play("core-097")]);
+  expect(entranceCues(e, env(FX_INTENSITY_SCALE.off), e.durationMs)).toEqual([]);
+  expect(planFx(e, p1, env(FX_INTENSITY_SCALE.off))).toEqual([]);
+});
 });
 
 describe("R3402001 Core's signature casts", () => {
@@ -343,7 +434,7 @@ describe("R3402001 Core's signature casts", () => {
     expect(shared(entranceCues(income, env(), income.durationMs, PLAIN_TRAP)).sort()).toEqual(["burst", "rays", "ring", "ring"]);
     expect(shakes(entranceCues(income, env(), income.durationMs, PLAIN_TRAP))).toContain(FX_LEGENDARY_TRAUMA);
     // Zephrys's and Craft a Card's casts and My Pawn's firing keep only their own look's takeover (R3400000), centred, the sooner gone.
-    for (const [events, look] of [[[play("core-097")], "genie"], [[play("core-099")], "forge"], [[fired("core-096")], "pawn"]] as const) {
+    for (const [events, look] of [[[play("core-097")], "genie"], [[play("core-099")], "crystalForge"], [[fired("core-096")], "pawn"]] as const) {
       const e = entry([...events]);
       const cues = entranceCues(e, env(), e.durationMs);
       expect(cues.map((c) => c.kind), look).toEqual(["takeover"]);
@@ -360,8 +451,9 @@ describe("R2722002 a hidden card's entrance centres on the zone that flipped", (
     const rays = entranceCues(plain, env(), plain.durationMs, PLAIN_TRAP).find((c) => c.kind === "rays");
     expect(rays).toMatchObject({ tone: "legendary", at: { kind: "testid", testid: "zone-you-backrow-3" } });
     // The other seat reads a Cloaked card's reveal at its firing too (R2734000), centred where it flips.
-    const reveal: GameEvent = { type: "activated", player: "p1", instanceId: "c61", defId: "classicplus-029", ability: "reveal" };
-    const entered = entranceEntries(planEntries([reveal, fired("classicplus-029")], p2, false), resolve, { seen: new Set() });
+    // A Mythic Spell with no cast of its own (Drone Core X: Core's and Classic+'s Mythic Spells have their signatures now).
+    const reveal: GameEvent = { type: "activated", player: "p1", instanceId: "c61", defId: "stinkyscape-036", ability: "reveal" };
+    const entered = entranceEntries(planEntries([reveal, fired("stinkyscape-036")], p2, false), resolve, { seen: new Set() });
     const theirs = setPieceEntries(entered, takeoverClaim, { reduced: false, bigMoments: "full", speed: 1 });
     const at = theirs.find((e) => e.entrance !== undefined);
     if (at === undefined) throw new Error("no entry");
@@ -396,10 +488,10 @@ describe("R2722002 a hidden card's entrance centres on the zone that flipped", (
     expect(ownCast("classic-044", "Spell")).toBe(true);
     expect(ownCast("classic-009", "Trap")).toBe(true);
     expect(ownCast("classic-090", "Field Spell")).toBe(false);
-    expect(ownCast("classicplus-035", "Spell")).toBe(false);
+    expect(ownCast("stinkyscape-137-1", "Spell")).toBe(false);
     expect(entranceCues(entry([play("classic-044")]), env(), 400)).toEqual([]);
     expect(entranceCues(entry([fired("classic-009")]), env(), 400)).toEqual([]);
-    expect(entranceCues(entry([play("classicplus-035")]), env(), 400).some((cue) => cue.kind === "rays")).toBe(true);
+    expect(entranceCues(entry([play("stinkyscape-137-1")]), env(), 400).some((cue) => cue.kind === "rays")).toBe(true);
     expect(entranceCues(entry([fired("classic-009")]), env(), 400, PLAIN_TRAP).some((cue) => cue.kind === "rays")).toBe(true);
     // A table that gives the Spell no signature: it takes the shared entrance again.
     const table = parseFxCardTable("test.json5", `{ "classic-044": { bespoke: "graveRise" } }`);

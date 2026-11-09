@@ -295,7 +295,8 @@ lets its subject break the window's top edge. A delivered art file (no layers), 
 picture), a restyled picture and Immersive, Out of frame and Extended art (layers of their own) stay as they were, and the
 Reduce motion setting, the system's and the fx intensity off draw the flat picture with its foil still. `CardFace`'s `tilt`
 says where a face listens: `"host"` its parent (a card in hand, on the board, in the Collection), `"window"` the whole
-window's pointer (the hover preview, which takes none), `"drag"` that and a touch drag on the face (inspect, where the
+window's pointer (the hover preview, which takes none; the pointer is read against the box of the card the preview is
+anchored to, `tiltAnchor`), `"drag"` that and a touch drag on the face (inspect, where the
 sheet's own swipe does not start on it); the card views also tilt with the phone's orientation once "Tilt with my phone" is
 on (`deviceTilt`, a device-only card setting; iOS asks leave once, inside the switch's tap). One face tilts at a time and
 none while the animation queue drains (`useTiltHold`, `game/Game.tsx`). The face's rotation is the one 3D thing: `.cf` is
@@ -547,8 +548,9 @@ a cry, a card recipe or Flourish (over its fixture, `RECIPE_FIXTURES` in `fx/mot
 plays as the card's play, a death, trigger or activate motif from its hook's `hookResolving` marker (R2797000), a Field
 card's aura stands in the first backrow zone, and a marquee Unit's entrance plays as it lands. It also lists every card
 whose entry is its signature by set (R3332000), each played over the board its entrance reads (Felinor Fiender's over
-three Felinors, R3332001); Stinkyscape part two's 23 (R3407000) each play on their module's own fixture
-(`fx/cards/stinkyscape/`), a hook's marker naming the card it plays. It calls no engine.
+three Felinors, R3332001), a signature Unit standing in its entrance's zone wearing its tile aura (Classic+'s, R3399001);
+Stinkyscape part two's 23 (R3407000) each play on their module's own fixture (`fx/cards/stinkyscape/`), a hook's marker
+naming the card it plays. It calls no engine.
 
 To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
 an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,

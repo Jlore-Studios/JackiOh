@@ -9,10 +9,12 @@
 // Pad's canvas, Goetzmann Game Design's napkin) shows that art at rest behind the card, the same parts
 // the live takeover mounts, painted by fx.css and never a card face (R202).
 // R3389000: it wears its card's own takeover look (`data-takeover-look`), In Too Deep's abyss among them.
-// R3402000: a Mythic whose takeover has a scene of its own (fx/takeoverArt.ts) shows it at rest behind
-// all of that, painted from its look's tint (board.css) and naming no card.
 // R3407000: a Mythic whose takeover draws its own picture (`takeoverArtOf`) shows that picture filling the
 // screen behind the rays, still, as its takeover's still form.
+// R3399002: a Mythic whose look is drawn as a picture of its own (fx/takeoverArt.ts `TAKEOVER_ART_DRAWINGS`:
+// Classic+'s four) shows that drawing at rest in the same art layer, filling the screen behind the card; it
+// carries its look, never the card it is for. R3402000: and Core's four Mythics' scenes of shapes, each shape
+// classed by its part as the live takeover's are, painted by fx.css from its look's tint, which the art layer carries.
 
 import { createElement, useContext, useEffect, type CSSProperties, type ReactElement } from "react";
 
@@ -20,7 +22,7 @@ import type { PlayerView } from "@jackioh/shared";
 
 import { CardFace } from "../cards/index.ts";
 import { TAKEOVER_TINTS, takeoverArtOf, takeoverLookOf } from "../fx/takeover.ts";
-import { TAKEOVER_ART, TAKEOVER_ART_ASPECT, TAKEOVER_ART_VIEWBOX, takeoverArtParts } from "../fx/takeoverArt.ts";
+import { TAKEOVER_ART_DRAWINGS, takeoverArtParts, type TakeoverDrawing } from "../fx/takeoverArt.ts";
 import type { TakeoverLook } from "../fx/types.ts";
 import { CatalogContext } from "./catalog.ts";
 import { namedFace } from "./faces.ts";
@@ -37,25 +39,23 @@ export type TakeoverStillProps = {
   onDone: () => void;
 };
 
-/** R3402000: the Mythic's own takeover scene at rest, or nothing when its look has none. */
-function StillArt({ look }: { look: TakeoverLook }): ReactElement | null {
-  const shapes = TAKEOVER_ART[look];
-  if (shapes === undefined) return null;
-  const tint = TAKEOVER_TINTS[look];
-  const style = { "--takeover-rim": tint.rim, "--takeover-core": tint.core, "--takeover-glow": tint.glow } as CSSProperties;
+/** R3399002: a look's drawing at rest, its paths in their own colours; R3402000: or its scene's shapes, each classed by its part. */
+function StillDrawing({ drawing }: { drawing: TakeoverDrawing }): ReactElement {
   return (
-    <svg
-      className="takeover-still-art"
-      data-look={look}
-      viewBox={TAKEOVER_ART_VIEWBOX}
-      preserveAspectRatio={TAKEOVER_ART_ASPECT}
-      aria-hidden="true"
-      style={style}
-    >
-      {/* A scene is a fixed list, so a shape's place in it is a stable key. */}
-      {shapes.map((shape, index) => createElement(shape.tag, { key: index, className: `takeover-still-art-${shape.part}`, ...shape.attrs }))}
+    <svg className="takeover-art-drawing" viewBox={drawing.viewBox} preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      {/* A drawing is a fixed list, so a shape's place in it is a stable key. */}
+      {"paths" in drawing
+        ? drawing.paths.map((path, index) => <path key={index} d={path.d} fill={path.fill} />)
+        : drawing.shapes.map((shape, index) => createElement(shape.tag, { key: index, className: `takeover-drawing-${shape.part}`, ...shape.attrs }))}
     </svg>
   );
+}
+
+/** R3402000: a scene is painted from its look's tint, so its art layer carries the tint as the live takeover does. */
+function sceneTint(look: TakeoverLook, drawing: TakeoverDrawing | undefined): CSSProperties | undefined {
+  if (drawing === undefined || "paths" in drawing) return undefined;
+  const tint = TAKEOVER_TINTS[look];
+  return { "--fx-tint-rim": tint.rim, "--fx-tint-core": tint.core, "--fx-tint-glow": tint.glow } as CSSProperties;
 }
 
 export default function TakeoverStill({ defId, instanceId, view, onDone }: TakeoverStillProps): ReactElement | null {
@@ -68,16 +68,17 @@ export default function TakeoverStill({ defId, instanceId, view, onDone }: Takeo
   if (face === null) return null;
   const look = takeoverLookOf(defId);
   const art = takeoverArtParts(look);
+  const drawing = TAKEOVER_ART_DRAWINGS[look];
   const picture = takeoverArtOf(defId);
   return (
     <div className="takeover-still" data-testid="takeover-still" data-takeover-def={defId} data-takeover-look={look} aria-hidden="true">
-      <StillArt look={look} />
       {picture === undefined ? null : <img className="takeover-still-art" src={picture} alt="" aria-hidden="true" draggable={false} decoding="async" />}
-      {art.length > 0 ? (
-        <span className="takeover-art" data-look={look} data-still="true" aria-hidden="true">
+      {art.length > 0 || drawing !== undefined ? (
+        <span className="takeover-art" data-look={look} data-still="true" aria-hidden="true" style={sceneTint(look, drawing)}>
           {art.map((part) => (
             <span key={part} className={`takeover-art-${part}`} />
           ))}
+          {drawing === undefined ? null : <StillDrawing drawing={drawing} />}
         </span>
       ) : null}
       <span className="takeover-still-rays" aria-hidden="true" />

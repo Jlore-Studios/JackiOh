@@ -17,9 +17,11 @@ import { CardDefsProvider } from "./refContext.tsx";
 import { CARD_GLARE_TRAVEL_PCT, CARD_TILT_MAX_DEG } from "./constants.ts";
 import { CardFace } from "./CardFace.tsx";
 import { resetCosmeticsForTests, writeCardLevel } from "./cosmetics.ts";
+import { HoverPreview } from "./inspect/HoverPreview.tsx";
+import { INSPECT_FACE } from "./inspect/testids.ts";
 import { faceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, readCardSettings, writeCardSettings } from "./settings.ts";
-import { devicePose, glareOf, pointerPose, resetTiltForTests, tiltDegrees, useTiltHold, type TiltMode } from "./tilt.ts";
+import { devicePose, glareOf, pointerPose, resetTiltForTests, tiltDegrees, useTiltHold, type TiltBox, type TiltMode } from "./tilt.ts";
 import { VERSION_ALT_ART_ID } from "./versions.ts";
 
 const LEGENDARY = "core-052";
@@ -27,6 +29,9 @@ const MYTHIC = "core-100";
 
 /** A host box 200 by 280 at the page's origin, which jsdom's layout does not give. */
 const BOX = { left: 0, top: 0, width: 200, height: 280 };
+
+/** An anchor box clear of the preview's `BOX`: the card the preview is anchored to, where the pointer is. */
+const ANCHOR: TiltBox = { left: 400, top: 500, width: 100, height: 140 };
 
 /** The tilt properties a face holds, each read from its inline style. */
 const PROPERTIES = ["--cf-tilt-x", "--cf-tilt-y", "--cf-tilt-rx", "--cf-tilt-ry", "--cf-glare-x", "--cf-glare-y"] as const;
@@ -46,19 +51,19 @@ function modelOf(id: string): ReturnType<typeof faceModel> {
   return faceModel({ defId: id, def, radiant: false });
 }
 
-/** A face in its own host element, whose box is `BOX`: what the tilt reads. */
-function Face({ id = MYTHIC, tilt }: { id?: string; tilt: TiltMode }): ReactElement {
+/** A face in its own host element, whose box is `BOX`: what the tilt reads without an anchor. */
+function Face({ id = MYTHIC, tilt, anchor }: { id?: string; tilt: TiltMode; anchor?: TiltBox }): ReactElement {
   return (
     <div className="host" ref={(node) => { if (node !== null) node.getBoundingClientRect = () => ({ ...BOX, right: BOX.left + BOX.width, bottom: BOX.top + BOX.height, x: BOX.left, y: BOX.top, toJSON: () => ({}) }); }}>
-      <CardFace face={modelOf(id)} layout="full" worn tilt={tilt} />
+      <CardFace face={modelOf(id)} layout="full" worn tilt={tilt} tiltAnchor={anchor} />
     </div>
   );
 }
 
-function mount(tilt: TiltMode, id = MYTHIC): { cf: HTMLElement; host: HTMLElement; unmount: () => void } {
+function mount(tilt: TiltMode, id = MYTHIC, anchor?: TiltBox): { cf: HTMLElement; host: HTMLElement; unmount: () => void } {
   const { container, unmount } = render(
     <CardDefsProvider defs={CATALOG}>
-      <Face id={id} tilt={tilt} />
+      <Face id={id} tilt={tilt} anchor={anchor} />
     </CardDefsProvider>,
   );
   const cf = container.querySelector<HTMLElement>(".cf");
@@ -163,7 +168,60 @@ describe("R3344001 the pose, the angles and the glare", () => {
 });
 
 describe("R3344001 the window's pointer tilts a face in the hover preview", () => {
-  it("R3344001 a window pointer tilts to the cap, a pointer far past it still reads the cap, and the glare is opposite", () => {
+  it("R3344001 the preview reads the pointer's place on the card it is anchored to: level at its middle, the cap at its edge, in between a fraction", () => {
+    const { cf } = mount("window", MYTHIC, ANCHOR);
+    expectLevel(cf, "at rest");
+    // The anchor's middle: level, where the old code read the cap against the preview's own box.
+    pointer(window, "pointermove", 450, 570);
+    expect(cf.getAttribute("data-tilt")).toBe("on");
+    expect(read(cf)).toEqual({
+      "--cf-tilt-x": "0",
+      "--cf-tilt-y": "0",
+      "--cf-tilt-rx": "0deg",
+      "--cf-tilt-ry": "0deg",
+      "--cf-glare-x": "50%",
+      "--cf-glare-y": "50%",
+    });
+    // The anchor's right edge: the cap along x alone.
+    pointer(window, "pointermove", 500, 570);
+    expect(read(cf)).toMatchObject({ "--cf-tilt-x": "1", "--cf-tilt-ry": "12deg", "--cf-tilt-rx": "0deg", "--cf-glare-x": "-10%" });
+    // The anchor's top-left corner: the cap both ways, the glare opposite.
+    pointer(window, "pointermove", 400, 500);
+    expect(read(cf)).toMatchObject({ "--cf-tilt-ry": "-12deg", "--cf-tilt-rx": "12deg", "--cf-glare-x": "110%", "--cf-glare-y": "110%" });
+    // A pose in between.
+    pointer(window, "pointermove", 475, 535);
+    expect(read(cf)).toMatchObject({ "--cf-tilt-x": "0.5", "--cf-tilt-y": "-0.5", "--cf-tilt-ry": "6deg", "--cf-tilt-rx": "6deg" });
+    // Far past the anchor: the cap, no more.
+    pointer(window, "pointermove", 100000, 570);
+    expect(cf.style.getPropertyValue("--cf-tilt-ry")).toBe("12deg");
+  });
+
+  it("R3344001 a new anchor is read at the next move without the face letting go", () => {
+    const { container, rerender } = render(
+      <CardDefsProvider defs={CATALOG}>
+        <Face tilt="window" anchor={{ left: 400, top: 500, width: 100, height: 140 }} />
+      </CardDefsProvider>,
+    );
+    const cf = container.querySelector<HTMLElement>(".cf");
+    if (cf === null) throw new Error("no face");
+    pointer(window, "pointermove", 475, 535);
+    expect(cf.style.getPropertyValue("--cf-tilt-x")).toBe("0.5");
+    // A new anchor object must not re-attach, which would level the face.
+    act(() => {
+      rerender(
+        <CardDefsProvider defs={CATALOG}>
+          <Face tilt="window" anchor={{ left: 450, top: 500, width: 100, height: 140 }} />
+        </CardDefsProvider>,
+      );
+    });
+    expect(cf.getAttribute("data-tilt")).toBe("on");
+    expect(cf.style.getPropertyValue("--cf-tilt-x")).toBe("0.5");
+    // The next move reads the new anchor: the same pointer is now left of its middle.
+    pointer(window, "pointermove", 475, 535);
+    expect(cf.style.getPropertyValue("--cf-tilt-x")).toBe("-0.5");
+  });
+
+  it("R3344001 a window face given no anchor reads its host's box, and a pointer far past it reads the cap", () => {
     const { cf } = mount("window");
     expectLevel(cf, "at rest");
     pointer(window, "pointermove", 200, 140);
@@ -184,6 +242,27 @@ describe("R3344001 the window's pointer tilts a face in the hover preview", () =
     // A pose in between.
     pointer(window, "pointermove", 150, 70);
     expect(read(cf)).toMatchObject({ "--cf-tilt-x": "0.5", "--cf-tilt-y": "-0.5", "--cf-tilt-ry": "6deg", "--cf-tilt-rx": "6deg" });
+  });
+
+  it("R3344001 the hover preview gives its face the anchor it is placed by", () => {
+    render(
+      <CardDefsProvider defs={CATALOG}>
+        <HoverPreview face={modelOf(MYTHIC)} anchor={{ left: 600, top: 400, width: 100, height: 140 }} />
+      </CardDefsProvider>,
+    );
+    const wrapper = screen.getByTestId(INSPECT_FACE);
+    // The preview stands above the anchor, as placePreview puts it: the pose must read the anchor, not this box.
+    wrapper.getBoundingClientRect = () => ({ left: 560, top: 100, width: 200, height: 280, right: 760, bottom: 380, x: 560, y: 100, toJSON: () => ({}) });
+    const cf = wrapper.querySelector<HTMLElement>(".cf");
+    if (cf === null) throw new Error("no face");
+    expect(cf.hasAttribute("data-depth")).toBe(true);
+    // The anchor's middle: level, though the pointer is below the preview's own box.
+    pointer(window, "pointermove", 650, 470);
+    expect(cf.getAttribute("data-tilt")).toBe("on");
+    expect(read(cf)).toMatchObject({ "--cf-tilt-x": "0", "--cf-tilt-y": "0" });
+    // The anchor's right edge: the cap along x alone.
+    pointer(window, "pointermove", 700, 470);
+    expect(read(cf)).toMatchObject({ "--cf-tilt-ry": "12deg", "--cf-tilt-rx": "0deg" });
   });
 
   it("R3344001 the face springs back: leaving the document, losing focus and unmounting each remove every property", () => {

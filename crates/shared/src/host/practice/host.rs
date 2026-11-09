@@ -28,7 +28,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use serde::{Deserialize, Serialize};
 
-use jackioh_ai::{AI_BUDGET, AiOptions, SearchBudget, ai_to_act};
+use jackioh_ai::{AiOptions, SearchBudget, ai_to_act};
 use jackioh_engine::{
     Action, ActionBody, CreateGameOptions, GameOverReason, GameState, PlayerId, ReplayInput, Rng,
     VERSIONS_SCHEME, outcome_for,
@@ -96,7 +96,8 @@ pub enum PracticeEvent {
 pub enum PracticeOutput {
     /// The game is on (made, or resumed): the seat the AI plays; it began there.
     Began { ai_seat: PlayerId },
-    /// R668: write this save, or clear it (`None`). A dungeon run's fight leaves the save as it was.
+    /// R668: write this save, or clear it (`None`). R3476000: a run fight's save goes in its own
+    /// slot, filed by the driver, never touching the free game's.
     Save { save: Option<Box<PracticeSave>> },
     /// R768: append this game to the ones kept and keep only the newest `keep`.
     Keep { replay: Box<PracticeReplay>, keep: u32 },
@@ -230,6 +231,12 @@ impl PracticeHost {
             || kept_config.difficulty != asked.difficulty
             || kept_config.sandbox != asked.sandbox
         {
+            return Err("the saved practice game is not the one the page remembers".to_string());
+        }
+        // R3476000: a free game never resumes a run fight's save, nor a run fight a free game's.
+        // Two run fights then rest on the seed, which names the fight (the run's seed, row and
+        // column).
+        if kept_config.is_run() != asked.is_run() {
             return Err("the saved practice game is not the one the page remembers".to_string());
         }
         let saved_on = catalog_of(&save.catalog, save.versions);
@@ -374,11 +381,6 @@ impl PracticeHost {
         }
     }
 
-    /// [`PracticeHost::decide`] at the AI's own budget.
-    pub fn decide_at_budget(&self, ask: &AiAsk) -> AiMove {
-        self.decide(ask, AI_BUDGET)
-    }
-
     // Output
 
     fn emit(&mut self, output: PracticeOutput) {
@@ -455,13 +457,11 @@ impl PracticeHost {
         self.snapshot();
     }
 
-    /// R668: the save a free game in progress leaves after each answer; none for a lesson (its coach
-    /// reads the game from its first snapshot on, so a lesson restarts instead) or a finished game. R2706000:
-    /// a run fight is never saved, and leaves the free game's save as it was.
+    /// R668: the save a game in progress leaves after each answer (R3476000: a run fight's too,
+    /// filed by the driver in its own slot, never touching the free game's); none for a lesson (its
+    /// coach reads the game from its first snapshot on, so a lesson restarts instead) or a finished
+    /// game, which clears the slot.
     fn save(&mut self) {
-        if self.config.is_run() {
-            return;
-        }
         let save = (!self.config.is_lesson() && !self.is_over()).then(|| {
             Box::new(PracticeSave {
                 catalog: self.catalog.clone(),

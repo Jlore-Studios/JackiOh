@@ -5,7 +5,12 @@
 //   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
 //   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
-//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
+//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks or a bespoke (fx/aura/looks.ts, R2787000, R3400000).
+//   + entrance: "<key>"                     beside any entry but "none", or alone: a Unit's or a Field Spell's entrance (fx/entrances.ts, R3332000);
+//   + takeover: "<look>", signature: true   a Mythic's own takeover look (fx/takeover.ts); a Legendary's or Mythic's signature (R3332000).
+// R3399000: every Legendary and Mythic here, tokens by printed rarity, is its signature (#3399), its
+// recipe in fx/cards/classicplus/, its aura a look of its own (R3399001), a Unit's a `tile` one on its own unit
+// zone (R3400000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
 // `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
@@ -22,27 +27,27 @@
   "classicplus-009": { cast: { motif: "transmute" } }, // Silence
   "classicplus-010": { cast: { motif: "bless" } }, // New Wraps
   "classicplus-011": "none: no hook (its Aura is static; the damage rows show the cap)", // Anime Armor
-  "classicplus-012": { trigger: { motif: "send" } }, // The Mother Pancake
-  "classicplus-012-1": { cast: { motif: "lance" } }, // Devour
-  "classicplus-012-2": { cast: { motif: "bolt" } }, // Death Boil
-  "classicplus-012-3": { cast: { motif: "send" } }, // Fluffy Grip
-  "classicplus-012-4": { cast: { motif: "bolt" } }, // Powder Spray
-  "classicplus-012-5": { cast: { motif: "bless" }, aura: { look: "holy", scope: "side" } }, // Anti-Waffle Shell
-  "classicplus-012-6": { setPiece: "vortex" }, // Frozen Wastes
-  "classicplus-012-7": "none: token (one census play)", // Legion of the Hungry
-  "classicplus-012-8": "none: token (two census plays)", // Frostspatula
-  "classicplus-013": { death: { motif: "send" } }, // Mommy Barker
+  "classicplus-012": { signature: true, entrance: "pancakeStack", bespoke: "pancakeFlip", aura: { look: "syrup", scope: "tile" } }, // The Mother Pancake
+  "classicplus-012-1": { signature: true, bespoke: "pancakeMouth" }, // Devour
+  "classicplus-012-2": { signature: true, bespoke: "batterBubble" }, // Death Boil
+  "classicplus-012-3": { signature: true, bespoke: "doughArm" }, // Fluffy Grip
+  "classicplus-012-4": { signature: true, bespoke: "flourCloud" }, // Powder Spray
+  "classicplus-012-5": { signature: true, entrance: "waffleIron", bespoke: "waffleGrid", aura: { look: "waffleDome", palette: "Spirit", scope: "side" } }, // Anti-Waffle Shell
+  "classicplus-012-6": { signature: true, bespoke: "whiteout" }, // Frozen Wastes
+  "classicplus-012-7": { signature: true, bespoke: "hungryPot" }, // Legion of the Hungry
+  "classicplus-012-8": { signature: true, entrance: "griddleFreeze", bespoke: "spatulaFlip", aura: { look: "frostMist", palette: "Spirit", scope: "zone" } }, // Frostspatula
+  "classicplus-013": { signature: true, entrance: "kitchenDoor", bespoke: "pancakeTray", aura: { look: "ovenSteam", scope: "tile" } }, // Mommy Barker
   "classicplus-014": { cast: { motif: "seal" } }, // Forever&
   "classicplus-015": { cast: { motif: "conjure" } }, // Conjure Rush Token
   "classicplus-016": { cast: { motif: "conjure" } }, // Conjure Rush Token+
   "classicplus-017": { cast: { motif: "conjure" } }, // Conjure Rush Token++
   "classicplus-018": { trigger: { motif: "offering" } }, // Gullible Treatler
-  "classicplus-019": { cast: { motif: "conjure", palette: "Physical/sport" } }, // League of Losers
-  "classicplus-019-1": "none: token (no hook)", // Top Loser
-  "classicplus-019-2": "none: token (its attack is combat)", // Jungle Loser
-  "classicplus-019-3": { cry: { motif: "bless" } }, // Mid Loser
-  "classicplus-019-4": { trigger: { motif: "mend" } }, // Support Loser
-  "classicplus-019-5": "none: token (turn events only)", // Bot Loser
+  "classicplus-019": { signature: true, bespoke: "lineup" }, // League of Losers
+  "classicplus-019-1": { signature: true, entrance: "shieldPlant", aura: { look: "laneWall", palette: "Physical/steel", scope: "tile" } }, // Top Loser
+  "classicplus-019-2": { signature: true, entrance: "vineNap", aura: { look: "snoreLeaves", palette: "Nature", scope: "tile" } }, // Jungle Loser
+  "classicplus-019-3": { signature: true, entrance: "spotlightPose", bespoke: "coinCall", aura: { look: "coinGlint", palette: "Hustle", scope: "tile" } }, // Mid Loser
+  "classicplus-019-4": { signature: true, entrance: "staffShuffle", bespoke: "sighMend", aura: { look: "staffBreath", scope: "tile" } }, // Support Loser
+  "classicplus-019-5": { signature: true, entrance: "flexBurst", bespoke: "killNotch", aura: { look: "bowNotch", palette: "Physical/blade", scope: "tile" } }, // Bot Loser
   "classicplus-020": { cry: { motif: "bless" } }, // Mushroom Power
   "classicplus-021": { cast: { motif: "nova" } }, // Whirlwind
   "classicplus-022": { cast: { motif: "bolt", palette: "Dark/blood" } }, // Blood Moon
@@ -50,9 +55,9 @@
   "classicplus-024": { bespoke: "crushingWalls" }, // Crushing Walls
   "classicplus-025": { cast: { motif: "bolt" } }, // Soul Shot
   "classicplus-026": { cry: { motif: "mana" } }, // Tommy Tempo
-  "classicplus-027": { cast: { motif: "send" } }, // Zephrys Zealotism
+  "classicplus-027": { signature: true, bespoke: "zealotCyclone", takeover: "zealot" }, // Zephrys Zealotism
   "classicplus-028": { death: { motif: "mend" } }, // Nuestro hogar, nuestras tumbas
-  "classicplus-029": { cast: { motif: "send" } }, // Portal to the Past
+  "classicplus-029": { signature: true, bespoke: "sepiaPortal", takeover: "portal" }, // Portal to the Past
   "classicplus-030": { cry: { motif: "transmute", palette: "Beast/felinor" } }, // Felinor Fuser
   "classicplus-031": { cast: { motif: "transmute" }, activate: { motif: "transmute" }, aura: { look: "arcane", scope: "zone" } }, // Fusion Lab
   "classicplus-032": { cast: { motif: "send" } }, // Otherworldly Removal
@@ -61,24 +66,24 @@
   "classicplus-032-3": "none: token (each Whirlwind it casts draws its nova)", // Blade Storm
   "classicplus-033": { cast: { motif: "bless" }, aura: { look: "holy", scope: "side" } }, // Ivory Tower
   "classicplus-034": { cast: { motif: "bind" }, trigger: { motif: "bind" }, aura: { look: "frost", palette: "Tech", scope: "lane" } }, // Memory Leak
-  "classicplus-035": { bespoke: "rollbackSweep" }, // Rollback
+  "classicplus-035": { signature: true, bespoke: "rollbackSweep" }, // Rollback
   "classicplus-036": { cast: { motif: "send" } }, // Conjure Bones
   "classicplus-036-1": { cast: { motif: "lance" } }, // Bone Storm
-  "classicplus-037": { trigger: { motif: "conjure" } }, // Wardrum
+  "classicplus-037": { signature: true, entrance: "drumLeap", bespoke: "drumBeat", aura: { look: "warHeartbeat", palette: "Fire", scope: "tile" } }, // Wardrum
   "classicplus-038": { death: { motif: "send" } }, // Solarius
   "classicplus-038-1": "none: token (each Spell it casts draws its own)", // Solarius Prime
   "classicplus-039": { death: { motif: "send" }, trigger: { motif: "tally" } }, // Book Worm
   "classicplus-040": { cast: { motif: "bless", palette: "Hustle/cash" } }, // Appropriations
   "classicplus-041": { bespoke: "constantStamp" }, // KY's Constant
-  "classicplus-042": { cast: { motif: "send", palette: "Nerd/chalk" } }, // KY's Test
-  "classicplus-042-1": "none: token (no motif reads burned)", // KY's Gift
-  "classicplus-043": { cast: { motif: "send", palette: "Tech/hologram" } }, // AI Slop
+  "classicplus-042": { signature: true, bespoke: "slateTest" }, // KY's Test
+  "classicplus-042-1": { signature: true, entrance: "giftDesk", bespoke: "giftBoxes", aura: { look: "appleRibbon", palette: "Nerd/chalk", scope: "zone" } }, // KY's Gift
+  "classicplus-043": { signature: true, bespoke: "holoLoom" }, // AI Slop
   "classicplus-044": { cast: { motif: "vanish", palette: "Tech/glitch" } }, // Simplicity Audit
   "classicplus-045": { cast: { motif: "vanish", palette: "Tech/glitch" } }, // Complexity Audit
-  "classicplus-046": { death: { motif: "send", palette: "Beast/felinor" } }, // Felinor Flagbearer
-  "classicplus-046-1": { cry: { motif: "conjure", palette: "Beast/felinor" } }, // Felinor Flagbearer Prime
-  "classicplus-047": { cast: { motif: "send" } }, // Jogg's Box
-  "classicplus-048": { death: { motif: "send", palette: "Tech/laser" } }, // Jlockeed's Lobbyist
+  "classicplus-046": { signature: true, entrance: "bannerPlant", bespoke: "bannerFold", aura: { look: "bannerBreeze", palette: "Beast/felinor", scope: "tile" } }, // Felinor Flagbearer
+  "classicplus-046-1": { signature: true, entrance: "greatBanner", aura: { look: "greatBannerShade", palette: "Beast/felinor", scope: "tile" } }, // Felinor Flagbearer Prime
+  "classicplus-047": { signature: true, bespoke: "puzzleBox" }, // Jogg's Box
+  "classicplus-048": { signature: true, entrance: "briefcaseStride", bespoke: "sealedEnvelope", aura: { look: "laserDot", palette: "Tech/laser", scope: "tile" } }, // Jlockeed's Lobbyist
   "classicplus-049": { trigger: { motif: "tithe" } }, // Jay Fungus
   "classicplus-050": { cast: { motif: "bless" } }, // Adaptive Growth
   "classicplus-051": "none: vanilla", // Jlockeed's J15 Fighter
@@ -99,8 +104,8 @@
   "classicplus-065-1": { cast: { motif: "drain" } }, // Rotten Grape
   "classicplus-065-2": { cast: { motif: "bolt" } }, // Normal Grape
   "classicplus-065-3": { cast: { motif: "bolt" } }, // Large Grape
-  "classicplus-065-4": { cast: { motif: "radiance" } }, // Golden Grape
-  "classicplus-065-5": "none: token (two census plays)", // Mythic Grape
+  "classicplus-065-4": { signature: true, bespoke: "grapeBounce" }, // Golden Grape
+  "classicplus-065-5": { signature: true, bespoke: "vineRipen", takeover: "vineyard" }, // Mythic Grape
   "classicplus-066": { cast: { motif: "send" } }, // Vine of Grapes
   "classicplus-067": { cast: { motif: "conjure" } }, // Pear
   "classicplus-068": { cast: { motif: "send" }, aura: { look: "holy", scope: "side" } }, // Organic Produce
@@ -108,15 +113,15 @@
   "classicplus-070": { cast: { motif: "bless" }, trigger: { motif: "bless" }, aura: { look: "storm", scope: "board" } }, // Chaos Machine
   "classicplus-071": { cast: { motif: "bless", palette: "Nerd/ink" } }, // Book of Buff
   "classicplus-072": { cast: { motif: "curse", palette: "Nerd/ink" } }, // Book of Nerf
-  "classicplus-073": { cast: { motif: "wipe" } }, // Call to Chaos (Classic+ Edition)
-  "classicplus-073-1": "none: token (its attack trigger is unmarked)", // Classic Golem
-  "classicplus-074": { cast: { motif: "transmute" }, aura: { look: "void", scope: "zone" } }, // Twice Forward One Step Backwards
-  "classicplus-075": { cry: { motif: "send" } }, // J-lease J-Jungle EX-plorer
-  "classicplus-075-1": { cast: { motif: "send" } }, // J-lease J-Jungle EX-plorer Pack
+  "classicplus-073": { signature: true, bespoke: "chaosLever" }, // Call to Chaos (Classic+ Edition)
+  "classicplus-073-1": { signature: true, entrance: "templeStack", aura: { look: "stoneFaces", scope: "tile" } }, // Classic Golem
+  "classicplus-074": { signature: true, bespoke: "stairGlue", aura: { look: "stairCracks", scope: "zone" }, takeover: "stair" }, // Twice Forward One Step Backwards
+  "classicplus-075": { signature: true, entrance: "vineSwing", bespoke: "packLob", aura: { look: "jungleLeaves", palette: "Nature", scope: "tile" } }, // J-lease J-Jungle EX-plorer
+  "classicplus-075-1": { signature: true, bespoke: "relicSpill" }, // J-lease J-Jungle EX-plorer Pack
   "classicplus-076": { death: { motif: "conjure" } }, // Brother Lar
   "classicplus-076-1": { activate: { motif: "bolt" } }, // Brother Ping
   "classicplus-077": { cast: { motif: "bless", palette: "Nerd/pixel" } }, // Anti-Softlock
-  "classicplus-078": { cast: { motif: "send", palette: "Tech/hologram" }, activate: { motif: "send", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "zone" } }, // Claude's Datacenter
+  "classicplus-078": { signature: true, entrance: "obeliskRise", bespoke: "printSlot", aura: { look: "serverLights", palette: "Tech/hologram", scope: "zone" } }, // Claude's Datacenter
   "classicplus-t-ai-01": "none: token (not in the census)", // Helpful Assistant
   "classicplus-t-ai-02": "none: token (no hook)", // Scaling Law
   "classicplus-t-ai-03": "none: token (one census play)", // Hallucination

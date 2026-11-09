@@ -117,7 +117,7 @@
   "core-096": { bespoke: "pawnStrings", takeover: "pawn", signature: true }, // My Pawn
   "core-097": { bespoke: "perfectWish", takeover: "genie", signature: true }, // Zephrys
   "core-098": { bespoke: "heroicDoors", entrance: "heroicPedestal", takeover: "rotunda", aura: { look: "pedestal", palette: "Holy", scope: "zone" }, signature: true }, // Heroic Power
-  "core-099": { bespoke: "fusionForge", takeover: "forge", signature: true }, // Craft a Card
+  "core-099": { bespoke: "fusionForge", takeover: "crystalForge", signature: true }, // Craft a Card
   "core-100": { setPiece: "voidFold", entrance: "voidCollapse", takeover: "void" }, // Ceaseless Void
   "core-t-rush": "none: vanilla", // Rush Token
   "core-t-sheep": "none: vanilla", // Sheep Token

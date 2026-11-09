@@ -37,7 +37,7 @@ import { OBJECTS_KIT } from "./sceneKitObjects.ts";
 import { PLACES_KIT } from "./sceneKitPlaces.ts";
 import { TOUCHES_KIT } from "./sceneKitTouches.ts";
 import { YARD_KIT } from "./sceneKitYard.ts";
-import { SCENE_RECIPES } from "./sceneRecipes.ts";
+import { ALT_SCENE_RECIPES, SCENE_RECIPES } from "./sceneRecipes.ts";
 import { LEGACY_RECIPES, LEGACY_TOUCH_PARTS } from "./sceneRecipesLegacy.ts";
 import { MEDITATIVE_PLUS_RECIPES } from "./sceneRecipesMeditativePlus.ts";
 import { TRAINING_GROUNDS_RECIPES } from "./sceneRecipesTrainingGrounds.ts";
@@ -221,10 +221,12 @@ describe("R3393000 Meditative+ and Training Grounds drawn as scenes", () => {
 
   it("R3393000 Alt art and a repaint grow the same parts from their own seed", () => {
     expect(OWN).toHaveLength(74);
+    expect(OWN.filter((card) => Object.hasOwn(ALT_SCENE_RECIPES, card.id))).toHaveLength(36);
     for (const card of OWN) {
       const scene = recipe(card.id);
       const normal = composeScene(scene, card.id);
       for (const picture of ["alt", "night"] as const) {
+        if (picture === "alt" && Object.hasOwn(ALT_SCENE_RECIPES, card.id)) continue; // R3397000: its alt recipe instead (setAltScenes.test.tsx)
         const seed = artSeedOf(card.id, picture);
         expect(seed, card.id).not.toBe(card.id);
         expect(sceneRecipeOf(seed), card.id).toBe(scene);

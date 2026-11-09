@@ -32,7 +32,6 @@ import {
   UNREVEALED_NOTE,
   useCanOpenFullScreen,
   faceDownLabel,
-  faceModel,
   isHeld,
   isInspectKey,
   openFullScreenArt,
@@ -55,7 +54,7 @@ import ActivateControls from "./ActivateControl.tsx";
 import FieldBadges from "./FieldBadges.tsx";
 import { usePhonePortrait } from "./phoneBar.ts";
 import { useCardInfo, useCopiedDef, useFieldPower, useTallies } from "./catalog.ts";
-import { liveFace } from "./faces.ts";
+import { useLiveFace } from "./faces.ts";
 import { printedCost } from "./decks.ts";
 import { isSpent, useActingSeat } from "./spent.ts";
 import { useKeywordLost } from "./keywordLoss.ts";
@@ -257,16 +256,14 @@ export default function Card(props: CardProps): ReactElement {
 
   // The card in play: the unit's view when it is one, else the card's own. A back has no face at all.
   const shown = unit ?? card;
-  const model: FaceModel =
-    shown === null
-      ? faceModel({ defId: "", radiant: false })
-      : liveFace(info, shown, {
-          ...(props.type === undefined ? {} : { type: props.type }),
-          ...(fieldPower === undefined ? {} : { fieldPower }),
-          ...(copied === undefined ? {} : { copied }),
-          ...(tallies.length === 0 ? {} : { tallies }),
-          ...(props.inHandOf === undefined ? {} : { inHand: true }),
-        });
+  // #3478: the face memoized on the view object, the definition, the live facts and the language.
+  const model: FaceModel = useLiveFace(info, shown, {
+    ...(props.type === undefined ? {} : { type: props.type }),
+    ...(fieldPower === undefined ? {} : { fieldPower }),
+    ...(copied === undefined ? {} : { copied }),
+    ...(tallies.length === 0 ? {} : { tallies }),
+    ...(props.inHandOf === undefined ? {} : { inHand: true }),
+  });
   // A face-up backrow card is drawn as the type its `BackrowView` names: the view is what the
   // client renders (CLAUDE.md rule 7), and the catalog only fills in what the view leaves out.
   const face: FaceModel = props.type === undefined ? model : { ...model, type: props.type };
@@ -497,7 +494,7 @@ export default function Card(props: CardProps): ReactElement {
       title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit, card)}
     >
       {unit !== undefined && unit !== null ? (
-        <MinionFace face={face} unit={unit} worn={worn} keywordsOffFace={offFace} />
+        <MinionFace face={face} unit={unit} worn={worn} keywordsOffFace={offFace} attacking={animatingEvent === "attackDeclared"} />
       ) : (
         // Issue #814: a Summit in play shortens to its header and next Ascent line; the overlays keep it all.
         // R2098000: its terms show their rule on hover and on a long press (cards/TermTip.tsx); a tap on one still reaches this root.

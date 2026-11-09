@@ -1369,7 +1369,8 @@ function isSummonOfPlay(played: GameEvent, next: GameEvent | undefined): boolean
   );
 }
 
-function sameCard(a: string, b: string): boolean {
+/** R97: whether two ids may name the same card, the sentinel matching either. */
+export function sameCard(a: string, b: string): boolean {
   return a === b || a === HIDDEN_ID || b === HIDDEN_ID;
 }
 

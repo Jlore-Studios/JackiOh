@@ -14,7 +14,7 @@ import type { CardDef } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection, LoadoutError } from "@jackioh/validator";
 
 import { CardArt, faceModel, isInspectKey, useInspectTrigger, type FaceModel } from "../../cards/index.ts";
-import { useCosmeticAttributes } from "../../cards/cosmetics.ts";
+import { cosmeticAttributes, useCosmeticAppearance } from "../../cards/cosmetics.ts";
 import { useOwnCopy } from "../../cards/fullArt.ts";
 import { readerName } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
@@ -108,7 +108,8 @@ export { isInspectKey };
  * takes a moving foil's slot.
  */
 function TileArt({ face, def, worn }: { face: FaceModel; def: CardDef; worn: boolean }): ReactElement {
-  const cosmetics = useCosmeticAttributes(face, worn, false);
+  const appearance = useCosmeticAppearance(face, worn);
+  const cosmetics = cosmeticAttributes(appearance, false);
   return (
     <span className="db-tile-art" {...cosmetics}>
       <CardArt defId={face.defId} radiant={false} tags={def.tags} type={def.type} shape="strip" />

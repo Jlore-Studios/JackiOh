@@ -18,6 +18,7 @@ import {
 } from "./constants.ts";
 import { capacityFor, createFxDirector, type FxDirector, type FxDirectorOptions } from "./director.ts";
 import { PARTICLE_PRESETS } from "./presets.ts";
+import { resetShedForTests } from "./shed.ts";
 import type { FxSurface } from "./surface.ts";
 import type {
   FxAnchor,
@@ -220,6 +221,8 @@ const live: FxDirector[] = [];
 afterEach(() => {
   for (const director of live.splice(0)) director.dispose();
   document.body.innerHTML = "";
+  // B34's slow frames shed the shared level; every test starts full again.
+  resetShedForTests();
 });
 
 function harness(over: Partial<FxDirectorOptions> = {}) {
@@ -770,6 +773,123 @@ describe("B34 — particle capacity", () => {
     h.frame(h.clock.now() + 16);
     expect(h.director.particles()).toBeGreaterThan(0);
     expect(h.director.particles()).toBeLessThanOrEqual(h.director.capacity());
+  });
+});
+
+describe("R3351000 the living game's shared shed order", () => {
+  /** Slow 40 ms frames that trip one window, B34's shape. */
+  const trip = Math.floor((FX_ADAPT_WINDOW * FX_ADAPT_SLOW_MS) / 40) + 1;
+
+  function settled(h: ReturnType<typeof harness>): void {
+    keepBusy(h.director);
+    h.frameEvery(16, FX_ADAPT_WINDOW + 1);
+    expect(h.director.shedLevel()).toBe(0);
+  }
+
+  const TINT = { rim: "#ffffff", core: "#000000", glow: "#ff0000" };
+
+  it("R3351000 a forced slow frame sheds motes first while the beats still play", () => {
+    const h = harness({ phone: true });
+    settled(h);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(1);
+    // Mote emission halves, but every burst still throws at least one mote.
+    h.director.play([
+      { kind: "burst", preset: "spark", at: at("card-a"), delayMs: 0, count: 24, spread: "point", power: 1 },
+      { kind: "burst", preset: "dust", at: at("card-a"), delayMs: 0, count: 1, spread: "point", power: 1 },
+    ]);
+    h.frame(h.clock.now() + STEP);
+    expect(h.director.particles()).toBe(12 + 1);
+  });
+
+  it("R3351000 further slow windows shed far auras, then faces, and healthy windows recover one stage at a time", () => {
+    const h = harness({ phone: true });
+    settled(h);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(1);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(2);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(3);
+    // Past the last stage nothing more sheds.
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(3);
+
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(2);
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(1);
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(0);
+    // Full again, healthy frames change nothing.
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(0);
+    expect(h.director.capacity()).toBe(FX_PARTICLE_CAP);
+  });
+
+  it("R3351000 a set piece's main beats never shed, at any stage", () => {
+    const h = harness({ phone: true });
+    settled(h);
+    h.frameEvery(40, trip);
+    h.frameEvery(40, trip);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(3);
+    // Every set piece's beats: a takeover, a fold, a launch, a rift and a title card. They are DOM
+    // cues with no particle counts, so emission scaling cannot touch them.
+    h.director.play([
+      { kind: "takeover", stage: null, look: "prismatic", tint: TINT, at: at("card-a"), landMs: 100, delayMs: 0, durationMs: 1000 },
+      { kind: "setPiece", shape: "fold", tint: TINT, spin: 1, side: null, at: at("card-a"), holdMs: 200, delayMs: 0, durationMs: 1000 },
+      { kind: "launch", at: at("card-a"), tint: TINT, size: "large", countsMs: [0, 600, 1200], igniteMs: 100, delayMs: 0, durationMs: 1000 },
+      { kind: "rift", at: at("card-a"), side: "you", tint: TINT, tearMs: 50, flareMs: 150, delayMs: 0, durationMs: 1000 },
+      { kind: "anomalyTitle", at: at("card-a"), text: "Found", picture: "<svg></svg>", tint: TINT, delayMs: 0, durationMs: 1000 },
+    ]);
+    h.frame(h.clock.now() + STEP);
+    for (const kind of ["takeover", "setPiece", "launch", "rift", "anomalyTitle"]) {
+      expect(h.root.querySelectorAll(`[data-fx="${kind}"]`)).toHaveLength(1);
+    }
+  });
+
+  it("R3351000 disposing a director resets the shared shed level to full", () => {
+    const h = harness({ phone: true });
+    settled(h);
+    h.frameEvery(40, trip);
+    h.frameEvery(40, trip);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(3);
+    h.director.dispose();
+    expect(h.director.shedLevel()).toBe(0);
+    // A director mounted after it starts full too: no cross-route leak.
+    expect(harness({ phone: true }).director.shedLevel()).toBe(0);
+  });
+
+  it("R3351000 an idle shed board recovers to full on healthy frames with no effect work", () => {
+    const h = harness({ phone: true });
+    settled(h);
+    h.frameEvery(40, trip);
+    h.frameEvery(40, trip);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(3);
+    h.director.clear();
+    expect(h.director.active()).toBe(0);
+    // No effect work left, yet the stranded level keeps the loop alive and drains one stage per
+    // healthy run, then the loop sleeps again.
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(2);
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(1);
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(0);
+    expect(h.frames.pending()).toBe(0);
+  });
+
+  it("R3351000 a desktop director halves its cap on slow windows but never sheds", () => {
+    const h = harness();
+    settled(h);
+    h.frameEvery(40, trip);
+    h.frameEvery(40, trip);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(0);
+    expect(h.director.capacity()).toBeLessThan(FX_PARTICLE_CAP);
   });
 });
 

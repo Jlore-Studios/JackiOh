@@ -204,12 +204,10 @@ export const FX_MOTIF_TRAUMA = {
 export const FX_ARMOR_TRAUMA = 0.2;
 export const FX_MIND_JUDGE_TRAUMA = 0.1;
 // R2797000: Stinkyscape's three Flourishes (fx/cards/stinkyscape/). Olivian Expanse's rift shakes as it
-// gives up its card; Imitated Instrumentality's three boots leave FX_MAGI_STAGGER of D apart, at most
-// FX_MAGI_BOOTS of them staggered, the first shaking the board; Drone Core X's Battleship warps in from
-// FX_WARP_FROM of the board (its top edge) and shakes as it lands.
+// gives up its card; Imitated Instrumentality's first boot shakes the board (R3395000: each boot in its own
+// entry, its signature's); Drone Core X's Battleship warps in from FX_WARP_FROM of the board (its top edge)
+// and shakes as it lands.
 export const FX_TERMINUS_TRAUMA = 0.5;
-export const FX_MAGI_STAGGER = 0.05;
-export const FX_MAGI_BOOTS = 3;
 export const FX_MAGI_TRAUMA = 0.3;
 export const FX_WARP_TRAUMA = 0.6;
 export const FX_WARP_FROM = { x: 0.5, y: 0 } as const;
@@ -241,6 +239,19 @@ export const FX_MOTIF_MIN_CARDS = 3;
 // R2803000: the audit's phone budget. The heaviest set pieces and a board of four auras hold this
 // mean frame time at the phone particle cap with mobile emulation.
 export const FX_PHONE_FRAME_BUDGET_MS = 50;
+// R3351000: the living game's worst single frame on a phone, about one frame at 8 fps; the mean
+// still holds FX_PHONE_FRAME_BUDGET_MS, so one hitch never costs the scene its budget.
+export const FX_PHONE_FRAME_WORST_MS = 120;
+/**
+ * R3351000: the living game's phone motion budget. On a phone the moving faces, tile auras,
+ * backdrops, particles and tilt draw from per-layer budgets that scale with the phone caps: the
+ * faces' share is the motion slots (COSMETIC_FOIL_ANIMATED_MAX in apps/web/src/cards/constants.ts),
+ * which is this many, so the two stay equal; tile and aura motes scale with intensity against the
+ * phone particle cap (auraBudget, tileMoteBudget through capacityFor in the aura layers); tilt holds
+ * one claim; a face counts 1, an aura 1, tilt 1. Past it the director sheds emission, then far auras,
+ * then the moving faces furthest from the pointer, in that order.
+ */
+export const PHONE_MOTION_BUDGET = 6;
 // R2784000: the scales the /dev/fx gallery offers.
 export const FX_GALLERY_SCALES = [0.5, 1, 1.5, 2] as const;
 // R3332000: the signature tier's loudness budgets, inside R200's FX_MAX_TAIL_MS, one set piece per action

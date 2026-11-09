@@ -9,9 +9,11 @@ import { baseView, emptySide, faceUpBackrow, unit } from "../../../apps/web/src/
 const noop = (): void => undefined;
 
 /**
- * Four Legendary and Mythic permanents that wear the default tile aura: a signature aura replaces it
- * (R3342000), a `{ bespoke }` entry's too (R3402000), so the board takes Felinor Fiender and two Classic+
- * Field Spell tokens that wear none in place of Silly Silas, Combo-Index and Heroic Power.
+ * Four Legendary and Mythic permanents that wear the default tile aura: a card's own aura replaces it (R3342000),
+ * a `{ bespoke }` entry's too (R3400000), and every signature permanent now wears its own (Core's, R3402000;
+ * Classic+'s, R3399001; Stinkyscape's, R3395001), so the board takes the ones that wear none: Felinor Fiender
+ * and two Ceaseless Voids in the unit rows, and the Dormant Starship, a Legendary Flying Unit standing in the
+ * backrow (R1081000).
  */
 function fourTileBoard() {
   return baseView({
@@ -26,10 +28,15 @@ function fourTileBoard() {
       backrow: [null, null, null, null, null],
     }),
     opponent: emptySide("p2", {
-      units: [null, null, null, null, null],
+      units: [null, unit("p2", { defId: "core-100", instanceId: "u-myth-2" }), null, null, null],
       backrow: [
-        faceUpBackrow("p2", { defId: "classicplus-012-8", instanceId: "b-leg-2", type: "Field Spell" }),
-        faceUpBackrow("p2", { defId: "classicplus-042-1", instanceId: "b-leg-3", type: "Field Spell" }),
+        faceUpBackrow("p2", {
+          defId: "stinkyscape-t-dormant-starship",
+          instanceId: "b-leg-2",
+          type: "Unit",
+          unit: unit("p2", { defId: "stinkyscape-t-dormant-starship", instanceId: "b-leg-2" }),
+        }),
+        null,
         null,
         null,
         null,
@@ -54,12 +61,13 @@ describe("R3342000 tile auras over the board", () => {
       expect(zone, "zone exists").to.not.equal(undefined);
       expect(aura, "aura exists").to.not.equal(undefined);
       if (!zone || !aura) return;
+      // The aura fills the zone inside its border (`inset: 0`): 1 px, and 2 px on a units row's side toward the middle.
       const zoneRect = zone.getBoundingClientRect();
       const auraRect = aura.getBoundingClientRect();
-      expect(auraRect.left).to.be.closeTo(zoneRect.left, 2);
-      expect(auraRect.top).to.be.closeTo(zoneRect.top, 2);
-      expect(auraRect.width).to.be.closeTo(zoneRect.width, 2);
-      expect(auraRect.height).to.be.closeTo(zoneRect.height, 2);
+      expect(auraRect.left).to.be.closeTo(zoneRect.left + zone.clientLeft, 2);
+      expect(auraRect.top).to.be.closeTo(zoneRect.top + zone.clientTop, 2);
+      expect(auraRect.width).to.be.closeTo(zone.clientWidth, 2);
+      expect(auraRect.height).to.be.closeTo(zone.clientHeight, 2);
     });
 
     cy.document().should((doc) => {
@@ -82,12 +90,13 @@ describe("R3342000 tile auras over the board", () => {
       expect(zone, "zone exists").to.not.equal(undefined);
       expect(aura, "aura exists").to.not.equal(undefined);
       if (!zone || !aura) return;
+      // The aura fills the zone inside its border (`inset: 0`): 1 px, and 2 px on a units row's side toward the middle.
       const zoneRect = zone.getBoundingClientRect();
       const auraRect = aura.getBoundingClientRect();
-      expect(auraRect.left).to.be.closeTo(zoneRect.left, 2);
-      expect(auraRect.top).to.be.closeTo(zoneRect.top, 2);
-      expect(auraRect.width).to.be.closeTo(zoneRect.width, 2);
-      expect(auraRect.height).to.be.closeTo(zoneRect.height, 2);
+      expect(auraRect.left).to.be.closeTo(zoneRect.left + zone.clientLeft, 2);
+      expect(auraRect.top).to.be.closeTo(zoneRect.top + zone.clientTop, 2);
+      expect(auraRect.width).to.be.closeTo(zone.clientWidth, 2);
+      expect(auraRect.height).to.be.closeTo(zone.clientHeight, 2);
     });
 
     cy.document().should((doc) => {

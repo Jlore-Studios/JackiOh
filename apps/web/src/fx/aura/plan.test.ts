@@ -1,6 +1,7 @@
 // R2787000: what wears an aura (a face-up Field Spell or Field Trap, a modifier a readable play added),
 // what it covers, how auras stack, how each begins and ends, and the motes' budget. R3337003: an
-// Anomaly's backdrop over its caster's side. R3400000: a face-up Unit's `tile` aura over its own unit zone.
+// Anomaly's backdrop over its caster's side. R3400000: a face-up Unit's `tile` aura over its own unit zone,
+// R3399001 a Classic+ signature Unit's own look among them.
 // R3402000: Core's three signature looks, on Silly Silas's tile and Combo-Index's and Heroic Power's zones.
 
 import type { BackrowView, GameEvent, PlayerId, PlayerView, Row } from "@jackioh/shared";
@@ -73,6 +74,9 @@ const TABLE = parseFxCardTable(
 );
 
 type Slot = BackrowView | null;
+
+/** R3395001: the signature looks Stinkyscape's three signature Field Spells wear, beside a bespoke recipe each. */
+const R3395001_LOOKS: readonly AuraLook[] = ["laserGrid", "silverRise", "labHaze"];
 
 function field(owner: PlayerId, defId: string, over: Partial<Extract<BackrowView, { faceDown: false }>> = {}): BackrowView {
   return faceUpBackrow(owner, { defId, type: defId === "core-018" ? "Field Trap" : "Field Spell", ...over });
@@ -150,6 +154,31 @@ describe("R2787000 what wears an aura", () => {
     expect(planned[7]?.colors).toEqual(FLAVOR_LOOKS.Fire.colors);
     // R3400000: Bob's bespoke entry names Physical's wind.
     expect(planned[5]?.colors).toEqual(FLAVOR_SUB_LOOKS.Physical?.wind?.colors);
+  });
+
+  it("R3395001 a bespoke Field Spell's own look stands in its zone: The Greatest Heist's laserGrid, Rod of Ages' silverRise and The Narcor Project's labHaze", () => {
+    resetIds();
+    const table = parseFxCardTable(
+      "aura.json5",
+      `{
+        "stinkyscape-007": { bespoke: "heistLocks", aura: { look: "laserGrid", palette: "Hustle/cash", scope: "zone" }, signature: true },
+        "stinkyscape-016": { bespoke: "rodBands", aura: { look: "silverRise", palette: "Physical/blade", scope: "zone" }, signature: true },
+        "stinkyscape-039": { bespoke: "narcorCases", aura: { look: "labHaze", palette: "Dark/curse", scope: "zone" }, signature: true },
+      }`,
+    );
+    const view = board([field("p1", "stinkyscape-007"), null, field("p1", "stinkyscape-016")], [null, field("p2", "stinkyscape-039")]);
+    const planned = planAuras(view, new Map(), table);
+    expect(planned.map((aura) => [aura.defId, aura.side, aura.lane, aura.scope, aura.look])).toEqual([
+      ["stinkyscape-007", "you", 1, "zone", "laserGrid"],
+      ["stinkyscape-016", "you", 3, "zone", "silverRise"],
+      ["stinkyscape-039", "opponent", 2, "zone", "labHaze"],
+    ]);
+    expect(planned.map((aura) => aura.look)).toEqual([...R3395001_LOOKS]);
+    // Each in its entry's palette, and its zone alone.
+    expect(planned[0]?.colors).toEqual(paletteLook("Hustle/cash")?.colors);
+    expect(auraZones(planned[2] ?? { scope: "zone", side: "opponent", lane: 2 })).toEqual([testid.zone("opponent", "backrow", 2)]);
+    // Face down, it wears none (R202).
+    expect(planAuras(board([faceDownBackrow], []), new Map(), table)).toEqual([]);
   });
 
   it("R2787000 an entry's palette may name a sub-look (#2792), whose colors the aura wears", () => {
@@ -267,6 +296,47 @@ describe("R2787000 what wears an aura", () => {
     expect(sources.has(sourceKey("p1", "m0"))).toBe(false);
     expect(sources.has(sourceKey("p1", "m1"))).toBe(false);
     expect(sources.has(sourceKey("p1", `m${String(AURA_SOURCES_LIMIT + 1)}`))).toBe(true);
+  });
+});
+
+describe("R3399001 a Classic+ signature Unit's own look on its tile", () => {
+  it("R3399001 a face-up Unit wears its own look on its own tile; a hidden one, a Field Spell on the unit row and a modifier from its Cry none", () => {
+    resetIds();
+    const table = parseFxCardTable(
+      "aura.json5",
+      `{
+        "classicplus-012": { entrance: "pancakeStack", aura: { look: "syrup", scope: "tile" }, signature: true },
+        "classicplus-019-3": { entrance: "spotlightPose", aura: { look: "coinGlint", palette: "Hustle", scope: "tile" }, signature: true },
+        "core-040": { aura: { look: "void", scope: "zone" } },
+      }`,
+    );
+    const pancake = unit("p1", { defId: "classicplus-012" });
+    const view = board([], []);
+    view.you.units = [null, pancake, null, null, null];
+    // The other seat's Mid Loser stands face up; a hidden unit (a face-down Stack's top as R202 redacts it) wears none.
+    const loser = unit("p2", { defId: "classicplus-019-3" });
+    // A Field Spell animated onto the unit row (Echoes of the Forgotten) is no Unit: its aura stays with its backrow.
+    view.opponent.units = [unit("p2", { defId: "hidden" }), unit("p2", { defId: "core-040" }), null, loser, null];
+    const planned = planAuras(view, new Map(), table);
+    expect(planned.map((aura) => [aura.key, aura.side, aura.lane, aura.scope, aura.look])).toEqual([
+      [`unit-${pancake.instanceId}`, "you", 2, "tile", "syrup"],
+      [`unit-${loser.instanceId}`, "opponent", 4, "tile", "coinGlint"],
+    ]);
+    const [first, second] = planned;
+    if (first === undefined || second === undefined) throw new Error("no unit aura");
+    expect(auraZones(first)).toEqual([testid.zone("you", "units", 2)]);
+    expect(auraZones(second)).toEqual([testid.zone("opponent", "units", 4)]);
+    expect(second.colors).toEqual(paletteLook("Hustle")?.colors);
+    // A modifier its Cry adds wears no second copy of its aura: the Unit's stands with the Unit.
+    const memory = createFxMemory();
+    const sources: AuraSources = new Map();
+    attributeModifiers([played("p2", loser.instanceId, "classicplus-019-3"), modifier("p2", "m3"), resolved("p2", loser.instanceId, "classicplus-019-3")], memory, sources);
+    expect(sources.get(sourceKey("p2", "m3"))).toEqual({ defId: "classicplus-019-3", instanceId: loser.instanceId });
+    view.opponent.modifiers = [{ id: "m3", label: "" }];
+    expect(planAuras(view, sources, table).map((aura) => aura.key)).toEqual([`unit-${pancake.instanceId}`, `unit-${loser.instanceId}`]);
+    // Gone from the board, its aura is gone.
+    view.you.units = [null, null, null, null, null];
+    expect(planAuras(view, sources, table).map((aura) => aura.key)).toEqual([`unit-${loser.instanceId}`]);
   });
 });
 

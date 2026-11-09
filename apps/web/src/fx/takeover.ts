@@ -19,7 +19,7 @@
 // and a Mythic's takeover keeps only its own look, centred on the screen and ending
 // FX_SIGNATURE_TAKEOVER_TAIL_MS after its entry, with no shared rings or shake, so the whole cast fits the
 // Mythic Spell's ceiling (R3332000). R3389000: In Too Deep's takeover is its own, "abyss": a spiral shaft
-// plunging into violet dark. R3402000: "rotunda" and "forge" join the own looks, "pawn" turns indigo, and
+// plunging into violet dark. R3402000: "rotunda" and "crystalForge" join the own looks, "pawn" turns indigo, and
 // the art each own look draws is takeoverArt.ts's.
 // R3407000: a look of `TAKEOVER_ART_LOOKS` also draws its card's own picture filling the screen behind the
 // sweep (`takeoverArtOf`, the cue's `art`), the picture the card's face shows; every other look draws none.
@@ -40,10 +40,14 @@ import type { FxAnchor, FxCue, FxPlanEnv, FxTakeoverCue, FxTint, TakeoverLook } 
 
 /**
  * R670, R2722001, R3332000: a Mythic's takeover look: its table entry's `takeover` (#100 Ceaseless Void's
- * "void", #96 My Pawn's "pawn", #97 Zephrys's "genie", Meditative #49 YileGPT's "ai"; R3400000 Meditative+
+ * "void", #96 My Pawn's "pawn", #97 Zephrys's "genie", Meditative #49 YileGPT's "ai"; R3402000 #98 Heroic
+ * Power's "rotunda", #99 Craft a Card's "crystalForge"; R3400000 Meditative+
  * #1 Bob's Plan's "summit", #26 Scratch Pad's "canvas", Training Grounds #40 Goetzmann Game Design's
  * "napkin"; R3389000 Classic #90 In Too Deep's "abyss"; R3405000 Meditative's other Mythics' twelve, from
- * #8 Reach the Summit's "ascent" to #97.9 Jlockeed's Headquarters' "fortress"), else the shared "prismatic".
+ * #8 Reach the Summit's "ascent" to #97.9 Jlockeed's Headquarters' "fortress"; R3399002 Classic+'s four
+ * Mythics' "zealot", "portal", "stair" and "vineyard"; R3395001 Stinkyscape #6 Tylannt's "vault", #16 Rod of
+ * Ages' "rod", #44 Great Paperclip Theory's "wire", #74 Paragon-X's "whiteDwarf", #86 Prototype-X2's "forge"),
+ * else the shared "prismatic".
  */
 export function takeoverLookOf(defId: string, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): TakeoverLook {
   const entry = table.get(defId);
@@ -59,7 +63,7 @@ export const TAKEOVER_TINTS: Readonly<Record<TakeoverLook, FxTint>> = {
   ai: { rim: "#22c55e", core: "#dcfce7", glow: "#4ade80" },
   // R3402000: Heroic Power's marble rotunda in holy gold, Craft a Card's crystal forge in blue.
   rotunda: { rim: "#f8fafc", core: "#fef3c7", glow: "#fde68a" },
-  forge: { rim: "#60a5fa", core: "#e0f2fe", glow: "#93c5fd" },
+  crystalForge: { rim: "#60a5fa", core: "#e0f2fe", glow: "#93c5fd" },
   // R3400000: Bob's red brushstroke over an ink-wash range, Scratch Pad's cyan cursor on paper, the napkin's lamplight in pixel colors.
   summit: { rim: "#dc2626", core: "#f5f5f4", glow: "#57534e" },
   canvas: { rim: "#22d3ee", core: "#fafaf9", glow: "#a8a29e" },
@@ -89,6 +93,19 @@ export const TAKEOVER_TINTS: Readonly<Record<TakeoverLook, FxTint>> = {
   caneRack: { rim: "#b91c1c", core: "#fef3c7", glow: "#f5f5f4" },
   warRoom: { rim: "#22d3ee", core: "#e0f2fe", glow: "#dc2626" },
   fortress: { rim: "#ef4444", core: "#e5e7eb", glow: "#475569" },
+  // R3399002: Classic+'s Mythics: Zephrys Zealotism's indigo cyclone, Portal to the Past's sepia vortex,
+  // Twice Forward's violet stair and its cyan cracks, Mythic Grape's violet grape over its green vines.
+  zealot: { rim: "#4f46e5", core: "#e0e7ff", glow: "#818cf8" },
+  portal: { rim: "#a16207", core: "#fef3c7", glow: "#d6a35c" },
+  stair: { rim: "#7c3aed", core: "#ede9fe", glow: "#22d3ee" },
+  vineyard: { rim: "#9333ea", core: "#f3e8ff", glow: "#65a30d" },
+  // R3395001: Tylannt's steel vault and its green gap, Rod of Ages' pale bands in an indigo gulf, the paperclip's silver wire
+  // and blue cores, Paragon-X's white dwarf, Prototype-X2's molten forge.
+  vault: { rim: "#94a3b8", core: "#e2e8f0", glow: "#22c55e" },
+  rod: { rim: "#cbd5e1", core: "#f8fafc", glow: "#a5b4fc" },
+  wire: { rim: "#d1d5db", core: "#f9fafb", glow: "#60a5fa" },
+  whiteDwarf: { rim: "#f8fafc", core: "#ffffff", glow: "#7dd3fc" },
+  forge: { rim: "#f97316", core: "#fed7aa", glow: "#ef4444" },
 };
 
 /** R3407000: the looks that draw their card's own picture filling the screen (`takeoverArtOf`). */

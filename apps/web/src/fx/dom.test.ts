@@ -10,7 +10,7 @@ import { ART_PLANES } from "../cards/art/index.ts";
 import { anomalyMarkup } from "../cards/art/svg.ts";
 import { FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
 import { mountDomEffect, mountHold, type DomEffect } from "./dom.ts";
-import { TAKEOVER_ART_PARTS } from "./takeoverArt.ts";
+import { TAKEOVER_ART_DRAWINGS, TAKEOVER_ART_PARTS } from "./takeoverArt.ts";
 import type { FxBox, FxDomCue, FxHoldCue, TakeoverLook } from "./types.ts";
 
 const AT: FxBox = { x: 100, y: 200, width: 80, height: 120 }; // center (140, 260)
@@ -711,6 +711,51 @@ describe("R2789000 — a keyword's callout", () => {
     // Taunt one, so the iconless probe moves to Cloaked, which neither lane iconified.
     expect(mountDomEffect(root, callout("Cloaked"), { at: AT })).toBeNull();
     expect(root.childElementCount).toBe(0);
+  });
+});
+
+describe("R3399002 — a takeover's own drawing", () => {
+  const takeover = (look: TakeoverLook): FxDomCue => ({ kind: "takeover", stage: null, look, tint: TINT, at: anchor, landMs: 1200, delayMs: 0, durationMs: 2400 });
+  const classesOf = (el: Element): (string | null)[] => [...el.children].map((child) => child.getAttribute("class"));
+
+  it("R3399002 a drawn look's takeover draws its picture in its art layer, and a look with no art none", () => {
+    for (const look of ["zealot", "portal", "stair", "vineyard"] as const) {
+      const drawing = TAKEOVER_ART_DRAWINGS[look];
+      // R3402000: Classic+'s four are drawn as paths (Core's four as scenes, takeoverArt.test.ts).
+      if (drawing === undefined || !("paths" in drawing)) throw new Error(`no drawing of paths for ${look}`);
+      const cue = takeover(look);
+      const el = expectMounted(mountDomEffect(root, cue, { at: AT }), cue);
+      expectCenteredOn(el, AT);
+      expect(el.getAttribute("data-look")).toBe(look);
+      // The drawing lies in the look's art layer (R3400000), over the dark and under the sweep, the rays and the wave.
+      expect(classesOf(el)).toEqual(["fx-takeover-dark", "takeover-art", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+      const layer = el.querySelector(".takeover-art");
+      if (layer === null) throw new Error(`no art layer for ${look}`);
+      expect(layer.getAttribute("data-look")).toBe(look);
+      expect(classesOf(layer)).toEqual(["takeover-art-drawing"]);
+      const svg = layer.querySelector(".takeover-art-drawing");
+      expect(svg?.namespaceURI).toBe("http://www.w3.org/2000/svg");
+      expect(svg?.getAttribute("viewBox")).toBe(drawing.viewBox);
+      expect(svg?.getAttribute("preserveAspectRatio")).toBe("xMidYMid slice");
+      expect(svg?.getAttribute("aria-hidden")).toBe("true");
+      const paths = [...(svg?.querySelectorAll("path") ?? [])];
+      expect(paths.map((path) => ({ d: path.getAttribute("d"), fill: path.getAttribute("fill"), part: path.getAttribute("class") }))).toEqual(
+        drawing.paths.map((path) => ({ d: path.d, fill: path.fill, part: `takeover-drawing-${path.part}` })),
+      );
+      // Keyed by its look alone: nothing in it names a card (R202).
+      expect(el.outerHTML).not.toMatch(/classicplus-|data-def/);
+      root.innerHTML = "";
+    }
+
+    // R3402000: "pawn" and "genie" draw a scene of their own now (takeoverArt.test.ts).
+    for (const look of ["prismatic", "void"] as const) {
+      const cue = takeover(look);
+      const el = expectMounted(mountDomEffect(root, cue, { at: AT }), cue);
+      expect(el.querySelector(".takeover-art")).toBeNull();
+      expect(el.querySelector("svg")).toBeNull();
+      expect(classesOf(el)).toEqual(["fx-takeover-dark", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+      root.innerHTML = "";
+    }
   });
 });
 

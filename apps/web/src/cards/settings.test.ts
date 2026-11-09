@@ -8,9 +8,11 @@ import { createElement, type ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  BOARD_NAMES_VALUES,
   CARD_SETTINGS_DEFAULTS,
   CARD_SETTINGS_FIELDS,
   CARD_SETTINGS_KEY,
+  isBoardNamesOption,
   readCardSettings,
   subscribeCardSettings,
   useCardSettings,
@@ -269,5 +271,12 @@ describe("subscribing (B28)", () => {
       writeCardSettings({ hoverPreviews: false });
     });
     expect(screen.getByTestId("probe")).toHaveTextContent("false|true");
+  });
+});
+
+describe("board names", () => {
+  it("isBoardNamesOption accepts the three board-names options and nothing else", () => {
+    for (const option of BOARD_NAMES_VALUES) expect(isBoardNamesOption(option)).toBe(true);
+    for (const other of ["Always", "", null, undefined, 1]) expect(isBoardNamesOption(other)).toBe(false);
   });
 });

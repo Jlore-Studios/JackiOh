@@ -2101,27 +2101,21 @@
   }
 }
 
-/* R3402000: a Core Mythic's own art (takeoverArt.ts), over the dark and under the sweep: one svg sliced
-   to cover the screen, faded in to the landing at --fx-land and out again by --fx-ms. Each part is painted
-   from the look's tint, and the look's own parts move by transform and opacity alone (R200): My Pawn's
-   hand reaches in and its strings snap taut down to the pieces; Zephrys's silk turns, his card backs
-   orbit and the spirit uncoils from its tail; Heroic Power's doors light one by one; Craft a Card's
-   gears turn and its hammer falls onto the anvil at --fx-land, throwing sparks. A shape's place among its
-   part's shapes (`--fx-art-i` of `--fx-art-n`, dom.ts) staggers the strings and the doors. Every motion
-   is the takeover's, so reduced motion stops it with the rest. Its layer is a `div` and its keyframes
-   are its own, beside R3407000's picture (an `img` of the same class, below). */
-div.fx-takeover-art {
-  position: absolute;
-  inset: 0;
+/* R3402000: a Core Mythic's own art (takeoverArt.ts), a scene of shapes among R3399002's drawings, in its
+   look's art layer over the dark and under the sweep (`.takeover-art`, below): one svg sliced to cover the
+   screen, faded in to the landing at --fx-land and out again by --fx-ms in place of the drawings' own fade.
+   Each part (`.takeover-drawing-<part>`) is painted from the look's tint (`--fx-tint-*`, which the takeover
+   and Reduce Motion's still both carry), at rest as the still shows it, and the look's own parts move only
+   under the live takeover, by transform and opacity alone (R200): My Pawn's hand reaches in and its strings
+   snap taut down to the pieces; Zephrys's silk turns, his card backs orbit and the spirit uncoils from its
+   tail; Heroic Power's doors light one by one; Craft a Card's gears turn and its hammer falls onto the anvil
+   at --fx-land, throwing sparks. A shape's place among its part's shapes (`--fx-art-i` of `--fx-art-n`,
+   dom.ts) staggers the strings and the doors. Every motion is the takeover's, so reduced motion stops it
+   with the rest. */
+.fx-takeover:is([data-look="pawn"], [data-look="genie"], [data-look="rotunda"], [data-look="crystalForge"]) .takeover-art-drawing {
   animation:
     fx-takeover-scene-in var(--fx-land) var(--ease-out) both,
     fx-takeover-scene-out calc(var(--fx-ms) - var(--fx-land)) var(--ease-in) var(--fx-land) forwards;
-}
-
-div.fx-takeover-art > svg {
-  display: block;
-  width: 100%;
-  height: 100%;
 }
 
 @keyframes fx-takeover-scene-in {
@@ -2148,136 +2142,136 @@ div.fx-takeover-art > svg {
 }
 
 /* The parts' paint: the veil washes the screen in the look's glow; figures and glass in its core and rim. */
-.fx-takeover-art-veil {
+.takeover-drawing-veil {
   fill: color-mix(in srgb, var(--fx-tint-glow) 26%, transparent);
 }
 
-.fx-takeover-art-hood,
-.fx-takeover-art-gear,
-.fx-takeover-art-anvil,
-.fx-takeover-art-hammer,
-.fx-takeover-art-card {
+.takeover-drawing-hood,
+.takeover-drawing-gear,
+.takeover-drawing-anvil,
+.takeover-drawing-hammer,
+.takeover-drawing-card {
   fill: color-mix(in srgb, var(--fx-tint-glow) 32%, var(--pal-black));
   stroke: color-mix(in srgb, var(--fx-tint-rim) 70%, transparent);
   stroke-width: 0.4;
   stroke-linejoin: round;
 }
 
-.fx-takeover-art-shadow,
-.fx-takeover-art-hero {
+.takeover-drawing-shadow,
+.takeover-drawing-hero {
   fill: color-mix(in srgb, var(--pal-black) 88%, transparent);
 }
 
-.fx-takeover-art-eye,
-.fx-takeover-art-oculus,
-.fx-takeover-art-spark,
-.fx-takeover-art-hub {
+.takeover-drawing-eye,
+.takeover-drawing-oculus,
+.takeover-drawing-spark,
+.takeover-drawing-hub {
   fill: var(--fx-tint-core);
 }
 
-.fx-takeover-art-card-mark {
+.takeover-drawing-card-mark {
   fill: color-mix(in srgb, var(--fx-tint-glow) 30%, transparent);
   stroke: var(--fx-tint-rim);
   stroke-width: 0.3;
 }
 
-.fx-takeover-art-board,
-.fx-takeover-art-crystal {
+.takeover-drawing-board,
+.takeover-drawing-crystal {
   fill: color-mix(in srgb, var(--fx-tint-glow) 34%, transparent);
   stroke: var(--fx-tint-rim);
   stroke-width: 0.35;
   stroke-linejoin: round;
 }
 
-.fx-takeover-art-slab,
-.fx-takeover-art-rail {
+.takeover-drawing-slab,
+.takeover-drawing-rail {
   fill: color-mix(in srgb, var(--fx-tint-glow) 60%, transparent);
   stroke: var(--fx-tint-core);
   stroke-width: 0.25;
 }
 
-.fx-takeover-art-squares {
+.takeover-drawing-squares {
   fill: color-mix(in srgb, var(--fx-tint-core) 34%, transparent);
 }
 
-.fx-takeover-art-piece,
-.fx-takeover-art-hand,
-.fx-takeover-art-cuff,
-.fx-takeover-art-spirit,
-.fx-takeover-art-arm,
-.fx-takeover-art-door {
+.takeover-drawing-piece,
+.takeover-drawing-hand,
+.takeover-drawing-cuff,
+.takeover-drawing-spirit,
+.takeover-drawing-arm,
+.takeover-drawing-door {
   fill: color-mix(in srgb, var(--fx-tint-core) 82%, transparent);
   stroke: var(--fx-tint-rim);
   stroke-width: 0.35;
   stroke-linejoin: round;
 }
 
-.fx-takeover-art-cuff {
+.takeover-drawing-cuff {
   fill: color-mix(in srgb, var(--fx-tint-glow) 45%, var(--pal-black));
 }
 
-.fx-takeover-art-spirit,
-.fx-takeover-art-arm {
+.takeover-drawing-spirit,
+.takeover-drawing-arm {
   fill: color-mix(in srgb, var(--fx-tint-glow) 70%, var(--fx-tint-core));
   stroke-width: 0.5;
 }
 
-.fx-takeover-art-door {
+.takeover-drawing-door {
   stroke: var(--fx-tint-glow);
 }
 
-.fx-takeover-art-wall,
-.fx-takeover-art-dome {
+.takeover-drawing-wall,
+.takeover-drawing-dome {
   fill: color-mix(in srgb, var(--fx-tint-rim) 20%, transparent);
   stroke: color-mix(in srgb, var(--fx-tint-rim) 50%, transparent);
   stroke-width: 0.3;
 }
 
-.fx-takeover-art-floor {
+.takeover-drawing-floor {
   fill: color-mix(in srgb, var(--fx-tint-rim) 36%, transparent);
   stroke: var(--fx-tint-glow);
   stroke-width: 0.4;
 }
 
-.fx-takeover-art-string,
-.fx-takeover-art-silk,
-.fx-takeover-art-rib,
-.fx-takeover-art-pillar,
-.fx-takeover-art-inlay,
-.fx-takeover-art-facet,
-.fx-takeover-art-rail-glow {
+.takeover-drawing-string,
+.takeover-drawing-silk,
+.takeover-drawing-rib,
+.takeover-drawing-pillar,
+.takeover-drawing-inlay,
+.takeover-drawing-facet,
+.takeover-drawing-rail-glow {
   fill: none;
   stroke: var(--fx-tint-core);
   stroke-width: 0.25;
   stroke-linecap: round;
 }
 
-.fx-takeover-art-silk {
+.takeover-drawing-silk {
   stroke: color-mix(in srgb, var(--fx-tint-glow) 70%, transparent);
   stroke-width: 1.8;
 }
 
-.fx-takeover-art-pillar {
+.takeover-drawing-pillar {
   stroke: color-mix(in srgb, var(--fx-tint-rim) 80%, transparent);
   stroke-width: 0.7;
 }
 
-.fx-takeover-art-rib,
-.fx-takeover-art-inlay {
+.takeover-drawing-rib,
+.takeover-drawing-inlay {
   stroke: color-mix(in srgb, var(--fx-tint-glow) 60%, transparent);
   stroke-width: 0.35;
 }
 
-.fx-takeover-art-rail-glow {
+.takeover-drawing-rail-glow {
   stroke-width: 0.5;
 }
 
 /* My Pawn: the hand reaches in, and each string drops from its fingertip and snaps taut, one after another. */
-.fx-takeover[data-look="pawn"] :is(.fx-takeover-art-hand, .fx-takeover-art-cuff) {
+.fx-takeover[data-look="pawn"] :is(.takeover-drawing-hand, .takeover-drawing-cuff) {
   animation: fx-takeover-art-reach var(--fx-land) var(--ease-out) both;
 }
 
-.fx-takeover[data-look="pawn"] .fx-takeover-art-string {
+.fx-takeover[data-look="pawn"] .takeover-drawing-string {
   transform-box: fill-box;
   transform-origin: 50% 0;
   animation: fx-takeover-art-snap calc(var(--fx-land) * 0.8) var(--ease-in) calc(var(--fx-art-i) / var(--fx-art-n) * var(--fx-land) * 0.2) both;
@@ -2315,19 +2309,19 @@ div.fx-takeover-art > svg {
 }
 
 /* Zephrys: the cyclone's silk turns about its eye and the card backs orbit it, as the spirit uncoils from its tail. */
-.fx-takeover[data-look="genie"] .fx-takeover-art-silk {
+.fx-takeover[data-look="genie"] .takeover-drawing-silk {
   transform-box: view-box;
   transform-origin: 50% 56%;
   animation: fx-takeover-art-turn var(--fx-ms) var(--ease-out) both;
 }
 
-.fx-takeover[data-look="genie"] :is(.fx-takeover-art-card, .fx-takeover-art-card-mark) {
+.fx-takeover[data-look="genie"] :is(.takeover-drawing-card, .takeover-drawing-card-mark) {
   transform-box: view-box;
   transform-origin: 50% 56%;
   animation: fx-takeover-art-orbit var(--fx-ms) linear both;
 }
 
-.fx-takeover[data-look="genie"] :is(.fx-takeover-art-spirit, .fx-takeover-art-arm, .fx-takeover-art-eye) {
+.fx-takeover[data-look="genie"] :is(.takeover-drawing-spirit, .takeover-drawing-arm, .takeover-drawing-eye) {
   transform-box: view-box;
   transform-origin: 50% 84%;
   animation: fx-takeover-art-uncoil var(--fx-land) var(--ease-overshoot) both;
@@ -2368,7 +2362,7 @@ div.fx-takeover-art > svg {
 }
 
 /* Heroic Power: the thirteen doors light in turn, left to right, the last as the card lands. */
-.fx-takeover[data-look="rotunda"] .fx-takeover-art-door {
+.fx-takeover[data-look="rotunda"] .takeover-drawing-door {
   animation: fx-takeover-art-light calc(var(--fx-land) / 2) var(--ease-out) calc(var(--fx-art-i) / var(--fx-art-n) * var(--fx-land) / 2) both;
 }
 
@@ -2386,19 +2380,19 @@ div.fx-takeover-art > svg {
 
 /* Craft a Card: the gears turn overhead; the hammer winds up and falls onto the anvil at --fx-land, and the
    strike's sparks fly from there. */
-.fx-takeover[data-look="forge"] .fx-takeover-art-gear {
+.fx-takeover[data-look="crystalForge"] .takeover-drawing-gear {
   transform-box: fill-box;
   transform-origin: 50% 50%;
   animation: fx-takeover-art-turn var(--fx-ms) var(--ease-out) both;
 }
 
-.fx-takeover[data-look="forge"] .fx-takeover-art-hammer {
+.fx-takeover[data-look="crystalForge"] .takeover-drawing-hammer {
   transform-box: view-box;
   transform-origin: 50% 14%;
   animation: fx-takeover-art-strike var(--fx-land) var(--ease-in) both;
 }
 
-.fx-takeover[data-look="forge"] .fx-takeover-art-spark {
+.fx-takeover[data-look="crystalForge"] .takeover-drawing-spark {
   transform-box: fill-box;
   transform-origin: 50% 50%;
   animation: fx-takeover-art-spark calc(var(--fx-ms) - var(--fx-land)) var(--ease-out) var(--fx-land) both;
@@ -3551,6 +3545,1538 @@ div.fx-takeover-art > svg {
   clip-path: polygon(0 0, 100% 0, 100% 80%, 50% 100%, 0 80%);
   background: var(--pal-yellow-400);
   animation: fx-figure-wipe var(--fx-ms) steps(5, end) both;
+}
+
+/* R3395001: Stinkyscape 001 to 090's figures, one prop of each card's concept, in R3400001's frame: shapes in
+   the cue's tint over its anchor's box, transform and opacity only (B55), never a card face (R202). */
+.fx-figure[data-figure="vaultDoor"]::before,
+.fx-figure[data-figure="vaultDoor"]::after,
+.fx-figure[data-figure="rod"]::before,
+.fx-figure[data-figure="rod"]::after,
+.fx-figure[data-figure="campus"]::before,
+.fx-figure[data-figure="campus"]::after,
+.fx-figure[data-figure="labCases"]::before,
+.fx-figure[data-figure="labCases"]::after,
+.fx-figure[data-figure="turret"]::before,
+.fx-figure[data-figure="paperclip"]::before,
+.fx-figure[data-figure="paperclip"]::after {
+  box-sizing: border-box;
+}
+
+/* Tylannt: a round steel vault door, a ring of bolts about its hub, swings open on its left hinge onto a bright gap. */
+.fx-figure[data-figure="vaultDoor"]::before {
+  width: calc(var(--fx-fig) * 0.8);
+  aspect-ratio: 1;
+  border-radius: var(--radius-round);
+  background: var(--fx-tint-glow);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent);
+  animation: fx-figure-gap var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="vaultDoor"]::after {
+  width: calc(var(--fx-fig) * 0.84);
+  aspect-ratio: 1;
+  border: 3px solid var(--fx-tint-rim);
+  border-radius: var(--radius-round);
+  transform-origin: 0 50%;
+  background:
+    repeating-radial-gradient(
+      circle,
+      var(--fx-tint-core) 0 8%,
+      color-mix(in srgb, var(--fx-tint-core) 35%, var(--pal-slate-700)) 8% 15%,
+      var(--fx-tint-rim) 15% 18%,
+      color-mix(in srgb, var(--fx-tint-core) 25%, var(--pal-slate-800)) 18% 56%,
+      transparent 56% 300%
+    ),
+    repeating-conic-gradient(from 0deg, var(--fx-tint-rim) 0 6deg, color-mix(in srgb, var(--fx-tint-core) 25%, var(--pal-slate-800)) 6deg 30deg);
+  animation: fx-figure-swing-open var(--fx-ms) var(--ease-in-out) both;
+}
+
+@keyframes fx-figure-gap {
+  0%,
+  40% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-figure-swing-open {
+  0% {
+    transform: scale(0.7, 0.7);
+  }
+  20% {
+    transform: scale(1, 1);
+  }
+  45% {
+    transform: scale(1, 1);
+  }
+  90%,
+  100% {
+    transform: scale(0.06, 1);
+  }
+}
+
+/* Tylannt's Quest: a combination dial turns in clicks, then slams home with a pop. */
+.fx-figure[data-figure="tumbler"]::before {
+  width: calc(var(--fx-fig) * 0.62);
+  aspect-ratio: 1;
+  border: 3px solid var(--fx-tint-rim);
+  border-radius: var(--radius-round);
+  background:
+    repeating-radial-gradient(
+      circle,
+      var(--fx-tint-core) 0 9%,
+      color-mix(in srgb, var(--fx-tint-glow) 20%, var(--pal-slate-800)) 9% 50%,
+      transparent 50% 300%
+    ),
+    repeating-conic-gradient(from -4deg, var(--fx-tint-glow) 0 8deg, transparent 8deg 360deg),
+    repeating-conic-gradient(from 0deg, var(--fx-tint-rim) 0 3deg, color-mix(in srgb, var(--fx-tint-glow) 15%, var(--pal-slate-900)) 3deg 15deg);
+  animation: fx-figure-dial var(--fx-ms) steps(6, end) both;
+}
+
+.fx-figure[data-figure="tumbler"]::after {
+  width: calc(var(--fx-fig) * 0.62);
+  aspect-ratio: 1;
+  border: 3px solid var(--fx-tint-glow);
+  border-radius: var(--radius-round);
+  animation: fx-figure-slam var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-dial {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  70% {
+    transform: rotate(216deg) scale(1);
+  }
+  78% {
+    transform: rotate(216deg) scale(1.18);
+  }
+  100% {
+    transform: rotate(216deg) scale(1);
+  }
+}
+
+@keyframes fx-figure-slam {
+  0%,
+  72% {
+    transform: scale(1);
+    opacity: 0;
+  }
+  78% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* The Greatest Heist: three nested lock rings turn at their own speeds, the middle against the others, over faint grid lines. */
+.fx-figure[data-figure="lockRings"] {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 11%, color-mix(in srgb, var(--fx-tint-glow) 28%, transparent) 11% 12%),
+    repeating-linear-gradient(90deg, transparent 0 11%, color-mix(in srgb, var(--fx-tint-glow) 28%, transparent) 11% 12%);
+}
+
+.fx-figure[data-figure="lockRings"]::before,
+.fx-figure[data-figure="lockRings"]::after {
+  width: calc(var(--fx-fig) * 0.95);
+  aspect-ratio: 1;
+  border-radius: var(--radius-round);
+}
+
+.fx-figure[data-figure="lockRings"]::before {
+  background: repeating-conic-gradient(from 0deg, var(--fx-tint-rim) 0 22deg, transparent 22deg 30deg);
+  mask-image: radial-gradient(circle, transparent 0 20%, var(--pal-black) 20% 28%, transparent 28% 61%, var(--pal-black) 61% 70%, transparent 70%);
+  animation: fx-figure-turn var(--fx-ms) linear both;
+}
+
+.fx-figure[data-figure="lockRings"]::after {
+  background: repeating-conic-gradient(from 10deg, var(--fx-tint-core) 0 40deg, transparent 40deg 60deg);
+  mask-image: radial-gradient(circle, transparent 0 38%, var(--pal-black) 38% 48%, transparent 48%);
+  animation: fx-figure-turn-back var(--fx-ms) linear both;
+}
+
+@keyframes fx-figure-turn {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(120deg);
+  }
+}
+
+@keyframes fx-figure-turn-back {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-260deg);
+  }
+}
+
+/* Rod of Ages: a tall slim rod rises from below, its twelve bands lighting one by one from the foot up. */
+.fx-figure[data-figure="rod"]::before,
+.fx-figure[data-figure="rod"]::after {
+  width: calc(var(--fx-fig) * 0.14);
+  height: calc(var(--fx-fig) * 1.1);
+  border-radius: var(--radius-pill);
+  transform-origin: 50% 100%;
+}
+
+.fx-figure[data-figure="rod"]::before {
+  border: 2px solid var(--fx-tint-rim);
+  background: repeating-linear-gradient(0deg, color-mix(in srgb, var(--fx-tint-rim) 45%, var(--pal-slate-900)) 0 7.33%, var(--fx-tint-rim) 7.33% 8.33%);
+  animation: fx-figure-rod-rise var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="rod"]::after {
+  background: color-mix(in srgb, var(--fx-tint-glow) 65%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--fx-tint-glow) 60%, transparent);
+  animation: fx-figure-rod-light var(--fx-ms) steps(12, end) both;
+}
+
+@keyframes fx-figure-rod-rise {
+  0% {
+    transform: translateY(45%);
+    opacity: 0;
+  }
+  30%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-figure-rod-light {
+  0%,
+  32% {
+    transform: scaleY(0);
+  }
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+/* Imitated Instrumentality: three tall slim cores flicker up side by side behind the hero, a triangle of thin beams linking them. */
+.fx-figure[data-figure="magiCores"]::before,
+.fx-figure[data-figure="magiCores"]::after {
+  width: calc(var(--fx-fig) * 1.2);
+  height: calc(var(--fx-fig) * 1.1);
+}
+
+.fx-figure[data-figure="magiCores"]::before {
+  transform-origin: 50% 100%;
+  clip-path: polygon(0 100%, 0 14%, 16.5% 0, 33.3% 14%, 50% 0, 66.6% 14%, 83.3% 0, 100% 14%, 100% 100%);
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 12%,
+    color-mix(in srgb, var(--fx-tint-core) 70%, var(--fx-tint-glow)) 12% 21%,
+    transparent 21% 33.33%
+  );
+  animation: fx-figure-flicker var(--fx-ms) linear both;
+}
+
+.fx-figure[data-figure="magiCores"]::after {
+  clip-path: polygon(evenodd, 16.5% 30%, 83.3% 30%, 50% 78%, 16.5% 30%, 21.5% 32.5%, 50% 73.5%, 78.3% 32.5%, 21.5% 32.5%);
+  background: var(--fx-tint-glow);
+  animation: fx-figure-beams var(--fx-ms) linear both;
+}
+
+@keyframes fx-figure-flicker {
+  0% {
+    transform: scaleY(0.6);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  16% {
+    opacity: 0.15;
+  }
+  24% {
+    opacity: 0.85;
+  }
+  30% {
+    opacity: 0.3;
+  }
+  38%,
+  100% {
+    transform: scaleY(1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes fx-figure-beams {
+  0%,
+  40% {
+    opacity: 0;
+  }
+  46% {
+    opacity: 1;
+  }
+  52% {
+    opacity: 0.3;
+  }
+  60%,
+  100% {
+    opacity: 0.9;
+  }
+}
+
+/* ZolarKeth: a lectern of light rises, a square mortarboard spinning down above it. */
+.fx-figure[data-figure="lectern"]::before {
+  width: calc(var(--fx-fig) * 0.6);
+  height: calc(var(--fx-fig) * 0.75);
+  top: 64%;
+  transform-origin: 50% 100%;
+  clip-path: polygon(4% 10%, 96% 0, 96% 14%, 60% 18%, 60% 88%, 76% 88%, 76% 100%, 24% 100%, 24% 88%, 40% 88%, 40% 20%, 4% 24%);
+  background: repeating-linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--fx-tint-glow) 80%, transparent) 0 6%,
+    color-mix(in srgb, var(--fx-tint-core) 60%, transparent) 6% 8%
+  );
+  animation: fx-figure-lectern var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="lectern"]::after {
+  width: calc(var(--fx-fig) * 0.5);
+  aspect-ratio: 1;
+  top: 20%;
+  clip-path: polygon(50% 0, 100% 25%, 78% 36%, 78% 70%, 50% 82%, 22% 70%, 22% 36%, 0 25%);
+  background: repeating-linear-gradient(180deg, var(--fx-tint-rim) 0 50%, color-mix(in srgb, var(--fx-tint-rim) 60%, var(--pal-black)) 50% 100%);
+  animation: fx-figure-cap var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-lectern {
+  0% {
+    transform: translateY(30%) scaleY(0.2);
+    opacity: 0;
+  }
+  35%,
+  100% {
+    transform: translateY(0) scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-figure-cap {
+  0% {
+    transform: translateY(-160%) rotateY(0deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  70%,
+  100% {
+    transform: translateY(0) rotateY(1080deg);
+    opacity: 1;
+  }
+}
+
+/* ZolarKeth's University: a domed campus outline rises in thin chalk strokes. */
+.fx-figure[data-figure="campus"]::before {
+  width: calc(var(--fx-fig) * 0.36);
+  aspect-ratio: 2 / 1;
+  top: calc(50% - var(--fx-fig) * 0.16);
+  border: 2px dashed var(--fx-tint-glow);
+  border-bottom: 0;
+  border-radius: var(--radius-pill) var(--radius-pill) 0 0;
+  animation: fx-figure-chalk-rise var(--fx-ms) steps(5, end) both;
+}
+
+.fx-figure[data-figure="campus"]::after {
+  width: calc(var(--fx-fig) * 0.66);
+  height: calc(var(--fx-fig) * 0.3);
+  top: calc(50% + var(--fx-fig) * 0.08);
+  border: 2px dashed var(--fx-tint-glow);
+  background: repeating-linear-gradient(90deg, transparent 0 12%, color-mix(in srgb, var(--fx-tint-glow) 85%, transparent) 12% 14%);
+  animation: fx-figure-chalk-rise var(--fx-ms) steps(5, end) both;
+}
+
+@keyframes fx-figure-chalk-rise {
+  0% {
+    transform: translateY(4vmin);
+    opacity: 0;
+  }
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Drone Core VIII: a cracked round reactor core glows, its cracks brightening. */
+.fx-figure[data-figure="reactor"]::before,
+.fx-figure[data-figure="reactor"]::after {
+  width: calc(var(--fx-fig) * 0.7);
+  aspect-ratio: 1;
+}
+
+.fx-figure[data-figure="reactor"]::before {
+  border: 3px solid color-mix(in srgb, var(--fx-tint-rim) 70%, var(--pal-black));
+  border-radius: var(--radius-round);
+  background: repeating-radial-gradient(
+    circle,
+    var(--fx-tint-core) 0 16%,
+    var(--fx-tint-glow) 16% 38%,
+    color-mix(in srgb, var(--fx-tint-rim) 55%, var(--pal-black)) 38% 300%
+  );
+  box-shadow: 0 0 24px color-mix(in srgb, var(--fx-tint-glow) 60%, transparent);
+  animation: fx-figure-throb var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="reactor"]::after {
+  clip-path: polygon(
+    50% 50%, 52% 38%, 49% 24%, 54% 8%, 53% 25%, 56% 39%, 51% 49%,
+    62% 42%, 72% 32%, 84% 24%, 74% 35%, 64% 46%, 52% 50%,
+    66% 54%, 78% 61%, 92% 60%, 78% 65%, 64% 58%, 51% 52%,
+    56% 64%, 54% 78%, 59% 92%, 50% 79%, 52% 65%, 50% 52%,
+    40% 62%, 30% 72%, 18% 78%, 28% 69%, 38% 58%, 49% 51%,
+    36% 53%, 21% 51%, 8% 49%, 21% 46%, 36% 48%, 49% 49%
+  );
+  background: var(--fx-tint-core);
+  animation: fx-figure-cracks var(--fx-ms) linear both;
+}
+
+@keyframes fx-figure-throb {
+  0% {
+    transform: scale(0.6);
+  }
+  30% {
+    transform: scale(1.04);
+  }
+  55% {
+    transform: scale(0.98);
+  }
+  80%,
+  100% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes fx-figure-cracks {
+  0%,
+  20% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  38% {
+    opacity: 0.5;
+  }
+  48% {
+    opacity: 0.2;
+  }
+  65%,
+  100% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+}
+
+/* Drone Core VIII's Interceptors: a press head slams down onto a plate, a stamp. */
+.fx-figure[data-figure="press"]::before {
+  width: calc(var(--fx-fig) * 0.8);
+  height: calc(var(--fx-fig) * 0.1);
+  top: 70%;
+  border-radius: var(--radius-xs);
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--fx-tint-rim) 60%, var(--pal-slate-800)) 0 18%, var(--fx-tint-rim) 18% 20%);
+  animation: fx-figure-plate var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="press"]::after {
+  width: calc(var(--fx-fig) * 0.56);
+  height: calc(var(--fx-fig) * 0.5);
+  top: calc(70% - var(--fx-fig) * 0.3);
+  clip-path: polygon(38% 0, 62% 0, 62% 55%, 100% 55%, 100% 100%, 0 100%, 0 55%, 38% 55%);
+  background: repeating-linear-gradient(
+    180deg,
+    var(--fx-tint-rim) 0 55%,
+    var(--fx-tint-core) 55% 62%,
+    color-mix(in srgb, var(--fx-tint-rim) 70%, var(--pal-black)) 62% 100%
+  );
+  animation: fx-figure-slam-down var(--fx-ms) var(--ease-in) both;
+}
+
+@keyframes fx-figure-slam-down {
+  0% {
+    transform: translateY(-110%);
+  }
+  40% {
+    transform: translateY(0);
+  }
+  48% {
+    transform: translateY(-8%);
+  }
+  56%,
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fx-figure-plate {
+  0%,
+  40% {
+    transform: translateY(0) scale(1, 1);
+  }
+  46% {
+    transform: translateY(12%) scale(1.06, 0.8);
+  }
+  60%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+
+/* Drone Core IX: a giant seed-pod core plunges onto the board's centre and splits into three hangar doors. */
+.fx-figure[data-figure="seedPod"]::before {
+  width: calc(var(--fx-fig) * 0.5);
+  aspect-ratio: 3 / 4;
+  border: 3px solid var(--fx-tint-rim);
+  border-radius: var(--radius-round);
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--fx-tint-rim) 70%, var(--pal-slate-900)) 0 117deg, var(--fx-tint-glow) 117deg 120deg);
+  animation: fx-figure-plunge var(--fx-ms) var(--ease-in) both;
+}
+
+.fx-figure[data-figure="seedPod"]::after {
+  width: calc(var(--fx-fig) * 0.62);
+  aspect-ratio: 1;
+  border-radius: var(--radius-round);
+  background:
+    repeating-radial-gradient(circle, var(--fx-tint-core) 0 14%, var(--fx-tint-glow) 14% 22%, transparent 22% 300%),
+    repeating-conic-gradient(from 10.5deg, color-mix(in srgb, var(--fx-tint-rim) 70%, var(--pal-slate-900)) 0 96deg, transparent 96deg 120deg);
+  animation: fx-figure-doors var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-plunge {
+  0% {
+    transform: translateY(-240%) scale(0.6, 0.6);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  40% {
+    transform: translateY(0) scale(1, 1);
+    opacity: 1;
+  }
+  48% {
+    transform: translateY(0) scale(1.08, 0.9);
+    opacity: 1;
+  }
+  54% {
+    transform: translateY(0) scale(1, 1);
+    opacity: 1;
+  }
+  60%,
+  100% {
+    transform: translateY(0) scale(1.1, 1.1);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-figure-doors {
+  0%,
+  54% {
+    transform: scale(0.75) rotate(0deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(0.85) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.35) rotate(24deg);
+    opacity: 1;
+  }
+}
+
+/* Kwzka: a soft cone of light drops from above onto her zone, a round stage platform rising under it. */
+.fx-figure[data-figure="spotlight"]::before {
+  width: calc(var(--fx-fig) * 1.1);
+  height: calc(var(--fx-fig) * 1.7);
+  top: auto;
+  bottom: 30%;
+  translate: -50% 0;
+  transform-origin: 50% 0;
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+  background: color-mix(in srgb, var(--fx-tint-glow) 45%, transparent);
+  mask-image: linear-gradient(180deg, transparent, var(--pal-black) 70%);
+  animation: fx-figure-drop var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="spotlight"]::after {
+  width: calc(var(--fx-fig) * 0.95);
+  aspect-ratio: 3 / 1;
+  top: 72%;
+  border-radius: var(--radius-round);
+  background: repeating-linear-gradient(180deg, var(--fx-tint-core) 0 45%, color-mix(in srgb, var(--fx-tint-rim) 65%, var(--pal-black)) 45% 100%);
+  animation: fx-figure-stage var(--fx-ms) var(--ease-overshoot) both;
+}
+
+@keyframes fx-figure-drop {
+  0% {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  35%,
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-figure-stage {
+  0%,
+  20% {
+    transform: translateY(60%) scale(0.6, 0);
+  }
+  55%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+
+/* The Narcor Project: a sealed lab vault slides open case by case onto a row of glass cases lit with crystal facets. */
+.fx-figure[data-figure="labCases"]::before,
+.fx-figure[data-figure="labCases"]::after {
+  width: calc(var(--fx-fig) * 0.9);
+  height: calc(var(--fx-fig) * 0.6);
+  border: 2px solid var(--fx-tint-rim);
+  border-radius: var(--radius-xs);
+}
+
+.fx-figure[data-figure="labCases"]::before {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 31.33%, var(--fx-tint-rim) 31.33% 33.33%),
+    repeating-linear-gradient(65deg, transparent 0 9%, color-mix(in srgb, var(--fx-tint-core) 80%, transparent) 9% 12%),
+    repeating-linear-gradient(-65deg, transparent 0 9%, color-mix(in srgb, var(--fx-tint-core) 80%, transparent) 9% 12%),
+    color-mix(in srgb, var(--fx-tint-glow) 40%, transparent);
+  animation: fx-figure-lock var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="labCases"]::after {
+  transform-origin: 100% 50%;
+  background: repeating-linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--fx-tint-rim) 30%, var(--pal-slate-900)) 0 16%,
+    color-mix(in srgb, var(--fx-tint-rim) 55%, var(--pal-slate-800)) 16% 20%
+  );
+  animation: fx-figure-unseal var(--fx-ms) steps(3, end) both;
+}
+
+@keyframes fx-figure-unseal {
+  0%,
+  25% {
+    transform: scaleX(1);
+  }
+  85%,
+  100% {
+    transform: scaleX(0);
+  }
+}
+
+/* Great Paperclip Theory: a silver wire bends into a paperclip's two loops, which clip on with a jolt. */
+.fx-figure[data-figure="paperclip"] {
+  rotate: -20deg;
+}
+
+.fx-figure[data-figure="paperclip"]::before {
+  width: calc(var(--fx-fig) * 0.24);
+  height: calc(var(--fx-fig) * 0.66);
+  border: 3px solid var(--fx-tint-rim);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--fx-tint-glow) 60%, transparent);
+  transform-origin: 50% 100%;
+  animation: fx-figure-bend var(--fx-ms) var(--ease-overshoot) both;
+}
+
+.fx-figure[data-figure="paperclip"]::after {
+  width: calc(var(--fx-fig) * 0.14);
+  height: calc(var(--fx-fig) * 0.46);
+  top: calc(50% - var(--fx-fig) * 0.06);
+  border: 3px solid var(--fx-tint-core);
+  border-bottom-color: transparent;
+  border-radius: var(--radius-pill);
+  animation: fx-figure-loop var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-bend {
+  0% {
+    transform: translateY(0) scale(0.08, 1.25) rotate(-60deg);
+  }
+  55% {
+    transform: translateY(0) scale(1, 1) rotate(0deg);
+  }
+  68% {
+    transform: translateY(6%) scale(1, 1) rotate(0deg);
+  }
+  78%,
+  100% {
+    transform: translateY(0) scale(1, 1) rotate(0deg);
+  }
+}
+
+@keyframes fx-figure-loop {
+  0%,
+  35% {
+    transform: translateY(0) scale(0.3);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  68% {
+    transform: translateY(6%) scale(1);
+    opacity: 1;
+  }
+  78%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Beam v5: an emitter unfolds like a flower of white mirror petals, a pilot light at its core. */
+.fx-figure[data-figure="mirrorBloom"]::before {
+  width: calc(var(--fx-fig) * 0.9);
+  aspect-ratio: 1;
+  clip-path: polygon(
+    50% 0, 59.2% 27.8%, 85.4% 14.6%, 72.2% 40.8%, 100% 50%, 72.2% 59.2%, 85.4% 85.4%, 59.2% 72.2%,
+    50% 100%, 40.8% 72.2%, 14.6% 85.4%, 27.8% 59.2%, 0 50%, 27.8% 40.8%, 14.6% 14.6%, 40.8% 27.8%
+  );
+  background: repeating-conic-gradient(
+    from 0deg,
+    color-mix(in srgb, var(--pal-white) 85%, var(--fx-tint-rim)) 0 22.5deg,
+    color-mix(in srgb, var(--pal-white) 50%, var(--fx-tint-glow)) 22.5deg 45deg
+  );
+  animation: fx-figure-bloom var(--fx-ms) var(--ease-overshoot) both;
+}
+
+.fx-figure[data-figure="mirrorBloom"]::after {
+  width: calc(var(--fx-fig) * 0.14);
+  aspect-ratio: 1;
+  border-radius: var(--radius-round);
+  background: var(--fx-tint-glow);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--fx-tint-glow) 85%, transparent);
+  animation: fx-figure-pilot var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-bloom {
+  0% {
+    transform: scale(0) rotate(-90deg);
+  }
+  45%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes fx-figure-pilot {
+  0%,
+  40% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  52% {
+    transform: scale(1.4);
+    opacity: 1;
+  }
+  62% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  72%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Repeater v5: a rotary cluster of six barrels drops in end-on and spins up once. */
+.fx-figure[data-figure="barrels"]::before {
+  --fx-bore: color-mix(in srgb, var(--pal-black) 75%, var(--fx-tint-rim));
+  width: calc(var(--fx-fig) * 0.62);
+  aspect-ratio: 1;
+  border: 3px solid var(--fx-tint-rim);
+  border-radius: var(--radius-round);
+  background:
+    repeating-radial-gradient(circle at 50% 23%, var(--fx-bore) 0 6%, var(--fx-tint-rim) 6% 9%, transparent 9% 300%),
+    repeating-radial-gradient(circle at 73.4% 36.5%, var(--fx-bore) 0 6%, var(--fx-tint-rim) 6% 9%, transparent 9% 300%),
+    repeating-radial-gradient(circle at 73.4% 63.5%, var(--fx-bore) 0 6%, var(--fx-tint-rim) 6% 9%, transparent 9% 300%),
+    repeating-radial-gradient(circle at 50% 77%, var(--fx-bore) 0 6%, var(--fx-tint-rim) 6% 9%, transparent 9% 300%),
+    repeating-radial-gradient(circle at 26.6% 63.5%, var(--fx-bore) 0 6%, var(--fx-tint-rim) 6% 9%, transparent 9% 300%),
+    repeating-radial-gradient(circle at 26.6% 36.5%, var(--fx-bore) 0 6%, var(--fx-tint-rim) 6% 9%, transparent 9% 300%),
+    repeating-radial-gradient(circle, var(--fx-tint-core) 0 8%, transparent 8% 300%),
+    color-mix(in srgb, var(--fx-tint-rim) 40%, var(--pal-slate-800));
+  animation: fx-figure-drop-spin var(--fx-ms) var(--ease-in-out) both;
+}
+
+.fx-figure[data-figure="barrels"]::after {
+  width: calc(var(--fx-fig) * 0.74);
+  aspect-ratio: 1;
+  border: 2px dashed var(--fx-tint-glow);
+  border-radius: var(--radius-round);
+  animation: fx-figure-spin-ring var(--fx-ms) var(--ease-in-out) both;
+}
+
+@keyframes fx-figure-drop-spin {
+  0% {
+    transform: translateY(-140%) rotate(0deg);
+  }
+  35% {
+    transform: translateY(0) rotate(0deg);
+  }
+  42% {
+    transform: translateY(-6%) rotate(0deg);
+  }
+  48% {
+    transform: translateY(0) rotate(0deg);
+  }
+  100% {
+    transform: translateY(0) rotate(360deg);
+  }
+}
+
+@keyframes fx-figure-spin-ring {
+  0%,
+  46% {
+    transform: rotate(0deg) scale(0.9);
+    opacity: 0;
+  }
+  56% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-540deg) scale(1.08);
+    opacity: 0;
+  }
+}
+
+/* Cannon v5: one colossal barrel swings down about its breech onto its mount and locks with a jolt. */
+.fx-figure[data-figure="cannon"]::before {
+  width: calc(var(--fx-fig) * 1.3);
+  height: calc(var(--fx-fig) * 0.26);
+  left: calc(50% - var(--fx-fig) * 0.4);
+  translate: 0 -50%;
+  transform-origin: 0 50%;
+  clip-path: polygon(0 0, 88% 14%, 88% 6%, 100% 6%, 100% 94%, 88% 94%, 88% 86%, 0 100%);
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--fx-tint-rim) 70%, var(--pal-slate-900)) 0 20%, var(--fx-tint-rim) 20% 23%);
+  animation: fx-figure-lower var(--fx-ms) var(--ease-in) both;
+}
+
+.fx-figure[data-figure="cannon"]::after {
+  width: calc(var(--fx-fig) * 0.38);
+  aspect-ratio: 1;
+  left: calc(50% - var(--fx-fig) * 0.4);
+  border: 3px solid var(--fx-tint-rim);
+  border-radius: var(--radius-round);
+  background: repeating-radial-gradient(circle, var(--fx-tint-core) 0 14%, color-mix(in srgb, var(--fx-tint-rim) 55%, var(--pal-slate-900)) 14% 300%);
+  animation: fx-figure-jolt var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-lower {
+  0% {
+    transform: translateX(0) rotate(-95deg);
+  }
+  45% {
+    transform: translateX(0) rotate(4deg);
+  }
+  52% {
+    transform: translateX(-6%) rotate(0deg);
+  }
+  60%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+}
+
+@keyframes fx-figure-jolt {
+  0%,
+  44% {
+    transform: translateX(0) scale(1);
+  }
+  50% {
+    transform: translateX(-6%) scale(1.1);
+  }
+  60%,
+  100% {
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Flak v5: a squat turret rises, its searchlight beam sweeping side to side. */
+.fx-figure[data-figure="turret"]::before {
+  width: calc(var(--fx-fig) * 0.6);
+  aspect-ratio: 2 / 1;
+  top: 64%;
+  border: 3px solid var(--fx-tint-rim);
+  border-bottom-width: 6px;
+  border-radius: var(--radius-pill) var(--radius-pill) 0 0;
+  transform-origin: 50% 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--fx-tint-rim) 55%, var(--pal-slate-900)) 0 14%,
+    color-mix(in srgb, var(--fx-tint-rim) 80%, var(--pal-slate-800)) 14% 16%
+  );
+  animation: fx-figure-squat var(--fx-ms) var(--ease-overshoot) both;
+}
+
+.fx-figure[data-figure="turret"]::after {
+  width: calc(var(--fx-fig) * 0.5);
+  height: calc(var(--fx-fig) * 1.2);
+  top: auto;
+  bottom: calc(36% + var(--fx-fig) * 0.12);
+  translate: -50% 0;
+  transform-origin: 50% 100%;
+  clip-path: polygon(45% 100%, 55% 100%, 100% 0, 0 0);
+  background: color-mix(in srgb, var(--fx-tint-glow) 50%, transparent);
+  mask-image: linear-gradient(0deg, var(--pal-black) 30%, transparent);
+  animation: fx-figure-sweep var(--fx-ms) var(--ease-in-out) both;
+}
+
+@keyframes fx-figure-squat {
+  0% {
+    transform: translateY(50%) scaleY(0);
+  }
+  35%,
+  100% {
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+@keyframes fx-figure-sweep {
+  0%,
+  30% {
+    transform: rotate(-35deg);
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  60% {
+    transform: rotate(35deg);
+  }
+  85%,
+  100% {
+    transform: rotate(-15deg);
+    opacity: 1;
+  }
+}
+
+/* Miner v5: a round intake maw grinds open, its ring of drill teeth spinning. */
+.fx-figure[data-figure="maw"]::before {
+  width: calc(var(--fx-fig) * 0.75);
+  aspect-ratio: 1;
+  border-radius: var(--radius-round);
+  background: repeating-conic-gradient(from 0deg, var(--fx-tint-rim) 0 12deg, color-mix(in srgb, var(--fx-tint-rim) 35%, var(--pal-black)) 12deg 24deg);
+  mask-image: radial-gradient(circle, transparent 0 38%, var(--pal-black) 39% 70%, transparent 71%);
+  animation: fx-figure-grind var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="maw"]::after {
+  width: calc(var(--fx-fig) * 0.4);
+  aspect-ratio: 1;
+  border: 2px solid var(--fx-tint-glow);
+  border-radius: var(--radius-round);
+  background: repeating-radial-gradient(
+    circle,
+    color-mix(in srgb, var(--fx-tint-glow) 45%, var(--pal-black)) 0 20%,
+    color-mix(in srgb, var(--pal-black) 85%, var(--fx-tint-rim)) 20% 300%
+  );
+  animation: fx-figure-open var(--fx-ms) steps(6, end) both;
+}
+
+@keyframes fx-figure-grind {
+  0% {
+    transform: scale(0.6) rotate(0deg);
+  }
+  100% {
+    transform: scale(1) rotate(540deg);
+  }
+}
+
+@keyframes fx-figure-open {
+  0%,
+  10% {
+    transform: scale(0) rotate(0deg);
+  }
+  60%,
+  100% {
+    transform: scale(1) rotate(-90deg);
+  }
+}
+
+/* Z'Zoth: a hooded wraith gathers out of the dark, one pale lantern eye opening in its hood. */
+.fx-figure[data-figure="wraith"]::before {
+  width: calc(var(--fx-fig) * 0.8);
+  aspect-ratio: 3 / 4;
+  clip-path: polygon(50% 0, 70% 8%, 80% 25%, 84% 50%, 92% 80%, 100% 100%, 82% 92%, 68% 100%, 50% 90%, 32% 100%, 18% 92%, 0 100%, 8% 80%, 16% 50%, 20% 25%, 30% 8%);
+  background:
+    repeating-radial-gradient(ellipse at 50% 26%, color-mix(in srgb, var(--pal-black) 92%, var(--fx-tint-glow)) 0 12%, transparent 12% 300%),
+    repeating-linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--fx-tint-rim) 35%, var(--pal-black)) 0 12%,
+      color-mix(in srgb, var(--fx-tint-rim) 22%, var(--pal-black)) 12% 20%
+    );
+  animation: fx-figure-gather var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="wraith"]::after {
+  width: calc(var(--fx-fig) * 0.11);
+  aspect-ratio: 5 / 3;
+  top: calc(50% - var(--fx-fig) * 0.255);
+  left: calc(50% + var(--fx-fig) * 0.03);
+  border-radius: var(--radius-round);
+  background: color-mix(in srgb, var(--pal-white) 60%, var(--fx-tint-glow));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--fx-tint-glow) 85%, transparent);
+  animation: fx-figure-eye var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-gather {
+  0% {
+    transform: scale(1.5) rotate(-6deg);
+    opacity: 0;
+  }
+  50%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.92;
+  }
+}
+
+@keyframes fx-figure-eye {
+  0%,
+  50% {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  62%,
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* A'Zoth: a horned herald unfolds, a shockwave ring pulsing out of its maw. */
+.fx-figure[data-figure="horn"]::before {
+  width: calc(var(--fx-fig) * 0.85);
+  aspect-ratio: 1;
+  transform-origin: 50% 100%;
+  clip-path: polygon(10% 0, 24% 28%, 38% 36%, 62% 36%, 76% 28%, 90% 0, 86% 32%, 72% 50%, 74% 72%, 62% 100%, 38% 100%, 26% 72%, 28% 50%, 14% 32%);
+  background:
+    repeating-radial-gradient(ellipse at 50% 84%, color-mix(in srgb, var(--fx-tint-glow) 70%, var(--pal-black)) 0 9%, transparent 9% 300%),
+    repeating-linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--fx-tint-rim) 40%, var(--pal-black)) 0 10%,
+      color-mix(in srgb, var(--fx-tint-rim) 25%, var(--pal-black)) 10% 16%
+    );
+  animation: fx-figure-unfold var(--fx-ms) var(--ease-overshoot) both;
+}
+
+.fx-figure[data-figure="horn"]::after {
+  width: calc(var(--fx-fig) * 0.3);
+  aspect-ratio: 1;
+  top: calc(50% + var(--fx-fig) * 0.3);
+  border: 3px solid var(--fx-tint-glow);
+  border-radius: var(--radius-round);
+  animation: fx-figure-pulse var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-unfold {
+  0% {
+    transform: scale(0.5, 0.1);
+  }
+  45%,
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+@keyframes fx-figure-pulse {
+  0%,
+  45% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  52% {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Paragon Mk2: an arrowhead fighter streaks in, banks and settles, a hexagonal shield snapping on around it. */
+.fx-figure[data-figure="fighter"]::before {
+  width: calc(var(--fx-fig) * 0.6);
+  aspect-ratio: 1;
+  clip-path: polygon(50% 0, 62% 40%, 100% 78%, 100% 90%, 60% 80%, 56% 100%, 44% 100%, 40% 80%, 0 90%, 0 78%, 38% 40%);
+  background: repeating-linear-gradient(90deg, var(--fx-tint-core) 0 50%, var(--fx-tint-rim) 50% 100%);
+  animation: fx-figure-streak var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="fighter"]::after {
+  width: calc(var(--fx-fig) * 0.95);
+  aspect-ratio: 8 / 7;
+  clip-path: polygon(
+    evenodd,
+    25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%, 25% 0,
+    27.5% 5%, 5.5% 50%, 27.5% 95%, 72.5% 95%, 94.5% 50%, 72.5% 5%, 27.5% 5%
+  );
+  background: color-mix(in srgb, var(--fx-tint-glow) 85%, transparent);
+  animation: fx-figure-hex var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-streak {
+  0% {
+    transform: translate(-120%, 200%) rotateY(0deg) rotate(30deg) scale(0.6);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  45% {
+    transform: translate(0, 0) rotateY(40deg) rotate(-8deg) scale(1);
+    opacity: 1;
+  }
+  62% {
+    transform: translate(0, 0) rotateY(-14deg) rotate(3deg) scale(1);
+    opacity: 1;
+  }
+  78%,
+  100% {
+    transform: translate(0, 0) rotateY(0deg) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-figure-hex {
+  0%,
+  72% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+  78% {
+    transform: scale(0.95);
+    opacity: 1;
+  }
+  86%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+}
+
+/* Paragon-X: a stark black-and-white blade of a ship dives in, a halo ring opening behind it. */
+.fx-figure[data-figure="blade"]::before {
+  width: calc(var(--fx-fig) * 0.95);
+  aspect-ratio: 1;
+  border: 3px solid color-mix(in srgb, var(--fx-tint-core) 80%, var(--fx-tint-glow));
+  border-radius: var(--radius-round);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--fx-tint-glow) 60%, transparent);
+  animation: fx-figure-halo var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="blade"]::after {
+  width: calc(var(--fx-fig) * 0.42);
+  height: calc(var(--fx-fig) * 1.05);
+  clip-path: polygon(50% 0, 58% 52%, 72% 68%, 56% 71%, 54% 100%, 46% 100%, 44% 71%, 28% 68%, 42% 52%);
+  background: repeating-linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--fx-tint-core) 85%, var(--pal-white)) 0 50%,
+    color-mix(in srgb, var(--fx-tint-rim) 12%, var(--pal-black)) 50% 100%
+  );
+  animation: fx-figure-dive var(--fx-ms) var(--ease-in) both;
+}
+
+@keyframes fx-figure-halo {
+  0%,
+  38% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  52% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.15);
+    opacity: 0.7;
+  }
+}
+
+@keyframes fx-figure-dive {
+  0% {
+    transform: translateY(-240%) scale(1.5);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  40% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  48% {
+    transform: translateY(4%) scale(1);
+    opacity: 1;
+  }
+  58%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Galaxy: a vast flagship descends onto its zone, its dark shadow sweeping ahead of it past the zone's edges. */
+.fx-figure[data-figure="flagship"]::before {
+  width: calc(var(--fx-fig) * 2.4);
+  height: calc(var(--fx-fig) * 1.5);
+  background: color-mix(in srgb, var(--pal-black) 55%, transparent);
+  mask-image: radial-gradient(closest-side, var(--pal-black) 45%, transparent);
+  animation: fx-figure-shadow var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="flagship"]::after {
+  width: calc(var(--fx-fig) * 1.7);
+  aspect-ratio: 6 / 5;
+  clip-path: polygon(50% 0, 60% 18%, 64% 40%, 100% 62%, 92% 72%, 64% 70%, 60% 100%, 40% 100%, 36% 70%, 8% 72%, 0 62%, 36% 40%, 40% 18%);
+  background: repeating-linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--fx-tint-rim) 55%, var(--pal-slate-900)) 0 8%,
+    color-mix(in srgb, var(--fx-tint-glow) 60%, var(--pal-slate-900)) 8% 9%
+  );
+  animation: fx-figure-descend var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-shadow {
+  0% {
+    transform: translateY(-80%) scale(1.3);
+    opacity: 0;
+  }
+  35%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-figure-descend {
+  0%,
+  15% {
+    transform: translateY(-140%) scale(1.3);
+    opacity: 0;
+  }
+  60%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Prototype-X1: two telemetry towers flash at the zone's sides, an unpainted hull lurching between them on trailing cables. */
+.fx-figure[data-figure="telemetry"]::before {
+  width: calc(var(--fx-w) * 1.2);
+  height: calc(var(--fx-fig) * 1.1);
+  background:
+    repeating-linear-gradient(180deg, transparent 0 8%, var(--fx-tint-rim) 8% 10%),
+    repeating-linear-gradient(
+      90deg,
+      var(--fx-tint-glow) 0 2%,
+      transparent 2% 7%,
+      var(--fx-tint-glow) 7% 9%,
+      transparent 9% 91%,
+      var(--fx-tint-glow) 91% 93%,
+      transparent 93% 98%,
+      var(--fx-tint-glow) 98% 100%
+    );
+  mask-image: repeating-linear-gradient(90deg, var(--pal-black) 0 9%, transparent 9% 91%, var(--pal-black) 91% 100%);
+  animation: fx-figure-beacon var(--fx-ms) linear both;
+}
+
+.fx-figure[data-figure="telemetry"]::after {
+  width: calc(var(--fx-fig) * 0.62);
+  height: calc(var(--fx-fig) * 0.8);
+  transform-origin: 50% 0;
+  clip-path: polygon(
+    30% 0, 70% 0, 82% 30%, 70% 60%, 62% 60%, 62% 100%, 60% 100%, 60% 60%, 51% 60%, 51% 100%, 49% 100%,
+    49% 60%, 40% 60%, 40% 100%, 38% 100%, 38% 60%, 30% 60%, 18% 30%
+  );
+  background: repeating-linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--pal-stone-500) 75%, var(--fx-tint-rim)) 0 13%,
+    color-mix(in srgb, var(--pal-stone-500) 50%, var(--pal-black)) 13% 15%
+  );
+  animation: fx-figure-lurch var(--fx-ms) var(--ease-in-out) both;
+}
+
+@keyframes fx-figure-beacon {
+  0% {
+    opacity: 0.2;
+  }
+  15% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.3;
+  }
+  45% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.3;
+  }
+  75% {
+    opacity: 1;
+  }
+  85%,
+  100% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes fx-figure-lurch {
+  0% {
+    transform: translateY(25%) rotate(-7deg);
+    opacity: 0;
+  }
+  25% {
+    transform: translateY(0) rotate(5deg);
+    opacity: 1;
+  }
+  42% {
+    transform: translateY(-3%) rotate(-3deg);
+    opacity: 1;
+  }
+  58% {
+    transform: translateY(0) rotate(2deg);
+    opacity: 1;
+  }
+  75%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* Prototype-X2: a molten sphere throbs, cracks down its middle and splits in two halves. */
+.fx-figure[data-figure="forgeShell"]::before,
+.fx-figure[data-figure="forgeShell"]::after {
+  width: calc(var(--fx-fig) * 0.34);
+  height: calc(var(--fx-fig) * 0.68);
+}
+
+.fx-figure[data-figure="forgeShell"]::before {
+  translate: -100% -50%;
+  transform-origin: 100% 50%;
+  border-radius: var(--radius-pill) 0 0 var(--radius-pill);
+  clip-path: polygon(0 0, 100% 0, 88% 18%, 100% 34%, 86% 52%, 100% 68%, 88% 84%, 100% 100%, 0 100%);
+  background: repeating-radial-gradient(
+    circle at 100% 50%,
+    var(--fx-tint-core) 0 14%,
+    var(--fx-tint-rim) 14% 46%,
+    color-mix(in srgb, var(--fx-tint-glow) 55%, var(--pal-black)) 46% 300%
+  );
+  animation: fx-figure-split-left var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="forgeShell"]::after {
+  translate: 0 -50%;
+  transform-origin: 0 50%;
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+  clip-path: polygon(12% 0, 100% 0, 100% 100%, 12% 100%, 0 84%, 12% 68%, 0 52%, 12% 34%, 0 18%);
+  background: repeating-radial-gradient(
+    circle at 0 50%,
+    var(--fx-tint-core) 0 14%,
+    var(--fx-tint-rim) 14% 46%,
+    color-mix(in srgb, var(--fx-tint-glow) 55%, var(--pal-black)) 46% 300%
+  );
+  animation: fx-figure-split-right var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-figure-split-left {
+  0% {
+    transform: translateX(0) rotate(0deg) scale(0.6);
+  }
+  30% {
+    transform: translateX(0) rotate(0deg) scale(1.04);
+  }
+  42% {
+    transform: translateX(-3%) rotate(-2deg) scale(1);
+  }
+  48% {
+    transform: translateX(2%) rotate(1deg) scale(1);
+  }
+  56% {
+    transform: translateX(0) rotate(0deg) scale(1);
+  }
+  100% {
+    transform: translateX(-40%) rotate(-14deg) scale(1);
+  }
+}
+
+@keyframes fx-figure-split-right {
+  0% {
+    transform: translateX(0) rotate(0deg) scale(0.6);
+  }
+  30% {
+    transform: translateX(0) rotate(0deg) scale(1.04);
+  }
+  42% {
+    transform: translateX(3%) rotate(2deg) scale(1);
+  }
+  48% {
+    transform: translateX(-2%) rotate(-1deg) scale(1);
+  }
+  56% {
+    transform: translateX(0) rotate(0deg) scale(1);
+  }
+  100% {
+    transform: translateX(40%) rotate(14deg) scale(1);
+  }
+}
+
+/* Siva 1: a long carpet rolls out into her zone, camera flashes popping around it. */
+.fx-figure[data-figure="carpet"]::before {
+  width: calc(var(--fx-fig) * 0.42);
+  height: calc(var(--fx-h) * 1.2);
+  top: auto;
+  bottom: -25%;
+  translate: -50% 0;
+  transform-origin: 50% 100%;
+  background: repeating-linear-gradient(90deg, var(--fx-tint-core) 0 8%, var(--fx-tint-rim) 8% 92%, var(--fx-tint-core) 92% 100%);
+  animation: fx-figure-unroll var(--fx-ms) var(--ease-out) both;
+}
+
+.fx-figure[data-figure="carpet"]::after {
+  --fx-flash: calc(var(--fx-fig) * 0.035);
+  --fx-flash-glow: color-mix(in srgb, var(--fx-tint-core) 50%, transparent);
+  width: calc(var(--fx-w) * 1.5);
+  height: calc(var(--fx-h) * 1.2);
+  background:
+    repeating-radial-gradient(circle at 12% 22%, var(--pal-white) 0 var(--fx-flash), var(--fx-flash-glow) var(--fx-flash) calc(var(--fx-flash) * 2.2), transparent calc(var(--fx-flash) * 2.2) 300%),
+    repeating-radial-gradient(circle at 88% 16%, var(--pal-white) 0 var(--fx-flash), var(--fx-flash-glow) var(--fx-flash) calc(var(--fx-flash) * 2.2), transparent calc(var(--fx-flash) * 2.2) 300%),
+    repeating-radial-gradient(circle at 8% 70%, var(--pal-white) 0 var(--fx-flash), var(--fx-flash-glow) var(--fx-flash) calc(var(--fx-flash) * 2.2), transparent calc(var(--fx-flash) * 2.2) 300%),
+    repeating-radial-gradient(circle at 92% 62%, var(--pal-white) 0 var(--fx-flash), var(--fx-flash-glow) var(--fx-flash) calc(var(--fx-flash) * 2.2), transparent calc(var(--fx-flash) * 2.2) 300%),
+    repeating-radial-gradient(circle at 50% 6%, var(--pal-white) 0 var(--fx-flash), var(--fx-flash-glow) var(--fx-flash) calc(var(--fx-flash) * 2.2), transparent calc(var(--fx-flash) * 2.2) 300%);
+  animation: fx-figure-flashes var(--fx-ms) linear both;
+}
+
+@keyframes fx-figure-unroll {
+  0% {
+    transform: scaleY(0);
+  }
+  45%,
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes fx-figure-flashes {
+  0%,
+  30% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  34% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.1;
+  }
+  48% {
+    opacity: 1;
+  }
+  54% {
+    opacity: 0.1;
+  }
+  64% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.05);
+    opacity: 0;
+  }
+}
+
+/* Siva 2: a small vial is flicked over, green drops falling from its mouth. */
+.fx-figure[data-figure="vial"]::before {
+  width: calc(var(--fx-fig) * 0.26);
+  aspect-ratio: 3 / 5;
+  top: 34%;
+  clip-path: polygon(38% 0, 62% 0, 62% 30%, 82% 55%, 82% 100%, 18% 100%, 18% 55%, 38% 30%);
+  background: repeating-linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--pal-white) 45%, transparent) 0 48%,
+    color-mix(in srgb, var(--pal-green-400) 75%, var(--fx-tint-glow)) 48% 100%
+  );
+  animation: fx-figure-flick var(--fx-ms) var(--ease-overshoot) both;
+}
+
+.fx-figure[data-figure="vial"]::after {
+  --fx-drop: calc(var(--fx-fig) * 0.03);
+  width: calc(var(--fx-fig) * 0.22);
+  height: calc(var(--fx-fig) * 0.5);
+  top: calc(34% + var(--fx-fig) * 0.34);
+  left: calc(50% + var(--fx-fig) * 0.08);
+  background:
+    repeating-radial-gradient(circle at 50% 12%, var(--pal-green-400) 0 var(--fx-drop), transparent var(--fx-drop) 300%),
+    repeating-radial-gradient(circle at 30% 48%, var(--pal-green-400) 0 var(--fx-drop), transparent var(--fx-drop) 300%),
+    repeating-radial-gradient(circle at 64% 82%, var(--pal-green-400) 0 var(--fx-drop), transparent var(--fx-drop) 300%);
+  animation: fx-figure-drip var(--fx-ms) var(--ease-in) both;
+}
+
+@keyframes fx-figure-flick {
+  0% {
+    transform: translateY(30%) rotate(0deg);
+    opacity: 0;
+  }
+  15% {
+    transform: translateY(0) rotate(-12deg);
+    opacity: 1;
+  }
+  40%,
+  100% {
+    transform: translateY(0) rotate(140deg);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-figure-drip {
+  0%,
+  38% {
+    transform: translateY(-30%);
+    opacity: 0;
+  }
+  46% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(60%);
+    opacity: 0;
+  }
 }
 
 /* R3405001: Meditative's signature Field Spells' figures (fx/cards/meditative/): Introspection's,
@@ -6491,7 +8017,7 @@ div.fx-takeover-art > svg {
 
 /* R3400000: a Mythic's own takeover art, part by part (takeoverArt.ts), over the dark and under the sweep,
    rays and wave: Bob's Plan's ink-wash summit, Scratch Pad's blank canvas and Goetzmann Game Design's
-   napkin. The same parts stand still behind Reduce Motion's card (game/TakeoverStill.tsx), so their look
+   napkin (R3395001: and Stinkyscape's five Mythics', below). The same parts stand still behind Reduce Motion's card (game/TakeoverStill.tsx), so their look
    is here and their motion only under `.fx-takeover`, timed to its landing at --fx-land. Palette colors
    alone, so the still needs no tint; shapes and never a card face (R202). */
 .takeover-art {
@@ -6507,7 +8033,12 @@ div.fx-takeover-art > svg {
 
 .fx-takeover[data-look="summit"] .fx-takeover-sweep,
 .fx-takeover[data-look="canvas"] .fx-takeover-sweep,
-.fx-takeover[data-look="napkin"] .fx-takeover-sweep {
+.fx-takeover[data-look="napkin"] .fx-takeover-sweep,
+.fx-takeover[data-look="vault"] .fx-takeover-sweep,
+.fx-takeover[data-look="rod"] .fx-takeover-sweep,
+.fx-takeover[data-look="wire"] .fx-takeover-sweep,
+.fx-takeover[data-look="whiteDwarf"] .fx-takeover-sweep,
+.fx-takeover[data-look="forge"] .fx-takeover-sweep {
   display: none;
 }
 
@@ -6754,6 +8285,428 @@ div.fx-takeover-art > svg {
   }
   100% {
     transform: rotate(160deg) scale(1.15);
+    opacity: 1;
+  }
+}
+
+/* R3395001: Stinkyscape's five Mythics' takeover art. Tylannt's vault: a giant round door filling the dark,
+   its tumbler dial clicking round, then swinging open on a bright gap. Rod of Ages: a starless gulf, the
+   colossal rod rising past the camera as its twelve bands light from the bottom, then shrinking away. Great
+   Paperclip Theory: one silver wire across a blueprint, bending into a staircase of drone cores that grows
+   huge and snaps back. Paragon-X: a white dwarf flaring, its halo ringing, a black-and-white blade cutting
+   across it. Prototype-X2: a forge-sphere, five ships spiralling in, the sphere cracking in molten light and
+   the hull bursting out. Palette colors alone; the motion only under `.fx-takeover`, transform and opacity. */
+.takeover-art-murk {
+  inset: 0;
+  background: color-mix(in srgb, var(--pal-slate-800) 55%, var(--pal-black));
+  opacity: 0.94;
+}
+
+.takeover-art-gap {
+  left: 50%;
+  top: 46%;
+  width: 7vmin;
+  height: 96vmin;
+  translate: -50% -50%;
+  background: color-mix(in srgb, var(--pal-green-400) 65%, var(--pal-white));
+  mask-image: linear-gradient(90deg, transparent, var(--pal-black), transparent);
+  opacity: 0.85;
+}
+
+.takeover-art-door {
+  left: 50%;
+  top: 46%;
+  width: 92vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  transform-origin: 0 50%;
+  border: 3vmin solid var(--pal-slate-800);
+  border-radius: var(--radius-round);
+  outline: 0.6vmin solid var(--pal-slate-100);
+  outline-offset: -5vmin;
+  background: color-mix(in srgb, var(--pal-slate-400) 70%, var(--pal-slate-800));
+}
+
+.takeover-art-dial {
+  left: 50%;
+  top: 46%;
+  width: 36vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  background: repeating-conic-gradient(from 0deg, var(--pal-slate-100) 0 1.5deg, transparent 1.5deg 12deg);
+  mask-image: radial-gradient(circle, transparent 0 56%, var(--pal-black) 58% 70%, transparent 72%);
+}
+
+.fx-takeover .takeover-art-dial {
+  animation: fx-art-dial var(--fx-land) steps(9, end) both;
+}
+
+.fx-takeover .takeover-art-door {
+  animation: fx-art-door var(--fx-land) var(--ease-in) both;
+}
+
+.fx-takeover .takeover-art-gap {
+  animation: fx-art-gap var(--fx-land) var(--ease-out) both;
+}
+
+@keyframes fx-art-dial {
+  0% {
+    transform: rotate(0deg);
+  }
+  75%,
+  100% {
+    transform: rotate(-270deg);
+  }
+}
+
+@keyframes fx-art-door {
+  0%,
+  72% {
+    transform: scaleX(1);
+  }
+  100% {
+    transform: scaleX(0.14);
+  }
+}
+
+@keyframes fx-art-gap {
+  0%,
+  70% {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scaleX(3);
+    opacity: 0.85;
+  }
+}
+
+.takeover-art-gulf {
+  inset: 0;
+  background: color-mix(in srgb, var(--pal-violet-700) 16%, var(--pal-black));
+  opacity: 0.95;
+}
+
+.takeover-art-colossus,
+.takeover-art-bandlight {
+  left: 50%;
+  bottom: 6%;
+  width: 8vmin;
+  height: 84vmin;
+  translate: -50% 0;
+  transform-origin: 50% 100%;
+  border-radius: var(--radius-pill);
+}
+
+.takeover-art-colossus {
+  box-sizing: border-box;
+  border-left: 1.6vmin solid var(--pal-slate-100);
+  border-right: 2vmin solid var(--pal-slate-800);
+  background: var(--pal-slate-400);
+}
+
+.takeover-art-bandlight {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 6.6%,
+    color-mix(in srgb, var(--pal-sky-300) 75%, var(--pal-white)) 6.6% 8.33%
+  );
+}
+
+.fx-takeover .takeover-art-colossus {
+  animation: fx-art-colossus var(--fx-land) var(--ease-in-out) both;
+}
+
+.fx-takeover .takeover-art-bandlight {
+  animation: fx-art-bandlight var(--fx-land) var(--ease-in-out) both;
+}
+
+@keyframes fx-art-colossus {
+  0% {
+    transform: translateY(70%) scale(1.5);
+  }
+  65% {
+    transform: translateY(-4%) scale(1.5);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fx-art-bandlight {
+  0% {
+    transform: translateY(70%) scale(1.5) scaleY(0.04);
+  }
+  65% {
+    transform: translateY(-4%) scale(1.5) scaleY(1);
+  }
+  100% {
+    transform: translateY(0) scale(1) scaleY(1);
+  }
+}
+
+.takeover-art-blueprint {
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--pal-blue-600) 30%, transparent) 0 1px, transparent 1px 6vmin),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--pal-blue-600) 30%, transparent) 0 1px, transparent 1px 6vmin),
+    color-mix(in srgb, var(--pal-blue-900) 82%, var(--pal-black));
+  opacity: 0.93;
+}
+
+.takeover-art-strand {
+  left: 4%;
+  right: 4%;
+  top: 46%;
+  height: 1.2vmin;
+  border-radius: var(--radius-pill);
+  background: var(--pal-slate-100);
+  opacity: 0;
+}
+
+.takeover-art-stairs {
+  left: 50%;
+  top: 46%;
+  width: 56vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  clip-path: polygon(0 100%, 0 80%, 20% 80%, 20% 60%, 40% 60%, 40% 40%, 60% 40%, 60% 20%, 80% 20%, 80% 0, 100% 0, 100% 100%);
+  background:
+    repeating-linear-gradient(90deg, transparent 0 19%, var(--pal-slate-100) 19% 20%),
+    repeating-linear-gradient(0deg, transparent 0 19%, var(--pal-slate-100) 19% 20%),
+    color-mix(in srgb, var(--pal-slate-400) 60%, var(--pal-blue-600));
+}
+
+.fx-takeover .takeover-art-strand {
+  animation: fx-art-strand var(--fx-land) var(--ease-out) both;
+}
+
+.fx-takeover .takeover-art-stairs {
+  animation: fx-art-stairs var(--fx-land) var(--ease-in-out) both;
+}
+
+@keyframes fx-art-strand {
+  0% {
+    transform: scaleX(0);
+    opacity: 1;
+  }
+  30% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  50%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-art-stairs {
+  0%,
+  30% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  40% {
+    transform: scale(0.3);
+    opacity: 1;
+  }
+  85% {
+    transform: scale(3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.takeover-art-dwarf {
+  left: 50%;
+  top: 45%;
+  width: 40vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  background: var(--pal-white);
+  box-shadow: 0 0 64px color-mix(in srgb, var(--pal-sky-300) 70%, transparent);
+}
+
+.takeover-art-flare {
+  inset: 0;
+  background: color-mix(in srgb, var(--pal-white) 50%, transparent);
+  mask-image: radial-gradient(circle at 50% 45%, var(--pal-black) 0 8%, transparent 52%);
+}
+
+.takeover-art-halo {
+  left: 50%;
+  top: 45%;
+  width: 62vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  border: 0.8vmin solid color-mix(in srgb, var(--pal-white) 80%, var(--pal-sky-300));
+}
+
+.takeover-art-cut {
+  left: 50%;
+  top: 45%;
+  width: 72vmin;
+  height: 5.5vmin;
+  translate: -50% -50%;
+  rotate: -12deg;
+  clip-path: polygon(0 50%, 68% 0, 100% 50%, 68% 100%);
+  border-top: 5.5vmin solid var(--pal-black);
+  background: var(--pal-white);
+}
+
+.fx-takeover .takeover-art-flare {
+  animation: fx-art-flare var(--fx-land) var(--ease-out) both;
+}
+
+.fx-takeover .takeover-art-halo {
+  animation: fx-art-halo var(--fx-land) var(--ease-overshoot) both;
+}
+
+.fx-takeover .takeover-art-cut {
+  animation: fx-art-cut var(--fx-land) var(--ease-in) both;
+}
+
+@keyframes fx-art-flare {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  35% {
+    transform: scale(1.4);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+}
+
+@keyframes fx-art-halo {
+  0%,
+  40% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-art-cut {
+  0%,
+  45% {
+    transform: translateX(-140vmax);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.takeover-art-sphere,
+.takeover-art-magma {
+  left: 50%;
+  top: 46%;
+  width: 78vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+}
+
+.takeover-art-sphere {
+  background: var(--pal-red-600);
+  box-shadow: inset 0 0 96px color-mix(in srgb, var(--pal-red-900) 80%, var(--pal-black)), inset 0 0 24px color-mix(in srgb, var(--pal-orange-400) 70%, transparent);
+}
+
+.takeover-art-magma {
+  width: 4vmin;
+  aspect-ratio: auto;
+  height: 70vmin;
+  rotate: 10deg;
+  border-radius: var(--radius-pill);
+  background: var(--pal-gold-200);
+}
+
+.takeover-art-convoy {
+  left: 50%;
+  top: 46%;
+  width: 100vmin;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: var(--radius-round);
+  background: repeating-conic-gradient(from 10deg, var(--pal-slate-100) 0 4deg, transparent 4deg 72deg);
+  mask-image: radial-gradient(circle, transparent 0 44%, var(--pal-black) 45% 48%, transparent 49%);
+  opacity: 0;
+}
+
+.takeover-art-hull {
+  left: 50%;
+  top: 46%;
+  width: 40vmin;
+  height: 18vmin;
+  translate: -50% -50%;
+  clip-path: polygon(0 60%, 14% 20%, 30% 34%, 42% 0, 58% 0, 70% 34%, 86% 20%, 100% 60%, 82% 100%, 18% 100%);
+  box-sizing: border-box;
+  border-bottom: 4vmin solid var(--pal-red-600);
+  background: var(--pal-slate-400);
+}
+
+.fx-takeover .takeover-art-convoy {
+  animation: fx-art-convoy var(--fx-land) var(--ease-in) both;
+}
+
+.fx-takeover .takeover-art-magma {
+  animation: fx-art-magma var(--fx-land) var(--ease-out) both;
+}
+
+.fx-takeover .takeover-art-hull {
+  animation: fx-art-hull var(--fx-land) var(--ease-overshoot) both;
+}
+
+@keyframes fx-art-convoy {
+  0% {
+    transform: rotate(0deg) scale(1.3);
+    opacity: 1;
+  }
+  60% {
+    transform: rotate(300deg) scale(0.45);
+    opacity: 1;
+  }
+  70%,
+  100% {
+    transform: rotate(330deg) scale(0.4);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-art-magma {
+  0%,
+  62% {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  80%,
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fx-art-hull {
+  0%,
+  78% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
     opacity: 1;
   }
 }
@@ -7783,6 +9736,69 @@ div.fx-takeover-art > svg {
   94%,
   100% {
     opacity: 1;
+  }
+}
+
+/* R3399002: Classic+'s four Mythics' looks, each drawn as a picture of its own (takeoverArt.ts
+   `TAKEOVER_ART_DRAWINGS`: Zephrys Zealotism's zealot, Portal to the Past's portal, Twice Forward One Step
+   Backwards' stair and Mythic Grape's vineyard), one SVG filling the art layer (`xMidYMid slice`). At rest it
+   stands as drawn, Reduce Motion's still among them; under the live takeover it fades in, holds and fades out
+   by --fx-ms, its "spin" paths turn and its "drift" paths swell toward the viewer, each about the centre of its
+   own box, while "back" and "subject" hold still. It names no card (R202). Transform and opacity only. */
+.takeover-art-drawing {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.takeover-drawing-spin,
+.takeover-drawing-drift {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.fx-takeover .takeover-art-drawing {
+  animation: fx-art-drawing var(--fx-ms) linear both;
+}
+
+.fx-takeover .takeover-drawing-spin {
+  animation: fx-art-drawing-spin var(--fx-ms) linear both;
+}
+
+.fx-takeover .takeover-drawing-drift {
+  animation: fx-art-drawing-drift var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-art-drawing {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.85;
+  }
+  75% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fx-art-drawing-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(150deg);
+  }
+}
+
+@keyframes fx-art-drawing-drift {
+  0% {
+    transform: scale(0.85);
+  }
+  100% {
+    transform: scale(1.3);
   }
 }
 

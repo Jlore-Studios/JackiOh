@@ -60,6 +60,10 @@ const UNION_ORDER: SfxId[] = [
   "windChime", "marketGong", "chalkHush", "porcelainRoar", "bronzeGulp", "modemGuqin", "serverChoir", "dialupStutter",
   "holoBow", "synthPops", "skullMutter", "keyJangle", "caneCrack", "caneThunder", "rootCreak", "chalkGasp",
   "frostPages", "coinCheer", "totemDrums", "templeDie", "golemStomp", "klaxonSlam", "cellSlam", "hangarRev",
+  // R3395000: the signatures of Stinkyscape 001 to 090's Legendaries and Mythics.
+  "vaultHiss", "safeChirp", "stoneChime", "magiChord", "lectureRumble", "pressStamp", "corvetteRoar", "popGasp",
+  "geigerHum", "wireRatchet", "beamWhine", "rattleSteam", "breechBoom", "flakWind", "crunchJackpot", "choirHulls",
+  "hornEcho", "jetSnap", "whiteRing", "hullDrills", "klaxonSputter", "moltenSnarl", "shutterPurr", "venomDrip",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -256,6 +260,31 @@ const DURATION_MS: Record<SfxId, number> = {
   klaxonSlam: 1600,
   cellSlam: 1500,
   hangarRev: 1600,
+  // R3395000.
+  vaultHiss: 1400,
+  safeChirp: 1200,
+  stoneChime: 1600,
+  magiChord: 1500,
+  lectureRumble: 1600,
+  pressStamp: 1300,
+  corvetteRoar: 1450,
+  popGasp: 1200,
+  geigerHum: 1400,
+  wireRatchet: 1600,
+  beamWhine: 1450,
+  rattleSteam: 1350,
+  breechBoom: 1500,
+  flakWind: 1600,
+  crunchJackpot: 1500,
+  choirHulls: 1600,
+  hornEcho: 1500,
+  jetSnap: 1300,
+  whiteRing: 1600,
+  hullDrills: 1500,
+  klaxonSputter: 1600,
+  moltenSnarl: 1500,
+  shutterPurr: 1400,
+  venomDrip: 1400,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];

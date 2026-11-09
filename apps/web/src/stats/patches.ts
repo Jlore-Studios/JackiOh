@@ -1,7 +1,8 @@
 // R1973002: the patches `/stats` can show, as `GET /api/stats/cards` lists them, newest first. A patch is the
 // window the cards share, a major or a patch with its micros and the patches no game was played on (R1973001).
 // R3324000: each offered patch is a tab, the newest always among them, and the newest short of games is
-// collecting. R3324001: the current patch is the newest version listed.
+// collecting. R3324001: the current patch is the newest version listed. R3447000: a card's figures name the patch
+// they were collected on.
 
 import { CATALOG_VERSION } from "@jackioh/cards";
 import type { PublicStatsCardsResponse } from "../net/api.ts";
@@ -39,6 +40,18 @@ export function offeredPatches(patches: readonly PatchWindow[], shown: number): 
 export function isCollecting(patches: readonly PatchWindow[], index: number): boolean {
   const patch = patches[index];
   return index === 0 && patch !== undefined && patch.games < STATS_PATCH_MIN_GAMES;
+}
+
+/**
+ * R3447000: the patch a card's figures were collected on: the listed patch holding the first version they count
+ * (`window.counted`, R1367000), the patch before while a newer one gathers its games, else that version itself.
+ * Null with no window, as from an older server.
+ */
+export function collectedOn(patches: readonly PatchWindow[], counted: readonly string[] | undefined): string | null {
+  const first = counted?.[0];
+  if (first === undefined) return null;
+  const patch = patches[patchIndex(patches, first)];
+  return patch === undefined ? first : patchName(patch);
 }
 
 /** R3324001: the current patch: the newest version the server lists, else the client's own catalog version. */

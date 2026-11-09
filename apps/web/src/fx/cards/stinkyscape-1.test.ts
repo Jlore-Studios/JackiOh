@@ -4,7 +4,10 @@
 // token has a `cast` (or a recipe or set piece of its own), every Field Spell an aura, every hook a drawn
 // motif, and the /dev/fx gallery plays every entry other than `none` as its card's play, a Death, trigger
 // or Activate from its marker, a hidden play or marker keying none (R202). stinkyscape-1.md, the pass's
-// per-card table, holds one row per card of the file that matches it.
+// per-card table, holds one row per card of the file that matches it. R3395000: its Legendaries' and
+// Mythics' signatures, each Entry naming its frame (`signature`, `entrance`, `takeover`) and a bespoke
+// entry's aura; a signature Unit's or Field Spell's play lands with its entrance, which a hidden summon
+// keys no more than a hidden play does.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -12,7 +15,6 @@ import { describe, expect, it } from "vitest";
 import { HIDDEN_ID, planEntries } from "../../game/animations.ts";
 import { galleryCards } from "../../routes/dev/fx.tsx";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
-import { describeEntry } from "../../test/setPass.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { planCardFx, planCardMotif } from "../cardFx.ts";
 import { FX_INTENSITY_SCALE, FX_SET_PASS_FLOOR } from "../constants.ts";
@@ -20,11 +22,11 @@ import { planFx } from "../cues.ts";
 import { createFxMemory } from "../memory.ts";
 import { motifScale } from "../motifs/build.ts";
 import { galleryCardEvents, galleryFieldView, galleryPlayOf, type GalleryCardPlay } from "../motifs/gallery.ts";
-import { isDrawnMotif } from "../motifs/names.ts";
+import { FX_CARD_HOOKS, isDrawnMotif } from "../motifs/names.ts";
 import { hasSetPiece, signatureRunOf } from "../setPieces.ts";
 import type { FxPlanEnv } from "../types.ts";
 import rawTable from "./stinkyscape-1.md?raw";
-import { entryAura, FX_CARD_FILES, parseFxCardTable, type FxCardEntry } from "./tables.ts";
+import { entryAura, FX_CARD_FILES, parseFxCardTable, type FxAuraSpec, type FxCardEntry } from "./tables.ts";
 
 /** The card types whose play is a `cast` the pass holds to one. */
 const CAST_TYPES: ReadonlySet<string> = new Set(["Spell", "Field Spell", "Trap", "Field Trap"]);
@@ -41,6 +43,40 @@ function entryOf(id: string): FxCardEntry {
   return entry;
 }
 
+function auraOf(aura: FxAuraSpec): string {
+  return ["aura", aura.look, aura.scope, aura.palette].filter((part) => part !== undefined).join(" ");
+}
+
+/** An entry's own part as stinkyscape-1.md's Entry column writes it (core.md's form). */
+function describeBody(entry: Exclude<FxCardEntry, { kind: "none" }>): string[] {
+  switch (entry.kind) {
+    case "bespoke":
+      return [`bespoke ${entry.key}`, ...(entry.aura === undefined ? [] : [auraOf(entry.aura)])];
+    case "setPiece":
+      return [`setPiece ${entry.key}`];
+    case "hooks": {
+      const parts: string[] = [];
+      for (const hook of FX_CARD_HOOKS) {
+        const spec = entry.hooks[hook];
+        if (spec === undefined) continue;
+        parts.push([hook, spec.motif, spec.palette, spec.row === "keep" ? "keep" : undefined].filter((part) => part !== undefined).join(" "));
+      }
+      if (entry.aura !== undefined) parts.push(auraOf(entry.aura));
+      return parts;
+    }
+  }
+}
+
+/** An entry as stinkyscape-1.md's Entry column writes it: R3395000 its frame first (`signature`, `entrance <key>`, `takeover <look>`), then its own part. */
+function describeEntry(entry: FxCardEntry): string {
+  if (entry.kind === "none") return `none: ${entry.reason}`;
+  const frame = [
+    ...(entry.signature === true ? ["signature"] : []),
+    ...(entry.entrance === undefined ? [] : [`entrance ${entry.entrance}`]),
+    ...(entry.takeover === undefined ? [] : [`takeover ${entry.takeover}`]),
+  ];
+  return [...frame, ...describeBody(entry)].join("; ");
+}
 
 function envOf(): FxPlanEnv {
   return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
@@ -58,9 +94,9 @@ function draws(defId: string, play: GalleryCardPlay, events: readonly GameEvent[
   for (const planned of planEntries(events, withEvents(view, [...events]), false, undefined, hasSetPiece, signatureRunOf)) {
     env.memory.remember(planned.events);
     if ((play.kind === "board" || play.kind === "hook") && planCardMotif(planned, planned.view, env) !== null) drawn = true;
-    // R3407000: the card's own entry alone, so another card's public entrance (a MAGI landing face up under
-    // Imitated Instrumentality) stays that card's own and is not this play's.
-    if (play.kind === "recipe" && planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }, own) !== null)) drawn = true;
+    // R3395000: an entrance-only signature draws its landing. R3407000: the card's own entry alone, so another
+    // card's public entrance (a MAGI landing face up under Imitated Instrumentality) stays that card's own and is not this play's.
+    if ((play.kind === "recipe" || play.kind === "entrance") && planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }, own) !== null)) drawn = true;
     // R3338000: a Terminus card's set piece is its signature's, a board clear's its wipe's.
     if (play.kind === "setPiece" && (planned.wipe?.by === defId || planned.signature?.by === defId)) drawn = true;
   }
@@ -69,12 +105,15 @@ function draws(defId: string, play: GalleryCardPlay, events: readonly GameEvent[
 
 /**
  * The same stream with its play's, marker's and firing's card read as the sentinel, as the other seat sees a
- * hidden card (R97); R3407000: its own landing too (a signature's entrance), as a hidden card never lands face up.
+ * hidden card (R97); R3407000: its own landing too (a signature's entrance), as a hidden card never lands face
+ * up, and R3395000 any landing of the card its play names, a face-down summon carrying no definition.
  */
 function hidden(events: readonly GameEvent[], defId: string): GameEvent[] {
+  const ids = new Set(events.flatMap((event) => (event.type === "cardPlayed" ? [event.instanceId] : [])));
   return events.map((event) => {
     if (event.type === "summoned" && event.defId === defId) return { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID };
     if (event.type === "cardPlayed" || event.type === "cardResolved") return { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID };
+    if (event.type === "summoned" && ids.has(event.instanceId)) return { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID };
     if (event.type === "hookResolving") return { ...event, sourceId: HIDDEN_ID, defId: HIDDEN_ID };
     if (event.type === "trapFired") return { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID };
     return event;
@@ -126,8 +165,8 @@ describe("R2797000 #2797 Stinkyscape 001 to 090's card animation pass", () => {
     const plays = galleryPlays();
     expect(plays.map(({ id }) => id)).toEqual(IDS.filter((id) => entryOf(id).kind !== "none"));
     expect(galleryCards().filter((card) => TABLE.has(card.defId)).map((card) => card.defId)).toEqual(plays.map(({ id }) => id));
-    // Every play kind the file uses, the hooks' among them.
-    expect(new Set(plays.map(({ play }) => play.kind))).toEqual(new Set(["board", "hook", "recipe", "setPiece"]));
+    // Every play kind the file uses, the hooks' among them, and R3395000 the entrance-only signatures' (Paragon Mk2's and Paragon-X's).
+    expect(new Set(plays.map(({ play }) => play.kind))).toEqual(new Set(["board", "hook", "recipe", "setPiece", "entrance"]));
     for (const { id, play } of plays) {
       const shown = galleryFieldView(id, view);
       expect(draws(id, play, galleryCardEvents(id, play, shown, 1), shown), `${id} ${play.kind}`).toBe(true);

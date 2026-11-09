@@ -17,6 +17,7 @@ import {
   BOARD,
   CARD_POOL,
   COLLECTION_SCREEN,
+  DEALING,
   GAME,
   PLAY_QUEUE,
   PRACTICE_HUD,
@@ -58,6 +59,11 @@ const SCREEN = {
 function practiceUrl(seed: string): string {
   const params = new URLSearchParams({ seed, difficulty: "easy", deck: "random", seat: "p1", pace: "fast" });
   return `/practice?${params.toString()}`;
+}
+
+/** The opening deal flies the hand over the deck pile after `cy.settled()`: axe then measures the cards, not the pile. */
+function dealt(): void {
+  cy.get(DEALING, { timeout: timeouts.animation, log: false }).should("not.exist");
 }
 
 /**
@@ -199,6 +205,7 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
           cy.get(ts(BOARD), { timeout: BOOT_TIMEOUT }).should("be.visible");
           // The opening mulligan (R265), whose card options are a prompt's.
           cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
+          dealt();
           cy.settled();
           expectNoBlockingViolations(at("/practice board"));
         });
@@ -206,6 +213,7 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
         it("hotseat board", () => {
           cy.seedGame({ seed: SEED, a: "01-aggro-a", b: "01-aggro-b" });
           cy.get(ts(GAME), { timeout: timeouts.view }).should("be.visible");
+          dealt();
           cy.settled();
           expectNoBlockingViolations(at("hotseat board"));
         });
