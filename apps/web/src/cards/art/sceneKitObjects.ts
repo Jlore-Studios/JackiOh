@@ -1035,9 +1035,9 @@ function hayBale(at: PartPlace, rng: Rng): KitShape[] {
   const r = between(rng, 4.7, 5.1);
   let straw = "";
   for (let k = 0; k < 6; k += 1) {
-    const x = -6 + k * 1.7 + between(rng, -0.3, 0.3);
+    const x = -6 + k * 1.9 + between(rng, -0.05, 0.05);
     const y = -2 * r + 1.6 + between(rng, 0, 2 * r - 3.4);
-    straw += seg(f, [x, y], [x + between(rng, 1, 1.8), y + between(rng, -0.4, 0.4)], 0.22);
+    straw += seg(f, [x, y], [x + between(rng, 1, 1.6), y + between(rng, -0.4, 0.4)], 0.22);
   }
   let spiral = "";
   for (const k of [0.32, 0.58, 0.82]) spiral += `M${f.p(4.5 - r * k, -r)}A${fmt(f.r(r * k * 0.62))} ${fmt(f.r(r * k))} 0 0 ${f.sweep(1)} ${f.p(4.5, -r - r * k)}L${f.p(4.5, -r - r * k + 0.2)}A${fmt(f.r(r * k * 0.62 - 0.2))} ${fmt(f.r(r * k - 0.2))} 0 0 ${f.sweep(0)} ${f.p(4.5 - r * k + 0.2, -r)}Z`;
@@ -1110,7 +1110,7 @@ function hammock(at: PartPlace, rng: Rng): KitShape[] {
   return [
     shape(f.ellipse(0, 0.2, 10, 0.7), "black", 0.2),
     shape(seg(f, [-13, 0], [-13, top - 0.6], 0.9) + seg(f, [13, 0], [13, top - 0.6], 0.9), "wood-700", 1, INKED),
-    shape(seg(f, [-13, top], [-9, hang], 0.25) + seg(f, [-13, top], [-9, hang + 0.6], 0.25) + seg(f, [13, top], [9, hang], 0.25) + seg(f, [13, top], [9, hang + 0.6], 0.25), "wood-800", 0.9),
+    shape(seg(f, [-13, top], [-9, hang], 0.25) + seg(f, [-13, top + 0.5], [-9, hang + 0.6], 0.25) + seg(f, [13, top], [9, hang], 0.25) + seg(f, [13, top + 0.5], [9, hang + 0.6], 0.25), "wood-800", 0.9),
     shape(cloth(0, 2.4), "red-600", 1, MAIN_INKED),
     shape(cloth(0.9, 0.3) + cloth(2, 0.3), "white", 0.5),
     shape(cloth(1.8, 0.8), "black", 0.18),
@@ -1127,7 +1127,8 @@ function sleepingBag(at: PartPlace, rng: Rng): KitShape[] {
     shape(f.ellipse(0, 0.2, 11.4, 0.7), "black", 0.22),
     shape(`M${f.p(-8, 0)}L${f.p(-8, -height)}L${f.p(9, -height + 0.6)}Q${f.p(11.4, -height * 0.5)} ${f.p(9, 0)}Z`, "blue-700", 1, MAIN_INKED),
     shape(quilt, "slate-900", 0.35),
-    shape(seg(f, [-7.6, -height + 0.6], [8.6, -height + 1.1], 0.35) + f.ellipse(between(rng, 3, 7), -height + 1.4, 0.45, 0.7), "slate-400", 0.9),
+    shape(seg(f, [-7.6, -height + 0.6], [8.6, -height + 1.1], 0.35), "slate-400", 0.9),
+    shape(f.ellipse(between(rng, 3, 7), -height + 1.4, 0.45, 0.7), "slate-400", 0.9),
     shape(f.ellipse(-8.4, -height * 0.5, 3, height * 0.55), "blue-800", 1, INKED),
     shape(f.ellipse(-8.2, -height * 0.5, 1.6, height * 0.32), "slate-900", 0.85),
   ];

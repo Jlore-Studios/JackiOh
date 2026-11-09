@@ -658,7 +658,7 @@ function fox(at: PartPlace, rng: Rng): KitShape[] {
 
 // R3398000: the parts the Core Alt art scenes added.
 
-/** R3398000: a palm standing on the anchor: a ringed trunk curving up and over, five to seven fronds drooping from its crown (main) over darker ones behind, their midribs, and a cluster of coconuts; about 16 wide and 30 tall at scale 1. */
+/** R3398000: a palm standing on the anchor: a ringed trunk curving up and over, five to seven fronds drooping from its crown (main, every other one in a second shape so that no two touching fronds share one) over darker ones behind, their midribs, and a cluster of coconuts spaced clear of each other; about 16 wide and 30 tall at scale 1. */
 function palm(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const height = between(rng, 26, 29);
@@ -675,7 +675,7 @@ function palm(at: PartPlace, rng: Rng): KitShape[] {
     rings += f.band([[x - 1.2 + 0.5 * t, y], [x + 1.2 - 0.5 * t, y - 0.3]], 0.28);
   }
   const fronds = whole(rng, 5, 7);
-  let front = "";
+  const front = ["", ""];
   let back = "";
   let ribs = "";
   for (let k = 0; k < fronds + 2; k += 1) {
@@ -691,20 +691,21 @@ function palm(at: PartPlace, rng: Rng): KitShape[] {
     const leaf = `M${f.p(...base)}Q${f.p(mid[0] + n[0], mid[1] + n[1])} ${f.p(...tip)}Q${f.p(mid[0] - n[0], mid[1] - n[1])} ${f.p(...base)}Z`;
     if (behind) back += leaf;
     else {
-      front += leaf;
+      front[k % 2] += leaf;
       ribs += `M${f.p(...base)}Q${f.p(mid[0] + n[0] * 0.12, mid[1] + n[1] * 0.12)} ${f.p(...tip)}Q${f.p(mid[0] - n[0] * 0.12, mid[1] - n[1] * 0.12)} ${f.p(...base)}Z`;
     }
   }
   const nuts = whole(rng, 2, 3);
   let coconuts = "";
-  for (let k = 0; k < nuts; k += 1) coconuts += f.circle(crown[0] - 1.1 + 1.1 * k, crown[1] + 1.5 + (k % 2) * 0.5, 0.85);
+  for (let k = 0; k < nuts; k += 1) coconuts += f.circle(crown[0] - 1.8 + 1.8 * k, crown[1] + 1.5 + (k % 2) * 0.5, 0.85);
   return [
     shape(f.ellipse(lean * 0.2, 0.3, 4.2, 0.6), "black", 0.2),
     shape(trunk, "wood-600", 1, INKED),
     shape(rings, "wood-800", 0.6),
     shape(back, "green-700", 1, INKED),
     shape(coconuts, "wood-700", 1, INKED),
-    shape(front, "green-500", 1, MAIN_INKED),
+    shape(front[0] ?? "", "green-500", 1, MAIN_INKED),
+    shape(front[1] ?? "", "green-500", 1, MAIN_INKED),
     shape(ribs, "green-900", 0.55),
   ];
 }
