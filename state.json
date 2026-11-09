@@ -16513,11 +16513,6 @@
       "owner": "claude-1",
       "owner_since": "2026-11-09T03:19:34Z",
       "owner_why": "handed off from `claude-6`: `claude-6` is busy: its lanes are all taken",
-      "paused": {
-        "at": "2026-11-09T02:55:38Z",
-        "interrupt": "usage",
-        "provider": "claude-6"
-      },
       "pending_request": false,
       "planned_at": "2026-11-08T09:09:12Z",
       "planned_by": "`claude-2` (claude, `opus`, strong)",
