@@ -36767,7 +36767,9 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-09T10:35:16Z",
         "every": 5,
+        "findings": 0,
         "head": "8fd67f5ebd9daaa3b0647690ac0de3f3d9fd3438",
         "issue": 3471,
         "merged_at": "2026-11-09T10:21:30Z",
@@ -36780,12 +36782,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:ed69648f-1794219960",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42600885336",
         "sha": "f7ec3ec20192b97ac9b6b2c3d97119094881a3df",
         "started_at": "2026-11-09T10:26:23Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: patches ship refused to promote the pending patches",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 166
