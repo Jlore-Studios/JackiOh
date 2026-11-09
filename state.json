@@ -17139,7 +17139,16 @@
       "feedback_since": "2026-11-09T21:06:47Z",
       "issue": 3502,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-7",
+        "rejections": [],
+        "reviews": [],
+        "sha": "ab3de5db3fe835168cd198f30c055adecaf355ef",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
