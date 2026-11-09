@@ -16267,7 +16267,7 @@
       }
     },
     "3493": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "decision": {
         "answer": "1",
@@ -16319,16 +16319,16 @@
       "interruptions": 0,
       "issue": 3483,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
       "provider": "muse",
       "question": "Do you accept the branch as-is on the per-file reading of the criterion (family files shrink 4,280 to 1,910 lines, -2,370, with every other acceptance item green), or do you direct a specific scope expansion to chase net -1,500?",
       "queued_at": "2026-11-09T20:39:14Z",
-      "run_id": "42649693631",
+      "run_id": "pending:6101cd06-1794256866",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "decision",
-      "started_at": "2026-11-09T15:56:25Z",
+      "started_at": "2026-11-09T20:41:46Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16925,9 +16925,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T20:17:43Z",
+    "at": "2026-11-09T20:41:46Z",
     "url": "",
-    "what": "review #3522 on claude-6"
+    "what": "revise #3493 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T20:24:57Z",
