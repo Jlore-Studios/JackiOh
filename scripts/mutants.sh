@@ -67,7 +67,28 @@ card_areas() {
   echo cards-lib
 }
 
-# FILTER (cargo-mutants' arguments that pick the area's mutants) and SIZE for a Rust area.
+# The cards crate reaches its scripts through the registry build.rs writes to OUT_DIR, which
+# cargo-mutants cannot follow: it finds a crate's files by their `mod` lines. So a card set's area
+# runs on a scratch copy of the tree whose cards lib.rs also declares every script as a module no
+# build compiles (`#[cfg(any())]`): cargo-mutants finds the scripts there, and the registry that the
+# copy's own build.rs writes compiles each mutated file. TREE is the copy, made once.
+TREE=
+cards_tree() {
+  [ -z "$TREE" ] || return 0
+  TREE=$(mktemp -d "${TMPDIR:-/tmp}/jackioh-mutants.XXXXXX")
+  trap 'rm -rf "$TREE"' EXIT
+  git ls-files -co --exclude-standard | while IFS= read -r file; do
+    if [ -f "$file" ]; then echo "$file"; fi
+  done | tar -cf - -T - | tar -xf - -C "$TREE"
+  for file in $(git ls-files -co --exclude-standard -- 'crates/cards/src/scripts/*/*.rs'); do
+    rel=${file#crates/cards/src/}
+    module=$(echo "${rel#scripts/}" | sed 's/\.rs$//; s|/|_|')
+    printf '\n#[cfg(any())]\n#[path = "%s"]\nmod mutants_%s;\n' "$rel" "$module"
+  done >>"$TREE/crates/cards/src/lib.rs"
+}
+
+# FILTER (cargo-mutants' arguments that pick the area's mutants, its tree among them) and SIZE for a
+# Rust area.
 rust_area() {
   case "$1" in
     engine) FILTER="-p jackioh-engine" SIZE=$SIZE_ENGINE ;;
@@ -80,7 +101,8 @@ rust_area() {
     cards-lib) FILTER="-p jackioh-cards -e crates/cards/src/scripts/**" SIZE=$SIZE_CARDS ;;
     cards-?*)
       [ -d "crates/cards/src/scripts/${1#cards-}" ] || return 1
-      FILTER="-p jackioh-cards -f crates/cards/src/scripts/${1#cards-}/**" SIZE=$SIZE_CARDS
+      cards_tree
+      FILTER="--dir $TREE -p jackioh-cards -f crates/cards/src/scripts/${1#cards-}/**" SIZE=$SIZE_CARDS
       ;;
     *) return 1 ;;
   esac
@@ -125,7 +147,7 @@ count_lines() {
 run_rust() {
   area=$1 k=$2
   shift 2
-  out=target/mutants/$area
+  out=$ROOT/target/mutants/$area
   total=$(cargo mutants --list $FILTER | count_lines)
   all=$(cargo mutants --list --no-config $FILTER | count_lines)
   n=$(shards "$total" "$SIZE")
@@ -203,14 +225,19 @@ in_diff() {
   base=${1:-origin/main}
   [ $# -lt 1 ] || shift
   [ "${1:-}" != "--" ] || shift
-  out=target/mutants/in-diff
+  out=$ROOT/target/mutants/in-diff
   mkdir -p "$out"
   git diff "$(git merge-base "$base" HEAD)" -- '*.rs' >"$out/diff.patch"
   if ! [ -s "$out/diff.patch" ]; then
     echo "mutants: no Rust line changed since $base"
     return 0
   fi
-  cargo mutants --in-diff "$out/diff.patch" --jobs "$JOBS" --output "$out" "$@"
+  dir=
+  if grep -q '^+++ b/crates/cards/src/scripts/' "$out/diff.patch"; then
+    cards_tree
+    dir="--dir $TREE"
+  fi
+  cargo mutants $dir --in-diff "$out/diff.patch" --jobs "$JOBS" --output "$out" "$@"
 }
 
 list_areas() {

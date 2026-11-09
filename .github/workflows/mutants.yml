@@ -13,7 +13,8 @@
 # k mod n), so the weeks walk every shard of every area in turn. Sunday at 03:17 UTC, three Rust and
 # three web jobs at a time so CI keeps runners, and on demand: `gh workflow run mutants.yml` (every
 # area, this week's shards), `-f area=<area>` for one, `-f shard=<k>` for another week's. A pull
-# request that changes the tooling runs twenty of the run crate's mutants and the Worker's, so a
+# request that changes the tooling runs twenty mutants of the run crate and of a card set (whose
+# scripts only scripts/mutants.sh's copy of the tree lets cargo-mutants find) and the Worker's, so a
 # broken setting shows before it merges.
 name: mutants
 
@@ -37,8 +38,6 @@ on:
       - scripts/mutants.sh
       - apps/web/stryker.config.mjs
       - apps/edge/stryker.config.mjs
-  push:
-    branches: [claude/upbeat-lamport-pn2n7j]
 
 permissions:
   contents: read
@@ -74,10 +73,8 @@ jobs:
           case "$AREA$SHARD" in *[!a-z0-9_-]*) echo "area and shard are names and numbers" >&2; exit 1 ;; esac
           shard=${SHARD:-$(($(date -u +%s) / 604800))}
           size=
-          if [ "$EVENT" = push ]; then
-            rust='["run"]' web='["web-drag","edge"]' shard=0
-          elif [ "$EVENT" = pull_request ]; then
-            rust='["run"]' web='["edge"]' shard=0 size=20
+          if [ "$EVENT" = pull_request ]; then
+            rust='["run","cards"]' web='["edge"]' shard=0 size=20
           elif [ -n "$AREA" ]; then
             case "$AREA" in
               web-* | edge) rust='[]' web="[\"$AREA\"]" ;;
@@ -105,7 +102,7 @@ jobs:
           cache-key: mutants
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-mutants
+          tool: cargo-mutants@27.1.0
       - name: every area's mutants and shards
         run: |
           cargo mutants --version
@@ -136,7 +133,7 @@ jobs:
           cache-key: mutants
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-mutants
+          tool: cargo-mutants@27.1.0
       # Five hours, then the steps below still score and keep what it tested.
       - name: mutants
         timeout-minutes: 300
@@ -171,13 +168,6 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           cache-key: mutants-web
-      - name: Stryker's lock (temporary)
-        run: |
-          pnpm add -D -w --save-exact @stryker-mutator/core @stryker-mutator/vitest-runner
-          git diff --stat
-          echo "STRYKER-LOCK-BEGIN"
-          git diff package.json pnpm-lock.yaml | gzip -9 | base64 -w 100
-          echo "STRYKER-LOCK-END"
       # The web's tests load the engine's WebAssembly module (apps/web/src/test/setup.ts); the
       # Worker's do not.
       - name: the engine's WebAssembly module
