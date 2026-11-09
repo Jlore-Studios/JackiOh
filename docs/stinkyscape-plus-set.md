@@ -42,7 +42,8 @@
   for the Marketplace (SP7).
 - **New mechanics**: Evolve and Evolves, Refresh for Activates (with the old "Refresh mana" renamed
   Replenish), Tipsy X, GIGA, the Warhero Token, Flexible, Frenzy, Evasive, Burn and Toxic. There is
-  also a long tail of verbs only one or two cards use (SP3, E6 to E8).
+  also a long tail of verbs only one or two cards use (SP3, E6 to E8). One system change reaches every
+  set: random cards are unique within an effect (E9).
 - **Patches to shipped cards** (SP4): Jay Fungus, Selective Breeding, Rotten Grape, Money Machine,
   xxFreshJack, Heroic Power and Great Paperclip Theory. Every unit that can't be attacked gains Evasive,
   and every "after this kills a Unit it may attack again" gains Frenzy.
@@ -139,11 +140,15 @@ before any card uses it. The text quoted is the designer's. Defaults follow.
 
 ### E3. Flexible, Evasive and Frenzy
 
-- **Flexible**: "Can be played in the unit row or the back row." The player picks the row as they play
-  it. **Default:** a Flexible Unit in the backrow keeps its stats and abilities. It can't attack unless it
-  has Ranged, and Units can't attack it. Effects that hit the backrow (and Cleave from the backrow lane)
-  can. A Flexible Field Spell in the unit row is a Unit with its printed stats. The part writes the
-  ruling.
+- **Flexible**: "Can be played in the unit row or the back row." The player picks the row as they play it.
+  **The owner's call (2026-11-09):** a Unit in the backrow **can attack and acts as a normal Unit**. It
+  works as Flying's backrow placement already does: a Flying Unit may be played into an empty backrow
+  zone and is a Unit there for every rule (R1081000, R2248000). **Flying Units innately have Flexible.**
+  Flexible is that placement made a keyword of its own, which any card may have, and Flying now grants
+  it rather than carrying the rule itself (same behavior for Flying Units, so no shipped Flying card
+  plays differently). **Default:** a Flexible Field Spell may be played into a unit zone and keeps
+  working there as a Field Spell; one with printed stats (#59 Mass Driver) is also a Unit there, which
+  can be attacked and can attack. The part writes the ruling.
 - **Evasive**: "Same thing as Can't be attacked … Units with Evasive implicitly have Can't Defend …
   A nerf can remove Evasive." It is a keyword. Every shipped card that says "Can't be attacked" gets
   Evasive instead (a catalog migration plus a fragment, since those cards gain Can't Defend).
@@ -208,8 +213,9 @@ Each verb is small, and only a card or two use it, so they share one part.
   nothing, and needs no target choice.
 - **N attacks a turn, only across** (#37 Scorch: "Can attack 10 times per turn. Can only attack the unit
   directly across from this").
-- **Attack riders**: "After this attacks, Freeze it" (#27); "When this attacks, gain +2 attack and take 2
-  damage" (#90); "When this is Frozen, fully heal it" (#90); "Freeze any Unit damaged by this" (#91).
+- **Attack riders**: "When this is Frozen, fully heal it" (#90, a new trigger) and "Freeze any Unit damaged
+  by this" (#91). "After this attacks, Freeze it" (#27) and "When this attacks, gain +2 attack and take 2
+  damage" (#90) are the existing `after_attack` hook (R1849001) and need nothing new.
 - **Activate cooldowns** (#125 Omura: "has a three turn cooldown, e.g., normal activates have a 1 turn
   cooldown"). This is an Activate usable once, then not again for N of its controller's turns.
 - **A per-turn damage pool** (#42 Force Projector, #123 Oct): "The first 5 damage allies would take per turn
@@ -272,7 +278,20 @@ Each verb is small, and only a card or two use it, so they share one part.
   this"; a Grape is a card whose name holds "Grape").
 - **Deck placement**: "Always starts on the bottom of your deck (if multiple cards have this, order is
   random)" and "When your exile has 5 cards cast this (wherever in your deck this is)" (#89 Animosity).
+  **The owner's call (2026-11-09):** after the opening shuffle, every card with this keyword goes to the
+  bottom of the deck, and when several have it they are shuffled among themselves there, in random order
+  (from the game's `Rng`), below every other card.
 - **Cast repeatedly** (#165 Shadiris: "Cast Shadiris Visions twice").
+
+### E9. Random cards are unique
+
+**The owner's call (2026-11-09), a system change:** every effect that generates random cards (adds,
+summons, Discovers, fills, shuffles, casts) draws them **unique**: no card twice within the one effect,
+unless the pool has too few cards left, and only then may it repeat. No card needs to say "unique" any
+more: #96 Open Enrollment and #97 Selective Enrollment lose the word (SP5). The engine's random-card
+pools (`catalog`'s pools, `with_pool_hold`, R2201001) draw without replacement within one effect, from the
+game's `Rng`. The change reaches every shipped card that makes random cards, so the release's fragment
+claims it as a rule (`--rule`), the golden traces are re-blessed and the seed-pinned tests re-pinned.
 
 ## SP4. The patches to shipped cards
 
@@ -293,6 +312,9 @@ All go live with the set, in fullsend 1's one pull request, claimed by its fragm
 
 ## SP5. Fixes to the list
 
+- **`{For AI: …}`** notes in the list are the designer's notes to the builder (the agent building the card),
+  not rules for the game's AI. "{For AI: Voiceline is …}" is a voice line, and "{For AI: look in the patch
+  notes …}" says where the data lives. Each one is binding on the card's part.
 - **Duplicate numbers.** The second card on each reused number moves to the end: #161 Space Invader (the
   second #74), #162 Edwin Van'Spacechief (the second #83), #163 Accelerationist (the second #92), #164 KPIs
   (the second #93), #165 Shadiris (the second #102), #166 Mindustrial Revolution (the second #140).
@@ -308,7 +330,9 @@ All go live with the set, in fullsend 1's one pull request, claimed by its fragm
 - **#50 Graphite**'s "Piece" means Pierce.
 - **#53 Laser Drill**'s Radiant face lists GIGA twice. It is GIGA once.
 - **#69.1** is "Sweet Essence" (the list spells it "Essense").
-- **#133.5 Reignclipse**: "Regin" means Reign. It keeps the list's Tribute 4.
+- **#133.5 Reignclipse**: "Regin" means Reign. **Tribute 3**, not the list's 4 (the owner, 2026-11-09): each
+  Automa-ζ fusion takes its two cards' shared Tribute (Fortnith 1, Sceptumbra 2, Reignclipse 3, as Reign and
+  Eclipse both have Tribute 3).
 - **#142 Call to Chaos (Mindustrial-Swarm Edition)**: "Jlockheed" means Jlockeed, and "Refresh N mana"
   reads Replenish (E5).
 - **#142.1, #142.2**: "Stinkscape+" means Stinkyscape+. #102b Shadiris's "Stinkscape Resources" means the
@@ -317,6 +341,8 @@ All go live with the set, in fullsend 1's one pull request, claimed by its fragm
 - **"Kwzki"** (#98 Doomed Ship) is iKwzki (S #110), the one beside Shockwave447 (S #111) and xxFreshJack
   (S #109).
 - **#7 Churnwalker**'s Radiant "Cry:" lost its "Choose one". It is the same choice.
+- **#96 Open Enrollment, #97 Selective Enrollment** lose "unique" from their text: every random card is
+  unique now (E9, the owner's call of 2026-11-09).
 
 ## SP6. Readings, card by card
 
@@ -356,9 +382,9 @@ ruling note.
   random one now and another at the start of each of your turns.
 - **#82 Endless Expedition**: "lose 1 mana" lowers the max mana by 1 for the rest of the game.
 - **#93 KPIs** (#164): "a lower winrate than this" reads the card metrics' winrate of record (M12). A card
-  with no recorded winrate is untouched.
-- **#95, #96, #97** (the tiers): S, A, D and F are the card metrics' tiers of record. "Unique" means no
-  card twice.
+  with no recorded winrate counts as 50% (the owner, 2026-11-09), and so does KPIs itself when it has none.
+- **#95, #96, #97** (the tiers): S, A, D and F are the card metrics' tiers of record. The cards are unique
+  by E9's rule, which every random card follows.
 - **#98 Doomed Ship**: one of the three pairs at random. The first card goes leftmost and the second
   rightmost.
 - **#121 Toxopid**: "Float reduces mana" is the existing "Float reduces cost". "Friendly Crawlers dying
@@ -417,6 +443,7 @@ only for the issues its `Blocked by` line names. Difficulty follows CLAUDE.md ru
 | E6 | `E6, combat and reaction verbs` | SP3 E6 | E5 | hard |
 | E7 | `E7, board geometry and damage routing` | SP3 E7 | E6 | hard |
 | E8 | `E8, hand, deck and fuse verbs` | SP3 E8 | E7 | hard |
+| E9 | `E9, random cards are unique` | SP3 E9 (the owner's system change) | E8 | hard |
 | S01 | `S01, the patches to shipped cards` | SP4: Jay Fungus, Selective Breeding, Rotten Grape, Money Machine, Heroic Power, Great Paperclip Theory I | E1, E5 | hard |
 | S02 | `S02, the Swarm evolvers` | #2, #27, #27.1, #28, #83, #86, #88, #92, #101, #161 | E1 | medium |
 | S03 | `S03, Swarm rule benders` | #3, #75, #75.1, #87, #93, #163 | E1 | hard |
@@ -443,9 +470,9 @@ only for the issues its `Blocked by` line names. Difficulty follows CLAUDE.md ru
 | S24 | `S24, Call to Chaos (Mindustrial-Swarm Edition)` | #142, #142.1, #142.2 | S01, S02, S03, S08, S13, S16, S21, S22, S23 | hard |
 | S25 | `S25, the seven AI cards` | T-AI-1 to T-AI-7 | S15, S16 | hard |
 | S26 | `S26, the set's look and sound` | all: set mark, chips, `FILTER_TAGS`, the `RELEASES` line, keyword icons (stein, Burn, Toxic, Evolved, GIGA), intro music for every Legendary and Mythic, the voice lines, every face read in the browser | every other S part | hard |
-| R | `R, the release` | the set ships, the AI dealing itself none of it | every other part | hard |
+| R | `R, the release` | the set ships, the AI dealing itself none of it | every other part (E9 included) | hard |
 
-The engine parts form one chain (F → E1 → … → E8). Each one touches the engine's shared surfaces
+The engine parts form one chain (F → E1 → … → E9). Each one touches the engine's shared surfaces
 (`state.rs`, `effects/mod.rs`, `script.rs`, `wire/events.rs`, the keyword tables), and two of them landing
 side by side would conflict on the integration branch, where a parked engine part would leave every card
 part after it without its verbs. The card parts touch their own script files. Each may edit only its own
