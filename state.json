@@ -15600,6 +15600,13 @@
     "3476": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42630242984",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "muse",
+        "since": "2026-11-09T14:17:36Z",
+        "until": "2026-11-09T14:47:36Z"
+      },
       "difficulty_by": {
         "at": "2026-11-09T14:17:23Z",
         "difficulty": "medium",
