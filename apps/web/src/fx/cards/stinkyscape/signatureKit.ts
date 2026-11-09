@@ -98,6 +98,11 @@ export function replace(cues: FxCue[]): CardFxResult {
   return { cues, row: "replace" };
 }
 
+/** R3395001: a beat that draws `cues` in place of its event's own row and of its system moment too. */
+export function replaceMoment(cues: FxCue[]): CardFxResult {
+  return { cues, row: "replace", moment: "replace" };
+}
+
 /** The unit zones of `side` the view shows a card in, in lane order. */
 export function shownUnitZones(view: PlayerView, side: Side): string[] {
   return view[side].units.flatMap((unit, k) => (unit === null ? [] : [testid.zone(side, "units", k + 1)]));

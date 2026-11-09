@@ -592,9 +592,9 @@ motifs most of them played; #3332 laid the frame (R3332000) and each set's pass 
   `magiBoot` grown, Drone Core VIII's conveyor, Drone Core IX's seed pod, Great Paperclip Theory's link);
   five Mythics' own takeovers with art and a still (`vault`, `rod`, `wire`, `whiteDwarf`, `forge`), each
   Mythic's entrance starting after its takeover's hold (`leadMs`, R3405000); and a sound of its own
-  (`audio/signatureCues.ts`). A signature's beat that replaces its event's row replaces its system moment
-  too (R3395001: Tylannt's dial in place of the shared quest banner, the Prototypes'
-  welds in place of the shared fusion). `fx/cards/stinkyscape-1.md`'s Why column holds each card's
+  (`audio/signatureCues.ts`). A beat that opts in (`moment: "replace"`) replaces its event's system moment
+  too (R3395001: Tylannt's dial and the Heist's lock rings in place of the shared quest moment); every
+  other beat draws beside its event's system moment. `fx/cards/stinkyscape-1.md`'s Why column holds each card's
   concept and verdict; `stinkyscape/signatures.test.ts` plays them, from both seats.
 
 ## Set pieces

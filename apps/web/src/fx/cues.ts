@@ -17,7 +17,7 @@ import { sideOf, testid, type Side } from "../game/contract.ts";
 import { armorTookHalf, damageFeel, damageTier, playTier, UNIT_SLAM, type PlayTier } from "../game/damageFeel.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { brandCues } from "./brand.ts";
-import { castOnDrawCues, planCardFxClaim, planCardMotif, planSignatureSweep, planSignatureZone } from "./cardFx.ts";
+import { castOnDrawCues, planCardFx, planCardMotif, planSignatureSweep, planSignatureZone } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
 import { rollCues } from "./rolls.ts";
 import { planSystemMoment, transmuteCues } from "./systemMoments.ts";
@@ -1242,10 +1242,10 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   cues.push(...beats.cues);
   // R2784000: each set's mechanics as a Signature in the motif language (systemMoments.ts), over the
   // entry minus what a card motif, a set piece or a beat already draws, holding nothing.
-  // R3395001: a signature's own beat (cardFx.ts) draws each event it replaces in place of that event's system
-  // moment too, as it does the event's row: Tylannt's dial for the quest's, a Prototype's weld for the fusion's.
-  const signatures = new Map(entry.events.map((event) => [event, planCardFxClaim(event, { entry, view, env, D: entry.durationMs })] as const));
-  const ownMoments = [...signatures].flatMap(([event, claim]) => (claim.signature && claim.result?.row === "replace" ? [event] : []));
+  // R3395001: a card's own beat (cardFx.ts) that says `moment: "replace"` draws its event in place of the
+  // event's system moment too (Tylannt's dial for the quest's); every other beat draws beside the moment.
+  const signatures = new Map(entry.events.map((event) => [event, planCardFx(event, { entry, view, env, D: entry.durationMs })] as const));
+  const ownMoments = [...signatures].flatMap(([event, result]) => (result?.moment === "replace" ? [event] : []));
   const systemSkip = new Set<GameEvent>([
     ...ownMoments,
     ...(motif?.replaces ?? []),
@@ -1261,7 +1261,7 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   const systemReplaced = (event: GameEvent): boolean =>
     replaced(event) || beats.replaces.has(event) || system.replaces.has(event);
   for (const event of entry.events) {
-    const signature = signatures.get(event)?.result ?? null;
+    const signature = signatures.get(event) ?? null;
     if (signature !== null) {
       cues.push(...signature.cues);
       if (signature.row === "replace") continue;

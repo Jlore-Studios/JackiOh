@@ -12,7 +12,7 @@ import { ringCue, tid, tunedBurst } from "../../build.ts";
 import { figureCue, figureTint } from "../../figures.ts";
 import type { FxCue } from "../../types.ts";
 import { FOOT, type CardRecipe, type Entrance } from "../recipe.ts";
-import { cardBack, entranceFigure, handOf, heroAt, lookOf, placeOf, replace, slamAt, slamShake, summonZone } from "./signatureKit.ts";
+import { cardBack, entranceFigure, handOf, heroAt, lookOf, placeOf, replace, replaceMoment, slamAt, slamShake, summonZone } from "./signatureKit.ts";
 
 /** The steel his vault is made of, and the cash it holds. */
 const STEEL = "Physical/steel";
@@ -46,7 +46,8 @@ export const vaultHeist: CardRecipe = (event, p, play) => {
     const at = quest === null ? heroAt(p.view, play.player) : tid(quest);
     const cues: FxCue[] = [figureCue("tumbler", at, figureTint(lookOf(STEEL)), 0, p.D), ringCue(p.D, "spark", at, 0)];
     if ((play.seen.questCompleted ?? 0) <= 1) cues.push({ ...tunedBurst(p.env.intensity, "confetti", at, "area", 0, TUNING.reward), colors: lookOf(CASH).colors });
-    return replace(cues);
+    // R3395001: in place of the shared quest moment too, whose banner alone overran his Mythic ceiling.
+    return replaceMoment(cues);
   }
   if (event.type === "addedToHand") {
     // A reward's card, as a back from his hero: its face is its owner's alone.

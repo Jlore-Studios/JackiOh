@@ -16,7 +16,7 @@ import { figureCue, figureTint } from "../../figures.ts";
 import { motifShot, otherSide } from "../../motifs/build.ts";
 import type { FxCue } from "../../types.ts";
 import { FOOT, type CardRecipe, type Entrance } from "../recipe.ts";
-import { cardAt, cardBack, entranceFigure, handOf, lookOf, replace, slamAt, slamShake, summonZone } from "./signatureKit.ts";
+import { cardAt, cardBack, entranceFigure, handOf, lookOf, replace, replaceMoment, slamAt, slamShake, summonZone } from "./signatureKit.ts";
 
 /** The cash-green of its vault and its lasers. */
 const CASH = "Hustle/cash";
@@ -53,12 +53,12 @@ export const heistLocks: CardRecipe = (event, p, play) => {
   const look = lookOf(CASH);
   const vault = cardAt(p.view, play);
   if (event.type === "questProgressed" && event.instanceId === play.instanceId) {
-    // One ring of the lock turns.
-    return replace([figureCue("lockRings", vault, figureTint(look), 0, p.D, { size: "small" }), ringCue(p.D, "spark", vault, 0)]);
+    // One ring of the lock turns, in place of the shared quest tally too (R3395001).
+    return replaceMoment([figureCue("lockRings", vault, figureTint(look), 0, p.D, { size: "small" }), ringCue(p.D, "spark", vault, 0)]);
   }
   if (event.type === "questCompleted" && event.instanceId === play.instanceId) {
-    // The vault swings open on its reward.
-    return replace([figureCue("lockRings", vault, figureTint(look), 0, p.D), ringCue(p.D, "gold", vault, 0), { kind: "sheen", at: vault, delayMs: 0, durationMs: p.D }]);
+    // The vault swings open on its reward, in place of the shared quest moment too (R3395001).
+    return replaceMoment([figureCue("lockRings", vault, figureTint(look), 0, p.D), ringCue(p.D, "gold", vault, 0), { kind: "sheen", at: vault, delayMs: 0, durationMs: p.D }]);
   }
   if (event.type === "addedToHand" && event.player === play.player) {
     return replace([cardBack(vault, handOf(p.view, event.player), 0, p.D)]);

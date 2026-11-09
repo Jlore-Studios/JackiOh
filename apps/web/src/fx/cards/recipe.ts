@@ -19,8 +19,13 @@ import { hitAnchor } from "../motifs/build.ts";
 
 export type CardFxPlan = { entry: AnimationEntry; view: PlayerView; env: FxPlanEnv; D: number };
 
-/** A recipe's answer: its cues, and whether the event's own row recipe still plays (`keep`) or not. */
-export type CardFxResult = { cues: FxCue[]; row: "keep" | "replace" };
+/**
+ * A recipe's answer: its cues, and whether the event's own row recipe still plays (`keep`) or not.
+ * R3395001: `moment: "replace"` also draws it in place of the event's system moment (systemMoments.ts),
+ * which a recipe opts into beat by beat (Tylannt's dial for the shared quest moment); without it the
+ * system moment draws beside the recipe, as before.
+ */
+export type CardFxResult = { cues: FxCue[]; row: "keep" | "replace"; moment?: "replace" };
 
 export type CardRecipe = (event: GameEvent, p: CardFxPlan, play: FxPlay) => CardFxResult | null;
 

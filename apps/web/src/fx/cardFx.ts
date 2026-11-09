@@ -15,8 +15,7 @@
 // innermost readable play around the one resolving), then an event that names its card as the source
 // (a redirect's or a counter's card, an Activate's, a quest's: `sourceIdOf`), found face up on the board
 // or in a readable event remembered (`signaturePlayOf`). Neither reads a hidden card (R202). It draws
-// beside a whole pile's one wave too (`planSignatureZone`). R3395001: a signature's beat that replaces its
-// event's row replaces that event's system moment too (`planCardFxClaim`, cues.ts).
+// beside a whole pile's one wave too (`planSignatureZone`).
 // R3407000: an entrance and the readable play's own recipe both draw on the `summoned` they both claim (a
 // MAGI's own entrance inside Imitated Instrumentality's boots); the fallback above never joins an entrance.
 
@@ -194,31 +193,17 @@ export function planSignatureSweep(entry: AnimationEntry, view: PlayerView, env:
   return { cues, replaces };
 }
 
-/**
- * R3395001: planCardFx's answer, and whether it is a signature's own beat (its own play's or hook's recipe,
- * or R3389000's claim), which draws an event it replaces in place of that event's system moment too
- * (cues.ts), as it does the event's row. An entrance's lands on a `summoned`, which has no system moment.
- */
-export function planCardFxClaim(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): { result: CardFxResult | null; signature: boolean } {
+export function planCardFx(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): CardFxResult | null {
   const entrance = planEntrance(event, p, table);
   const play = p.env.memory.resolving();
   const key = play === undefined || play.defId === HIDDEN_ID ? undefined : bespokeOf(play.defId, table);
   const own = play === undefined || key === undefined ? null : CARD_RECIPES[key](event, p, play);
-  const signature = play !== undefined && isSignature(table.get(play.defId));
-  if (entrance === null) {
-    if (own !== null) return { result: own, signature };
-    const claimed = signatureFallback(event, p, table);
-    return { result: claimed, signature: claimed !== null };
-  }
-  if (own === null) return { result: entrance, signature: false };
+  if (entrance === null) return own ?? signatureFallback(event, p, table);
+  if (own === null) return entrance;
   // R3407000: an entrance inside a recipe that claims the same summon draws both (a MAGI's own entrance
   // under Imitated Instrumentality's boots, Sanctum's echoes as it rises). The fallback (R3389000) never
   // joins an entrance: a summon with one draws it, as before.
-  return { result: { cues: [...entrance.cues, ...own.cues], row: "replace" }, signature };
-}
-
-export function planCardFx(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): CardFxResult | null {
-  return planCardFxClaim(event, p, table).result;
+  return { cues: [...entrance.cues, ...own.cues], row: "replace" };
 }
 
 /** A motif's cues for one entry, and the entry's events it drew in place of their own row recipe. */

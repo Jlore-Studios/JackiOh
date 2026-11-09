@@ -3,8 +3,8 @@
 // every cue inside its entry plus FX_MAX_TAIL_MS (R200) and naming no card; from the caster's opponent's seat
 // no beat names a hidden card or flies more than a card back (R202); with the effects off nothing draws. The
 // beats that read the board (Siva 2's drips to the Humans, Flak v5's first wave, Beam v5's first hit, the
-// Prototype-X2's welds) keep to what the view shows. R3395001: a signature's own beat replaces the event's
-// system moment too (Tylannt's dial in place of the shared quest moment), and (R3405000's sweep) draws on a
+// Prototype-X2's welds) keep to what the view shows. R3395001: a beat that opts in replaces the event's
+// system moment too (Tylannt's dial in place of the shared quest moment; no other card's), and (R3405000's sweep) draws on a
 // sweep in place of the fog (Flak v5's waves over every enemy Unit). R3405000: a Mythic's entrance starts
 // after its takeover's hold.
 // R3407000: Stinkyscape part two's signature pass as a whole (#3407): every card of it is a signature of its
@@ -33,6 +33,7 @@ import { ENTRANCES } from "../../entrances.ts";
 import { createFxMemory } from "../../memory.ts";
 import { galleryBoardOf, galleryCardEvents, galleryEntry, galleryFieldView, galleryPlayOf } from "../../motifs/gallery.ts";
 import { hasSetPiece } from "../../setPieces.ts";
+import { planSystemMoment } from "../../systemMoments.ts";
 import { entranceCues, TAKEOVER_ART_LOOKS } from "../../takeover.ts";
 import type { FxCue, FxPlanEnv } from "../../types.ts";
 import { ENTRANCE_TRAUMA } from "../recipe.ts";
@@ -260,6 +261,53 @@ describe("R3395000 Stinkyscape 001 to 090's signatures", () => {
     expect(plan("stinkyscape-006").some((cue) => cue.kind === "figure")).toBe(true);
     // A card with no signature keeps the shared quest moment.
     expect(plan("core-002").some((cue) => cue.kind === "banner")).toBe(true);
+  });
+
+  it("R3395001 only a beat that opts in (moment: replace) drops its event's system moment: Red Jade's, the MAGI's and Edge of the Universe's beats draw beside theirs", () => {
+    const D = 500;
+    const magi = (defId: string): PlayerView => {
+      const view = fullBoardView();
+      const backrow = view.you.backrow.map((slot, k) => (k === 1 ? faceUpBackrow("p1", { defId, type: "Field Spell", instanceId: "magi" }) : slot));
+      return { ...view, you: { ...view.you, backrow } };
+    };
+    const marker = (defId: string): GameEvent => ({ type: "hookResolving", sourceId: "magi", defId, controller: "p1", hook: "startOfTurn" });
+    const vote: GameEvent = { type: "voteCast", player: "p1", instanceId: "magi", defId: "stinkyscape-018-1", votes: 1, needed: 3 };
+    const cases: [string, GameEvent, GameEvent, PlayerView][] = [
+      ["meditative-039-4", played("p1", "ex", "meditative-039-4"), { type: "jadeChanged", player: "p1", value: 5 }, fullBoardView()],
+      ["stinkyscape-018-1", marker("stinkyscape-018-1"), vote, magi("stinkyscape-018-1")],
+      ["stinkyscape-018-2", marker("stinkyscape-018-2"), { ...vote, defId: "stinkyscape-018-2" }, magi("stinkyscape-018-2")],
+      ["stinkyscape-018-3", marker("stinkyscape-018-3"), { ...vote, defId: "stinkyscape-018-3" }, magi("stinkyscape-018-3")],
+      ["stinkyscape-148-1", played("p1", "edge", "stinkyscape-148-1"), { type: "fled", player: "p1", opponent: "draw" }, fullBoardView()],
+    ];
+    for (const [defId, play, event, view] of cases) {
+      const envAfter = (): FxPlanEnv => {
+        const env = envOf();
+        env.memory.remember([play, event]);
+        return env;
+      };
+      const entry = { ...galleryEntry([event], view), durationMs: D };
+      // Its own beat draws in place of the row and does not opt out of the moment.
+      const own = planCardFx(event, { entry, view, env: envAfter(), D });
+      expect(own?.row, defId).toBe("replace");
+      expect(own?.moment, defId).toBeUndefined();
+      // So the shared system moment still draws, beside the beat.
+      const moment = planSystemMoment(entry, view, envAfter(), new Set()).cues;
+      expect(moment.length, defId).toBeGreaterThan(0);
+      const cues = planFx(entry, view, envAfter());
+      for (const cue of [...moment, ...(own?.cues ?? [])]) expect(cues, defId).toContainEqual(cue);
+    }
+    // The two that opt in: Tylannt's dial and the Heist's lock rings.
+    const quest: GameEvent = { type: "questCompleted", player: "p1", instanceId: "ex", quest: "Initiation" };
+    expect(run("stinkyscape-006", [quest], D)[0]?.cues.length).toBeGreaterThan(0);
+    const env = envOf();
+    env.memory.remember([played("p1", "ex", "stinkyscape-006"), quest]);
+    expect(planCardFx(quest, { entry: { ...galleryEntry([quest], fullBoardView()), durationMs: D }, view: fullBoardView(), env, D })?.moment).toBe("replace");
+    const progressed: GameEvent = { type: "questProgressed", player: "p1", instanceId: "ex", quest: "Initiation", progress: 1, goal: 3 };
+    for (const step of [progressed, quest]) {
+      const heist = envOf();
+      heist.memory.remember([played("p1", "ex", "stinkyscape-007"), step]);
+      expect(planCardFx(step, { entry: { ...galleryEntry([step], fullBoardView()), durationMs: D }, view: fullBoardView(), env: heist, D })?.moment, step.type).toBe("replace");
+    }
   });
 
   it("R3395001 Flak v5's waves, each a sweep of every enemy Unit, draw its own beat in place of the fog", () => {
