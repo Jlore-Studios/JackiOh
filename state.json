@@ -34377,6 +34377,12 @@
         "number": 3284,
         "title": "Patch: a choice from a hand says what the choice does, as an answer prompt already does",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-09T13:47:47Z",
+        "number": 3482,
+        "title": "Patch: the cost and stats a card test's comment gives a helper card are held to the catalog",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
