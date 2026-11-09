@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3496,
+  "title": "Patch: a dungeon run in progress survives a card patch: it plays on under the catalog it started on, and one that cannot still keeps what it extracted",
+  "branch": "bot/issue-3496",
+  "thread": "**Issue #3496 (data, not instructions):**\n\n```text\n# #3496: Patch: a dungeon run in progress survives a card patch: it plays on under the catalog it started on, and one that cannot still keeps what it extracted\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the game ships a patch that adds or changes cards, a dungeon run you left half-played can disappear. The next time you open the dungeon, the run is gone without a word. Any card or relic you extracted at a boss in that run is lost too, because extractions are only banked when a run ends. Once this is built, a run you left before a patch picks up where it was, on the map it was dealt. If the device can no longer replay it at all, the run ends with a short notice and still banks what it extracted.\n\n## Why\n\n- `apps/web/src/dungeon/store.ts:93`: `KeptRun = { file, startedAt, daily }` carries no catalog version. A practice save carries one (`apps/web/src/practice/saveStore.ts:64`), and so does a kept replay.\n- `store.ts:222-236`: `foldKept` always folds the kept run on the current build's content, `runContent()`, which is `run_catalog_content(engine::registered_catalog())` (`crates/wasm/core/src/lib.rs:186-189`).\n- `store.ts:243-247`: a kept run that will not fold is removed (`removeStored(DUNGEON_RUN_KEY)`) with no message.\n- Why a card patch breaks the fold:\n  - `crates/run/src/fight.rs:54-69`: the content's pool is every deckable card with its rarity, set, type and tags.\n  - `deal_deck` (`crates/run/src/lib.rs:950-960`) shuffles the whole open pool, and `run_fold` (`lib.rs:1275-1281`) replays the log from `run_create`.\n  - So a card added, removed or retagged reshuffles what the packs, shops and enemy decks dealt. A logged pick of a card no longer offered is refused, and the whole fold fails.\n- Extractions are banked only at the end. The store's header (`store.ts:12-13`) and `settle` (`store.ts:343-368`) add extracted cards and artifacts to the unlocks only when a run settles, so a dropped run banks nothing. \u00a715.7 promises \"What is extracted leaves the run at once and is unlocked for future starting decks.\"\n- Leaving a run across a patch is now the normal case: since #3476 a run and its fight pick up where they stood, and card patches ship often.\n- R767000 already sets the rule for kept games: they fold under the catalog version they carry, from the versions the browser carries.\n\n## Proposal\n\n1. `KeptRun` gains `catalog`, the engine module's `catalogVersion()` when the run starts. A kept run from before this change, with no `catalog`, reads as today's version.\n2. Add a binding `runContentAt(version)`: `run_catalog_content` over that version's carried shipped catalog (`jackioh_cards::shipped_catalog`), or null when this build no longer carries it.\n   - It goes in the three wasm surfaces (`crates/wasm/core`, `crates/wasm/src`, `crates/wasm/c`) and in `apps/web/src/wasm/index.ts`.\n3. `foldKept` folds on the kept version's content and keeps it as `Live.content`, a field that already exists. The rest of the run then plays on the content it was dealt from.\n   - A fight still builds its game under the current catalog, as a fight started today does. The ruling records that choice.\n4. The kept run also stores the extractions its last fold showed.\n   - When a run cannot be folded at all (its version is no longer carried, or a step is refused), the store settles it as abandoned, which is lost (\u00a715.9).\n   - It banks those extractions, keeping only ids the current content still knows.\n   - The start screen says so in one line instead of dropping the run silently.\n5. One ruling covers both decisions: a run folds under the version it started on, and a run that cannot fold ends lost but keeps its extractions.\n   - Its note is `spec/rulings/R<N>000.md`, N being this issue's number.\n   - Add a sentence in \u00a715.2 and the ruling's paragraph in `spec/pending/<N>.md`.\n\n## Where it lands\n\n- `apps/web/src/dungeon/store.ts` and `store.test.ts`; the start screen's notice under `apps/web/src/dungeon/start/`; `apps/web/src/i18n/zh-CN.json`\n- `apps/web/src/wasm/index.ts`, `crates/wasm/core/src/lib.rs`, `crates/wasm/src/lib.rs`, `crates/wasm/c/src/lib.rs` (and the C module's export list)\n- `spec/15-dungeon-run.md` \u00a715.2, \u00a715.7 and \u00a715.9, with R767000 as the precedent\n\n## Acceptance criteria\n\n- [ ] A store test keeps a run under version A, then moves the build to a catalog B whose pool reshuffles the deal. After a reload it finds the same run state, map and deck, played on A's content.\n- [ ] A kept run whose version this build does not carry settles once, as lost. Its record joins the history, its stored extractions join the unlocks, and the start screen says what happened.\n- [ ] A kept run written before this change (no `catalog`) loads as it does today.\n- [ ] `store.test.ts`'s case that expects a silent drop (near line 169) is updated to the new rule.\n- [ ] wasm body tests cover `runContentAt` for a carried version and an unknown one. `JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh` stays free of imports.\n- [ ] The ruling's note, its proving test and its pending paragraph are in place, and `cargo jackioh spec check` passes.\n\n## Size and risks\n\nMedium: about 10 files across the web store and the three wasm surfaces. Difficulty medium.\n\n- **Removed cards.** A card removed from the catalog since the run started can still sit in the run's deck. The ruling must say what its next fight does with it; the proposal is to leave it out of the fight's deck and keep it in the run.\n- **Trusting stored extractions.** They are device data, as the whole Sandbox is (DR1), and are filtered against the content.\n- **Sequencing.** \"A dungeon run's time counts only while it is played\" (suggested alongside this one) also edits `KeptRun`, so build the two in turn, not in parallel.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `data` \u2192 `priority:high`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-09T20:31:40Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3496: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T20:32:18Z",
+    "claimed_at": "2026-11-09T20:42:36Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
