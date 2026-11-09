@@ -15924,6 +15924,7 @@
       "planned_at": "2026-11-09T10:53:27Z",
       "planned_by": "`claude-5` (claude, `opus`, strong)",
       "planned_by_id": "claude-5",
+      "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-5",
       "queued_at": "2026-11-07T17:21:39Z",
