@@ -395,8 +395,10 @@ ruling note.
   Sei & Omura, Vela & Corvus).
 - **#138, #139** "embiggen they have Tribute 1 (2)": once embiggened, the added cards have that Tribute.
   Before that they keep their own.
-- **#142 Call to Chaos**: "Cast 5 Jlockeed cards" casts five random Jlockeed Spells with random targets.
-  The Radiant "!!!" does three distinct effects.
+- **#142 Call to Chaos**: "Cast 5 Jlockeed cards" draws five random Jlockeed cards, Units included (the
+  owner, 2026-11-09): each Spell is cast with random targets and each Unit (or other permanent) is
+  summoned. Its text reads "Summon or cast 5 random Jlockeed cards". The Radiant "!!!" does three distinct
+  effects.
 - **#157 Phantom Shipyard**: Dormant until launched. Its Activate 3 exiles it and launches a Starship
   holding every piece it fused in.
 - **The Enigmata**: from then on, at the start of each player's turn, that player casts a Jogg's Box with
@@ -429,6 +431,22 @@ in its fullsend mode (`bot/README.md`, Fullsend):
 
 No part is titled `(part n of m)`, because the night bot builds those strictly in order. Each part waits
 only for the issues its `Blocked by` line names. Difficulty follows CLAUDE.md rule 11.
+
+**Opened on 2026-11-09:** the tracker #3533; fullsend 1 #3534 with its parts #3535 to #3573; fullsend 2 #3574;
+fullsend 3 #3575.
+
+| Id | Issue | Id | Issue | Id | Issue | Id | Issue |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| F | #3535 | E6 | #3550 | S05 | #3544 | S16 | #3553 |
+| E1 | #3536 | E7 | #3554 | S06 | #3537 | S17 | #3538 |
+| E2 | #3540 | E8 | #3558 | S07 | #3559 | S18 | #3557 |
+| E3 | #3543 | E9 | #3563 | S08 | #3555 | S19 | #3567 |
+| E4 | #3546 | S01 | #3551 | S09 | #3547 | S20 | #3568 |
+| E5 | #3548 | S02 | #3541 | S10 | #3556 | S21 | #3561 |
+| R | #3573 | S03 | #3542 | S11 | #3549 | S22 | #3569 |
+| S26 | #3572 | S04 | #3552 | S12 | #3545 | S23 | #3539 |
+| S24 | #3570 | S25 | #3571 | S13 | #3560 | S14 | #3565 |
+| S15 | #3566 | | | | | | |
 
 ### Fullsend 1: the mechanics, every card and the release
 
