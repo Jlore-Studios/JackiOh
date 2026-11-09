@@ -9,7 +9,7 @@
 // view carries (R243), else from nothing: the card is drawn by its id. The R97 sentinel names no
 // card, so it has no face, and the callers draw a back.
 
-import type { CardDef, CardType, CardView, PlayerView, UnitView } from "@jackioh/shared";
+import type { CardDef, CardType, CardView, PlayerView } from "@jackioh/shared";
 
 import { faceModel, type FaceModel, type RolledPower } from "../cards/index.ts";
 import type { NamedTally } from "../cards/tallies.ts";
@@ -26,11 +26,6 @@ function infoFor(lookup: CardLookup | null, view: PlayerView, defId: string, rad
   const defs = view.defs;
   const fromView = defs !== undefined && defs[defId] !== undefined ? lookupFromDefs(defs)(defId, radiant) : undefined;
   return fromView ?? unknownCard(defId);
-}
-
-/** A unit on the field, as against a card in a pile, a hand or the backrow. */
-export function isUnitView(card: CardView): card is UnitView {
-  return "maxHealth" in card && "keywords" in card;
 }
 
 /** What the view lists about a card beyond its printed face, and the face it makes (R243). */
@@ -63,16 +58,6 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   });
   if (answer.answer !== "face") throw new Error(`the face model answered ${answer.answer} for a card`);
   return answer.face;
-}
-
-/**
- * Every face a view shows, by instance id, in one call: the cards it lists face up on the field, in the piles
- * and in the viewer's own hand (jackioh-shared `face/live.rs`). The sentinel has none.
- */
-export function viewFaces(view: PlayerView): Readonly<Record<string, FaceModel>> {
-  const answer = face({ call: "view", view, locale: getLocale() });
-  if (answer.answer !== "faces") throw new Error(`the face model answered ${answer.answer} for a view`);
-  return answer.faces;
 }
 
 function backrowType(card: CardView): CardType | undefined {

@@ -26,6 +26,7 @@ import {
   createWakeProbe,
   defaultMonotonic,
   defaultTimers,
+  isNumberOrNull,
   letGo,
   nextNonce,
   pageWake,
@@ -87,8 +88,6 @@ export type DuosServerFrame =
   /** R2990000: a watcher's emote, relayed live to both people's seats and to the game's other watchers. */
   | { type: "spectatorEmote"; watcher: string; emote: EmojiEmoteId };
 
-const isTimeOrNull = (value: unknown): value is number | null => value === null || typeof value === "number";
-
 function parseLegal(value: unknown): readonly DuosActionBody[] {
   if (!Array.isArray(value)) return [];
   return value.filter((entry): entry is DuosActionBody => isRecord(entry) && typeof entry.kind === "string");
@@ -128,8 +127,8 @@ export function parseDuosFrame(text: string): DuosServerFrame | null {
       };
     case "clock": {
       const grace = parsed.graceDeadlines;
-      if (typeof parsed.now !== "number" || !isTimeOrNull(parsed.roundDeadline) || !isRecord(grace)) return null;
-      if (!isTimeOrNull(grace.a1) || !isTimeOrNull(grace.a2)) return null;
+      if (typeof parsed.now !== "number" || !isNumberOrNull(parsed.roundDeadline) || !isRecord(grace)) return null;
+      if (!isNumberOrNull(grace.a1) || !isNumberOrNull(grace.a2)) return null;
       return {
         type: "clock",
         now: parsed.now,

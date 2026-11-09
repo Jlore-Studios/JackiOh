@@ -25,7 +25,7 @@ import { flavorEntranceCues } from "./entrances.ts";
 import { flavorExitCues } from "./exits.ts";
 import { attackerOf, flavorLookOf, flavorSourceOf } from "./flavorSource.ts";
 import { FLAVOR_LOOKS, flavorLook } from "./flavors.ts";
-import { ringCue, tunedBurst } from "./build.ts";
+import { bannerCue as banner, frac, ghostCue as ghost, raysCue as rays, ringCue as ring, tid as anchor, tunedBurst, viewportCenter } from "./build.ts";
 import { MOTIF_TUNING } from "./motifs/build.ts";
 import { lookOf, TONE_LOOKS, ZONE_DEFAULT, ZONE_LOOKS, type ZoneLook } from "./looks.ts";
 import type { MotifSpec } from "./motifs/build.ts";
@@ -42,12 +42,10 @@ import { shotCue } from "./stage.ts";
 import { entranceCues, entranceEchoMs, entranceLandMs } from "./takeover.ts";
 import {
   FX_ARMOR_TRAUMA,
-  FX_BANNER_TAIL_MS,
   FX_BURN_AT,
   FX_CAST_SCALE_MAX,
   FX_CAST_SCALE_STEP,
   FX_CAST_TRAUMA,
-  FX_CENTER,
   FX_COUNTER_TRAUMA,
   FX_CRACK_TAIL_MS,
   FX_DEATH_EMBER_AT,
@@ -64,7 +62,6 @@ import {
   FX_HEAL_SPLAT_AT,
   FX_LEGENDARY_TRAUMA,
   FX_LETHAL_LEAD_MAX_MS,
-  FX_MAX_TAIL_MS,
   FX_MIND_CONTROL_FLIGHT_FRACTION,
   FX_MOTIF_PHASES,
   FX_OVERFLOW_FIZZLE_AT,
@@ -72,12 +69,10 @@ import {
   FX_PLAY_MASSIVE_TRAUMA,
   FX_PROJECTILE_FLIGHT_FRACTION,
   FX_RADIANT_BURST_AT,
-  FX_RAYS_TAIL_MS,
   FX_REDIRECT_FLIGHT_FRACTION,
   FX_RESULT_MS,
   FX_RESULT_TRAUMA,
   FX_REWIND_TRAUMA,
-  FX_RING_MS,
   FX_SHAKE_MAX_PX,
   FX_SHOT_LAUNCH_AT,
   FX_SLAM_MAX_TRAUMA,
@@ -90,22 +85,18 @@ import {
 } from "./constants.ts";
 import type {
   FxAnchor,
-  FxBannerTone,
   FxBurstCue,
   FxCardFacts,
   FxCrackCue,
   FxCue,
-  FxGhostCue,
   FxMemory,
   FxOutcome,
   FxPlanEnv,
   FxPoint,
   FxPreset,
   FxProjectileCue,
-  FxRayTone,
   FxRaysCue,
   FxRecipe,
-  FxRingCue,
   FxShakeCue,
   FxSplatCue,
   FxSplatTone,
@@ -203,21 +194,9 @@ const SIDES: readonly Side[] = ["you", "opponent"];
 
 /* Anchors */
 
-function anchor(id: string, at?: FxPoint): FxAnchor {
-  return at === undefined ? { kind: "testid", testid: id } : { kind: "testid", testid: id, at: { x: at.x, y: at.y } };
-}
-
-function viewportCenter(): FxAnchor {
-  return { kind: "viewport", at: { x: FX_CENTER.x, y: FX_CENTER.y } };
-}
-
 const isCard = (tgt: string): boolean => tgt.startsWith("card-");
 const isHandCard = (tgt: string): boolean => tgt.startsWith("hand-card-");
 /* Cue builders */
-
-function frac(fraction: number, durationMs: number): number {
-  return Math.round(fraction * durationMs);
-}
 
 function burst(
   intensity: number,
@@ -247,28 +226,12 @@ function projectile(intensity: number, preset: FxPreset, from: FxAnchor, to: FxA
   return { kind: "projectile", preset, from, to, delayMs: 0, flightMs, density: intensity };
 }
 
-function ring(D: number, preset: FxPreset, at: FxAnchor, delayMs: number): FxRingCue {
-  return { kind: "ring", preset, at, delayMs, durationMs: Math.min(FX_RING_MS, D - delayMs + FX_MAX_TAIL_MS) };
-}
-
-function rays(D: number, tone: FxRayTone, at: FxAnchor, delayMs: number): FxRaysCue {
-  return { kind: "rays", tone, at, delayMs, durationMs: D - delayMs + FX_RAYS_TAIL_MS };
-}
-
 function splat(D: number, tone: FxSplatTone, amount: number, at: FxAnchor, delayMs: number): FxSplatCue {
   return { kind: "splat", tone, amount, at, delayMs, durationMs: D - delayMs + FX_SPLAT_HOLD_MS };
 }
 
 function crack(D: number, at: FxAnchor, delayMs: number): FxCrackCue {
   return { kind: "crack", at, delayMs, durationMs: D - delayMs + FX_CRACK_TAIL_MS };
-}
-
-function ghost(D: number, from: FxAnchor, to: FxAnchor): FxGhostCue {
-  return { kind: "ghost", from, to, delayMs: 0, durationMs: D };
-}
-
-function banner(D: number, text: string, tone: FxBannerTone): FxCue {
-  return { kind: "banner", text, tone, delayMs: 0, durationMs: D + FX_BANNER_TAIL_MS };
 }
 
 /** The trauma for a peak shake of `px`: offset is FX_SHAKE_MAX_PX × trauma² (shake.ts) (#57, #185). */
@@ -588,7 +551,7 @@ const shieldBreak: Recipe = (event, p) => {
   const at = anchor(p.tgt);
   const land = frac(FX_MOTIF_PHASES.land, p.D);
   const cues: FxCue[] = [
-    ringCue(p.D, "gold", at, 0),
+    ring(p.D, "gold", at, 0),
     { ...tunedBurst(p.env.intensity, "shard", at, "ring", land, MOTIF_TUNING.small), colors: FLAVOR_LOOKS.Holy.colors },
   ];
   pushShake(cues, p.env.intensity, FX_ARMOR_TRAUMA, land);
