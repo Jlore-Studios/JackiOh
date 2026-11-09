@@ -177,6 +177,45 @@ export function pollWhileVisible(
   };
 }
 
+/**
+ * R3576000: calls `onQuiet(true)` once the tab has stayed hidden for `afterMs`, and `onQuiet(false)` when
+ * it shows again after that; a tab that shows sooner calls nothing. A page that starts hidden counts
+ * from the call. What holds the server awake for a tab nobody looks at (its social socket, its presence
+ * beat) lets go on the first and comes back on the second. Presentation only (CLAUDE.md rule 7). It
+ * returns what stops the timer and the listener.
+ */
+export function quietWhileHidden(onQuiet: (quiet: boolean) => void, afterMs: number): () => void {
+  if (typeof window === "undefined" || typeof document === "undefined") return () => undefined;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let quiet = false;
+  const arm = (): void => {
+    if (timer !== null || quiet) return;
+    timer = setTimeout(() => {
+      timer = null;
+      quiet = true;
+      onQuiet(true);
+    }, afterMs);
+  };
+  const onVisibility = (): void => {
+    if (document.visibilityState === "hidden") {
+      arm();
+      return;
+    }
+    if (timer !== null) clearTimeout(timer);
+    timer = null;
+    if (!quiet) return;
+    quiet = false;
+    onQuiet(false);
+  };
+  document.addEventListener("visibilitychange", onVisibility);
+  if (document.visibilityState === "hidden") arm();
+  return () => {
+    document.removeEventListener("visibilitychange", onVisibility);
+    if (timer !== null) clearTimeout(timer);
+    timer = null;
+  };
+}
+
 export type WakeProbeTarget = {
   readonly readyState: number;
 };
