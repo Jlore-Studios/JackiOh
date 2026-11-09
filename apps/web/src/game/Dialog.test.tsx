@@ -228,7 +228,7 @@ describe("R3220000 the dialog convention", () => {
       expect(text, source).not.toMatch(/\buse(?:BackLayer|ModalKeys|Effect|LayoutEffect)\b|\.focus\(/);
     }
     expect(readSheet("src/game/notices.css")).not.toMatch(/concede-(?:scrim|dialog)/);
-    expect(readSheet("src/practice/practice.css")).not.toMatch(/practice-leave|practice-result-scrim/);
+    expect(readSheet("src/practice/practice.css")).not.toMatch(/practice-leave|practice-result-scrim|practice-result__(title|reason|actions)/);
   });
 });
 

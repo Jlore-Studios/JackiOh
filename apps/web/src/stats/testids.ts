@@ -46,6 +46,8 @@ export const statsTestid = {
   /** R3185000: the card detail's Statistics panel's tier chip and adjusted win rate (beside `INSPECT_STATS`). */
   cardStatsTier: "inspect-stats-tier",
   cardStatsAdjusted: "inspect-stats-adjusted",
+  /** R3447000: the card detail's Statistics panel's patch its figures were collected on. */
+  cardStatsPatch: "inspect-stats-patch",
   /** R3022000: a card's tier (a table row's or a grid item's) and the line under the cards that says what tiers mean. */
   tierCell: "stats-tier-cell",
   tiersNote: "stats-tiers-note",

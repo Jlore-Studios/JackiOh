@@ -14,12 +14,14 @@ import { useEffect, useState, type ReactElement } from "react";
 
 import { earnedOnly } from "../cards/cosmetics.ts";
 import { rereadOwnedCosmetics } from "../cards/ownedFullArt.ts";
+import type { GrantItem } from "../economy/GrantReveal.tsx";
 import { Dialog } from "../game/Dialog.tsx";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { getTokens, redeemCardToken, redeemCosmeticToken, type CosmeticTokenTier, type TokenBarsResponse } from "../net/api.ts";
-import { cosmeticTier, type RegistryCosmetic } from "../shop/shop.ts";
+import { REGISTRY, cosmeticTier, type RegistryCosmetic } from "../shop/shop.ts";
 import { collectionTestid as T } from "./collection.ts";
 import { messageOf } from "../net/errors.ts";
+import { markNewLevels } from "./newLevels.ts";
 
 import "./tokenOffer.css";
 
@@ -131,6 +133,7 @@ export default function TokenOffer({
   held,
   name,
   onRedeemed,
+  onReveal,
 }: {
   token: string;
   spend: TokenSpend;
@@ -138,6 +141,11 @@ export default function TokenOffer({
   /** The item's name in the reader's language, which the question names. */
   name: string;
   onRedeemed: (held: HeldTokens) => void;
+  /**
+   * R3349000: called with the bought level so the preview can reveal the card wearing it. The offer
+   * unmounts on success (the spent token no longer covers it), so the reveal lives with the caller.
+   */
+  onReveal?: (item: GrantItem) => void;
 }): ReactElement | null {
   // Once redeemed the offer is spent: the item shows owned as the re-read answers. R2480000: the
   // press asks first; `asked` puts the focus back on the offer when Cancel or Escape answers.
@@ -168,7 +176,21 @@ export default function TokenOffer({
         setState("redeemed");
         onRedeemed(answer.tokens);
         // A cosmetic's ownership is the owned-cosmetics read; a card's is the collection's own re-read.
-        if (spend.kind === "cosmetic") rereadOwnedCosmetics();
+        if (spend.kind === "cosmetic") {
+          rereadOwnedCosmetics();
+          const entry = REGISTRY.find((cosmetic) => cosmetic.id === spend.cosmeticId);
+          if (entry !== undefined) {
+            // A bought cosmetic reveals the card wearing it, with the caller's preview, before it closes.
+            markNewLevels(token, [{ id: spend.cosmeticId, cardId: spend.cardId ?? null }]);
+            onReveal?.({
+              cosmeticId: spend.cosmeticId,
+              cardId: spend.cardId ?? null,
+              rarity: entry.rarity,
+              chase: entry.chase,
+              name: t(entry.name),
+            });
+          }
+        }
       },
       (cause: unknown) => {
         setState("ready");

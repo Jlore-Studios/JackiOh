@@ -752,7 +752,7 @@ const PLAGUE_NUKE: SceneRecipe = {
       { part: "soldier-fallen", x: 78, y: 80, scale: 1.2, flip: -1 },
     ],
     subject: [
-      { part: "crater", x: 50, y: 80, scale: 0.8 },
+      { part: "blast-crater", x: 50, y: 80, scale: 0.8 },
       { part: "smoke-billow", x: 50, y: 66, scale: 2.4, paint: "green-400" },
       { part: "spores", x: 50, y: 44, scale: 1.6, paint: "lime-200" },
     ],
@@ -1006,7 +1006,7 @@ const BOOK_OF_WILDFIRE: SceneRecipe = {
       { part: "pine", x: 84, y: 72, scale: 1, count: 2, spread: [10, 2], paint: "green-900" },
       { part: "flames", x: 22, y: 70, scale: 1.2 },
       { part: "flames", x: 66, y: 70, scale: 1.1 },
-      { part: "deer", x: 84, y: 76, scale: 1.2 },
+      { part: "leaping-deer", x: 84, y: 76, scale: 1.2 },
     ],
     subject: [
       { part: "tome", x: 50, y: 86, scale: 3, paint: "red-900" },

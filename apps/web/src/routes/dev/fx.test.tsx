@@ -7,9 +7,10 @@
 // R2785000: it plays a card as the fixture set piece, which holds the board until a click skips it.
 // R3332000: it lists every signature by set; R3332001 plays Felinor Fiender's over its Felinors.
 // R3400001: Meditative+'s and Training Grounds' eight signatures, each tile aura standing as its Unit lands.
-// R3389001: Classic's eleven.
+// R3389001: Classic's eleven. R3395000: Stinkyscape 001 to 090's 24.
 // R3407000: Stinkyscape part two's 23, each Unit's look on its tile and each Field Spell's on its zone.
 // R3405001: Meditative's 32, each aura standing where its card stands.
+// R3399000: every Classic+ signature, and R3399001 each signature Unit wearing its own look on its tile.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -26,6 +27,7 @@ import { planFx } from "../../fx/cues.ts";
 import { FLAVOR_SUB_LOOKS, FX_PALETTES } from "../../fx/flavors.ts";
 import { createFxMemory } from "../../fx/memory.ts";
 import {
+  GALLERY_ENTRANCE_LANE,
   GALLERY_SET_PIECE,
   SYSTEM_MOMENTS,
   galleryBoardOf,
@@ -75,8 +77,10 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     // Training-Grounds Golem's signature, which was `none`. R3407000: xxFreshJack's, Megabase's, Edge of the
     // Universe's and the Stinkyscape Golem's signatures, which were `none`. R3405001: Meditative's six
     // signatures that were `none` (Jade Beauty, AI Girlfriend, Keymaster Keenus, Mayor Medinamogger, Prison,
-    // Jlockeed's Headquarters).
-    expect(cards).toHaveLength(661);
+    // Jlockeed's Headquarters). R3399000: Classic+'s 104 (its eight tokens printed Legendary or Mythic that were
+    // `none` are signatures now). R3395000: Tylannt's, Paragon Mk2's and Siva 2's signatures, which were `none`
+    // (Stinkyscape 001 to 090's 97).
+    expect(cards).toHaveLength(672);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
@@ -250,6 +254,32 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     }
   });
 
+  it("R3395000 the gallery lists and plays Stinkyscape 001 to 090's 24 signatures, each aura on its own tile or zone", () => {
+    const ids = ["006", "007", "016", "018", "026", "034", "035", "037", "039", "044", "058", "059", "060", "061", "066", "070", "071", "073", "074", "080", "085", "086", "087", "088"].map((n) => `stinkyscape-${n}`);
+    const stinkyscape = gallerySignatures().find((group) => group.set === "Stinkyscape")?.cards.map((card) => card.defId) ?? [];
+    expect(stinkyscape.filter((defId) => ids.includes(defId))).toEqual(ids);
+    for (const defId of ids) {
+      // Its aura stands where its gallery play lands it: a Unit's on its tile, a Field Spell's in its zone, a Spell's nowhere.
+      const auras = planAuras(galleryFieldView(defId, galleryBoardOf(defId, fullBoardView())), new Map()).filter((aura) => aura.defId === defId);
+      const type = CATALOG[defId]?.type;
+      if (type === "Unit") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["tile", 3]]);
+      else if (type === "Field Spell") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["zone", 1]]);
+      else expect(auras, defId).toEqual([]);
+    }
+    // The rendered gallery offers all 24 and plays one of each kind (fx/cards/stinkyscape/signatures.test.ts plans
+    // every one, fx-signature-stinkyscape-1.cy.tsx draws every one): a Mythic Unit's takeover and entrance, a Field
+    // Spell's landing, a Spell's cast and an entrance alone.
+    render(<FxGallery />);
+    const select = screen.getByTestId(fxGalleryTestid.signature);
+    const offered = [...select.querySelectorAll("option")].map((option) => option.value);
+    for (const defId of ids) expect(offered, defId).toContain(defId);
+    for (const defId of ["stinkyscape-006", "stinkyscape-007", "stinkyscape-034", "stinkyscape-073"]) {
+      fireEvent.change(select, { target: { value: defId } });
+      fireEvent.click(screen.getByTestId(fxGalleryTestid.playSignature));
+      expect(screen.getByTestId("game").querySelector("[data-animating]"), defId).not.toBeNull();
+    }
+  });
+
   it("R3400001 the gallery lists the eight signatures by set and stands each tile aura", () => {
     const signatures = gallerySignatures();
     const of = (set: string): string[] => signatures.find((group) => group.set === set)?.cards.map((card) => card.defId) ?? [];
@@ -420,7 +450,7 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     }
   });
 
-  it("R2795000 the gallery has a play for every Classic+ entry other than none, and each plays its motif, recipe or set piece", () => {
+  it("R2795000 R3399000 the gallery has a play for every Classic+ entry other than none, and each plays its motif, recipe, entrance or set piece", () => {
     render(<FxGallery />);
     const offered = optionsOf(fxGalleryTestid.card);
     const view = fullBoardView();
@@ -439,11 +469,26 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
         env.memory.remember(planned.events);
         // R2797000: a hook's motif draws from its marker under the play, as the board draws it.
         if ((play.kind === "board" || play.kind === "hook") && planCardMotif(planned, planned.view, env) !== null) drawn = true;
-        if (play.kind === "recipe" && planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null)) drawn = true;
+        // R3399000: a signature's recipe, and an entrance alone as its card lands (Top Loser's, Jungle Loser's, Classic Golem's).
+        const keyed = planned.events.some((event) => planCardFx(event, { entry: planned, view: planned.view, env, D: planned.durationMs }) !== null);
+        if ((play.kind === "recipe" || play.kind === "entrance") && keyed) drawn = true;
         // R3338000: a Terminus card's set piece is its signature's, a board clear's its wipe's.
         if (play.kind === "setPiece" && (planned.wipe?.by === defId || planned.signature?.by === defId)) drawn = true;
       }
       expect(drawn, `${defId} ${play.kind}`).toBe(true);
+    }
+  });
+
+  it("R3399000 R3399001 each Classic+ signature Unit's gallery view stands it in its entrance's zone, wearing its tile aura", () => {
+    const view = fullBoardView();
+    const units = galleryCards().filter((card) => card.defId.startsWith("classicplus-") && CATALOG[card.defId]?.type === "Unit" && entryAura(FX_CARD_TABLE.get(card.defId)) !== undefined);
+    expect(units).toHaveLength(13);
+    for (const { defId } of units) {
+      const shown = galleryFieldView(defId, view);
+      expect(shown.you.units[GALLERY_ENTRANCE_LANE - 1], defId).toEqual(expect.objectContaining({ defId }));
+      const auras = planAuras(shown, new Map()).filter((aura) => aura.defId === defId);
+      expect(auras.map((aura) => [aura.side, aura.lane, aura.scope]), defId).toEqual([["you", GALLERY_ENTRANCE_LANE, "tile"]]);
+      expect(planAuras(view, new Map()).some((aura) => aura.defId === defId), defId).toBe(false);
     }
   });
 

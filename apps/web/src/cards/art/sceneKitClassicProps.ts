@@ -238,7 +238,7 @@ function chalice(at: PartPlace, rng: Rng): KitShape[] {
 // Terrain
 
 /** R3352000: a blast crater in the ground centred on the anchor, its shallow hollow shaded on the left and lit on the right about a dark smouldering pit half hidden by its near lip, a rubble rim, a scorch star and thrown rocks round it, about 44 wide and 13 tall at scale 1. */
-function crater(at: PartPlace, rng: Rng): KitShape[] {
+function blastCrater(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   // A point at angle `a` round an ellipse of rx by ry, pushed out by a factor between `lo` and `hi`.
   const round = (a: number, rx: number, ry: number, lo: number, hi: number): Point => {
@@ -350,6 +350,6 @@ export const CLASSIC_PROPS_KIT = {
   web: { category: "objects", draw: web },
   vat: { category: "objects", draw: vat },
   chalice: { category: "objects", draw: chalice },
-  crater: { category: "terrain", draw: crater },
+  "blast-crater": { category: "terrain", draw: blastCrater },
   "spiral-shaft": { category: "terrain", draw: spiralShaft },
 } as const satisfies Readonly<Record<string, KitPart>>;

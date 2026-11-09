@@ -13,6 +13,7 @@ import { __resetSettingsForTests, writeSettings } from "../../settings/store.ts"
 import { parseFxCardTable } from "../cards/tables.ts";
 import { AURA_FADE_IN_MS, AURA_FADE_OUT_MS, AURA_PARTICLE_SHARE, FX_PARTICLE_CAP_MOBILE } from "../constants.ts";
 import { resetFxSettingsForTests, setFxSettings } from "../settings.ts";
+import { resetShedForTests, setShedLevel, setShedPointer } from "../shed.ts";
 import type { FxSurface } from "../surface.ts";
 import type { FxBox, FxFrameSource, FxVisibility } from "../types.ts";
 import AuraLayer, { AURA_CANVAS_TESTID, AURA_LAYER_TESTID, type AuraSeams } from "./AuraLayer.tsx";
@@ -29,6 +30,7 @@ afterEach(() => {
   setReducedMotion(false);
   resetFxSettingsForTests();
   __resetSettingsForTests();
+  resetShedForTests();
   localStorage.clear();
 });
 
@@ -425,5 +427,69 @@ describe("R3337003 an Anomaly's backdrop", () => {
       writeSettings({ reduceMotion: false });
     });
     expect(panel.aura("anomaly-p1")).toHaveAttribute("data-anomaly", "WH");
+  });
+});
+
+describe("R3351000 the living game's shared shed order", () => {
+  it("R3351000 at shed stage 2 the auras far from the pointer halve their motes and the one under it keeps them", () => {
+    resetIds();
+    resetShedForTests();
+    // Two auras in different boxes: the zone aura near, the side aura far.
+    const near: FxBox = { x: 0, y: 0, width: 100, height: 100 };
+    const far: FxBox = { x: 500, y: 500, width: 100, height: 100 };
+    const fx = fakeSeams();
+    fx.seams.measure = (testids) => (testids.length > 2 ? far : near);
+    const view = board([field("p1", "core-014")], [field("p2", "classic-042")]);
+    const m = mount(view, fx);
+    expect(m.auras()).toHaveLength(2);
+    // Each aura draws its whole budget of 24 motes (AURA_MOTES_PER_AURA at normal intensity).
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "48");
+    // Shed to stage 2 with the pointer over the zone aura: the side aura halves.
+    act(() => {
+      setShedLevel(2);
+      setShedPointer({ x: 50, y: 50 });
+    });
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "36");
+    // With no pointer known every aura counts as far.
+    act(() => {
+      setShedPointer(null);
+    });
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "24");
+    // Recovery draws whole again.
+    act(() => {
+      setShedLevel(0);
+    });
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "48");
+  });
+
+  it("R3351000 pointer moves below stage 2 re-render and re-measure nothing", () => {
+    resetIds();
+    resetShedForTests();
+    // Two auras in different boxes: the zone aura near, the side aura far.
+    const near: FxBox = { x: 0, y: 0, width: 100, height: 100 };
+    const far: FxBox = { x: 500, y: 500, width: 100, height: 100 };
+    const fx = fakeSeams();
+    let measures = 0;
+    fx.seams.measure = (testids) => {
+      measures += 1;
+      return testids.length > 2 ? far : near;
+    };
+    const view = board([field("p1", "core-014")], [field("p2", "classic-042")]);
+    const m = mount(view, fx);
+    expect(m.auras()).toHaveLength(2);
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "48");
+    const measured = measures;
+    // Pointer moves at stage 0 change no snapshot: no re-render, no new measure, no mote change.
+    act(() => {
+      setShedPointer({ x: 10, y: 10 });
+    });
+    act(() => {
+      setShedPointer({ x: 600, y: 600 });
+    });
+    act(() => {
+      setShedPointer({ x: 50, y: 50 });
+    });
+    expect(measures).toBe(measured);
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "48");
   });
 });

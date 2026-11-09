@@ -126,7 +126,39 @@ picture, transform and opacity only, behind `prefers-reduced-motion`. Without a 
 byte for byte the still one. Every animated level and the signed one above it wear it (R3015002, as the
 Animated art, the Legendary and the Mythic did, R2715000), a few faces at once (`useArtMotion`). A delivered file is still art: a card with real art draws no moving
 version, so delivering a full-art card's file means delivering its motion too, or the card stops
-moving.
+moving. R3340000: the 21 full-art cards' recipes are hand-written and every other Legendary and Mythic has
+one of its own (`RARE_ART_MOTION`, built by `recipe` from the card's type, tags and set, none drawing a gold
+particle: R2725004), so no Legendary or Mythic borrows a motion by id; `motion.test.ts` lists the ones that
+still would and holds the list empty. Every card keeps the motion it borrowed before.
+
+## Art that lives in play (R3340000)
+
+A card on the board moves its art too, and answers the player (`artLive.ts`, `art/artLive.css`).
+
+- **Who moves.** A board face (a Unit's `MinionFace`, a face-up backrow card's compact `CardFace`) moves its art for an
+  animated or signed level and for every Mythic, in any look, in the one budget of motion slots the hand shares
+  (`motionSlots.ts`, `COSMETIC_FOIL_ANIMATED_MAX`). The slots go to the face under the pointer or focus (and an
+  attacker), then Mythics newest first, Legendaries, then the rest newest first; a freed slot passes on in the same
+  tick; a hidden tab and a face off screen hold still. `animatedFoil`, Reduce motion, the system's setting and Fx
+  intensity (`off` stills all, `low` leaves the first, the Mythics and the Legendaries) still rule. A face that holds
+  no slot draws its still picture.
+- **The layer stack.** A moving board face draws its picture three times, one image each (`CardArt` `live`): the
+  backdrop on `.cf-art` itself (the painter's `part` "backdrop" with a *detached* motion, which draws no particles),
+  the subject over it (`.cf-art-subject`, part "subject") and the motes (`.cf-art-motes`, `particleLayerUri`: the
+  particles alone). So every painter's roles, subject, light and motes, give every card the reactions, and a recipe
+  needs nothing of its own for them. A picture with no parts (a delivered file, a restyle, a Starship's, a Legacy
+  card's, a Battleship's) stays one image and answers as a whole. So does a face that draws depth planes (R3344000, an Epic or rarer face):
+  its planes are its layers, so its window is not split again.
+- **The reactions.** Hover or focus: the subject turns and leans toward the pointer (`--art-aim-x`/`-y` from
+  `aimOf`), the motes scatter and settle. Keyboard focus alone, which has no pointer coordinate, uses a subtle fixed
+  upper-right pose; the pointer's place wins while both are on the face. Press: the subject flinches (`scale`) and
+  springs back on the overshoot curve. `attackDeclared`: the subject swings on the attack's own `--fx-lunge-x/y` and
+  the motes fire. All in `rotate`, `translate`, `scale` and `opacity`, inside the reduced-motion gate, with
+  `motion.css`'s times and curves.
+- **The marks.** A Unit's art wears cracks for the health it is missing (`wear.ts`: `damageLevel`, one more of
+  `ART_WEAR_LEVELS` steps each time, each crack grown from the card's id so a level's cracks start the next
+  level's), a glow in its card's theme colour when buffed (`--art-glow`) and frost when frozen
+  (`ArtWear.tsx`). They read the view's numbers and keywords only, and are still drawings: reduced motion keeps them.
 
 ## Pictures (R2940001)
 
@@ -139,7 +171,8 @@ still a pure function of the card's id, name, tags and type. The cache keys the 
 served for another's. The normal picture's seed is the card's id alone, so every still picture and
 golden hash stands. A later version with a picture of its own adds its own name to `ArtPicture`, so it
 draws apart from every other. A Starship's art, a Legacy card's and a delivered file keep their one picture.
-A Classic+ card offered Alt art draws an alt recipe of its own instead (R3396000, below).
+A Classic+, Meditative+ or Training Grounds card offered Alt art draws an alt recipe of its own instead (R3396000,
+R3397000, below).
 
 ## One picture per variant (R3015002)
 
@@ -545,6 +578,36 @@ Meditative+'s and Training Grounds' pass (#3438) gave its own. Every entry clear
 `meditativeScenes.test.ts` holds the set to all of it, and `meditative-scenes.cy.tsx` shows every Epic, Legendary
 and Mythic entry at hand size and the rest as a contact sheet, at desktop size and at 390x844.
 
+## Meditative+ and Training Grounds Alt art restaged (R3397000)
+
+Each of the 36 Meditative+ and Training Grounds cards offered Alt art (14 and 22) draws an alt recipe of its own,
+written from #3397's brief for it, under Classic+'s rules (above): the same subject and idea in another place, time
+or story moment, read under the card's Alt art seed alone, one picture at every Alt art level. The recipes are
+`meditativePlusAltRecipes.ts` and `trainingGroundsAltRecipes.ts`, spread into `ALT_SCENE_RECIPES` after Classic+'s.
+A Training Grounds card's painter (`trainingGroundsArtUri`) reads its scene under the seed it is given, so its Alt
+art level draws the alt recipe as its normal face draws its own.
+
+- **The family.** A Meditative+ alt keeps the ink line and exactly one red `seal` in the near layer, where the
+  normal picture stamps it, inside the band every face shows; it drops the ink-wash peaks where its brief leaves the
+  mountains (under a lake, in bamboo, on a picnic blanket). A Training Grounds alt keeps the carved-wood line and,
+  as its normal picture, no seal, and leaves the yard wherever its brief does.
+- **The same subject.** A figure both pictures draw is the normal one's person (`normalLookOf`); a person the brief
+  keeps beside it is the extra at the same index in both pictures, with the normal one's head and outfit
+  (`normalExtraLookOf`: Bloodbloom's mage, Dogpile's foe, Group leader's column, Right-Hand Felinor's knight,
+  Seance's recruits, Tutorial Master's recruit, Call to Chaos's instructor); a subject that is a part stays in the
+  subject layer.
+- **Camera and detail.** Classic+'s new camera (the subject moved, rescaled or a figure come or gone); the rarity's
+  floor and the byte ceiling on both faces, far, mid, subject and near layers from Epic up, and Goetzmann Game
+  Design, the one with full-art motion, a layer for each role it moves.
+
+A detail the kit lacks is left out and named in the recipe's comment, never drawn as another part. The briefs added
+thirteen parts: a goat, a deer, a duck and walnuts (`sceneKitNature.ts`); a crater, a sandcastle, a snowman, a
+water wheel and a rowboat (`sceneKitPlaces.ts`, the rowboat apart from the sailing `boat`); and a cork board, a
+washing line, a picnic blanket and a hanging rope (`sceneKitObjects.ts`). KY's Competition shares #3401's split
+`melon`. `setAltScenes.test.tsx` holds every recipe to the rules and every Alt art level's face to its picture and
+its Radiant marks, and `set-alt-scenes.cy.tsx` measures each window against `ALT_PICTURE_CHANGE_MIN` and screenshots
+each normal face beside its Alt art face.
+
 ## Classic's scenes (R3352000)
 
 Classic's pass draws every Classic entry from a recipe of its own, each from its brief (#3352's table), in the art
@@ -570,10 +633,10 @@ outfits (`outfit-harlequin`, `outfit-cloak`, `outfit-spider`) and six held items
 `item-abacus`, `item-cookie`, `item-grapple`, `item-rake`), after the old ones of their kinds in `figureKit.ts`, and
 eighteen scenery parts in a module of their own, `sceneKitClassic.ts` (its props in `sceneKitClassicProps.ts`),
 spread into `SCENE_KIT` after Meditative's: the creatures (`tortoise`, `slime`, `shrimp`, `crawler`, `maw`,
-`skeleton`, `lizard`, `deer`, `mule`), the objects (`pickle`, `sceptre`, `spike-trap`, `tesla-coil`, `web`, `vat`,
-`chalice`), a `crater`, and In Too Deep's `spiral-shaft`, none taking an old part's name. Every Classic entry is off
-the short list, whose cap fell from 157 to 68; `classicScenes.test.ts` holds the recipes to all of it, and
-`classic-scenes.cy.tsx` shows every Epic, Legendary and Mythic scene at hand size, base and Radiant, and a contact
+`skeleton`, `lizard`, `leaping-deer`, `mule`), the objects (`pickle`, `sceptre`, `spike-trap`, `tesla-coil`, `web`,
+`vat`, `chalice`), a `blast-crater`, and In Too Deep's `spiral-shaft`, none taking an old part's name (the deer and
+the crater beside R3397000's `deer` and `crater`, above). Every Classic entry is off the short list, whose cap fell
+from 157 to 68; `classicScenes.test.ts` holds the recipes to all of it, and `classic-scenes.cy.tsx` shows every Epic, Legendary and Mythic scene at hand size, base and Radiant, and a contact
 sheet of the rest, at desktop size and at 390x844.
 
 ## The detail floor (R3331001)

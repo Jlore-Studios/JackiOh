@@ -19,7 +19,9 @@
 // takeover look.
 // R3407000: Stinkyscape part two's six Mythics' own takeover looks join them. R3405000: Meditative's Mythics'
 // twelve join them too ("ascent", "workshop", "brush", "mine", "quarry", "pavilion", "virus", "dojo",
-// "studyHall", "caneRack", "warRoom", "fortress").
+// "studyHall", "caneRack", "warRoom", "fortress"). R3399002: and Classic+'s four Mythics' ("zealot", "portal",
+// "stair", "vineyard"); R3399001: Classic+'s signature permanents wear their own looks, a Unit's on its `tile`.
+// R3395001: Stinkyscape's "vault", "rod", "wire", "whiteDwarf" and "forge" join the Mythics' own takeover looks.
 
 import JSON5 from "json5";
 
@@ -101,6 +103,17 @@ export const OWN_TAKEOVER_LOOKS: Readonly<Record<OwnTakeoverLook, true>> = {
   caneRack: true,
   warRoom: true,
   fortress: true,
+  // R3399002: Classic+'s Mythics'.
+  zealot: true,
+  portal: true,
+  stair: true,
+  vineyard: true,
+  // R3395001: Stinkyscape 001 to 090's five Mythics.
+  vault: true,
+  rod: true,
+  wire: true,
+  whiteDwarf: true,
+  forge: true,
 };
 
 function isOwnTakeoverLook(look: string): look is OwnTakeoverLook {

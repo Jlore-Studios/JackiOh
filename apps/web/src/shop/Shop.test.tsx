@@ -26,6 +26,7 @@ import { skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { expectEmptyState } from "../test/empty.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
+import { grantTestid as G } from "../economy/GrantReveal.tsx";
 import CosmeticPacks from "./CosmeticPacks.tsx";
 import Shop from "./Shop.tsx";
 import {
@@ -834,6 +835,64 @@ describe("#1309 the cosmetic packs", () => {
     expect(screen.queryByTestId(T.chasePick("foil-cracked-ice"))).toBeNull();
   });
 
+  it("R3349000 a cosmetic pack grant shows the card in its new level, rarest last", async () => {
+    const opened = openedCosmeticPack();
+    cosmeticServer({
+      open: {
+        status: 200,
+        body: {
+          ...opened,
+          slots: [
+            {
+              rarity: "Rare",
+              grant: { kind: "cosmetic", cosmeticId: "version-sketch", cosmeticRarity: "Rare", cardId: "core-001", cardGranted: false },
+            },
+            {
+              rarity: "Legendary",
+              grant: {
+                kind: "cosmetic",
+                cosmeticId: "version-full-art",
+                cosmeticRarity: "Legendary",
+                cardId: "core-001",
+                cardGranted: false,
+              },
+            },
+            { rarity: "Common", grant: { kind: "bars" } },
+          ],
+        } satisfies OpenedCosmeticPackResponse,
+      },
+    });
+    render(<CosmeticPacks token={TOKEN} />);
+    await screen.findByTestId(T.unopened);
+    fireEvent.click(screen.getByTestId(T.open));
+    await screen.findByTestId(T.reveal);
+
+    // The Rare sketch first, the Legendary full art last: rarest last, on the card wearing it.
+    const scene = await screen.findByTestId(G.scene);
+    expect(scene).toHaveAttribute("data-treatment", "panel");
+    expect(scene).toHaveAttribute("data-stage", "before");
+    expect(screen.getByTestId(G.name(0))).toHaveTextContent("Sketch · Rare");
+
+    fireEvent.click(scene);
+    expect(scene).toHaveAttribute("data-stage", "after");
+    expect(screen.getByTestId(G.after(0)).querySelector(".cf")).not.toBeNull();
+
+    fireEvent.click(scene);
+    expect(scene).toHaveAttribute("data-treatment", "grow");
+    expect(scene).toHaveAttribute("data-stage", "before");
+    expect(screen.getByTestId(G.name(1))).toHaveTextContent("Full art · Legendary");
+
+    fireEvent.click(scene);
+    expect(scene).toHaveAttribute("data-stage", "after");
+    fireEvent.click(scene);
+    await waitFor(() => {
+      expect(screen.queryByTestId(G.scene)).toBeNull();
+    });
+    // The reveal list stands as the server answered it.
+    expect(screen.getByTestId(T.reveal)).toBeInTheDocument();
+    expect(screen.getByTestId(T.slot(0))).toHaveTextContent("New cosmetic: Sketch");
+  });
+
   it("R1579000 an opened cosmetic pack links to the Collection's cosmetics", async () => {
     cosmeticServer();
     render(<CosmeticPacks token={TOKEN} />);
@@ -1105,11 +1164,46 @@ describe("#1667 the Chase Shard bar", () => {
 
     expect(server.to("POST", "/api/cosmetic-packs/chase")).toHaveLength(1);
     expect(server.to("POST", "/api/cosmetic-packs/chase")[0]?.body).toEqual({ cosmeticId: AURORA.id });
+
+    // The account chase reveals on the panel: a playmat sits on no card, so it grows in instead.
+    const reveal = screen.getByTestId(G.scene);
+    expect(reveal).toHaveAttribute("data-treatment", "grow");
+    expect(screen.getByTestId(G.name(0))).toHaveTextContent("Aurora table · Legendary · Chase");
     expect(shardBar()).toHaveTextContent("0 / 20");
     expect(shardBar()).toHaveAttribute("data-state", "resting");
     expect(shardFill()).toBe("scaleX(0)");
     expect(screen.queryByTestId(T.shardChoice)).toBeNull();
     expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("R3349000 a chase buy takes the screen", async () => {
+    const MOLTEN: RegistryCosmetic = {
+      id: "foil-molten-gold",
+      kind: "foil",
+      name: "Molten gold",
+      rarity: "Legendary",
+      default: false,
+      starter: false,
+      chase: true,
+    };
+    const server = chaseServer();
+    render(<CosmeticPacks token={TOKEN} registry={[MOLTEN]} />);
+    await flush();
+
+    fireEvent.click(screen.getByTestId(T.chasePick(MOLTEN.id)));
+    await flush();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    await flush();
+
+    // A Legendary chase on a card takes the screen in the full-screen view; a tap moves on.
+    const scene = screen.getByTestId(G.scene);
+    expect(scene).toHaveAttribute("data-treatment", "takeover");
+    expect(scene.querySelector('[data-testid="fullscreen-art"]')).not.toBeNull();
+    expect(screen.getByTestId(G.name(0))).toHaveTextContent("Molten gold · Legendary · Chase");
+    fireEvent.click(screen.getByTestId("fullscreen-art"));
+    expect(screen.queryByTestId(G.scene)).toBeNull();
+    expect(server.to("POST", "/api/cosmetic-packs/chase")).toHaveLength(1);
+    expect(screen.queryByTestId(T.shardChoice)).toBeNull();
   });
 
   it("R2683000 the first Buy asks in the row, in the reader's language, with Cancel focused, and sends nothing", async () => {

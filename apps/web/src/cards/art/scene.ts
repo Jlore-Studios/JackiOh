@@ -6,9 +6,10 @@
 // the Radiant face, which only repaints, keeps every shape. `withScene` lays a composed scene into the
 // procedural painter's `ArtSpec`, so every painter that hands it a recipe card prints, moves, splits
 // (Out of frame) and restyles it as it does any other picture. A card with no recipe never reaches
-// here and draws its picture byte for byte. R3396000: a Classic+ card offered Alt art draws an alt
-// recipe of its own (sceneRecipes.ts `ALT_SCENE_RECIPES`) under its Alt art seed alone. Presentation
-// only (CLAUDE.md rule 7): the art reads a card's id, never anything hidden.
+// here and draws its picture byte for byte. R3396000, R3397000: a Classic+, Meditative+ or Training
+// Grounds card offered Alt art draws an alt recipe of its own (sceneRecipes.ts `ALT_SCENE_RECIPES`) under
+// its Alt art seed alone. Presentation only (CLAUDE.md rule 7): the art reads a card's id, never anything
+// hidden.
 
 import { hashId, round2, seededRandom } from "./hash.ts";
 import { drawFigure, type FigureLook, type PoseId, type FigurePartId } from "./figureKit.ts";
@@ -231,9 +232,9 @@ function faded<T extends KitShape>(shape: T, fade: number | undefined): T {
 }
 
 /**
- * The card's recipe, read by its id alone (a picture's own seed keeps the card's), or null. R3396000: a card with an
- * alt recipe draws it under its Alt art seed (`<id>#alt`) alone; every other seed of it, a repaint's among them, keeps
- * its recipe.
+ * The card's recipe, read by its id alone (a picture's own seed keeps the card's), or null. R3396000, R3397000: a
+ * Classic+, Meditative+ or Training Grounds card offered Alt art draws its alt recipe under its Alt art seed
+ * (`<id>#alt`) alone; every other seed of it, a repaint's among them, keeps its recipe.
  */
 export function sceneRecipeOf(seedId: string): SceneRecipe | null {
   const cut = seedId.indexOf(SCENE_SEED_SEPARATOR);

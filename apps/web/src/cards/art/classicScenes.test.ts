@@ -16,7 +16,7 @@ import { proceduralCardArtUri } from "../../patches/cardArt.ts";
 import { FIGURE_DEFAULT_LOOK, FIGURE_KIT, type FigureLook } from "./figureKit.ts";
 import { hashId } from "./hash.ts";
 import { motifFor } from "./motifs.ts";
-import { ART_ROLES, FULL_ART_MOTION } from "./motion.ts";
+import { ART_ROLES, FULL_ART_CARD_MOTION, FULL_ART_MOTION } from "./motion.ts";
 import { artSeedOf } from "./pictures.ts";
 import { artSpec, type ArtSpec } from "./procedural.ts";
 import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } from "./richness.ts";
@@ -211,7 +211,8 @@ describe("R3352000 Classic's scenes", () => {
     expect(extras).toBeGreaterThan(0);
     // The full-art Classic card moves every layer its motion names (R2715001), its props among them: a scene draws no
     // motif glyph or accent, so its props are placements marked `props` (R3390000), never in the subject layer.
-    const fullArt = CLASSIC.filter((card) => FULL_ART_MOTION[card.id] !== undefined);
+    // The full-art cards' own motions (R2715001), not R3340000's recipes for every other Legendary and Mythic.
+    const fullArt = CLASSIC.filter((card) => FULL_ART_CARD_MOTION[card.id] !== undefined);
     expect(fullArt.map((card) => card.id)).toEqual(["classic-090"]);
     for (const card of fullArt) {
       const motion = FULL_ART_MOTION[card.id] ?? null;

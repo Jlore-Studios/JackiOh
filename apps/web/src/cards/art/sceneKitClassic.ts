@@ -315,7 +315,7 @@ function lizard(at: PartPlace, rng: Rng): KitShape[] {
 }
 
 /** R3352000: a deer leaping, facing the way it faces, its hind hooves on the anchor: antlers up, legs stretched fore and aft, a white tail flash, its coat main; about 17 long and 18 tall at scale 1 (antlers included). */
-function deer(at: PartPlace, rng: Rng): KitShape[] {
+function leapingDeer(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
   const reach = between(rng, -0.6, 0.6);
   return [
@@ -375,7 +375,7 @@ export const CLASSIC_KIT = {
   maw: { category: "creatures", draw: maw },
   skeleton: { category: "creatures", draw: skeleton },
   lizard: { category: "creatures", draw: lizard },
-  deer: { category: "creatures", draw: deer },
+  "leaping-deer": { category: "creatures", draw: leapingDeer },
   mule: { category: "creatures", draw: mule },
   // The props (sceneKitClassicProps.ts), after the creatures.
   ...CLASSIC_PROPS_KIT,

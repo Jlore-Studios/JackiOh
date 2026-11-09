@@ -1257,8 +1257,8 @@ sh crates/server/tests/deploy/rehearse.sh             # the container's boot reh
 Two binaries: `tests/server.rs` is the general one over `tests/{api,actor,bots,loops,support}/`, and
 `tests/server_store.rs` the store's, over `tests/store/` and `support/test_app.rs` alone, so that
 `tests/db/run.sh` builds and links only that, the engine, the cards and the AI at opt-level 0 through its
-`PROFILE_FLAGS`, which each of its `cargo` calls repeats (CI's `db (store contract)` job stays under five
-minutes, #3162, #3410). A
+`PROFILE_FLAGS`, which each of its `cargo` calls repeats, each finding the build fresh because every root
+`build.rs` hashes exists (CI's `db (store contract)` job stays under five minutes, #3162, #3410, #3436). A
 `store::` test lives in `server_store` only, and every other area in `server` only. CI's four
 `rust (test server …)` groups split the suite by test name (.github/ci/rust-test.toml says how), so only
 the lib and `server` hold tests whose path has `api::`, and only `server` ones with `api::practice::`.
@@ -1277,6 +1277,15 @@ transaction restores every table when it fails, claims are single-shot). `tests/
 runs every case against `Db::Fake` always and against `Db::Pg` when `DATABASE_URL` is set, which is
 what `tests/db/run.sh` sets, so a change to the store goes there. RLS and triggers are a property of
 real Postgres, so only the three Docker suites check them (CI's `db` job).
+
+`actor::perf` (#3429) plays random-policy matches at once through the actor on the in-memory store, on
+a runtime of `SERVER_PERF_WORKER_THREADS` workers. Daily, `perf_server_holds_its_budgets` holds the
+median action's `submit` round trip (answered only after both seats' views are pushed) to
+`SERVER_PERF_BROADCAST_MS_BUDGET` and the matches finished per second to
+`SERVER_PERF_MATCHES_PER_SECOND_FLOOR` (`config.rs`'s `SERVER_PERF_*`) and prints its table; per pull
+request `perf_server_smoke_plays_matches_at_once` plays `SERVER_PERF_SMOKE_MATCHES` with no budget. It
+is this binary's only daily test: a second `#[ignore = "daily: …"]` here would run beside it under
+`--ignored` and skew its clock.
 
 `tests/export_config.rs` writes `apps/web/src/wire/serverConfig.ts`, the constants the client and e2e
 read; CI fails when a run changes it.
