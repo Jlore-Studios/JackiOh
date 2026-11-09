@@ -15840,8 +15840,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-8",
-      "owner_since": "2026-11-09T09:03:11Z",
-      "owner_why": "its turn came (it conflicts with `main` now), and the lane that approved it resolves it",
+      "owner_since": "2026-11-09T10:27:24Z",
+      "owner_why": "its approval shipped `ef0542ab68f1`, and the last approver owns the merge, so it resolves the conflict",
       "pending_request": false,
       "planned_at": "2026-11-09T01:00:14Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -17853,7 +17853,7 @@
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
-      "queued_at": "2026-11-09T09:03:11Z",
+      "queued_at": "2026-11-09T10:27:24Z",
       "requested_by": "jgoetzmann-bot",
       "requeued": {
         "ef0542ab68f1349b50d839ee5a8b242dfc6c9c11": "cf108f4ccd99f3f122675a2f8cc8a1ccd2d34a28"
@@ -17879,7 +17879,7 @@
         "provider": "claude-8",
         "run": "42590480142"
       },
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-11-09T09:03:39Z",
       "stop_requested": false,
       "taken_asks": [],
