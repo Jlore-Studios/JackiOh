@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3479,
+  "title": "Patch: the practice AI scores a decision by its hand evaluation alone when most of the cards in view are ones its learned network never saw",
+  "branch": "bot/issue-3479",
+  "thread": "**Issue #3479 (data, not instructions):**\n\n```text\n# #3479: Patch: the practice AI scores a decision by its hand evaluation alone when most of the cards in view are ones its learned network never saw\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe practice AI and the ladder bots judge positions partly with a small trained network. It was trained before the Stinkyscape and Training Grounds sets reached AI decks, so it has never seen any of their cards, yet it still gets half the say in every decision. About four in ten of the cards in today's AI decks are cards it has never seen. Once this is built, a decision on a board made mostly of such cards is scored by the hand-written evaluation alone, as decisions involving a Starship already are, until a person retrains the network.\n\n## Why\n\n- `crates/ai/src/learned/weights.json` names `catalog: v0.3.17`. Of its 2,927 keys, none names a Stinkyscape or Training Grounds card. Counted from the file: Core 680, Classic 460, Classic+ 608, Meditative 1,000, Meditative+ 135.\n- It applies at `LEARNED_CORRECTION_SHARE = 0.5` (`crates/ai/src/config.rs:707`) in every 1v1 decision. The only exclusions are a finished game, Duos, the tutorial's opponent and a Starship root (`crates/ai/src/learned.rs:312-318`).\n- R3038003 found this same network, fitted before a set existed, flipping a removal choice by 27 points, and fixed it for Starship decisions only: 'the exception stays right until it has seen a Starship'.\n- Measured in this survey: 494 of 1,200 cards dealt into AI decks (41.2%) are unknown to the network, from 16% to 64% per deck. When it was promoted its whole benefit was small (`config.rs`: +0.010 edge for the full correction and +0.064 at half, over 1,600 paired games), and that was measured before these sets.\n- `unknown_cards` and `Learned::known_card_ids` (`learned.rs:96-153`, R3112002) already count this share for `cargo jackioh positions`, but no decision reads it.\n\n## Proposal\n\n- At a decision's root, beside `holds_starship` (R3038003), compute with `unknown_cards` the share of named cards the network has no row for. Count only what the redacted view shows (own hand, both fields, face-up backrow), so two states that differ only in hidden cards get the same answer.\n- Above a new `LEARNED_MAX_UNKNOWN_SHARE` in `crates/ai/src/config.rs`, a root fact makes `finalist_score_with` return the hand evaluation for every line of that decision, as the Starship root does.\n- Pick the threshold by a screen of hand against learned on today's pool (`cargo jackioh arena`, as `training/improve.md` describes) and record its games, seeds and result in the ruling. If the network still helps at every share, ship no switch and report that.\n- Write a new ruling widening R3038003's reach, with its tests in `crates/ai/tests/ai/learned.rs`.\n\n## Where it lands\n\n`crates/ai/src/learned.rs`, the root's prices in `crates/ai/src/decide.rs`, `crates/ai/src/config.rs`, `crates/ai/tests/ai/learned.rs`; SPEC \u00a79.9 (`spec/09-architecture.md`); a new ruling note.\n\n## Acceptance criteria\n\n- [ ] A test: a root whose view holds mostly Training Grounds or Stinkyscape cards scores every finalist by the hand evaluation exactly.\n- [ ] A test: a Core-only root scores as before (the network's correction at its share).\n- [ ] A test: two states that differ only in hidden cards (the enemy hand, both libraries, face-down cards) give the same root fact.\n- [ ] The screen's games, seeds and result are in the ruling, and `cargo jackioh gate` passes at smoke size.\n- [ ] `cargo test -p jackioh-ai`, clippy, fmt and `cargo jackioh spec check` pass.\n\n## Size and risks\n\nHard, about 5 files and a ruling. The threshold decides how often the network runs at all, and a screen of a few hundred games takes hours on a 4-core machine. This is a stopgap: retraining the network on today's catalog is a person's call (`training/README.md`), and once that is done this switch rarely fires.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-09T13:50:11Z:\n\nApprove\n\n---\nComment by @MaxGoetzmann at 2026-11-09T13:53:12Z:\n\n@jgoetzmann-bot One requirement to add when you plan this: **the switch has to keep working for future sets too.** Stinkyscape and Training Grounds are the sets missing from the network today, but the next set to reach AI decks will be missing in the same way until a person retrains it. That case should need no code change.\n\nConcretely:\n\n- **Base \"unknown\" on the network's own keys, never on a list of sets.** The root fact should come from `unknown_cards(sparse, &network.known_card_ids())` (R3112002) and nothing else. No set ids, set names, card-id prefixes or catalog versions in `learned.rs`, `decide.rs` or `config.rs`. A card from a set added later then counts as unknown on day one, and once the network is retrained on it, it counts as known with no edit.\n- **Don't name today's sets in the rule.** The ruling note and SPEC \u00a79.9 should state the rule as \"a named card the network has no row for\", with Stinkyscape and Training Grounds only as the example the screen measured. The same goes for code comments.\n- **Write tests that survive a retrain.** The \"mostly unknown cards\" test should pick its cards from the catalog by asking the network which ids it lacks, or build them from a fixture network whose key list leaves a card out. Hardcoding Training Grounds or Stinkyscape ids won't do: once someone retrains on those sets, that test would fail, or worse, pass for the wrong reason. Add one test that shows a card id the network has never seen, one that belongs to no set the network was trained on, counts as unknown. That test stands in for \"a set released after this one\".\n- **Make the threshold a share.** `LEARNED_MAX_UNKNOWN_SHARE` is a share of named copies (`unknown / named`), so it doesn't depend on how many sets exist or how big they are. The ruling should record which `catalog:` version of `weights.json` the screen ran against, so a later reader can tell whether the threshold was picked before or after a retrain.\n- **Leave the Starship exception (R3038003) separate.** It covers a mechanic the hand evaluation prices differently, not only unknown cards, so keep it as its own root fact and don't fold it into this one.\n\nThe acceptance criteria above still stand. Add this one: *a test that a card id absent from the network's keys and from every set it was trained on is counted unknown, with no set named in the switch's code path.*\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3479: needs a plan; `claude-1` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T13:53:31Z",
+    "claimed_at": "2026-11-09T14:01:50Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3464 is held for `claude-7` until 09:20 (5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
