@@ -17933,18 +17933,6 @@
         "tiers": {
           "claude": "strong"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          3458,
-          3457
-        ],
-        "ends": "2026-11-09T04:56:12Z",
-        "from_run": "42550765091",
-        "head": "770b7b040a5062b335dfda6db10a0030a2bf660b",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-09T02:56:12Z"
       }
     },
     "3462": {
