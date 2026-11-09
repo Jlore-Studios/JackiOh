@@ -1785,7 +1785,7 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   roll: ["kind", "title", "die", "items", "delayMs", "durationMs"],
   fog: ["kind", "tone", "from", "to", "tint", "icon", "delayMs", "durationMs"],
   zone: ["kind", "at", "tint", "text", "direction", "delayMs", "durationMs"],
-  takeover: ["kind", "look", "tint", "at", "landMs", "delayMs", "durationMs"],
+  takeover: ["kind", "stage", "look", "tint", "at", "landMs", "delayMs", "durationMs"],
   setPiece: ["kind", "shape", "tint", "spin", "side", "at", "holdMs", "delayMs", "durationMs"],
   launch: ["kind", "at", "tint", "size", "countsMs", "igniteMs", "delayMs", "durationMs"],
   ship: ["kind", "move", "at", "tint", "count", "lit", "delayMs", "durationMs"],

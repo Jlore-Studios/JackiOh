@@ -26,6 +26,8 @@
 import { isStinkyscapeArt } from "../cards/art/stinkyscape.ts";
 import { stinkyscapeArtUri } from "../cards/art/svg.ts";
 import { HIDDEN_ID, leadMs, type AnimationEntry } from "../game/animations.ts";
+import { ART_PLANES, artPlaneBackground } from "../cards/art/pictures.ts";
+import { signatureFaceOf } from "../cards/signatureFaces.ts";
 import { sideOf, testid } from "../game/contract.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { frac, raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
@@ -179,12 +181,16 @@ export function entranceCues(entry: AnimationEntry, env: Pick<FxPlanEnv, "intens
   }
   // R2800000: a Mythic whose own wipe is the action's set piece yields its takeover to it.
   if (!mythic || entrance.yielded === true) return cues;
-  const look = takeoverLookOf(entrance.defId, table);
+  const defId = entrance.defId;
+  const name = (CATALOG[defId] ?? entry.view.defs?.[defId])?.name ?? defId;
+  const radiant = entry.events.some((e) => "radiant" in e && (e as { radiant?: boolean }).radiant === true);
+  const look = takeoverLookOf(defId, table);
   const tail = own ? FX_SIGNATURE_TAKEOVER_TAIL_MS : FX_TAKEOVER_TAIL_MS;
   // R3400000: a signature Spell's own takeover fills the screen from its middle, as its recipe draws at the board's centre.
   const art = takeoverArtOf(entrance.defId, table);
   const takeover: FxTakeoverCue = {
     kind: "takeover",
+    stage: entry.setPiece === undefined ? null : { planes: ART_PLANES.map((plane) => artPlaneBackground(defId, plane, radiant)), name, face: signatureFaceOf(defId) },
     look,
     tint: TAKEOVER_TINTS[look],
     at: own ? CENTER : (field ?? at),
