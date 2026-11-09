@@ -24,6 +24,32 @@ export const dungeonMapTestid = {
   hudArtifact: (index: number): string => `dungeon-run-artifact-${String(index)}`,
   /** The score so far. */
   score: "dungeon-run-score",
+  /** #3501: the HUD's Your run button, which opens the panel. */
+  yourRun: "dungeon-run-your-run",
+  /** #3501: the Your run panel. */
+  panel: "dungeon-run-panel",
+  /** #3501: the panel's ✕. */
+  panelClose: "dungeon-run-panel-close",
+  /** #3501: the run's seed, in the panel. */
+  panelSeed: "dungeon-run-panel-seed",
+  /** #3501: the panel's button that copies the seed. */
+  panelSeedCopy: "dungeon-run-panel-seed-copy",
+  /** #3501: the panel's deck grid. */
+  panelDeck: "dungeon-run-panel-deck",
+  /** #3501: one deck card in the panel, by its place in the deck. */
+  panelCard: (index: number): string => `dungeon-run-panel-card-${String(index)}`,
+  /** #3501: the relics the panel lists. */
+  panelArtifacts: "dungeon-run-panel-artifacts",
+  /** #3501: one relic in the panel, by its place in the run's list. */
+  panelArtifact: (index: number): string => `dungeon-run-panel-artifact-${String(index)}`,
+  /** #3501: the blessings the panel lists. */
+  panelBlessings: "dungeon-run-panel-blessings",
+  /** #3501: one blessing in the panel, by its place in the run's list. */
+  panelBlessing: (index: number): string => `dungeon-run-panel-blessing-${String(index)}`,
+  /** #3501: the curses the panel lists. */
+  panelCurses: "dungeon-run-panel-curses",
+  /** #3501: one curse in the panel, by its place in the run's list. */
+  panelCurse: (index: number): string => `dungeon-run-panel-curse-${String(index)}`,
   /** The run's refusal of the last action; role="alert". */
   refusal: "dungeon-run-refusal",
   /** B27: the current act's map. */
@@ -116,6 +142,8 @@ export const dungeonMapTestid = {
   endTurns: "dungeon-run-end-turns",
   /** B31: the Embers the score pays. */
   endEmbers: "dungeon-run-end-embers",
+  /** #3501: the run's seed, on the run-over screen. */
+  endSeed: "dungeon-run-end-seed",
   /** B31: the cards the run extracted. */
   extractedCards: "dungeon-run-extracted-cards",
   /** B31: the relics the run extracted. */

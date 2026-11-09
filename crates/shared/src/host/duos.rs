@@ -25,10 +25,10 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use jackioh_engine::duos::{DuosState, duos_legal_actions, duos_reduce, duos_seats_to_act, duos_view_for};
-use jackioh_engine::mulligan_owed;
 use jackioh_engine::wire::{
     ActionBody, DUOS_SEATS, DuosAction, DuosActionBody, DuosResult, DuosSeat, DuosView,
 };
+use jackioh_engine::{CombatForecast, combat_forecast, mulligan_owed};
 
 use super::bot::r188_forbidden;
 use super::clock::match_ceiling_at;
@@ -226,6 +226,11 @@ pub enum DuosSeatMessage {
     View {
         view: Box<DuosView>,
         legal: Vec<DuosActionBody>,
+        /// R3477000: the engine's forecast of the attacks among `legal` (`DuosHost::forecast`); never a
+        /// watcher's.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        forecast: Option<CombatForecast>,
     },
     /// S6: the deadline the seat is playing against (its round's, its prompt's, or the mulligans'), both
     /// people's disconnect graces, and the host's `now` to measure them by.
@@ -739,6 +744,22 @@ impl DuosHost {
         duos_legal_actions(&self.game, seat)
     }
 
+    /// R3477000: what each attack `seat` is offered now would do, read from its duel's face-up board
+    /// alone (`combat_forecast`, R3100000). Duos offers fewer of a duel's attacks than the duel allows
+    /// (`duos_legal_actions`), so only the entries of the attacks `legal` lists are kept, in its order.
+    pub fn forecast(&self, seat: DuosSeat) -> CombatForecast {
+        let legal = self.legal(seat);
+        let mut forecast = combat_forecast(&self.game.duels[seat.duel()], seat.player());
+        forecast.attacks.retain(|entry| {
+            legal.iter().any(|action| {
+                matches!(action, DuosActionBody::Duel {
+                    body: ActionBody::Attack { attacker_id, target_id },
+                } if *attacker_id == entry.attacker_id && *target_id == entry.target_id)
+            })
+        });
+        forecast
+    }
+
     // Output
 
     fn flush_timers(&mut self) {
@@ -780,7 +801,15 @@ impl DuosHost {
         }
         let legal = self.legal(seat);
         let view = Box::new(self.view_for(seat, now));
-        self.send(seat, DuosSeatMessage::View { view, legal });
+        let forecast = Some(self.forecast(seat));
+        self.send(
+            seat,
+            DuosSeatMessage::View {
+                view,
+                legal,
+                forecast,
+            },
+        );
     }
 
     fn push_clock(&mut self, seat: DuosSeat, now: i64) {

@@ -83,8 +83,11 @@ const CHARACTER_UNITS: Readonly<Record<string, string>> = {
 };
 /** The kit modules #3401 added, which sceneKit.ts spreads into `SCENE_KIT` after Classic+'s and #3393's. */
 const INK_MODULES = [INK_PLACES_KIT, INK_BUILDINGS_KIT, INK_OBJECTS_KIT, INK_CURIOS_KIT, INK_MACHINES_KIT, INK_NATURE_KIT, INK_CREATURES_KIT, INK_CHARACTERS_KIT];
-/** The parts sceneKit.ts draws itself: the first kit's (#3331) and the 199 Core's scenes added after them (R3392000). */
-const FIRST_KIT_PARTS = 56 + 199;
+/**
+ * The parts sceneKit.ts draws itself: the first kit's (#3331), the 199 Core's scenes added after them (R3392000) and the
+ * 81 Stinkyscape's pass added after those (R3391000, classicPlusScenes.test.ts's `STINKYSCAPE_KIT_PARTS`).
+ */
+const FIRST_KIT_PARTS = 56 + 199 + 81;
 /** Where an emblem or the seal may stand, and how big an emblem may be: inside the band every face's window shows (motifs.test.ts's). */
 const SHOWN_BAND = { left: 10, right: 90, top: 22, bottom: 84, size: 8 } as const;
 

@@ -7,7 +7,8 @@
 //! `unspent_mana`, the lethal constants and a ladder bot's `temperature` (R1452) keep their meaning.
 //! 1v1 only: a Duos duel keeps the hand eval (D9, R964000), since the network never saw a team's pool,
 //! and so does the tutorial's opponent (R1012003), whose lessons are scripts written for it, and so does a
-//! decision whose root holds a Starship (R3038003), which the network never saw. The float
+//! decision whose root holds a Starship (R3038003), which the network never saw, and so does one whose
+//! redacted view names mostly cards the network has no row for (R3479000, `unknown_root`). The float
 //! network is `f64`, every loop in one fixed order, ReLU written as comparisons and no libm function:
 //! the determinism the hand eval's own `f64` rests on (D7). A feature key the weights' table lacks is
 //! no input, so a new card's id key is none (D5), but the keys of what it is are
@@ -16,9 +17,12 @@
 
 use jackioh_engine::{AI_TUTORIAL, GameState, Handicap, PlayerId};
 
-use crate::config::{AI_EVAL, AI_EVAL_KIND, EvalKind, LEARNED_CORRECTION_SHARE, LEARNED_REACH, LearnedReach};
+use crate::config::{
+    AI_EVAL, AI_EVAL_KIND, EvalKind, LEARNED_CORRECTION_SHARE, LEARNED_MAX_UNKNOWN_SHARE, LEARNED_REACH,
+    LearnedReach,
+};
 use crate::evaluate::{NextSwing, Prices, evaluate_priced};
-use crate::features::{Features, card_id_of_key, features_of};
+use crate::features::{Features, card_id_of_key, features, features_of};
 
 /// One dense layer of the head: `out = clip(w · input + b)`, `w` row-major `outputs × inputs`.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -150,6 +154,23 @@ pub fn unknown_cards(sparse: &[(String, i32)], known: &[&str]) -> UnknownCards {
         }
     }
     cards
+}
+
+/// R3479000: whether more than `LEARNED_MAX_UNKNOWN_SHARE` of the copies `found` counts name an id the
+/// network has no row for. A count that names no card is no fact.
+pub fn mostly_unknown(found: UnknownCards) -> bool {
+    found.named > 0 && found.unknown as f64 / found.named as f64 > LEARNED_MAX_UNKNOWN_SHARE
+}
+
+/// R3479000: the root's fact, whether `view` names mostly cards `network` has no row for (`unknown_cards`
+/// over `view`'s features, against `known_card_ids`). `view` must already be `seat`'s redaction (R185, as
+/// `features` requires), so no hidden card counts. A card is unknown by `network`'s own keys alone: one a
+/// later network has rows for is known to it with no edit here.
+pub fn unknown_root(view: &GameState, seat: PlayerId, network: &Learned<'_>) -> bool {
+    mostly_unknown(unknown_cards(
+        &features(view, seat).sparse,
+        &network.known_card_ids(),
+    ))
 }
 
 /// The ReLU clipped at one, as comparisons: below zero is zero, above one is one, NaN stays NaN.
@@ -309,10 +330,13 @@ pub fn finalist_score_with(
             // with a 12-card deck, as a Duos duel is one (D9). R3038003: so is a decision that holds a
             // Starship, which the hand eval prices by what it leaves (R2566000) and the network, fitted
             // before the set, reads as any unit and its spent mana: every line of the decision alike.
+            // R3479000: so is a decision whose redacted view names mostly cards the network has no row
+            // for, every line alike.
             if state.result.is_some()
                 || state.players[seat].duos.is_some()
                 || is_tutorial_opponent(state.players[seat].handicap)
                 || prices.starship_root
+                || prices.unknown_root
             {
                 return hand;
             }

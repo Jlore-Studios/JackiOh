@@ -7,7 +7,7 @@
 import type { ReactElement, ReactNode } from "react";
 
 import type { CardDef } from "@jackioh/shared";
-import type { RunAction, RunCard, RunContent, RunPassiveDef, RunState } from "@jackioh/run";
+import type { RunAction, RunCard, RunContent, RunCurseDef, RunPassiveDef, RunState } from "@jackioh/run";
 
 import { CardFace, faceModel } from "../../cards/index.ts";
 import { readerName } from "../../cards/chinese.ts";
@@ -41,6 +41,16 @@ function passiveDef(content: RunContent, id: string): RunPassiveDef | undefined 
 /** A relic's or blessing's name, translated, falling back to its id. */
 export function passiveName(content: RunContent, id: string): string {
   const def = passiveDef(content, id);
+  return def === undefined ? id : t(def.name);
+}
+
+function curseDef(content: RunContent, id: string): RunCurseDef | undefined {
+  return content.curses.find((curse) => curse.id === id);
+}
+
+/** A curse's name, translated, falling back to its id: a record may name one the content dropped. */
+export function curseName(content: RunContent, id: string): string {
+  const def = curseDef(content, id);
   return def === undefined ? id : t(def.name);
 }
 
@@ -155,6 +165,21 @@ export function PassiveChoice({ id, level = null, content }: PassiveChoiceProps)
       {level === null ? null : (
         <span className="dungeon-run-passive__level">{t("Level {level}", { level: String(level) })}</span>
       )}
+      <span className="dungeon-run-passive__text">{t(def.text)}</span>
+    </span>
+  );
+}
+
+/** A curse with its translated name, points and text; an unknown id shows under its id rather than hiding. */
+export function CurseChoice({ id, content }: { id: string; content: RunContent }): ReactElement {
+  const def = curseDef(content, id);
+  if (def === undefined) {
+    return <span className="dungeon-run-passive">{id}</span>;
+  }
+  return (
+    <span className="dungeon-run-passive">
+      <strong className="dungeon-run-passive__name">{t(def.name)}</strong>
+      <span className="dungeon-run-passive__meta">{t("Points: {points}", { points: String(def.points) })}</span>
       <span className="dungeon-run-passive__text">{t(def.text)}</span>
     </span>
   );

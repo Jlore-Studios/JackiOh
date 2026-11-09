@@ -47,13 +47,14 @@ import {
 } from "./scene.ts";
 import { SCENE_KIT } from "./sceneKit.ts";
 import { ALT_SCENE_RECIPES, SCENE_RECIPES, STINKYSCAPE_91_RECIPES } from "./sceneRecipes.ts";
+import { STINKYSCAPE_RECIPES } from "./stinkyscapeRecipes.ts";
 import { legacyArtUri, proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { compositionFor, compositionOf, themeFor } from "./themes.ts";
 import { legacySvg } from "./traininggrounds.ts";
 
 const SVG_PREFIX = "data:image/svg+xml,";
 const PROOFS = ["classic-074", "core-002", "core-098", "core-100", "stinkyscape-015"] as const;
-const SCENERY: readonly KitCategory[] = ["terrain", "architecture", "plants", "creatures", "objects", "weather"];
+const SCENERY: readonly KitCategory[] = ["terrain", "architecture", "plants", "creatures", "objects", "weather", "craft"];
 /** The seeds every part is drawn from, enough to reach each branch its stream picks. */
 const SEEDS = 40;
 const PATH = /^M[-\d. MLQCAZ]+$/;
@@ -241,11 +242,14 @@ describe("R3331000 the five proof cards", () => {
     // R3392000: the proofs and every Core entry draw from a recipe, and every Classic+ entry (R3390000, which
     // classicPlusScenes.test.ts checks); R3393000: so does every Meditative+ and Training Grounds entry
     // (setScenes.test.ts); R3401000: so does every Meditative entry (meditativeScenes.test.ts); R3403000: so do #3403's
-    // Stinkyscape entries (stinkyscape91Scenes.test.ts); R3352000: and every Classic entry (classicScenes.test.ts).
+    // Stinkyscape entries (stinkyscape91Scenes.test.ts); R3391000: so do Stinkyscape's cards 1 to 90 of its pass, which
+    // hold Arg Arg Defender's (stinkyscapeScenes.test.ts); R3352000: and every Classic entry (classicScenes.test.ts).
     const core = Object.values(CATALOG).filter((card) => card.set === "Core").map((card) => card.id);
     const passes = Object.values(CATALOG).filter((card) => card.set === "Meditative+" || card.set === "Training Grounds" || card.set === "Classic").map((card) => card.id);
     const checkedElsewhere = (id: string): boolean => id.startsWith("classicplus-") || id.startsWith("meditative-");
-    expect(Object.keys(SCENE_RECIPES).filter((id) => !checkedElsewhere(id) && !Object.hasOwn(STINKYSCAPE_91_RECIPES, id)).sort()).toEqual([...new Set<string>([...PROOFS, ...core, ...passes])].sort());
+    expect(Object.keys(SCENE_RECIPES).filter((id) => !checkedElsewhere(id) && !Object.hasOwn(STINKYSCAPE_91_RECIPES, id)).sort()).toEqual(
+      [...new Set<string>([...PROOFS, ...core, ...passes, ...Object.keys(STINKYSCAPE_RECIPES)])].sort(),
+    );
     for (const id of PROOFS) {
       const card = def(id);
       const shapes = composeScene(recipe(id), id);

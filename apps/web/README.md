@@ -138,10 +138,10 @@ stays inside. `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`,
 
 Since #3221 (R3221000) the menus' dialogs draw through it too: `SettingsPanel`, the friends panel
 (`FriendsButton`), `ChatPanel`, `ChallengeDialog`, `TokenOffer`'s and the shop's chase question, the
-account's delete question, `/stats`'s card breakdown, `DungeonStats`'s run details, `FieldGuide`,
-`PatchNotes`'s card, `ItemPreview`, `CardCosmeticsView`, `LooksScreen`, `DevButton`'s panel,
-`CommandMenu` and `TutorialResult`. A caller may also give it an `id`, its own `closeTestid` and
-`closeLabel` for the ✕, a `scrimTestid`, `focus` (what takes the focus on open, else the first answer,
+account's delete question, `/stats`'s card breakdown, `DungeonStats`'s run details, the dungeon's Your run
+panel (`RunPanel`), `FieldGuide`, `PatchNotes`'s card, `ItemPreview`, `CardCosmeticsView`, `LooksScreen`,
+`DevButton`'s panel, `CommandMenu` and `TutorialResult`. A caller may also give it an `id`, its own
+`closeTestid` and `closeLabel` for the ✕, a `scrimTestid`, `focus` (what takes the focus on open, else the first answer,
 else the ✕), `panelRef`, a `title` with markup of its own, and answers that are `disabled` or `busy`
 (`aria-busy`), the `cancel` disabled too while a request is out. `sheet` makes it a sheet: centred on a
 wide screen, at the foot of an upright phone and down the right edge of a phone on its side (Settings,
@@ -990,10 +990,15 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   while the Lethal hint setting is on, and the board shows it (`data-lethal-hint` on the game, which
   outlines the enemy hero and End turn, and the `lethal-hint` line "You have lethal") once it shows
   the newest view, never on a replay. Online and hotseat boards never set it.
-- In a lesson the snapshot also adds `forecast`, the engine's `combatForecast(state, human)` (R3100000): what
+- Every snapshot adds `forecast` (R3477000), the engine's `combatForecast(state, human)` (R3100000): what
   each of the human's legal attacks would do, as the board shows it, and whether the attackers that reach the
   enemy hero finish it. It reads nothing the human cannot see, and the tutorial's coach names its attacks by it
-  (`tutorial/advice.ts`), so the client does no combat maths.
+  (`tutorial/advice.ts`), so the client does no combat maths. Outside a lesson the board draws it too: while
+  an attacker is selected or dragged, each legal target with an entry wears a label (`game/AttackOutcome.tsx`,
+  `outcome-<target testid>`) with the damage dealt, the damage taken back, a skull on whichever dies and the
+  struck-through shield mark for a broken Divine Shield; the Show attack outcomes setting (`attackOutcomes`,
+  on by default) hides it. A seat's 1v1 and Duos `view` frames carry the same field (`net.ts`,
+  `duos/socket.ts`), and a watcher's never does.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
 - A question sequence's 60 seconds (Meditative+ #20 KY's Competition, R1563006) are the machine's: an answer carries `timers`
   (`PracticeTimer`, a delay in ms from the answer), the controller keeps each as a timeout and sends `timerFired` when it is
