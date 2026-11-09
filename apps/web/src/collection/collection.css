@@ -1125,3 +1125,28 @@
   gap: var(--space-2);
   width: 128px;
 }
+
+/* R3349000: a card with a newly earned level carries a "new" mark until it is viewed. */
+.tavern.app-shell .collection-card__new {
+  position: absolute;
+  top: 4px;
+  inset-inline-end: 4px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--tavern-gold);
+  color: var(--pal-wood-950);
+  font-size: var(--type-xs);
+  font-weight: 700;
+  pointer-events: none;
+}
+
+/* R3349000: a signed rung signs across its picture, as a signed face does. */
+.tavern.app-shell .collection-strip__picture .cf-signature {
+  position: absolute;
+  z-index: var(--z-raised);
+  left: 6%;
+  right: 6%;
+  bottom: 12%;
+  height: 18%;
+  pointer-events: none;
+}

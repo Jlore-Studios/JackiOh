@@ -860,7 +860,8 @@ fn effect_of(ctx: &mut EffectContext<'_>, compiled: &CompiledEffect) -> Vec<Effe
 /// The resume step a crafted Discover answers: it adds the pick, as Core #7's does.
 const DISCOVER_STEP: &str = "discover";
 
-/// A reveal hat's trigger, in Core #41's shape: the opponent's play of the type, or attack (R883).
+/// A reveal hat's trigger, in Core #41's shape: the opponent's play of the type, or attack (R883), never a
+/// forced one (R121).
 fn reveal_trigger(hat: CraftHatKind, compiled: Vec<CompiledEffect>) -> TriggerDef {
     let (id, on) = match hat {
         CraftHatKind::OpponentPlaysUnit => ("crafted-reveal-unit", vec![GameEventType::CardPlayed]),
@@ -883,8 +884,15 @@ fn reveal_trigger(hat: CraftHatKind, compiled: Vec<CompiledEffect>) -> TriggerDe
             (hat == CraftHatKind::OpponentPlaysUnit && played == CardType::Unit)
                 || (hat == CraftHatKind::OpponentPlaysSpell && played == CardType::Spell)
         }
-        GameEvent::AttackDeclared { attacker_id, .. } => find_instance(ctx.state, attacker_id)
-            .is_some_and(|attacker| attacker.controller == opponent_of(ctx.controller)),
+        // R121: a forced attack is declared by the effect that forces it, not by the opponent, so it never
+        // reveals one.
+        GameEvent::AttackDeclared {
+            attacker_id, forced, ..
+        } => {
+            !*forced
+                && find_instance(ctx.state, attacker_id)
+                    .is_some_and(|attacker| attacker.controller == opponent_of(ctx.controller))
+        }
         _ => false,
     })
 }

@@ -13,9 +13,11 @@ import type { ReactElement } from "react";
 import type { CardDef } from "@jackioh/shared";
 
 import { CardArt, INSPECT_KEY_SHORTCUT, useCardSettings } from "../cards/index.ts";
-import { normalizeCosmetics, wornCosmetics } from "../cards/cosmetics.ts";
+import { normalizeCosmetics, useArtMotion, wornCosmetics } from "../cards/cosmetics.ts";
+import { artMotionOf } from "../cards/fullArt.ts";
+import { FullArtSignature } from "../cards/FullArtSignature.tsx";
 import type { FaceModel } from "../cards/model.ts";
-import { DEFAULT_VARIANT, artPartOf, artPictureOf, levelOf, lookOn } from "../cards/versions.ts";
+import { DEFAULT_VARIANT, artPartOf, artPictureOf, levelOf, lookOfLevel, lookOn } from "../cards/versions.ts";
 import { t } from "../i18n/i18n.ts";
 import { SampleFace } from "./CosmeticLook.tsx";
 import { NO_FULL_ART_ID, collectionTestid as T, type Ladder, type Rung } from "./collection.ts";
@@ -28,12 +30,21 @@ import type { LookHoverTrigger } from "./LookHover.tsx";
  * card's default look across the whole face for those, where the card has one (`lookOn`, the setting's say included).
  */
 export function RungPicture({ def, face, rung }: { def: CardDef; face: FaceModel; rung: Rung }): ReactElement {
-  const { rarityFoil, fullArt } = useCardSettings();
+  const { rarityFoil, fullArt, animatedFoil } = useCardSettings();
   const variant = rung.id === NO_FULL_ART_ID ? DEFAULT_VARIANT : levelOf(rung.id)?.variant;
   const look = variant === DEFAULT_VARIANT ? lookOn(def.id, null, fullArt).version : rung.id;
+  // R3349000: each rung draws its own level's look: a level at or above an animated one moves its picture's own
+  // layers while a motion slot is theirs (the face's rule, `useArtMotion`), and a signed one signs.
+  const { animated, signed } = lookOfLevel(rung.id);
+  const artMotion = useArtMotion(animated && animatedFoil);
+  const motion = artMotion && animated ? artMotionOf(def.id) : null;
   if (look !== null) {
     return (
-      <span className="collection-strip__picture collection-strip__picture--full-art">
+      <span
+        className="collection-strip__picture collection-strip__picture--full-art"
+        data-art-motion={animated ? (artMotion ? "animated" : "static") : undefined}
+        data-signed={signed ? "true" : undefined}
+      >
         <CardArt
           defId={def.id}
           radiant={false}
@@ -43,7 +54,9 @@ export function RungPicture({ def, face, rung }: { def: CardDef; face: FaceModel
           shape="full"
           picture={artPictureOf(look, def.set)}
           part={artPartOf(look)}
+          motion={motion}
         />
+        {signed ? <FullArtSignature name={def.name} defId={def.id} /> : null}
       </span>
     );
   }

@@ -25,8 +25,10 @@ import { CATALOG } from "@jackioh/cards";
 import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
 import EquipButton from "../collection/EquipButton.tsx";
 import { cardNameOf } from "../collection/collection.ts";
+import { markNewLevels } from "../collection/newLevels.ts";
 import { BURST_MS, flightsOf, type RevealItem } from "../economy/bars.ts";
 import FillBar, { useReducedMotion } from "../economy/FillBar.tsx";
+import GrantReveal, { type GrantItem } from "../economy/GrantReveal.tsx";
 import OpeningBars from "../economy/OpeningBars.tsx";
 import RewardReveal from "../economy/RewardReveal.tsx";
 import "../economy/spend.css";
@@ -49,7 +51,7 @@ import { paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { spendOutNow, useSpendOut } from "../net/spending.ts";
 import PackObject from "../packs/PackObject.tsx";
-import { COSMETIC_PACK } from "../packs/packs.ts";
+import { COSMETIC_PACK, orderGrantsRarestLast } from "../packs/packs.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import {
@@ -98,6 +100,10 @@ export default function CosmeticPacks({
     () => cachedRead<OwnedCosmeticsResponse>(token, keptPaths.cosmetics) ?? null,
   );
   const [opened, setOpened] = useState<OpenedCosmeticPackResponse | null>(null);
+  // R3349000: the opened slots' cosmetic grants, rarest last, revealing the card in each new level.
+  const [grants, setGrants] = useState<GrantItem[] | null>(null);
+  // R3349000: a bought chase, revealing the card in its new level before the choice closes.
+  const [chaseGrant, setChaseGrant] = useState<GrantItem | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -187,6 +193,16 @@ export default function CosmeticPacks({
         setOpened(next);
         setShardFrom(next.shardBefore);
         setInfo((before) => (before === null ? before : { ...before, unopened: next.unopened, shardBar: next.shardBar }));
+        // R3349000: each new cosmetic reveals the card wearing it, the rarest last.
+        setGrants(grantsOf(next, registry));
+        markNewLevels(
+          token,
+          next.slots.flatMap((slot) => {
+            const grant = slot.grant;
+            if (grant.kind !== "cosmetic") return [];
+            return [{ id: grant.cosmeticId, cardId: grant.cardId }, ...(grant.below ?? []).map((below) => ({ id: below, cardId: grant.cardId }))];
+          }),
+        );
         onChanged?.(next);
         // The collection and owned cosmetics moved too, but only a full bar's choice prices them: read them then.
         if (shardFull(next.shardBar)) readChoice();
@@ -208,6 +224,9 @@ export default function CosmeticPacks({
         // The bar emptied: the choice leaves with it.
         setInfo(next);
         setShardFrom(undefined);
+        // R3349000: the bought chase reveals the card wearing it before the choice closes.
+        setChaseGrant({ cosmeticId: cosmetic.id, cardId: cardId ?? null, rarity: cosmetic.rarity, chase: true, name: t(cosmetic.name) });
+        markNewLevels(token, [{ id: cosmetic.id, cardId: cardId ?? null }]);
         onChanged?.();
       },
       (cause: unknown) => {
@@ -345,12 +364,50 @@ export default function CosmeticPacks({
           />
         </>
       )}
+      {grants === null || grants.length === 0 ? null : (
+        <GrantReveal
+          items={grants}
+          onDone={() => {
+            setGrants(null);
+          }}
+        />
+      )}
+      {chaseGrant === null ? null : (
+        <GrantReveal
+          items={[chaseGrant]}
+          onDone={() => {
+            setChaseGrant(null);
+          }}
+        />
+      )}
       {error === null ? null : (
         <p className="notice" role="alert" data-testid={shopTestid.packsError}>
           {t(error)}
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * R3349000: an opening's cosmetic grants as reveal items, rarest last with ties keeping slot order; a
+ * spent duplicate grants nothing and reveals nothing. Names come from the caller's own registry, which
+ * a test may replace.
+ */
+function grantsOf(opened: OpenedCosmeticPackResponse, registry: readonly RegistryCosmetic[]): GrantItem[] {
+  return orderGrantsRarestLast(
+    opened.slots.flatMap((slot) => {
+      const grant = slot.grant;
+      if (grant.kind !== "cosmetic") return [];
+      const name = registry.find((entry) => entry.id === grant.cosmeticId)?.name;
+      const item: GrantItem = {
+        cosmeticId: grant.cosmeticId,
+        cardId: grant.cardId,
+        rarity: grant.cosmeticRarity,
+        below: grant.below,
+      };
+      return [name === undefined ? item : { ...item, name: t(name) }];
+    }),
   );
 }
 

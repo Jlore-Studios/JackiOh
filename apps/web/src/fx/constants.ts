@@ -239,6 +239,16 @@ export const FX_MOTIF_MIN_CARDS = 3;
 // R2803000: the audit's phone budget. The heaviest set pieces and a board of four auras hold this
 // mean frame time at the phone particle cap with mobile emulation.
 export const FX_PHONE_FRAME_BUDGET_MS = 50;
+// R3351000: the living game's worst single frame on a phone, about one frame at 8 fps; the mean
+// still holds FX_PHONE_FRAME_BUDGET_MS, so one hitch never costs the scene its budget.
+export const FX_PHONE_FRAME_WORST_MS = 120;
+/**
+ * R3351000: the living game's shared phone motion budget. Moving faces, tile auras, backdrops,
+ * particles and tilt share six concurrent motion units on a phone: the faces' share is the motion
+ * slots (COSMETIC_FOIL_ANIMATED_MAX in apps/web/src/cards/constants.ts), which is this many, so the
+ * two stay equal; a face counts 1, an aura 1, tilt 1. Past it the director sheds in the ruled order.
+ */
+export const PHONE_MOTION_BUDGET = 6;
 // R2784000: the scales the /dev/fx gallery offers.
 export const FX_GALLERY_SCALES = [0.5, 1, 1.5, 2] as const;
 // R3332000: the signature tier's loudness budgets, inside R200's FX_MAX_TAIL_MS, one set piece per action

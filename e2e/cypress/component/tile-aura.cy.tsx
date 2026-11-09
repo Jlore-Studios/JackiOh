@@ -22,9 +22,16 @@ function fourTileBoard() {
     }),
     opponent: emptySide("p2", {
       units: [null, null, null, null, null],
+      // Core #93 and #98 wear auras of their own now (R3400000), which replace the tile aura: a Legendary Field Spell
+      // and a Mythic Flying Unit standing in the backrow (R1081000) wear it instead.
       backrow: [
-        faceUpBackrow("p2", { defId: "core-093", instanceId: "b-leg-2", type: "Field Spell" }),
-        faceUpBackrow("p2", { defId: "core-098", instanceId: "b-myth-2", type: "Field Spell" }),
+        faceUpBackrow("p2", { defId: "classicplus-012-8", instanceId: "b-leg-2", type: "Field Spell" }),
+        faceUpBackrow("p2", {
+          defId: "stinkyscape-074",
+          instanceId: "b-myth-2",
+          type: "Unit",
+          unit: unit("p2", { defId: "stinkyscape-074", instanceId: "b-myth-2" }),
+        }),
         null,
         null,
         null,
@@ -49,12 +56,13 @@ describe("R3342000 tile auras over the board", () => {
       expect(zone, "zone exists").to.not.equal(undefined);
       expect(aura, "aura exists").to.not.equal(undefined);
       if (!zone || !aura) return;
+      // The aura fills the zone inside its border (`inset: 0`): 1 px, and 2 px on a units row's side toward the middle.
       const zoneRect = zone.getBoundingClientRect();
       const auraRect = aura.getBoundingClientRect();
-      expect(auraRect.left).to.be.closeTo(zoneRect.left, 2);
-      expect(auraRect.top).to.be.closeTo(zoneRect.top, 2);
-      expect(auraRect.width).to.be.closeTo(zoneRect.width, 2);
-      expect(auraRect.height).to.be.closeTo(zoneRect.height, 2);
+      expect(auraRect.left).to.be.closeTo(zoneRect.left + zone.clientLeft, 2);
+      expect(auraRect.top).to.be.closeTo(zoneRect.top + zone.clientTop, 2);
+      expect(auraRect.width).to.be.closeTo(zone.clientWidth, 2);
+      expect(auraRect.height).to.be.closeTo(zone.clientHeight, 2);
     });
 
     cy.document().should((doc) => {
@@ -77,12 +85,13 @@ describe("R3342000 tile auras over the board", () => {
       expect(zone, "zone exists").to.not.equal(undefined);
       expect(aura, "aura exists").to.not.equal(undefined);
       if (!zone || !aura) return;
+      // The aura fills the zone inside its border (`inset: 0`): 1 px, and 2 px on a units row's side toward the middle.
       const zoneRect = zone.getBoundingClientRect();
       const auraRect = aura.getBoundingClientRect();
-      expect(auraRect.left).to.be.closeTo(zoneRect.left, 2);
-      expect(auraRect.top).to.be.closeTo(zoneRect.top, 2);
-      expect(auraRect.width).to.be.closeTo(zoneRect.width, 2);
-      expect(auraRect.height).to.be.closeTo(zoneRect.height, 2);
+      expect(auraRect.left).to.be.closeTo(zoneRect.left + zone.clientLeft, 2);
+      expect(auraRect.top).to.be.closeTo(zoneRect.top + zone.clientTop, 2);
+      expect(auraRect.width).to.be.closeTo(zone.clientWidth, 2);
+      expect(auraRect.height).to.be.closeTo(zone.clientHeight, 2);
     });
 
     cy.document().should((doc) => {
