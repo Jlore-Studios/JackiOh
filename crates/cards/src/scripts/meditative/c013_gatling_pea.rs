@@ -51,7 +51,7 @@ mod tests {
 
     const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
     const CLONE_MACHINE: &str = "core-033"; // Field Spell: shuffle 3 copies of each played card.
-    const VANILLA: &str = "core-008"; // a (1) 4/4 with no text.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // a (1) 4/4 with no text.
     const SPARE: &str = "core-010"; // (0) Spell, never played: it only keeps the turn open (R82).
 
     /// A side with mana to play and a stocked library, so no turn auto-ends (§2.5) or fatigues.

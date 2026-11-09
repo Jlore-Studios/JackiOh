@@ -48,7 +48,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SEANCE: &str = "traininggrounds-037";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4; Radiant 12/12.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4; Radiant 12/12.
     const WEAPONS: &str = "core-014"; // (4) Field Spell.
     const TRAP: &str = "core-041"; // Sheepish, a Trap.
     const FILLER: &str = "core-005";

@@ -56,7 +56,7 @@ mod tests {
 
     const FILLER: &str = "core-010"; // (0) Spell.
     const SPARE: &str = "core-005"; // (1) Spell: library spare.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const TRAP: &str = "core-085"; // (2) Trap, set face down to fill the backrow.
 
     const SEEDS: usize = 30;

@@ -44,7 +44,7 @@ mod tests {
 
     const BRINGER: &str = "classic-076";
     const CRAWLER: &str = "classic-053"; // (1) Unit: whenever Plague Counters are placed on this, draw 1.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
     const PAWN: &str = "core-096"; // (1) Trap: answers only an attack that would be lethal.
     const MANA_WELL: &str = "core-006"; // (3) Field Spell.

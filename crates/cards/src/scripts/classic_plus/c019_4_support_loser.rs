@@ -50,7 +50,7 @@ mod tests {
 
     const SUPPORT: &str = "classicplus-019-4";
     const BODY: &str = "core-019"; // 9/9 Taunt; end of turn: heal this to full — kept off the board here
-    const VANILLA: &str = "core-008"; // 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // 4/4
     const MOON: &str = "classicplus-022";
     const HIT_JOB: &str = "core-016";
     const FILLER: &str = "core-005";

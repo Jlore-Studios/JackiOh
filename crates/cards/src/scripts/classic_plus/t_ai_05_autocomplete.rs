@@ -77,14 +77,14 @@ mod tests {
 
     const AUTOCOMPLETE: &str = "classicplus-t-ai-05";
     const TAX: &str = "classicplus-t-ai-07"; // (1) AI Spell
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
     const TWINSPELL: &str = "core-079"; // (2) Field Spell
     const BEAR: &str = "core-060"; // (1) Trap
     const HINDER: &str = "core-021"; // (0) Spell, cast on draw
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
-    const TIMMY: &str = "core-011"; // (1) Unit: p1's library, so its draw is never a card under test
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit: p1's library, so its draw is never a card under test
     const REFUSAL: &str = "classicplus-t-ai-09"; // (1) Trap: counters a Spell that targets one of your Units
 
     const P1: PlayerId = PlayerId::P1;

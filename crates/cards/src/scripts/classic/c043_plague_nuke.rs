@@ -105,7 +105,7 @@ mod tests {
     const NUKE: &str = "classic-043";
     const STATE: &str = "classic-041"; // State of the Game: 3/3 Indestructible.
     const VOIDWALKER: &str = "classic-050"; // Aura: cards that would go to a graveyard are exiled instead.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const MENACE: &str = "core-019"; // (3) Unit 9/9.
     const FELINORS: &str = "core-012"; // Cry: summon a copy of this.
     const DEFENDER: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn.

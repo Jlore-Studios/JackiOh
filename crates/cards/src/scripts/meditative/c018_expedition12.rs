@@ -128,8 +128,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const EXPEDITION: &str = "meditative-018";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const TIMMY: &str = "core-011"; // (1) Unit 3/3.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit 3/3.
     const MENACE: &str = "core-019"; // (3) Unit 9/9.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
     const COIN: &str = "core-t-coin"; // (0) Spell: gain 1 mana.

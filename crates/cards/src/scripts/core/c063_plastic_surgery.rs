@@ -60,7 +60,7 @@ mod tests {
 
     const SURGERY: &str = "core-063"; // Spell, 1
     const FELINOR: &str = "core-t-felinor"; // 1/1 with no keywords at all: a clean slate for the grant
-    const TIMMY: &str = "core-011"; // 3/3 with Rush and First Strike, both in the pool
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // 3/3 with Rush and First Strike, both in the pool
     const MENACE: &str = "core-019"; // 9/9 with Taunt, in the pool
 
     /// R21's pool as keyword KINDS. Read from the engine's pool, so this test never restates the

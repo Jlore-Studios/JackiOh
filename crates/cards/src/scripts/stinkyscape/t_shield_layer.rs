@@ -49,7 +49,7 @@ mod tests {
     const SHIELD: &str = "stinkyscape-t-shield-layer";
     const PROPAGATION: &str = "stinkyscape-t-propagation-layer";
     const MELTDOWN: &str = "stinkyscape-t-meltdown-layer";
-    const ALLY: &str = "core-008"; // (1) 4/4.
+    const ALLY: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const BURN: &str = "classic-036"; // (0) Spell: deal {damage} damage.
     const STRIKER: &str = "classic-049"; // (3) 9/9 Rush.
     const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.

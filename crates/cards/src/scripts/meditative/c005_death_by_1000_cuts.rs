@@ -80,7 +80,7 @@ mod tests {
     const CUTS: &str = "meditative-005";
     const ECHO: &str = "classic-057"; // (1) Spell: has the text of the last Spell either player played.
     const MENACE: &str = "core-019"; // 9/9 Taunt.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const FODDER: &str = "core-015"; // 1/1 Unit.
     const FILLER: &str = "core-005"; // (1) Spell.
     const TWINSPELL: &str = "core-079"; // (2) Field Spell, Activate: the next Spell gains Echo +1.

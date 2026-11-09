@@ -58,7 +58,7 @@ mod tests {
     const DUSTING: &str = "classic-063";
     const CRAWLER: &str = "classic-053"; // (1) Unit: whenever Plague Counters are placed on this, draw 1.
     const SLIME: &str = "classic-027"; // (0) Unit: Plague Counters placed on this are doubled.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
     const FIENDER: &str = "core-092"; // (2) Unit 5/7 Stack.
     const PAWN: &str = "core-096"; // (1) Trap: answers only an attack that would be lethal.

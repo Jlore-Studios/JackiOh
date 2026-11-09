@@ -50,9 +50,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FORTIFY: &str = "traininggrounds-012";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const MOON: &str = "traininggrounds-007"; // Chosen by the Moon: Taunt, Armor 3 (once P3 builds it).
-    const ARMORED: &str = "core-025"; // (4) Unit 7/7, Armor 7.
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) Unit 7/7, Armor 7.
     const MENACE: &str = "core-019"; // (3) Unit 9/9, Taunt.
     const ROCK: &str = "core-066"; // (4) Unit 10/10, Indestructible.
     const SHIELDED: &str = "core-056"; // (2) Jilliax 3/2: Rush, Taunt, Lifesteal, Divine Shield.

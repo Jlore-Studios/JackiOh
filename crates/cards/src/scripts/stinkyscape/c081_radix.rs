@@ -50,7 +50,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const FILLER: &str = "core-005"; // (1) Spell.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
 

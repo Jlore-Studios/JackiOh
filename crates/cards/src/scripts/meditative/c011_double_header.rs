@@ -88,7 +88,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const VANILLA: &str = "core-008"; // a (1) 4/4 with no text.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // a (1) 4/4 with no text.
     const SPARE: &str = "core-010"; // (0) Spell, never played: it only keeps the turn open (R82).
     const JELLY: &str = "core-027"; // (1) Spell, cast on draw.
     const SHEEPISH: &str = "core-041"; // (1) Trap: transform a played Unit into a Sheep Token.

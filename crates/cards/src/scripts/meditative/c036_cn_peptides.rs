@@ -76,7 +76,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const PEPTIDES: &str = "meditative-036";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4, the target.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4, the target.
     const WALL: &str = "core-066"; // The Rock, 10/10 Indestructible, which tails cannot kill.
     const FILLER: &str = "core-005";
 

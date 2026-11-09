@@ -57,7 +57,7 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
     const HINDER: &str = "core-021"; // Cast on draw; base face makes its caster discard 1 at random (R682)
     const SOLARIUS: &str = "classicplus-038"; // Unit printing Spell Damage +2
-    const DECK_A: &str = "core-011"; // Tempo Timmy, (1) Unit
+    const DECK_A: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // Tempo Timmy, (1) Unit
     const DECK_B: &str = "core-001"; // Big D-fender, (2) Unit
     const DECK_C: &str = "core-002"; // Speciesist, (2) Unit
     const DECK_D: &str = "core-003"; // Right-house defender, (1) Unit

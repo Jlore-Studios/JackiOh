@@ -101,7 +101,7 @@ mod tests {
 
     const CURSE: &str = "classic-001";
     const STOCKPILE: &str = "core-005"; // (1) Spell
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
     const MR_TOKEN: &str = "core-015"; // (1) Unit 1/1: "Cry: Summon a Rush Token."
     const SHEEPISH: &str = "core-041"; // (1) Trap

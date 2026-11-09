@@ -86,8 +86,8 @@ mod tests {
 
     const FISHING: &str = "meditative-021";
     const FILLER: &str = "core-005"; // (1) Spell.
-    const VANILLA: &str = "core-008"; // (1) Unit.
-    const TIMMY: &str = "core-011"; // (1) Unit.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit.
 
     /// p1 holds a Radiant API Key Fishing, against a hand to take.
     fn radiant_return() -> Scenario {

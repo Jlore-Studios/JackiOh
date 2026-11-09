@@ -52,7 +52,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const WILDFIRE: &str = "classic-055";
-    const VANILLA: &str = "core-008"; // 4/4, no text
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // 4/4, no text
     const MENACE: &str = "core-019"; // 9/9 Taunt
     const DEFENDER: &str = "core-003"; // 1/1 Taunt, Divine Shield, Reborn
     const TOP_LOSER: &str = "classicplus-019-1"; // Radiant: Immune to Spells

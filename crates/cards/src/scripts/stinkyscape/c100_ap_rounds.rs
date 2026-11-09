@@ -27,8 +27,8 @@ mod tests {
     use crate::filler;
 
     const ROUNDS: &str = "stinkyscape-100";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const ARMORED: &str = "core-025"; // (4) Unit 7/7, Armor 7.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) Unit 7/7, Armor 7.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
     fn live_kinds(s: &Scenario, card: &str) -> Vec<String> {

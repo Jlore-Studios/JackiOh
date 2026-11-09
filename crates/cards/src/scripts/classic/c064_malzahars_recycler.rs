@@ -117,7 +117,7 @@ mod tests {
     const ZAO_GAO: &str = "core-080"; // (2) Spell: Discard 2 random cards. Summon 2 Rush Tokens …
     const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: … Discard 1 random card.
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9
     const FILLER: &str = "core-010"; // (0) Spell
     const NOSE_HUNTER: &str = "classic-015"; // Activate: Discard a random card. Exile the bottom card of their deck.

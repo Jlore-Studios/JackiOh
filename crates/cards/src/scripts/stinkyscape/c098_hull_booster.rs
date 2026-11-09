@@ -27,7 +27,7 @@ mod tests {
     use crate::filler;
 
     const BOOSTER: &str = "stinkyscape-098";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const WEAK: &str = "core-007"; // (1) Unit 1/1.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 

@@ -14,7 +14,7 @@ const GAMBIT: &str = "classic-052"; // (2) Trap: a lethal hit is canceled; then 
 const INCOME_TAX: &str = "classic-009"; // (2) Trap with a table of steps of its own, and no "heal".
 const COUNTERSPELL: &str = "classic-017"; // (2) Trap with no table of steps: the outer ingredient of the fusion.
 const FILLER: &str = "core-005";
-const ATTACKER: &str = "core-008"; // 4/4
+const ATTACKER: &str = "stand-in (1) 4/4 R12/12"; // 4/4
 
 use super::scenario;
 

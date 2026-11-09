@@ -124,9 +124,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FEELINGS: &str = "classic-032";
-    const TIMMY: &str = "core-011"; // (1) Unit 3/3.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const POINTMASTER: &str = "core-020"; // (2) Unit 7/1.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit 3/3.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
+    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield"; // (2) Unit 7/1.
     const MENACE: &str = "core-019"; // (3) Unit 9/9.
     const BEAR: &str = "core-060"; // (1) Trap.
     const FIELD: &str = "core-006"; // Mana Well, a Field Spell.

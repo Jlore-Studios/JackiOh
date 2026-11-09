@@ -58,7 +58,7 @@ mod tests {
     const NONO: &str = "stinkyscape-099";
     const PARANOIA: &str = "meditative-099"; // (2) Field Spell: Aura: your Spells have Cloaked.
     const CORE_SYSTEM: &str = "stinkyscape-117"; // (3) Spell: Bounce all permanents.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const FILLER: &str = "core-005";
 
     fn nonos(cards: &[CardInstance]) -> Vec<CardInstance> {

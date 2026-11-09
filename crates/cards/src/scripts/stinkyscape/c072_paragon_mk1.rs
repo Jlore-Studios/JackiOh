@@ -27,7 +27,7 @@ mod tests {
 
     const PARAGON: &str = "stinkyscape-072";
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const ARMORED: &str = "core-025"; // (4) Unit 7/7, Armor 7.
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) Unit 7/7, Armor 7.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 

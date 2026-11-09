@@ -109,7 +109,7 @@ mod tests {
     const ARGUSLAND: &str = "classic-075";
     const VITAL_KILL: &str = "classic-029"; // C #29 Book of Vital Kill: set a hero's health to 13.
     const VANILLA: &str = "core-008"; // 4/4
-    const SEVEN_SEVEN: &str = "core-025"; // 4-mana 7/7 Armor 7: a plain 7-attack hitter (Pointmaster is a 6/1 since issue #3136)
+    const SEVEN_SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // 4-mana 7/7 Armor 7: a plain 7-attack hitter (Pointmaster is a 6/1 since issue #3136)
     const MENACE: &str = "core-019"; // 9/9 Taunt
     const PANTHER: &str = "core-032"; // 5/4 Rush: whenever this attacks, draw 2 for each Unit that attack destroyed.
     const GARY: &str = "core-004"; // 1/1

@@ -76,7 +76,7 @@ mod tests {
     // Issue #2521: Stratos (S #68) is no Starship Piece any more, so a piece of 6 Health stands in.
     const CRYSTAL: &str = "stinkyscape-132"; // (2) 3/6 Starship Piece, "Death: Your hero gains 1 Armor."
     const VANILLA: &str = "core-008"; // (1) 4/4.
-    const TIMMY: &str = "core-011"; // (1) 3/3 Rush, First Strike.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) 3/3 Rush, First Strike.
 
     fn has_trample(s: &Scenario, id: &str) -> bool {
         s.stats(id)

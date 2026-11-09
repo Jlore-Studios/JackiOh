@@ -117,10 +117,10 @@ mod tests {
     use super::ID;
 
     const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const MOTHS: &str = "core-009"; // (2) 1/14.
     const STRATOS: &str = "stinkyscape-068"; // (1) 3/1 Flying, Ranged.
-    const GREASER: &str = "meditative-100"; // (2) 7/7.
+    const GREASER: &str = "stand-in (2) 7/7 R21/21"; // (2) 7/7.
     const ATTACK: i32 = 2;
     const NO_DEFENSE: &str = "cannot be in Defense Position";
 

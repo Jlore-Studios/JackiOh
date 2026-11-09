@@ -130,7 +130,7 @@ mod tests {
     const PREP: &str = "classic-035";
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
     const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const ARMOR: &str = "core-073"; // (2) Field Spell; Cry: Draw 1.
     const SHEEPISH: &str = "core-041"; // (1) Trap.
     const VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw: take 1 damage.

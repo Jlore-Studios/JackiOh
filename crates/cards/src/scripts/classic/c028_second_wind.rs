@@ -98,7 +98,7 @@ mod tests {
     const STOCKPILE: &str = "core-005"; // (1) Spell: "Draw 2. Heal your hero 2."
     const ECLIPSE: &str = "core-035"; // (1) Spell: "Deal 3 damage to a target."
     const MR_TOKEN: &str = "core-015"; // (1) Unit 1/1: "Cry: Summon a Rush Token."
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
     const SHEEPISH: &str = "core-041"; // (1) Trap
     const MANA_WELL: &str = "core-006"; // (3) Field Spell
     const MENACE: &str = "core-019"; // (3) Unit 9/9

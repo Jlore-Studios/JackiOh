@@ -127,7 +127,7 @@ mod tests {
     const TOKENS: &str = "core-015"; // (1) 1/1, Cry: summon a Rush Token (Radiant: 3).
     const RUSH: &str = "core-t-rush";
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const TOE_CRACKER: &str = "classic-006"; // (2) 3/4, Aura: your Traps cost (0).
     const JAY: &str = "classicplus-049"; // (2) 3/6 Taunt, End of turn: a random card in your hand costs (2) less.
     const SHEEPLE: &str = "classic-082"; // (1) 1/1, Death: draw 2.

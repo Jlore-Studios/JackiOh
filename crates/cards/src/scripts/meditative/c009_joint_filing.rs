@@ -79,7 +79,7 @@ mod tests {
     const BREAD_AND_BUTTER: &str = "core-018"; // Field Trap: fires in the end-of-turn trap window.
     const BREAD_TOKEN: &str = "core-t-bread";
     const MAGIC_JAMMED: &str = "core-036"; // Spell: destroy a backrow card, Lock its zone.
-    const VANILLA: &str = "core-008"; // a (1) 4/4 with no text
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // a (1) 4/4 with no text
     const FILLER: &str = "core-005"; // Stockpile, a (1) Spell
 
     /// A side with something to do and a deck to draw, so no turn auto-ends (§2.5) or fatigues.

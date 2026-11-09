@@ -72,7 +72,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const LOCKDOWN: &str = "classic-084";
-    const VANILLA: &str = "core-008"; // 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // 4/4
     const TOKEN_MAKER: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
     const DEFENDER: &str = "core-003"; // Right-house defender: Reborn
     const CALL_TO_ARMS: &str = "core-069"; // Spell 2: Recruit 3 (1) Cost or less Units

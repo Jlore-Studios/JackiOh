@@ -62,7 +62,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const RAY: &str = "stinkyscape-001";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const FILLER: &str = "core-005";
     const IMMUNE: &str = "classicplus-019-1"; // Radiant: Immune to Spells.
     const ROCK: &str = "core-066"; // (10) 10/10 Indestructible; Radiant also Immutable.

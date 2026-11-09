@@ -39,7 +39,7 @@ mod tests {
     use super::ID;
 
     const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const SAINTESS: &str = "core-081"; // (1) 2/2, "Death: Make your other Units Radiant."
     const DEFENDER: &str = "core-003"; // (1) 1/1 Taunt, Divine Shield, Reborn.
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.

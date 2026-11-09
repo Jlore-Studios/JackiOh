@@ -162,7 +162,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SUMMIT: &str = "meditative-008";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
     const TWINSPELL: &str = "core-079"; // Field Spell: Activate: the next Spell this turn gains Echo +1.
     const TAX: &str = "classic-009"; // (2) Trap.

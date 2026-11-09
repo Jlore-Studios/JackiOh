@@ -50,7 +50,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const TAX: &str = "classicplus-t-ai-07";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
     const FELINOR: &str = "core-043"; // (4) Spell
     const ADAPTIVE_UI: &str = "core-074"; // (X) Spell

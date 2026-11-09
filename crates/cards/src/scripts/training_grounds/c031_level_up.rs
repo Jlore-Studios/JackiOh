@@ -98,7 +98,7 @@ mod tests {
     use crate::upgrade_number;
 
     const LEVEL_UP: &str = super::ID;
-    const VANILLA: &str = "core-008"; // (1) 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4
     const SPECIESIST: &str = "core-002"; // (2) 4/1
     /// S Trap: "Reveals when an enemy Unit attacks one of your Units: Cancel the attack and Freeze the attacker."
     const CANCELLER: &str = "stinkyscape-t-ai-04";

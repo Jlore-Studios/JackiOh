@@ -19,6 +19,7 @@ pub mod slumber;
 pub mod spell_power;
 pub mod spell_verbs;
 pub mod staged_quests;
+pub mod stand_in;
 pub mod starscape;
 pub mod starship;
 pub mod starship_base_piece;

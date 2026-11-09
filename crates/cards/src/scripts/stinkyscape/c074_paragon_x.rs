@@ -58,7 +58,7 @@ mod tests {
     use super::ID;
 
     const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const POWDER_SPRAY: &str = "classicplus-012-4"; // (1) Spell: Deal 3 damage to each enemy.
     const SORCERER: &str = "core-068"; // (2) 5/5, Cry: Deal 4 damage.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.

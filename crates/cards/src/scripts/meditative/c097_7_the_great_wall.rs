@@ -56,8 +56,8 @@ mod tests {
 
     const FILLER: &str = "core-010"; // (0) Spell.
     const SPARE: &str = "core-005"; // (1) Spell: library spare.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const TIMMY: &str = "core-011"; // (1) Unit 3/3.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit 3/3.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const NETHER: &str = "core-088"; // (4) Spell: Destroy all permanents.
     const SOFTLOCK: &str = "classicplus-077"; // (2) Spell: Unlock every zone.

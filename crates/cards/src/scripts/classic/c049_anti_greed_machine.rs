@@ -62,7 +62,7 @@ mod tests {
 
     const MACHINE: &str = "classic-049";
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const VANILLA: &str = "core-008"; // 4/4, no text
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // 4/4, no text
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
     const FIENDER: &str = "core-092"; // Stack Unit
     const SUPER_VIRUS: &str = "core-090-1"; // Cast on draw: take 1 damage

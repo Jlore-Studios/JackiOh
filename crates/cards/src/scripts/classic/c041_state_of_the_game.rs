@@ -44,7 +44,7 @@ mod tests {
     const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
     const CUBE: &str = "core-022"; // (3) Unit: Cry: Tribute one of your other Units and remember it.
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4, no text.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4, no text.
     const FILLER: &str = "core-005"; // (1) Spell, a card to keep a hand from auto-ending the turn (§2.5).
     const FLAME: &str = "classic-016"; // (1) Spell, Book: Deal 4 damage.
 

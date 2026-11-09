@@ -51,7 +51,7 @@ mod tests {
 
     const SACKED: &str = "stinkyscape-135";
     const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const SORCERER: &str = "core-068"; // (2) 5/5: "Cry: Deal 4 damage."
     const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."
     const FLOOD: &str = "core-017"; // (4) Spell: "Bounce all Units."

@@ -27,7 +27,7 @@ mod tests {
     use crate::filler;
 
     const VAMP: &str = "stinkyscape-122";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
     fn live_kinds(s: &Scenario, card: &str) -> Vec<String> {

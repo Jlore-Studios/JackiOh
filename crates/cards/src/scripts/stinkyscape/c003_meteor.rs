@@ -59,7 +59,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const METEOR: &str = "stinkyscape-003";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const GENN: &str = "classic-086"; // (4) Unit 14/14; Radiant 42/42.
     const JILLIAX: &str = "core-056"; // (2) Unit 3/2: Rush, Taunt, Lifesteal, Divine Shield.
     const FILLER: &str = "core-005";

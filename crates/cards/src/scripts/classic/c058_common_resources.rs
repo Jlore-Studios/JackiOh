@@ -51,7 +51,7 @@ mod tests {
 
     const RESOURCES: &str = "classic-058";
     const MACHINE: &str = "classic-049"; // Radiant: your opponent can't draw more than 1 card each turn.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9
     const STOCKPILE: &str = "core-005"; // (1) Spell
     const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage

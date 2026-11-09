@@ -68,7 +68,7 @@ mod tests {
     use super::{GAIN_BRITTLE_MODE, ID, TRIBUTE_MODE};
 
     const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const MOTHS: &str = "core-009"; // (2) 1/14: at its controller's start of turn every enemy Unit attacks it.
 
     const BARRED: &str = "the Gauntlet's Units fight only each other";

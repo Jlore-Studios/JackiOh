@@ -60,7 +60,7 @@ mod tests {
     use super::{ID, RADIANT_AT_KEYWORDS, script_v0_5_11o};
 
     const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const MR_TOKEN: &str = "core-015"; // (1) 1/1, "Cry: Summon a Rush Token."
     const RUSH_TOKEN: &str = "core-t-rush";
 

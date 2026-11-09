@@ -104,8 +104,8 @@ mod tests {
     const LAG: &str = "classic-025";
     const REPLENISH: &str = "core-010"; // (0) Spell
     const INFINITE: &str = "core-075"; // (0) Field Spell
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const TIMMY: &str = "core-011"; // (1) Unit 3/3
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit 3/3
     const STOCKPILE: &str = "core-005"; // (1) Spell
     const SHEEPISH: &str = "core-041"; // (1) Trap
     const BREAD: &str = "core-018"; // (1) Field Trap
@@ -117,7 +117,7 @@ mod tests {
     const TWO_TRAP: &str = "classic-052"; // Final Gambit, a (2) Trap that answers nothing these tests do (Unlicensed Experimentation, core-085, costs 3 since issue #3136)
     const MENACE: &str = "core-019"; // (3) Unit 9/9
     const MANA_WELL: &str = "core-006"; // (3) Field Spell
-    const SEVEN: &str = "core-025"; // (4) Unit 7/7
+    const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) Unit 7/7
     const TOE_CRACKER: &str = "classic-006"; // (2) Unit: "Aura: Your Traps cost (0)."
     const RUSH_TOKEN: &str = "core-t-rush"; // (1) Unit token
 

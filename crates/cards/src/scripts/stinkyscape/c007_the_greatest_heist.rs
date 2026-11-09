@@ -164,7 +164,7 @@ mod tests {
     const JELLY: &str = "core-026"; // (3) Spell: Make a card in your hand Radiant.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const MIND_CONTROL: &str = "core-049"; // (4) Spell: Steal an enemy Unit.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const CORE_SYSTEM: &str = "stinkyscape-117"; // (3) Spell: Bounce all permanents.
 
     const MANA: i32 = 20;

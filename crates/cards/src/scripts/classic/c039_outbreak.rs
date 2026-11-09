@@ -124,7 +124,7 @@ mod tests {
     const SLIME: &str = "classic-027"; // (0) Unit 1/1: placements on it doubled.
     const CHALICE: &str = "classic-087"; // (X) Field Spell.
     const BILLY: &str = "classicplus-069"; // (X) Unit 2X/3X; its Cry Upgrades it, never its cost (R396).
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const MENACE: &str = "core-019"; // (3) Unit 9/9.
     const PAWN: &str = "core-096"; // (1) Trap, answers only a lethal attack.
     const UNLICENSED: &str = "classic-052"; // Final Gambit, a (2) Trap that answers nothing here (Unlicensed Experimentation, core-085, costs 3 since issue #3136).

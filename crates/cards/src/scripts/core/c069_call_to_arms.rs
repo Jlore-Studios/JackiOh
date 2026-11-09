@@ -63,8 +63,8 @@ mod tests {
     const CALL: &str = "core-069"; // Spell, cost 2.
 
     // The library fixtures, at their printed costs (R65).
-    const TIMMY: &str = "core-011"; // Unit, cost 1, 3/3 — no Cry.
-    const VANILLA: &str = "core-008"; // Unit, cost 1, 3/3 Immutable — no Cry.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // Unit, cost 1, 3/3 — no Cry.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // Unit, cost 1, 3/3 Immutable — no Cry.
     const DEFENDER: &str = "core-003"; // Unit, cost 1, 1/1 Divine Shield + Reborn — no Cry.
     const TOKEN_MAKER: &str = "core-015"; // Unit, cost 1, 1/1 — "Cry: summon a Rush Token" (R1's probe).
     const POINTMASTER: &str = "core-020"; // Unit, cost 2, 7/2 — above the base ceiling, inside the radiant one.

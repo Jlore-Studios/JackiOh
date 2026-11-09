@@ -95,7 +95,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4: a card p2 can play.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4: a card p2 can play.
     const FILLER: &str = "core-016"; // Hit Job: inert in a hand.
     const RUSH_TOKEN: &str = "core-t-rush"; // A unit-token card, as #75 Infinite Reserves makes one.
 

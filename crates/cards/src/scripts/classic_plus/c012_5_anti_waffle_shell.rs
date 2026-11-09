@@ -59,7 +59,7 @@ mod tests {
 
     const SHELL: &str = "classicplus-012-5";
     const MENACE: &str = "core-019"; // (3) 9/9
-    const POINTMASTER: &str = "core-020"; // (2) 6/1
+    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield"; // (2) 6/1
     const MAGIC_JAMMED: &str = "core-036"; // destroy target backrow card
     const FILLER: &str = "core-005";
 

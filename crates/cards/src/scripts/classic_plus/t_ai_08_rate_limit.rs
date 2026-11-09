@@ -75,7 +75,7 @@ mod tests {
 
     const RATE_LIMIT: &str = "classicplus-t-ai-08";
     const REFUSAL: &str = "classicplus-t-ai-09";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
     const REPLENISH: &str = "core-010"; // (0) Spell
     const SHREDDER: &str = "core-013"; // (3) Unit: End of turn: deal 2 damage to each enemy.

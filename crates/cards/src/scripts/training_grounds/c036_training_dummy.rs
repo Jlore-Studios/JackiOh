@@ -48,7 +48,7 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    const VANILLA: &str = "core-008"; // (1) Mr. Vanilla, 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Mr. Vanilla, 4/4.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const SWITCH_ALL: &str = "core-048"; // (0) Spell: switch the position of every Unit.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.

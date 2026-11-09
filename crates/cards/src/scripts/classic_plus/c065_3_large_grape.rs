@@ -52,7 +52,7 @@ mod tests {
     const HINDER: &str = "core-021"; // Cast on draw; base face makes its caster discard 1 at random (R682)
     const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2
     const DECK_A: &str = "core-043"; // (4) Unit, Big Felinor
-    const DECK_B: &str = "core-025"; // (4) Unit
+    const DECK_B: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) Unit
     const BILLY: &str = "classicplus-069"; // Buff Billy, an (X) Unit
 
     use crate::js;

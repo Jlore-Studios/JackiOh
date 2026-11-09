@@ -159,7 +159,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
 
     fn board(seed: &str, radiant: bool) -> Scenario {
         weapon_board(

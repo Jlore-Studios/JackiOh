@@ -101,7 +101,7 @@ mod tests {
     const SLIME: &str = "classic-027"; // (0) Unit 1/1.
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
     const MR_TOKEN: &str = "core-015"; // (1) Unit 1/1: Cry: Summon a Rush Token.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
     const COLLATERAL: &str = "core-034"; // (4) Spell: Exile target permanent and a random card from your opponent's deck.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).

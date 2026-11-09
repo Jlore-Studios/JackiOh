@@ -101,8 +101,8 @@ mod tests {
 
     const KITTEN: &str = "meditative-030";
     const MENACE: &str = "core-019"; // (3) Unit 9/9.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const SEVEN_SEVEN: &str = "core-025"; // (4) Unit 7/7.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
+    const SEVEN_SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) Unit 7/7.
     const MOON: &str = "classicplus-022"; // (1) Trap, set face-down.
     const CHALICE: &str = "classic-087"; // (X) Field Spell.
     const FILLER: &str = "core-005";

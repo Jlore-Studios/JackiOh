@@ -63,7 +63,7 @@ mod tests {
     const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
     const CHASSIS: &str = "stinkyscape-048"; // (1) 4/1 Starship Piece, Equip, Rush: keywords only.
     const BURNER: &str = "stinkyscape-090"; // (2) 4/8 Starship Piece.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const FILLER: &str = "core-005";
 
     /// p1's launched Starship holding an AP Rounds, a Radiant After Burner and an Ultralight Chassis, in

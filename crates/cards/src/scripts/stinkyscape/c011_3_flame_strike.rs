@@ -36,7 +36,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const STRIKE: &str = "stinkyscape-011-3";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const MENACE: &str = "core-019"; // (3) Unit 9/9.
     const SHIELDED: &str = "core-056"; // (2) Unit 3/2, Divine Shield.
     const FILLER: &str = "core-005";

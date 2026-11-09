@@ -178,8 +178,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TRAP: &str = "core-085"; // Trap, 3 (2 until issue #3136), Legendary
-    const TIMMY: &str = "core-011"; // Unit, 1 — 3/3 Rush, First Strike
-    const BIG_UNIT: &str = "core-025"; // Unit, 4 — 7/7 Armor 7
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // Unit, 1 — 3/3 Rush, First Strike
+    const BIG_UNIT: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // Unit, 4 — 7/7 Armor 7
     const MR_TOKEN: &str = "core-015"; // Unit, 1 — 1/1, Cry: summon a Rush Token
     const MR_VANILLA: &str = "core-008"; // Unit, 1 — 4/4, no text
 

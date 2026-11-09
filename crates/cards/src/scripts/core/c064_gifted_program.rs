@@ -45,7 +45,7 @@ mod tests {
     const FRIEND: &str = "core-062"; // Spell, 1 — radiant adds +2/+2, so the face it ran is visible
     const SURGERY: &str = "core-063"; // Spell, 1 — +3/+3 base, +6/+6 radiant
     const POINTMASTER: &str = "core-020"; // Unit, 2 — 6/1 base, 12/2 radiant: the threshold probe
-    const TIMMY: &str = "core-011"; // Unit, 3/3
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // Unit, 3/3
     const MENACE: &str = "core-019"; // Unit, 9/9 — filler so a turn never auto-ends (§2.5, R82)
     const FELINOR: &str = "core-t-felinor";
 

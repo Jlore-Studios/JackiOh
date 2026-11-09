@@ -67,7 +67,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const GAME: &str = "meditative-020";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
     const FIENDER: &str = "core-092"; // (2) Unit with Stack.
 

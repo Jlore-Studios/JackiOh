@@ -103,8 +103,8 @@ mod tests {
 
     const PACT: &str = "classic-023";
     const BOOK: &str = "classic-016"; // Book of Flame: Deal 4 damage (Radiant 8).
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const TIMMY: &str = "core-011"; // (1) Unit 3/3.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit 3/3.
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal 2.
     const BEAR: &str = "core-060"; // (1) Trap.
     const PANTHER: &str = "core-032"; // Unit 5/4 Rush: whenever this attacks, draw 2 per Unit it destroyed.

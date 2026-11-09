@@ -47,7 +47,7 @@ mod tests {
     use crate::merged;
 
     const FILLER: &str = "core-010"; // (0) Spell: a play always open, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const MR_TOKEN: &str = "core-015"; // (1) 1/1.
     const ENEMY_HERO: &str = "hero-p2";
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.

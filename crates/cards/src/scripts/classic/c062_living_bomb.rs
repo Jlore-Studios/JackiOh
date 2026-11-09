@@ -119,7 +119,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BOMB: &str = "classic-062";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
     const ROCK: &str = "core-066"; // (4) Unit 10/10 Indestructible, Tribute 1.
     const FAUCI: &str = "core-091"; // (2) Unit 1/6 Rush; Start of turn: +1 mana per Plague Counter.

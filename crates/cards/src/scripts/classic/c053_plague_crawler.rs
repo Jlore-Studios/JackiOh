@@ -82,7 +82,7 @@ mod tests {
 
     const CRAWLER: &str = "classic-053";
     const SLIME: &str = "classic-027"; // (0) Unit 1/1: Plague Counters placed on this are doubled.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt; Radiant adds Immutable.
     const MANA_WELL: &str = "core-006"; // (3) Field Spell.
     const UNLICENSED: &str = "core-085"; // (2) Trap, answers only a permanent of a type its controller controls.

@@ -62,7 +62,7 @@ mod tests {
 
     const JORO: &str = "classic-033";
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
-    const SEVEN: &str = "core-025"; // (4) Unit 7/7
+    const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) Unit 7/7
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const TIMMY: &str = "core-011"; // (1) Unit 3/3
     const ECLIPSE: &str = "core-035"; // (1) Spell: "Deal 3 damage to a target."

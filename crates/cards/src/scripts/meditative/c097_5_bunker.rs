@@ -48,9 +48,9 @@ mod tests {
     const FILLER: &str = "core-010"; // (0) Spell.
     const SPARE: &str = "core-005"; // (1) Spell: library spare.
     const BIG_ATTACKER: &str = "core-019"; // (9) 9/9 Unit: survives 15 damage, so we can verify exact damage taken.
-    const ARMORED: &str = "core-025"; // (4) 7/7, Armor 7 Unit.
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) 7/7, Armor 7 Unit.
     const MOTHS: &str = "core-009"; // (2) 1/14 Unit: forces attacks at start of turn.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const GHOST: &str = "classic-089"; // (2) 5/6 Divine Shield.
     const BURN: &str = "classic-036"; // (0) Spell: deal 2 damage.
     const FELINOR: &str = "core-043"; // Big Felinor, Radiant 6/20.

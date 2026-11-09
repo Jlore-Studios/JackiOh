@@ -48,7 +48,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const LANCE: &str = "classic-083";
-    const VANILLA: &str = "core-008"; // 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // 4/4
     const JILLIAX: &str = "core-056"; // 3/2 Rush, Taunt, Lifesteal, Divine Shield
     const THE_ROCK: &str = "core-066"; // 10/10 Indestructible
     const STOCKPILE: &str = "core-005";

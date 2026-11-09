@@ -135,7 +135,7 @@ mod tests {
 
     const FILLER: &str = "core-010"; // (0) Spell.
     const SPARE: &str = "core-005"; // (1) Spell: library spare.
-    const VANILLA: &str = "core-008"; // (1) Unit.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit.
     const FIENDER: &str = "core-092"; // (2) Unit: Stack.
     const FELINORS: &str = "core-012"; // (2) Unit: Cry summons a copy.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.

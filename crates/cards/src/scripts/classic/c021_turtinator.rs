@@ -68,9 +68,9 @@ mod tests {
 
     const TURTLE: &str = "classic-021";
     const FILLER: &str = "core-005"; // (1) Spell, a card to keep a hand from auto-ending (§2.5).
-    const VANILLA: &str = "core-008"; // 4/4.
-    const TIMMY: &str = "core-011"; // 3/3.
-    const SEVEN_SEVEN: &str = "core-025"; // 4-mana 7/7 Armor 7: a plain 7-attack Unit (Pointmaster is a 6/1 since issue #3136).
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // 4/4.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // 3/3.
+    const SEVEN_SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // 4-mana 7/7 Armor 7: a plain 7-attack Unit (Pointmaster is a 6/1 since issue #3136).
     const D_FENDER: &str = "core-001"; // 0/7.
     const SAINTESS: &str = "core-081"; // 2/2, "Death: Make your other Units Radiant."
     const WEAPONS: &str = "core-014"; // Field Spell, "Aura: Your Units have +2 Attack, Rush and First Strike."

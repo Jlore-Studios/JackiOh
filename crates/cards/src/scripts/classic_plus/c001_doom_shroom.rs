@@ -51,8 +51,8 @@ mod tests {
     use crate::scenario;
 
     const DOOM: &str = "classicplus-001";
-    const TIMMY: &str = "core-011"; // (1) 3/3 Rush, First Strike.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) 3/3 Rush, First Strike.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const FIENDER: &str = "core-092"; // (2) 5/7 Stack.
     const DEFENDER: &str = "core-003"; // (1) Taunt, Divine Shield, Reborn; Radiant: Death summons a base one.
     const TOKEN: &str = "core-t-rush"; // a unit token

@@ -90,7 +90,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const SEVEN: &str = "core-025"; // (4) Unit 7/7, no text.
+    const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) Unit 7/7, no text.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const FILLER: &str = "core-005"; // (1) Spell, never played here.
 

@@ -218,8 +218,8 @@ mod tests {
         fn r831014_r65_an_x_card_counts_as_0_an_embiggen_card_at_its_base_price_and_a_cost_change_counts() {
             let library = vec![
                 json!("core-024"),                           // Efficiency Dividend, X: 0 out of play.
-                json!("core-056"),                           // Jilliax, (2) or paid (3): its (2).
-                json!("core-046"),                           // Suppressive Aura, (2) or paid (4): its (2).
+                json!("core-056"),                           // Jilliax: embiggen, its base price.
+                json!("core-046"),                           // Suppressive Aura: embiggen, its base price.
                 json!({ "def": MENACE, "costMod": -1 }),     // (3) made (2): exiled.
                 json!({ "def": VANILLA, "costMod": 2 }),     // (1) made (3): kept.
                 json!(MENACE),                               // (3): kept.

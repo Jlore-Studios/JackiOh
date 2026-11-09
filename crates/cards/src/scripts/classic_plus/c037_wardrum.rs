@@ -176,9 +176,9 @@ mod tests {
     const SHEEPISH: &str = "core-041"; // (1) Trap.
     const BREAD: &str = "core-018"; // (1) Field Trap.
     const MANA_WELL: &str = "core-006"; // (3) Field Spell.
-    const VANILLA: &str = "core-008"; // (1) Unit, no text.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit, no text.
     const MENACE: &str = "core-019";
-    const POINTMASTER: &str = "core-020"; // (2) 7/1.
+    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield"; // (2) 7/1.
     const TIMMY: &str = "core-011"; // (1) 3/3 Rush, First Strike.
     const FOREVER: &str = "classicplus-014"; // (1) Spell: the next Spell you play returns to your hand after it resolves.
     const SPATULA: &str = "classicplus-012-8"; // (2) Field Spell token: Animated on your turn, Rush, 10/3.

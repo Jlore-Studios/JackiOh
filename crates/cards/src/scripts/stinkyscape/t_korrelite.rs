@@ -56,7 +56,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     const BODY: &str = "core-019"; // 9/9
-    const ARMORED: &str = "core-025"; // 7/7, Armor 7
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // 7/7, Armor 7
     const FILLER: &str = "core-005";
     /// The enemy hero's Armor in the Pierce tests: more than any hit here, so a hit it took would show.
     const HERO_ARMOR: i32 = 5;

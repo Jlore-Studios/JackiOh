@@ -53,8 +53,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SECURE: &str = "stinkyscape-118";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const GREASER: &str = "meditative-100"; // (2) Unit 7/7.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
+    const GREASER: &str = "stand-in (2) 7/7 R21/21"; // (2) Unit 7/7.
     const BOOK_OF_STATS: &str = "classicplus-057"; // (1) Spell: Give a Unit +5/+5.
     const FILLER: &str = "core-005";
 

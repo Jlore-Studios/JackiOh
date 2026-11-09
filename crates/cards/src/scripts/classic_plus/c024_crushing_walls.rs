@@ -54,7 +54,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const WALLS: &str = "classicplus-024";
-    const BODY: &str = "core-008"; // 4/4
+    const BODY: &str = "stand-in (1) 4/4 R12/12"; // 4/4
     const ROCK: &str = "core-066"; // Indestructible
     const FIELD_SPELL: &str = "core-064";
     const TRAP: &str = "core-060";

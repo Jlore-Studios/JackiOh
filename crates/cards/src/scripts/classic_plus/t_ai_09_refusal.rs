@@ -99,7 +99,7 @@ mod tests {
     use crate::scenario;
 
     const REFUSAL: &str = "classicplus-t-ai-09";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
     const TRUE_STRIKE: &str = "core-044"; // (1) Spell: Pierce. Deal 4 damage. Exile this.
@@ -108,7 +108,7 @@ mod tests {
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
     const TWINSPELL: &str = "core-079"; // (2) Field Spell: Activate: your next Spell this turn gains Echo +1.
     const BEAR: &str = "core-060"; // (1) Trap
-    const COUNTERSPELL_TEST_FILLER: &str = "core-011"; // (1) Unit
+    const COUNTERSPELL_TEST_FILLER: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit
     const SCEPTER: &str = "classic-007"; // (1) Field Spell: Cry: exile a (1) Cost or less Spell from your hand. Activate: cast a copy of it.
     const FLAME: &str = "classic-016"; // (1) Spell, Book: Deal 4 damage.
 

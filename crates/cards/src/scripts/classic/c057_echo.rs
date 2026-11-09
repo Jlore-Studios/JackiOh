@@ -79,7 +79,7 @@ mod tests {
     const DREAM: &str = "core-023"; // (1) Spell: … End of turn: Return this to your hand.
     const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage.
     const MENACE: &str = "core-019"; // (3) Unit 9/9
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
     const PILE_ON: &str = "classic-060"; // (5) Spell: Recruit every permanent in your deck; to the bottom of the deck, not the GY.
     /// Pile On with C+ #39 Book Worm fused in, as R179 names it: a Spell, its first ingredient's type.
     const FUSED_PILE_ON: &str = "t-1:classic-060+classicplus-039";

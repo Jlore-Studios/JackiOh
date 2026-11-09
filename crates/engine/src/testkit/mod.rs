@@ -12,6 +12,7 @@
 //! `duos_scenario.rs` #936's begun Duos game. `golden.rs` (§13.3, #1641) and `pick.rs` (the one-instance pick
 //! builders, #1826) are not globbed in: callers name the module (`golden::<item>`). `must` (#2023) comes in
 //! with the glob, the effects library (its verbs share names with engine functions) does not.
+//! `stand_in.rs` (#3486) builds the card a `stand-in …` id spells out; no catalog lists it.
 
 pub mod duos_scenario;
 pub mod glow;
@@ -23,6 +24,7 @@ pub mod preview;
 pub mod scenario;
 pub mod seams;
 pub mod seed_search;
+pub mod stand_in;
 
 pub use crate::*;
 
@@ -34,6 +36,7 @@ pub use preview::*;
 pub use scenario::*;
 pub use seams::*;
 pub use seed_search::*;
+pub use stand_in::*;
 
 // The thread-local override wins over the production registries `crate::*` re-exports.
 pub use scenario::{register_catalog, register_scripts, register_shipped};

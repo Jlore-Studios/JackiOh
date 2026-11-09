@@ -91,7 +91,7 @@ mod tests {
     const HINDER: &str = "core-021"; // (0) Spell, cast on draw.
     const TWINSPELL: &str = "core-079"; // (2) Field Spell: Activate: your next Spell this turn gains Echo +1.
     const BEAR: &str = "core-060"; // (1) Trap.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const MENACE: &str = "core-019";
 
     fn armed(radiant_face: bool, lane: i32) -> Value {

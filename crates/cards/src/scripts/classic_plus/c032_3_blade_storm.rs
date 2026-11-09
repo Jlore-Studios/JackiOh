@@ -61,7 +61,7 @@ mod tests {
     const TIMMY: &str = "core-011"; // 3/3
     const JILLIAX: &str = "core-056"; // 3/2, Divine Shield
     const DEFENDER: &str = "core-003"; // 1/1, Divine Shield, Reborn
-    const SEVEN: &str = "core-025"; // 7/7, Armor 7
+    const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // 7/7, Armor 7
     const UNBREAKABLE: &str = "classic-041"; // 3/3, Indestructible
     const SOLARIUS: &str = "classicplus-038"; // 3/2, Spell Damage +2
     const HOGAR: &str = "classicplus-028"; // 3/4 Taunt, Reborn; Death: heal your hero 3

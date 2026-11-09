@@ -29,7 +29,7 @@ mod tests {
     use std::sync::Arc;
 
     const JUHAN: &str = "classicplus-004";
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const FIENDER: &str = "core-092"; // (2) 5/7 Stack.
     const MENACE: &str = "core-019"; // Radiant: Taunt, Immutable.
     const MIND_CONTROL: &str = "core-049"; // (5) Float reduces cost. Steal an enemy card.

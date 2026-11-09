@@ -44,13 +44,13 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const UNAN: &str = "meditative-092";
-    const ALLY: &str = "core-011"; // A plain 3/3 Unit to guard.
+    const ALLY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // A plain 3/3 Unit to guard.
     const STRIKER: &str = "classic-049"; // A plain 9/9 Unit to strike with.
     const VITAL_KILL: &str = "classic-029"; // Sets a declared hero's health to 13.
     const HEAVY: &str = "classic-086"; // A plain 14/14 Unit.
     const FILLER: &str = "core-005";
     const BURN: &str = "classic-036"; // (0) Spell: deal 2 damage to any unit or hero.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const GOLEM: &str = "core-055"; // 10/5 Taunt.
     const GHOST: &str = "classic-089"; // 5/6 Divine Shield.
     const BASTION: &str = "classic-041"; // 3/3 Indestructible.

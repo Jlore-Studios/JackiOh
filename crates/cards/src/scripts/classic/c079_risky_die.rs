@@ -111,7 +111,7 @@ mod tests {
     const DIVIDEND: &str = "core-024"; // (X) Spell
     const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
     const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: … Discard 1 random card.
-    const VANILLA: &str = "core-008"; // (1) Unit
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit
 
     use crate::scenario;
 

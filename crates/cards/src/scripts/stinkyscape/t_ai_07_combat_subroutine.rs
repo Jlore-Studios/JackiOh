@@ -53,7 +53,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SUBROUTINE: &str = "stinkyscape-t-ai-07";
-    const VANILLA: &str = "core-008"; // (1) 4/4, no keywords.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4, no keywords.
     const FILLER: &str = "core-005";
 
     fn played(radiant: bool, seed: &str) -> Scenario {

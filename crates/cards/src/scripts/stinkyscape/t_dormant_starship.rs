@@ -59,7 +59,7 @@ mod tests {
     const CAPACITOR: &str = "stinkyscape-133"; // When launched: +1/+1 per other piece.
     const MONKEY: &str = "classic-077"; // (2) 5/5 Stack, "Aura: Spells cost (1) more."
     const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const FILLER: &str = "core-005";
     const TRAP: &str = "core-085"; // (2) Trap, set face down to fill a backrow.
     /// R2521000: what a test's Buff (an Upgrade's tuning, B3.4) adds to a piece's attack and health.

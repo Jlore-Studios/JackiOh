@@ -54,7 +54,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const PATH: &str = "traininggrounds-026";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const ROCK: &str = "core-066"; // (4) Unit 10/10, Indestructible.
     const TRAP: &str = "core-041"; // Sheepish, a Trap.
     const RUSH_TOKEN: &str = "core-t-rush";

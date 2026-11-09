@@ -64,7 +64,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const PRIME: &str = "classicplus-046-1";
-    const VANILLA: &str = "core-008"; // Mr. Vanilla 4/4, no tag
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // Mr. Vanilla 4/4, no tag
     const DUPE: &str = "core-012"; // Duplicating Felinors 3/4, a Felinor
     const FLOOD: &str = "core-017"; // (4) Spell: bounce all Units
     const FILLER: &str = "core-005";

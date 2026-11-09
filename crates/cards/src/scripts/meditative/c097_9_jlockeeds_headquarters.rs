@@ -79,7 +79,7 @@ mod tests {
 
     const FILLER: &str = "core-010"; // (0) Spell.
     const SPARE: &str = "core-005"; // (1) Spell: library spare.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     /// Every non-token Jlockeed Unit of the sets that ship, in catalog order (R380, R1420): Core #13, C+ #48
     /// and #51, M #87 (every tribe), Stinkyscape's #127, #128 and #129 (#1884) and Training Grounds' #48,
     /// Core #13's snapshot (#2204).

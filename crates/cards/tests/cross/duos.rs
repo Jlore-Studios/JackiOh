@@ -701,7 +701,7 @@ mod glitch {
 mod lethal {
     use super::*;
 
-    const BOARD: &str = "core-011"; // a 3/3
+    const BOARD: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // a 3/3
     const CHARGER: &str = "core-045"; // (2) 4-attack Charge
 
     fn lethal_ids(state: &GameState) -> Vec<String> {

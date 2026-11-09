@@ -86,10 +86,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const CONSTANT: &str = "classicplus-041";
-    const TIMMY: &str = "core-011"; // (1) 3/3: its cost is its one number that is not 3
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) 3/3: its cost is its one number that is not 3
     const VANILLA: &str = "core-008"; // (1) 4/4
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt
-    const ARMORED: &str = "core-025"; // (4) 7/7 Armor 7
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) 7/7 Armor 7
     const DUPLICATING: &str = "core-012"; // (2) 3/4, Cry: summon a copy of this
     const HIT_JOB: &str = "core-016"; // (3) Spell: no number other than 3
     const CHALICE: &str = "classic-087"; // (X) Field Spell: an X is never a number

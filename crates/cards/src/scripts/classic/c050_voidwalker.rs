@@ -73,7 +73,7 @@ mod tests {
     const SHEEPISH: &str = "core-041"; // (1) Trap: when your opponent plays a Unit, after its Cry, transform it into a Sheep.
     const MIND_CONTROL: &str = "core-049"; // (5) Spell: steal an enemy card.
     const FIENDER: &str = "core-092"; // (2) Unit, Stack.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
     const GARY: &str = "core-004"; // (1) Unit 1/1
     const LUNAR: &str = "core-035"; // (1) Spell: deal 3 damage to a target.
     const DEFENDER: &str = "core-003"; // (1) Unit 1/1, Reborn; Radiant: Death: summon a base Right-house defender.

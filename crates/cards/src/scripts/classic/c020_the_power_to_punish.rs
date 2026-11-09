@@ -142,12 +142,12 @@ mod tests {
     const DOOM_ALL: &str = "destroy all enemy Units at the start of your next turn";
 
     const FILLER: &str = "core-005"; // (1) Spell Stockpile: draw 2, heal 2.
-    const VANILLA: &str = "core-008"; // 4/4.
-    const TIMMY: &str = "core-011"; // (1) 3/3.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // 4/4.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) 3/3.
     const MENACE: &str = "core-019"; // 9/9.
-    const POINTMASTER: &str = "core-020"; // 7/1.
+    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield"; // 7/1.
     const ROCK: &str = "core-066"; // 10/10 Indestructible.
-    const BIG: &str = "core-025"; // 7/7 Armor 7; Radiant adds Reborn.
+    const BIG: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // 7/7 Armor 7; Radiant adds Reborn.
     const CUBE: &str = "core-022"; // (3) Cry: Tribute one of your other Units.
     const COLLATERAL: &str = "core-034"; // (4) Exile target permanent and a random card from their deck.
 

@@ -47,7 +47,7 @@ mod tests {
 
     const ANIME: &str = "classicplus-011";
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const LUNAR: &str = "core-035"; // (1) Deal 3 damage to a target.
     const TRUE_STRIKE: &str = "core-044"; // (1) Pierce. Deal 4 damage.
     const STOCKPILE: &str = "core-005"; // (1) Draw 2. Heal your hero 2.

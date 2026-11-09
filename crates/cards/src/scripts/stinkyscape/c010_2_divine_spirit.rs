@@ -49,7 +49,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const SPIRIT: &str = "stinkyscape-010-2";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const IMMUNE: &str = "classicplus-019-1"; // Radiant: Immune to Spells.
     const FILLER: &str = "core-005";
 

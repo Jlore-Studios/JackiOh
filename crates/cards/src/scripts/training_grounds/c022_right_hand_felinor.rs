@@ -61,7 +61,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FELINOR: &str = super::ID;
-    const BODY: &str = "core-008"; // Mr. Vanilla 4/4
+    const BODY: &str = "stand-in (1) 4/4 R12/12"; // Mr. Vanilla 4/4
     const TOP: &str = "core-092"; // Felinor Fiender, Stack
     const FILLER: &str = "core-005";
 

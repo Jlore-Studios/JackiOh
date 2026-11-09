@@ -64,7 +64,7 @@ mod tests {
     const SOFTLOCK: &str = "classicplus-077";
     const VANILLA: &str = "core-008";
     const TIMMY: &str = "core-011";
-    const ARMORED: &str = "core-025"; // 7/7, Armor 7
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // 7/7, Armor 7
     const ECLIPSE: &str = "core-035"; // (1) Spell: deal 3 damage to a target
     const MANA_WELL: &str = "core-006"; // a Field Spell
     const CONJURE_KY: &str = "core-057"; // (2) Spell: add 3 random KY cards to your hand

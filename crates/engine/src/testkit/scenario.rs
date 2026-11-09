@@ -24,6 +24,7 @@
 //! instance of that def, the active player's first: hand, unit zones (lane by lane, a pile's top first),
 //! backrow, graveyard, exile, library, resolving. `play` searches hands only, `attack`/`switch_position` the
 //! field only. No match panics listing what was there; for one of several copies pass the `CardInstance`.
+//! A stand-in id (`stand_in.rs`, #3486) names the card it builds.
 //!
 //! INSTANCES ARE SNAPSHOTS: a `CardInstance` captured before a step is stale after it. Every method
 //! re-resolves one by `id`, but read state back with `s.card(inst)`, `s.unit(p, lane)` or
@@ -556,6 +557,7 @@ fn describe_instance(state: &GameState, card: &CardInstance) -> String {
                 .get(&card.def_id)
                 .map(|def| def.name.as_str())
         })
+        .or_else(|| crate::testkit::stand_in::stand_in_def(&card.def_id).map(|def| def.name.as_str()))
         .unwrap_or("?");
     format!(
         "{} {} \"{}\"{}",
@@ -576,6 +578,11 @@ fn visible_defs(state: &GameState) -> Vec<&CardDef> {
 
 /// Steps 2-4 of the header's resolution order: every defId that matched at the first step to match.
 fn def_ids_for(state: &GameState, text: &str) -> Vec<String> {
+    if crate::testkit::stand_in::is_stand_in(text) {
+        return crate::catalog::find_def(Some(state), text)
+            .map(|def| vec![def.id.clone()])
+            .unwrap_or_default();
+    }
     let defs = visible_defs(state);
     let lower = text.to_lowercase();
     let steps: [&dyn Fn(&CardDef) -> bool; 4] = [

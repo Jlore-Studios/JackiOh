@@ -55,7 +55,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // 4/4
     const TIMMY: &str = "core-011"; // 3/3
     const PILLOW: &str = "core-065-1"; // Spikey Pillow: can't be in Defense Position
-    const ARMORED: &str = "core-025"; // 4-mana 7/7, Armor 7
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // 4-mana 7/7, Armor 7
     const STOCKPILE: &str = "core-005";
     const FIENDER: &str = "core-092"; // Stack; has the stats of all your Felinors
 

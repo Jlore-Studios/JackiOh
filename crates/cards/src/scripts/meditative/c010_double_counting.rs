@@ -38,14 +38,14 @@ mod tests {
 
     const SORCERER: &str = "core-068"; // Unit 5/5. Cry: deal 4 damage to a declared target.
     const FELINOR: &str = "core-043"; // Unit 3/10, no text that answers damage.
-    const TIMMY: &str = "core-011"; // Unit 3/3: one 4-hit kills it.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // Unit 3/3: one 4-hit kills it.
     const ARMOR: &str = "core-073"; // Field Spell. Cry: Draw 1.
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
     const LAR: &str = "classicplus-076"; // Unit 1/1. Death: Summon a Brother Ping.
     const PING: &str = "classicplus-076-1"; // Brother Ping.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
     const REWIND: &str = "classic-054"; // (1) Spell: trigger a Cry of one of your Units.
-    const VANILLA: &str = "core-008"; // a (1) 4/4 with no text.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // a (1) 4/4 with no text.
     const FILLER: &str = "core-010"; // (0) Spell, never played: it only keeps the turn open (R82).
 
     /// A side with mana to play and a stocked library, so no turn auto-ends (§2.5) or fatigues.

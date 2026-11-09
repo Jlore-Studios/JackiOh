@@ -54,9 +54,9 @@ mod tests {
     use crate::{merged, upgrade_number};
 
     const RUNES: &str = super::ID;
-    const TIMMY: &str = "core-011"; // (1) 3/3 Rush, First Strike.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const ARMORED: &str = "core-025"; // (4) 7/7, Armor 7.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) 3/3 Rush, First Strike.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) 7/7, Armor 7.
     const DEFENDER: &str = "core-003"; // (1) 1/1 Taunt, Divine Shield, Reborn.
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";

@@ -105,7 +105,7 @@ mod tests {
     const POINTMASTER: &str = "core-020"; // (2) Unit.
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
     const SEVEN_SEVEN: &str = "core-025"; // (4) Unit 7/7.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const ROCK: &str = "core-066"; // (4) Unit 10/10, Indestructible.
     const FELINOR_TOKEN: &str = "core-t-felinor";
     const HINDER: &str = "core-021"; // (0) Spell: a card in hand, so no turn ends by itself (R82).

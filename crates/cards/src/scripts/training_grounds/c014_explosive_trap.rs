@@ -60,7 +60,7 @@ mod tests {
     const TRAP: &str = super::ID;
     const RENO: &str = "core-053"; // (3) 4/6, Cry: heal your hero up to 30.
     const SAINTESS: &str = "core-081"; // (1) 1/2.
-    const ARMORED: &str = "core-025"; // (4) 7/7, Armor 7.
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) 7/7, Armor 7.
     const DEFENDER: &str = "core-003"; // (1) 1/1 Taunt, Divine Shield, Reborn.
     const TOKEN_MAKER: &str = "core-015"; // (1) 1/1, Cry: summon a Rush Token.
     const TRUE_STRIKE: &str = "core-044"; // a Spell.

@@ -129,14 +129,14 @@ mod tests {
     const GLITCH: &str = "classic-018";
     const NUMBERS: &[&str] = &["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
     const REPLENISH: &str = "core-010"; // (0) Spell
-    const VANILLA: &str = "core-008"; // (1) Unit
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit
     const STOCKPILE: &str = "core-005"; // (1) Spell
     const FELINORS: &str = "core-012"; // (2) Unit
     const TWO_TRAP: &str = "classic-052"; // Final Gambit, a (2) Trap that answers nothing these tests do (Unlicensed Experimentation, core-085, costs 3 since issue #3136)
     const TWINSPELL: &str = "core-079"; // (2) Field Spell
     const MENACE: &str = "core-019"; // (3) Unit
     const MANA_WELL: &str = "core-006"; // (3) Field Spell
-    const SEVEN: &str = "core-025"; // (4) Unit
+    const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) Unit
     const ROCK: &str = "core-066"; // (4) Unit, Indestructible, Tribute 1
     const DIVIDEND: &str = "core-024"; // (X) Spell
     const BILLY: &str = "classicplus-069"; // (X) Unit

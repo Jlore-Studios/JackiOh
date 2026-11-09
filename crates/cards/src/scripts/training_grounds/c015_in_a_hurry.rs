@@ -82,8 +82,8 @@ mod tests {
 
     const HURRY: &str = "traininggrounds-015";
     const RUSH_TOKEN: &str = "core-t-rush";
-    const GREASER: &str = "meditative-100"; // (2) Unit 7/7.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const GREASER: &str = "stand-in (2) 7/7 R21/21"; // (2) Unit 7/7.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const ROCK: &str = "core-066"; // (4) Unit 10/10, Indestructible.
     const SUPPORT_LOSER: &str = "classicplus-019-4"; // End of turn: heal your hero and each of your Units 3.
     const ACE: &str = "classic-065"; // Trap; Radiant: at the end of your turn, Recruit 1 or 3.

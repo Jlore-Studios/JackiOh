@@ -80,7 +80,7 @@ mod tests {
     const DIVIDEND: &str = "core-024"; // (X) Spell
     const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
     const REMINISCE: &str = "core-072"; // (1) Spell: Discover a card from your GY. It costs (1) less. Exile this.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
     const FILLER: &str = "core-010"; // (0) Spell
     const SECOND_WIND: &str = "classic-028"; // Radiant Aura: you may play cards from your graveyard that cost (1) or more.
 

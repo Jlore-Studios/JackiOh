@@ -112,8 +112,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TESLA: &str = "classic-005";
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const TIMMY: &str = "core-011"; // (1) 3/3.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) 3/3.
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
     const TOKEN_MAN: &str = "core-015"; // (1) 1/1, Cry: Summon a Rush Token (3/3).
     const CALL: &str = "core-069"; // (2) Spell: Recruit 3 Units of (1) Cost or less.

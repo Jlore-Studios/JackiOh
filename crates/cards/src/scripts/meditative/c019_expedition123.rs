@@ -89,7 +89,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const EXPEDITION: &str = "meditative-019";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
     const COIN: &str = "core-t-coin"; // (0) Spell: gain 1 mana.
 

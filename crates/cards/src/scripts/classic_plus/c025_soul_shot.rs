@@ -97,7 +97,7 @@ mod tests {
     const ROCK: &str = "core-066"; // 10/10 Indestructible
     const TOP_LOSER: &str = "classicplus-019-1"; // Radiant: Immune to Spells
     const MOTHS: &str = "core-009"; // Moths to the Flame, (2) 1/14
-    const VANILLA: &str = "core-008"; // Mr. Vanilla, (1) 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // Mr. Vanilla, (1) 4/4
     const LANE_EATER: &str = "classic-071"; // Lane Eater, (3) 4/4 (Silly Silas, core-052, is a 2/2 since issue #3136)
     const FILLER: &str = "core-005";
 

@@ -141,7 +141,7 @@ mod tests {
     ];
     const SYSTEMS: [&str; 4] = ["stinkyscape-117", "stinkyscape-118", "stinkyscape-119", "stinkyscape-120"];
     const DORMANT_STARSHIP: &str = "stinkyscape-t-dormant-starship";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
 
     const SEED: &str = "chaos-scape";

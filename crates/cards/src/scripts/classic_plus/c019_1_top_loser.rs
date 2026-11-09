@@ -41,7 +41,7 @@ mod tests {
     const TOP: &str = "classicplus-019-1";
     const JUNGLE: &str = "classicplus-019-2";
     const BODY: &str = "core-019"; // 9/9 Taunt
-    const VANILLA: &str = "core-008"; // 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // 4/4
     const HIT_JOB: &str = "core-016"; // Spell: destroy target Unit
     const SORCERER: &str = "core-068"; // Unit: Cry deal 4 damage to a target
     const SWITCH_ALL: &str = "core-048"; // Spell: switch the position of every Unit

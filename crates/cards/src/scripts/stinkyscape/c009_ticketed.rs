@@ -66,7 +66,7 @@ mod tests {
     use super::ID;
 
     const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const LAR: &str = "classicplus-076"; // (1) 1/1: "Death: Summon a Brother Ping."
     const SORCERER: &str = "core-068"; // (2) 5/5: "Cry: Deal 4 damage."
     const ARMOR: &str = "core-073"; // (2) Field Spell: "… Cry: Draw 1."

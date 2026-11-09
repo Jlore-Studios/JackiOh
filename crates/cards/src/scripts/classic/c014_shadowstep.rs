@@ -147,9 +147,9 @@ mod tests {
     const SHADOWSTEP: &str = "classic-014";
     const BIG_FELINOR: &str = "core-043"; // (4) Unit 3/10: "Cry: Destroy all non-Felinor Units."
     const MIND_CONTROL: &str = "core-049"; // (5) Spell: "Float reduces cost. Steal an enemy card."
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9
-    const TIMMY: &str = "core-011"; // (1) Unit 3/3
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit 3/3
     const DEFENDER: &str = "core-003"; // (1) Unit 1/1 Taunt, Divine Shield, Reborn
     const STATE_OF_GAME: &str = "classic-041"; // (1) Unit 3/3 Indestructible
     const SAINTESS: &str = "core-081"; // (1) Unit 2/2: "Death: Make your other Units Radiant."

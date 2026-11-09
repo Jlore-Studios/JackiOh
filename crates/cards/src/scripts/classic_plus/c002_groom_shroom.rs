@@ -90,7 +90,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const GROOM: &str = "classicplus-002";
-    const TIMMY: &str = "core-011"; // (1) 3/3 Rush, First Strike.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) 3/3 Rush, First Strike.
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";

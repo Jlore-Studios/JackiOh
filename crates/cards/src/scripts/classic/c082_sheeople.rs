@@ -66,7 +66,7 @@ mod tests {
     const GOLEM: &str = "core-055"; // (3) Unit 10/5: Taunt, Tribute 3.
     const CUBE: &str = "core-022"; // (3) Unit: Cry: Tribute one of your other Units and remember it.
     const TURTINATOR: &str = "classic-021"; // (2) Unit 5/4: Activate: Tribute a Unit; deal damage equal to its attack.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
     const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
     const COLLATERAL: &str = "core-034"; // (4) Spell: Exile target permanent and a random card from your opponent's deck.

@@ -139,7 +139,7 @@ mod tests {
     const FLAME: &str = "classic-016"; // (1) Spell, Book: Deal 4 damage (8 Radiant).
     const DIVIDEND: &str = "core-024"; // (X) Spell: modes damage / heal / mana.
     const JAMMED: &str = "core-036"; // (1) Spell: Destroy target backrow card; Lock its zone.
-    const TIMMY: &str = "core-011"; // (1) Unit.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit.
     const VANILLA: &str = "core-008";
     const FILLER: &str = "core-010"; // (0) Spell Rapid Replenish.
     const TUTOR: &str = "core-051"; // (1) Spell: opens a type prompt as it resolves.

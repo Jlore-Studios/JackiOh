@@ -44,7 +44,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const CORE_SYSTEM: &str = "stinkyscape-117";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const WEAPONS: &str = "core-014"; // (4) Field Spell.
     const SHEEPISH: &str = "core-041"; // (1) Trap.
     const RUSH_TOKEN: &str = "core-t-rush"; // A Unit token.

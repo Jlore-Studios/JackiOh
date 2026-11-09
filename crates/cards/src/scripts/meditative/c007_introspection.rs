@@ -101,7 +101,7 @@ mod tests {
     const GENN: &str = "classic-086";
     const FODDER: &str = "core-015"; // (1) 1/1 Unit.
     const FILLER: &str = "core-005"; // (1) Spell.
-    const VANILLA: &str = "core-008"; // (1) Unit.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit.
     const CHEAP: &str = "core-010"; // (0) Spell.
     const DIVIDEND: &str = "core-024"; // (X) Spell.
 

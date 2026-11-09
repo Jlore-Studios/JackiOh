@@ -119,7 +119,7 @@ mod tests {
     use super::{CN_PEPTIDES, ID};
 
     const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const MOTHS: &str = "core-009"; // (2) 1/14.
     const GENN: &str = "classic-086"; // (4) 14/14.
     const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."

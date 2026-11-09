@@ -89,9 +89,9 @@ mod tests {
     const ECLIPSE: &str = "core-035"; // (1) Spell: "Deal 3 damage to a target."
     const COLLATERAL: &str = "core-034"; // (4) Spell: "Exile target permanent and a random card from your opponent's deck."
     const STATE_OF_GAME: &str = "classic-041"; // (1) Unit 3/3 Indestructible
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9
-    const TIMMY: &str = "core-011"; // (1) Unit 3/3
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit 3/3
     const STOCKPILE: &str = "core-005"; // (1) Spell, a spare card (§2.5)
 
     use crate::js;

@@ -136,7 +136,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FILLER: &str = "core-005"; // (1) Spell.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
     const POOL_SEEDS: u32 = 20;
     /// The fifteen Units that #2521 took off the Starship Pieces: the pool offers none of them.
     const NO_LONGER_PIECES: [&str; 15] = [

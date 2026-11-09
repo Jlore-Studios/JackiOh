@@ -42,7 +42,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BACK_BREAKER: &str = "classic-051";
-    const VANILLA: &str = "core-008"; // 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // 4/4
     const MENACE: &str = "core-019"; // 9/9 Taunt
     const HIT_JOB: &str = "core-016"; // Spell 3: destroy target Unit
     const FLOOD: &str = "core-017"; // Spell 4: bounce all Units

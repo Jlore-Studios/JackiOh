@@ -87,7 +87,7 @@ mod tests {
     const FILLER: &str = "core-010"; // (0) Spell.
     const SPARE: &str = "core-005"; // (1) Spell: library spare.
     const CHEAP_UNIT: &str = "core-008"; // (1) Unit.
-    const DEAR_UNIT: &str = "core-025"; // (4) Unit.
+    const DEAR_UNIT: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) Unit.
     const CHEAP_SPELL: &str = "core-041"; // (1) Trap.
     const VANILLA: &str = "core-008";
     const SHEEP: &str = "core-t-sheep"; // Worth 2 Tributes.

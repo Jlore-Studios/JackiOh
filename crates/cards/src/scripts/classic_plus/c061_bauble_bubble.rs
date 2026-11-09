@@ -51,7 +51,7 @@ mod tests {
     const SILAS: &str = "core-052"; // Radiant: cards crossing to the opponent bounce to their controller's hand
     const CUBE: &str = "core-022"; // Carnivorous Cube: its Cry tributes one of your other Units
     const VANILLA: &str = "core-008";
-    const FILLER: &str = "core-011"; // Tempo Timmy, a (1) Unit (never a Stockpile, so the adds read plainly)
+    const FILLER: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // Tempo Timmy, a (1) Unit (never a Stockpile, so the adds read plainly)
 
     use crate::scenario;
 

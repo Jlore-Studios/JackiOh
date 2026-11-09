@@ -64,7 +64,7 @@ mod tests {
     const BIG_MAX: &str = "classic-080";
     /// S #114 Arctic Citadel, Epic.
     const CITADEL: &str = "stinkyscape-114";
-    const VANILLA: &str = "core-008"; // (1) 4/4, Common.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4, Common.
     const FILLER: &str = "core-005";
     /// C+ #73.1 Classic Golem, a unit token printed Legendary: its rarity is Token.
     const GOLEM: &str = "classicplus-073-1";

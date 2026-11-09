@@ -44,7 +44,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const DINO: &str = "traininggrounds-034";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const WEAPONS: &str = "core-014"; // Field Spell: your Units have +2 Attack.
     const PARAGON: &str = "stinkyscape-074"; // Paragon-X 10/1, Immutable.
 

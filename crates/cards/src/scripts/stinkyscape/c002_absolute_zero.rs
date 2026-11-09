@@ -65,7 +65,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const ZERO: &str = "stinkyscape-002";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
     const FILLER: &str = "core-005";
     const WILD_SYSTEM: &str = "stinkyscape-120"; // (3) Spell: the melee (R1848005).
     const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
