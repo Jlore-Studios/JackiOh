@@ -37207,7 +37207,8 @@
       "2026-11-09T07:46:29Z,claude-8,stream,call,42572049283,27,2026-11-09T09:40:00Z,,,allowed,85,,"
     ],
     "runs": [
-      "2026-11-09T07:38:55Z,42575482627,claude-1,opus,revise,3457,hard,built,,19.8,65,14514,2546638,1.4832,4,10,,,5.8,claude-7,fresh,other,1"
+      "2026-11-09T07:38:55Z,42575482627,claude-1,opus,revise,3457,hard,built,,19.8,65,14514,2546638,1.4832,4,10,,,5.8,claude-7,fresh,other,1",
+      "2026-11-09T07:47:38Z,42572049283,claude-8,opus,review,3461,hard,approved,,25.6,108,31309,5448125,4.7624,11,27,,,0.8,claude-8,fresh,,5"
     ]
   },
   "version": 1
