@@ -18497,13 +18497,16 @@
     "what": "review #3460 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-09T04:57:38Z",
+    "at": "2026-11-09T05:08:02Z",
     "notes": [
-      "delivered review #3460 on claude-3 (run 42563959245): interrupted",
-      "delivered review #3464 on claude-3 (run 42560436722): interrupted",
-      "delivered build #3429 on claude-1 (run 42555777227): built",
-      "started review #3465 on claude-1 (run 42564897761)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-09T05:10:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is idle, but nothing queued is for it; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 86%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-09T09:00:00Z; it takes reviews only; it can start a build or a plan again in 3h 58m; `muse` is idle, but nothing queued is for it; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it; waiting for their owners: #3460 held for `claude-3` until 23:10 (it refused a call); #3464 held for `claude-3` until 23:10 (it refused a call)",
+      "#3464 is held for `claude-3` until 23:10 (it refused a call)",
+      "#3460 is held for `claude-3` until 23:10 (it refused a call)",
+      "delivered revise #3462 on claude-6 (run 42564022762): built",
+      "delivered revise #3426 on claude-4 (run 42559584312): built",
+      "started review #3464 on claude-3 (run 42565812608)",
+      "started review #3426 on claude-4 (run 42565876986)",
+      "started review #3460 on claude-3 (run 42565944089)",
+      "nothing more to start: nothing is queued",
       "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -19210,7 +19213,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T04:57:38Z",
+  "loop_tick": "2026-11-09T05:08:02Z",
   "machine_disk": {
     "issue": null,
     "reading": {
