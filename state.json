@@ -17667,7 +17667,21 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 6731148803
+      "waiting_comment": 6731148803,
+      "waiting_turn": {
+        "behind": [
+          3462,
+          3461,
+          3457,
+          3444
+        ],
+        "ends": "2026-11-09T06:48:38Z",
+        "from_run": "42562036246",
+        "head": "98c798a2438403ba3930f9c90e9c9f457465d2f5",
+        "model": "opus",
+        "provider": "claude-6",
+        "since": "2026-11-09T04:48:38Z"
+      }
     },
     "3459": {
       "action": "build",
