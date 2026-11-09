@@ -17608,30 +17608,13 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
-        "built_by": "claude-7",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [],
-          "from": "20110db7fdd8f811e75b9dd5835439d032b42bf4",
-          "main": "1b69bb256877b86e3332e37959c33b95e2390c1e"
-        },
+        "built_by": "claude-1",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-7",
-            "run": "42561226566",
-            "tier": "strong"
-          }
-        ],
-        "sha": "d7775ded14195e2fd56cb223b1de0f77339035e7",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "f9e3e47cd11a43c1694b1bbf356580f8ad211648",
+        "tiers": {}
       }
     },
     "3458": {
