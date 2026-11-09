@@ -16441,6 +16441,13 @@
     "3497": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-09T21:01:50Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard-rule line holds: it is a client-only change in apps/web (Game, audio director, spec note), not engine rules, AI, cross-crate, migration, or big."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
