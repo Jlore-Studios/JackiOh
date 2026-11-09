@@ -16676,23 +16676,12 @@
     "what": "review #3506 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-09T17:24:28Z",
+    "at": "2026-11-09T17:35:26Z",
     "notes": [
-      "delivered suggest on claude-3 (run 42659001663): suggested",
-      "delivered build #3486 on claude-8 (run 42647440734): built",
-      "started review #3505 on claude-8 (run 42664880941)",
+      "delivered build #3477 on claude-7 (run 42647295314): built",
+      "started review #3506 on claude-7 (run 42666577036)",
       "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days",
-      "#3504: typed it Task",
-      "#3503: typed it Task",
-      "#3502: typed it Task",
-      "#3501: typed it Task",
-      "#3500: typed it Task",
-      "#3499: typed it Feature",
-      "#3498: typed it Task",
-      "#3497: typed it Task",
-      "#3496: typed it Task",
-      "#3495: closed, so `bot:merging` is off"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17398,7 +17387,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T17:24:28Z",
+  "loop_tick": "2026-11-09T17:35:26Z",
   "machine_disk": {
     "issue": null,
     "reading": {
