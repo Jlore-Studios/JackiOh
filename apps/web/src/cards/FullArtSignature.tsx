@@ -82,6 +82,11 @@ export function signatureLength(name: string, size: number, charEm: number): num
   return Math.min(SIGNATURE_WIDTH, Math.max(name.length, 1) * size * charEm);
 }
 
+/** R3345000: an SVG attribute's reference to the fragment `id` (a clip path's or a mask's). */
+export function fragmentRef(id: string): string {
+  return `url(#${id})`;
+}
+
 /** An id React gives, as an SVG fragment can name it. */
 function svgId(id: string, part: string): string {
   return `sig-${id.replace(/[^A-Za-z0-9_-]/gu, "")}-${part}`;
