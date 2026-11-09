@@ -15701,6 +15701,13 @@
     "3481": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-09T14:15:24Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "None of the five hard lines holds: only crates/tools/src/run_sim.rs, the tools README row and spec \u00a715.12 change (3 files); no engine, AI, cross-crate contract or migration; crates/run stays as it is."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
