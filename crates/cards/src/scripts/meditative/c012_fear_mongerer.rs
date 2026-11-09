@@ -41,15 +41,15 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const SHREDDER: &str = "core-013"; // Unit. End of turn: 2 damage to each enemy Unit and hero.
-    const DREAM: &str = "core-023"; // Spell. End of turn: return this to hand, from the graveyard.
-    const RECYCLING: &str = "core-039"; // Spell. Exile this. End of turn: copy each other card played.
-    const VANILLA: &str = "core-008"; // a (1) 4/4 with no text.
-    const BREAD_AND_BUTTER: &str = "core-018"; // Field Trap: fires in the end-of-turn trap window.
+    const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: Unit. End of turn: 2 damage to each enemy Unit and hero.
+    const DREAM: &str = "core-023"; // Reoccurring Dream: Spell. End of turn: return this to hand, from the graveyard.
+    const RECYCLING: &str = "core-039"; // Recycling Initiative: Spell. Exile this. End of turn: copy each other card played.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: no text
+    const BREAD_AND_BUTTER: &str = "core-018"; // Bread and Butter: fires in the end-of-turn trap window
     const BREAD_TOKEN: &str = "core-t-bread";
     const FILING: &str = "meditative-009"; // Joint Filing: each end-of-turn hook runs twice.
     const PEA: &str = "meditative-013"; // Gatling Pea: end of turn, 1 to the enemy hero, then grows.
-    const SPARE: &str = "core-010"; // (0) Spell, never played: it only keeps the turn open (R82).
+    const SPARE: &str = "core-010"; // Rapid Replenish: a Spell, never played: it only keeps the turn open (R82)
 
     /// A side with mana to play and a stocked library, so no turn auto-ends (§2.5) or fatigues.
     fn side(extra: Value) -> Value {

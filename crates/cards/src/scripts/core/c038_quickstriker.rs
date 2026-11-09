@@ -53,14 +53,14 @@ mod tests {
 
     const QUICKSTRIKER: &str = "core-038";
     /// Three plays whose own texts never touch a hero's health, so the damage read is Quickstriker's.
-    const RAPID_REPLENISH: &str = "core-010"; // 0-cost Spell; Combo 3, so nothing at one play
-    const TEMPO_TIMMY: &str = "core-011"; // 1-cost Unit
-    const BIG_D_FENDER: &str = "core-001"; // 2-cost Unit
+    const RAPID_REPLENISH: &str = "core-010"; // Rapid Replenish: Combo 3, so nothing at one play
+    const TEMPO_TIMMY: &str = "core-011"; // Tempo Timmy
+    const BIG_D_FENDER: &str = "core-001"; // Big D-fender
     const SPARE: &str = "core-005";
 
-    const POINTMASTER: &str = "core-020"; // 2-cost Unit, no text
-    const ANTI_ONESHOT: &str = "core-073"; // Field Spell: p2's hero takes at most 5 in one instance
-    const GOING_LONG: &str = "core-084"; // Field Spell: p2's hero has Armor 2 (paid 2)
+    const POINTMASTER: &str = "core-020"; // Pointmaster: no text
+    const ANTI_ONESHOT: &str = "core-073"; // Anti-oneshot Armor: p2's hero takes at most 5 in one instance
+    const GOING_LONG: &str = "core-084"; // Going Long: p2's hero has Armor 2 (paid 2)
 
     const HERO: i32 = 30;
 

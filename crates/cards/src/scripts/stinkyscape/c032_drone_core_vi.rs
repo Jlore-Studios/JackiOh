@@ -43,7 +43,7 @@ mod tests {
 
     const CORE: &str = "stinkyscape-032";
     const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
     fn setup(radiant: bool, field: Value) -> Scenario {

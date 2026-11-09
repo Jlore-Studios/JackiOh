@@ -161,8 +161,8 @@ mod tests {
 
     const MIND: &str = "meditative-022";
     const FORTIFY: &str = "meditative-022-1";
-    const FILLER: &str = "core-005"; // (1) Spell.
-    const MENACE: &str = "core-019"; // (3) 9/9.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const MENACE: &str = "core-019"; // Midrange Menace
     const WIND: &str = "classic-028"; // Second Wind: exile your deck, discard your hand.
 
     /// p1 keeps `secret`; p2 holds the linked Fortify Mind and it is p2's turn.

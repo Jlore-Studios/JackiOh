@@ -10,11 +10,11 @@ use jackioh_engine::PlayerId::P1;
 use jackioh_engine::subsystems::fuse::FuseArgs;
 use jackioh_engine::testkit::*;
 
-const KYS_CONSTANT: &str = "classicplus-041"; // (1) Spell: Cry, pick a hand card (check: "number").
-const REWIND: &str = "classic-054"; // (1) Spell: Cry, pick an ally Unit or graveyard card with a Cry (check: "hasCry").
-const SHRIMP: &str = "classic-048"; // (2) Unit with a Cry: a card Rewind's predicate admits.
-const HIT_JOB: &str = "core-016"; // a hand card for KY's Constant's pick to name.
-const ANCHOR: &str = "core-010"; // a free Spell that keeps the turn open; never played.
+const KYS_CONSTANT: &str = "classicplus-041"; // KY's Constant: Cry, pick a hand card (check: "number")
+const REWIND: &str = "classic-054"; // Rewind: Cry, pick an ally Unit or graveyard card with a Cry (check: "hasCry").
+const SHRIMP: &str = "classic-048"; // Hired Shrimp: Unit with a Cry: a card Rewind's predicate admits.
+const HIT_JOB: &str = "core-016"; // Hit Job: a hand card for KY's Constant's pick to name
+const ANCHOR: &str = "core-010"; // Rapid Replenish: a free Spell that keeps the turn open; never played.
 
 use super::scenario;
 

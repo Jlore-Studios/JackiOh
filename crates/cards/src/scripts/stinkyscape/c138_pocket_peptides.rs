@@ -118,12 +118,12 @@ mod tests {
 
     use super::{CN_PEPTIDES, ID};
 
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const MOTHS: &str = "core-009"; // (2) 1/14.
-    const GENN: &str = "classic-086"; // (4) 14/14.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."
-    const SORCERER: &str = "core-068"; // (2) 5/5: "Cry: Deal 4 damage."
+    const FILLER: &str = "core-005"; // Stockpile: a Spell, a card in hand, so no turn ends by itself
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MOTHS: &str = "core-009"; // Moths to the Flame
+    const GENN: &str = "stand-in (4) 14/14 R42/42";
+    const HIT_JOB: &str = "core-016"; // Hit Job: "Destroy a Unit."
+    const SORCERER: &str = "core-068"; // Twisted Sorcerer: "Cry: Deal 4 damage."
 
     fn trapped(seed: &str, radiant: bool, hand: Value, field: Value) -> Scenario {
         let mut cards = vec![json!(FILLER)];

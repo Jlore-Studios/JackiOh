@@ -13,15 +13,15 @@
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
 
-const VANILLA: &str = "core-008"; // Unit, cost 1, no Cry
-const SUPPRESSIVE_AURA: &str = "core-046"; // radiant: enemy units -4/-4
-const LUNAR_ECLIPSE: &str = "core-035"; // 3 damage; the next Spell you play this turn costs 1 less
-const TEMPO_TIMMY: &str = "core-011"; // 3/3 Rush, First Strike
-const BREAD_AND_BUTTER: &str = "core-018"; // Field Trap in the end-of-turn window (R62)
-const ECHOES: &str = "core-040"; // Start of your turn: damage to the enemy hero = cards in your exile
-const KPOP_FANATIC: &str = "core-050"; // Cry: at the start of your next turn, steal the chosen permanent
+const VANILLA: &str = "core-008"; // Mr. Vanilla: no Cry
+const SUPPRESSIVE_AURA: &str = "core-046"; // Suppressive Aura: radiant: debuffs enemy units
+const LUNAR_ECLIPSE: &str = "core-035"; // Lunar Eclipse: 3 damage; the next Spell you play this turn costs 1 less
+const TEMPO_TIMMY: &str = "core-011"; // Tempo Timmy: Rush, First Strike
+const BREAD_AND_BUTTER: &str = "core-018"; // Bread and Butter: Field Trap in the end-of-turn window (R62)
+const ECHOES: &str = "core-040"; // Echoes of the Forgotten: Start of your turn: damage to the enemy hero = cards in your exile
+const KPOP_FANATIC: &str = "core-050"; // K-Pop Fanatic: Cry: at the start of your next turn, steal the chosen permanent
 const RENO: &str = "core-053";
-const MASOCHISM_MASK: &str = "core-065"; // Start of turn: a mode prompt
+const MASOCHISM_MASK: &str = "core-065"; // Masochism Mask: Start of turn: a mode prompt
 const MY_PAWN: &str = "core-096";
 const GARY: &str = "core-004";
 const SEVEN_SEVEN: &str = "core-025";
@@ -595,8 +595,8 @@ mod r62_2_2_a_this_turn_effect_made_after_cleanup_ends_with_that_turn {
 
 // A Spell's clauses belong to the turn it was played on (R155, R241, §6.2, R62)
 
-const PREM_PANTHER: &str = "core-032"; // 5/4 Rush; after it attacks and survives, draw 2 per Unit destroyed
-const MOTHS: &str = "core-009"; // 1/14; start of turn: every enemy Unit attacks this
+const PREM_PANTHER: &str = "core-032"; // Prem Panther: Rush; after it attacks and survives, draw 2 per Unit destroyed
+const MOTHS: &str = "core-009"; // Moths to the Flame: start of turn: every enemy Unit attacks this
 
 /// Put a fresh instance of `defId` on top of a player's library (index 0 is the top, §3).
 fn on_top_of_library(s: &mut Scenario, def_id: &str, player: PlayerId) -> CardInstance {
@@ -766,10 +766,10 @@ mod r241_r155_r71_a_spell_s_end_of_turn_clause_belongs_to_the_turn_it_was_played
 
 // The start of a turn reports what it changes (R169, R240, §10.3)
 
-const HINDER: &str = "core-021"; // Cast on draw: the opponent's next mana refresh is 1 lower
-const HIT_JOB: &str = "core-016"; // a Spell with no hand trigger
-const STOCKPILE: &str = "core-005"; // likewise
-const GOING_LONG: &str = "core-084"; // Field Spell: your hero has Armor 2
+const HINDER: &str = "core-021"; // Hinder: Cast on draw: the opponent's next mana refresh is 1 lower
+const HIT_JOB: &str = "core-016"; // Hit Job: a Spell with no hand trigger
+const STOCKPILE: &str = "core-005"; // Stockpile: likewise
+const GOING_LONG: &str = "core-084"; // Going Long: your hero has Armor 2
 
 fn hits_on_p2_hero(events: &[GameEvent]) -> Vec<GameEvent> {
     events

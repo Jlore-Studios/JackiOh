@@ -76,13 +76,13 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MELT: &str = "classic-011";
-    const FILLER: &str = "core-005"; // (1) Spell, p1's spare card (§2.5).
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
-    const SEVEN: &str = "core-025"; // (4) Unit 7/7
-    const FELINORS: &str = "core-012"; // (2) Unit 3/4
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const REPLENISH: &str = "core-010"; // (0) Spell
-    const SPECIESIST: &str = "core-002"; // (2) Unit 6/1
+    const FILLER: &str = "core-005"; // Stockpile: a Spell, p1's spare card (§2.5).
+    const MENACE: &str = "core-019"; // Midrange Menace: Unit Taunt
+    const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const FELINORS: &str = "core-012"; // Duplicating Felinors
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const REPLENISH: &str = "core-010"; // Rapid Replenish: a Spell
+    const SPECIESIST: &str = "core-002"; // Speciesist
     const THEIR_HAND: [&str; 5] = [MENACE, SEVEN, FELINORS, VANILLA, REPLENISH];
 
     fn open(s: &Scenario) -> PendingChoice {

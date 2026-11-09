@@ -54,10 +54,10 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const FILLER: &str = "core-010"; // (0) Spell.
-    const SPARE: &str = "core-005"; // (1) Spell: library spare.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const TRAP: &str = "core-085"; // (2) Trap, set face down to fill the backrow.
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const SPARE: &str = "core-005"; // Stockpile: library spare
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const TRAP: &str = "core-085"; // Unlicensed Experimentation: a Trap, set face down to fill the backrow
 
     const SEEDS: usize = 30;
 

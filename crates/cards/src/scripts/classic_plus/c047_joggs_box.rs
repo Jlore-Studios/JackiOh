@@ -329,7 +329,7 @@ mod tests {
         #[test]
         fn r387_with_jogg_s_box_and_fig_of_life_the_only_spells_all_ten_casts_are_fig_of_life() {
             crate::register_all();
-            const FIG: &str = "core-047"; // (3) Spell: heal a target 20
+            const FIG: &str = "core-047"; // Fig of Life: heal a target 20
             let _restore = with_catalog(only_spells(FIG));
             let mut s = scenario(json!({
                 "seed": "jogg-only-fig",
@@ -345,7 +345,7 @@ mod tests {
         #[test]
         fn r656_jogg_s_box_aims_nothing_its_helpful_casts_land_on_both_sides_across_seeds() {
             crate::register_all();
-            const FIG: &str = "core-047"; // (3) Spell: heal a target 20 — aimed help, but the Box carries no targetEnemies
+            const FIG: &str = "core-047"; // Fig of Life: heal a target 20 — aimed help, but the Box carries no targetEnemies
             let mut sides: IndexSet<String> = IndexSet::new();
             {
                 let _restore = with_catalog(only_spells(FIG));
@@ -372,7 +372,7 @@ mod tests {
         #[test]
         fn r452_r471_a_cast_book_of_plague_c_n70_places_its_tokens_at_random_its_caster_is_never_asked() {
             crate::register_all();
-            const PLAGUE_BOOK: &str = "classic-070"; // (1) Spell: "Place {tokens} Plague Counters."
+            const PLAGUE_BOOK: &str = "classic-070"; // Book of Plague: "Place {tokens} Plague Counters."
             let _restore = with_catalog(only_spells(PLAGUE_BOOK));
             let mut s = scenario(json!({
                 "seed": "jogg-only-plague",

@@ -50,7 +50,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FODDER: &str = "core-093-1"; // Spell token, 0 mana
+    const FODDER: &str = "core-093-1"; // Combo-Fodder: a Spell token
     /// #61 Postdoc is 2/4: the base 2 leaves it standing, the radiant 4 kills it.
     const POSTDOC: &str = "core-061";
     /// §2.5/R82 TURN ANCHOR. #10 Rapid Replenish is a 0-cost Spell, always an affordable play, so one

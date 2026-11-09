@@ -48,8 +48,8 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
-    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
 
     fn hits(s: &Scenario) -> Vec<String> {
         s.last_events()

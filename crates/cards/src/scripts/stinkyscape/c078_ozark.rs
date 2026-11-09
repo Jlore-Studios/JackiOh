@@ -59,8 +59,8 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const FILLER: &str = "core-005"; // (1) Spell.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
 
     /// p1 plays the Ozark (Radiant on `radiant`) into lane 1; returns the scenario and its id.
     fn prospected(radiant: bool, seed: &str) -> (Scenario, String) {

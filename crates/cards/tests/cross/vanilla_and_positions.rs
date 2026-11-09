@@ -259,8 +259,8 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
 
 // A unit's keywords are a set (§6.1, §10.4, §10.8)
 
-const TIMMY: &str = "core-011"; // Unit, 1: Rush, First Strike
-const WEAPONS: &str = "core-014"; // Field Spell: your units have +2 attack, Rush, First Strike
+const TIMMY: &str = "core-011"; // Tempo Timmy: Rush, First Strike
+const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your units have +2 attack, Rush, First Strike
 // Unit, 3: printed Taunt, and no Can't Defend: Right-house defender has it since issue #3136 (R2657000),
 // so it cannot stand in Defense Position, which this set test needs.
 const MENACE: &str = "core-019";

@@ -103,8 +103,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
 
     const DAMAGE: i32 = 7;
     const RADIANT_DAMAGE: i32 = 14;

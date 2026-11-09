@@ -39,10 +39,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FUNGUS: &str = "classicplus-049";
-    const X_SPELL: &str = "core-024"; // Efficiency Dividend, X Cost
-    const FREE: &str = "core-010"; // Rapid Replenish, (0)
-    const THREE: &str = "core-016"; // Hit Job, (3)
-    const ONE: &str = "core-005"; // Stockpile, (1)
+    const X_SPELL: &str = "core-024"; // Efficiency Dividend
+    const FREE: &str = "core-010"; // Rapid Replenish
+    const THREE: &str = "core-016"; // Hit Job
+    const ONE: &str = "core-005"; // Stockpile
 
     struct Grown {
         radiant: bool,

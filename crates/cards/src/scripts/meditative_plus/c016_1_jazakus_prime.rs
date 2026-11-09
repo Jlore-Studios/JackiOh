@@ -65,7 +65,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const VANILLA: &str = "core-008"; // 4/4
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
 
     fn huge_recipe(hits: &[i32]) -> Value {
         let effects: Vec<Value> = hits

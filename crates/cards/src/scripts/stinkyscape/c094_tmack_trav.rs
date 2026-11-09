@@ -73,10 +73,10 @@ mod tests {
 
     use super::{ID, script_v0_5_11};
 
-    const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const GRUNT: &str = "core-001"; // (2) 0/7 Big D-fender: dies to Tmack's 8, and strikes back for nothing.
-    const MOTHS: &str = "core-009"; // (2) 1/14: at its controller's start of turn every enemy Unit attacks it.
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const GRUNT: &str = "core-001"; // Big D-fender: Big D-fender: dies to Tmack's 8, and strikes back for nothing
+    const MOTHS: &str = "core-009"; // Moths to the Flame: at its controller's start of turn every enemy Unit attacks it.
 
     fn fauci() -> Value {
         json!({ "def": "core-091", "radiant": true })

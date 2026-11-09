@@ -72,9 +72,9 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const OOMEN: &str = "core-067"; // Unit 1/2 → 2/4, cost 1, Human.
-    const MANA_WELL: &str = "core-006"; // A Field Spell: something to occupy a backrow zone with.
-    const SIPHON_SQUAD: &str = "classic-088"; // Field Trap that Tributes itself while the opponent has no Units (R403).
+    const OOMEN: &str = "core-067"; // Zoomerbin Oomen: Human
+    const MANA_WELL: &str = "core-006"; // Mana Well: something to occupy a backrow zone with
+    const SIPHON_SQUAD: &str = "classic-088"; // Siphon Squad: Field Trap that Tributes itself while the opponent has no Units (R403).
 
     /// The base face's pool, by catalog id: the Cost (1) traps of every set (R380), Core #18, #41,
     /// #60, #71, #96, Classic #63, Meditative #64 and #68, Stinkyscape (#1884) #5, #131, #135, #138
@@ -118,7 +118,7 @@ mod tests {
 
     /// R82: a turn left with only end, concede and offer-draw auto-ends after every action, so each
     /// scenario keeps this free Spell in p1's hand, never played, as one legal action on the turn.
-    const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: a Spell, always an affordable play
 
     /// `scenario(opts)` with ANCHOR appended to p1's hand.
     fn board(opts: Value) -> Scenario {

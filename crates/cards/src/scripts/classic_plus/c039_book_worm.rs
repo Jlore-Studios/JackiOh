@@ -72,8 +72,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const WORM: &str = "classicplus-039";
-    const MENACE: &str = "core-019"; // 9/9: the worm dies attacking it.
-    const FLOOD: &str = "core-017"; // (4) Spell: bounce all Units.
+    const MENACE: &str = "core-019"; // Midrange Menace: the worm dies attacking it
+    const FLOOD: &str = "core-017"; // Flood: bounce all Units
     const FILLER: &str = "core-005";
 
     use crate::scenario;

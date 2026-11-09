@@ -76,8 +76,8 @@ mod tests {
 
     const RCTA: &str = "meditative-035";
     const FILLER: &str = "core-005";
-    const VANILLA: &str = "core-008"; // 4/4, untagged.
-    const BROTHER: &str = "classicplus-076"; // CN Unit.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: untagged
+    const BROTHER: &str = "classicplus-076"; // Brother Lar: CN Unit
     // Untagged Trap, set face-down; it answers a Unit play, so it stays set under this Spell (#60
     // Bear Honeypot answers any (1) Cost play and would leave the field before the Spell resolved).
     const SHEEPISH: &str = "core-041";

@@ -45,12 +45,12 @@ mod tests {
 
     use super::ID;
 
-    const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const SHREDDER: &str = "core-013"; // (3) 6/10: lives through a strike back of 9, not one of 11.
-    const MOTHS: &str = "core-009"; // (2) 1/14: at its controller's start of turn every enemy Unit attacks it.
-    const TRAITOROUS_BLOOD: &str = "meditative-064"; // Trap: re-aims an attack at the attacker's neighbour.
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: lives through a strike back of 9, not one of 11
+    const MOTHS: &str = "core-009"; // Moths to the Flame: at its controller's start of turn every enemy Unit attacks it.
+    const TRAITOROUS_BLOOD: &str = "meditative-064"; // Traitorous Blood: re-aims an attack at the attacker's neighbour
 
     fn board(radiant: bool, p1_field: Value, p2_field: Value) -> Scenario {
         let mut field = vec![json!({ "def": ID, "radiant": radiant })];

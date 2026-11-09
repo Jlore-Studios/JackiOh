@@ -56,7 +56,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-    const BODY: &str = "core-019"; // 9/9
+    const BODY: &str = "core-019"; // Midrange Menace
     const FILLER: &str = "core-005";
 
     fn board(radiant: bool) -> Scenario {

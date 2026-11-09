@@ -206,17 +206,17 @@ mod tests {
 
     use crate::scenario;
 
-    const RECYCLING: &str = "traininggrounds-057"; // Spell, 0
-    const TIMMY: &str = "core-011"; // Unit, 1 — 3/3 Rush, First Strike, no Cry
-    const MR_TOKEN: &str = "core-015"; // Unit, 1 — Cry: summon a Rush Token
-    const BIG_D: &str = "core-001"; // Unit, 2 — 0/8, an aura and no Cry: nothing to fire on a replay
-    const BREAD: &str = "core-018"; // Field Trap, 1 — fires in the end-of-turn trap window (R62)
-    const FELINORS: &str = "core-012"; // Unit, 2 — 3/4, the body that kills a Rush Token on the strike-back
-    const RUSH_TOKEN: &str = "core-t-rush"; // the unit-token CARD, playable from a hand (#75), 3/3 Rush
-    const STOCKPILE: &str = "core-005"; // Spell, 1 — the spare card that keeps a turn meaningful (§2.5)
-    const MENACE: &str = "core-019"; // library filler
-    const POSTDOC: &str = "core-061"; // library filler
-    const FLOOD: &str = "core-017"; // Spell, 4 — Bounce all Units
+    const RECYCLING: &str = "traininggrounds-057"; // Legacy: Recycling Initiative: a Spell
+    const TIMMY: &str = "core-011"; // Tempo Timmy: Rush, First Strike, no Cry
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
+    const BIG_D: &str = "core-001"; // Big D-fender: an aura and no Cry: nothing to fire on a replay
+    const BREAD: &str = "core-018"; // Bread and Butter: a Field Trap, fires in the end-of-turn trap window (R62)
+    const FELINORS: &str = "core-012"; // Duplicating Felinors: the body that kills a Rush Token on the strike-back
+    const RUSH_TOKEN: &str = "core-t-rush"; // Rush Token: the unit-token CARD, playable from a hand (#75), Rush
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell, the spare card that keeps a turn meaningful (§2.5)
+    const MENACE: &str = "core-019"; // Midrange Menace: library filler
+    const POSTDOC: &str = "core-061"; // Prejudiced Postdoc: library filler
+    const FLOOD: &str = "core-017"; // Flood: a Spell, Bounce all Units
 
     /// Both sides keep a card in hand and cards in the library, so no turn auto-ends (§2.5, R82).
     fn spare() -> Value {

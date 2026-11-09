@@ -21,10 +21,10 @@ mod tests {
     use crate::scenario;
 
     const FILLER: &str = "core-005";
-    const BODY: &str = "core-008"; // Mr. Vanilla 4/4
-    const FIVE: &str = "traininggrounds-001"; // Spikey Steven 5/2
-    const THREE: &str = "traininggrounds-006"; // Chosen by the Sun 3/3
-    const PIERCER: &str = "classicplus-076-1"; // Brother Ping 4/4 Pierce
+    const BODY: &str = "core-008"; // Mr. Vanilla
+    const FIVE: &str = "stand-in (1) 5/2 R15/6";
+    const THREE: &str = "traininggrounds-006"; // Chosen by the Sun
+    const PIERCER: &str = "classicplus-076-1"; // Brother Ping: Pierce
 
     /// p2 holds the Moon in lane 1 (and a Mr. Vanilla in lane 2); p1 swings with `attacker`, its lane-1
     /// Unit.

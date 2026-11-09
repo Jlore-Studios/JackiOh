@@ -40,8 +40,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-005"; // Stockpile, a Spell that prints no Tradable.
-    const PRESTIGE: &str = "meditative-053"; // Prints Tradable.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell that prints no Tradable.
+    const PRESTIGE: &str = "meditative-053"; // Prestige: Prints Tradable
 
     fn unionised(seed: &str, radiant: bool) -> Scenario {
         scenario(json!({

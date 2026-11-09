@@ -42,9 +42,9 @@ mod tests {
     use super::ID;
     use crate::{filler, scenario};
 
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const ARMOR: &str = "core-073"; // (2) Field Spell.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const ARMOR: &str = "core-073"; // Anti-oneshot Armor: a Field Spell
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy a Unit
     const FILLER: &str = "core-005";
 
     fn board(radiant: bool, p2_hand: Value) -> Scenario {

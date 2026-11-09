@@ -74,10 +74,10 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
-    const FEELINGS: &str = "classic-032"; // (2) Spell: steal an enemy Unit in a lane with your (1) Unit.
-    const COMMANDER: &str = "stinkyscape-137"; // (4) Unit, Cry: launch your Dormant Starship.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy a Unit
+    const FEELINGS: &str = "classic-032"; // Felinor Feelings: steal an enemy Unit in a lane with your Unit.
+    const COMMANDER: &str = "stinkyscape-137"; // Starfleet Commander: Cry: launch your Dormant Starship
 
     /// p1's Prepare For Liftoff set (Radiant if `radiant`) in backrow lane 1, and an AP Rounds of p1's in
     /// lane 2 and of p2's in lane 1, p1 holding two Hit Jobs.

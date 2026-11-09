@@ -47,8 +47,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const LEADER: &str = super::ID;
-    const BODY: &str = "core-008"; // Mr. Vanilla 4/4
-    const LATE: &str = "traininggrounds-001"; // Spikey Steven 5/2, played after the leader
+    const BODY: &str = "core-008"; // Mr. Vanilla
+    const LATE: &str = "traininggrounds-001"; // Spikey Steven: played after the leader
     const FILLER: &str = "core-005";
 
     /// p1 holds the leader in lane 1 and a Mr. Vanilla in lane 2; p2 a Mr. Vanilla in lane 1.

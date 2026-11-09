@@ -52,11 +52,11 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BOOK: &str = "classic-003";
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt; Radiant 18/18.
+    const MENACE: &str = "core-019"; // Midrange Menace: Unit Taunt
     // Classic+ #26 Tommy Tempo, a Radiant Taunt set to 18/18 (`statsOverride`; it prints 8/8 since issue
     // #3138, 10/10 from patch v0.3.10): a big body no Immutable keeps a Spell off (R781001).
     const TEMPO: &str = "classicplus-026";
-    const FILLER: &str = "core-005"; // a card that keeps a hand from auto-ending the turn (§2.5).
+    const FILLER: &str = "core-005"; // Stockpile: a card that keeps a hand from auto-ending the turn (§2.5).
 
     use crate::js;
 

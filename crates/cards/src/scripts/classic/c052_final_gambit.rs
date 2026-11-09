@@ -107,23 +107,23 @@ mod tests {
 
     const GAMBIT: &str = "classic-052";
     const ARGUSLAND: &str = "classic-075";
-    const VITAL_KILL: &str = "classic-029"; // C #29 Book of Vital Kill: set a hero's health to 13.
-    const VANILLA: &str = "core-008"; // 4/4
-    const SEVEN_SEVEN: &str = "core-025"; // 4-mana 7/7 Armor 7: a plain 7-attack hitter (Pointmaster is a 6/1 since issue #3136)
-    const MENACE: &str = "core-019"; // 9/9 Taunt
-    const PANTHER: &str = "core-032"; // 5/4 Rush: whenever this attacks, draw 2 for each Unit that attack destroyed.
-    const GARY: &str = "core-004"; // 1/1
-    const LUNAR: &str = "core-035"; // (1) Spell: deal 3 damage to a target.
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const BLOOD_BEAN: &str = "core-027"; // Cast on draw: make a random hand card Radiant. Lose 5 health.
-    const HINDER: &str = "core-021"; // Cast on draw: their next refresh −1. Discard 1 at random (R682).
-    const GOING_LONG: &str = "core-084"; // Field Spell: your hero has Armor 2.
-    const ANTI_ONESHOT: &str = "core-073"; // Field Spell: your hero can't take more than 5 damage at a time.
+    const VITAL_KILL: &str = "classic-029"; // Book of Vital Kill: set a hero's health to 13
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const SEVEN_SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // a plain hitter
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const PANTHER: &str = "core-032"; // Prem Panther: Rush: whenever this attacks, draw 2 for each Unit that attack destroyed.
+    const GARY: &str = "core-004"; // Gary the Gambler
+    const LUNAR: &str = "core-035"; // Lunar Eclipse: deal 3 damage to a target
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const BLOOD_BEAN: &str = "core-027"; // Blood Ridden Glowy Jelly Bean: Cast on draw: make a random hand card Radiant. Lose 5 health.
+    const HINDER: &str = "core-021"; // Hinder: Cast on draw: their next refresh −1. Discard 1 at random (R682).
+    const GOING_LONG: &str = "core-084"; // Going Long: your hero has Armor 2
+    const ANTI_ONESHOT: &str = "core-073"; // Anti-oneshot Armor: your hero can't take more than 5 damage at a time
     const FILLER: &str = "core-005";
     const DECK: [&str; 5] = [FILLER, FILLER, FILLER, FILLER, FILLER];
-    const FORWARD: &str = "classicplus-074"; // (2) Field Trap: every 2 cards the opponent plays, the last is fused into this.
-    const RAPID: &str = "core-010"; // (0) Spell: Combo 3: draw 3.
-    const TRUE_STRIKE: &str = "core-044"; // (1) Spell: Pierce. Deal 4 damage. Exile this.
+    const FORWARD: &str = "classicplus-074"; // Twice Forward One Step Backwards: every 2 cards the opponent plays, the last is fused into this
+    const RAPID: &str = "core-010"; // Rapid Replenish: Combo 3: draw 3
+    const TRUE_STRIKE: &str = "core-044"; // True Strike: Pierce. Deal 4 damage. Exile this.
 
     use crate::js;
 

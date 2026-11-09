@@ -56,13 +56,13 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TRICKSTER: &str = "classic-002";
-    const TWO_TRAP: &str = "classic-052"; // Final Gambit, a (2) Trap that answers nothing these tests do (Unlicensed Experimentation, core-085, costs 3 since issue #3136)
-    const SHEEPISH: &str = "core-041"; // (1) Trap
-    const TESLA: &str = "classic-005"; // (2) Field Trap
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell
-    const STOCKPILE: &str = "core-005"; // (1) Spell
-    const VANILLA: &str = "core-008"; // (1) Unit
-    const WARDRUM: &str = "classicplus-037"; // (4) Unit, Divine Shield: "End of turn: Cast a copy of a random Spell, Field Spell or Trap you played this turn."
+    const TWO_TRAP: &str = "classic-052"; // Final Gambit: Trap that answers nothing these tests do (Unlicensed Experimentation, core-085 since issue #3136)
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const TESLA: &str = "classic-005"; // Tesla: a Field Trap
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const WARDRUM: &str = "classicplus-037"; // Wardrum: Divine Shield, "End of turn: Cast a copy of a random Spell, Field Spell or Trap you played this turn."
 
     use crate::js;
 

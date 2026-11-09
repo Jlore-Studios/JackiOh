@@ -29,7 +29,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const GENN: &str = "classic-086";
-    const SAINTESS: &str = "core-081"; // Death: make your other Units Radiant
+    const SAINTESS: &str = "core-081"; // Radiant Saintess: Death: make your other Units Radiant
     const HIT_JOB: &str = "core-016";
     const STOCKPILE: &str = "core-005";
     const VANILLA: &str = "core-008";

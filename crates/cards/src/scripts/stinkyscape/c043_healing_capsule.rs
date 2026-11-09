@@ -53,8 +53,8 @@ mod tests {
     use crate::filler;
 
     const CAPSULE: &str = "stinkyscape-043";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: Spell (§2.5).
 
     fn heals(s: &Scenario) -> Vec<i32> {
         s.events()

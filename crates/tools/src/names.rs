@@ -10,8 +10,23 @@
 //! It only ever rewrites the name on a line that is already an entry. It never adds, removes or reorders
 //! one, because an entry carries a person's judgment (a voice, a motif, a verdict) and a generated stub
 //! would pass the gate that asks for it.
+//!
+//! The card tests (#3486, every `.rs` file under `crates/cards/src` and `crates/cards/tests`, a script's
+//! own file from its `#[cfg(test)]` on): a helper line, `const <NAME>: &str = "<id>"; // <comment>` with a
+//! catalog id, keeps the card's name in its comment, and nothing beside a catalog id gives a cost or
+//! stats, since a balance patch would make them stale: those are refused rather than checked, so there
+//! is nothing to keep in sync (a test that wants only numbers names a stand-in, `stand-in (1) 4/4`,
+//! `crates/engine/src/testkit/stand_in.rs`). A helper's comment that is its name, or starts with
+//! `<name>: `, is kept; one whose text before a `: ` is a card's name (another card's, written beside
+//! the wrong id) has that name put back; any other gets the name in front, `<name>: <comment>`, so a
+//! comment's own words (`Cry: …`, `Radiant: …`) are never lost. A helper line with no comment is left,
+//! and so is an id the catalog does not hold (a stand-in, a fixture, a fused id).
 
-use std::{collections::BTreeMap, fs, path::Path};
+use std::{
+    collections::BTreeMap,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Result, bail};
 
@@ -40,6 +55,17 @@ const YAML_EMOTES_ID: &str = "emotes";
 const AUDIT_HEADER: &str = "| Id | Card | Verdict | Reasoning |";
 /// Where an fx entry's comment starts (`tables.test.ts`'s `ENTRY_LINE`).
 const FX_COMMENT: &str = ", // ";
+
+/// Where the card tests are (#3486): every `.rs` file under these.
+const CARD_TEST_DIRS: [&str; 2] = ["crates/cards/src", "crates/cards/tests"];
+/// The card scripts' files, whose card tests start at their `TESTS_OPEN` line; the script above it is
+/// left alone.
+const SCRIPTS_DIR: &str = "crates/cards/src/scripts/";
+const TESTS_OPEN: &str = "#[cfg(test)]";
+/// What a cost or stats beside a catalog id in a card test is told.
+const NUMBERS_PROBLEM: &str = "the comment gives a cost or stats, which a balance patch makes stale: write `// <Name>` or `// <Name>: <role>`, or name a stand-in such as \"stand-in (1) 4/4 R12/12\" (crates/engine/src/testkit/stand_in.rs)";
+/// The visibilities a helper line's `const` may carry.
+const HELPER_VISIBILITIES: [&str; 3] = ["pub ", "pub(crate) ", "pub(super) "];
 
 /// Fail, writing nothing, when a name comment is not the catalog's.
 #[derive(clap::Args)]
@@ -198,7 +224,12 @@ fn plan(root: &Path, names: &Names) -> Result<Plan> {
     fx.sort();
     files.extend(fx.into_iter().map(|path| (path, rewrite_fx as Rewriter)));
     files.push((AUDIT.to_string(), rewrite_audit));
+    files.extend(card_test_rewriters(root)?);
+    apply(root, files, names)
+}
 
+/// Each file's rewrite, as `(path, new text)` where it changes, and the problems, by path.
+fn apply(root: &Path, files: Vec<(String, Rewriter)>, names: &Names) -> Result<Plan> {
     let mut changed = Vec::new();
     let mut problems = Vec::new();
     for (path, rewrite) in files {
@@ -211,6 +242,201 @@ fn plan(root: &Path, names: &Names) -> Result<Plan> {
         }
     }
     Ok((changed, problems))
+}
+
+/// Each card test file with its rewriter: a script's own file from its tests on, any other whole.
+fn card_test_rewriters(root: &Path) -> Result<Vec<(String, Rewriter)>> {
+    Ok(card_test_files(root)?
+        .into_iter()
+        .map(|path| {
+            let rewrite: Rewriter = if path.starts_with(SCRIPTS_DIR) {
+                rewrite_card_script
+            } else {
+                rewrite_card_test
+            };
+            (path, rewrite)
+        })
+        .collect())
+}
+
+/// Every `.rs` file under `CARD_TEST_DIRS`, as sorted paths from the repository's root.
+fn card_test_files(root: &Path) -> Result<Vec<String>> {
+    let mut pending: Vec<PathBuf> = CARD_TEST_DIRS.iter().map(|dir| root.join(dir)).collect();
+    let mut files = Vec::new();
+    while let Some(next) = pending.pop() {
+        for entry in fs::read_dir(&next).map_err(|error| anyhow::anyhow!("{}: {error}", next.display()))? {
+            let path = entry?.path();
+            if path.is_dir() {
+                pending.push(path);
+            } else if path.extension().is_some_and(|extension| extension == "rs") {
+                let relative = path.strip_prefix(root)?;
+                let parts: Vec<&str> = relative
+                    .components()
+                    .filter_map(|part| part.as_os_str().to_str())
+                    .collect();
+                files.push(parts.join("/"));
+            }
+        }
+    }
+    files.sort();
+    Ok(files)
+}
+
+/// A card test file other than a script's: every line.
+fn rewrite_card_test(text: &str, names: &Names) -> (String, Vec<String>) {
+    rewrite_helpers(text, names, true)
+}
+
+/// A card script's own file: the lines after its first `TESTS_OPEN`.
+fn rewrite_card_script(text: &str, names: &Names) -> (String, Vec<String>) {
+    rewrite_helpers(text, names, false)
+}
+
+/// The card tests' lines, from the first or from the line after `TESTS_OPEN`, each problem with its line.
+fn rewrite_helpers(text: &str, names: &Names, from_start: bool) -> (String, Vec<String>) {
+    let mut in_tests = from_start;
+    let mut number = 0;
+    rewrite_lines(text, |line| {
+        number += 1;
+        if !in_tests {
+            in_tests = line.trim() == TESTS_OPEN;
+            return Ok(None);
+        }
+        card_test_line(line, names).map_err(|problem| format!("line {number}: {problem}"))
+    })
+}
+
+/// One card test line: a helper's comment with its card's name, a cost or stats beside a catalog id
+/// refused, any other line left.
+fn card_test_line(line: &str, names: &Names) -> Result<Option<String>, String> {
+    let Some(at) = comment_at(line) else {
+        return Ok(None);
+    };
+    let (code, after) = (&line[..at], &line[at + "//".len()..]);
+    let comment = after.trim();
+    if comment.is_empty() {
+        return Ok(None);
+    }
+    if let Some(id) = helper_id(code) {
+        let Some(name) = names.get(id) else {
+            return Ok(None);
+        };
+        if gives_numbers(&comment.replace(name.as_str(), "")) {
+            return Err(format!("{id}: {NUMBERS_PROBLEM}"));
+        }
+        let named = named_comment(comment, name, names);
+        if named == comment {
+            return Ok(None);
+        }
+        return Ok(Some(format!("{code}// {named}")));
+    }
+    let ids: Vec<&str> = quoted(code)
+        .into_iter()
+        .filter(|text| names.contains_key(*text))
+        .collect();
+    let rest = ids.iter().fold(comment.to_string(), |rest, id| {
+        rest.replace(names[*id].as_str(), "")
+    });
+    if !ids.is_empty() && gives_numbers(&rest) {
+        return Err(format!("{}: {NUMBERS_PROBLEM}", ids.join(", ")));
+    }
+    Ok(None)
+}
+
+/// A helper's comment with the card's name: kept when it is the name or starts `<name>: `; when its text
+/// before a `: ` is a card's name (the longest such, for a name like "Legacy: Mr. Vanilla" holds one),
+/// that name is put back; the name put in front of any other, so none of the comment's own words is lost.
+fn named_comment(comment: &str, name: &str, names: &Names) -> String {
+    if comment == name || comment.starts_with(&format!("{name}: ")) {
+        return comment.to_string();
+    }
+    let named_head = comment
+        .match_indices(": ")
+        .map(|(at, _)| at)
+        .filter(|&at| names.values().any(|known| *known == comment[..at]))
+        .last();
+    match named_head {
+        Some(at) => format!("{name}: {}", &comment[at + ": ".len()..]),
+        None => format!("{name}: {comment}"),
+    }
+}
+
+/// `[pub ]const <NAME>: &str = "<id>";`, the code of a helper line, as its id.
+fn helper_id(code: &str) -> Option<&str> {
+    let code = code.trim();
+    let code = HELPER_VISIBILITIES
+        .iter()
+        .find_map(|visibility| code.strip_prefix(visibility))
+        .unwrap_or(code);
+    let (constant, rest) = code.strip_prefix("const ")?.split_once(": &str = \"")?;
+    if constant.is_empty()
+        || !constant
+            .bytes()
+            .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_')
+    {
+        return None;
+    }
+    let (id, tail) = rest.split_once('"')?;
+    (tail == ";").then_some(id)
+}
+
+/// Where a line's `//` comment starts, outside any string literal.
+fn comment_at(line: &str) -> Option<usize> {
+    let bytes = line.as_bytes();
+    let mut in_string = false;
+    let mut at = 0;
+    while at < bytes.len() {
+        match bytes[at] {
+            b'\\' if in_string => at += 1,
+            b'"' => in_string = !in_string,
+            b'/' if !in_string && bytes.get(at + 1) == Some(&b'/') => return Some(at),
+            _ => {}
+        }
+        at += 1;
+    }
+    None
+}
+
+/// The string literals in a line's code, in order.
+fn quoted(code: &str) -> Vec<&str> {
+    let bytes = code.as_bytes();
+    let mut found = Vec::new();
+    let mut open: Option<usize> = None;
+    let mut at = 0;
+    while at < bytes.len() {
+        match (bytes[at], open) {
+            (b'\\', Some(_)) => at += 1,
+            (b'"', None) => open = Some(at + 1),
+            (b'"', Some(from)) => {
+                found.push(&code[from..at]);
+                open = None;
+            }
+            _ => {}
+        }
+        at += 1;
+    }
+    found
+}
+
+/// Whether a text gives a cost, `(<digits>)` or `(X)`, or stats, a `/` with a digit or `X` before it and
+/// one after it (past a `+` or `-`): `4/4`, `+2/+2`, `3X/3X`, `R12/12`.
+fn gives_numbers(text: &str) -> bool {
+    let number = |byte: u8| byte.is_ascii_digit() || byte == b'X';
+    let cost = text.match_indices('(').any(|(at, _)| {
+        let inner = &text[at + 1..];
+        inner.split_once(')').is_some_and(|(inner, _)| {
+            inner == "X" || (!inner.is_empty() && inner.bytes().all(|byte| byte.is_ascii_digit()))
+        })
+    });
+    let bytes = text.as_bytes();
+    let stats = text.match_indices('/').any(|(at, _)| {
+        let mut after = at + 1;
+        if matches!(bytes.get(after), Some(b'+' | b'-')) {
+            after += 1;
+        }
+        at > 0 && number(bytes[at - 1]) && bytes.get(after).copied().is_some_and(number)
+    });
+    cost || stats
 }
 
 pub fn run(args: Args) -> Result<()> {
@@ -353,6 +579,178 @@ mod tests {
                 "{text}"
             );
         }
+    }
+
+    fn card_names() -> Names {
+        [
+            ("core-005", "Stockpile"),
+            ("core-016", "Hit Job"),
+            ("core-019", "Midrange Menace"),
+            ("core-025", "4-mana 7/7"),
+            ("traininggrounds-043", "Legacy: Mr. Vanilla"),
+        ]
+        .into_iter()
+        .map(|(id, name)| (id.to_string(), name.to_string()))
+        .collect()
+    }
+
+    #[test]
+    fn card_test_comment_takes_the_name_and_keeps_its_role() {
+        let text = concat!(
+            "const KILL: &str = \"core-016\"; // Hit Job\n",
+            "const KILL_2: &str = \"core-016\"; // Hit Job: the removal\n",
+            "    pub const WRONG: &str = \"core-016\"; // Midrange Menace: the removal\n",
+            "pub(crate) const ROLE: &str = \"core-016\";  // the removal\n",
+            "pub(super) const CRY: &str = \"core-016\"; // Cry: Radiant: a text it keeps\n",
+            "const RENAMED: &str = \"core-016\"; // Contract Killer: a name no card has\n",
+            "const BARE: &str = \"core-016\";\n",
+            "const EMPTY: &str = \"core-016\"; //\n",
+            "const VANILLA: &str = \"stand-in (1) 4/4 R12/12\"; // the vanilla\n",
+            "const FIXTURE: &str = \"fx-1\"; // a fixture\n",
+            "const LEGACY: &str = \"traininggrounds-043\"; // Legacy: Mr. Vanilla: the old one\n",
+            "const LEGACY_OLD: &str = \"traininggrounds-043\"; // Hit Job: the old one\n",
+            "const WRONG_LEGACY: &str = \"core-016\"; // Legacy: Mr. Vanilla: the removal\n",
+            "const SEVEN: &str = \"core-025\"; // 4-mana 7/7\n",
+            "let kill = \"core-016\"; // the removal\n",
+        );
+        let want = concat!(
+            "const KILL: &str = \"core-016\"; // Hit Job\n",
+            "const KILL_2: &str = \"core-016\"; // Hit Job: the removal\n",
+            "    pub const WRONG: &str = \"core-016\"; // Hit Job: the removal\n",
+            "pub(crate) const ROLE: &str = \"core-016\";  // Hit Job: the removal\n",
+            "pub(super) const CRY: &str = \"core-016\"; // Hit Job: Cry: Radiant: a text it keeps\n",
+            "const RENAMED: &str = \"core-016\"; // Hit Job: Contract Killer: a name no card has\n",
+            "const BARE: &str = \"core-016\";\n",
+            "const EMPTY: &str = \"core-016\"; //\n",
+            "const VANILLA: &str = \"stand-in (1) 4/4 R12/12\"; // the vanilla\n",
+            "const FIXTURE: &str = \"fx-1\"; // a fixture\n",
+            "const LEGACY: &str = \"traininggrounds-043\"; // Legacy: Mr. Vanilla: the old one\n",
+            "const LEGACY_OLD: &str = \"traininggrounds-043\"; // Legacy: Mr. Vanilla: the old one\n",
+            "const WRONG_LEGACY: &str = \"core-016\"; // Hit Job: the removal\n",
+            "const SEVEN: &str = \"core-025\"; // 4-mana 7/7\n",
+            "let kill = \"core-016\"; // the removal\n",
+        );
+        let (new, problems) = rewrite_card_test(text, &card_names());
+        assert_eq!(problems, Vec::<String>::new());
+        assert_eq!(new, want);
+    }
+
+    #[test]
+    fn a_scripts_own_body_is_left() {
+        let text = concat!(
+            "pub const ID: &str = \"core-016\"; // Old\n",
+            "const OTHER: &str = \"core-019\"; // (3) 9/9\n",
+            "#[cfg(test)]\n",
+            "mod tests {\n",
+            "    const KILL: &str = \"core-016\"; // removal\n",
+            "}\n",
+        );
+        let (new, problems) = rewrite_card_script(text, &card_names());
+        assert_eq!(problems, Vec::<String>::new());
+        assert_eq!(new, text.replace("// removal", "// Hit Job: removal"));
+
+        let (_, problems) = rewrite_card_test(text, &card_names());
+        assert_eq!(problems, vec![format!("line 2: core-019: {NUMBERS_PROBLEM}")]);
+    }
+
+    #[test]
+    fn a_cost_or_stats_beside_a_real_id_is_a_problem_with_its_line() {
+        let text = concat!(
+            "#[cfg(test)]\n",
+            "const BIG_ATTACKER: &str = \"core-019\"; // (9) 9/9 Unit\n",
+            "        \"field\": [{ \"def\": \"core-019\", \"lane\": 2 }], // 8/10 after the buff\n",
+            "const SPARE: &str = \"core-005\"; // Stockpile, a (1) Spell\n",
+            "const SEVEN: &str = \"core-025\"; // 4-mana 7/7: (4) 7/7\n",
+            "const BIG: &str = \"stand-in (3) 9/9\"; // (3) 9/9\n",
+            "// \"core-019\" is a (3) 9/9\n",
+            "let pair = [\"fx-1\", \"stand-in (1) 2/2\"]; // 2/2s\n",
+            "let url = \"https://core-019\"; // 1/2\n",
+        );
+        let (new, problems) = rewrite_card_script(text, &card_names());
+        assert_eq!(new, text);
+        assert_eq!(
+            problems,
+            vec![
+                format!("line 2: core-019: {NUMBERS_PROBLEM}"),
+                format!("line 3: core-019: {NUMBERS_PROBLEM}"),
+                format!("line 4: core-005: {NUMBERS_PROBLEM}"),
+                format!("line 5: core-025: {NUMBERS_PROBLEM}"),
+            ]
+        );
+    }
+
+    #[test]
+    fn gives_numbers_reads_costs_and_stats_only() {
+        for text in [
+            "(1)",
+            "a (12) Spell",
+            "(X) Unit",
+            "4/4",
+            "+2/+2",
+            "-1/-1",
+            "3X/3X",
+            "R12/12",
+            "X/X",
+        ] {
+            assert!(gives_numbers(text), "{text}");
+        }
+        for text in [
+            "Hit Job: the removal",
+            "(the removal)",
+            "and/or",
+            "crates/cards/src",
+            "Jlockeed Shredder-10",
+            "/4",
+            "4/",
+            "(1a)",
+            "()",
+        ] {
+            assert!(!gives_numbers(text), "{text}");
+        }
+    }
+
+    #[test]
+    fn a_second_card_test_pass_changes_nothing() {
+        let text = concat!(
+            "const OLD: &str = \"core-016\"; // Contract Killer: the removal\n",
+            "const ROLE: &str = \"core-016\"; // the removal\n",
+            "const LEGACY: &str = \"traininggrounds-043\"; // the old one\n",
+        );
+        let (once, _) = rewrite_card_test(text, &card_names());
+        assert_ne!(once, text);
+        assert_eq!(
+            rewrite_card_test(&once, &card_names()),
+            (once.clone(), Vec::new())
+        );
+    }
+
+    /// #3486: what `plan` finds in the card tests alone.
+    fn card_test_plan(root: &Path, names: &Names) -> Result<Plan> {
+        apply(root, card_test_rewriters(root)?, names)
+    }
+
+    /// #3486: the card tests as they are pass `names --check`: no helper's comment lacks its card's
+    /// name and none beside a catalog id gives a cost or stats.
+    #[test]
+    fn card_tests_pass_names_check() {
+        let root = repo_root();
+        let files = card_test_rewriters(&root).expect("the card tests read");
+        assert!(
+            files.len() > 700,
+            "only {} card test files were walked",
+            files.len()
+        );
+        let (changed, problems) = card_test_plan(&root, &catalog_names()).expect("the card tests read");
+        assert!(
+            problems.is_empty(),
+            "a comment beside a catalog id in a card test gives a cost or stats (#3486):\n{}",
+            problems.join("\n")
+        );
+        let stale: Vec<&str> = changed.iter().map(|(path, _)| path.as_str()).collect();
+        assert!(
+            stale.is_empty(),
+            "a helper's comment lacks its card's name: run `cargo jackioh names` ({stale:?})"
+        );
     }
 
     #[test]

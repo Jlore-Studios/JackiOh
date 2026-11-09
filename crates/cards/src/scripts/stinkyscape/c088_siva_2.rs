@@ -55,9 +55,9 @@ mod tests {
     use super::{SPECIESIST, ID};
     use crate::{filler, scenario};
 
-    const VANILLA: &str = "core-008"; // (1) 4/4, a Human.
-    const MENACE: &str = "core-019"; // (3) 9/9, no tag.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: a Human
+    const MENACE: &str = "core-019"; // Midrange Menace: no tag
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy a Unit
     const FILLER: &str = "core-005";
 
     fn board(radiant: bool) -> Scenario {

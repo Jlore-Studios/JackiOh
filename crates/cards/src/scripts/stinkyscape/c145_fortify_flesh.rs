@@ -48,7 +48,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FORTIFY: &str = "stinkyscape-145";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
     fn armor_of(s: &Scenario, player: PlayerId) -> i32 {

@@ -67,7 +67,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const CONTRACT: &str = "classicplus-052";
-    const NETHER: &str = "core-088"; // (4) Spell: destroy all permanents
+    const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
     const FILLER: &str = "core-005";
     /// The non-token Jlockeed cards of every set but this one, sorted: Core #13, #14, C #4, C+ #48, #51,
     /// Meditative #87 and #97 (§8.8), Meditative+ #4 (§8.9, #1187), Stinkyscape #124 to #130 (#1884) and

@@ -68,19 +68,19 @@ mod tests {
     use crate::scenario;
 
     const ECHO: &str = "classic-057";
-    const COIN: &str = "core-t-coin"; // (0) Spell: Gain {mana} mana this turn (1, Radiant 2).
-    const WILDFIRE: &str = "classic-055"; // (1) Spell: Deal {damage} damage (4, Radiant 8), a declared target.
-    const GRAND: &str = "classic-072"; // Trap: counters the opponent's non-Unit plays.
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const RAPID: &str = "core-010"; // (0) Spell: Combo 3: Draw 3.
-    const ARMOR: &str = "core-073"; // (2) Field Spell
-    const ADAPTIVE: &str = "core-074"; // (X) Spell: Deal X to a target; heal X; draw X; an X/X Ghoul.
-    const REMINISCE: &str = "core-072"; // (1) Spell: Discover a card from your GY. It costs (1) less. Exile this.
-    const DREAM: &str = "core-023"; // (1) Spell: … End of turn: Return this to your hand.
-    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const PILE_ON: &str = "classic-060"; // (5) Spell: Recruit every permanent in your deck; to the bottom of the deck, not the GY.
+    const COIN: &str = "core-t-coin"; // The Coin: Gain {mana} mana this turn (1, Radiant 2)
+    const WILDFIRE: &str = "classic-055"; // Book of Wildfire: Deal {damage} damage (4, Radiant 8), a declared target
+    const GRAND: &str = "classic-072"; // Grand Counterspell: counters the opponent's non-Unit plays.
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const RAPID: &str = "core-010"; // Rapid Replenish: Combo 3: Draw 3
+    const ARMOR: &str = "core-073"; // Anti-oneshot Armor: a Field Spell
+    const ADAPTIVE: &str = "core-074"; // Adaptive UI: Deal X to a target; heal X; draw X; a Ghoul with X attack and health
+    const REMINISCE: &str = "core-072"; // Reminisce: Discover a card from your GY. It costs less. Exile this.
+    const DREAM: &str = "core-023"; // Reoccurring Dream: … End of turn: Return this to your hand.
+    const SUPER_VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw: take 1 damage.
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const PILE_ON: &str = "classic-060"; // Pile On: Recruit every permanent in your deck; to the bottom of the deck, not the GY.
     /// Pile On with C+ #39 Book Worm fused in, as R179 names it: a Spell, its first ingredient's type.
     const FUSED_PILE_ON: &str = "t-1:classic-060+classicplus-039";
 

@@ -63,7 +63,7 @@ mod tests {
 
     const FACTORY: &str = "meditative-029";
     const FILLER: &str = "core-005";
-    const FREE: &str = "core-010"; // a (0) Spell: keeps the turn from ending by itself with no mana left
+    const FREE: &str = "core-010"; // Rapid Replenish: keeps the turn from ending by itself with no mana left
 
     /// The `counterChanged` events, as JSON.
     fn changes(s: &Scenario) -> Vec<Value> {
