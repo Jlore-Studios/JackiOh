@@ -31371,10 +31371,6 @@
       "refused_until": "2026-11-08T18:10:00Z",
       "spent": [
         {
-          "at": "2026-11-02T21:02:29Z",
-          "minutes": 13.8
-        },
-        {
           "at": "2026-11-02T21:22:20Z",
           "minutes": 1.3
         },
@@ -32169,16 +32165,13 @@
         {
           "at": "2026-11-09T22:19:08Z",
           "minutes": 28.5
+        },
+        {
+          "at": "2026-11-09T22:48:04Z",
+          "minutes": 6.1
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-02T02:44:55Z",
-          "cache": 849111,
-          "cost": 0.7642,
-          "input": 27,
-          "output": 7438
-        },
         {
           "at": "2026-11-02T03:57:23Z",
           "cache": 1189414,
@@ -33571,14 +33564,21 @@
           "cost": 2.2978,
           "input": 139,
           "output": 57945
+        },
+        {
+          "at": "2026-11-09T22:48:04Z",
+          "cache": 595244,
+          "cost": 0.439,
+          "input": 14,
+          "output": 6270
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-10T01:40:00Z",
-          "utilization": 0.35
+          "utilization": 0.5
         },
-        "observed_at": "2026-11-09T22:19:08Z",
+        "observed_at": "2026-11-09T22:48:04Z",
         "status": "allowed"
       }
     },
@@ -36410,7 +36410,10 @@
   },
   "usage_spool": {
     "readings": [
-      "2026-11-09T22:34:46Z,claude-1,ping,before,42712895062,57,2026-11-10T02:30:00Z,,,allowed,40,,"
+      "2026-11-09T22:34:46Z,claude-1,ping,before,42712895062,57,2026-11-10T02:30:00Z,,,allowed,40,,",
+      "2026-11-09T22:24:11Z,claude-8,ping,before,42711060097,48,2026-11-10T01:40:00Z,,,allowed,85,,",
+      "2026-11-09T22:24:50Z,claude-8,stream,call,42711060097,49,2026-11-10T01:40:00Z,,,allowed,85,,",
+      "2026-11-09T22:30:20Z,claude-8,stream,call,42711060097,50,2026-11-10T01:40:00Z,,,allowed,85,,"
     ],
     "runs": [
       "2026-11-09T22:34:46Z,42712895062,claude-1,opus,build,3504,hard,interrupted,5-hour cap,0,0,0,0,,57,57,,,118.3,claude-1,none,,0"
