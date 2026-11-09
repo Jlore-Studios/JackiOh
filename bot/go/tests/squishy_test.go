@@ -38,6 +38,10 @@ import (
 // SQUISHY
 var squishyUser = pyjson.New("login", "squishy-squooby", "id", 334289562)
 
+// squishysMarker is what Squishy's harness puts at the end of everything it writes
+// (`gh.WithMarker`).
+const squishysMarker = "\n\n<!-- jackioh-squishy -->"
+
 // ------------------------------------------------------------------ SquishyProcessTests
 
 // squishy_cases_test.go's tests in a process started as Squishy: this test binary again, with
@@ -99,6 +103,13 @@ func TestSquishy_SquishysConfigSaysWhoItIs(t *testing.T) {
 	}
 	assertEqual(t, logins, []string{"jgoetzmann-bot"})
 	assertNotEqual(t, found.Marker, config.Marker)
+	// The night bot knows Squishy's words by this marker (#961, #3508).
+	markers := []string{}
+	for _, o := range config.Others {
+		markers = append(markers, o.Marker)
+	}
+	assertEqual(t, markers, []string{found.Marker})
+	assertEqual(t, "\n\n"+found.Marker, squishysMarker)
 }
 
 func TestSquishy_SquishysSubscriptionIsItsOwnOnGithubsRunners(t *testing.T) {
@@ -238,7 +249,8 @@ func TestSquishy_AssignedToSquishyKeepsItSquishys(t *testing.T) {
 // ------------------------------------------------------------------ BotsDoNotTalkForEverTests
 //
 // The bots name each other in their replies; only a bare `stop` from the other bot is a command,
-// and nothing answers it with a hint.
+// and nothing answers it with a hint. Squishy's words carry its marker: what a person types as
+// Squishy's account does not, and is answered as anyone's (#961, #3508).
 
 // squishyComment is BotsDoNotTalkForEverTests.comment: `user` comments `body` on `number`, and the
 // bot hears it.
@@ -255,7 +267,7 @@ func TestSquishy_SquishysReplyNamingTheNightBotIsNoRequest(t *testing.T) {
 	ctx := testsupport.MakeCtx(gh)
 	gh.AddIssue(9, fakes.Issue{Labels: []string{config.LabelBuild}})
 	out := squishyComment(ctx, gh, 9, "@jgoetzmann-bot\n\n#9 is the night bot's (@jgoetzmann-bot): it "+
-		"carries the night bot's labels.", squishyUser)
+		"carries the night bot's labels."+squishysMarker, squishyUser)
 	assertEqual(t, out, []string{"no command"})
 	assertEqual(t, gh.BotComments(9), []string{})
 }
@@ -265,9 +277,51 @@ func TestSquishy_ABareStopFromSquishyStopsItsSubIssue(t *testing.T) {
 	ctx := testsupport.MakeCtx(gh)
 	gh.AddIssue(10, fakes.Issue{Labels: []string{config.LabelBuild}})
 	squishyComment(ctx, gh, 10, "@jgoetzmann-bot stop\n\njgoetzmann stopped the tree this belongs to "+
-		"(#4).", squishyUser)
+		"(#4)."+squishysMarker, squishyUser)
 	assertNotIn(t, config.LabelBuild, gh.LabelNames(10))
 	assertTrue(t, ctx.Store.Load().Obj("items").Obj("10").Truthy("stop_requested"))
+}
+
+func TestSquishy_SquishysVoteIsNoVote(t *testing.T) {
+	gh := fakes.NewFakeGitHub()
+	ctx := testsupport.MakeCtx(gh)
+	gh.AddIssue(13, fakes.Issue{Labels: []string{config.LabelSuggestion}})
+	assertEqual(t, squishyComment(ctx, gh, 13, "approve"+squishysMarker, squishyUser), []string{"no command"})
+	assertEqual(t, gh.LabelNames(13), setOf(config.LabelSuggestion))
+}
+
+func TestSquishy_APersonWorkingAsSquishysAccountIsAnswered(t *testing.T) {
+	// #961: "Approve" typed as squishy-squooby on a suggestion was dropped as Squishy's own. Claude
+	// sessions post as that account too, their handoffs among it (#3508).
+	gh := fakes.NewFakeGitHub()
+	ctx := testsupport.MakeCtx(gh)
+	gh.AddIssue(14, fakes.Issue{Labels: []string{config.LabelSuggestion}})
+	squishyComment(ctx, gh, 14, "Approve", squishyUser)
+	assertIn(t, config.LabelBuild, gh.LabelNames(14))
+	assertTrue(t, strings.HasPrefix(lastOf(t, gh.BotComments(14)), "@squishy-squooby\n\nQueued #14"))
+	gh.AddIssue(15)
+	squishyComment(ctx, gh, 15, "/harness build", squishyUser)
+	assertIn(t, config.LabelBuild, gh.LabelNames(15))
+	// Squishy's marker quoted behind `>` is the quoted words', not this comment's.
+	gh.AddIssue(16)
+	squishyComment(ctx, gh, 16, "> Built it."+strings.ReplaceAll(squishysMarker, "\n", "\n> ")+
+		"\n\n/harness build", squishyUser)
+	assertIn(t, config.LabelBuild, gh.LabelNames(16))
+}
+
+func TestSquishy_OnlyAReviewWithSquishysMarkerIsSquishys(t *testing.T) {
+	gh := fakes.NewFakeGitHub()
+	ctx := testsupport.MakeCtx(gh)
+	gh.AddPull(9, "bot/issue-5", fakes.Pull{Labels: []string{config.LabelPR}})
+	review := func(body string) []string {
+		return events.Handle(ctx, "pull_request_review", pyjson.New("action", "submitted", "sender", squishyUser,
+			"pull_request", gh.GetPull(9), "review", pyjson.New("id", len(body), "state", "changes_requested",
+				"body", body, "user", squishyUser, "author_association", "MEMBER")))
+	}
+	assertEqual(t, review("Name it better."+squishysMarker), []string{"ignored: another bot's review"})
+	assertNotIn(t, config.LabelRevise, gh.LabelNames(9))
+	review("Name it better.")
+	assertIn(t, config.LabelRevise, gh.LabelNames(9))
 }
 
 func TestSquishy_APersonStillGetsEveryCommand(t *testing.T) {
