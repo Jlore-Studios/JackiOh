@@ -35895,7 +35895,8 @@
       "2026-11-09T20:49:20Z,claude-1,ping,before,42696348082,100,2026-11-09T21:30:00Z,,,rejected,40,,"
     ],
     "runs": [
-      "2026-11-09T20:34:07Z,42685278684,claude-4,sonnet,review,3520,medium,approved,,7,66,17827,1735835,1.1466,3,6,,,3.7,,fresh,,5"
+      "2026-11-09T20:34:07Z,42685278684,claude-4,sonnet,review,3520,medium,approved,,7,66,17827,1735835,1.1466,3,6,,,3.7,,fresh,,5",
+      "2026-11-09T20:49:20Z,42696348082,claude-1,opus,plan,3504,medium,interrupted,5-hour cap,0,0,0,0,,100,100,,,12.8,,none,,0"
     ]
   },
   "version": 1
