@@ -17325,6 +17325,17 @@
         "tiers": {
           "muse": "medium"
         }
+      },
+      "waiting_turn": {
+        "behind": [
+          3506
+        ],
+        "ends": "2026-11-10T00:49:19Z",
+        "from_run": "42709255731",
+        "head": "dc3e29c254a4d6fab5c382829fdd039d3da9402d",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "muse",
+        "since": "2026-11-09T22:49:19Z"
       }
     },
     "3525": {
