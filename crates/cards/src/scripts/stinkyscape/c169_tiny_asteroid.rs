@@ -70,15 +70,8 @@ pub fn pool_preview() -> PreviewHook {
         else {
             return vec![];
         };
-        let names: Vec<String> = pool
-            .iter()
-            .map(|def_id| def_of(Some(ctx.state), def_id).name.clone())
-            .collect();
-        let label = if ctx.radiant {
-            "random Radiant Stinkyscape Resource"
-        } else {
-            "random Stinkyscape Resource"
-        };
+        let names: Vec<String> = pool.iter().map(|def_id| def_of(Some(ctx.state), def_id).name.clone()).collect();
+        let label = if ctx.radiant { "random Radiant Stinkyscape Resource" } else { "random Stinkyscape Resource" };
         vec![PreviewValue {
             label: label.to_string(),
             value: names.len() as i32,

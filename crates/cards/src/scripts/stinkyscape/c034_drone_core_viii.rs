@@ -20,9 +20,7 @@ const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
 fn face(radiant: bool, deck: bool) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
-            vec![fill_board(json_as(
-                json!({ "defId": INTERCEPTOR, "radiant": radiant }),
-            ))]
+            vec![fill_board(json_as(json!({ "defId": INTERCEPTOR, "radiant": radiant })))]
         })),
         hand_triggers: vec![float_reduces_cost("drone-core-viii-float-hand")],
         deck_triggers: if deck {

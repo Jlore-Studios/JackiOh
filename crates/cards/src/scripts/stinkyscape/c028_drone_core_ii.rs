@@ -15,9 +15,7 @@ const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
 fn face(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
-            vec![summon(json_as(
-                json!({ "defId": INTERCEPTOR, "radiant": radiant }),
-            ))]
+            vec![summon(json_as(json!({ "defId": INTERCEPTOR, "radiant": radiant })))]
         })),
         ..Script::default()
     }

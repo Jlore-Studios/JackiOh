@@ -27,11 +27,7 @@ const ODDS: [i32; 3] = [60, 30, 10];
 /// R2521001: `ODDS` over `least..=most`, the low end first; a value past the third is weighted as
 /// the third, and a Nerf that crossed the two ends rolls between them.
 fn odds(least: i32, most: i32) -> Vec<DamageOdds> {
-    let (lo, hi) = if least <= most {
-        (least, most)
-    } else {
-        (most, least)
-    };
+    let (lo, hi) = if least <= most { (least, most) } else { (most, least) };
     (lo..=hi)
         .enumerate()
         .map(|(at, amount)| DamageOdds {

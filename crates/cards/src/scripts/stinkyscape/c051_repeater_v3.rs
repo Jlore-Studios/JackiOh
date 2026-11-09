@@ -40,11 +40,7 @@ fn repeater() -> ActivationDecl {
         uses: ActivationUses::Count(USES),
         cost: None,
         // "an enemy Unit": enemy Units only, never a hero.
-        targets: vec![TargetDecl::target(
-            1,
-            1,
-            json!({ "side": "enemy", "of": ["unit"] }),
-        )],
+        targets: vec![TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit"] }))],
         modes: vec![],
         can_activate: None,
         has: None,
