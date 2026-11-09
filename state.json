@@ -16228,9 +16228,11 @@
         "question": "Do you accept the branch as-is on the per-file reading of the criterion (family files shrink 4,280 to 1,910 lines, -2,370, with every other acceptance item green), or do you direct a specific scope expansion to chase net -1,500?",
         "why": "it is the only path that keeps test count, test names, seeds, coverage, and all green gates intact, and the per-file measurement the plan prescribed passes the 1,500 bar by a wide margin."
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-09T14:23:11Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-09T15:49:54Z",
         "family": "muse",
@@ -16240,6 +16242,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the Stinkyscape weapon, Miner, Drone Core and Asteroid families share their test bodies instead of copying them card by card\"} -->\n- ## What changed\n- The 31 Stinkyscape family test files no longer copy each other's bodies. New `crates/cards/src/stinkyscape_family.rs` (`#[cfg(test)]`, registered in [lib.rs](crates/cards/src/lib.rs)) holds each family's test bodies once \u2014 beam, repeater, cannon, flak (incl. rolls, sweeps, kept scripts, uses limits\u2026\n- Dropped (as the issue lists, nothing else): the 12 `its_health_is_doubled` tests in c050/c054/c058/c051/c055/c059/c052/c056/c060/c053/c057/c061. Tests went 226 \u2192 214; family test lines 4,280 \u2192 2,146 (\u22122,134).\n- ## How I tested it\n- - `cargo test -p jackioh-cards`: 8,508 lib + 1,106 integration tests passed, 0 failed.\n- - `cargo fmt --check`: clean. `cargo clippy -p jackioh-cards --all-targets -- -D warnings`: clean.\n- - `cargo jackioh spec check`: ok (1,871 rulings, 4,834 proofs).\n- - `cargo jackioh classify --base origin/main`: `Internal`, no card plays differently.\n- - Audited per file: every `r<n>` test name is unchanged in its original file; no diff hunk starts above `#[cfg(test)]`.\n- ## Decisions the issue didn't settle\n- - c027 keeps all its tests inline \u2014 its discard/interceptor bodies share nothing with II/V, and forcing them into one helper would falsify coverage. Rejected alternative: a parametrized discard helper (saved ~10 lines, blurred two mechanics).\n- - c063's uses wrapper passes literal `1` (that file has no `USES` const; the helper special-cases 1 to the \"already been used\" refusal).\n- - Drone Core IX uses VIII's fuller opponent-float body including the mid assert \u2014 verified passing rather than left inline.\n- - Flak v3's sweep keeps its own asserts over the shared `Seen` struct (rerolled stays unasserted there, as today); kept-9f seeds kept literally (`s005-kept-9e` in v3/v4, `s006-kept-9e` in v5) so RNG streams are unchanged.\n- - Helper names carry no `r<n>` token so `spec check` keeps reading the wrappers as the proving tests; helper comments cite only already-ruled R-ids.\n- One thing for the reviewer to look at twice: the shared module is ~1,000 lines \u2014 the shrinkage (2,134 lines) already nets it out, but the drone section is the thinnest win (IX's added mid assert is the one behavior-adjacent call).\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3483 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3483/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 3483,
       "kind": "review",
       "live": "reviewing",
