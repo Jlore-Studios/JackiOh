@@ -286,7 +286,7 @@ describe("R2944001 every card offered a part 5 version draws it", () => {
 });
 
 describe("R2944002 Immersive's depth", () => {
-  it("R2944002 R3015000 Immersive's depth takes a motion slot and holds still with Animated foil off, under Reduce motion and on a lazy face", () => {
+  it("R2944002 R3015000 R3340000 Immersive's depth takes a motion slot and holds still with Animated foil off, under Reduce motion and on a lazy face", () => {
     const IMMERSIVE_ANIMATED = `${VERSION_IMMERSIVE_ID}-animated`;
     expect(offeredOn(VERSION_IMMERSIVE_ID, BOTH) && offeredOn(IMMERSIVE_ANIMATED, BOTH)).toBe(true);
     const def = CATALOG[BOTH];
@@ -302,7 +302,8 @@ describe("R2944002 Immersive's depth", () => {
       );
       return [...container.querySelectorAll<HTMLElement>(".cf")];
     };
-    const split = [...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"), "static"];
+    // R3340000: the slots go to the newest faces, so the oldest holds still.
+    const split = ["static", ...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated")];
     // Past the slots the rest hold still, Immersive's first level or its animated one, one slot a face: its depth and its
     // art's own motion move together.
     writeCardLevel(BOTH, VERSION_IMMERSIVE_ID);

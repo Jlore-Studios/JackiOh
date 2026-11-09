@@ -217,7 +217,8 @@ The new canvas presets (#2792, drawn in code in `fx/presets.ts` and `fx/sprites.
 
 `aura` (#2787, R2787000) is the one persistent motif: while a card's effect holds, the zone, lane, side
 or board it covers wears a quiet looping look in the card's palette, a tint, a slow drift of motes and
-an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, palette?, scope } }`.
+an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, palette?, scope } }`;
+R3400000: beside a `{ bespoke }` recipe too (`entryAura` reads either).
 
 - **Looks** (`fx/aura/looks.ts`, `AURA_LOOKS`): `ember`, `frost`, `bloom`, `void`, `storm`, `holy`,
   `toxic`, `arcane`, (R3337003) `drift` (an asteroid field's), (R3400000) `flurry` (snow), `chalk`
@@ -234,8 +235,11 @@ an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, pale
   `silkWeb`, `mossCreep`, `crownSigil`, `craterSmoke`, `cloakShimmer` and `abyssWhirl`, each one
   Classic signature's own, and (R3407000) fifteen more, each one Stinkyscape part two card's own:
   `scanline`, `heartbeat`, `glint`, `pixelcrawl`, `duohalo`, `arcflick`, `steplights`, `searchlight`,
-  `stationrings`, `aiwisp`, `crownpulse`, `drumbeat`, `starpath`, `stinkvapour` and `pages`; all within
-  `AURA_SIGNATURE_MAX_INTENSITY`. The loader fails one on any entry that is no signature, and
+  `stationrings`, `aiwisp`, `crownpulse`, `drumbeat`, `starpath`, `stinkvapour` and `pages`, and (R3399001)
+  eighteen more, each one Classic+ signature permanent's own: `syrup`, `waffleDome`, `frostMist`, `ovenSteam`,
+  `laneWall`, `snoreLeaves`, `coinGlint`, `staffBreath`, `bowNotch`, `warHeartbeat`, `appleRibbon`,
+  `bannerBreeze`, `greatBannerShade`, `laserDot`, `stoneFaces`, `stairCracks`, `jungleLeaves` and
+  `serverLights`, its Units' on their tiles; all within `AURA_SIGNATURE_MAX_INTENSITY`. The loader fails one on any entry that is no signature, and
   `auraLookSpec` reads either kind.
 - **What wears one** (`fx/aura/plan.ts`, read off the shown view alone): every face-up Field Spell or
   Field Trap whose entry has an aura, every face-up Unit whose entry has a `tile` aura (R3400000), and every modifier the view lists that a readable play added
@@ -290,8 +294,8 @@ under the card (`fx/aura/TileAura.tsx`, `tile.css`).
   Core, runes for Classic, ink for Meditative, starfield for Stinkyscape, roots for Training Grounds),
   a wider edge glow and motes (`TILE_MOTES_MYTHIC`).
 - **Signature replacement:** a card whose entry carries an `aura` (such as Feng Shui, or R3400000 a
-  bespoke entry's, Bob's, Tutorial Master's and Classic's signatures') uses that standing aura in
-  `AuraLayer` instead.
+  bespoke entry's, Bob's, Tutorial Master's, Classic's and R3399001 Classic+'s signatures') uses that
+  standing aura in `AuraLayer` instead.
 - **Interactions:** hover, press or tap sends a ripple, plays a bell in its hue (`auraTouch`) and
   buzzes on a phone (`Haptics.touch()`). Being picked as a target brightens the glow; damage or
   divine shield loss flickers it; Dormant, Frozen or Silenced dims it; destroyed or exiled fades
@@ -492,10 +496,12 @@ Issue #3330 asks for an animation of its own for every Legendary and Mythic, in 
 motifs most of them played; #3332 laid the frame (R3332000) and each set's pass writes its cards'.
 
 - **Budgets** (`fx/constants.ts`, `tiers.test.ts`): over its gallery play, held as the queue holds it
-  at speed 1 with Big moments full, every cue of a Legendary's signature ends within
-  `SIGNATURE_LEGENDARY_MAX_MS` (1.6 s) of the play's start, a Mythic's, its takeover's hold included,
-  within `SIGNATURE_MYTHIC_MAX_MS` (2.6 s), and a Spell's, seen only briefly, within
-  `SIGNATURE_SPELL_SHARE` of its rarity's. A Spell's shakes may reach `SIGNATURE_SPELL_MAX_TRAUMA` (1),
+  at speed 1 with Big moments full, each of a signature's own cues (its entrance or takeover, its motif
+  or recipes, its set piece; not the rows every card's events share) ends within its budget of the start
+  of the entry it plays in (R3399005): a Legendary's within `SIGNATURE_LEGENDARY_MAX_MS` (1.6 s), a
+  Mythic's within `SIGNATURE_MYTHIC_MAX_MS` (2.6 s), and a Spell's, seen only briefly, within
+  `SIGNATURE_SPELL_SHARE` of its rarity's, but a Mythic's takeover, its hold included, within the
+  Mythic's whole. A Spell's shakes may reach `SIGNATURE_SPELL_MAX_TRAUMA` (1),
   a permanent's `SIGNATURE_PERMANENT_MAX_TRAUMA` (0.8), and a signature aura's alpha, tint and edge
   stay within `AURA_SIGNATURE_MAX_INTENSITY`. All of it sits inside R200's tail, one set piece per
   action and `SET_PIECE_HOLD_CAP_MS`, and a tap, the speed, the intensity, Big moments and Reduce
@@ -570,6 +576,20 @@ motifs most of them played; #3332 laid the frame (R3332000) and each set's pass 
   in place of the shared rays; a permanent's standing look of its own on its zone, a Unit's on its
   tile; In Too Deep's own takeover, `abyss`, and its still. `fx/cards/classic.md` ("Signatures") lists
   each card's beats, what moved and its verdict; `classic/signatures.test.ts` plays them, from both seats.
+- **Classic+** (#3399, R3399000): all 35 of its Legendaries and Mythics, tokens by printed rarity, are
+  signatures, each recipe in `fx/cards/classicplus/` and each card's beats, moves and verdict in
+  `fx/cards/classicplus.md`'s Signatures table. A Unit or a Field Spell lands with its own `entrance` and
+  plays its text's beat in its `bespoke` recipe (on its Cry, trigger, Death or Activate, keyed by the
+  hook its marker opens), wearing a look of its own beside it (R3399001: eighteen new signature looks, a
+  Unit's on its `tile`); a Spell's recipe claims its own `cardPlayed` for its cast, then the events its text
+  emits. Its four Mythics take looks of their own (`zealot`, `portal`, `stair`, `vineyard`) whose takeover
+  draws a picture filling the screen, an SVG drawing (`fx/takeoverArt.ts`, `TAKEOVER_ART_DRAWINGS`) in the
+  art layer R3400000's parts stand in, still under Reduce Motion (R3399002); a beat only the owner may
+  see (a Discover's or a test's options) plays on the owner's seat alone, and from the other seat every
+  card in a hand or deck flies as a back (R3399003); each card's play or cast names a sound effect of its
+  own (R3399004). `classicplus/signatures.test.ts`
+  holds each signature's own cues to its ceiling of the entry it plays in, the per-beat measure a person
+  chose for every set's signatures, which `tiers.test.ts` applies since (R3399005).
 - **Meditative** (#3405, R3405000, R3405001): every Meditative Legendary and Mythic, its tokens by their
   printed rarity among them, is a signature after its concept, in `fx/cards/meditative/`: a Unit's
   entrance of its own, then its text's beat and a standing look on its tile; a Spell's cast of its own; a
