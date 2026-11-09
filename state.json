@@ -16267,7 +16267,7 @@
       }
     },
     "3493": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "died": 0,
@@ -16286,10 +16286,12 @@
       },
       "interruptions": 0,
       "issue": 3483,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "revising",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-09T21:52:15Z",
         "from_run": "42695418981",
         "gates": [
           {
@@ -16353,11 +16355,11 @@
       "question": "",
       "queued_at": "2026-11-09T21:50:14Z",
       "round_tier": "medium",
-      "run_id": "42695418981",
+      "run_id": "pending:916973d1-1794261097",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-09T20:41:46Z",
+      "started_at": "2026-11-09T21:52:15Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17318,9 +17320,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T21:51:24Z",
+    "at": "2026-11-09T21:52:15Z",
     "url": "",
-    "what": "review #3523 on claude-7"
+    "what": "review #3493 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T21:36:13Z",
