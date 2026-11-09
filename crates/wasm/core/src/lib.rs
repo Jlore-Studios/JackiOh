@@ -188,6 +188,20 @@ pub fn run_content() -> Result<String, String> {
     to_json(&jackioh_run::run_catalog_content(engine::registered_catalog()))
 }
 
+/// R3496000: `RunContent` for a catalog version: the build's own answers `run_content()`; a
+/// carried version answers `run_catalog_content` over its carried shipped catalog; any other
+/// version answers `null`, which the store settles as lost.
+pub fn run_content_at(version_json: &str) -> Result<String, String> {
+    let version: String = parse("runContentAt: the version", version_json)?;
+    if version == jackioh_cards::catalog_version() {
+        return run_content();
+    }
+    match jackioh_cards::shipped_catalog(&version) {
+        Some(shipped) => to_json(&jackioh_run::run_catalog_content(shipped.defs())),
+        None => Ok("null".to_owned()),
+    }
+}
+
 /// `null` when the setup may start a run, else the reason.
 pub fn run_check_setup(setup_json: &str, unlocks_json: &str, content_json: &str) -> Result<String, String> {
     let setup: RunSetup = parse("runCheckSetup: the setup", setup_json)?;

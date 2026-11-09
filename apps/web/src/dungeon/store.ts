@@ -22,8 +22,10 @@ import { messageOf } from "../net/errors.ts";
 import { getStored, removeStored, setStored } from "../net/storage.ts";
 import { clearStoredRunFight } from "../practice/saveStore.ts";
 import {
+  catalogVersion,
   runCheckSetup,
   runContent,
+  runContentAt,
   runCreate,
   runDailySeed,
   runEmbers,
@@ -75,6 +77,8 @@ export type Dungeon = {
   startedAt: number | null;
   /** The finished run's time in ms, as its record holds it (B20); null while the run is on its way. */
   timeMs: number | null;
+  /** R3496000: why the kept run ended without being played, shown once on the start screen. */
+  notice: string | null;
   /** The refusal, or null. */
   start(setup: RunSetup): string | null;
   /** The refusal, or null. */
@@ -89,8 +93,19 @@ export type Dungeon = {
 /** The day the daily run was last started on, and how many of that day's daily runs were started. */
 type DailyCount = { date: string; started: number };
 
-/** The run on its way, as the device keeps it. */
-type KeptRun = { file: RunFile; startedAt: number; daily: boolean };
+/**
+ * R3496000: the run on its way, as the device keeps it. `catalog` is the catalog version the run
+ * started on, null when written before versions were kept; the extractions are what its last fold
+ * showed, banked when it cannot be folded at all.
+ */
+type KeptRun = {
+  file: RunFile;
+  startedAt: number;
+  daily: boolean;
+  catalog: string | null;
+  extractedCards: string[];
+  extractedArtifacts: string[];
+};
 
 /** The run the page plays: the kept one folded, with the content it folded on. */
 type Live = KeptRun & {
@@ -105,6 +120,7 @@ type Core = {
   daily: DailyCount | null;
   history: RunRecord[];
   live: Live | null;
+  notice: string | null;
 };
 
 /** Nothing yet: the first level, no extracted card or relic, no Embers, and no account's collection to hold to. */
@@ -157,7 +173,13 @@ function parseKept(raw: unknown): KeptRun | null {
   const file = parseFile(raw.file);
   const { startedAt, daily } = raw;
   if (file === null || !isCount(startedAt) || typeof daily !== "boolean") return null;
-  return { file, startedAt, daily };
+  // R3496000: a run kept before versions were kept has no version: it folds as today's.
+  const catalog = raw.catalog === undefined || raw.catalog === null ? null : raw.catalog;
+  if (catalog !== null && typeof catalog !== "string") return null;
+  const extractedCards = raw.extractedCards === undefined ? [] : raw.extractedCards;
+  const extractedArtifacts = raw.extractedArtifacts === undefined ? [] : raw.extractedArtifacts;
+  if (!isStrings(extractedCards) || !isStrings(extractedArtifacts)) return null;
+  return { file, startedAt, daily, catalog, extractedCards, extractedArtifacts };
 }
 
 function parseDaily(raw: unknown): DailyCount | null {
@@ -224,15 +246,108 @@ function contentOf(): RunContent {
   return compiled;
 }
 
-/** B19: the kept run folded back on the content it started on, or null when it will not fold. */
-function foldKept(kept: KeptRun): Live | null {
+/**
+ * R3496000: the content a kept run folds on: today's when it started on no kept version, else its
+ * version's, or null when this build no longer carries it.
+ */
+function contentForVersion(version: string | null): RunContent | null {
   try {
-    const content = contentOf();
-    const folded = runFold(kept.file, content);
-    return "error" in folded ? null : { ...kept, run: folded.state, content, timeMs: null };
+    if (version === null || version === catalogVersion()) return contentOf();
+    return runContentAt(version);
   } catch {
     return null;
   }
+}
+
+/**
+ * R3496000: B19 the kept run folded back on the content of the catalog version it started on.
+ * `"gone"` when no content folds it: its version is no longer carried, or its log is refused. Null
+ * when it cannot be read at all: a transient failure must never mint a history record.
+ */
+function foldKept(kept: KeptRun): Live | "gone" | null {
+  try {
+    const content = contentForVersion(kept.catalog);
+    if (content === null) return "gone";
+    const folded = runFold(kept.file, content);
+    return "error" in folded ? "gone" : { ...kept, run: folded.state, content, timeMs: null };
+  } catch {
+    return null;
+  }
+}
+
+/** R3496000: a run that never settled has no rows, no score and no stats. */
+const EMPTY_RUN_STATS: RunStats = {
+  nodesVisited: 0,
+  fightsWon: 0,
+  elitesWon: 0,
+  ghostsWon: 0,
+  miniBossesWon: 0,
+  bossesWon: 0,
+  damageDealt: 0,
+  healingDone: 0,
+  cardsDrawn: 0,
+  turns: 0,
+  damageTaken: 0,
+  healed: 0,
+  coinsEarned: 0,
+  coinsSpent: 0,
+  ticketsEarned: 0,
+  ticketsSpent: 0,
+  cardsKept: 0,
+  cardsBought: 0,
+  cardsRemoved: 0,
+  cardsMadeRadiant: 0,
+  cardsBuffed: 0,
+  packsSkipped: 0,
+  artifactsTaken: 0,
+  artifactsLeveled: 0,
+  blessingsTaken: 0,
+  eventsSeen: 0,
+  chestsOpened: 0,
+};
+
+/**
+ * R3496000: what a run that cannot be folded at all settles: lost with no row, no score and no
+ * Embers, banking what it had extracted of what the current content still knows.
+ */
+function settleUnfoldable(base: Core, kept: KeptRun, now: number): Core {
+  const content = contentOf();
+  const pool = new Set(content.pool.map((card) => card.id));
+  const known = new Set(content.passives.map((passive) => passive.id));
+  const { unlocks } = base.progress;
+  const record: RunRecord = {
+    seed: kept.file.setup.seed,
+    daily: kept.daily,
+    mode: "sandbox",
+    curses: kept.file.setup.curses,
+    cursePoints: cursePointsOf(kept.file.setup.curses, content),
+    rowReached: 0,
+    won: false,
+    score: 0,
+    embers: 0,
+    timeMs: Math.max(DUNGEON_ELAPSED_MIN_MS, now - kept.startedAt),
+    endedAt: new Date(now).toISOString(),
+    stats: EMPTY_RUN_STATS,
+  };
+  return {
+    ...base,
+    progress: {
+      unlocks: {
+        ...unlocks,
+        cards: union(
+          unlocks.cards,
+          kept.extractedCards.filter((id) => pool.has(id)),
+        ),
+        artifacts: union(
+          unlocks.artifacts,
+          kept.extractedArtifacts.filter((id) => known.has(id)),
+        ),
+      },
+      embers: base.progress.embers,
+    },
+    history: [...base.history, record],
+    live: null,
+  };
 }
 
 function loadCore(): Core {
@@ -242,15 +357,39 @@ function loadCore(): Core {
   let live: Live | null = null;
   if (stored !== null) {
     const kept = parseKept(stored);
-    live = kept === null ? null : foldKept(kept);
-    // A run that cannot be read or folded is dropped alone: the progress and the history stay.
-    if (live === null) removeStored(DUNGEON_RUN_KEY);
+    if (kept === null) {
+      // A run that cannot be read is dropped alone: the progress and the history stay.
+      removeStored(DUNGEON_RUN_KEY);
+    } else {
+      const folded = foldKept(kept);
+      if (folded === null) {
+        // A run no binding can read is dropped alone, as before: never settled.
+        removeStored(DUNGEON_RUN_KEY);
+      } else if (folded === "gone") {
+        // R3496000: a run no content folds ends lost but keeps what it had extracted.
+        const settled = settleUnfoldable({ progress, daily, history, live: null, notice: null }, kept, Date.now());
+        persistProgress(settled);
+        persistHistory(settled);
+        removeStored(DUNGEON_RUN_KEY);
+        // The key is gone, so the notice shows once.
+        return { ...settled, notice: t("The patch ended your last run as lost. What you had extracted is kept.") };
+      } else {
+        live = folded;
+      }
+    }
   }
-  return { progress, daily, history, live };
+  return { progress, daily, history, live, notice: null };
 }
 
 function keptOf(live: Live): KeptRun {
-  return { file: live.file, startedAt: live.startedAt, daily: live.daily };
+  return {
+    file: live.file,
+    startedAt: live.startedAt,
+    daily: live.daily,
+    catalog: live.catalog,
+    extractedCards: [...live.run.extractedCards],
+    extractedArtifacts: [...live.run.extractedArtifacts],
+  };
 }
 
 function persistProgress(core: Core): void {
@@ -391,6 +530,9 @@ function startRun(setup: RunSetup): string | null {
       file: { setup, unlocks, log: [] },
       startedAt: Date.now(),
       daily,
+      catalog: catalogVersion(),
+      extractedCards: [],
+      extractedArtifacts: [],
       run: created.state,
       content,
       timeMs: null,
@@ -486,7 +628,7 @@ function snapshot(): Core {
  * The Dungeon run's state and verbs. Each verb answers the run's own refusal, word for word, or null.
  */
 export function useDungeon(): Dungeon {
-  const { progress, live } = useSyncExternalStore(subscribe, snapshot, snapshot);
+  const { progress, live, notice } = useSyncExternalStore(subscribe, snapshot, snapshot);
   const content = live === null ? contentOf() : live.content;
   return useMemo(
     () => ({
@@ -495,11 +637,12 @@ export function useDungeon(): Dungeon {
       run: live === null ? null : live.run,
       startedAt: live === null ? null : live.startedAt,
       timeMs: live === null ? null : live.timeMs,
+      notice,
       start: startRun,
       act: actOn,
       abandon: abandonRun,
       buyLevel: buyNextLevel,
     }),
-    [content, progress, live],
+    [content, progress, live, notice],
   );
 }

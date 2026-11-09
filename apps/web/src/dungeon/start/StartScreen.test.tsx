@@ -37,6 +37,7 @@ function dungeonOf(over: Partial<Dungeon> = {}): Dungeon {
     run: null,
     startedAt: null,
     timeMs: null,
+    notice: null,
     start: vi.fn(() => null),
     act: vi.fn(() => null),
     abandon: vi.fn(),
@@ -388,5 +389,21 @@ describe("B19 a run in progress", () => {
 
     expect(screen.queryByTestId(dungeonTestid.saved)).toBeNull();
     expect(byId(dungeonTestid.startRun)).toBeInTheDocument();
+  });
+});
+
+describe("R3496000 the patch notice", () => {
+  it("R3496000 a run the patch ended is said in one line", () => {
+    show(dungeonOf({ notice: "The patch ended your last run as lost. What you had extracted is kept." }));
+
+    const notice = byId(dungeonTestid.notice);
+    expect(notice).toHaveTextContent("The patch ended your last run as lost. What you had extracted is kept.");
+    expect(notice).toHaveAttribute("role", "status");
+  });
+
+  it("R3496000 no notice ends no notice", () => {
+    show();
+
+    expect(screen.queryByTestId(dungeonTestid.notice)).toBeNull();
   });
 });

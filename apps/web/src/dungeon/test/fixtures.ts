@@ -210,8 +210,13 @@ function foldStandIn(file: RunFile): { state: RunState } | { error: string } {
  * what it needs on each (`wasmBindings.runCheckSetup.mockReturnValue("…")`); `resetBindings` puts every
  * default back.
  */
+/** The same shape as `CONTENT`, its pool dealt in another order: a build whose patch reshuffled the deal. */
+export const CONTENT_B: RunContent = { ...CONTENT, pool: [...CONTENT.pool].reverse() };
+
 export const wasmBindings = {
   runContent: vi.fn((): RunContent => CONTENT),
+  catalogVersion: vi.fn((): string => "test-catalog"),
+  runContentAt: vi.fn((_version: string): RunContent | null => null),
   runCheckSetup: vi.fn((_setup: RunSetup, _unlocks: RunUnlocks, _content: RunContent): string | null => null),
   runCreate: vi.fn((setup: RunSetup, _unlocks: RunUnlocks, _content: RunContent): { state: RunState } | { error: string } =>
     createStandIn(setup),
@@ -231,6 +236,8 @@ export const wasmBindings = {
 /** Every binding back to its default answer, and every call forgotten. */
 export function resetBindings(): void {
   wasmBindings.runContent.mockReset().mockImplementation(() => CONTENT);
+  wasmBindings.catalogVersion.mockReset().mockImplementation(() => "test-catalog");
+  wasmBindings.runContentAt.mockReset().mockImplementation(() => null);
   wasmBindings.runCheckSetup.mockReset().mockImplementation(() => null);
   wasmBindings.runCreate.mockReset().mockImplementation((setup) => createStandIn(setup));
   wasmBindings.runReduce.mockReset().mockImplementation((state, _content, action) => reduceStandIn(state, action));
