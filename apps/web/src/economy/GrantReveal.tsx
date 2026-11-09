@@ -179,7 +179,7 @@ export default function GrantReveal({ items, onDone }: { items: readonly GrantIt
   const cardName = def === undefined ? null : readerName(def);
   const title = cardName === null ? t("New cosmetic") : t("New cosmetic for {card}", { card: cardName });
   const style = {
-    "--grant-wipe-ms": GRANT_WIPE_MS,
+    "--grant-wipe": `${String(GRANT_WIPE_MS)}ms`,
   } as CSSProperties;
   return (
     <div

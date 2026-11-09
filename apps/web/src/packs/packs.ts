@@ -171,7 +171,7 @@ export function playStinger(rarity: PrintedRarity): void {
 
 /** How long a variant-level grant reveal holds the card's previous look before it wipes into the new level. */
 export const GRANT_BEFORE_MS = 700;
-/** How long a variant-level grant reveal's wipe into the new level takes; `grantReveal.css` reads it as `--grant-wipe-ms`. */
+/** How long a variant-level grant reveal's wipe into the new level takes; `grantReveal.css` reads it as `--grant-wipe`. */
 export const GRANT_WIPE_MS = 600;
 /** How long a full-screen grant moment holds under `bigMoments` "short": half the takeover's hold (R2785000). */
 export const GRANT_TAKEOVER_SHORT_MS = 500;

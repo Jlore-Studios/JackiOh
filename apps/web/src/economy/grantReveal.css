@@ -1,8 +1,7 @@
 /* R3349000: a variant-level grant's reveal. The queue plays over the panel that granted it: Rare
    and Epic on the panel itself, Legendary with the panel dimmed and the card growing in with light
-   from behind, Mythic (and a Legendary or Mythic chase) in the full-screen view. Every @keyframes
-   moves only transform and opacity, taking its duration from the constants in packs.ts through
-   `--grant-wipe-ms`. */
+   from behind, Mythic (and a Legendary or Mythic chase) in the full-screen view. Each animation
+   takes its duration from the constants in packs.ts through `--grant-wipe`. */
 
 .grant-scene {
   position: fixed;
@@ -14,17 +13,17 @@
   justify-content: center;
   /* A short screen scrolls from the top rather than clipping it. */
   justify-content: safe center;
-  gap: 1rem;
-  padding: 1rem;
+  gap: var(--space-7);
+  padding: var(--space-7);
   overflow-y: auto;
-  background: rgb(8 10 16 / 0.72);
-  color: var(--text, #e8eaf2);
+  background: color-mix(in srgb, var(--pal-black) 72%, transparent);
+  color: var(--pal-slate-100);
   cursor: var(--cursor-glove-point, pointer);
 }
 
 /* Legendary: the panel dims and the card grows in with light from behind. */
 .grant-scene[data-treatment="grow"] {
-  background: rgb(4 5 9 / 0.88);
+  background: color-mix(in srgb, var(--pal-black) 88%, transparent);
 }
 
 .grant-item {
@@ -33,7 +32,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-4);
   max-width: 24rem;
 }
 
@@ -76,20 +75,20 @@
 
 /* The wipe into the new level: the full-art frame unfolding. */
 .grant-scene[data-motion="full"] .grant-wipe {
-  animation: grant-wipe calc(var(--grant-wipe-ms) * 1ms) ease-out both;
+  animation: grant-wipe var(--grant-wipe) var(--ease-out) both;
   filter: drop-shadow(0 0 1.25rem var(--grant-glow));
 }
 
 /* Legendary: the card grows in with light from behind. */
 .grant-scene[data-treatment="grow"][data-motion="full"] .grant-wipe {
   animation:
-    grant-wipe calc(var(--grant-wipe-ms) * 1ms) ease-out both,
-    grant-grow calc(var(--grant-wipe-ms) * 1ms) ease-out both;
+    grant-wipe var(--grant-wipe) var(--ease-out) both,
+    grant-grow var(--grant-wipe) var(--ease-out) both;
 }
 
 .grant-name {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--type-lg);
   text-align: center;
 }
 
@@ -105,7 +104,7 @@
   right: 0;
   bottom: max(1rem, env(safe-area-inset-bottom));
   text-align: center;
-  text-shadow: 0 1px 3px #000;
+  text-shadow: 0 1px 3px var(--pal-black);
 }
 
 @keyframes grant-wipe {

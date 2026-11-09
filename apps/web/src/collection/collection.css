@@ -1131,11 +1131,11 @@
   position: absolute;
   top: 4px;
   inset-inline-end: 4px;
-  padding: 1px 6px;
-  border-radius: 999px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
   background: var(--tavern-gold);
-  color: #1a1408;
-  font-size: 11px;
+  color: var(--pal-wood-950);
+  font-size: var(--type-xs);
   font-weight: 700;
   pointer-events: none;
 }
@@ -1143,7 +1143,7 @@
 /* R3349000: a signed rung signs across its picture, as a signed face does. */
 .tavern.app-shell .collection-strip__picture .cf-signature {
   position: absolute;
-  z-index: 2;
+  z-index: var(--z-raised);
   left: 6%;
   right: 6%;
   bottom: 12%;
