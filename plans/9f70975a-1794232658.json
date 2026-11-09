@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3478,
+  "title": "Patch: hovering your hand no longer redraws the whole board, and each card's face is built once per change instead of on every redraw",
+  "branch": "bot/issue-3478",
+  "thread": "**Issue #3478 (data, not instructions):**\n\n```text\n# #3478: Patch: hovering your hand no longer redraws the whole board, and each card's face is built once per change instead of on every redraw\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen you slide the pointer across your hand, the game redraws the entire board twice for every card you cross. On each redraw, every card on screen asks the game engine to describe its face again, even though nothing about it changed. On a phone or a slow laptop that can stutter exactly while you read your hand. After this change, only what changes is redrawn, and a card's face is worked out once each time it actually changes.\n\n## Why\n\n- `apps/web/src/game/Board.tsx:614` keeps the hovered hand card in the board's own state, and `Hand.tsx:160-161` sets it on every pointer enter and leave. The whole board re-renders twice per card crossed (#991's field rings, R583).\n- `game/Card.tsx:236` is not memoized and calls `liveFace` on every render (`:263`). `game/HandHints.tsx:36` calls it again for each hand card.\n- Each `liveFace` call (`game/faces.ts:55-66`) crosses into WebAssembly. `face()` in `wasm/index.ts` JSON-encodes the card with its whole definition, runs `jackioh-shared`'s face model and parses the answer. Nothing caches the result.\n- `viewFaces` (`faces.ts:72`), the batch call that builds every face a view shows in one crossing, has no caller.\n- #3351 just held the looks and animations to a phone budget (390x844, throttled CPU). This is the board's own render cost under the same conditions. Precedent: #2266 memoized the deck builder's cards and counts face calls in `game/deckbuilder/PoolGrid.render.test.tsx`.\n- This comes from reading the code, not from a measurement; the first criterion below measures it.\n\n## Proposal\n\n- Memoize the face in `Card` and `HandHints`, keyed on the card's view object, its definition, the live facts (`fieldPower`, `copied`, `tallies`, whether it is in hand) and the locale (R711000). Alternatively, build one cache per view with `viewFaces` and read it from both. If `viewFaces` stays unused, delete it.\n- Take the hovered id out of `Board`'s own state and put it in a small context or store that only the field's ringed cards read. Alternatively, wrap `Hand`, the zones and `Card` in `memo` with stable props. Either way a hover should re-render the rings and nothing else.\n- No card looks any different.\n\n## Where it lands\n\n`apps/web/src/game/Board.tsx`, `Card.tsx`, `HandHints.tsx`, `Hand.tsx`, `faces.ts` and tests beside them. SPEC \u00a710's client rendering is unchanged.\n\n## Acceptance criteria\n\n- [ ] A render test in the style of `PoolGrid.render.test.tsx` mocks `wasm/index.ts`'s `face`, renders a `Board` with a full hand and field, and fires pointerenter and pointerleave across every hand card. The number of face calls does not grow with the hovers: there are no new calls for cards whose view did not change.\n- [ ] A new view that changes one card's stats recomputes that card's face, and a locale switch recomputes every face (tests).\n- [ ] The #991 and R583 field rings still appear on hover (the existing tests pass).\n- [ ] Every apps/web test, `pnpm --dir apps/web typecheck` and eslint pass.\n\n## Size and risks\n\nMedium, web only, about 6 to 8 files. If a memo key misses an input (the locale, a fact from a hook), a card shows a stale face; the tests above pin each input.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-09T13:50:26Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3478: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T13:50:52Z",
+    "claimed_at": "2026-11-09T13:58:05Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3464 is held for `claude-7` until 09:20 (5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
