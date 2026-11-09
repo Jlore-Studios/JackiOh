@@ -239,10 +239,11 @@ describe("R3331000 the five proof cards", () => {
     expect(SCENE_BOX).toBe(ART_BOX);
     // R3392000: the proofs and every Core entry draw from a recipe, and every Classic+ entry (R3390000, which
     // classicPlusScenes.test.ts checks); R3393000: so does every Meditative+ and Training Grounds entry
-    // (setScenes.test.ts).
+    // (setScenes.test.ts); R3401000: and every Meditative entry (meditativeScenes.test.ts).
     const core = Object.values(CATALOG).filter((card) => card.set === "Core").map((card) => card.id);
     const passes = Object.values(CATALOG).filter((card) => card.set === "Meditative+" || card.set === "Training Grounds").map((card) => card.id);
-    expect(Object.keys(SCENE_RECIPES).filter((id) => !id.startsWith("classicplus-")).sort()).toEqual([...new Set<string>([...PROOFS, ...core, ...passes])].sort());
+    const checkedElsewhere = (id: string): boolean => id.startsWith("classicplus-") || id.startsWith("meditative-");
+    expect(Object.keys(SCENE_RECIPES).filter((id) => !checkedElsewhere(id)).sort()).toEqual([...new Set<string>([...PROOFS, ...core, ...passes])].sort());
     for (const id of PROOFS) {
       const card = def(id);
       const shapes = composeScene(recipe(id), id);

@@ -12,7 +12,7 @@ import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import { PROFICIENCY_LEVELS } from "@jackioh/server-config";
+import { FLEET_TRACK_LEVELS, PROFICIENCY_LEVELS } from "@jackioh/server-config";
 
 import AccountCosmeticTiles from "../collection/AccountCosmeticTiles.tsx";
 import { CosmeticLook } from "../collection/CosmeticLook.tsx";
@@ -37,9 +37,11 @@ import {
   DECK_SLOT_KINDS,
   DEFAULT_CARD_COSMETICS,
   MOVING_FINISHES_AND_BORDERS,
+  STARSHIP_SLOT_KINDS,
   cosmeticsOf,
   deckCosmeticPatch,
   deckCosmeticsOf,
+  earnedOnly,
   isChaseCosmetic,
   normalizeCosmetics,
   pickedDeckCosmetics,
@@ -481,8 +483,10 @@ describe("R1297000 the deck slots", () => {
 
   it("R1297000 the store keeps the deck slots beside the card slots", () => {
     expect([...CARD_SLOT_KINDS, ...DECK_SLOT_KINDS]).toEqual(["foil", "finish", "border", "table", "field", "cardBack"]);
+    // R3335000: and the four Starship slots after them.
+    expect(STARSHIP_SLOT_KINDS).toEqual(["starshipHull", "starshipLivery", "starshipTrail", "starshipPieceSkin"]);
     expect(readCosmetics()).toEqual(DEFAULT_CARD_COSMETICS);
-    expect(Object.keys(DEFAULT_CARD_COSMETICS)).toHaveLength(6);
+    expect(Object.keys(DEFAULT_CARD_COSMETICS)).toEqual([...CARD_SLOT_KINDS, ...DECK_SLOT_KINDS, ...STARSHIP_SLOT_KINDS]);
 
     writeCosmetics({ table: TABLE, cardBack: BACK, border: PICKS.border });
     expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, table: TABLE, cardBack: BACK, border: PICKS.border });
@@ -993,14 +997,25 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
     return out;
   }
 
-  /** The non-default entries of the kinds a player picks, as `[id, kind]`; a card's own version and augments (R2725000) are none. */
+  /**
+   * The non-default entries of the kinds a player picks, as `[id, kind]`; a card's own version and augments (R2725000)
+   * are none, nor a Starship's (R3335000), which the painter draws (cards/starship.test.tsx).
+   */
   const PICKED = COSMETICS.filter(
-    (cosmetic) => !cosmetic.default && !(["fullArt", "portrait", "version", "augment"] as readonly string[]).includes(cosmetic.kind),
+    (cosmetic) =>
+      !cosmetic.default &&
+      !(["fullArt", "portrait", "version", "augment", ...STARSHIP_SLOT_KINDS] as readonly string[]).includes(cosmetic.kind),
   );
 
   it("R1833000 R2755000 every non-default foil, finish, border, table, field and card back has a rule that styles it", () => {
-    // Nine of each kind, and the Jlorious card back (R2755000).
-    expect(PICKED.length).toBe(6 * 9 + 1);
+    // Nine of each kind; and earned only, the Jlorious card back (R2755000) and R3335002's three Fleet track rewards.
+    expect(PICKED.filter((cosmetic) => !earnedOnly(cosmetic)).length).toBe(6 * 9);
+    expect(PICKED.filter((cosmetic) => earnedOnly(cosmetic)).map((cosmetic) => cosmetic.id)).toEqual([
+      "card-back-jlorious",
+      "card-back-stinkyscape",
+      "table-stinkyscape",
+      "field-stinkyscape",
+    ]);
     for (const { id, kind } of PICKED) {
       switch (kind) {
         case "foil":
@@ -1283,9 +1298,9 @@ describe("R2720000 every finish on a full-art face", () => {
 
 describe("R1953001 the chases move everywhere, and a card wears its own picks or the defaults", () => {
   /** Every Legendary and Mythic entry of the registry, the starters among them, so a new one is walked too. */
-  /** Legendary and Mythic, but the Jlorious card back, which nothing drops (R2755000). */
+  /** Legendary and Mythic, but the Jlorious ones (R2755000) and the Fleet track's (R3335002), which nothing drops. */
   const CHASES = COSMETICS.filter(
-    (cosmetic) => (cosmetic.rarity === "Legendary" || cosmetic.rarity === "Mythic") && !("jlorious" in cosmetic),
+    (cosmetic) => (cosmetic.rarity === "Legendary" || cosmetic.rarity === "Mythic") && !("jlorious" in cosmetic) && !("track" in cosmetic),
   );
   /** A Common card the catalog has, which wears every cosmetic foil (no rarity foil of its own). */
   const CARD = "core-004";
@@ -1401,6 +1416,43 @@ describe("R1953001 the chases move everywhere, and a card wears its own picks or
     const flat = cosmeticsCss.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\s+/g, " ");
     expect(flat).toContain('.cf-back[data-card-back="card-back-jlorious"] .cf-back-emblem { height: 86%; aspect-ratio: 82 / 112; opacity: 1; background: url("/brand/jackioh-card-back.svg")');
     expect(flat).toContain('.pile[data-card-back="card-back-jlorious"] { --card-back-look: url("/brand/jackioh-card-back.svg")');
+  });
+
+  it("R3335002 thirty Fleet rewards, earned only, no chase", () => {
+    const levelOf = (cosmetic: { readonly id: string; readonly trackLevel?: number | null }): number | null => cosmetic.trackLevel ?? null;
+    const fleet = COSMETICS.filter((cosmetic) => "track" in cosmetic);
+    expect(fleet).toHaveLength(FLEET_TRACK_LEVELS);
+    // One a level, from the first to the last, each on the Fleet track alone.
+    expect(fleet.map(levelOf)).toEqual(Array.from({ length: FLEET_TRACK_LEVELS }, (_, at) => at + 1));
+    for (const cosmetic of fleet) {
+      expect(cosmetic, cosmetic.id).toMatchObject({ track: "fleet", default: false, starter: false, chase: false });
+      expect("card" in cosmetic, cosmetic.id).toBe(false);
+      expect(earnedOnly(cosmetic), cosmetic.id).toBe(true);
+      expect(isChaseCosmetic(cosmetic.id), cosmetic.id).toBe(false);
+    }
+    // Starship looks but for a card back, a playmat and a backdrop; the last level's the Stinkyscape hull.
+    const starship: readonly string[] = STARSHIP_SLOT_KINDS;
+    expect(fleet.filter((cosmetic) => !starship.includes(cosmetic.kind)).map((cosmetic) => cosmetic.id)).toEqual([
+      "card-back-stinkyscape",
+      "table-stinkyscape",
+      "field-stinkyscape",
+    ]);
+    expect(fleet.at(-1)).toMatchObject({ id: "starship-hull-stinkyscape", kind: "starshipHull" });
+    // The Jlorious Starship (R3335003) is earned only as the Jlorious card back is, and no chase.
+    const jlorious = COSMETICS.find((cosmetic) => cosmetic.id === "starship-hull-jlorious");
+    expect(jlorious).toMatchObject({ kind: "starshipHull", rarity: "Mythic", default: false, starter: false, chase: false, jlorious: true });
+    expect(jlorious === undefined ? false : earnedOnly(jlorious)).toBe(true);
+    expect(COSMETICS.filter((cosmetic) => earnedOnly(cosmetic)).map((cosmetic) => cosmetic.id)).toEqual([
+      "card-back-jlorious",
+      "starship-hull-jlorious",
+      ...fleet.map((cosmetic) => cosmetic.id),
+    ]);
+    // Every Starship kind's default is the standard every account owns, and nothing else of those kinds is bought.
+    for (const kind of STARSHIP_SLOT_KINDS) {
+      const [standard, ...rest] = cosmeticsOf(kind);
+      expect(standard, kind).toMatchObject({ id: DEFAULT_CARD_COSMETICS[kind], default: true, starter: true });
+      for (const cosmetic of rest) expect(earnedOnly(cosmetic), cosmetic.id).toBe(true);
+    }
   });
 
   it("R1953001 a card with no pick of its own draws its kind's default though the synced settings hold another foil, finish and border", () => {
