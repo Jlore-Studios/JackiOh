@@ -49,6 +49,8 @@ export const FX_PLAY_MASSIVE_TRAUMA = 0.7;
 export const FX_TAKEOVER_TAIL_MS = 700;
 /** R2722001: the takeover's shake as its card lands (R2803000: eased for the phone frame budget; the result still thumps hardest). */
 export const FX_TAKEOVER_TRAUMA = 0.6;
+/** R3402000: a Mythic's own takeover art (takeoverArt.ts) draws at most this many shapes, for the phone frame budget. */
+export const TAKEOVER_ART_MAX_SHAPES = 48;
 export const FX_TRAP_TRAUMA = 0.4;
 export const FX_RESULT_TRAUMA = 0.9;
 export const FX_LETHAL_LEAD_MAX_MS = 600;     // the killing blow replayed before the result plays in at most this (R200)
@@ -283,6 +285,18 @@ export const FX_CHAOS_DICE_PANEL_MS = 760;
 // R3400001: the signatures' own shakes (each within its type's budget, SIGNATURE_*_MAX_TRAUMA): Bob's Plan's
 // ink as its takeover's hold ends; the Units' entrances shake by ENTRANCE_TRAUMA (fx/cards/recipe.ts).
 export const FX_BOBS_PLAN_TRAUMA = 0.6;
+// R3402001: Core's signatures (fx/cards/core/): each one's shake; at most FX_SIGNATURE_BURSTS_MAX follow-up
+// beats in one entry and FX_PAWN_STRINGS_MAX of My Pawn's strings; Call to Chaos's own reel shows its roll
+// for FX_REELS_MS of the roll's entry, inside its Spell's budget.
+export const FX_CRUCIBLE_TRAUMA = 0.4;
+export const FX_CLAMP_TRAUMA = 0.5;
+export const FX_POCKET_TRAUMA = 0.45;
+export const FX_REELS_TRAUMA = 0.55;
+export const FX_PAWN_TRAUMA = 0.5;
+export const FX_GRADE_TRAUMA = 0.3;
+export const FX_SIGNATURE_BURSTS_MAX = 5;
+export const FX_PAWN_STRINGS_MAX = 6;
+export const FX_REELS_MS = 800;
 // R2787000: a card's aura (fx/aura/), the standing look of a Field Spell or a lasting modifier. At most
 // AURA_MAX_PER_ZONE cover a zone; each draws at most AURA_MOTES_PER_AURA motes (times the intensity),
 // all of them together at most AURA_PARTICLE_SHARE of the particle cap. It fades in over AURA_FADE_IN_MS

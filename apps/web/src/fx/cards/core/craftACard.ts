@@ -1,39 +1,54 @@
 // #2793: #99 Craft a Card (`core-099`, bespoke "fusionForge"), bespoke because its Discovered Units fuse
-// off the board and no motif reads `fused`: at the fuse two halves fly in from the board's edges and
-// forge in a nova at its centre, and the crafted card flies on into the caster's hand pile. The engine
-// adds the card to the hand before it reports the fuse, so the forge carries the card's flight. It
-// anchors on the board and the hand pile alone, the same on both seats (R202); the rows still play.
+// off the board and no motif reads `fused`. R3402001: its signature (R3332000), a Mythic Spell's: its
+// takeover is a floating crystal forge, two glowing rails converging on an anvil under a giant hammer,
+// gears turning overhead (takeover look "crystalForge", takeoverArt.ts), the hammer falling as the card lands.
+// Through its hold the two Discovered Units ride the rails in from the board's edges as card backs and
+// meet in frost sparks at its centre (the caster picks them in a prompt only they see). The engine adds
+// the crafted card to the hand before it reports the fuse: the hand pile rings as it does, and on the
+// `fused` the crafted card flies on from the forge into the hand pile as a card back, with the strike's
+// shake, both in place of their rows, inside a Spell's budget. It anchors on the board and the hand pile
+// alone, the same on both seats (R202).
 
-import { animTestid } from "../../../game/animations.ts";
+import { animTestid, leadMs } from "../../../game/animations.ts";
 import { sideOf, testid } from "../../../game/contract.ts";
-import { shakeCues, tid } from "../../build.ts";
+import { ringCue, shakeCues, tid } from "../../build.ts";
 import { FX_CENTER, FX_FORGE_REACH, FX_FORGE_TRAUMA } from "../../constants.ts";
-import { MOTIF_TUNING, motifBurst, motifRing, motifShot, timesOf } from "../../motifs/build.ts";
+import { MOTIF_TUNING, motifBurst, motifRing, timesOf } from "../../motifs/build.ts";
 import type { FxAnchor } from "../../types.ts";
 import type { CardRecipe } from "../recipe.ts";
-import { flourishSpec } from "./flourish.ts";
+import { flourishSpec, isFirstBeat } from "./flourish.ts";
 
 export const fusionForge: CardRecipe = (event, p, play) => {
-  if (event.type !== "fused") return null;
+  // R2722002: a Cloaked copy plays at its reveal, the `cast` its `trapFired` opens.
+  if (play.hook !== undefined && play.hook !== "cast") return null;
   const spec = flourishSpec(p, play);
   const t = timesOf(p.D);
   const centre = tid(testid.board, FX_CENTER);
-  const edge = (x: number): FxAnchor => tid(testid.board, { x, y: FX_CENTER.y });
-  const left = edge(FX_FORGE_REACH);
-  const right = edge(1 - FX_FORGE_REACH);
   const hand = tid(animTestid.hand(sideOf(p.view, play.player)));
+  if (isFirstBeat(event, play)) {
+    const edge = (x: number): FxAnchor => tid(testid.board, { x, y: FX_CENTER.y });
+    // The halves ride in through the takeover's hold and meet before its card lands; with Big moments
+    // off there is no hold, and they meet as the entry lands.
+    const hold = Math.max(leadMs(p.entry), t.L);
+    const ride = Math.round(hold / 2);
+    return {
+      cues: [
+        motifBurst(spec, edge(FX_FORGE_REACH), "point", t.G, MOTIF_TUNING.gather),
+        motifBurst(spec, edge(1 - FX_FORGE_REACH), "point", t.G, MOTIF_TUNING.gather),
+        { kind: "ghost", from: edge(FX_FORGE_REACH), to: centre, delayMs: ride, durationMs: hold - ride },
+        { kind: "ghost", from: edge(1 - FX_FORGE_REACH), to: centre, delayMs: ride, durationMs: hold - ride },
+        motifBurst(spec, centre, "area", hold, MOTIF_TUNING.land, "frost"),
+        motifRing(spec, p.D, centre, hold),
+      ],
+      row: "keep",
+    };
+  }
+  if (event.type === "addedToHand" && event.player === play.player) {
+    return { cues: [ringCue(p.D, "frost", hand, t.G)], row: "replace" };
+  }
+  if (event.type !== "fused") return null;
   return {
-    cues: [
-      motifBurst(spec, left, "point", t.G, MOTIF_TUNING.gather),
-      motifBurst(spec, right, "point", t.G, MOTIF_TUNING.gather),
-      motifShot(spec, "bolt", left, centre, t.T, t.L - t.T),
-      motifShot(spec, "bolt", right, centre, t.T, t.L - t.T),
-      motifBurst(spec, centre, "area", t.L, MOTIF_TUNING.nova),
-      motifRing(spec, p.D, centre, t.L),
-      ...shakeCues(spec.scale, FX_FORGE_TRAUMA, t.L),
-      { kind: "ghost", from: centre, to: hand, delayMs: t.Li, durationMs: t.D - t.Li },
-      motifBurst(spec, hand, "point", t.D, MOTIF_TUNING.small, "sparkle"),
-    ],
-    row: "keep",
+    cues: [{ kind: "ghost", from: centre, to: hand, delayMs: t.G, durationMs: Math.min(p.D, t.L) }, ...shakeCues(p.env.intensity, FX_FORGE_TRAUMA, t.G)],
+    row: "replace",
   };
 };
