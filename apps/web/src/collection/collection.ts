@@ -57,6 +57,8 @@ export const collectionTestid = {
   noPacks: "collection-no-packs",
   loading: (part: CollectionPart) => `collection-loading-${part}`,
   error: (part: CollectionPart) => `collection-error-${part}`,
+  /** R3349000: a card's "new" mark for a newly earned level, until the card is viewed. */
+  newMark: (id: string) => `collection-new-${id}`,
   /** #1691: Try again beside a panel's failed read. */
   retry: (part: CollectionPart) => `collection-retry-${part}`,
   set: (set: string) => `collection-set-${set}`,

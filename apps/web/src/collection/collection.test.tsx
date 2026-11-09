@@ -78,10 +78,14 @@ import { collectionOf, cosmeticPacksInfo, tokenBars, walletInfo } from "../shop/
 import { expectEmptyState } from "../test/empty.ts";
 import { settle } from "../test/settle.ts";
 import { stubServer } from "../test/stubServer.ts";
+import { grantTestid as G } from "../economy/GrantReveal.tsx";
 import AccountCosmeticTiles from "./AccountCosmeticTiles.tsx";
+import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
 import OwnedCards from "./OwnedCards.tsx";
 import TracksPanel from "./TracksPanel.tsx";
+import VariantLadders from "./VariantLadders.tsx";
 import WalletPanel from "./WalletPanel.tsx";
+import { clearSeenForCard, markNewLevels } from "./newLevels.ts";
 import {
   COLLECTED_DEFS,
   NO_FULL_ART_ID,
@@ -1364,13 +1368,94 @@ describe("R3015007 a held token on a ladder", () => {
     await waitFor(() => {
       expect(screen.getByTestId(T.rung(VERSION_SKETCH_ID))).toHaveAttribute("data-owned", "true");
     });
+    // R3349000: the bought level reveals the card wearing it; taps move through it, closing the preview.
+    const reveal = await screen.findByTestId(G.scene);
+    fireEvent.click(reveal);
+    const again = screen.queryByTestId(G.scene);
+    if (again !== null) fireEvent.click(again);
+    expect(screen.queryByTestId(G.scene)).toBeNull();
     expect(server.to("POST", "/api/tokens/redeem-cosmetic")).toHaveLength(1);
     expect(server.to("POST", "/api/tokens/redeem-cosmetic")[0]?.body).toEqual({ token: "Rare", cosmeticId: VERSION_SKETCH_ID, cardId: BIG_D });
-    closePreview();
+    expect(screen.queryByTestId(T.preview)).toBeNull();
     expect(screen.getByTestId(T.rung(VERSION_SKETCH_FULL_ART_ID))).toHaveAttribute("data-next", "true");
     expect(await within(previewOf(VERSION_SKETCH_FULL_ART_ID)).findByTestId(T.tokenOffer(VERSION_SKETCH_FULL_ART_ID))).toHaveTextContent(
       "Unlock with an Epic token (9 held)",
     );
+  });
+});
+
+describe("R3349000 new levels and ladder looks", () => {
+  const TOKEN = "token-1";
+  const CARD = "core-001";
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("R3349000 a new level marks the card until it is viewed", () => {
+    markNewLevels(TOKEN, [{ id: VERSION_SKETCH_ID, cardId: CARD }]);
+    render(<OwnedCards collection={collectionOwning([CARD])} defs={[defOf(CARD)]} token={TOKEN} />);
+    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
+
+    expect(screen.getByTestId(T.card(CARD))).toHaveAttribute("data-new", "true");
+    expect(screen.getByTestId(T.newMark(CARD))).toHaveTextContent("New");
+
+    fireEvent.click(screen.getByTestId(T.card(CARD)));
+    expect(screen.getByTestId(T.cardView)).toBeInTheDocument();
+    expect(screen.getByTestId(T.card(CARD))).not.toHaveAttribute("data-new");
+    expect(screen.queryByTestId(T.newMark(CARD))).toBeNull();
+  });
+
+  it("R3349000 a hover previews the newest unseen level", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    markNewLevels(TOKEN, [
+      { id: VERSION_SKETCH_ID, cardId: CARD },
+      { id: VERSION_ANIMATED_ID, cardId: CARD },
+    ]);
+    render(<OwnedCards collection={collectionOwning([CARD])} defs={[defOf(CARD)]} token={TOKEN} />);
+    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
+
+    fireEvent.pointerEnter(screen.getByTestId(T.card(CARD)), { pointerType: "mouse" });
+    act(() => {
+      vi.advanceTimersByTime(HOVER_DELAY_MS);
+    });
+    // The newest unseen level, the Default's Animated, plays in the hover preview.
+    expect(screen.getByTestId(T.lookHover)).toHaveAttribute("data-level", VERSION_ANIMATED_ID);
+    clearSeenForCard(TOKEN, CARD);
+  });
+
+  it("R3349000 each ladder rung shows its level's look", () => {
+    const def = defOf(CARD);
+    render(
+      <VariantLadders
+        def={def}
+        face={faceModel({ defId: def.id, def, radiant: false })}
+        ladders={cardLadders(def.id, () => true)}
+        equipped={null}
+        show={vi.fn()}
+        hide={vi.fn()}
+        equip={vi.fn()}
+        onPreview={vi.fn()}
+      />,
+    );
+
+    // An animated rung moves its picture's own layers (CardArt's `motion`), as the face of that level does.
+    const animated = screen.getByTestId(T.rung(VERSION_FULL_ART_ANIMATED_ID));
+    expect(animated.querySelector(".collection-strip__picture")).toHaveAttribute("data-art-motion", "animated");
+    expect(animated.querySelector("[data-art-moving]")).toHaveAttribute("data-art-moving", "true");
+    expect(animated.querySelector(".cf-signature")).toBeNull();
+
+    // A signed rung is an animated one with its signature written over it.
+    const signed = screen.getByTestId(T.rung(VERSION_FULL_ART_SIGNED_ID));
+    expect(signed.querySelector(".collection-strip__picture")).toHaveAttribute("data-art-motion", "animated");
+    expect(signed.querySelector("[data-art-moving]")).toHaveAttribute("data-art-moving", "true");
+    expect(signed.querySelector(".cf-signature")).not.toBeNull();
+
+    // The first full-art level adds the frame alone: it neither moves nor signs.
+    const still = screen.getByTestId(T.rung(VERSION_FULL_ART_ID));
+    expect(still.querySelector(".collection-strip__picture")).not.toHaveAttribute("data-art-motion");
+    expect(still.querySelector("[data-art-moving]")).toBeNull();
+    expect(still.querySelector(".cf-signature")).toBeNull();
   });
 });
 
