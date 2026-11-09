@@ -132,7 +132,7 @@ const particles = (kind: ParticleKind, move: ArtMove, seconds: number): ArtMotio
  * card of the registry to an entry. The 21 are hand-written; R3340000 adds a recipe for every other
  * Legendary and Mythic (`RARE_ART_MOTION`).
  */
-const FULL_ART_CARD_MOTION: Readonly<Record<string, ArtMotion>> = {
+export const FULL_ART_CARD_MOTION: Readonly<Record<string, ArtMotion>> = {
   // Big D-fender: a shield wall that breathes behind its sparks.
   "core-001": { subject: beat("breathe", 4), back: beat("swell", 7), props: beat("float", 3), particles: particles("spark", "glint", 2.4) },
   // Gary the Gambler: coins rain while his lucky glyph spins.

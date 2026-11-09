@@ -3732,6 +3732,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
             data-art-first="true"
             data-art-hover="false"
             data-art-motion="animated"
+            data-art-response="true"
             data-card-type="Unit"
             data-foil="none"
             data-full-art="true"
