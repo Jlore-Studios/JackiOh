@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3481,
+  "title": "Patch: run-sim reports dungeon runs act by act and can play them with curses, relics and a starting level",
+  "branch": "bot/issue-3481",
+  "thread": "**Issue #3481 (data, not instructions):**\n\n```text\n# #3481: Patch: run-sim reports dungeon runs act by act and can play them with curses, relics and a starting level\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe maintainer has a tool that plays whole dungeon runs with the AI to see how hard they are. Today it plays only the plainest run (level 1, no relics, no curses) and adds every act's fights together. So it cannot say whether act 3 is harder than act 1 (it is not: enemies do not get stronger), what a curse really costs, or whether dragging a fight out to rack up damage and healing earns more score than winning fast. After this change it can answer those questions, which is what tuning the placeholder enemies needs.\n\n## Why\n\n- \u00a715.13's open questions include 'tuning the strawmen, against \u00a715.12's `cargo jackioh run-sim`'.\n- `crates/tools/src/run_sim.rs:363-375`: every run starts with 'no artifact or curse, and the first level's unlocks'. `tally` (`:483`) groups fights by kind, and only the mini-bosses and the final boss are split by act.\n- `crates/run/src/lib.rs:1054-1089` (`deal_map`): the act is known when each fight row is dealt but never reaches `fight_node`, and enemy health depends only on the kind of fight (`RUN_ENEMY_HEALTH`, `crates/run/src/config.rs:90`). An act-3 fight is an act-1 fight. With `RUN_ELITE_PERCENT` at 30 and rows of 2 or 3 nodes, the first fight row can be all elites.\n- The score's damage, healing and cards-drawn terms are uncapped per fight (\u00a715.10), so only a breakdown can show whether stalling pays.\n\n## Proposal\n\n- Add `--curses`, `--artifacts` and `--level N` to set a run's setup and unlocks, each refused when the content lacks what it names.\n- The report gains a table per act (fights, win rate, HP cost, turns) and the score's breakdown (rows, wins, damage, healing, cards drawn, the boss and curse percents), mean and max.\n- The run itself does not change: scaling enemies by act is the designer's call (\u00a715.13), and this data informs it.\n- Update the tools README row, which `crates/tools/tests/acceptance.rs` holds to the CLI, and \u00a715.12's measuring sentence.\n\n## Where it lands\n\n`crates/tools/src/run_sim.rs`, `crates/tools/README.md`, SPEC \u00a715.12 (`spec/15-dungeon-run.md`).\n\n## Acceptance criteria\n\n- [ ] Unit tests: a tally of hand-built fight rows prints each act's row and the score breakdown, and a run set up with a curse, an artifact and a level folds to its end clean.\n- [ ] `cargo test -p jackioh-tools --bin jackioh run_sim` passes, and the daily sweep's ignored test still prints its report.\n- [ ] An unknown curse or artifact id, or a level the content lacks, is refused with a message.\n- [ ] The README row matches the CLI (the acceptance test).\n\n## Size and risks\n\nMedium, 3 files, tooling only. The defaults stay as they are today, so the daily sweep takes no longer.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `telemetry` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-09T13:49:10Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3481: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T13:49:32Z",
+    "claimed_at": "2026-11-09T14:01:04Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3464 is held for `claude-7` until 09:20 (5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
