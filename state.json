@@ -18464,12 +18464,9 @@
     "what": "revise #3461 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-09T10:25:02Z",
+    "at": "2026-11-09T10:34:21Z",
     "notes": [
-      "started review #3472 on claude-8 (run 42600885336)",
-      "started plan #3406 on claude-5 (run 42600964529)",
-      "started revise #3461 on claude-8 (run 42601043271)",
-      "nothing more to start: nothing is queued"
+      "delivered review #3472 on claude-8 (run 42600885336): reviewed"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19175,7 +19172,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T10:25:02Z",
+  "loop_tick": "2026-11-09T10:34:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
