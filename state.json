@@ -17356,13 +17356,14 @@
       "merge_owner": "claude-8",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-3",
       "queued_at": "2026-11-09T00:31:31Z",
-      "run_id": "42540785168",
+      "run_id": "pending:34c91d42-1794193038",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 155,
-      "started_at": "2026-11-09T00:32:56Z",
+      "started_at": "2026-11-09T02:57:57Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17984,9 +17985,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T02:40:05Z",
+    "at": "2026-11-09T02:57:57Z",
     "url": "",
-    "what": "build #3429 on claude-6"
+    "what": "spot-check #3453 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-09T02:50:06Z",
@@ -36134,7 +36135,15 @@
         "n": 155,
         "pr": 3453,
         "queued_at": "2026-11-09T02:54:33Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:34c91d42-1794193038",
         "sha": "31af522cf0568cdddd12de8f948b58d0753a8e14",
+        "started_at": "2026-11-09T02:57:57Z",
         "status": "queued",
         "title": "Patch: promotions stop timing out: the patch source test loads a bounded set of snapshots, and each ci-scope case answers for one file",
         "tries": 0
