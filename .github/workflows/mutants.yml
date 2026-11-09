@@ -75,7 +75,7 @@ jobs:
           shard=${SHARD:-$(($(date -u +%s) / 604800))}
           size=
           if [ "$EVENT" = push ]; then
-            size=1
+            rust='["run"]' web='["web-drag","edge"]' shard=0
           elif [ "$EVENT" = pull_request ]; then
             rust='["run"]' web='["edge"]' shard=0 size=20
           elif [ -n "$AREA" ]; then
@@ -116,7 +116,7 @@ jobs:
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
   rust:
-    name: rust (${{ matrix.area }})
+    name: cargo-mutants (${{ matrix.area }})
     needs: plan
     if: needs.plan.outputs.rust != '[]'
     runs-on: ubuntu-latest
@@ -154,7 +154,7 @@ jobs:
           retention-days: 30
 
   web:
-    name: web (${{ matrix.area }})
+    name: stryker (${{ matrix.area }})
     needs: plan
     if: needs.plan.outputs.web != '[]'
     runs-on: ubuntu-latest
