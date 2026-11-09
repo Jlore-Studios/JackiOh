@@ -225,8 +225,9 @@ impl TurnHookPrice {
 }
 
 /// R2424000, R2477000, R2564000, R2688000, R3064000: the prices a decision's root probed, passed by
-/// reference from `decide` through the search to every scorer that reads them, and R3038003: the one fact
-/// about the root they ride with, whether it holds a Starship.
+/// reference from `decide` through the search to every scorer that reads them, and the two facts about the
+/// root they ride with: whether it holds a Starship (R3038003), and whether its view names mostly cards the
+/// learned network has no row for (R3479000).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Prices {
     pub deaths: Vec<DeathPrice>,
@@ -239,6 +240,10 @@ pub struct Prices {
     /// priced in the hand eval's terms above (R2566000, R2380000, R3064000), which the network was never
     /// fitted to read.
     pub starship_root: bool,
+    /// R3479000: most of the card copies the root's redacted view names are ids the learned network has
+    /// no row for (`learned::unknown_root`), so its finalists are scored by the hand eval alone
+    /// (`learned::finalist_score_with`), whatever the line, as with `starship_root`.
+    pub unknown_root: bool,
 }
 
 impl Prices {
@@ -250,6 +255,7 @@ impl Prices {
         attack_hooks: Vec::new(),
         awakenings: Vec::new(),
         starship_root: false,
+        unknown_root: false,
     };
 }
 

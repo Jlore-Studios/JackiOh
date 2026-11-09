@@ -23202,5 +23202,53 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.13e",
+    "date": "2026-11-09",
+    "title": "Patch: audit the codebase for dead code, duplicates and zombie routes, 2026-11-08",
+    "source": "#3423",
+    "notes": "The code audit of 2026-11-08 (#3423, after #2658): dead code removed and duplicated helpers merged. Under apps/web/src/cards/ (R2529000) an unused type goes and the settings, the art kit and two syncs reuse one helper each: how cards look and play is unchanged.",
+    "player": {
+      "title": "Unused code tidied away",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Unused code was removed and repeated helpers were merged. Nothing about how cards look or play changes."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "71ef2a3bd05ce845d7ab98f1734ee9a5894391d3"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.13f",
+    "date": "2026-11-09",
+    "title": "Patch: every Stinkyscape (cards 91 to 178 and its tokens) Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
+    "source": "#3406",
+    "notes": "Stinkyscape's later cards' Alt art pass (#3330, on #3403's scenes, after #3396's Classic+ and #3397's Meditative+ and Training Grounds passes). Every card of #3406's table, the 54 Stinkyscape cards from #91 on and tokens offered Alt art but the Dormant Starship, now draws an alt scene recipe of its own from a brief per card (R3406000): its subject restaged in another place, time or moment, under a sky sharing no colour with its normal picture's and a new camera, where Alt art had redrawn the normal picture from another seed. A figure keeps the normal picture's person, and a person the brief keeps beside it stays the normal one's. The Starship Pieces, Jlockeed's three weapons and Dice of Doom keep their own painter's normal face and stand their piece in the alt scene as a new part of the scene kit. Every Alt art level draws the one alt picture, base and Radiant; each clears its rarity's detail floor and the byte ceiling, and in a real browser changes at least 60% of the normal window's sampled points (ALT_PICTURE_CHANGE_MIN). Repaints keep the normal picture. The scene kit gains a nanobot swarm, a hull plate, a cartridge, an overdrive engine, a warp ring, a rail gun, a great cannon, a missile pod, a capacitor cell, a flank pod, a launcher tube, a hundred-sided die, a pineapple, an escalator and a seashell. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every later Stinkyscape Alt art restaged",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Stinkyscape's later cards, the Starship Pieces among them, now show their subject somewhere else in their Alt art: a new place, time or moment, clearly apart from their normal art."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "a56de72f3768ef49d53234a09b0a35b1e63104b0"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

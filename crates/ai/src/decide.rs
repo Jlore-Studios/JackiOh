@@ -35,6 +35,7 @@ use crate::evaluate::{
     Prices, activation_prices, attack_hook_prices, awaken_prices, death_prices, holds_starship,
     turn_hook_prices,
 };
+use crate::learned::{LEARNED, unknown_root};
 use crate::lethal::{find_lethal, trim_lethal};
 use crate::match_::replacements_for;
 use crate::mulligan::mulligan_keep_curved;
@@ -417,6 +418,8 @@ fn plan(
         // R3038003: read off the redacted root, so no hidden card is in it, and carried with the prices
         // so that every line of the decision, on every determinization, is scored by the same eval.
         starship_root: holds_starship(&public, seat),
+        // R3479000: read off the redacted root too, against the network the search scores with.
+        unknown_root: unknown_root(&public, seat, &LEARNED),
     };
 
     // The determinizations' draws: with a style's own two (passing over lethal, picking a
