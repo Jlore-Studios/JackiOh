@@ -6,8 +6,10 @@
 # apps/web/src/net/cloudflare-config.test.ts holds this file.
 # R2983000: Google's own sign-in button (Google Identity Services, on /login) needs its script, its
 # frames, its styles and its requests (static-pages.ts `GOOGLE_IDENTITY_SOURCE`), and nothing else.
+# R3507000: `img-src` also names Roblox's one image host (auth/LinkedAccounts.tsx shows a linked Roblox
+# account's headshot from it; net/auth.ts `ROBLOX_AVATAR_IMAGE_HOST`), and no wildcard.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; worker-src 'self'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; frame-src 'self' https://accounts.google.com/gsi/; connect-src %CONNECT_SRC%; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; worker-src 'self'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/; img-src 'self' data: blob: https://tr.rbxcdn.com; media-src 'self' blob:; font-src 'self'; frame-src 'self' https://accounts.google.com/gsi/; connect-src %CONNECT_SRC%; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

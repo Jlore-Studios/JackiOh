@@ -32,7 +32,40 @@ export const linkedTestid = {
   notice: "account-linked-notice",
   moving: "account-linked-moving",
   error: "account-linked-error",
+  identity: "account-linked-identity",
+  avatar: "account-linked-avatar",
 } as const;
+
+/** R3507000: the side, in pixels, of the linked Roblox account's headshot. */
+const LINKED_ROBLOX_AVATAR_PX = 32;
+
+/**
+ * R3507000: which Roblox account is linked: `@username`, with the display name before it when that differs, and
+ * its headshot before that (dropped for good once it fails to load, so no broken image shows). Display only, from
+ * `identity_data`; a proper noun, so it is built here and not translated. The image's empty `alt` is right because
+ * the username beside it names it, so a row with no username shows neither.
+ */
+function RobloxIdentity({ username, displayName, avatarUrl }: { username: string; displayName?: string; avatarUrl?: string }): ReactElement {
+  const [failed, setFailed] = useState(false);
+  return (
+    <p className="account-linked-identity" data-testid={linkedTestid.identity}>
+      {avatarUrl !== undefined && !failed ? (
+        <img
+          src={avatarUrl}
+          alt=""
+          loading="lazy"
+          width={LINKED_ROBLOX_AVATAR_PX}
+          height={LINKED_ROBLOX_AVATAR_PX}
+          data-testid={linkedTestid.avatar}
+          onError={() => {
+            setFailed(true);
+          }}
+        />
+      ) : null}
+      {displayName !== undefined && displayName !== username ? `${displayName} (@${username})` : `@${username}`}
+    </p>
+  );
+}
 
 type Phase = { kind: "loading" } | { kind: "ready"; identities: LinkedIdentity[] } | { kind: "unknown" };
 
@@ -144,6 +177,9 @@ function LinkedPanel({ token, providers }: { token: string; providers: OAuthProv
                     ? t("{provider}: not linked.", { provider: label })
                     : t("{provider}: linked. You can sign in with it.", { provider: label })}
                 </p>
+                {identity?.provider === "custom:roblox" && identity.username !== undefined ? (
+                  <RobloxIdentity username={identity.username} displayName={identity.displayName} avatarUrl={identity.avatarUrl} />
+                ) : null}
                 {identity === undefined ? (
                   <button
                     type="button"
