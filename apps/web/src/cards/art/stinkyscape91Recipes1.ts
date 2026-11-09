@@ -32,7 +32,7 @@ const ROSEMARY_TRISCUIT: SceneRecipe = {
       { part: "obs-bench", x: 50, y: 84, scale: 3 },
     ],
     near: [
-      { part: "cracker", x: 55.5, y: 48.5, scale: 0.9 },
+      { part: "cracker", x: 56, y: 50, scale: 1.2 },
       { part: "cup", x: 32, y: 73.8, scale: 1.2 },
     ],
     light: [
@@ -1004,7 +1004,7 @@ const SHOCKWAVE447: SceneRecipe = {
     near: [
       { part: "card", x: 30, y: 84, scale: 1, count: 3, spread: [8, 8] },
       { part: "card", x: 70, y: 84, scale: 1, count: 2, spread: [8, 8] },
-      { part: "cog", x: 24, y: 70, scale: 1, count: 2, spread: [6, 6], paint: "sky-400" },
+      { part: "cog", x: 24, y: 70, scale: 1, paint: "sky-400" },
       { part: "gear", x: 76, y: 68, scale: 0.8, paint: "sky-300" },
     ],
     light: [
@@ -1017,6 +1017,349 @@ const SHOCKWAVE447: SceneRecipe = {
     particles: [
       { part: "sparks", x: 50, y: 40, scale: 1.2, count: 3, spread: [24, 12], paint: "sky-300" },
       { part: "motes", x: 50, y: 50, scale: 1.4, paint: "blue-200" },
+    ],
+  },
+};
+
+/** A hopeful queueing on Job Application's concourse, a portfolio held to the chest. */
+const HOPEFUL = { head: "head-human", hair: "hair-long", outfit: "outfit-suit", item: "item-clipboard", skin: "red-300", cloth: "slate-400" } as const;
+
+/** Job Application (Stinkyscape #112, Legendary): a corporate recruitment concourse in an orbital office tower, hopefuls with portfolios queueing past glowing interview pods as a blank resume sheet is sucked into a pneumatic intake tube; a hiring drone hovers at the desk, and through the window rises the next stage's tower, in harsh fluorescent light with one warm spotlight on a closed offer door; the next stage's tower is the kit's glass spire, and the queue behind the three hopefuls the kit's crew. */
+const JOB_APPLICATION: SceneRecipe = {
+  family: "stinkyscape",
+  sky: ["black", "slate-800"],
+  light: { x: 84, y: 56, r: 30, paint: "orange-400", opacity: 0.34 },
+  emblem: { x: 14, y: 30, size: 5, rotate: 0 },
+  figure: { x: 34, y: 88, scale: 0.78, pose: "pose-hold", look: HOPEFUL },
+  extras: [
+    { layer: "mid", x: 22, y: 80, scale: 0.6, pose: "pose-hold", look: { ...HOPEFUL, hair: "hair-short", item: "item-book", skin: "wood-700", cloth: "slate-700" } },
+    { layer: "mid", x: 11, y: 79, scale: 0.56, pose: "pose-stand", look: { ...HOPEFUL, hair: "hair-bun", item: null, skin: "brass-600", cloth: "blue-800" } },
+  ],
+  layers: {
+    sky: [{ part: "stars", x: 50, y: 22, scale: 2 }],
+    far: [
+      { part: "glass-spire", x: 48, y: 62, scale: 0.9, paint: "sky-400", fade: 0.8 },
+      { part: "viewport", x: 50, y: 34, scale: 1.8 },
+      { part: "ceiling-lights", x: 50, y: 4, scale: 1.2 },
+    ],
+    mid: [
+      { part: "tile-floor", x: 50, y: 70, paint: "slate-700" },
+      { part: "pod", x: 14, y: 70, scale: 0.6, paint: "sky-300" },
+      { part: "framed-door", x: 84, y: 72, scale: 1.7, paint: "wood-700" },
+      { part: "desk", x: 66, y: 78, scale: 1.4, paint: "slate-400" },
+    ],
+    subject: [
+      { part: "intake-tube", x: 50, y: 80, scale: 1.2 },
+      { part: "pages", x: 54, y: 44, scale: 0.6 },
+      { part: "drone", x: 66, y: 56, scale: 0.9 },
+    ],
+    near: [{ part: "crew-crowd", x: 18, y: 104, scale: 1.3 }],
+    light: [
+      { part: "spotlight", x: 84, y: 20, scale: 0.9, paint: "orange-400" },
+      { part: "halo", x: 84, y: 60, scale: 1.4, paint: "orange-400" },
+      { part: "halo", x: 50, y: 50, scale: 1.2, paint: "sky-300" },
+      { part: "rim-light", x: 34, y: 66, scale: 1, paint: "slate-100" },
+    ],
+    particles: [{ part: "motes", x: 50, y: 40, scale: 1.2, paint: "slate-100" }],
+  },
+};
+
+/** Paycheck (Stinkyscape #112.1, Token): a crisp green credit chip lands on a station casino's roulette table as the ball rattles toward red pockets on a blank wheel, in green lamplight. */
+const PAYCHECK: SceneRecipe = {
+  family: "stinkyscape",
+  sky: ["black", "green-900"],
+  light: { x: 50, y: 30, r: 34, paint: "green-400", opacity: 0.32 },
+  emblem: { x: 16, y: 30, size: 5, rotate: 0 },
+  layers: {
+    far: [
+      { part: "bulkhead", x: 50, y: 62, paint: "slate-800" },
+      { part: "porthole", x: 82, y: 34, scale: 0.9 },
+    ],
+    mid: [{ part: "deck-floor", x: 50, y: 64, paint: "green-900" }],
+    subject: [
+      { part: "roulette", x: 50, y: 84, scale: 2 },
+      { part: "credit-chip", x: 58, y: 52, scale: 2 },
+    ],
+    near: [{ part: "coin-stack", x: 20, y: 92, scale: 0.9 }],
+    light: [
+      { part: "spotlight", x: 50, y: 2, scale: 1, paint: "green-400" },
+      { part: "halo", x: 58, y: 56, scale: 1, paint: "green-400" },
+    ],
+    particles: [{ part: "sparks", x: 58, y: 58, scale: 1, count: 2, spread: [6, 4], paint: "green-200" }],
+  },
+};
+
+/** A Very Dandy Lad (Stinkyscape #113, Epic): in front, a dandy in a plum velvet frock coat and top hat flicks a lace cuff; in the middle, cheap little robots and drones blink out in violet sparks around him; behind, a velvet-draped first-class lounge on a luxury liner, its window on the stars and a chandelier overhead; he stands hand on hip, as the figure kit has no monocle or lace cuff to flick. */
+const A_VERY_DANDY_LAD: SceneRecipe = {
+  family: "stinkyscape",
+  sky: ["black", "violet-700"],
+  light: { x: 50, y: 34, r: 38, paint: "violet-500", opacity: 0.34 },
+  emblem: { x: 84, y: 30, size: 5, rotate: 0 },
+  figure: {
+    x: 50,
+    y: 88,
+    scale: 1,
+    pose: "pose-hips",
+    look: { head: "head-human", hair: "top-hat", outfit: "outfit-frock", item: null, skin: "red-300", cloth: "violet-700" },
+  },
+  layers: {
+    sky: [{ part: "stars", x: 50, y: 30, scale: 1.6 }],
+    far: [
+      { part: "viewport", x: 50, y: 36, scale: 1.3 },
+      { part: "drapes", x: 50, y: 4, scale: 1.7, paint: "violet-700" },
+      { part: "chandelier", x: 50, y: 4, scale: 1.1 },
+    ],
+    mid: [
+      { part: "checker-floor", x: 50, y: 70, paint: "violet-700" },
+      { part: "chair", x: 14, y: 82, scale: 1.3, paint: "red-900" },
+      { part: "robot", x: 30, y: 82, scale: 0.6, fade: 0.55 },
+      { part: "robot", x: 72, y: 84, scale: 0.55, flip: -1, fade: 0.45 },
+      { part: "drone", x: 70, y: 52, scale: 0.8, fade: 0.5 },
+    ],
+    near: [
+      { part: "wide-table", x: 88, y: 102, scale: 0.7, paint: "wood-800" },
+      { part: "cup", x: 86, y: 92, scale: 1 },
+    ],
+    light: [
+      { part: "warp-flash", x: 30, y: 72, scale: 0.5, paint: "violet-500" },
+      { part: "halo", x: 50, y: 10, scale: 1.2, paint: "violet-300" },
+      { part: "rim-light", x: 50, y: 62, scale: 1, paint: "violet-300" },
+    ],
+    particles: [
+      { part: "sparks", x: 30, y: 74, scale: 1, count: 3, spread: [6, 8], paint: "violet-300" },
+      { part: "motes", x: 50, y: 40, scale: 1.2, paint: "violet-300" },
+    ],
+  },
+};
+
+/** Arctic Citadel (Stinkyscape #114, Epic): in front, a giant in a frost-white parka, his armour bolted from scavenged wreck plates and a turret on one shoulder; in the middle, drifting scraps fly in and weld onto him; behind, an ice moon's graveyard of frozen ships; the turret hovers at his shoulder, as the figure kit mounts nothing there. */
+const ARCTIC_CITADEL: SceneRecipe = {
+  family: "stinkyscape",
+  sky: ["black", "blue-800"],
+  light: { x: 70, y: 30, r: 36, paint: "sky-300", opacity: 0.3 },
+  emblem: { x: 16, y: 30, size: 5, rotate: 0 },
+  figure: {
+    x: 50,
+    y: 90,
+    scale: 1.12,
+    pose: "pose-guard",
+    look: { head: "head-human", hair: "space-helmet", outfit: "outfit-plated-parka", item: "item-blaster", skin: "brass-600", cloth: "slate-100" },
+  },
+  layers: {
+    sky: [
+      { part: "stars", x: 50, y: 20, scale: 2 },
+      { part: "planet", x: 80, y: 18, scale: 0.8, paint: "sky-400" },
+    ],
+    far: [
+      { part: "regolith", x: 50, y: 66, paint: "slate-100" },
+      { part: "starship", x: 20, y: 58, scale: 0.6, paint: "slate-400", fade: 0.7 },
+      { part: "freighter", x: 84, y: 62, scale: 0.7, flip: -1, paint: "slate-400", fade: 0.7 },
+    ],
+    mid: [
+      { part: "robot-wreck", x: 18, y: 84, scale: 1 },
+      { part: "ice-block", x: 84, y: 88, scale: 0.7 },
+      { part: "wreckage", x: 24, y: 44, scale: 0.45 },
+    ],
+    subject: [{ part: "turret", x: 43, y: 38, scale: 0.8, flip: -1 }],
+    near: [{ part: "frost", x: 50, y: 96, scale: 1.2 }],
+    light: [
+      { part: "halo", x: 50, y: 50, scale: 1.8, paint: "sky-300" },
+      { part: "rim-light", x: 50, y: 60, scale: 1.2, paint: "sky-300" },
+    ],
+    particles: [
+      { part: "sparks", x: 50, y: 50, scale: 0.9, count: 3, spread: [12, 6], paint: "orange-400" },
+    ],
+  },
+};
+
+/** A crewman Scornboi lets stay. */
+const KEPT_CREW = { head: "head-human", hair: "hair-long", outfit: "outfit-jacket", item: null, skin: "wood-700", cloth: "slate-400" } as const;
+
+/** Scornboi (Stinkyscape #115, Legendary): a sneering admiral in a black and crimson high-collared greatcoat stands at a docking gate holding up a very short blank list and pointing; behind him aliens, beasts and robots are dragged by a crimson exile beam into a void hatch while a few humans and starships stay, in harsh crimson floodlight with long shadows; his short blank list is the kit's slate, and the humans who stay one crewman and the crew behind him. */
+const SCORNBOI: SceneRecipe = {
+  family: "stinkyscape",
+  sky: ["black", "red-900"],
+  light: { x: 74, y: 40, r: 40, paint: "red-500", opacity: 0.4 },
+  emblem: { x: 14, y: 30, size: 5, rotate: 0 },
+  figure: {
+    x: 38,
+    y: 88,
+    scale: 0.96,
+    pose: "pose-point",
+    look: { head: "head-human", hair: "hair-short", outfit: "outfit-greatcoat", item: "item-slate", skin: "red-300", cloth: "red-900" },
+  },
+  extras: [{ layer: "mid", x: 14, y: 80, scale: 0.56, pose: "pose-stand", look: KEPT_CREW }],
+  layers: {
+    sky: [{ part: "stars", x: 50, y: 18, scale: 2 }],
+    far: [
+      { part: "starship", x: 24, y: 30, scale: 0.6 },
+      { part: "crew-crowd", x: 22, y: 72, scale: 0.8 },
+    ],
+    mid: [
+      { part: "tile-floor", x: 50, y: 72, paint: "slate-700" },
+      { part: "airlock", x: 76, y: 42, scale: 1.4 },
+      { part: "alien", x: 70, y: 68, scale: 0.6, fade: 0.8 },
+      { part: "dog", x: 82, y: 70, scale: 0.8, flip: -1, fade: 0.8 },
+      { part: "robot", x: 62, y: 74, scale: 0.55, fade: 0.85 },
+    ],
+    near: [{ part: "crate", x: 90, y: 100, scale: 1.4, paint: "slate-700" }],
+    light: [
+      { part: "tractor-beam", x: 76, y: 46, scale: 1.3, paint: "red-500" },
+      { part: "spotlight", x: 40, y: 0, scale: 1, paint: "red-400" },
+      { part: "halo", x: 76, y: 42, scale: 1.6, paint: "red-500" },
+      { part: "rim-light", x: 38, y: 64, scale: 1.1, paint: "red-400" },
+    ],
+    particles: [{ part: "sparks", x: 76, y: 58, scale: 1, count: 2, spread: [10, 10], paint: "red-400" }],
+  },
+};
+
+/** Megabase (Stinkyscape #116, Legendary): a colossal station the size of a moon, tiered decks and plated armour rings round it, its lobby dome glowing; shuttles stream into its docks as enemy fire sparks harmlessly off its hull, a gift shop's windows twinkling on one ring, a blue-green planet below and dawn glare raking across the steel. */
+const MEGABASE: SceneRecipe = {
+  family: "stinkyscape",
+  sky: ["black", "blue-900"],
+  light: { x: 88, y: 74, r: 40, paint: "orange-400", opacity: 0.34 },
+  emblem: { x: 14, y: 28, size: 5, rotate: 0 },
+  layers: {
+    sky: [
+      { part: "stars", x: 50, y: 20, scale: 2.2 },
+      { part: "stars", x: 24, y: 56, scale: 1.2 },
+      { part: "nebula", x: 24, y: 24, scale: 1, paint: "blue-600" },
+    ],
+    far: [
+      { part: "planet-limb", x: 40, y: 82, paint: "jade-400" },
+      { part: "sun-disc", x: 92, y: 78, scale: 0.8 },
+    ],
+    mid: [
+      { part: "shuttle", x: 18, y: 50, scale: 0.7 },
+      { part: "shuttle", x: 26, y: 62, scale: 0.55 },
+      { part: "fighter", x: 86, y: 28, scale: 0.6, flip: -1, paint: "red-600" },
+      { part: "fighter", x: 90, y: 42, scale: 0.5, flip: -1, paint: "red-600" },
+    ],
+    subject: [{ part: "space-station", x: 50, y: 50, scale: 1.05 }],
+    near: [
+      { part: "laser", x: 84, y: 30, scale: 0.5, flip: -1, paint: "red-500" },
+      { part: "satellite", x: 12, y: 84, scale: 0.8 },
+    ],
+    light: [
+      { part: "lens-flare", x: 92, y: 78, scale: 0.8 },
+      { part: "god-rays", x: 92, y: 78, scale: 1, flip: -1, paint: "orange-400" },
+      { part: "halo", x: 50, y: 30, scale: 1.2, paint: "sky-300" },
+      { part: "rim-light", x: 56, y: 52, scale: 1.3, paint: "orange-400" },
+    ],
+    particles: [
+      { part: "sparks", x: 66, y: 40, scale: 1, count: 3, spread: [4, 8], paint: "red-400" },
+      { part: "motes", x: 50, y: 50, scale: 1.4, paint: "sky-300" },
+    ],
+  },
+};
+
+/** Core System (Stinkyscape #117, Epic): in front, a technician's gloved hand slams a big reset lever on a station command floor; in the middle, every ship and turret on the tactical table folds back into pale blue light streaming home; behind, a reactor powering down to cold blue; the folding ships and turret are faded copies in the table's light. */
+const CORE_SYSTEM: SceneRecipe = {
+  family: "stinkyscape",
+  sky: ["black", "blue-900"],
+  light: { x: 50, y: 40, r: 36, paint: "sky-300", opacity: 0.3 },
+  emblem: { x: 86, y: 30, size: 5, rotate: 0 },
+  layers: {
+    far: [
+      { part: "bulkhead", x: 50, y: 62, paint: "slate-800" },
+      { part: "reactor", x: 50, y: 60, scale: 1.1, paint: "blue-600" },
+      { part: "console", x: 14, y: 64, scale: 0.7 },
+    ],
+    mid: [
+      { part: "tile-floor", x: 50, y: 64, paint: "slate-700" },
+      { part: "holo-table", x: 46, y: 80, scale: 1.4 },
+    ],
+    subject: [
+      { part: "fighter", x: 36, y: 50, scale: 0.45, fade: 0.6 },
+      { part: "turret", x: 56, y: 56, scale: 0.55, fade: 0.6 },
+      { part: "fighter", x: 60, y: 44, scale: 0.4, flip: -1, fade: 0.5 },
+      { part: "energy-beam", x: 46, y: 20, scale: 0.8, paint: "sky-300" },
+    ],
+    near: [
+      { part: "reset-lever", x: 76, y: 100, scale: 1.4, flip: -1 },
+      { part: "gloved-hand", x: 90, y: 84, scale: 1, flip: -1 },
+    ],
+    light: [
+      { part: "halo", x: 46, y: 54, scale: 1.6, paint: "sky-300" },
+      { part: "halo", x: 50, y: 40, scale: 1, paint: "blue-600" },
+      { part: "rim-light", x: 76, y: 86, scale: 0.8, paint: "sky-300" },
+    ],
+    particles: [
+      { part: "motes", x: 46, y: 46, scale: 1.2, paint: "sky-300" },
+      { part: "sparks", x: 72, y: 80, scale: 0.8, count: 2, spread: [4, 4], paint: "blue-200" },
+    ],
+  },
+};
+
+/** Secure System (Stinkyscape #118, Epic): in front, armoured blast shutters slam down over a fortress-station gun deck; in the middle, every cannon barrel sealed by glowing teal locking clamps; behind, rows of silent turrets along the hull and annoyed crew glaring, in cold teal light; the locking clamps are the kit's padlocks, lit teal. */
+const SECURE_SYSTEM: SceneRecipe = {
+  family: "stinkyscape",
+  sky: ["black", "slate-900"],
+  light: { x: 50, y: 34, r: 36, paint: "cyan-400", opacity: 0.28 },
+  emblem: { x: 14, y: 30, size: 5, rotate: 0 },
+  layers: {
+    sky: [{ part: "stars", x: 50, y: 20, scale: 2 }],
+    far: [
+      { part: "catwalk", x: 50, y: 52 },
+      { part: "turret", x: 50, y: 50, scale: 0.6, count: 4, spread: [20, 0] },
+      { part: "crew-crowd", x: 50, y: 62, scale: 1 },
+    ],
+    mid: [{ part: "tile-floor", x: 50, y: 66, paint: "slate-700" }],
+    subject: [
+      { part: "turret", x: 32, y: 80, scale: 1.4 },
+      { part: "turret", x: 66, y: 80, scale: 1.4, flip: -1 },
+      { part: "padlock", x: 39, y: 70, scale: 0.9, paint: "cyan-400" },
+      { part: "padlock", x: 59, y: 70, scale: 0.9, paint: "cyan-400" },
+    ],
+    near: [
+      { part: "blast-door", x: 12, y: 102, scale: 1.3 },
+      { part: "blast-door", x: 88, y: 102, scale: 1.3, flip: -1 },
+    ],
+    light: [
+      { part: "halo", x: 39, y: 68, scale: 0.8, paint: "cyan-400" },
+      { part: "halo", x: 59, y: 68, scale: 0.8, paint: "cyan-400" },
+      { part: "rim-light", x: 50, y: 70, scale: 1.2, paint: "cyan-400" },
+    ],
+    particles: [{ part: "motes", x: 50, y: 50, scale: 1.2, paint: "cyan-400" }],
+  },
+};
+
+/** Unsecure System (Stinkyscape #119, Epic): in front, a giggling hacker yanks out a glowing firewall cable; in the middle, a shimmering energy wall crumbles into glitching pixels; behind, every turret on a station ring flares to twice its size, in magenta glitch light; the palette's nearest to magenta is its purple. */
+const UNSECURE_SYSTEM: SceneRecipe = {
+  family: "stinkyscape",
+  sky: ["black", "violet-700"],
+  light: { x: 62, y: 50, r: 36, paint: "purple-400", opacity: 0.34 },
+  emblem: { x: 86, y: 76, size: 5, rotate: 0 },
+  figure: {
+    x: 34,
+    y: 88,
+    scale: 0.9,
+    pose: "pose-lunge",
+    flip: -1,
+    look: { head: "head-human", hair: "hood", outfit: "outfit-hoodie", item: null, skin: "orange-400", cloth: "slate-700" },
+  },
+  layers: {
+    sky: [{ part: "stars", x: 50, y: 18, scale: 2 }],
+    far: [
+      { part: "ring-arc", x: 50, y: 30, scale: 1, paint: "slate-400" },
+      { part: "turret", x: 22, y: 30, scale: 1.3 },
+      { part: "turret", x: 78, y: 30, scale: 1.3, flip: -1 },
+    ],
+    mid: [
+      { part: "deck-floor", x: 50, y: 70, paint: "slate-800" },
+      { part: "energy-wall", x: 66, y: 80, scale: 1.1, paint: "purple-400" },
+      { part: "glitch", x: 66, y: 60, scale: 1 },
+    ],
+    subject: [{ part: "cable", x: 58, y: 66, scale: 0.9, flip: -1 }],
+    near: [{ part: "console", x: 88, y: 100, scale: 1, flip: -1 }],
+    light: [
+      { part: "halo", x: 22, y: 28, scale: 1.2, paint: "purple-400" },
+      { part: "halo", x: 78, y: 28, scale: 1.2, paint: "purple-400" },
+      { part: "rim-light", x: 34, y: 62, scale: 1, paint: "purple-400" },
+    ],
+    particles: [
+      { part: "pixels", x: 66, y: 56, scale: 1 },
+      { part: "sparks", x: 46, y: 64, scale: 0.9, count: 2, spread: [6, 6], paint: "purple-400" },
     ],
   },
 };
@@ -1048,4 +1391,13 @@ export const STINKYSCAPE_91_RECIPES_1: Readonly<Record<string, SceneRecipe>> = {
   "stinkyscape-109": XXFRESHJACK,
   "stinkyscape-110": IKWZKI,
   "stinkyscape-111": SHOCKWAVE447,
+  "stinkyscape-112": JOB_APPLICATION,
+  "stinkyscape-112-1": PAYCHECK,
+  "stinkyscape-113": A_VERY_DANDY_LAD,
+  "stinkyscape-114": ARCTIC_CITADEL,
+  "stinkyscape-115": SCORNBOI,
+  "stinkyscape-116": MEGABASE,
+  "stinkyscape-117": CORE_SYSTEM,
+  "stinkyscape-118": SECURE_SYSTEM,
+  "stinkyscape-119": UNSECURE_SYSTEM,
 };

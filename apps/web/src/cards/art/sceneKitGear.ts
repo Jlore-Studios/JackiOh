@@ -105,6 +105,23 @@ function cog(f: Pen, c: Point, r: number, teeth: number, spin: number): string {
   return f.poly(rim);
 }
 
+/** A band along `points` whose width at each point is `width(t)`, `t` running from 0 at its first point to 1 at its last: a trail, a flame or a tendril that tapers. */
+function tapered(f: Pen, points: readonly Point[], width: (t: number) => number): string {
+  const last = Math.max(1, points.length - 1);
+  const left: Point[] = [];
+  const right: Point[] = [];
+  points.forEach((p, i) => {
+    const a = points[Math.max(0, i - 1)] ?? p;
+    const b = points[Math.min(last, i + 1)] ?? p;
+    const length = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const half = width(i / last) / 2;
+    const n: Point = [(-(b[1] - a[1]) / length) * half, ((b[0] - a[0]) / length) * half];
+    left.push(plus(p, n));
+    right.push(plus(p, n, -1));
+  });
+  return f.poly([...left, ...right.reverse()]);
+}
+
 // Devices and props
 
 /** A control console standing on the anchor: a sloped desk on a pedestal, two or three lit screens, rows of buttons and a joystick; about 20 wide and 14 tall at scale 1. */
@@ -160,7 +177,7 @@ function lightDiagram(at: PartPlace, rng: Rng): KitShape[] {
     return out;
   };
   const arms = [arm(0), arm(180)];
-  const nodes = arms.flatMap((points) => [7, 13, 20].map((i) => points[i] ?? [0, 0]));
+  const nodes = arms.flatMap((points) => [7, 13, 20].map((i): Point => points[i] ?? [0, 0]));
   const phase = between(rng, 0, 30);
   let dashes = "";
   for (let a = 0; a < 360; a += 30) dashes += f.band([polar(12.5, phase + a), polar(12.5, phase + a + 9), polar(12.5, phase + a + 18)], 0.4);
@@ -632,73 +649,276 @@ function chaosEgg(at: PartPlace, rng: Rng): KitShape[] {
 /** A game board lying flat in perspective, centred on the anchor: a checkered board (main) with a rim, five or six pieces standing on it; about 20 wide and 8 deep at scale 1. */
 function gameBoard(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
-  return [shape(f.ellipse(0, 0, 10, 4), "slate-400", between(rng, 0.9, 1) * 1, MAIN_INKED)];
+  // A point of the board's top, `u` across it and `v` from its far edge to its near one, the far edge narrower.
+  const P = (u: number, v: number): Point => [(-10 + 20 * u) * (0.8 + 0.2 * v), -4 + 8 * v];
+  const cell = (c: number, r: number): string => f.poly([P(c / 6, r / 3), P((c + 1) / 6, r / 3), P((c + 1) / 6, (r + 1) / 3), P(c / 6, (r + 1) / 3)]);
+  let dark = "";
+  for (let r = 0; r < 3; r += 1) for (let c = r % 2; c < 6; c += 2) dark += cell(c, r);
+  const piece = (c: number, r: number): string => {
+    const [x, y] = P((c + 0.5) / 6, (r + 0.5) / 3);
+    return f.poly([[x - 0.8, y], [x + 0.8, y], [x + 0.45, y - 1.6], [x - 0.45, y - 1.6]]) + f.circle(x, y - 2.4, 0.75);
+  };
+  const shift = whole(rng, 0, 5);
+  // A row's pieces, two columns apart so none touches another.
+  const row = (r: number, n: number): string => {
+    let d = "";
+    for (let k = 0; k < n; k += 1) d += piece((shift + r + 2 * k) % 6, r);
+    return d;
+  };
+  return [
+    shape(f.ellipse(0, 4.8, 11, 1.4), "slate-900", 0.3),
+    shape(f.poly([[-10, 4], [10, 4], [10, 5.4], [-10, 5.4]]), "wood-800", 1, INKED),
+    shape(f.poly([P(0, 0), P(1, 0), P(1, 1), P(0, 1)]), "wood-600", 1, MAIN_INKED),
+    shape(dark, "wood-900", 0.75),
+    shape(row(0, 2), "red-500", 1, INKED),
+    shape(row(1, 2), "sky-300", 1, INKED),
+    shape(row(2, whole(rng, 1, 2)), "red-500", 1, INKED),
+    shape(f.band([P(0.08, 0.06), P(0.5, 0.06)], 0.3), "white", 0.35),
+  ];
 }
 
 /** A square wheat cracker centred on the anchor, tilted: a golden-brown biscuit (main, brass-500) docked with holes, rosemary sprigs and salt flecks on top, a bite taken from a corner; about 6 across at scale 1. */
 function cracker(at: PartPlace, rng: Rng): KitShape[] {
-  const f = local(at);
-  return [shape(f.ellipse(0, 0, 3, 3), "slate-400", between(rng, 0.9, 1) * 1, MAIN_INKED)];
+  const t = tilted(local(at), between(rng, -24, 24));
+  const rim: Point[] = [[-3, -3], [1, -3], [1.3, -2.3], [1.9, -2], [2.2, -1.4], [3, -1], [3, 3], [-3, 3]];
+  const holes: Point[] = [[-1.6, -1.6], [0, -1.6], [-1.6, 0], [0, 0], [1.6, 0.2], [-1.6, 1.6], [0, 1.6], [1.6, 1.6]];
+  const sprig = (a: Point, b: Point): string => {
+    let d = t.band([a, b], 0.25);
+    for (const s of [0.25, 0.5, 0.75]) {
+      const p: Point = [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s];
+      d += t.band([p, [p[0] - 0.2, p[1] - 0.7]], 0.2) + t.band([p, [p[0] + 0.6, p[1] + 0.3]], 0.2);
+    }
+    return d;
+  };
+  return [
+    shape(t.poly(rim.map(([x, y]): Point => [x + 0.4, y + 0.5])), "wood-700", 1, INKED),
+    shape(t.poly(rim), "brass-500", 1, MAIN_INKED),
+    shape(t.band([[-2.4, -2.4], [0.6, -2.4]], 0.3) + t.band([[-2.4, 2.4], [2.4, 2.4]], 0.3), "wood-600", 0.45),
+    shape(holes.map(([x, y]) => t.circle(x, y, 0.28)).join(""), "wood-800", 0.8),
+    shape(sprig([-2.4, 1], [0.8, -0.9]) + sprig([0.2, 2.5], [2.5, 0.6]), "green-700", 1),
+    shape(t.circle(-0.8, -2.2, 0.18) + t.circle(2.1, 1, 0.18) + t.circle(-2.2, 2.2, 0.18) + t.circle(0.9, 0.9, 0.18), "white", 0.85),
+  ];
 }
 
 /** A holographic price chart standing on the anchor: four or five translucent bars (main) rising left to right, a frame, an arrow climbing over them; about 14 wide and 14 tall at scale 1. */
 function priceBars(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
-  return [shape(f.poly([[-7, 0], [7, 0], [7, -14], [-7, -14]]), "slate-400", between(rng, 0.9, 1) * 1, MAIN_INKED)];
+  const n = whole(rng, 4, 5);
+  const step = 12 / n;
+  let bars = "";
+  let tops = "";
+  const peaks: Point[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const x0 = -6 + i * step + step * 0.18;
+    const x1 = x0 + step * 0.64;
+    const h = 2.6 + (8.4 * i) / (n - 1) + between(rng, -0.6, 0.6);
+    bars += box(f, x0, -h, x1, -0.4);
+    tops += box(f, x0, -h, x1, -h + 0.5);
+    peaks.push([(x0 + x1) / 2, -h - 1.4]);
+  }
+  const first = peaks[0] ?? [-5, -4];
+  const end = peaks[peaks.length - 1] ?? [5, -12];
+  const head: Point = [end[0] + 1.4, end[1] - 1.4];
+  return [
+    shape(box(f, -7, -14, 7, 0), "sky-300", 0.12),
+    shape(f.band([[-7, -14], [-7, 0], [7, 0]], 0.4) + f.band([[-6.6, -4.7], [6.6, -4.7]], 0.15) + f.band([[-6.6, -9.4], [6.6, -9.4]], 0.15), "white", 0.4),
+    shape(bars, "sky-300", 0.55, MAIN),
+    shape(tops, "white", 0.7),
+    shape(f.band([first, ...peaks.slice(1, -1), end], 0.6), "white", 0.9),
+    shape(f.poly([[head[0] + 0.4, head[1] - 0.4], [head[0] - 2.4, head[1] + 0.2], [head[0] - 0.2, head[1] + 2.4]]), "white", 0.9),
+    shape(box(f, -5, 0, 5, 1), "slate-700", 1, INKED),
+  ];
 }
 
 /** An AI's light ring centred on the anchor: a dark ring housing, ten or twelve lit segments (main) round it with a few dark, a glow and spin streaks; about 14 across at scale 1. */
 function lightRing(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
-  return [shape(f.ellipse(0, 0, 7, 7), "slate-400", between(rng, 0.9, 1) * 1, MAIN_INKED)];
+  const n = whole(rng, 10, 12);
+  const spin = between(rng, 0, 360);
+  const dark = new Set([whole(rng, 0, n - 1), whole(rng, 0, n - 1)]);
+  let lit = "";
+  let off = "";
+  for (let i = 0; i < n; i += 1) {
+    const a = spin + (i * 360) / n;
+    const w = (360 / n) * 0.34;
+    const segment = f.poly([polar(5, a - w), polar(6.6, a - w), polar(6.6, a + w), polar(5, a + w)]);
+    if (dark.has(i)) off += segment;
+    else lit += segment;
+  }
+  const streak = (from: number): string => f.band([0, 1, 2, 3, 4].map((k) => polar(8.4, from + k * 12)), 0.4);
+  return [
+    shape(f.circle(0, 0, 9.4), "sky-300", 0.16, MAIN),
+    shape(f.circle(0, 0, 7.2) + f.circle(0, 0, 4.4), "slate-800", 1, INKED),
+    shape(lit, "sky-300", 1, MAIN),
+    shape(off, "slate-700", 0.9),
+    shape(f.circle(0, 0, 3.6), "slate-900", 1, INKED),
+    shape(f.circle(0, 0, 1.4), "sky-300", 0.8, MAIN),
+    shape(streak(spin + 20) + streak(spin + 200), "white", 0.4),
+  ];
 }
 
 /** A beam of light falling straight down from the anchor: a wide translucent column (main) about 8 wide and 60 long, a brighter core, rings of light down it and a splash of light where it lands at its foot. */
 function energyBeam(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
-  return [shape(f.poly([[-4, 0], [4, 0], [4, 60], [-4, 60]]), "slate-400", between(rng, 0.9, 1) * 0.4, MAIN)];
+  const first = between(rng, 6, 12);
+  let rings = "";
+  for (let y = first; y < 54; y += 12) rings += f.ellipse(0, y, 5.4, 1.3) + f.ellipse(0, y, 4.4, 0.8);
+  return [
+    shape(f.poly([[-5.6, 0], [5.6, 0], [6.6, 60], [-6.6, 60]]), "sky-300", 0.16, MAIN),
+    shape(f.poly([[-4, 0], [4, 0], [4.4, 60], [-4.4, 60]]), "sky-300", 0.4, MAIN),
+    shape(f.poly([[-1.4, 0], [1.4, 0], [1.6, 60], [-1.6, 60]]), "white", 0.75),
+    shape(rings, "white", 0.45),
+    shape(f.ellipse(0, 60, 11, 2.6), "sky-300", 0.35, MAIN),
+    shape(f.ellipse(0, 60, 5, 1.1) + f.circle(0, 0, 2.6), "white", 0.6),
+  ];
 }
 
 /** Three wobbly bolts of magic from the anchor curving off toward its facing at different angles: each a glowing head (main) with a tapering wavering trail; about 30 long and 16 tall at scale 1. */
 function magicBolt(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
-  return [shape(f.poly([[0, -8], [30, -8], [30, 8], [0, 8]]), "slate-400", between(rng, 0.9, 1) * 0.4, MAIN)];
+  const trails: Point[][] = [];
+  const heads: Point[] = [];
+  for (const angle of [-22, 0, 22]) {
+    const a = angle + between(rng, -6, 6);
+    const reach = between(rng, 26, 30);
+    const end = polar(reach, a);
+    const bend = polar(reach * 0.55, a + between(rng, -28, 28));
+    const wobble = between(rng, 0, 6);
+    const curve = quad([0, 0], bend, end, 10);
+    trails.push(beside(curve, 0).map((p, i) => plus(p, heading(a + 90), Math.sin(wobble + i * 1.3) * 0.7 * (i / 10))));
+    heads.push(end);
+  }
+  const trail = (scale: number): string => trails.map((points) => tapered(f, points, (t) => scale * t)).join("");
+  return [
+    shape(trail(3.6), "violet-300", 0.25, MAIN),
+    shape(trail(1.6), "violet-300", 0.85, MAIN),
+    shape(trail(0.5), "white", 0.7),
+    shape(heads.map((p) => f.circle(...p, 3.6)).join(""), "violet-300", 0.3, MAIN),
+    shape(heads.map((p) => f.circle(...p, 2)).join(""), "violet-300", 1, MAIN),
+    shape(heads.map((p) => star(f, p, 2.6)).join(""), "white", 0.85),
+  ];
 }
 
 /** A laser from the anchor toward its facing: a thin bright line (main) with a white core about 40 long, a glow about it, a flare at the muzzle and an impact flare at its far end. */
 function laser(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
-  return [shape(f.poly([[0, -1.5], [40, -1.5], [40, 1.5], [0, 1.5]]), "slate-400", between(rng, 0.9, 1) * 0.4, MAIN)];
+  const reach = between(rng, 38, 42);
+  const end: Point = [reach, 0];
+  const sparks = [150, 200, 120, 240].map((a) => f.band([plus(end, heading(a + between(rng, -12, 12)), 1.8), plus(end, heading(a), between(rng, 3.6, 5.4))], 0.35)).join("");
+  return [
+    shape(f.band([[0, 0], end], 3.2), "red-500", 0.25, MAIN),
+    shape(f.band([[0, 0], end], 1.2), "red-500", 0.9, MAIN),
+    shape(f.band([[0, 0], end], 0.4), "white", 0.95),
+    shape(f.circle(0, 0, 2.6) + f.circle(...end, 4), "red-500", 0.35, MAIN),
+    shape(star(f, [0, 0], 3.2) + star(f, end, 4.6, 6, between(rng, 0, 30)), "white", 0.85),
+    shape(sparks, "red-500", 0.9, MAIN),
+  ];
 }
 
 /** A shimmering wall of energy standing on the anchor: a translucent panel (main) about 30 wide and 30 tall, a hexagon grid of light on it, bright edges, crackles along its top and an emitter rail at its foot. */
 function energyWall(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
-  return [shape(f.poly([[-15, 0], [15, 0], [15, -30], [-15, -30]]), "slate-400", between(rng, 0.9, 1) * 0.4, MAIN)];
+  const hex = (cx: number, cy: number, r: number): string => f.poly([0, 1, 2, 3, 4, 5].map((k) => polar(r, 30 + k * 60, cx, cy)));
+  let grid = "";
+  for (const y of [-24, -15, -6]) {
+    const zig: Point[] = [];
+    for (let x = -14; x <= 14; x += 3.5) zig.push([x, y + ((x + 14) % 7 === 0 ? -1.5 : 1.5)]);
+    grid += f.band(zig, 0.3);
+  }
+  let cells = "";
+  for (let k = 0; k < 6; k += 1) cells += hex(-12 + k * 4.8 + between(rng, -0.6, 0.6), -27 + ((k * 7) % 5) * 5.4, 1.8);
+  const crackle = (x0: number): string => {
+    const points: Point[] = [];
+    for (let i = 0; i <= 5; i += 1) points.push([x0 + i * 1.8, -30 - (i % 2 === 0 ? 0.4 : between(rng, 1.4, 2.6))]);
+    return f.band(points, 0.4);
+  };
+  return [
+    shape(f.ellipse(0, 0, 17, 2.2), "sky-300", 0.3, MAIN),
+    shape(box(f, -15, -30, 15, 0), "sky-300", 0.28, MAIN),
+    shape(grid, "white", 0.3),
+    shape(cells, "white", 0.25),
+    shape(f.band([[-15, 0], [-15, -30], [15, -30], [15, 0]], 0.6), "white", 0.7),
+    shape(crackle(-12 + between(rng, -1, 1)) + crackle(3 + between(rng, -1, 1)), "sky-300", 0.9, MAIN),
+    shape(box(f, -16.5, 0, 16.5, 2), "slate-700", 1, INKED),
+    shape(f.circle(-12, 1, 0.5) + f.circle(0, 1, 0.5) + f.circle(12, 1, 0.5), "sky-300", 1, MAIN),
+  ];
 }
 
 /** A tractor beam spreading down from the anchor: a translucent cone of light (main) about 20 wide at its foot and 24 long, bands of light down it and a net of light lines at its foot. */
 function tractorBeam(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
-  return [shape(f.poly([[-10, 0], [10, 0], [10, 24], [-10, 24]]), "slate-400", between(rng, 0.9, 1) * 0.4, MAIN)];
+  const width = (y: number): number => 1.6 + (8.4 * y) / 24;
+  let bands = "";
+  for (let y = between(rng, 4, 7); y < 20; y += 5) bands += f.band([[-width(y), y], [0, y + 0.2 * width(y)], [width(y), y]], 0.5);
+  let net = "";
+  for (let k = -2; k <= 2; k += 1) net += f.band([[k * 3.4 - 2, 19.6], [k * 3.4 + 2, 24]], 0.3);
+  return [
+    shape(f.poly([[-2.6, 0], [2.6, 0], [12, 24], [-12, 24]]), "cyan-400", 0.16, MAIN),
+    shape(f.poly([[-1.6, 0], [1.6, 0], [10, 24], [-10, 24]]), "cyan-400", 0.32, MAIN),
+    shape(bands, "white", 0.45),
+    shape(net, "white", 0.35),
+    shape(f.ellipse(0, 24, 10, 2) + f.ellipse(0, 24, 9, 1.4), "white", 0.55),
+    shape(f.ellipse(0, 0, 3, 1.2), "slate-700", 1, INKED),
+    shape(f.circle(0, 0.4, 0.7), "white", 0.9),
+  ];
 }
 
 /** An engine's plume behind the anchor, away from its facing: an outer flame (main), an inner one and a white-hot core tapering about 18 long, shock diamonds in it and smoke puffs at its tail. */
 function thrusterFlame(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
-  return [shape(f.poly([[0, -3], [18, -3], [18, 3], [0, 3]]), "slate-400", between(rng, 0.9, 1) * 0.4, MAIN)];
+  const reach = between(rng, 16, 20);
+  const plume = (half: number, length: number): string => `M${f.p(0, -half)}Q${f.p(-length * 0.45, -half * 1.2)} ${f.p(-length, 0)}Q${f.p(-length * 0.45, half * 1.2)} ${f.p(0, half)}Z`;
+  const diamond = (x: number, r: number): string => f.poly([[x + r, 0], [x, -r * 0.6], [x - r, 0], [x, r * 0.6]]);
+  const puffs = [0, 1, 2].map((k) => f.circle(-reach - 1 - k * 1.6 + between(rng, -0.5, 0.5), between(rng, -2.4, 2.4), 1.1 + k * 0.3)).join("");
+  return [
+    shape(f.ellipse(-reach * 0.45, 0, reach * 0.62, 4.6), "orange-400", 0.2, MAIN),
+    shape(plume(3, reach), "orange-400", 0.85, MAIN),
+    shape(plume(1.9, reach * 0.7), "white", 0.55),
+    shape(plume(1, reach * 0.35), "white", 0.95),
+    shape(diamond(-reach * 0.42, 1.1) + diamond(-reach * 0.62, 0.8) + diamond(-reach * 0.8, 0.5), "white", 0.6),
+    shape(puffs, "slate-400", 0.3),
+  ];
 }
 
 /** A jump flash centred on the anchor: three rippling rings of light (main) widening out, a four-pointed starburst and a bright white core; about 30 across at scale 1. */
 function warpFlash(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
-  return [shape(f.ellipse(0, 0, 15, 15), "slate-400", between(rng, 0.9, 1) * 0.4, MAIN)];
+  const phase = between(rng, 0, 6);
+  // Six ripples round each ring, four points to a ripple.
+  const wavy = (r: number): Point[] => Array.from({ length: 24 }, (_, k) => polar(r + 0.5 * Math.sin(phase + (k * Math.PI) / 2), k * 15));
+  const ring = (r: number, w: number): string => f.poly(wavy(r + w / 2)) + f.poly(wavy(r - w / 2));
+  const turn = between(rng, -12, 12);
+  return [
+    shape(f.circle(0, 0, 15), "sky-300", 0.15, MAIN),
+    shape(ring(6, 1) + ring(10, 0.8) + ring(13.6, 0.6), "sky-300", 0.6, MAIN),
+    shape(star(f, [0, 0], 13, 4, turn, 0.12), "white", 0.55),
+    shape(star(f, [0, 0], 7, 4, turn + 45, 0.2), "white", 0.5),
+    shape(f.circle(0, 0, 4.6), "sky-300", 0.5, MAIN),
+    shape(f.circle(0, 0, 2.6), "white", 0.95),
+  ];
 }
 
 /** A thread of black shadow from the anchor curling about 30 toward its facing: a thin dark band thickening and thinning as it winds, wisps peeling off it, a violet glow along it (main) and a sharp point at its end. */
 function shadowTendril(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
-  return [shape(f.poly([[0, -5], [30, -5], [30, 5], [0, 5]]), "slate-400", between(rng, 0.9, 1) * 0.4, MAIN)];
+  const phase = between(rng, 0, 6);
+  const sway = between(rng, 3, 5);
+  const path: Point[] = Array.from({ length: 13 }, (_, i) => {
+    const t = i / 12;
+    return [30 * t, sway * Math.sin(phase + t * 7.5) * (1 - 0.4 * t)];
+  });
+  const width = (t: number): number => (0.6 + 1.6 * Math.abs(Math.sin(t * 4.7))) * (1 - t);
+  const wisp = (i: number, side: number): string => {
+    const base = path[i] ?? [0, 0];
+    return tapered(f, [base, plus(base, [1.6, side * 2.4]), plus(base, [3.8, side * 3])], (t) => 0.9 * (1 - t));
+  };
+  return [
+    shape(f.band(path, 3.2), "violet-500", 0.3, MAIN),
+    shape(tapered(f, path, width), "black", 0.95),
+    shape(wisp(3, -1) + wisp(7, 1) + wisp(10, -1), "black", 0.6),
+    shape(f.band(beside(path.slice(1, 10), -0.9), 0.25), "violet-300", 0.5),
+    shape(star(f, path[12] ?? [30, 0], 1.6), "violet-300", 0.8),
+  ];
 }
 
 /** R3403000: the gear in space Stinkyscape's later cards added, by id, each with its kind. */

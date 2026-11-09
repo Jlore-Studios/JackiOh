@@ -573,7 +573,7 @@ mechs, a wasp, a golem, an alien, a crew), `sceneKitGear.ts` (consoles, a diagra
 credit chips, a roulette table, capsules, a kicking sack, pages, a blueprint, a reset lever, a drill, the chaos egg,
 and the beams, bolts, lasers, walls, plumes and flashes of energy) and `sceneKitCosmos.ts` (comets, frost and ice, a
 planet's ring, alarms, streaks, waves, flares, wormholes, rifts, galaxies, stink clouds). The pointing pose and the
-hoodie are Core's and the headset Meditative's (`headphones`); a part named as the kit names one already is named for what sets it apart (`outfit-sleeveless`,
+hoodie are Core's and the headphones Meditative's; a part named as the kit names one already is named for what sets it apart (`outfit-sleeveless`,
 `outfit-plated-parka`, `item-shock-axe`, `obs-bench`, `lamp-tent`, `ticker-tape`, `speed-streaks`, `surf-wave`,
 `crew-crowd`, `kicking-sack`, and beside the Meditative pass's crane, rift and blueprint `shipyard-crane`, `space-rift`
 and `holo-blueprint`), so no module's spread replaces another's. Every entry clears its rarity's floor and is
