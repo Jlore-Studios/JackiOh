@@ -18479,13 +18479,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-3",
       "queued_at": "2026-11-09T06:57:56Z",
-      "run_id": "42576625059",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:3c63f106-1794210758",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 160,
-      "started_at": "2026-11-09T07:01:07Z",
+      "started_at": "2026-11-09T07:53:08Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18512,9 +18513,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T07:52:26Z",
+    "at": "2026-11-09T07:53:08Z",
     "url": "",
-    "what": "review #3457 on claude-1"
+    "what": "spot-check #3467 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-09T07:37:51Z",
@@ -36766,7 +36767,15 @@
         "n": 160,
         "pr": 3467,
         "queued_at": "2026-11-09T07:45:39Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:3c63f106-1794210758",
         "sha": "e8d5f21f9b55ccb441515cee55a2694c1d274a4d",
+        "started_at": "2026-11-09T07:53:08Z",
         "status": "queued",
         "title": "Patch: the living game on a phone: a pass at 390x844 and on a throttled CPU over every look, animation and sound #3330 adds, with one budget they share",
         "tries": 0
