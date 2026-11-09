@@ -173,8 +173,9 @@ still a pure function of the card's id, name, tags and type. The cache keys the 
 served for another's. The normal picture's seed is the card's id alone, so every still picture and
 golden hash stands. A later version with a picture of its own adds its own name to `ArtPicture`, so it
 draws apart from every other. A Starship's art, a Legacy card's and a delivered file keep their one picture.
-A Classic+, Meditative+, Training Grounds, Meditative or Core card offered Alt art draws an alt recipe of its own
-instead (R3396000, R3397000, R3404000 and R3398000, below).
+A Classic+, Meditative+, Training Grounds, Meditative or Core card offered Alt art, and a card of #3406's table,
+Stinkyscape's later cards, draws an alt recipe of its own instead (R3396000, R3397000, R3404000, R3398000 and
+R3406000, below).
 
 ## One picture per variant (R3015002)
 
@@ -615,7 +616,8 @@ to #119), `stinkyscape91Recipes2.ts` (#120 to #159 with #135's, #137's, #147's, 
 subject, setting and idea, its subject within x 30 to 70 and y 25 to 85, and its emblem small inside the band every
 face shows. The cards the table leaves to other issues (every Starship Piece and the three Jlockeed weapons that
 are Pieces when Embiggened, the Dormant Starship, the Drone Battleship's layers, Anomaly Found!, the Terminus tokens
-and Dice of Doom) have no recipe and draw as before.
+and Dice of Doom) have no recipe and draw as before. R3406000 gives those of them #3406's table names an alt recipe,
+their normal faces unchanged (below).
 
 Each humanoid Unit is a figure dressed as who it is, no two alike; fourteen Units are no person and draw a creature
 or a machine of the kit as their subject: the Wasp and the Hornet, Megabase, the Sack, the Stinkyscape Golem, the
@@ -697,6 +699,40 @@ The briefs added three parts: a fisherman's oar lying level and a sofa (`sceneKi
 face to its picture and its Radiant marks, and `meditative-alt-scenes.cy.tsx` measures each window's share against
 `ALT_PICTURE_CHANGE_MIN` (0.6) and screenshots each normal face beside its Alt art face.
 
+## Stinkyscape's later Alt art restaged (R3406000)
+
+Each of the 54 cards of #3406's table, every Stinkyscape card from #91 on and every Stinkyscape token offered Alt art
+but the Dormant Starship, draws an alt recipe of its own, written from #3406's brief for it, under Classic+'s rules
+(above): the same subject and idea in another place, time or story moment, read under the card's Alt art seed alone,
+one picture at every Alt art level. The recipes are three files in id order, spread into `ALT_SCENE_RECIPES` as
+`STINKYSCAPE_91_ALT_RECIPES` after the other sets': `stinkyscape91AltRecipes1.ts` (#93 to #115, with
+`normalLookOf` and `normalExtraLookOf`, read from #3403's recipe files so no import goes round),
+`stinkyscape91AltRecipes2.ts` (#116 to #146) and `stinkyscape91AltRecipes3.ts` (#147 to #177).
+
+- **A piece of its own painter.** Eighteen of the 54 have no normal recipe: the fourteen Starship Pieces, Jlockeed's
+  Siege Tank, Yamato Cannon and Missile Pod, and Dice of Doom. Their normal face and every seed but the Alt art one
+  keep their own painter's picture; the Stinkyscape painter tries the scene first (svg.ts `sceneArtSvg`), so their
+  Alt art seed alone finds the alt recipe. Each stands its piece in its subject layer as a part of the scene kit,
+  under a sky that is neither `black` nor `slate-900`.
+- **The same subject.** A figure both pictures draw is the normal one's person (`normalLookOf`; only its item, cloth
+  or hair may change); a person the brief keeps is the extra at the same index (`normalExtraLookOf`: Scornboi's
+  aide, ETHICS's members); a subject that is a part stays in the subject layer; Pocket Peptides' held vial stands on
+  the table as a `vial`; and Megabase and Huge Asteroid, seen from inside, stand an `escalator` and a `reactor` there.
+- **Camera and detail.** Classic+'s new camera and new sky for the 36 with a normal recipe; the rarity's floor and
+  the byte ceiling on both faces, far, mid, subject and near layers from Epic up, and Dice of Doom, the one with
+  full-art motion, a layer for each role it moves.
+
+A detail the kit lacks is left out and named in the recipe's comment, never drawn as another part (Vxyl's folded
+cloak, A Very Dandy Lad's parasol, Arctic Citadel's parka at his waist, the stars on the wizard's robe, the
+Commander's chin on her fist, No-No Words' hand over the mouth, IN33DH3's crossed legs, Core System's dust sheets),
+and ETHICS's papers are scrolls under every other member's arm, so six do not take its picture past the byte ceiling. Fifteen parts joined the kit in a module of their own, `sceneKitStinkyAlt.ts`, spread
+into `SCENE_KIT` after every other: the pieces (a nanobot swarm, a hull plate, a cartridge, an overdrive engine, a
+warp ring, a rail gun, a great cannon, a missile pod, a capacitor cell, a flank pod, a launcher tube and a
+hundred-sided die with no digits), a pineapple, an escalator and a glowing seashell. `stinkyscape91AltScenes.test.tsx`
+holds every recipe to the rules and every Alt art level's face to its picture and its Radiant marks, and
+`stinkyscape91-alt-scenes.cy.tsx` measures each window against `ALT_PICTURE_CHANGE_MIN` and screenshots each normal
+face beside its Alt art face.
+
 ## Classic's scenes (R3352000)
 
 Classic's pass draws every Classic entry from a recipe of its own, each from its brief (#3352's table), in the art
@@ -721,13 +757,14 @@ The parts the briefs named joined the kits: the figure kit's crouch (`pose-crouc
 outfits (`outfit-harlequin`, `outfit-travel-cloak`, `outfit-spider`) and six held items (`item-card-fan`,
 `item-cleaver`, `item-abacus`, `item-cookie`, `item-grapple`, `item-rake`), after the old ones of their kinds in
 `figureKit.ts`, and eighteen scenery parts in a module of their own, `sceneKitClassic.ts` (its props in
-`sceneKitClassicProps.ts`), spread into `SCENE_KIT` last, after Stinkyscape's: the creatures (`tortoise`, `slime`,
-`shrimp`, `crawler`, `maw`, `skeleton`, `lizard`, `leaping-deer`, `mule`), the objects (`pickle`, `sceptre`,
-`spike-trap`, `tesla-coil`, `web`, `vat`, `chalice`), a `blast-crater`, and In Too Deep's `spiral-shaft`, none taking
-an old part's name (the deer and the crater beside R3397000's `deer` and `crater`, the cloak beside R3403000's
-`outfit-cloak`, above). Every Classic entry is off the short list, whose cap fell from 129 to 40;
-`classicScenes.test.ts` holds the recipes to all of it, and `classic-scenes.cy.tsx` shows every Epic, Legendary and
-Mythic scene at hand size, base and Radiant, and a contact sheet of the rest, at desktop size and at 390x844.
+`sceneKitClassicProps.ts`), spread into `SCENE_KIT` after Stinkyscape's, with only the Stinkyscape Alt art pass's
+module after it (above): the creatures (`tortoise`, `slime`, `shrimp`, `crawler`, `maw`, `skeleton`, `lizard`,
+`leaping-deer`, `mule`), the objects (`pickle`, `sceptre`, `spike-trap`, `tesla-coil`, `web`, `vat`, `chalice`), a
+`blast-crater`, and In Too Deep's `spiral-shaft`, none taking an old part's name (the deer and the crater beside
+R3397000's `deer` and `crater`, the cloak beside R3403000's `outfit-cloak`, above). Every Classic entry is off the
+short list, whose cap fell from 129 to 40; `classicScenes.test.ts` holds the recipes to all of it, and
+`classic-scenes.cy.tsx` shows every Epic, Legendary and Mythic scene at hand size, base and Radiant, and a contact
+sheet of the rest, at desktop size and at 390x844.
 
 ## The detail floor (R3331001)
 

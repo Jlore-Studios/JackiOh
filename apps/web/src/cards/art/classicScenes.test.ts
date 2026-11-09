@@ -260,11 +260,13 @@ describe("R3352000 Classic's scenes", () => {
 
   it("R3352000 every part this pass added joins the kits beside the old ones and is drawn by a Classic scene", () => {
     // Classic's scenery is a module of its own, spread into SCENE_KIT after every earlier part: an id an earlier
-    // part held would keep that part's place (and replace it without a word), so the last entries are this module's.
+    // part held would keep that part's place (and replace it without a word), so this module's entries stand
+    // together, in its order (R3406000's Stinkyscape Alt art module follows them, stinkyscape91AltScenes.test.tsx).
     const added = Object.entries(CLASSIC_KIT);
     expect(added.length).toBeGreaterThan(0);
     const kit = Object.keys(SCENE_KIT);
-    expect(kit.slice(kit.length - added.length)).toEqual(added.map(([id]) => id));
+    const start = kit.indexOf(added[0]?.[0] ?? "");
+    expect(kit.slice(start, start + added.length)).toEqual(added.map(([id]) => id));
     for (const [id, part] of added) expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);
     for (const id of CLASSIC_FIGURE_PARTS) expect(Object.hasOwn(FIGURE_KIT, id), id).toBe(true);
     // Each new part is there because a brief named it: a Classic scene draws it.

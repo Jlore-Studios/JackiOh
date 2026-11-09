@@ -144,7 +144,7 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
   }
 
   /** Carries out what the machine asked, in order, and gathers what the answer to the page holds. */
-  function carryOut(outputs: readonly PracticeOutput[], game: GameState, now: number): Carried {
+  function carryOut(outputs: readonly PracticeOutput[], game: GameState, now: number, isRun: boolean): Carried {
     const carried: Carried = { timers: [] };
     for (const output of outputs) {
       switch (output.output) {
@@ -152,7 +152,9 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
           carried.aiSeat = output.aiSeat;
           break;
         case "save":
-          env.saves?.write(output.save);
+          // R668: the free game in its slot; R3476000: a run fight in its own, never the free game's.
+          if (isRun) env.saves?.writeRunFight(output.save);
+          else env.saves?.write(output.save);
           break;
         case "keep": {
           const saves = env.saves;
@@ -205,7 +207,7 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
     const answer = practiceCall({ op: "step", host: current(), event, now });
     if (answer.reply !== "stepped") throw new Error(`the practice engine answered "${answer.reply}" unexpectedly`);
     machine = answer.host;
-    return carryOut(answer.outputs, answer.host.game, now);
+    return carryOut(answer.outputs, answer.host.game, now, machine.config.run !== undefined);
   }
 
   /** A start or a resume: the machine's refusal is the failure, and no game exists. */
@@ -213,7 +215,7 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
     if (answer.reply === "refused") throw new Error(answer.message);
     if (answer.reply !== "stepped") throw new Error(`the practice engine answered "${answer.reply}" unexpectedly`);
     machine = answer.host;
-    return carryOut(answer.outputs, answer.host.game, now);
+    return carryOut(answer.outputs, answer.host.game, now, machine.config.run !== undefined);
   }
 
   /** The timers an answer carries to the page, when it carries any. */
@@ -328,7 +330,8 @@ export function createPracticeDriver(env: PracticeDriverEnv): PracticeDriver {
       case "resume": {
         // Like a start, a resume replaces whatever was running, even when it fails.
         machine = null;
-        const saved = env.saves?.read() ?? null;
+        // R668: the free game from its slot; R3476000: a run fight from its own, never the free game's.
+        const saved = request.config.run !== undefined ? (env.saves?.readRunFight() ?? null) : (env.saves?.read() ?? null);
         const now = env.now();
         const carried = begin(
           practiceCall({

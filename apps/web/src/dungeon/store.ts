@@ -20,6 +20,7 @@ import type { RunAction, RunContent, RunFile, RunSetup, RunState, RunStats, RunU
 import { t } from "../i18n/i18n.ts";
 import { messageOf } from "../net/errors.ts";
 import { getStored, removeStored, setStored } from "../net/storage.ts";
+import { clearStoredRunFight } from "../practice/saveStore.ts";
 import {
   runCheckSetup,
   runContent,
@@ -403,6 +404,8 @@ function startRun(setup: RunSetup): string | null {
     };
     persistRun(live);
     if (daily) persistProgress(next);
+    // R3476000: a new run's first fight finds no kept fight.
+    clearStoredRunFight();
     commit(next);
     return null;
   } catch (cause) {
@@ -456,6 +459,8 @@ function abandonRun(): void {
   // An unfinished run is given up first, which settles its loss; a finished one has settled already.
   const settled = runFinished(live.run) ? from : step(from, live, { type: "abandon" });
   if (typeof settled !== "string") commit({ ...settled, live: null });
+  // R3476000: an abandoned run keeps no fight.
+  clearStoredRunFight();
 }
 
 function buyNextLevel(): string | null {
