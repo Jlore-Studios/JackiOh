@@ -8,11 +8,13 @@ use serde_json::{Value, json};
 use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::{Rarity, set_ships};
 use jackioh_server::app::{self, App, now_ms};
-use jackioh_server::config::{CARD_TOKEN_BAR_SIZE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
+use jackioh_server::config::{
+    CARD_TOKEN_BAR_SIZE, FLEET_TRACK_LEVELS, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS,
+};
 use jackioh_server::cosmetics::{
     ANIMATED_ART_ID_PREFIX, AUGMENT_ID_PREFIX, Cosmetic, CosmeticKind, JLORIOUS_CARD_BACK,
-    VERSION_EXTENDED_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_ID, VERSION_ID_PREFIX,
-    is_default_look, offered, owns, shipped,
+    JLORIOUS_COSMETICS, VERSION_EXTENDED_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_ID,
+    VERSION_ID_PREFIX, is_default_look, offered, owns, shipped,
 };
 use jackioh_server::db::fake::OnCall;
 use jackioh_server::db::store::{CollectionEntry, CollectionGrant};
@@ -613,6 +615,37 @@ async fn r1300000_r2755000_fill_grants_every_card_and_every_cosmetic_but_the_jlo
     );
     assert_eq!(card_grants(&app, DEV).await.len(), cards.len());
     assert_eq!(ledger(&app, DEV).await, after);
+}
+
+#[tokio::test]
+async fn r3335002_fill_grants_every_fleet_reward_but_not_the_jlorious_starship() {
+    let (app, dev, _other) = dev_app().await;
+    let registry = shipped().expect("the registry parses");
+    let fleet: Vec<String> = registry
+        .iter()
+        .filter(|cosmetic| cosmetic.track.is_some())
+        .map(|cosmetic| cosmetic.id.clone())
+        .collect();
+    assert_eq!(fleet.len(), FLEET_TRACK_LEVELS as usize);
+    ok(&app, "/api/dev/fill", &dev, json!({})).await;
+    let held = holdings(&app, DEV).await;
+    // §14.10: a dev account wears every Fleet track reward without playing the track; only reaching Jlorious
+    // grants the Jlorious Starship, as it does the card back.
+    for id in &fleet {
+        assert!(held.cosmetics.account.contains(id), "{id}");
+    }
+    for id in JLORIOUS_COSMETICS {
+        assert!(!held.cosmetics.account.iter().any(|owned| owned == id), "{id}");
+    }
+    // Each Starship kind's default stays owned with no row (§14.2).
+    for kind in CosmeticKind::STARSHIP {
+        let default = registry
+            .iter()
+            .find(|cosmetic| cosmetic.kind == kind && cosmetic.default)
+            .map(|cosmetic| cosmetic.id.clone())
+            .expect("a default per Starship kind");
+        assert!(!held.cosmetics.account.contains(&default), "{default}");
+    }
 }
 
 #[tokio::test]

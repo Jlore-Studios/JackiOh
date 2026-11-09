@@ -19,6 +19,7 @@ import {
   escortMarkup, hardpointPlacements, hullMarkup, ledgerMarkup, liveryPaint, shipyardLampOf, shipyardMarkup, STARSHIP_DESIGNS, STARSHIP_MODULES_MAX,
   starshipClassOf, type HullPaint, type Placement, type StarshipArt, type StarshipClass,
 } from "./starshipHulls.ts";
+import type { StarshipTrail } from "./starshipLooks.ts";
 import {
   MODULE_BOX, moduleCenter, moduleMarkup, modulePaint, STARSHIP_MODULE_IDS, starshipModuleOf, type Hangar, type Hardpoint, type ModuleGroup,
   type ModuleKind, type StarshipModule,
@@ -2231,7 +2232,7 @@ function pieceCardSvg(m: StarshipModule, radiant: boolean, motion: ArtMotion | n
 
 // R2249000, R3333000: a Starship's own art, drawn from what it holds
 
-/** The seed a Starship's sky grows from: its design's, so a ship keeps one sky whatever fuses into it. */
+/** The seed a Starship's sky grows from: its design's (its `sky`, else its id), so a ship keeps one sky whatever fuses into it. */
 const STARSHIP_SEED_PREFIX = "starship-";
 const STARSHIP_ESCORTS_MAX = 3;
 /** A launched Starship is escorted by one frigate for every this many pieces it holds, up to the most. */
@@ -2251,17 +2252,31 @@ const ICON_RIVET = "#9aa1b8";
 /** How large a module's icon draws it on its plate. */
 const MODULE_ICON_SCALE = 0.75;
 
-function streak(rng: Rng, p: Paint): string {
+function streak(rng: Rng, color: string): string {
   const y = between(rng, 6, 94);
   const x = between(rng, 40, 100);
   const length = between(rng, 18, 46);
-  return line(x, y, x - length, y + between(rng, -2, 2), mixHex(p.glow, "#ffffff", 0.5), between(rng, 0.25, 0.7), {
+  return line(x, y, x - length, y + between(rng, -2, 2), color, between(rng, 0.25, 0.7), {
     opacity: between(rng, 0.25, 0.6),
   });
 }
 
 function gildHull(p: HullPaint): HullPaint {
   return { ...gild(p), trim: mixHex(p.trim, RADIANT_PALETTE.mote, GILD_MIX), window: mixHex(p.window, RADIANT_PALETTE.glow, GILD_MIX) };
+}
+
+/** The white-hot core of a Starship's burn, and how far its warp streaks pale its glow, with no trail of its own. */
+const BURN_CORE = "#ffffff";
+const STREAK_PALE = 0.5;
+
+/**
+ * R3335000: a launched Starship's engine colours, its burn, the burn's core and its warp streaks: its trail's, gilded
+ * as its glow is on a Radiant face, or, with none, its livery's glow, a white core and streaks paler than its glow.
+ */
+function burnPaint(trail: StarshipTrail | null, p: HullPaint, radiant: boolean): StarshipTrail {
+  if (trail === null) return { burn: p.glow, core: BURN_CORE, streak: mixHex(p.glow, BURN_CORE, STREAK_PALE) };
+  if (!radiant) return trail;
+  return { burn: mixHex(trail.burn, RADIANT_PALETTE.glow, GILD_MIX), core: trail.core, streak: mixHex(trail.streak, RADIANT_PALETTE.glow, GILD_MIX) };
 }
 
 /** What a Starship's picture mounts: its class, the pieces it shows (its oldest, up to the most), their modules and their places. */
@@ -2346,11 +2361,12 @@ export function shipyardIdleOf(ship: StarshipArt): { lamp: StarshipPoint; cone: 
  * R3333000: the art a Starship wears, Dormant or launched, drawn from its inputs (`StarshipArt`): its class from the
  * count of its pieces, each piece's module (gilded when the piece or the face is Radiant) on its hardpoint oldest
  * first, its design's hull in its livery, and the shipyard about a Dormant one or, launched, its engines' burn, warp
- * streaks and escorts. Never its definition's id or name, which a fusion changes (R2249000).
+ * streaks and escorts. Never its definition's id or name, which a fusion changes (R2249000). R3335000: a launched one's
+ * burn and streaks in its trail's colours and its modules in its piece skin's tones, gilded after, when it has them.
  */
 export function starshipSvg(ship: StarshipArt): string {
   const design = STARSHIP_DESIGNS[ship.design];
-  const seed = hashId(`${STARSHIP_SEED_PREFIX}${ship.design}`);
+  const seed = hashId(`${STARSHIP_SEED_PREFIX}${design.sky ?? design.id}`);
   const base = liveryPaint(ship.livery ?? design.livery);
   const p = ship.radiant ? gildHull(base) : base;
   const behind = seededRandom((seed ^ BACKDROP_SALT) >>> 0);
@@ -2360,7 +2376,10 @@ export function starshipSvg(ship: StarshipArt): string {
   const { cls, shown, modules, places } = starshipLayout(ship);
   const L = cls.length;
   const H = cls.height;
-  const paints = modules.map((m, i) => (shown[i]?.radiant === true || ship.radiant ? gild(modulePaint(m)) : modulePaint(m)));
+  const skin = ship.skin ?? null;
+  const skinned = (m: StarshipModule): Paint => (skin === null ? modulePaint(m) : { ...modulePaint(m), ...skin });
+  const paints = modules.map((m, i) => (shown[i]?.radiant === true || ship.radiant ? gild(skinned(m)) : skinned(m)));
+  const engines = burnPaint(ship.trail ?? null, p, ship.radiant);
   const mounted = (keep: (m: StarshipModule) => boolean): string =>
     modules
       .map((m, i) => {
@@ -2374,8 +2393,8 @@ export function starshipSvg(ship: StarshipArt): string {
       .join("");
   const body: string[] = [];
   if (ship.launched) {
-    body.push(poly([[-L, -0.45 * H], [-L - 10 - 0.3 * L, 0], [-L, 0.45 * H]], p.glow, "none", { opacity: 0.7 }));
-    body.push(poly([[-L, -0.2 * H], [-L - 6 - 0.15 * L, 0], [-L, 0.2 * H]], "#ffffff", "none", { opacity: 0.8 }));
+    body.push(poly([[-L, -0.45 * H], [-L - 10 - 0.3 * L, 0], [-L, 0.45 * H]], engines.burn, "none", { opacity: 0.7 }));
+    body.push(poly([[-L, -0.2 * H], [-L - 6 - 0.15 * L, 0], [-L, 0.2 * H]], engines.core, "none", { opacity: 0.8 }));
   }
   body.push(mounted((m) => m.mount === "stern"));
   body.push(hullMarkup(design, cls, p, ship.launched));
@@ -2390,7 +2409,7 @@ export function starshipSvg(ship: StarshipArt): string {
     const last = places[places.length - 1];
     body.push(shipyardMarkup(cls, last === undefined ? null : { x: last.x, y: last.y }, ship.pieces.length, p));
   }
-  const streaks = ship.launched ? Array.from({ length: STARSHIP_STREAKS }, () => streak(behind, p)).join("") : "";
+  const streaks = ship.launched ? Array.from({ length: STARSHIP_STREAKS }, () => streak(behind, engines.streak)).join("") : "";
   return (
     `<svg viewBox="0 0 ${BOX} ${BOX}" width="${BOX}" height="${BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">` +
     `<defs>${defs.join("")}</defs>` +

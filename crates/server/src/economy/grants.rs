@@ -10,8 +10,8 @@ use jackioh_shared::economy::math::PityCounters;
 use crate::api::http::ApiError;
 use crate::db::store::{CollectionEntry, CollectionGrant, StoreError, Tx};
 use crate::economy::store::{
-    CosmeticGrant, CounterEntry, CounterGrant, EconomyReason, InventoryGrant, JloreGrant, JloreReason,
-    QuestGrant, TrackGrant,
+    CosmeticGrant, CounterEntry, CounterGrant, EconomyReason, FleetGrant, InventoryGrant, JloreGrant,
+    JloreReason, QuestGrant, TrackGrant,
 };
 
 /// The collection ledger's reason for a card a pack unlocks: migration 0002's `pack`, one of its
@@ -95,6 +95,12 @@ fn refusal_text(grant: &LedgerGrant) -> String {
         LedgerGrant::Counter { counter, delta, .. } => format!("the counter {counter:?} refused {delta}"),
         LedgerGrant::Jlore { delta, cause, .. } => format!("the wallet refused {delta} Jlore for {cause:?}"),
         LedgerGrant::Track { set_id, .. } => format!("the {set_id} track refused a grant"),
+        LedgerGrant::Fleet { xp, levels, .. } => {
+            format!("the Fleet track refused {xp} XP and {levels} levels")
+        }
+        LedgerGrant::FleetReward { cosmetic_id, .. } => {
+            format!("the Fleet track's reward {cosmetic_id} was refused")
+        }
         LedgerGrant::Quest { quest_id, change, .. } => format!("the quest {quest_id} refused {change:?}"),
         LedgerGrant::QuestDue { .. } => "the quest schedule refused a date".to_string(),
     }
@@ -102,10 +108,11 @@ fn refusal_text(grant: &LedgerGrant) -> String {
 
 /// Writes `grants` in order in the caller's transaction: an inventory grant to the inventory, cards to the
 /// collection (absolute quantities, then their ledger's deltas), a cosmetic to the cosmetics, a counter to its
-/// counter, Jlore to the wallet, XP and levels to a set track, a quest's change to the quests and the date of
-/// the next one to its schedule. A grant carries its own `ref` or takes the outcome's, and its own date or the
+/// counter, Jlore to the wallet, XP and levels to a set track or the Fleet track and a Fleet level's reward to the
+/// cosmetics (R3335001), a quest's change to the quests and the date of the next one to its schedule. A grant carries its own `ref` or takes the outcome's, and its own date or the
 /// outcome's. A holding that cannot take a grant is `refused`'s error, writing nothing more; a wallet or a track
-/// that takes none, and a quest that arrives held already, are no refusals, as before. Answers the count the
+/// that takes none, a quest that arrives held already and a Fleet reward the account owns already (a dev account's
+/// fill, R3335002) are no refusals. Answers the count the
 /// first inventory grant left, which an opening reads as the packs still held.
 pub async fn write_grants<E: From<StoreError>>(
     tx: &mut Tx<'_>,
@@ -228,6 +235,44 @@ pub async fn write_grants<E: From<StoreError>>(
                     levels: *levels,
                     rewards: *rewards,
                     reason: reason_of(*cause),
+                    reference: reference.clone().or_else(|| writing.reference.clone()),
+                    dev: writing.dev,
+                    at: writing.at,
+                })
+                .await?;
+            }
+            LedgerGrant::Fleet {
+                xp,
+                levels,
+                cause,
+                reference,
+            } => {
+                let written = tx
+                    .economy_fleet_grant(&FleetGrant {
+                        profile_id: profile_id.clone(),
+                        xp: *xp,
+                        levels: *levels,
+                        reason: reason_of(*cause),
+                        reference: reference.clone().or_else(|| writing.reference.clone()),
+                        dev: writing.dev,
+                        at: writing.at,
+                    })
+                    .await?;
+                if !written {
+                    return Err(refused(grant));
+                }
+            }
+            LedgerGrant::FleetReward {
+                cosmetic_id,
+                reference,
+            } => {
+                // R3335002: earned only by the track, its reason `track`; one owned already stays owned.
+                tx.economy_cosmetics_grant(&CosmeticGrant {
+                    profile_id: profile_id.clone(),
+                    card_id: None,
+                    cosmetic_id: cosmetic_id.clone(),
+                    delta: 1,
+                    reason: EconomyReason::Track,
                     reference: reference.clone().or_else(|| writing.reference.clone()),
                     dev: writing.dev,
                     at: writing.at,
@@ -362,6 +407,8 @@ pub async fn write_grants_all<E: From<StoreError>>(
                 }
                 LedgerGrant::Jlore { .. }
                 | LedgerGrant::Track { .. }
+                | LedgerGrant::Fleet { .. }
+                | LedgerGrant::FleetReward { .. }
                 | LedgerGrant::Quest { .. }
                 | LedgerGrant::QuestDue { .. } => return Err(refused(grant)),
             }

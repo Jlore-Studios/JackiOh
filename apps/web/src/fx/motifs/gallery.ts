@@ -32,6 +32,36 @@ import { recycleLoopFixture } from "../cards/classic/recycle.ts";
 import { secondGustFixture } from "../cards/classic/secondWind.ts";
 import { tyrantCommandFixture } from "../cards/classic/spellTyrant.ts";
 import { felinorBoard } from "../cards/core/felinorFiender.ts";
+import { holoLoomFixture } from "../cards/classicplus/aiSlop.ts";
+import { killNotchFixture } from "../cards/classicplus/botLoser.ts";
+import { chaosLeverFixture } from "../cards/classicplus/callToChaos.ts";
+import { printSlotFixture } from "../cards/classicplus/datacenter.ts";
+import { batterBubbleFixture } from "../cards/classicplus/deathBoil.ts";
+import { pancakeMouthFixture } from "../cards/classicplus/devour.ts";
+import { bannerFoldFixture } from "../cards/classicplus/flagbearer.ts";
+import { doughArmFixture } from "../cards/classicplus/fluffyGrip.ts";
+import { spatulaFlipFixture } from "../cards/classicplus/frostspatula.ts";
+import { whiteoutFixture } from "../cards/classicplus/frozenWastes.ts";
+import { grapeBounceFixture } from "../cards/classicplus/goldenGrape.ts";
+import { packLobFixture } from "../cards/classicplus/jlease.ts";
+import { relicSpillFixture } from "../cards/classicplus/jleasePack.ts";
+import { puzzleBoxFixture } from "../cards/classicplus/joggsBox.ts";
+import { giftBoxesFixture } from "../cards/classicplus/kysGift.ts";
+import { slateTestFixture } from "../cards/classicplus/kysTest.ts";
+import { lineupFixture } from "../cards/classicplus/league.ts";
+import { hungryPotFixture } from "../cards/classicplus/legion.ts";
+import { sealedEnvelopeFixture } from "../cards/classicplus/lobbyist.ts";
+import { coinCallFixture } from "../cards/classicplus/midLoser.ts";
+import { pancakeTrayFixture } from "../cards/classicplus/mommyBarker.ts";
+import { pancakeFlipFixture } from "../cards/classicplus/motherPancake.ts";
+import { vineRipenFixture } from "../cards/classicplus/mythicGrape.ts";
+import { sepiaPortalFixture } from "../cards/classicplus/portal.ts";
+import { flourCloudFixture } from "../cards/classicplus/powderSpray.ts";
+import { sighMendFixture } from "../cards/classicplus/supportLoser.ts";
+import { stairGlueFixture } from "../cards/classicplus/twiceForward.ts";
+import { waffleGridFixture } from "../cards/classicplus/waffleShell.ts";
+import { drumBeatFixture } from "../cards/classicplus/wardrum.ts";
+import { zealotCycloneFixture } from "../cards/classicplus/zealotism.ts";
 import { brushSealFixture } from "../cards/meditative/aestheticizeTheGame.ts";
 import { aiGirlfriendFixture } from "../cards/meditative/aiGirlfriend.ts";
 import { alternateFateFixture } from "../cards/meditative/alternateFate.ts";
@@ -76,6 +106,7 @@ import { shockwaveLectureFixture } from "../cards/stinkyscape/shockwave447.ts";
 import { stimmyDropFixture } from "../cards/stinkyscape/stimmycheck.ts";
 import { chaosOrbFixture } from "../cards/stinkyscape/wildar.ts";
 import type { EntranceKey } from "../cards/recipe.ts";
+import { STINKYSCAPE_SIGNATURE_BOARDS, STINKYSCAPE_SIGNATURE_FIXTURES } from "../cards/stinkyscape/signatureFixtures.ts";
 import { fleetBoard } from "../cards/stinkyscape/starshipSignatures.ts";
 import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
 import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
@@ -439,6 +470,7 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * player's Dormant Starship, which the board does not show, so its brand falls on the hero. R3407000:
  * Stinkyscape part two's signatures take their modules' own (fx/cards/stinkyscape/), each told the card it
  * plays (`defId`), so a hook's marker names it.
+ * R3395000: Stinkyscape 001 to 090's signatures take theirs from fx/cards/stinkyscape/signatureFixtures.ts.
  */
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId, defId?: string) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
@@ -637,7 +669,46 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   stimmyDrop: stimmyDropFixture,
   narcorDust: narcorDustFixture,
   redNarcorHum: redNarcorHumFixture,
+  // R3399000: Classic+'s signatures take their own fixtures (fx/cards/classicplus/), as the engine emits each card's events.
+  pancakeFlip: pancakeFlipFixture,
+  pancakeMouth: pancakeMouthFixture,
+  batterBubble: batterBubbleFixture,
+  doughArm: doughArmFixture,
+  flourCloud: flourCloudFixture,
+  waffleGrid: waffleGridFixture,
+  whiteout: whiteoutFixture,
+  hungryPot: hungryPotFixture,
+  spatulaFlip: spatulaFlipFixture,
+  pancakeTray: pancakeTrayFixture,
+  lineup: lineupFixture,
+  coinCall: coinCallFixture,
+  sighMend: sighMendFixture,
+  killNotch: killNotchFixture,
+  zealotCyclone: zealotCycloneFixture,
+  sepiaPortal: sepiaPortalFixture,
+  drumBeat: drumBeatFixture,
+  slateTest: slateTestFixture,
+  giftBoxes: giftBoxesFixture,
+  holoLoom: holoLoomFixture,
+  bannerFold: bannerFoldFixture,
+  puzzleBox: puzzleBoxFixture,
+  sealedEnvelope: sealedEnvelopeFixture,
+  grapeBounce: grapeBounceFixture,
+  vineRipen: vineRipenFixture,
+  chaosLever: chaosLeverFixture,
+  stairGlue: stairGlueFixture,
+  packLob: packLobFixture,
+  relicSpill: relicSpillFixture,
+  printSlot: printSlotFixture,
+  // R3395000: Stinkyscape 001 to 090's signatures (fx/cards/stinkyscape/signatureFixtures.ts).
+  ...STINKYSCAPE_SIGNATURE_FIXTURES,
 };
+
+/**
+ * R3399000: Classic+'s two signatures whose gallery plays plan the most particles (their bursts' counts summed),
+ * which fx-phone-frame.cy.tsx holds to the phone frame budget; classicplus/signatures.test.ts keeps the pick true.
+ */
+export const PHONE_HEAVIEST_SIGNATURES = ["classicplus-012-7", "classicplus-035"] as const;
 
 /** R2794000: the lane of the viewer's unit row a gallery entrance lands in. */
 export const GALLERY_ENTRANCE_LANE = 3;
@@ -754,15 +825,21 @@ export const SET_PIECE_FIXTURES: { readonly [K in SetPieceKey]: FixtureOf } = {
 const GALLERY_FIELD_ENTRANCE_LANE = 1;
 
 /** R3332001: the board an entrance reads, for one that reads it (Felinor Fiender's Felinors; R3334004 Starfleet Commander's Dormant Starship). */
-const ENTRANCE_BOARDS: Partial<Record<EntranceKey, (view: PlayerView) => PlayerView>> = { felinorAssembly: felinorBoard, fleetCommand: fleetBoard };
+const ENTRANCE_BOARDS: Partial<Record<EntranceKey, (view: PlayerView) => PlayerView>> = {
+  felinorAssembly: felinorBoard,
+  fleetCommand: fleetBoard,
+  // R3399000: Felinor Flagbearer's ribbons and Prime's banner shadow reach the Felinors beside them.
+  bannerPlant: felinorBoard,
+  greatBanner: felinorBoard,
+};
 
 /** R3389001: Back from the GY's board: its caster's first unit zone open, so the Unit it raises lands alone there, no Stack. */
 function openFirstZone(view: PlayerView): PlayerView {
   return { ...view, you: { ...view.you, units: view.you.units.map((unit, k) => (k === 0 ? null : unit)) } };
 }
 
-/** R3389001: the board a recipe reads, for one that reads it. */
-const RECIPE_BOARDS: Partial<Record<CardRecipeKey, (view: PlayerView) => PlayerView>> = { graveRise: openFirstZone };
+/** R3389001: the board a recipe reads, for one that reads it. R3395000: and one whose fixture summons, its zones open. */
+const RECIPE_BOARDS: Partial<Record<CardRecipeKey, (view: PlayerView) => PlayerView>> = { graveRise: openFirstZone, ...STINKYSCAPE_SIGNATURE_BOARDS };
 
 /**
  * R3332001: the board the gallery plays `defId` over: its entrance's own (`ENTRANCE_BOARDS`), R3389001
@@ -818,6 +895,18 @@ export function galleryCardEvents(defId: string, play: GalleryCardPlay, view: Pl
     ...under,
     { type: "cardResolved", player, instanceId, defId, permanent: false, costPaid: 1 },
   ];
+}
+
+/**
+ * R3399000: `view` with the gallery's play `n` of `defId` in the viewer's hand, as a real play starts: its
+ * cast, a Legendary's rays and a Mythic Spell's takeover rise from the card in hand (`cardPlayed`'s target),
+ * which the board still shows while it plans the play. The card is the viewer's own, so its face is theirs.
+ */
+export function galleryHandOf(defId: string, view: PlayerView, n: number): PlayerView {
+  const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
+  const printed = CATALOG[defId]?.cost ?? 0;
+  const cost = typeof printed === "number" ? printed : printed === "X" ? 0 : printed.base;
+  return { ...view, you: { ...view.you, hand: [...hand, { instanceId: galleryPlayId(n), defId, radiant: false, cost }] } };
 }
 
 /**

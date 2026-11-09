@@ -155,6 +155,11 @@ queue once its own checks pass, and the queue lands it after ci.yml's `merge_gro
 `main` with it on top. Take the `merge_group` trigger in ci.yml to `main` before applying it: a
 queue whose checks never report takes every pull request out at the timeout.
 
+It builds three pull requests at a time (`max_entries_to_build`, five until #3292's follow-up: five
+builds of about 40 jobs each overran the 12 hosted runners CI keeps, and a failure at the front threw
+away the four behind it). An `apply` from before that change shows it as `1 to change`, the
+`main_merge_queue` ruleset updated in place.
+
 When a pull request leaves the queue, the queue builds every one behind it again, and GitHub leaves
 their old builds running; each new build cancels its own pull request's older ones (ci.yml's
 `queue-supersede`), so a dead build never holds the runners the live ones wait for.

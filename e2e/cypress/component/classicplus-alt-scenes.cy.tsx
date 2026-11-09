@@ -22,8 +22,8 @@ type CardDef = (typeof CATALOG)[string];
 type Point = { x: number; y: number };
 type Shot = { width: number; height: number; data: Uint8ClampedArray; scale: number };
 
-/** Every Classic+ card offered Alt art, in id order. */
-const IDS: readonly string[] = Object.keys(ALT_SCENE_RECIPES).sort();
+/** Every Classic+ card offered Alt art, in id order. R3397000: the table holds Meditative+'s and Training Grounds' too (set-alt-scenes.cy.tsx); R3404000: and Meditative's (meditative-alt-scenes.cy.tsx); R3398000: and Core's (core-alt-scenes.cy.tsx). */
+const IDS: readonly string[] = Object.keys(ALT_SCENE_RECIPES).filter((id) => CATALOG[id]?.set === "Classic+").sort();
 /** The cards a page shows: each four faces, all inside the viewport. */
 const CARDS_PER_PAGE = 8;
 const PAGES: readonly (readonly string[])[] = Array.from({ length: Math.ceil(IDS.length / CARDS_PER_PAGE) }, (_, n) => IDS.slice(n * CARDS_PER_PAGE, (n + 1) * CARDS_PER_PAGE));

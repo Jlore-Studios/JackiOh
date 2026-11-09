@@ -53,7 +53,11 @@ export type SfxId =
   | "bowlBreath" | "peakFlute" | "ticketHorn" | "forgeQuench" | "brushGuzheng" | "wellGush" | "minePick" | "jadeZither"
   | "windChime" | "marketGong" | "chalkHush" | "porcelainRoar" | "bronzeGulp" | "modemGuqin" | "serverChoir" | "dialupStutter"
   | "holoBow" | "synthPops" | "skullMutter" | "keyJangle" | "caneCrack" | "caneThunder" | "rootCreak" | "chalkGasp"
-  | "frostPages" | "coinCheer" | "totemDrums" | "templeDie" | "golemStomp" | "klaxonSlam" | "cellSlam" | "hangarRev";
+  | "frostPages" | "coinCheer" | "totemDrums" | "templeDie" | "golemStomp" | "klaxonSlam" | "cellSlam" | "hangarRev"
+  // R3395000: Stinkyscape 001 to 090's signature Legendaries and Mythics, one each (signatureCues.ts).
+  | "vaultHiss" | "safeChirp" | "stoneChime" | "magiChord" | "lectureRumble" | "pressStamp" | "corvetteRoar" | "popGasp"
+  | "geigerHum" | "wireRatchet" | "beamWhine" | "rattleSteam" | "breechBoom" | "flakWind" | "crunchJackpot" | "choirHulls"
+  | "hornEcho" | "jetSnap" | "whiteRing" | "hullDrills" | "klaxonSputter" | "moltenSnarl" | "shutterPurr" | "venomDrip";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains

@@ -5,18 +5,22 @@
 // obelisk, a dome, a fallen column, a throne, a fountain, a cot, a market stall); the rings and wheels
 // centred on it (a portal ring, a rune circle, a fortune wheel, a clock face); and three big things (a jet in
 // flight, a hand cart, a chest of drawers). R3396000: the Classic+ Alt art scenes (#3396) added a waterfall, a
-// tent and a sailing boat. sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a
-// palette.css name, none in Radiant's gold window; a glow is a stack of translucent shapes, never a
-// gradient; shapes are filled even-odd, so a hole is a second sub-path and no two sub-paths of one shape
-// overlap otherwise.
+// tent and a sailing boat. R3397000: the Meditative+ and Training Grounds Alt art scenes (#3397) added a
+// smoking crater, a sandcastle, a snowman, a mill's water wheel and a rowboat, and R3398000's Core Alt art scenes
+// (#3398) a field holding a clean crater (`crater-field`, apart from R3397000's `crater`) and a van. sceneKit.ts
+// spreads them into `SCENE_KIT`. Every colour is a palette.css name, none in Radiant's gold window; a glow is a
+// stack of translucent shapes, never a gradient; shapes are filled even-odd, so a hole is a second sub-path and no
+// two sub-paths of one shape overlap otherwise.
 
 import { fmt } from "./hash.ts";
 import {
+  bandPath,
   between,
   DEGREES,
   EDGE,
   ellipsePath,
   FAR_EDGE,
+  groundBand,
   INKED,
   leant,
   local,
@@ -1211,6 +1215,199 @@ function waterfall(at: PartPlace, rng: Rng): KitShape[] {
   return out;
 }
 
+// R3397000: the places the Meditative+ and Training Grounds Alt art scenes added.
+
+/** R3397000: a rowboat afloat, its waterline on the anchor: a plank hull (main) curving up at bow and stern, its gunwale, a thwart and two oars resting out in their locks; about 24 wide and 6 tall at scale 1. */
+function rowboat(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const bow = between(rng, 3.4, 4.2);
+  const dip = between(rng, -0.6, 0.6);
+  return [
+    shape(f.ellipse(0, 0.6, 11, 0.8), "black", 0.2),
+    shape(f.band([[-4, -2.6], [-12, 1.2 + dip]], 0.45) + f.band([[4.4, -2.6], [12, 1 - dip]], 0.45), "wood-600", 1, INKED),
+    shape(`M${f.p(-9.6, -bow)}Q${f.p(-8, 0.2)} ${f.p(-4.6, 0.8)}L${f.p(5, 0.8)}Q${f.p(8.4, 0.2)} ${f.p(9.8, -bow - 0.4)}L${f.p(7.6, -2.4)}L${f.p(-7.4, -2.4)}Z`, "wood-700", 1, MAIN_INKED),
+    shape(f.band([[-8.4, -1], [8.6, -1]], 0.3), "wood-800", 0.6),
+    shape(f.band([[-9.4, -bow + 0.3], [-7.4, -2.4], [7.6, -2.4], [9.6, -bow]], 0.45), "wood-600", 1, INKED),
+    shape(f.band([[-1.4, -2.6], [1.4, -2.6]], 0.7) + f.circle(-4, -2.8, 0.35) + f.circle(4.4, -2.8, 0.35), "wood-800", 1),
+    shape(f.ellipse(-11.6, 1.3 + dip, 1.3, 0.4) + f.ellipse(11.6, 1.1 - dip, 1.3, 0.4), "wood-600", 1),
+    shape(f.band([[-8, 0.9], [8.2, 0.9]], 0.35), "white", 0.45),
+  ];
+}
+
+/** R3397000: a smoking crater blasted into the ground about the anchor: scorched earth and cracks round a raised stone rim (main), a dark pit glowing at its heart, rubble on the lip and two or three wisps of smoke rising; about 40 wide and 16 tall (smoke included) at scale 1. */
+function crater(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  let cracks = "";
+  for (const angle of [160, 200, 340, 20, 100]) {
+    const reach = between(rng, 20, 23);
+    const [ax, ay] = polar(15, angle);
+    const [bx, by] = polar(reach, angle + between(rng, -6, 6));
+    cracks += f.band([[ax, ay * 0.22], [bx, by * 0.24]], 0.35);
+  }
+  let rubble = "";
+  for (const x of [-15, -9, 7, 13]) {
+    const rx = x + between(rng, -1, 1);
+    const ry = 2.4 + between(rng, -0.4, 0.4);
+    const r = between(rng, 0.8, 1.3);
+    rubble += f.poly([[rx - r, ry], [rx - r * 0.5, ry - r], [rx + r * 0.6, ry - r * 0.8], [rx + r, ry]]);
+  }
+  const wisps = whole(rng, 2, 3);
+  const out = [
+    shape(f.ellipse(0, 0.6, 22, 4.6), "slate-900", 0.45),
+    shape(cracks, "slate-900", 0.6),
+    shape(f.ellipse(0, -0.4, 19, 4.2) + f.ellipse(0, 0, 14, 2.7), "stone-500", 1, MAIN_INKED),
+    shape(f.ellipse(0, 0, 14, 2.7), "slate-900", 0.9),
+    shape(f.ellipse(0, 0.2, 8, 1.4), "ember-500", 0.35),
+    shape(f.ellipse(0, 0.2, 3.6, 0.7), "orange-400", 0.45),
+    shape(rubble, "slate-700", 1, INKED),
+  ];
+  for (let k = 0; k < wisps; k += 1) {
+    const x = (k - (wisps - 1) / 2) * 7 + between(rng, -1.4, 1.4);
+    const rise = between(rng, 5, 9);
+    out.push(shape(f.circle(x, -rise, 2.2 + k * 0.4) + f.circle(x + between(rng, 1.6, 2.6), -rise - 4.4, 1.6), "slate-400", 0.3));
+  }
+  return out;
+}
+
+/** R3397000: a sandcastle on the anchor: a sand mound (main) with a crenellated keep and two side towers (the stream may slump one), its door and windows, a red pennant and shells pressed into the sand; about 18 wide and 15 tall at scale 1. */
+function sandcastle(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const slump = rng() < 0.5;
+  const crenel = (left: number, right: number, top: number): Point[] => {
+    const w = (right - left) / 5;
+    return [
+      [left, top + 1],
+      [left + w, top + 1],
+      [left + w, top],
+      [left + 2 * w, top],
+      [left + 2 * w, top + 1],
+      [left + 3 * w, top + 1],
+      [left + 3 * w, top],
+      [left + 4 * w, top],
+      [left + 4 * w, top + 1],
+      [right, top + 1],
+    ];
+  };
+  const tower = (cx: number, height: number): Point[] => [[cx - 1.4, -3.8], ...crenel(cx - 1.4, cx + 1.4, -3.8 - height), [cx + 1.4, -3.8]];
+  const left = tower(-6.2, between(rng, 6.4, 7.4));
+  const right: Point[] = slump
+    ? [[4.6, -3.8], [4.8, -7.4], [5.6, -8.6], [6.8, -8.2], [7.6, -6.2], [8, -3.8]]
+    : tower(6.2, between(rng, 6.4, 7.4));
+  const keep: Point[] = [[-3, -4.2], ...crenel(-3, 3, -11.4), [3, -4.2]];
+  const out = [
+    shape(f.ellipse(0, 0.3, 10, 0.9), "black", 0.2),
+    shape(`M${f.p(-9, 0)}Q${f.p(-8.6, -4)} ${f.p(-6, -4.4)}L${f.p(6, -4.4)}Q${f.p(8.6, -4)} ${f.p(9, 0)}Z`, "brass-500", 1, MAIN_INKED),
+    shape(f.poly(keep), "brass-500", 1, INKED),
+    shape(f.poly(left), "brass-500", 1, INKED),
+    shape(f.poly(right), "brass-500", 1, INKED),
+    shape(f.band([[2.4, -10.2], [2.4, -4.6]], 0.9) + f.band([[-5.2, -9], [-5.2, -4.2]], 0.7), "brass-600", 0.5),
+    shape(`M${f.p(-1.1, -4.2)}L${f.p(-1.1, -6.4)}Q${f.p(0, -7.6)} ${f.p(1.1, -6.4)}L${f.p(1.1, -4.2)}Z` + f.poly([[-0.4, -9.6], [0.4, -9.6], [0.4, -8.4], [-0.4, -8.4]]), "wood-800", 0.85),
+    shape(f.band([[0, -11.2], [0, -15]], 0.25), "wood-700", 1),
+    shape(f.poly([[0.1, -15], [2.6 + between(rng, -0.3, 0.3), -14.4], [0.1, -13.8]]), "red-600", 1, INKED),
+    shape(f.circle(-6.6, -1.6, 0.4) + f.circle(3.8, -2.2, 0.35) + f.circle(6.8, -1.2, 0.4), "white", 0.8),
+  ];
+  if (slump) out.push(shape(f.poly([[7.6, -3.9], [9.2, -2.6], [8.4, -1.8], [7.2, -3.4]]), "brass-600", 0.7));
+  return out;
+}
+
+/** R3397000: a snowman standing on the anchor: three stacked snowballs (the lowest main), their shade, coal eyes and buttons, a carrot nose, stick arms, a red scarf and often a black hat; about 9 wide and 17 tall at scale 1. */
+function snowman(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const wave = between(rng, -1.4, 1.4);
+  const out = [
+    shape(f.ellipse(0, 0.2, 4.4, 0.7), "slate-400", 0.35),
+    shape(f.circle(0, -3.4, 3.6), "white", 1, MAIN_INKED),
+    shape(f.circle(0, -8.6, 2.6), "white", 1, INKED),
+    shape(f.circle(0, -12.6, 1.9), "white", 1, INKED),
+    shape(f.ellipse(0.9, -2.5, 2.4, 2.2) + f.ellipse(0.7, -8, 1.7, 1.5) + f.ellipse(0.5, -12.2, 1.1, 1), "blue-200", 0.45),
+    shape(f.circle(-0.6, -13, 0.25) + f.circle(0.7, -13, 0.25) + f.circle(0, -9.4, 0.3) + f.circle(0, -7.9, 0.3) + f.circle(0, -4.4, 0.32), "black", 0.9),
+    shape(f.poly([[0.2, -12.5], [2.4, -12.1], [0.2, -11.9]]), "orange-400", 1, INKED),
+    shape(f.band([[-2.3, -9], [-5.2, -10.8 + wave], [-6, -12 + wave]], 0.35) + f.band([[2.3, -9], [5.2, -10.6 - wave], [5.8, -11.8 - wave]], 0.35), "wood-700", 1, INKED),
+    shape(f.band([[-1.9, -10.9], [1.9, -10.9]], 0.8) + f.band([[1.2, -10.4], [1.8, -8.8]], 0.6), "red-600", 1, INKED),
+  ];
+  if (rng() < 0.6) out.push(shape(f.poly([[-1.8, -14.2], [1.8, -14.2], [1.8, -14.6], [1.1, -14.6], [1.1, -16.8], [-1.1, -16.8], [-1.1, -14.6], [-1.8, -14.6]]), "slate-900", 1, INKED));
+  return out;
+}
+
+/** R3397000: a mill's paddle wheel turning on its axle post, its lowest paddles dipping to the anchor: a timber rim (main), spokes, eight paddles, an iron hub and foam where it meets the water; about 22 across and 22 tall at scale 1. */
+function waterWheel(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const hub: Point = [0, -11];
+  const turn = between(rng, 0, 45);
+  let spokes = "";
+  for (let k = 0; k < 4; k += 1) {
+    const angle = turn + k * 45;
+    spokes += f.band([polar(8.9, angle, ...hub), polar(8.9, angle + 180, ...hub)], 0.7);
+  }
+  let paddles = "";
+  for (let k = 0; k < 8; k += 1) {
+    const angle = turn + 22.5 + k * 45;
+    const [ix, iy] = polar(8.6, angle, ...hub);
+    const [ox, oy] = polar(11, angle, ...hub);
+    paddles += f.band([[ix, iy], [ox, oy]], 1.8);
+  }
+  return [
+    shape(f.band([[0, -11], [0, 0.4]], 1.6) + f.band([[-3.6, 0.4], [3.6, 0.4]], 0.9), "wood-800", 1, INKED),
+    shape(paddles, "wood-600", 1, INKED),
+    shape(f.circle(...hub, 10) + f.circle(...hub, 8.8), "wood-700", 1, MAIN_INKED),
+    shape(spokes, "wood-800", 1),
+    shape(f.circle(...hub, 1.8), "stone-500", 1, INKED),
+    shape(f.circle(...hub, 0.6), "slate-900", 1),
+    shape(f.ellipse(0, -0.4, 8, 1.2), "white", 0.4),
+    shape(f.circle(-4.6, -3.4, 0.35) + f.circle(5.2, -2.6, 0.3) + f.circle(-6.2, -1.8, 0.3), "sky-300", 0.7),
+  ];
+}
+
+// R3398000: the places the Core Alt art scenes added.
+
+/** R3398000: ground from the placement's y down across the box, as a field's (main), holding a clean crater about 30 wide at the placement's x: a lit raised rim, a dark floor, the shade of its far wall and clods thrown round it. */
+function craterField(at: PartPlace, rng: Rng): KitShape[] {
+  const top = at.y;
+  const cy = top + (FAR_EDGE - top) * between(rng, 0.36, 0.44);
+  const rx = 15 * at.s * between(rng, 0.94, 1.06);
+  const ry = rx * between(rng, 0.26, 0.32);
+  let rows = "";
+  for (const k of [1, 2]) {
+    const y = top + (FAR_EDGE - top) * (k / 3) ** 1.3;
+    rows += bandPath([[EDGE, y + between(rng, -1, 1)], [50, y], [FAR_EDGE, y + between(rng, -1, 1)]], 0.6 + 0.5 * k * at.s);
+  }
+  let clods = "";
+  const lumps = whole(rng, 5, 7);
+  for (let k = 0; k < lumps; k += 1) {
+    const [dx, dy] = polar(1.18 + between(rng, 0, 0.3), (k * 360) / lumps + between(rng, -14, 14));
+    clods += ellipsePath(at.x + dx * rx, cy + dy * ry, between(rng, 0.7, 1.3) * at.s, between(rng, 0.4, 0.7) * at.s);
+  }
+  return [
+    shape(groundBand(rng, top, 1.2 * at.s, 4), "green-700", 1, MAIN),
+    shape(rows, "green-500", 0.3),
+    shape(ellipsePath(at.x, cy, rx * 1.1, ry * 1.18) + ellipsePath(at.x, cy, rx * 0.94, ry * 0.9), "stone-500", 0.9),
+    shape(ellipsePath(at.x, cy + ry * 0.04, rx * 0.94, ry * 0.9), "wood-800", 1),
+    shape(`M${pt(at.x - rx * 0.94, cy)}A${fmt(rx * 0.94)} ${fmt(ry * 0.9)} 0 0 1 ${pt(at.x + rx * 0.94, cy)}Q${pt(at.x, cy - ry * 0.1)} ${pt(at.x - rx * 0.94, cy)}Z`, "black", 0.35),
+    shape(ellipsePath(at.x, cy + ry * 0.3, rx * 0.4, ry * 0.25), "wood-700", 0.6),
+    shape(clods, "wood-700", 0.9),
+  ];
+}
+
+/** R3398000: a boxy van side on, standing on the anchor and nosing the way it faces: its body (main) with a sloped cab, a cab window, a door seam, a band along its flank, a headlight and bumper, two wheels and a ladder on its roof rack; about 26 wide and 14 tall at scale 1. */
+function van(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const nose = between(rng, 10, 11);
+  const stripe = between(rng, -7, -6);
+  let rungs = "";
+  for (let x = -10; x <= 2; x += 2) rungs += rect(f, x - 0.2, -14.4, x + 0.2, -13.8);
+  return [
+    shape(f.ellipse(0, 0.3, 13.4, 0.9), "black", 0.25),
+    shape(`M${f.p(-13, -2.4)}L${f.p(-13, -12.4)}Q${f.p(-13, -13)} ${f.p(-12.4, -13)}L${f.p(6, -13)}L${f.p(nose, -8)}L${f.p(13, -7.4)}L${f.p(13, -2.4)}Z`, "slate-100", 1, MAIN_INKED),
+    shape(rect(f, -13, stripe, 13, stripe + 1.2), "orange-400", 0.95),
+    shape(f.poly([[6.6, -12.2], [nose - 0.6, -8.4], [6.6, -8.4]]), "slate-900", 0.85),
+    shape(f.band([[-2, -12.4], [-2, -3]], 0.25) + f.band([[5.2, -12.4], [5.2, -3]], 0.25) + rect(f, 3.4, -8.4, 4.6, -7.8), "slate-700", 0.7),
+    shape(rect(f, -12, -14.6, 3, -14.4) + rect(f, -12, -13.8, 3, -13.6) + rungs, "slate-700", 0.9),
+    shape(f.circle(12.4, -6.2, 0.6) + rect(f, 11.6, -3.4, 13.4, -2.4), "white", 0.9),
+    shape(f.circle(-8, -2.2, 2.3) + f.circle(8, -2.2, 2.3), "slate-900", 1, INKED),
+    shape(f.circle(-8, -2.2, 0.9) + f.circle(8, -2.2, 0.9), "slate-400", 1),
+  ];
+}
+
 /** R3390000: the places the Classic+ scenes added, by id, each with its kind. */
 export const PLACES_KIT = {
   water: { category: "terrain", draw: water },
@@ -1249,4 +1446,13 @@ export const PLACES_KIT = {
   waterfall: { category: "terrain", draw: waterfall },
   tent: { category: "architecture", draw: tent },
   boat: { category: "objects", draw: boat },
+  // R3397000: the Meditative+ and Training Grounds Alt art scenes' crater, sandcastle, snowman, water wheel and rowboat.
+  crater: { category: "terrain", draw: crater },
+  sandcastle: { category: "architecture", draw: sandcastle },
+  snowman: { category: "objects", draw: snowman },
+  "water-wheel": { category: "architecture", draw: waterWheel },
+  rowboat: { category: "objects", draw: rowboat },
+  // R3398000: the Core Alt art scenes' crater field and van.
+  "crater-field": { category: "terrain", draw: craterField },
+  van: { category: "objects", draw: van },
 } as const satisfies Readonly<Record<string, KitPart>>;

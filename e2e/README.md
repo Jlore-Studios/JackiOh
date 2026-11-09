@@ -57,6 +57,8 @@ same server with no restart. CI (`.github/actions/e2e-shard`) boots one release 
 `vite preview` of the `build:e2e` client per shard, waits for `/api/catalog` and the client to answer,
 then runs its shard's specs on Chrome: the smoke list (01, 06, 10, 13, 19, 46, 47,
 `scripts/shard-specs.mjs`'s `SMOKE`) on every pull request, every spec in the daily super run.
+`node scripts/shard-specs.mjs --component <k> <K>` splits the component specs the same way, by measured
+time, for the super run's component jobs.
 Electron is no longer run.
 
 Chrome 155 kills its own network service now and then under Cypress 16, whose Chrome runs pause

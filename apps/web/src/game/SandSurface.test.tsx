@@ -43,6 +43,7 @@ const FAMILY_OF: Record<string, TapFamily> = {
   "table-neon-grid": "neon",
   "table-ancient-map": "parchment",
   "table-astral": "astral",
+  "table-stinkyscape": "neon",
 };
 
 const SFX_OF: Record<TapFamily, SfxId> = {

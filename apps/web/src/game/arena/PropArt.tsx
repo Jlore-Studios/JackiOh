@@ -138,4 +138,18 @@ export const PROP_ART: Readonly<Record<string, ReactElement>> = {
     <rect key="mast" className="pc" x="23" y="9" width="2" height="9" />,
     <circle key="dish" className="pc" cx="24" cy="8" r="3" />,
   ),
+  "stinkyscape-rocket": svg(
+    <path key="flame" className="pc" d="M19 36h10l-5 10z" />,
+    <path key="finL" className="pb" d="M17 26l-7 10h9z" />,
+    <path key="finR" className="pb" d="M31 26l7 10h-9z" />,
+    <path key="body" className="pa" d="M24 3c7 6 9 16 7 33H17c-2-17 0-27 7-33z" />,
+    <circle key="port" className="pc" cx="24" cy="17" r="4" />,
+  ),
+  "stinkyscape-planet": svg(
+    <ellipse key="ringBack" className="pc" cx="24" cy="26" rx="22" ry="5" />,
+    <circle key="world" className="pa" cx="24" cy="24" r="12" />,
+    <path key="band" className="pb" d="M13 20h22v4H13z" />,
+    <path key="ringFront" className="pc" d="M2 26a22 5 0 0 0 44 0h-5a17 2.5 0 0 1-34 0z" />,
+    <circle key="moon" className="pb" cx="40" cy="9" r="3" />,
+  ),
 };

@@ -1139,17 +1139,26 @@ func OnQueueCI(ctx *hctx.Context, run *pyjson.Object) []string {
 	if queued {
 		return []string{fmt.Sprintf("#%d: still in the merge queue, built again without what failed ahead of it", number)}
 	}
+	return []string{queueFix(ctx, number, pull, run,
+		"The merge queue took this out: CI failed on `main` with it on top", false)}
+}
+
+// queueFix is what a bot pull request out of the merge queue gets for its failed build `run`: a CI
+// fix with that build's logs (`fixCI`, opening its comment with `failed`), unless it is held (a
+// revision, a stop, `queue.hold_merge`, people's) or the reviews never cleared its head. `early`
+// marks a build the status loop stopped once a required job had failed (`EvacQueue`). The note of
+// what it did.
+func queueFix(ctx *hctx.Context, number int, pull *pyjson.Object, run *pyjson.Object, failed string, early bool) string {
 	names := queue.LabelNames(pull)
 	record := ctx.Store.Load().Obj("items").Obj(strconv.Itoa(number))
 	if intersects(names, config.LabelBlocked, config.LabelRevise, config.LabelReady, config.LabelPersonMerges) ||
 		config.IsLive(names) || queue.IsHuman(names) || record.Truthy("stop_requested") ||
 		queue.ArchivedOf(record) != nil {
-		return []string{fmt.Sprintf("#%d: out of the merge queue, and held, so left alone", number)}
+		return fmt.Sprintf("#%d: out of the merge queue, and held, so left alone", number)
 	}
 	sha := py.OrStr(pull.Obj("head").Get("sha"), "")
 	if !pyjson.Equal(queue.Cleared(record).Get("sha"), sha) {
-		return []string{fmt.Sprintf("#%d: out of the merge queue, and its head is not the cleared one", number)}
+		return fmt.Sprintf("#%d: out of the merge queue, and its head is not the cleared one", number)
 	}
-	return []string{fixCI(ctx, number, pull, names, record, run, sha,
-		"The merge queue took this out: CI failed on `main` with it on top", false, false)}
+	return fixCI(ctx, number, pull, names, record, run, sha, failed, early, false)
 }

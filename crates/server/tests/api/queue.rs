@@ -2238,6 +2238,11 @@ mod r1834002_the_loadout_the_ticket_freezes {
             "foil": "foil-none",
             "finish": "finish-plain",
             "border": "border-standard",
+            // R3335000: the four Starship kinds, each its default.
+            "starshipHull": "starship-hull-standard",
+            "starshipLivery": "starship-livery-standard",
+            "starshipTrail": "starship-trail-standard",
+            "starshipPieceSkin": "starship-piece-skin-standard",
         })
     }
 
@@ -2369,6 +2374,11 @@ mod r1834002_the_loadout_the_ticket_freezes {
                 "foil": "foil-none",
                 "finish": "finish-plain",
                 "border": "border-standard",
+                // R3335000: the four Starship kinds, each its default.
+                "starshipHull": "starship-hull-standard",
+                "starshipLivery": "starship-livery-standard",
+                "starshipTrail": "starship-trail-standard",
+                "starshipPieceSkin": "starship-piece-skin-standard",
             },
             "cards": cards,
         });

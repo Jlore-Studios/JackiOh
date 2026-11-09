@@ -2,14 +2,17 @@
 // No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
 // Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers, R2801000 launches,
 // R3336000 ships, R2800000 set pieces, and R3337002's radar and R3337003's rift and title card. R3400000: a
-// takeover's look may draw its art (takeoverArt.ts); R3400001: a signature's figures (figures.ts), each a shape
-// over its box, never a card.
+// takeover's look may draw its art (takeoverArt.ts; R3399002: its parts or a drawing of its own); R3400001: a
+// signature's figures (figures.ts), each a shape over its box, never a card.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
+import { ART_PLANES } from "../cards/art/pictures.ts";
+import { fragmentRef, signatureLength, signatureSize } from "../cards/FullArtSignature.tsx";
+import { SIGNATURE_FACES } from "../cards/signatureFaces.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
-import { pointIn } from "./anchors.ts";
-import { takeoverArtParts } from "./takeoverArt.ts";
-import type { FxAnchor, FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxPoint, FxRollCue, FxSplatTone, FxTimedPoint, FxTint, SetPieceShape } from "./types.ts";
+import { atOf, pointIn } from "./anchors.ts";
+import { TAKEOVER_ART_DRAWINGS, takeoverArtParts, type TakeoverDrawing } from "./takeoverArt.ts";
+import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTakeoverStage, FxTimedPoint, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
 
 export type DomEffectBoxes = { at?: FxBox | null; from?: FxBox | null; to?: FxBox | null };
@@ -60,6 +63,79 @@ function spanOf(a: FxBox, b: FxBox, pad: number): FxBox {
 }
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+/** The takeovers mounted so far: each signature clip path an id of its own. */
+let takeoverSigns = 0;
+
+/**
+ * R3345000: the full-window stage of a takeover that holds a set piece: the card's art in its depth planes
+ * and its name signing across the bottom.
+ */
+function takeoverStage(doc: Document, card: FxTakeoverStage): HTMLElement {
+  const stage = doc.createElement("div");
+  stage.className = "fx-takeover-stage";
+
+  const planes = doc.createElement("div");
+  planes.className = "fx-takeover-planes";
+  ART_PLANES.forEach((plane, i) => {
+    const p = doc.createElement("div");
+    p.className = "fx-takeover-plane";
+    p.setAttribute("data-plane", plane);
+    p.style.backgroundImage = card.planes[i] ?? "";
+    planes.appendChild(p);
+  });
+  stage.appendChild(planes);
+
+  const signatureFace = card.face;
+  // R2715002, R3345000: the name in its set's hand (`.cf-signature[data-signature-face]` sets the face),
+  // uncovered left to right as a pen would write it: a clip path whose rect slides in (fx.css).
+  const signature = doc.createElement("div");
+  signature.className = "fx-takeover-signature";
+  const hand = doc.createElement("span");
+  hand.className = "cf-signature";
+  hand.setAttribute("data-signature-face", signatureFace);
+  hand.setAttribute("aria-hidden", "true");
+  signature.appendChild(hand);
+
+  const sigSvg = doc.createElementNS(SVG_NS, "svg");
+  sigSvg.setAttribute("viewBox", "0 0 200 48");
+  sigSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  sigSvg.setAttribute("focusable", "false");
+
+  const clipId = `fx-takeover-sign-${takeoverSigns++}`;
+  const defs = doc.createElementNS(SVG_NS, "defs");
+  const clip = doc.createElementNS(SVG_NS, "clipPath");
+  clip.setAttribute("id", clipId);
+  const reveal = doc.createElementNS(SVG_NS, "rect");
+  reveal.setAttribute("class", "fx-takeover-sign-reveal");
+  reveal.setAttribute("x", "-10");
+  reveal.setAttribute("y", "-10");
+  reveal.setAttribute("width", "220");
+  reveal.setAttribute("height", "68");
+  clip.appendChild(reveal);
+  defs.appendChild(clip);
+  sigSvg.appendChild(defs);
+
+  const ink = doc.createElementNS(SVG_NS, "g");
+  ink.setAttribute("clip-path", fragmentRef(clipId));
+  const text = doc.createElementNS(SVG_NS, "text");
+  text.setAttribute("class", "cf-signature-text");
+  text.setAttribute("x", "100");
+  text.setAttribute("y", "34");
+  text.setAttribute("text-anchor", "middle");
+  const { charEm } = SIGNATURE_FACES[signatureFace];
+  const size = signatureSize(card.name, charEm);
+  const length = signatureLength(card.name, size, charEm);
+  text.setAttribute("font-size", String(size));
+  text.setAttribute("textLength", String(length));
+  text.setAttribute("lengthAdjust", "spacingAndGlyphs");
+  text.textContent = card.name;
+  ink.appendChild(text);
+  sigSvg.appendChild(ink);
+
+  hand.appendChild(sigSvg);
+  stage.appendChild(signature);
+  return stage;
+}
 
 /** R2722001: a takeover's layers, bottom to top (fx.css). */
 const TAKEOVER_PARTS = ["dark", "sweep", "rays", "wave"] as const;
@@ -98,10 +174,6 @@ function ms(value: number): string {
 function placeAtPoint(el: HTMLElement, point: { x: number; y: number }): void {
   el.style.setProperty("--fx-x", px(point.x));
   el.style.setProperty("--fx-y", px(point.y));
-}
-
-function atOf(anchor: FxAnchor): FxPoint | undefined {
-  return anchor.kind === "testid" ? anchor.at : undefined;
 }
 
 /**
@@ -156,6 +228,23 @@ function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
     svg.appendChild(path);
     el.appendChild(svg);
   }
+}
+
+/** R3399002: a takeover's drawing in its art layer, one path a shape, each moved by fx.css under the live takeover as its `part` says. */
+function takeoverDrawing(doc: Document, drawing: TakeoverDrawing): SVGSVGElement {
+  const svg = doc.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("class", "takeover-art-drawing");
+  svg.setAttribute("viewBox", drawing.viewBox);
+  svg.setAttribute("preserveAspectRatio", "xMidYMid slice");
+  svg.setAttribute("aria-hidden", "true");
+  for (const shape of drawing.paths) {
+    const path = doc.createElementNS(SVG_NS, "path");
+    path.setAttribute("class", `takeover-drawing-${shape.part}`);
+    path.setAttribute("d", shape.d);
+    path.setAttribute("fill", shape.fill);
+    svg.appendChild(path);
+  }
+  return svg;
 }
 
 function chaosLines(doc: Document, el: HTMLElement, lines: FxChaosCue["lines"]): void {
@@ -367,18 +456,24 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       break;
     }
     case "takeover": {
-      // R2722001: the board's darkening, a card-shaped silhouette (never a face, R202) sweeping into
-      // `at`, and the rays and the shockwave from there once the card lands at `--fx-land`.
+      // R2722001, R3345000: the board's darkening, the card's full art in 4 depth planes,
+      // dolly camera, set signature hand signing across the bottom, and rays/shockwave.
+      // R3399002: a look drawn as a picture of its own paints it in its art layer, keyed by the look alone.
       const at = boxes.at ?? null;
       if (at === null) return null;
       placeAtCenter(el, at);
       el.setAttribute("data-look", cue.look);
       tintVars(el, cue.tint);
       el.style.setProperty("--fx-land", `${Math.max(0, cue.landMs)}ms`);
+
+      const stage = cue.stage === null ? null : takeoverStage(doc, cue.stage);
+
       for (const part of TAKEOVER_PARTS) {
         const child = doc.createElement("div");
         child.className = `fx-takeover-${part}`;
         el.appendChild(child);
+        // R3345000: the card's own full-art stage sits over the dark, under the sweep, rays and wave.
+        if (part === "dark" && stage !== null) el.appendChild(stage);
         // R3407000: a look of its own may draw its card's picture filling the screen, over the dark and under the sweep.
         if (part === "dark" && cue.art !== undefined) {
           const picture = doc.createElement("img");
@@ -389,9 +484,11 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
           picture.src = cue.art;
           el.appendChild(picture);
         }
-        // R3400000: a look with art of its own draws it over the dark, under the sweep, rays and wave, one element a part.
+        // R3400000: a look with art of its own draws it over the dark, under the sweep, rays and wave, one element a part;
+        // R3399002: or its drawing, one path a shape.
         const parts = part === "dark" ? takeoverArtParts(cue.look) : [];
-        if (parts.length === 0) continue;
+        const drawing = part === "dark" ? TAKEOVER_ART_DRAWINGS[cue.look] : undefined;
+        if (parts.length === 0 && drawing === undefined) continue;
         const art = doc.createElement("div");
         art.className = "takeover-art";
         art.setAttribute("data-look", cue.look);
@@ -400,6 +497,7 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
           piece.className = `takeover-art-${name}`;
           art.appendChild(piece);
         }
+        if (drawing !== undefined) art.appendChild(takeoverDrawing(doc, drawing));
         el.appendChild(art);
       }
       break;

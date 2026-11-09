@@ -18,18 +18,15 @@ import {
 } from "../constants.ts";
 import { FIGURE_KIT, figureLookFor } from "./figureKit.ts";
 import { motifFor } from "./motifs.ts";
-import { ART_ROLES, FULL_ART_MOTION } from "./motion.ts";
+import { ART_ROLES, FULL_ART_CARD_MOTION, FULL_ART_MOTION } from "./motion.ts";
 import { artSeedOf } from "./pictures.ts";
 import { artSpec, type ArtSpec } from "./procedural.ts";
 import { ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } from "./richness.ts";
 import { composeScene, SCENE_LAYERS, sceneRecipeOf, sceneUse, type SceneLayer, type SceneRecipe } from "./scene.ts";
 import { SCENE_KIT } from "./sceneKit.ts";
-import { MOUNTAIN_KIT } from "./sceneKitMountain.ts";
 import { NATURE_KIT } from "./sceneKitNature.ts";
 import { OBJECTS_KIT } from "./sceneKitObjects.ts";
 import { PLACES_KIT } from "./sceneKitPlaces.ts";
-import { TOUCHES_KIT } from "./sceneKitTouches.ts";
-import { YARD_KIT } from "./sceneKitYard.ts";
 import { ALT_SCENE_RECIPES } from "./sceneRecipes.ts";
 import { proceduralArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
@@ -185,7 +182,8 @@ describe("R3390000 Classic+ drawn as scenes", () => {
     expect(recipe("classicplus-019").extras?.length ?? 0).toBeGreaterThanOrEqual(4);
     expect(crowds).toBeGreaterThan(1);
     // A Classic+ full-art card moves every layer its motion names (R2715001), its props among them.
-    const fullArt = ENTRIES.filter((card) => FULL_ART_MOTION[card.id] !== undefined);
+    // The full-art cards' own motions (R2715001), not R3340000's recipes for every other Legendary and Mythic.
+    const fullArt = ENTRIES.filter((card) => FULL_ART_CARD_MOTION[card.id] !== undefined);
     expect(fullArt.map((card) => card.id).sort()).toEqual(
       ["classicplus-012", "classicplus-019", "classicplus-026", "classicplus-046", "classicplus-048", "classicplus-062", "classicplus-069", "classicplus-075"].sort(),
     );
@@ -216,7 +214,9 @@ describe("R3390000 Classic+ drawn as scenes", () => {
   it("R3390000 Alt art grows the same parts from its own seed", () => {
     // R3396000: the 40 offered Alt art draw an alt recipe of their own instead (classicPlusAltScenes.test.tsx).
     const reseeded = ENTRIES.filter((card) => !Object.hasOwn(ALT_SCENE_RECIPES, card.id));
-    expect(reseeded).toHaveLength(ENTRIES.length - Object.keys(ALT_SCENE_RECIPES).length);
+    // R3397000: the table holds Meditative+'s and Training Grounds' too (setAltScenes.test.tsx); R3404000: and
+    // Meditative's (meditativeAltScenes.test.tsx).
+    expect(reseeded).toHaveLength(ENTRIES.length - Object.keys(ALT_SCENE_RECIPES).filter((id) => CATALOG[id]?.set === "Classic+").length);
     expect(reseeded).toHaveLength(76);
     for (const card of reseeded) {
       const scene = recipe(card.id);
@@ -244,9 +244,10 @@ describe("R3390000 Classic+ drawn as scenes", () => {
     expect(new Set(added.map(([id]) => id)).size, "no id in two modules").toBe(added.length);
     for (const entries of modules) expect(entries.length).toBeGreaterThan(0);
     for (const [id, part] of added) expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);
-    // None takes the place of one of sceneKit.ts's own parts, the first kit's or Stinkyscape's pass's; the modules
-    // #3393 added beside them hold their own (R3393000, setScenes.test.ts).
-    const later = [MOUNTAIN_KIT, YARD_KIT, TOUCHES_KIT].flatMap((kit) => Object.keys(kit));
-    expect(Object.keys(SCENE_KIT)).toHaveLength(FIRST_KIT_PARTS + STINKYSCAPE_KIT_PARTS + added.length + later.length);
+    // None takes the place of one of sceneKit.ts's own parts, the first kit's or Stinkyscape's pass's (R3391000): they
+    // follow them in order (the modules #3393 and #3401 added follow them, and meditativeScenes.test.ts counts the
+    // whole kit).
+    const own = FIRST_KIT_PARTS + STINKYSCAPE_KIT_PARTS;
+    expect(Object.keys(SCENE_KIT).slice(own, own + added.length)).toEqual(added.map(([id]) => id));
   });
 });

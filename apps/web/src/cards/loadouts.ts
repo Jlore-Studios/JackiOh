@@ -9,6 +9,8 @@
 // (CLAUDE.md rule 7): no loadout reaches the engine, an action or the view.
 // R3013002: a `cardLoadouts` payload also carries the proficiency stamps of the cards it lists that wear one
 // (`stamps`, left out when none does), frozen with the seat's loadout and sent by the same rule (stamps.ts).
+// R3335000: a seat's picks also hold its four Starship picks, which its launched Starships wear; a frame frozen
+// before #3335 has none, and each reads as its kind's default.
 
 import { createElement, type ReactElement, type ReactNode } from "react";
 
@@ -19,6 +21,7 @@ import { isRecord } from "../wire/json.ts";
 import {
   CARD_SLOT_KINDS,
   DEFAULT_CARD_COSMETICS,
+  STARSHIP_SLOT_KINDS,
   TheirCopyContext,
   resolveCosmetic,
   type CardCosmetics,
@@ -44,14 +47,19 @@ const DEFAULT_SEAT: CardCosmetics = Object.freeze({ ...DEFAULT_CARD_COSMETICS })
 
 const isSeat = (value: unknown): value is PlayerId => value === "p1" || value === "p2";
 
-/** One seat's six picks, each a registry id of its kind (an unknown one its default), or null when a key is missing or not a text. */
+/**
+ * One seat's picks, each a registry id of its kind (an unknown one its default), or null when one of the six is missing
+ * or not a text. R3335000: a Starship kind a frame lacks (one frozen before #3335) reads as its default.
+ */
 function seatPicksOf(raw: unknown): CardCosmetics | null {
   if (!isRecord(raw)) return null;
   const out: Partial<Record<CosmeticKind, string>> = {};
+  const starship: readonly CosmeticKind[] = STARSHIP_SLOT_KINDS;
   for (const kind of COSMETIC_KINDS) {
     const id = raw[kind];
-    if (typeof id !== "string") return null;
-    out[kind] = resolveCosmetic(kind, id);
+    if (id === undefined && starship.includes(kind)) out[kind] = DEFAULT_CARD_COSMETICS[kind];
+    else if (typeof id !== "string") return null;
+    else out[kind] = resolveCosmetic(kind, id);
   }
   return out as CardCosmetics;
 }

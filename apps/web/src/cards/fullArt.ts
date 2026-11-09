@@ -12,7 +12,8 @@
 // maps it), worn where owned and offered, else the highest below it that is (`wornLevel`); R3015002: every full-art
 // level prints the full-art layout (`wearsFullArt`, `isFullBleed`).
 // R3046000: a board face prints full art too, a Unit's `MinionFace` and a face-up backrow card's compact `CardFace`: the
-// art across the face, still, with the name in a band below it (`boardLookOf`).
+// art across the face with the name in a band below it (`boardLookOf`). R3340000: it carries the look's animated and
+// signed flags, so the board face and the full face read one decision, and its art moves while it holds a motion slot.
 // R3343001: a Default level draws the card's default look (versions.ts `lookOn`): a Mythic's Full art while the setting
 // is on (so `wearsFullArt`), a Legendary's Extended art whatever it is.
 
@@ -302,13 +303,14 @@ export function tierOfLook(look: CardLook): FullArtTier | null {
 /**
  * R3046000: the look a board face wears (a Unit's `MinionFace`, a face-up backrow card's compact `CardFace`) given the
  * `look` its full face would (`useCardLook`): where the full face prints full art (`showsFullArt`, any full-art level,
- * R3015002), that level's art, still: animation and a signature move and sign the art of a full face alone
- * (R2715000), so a board face lays the picture across itself and keeps its name in a band below it. Null where the
- * full face prints none, so a board face that is not full art keeps its window.
+ * R3015002), that level's art, laid across the face with its name in a band below it. R3340000: it carries the level's
+ * `animated` and `signed` flags, which the board face reads as the full face does to move its art while a slot is its (a
+ * board face draws no signature, sweep or drift: R2715000's tiers' marks stay the full face's). Null where the full face
+ * prints none, so a board face that is not full art keeps its window.
  */
 export function boardLookOf(face: FaceModel, look: CardLook): CardLook | null {
   if (!showsFullArt(face, isFullBleed(look.version))) return null;
-  return { level: look.version, version: look.version, animated: false, signed: false };
+  return { level: look.version, version: look.version, animated: look.animated, signed: look.signed };
 }
 
 /**

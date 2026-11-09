@@ -36,7 +36,7 @@ export type InspectOptions = {
   longPress?: boolean;
   /** Default false. True: a mouse's or pen's main button held as long counts too (the hero portrait, R1449). */
   holdAnyPointer?: boolean;
-  onLongPress?: () => void;
+  onLongPress?: (pointerId?: number | null) => void;
   /** A mouse right-click calls it and prevents the native menu. The deck builder's, and the hero
       portrait's, which acts only while nothing is targeted (R1449): the board's cards leave
       right-click to the drag cancel. */
@@ -214,7 +214,7 @@ export function useInspectTrigger(
           const previewHold = onLongPress === undefined && hoverAllowed();
           pressState.current = "fired";
           armSuppressor();
-          if (onLongPress !== undefined) onLongPress();
+          if (onLongPress !== undefined) onLongPress(press.current?.pointerId ?? null);
           else if (previewHold) {
             // `press` keeps the start point, so a drift past the slop still ends the look.
             holdPreview.current = pressKey;

@@ -18,6 +18,11 @@ export type BoardNamesOption = "artFirst" | "always" | "never";
 export const BOARD_NAMES_DEFAULT: BoardNamesOption = "artFirst";
 export const BOARD_NAMES_VALUES: readonly BoardNamesOption[] = ["artFirst", "always", "never"] as const;
 
+/** R3339000: whether a stored or chosen value is one of the board-names options. */
+export function isBoardNamesOption(value: unknown): value is BoardNamesOption {
+  return BOARD_NAMES_VALUES.some((option) => option === value);
+}
+
 export type CardSettings = {
   hoverPreviews: boolean;
   animatedFoil: boolean;
@@ -39,7 +44,7 @@ export const CARD_SETTINGS_DEFAULTS: Readonly<CardSettings> = Object.freeze({
   setWatermarks: true,
   rarityFoil: false,
   deviceTilt: false,
-  boardNames: "artFirst",
+  boardNames: BOARD_NAMES_DEFAULT,
 });
 
 type CardSettingsField = {
@@ -147,7 +152,7 @@ function parse(raw: string): CardSettings {
     const value = record[key];
     if (typeof value === "boolean") (settings as Record<string, unknown>)[key] = value;
   }
-  if (record.boardNames === "artFirst" || record.boardNames === "always" || record.boardNames === "never") {
+  if (isBoardNamesOption(record.boardNames)) {
     settings.boardNames = record.boardNames;
   }
   return settings;
@@ -169,7 +174,7 @@ export function writeCardSettings(patch: Partial<CardSettings>): CardSettings {
     const value = patch[key];
     if (typeof value === "boolean") (next as Record<string, unknown>)[key] = value;
   }
-  if (patch.boardNames === "artFirst" || patch.boardNames === "always" || patch.boardNames === "never") {
+  if (isBoardNamesOption(patch.boardNames)) {
     next.boardNames = patch.boardNames;
   }
   fallback = setStored(CARD_SETTINGS_KEY, JSON.stringify(next)) ? null : { value: next, raw: readRaw() };

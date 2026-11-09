@@ -45,7 +45,8 @@ describe("R2803000 the audit's coverage", () => {
     expect(fields.length).toBeGreaterThan(0);
     for (const id of fields) {
       const entry = entryOf(id);
-      // R3400000: a `{ bespoke }` may wear it (R3389000: Classic's Field Spells' signatures; R3405001: Meditative's).
+      // R3400000: a `{ bespoke }` may wear it (R3389000: Classic's Field Spells' signatures; R3405001: Meditative's;
+      // R3395000: Stinkyscape's three).
       expect(entryAura(entry), id).toBeDefined();
     }
   });
@@ -54,11 +55,14 @@ describe("R2803000 the audit's coverage", () => {
     const recipes = CARDS.filter((id) => CATALOG[id]?.type === "Field Spell" && entryOf(id).kind === "bespoke");
     // R3407000: and Stinkyscape part two's Job Application, Alteran Reach and Sanctum.
     // R3405001: Meditative's eight signature Field Spells with a recipe (The Cane's is its entrance alone).
+    // R3399000: and Classic+'s Claude's Datacenter (its three token Field Spells are no card of the census).
+    // R3395000: and Stinkyscape's three, The Greatest Heist, Rod of Ages and The Narcor Project.
     expect(recipes).toEqual([
     "classic-004",
     "classic-007",
     "classic-028",
     "classic-090",
+    "classicplus-078",
       "meditative-007",
       "meditative-011",
       "meditative-026",
@@ -67,6 +71,9 @@ describe("R2803000 the audit's coverage", () => {
       "meditative-071",
       "meditative-075",
       "meditative-080",
+      "stinkyscape-007",
+      "stinkyscape-016",
+      "stinkyscape-039",
       "stinkyscape-112",
       "stinkyscape-148",
       "stinkyscape-152",]);

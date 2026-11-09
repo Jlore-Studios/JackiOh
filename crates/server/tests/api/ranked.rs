@@ -469,7 +469,7 @@ mod r610_bots {
 
 mod r2755000_the_jlorious_card_back {
     use super::*;
-    use jackioh_server::cosmetics::JLORIOUS_CARD_BACK;
+    use jackioh_server::cosmetics::{JLORIOUS_CARD_BACK, JLORIOUS_STARSHIP};
     use jackioh_server::economy::store::EconomyReason;
 
     use super::r640000_bots_on_the_ladder::seed_placed_bot;
@@ -541,6 +541,47 @@ mod r2755000_the_jlorious_card_back {
             json!(2)
         );
         assert!(backs(&off, A).await.is_empty());
+    }
+
+    /// R3335003: the Jlorious Starship's ledger rows of `profile_id`, as `backs` reads the card back's.
+    async fn starships(app: &App, profile_id: &str) -> Vec<(EconomyReason, Option<String>)> {
+        let mut tx = app.db.begin(Some(profile_id)).await.expect("begin");
+        let ledger = tx.economy_ledger_get(profile_id).await.expect("the ledger");
+        let owned = tx.economy_cosmetics_get(profile_id).await.expect("the cosmetics");
+        tx.commit().await.expect("commit");
+        let rows: Vec<(EconomyReason, Option<String>)> = ledger
+            .cosmetics
+            .into_iter()
+            .filter(|row| row.cosmetic_id == JLORIOUS_STARSHIP)
+            .map(|row| (row.reason, row.reference))
+            .collect();
+        assert_eq!(
+            owned.account.iter().any(|id| id == JLORIOUS_STARSHIP),
+            !rows.is_empty()
+        );
+        rows
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3335003_the_game_that_leaves_people_jlorious_grants_the_jlorious_starship_too() {
+        let app = test_app().await;
+        r608_season(&app).await;
+        rate(&app, game("j-1", [player(A), player(B)], Some(0), 1)).await;
+        // Beside the card back, by the same game, with the same reason, to each person it leaves Jlorious.
+        let granted = vec![(EconomyReason::Jlorious, Some("j-1".to_string()))];
+        for jlorious in [A, "m-high", "m-low"] {
+            assert_eq!(starships(&app, jlorious).await, granted, "{jlorious}");
+            assert_eq!(backs(&app, jlorious).await, granted, "{jlorious}");
+        }
+        assert!(starships(&app, B).await.is_empty());
+        assert!(starships(&app, "golden").await.is_empty());
+        // Once: the next game that leaves A Jlorious writes nothing more.
+        rate(&app, game("j-2", [player(A), player(B)], Some(0), 2)).await;
+        assert_eq!(starships(&app, A).await, granted);
+        // A ladder bot never owns it (R640000).
+        seed_placed_bot(&app, "bot-mythic", 3000.0, tier_bottom(4) + 3).await;
+        rate(&app, game("j-3", [bot("bot-mythic"), player(B)], Some(0), 3)).await;
+        assert!(starships(&app, "bot-mythic").await.is_empty());
     }
 }
 

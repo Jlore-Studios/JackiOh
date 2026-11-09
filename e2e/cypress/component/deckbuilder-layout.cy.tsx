@@ -11,6 +11,8 @@ import { FIT_FLOOR_PX } from "../../../apps/web/src/cards/constants.ts";
 import { faceText } from "../../../apps/web/src/cards/CardFace.tsx";
 import { faceModel } from "../../../apps/web/src/cards/model.ts";
 import { showsFullArt } from "../../../apps/web/src/cards/fullArt.ts";
+import { readCardSettings } from "../../../apps/web/src/cards/settings.ts";
+import { isFullBleed, lookOn } from "../../../apps/web/src/cards/versions.ts";
 import { setShips } from "../../../apps/web/src/wire/catalog.ts";
 import { DECK_HISTORY_BUTTON, DECK_HISTORY_PANEL } from "../../../apps/web/src/game/deckbuilder/testids.ts";
 import {
@@ -318,9 +320,11 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     cy.document().should((doc) => {
       const missing: string[] = [];
       const faint: string[] = [];
+      const fullArt = readCardSettings().fullArt;
       for (const def of DECKABLE) {
-        // R1017001: a hero portrait's card prints full art and no rules box (card-faces.cy.tsx B15).
-        if (showsFullArt(faceModel({ defId: def.id, def, radiant: false }))) continue;
+        // R1017001: a hero portrait's card prints full art and no rules box (card-faces.cy.tsx B15); R3343001: so does a
+        // Mythic, whose Default draws Full art while the Full-art cards setting is on.
+        if (showsFullArt(faceModel({ defId: def.id, def, radiant: false })) || isFullBleed(lookOn(def.id, null, fullArt).version)) continue;
         const item = doc.querySelector(`${POOL_ITEMS}[data-card="${def.id}"]`);
         const terms = [...(item?.querySelectorAll<HTMLElement>(".card-text strong.cf-term") ?? [])];
         const drawn = new Set(terms.map((term) => term.dataset.term));

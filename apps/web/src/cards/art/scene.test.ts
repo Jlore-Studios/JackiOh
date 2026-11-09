@@ -45,7 +45,7 @@ import {
   type SceneRecipe,
 } from "./scene.ts";
 import { SCENE_KIT } from "./sceneKit.ts";
-import { SCENE_RECIPES } from "./sceneRecipes.ts";
+import { ALT_SCENE_RECIPES, SCENE_RECIPES, STINKYSCAPE_91_RECIPES } from "./sceneRecipes.ts";
 import { STINKYSCAPE_RECIPES } from "./stinkyscapeRecipes.ts";
 import { legacyArtUri, proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { compositionFor, compositionOf, themeFor } from "./themes.ts";
@@ -240,10 +240,15 @@ describe("R3331000 the five proof cards", () => {
     expect(SCENE_BOX).toBe(ART_BOX);
     // R3392000: the proofs and every Core entry draw from a recipe, and every Classic+ entry (R3390000, which
     // classicPlusScenes.test.ts checks); R3393000: so does every Meditative+ and Training Grounds entry
-    // (setScenes.test.ts); R3391000: and Stinkyscape's, which hold Arg Arg Defender's (stinkyscapeScenes.test.ts).
+    // (setScenes.test.ts); R3401000: and every Meditative entry (meditativeScenes.test.ts); R3403000: and #3403's
+    // Stinkyscape entries (stinkyscape91Scenes.test.ts); R3391000: and Stinkyscape's cards 1 to 90 of its pass, which
+    // hold Arg Arg Defender's (stinkyscapeScenes.test.ts).
     const core = Object.values(CATALOG).filter((card) => card.set === "Core").map((card) => card.id);
     const passes = Object.values(CATALOG).filter((card) => card.set === "Meditative+" || card.set === "Training Grounds").map((card) => card.id);
-    expect(Object.keys(SCENE_RECIPES).filter((id) => !id.startsWith("classicplus-")).sort()).toEqual([...new Set<string>([...PROOFS, ...core, ...passes, ...Object.keys(STINKYSCAPE_RECIPES)])].sort());
+    const checkedElsewhere = (id: string): boolean => id.startsWith("classicplus-") || id.startsWith("meditative-");
+    expect(Object.keys(SCENE_RECIPES).filter((id) => !checkedElsewhere(id) && !Object.hasOwn(STINKYSCAPE_91_RECIPES, id)).sort()).toEqual(
+      [...new Set<string>([...PROOFS, ...core, ...passes, ...Object.keys(STINKYSCAPE_RECIPES)])].sort(),
+    );
     for (const id of PROOFS) {
       const card = def(id);
       const shapes = composeScene(recipe(id), id);
@@ -313,6 +318,11 @@ describe("R3331000 the five proof cards", () => {
       for (const picture of ["alt", "night"] as const) {
         const seed = artSeedOf(id, picture);
         expect(seed, id).not.toBe(id);
+        // R3398000: Heroic Power and Ceaseless Void, offered Alt art, draw an alt recipe of their own under its seed (coreAltScenes.test.tsx).
+        if (picture === "alt" && Object.hasOwn(ALT_SCENE_RECIPES, id)) {
+          expect(sceneRecipeOf(seed), id).toBe(ALT_SCENE_RECIPES[id]);
+          continue;
+        }
         expect(sceneRecipeOf(seed), id).toBe(scene);
         const own = composeScene(scene, seed);
         expect(new Set(own.map((shape) => shape.part)), `${id} ${picture}`).toEqual(new Set(normal.map((shape) => shape.part)));

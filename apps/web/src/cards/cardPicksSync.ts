@@ -9,7 +9,7 @@
 
 import { getCardPicks, putCardPick, uploadCardPicks, type CardPicksEntry, type CardPicksResponse, type CardPickPut } from "../net/api.ts";
 import type { Account } from "../net/gate.ts";
-import { SETTINGS_SYNC_GRACE_MS, useAccountSync } from "../settings/accountSync.ts";
+import { requestQueue, SETTINGS_SYNC_GRACE_MS, useAccountSync } from "../settings/accountSync.ts";
 import { isRecord } from "../wire/json.ts";
 import {
   readAllCardPicks,
@@ -89,22 +89,8 @@ export function startCardPicksAccountSync(options: {
   let stopped = false;
   /** The writes made while the account's copy was on its way, which it must not undo; null once it came. */
   let early: [string, CardPickChange][] | null = [];
-  let queue: Promise<void> = Promise.resolve();
-  let pending = 0;
-
   /** One request after those before it; a failure is swallowed, so the next still runs. */
-  const enqueue = (request: () => Promise<unknown>): void => {
-    pending += 1;
-    queue = queue
-      .then(request)
-      .then(
-        () => undefined,
-        () => undefined,
-      )
-      .finally(() => {
-        pending -= 1;
-      });
-  };
+  const { enqueue, settled } = requestQueue();
 
   const send = (defId: string, change: CardPickChange): void => {
     enqueue(() => api.put(token(), { cardId: defId, ...change }));
@@ -147,9 +133,7 @@ export function startCardPicksAccountSync(options: {
       stopped = true;
       unsubscribe();
     },
-    settled: async () => {
-      while (pending > 0) await queue;
-    },
+    settled,
   };
 }
 

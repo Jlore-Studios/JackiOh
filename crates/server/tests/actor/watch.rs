@@ -1119,6 +1119,11 @@ mod r1834003_a_watcher_wears_the_seats_loadouts {
             "foil": "foil-none",
             "finish": "finish-plain",
             "border": "border-standard",
+            // R3335000: the four Starship kinds, each its default.
+            "starshipHull": "starship-hull-standard",
+            "starshipLivery": "starship-livery-standard",
+            "starshipTrail": "starship-trail-standard",
+            "starshipPieceSkin": "starship-piece-skin-standard",
         });
         let mut friend = defaults.clone();
         friend["table"] = json!("table-felt");

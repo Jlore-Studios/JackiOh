@@ -32,6 +32,33 @@ func TestPlanNeedsAsPython(t *testing.T) {
 	}
 }
 
+// #3352: a planner that writes "none" and then an aside needs nobody, while a line that asks for
+// something, whatever its punctuation, still hands the issue over.
+func TestPlanNeedsReadsNoneBeforeAnAside(t *testing.T) {
+	nobodyLines := []string{
+		"**Human required:** none. One plan, one pull request, no split (see Open questions).",
+		"**Human required:** None (see Open questions).",
+		"**Human required:** not needed; the bot can build all of it.",
+		"**Human required:** N/A - every file is under apps/web/.",
+		"**Human required:** no — nothing outside the bot's paths.",
+	}
+	for _, line := range nobodyLines {
+		if got := PlanNeeds(line+"\n\n## Goal\nx", []string{"nothing/"}); got != "" {
+			t.Errorf("PlanNeeds(%q) = %q, want no person", line, got)
+		}
+	}
+	asks := map[string]string{
+		"**Human required:** set the secret FOO. Then queue it again.":    "set the secret FOO. Then queue it again.",
+		"**Human required:** no secrets; a person must flip the setting.": "no secrets; a person must flip the setting.",
+		"**Human required:** nothing builds until the dashboard is set.":  "nothing builds until the dashboard is set.",
+	}
+	for line, want := range asks {
+		if got := PlanNeeds(line+"\n\n## Goal\nx", []string{"nothing/"}); got != want {
+			t.Errorf("PlanNeeds(%q) = %q, want %q", line, got, want)
+		}
+	}
+}
+
 func TestTheHandOverAsPython(t *testing.T) {
 	data := expected(t)
 	if People() != data.Str("people") {

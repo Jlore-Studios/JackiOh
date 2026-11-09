@@ -6,10 +6,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ANOMALY_CODES } from "../cards/anomalies.ts";
+import { ART_PLANES } from "../cards/art/index.ts";
 import { anomalyMarkup } from "../cards/art/svg.ts";
 import { FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
 import { mountDomEffect, mountHold, type DomEffect } from "./dom.ts";
-import { TAKEOVER_ART_PARTS } from "./takeoverArt.ts";
+import { TAKEOVER_ART_DRAWINGS, TAKEOVER_ART_PARTS } from "./takeoverArt.ts";
 import type { FxBox, FxDomCue, FxHoldCue, TakeoverLook } from "./types.ts";
 
 const AT: FxBox = { x: 100, y: 200, width: 80, height: 120 }; // center (140, 260)
@@ -226,7 +227,7 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
   });
 
   it("R3400000 a takeover with art mounts its parts; prismatic none", () => {
-    const takeover: FxDomCue = { kind: "takeover", look: "napkin", tint: TINT, at: anchor, landMs: 1240, delayMs: 0, durationMs: 1800 };
+    const takeover: FxDomCue = { kind: "takeover", stage: null, look: "napkin", tint: TINT, at: anchor, landMs: 1240, delayMs: 0, durationMs: 1800 };
     const el = expectMounted(mountDomEffect(root, takeover, { at: AT }), takeover);
     expect(el.getAttribute("data-look")).toBe("napkin");
     expect(cssVar(el, "--fx-land")).toBe("1240ms");
@@ -248,11 +249,19 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     const plain = expectMounted(mountDomEffect(root, shared, { at: AT }), shared);
     expect([...plain.children].map((child) => child.className)).toEqual(["fx-takeover-dark", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
     expect(plain.querySelector(".takeover-art")).toBeNull();
+    plain.remove();
+    // R3345000: a set piece's full-art stage sits over the dark, under a look's own art.
+    const staged: FxDomCue = { ...takeover, stage: { planes: ART_PLANES.map((plane) => `linear-gradient(${plane})`), name: "Ceaseless Void", face: "ink" } };
+    const full = mountDomEffect(root, staged, { at: AT })?.el;
+    expect(full).toBeDefined();
+    expect([...(full?.children ?? [])].map((child) => child.className)).toEqual(["fx-takeover-dark", "fx-takeover-stage", "takeover-art", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+    // The stage signs the card's name (its one text), which the shared layers never carry.
+    expect(full?.querySelector(".fx-takeover-signature .cf-signature-text")?.textContent).toBe("Ceaseless Void");
   });
 
   it("R3407000 a takeover with its card's picture mounts one image over the dark, under the sweep; without one none", () => {
     const art = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E";
-    const takeover: FxDomCue = { kind: "takeover", look: "freshJack", tint: TINT, at: anchor, landMs: 1240, delayMs: 0, durationMs: 1800, art };
+    const takeover: FxDomCue = { kind: "takeover", stage: null, look: "freshJack", tint: TINT, at: anchor, landMs: 1240, delayMs: 0, durationMs: 1800, art };
     const el = expectMounted(mountDomEffect(root, takeover, { at: AT }), takeover);
     expect(el.getAttribute("data-look")).toBe("freshJack");
     expect([...el.children].map((child) => child.className)).toEqual(["fx-takeover-dark", "fx-takeover-art", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
@@ -702,6 +711,49 @@ describe("R2789000 — a keyword's callout", () => {
     // Taunt one, so the iconless probe moves to Cloaked, which neither lane iconified.
     expect(mountDomEffect(root, callout("Cloaked"), { at: AT })).toBeNull();
     expect(root.childElementCount).toBe(0);
+  });
+});
+
+describe("R3399002 — a takeover's own drawing", () => {
+  const takeover = (look: TakeoverLook): FxDomCue => ({ kind: "takeover", stage: null, look, tint: TINT, at: anchor, landMs: 1200, delayMs: 0, durationMs: 2400 });
+  const classesOf = (el: Element): (string | null)[] => [...el.children].map((child) => child.getAttribute("class"));
+
+  it("R3399002 a drawn look's takeover draws its picture in its art layer, and a look with no art none", () => {
+    for (const look of ["zealot", "portal", "stair", "vineyard"] as const) {
+      const drawing = TAKEOVER_ART_DRAWINGS[look];
+      if (drawing === undefined) throw new Error(`no drawing for ${look}`);
+      const cue = takeover(look);
+      const el = expectMounted(mountDomEffect(root, cue, { at: AT }), cue);
+      expectCenteredOn(el, AT);
+      expect(el.getAttribute("data-look")).toBe(look);
+      // The drawing lies in the look's art layer (R3400000), over the dark and under the sweep, the rays and the wave.
+      expect(classesOf(el)).toEqual(["fx-takeover-dark", "takeover-art", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+      const layer = el.querySelector(".takeover-art");
+      if (layer === null) throw new Error(`no art layer for ${look}`);
+      expect(layer.getAttribute("data-look")).toBe(look);
+      expect(classesOf(layer)).toEqual(["takeover-art-drawing"]);
+      const svg = layer.querySelector(".takeover-art-drawing");
+      expect(svg?.namespaceURI).toBe("http://www.w3.org/2000/svg");
+      expect(svg?.getAttribute("viewBox")).toBe(drawing.viewBox);
+      expect(svg?.getAttribute("preserveAspectRatio")).toBe("xMidYMid slice");
+      expect(svg?.getAttribute("aria-hidden")).toBe("true");
+      const paths = [...(svg?.querySelectorAll("path") ?? [])];
+      expect(paths.map((path) => ({ d: path.getAttribute("d"), fill: path.getAttribute("fill"), part: path.getAttribute("class") }))).toEqual(
+        drawing.paths.map((path) => ({ d: path.d, fill: path.fill, part: `takeover-drawing-${path.part}` })),
+      );
+      // Keyed by its look alone: nothing in it names a card (R202).
+      expect(el.outerHTML).not.toMatch(/classicplus-|data-def/);
+      root.innerHTML = "";
+    }
+
+    for (const look of ["prismatic", "void", "pawn", "genie"] as const) {
+      const cue = takeover(look);
+      const el = expectMounted(mountDomEffect(root, cue, { at: AT }), cue);
+      expect(el.querySelector(".takeover-art")).toBeNull();
+      expect(el.querySelector("svg")).toBeNull();
+      expect(classesOf(el)).toEqual(["fx-takeover-dark", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+      root.innerHTML = "";
+    }
   });
 });
 

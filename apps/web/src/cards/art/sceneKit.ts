@@ -11,8 +11,8 @@
 // fills every ridge, so a hole is a second sub-path and no two sub-paths of one shape overlap otherwise.
 // R3392000: Core's scenes added the places, creatures, props and weather their briefs name, each part after
 // the old ones of its kind.
-// A pointing part (a beam, a light stream, a light cone, a meteor, a smoke trail, a comet) also turns by
-// its placement's `rotate` about its anchor, extending along +x unturned; every other part ignores it.
+// R3391000: a pointing part (a beam, a light stream, a light cone, a meteor, a smoke trail, a comet streak) also
+// turns by its placement's `rotate` about its anchor, extending along +x unturned; every other part ignores it.
 
 import { fmt } from "./hash.ts";
 import {
@@ -45,10 +45,23 @@ import {
   type Point,
 } from "./kitDraw.ts";
 import type { KitPart, KitShape, PaletteName, PartPlace, Rng } from "./scene.ts";
+import { COSMOS_KIT } from "./sceneKitCosmos.ts";
+import { CRAFT_KIT } from "./sceneKitCraft.ts";
+import { GEAR_KIT } from "./sceneKitGear.ts";
+import { INK_BUILDINGS_KIT } from "./sceneKitInkBuildings.ts";
+import { INK_CHARACTERS_KIT } from "./sceneKitInkCharacters.ts";
+import { INK_CREATURES_KIT } from "./sceneKitInkCreatures.ts";
+import { INK_CURIOS_KIT } from "./sceneKitInkCurios.ts";
+import { INK_MACHINES_KIT } from "./sceneKitInkMachines.ts";
+import { INK_NATURE_KIT } from "./sceneKitInkNature.ts";
+import { INK_OBJECTS_KIT } from "./sceneKitInkObjects.ts";
+import { INK_PLACES_KIT } from "./sceneKitInkPlaces.ts";
 import { NATURE_KIT } from "./sceneKitNature.ts";
 import { OBJECTS_KIT } from "./sceneKitObjects.ts";
 import { PLACES_KIT } from "./sceneKitPlaces.ts";
 import { MOUNTAIN_KIT } from "./sceneKitMountain.ts";
+import { SPACE_KIT } from "./sceneKitSpace.ts";
+import { STINKY_ALT_KIT } from "./sceneKitStinkyAlt.ts";
 import { TOUCHES_KIT } from "./sceneKitTouches.ts";
 import { YARD_KIT } from "./sceneKitYard.ts";
 
@@ -6928,14 +6941,14 @@ export const SCENE_KIT = {
   cyclone: { category: "weather", draw: cyclonePart },
   eclipse: { category: "weather", draw: eclipsePart },
   "sun-disc": { category: "weather", draw: sunDiscPart },
-  fighter: { category: "craft", draw: fighter },
+  "wedge-fighter": { category: "craft", draw: fighter },
   "needle-fighter": { category: "craft", draw: needleFighter },
   "arrow-fighter": { category: "craft", draw: arrowFighter },
   "blade-fighter": { category: "craft", draw: bladeFighter },
   scout: { category: "craft", draw: scout },
   walker: { category: "craft", draw: walker },
   skiff: { category: "craft", draw: skiff },
-  drone: { category: "craft", draw: drone },
+  "eye-drone": { category: "craft", draw: drone },
   "helper-drone": { category: "craft", draw: helperDrone },
   "drone-corvette": { category: "craft", draw: droneCorvette },
   "drone-battleship": { category: "craft", draw: droneBattleship },
@@ -6948,48 +6961,48 @@ export const SCENE_KIT = {
   "fused-hull": { category: "craft", draw: fusedHull },
   wreck: { category: "craft", draw: wreck },
   "ghost-ship": { category: "craft", draw: ghostShip },
-  rocket: { category: "craft", draw: rocket },
+  "retro-rocket": { category: "craft", draw: rocket },
   tram: { category: "craft", draw: tram },
   "gun-ring": { category: "craft", draw: gunRing },
-  station: { category: "architecture", draw: station },
+  "ring-station": { category: "architecture", draw: station },
   "dock-gantry": { category: "architecture", draw: dockGantry },
   "hangar-wall": { category: "architecture", draw: hangarWall },
   "vault-door": { category: "architecture", draw: vaultDoor },
   "server-core": { category: "architecture", draw: serverCore },
   "cell-bars": { category: "architecture", draw: cellBars },
-  console: { category: "architecture", draw: consolePart },
+  "control-desk": { category: "architecture", draw: consolePart },
   "antenna-mast": { category: "architecture", draw: antennaMast },
   "bunk-pod": { category: "architecture", draw: bunkPod },
   "pilot-seat": { category: "architecture", draw: pilotSeat },
   "cockpit-frame": { category: "architecture", draw: cockpitFrame },
-  porthole: { category: "architecture", draw: porthole },
+  "riveted-porthole": { category: "architecture", draw: porthole },
   "space-window": { category: "architecture", draw: spaceWindow },
   "glass-case": { category: "architecture", draw: glassCase },
   "market-stall": { category: "architecture", draw: marketStall },
   "disruptor-beacon": { category: "architecture", draw: disruptorBeacon },
-  reactor: { category: "architecture", draw: reactor },
-  "deck-floor": { category: "terrain", draw: deckFloor },
+  "reactor-core": { category: "architecture", draw: reactor },
+  "ship-deck": { category: "terrain", draw: deckFloor },
   corridor: { category: "terrain", draw: corridor },
-  regolith: { category: "terrain", draw: regolith },
+  "moon-surface": { category: "terrain", draw: regolith },
   "lava-flats": { category: "terrain", draw: lavaFlats },
   "hover-platform": { category: "terrain", draw: hoverPlatform },
   "ray-gun": { category: "objects", draw: rayGun },
   "drone-core": { category: "objects", draw: droneCore },
   "credit-chips": { category: "objects", draw: creditChips },
   duffel: { category: "objects", draw: duffel },
-  cracker: { category: "objects", draw: cracker },
+  "herb-cracker": { category: "objects", draw: cracker },
   "coffee-bulb": { category: "objects", draw: coffeeBulb },
-  "ice-block": { category: "objects", draw: iceBlock },
+  "ice-cube": { category: "objects", draw: iceBlock },
   "boot-clamp": { category: "objects", draw: bootClamp },
   "cracked-mask": { category: "objects", draw: crackedMask },
   "ancient-rod": { category: "objects", draw: ancientRod },
   "axe-head": { category: "objects", draw: axeHead },
   "containment-sphere": { category: "objects", draw: containmentSphere },
   "wire-coil": { category: "objects", draw: wireCoil },
-  "robot-arm": { category: "objects", draw: robotArm },
+  "welding-arm": { category: "objects", draw: robotArm },
   debris: { category: "objects", draw: debris },
-  rope: { category: "objects", draw: rope },
-  "gloved-hand": { category: "creatures", draw: glovedHand },
+  "swing-rope": { category: "objects", draw: rope },
+  "reaching-hand": { category: "creatures", draw: glovedHand },
   cosmality: { category: "creatures", draw: cosmality },
   sleeper: { category: "creatures", draw: sleeper },
   "berry-vine": { category: "plants", draw: berryVine },
@@ -6999,12 +7012,12 @@ export const SCENE_KIT = {
   "light-cone": { category: "weather", draw: lightCone },
   meteor: { category: "weather", draw: meteor },
   "smoke-trail": { category: "weather", draw: smokeTrail },
-  comet: { category: "weather", draw: comet },
+  "comet-streak": { category: "weather", draw: comet },
   "star-glare": { category: "weather", draw: starGlare },
   "gas-giant": { category: "weather", draw: gasGiant },
   "space-shards": { category: "weather", draw: spaceShards },
   "light-grid": { category: "weather", draw: lightGrid },
-  rift: { category: "weather", draw: rift },
+  "ringed-rift": { category: "weather", draw: rift },
   "frost-shard": { category: "weather", draw: frostShard },
   missiles: { category: "weather", draw: missiles },
   "flame-column": { category: "weather", draw: flameColumn },
@@ -7017,6 +7030,22 @@ export const SCENE_KIT = {
   ...MOUNTAIN_KIT,
   ...YARD_KIT,
   ...TOUCHES_KIT,
+  // R3401000: the parts the Meditative scenes added.
+  ...INK_PLACES_KIT,
+  ...INK_BUILDINGS_KIT,
+  ...INK_OBJECTS_KIT,
+  ...INK_CURIOS_KIT,
+  ...INK_MACHINES_KIT,
+  ...INK_NATURE_KIT,
+  ...INK_CREATURES_KIT,
+  ...INK_CHARACTERS_KIT,
+  // R3403000: the parts the Stinkyscape scenes added.
+  ...SPACE_KIT,
+  ...CRAFT_KIT,
+  ...GEAR_KIT,
+  ...COSMOS_KIT,
+  // R3406000: the parts the Stinkyscape Alt art pass added.
+  ...STINKY_ALT_KIT,
 } as const satisfies Readonly<Record<string, KitPart>>;
 
 export type SceneryPartId = keyof typeof SCENE_KIT;

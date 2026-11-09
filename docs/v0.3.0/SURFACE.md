@@ -176,7 +176,7 @@ Crate edges (path dependencies; every crate also takes the third-party crates it
 | `jackioh-engine` | — (features: `testkit`, `ts` = `dep:ts-rs`) | `jackioh-cards` (golden traces, hotseat fixture) |
 | `jackioh-cards` | `jackioh-engine` | `jackioh-engine` with `features = ["testkit"]` |
 | `jackioh-ai` | `jackioh-engine` | `jackioh-cards`, `jackioh-engine` with `testkit` |
-| `jackioh-wasm` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | — |
+| `jackioh-wasm` | `jackioh-cards`, `jackioh-wasm-core` | — |
 | `jackioh-server` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-shared` | `jackioh-engine` with `testkit` |
 | `jackioh-tools` | `jackioh-engine` with `testkit` (fuzz's invariant monitor), `jackioh-cards`, `jackioh-ai` | — |
 | `jackioh-shared` | `jackioh-engine`, `jackioh-ai` (features: `ts` = `dep:ts-rs`, #3098); the server and `jackioh-wasm-core` depend on it, no pure crate does | `jackioh-cards` (#3101: the host machine's tests play on the real catalog), `serde_json` |
@@ -1042,7 +1042,9 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   both seats through the `deal_emote_hand` binding.
 - **Loadouts** (#1834, R1834000–R1834005): two frames ride beside `portraits`, never in `PlayerView`.
   `{ "type": "loadouts", "p1", "p2" }` (`ServerMessage::Loadouts { p1, p2 }`), each a `SeatLoadout`
-  `{ table, field, cardBack, foil, finish, border }` of registry ids, goes on `hello` and attach
+  `{ table, field, cardBack, foil, finish, border, starshipHull, starshipLivery, starshipTrail,
+  starshipPieceSkin }` of registry ids (the four Starship picks since #3335, R3335000, each its kind's
+  default when a stored frame lacks it), goes on `hello` and attach
   before the view and to a watcher as it attaches; `{ "type": "cardLoadouts", "seat", "cards" }`
   (`ServerMessage::CardLoadouts { seat, cards }`), `cards` a list of `{ cardId, foil?, finish?,
   border?, fullArt? }` (`fullArt` `true` for the card's still Epic full art, or a Legendary's, a

@@ -72,6 +72,10 @@
 // R3046000: a compact face (a face-up backrow card) prints full art too: the art across the face, still, and its name in
 // a band below the art, with the cost gem, the rarity gem and set mark, the crest and the states over it and no type line
 // (`data-full-art` on a compact face, cards.css; fullArt.ts `boardLookOf`). A compact face that is not full art keeps its window.
+// R3340000: a compact face in play (`onBoard`) moves its art when its card wears an animated or signed level or is a Mythic, as
+// a full face does, drawing no signature, sweep or drift, taking a motion slot ranked by the pointer, focus and rarity
+// (`useArtMotion`, motionSlots.ts), and answers the pointer and a press (artLive.ts, `data-art-hover`): a hovered one claims a
+// slot to answer in. Its art is in layers while it moves (CardArt `live`).
 //
 // R2723000: a full-art face in the viewer's own hand (`ownHand`, which Card.tsx sets) is its art alone
 // (`data-full-art-hand`), with its cost gem, a Unit's stats, its states, its motion and its cosmetics:
@@ -86,6 +90,9 @@
 // R3013002: the face wears its card's proficiency stamp (stamps.ts): the account's pick on the viewer's own copy
 // (`worn`), the seat's frozen one below a `TheirCopy`; ProficiencyStamp.tsx draws it in stamps.css's slot, clear
 // of every part, base and Radiant alike.
+//
+// R3335000: a launched Starship's art wears its Starship look (cosmetics.ts `useStarshipLook`): the account's picks on
+// the viewer's own copy (`worn`), the seat's frozen ones below a `TheirCopy`, else the standard.
 //
 // R3338002: given `gemDrain` (Card.tsx, a Ceaseless Void in its owner's own hand), the cost gem's level falls as its
 // cost does (`data-gem-drain`, `--cost-drain`, cards.css); every other face's gem is drawn whole.
@@ -107,9 +114,11 @@ import { CardArt, type ArtShape } from "./art/index.ts";
 import { hasArtParts, hasArtPlanes } from "./art/CardArt.tsx";
 import { ART_PLANES, showcaseFamilyOf } from "./art/pictures.ts";
 import { CardStates } from "./CardStates.tsx";
+import { useArtLive } from "./artLive.ts";
 import { useImmersiveShift } from "./immersive.ts";
+import { slotRarityOf } from "./motionSlots.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { useArtMotion, useCosmeticAttributes } from "./cosmetics.ts";
+import { cosmeticAttributes, useArtMotion, useCosmeticAppearance, useStarshipLook } from "./cosmetics.ts";
 import {
   CARD_DEPTH_STEP_CQW,
   CARD_FRAME_BREAK_PX,
@@ -133,7 +142,7 @@ import { StarshipPieces } from "./StarshipPieces.tsx";
 import { setMarkOf, watermarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
 import { pixelNameUri } from "./pixelName.ts";
-import { useCardTilt, type TiltMode } from "./tilt.ts";
+import { useCardTilt, type TiltBox, type TiltMode } from "./tilt.ts";
 import {
   NORMAL_LOOK,
   VERSION_EXTENDED_ART_ID,
@@ -186,6 +195,11 @@ export type CardFaceProps = {
    * "off" by default, so a face in a list or a picker never tilts.
    */
   tilt?: TiltMode;
+  /**
+   * R3344001: with `tilt="window"`, the box of the card the face is anchored to (the hover preview's anchor): the
+   * pointer is on it, never over the face, so the pose is read against it. Without it a window face reads its host's box.
+   */
+  tiltAnchor?: TiltBox;
 };
 
 /** The art window's shape follows the card type, as Hearthstone's minion oval and spell frame do. */
@@ -329,7 +343,7 @@ export function CardFace({
   ascentLevel,
   worn = false,
   ownHand = false, onBoard = false, gemDrain = null,
-  tilt = "off", }: CardFaceProps): ReactElement {
+  tilt = "off", tiltAnchor }: CardFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides;
@@ -368,7 +382,10 @@ export function CardFace({
 
   const scales = { "--cf-name-scale": String(TIER_SCALE[names]), "--cf-text-scale": String(TIER_SCALE[texts]) } as CSSProperties;
   const rarity = frameRarity(face);
+  const cosmeticAppearance = useCosmeticAppearance({ ...face, rarity }, worn);
   const stamp = useCardStamp(face, worn);
+  // R3335000: the Starship look a launched Starship wears: the viewer's own picks, or its seat's below a `TheirCopy`.
+  const starshipLook = useStarshipLook(worn);
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
   const glitch = isGlitch(face.defId);
@@ -380,8 +397,9 @@ export function CardFace({
   const tier = full ? tierOfLook(look) : null;
   // R2725003: an animated full art lays the band over it and drifts it. R3015002: a signed level signs the name
   // across its full art, but in the viewer's own hand.
-  const moving = fullArt && look.animated;
-  const signed = fullArt && look.signed && !bare;
+  // R3340000: a compact face's look carries the flags, its art moving by them (`artMoves`); only a full face sweeps and signs.
+  const moving = full && fullArt && look.animated;
+  const signed = full && fullArt && look.signed && !bare;
   // R2943001: a Starship in play's and a Legacy card's pictures have no parts; nor (R3337001) an Anomaly Found! in play
   // holding a board, which wears that board's picture.
   const starship = face.inPlay ? face.starship : null;
@@ -389,10 +407,18 @@ export function CardFace({
   // R2944001: Immersive lays its subject on a near layer over its hazed backdrop where the picture has parts.
   const immersive = look.version === VERSION_IMMERSIVE_ID && !fullArt && !glitch && hasArtParts(face.defId, starship, anomaly);
   // R2715001: an Animated look moves its art's own layers while a slot is theirs. R2944002: Immersive's depth moves in
-  // the same slot, one per face, Animated or not.
-  const artMoves = look.animated;
-  const artMotion = useArtMotion((artMoves || immersive) && settings.animatedFoil && !lazyArt);
-  useImmersiveShift(faceRef, immersive && artMotion);
+  // the same slot, one per face, Animated or not. R3340000: a card in play moves its art for an animated or signed level and
+  // for a Mythic; a hovered or focused one claims a slot to answer in, ranked first (motionSlots.ts).
+  const board = !full && onBoard;
+  const artMoves = full ? look.animated : board && (cardLook.animated || rarity === "Mythic");
+  // R2715001, R3340000: a full art's drift, band sweep and signature move in the same one ranked slot as its art's layers.
+  const live = useArtLive(faceRef, artMoves || moving || signed || board || immersive || cosmeticAppearance.animates);
+  const engaged = board && live.hovered;
+  const faceMotion = useArtMotion(
+    (artMoves || moving || signed || immersive || engaged || cosmeticAppearance.animates) && settings.animatedFoil && !lazyArt && live.onScreen,
+    { hovered: live.hovered, rarity: slotRarityOf(rarity) },
+  );
+  useImmersiveShift(faceRef, immersive && faceMotion.moving);
   // R2942001: Extended art's picture runs past its window across the face; Pixel sets the name in its pixel face, when
   // the face has every character of it and it is short enough to read (`PIXEL_NAME_MAX_GLYPHS`; a small face prints
   // it in the normal face, cards.css).
@@ -404,7 +430,7 @@ export function CardFace({
   const outOfFrame = look.version === VERSION_OUT_OF_FRAME_ID && !fullArt && !glitch && hasArtParts(face.defId, starship, anomaly);
   // R3015002: one picture per variant at every level, and its own motion at every animated one.
   const picture = artPictureOf(look.version, face.set);
-  const motion = artMotion && artMoves ? artMotionOf(face.defId) : null;
+  const motion = faceMotion.moving && (artMoves || engaged) ? artMotionOf(face.defId) : null;
   // R3344000: an Epic or rarer face, or a full-art one, draws its picture as depth planes unless the viewer's motion
   // settings ask for the flat picture, which also holds its foil still under the fx intensity off.
   const { flat, fxOff } = useDepthMotion();
@@ -412,11 +438,12 @@ export function CardFace({
   const depth = wantsDepth && !flat;
   const shape: ArtShape = fullArt || extended || artFirst ? "full" : ART_SHAPE[face.type];
   const breaks = depth && breaksFrame(rarity, ownHand, tilt);
-  useCardTilt(faceRef, depth ? tilt : "off", !flat);
+  useCardTilt(faceRef, depth ? tilt : "off", !flat, tiltAnchor);
   // R1295000: what the face wears, judged by the rarity its frame shows as its rarity foil is.
-  // R1956000: a grid's faces hold theirs still, so the slots stay with the card a player opens.
+  // R1956000: a grid's faces hold theirs still, so the slots stay with the card a player opens. R3340000: every moving
+  // cosmetic uses the same ranked, visible face-level decision as the art above.
   const foilMoves = settings.animatedFoil && !(fxOff && wantsDepth);
-  const cosmetics = useCosmeticAttributes({ ...face, rarity }, worn, foilMoves && !lazyArt);
+  const cosmetics = cosmeticAttributes(cosmeticAppearance, faceMotion.moving && foilMoves && !lazyArt);
   const glare = glareFor(cosmetics["data-cosmetic-foil"], face.radiant);
   const style = depth
     ? ({
@@ -452,9 +479,11 @@ export function CardFace({
       data-version={look.version ?? undefined}
       data-level={look.level ?? undefined}
       data-showcase={showcase ?? undefined}
-      data-full-art-motion={moving || signed ? (settings.animatedFoil ? "animated" : "static") : undefined}
-      data-art-motion={artMoves ? (artMotion ? "animated" : "static") : undefined}
-      data-immersive-motion={immersive ? (artMotion ? "animated" : "static") : undefined}
+      data-full-art-motion={moving || signed ? (faceMotion.moving ? "animated" : "static") : undefined}
+      data-art-motion={artMoves || engaged ? (faceMotion.moving ? "animated" : "static") : undefined}
+      data-art-hover={board ? (live.hovered ? "true" : "false") : undefined}
+      data-art-response={board && faceMotion.enabled ? "true" : undefined}
+      data-immersive-motion={immersive ? (faceMotion.moving ? "animated" : "static") : undefined}
       data-depth={depth ? "true" : undefined}
       data-frame-break={breaks ? "true" : undefined}
       {...cosmetics}
@@ -501,10 +530,12 @@ export function CardFace({
               shape={shape}
               lazy={lazyArt}
               starship={starship}
+              look={starshipLook}
               anomaly={anomaly}
               picture={picture}
               motion={motion}
               part={depth ? "far" : outOfFrame || immersive ? "backdrop" : "whole"}
+              live={board && motion !== null}
             />
           )}
           {outOfFrame && (
@@ -518,6 +549,7 @@ export function CardFace({
               className="cf-art--cutout"
               lazy={lazyArt}
               starship={starship}
+              look={starshipLook}
               anomaly={anomaly}
               picture={picture}
               motion={motion}
@@ -536,6 +568,7 @@ export function CardFace({
                 className="cf-art--near"
                 lazy={lazyArt}
                 starship={starship}
+                look={starshipLook}
                 anomaly={anomaly}
                 picture="normal"
                 motion={motion}

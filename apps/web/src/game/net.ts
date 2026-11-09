@@ -332,7 +332,7 @@ export function letGo(stale: SocketLike, reason: string, next?: () => void): voi
 
 const isString = (value: unknown): value is string => typeof value === "string";
 
-const isNumberOrNull = (value: unknown): value is number | null =>
+export const isNumberOrNull = (value: unknown): value is number | null =>
   value === null || typeof value === "number";
 
 const isStakesOrNull = (value: unknown): value is RematchStakes | null => value === null || value === 1 || value === 2;

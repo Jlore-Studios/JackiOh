@@ -56,6 +56,7 @@ type Patches struct {
 	InMergeQueue           func(nodeID string) bool
 	QueueRemoval           func(nodeID string) map[string]string
 	Dequeue                func(nodeID string)
+	QueueOrder             func(branch string) []int
 	PinIssue               func(nodeID string)
 	MarkReady              func(nodeID string)
 	MarkDraft              func(nodeID string)
@@ -429,6 +430,13 @@ func (c *FakeGitHub) Dequeue(nodeID string) {
 		return
 	}
 	c.Own().Dequeue(nodeID)
+}
+
+func (c *FakeGitHub) QueueOrder(branch string) []int {
+	if c.Patch.QueueOrder != nil {
+		return c.Patch.QueueOrder(branch)
+	}
+	return c.Own().QueueOrder(branch)
 }
 
 func (c *FakeGitHub) PinIssue(nodeID string) {

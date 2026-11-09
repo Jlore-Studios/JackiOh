@@ -1,8 +1,8 @@
 // R3391000: Stinkyscape's scenes (stinkyscapeRecipes.ts). Each card of #3391's table, and no other Stinkyscape
-// card, draws from a recipe of its own that places every part its brief names; a Unit draws its character; each
-// clears its rarity's floor, richer the rarer; both faces share one geometry under the ceiling and outside
-// Radiant's gold window; no two pictures are alike; and the kit's new reach (craft and a placement's turn)
-// leaves every older recipe as it drew. The pixels are e2e/cypress/component/stinkyscape-scenes.cy.tsx's.
+// card but #3403's (R3403000), draws from a recipe of its own that places every part its brief names; a Unit draws
+// its character; each clears its rarity's floor, richer the rarer; both faces share one geometry under the ceiling
+// and outside Radiant's gold window; no two pictures are alike; and the kit's new reach (craft and a placement's
+// turn) leaves every older recipe as it drew. The pixels are e2e/cypress/component/stinkyscape-scenes.cy.tsx's.
 
 import { describe, expect, it } from "vitest";
 
@@ -24,7 +24,7 @@ import { artSpec } from "./procedural.ts";
 import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } from "./richness.ts";
 import { composeScene, SCENE_LAYERS, SCENE_PALETTE, sceneRecipeOf, sceneUse, type KitCategory, type PaletteName, type SceneLayer, type ScenePlacement, type SceneRecipe } from "./scene.ts";
 import { SCENE_KIT, type SceneryPartId } from "./sceneKit.ts";
-import { ALT_SCENE_RECIPES, SCENE_RECIPES } from "./sceneRecipes.ts";
+import { ALT_SCENE_RECIPES, SCENE_RECIPES, STINKYSCAPE_91_RECIPES } from "./sceneRecipes.ts";
 import { isStinkyscapeArt, STARSHIP_PIECES } from "./stinkyscape.ts";
 import { STINKYSCAPE_RECIPES } from "./stinkyscapeRecipes.ts";
 import { compositionFor, themeFor } from "./themes.ts";
@@ -52,7 +52,7 @@ const MYTHIC_PARTS: Readonly<Record<string, SceneryPartId>> = {
   "stinkyscape-086": "fused-hull",
 };
 /** The parts that turn with their placement's `rotate`. */
-const POINTING: readonly SceneryPartId[] = ["beam", "light-stream", "light-cone", "meteor", "smoke-trail", "comet"];
+const POINTING: readonly SceneryPartId[] = ["beam", "light-stream", "light-cone", "meteor", "smoke-trail", "comet-streak"];
 const PATH = /^M[-\d. MLQCAZ]+$/;
 /** The seven kinds of scenery (scene.ts's `KitCategory` but the figure's five). */
 const SCENERY_KINDS: readonly KitCategory[] = ["terrain", "architecture", "plants", "creatures", "objects", "weather", "craft"];
@@ -60,68 +60,68 @@ const SCENERY_KINDS: readonly KitCategory[] = ["terrain", "architecture", "plant
 const SEEDS = 40;
 /** Each card's parts its brief names, the scenery and the figure's (the pass's plan, #3391). */
 const BRIEF_PARTS: Readonly<Record<string, readonly string[]>> = {
-  "stinkyscape-001": ["fighter", "dock-gantry", "ray-gun", "beam", "frost-shard"],
-  "stinkyscape-002": ["scout", "ice-block", "star-glare", "frost-shard"],
-  "stinkyscape-003": ["walker", "wreck", "regolith", "shockwave", "meteor", "smoke-trail"],
+  "stinkyscape-001": ["wedge-fighter", "dock-gantry", "ray-gun", "beam", "frost-shard"],
+  "stinkyscape-002": ["scout", "ice-cube", "star-glare", "frost-shard"],
+  "stinkyscape-003": ["walker", "wreck", "moon-surface", "shockwave", "meteor", "smoke-trail"],
   "stinkyscape-005": ["cockpit-frame", "cracked-mask", "light-stream"],
-  "stinkyscape-006": ["skiff", "station", "vault-door", "credit-chips", "duffel", "pose-reach", "item-drill"],
-  "stinkyscape-007": ["vault-door", "credit-chips", "rope", "space-window", "comet", "porthole", "light-grid"],
-  "stinkyscape-008": ["deck-floor", "cracker", "drum", "herb-sprig", "outfit-work-apron"],
-  "stinkyscape-009": ["scout", "regolith", "boot-clamp", "light-cone"],
-  "stinkyscape-010": ["deck-floor", "gloved-hand", "rift", "flame-column", "hex-shield"],
-  "stinkyscape-011": ["deck-floor", "lectern", "rift", "frost-shard", "missiles", "flame-column"],
-  "stinkyscape-012": ["bunk-pod", "space-window", "porthole", "sleeper", "shockwave", "rift"],
-  "stinkyscape-013": ["corridor", "space-helmet"],
-  "stinkyscape-014": ["deck-floor", "outfit-hydraulic"],
-  "stinkyscape-015": ["hangar-wall", "deck-floor", "pose-spread"],
+  "stinkyscape-006": ["skiff", "ring-station", "vault-door", "credit-chips", "duffel", "pose-reach", "item-drill"],
+  "stinkyscape-007": ["vault-door", "credit-chips", "swing-rope", "space-window", "comet-streak", "riveted-porthole", "light-grid"],
+  "stinkyscape-008": ["ship-deck", "herb-cracker", "drum", "herb-sprig", "outfit-work-apron"],
+  "stinkyscape-009": ["scout", "moon-surface", "boot-clamp", "light-cone"],
+  "stinkyscape-010": ["ship-deck", "reaching-hand", "ringed-rift", "flame-column", "hex-shield"],
+  "stinkyscape-011": ["ship-deck", "lectern", "ringed-rift", "frost-shard", "missiles", "flame-column"],
+  "stinkyscape-012": ["bunk-pod", "space-window", "riveted-porthole", "sleeper", "shockwave", "ringed-rift"],
+  "stinkyscape-013": ["corridor", "cracked-helmet"],
+  "stinkyscape-014": ["ship-deck", "outfit-hydraulic"],
+  "stinkyscape-015": ["hangar-wall", "ship-deck", "pose-spread"],
   "stinkyscape-016": ["hover-platform", "ancient-rod", "debris", "light-stream"],
-  "stinkyscape-017": ["cell-bars", "deck-floor", "anvil", "axe-head", "outfit-work-apron", "item-hammer"],
-  "stinkyscape-018": ["server-core", "deck-floor", "beam"],
+  "stinkyscape-017": ["cell-bars", "ship-deck", "anvil", "axe-head", "outfit-work-apron", "item-hammer"],
+  "stinkyscape-018": ["server-core", "ship-deck", "beam"],
   "stinkyscape-019": ["containment-sphere", "cosmality"],
-  "stinkyscape-020": ["station", "deck-floor", "beam", "pose-reach", "item-scanner"],
-  "stinkyscape-021": ["regolith", "berry-vine", "gas-giant"],
-  "stinkyscape-022": ["fighter", "gunship", "disruptor-beacon", "beam", "rift"],
-  "stinkyscape-023": ["fighter", "disruptor-beacon", "shockwave"],
+  "stinkyscape-020": ["ring-station", "ship-deck", "beam", "pose-reach", "item-scanner"],
+  "stinkyscape-021": ["moon-surface", "berry-vine", "gas-giant"],
+  "stinkyscape-022": ["wedge-fighter", "gunship", "disruptor-beacon", "beam", "ringed-rift"],
+  "stinkyscape-023": ["wedge-fighter", "disruptor-beacon", "shockwave"],
   "stinkyscape-024": ["disruptor-beacon", "gas-giant", "space-shards"],
-  "stinkyscape-025": ["deck-floor", "debris", "light-grid", "pose-reach", "outfit-labcoat", "item-stylus"],
-  "stinkyscape-026": ["rocket", "station", "deck-floor", "gas-giant", "pose-reach", "hair-silver", "outfit-academic", "item-chart"],
-  "stinkyscape-027": ["card", "drone", "regolith", "drone-core", "debris"],
-  "stinkyscape-028": ["drone", "drone-core", "gloved-hand"],
-  "stinkyscape-029": ["drone", "regolith", "drone-core"],
-  "stinkyscape-030": ["drone", "antenna-mast", "drone-core"],
+  "stinkyscape-025": ["ship-deck", "debris", "light-grid", "pose-reach", "outfit-labcoat", "item-stylus"],
+  "stinkyscape-026": ["retro-rocket", "ring-station", "ship-deck", "gas-giant", "pose-reach", "hair-professor", "outfit-academic", "item-chart"],
+  "stinkyscape-027": ["card", "eye-drone", "moon-surface", "drone-core", "debris"],
+  "stinkyscape-028": ["eye-drone", "drone-core", "reaching-hand"],
+  "stinkyscape-029": ["eye-drone", "moon-surface", "drone-core"],
+  "stinkyscape-030": ["eye-drone", "antenna-mast", "drone-core"],
   "stinkyscape-031": ["drone-corvette", "dock-gantry", "drone-core", "light-cone"],
-  "stinkyscape-032": ["drone", "drone-core", "light-stream"],
-  "stinkyscape-033": ["drone", "drone-corvette", "drone-core", "comet"],
-  "stinkyscape-034": ["drone", "dock-gantry", "conveyor", "reactor", "drone-core", "robot-arm"],
+  "stinkyscape-032": ["eye-drone", "drone-core", "light-stream"],
+  "stinkyscape-033": ["eye-drone", "drone-corvette", "drone-core", "comet-streak"],
+  "stinkyscape-034": ["eye-drone", "dock-gantry", "conveyor", "reactor-core", "drone-core", "welding-arm"],
   "stinkyscape-035": ["drone-corvette", "lava-flats", "drone-core", "debris", "smoke-trail"],
-  "stinkyscape-036": ["drone", "drone-battleship", "dock-gantry", "drone-core"],
-  "stinkyscape-037": ["fighter", "station", "hover-platform", "light-stream", "light-cone", "headset"],
+  "stinkyscape-036": ["eye-drone", "drone-battleship", "dock-gantry", "drone-core"],
+  "stinkyscape-037": ["wedge-fighter", "ring-station", "hover-platform", "light-stream", "light-cone", "headset"],
   "stinkyscape-039": ["glass-case", "outfit-labcoat"],
   "stinkyscape-041": ["helper-drone", "tram", "drone-core"],
-  "stinkyscape-042": ["console", "deck-floor", "drone-core", "goggles", "outfit-labcoat"],
-  "stinkyscape-044": ["porthole", "drone-core", "wire-coil"],
-  "stinkyscape-045": ["drone", "hangar-wall", "deck-floor", "item-core"],
-  "stinkyscape-046": ["drone", "station", "console", "pilot-seat", "cockpit-frame", "robot-arm", "coffee-bulb", "pose-sit"],
-  "stinkyscape-047": ["drone-corvette", "console", "pilot-seat", "porthole", "robot-arm", "sleeper"],
-  "stinkyscape-068": ["fighter", "dock-gantry", "deck-floor"],
-  "stinkyscape-069": ["needle-fighter", "hangar-wall", "deck-floor"],
+  "stinkyscape-042": ["control-desk", "ship-deck", "drone-core", "goggles", "outfit-labcoat"],
+  "stinkyscape-044": ["riveted-porthole", "drone-core", "wire-coil"],
+  "stinkyscape-045": ["eye-drone", "hangar-wall", "ship-deck", "item-core"],
+  "stinkyscape-046": ["eye-drone", "ring-station", "control-desk", "pilot-seat", "cockpit-frame", "welding-arm", "coffee-bulb", "pose-sit"],
+  "stinkyscape-047": ["drone-corvette", "control-desk", "pilot-seat", "riveted-porthole", "welding-arm", "sleeper"],
+  "stinkyscape-068": ["wedge-fighter", "dock-gantry", "ship-deck"],
+  "stinkyscape-069": ["needle-fighter", "hangar-wall", "ship-deck"],
   "stinkyscape-070": ["wreck", "ghost-ship", "debris", "head-wraith", "outfit-wreck"],
   "stinkyscape-071": ["wreck", "debris", "shockwave", "star-glare", "pose-spread", "head-horn", "outfit-wreck"],
   "stinkyscape-072": ["arrow-fighter", "beam", "gas-giant"],
   "stinkyscape-073": ["arrow-fighter", "beam", "hex-shield"],
-  "stinkyscape-074": ["blade-fighter", "wreck", "regolith", "beam", "smoke-trail", "star-glare", "hex-shield"],
+  "stinkyscape-074": ["blade-fighter", "wreck", "moon-surface", "beam", "smoke-trail", "star-glare", "hex-shield"],
   "stinkyscape-075": ["miner-craft"],
   "stinkyscape-076": ["miner-craft", "barge", "beam"],
-  "stinkyscape-077": ["fighter", "trader", "station"],
+  "stinkyscape-077": ["wedge-fighter", "trader", "ring-station"],
   "stinkyscape-078": ["miner-craft", "barge", "credit-chips"],
-  "stinkyscape-080": ["fighter", "flagship"],
-  "stinkyscape-081": ["frame-ship", "hangar-wall", "deck-floor"],
+  "stinkyscape-080": ["wedge-fighter", "flagship"],
+  "stinkyscape-081": ["frame-ship", "hangar-wall", "ship-deck"],
   "stinkyscape-082": ["gunship", "debris", "smoke-trail"],
-  "stinkyscape-083": ["fighter", "gun-ring", "pilot-seat", "cockpit-frame", "pose-sit"],
-  "stinkyscape-084": ["reactor", "debris"],
-  "stinkyscape-085": ["frame-ship", "wreck", "antenna-mast", "regolith", "smoke-trail", "light-cone"],
+  "stinkyscape-083": ["wedge-fighter", "gun-ring", "pilot-seat", "cockpit-frame", "pose-sit"],
+  "stinkyscape-084": ["reactor-core", "debris"],
+  "stinkyscape-085": ["frame-ship", "wreck", "antenna-mast", "moon-surface", "smoke-trail", "light-cone"],
   "stinkyscape-086": ["fused-hull", "debris", "smoke-trail"],
-  "stinkyscape-087": ["station", "hover-platform", "light-stream", "pose-reach", "shades"],
+  "stinkyscape-087": ["ring-station", "hover-platform", "light-stream", "pose-reach", "shades"],
   "stinkyscape-088": ["corridor", "item-venom-blade"],
   "stinkyscape-089": ["market-stall", "credit-chips", "scales"],
 };
@@ -183,7 +183,7 @@ function baseOf(id: string): string {
 }
 
 describe("R3391000 Stinkyscape's scenes", () => {
-  it("R3391000 the pass's 64 entries and no other Stinkyscape card draw from recipes of their own", () => {
+  it("R3391000 the pass's 64 entries and no other Stinkyscape card but #3403's table draw from recipes of their own", () => {
     expect(PASS).toHaveLength(64);
     expect(Object.keys(STINKYSCAPE_RECIPES).sort()).toEqual([...PASS].sort());
     for (const id of PASS) {
@@ -194,8 +194,13 @@ describe("R3391000 Stinkyscape's scenes", () => {
     }
     expect(new Set(PASS.map((id) => STINKYSCAPE_RECIPES[id])).size).toBe(PASS.length);
     for (const id of OWNED_ELSEWHERE) expect(sceneRecipeOf(id), id).toBeNull();
-    // No other Stinkyscape card draws a scene, and every card numbered 1 to 90 the table leaves out prints Starship Piece or is another issue's.
-    for (const card of Object.values(CATALOG)) if (isStinkyscapeArt(card.id) && !PASS.includes(card.id)) expect(sceneRecipeOf(card.id), card.id).toBeNull();
+    // No other Stinkyscape card draws a scene but #3403's table (R3403000: the later cards and the early cards' tokens it
+    // names, stinkyscape91Scenes.test.ts), and every card numbered 1 to 90 the table leaves out prints Starship Piece or
+    // is another issue's.
+    for (const id of PASS) expect(Object.hasOwn(STINKYSCAPE_91_RECIPES, id), id).toBe(false);
+    for (const card of Object.values(CATALOG)) {
+      if (isStinkyscapeArt(card.id) && !PASS.includes(card.id) && !Object.hasOwn(STINKYSCAPE_91_RECIPES, card.id)) expect(sceneRecipeOf(card.id), card.id).toBeNull();
+    }
     const rest = Object.values(CATALOG).filter((card) => {
       const number = /^stinkyscape-(\d{3})$/.exec(card.id)?.[1];
       return number !== undefined && Number(number) <= TABLE_LAST && !PASS.includes(card.id);

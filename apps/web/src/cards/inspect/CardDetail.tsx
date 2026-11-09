@@ -15,6 +15,8 @@ import { faceModel, type FaceModel } from "../model.ts";
 import { locWords } from "./locWords.ts";
 import { RulesText } from "../RulesText.tsx";
 import { RefsInteractive } from "../refContext.tsx";
+import { FullScreenButton } from "../FullScreenArt.tsx";
+import { useFullScreenTrigger } from "../fullscreen.ts";
 import { watermarkOf } from "../setMark.ts";
 import { useCardSettings } from "../settings.ts";
 import { CardHistory } from "../../patches/CardHistory.tsx";
@@ -135,6 +137,9 @@ export function CardDetail({
   const radiant = faceModel({ defId: def.id, def, radiant: true, chinese: easter });
   const glossary = mergeGlossary(base.glossary, radiant.glossary);
 
+  const fsBase = useFullScreenTrigger(base, { worn: own });
+  const fsRadiant = useFullScreenTrigger(radiant, { worn: own });
+
   return createPortal(
     <div className="inspect-layer inspect-layer--detail" {...modal.layerProps}>
       <div className="inspect-scrim" data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
@@ -152,13 +157,13 @@ export function CardDetail({
           <RefsInteractive>
             <div className="inspect-detail-faces">
               <figure className="inspect-detail-face">
-                <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_BASE}>
+                <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_BASE} {...fsBase.handlers}>
                   <CardFace face={base} layout="full" worn={own} />
                 </div>
                 <figcaption className="inspect-detail-caption">{t("Base")}</figcaption>
               </figure>
               <figure className="inspect-detail-face inspect-detail-face--radiant">
-                <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_RADIANT}>
+                <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_RADIANT} {...fsRadiant.handlers}>
                   <CardFace face={radiant} layout="full" worn={own} />
                 </div>
                 <figcaption className="inspect-detail-caption">{t("Radiant")}</figcaption>
@@ -170,6 +175,7 @@ export function CardDetail({
               <p className="inspect-meta" data-loc={def.loc}>
                 {detailMetaLine(def)}
               </p>
+              <FullScreenButton card={base} worn={own} />
               <DetailRules base={base} radiant={radiant} />
               <Glossary entries={glossary} />
               <Flavour defId={def.id} easter={easter} />

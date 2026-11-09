@@ -21,11 +21,12 @@ import { settle } from "../test/settle.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
 import { AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, VERSION_ANIMATED_ID, VERSION_FULL_ART_ID, VERSION_FULL_ART_SIGNED_ID } from "../cards/versions.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
+import { grantTestid as G } from "../economy/GrantReveal.tsx";
 import AccountCosmeticTiles from "./AccountCosmeticTiles.tsx";
 import { collectionTestid as T } from "./collection.ts";
 import { collectionOwning } from "./fixtures.ts";
 import OwnedCards from "./OwnedCards.tsx";
-import { offerTier, type HeldTokens } from "./TokenOffer.tsx";
+import { coveringTiers, offerTier, type HeldTokens } from "./TokenOffer.tsx";
 
 const TOKEN = "token-1";
 
@@ -120,6 +121,16 @@ function closePreview(): void {
   expect(screen.queryByTestId(T.preview)).toBeNull();
 }
 
+/**
+ * R3349000: taps through a bought cosmetic's reveal (a tap always moves on): the before into the
+ * after where the card has a previous look, then done, which closes the preview it opened over.
+ */
+function throughReveal(): void {
+  fireEvent.click(screen.getByTestId(G.scene));
+  const again = screen.queryByTestId(G.scene);
+  if (again !== null) fireEvent.click(again);
+}
+
 describe("R1953001 a held cosmetic token, offered in the preview", () => {
   it("R1953001 a locked Epic cosmetic offers a held Epic token, redeems it and shows it owned", async () => {
     const server = tokenServer({ cosmeticEpic: 2 }, { status: 200, body: barsHolding({ cosmeticEpic: 1 }) });
@@ -144,7 +155,10 @@ describe("R1953001 a held cosmetic token, offered in the preview", () => {
     expect(server.to("POST", "/api/tokens/redeem-cosmetic")[0]?.body).toEqual({ token: "Epic", cosmeticId: "foil-galaxy", cardId: "core-001" });
     expect(read, "the screen's ownership is read again").toHaveBeenCalledTimes(2);
     expect(within(preview).queryByTestId(T.tokenOffer("foil-galaxy"))).toBeNull();
-    closePreview();
+    // R3349000: the bought cosmetic reveals the card wearing it; taps move through it, closing the preview.
+    throughReveal();
+    expect(screen.queryByTestId(G.scene)).toBeNull();
+    expect(screen.queryByTestId(T.preview)).toBeNull();
     // The answer's held count is the one the other offers now say.
     expect(await within(previewOf("border-runes")).findByTestId(T.tokenOffer("border-runes"))).toHaveTextContent(
       "Unlock with an Epic token (1 held)",
@@ -302,6 +316,9 @@ describe("R1953001 a held cosmetic token, offered in the preview", () => {
     });
     // An account cosmetic names no card.
     expect(server.to("POST", "/api/tokens/redeem-cosmetic")[0]?.body).toEqual({ token: "Epic", cosmeticId: "table-marble" });
+    // R3349000: the bought playmat reveals on the panel; taps move through it, closing the preview.
+    throughReveal();
+    expect(screen.queryByTestId(G.scene)).toBeNull();
     // The answer holds no token now, so no locked tile offers one.
     fireEvent.keyDown(document.body, { key: "Escape" });
     expect(document.querySelector('[data-testid^="collection-token-offer-"]')).toBeNull();
@@ -366,6 +383,10 @@ describe("R2728000 a held Legendary token, offered in the preview", () => {
       cosmeticId: "foil-molten-gold",
       cardId: "core-001",
     });
+    // R3349000: the bought chase takes the screen; a tap moves on, closing the preview.
+    throughReveal();
+    expect(screen.queryByTestId(G.scene)).toBeNull();
+    expect(screen.queryByTestId(T.preview)).toBeNull();
   });
 
   it("R2728000 a locked Legendary playmat tile offers a Legendary token", async () => {
@@ -394,6 +415,10 @@ describe("R2728000 a held Legendary token, offered in the preview", () => {
       expect(screen.getByTestId(T.tile("table-obsidian-slab"))).toHaveAttribute("data-owned", "true");
     });
     expect(server.to("POST", "/api/tokens/redeem-cosmetic")[0]?.body).toEqual({ token: "Legendary", cosmeticId: "table-obsidian-slab" });
+    // R3349000: the bought playmat reveals on the panel; taps move through it, closing the preview.
+    throughReveal();
+    expect(screen.queryByTestId(G.scene)).toBeNull();
+    expect(screen.queryByTestId(T.preview)).toBeNull();
   });
 });
 
@@ -449,6 +474,10 @@ describe("R2480000 spending a cosmetic token asks first", () => {
     expect(server.to("POST", "/api/tokens/redeem-cosmetic")).toHaveLength(1);
     expect(server.to("POST", "/api/tokens/redeem-cosmetic")[0]?.body).toEqual({ token: "Epic", cosmeticId: "foil-sunburst", cardId: "core-001" });
     expect(screen.queryByTestId(T.tokenOfferDialog("foil-sunburst"))).toBeNull();
+    // R3349000: the bought cosmetic reveals the card wearing it; taps move through it, closing the preview.
+    throughReveal();
+    expect(screen.queryByTestId(G.scene)).toBeNull();
+    expect(screen.queryByTestId(T.preview)).toBeNull();
   });
 
   it("R2480000 Cancel and Escape send nothing and put the offer back, and Escape leaves the card view open", async () => {
@@ -631,5 +660,36 @@ describe("R2730000 a card token is spent from the locked card's preview", () => 
     expect(screen.getByTestId(T.card("core-002"))).toHaveAttribute("data-owned", "false");
     expect(server.to("POST", "/api/tokens/redeem-card")).toHaveLength(1);
     expect(server.to("GET", "/api/collection"), "nothing was granted, so the collection is not read again").toHaveLength(0);
+  });
+});
+
+describe("R3335002 an earned-only cosmetic takes no token", () => {
+  it("R3335002 no token offer on a Fleet reward", async () => {
+    const plenty = held({ cosmeticRare: 9, cosmeticEpic: 9, cosmeticLegendary: 9 });
+    // Every Fleet track reward and the Jlorious ones, of every rarity a token reaches, none covered.
+    const earned = COSMETICS.filter((cosmetic) => "track" in cosmetic || "jlorious" in cosmetic);
+    expect(new Set(earned.map((cosmetic) => cosmetic.rarity))).toEqual(new Set(["Epic", "Legendary", "Mythic"]));
+    for (const cosmetic of earned) {
+      expect(offerTier(cosmetic, plenty), cosmetic.id).toBeNull();
+      expect(coveringTiers(cosmetic, plenty), cosmetic.id).toEqual([]);
+    }
+    // An Epic one that is no reward is covered beside them.
+    expect(offerTier(entry("table-marble"), plenty)).toBe("Epic");
+
+    // On the tiles: the Fleet playmat's locked tile names the level that pays it, and its preview offers no token.
+    tokenServer({ cosmeticEpic: 1 }, refusal(500, "internal", "unused"));
+    render(
+      <ViewerAccountCosmetics token={TOKEN} gated read={() => Promise.resolve(new Set<string>())}>
+        <AccountCosmeticTiles token={TOKEN} />
+      </ViewerAccountCosmetics>,
+    );
+    expect(await within(tilePreviewOf("table-marble")).findByTestId(T.tokenOffer("table-marble"))).toBeInTheDocument();
+    closePreview();
+    const fleet = screen.getByTestId(T.tile("table-stinkyscape"));
+    expect(fleet).toHaveAttribute("data-owned", "false");
+    expect(fleet).toHaveTextContent("Fleet track level 16");
+    tilePreviewOf("table-stinkyscape");
+    await settle();
+    expect(within(screen.getByTestId(T.preview)).queryByTestId(T.tokenOffer("table-stinkyscape"))).toBeNull();
   });
 });

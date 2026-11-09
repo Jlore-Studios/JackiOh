@@ -76,7 +76,6 @@ class Prepared:
     ptr: torch.Tensor
     val: torch.Tensor
     outcome: torch.Tensor
-    turn: np.ndarray
 
     def __len__(self) -> int:
         return len(self.outcome)
@@ -116,7 +115,6 @@ def prepare(positions: D.Positions, vocab: D.Vocabulary, scaler: D.Standardizer)
         ptr=torch.as_tensor(ptr),
         val=torch.as_tensor(positions.sparse_val[keep], dtype=torch.float32),
         outcome=torch.as_tensor(positions.outcome, dtype=torch.float32),
-        turn=positions.turn,
     )
 
 

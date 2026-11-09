@@ -24,13 +24,13 @@ const FREEZE_RAY: SceneRecipe = {
     sky: [{ part: "stars", x: 50, y: 22, scale: 1.6 }],
     far: [{ part: "dock-gantry", x: 58, y: 70, scale: 1.3 }],
     mid: [
-      { part: "fighter", x: 30, y: 60, scale: 0.9 },
-      { part: "fighter", x: 88, y: 60, scale: 0.9 },
+      { part: "wedge-fighter", x: 30, y: 60, scale: 0.9 },
+      { part: "wedge-fighter", x: 88, y: 60, scale: 0.9 },
       { part: "frost-shard", x: 34, y: 60, scale: 0.9 },
       { part: "frost-shard", x: 84, y: 60, scale: 0.9 },
     ],
     subject: [
-      { part: "fighter", x: 62, y: 56, scale: 1.5, paint: "slate-100" },
+      { part: "wedge-fighter", x: 62, y: 56, scale: 1.5, paint: "slate-100" },
       { part: "frost-shard", x: 60, y: 58, scale: 1.3 },
     ],
     near: [{ part: "ray-gun", x: 22, y: 74, scale: 1.6 }],
@@ -59,7 +59,7 @@ const ABSOLUTE_ZERO: SceneRecipe = {
     ],
     subject: [
       { part: "scout", x: 50, y: 54, scale: 1.4 },
-      { part: "ice-block", x: 50, y: 55, scale: 1.1 },
+      { part: "ice-cube", x: 50, y: 55, scale: 1.1 },
     ],
     near: [
       { part: "frost-shard", x: 36, y: 70 },
@@ -84,7 +84,7 @@ const METEOR: SceneRecipe = {
       { part: "smoke-trail", x: 6, y: 12, scale: 1.2, rotate: 18 },
       { part: "smoke-trail", x: 62, y: 6, scale: 1, rotate: 32 },
     ],
-    far: [{ part: "regolith", x: 50, y: 60, paint: "red-900" }],
+    far: [{ part: "moon-surface", x: 50, y: 60, paint: "red-900" }],
     mid: [
       { part: "walker", x: 52, y: 70, scale: 1.2 },
       { part: "wreck", x: 24, y: 68, scale: 0.8 },
@@ -92,7 +92,7 @@ const METEOR: SceneRecipe = {
     ],
     subject: [{ part: "meteor", x: 32, y: 28, scale: 1.2, rotate: 48 }],
     near: [
-      { part: "regolith", x: 50, y: 80, paint: "red-600" },
+      { part: "moon-surface", x: 50, y: 80, paint: "red-600" },
       { part: "debris", x: 28, y: 88, scale: 1.1 },
       { part: "debris", x: 74, y: 90, scale: 1.2 },
     ],
@@ -115,7 +115,7 @@ const MASOCHISM_UNMASKED: SceneRecipe = {
   emblem: { x: 44, y: 44, size: 4, rotate: 0 },
   layers: {
     sky: [{ part: "stars", x: 50, y: 22, scale: 1.4 }],
-    far: [{ part: "fighter", x: 82, y: 30, scale: 0.8, flip: -1, paint: "slate-700" }],
+    far: [{ part: "wedge-fighter", x: 82, y: 30, scale: 0.8, flip: -1, paint: "slate-700" }],
     mid: [{ part: "cockpit-frame", x: 50, y: 74 }],
     subject: [{ part: "cracked-mask", x: 44, y: 50, scale: 1.6 }],
     near: [{ part: "debris", x: 18, y: 82 }],
@@ -144,7 +144,7 @@ const TYLANNT: SceneRecipe = {
       { part: "stars", x: 30, y: 62, scale: 1.5 },
     ],
     far: [
-      { part: "station", x: 22, y: 34, scale: 1.3 },
+      { part: "ring-station", x: 22, y: 34, scale: 1.3 },
       { part: "vault-door", x: 72, y: 26, scale: 0.7 },
       { part: "credit-chips", x: 60, y: 32, count: 3, spread: [10, 6] },
     ],
@@ -187,13 +187,13 @@ const THE_GREATEST_HEIST: SceneRecipe = {
       // The breached skylight the rope hangs from, the comet's tail crossing the open space beyond it, inside
       // the y 18 to 82 a face's window shows.
       { part: "space-window", x: 60, y: 30 },
-      { part: "comet", x: 53.5, y: 34.5, scale: 0.4, rotate: -20 },
-      { part: "porthole", x: 60, y: 30 },
+      { part: "comet-streak", x: 53.5, y: 34.5, scale: 0.4, rotate: -20 },
+      { part: "riveted-porthole", x: 60, y: 30 },
       { part: "vault-door", x: 22, y: 44, scale: 1.2 },
       { part: "light-grid", x: 70, y: 40, scale: 0.6, paint: "green-400" },
     ],
     mid: [
-      { part: "deck-floor", x: 50, y: 66, paint: "slate-800" },
+      { part: "ship-deck", x: 50, y: 66, paint: "slate-800" },
       { part: "crate", x: 72, y: 74, count: 3, spread: [9, 1], paint: "slate-700" },
       { part: "crate", x: 76, y: 66, scale: 0.9, count: 2, spread: [5, 0], paint: "slate-700" },
       { part: "credit-chips", x: 66, y: 76, count: 2, spread: [6, 2] },
@@ -203,7 +203,7 @@ const THE_GREATEST_HEIST: SceneRecipe = {
       { part: "crystal", x: 50, y: 70, scale: 1.4, paint: "cyan-400" },
     ],
     near: [
-      { part: "rope", x: 60, y: 20, scale: 1 },
+      { part: "swing-rope", x: 60, y: 20, scale: 1 },
       { part: "credit-chips", x: 26, y: 86, count: 2, spread: [8, 3] },
     ],
     light: [
@@ -229,14 +229,14 @@ const CONJURE_ROSEMARY_TRISCUIT: SceneRecipe = {
   layers: {
     far: [
       { part: "room-wall", x: 50, y: 70, paint: "slate-700" },
-      { part: "porthole", x: 80, y: 30, scale: 0.8 },
+      { part: "riveted-porthole", x: 80, y: 30, scale: 0.8 },
     ],
-    mid: [{ part: "deck-floor", x: 50, y: 70, paint: "wood-700" }],
+    mid: [{ part: "ship-deck", x: 50, y: 70, paint: "wood-700" }],
     subject: [{ part: "herb-sprig", x: 34, y: 34, scale: 1.2 }],
     near: [
       { part: "crate", x: 76, y: 92, scale: 1.3 },
       { part: "drum", x: 74, y: 78, scale: 0.65 },
-      { part: "cracker", x: 60, y: 32, scale: 1.3 },
+      { part: "herb-cracker", x: 60, y: 32, scale: 1.3 },
     ],
     light: [
       { part: "halo", x: 60, y: 32, scale: 1.2, paint: "orange-400" },
@@ -254,7 +254,7 @@ const TICKETED: SceneRecipe = {
   layers: {
     sky: [{ part: "stars", x: 50, y: 20, scale: 1.4 }],
     mid: [
-      { part: "regolith", x: 50, y: 64 },
+      { part: "moon-surface", x: 50, y: 64 },
       { part: "fence", x: 50, y: 66, scale: 1.2, paint: "slate-700" },
     ],
     subject: [
@@ -284,15 +284,15 @@ const OTHERWORLDLY_ENDURANCE: SceneRecipe = {
       { part: "planet", x: 16, y: 26, scale: 0.6, paint: "violet-300" },
     ],
     mid: [
-      { part: "deck-floor", x: 50, y: 70, paint: "slate-800" },
-      { part: "rift", x: 50, y: 40, scale: 1.3, paint: "violet-300" },
+      { part: "ship-deck", x: 50, y: 70, paint: "slate-800" },
+      { part: "ringed-rift", x: 50, y: 40, scale: 1.3, paint: "violet-300" },
     ],
     subject: [
       { part: "flame-column", x: 38, y: 52, scale: 0.5 },
       { part: "wisp", x: 50, y: 44, scale: 1.1 },
       { part: "hex-shield", x: 62, y: 46, scale: 0.4, paint: "violet-300" },
     ],
-    near: [{ part: "gloved-hand", x: 50, y: 92, scale: 1.8 }],
+    near: [{ part: "reaching-hand", x: 50, y: 92, scale: 1.8 }],
     light: [
       { part: "halo", x: 50, y: 44, scale: 2, paint: "white" },
       { part: "light-shaft", x: 50, y: 30, count: 2, spread: [8, 0] },
@@ -314,9 +314,9 @@ const OTHERWORLDLY_MAGIC: SceneRecipe = {
       { part: "nebula", x: 76, y: 22, scale: 0.8, paint: "jade-400" },
     ],
     mid: [
-      { part: "deck-floor", x: 50, y: 74, paint: "slate-700" },
+      { part: "ship-deck", x: 50, y: 74, paint: "slate-700" },
       { part: "fence", x: 50, y: 74, scale: 1.4, paint: "slate-400" },
-      { part: "rift", x: 50, y: 38, scale: 1.2, paint: "cyan-400" },
+      { part: "ringed-rift", x: 50, y: 38, scale: 1.2, paint: "cyan-400" },
     ],
     subject: [
       { part: "frost-shard", x: 34, y: 50, scale: 1.1 },
@@ -344,10 +344,10 @@ const OTHERWORLDLY_NIGHTMARE: SceneRecipe = {
       { part: "room-wall", x: 50, y: 78, paint: "slate-800" },
       // The porthole's strange stars: open space behind its glass.
       { part: "space-window", x: 80, y: 28 },
-      { part: "porthole", x: 80, y: 28, scale: 1 },
+      { part: "riveted-porthole", x: 80, y: 28, scale: 1 },
     ],
     mid: [
-      { part: "rift", x: 46, y: 28, scale: 1.1, paint: "purple-400" },
+      { part: "ringed-rift", x: 46, y: 28, scale: 1.1, paint: "purple-400" },
       { part: "mist", x: 50, y: 46, scale: 0.9, count: 2, spread: [10, 4], paint: "purple-400" },
     ],
     subject: [
@@ -356,7 +356,7 @@ const OTHERWORLDLY_NIGHTMARE: SceneRecipe = {
       { part: "pale-hand", x: 36, y: 50, scale: 1.2, flip: -1, paint: "slate-900" },
       { part: "shockwave", x: 62, y: 46, scale: 0.4, paint: "violet-300" },
     ],
-    near: [{ part: "deck-floor", x: 50, y: 86, paint: "slate-900" }],
+    near: [{ part: "ship-deck", x: 50, y: 86, paint: "slate-900" }],
     light: [{ part: "halo", x: 46, y: 28, scale: 1.6, paint: "purple-400" }],
     particles: [{ part: "motes", x: 50, y: 40, scale: 1.2, count: 2, spread: [10, 6], paint: "violet-300" }],
   },
@@ -368,8 +368,8 @@ const ASPHYXIANTS_CLOUD: SceneRecipe = {
   sky: ["slate-900", "green-900"],
   light: { x: 50, y: 42, r: 30, paint: "lime-400", opacity: 0.3 },
   emblem: { x: 56, y: 58, size: 4, rotate: 0 },
-  figure: { x: 56, y: 86, scale: 0.8, pose: "pose-raise", look: human({ hair: "space-helmet", outfit: "outfit-suit", item: null, cloth: "slate-400" }) },
-  extras: [{ x: 32, y: 78, scale: 0.55, flip: -1, pose: "pose-guard", look: human({ hair: "space-helmet", outfit: "outfit-suit", item: null, cloth: "slate-400" }), layer: "subject" }],
+  figure: { x: 56, y: 86, scale: 0.8, pose: "pose-raise", look: human({ hair: "cracked-helmet", outfit: "outfit-suit", item: null, cloth: "slate-400" }) },
+  extras: [{ x: 32, y: 78, scale: 0.55, flip: -1, pose: "pose-guard", look: human({ hair: "cracked-helmet", outfit: "outfit-suit", item: null, cloth: "slate-400" }), layer: "subject" }],
   layers: {
     far: [{ part: "corridor", x: 50, y: 44, paint: "red-500" }],
     mid: [{ part: "mist", x: 50, y: 50, scale: 1.2, count: 3, spread: [16, 10], paint: "lime-400" }],
@@ -388,7 +388,7 @@ const ARM_OF_THE_JEMPIRE: SceneRecipe = {
   extras: [{ x: 66, y: 82, scale: 0.8, flip: -1, pose: "pose-guard", look: human({ outfit: "outfit-armor", item: "item-shield", cloth: "slate-400" }), layer: "subject" }],
   layers: {
     far: [{ part: "banner", x: 14, y: 70, scale: 1.2, paint: "violet-700" }],
-    mid: [{ part: "deck-floor", x: 50, y: 72, paint: "slate-700" }],
+    mid: [{ part: "ship-deck", x: 50, y: 72, paint: "slate-700" }],
   },
 };
 
@@ -405,7 +405,7 @@ const ARG_ARG_DEFENDER: SceneRecipe = {
   ],
   layers: {
     far: [{ part: "hangar-wall", x: 50, y: 68 }],
-    mid: [{ part: "deck-floor", x: 50, y: 68 }],
+    mid: [{ part: "ship-deck", x: 50, y: 68 }],
   },
 };
 
@@ -459,7 +459,7 @@ const IMPRISONED_SHIP_SMITH: SceneRecipe = {
   emblem: { x: 42, y: 58, size: 4, rotate: 0 },
   figure: { x: 42, y: 86, scale: 0.95, pose: "pose-raise", look: human({ outfit: "outfit-work-apron", item: "item-hammer", cloth: "wood-700" }) },
   layers: {
-    mid: [{ part: "deck-floor", x: 50, y: 74, paint: "slate-800" }],
+    mid: [{ part: "ship-deck", x: 50, y: 74, paint: "slate-800" }],
     subject: [
       { part: "anvil", x: 62, y: 84, scale: 1.2 },
       { part: "axe-head", x: 64, y: 74.7, scale: 1.2 },
@@ -483,13 +483,13 @@ const IMITATED_INSTRUMENTALITY: SceneRecipe = {
       { part: "column", x: 90, y: 74, scale: 1.4, paint: "slate-800" },
       { part: "arch", x: 50, y: 70, scale: 2.2, paint: "slate-800" },
     ],
-    mid: [{ part: "deck-floor", x: 50, y: 72, paint: "slate-900" }],
+    mid: [{ part: "ship-deck", x: 50, y: 72, paint: "slate-900" }],
     subject: [
       { part: "server-core", x: 26, y: 74, scale: 1.3, paint: "cyan-400" },
       { part: "server-core", x: 74, y: 74, scale: 1.3, paint: "red-400" },
       { part: "server-core", x: 50, y: 66, scale: 1.4, paint: "violet-300" },
     ],
-    near: [{ part: "console", x: 18, y: 96, scale: 1.2 }],
+    near: [{ part: "control-desk", x: 18, y: 96, scale: 1.2 }],
     light: [
       { part: "beam", x: 26, y: 44, scale: 1.2, rotate: 0, paint: "cyan-400" },
       { part: "beam", x: 26, y: 44, scale: 0.7, rotate: -36, paint: "cyan-400" },
@@ -534,11 +534,11 @@ const TNACK_TRAV: SceneRecipe = {
   layers: {
     sky: [{ part: "stars", x: 50, y: 14, scale: 1.2 }],
     far: [
-      { part: "station", x: 18, y: 26, scale: 0.9 },
+      { part: "ring-station", x: 18, y: 26, scale: 0.9 },
       { part: "banner", x: 88, y: 60, scale: 1.1, paint: "cyan-400" },
       { part: "banner", x: 8, y: 62, scale: 1, paint: "red-600" },
     ],
-    mid: [{ part: "deck-floor", x: 50, y: 72, paint: "slate-700" }],
+    mid: [{ part: "ship-deck", x: 50, y: 72, paint: "slate-700" }],
     near: [{ part: "crate", x: 12, y: 96, scale: 1.4 }],
     light: [
       { part: "beam", x: 54, y: 52, scale: 0.4, rotate: -20, paint: "cyan-400" },
@@ -560,7 +560,7 @@ const MOONBERRY: SceneRecipe = {
       { part: "stars", x: 30, y: 20, scale: 1.2 },
       { part: "gas-giant", x: 70, y: 32, scale: 1.3, paint: "violet-300" },
     ],
-    mid: [{ part: "regolith", x: 50, y: 72, paint: "slate-400" }],
+    mid: [{ part: "moon-surface", x: 50, y: 72, paint: "slate-400" }],
     subject: [{ part: "berry-vine", x: 50, y: 78, scale: 2.4 }],
     light: [{ part: "halo", x: 50, y: 50, scale: 1.2, paint: "sky-300" }],
   },
@@ -578,11 +578,11 @@ const GATINSIR: SceneRecipe = {
       { part: "nebula", x: 24, y: 70, scale: 0.9, paint: "violet-700" },
     ],
     far: [
-      { part: "rift", x: 62, y: 38, scale: 1.6, paint: "violet-500" },
+      { part: "ringed-rift", x: 62, y: 38, scale: 1.6, paint: "violet-500" },
       { part: "gunship", x: 62, y: 38, scale: 0.9, paint: "slate-700" },
     ],
     mid: [{ part: "disruptor-beacon", x: 82, y: 66, scale: 1 }],
-    subject: [{ part: "fighter", x: 40, y: 60, scale: 1.6, paint: "red-600" }],
+    subject: [{ part: "wedge-fighter", x: 40, y: 60, scale: 1.6, paint: "red-600" }],
     near: [{ part: "asteroid", x: 12, y: 88, scale: 1.3 }],
     light: [
       { part: "beam", x: 48, y: 59, scale: 0.6, rotate: -8, paint: "red-400" },
@@ -608,8 +608,8 @@ const WARP_DISRUPTOR: SceneRecipe = {
       { part: "nebula", x: 24, y: 34, scale: 1.2, paint: "blue-600" },
     ],
     far: [
-      { part: "fighter", x: 18, y: 72, scale: 0.6, paint: "slate-700" },
-      { part: "fighter", x: 84, y: 30, scale: 0.6, flip: -1, paint: "slate-700" },
+      { part: "wedge-fighter", x: 18, y: 72, scale: 0.6, paint: "slate-700" },
+      { part: "wedge-fighter", x: 84, y: 30, scale: 0.6, flip: -1, paint: "slate-700" },
     ],
     subject: [{ part: "disruptor-beacon", x: 50, y: 50, scale: 1.6 }],
     light: [
@@ -658,7 +658,7 @@ const KYS_TRICKNOLOGY: SceneRecipe = {
       { part: "light-grid", x: 66, y: 52, scale: 1, paint: "slate-100" },
       { part: "light-grid", x: 70, y: 70, scale: 0.8, paint: "slate-100" },
     ],
-    near: [{ part: "deck-floor", x: 50, y: 88, paint: "slate-700" }],
+    near: [{ part: "ship-deck", x: 50, y: 88, paint: "slate-700" }],
     light: [{ part: "halo", x: 52, y: 52, scale: 1, paint: "slate-100" }],
     particles: [
       { part: "motes", x: 60, y: 50, scale: 1.2, paint: "slate-100" },
@@ -675,20 +675,20 @@ const ZOLARKETH: SceneRecipe = {
   sky: ["blue-900", "sky-400"],
   light: { x: 70, y: 70, r: 34, paint: "blue-200", opacity: 0.4 },
   emblem: { x: 44, y: 56, size: 4, rotate: 0 },
-  figure: { x: 44, y: 88, scale: 0.92, pose: "pose-reach", look: human({ hair: "hair-silver", outfit: "outfit-academic", item: "item-chart", cloth: "blue-800" }) },
+  figure: { x: 44, y: 88, scale: 0.92, pose: "pose-reach", look: human({ hair: "hair-professor", outfit: "outfit-academic", item: "item-chart", cloth: "blue-800" }) },
   layers: {
     sky: [{ part: "stars", x: 40, y: 14, scale: 1.4 }],
     far: [
       { part: "gas-giant", x: 74, y: 84, scale: 1.4, paint: "blue-600" },
-      { part: "station", x: 26, y: 30, scale: 1.1 },
+      { part: "ring-station", x: 26, y: 30, scale: 1.1 },
       { part: "tower", x: 14, y: 62, scale: 0.8 },
       { part: "arch", x: 30, y: 62, scale: 0.8 },
     ],
     mid: [
-      { part: "rocket", x: 80, y: 66, scale: 1.3 },
+      { part: "retro-rocket", x: 80, y: 66, scale: 1.3 },
       { part: "antenna-mast", x: 62, y: 66, scale: 0.6 },
     ],
-    subject: [{ part: "deck-floor", x: 50, y: 74, paint: "slate-700" }],
+    subject: [{ part: "ship-deck", x: 50, y: 74, paint: "slate-700" }],
     near: [{ part: "fence", x: 50, y: 90, scale: 2, paint: "slate-400" }],
     light: [
       { part: "rim-light", x: 44, y: 60, scale: 1.4, paint: "blue-200" },
@@ -707,13 +707,13 @@ const DRONE_CORE_I: SceneRecipe = {
   layers: {
     sky: [{ part: "stars", x: 50, y: 20, scale: 1.4 }],
     mid: [
-      { part: "regolith", x: 50, y: 66, paint: "wood-700" },
+      { part: "moon-surface", x: 50, y: 66, paint: "wood-700" },
       { part: "debris", x: 20, y: 66, scale: 1.2, paint: "wood-600" },
       { part: "debris", x: 84, y: 68, scale: 1.1, paint: "wood-600" },
     ],
     subject: [
       { part: "drone-core", x: 46, y: 62, scale: 1.8, paint: "orange-400" },
-      { part: "drone", x: 68, y: 42, scale: 1.3 },
+      { part: "eye-drone", x: 68, y: 42, scale: 1.3 },
     ],
     near: [{ part: "card", x: 34, y: 59, scale: 1, paint: "slate-100" }],
     light: [{ part: "halo", x: 46, y: 62, scale: 1.2, paint: "orange-400" }],
@@ -731,13 +731,13 @@ const DRONE_CORE_II: SceneRecipe = {
       { part: "room-wall", x: 50, y: 66, paint: "slate-700" },
       { part: "lantern", x: 44, y: 8, scale: 1.4 },
     ],
-    mid: [{ part: "deck-floor", x: 50, y: 66, paint: "wood-700" }],
+    mid: [{ part: "ship-deck", x: 50, y: 66, paint: "wood-700" }],
     subject: [
-      { part: "drone", x: 50, y: 56, scale: 2.2 },
+      { part: "eye-drone", x: 50, y: 56, scale: 2.2 },
       { part: "drone-core", x: 50, y: 57, scale: 0.6 },
     ],
     near: [
-      { part: "gloved-hand", x: 70, y: 80, scale: 1.4, flip: -1 },
+      { part: "reaching-hand", x: 70, y: 80, scale: 1.4, flip: -1 },
       { part: "crate", x: 18, y: 92, scale: 1.2 },
     ],
   },
@@ -752,13 +752,13 @@ const DRONE_CORE_III: SceneRecipe = {
   layers: {
     far: [{ part: "cloud", x: 70, y: 24, scale: 0.8, count: 2, spread: [16, 4] }],
     mid: [
-      { part: "regolith", x: 50, y: 70, paint: "slate-100" },
-      { part: "porthole", x: 24, y: 58, scale: 1.3, paint: "slate-700" },
+      { part: "moon-surface", x: 50, y: 70, paint: "slate-100" },
+      { part: "riveted-porthole", x: 24, y: 58, scale: 1.3, paint: "slate-700" },
     ],
     subject: [
       { part: "drone-core", x: 24, y: 58, scale: 1.4 },
-      { part: "drone", x: 50, y: 44, scale: 1.6 },
-      { part: "drone", x: 66, y: 44, scale: 1.6 },
+      { part: "eye-drone", x: 50, y: 44, scale: 1.6 },
+      { part: "eye-drone", x: 66, y: 44, scale: 1.6 },
     ],
     near: [{ part: "crate", x: 20, y: 92, scale: 1.6, paint: "slate-700" }],
   },
@@ -773,14 +773,14 @@ const DRONE_CORE_IV: SceneRecipe = {
   layers: {
     sky: [{ part: "stars", x: 50, y: 20, scale: 1.6 }],
     mid: [
-      { part: "regolith", x: 50, y: 74, paint: "slate-400" },
+      { part: "moon-surface", x: 50, y: 74, paint: "slate-400" },
       { part: "antenna-mast", x: 34, y: 76, scale: 1.2 },
     ],
     subject: [
       { part: "drone-core", x: 34, y: 40, scale: 1.2 },
-      { part: "drone", x: 60, y: 40, scale: 1.4 },
-      { part: "drone", x: 52, y: 30, scale: 1.2 },
-      { part: "drone", x: 52, y: 50, scale: 1.2 },
+      { part: "eye-drone", x: 60, y: 40, scale: 1.4 },
+      { part: "eye-drone", x: 52, y: 30, scale: 1.2 },
+      { part: "eye-drone", x: 52, y: 50, scale: 1.2 },
     ],
     near: [{ part: "mist", x: 50, y: 82, scale: 1.2, paint: "slate-400" }],
     light: [{ part: "rim-light", x: 34, y: 56, paint: "white" }],
@@ -796,7 +796,7 @@ const DRONE_CORE_V: SceneRecipe = {
   layers: {
     far: [
       { part: "dock-gantry", x: 50, y: 78, scale: 1.8 },
-      { part: "deck-floor", x: 50, y: 78, paint: "slate-800" },
+      { part: "ship-deck", x: 50, y: 78, paint: "slate-800" },
     ],
     subject: [
       { part: "drone-core", x: 36, y: 56, scale: 2.2 },
@@ -827,11 +827,11 @@ const DRONE_CORE_VI: SceneRecipe = {
     mid: [{ part: "asteroid", x: 30, y: 80, scale: 3.2, paint: "blue-200" }],
     subject: [
       { part: "drone-core", x: 30, y: 72, scale: 1.2 },
-      { part: "drone", x: 40, y: 58, scale: 1 },
-      { part: "drone", x: 50, y: 48, scale: 1 },
-      { part: "drone", x: 60, y: 40, scale: 1 },
-      { part: "drone", x: 70, y: 34, scale: 1 },
-      { part: "drone", x: 80, y: 30, scale: 1 },
+      { part: "eye-drone", x: 40, y: 58, scale: 1 },
+      { part: "eye-drone", x: 50, y: 48, scale: 1 },
+      { part: "eye-drone", x: 60, y: 40, scale: 1 },
+      { part: "eye-drone", x: 70, y: 34, scale: 1 },
+      { part: "eye-drone", x: 80, y: 30, scale: 1 },
     ],
     near: [{ part: "frost-shard", x: 16, y: 90, scale: 1.4 }],
     light: [{ part: "light-stream", x: 30, y: 72, scale: 1.3, rotate: -40, paint: "cyan-400" }],
@@ -848,17 +848,17 @@ const DRONE_CORE_VII: SceneRecipe = {
   layers: {
     sky: [
       { part: "stars", x: 50, y: 22, scale: 1.6 },
-      { part: "comet", x: 52, y: 18, scale: 1.1, rotate: -12 },
+      { part: "comet-streak", x: 52, y: 18, scale: 1.1, rotate: -12 },
     ],
     far: [{ part: "nebula", x: 20, y: 30, scale: 0.9, paint: "blue-600" }],
     mid: [{ part: "drone-core", x: 24, y: 64, scale: 2.4 }],
     subject: [
       { part: "drone-corvette", x: 56, y: 52, scale: 1.3 },
-      { part: "drone", x: 70, y: 36, scale: 1 },
-      { part: "drone", x: 72, y: 66, scale: 1 },
+      { part: "eye-drone", x: 70, y: 36, scale: 1 },
+      { part: "eye-drone", x: 72, y: 66, scale: 1 },
     ],
     near: [
-      { part: "deck-floor", x: 30, y: 86, paint: "slate-700" },
+      { part: "ship-deck", x: 30, y: 86, paint: "slate-700" },
       { part: "debris", x: 84, y: 86, scale: 1 },
       { part: "sparks", x: 30, y: 70, scale: 0.8, paint: "orange-400" },
     ],
@@ -876,26 +876,26 @@ const DRONE_CORE_VIII: SceneRecipe = {
   layers: {
     sky: [
       { part: "stars", x: 60, y: 16, scale: 1.6 },
-      { part: "drone", x: 70, y: 22, scale: 0.5, count: 6, spread: [26, 8] },
+      { part: "eye-drone", x: 70, y: 22, scale: 0.5, count: 6, spread: [26, 8] },
     ],
     far: [
       { part: "dock-gantry", x: 74, y: 56, scale: 1.2 },
-      { part: "drone", x: 76, y: 38, scale: 0.7, count: 4, spread: [18, 6] },
+      { part: "eye-drone", x: 76, y: 38, scale: 0.7, count: 4, spread: [18, 6] },
     ],
     mid: [
-      { part: "reactor", x: 20, y: 76, scale: 1.4 },
+      { part: "reactor-core", x: 20, y: 76, scale: 1.4 },
       { part: "conveyor", x: 56, y: 70, scale: 1.1 },
     ],
     subject: [
       { part: "drone-core", x: 22, y: 56, scale: 0.9 },
-      { part: "drone", x: 48, y: 66, scale: 1.1 },
-      { part: "drone", x: 62, y: 66, scale: 1.1 },
-      { part: "drone", x: 74, y: 58, scale: 1.2 },
-      { part: "drone", x: 84, y: 48, scale: 1.2 },
+      { part: "eye-drone", x: 48, y: 66, scale: 1.1 },
+      { part: "eye-drone", x: 62, y: 66, scale: 1.1 },
+      { part: "eye-drone", x: 74, y: 58, scale: 1.2 },
+      { part: "eye-drone", x: 84, y: 48, scale: 1.2 },
     ],
     near: [
-      { part: "robot-arm", x: 38, y: 92, scale: 1.2 },
-      { part: "robot-arm", x: 74, y: 92, scale: 1.1, flip: -1 },
+      { part: "welding-arm", x: 38, y: 92, scale: 1.2 },
+      { part: "welding-arm", x: 74, y: 92, scale: 1.1, flip: -1 },
     ],
     light: [
       { part: "beam", x: 24, y: 64, scale: 0.6, rotate: 0, paint: "blue-600" },
@@ -961,17 +961,17 @@ const DRONE_CORE_X: SceneRecipe = {
     ],
     mid: [
       { part: "debris", x: 40, y: 26, count: 2, spread: [10, 6] },
-      { part: "drone", x: 80, y: 30, scale: 0.6, count: 7, spread: [16, 12] },
+      { part: "eye-drone", x: 80, y: 30, scale: 0.6, count: 7, spread: [16, 12] },
     ],
     subject: [
       { part: "drone-battleship", x: 56, y: 52, scale: 0.85 },
-      { part: "drone", x: 84, y: 62, scale: 0.9 },
-      { part: "drone", x: 88, y: 46, scale: 0.8 },
+      { part: "eye-drone", x: 84, y: 62, scale: 0.9 },
+      { part: "eye-drone", x: 88, y: 46, scale: 0.8 },
       { part: "drone-core", x: 84, y: 62, scale: 0.25 },
       { part: "drone-core", x: 88, y: 46, scale: 0.22 },
     ],
     near: [
-      { part: "drone", x: 10, y: 88, scale: 1.6 },
+      { part: "eye-drone", x: 10, y: 88, scale: 1.6 },
       { part: "drone-core", x: 10, y: 88, scale: 0.45 },
       { part: "debris", x: 72, y: 90, scale: 1.2 },
     ],
@@ -1002,11 +1002,11 @@ const KWZKA: SceneRecipe = {
   layers: {
     sky: [{ part: "stars", x: 50, y: 14, scale: 1.6 }],
     far: [
-      { part: "station", x: 16, y: 30, scale: 1 },
-      { part: "fighter", x: 82, y: 30, scale: 0.6, flip: -1 },
-      { part: "fighter", x: 88, y: 44, scale: 0.5, flip: -1 },
+      { part: "ring-station", x: 16, y: 30, scale: 1 },
+      { part: "wedge-fighter", x: 82, y: 30, scale: 0.6, flip: -1 },
+      { part: "wedge-fighter", x: 88, y: 44, scale: 0.5, flip: -1 },
     ],
-    mid: [{ part: "fighter", x: 14, y: 62, scale: 0.8 }],
+    mid: [{ part: "wedge-fighter", x: 14, y: 62, scale: 0.8 }],
     subject: [{ part: "hover-platform", x: 50, y: 72, scale: 1.1, paint: "red-300" }],
     near: [{ part: "mist", x: 50, y: 92, scale: 1.4, paint: "purple-400" }],
     light: [
@@ -1037,7 +1037,7 @@ const THE_NARCOR_PROJECT: SceneRecipe = {
       { part: "ruin-wall", x: 14, y: 70, scale: 1.2, paint: "slate-800" },
     ],
     mid: [
-      { part: "deck-floor", x: 50, y: 70, paint: "slate-800" },
+      { part: "ship-deck", x: 50, y: 70, paint: "slate-800" },
       { part: "glass-case", x: 18, y: 72, scale: 1.1 },
       { part: "crystal", x: 18, y: 66, scale: 0.8, count: 2, spread: [2, 1], paint: "purple-400" },
       { part: "glass-case", x: 82, y: 72, scale: 1.1 },
@@ -1091,8 +1091,8 @@ const CORE_RESEARCHER: SceneRecipe = {
       { part: "smoke-trail", x: 70, y: 40, scale: 0.6, rotate: -80, paint: "slate-900" },
     ],
     mid: [
-      { part: "deck-floor", x: 50, y: 70, paint: "slate-700" },
-      { part: "console", x: 80, y: 74, scale: 1.2 },
+      { part: "ship-deck", x: 50, y: 70, paint: "slate-700" },
+      { part: "control-desk", x: 80, y: 74, scale: 1.2 },
     ],
     near: [{ part: "drone-core", x: 54, y: 34, scale: 1 }],
     light: [{ part: "halo", x: 54, y: 34, scale: 1.2, paint: "cyan-400" }],
@@ -1115,12 +1115,12 @@ const GREAT_PAPERCLIP_THEORY: SceneRecipe = {
       { part: "planet", x: 52, y: 14, scale: 0.7, paint: "slate-400" },
     ],
     far: [
-      { part: "porthole", x: 46, y: 56, scale: 2.6, paint: "slate-700" },
-      { part: "station", x: 18, y: 30, scale: 0.6 },
+      { part: "riveted-porthole", x: 46, y: 56, scale: 2.6, paint: "slate-700" },
+      { part: "ring-station", x: 18, y: 30, scale: 0.6 },
     ],
     mid: [
-      { part: "deck-floor", x: 50, y: 82, paint: "slate-400" },
-      { part: "console", x: 30, y: 84, scale: 1.2, paint: "slate-100" },
+      { part: "ship-deck", x: 50, y: 82, paint: "slate-400" },
+      { part: "control-desk", x: 30, y: 84, scale: 1.2, paint: "slate-100" },
     ],
     subject: [
       { part: "wire-coil", x: 30, y: 74, scale: 1.6 },
@@ -1154,9 +1154,9 @@ const DRONE_COMMANDER: SceneRecipe = {
   layers: {
     far: [{ part: "hangar-wall", x: 50, y: 66, paint: "slate-800" }],
     mid: [
-      { part: "deck-floor", x: 50, y: 66, paint: "slate-700" },
-      { part: "drone", x: 70, y: 34, scale: 1.1, count: 3, spread: [14, 10] },
-      { part: "drone", x: 22, y: 30, scale: 1, count: 2, spread: [8, 6] },
+      { part: "ship-deck", x: 50, y: 66, paint: "slate-700" },
+      { part: "eye-drone", x: 70, y: 34, scale: 1.1, count: 3, spread: [14, 10] },
+      { part: "eye-drone", x: 22, y: 30, scale: 1, count: 2, spread: [8, 6] },
     ],
     near: [{ part: "crate", x: 84, y: 94, scale: 1.3, paint: "slate-700" }],
     light: [
@@ -1176,13 +1176,13 @@ const CIRCADIAN_HALFCYCLER: SceneRecipe = {
   layers: {
     sky: [
       { part: "stars", x: 50, y: 14, scale: 1.2 },
-      { part: "station", x: 70, y: 30, scale: 1.1 },
-      { part: "drone", x: 84, y: 20, scale: 0.6 },
+      { part: "ring-station", x: 70, y: 30, scale: 1.1 },
+      { part: "eye-drone", x: 84, y: 20, scale: 0.6 },
     ],
     far: [{ part: "cockpit-frame", x: 50, y: 66 }],
     mid: [
-      { part: "console", x: 72, y: 78, scale: 1.3 },
-      { part: "robot-arm", x: 86, y: 76, scale: 0.9, flip: -1 },
+      { part: "control-desk", x: 72, y: 78, scale: 1.3 },
+      { part: "welding-arm", x: 86, y: 76, scale: 0.9, flip: -1 },
     ],
     subject: [{ part: "pilot-seat", x: 38, y: 84, scale: 1 }],
     near: [{ part: "coffee-bulb", x: 54, y: 48, scale: 0.7 }],
@@ -1203,24 +1203,24 @@ const CIRCADIAN_FULLCYCLER: SceneRecipe = {
   layers: {
     sky: [{ part: "stars", x: 50, y: 14, scale: 1.2 }],
     far: [
-      { part: "porthole", x: 30, y: 30, scale: 1.4 },
-      { part: "porthole", x: 70, y: 30, scale: 1.4 },
+      { part: "riveted-porthole", x: 30, y: 30, scale: 1.4 },
+      { part: "riveted-porthole", x: 70, y: 30, scale: 1.4 },
       { part: "drone-corvette", x: 30, y: 30, scale: 0.4 },
       { part: "drone-corvette", x: 70, y: 28, scale: 0.36 },
       { part: "drone-corvette", x: 72, y: 34, scale: 0.3 },
     ],
     mid: [
-      { part: "deck-floor", x: 50, y: 66, paint: "slate-700" },
-      { part: "console", x: 18, y: 72, scale: 1.1 },
-      { part: "console", x: 82, y: 72, scale: 1.1 },
-      { part: "robot-arm", x: 10, y: 72, scale: 0.8 },
-      { part: "robot-arm", x: 90, y: 72, scale: 0.8, flip: -1 },
+      { part: "ship-deck", x: 50, y: 66, paint: "slate-700" },
+      { part: "control-desk", x: 18, y: 72, scale: 1.1 },
+      { part: "control-desk", x: 82, y: 72, scale: 1.1 },
+      { part: "welding-arm", x: 10, y: 72, scale: 0.8 },
+      { part: "welding-arm", x: 90, y: 72, scale: 0.8, flip: -1 },
     ],
     subject: [
       { part: "pilot-seat", x: 52, y: 84, scale: 1.2 },
       { part: "sleeper", x: 52, y: 64, scale: 1.4 },
     ],
-    near: [{ part: "deck-floor", x: 50, y: 92, paint: "slate-800" }],
+    near: [{ part: "ship-deck", x: 50, y: 92, paint: "slate-800" }],
     light: [
       { part: "halo", x: 18, y: 64, scale: 0.8, paint: "cyan-400" },
       { part: "halo", x: 82, y: 64, scale: 0.8, paint: "cyan-400" },
@@ -1237,11 +1237,11 @@ const STRATOS: SceneRecipe = {
   layers: {
     far: [
       { part: "dock-gantry", x: 50, y: 50, scale: 1.6, paint: "slate-700" },
-      { part: "fighter", x: 34, y: 34, scale: 0.6, paint: "slate-400" },
-      { part: "fighter", x: 64, y: 34, scale: 0.6, paint: "slate-400" },
+      { part: "wedge-fighter", x: 34, y: 34, scale: 0.6, paint: "slate-400" },
+      { part: "wedge-fighter", x: 64, y: 34, scale: 0.6, paint: "slate-400" },
     ],
-    mid: [{ part: "deck-floor", x: 50, y: 66, paint: "slate-400" }],
-    subject: [{ part: "fighter", x: 50, y: 58, scale: 1.7, paint: "blue-600" }],
+    mid: [{ part: "ship-deck", x: 50, y: 66, paint: "slate-400" }],
+    subject: [{ part: "wedge-fighter", x: 50, y: 58, scale: 1.7, paint: "blue-600" }],
   },
 };
 
@@ -1257,7 +1257,7 @@ const FALCON: SceneRecipe = {
   ],
   layers: {
     far: [{ part: "hangar-wall", x: 50, y: 70 }],
-    mid: [{ part: "deck-floor", x: 50, y: 70 }],
+    mid: [{ part: "ship-deck", x: 50, y: 70 }],
     subject: [{ part: "needle-fighter", x: 56, y: 54, scale: 1.6 }],
     light: [{ part: "light-shaft", x: 30, y: 0, count: 2, spread: [24, 0] }],
   },
@@ -1344,7 +1344,7 @@ const PARAGON_MK1: SceneRecipe = {
     sky: [{ part: "stars", x: 50, y: 14, scale: 1.4 }],
     far: [
       { part: "gas-giant", x: 50, y: 130, scale: 4.4, paint: "blue-600" },
-      { part: "station", x: 84, y: 22, scale: 0.5 },
+      { part: "ring-station", x: 84, y: 22, scale: 0.5 },
     ],
     mid: [
       { part: "cloud", x: 30, y: 80, scale: 0.9, count: 3, spread: [24, 4] },
@@ -1413,7 +1413,7 @@ const PARAGON_X: SceneRecipe = {
       { part: "star-glare", x: 78, y: 22, scale: 1.4 },
     ],
     far: [
-      { part: "regolith", x: 50, y: 72, paint: "slate-700" },
+      { part: "moon-surface", x: 50, y: 72, paint: "slate-700" },
       { part: "moon", x: 20, y: 28, scale: 0.8, paint: "slate-400" },
     ],
     mid: [
@@ -1494,10 +1494,10 @@ const YUMA: SceneRecipe = {
   layers: {
     sky: [{ part: "stars", x: 50, y: 14, scale: 1 }],
     far: [
-      { part: "station", x: 22, y: 30, scale: 1.4 },
-      { part: "fighter", x: 40, y: 20, scale: 0.4 },
-      { part: "fighter", x: 8, y: 44, scale: 0.4, flip: -1 },
-      { part: "fighter", x: 36, y: 40, scale: 0.3 },
+      { part: "ring-station", x: 22, y: 30, scale: 1.4 },
+      { part: "wedge-fighter", x: 40, y: 20, scale: 0.4 },
+      { part: "wedge-fighter", x: 8, y: 44, scale: 0.4, flip: -1 },
+      { part: "wedge-fighter", x: 36, y: 40, scale: 0.3 },
     ],
     mid: [{ part: "planet", x: 84, y: 70, scale: 1.4, paint: "orange-400" }],
     subject: [{ part: "trader", x: 56, y: 46, scale: 1.7 }],
@@ -1553,8 +1553,8 @@ const GALAXY: SceneRecipe = {
       { part: "nebula", x: 22, y: 24, scale: 1, paint: "violet-700" },
     ],
     far: [
-      { part: "fighter", x: 14, y: 30, scale: 0.6, flip: -1, paint: "slate-700" },
-      { part: "fighter", x: 86, y: 26, scale: 0.6, paint: "slate-700" },
+      { part: "wedge-fighter", x: 14, y: 30, scale: 0.6, flip: -1, paint: "slate-700" },
+      { part: "wedge-fighter", x: 86, y: 26, scale: 0.6, paint: "slate-700" },
       { part: "smoke-trail", x: 14, y: 32, scale: 0.5, rotate: -150, paint: "slate-700" },
       { part: "smoke-trail", x: 86, y: 28, scale: 0.5, rotate: -30, paint: "slate-700" },
     ],
@@ -1581,7 +1581,7 @@ const RADIX: SceneRecipe = {
   emblem: { x: 50, y: 54, size: 4, rotate: 0 },
   layers: {
     far: [{ part: "hangar-wall", x: 50, y: 70 }],
-    mid: [{ part: "deck-floor", x: 50, y: 70 }],
+    mid: [{ part: "ship-deck", x: 50, y: 70 }],
     subject: [{ part: "frame-ship", x: 50, y: 54, scale: 1.9 }],
     near: [
       { part: "crate", x: 16, y: 94, scale: 1.4, paint: "slate-700" },
@@ -1606,7 +1606,7 @@ const PHALANX: SceneRecipe = {
       { part: "ruin-wall", x: 84, y: 66, scale: 1.4, flip: -1, paint: "slate-700" },
       { part: "tower", x: 50, y: 64, scale: 0.8, paint: "slate-700" },
     ],
-    mid: [{ part: "regolith", x: 50, y: 66, paint: "slate-700" }],
+    mid: [{ part: "moon-surface", x: 50, y: 66, paint: "slate-700" }],
     subject: [{ part: "gunship", x: 50, y: 58, scale: 1.8 }],
     near: [
       { part: "debris", x: 20, y: 86, scale: 1.4 },
@@ -1624,16 +1624,16 @@ const HALO: SceneRecipe = {
   sky: ["black", "red-900"],
   light: { x: 50, y: 50, r: 30, paint: "cyan-400", opacity: 0.35 },
   emblem: { x: 46, y: 60, size: 4, rotate: 0 },
-  figure: { x: 46, y: 70, scale: 0.5, pose: "pose-sit", look: human({ hair: "space-helmet", outfit: "outfit-suit", item: null, cloth: "slate-700" }) },
+  figure: { x: 46, y: 70, scale: 0.5, pose: "pose-sit", look: human({ hair: "cracked-helmet", outfit: "outfit-suit", item: null, cloth: "slate-700" }) },
   layers: {
     sky: [{ part: "stars", x: 50, y: 14, scale: 1.6 }],
     far: [
-      { part: "fighter", x: 16, y: 20, scale: 0.6, count: 3, spread: [10, 8], paint: "red-600" },
-      { part: "fighter", x: 86, y: 76, scale: 0.6, flip: -1, count: 3, spread: [10, 8], paint: "red-600" },
+      { part: "wedge-fighter", x: 16, y: 20, scale: 0.6, count: 3, spread: [10, 8], paint: "red-600" },
+      { part: "wedge-fighter", x: 86, y: 76, scale: 0.6, flip: -1, count: 3, spread: [10, 8], paint: "red-600" },
     ],
     mid: [{ part: "gun-ring", x: 50, y: 56, scale: 1.7 }],
     subject: [
-      { part: "porthole", x: 50, y: 56, scale: 1.6, paint: "slate-400" },
+      { part: "riveted-porthole", x: 50, y: 56, scale: 1.6, paint: "slate-400" },
       { part: "pilot-seat", x: 46, y: 71, scale: 0.5 },
     ],
     near: [{ part: "cockpit-frame", x: 50, y: 96 }],
@@ -1653,9 +1653,9 @@ const POWER_CELL: SceneRecipe = {
   layers: {
     far: [
       { part: "room-wall", x: 50, y: 74, paint: "slate-700" },
-      { part: "deck-floor", x: 50, y: 74, paint: "slate-800" },
+      { part: "ship-deck", x: 50, y: 74, paint: "slate-800" },
     ],
-    subject: [{ part: "reactor", x: 46, y: 78, scale: 1.6, paint: "green-400" }],
+    subject: [{ part: "reactor-core", x: 46, y: 78, scale: 1.6, paint: "green-400" }],
     near: [
       { part: "crate", x: 78, y: 94, scale: 1.4, paint: "slate-700" },
       { part: "debris", x: 70, y: 60, scale: 0.8 },
@@ -1674,7 +1674,7 @@ const PROTOTYPE_X1: SceneRecipe = {
   layers: {
     sky: [{ part: "stars", x: 50, y: 14, scale: 1.6 }],
     far: [
-      { part: "regolith", x: 50, y: 66 },
+      { part: "moon-surface", x: 50, y: 66 },
       { part: "antenna-mast", x: 12, y: 68, scale: 1.1 },
       { part: "antenna-mast", x: 88, y: 66, scale: 0.9 },
     ],
@@ -1749,11 +1749,11 @@ const SIVA_1: SceneRecipe = {
   layers: {
     sky: [{ part: "stars", x: 50, y: 14, scale: 1.4 }],
     far: [
-      { part: "station", x: 72, y: 26, scale: 1.3 },
+      { part: "ring-station", x: 72, y: 26, scale: 1.3 },
       { part: "banner", x: 14, y: 70, scale: 1.2, paint: "violet-500" },
       { part: "banner", x: 88, y: 70, scale: 1.2, flip: -1, paint: "violet-500" },
     ],
-    mid: [{ part: "deck-floor", x: 50, y: 74, paint: "slate-800" }],
+    mid: [{ part: "ship-deck", x: 50, y: 74, paint: "slate-800" }],
     subject: [{ part: "hover-platform", x: 40, y: 80, scale: 1.1, paint: "red-600" }],
     near: [{ part: "mist", x: 50, y: 92, scale: 1.2, paint: "purple-400" }],
     light: [

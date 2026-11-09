@@ -87,6 +87,11 @@ postgres_pid=$!
 # (Cargo.toml): these tests store and read rows and play no game, so nothing runs their code long
 # enough to repay optimizing it (#3162, #3410). Every `cargo` call below takes the same flags:
 # a different profile is a different build, so one call without them compiles it all again.
+# Each call must also find the build fresh. A `cargo:rerun-if-changed` naming a path that does not
+# exist is stale on every call, and crates/server/build.rs named one (`../cards/data`, deleted with the
+# compiled win-rate table), so the build, the `--list` and each shard compiled the server again, one
+# after another on cargo's build lock: the job ran 7 minutes (#3436). A call that compiles nothing
+# takes under a second.
 PROFILE_FLAGS="--config profile.test.package.jackioh-engine.opt-level=0 --config profile.test.package.jackioh-cards.opt-level=0 --config profile.test.package.jackioh-ai.opt-level=0"
 
 # Built once: in the test profile, `cargo test`'s, and with the tests, so with the features the tests

@@ -30,7 +30,7 @@ export type { IconName } from "./icons.tsx";
 export { FACE_DOWN_TAG, REVEAL_AT_LABEL, REVEAL_AT_NOTE, UNREVEALED_NOTE, costPhrase, faceDownLabel } from "./faceDown.ts";
 
 // Slice A: art.
-export { CardArt } from "./art/index.ts";
+export { CardArt, ART_PLANES } from "./art/index.ts";
 
 // Slice C: inspect.
 export {
@@ -64,5 +64,21 @@ export {
 } from "./inspect/index.ts";
 export type { CardListEntry, InspectOverlayState, InspectRenderSubject, InspectSubject } from "./inspect/index.ts";
 
+// R3344001: Tilt and queue hold state
+export { isHeld, useIsHeld, useTiltHold } from "./tilt.ts";
+
 // Slice C: card settings, which task 7's panel mounts at integration.
 export { CARD_SETTINGS_DEFAULTS, useCardSettings, writeCardSettings } from "./settings.ts";
+
+// R3345000: Full-screen art view and trigger
+export {
+  canOpenFullScreen,
+  closeFullScreenArt,
+  openFullScreenArt,
+  useCanOpenFullScreen,
+  useFullScreenArt,
+  useFullScreenTrigger,
+  type FullScreenState,
+  type FullScreenTriggerOptions,
+} from "./fullscreen.ts";
+export { FullScreenArt, FullScreenArtHost, FullScreenButton, type FullScreenArtProps } from "./FullScreenArt.tsx";

@@ -30,6 +30,7 @@ import type { ActionBody, Aim, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerVi
 import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import type { SeatLoadouts } from "../cards/loadouts.ts";
 import { useTiltHold } from "../cards/tilt.ts";
+import { FullScreenArtHost } from "../cards/index.ts";
 import type { EmoteShow } from "../emotes/session.ts";
 import type { HeroEmotes } from "./Hero.tsx";
 import type { ChoiceHover } from "./choiceHover.ts";
@@ -46,6 +47,7 @@ import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
 import { IDLE, answerPlaguePlacement, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
 import {
+  HIDDEN_ID,
   SET_PIECE_SKIP_HINT_MS,
   TAKEOVER_SET_PIECE,
   animTestid,
@@ -609,12 +611,12 @@ export default function Game({
         // #185: and the heaviest landing's, from the same capped share the queue would give it.
         const slams = slamEntries(planEntries(fresh, previous, true), slamResolver, true);
         triggerHitStopMs(slams.reduce((ms, entry) => Math.max(ms, entry.slam?.hitStopMs ?? 0), 0));
-        // R2722001: a Mythic's entrance is a still card instead of a takeover: the viewer's own (the
-        // other seat's is up in the showcase already), once per card. R3337003: a play that lays an
-        // Anomaly yields it to the Anomaly's still title card, as its takeover yields to the rift.
+        // R2722001, R3345000: a public Mythic's entrance under reduced motion shows TakeoverStill with
+        // the card's own picture for both seats (hidden play shows nothing, R202). R3337003: a play that
+        // lays an Anomaly yields it to the Anomaly's still title card, as its takeover yields to the rift.
         const rifted = new Set(slams.flatMap((entry) => entry.rift?.sourceId ?? []));
         const mythic = entranceEntries(slams, entranceResolver, { seen: stillSeen.current }).find(
-          (entry) => entry.entrance?.tier === "mythic" && entry.entrance.player === previous.viewer && !rifted.has(entry.entrance.instanceId),
+          (entry) => entry.entrance?.tier === "mythic" && entry.entrance.defId !== HIDDEN_ID && !rifted.has(entry.entrance.instanceId),
         )?.entrance;
         if (mythic !== undefined) setStill({ defId: mythic.defId, instanceId: mythic.instanceId, view: previous });
       }
@@ -981,6 +983,7 @@ export default function Game({
       ) : null}
 
       {concedeOpen ? <ConfirmConcede body={concedeBody} onConfirm={confirmConcede} onCancel={cancelConcede} /> : null}
+      <FullScreenArtHost />
     </div>
   );
 }

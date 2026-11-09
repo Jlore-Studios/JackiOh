@@ -530,3 +530,38 @@ async fn every_state_of_a_whole_game_checkpoints_and_passes_its_checks() {
         }
     }
 }
+
+/// Every root `build.rs` hashes into `RULES_FINGERPRINT` exists. Cargo takes a `rerun-if-changed`
+/// path that is missing for changed on every run, so one dead root (`../cards/data`, deleted when the
+/// compiled win-rate table retired) recompiled this crate on every `cargo` call: the five of them in
+/// tests/db/run.sh took `db (store contract)` past seven minutes (#3436).
+#[test]
+fn the_rules_fingerprints_roots_all_exist() {
+    let build = include_str!("../../build.rs");
+    let list = build
+        .split_once("const RULES: &[&str] = &[")
+        .and_then(|(_, rest)| rest.split_once("];"))
+        .map(|(list, _)| list)
+        .expect("build.rs declares RULES");
+    let roots: Vec<&str> = list
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix('"')?.split('"').next())
+        .collect();
+    assert!(
+        roots.contains(&"../engine/src"),
+        "the scan found no root: {roots:?}"
+    );
+    let missing: Vec<&str> = roots
+        .iter()
+        .copied()
+        .filter(|root| {
+            !std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join(root)
+                .exists()
+        })
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "build.rs hashes roots that do not exist, so Cargo recompiles the crate on every call: {missing:?}"
+    );
+}

@@ -1,6 +1,6 @@
 // R3342000: tests for the TileAura component (issue #3342).
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PlayerView } from "@jackioh/shared";
@@ -17,6 +17,7 @@ import { setReducedMotion } from "../../test/setup.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { FX_PARTICLE_CAP_MOBILE } from "../constants.ts";
 import { resetFxSettingsForTests, setFxSettings } from "../settings.ts";
+import { resetShedForTests, setShedLevel } from "../shed.ts";
 import { TILE_PARTICLE_SHARE, TILE_TOUCH_GAP_MS } from "./config.ts";
 import { tileMoteBudget } from "./tile.ts";
 
@@ -49,6 +50,7 @@ afterEach(() => {
   resetFxSettingsForTests();
   __resetSettingsForTests();
   setAudioEngineForTests(null);
+  resetShedForTests();
   localStorage.clear();
   vi.clearAllMocks();
 });
@@ -205,5 +207,25 @@ describe("R3342000 TileAura component", () => {
   it("R3342000 at width 390 motes in a 20-tile board stay within budget", () => {
     const singleBudget = tileMoteBudget("Mythic", 20, 1, 390);
     expect(20 * singleBudget).toBeLessThanOrEqual(Math.floor(TILE_PARTICLE_SHARE * FX_PARTICLE_CAP_MOBILE));
+  });
+});
+
+describe("R3351000 the living game's shared shed order", () => {
+  it("R3351000 at shed stage 2 the tile halves its motes with the far auras", () => {
+    const view = baseView({
+      you: emptySide("p1", { units: [unit("p1", { defId: "core-100", instanceId: "u-shed-1" })] }),
+    });
+    renderZone(view);
+    const zone = screen.getByTestId(testid.zone("you", "units", 1));
+    // A Mythic alone: five motes at full intensity (TILE_MOTES_MYTHIC), two shed.
+    expect(zone.querySelectorAll(".tile-aura-mote")).toHaveLength(5);
+    act(() => {
+      setShedLevel(2);
+    });
+    expect(zone.querySelectorAll(".tile-aura-mote")).toHaveLength(2);
+    act(() => {
+      setShedLevel(0);
+    });
+    expect(zone.querySelectorAll(".tile-aura-mote")).toHaveLength(5);
   });
 });

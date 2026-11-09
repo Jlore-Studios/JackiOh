@@ -519,13 +519,18 @@ describe("R3344000 reduced motion, the OS setting and fx intensity off draw the 
     expect(radiantStill.hasAttribute("data-depth")).toBe(false);
     expect(radiantStill.getAttribute("data-foil")).toBe("static");
     cleanup();
-    // A face with no depth in any case keeps its foil moving under fx off: only a face that would have depth is stilled.
+    // R3340000 (amending this): the fx intensity off holds every face still, a face with no depth among them, its foil
+    // standing as it does.
     writeCardPick(COMMON, "foil", "foil-holo-sweep");
     const common = faceIn(COMMON);
-    expect(common.getAttribute("data-cosmetic-motion")).toBe("animated");
+    expect(common.getAttribute("data-cosmetic-foil")).toBe("foil-holo-sweep");
+    expect(common.getAttribute("data-cosmetic-motion")).toBe("static");
     cleanup();
     setFxSettings({ intensity: "normal" });
     expect(faceIn(LEGENDARY).getAttribute("data-depth")).toBe("true");
+    cleanup();
+    // At the normal intensity the face with no depth moves its foil again.
+    expect(faceIn(COMMON).getAttribute("data-cosmetic-motion")).toBe("animated");
   });
 
   it("R3344000 the depth stylesheet gives no motion outside the gate that reduced motion and the Reduce motion switch close", () => {

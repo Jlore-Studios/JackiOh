@@ -936,7 +936,7 @@ const WIDE_ENEMY_HEALTH: i32 = 30;
 /// (R90, R348).
 const WIDE_MIN_CANDIDATES: usize = 190;
 
-fn wide_boards() -> Vec<(&'static str, Value)> {
+pub(crate) fn wide_boards() -> Vec<(&'static str, Value)> {
     let board = |mana: i32| {
         json!({
             "p1": { "hand": WIDE_HAND, "mana": mana, "field": WIDE_FIELD },
@@ -949,7 +949,7 @@ fn wide_boards() -> Vec<(&'static str, Value)> {
     ]
 }
 
-fn wide_state(name: &str, setup: &Value) -> GameState {
+pub(crate) fn wide_state(name: &str, setup: &Value) -> GameState {
     let mut options = json!({ "seed": format!("perf-{name}"), "active": "p1", "turn": WIDE_TURN });
     if let (Some(into), Some(from)) = (options.as_object_mut(), setup.as_object()) {
         for (key, value) in from {

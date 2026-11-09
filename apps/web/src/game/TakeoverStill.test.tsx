@@ -3,7 +3,9 @@
 // Reduce motion there is no hold, no shake and no flash, and a still card stands over the board for
 // TAKEOVER_STILL_MS instead. R3337003: a Mythic play that lays an Anomaly (Anomaly Found!) yields both to
 // the Anomaly's rift and its still title card. R3389000: the still wears its card's own takeover look.
-// R3405000: and each Meditative Mythic's still draws its own art.
+// R3405000: and each Meditative Mythic's still draws its own art. R3399002: a Mythic whose look is drawn as a
+// picture of its own shows that drawing still behind the card. R3395001: Stinkyscape's five Mythics' stills
+// show their art.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -19,7 +21,7 @@ import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Game from "./Game.tsx";
 import { TAKEOVER_STILL_MS } from "./TakeoverStill.tsx";
 import { takeoverArtOf, takeoverLookOf } from "../fx/takeover.ts";
-import { TAKEOVER_ART_PARTS } from "../fx/takeoverArt.ts";
+import { TAKEOVER_ART_DRAWINGS, TAKEOVER_ART_PARTS } from "../fx/takeoverArt.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, withEvents } from "../test/fixtures.ts";
 
@@ -28,6 +30,8 @@ const lookup = lookupFromDefs(CATALOG);
 const boardCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "board.css"), "utf8");
 /** #97 Zephrys, a Mythic Spell; #52 Silly Silas, a Legendary Unit. */
 const ZEPHRYS = "core-097";
+/** Classic+'s Zephrys Zealotism, a Mythic Spell whose takeover wears the "zealot" look (R3399002). */
+const ZEALOTISM = "classicplus-027";
 const START: GameEvent[] = [{ type: "turnStarted", player: "p1", turn: 3 }];
 const cast = (defId: string): GameEvent => ({ type: "cardPlayed", player: "p1", instanceId: `i-${defId}`, defId, costPaid: 3 });
 
@@ -79,6 +83,39 @@ describe("R2722001 a Mythic's takeover on the board", () => {
     // R2803000: the still echoes the takeover at rest: a motionless rays disc and the landing ring.
     expect(still.querySelector(".takeover-still-rays")).not.toBeNull();
     expect(still.querySelector(".takeover-still-ring")).not.toBeNull();
+    // R3399002: #97 Zephrys's "genie" look has no drawing of its own, so its still shows none.
+    expect(still.querySelector(".takeover-art-drawing")).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(TAKEOVER_STILL_MS);
+    });
+    expect(screen.queryByTestId("takeover-still")).toBeNull();
+  });
+
+  it("R3399002 under Reduce motion Zephrys Zealotism's still shows its art and animates nothing", () => {
+    writeSettings({ reduceMotion: true });
+    playOut(ZEALOTISM);
+    const game = screen.getByTestId("game");
+    expect(game).not.toHaveAttribute("data-takeover");
+    expect(game).not.toHaveAttribute("data-animating");
+    const still = screen.getByTestId("takeover-still");
+    const layer = still.querySelector(".takeover-art");
+    const art = layer?.querySelector("svg.takeover-art-drawing") ?? null;
+    const zealot = TAKEOVER_ART_DRAWINGS.zealot;
+    if (layer === null || art === null || zealot === undefined) throw new Error("no drawing");
+    // In its look's art layer (R3400000), first, so the card, the rays and the ring lie over it; it carries its
+    // look, never the card (R202).
+    expect(still.firstElementChild).toBe(layer);
+    expect(layer).toHaveAttribute("data-look", "zealot");
+    expect(layer).toHaveAttribute("data-still", "true");
+    expect(art).toHaveAttribute("viewBox", zealot.viewBox);
+    expect(art).toHaveAttribute("preserveAspectRatio", "xMidYMid slice");
+    expect(art).toHaveAttribute("aria-hidden", "true");
+    expect(layer.outerHTML).not.toContain(ZEALOTISM);
+    const paths = [...art.querySelectorAll("path")];
+    expect(paths.map((path) => [path.getAttribute("d"), path.getAttribute("fill")])).toEqual(zealot.paths.map((path) => [path.d, path.fill]));
+    // Nothing in it moves: no effects-layer class, no SMIL, no inline style, no data-animating.
+    expect(art.querySelector("[class], [style], animate, animateTransform, [data-animating]")).toBeNull();
+    expect(still.querySelector("[data-animating]")).toBeNull();
     act(() => {
       vi.advanceTimersByTime(TAKEOVER_STILL_MS);
     });
@@ -127,6 +164,32 @@ describe("R2722001 a Mythic's takeover on the board", () => {
     expect(screen.getByTestId("takeover-still").querySelector(".takeover-art")).toBeNull();
   });
 
+  it("R3395001 under reduced motion each Stinkyscape Mythic shows its art still", () => {
+    writeSettings({ reduceMotion: true });
+    const looks = [
+      ["stinkyscape-006", "vault", "units"],
+      ["stinkyscape-016", "rod", "backrow"],
+      ["stinkyscape-044", "wire", null],
+      ["stinkyscape-074", "whiteDwarf", "units"],
+      ["stinkyscape-086", "forge", "units"],
+    ] as const;
+    for (const [defId, look, row] of looks) {
+      // A Unit or a Field Spell lands as it is played; a Spell is its cast alone.
+      playOut(defId, row === null ? [] : [{ type: "summoned", player: "p1", instanceId: `i-${defId}`, defId, row, lane: 1 }]);
+      const still = screen.getByTestId("takeover-still");
+      expect(still).toHaveAttribute("data-takeover-def", defId);
+      expect(still).toHaveAttribute("data-takeover-look", look);
+      const art = still.querySelector(".takeover-art");
+      expect(art, defId).not.toBeNull();
+      expect(art).toHaveAttribute("data-look", look);
+      expect(art).toHaveAttribute("data-still", "true");
+      expect([...(art?.children ?? [])].map((part) => part.className), defId).toEqual(TAKEOVER_ART_PARTS[look]?.map((part) => `takeover-art-${part}`));
+      // Shapes only: no text, and nothing in it animates.
+      expect(art?.textContent, defId).toBe("");
+      expect(still.querySelector("[data-animating]")).toBeNull();
+      cleanup();
+    }
+  });
   it("R3405000 under reduced motion each Meditative Mythic shows its own art still", () => {
     writeSettings({ reduceMotion: true });
     const mythics = Object.values(CATALOG).filter((card) => card.id.startsWith("meditative-") && (card.printedRarity ?? card.rarity) === "Mythic");
@@ -147,25 +210,25 @@ describe("R2722001 a Mythic's takeover on the board", () => {
   });
 
   it("R3407000 under reduced motion each Stinkyscape Mythic Spell shows its own picture still, behind the rays", () => {
-    writeSettings({ reduceMotion: true });
-    for (const defId of ["stinkyscape-148-1", "stinkyscape-t-red-narcor"]) {
-      playOut(defId);
-      const still = screen.getByTestId("takeover-still");
-      expect(still).toHaveAttribute("data-takeover-def", defId);
-      const picture = still.querySelector("img.takeover-still-art");
-      expect(picture, defId).not.toBeNull();
-      expect(picture).toHaveAttribute("src", takeoverArtOf(defId));
-      expect(picture).toHaveAttribute("alt", "");
-      expect(picture).toHaveAttribute("aria-hidden", "true");
-      // Behind the rays disc, and nothing in the still animates.
-      expect(still.firstElementChild, defId).toBe(picture);
-      expect(still.querySelector("[data-animating]")).toBeNull();
-      cleanup();
-    }
-    // A Mythic whose look draws no picture of its own shows none.
-    playOut(ZEPHRYS);
-    expect(screen.getByTestId("takeover-still").querySelector("img.takeover-still-art")).toBeNull();
-  });
+  writeSettings({ reduceMotion: true });
+  for (const defId of ["stinkyscape-148-1", "stinkyscape-t-red-narcor"]) {
+    playOut(defId);
+    const still = screen.getByTestId("takeover-still");
+    expect(still).toHaveAttribute("data-takeover-def", defId);
+    const picture = still.querySelector("img.takeover-still-art");
+    expect(picture, defId).not.toBeNull();
+    expect(picture).toHaveAttribute("src", takeoverArtOf(defId));
+    expect(picture).toHaveAttribute("alt", "");
+    expect(picture).toHaveAttribute("aria-hidden", "true");
+    // Behind the rays disc, and nothing in the still animates.
+    expect(still.firstElementChild, defId).toBe(picture);
+    expect(still.querySelector("[data-animating]")).toBeNull();
+    cleanup();
+  }
+  // A Mythic whose look draws no picture of its own shows none.
+  playOut(ZEPHRYS);
+  expect(screen.getByTestId("takeover-still").querySelector("img.takeover-still-art")).toBeNull();
+});
 
   it("R2722001 a Legendary takes neither the hold nor the still", () => {
   writeSettings({ reduceMotion: true });
@@ -203,5 +266,27 @@ describe("R3337003 a Mythic play that lays an Anomaly yields its takeover to the
     playOut(ANOMALY_FOUND, LAID);
     expect(screen.queryByTestId("takeover-still")).toBeNull();
     expect(screen.getByTestId("game")).not.toHaveAttribute("data-set-piece");
+  });
+
+  it("R3345000 under reduced motion an opponent's public Mythic play shows TakeoverStill with the card's own picture", () => {
+    writeSettings({ reduceMotion: true });
+    const oppCast: GameEvent = { type: "cardPlayed", player: "p2", instanceId: "i-opp-zephrys", defId: ZEPHRYS, costPaid: 3 };
+    const before = withEvents(baseView(), START);
+    const { rerender } = render(
+      <CatalogContext.Provider value={lookup}>
+        <Game view={before} legal={[]} onAction={vi.fn()} />
+      </CatalogContext.Provider>,
+    );
+    rerender(
+      <CatalogContext.Provider value={lookup}>
+        <Game view={withEvents(baseView(), [...START, oppCast])} legal={[]} onAction={vi.fn()} />
+      </CatalogContext.Provider>,
+    );
+    const still = screen.getByTestId("takeover-still");
+    expect(still).toHaveAttribute("data-takeover-def", ZEPHRYS);
+    act(() => {
+      vi.advanceTimersByTime(TAKEOVER_STILL_MS);
+    });
+    expect(screen.queryByTestId("takeover-still")).toBeNull();
   });
 });

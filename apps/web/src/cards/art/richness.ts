@@ -47,9 +47,11 @@ export const ART_DETAIL_SHORT: ReadonlySet<string> = new Set<string>(SHORT);
 /**
  * The most `ART_DETAIL_SHORT` may name: its length as the last pass left it, so it can only shrink (561 after
  * #3331; 445 after #3390, R3390000, which took Classic+'s 116 off; 337 after #3392, R3392000, which took Core's
- * 108 off; 289 after #3393, R3393000, which took Meditative+'s and Training Grounds' 48 off).
+ * 108 off; 289 after #3393, R3393000, which took Meditative+'s and Training Grounds' 48 off; 157 after #3401,
+ * R3401000, which took Meditative's 132 off; 129 after #3403, R3403000, which took the 28 of Stinkyscape's later
+ * cards still on it off).
  */
-export const ART_DETAIL_SHORT_MAX = 289;
+export const ART_DETAIL_SHORT_MAX = 129;
 
 /** The shapes a picture draws: its paths, circles, rects, ellipses, polygons, polylines and lines, after its `<defs>`. */
 export function artElements(svg: string): number {

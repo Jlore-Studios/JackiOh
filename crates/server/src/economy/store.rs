@@ -25,7 +25,8 @@ use jackioh_engine::wire::PrintedRarity;
 use jackioh_engine::{Action, LastBoardEntry, LeanPick, PlayerId};
 
 use crate::config::{
-    NANOS_PER_MS, PLAYER_SETTINGS_TEXT_MAX_LENGTH, PROFICIENCY_LEVELS, SET_TRACK_FIRST_LEVEL,
+    FLEET_TRACK_LEVELS, NANOS_PER_MS, PLAYER_SETTINGS_TEXT_MAX_LENGTH, PROFICIENCY_LEVELS,
+    SET_TRACK_FIRST_LEVEL,
 };
 use crate::cosmetics::CosmeticRarity;
 use crate::db::store::{StoreError, StoreResult, Tx};
@@ -34,6 +35,7 @@ use crate::economy::practice::{ClaimBucket, ClaimedResult};
 // The rows an opening names and the cosmetics an account owns are `jackioh-shared`'s (#3104): the pure economy
 // decides over them and the store keeps them.
 pub use jackioh_shared::cosmetics::{CardCosmetic, FullArtPick, OwnedCosmetics};
+pub use jackioh_shared::economy::fleet::FleetTrack;
 pub use jackioh_shared::economy::ledger::{
     Counter, HeldQuest, InventoryItem, QuestBook, QuestChange, SetTrack,
 };
@@ -319,6 +321,28 @@ pub struct TrackGrant {
     pub at: i64,
 }
 
+/// R3335001: one row of `public.fleet_track_grants` (migration 0086): the XP and levels the account's Fleet track
+/// gained (§14.15), each signed, at least one not zero; its reason `game` or `dev`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct FleetGrant {
+    pub profile_id: String,
+    pub xp: i64,
+    pub levels: i64,
+    pub reason: EconomyReason,
+    pub reference: Option<String>,
+    pub dev: bool,
+    pub at: i64,
+}
+
+/// R3335001: one row of `public.fleet_tracks` (migration 0086): the account's Fleet XP and the level it reached.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct FleetRow {
+    pub xp: i64,
+    pub level: i64,
+}
+
 /// One row of `public.quest_grants`: a quest's change, with the progress it made when it
 /// progressed (and 0 otherwise).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -359,6 +383,9 @@ pub struct EconomyLedger {
     pub tracks: Vec<TrackGrant>,
     pub quests: Vec<QuestGrant>,
     pub cosmetics: Vec<CosmeticGrant>,
+    /// R3335001: the Fleet track's rows (migration 0086).
+    #[serde(default)]
+    pub fleet: Vec<FleetGrant>,
 }
 
 /// The fake's tables (`FakeTables::economy`): each state table as `(profile_id, row)` pairs, each
@@ -391,6 +418,9 @@ pub struct EconomyTables {
     pub news_claims: Vec<NewsClaim>,
     /// R3013000: migration 0081's card proficiency, one per profile and card.
     pub card_proficiency: Vec<(String, CardProficiency)>,
+    /// R3335001: migration 0086's Fleet tracks, one per profile, and their ledger.
+    pub fleet_tracks: Vec<(String, FleetRow)>,
+    pub fleet_grants: Vec<FleetGrant>,
 }
 
 // What both stores refuse alike: migration 0045's checks
@@ -489,6 +519,32 @@ fn check_track(grant: &TrackGrant) -> Result<(), StoreError> {
         return Err(refused("a track grant of nothing changes nothing".to_string()));
     }
     check_dev(grant.reason == EconomyReason::Dev, grant.dev)
+}
+
+fn check_fleet(grant: &FleetGrant) -> Result<(), StoreError> {
+    // `fleet_track_grants_change_check` and `fleet_track_grants_reason_check`.
+    if grant.xp == 0 && grant.levels == 0 {
+        return Err(refused("a Fleet grant of nothing changes nothing".to_string()));
+    }
+    if !matches!(grant.reason, EconomyReason::Game | EconomyReason::Dev) {
+        return Err(refused(format!(
+            "a Fleet grant's reason is game or dev, not {:?}",
+            grant.reason
+        )));
+    }
+    check_dev(grant.reason == EconomyReason::Dev, grant.dev)
+}
+
+/// R3335001: the Fleet track `grant` leaves, from `held` (no row is level 0 with no XP): `None` when that is no
+/// track (XP or level below 0, a level past `FLEET_TRACK_LEVELS`), or a sum overflows.
+fn fleet_after(held: Option<FleetRow>, grant: &FleetGrant) -> Option<FleetRow> {
+    let held = held.unwrap_or_default();
+    let next = FleetRow {
+        xp: held.xp.checked_add(grant.xp)?,
+        level: held.level.checked_add(grant.levels)?,
+    };
+    let holds = next.xp >= 0 && (0..=i64::from(FLEET_TRACK_LEVELS)).contains(&next.level);
+    holds.then_some(next)
 }
 
 fn check_quest(grant: &QuestGrant) -> Result<(), StoreError> {
@@ -725,6 +781,25 @@ impl Tx<'_> {
     pub async fn economy_tracks_grant(&mut self, grant: &TrackGrant) -> StoreResult<Option<SetTrack>> {
         check_track(grant)?;
         economy_dispatch!(self, tracks_grant(grant))
+    }
+
+    /// R3335001: the account's Fleet track (§14.15), no row reading as level 0 with no XP, and the XP its `game`
+    /// rows add up to with `at` in `[from, until)` (milliseconds), the day a payout is held to. Read under the
+    /// account's economy lock, so the sum is the one a payout adds to.
+    pub async fn economy_fleet_get(
+        &mut self,
+        profile_id: &str,
+        from: i64,
+        until: i64,
+    ) -> StoreResult<FleetTrack> {
+        economy_dispatch!(self, fleet_get(profile_id, from, until))
+    }
+
+    /// R3335001: adds a grant's XP and levels to the account's Fleet track and writes its ledger row. False, writing
+    /// nothing, when that would be no track (see `fleet_after`).
+    pub async fn economy_fleet_grant(&mut self, grant: &FleetGrant) -> StoreResult<bool> {
+        check_fleet(grant)?;
+        economy_dispatch!(self, fleet_grant(grant))
     }
 
     /// §14.9: the held quests, by when they arrived (then id), and when the next is due. The
@@ -1080,6 +1155,8 @@ pub fn remove_economy_rows(tables: &mut EconomyTables, profile_id: &str) {
     tables.idempotency_keys.retain(|row| row.profile_id != profile_id);
     tables.news_claims.retain(|row| row.profile_id != profile_id);
     tables.card_proficiency.retain(|(owner, _)| owner != profile_id);
+    tables.fleet_tracks.retain(|(owner, _)| owner != profile_id);
+    tables.fleet_grants.retain(|grant| grant.profile_id != profile_id);
 }
 
 // Postgres (migration 0045)
@@ -1091,10 +1168,11 @@ mod pg {
 
     use super::{
         CardCosmetic, CardPicks, CardProficiency, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant,
-        EconomyLedger, EconomyReason, FullArtPick, GameJloreTotals, HeldQuest, IdempotencyRow,
-        InventoryEntry, InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics, PracticeClaim,
-        PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled, QuestBook, QuestChange,
-        QuestGrant, SetTrack, TrackGrant, claim_count_day, count_after, from_literal, literal, track_after,
+        EconomyLedger, EconomyReason, FleetGrant, FleetRow, FleetTrack, FullArtPick, GameJloreTotals,
+        HeldQuest, IdempotencyRow, InventoryEntry, InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics,
+        PracticeClaim, PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled, QuestBook,
+        QuestChange, QuestGrant, SetTrack, TrackGrant, claim_count_day, count_after, fleet_after,
+        from_literal, literal, track_after,
     };
     use crate::auth::is_uuid;
     use crate::config::SET_TRACK_FIRST_LEVEL;
@@ -1698,6 +1776,82 @@ mod pg {
         Ok(Some(track_of(&row)?))
     }
 
+    /// Migration 0086's two tables: the track row, then the day's `game` rows' XP. A deleted seat reads back as the
+    /// empty id, which has no rows.
+    pub async fn fleet_get(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        from: i64,
+        until: i64,
+    ) -> Result<FleetTrack, StoreError> {
+        if !is_uuid(profile_id) {
+            return Ok(FleetTrack::default());
+        }
+        run_as(t, Some(profile_id)).await?;
+        let row: Option<(i64, i64)> =
+            sqlx::query_as("select xp, level from public.fleet_tracks where profile_id = $1::uuid")
+                .bind(profile_id)
+                .fetch_optional(&mut **t)
+                .await?;
+        let xp_today: i64 = sqlx::query_scalar(
+            "select coalesce(sum(xp), 0)::bigint from public.fleet_track_grants
+              where profile_id = $1::uuid and reason = $2::text
+                and at >= to_timestamp($3::double precision / 1000.0)
+                and at < to_timestamp($4::double precision / 1000.0)",
+        )
+        .bind(profile_id)
+        .bind(literal(&EconomyReason::Game)?)
+        .bind(from)
+        .bind(until)
+        .fetch_one(&mut **t)
+        .await?;
+        let (xp, level) = row.unwrap_or_default();
+        Ok(FleetTrack { xp, level, xp_today })
+    }
+
+    /// `tracks_grant`'s shape over `fleet_tracks`: the new track is checked here (`fleet_after`), and an absent one
+    /// is inserted from level 0.
+    pub async fn fleet_grant(t: &mut PgTx<'_>, grant: &FleetGrant) -> Result<bool, StoreError> {
+        run_as(t, Some(grant.profile_id.as_str())).await?;
+        let held: Option<(i64, i64)> = sqlx::query_as(
+            "select xp, level from public.fleet_tracks where profile_id = $1::uuid for update",
+        )
+        .bind(grant.profile_id.as_str())
+        .fetch_optional(&mut **t)
+        .await?;
+        let held = held.map(|(xp, level)| FleetRow { xp, level });
+        if fleet_after(held, grant).is_none() {
+            return Ok(false);
+        }
+        sqlx::query(
+            "insert into public.fleet_tracks (profile_id, xp, level)
+             values ($1::uuid, $2::bigint, $3::bigint)
+             on conflict (profile_id) do update
+                set xp = public.fleet_tracks.xp + $2::bigint,
+                    level = public.fleet_tracks.level + $3::bigint",
+        )
+        .bind(grant.profile_id.as_str())
+        .bind(grant.xp)
+        .bind(grant.levels)
+        .execute(&mut **t)
+        .await?;
+        sqlx::query(
+            "insert into public.fleet_track_grants (profile_id, xp, levels, reason, ref, dev, at)
+             values ($1::uuid, $2::bigint, $3::bigint, $4::text, $5::text, $6::boolean,
+                     to_timestamp($7::double precision / 1000.0))",
+        )
+        .bind(grant.profile_id.as_str())
+        .bind(grant.xp)
+        .bind(grant.levels)
+        .bind(literal(&grant.reason)?)
+        .bind(grant.reference.as_deref())
+        .bind(grant.dev)
+        .bind(grant.at)
+        .execute(&mut **t)
+        .await?;
+        Ok(true)
+    }
+
     pub async fn quests_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<QuestBook, StoreError> {
         run_as(t, Some(profile_id)).await?;
         // The schedule first, locked, so the held quests read after it are the ones a top-up
@@ -2256,6 +2410,25 @@ mod pg {
             })
         })
         .collect::<Result<Vec<_>, StoreError>>()?;
+        let fleet = rows(
+            "select xp, levels, reason, ref, dev, at from public.fleet_track_grants
+              where profile_id = $1::uuid order by id",
+        )
+        .fetch_all(&mut **t)
+        .await?
+        .iter()
+        .map(|row| -> Result<FleetGrant, StoreError> {
+            Ok(FleetGrant {
+                profile_id: profile_id.to_string(),
+                xp: row.try_get("xp")?,
+                levels: row.try_get("levels")?,
+                reason: from_literal(row.try_get("reason")?)?,
+                reference: row.try_get("ref")?,
+                dev: row.try_get("dev")?,
+                at: at_of(row)?,
+            })
+        })
+        .collect::<Result<Vec<_>, StoreError>>()?;
         Ok(EconomyLedger {
             jlore,
             inventory,
@@ -2263,6 +2436,7 @@ mod pg {
             tracks,
             quests,
             cosmetics,
+            fleet,
         })
     }
 
@@ -2724,10 +2898,11 @@ mod pg {
 mod fake {
     use super::{
         CardCosmetic, CardPicks, CardProficiency, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant,
-        EconomyLedger, EconomyReason, EconomyTables, GameJloreTotals, HeldQuest, IdempotencyRow,
-        InventoryEntry, InventoryGrant, JloreGrant, JloreReason, NewsClaim, OwnedCosmetics, PracticeClaim,
-        PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled, QuestBook, QuestChange,
-        QuestGrant, SetTrack, TrackGrant, claim_count_day, count_after, literal, track_after,
+        EconomyLedger, EconomyReason, EconomyTables, FleetGrant, FleetTrack, GameJloreTotals, HeldQuest,
+        IdempotencyRow, InventoryEntry, InventoryGrant, JloreGrant, JloreReason, NewsClaim, OwnedCosmetics,
+        PracticeClaim, PracticeClaimCount, PracticeOutcome, PracticeSeed, PracticeSettled, QuestBook,
+        QuestChange, QuestGrant, SetTrack, TrackGrant, claim_count_day, count_after, fleet_after, literal,
+        track_after,
     };
     use crate::db::fake::FakeTx;
     use crate::db::store::ProfileKind;
@@ -2946,6 +3121,53 @@ mod fake {
         }
         tables.track_grants.push(grant.clone());
         Ok(Some(next))
+    }
+
+    pub fn fleet_get(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        from: i64,
+        until: i64,
+    ) -> Result<FleetTrack, StoreError> {
+        let tables = call(f, "economy.fleet.get")?;
+        let row = tables
+            .fleet_tracks
+            .iter()
+            .find(|(owner, _)| owner == profile_id)
+            .map(|(_, row)| *row)
+            .unwrap_or_default();
+        let xp_today = tables
+            .fleet_grants
+            .iter()
+            .filter(|grant| {
+                grant.profile_id == profile_id
+                    && grant.reason == EconomyReason::Game
+                    && (from..until).contains(&grant.at)
+            })
+            .map(|grant| grant.xp)
+            .sum();
+        Ok(FleetTrack {
+            xp: row.xp,
+            level: row.level,
+            xp_today,
+        })
+    }
+
+    pub fn fleet_grant(f: &mut FakeTx<'_>, grant: &FleetGrant) -> Result<bool, StoreError> {
+        let tables = call(f, "economy.fleet.grant")?;
+        let held = tables
+            .fleet_tracks
+            .iter_mut()
+            .find(|(owner, _)| *owner == grant.profile_id);
+        let Some(next) = fleet_after(held.as_ref().map(|(_, row)| *row), grant) else {
+            return Ok(false);
+        };
+        match held {
+            Some((_, row)) => *row = next,
+            None => tables.fleet_tracks.push((grant.profile_id.clone(), next)),
+        }
+        tables.fleet_grants.push(grant.clone());
+        Ok(true)
     }
 
     pub fn quests_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<QuestBook, StoreError> {
@@ -3263,6 +3485,7 @@ mod fake {
             tracks: mine(&tables.track_grants, |row| &row.profile_id, profile_id),
             quests: mine(&tables.quest_grants, |row| &row.profile_id, profile_id),
             cosmetics: mine(&tables.cosmetic_grants, |row| &row.profile_id, profile_id),
+            fleet: mine(&tables.fleet_grants, |row| &row.profile_id, profile_id),
         })
     }
 

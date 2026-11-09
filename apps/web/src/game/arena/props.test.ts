@@ -1,5 +1,5 @@
-// R3348001 (#3348): the ten playmats' corner props: two each, one by each corner, on the field taps'
-// own sounds, and four hidden sequences.
+// R3348001 (#3348): the playmats' corner props: two each, one by each corner, on the field taps'
+// own sounds, and four hidden sequences. R3335001: the Fleet track's Stinkyscape playmat made them eleven.
 
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
@@ -12,8 +12,8 @@ import { CORNER_PROPS, CORNER_SEQUENCES, propsOf, sequenceOf } from "./props.ts"
 const MATS = cosmeticsOf("table").map((cosmetic) => cosmetic.id);
 
 describe("R3348001 the corner props", () => {
-  it("R3348001 each of the ten playmats has two props, one by each corner, and no other mat has any", () => {
-    expect(MATS).toHaveLength(10);
+  it("R3348001 each of the eleven playmats has two props, one by each corner, and no other mat has any", () => {
+    expect(MATS).toHaveLength(11);
     expect(Object.keys(CORNER_PROPS).sort()).toEqual([...MATS].sort());
     for (const mat of MATS) {
       const props = propsOf(mat);
@@ -26,7 +26,7 @@ describe("R3348001 the corner props", () => {
 
   it("R3348001 prop ids are unique and begin with a name of their mat's own, and each has its picture", () => {
     const ids = MATS.flatMap((mat) => propsOf(mat).map((prop) => prop.id));
-    expect(new Set(ids).size).toBe(20);
+    expect(new Set(ids).size).toBe(MATS.length * 2);
     expect(Object.keys(PROP_ART).sort()).toEqual([...ids].sort());
     for (const id of ids) {
       const art = PROP_ART[id] as ReactElement<{ children: ReactElement<{ className: string }>[] }> | undefined;

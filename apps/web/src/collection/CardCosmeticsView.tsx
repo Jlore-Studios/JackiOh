@@ -52,6 +52,7 @@ import {
   type StripItem,
   type StripKind,
 } from "./collection.ts";
+import GrantReveal, { type GrantItem } from "../economy/GrantReveal.tsx";
 import ItemPreview, { usePreviewHold } from "./ItemPreview.tsx";
 import { LookHoverPanel, useLookHover } from "./LookHover.tsx";
 import ProficiencyPanel from "./ProficiencyPanel.tsx";
@@ -257,6 +258,8 @@ export default function CardCosmeticsView({
   const picks = useCardPicks(def.id);
   const [preview, setPreview] = useState<Shown | null>(null);
   const [previewing, setPreviewing] = useState<string | null>(null);
+  // R3349000: a bought level reveals the card wearing it before the preview closes.
+  const [grant, setGrant] = useState<GrantItem | null>(null);
   const [textOpen, setTextOpen] = useState(false);
   // R3016001: the hovered rung's preview in the three views.
   const hover = useLookHover();
@@ -296,6 +299,7 @@ export default function CardCosmeticsView({
         held={tokens}
         name={item.name}
         onRedeemed={setTokens}
+        onReveal={setGrant}
       />
     );
   };
@@ -403,6 +407,15 @@ export default function CardCosmeticsView({
           }
           offer={previewed.owned ? null : offer(previewed)}
           onClose={() => {
+            setPreviewing(null);
+          }}
+        />
+      )}
+      {grant === null ? null : (
+        <GrantReveal
+          items={[grant]}
+          onDone={() => {
+            setGrant(null);
             setPreviewing(null);
           }}
         />

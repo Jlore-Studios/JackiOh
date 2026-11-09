@@ -44,6 +44,7 @@ import {
   type StinkyFamily,
 } from "./stinkyscape.ts";
 import { sceneRecipeOf } from "./scene.ts";
+import { STINKYSCAPE_91_RECIPES } from "./sceneRecipes.ts";
 import { STINKYSCAPE_RECIPES } from "./stinkyscapeRecipes.ts";
 import { anomalyArtUri, proceduralArtUri, starshipModuleIconUri, starshipModuleUri, stinkyscapeArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
@@ -670,6 +671,11 @@ describe("R503 R3331002: a shipped Stinkyscape card keeps the picture v0.5.0 shi
   // R3331002: a record, which pins the picture each face shows while its card has no scene recipe; a card a
   // picture pass gives one draws its scene instead.
   const recorded = STINKYSCAPE_V050 as unknown as Readonly<Record<string, readonly [number, number]>>;
+  /**
+   * The entries that draw a scene: R3391000 every entry of #3391's table (cards 1 to 90, Arg Arg Defender's among them)
+   * and R3403000 every entry of #3403's.
+   */
+  const SCENE_IDS = [...Object.keys(STINKYSCAPE_RECIPES), ...Object.keys(STINKYSCAPE_91_RECIPES)].sort();
   /** The picture the face shows, as its painter printed it. */
   const shown = (card: CardDef, radiant: boolean): string =>
     decodeURIComponent(stinkyscapeArtUri(card.id, card.name, card.tags, card.type, radiant).slice(SVG_PREFIX.length));
@@ -687,12 +693,12 @@ describe("R503 R3331002: a shipped Stinkyscape card keeps the picture v0.5.0 shi
       expect(hashId(shown(card, true)), card.id).toBe(radiant);
       unchanged += 1;
     }
-    expect(unchanged).toBe(SET.length - Object.keys(STINKYSCAPE_RECIPES).length);
+    expect(unchanged).toBe(SET.length - SCENE_IDS.length);
   });
 
   it("R3331002 a Stinkyscape card with a scene recipe draws a picture v0.5.0 did not, on both faces", () => {
     const scenes = SET.filter((card) => sceneRecipeOf(card.id) !== null);
-    expect(scenes.map((card) => card.id).sort()).toEqual(Object.keys(STINKYSCAPE_RECIPES).sort());
+    expect(scenes.map((card) => card.id).sort()).toEqual(SCENE_IDS);
     for (const card of scenes) {
       const [base, radiant] = recorded[card.id] ?? [];
       expect(hashId(shown(card, false)), card.id).not.toBe(base);

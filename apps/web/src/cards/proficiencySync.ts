@@ -8,7 +8,7 @@
 
 import { getProficiency, putProficiencyStamp, type ProficiencyResponse, type ProficiencyStampPut } from "../net/api.ts";
 import type { Account } from "../net/gate.ts";
-import { SETTINGS_SYNC_GRACE_MS, useAccountSync } from "../settings/accountSync.ts";
+import { requestQueue, SETTINGS_SYNC_GRACE_MS, useAccountSync } from "../settings/accountSync.ts";
 import { isRecord } from "../wire/json.ts";
 import { replaceOwnProficiency, subscribeStampWrites } from "./stamps.ts";
 
@@ -40,22 +40,8 @@ function cardsOf(answer: unknown): readonly unknown[] {
 export function startProficiencyAccountSync(options: { token: () => string; api: ProficiencyAccountApi }): ProficiencyAccountSync {
   const { token, api } = options;
   let stopped = false;
-  let queue: Promise<void> = Promise.resolve();
-  let pending = 0;
-
   /** One request after those before it; a failure is swallowed, so the next still runs. */
-  const enqueue = (request: () => Promise<unknown>): void => {
-    pending += 1;
-    queue = queue
-      .then(request)
-      .then(
-        () => undefined,
-        () => undefined,
-      )
-      .finally(() => {
-        pending -= 1;
-      });
-  };
+  const { enqueue, settled } = requestQueue();
 
   const replace = (answer: unknown): void => {
     const cards = cardsOf(answer);
@@ -86,9 +72,7 @@ export function startProficiencyAccountSync(options: { token: () => string; api:
       unsubscribe();
       replaceOwnProficiency([]);
     },
-    settled: async () => {
-      while (pending > 0) await queue;
-    },
+    settled,
   };
 }
 

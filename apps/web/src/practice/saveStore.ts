@@ -16,6 +16,9 @@ export type PracticeSaveStore = {
   readonly ready: Promise<void>;
   read(): PracticeSave | null;
   write(save: PracticeSave | null): void;
+  /** R3476000: the run fight in progress, in its own slot; never the free game's. */
+  readRunFight(): PracticeSave | null;
+  writeRunFight(save: PracticeSave | null): void;
   /** R768: the kept finished games, oldest first. */
   readReplays(): readonly PracticeReplay[];
   writeReplays(replays: readonly PracticeReplay[]): void;
@@ -24,17 +27,27 @@ export type PracticeSaveStore = {
 export const PRACTICE_SAVE_DB = "jackioh.practice";
 const STORE = "save";
 const KEY = "game";
+const RUN_FIGHT_KEY = "runFight";
 const REPLAYS_KEY = "replays";
 
 /** A store that forgets on reload: jsdom, a browser without IndexedDB, and the tests. */
-export function memorySaveStore(initial: PracticeSave | null = null, replays: readonly PracticeReplay[] = []): PracticeSaveStore {
+export function memorySaveStore(
+  initial: PracticeSave | null = null,
+  replays: readonly PracticeReplay[] = [],
+  runFight: PracticeSave | null = null,
+): PracticeSaveStore {
   let save = initial;
+  let fight = runFight;
   let kept = [...replays];
   return {
     ready: Promise.resolve(),
     read: () => save,
     write: (next) => {
       save = next;
+    },
+    readRunFight: () => fight,
+    writeRunFight: (next) => {
+      fight = next;
     },
     readReplays: () => kept,
     writeReplays: (next) => {
@@ -93,6 +106,8 @@ function request<T>(req: IDBRequest<T>): Promise<T> {
 /** IndexedDB behind an in-memory copy. Writes are issued in order, one transaction each. */
 export function indexedDbSaveStore(factory: IDBFactory): PracticeSaveStore {
   let save: PracticeSave | null = null;
+  // R3476000: the run fight's own slot, read at boot and written per answer, beside the free game's.
+  let runFight: PracticeSave | null = null;
   let replays: PracticeReplay[] = [];
   let db: IDBDatabase | null = null;
 
@@ -104,6 +119,8 @@ export function indexedDbSaveStore(factory: IDBFactory): PracticeSaveStore {
     db = await request(open);
     const stored: unknown = await request(db.transaction(STORE, "readonly").objectStore(STORE).get(KEY));
     save = isSave(stored) ? stored : null;
+    const fight: unknown = await request(db.transaction(STORE, "readonly").objectStore(STORE).get(RUN_FIGHT_KEY));
+    runFight = isSave(fight) ? fight : null;
     const kept: unknown = await request(db.transaction(STORE, "readonly").objectStore(STORE).get(REPLAYS_KEY));
     replays = Array.isArray(kept) ? (kept as unknown[]).filter(isReplay) : [];
   }
@@ -111,6 +128,7 @@ export function indexedDbSaveStore(factory: IDBFactory): PracticeSaveStore {
   const ready = boot().catch(() => {
     db = null;
     save = null;
+    runFight = null;
     replays = [];
   });
 
@@ -128,6 +146,18 @@ export function indexedDbSaveStore(factory: IDBFactory): PracticeSaveStore {
         // A closed or full database: this answer's save is lost, and the game goes on.
       }
     },
+    readRunFight: () => runFight,
+    writeRunFight(next) {
+      runFight = next;
+      if (db === null) return;
+      try {
+        const store = db.transaction(STORE, "readwrite").objectStore(STORE);
+        if (next === null) store.delete(RUN_FIGHT_KEY);
+        else store.put(next, RUN_FIGHT_KEY);
+      } catch {
+        // As for a free game's save: this answer's fight is lost, and the fight goes on.
+      }
+    },
     readReplays: () => replays,
     writeReplays(next) {
       replays = [...next];
@@ -143,4 +173,35 @@ export function indexedDbSaveStore(factory: IDBFactory): PracticeSaveStore {
 
 export function defaultSaveStore(): PracticeSaveStore {
   return typeof indexedDB === "undefined" ? memorySaveStore() : indexedDbSaveStore(indexedDB);
+}
+
+/**
+ * R3476000: forget the kept run fight, and only it (a finished fight, an abandoned run, a new
+ * run). Fire-and-forget for the page: it deletes the run fight's key without ever reading the
+ * log (rule 7), and a missing database, store or key is no kept fight to forget.
+ */
+export function clearStoredRunFight(): void {
+  try {
+    if (typeof indexedDB === "undefined") return;
+    const open = indexedDB.open(PRACTICE_SAVE_DB, 1);
+    open.onsuccess = () => {
+      let db: IDBDatabase | null = null;
+      try {
+        db = open.result;
+        const tx = db.transaction(STORE, "readwrite");
+        tx.oncomplete = () => db?.close();
+        tx.onerror = () => db?.close();
+        tx.objectStore(STORE).delete(RUN_FIGHT_KEY);
+      } catch {
+        // No store, or a transaction that would not start: nothing kept to forget.
+        try {
+          db?.close();
+        } catch {
+          // A close that fails leaves nothing behind worth reporting.
+        }
+      }
+    };
+  } catch {
+    // A database that will not open holds no fight to forget.
+  }
 }

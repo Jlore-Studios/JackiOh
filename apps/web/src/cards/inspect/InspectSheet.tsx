@@ -20,6 +20,8 @@ import { InspectNote } from "./InspectNote.tsx";
 import { Printed } from "./Printed.tsx";
 import { LocLine, StateNotes } from "./StateNotes.tsx";
 import { RefsInteractive } from "../refContext.tsx";
+import { FullScreenButton } from "../FullScreenArt.tsx";
+import { useFullScreenTrigger } from "../fullscreen.ts";
 import { useModalOverlay } from "./store.ts";
 import { SheetGrip, useSheetSwipe } from "./useSheetSwipe.tsx";
 import { INSPECT_CLOSE, INSPECT_FACE, INSPECT_SCRIM, INSPECT_SHEET } from "./testids.ts";
@@ -35,6 +37,7 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
   const ascentLevel = face.ascent;
   // R1655000: the viewer's own card's sheet wears its cosmetics, as it prints its full art.
   const own = useOwnCopy();
+  const fs = useFullScreenTrigger(face, { worn: own });
 
   return createPortal(
     <div className="inspect-layer inspect-layer--sheet" {...modal.layerProps}>
@@ -51,10 +54,11 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
         <SheetGrip />
         <div className="inspect-sheet-body">
           <RefsInteractive>
-            <div className="inspect-face inspect-face--sheet" data-testid={INSPECT_FACE}>
+            <div className="inspect-face inspect-face--sheet" data-testid={INSPECT_FACE} {...fs.handlers}>
               <CardFace face={face} layout="full" ascentLevel={ascentLevel} worn={own} tilt="drag" />
               <InspectNote note={note} />
             </div>
+            <FullScreenButton card={face} worn={own} />
             <Extended face={face} ascentLevel={ascentLevel} />
             <StateNotes face={face} />
             <Printed face={face} />

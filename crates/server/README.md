@@ -64,7 +64,7 @@ no rule is restated here. The Conquest series' transitions and projection are `j
 `freeze_stamps`, `worn_stamps`), and `shown_defs`, `cards_due` and the deal they read (`dealt_cards`, which
 `actor/engine.rs` re-exports), called natively by `actor/registry.rs`, `actor/match_actor.rs` and `api/replays.rs`;
 `loadout.rs` keeps the store reads that build their records and names the rest as it always has. A co-op match calls the engine's Duos functions (`duos_create`,
-`duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`,
+`duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_view_for`,
 `duos_fold`) and the AI's `duos_decide` the same way, deciding nothing of its own (§13). The
 catalog and its version are compiled in from `crates/cards`.
 
@@ -203,7 +203,7 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `POST` | `/api/cosmetic-packs/open` | active | open one cosmetic pack, 409 when none is held: its slots, each an unowned cosmetic (and its card, when the account lacked it, and `below`, the levels an out-of-order pull grants beneath it, R3015003) or bar points, the Chase Shard bar's points before it (`shardBefore`) and the bar after it, the packs left and `bars`, as a card pack's opening answers them (R1306000, R1306001, R1306003) |
 | `POST` | `/api/cosmetic-packs/chase` | active | `{ cosmeticId, cardId? }`: a full Chase Shard bar buys one unowned Legendary or Mythic cosmetic and empties, a variant's level only as its card's next, 400 `bad_request` for a retired cosmetic, one not offered on the card or a level past the next (R3015004), 409 for a choice it cannot pay for, answering the bar and packs after it (R1306002) |
 | `GET` | `/api/wallet` | active | the caller's Jlore balance (§14.1); read-only, like the collection |
-| `GET` | `/api/tracks` | active | the caller's set tracks in catalog order — level, XP, the XP the current level spans (`levelXp`) and the XP to the next level, the next rewards (all three `null` on the last level, R1302005) and how many levels have paid (§14.7); read-only, like the collection |
+| `GET` | `/api/tracks` | active | the caller's set tracks in catalog order — level, XP, the XP the current level spans (`levelXp`) and the XP to the next level, the next rewards (all three `null` on the last level, R1302005) and how many levels have paid (§14.7), then `fleet`, the Fleet track (§14.15, R3335001): its level and XP, `levelXp` and `xpToNext` (both `null` on its last level), `xpToday`, the Fleet XP this UTC day's games paid, and `nextRewards`, the ids of the next `FLEET_TRACK_NEXT_REWARDS_SHOWN` levels' cosmetics; read-only, like the collection |
 | `GET` | `/api/quests` | active | the caller's held quests, `{ quests: [{ questId, title, progress, target, jlore, xp, arrivedAt }], nextDueAt, replacesLeft }`, topped up first while the economy is live (R1304000); `nextDueAt` is `null` at `QUEST_MAX_HELD` and while the economy is off, when none arrives (R1304002); `replacesLeft` is the replaces the account may still spend this UTC day, `QUEST_REPLACES_PER_DAY` less its `removed` quest rows of the day, and 0 while the economy is off (R2210000) |
 | `POST` | `/api/quests/:questId/replace` | active | replaces a held quest: in one transaction under the account's economy lock it writes the quest's `removed` row and the `arrived` row of one drawn as an arrival is (uniformly among the entries not held, the replaced one excluded, its seed in the `ref`), which takes its slot at once with 0 progress, the replaced quest's progress lost and the arrival rhythm unmoved; answers what `GET /api/quests` answers. 409 `conflict` while the economy is off, when today's `QUEST_REPLACES_PER_DAY` are spent and when no other quest is left to draw, 404 `not_found` for a quest not held; a refusal writes nothing (R2210000) |
 | `GET` | `/api/news` | active | the news live now (R2875001), `{ news: [{ id, kind, version, title, summary, postedAt, reward: { kind, amount, pack?, tier? } | null, claimed }] }`, newest first, `claimed` the caller's own (R2875002); a dev's post from the dashboard standing now is an `alert` whose `reward` is null (R3074003) |
@@ -1159,7 +1159,7 @@ index is rebuilt over `(season_id, format, ladder)`. `rated_games` records each 
 before being Constructed. In the code the ladder is `ranked::ladder::Ladder`:
 - a game's is its mode's (`db::store::ladder_of_mode`);
 - every ranked store read and write takes it;
-- `Profile::glicko` and `BotRow::rating_on` read a rating on it.
+- `Profile::glicko` and `BotRow`'s `BotRecord::rating_for` (`bots/pool.rs`) read a rating on it.
 
 `tests/sql/12_ranked.sql` checks the columns, keys, checks and the refusal (R2778000).
 
@@ -1257,8 +1257,8 @@ sh crates/server/tests/deploy/rehearse.sh             # the container's boot reh
 Two binaries: `tests/server.rs` is the general one over `tests/{api,actor,bots,loops,support}/`, and
 `tests/server_store.rs` the store's, over `tests/store/` and `support/test_app.rs` alone, so that
 `tests/db/run.sh` builds and links only that, the engine, the cards and the AI at opt-level 0 through its
-`PROFILE_FLAGS`, which each of its `cargo` calls repeats (CI's `db (store contract)` job stays under five
-minutes, #3162, #3410). A
+`PROFILE_FLAGS`, which each of its `cargo` calls repeats, each finding the build fresh because every root
+`build.rs` hashes exists (CI's `db (store contract)` job stays under five minutes, #3162, #3410, #3436). A
 `store::` test lives in `server_store` only, and every other area in `server` only. CI's four
 `rust (test server …)` groups split the suite by test name (.github/ci/rust-test.toml says how), so only
 the lib and `server` hold tests whose path has `api::`, and only `server` ones with `api::practice::`.
@@ -1277,6 +1277,15 @@ transaction restores every table when it fails, claims are single-shot). `tests/
 runs every case against `Db::Fake` always and against `Db::Pg` when `DATABASE_URL` is set, which is
 what `tests/db/run.sh` sets, so a change to the store goes there. RLS and triggers are a property of
 real Postgres, so only the three Docker suites check them (CI's `db` job).
+
+`actor::perf` (#3429) plays random-policy matches at once through the actor on the in-memory store, on
+a runtime of `SERVER_PERF_WORKER_THREADS` workers. Daily, `perf_server_holds_its_budgets` holds the
+median action's `submit` round trip (answered only after both seats' views are pushed) to
+`SERVER_PERF_BROADCAST_MS_BUDGET` and the matches finished per second to
+`SERVER_PERF_MATCHES_PER_SECOND_FLOOR` (`config.rs`'s `SERVER_PERF_*`) and prints its table; per pull
+request `perf_server_smoke_plays_matches_at_once` plays `SERVER_PERF_SMOKE_MATCHES` with no budget. It
+is this binary's only daily test: a second `#[ignore = "daily: …"]` here would run beside it under
+`--ignored` and skew its clock.
 
 `tests/export_config.rs` writes `apps/web/src/wire/serverConfig.ts`, the constants the client and e2e
 read; CI fails when a run changes it.

@@ -235,46 +235,50 @@ describe("scripts/ci-scope.sh", () => {
     expect(lines(base, "not-a-commit")).toEqual(every(true));
   });
 
-  it("runs the db job only when what it tests against Postgres changed", () => {
-    for (const file of [
-      "crates/server/migrations/0027_new.sql",
-      "crates/server/src/db/pg.rs",
-      "crates/server/src/db/migrate.rs",
-      "crates/server/Dockerfile",
-      "wrangler.jsonc",
-      "crates/server/.env.example",
-      "crates/server/tests/sql/01_schema_invariants.sql",
-      "crates/server/tests/db/run.sh",
-      "crates/server/tests/deploy/rehearse.sh",
-      "crates/server/tests/store/contract.rs",
-      "crates/server/Cargo.toml",
-      // The shared crate's series rows and frozen decks are what the store writes, and the image builds it (#3098).
-      "crates/shared/src/series.rs",
-      "crates/shared/Cargo.toml",
-      "Cargo.lock",
-    ]) {
-      expect(fullAndDb(answerFor(file)), file).toEqual({ full: true, db: true });
-      expect(dbFor(ENGINE, file), `engine + ${file}`).toBe(true);
-      expect(dbFor("bot/harness/state.py", file), `bot + ${file}`).toBe(true);
-    }
-    for (const file of [
-      "crates/engine/src/reduce.rs",
-      "crates/server/src/api/queue.rs",
-      "crates/server/src/actor/match_actor.rs",
-      "crates/server/tests/api/queue.rs",
-      "crates/server/tests/server.rs",
-      "crates/server/tests/support/deps.rs",
-      "crates/server/tests/support/engine.rs",
-      "crates/shared/tests/series.rs",
-      "crates/server/src/dbx.rs",
-      "crates/server/Dockerfile.dev",
-      "crates/server-db/x.rs",
-      "Cargo.toml",
-      "apps/web/src/main.tsx",
-      "docs/architecture.md",
-    ]) {
-      expect(fullAndDb(answerFor(file)), file).toEqual({ full: true, db: false });
-    }
+  // One case per file, as above: one case for all of these ran the script 57 times, 1.5 s here and past
+  // vitest's 5 s on #3415's `web (unit 7/8)` (#3418). The lists below have a case per file for the same reason.
+  it.each([
+    "crates/server/migrations/0027_new.sql",
+    "crates/server/src/db/pg.rs",
+    "crates/server/src/db/migrate.rs",
+    "crates/server/Dockerfile",
+    "wrangler.jsonc",
+    "crates/server/.env.example",
+    "crates/server/tests/sql/01_schema_invariants.sql",
+    "crates/server/tests/db/run.sh",
+    "crates/server/tests/deploy/rehearse.sh",
+    "crates/server/tests/store/contract.rs",
+    "crates/server/Cargo.toml",
+    // The shared crate's series rows and frozen decks are what the store writes, and the image builds it (#3098).
+    "crates/shared/src/series.rs",
+    "crates/shared/Cargo.toml",
+    "Cargo.lock",
+  ])("runs the db job for %s, which it tests against Postgres, alone or beside the engine or the bot's code", (file) => {
+    expect(fullAndDb(answerFor(file)), file).toEqual({ full: true, db: true });
+    expect(dbFor(ENGINE, file), `engine + ${file}`).toBe(true);
+    expect(dbFor("bot/harness/state.py", file), `bot + ${file}`).toBe(true);
+  });
+
+  it.each([
+    "crates/engine/src/reduce.rs",
+    "crates/server/src/api/queue.rs",
+    "crates/server/src/actor/match_actor.rs",
+    "crates/server/tests/api/queue.rs",
+    "crates/server/tests/server.rs",
+    "crates/server/tests/support/deps.rs",
+    "crates/server/tests/support/engine.rs",
+    "crates/shared/tests/series.rs",
+    "crates/server/src/dbx.rs",
+    "crates/server/Dockerfile.dev",
+    "crates/server-db/x.rs",
+    "Cargo.toml",
+    "apps/web/src/main.tsx",
+    "docs/architecture.md",
+  ])("leaves the db job off for %s, which it does not test against Postgres", (file) => {
+    expect(fullAndDb(answerFor(file)), file).toEqual({ full: true, db: false });
+  });
+
+  it("leaves the db job and the heavy jobs off for the bot's code alone", () => {
     expect(fullAndDb(answerFor("bot/harness/state.py", ".harness/config.json"))).toEqual({ full: false, db: false });
   });
 
@@ -472,12 +476,12 @@ describe("scripts/ci-scope.sh", () => {
     },
   };
   for (const [line, { on, off }] of Object.entries(SCOPED) as [keyof typeof SCOPED, (typeof SCOPED)[keyof typeof SCOPED]][]) {
-    it(`runs ${line} only when what its job reads changed`, () => {
-      for (const file of on) expect(answerFor(file)[line], file).toBe(true);
-      for (const file of off) {
-        expect(answerFor(file)[line], file).toBe(false);
-        expect(answerFor(ENGINE, file)[line], `engine + ${file}`).toBe(true);
-      }
+    it.each(on)(`runs ${line} for %s, which its job reads`, (file) => {
+      expect(answerFor(file)[line], file).toBe(true);
+    });
+    it.each(off)(`leaves ${line} off for %s, which its job does not read, unless something else turns it on`, (file) => {
+      expect(answerFor(file)[line], file).toBe(false);
+      expect(answerFor(ENGINE, file)[line], `engine + ${file}`).toBe(true);
     });
   }
 
@@ -512,35 +516,31 @@ describe("scripts/ci-scope.sh", () => {
       "docs/architecture.md",
     ],
   };
-  it("runs promote-production.test.ts only when what it runs, reads or runs on changed", () => {
-    for (const file of PROMOTE.on) {
-      const { web, web_promote } = answerFor(file);
-      expect({ web, web_promote }, file).toEqual({ web: true, web_promote: true });
-    }
-    for (const file of PROMOTE.off) {
-      expect(answerFor(file).web_promote, file).toBe(false);
-      expect(answerFor(ENGINE, file).web_promote, `engine + ${file}`).toBe(false);
-      expect(answerFor("scripts/promote-production.sh", file).web_promote, `script + ${file}`).toBe(true);
-    }
+  it.each(PROMOTE.on)("runs promote-production.test.ts, and web, for %s, which it runs, reads or runs on", (file) => {
+    const { web, web_promote } = answerFor(file);
+    expect({ web, web_promote }, file).toEqual({ web: true, web_promote: true });
+  });
+  it.each(PROMOTE.off)("leaves promote-production.test.ts off for %s, alone or beside the engine, but not beside its script", (file) => {
+    expect(answerFor(file).web_promote, file).toBe(false);
+    expect(answerFor(ENGINE, file).web_promote, `engine + ${file}`).toBe(false);
+    expect(answerFor("scripts/promote-production.sh", file).web_promote, `script + ${file}`).toBe(true);
   });
 
   // infra/'s terraform steps in `rust (checks, fuzz 200)` (#1708): nothing but infra/ reads it.
-  it("runs infra/'s terraform steps only when infra/ or the workflow that runs them changed", () => {
-    for (const file of ["infra/versions.tf", "infra/.terraform.lock.hcl", "infra/README.md"]) {
-      expect(onFor(file), file).toEqual(["full", "infra"]);
-    }
-    for (const file of [
-      "crates/engine/src/reduce.rs",
-      "apps/web/src/main.tsx",
-      "Cargo.toml",
-      "wrangler.jsonc",
-      "apps/edge/src/index.ts",
-      "docs/deploy-cloudflare.md",
-      "infra-copy/versions.tf",
-    ]) {
-      expect(answerFor(file).infra, file).toBe(false);
-      expect(answerFor("infra/versions.tf", file).infra, `infra + ${file}`).toBe(true);
-    }
+  it.each(["infra/versions.tf", "infra/.terraform.lock.hcl", "infra/README.md"])("runs infra/'s terraform steps, and nothing else, for %s", (file) => {
+    expect(onFor(file), file).toEqual(["full", "infra"]);
+  });
+  it.each([
+    "crates/engine/src/reduce.rs",
+    "apps/web/src/main.tsx",
+    "Cargo.toml",
+    "wrangler.jsonc",
+    "apps/edge/src/index.ts",
+    "docs/deploy-cloudflare.md",
+    "infra-copy/versions.tf",
+  ])("leaves infra/'s terraform steps off for %s, unless infra/ changed beside it", (file) => {
+    expect(answerFor(file).infra, file).toBe(false);
+    expect(answerFor("infra/versions.tf", file).infra, `infra + ${file}`).toBe(true);
   });
 
   // The Rust test groups each path runs, one path for each pattern of the script's crate map.
@@ -585,24 +585,26 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/server/Cargo.toml", ["rust_server", "rust_tools_wasm"]],
     ["crates/ai/Cargo.toml", ["rust_server", "rust_ai", "rust_ai_slow", "rust_tools_wasm"]],
   ];
-  it("runs each Rust test group for the crates it builds on and the files its tests read", () => {
-    const groups = (...files: string[]): Name[] => onFor(...files).filter((name) => (RUST as readonly Name[]).includes(name));
-    for (const [file, expected] of GROUPS) expect(groups(file), file).toEqual(expected);
-    for (const file of [
-      "apps/web/src/main.tsx",
-      "e2e/cypress/e2e/01-hotseat-full-game.cy.ts",
-      "docs/architecture.md",
-      "spec/rulings/R0195.md",
-      "SPEC.md",
-      "wrangler.jsonc",
-      "apps/edge/src/index.ts",
-      "infra/versions.tf",
-      // No Rust test reads it: the web's build-wasm-cache.test.ts and `web (wasm c module)` run it.
-      "scripts/build-wasm.sh",
-    ]) {
-      expect(groups(file), file).toEqual([]);
-      expect(groups(ENGINE, file), `engine + ${file}`).toEqual([...RUST]);
-    }
+  const groups = (...files: string[]): Name[] => onFor(...files).filter((name) => (RUST as readonly Name[]).includes(name));
+  for (const [file, expected] of GROUPS) {
+    it(`runs each Rust test group for the crates it builds on and the files its tests read: ${file}`, () => {
+      expect(groups(file), file).toEqual(expected);
+    });
+  }
+  it.each([
+    "apps/web/src/main.tsx",
+    "e2e/cypress/e2e/01-hotseat-full-game.cy.ts",
+    "docs/architecture.md",
+    "spec/rulings/R0195.md",
+    "SPEC.md",
+    "wrangler.jsonc",
+    "apps/edge/src/index.ts",
+    "infra/versions.tf",
+    // No Rust test reads it: the web's build-wasm-cache.test.ts and `web (wasm c module)` run it.
+    "scripts/build-wasm.sh",
+  ])("runs no Rust test group for %s, which no Rust test reads, unless something else turns them on", (file) => {
+    expect(groups(file), file).toEqual([]);
+    expect(groups(ENGINE, file), `engine + ${file}`).toEqual([...RUST]);
   });
 
   it("runs the tools group when a diff adds a line acceptance.rs's scans read", () => {

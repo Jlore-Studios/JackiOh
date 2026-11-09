@@ -307,7 +307,9 @@ describe("R2803000 the gallery captures every set piece mid-flight and at rest",
     const { before, after, events } = launchScene();
     mountShown(before, withEvents(after, events));
     cy.get(GAME, { timeout: 4_000 }).should("have.attr", "data-set-piece", "starship");
-    cy.get(`${FX_DOM} [data-fx="launch"] .fx-launch-count`).should("have.length", 3);
+    // R3334001: the launch's 3-2-1 countdown is gone; its flame lights the ship's tile.
+    cy.get(`${FX_DOM} [data-fx="launch"] .fx-launch-flame`).should("have.length", 1);
+    cy.get(`${FX_DOM} [data-fx="launch"] .fx-launch-count`).should("not.exist");
     cy.screenshot("gallery-set-piece-starship-mid", { capture: "viewport", overwrite: true });
     cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
     cy.get(GAME).should("not.have.attr", "data-set-piece");

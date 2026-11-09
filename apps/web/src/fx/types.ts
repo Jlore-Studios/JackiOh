@@ -1,6 +1,7 @@
 // The effects layer's contract (docs/polish/1-animations.md, Surface S1).
 
 import type { CardType, GameEvent, KeywordKind, PlayerId, PlayerView, Rarity, Row, Tag } from "@jackioh/shared";
+import type { SignatureFace } from "../cards/signatureFaces.ts";
 import type { Side } from "../game/contract.ts";
 import type { FxFigure } from "./figures.ts";
 import type { FxCardHook } from "./motifs/names.ts";
@@ -163,7 +164,9 @@ export type FxFogCue = {
  * and a shockwave crosses both sides when it lands at `landMs`, all inside the entry and gone within
  * the effects' tail (R200). R3400000: "summit", "canvas" and "napkin" draw art of their own over the dark
  * (takeoverArt.ts), the same art Reduce Motion's still shows (game/TakeoverStill.tsx). R3405000: Meditative's
- * Mythics' twelve, from "ascent" to "fortress", each with art of its own.
+ * Mythics' twelve, from "ascent" to "fortress", each with art of its own. R3399002: Classic+'s four Mythics'
+ * looks, "zealot", "portal", "stair" and "vineyard", each draw a picture of their own (takeoverArt.ts).
+ * R3395001: Stinkyscape's "vault", "rod", "wire", "whiteDwarf" and "forge" have art of their own too.
  */
 export type TakeoverLook =
   | "prismatic"
@@ -184,13 +187,30 @@ export type TakeoverLook =
   | "studyHall"
   | "caneRack"
   | "warRoom"
-  | "fortress";
+  | "fortress"
+  | "zealot"
+  | "portal"
+  | "stair"
+  | "vineyard"
+  | "vault"
+  | "rod"
+  | "wire"
+  | "whiteDwarf"
+  | "forge";
+/**
+ * R3345000: what a takeover's set piece shows of the card: its own picture, one CSS `background-image` per depth plane
+ * (`ART_PLANES` order, far to nearest), its name and the hand it signs in (R2715002). It is the picture and the
+ * name, never the definition, so the cue names no card (R202; a takeover plans only for a readable play).
+ */
+export type FxTakeoverStage = { planes: readonly string[]; name: string; face: SignatureFace };
 /**
  * R3407000: `art`, a look of its own that draws its card's picture over the dark (`TAKEOVER_ART_LOOKS`), the
  * picture's URI: only ever a card the seat's own event names (R202).
  */
 export type FxTakeoverCue = {
   kind: "takeover";
+  /** R3345000: the card's art that takes the window while the entry holds a set piece; null without one (Big moments off, the cap): only the board's darkening and the sweep play. */
+  stage: FxTakeoverStage | null;
   look: TakeoverLook;
   tint: FxTint;
   at: FxAnchor;

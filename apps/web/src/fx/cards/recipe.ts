@@ -6,6 +6,7 @@
 // R3389001: Classic's signatures' six new entrances, their shakes and the beats they time (rule 9).
 // R3405000: an entrance reads its entry's lead (`leadMs`, a Mythic's takeover hold) and starts after it;
 // R3405001: Meditative's signature Units' and Field Spells' entrances, and each recipe's gallery fixture.
+// R3395000: Stinkyscape 001 to 090's signature Units' and Field Spells' (fx/cards/stinkyscape/).
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
@@ -18,8 +19,13 @@ import { hitAnchor } from "../motifs/build.ts";
 
 export type CardFxPlan = { entry: AnimationEntry; view: PlayerView; env: FxPlanEnv; D: number };
 
-/** A recipe's answer: its cues, and whether the event's own row recipe still plays (`keep`) or not. */
-export type CardFxResult = { cues: FxCue[]; row: "keep" | "replace" };
+/**
+ * A recipe's answer: its cues, and whether the event's own row recipe still plays (`keep`) or not.
+ * R3395001: `moment: "replace"` also draws it in place of the event's system moment (systemMoments.ts),
+ * which a recipe opts into beat by beat (Tylannt's dial for the shared quest moment); without it the
+ * system moment draws beside the recipe, as before.
+ */
+export type CardFxResult = { cues: FxCue[]; row: "keep" | "replace"; moment?: "replace" };
 
 export type CardRecipe = (event: GameEvent, p: CardFxPlan, play: FxPlay) => CardFxResult | null;
 
@@ -75,6 +81,28 @@ export const ENTRANCE_TRAUMA = {
   snowplowHeave: 0.75,
   chalkboardLesson: FX_LEGENDARY_TRAUMA,
   golemLashing: 0.75,
+  // R3395000: Stinkyscape 001 to 090's signature Units and Field Spells, a Legendary's at FX_LEGENDARY_TRAUMA and a
+  // Mythic's (Tylannt, Rod of Ages, Paragon-X, Prototype-X2) a step louder, inside SIGNATURE_PERMANENT_MAX_TRAUMA.
+  vaultStride: 0.75,
+  heistDrop: FX_LEGENDARY_TRAUMA,
+  rodRise: 0.75,
+  lecternRise: FX_LEGENDARY_TRAUMA,
+  spotlightKiss: FX_LEGENDARY_TRAUMA,
+  labVault: FX_LEGENDARY_TRAUMA,
+  emitterBloom: FX_LEGENDARY_TRAUMA,
+  barrelSpin: FX_LEGENDARY_TRAUMA,
+  breechLock: FX_LEGENDARY_TRAUMA,
+  turretScan: FX_LEGENDARY_TRAUMA,
+  intakeMaw: FX_LEGENDARY_TRAUMA,
+  wraithGather: FX_LEGENDARY_TRAUMA,
+  heraldHorn: FX_LEGENDARY_TRAUMA,
+  paragonStreak: FX_LEGENDARY_TRAUMA,
+  paragonDive: 0.75,
+  flagshipDescent: FX_LEGENDARY_TRAUMA,
+  testLurch: FX_LEGENDARY_TRAUMA,
+  forgeBurst: 0.75,
+  redCarpet: FX_LEGENDARY_TRAUMA,
+  venomStep: FX_LEGENDARY_TRAUMA,
   // R3389001: Classic's signatures.
   seeingOrb: 0.4,
   sceptrePlant: 0.4,
@@ -82,6 +110,24 @@ export const ENTRANCE_TRAUMA = {
   silkDrop: 0.35,
   royalCloak: 0.4,
   abyssSurface: 0.5,
+  // R3399000: Classic+'s signatures, in catalog order.
+  pancakeStack: FX_LEGENDARY_TRAUMA,
+  waffleIron: FX_LEGENDARY_TRAUMA,
+  griddleFreeze: FX_LEGENDARY_TRAUMA,
+  kitchenDoor: FX_LEGENDARY_TRAUMA,
+  shieldPlant: FX_LEGENDARY_TRAUMA,
+  vineNap: FX_LEGENDARY_TRAUMA,
+  spotlightPose: FX_LEGENDARY_TRAUMA,
+  staffShuffle: FX_LEGENDARY_TRAUMA,
+  flexBurst: FX_LEGENDARY_TRAUMA,
+  drumLeap: FX_LEGENDARY_TRAUMA,
+  giftDesk: FX_LEGENDARY_TRAUMA,
+  bannerPlant: FX_LEGENDARY_TRAUMA,
+  greatBanner: FX_LEGENDARY_TRAUMA,
+  briefcaseStride: FX_LEGENDARY_TRAUMA,
+  templeStack: FX_LEGENDARY_TRAUMA,
+  vineSwing: FX_LEGENDARY_TRAUMA,
+  obeliskRise: FX_LEGENDARY_TRAUMA,
   // R3407000: Stinkyscape part two's (fx/cards/stinkyscape/), each within SIGNATURE_PERMANENT_MAX_TRAUMA.
   melchiorBoot: 0.3,
   balthasarLamp: 0.2,

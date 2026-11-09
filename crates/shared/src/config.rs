@@ -1890,6 +1890,28 @@ pub const SET_TRACK_LEVELS: u32 = 100;
 pub const SET_TRACK_UNLOCK_LEVEL: u32 = 10;
 /// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
 pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
+/// SPEC §14.15, R3335001: the Fleet track's levels, each paying one Stinkyscape cosmetic, the last the Stinkyscape
+/// hull (#3335 proposed 30).
+pub const FLEET_TRACK_LEVELS: u32 = 30;
+/// SPEC §14.15, R3335001: the XP each Fleet track level costs, the same at every level.
+pub const FLEET_TRACK_XP_PER_LEVEL: i32 = 500;
+/// SPEC §14.15, R3335001: the Fleet XP a recorded game pays for each Stinkyscape card of the player's deck they
+/// played.
+pub const FLEET_TRACK_XP_PER_STINKYSCAPE_PLAY: i32 = 10;
+/// SPEC §14.15, R3335001: the Fleet XP a recorded game pays for each Starship Piece the player fused.
+pub const FLEET_TRACK_XP_PER_PIECE_FUSED: i32 = 15;
+/// SPEC §14.15, R3335001: the Fleet XP a recorded game pays for each Starship the player launched.
+pub const FLEET_TRACK_XP_PER_LAUNCH: i32 = 50;
+/// SPEC §14.15, R3335001: the Fleet XP a recorded game's win pays when the deck held `FLEET_TRACK_DECK_SHARE`
+/// Stinkyscape cards or more.
+pub const FLEET_TRACK_XP_STINKYSCAPE_WIN: i32 = 50;
+/// SPEC §14.15, R3335001: the share of a deck's cards that must be Stinkyscape cards for a win to pay
+/// `FLEET_TRACK_XP_STINKYSCAPE_WIN`.
+pub const FLEET_TRACK_DECK_SHARE: f64 = 0.5;
+/// SPEC §14.15, R3335001: the most Fleet XP the games of one UTC day pay, so the track is a track and not a grind.
+pub const FLEET_TRACK_XP_DAILY_MAX: i64 = 1500;
+/// SPEC §14.15, R3335001: how many of the Fleet track's next rewards `GET /api/tracks` names.
+pub const FLEET_TRACK_NEXT_REWARDS_SHOWN: usize = 3;
 /// SPEC §14.8: the Jlore a ladder game pays its winner (#1333's table: 20).
 pub const JLORE_LADDER_WIN: i32 = 20;
 /// SPEC §14.8: the Jlore a ladder game pays its loser (#1333's table: 10), so losing still moves

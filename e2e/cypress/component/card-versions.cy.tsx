@@ -263,6 +263,8 @@ const PART_SIX_LOOKS = [
 const PART_SIX_SHOT_LOOKS = PART_SIX_LOOKS.filter((look) => !look.name.endsWith("-stack"));
 /** Small enough that part 6's four rows of eight faces lie inside the viewport the screenshot captures. */
 const PART_SIX_SHOT_WIDTH = 100;
+/** Small enough that each part 5 card's ten faces (#3369 added the Default's) keep to one row inside the captured viewport. */
+const PART_FIVE_SHOT_WIDTH = 100;
 
 /** How far apart two boxes' edges or middles may lie and count as one place, in CSS pixels. */
 const SAME_PLACE_PX = 0.5;
@@ -1008,7 +1010,7 @@ describe("R2725003 R3015000 a card's levels on real faces", () => {
     // Animated foil off holds every picture still, so one screenshot compares the pictures alone.
     writeCardSettings({ animatedFoil: false });
     writeCardPick(PART_FIVE_CARDS[0].id, "foil", FOIL);
-    cy.mount(<OfferedFaces width={SHOT_WIDTH} cards={PART_FIVE_CARDS} looks={PART_FIVE_SHOT_LOOKS} />);
+    cy.mount(<OfferedFaces width={PART_FIVE_SHOT_WIDTH} cards={PART_FIVE_CARDS} looks={PART_FIVE_SHOT_LOOKS} />);
     cy.get('.cf[data-immersive-motion="static"]', { timeout: SETTLE_TIMEOUT_MS }).should("have.length", PART_FIVE_CARDS.length * 2);
     cy.get('.cf[data-art-motion="static"]').should("have.length", PART_FIVE_CARDS.length * 2);
     cy.get('[data-art-moving="true"]').should("not.exist");

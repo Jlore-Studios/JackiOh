@@ -86,7 +86,8 @@ export function HoverPreview({ face, anchor, prefer = "beside", note, keyHint }:
 
   const faceBox = (
     <div className="inspect-face" data-testid={INSPECT_FACE} style={{ height: previewHeight(window.innerHeight) }}>
-      <CardFace face={face} layout="full" ascentLevel={ascentLevel} worn={own} tilt="window" />
+      {/* R3344001: the pose is read against the anchor, where the pointer is, never over the face. */}
+      <CardFace face={face} layout="full" ascentLevel={ascentLevel} worn={own} tilt="window" tiltAnchor={anchor} />
       <InspectNote note={note} />
     </div>
   );

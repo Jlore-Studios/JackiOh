@@ -106,6 +106,11 @@ export function pointIn(box: FxBox, at?: FxPoint): FxVec {
   return { x: box.x + box.width * p.x, y: box.y + box.height * p.y };
 }
 
+/** The point a test-id anchor names inside its box; any other anchor names none. */
+export function atOf(anchor: FxAnchor): FxPoint | undefined {
+  return anchor.kind === "testid" ? anchor.at : undefined;
+}
+
 type SavedInline = { translate: string; rotate: string; translatePriority: string; rotatePriority: string };
 
 function restoreProperty(style: CSSStyleDeclaration, name: string, value: string, priority: string): void {

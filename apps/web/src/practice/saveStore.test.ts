@@ -1,9 +1,16 @@
 // R668: the worker's store for a free game in progress (saveStore.ts), against a minimal IndexedDB
 // fake (jsdom has none).
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PRACTICE_SAVE_DB, indexedDbSaveStore, memorySaveStore, type PracticeReplay, type PracticeSave } from "./saveStore.ts";
+import {
+  PRACTICE_SAVE_DB,
+  clearStoredRunFight,
+  indexedDbSaveStore,
+  memorySaveStore,
+  type PracticeReplay,
+  type PracticeSave,
+} from "./saveStore.ts";
 
 const SAVE: PracticeSave = {
   catalog: "v-test",
@@ -80,6 +87,10 @@ function macrotasks(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe("R668 the practice worker's save store", () => {
   it("R668 memory keeps what is written until it is cleared", async () => {
     const store = memorySaveStore();
@@ -128,6 +139,58 @@ describe("R668 the practice worker's save store", () => {
     expect(blocked.read()).toBeNull();
     blocked.write(SAVE);
     expect(blocked.read()).toEqual(SAVE);
+  });
+});
+
+describe("R3476000 the run fight's slot is its own", () => {
+  const FIGHT: PracticeSave = { ...SAVE, hash: "fight" };
+
+  it("R3476000 the free game and the run fight coexist, and each clear leaves the other", async () => {
+    const store = memorySaveStore();
+    await store.ready;
+    expect(store.readRunFight()).toBeNull();
+    store.write(SAVE);
+    store.writeRunFight(FIGHT);
+    expect(store.read(), "the free game's save").toEqual(SAVE);
+    expect(store.readRunFight(), "the run fight's save").toEqual(FIGHT);
+    store.write(null);
+    expect(store.read()).toBeNull();
+    expect(store.readRunFight(), "clearing the free game leaves the fight").toEqual(FIGHT);
+    store.write(SAVE);
+    store.writeRunFight(null);
+    expect(store.readRunFight()).toBeNull();
+    expect(store.read(), "clearing the fight leaves the free game").toEqual(SAVE);
+  });
+
+  it("R3476000 the run fight outlives the store beside the free game, and clearStoredRunFight deletes only it", async () => {
+    const idb = fakeIndexedDb();
+    const first = indexedDbSaveStore(idb.factory);
+    await first.ready;
+    first.write(SAVE);
+    first.writeRunFight(FIGHT);
+    await macrotasks();
+
+    const second = indexedDbSaveStore(idb.factory);
+    await second.ready;
+    expect(second.read()).toEqual(SAVE);
+    expect(second.readRunFight(), "the fight is read at boot beside the free game").toEqual(FIGHT);
+
+    vi.stubGlobal("indexedDB", idb.factory);
+    clearStoredRunFight();
+    await macrotasks();
+    await macrotasks();
+    expect(idb.rows.get("game"), "the free game is untouched").toEqual(SAVE);
+    expect(idb.rows.has("runFight"), "only the fight is forgotten").toBe(false);
+
+    const third = indexedDbSaveStore(idb.factory);
+    await third.ready;
+    expect(third.read()).toEqual(SAVE);
+    expect(third.readRunFight()).toBeNull();
+  });
+
+  it("R3476000 clearStoredRunFight is a no-op without a database", () => {
+    vi.stubGlobal("indexedDB", undefined);
+    expect(() => clearStoredRunFight()).not.toThrow();
   });
 });
 

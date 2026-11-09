@@ -287,6 +287,7 @@
 .corner-props[data-mat="table-obsidian-slab"] { --prop-a: var(--pal-slate-800); --prop-b: var(--pal-violet-500); --prop-c: var(--pal-violet-300); }
 .corner-props[data-mat="table-ancient-map"] { --prop-a: var(--pal-brass-800); --prop-b: var(--pal-wood-700); --prop-c: var(--pal-parchment); }
 .corner-props[data-mat="table-astral"] { --prop-a: var(--pal-blue-700); --prop-b: var(--pal-violet-300); --prop-c: var(--pal-white); }
+.corner-props[data-mat="table-stinkyscape"] { --prop-a: var(--pal-slate-400); --prop-b: var(--pal-violet-500); --prop-c: var(--pal-orange-400); }
 
 /* A tap: the prop's small motion. */
 .corner-prop[data-play="move"][data-state="tap"] .corner-prop__art {
