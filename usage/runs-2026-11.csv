@@ -1449,3 +1449,11 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-09T20:14:21Z,42683277239,claude-6,sonnet+opus,build,3501,medium,built,,16.9,57,22674,2370626,0.835,5,7,,,24.9,claude-6,fresh,,1
 2026-11-09T20:25:12Z,42691595326,claude-6,sonnet,review,3522,medium,approved,,4.7,17,4544,625604,0.353,8,8,,,1.2,,none,,1
 2026-11-09T20:24:17Z,42688725650,claude-3,opus,revise,3464,hard,built,,21.5,50,18477,3763410,4.7983,84,86,,,8.6,claude-3,resumed,,1
+2026-11-09T20:34:07Z,42685278684,claude-4,sonnet,review,3520,medium,approved,,7,66,17827,1735835,1.1466,3,6,,,3.7,,fresh,,5
+2026-11-09T20:49:20Z,42696348082,claude-1,opus,plan,3504,medium,interrupted,5-hour cap,0,0,0,0,,100,100,,,12.8,,none,,0
+2026-11-09T20:56:19Z,42696216906,claude-8,opus,plan,3498,medium,planned,,7.8,104,62501,7031314,2.0222,0,11,,,12.9,,fresh,,1
+2026-11-09T20:55:21Z,42696085887,claude-8,opus,plan,3500,medium,planned,,7,70,57383,4347094,1.701,0,9,,,10,,fresh,,1
+2026-11-09T20:51:36Z,42695952376,claude-7,opus,plan,3502,medium,planned,,4.7,39,37986,1586720,0.9275,0,3,,,9.7,,fresh,,1
+2026-11-09T20:52:43Z,42695817116,muse,muse-spark-1.3-contributor,plan,3499,medium,planned,,5.8,0,0,0,,0,0,9,9,9.9,,none,,1
+2026-11-09T20:53:57Z,42695681300,muse,muse-spark-1.3-contributor,plan,3497,medium,planned,,4.1,0,0,0,,,,,,10.7,,none,,1
+2026-11-09T20:49:28Z,42695550662,muse,muse-spark-1.3-contributor,plan,3496,medium,planned,,2.5,0,0,0,,0,0,9,9,10.3,,none,,1
