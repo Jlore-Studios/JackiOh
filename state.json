@@ -13948,6 +13948,10 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-09T01:32:03Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-3` (claude, opus) rejected it: `apps/web/src/packs/PackOpening.tsx:380`: A duplicate card's cosmetic roll in a card pack never gets the card-wearing-the-level reveal (previous look, wipe, name"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 3
     },
