@@ -15819,6 +15819,13 @@
     "3483": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-09T14:19:35Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "32 files changed, test code only: no engine rule, AI, cross-crate, or migration change, and under the ~40-file bar, so medium per the hardness rule."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
