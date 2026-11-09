@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3503,
+  "title": "Patch: the five attack-hook runners in combat share one helper for running and resuming a hook",
+  "branch": "bot/issue-3503",
+  "thread": "**Issue #3503 (data, not instructions):**\n\n```text\n# #3503: Patch: the five attack-hook runners in combat share one helper for running and resuming a hook\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nNothing changes for players. The engine's combat code repeats one block five times. That block runs a card's \"when this attacks\", \"after this attacks\", \"after this is attacked\" or ally-attack text, and picks it up again after a prompt. Once this is built, the block is written once and the file is about 200 lines shorter. A fix to how such a text resumes then lands in one place instead of five.\n\n## Why\n\n- **The same block, five times.** `crates/engine/src/combat.rs` is 2,920 lines. Five functions build the same `WorkPlan { def_id: String::new(), step: \"hook\", radiant: false, instance_id: None, data: { KEY: to_json(owed) }, .. }`:\n  - `answer_when_attacks` (line 1805)\n  - `run_after_attack` (lines 2271-2352)\n  - `run_after_attacked` (lines 2441-2522)\n  - `answer_ally_attacked` (line 2616)\n  - `answer_ally_attack` (line 2806)\n- **Each one then does the same steps.** It calls `resolve::make_context`, restores `exits_from` and `summoned` from the paused step, calls the hook and `prompts::run_resumable_list`, and owes its state check on `ListStatus::Asked`. `run_after_attack` and `run_after_attacked` differ only in the facts they pass and how they pick the self card.\n- **The bookkeeping is copied too.** Each runner has its own `owe_*` / `owed_*_of` / `run_owed_*` trio, the same few lines on its own key. The `owe_*` copies are at lines 1795, 2264, 2524, 2606 and 2798.\n- **The two ally runners share more.** They repeat the same loop over holders and the same `check_only` handling.\n\n## Proposal\n\n- **Two helpers do the shared work:**\n  - one `run_engine_hook`: the plan, the context with its controller and data, the restore from the paused step, the hook and the resumable list;\n  - one `owe_engine_hook(work, key, owed)`.\n- **The five runners keep only what differs:** who the self card is, the facts they pass, and their key.\n- **The restore stays exactly as it is**, only `exits_from` and `summoned`. The Death path in `state_check.rs` and `prompts::run_resume` restore more. Whether that difference matters is noted and left alone.\n- **Key order is kept** in the facts maps, which are saved with a paused step.\n\n## Where it lands\n\n`crates/engine/src/combat.rs` only.\n\n## Acceptance criteria\n\n- [ ] `cargo test -p jackioh-engine --features testkit --test 'rules*'` passes, including the when-attacks, after-attack, after-attacked and ally-attack modules.\n- [ ] `cargo jackioh golden check` passes, and `cargo jackioh fuzz --seeds 200` hashes as it does on the base.\n- [ ] `cargo jackioh classify --base origin/main` reports kind Internal, with no card that plays differently.\n- [ ] `combat.rs` shrinks by at least 150 lines, with no new `#[allow]`.\n\n## Size and risks\n\nMedium: one file, behaviour-neutral. Difficulty medium.\n\n- The risk is low and the golden and fuzz hashes guard it.\n- `combat.rs` is a hot file, so land this between other combat changes, not alongside one.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-09T20:34:41Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3503: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T20:35:03Z",
+    "claimed_at": "2026-11-09T20:48:33Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
