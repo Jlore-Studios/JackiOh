@@ -16066,12 +16066,11 @@
     "what": "build #3477 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-09T15:05:33Z",
+    "at": "2026-11-09T15:15:59Z",
     "notes": [
       "#3464 is held for `claude-7` until 09:20 (5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%))",
-      "delivered plan #3477 on claude-6 (run 42639849353): planned",
-      "started build #3477 on claude-6 (run 42641609388)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-09T16:40:00Z; `claude-7` 5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-09T15:20:00Z; it can start a build or a plan again in 10m; `claude-8` is idle, but nothing queued is for it; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-11-09T16:10:00Z; it can start a build or a plan again in 1h 00m; `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it; waiting for their owners: #3464 held for `claude-7` until 09:20 (5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%))"
+      "delivered review #3489 on muse (run 42639579086): approved",
+      "delivered review #3488 on muse (run 42636487069): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16777,7 +16776,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T15:05:33Z",
+  "loop_tick": "2026-11-09T15:15:59Z",
   "machine_disk": {
     "issue": null,
     "reading": {
