@@ -16781,6 +16781,18 @@
       "asks": [],
       "ci_fixed_head": "825e442b231ed380cb49be0ba55d6bb85829a8f8",
       "ci_fixes": 1,
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-4",
+          "tier": "medium"
+        },
+        "at": "2026-11-09T20:40:20Z",
+        "built_by": "claude-4",
+        "by": "`claude` (medium)",
+        "sha": "825e442b231ed380cb49be0ba55d6bb85829a8f8"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-09T18:20:33Z",
@@ -16796,6 +16808,7 @@
       "issue": 3507,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "claude-4",
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-09T19:34:41Z",
