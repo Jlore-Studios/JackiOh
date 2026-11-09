@@ -304,78 +304,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:6620448536": {
-      "at": "2026-11-04T01:57:25Z",
-      "lines": [
-        "Reject"
-      ]
-    },
-    "c:6620452061": {
-      "at": "2026-11-04T01:57:38Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6620455276": {
-      "at": "2026-11-04T01:57:50Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6620463436": {
-      "at": "2026-11-04T01:58:23Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6620469347": {
-      "at": "2026-11-04T01:58:54Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6620474421": {
-      "at": "2026-11-04T01:59:09Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6620484215": {
-      "at": "2026-11-04T01:59:48Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6620498246": {
-      "at": "2026-11-04T02:00:48Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6620505359": {
-      "at": "2026-11-04T02:01:14Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6626181154": {
-      "at": "2026-11-04T08:24:01Z",
-      "lines": [
-        "/harness revise Gate the nine `WALK_*` constants in `crates/run/src/config.rs` behind `#[cfg(test)]`, as your last revise run did (its commit `8357c5a` never reached the branch, which is still on the red `4f4326d`). Add no rows to `spec/15`'s constants table: these tune the test, not the dungeon, and `#[cfg(test)]` keeps them out of the check the way the engine's `config.rs` does. Push it so `rust` runs again. That was the only failure; nothing else needs to change."
-      ]
-    },
-    "c:6626186100": {
-      "at": "2026-11-04T08:26:45Z",
-      "lines": [
-        "/harness revise Decisions for pass 3, below. Your last run's commit `d9d6d14` never reached the branch (it is still on `0ac23d8`), so if that work is gone, redo the parts these decisions keep."
-      ]
-    },
-    "c:6626192852": {
-      "at": "2026-11-04T08:26:54Z",
-      "lines": [
-        "/harness build Option (A): today's deal earns nothing. Change the seat rule so the seat alternates strictly from day to day."
-      ]
-    },
     "c:6635610985": {
       "at": "2026-11-04T16:10:12Z",
       "lines": [
@@ -530,6 +458,12 @@
       "at": "2026-11-08T22:59:18Z",
       "lines": [
         "/harness 1"
+      ]
+    },
+    "c:6741604637": {
+      "at": "2026-11-09T13:46:33Z",
+      "lines": [
+        "Approve"
       ]
     }
   },
