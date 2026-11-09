@@ -18592,6 +18592,8 @@
       }
     },
     "3467": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-09T06:28:30Z",
@@ -18605,8 +18607,11 @@
         "trail": "- Implementation is complete and fast checks pass. Waiting on the WASM build and spec check to run the unit suites \u2014 will continue when they land.\n- Done so far:\n- - New `apps/web/src/fx/shed.ts` (+ tests): the shared shed store, stages 0\u20133, emission/aura scales, pointer.\n- - `constants.ts`: `PHONE_MOTION_BUDGET = 6`, `FX_PHONE_FRAME_WORST_MS = 120` (+ pinning tests).\n- - `director.ts`: shed advances/recovers on the existing adapt windows, halves burst/projectile/shot emission from stage 1, exposes `shedLevel()`; set-piece DOM beats untouched (+ 3 tests).\n- - `AuraLayer`/`TileAura` halve far/tile motes at stage 2; `useMotionSlot` stills non-hovered faces at stage 3; `FxLayer` feeds the pointer (+ tests in each file).\n- - New `e2e/cypress/component/fx-phone-living-game.cy.tsx`: living board at 390x844, 360x780, 844x390 under 4x throttling through 8 moments with mean/worst asserts, plus a deterministic shed-order integration test.\n- - `card-fullscreen.cy.tsx`: long-press test over 5 board faces + 10 hand cards (inspect everywhere, fullscreen where R3345000 allows).\n- - `spec/rulings/R3351000.md` + `spec/pending/3351.md`.\n- - Green: web typecheck, component typecheck, eslint on all touched files, `cargo fmt --check`.\n- Still pending: vitest runs (blocked on the WASM build) and `cargo jackioh spec check` (both running in background). Cypress component specs and e2e 46/47 can't run on this machine (no Xvfb, no sudo) \u2014 CI will exercise them.Todo list synced. Everything implementable is done; vitest and spec check ar\u2026\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the living game on a phone: a pass at 390x844 and on a throttled CPU over every look, animation and sound #3330 adds, with one budget they share\"} -->\n- ## What changed\n- **One shared budget (R3351000).** Moving faces, tile auras, backdrops, particles and tilt now share `PHONE_MOTION_BUDGET` (6) on a phone, with `FX_PHONE_FRAME_WORST_MS` (120) beside the existing 50 ms mean budget, both in [constants.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-3351/app\u2026\n- **Named shed order.** New [shed.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-3351/apps/web/src/fx/shed.ts) publishes stages 0\u20133. The [director](/home/agent-muse/actions-runner/_work/_temp/work/item-3351/apps/web/src/fx/director.ts) sheds one stage per slow window (same trip as the exis\u2026\n- **Scenario + coverage.** New `e2e/cypress/component/fx-phone-living-game.cy.tsx`: five art-first Units (Silly Silas, Felinor Fiender, Tylannt, Paragon-X, Prototype-X2), an Anomaly backdrop, a launched Starship and a ten-card hand with a tilted Mythic, played through anomaly cast, Mythic takeover, S\u2026\n- ## How it was tested\n- - `vitest run` on 10 files (shed, director, constants, FxLayer, stage, AuraLayer, TileAura, motionSlots, artLive, animations.flavor): **224/224 pass**, including 9 new R3351000 tests; B34/B41 capacity semantics untouched.\n- - `pnpm --dir apps/web typecheck`, `pnpm --dir e2e typecheck` (43 fixtures OK), `typecheck:component`, `eslint` on all touched files, `cargo fmt --check`: clean.\n- - `cargo jackioh spec check`: ok (1863 rulings, 4808 proofs); `catalog check`, `patches check`: ok.\n- - **Not run here**: the two Cypress component specs and e2e 46/47 \u2014 this machine has Chrome and the Cypress binary but no Xvfb and no sudo, so no browser runs; CI exercises them. The specs are built verbatim from proven patterns in `fx-phone-frame.cy.tsx` and typecheck clean.\n- ## Decisions the task did not settle\n- - The plan put aura/face shedding in `FxLayer`, but `Game` renders `FxLayer` and `AuraLayer` as siblings, so the layer has no handle on them: the director scales emission at `fire()` and the layers read the published level. Same observable order, correct seam.\n- - Stage 3 keeps only the hovered face: the slot allocator has no face geometry, and hovered-first ranking already means the hovered face is nearest the pointer. \"Far\" likewise means \"whose box is not under the pointer\" (AuraLayer measures boxes); TileAura sheds with the far set (it measures none). \u2026\n- - Test titles use full `R3351000` (the plan's `R3351` shorthand would fail `spec check` as an unknown ruling).\n- - The cy shed test forces stages through the published store instead of manufacturing slow frames: deterministic in-browser proof of the order; the slow-window trip itself is pinned in `director.test.ts`. Worst-frame retries like the mean (noise only adds time).\n- - Broadside runs at slowest speed, then restores full speed; five units are hardcoded verified defIds, not a catalog search.\n- - No owning-part fixes: nothing measurable failed here (no browser); e2e 46/47 are unaffected (FX-only diff, no layout/menu/controls touched) but unrun here.\n- ## Look twice\n- - `director.ts` recover condition gained `|| shedStage() > 0` so shed recovers even if the cap is already home; lockstep with the cap holds in all existing tests.\n- - `motionSlots.ts` `active = wanted && (!still || hovered)`: tokens/ages survive shed so recovery reclaims old rank (covered by test).\n- - New spec's moment retry resets to the plain board first \u2014 replaying identical events would otherwise diff empty and sample an idle board.\n- - `card-fullscreen` mount passes `wearCosmetics` (as hotseat does); without it no board face is \"worn\" and fullscreen could never open.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3351 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3351/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3351,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-09T07:01:07Z",
         "from_run": "42573245851",
         "gates": [
           {
@@ -18665,8 +18670,15 @@
         "source": "build",
         "until": "2026-11-09T07:27:56Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-09T06:57:56Z",
+      "run_id": "pending:f1892fde-1794207639",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-09T07:01:07Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -18680,9 +18692,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T07:00:26Z",
+    "at": "2026-11-09T07:01:07Z",
     "url": "",
-    "what": "review #3456 on claude-7"
+    "what": "review #3467 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T06:48:27Z",
