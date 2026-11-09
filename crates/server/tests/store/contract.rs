@@ -19,7 +19,8 @@ use jackioh_engine::wire::{
 use jackioh_engine::{Action, DECK_SIZE, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::config::PersonaName;
 use jackioh_server::config::{
-    DECK_VERSION_DEBOUNCE_MS, DECK_VERSIONS_KEPT, JLORIOUS_SIZE, STARTER_CARDS, USERNAME_CHANGE_COOLDOWN_MS,
+    DECK_VERSION_DEBOUNCE_MS, DECK_VERSIONS_KEPT, JLORIOUS_SIZE, PRACTICE_SEEDS_OPEN_MAX, STARTER_CARDS,
+    USERNAME_CHANGE_COOLDOWN_MS,
 };
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
@@ -10054,8 +10055,9 @@ mod economy {
     }
 
     /// R1483000: a profile's open seeds are the ones unclaimed and issued at or after the time given,
-    /// its own alone: a claimed seed and a lapsed one do not count, nor another profile's.
-    async fn r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts(
+    /// its own alone: a settled seed and a lapsed one do not count, nor another profile's (R3500001:
+    /// a claim not yet settled counts, `r3500001_a_claimed_unsettled_practice_seed_counts_until_it_settles_or_lapses`).
+    async fn r1483000_open_practice_seed_count_excludes_settled_expired_and_other_accounts(
         harness: &StoreHarness,
     ) {
         let owner = pending_profile(harness, None).await;
@@ -10081,6 +10083,9 @@ mod economy {
         }
         let claim = practice_claim();
         assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-claimed", now + 1, &claim)));
+        assert!(
+            q!(harness, t => t.economy_practice_seed_settle(&owner.id, "seed-claimed", PracticeOutcome::Paid, now + 2))
+        );
         let open = |profile_id: &str, since: i64| {
             let profile_id = profile_id.to_string();
             async move { q!(harness, t => t.economy_practice_seeds_open(&profile_id, since)) }
@@ -10094,6 +10099,84 @@ mod economy {
         assert_eq!(open(&owner.id, now).await, 1);
         assert_eq!(open(&owner.id, now + 1).await, 0);
         assert_eq!(open(&other.id, now - 100).await, 1);
+    }
+
+    /// R3500001: a seed claimed and not yet settled counts toward the open seeds, so a claim waiting
+    /// for its check keeps its place (`PRACTICE_SEEDS_OPEN_MAX` of them refuse another seed); a settle,
+    /// paid or refused, frees it, and a claim whose settle never came stops counting when its seed
+    /// lapses. Another profile's claims never count.
+    async fn r3500001_a_claimed_unsettled_practice_seed_counts_until_it_settles_or_lapses(
+        harness: &StoreHarness,
+    ) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        let seed = |name: &str, profile_id: &str, issued_at: i64| -> PracticeSeed {
+            from(json!({
+                "seed": name, "profileId": profile_id, "issuedAt": issued_at, "claimedAt": null,
+                "setup": {
+                    "difficulty": "easy", "humanSeat": "p1", "deck": { "kind": "random", "lean": null },
+                    "lastBoard": [], "catalogVersion": "v-contract",
+                },
+            }))
+        };
+        for held in [
+            seed("seed-a", &owner.id, now),
+            seed("seed-b", &owner.id, now),
+            seed("seed-c", &owner.id, now),
+            seed("seed-lapsed", &owner.id, now - 1000),
+            seed("seed-theirs", &other.id, now),
+        ] {
+            q!(harness, t => t.economy_practice_seed_insert(&held));
+        }
+        let claim = practice_claim();
+        for (profile_id, name) in [
+            (&owner.id, "seed-a"),
+            (&owner.id, "seed-b"),
+            (&owner.id, "seed-c"),
+            (&owner.id, "seed-lapsed"),
+            (&other.id, "seed-theirs"),
+        ] {
+            assert!(q!(harness, t => t.economy_practice_seed_claim(profile_id, name, now + 1, &claim)));
+        }
+        let open = |profile_id: &str, since: i64| {
+            let profile_id = profile_id.to_string();
+            async move { q!(harness, t => t.economy_practice_seeds_open(&profile_id, since)) }
+        };
+        let settle = |profile_id: &str, name: &str, outcome: PracticeOutcome| {
+            let (profile_id, name) = (profile_id.to_string(), name.to_string());
+            async move {
+                assert!(
+                    q!(harness, t => t.economy_practice_seed_settle(&profile_id, &name, outcome, now + 2)),
+                    "{name} settles"
+                );
+            }
+        };
+
+        // Three claims not yet settled hold three places: a fourth seed is refused.
+        assert_eq!(open(&owner.id, now - 100).await, 3);
+        assert!(open(&owner.id, now - 100).await >= PRACTICE_SEEDS_OPEN_MAX);
+        // The lapsed one counts only while its seed is within the lifetime the caller gives.
+        assert_eq!(open(&owner.id, now - 2000).await, 4);
+        assert_eq!(open(&other.id, now - 100).await, 1);
+
+        // A settle frees its place, paid or refused; one of a lapsed seed changes nothing.
+        settle(&owner.id, "seed-a", PracticeOutcome::Paid).await;
+        assert_eq!(open(&owner.id, now - 100).await, 2);
+        settle(&owner.id, "seed-b", PracticeOutcome::Refused).await;
+        assert_eq!(open(&owner.id, now - 100).await, 1);
+        settle(&owner.id, "seed-lapsed", PracticeOutcome::Paid).await;
+        assert_eq!(open(&owner.id, now - 100).await, 1);
+        assert_eq!(open(&owner.id, now - 2000).await, 1);
+
+        // An unclaimed seed counts as it did.
+        q!(harness, t => t.economy_practice_seed_insert(&seed("seed-d", &owner.id, now)));
+        assert_eq!(open(&owner.id, now - 100).await, 2);
+        assert_eq!(
+            open(&other.id, now - 100).await,
+            1,
+            "another profile's unsettled claim stays its own"
+        );
     }
 
     /// R2379000: a release deletes the owner's unclaimed seed alone: another profile's release
@@ -11203,7 +11286,8 @@ mod economy {
         practice_seeds_issue_claim_once_and_prune,
         r1483000_game_jlore_totals_use_one_window_reason_and_reference,
         r2210000_removed_quest_count_uses_one_window_change_and_reason,
-        r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts,
+        r1483000_open_practice_seed_count_excludes_settled_expired_and_other_accounts,
+        r3500001_a_claimed_unsettled_practice_seed_counts_until_it_settles_or_lapses,
         r2379000_a_practice_seed_release_deletes_only_the_owners_unclaimed_seed,
         r2422000_a_practice_claim_is_kept_until_it_settles_once,
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,

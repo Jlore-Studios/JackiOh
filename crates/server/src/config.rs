@@ -488,6 +488,20 @@ pub const REPLAY_CACHE_TTL_SECONDS: i64 = 600;
 /// Requests per minute per account to the two replay routes together, on top of R109's
 /// API-wide allowance: opening a replay folds a whole game.
 pub const REPLAY_REQUESTS_PER_MINUTE: usize = 60;
+/// SPEC §9.8, R3500000: how many replay folds run at once, 1v1 and co-op together: an opening that
+/// is not kept in memory folds its whole game off the runtime (R768), and the server is a quarter of a
+/// processor (`wrangler.jsonc`), where a 256-action game folds in about 200 ms of a full core
+/// (`jackioh perf`). One keeps the blocking pool free for the live matches' folds, as
+/// `PRACTICE_VERIFY_CONCURRENCY` does for practice's.
+pub const REPLAY_FOLDS_RUNNING_MAX: usize = 1;
+/// SPEC §9.8, R3500000: how long an opening that is not kept in memory waits, in milliseconds, for
+/// the fold of the same match that is running and for its turn among `REPLAY_FOLDS_RUNNING_MAX`,
+/// before it is refused with 429 (`REPLAY_FOLD_RETRY_AFTER_MS`). Well under
+/// `API_REQUEST_TIMEOUT_SECONDS`; the fold itself is not timed.
+pub const REPLAY_FOLD_WAIT_MS: u64 = 5_000;
+/// SPEC §9.8, R3500000: the wait the refusal of an opening past `REPLAY_FOLD_WAIT_MS` states
+/// (`retryAfterMs`, R192): a fold of a long game takes that long to leave room.
+pub const REPLAY_FOLD_RETRY_AFTER_MS: i64 = 2_000;
 
 // ---------------------------------------------------------------------------------------------
 // Constant-time failure (§9.4, BUILD M6-T1).
@@ -1365,9 +1379,11 @@ pub const ECONOMY_SPENDS_WAITING_MAX: usize = 4;
 /// SPEC §14.11, R2378000: the wait the refusal of a spend sent past `ECONOMY_SPENDS_WAITING_MAX`
 /// states (`retryAfterMs`, R192).
 pub const SPEND_BUSY_RETRY_AFTER_MS: i64 = 1_000;
-/// SPEC §14.8, R1483000: how many unclaimed, unexpired practice seeds an account holds at once; a
-/// request past it is refused and issues nothing. Bounds one account's place in the claim queue
-/// (`PRACTICE_VERIFY_CONCURRENCY`). The approved proposal's number (#1483).
+/// SPEC §14.8, R1483000, R3500001: how many practice seeds an account holds at once, each one
+/// unclaimed or claimed and not yet settled (paid or refused), issued within
+/// `PRACTICE_SEED_TTL_SECONDS`; a request past it is refused and issues nothing. Bounds one account's
+/// place in the claim queue (`PRACTICE_VERIFY_CONCURRENCY`): a claim waiting for its check keeps its
+/// place. The approved proposal's number (#1483).
 pub const PRACTICE_SEEDS_OPEN_MAX: i64 = 3;
 /// SPEC §14.8, #1303: how many practice claims the server verifies at once, each a fold of the
 /// game's log off the runtime (`economy::practice`, R2560000). A claim past it
@@ -1385,8 +1401,9 @@ pub const PRACTICE_PAY_BACKOFF_MS: i64 = 250;
 /// SPEC §14.8, R2422000: how long a practice claim may stay unsettled (neither paid nor refused)
 /// after it burned its seed before the retention loop settles it: a claim whose pay every try
 /// failed, or whose server stopped or crashed under it. Well past what a live settle takes (a wait
-/// for a verification permit, the check and the pay's tries), so the sweep never takes a claim a
-/// live settle is still working on; ten minutes, as `GAME_RECORD_REFILE_GRACE_SECONDS` waits.
+/// for a verification permit, the check and the pay's tries), so the sweep seldom meets a claim a
+/// live settle is still working on, and it skips one it does (R3500001); ten minutes, as
+/// `GAME_RECORD_REFILE_GRACE_SECONDS` waits.
 pub const PRACTICE_SETTLE_GRACE_SECONDS: i64 = 10 * 60;
 
 // ---- Economy (SPEC §14, #1299) ----

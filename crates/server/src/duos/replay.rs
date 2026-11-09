@@ -4,7 +4,10 @@
 //! Only the two people who played it may read it; anyone else gets 404 (R768). A live match is 409
 //! (§13.9); a purged log is 410 `gone`; an unsupported match is 422 `replay_unavailable`. The fold
 //! runs under the catalog the match was played on (R767000) on the blocking pool, cached in
-//! `DuosReplayCache` (`REPLAY_CACHE_TTL_SECONDS`, `REPLAY_CACHE_MATCHES`).
+//! `DuosReplayCache` (`REPLAY_CACHE_TTL_SECONDS`, `REPLAY_CACHE_MATCHES`). R3500000: an opening not
+//! kept waits for the permit every replay fold takes (`REPLAY_FOLDS_RUNNING_MAX`, the 1v1 replays'
+//! too), shares one fold with a concurrent opening of its match, and is 429 with `retryAfterMs`
+//! past `REPLAY_FOLD_WAIT_MS`.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
@@ -127,12 +130,16 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
                 .map(|entry| action_of(&entry.action))
                 .collect::<Result<_, _>>()?;
             let folding = row.clone();
-            let opened = tokio::task::spawn_blocking(move || open(&folding, actions))
-                .await
-                .map_err(|error| ApiError::internal(error.to_string()))?;
-            let opened = Arc::new(opened);
-            replays.put(&row.id, Arc::clone(&opened), now_ms());
-            opened
+            replays
+                .open(&app.replays.folds, &row.id, |permit| async move {
+                    tokio::task::spawn_blocking(move || {
+                        let _permit = permit;
+                        open(&folding, actions)
+                    })
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))
+                })
+                .await?
         }
     };
     match opened.as_ref() {

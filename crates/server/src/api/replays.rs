@@ -9,10 +9,16 @@
 //! Replays fold under original catalog versions and All Random deals (R433, R112).
 //!
 //! Cached in memory (up to `REPLAY_CACHE_MATCHES`, `REPLAY_CACHE_TTL_SECONDS`), rate limited
-//! to `REPLAY_REQUESTS_PER_MINUTE` per account (R109).
+//! to `REPLAY_REQUESTS_PER_MINUTE` per account (R109). An opening not kept in memory folds a whole
+//! game, so those run behind one server-wide permit pool, 1v1 and co-op together
+//! (`REPLAY_FOLDS_RUNNING_MAX`): concurrent openings of one match share a single fold, and one
+//! that waits past `REPLAY_FOLD_WAIT_MS` for it or for its turn is 429 with `retryAfterMs` (R3500000,
+//! R192). A cached page waits for nothing.
 
 use std::collections::BTreeSet;
+use std::future::Future;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use indexmap::IndexMap;
 use jackioh_engine::config::{REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS};
@@ -22,6 +28,8 @@ use jackioh_engine::{
 };
 use serde::Serialize;
 use serde_json::json;
+use tokio::sync::{OwnedSemaphorePermit, Semaphore};
+use tokio::time::{Instant, timeout_at};
 
 use crate::actor::engine::{self, EngineState, Pinned};
 use crate::actor::match_actor::last_boards_of;
@@ -33,8 +41,8 @@ use crate::api::http::{
 };
 use crate::app::App;
 use crate::config::{
-    MS_PER_SECOND, REPLAY_CACHE_MATCHES, REPLAY_CACHE_TTL_SECONDS, REPLAY_LIST_PAGE,
-    REPLAY_REQUESTS_PER_MINUTE,
+    MS_PER_SECOND, REPLAY_CACHE_MATCHES, REPLAY_CACHE_TTL_SECONDS, REPLAY_FOLD_RETRY_AFTER_MS,
+    REPLAY_FOLD_WAIT_MS, REPLAY_FOLDS_RUNNING_MAX, REPLAY_LIST_PAGE, REPLAY_REQUESTS_PER_MINUTE,
 };
 use crate::db::store::{MatchPhase, Profile, QueueMode, ReplayRow, ResultRow};
 use crate::loadout::{Loadout, SeatCards, SeatLoadout, cards_due, shown_defs};
@@ -42,11 +50,15 @@ use crate::loadout::{Loadout, SeatCards, SeatLoadout, cards_due, shown_defs};
 /// Unit conversion, not configuration.
 const MS_PER_MINUTE: i64 = 60 * MS_PER_SECOND;
 
-/// What the replay routes keep between requests, one per `App`: the opened replays and their own
-/// allowance.
+/// R3500000: what an opening refused past `REPLAY_FOLD_WAIT_MS` says.
+pub const REPLAY_BUSY_MESSAGE: &str = "other replays are opening right now; try again in a moment";
+
+/// What the replay routes keep between requests, one per `App`: the opened replays, their own
+/// allowance and the permits of the folds that run (R3500000), which the co-op replays take too.
 pub struct Replays {
     pub cache: ReplayCache,
     pub limiter: RateLimiter,
+    pub folds: Arc<Semaphore>,
 }
 
 impl Default for Replays {
@@ -54,6 +66,7 @@ impl Default for Replays {
         Replays {
             cache: ReplayCache::default(),
             limiter: create_rate_limiter(REPLAY_REQUESTS_PER_MINUTE, MS_PER_MINUTE),
+            folds: Arc::new(Semaphore::new(REPLAY_FOLDS_RUNNING_MAX)),
         }
     }
 }
@@ -63,12 +76,35 @@ impl Default for Replays {
 /// nothing but their routes reads them (CLAUDE.md rule 7). The lock is never held across a fold.
 pub struct ReplayCache<T = ReplayOpen> {
     entries: Mutex<IndexMap<String, (i64, Arc<T>)>>,
+    /// R3500000: a turn for each match being opened, so concurrent openings of it fold it once:
+    /// the one that holds the turn folds, the others wait for it and find its replay kept. An entry
+    /// lives while a request holds or waits on its turn (`Flight`).
+    flights: Mutex<IndexMap<String, Arc<tokio::sync::Mutex<()>>>>,
 }
 
 impl<T> Default for ReplayCache<T> {
     fn default() -> Self {
         ReplayCache {
             entries: Mutex::new(IndexMap::new()),
+            flights: Mutex::new(IndexMap::new()),
+        }
+    }
+}
+
+/// A request's hold on its match's entry in `ReplayCache::flights`: the last one to let go removes
+/// the entry. A handle is taken under the map's lock, so a count of two (the map's and this one's)
+/// is the last.
+struct Flight<'a, T> {
+    cache: &'a ReplayCache<T>,
+    key: &'a str,
+    turn: Arc<tokio::sync::Mutex<()>>,
+}
+
+impl<T> Drop for Flight<'_, T> {
+    fn drop(&mut self) {
+        let mut flights = lock(&self.cache.flights);
+        if Arc::strong_count(&self.turn) <= 2 {
+            flights.shift_remove(self.key);
         }
     }
 }
@@ -112,6 +148,51 @@ impl<T> ReplayCache<T> {
     /// Forgets every opened replay (the retention purge took logs they were folded from).
     pub fn clear(&self) {
         lock(&self.entries).clear();
+    }
+
+    /// The hold on `key`'s turn, the entry made if no request has one. Never held across an await.
+    fn flight<'a>(&'a self, key: &'a str) -> Flight<'a, T> {
+        let turn = Arc::clone(lock(&self.flights).entry(key.to_string()).or_default());
+        Flight {
+            cache: self,
+            key,
+            turn,
+        }
+    }
+
+    /// R3500000: the replay of `match_id`, from memory or else folded by `fold` and kept. A
+    /// request waits for the turn on its match (a fold of it already running is then found kept,
+    /// and folded once) and for a permit of `folds`, `REPLAY_FOLD_WAIT_MS` in all, and is refused
+    /// with 429 past it (R192). `fold` is given the permit and holds it as long as the fold runs,
+    /// so one whose request is dropped mid-fold still counts: its replay is lost and the next
+    /// request folds the match again.
+    pub async fn open<F, Fut>(
+        &self,
+        folds: &Arc<Semaphore>,
+        match_id: &str,
+        fold: F,
+    ) -> Result<Arc<T>, ApiError>
+    where
+        F: FnOnce(OwnedSemaphorePermit) -> Fut,
+        Fut: Future<Output = Result<T, ApiError>>,
+    {
+        let busy = || rate_limited(REPLAY_BUSY_MESSAGE, REPLAY_FOLD_RETRY_AFTER_MS);
+        let deadline = Instant::now() + Duration::from_millis(REPLAY_FOLD_WAIT_MS);
+        // Declared before the guard so it drops after it, and sees the turn let go.
+        let flight = self.flight(match_id);
+        let _turn = timeout_at(deadline, Arc::clone(&flight.turn).lock_owned())
+            .await
+            .map_err(|_| busy())?;
+        if let Some(open) = self.get(match_id, now_ms()) {
+            return Ok(open);
+        }
+        let permit = timeout_at(deadline, Arc::clone(folds).acquire_owned())
+            .await
+            .map_err(|_| busy())?
+            .map_err(|_| ApiError::internal("the replay folds' permits are closed"))?;
+        let open = Arc::new(fold(permit).await?);
+        self.put(match_id, Arc::clone(&open), now_ms());
+        Ok(open)
     }
 }
 
@@ -322,15 +403,20 @@ fn open_folded(replay: &ReplayRow, log: Vec<Action>, mode: Option<QueueMode>) ->
 }
 
 /// R768: `open_folded` in one job off the runtime (#1035), as Duos's replay opens: a long log is a
-/// long fold.
+/// long fold. R3500000: the job holds `permit` until it ends, even if its request is dropped.
 async fn open_uncached(
     app: &App,
     replay: &ReplayRow,
     log: Vec<Action>,
     mode: Option<QueueMode>,
+    permit: OwnedSemaphorePermit,
 ) -> ReplayOpen {
     let folding = replay.clone();
-    let opened = engine::off_runtime(app.engine_thread, move || open_folded(&folding, log, mode)).await;
+    let opened = engine::off_runtime(app.engine_thread, move || {
+        let _permit = permit;
+        open_folded(&folding, log, mode)
+    })
+    .await;
     opened.unwrap_or_else(|message| {
         // A setup `create_game` refuses: the frozen decks no longer pass this build's checks.
         tracing::error!(event = "replay.open.panicked", matchId = %replay.row.id, message = %message);
@@ -338,20 +424,24 @@ async fn open_uncached(
     })
 }
 
-/// The replay of a match the caller may read: the one kept in memory, else `log` folded and kept.
+/// The replay of a match the caller may read: the one kept in memory, else `log` folded and kept,
+/// behind R3500000's turn and permit (429 past `REPLAY_FOLD_WAIT_MS`).
 async fn open_replay(
     app: &App,
     replay: &ReplayRow,
     kept: Option<Arc<ReplayOpen>>,
     log: Vec<Action>,
     mode: Option<QueueMode>,
-) -> Arc<ReplayOpen> {
+) -> Result<Arc<ReplayOpen>, ApiError> {
     if let Some(open) = kept {
-        return open;
+        return Ok(open);
     }
-    let open = Arc::new(open_uncached(app, replay, log, mode).await);
-    app.replays.cache.put(&replay.row.id, Arc::clone(&open), now_ms());
-    open
+    app.replays
+        .cache
+        .open(&app.replays.folds, &replay.row.id, |permit| async move {
+            Ok(open_uncached(app, replay, log, mode, permit).await)
+        })
+        .await
 }
 
 /// R768000: why a listed match cannot be shown, as far as is known without folding it (#1825): a
@@ -525,7 +615,7 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
     };
     tx.commit().await?;
 
-    let open = open_replay(app, &replay, kept, log, mode).await;
+    let open = open_replay(app, &replay, kept, log, mode).await?;
     let (total, checkpoints) = match open.as_ref() {
         ReplayOpen::Refused { reason } => {
             return Err(ApiError::with_details(
@@ -604,4 +694,133 @@ async fn replay_reader(
         .into_iter()
         .find(|sharer| seats.players.contains(sharer));
     Ok(sharer.map(|sharer| (seats, sharer)))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use super::*;
+
+    /// Sleeps on the paused clock, as a fold takes time without taking a thread.
+    const FOLD_MS: u64 = 10;
+
+    fn folds() -> Arc<Semaphore> {
+        Arc::new(Semaphore::new(REPLAY_FOLDS_RUNNING_MAX))
+    }
+
+    fn flights_held(cache: &ReplayCache<usize>) -> usize {
+        lock(&cache.flights).len()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3500000_concurrent_opens_of_one_match_fold_it_once() {
+        let (cache, folds) = (ReplayCache::<usize>::default(), folds());
+        let folded = AtomicUsize::new(0);
+        let open = || {
+            cache.open(&folds, "m-1", |_permit| async {
+                folded.fetch_add(1, Ordering::SeqCst);
+                tokio::time::sleep(Duration::from_millis(FOLD_MS)).await;
+                Ok(7)
+            })
+        };
+        let (a, b, c) = tokio::join!(open(), open(), open());
+        assert_eq!(folded.load(Ordering::SeqCst), 1);
+        for answer in [a, b, c] {
+            assert_eq!(*answer.expect("every open answers"), 7);
+        }
+        assert_eq!(cache.held(now_ms()), 1);
+        assert_eq!(flights_held(&cache), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3500000_opens_of_different_matches_never_exceed_the_fold_cap() {
+        let (cache, folds) = (Arc::new(ReplayCache::<usize>::default()), folds());
+        let (running, peak) = (Arc::new(AtomicUsize::new(0)), Arc::new(AtomicUsize::new(0)));
+        let opens: Vec<_> = (0..6)
+            .map(|n| {
+                let (cache, folds) = (Arc::clone(&cache), Arc::clone(&folds));
+                let (running, peak) = (Arc::clone(&running), Arc::clone(&peak));
+                tokio::spawn(async move {
+                    cache
+                        .open(&folds, &format!("m-{n}"), |permit| async move {
+                            let _permit = permit;
+                            let now = running.fetch_add(1, Ordering::SeqCst) + 1;
+                            peak.fetch_max(now, Ordering::SeqCst);
+                            tokio::time::sleep(Duration::from_millis(FOLD_MS)).await;
+                            running.fetch_sub(1, Ordering::SeqCst);
+                            Ok(n)
+                        })
+                        .await
+                })
+            })
+            .collect();
+        for open in opens {
+            open.await.expect("the task ran").expect("every open answers");
+        }
+        let peak = peak.load(Ordering::SeqCst);
+        assert!((1..=REPLAY_FOLDS_RUNNING_MAX).contains(&peak), "peak {peak}");
+        assert_eq!(cache.held(now_ms()), 6);
+        assert_eq!(flights_held(&cache), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3500000_an_open_waiting_for_a_long_fold_of_its_match_is_a_429_and_leaves_the_fold_alone() {
+        let (cache, folds) = (ReplayCache::<usize>::default(), folds());
+        let folded = AtomicUsize::new(0);
+        let long_fold = Duration::from_millis(REPLAY_FOLD_WAIT_MS * 2);
+        let first = cache.open(&folds, "m-1", |_permit| async {
+            folded.fetch_add(1, Ordering::SeqCst);
+            tokio::time::sleep(long_fold).await;
+            Ok(7)
+        });
+        let second = async {
+            // The first has taken the turn and the permit by the time this one asks.
+            tokio::time::sleep(Duration::from_millis(1)).await;
+            cache
+                .open(&folds, "m-1", |_permit| async {
+                    folded.fetch_add(1, Ordering::SeqCst);
+                    Ok(8)
+                })
+                .await
+        };
+        let (first, second) = tokio::join!(first, second);
+        assert_eq!(*first.expect("the fold that holds the turn answers"), 7);
+        let error = second.expect_err("the turn is not free for the whole wait");
+        assert_eq!(error.code, ApiErrorCode::RateLimited);
+        assert_eq!(error.retry_after_ms, Some(REPLAY_FOLD_RETRY_AFTER_MS));
+        assert_eq!(folded.load(Ordering::SeqCst), 1);
+        assert_eq!(cache.held(now_ms()), 1);
+        assert_eq!(flights_held(&cache), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3500000_an_open_past_the_wait_is_a_429_with_retry_after_ms() {
+        let (cache, folds) = (ReplayCache::<usize>::default(), folds());
+        let taken = Arc::clone(&folds)
+            .acquire_many_owned(u32::try_from(REPLAY_FOLDS_RUNNING_MAX).expect("a small cap"))
+            .await
+            .expect("the permits are free");
+        let folded = AtomicUsize::new(0);
+        let error = cache
+            .open(&folds, "m-1", |_permit| async {
+                folded.fetch_add(1, Ordering::SeqCst);
+                Ok(1)
+            })
+            .await
+            .expect_err("no permit is free for the whole wait");
+        assert_eq!(error.code, ApiErrorCode::RateLimited);
+        assert_eq!(error.message, REPLAY_BUSY_MESSAGE);
+        assert_eq!(error.retry_after_ms, Some(REPLAY_FOLD_RETRY_AFTER_MS));
+        assert_eq!(folded.load(Ordering::SeqCst), 0);
+        assert_eq!(cache.held(now_ms()), 0);
+        assert_eq!(flights_held(&cache), 0);
+
+        drop(taken);
+        let opened = cache
+            .open(&folds, "m-1", |_permit| async { Ok(2) })
+            .await
+            .expect("a permit is free again");
+        assert_eq!(*opened, 2);
+    }
 }
