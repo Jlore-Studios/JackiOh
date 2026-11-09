@@ -16957,20 +16957,36 @@
         "built_by": "claude-8",
         "carried": {
           "by": "`claude` (strong)",
-          "conflicts": [],
-          "from": "94f613f58729f96af1cf8fdf65162ac5d4b3936c",
-          "main": "1b69bb256877b86e3332e37959c33b95e2390c1e"
+          "conflicts": [
+            "apps/web/src/fx/cards/bespoke.ts",
+            "apps/web/src/fx/cards/coverage.test.ts",
+            "apps/web/src/fx/cards/tables.test.ts",
+            "apps/web/src/fx/cards/tables.ts",
+            "apps/web/src/fx/cards/tiers.test.ts",
+            "apps/web/src/fx/entrances.ts",
+            "apps/web/src/fx/motifs/gallery.ts",
+            "apps/web/src/fx/takeover.test.ts",
+            "apps/web/src/fx/takeover.ts",
+            "apps/web/src/fx/takeoverArt.ts",
+            "apps/web/src/fx/types.ts",
+            "apps/web/src/game/TakeoverStill.test.tsx",
+            "apps/web/src/routes/dev/fx.test.tsx",
+            "docs/polish/9-card-animations.md",
+            "spec/rulings/R3332000.md"
+          ],
+          "from": "357103244f7e37df73e04bd7bb9070fe7d7b4e18",
+          "main": "782c85136a05733dd977312d5f1784c460a8f9b6"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-8",
-            "run": "42563079532",
+            "run": "42573185886",
             "tier": "strong"
           }
         ],
-        "sha": "357103244f7e37df73e04bd7bb9070fe7d7b4e18",
+        "sha": "9fa7569d1d8760da78325f577bc4a3622da70f17",
         "tiers": {
           "claude": "strong"
         }
