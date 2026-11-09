@@ -17713,7 +17713,8 @@
         "tiers": {
           "claude": "strong"
         }
-      }
+      },
+      "waiting_comment": 6731148803
     },
     "3459": {
       "action": "build",
