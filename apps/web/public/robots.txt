@@ -1,8 +1,21 @@
 User-agent: *
 Allow: /
+# #3485: account-gated screens have nothing to index for a signed-out crawler (the
+# client sends it to /login in JS, which Search Console records as "Page with
+# redirect"), so they are kept out of the index on purpose. They stay out of
+# sitemap.xml and keep their redirect; src/net/search-index.test.ts holds this list
+# to main.tsx's Gated screens.
 Disallow: /account
 Disallow: /invite
+Disallow: /play
+Disallow: /decks
+Disallow: /together
+Disallow: /leaderboard
+Disallow: /collection
+Disallow: /shop
 Disallow: /match/
 Disallow: /series/
+Disallow: /watch/
+Disallow: /duos/
 
 Sitemap: https://staging.jackioh.com/sitemap.xml
