@@ -507,6 +507,12 @@
       "lines": [
         "Approve"
       ]
+    },
+    "c:6741750938": {
+      "at": "2026-11-09T13:53:27Z",
+      "lines": [
+        "@jgoetzmann-bot One requirement to add when you plan this: **the switch has to keep working for future sets too.** Stinkyscape and Training Grounds are the sets missing from the network today, but the next set to reach AI decks will be missing in the same way until a person retrains it. That case should need no code change."
+      ]
     }
   },
   "items": {
