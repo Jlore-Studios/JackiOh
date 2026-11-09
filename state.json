@@ -17192,7 +17192,7 @@
       "queued_at": "2026-11-09T09:20:24Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "42576701810",
+      "run_id": "pending:665045f9-1794216013",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17213,7 +17213,7 @@
         "run": "42576701810"
       },
       "source": "conflict",
-      "started_at": "2026-11-09T07:01:48Z",
+      "started_at": "2026-11-09T09:20:45Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 5,
@@ -18391,9 +18391,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T09:12:32Z",
+    "at": "2026-11-09T09:20:45Z",
     "url": "",
-    "what": "plan #3471 on muse"
+    "what": "revise #3444 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-09T09:11:08Z",
