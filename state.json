@@ -16576,13 +16576,14 @@
     "what": "build #3507 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-09T18:07:02Z",
+    "at": "2026-11-09T18:17:46Z",
     "notes": [
-      "delivered plan #3507 on muse (run 42669109821): planned",
-      "delivered review #3506 on claude-7 (run 42666577036): approved",
-      "started build #3507 on muse (run 42671679336)",
+      "#3506: approved and green, so its strikes are cleared",
+      "delivered build #3507 on muse (run 42671679336): infra (its model job left no upload)",
+      "started revise #3506 on claude-7 (run 42673094737)",
+      "started build #3507 on claude-4 (run 42673197667)",
       "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17288,7 +17289,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T18:07:02Z",
+  "loop_tick": "2026-11-09T18:17:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
