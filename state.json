@@ -15909,15 +15909,8 @@
       "waiting_comment": 6710911227
     },
     "3406": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42600964529",
-        "model": "opus",
-        "provider": "claude-5",
-        "since": "2026-11-09T10:53:34Z",
-        "until": "2026-11-09T11:23:34Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15929,10 +15922,9 @@
         "reason": "planned on opus",
         "trail": "c/cards/art; sed -n 240,260p setScenes.test.ts; sed -n 236,250p classicPlusScenes.test.ts; grep -n \\\"toHaveLength\\\\|Object.keys(SCENE\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406/apps/web/src; grep -rn '\\\"alt\\\"' --include=*.test.ts --include=*.test.tsx . | grep -v \\\"cards/art/setAltScenes\\\\|cards/art/classicPlusAltScenes\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406/apps/web/src/cards/art; sed -n 95,129p terminusArt.test.tsx; sed -n 130,160p pictures.test.ts; sed -n 610,640p pictures.test.ts; sed -n 300,330p\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406/apps/web/src/cards/art; sed -n 95,135p fusedArt.test.tsx; grep -n \\\"STINKY_IDS =\\\" -A4 terminusArt.test.tsx; grep -n \\\"function drawnArt\\\" -A25 \u2026\n- Bash: {\"command\": \"cd /tmp/plan3406 && cat > dump3.mjs <<'EOF'\\nconst base = \\\"/home/runner/work/_temp/work/item-3406/apps/web/src/cards/art/\\\";\\nconst m = await import(base + \\\"motion.ts\\\");\\nconst ids = \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406; ls spec/rulings/ | grep -E \\\"^R3406\\\"; grep -l -i \\\"alt art\\\" spec/rulings/R3333*.md spec/rulings/R3338*.md spec/rulings/R3336*.md spec/rulings\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406; sed -n 1,30p spec/rulings/R3338001.md; grep -n \\\"R3406\\\\|3406\\\" -r spec apps/web/src e2e crates/cards/patches 2>/dev/null | head\", \"description\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406; sed -n 1,12p spec/rulings/R3333001.md; grep -n -i \\\"seed\\\\|picture of its own\\\\|Alt\\\" spec/rulings/R3333001.md | head; tail -5 spec/rulings/R34\u2026\n- Bash: {\"command\": \"ls ~/.cache/Cypress 2>/dev/null | head; which google-chrome chromium chromium-browser 2>/dev/null; grep -n \\\"test:component\\\" e2e/package.json; grep -rn \\\"component\\\" .github/workflows/*\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406; sed -n 1170,1200p .github/workflows/ci.yml; ls node_modules/.pnpm 2>/dev/null | grep -i \\\"^cypress@\\\" | head -2; ls e2e/node_modules/.bin/cypre\u2026\n- tool error: Exit code 2 with: specs: ${{ inputs.e2e == 'all' && 'all' || 'smoke' }} shard: ${{ matrix.shard }} shards: ${{ strategy.job-total }} # Only on a dispatch with `e2e: all`, as super.yml's `component` j\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406/apps/web/src/cards/art; grep -n \\\"offered\\\\|Object.keys(ALT_SCENE_RECIPES)\\\\|Object.entries(ALT_SCENE_RECIPES)\\\\|NEW_PARTS\\\\|SCENE_RECIPES)\\\" cl\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406/apps/web/src; grep -rn \\\"artSeedOf\\\\|#alt\\\" cards/art/stinkyscape.test.tsx cards/art/starshipModules.test.ts cards/art/art.test.ts cards/art/art\u2026\n- Bash: {\"command\": \"cd /tmp/plan3406 && cat > gold.mjs <<'EOF'\\nconst base = \\\"/home/runner/work/_temp/work/item-3406/apps/web/src/cards/\\\";\\nconst c = await import(base + \\\"constants.ts\\\");\\nconst s = awai\u2026\n- Bash: {\"command\": \"cd /tmp/plan3406 && node --experimental-strip-types dump2.mjs 094 096 099 103 109 110 111 113 114 115 123 137 138 146 147 2>&1; python3 - <<'EOF'\\nimport json,glob\\ncat=None\\nfor p in gl\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406; python3 - <<'EOF'\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\ncards=c['cards'] if isinstance(c,dict) and 'cards' in c else c\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406/apps/web/src/cards/art; sed -n 5150,5180p sceneKit.ts; sed -n 1,40p sceneKitCosmos.ts | head -40; sed -n 490,514p sceneKitCosmos.ts\", \"descripti\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406/apps/web/src/cards/art; grep -n \\\"parts no scene\\\\|unused\\\\|never placed\\\\|placed by\\\" *.test.ts *.test.tsx | head; grep -n \\\"it(\\\\\\\"R3331000\\\" \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406/apps/web/src/cards/art; sed -n 171,190p scene.test.ts; sed -n 331,343p scene.test.ts\", \"description\": \"Read palette and no-recipe tests in scene\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3406/.bot-plan.md\", \"content\": \"# Draft plan #3406 (planner notes)\\n\\nFound:\\n- Pattern: #3397 (cb657107f5) and #3396 (7336cf5731). `ALT_SCENE_RECIPES\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406; grep -n '\\\"typecheck\\\\|\\\"lint\\\\|\\\"test\\\"' e2e/package.json apps/web/package.json package.json | head; grep -n \\\"title\\\\|--source\\\\|--visual\\\" c\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3406/.bot-plan.md\", \"content\": \"**Goal.** Each of the 54 Stinkyscape cards in #3406's table draws an alt scene recipe of its own, written from its bri\u2026\n- Bash: {\"command\": \"cd /tmp/plan3406 && cat > lv.mjs <<'EOF'\\nconst base = \\\"/home/runner/work/_temp/work/item-3406/apps/web/src/cards/\\\";\\nconst v = await import(base + \\\"versions.ts\\\");\\nconst ids = [\\\"09\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406; python3 - <<'EOF'\\nimport re\\nsrc=open('apps/web/src/wire/generated/cosmetics.ts').read()\\ni=src.index('export const COSMETIC_OFFERS')\\nbody=sr\u2026\n- Bash: {\"command\": \"wc -w -c /home/runner/work/_temp/work/item-3406/.bot-plan.md\", \"description\": \"Count words in the draft plan\"}\n- said: Verified: all 54 cards are offered all four Alt art levels. The draft is about 450 words over the 2,500-word limit and has one section the format doesn't allow, so I'm tightening it.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3406/.bot-plan.md\", \"content\": \"**Goal.** Each of the 54 Stinkyscape cards in #3406's table draws an alt scene recipe of its own, written from its bri\u2026\n- Bash: {\"command\": \"wc -w -c /home/runner/work/_temp/work/item-3406/.bot-plan.md; sed 's/|/ /g; s/`//g' /home/runner/work/_temp/work/item-3406/.bot-plan.md | wc -w\", \"description\": \"Count words in the trimm\u2026\n- said: **Goal.** Each of the 54 Stinkyscape cards in #3406's table draws an alt scene recipe of its own, written from its brief: the same subject in another place, time or moment. It draws one picture at every Alt art level, base and Radiant; the normal face and the repaints keep what they draw today. Eac\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-5",
       "owner_since": "2026-11-09T10:27:02Z",
       "owner_why": "it plans it",
@@ -15945,9 +15937,9 @@
       "provider": "claude-5",
       "queued_at": "2026-11-07T17:21:39Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42600964529",
+      "run_id": "pending:d769d525-1794221726",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-09T10:27:02Z",
+      "started_at": "2026-11-09T10:55:48Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18480,9 +18472,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T10:55:14Z",
+    "at": "2026-11-09T10:55:48Z",
     "url": "",
-    "what": "revise #3444 on claude-1"
+    "what": "build #3406 on claude-5"
   },
   "last_sweep": {
     "at": "2026-11-09T10:41:51Z",
