@@ -15640,7 +15640,7 @@
         "tier": "medium",
         "why": "Rule 3: the shared crate, the server and the web must agree on one new wire field (a forecast beside the view in practice snapshots, 1v1 frames and Duos frames), plus a new ruling and a setting; no engine, AI or migration change."
       },
-      "failures": 0,
+      "failures": 1,
       "forced": false,
       "handoff": {
         "at": "2026-11-09T14:10:56Z",
