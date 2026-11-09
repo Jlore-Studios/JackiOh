@@ -15100,6 +15100,7 @@
         "resolved_by": "`claude` (strong)",
         "sha": "531f786f061afafcae58fba1ea8c3db911c69253"
       },
+      "closed_at": "2026-11-09T14:18:20Z",
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -15115,6 +15116,7 @@
         "provider": "claude-4",
         "sha": "531f786f061afafcae58fba1ea8c3db911c69253"
       },
+      "merged": true,
       "pending_request": false,
       "provider": "claude-4",
       "question": "",
