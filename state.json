@@ -16198,7 +16198,9 @@
     "3423": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-11-08T22:56:41Z",
         "family": "claude",
