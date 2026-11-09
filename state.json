@@ -13945,7 +13945,9 @@
     },
     "3352": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6712090776"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -14000,9 +14002,7 @@
       },
       "started_at": "2026-11-09T00:50:51Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6712090776"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "waiting_comment": 6728135775
     },
