@@ -33,6 +33,20 @@ function sources(dir: string): string[] {
 /** Each file's strings, parsed once for every guard below: the guards each read the whole client. */
 const WORDS = new Map<string, { at: string; text: string }[]>();
 
+// Read off `ts` once: vitest hands a CommonJS module over behind a Proxy, so each `ts.<name>` in the walk,
+// up to nine for every node of the client, went through its trap, and took R373's scan past its 5 s in CI.
+const {
+  forEachChild,
+  isExportDeclaration,
+  isImportDeclaration,
+  isJsxText,
+  isNoSubstitutionTemplateLiteral,
+  isStringLiteral,
+  isTemplateHead,
+  isTemplateMiddle,
+  isTemplateTail,
+} = ts;
+
 function wordsIn(path: string): { at: string; text: string }[] {
   const known = WORDS.get(path);
   if (known) return known;
@@ -44,19 +58,19 @@ function wordsIn(path: string): { at: string; text: string }[] {
   const name = relative(SRC, path);
   const out: { at: string; text: string }[] = [];
   const visit = (node: ts.Node): void => {
-    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) return;
+    if (isImportDeclaration(node) || isExportDeclaration(node)) return;
     if (
-      ts.isStringLiteral(node) ||
-      ts.isNoSubstitutionTemplateLiteral(node) ||
-      ts.isTemplateHead(node) ||
-      ts.isTemplateMiddle(node) ||
-      ts.isTemplateTail(node) ||
-      ts.isJsxText(node)
+      isStringLiteral(node) ||
+      isNoSubstitutionTemplateLiteral(node) ||
+      isTemplateHead(node) ||
+      isTemplateMiddle(node) ||
+      isTemplateTail(node) ||
+      isJsxText(node)
     ) {
       const line = file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1;
       out.push({ at: `${name}:${String(line)}`, text: node.text });
     }
-    ts.forEachChild(node, visit);
+    forEachChild(node, visit);
   };
   visit(file);
   WORDS.set(path, out);
