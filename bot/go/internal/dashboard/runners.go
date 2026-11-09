@@ -85,6 +85,7 @@ var Workflows = map[string]string{
 	"learn-set.yml":          "a new patch or set stops a learn export still early on the version before",
 	"learn.yml":              "the learn lane: self-play, retrain and gate of the learned evaluation, back to back",
 	"lock-conversations.yml": "locks every conversation to collaborators",
+	"mutants.yml":            "weekly: a shard of every area's mutation testing, each area's score in its summary",
 	"patches-ship.yml":       "ships the pending card-patch fragments after a merge",
 	"pr-title.yml":           "holds a pull request's title to the convention",
 	"promote-production.yml": "production daily, from a passing super run on staging; /promote sooner",

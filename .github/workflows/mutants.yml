@@ -1,0 +1,224 @@
+# Mutation testing (#3490): whether a test fails when the code it covers is wrong, which the daily
+# coverage floor (super.yml, .github/coverage-floor.txt) cannot say. Once a week, one shard of every
+# area scripts/mutants.sh knows: cargo-mutants over each Rust crate (the cards one set a week) and
+# Stryker over the web's layers and the Worker. The `report` job writes one table to the run's
+# summary, each area's mutants killed, survived, timed out, unviable and left out and its score,
+# with the survivors under it, and each area's full report stays an artifact for 30 days, which is
+# what an audit pull request sorts (#3490 part 4).
+#
+# It reports and gates nothing: it stays outside super.yml, so production waits on no number nobody
+# has seen yet. Once the scores settle, a floor joins .github/coverage-floor.txt's, raised by hand.
+#
+# The weeks since 1970 pick each area's shard (`sh scripts/mutants.sh <area> <k>` runs shard
+# k mod n), so the weeks walk every shard of every area in turn. Sunday at 03:17 UTC, three Rust and
+# three web jobs at a time so CI keeps runners, and on demand: `gh workflow run mutants.yml` (every
+# area, this week's shards), `-f area=<area>` for one, `-f shard=<k>` for another week's. A pull
+# request that changes the tooling runs twenty mutants of the run crate and of a card set (whose
+# scripts only scripts/mutants.sh's copy of the tree lets cargo-mutants find) and the Worker's, so a
+# broken setting shows before it merges.
+name: mutants
+
+on:
+  schedule:
+    - cron: "17 3 * * 0"
+  workflow_dispatch:
+    inputs:
+      area:
+        description: "One area (sh scripts/mutants.sh areas lists them); empty: every area"
+        type: string
+        default: ""
+      shard:
+        description: "The shard k to run (k mod each area's shard count); empty: this week's"
+        type: string
+        default: ""
+  pull_request:
+    paths:
+      - .cargo/mutants.toml
+      - .github/workflows/mutants.yml
+      - scripts/mutants.sh
+      - apps/web/stryker.config.mjs
+      - apps/edge/stryker.config.mjs
+
+permissions:
+  contents: read
+
+# One run per branch and area at a time: a dispatch of one area never waits for another's.
+concurrency:
+  group: mutants-${{ github.ref }}-${{ inputs.area }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CYPRESS_INSTALL_BINARY: "0"
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      rust: ${{ steps.plan.outputs.rust }}
+      web: ${{ steps.plan.outputs.web }}
+      shard: ${{ steps.plan.outputs.shard }}
+      size: ${{ steps.plan.outputs.size }}
+    steps:
+      - name: the areas and the shard
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_AREA: ${{ inputs.area }}
+          INPUT_SHARD: ${{ inputs.shard }}
+        run: |
+          rust='["engine","cards","ai","run","shared","server","tools","wasm"]'
+          web='["web-animations","web-effects","web-audio","web-cards","web-drag","web-settings","web-wire","web-wasm","edge"]'
+          case "$INPUT_AREA$INPUT_SHARD" in *[!a-z0-9_-]*) echo "area and shard are names and numbers" >&2; exit 1 ;; esac
+          shard=${INPUT_SHARD:-$(($(date -u +%s) / 604800))}
+          size=
+          if [ "$EVENT" = pull_request ]; then
+            rust='["run","cards"]' web='["edge"]' shard=0 size=20
+          elif [ -n "$INPUT_AREA" ]; then
+            case "$INPUT_AREA" in
+              web-* | edge) rust='[]' web="[\"$INPUT_AREA\"]" ;;
+              *) rust="[\"$INPUT_AREA\"]" web='[]' ;;
+            esac
+          fi
+          {
+            echo "rust=$rust"
+            echo "web=$web"
+            echo "shard=$shard"
+            echo "size=$size"
+          } | tee -a "$GITHUB_OUTPUT"
+
+  areas:
+    name: the areas
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+          cache-key: mutants
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants@27.1.0
+      - name: every area's mutants and shards
+        run: |
+          cargo mutants --version
+          {
+            echo "## The areas"
+            echo
+            sh scripts/mutants.sh areas
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  rust:
+    name: cargo-mutants (${{ matrix.area }})
+    needs: plan
+    if: needs.plan.outputs.rust != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        area: ${{ fromJSON(needs.plan.outputs.rust) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+          cache-key: mutants
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants@27.1.0
+      # Five hours, then the steps below still score and keep what it tested.
+      - name: mutants
+        timeout-minutes: 300
+        env:
+          AREA: ${{ matrix.area }}
+          SHARD: ${{ needs.plan.outputs.shard }}
+          MUTANTS_SHARD_SIZE: ${{ needs.plan.outputs.size }}
+        run: sh scripts/mutants.sh "$AREA" "$SHARD"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutants-${{ matrix.area }}
+          path: target/mutants/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  web:
+    name: stryker (${{ matrix.area }})
+    needs: plan
+    if: needs.plan.outputs.web != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        area: ${{ fromJSON(needs.plan.outputs.web) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: mutants-web
+      # The web's tests load the engine's WebAssembly module (apps/web/src/test/setup.ts); the
+      # Worker's do not.
+      - name: the engine's WebAssembly module
+        if: matrix.area != 'edge'
+        run: sh scripts/build-wasm.sh
+      - name: mutants
+        timeout-minutes: 300
+        env:
+          AREA: ${{ matrix.area }}
+          SHARD: ${{ needs.plan.outputs.shard }}
+          MUTANTS_SHARD_SIZE: ${{ needs.plan.outputs.size }}
+        run: sh scripts/mutants.sh "$AREA" "$SHARD"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutants-${{ matrix.area }}
+          path: target/mutants/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  report:
+    name: report
+    needs: [rust, web]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mutants-*
+          path: target/mutants
+          merge-multiple: true
+      - name: the scores
+        run: |
+          mkdir -p target/mutants
+          for dir in target/mutants/*/; do
+            if [ -d "$dir" ]; then sh scripts/mutants.sh score "$(basename "$dir")"; fi
+          done >"$RUNNER_TEMP/scores.md"
+          {
+            echo "## Mutation scores"
+            echo
+            echo "Killed counts the mutants that timed out; the score is killed over killed and survived."
+            echo
+            echo "| area | shard | killed | survived | timed out | unviable | left out | score |"
+            echo "|---|---|---:|---:|---:|---:|---:|---:|"
+            grep '^|' "$RUNNER_TEMP/scores.md" || echo "| no area reported | | | | | | | |"
+            echo
+            grep -v '^|' "$RUNNER_TEMP/scores.md" || true
+          } | tee -a "$GITHUB_STEP_SUMMARY"
