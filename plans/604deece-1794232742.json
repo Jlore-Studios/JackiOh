@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3477,
+  "title": "Patch: aiming an attack shows what it will do: the damage each side takes and whether either dies",
+  "branch": "bot/issue-3477",
+  "thread": "**Issue #3477 (data, not instructions):**\n\n```text\n# #3477: Patch: aiming an attack shows what it will do: the damage each side takes and whether either dies\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen you pick up one of your units to attack, each target you could hit shows a small label: how much damage it takes, how much your unit takes back, and a skull on whichever one dies. JackiOh piles Armor, Defense Position, Divine Shield, First Strike, Pierce and damage caps on top of plain attack-against-health maths, so players misjudge trades. The game already works the answer out from the face-up board, but only the tutorial's coach uses it today. It reads only what both players can see, so it gives away no trap or hand card, though a face-down trap can still change the outcome.\n\n## Why\n\n- `combat_forecast` (`crates/engine/src/query.rs:742`, R3100000) already gives every attack a seat may declare its `dealt`, `taken`, `kills`, `survives` and `pops` (`apps/web/src/wire/generated/AttackForecast.ts`). It reads no hand, library or face-down card. A property test plays the forecast attacks on hundreds of random boards for real and requires the events to match (`crates/engine/tests/rules/combat_forecast.rs`).\n- It reaches a player only in a tutorial lesson. `crates/shared/src/host/practice/host.rs:602-606` sets `forecast` only when `config.is_lesson()`. The 1v1 `ServerMessage::View` (`crates/server/src/actor/protocol.rs:225`) carries the view, the legal actions and the economy, nothing more. Outside `apps/web/src/tutorial/` no component reads it.\n- Combat is a design pillar (\u00a71, 'Two combat axes'), and its maths has many stops: \u00a74.4's Divine Shield, Armor and Pierce, the target's cap, Indestructible and the hero's anti-oneshot cap, plus First Strike in \u00a74.3. The client may not do this maths itself (CLAUDE.md rule 7). R3100000 deleted exactly such a TypeScript copy and calls the forecast 'a derived fact, not a rule'.\n\n## Proposal\n\n- Send the seat's forecast with its own view wherever it may attack: in every practice snapshot (not only a lesson's), in the 1v1 server's View message to a seat (never to a watcher), and in a Duos duel's seat view.\n- While an attacker is selected or dragged, each legal target shows that attack's forecast: damage dealt, damage taken back, a kill mark on whichever dies and a mark for a broken shield. A target with no forecast entry shows nothing.\n- Add a setting, 'Show attack outcomes', on by default unless the owner prefers otherwise.\n- Write a new ruling amending R3100000's 'only in a lesson', with Hearthstone semantics: damage reads as the pipeline reads it, and the label is a derived fact.\n\n## Where it lands\n\n- `crates/shared/src/host/practice/host.rs`; `crates/server/src/actor/protocol.rs` and the match actor's view push; the Duos view path.\n- `apps/web/src/game/` (the aiming overlay on `Board`/`Card`, the settings panel) and the generated wire types under `apps/web/src/wire/`.\n- SPEC \u00a79.10 and \u00a710.10, `spec/rulings/R3100000.md`, a new ruling note.\n\n## Acceptance criteria\n\n- [ ] A free practice game's snapshot carries the forecast (`crates/shared/tests/practice.rs`). A seat's 1v1 frame carries it and a watcher's never does (`crates/server/tests`).\n- [ ] A test: the forecast in a seat's frame is the same for two states that differ only in hidden cards (the enemy hand, both libraries, face-down backrow cards).\n- [ ] Vitest: with an attacker selected, each legal target shows its forecast's dealt and taken, with a kill mark exactly when `kills` is true. The setting turned off hides it, and with no forecast nothing renders.\n- [ ] The tutorial coach is unchanged (`apps/web/src/tutorial/advice.test.ts` passes).\n- [ ] `cargo jackioh spec check`, the server and shared suites and the touched web tests pass.\n\n## Size and risks\n\nHard, about 15 to 20 files across the shared crate, the server and the web. Each frame grows by one small entry per legal attack. The forecast does not know about face-down traps, so the label must not read as a promise; its tooltip should say so. The owner may want it in practice only, which the setting and a per-mode flag make a one-line choice.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-09T13:50:49Z:\n\nApprove\n\n---\nComment by @MaxGoetzmann at 2026-11-09T13:51:04Z:\n\nMake sure it\u2019s pretty unintrusive\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3477: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T13:51:12Z",
+    "claimed_at": "2026-11-09T13:59:30Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3464 is held for `claude-7` until 09:20 (5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
