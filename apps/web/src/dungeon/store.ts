@@ -219,7 +219,8 @@ function writeJson(key: string, value: unknown): void {
 
 let compiled: RunContent | null = null;
 
-function contentOf(): RunContent {
+/** The compiled-in content, built once; the stats page names a past run's curses from it. */
+export function contentOf(): RunContent {
   compiled ??= runContent();
   return compiled;
 }

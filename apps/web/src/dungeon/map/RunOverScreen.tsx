@@ -1,5 +1,5 @@
 // The dungeon run's end (DR9, DR14 part F, #2707): the score with the run's time and turns beside it
-// (§15.10), the Embers it pays, what the run extracted, the run's stats, and the ways out, a new run or the statistics page. Players read
+// (§15.10), the Embers it pays, its seed (#3501), what the run extracted, the run's stats, and the ways out, a new run or the statistics page. Players read
 // "relic"; the code keeps the run's word, artifact (WRITING.md's jargon). Presentation only
 // (CLAUDE.md rule 7): the numbers come from part C's bindings, and every word goes through `t()`
 // at render, never at module scope.
@@ -82,6 +82,9 @@ export function RunOverScreen({ dungeon, run, content, won }: RunOverScreenProps
       </p>
       <p className="dungeon-run-end__embers" data-testid={dungeonMapTestid.endEmbers}>
         {t("Embers: {embers}", { embers: String(embers) })}
+      </p>
+      <p className="dungeon-run-end__seed" data-testid={dungeonMapTestid.endSeed}>
+        {t("Seed: {seed}", { seed: run.seed })}
       </p>
       <h3 className="dungeon-run-section__title">{t("Cards extracted")}</h3>
       {run.extractedCards.length === 0 ? (

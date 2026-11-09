@@ -158,6 +158,8 @@ The whole map (enemies, decks, bosses' drops, events) is dealt at the start, and
 
 The player steps onto any node of the next row.
 
+Between fights the top bar shows HP, Coins, Tickets, the deck's size, the relics held and the score, and a Your run panel lists the deck (Radiant and buffed cards marked), the relics and blessings held with their text, the curses taken with their names and text, and the seed, which can be copied.
+
 ### 15.6 The fights
 
 **The human:** the run deck in order, with `HUMAN_HANDICAP`, its deck size the deck's length and its hero health the run's HP ([[R180]], [[R290]]). At setup, before the opening draw, each Radiant card is dealt Radiant ([[§5.2]]) and each buff is applied as one Buff ([[§6.3]]).
@@ -249,6 +251,8 @@ Time and turns are shown beside the score, not in it.
 **Embers** are earned only by playing: `run_embers`, the score divided by `RUN_SCORE_PER_EMBER`, paid when a run ends. They buy levels ([[§15.3]]) at `RUN_LEVEL_EMBERS`. Spending them on upgrading artifacts or buying buffs is not built.
 
 **Leaderboards:** deepest row, most curse points, top score and fastest win, with an on-screen timer. The Sandbox's stay on the device; the Campaign's hold checked runs.
+
+The run-over screen shows the run's seed, and a past run's details name its curses from the run's content; an id the content no longer holds shows as itself.
 
 **Stats:** `RunStats`'s fields, in words: nodes visited; fights, elites, ghosts, mini-bosses and bosses won; damage dealt, healing done, cards drawn and turns; damage taken and healing taken; Coins and Tickets earned and spent; cards kept, bought, removed, made Radiant and buffed; packs skipped; artifacts taken and leveled; blessings taken; events seen; chests opened.
 

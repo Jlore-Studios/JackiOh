@@ -138,10 +138,10 @@ stays inside. `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`,
 
 Since #3221 (R3221000) the menus' dialogs draw through it too: `SettingsPanel`, the friends panel
 (`FriendsButton`), `ChatPanel`, `ChallengeDialog`, `TokenOffer`'s and the shop's chase question, the
-account's delete question, `/stats`'s card breakdown, `DungeonStats`'s run details, `FieldGuide`,
-`PatchNotes`'s card, `ItemPreview`, `CardCosmeticsView`, `LooksScreen`, `DevButton`'s panel,
-`CommandMenu` and `TutorialResult`. A caller may also give it an `id`, its own `closeTestid` and
-`closeLabel` for the ✕, a `scrimTestid`, `focus` (what takes the focus on open, else the first answer,
+account's delete question, `/stats`'s card breakdown, `DungeonStats`'s run details, the dungeon's Your run
+panel (`RunPanel`), `FieldGuide`, `PatchNotes`'s card, `ItemPreview`, `CardCosmeticsView`, `LooksScreen`,
+`DevButton`'s panel, `CommandMenu` and `TutorialResult`. A caller may also give it an `id`, its own
+`closeTestid` and `closeLabel` for the ✕, a `scrimTestid`, `focus` (what takes the focus on open, else the first answer,
 else the ✕), `panelRef`, a `title` with markup of its own, and answers that are `disabled` or `busy`
 (`aria-busy`), the `cancel` disabled too while a request is out. `sheet` makes it a sheet: centred on a
 wide screen, at the foot of an upright phone and down the right edge of a phone on its side (Settings,

@@ -25,13 +25,14 @@ import {
 import { dungeonMapTestid } from "./testids.ts";
 import { CampfireScreen, EventScreen, ShopScreen, ShrineScreen } from "./TileScreens.tsx";
 import { RunOverScreen } from "./RunOverScreen.tsx";
+import { RunPanel } from "./RunPanel.tsx";
 import { passiveName, type SendRunAction } from "./RunDisplay.tsx";
 import "../../auth/tavern.css";
 import "./run.css";
 
 /**
- * The HUD, on every screen: HP, Coins, Tickets, the deck's size, the relics held and the score, and
- * the run's time until the run is over (B24), whose record then holds it.
+ * The HUD, on every screen: HP, Coins, Tickets, the deck's size, the relics held, the score and the
+ * Your run button (#3501), and the run's time until the run is over (B24), whose record then holds it.
  */
 function RunHud({ run, content, startedAt }: { run: RunState; content: RunContent; startedAt: number | null }): ReactElement {
   const max = runMaxHp(run, content);
@@ -71,6 +72,7 @@ function RunHud({ run, content, startedAt }: { run: RunState; content: RunConten
       <span className="dungeon-run-hud__stat" data-testid={dungeonMapTestid.score}>
         {t("Score")}: {score}
       </span>
+      <RunPanel run={run} content={content} />
     </header>
   );
 }

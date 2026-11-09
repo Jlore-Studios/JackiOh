@@ -4,7 +4,8 @@
 // Sandbox/Campaign and daily-only filter, and each entry opens that run's stats in a dialog.
 //
 // CLAUDE.md rule 7: this reads completed `RunRecord`s only, never a live run, the engine or
-// hidden game information.
+// hidden game information; the one other thing it reads is the compiled-in run content, public,
+// to name a record's curses (#3501).
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 
@@ -17,8 +18,9 @@ import { MS_PER_SECOND } from "../../game/clockConstants.ts";
 import { formatDateTime, formatNumber, t, useLocale } from "../../i18n/i18n.ts";
 import { paths } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
+import { curseName } from "../map/RunDisplay.tsx";
 import { RUN_STAT_LABELS } from "../map/RunOverScreen.tsx";
-import { readRunHistory, type DungeonMode, type RunRecord } from "../store.ts";
+import { contentOf, readRunHistory, type DungeonMode, type RunRecord } from "../store.ts";
 import { dungeonStatsTestid, type DungeonLeaderboard } from "./testids.ts";
 import "./dungeon-stats.css";
 
@@ -167,6 +169,8 @@ function Board({
  * whose ✕ takes the focus as on the statistics drill-down's, and whose keys are the app's modal contract.
  */
 function RunDetails({ record, onClose }: { record: RunRecord; onClose: () => void }): ReactElement {
+  // The record holds a curse's id; its name comes from the compiled-in content (#3501), the id standing in for one it dropped.
+  const content = contentOf();
   return (
     <Dialog
       role="dialog"
@@ -226,7 +230,7 @@ function RunDetails({ record, onClose }: { record: RunRecord; onClose: () => voi
         ) : (
           <ul className="dungeon-stats__curses">
             {record.curses.map((curse: string) => (
-              <li key={curse}>{t(curse)}</li>
+              <li key={curse}>{curseName(content, curse)}</li>
             ))}
           </ul>
         )}
