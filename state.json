@@ -16796,6 +16796,13 @@
     "3504": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-09T22:06:56Z",
+        "difficulty": "hard",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "Rule 5: about 85 files change in all (the testkit, 28 card files rewritten, 53 given a comment line, 2 docs), even though every change is test code."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
