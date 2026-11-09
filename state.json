@@ -18464,10 +18464,12 @@
     "what": "revise #3461 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-09T10:19:50Z",
+    "at": "2026-11-09T10:25:02Z",
     "notes": [
-      "#3464: approved and green, so its strikes are cleared",
-      "#3472: closed, so `bot:merging` is off"
+      "started review #3472 on claude-8 (run 42600885336)",
+      "started plan #3406 on claude-5 (run 42600964529)",
+      "started revise #3461 on claude-8 (run 42601043271)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19173,7 +19175,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T10:15:45Z",
+  "loop_tick": "2026-11-09T10:25:02Z",
   "machine_disk": {
     "issue": null,
     "reading": {
