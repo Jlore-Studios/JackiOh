@@ -1406,10 +1406,17 @@ impl MatchActor {
             let found = tokio::task::spawn_blocking(move || {
                 // R388, R767000: runs under the match's pinned catalog.
                 jackioh_cards::register_all();
-                let deadline = std::time::Instant::now()
-                    + Duration::from_millis(u64::try_from(job.deadline_ms).unwrap_or(0));
+                let started = std::time::Instant::now();
+                let deadline = started + Duration::from_millis(u64::try_from(job.deadline_ms).unwrap_or(0));
+                // R3498000: past the wrap-up the beam explores no further; the reply and the other worlds
+                // run on to the deadline.
+                let wrap_up_at = started
+                    + Duration::from_millis(
+                        u64::try_from(jackioh_ai::wrap_up_after_ms(job.deadline_ms)).unwrap_or(0),
+                    );
                 let should_stop = move || std::time::Instant::now() >= deadline;
-                pinned.run(|| job.run(Some(&should_stop)))
+                let wrap_up = move || std::time::Instant::now() >= wrap_up_at;
+                pinned.run(|| job.run(Some(&should_stop), Some(&wrap_up)))
             })
             .await;
             let choice = found.unwrap_or_else(|_| BotChoice::nothing(fallback_cursor));

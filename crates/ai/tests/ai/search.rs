@@ -1423,6 +1423,7 @@ mod decides_determinism_and_budget_b15 {
                 rng: create_rng("search-default", 0),
                 budget: AI_BUDGET,
                 should_stop: None,
+                wrap_up: None,
             },
         );
         let explicit = decide(&state, AI, &mut ai_options("search-default", AI_BUDGET));
@@ -1445,6 +1446,7 @@ mod decides_determinism_and_budget_b15 {
                 rng: create_rng("search-clock", 0),
                 budget: AI_GATE_BUDGET,
                 should_stop: Some(&stop),
+                wrap_up: None,
             },
         );
         assert!(decision.is_some());
@@ -1471,6 +1473,7 @@ mod decides_determinism_and_budget_b15 {
                 rng: create_rng("search-clock-n", 0),
                 budget: AI_BUDGET,
                 should_stop: Some(&stop),
+                wrap_up: None,
             },
         )
         .expect("a decision");
@@ -1581,6 +1584,170 @@ mod decides_determinism_and_budget_b15 {
         assert!(!counter.take());
         assert_eq!(counter.used(), 2);
         assert_eq!(js(counter.stopped_by()), json!("clock"));
+    }
+}
+
+/// R3498000: a host's wrap-up stops the beam alone, so that a decision its clock cuts short still scores
+/// its finalists after the reply on every sampled world, while a hard stop at the same poll scores neither.
+mod r3498000_wrap_up {
+    use super::*;
+
+    /// `mid_game`'s budget with no lethal solver, so that every node the clock cuts is the search's.
+    fn budget() -> SearchBudget {
+        SearchBudget {
+            lethal_nodes: 0,
+            ..AI_BUDGET
+        }
+    }
+
+    /// The decision with no clock.
+    fn base() -> Decision {
+        decide(&mid_game(), AI, &mut ai_options("r3498000", budget())).expect("a decision")
+    }
+
+    /// The same decision under a fake clock that counts the hard stop's polls (one before each node): the
+    /// hard stop fires once more than `stop_at` polls are made, and the wrap-up, when given, from the
+    /// `wrap_at`th poll on.
+    fn clocked(wrap_at: Option<usize>, stop_at: usize) -> Decision {
+        let polls = Cell::new(0usize);
+        let should_stop = || {
+            polls.set(polls.get() + 1);
+            polls.get() > stop_at
+        };
+        let wrap_up = || wrap_at.is_some_and(|at| polls.get() >= at);
+        let mut options = AiOptions {
+            rng: create_rng("r3498000", 0),
+            budget: budget(),
+            should_stop: Some(&should_stop),
+            wrap_up: wrap_at.map(|_| &wrap_up as &dyn Fn() -> bool),
+        };
+        decide(&mid_game(), AI, &mut options).expect("a decision")
+    }
+
+    /// Half the nodes the decision spends with no clock: well inside its beam.
+    fn halfway() -> usize {
+        let nodes = base().stats.nodes;
+        assert!(
+            nodes / 2 > AI_BUDGET.root_branching + 1,
+            "PREMISE: the search spends more than its root ({nodes})"
+        );
+        nodes / 2
+    }
+
+    #[test]
+    fn r3498000_a_wrap_up_at_poll_n_scores_the_reply_on_every_world_where_a_hard_stop_at_n_scores_neither() {
+        let state = mid_game();
+        let worlds = budget().determinizations;
+        let plain = base();
+        assert_eq!(plain.reason, DecisionReason::Search);
+        assert!(plain.stats.replied > 0, "{:?}", plain.stats);
+        assert_eq!(plain.stats.worlds_scored, worlds);
+        assert!(!plain.fell_short());
+        let n = halfway();
+
+        // Today's behaviour: the clock fires mid-beam and refuses the reply and every other world.
+        let stopped = clocked(None, n);
+        assert_eq!(stopped.reason, DecisionReason::Search);
+        assert_eq!(js(stopped.stats.stopped_by), json!("clock"));
+        assert_eq!(stopped.stats.nodes, n);
+        assert_eq!(stopped.stats.replied, 0, "{:?}", stopped.stats);
+        assert_eq!(stopped.stats.worlds_scored, 1);
+        assert!(stopped.fell_short());
+        assert!(is_legal(&state, AI, &stopped.action));
+
+        // The wrap-up at the same poll stops the beam alone: the reply and the other worlds still run.
+        let wrapped = clocked(Some(n), n + AI_BUDGET.nodes);
+        assert_eq!(wrapped.reason, DecisionReason::Search);
+        assert_eq!(js(wrapped.stats.stopped_by), json!("clock"));
+        assert!(wrapped.stats.nodes > n, "{:?}", wrapped.stats);
+        assert!(wrapped.stats.nodes <= budget().nodes);
+        assert!(wrapped.stats.replied > 0, "{:?}", wrapped.stats);
+        assert_eq!(wrapped.stats.worlds_scored, worlds);
+        assert!(!wrapped.fell_short());
+        assert!(is_legal(&state, AI, &wrapped.action));
+    }
+
+    #[test]
+    fn r3498000_the_hard_stop_still_ends_the_reply_after_a_wrap_up() {
+        let n = halfway();
+        let decision = clocked(Some(n), n);
+        assert_eq!(js(decision.stats.stopped_by), json!("clock"));
+        assert!(decision.stats.nodes <= n, "{:?}", decision.stats);
+        assert_eq!(decision.stats.replied, 0, "{:?}", decision.stats);
+        assert_eq!(decision.stats.worlds_scored, 1);
+        assert!(decision.fell_short());
+        assert!(is_legal(&mid_game(), AI, &decision.action));
+    }
+
+    #[test]
+    fn r3498000_a_wrap_up_that_never_fires_decides_as_no_clock_does() {
+        let never = || false;
+        let decision = decide(
+            &mid_game(),
+            AI,
+            &mut AiOptions {
+                rng: create_rng("r3498000", 0),
+                budget: budget(),
+                should_stop: Some(&never),
+                wrap_up: Some(&never),
+            },
+        );
+        assert_eq!(decision, Some(base()));
+    }
+
+    #[test]
+    fn r3498000_a_wrap_up_at_the_first_poll_still_plays_a_searched_move() {
+        let state = mid_game();
+        let polls = Cell::new(0usize);
+        let at_once = || {
+            polls.set(polls.get() + 1);
+            true
+        };
+        let decision = decide(
+            &state,
+            AI,
+            &mut AiOptions {
+                rng: create_rng("r3498000", 0),
+                budget: budget(),
+                should_stop: None,
+                wrap_up: Some(&at_once),
+            },
+        )
+        .expect("a decision");
+        assert!(polls.get() > 0);
+        assert_eq!(decision.reason, DecisionReason::Search);
+        assert_eq!(js(decision.stats.stopped_by), json!("clock"));
+        assert!(decision.stats.lines > 0, "{:?}", decision.stats);
+        assert_eq!(decision.stats.worlds_scored, budget().determinizations);
+        assert!(!decision.fell_short());
+        assert!(is_legal(&state, AI, &decision.action));
+    }
+
+    #[test]
+    fn r3498000_a_wrap_up_counter_refuses_past_its_floor_until_it_closes_and_leaves_its_parent_running() {
+        let root = create_node_counter(100, None);
+        let fired = || true;
+        let beam = create_wrap_up_counter(&root, 50, Some(&fired), 5);
+        assert_eq!(
+            [beam.take(), beam.take(), beam.take(), beam.take(), beam.take()],
+            [true; 5]
+        );
+        assert!(!beam.take());
+        assert_eq!(beam.stopped_by(), StoppedBy::Clock);
+        assert!(root.take());
+        assert_eq!(root.stopped_by(), StoppedBy::Exhausted);
+
+        beam.end_exploring();
+        assert!(beam.take());
+        assert_eq!(root.used(), 7);
+
+        // With no wrap-up it is a plain slice, which closing changes nothing for.
+        let plain = create_wrap_up_counter(&root, 1, None, 0);
+        assert!(plain.take());
+        assert!(!plain.take());
+        plain.end_exploring();
+        assert!(!plain.take());
+        assert_eq!(plain.stopped_by(), StoppedBy::Budget);
     }
 }
 

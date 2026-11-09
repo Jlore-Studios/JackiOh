@@ -355,7 +355,9 @@ export (below).
 The AI's search is a body of its own, `bot_decide(call, deadline_ms)`: a `DecideCall` (the `DuelHost` and the
 `DecideRequest` a `decide` output made) in, the `BotChoice` to feed back as `decided` out. A host with a clock
 (the browser) passes the `deadline_ms` the request's `deadlineMs` makes of its clock, and the search ends
-there with its best line; the C module has no clock, so the search ends at the strength's budget.
+there with its best line, its beam wrapped up at `AI_WRAP_UP_SHARE` of the time so that the reply and the
+other worlds still run (R3498000: `bots::decide`, `DecideJob::run` and `boundary::decide` take the
+wrap-up beside the hard stop); the C module has no clock, so the search ends at the strength's budget.
 
 ### Duos co-op (`src/host/duos.rs`, `src/host/again.rs`)
 

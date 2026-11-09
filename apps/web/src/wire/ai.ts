@@ -16,7 +16,8 @@
 // THE CLOCK. TypeScript's `shouldStop` was a callback, and a callback cannot cross into WebAssembly.
 // `decide` takes `deadlineMs` instead, a `Date.now()` time after which the search answers with its
 // best so far; absent, there is no clock, and the decision depends only on the state, the stream and
-// the budget.
+// the budget. The module derives the search's wrap-up from it, past which the beam explores no further so
+// that the reply and the other sampled worlds still run (R3498000).
 
 import {
   aiConstants,
@@ -88,6 +89,16 @@ export type SearchStats = {
    */
   simPanics: number;
   stoppedBy: "exhausted" | "budget" | "clock";
+  /**
+   * R3498000: the shortlisted lines on determinization 0 scored after a simulated reply; 0 when the
+   * decision never reached the reply.
+   */
+  replied: number;
+  /**
+   * R3498000: the determinizations the finalists were scored on, determinization 0 included; 0 when the
+   * decision never reached its finalists.
+   */
+  worldsScored: number;
   /** Mean score of the chosen line across determinizations (0 for forced/mulligan/draw-offer). */
   score: number;
 };
