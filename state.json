@@ -14001,15 +14001,8 @@
       "stop_requested": false
     },
     "3351": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42572112766",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-09T06:24:57Z",
-        "until": "2026-11-09T06:54:57Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -14021,10 +14014,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "d` (R3340000), `spec/pending/3345.md` (R3345000), `apps/web/src/fx/FxLayer.tsx` (props around `FxLayerProps`), `apps/web/src/fx/aura/plan.ts` (`planAuras`, `auraBudget`), `apps/web/src/fx/aura/tile.ts` (`planTile\u2026\n- 2. `apps/web/src/fx/constants.ts`: after `FX_PHONE_FRAME_BUDGET_MS`, add `export const FX_PHONE_FRAME_WORST_MS = 120;` (worst single frame at ~8 fps; ruled by R3351000) and `export const PHONE_MOTION_BUDGET = 6;` (moving faces + tile auras + backdrops + particles + tilt share six concurrent motion \u2026\n- 3. `apps/web/src/fx/director.ts`, `adapt()`: replace the bare halve-the-cap with stages `0` (full) \u2192 `1` (motes: halve particle emission) \u2192 `2` (far auras: halve aura/tile-aura intensity) \u2192 `3` (moving faces furthest from the pointer: pause). Advance one stage per slow window (same `FX_ADAPT_WINDOW\u2026\n- 4. `apps/web/src/fx/FxLayer.tsx`: each frame read the director's shed level and apply it: level \u2265 1 scales `particles.emit` counts; level \u2265 2 passes halved intensity into `planAuras`/`planTileAuras`; level \u2265 3 stills moving faces beyond `PHONE_MOTION_BUDGET`, furthest-from-pointer first, reusing th\u2026\n- 5. `e2e/cypress/component/fx-phone-living-game.cy.tsx`: copy `fx-phone-frame.cy.tsx`'s `sampleFrames`, `summary`, `mountScene` verbatim. Board: `tileBoardView()` from `apps/web/src/test/tileBoard.ts` for tile auras, plus five art-first Units (two Legendary, one Mythic; reuse `fx-phone-frame`'s Myth\u2026\n- 6. Same spec: loop the three sizes `[{390,844},{360,780},{844,390}]`; per size set 4x throttling with `cy.then(() => Cypress.automation(\"remote:debugger:protocol\", { command: \"Emulation.setCPUThrottlingRate\", params: { rate: 4 } }))` (pattern: `full-art-board.cy.tsx`'s `Emulation.setFocusEmulationE\u2026\n- 7. `e2e/cypress/component/card-fullscreen.cy.tsx`: add `it(\"R3351000 a long press opens inspect and the full-screen view from every board face and hand card\")`: mount the living-game board, press-and-hold (`FULLSCREEN_HOLD_MS = 450` in `apps/web/src/cards/constants.ts`; `useFullScreenTrigger` in `a\u2026\n- 8. Run e2e `46` and `47` unchanged against a build with every #3330 part on; fix any failure in the owning part's stylesheet/component, never in the specs.\n- 9. Triage every finding: fix it in the part that owns it; if that part's issue is still open, leave a short note on that issue instead and cite it. List each finding and where it went in the pull request body.\n- 10. Write `spec/rulings/R3351000.md` (front matter `id`, `title`, `cards`, `proven_in` listing the new spec, `director.test.ts`, `constants.test.ts`; body: budget numbers, shed order, set-piece exemption, Hearthstone semantics line if the spec is silent) and `spec/pending/3351.md` (\u00a711 paragraph on\u2026\n- ## Tests\n- - `apps/web/src/fx/constants.test.ts`, `it(\"R3351000 the shared phone motion budget and worst-frame budget\")`: `PHONE_MOTION_BUDGET` is 6; `FX_PHONE_FRAME_WORST_MS` is 120, greater than `FX_PHONE_FRAME_BUDGET_MS` (50) and \u2264 250. Run `pnpm --dir apps/web test src/fx/constants.test.ts`.\n- - `apps/web/src/fx/director.test.ts`, `it(\"R3351 a forced slow frame sheds motes first\")`: pump slow frames (copy the B34 `frameEvery(40, \u2026)` trip pattern), assert emission halved while auras/faces untouched. `it(\"R3351 shedding continues far auras, then faces furthest from the pointer\")`: further \u2026\n- - `e2e/cypress/component/fx-phone-living-game.cy.tsx`, `it(\"R3351 the living game holds the phone budget at <size> under 4x throttling\")` per size plus the shed-order integration `it(\"R3351 a forced slow frame sheds motes first and set-piece beats never\")`. Run `pnpm --dir e2e test:component --spec\u2026\n- - `e2e/cypress/component/card-fullscreen.cy.tsx` long-press `it(...)`. Run its component command.\n- - `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web e2e`, `cargo jackioh spec check`.\n- ## Done when\n- - [ ] Scenario runs at all three sizes under 4x throttling: mean \u2264 `FX_PHONE_FRAME_BUDGET_MS`, worst \u2264 `FX_PHONE_FRAME_WORST_MS`.\n- - [ ] Shed order unit-tested: motes first, far auras, far faces; set-piece beats never shed.\n- - [ ] E2e `46`, `47`, and the long-press check pass with every part's features on.\n- - [ ] Pull request lists each finding with its fix location or part-issue note.\n- - [ ] Ruling note + `spec/pending/3351.md` paragraph exist; web tests, typecheck, eslint, `cargo jackioh spec check` pass.\n- - [ ] No forbidden path touched; no check weakened; decisions not in the task recorded.\n- ## Risks\n- - CDP throttling needs a Chrome-family browser; if CI's Cypress browser lacks `remote:debugger:protocol`, the spec errors instead of silently passing \u2014 verify the e2e browser config first, never gate the asserts on protocol availability.\n- - Frame times are noisy on shared runners: the `holdsBudget` lowest-of-three retry shape (already accepted in `fx-phone-frame.cy.tsx`) applies to the mean only; the worst-frame assert rides on the passing attempt.\n- - The shed level must not leak hidden information or affect rules: it only scales emissions/intensity/motion (rule 7 safe); keep all emission counts deterministic from the seeded rng.\n- - Landscape 844x390 may trip R1581000's under-501px-tall exemption (page may scroll there); the board is not a menu, so assert the board's own region instead of the document.\n- ## Open questions\n- - None blocking. Assumed reversible defaults, recorded in the steps: worst budget 120 ms, shared budget 6 motion units, three sizes exact, CDP rate 4 with reset in `afterEach`, one ruling R3351000. If the scenario measures a worst frame the hardware cannot hold, the builder reports the numbers rath\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3351 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3351/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-09T06:17:12Z",
       "owner_why": "it plans it",
@@ -14037,9 +14029,9 @@
       "provider": "muse",
       "queued_at": "2026-11-07T00:02:50Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42572112766",
+      "run_id": "pending:233594f9-1794205686",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-09T06:17:12Z",
+      "started_at": "2026-11-09T06:28:30Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18477,9 +18469,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T06:27:54Z",
+    "at": "2026-11-09T06:28:30Z",
     "url": "",
-    "what": "revise #3437 on claude-8"
+    "what": "build #3351 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T06:14:31Z",
