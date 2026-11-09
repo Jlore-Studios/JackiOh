@@ -15801,17 +15801,8 @@
       "taken_asks": []
     },
     "3483": {
-      "action": "plan",
-      "asks": [
-        "c:6741604637"
-      ],
-      "build_next": {
-        "from_run": "42628667787",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-09T14:19:48Z",
-        "until": "2026-11-09T14:49:48Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-09T14:19:35Z",
         "difficulty": "medium",
@@ -15830,10 +15821,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "|\n- | `crates/cards/src/scripts/stinkyscape/c170_medium_asteroid.rs` | change | Test module becomes wrappers |\n- | `crates/cards/src/scripts/stinkyscape/c171_large_asteroid.rs` | change | Test module becomes wrappers |\n- | `crates/cards/src/scripts/stinkyscape/c172_huge_asteroid.rs` | change | Test module becomes wrappers |\n- Do not touch: anything under `.github/`, `.harness/`, `.squishy/`, `bot/`; `spec/`; `crates/cards/build.rs`, `catalog.json`, or any line above `#[cfg(test)]` in any script. Governing spec: \u00a78.10 rows 27\u201336, 50\u201366, 169\u2013172; cards README \u00a75 (#1125); CLAUDE.md rules 3, 4, 5, 6, 9.\n- ## Steps\n- 1. Create `crates/cards/src/stinkyscape_family.rs` as `#[cfg(test)]`-only helpers (no `#[test]`, no `r<n>` tokens in helper names). Declare it in `crates/cards/src/lib.rs` next to `weapon_board`. Move shared fixture consts (`MENACE`, `VANILLA`, `FLOOD`, `FILLER`, `REKNITE`, `POINTMASTER`, `BODY`, `\u2026\n- 2. Beam section: copy `c054_beam_v4.rs`'s test bodies into `beam_board`, `beam_at`, `beam_at_hero`, `beam_offered`, `beam_wall`, `beam_cleaves`, `beam_never_hero`, `beam_own_unit_refused`, `beam_cooldown_cycle`, `beam_bounce_clears`, `beam_equip_takes_activate`, `beam_param_reads`, `beam_kept_halve\u2026\n- 3. Rewrite the three beam test modules as wrappers with identical `#[test]` names calling step 2's helpers (c050: damage 5/10; c054: 7/14; c058: 11/22). Keep c050's `sources`/`equipped_sources` block and its two `r3291000_\u2026` tests inline. Delete `RADIANT_HEALTH` and `its_health_is_doubled` in all t\u2026\n- 4. Repeater section (reference `c055`): `rep_on`, `rep_at`, `rep_at_hero`, `rep_offered`, `rep_pierces`, `rep_never_hero`, `rep_uses_a_turn(id, seed, uses, amount)` (copy the `USES`-loop body, `uses` as param), `rep_equip`, `rep_param_reads`, `rep_kept_halves_hero(id, seed, radiant_damage, old_uses\u2026\n- 5. Cannon section (reference `c056`): `can_on`, `can_at`, `can_at_hero`, `can_offered`, `can_hits`, `can_never_hero`, `can_once_a_turn`, `can_equip`, `can_param_reads`, `can_kept_halves_hero(id, seed, damage, kept)`. Wrappers: c052 (5, 10), c056 (7, 14), c060 (11, 22). Drop health tests.\n- 6. Flak section (reference `c057`, with `c061`'s generalizations): shared `BASE_RANGE`/`RADIANT_RANGE` (1,3)/(2,4), `RADIANT_LUCKY`, `flak_on`, `flak_wall(s)`, `flak_walls`, `fire`, `Seen`, `over_the_seeds(id, seed, radiant, range, lucky, rounds, seeds)`, `flak_roll_spread` (counts + differed asser\u2026\n- 7. Miner section (reference `c064`): `miner_board`, `miner_dig`, `miner_mined`, `miner_gains_one`, `miner_burns_when_full`, `miner_uses_limit(id, seed, uses)` (uses 1 \u2192 refuse `\"already been used\"`, counts 1 then 2; else refuse `format!(\"used {uses} times this turn\")`, counts `uses` then `uses + 1`\u2026\n- 8. Asteroid section (reference `c169`): `asteroid_node(id, radiant)`, `asteroid_mine(id)`, `asteroid_activate_pays(id, self_damage, resources)`, `asteroid_death_pays(id, resources)`, `asteroid_never_attacks(id)`, `asteroid_params(id)`, `asteroid_radiant(id, resources)`, `asteroid_rider_pool(id)`. W\u2026\n- 9. Drone section: `drone_single_cast(core, seed, radiant, field)` (II, V); `drone_unit_row(s)`, `drone_backrow_row(s)` (VIII, IX after diffing identical); `drone_multi_setup(core, seed, radiant, field)` + `drone_cell(token, radiant)` (III, IV, VI; their layout asserts stay per-file); `drone_floatin\u2026\n- 10. In every edited file, trim now-unused imports and consts so no warnings remain; keep the `// S \u2026` comment line above `#[cfg(test)]`. Verify no line above `#[cfg(test)]` changed via `git diff` restricted to those ranges.\n- 11. Measure: `cargo test -p jackioh-cards` must run the same tests minus only the 12 dropped `its_health_is_doubled` tests (list them in the final report); count test lines before/after with `awk '/#\\[cfg\\(test\\)\\]/,0' \u2026 | wc -l` per file and confirm shrinkage \u2265 1,500. Run `cargo fmt --check`, `car\u2026\n- ## Tests\n- No new test files: every wrapper in the 31 files above is the test. Each wrapper keeps its exact current `#[test]` name (e.g. `r1862000_hits_the_chosen_unit_and_each_unit_beside_it_through_armor`, `r384_3_uses_a_turn_a_fourth_use_refused_and_again_next_turn`, `r2476000_it_names_the_resource_pool_it\u2026\n- ## Done when\n- - [ ] Every `r<n>` test name is still in its original file and `cargo jackioh spec check` passes.\n- - [ ] `cargo test -p jackioh-cards` passes with the same tests minus only the 12 listed dropped tests, named in the final report.\n- - [ ] `git diff` shows no changed line above any `#[cfg(test)]`, and `cargo jackioh classify --base origin/main` reports no card that plays differently.\n- - [ ] Family test code shrank by \u2265 1,500 lines (measured per step 11).\n- - [ ] `cargo fmt --check` and `cargo clippy -p jackioh-cards --all-targets -- -D warnings` pass.\n- ## Risks\n- - Drone cores VII\u2013X and I/II/V are mechanically distinct (discard, corvette, battleship pile, fill-board, kept scripts), so their test bodies stay per-file except the float/setup helpers; the 1,500-line target is met from weapons, miners, asteroids, flak and the drone helpers above. Do not force un\u2026\n- - Seeds are passed through as parameters, never regenerated, so statistical sweep tests (flak `SEEDS`, miner replay equality) run identical RNG streams.\n- - Kept-script tests (`script_v0_5_11`, `script_v0_5_9f`, VII's `script_v0_5_11o`) differ per file, so they are passed as `fn() -> CardScripts` arguments, never moved.\n- - Flak v3's sweep is ported from its tuple shape to the shared `Seen` shape with `rounds = 1` (rerolled always false; its tests assert only counts/differed as today).\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3483 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3483/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-09T13:48:06Z",
       "owner_why": "it plans it",
@@ -15846,12 +15836,14 @@
       "provider": "muse",
       "queued_at": "2026-11-09T13:46:40Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "42628667787",
+      "run_id": "pending:b95a1611-1794234153",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-09T13:48:06Z",
+      "started_at": "2026-11-09T14:23:11Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6741604637"
+      ]
     },
     "3485": {
       "action": "build",
@@ -15913,9 +15905,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T14:22:19Z",
+    "at": "2026-11-09T14:23:11Z",
     "url": "",
-    "what": "build #3476 on muse"
+    "what": "build #3483 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T13:55:11Z",
