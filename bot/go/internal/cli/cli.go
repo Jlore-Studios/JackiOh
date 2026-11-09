@@ -1020,9 +1020,17 @@ func CmdDashboard(cfg *config.Config, args *Args) int {
 	}
 }
 
-// gateTick is a tick of the runner gate between the loop's rewrites (`cigate.Tick`); it says only
-// what it did, and a failure is only a warning.
+// gateTick is a tick of the runner gate between the loop's rewrites (`cigate.Tick`), after the look
+// at the merge queue's builds (`events.EvacQueue`), whose cancelled build frees runners the gate
+// can give out; it says only what they did, and a failure is only a warning.
 func gateTick(cfg *config.Config) {
+	if err := herr.Try(func() {
+		for _, note := range events.EvacQueue(Ctx(cfg, true)) {
+			say(redact.Redact("merge queue: "+note, nil))
+		}
+	}); err != nil {
+		say(redact.Redact("::warning::the merge queue's builds were not looked at: "+herr.Str(err), nil))
+	}
 	if err := herr.Try(func() {
 		if note := cigate.Tick(Ctx(cfg, true)); note != "" {
 			say(redact.Redact("runner gate: "+note, nil))

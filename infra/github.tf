@@ -40,10 +40,14 @@ import {
 # was, so two pull requests each green alone landed red together (four of the five red runs on main
 # of 2026-10-29), and `strict` on instead would send every open pull request back to update and
 # re-run whenever one merged, several times an hour. The queue lands pull requests in the order they
-# became ready to merge. It builds `main` with every one ahead and the next on top, in parallel
-# (`max_entries_to_build`), runs ci.yml's `merge_group` there, waits for the same five checks the
-# protection above requires, and takes out any whose own build fails, rebuilding those behind it
-# without it. `ALLGREEN`: every commit it lands passed CI as it lands, which promote-production.yml
+# became ready to merge. It builds `main` with every one ahead and the next on top, three at a time
+# (`max_entries_to_build`). It built five until #3292's follow-up: each build asks for about 40 of
+# the 12 hosted runners CI keeps, and when the first failed, the four behind it, which hold its
+# change, failed with it and were built again (51 of 125 builds on 2026-11-05 and 06 were thrown
+# away). Three at a time land about 12 an hour at a 15-minute build, where the bots merge 3 an hour
+# on average and 11 in their busiest hours. It runs ci.yml's `merge_group` there, waits for the same
+# five checks the protection above requires, and takes out any whose own build fails, rebuilding
+# those behind it without it. `ALLGREEN`: every commit it lands passed CI as it lands, which promote-production.yml
 # relies on when it picks a commit of `main`. The timeout is past CI's worst wait for runners
 # (90 minutes on 2026-10-29, nearly all of it queued): at the default 60 the queue would take a
 # green pull request out for the runners' slowness. Squash, as every bot and lane merges. The
@@ -65,7 +69,7 @@ resource "github_repository_ruleset" "main_merge_queue" {
     merge_queue {
       merge_method                      = "SQUASH"
       grouping_strategy                 = "ALLGREEN"
-      max_entries_to_build              = 5
+      max_entries_to_build              = 3
       min_entries_to_merge              = 1
       max_entries_to_merge              = 5
       min_entries_to_merge_wait_minutes = 5
