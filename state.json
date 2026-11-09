@@ -16639,6 +16639,13 @@
     "3502": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-09T20:59:54Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "Web-only change (apps/web dungeon store, RunTimer, their tests) plus a ruling note and a spec sentence. No line of the hard rule holds: no engine, AI or database migration, and the kept run only gains one optional field that old runs read as absent."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
