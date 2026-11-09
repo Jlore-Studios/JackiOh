@@ -24842,10 +24842,6 @@
     "claude-4": {
       "spent": [
         {
-          "at": "2026-10-29T01:59:14Z",
-          "minutes": 1.2
-        },
-        {
           "at": "2026-10-29T02:39:38Z",
           "minutes": 33.3
         },
@@ -25640,16 +25636,13 @@
         {
           "at": "2026-11-09T02:36:52Z",
           "minutes": 19.2
+        },
+        {
+          "at": "2026-11-09T04:00:28Z",
+          "minutes": 6.4
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-10-27T04:00:02Z",
-          "cache": 18388309,
-          "cost": 10.0358,
-          "input": 254,
-          "output": 90980
-        },
         {
           "at": "2026-10-27T04:15:56Z",
           "cache": 3953109,
@@ -27042,14 +27035,21 @@
           "cost": 7.5297,
           "input": 58,
           "output": 13106
+        },
+        {
+          "at": "2026-11-09T04:00:28Z",
+          "cache": 1006574,
+          "cost": 0.9989,
+          "input": 21,
+          "output": 6658
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-09T07:20:00Z",
-          "utilization": 0.03
+          "utilization": 0.05
         },
-        "observed_at": "2026-11-09T03:27:15Z",
+        "observed_at": "2026-11-09T04:00:28Z",
         "status": "allowed"
       }
     },
@@ -36735,7 +36735,10 @@
   },
   "usage_spool": {
     "readings": [
-      "2026-11-09T03:51:08Z,claude-8,ping,before,42556961902,88,2026-11-09T04:30:00Z,,,allowed,85,,"
+      "2026-11-09T03:51:08Z,claude-8,ping,before,42556961902,88,2026-11-09T04:30:00Z,,,allowed,85,,",
+      "2026-11-09T03:40:43Z,claude-4,ping,before,42556714297,3,2026-11-09T07:20:00Z,,,allowed,50,,",
+      "2026-11-09T03:41:20Z,claude-4,stream,call,42556714297,4,2026-11-09T07:20:00Z,,,allowed,50,,",
+      "2026-11-09T03:47:11Z,claude-4,stream,call,42556714297,5,2026-11-09T07:20:00Z,,,allowed,50,,"
     ],
     "runs": [
       "2026-11-09T03:51:08Z,42556961902,claude-8,opus,revise,3461,hard,interrupted,5-hour cap,0,0,0,0,,88,88,,,8.8,claude-6,none,other,0"
