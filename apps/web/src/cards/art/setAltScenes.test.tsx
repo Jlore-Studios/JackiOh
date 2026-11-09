@@ -217,14 +217,14 @@ describe("R3397000 Meditative+ and Training Grounds Alt art restaged", () => {
       .sort();
     expect(offered).toHaveLength(36);
     expect(ALT_IDS).toEqual(offered);
-    // The table holds these and Classic+'s (R3396000), and nothing else.
+    // The table holds these, Classic+'s (R3396000) and Meditative's (R3404000), and nothing else.
     const everyOffered = Object.values(CATALOG)
-      .filter((card) => (card.set === "Classic+" || SETS.includes(card.set)) && offeredOn(VERSION_ALT_ART_ID, card.id))
+      .filter((card) => (card.set === "Classic+" || card.set === "Meditative" || SETS.includes(card.set)) && offeredOn(VERSION_ALT_ART_ID, card.id))
       .map((card) => card.id)
       .sort();
-    expect(everyOffered).toHaveLength(76);
+    expect(everyOffered).toHaveLength(130);
     // R3406000: and Stinkyscape's later cards' (stinkyscape91AltScenes.test.tsx).
-    expect(Object.keys(ALT_SCENE_RECIPES).filter((id) => ["Classic+", ...SETS].includes(CATALOG[id]?.set ?? "")).sort()).toEqual(everyOffered);
+    expect(Object.keys(ALT_SCENE_RECIPES).filter((id) => ["Classic+", "Meditative", ...SETS].includes(CATALOG[id]?.set ?? "")).sort()).toEqual(everyOffered);
     expect(ALT_PICTURE_CHANGE_MIN).toBe(0.6);
     const seen = new Map<string, string>(Object.entries(SCENE_RECIPES).map(([id, scene]) => [JSON.stringify(scene), id]));
     for (const [id, scene] of Object.entries(ALT_SCENE_RECIPES)) if (!ALT_IDS.includes(id)) seen.set(JSON.stringify(scene), `${id}#alt`);

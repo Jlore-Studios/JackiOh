@@ -1,9 +1,10 @@
 // R3401000: the scene kit's machines (ART.md, "Scene recipes and kits"), which the Meditative scenes (#3401)
 // added: two Units drawn whole as living machines (a towering clockwork sentry, a small round robot sitting
 // cross-legged) and the machines of the cards' settings (a gacha capsule machine, an office copier, a glowing
-// terminal, a coin press, a mountain railway carriage, a motorbike, a desk of monitors, a barbell). Each stands
-// on its anchor, its bottom centre there, but for two: the blueprint table, the centre of whose front edge is
-// the anchor, and the barbell, centred on it at its bar. sceneKit.ts spreads them into `SCENE_KIT`. Every
+// terminal, a coin press, a mountain railway carriage, a motorbike, a desk of monitors, a barbell), and R3404000's
+// tower crane, which Meditative's Alt art (#3404) added. Each stands on its anchor, its bottom centre there, but
+// for two: the blueprint table, the centre of whose front edge is the anchor, and the barbell, centred on it at
+// its bar. sceneKit.ts spreads them into `SCENE_KIT`. Every
 // colour is a palette.css name, none in Radiant's gold window; a glow (a lens, a screen, a lit window) is a
 // stack of translucent shapes, never a gradient; shapes are filled even-odd, so a hole is a second sub-path
 // and no two sub-paths of one shape overlap otherwise.
@@ -941,7 +942,30 @@ function barbell(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
-/** R3401000: the machines the Meditative scenes added, by id, each with its kind. */
+/** R3404000: a tower crane standing on the anchor: a lattice mast (main, orange-400) on a concrete slab, its operator's cab at the top with a lit window, a long jib out the way it faces and a short counter-jib behind with its block of weights, tie bars from a peak above the mast to both ends, a trolley partway along the jib and a hook on its line hanging below; about 38 wide and 44 tall at scale 1. */
+function towerCrane(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const [top, jib] = [-37.6, 28];
+  const trolley = between(rng, 13, 24);
+  const hook = between(rng, -28, -14);
+  let lattice = "";
+  for (let y = -1.2; y > top + 2; y -= 3.2) lattice += f.band([[-1.1, y], [1.1, y - 3.2]], 0.28) + f.band([[1.1, y], [-1.1, y - 3.2]], 0.28);
+  for (let x = 3; x < jib - 1; x += 3) lattice += f.band([[x, top + 1.3], [x + 1.5, top + 0.15]], 0.24) + f.band([[x + 1.5, top + 0.15], [x + 3, top + 1.3]], 0.24);
+  const mast = rect(f, -1.3, top, 1.3, -1) + rect(f, -9, top - 1.4, jib, top + 1.4);
+  return [
+    shape(rect(f, -4, -1, 4, 0), "slate-400", 1, INKED),
+    shape(mast, "orange-400", 1, MAIN_INKED),
+    shape(lattice, "slate-900", 0.5),
+    shape(f.band([[-9, top - 1.4], [0, top - 7], [jib, top - 1.4]], 0.3) + f.band([[0, top - 7], [0, top - 1.4]], 0.4), "slate-800", 1),
+    shape(rect(f, -8.6, top + 1.4, -4.8, top + 5), "slate-800", 1, INKED),
+    shape(rect(f, 1.3, top + 1.4, 4.6, top + 4.8), "slate-700", 1, INKED),
+    shape(rect(f, 2, top + 2, 4, top + 3.6), "blue-200", 0.7),
+    shape(rect(f, trolley - 1.2, top + 1.4, trolley + 1.2, top + 2.4) + f.band([[trolley, top + 2.4], [trolley, hook - 1]], 0.2), "slate-800", 1),
+    shape(rect(f, trolley - 0.9, hook - 1.4, trolley + 0.9, hook) + f.band([[trolley, hook], [trolley, hook + 1.4], [trolley - 0.8, hook + 1.9], [trolley - 1.2, hook + 1.1]], 0.36), "slate-900", 1),
+  ];
+}
+
+/** R3401000: the machines the Meditative scenes added, by id, each with its kind. R3404000: the tower crane the Alt art briefs added after them. */
 export const INK_MACHINES_KIT = {
   "clockwork-sentry": { category: "objects", draw: clockworkSentry },
   "round-bot": { category: "objects", draw: roundBot },
@@ -954,4 +978,5 @@ export const INK_MACHINES_KIT = {
   monitors: { category: "objects", draw: monitors },
   blueprint: { category: "objects", draw: blueprint },
   barbell: { category: "objects", draw: barbell },
+  "tower-crane": { category: "objects", draw: towerCrane },
 } as const satisfies Readonly<Record<string, KitPart>>;
