@@ -17975,15 +17975,6 @@
       "failures": 0,
       "feedback_since": "2026-11-09T03:49:15Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-09T04:54:59Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\n\nRevision (cross-review, claude-3 / sonnet pass 4): 3 blocking findings in PackOpening.tsx to answer:\n1. card-pack slot with a cosmetic grant (a roll) never plays GrantReveal / rarity treatment.\n2. Legendary flare keys on cosmetic grant rarity; issue says Legendary *card* pulled flares (slot.rarity).\n3. markNewLevels in PackOpening marks slot.cardId for account cosmetics (false \"new\" mark).\nAlso unaddressed from muse's round 3 review: VariantLadders.tsx:43 data-cosmetic-motion on wrapper span, nothing reads it / CardArt gets no motion prop.\n\nEarlier (passes 1-3, see journal): full feature built; zh-CN keys added; Mythic takeover respects bigMoments.\n\n## Log\n- Pass 4 start: read journal; about to read the diff and PackOpening.tsx.\n- Pass 4: edited PackOpening.tsx: revealOf(slot) helper (cardId null for non-per-card kinds via isPerCardKind), GrantReveal rendered in PackScene (flip queues one; reduced queues all rarest-last; Reveal-all skips), flare keyed on slot.rarity===\"Legendary\" (effect moved after showSlots), markNewLevels uses revealOf. NEXT: fix tests in PackOpening.test.tsx (+ pack-opening.cy.tsx, ruling text), add new tests, check VariantLadders motion finding, run vitest/eslint/spec check.\n- Pass 4: PackOpening tests done (84 pass, mutation-checked). Dropped reduced-motion queue (existing tests lock reduced = instant, one sting, scene focus). NEXT: pack-opening.cy.tsx flips slot 2 (roll) -> overlay now; ruling/pending text mention roll in pack + flare card; VariantLadders motion finding; eslint, spec check, fmt.\n- Pass 4: VariantLadders rung motion made real (lookOfLevel + useArtMotion + CardArt motion; data-art-motion replaces the dead data-cosmetic-motion), ladder test updated. NEXT: mutation-check, update ruling/pending text, eslint, fmt, spec check, wider vitest (packs shop collection economy i18n), final report.\n- Pass 4 DONE: all 3 findings + ladder motion fixed; tests: src/packs src/shop src/collection src/economy src/i18n = 368 pass; typecheck/eslint/fmt/spec check clean. Only the final report is left.\n",
-        "provider": "claude-3",
-        "reason": "`claude-3` reached its usage limit",
-        "trail": ""
-      },
       "interruptions": 0,
       "issue": 3349,
       "kind": "review",
