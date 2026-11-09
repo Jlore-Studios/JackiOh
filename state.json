@@ -17873,14 +17873,6 @@
       "failures": 0,
       "feedback_since": "2026-11-09T01:03:33Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-09T06:02:15Z",
-        "lifted": "2026-11-09T04:38:53Z",
-        "owner": "claude-8",
-        "since": "2026-11-09T04:02:15Z",
-        "until": "2026-11-09T04:30:00Z",
-        "why": "5-hour usage is 88%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "interruptions": 0,
       "issue": 3404,
       "kind": "revise",
@@ -17897,11 +17889,11 @@
       "queued_at": "2026-11-09T03:23:40Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "",
-      "run_id": "42556961902",
+      "run_id": "pending:ebb3b40c-1794199215",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-11-09T03:32:25Z",
+      "started_at": "2026-11-09T04:40:48Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -18200,9 +18192,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T04:40:03Z",
+    "at": "2026-11-09T04:40:48Z",
     "url": "",
-    "what": "revise #3437 on claude-8"
+    "what": "revise #3461 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-09T04:26:34Z",
