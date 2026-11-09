@@ -16512,6 +16512,13 @@
     "3499": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-09T21:00:53Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "no engine-rules, AI, cross-crate-design, migration, or 40-file scope: a Vite plugin plus import swaps inside the web client"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
