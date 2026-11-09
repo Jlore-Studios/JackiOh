@@ -41,7 +41,7 @@ import { PLACES_KIT } from "./sceneKitPlaces.ts";
 import { SPACE_KIT } from "./sceneKitSpace.ts";
 import { TOUCHES_KIT } from "./sceneKitTouches.ts";
 import { YARD_KIT } from "./sceneKitYard.ts";
-import { STINKYSCAPE_91_RECIPES } from "./sceneRecipes.ts";
+import { ALT_SCENE_RECIPES, STINKYSCAPE_91_RECIPES } from "./sceneRecipes.ts";
 import { STARSHIP_PIECES } from "./stinkyscape.ts";
 import { compositionFor, themeFor } from "./themes.ts";
 
@@ -287,7 +287,10 @@ describe("R3403000 Stinkyscape's later cards drawn as scenes", () => {
   });
 
   it("R3403000 Alt art grows the same parts from its own seed", () => {
-    for (const card of ENTRIES) {
+    // R3406000: an entry of #3406's table draws an alt recipe of its own instead (stinkyscape91AltScenes.test.tsx).
+    const regrown = ENTRIES.filter((card) => !Object.hasOwn(ALT_SCENE_RECIPES, card.id));
+    expect(regrown).toHaveLength(67);
+    for (const card of regrown) {
       const scene = recipe(card.id);
       const normal = composeScene(scene, card.id);
       const seed = artSeedOf(card.id, "alt");
