@@ -461,4 +461,35 @@ describe("R3351000 the living game's shared shed order", () => {
     });
     expect(m.layer()).toHaveAttribute("data-aura-motes", "48");
   });
+
+  it("R3351000 pointer moves below stage 2 re-render and re-measure nothing", () => {
+    resetIds();
+    resetShedForTests();
+    // Two auras in different boxes: the zone aura near, the side aura far.
+    const near: FxBox = { x: 0, y: 0, width: 100, height: 100 };
+    const far: FxBox = { x: 500, y: 500, width: 100, height: 100 };
+    const fx = fakeSeams();
+    let measures = 0;
+    fx.seams.measure = (testids) => {
+      measures += 1;
+      return testids.length > 2 ? far : near;
+    };
+    const view = board([field("p1", "core-014")], [field("p2", "classic-042")]);
+    const m = mount(view, fx);
+    expect(m.auras()).toHaveLength(2);
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "48");
+    const measured = measures;
+    // Pointer moves at stage 0 change no snapshot: no re-render, no new measure, no mote change.
+    act(() => {
+      setShedPointer({ x: 10, y: 10 });
+    });
+    act(() => {
+      setShedPointer({ x: 600, y: 600 });
+    });
+    act(() => {
+      setShedPointer({ x: 50, y: 50 });
+    });
+    expect(measures).toBe(measured);
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "48");
+  });
 });

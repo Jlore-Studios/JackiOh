@@ -789,7 +789,7 @@ describe("R3351000 the living game's shared shed order", () => {
   const TINT = { rim: "#ffffff", core: "#000000", glow: "#ff0000" };
 
   it("R3351000 a forced slow frame sheds motes first while the beats still play", () => {
-    const h = harness();
+    const h = harness({ phone: true });
     settled(h);
     h.frameEvery(40, trip);
     expect(h.director.shedLevel()).toBe(1);
@@ -803,7 +803,7 @@ describe("R3351000 the living game's shared shed order", () => {
   });
 
   it("R3351000 further slow windows shed far auras, then faces, and healthy windows recover one stage at a time", () => {
-    const h = harness();
+    const h = harness({ phone: true });
     settled(h);
     h.frameEvery(40, trip);
     expect(h.director.shedLevel()).toBe(1);
@@ -828,7 +828,7 @@ describe("R3351000 the living game's shared shed order", () => {
   });
 
   it("R3351000 a set piece's main beats never shed, at any stage", () => {
-    const h = harness();
+    const h = harness({ phone: true });
     settled(h);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
@@ -847,6 +847,49 @@ describe("R3351000 the living game's shared shed order", () => {
     for (const kind of ["takeover", "setPiece", "launch", "rift", "anomalyTitle"]) {
       expect(h.root.querySelectorAll(`[data-fx="${kind}"]`)).toHaveLength(1);
     }
+  });
+
+  it("R3351000 disposing a director resets the shared shed level to full", () => {
+    const h = harness({ phone: true });
+    settled(h);
+    h.frameEvery(40, trip);
+    h.frameEvery(40, trip);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(3);
+    h.director.dispose();
+    expect(h.director.shedLevel()).toBe(0);
+    // A director mounted after it starts full too: no cross-route leak.
+    expect(harness({ phone: true }).director.shedLevel()).toBe(0);
+  });
+
+  it("R3351000 an idle shed board recovers to full on healthy frames with no effect work", () => {
+    const h = harness({ phone: true });
+    settled(h);
+    h.frameEvery(40, trip);
+    h.frameEvery(40, trip);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(3);
+    h.director.clear();
+    expect(h.director.active()).toBe(0);
+    // No effect work left, yet the stranded level keeps the loop alive and drains one stage per
+    // healthy run, then the loop sleeps again.
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(2);
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(1);
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(0);
+    expect(h.frames.pending()).toBe(0);
+  });
+
+  it("R3351000 a desktop director halves its cap on slow windows but never sheds", () => {
+    const h = harness();
+    settled(h);
+    h.frameEvery(40, trip);
+    h.frameEvery(40, trip);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(0);
+    expect(h.director.capacity()).toBeLessThan(FX_PARTICLE_CAP);
   });
 });
 
