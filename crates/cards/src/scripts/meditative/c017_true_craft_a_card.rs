@@ -361,6 +361,70 @@ mod tests {
             (s, card)
         }
 
+        /// A crafted Trap that reveals when the opponent attacks and summons a Sheep Token.
+        fn attack_trap() -> Value {
+            json!({
+                "cost": 2, "type": "Trap", "adjective": "Static", "noun": "Macro",
+                "attack": 0, "health": 1, "keywords": [], "echo": 0,
+                "hats": [{ "hat": "opponentAttacks", "effects": [{ "verb": "summonSheep" }] }],
+            })
+        }
+
+        /// p1 sets `attack_trap`; p2's Warp Disruptor II (S #24) forces its Moths onto any Unit p1 summons.
+        fn trap_set_against_a_disruptor() -> Scenario {
+            let mut s = scenario(json!({
+                "p1": { "hand": [ID, "core-008"], "mana": 10 },
+                "p2": {
+                    "field": [{ "def": "core-009", "lane": 1 }],
+                    "backrow": ["stinkyscape-024"],
+                    "hand": ["core-053"],
+                    "library": ["core-001", "core-002"],
+                },
+            }));
+            s.play(ID, json!({}));
+            s.answer(json!(["2"]));
+            if let Some(pending) = s.state_mut().pending.as_mut() {
+                pending.craft_offer = Some(whole_palette());
+            }
+            s.answer(json!([{ "pick": "craft", "recipe": attack_trap() }]));
+            let trap = s
+                .hand(P1)
+                .into_iter()
+                .find(|card| card.def_id.starts_with("craft:"))
+                .expect("the crafted trap");
+            s.play(&trap, json!({}));
+            s
+        }
+
+        #[test]
+        fn r121_r883_a_crafted_reveal_on_an_attack_does_not_arm_on_a_forced_attack() {
+            let mut s = trap_set_against_a_disruptor();
+            let trap = s.backrow(P1, 1).expect("the trap is set").id;
+            s.play("core-008", json!({ "zone": 1 }));
+            assert!(
+                s.events()
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::AttackDeclared { forced: true, .. })),
+                "Warp Disruptor II forces p2's Moths to attack the Unit p1 summoned"
+            );
+            assert!(
+                !s.events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. })),
+                "a forced attack is not the opponent declaring one (R121)"
+            );
+            assert_eq!(s.backrow(P1, 1).map(|card| card.id), Some(trap), "the trap stays set");
+        }
+
+        #[test]
+        fn r121_r883_a_crafted_reveal_on_an_attack_still_fires_on_a_declared_one() {
+            let mut s = trap_set_against_a_disruptor();
+            s.end_turn();
+            s.attack("core-009", "hero");
+            assert!(
+                s.events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. })),
+                "p2 declaring an attack reveals the trap"
+            );
+        }
+
         #[test]
         fn r880_the_cost_is_a_number_prompt_from_0_to_4() {
             let mut s = scenario(json!({

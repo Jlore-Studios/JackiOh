@@ -166,6 +166,7 @@ export type FxFogCue = {
  * (takeoverArt.ts), the same art Reduce Motion's still shows (game/TakeoverStill.tsx). R3405000: Meditative's
  * Mythics' twelve, from "ascent" to "fortress", each with art of its own. R3399002: Classic+'s four Mythics'
  * looks, "zealot", "portal", "stair" and "vineyard", each draw a picture of their own (takeoverArt.ts).
+ * R3395001: Stinkyscape's "vault", "rod", "wire", "whiteDwarf" and "forge" have art of their own too.
  */
 export type TakeoverLook =
   | "prismatic"
@@ -190,7 +191,12 @@ export type TakeoverLook =
   | "zealot"
   | "portal"
   | "stair"
-  | "vineyard";
+  | "vineyard"
+  | "vault"
+  | "rod"
+  | "wire"
+  | "whiteDwarf"
+  | "forge";
 /**
  * R3345000: what a takeover's set piece shows of the card: its own picture, one CSS `background-image` per depth plane
  * (`ART_PLANES` order, far to nearest), its name and the hand it signs in (R2715002). It is the picture and the

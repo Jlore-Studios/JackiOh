@@ -4,9 +4,11 @@
 // a Card's workshop, Aestheticize the Game's brush, Red Jade's mine, Jade Beauty's quarry, YileGPT's ai,
 // YileGPT Prime's pavilion, Yile's Virus's virus, AI Girlfriend's dojo, Pareto Optimality's studyHall,
 // The Cane's caneRack, Jlockeed's Evil Blueprints' warRoom and Jlockeed's Headquarters' fortress, each
-// part named for its look. The takeover cue mounts them live (dom.ts), timed to its landing; Reduce
-// Motion's still mounts the same parts at rest (game/TakeoverStill.tsx). Shapes only, never a card face
-// (R202): True Craft's card is a blank card shape.
+// part named for its look. R3395001: and Stinkyscape's five, Tylannt's vault door, Rod of Ages' colossal
+// rod, Great Paperclip Theory's wire, Paragon-X's white dwarf and Prototype-X2's forge. The takeover cue
+// mounts them live (dom.ts), timed to its landing; Reduce Motion's still mounts the same parts at rest
+// (game/TakeoverStill.tsx). Shapes only, never a card face (R202): True Craft's card is a blank card
+// shape. A part is a class, `.takeover-art-<part>`, so each name is used by one look alone.
 // R3399002: Classic+'s four Mythics' looks draw their art as a drawing of their own instead of parts
 // (`TAKEOVER_ART_DRAWINGS`), mounted in the same art layer over the dark, live and still. The catalog's card
 // art is procedural and ART_MANIFEST is empty, so each is drawn here by hand as paths on a 160 by 90 frame,
@@ -45,6 +47,11 @@ export const TAKEOVER_ART_PARTS: Readonly<Partial<Record<TakeoverLook, readonly 
   caneRack: ["rack-lacquer", "rack-cane", "rack-hand"],
   warRoom: ["war-table", "war-villain", "war-blueprint", "war-lamps"],
   fortress: ["fortress-keep", "fortress-peak", "fortress-racks", "fortress-beacons"],
+  vault: ["murk", "gap", "door", "dial"],
+  rod: ["gulf", "colossus", "bandlight"],
+  wire: ["blueprint", "strand", "stairs"],
+  whiteDwarf: ["dwarf", "flare", "halo", "cut"],
+  forge: ["sphere", "magma", "convoy", "hull"],
 };
 
 /** The parts `look`'s art draws, none for a look without art. */

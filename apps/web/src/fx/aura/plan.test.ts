@@ -73,6 +73,9 @@ const TABLE = parseFxCardTable(
 
 type Slot = BackrowView | null;
 
+/** R3395001: the signature looks Stinkyscape's three signature Field Spells wear, beside a bespoke recipe each. */
+const R3395001_LOOKS: readonly AuraLook[] = ["laserGrid", "silverRise", "labHaze"];
+
 function field(owner: PlayerId, defId: string, over: Partial<Extract<BackrowView, { faceDown: false }>> = {}): BackrowView {
   return faceUpBackrow(owner, { defId, type: defId === "core-018" ? "Field Trap" : "Field Spell", ...over });
 }
@@ -149,6 +152,31 @@ describe("R2787000 what wears an aura", () => {
     expect(planned[7]?.colors).toEqual(FLAVOR_LOOKS.Fire.colors);
     // R3400000: Bob's bespoke entry names Physical's wind.
     expect(planned[5]?.colors).toEqual(FLAVOR_SUB_LOOKS.Physical?.wind?.colors);
+  });
+
+  it("R3395001 a bespoke Field Spell's own look stands in its zone: The Greatest Heist's laserGrid, Rod of Ages' silverRise and The Narcor Project's labHaze", () => {
+    resetIds();
+    const table = parseFxCardTable(
+      "aura.json5",
+      `{
+        "stinkyscape-007": { bespoke: "heistLocks", aura: { look: "laserGrid", palette: "Hustle/cash", scope: "zone" }, signature: true },
+        "stinkyscape-016": { bespoke: "rodBands", aura: { look: "silverRise", palette: "Physical/blade", scope: "zone" }, signature: true },
+        "stinkyscape-039": { bespoke: "narcorCases", aura: { look: "labHaze", palette: "Dark/curse", scope: "zone" }, signature: true },
+      }`,
+    );
+    const view = board([field("p1", "stinkyscape-007"), null, field("p1", "stinkyscape-016")], [null, field("p2", "stinkyscape-039")]);
+    const planned = planAuras(view, new Map(), table);
+    expect(planned.map((aura) => [aura.defId, aura.side, aura.lane, aura.scope, aura.look])).toEqual([
+      ["stinkyscape-007", "you", 1, "zone", "laserGrid"],
+      ["stinkyscape-016", "you", 3, "zone", "silverRise"],
+      ["stinkyscape-039", "opponent", 2, "zone", "labHaze"],
+    ]);
+    expect(planned.map((aura) => aura.look)).toEqual([...R3395001_LOOKS]);
+    // Each in its entry's palette, and its zone alone.
+    expect(planned[0]?.colors).toEqual(paletteLook("Hustle/cash")?.colors);
+    expect(auraZones(planned[2] ?? { scope: "zone", side: "opponent", lane: 2 })).toEqual([testid.zone("opponent", "backrow", 2)]);
+    // Face down, it wears none (R202).
+    expect(planAuras(board([faceDownBackrow], []), new Map(), table)).toEqual([]);
   });
 
   it("R2787000 an entry's palette may name a sub-look (#2792), whose colors the aura wears", () => {

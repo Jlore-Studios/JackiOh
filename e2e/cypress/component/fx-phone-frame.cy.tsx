@@ -11,7 +11,9 @@
 // R3344001: a hand with one face tilted under a pointer that keeps moving over it, its planes parallaxing
 // under its glare. R3334002: a launched Starship's broadside of eight guns, at the slowest effects speed.
 // R3400001: Goetzmann Game Design's and Bob's Plan's signatures, the two heaviest of Meditative+'s and Training
-// Grounds', their takeovers drawing full-screen art.
+// Grounds', their takeovers drawing full-screen art. R3395000: Imitated Instrumentality's and Flak v5's, the two
+// heaviest of Stinkyscape 001 to 090's, the MAGI landing with their own entrances under the boots (R3407000)
+// and Flak v5's wave blooming over every enemy Unit.
 // R3407000: xxFreshJack's and Alteran Reach's, the two heaviest of Stinkyscape part two's, their takeovers
 // drawing their cards' own pictures full screen. R3405001: Keymaster Keenus's and Jlockeed's Headquarters',
 // the two heaviest of Meditative's, the second over its own takeover's art.
@@ -332,6 +334,29 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
     });
     cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
   });
+
+  // R3395000: Stinkyscape 001 to 090's two heaviest by burst particles (fx/cards/stinkyscape/signatures.test.ts
+  // HEAVIEST): Imitated Instrumentality's cast, each MAGI landing with its own entrance under its boot
+  // (R3407000), and Flak v5's Activate sweeping every enemy Unit. Neither takes over the board.
+  for (const [defId, name] of [
+    ["stinkyscape-018", "Imitated Instrumentality"],
+    ["stinkyscape-061", "Flak v5"],
+  ] as const) {
+    it(`R3395000 ${name}'s signature holds the phone frame budget mid-flight`, () => {
+      cy.viewport(PHONE.width, PHONE.height);
+      const entry = FX_CARD_TABLE.get(defId);
+      const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${defId} has no gallery play`);
+      const board = galleryBoardOf(defId, fullBoardView());
+      holdsBudget(`${name}'s signature`, () => {
+        mountScene(board, galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
+        cy.get(GAME).find("[data-animating]").should("exist");
+        cy.get(CANVAS).should("exist");
+        return sampleFrames();
+      });
+      cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+    });
+  }
 
   // R3400001: the group's two heaviest, its Mythic Spells with full-screen art over their takeovers.
   for (const [defId, name, look] of [

@@ -4,7 +4,8 @@
 // TAKEOVER_STILL_MS instead. R3337003: a Mythic play that lays an Anomaly (Anomaly Found!) yields both to
 // the Anomaly's rift and its still title card. R3389000: the still wears its card's own takeover look.
 // R3405000: and each Meditative Mythic's still draws its own art. R3399002: a Mythic whose look is drawn as a
-// picture of its own shows that drawing still behind the card.
+// picture of its own shows that drawing still behind the card. R3395001: Stinkyscape's five Mythics' stills
+// show their art.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -163,6 +164,32 @@ describe("R2722001 a Mythic's takeover on the board", () => {
     expect(screen.getByTestId("takeover-still").querySelector(".takeover-art")).toBeNull();
   });
 
+  it("R3395001 under reduced motion each Stinkyscape Mythic shows its art still", () => {
+    writeSettings({ reduceMotion: true });
+    const looks = [
+      ["stinkyscape-006", "vault", "units"],
+      ["stinkyscape-016", "rod", "backrow"],
+      ["stinkyscape-044", "wire", null],
+      ["stinkyscape-074", "whiteDwarf", "units"],
+      ["stinkyscape-086", "forge", "units"],
+    ] as const;
+    for (const [defId, look, row] of looks) {
+      // A Unit or a Field Spell lands as it is played; a Spell is its cast alone.
+      playOut(defId, row === null ? [] : [{ type: "summoned", player: "p1", instanceId: `i-${defId}`, defId, row, lane: 1 }]);
+      const still = screen.getByTestId("takeover-still");
+      expect(still).toHaveAttribute("data-takeover-def", defId);
+      expect(still).toHaveAttribute("data-takeover-look", look);
+      const art = still.querySelector(".takeover-art");
+      expect(art, defId).not.toBeNull();
+      expect(art).toHaveAttribute("data-look", look);
+      expect(art).toHaveAttribute("data-still", "true");
+      expect([...(art?.children ?? [])].map((part) => part.className), defId).toEqual(TAKEOVER_ART_PARTS[look]?.map((part) => `takeover-art-${part}`));
+      // Shapes only: no text, and nothing in it animates.
+      expect(art?.textContent, defId).toBe("");
+      expect(still.querySelector("[data-animating]")).toBeNull();
+      cleanup();
+    }
+  });
   it("R3405000 under reduced motion each Meditative Mythic shows its own art still", () => {
     writeSettings({ reduceMotion: true });
     const mythics = Object.values(CATALOG).filter((card) => card.id.startsWith("meditative-") && (card.printedRarity ?? card.rarity) === "Mythic");
@@ -183,25 +210,25 @@ describe("R2722001 a Mythic's takeover on the board", () => {
   });
 
   it("R3407000 under reduced motion each Stinkyscape Mythic Spell shows its own picture still, behind the rays", () => {
-    writeSettings({ reduceMotion: true });
-    for (const defId of ["stinkyscape-148-1", "stinkyscape-t-red-narcor"]) {
-      playOut(defId);
-      const still = screen.getByTestId("takeover-still");
-      expect(still).toHaveAttribute("data-takeover-def", defId);
-      const picture = still.querySelector("img.takeover-still-art");
-      expect(picture, defId).not.toBeNull();
-      expect(picture).toHaveAttribute("src", takeoverArtOf(defId));
-      expect(picture).toHaveAttribute("alt", "");
-      expect(picture).toHaveAttribute("aria-hidden", "true");
-      // Behind the rays disc, and nothing in the still animates.
-      expect(still.firstElementChild, defId).toBe(picture);
-      expect(still.querySelector("[data-animating]")).toBeNull();
-      cleanup();
-    }
-    // A Mythic whose look draws no picture of its own shows none.
-    playOut(ZEPHRYS);
-    expect(screen.getByTestId("takeover-still").querySelector("img.takeover-still-art")).toBeNull();
-  });
+  writeSettings({ reduceMotion: true });
+  for (const defId of ["stinkyscape-148-1", "stinkyscape-t-red-narcor"]) {
+    playOut(defId);
+    const still = screen.getByTestId("takeover-still");
+    expect(still).toHaveAttribute("data-takeover-def", defId);
+    const picture = still.querySelector("img.takeover-still-art");
+    expect(picture, defId).not.toBeNull();
+    expect(picture).toHaveAttribute("src", takeoverArtOf(defId));
+    expect(picture).toHaveAttribute("alt", "");
+    expect(picture).toHaveAttribute("aria-hidden", "true");
+    // Behind the rays disc, and nothing in the still animates.
+    expect(still.firstElementChild, defId).toBe(picture);
+    expect(still.querySelector("[data-animating]")).toBeNull();
+    cleanup();
+  }
+  // A Mythic whose look draws no picture of its own shows none.
+  playOut(ZEPHRYS);
+  expect(screen.getByTestId("takeover-still").querySelector("img.takeover-still-art")).toBeNull();
+});
 
   it("R2722001 a Legendary takes neither the hold nor the still", () => {
   writeSettings({ reduceMotion: true });

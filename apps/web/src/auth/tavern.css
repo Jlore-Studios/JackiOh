@@ -723,6 +723,13 @@
     z-index: 1;
   }
 
+  /* The footer takes a row of its own under the board: auto-placed beside it, its longest line (#3380's labels)
+     widened that margin and narrowed the board, wrapping the create-account terms onto a third line. */
+  .tavern.app-shell.auth-screen > .site-footer {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
   /* Both parts start at the top: a refusal appearing under the button lengthens the form's part
      without moving the title beside it (the same reason the board is never centered). */
   .tavern.app-shell .panel--split {

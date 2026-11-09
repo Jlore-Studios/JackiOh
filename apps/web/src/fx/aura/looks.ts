@@ -11,6 +11,8 @@
 // R3399001: eighteen more join them, one of each Classic+ signature permanent's own (#3399), each moving as its
 // card's concept does (syrup creeping down, steam rising, a banner in a breeze).
 // R3407000: fifteen more join them, each one Stinkyscape card's own "on its tile" (part two).
+// R3395001: three join them for Stinkyscape's signature Field Spells: The Greatest Heist's sweeping green
+// `laserGrid`, Rod of Ages' rising `silverRise` and The Narcor Project's slow `labHaze`.
 
 /** The seventeen looks, as a card's table entry or an Anomaly's backdrop (`fx/anomaly.ts`, R3337003) names them. */
 export const AURA_LOOK_NAMES = [
@@ -43,6 +45,8 @@ export const AURA_FIELD_TYPES = ["Field Spell", "Field Trap"] as const;
  * R3389000: the looks of Classic's signatures (#3389), each its card's own: Palantir's watching iris,
  * InfiniScepter's loop, Second Wind's breeze over the graveyard, Joro's web, Nature Titan's moss, Spell
  * Tyrant's crown-sigil, BOOM! Big Max's crater smoke, King Wagtoggle's cloak and In Too Deep's whirlpool.
+ * R3395001: Stinkyscape's three signature Field Spells', The Greatest Heist's laser grid, Rod of Ages' silver
+ * bands and The Narcor Project's lab haze.
  */
 export const AURA_SIGNATURE_LOOK_NAMES = [
   "seeingIris",
@@ -96,6 +100,10 @@ export const AURA_SIGNATURE_LOOK_NAMES = [
   "starpath",
   "stinkvapour",
   "pages",
+  // R3395001: Stinkyscape 001 to 090's three Field Spells'.
+  "laserGrid",
+  "silverRise",
+  "labHaze",
 ] as const;
 
 /** A shared look, any entry's to wear. */
@@ -254,6 +262,12 @@ export const AURA_SIGNATURE_LOOKS: Readonly<Record<AuraSignatureLook, AuraLookSp
   stinkvapour: { vx: [-6, 6], vy: [-16, -6], size: [5, 9], life: [2400, 3800], alpha: 0.5, tint: 0.12, glow: 12, edge: 0.45, blend: S },
   // Sanctum's silver motes drifting up like turning pages.
   pages: { vx: [-6, 6], vy: [-20, -8], size: [2, 3.5], life: [2200, 3600], alpha: 0.7, tint: 0.08, glow: 14, edge: 0.55, blend: L },
+  // R3395001: The Greatest Heist: cash-green laser glints sweeping sideways across its vault.
+  laserGrid: { vx: [-16, 16], vy: [-2, 2], size: [1, 2], life: [1800, 3000], alpha: 0.6, tint: 0.06, glow: 12, edge: 0.5, blend: L },
+  // Rod of Ages: pale silver motes rising off its bands.
+  silverRise: { vx: [-2, 2], vy: [-16, -8], size: [1.5, 3], life: [2600, 4200], alpha: 0.6, tint: 0.08, glow: 12, edge: 0.5, blend: L },
+  // The Narcor Project: a slow green haze seeping from its cracks.
+  labHaze: { vx: [-5, 5], vy: [-8, -2], size: [4, 7], life: [3000, 5000], alpha: 0.45, tint: 0.12, glow: 12, edge: 0.45, blend: S },
 };
 
 /** R3389000: any look's spec, shared or a signature's own. */
