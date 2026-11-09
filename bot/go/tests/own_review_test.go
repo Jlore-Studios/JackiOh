@@ -534,9 +534,10 @@ func TestOwnReview_TheLoopStartsItsOwnReviewRunInTheTickThatDeliversItsBuild(t *
 	assertEqual(t, len(again), 1, notes)
 	assertIn(t, fmt.Sprintf("started review #%d on claude-1", pr), again[0])
 	review := controllerFetch(t, ctx, h.gh.Dispatches[len(h.gh.Dispatches)-1].Inputs["plan_ref"])
-	// Sonnet built the medium item, so Sonnet reviews it and fixes what it finds (#2903), not Opus.
+	// Sonnet built the medium item, so Sonnet fixes what the review finds (#2903), and Opus, the account's
+	// strongest seat, reviews it, in the same lane and a fresh session of its own.
 	assertEqual(t, []any{review.Get("own_review"), review.Get("provider"), dig(t, review, "seats", "review", "model"),
-		dig(t, review, "seats", "build", "model")}, []any{true, "claude-1", "sonnet", "sonnet"})
+		dig(t, review, "seats", "build", "model")}, []any{true, "claude-1", "opus", "sonnet"})
 }
 
 // A person's `/harness handoff` releases a waiting own review from its lane: it goes to its final

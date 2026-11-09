@@ -346,8 +346,9 @@ touching different files. Squishy has the same mode, `squishy:fullsend` ([Squish
    for the parts before the other items ([Who takes what](#subscriptions)). Once its plan is on
    record, the subscriptions whose strongest seat is weakest take it first, and one with no seat
    of its difficulty's tier may build it on a medium seat (`config.PartFloor`): Muse builds a
-   hard part from Opus's plan, while a Claude account still builds a hard one on Opus, never on
-   Sonnet. The parts build side by side with the parts that do not wait for them. Its run starts from the integration branch, not `main`, and measures every diff against
+   hard part from Opus's plan, and so does a Claude account's Sonnet seat since 2026-11-09 (it built
+   a hard one on Opus, never on Sonnet, before), the tree's reconcile, on Opus, checking it either
+   way. The parts build side by side with the parts that do not wait for them. Its run starts from the integration branch, not `main`, and measures every diff against
    it (`work.Worker.Part`): one builder pass and the path guard, and no checks, self check,
    catch-up with `main` or review. Deliver lands the change on the integration branch
    (`deliver.Deliverer.LandPart`): a fast-forward when nothing landed since the part started,
@@ -657,13 +658,13 @@ The bot spends whichever of your subscriptions is free. They are listed in
 
 | Provider | CLI and model | Login | Hours | Limits |
 |---|---|---|---|---|
-| `claude-1` | Claude Code, `opus` at `xhigh` (fix passes at `high`), and `sonnet` at `xhigh` (medium) | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00, and outside it while under 40% of 5 hours (`off_hours`) | all of 5 hours (100%) in its hours, no weekly cap |
-| `claude-2` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
-| `claude-3` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
-| `claude-4` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
+| `claude-1` | Claude Code, `opus` at `xhigh` (fix passes at `high`), and `sonnet` at `high` (medium; [the Sonnet effort test](#the-sonnet-effort-test)) | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00, and outside it while under 40% of 5 hours (`off_hours`) | all of 5 hours (100%) in its hours, no weekly cap |
+| `claude-2` | the same as claude-1, with `sonnet` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
+| `claude-3` | the same as claude-1, with `sonnet` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
+| `claude-4` | the same as claude-1, with `sonnet` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-5` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week; from Sunday 17:00 until its week resets on Monday at 09:00 UTC, 80% of 5 hours, 90% of the week and its sessions' last hours up to 90% (`late_week`); never past 90% of either (`hard_cap`) |
 | `claude-6` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
-| `claude-7` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time: 01:00–10:00 up to its cap, and outside it (10:00–01:00) while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
+| `claude-7` | the same as claude-1, with `sonnet` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time: 01:00–10:00 up to its cap, and outside it (10:00–01:00) while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-8` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_8` | any time | 85% of 5 hours, no weekly cap |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-sol` at `xhigh` (`gpt-5.6-terra` until 2026-10-20); medium, and weak only from 2026-10-11 to 2026-10-20, on Terra | on the machine, as `agent-gpt` | any time | all of 5 hours (100%), all of the week (Codex reports both; #798) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high`, medium in every role (plans, builds, reviews); Gemini 4 Argon was tried in #2748 and is not on the owner's Google account (checked on the box on 2026-11-02, agy CLI 1.4.12): a newer model is set only once `agy models` lists it and a headless `agy -p` call answers on it | on the machine, as `agent-agy` | any time | all of 5 hours (100%), all of the week (its own `agy -p /usage`, the Gemini pool's row; #798) |
@@ -701,7 +702,8 @@ once its secret is in `providers.SecretNames` and the workflow's `HARNESS_SECRET
 - `tier`: `weak`, `medium` or `strong`, the tier of `model` ([below](#difficulty-and-tiers)). A
   weak seat takes no work since #2748: no difficulty is built at weak.
 - `extra_models`: other models the subscription runs for a role, each with its `model`, `effort`
-  and `tier`. Every Claude account runs Sonnet at `xhigh` (medium, #317) beside Opus, and
+  and `tier`. Every Claude account runs Sonnet (medium, #317) beside Opus, at `xhigh` or `high` by
+  account ([the Sonnet effort test](#the-sonnet-effort-test)), and
   switches between them as the work needs ([below](#switching-between-opus-and-sonnet)). (The
   stand-ins, `takes_over`, and `easy_first` built only easy items and went with them in #2748.)
 - `fix_effort`: the effort a fix pass runs at (`high` on the Claude accounts), which answers named
@@ -855,7 +857,7 @@ nothing):
 | Tier | Models |
 |---|---|
 | strong | Claude Opus, on every Claude account |
-| medium | Muse, Gemini 3.8 Flash through agy (#2748 tried Gemini 4 Argon, which is not on the owner's Google account), Codex (`gpt`, on GPT-5.6 Sol; weak from 2026-10-11 to 2026-10-20, on Terra), Claude Sonnet at `xhigh` (on every Claude account, beside its Opus) |
+| medium | Muse, Gemini 3.8 Flash through agy (#2748 tried Gemini 4 Argon, which is not on the owner's Google account), Codex (`gpt`, on GPT-5.6 Sol; weak from 2026-10-11 to 2026-10-20, on Terra), Claude Sonnet at `xhigh` or `high` (on every Claude account, beside its Opus) |
 | weak | none since #2129, and since #2748 a weak seat takes no work: nothing is built at weak |
 
 Every item has a difficulty, from its labels: `difficulty:medium` or `difficulty:hard`
@@ -1011,9 +1013,10 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   own tier or above, as any owner's work does.
 - **The own review run** ([below](#the-own-review-run)). Every change is reviewed in a fresh
   adversarial session of its lane's reviewer, never an approval from its builder's context: the
-  model that built it, on the same subscription, reads the change cold in a new instance (#2903,
-  not the subscription's strongest seat: Sonnet what Sonnet built; on a Claude account, Opus for a
-  hard item). On the night bot that review is a run of its own, the
+  subscription's strongest seat at or above the item's tier, on the same subscription, reads the
+  change cold in a new instance (2026-11-09: Opus on a Claude account, for a medium item Sonnet
+  built as for a hard one; #2903 had the model that built it review its own work, and that model
+  still fixes what the review finds). On the night bot that review is a run of its own, the
   second of the two runs every code change takes, on the same subscription and lane; on Squishy
   it is in the build's own run, as it was before (`own_review_run`). Its findings count, its
   builder fixes them, and its approval at the item's tier ships the change (the owner's decision
@@ -1083,11 +1086,14 @@ and reviews it: plan, run 1 and run 2, one lane and one model, each a fresh sess
    takes it in between; the own review run itself takes it (`Lanes.Without`), as its subscription's
    own work, first (`plan.Pairs`). Its handoff, and its Claude session, go on on the pull request
    (for the item's later runs there; run 2 resumes neither).
-2. **Run 2, its own review** (`bot:reviewing`), on the same subscription and the same model
-   (`plan.ownReviewer`, #2903: the model that built the head, its reservation's `model`, reviews
-   and fixes, Sonnet what Sonnet built, Opus a hard item; a reservation from before names no model,
-   and its weakest seat at the item's tier does both, as builds go). Every review and every fix is
-   a new instance: run 2 resumes no kept session (`work.Worker`'s `resumes`), and its plan carries
+2. **Run 2, its own review** (`bot:reviewing`), on the same subscription and lane
+   (`plan.ownReviewer`): the model that built the head (its reservation's `model`, #2903) fixes,
+   Sonnet what Sonnet built, Opus a hard item, and the subscription's strongest seat at or above
+   the item's tier reviews (`plan.RunReviewer`, 2026-11-09), Opus on a Claude account, so a medium
+   item Sonnet built is approved by Opus; a reservation from before names no model, and its
+   weakest seat at the item's tier fixes, as builds go. A subscription with one seat (Muse, agy,
+   Codex) reviews on it. Every review and every fix is a new instance, so a different model
+   reviewing than fixing rereads nothing: run 2 resumes no kept session (`work.Worker`'s `resumes`), and its plan carries
    none. Its first round builds nothing
    (`work.Worker.OwnReview`): a fresh adversarial session reviews the head run 1 pushed, with the
    checks run 1 ran on it and the pull request's CI on that head, which the job reads with its own
@@ -1396,7 +1402,8 @@ subscription built.
 
 ### Switching between Opus and Sonnet
 
-Every Claude account runs two models, Opus (strong) and Sonnet at `xhigh` (medium). The router
+Every Claude account runs two models, Opus (strong) and Sonnet (medium; `xhigh` or `high` by
+account, [the Sonnet effort test](#the-sonnet-effort-test)). The router
 starts a run on the weaker one that meets the item's difficulty, and the run moves its builder
 between them as the work needs (`work.Worker.Switch`), never below the item's difficulty: a hard
 item stays on Opus.
@@ -1418,6 +1425,60 @@ record names the model that built it, the result lists every switch (`switches`)
 the run leaves says when and why it switched. A lane with one model (Muse, agy, Codex) never
 switches.
 
+### Every model change is a new agent
+
+The harness never changes a model inside a session, since that would reread the whole transcript
+(the prompt cache is per model) and spend the context window again. Every change of model is a new
+`claude` call, in the same job, on the same subscription and lane, started from its prompt and the
+item's handoff:
+
+- **A builder's switch** between Opus and Sonnet (above) takes effect on the run's next pass, a
+  fresh call. A kept session is resumed only by the model that wrote it: `work.Worker.resumeFrom`
+  compares `sessions.Family` of the kept session's model and the call's, and a mismatch starts a
+  fresh session with the first prompt and the handoff, as any other fallback does.
+- **The own review run** reviews on Opus and fixes on the model that built the change
+  ([the own review run](#the-own-review-run)): two kinds of call, each a new instance that resumes
+  nothing, in one run on the lane its build reserved. The reviews were always fresh sessions by
+  design, so Opus reading the head cold costs what a Sonnet review of it did, at Opus's price.
+- **A hard part** a Claude account builds on Sonnet is one builder pass, with no switch inside it
+  (`next_model` is read only between the rounds of a build or a revision). The tree's reconcile
+  (Opus) is the first to check it, and a part it sends back goes to its builder's subscription on
+  Opus, not the Sonnet that was sent back (`plan.SentBackSeat`): a new call on the same lane.
+
+Claude Code's advisor tool (`--advisor`) is not used: it is a consult inside one session, which
+sends the executor's whole transcript to the advisor model at each call, and the harness runs every
+Claude call with `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` set (`runner.QuietEnv`); the advisor's
+docs say it stays off when a variable that turns flag fetching off is set, naming `DISABLE_TELEMETRY`,
+and whether this one counts has not been tried. Anything an advisor would do for a plan is a separate call in
+the lane, a plan-check by Opus, which does not exist yet.
+
+### The Sonnet effort test
+
+Every Sonnet seat ran at `xhigh` until 2026-11-09. The docs call `medium` the default effort of
+Sonnet 5.5 and Opus 5.5 and `high` the one for work where verification matters, and describe
+`xhigh` only as deeper reasoning at a higher token spend, never as a default, so since 2026-11-09 four accounts run Sonnet at `high` and four stay at `xhigh`,
+in `.harness/providers.json`'s `extra_models`:
+
+| Sonnet at `high` | Sonnet at `xhigh` |
+|---|---|
+| `claude-1`, `claude-5`, `claude-6`, `claude-8` | `claude-2`, `claude-3`, `claude-4`, `claude-7` |
+
+The split is by account because the load balancer spreads the same kind of items over the accounts
+(about 103 and 114 Sonnet runs on each side, 11-03 to 11-09), and the same day's change to the own
+review's reviewer (Opus for every Claude lane) applies to both sides, so it cannot tell them apart.
+Only the Sonnet seat differs: Opus runs at `xhigh` everywhere, and fix passes at `high`.
+
+Compare the medium items each side built and approved (`bot-usage`'s `runs-*.csv`: `subscription`,
+`models`, `kind`, `item`, `outcome`, `model_minutes`, `usd_reported`; the journal's steps):
+revisions per item and the share with none, runs per item, model minutes and cost, the time to the
+first approval, and the share of runs a cap cut off. The baseline, all at `xhigh` (255 items to
+11-09): 0.24 revisions an item, 82% with none, 2.7 runs, a median of 40 model minutes and $5.0
+(`usd_reported`, an API-price figure), 1.8 hours to the first approval
+([`reviews/2026-11-09-model-setup.md`](../reviews/2026-11-09-model-setup.md)). With about 100 items
+a side, set both sides to the winner by editing `extra_models`; a tie goes to `high`, which costs
+less. Squishy has no Sonnet seat (its one Opus account does everything), so the test does not
+reach it.
+
 ### How hard it is
 
 The difficulties are medium and hard (#2748 retired `difficulty:easy`, once the only difficulty a
@@ -1433,8 +1494,9 @@ An item is **hard** if any of these holds, and **medium** otherwise:
 4. **A migration:** a database migration, or moving data or state between shapes.
 5. **Big:** about 40 files or more changed in all, the tests included.
 
-Torn between the two, take the harder. A medium item is planned, built and approved by a medium
-model (Muse, Gemini, GPT or Sonnet; the approval may be its own lane's, 2026-11-02); a hard one by
+Torn between the two, take the harder. A medium item is planned and built by a medium
+model (Muse, Gemini, GPT or Sonnet) and approved by a medium or strong one (on a Claude account,
+its Opus since 2026-11-09; the approval may be its own lane's, 2026-11-02); a hard one by
 Opus alone. The harness still reads the plan's **Files to touch** table
 (`issueplan.FilesToTouch`): a plan that lists only paths the bot may not change goes to the people
 ([`human required`](#priority-and-human)).
@@ -1559,7 +1621,8 @@ independent measure of this self-review.
 An item ships on one approval at its tier, with no audit by another model first (#2748, section 5),
 and since the owner's decision of 2026-11-02 that approval is most often its own lane's: the
 adversarial reviewer of its [own review run](#the-own-review-run), on the subscription that built
-it, a medium model's for a medium item, Opus on the same account for a hard one. What that self-review misses is measured after the fact, by a model of
+it, a medium model's for a medium item on Muse, agy or Codex, Opus on the same account for a
+Claude lane's medium or hard item (2026-11-09). What that self-review misses is measured after the fact, by a model of
 another subscription ([`go/internal/spotcheck/`](go/internal/spotcheck/)): this check is the
 independent measure of medium and hard self-approval. Before the change, Opus asked for changes on
 25% of the commits a medium model had approved.
