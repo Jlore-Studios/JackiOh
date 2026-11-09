@@ -18313,15 +18313,8 @@
       }
     },
     "3468": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42583325935",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-09T08:12:15Z",
-        "until": "2026-11-09T08:42:15Z"
-      },
       "difficulty_by": {
         "at": "2026-11-09T08:12:06Z",
         "difficulty": "medium",
@@ -18340,10 +18333,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "ntil the level drains to full, then sleeps again. Update the `shedLevel()` method com\u2026\n- 4. `apps/web/src/fx/director.ts`, `dispose`: after `clear()`, call `setShedLevel(SHED_FULL)` (import `SHED_FULL` from `./shed.ts`). One director is mounted at a time in production (board, pack, showcase, and dev gallery unmount each other), so resetting the shared level on disposal ends cross-route\u2026\n- 5. `apps/web/src/fx/FxLayer.tsx`: in the director-creation layout effect, add `phone: (s.viewportWidth?.() ?? window.innerWidth) < FX_MOBILE_WIDTH` next to the existing `capacity: capacityFor(...)` line. `FX_MOBILE_WIDTH` is already imported.\n- 6. `apps/web/src/packs/PackOpening.tsx`, `apps/web/src/stats/StatShowcase.tsx`, `apps/web/src/routes/dev/fx.tsx`: add `phone: window.innerWidth < FX_MOBILE_WIDTH` to each `createFxDirector` call and add `FX_MOBILE_WIDTH` to each file's `./constants.ts` or `../../fx/constants.ts` import.\n- 7. `apps/web/src/fx/aura/AuraLayer.tsx`: replace the pointer subscription with a stage-gated snapshot, keeping the level subscription as is:\n- `const pointer = useSyncExternalStore(subscribeShed, () => (shedAuraScale(shedLevel()) === 1 ? null : shedPointer()), () => null);`\n- Below stage 2 the snapshot is always null, so pointer-move notifications change nothing and React bails out: no re-render, no `measureAll` forced layout, no drift re-sync. At stage 2+ the real pointer flows and the existing `budgetFor` near/far logic (lines 261-268) works unchanged. `shedAuraScale`\u2026\n- 8. `apps/web/src/fx/shed.ts` header comment and `apps/web/src/fx/constants.ts` `PHONE_MOTION_BUDGET` comment: reword to the actual mechanism. Faces are capped by the motion slots (`COSMETIC_FOIL_ANIMATED_MAX`, 6, on every viewport); tile and aura mote budgets scale with intensity and the phone part\u2026\n- 9. `spec/rulings/R3351000.md`: reword only the \"One shared budget\" paragraph and its rejected-alternatives line about \"a per-layer budget\" to match step 8: per-layer phone-scaled budgets plus the ordered shed, with the faces' share anchored at 6 by the motion slots. Keep every `[[R...]]` link, the \u2026\n- 10. `apps/web/src/fx/director.test.ts`: pass `phone: true` in the three existing `R3351000` tests' `harness(...)` calls (the harness spreads overrides into `createFxDirector`, so no harness change is needed). Add: `it(\"R3351000 disposing a director resets the shared shed level to full\", ...)` (slow\u2026\n- 11. `apps/web/src/fx/aura/AuraLayer.test.tsx`: add `it(\"R3351000 pointer moves below stage 2 re-render and re-measure nothing\", ...)` reusing `fakeSeams`, `board`, `field`, and `mount`: wrap `fx.seams.measure` with a counter, mount the two-aura view at stage 0, record the count and `data-aura-motes\u2026\n- 12. `apps/web/src/fx/constants.test.ts`: update only the comment inside `it(\"R3351000 the shared phone motion budget and worst-frame budget\", ...)` to the per-layer wording; keep all assertions (`PHONE_MOTION_BUDGET` 6, equals `COSMETIC_FOIL_ANIMATED_MAX`, worst-frame bounds).\n- ## Tests\n- - `pnpm --dir apps/web test src/fx/director.test.ts` (steps 1-4, 10)\n- - `pnpm --dir apps/web test src/fx/aura/AuraLayer.test.tsx` (step 7, 11)\n- - `pnpm --dir apps/web test src/fx/shed.test.ts` (unchanged, guards the store both consumers share)\n- - `pnpm --dir apps/web test src/fx/aura/TileAura.test.tsx` (unchanged, level-only consumer)\n- - `pnpm --dir apps/web test src/cards/motionSlots.test.ts` (unchanged, stage-3 face behavior)\n- - `pnpm --dir apps/web test src/fx/constants.test.ts` (step 12)\n- - `pnpm --dir apps/web typecheck` (touched `tsx`/options types)\n- - `cargo jackioh spec check` (step 9; also run after any comment edit that cites an `R` id)\n- ## Done when\n- - A disposed director leaves the shed level at full; an idle shed board returns to full on healthy frames with no effects; desktop viewports never pass stage 0 while phone viewports shed 1-2-3 and recover, all covered by the new `director.test.ts` tests.\n- - Pointer moves below stage 2 cause no `AuraLayer` re-render, no `measureAll`, and no mote change, covered by the new `AuraLayer.test.tsx` test; stage-2 near/far halving still passes.\n- - `PHONE_MOTION_BUDGET` is read nowhere as a counter and the ruling, constant, and shed header all describe the per-layer mechanism instead; `spec check` is green.\n- - The exact commands above are green with no skipped, ignored, or weakened test and no new lint suppression.\n- ## Risks\n- - Keeping the loop alive while shed > 0 costs roughly 90 healthy frames per stage after effects end on a slow phone; bounded, rare, and far cheaper than a stuck-still session. A timer-based recovery was rejected as new clock machinery in the FX layer.\n- - `dispose` resetting the shared level assumes one mounted director at a time, which holds for the four production call sites (routes unmount each other) but not for tests mounting several; tests already call `resetShedForTests` between cases.\n- - Desktop keeps `B34` cap halving without shedding: a stranded desktop level can only come from shared-module tests, where the healthy path still drains it.\n- - `TileAura` and `motionSlots` subscribe to the level only, not the pointer, so they need no change; `CardFace`, tilt, pack, showcase, and gallery faces inherit the fix through the store.\n- ## Open questions\n- None. The phone-only gate the issue left open is decided in steps 1-2 and 5-6 (shed publishes on phone viewports only; desktop keeps cap halving), and the budget question in steps 8-9 (reword to the actual mechanism rather than enforcing a cross-layer counter the code has no allocator for).\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-3468 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-3468/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-09T08:04:15Z",
       "owner_why": "it plans it",
@@ -18356,19 +18348,19 @@
       "provider": "muse",
       "queued_at": "2026-11-09T08:01:05Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "42583325935",
+      "run_id": "pending:9a87fd1b-1794212056",
       "runs_on": "night-vm-muse",
       "spot_check_of": 3467,
-      "started_at": "2026-11-09T08:04:15Z",
+      "started_at": "2026-11-09T08:14:49Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T08:04:15Z",
+    "at": "2026-11-09T08:14:49Z",
     "url": "",
-    "what": "plan #3468 on muse"
+    "what": "build #3468 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T08:00:02Z",
