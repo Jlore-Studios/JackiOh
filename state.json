@@ -35748,22 +35748,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-09T19:28:16Z,claude-6,ping,before,42683277239,5,2026-11-10T00:00:00Z,,,allowed,70,,",
-      "2026-11-09T19:28:44Z,claude-6,stream,call,42683277239,6,2026-11-10T00:00:00Z,,,allowed,70,,",
-      "2026-11-09T19:29:44Z,claude-6,stream,call,42683277239,7,2026-11-10T00:00:00Z,,,allowed,70,,",
-      "2026-11-09T19:45:22Z,claude-6,stream,call,42683277239,7,2026-11-10T00:00:00Z,,,allowed,70,,",
-      "2026-11-09T20:20:17Z,claude-6,ping,before,42691595326,8,2026-11-10T00:00:00Z,,,allowed,70,,",
-      "2026-11-09T20:02:58Z,claude-3,stream,call,42688725650,84,2026-11-09T21:50:00Z,,,allowed,,,",
-      "2026-11-09T20:15:14Z,claude-3,stream,call,42688725650,85,2026-11-09T21:50:00Z,,,allowed,,,",
-      "2026-11-09T20:23:14Z,claude-3,stream,call,42688725650,86,2026-11-09T21:50:00Z,,,allowed,,,"
-    ],
-    "runs": [
-      "2026-11-09T20:14:21Z,42683277239,claude-6,sonnet+opus,build,3501,medium,built,,16.9,57,22674,2370626,0.835,5,7,,,24.9,claude-6,fresh,,1",
-      "2026-11-09T20:25:12Z,42691595326,claude-6,sonnet,review,3522,medium,approved,,4.7,17,4544,625604,0.353,8,8,,,1.2,,none,,1",
-      "2026-11-09T20:24:17Z,42688725650,claude-3,opus,revise,3464,hard,built,,21.5,50,18477,3763410,4.7983,84,86,,,8.6,claude-3,resumed,,1"
-    ]
-  },
   "version": 1
 }
