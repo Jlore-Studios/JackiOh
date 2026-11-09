@@ -15529,6 +15529,8 @@
       "stop_requested": false
     },
     "3475": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-09T11:44:18Z",
@@ -15542,8 +15544,13 @@
         "trail": " built.\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3406/spec/rulings/R3406000.md\", \"offset\": 8}\n- said: Two precision fixes: the kept look is head, outfit and skin (what the test checks), and the sky/camera rule applies to the 36 cards that have a normal recipe.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R3406000.md'\\ns=open(p).read()\\npairs=[\\n(\\\"\\\"\\\"**The same subject.** A figure both pictures draw is the normal one's person, its head and outfit uncha\u2026\n- Bash: {\"command\": \"sed -n 5,13p apps/web/src/cards/art/scene.ts | awk '{print length\\\": \\\"$0}'\", \"description\": \"Check scene.ts header line lengths\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/cards/art/scene.ts'\\ns=open(p).read()\\na=\\\"\\\"\\\"// here and draws its picture byte for byte. R3396000, R3397000, R3406000: a Classic+, Meditative+ or\\n/\u2026\n- Bash: {\"command\": \"grep -E \\\"Test Files|Tests |FAIL|\\u00d7\\\" /tmp/webtests.log | head; tail -1 /tmp/webtests.log | cut -c1-100\", \"description\": \"Check web test progress\"}\n- said: Two failures so far, both at ~6 s, which suggests timeouts under load. I'll wait for the run to finish and read their errors.\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/webtests.log; do sleep 5; done; grep -E \\\"Test Files|Tests \\\" /tmp/webtests.log\", \"description\": \"Wait for web tests to finish\", \"timeout\": 1800000, \"run_in\u2026\n- Bash: {\"command\": \"grep -n \\\"R1017002 across a long visit\\\\|B1 equal arguments\\\" -r apps/web/src --include=*.test.* | head; grep -B2 -A12 \\\"FAIL .*B1 equal\\\\|FAIL .*R1017002\\\" /tmp/webtests.log | head -60\"\u2026\n- said: `art.test.ts` passed in my earlier run of the art directory, so this looks like load from the concurrent cargo and Cypress jobs. I'll rerun both files alone once the full run ends.\n- Bash: {\"command\": \"echo \\\"- run 4: harness web test run in progress; 2 fails seen at ~6s (art.test.ts B1, landing.test.tsx R1017002) while cargo/cypress ran in parallel - will rerun alone.\\\" >> .bot-notes.\u2026\n- said: Meanwhile, checking a few brief details the kit may not have a pose or part for (099's hand over the mouth, 117's dust sheets, 147's cross-legged pose).\n- Bash: {\"command\": \"cd apps/web/src/cards/art && awk '/^\\\\/\\\\*\\\\* No-No Words/,/^};/' stinkyscape91AltRecipes1.ts | grep -n \\\"pose\\\\|part\\\" | cut -c1-160; awk '/^\\\\/\\\\*\\\\* Core System/,/^};/' stinkyscape91A\u2026\n- said: For consistency with the rule that a missing detail is named in the recipe's comment, I'll note those three approximations in their comments.\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\ndef edit(path, pairs):\\n s=open(path).read()\\n for a,b in pairs:\\n assert s.count(a)==1, (path, a, s.count(a))\\n s=s.replace(a,b)\\n open(path,'w').write(s)\\\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef edit(path, pairs):\\n s=open(path).read()\\n for a,b in pairs:\\n assert s.count(a)==1, (path, a, s.count(a))\\n s=s.replace(a,b)\\n open(path,'w').write(s)\\nedit('stin\u2026\n- said: Adding those three to the ruling's and ART.md's lists of left-out details.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3406 && python3 - <<'EOF'\\ndef edit(path, pairs):\\n s=open(path).read()\\n for a,b in pairs:\\n assert s.count(a)==1, (path, a, s.count(a))\\n s=s.repla\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/cards/art/ART.md'\\ns=open(p).read()\\na=\\\"\\\"\\\"A detail the kit lacks is left out and named in the recipe's comment, never drawn as another part (Vxyl's \u2026\n- Bash: {\"command\": \"grep -cE \\\"^ (\\u2713|\\u276f) \\\\|web\\\\|\\\" /tmp/webtests.log; grep -E \\\"^ \\u276f \\\\|web\\\\|\\\" /tmp/webtests.log | head\", \"description\": \"Count web test files done\"}\n- Bash: {\"command\": \"grep -E \\\"\\\\|web\\\\|\\\" /tmp/webtests.log | wc -l; grep -E \\\"\\u2713 \\\\|web\\\\|| \\\\|web\\\\| src\\\" /tmp/webtests.log | tail -3 | cut -c1-120\", \"description\": \"Check web test progress\"}\n- said: Still running. Waiting for it to finish.\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/webtests.log; do sleep 10; done; grep -E \\\"Test Files|Tests |^exit\\\" /tmp/webtests.log\", \"description\": \"Wait for the web test run to end\", \"timeout\": 18000\u2026\n- Bash: {\"command\": \"grep -A8 \\\"FAIL .*|web|\\\" /tmp/webtests.log | grep -v \\\"^\\\\s*$\\\" | head -30 | cut -c1-220\", \"description\": \"Read the two failures' errors\"}\n- said: Both are 5 s timeouts from the loaded run. Rerunning the two files alone on a quiet machine.\n- Bash: {\"command\": \"timeout 600 pnpm --dir apps/web exec vitest run src/routes/landing.test.tsx src/cards/art/art.test.ts 2>&1 | grep -E \\\"Test Files|Tests |\\u00d7|FAIL|Duration\\\"\", \"description\": \"Rerun th\u2026\n- said: Both pass alone. Checking their individual durations, to be sure the pass didn't push them near the 5 s limit.\n- Bash: {\"command\": \"timeout 600 pnpm --dir apps/web exec vitest run src/routes/landing.test.tsx src/cards/art/art.test.ts --reporter=verbose 2>&1 | grep -E \\\"B1 equal|R1017002 across\\\" | cut -c1-200\", \"desc\u2026\n- said: Alone they take 2.0 s and 1.4 s, well under the limit. Final pass after the last edits: art directory, typecheck, eslint and `spec check`.\n- Bash: {\"command\": \"echo \\\"- run 4: full harness web run: 318/320 files pass; 2 timed out under load (art.test.ts B1, landing R1017002), pass alone in 2.0s/1.4s. Final reruns next.\\\" >> .bot-notes.md; timeo\u2026\n- said: All green. Checking the final tree for strays.\n- Bash: {\"command\": \"git status --short; ls spec/pending/; git diff --stat HEAD | tail -2\", \"description\": \"Show final working tree status\"}\n- said: Everything is in place. Updating the notes' State for whoever comes next.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## Log')\\nstate='''## State\\n\\n(run 4, rewritten) DONE: all of the plan is built and checked; only the final report rem\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every Stinkyscape (cards 91 to 178 and its tokens) Alt art somewhere else: the same subject in a new place, time or moment, one brief per card\"} --> ## What changed All 54 cards in #3406's table now have an alt scene recipe of their own, written from ea\u2026"
       },
       "issue": 3406,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-09T13:06:22Z",
+      "run_id": "pending:753f5a85-1794229562",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15562,6 +15569,9 @@
         "provider": "claude-3",
         "run": "42611394318"
       },
+      "started_at": "2026-11-09T13:06:37Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15575,9 +15585,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T12:56:22Z",
+    "at": "2026-11-09T13:06:37Z",
     "url": "",
-    "what": "suggestions on claude-8"
+    "what": "review #3475 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-09T12:54:46Z",
