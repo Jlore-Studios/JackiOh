@@ -15758,18 +15758,8 @@
       "verdict_rounds": 1
     },
     "3479": {
-      "action": "plan",
-      "asks": [
-        "c:6741689506",
-        "c:6741750938"
-      ],
-      "build_next": {
-        "from_run": "42636745230",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-09T15:33:22Z",
-        "until": "2026-11-09T16:03:22Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-09T15:33:08Z",
         "difficulty": "hard",
@@ -15788,10 +15778,9 @@
         "reason": "planned on opus",
         "trail": "heck rustfmt config\"}\n- Bash: {\"command\": \"grep -E \\\"Running|test result\\\" /tmp/scratch-ws.log | tail -6; grep -cE \\\"FAILED|panicked\\\" /tmp/scratch-ws.log\", \"description\": \"Check scratch workspace test progress\"}\n- Bash: {\"command\": \"tail -3 /tmp/scratch-ws.log | cut -c1-200\", \"description\": \"Check scratch workspace build output\"}\n- Bash: {\"command\": \"until grep -q \\\"^real\\\" /tmp/scratch-ws.log; do sleep 10; done; grep -E \\\"test result|FAILED|panicked|^error\\\" /tmp/scratch-ws.log | grep -v \\\"ok\\\\. 0 passed\\\" | tail -60\", \"description\"\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3479/.bot-plan.md\", \"content\": \"<!-- draft; see final message for the plan as delivered -->\\n# Draft plan #3479 (opus planner, run 2) \\u2014 notes\\n\\n\u2026\n- Bash: {\"command\": \"grep -n \\\"Adding a ruling\\\" -A25 spec/README.md | head -40\", \"description\": \"Read spec README's Adding a ruling section\"}\n- Bash: {\"command\": \"until grep -q \\\"^real\\\" /tmp/scratch-ws.log; do sleep 10; done; grep -E \\\"test result|FAILED|panicked|^error\\\" /tmp/scratch-ws.log | grep -v \\\"ok\\\\. 0 passed\\\" | tail -60; tail -4 /tmp/s\u2026\n- Bash: {\"command\": \"grep -E \\\"Running|test result\\\" /tmp/scratch-ws.log | tail -8 | cut -c1-200; grep -E \\\"FAILED|panicked\\\" /tmp/scratch-ws.log | head -20 | cut -c1-300\", \"description\": \"Check workspace te\u2026\n- Bash: {\"command\": \"tail -5 /tmp/scratch-ws.log | cut -c1-200; ps aux | grep -c \\\"[r]ustc\\\"\", \"description\": \"Check workspace build state\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3479/.bot-plan.md\", \"content\": \"<!-- draft; final message holds the plan as delivered. Notes at the bottom. -->\\n\\n## Goal\\n\\nAdd a second root fact b\u2026\n- Bash: {\"command\": \"until grep -q \\\"^real\\\" /tmp/scratch-ws.log; do sleep 10; done; echo done\", \"description\": \"Wait for workspace tests to finish\", \"timeout\": 3600000, \"run_in_background\": true}\n- Bash: {\"command\": \"sed -n 1,12p crates/ai/src/learned.rs | cat -A | cut -c1-130 | head -3 >/dev/null; sed -n 8,10p crates/ai/src/learned.rs; sed -n 310,318p crates/ai/src/learned.rs\", \"description\": \"Quote\u2026\n- Bash: {\"command\": \"until grep -q \\\"^real\\\" /tmp/scratch-ws.log; do sleep 10; done; grep -E \\\"test result|FAILED|panicked|^error\\\" /tmp/scratch-ws.log | grep -v \\\" 0 passed; 0 failed\\\" | cut -c1-250 | tail \u2026\n- Bash: {\"command\": \"grep -E \\\"Running|test result\\\" /tmp/scratch-ws.log | tail -10 | cut -c1-200; grep -E \\\"FAILED|panicked\\\" /tmp/scratch-ws.log | head -20 | cut -c1-300\", \"description\": \"Check workspace t\u2026\n- Bash: {\"command\": \"until grep -q \\\"^real\\\" /tmp/scratch-ws.log; do sleep 10; done; grep -E \\\"Running|test result|FAILED|panicked\\\" /tmp/scratch-ws.log | grep -E \\\"FAILED|panicked|failed;\\\" | grep -v \\\" 0 f\u2026\n- Bash: {\"command\": \"cd /tmp/scratch-3479 && rustfmt --check --edition 2024 --config-path rustfmt.toml crates/ai/src/learned.rs crates/ai/src/decide.rs crates/ai/src/evaluate.rs crates/ai/src/config.rs crate\u2026\n- Bash: {\"command\": \"until grep -q \\\"^real\\\" /tmp/scratch-ws.log; do sleep 10; done; echo finished\", \"description\": \"Wait until workspace tests finish\", \"timeout\": 3000000}\n- Bash: {\"command\": \"grep -E \\\"test result\\\" /tmp/scratch-ws.log | grep -v \\\" 0 failed\\\" | cut -c1-200; grep -E \\\"^test .* FAILED|panicked at\\\" /tmp/scratch-ws.log | cut -c1-300 | head -30; grep -E \\\"^error|\u2026\n- Bash: {\"command\": \"grep -n \\\"ci_scope_runs_a_crates_groups\\\" -A25 /tmp/scratch-ws.log | sed -n 1,40p | cut -c1-300\", \"description\": \"Read the ci_scope test failure\"}\n- Bash: {\"command\": \"sed -n 690,740p crates/tools/tests/acceptance.rs\", \"description\": \"Read the ci_scope acceptance test\"}\n- Bash: {\"command\": \"diff -rq /tmp/scratch-3479/apps/web/src/wire apps/web/src/wire && echo \\\"wire unchanged\\\"; grep -E \\\"Running.*ai_slow|Running tests/ai.rs\\\" -A0 /tmp/scratch-ws.log | cut -c1-150; grep -B\u2026\n- Bash: {\"command\": \"awk '/Running tests\\\\/ai_slow.rs/{f=1} f && /test result/{print; exit}' /tmp/scratch-ws.log; awk '/Running tests\\\\/ai.rs/{f=1} f && /test result/{print; exit}' /tmp/scratch-ws.log; awk '\u2026\n- Bash: {\"command\": \"grep -n \\\"ai_slow\\\\|deps/ai-\\\\|deps/server-\\\" /tmp/scratch-ws.log | head; \", \"description\": \"Locate AI and server suite runs\"}\n- Bash: {\"command\": \"sed -n '45,860p' /tmp/scratch-ws.log | grep \\\"test result\\\"; sed -n '858,1200p' /tmp/scratch-ws.log | grep -m1 \\\"test result\\\"; sed -n '15193,18000p' /tmp/scratch-ws.log | grep -m1 \\\"tes\u2026\n- Bash: {\"command\": \"ls -d node_modules apps/web/node_modules 2>/dev/null; sed -n 1,40p scripts/build-wasm.sh | grep -v \\\"^#\\\" | head -30\", \"description\": \"Check node_modules and wasm build script\"}\n- Bash: {\"command\": \"sed -n 40,140p scripts/build-wasm.sh | grep -v \\\"^\\\\s*#\\\" \", \"description\": \"Read the rest of build-wasm.sh\"}\n- Bash: {\"command\": \"sed -n 155,160p spec/09-architecture.md | cut -c1-200; awk 'NR==159' spec/09-architecture.md | tail -c 300\", \"description\": \"Confirm \\u00a79.9 Evaluation bullet line and ending\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3479/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 2: it changes the AI's decisions (crates/ai/src/learned.rs, decid\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count words and characters in the plan\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3479/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"Give a decision's root a second fact beside the Starship one (R3038003), `Price\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3479/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\" - Record each arm's `games`, `aWins`, `bWins`, `draws`, `aborted`, `deals`, `e\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3479/.bot-plan.md\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 2: it changes the AI's decisions (crates/ai/src/learned.rs, decide.rs) and needs an arena screen to set the threshold\"} --> ## Goal Add a second root fact beside the Starship one (R3038003): `Prices.unknown_root`. `plan` reads it once, off the redacted \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-09T14:01:50Z",
       "owner_why": "it plans it",
@@ -15804,12 +15793,15 @@
       "provider": "claude-1",
       "queued_at": "2026-11-09T13:53:31Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "42636745230",
+      "run_id": "pending:6e4b6e9b-1794238779",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-09T14:38:54Z",
+      "started_at": "2026-11-09T15:40:15Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6741689506",
+        "c:6741750938"
+      ]
     },
     "3481": {
       "action": "build",
@@ -16372,9 +16364,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T15:39:25Z",
+    "at": "2026-11-09T15:40:15Z",
     "url": "",
-    "what": "revise #3464 on claude-7"
+    "what": "build #3479 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-09T15:15:59Z",
