@@ -8,8 +8,9 @@ export default {
   testRunner: "vitest",
   // Named, not found by Stryker's `@stryker-mutator/*` glob, which pnpm's layout hides from it.
   plugins: ["@stryker-mutator/vitest-runner"],
-  // `related`: each mutant runs only the test files that import what it changed.
-  vitest: { configFile: "vitest.config.ts", related: true },
+  // `related`: each mutant runs only the test files that import what it changed. The config leaves out
+  // the tests that read the sources as text, which in place see every mutant (its header says why).
+  vitest: { configFile: "vitest.stryker.config.ts", related: true },
   // In place, not in a sandbox copy of apps/web: the tests read files by their path from the
   // repository's root (the spec's notes, the stylesheets, the voice and music manifests). Stryker
   // puts each file back when it ends.
