@@ -17989,14 +17989,16 @@
     "what": "build #3429 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-09T03:04:56Z",
+    "at": "2026-11-09T03:16:48Z",
     "notes": [
-      "#3458 is held for `claude-6` until 21:10 (5-hour usage is 59%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
-      "#3429 is held for `claude-6` until 21:10 (5-hour usage is 59%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
-      "#3456: approved and green, so its strikes are cleared",
-      "delivered review #3444 on claude-1 (run 42552077843): interrupted",
-      "started review #3444 on claude-1 (run 42554577561)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` 5-hour usage is 53%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-09T04:00:00Z; it can start a build or a plan again in 52m; `claude-8` 5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-09T04:30:00Z; it can start a build or a plan again in 22m; `claude-1` is idle, but nothing queued is for it; `claude-4` is busy; `claude-6` 5-hour usage is 59%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-09T03:10:00Z; it can start a build or a plan again in 2m; `claude-5` 7-day usage is 86%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-09T09:00:00Z; it takes reviews only; it can start a build or a plan again in 5h 52m; `muse` is idle, but nothing queued is for it; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` 5-hour usage is 87%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-09T04:50:00Z; it takes reviews only; it can start a build or a plan again in 1h 42m; waiting for their owners: #3429 held for `claude-6` until 21:10 (5-hour usage is 59%, too close to its 50% cap outside its hours to start a long run (it starts under 45%)); #3458 held for `claude-6` until 21:10 (5-hour usage is 59%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))"
+      "#3458: `claude-6` can start again, so its hold is lifted",
+      "#3429: `claude-6` can start again, so its hold is lifted",
+      "#3437: its turn came (it waited 120 minutes for #3426, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway)",
+      "delivered review #3453 on claude-3 (run 42553761846): reviewed",
+      "started revise #3458 on claude-6 (run 42555717003)",
+      "started build #3429 on claude-1 (run 42555777227)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is idle, but nothing queued is for it; `claude-7` 5-hour usage is 53%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-09T04:00:00Z; it can start a build or a plan again in 39m; `claude-8` 5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-09T04:30:00Z; it can start a build or a plan again in 9m; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 86%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-09T09:00:00Z; it takes reviews only; it can start a build or a plan again in 5h 39m; `muse` is idle, but nothing queued is for it; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` 5-hour usage is 87%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-09T04:50:00Z; it takes reviews only; it can start a build or a plan again in 1h 29m; waiting for their owners: #3437 held for `claude-8` until 21:30 (5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%))",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18702,7 +18704,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T03:04:56Z",
+  "loop_tick": "2026-11-09T03:16:48Z",
   "machine_disk": {
     "issue": null,
     "reading": {
