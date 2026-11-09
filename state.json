@@ -16214,11 +16214,6 @@
       "owner": "claude-4",
       "owner_since": "2026-11-09T00:51:42Z",
       "owner_why": "it took it up; released from its hold: `claude-1` has no runner free where it runs",
-      "paused": {
-        "at": "2026-11-08T23:01:19Z",
-        "interrupt": "usage",
-        "provider": "claude-1"
-      },
       "pending_request": false,
       "planned_at": "2026-11-08T14:41:24Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
