@@ -42,9 +42,10 @@ import type { FxAnchor, FxCue, FxPlanEnv, FxTakeoverCue, FxTint, TakeoverLook } 
  * "void", #96 My Pawn's "pawn", #97 Zephrys's "genie", Meditative #49 YileGPT's "ai"; R3400000 Meditative+
  * #1 Bob's Plan's "summit", #26 Scratch Pad's "canvas", Training Grounds #40 Goetzmann Game Design's
  * "napkin"; R3389000 Classic #90 In Too Deep's "abyss"; R3405000 Meditative's other Mythics' twelve, from
- * #8 Reach the Summit's "ascent" to #97.9 Jlockeed's Headquarters' "fortress"; R3395001 Stinkyscape #6
- * Tylannt's "vault", #16 Rod of Ages' "rod", #44 Great Paperclip Theory's "wire", #74 Paragon-X's
- * "whiteDwarf", #86 Prototype-X2's "forge"), else the shared "prismatic".
+ * #8 Reach the Summit's "ascent" to #97.9 Jlockeed's Headquarters' "fortress"; R3399002 Classic+'s four
+ * Mythics' "zealot", "portal", "stair" and "vineyard"; R3395001 Stinkyscape #6 Tylannt's "vault", #16 Rod of
+ * Ages' "rod", #44 Great Paperclip Theory's "wire", #74 Paragon-X's "whiteDwarf", #86 Prototype-X2's "forge"),
+ * else the shared "prismatic".
  */
 export function takeoverLookOf(defId: string, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): TakeoverLook {
   const entry = table.get(defId);
@@ -87,6 +88,12 @@ export const TAKEOVER_TINTS: Readonly<Record<TakeoverLook, FxTint>> = {
   caneRack: { rim: "#b91c1c", core: "#fef3c7", glow: "#f5f5f4" },
   warRoom: { rim: "#22d3ee", core: "#e0f2fe", glow: "#dc2626" },
   fortress: { rim: "#ef4444", core: "#e5e7eb", glow: "#475569" },
+  // R3399002: Classic+'s Mythics: Zephrys Zealotism's indigo cyclone, Portal to the Past's sepia vortex,
+  // Twice Forward's violet stair and its cyan cracks, Mythic Grape's violet grape over its green vines.
+  zealot: { rim: "#4f46e5", core: "#e0e7ff", glow: "#818cf8" },
+  portal: { rim: "#a16207", core: "#fef3c7", glow: "#d6a35c" },
+  stair: { rim: "#7c3aed", core: "#ede9fe", glow: "#22d3ee" },
+  vineyard: { rim: "#9333ea", core: "#f3e8ff", glow: "#65a30d" },
   // R3395001: Tylannt's steel vault and its green gap, Rod of Ages' pale bands in an indigo gulf, the paperclip's silver wire
   // and blue cores, Paragon-X's white dwarf, Prototype-X2's molten forge.
   vault: { rim: "#94a3b8", core: "#e2e8f0", glow: "#22c55e" },

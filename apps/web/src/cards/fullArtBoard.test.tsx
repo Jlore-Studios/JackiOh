@@ -265,9 +265,11 @@ describe("R3046000 a full-art Unit on the board", () => {
     expect(art?.getAttribute("data-art-picture")).toBe("alt");
   });
 
-  it("R3046000 the board holds the art still: Animated and Signature move and sign a full face alone", () => {
-    // R3015000: Full art's signed level, animated and signed.
+  it("R3046000 R3340000 a board face moves its art for an animated or signed level and signs and sweeps nothing: only a full face does", () => {
+    // R3015000: Full art's signed level, animated and signed. R3340000: a board face moves its art as the full face does, but
+    // its name is hidden or sits in a band, so it draws no signature, sweep or drift (R3046000).
     wear("core-004", VERSION_FULL_ART_SIGNED_ID);
+    wear("core-018", VERSION_FULL_ART_SIGNED_ID);
     const full = (() => {
       const { container } = render(<CardFace face={faceModel({ defId: "core-004", def: defOf("core-004"), radiant: false })} layout="full" worn />);
       return container.querySelector<HTMLElement>(".cf");
@@ -276,17 +278,25 @@ describe("R3046000 a full-art Unit on the board", () => {
     expect(full?.querySelector(".cf-signature"), "and signs it").not.toBeNull();
     cleanup();
 
-    for (const cf of [minionOf("core-004"), backrowOf("core-018")]) {
+    for (const cf of [minionOf("core-004"), backrowOf("core-018", { onBoard: true })]) {
+      const layout = cf.getAttribute("data-layout");
       expect(cf.getAttribute("data-full-art")).toBe("true");
-      for (const attribute of ["data-art-motion", "data-full-art-motion", "data-full-art-tier", "data-augments"]) {
-        expect(cf.hasAttribute(attribute), `${cf.getAttribute("data-layout")} ${attribute}`).toBe(false);
+      expect(cf.getAttribute("data-art-motion"), `${layout} moves its art`).toBe("animated");
+      expect(cf.querySelector("[data-art-moving]"), `${layout} draws moving art`).not.toBeNull();
+      for (const attribute of ["data-full-art-motion", "data-full-art-tier", "data-augments"]) {
+        expect(cf.hasAttribute(attribute), `${layout} ${attribute}`).toBe(false);
       }
       expect(cf.classList.contains("cf-full-art--animated")).toBe(false);
       expect(cf.classList.contains("cf-full-art--signed")).toBe(false);
-      expect(cf.querySelector(".cf-signature, .cf-full-art-sweep, [data-art-moving]")).toBeNull();
+      expect(cf.querySelector(".cf-signature, .cf-full-art-sweep")).toBeNull();
       expect(cf.querySelector(".cf-art")?.getAttribute("data-art-picture")).toBeNull();
       cleanup();
     }
+
+    // A compact face that is not a card in play (a picker's tile, a notice) holds still whatever its look.
+    const tile = backrowOf("core-018");
+    expect(tile.hasAttribute("data-art-motion")).toBe(false);
+    expect(tile.querySelector("[data-art-moving]")).toBeNull();
   });
 
   it("R3046000 a card that wears Animated alone, on its normal face, keeps its frame art", () => {
@@ -364,15 +374,15 @@ describe("R3046000 a full-art face-up backrow card", () => {
 });
 
 describe("R3046000 boardLookOf", () => {
-  it("R3046000 gives the version still where the full face prints full art, and null where it does not", () => {
+  it("R3046000 R3340000 gives the version, with the level's flags, where the full face prints full art, and null where it does not", () => {
     const face = faceModel({ defId: "core-004", def: defOf("core-004"), radiant: false });
     const plain = faceModel({ defId: "core-002", def: defOf("core-002"), radiant: false });
     const full = lookOfLevel(VERSION_FULL_ART_ID);
     const still = { level: VERSION_FULL_ART_ID, version: VERSION_FULL_ART_ID, animated: false, signed: false };
     expect(boardLookOf(face, full)).toEqual(still);
-    // Motion and a signature are the full face's alone (R3015000: the levels above the art).
-    expect(boardLookOf(face, lookOfLevel(VERSION_FULL_ART_ANIMATED_ID))).toEqual(still);
-    expect(boardLookOf(face, lookOfLevel(VERSION_FULL_ART_SIGNED_ID))).toEqual(still);
+    // R3340000: the levels above the art carry their flags, which a board face reads to move its art (R3015000).
+    expect(boardLookOf(face, lookOfLevel(VERSION_FULL_ART_ANIMATED_ID))).toEqual({ ...still, animated: true, signed: false });
+    expect(boardLookOf(face, lookOfLevel(VERSION_FULL_ART_SIGNED_ID))).toEqual({ ...still, animated: true, signed: true });
     expect(boardLookOf(face, NORMAL_LOOK)).toBeNull();
     expect(boardLookOf(plain, full)).toBeNull();
     // Alt full art lays its art across the face as Full art does (R2940001); `useCardLook` holds a pick to the offer.

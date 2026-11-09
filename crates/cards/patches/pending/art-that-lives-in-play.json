@@ -1,0 +1,20 @@
+{
+  "title": "Patch: art that lives in play",
+  "sources": "#3340",
+  "notes": "A board face's art moves for an animated or signed level and for every Mythic, in the motion slots the hand shares (ranked by the pointer or focus first, then Mythics, Legendaries and the rest newest first). A moving face's art answers the pointer, a press and an attack, and a unit's art wears cracks for the health it is missing, a glow when buffed and frost when frozen. Every Legendary and Mythic has its own motion recipe. How cards look only: nothing plays differently.",
+  "player": {
+    "title": "Art that lives in play",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "On the board, the art of every animated or signed card, and of every Mythic, keeps moving, a few cards at a time: the one under your pointer first, then Mythics, Legendaries and the rest.",
+      "A card's art answers you: its subject leans toward your pointer and the sparks scatter and settle, it flinches when you press it, and it swings toward its target when it attacks.",
+      "A damaged unit's art shows cracks that grow as its health falls, a buffed unit glows in its card's colours and a frozen one frosts over, even with reduced motion on.",
+      "Every Legendary and Mythic has a moving picture of its own."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

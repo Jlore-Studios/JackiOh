@@ -28,6 +28,10 @@
 // R3333000: a Starship's art is drawn from the pieces its view lists, oldest first, and its launch, in the hull design
 // of the name it launched under (the face's, `name`), a Dormant one in its shipyard (`data-art-design`). R3335000: a
 // launched one wears the Starship look its face gives (`look`), a hull pick's design in place of its name's.
+// R3340000: a board face given `live` draws its moving picture in three layers, the backdrop on the window itself and the
+// subject (`.cf-art-subject`) and the motes (`.cf-art-motes`) over it (`data-art-live`), which artLive.css turns toward the
+// pointer, presses and swings; where the picture has no parts (a delivered file, a restyle, a Starship's, a Legacy card's, a
+// Battleship's) it is one image. Given `wear`, its cracks, glow and frost sit over the picture whatever draws it (ArtWear.tsx).
 // R3337001: an Anomaly Found! in play holding a board (`FaceModel.anomaly`) wears that board's picture
 // (`data-art-anomaly`), one picture as a Starship's is; a code that is none of the ten draws the card's own.
 
@@ -39,6 +43,7 @@ import { isAnomalyCode, type AnomalyCode } from "../anomalies.ts";
 import type { StarshipPieceRef } from "../../wire/generated/StarshipPieceRef.ts";
 import { useDefResolver } from "../refContext.tsx";
 import { artSubjectOf } from "./fusedArt.ts";
+import { ArtWear } from "./ArtWear.tsx";
 import { ART_MANIFEST, artUrl, type ArtManifest } from "./manifest.ts";
 import type { ArtMotion } from "./motion.ts";
 import { canWatchArt, whenNear } from "./near.ts";
@@ -47,11 +52,12 @@ import { artSeedOf, isRepaint, restyleOf, type ArtPart, type ArtPicture } from "
 import { starshipArtOf } from "./starshipHulls.ts";
 import type { StarshipLook } from "./starshipLooks.ts";
 import { isStinkyscapeArt, shipDecksOf, stinkySubject, type ShipArt } from "./stinkyscape.ts";
-import { anomalyArtUri, legacyArtUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
+import { anomalyArtUri, legacyArtUri, particleLayerUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
-import { compositionOf, themeFor, THEME_PALETTES } from "./themes.ts";
+import { compositionOf, themeFor, THEME_PALETTES, type ArtThemeId } from "./themes.ts";
 
 import "./art.css";
+import "./artLive.css";
 
 export type ArtShape = "portrait" | "window" | "arch" | "notched" | "oval" | "strip" | "full" | "frame" | "plane";
 
@@ -84,9 +90,16 @@ export type CardArtProps = {
   part?: ArtPart;
   /** R3336000: a Drone Battleship layer on the board (`shipArtOf`) draws the decks of its ship still standing; null draws its printed picture. */
   ship?: ShipArt | null;
+  /** R3340000: a board face whose art moves answers the player: its picture is drawn in layers (backdrop, subject, motes) that artLive.css moves. */
+  live?: boolean;
+  /** R3340000: what the unit's art wears: its damage level (wear.ts), buffed and frozen. Null or absent: nothing. */
+  wear?: ArtWearState | null;
   /** R3335000: the Starship look a launched Starship wears (cosmetics.ts `useStarshipLook`); null draws it in none. */
   look?: StarshipLook | null;
 };
+
+/** R3340000: the marks a unit's art wears (`ArtWear`). */
+export type ArtWearState = { damage: number; buffed: boolean; frozen: boolean };
 
 /**
  * R2943001: whether a window draws a card's picture in parts (`ArtPart`): its painter's own, which a Starship in play
@@ -96,6 +109,10 @@ export function hasArtParts(defId: string, starship: CardArtProps["starship"], a
   return starship == null && heldAnomaly(anomaly) === null && snapshotArtOf(defId) === null;
 }
 
+/** R3340000: a buffed unit's glow takes its card's theme colour (themes.ts `glow`), read by artLive.css as `--art-glow`. */
+function wearStyle(wear: ArtWearState | null, theme: ArtThemeId): CSSProperties {
+  return wear?.buffed === true ? ({ "--art-glow": THEME_PALETTES[theme].glow } as CSSProperties) : {};
+}
 /** R3337001: the board whose picture a window draws: the held code, if it is one of the ten. */
 function heldAnomaly(anomaly: CardArtProps["anomaly"]): AnomalyCode | null {
   return isAnomalyCode(anomaly) ? anomaly : null;
@@ -137,6 +154,8 @@ export function CardArt({
   picture = "normal",
   part = "whole",
   ship = null,
+  live = false,
+  wear = null,
   look = null,
 }: CardArtProps): ReactElement {
   // Keep failures per source so cards and faces retry independently.
@@ -185,7 +204,11 @@ export function CardArt({
         data-art="real"
         data-art-theme={theme}
         data-art-variant={variant}
+        data-art-damage={wear !== null && wear.damage > 0 ? wear.damage : undefined}
+        data-art-buffed={wear?.buffed === true ? "true" : undefined}
+        data-art-frozen={wear?.frozen === true ? "true" : undefined}
         aria-hidden="true"
+        style={wearStyle(wear, theme)}
       >
         <img
           className="cf-art-img"
@@ -197,6 +220,7 @@ export function CardArt({
           onError={() => setFailedSrc(src)}
         />
         {real.tint ? <span className="cf-art-tint" /> : null}
+        {wear !== null && <ArtWear damage={wear.damage} buffed={wear.buffed} frozen={wear.frozen} seedId={defId} />}
       </span>
     );
   }
@@ -204,19 +228,22 @@ export function CardArt({
   // R3333000: the design a Starship wears is its launched name's, the face's (`artSubjectOf` may stand another for it).
   // R3335000: a launched one in its seat's look, its hull pick's design in place of its name's.
   const starshipArt = starship === null ? null : starshipArtOf(starship.list, starship.launched, shownName, radiant, look);
-  const uri = !near
-    ? null
-    : starshipArt !== null
+  // R3340000: the picture as `m` moves it, whole or one part of it (a live face's layers).
+  const drawn = (m: ArtMotion | null, p: ArtPart): string =>
+    starshipArt !== null
       ? starshipArtUri(starshipArt, restyle)
       : anomaly !== null
         ? anomalyArtUri(anomaly, radiant, restyle)
         : stinky
-          ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split, ship)
+          ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, m, seedId, restyle, p, ship)
           : yard
-            ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, motion, seedId, restyle, split)
+            ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, m, seedId, restyle, p)
             : coreId !== null
               ? legacyArtUri(defId, coreId, cardName, tags, type, radiant, restyle)
-              : proceduralArtUri(seedId, theme, compositionOf(defId, type), radiant, motif, motion, restyle, split);
+              : proceduralArtUri(seedId, theme, compositionOf(defId, type), radiant, motif, m, restyle, p);
+  // R3340000: a live face's picture is in layers where it has parts to lay: a painter's own, whole, with a motion, no Battleship and no Anomaly's board (one picture).
+  const layered = live && motion !== null && near && starshipArt === null && anomaly === null && coreId === null && restyle === null && split === "whole" && ship === null;
+  const uri = !near ? null : layered ? drawn({ ...motion, detached: true }, "backdrop") : drawn(motion, split);
   const family =
     starship !== null
       ? "starship"
@@ -244,12 +271,24 @@ export function CardArt({
       data-art-decks={stinky ? (shipDecksOf(defId, ship) ?? undefined) : undefined}
       data-art-pending={uri === null ? "true" : undefined}
       data-art-moving={uri !== null && starship === null && anomaly === null && coreId === null && motion !== null ? "true" : undefined}
+      data-art-live={layered ? "true" : undefined}
+      data-art-damage={wear !== null && wear.damage > 0 ? wear.damage : undefined}
+      data-art-buffed={wear?.buffed === true ? "true" : undefined}
+      data-art-frozen={wear?.frozen === true ? "true" : undefined}
       aria-hidden="true"
       style={
         uri === null
-          ? ({ "--art-sky-1": skyTop, "--art-sky-2": skyBottom } as CSSProperties)
-          : { backgroundImage: `url("${uri}")`, backgroundSize: "cover" }
+          ? ({ "--art-sky-1": skyTop, "--art-sky-2": skyBottom, ...wearStyle(wear, theme) } as CSSProperties)
+          : { backgroundImage: `url("${uri}")`, backgroundSize: "cover", ...wearStyle(wear, theme) }
       }
-    />
+    >
+      {layered && motion !== null && (
+        <>
+          <span className="cf-art-layer cf-art-subject" style={{ backgroundImage: `url("${drawn(motion, "subject")}")` }} />
+          <span className="cf-art-layer cf-art-motes" style={{ backgroundImage: `url("${particleLayerUri(motion, seedId)}")` }} />
+        </>
+      )}
+      {wear !== null && <ArtWear damage={wear.damage} buffed={wear.buffed} frozen={wear.frozen} seedId={seedId} />}
+    </span>
   );
 }

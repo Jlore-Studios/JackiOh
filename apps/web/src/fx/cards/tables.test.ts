@@ -401,6 +401,11 @@ describe("R2784000 the per-set effects tables", () => {
       "meditative-071-1": "caneRack",
       "meditative-097": "warRoom",
       "meditative-097-9": "fortress",
+      // R3399002: Classic+'s four Mythics.
+      "classicplus-027": "zealot",
+      "classicplus-029": "portal",
+      "classicplus-065-5": "vineyard",
+      "classicplus-074": "stair",
       // R3395001: Stinkyscape's five Mythics.
       "stinkyscape-006": "vault",
       "stinkyscape-016": "rod",
@@ -410,15 +415,18 @@ describe("R2784000 the per-set effects tables", () => {
     };
     for (const [defId, look] of Object.entries(looks)) expect(takeoverLookOf(defId), defId).toBe(look);
     expect(Object.keys(OWN_TAKEOVER_LOOKS).sort()).toEqual(Object.values(looks).sort());
+    // R3399000: Classic+'s signatures' seventeen entrances.
+    const classicPlus = [...FX_CARD_TABLE.keys()].filter((defId) => defId.startsWith("classicplus-")).flatMap((defId) => entranceKeyOf(defId) ?? []);
+    expect(classicPlus).toHaveLength(17);
     // Every entrance the table names is a recipe, and the four marquees', the signature Units', (R3334004) the
-    // Dormant Starship's and Starfleet Commander's and Classic's signatures' are all of them.
+    // Dormant Starship's and Starfleet Commander's and Classic's and Classic+'s signatures' are all of them.
     const named = [...FX_CARD_TABLE.keys()].flatMap((defId) => {
       const key = entranceKeyOf(defId);
       return key === undefined ? [] : [key];
     });
     for (const key of named) expect(typeof ENTRANCES[key], key).toBe("function");
     expect(new Set(named)).toEqual(
-      new Set([...Object.values(entrances), ...Object.values(signatureEntrances), ...Object.values(classicEntrances), ...Object.values(meditativeEntrances), "shipyardRollout", "fleetCommand"]),
+      new Set([...Object.values(entrances), ...Object.values(signatureEntrances), ...Object.values(classicEntrances), ...Object.values(meditativeEntrances), ...classicPlus, "shipyardRollout", "fleetCommand"]),
     );
     expect(Object.keys(ENTRANCES).sort()).toEqual([...new Set(named)].sort());
   });
@@ -474,6 +482,7 @@ describe("R2784000 the per-set effects tables", () => {
     says(`"core-035": { aura: { look: "ember", scope: "lane" } }`, /core-035: a lane aura stands in a zone; this card is a Spell, whose aura is side or board$/);
     expect(parse(`"core-035": { aura: { look: "ember", scope: "side" } }`).get("core-035")).toEqual({ kind: "hooks", hooks: {}, aura: { look: "ember", scope: "side" } });
     expect(parse(`"core-035": { aura: { look: "ember", scope: "board" } }`).get("core-035")?.kind).toBe("hooks");
+    says(`"core-021": { bespoke: "manaCrack", aura: { look: "frost", scope: "zone" } }`, /core-021: a zone aura stands in a zone; this card is a Spell, whose aura is side or board$/);
     // R3400000: a bespoke entry may wear one too (its test below).
     expect(parse(`"core-021": { bespoke: "manaCrack", aura: { look: "frost", scope: "side" } }`).get("core-021")).toEqual({ kind: "bespoke", key: "manaCrack", aura: { look: "frost", scope: "side" } });
     says(`"core-035": {}`, /core-035: names no hook/);
@@ -515,6 +524,41 @@ describe("R2784000 the per-set effects tables", () => {
     expect(FX_CARD_TABLE.get("traininggrounds-038")).toMatchObject({ aura: { look: "chalk", scope: "tile" } });
   });
 
+  it("R3399001 a Classic+ signature's own look parses beside its bespoke or alone, a Unit's on its tile, and each permanent wears its own", () => {
+    const parse = (body: string) => parseFxCardTable("test.json5", `{ ${body} }`);
+    const says = (body: string, problem: RegExp): void => {
+      expect(() => parse(body)).toThrow(problem);
+    };
+    // A Unit's own look on its tile (R3400000), beside a bespoke or alone (Classic+'s Mother Pancake, Top Loser).
+    expect(parse(`"classicplus-012": { bespoke: "pancakeFlip", aura: { look: "syrup", scope: "tile" }, entrance: "pancakeStack", signature: true }`).get("classicplus-012")).toEqual({
+      kind: "bespoke",
+      key: "pancakeFlip",
+      aura: { look: "syrup", scope: "tile" },
+      entrance: "pancakeStack",
+      signature: true,
+    });
+    expect(parse(`"classicplus-019-1": { aura: { look: "laneWall", scope: "tile" }, entrance: "shieldPlant", signature: true }`).get("classicplus-019-1")).toEqual({
+      kind: "hooks",
+      hooks: {},
+      aura: { look: "laneWall", scope: "tile" },
+      entrance: "shieldPlant",
+      signature: true,
+    });
+    // A Unit's aura stands on its tile, never its zone's lane; a Field Spell's on its own zone.
+    says(`"classicplus-012": { bespoke: "pancakeFlip", aura: { look: "syrup", scope: "lane" }, entrance: "pancakeStack", signature: true }`, /classicplus-012: a lane aura stands in a zone; this card is a Unit, whose aura is side or board$/);
+    expect(entryAura(FX_CARD_TABLE.get("classicplus-012"))).toEqual({ look: "syrup", scope: "tile" });
+    expect(entryAura(FX_CARD_TABLE.get("classicplus-019-1"))).toEqual({ look: "laneWall", palette: "Physical/steel", scope: "tile" });
+    expect(entryAura(FX_CARD_TABLE.get("classicplus-078"))).toEqual({ look: "serverLights", palette: "Tech/hologram", scope: "zone" });
+    // Every Classic+ signature permanent with an aura wears a look of its own; every Unit's is a tile one.
+    for (const [defId, entry] of FX_CARD_TABLE) {
+      const aura = entryAura(entry);
+      if (!defId.startsWith("classicplus-") || !isSignature(entry) || aura === undefined) continue;
+      expect(AURA_SIGNATURE_LOOK_NAMES, defId).toContain(aura.look);
+      if (CATALOG[defId]?.type === "Unit") expect(aura.scope, defId).toBe("tile");
+    }
+    says(`"core-088": { setPiece: "nether", aura: { look: "void", scope: "board" } }`, /core-088: a setPiece entry holds nothing else but its frame$/);
+    says(`"core-021": { bespoke: "manaCrack", cast: { motif: "bolt" } }`, /core-021: a bespoke entry holds nothing else but its frame and its aura$/);
+  });
   it("R3395001 Stinkyscape's signature Field Spells wear their own laserGrid, silverRise and labHaze in their zones, and its signature Units an aura on their tiles", () => {
     const parse = (body: string) => parseFxCardTable("test.json5", `{ ${body} }`);
     for (const look of ["laserGrid", "silverRise", "labHaze"] as const) expect(AURA_SIGNATURE_LOOK_NAMES, look).toContain(look);
@@ -538,39 +582,39 @@ describe("R2784000 the per-set effects tables", () => {
   });
 
   it("R2787000 R2794000 R3405001 the ten example Field Spells across the sets wear their auras", () => {
-    const examples = {
-      "core-014": { look: "storm", scope: "side" },
-      "core-046": { look: "void", scope: "board" },
-      "classic-042": { look: "toxic", scope: "board" },
-      "classic-075": { look: "holy", scope: "side" },
-      "classicplus-034": { look: "frost", palette: "Tech", scope: "lane" },
-      // R3405001: Feng Shui's signature stands its compass ring on its own zone.
-      "meditative-040": { look: "orbit", scope: "zone" },
-      "meditativeplus-009": { look: "arcane", scope: "board" },
-      "stinkyscape-046": { look: "storm", scope: "lane" },
-      "stinkyscape-155": { look: "ember", scope: "zone" },
-      "traininggrounds-019": { look: "bloom", scope: "zone" },
-    };
-    expect(Object.keys(examples)).toHaveLength(10);
-    // R2794000: Classic's pass gave its two examples their play's motifs beside the aura.
-    const hooksOf: Readonly<Record<string, object>> = {
-      "classic-042": { cast: { motif: "tally" }, activate: { motif: "tally" } },
-      "classic-075": { cast: { motif: "bless" } },
-    };
-    const files = new Set<string>();
-    for (const [defId, aura] of Object.entries(examples)) {
-      expect(CATALOG[defId]?.type, defId).toBe("Field Spell");
-      // A set's pass may give the card hooks beside its aura (#2793 gave Core #14 and #46 a cast, #2796
-      // Meditative #40 and Meditative+ #9, R2795000 Classic+ #34 its bind); the aura stays the example's.
-      // R3400000: or a bespoke recipe of its own beside it (R3405001 Meditative #40's signature).
-      const entry = FX_CARD_TABLE.get(defId);
-      expect(entry?.kind, defId).toBe(defId === "meditative-040" ? "bespoke" : "hooks");
-      expect(entry?.kind === "hooks" || entry?.kind === "bespoke" ? entry.aura : undefined, defId).toEqual(aura);
-      const hooks = hooksOf[defId];
-      if (hooks !== undefined) expect(entry, defId).toEqual({ kind: "hooks", hooks, aura });
-      const file = FX_CARD_FILES.find((candidate) => parseFxCardTable(candidate.file, candidate.source).has(defId));
-      if (file !== undefined) files.add(file.file);
-    }
-    expect(files.size).toBe(FX_CARD_FILES.length);
-  });
+  const examples = {
+    "core-014": { look: "storm", scope: "side" },
+    "core-046": { look: "void", scope: "board" },
+    "classic-042": { look: "toxic", scope: "board" },
+    "classic-075": { look: "holy", scope: "side" },
+    "classicplus-034": { look: "frost", palette: "Tech", scope: "lane" },
+    // R3405001: Feng Shui's signature stands its compass ring on its own zone.
+    "meditative-040": { look: "orbit", scope: "zone" },
+    "meditativeplus-009": { look: "arcane", scope: "board" },
+    "stinkyscape-046": { look: "storm", scope: "lane" },
+    "stinkyscape-155": { look: "ember", scope: "zone" },
+    "traininggrounds-019": { look: "bloom", scope: "zone" },
+  };
+  expect(Object.keys(examples)).toHaveLength(10);
+  // R2794000: Classic's pass gave its two examples their play's motifs beside the aura.
+  const hooksOf: Readonly<Record<string, object>> = {
+    "classic-042": { cast: { motif: "tally" }, activate: { motif: "tally" } },
+    "classic-075": { cast: { motif: "bless" } },
+  };
+  const files = new Set<string>();
+  for (const [defId, aura] of Object.entries(examples)) {
+    expect(CATALOG[defId]?.type, defId).toBe("Field Spell");
+    // A set's pass may give the card hooks beside its aura (#2793 gave Core #14 and #46 a cast, #2796
+    // Meditative #40 and Meditative+ #9, R2795000 Classic+ #34 its bind); the aura stays the example's.
+    // R3400000: or a bespoke recipe of its own beside it (R3405001 Meditative #40's signature).
+    const entry = FX_CARD_TABLE.get(defId);
+    expect(entry?.kind, defId).toBe(defId === "meditative-040" ? "bespoke" : "hooks");
+    expect(entry?.kind === "hooks" || entry?.kind === "bespoke" ? entry.aura : undefined, defId).toEqual(aura);
+    const hooks = hooksOf[defId];
+    if (hooks !== undefined) expect(entry, defId).toEqual({ kind: "hooks", hooks, aura });
+    const file = FX_CARD_FILES.find((candidate) => parseFxCardTable(candidate.file, candidate.source).has(defId));
+    if (file !== undefined) files.add(file.file);
+  }
+  expect(files.size).toBe(FX_CARD_FILES.length);
+});
 });

@@ -7,7 +7,8 @@
 // entrance as it lands), or as the fixture set piece (R2785000), its play holding the board for the set
 // piece's beat until a tap, a click or Space. R3332000: it lists every card's signature by set, for a
 // person to review each one; R3332001 a signature whose entrance reads the board plays over its own
-// (`galleryBoardOf`: Felinor Fiender's over three Felinors). Dev only: chunks.tsx loads it behind
+// (`galleryBoardOf`: Felinor Fiender's over three Felinors); R3399000 every card's play starts from the card in the
+// viewer's hand (`galleryHandOf`), so a cast's and a Mythic Spell's takeover rise from it. Dev only: chunks.tsx loads it behind
 // DEV_ONLY, so a production build leaves it out and serves a 404 here, as at `/dev/hotseat`.
 // R3346000: it plays every play impact, each type at each cost tier, with the board shake a heavy or
 // massive one brings, and a trap's set click and snap, side by side for review by ear.
@@ -37,6 +38,7 @@ import {
   galleryCues,
   galleryEntry,
   galleryFieldView,
+  galleryHandOf,
   galleryPlayId,
   galleryPlayOf,
   gallerySetPiece,
@@ -199,8 +201,9 @@ export default function FxGallery(): ReactElement {
     setSetPieceId(asSetPiece ? galleryPlayId(plays.current) : null);
     // R3332001: a board of the entrance's own goes up first, with no new events, so the board plans the
     // play against it (Game plans against the view it still shows).
+    // R3399000: and the card in the viewer's hand, where its play starts (a cast's and a takeover's anchor).
     const board = galleryBoardOf(card.defId, base);
-    if (board !== base) flushSync(() => setShown(board));
+    flushSync(() => setShown(galleryHandOf(card.defId, board, plays.current)));
     setShown(withEvents(galleryFieldView(card.defId, board), galleryCardEvents(card.defId, card.play, board, plays.current)));
   };
   // R2784000: every system moment through the real planner, on the gallery director.

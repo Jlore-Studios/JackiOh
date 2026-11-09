@@ -7,6 +7,7 @@
 // Anomaly cast (its rift, flare, title card and landing). R3332001: Felinor Fiender's signature, the first,
 // over the gallery's board with its three Felinors. R3389001: Classic's two heaviest signatures, In Too Deep's
 // (its own abyss takeover) and BOOM! Big Max's. R3338000: Ceaseless Void's fold and Dice of Doom's 67.
+// R3340000: a board of six moving faces (every Mythic's art moves on the board, in the six motion slots).
 // R3344001: a hand with one face tilted under a pointer that keeps moving over it, its planes parallaxing
 // under its glare. R3334002: a launched Starship's broadside of eight guns, at the slowest effects speed.
 // R3400001: Goetzmann Game Design's and Bob's Plan's signatures, the two heaviest of Meditative+'s and Training
@@ -16,6 +17,7 @@
 // R3407000: xxFreshJack's and Alteran Reach's, the two heaviest of Stinkyscape part two's, their takeovers
 // drawing their cards' own pictures full screen. R3405001: Keymaster Keenus's and Jlockeed's Headquarters',
 // the two heaviest of Meditative's, the second over its own takeover's art.
+// R3399000: Classic+'s two heaviest signatures (`PHONE_HEAVIEST_SIGNATURES`).
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-phone-frame.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -25,7 +27,14 @@ import { planTileAuras } from "../../../apps/web/src/fx/aura/tile.ts";
 import { FX_CARD_TABLE } from "../../../apps/web/src/fx/cards/tables.ts";
 import { FX_PARTICLE_CAP_MOBILE, FX_PHONE_FRAME_BUDGET_MS, FX_SETTINGS_KEY, FX_SPEED_MIN } from "../../../apps/web/src/fx/constants.ts";
 import { capacityFor } from "../../../apps/web/src/fx/director.ts";
-import { doomFixture, galleryBoardOf, galleryCardEvents, galleryFieldView, galleryPlayOf } from "../../../apps/web/src/fx/motifs/gallery.ts";
+import {
+  PHONE_HEAVIEST_SIGNATURES,
+  doomFixture,
+  galleryBoardOf,
+  galleryCardEvents,
+  galleryFieldView,
+  galleryPlayOf,
+} from "../../../apps/web/src/fx/motifs/gallery.ts";
 import { DEFAULT_FX_SETTINGS, setFxSettings } from "../../../apps/web/src/fx/settings.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
@@ -418,6 +427,24 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
     });
   }
 
+  // R3399000: Classic+'s two heaviest signatures, by the particles their gallery plays plan (PHONE_HEAVIEST_SIGNATURES).
+  for (const defId of PHONE_HEAVIEST_SIGNATURES) {
+    it(`R3399000 ${defId}'s signature holds the phone frame budget mid-flight`, () => {
+      cy.viewport(PHONE.width, PHONE.height);
+      const entry = FX_CARD_TABLE.get(defId);
+      const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${defId} has no gallery play`);
+      const board = galleryBoardOf(defId, fullBoardView());
+      holdsBudget(`${defId}'s signature`, () => {
+        mountScene(board, galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
+        cy.get(GAME).find("[data-animating]").should("exist");
+        cy.get(CANVAS).should("exist");
+        return sampleFrames();
+      });
+      cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+    });
+  }
+
   // R3407000: Stinkyscape part two's two heaviest: a Mythic Unit's and a Mythic Field Spell's, each its takeover
   // over its card's own picture, its own entrance and its text's beat.
   for (const [defId, name, look] of [
@@ -478,6 +505,21 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
     });
     cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
     cy.get(GAME).should("not.have.attr", "data-set-piece");
+  });
+
+  it("R3340000 a board of six moving faces holds the phone frame budget", () => {
+    cy.viewport(PHONE.width, PHONE.height);
+    // The fixture's opponent already fields Ceaseless Void, a Mythic; five Mythic Units of ours make the six faces whose art moves.
+    const view = fullBoardView();
+    const MYTHICS = ["meditative-049", "stinkyscape-006", "stinkyscape-074", "stinkyscape-086", "stinkyscape-109"];
+    view.you.units = MYTHICS.map((defId) => unit("p1", { defId }));
+    holdsBudget("Six moving faces", () => {
+      mountScene(view, view, []);
+      cy.get('[data-art-motion="animated"]', { timeout: 4_000 }).should("have.length", 6);
+      cy.get('[data-art-motion="animated"] [data-art-moving="true"]').should("have.length", 6);
+      cy.get(CANVAS).should("exist");
+      return sampleFrames();
+    });
   });
 
   it("R3344001 a hand with one tilted face holds the phone frame budget", () => {

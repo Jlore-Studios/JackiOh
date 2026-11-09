@@ -4007,6 +4007,7 @@
   "{games} games": "{games} 局",
   "Data for patch {patch} is still being collected at this time.": "版本 {patch} 的数据目前仍在收集中。",
   "See patch {patch}": "查看版本 {patch}",
+  "Collected on patch {patch}": "收集于版本 {patch}",
   "Columns": "列",
   "Other created cards": "其他创造的卡牌",
   "Tokens made during the game.": "对局中生成的衍生物。",
