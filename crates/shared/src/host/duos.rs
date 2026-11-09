@@ -25,10 +25,10 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use jackioh_engine::duos::{DuosState, duos_legal_actions, duos_reduce, duos_seats_to_act, duos_view_for};
-use jackioh_engine::{CombatForecast, combat_forecast, mulligan_owed};
 use jackioh_engine::wire::{
     ActionBody, DUOS_SEATS, DuosAction, DuosActionBody, DuosResult, DuosSeat, DuosView,
 };
+use jackioh_engine::{CombatForecast, combat_forecast, mulligan_owed};
 
 use super::bot::r188_forbidden;
 use super::clock::match_ceiling_at;

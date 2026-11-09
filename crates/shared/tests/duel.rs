@@ -1488,9 +1488,7 @@ mod the_forecast {
 
     #[test]
     fn r3477000_a_seats_view_carries_the_forecast_and_reads_no_hidden_card() {
-        let side = |hand: &str, backrow: &str, library: [&str; 2]| {
-            json!({ "field": ["core-008"], "hand": [hand], "backrow": [backrow], "library": library })
-        };
+        let side = |hand: &str, backrow: &str, library: [&str; 2]| json!({ "field": ["core-008"], "hand": [hand], "backrow": [backrow], "library": library });
         let plain = json!({
             "seed": "r3477000",
             "active": "p1",
@@ -1516,7 +1514,9 @@ mod the_forecast {
             jackioh_engine::view_for(&hidden.state, P1),
             "the premise: p1 is shown the same board"
         );
-        let forecast = plain.forecast.expect("R3477000: a seat's view carries its forecast");
+        let forecast = plain
+            .forecast
+            .expect("R3477000: a seat's view carries its forecast");
         assert_eq!(Some(&forecast), hidden.forecast.as_ref());
         assert_eq!(forecast, jackioh_engine::combat_forecast(&plain.state, P1));
         let attacks: Vec<(String, String)> = plain
@@ -1565,7 +1565,10 @@ mod the_forecast {
                     unreachable!()
                 };
                 assert_eq!(view.viewer, home);
-                assert!(forecast.is_some(), "R3477000: every seat's view carries a forecast");
+                assert!(
+                    forecast.is_some(),
+                    "R3477000: every seat's view carries a forecast"
+                );
             }
         }
         let active = table.active();

@@ -194,7 +194,7 @@ The human goes first in every lesson. Every other mechanic the Field Guide holds
     - The first time an entry is found, the coach shows a discovery bubble that names the rule ("You found Cry: it happens when you play the unit from your hand"), with Got it.
     - The bubble shows if the entry is on this lesson's list, or the player has not met it before and no later lesson holds it ([[R2434001]]). At most `TUTORIAL_BUBBLES_PER_MOVE_MAX` (2) "Got it"s show between two of the player's moves; any further entry is found without a bubble.
   - **Hints.** A moment carries a nudge and a pointed hint that rings the card, the lane or the hero. The level rises with each of the player's own turns the moment stays unfound, or with each Hint press; the bubble offers Hint while a hint is left.
-  - **What the coach reads.** The human's view, the human's legal actions, whether the AI owes a move, the public catalog and the engine's forecast of the human's attacks (what each would do, as the board shows it), and nothing else. So it shows nothing the board does not, and it decides nothing ([[R292]], [[R3100000]]).
+  - **What the coach reads.** The human's view, the human's legal actions, whether the AI owes a move, the public catalog and the engine's forecast of the human's attacks (what each would do, as the board shows it), and nothing else. So it shows nothing the board does not, and it decides nothing ([[R292]], [[R3100000]]). Every seat's view carries that forecast ([[R3477000]]), but a lesson's board draws no attack outcome, so its discoveries stay the player's to find.
   - **Nothing strands the player** ([[R314]]).
     - There is no Skip step.
     - A moment never holds the AI; only a tip or an `info` step does, and each shows Got it.

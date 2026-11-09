@@ -279,6 +279,8 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
       legal={snapshot.legal}
       onAction={onAction}
       error={snapshot.error}
+      // R3477000: the practice snapshot's forecast of the human's attacks.
+      forecast={snapshot.forecast}
       emotes={emotes}
       // A fight counts in the run's own stats (DR9), not the device's (R639).
       trackStats={false}

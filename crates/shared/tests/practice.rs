@@ -656,7 +656,11 @@ fn r3477000_a_free_games_every_snapshot_holds_the_forecast_of_the_humans_attacks
             let body = random_action(session.state(), seat, &mut human).expect("the human owes an action");
             session.act(body);
         }
-        let forecast = session.snapshot().forecast.clone().expect("every snapshot holds one");
+        let forecast = session
+            .snapshot()
+            .forecast
+            .clone()
+            .expect("every snapshot holds one");
         assert_eq!(
             forecast,
             jackioh_engine::combat_forecast(session.state(), session.host.human_seat())
@@ -664,8 +668,16 @@ fn r3477000_a_free_games_every_snapshot_holds_the_forecast_of_the_humans_attacks
         forecast_attacks += forecast.attacks.len();
     }
     assert!(session.host.is_over(), "the game ends within {MOVE_CAP} actions");
-    assert!(session.snapshots.iter().all(|snapshot| snapshot.forecast.is_some()));
-    assert!(forecast_attacks > 0, "the premise: some snapshot forecast an attack");
+    assert!(
+        session
+            .snapshots
+            .iter()
+            .all(|snapshot| snapshot.forecast.is_some())
+    );
+    assert!(
+        forecast_attacks > 0,
+        "the premise: some snapshot forecast an attack"
+    );
 }
 
 #[test]
