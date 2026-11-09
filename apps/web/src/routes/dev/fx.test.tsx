@@ -7,7 +7,7 @@
 // R2785000: it plays a card as the fixture set piece, which holds the board until a click skips it.
 // R3332000: it lists every signature by set; R3332001 plays Felinor Fiender's over its Felinors.
 // R3400001: Meditative+'s and Training Grounds' eight signatures, each tile aura standing as its Unit lands.
-// R3389001: Classic's eleven.
+// R3389001: Classic's eleven. R3395000: Stinkyscape 001 to 090's 24.
 // R3407000: Stinkyscape part two's 23, each Unit's look on its tile and each Field Spell's on its zone.
 // R3405001: Meditative's 32, each aura standing where its card stands.
 // R3399000: every Classic+ signature, and R3399001 each signature Unit wearing its own look on its tile.
@@ -78,8 +78,9 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     // Universe's and the Stinkyscape Golem's signatures, which were `none`. R3405001: Meditative's six
     // signatures that were `none` (Jade Beauty, AI Girlfriend, Keymaster Keenus, Mayor Medinamogger, Prison,
     // Jlockeed's Headquarters). R3399000: Classic+'s 104 (its eight tokens printed Legendary or Mythic that were
-    // `none` are signatures now).
-    expect(cards).toHaveLength(669);
+    // `none` are signatures now). R3395000: Tylannt's, Paragon Mk2's and Siva 2's signatures, which were `none`
+    // (Stinkyscape 001 to 090's 97).
+    expect(cards).toHaveLength(672);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });
@@ -250,6 +251,32 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
       if (type === "Unit") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["tile", 3]]);
       else if (type === "Field Spell") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["zone", 1]]);
       else expect(auras, defId).toEqual([]);
+    }
+  });
+
+  it("R3395000 the gallery lists and plays Stinkyscape 001 to 090's 24 signatures, each aura on its own tile or zone", () => {
+    const ids = ["006", "007", "016", "018", "026", "034", "035", "037", "039", "044", "058", "059", "060", "061", "066", "070", "071", "073", "074", "080", "085", "086", "087", "088"].map((n) => `stinkyscape-${n}`);
+    const stinkyscape = gallerySignatures().find((group) => group.set === "Stinkyscape")?.cards.map((card) => card.defId) ?? [];
+    expect(stinkyscape.filter((defId) => ids.includes(defId))).toEqual(ids);
+    for (const defId of ids) {
+      // Its aura stands where its gallery play lands it: a Unit's on its tile, a Field Spell's in its zone, a Spell's nowhere.
+      const auras = planAuras(galleryFieldView(defId, galleryBoardOf(defId, fullBoardView())), new Map()).filter((aura) => aura.defId === defId);
+      const type = CATALOG[defId]?.type;
+      if (type === "Unit") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["tile", 3]]);
+      else if (type === "Field Spell") expect(auras.map((aura) => [aura.scope, aura.lane]), defId).toEqual([["zone", 1]]);
+      else expect(auras, defId).toEqual([]);
+    }
+    // The rendered gallery offers all 24 and plays one of each kind (fx/cards/stinkyscape/signatures.test.ts plans
+    // every one, fx-signature-stinkyscape-1.cy.tsx draws every one): a Mythic Unit's takeover and entrance, a Field
+    // Spell's landing, a Spell's cast and an entrance alone.
+    render(<FxGallery />);
+    const select = screen.getByTestId(fxGalleryTestid.signature);
+    const offered = [...select.querySelectorAll("option")].map((option) => option.value);
+    for (const defId of ids) expect(offered, defId).toContain(defId);
+    for (const defId of ["stinkyscape-006", "stinkyscape-007", "stinkyscape-034", "stinkyscape-073"]) {
+      fireEvent.change(select, { target: { value: defId } });
+      fireEvent.click(screen.getByTestId(fxGalleryTestid.playSignature));
+      expect(screen.getByTestId("game").querySelector("[data-animating]"), defId).not.toBeNull();
     }
   });
 

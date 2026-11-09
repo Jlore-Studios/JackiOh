@@ -181,8 +181,6 @@ const S2 = {
   FX_MIND_JUDGE_TRAUMA: 0.1,
   // Issue #2797: Stinkyscape's Flourishes (R2797000).
   FX_TERMINUS_TRAUMA: 0.5,
-  FX_MAGI_STAGGER: 0.05,
-  FX_MAGI_BOOTS: 3,
   FX_MAGI_TRAUMA: 0.3,
   FX_WARP_TRAUMA: 0.6,
   FX_WARP_FROM: { x: 0.5, y: 0 },
@@ -416,8 +414,7 @@ describe("S2 the effects constants", () => {
       // R2789000: the beats' stagger cap and a First Strike's break-off.
       constants.FX_BEAT_STAGGER_MAX,
       constants.FX_FIRST_STRIKE_BREAK_AT,
-      // R2797000: Imitated Instrumentality's stagger, and where Drone Core X's Battleship warps in from.
-      constants.FX_MAGI_STAGGER,
+      // R2797000: where Drone Core X's Battleship warps in from.
       constants.FX_WARP_FROM.x,
       // R2801000: a fuse's landing, the launch's ignition, contrail flight and landing.
       constants.FX_STARSHIP_FUSE_LAND_AT,
@@ -481,8 +478,8 @@ describe("S2 the effects constants", () => {
 
   it("R3351000 the shared phone motion budget and worst-frame budget", () => {
     expect(constants.PHONE_MOTION_BUDGET).toBe(6);
-    // The phone's face-motion allowance is the motion slots': raising one without the other breaks
-    // the shared budget the living game holds.
+    // The phone budget's faces' share is the motion slots': raising one without the other breaks the
+    // per-layer budget the living game draws its faces from, so the two stay equal.
     expect(constants.PHONE_MOTION_BUDGET).toBe(COSMETIC_FOIL_ANIMATED_MAX);
     expect(constants.FX_PHONE_FRAME_WORST_MS).toBe(120);
     // The worst frame is looser than the mean but still a playing game: past ~8 fps a hitch reads

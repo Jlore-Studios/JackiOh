@@ -13,6 +13,8 @@
 // R3405001: Meditative's Legendaries' and Mythics' signatures (fx/cards/meditative/), every one but The
 // Cane's and Mayor Medinamogger's, whose signatures are their entrances alone. R3399000: Classic+'s signatures'
 // thirty recipes (#3399), in catalog order.
+// R3395000: the signatures of Stinkyscape 001 to 090's Legendaries and Mythics (fx/cards/stinkyscape/;
+// Imitated Instrumentality's magiBoot grows from its flourish).
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
@@ -112,6 +114,27 @@ import { stimmyDrop } from "./stinkyscape/stimmycheck.ts";
 import { chaosOrb } from "./stinkyscape/wildar.ts";
 import { probeScan } from "./stinkyscape/probeScan.ts";
 import { stratosSwarm } from "./stinkyscape/stratosSwarm.ts";
+import { echoRings } from "./stinkyscape/aZoth.ts";
+import { beamCharge } from "./stinkyscape/beamV5.ts";
+import { cannonShell } from "./stinkyscape/cannonV5.ts";
+import { droneConveyor } from "./stinkyscape/droneCoreEight.ts";
+import { seedPod } from "./stinkyscape/droneCoreNine.ts";
+import { flakWaves } from "./stinkyscape/flakV5.ts";
+import { bellyBay } from "./stinkyscape/galaxy.ts";
+import { heistLocks } from "./stinkyscape/greatestHeist.ts";
+import { allureRibbon } from "./stinkyscape/kwzka.ts";
+import { asteroidCrunch } from "./stinkyscape/minerV5.ts";
+import { narcorCases } from "./stinkyscape/narcorProject.ts";
+import { paperclipLink } from "./stinkyscape/paperclipTheory.ts";
+import { wingMount } from "./stinkyscape/prototypeX1.ts";
+import { spineWeld } from "./stinkyscape/prototypeX2.ts";
+import { repeaterBurst } from "./stinkyscape/repeaterV5.ts";
+import { rodBands } from "./stinkyscape/rodOfAges.ts";
+import { glowLeash } from "./stinkyscape/siva1.ts";
+import { venomHand } from "./stinkyscape/siva2.ts";
+import { vaultHeist } from "./stinkyscape/tylannt.ts";
+import { ghostHulls } from "./stinkyscape/zZoth.ts";
+import { campusLaunch } from "./stinkyscape/zolarKeth.ts";
 import { celestialCall } from "./traininggrounds/celestialCaller.ts";
 import { chaosDice } from "./traininggrounds/chaosDice.ts";
 import { dinoStomp } from "./traininggrounds/dinoSize.ts";
@@ -181,6 +204,27 @@ export const CARD_RECIPES = {
   bobSoldier,
   scratchPad,
   magiBoot,
+  vaultHeist,
+  heistLocks,
+  rodBands,
+  campusLaunch,
+  droneConveyor,
+  seedPod,
+  allureRibbon,
+  narcorCases,
+  paperclipLink,
+  beamCharge,
+  repeaterBurst,
+  cannonShell,
+  flakWaves,
+  asteroidCrunch,
+  ghostHulls,
+  echoRings,
+  bellyBay,
+  wingMount,
+  spineWeld,
+  glowLeash,
+  venomHand,
   battleshipWarp,
   duoBond,
   flashFreeze,

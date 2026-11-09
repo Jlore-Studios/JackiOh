@@ -126,9 +126,11 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
   const off = settings.intensity === "off";
   const still = panelReduces || reducedMotionNow(settings);
   const intensity: number = FX_INTENSITY_SCALE[settings.intensity];
-  // R3351000: the shed stage and the pointer it measures far auras by (shed.ts).
+  // R3351000: the shed stage and the pointer it measures far auras by (shed.ts). Below stage 2
+  // the snapshot is always null, so pointer-move notifications change nothing and React bails out:
+  // no re-render, no measureAll forced layout, no drift re-sync.
   const shed = useSyncExternalStore(subscribeShed, shedLevel, () => 0);
-  const pointer = useSyncExternalStore(subscribeShed, shedPointer, () => null);
+  const pointer = useSyncExternalStore(subscribeShed, () => (shedAuraScale(shedLevel()) === 1 ? null : shedPointer()), () => null);
 
   // What the effects read: a ref, so a seam object made each render restarts nothing.
   const live = useRef(seams ?? {});

@@ -1433,7 +1433,8 @@ pub mod patches_io {
 ///   differently, or a rule every game meets, R2455000, R2499000) is `v0.Z.(X+1)`: after v0.3.17 or
 ///   v0.3.17c it is v0.3.18;
 /// - a **micro** (anything smaller) is the newest version with the next letter: after v0.3.17 it is
-///   v0.3.17b, after v0.3.17b v0.3.17c.
+///   v0.3.17b, after v0.3.17b v0.3.17c. After a version ending in `z` it opens the next line instead
+///   (R3471000): after v0.3.17z it is v0.3.18, wearing a patch-form name with a micro tier.
 ///
 /// No title, flag or label names a tier (R1365000). This is the one place a version string is read,
 /// when a patch ships; R105 holds everywhere else, and later readers read the `tier` recorded beside it.
@@ -1477,14 +1478,13 @@ pub mod versions {
         Ok(match tier {
             Tier::Major => format!("v{a}.{}.0", bump(b)?),
             Tier::Patch => format!("v{a}.{b}.{}", bump(c)?),
-            Tier::Micro => {
-                let next = match letter.as_bytes().first() {
-                    None => 'b',
-                    Some(b'z') => bail!("{newest} has no letter left after z"),
-                    Some(byte) => char::from(byte + 1),
-                };
-                format!("v{a}.{b}.{c}{next}")
-            }
+            Tier::Micro => match letter.as_bytes().first() {
+                // R3471000: a micro after `z` opens the next line, the patch's rollover, wearing a
+                // patch-form name with a micro tier (R105 reads the tier, never the name).
+                None => format!("v{a}.{b}.{c}b"),
+                Some(b'z') => format!("v{a}.{b}.{}", bump(c)?),
+                Some(byte) => format!("v{a}.{b}.{c}{}", char::from(byte + 1)),
+            },
         })
     }
 }
@@ -2586,8 +2586,16 @@ mod tests {
             fn r1366000_refuses_a_newest_version_it_cannot_follow() {
                 assert!(refused(Tier::Patch, "core-1").contains("no vA.B.C form"));
                 assert!(refused(Tier::Micro, "v0.2.X").contains("no vA.B.C form"));
-                assert!(refused(Tier::Micro, "v0.2.5z").contains("no letter left"));
                 assert_eq!(name_by_tier(Tier::Patch, "v0.2.5z").unwrap(), "v0.2.6");
+            }
+
+            // R3471000: a micro after `z` opens the next line, the patch's rollover, and the next
+            // micro after that takes the line's first letter again.
+            #[test]
+            fn r3471000_a_micro_after_z_opens_the_next_line() {
+                assert_eq!(name_by_tier(Tier::Micro, "v0.5.12z").unwrap(), "v0.5.13");
+                assert_eq!(name_by_tier(Tier::Micro, "v0.2.5z").unwrap(), "v0.2.6");
+                assert_eq!(name_by_tier(Tier::Micro, "v0.5.13").unwrap(), "v0.5.13b");
             }
         }
     }
@@ -3625,6 +3633,73 @@ mod tests {
                     .map(|patch| patch.version)
                     .collect();
                 assert_eq!(versions, strings(&["v0.1.1", "v0.1.1b", "v0.1.1c"]));
+            }
+
+            // R3471000: the line has one letter left for two honest micros, as the v0.5.12 line
+            // did. The first takes `z`; the second opens the next line, wearing a patch-form name
+            // with a micro tier.
+            #[test]
+            fn r3471000_ships_two_micros_past_z_opening_the_next_line() {
+                let temp = TempDir::new("jackioh-ship-micro-rollover-");
+                let root = temp.path();
+                let dir = root.join("crates/cards/patches");
+                let base = catalog_of(vec![card("aaa", 1), card("bbb", 1)]);
+                git(root, &["init", "-q", "-b", "main"], None);
+                let mut newest = base_patch(
+                    "base notes",
+                    vec![
+                        PatchChange::added("aaa", "Card aaa"),
+                        PatchChange::added("bbb", "Card bbb"),
+                    ],
+                );
+                newest.version = "v0.1.1y".to_string();
+                let mut files = vec![
+                    ("crates/cards/catalog.json", json(&base)),
+                    ("crates/cards/patches/patches.json", json(&[newest])),
+                    ("crates/cards/patches/v0.1.1y.json", json(&base)),
+                    (
+                        "crates/cards/patches/index.json",
+                        json(&index_of(vec![
+                            ("aaa", vec!["v0.1.1y"]),
+                            ("bbb", vec!["v0.1.1y"]),
+                        ])),
+                    ),
+                    ("crates/cards/patches/shipped.json", json(&unshipped("v0.1.1y"))),
+                ];
+                files.extend(version_sites("v0.1.1y"));
+                write_files(root, &files);
+                git(root, &["add", "-A"], None);
+                git(
+                    root,
+                    &["commit", "-q", "-m", "base"],
+                    Some("2026-09-27T12:00:00+00:00"),
+                );
+                let visual = |title: &str| FragmentArgs {
+                    cards: Some(Vec::new()),
+                    visual: Some(true),
+                    ..fragment_args(title, "s", "n", None)
+                };
+                write_fragment(root, &visual("Patch: looks one")).unwrap();
+                commit_at(root, "looks one", "2026-10-01T12:00:00+00:00");
+                write_fragment(root, &visual("Patch: looks two")).unwrap();
+                commit_at(root, "looks two", "2026-10-02T12:00:00+00:00");
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1z", "v0.1.2"]));
+                let patches = read_patches(&dir.join("patches.json")).unwrap();
+                let versions: Vec<&str> = patches.iter().map(|patch| patch.version.as_str()).collect();
+                assert_eq!(versions, ["v0.1.1y", "v0.1.1z", "v0.1.2"]);
+                for version in ["v0.1.1z", "v0.1.2"] {
+                    let patch = patches
+                        .iter()
+                        .find(|patch| patch.version == version)
+                        .expect(version);
+                    assert_eq!(
+                        (patch.tier, patch.plays.clone()),
+                        (Some(Tier::Micro), Some(Vec::new()))
+                    );
+                }
+                assert_eq!(read_snapshot("v0.1.2", &dir).unwrap(), base);
+                assert!(read(&root.join("crates/server/.env.example")).contains("CATALOG_VERSION=v0.1.2"));
             }
 
             #[test]

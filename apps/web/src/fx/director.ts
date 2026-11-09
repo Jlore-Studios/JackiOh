@@ -26,7 +26,7 @@ import { createParticleSystem } from "./particles.ts";
 import { artBoxOf, pointIn } from "./anchors.ts";
 import { createRng } from "./rng.ts";
 import { createShake } from "./shake.ts";
-import { setShedLevel, shedEmissionScale, shedLevel as shedStage } from "./shed.ts";
+import { SHED_FULL, setShedLevel, shedEmissionScale, shedLevel as shedStage } from "./shed.ts";
 import type { FxSurface } from "./surface.ts";
 import type {
   FxAnchor,
@@ -54,6 +54,8 @@ export type FxDirectorOptions = {
   shakeSink: FxShakeSink;
   seed: number;
   capacity: number;
+  /** True on a phone viewport (narrower than `FX_MOBILE_WIDTH`): only then does `adapt` publish shed stages; default false. */
+  phone?: boolean;
   /** Stage-cue target lookup; defaults to a `document` query. */
   element?: (testid: string) => HTMLElement | null;
   /** Scroll/resize subscription for tracking parked stand-ins; defaults to window events. */
@@ -86,7 +88,8 @@ export type FxDirector = {
   capacity(): number;
   /**
    * R3351000: the shed stage the adaptive cap has reached: 0 full, 1 motes, 2 far auras, 3 the
-   * moving faces past the pointer's own. The effects layer reads it through `shed.ts`.
+   * moving faces past the pointer's own. The effects layer reads it through `shed.ts`. Only a phone
+   * director publishes stages past full (`phone`); a desktop director never sheds.
    */
   shedLevel(): number;
   dispose(): void;
@@ -162,6 +165,7 @@ function atOf(anchor: FxAnchor): FxPoint | undefined {
 
 export function createFxDirector(options: FxDirectorOptions): FxDirector {
   const { surface, domRoot, now, frames, visibility, shakeSink, seed } = options;
+  const phone = options.phone ?? false;
   const element = options.element ?? defaultElement;
 
   // Effects aimed at a carried card must target its stand-in, not the concealed source.
@@ -219,10 +223,11 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     windowSum += raw;
     if (windowSum > FX_ADAPT_WINDOW * slowMs) {
       setCap(Math.max(FX_PARTICLE_CAP_MIN, Math.floor(cap / 2)));
-      // R3351000: a slow window sheds one stage deeper — motes, then far auras, then faces — on the
-      // same trip that lowers the cap, and a set piece's beats never shed (they are DOM cues with no
-      // particle counts, so emission scaling cannot touch them).
-      setShedLevel(shedStage() + 1);
+      // R3351000: a slow window on a phone sheds one stage deeper — motes, then far auras,
+      // then faces — on the same trip that lowers the cap, and a set piece's beats never shed (they
+      // are DOM cues with no particle counts, so emission scaling cannot touch them). Desktop keeps
+      // the cap halving (B34) without shedding.
+      if (phone) setShedLevel(shedStage() + 1);
       healthyWindows = 0;
       resetWindow();
       return;
@@ -538,13 +543,16 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     }
   };
 
+  // R3351000: a shed stage keeps the loop alive, so healthy windows drain a stranded level back
+  // to full on an idle board instead of freezing faces for the rest of the session.
   const hasWork = (): boolean =>
     pending.length > 0 ||
     mounted.length > 0 ||
     layoutDirty ||
     particles.alive() > 0 ||
     canvasFx.alive() > 0 ||
-    shake.active();
+    shake.active() ||
+    shedStage() > 0;
 
   const onFrame = (frame: FxFrame): boolean => {
     if (pausedAt !== null) return false;
@@ -698,6 +706,9 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     dispose(): void {
       if (disposed) return;
       clear();
+      // R3351000: the shed level is one module-wide shared stage, so a disposed director leaves it
+      // full — otherwise every face past stage 3 stays still for the rest of the session.
+      setShedLevel(SHED_FULL);
       disposed = true;
       unsubscribeViewport();
       loop.dispose();

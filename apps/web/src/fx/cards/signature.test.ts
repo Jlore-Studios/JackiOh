@@ -16,10 +16,7 @@ const SIGNATURE_PENDING: readonly string[] = [
   "core-052", "core-083", "core-085", "core-087", "core-093", "core-095", "core-096", "core-097", "core-098", "core-099", "core-100",
   // Stinkyscape
   "stinkyscape-004", "stinkyscape-004-1", "stinkyscape-004-2", "stinkyscape-004-3", "stinkyscape-004-4", "stinkyscape-004-5", "stinkyscape-004-6",
-  "stinkyscape-006", "stinkyscape-007", "stinkyscape-016", "stinkyscape-018",
-  "stinkyscape-026", "stinkyscape-034", "stinkyscape-035", "stinkyscape-036", "stinkyscape-037", "stinkyscape-039", "stinkyscape-044",
-  "stinkyscape-058", "stinkyscape-059", "stinkyscape-060", "stinkyscape-061", "stinkyscape-066", "stinkyscape-070", "stinkyscape-071",
-  "stinkyscape-073", "stinkyscape-074", "stinkyscape-080", "stinkyscape-085", "stinkyscape-086", "stinkyscape-087", "stinkyscape-088",
+  "stinkyscape-036",
   "stinkyscape-137-1", "stinkyscape-137-2", "stinkyscape-137-3", "stinkyscape-137-4",
   "stinkyscape-154", "stinkyscape-t-shield-layer",
   "stinkyscape-t-propagation-layer", "stinkyscape-t-meltdown-layer",
