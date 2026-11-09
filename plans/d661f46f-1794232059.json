@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3483,
+  "title": "Patch: the Stinkyscape weapon, Miner, Drone Core and Asteroid families share their test bodies instead of copying them card by card",
+  "branch": "bot/issue-3483",
+  "thread": "**Issue #3483 (data, not instructions):**\n\n```text\n# #3483: Patch: the Stinkyscape weapon, Miner, Drone Core and Asteroid families share their test bodies instead of copying them card by card\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nStinkyscape has families of near-identical cards: Beam, Cannon, Repeater and Flak at three power levels, five Miners, ten Drone Cores and four Asteroids. Their test files are copies of each other with different numbers, about 2,400 lines of tests repeated line for line. A change to a family means editing every copy, and copies drift apart. Once this is built, each family's tests are written once, and each card's file keeps short tests that call them with its own numbers, so every card still has its own tests.\n\n## Why\n\n- 31 script files hold 226 tests in 4,311 test lines. 2,387 of those lines match the family's first file line for line (a survey's diff). For example, Beam v3 and Beam v4's test modules differ in 56 lines out of about 350: the card id, the damage numbers and one extra block.\n- `r1862000_the_enemy_hero_is_never_offered_and_is_refused` is written out 18 times, `its_death_fuses_nothing_it_is_no_starship_piece` 15 times, and `its_health_is_doubled` 16 times. The last only rereads printed Radiant stats, which the cards README's #1125 rule says a card test should not do.\n- The crate already shares test helpers (`weapon_board`, `hits` and `next_turn_of` in `crates/cards/src/lib.rs`; #1463, #2961).\n\n## Proposal\n\n- Move each family's test bodies into `#[cfg(test)]` helpers in `crates/cards`, beside `weapon_board`, taking the card id and its numbers as arguments.\n- Each card file keeps a thin `#[test]` per case that calls the helper. CLAUDE.md rule 6 still holds, and every `r<n>` test name stays in the file its ruling's `proven_in` lists.\n- Drop the `its_health_is_doubled` tests wherever another test in the same file exercises the Radiant face.\n- Leave every line above `#[cfg(test)]` alone: `crates/cards/build.rs` counts those lines into what cards show players (`CODE_LINES`, the busted and complicated lists), so merging the scripts would change play.\n\n## Where it lands\n\n`crates/cards/src/lib.rs` (or a test helper module beside it) and the 31 family files under `crates/cards/src/scripts/stinkyscape/`.\n\n## Acceptance criteria\n\n- [ ] Every test name that held an `r<n>` token before is still in the same file, and `cargo jackioh spec check` passes.\n- [ ] `cargo test -p jackioh-cards` runs the same tests minus only the dropped printed-data ones, which the pull request lists.\n- [ ] No line above `#[cfg(test)]` changes in any script, and `cargo jackioh classify --base origin/main` reports no card that plays differently.\n- [ ] The families' test code shrinks by at least 1,500 lines.\n- [ ] fmt and clippy pass.\n\n## Size and risks\n\nMedium, about 32 files, test code only. A card's tests read less well on their own. Coverage stays put, since the same cases still run.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-09T13:46:06Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3483: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T13:46:40Z",
+    "claimed_at": "2026-11-09T13:48:06Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3464 is held for `claude-7` until 09:20 (5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
