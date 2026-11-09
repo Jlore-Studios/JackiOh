@@ -16066,6 +16066,8 @@
       }
     },
     "3489": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-09T14:21:22Z",
@@ -16079,8 +16081,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: hovering your hand no longer redraws the whole board, and each card's face is built once per change instead of on every redraw\"} -->\n- ## What changed\n- Hovering the viewer's hand no longer re-renders `Board`, and card faces are memoized per card:\n- - New [hoveredHandCard.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-3478/apps/web/src/game/hoveredHandCard.tsx): `HoveredHandCardProvider` owning the `string | null` hover state, plus value/setter hooks with `null`/noop defaults so bare `Hand`/`Zone` mounts keep working.\n- - [faces.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-3478/apps/web/src/game/faces.ts): new `useLiveFace(info, card, facts)` hook memoizing `liveFace` on the view object, `info.def`/`info.name`, the live facts (tallies keyed on contents), and the locale (R711000). `liveFace` itself is \u2026\n- - [Card.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-3478/apps/web/src/game/Card.tsx) and [HandHints.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-3478/apps/web/src/game/HandHints.tsx) call the hook with the same facts as before; `HandHints` drops its direct `useLocale` (\u2026\n- - [Zone.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-3478/apps/web/src/game/Zone.tsx) reads the hovered id and adds the counted set via `countedTestids`, passing it to `TileAura`/`Card`/`Backrow`.\n- - [Board.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-3478/apps/web/src/game/Board.tsx): hover state, `counted`, and `fieldHighlight` deleted; field plus viewer's hand wrapped in the provider; plain `highlight` passed to zones.\n- - [Hand.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-3478/apps/web/src/game/Hand.tsx): pointer handlers report to `props.onHover ?? contextHover`; `onHover` documented as a test override.\n- - [contract.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-3478/apps/web/src/game/contract.ts): one-line doc fix (`Zone.tsx` adds `counted`, not `Board.tsx`).\n- - New [Board.render.test.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-3478/apps/web/src/game/Board.render.test.tsx): the three acceptance tests, counting mocked `face` calls.\n- ## How it was tested\n- - New file: 3/3 pass. Hovering all 4 hand cards enter+leave adds zero `face` calls, with rings appearing/clearing on the previewed card.\n- - Negative control: with the memo forced to always miss, the hover test fails 198 calls vs 38 baseline (8 hover events \u00d7 ~20 faces \u2014 the issue's \"twice per card\" redraw, measured). Reverted after.\n- - Existing suites all green: `Board`, `Hand`, `HandHints`, `Card`, `Zone` tests \u2014 122 tests across 6 files, including the four #991 ring tests.\n- - `pnpm --dir apps/web typecheck`, eslint on all touched files, `cargo fmt --check`, and `cargo jackioh spec check` (1871 rulings, 4834 proofs) all pass.\n- ## Decisions and departures from the plan\n- - The viewer's `Seat` stands inside the hover provider with the field and hand: it sits between them in `board.css` grid order, consumes no hover state, and React skips re-rendering it on hover. Rejected moving it (would break grid order). Proof it stays still: piles recompute faces on every render\u2026\n- - `useLiveFace` accepts `CardView | null` (backs keep the placeholder without crossing) and `Zone` falls back to `NO_HIGHLIGHT` when spreading the counted set; the test mounts via `withCatalog` (which exposes `rerender`) instead of `renderBoard`. No `catalog.ts` change was needed.\n- - `viewFaces` has no definition or callers anywhere in `apps/web/src` or `e2e`, so there was nothing to delete. No ruling note: web-only change, no rules decision.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3478 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3478/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3478,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-09T14:56:20Z",
         "from_run": "42633874408",
         "gates": [
           {
@@ -16139,8 +16144,15 @@
         "source": "build",
         "until": "2026-11-09T15:23:45Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-09T14:53:45Z",
+      "run_id": "pending:238a4eaa-1794236135",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-09T14:56:20Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16154,9 +16166,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T14:38:54Z",
+    "at": "2026-11-09T14:56:20Z",
     "url": "",
-    "what": "plan #3479 on claude-1"
+    "what": "review #3489 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T14:32:43Z",
