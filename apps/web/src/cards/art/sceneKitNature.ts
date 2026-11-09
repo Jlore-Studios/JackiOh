@@ -5,11 +5,11 @@
 // light (a shockwave, a tornado, flames, a fireball, a ribbon of light, a thought bubble, spores, snow,
 // static, bubbles, smoke, rain, dust, a sun, falling petals). R3396000: the Classic+ Alt art scenes (#3396)
 // added a clump of bamboo, a cactus and a fox. R3397000: the Meditative+ and Training Grounds Alt art scenes
-// (#3397) added a mountain goat, a deer, a paddling duck and a heap of walnuts. sceneKit.ts
-// spreads the table into `SCENE_KIT`. Each part keeps the kit's rules: one to twelve filled shapes drawn in
-// its own frame (`local`), varied by the scene's stream alone, every colour a palette name out of Radiant's
-// gold window (food's golds are brass, butter is slate), a glow a stack of translucent shapes, and no two
-// sub-paths of one shape overlapping but for a hole.
+// (#3397) added a mountain goat, a deer, a paddling duck and a heap of walnuts, and R3398000's Core Alt art scenes
+// (#3398) a palm and a camel. sceneKit.ts spreads the table into `SCENE_KIT`. Each part keeps the kit's rules: one
+// to twelve filled shapes drawn in its own frame (`local`), varied by the scene's stream alone, every colour a
+// palette name out of Radiant's gold window (food's golds are brass, butter is slate), a glow a stack of
+// translucent shapes, and no two sub-paths of one shape overlapping but for a hole.
 
 import { fmt } from "./hash.ts";
 import { between, blob, DEGREES, FULL_TURN, INKED, local, MAIN, MAIN_INKED, shape, sparkle, turned, whole, type Local, type Point } from "./kitDraw.ts";
@@ -739,6 +739,85 @@ function duck(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+// R3398000: the parts the Core Alt art scenes added.
+
+/** R3398000: a palm standing on the anchor: a ringed trunk curving up and over, five to seven fronds drooping from its crown (main, every other one in a second shape so that no two touching fronds share one) over darker ones behind, their midribs, and a cluster of coconuts spaced clear of each other; about 16 wide and 30 tall at scale 1. */
+function palm(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const height = between(rng, 26, 29);
+  const lean = between(rng, 2.5, 5.5);
+  const crown: Point = [lean, -height];
+  const on = (t: number): Point => [lean * t * t, -height * t];
+  let trunk = `M${f.p(-1.3, 0)}`;
+  for (const t of [0.35, 0.7, 1]) trunk += `L${f.p(on(t)[0] - 1.3 + 0.6 * t, on(t)[1])}`;
+  for (const t of [1, 0.7, 0.35]) trunk += `L${f.p(on(t)[0] + 1.3 - 0.6 * t, on(t)[1])}`;
+  trunk += `L${f.p(1.3, 0)}Z`;
+  let rings = "";
+  for (let t = 0.1; t < 0.96; t += 0.11) {
+    const [x, y] = on(t);
+    rings += f.band([[x - 1.2 + 0.5 * t, y], [x + 1.2 - 0.5 * t, y - 0.3]], 0.28);
+  }
+  const fronds = whole(rng, 5, 7);
+  const front = ["", ""];
+  let back = "";
+  let ribs = "";
+  for (let k = 0; k < fronds + 2; k += 1) {
+    const behind = k >= fronds;
+    const angle = behind ? -90 + (k === fronds ? -40 : 40) : -172 + (164 * k) / (fronds - 1) + between(rng, -6, 6);
+    const length = between(rng, 8, 10) * (behind ? 0.8 : 1);
+    const u: Point = [Math.cos(angle * DEGREES), Math.sin(angle * DEGREES)];
+    const droop = 3.2 * Math.abs(u[0]);
+    const base: Point = [crown[0] + u[0] * 0.9, crown[1] + u[1] * 0.9];
+    const tip: Point = [crown[0] + u[0] * length, crown[1] + u[1] * length + droop];
+    const mid: Point = [(base[0] + tip[0]) / 2, (base[1] + tip[1]) / 2 - 1.6 * Math.abs(u[0])];
+    const n: Point = [-u[1] * 1.5, u[0] * 1.5];
+    const leaf = `M${f.p(...base)}Q${f.p(mid[0] + n[0], mid[1] + n[1])} ${f.p(...tip)}Q${f.p(mid[0] - n[0], mid[1] - n[1])} ${f.p(...base)}Z`;
+    if (behind) back += leaf;
+    else {
+      front[k % 2] += leaf;
+      ribs += `M${f.p(...base)}Q${f.p(mid[0] + n[0] * 0.12, mid[1] + n[1] * 0.12)} ${f.p(...tip)}Q${f.p(mid[0] - n[0] * 0.12, mid[1] - n[1] * 0.12)} ${f.p(...base)}Z`;
+    }
+  }
+  const nuts = whole(rng, 2, 3);
+  let coconuts = "";
+  for (let k = 0; k < nuts; k += 1) coconuts += f.circle(crown[0] - 1.8 + 1.8 * k, crown[1] + 1.5 + (k % 2) * 0.5, 0.85);
+  return [
+    shape(f.ellipse(lean * 0.2, 0.3, 4.2, 0.6), "black", 0.2),
+    shape(trunk, "wood-600", 1, INKED),
+    shape(rings, "wood-800", 0.6),
+    shape(back, "green-700", 1, INKED),
+    shape(coconuts, "wood-700", 1, INKED),
+    shape(front[0] ?? "", "green-500", 1, MAIN_INKED),
+    shape(front[1] ?? "", "green-500", 1, MAIN_INKED),
+    shape(ribs, "green-900", 0.55),
+  ];
+}
+
+/** R3398000: a one-humped camel standing on the anchor and facing the way it faces: four thin knobbly legs, a tufted tail, its hump and belly, a long curved neck and a drooping head with an ear and an eye, and a saddle blanket over the hump (main) with a fringed hem; about 20 long and 18 tall at scale 1. */
+function camel(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const hump = between(rng, -16.4, -15);
+  const nod = between(rng, -0.8, 0.8);
+  const legs = (xs: readonly number[]): string => xs.map((x) => f.band([[x, -7], [x + 0.3, -3.6], [x - 0.1, 0]], 0.75)).join("");
+  return [
+    shape(f.ellipse(0, 0.3, 8.6, 0.7), "black", 0.2),
+    shape(legs([-4.6, 4.2]), "wood-700", 1, INKED),
+    shape(f.band([[-7.2, -9.6], [-8.2, -7.6], [-8, -5.6]], 0.45), "wood-700", 1),
+    shape(
+      `M${f.p(-7.6, -8.6)}Q${f.p(-7.8, -11.4)} ${f.p(-5, -11.8)}Q${f.p(-1.6, hump)} ${f.p(1.6, -11.8)}Q${f.p(5.4, -11.6)} ${f.p(6, -9.4)}Q${f.p(5.4, -6.4)} ${f.p(0, -6.6)}Q${f.p(-7, -6.4)} ${f.p(-7.6, -8.6)}Z`,
+      "brass-600",
+      1,
+      INKED,
+    ),
+    shape(legs([-6, 2.8]), "brass-600", 1, INKED),
+    shape(f.band([[4.8, -10], [7, -12.2], [8, -15.2 + nod]], 1.6), "brass-600", 1, INKED),
+    shape(f.ellipse(9.2, -15.6 + nod, 2, 1.05) + f.poly([[7.6, -16.4 + nod], [7.8, -17.6 + nod], [8.4, -16.6 + nod]]), "brass-600", 1, INKED),
+    shape(f.poly([[-4.4, -12.2], [-1.6, hump + 0.9], [1.4, -12.4], [2, -8.4], [-4.6, -8.2]]), "red-600", 1, MAIN_INKED),
+    shape(f.band([[-4.6, -8.2], [2, -8.4]], 0.5), "blue-600", 1),
+    shape(f.circle(9.4, -16 + nod, 0.25) + f.circle(11, -15.3 + nod, 0.18), "black", 0.9),
+  ];
+}
+
 // Food
 
 /** An apple standing on the anchor, with a stem, a leaf and a shine; about 3.7 across and 4.3 tall (leaf included) at scale 1. */
@@ -1282,6 +1361,9 @@ export const NATURE_KIT = {
   goat: { category: "creatures", draw: goat },
   deer: { category: "creatures", draw: deer },
   duck: { category: "creatures", draw: duck },
+  // R3398000: the Core Alt art scenes' palm and camel.
+  palm: { category: "plants", draw: palm },
+  camel: { category: "creatures", draw: camel },
   snake: { category: "creatures", draw: snake },
   grub: { category: "creatures", draw: grub },
   boar: { category: "creatures", draw: boar },

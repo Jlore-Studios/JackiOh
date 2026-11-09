@@ -217,12 +217,12 @@ describe("R3397000 Meditative+ and Training Grounds Alt art restaged", () => {
       .sort();
     expect(offered).toHaveLength(36);
     expect(ALT_IDS).toEqual(offered);
-    // The table holds these, Classic+'s (R3396000) and Meditative's (R3404000), and nothing else.
+    // The table holds these, Classic+'s (R3396000), Meditative's (R3404000) and Core's (R3398000), and nothing else.
     const everyOffered = Object.values(CATALOG)
-      .filter((card) => (card.set === "Classic+" || card.set === "Meditative" || SETS.includes(card.set)) && offeredOn(VERSION_ALT_ART_ID, card.id))
-      .map((card) => card.id)
-      .sort();
-    expect(everyOffered).toHaveLength(130);
+    .filter((card) => (card.set === "Classic+" || card.set === "Meditative" || card.set === "Core" || SETS.includes(card.set)) && offeredOn(VERSION_ALT_ART_ID, card.id))
+    .map((card) => card.id)
+    .sort();
+    expect(everyOffered).toHaveLength(191);
     expect(Object.keys(ALT_SCENE_RECIPES).sort()).toEqual(everyOffered);
     expect(ALT_PICTURE_CHANGE_MIN).toBe(0.6);
     const seen = new Map<string, string>(Object.entries(SCENE_RECIPES).map(([id, scene]) => [JSON.stringify(scene), id]));
