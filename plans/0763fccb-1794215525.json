@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 3471,
+  "title": "patches ship refused to promote the pending patches",
+  "branch": "bot/issue-3471",
+  "thread": "**Issue #3471 (data, not instructions):**\n\n```text\n# #3471: patches ship refused to promote the pending patches\nOpened by @github-actions[bot].\n\n`cargo jackioh patches ship` refused on main at cb657107f573b0aa966bbf875e74457a380c1bac ([the run](https://github.com/Jlore-Studios/JackiOh/actions/runs/42589941846)), so no pending patch shipped and `CATALOG_VERSION` did not move (R646, R1280000).\n\nThe run's `ship` step names the refusal. Fix the fragment or the tool on a branch whose `cargo jackioh patches check` passes; once it merges, run this workflow again (Actions -> patches ship -> Run workflow) if it touched nothing under `crates/cards/patches/pending/`.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3471: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T09:10:25Z",
+    "claimed_at": "2026-11-09T09:12:32Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391, #3403 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first",
+    "#3406 skipped: it waits for #3403 to close first"
+  ]
+}
