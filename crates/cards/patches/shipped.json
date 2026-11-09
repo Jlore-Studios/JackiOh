@@ -830,5 +830,47 @@
     "commit": "e9b9946ddc6be54b208701cda84b0a745884f853",
     "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
     "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
+  },
+  {
+    "version": "v0.5.12r",
+    "commit": "add37b58df54093e9d91e5ac157bb8595fd0c787",
+    "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
+    "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
+  },
+  {
+    "version": "v0.5.12s",
+    "commit": "b01bbd555cba846961161b376ac5bbe08c769e58",
+    "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
+    "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
+  },
+  {
+    "version": "v0.5.12t",
+    "commit": "7336cf5731447720c4f8400e1490c69909f70eb6",
+    "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
+    "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
+  },
+  {
+    "version": "v0.5.12u",
+    "commit": "afe5882e14bb6079f74f3aa9f707e59ace4d421d",
+    "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
+    "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
+  },
+  {
+    "version": "v0.5.12v",
+    "commit": "3ea20043dddfe1aae9f1ead4b497b690512d4b3e",
+    "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
+    "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
+  },
+  {
+    "version": "v0.5.12w",
+    "commit": "c7e599e43bd117d1bdf4ea9dfe12c73504d47e00",
+    "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
+    "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
+  },
+  {
+    "version": "v0.5.12x",
+    "commit": "f9c2965453bcca9534aee8f2ef26689a9d1e518e",
+    "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
+    "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
   }
 ]
