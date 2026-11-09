@@ -312,6 +312,31 @@ func TestRequiredChecksAndQueueRemoval(t *testing.T) {
 	}
 }
 
+// The merge queue's pull requests come in their positions' order, whatever order GitHub lists
+// them in; a branch with no queue has none.
+func TestQueueOrder(t *testing.T) {
+	entry := func(position, number int) *pyjson.Object {
+		return pyjson.New("position", position, "pullRequest", pyjson.New("number", number))
+	}
+	answer := pyjson.New("data", pyjson.New("repository", pyjson.New("mergeQueue", pyjson.New("entries",
+		pyjson.New("nodes", []any{entry(2, 41), entry(1, 7), entry(3, 12)})))))
+	o := &opener{answer: func(req *Request) (*Response, error) { return jsonAnswer(answer), nil }}
+	client := NewGitHub("o/r", "t", false, o.open, nil, "")
+	if got := client.QueueOrder("main"); !reflect.DeepEqual(got, []int{7, 41, 12}) {
+		t.Fatalf("order %v", got)
+	}
+	sent := string(o.asked[0].Body)
+	for _, want := range []string{`"owner": "o"`, `"name": "r"`, `"branch": "main"`, "mergeQueue(branch: $branch)"} {
+		if !strings.Contains(sent, want) {
+			t.Fatalf("%s not in %s", want, sent)
+		}
+	}
+	answer = pyjson.New("data", pyjson.New("repository", pyjson.New("mergeQueue", nil)))
+	if got := client.QueueOrder("main"); len(got) != 0 {
+		t.Fatalf("no queue: %v", got)
+	}
+}
+
 // The real opener, against local servers: urllib's redirect rules and its exceptions.
 func TestTheOpenerFollowsRedirectsAsUrllib(t *testing.T) {
 	var auth string
