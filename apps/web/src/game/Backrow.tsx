@@ -74,6 +74,8 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
     );
   }
 
+  // R3340000: both public forms key their Card below by this identity, so a same-lane replacement mounts as a new face
+  // with a new motion age even when the board jumps directly between occupied views.
   const testId = testid.card(entry.instanceId);
   // R1081000: a Unit standing in the backrow is drawn as the minion it is — the unit block the view
   // carries — with the same switch, target, highlight and click wiring a unit-zone minion has
@@ -83,6 +85,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
     return (
       <>
         <Card
+          key={entry.instanceId}
           testId={testId}
           card={entry}
           unit={unit}
@@ -108,6 +111,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
   return (
     <>
       <Card
+        key={entry.instanceId}
         testId={testId}
         card={entry}
         onField
