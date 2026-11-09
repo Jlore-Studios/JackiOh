@@ -13939,9 +13939,7 @@
     },
     "3352": {
       "action": "build",
-      "asks": [
-        "c:6712090776"
-      ],
+      "asks": [],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13957,9 +13955,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-09T01:31:54Z",
-      "owner_why": "released from its hold: `claude-8` has no runner free where it runs",
+      "owner": "claude-3",
+      "owner_since": "2026-11-09T02:02:00Z",
+      "owner_why": "it took it up; released from its hold: `claude-8` has no runner free where it runs",
       "paused": {
         "at": "2026-11-09T01:28:05Z",
         "interrupt": "usage",
@@ -13970,12 +13968,12 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
-      "provider": "claude-8",
+      "provider": "claude-3",
       "question": "none. One plan, one pull request, no split (see Open questions).",
       "queued_at": "2026-11-07T19:38:59Z",
       "requested_by": "jgoetzmann",
       "round_tier": "strong",
-      "run_id": "42542392964",
+      "run_id": "pending:18216033-1794189694",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -13994,9 +13992,11 @@
         "provider": "claude-8",
         "run": "42542392964"
       },
-      "started_at": "2026-11-09T00:50:51Z",
+      "started_at": "2026-11-09T02:02:00Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6712090776"
+      ],
       "verdict_rounds": 0,
       "waiting_comment": 6728135775
     },
@@ -17877,9 +17877,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T01:50:10Z",
+    "at": "2026-11-09T02:02:00Z",
     "url": "",
-    "what": "review #3458 on claude-2"
+    "what": "build #3352 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-09T01:47:42Z",
