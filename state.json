@@ -13893,9 +13893,7 @@
     },
     "3352": {
       "action": "build",
-      "asks": [
-        "c:6712090776"
-      ],
+      "asks": [],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13911,9 +13909,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-5",
-      "owner_since": "2026-11-08T23:04:12Z",
-      "owner_why": "handed off from `claude-7`: `claude-7` is busy: its lanes are all taken",
+      "owner": "claude-8",
+      "owner_since": "2026-11-09T00:50:51Z",
+      "owner_why": "handed off from `claude-5`: `claude-5` 7-day usage is 86%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-09T09:00:00Z",
       "paused": {
         "at": "2026-11-08T23:12:46Z",
         "interrupt": "usage",
@@ -13924,12 +13922,12 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
-      "provider": "claude-5",
+      "provider": "claude-8",
       "question": "none. One plan, one pull request, no split (see Open questions).",
       "queued_at": "2026-11-07T19:38:59Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "42533336499",
+      "run_id": "pending:3de43520-1794185414",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -13948,9 +13946,11 @@
         "provider": "claude-7",
         "run": "42529006953"
       },
-      "started_at": "2026-11-08T23:04:12Z",
+      "started_at": "2026-11-09T00:50:51Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6712090776"
+      ],
       "verdict_rounds": 0,
       "waiting_comment": 6728135775
     },
@@ -17593,9 +17593,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T00:50:00Z",
+    "at": "2026-11-09T00:50:51Z",
     "url": "",
-    "what": "review #3454 on muse"
+    "what": "build #3352 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-09T00:29:20Z",
