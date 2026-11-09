@@ -16085,13 +16085,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-8",
       "queued_at": "2026-11-09T14:53:45Z",
-      "run_id": "42639579086",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:399e4a72-1794238831",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 170,
-      "started_at": "2026-11-09T14:56:20Z",
+      "started_at": "2026-11-09T15:41:06Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16364,9 +16365,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T15:40:15Z",
+    "at": "2026-11-09T15:41:06Z",
     "url": "",
-    "what": "build #3479 on claude-1"
+    "what": "spot-check #3489 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-09T15:15:59Z",
@@ -34772,7 +34773,15 @@
         "n": 170,
         "pr": 3489,
         "queued_at": "2026-11-09T15:29:29Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:399e4a72-1794238831",
         "sha": "3f8896c61dfa5f03681695ac31204429cafd7c85",
+        "started_at": "2026-11-09T15:41:06Z",
         "status": "queued",
         "title": "Patch: hovering your hand no longer redraws the whole board, and each card's face is built once per change instead of on every redraw",
         "tries": 0
