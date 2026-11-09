@@ -16595,17 +16595,8 @@
       ]
     },
     "3500": {
-      "action": "plan",
-      "asks": [
-        "c:6750808141"
-      ],
-      "build_next": {
-        "from_run": "42696085887",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-09T20:59:16Z",
-        "until": "2026-11-09T21:29:16Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-09T20:59:05Z",
         "difficulty": "medium",
@@ -16624,10 +16615,9 @@
         "reason": "planned on sonnet",
         "trail": " 2480,2660p crates/server/src/economy/store.rs\"}\n- Bash: {\"command\": \"sed -n 3490,3640p crates/server/src/economy/store.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"practice_settles\\\" crates/ --include=*.rs | head -20; sed -n 60,110p crates/server/src/app.rs; grep -n \\\"PRACTICE_SEED_TTL_SECONDS\\\" crates/server/src/config.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"practice_verifications\\\" crates/ --include=*.rs | grep -v \\\"^crates/server/src/api/practice.rs\\\"; grep -rn \\\"App {$\\\" crates/server --include=*.rs | head; sed -n 1040,1075p cr\u2026\n- Bash: {\"command\": \"cat crates/server/tests/api/replays.rs | head -150; wc -l crates/server/tests/api/replays.rs; grep -n \\\"^async fn\\\\|^fn \\\\|#\\\\[tokio::test\\\\|#\\\\[test\\\" crates/server/tests/api/replays.rs\u2026\n- Bash: {\"command\": \"sed -n 125,175p crates/server/tests/api/codes.rs; sed -n 100,175p crates/server/tests/api/e2e.rs; sed -n 940,960p crates/server/tests/api/e2e.rs\"}\n- Bash: {\"command\": \"sed -n 9860,9960p crates/server/tests/store/contract.rs; sed -n 10040,10135p crates/server/tests/store/contract.rs\"}\n- Bash: {\"command\": \"ls spec/rulings | grep -E \\\"^R(35|34)[0-9]{2}\\\" | tail; ls spec/pending | tail -5; cat spec/rulings/R1483000.md; cat spec/rulings/R2422000.md; cat spec/rulings/R2378000.md; ls spec | hea\u2026\n- Bash: {\"command\": \"grep -n \\\"Adding a ruling\\\" -A40 spec/README.md | head -90; cat spec/pending/3479.md; cat spec/rulings/R3479000.md | head -30\"}\n- Bash: {\"command\": \"grep -n \\\"^## \\\\|^### \\\" spec/09-architecture.md | sed -n 1,80p; grep -n \\\"^## \\\\|^### \\\" spec/14-economy.md | head -50\"}\n- Bash: {\"command\": \"sed -n 116,138p spec/09-architecture.md; sed -n 159,169p spec/14-economy.md\"}\n- Bash: {\"command\": \"grep -rn \\\"R192\\\\b\\\" spec/rulings/R0192.md | head -3; sed -n 1,25p spec/rulings/R0192.md; grep -rn \\\"retryAfterMs\\\" apps/web/src --include=*.ts --include=*.tsx -l | head; grep -rn \\\"repl\u2026\n- Bash: {\"command\": \"ls apps/web/src | head -80; grep -rln \\\"api/replays\\\" apps/web/src | head; grep -rn \\\"rate_limited\\\\|RateLimited\\\\|retryAfter\\\" apps/web/src/net/api.ts | head\"}\n- Bash: {\"command\": \"grep -n \\\"rate_limited\\\\|retryAfter\\\\|ApiRequestError\\\\|catch\\\\|error\\\" apps/web/src/replay/sources.ts | head -40; ls apps/web/src/replay; grep -rn \\\"rate_limited\\\\|retryAfterMs\\\" apps/w\u2026\n- Bash: {\"command\": \"sed -n 1,80p crates/server/tests/api/economy_turns.rs; grep -n \\\"r2422000\\\\|fn \\\\|#\\\\[tokio::test\\\" crates/server/tests/api/practice.rs | sed -n 1,140p\"}\n- Bash: {\"command\": \"sed -n 1030,1125p crates/server/tests/api/practice.rs; sed -n 1195,1290p crates/server/tests/api/practice.rs\"}\n- Bash: {\"command\": \"sed -n 1400,1670p crates/server/tests/api/practice.rs\"}\n- Bash: {\"command\": \"grep -n \\\"r1483000_open_practice_seed_count\\\\|r2379000_a_practice_seed_release\\\\|practice_seeds_issue_claim_once_and_prune\\\" crates/server/tests/store/*.rs; grep -n \\\"fn practice_claim\\\\\u2026\n- Bash: {\"command\": \"sed -n 1,40p crates/server/tests/db/run.sh | head -50; grep -n \\\"claimed_at is null\\\\|seeds_open\\\" crates/server/tests/sql/*.sql | head; sed -n 11190,11215p crates/server/tests/store/con\u2026\n- Bash: {\"command\": \"grep -n \\\"TIMEOUT\\\\|_MS: u64\\\" crates/server/src/config.rs | head -30; grep -rn \\\"ReplayCache\\\\|DuosReplayCache\\\" crates/server --include=*.rs | grep -v \\\"^crates/server/src/api/replays.\u2026\n- Bash: {\"command\": \"sed -n 150,335p crates/server/tests/api/replays.rs\"}\n- Bash: {\"command\": \"sed -n 930,1110p crates/server/tests/api/replays.rs\"}\n- Bash: {\"command\": \"grep -rln \\\"matches/.*replay\\\\|duos.*replay\\\" crates/server/tests | head; grep -rn \\\"replay\\\" crates/server/tests/actor/duos.rs | head -20\"}\n- Bash: {\"command\": \"cat crates/server/Cargo.toml | sed -n 1,80p; grep -rn \\\"start_paused\\\\|time::pause\\\" crates/server/src crates/server/tests | head -5\"}\n- Bash: {\"command\": \"sed -n 40,75p apps/web/src/replay/sources.ts; sed -n 180,200p apps/web/src/replay/sources.test.ts; grep -n \\\"rate_limited\\\\|retryAfter\\\" apps/web/src/routes/replays.tsx apps/web/src/repl\u2026\n- Bash: {\"command\": \"grep -rn \\\"Claim one of your open\\\" --include=*.rs --include=*.ts --include=*.tsx --include=*.md . 2>/dev/null | grep -v node_modules | head\"}\n- Bash: {\"command\": \"grep -rn \\\"REPLAY_REQUESTS_PER_MINUTE\\\\|REPLAY_CACHE_MATCHES\\\" --include=*.md --include=*.rs --include=*.ts . 2>/dev/null | grep -v node_modules | grep -v \\\"^./crates/server/src/api/repl\u2026\n- Bash: {\"command\": \"sed -n 395,470p crates/server/tests/export_config.rs; grep -n \\\"PRACTICE_VERIFY_CONCURRENCY\\\\|PRACTICE_SEEDS_OPEN_MAX\\\\|ECONOMY_SPENDS_RUNNING_MAX\\\\|SPEND_BUSY_RETRY\\\" crates/server/test\u2026\n- Bash: {\"command\": \"grep -n \\\"api/replays\\\\|practice/seeds\\\\|practice/claims\\\\|PRACTICE_SEEDS_OPEN_MAX\\\\|PRACTICE_VERIFY_CONCURRENCY\\\\|sweep\\\" crates/server/README.md | cut -c1-400\"}\n- Bash: {\"command\": \"sed -n 214p crates/server/README.md; echo ----; sed -n 959,967p crates/server/README.md; echo ----; sed -n 1116,1122p crates/server/README.md\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn add_user\\\" -A12 crates/server/tests/support/deps.rs; grep -n \\\"pub async fn fake_lock\\\\|pub fn fake_ref\\\" -A10 crates/server/tests/support/store.rs | head -40; grep -n \\\u2026\n- Bash: {\"command\": \"grep -n 'name = \\\"tokio\\\"' -A2 Cargo.lock | head; grep -n \\\"^tokio\\\" Cargo.toml; grep -rn \\\"const_new\\\" crates/server | head -3\"}\n- Bash: {\"command\": \"sed -n 905,932p crates/server/tests/api/replays.rs; sed -n 300,310p crates/server/tests/api/replays.rs\"}\n- Bash: {\"command\": \"sed -n 318,350p crates/server/src/api/http.rs; grep -n \\\"retryAfterMs\\\" crates/server/tests/api/*.rs | head -5\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3500/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"medium\\\", \\\"why\\\": \\\"Rule 'hard' lines 1-5 do not hold: server crate only (plus spec note\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of the five 'hard' lines holds: the change is in the server crate plus spec notes and README, it edits a query but adds no migration, and it touches about 18 files.\"} --> ## Goal Uncached replay opens, 1v1 and co-op together, run through a server-wide\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-09T20:46:02Z",
       "owner_why": "it plans it",
@@ -16640,12 +16630,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-09T20:36:03Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "42696085887",
+      "run_id": "pending:1e67521d-1794258422",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-09T20:46:02Z",
+      "started_at": "2026-11-09T21:07:37Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6750808141"
+      ]
     },
     "3501": {
       "action": "build",
@@ -17152,9 +17144,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T21:06:47Z",
+    "at": "2026-11-09T21:07:37Z",
     "url": "",
-    "what": "build #3502 on claude-7"
+    "what": "build #3500 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-09T20:49:46Z",
