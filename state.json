@@ -15270,16 +15270,26 @@
         ],
         "builder": "claude",
         "built_by": "claude-7",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/cards/art/ART.md",
+            "apps/web/src/cards/art/figureKit.ts",
+            "apps/web/src/cards/art/sceneRecipes.ts"
+          ],
+          "from": "4360831bcf82b1064865cb3c369f5c1a979bba3b",
+          "main": "3f8896c61dfa5f03681695ac31204429cafd7c85"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-7",
-            "run": "42609899753",
+            "run": "42646872959",
             "tier": "strong"
           }
         ],
-        "sha": "4360831bcf82b1064865cb3c369f5c1a979bba3b",
+        "sha": "b6645ab38ec1f8f3ed54e3dd54b8c18e65b8448e",
         "tiers": {
           "claude": "strong"
         }
