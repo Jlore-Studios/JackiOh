@@ -17824,6 +17824,8 @@
       }
     },
     "3461": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-09T01:03:33Z",
@@ -17837,8 +17839,11 @@
         "trail": "es read as their briefs; three need nudging (024's sheep sits under the window's bottom edge, 056's sleepers and 081's bone hands are cut off). Fixing those.\n- Bash: {\"command\": \"cd src/cards/art && python3 - <<'EOF'\\ndef edit(path, pairs):\\n s=open(path).read()\\n for a,b in pairs:\\n if s.count(a)!=1: raise SystemExit(f\\\"{path}: {a!r} count {s.count(a)}\\\")\\n s=s.\u2026\n- Read: {\"file_path\": \"/tmp/dump/sheet1.png\"}\n- Read: {\"file_path\": \"/tmp/dump/sheet2.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3404 && (E2E_COMPONENT_PORT=5281 timeout 1500 pnpm --dir e2e test:component --spec cypress/component/meditative-alt-scenes.cy.tsx > /tmp/alt.log 2>&1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3404 && python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Next: kit parts -> 3 recipe files -> wiring -> tests -> vitest -> cyp\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3404/apps/web/src/cards/art/ART.md\", \"offset\": 131, \"limit\": 15}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3404/apps/web/src/cards/art/ART.md\", \"offset\": 439, \"limit\": 110}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3404/apps/web/src/cards/art && python3 - <<'EOF'\\np='ART.md'\\ns=open(p).read()\\na=\\\"A Classic+ card offered Alt art draws an alt recipe of its own in\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='scene.ts'\\ns=open(p).read()\\npairs=[('''// here and draws its picture byte for byte. R3396000: a Classic+ card offered Alt art draws an alt\\n// recipe of its own (s\u2026\n- Bash: {\"command\": \"timeout 1200 cargo jackioh patches \\\"Patch: every Meditative Alt art somewhere else: the same subject in a new place, time or moment, one brief per card\\\" --source \\\"#3404\\\" --notes \\\"Me\u2026\n- Bash: {\"command\": \"f=crates/cards/patches/pending/every-meditative-alt-art-somewhere-else-the-same-subject-in.json && cat $f && python3 - \\\"$f\\\" <<'EOF'\\nimport json,sys\\np=sys.argv[1]\\nd=json.load(open(p)\u2026\n- Bash: {\"command\": \"grep \\\"M5-T1 layout\\\" /tmp/alt.log | sed 's/.*\\\\[M5-T1 layout\\\\] //' > /tmp/dump/shares.jsonl; python3 - <<'EOF'\\nimport json\\nallv={}\\nfor l in open('/tmp/dump/shares.jsonl'):\\n allv.up\u2026\n- Bash: {\"command\": \"rm apps/web/src/cards/art/zzdump.test.ts apps/web/src/cards/art/zzfloor.test.ts apps/web/src/cards/art/zzsheet.test.ts && git status --porcelain && git fetch -q origin main 2>&1 | tail -\u2026\n- Bash: {\"command\": \"git diff --stat HEAD origin/main -- apps/web/src/cards/art e2e/cypress/component spec/rulings/R2940001.md spec/rulings/R3401000.md spec/rulings/R34* | tail -15; git log --oneline HEAD..o\u2026\n- Bash: {\"command\": \"(pnpm --dir apps/web typecheck > /tmp/tc.log 2>&1; echo \\\"EXIT $?\\\" >> /tmp/tc.log) & (pnpm --dir e2e typecheck:component > /tmp/tcc.log 2>&1; echo \\\"EXIT $?\\\" >> /tmp/tcc.log) & (timeou\u2026\n- Bash: {\"command\": \"timeout 900 cargo jackioh patches check 2>&1 | tail -3; timeout 1500 cargo jackioh classify --base origin/main --claims 2>&1 | tail -15\", \"description\": \"Run patches check and classify w\u2026\n- Bash: {\"command\": \"timeout 600 cargo jackioh classify --base origin/main --claims >/dev/null 2>&1; echo \\\"classify exit $?\\\"; until grep -q \\\"^EXIT\\\" /tmp/tc.log && grep -q \\\"^EXIT\\\" /tmp/tcc.log && grep -\u2026\n- tool error: Exit code 1 classify exit 0 error: unexpected argument '-3' found tip: to pass '-3' as a value, use '-- -3' Usage: tail [OPTION]... [FILE]... For more information, try '--help'.\n- Bash: {\"command\": \"for f in /tmp/tc.log /tmp/tcc.log /tmp/eslint.log; do echo \\\"== $f\\\"; tail -n 5 $f; done\", \"description\": \"Show typecheck and eslint results\"}\n- Bash: {\"command\": \"(timeout 1500 pnpm exec eslint apps/web e2e > /tmp/eslint-full.log 2>&1; echo \\\"EXIT $?\\\" >> /tmp/eslint-full.log) & timeout 1700 sh -c \\\"sh scripts/build-wasm.sh > /tmp/wasm2.log 2>&1 &\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo fmt-ok; grep -rln \\\"patches/pending\\\\|pending_fragments\\\\|\\\\\\\"pending\\\\\\\"\\\" crates --include=*.rs | head\", \"description\": \"Check rustfmt and find Rust readers o\u2026\n- Bash: {\"command\": \"grep -rln \\\"patches/pending\\\" crates --include=*.rs | grep -v scripts/ | head; \", \"description\": \"Find non-script Rust files reading pending patches\"}\n- Bash: {\"command\": \"grep -n \\\"patches/pending\\\" -B3 -A12 crates/cards/tests/cross/card_text.rs | head -60\", \"description\": \"See what card_text test checks in pending fragments\"}\n- Bash: {\"command\": \"grep -n \\\"meditative-0\\\" e2e/cypress/component/*.cy.tsx | grep -v \\\"meditative-alt-scenes\\\\|meditative-scenes\\\" | head; grep -rn \\\"meditative-0[0-9][0-9]#alt\\\\|artSeedOf(\\\\\\\"meditative\\\"\u2026\n- Bash: {\"command\": \"tail -n 5 /tmp/eslint-full.log\", \"description\": \"Check the full eslint run\"}\n- Bash: {\"command\": \"(E2E_COMPONENT_PORT=5283 timeout 1500 pnpm --dir e2e test:component --spec cypress/component/card-versions.cy.tsx > /tmp/cv.log 2>&1; echo \\\"EXIT $?\\\" >> /tmp/cv.log) > /dev/null 2>&1 &\\\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index(\\\"## State\\\")\\nend=s.index(\\\"## Log\\\")\\nstate=\\\"\\\"\\\"## State\\n\\n- Pass 1 (builder, opus, 2026-11-09): BUILD COMPLETE\u2026\n- Bash: {\"command\": \"grep -n \\\"prettier\\\\|format\\\" package.json apps/web/package.json | head; ls .prettierrc* 2>/dev/null\", \"description\": \"Check for a prettier format check\"}\n- tool error: Exit code 2\n- Bash: {\"command\": \"until grep -q \\\"^EXIT\\\" /tmp/cv.log; do sleep 5; done; grep -E \\\"Tests:|Passing:|Failing:\\\" /tmp/cv.log; tail -n 3 /tmp/cv.log\", \"description\": \"Wait for the card-versions spec result\", \u2026\n- Bash: {\"command\": \"git status --porcelain; cat /tmp/dump/table.md | wc -l\", \"description\": \"Final status check\"}\n- Bash: {\"command\": \"cat /tmp/dump/table.md\", \"description\": \"Print the per-card table for the report\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every Meditative Alt art somewhere else: the same subject in a new place, time or moment, one brief per card\"} --> ## What changed All 54 Meditative cards offered `version-alt-art` now have an Alt art picture of their own, drawn from the brief for that \u2026"
       },
       "issue": 3404,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-09T02:24:29Z",
         "from_run": "42543499890",
         "gates": [
           {
@@ -17930,8 +17935,15 @@
         "source": "build",
         "until": "2026-11-09T02:52:38Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-09T02:22:38Z",
+      "run_id": "pending:e6a67991-1794191035",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "started_at": "2026-11-09T02:24:29Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17989,9 +18001,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T02:13:40Z",
+    "at": "2026-11-09T02:24:29Z",
     "url": "",
-    "what": "review #3458 on claude-6"
+    "what": "review #3461 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-09T02:09:37Z",
