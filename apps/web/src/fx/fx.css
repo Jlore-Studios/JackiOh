@@ -7457,6 +7457,69 @@
   }
 }
 
+/* R3399002: Classic+'s four Mythics' looks, each drawn as a picture of its own (takeoverArt.ts
+   `TAKEOVER_ART_DRAWINGS`: Zephrys Zealotism's zealot, Portal to the Past's portal, Twice Forward One Step
+   Backwards' stair and Mythic Grape's vineyard), one SVG filling the art layer (`xMidYMid slice`). At rest it
+   stands as drawn, Reduce Motion's still among them; under the live takeover it fades in, holds and fades out
+   by --fx-ms, its "spin" paths turn and its "drift" paths swell toward the viewer, each about the centre of its
+   own box, while "back" and "subject" hold still. It names no card (R202). Transform and opacity only. */
+.takeover-art-drawing {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.takeover-drawing-spin,
+.takeover-drawing-drift {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.fx-takeover .takeover-art-drawing {
+  animation: fx-art-drawing var(--fx-ms) linear both;
+}
+
+.fx-takeover .takeover-drawing-spin {
+  animation: fx-art-drawing-spin var(--fx-ms) linear both;
+}
+
+.fx-takeover .takeover-drawing-drift {
+  animation: fx-art-drawing-drift var(--fx-ms) var(--ease-out) both;
+}
+
+@keyframes fx-art-drawing {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.85;
+  }
+  75% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fx-art-drawing-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(150deg);
+  }
+}
+
+@keyframes fx-art-drawing-drift {
+  0% {
+    transform: scale(0.85);
+  }
+  100% {
+    transform: scale(1.3);
+  }
+}
+
 /* --------------------------------------------------------------------------- set piece --- */
 
 /* R2800000: a board clear's set piece, over the whole layer and centred on `--fx-x/--fx-y` (the board,

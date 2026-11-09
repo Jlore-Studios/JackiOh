@@ -2,8 +2,8 @@
 // No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
 // Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields, R2722001 takeovers, R2801000 launches,
 // R3336000 ships, R2800000 set pieces, and R3337002's radar and R3337003's rift and title card. R3400000: a
-// takeover's look may draw its art (takeoverArt.ts); R3400001: a signature's figures (figures.ts), each a shape
-// over its box, never a card.
+// takeover's look may draw its art (takeoverArt.ts; R3399002: its parts or a drawing of its own); R3400001: a
+// signature's figures (figures.ts), each a shape over its box, never a card.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { ART_PLANES } from "../cards/art/pictures.ts";
@@ -11,7 +11,7 @@ import { fragmentRef, signatureLength, signatureSize } from "../cards/FullArtSig
 import { SIGNATURE_FACES } from "../cards/signatureFaces.ts";
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
 import { atOf, pointIn } from "./anchors.ts";
-import { takeoverArtParts } from "./takeoverArt.ts";
+import { TAKEOVER_ART_DRAWINGS, takeoverArtParts, type TakeoverDrawing } from "./takeoverArt.ts";
 import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTakeoverStage, FxTimedPoint, FxTint, SetPieceShape } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
 
@@ -230,6 +230,23 @@ function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
   }
 }
 
+/** R3399002: a takeover's drawing in its art layer, one path a shape, each moved by fx.css under the live takeover as its `part` says. */
+function takeoverDrawing(doc: Document, drawing: TakeoverDrawing): SVGSVGElement {
+  const svg = doc.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("class", "takeover-art-drawing");
+  svg.setAttribute("viewBox", drawing.viewBox);
+  svg.setAttribute("preserveAspectRatio", "xMidYMid slice");
+  svg.setAttribute("aria-hidden", "true");
+  for (const shape of drawing.paths) {
+    const path = doc.createElementNS(SVG_NS, "path");
+    path.setAttribute("class", `takeover-drawing-${shape.part}`);
+    path.setAttribute("d", shape.d);
+    path.setAttribute("fill", shape.fill);
+    svg.appendChild(path);
+  }
+  return svg;
+}
+
 function chaosLines(doc: Document, el: HTMLElement, lines: FxChaosCue["lines"]): void {
   el.style.setProperty("--fx-lines", String(lines.length));
   lines.forEach((line, index) => {
@@ -441,6 +458,7 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
     case "takeover": {
       // R2722001, R3345000: the board's darkening, the card's full art in 4 depth planes,
       // dolly camera, set signature hand signing across the bottom, and rays/shockwave.
+      // R3399002: a look drawn as a picture of its own paints it in its art layer, keyed by the look alone.
       const at = boxes.at ?? null;
       if (at === null) return null;
       placeAtCenter(el, at);
@@ -466,9 +484,11 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
           picture.src = cue.art;
           el.appendChild(picture);
         }
-        // R3400000: a look with art of its own draws it over the dark, under the sweep, rays and wave, one element a part.
+        // R3400000: a look with art of its own draws it over the dark, under the sweep, rays and wave, one element a part;
+        // R3399002: or its drawing, one path a shape.
         const parts = part === "dark" ? takeoverArtParts(cue.look) : [];
-        if (parts.length === 0) continue;
+        const drawing = part === "dark" ? TAKEOVER_ART_DRAWINGS[cue.look] : undefined;
+        if (parts.length === 0 && drawing === undefined) continue;
         const art = doc.createElement("div");
         art.className = "takeover-art";
         art.setAttribute("data-look", cue.look);
@@ -477,6 +497,7 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
           piece.className = `takeover-art-${name}`;
           art.appendChild(piece);
         }
+        if (drawing !== undefined) art.appendChild(takeoverDrawing(doc, drawing));
         el.appendChild(art);
       }
       break;

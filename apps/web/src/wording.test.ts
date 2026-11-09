@@ -47,6 +47,12 @@ const {
   isTemplateTail,
 } = ts;
 
+/**
+ * The whole client's parse, which the first scan to run pays and the rest read from `WORDS`: 2.6 to 5.7 s on CI's
+ * loaded unit shards (#3449), past vitest's default 5 s, and it grows with the client.
+ */
+const SCAN_TIMEOUT_MS = 30_000;
+
 function wordsIn(path: string): { at: string; text: string }[] {
   const known = WORDS.get(path);
   if (known) return known;
@@ -78,7 +84,7 @@ function wordsIn(path: string): { at: string; text: string }[] {
 }
 
 describe("R373 players read Deck and Tribute", () => {
-  it("R373 no text a player can read in the client says library or sacrifice", () => {
+  it("R373 no text a player can read in the client says library or sacrifice", { timeout: SCAN_TIMEOUT_MS }, () => {
     const files = sources(SRC).filter((path) => !CONVERTED.has(relative(SRC, path)));
     expect(files.length).toBeGreaterThan(100);
     const found = files
@@ -109,7 +115,7 @@ function oldCostWords(text: string): boolean {
 }
 
 describe("R432 a cost is \"(N) Cost\" as a noun and \"costs (N)\" as a verb", () => {
-  it("R432 no text a player can read in the client writes a cost the old way", () => {
+  it("R432 no text a player can read in the client writes a cost the old way", { timeout: SCAN_TIMEOUT_MS }, () => {
     const files = sources(SRC);
     expect(files.length).toBeGreaterThan(100);
     const found = files
@@ -211,7 +217,7 @@ function voiceLineTexts(): string[] {
 }
 
 describe("R1320 players read Nerf and Buff", () => {
-  it("R1320 no text a player can read in the client says Degrade or Upgrade", () => {
+  it("R1320 no text a player can read in the client says Degrade or Upgrade", { timeout: SCAN_TIMEOUT_MS }, () => {
     const files = sources(SRC);
     expect(files.length).toBeGreaterThan(100);
     const found = files
@@ -317,7 +323,7 @@ function namesTheRename(text: string): boolean {
 }
 
 describe("R781000 players read Equip, the keyword Magnetic became", () => {
-  it("R781000 no text in the client, no card, flavour or voice line and no Chinese string says Magnetic", () => {
+  it("R781000 no text in the client, no card, flavour or voice line and no Chinese string says Magnetic", { timeout: SCAN_TIMEOUT_MS }, () => {
     const files = sources(SRC);
     expect(files.length).toBeGreaterThan(100);
     const client = files
@@ -355,7 +361,7 @@ describe("R781000 players read Equip, the keyword Magnetic became", () => {
 const OLD_JLOCK = /jlockh/i;
 
 describe("R278 the faction is Jlockeed", () => {
-  it("R278 no client text, card, flavour, voice line or Chinese string spells it with an h", () => {
+  it("R278 no client text, card, flavour, voice line or Chinese string spells it with an h", { timeout: SCAN_TIMEOUT_MS }, () => {
     const files = sources(SRC);
     expect(files.length).toBeGreaterThan(100);
     const client = files
