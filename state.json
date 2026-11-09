@@ -19210,17 +19210,6 @@
   },
   "machine_memory": [
     {
-      "at": "2026-11-04T06:57:27Z",
-      "box": "b2",
-      "high_swap": 884830208,
-      "low_available": 3842764800,
-      "runner": "night-vm-muse-b2",
-      "stall_full": 28.9,
-      "stall_some": 82.6,
-      "swapped": 2803018,
-      "total": 8153972736
-    },
-    {
       "at": "2026-11-04T07:18:55Z",
       "box": "b2",
       "high_swap": 913170432,
@@ -19827,6 +19816,16 @@
       "stall_full": 0.0,
       "stall_some": 0.0,
       "swapped": 0,
+      "total": 8153972736
+    },
+    {
+      "at": "2026-11-09T06:53:22Z",
+      "high_swap": 153108480,
+      "low_available": 6510174208,
+      "runner": "night-vm-muse",
+      "stall_full": 2.9,
+      "stall_some": 3.5,
+      "swapped": 243200,
       "total": 8153972736
     }
   ],
