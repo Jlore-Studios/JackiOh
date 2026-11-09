@@ -17959,8 +17959,11 @@
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
-      "ci_fixes": 1,
+      "ci_fixes": 0,
       "ci_on_head": true,
+      "ci_reruns": {
+        "03e2bf8671e316d78c98997f45fc0098253cd68f": 1
+      },
       "ci_run_id": 42556499635,
       "ci_sha": "03e2bf8671e316d78c98997f45fc0098253cd68f",
       "cleared": {
