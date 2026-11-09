@@ -18404,6 +18404,14 @@
       "started_at": "2026-11-09T09:29:47Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "3472": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-09T09:29:47Z",
+      "issue": 3471,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
