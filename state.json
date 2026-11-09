@@ -14668,25 +14668,16 @@
         ],
         "builder": "claude",
         "built_by": "claude-1",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/cards/art/scene.test.ts",
-            "apps/web/src/wording.test.ts"
-          ],
-          "from": "eaed2ec44c7d9c72129b423f0215e1cd1fa07612",
-          "main": "cf108f4ccd99f3f122675a2f8cc8a1ccd2d34a28"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-1",
-            "run": "42604798688",
+            "run": "42613221114",
             "tier": "strong"
           }
         ],
-        "sha": "98d9d2500b4bf027c9137dc94063c373c6fefdc0",
+        "sha": "b21f8bab4689e3c114fcf588441d338b4f59a7e0",
         "tiers": {
           "claude": "strong"
         }
