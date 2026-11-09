@@ -15541,6 +15541,14 @@
       "spot_check_n": 165,
       "started_at": "2026-11-09T10:26:23Z",
       "stop_requested": false
+    },
+    "3475": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-09T11:44:18Z",
+      "issue": 3406,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
