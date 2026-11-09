@@ -17963,6 +17963,8 @@
       }
     },
     "3464": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-09T02:02:00Z",
@@ -17976,8 +17978,11 @@
         "trail": " /home/runner/work/_temp/work/item-3352; cat >> .bot-notes.md <<'EOF'\\n- 03:45 Cypress classic-scenes.cy.tsx PASSED (4 tests, 01:40) before chalice/#81 edits. Added `chalice` (props, #\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3352; J=/home/runner/work/JackiOh/JackiOh/target/release/jackioh; timeout 1200 $J classify --base origin/main --claims 2>&1 | tail -15\", \"description\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3352; J=/home/runner/work/JackiOh/JackiOh/target/release/jackioh; timeout 1200 $J classify --base origin/main --claims >/dev/null 2>&1; echo \\\"exit $\u2026\n- Bash: {\"command\": \"sleep 120; grep -E \\\"Test Files|Tests |FAIL|\\u00d7|exit\\\" /tmp/w3352c/web1.log | head\", \"description\": \"Wait for the broad web tests\", \"timeout\": 200000}\n- tool error: <tool_use_error>Blocked: sleep 120 followed by: grep -E \"Test Files|Tests |FAIL|\u00d7|exit\" /tmp/w3352c/web1.log head. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sle\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3352/apps/web; timeout 900 pnpm exec vitest run src/cards/art/ 2>&1 | grep -E \\\"Test Files|Tests |FAIL|\\u00d7\\\" | head -20; grep -v \\\" OK$\\\" /tmp/cla\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3352/apps/web; timeout 900 pnpm exec vitest run src/cards/art/art.test.ts src/cards/art/pictures.test.ts 2>&1 | grep -E \\\"Error|expected|timed out|Ti\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/w3352c/web1.log; do sleep 5; done; grep -E \\\"Test Files|Tests |FAIL|exit\\\" /tmp/w3352c/web1.log | head -30\", \"description\": \"Wait for the broad web tests to \u2026\n- said: I'll wait for the broad web run to finish, then time `art.test.ts`'s B1 test on its own. It timed out while the machine was busy, so I need to know whether it is near its 5-second limit even on a quiet machine.\n- Bash: {\"command\": \"grep -E \\\"Test Files|Tests |FAIL|exit\\\" /tmp/w3352c/web1.log | head -30; ps aux | grep -c \\\"[v]itest\\\"\", \"description\": \"Check whether the broad web tests finished\"}\n- Bash: {\"command\": \"ps -eo pid,etime,pcpu,args | grep \\\"[v]itest\\\" | cut -c1-200 | head; uptime\", \"description\": \"See the running vitest processes and load\"}\n- Bash: {\"command\": \"nproc; free -g | head -2\", \"description\": \"Check CPU count and memory\"}\n- Bash: {\"command\": \"cat > /tmp/w3352c/mktable.py <<'EOF'\\nimport re, sys\\nsys.path.insert(0, \\\"/tmp/w3352c\\\")\\nfrom verdicts import V\\nrows = open(\\\"/tmp/w3352c/table.md\\\").read().strip().split(\\\"\\\\n\\\")\\nou\u2026\n- said: The table generator works. Waiting for the broad web test run to finish before timing B1 on its own.\n- Bash: {\"command\": \"grep -E \\\"Test Files|Tests |FAIL|exit|Duration\\\" /tmp/w3352c/web1.log | head -30\", \"description\": \"Read the broad web test summary\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3352/apps/web; uptime; timeout 900 pnpm exec vitest run src/cards/art/art.test.ts src/cards/art/pictures.test.ts --reporter=verbose 2>&1 | grep -E \\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3352/apps/web; cp src/cards/art/sceneRecipes.ts /tmp/w3352c/sceneRecipes.ts.bak; sed -i 's/^ \\\\.\\\\.\\\\.CLASSIC_RECIPES_[123],$/ \\\\/\\\\/ TEMP &/' src/ca\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3352/apps/web/src/cards/art; git diff 3163b425c1 -- figureKit.ts | head -40; sed -n 1,15p sceneKitClassic.ts; grep -n \\\"^export const CLASSIC_KIT\\\" -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3352/apps/web; timeout 600 pnpm exec vitest run src/cards/art/zzClassicReport.test.ts 2>&1 | grep -E \\\"Tests \\\"; grep -c \\\" OK$\\\" /tmp/classic-report\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3352; python3 - <<'EOF'\\np = \\\".bot-notes.md\\\"\\ns = open(p).read()\\ni = s.index(\\\"## Log\\\")\\nstate = \\\"\\\"\\\"## State\\n\\n- 2026-11-09 sixth run (claude\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3352; timeout 900 pnpm exec eslint apps/web/src/cards/art e2e/cypress/component/classic-scenes.cy.tsx 2>&1 | tail -5; echo \\\"eslint exit ${PIPESTATUS\u2026\n- Bash: {\"command\": \"grep -aE \\\"All specs passed|failed|Failing|\\u2716|exit|Tests:|Passing:\\\" /tmp/w3352c/cy2.log | tail -8\", \"description\": \"Read the second Cypress result\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3352/apps/web; timeout 900 pnpm exec vitest run src/cards/art/ src/cards/fullArt.test.tsx src/cards/fullArtBoard.test.tsx src/cards/fullArtTiers.test\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3352; (timeout 3000 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/c\u2026\n- Bash: {\"command\": \"cat /tmp/w3352c/pr-table.md\", \"description\": \"Show the PR table\"}\n- Bash: {\"command\": \"cd /tmp/w3352c; sed -i 's/\\\"083\\\": \\\"as briefed: the armoured ogre wears its armour as plate\\\"/\\\"083\\\": \\\"as briefed\\\"/' verdicts.py; python3 mktable.py > pr-table.md; grep \\\"classic-083\u2026\n- Bash: {\"command\": \"until grep -aq \\\"^exit\\\" /tmp/w3352c/web2.log; do sleep 10; done; grep -aE \\\"Test Files|Tests |FAIL|\\u00d7|exit|Duration\\\" /tmp/w3352c/web2.log | head -20\", \"description\": \"Wait for the \u2026\n- said: The build is finished. The last check still running is the harness's own web test command (tests for the changed files only), which I'm waiting on.\n- Bash: {\"command\": \"grep -aE \\\"Test Files|Tests |FAIL|\\u00d7|exit|Duration\\\" /tmp/w3352c/web2.log | head -20\", \"description\": \"Read the harness web test summary\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3352; git status --short; echo \\\"- 04:30 harness web command: 316 files passed. Cypress rerun passed. All checks green. Writing final report.\\\" >> .b\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every Classic card drawn as what it is: a scene of its own for each, richer the rarer\"} --> ## What changed Every entry in the issue's table now draws its own scene recipe, written from its brief, in Classic's temple-stone look. That is Classic #1\u2013#73, \u2026"
       },
       "issue": 3352,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-09T04:11:40Z",
         "from_run": "42548668690",
         "gates": [
           {
@@ -18069,8 +18074,15 @@
         "source": "build",
         "until": "2026-11-09T04:40:40Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-09T04:10:40Z",
+      "run_id": "pending:546269dc-1794197472",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "started_at": "2026-11-09T04:11:40Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18084,9 +18096,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T04:02:30Z",
+    "at": "2026-11-09T04:11:40Z",
     "url": "",
-    "what": "revise #3426 on claude-4"
+    "what": "review #3464 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-09T03:59:07Z",
