@@ -23846,10 +23846,6 @@
     "claude-4": {
       "spent": [
         {
-          "at": "2026-10-30T04:29:50Z",
-          "minutes": 18.3
-        },
-        {
           "at": "2026-10-30T04:39:17Z",
           "minutes": 6.3
         },
@@ -24644,16 +24640,13 @@
         {
           "at": "2026-11-09T19:34:22Z",
           "minutes": 20.9
+        },
+        {
+          "at": "2026-11-09T20:39:53Z",
+          "minutes": 7.0
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-10-28T13:07:25Z",
-          "cache": 6504312,
-          "cost": 4.5726,
-          "input": 122,
-          "output": 93650
-        },
         {
           "at": "2026-10-28T15:34:30Z",
           "cache": 11257666,
@@ -26046,14 +26039,21 @@
           "cost": 0.737,
           "input": 55,
           "output": 20565
+        },
+        {
+          "at": "2026-11-09T20:39:53Z",
+          "cache": 1735835,
+          "cost": 1.1466,
+          "input": 66,
+          "output": 17827
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-09T22:20:00Z",
-          "utilization": 0.03
+          "utilization": 0.06
         },
-        "observed_at": "2026-11-09T19:34:22Z",
+        "observed_at": "2026-11-09T20:39:53Z",
         "status": "allowed"
       }
     },
@@ -35869,6 +35869,16 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-09T19:40:30Z,claude-4,ping,before,42685278684,3,2026-11-09T22:20:00Z,,,allowed,70,,",
+      "2026-11-09T19:40:53Z,claude-4,stream,call,42685278684,4,2026-11-09T22:20:00Z,,,allowed,70,,",
+      "2026-11-09T19:41:54Z,claude-4,stream,call,42685278684,5,2026-11-09T22:20:00Z,,,allowed,70,,",
+      "2026-11-09T20:14:47Z,claude-4,stream,call,42685278684,5,2026-11-09T22:20:00Z,,,allowed,70,,",
+      "2026-11-09T20:15:22Z,claude-4,stream,call,42685278684,6,2026-11-09T22:20:00Z,,,allowed,70,,",
+      "2026-11-09T20:31:01Z,claude-4,stream,call,42685278684,6,2026-11-09T22:20:00Z,,,allowed,70,,"
+    ]
   },
   "version": 1
 }
