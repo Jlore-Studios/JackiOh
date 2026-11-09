@@ -246,7 +246,7 @@ Each also makes every fight's enemy stronger ([[§15.6]], [[R2922001]]).
 - `RUN_SCORE_DAMAGE`, `RUN_SCORE_HEALING` and `RUN_SCORE_CARD_DRAWN` per point of every fight's report, a lost fight's included;
 - then `RUN_SCORE_MINI_BOSS_PERCENT` percent per mini-boss beaten, then `RUN_SCORE_FINAL_BOSS_PERCENT` percent for the final boss, then the curse points' percent (`RUN_SCORE_CURSE_POINT_PERCENT`).
 
-Time and turns are shown beside the score, not in it.
+Time and turns are shown beside the score, not in it. A run's time is the time it was played: it counts only while the run is open and shown, so a run left and picked up later is not timed by the calendar ([[R3502000]]).
 
 **Embers** are earned only by playing: `run_embers`, the score divided by `RUN_SCORE_PER_EMBER`, paid when a run ends. They buy levels ([[§15.3]]) at `RUN_LEVEL_EMBERS`. Spending them on upgrading artifacts or buying buffs is not built.
 

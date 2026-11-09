@@ -155,13 +155,14 @@ function fightHost(reports: ("action" | "error")[] = [], aiToAct = false, resume
 
 function fakeDungeon(
   act: Mock<(action: RunAction) => string | null>,
-  startedAt: number | null = Date.now() - 65_000,
+  elapsedMs: number | null = 65_000,
 ): Dungeon {
   return {
     content: CONTENT,
     progress: { unlocks: {}, embers: 0 },
     run: RUN,
-    startedAt,
+    elapsedMs,
+    resumedAt: null,
     start: vi.fn(() => null),
     act,
     abandon: vi.fn(),
