@@ -13,7 +13,7 @@ import { BACKDROP_PARTICLE_MAX } from "../../game/config.ts";
 import { testid } from "../../game/contract.ts";
 import { baseView, emptySide, faceUpBackrow, unit } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
-import { FX_CARD_TABLE, parseFxCardTable } from "../cards/tables.ts";
+import { entryAura, FX_CARD_TABLE, parseFxCardTable } from "../cards/tables.ts";
 import { FX_PARTICLE_CAP_MOBILE } from "../constants.ts";
 import {
   TILE_FADE_OUT_MS,
@@ -21,6 +21,7 @@ import {
   TILE_MOTES_MYTHIC,
   TILE_PARTICLE_SHARE,
 } from "./config.ts";
+import { planAuras } from "./plan.ts";
 import {
   planTileAura,
   tierOf,
@@ -40,7 +41,6 @@ describe("R3342000 tile aura planner", () => {
       const tier = tierOf(def);
       if (tier === null) continue;
       if (def.type !== "Unit" && def.type !== "Field Spell" && def.type !== "Field Trap" && def.type !== "Trap") continue;
-      const tableEntry = FX_CARD_TABLE.get(id);
       const isUnit = def.type === "Unit";
       const view = baseView({
         you: emptySide("p1", {
@@ -50,9 +50,11 @@ describe("R3342000 tile aura planner", () => {
       });
 
       const planned = planTileAura(view, "you", isUnit ? "units" : "backrow", 1);
-      // A card whose table entry wears its own aura (R3400000: a bespoke entry's too) wears that in its place.
-      if ((tableEntry?.kind === "hooks" || tableEntry?.kind === "bespoke") && tableEntry.aura !== undefined) {
+      // A card whose table entry wears its own aura (R3400000: a bespoke entry's too) wears that in its place, and
+      // (R3399001) stands it in the aura layer: a Unit's on its own tile, a Field card's from its zone.
+      if (entryAura(FX_CARD_TABLE.get(id)) !== undefined) {
         expect(planned, id).toBeNull();
+        if (def.type !== "Trap") expect(planAuras(view, new Map()).some((aura) => aura.defId === id), id).toBe(true);
         covered += 1;
         continue;
       }
@@ -284,6 +286,18 @@ describe("R3342000 tile aura planner", () => {
     // With signature table: plans null
     const signatureTable = parseFxCardTable("test.json5", '{ "core-052": { aura: { look: "void", scope: "side" } } }');
     expect(planTileAura(silasView, "you", "units", 1, signatureTable)).toBeNull();
+  });
+
+  it("R3399001 a Classic+ signature Unit's bespoke entry aura replaces the default tile aura too", () => {
+    const pancakeView = baseView({
+      you: emptySide("p1", {
+        units: [unit("p1", { defId: "classicplus-012", instanceId: "u1" })],
+      }),
+    });
+    expect(planTileAura(pancakeView, "you", "units", 1, new Map())).not.toBeNull();
+    // The Mother Pancake's entry is `{ bespoke, aura, entrance, signature }`: its own syrup stands on its tile instead.
+    expect(planTileAura(pancakeView, "you", "units", 1)).toBeNull();
+    expect(planAuras(pancakeView, new Map()).map((aura) => [aura.key, aura.scope, aura.look])).toEqual([["unit-u1", "tile", "syrup"]]);
   });
 
   it("R3400000 a signature Unit's own tile aura, on a hooks or a bespoke entry, replaces the default", () => {

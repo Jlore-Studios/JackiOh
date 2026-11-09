@@ -7,7 +7,7 @@ import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import { animTestid, planEntries, type AnimationEntry } from "../../../game/animations.ts";
-import { testid } from "../../../game/contract.ts";
+import { LANES, testid } from "../../../game/contract.ts";
 import { fullBoardView, withEvents } from "../../../test/fixtures.ts";
 import {
   FX_INTENSITY_SCALE,
@@ -91,25 +91,41 @@ function effectCues(events: readonly GameEvent[], D = 400, env: FxPlanEnv = envO
 const at = (cue: FxCue): string => ("at" in cue && cue.at.kind === "testid" ? cue.at.testid : "");
 
 describe("R2795000 Classic+'s Flourishes", () => {
-  it("R2795000 each Flourish is its card's bespoke entry", () => {
-    for (const [defId, key] of FLOURISHES) expect(FX_CARD_TABLE.get(defId), defId).toEqual({ kind: "bespoke", key });
+  it("R2795000 R3399000 each Flourish is its card's bespoke entry, Rollback's now its signature", () => {
+    for (const [defId, key] of FLOURISHES) {
+      expect(FX_CARD_TABLE.get(defId), defId).toEqual(defId === ROLLBACK ? { kind: "bespoke", key, signature: true } : { kind: "bespoke", key });
+    }
   });
 
   it("R2795000 Rollback rewinds lane 5 to lane 1 on both sides, then glints both heroes; its row still plays", () => {
     const view = fullBoardView();
     const cues = effectCues(stream(ROLLBACK, "rollbackSweep", view));
     const rings = cues.flatMap((cue) => (cue.kind === "ring" && cue.preset === "arcane" && at(cue).startsWith("zone-") ? [`${at(cue)}@${String(cue.delayMs)}`] : []));
-    // At D 400: travel 80, and FX_ROLLBACK_STEP (32 ms) between lanes, lane 5 first.
-    expect(rings).toEqual(
-      [5, 4, 3, 2, 1].flatMap((lane, k) => ["you", "opponent"].map((side) => `${testid.zone(side as "you" | "opponent", "units", lane)}@${String(80 + 32 * k)}`)),
-    );
-    const L = timesOf(400).L;
-    const glints = cues.filter((cue) => cue.kind === "burst" && cue.preset === "sparkle" && cue.delayMs === L).map(at);
+    // At D 400: from the entry's start, FX_ROLLBACK_STEP (32 ms) between lanes, lane 5 first (#3399 moved it up from Travel).
+    expect(rings).toEqual([5, 4, 3, 2, 1].flatMap((lane, k) => ["you", "opponent"].map((side) => `${testid.zone(side as "you" | "opponent", "units", lane)}@${String(32 * k)}`)));
+    // The heroes glint a step after lane 1.
+    const glint = Math.round(LANES.length * FX_ROLLBACK_STEP * 400);
+    const glints = cues.filter((cue) => cue.kind === "burst" && cue.preset === "sparkle" && cue.delayMs === glint).map(at);
     expect(glints).toEqual([testid.hero("you"), testid.hero("opponent")]);
     // In the card's own look (Physical's sepia), at its scale.
     for (const cue of cues) if (cue.kind === "burst" && cue.preset === "sparkle") expect(cue.colors).toEqual(FLAVOR_LOOKS.Physical.colors);
     // The row's own rewind (the board's sheen) still plays.
     expect(cues.some((cue) => cue.kind === "sheen" && at(cue) === testid.board)).toBe(true);
+    // #3399: its cast frames the screen in a stone clock (twelve ticks and a ring at twelve), its hand stutters
+    // three times, and a tint washes every unit zone, lane 5 first, each side in turn.
+    const onScreen = (cue: FxCue): boolean => "at" in cue && cue.at.kind === "viewport";
+    const cast = planAll(stream(ROLLBACK, "rollbackSweep", view), view, envOf(), 400).find(({ entry }) => entry.events.some((event) => event.type === "cardPlayed"))?.cues ?? [];
+    expect(cast.filter((cue) => cue.kind === "burst" && cue.preset === "dust" && onScreen(cue))).toHaveLength(12);
+    expect(cast.filter((cue) => cue.kind === "ring" && cue.preset === "dust" && onScreen(cue))).toHaveLength(1);
+    expect(cast.filter((cue) => cue.kind === "burst" && cue.preset === "arcane" && cue.spread === "point" && onScreen(cue))).toHaveLength(3);
+    const tint = cast.flatMap((cue) => (cue.kind === "burst" && cue.preset === "smoke" ? [at(cue)] : []));
+    expect(tint).toEqual([5, 4, 3, 2, 1].flatMap((lane) => ["you", "opponent"].map((side) => testid.zone(side as "you" | "opponent", "units", lane))));
+    // At the rewind its hand swings back a tick for each turn rolled back (beside the row's own arcane ring at
+    // the middle): one here, three for three turns.
+    const swings = (planned: readonly FxCue[]): number => planned.filter((cue) => cue.kind === "burst" && cue.preset === "arcane" && cue.spread === "point" && onScreen(cue)).length;
+    expect(swings(cues)).toBe(1);
+    const three: GameEvent[] = [played("p1", "ex", ROLLBACK), { type: "rolledBack", player: "p1", turnsAgo: 3, sides: ["p1", "p2"] }, resolved("p1", "ex", ROLLBACK)];
+    expect(swings(effectCues(three))).toBe(3);
   });
 
   it("R2795000 Rollback rings only the sides its rollback names", () => {
