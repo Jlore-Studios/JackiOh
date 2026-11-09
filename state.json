@@ -16288,6 +16288,7 @@
       "asks": [
         "c:6728331432"
       ],
+      "closed_at": "2026-11-09T06:15:02Z",
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -16306,6 +16307,7 @@
       "issue": 3399,
       "kind": "revise",
       "live": "reviewing",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-4",
       "question": "How should R3332000's signature budget be measured, so the 35 Classic+ signatures can pass it?",
