@@ -17949,10 +17949,12 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "at": "2026-11-09T08:13:43Z",
+        "at": "2026-11-09T11:18:43Z",
         "built_by": "claude-4",
         "by": "`claude` (strong)",
-        "sha": "bfaa8dc72838cc889520f6d31ac1d9e7109aa3bc"
+        "carried_from": "bfaa8dc72838cc889520f6d31ac1d9e7109aa3bc",
+        "resolved_by": "`claude` (strong)",
+        "sha": "517ce8b770d2e3fc65e08345ac38588880ae5657"
       },
       "died": 0,
       "difficulty": "hard",
@@ -17964,6 +17966,7 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
+      "merge_owner": "claude-4",
       "merge_owner_gave_up": {
         "at": "2026-11-09T09:01:12Z",
         "provider": "claude-4",
