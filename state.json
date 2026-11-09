@@ -15234,11 +15234,6 @@
       "last_findings": [],
       "live": "resolving",
       "merge_owner": "claude-7",
-      "paused": {
-        "at": "2026-11-09T13:38:47Z",
-        "interrupt": "usage",
-        "provider": "claude-7"
-      },
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
