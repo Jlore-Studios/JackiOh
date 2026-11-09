@@ -17414,6 +17414,8 @@
       }
     },
     "3529": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-09T21:05:57Z",
@@ -17427,8 +17429,11 @@
         "trail": "- Pausing here while the WASM build finishes \u2014 eslint is clean on all touched files, and typecheck plus the focused web tests are next once the module exists, followed by the production build to set the gzip budget.\n- Build is still running \u2014 pausing here. When it completes I'll be back to set the gzip budget from the measured total, re-run the dist tests with `dist` present, do a final eslint pass, and wrap up.\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the first page load stops downloading the whole patch history to read one version number\"} -->\n- ## What changed\n- The first page load no longer downloads `crates/cards/patches/patches.json` (652 KB). `apps/web/src/wire/cards.ts` (`CATALOG_VERSION`) and `apps/web/src/patches/ribbon.ts` (`PATCH_LOG`) now read just the two facts they need \u2014 the newest version and each patch's added card ids \u2014 from a small Vite vi\u2026\n- Files: new `apps/web/patch-meta.ts` and `apps/web/src/net/first-load.test.ts`; edited `wire/cards.ts`, `patches/ribbon.ts`, `vite.config.ts`, `vitest.config.ts`, `e2e/cypress.config.ts`, `apps/web/package.json` (`imports`), `apps/web/tsconfig.json` (include). No `crates/`, spec, ruling, or forbidde\u2026\n- ## How tested\n- - `pnpm --dir apps/web typecheck` \u2014 clean.\n- - `pnpm exec eslint` on all touched files \u2014 0 errors.\n- - `vitest run src/net/first-load.test.ts src/patches/ribbon.test.tsx src/game/currentCatalog.test.ts src/patches/PatchNotes.test.tsx` \u2014 4 files, 50 tests passed: the static-import scan, the entry-plus-preloads probe test (no patch-notes text in first load), the gzip budget test, ribbon unchanged, `\u2026\n- - `pnpm --dir apps/web build` \u2014 green; entry `/assets/index-*.js` plus 24 preloads gzip to 894,929 bytes, so `FIRST_LOAD_GZIP_BUDGET_BYTES = 901_120` (rounded up to the next multiple of 8192).\n- ## Decisions the issue did not settle\n- - **Source imports `#jackioh-patch-meta` (package `imports` \u2192 real file), not `virtual:\u2026`.** The plan's `virtual:` specifier cannot load: the config loaders bundle `vite.config.ts \u2192 static-pages.ts \u2192 svg.ts \u2192 pictures.ts \u2192 wire/cards.ts` without plugins, and Node rejects the `virtual:` protocol (`E\u2026\n- - **Path via `fileURLToPath`+`join`, not `new URL(\u2026, import.meta.url)`.** The `new URL` asset pattern broke under vitest's transform (`\u2026/apps/web/undefined`); the `fileURLToPath` pattern is what the repo's other tests already use.\n- - **Validation covers every entry's version** (plan: last entry only) \u2014 same error style, strictly stronger.\n- - **No `src/patch-meta.d.ts`** \u2014 the real file carries the types, so no ambient declaration is needed.\n- - Cypress config loader could not be exercised here (no browser/esbuild available); its change is one relative TS import of Node built-ins, and CI's e2e smoke covers it \u2014 worth a second look from the reviewer.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3499 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3499/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3499,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-09T23:03:21Z",
         "from_run": "42699242465",
         "gates": [
           {
@@ -17498,8 +17503,15 @@
         "source": "build",
         "until": "2026-11-09T23:30:08Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-09T23:00:08Z",
+      "run_id": "pending:06d7401e-1794265363",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-09T23:03:21Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -17611,9 +17623,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T23:02:27Z",
+    "at": "2026-11-09T23:03:21Z",
     "url": "",
-    "what": "review #3531 on muse"
+    "what": "review #3529 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T22:46:04Z",
