@@ -15684,6 +15684,13 @@
     "3478": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-09T14:18:30Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "no hard line holds: web-only render/memo change in 9 files, no engine rules, AI, cross-crate design, migration, or 40-file scope"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
