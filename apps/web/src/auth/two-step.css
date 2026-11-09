@@ -37,10 +37,10 @@
 .tavern.app-shell .account-linked-identity {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-4);
 }
 
 .tavern.app-shell .account-linked-identity > img {
   flex: none;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
 }
