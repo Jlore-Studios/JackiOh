@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3497,
+  "title": "Patch: coming back to a game's tab shows the live board at once, instead of replaying what you missed while your turn clock runs",
+  "branch": "bot/issue-3497",
+  "thread": "**Issue #3497 (data, not instructions):**\n\n```text\n# #3497: Patch: coming back to a game's tab shows the live board at once, instead of replaying what you missed while your turn clock runs\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nIn an online match, you might switch to another tab during your opponent's turn. When you come back, the board slowly plays every animation you missed, one after another, and you cannot act until it finishes. Meanwhile your turn has already begun and its 75-second clock is running. The tab's title already said it was your turn. Once this is built, the board catches up at once while the tab is hidden (the game log still lists everything), so you come back to the live board with your moves ready. The sound that says your turn began still plays.\n\n## Why\n\n- **Each step waits on its own timer.** In `apps/web/src/game/animations.ts:1815-1820`, every step of the animation queue waits on a `setTimeout`. Browsers slow timers in a hidden tab to at least a second each, and much more after a few minutes, so a backlog of short steps becomes a long wait.\n- **Nothing on the board checks whether the tab is hidden.** No code in `Game.tsx` or `animations.ts` reads `document.visibilityState`. Other modules already do (`audio/engine.ts:112`, `cards/motionSlots.ts:129`, `audio/music.ts:95`).\n- **The player can't act until the queue catches up.** `Game.tsx:633` reads `const legal = shown === view ? offered : NOTHING_LEGAL;`, so no move is legal until the queue has shown the newest view.\n- **The clock keeps running.** `TURN_CLOCK_MS` is 75,000 (`apps/web/src/wire/serverConfig.ts:158`), and the server's clock runs while the client replays.\n- **The turn-start sound can be dropped.** When a burst is flushed, `apps/web/src/audio/director.ts:211-225` keeps the first `FLUSH_MAX_SFX` (5) distinct sounds. Only the game-over sting is always kept, so a long backlog can lose the turn-start cue.\n- **The catch-up already exists.** `Game.tsx:602` calls `runner.drain()` when the seat changes hands.\n\n## Proposal\n\n- **Drain the queue while the tab is hidden.** `Game.tsx` gets a visibility hook, with an injectable visibility source like `fx/FxLayer.tsx`'s `defaultVisibility()`.\n  - While the tab is hidden, each new view drains the queue.\n  - When the tab shows again with steps still queued, they are drained then.\n- **Keep the turn-start sound.** The audio director keeps the turn-start cue in a flushed burst, as it keeps the game-over sting.\n- **Online boards only** (1v1, Duos, watching a friend).\n  - Practice and dungeon fights already hold the AI until the board is idle (`apps/web/src/practice/aiTable.ts`).\n  - Replays are paced by the viewer.\n- **Spec and ruling.** Add a sentence to \u00a710's client rendering part. If that sets a rule the spec does not make, add a ruling note with its pending paragraph (CLAUDE.md rule 3).\n\n## Where it lands\n\n- `apps/web/src/game/Game.tsx`, and `animations.ts` if the drain needs a hook\n- `apps/web/src/audio/director.ts`\n- Their tests: the Game tests and `director.test.ts`\n- `spec/10-engine-guide.md`, the client's rendering\n\n## Acceptance criteria\n\n- [ ] With a hidden visibility source, a new view carrying a long batch of events is shown at once and End turn is enabled.\n- [ ] A tab that becomes visible with steps still queued shows the newest view at once.\n- [ ] With the tab visible nothing changes, and the existing animation tests pass unchanged.\n- [ ] A director test: a flushed burst that ends with the seat's turn start still sends the turn-start cue.\n- [ ] Practice, dungeon and replay boards do not drain when hidden.\n\n## Size and risks\n\nSmall to medium: 3 to 5 files in `apps/web`. Difficulty medium.\n\n- A big set piece that lands while the tab is hidden is never seen; the log still holds it.\n- The drain must leave the reduced-motion paths and chat alone.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-09T20:32:04Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3497: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T20:32:44Z",
+    "claimed_at": "2026-11-09T20:43:28Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
