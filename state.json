@@ -17738,6 +17738,8 @@
       "taken_asks": []
     },
     "3460": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-09T01:32:03Z",
@@ -17751,8 +17753,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: unlocks worth the wait: a new variant level is revealed on its own card, Legendary and Mythic pulls take the screen, and the Collection shows off what you earned\"} -->\n- ## What changed\n- Every variant-level grant now reveals the card wearing it: first its previous look, then a wipe into the new level with its name and rarity beneath it. Several grants play in order, rarest last; a pack's own pulls keep the pack's order. Rare and Epic play on the panel with a sound by rarity, Legend\u2026\n- Files: new `economy/GrantReveal.tsx` + `grantReveal.css`, `collection/newLevels.ts`, `e2e/cypress/component/grant-reveals.cy.tsx`, `spec/rulings/R3349000.md`, `spec/pending/3349.md`; changed `packs.ts` (grant constants, `legendaryFlareCues`, `GRANT_TREATMENT`/`treatmentOf`, `orderGrantsRarestLast`)\u2026\n- ## How you can check it\n- - `pnpm --dir apps/web exec vitest run src/packs src/shop src/collection src/economy` \u2192 19 files, 353 tests passed (includes the new `R3349000` its: flare/takeover/pack-order, pack/token/chase reveals rarest-last, new-mark, ladder looks).\n- - `pnpm --dir apps/web typecheck` \u2192 clean; `pnpm exec eslint` on all touched files \u2192 clean; `cargo fmt --check` \u2192 clean.\n- - `cargo jackioh spec check` \u2192 1855 rulings, 4779 proofs, ok.\n- - Component spec `E2E_COMPONENT_PORT=5282 pnpm --dir e2e test:component --spec cypress/component/grant-reveals.cy.tsx` could not run here (no Cypress binary on this machine, install disabled); it passes e2e typecheck and eslint, CI runs it.\n- ## Decisions the issue did not settle\n- - New-mark storage is namespaced by the session token (no account id reaches these screens); only ids the server granted are kept.\n- - An account-cosmetic takeover (Mythic playmat, no card) falls back to grow-in \u2014 the full-screen view needs a card.\n- - `TokenOffer` does not own the reveal: it unmounts when the spent token stops covering the offer, so it reports the grant via `onReveal` and the parents (`CardCosmeticsView`, `AccountCosmeticTiles`) render `GrantReveal` and close the preview on done, per the plan.\n- - The Mythic pack takeover waits for the tear (the sealed/tearing pack moment is kept; reduced motion and Reveal-all skip it).\n- - Marks live only on card tiles, matching the issue; account rows are out of scope.\n- - `takeoverArtOf` was not imported \u2014 `FullScreenArt` already shows the card's own art.\n- - Reviewer look-twice: the nested-dialog Escape flow \u2014 the reveal's done closes the preview, so a second Escape reaches the card view; existing tests were updated to tap through the reveal instead.\n- ## Player note\n- Earning a new look is a moment now. Duplicates, cosmetic packs, tokens and Chase Shard buys reveal the card actually wearing its new level \u2014 small chimes for Rare and Epic, a light-bathed grow-in for Legendary, the full screen for Mythic \u2014 with Legendary and Mythic pack pulls getting their own flar\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3349 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3349/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3349,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-09T02:25:14Z",
         "from_run": "42546065067",
         "gates": [
           {
@@ -17811,8 +17816,15 @@
         "source": "build",
         "until": "2026-11-09T02:51:53Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-09T02:21:53Z",
+      "run_id": "pending:dbd92c6f-1794191081",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-09T02:25:14Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -18003,9 +18015,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T02:24:29Z",
+    "at": "2026-11-09T02:25:14Z",
     "url": "",
-    "what": "review #3461 on claude-6"
+    "what": "review #3460 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T02:09:37Z",
