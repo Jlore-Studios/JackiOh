@@ -223,9 +223,9 @@ export type Highlight = {
   condition?: ReadonlySet<string>;
   /**
    * #991, R583: the cards the hovered or selected hand card's preview counts, as `card-<id>` testids:
-   * its values' `ids` off the view (R1447 keeps them to cards the viewer reads), which Board.tsx adds
-   * for the field alone (`countedTestids`, glow.ts). Never from `legalActions`; no click reads it.
-   * Absent means nothing is ringed.
+   * its values' `ids` off the view (R1447 keeps them to cards the viewer reads), which Zone.tsx adds
+   * from the hover context for the field alone (`countedTestids`, glow.ts). Never from `legalActions`;
+   * no click reads it. Absent means nothing is ringed.
    */
   counted?: ReadonlySet<string>;
 };

@@ -23202,5 +23202,29 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.13e",
+    "date": "2026-11-09",
+    "title": "Patch: audit the codebase for dead code, duplicates and zombie routes, 2026-11-08",
+    "source": "#3423",
+    "notes": "The code audit of 2026-11-08 (#3423, after #2658): dead code removed and duplicated helpers merged. Under apps/web/src/cards/ (R2529000) an unused type goes and the settings, the art kit and two syncs reuse one helper each: how cards look and play is unchanged.",
+    "player": {
+      "title": "Unused code tidied away",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Unused code was removed and repeated helpers were merged. Nothing about how cards look or play changes."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "71ef2a3bd05ce845d7ab98f1734ee9a5894391d3"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
