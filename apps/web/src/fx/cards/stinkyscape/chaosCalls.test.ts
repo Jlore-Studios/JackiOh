@@ -42,7 +42,7 @@ import { landMsAfter } from "./signature.ts";
 const STINKY = "stinkyscape-150";
 const GOLEM = STINKYSCAPE_GOLEM_ID;
 const SCAPE = "stinkyscape-151";
-/** Stinkyscape #7 The Greatest Heist, a Quest Field Spell with no entrance of its own. */
+/** Stinkyscape #7 The Greatest Heist, a Quest Field Spell, landing with an entrance of its own (R3395000). */
 const HEIST = "stinkyscape-007";
 const ID = "fx-chaos";
 const DS = [120, 200, 400, 732, 1400] as const;
@@ -179,11 +179,12 @@ describe("R3407000 Stinkyscape's Calls to Chaos and their Golem", () => {
     const [mine, theirs] = signature([added("p1"), { type: "addedToHand", player: "p2", instanceId: HIDDEN_ID, defId: HIDDEN_ID }], D, before, view);
     expect(mine).toEqual({ cues: [{ kind: "ghost", from: CENTRE, to: tid(animTestid.hand("you")), delayMs: 0, durationMs: D }], row: "replace" });
     expect(theirs).toEqual({ cues: [{ kind: "ghost", from: CENTRE, to: tid(animTestid.hand("opponent")), delayMs: 0, durationMs: D }], row: "replace" });
-    // A Field Spell into the backrow: a puff at its zone's foot, over its row.
+    // A Field Spell into the backrow: a puff at its zone's foot. Every Quest or Wincon Field Spell lands with an
+    // entrance of its own (R3395000's Heist among them), so both draw (R3407000): its entrance, then the puff.
     const [field] = signature([summoned("p1", "q1", HEIST, "backrow", 2)], D, before, view);
-    expect(field?.row).toBe("keep");
-    expect(kinds(field?.cues ?? [])).toEqual(["burst"]);
-    expect(field?.cues[0]).toMatchObject({ at: tid(testid.zone("you", "backrow", 2), FOOT), preset: "smoke", colors: FLAVOR_LOOKS.Toxic.colors });
+    expect(field?.row).toBe("replace");
+    expect(field?.cues.length).toBeGreaterThan(1);
+    expect(field?.cues.at(-1)).toMatchObject({ kind: "burst", at: tid(testid.zone("you", "backrow", 2), FOOT), preset: "smoke", colors: FLAVOR_LOOKS.Toxic.colors });
     // The Golem: its own entrance alone, as it lands anywhere.
     const tgt = testid.zone("you", "units", 2);
     const [golem] = signature([summoned("p1", "g1", GOLEM, "units", 2)], D, before, view);

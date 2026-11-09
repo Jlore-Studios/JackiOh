@@ -181,8 +181,6 @@ const S2 = {
   FX_MIND_JUDGE_TRAUMA: 0.1,
   // Issue #2797: Stinkyscape's Flourishes (R2797000).
   FX_TERMINUS_TRAUMA: 0.5,
-  FX_MAGI_STAGGER: 0.05,
-  FX_MAGI_BOOTS: 3,
   FX_MAGI_TRAUMA: 0.3,
   FX_WARP_TRAUMA: 0.6,
   FX_WARP_FROM: { x: 0.5, y: 0 },
@@ -416,8 +414,7 @@ describe("S2 the effects constants", () => {
       // R2789000: the beats' stagger cap and a First Strike's break-off.
       constants.FX_BEAT_STAGGER_MAX,
       constants.FX_FIRST_STRIKE_BREAK_AT,
-      // R2797000: Imitated Instrumentality's stagger, and where Drone Core X's Battleship warps in from.
-      constants.FX_MAGI_STAGGER,
+      // R2797000: where Drone Core X's Battleship warps in from.
       constants.FX_WARP_FROM.x,
       // R2801000: a fuse's landing, the launch's ignition, contrail flight and landing.
       constants.FX_STARSHIP_FUSE_LAND_AT,

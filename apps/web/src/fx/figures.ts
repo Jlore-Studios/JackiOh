@@ -2,7 +2,8 @@
 // box in a tint (`.fx-figure[data-figure="…"]`), with no image and no text. A figure is a prop of a
 // card's moment (a scroll, a snowplow, a chalkboard, a die), never a card face, so it names no card
 // (R202). Meditative+'s and Training Grounds' signatures draw them (fx/cards/meditativeplus/,
-// fx/cards/traininggrounds/), and R3405001 Meditative's (fx/cards/meditative/).
+// fx/cards/traininggrounds/), R3405001 Meditative's (fx/cards/meditative/) and R3395001 Stinkyscape 001
+// to 090's (fx/cards/stinkyscape/).
 
 import type { FlavorLook } from "./flavors.ts";
 import type { FxAnchor, FxFigureCue, FxTint } from "./types.ts";
@@ -85,6 +86,34 @@ export const FX_FIGURES = [
   "chains",
   "fortress",
   "convoy",
+  // R3395001: Stinkyscape 001 to 090's signatures (fx/cards/stinkyscape/), each a prop of its card's concept.
+  "vaultDoor",
+  "tumbler",
+  "lockRings",
+  "rod",
+  "magiCores",
+  "lectern",
+  "campus",
+  "reactor",
+  "press",
+  "seedPod",
+  "spotlight",
+  "labCases",
+  "paperclip",
+  "mirrorBloom",
+  "barrels",
+  "cannon",
+  "turret",
+  "maw",
+  "wraith",
+  "horn",
+  "fighter",
+  "blade",
+  "flagship",
+  "telemetry",
+  "forgeShell",
+  "carpet",
+  "vial",
 ] as const;
 
 export type FxFigure = (typeof FX_FIGURES)[number];

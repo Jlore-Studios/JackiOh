@@ -1242,7 +1242,12 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   cues.push(...beats.cues);
   // R2784000: each set's mechanics as a Signature in the motif language (systemMoments.ts), over the
   // entry minus what a card motif, a set piece or a beat already draws, holding nothing.
+  // R3395001: a card's own beat (cardFx.ts) that says `moment: "replace"` draws its event in place of the
+  // event's system moment too (Tylannt's dial for the quest's); every other beat draws beside the moment.
+  const signatures = new Map(entry.events.map((event) => [event, planCardFx(event, { entry, view, env, D: entry.durationMs })] as const));
+  const ownMoments = [...signatures].flatMap(([event, result]) => (result?.moment === "replace" ? [event] : []));
   const systemSkip = new Set<GameEvent>([
+    ...ownMoments,
     ...(motif?.replaces ?? []),
     ...(setPiece?.replaces ?? []),
     ...(terminus?.replaces ?? []),
@@ -1256,7 +1261,7 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   const systemReplaced = (event: GameEvent): boolean =>
     replaced(event) || beats.replaces.has(event) || system.replaces.has(event);
   for (const event of entry.events) {
-    const signature = planCardFx(event, { entry, view, env, D: entry.durationMs });
+    const signature = signatures.get(event) ?? null;
     if (signature !== null) {
       cues.push(...signature.cues);
       if (signature.row === "replace") continue;

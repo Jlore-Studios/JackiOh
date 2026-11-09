@@ -202,12 +202,10 @@ export const FX_MOTIF_TRAUMA = {
 export const FX_ARMOR_TRAUMA = 0.2;
 export const FX_MIND_JUDGE_TRAUMA = 0.1;
 // R2797000: Stinkyscape's three Flourishes (fx/cards/stinkyscape/). Olivian Expanse's rift shakes as it
-// gives up its card; Imitated Instrumentality's three boots leave FX_MAGI_STAGGER of D apart, at most
-// FX_MAGI_BOOTS of them staggered, the first shaking the board; Drone Core X's Battleship warps in from
-// FX_WARP_FROM of the board (its top edge) and shakes as it lands.
+// gives up its card; Imitated Instrumentality's first boot shakes the board (R3395000: each boot in its own
+// entry, its signature's); Drone Core X's Battleship warps in from FX_WARP_FROM of the board (its top edge)
+// and shakes as it lands.
 export const FX_TERMINUS_TRAUMA = 0.5;
-export const FX_MAGI_STAGGER = 0.05;
-export const FX_MAGI_BOOTS = 3;
 export const FX_MAGI_TRAUMA = 0.3;
 export const FX_WARP_TRAUMA = 0.6;
 export const FX_WARP_FROM = { x: 0.5, y: 0 } as const;

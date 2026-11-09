@@ -106,6 +106,7 @@ import { shockwaveLectureFixture } from "../cards/stinkyscape/shockwave447.ts";
 import { stimmyDropFixture } from "../cards/stinkyscape/stimmycheck.ts";
 import { chaosOrbFixture } from "../cards/stinkyscape/wildar.ts";
 import type { EntranceKey } from "../cards/recipe.ts";
+import { STINKYSCAPE_SIGNATURE_BOARDS, STINKYSCAPE_SIGNATURE_FIXTURES } from "../cards/stinkyscape/signatureFixtures.ts";
 import { fleetBoard } from "../cards/stinkyscape/starshipSignatures.ts";
 import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
 import { FX_NEXT_REFRESH_MODIFIER_ID } from "../constants.ts";
@@ -469,6 +470,7 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * player's Dormant Starship, which the board does not show, so its brand falls on the hero. R3407000:
  * Stinkyscape part two's signatures take their modules' own (fx/cards/stinkyscape/), each told the card it
  * plays (`defId`), so a hook's marker names it.
+ * R3395000: Stinkyscape 001 to 090's signatures take theirs from fx/cards/stinkyscape/signatureFixtures.ts.
  */
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId, defId?: string) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
@@ -698,6 +700,8 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   packLob: packLobFixture,
   relicSpill: relicSpillFixture,
   printSlot: printSlotFixture,
+  // R3395000: Stinkyscape 001 to 090's signatures (fx/cards/stinkyscape/signatureFixtures.ts).
+  ...STINKYSCAPE_SIGNATURE_FIXTURES,
 };
 
 /**
@@ -834,8 +838,8 @@ function openFirstZone(view: PlayerView): PlayerView {
   return { ...view, you: { ...view.you, units: view.you.units.map((unit, k) => (k === 0 ? null : unit)) } };
 }
 
-/** R3389001: the board a recipe reads, for one that reads it. */
-const RECIPE_BOARDS: Partial<Record<CardRecipeKey, (view: PlayerView) => PlayerView>> = { graveRise: openFirstZone };
+/** R3389001: the board a recipe reads, for one that reads it. R3395000: and one whose fixture summons, its zones open. */
+const RECIPE_BOARDS: Partial<Record<CardRecipeKey, (view: PlayerView) => PlayerView>> = { graveRise: openFirstZone, ...STINKYSCAPE_SIGNATURE_BOARDS };
 
 /**
  * R3332001: the board the gallery plays `defId` over: its entrance's own (`ENTRANCE_BOARDS`), R3389001
