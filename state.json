@@ -16507,11 +16507,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-09T20:58:11Z",
+        "at": "2026-11-09T21:37:40Z",
         "difficulty": "hard",
         "provider": "claude-8",
-        "tier": "medium",
-        "why": "Rule 2: the change is to the AI's search (crates/ai/src/decide.rs, simulate.rs). Rule 3: the shared, wasm and server hosts must all agree on the new callback."
+        "tier": "strong",
+        "why": "Rule 2: it changes the AI's search in crates/ai/src/ (decide.rs, simulate.rs, search.rs); rule 3 too: the AI, shared, wasm, server and tools crates must agree on a new callback"
       },
       "failures": 0,
       "forced": false,
