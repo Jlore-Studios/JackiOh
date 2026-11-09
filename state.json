@@ -17476,13 +17476,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
-        "sha": "edb551660335036ec9aef9e2aa8b4d8d7ba06f76",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "42542315363",
+            "tier": "medium"
+          }
+        ],
+        "sha": "9247a90d8bc20662444883261470b99f80b8bc22",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "3455": {
