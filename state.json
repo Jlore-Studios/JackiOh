@@ -18413,12 +18413,8 @@
     "what": "build #3471 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-09T09:27:31Z",
-    "notes": [
-      "delivered plan #3471 on muse (run 42591624548): planned",
-      "started build #3471 on muse (run 42593862529)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-11-09T09:40:10Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -19123,7 +19119,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T09:27:31Z",
+  "loop_tick": "2026-11-09T09:40:10Z",
   "machine_disk": {
     "issue": null,
     "reading": {
