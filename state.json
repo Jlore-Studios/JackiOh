@@ -18159,18 +18159,18 @@
         "approvals": [
           "claude"
         ],
-        "builder": "",
-        "built_by": "",
+        "builder": "claude",
+        "built_by": "claude-7",
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "provider": "claude-3",
-            "run": "42565812608",
+            "provider": "claude-7",
+            "run": "42599909968",
             "tier": "strong"
           }
         ],
-        "sha": "c349ffa7ca4e96e3e97e41c1679d976ba3430ddf",
+        "sha": "5200b70ee60bcddf0d307716c026a2021f2b132e",
         "tiers": {
           "claude": "strong"
         }
