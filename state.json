@@ -16744,6 +16744,13 @@
     "3503": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-09T22:31:41Z",
+        "difficulty": "hard",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "Rule line 1: it rewrites the engine's resumable hook sequences (crates/engine/src/combat.rs), the resolution loop's pause/resume path, and when in doubt the rule says hard."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
