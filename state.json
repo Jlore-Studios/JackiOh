@@ -16888,7 +16888,11 @@
       "issue": 3507,
       "kind": "review",
       "live": "reviewing",
-      "merge_owner": "claude-4",
+      "merge_owner_gave_up": {
+        "at": "2026-11-09T20:57:20Z",
+        "provider": "claude-4",
+        "sha": "825e442b231ed380cb49be0ba55d6bb85829a8f8"
+      },
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-09T19:34:41Z",
