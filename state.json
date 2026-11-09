@@ -17132,6 +17132,14 @@
           "claude": "medium"
         }
       }
+    },
+    "3523": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-09T21:06:47Z",
+      "issue": 3502,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
