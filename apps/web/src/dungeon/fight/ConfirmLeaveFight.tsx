@@ -1,7 +1,7 @@
-// "Leave this fight?": what leaving a dungeon run's fight in progress asks, since the fight is
-// dealt again from its seed when the run starts it again (R2706000). Staying is the default: it
-// has the focus, and Escape, Back (R2127000) or a click outside the panel means stay. Leaving
-// makes the move the leave guard held (R1754000). It decides nothing (CLAUDE.md rule 7).
+// "Leave this fight?": what leaving a dungeon run's fight in progress asks, since the fight
+// waits where it stood and is resumed when the run starts it again (R3476000). Staying is the
+// default: it has the focus, and Escape, Back (R2127000) or a click outside the panel means stay.
+// Leaving makes the move the leave guard held (R1754000). It decides nothing (CLAUDE.md rule 7).
 // Modeled on practice's question (PracticeLeave.tsx), minus the Save and leave a dungeon fight
 // never has (R2972000), and drawn, as it is, through `Dialog.tsx` (R3220000).
 
@@ -24,7 +24,7 @@ export default function ConfirmLeaveFight({ onStay, onLeave }: ConfirmLeaveFight
       role="alertdialog"
       testid={fightTestid.leaveDialog}
       title={t("Leave this fight?")}
-      description={t("It ends here and the fight starts over from its first turn.")}
+      description={t("It waits here and picks up where you left it.")}
       onClose={onStay}
       cancel={{ label: t("Stay"), kind: "primary", testid: fightTestid.leaveStay }}
       actions={[{ label: t("Leave"), kind: "danger", onClick: onLeave, testid: fightTestid.leaveConfirm }]}

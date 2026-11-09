@@ -9,8 +9,9 @@
 // The board is the practice route's (`routes/practice.tsx`): the same controller, pacing
 // (`practice/aiTable.ts`: the AI waits on `data-animating`, `data-showcase` and `data-speaking`, #2925),
 // emotes and `Game`, with no Offer draw (R188). The worker holds the game; the page holds snapshots
-// (CLAUDE.md rule 7). A fight is never saved (R2706000): after a reload the run, still on its fight,
-// deals it again from its seed.
+// (CLAUDE.md rule 7). A fight left unfinished waits where it stood (R3476000): after a reload the
+// run, still on its fight, resumes the kept fight where it was left; Try again deals it fresh from
+// its seed instead (R2972000).
 
 import {
   useCallback,
@@ -35,6 +36,7 @@ import { useBoardBusy, useControllerState, useShowcaseHold, useVoiceHold } from 
 import { createPracticeController, type PracticeController } from "../../practice/controller.ts";
 import { usePracticeEmotes } from "../../practice/emotes.ts";
 import { createPracticeHost, type PracticeHost } from "../../practice/host.ts";
+import type { PracticeStartConfig } from "../../practice/protocol.ts";
 import { ThinkIndicator } from "../../practice/ThinkIndicator.tsx";
 import { guardLeaving } from "../../net/navigate.ts";
 import { messageOf } from "../../net/errors.ts";
@@ -100,13 +102,22 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     const next = createPracticeController({ host: factory.current(), pacing: pace.current });
     setController(next);
     // B22: the AI plays the enemy at p2; `run` replaces the deck, the difficulty's handicap and the seed.
-    void next.start({
+    const config: PracticeStartConfig = {
       seed: fight.seed,
       difficulty: FIGHT_DIFFICULTY,
       humanSeat: "p1",
       deck: { kind: "random" },
       run: fight,
-    });
+    };
+    if (restart === 0) {
+      // R3476000: a kept fight is picked up where it stood; one that does not fold is dealt fresh.
+      void next.resume(config).then(() => {
+        if (next.getState().phase === "failed" && next.getState().snapshot === null) void next.start(config);
+      });
+    } else {
+      // R2972000: Try again deals the same fight fresh from its seed.
+      void next.start(config);
+    }
     return () => {
       next.dispose();
       setController((current) => (current === next ? null : current));
@@ -171,8 +182,8 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
   // R2972000: while the fight is live, every in-app move off it asks first (R1754000), as every
   // way off a live online match does (R2479000). These hooks sit before the screens below: a
   // live-to-failed transition re-renders this same screen, and hooks after a return would change
-  // the hook count. The stopped screen holds nothing: Try again deals the same fight again from
-  // its seed, so there is no live fight to keep. The cleanup releases the guard when the store
+  // the hook count. The stopped screen holds nothing: Try again deals the same fight fresh from
+  // its seed (R3476000), so there is no kept fight to pick up. The cleanup releases the guard when the store
   // moves screens on its own (Continue sends the report and unmounts this screen), and `!over`
   // releases it once the fight has its result.
   const [leaving, setLeaving] = useState<{ leave: () => void } | null>(null);

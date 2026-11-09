@@ -745,6 +745,35 @@ describe("R2706000 a dungeon run's fight through the controller", () => {
     expect(readLastBoard()).toEqual(board);
   });
 
+  it("R3476000 a run fight's missed resume and start leave practice's memory alone", async () => {
+    const board = [{ defId: "core-008", radiant: false }];
+    writeLastBoard(board);
+    writePracticeResume(CONFIG);
+    const fake = fakeHost();
+    const controller = controllerFor(fake);
+    // The free game the page remembers is named, and the fight asks for its own kept game.
+    const resumed = controller.resume(FIGHT);
+    await flush();
+    expect(fake.requests.at(-1)?.body).toEqual({ type: "resume", config: FIGHT });
+    fake.respond({ type: "failed", message: "no practice game is saved on this device" });
+    await resumed;
+    await flush();
+    expect(controller.getState().phase).toBe("failed");
+    // The miss clears nothing: the free game is still there to resume, board and all.
+    expect(readPracticeResume(), "the free game is still remembered").toEqual(CONFIG);
+    expect(readLastBoard(), "its last board is untouched").toEqual(board);
+
+    // And dealing the fight remembers nothing new either.
+    const started = controller.start(FIGHT);
+    await flush();
+    expect(fake.requests.at(-1)?.body).toEqual({ type: "start", config: FIGHT });
+    fake.respond({ type: "started", snapshot: humanTurn(1), defs: {}, aiSeat: "p2" });
+    await started;
+    await flush();
+    expect(readPracticeResume(), "starting the fight remembers nothing new").toEqual(CONFIG);
+    expect(readLastBoard(), "its last board is untouched").toEqual(board);
+  });
+
   it("B25 runReport resolves the action and rejects an error or a failure", async () => {
     const fake = fakeHost();
     const controller = controllerFor(fake);

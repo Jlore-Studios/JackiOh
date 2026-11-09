@@ -217,8 +217,8 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
 
   function applySnapshot(snapshot: PracticeSnapshot, extra: Partial<PracticeControllerState> = {}): void {
     if (snapshot.view.result !== null) {
-      // R668: a finished game is not resumed. R2706000: a run fight was never remembered, and the
-      // free game the page remembers is still there to resume.
+      // R668: a finished game is not resumed. R2706000, R3476000: a run fight was never remembered,
+      // and the free game the page remembers is still there to resume.
       if (state.config?.run === undefined) clearPracticeResume();
       // R508: a finished free game's board becomes the human's last practice board.
       if (snapshot.lastBoard !== undefined) writeLastBoard(snapshot.lastBoard);
@@ -303,13 +303,14 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
         if (!disposed && gen === generation) {
           if (response.type === "started") {
             // R668: a free game is remembered from its deal on; a lesson's start forgets any.
-            // R2706000: a run fight leaves the page's memory of the free game as it was.
+            // R2706000, R3476000: a run fight leaves the page's memory of the free game as it was.
             if (config.run === undefined) writePracticeResume(config);
             applyTimers(response.timers, gen);
             applySnapshot(response.snapshot, { aiSeat: response.aiSeat, defs: response.defs, failure: null });
           } else {
             // A save that does not fold is no game to come back to.
-            if (body.type === "resume") clearPracticeResume();
+            // R3476000: a missed run resume never clears the free game's page marker.
+            if (body.type === "resume" && config.run === undefined) clearPracticeResume();
             set({ phase: "failed", thinking: false, failure: unexpected(response) });
           }
         }

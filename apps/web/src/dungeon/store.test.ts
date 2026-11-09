@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RunFile, RunState } from "@jackioh/run";
 
 import { DUNGEON_HISTORY_KEY, DUNGEON_PROGRESS_KEY, DUNGEON_RUN_KEY } from "./config.ts";
+import { clearStoredRunFight } from "../practice/saveStore.ts";
 import { __resetDungeonForTests, dailyRunNumber, readRunHistory, useDungeon, type Dungeon } from "./store.ts";
 import {
   CONTENT,
@@ -25,6 +26,11 @@ import {
 vi.mock("../wasm/index.ts", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   ...(await import("./test/fixtures.ts")).wasmBindings,
+}));
+
+vi.mock("../practice/saveStore.ts", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  clearStoredRunFight: vi.fn(),
 }));
 
 const DAY = "2026-11-01";
@@ -425,6 +431,17 @@ describe("B15 the daily run's number", () => {
     press(() => tomorrow.current.start(setupOf({ seed: daily(1, NEXT_DAY) })));
     expect(dailyRunNumber(NEXT_DAY)).toBe(2);
     expect(stored(DUNGEON_PROGRESS_KEY)).toEqual(expect.objectContaining({ daily: { date: NEXT_DAY, started: 1 } }));
+  });
+});
+
+describe("R3476000 the kept fight follows the run", () => {
+  it("R3476000 abandoning and starting a run drop the kept fight", () => {
+    vi.mocked(clearStoredRunFight).mockClear();
+    const dungeon = mount();
+    expect(press(() => dungeon.current.start(setupOf()))).toBeNull();
+    expect(clearStoredRunFight, "a new run's first fight finds no kept fight").toHaveBeenCalledTimes(1);
+    press(() => dungeon.current.abandon());
+    expect(clearStoredRunFight, "an abandoned run keeps no fight").toHaveBeenCalledTimes(2);
   });
 });
 
