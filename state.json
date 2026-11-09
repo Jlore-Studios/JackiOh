@@ -37179,5 +37179,10 @@
     "issue": 2890,
     "pinned": true
   },
+  "usage_spool": {
+    "runs": [
+      "2026-11-09T10:16:59Z,42583174739,claude-3,opus,revise,3464,hard,infra,infra,,,,,,,,,,3.6,claude-3,none,,"
+    ]
+  },
   "version": 1
 }
