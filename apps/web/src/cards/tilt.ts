@@ -6,9 +6,11 @@
 // `--cf-glare-x` and `--cf-glare-y` (where the glare lies, opposite the tilt), with `data-tilt="on"` while it holds.
 //
 // Where it listens is the face's mode (`TiltMode`): "host" the face's parent, for the card the pointer is on or a touch
-// presses (in hand, on the board, in the Collection); "window" the whole window's pointer, for the hover preview, which
-// takes no pointer of its own; "drag" the window's pointer and a touch drag on the face, in inspect, where it holds off
-// the sheet's swipe on the face. The pose always reads the host's box, never the face's own, which rotates.
+// presses (in hand, on the board, in the Collection); "window" the window's pointer, for the hover preview, which takes
+// no pointer of its own: its pose is read against the box of the card it is anchored to (`CardFace`'s `tiltAnchor`),
+// where the pointer is; "drag" the window's pointer and a touch drag on the face, in inspect, where it holds off
+// the sheet's swipe on the face. The pose reads the host's box (the anchor's, in the preview), never the face's own,
+// which rotates.
 //
 // One face tilts at a time (`claim`): a face that starts to tilt takes the slot, and one that asks for it with a lower
 // priority than its holder's does not get it. None tilts while the animation queue drains (`useTiltHold`, Game.tsx),
@@ -16,7 +18,7 @@
 // the host's box and writes six properties; it reads no view (CLAUDE.md rule 7). Presentation only: nothing here
 // reaches the engine, an action, `PlayerView` or the log.
 
-import { useEffect, useSyncExternalStore, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type RefObject } from "react";
 
 import { CARD_GLARE_TRAVEL_PCT, CARD_TILT_MAX_DEG } from "./constants.ts";
 import { tiltShift, unitClamp, type ImmersiveShift } from "./immersive.ts";
@@ -53,14 +55,14 @@ const GLARE_DIGITS = 1;
 /** The glare lies at the middle of its layer when the face is level, in percent. */
 const GLARE_REST_PCT = 50;
 
-/** R3344001: the part of a box a pose reads. */
-type Box = { left: number; top: number; width: number; height: number };
+/** R3344001: the part of a box a pose reads: a face's is its host's, the hover preview's is its anchor's. */
+export type TiltBox = { left: number; top: number; width: number; height: number };
 
 /**
  * R3344001: the pose of a pointer at (`clientX`, `clientY`) over `box`: level at the box's middle, and each edge's far
  * pose at that edge, held there past it. A side of no length gives none along it.
  */
-export function pointerPose(clientX: number, clientY: number, box: Box): TiltPose {
+export function pointerPose(clientX: number, clientY: number, box: TiltBox): TiltPose {
   return {
     x: box.width > 0 ? unitClamp(((clientX - box.left) / box.width) * 2 - 1) : 0,
     y: box.height > 0 ? unitClamp(((clientY - box.top) / box.height) * 2 - 1) : 0,
@@ -174,9 +176,16 @@ function touches(event: PointerEvent): boolean {
 /**
  * Listens for what tilts `face` in `mode` on `host`, and writes its pose to `face`. Returns what stops it, which also
  * puts the face level. `deviceTilt` adds the device's orientation, from the start in the window's and the drag's modes
- * and while a pointer hovers or presses in the host's.
+ * and while a pointer hovers or presses in the host's. In the window's mode the pose is read against `anchor`'s box
+ * when it has one (the hover preview's anchor), else the host's.
  */
-function attach(face: HTMLElement, host: HTMLElement, mode: Exclude<TiltMode, "off">, deviceTilt: boolean): () => void {
+function attach(
+  face: HTMLElement,
+  host: HTMLElement,
+  mode: Exclude<TiltMode, "off">,
+  deviceTilt: boolean,
+  anchor: { readonly current: TiltBox | undefined },
+): () => void {
   let pressed = false;
   let device = false;
 
@@ -204,7 +213,10 @@ function attach(face: HTMLElement, host: HTMLElement, mode: Exclude<TiltMode, "o
     face.dataset.tilt = "on";
   };
 
-  const poseAt = (event: MouseEvent): TiltPose => pointerPose(event.clientX, event.clientY, host.getBoundingClientRect());
+  // The pointer is on the card the preview is anchored to, never over the preview, which is placed clear of it
+  // (placePreview): so the window mode reads the anchor's box when it has one, and every other mode its host's.
+  const boxOf = (): TiltBox => (mode === "window" ? anchor.current : undefined) ?? host.getBoundingClientRect();
+  const poseAt = (event: MouseEvent): TiltPose => pointerPose(event.clientX, event.clientY, boxOf());
 
   const onDevice = (event: DeviceOrientationEvent): void => {
     const pose = devicePose(event.gamma, event.beta);
@@ -293,16 +305,21 @@ function attach(face: HTMLElement, host: HTMLElement, mode: Exclude<TiltMode, "o
 
 /**
  * R3344001: while `mode` is not "off", `allowed` and no hold stands, the face at `faceRef` tilts as `mode` says (`attach`),
- * and once not it listens to nothing and holds no property, so it rests level.
+ * and once not it listens to nothing and holds no property, so it rests level. `anchor` is for the window's mode (the
+ * hover preview's anchor): without one a window face reads its host's box.
  */
-export function useCardTilt(faceRef: RefObject<HTMLElement | null>, mode: TiltMode, allowed: boolean): void {
+export function useCardTilt(faceRef: RefObject<HTMLElement | null>, mode: TiltMode, allowed: boolean, anchor?: TiltBox): void {
   const held = useIsHeld();
   const { deviceTilt } = useCardSettings();
+  const anchorRef = useRef(anchor);
+  useLayoutEffect(() => {
+    anchorRef.current = anchor;
+  });
   const active = mode !== "off" && allowed && !held;
   useEffect(() => {
     const face = faceRef.current;
     const host = face?.parentElement ?? null;
     if (!active || face === null || host === null) return undefined;
-    return attach(face, host, mode, deviceTilt);
+    return attach(face, host, mode, deviceTilt, anchorRef);
   }, [faceRef, active, mode, deviceTilt]);
 }

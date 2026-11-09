@@ -90,7 +90,10 @@
 # `changes` job scopes the group's diff against the queue's base as it scopes a pull request's, and
 # the push to main still runs everything after it. A run here gets the smoke list, as a pull request,
 # stops once one of the five has failed (`queue-cancel-*`, at the end), and cancels its own pull
-# request's older builds, which the queue rebuilt and GitHub leaves running (`queue-supersede`).
+# request's older builds, which the queue rebuilt and GitHub leaves running (`queue-supersede`). The
+# night bot's status loop goes sooner: once a job of a build fails for its own pull request, it takes
+# that pull request out of the queue and only then cancels the run (bot/go/internal/events
+# `EvacQueue`, bot/README.md "Evacuating the merge queue").
 name: CI
 
 on:
@@ -1445,7 +1448,10 @@ jobs:
   # and the bot that owns the pull request answers the cancelled run with a CI fix
   # (bot/go/internal/events `OnQueueCI`). Never sooner, at a failed piece: a run cancelled before a
   # summary job runs leaves that required check skipped, and a skipped required check counts as
-  # passing, which here would let the queue land the pull request.
+  # passing, which here would let the queue land the pull request. The night bot's status loop goes
+  # sooner only by taking the pull request out of the queue first, at a failed piece, and cancelling
+  # the run once GitHub says it is out (bot/go/internal/events `EvacQueue`); these jobs stop the
+  # builds it did not, and every one while the loop is down.
   queue-cancel-rust:
     name: cancel the queue build (rust)
     needs: rust
