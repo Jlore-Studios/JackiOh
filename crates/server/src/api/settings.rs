@@ -24,7 +24,7 @@ use crate::db::store::{
     PlayerSettingsMergeOutcome, PlayerSettingsRow,
 };
 use crate::economy::store::OwnedCosmetics;
-use crate::loadout::{CARD_SLOT_KINDS, COSMETICS_GROUP, DECK_SLOT_KINDS, setting_key};
+use crate::loadout::{CARD_SLOT_KINDS, COSMETICS_GROUP, DECK_SLOT_KINDS, STARSHIP_SLOT_KINDS, setting_key};
 
 /// R633: a group id is a lower-case slug (`gameplay`, `audio`, `fx`, `cards`).
 fn is_group_id_shape(id: &str) -> bool {
@@ -170,9 +170,13 @@ pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSett
     Ok(groups)
 }
 
-/// R1834001: validates cosmetic picks against owned items.
+/// R1834001: validates cosmetic picks against owned items. R3335000: the four Starship picks too.
 fn check_cosmetics_group(group: &PlayerSettingsGroup, owned: &OwnedCosmetics) -> Result<(), ApiError> {
-    for kind in CARD_SLOT_KINDS.into_iter().chain(DECK_SLOT_KINDS) {
+    for kind in CARD_SLOT_KINDS
+        .into_iter()
+        .chain(DECK_SLOT_KINDS)
+        .chain(STARSHIP_SLOT_KINDS)
+    {
         let key = setting_key(kind);
         let field = format!("{COSMETICS_GROUP}.{key}");
         match group.values.get(key) {

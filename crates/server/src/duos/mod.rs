@@ -23,6 +23,7 @@ use jackioh_engine::wire::{
     DUOS_REASON_CEILING, DUOS_REASON_VOIDED, DuosActionBody, DuosOutcome, DuosResult, DuosSeat, Team,
 };
 use jackioh_engine::{ActionBody, PlayerId};
+use jackioh_shared::economy::fleet::FleetPlay;
 
 use crate::actor::contracts::one_tx;
 use crate::actor::protocol::SERVER_NONCE_PREFIX;
@@ -173,6 +174,8 @@ async fn pay_coop(
                 },
                 // R3013000: the co-op log is not folded, so no play is counted.
                 proficiency: Vec::new(),
+                // R3335001: nor does the Fleet track count anything of it.
+                fleet: FleetPlay::default(),
             },
         )
         .await?;

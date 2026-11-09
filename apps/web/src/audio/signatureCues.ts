@@ -1,7 +1,9 @@
-// R3400001: the signature sounds of Meditative+'s and Training Grounds' Legendaries and Mythics, beside the
-// sound table's own (cues.ts `cuesFor` appends them after the event's row, as it does the Battleship's): a
-// Spell's as its play is read (`cardPlayed`), a Unit's as it lands face up in a unit zone (`summoned`), the
-// moment its signature's own cast or entrance starts. A row reads only the `defId` the event itself carries,
+// R3400001, R3405001: the signature sounds of Meditative+'s, Training Grounds' and Meditative's Legendaries
+// and Mythics, beside the sound table's own (cues.ts `cuesFor` appends them after the event's row, as it does
+// the Battleship's): a Spell's as its play is read (`cardPlayed`), a Unit's as it lands face up in a unit zone
+// (`summoned`), the moment its signature's own cast or entrance starts. R3405000: a Field Spell that reaches
+// the field without a play (The Cane, put there by Pareto Optimality) sounds as it lands face up in the
+// backrow (a `summoned` into the backrow, R3407001's row). A row reads only the `defId` the event itself carries,
 // so a hidden play (R97's sentinel), a card set face down (its `formerId`, R227) and every other card sound
 // nothing more (R203).
 // R3407001: Stinkyscape's 23 signature cards joined, one sound each, so that every card with a signature of
@@ -84,11 +86,76 @@ export const SIGNATURE_SFX: Readonly<Record<string, SignatureSound>> = {
   "stinkyscape-t-narcor": { sfx: "whisperClink", on: "cardPlayed" },
   // Red Narcor: a deep resonant hum rising to a bright crystal ring.
   "stinkyscape-t-red-narcor": { sfx: "crystalRise", on: "cardPlayed" },
+  // R3405001: Meditative's.
+  // Introspection: a deep inhale, a singing bowl's hum, a sharp exhale.
+  "meditative-007": { sfx: "bowlBreath", on: "cardPlayed" },
+  // Reach the Summit: wind over a peak, then three rising flute steps.
+  "meditative-008": { sfx: "peakFlute", on: "cardPlayed" },
+  // Double Header: a stadium horn, then a ticket tearing in two.
+  "meditative-011": { sfx: "ticketHorn", on: "cardPlayed" },
+  // True Craft a Card: soft keystrokes building in rhythm, then a forge's quench hiss.
+  "meditative-017": { sfx: "forgeQuench", on: "cardPlayed" },
+  // Aestheticize the Game: a long brush stroke on paper, a guzheng glissando.
+  "meditative-020": { sfx: "brushGuzheng", on: "cardPlayed" },
+  // Alternate Fate: a dry well's hollow echo, then a gush of water.
+  "meditative-026": { sfx: "wellGush", on: "cardPlayed" },
+  // Red Jade: a pick strike, a low mountain groan, a crystal ring.
+  "meditative-039-4": { sfx: "minePick", on: "cardPlayed" },
+  // Jade Beauty: stone cracking, a zither glissando, a sigh.
+  "meditative-039-5": { sfx: "jadeZither", on: "summoned", row: "units" },
+  // Feng Shui: a wind chime, a soft gong, one guqin string.
+  "meditative-040": { sfx: "windChime", on: "cardPlayed" },
+  // CN Flea Market: a gong, crowd chatter, one abacus clack.
+  "meditative-042": { sfx: "marketGong", on: "cardPlayed" },
+  // Knowledge Breaker: chalk snapping, a long hush, a cracked porcelain chime.
+  "meditative-045": { sfx: "chalkHush", on: "summoned", row: "units" },
+  // Knowledge Breaker Prime: porcelain shattering, a deep roar, a rolling boom.
+  "meditative-045-1": { sfx: "porcelainRoar", on: "summoned", row: "units" },
+  // 饕餮: a deep bronze bell, a long inhale, a gulp.
+  "meditative-047": { sfx: "bronzeGulp", on: "summoned", row: "units" },
+  // YileGPT: a brush stroke, a soft modem chirp, a guqin note.
+  "meditative-049": { sfx: "modemGuqin", on: "summoned", row: "units" },
+  // YileGPT Prime: a thunderous brush stroke, a server hum, a choir of chirps.
+  "meditative-049-1": { sfx: "serverChoir", on: "summoned", row: "units" },
+  // Yile's Virus: a dial-up screech chopped into stutters.
+  "meditative-049-2": { sfx: "dialupStutter", on: "summoned", row: "units" },
+  // AI Girlfriend: a hologram chime, a soft bow, palms snapping a block.
+  "meditative-049-3": { sfx: "holoBow", on: "summoned", row: "units" },
+  // Devin Bot: a synth hum, then a quick run of pops.
+  "meditative-051": { sfx: "synthPops", on: "summoned", row: "units" },
+  // Skull of J'Nari: a rattling jaw, a ghostly cough, an interrupted mutter.
+  "meditative-063": { sfx: "skullMutter", on: "cardPlayed" },
+  // Keymaster Keenus: a key ring's jangle, then locks clicking open in turn.
+  "meditative-065": { sfx: "keyJangle", on: "summoned", row: "units" },
+  // Pareto Optimality: a cane whistling through the air, a sharp crack, a tut.
+  "meditative-071": { sfx: "caneCrack", on: "cardPlayed" },
+  // The Cane: thunder rolling, a lacquer creak, a sharp rap on wood; as it lands, since Pareto puts it there without a play.
+  "meditative-071-1": { sfx: "caneThunder", on: "summoned", row: "backrow" },
+  // Ever Growing Tree: creaking wood, a deep root groan, rustling leaves.
+  "meditative-075": { sfx: "rootCreak", on: "cardPlayed" },
+  // Touched by KY: a chalk squeak, a gasp, a rush of pages.
+  "meditative-079": { sfx: "chalkGasp", on: "summoned", row: "units" },
+  // Aluneth: whispered pages, a frosty chime, three wingbeats.
+  "meditative-080": { sfx: "frostPages", on: "cardPlayed" },
+  // Mayor Medinamogger: a coin's ping, a distant crowd cheering.
+  "meditative-086": { sfx: "coinCheer", on: "summoned", row: "units" },
+  // Tatches the Totem: five different drums, one after another.
+  "meditative-087": { sfx: "totemDrums", on: "summoned", row: "units" },
+  // Call to Chaos (Meditative Edition): a temple bell cut short by a crash, a rattling die.
+  "meditative-095": { sfx: "templeDie", on: "cardPlayed" },
+  // CN Golem: stone blocks locking, a lacquer creak, a ground-shaking stomp.
+  "meditative-095-1": { sfx: "golemStomp", on: "summoned", row: "units" },
+  // Jlockeed's Evil Blueprints: paper unrolling, a klaxon, gauntlets slamming down on steel.
+  "meditative-097": { sfx: "klaxonSlam", on: "cardPlayed" },
+  // Prison: an iron clang, rattling chains, a cell door slamming.
+  "meditative-097-8": { sfx: "cellSlam", on: "summoned", row: "units" },
+  // Jlockeed's Headquarters: hydraulic doors grinding, a radar ping, truck engines revving.
+  "meditative-097-9": { sfx: "hangarRev", on: "summoned", row: "units" },
 };
 
 const NONE: readonly SoundCue[] = [];
 
-/** R3400001, R3407001: the signature sound `event` starts, or none: another event or row, another card, or a card the viewer cannot read. */
+/** R3400001, R3405000, R3407001: the signature sound `event` starts, or none: another event or row, another card, or a card the viewer cannot read. */
 export function signatureCues(event: GameEvent): readonly SoundCue[] {
   if (event.type !== "cardPlayed" && event.type !== "summoned") return NONE;
   if (event.defId === HIDDEN_DEF_ID || event.formerId !== undefined) return NONE;

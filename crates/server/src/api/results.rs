@@ -12,6 +12,7 @@ use std::time::Duration;
 
 use indexmap::IndexMap;
 use jackioh_engine::{ActionBody, GameOverReason, PerPlayer, PlayerId, Winner};
+use jackioh_shared::economy::fleet::fleet_play;
 
 use crate::actor::contracts::{RecordResultInput, TerminalOutcome, VoidMatchInput};
 use crate::actor::{engine, match_actor, registry};
@@ -380,6 +381,8 @@ async fn write_once(
                         game.map(|game| &game.seats[seat.player]),
                         &app.catalog.defs,
                     ),
+                    // [[R3335001]]: what the seat did with Stinkyscape, which the Fleet track pays for.
+                    fleet: fleet_play(game.map(|game| &game.seats[seat.player]), &app.catalog.defs),
                 },
             )
             .await

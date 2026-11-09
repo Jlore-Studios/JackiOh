@@ -194,6 +194,16 @@ export const STARSHIP_LETTERING: { readonly [D in Exclude<StarshipDesignId, "shi
   "jlockeed-skylark": { font: "text", weight: 800, tracking: 0.02, italic: true },
   "ember-of-departure": { font: "marker", weight: 400, tracking: 0.02, italic: false },
   "silent-choir": { font: "copperplate", weight: 400, tracking: 0.06, italic: false },
+  // R3335000: the hull design cosmetics' (starshipLooks.ts `HULL_DESIGNS`), each as its hull suits.
+  scout: { font: "text", weight: 700, tracking: 0.06, italic: false },
+  courier: { font: "text", weight: 600, tracking: 0.02, italic: true },
+  freighter: { font: "mono", weight: 800, tracking: 0.08, italic: false },
+  corsair: { font: "marker", weight: 400, tracking: 0.02, italic: true },
+  cathedral: { font: "copperplate", weight: 600, tracking: 0.08, italic: false },
+  leviathan: { font: "brush", weight: 400, tracking: 0.04, italic: false },
+  ark: { font: "display", weight: 600, tracking: 0.04, italic: false },
+  stinkyscape: { font: "display", weight: 800, tracking: 0.14, italic: false },
+  jlorious: { font: "signature", weight: 400, tracking: 0.02, italic: true },
 };
 
 /** The design whose lettering a name no launched design has would fall back on (`starshipDesignOf` gives every launch one). */

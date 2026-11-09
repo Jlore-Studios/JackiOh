@@ -8,7 +8,9 @@
 // "snowplowHeave", Training Grounds #38 Tutorial Master's "chalkboardLesson" and #39.1 the Training-Grounds
 // Golem's "golemLashing". R3389001: Classic's signatures' six (#4 Palantir "seeingOrb", #7 InfiniScepter
 // "sceptrePlant", #28 Second Wind "galeBurst", #33 Joro "silkDrop", #85 King Wagtoggle "royalCloak", #90 In
-// Too Deep "abyssSurface"). R3407000: Stinkyscape part two's (fx/cards/stinkyscape/). It keys off the `summoned` event's
+// Too Deep "abyssSurface"). R3407000: Stinkyscape part two's (fx/cards/stinkyscape/). R3405001: Meditative's
+// twenty-five, from #7 Introspection's "poolBreath" to #97.9 Jlockeed's Headquarters' "fortressRise", each
+// starting after its entry's lead (`leadMs`, R3405000). It keys off the `summoned` event's
 // own `defId`, which a hidden summon never has (R202), and decorates the entry the runner already timed,
 // so it paces nothing (R200, R201).
 //
@@ -29,6 +31,31 @@ import { galeBurst } from "./cards/classic/secondWind.ts";
 import { tyrantSigil } from "./cards/classic/spellTyrant.ts";
 import { voidCollapse } from "./cards/core/ceaselessVoid.ts";
 import { felinorAssembly } from "./cards/core/felinorFiender.ts";
+import { dojoBoot } from "./cards/meditative/aiGirlfriend.ts";
+import { crackedEarth } from "./cards/meditative/alternateFate.ts";
+import { lanternLight } from "./cards/meditative/aluneth.ts";
+import { golemLock } from "./cards/meditative/cnGolem.ts";
+import { cushionDrop } from "./cards/meditative/devinBot.ts";
+import { floodlights } from "./cards/meditative/doubleHeader.ts";
+import { treeSprout } from "./cards/meditative/everGrowingTree.ts";
+import { fiveCompass } from "./cards/meditative/fengShui.ts";
+import { poolBreath } from "./cards/meditative/introspection.ts";
+import { jadeBoulder } from "./cards/meditative/jadeBeauty.ts";
+import { fortressRise } from "./cards/meditative/jlockeedHq.ts";
+import { keyRing } from "./cards/meditative/keymasterKeenus.ts";
+import { chalkMask } from "./cards/meditative/knowledgeBreaker.ts";
+import { maskSplit } from "./cards/meditative/knowledgeBreakerPrime.ts";
+import { coinFlip } from "./cards/meditative/mayorMedinamogger.ts";
+import { studyCurve } from "./cards/meditative/paretoOptimality.ts";
+import { prisonBars } from "./cards/meditative/prison.ts";
+import { skullThud } from "./cards/meditative/skullOfJnari.ts";
+import { bronzeCauldron } from "./cards/meditative/taotie.ts";
+import { totemStack } from "./cards/meditative/tatchesTheTotem.ts";
+import { caneRise } from "./cards/meditative/theCane.ts";
+import { chalkHand } from "./cards/meditative/touchedByKy.ts";
+import { scrollScholar } from "./cards/meditative/yileGpt.ts";
+import { pavilionUnfurl } from "./cards/meditative/yileGptPrime.ts";
+import { virusBoot } from "./cards/meditative/yilesVirus.ts";
 import { snowplowHeave } from "./cards/meditativeplus/bobSoldier.ts";
 import { golemLashing } from "./cards/traininggrounds/trainingGolem.ts";
 import { chalkboardLesson } from "./cards/traininggrounds/tutorialMaster.ts";
@@ -86,6 +113,32 @@ export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = {
   alteranDive,
   golemCrash,
   sanctumRise,
+  // R3405001: Meditative's signature Units' and Field Spells'.
+  poolBreath,
+  floodlights,
+  crackedEarth,
+  jadeBoulder,
+  fiveCompass,
+  chalkMask,
+  maskSplit,
+  bronzeCauldron,
+  scrollScholar,
+  pavilionUnfurl,
+  virusBoot,
+  dojoBoot,
+  cushionDrop,
+  skullThud,
+  keyRing,
+  studyCurve,
+  caneRise,
+  treeSprout,
+  chalkHand,
+  lanternLight,
+  coinFlip,
+  totemStack,
+  golemLock,
+  prisonBars,
+  fortressRise,
 };
 
 /* #1445: one summon entrance per flavor */
