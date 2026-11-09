@@ -285,7 +285,10 @@ function trapGame() {
   const unitPlay = game.legal("p2").find((a) => a.type === "play" && a.instanceId === unitCard?.instanceId && a.faceDown === undefined);
   if (unitPlay === undefined) throw new Error("no play of p2's unit");
   const fire = game.act("p2", unitPlay);
-  return { set, fire };
+  // The lane p2's Unit was summoned to, as the batch that fired the Trap reports it.
+  const landed = fire.p1.fresh.find((e) => e.type === "summoned" && e.instanceId === unitCard?.instanceId);
+  const seizedLane = landed?.type === "summoned" ? landed.lane : undefined;
+  return { set, fire, seizedLane };
 }
 
 describe("R2722002 against the real engine: a hidden card's entrance is at its reveal", () => {
@@ -347,6 +350,13 @@ describe("R2722002 against the real engine: a hidden card's entrance is at its r
       const fire = trap.fire[viewer];
       expect(grandCues(fire), `the Trap on ${viewer}`).toEqual([opening(viewer, "intro-core-085"), "entrance:legendary:false", "sfx:sting"].sort());
       expect(fire.fx.some((cue) => cue.kind === "fracture"), `the hatch on ${viewer}`).toBe(true);
+      // R3402001: the weld's poison ring lands on the Unit whose play fired the Trap, in the zone it was just
+      // summoned to (the board still shows the view before the batch), on both seats: never on a hand card.
+      const seizedRings = fire.fx.filter((cue) => cue.kind === "ring" && cue.preset === "poison");
+      expect(seizedRings, `the seized Unit's ring on ${viewer}`).toHaveLength(1);
+      expect(seizedRings.map((cue) => (cue.kind === "ring" && cue.at.kind === "testid" ? cue.at.testid : null)), `where it rings on ${viewer}`).toEqual([
+        `zone-${viewer === "p2" ? "you" : "opponent"}-units-${String(must(trap.seizedLane))}`,
+      ]);
       expect(fire.sfx.filter((s) => s.id === "hatchWeld"), `its sound on ${viewer}`).toHaveLength(1);
       expect(trap.set[viewer].sfx.some((s) => s.id === "hatchWeld"), `its set on ${viewer}`).toBe(false);
       expect(trap.set[viewer].fx.some((cue) => cue.kind === "fracture"), `its set on ${viewer}`).toBe(false);

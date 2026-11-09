@@ -14,7 +14,7 @@ import { FX_CLAMP_TRAUMA, FX_CRACK_TAIL_MS, FX_FRACTURE_TAIL_MS } from "../../co
 import { FLAVOR_LOOKS, paletteLook } from "../../flavors.ts";
 import { timesOf } from "../../motifs/build.ts";
 import type { FxCue } from "../../types.ts";
-import type { CardRecipe } from "../recipe.ts";
+import type { CardFxPlan, CardRecipe } from "../recipe.ts";
 import { isFirstBeat } from "./flourish.ts";
 
 /** Every particle count the hatch and the weld throw, at intensity "normal" (rule 9). */
@@ -27,6 +27,21 @@ const TUNING = {
 
 /** The hatch's look: Dark's curse, a sickly green over shadow. */
 const HATCH_PALETTE = "Dark/curse";
+
+/**
+ * Where the seized permanent stands as the weld lands: the zone its newest readable `summoned` names (the board shows
+ * the view from before the batch until the burst ends, so a Unit whose play fired the Trap is still in its owner's
+ * hand there, hidden from the Trap's owner and a hand card to its own), else the board card the view shows.
+ */
+function seizedAt(p: CardFxPlan, instanceId: string): string | null {
+  const recent = p.env.memory.recent();
+  for (let k = recent.length - 1; k >= 0; k -= 1) {
+    const event = recent[k];
+    if (event?.type === "summoned" && event.instanceId === instanceId) return testid.zone(sideOf(p.view, event.player), event.row, event.lane);
+  }
+  const shown = locateInstance(p.view, instanceId);
+  return shown === testid.card(instanceId) ? shown : null;
+}
 
 export const clampWeld: CardRecipe = (event, p, play) => {
   if (play.hook !== "cast") return null;
@@ -48,7 +63,7 @@ export const clampWeld: CardRecipe = (event, p, play) => {
   if (event.type !== "fused") return null;
   const cues: FxCue[] = [];
   const seized = event.instanceIds[0];
-  const from = seized === undefined ? null : locateInstance(p.view, seized);
+  const from = seized === undefined ? null : seizedAt(p, seized);
   const to = locateInstance(p.view, event.resultInstanceId);
   if (from !== null && from !== to) cues.push(ringCue(p.D, "poison", tid(from), t.G));
   if (to !== null) {

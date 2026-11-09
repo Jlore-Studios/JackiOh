@@ -2,7 +2,7 @@
 // (a white marble rotunda of thirteen glowing doors, takeoverArt.ts), entrance "heroicPedestal", recipe
 // "heroicDoors" and a `pedestal` aura on its zone (R3402000). As the hall folds down it lands as a crystal
 // pedestal in its zone: holy rays, a ring and a burst of light, and a diamond glint for its Indestructible.
-// Its Discover's doors open in the prompt, for the caster alone. Each Activate is a beat of its own (a later
+// Its Discover's doors are the rotunda's. Each Activate is a beat of its own (a later
 // action than its play): on its `activated`, which the engine sends before the Activate's hook opens, the
 // pedestal flares, and inside the hook the power's own events launch it from the pedestal, each kind at
 // most FX_SIGNATURE_BURSTS_MAX times an entry: a fire dart to a `damage`'s target, a dust sprinter to a
