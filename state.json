@@ -15144,6 +15144,7 @@
         "resolved_by": "`claude` (strong)",
         "sha": "c3624b4e40e043a63cee7aaadc2a67e4c2f0bc39"
       },
+      "closed_at": "2026-11-09T06:12:44Z",
       "cross_rounds": 2,
       "died": 0,
       "difficulty": "medium",
@@ -15156,6 +15157,7 @@
       "last_findings": [],
       "live": "reviewing",
       "merge_owner": "claude-1",
+      "merged": true,
       "pending_request": false,
       "provider": "gpt",
       "question": "",
