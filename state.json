@@ -17734,6 +17734,13 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": ""
       },
+      "hold": {
+        "ends": "2026-11-09T07:01:00Z",
+        "owner": "claude-3",
+        "since": "2026-11-09T05:01:00Z",
+        "until": "2026-11-09T05:10:00Z",
+        "why": "it refused a call"
+      },
       "interruptions": 0,
       "issue": 3349,
       "kind": "review",
