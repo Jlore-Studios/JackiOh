@@ -61,4 +61,11 @@ exclude_re = [
   # compiled out, so no test can see them. Their testkit twins share their names and only reach the
   # harness (above).
   'replace (test_override|shipped_override|previewed|override_map) -> ',
+  # crates/run (#3513): a boss card's slot is the last, Anything, and `run_check_setup` only asks
+  # whether a card's slot is at or above each rank, so any index at or past the last fits the same
+  # slots (`len - 1`, `len + 1` and `len / 1` alike).
+  'replace - with (\+|/) in slot_needed',
+  # crates/run (#3513): the row's spread, `MAX - MIN + 1`, is `MAX / MIN + 1` too at the widths
+  # config.rs sets (3 and 2); the width test fails the other mutants of the line.
+  'replace - with / in row_width',
 ]

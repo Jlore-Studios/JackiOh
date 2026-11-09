@@ -1050,6 +1050,18 @@ fn row_width(rng: &mut Rng) -> i32 {
     RUN_ROW_WIDTH_MIN + rng.int(RUN_ROW_WIDTH_MAX - RUN_ROW_WIDTH_MIN + 1)
 }
 
+/// §15.5: a fight node is an Elite at `RUN_ELITE_PERCENT`, else a Ghost at `RUN_GHOST_PERCENT`, else
+/// a Fight. The second roll is drawn only when the first is no Elite.
+fn fight_kind(rng: &mut Rng) -> RunNodeKind {
+    if rng.int(PERCENT) < RUN_ELITE_PERCENT {
+        RunNodeKind::Elite
+    } else if rng.int(PERCENT) < RUN_GHOST_PERCENT {
+        RunNodeKind::Ghost
+    } else {
+        RunNodeKind::Fight
+    }
+}
+
 /// DR4: per act, its fight rows with a tile row between each two, a campfire, and the boss.
 fn deal_map(content: &RunContent, held: &[&str], rng: &mut Rng) -> Vec<Vec<RunNode>> {
     let mut rows = Vec::new();
@@ -1066,13 +1078,7 @@ fn deal_map(content: &RunContent, held: &[&str], rng: &mut Rng) -> Vec<Vec<RunNo
             let width = row_width(rng);
             let row = (0..width)
                 .map(|_| {
-                    let kind = if rng.int(PERCENT) < RUN_ELITE_PERCENT {
-                        RunNodeKind::Elite
-                    } else if rng.int(PERCENT) < RUN_GHOST_PERCENT {
-                        RunNodeKind::Ghost
-                    } else {
-                        RunNodeKind::Fight
-                    };
+                    let kind = fight_kind(rng);
                     fight_node(content, kind, held, rng)
                 })
                 .collect();
@@ -1744,7 +1750,7 @@ fn apply(
             make_radiant(state, *index)?;
         }
         (RunPhase::Shop { .. }, RunAction::Buff { index }) => {
-            if *index < state.deck.len() {
+            if state.deck.get(*index).is_some() {
                 spend_tickets(state, RUN_BUFF_TICKETS)?;
             }
             buff(state, *index)?;
