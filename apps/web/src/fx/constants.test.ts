@@ -481,8 +481,8 @@ describe("S2 the effects constants", () => {
 
   it("R3351000 the shared phone motion budget and worst-frame budget", () => {
     expect(constants.PHONE_MOTION_BUDGET).toBe(6);
-    // The phone's face-motion allowance is the motion slots': raising one without the other breaks
-    // the shared budget the living game holds.
+    // The phone budget's faces' share is the motion slots': raising one without the other breaks the
+    // per-layer budget the living game draws its faces from, so the two stay equal.
     expect(constants.PHONE_MOTION_BUDGET).toBe(COSMETIC_FOIL_ANIMATED_MAX);
     expect(constants.FX_PHONE_FRAME_WORST_MS).toBe(120);
     // The worst frame is looser than the mean but still a playing game: past ~8 fps a hitch reads

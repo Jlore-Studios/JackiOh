@@ -243,10 +243,13 @@ export const FX_PHONE_FRAME_BUDGET_MS = 50;
 // still holds FX_PHONE_FRAME_BUDGET_MS, so one hitch never costs the scene its budget.
 export const FX_PHONE_FRAME_WORST_MS = 120;
 /**
- * R3351000: the living game's shared phone motion budget. Moving faces, tile auras, backdrops,
- * particles and tilt share six concurrent motion units on a phone: the faces' share is the motion
- * slots (COSMETIC_FOIL_ANIMATED_MAX in apps/web/src/cards/constants.ts), which is this many, so the
- * two stay equal; a face counts 1, an aura 1, tilt 1. Past it the director sheds in the ruled order.
+ * R3351000: the living game's phone motion budget. On a phone the moving faces, tile auras,
+ * backdrops, particles and tilt draw from per-layer budgets that scale with the phone caps: the
+ * faces' share is the motion slots (COSMETIC_FOIL_ANIMATED_MAX in apps/web/src/cards/constants.ts),
+ * which is this many, so the two stay equal; tile and aura motes scale with intensity against the
+ * phone particle cap (auraBudget, tileMoteBudget through capacityFor in the aura layers); tilt holds
+ * one claim; a face counts 1, an aura 1, tilt 1. Past it the director sheds emission, then far auras,
+ * then the moving faces furthest from the pointer, in that order.
  */
 export const PHONE_MOTION_BUDGET = 6;
 // R2784000: the scales the /dev/fx gallery offers.
