@@ -244,7 +244,7 @@ pub struct PracticeSnapshot {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub lethal: Option<bool>,
-    /// R3100000: in a tutorial lesson, what each of the human's legal attacks would do.
+    /// R3100000, R3477000: what each of the human's legal attacks would do, in every snapshot.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub forecast: Option<CombatForecast>,

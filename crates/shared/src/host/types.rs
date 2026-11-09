@@ -5,8 +5,8 @@
 use serde::{Deserialize, Serialize};
 
 use jackioh_engine::{
-    Action, ActionBody, Aim, EmoteId, GameEventType, GameResult, LastBoardEntry, PlayerId, PlayerView,
-    PromptKind,
+    Action, ActionBody, Aim, CombatForecast, EmoteId, GameEventType, GameResult, LastBoardEntry, PlayerId,
+    PlayerView, PromptKind,
 };
 
 use crate::bots::decide::BotChoice;
@@ -88,6 +88,10 @@ pub enum SeatMessage {
     View {
         view: Box<PlayerView>,
         legal: Vec<ActionBody>,
+        /// R3477000: the engine's forecast of this seat's attacks (`combat_forecast`); never a watcher's.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        forecast: Option<CombatForecast>,
     },
     /// §9.5: the deadlines both clients render; `now` is the host's clock at send time.
     Clock {

@@ -656,11 +656,16 @@ impl DuosActor {
     /// A message of the machine's, framed for the person's socket.
     fn send_seat(&self, core: &mut Core, seat: DuosSeat, message: DuosSeatMessage) {
         let frame = match message {
-            DuosSeatMessage::View { view, legal } => {
+            DuosSeatMessage::View {
+                view,
+                legal,
+                forecast,
+            } => {
                 let index = human(seat);
                 DuosServerMessage::View {
                     view,
                     legal,
+                    forecast,
                     jlore_capped: index.map(|index| core.jlore_capped[index]).unwrap_or(false),
                     economy: index.and_then(|index| core.economy[index].clone()),
                 }
@@ -689,14 +694,25 @@ impl DuosActor {
         self.send(core, seat, &frame);
     }
 
-    /// B35: view and legal actions, sent anew.
+    /// B35: view, legal actions and their forecast (R3477000), sent anew; read under the match's catalog
+    /// (R767000).
     fn push_view(&self, core: &mut Core, seat: DuosSeat) {
         if self.socket_for(core, seat).is_none() {
             return;
         }
         let view = Box::new(self.seat_view(core, seat));
-        let legal = crate::actor::engine::run_pinned(self.shared.pinned, || core.host.legal(seat));
-        self.send_seat(core, seat, DuosSeatMessage::View { view, legal });
+        let (legal, forecast) = crate::actor::engine::run_pinned(self.shared.pinned, || {
+            (core.host.legal(seat), core.host.forecast(seat))
+        });
+        self.send_seat(
+            core,
+            seat,
+            DuosSeatMessage::View {
+                view,
+                legal,
+                forecast: Some(forecast),
+            },
+        );
     }
 
     // The end of the match (B40)
@@ -1547,6 +1563,8 @@ impl DuosActor {
             let frame = encode(&DuosServerMessage::View {
                 view: Box::new(self.seat_view(core, seat)),
                 legal: Vec::new(),
+                // R3477000: a watcher is shown no forecast, as it is shown no legal action.
+                forecast: None,
                 jlore_capped: false,
                 economy: None,
             });

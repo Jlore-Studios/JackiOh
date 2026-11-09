@@ -979,10 +979,20 @@ impl MatchActor {
     /// picks (`cards_due`).
     fn send_seat(&self, core: &mut Core, home: PlayerId, message: SeatMessage) {
         match message {
-            SeatMessage::View { view, legal } => {
+            SeatMessage::View {
+                view,
+                legal,
+                forecast,
+            } => {
                 let view = *view;
                 let shown = shown_defs(&view, &self.shared.dealt_cards);
-                let frame = view_message(view, &legal, core.jlore_capped[home], core.economy[home].clone());
+                let frame = view_message(
+                    view,
+                    &legal,
+                    forecast,
+                    core.jlore_capped[home],
+                    core.economy[home].clone(),
+                );
                 self.send_to_home(core, home, &frame);
                 if !core.sockets[home].as_ref().is_some_and(Socket::is_open) {
                     return;
@@ -1017,12 +1027,23 @@ impl MatchActor {
         }
     }
 
-    /// The seat's view and legal actions, sent anew to the account that plays it.
+    /// The seat's view, legal actions and their forecast (R3477000), sent anew to the account that
+    /// plays it; both read under the match's catalog (R388, R767000).
     fn push_view(&self, core: &mut Core, player: PlayerId) {
         let home = playing(core, player);
         let view = Box::new(self.view_of(core, player));
-        let legal = engine::run_pinned(self.shared.pinned, || core.host.legal(player));
-        self.send_seat(core, home, SeatMessage::View { view, legal });
+        let (legal, forecast) = engine::run_pinned(self.shared.pinned, || {
+            (core.host.legal(player), core.host.forecast(player))
+        });
+        self.send_seat(
+            core,
+            home,
+            SeatMessage::View {
+                view,
+                legal,
+                forecast: Some(forecast),
+            },
+        );
     }
 
     // The clock's stored copy (§9.5)
@@ -2312,7 +2333,8 @@ impl MatchActor {
         for home in PLAYERS {
             let view = self.view_of(core, playing(core, home));
             let shown = shown_defs(&view, &self.shared.dealt_cards);
-            let frame = encode(&view_message(view, &[], false, None));
+            // R3477000: a watcher is shown no forecast, as it is shown no legal action.
+            let frame = encode(&view_message(view, &[], None, false, None));
             let seq = core.spectate.next_seq;
             core.spectate.next_seq += 1;
             core.spectate.records[home].push_back(SpectateFrame {
