@@ -17824,6 +17824,7 @@
           }
         ],
         "head": "9ed63fadd18c73e45048ab8e41f390a8f60b1ecd",
+        "interruptions": 1,
         "kind": "revise",
         "model": "sonnet",
         "provider": "claude-3",
