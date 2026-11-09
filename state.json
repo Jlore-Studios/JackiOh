@@ -17720,49 +17720,33 @@
     "3460": {
       "action": "revise",
       "asks": [],
-      "audit_tier": "medium",
+      "audit_tier": "",
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-09T01:32:03Z",
+      "feedback_since": "2026-11-09T03:49:15Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3349,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "A duplicate card's cosmetic roll in a card pack never gets the card-wearing-the-level reveal (previous look, wipe, name and rarity) or the rarity treatment. It only gets the old slot face plus a Legendary flare.",
-          "evidence": "GrantReveal is rendered only in CosmeticPacks.tsx, CardCosmeticsView.tsx and AccountCosmeticTiles.tsx (grep over apps/web/src). PackOpening.tsx never renders it, and a card-pack slot with grant.kind === 'cosmetic' still renders PackSlotFace plus a text outcome. A Mythic cosmetic roll on a non-Mythic card gets no takeover, and a Rare or Epic roll gets no chime-and-wipe. Issue #3349 lists 'a roll' as a grant and its acceptance says 'a roll, a pack, a token and a chase grant each show the card in its new level, rarest last, with the rarity's treatment'. No test covers a roll's treatment. The PR body also says 'Duplicates ... reveal the card actually wearing its new level', which the diff does not do. Fix: play the roll's reveal in PackScene for cosmetic slots, or record a decision to defer it and cover the acceptance some other way.",
-          "severity": "blocking",
-          "where": "apps/web/src/packs/PackOpening.tsx:380"
-        },
-        {
-          "claim": "The Legendary flare keys on a cosmetic grant's rarity, while the Mythic takeover keys on the card's own rarity. A Legendary card pulled from a pack therefore never flares.",
-          "evidence": "The flare effect and data-flare test `slot.grant.kind === 'cosmetic' && slot.grant.cosmeticRarity === 'Legendary'`. The takeover uses `opened.slots.findIndex(slot => slot.rarity === 'Mythic')`, which is the card's rarity. Issue \u00a73 and the PR body say 'A Legendary card pulled from a pack flares before it flips' and 'a Legendary or Mythic card pulled from a pack'. A slot with rarity 'Legendary' and grant {kind:'card'} gets no flare. The test 'R3349000 a Legendary pull flares before it flips' only passes because it swaps in a Legendary cosmetic grant. Fix: flare on slot.rarity === 'Legendary', and decide explicitly what a Legendary cosmetic roll does.",
-          "severity": "blocking",
-          "where": "apps/web/src/packs/PackOpening.tsx:206"
-        },
-        {
-          "claim": "markNewLevels in PackOpening marks slot.cardId for every cosmetic grant, including account cosmetics (playmat, portrait, card back). A card that earned no level gets a false 'new' mark, and its hover preview then plays that unrelated id as a level.",
-          "evidence": "`[{ id: grant.cosmeticId, cardId: slot.cardId }, ...]` runs for any grant.kind === 'cosmetic'. PacksResponse.odds.globalCosmetic shows card packs also drop unowned account cosmetics, and the slot's cardId is still the pulled card. CosmeticPacks.tsx correctly uses grant.cardId (null for an account cosmetic), and CosmeticLook.hasLook distinguishes per-card kinds with isCardSlot. OwnedCards then reads unseenForCard(...).at(-1) into LookHoverPanel level=<table id>. Fix: pass cardId only when the cosmetic's registry kind is a per-card slot, else null. Marks live only on card tiles, so null entries should not mark a card. Add a test.",
-          "severity": "blocking",
-          "where": "apps/web/src/packs/PackOpening.tsx:586"
-        }
-      ],
+      "last_findings": [],
       "live": "revising",
       "pending_request": false,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-11-09T03:47:06Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "medium",
       "run_id": "42558456309",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-11-09T03:49:15Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [],
         "builder": "muse",
