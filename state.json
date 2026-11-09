@@ -16496,6 +16496,9 @@
       "taken_asks": [],
       "verdict_rounds": 1
     },
+    "3504": {
+      "suggestion": true
+    },
     "3505": {
       "action": "review",
       "asks": [],
