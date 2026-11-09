@@ -16875,12 +16875,17 @@
       "last_findings": [],
       "live": "resolving",
       "merge_owner": "claude-8",
+      "paused": {
+        "at": "2026-11-09T03:47:36Z",
+        "interrupt": "usage",
+        "provider": "claude-8"
+      },
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
       "queued_at": "2026-11-09T03:17:19Z",
       "requested_by": "jgoetzmann-bot",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "42556843145",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -16905,7 +16910,7 @@
       "started_at": "2026-11-09T03:31:07Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
