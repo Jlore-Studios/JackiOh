@@ -96,8 +96,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const STIMMY: &str = "stinkyscape-153";
-    const NONO: &str = "stinkyscape-099"; // (X) Spell.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
+    const NONO: &str = "stinkyscape-099"; // No-No Words: a Spell
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
     const SEEDS: usize = 20;

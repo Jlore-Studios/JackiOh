@@ -132,17 +132,17 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SPATULA: &str = "classicplus-012-8";
-    const TOKENS: &str = "core-015"; // (1) 1/1, Cry: summon a Rush Token
-    const MENACE: &str = "core-019"; // 9/9
-    const RUSH: &str = "core-t-rush"; // 3/3 Rush
-    const MAGIC_JAMMED: &str = "core-036"; // (1) destroy target backrow card
-    const POWDER: &str = "classicplus-012-4"; // (1) 3 damage to each enemy
-    const MOTHER: &str = "classicplus-012"; // End of turn: add a random Pancake token to your hand
-    const SURGERY: &str = "core-063"; // (1) +3/+3 and 1 random keyword
-    const WASTES: &str = "classicplus-012-6"; // (2) Field Spell, Cry: destroy all Units
-    const FIENDER: &str = "core-092"; // (2) 5/7 Stack
-    const MROW: &str = "core-086"; // 1/1 Can't attack; Death: take control of the Unit that destroyed this
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell
+    const TOKENS: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const RUSH: &str = "core-t-rush"; // Rush Token: Rush
+    const MAGIC_JAMMED: &str = "core-036"; // Magic Jammed: destroy target backrow card
+    const POWDER: &str = "classicplus-012-4"; // Powder Spray: 3 damage to each enemy
+    const MOTHER: &str = "classicplus-012"; // The Mother Pancake: End of turn: add a random Pancake token to your hand
+    const SURGERY: &str = "core-063"; // Plastic Surgery: +attack/+health and 1 random keyword
+    const WASTES: &str = "classicplus-012-6"; // Frozen Wastes: a Field Spell, Cry: destroy all Units
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const MROW: &str = "core-086"; // "Miss" Mrow: Can't attack; Death: take control of the Unit that destroyed this
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
     const FILLER: &str = "core-005";
     const DECK: [&str; 6] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 

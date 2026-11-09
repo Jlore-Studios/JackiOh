@@ -45,15 +45,15 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-010"; // (0) Spell.
-    const SPARE: &str = "core-005"; // (1) Spell: library spare.
-    const BIG_ATTACKER: &str = "core-019"; // (9) 9/9 Unit: survives 15 damage, so we can verify exact damage taken.
-    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) 7/7, Armor 7 Unit.
-    const MOTHS: &str = "core-009"; // (2) 1/14 Unit: forces attacks at start of turn.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
-    const GHOST: &str = "classic-089"; // (2) 5/6 Divine Shield.
-    const BURN: &str = "classic-036"; // (0) Spell: deal 2 damage.
-    const FELINOR: &str = "core-043"; // Big Felinor, Radiant 6/20.
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const SPARE: &str = "core-005"; // Stockpile: library spare
+    const BIG_ATTACKER: &str = "core-019"; // Midrange Menace: survives 15 damage, so we can verify exact damage taken
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const MOTHS: &str = "core-009"; // Moths to the Flame: forces attacks at start of turn
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const GHOST: &str = "classic-089"; // Paul Allen's Ghost: Divine Shield
+    const BURN: &str = "classic-036"; // Burn: deal 2 damage
+    const FELINOR: &str = "core-043"; // Big Felinor
 
     #[test]
     fn is_a_2_cost_unit_token_printed_epic() {

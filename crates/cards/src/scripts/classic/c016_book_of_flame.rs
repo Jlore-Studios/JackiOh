@@ -47,8 +47,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BOOK: &str = "classic-016";
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) Unit 7/7, Armor 7.
+    const MENACE: &str = "core-019"; // Midrange Menace: Unit Taunt
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
     const FILLER: &str = "core-005";
 
     fn hits(s: &Scenario) -> Vec<(String, i32)> {

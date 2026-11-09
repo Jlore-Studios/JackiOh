@@ -49,15 +49,15 @@ mod tests {
     use crate::scenario;
 
     const ACQUIRE: &str = "classic-034";
-    const RECURRING: &str = "classic-047"; // C #47 Recurring Felinor, (2) Unit: "Cry: Cast Ancient Acquisition."
-    const FILLER: &str = "core-005"; // (1) Spell, a spare card (§2.5).
-    const MENACE: &str = "core-019"; // (3) Unit
-    const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) Unit
-    const FELINORS: &str = "core-012"; // (2) Unit
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit
-    const REPLENISH: &str = "core-010"; // (0) Spell
-    const ECLIPSE: &str = "core-035"; // (1) Spell
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell
+    const RECURRING: &str = "classic-047"; // Recurring Felinor: "Cry: Cast Ancient Acquisition."
+    const FILLER: &str = "core-005"; // Stockpile: a Spell, a spare card (§2.5).
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const FELINORS: &str = "core-012"; // Duplicating Felinors
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const REPLENISH: &str = "core-010"; // Rapid Replenish: a Spell
+    const ECLIPSE: &str = "core-035"; // Lunar Eclipse: a Spell
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
 
     use crate::js;
 

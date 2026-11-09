@@ -57,11 +57,11 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const VITAL: &str = "classic-029";
-    const GAMBIT: &str = "classic-052"; // C #52 Final Gambit, (2) Trap: a hit that would bring your hero to 0 or less.
-    const FAUCI: &str = "core-091"; // (2) Unit: "Whenever this takes damage, place a Plague Counter on this."
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4, no text.
-    const ANTI_ONESHOT: &str = "core-073"; // (2) Field Spell: "Your hero can't take more than 5 damage at a time."
-    const FILLER: &str = "core-005"; // (1) Spell, a spare card so a hand never runs out (§2.5).
+    const GAMBIT: &str = "classic-052"; // Final Gambit: a hit that would bring your hero to 0 or less
+    const FAUCI: &str = "core-091"; // Fed Fauci: "Whenever this takes damage, place a Plague Counter on this."
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const ANTI_ONESHOT: &str = "core-073"; // Anti-oneshot Armor: "Your hero can't take more than 5 damage at a time."
+    const FILLER: &str = "core-005"; // Stockpile: a Spell, a spare card so a hand never runs out (§2.5).
 
     fn events_of(s: &Scenario, kind: GameEventType) -> Vec<GameEvent> {
         s.events().iter().filter(|event| event.event_type() == kind).cloned().collect()

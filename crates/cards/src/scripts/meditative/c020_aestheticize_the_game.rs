@@ -67,9 +67,9 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const GAME: &str = "meditative-020";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile.
-    const FIENDER: &str = "core-092"; // (2) Unit with Stack.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Unit with Stack.
 
     fn board(hand: Value) -> Scenario {
         scenario(json!({

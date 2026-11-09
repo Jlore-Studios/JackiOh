@@ -44,10 +44,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const CORE_SYSTEM: &str = "stinkyscape-117";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const WEAPONS: &str = "core-014"; // (4) Field Spell.
-    const SHEEPISH: &str = "core-041"; // (1) Trap.
-    const RUSH_TOKEN: &str = "core-t-rush"; // A Unit token.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: a Field Spell
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const RUSH_TOKEN: &str = "core-t-rush"; // Rush Token: A Unit token.
     const FILLER: &str = "core-005";
 
     fn refresh_label(s: &Scenario, viewer: PlayerId, of: PlayerId) -> Option<String> {

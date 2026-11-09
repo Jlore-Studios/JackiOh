@@ -64,9 +64,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const NONO: &str = "stinkyscape-099";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const GREASER: &str = "stand-in (2) 7/7 R21/21"; // (2) Unit 7/7.
-    const GENN: &str = "classic-086"; // (4) Unit 14/14.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const GREASER: &str = "stand-in (2) 7/7 R21/21";
+    const GENN: &str = "stand-in (4) 14/14 R42/42";
     const FILLER: &str = "core-005";
     const SCALING_LAW: &str = "classicplus-t-ai-02";
     const MANA: i32 = 10;

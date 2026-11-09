@@ -115,17 +115,17 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const EXILE: &str = "classic-010";
-    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit 3/3.
-    const TOKEN_MAN: &str = "core-015"; // (1) Unit, "Cry: Summon a Rush Token."
-    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield"; // (2) Unit 7/1.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const STOCKPILE: &str = "core-005"; // (1) Spell.
-    const BEAR: &str = "core-060"; // (1) Trap.
-    const HINDER: &str = "core-021"; // (0) Spell, cast on draw.
-    const SLIME: &str = "classic-027"; // (0) Unit 1/1.
-    const CHALICE: &str = "classic-087"; // (X) Field Spell, Plague Chalice.
-    const ROCK: &str = "core-066"; // (4) Unit 10/10, Tribute 1, Indestructible.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const TOKEN_MAN: &str = "core-015"; // Me and Mr Token: "Cry: Summon a Rush Token."
+    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
+    const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
+    const HINDER: &str = "core-021"; // Hinder: a Spell, cast on draw
+    const SLIME: &str = "classic-027"; // Pestilent Slime
+    const CHALICE: &str = "classic-087"; // Plague Chalice: a Field Spell, Plague Chalice
+    const ROCK: &str = "core-066"; // The Rock: Tribute 1, Indestructible
 
     fn armed(radiant_face: bool, lane: i32) -> Value {
         json!({ "def": EXILE, "radiant": radiant_face, "faceUp": false, "lane": lane })

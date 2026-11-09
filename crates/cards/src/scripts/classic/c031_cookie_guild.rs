@@ -49,14 +49,14 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const GUILD: &str = "classic-031";
-    const FELINORS: &str = "core-012"; // (2) Unit 3/4, Cry: summon a copy of this.
-    const BIG_D: &str = "core-001"; // (2) Unit.
-    const TEMPO: &str = "core-011"; // (1) Unit 3/3.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9.
-    const STOCKPILE: &str = "core-005"; // (1) Spell.
-    const ARMOR: &str = "core-073"; // (2) Field Spell: a permanent, not a Unit.
-    const BUFF_BILLY: &str = "classicplus-069"; // (X) Unit.
+    const FELINORS: &str = "core-012"; // Duplicating Felinors: Cry: summon a copy of this
+    const BIG_D: &str = "core-001"; // Big D-fender
+    const TEMPO: &str = "core-011"; // Tempo Timmy
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
+    const ARMOR: &str = "core-073"; // Anti-oneshot Armor: a permanent, not a Unit
+    const BUFF_BILLY: &str = "classicplus-069"; // Buff Billy
     const ANCHOR: &str = "core-010";
 
     fn unit_defs(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {

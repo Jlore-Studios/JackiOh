@@ -49,9 +49,9 @@ mod tests {
 
     const UPLINK: &str = "stinkyscape-t-ai-08";
     const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy a Unit
 
     fn fielded(radiant: bool, field: Value) -> Scenario {
         scenario(json!({

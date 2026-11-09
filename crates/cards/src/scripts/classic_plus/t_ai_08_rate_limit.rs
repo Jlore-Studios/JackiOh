@@ -75,13 +75,13 @@ mod tests {
 
     const RATE_LIMIT: &str = "classicplus-t-ai-08";
     const REFUSAL: &str = "classicplus-t-ai-09";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const REPLENISH: &str = "core-010"; // (0) Spell
-    const SHREDDER: &str = "core-013"; // (3) Unit: End of turn: deal 2 damage to each enemy.
-    const HINDER: &str = "core-021"; // (0) Spell, cast on draw
-    const SCARAB: &str = "core-007"; // (1) Unit: Cry: Discover a (2) Cost card
-    const HIT_JOB: &str = "core-016"; // Spell: destroy a target Unit
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const REPLENISH: &str = "core-010"; // Rapid Replenish: a Spell
+    const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: End of turn: deal 2 damage to each enemy.
+    const HINDER: &str = "core-021"; // Hinder: a Spell, cast on draw
+    const SCARAB: &str = "core-007"; // Jewelosco Scarab: Cry: Discover a 2 Cost card
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy a target Unit
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;

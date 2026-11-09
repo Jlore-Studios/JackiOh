@@ -69,7 +69,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const KY_CONSTANT: &str = "classicplus-041";
-    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) 7/7 Armor 7.
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
 
     /// One Buff or Nerf of `id`, as one application of a tune verb makes it (B3.4 rule 1).
     fn tune(s: &mut Scenario, id: &str, direction: TuneDirection) -> Vec<GameEvent> {

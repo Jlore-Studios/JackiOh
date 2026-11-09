@@ -58,11 +58,11 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-010"; // (0) Spell.
-    const SPARE: &str = "core-005"; // (1) Spell: library spare.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt, Immutable on its Radiant face.
-    const TRAP: &str = "core-060"; // a Trap.
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const SPARE: &str = "core-005"; // Stockpile: library spare
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt, Immutable on its Radiant face.
+    const TRAP: &str = "core-060"; // Bear Honeypot: a Trap
 
     /// The University in lane 1, a Vanilla in lane 2, a Radiant Menace (Immutable) in lane 3 and a face-down
     /// Trap in backrow lane 1 on p1's side; a Vanilla on p2's.

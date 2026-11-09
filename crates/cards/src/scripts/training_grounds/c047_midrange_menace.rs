@@ -220,11 +220,11 @@ mod tests {
     mod n19_midrange_menace_radiant_immutable {
         use super::*;
 
-        const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-        const POSTDOC: &str = "core-061"; // (2) Unit; Radiant Cry: summon a Vanilla copy of any unit.
-        const WHIRLWIND: &str = "classicplus-021"; // (0) Spell: Pierce, deal 1 damage to all Units.
-        const SOUL_SHOT: &str = "classicplus-025"; // (2) Spell: Destroy a random enemy Unit.
-        const PUNISH: &str = "classic-020"; // Field Spell: Activate, choose one, one mode destroys a Unit.
+        const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+        const POSTDOC: &str = "core-061"; // Prejudiced Postdoc: Radiant Cry: summon a Vanilla copy of any unit.
+        const WHIRLWIND: &str = "classicplus-021"; // Whirlwind: Pierce, deal 1 damage to all Units
+        const SOUL_SHOT: &str = "classicplus-025"; // Soul Shot: Destroy a random enemy Unit.
+        const PUNISH: &str = "classic-020"; // The Power to Punish: Activate, choose one, one mode destroys a Unit
         const DOOM: &str = "destroy a Unit at the start of your next turn";
         const FILLER: &str = "core-010";
 

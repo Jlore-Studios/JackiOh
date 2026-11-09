@@ -59,7 +59,7 @@ mod tests {
     const BALTHASAR: &str = "stinkyscape-018-2";
     const CASPER: &str = "stinkyscape-018-3";
     const MANA_WELL: &str = "core-006";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-016"; // Hit Job: inert in a hand.
 
     fn backrow(s: &Scenario) -> Vec<Option<(String, bool)>> {

@@ -17,9 +17,10 @@
 //! stats, since a balance patch would make them stale: those are refused rather than checked, so there
 //! is nothing to keep in sync (a test that wants only numbers names a stand-in, `stand-in (1) 4/4`,
 //! `crates/engine/src/testkit/stand_in.rs`). A helper's comment that is its name, or starts with
-//! `<name>: `, is kept; one with a `: ` has the text before it (a name the card no longer has) put back
-//! as the name; any other gets the name in front, `<name>: <comment>`. A helper line with no comment
-//! is left, and so is an id the catalog does not hold (a stand-in, a fixture, a fused id).
+//! `<name>: `, is kept; one whose text before a `: ` is a card's name (another card's, written beside
+//! the wrong id) has that name put back; any other gets the name in front, `<name>: <comment>`, so a
+//! comment's own words (`Cry: …`, `Radiant: …`) are never lost. A helper line with no comment is left,
+//! and so is an id the catalog does not hold (a stand-in, a fixture, a fused id).
 
 use std::{
     collections::BTreeMap,
@@ -243,11 +244,6 @@ fn apply(root: &Path, files: Vec<(String, Rewriter)>, names: &Names) -> Result<P
     Ok((changed, problems))
 }
 
-/// #3486: what `plan` finds in the card tests alone.
-fn card_test_plan(root: &Path, names: &Names) -> Result<Plan> {
-    apply(root, card_test_rewriters(root)?, names)
-}
-
 /// Each card test file with its rewriter: a script's own file from its tests on, any other whole.
 fn card_test_rewriters(root: &Path) -> Result<Vec<(String, Rewriter)>> {
     Ok(card_test_files(root)?
@@ -328,7 +324,7 @@ fn card_test_line(line: &str, names: &Names) -> Result<Option<String>, String> {
         if gives_numbers(&comment.replace(name.as_str(), "")) {
             return Err(format!("{id}: {NUMBERS_PROBLEM}"));
         }
-        let named = named_comment(comment, name);
+        let named = named_comment(comment, name, names);
         if named == comment {
             return Ok(None);
         }
@@ -347,16 +343,20 @@ fn card_test_line(line: &str, names: &Names) -> Result<Option<String>, String> {
     Ok(None)
 }
 
-/// A helper's comment with the card's name: kept when it is the name or starts `<name>: `, its text
-/// before a `: ` put back as the name (past the `: ` a name like "Legacy: Hit Job" holds), the name put
-/// in front of any other.
-fn named_comment(comment: &str, name: &str) -> String {
+/// A helper's comment with the card's name: kept when it is the name or starts `<name>: `; when its text
+/// before a `: ` is a card's name (the longest such, for a name like "Legacy: Mr. Vanilla" holds one),
+/// that name is put back; the name put in front of any other, so none of the comment's own words is lost.
+fn named_comment(comment: &str, name: &str, names: &Names) -> String {
     if comment == name || comment.starts_with(&format!("{name}: ")) {
         return comment.to_string();
     }
-    let in_name = name.matches(": ").count();
-    match comment.splitn(in_name + 2, ": ").nth(in_name + 1) {
-        Some(role) => format!("{name}: {role}"),
+    let named_head = comment
+        .match_indices(": ")
+        .map(|(at, _)| at)
+        .filter(|&at| names.values().any(|known| *known == comment[..at]))
+        .last();
+    match named_head {
+        Some(at) => format!("{name}: {}", &comment[at + ": ".len()..]),
         None => format!("{name}: {comment}"),
     }
 }
@@ -599,28 +599,34 @@ mod tests {
         let text = concat!(
             "const KILL: &str = \"core-016\"; // Hit Job\n",
             "const KILL_2: &str = \"core-016\"; // Hit Job: the removal\n",
-            "    pub const OLD: &str = \"core-016\"; // Contract Killer: the removal\n",
+            "    pub const WRONG: &str = \"core-016\"; // Midrange Menace: the removal\n",
             "pub(crate) const ROLE: &str = \"core-016\";  // the removal\n",
+            "pub(super) const CRY: &str = \"core-016\"; // Cry: Radiant: a text it keeps\n",
+            "const RENAMED: &str = \"core-016\"; // Contract Killer: a name no card has\n",
             "const BARE: &str = \"core-016\";\n",
             "const EMPTY: &str = \"core-016\"; //\n",
             "const VANILLA: &str = \"stand-in (1) 4/4 R12/12\"; // the vanilla\n",
             "const FIXTURE: &str = \"fx-1\"; // a fixture\n",
             "const LEGACY: &str = \"traininggrounds-043\"; // Legacy: Mr. Vanilla: the old one\n",
-            "const LEGACY_OLD: &str = \"traininggrounds-043\"; // Legacy: Mr. Plain: the old one\n",
+            "const LEGACY_OLD: &str = \"traininggrounds-043\"; // Hit Job: the old one\n",
+            "const WRONG_LEGACY: &str = \"core-016\"; // Legacy: Mr. Vanilla: the removal\n",
             "const SEVEN: &str = \"core-025\"; // 4-mana 7/7\n",
             "let kill = \"core-016\"; // the removal\n",
         );
         let want = concat!(
             "const KILL: &str = \"core-016\"; // Hit Job\n",
             "const KILL_2: &str = \"core-016\"; // Hit Job: the removal\n",
-            "    pub const OLD: &str = \"core-016\"; // Hit Job: the removal\n",
+            "    pub const WRONG: &str = \"core-016\"; // Hit Job: the removal\n",
             "pub(crate) const ROLE: &str = \"core-016\";  // Hit Job: the removal\n",
+            "pub(super) const CRY: &str = \"core-016\"; // Hit Job: Cry: Radiant: a text it keeps\n",
+            "const RENAMED: &str = \"core-016\"; // Hit Job: Contract Killer: a name no card has\n",
             "const BARE: &str = \"core-016\";\n",
             "const EMPTY: &str = \"core-016\"; //\n",
             "const VANILLA: &str = \"stand-in (1) 4/4 R12/12\"; // the vanilla\n",
             "const FIXTURE: &str = \"fx-1\"; // a fixture\n",
             "const LEGACY: &str = \"traininggrounds-043\"; // Legacy: Mr. Vanilla: the old one\n",
             "const LEGACY_OLD: &str = \"traininggrounds-043\"; // Legacy: Mr. Vanilla: the old one\n",
+            "const WRONG_LEGACY: &str = \"core-016\"; // Hit Job: the removal\n",
             "const SEVEN: &str = \"core-025\"; // 4-mana 7/7\n",
             "let kill = \"core-016\"; // the removal\n",
         );
@@ -716,6 +722,11 @@ mod tests {
             rewrite_card_test(&once, &card_names()),
             (once.clone(), Vec::new())
         );
+    }
+
+    /// #3486: what `plan` finds in the card tests alone.
+    fn card_test_plan(root: &Path, names: &Names) -> Result<Plan> {
+        apply(root, card_test_rewriters(root)?, names)
     }
 
     /// #3486: the card tests as they are pass `names --check`: no helper's comment lacks its card's

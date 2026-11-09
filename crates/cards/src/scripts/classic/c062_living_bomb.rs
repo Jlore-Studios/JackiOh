@@ -119,17 +119,17 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BOMB: &str = "classic-062";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const ROCK: &str = "core-066"; // (4) Unit 10/10 Indestructible, Tribute 1.
-    const FAUCI: &str = "core-091"; // (2) Unit 1/6 Rush; Start of turn: +1 mana per Plague Counter.
-    const FIENDER: &str = "core-092"; // (2) Unit 5/7 Stack.
-    const REBORN: &str = "core-003"; // (1) Unit 1/1 Taunt, Divine Shield, Reborn.
-    const PAWN: &str = "core-096"; // (1) Trap: answers only an attack that would be lethal.
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell.
-    const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
-    const FILLER: &str = "core-005"; // (1) Spell, a card to keep a turn from auto-ending (§2.5).
-    const X: &str = "core-020"; // library filler.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const ROCK: &str = "core-066"; // The Rock: Indestructible, Tribute 1
+    const FAUCI: &str = "core-091"; // Fed Fauci: Rush; Start of turn: +1 mana per Plague Counter.
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const REBORN: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
+    const PAWN: &str = "core-096"; // My Pawn: answers only an attack that would be lethal
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const FLOOD: &str = "core-017"; // Flood: Bounce all Units.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell to keep a turn from auto-ending (§2.5).
+    const X: &str = "core-020"; // Pointmaster: library filler
 
     use crate::js;
 

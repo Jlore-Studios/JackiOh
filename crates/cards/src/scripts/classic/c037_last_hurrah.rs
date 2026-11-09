@@ -72,8 +72,8 @@ mod tests {
 
     const HURRAH: &str = "classic-037";
     const PALANTIR: &str = "classic-004";
-    const RECYCLER: &str = "classic-064"; // Field Spell: whenever you discard cards, draw that many.
-    const FILLER: &str = "core-005"; // (1) Spell.
+    const RECYCLER: &str = "classic-064"; // Malzahar's Recycler: whenever you discard cards, draw that many
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
     const VANILLA: &str = "core-008";
     const TIMMY: &str = "core-011";
     const MENACE: &str = "core-019";

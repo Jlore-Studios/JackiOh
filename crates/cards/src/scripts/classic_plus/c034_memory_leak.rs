@@ -120,13 +120,13 @@ mod tests {
 
     const LEAK: &str = "classicplus-034";
     const WARDRUM: &str = "classicplus-037";
-    const BONE_STORM: &str = "classicplus-036-1"; // (1) Spell: 1 damage to each enemy.
-    const DEFENDER: &str = "core-003"; // 1/1 Taunt, Divine Shield, Reborn.
-    const MENACE: &str = "core-019"; // (3) 9/9.
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell.
-    const LUNAR_ECLIPSE: &str = "core-035"; // (1) Spell: 3 damage to a target.
-    const SHEEPISH: &str = "core-041"; // (1) Trap.
-    const BREAD: &str = "core-018"; // (1) Field Trap.
+    const BONE_STORM: &str = "classicplus-036-1"; // Bone Storm: 1 damage to each enemy
+    const DEFENDER: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const LUNAR_ECLIPSE: &str = "core-035"; // Lunar Eclipse: 3 damage to a target
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const BREAD: &str = "core-018"; // Bread and Butter: a Field Trap
     const FILLER: &str = "core-005";
 
     fn lane(row: &str, lane: i32) -> Value {

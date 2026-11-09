@@ -20,7 +20,7 @@ mod tests {
     use crate::scenario;
 
     const FILLER: &str = "core-005";
-    const BODY: &str = "stand-in (1) 4/4 R12/12"; // Mr. Vanilla 4/4
+    const BODY: &str = "stand-in (1) 4/4 R12/12";
 
     fn played(radiant: bool) -> Scenario {
         let mut s = scenario(json!({

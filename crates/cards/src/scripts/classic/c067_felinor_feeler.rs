@@ -52,12 +52,12 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FEELER: &str = "classic-067";
-    const VANILLA: &str = "core-008"; // 4/4
-    const TIMMY: &str = "core-011"; // 3/3
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const TIMMY: &str = "core-011"; // Tempo Timmy
     const PILLOW: &str = "core-065-1"; // Spikey Pillow: can't be in Defense Position
-    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // 4-mana 7/7, Armor 7
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
     const STOCKPILE: &str = "core-005";
-    const FIENDER: &str = "core-092"; // Stack; has the stats of all your Felinors
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack; has the stats of all your Felinors
 
     fn spare() -> Value {
         json!({ "hand": [STOCKPILE], "library": [VANILLA, VANILLA] })

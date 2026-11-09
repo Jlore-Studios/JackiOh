@@ -158,9 +158,9 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
-    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield"; // (2) 7/1 First Strike.
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield";
 
     /// The printed ranges, base and Radiant, the Radiant face's Lucky and its health.
     const BASE_RANGE: (i32, i32) = (1, 3);

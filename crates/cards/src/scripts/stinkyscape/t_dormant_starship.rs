@@ -52,16 +52,16 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     // Issue #2521: Stratos (S #68) is no Starship Piece (B9), so a keywords-only piece stands in.
-    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
-    const FLAK_V3: &str = "stinkyscape-053"; // (2) Weapon, Starship Piece, Equip; Radiant Lucky 1.
-    const OVERDRIVE: &str = "stinkyscape-101"; // (2) 5/5 Starship Piece, Equip, Brittle 2, Reborn.
-    const CAPSULE: &str = "stinkyscape-040"; // (3) 2/2 Starship Piece, "Cry: Place 2 Plague Counters."
-    const CAPACITOR: &str = "stinkyscape-133"; // When launched: +1/+1 per other piece.
-    const MONKEY: &str = "classic-077"; // (2) 5/5 Stack, "Aura: Spells cost (1) more."
-    const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
+    const FLAK_V3: &str = "stinkyscape-053"; // Flak v3: Weapon, Starship Piece, Equip; Radiant Lucky 1
+    const OVERDRIVE: &str = "stinkyscape-101"; // Overdrive Module: Starship Piece, Equip, Brittle 2, Reborn
+    const CAPSULE: &str = "stinkyscape-040"; // Poison Capsule: Starship Piece, "Cry: Place 2 Plague Counters."
+    const CAPACITOR: &str = "stinkyscape-133"; // Ultra Capacitor: When launched: +attack/+health per other piece.
+    const MONKEY: &str = "classic-077"; // Anti-Magic Monkey: Stack, "Aura: Spells cost more."
+    const HIT_JOB: &str = "core-016"; // Hit Job: "Destroy a Unit."
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
-    const TRAP: &str = "core-085"; // (2) Trap, set face down to fill a backrow.
+    const TRAP: &str = "core-085"; // Unlicensed Experimentation: a Trap, set face down to fill a backrow
     /// R2521000: what a test's Buff (an Upgrade's tuning, B3.4) adds to a piece's attack and health.
     const BUFF: i32 = 2;
 

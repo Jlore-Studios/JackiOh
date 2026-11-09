@@ -52,7 +52,7 @@ mod tests {
 
     const HALFCYCLER: &str = "stinkyscape-046";
     const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
     fn fielded(radiant: bool, active: &str, hand: Value, field: Value) -> Scenario {

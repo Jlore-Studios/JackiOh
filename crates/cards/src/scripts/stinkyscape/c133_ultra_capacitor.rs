@@ -46,7 +46,7 @@ mod tests {
     use crate::{built_starship, launch_starship};
     use jackioh_engine::testkit::*;
 
-    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
 
     /// p1's Starship holding the Capacitor (lane 1) and `others` AP Rounds, launched; its stats before
     /// and after the launch.

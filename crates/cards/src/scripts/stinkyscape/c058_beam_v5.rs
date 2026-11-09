@@ -140,9 +140,9 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
-    const FLOOD: &str = "core-017"; // (4) Spell: "Bounce all Units."
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FLOOD: &str = "core-017"; // Flood: "Bounce all Units."
 
     /// The printed `damage`, and the Radiant face's (12 and 24 until #2657), and its Radiant health.
     const DAMAGE: i32 = 11;

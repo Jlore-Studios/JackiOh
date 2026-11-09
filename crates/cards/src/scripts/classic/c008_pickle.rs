@@ -274,8 +274,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const PICKLE: &str = "classic-008";
-    const FILLER: &str = "core-005"; // (1) Spell, p1's spare card (§2.5).
-    const PALANTIR: &str = "classic-004"; // (2) Field Spell: steals and casts a (2) Cost Spell the opponent plays.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell, p1's spare card (§2.5).
+    const PALANTIR: &str = "classic-004"; // Palantir: steals and casts a Spell the opponent plays
     const MY_DECK: [&str; 4] = ["core-019", "core-025", "core-012", "core-020"];
     const THEIR_HAND: [&str; 3] = ["core-008", "core-011", "core-015"];
     const THEIR_DECK: [&str; 4] = ["core-006", "core-035", "core-048", "core-039"];

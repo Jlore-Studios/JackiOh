@@ -69,8 +69,8 @@ mod tests {
 
     use super::ID;
 
-    const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
 
     fn holding(radiant: bool, p1_field: Value, p2_field: Value) -> Scenario {
         crate::scenario(json!({

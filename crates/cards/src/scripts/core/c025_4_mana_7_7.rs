@@ -29,7 +29,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BIG: &str = "core-025";
-    const CUBE: &str = "core-022"; // Cry: Tribute one of your other Units (R428).
+    const CUBE: &str = "core-022"; // Carnivorous Cube: Cry: Tribute one of your other Units (R428).
     const EXILER: &str = "core-034"; // Collateral Damage: exile target permanent, cost 3.
     const FILLER: &str = "core-005";
 

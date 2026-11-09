@@ -73,14 +73,14 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BOOTS: &str = "classic-013";
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const MOTHS: &str = "core-009"; // 1/14: start of turn, every enemy Unit attacks this.
-    const TEMPO: &str = "core-011"; // (1) Unit 3/3 Rush.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const STOCKPILE: &str = "core-005"; // (1) Spell.
-    const SHEEPISH: &str = "core-041"; // (1) Trap.
+    const MENACE: &str = "core-019"; // Midrange Menace: Unit Taunt
+    const MOTHS: &str = "core-009"; // Moths to the Flame: start of turn, every enemy Unit attacks this.
+    const TEMPO: &str = "core-011"; // Tempo Timmy: Rush
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
     const ANCHOR: &str = "core-010";
-    const PAWN: &str = "core-096"; // Trap: cancels an attack lethal to its controller's hero (R44).
+    const PAWN: &str = "core-096"; // My Pawn: cancels an attack lethal to its controller's hero (R44)
     const A: &str = "core-020";
     const B: &str = "core-001";
 

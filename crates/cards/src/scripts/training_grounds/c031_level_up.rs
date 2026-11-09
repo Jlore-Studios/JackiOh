@@ -98,11 +98,11 @@ mod tests {
     use crate::upgrade_number;
 
     const LEVEL_UP: &str = super::ID;
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4
-    const SPECIESIST: &str = "core-002"; // (2) 4/1
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const SPECIESIST: &str = "core-002"; // Speciesist
     /// S Trap: "Reveals when an enemy Unit attacks one of your Units: Cancel the attack and Freeze the attacker."
     const CANCELLER: &str = "stinkyscape-t-ai-04";
-    const MOTHS: &str = "core-009"; // start of turn: every enemy Unit attacks this
+    const MOTHS: &str = "core-009"; // Moths to the Flame: start of turn: every enemy Unit attacks this
     const FILLER: &str = "core-010";
 
     fn wall() -> Value {

@@ -41,7 +41,7 @@ mod tests {
 
     const ESCORT: &str = "stinkyscape-t-ai-01";
     const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
     fn played(radiant: bool, field: Value, lane: i32) -> Scenario {

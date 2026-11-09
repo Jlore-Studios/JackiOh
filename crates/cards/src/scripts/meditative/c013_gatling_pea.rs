@@ -49,10 +49,10 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
-    const CLONE_MACHINE: &str = "core-033"; // Field Spell: shuffle 3 copies of each played card.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // a (1) 4/4 with no text.
-    const SPARE: &str = "core-010"; // (0) Spell, never played: it only keeps the turn open (R82).
+    const FLOOD: &str = "core-017"; // Flood: Bounce all Units.
+    const CLONE_MACHINE: &str = "core-033"; // Unstable Clone Machine: shuffle 3 copies of each played card
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const SPARE: &str = "core-010"; // Rapid Replenish: a Spell, never played: it only keeps the turn open (R82)
 
     /// A side with mana to play and a stocked library, so no turn auto-ends (§2.5) or fatigues.
     fn side(extra: Value) -> Value {

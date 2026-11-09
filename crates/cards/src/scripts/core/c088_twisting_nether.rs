@@ -75,11 +75,11 @@ mod tests {
 
     // Inert fixtures: each unit's only text is a Cry, which `field` never fires. Mana Well and Sheepish
     // have no Indestructible.
-    const GARY: &str = "core-004"; // 1/1
-    const RENO: &str = "core-053"; // 4/6
-    const ROCK: &str = "core-066"; // 10/10, printed Indestructible
-    const MANA_WELL: &str = "core-006"; // Field Spell
-    const SHEEPISH: &str = "core-041"; // Trap; watches for a Unit the opponent plays, so a Spell is safe
+    const GARY: &str = "core-004"; // Gary the Gambler
+    const RENO: &str = "core-053"; // Reno
+    const ROCK: &str = "core-066"; // The Rock: printed Indestructible
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const SHEEPISH: &str = "core-041"; // Sheepish: watches for a Unit the opponent plays, so a Spell is safe
 
     // §2.5: one always-playable card per hand keeps a scenario on the turn it started on.
     const FILLER: &str = "core-005";

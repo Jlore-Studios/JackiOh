@@ -46,11 +46,11 @@ mod tests {
     use super::{DORMANT_TURNS, ID};
     use crate::merged;
 
-    const FILLER: &str = "core-010"; // (0) Spell: a play always open, so no turn ends by itself.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
-    const MR_TOKEN: &str = "core-015"; // (1) 1/1.
+    const FILLER: &str = "core-010"; // Rapid Replenish: a play always open, so no turn ends by itself
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token
     const ENEMY_HERO: &str = "hero-p2";
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
 
     fn played(radiant: bool, p2: Value, seed: &str) -> Scenario {
         let mut s = crate::scenario(json!({

@@ -68,11 +68,11 @@ mod tests {
     use super::ID;
     use crate::def_ids;
 
-    const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4, no Cry.
-    const MR_TOKEN: &str = "core-015"; // (1) 1/1, "Cry: Summon a Rush Token."
-    const FELINORS: &str = "core-012"; // (2) 3/4, "Cry: Summon a copy of this."
-    const SORCERER: &str = "core-068"; // (2) 5/5, "Cry: Deal 4 damage" to any Unit or hero.
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // no Cry.
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: "Cry: Summon a Rush Token."
+    const FELINORS: &str = "core-012"; // Duplicating Felinors: "Cry: Summon a copy of this."
+    const SORCERER: &str = "core-068"; // Twisted Sorcerer: "Cry: Deal 4 damage" to any Unit or hero.
     const SORCERER_DAMAGE: i32 = 4;
     const RUSH_TOKEN: &str = "core-t-rush";
 

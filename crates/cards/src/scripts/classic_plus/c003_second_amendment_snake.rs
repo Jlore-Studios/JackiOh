@@ -47,13 +47,13 @@ mod tests {
     use crate::scenario;
 
     const SNAKE: &str = "classicplus-003";
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
-    const MR_TOKEN: &str = "core-015"; // (1) 1/1.
-    const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2.
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token
+    const SOLARIUS: &str = "classicplus-038"; // Solarius: Spell Damage +2
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
-    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) 7/7 Armor 7.
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
     const HITS_LABEL: &str = "for each Plague Counter on this";
 
     /// One of the Snake's `damage` events: where it sits in the event list, what it hit, how hard.

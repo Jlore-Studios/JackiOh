@@ -177,22 +177,22 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const TRAP: &str = "core-085"; // Trap, 3 (2 until issue #3136), Legendary
-    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // Unit, 1 — 3/3 Rush, First Strike
-    const BIG_UNIT: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // Unit, 4 — 7/7 Armor 7
-    const MR_TOKEN: &str = "core-015"; // Unit, 1 — 1/1, Cry: summon a Rush Token
-    const MR_VANILLA: &str = "core-008"; // Unit, 1 — 4/4, no text
+    const TRAP: &str = "core-085"; // Unlicensed Experimentation: a Trap, Legendary (its cost changed in issue #3136)
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const BIG_UNIT: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
+    const MR_VANILLA: &str = "core-008"; // Mr. Vanilla: no text
 
     /// A Radiant #19 Midrange Menace: an 18/18 with Taunt and Immutable (§8.1 row 19).
     fn immutable() -> Value {
         json!({ "def": "core-019", "radiant": true })
     }
 
-    const RUSH_TOKEN: &str = "core-t-rush"; // the unit-token CARD, playable from a hand (§5, #75)
-    const STOCKPILE: &str = "core-005"; // Spell, 1
-    const CALL_TO_ARMS: &str = "core-069"; // Spell, 2 — "Recruit 3 Units costing 1 or less"
-    const MY_PAWN: &str = "core-096"; // Trap, 1
-    const INTERN: &str = "core-071"; // Field Trap, 1
+    const RUSH_TOKEN: &str = "core-t-rush"; // Rush Token: the unit-token CARD, playable from a hand (§5, #75)
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
+    const CALL_TO_ARMS: &str = "core-069"; // Call to Arms: a Spell, "Recruit 3 Units costing 1 or less"
+    const MY_PAWN: &str = "core-096"; // My Pawn: a Trap
+    const INTERN: &str = "core-071"; // Intern Stimmy: a Field Trap
     const MENACE: &str = "core-019";
 
     use crate::js;
@@ -600,8 +600,8 @@ mod tests {
     mod n85_unlicensed_experimentation_glows_while_a_fuse_has_somewhere_to_land_r662 {
         use super::*;
 
-        const VANILLA: &str = "core-008"; // Mr. Vanilla, a 1-cost Unit
-        const MENACE: &str = "core-019"; // Midrange Menace; its Radiant face is Immutable
+        const VANILLA: &str = "core-008"; // Mr. Vanilla
+        const MENACE: &str = "core-019"; // Midrange Menace: its Radiant face is Immutable
 
         fn face_of(radiant: bool) -> &'static str {
             if radiant {

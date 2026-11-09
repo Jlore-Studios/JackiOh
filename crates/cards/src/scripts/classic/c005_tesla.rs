@@ -112,14 +112,14 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TESLA: &str = "classic-005";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
-    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) 3/3.
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const TOKEN_MAN: &str = "core-015"; // (1) 1/1, Cry: Summon a Rush Token (3/3).
-    const CALL: &str = "core-069"; // (2) Spell: Recruit 3 Units of (1) Cost or less.
-    const DEFENDER: &str = "core-003"; // (1) 1/1 Taunt, Divine Shield, Reborn.
-    const HIT_JOB: &str = "core-016"; // (3) Destroy target Unit.
-    const FEELINGS: &str = "classic-032"; // (1) Steal an enemy permanent in a lane where you control a (1) Cost Unit.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const TOKEN_MAN: &str = "core-015"; // Me and Mr Token: Cry: Summon a Rush Token.
+    const CALL: &str = "core-069"; // Call to Arms: Recruit 3 Units
+    const DEFENDER: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const FEELINGS: &str = "classic-032"; // Felinor Feelings: Steal an enemy permanent in a lane where you control a Unit
     const FILLER: &str = "core-010";
 
     use crate::js;

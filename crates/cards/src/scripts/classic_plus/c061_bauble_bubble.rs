@@ -44,14 +44,14 @@ mod tests {
 
     const BAUBLE: &str = "classicplus-061";
     const STOCKPILE: &str = "core-005";
-    const NETHER: &str = "core-088"; // (4) Spell: destroy all permanents
-    const JAMMED: &str = "core-036"; // (1) Spell: destroy target backrow card, Lock its zone
-    const COLLATERAL: &str = "core-034"; // (4) Spell: exile target permanent and a random card of the enemy deck
-    const TRANSMOGULATE: &str = "core-083"; // (2) Spell: replace every card of yours with a random Legendary
-    const SILAS: &str = "core-052"; // Radiant: cards crossing to the opponent bounce to their controller's hand
+    const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
+    const JAMMED: &str = "core-036"; // Magic Jammed: destroy target backrow card, Lock its zone
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: exile target permanent and a random card of the enemy deck
+    const TRANSMOGULATE: &str = "core-083"; // Transmogulate: replace every card of yours with a random Legendary
+    const SILAS: &str = "core-052"; // Silly Silas: Radiant: cards crossing to the opponent bounce to their controller's hand
     const CUBE: &str = "core-022"; // Carnivorous Cube: its Cry tributes one of your other Units
     const VANILLA: &str = "core-008";
-    const FILLER: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // Tempo Timmy, a (1) Unit (never a Stockpile, so the adds read plainly)
+    const FILLER: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // never a Stockpile, so the adds read plainly
 
     use crate::scenario;
 

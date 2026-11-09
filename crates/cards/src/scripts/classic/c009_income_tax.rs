@@ -204,14 +204,14 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TAX: &str = "classic-009";
-    const PALANTIR: &str = "classic-004"; // (2) Field Spell: "Aura: Your opponent can't draw more than 1 card each turn."
-    const STOCKPILE: &str = "core-005"; // (1) Spell: "Draw 2. Heal your hero 2."
-    const JELLY_BEAN: &str = "core-027"; // (1) Spell: "Cast on draw: Make a random card in your hand Radiant. Lose 7 health."
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
-    const MENACE: &str = "core-019"; // (3) Unit 9/9
-    const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) Unit 7/7
-    const FELINORS: &str = "core-012"; // (2) Unit 3/4
-    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit 3/3
+    const PALANTIR: &str = "classic-004"; // Palantir: "Aura: Your opponent can't draw more than 1 card each turn."
+    const STOCKPILE: &str = "core-005"; // Stockpile: "Draw 2. Heal your hero 2."
+    const JELLY_BEAN: &str = "core-027"; // Blood Ridden Glowy Jelly Bean: "Cast on draw: Make a random card in your hand Radiant. Lose 7 health."
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const FELINORS: &str = "core-012"; // Duplicating Felinors
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
 
     fn open(s: &Scenario) -> PendingChoice {
         must(s.state().pending.clone(), "open prompt")

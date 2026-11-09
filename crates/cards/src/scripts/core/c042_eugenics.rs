@@ -84,10 +84,10 @@ mod tests {
 
     use crate::scenario;
 
-    const PLAIN: &str = "core-025"; // (4) 4-mana 7/7, no script: it stays.
-    const MENACE: &str = "core-019"; // (3) Midrange Menace: it stays.
-    const VANILLA: &str = "core-008"; // (1) Mr. Vanilla: exiled.
-    const STOCKPILE: &str = "core-005"; // (1) Stockpile: exiled.
+    const PLAIN: &str = "core-025"; // 4-mana 7/7: no script: it stays
+    const MENACE: &str = "core-019"; // Midrange Menace: it stays.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: exiled.
+    const STOCKPILE: &str = "core-005"; // Stockpile: exiled.
 
     /// `n` copies of one card. R80 caps a library at 60.
     fn copies(n: usize, card: &'static str) -> Vec<Value> {

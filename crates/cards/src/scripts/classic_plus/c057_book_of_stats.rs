@@ -37,8 +37,8 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const BOOK: &str = "classicplus-057";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // Mr. Vanilla 4/4
-    const FLOOD: &str = "core-017"; // (4) Spell: bounce all Units
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FLOOD: &str = "core-017"; // Flood: bounce all Units
     const FILLER: &str = "core-005";
 
     use crate::scenario;

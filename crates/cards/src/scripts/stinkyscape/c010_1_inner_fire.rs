@@ -61,9 +61,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const INNER_FIRE: &str = "stinkyscape-010-1";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const WEAPONS: &str = "core-014"; // (4) Field Spell: your units have +2 Attack.
-    const IMMUNE: &str = "classicplus-019-1"; // Radiant: Immune to Spells.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your units have +2 Attack
+    const IMMUNE: &str = "classicplus-019-1"; // Top Loser: Radiant: Immune to Spells.
     const FILLER: &str = "core-005";
 
     fn stats_override(attack: i32, health: i32) -> Value {

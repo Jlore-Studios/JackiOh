@@ -117,8 +117,8 @@ mod tests {
     const HOUSE: &str = "classicplus-007";
     const RIGHT: &str = "core-003"; // Right-house defender
     const WRONG: &str = "classicplus-006"; // Wrong-House Attacker
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
-    const HIT_JOB: &str = "core-016"; // (3) Destroy target Unit.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
 

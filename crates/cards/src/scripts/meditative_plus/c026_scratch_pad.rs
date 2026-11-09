@@ -84,7 +84,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
 
     fn unit_recipe() -> Value {
         json!({

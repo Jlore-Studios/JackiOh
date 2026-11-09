@@ -39,12 +39,12 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-005"; // (1) Spell.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const FREEBIE: &str = "core-010"; // (0) Spell.
-    const HIT_JOB: &str = "core-016"; // (3) Spell.
-    const FLOOD: &str = "core-017"; // (4) Spell.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const FREEBIE: &str = "core-010"; // Rapid Replenish: a Spell
+    const HIT_JOB: &str = "core-016"; // Hit Job: a Spell
+    const FLOOD: &str = "core-017"; // Flood: a Spell
 
     fn offered(radiant: bool, seed: &str, mine: Value, theirs: Value) -> Scenario {
         let mut hand = vec![json!({ "def": ID, "radiant": radiant })];

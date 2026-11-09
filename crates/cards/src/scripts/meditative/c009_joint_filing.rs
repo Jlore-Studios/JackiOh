@@ -71,16 +71,16 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const SHREDDER: &str = "core-013"; // End of turn: 2 damage to each enemy.
-    const FARM: &str = "core-058"; // Field Spell. Start of turn: summon a Rush Token.
+    const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: End of turn: 2 damage to each enemy.
+    const FARM: &str = "core-058"; // Rush Token Farm: Field Spell. Start of turn: summon a Rush Token.
     const RUSH_TOKEN: &str = "core-t-rush";
-    const DREAM: &str = "core-023"; // Spell. End of turn: return this to hand (from the graveyard).
-    const RECYCLING: &str = "core-039"; // Spell. Exile this. End of turn (delayed): copy each other card played.
-    const BREAD_AND_BUTTER: &str = "core-018"; // Field Trap: fires in the end-of-turn trap window.
+    const DREAM: &str = "core-023"; // Reoccurring Dream: Spell. End of turn: return this to hand (from the graveyard).
+    const RECYCLING: &str = "core-039"; // Recycling Initiative: Spell. Exile this. End of turn (delayed): copy each other card played.
+    const BREAD_AND_BUTTER: &str = "core-018"; // Bread and Butter: fires in the end-of-turn trap window
     const BREAD_TOKEN: &str = "core-t-bread";
-    const MAGIC_JAMMED: &str = "core-036"; // Spell: destroy a backrow card, Lock its zone.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // a (1) 4/4 with no text
-    const FILLER: &str = "core-005"; // Stockpile, a (1) Spell
+    const MAGIC_JAMMED: &str = "core-036"; // Magic Jammed: destroy a backrow card, Lock its zone.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
 
     /// A side with something to do and a deck to draw, so no turn auto-ends (§2.5) or fatigues.
     fn side(extra: Value) -> Value {

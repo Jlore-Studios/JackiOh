@@ -60,9 +60,9 @@ mod tests {
     use crate::filler;
 
     const CAPSULE: &str = "stinkyscape-040";
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+    const MENACE: &str = "core-019"; // Midrange Menace: a Unit, Taunt
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: Spell (§2.5).
 
     fn hits_from(s: &Scenario, source: &str) -> Vec<i32> {
         s.events()

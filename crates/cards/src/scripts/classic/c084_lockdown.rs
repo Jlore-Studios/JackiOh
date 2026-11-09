@@ -72,18 +72,18 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const LOCKDOWN: &str = "classic-084";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const TOKEN_MAKER: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
     const DEFENDER: &str = "core-003"; // Right-house defender: Reborn
-    const CALL_TO_ARMS: &str = "core-069"; // Spell 2: Recruit 3 (1) Cost or less Units
+    const CALL_TO_ARMS: &str = "core-069"; // Call to Arms: Recruit 3 Units costing 1 or less
     const HIT_JOB: &str = "core-016";
-    const MAGIC_JAMMED: &str = "core-036"; // destroy target backrow card, Lock its zone
-    const COLLATERAL: &str = "core-034"; // exile target permanent
-    const MANA_WELL: &str = "core-006"; // Field Spell
-    const SHEEPISH: &str = "core-041"; // Trap
+    const MAGIC_JAMMED: &str = "core-036"; // Magic Jammed: destroy target backrow card, Lock its zone
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: exile target permanent
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
     const STOCKPILE: &str = "core-005";
     const TIMMY: &str = "core-011";
-    const GRAND_COUNTERSPELL: &str = "classic-072"; // Trap: when your opponent plays a non-Unit card, Counter it.
+    const GRAND_COUNTERSPELL: &str = "classic-072"; // Grand Counterspell: when your opponent plays a non-Unit card, Counter it.
 
     use crate::scenario;
 

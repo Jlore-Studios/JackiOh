@@ -46,10 +46,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FAN: &str = "traininggrounds-010";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) Unit 7/7, Armor 7.
-    const SHIELDED: &str = "classic-089"; // (2) Unit 5/6, Divine Shield.
-    const ARCH_MAGE: &str = "meditativeplus-008"; // (2) Unit 4/8, Spell Damage +3.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const SHIELDED: &str = "classic-089"; // Paul Allen's Ghost: Divine Shield
+    const ARCH_MAGE: &str = "meditativeplus-008"; // Arch Mage: Spell Damage +3
 
     fn hero_health(s: &Scenario, player: PlayerId) -> i32 {
         s.state().players[player].hero.health

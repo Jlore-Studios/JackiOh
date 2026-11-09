@@ -97,8 +97,8 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const DATACENTER: &str = "classicplus-078";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit
-    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;

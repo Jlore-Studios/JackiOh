@@ -42,7 +42,7 @@ mod tests {
 
     const P2: PlayerId = PlayerId::P2;
 
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
     const FILLER: &str = "core-008";
 
     #[test]

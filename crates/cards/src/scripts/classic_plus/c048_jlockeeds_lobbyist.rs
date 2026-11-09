@@ -63,9 +63,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const LOBBYIST: &str = "classicplus-048";
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy target Unit
-    const SWITCH_ALL: &str = "core-048"; // (0) Spell: switch the position of every Unit
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // Mr. Vanilla 4/4
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
+    const SWITCH_ALL: &str = "core-048"; // 5pek Controller: switch the position of every Unit
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
     /// The non-token Jlockeed cards of every set but this one, sorted: Core #13, #14, C #4, C+ #51, #52,
     /// M #87 and #97 (§8.8), M+ #4 (§8.9, #1187), Stinkyscape #124 to #130 (#1884) and Training Grounds

@@ -14,14 +14,14 @@ use jackioh_engine::testkit::*;
 
 const STOCKPILE: &str = "core-005";
 const VANILLA: &str = "core-008";
-const STAB: &str = "core-070"; // Spiteful Stab, a printed 3-cost Spell (Flood costs (4) since patch v0.2.0)
-const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10, a printed 3-cost Unit
+const STAB: &str = "core-070"; // Spiteful Stab: a printed Spell (Flood costs 4 since patch v0.2.0)
+const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: a printed Unit
 const MENACE: &str = "core-019";
 const RAPID: &str = "core-010";
-const TIMMY: &str = "core-011"; // a unit on each board, so no turn auto-ends (R82)
+const TIMMY: &str = "core-011"; // Tempo Timmy: a unit on each board, so no turn auto-ends (R82)
 const HIT_JOB: &str = "core-016";
-const HINDER: &str = "core-021"; // cast on draw: the opponent's next refresh is 1 lower
-const DIVIDEND: &str = "core-024"; // X-cost Spell; the "mana" mode gains floor(X/2) next turn
+const HINDER: &str = "core-021"; // Hinder: cast on draw: the opponent's next refresh is 1 lower
+const DIVIDEND: &str = "core-024"; // Efficiency Dividend: Spell; the "mana" mode gains half of X next turn
 const COST_4: &str = "core-025"; // 4-mana 7/7
 const TUTOR: &str = "core-051";
 const CALL_TO_ARMS: &str = "core-069";
@@ -181,11 +181,11 @@ mod s2_3_a_one_shot_refresh_rider_moves_current_mana_not_max_mana {
 
 // Round 9: a play-time discount is not a library or graveyard card's cost (R65, R48, §8 #35, #77, #78)
 
-const RAPID_REPLENISH: &str = "core-010"; // Spell, 0
-const SEVEN_SEVEN: &str = "core-025"; // Unit, 4
+const RAPID_REPLENISH: &str = "core-010"; // Rapid Replenish: a Spell
+const SEVEN_SEVEN: &str = "core-025"; // 4-mana 7/7
 const ARCHIVIST: &str = "core-030";
 const LUNAR_ECLIPSE: &str = "core-035";
-const FULLSEND: &str = "core-078"; // Spell, 4
+const FULLSEND: &str = "core-078"; // /fullsend: a Spell
 const GREED: &str = "core-094";
 
 fn at_p2() -> Value {

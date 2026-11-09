@@ -84,15 +84,15 @@ mod tests {
     use crate::scenario;
 
     const TOXINS: &str = "classic-042";
-    const SLIME: &str = "classic-027"; // (0) Unit 1/1: "Plague Counters placed on this are multiplied by {multiplier}." (2)
-    const FAUCI: &str = "core-091"; // (2) Unit 1/6: "Whenever this takes damage, place a Plague Counter on this."
-    const ECLIPSE: &str = "core-035"; // (1) Spell: "Deal 3 damage to a target."
-    const COLLATERAL: &str = "core-034"; // (4) Spell: "Exile target permanent and a random card from your opponent's deck."
-    const STATE_OF_GAME: &str = "classic-041"; // (1) Unit 3/3 Indestructible
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
-    const MENACE: &str = "core-019"; // (3) Unit 9/9
-    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit 3/3
-    const STOCKPILE: &str = "core-005"; // (1) Spell, a spare card (§2.5)
+    const SLIME: &str = "classic-027"; // Pestilent Slime: "Plague Counters placed on this are multiplied by {multiplier}."
+    const FAUCI: &str = "core-091"; // Fed Fauci: "Whenever this takes damage, place a Plague Counter on this."
+    const ECLIPSE: &str = "core-035"; // Lunar Eclipse: "Deal 3 damage to a target."
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: "Exile target permanent and a random card from your opponent's deck."
+    const STATE_OF_GAME: &str = "classic-041"; // State of the Game: Unit Indestructible
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell, a spare card (§2.5)
 
     use crate::js;
 

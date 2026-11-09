@@ -59,7 +59,7 @@ mod tests {
 
     const CORE: &str = "stinkyscape-034";
     const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
     fn price_of(s: &Scenario, id: &str) -> i32 {

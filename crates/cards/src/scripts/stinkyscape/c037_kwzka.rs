@@ -85,10 +85,10 @@ mod tests {
     use super::ID;
     use crate::{filler, scenario};
 
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const MENACE: &str = "core-019"; // (3) 9/9.
-    const MR_TOKEN: &str = "core-015"; // (1) 1/1: Cry: summon a Rush Token.
-    const FANATIC: &str = "core-050"; // (2) 1/1: Cry: Allure an enemy permanent.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
+    const FANATIC: &str = "core-050"; // K-Pop Fanatic: Cry: Allure an enemy permanent.
     const FILLER: &str = "core-005";
 
     fn board(radiant: bool, p2_hand: Value, p2_field: Value) -> Scenario {

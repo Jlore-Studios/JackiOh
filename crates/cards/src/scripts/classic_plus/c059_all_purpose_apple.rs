@@ -47,8 +47,8 @@ mod tests {
 
     const APPLE: &str = "classicplus-059";
     const RUSH: &str = "core-t-rush";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // Mr. Vanilla 4/4
-    const SOLARIUS: &str = "classicplus-038"; // a Unit printing Spell Damage +2
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const SOLARIUS: &str = "classicplus-038"; // Solarius: a Unit printing Spell Damage +2
     const FILLER: &str = "core-005";
 
     use crate::scenario;

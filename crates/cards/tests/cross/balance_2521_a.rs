@@ -20,15 +20,15 @@ const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
 
 // Cards from other sets, there for their bodies alone.
-const ANCHOR: &str = "core-010"; // Rapid Replenish, a (0) Spell: a play always left in hand.
-const FILLER: &str = "core-005"; // Stockpile, a (1) Spell: library filler for the draws.
-const VANILLA: &str = "core-008"; // Mr. Vanilla, a (1) 4/4 Unit with no text.
-const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-const MENACE: &str = "core-019"; // Midrange Menace, a (3) 9/9 Taunt Unit.
-const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // 4-mana 7/7, a (4) 7/7 Unit with Armor 7.
-const BIG_FELINOR: &str = "core-043"; // (4) Unit 3/10, Radiant 6/20. Cry: Destroy all non-Felinor Units.
-const TWISTING_NETHER: &str = "core-088"; // (4) Spell: Destroy all permanents.
-const CAT_EARS: &str = "meditative-067"; // Sentient Cat Ears, a (1) 1/1 Equip Unit that is no Starship Piece.
+const ANCHOR: &str = "core-010"; // Rapid Replenish: a play always left in hand
+const FILLER: &str = "core-005"; // Stockpile: library filler for the draws
+const VANILLA: &str = "core-008"; // Mr. Vanilla: Unit with no text.
+const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+const MENACE: &str = "core-019"; // Midrange Menace: Taunt Unit
+const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+const BIG_FELINOR: &str = "core-043"; // Big Felinor: Cry: Destroy all non-Felinor Units
+const TWISTING_NETHER: &str = "core-088"; // Twisting Nether: Destroy all permanents.
+const CAT_EARS: &str = "meditative-067"; // Sentient Cat Ears: Equip Unit that is no Starship Piece.
 
 // B1–B5: the Resources.
 const REKNITE: &str = "stinkyscape-t-reknite";

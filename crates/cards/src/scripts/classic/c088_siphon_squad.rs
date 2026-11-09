@@ -147,13 +147,13 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SIPHON: &str = "classic-088";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit 3/3 Rush, First Strike.
-    const WEAPONS: &str = "core-014"; // (4) Field Spell: Aura: your Units have +2 attack, Rush and First Strike.
-    const FIENDER: &str = "core-092"; // (2) Unit 5/7 Stack.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: Aura: your Units have +2 attack, Rush and First Strike.
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: a Spell (§2.5).
 
     use crate::scenario;
 

@@ -61,13 +61,13 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MACHINE: &str = "classic-049";
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // 4/4, no text
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
-    const FIENDER: &str = "core-092"; // Stack Unit
-    const SUPER_VIRUS: &str = "core-090-1"; // Cast on draw: take 1 damage
-    const FILLER: &str = "core-010"; // (0) Spell, Combo 3 — a card to keep in hand
-    const PALANTIR: &str = "classic-004"; // Aura: your opponent can't draw more than 1 card each turn.
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const SUPER_VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw: take 1 damage
+    const FILLER: &str = "core-010"; // Rapid Replenish: Combo 3, a card to keep in hand
+    const PALANTIR: &str = "classic-004"; // Palantir: Aura: your opponent can't draw more than 1 card each turn
 
     use crate::js;
 

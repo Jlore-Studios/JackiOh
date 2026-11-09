@@ -76,11 +76,11 @@ mod tests {
 
     use super::{ID, SACK};
 
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
-    const SORCERER: &str = "core-068"; // (2) 5/5: "Cry: Deal 4 damage."
-    const LAR: &str = "classicplus-076"; // (1) 1/1: "Death: Summon a Brother Ping."
-    const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."
-    const ZAP: &str = "core-036"; // (1) Spell Magic Jammed: no Unit, it leaves the trap set.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell, a card in hand, so no turn ends by itself
+    const SORCERER: &str = "core-068"; // Twisted Sorcerer: "Cry: Deal 4 damage."
+    const LAR: &str = "classicplus-076"; // Brother Lar: "Death: Summon a Brother Ping."
+    const HIT_JOB: &str = "core-016"; // Hit Job: "Destroy a Unit."
+    const ZAP: &str = "core-036"; // Magic Jammed: a Spell, no Unit, it leaves the trap set
 
     fn trapped(radiant: bool, hand: Value) -> Scenario {
         let mut s = crate::scenario(json!({

@@ -121,10 +121,10 @@ mod tests {
     const AUDIT: &str = "classicplus-044";
     const LOW: &str = "core-008"; // Mr. Vanilla
     const HIGH: &str = "core-022"; // Carnivorous Cube
-    const LOW_TRAP: &str = "core-071"; // Intern Stimmy, a Field Trap
+    const LOW_TRAP: &str = "core-071"; // Intern Stimmy: a Field Trap
     const REBORN: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
     const RUSH: &str = "core-t-rush";
-    const FIENDER: &str = "core-092"; // Felinor Fiender, Stack
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
     const INDESTRUCTIBLE: &str = "classic-041"; // State of the Game: Indestructible
     const FILLER: &str = "core-005";
     const ALL: &str = "All permanents";

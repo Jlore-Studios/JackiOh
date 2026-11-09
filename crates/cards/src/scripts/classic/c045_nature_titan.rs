@@ -60,13 +60,13 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TITAN: &str = "classic-045";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const SHEEP: &str = "core-t-sheep"; // Sheep Token, worth 2 Tributes.
-    const DEFENDER: &str = "core-003"; // Right-house defender 1/1: Taunt, Divine Shield, Reborn.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const SHEEP: &str = "core-t-sheep"; // Sheep Token: worth 2 Tributes
+    const DEFENDER: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
     const FIENDER: &str = "core-092"; // Felinor Fiender: Stack.
-    const MOTHS: &str = "core-009"; // 1/14: Start of turn: every enemy Unit attacks this.
-    const TEMPO: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit 3/3 Rush.
+    const MOTHS: &str = "core-009"; // Moths to the Flame: Start of turn: every enemy Unit attacks this.
+    const TEMPO: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
     const ANCHOR: &str = "core-010";
     const A: &str = "core-020";
     const B: &str = "core-001";

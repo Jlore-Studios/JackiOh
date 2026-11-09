@@ -87,10 +87,10 @@ mod tests {
 
     const GOLDEN: &str = "classicplus-065-4";
     const FILLER: &str = "core-005";
-    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // Unit 3/3 → 6/6
-    const DFENDER: &str = "core-001"; // Unit 0/7 → 0/14
-    const FELINORS: &str = "core-012"; // Unit 3/4 → 6/9
-    const SHEEPISH: &str = "core-041"; // Trap
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const DFENDER: &str = "core-001"; // Big D-fender
+    const FELINORS: &str = "core-012"; // Duplicating Felinors
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
 
     fn radiant_sets(s: &Scenario, viewer: PlayerId) -> Vec<Value> {
         s.view(viewer)

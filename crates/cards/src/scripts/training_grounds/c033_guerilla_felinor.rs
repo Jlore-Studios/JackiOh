@@ -35,10 +35,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const GUERILLA: &str = super::ID;
-    const BIG: &str = "traininggrounds-008"; // Clobberer 14/7
-    const FRAIL: &str = "traininggrounds-001"; // Spikey Steven 5/2
-    const SUN: &str = "traininggrounds-006"; // Chosen by the Sun 3/3, Divine Shield
-    const MOON: &str = "traininggrounds-007"; // Chosen by the Moon 3/3, Taunt, Armor 3
+    const BIG: &str = "stand-in (3) 14/7 R42/14";
+    const FRAIL: &str = "stand-in (1) 5/2 R15/6";
+    const SUN: &str = "traininggrounds-006"; // Chosen by the Sun: Divine Shield
+    const MOON: &str = "traininggrounds-007"; // Chosen by the Moon: Taunt, Armor 3
     const FILLER: &str = "core-005";
 
     fn guerilla(radiant: bool, theirs: Value) -> Scenario {

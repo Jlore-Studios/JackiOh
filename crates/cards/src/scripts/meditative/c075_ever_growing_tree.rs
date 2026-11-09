@@ -104,7 +104,7 @@ mod tests {
         }
     }
 
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const MANA_WELL: &str = "core-006";
     const WEAPONS: &str = "core-014";
     const ANTI_ONESHOT: &str = "core-073";

@@ -85,9 +85,9 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4, no piece.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // no piece.
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy a Unit
 
     /// p1's Starship (one AP Rounds) and, in p2's backrow lane 2, a set Stimulus (Radiant if `radiant`);
     /// p1 holds `hand` beside it. Returns the scenario, the Starship's id and the Stimulus's.

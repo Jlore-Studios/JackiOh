@@ -51,10 +51,10 @@ mod tests {
 
     use super::ID;
 
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: draw 2, heal 2.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
-    const EXILER: &str = "core-034"; // (4) Spell: Exile a permanent and a random card from the opponent's deck.
-    const SHATTER: &str = "core-036"; // (1) Spell: Destroy a backrow card. Lock its zone.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell, draw 2, heal 2
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const EXILER: &str = "core-034"; // Collateral Damage: Exile a permanent and a random card from the opponent's deck.
+    const SHATTER: &str = "core-036"; // Magic Jammed: Destroy a backrow card. Lock its zone.
 
     fn standing(radiant: bool, graveyard: Value) -> Scenario {
         crate::scenario(json!({

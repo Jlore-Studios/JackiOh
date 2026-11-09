@@ -95,8 +95,8 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // Mr. Vanilla, 4/4, no text
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
 
     fn game(field: Value, hits: usize) -> Scenario {
         crate::scenario(json!({

@@ -10,11 +10,11 @@ use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::subsystems::fuse::FuseArgs;
 use jackioh_engine::testkit::*;
 
-const GAMBIT: &str = "classic-052"; // (2) Trap: a lethal hit is canceled; then heal {heal} 10 and draw {draw} 3 (resume step).
-const INCOME_TAX: &str = "classic-009"; // (2) Trap with a table of steps of its own, and no "heal".
-const COUNTERSPELL: &str = "classic-017"; // (2) Trap with no table of steps: the outer ingredient of the fusion.
+const GAMBIT: &str = "classic-052"; // Final Gambit: a lethal hit is canceled; then heal {heal} 10 and draw {draw} 3 (resume step)
+const INCOME_TAX: &str = "classic-009"; // Income Tax: Trap with a table of steps of its own, and no "heal".
+const COUNTERSPELL: &str = "classic-017"; // Counterspell: Trap with no table of steps: the outer ingredient of the fusion.
 const FILLER: &str = "core-005";
-const ATTACKER: &str = "stand-in (1) 4/4 R12/12"; // 4/4
+const ATTACKER: &str = "stand-in (1) 4/4 R12/12";
 
 use super::scenario;
 

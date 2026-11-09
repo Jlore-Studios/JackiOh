@@ -75,14 +75,14 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const VOID: &str = "core-100"; // Unit, 100, Mythic, 10/10 → 20/20 plus Charge
+    const VOID: &str = "core-100"; // Ceaseless Void: Mythic, plus Charge
     const PRINTED: i32 = 100;
 
     /// #11 Tempo Timmy, a 1-cost 3/3 Unit. #58 Rush Token Farm, a 2-cost Field Spell with no triggers
     /// on a play. A radiant #25 is an Indestructible 7/7, and #98 an Indestructible Field Spell.
     const TIMMY: &str = "core-011";
     const FARM: &str = "core-058";
-    const ROCKY: &str = "core-066"; // #66 The Rock: Indestructible on both faces
+    const ROCKY: &str = "core-066"; // The Rock: Indestructible on both faces
     const HEROIC: &str = "core-098";
     const RUSH_TOKEN: &str = "core-t-rush";
     /// #53 Reno, a 3-cost Unit: the spare card that keeps §2.5's auto-end off the assertions.

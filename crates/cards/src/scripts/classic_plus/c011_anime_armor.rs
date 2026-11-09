@@ -46,18 +46,18 @@ mod tests {
     use crate::scenario;
 
     const ANIME: &str = "classicplus-011";
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
-    const LUNAR: &str = "core-035"; // (1) Deal 3 damage to a target.
-    const TRUE_STRIKE: &str = "core-044"; // (1) Pierce. Deal 4 damage.
-    const STOCKPILE: &str = "core-005"; // (1) Draw 2. Heal your hero 2.
-    const JELLY_BEAN: &str = "core-027"; // Cast on draw: make a random hand card Radiant. Lose 7 health.
-    const ANTI_ONESHOT: &str = "core-073"; // Field Spell: hits on your hero are capped at 5 (Radiant 3).
-    const BIG_MAX: &str = "classic-080"; // 13/8 Rush, Trample, Indestructible.
-    const SNAKE: &str = "classicplus-003"; // Death: a hit of {damage} on a random enemy per Plague Counter.
-    const VITAL_KILL: &str = "classic-029"; // (1) Set a hero's health to 13.
-    const HIT_JOB: &str = "core-016"; // (3) Destroy target Unit.
-    const SILENCE: &str = "classicplus-009"; // (0) Vanilla a Unit.
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const LUNAR: &str = "core-035"; // Lunar Eclipse: Deal 3 damage to a target
+    const TRUE_STRIKE: &str = "core-044"; // True Strike: Pierce. Deal 4 damage.
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const JELLY_BEAN: &str = "core-027"; // Blood Ridden Glowy Jelly Bean: Cast on draw: make a random hand card Radiant. Lose 7 health.
+    const ANTI_ONESHOT: &str = "core-073"; // Anti-oneshot Armor: hits on your hero are capped at 5 (Radiant 3)
+    const BIG_MAX: &str = "classic-080"; // BOOM! Big Max: Rush, Trample, Indestructible
+    const SNAKE: &str = "classicplus-003"; // Second Amendment Snake: Death: a hit of {damage} on a random enemy per Plague Counter
+    const VITAL_KILL: &str = "classic-029"; // Book of Vital Kill: Set a hero's health to 13.
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const SILENCE: &str = "classicplus-009"; // Silence: Vanilla a Unit.
     const FILLER: &str = "core-010";
 
     fn hero_hits(s: &Scenario, player: PlayerId) -> Vec<i32> {

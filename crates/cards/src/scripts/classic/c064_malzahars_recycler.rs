@@ -114,17 +114,17 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const RECYCLER: &str = "classic-064";
-    const ZAO_GAO: &str = "core-080"; // (2) Spell: Discard 2 random cards. Summon 2 Rush Tokens …
-    const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: … Discard 1 random card.
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
-    const MENACE: &str = "core-019"; // (3) Unit 9/9
-    const FILLER: &str = "core-010"; // (0) Spell
-    const NOSE_HUNTER: &str = "classic-015"; // Activate: Discard a random card. Exile the bottom card of their deck.
-    const RAPID_DRAW: &str = "classic-026"; // (0) Spell: Draw 4. Then discard 4 random cards.
-    const LAST_HURRAH: &str = "classic-037"; // (0) Spell: Draw your deck. At the end of this turn, discard your hand.
-    const PICKLE: &str = "classic-008"; // (1) Spell: at the start of your opponent's next turn, they choose 3 times: discard 1, exile 1, or you draw 1.
-    const INCOME_TAX: &str = "classic-009"; // Trap: when the cards your opponent has drawn in a turn reach 2 …
+    const ZAO_GAO: &str = "core-080"; // Zao Gao: Discard 2 random cards. Summon 2 Rush Tokens …
+    const HINDER: &str = "core-021"; // Hinder: Cast on draw: … Discard 1 random card.
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const NOSE_HUNTER: &str = "classic-015"; // Nose Hunter: Activate: Discard a random card. Exile the bottom card of their deck.
+    const RAPID_DRAW: &str = "classic-026"; // Rapid Draw: Draw 4. Then discard 4 random cards.
+    const LAST_HURRAH: &str = "classic-037"; // Last Hurrah: Draw your deck. At the end of this turn, discard your hand.
+    const PICKLE: &str = "classic-008"; // Pickle: at the start of your opponent's next turn, they choose 3 times: discard 1, exile 1, or you draw 1
+    const INCOME_TAX: &str = "classic-009"; // Income Tax: when the cards your opponent has drawn in a turn reach 2 …
 
     use crate::js;
 

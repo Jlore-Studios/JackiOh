@@ -29,11 +29,11 @@ mod tests {
     use std::sync::Arc;
 
     const JUHAN: &str = "classicplus-004";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
-    const FIENDER: &str = "core-092"; // (2) 5/7 Stack.
-    const MENACE: &str = "core-019"; // Radiant: Taunt, Immutable.
-    const MIND_CONTROL: &str = "core-049"; // (5) Float reduces cost. Steal an enemy card.
-    const HIT_JOB: &str = "core-016"; // (3) Destroy target Unit.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const MENACE: &str = "core-019"; // Midrange Menace: Radiant: Taunt, Immutable
+    const MIND_CONTROL: &str = "core-049"; // Snom Bunny Mind Control: Float reduces cost. Steal an enemy card.
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
 

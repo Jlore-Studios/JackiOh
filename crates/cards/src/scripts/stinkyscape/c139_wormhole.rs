@@ -62,10 +62,10 @@ mod tests {
 
     use super::ID;
 
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: draws, aims at nothing.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
-    const GREASER: &str = "stand-in (2) 7/7 R21/21"; // (2) 7/7.
-    const BOOK: &str = "classicplus-057"; // (1) Spell Book of Stats: "Give a Unit +5/+5" (+10/+10 Radiant).
+    const FILLER: &str = "core-005"; // Stockpile: a Spell, draws, aims at nothing
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const GREASER: &str = "stand-in (2) 7/7 R21/21";
+    const BOOK: &str = "classicplus-057"; // Book of Stats: a Spell, gives a Unit +attack/+health (more when Radiant)
     const BUFF: i32 = 5;
     const RADIANT_BUFF: i32 = 10;
 

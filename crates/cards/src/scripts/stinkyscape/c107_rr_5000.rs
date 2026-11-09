@@ -36,7 +36,7 @@ mod tests {
     use crate::filler;
 
     const RR: &str = "stinkyscape-107";
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: Spell (§2.5).
 
     mod base {
         use super::*;

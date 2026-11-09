@@ -54,13 +54,13 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const WALLS: &str = "classicplus-024";
-    const BODY: &str = "stand-in (1) 4/4 R12/12"; // 4/4
-    const ROCK: &str = "core-066"; // Indestructible
+    const BODY: &str = "stand-in (1) 4/4 R12/12";
+    const ROCK: &str = "core-066"; // The Rock: Indestructible
     const FIELD_SPELL: &str = "core-064";
     const TRAP: &str = "core-060";
-    const FIENDER: &str = "core-092"; // Stack
-    const TOP: &str = "classicplus-019-1"; // Radiant: Immune to Spells
-    const FROST: &str = "classicplus-012-8"; // Field Spell, Animated on your turn
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const TOP: &str = "classicplus-019-1"; // Top Loser: Radiant: Immune to Spells
+    const FROST: &str = "classicplus-012-8"; // Frostspatula: a Field Spell, Animated on your turn
     const TOWER: &str = "classicplus-033"; // Ivory Tower: the first Unit stacked onto it is fused into it
     const FILLER: &str = "core-005";
 

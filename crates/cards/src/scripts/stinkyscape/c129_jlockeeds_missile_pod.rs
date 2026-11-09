@@ -72,7 +72,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const POD: &str = "stinkyscape-129";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
     fn standing(radiant: bool) -> Scenario {

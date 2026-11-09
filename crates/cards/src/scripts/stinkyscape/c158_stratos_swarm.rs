@@ -47,11 +47,11 @@ mod tests {
     use crate::filler;
 
     const SWARM: &str = "stinkyscape-158";
-    const STRATOS: &str = "stinkyscape-068"; // (1) 3/1 Flying, Ranged.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
-    const WELL: &str = "core-006"; // Mana Well, a Field Spell to fill a backrow zone.
+    const STRATOS: &str = "stinkyscape-068"; // Stratos: Flying, Ranged
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: Spell (§2.5).
+    const WELL: &str = "core-006"; // Mana Well: a Field Spell to fill a backrow zone.
 
     fn row(s: &Scenario) -> Vec<Option<String>> {
         (1..=5)

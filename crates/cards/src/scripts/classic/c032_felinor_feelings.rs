@@ -124,13 +124,13 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FEELINGS: &str = "classic-032";
-    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit 3/3.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield"; // (2) Unit 7/1.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9.
-    const BEAR: &str = "core-060"; // (1) Trap.
-    const FIELD: &str = "core-006"; // Mana Well, a Field Spell.
-    const BILLY: &str = "classicplus-069"; // (X) Unit.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
+    const FIELD: &str = "core-006"; // Mana Well: a Field Spell
+    const BILLY: &str = "classicplus-069"; // Buff Billy
     const TOKEN: &str = "core-t-felinor";
     const FILLER: &str = "core-010";
 

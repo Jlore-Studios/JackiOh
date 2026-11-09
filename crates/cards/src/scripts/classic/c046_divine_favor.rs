@@ -70,11 +70,11 @@ mod tests {
 
     const FAVOR: &str = "classic-046";
     const MACHINE: &str = "classic-049"; // Anti-Greed Machine: players can't draw more than 1 card each turn.
-    const FILLER: &str = "core-010"; // (0) Spell
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
     const STOCKPILE: &str = "core-005";
     const MENACE: &str = "core-019";
-    const SUPER_VIRUS: &str = "core-090-1"; // Cast on draw
-    const HINDER: &str = "core-021"; // Cast on draw: … Discard 1 at random (R682: no prompt).
+    const SUPER_VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw
+    const HINDER: &str = "core-021"; // Hinder: Cast on draw: … Discard 1 at random (R682: no prompt).
 
     use crate::js;
 

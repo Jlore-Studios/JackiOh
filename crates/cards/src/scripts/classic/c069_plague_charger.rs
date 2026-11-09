@@ -65,12 +65,12 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const CHARGER: &str = "classic-069";
-    const CRAWLER: &str = "classic-053"; // (1) Unit: Cry: place 1 Plague Counter on a permanent (a prompt).
-    const MUTATE: &str = "classic-078"; // (1) Field Spell: Activate ♾️: remove a Plague Counter from a permanent …
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
-    const FILLER: &str = "core-005"; // (1) Spell (§2.5).
-    const ANCHOR: &str = "core-010"; // (0) Spell: keeps a spent turn open (§2.5).
+    const CRAWLER: &str = "classic-053"; // Plague Crawler: Cry: place 1 Plague Counter on a permanent (a prompt).
+    const MUTATE: &str = "classic-078"; // Mutate Spell: Activate ♾️: remove a Plague Counter from a permanent …
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FLOOD: &str = "core-017"; // Flood: Bounce all Units.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell (§2.5).
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: keeps a spent turn open (§2.5).
 
     use crate::scenario;
 

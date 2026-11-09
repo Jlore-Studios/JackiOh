@@ -86,12 +86,12 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const COUNTER: &str = "classic-017";
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const REPLENISH: &str = "core-010"; // (0) Spell, Combo 3.
-    const HINDER: &str = "core-021"; // (0) Spell, cast on draw.
-    const TWINSPELL: &str = "core-079"; // (2) Field Spell: Activate: your next Spell this turn gains Echo +1.
-    const BEAR: &str = "core-060"; // (1) Trap.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const REPLENISH: &str = "core-010"; // Rapid Replenish: a Spell, Combo 3
+    const HINDER: &str = "core-021"; // Hinder: a Spell, cast on draw
+    const TWINSPELL: &str = "core-079"; // Twinspell: Activate: your next Spell this turn gains Echo +1.
+    const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const MENACE: &str = "core-019";
 
     fn armed(radiant_face: bool, lane: i32) -> Value {

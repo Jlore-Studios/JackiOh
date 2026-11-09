@@ -81,16 +81,16 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const CRAWLER: &str = "classic-053";
-    const SLIME: &str = "classic-027"; // (0) Unit 1/1: Plague Counters placed on this are doubled.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt; Radiant adds Immutable.
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell.
-    const UNLICENSED: &str = "core-085"; // (2) Trap, answers only a permanent of a type its controller controls.
-    const FIENDER: &str = "core-092"; // (2) Unit 5/7 Stack.
-    const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
-    const FILLER: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const ANCHOR: &str = "core-010"; // (0) Spell, a card to keep a hand from auto-ending the turn (§2.5).
-    const X: &str = "core-020"; // library filler.
+    const SLIME: &str = "classic-027"; // Pestilent Slime: Plague Counters placed on this are doubled.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt; Radiant adds Immutable.
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const UNLICENSED: &str = "core-085"; // Unlicensed Experimentation: a Trap, answers only a permanent of a type its controller controls
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const FLOOD: &str = "core-017"; // Flood: Bounce all Units.
+    const FILLER: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: a Spell to keep a hand from auto-ending (§2.5).
+    const X: &str = "core-020"; // Pointmaster: library filler
 
     use crate::js;
 

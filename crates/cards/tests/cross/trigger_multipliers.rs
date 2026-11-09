@@ -12,8 +12,8 @@ const FILING: &str = "meditative-009"; // Joint Filing: each end-of-turn hook ru
 const COUNTING: &str = "meditative-010"; // Double Counting: each Cry runs twice.
 const FEAR: &str = "meditative-012"; // Fear Mongerer: Cry, trigger your End of turn effects.
 const PEA: &str = "meditative-013"; // Gatling Pea: end of turn, 1 to the enemy hero, then grows.
-const SPARE: &str = "core-010"; // (0) Spell, never played: it only keeps the turn open (R82).
-const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // a (1) 4/4 with no text.
+const SPARE: &str = "core-010"; // Rapid Replenish: a Spell, never played: it only keeps the turn open (R82)
+const VANILLA: &str = "stand-in (1) 4/4 R12/12";
 
 /// The Pea's declared damage as its tuning leaves it (R386).
 fn damage(s: &Scenario) -> i32 {

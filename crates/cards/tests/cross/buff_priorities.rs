@@ -12,13 +12,13 @@ use super::scenario;
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
 
-const CRAWLER: &str = "classic-053"; // Plague Crawler: (1) Unit; Cry `tokens`, lasting `draw`.
-const LIVING_BOMB: &str = "classic-062"; // (1) Field Spell, no numbers.
-const PLANTATION: &str = "classic-074"; // Corpse Plantation: (2) Field Spell, `usesPlague`.
-const ECLIPSE: &str = "core-035"; // Lunar Eclipse: (1) Spell, deals 3 damage, `dealsDamage`.
-const FIELD_OF_DREAMS: &str = "core-076"; // (2) Spell that deals no damage.
-const INTROSPECTION: &str = "meditative-007"; // (4) Field Spell: Start of turn ... deal 1 damage to each enemy, `dealsDamage`.
-const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // A 7/7 Unit with Armor 7.
+const CRAWLER: &str = "classic-053"; // Plague Crawler: Cry `tokens`, lasting `draw`
+const LIVING_BOMB: &str = "classic-062"; // Living Bomb: a Field Spell, no numbers
+const PLANTATION: &str = "classic-074"; // Corpse Plantation: a Field Spell, `usesPlague`
+const ECLIPSE: &str = "core-035"; // Lunar Eclipse: a Spell, deals 3 damage, `dealsDamage`
+const FIELD_OF_DREAMS: &str = "core-076"; // Field of Dreams: Spell that deals no damage.
+const INTROSPECTION: &str = "meditative-007"; // Introspection: Start of turn... deal 1 damage to each enemy, `dealsDamage`.
+const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
 const FILLER: &str = "core-005";
 
 fn apply_for_p1(s: &mut Scenario, effects: &[Effect]) -> Vec<GameEvent> {

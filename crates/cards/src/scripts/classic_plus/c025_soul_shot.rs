@@ -92,13 +92,13 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SHOT: &str = "classicplus-025";
-    const SMALL: &str = "core-012"; // 3/4, (2)
-    const BIG: &str = "core-019"; // 9/9, (3)
-    const ROCK: &str = "core-066"; // 10/10 Indestructible
-    const TOP_LOSER: &str = "classicplus-019-1"; // Radiant: Immune to Spells
-    const MOTHS: &str = "core-009"; // Moths to the Flame, (2) 1/14
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // Mr. Vanilla, (1) 4/4
-    const LANE_EATER: &str = "classic-071"; // Lane Eater, (3) 4/4 (Silly Silas, core-052, is a 2/2 since issue #3136)
+    const SMALL: &str = "core-012"; // Duplicating Felinors
+    const BIG: &str = "core-019"; // Midrange Menace
+    const ROCK: &str = "core-066"; // The Rock: Indestructible
+    const TOP_LOSER: &str = "classicplus-019-1"; // Top Loser: Radiant: Immune to Spells
+    const MOTHS: &str = "core-009"; // Moths to the Flame
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const LANE_EATER: &str = "classic-071"; // Lane Eater: Silly Silas (core-052) changed stats since issue #3136
     const FILLER: &str = "core-005";
 
     fn shot(p2: Value, radiant_face: bool, seed: &str) -> Scenario {

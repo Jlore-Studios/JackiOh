@@ -40,16 +40,16 @@ mod tests {
 
     const TOP: &str = "classicplus-019-1";
     const JUNGLE: &str = "classicplus-019-2";
-    const BODY: &str = "core-019"; // 9/9 Taunt
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // 4/4
-    const HIT_JOB: &str = "core-016"; // Spell: destroy target Unit
-    const SORCERER: &str = "core-068"; // Unit: Cry deal 4 damage to a target
-    const SWITCH_ALL: &str = "core-048"; // Spell: switch the position of every Unit
-    const NETHER: &str = "core-088"; // Spell: destroy all permanents
-    const BIG_FELINOR: &str = "core-043"; // Unit: Cry destroy all non-Felinor Units
+    const BODY: &str = "core-019"; // Midrange Menace: Taunt
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
+    const SORCERER: &str = "core-068"; // Twisted Sorcerer: Cry deal 4 damage to a target
+    const SWITCH_ALL: &str = "core-048"; // 5pek Controller: switch the position of every Unit
+    const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
+    const BIG_FELINOR: &str = "core-043"; // Big Felinor: Cry destroy all non-Felinor Units
     const WHIRLWIND: &str = "classicplus-021";
-    const AURA: &str = "core-046"; // Field Spell: "Aura: All Units have −1/−1."
-    const HONEYPOT: &str = "core-060"; // Trap; radiant: fill your board with Rush Tokens, they attack a played Unit
+    const AURA: &str = "core-046"; // Suppressive Aura: "Aura: All Units have reduced attack and health."
+    const HONEYPOT: &str = "core-060"; // Bear Honeypot: radiant: fill your board with Rush Tokens, they attack a played Unit
     const FILLER: &str = "core-005";
     const DECK: [&str; 4] = [FILLER, FILLER, FILLER, FILLER];
 

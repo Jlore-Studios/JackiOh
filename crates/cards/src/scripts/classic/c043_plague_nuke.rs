@@ -103,14 +103,14 @@ mod tests {
     use crate::scenario;
 
     const NUKE: &str = "classic-043";
-    const STATE: &str = "classic-041"; // State of the Game: 3/3 Indestructible.
-    const VOIDWALKER: &str = "classic-050"; // Aura: cards that would go to a graveyard are exiled instead.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9.
-    const FELINORS: &str = "core-012"; // Cry: summon a copy of this.
+    const STATE: &str = "classic-041"; // State of the Game: Indestructible
+    const VOIDWALKER: &str = "classic-050"; // Voidwalker: Aura: cards that would go to a graveyard are exiled instead
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const FELINORS: &str = "core-012"; // Duplicating Felinors: Cry: summon a copy of this
     const DEFENDER: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn.
     const RUSH_TOKEN: &str = "core-t-rush";
-    const BIG_FELINOR: &str = "core-043"; // (4) Unit 3/10, under the Stack pile below.
+    const BIG_FELINOR: &str = "core-043"; // Big Felinor: under the Stack pile below.
     const FIENDER: &str = "core-092"; // Felinor Fiender: Stack.
     const ANCHOR: &str = "core-010";
 

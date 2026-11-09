@@ -56,12 +56,12 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MOON: &str = "classicplus-022";
-    const FIG: &str = "core-047"; // Heal a target 20.
-    const RENO: &str = "core-053"; // Cry: heal your hero up to 30.
-    const MENACE: &str = "core-019"; // 9/9 Taunt; end of turn: heal this to full.
-    const JILLIAX: &str = "core-056"; // 3/2 Rush, Taunt, Lifesteal, Divine Shield
-    const ANTI_ONESHOT: &str = "core-073"; // the hero takes at most 5 at once
-    const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2
+    const FIG: &str = "core-047"; // Fig of Life: Heal a target 20.
+    const RENO: &str = "core-053"; // Reno: Cry: heal your hero up to 30
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt; end of turn: heal this to full
+    const JILLIAX: &str = "core-056"; // Jilliax: Rush, Taunt, Lifesteal, Divine Shield
+    const ANTI_ONESHOT: &str = "core-073"; // Anti-oneshot Armor: the hero takes at most 5 at once
+    const SOLARIUS: &str = "classicplus-038"; // Solarius: Spell Damage +2
     const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
     const FILLER: &str = "core-005";
     const DECK: [&str; 6] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];

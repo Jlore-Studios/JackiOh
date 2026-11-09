@@ -145,19 +145,19 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SHADOWSTEP: &str = "classic-014";
-    const BIG_FELINOR: &str = "core-043"; // (4) Unit 3/10: "Cry: Destroy all non-Felinor Units."
-    const MIND_CONTROL: &str = "core-049"; // (5) Spell: "Float reduces cost. Steal an enemy card."
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
-    const MENACE: &str = "core-019"; // (3) Unit 9/9
-    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit 3/3
-    const DEFENDER: &str = "core-003"; // (1) Unit 1/1 Taunt, Divine Shield, Reborn
-    const STATE_OF_GAME: &str = "classic-041"; // (1) Unit 3/3 Indestructible
-    const SAINTESS: &str = "core-081"; // (1) Unit 2/2: "Death: Make your other Units Radiant."
-    const MR_TOKEN: &str = "core-015"; // (1) Unit 1/1: "Cry: Summon a Rush Token."
-    const RUSH_TOKEN: &str = "core-t-rush"; // (1) Unit token 3/3
-    const FELINORS: &str = "core-012"; // (2) Unit 3/4, a Felinor Big Felinor spares
-    const STOCKPILE: &str = "core-005"; // (1) Spell, a spare card (§2.5)
-    const SUPPRESSIVE_AURA: &str = "core-046"; // (2) Field Spell: "Aura: All Units have −1/−1."
+    const BIG_FELINOR: &str = "core-043"; // Big Felinor: "Cry: Destroy all non-Felinor Units."
+    const MIND_CONTROL: &str = "core-049"; // Snom Bunny Mind Control: "Float reduces cost. Steal an enemy card."
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const DEFENDER: &str = "core-003"; // Right-house defender: Unit Taunt, Divine Shield, Reborn
+    const STATE_OF_GAME: &str = "classic-041"; // State of the Game: Unit Indestructible
+    const SAINTESS: &str = "core-081"; // Radiant Saintess: "Death: Make your other Units Radiant."
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: "Cry: Summon a Rush Token."
+    const RUSH_TOKEN: &str = "core-t-rush"; // Rush Token: Unit token
+    const FELINORS: &str = "core-012"; // Duplicating Felinors: a Felinor Big Felinor spares
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell, a spare card (§2.5)
+    const SUPPRESSIVE_AURA: &str = "core-046"; // Suppressive Aura: "Aura: All Units get a stat penalty."
 
     fn wipe(radiant_face: bool, mine: Value, opts: Value) -> Scenario {
         scenario(json!({

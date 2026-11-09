@@ -34,11 +34,11 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const THWOMP: &str = "traininggrounds-011";
-    const GREASER: &str = "stand-in (2) 7/7 R21/21"; // (2) Unit 7/7.
-    const BIG: &str = "core-019"; // (3) Midrange Menace 9/9, Taunt.
-    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // (4) Unit 7/7, Armor 7.
-    const SHIELDED: &str = "core-056"; // (2) Jilliax 3/2: Rush, Taunt, Lifesteal, Divine Shield.
-    const ARCH_MAGE: &str = "meditativeplus-008"; // (2) Unit 4/8, Spell Damage +3.
+    const GREASER: &str = "stand-in (2) 7/7 R21/21";
+    const BIG: &str = "core-019"; // Midrange Menace: Taunt.
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const SHIELDED: &str = "core-056"; // Jilliax: Rush, Taunt, Lifesteal, Divine Shield
+    const ARCH_MAGE: &str = "meditativeplus-008"; // Arch Mage: Spell Damage +3
 
     fn board(radiant: bool, mine: Value, theirs: Value) -> Scenario {
         scenario(json!({

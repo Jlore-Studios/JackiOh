@@ -85,8 +85,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const FILLER: &str = "core-016";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4
-    const ALTERNATE_FATE: &str = "meditative-026"; // Aura: Players don't generate mana naturally.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const ALTERNATE_FATE: &str = "meditative-026"; // Alternate Fate: Aura: Players don't generate mana naturally.
 
     fn fielded(seed: &str, radiant: bool) -> Scenario {
         crate::scenario(json!({

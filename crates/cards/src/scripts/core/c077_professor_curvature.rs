@@ -51,8 +51,8 @@ mod tests {
     const CURVATURE: &str = "core-077";
 
     /// The probes, in hand and never played except where a test says so.
-    const COST_3: &str = "core-070"; // Spiteful Stab (Flood costs (4) since patch v0.2.0)
-    const COST_4: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // 4-mana 7/7 — a Unit, so it has a lane to enter
+    const COST_3: &str = "core-070"; // Spiteful Stab: Flood costs 4 since patch v0.2.0
+    const COST_4: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // a Unit, so it has a lane to enter
     /// #17 Flood, a (4) Spell raised to (6) by a `costMod` of 2: no Core card prints (5) or (6) since
     /// #1563 made GIGA Glowy Jelly Bean (7), whose Float discount would move under a cross-turn test.
     const COST_6: &str = "core-017";

@@ -43,12 +43,12 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const WHIRLWIND: &str = "classicplus-021";
-    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // 7/7, Armor 7
-    const SHIELDED: &str = "core-056"; // Jilliax 3/2, Divine Shield
-    const BODY: &str = "core-019"; // 9/9
-    const ONE: &str = "core-003"; // Right-house defender 1/1, Taunt, Divine Shield, Reborn
-    const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2
-    const TOP_LOSER: &str = "classicplus-019-1"; // Radiant: Immune to Spells
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const SHIELDED: &str = "core-056"; // Jilliax: Divine Shield
+    const BODY: &str = "core-019"; // Midrange Menace
+    const ONE: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
+    const SOLARIUS: &str = "classicplus-038"; // Solarius: Spell Damage +2
+    const TOP_LOSER: &str = "classicplus-019-1"; // Top Loser: Radiant: Immune to Spells
     const FILLER: &str = "core-005";
     const DECK: [&str; 4] = [FILLER, FILLER, FILLER, FILLER];
 

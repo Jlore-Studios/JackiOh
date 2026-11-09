@@ -38,16 +38,16 @@ mod tests {
 
     use super::ID;
 
-    const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
-    const SAINTESS: &str = "core-081"; // (1) 2/2, "Death: Make your other Units Radiant."
-    const DEFENDER: &str = "core-003"; // (1) 1/1 Taunt, Divine Shield, Reborn.
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const SHATTER: &str = "core-036"; // (1) Spell: Destroy a backrow card. Lock its zone.
-    const ARMAGEDDON: &str = "core-088"; // (4) Spell: Destroy all permanents.
-    const RESERVES: &str = "core-075"; // (0) Field Spell: a backrow card to destroy.
-    const ROCK: &str = "core-066"; // (4) 10/10 Tribute 1.
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const SAINTESS: &str = "core-081"; // Radiant Saintess: "Death: Make your other Units Radiant."
+    const DEFENDER: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const SHATTER: &str = "core-036"; // Magic Jammed: Destroy a backrow card. Lock its zone.
+    const ARMAGEDDON: &str = "core-088"; // Twisting Nether: Destroy all permanents.
+    const RESERVES: &str = "core-075"; // Infinite Reserves: a backrow card to destroy
+    const ROCK: &str = "core-066"; // The Rock: Tribute 1
 
     fn board(radiant: bool, p1_hand: Value, p1_field: Value, p2_field: Value) -> Scenario {
         let mut field = vec![json!({ "def": ID, "radiant": radiant })];

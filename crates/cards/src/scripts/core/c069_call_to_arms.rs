@@ -60,22 +60,22 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const CALL: &str = "core-069"; // Spell, cost 2.
+    const CALL: &str = "core-069"; // Call to Arms: a Spell
 
     // The library fixtures, at their printed costs (R65).
-    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // Unit, cost 1, 3/3 — no Cry.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // Unit, cost 1, 3/3 Immutable — no Cry.
-    const DEFENDER: &str = "core-003"; // Unit, cost 1, 1/1 Divine Shield + Reborn — no Cry.
-    const TOKEN_MAKER: &str = "core-015"; // Unit, cost 1, 1/1 — "Cry: summon a Rush Token" (R1's probe).
-    const POINTMASTER: &str = "core-020"; // Unit, cost 2, 7/2 — above the base ceiling, inside the radiant one.
-    const MENACE: &str = "core-019"; // Unit, cost 3 — above both ceilings.
-    const TRAP: &str = "core-041"; // Sheepish, Trap, cost 1 — a cheap permanent that is not a Unit.
-    const SPELL: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — never a Recruit candidate (§6.3).
-    const RUSH_TOKEN: &str = "core-t-rush"; // Unit token, cost 1 — a card that leaves a library only by a draw (R11).
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // no Cry.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // no Cry.
+    const DEFENDER: &str = "core-003"; // Right-house defender: Divine Shield + Reborn — no Cry
+    const TOKEN_MAKER: &str = "core-015"; // Me and Mr Token: "Cry: summon a Rush Token" (R1's probe)
+    const POINTMASTER: &str = "core-020"; // Pointmaster: above the base ceiling, inside the radiant one
+    const MENACE: &str = "core-019"; // Midrange Menace: above both ceilings
+    const TRAP: &str = "core-041"; // Sheepish: a Trap, a cheap permanent that is not a Unit
+    const SPELL: &str = "core-010"; // Rapid Replenish: a Spell, never a Recruit candidate (§6.3).
+    const RUSH_TOKEN: &str = "core-t-rush"; // Rush Token: Unit token — a card that leaves a library only by a draw (R11).
 
     /// R82: a turn left with only end, concede and offer-draw auto-ends after every action, so each
     /// scenario keeps this free Spell in p1's hand, never played, as one legal action on the turn.
-    const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: a Spell, always an affordable play
 
     /// `scenario(opts)` with ANCHOR appended to p1's hand.
     fn board(opts: Value) -> Scenario {

@@ -69,10 +69,10 @@ mod tests {
 
     const FLAG: &str = "classicplus-046";
     const PRIME: &str = "classicplus-046-1";
-    const DUPE: &str = "core-012"; // Duplicating Felinors 3/4, a Felinor
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // Mr. Vanilla 4/4, no tag
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy target Unit
-    const TRUE_STRIKE: &str = "core-044"; // (1) Spell: Pierce, deal 4 damage
+    const DUPE: &str = "core-012"; // Duplicating Felinors: a Felinor
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
+    const TRUE_STRIKE: &str = "core-044"; // True Strike: Pierce, deal 4 damage
     const FILLER: &str = "core-005";
 
     fn kinds(s: &Scenario, card: &str) -> Vec<String> {

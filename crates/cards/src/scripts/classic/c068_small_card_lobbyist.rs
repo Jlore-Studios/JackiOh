@@ -71,18 +71,18 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const LOBBYIST: &str = "classic-068";
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
-    const FIG: &str = "core-047"; // (3) Spell: Heal a target 20.
-    const NETHER: &str = "core-088"; // (4) Spell: Destroy all permanents.
-    const ARMOR: &str = "core-073"; // (2) Field Spell
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
-    const ECLIPSE: &str = "core-035"; // (1) Spell: Deal 3 damage; your next Spell this turn costs (1) less.
-    const DIVIDEND: &str = "core-024"; // (X) Spell
-    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
-    const REMINISCE: &str = "core-072"; // (1) Spell: Discover a card from your GY. It costs (1) less. Exile this.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4
-    const FILLER: &str = "core-010"; // (0) Spell
-    const SECOND_WIND: &str = "classic-028"; // Radiant Aura: you may play cards from your graveyard that cost (1) or more.
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const FIG: &str = "core-047"; // Fig of Life: Heal a target 20.
+    const NETHER: &str = "core-088"; // Twisting Nether: Destroy all permanents.
+    const ARMOR: &str = "core-073"; // Anti-oneshot Armor: a Field Spell
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const ECLIPSE: &str = "core-035"; // Lunar Eclipse: Deal 3 damage; your next Spell this turn costs less.
+    const DIVIDEND: &str = "core-024"; // Efficiency Dividend: a Spell
+    const SUPER_VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw
+    const REMINISCE: &str = "core-072"; // Reminisce: Discover a card from your GY. It costs less. Exile this.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const SECOND_WIND: &str = "classic-028"; // Second Wind: Radiant Aura: you may play cards from your graveyard that cost at least 1
 
     use crate::js;
 

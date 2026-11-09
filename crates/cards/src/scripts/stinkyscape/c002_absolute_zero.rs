@@ -65,15 +65,15 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const ZERO: &str = "stinkyscape-002";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
-    const WILD_SYSTEM: &str = "stinkyscape-120"; // (3) Spell: the melee (R1848005).
-    const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
-    const SILENCE: &str = "classicplus-009"; // (0) Spell: Vanilla a Unit.
-    const STEAL: &str = "core-049"; // (4) Spell: Steal an enemy Unit.
-    const BOB: &str = "meditativeplus-024"; // (3) Unit 5/5, Cry mode "freeze": Freeze all enemy Units.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const METEOR: &str = "stinkyscape-003"; // (3) Spell: 15 damage to a Unit, trampling.
+    const WILD_SYSTEM: &str = "stinkyscape-120"; // Wild System: the melee (R1848005)
+    const FLOOD: &str = "core-017"; // Flood: Bounce all Units.
+    const SILENCE: &str = "classicplus-009"; // Silence: Vanilla a Unit.
+    const STEAL: &str = "core-049"; // Snom Bunny Mind Control: Steal an enemy Unit.
+    const BOB: &str = "meditativeplus-024"; // Bob, Wisconsin's Strongest Soldier: Cry mode "freeze": Freeze all enemy Units.
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const METEOR: &str = "stinkyscape-003"; // Meteor: 15 damage to a Unit, trampling
 
     const GIVE: &str = "give Indestructible";
     const FREEZE_ONLY: &str = "freeze only";

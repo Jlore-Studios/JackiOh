@@ -82,10 +82,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const CLOUD: &str = ID;
-    const GREASER: &str = "stand-in (2) 7/7 R21/21"; // (2) Unit 7/7.
-    const JILLIAX: &str = "core-056"; // (2) Unit 3/2: Rush, Taunt, Lifesteal, Divine Shield.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const WHIRLWIND: &str = "classicplus-021"; // (0) Spell: 1 damage to all Units.
+    const GREASER: &str = "stand-in (2) 7/7 R21/21";
+    const JILLIAX: &str = "core-056"; // Jilliax: Rush, Taunt, Lifesteal, Divine Shield
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const WHIRLWIND: &str = "classicplus-021"; // Whirlwind: 1 damage to all Units
     const FILLER: &str = "core-005";
 
     fn hero_health(s: &Scenario, player: PlayerId) -> i32 {

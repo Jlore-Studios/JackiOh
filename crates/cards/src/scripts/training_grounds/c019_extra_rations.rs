@@ -42,9 +42,9 @@ mod tests {
     use crate::upgrade_number;
 
     const RATIONS: &str = super::ID;
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1)
-    const SPECIESIST: &str = "core-002"; // (2)
-    const RENO: &str = "core-053"; // (3)
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const SPECIESIST: &str = "core-002"; // Speciesist
+    const RENO: &str = "core-053"; // Reno
     const FILLER: &str = "core-010";
 
     fn board(radiant: bool, p1: Value) -> Scenario {

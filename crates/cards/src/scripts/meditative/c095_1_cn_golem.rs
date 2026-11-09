@@ -79,7 +79,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // Mr. Vanilla, 4/4, no text; 12/12 Radiant
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
     /// The Golem in p1's lane 3 (`golem` is its field entry), p2's units `enemies`, p2's library

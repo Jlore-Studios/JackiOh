@@ -141,15 +141,15 @@ mod tests {
     const DOOM: &str = "destroy a Unit at the start of your next turn";
     const DOOM_ALL: &str = "destroy all enemy Units at the start of your next turn";
 
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: draw 2, heal 2.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // 4/4.
-    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) 3/3.
-    const MENACE: &str = "core-019"; // 9/9.
-    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield"; // 7/1.
-    const ROCK: &str = "core-066"; // 10/10 Indestructible.
-    const BIG: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // 7/7 Armor 7; Radiant adds Reborn.
-    const CUBE: &str = "core-022"; // (3) Cry: Tribute one of your other Units.
-    const COLLATERAL: &str = "core-034"; // (4) Exile target permanent and a random card from their deck.
+    const FILLER: &str = "core-005"; // Stockpile: draw 2, heal 2
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield";
+    const ROCK: &str = "core-066"; // The Rock: Indestructible
+    const BIG: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const CUBE: &str = "core-022"; // Carnivorous Cube: Cry: Tribute one of your other Units.
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: Exile target permanent and a random card from their deck.
 
     fn at_p2() -> Value {
         json!([{ "pick": "hero", "player": "p2" }])

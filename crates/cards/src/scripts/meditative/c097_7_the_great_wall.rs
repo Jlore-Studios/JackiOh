@@ -54,13 +54,13 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-010"; // (0) Spell.
-    const SPARE: &str = "core-005"; // (1) Spell: library spare.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // (1) Unit 3/3.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const NETHER: &str = "core-088"; // (4) Spell: Destroy all permanents.
-    const SOFTLOCK: &str = "classicplus-077"; // (2) Spell: Unlock every zone.
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const SPARE: &str = "core-005"; // Stockpile: library spare
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const NETHER: &str = "core-088"; // Twisting Nether: Destroy all permanents.
+    const SOFTLOCK: &str = "classicplus-077"; // Anti-Softlock: Unlock every zone.
     const SCHOOL: &str = "meditative-097-3";
     const HEADQUARTERS: &str = "meditative-097-9";
 

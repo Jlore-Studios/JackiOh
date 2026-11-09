@@ -49,10 +49,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BOOK: &str = "classic-012";
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt; Radiant 18/18.
-    const SHIELDED: &str = "core-003"; // Right-house defender 1/1 Taunt, Divine Shield, Reborn.
-    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield"; // (2) Unit 7/1 First Strike.
-    const ROCK: &str = "core-066"; // The Rock 10/10 Indestructible.
+    const MENACE: &str = "core-019"; // Midrange Menace: Unit Taunt
+    const SHIELDED: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
+    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield";
+    const ROCK: &str = "core-066"; // The Rock: Indestructible
     // Classic+ #26 Tommy Tempo, a Radiant Taunt set to 18/18 (`statsOverride`; it prints 8/8 since issue
     // #3138, 10/10 from patch v0.3.10): a big body no Immutable keeps a Spell off (R781001).
     const TEMPO: &str = "classicplus-026";

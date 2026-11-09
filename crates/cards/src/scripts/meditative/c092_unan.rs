@@ -44,20 +44,20 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const UNAN: &str = "meditative-092";
-    const ALLY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // A plain 3/3 Unit to guard.
-    const STRIKER: &str = "classic-049"; // A plain 9/9 Unit to strike with.
-    const VITAL_KILL: &str = "classic-029"; // Sets a declared hero's health to 13.
-    const HEAVY: &str = "classic-086"; // A plain 14/14 Unit.
+    const ALLY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // A plain Unit to guard.
+    const STRIKER: &str = "classic-049"; // Anti-Greed Machine: A plain Unit to strike with.
+    const VITAL_KILL: &str = "classic-029"; // Book of Vital Kill: Sets a declared hero's health to 13.
+    const HEAVY: &str = "stand-in (4) 14/14 R42/42";
     const FILLER: &str = "core-005";
-    const BURN: &str = "classic-036"; // (0) Spell: deal 2 damage to any unit or hero.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
-    const GOLEM: &str = "core-055"; // 10/5 Taunt.
-    const GHOST: &str = "classic-089"; // 5/6 Divine Shield.
-    const BASTION: &str = "classic-041"; // 3/3 Indestructible.
-    const GRAPE: &str = "classicplus-065-1"; // (1) Spell: your hero loses 5 health.
-    const POISONOUS: &str = "classicplus-006"; // 1/1 Rush, Lifesteal, Poisonous.
-    const SCARAB: &str = "core-007"; // 1/1.
-    const WHIRLWIND: &str = "classicplus-021"; // (0) Spell: deal 1 damage to all Units.
+    const BURN: &str = "classic-036"; // Burn: deal 2 damage to any unit or hero
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const GOLEM: &str = "core-055"; // Lava Golem: Taunt
+    const GHOST: &str = "classic-089"; // Paul Allen's Ghost: Divine Shield
+    const BASTION: &str = "classic-041"; // State of the Game: Indestructible
+    const GRAPE: &str = "classicplus-065-1"; // Rotten Grape: your hero loses 5 health
+    const POISONOUS: &str = "classicplus-006"; // Wrong-House Attacker: Rush, Lifesteal, Poisonous
+    const SCARAB: &str = "core-007"; // Jewelosco Scarab
+    const WHIRLWIND: &str = "classicplus-021"; // Whirlwind: deal 1 damage to all Units
 
     fn redirects(s: &Scenario) -> usize {
         s.events()

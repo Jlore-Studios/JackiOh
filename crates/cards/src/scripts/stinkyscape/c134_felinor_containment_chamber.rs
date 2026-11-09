@@ -70,10 +70,10 @@ mod tests {
     use crate::filler;
 
     const CHAMBER: &str = "stinkyscape-134";
-    const FELINOR: &str = "core-t-felinor"; // §7's shared Felinor Token, 1/1.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+    const FELINOR: &str = "core-t-felinor"; // Felinor Token: §7's shared token
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: Spell (§2.5).
 
     fn kinds(s: &Scenario, card: &str) -> Vec<String> {
         s.stats(card)

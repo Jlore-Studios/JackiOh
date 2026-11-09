@@ -26,7 +26,7 @@ fn units() -> CatalogQueryArgs {
     json_as(json!({ "type": "Unit" }))
 }
 
-fn ids(pool: &[&CardDef]) -> Vec<String> {
+fn pool_ids(pool: &[&CardDef]) -> Vec<String> {
     pool.iter().map(|def| def.id.clone()).collect()
 }
 
@@ -88,8 +88,8 @@ fn stand_ins_play_attack_and_summon_from_every_zone() {
 #[test]
 fn no_catalog_query_or_pool_reaches_a_stand_in() {
     setup_catalog();
-    let every_before = ids(&query(&every_card()));
-    let units_before = ids(&query(&units()));
+    let every_before = pool_ids(&query(&every_card()));
+    let units_before = pool_ids(&query(&units()));
     let registered_before = registered_catalog().len();
 
     for id in STAND_INS {
@@ -97,8 +97,8 @@ fn no_catalog_query_or_pool_reaches_a_stand_in() {
     }
     scenario(json!({ "p1": { "hand": [SPELL], "field": [BIG], "backrow": [TRAP] } }));
 
-    assert_eq!(ids(&query(&every_card())), every_before);
-    assert_eq!(ids(&query(&units())), units_before);
+    assert_eq!(pool_ids(&query(&every_card())), every_before);
+    assert_eq!(pool_ids(&query(&units())), units_before);
     for id in STAND_INS {
         assert!(!every_before.iter().any(|known| known == id), "{id} is in a pool");
         let named = query(&json_as(
@@ -123,7 +123,7 @@ fn a_seeded_pool_draw_is_the_same_with_stand_ins_in_play() {
         let pool = query(&units());
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let drawn = rng.pick(&pool).map(|def| def.id.clone());
-        (state.rng_cursor, ids(&pool), drawn)
+        (state.rng_cursor, pool_ids(&pool), drawn)
     };
     let fixtures = draw("fx-1", "fx-2", ["fx-3", "fx-4"]);
     let stand_ins = draw(VANILLA, BIG, [QUICK, TARGET]);

@@ -56,16 +56,16 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const DUSTING: &str = "classic-063";
-    const CRAWLER: &str = "classic-053"; // (1) Unit: whenever Plague Counters are placed on this, draw 1.
-    const SLIME: &str = "classic-027"; // (0) Unit: Plague Counters placed on this are doubled.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) Unit 4/4.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const FIENDER: &str = "core-092"; // (2) Unit 5/7 Stack.
-    const PAWN: &str = "core-096"; // (1) Trap: answers only an attack that would be lethal.
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell.
-    const FILLER: &str = "core-005"; // (1) Spell, a card to keep a turn from auto-ending (§2.5).
-    const X: &str = "core-020"; // library filler.
-    const Y: &str = "core-011"; // library filler of another kind, to tell draws apart.
+    const CRAWLER: &str = "classic-053"; // Plague Crawler: whenever Plague Counters are placed on this, draw 1.
+    const SLIME: &str = "classic-027"; // Pestilent Slime: Plague Counters placed on this are doubled.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const PAWN: &str = "core-096"; // My Pawn: answers only an attack that would be lethal
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const FILLER: &str = "core-005"; // Stockpile: a Spell to keep a turn from auto-ending (§2.5).
+    const X: &str = "core-020"; // Pointmaster: library filler
+    const Y: &str = "core-011"; // Tempo Timmy: library filler of another kind, to tell draws apart
 
     use crate::js;
 

@@ -45,15 +45,15 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const PARANOIA: &str = "meditative-099";
-    const STOCKPILE: &str = "core-005"; // Draw, heal; no declared targets.
-    const ECLIPSE: &str = "core-035"; // Deal 3 to a target.
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw, heal; no declared targets
+    const ECLIPSE: &str = "core-035"; // Lunar Eclipse: Deal 3 to a target
     const VANILLA: &str = "core-008";
-    const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2.
-    const TOE_CRACKER: &str = "classic-006"; // Aura: Your Traps cost (0).
-    const COUNTERSPELL: &str = "classic-017"; // Trap: counters the opponent's next Spell.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
-    const SURGERY: &str = "core-063"; // (1) Spell: buff a Unit, a needed target (R703).
-    const GREAT_WALL: &str = "meditative-097-7"; // 0/50 Immutable.
+    const SOLARIUS: &str = "classicplus-038"; // Solarius: Spell Damage +2
+    const TOE_CRACKER: &str = "classic-006"; // Cloaked Toe Cracker: Aura: your Traps cost nothing
+    const COUNTERSPELL: &str = "classic-017"; // Counterspell: counters the opponent's next Spell
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy a Unit
+    const SURGERY: &str = "core-063"; // Plastic Surgery: buff a Unit, a needed target (R703)
+    const GREAT_WALL: &str = "meditative-097-7"; // The Great Wall: Immutable
 
     /// Answer the open Target prompt at the enemy hero.
     fn answer_hero(s: &mut Scenario) {

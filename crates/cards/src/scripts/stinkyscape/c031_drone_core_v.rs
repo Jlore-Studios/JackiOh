@@ -40,7 +40,7 @@ mod tests {
 
     const CORE: &str = "stinkyscape-031";
     const CORVETTE: &str = "stinkyscape-t-drone-corvette";
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
     fn cast(radiant: bool, field: Value) -> Scenario {

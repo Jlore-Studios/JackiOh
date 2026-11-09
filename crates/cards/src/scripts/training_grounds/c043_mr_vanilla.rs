@@ -41,9 +41,9 @@ mod tests {
             .collect()
     }
 
-    const FILLER: &str = "core-016"; // #16 Hit Job: an inert hand and library card, so no turn auto-ends.
-    const MENACE: &str = "core-019"; // #19 Midrange Menace, 9/9 Taunt.
-    const GIGA: &str = "core-029"; // #29 GIGA Glowy Jelly Bean.
+    const FILLER: &str = "core-016"; // Hit Job: an inert hand and library card, so no turn auto-ends
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const GIGA: &str = "core-029"; // GIGA Glowy Jelly Bean
 
     mod n8_mr_vanilla_base {
         use super::*;

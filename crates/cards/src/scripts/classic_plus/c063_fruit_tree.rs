@@ -48,7 +48,7 @@ mod tests {
 
     const TREE: &str = "classicplus-063";
     const PRODUCE: &str = "classicplus-068"; // Organic Produce: no Fruit since #1837 (R1837000).
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: a hand card so turns do not auto-end, and deck filler.
+    const FILLER: &str = "core-005"; // Stockpile: a hand card so turns do not auto-end, and deck filler
     const GRAPES: [&str; 5] = [
         "classicplus-065-1",
         "classicplus-065-2",
