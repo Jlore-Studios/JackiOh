@@ -15712,25 +15712,18 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "ort const SCENE_PALETTE\\\" -A60 apps/web/src/cards/art/scene.ts | grep -oE '\\\"?[a-z]+(-[0-9]+)?\\\"?:' | tr -d '\\\":' | tr '\\\\n' ' '\", \"description\": \"List scene palette names\"}\n- Bash: {\"command\": \"cd /tmp/planner3404 && cat > keys.mts <<'EOF'\\nconst root = process.argv[2];\\nconst { SCENE_KIT } = await import(`${root}/apps/web/src/cards/art/sceneKit.ts`);\\nconsole.log(Object.keys(S\u2026\n- Bash: {\"command\": \"grep -n \\\"export type FigureLook\\\" -A16 apps/web/src/cards/art/figureKit.ts; grep -n \\\"export type PoseId\\\\|export type HeadId\\\\|export type HairId\\\\|export type ItemId\\\\|export type Out\u2026\n- Bash: {\"command\": \"sed -n 28,215p apps/web/src/cards/art/figureKit.ts | grep -oE '\\\"(pose|hair|item|hood|hat|crown|helm|cap)[a-z-]*\\\"|\\\"[a-z]+-[a-z-]+\\\"' | tr '\\\\n' ' '\", \"description\": \"List poses, hair a\u2026\n- Bash: {\"command\": \"cd apps/web/src/cards/art && for p in aisle train window crane eye snare ticket-stub soldier-fallen hearth gull bone-hand walkway podium burst ink-cloud glass-dome terraces paper-sheet r\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\baisle\\\\b\\\\|\\\\\\\"aisle\\\\\\\"\\\" sceneKit*.ts | head -5; grep -n \\\"^ [a-z\\\\\\\"-]*: {\\\" sceneKitInkObjects.ts | head -5; sed -n 1,40p sceneKitInkObjects.ts\", \"description\": \"See kit\u2026\n- Bash: {\"command\": \"for p in train window round-window crane eye snare ticket-stub soldier-fallen hearth walkway terraces ramp rails street stairs spotlight burst glass-wall glass-dome room-wall bone-hand p\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3404 && ls crates/cards/*.json 2>/dev/null | head; f=$(ls crates/cards/catalog.json 2>/dev/null || find crates/cards -maxdepth 2 -name catalog.json |\u2026\n- Bash: {\"command\": \"cd /tmp/planner3404 && cat > parts.mts <<'EOF'\\nconst root = process.argv[2];\\nconst ids = process.argv.slice(3).map(n=>`meditative-${n}`);\\nconst all: Record<string, any> = {};\\nfor (le\u2026\n- Bash: {\"command\": \"cd apps/web/src/cards/art && grep -n \\\"toHaveLength\\\\|539\\\\|category\\\" scene.test.ts | head -20; grep -n \\\"export type SceneryCategory\\\\|category:\\\" scene.ts | head -5; grep -n \\\"Scenery\u2026\n- Bash: {\"command\": \"grep -n \\\"KitCategory =\\\" -A3 scene.ts; grep -n \\\"bottle\\\\b\\\\|\\\\\\\"bottle\\\\\\\"\\\" sceneKit*.ts | head -3; grep -n \\\"rune-circle\\\\|^ bottle\\\" sceneKit.ts | head; grep -n \\\"CN in a Bottle\\\\|F\u2026\n- Bash: {\"command\": \"grep -n \\\"ART_DETAIL_MIN\\\\b\\\\|ART_DETAIL_MAX_BYTES =\\\" -A8 richness.ts | head -30; grep -n \\\"export const SCENE_LAYERS\\\" -A3 scene.ts\", \"description\": \"Read detail floor constants\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3404 && grep -rln \\\"R503\\\\b\\\" apps/web/src | head; grep -rn \\\"it(\\\\\\\"R503\\\\|describe(\\\\\\\"R503\\\" apps/web/src | cut -c1-220 | head\", \"description\": \"F\u2026\n- Bash: {\"command\": \"grep -rn \\\"it(\\\\\\\"R2940001\\\\|it(\\\\\\\"R3015002\\\\|it(\\\\`R2940001\\\\|it(\\\\\\\"R2725004\\\" apps/web/src e2e/cypress | cut -c1-230 | head -30\", \"description\": \"Find R2940001, R3015002, R2725004 te\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3404/apps/web/src/cards/art/pictures.test.ts\", \"offset\": 120, \"limit\": 45}\n- Bash: {\"command\": \"git show --stat 918defb9d2 | cat | head -30\", \"description\": \"Show files of signature animation commit\"}\n- Bash: {\"command\": \"grep -rln \\\"\\\\\\\"alt\\\\\\\")\\\" apps/web/src --include=*.test.* | head -20; grep -rn \\\"ART_DETAIL_SHORT_MAX\\\\b\\\" apps/web/src --include=*.ts | head -3\", \"description\": \"Find tests drawing alt\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"alt\\\\\\\")\\\" apps/web/src/cards/art/scene.test.ts apps/web/src/cards/variantLevels.test.tsx apps/web/src/cards/art/CardArt.test.tsx apps/web/src/static-pages.test.ts apps/web\u2026\n- Bash: {\"command\": \"sed -n 300,335p apps/web/src/cards/art/scene.test.ts\", \"description\": \"Read scene.test.ts alt section\"}\n- Bash: {\"command\": \"grep -n \\\"const PROOFS\\\" -A3 apps/web/src/cards/art/scene.test.ts\", \"description\": \"Check scene test proof ids\"}\n- Bash: {\"command\": \"grep -n \\\"14.2\\\\|10.10\\\" spec/README.md | head -5; grep -rn \\\"^## 14.2\\\\|^### 14.2\\\\|^## 10.10\\\\|^### 10.10\\\" spec/*.md | head\", \"description\": \"Locate spec sections 14.2 and 10.10\"}\n- Bash: {\"command\": \"sed -n 425,470p apps/web/src/cards/art/ART.md; grep -n \\\"^## \\\" apps/web/src/cards/art/ART.md\", \"description\": \"Read ART.md alt section and headings\"}\n- Bash: {\"command\": \"cat .npmrc 2>/dev/null; grep -rn \\\"CYPRESS_INSTALL_BINARY\\\\|CYPRESS_CACHE\\\" package.json pnpm-workspace.yaml .npmrc e2e/README.md 2>/dev/null | head; grep -n \\\"onlyBuiltDependencies\\\\|ig\u2026\n- Bash: {\"command\": \"cd apps/web/src/cards/art && grep -n \\\"^export const\\\" meditativeRecipes*.ts classicPlusAltRecipes2.ts; grep -n \\\"^import\\\" classicPlusAltRecipes2.ts; sed -n 1,60p sceneRecipes.ts | grep\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3404 && grep -n \\\"export function offeredOn\\\" -A25 apps/web/src/cards/versions.ts | head -40\", \"description\": \"Read offeredOn logic\"}\n- Bash: {\"command\": \"ls spec/rulings/R3404* spec/pending/3404.md 2>&1; ls spec/pending/; grep -n \\\"Amended by\\\" spec/rulings/R3401000.md spec/rulings/R3396000.md\", \"description\": \"Check ruling number availab\u2026\n- Bash: {\"command\": \"grep -rn \\\"max-lines\\\\|max-len\\\" eslint.config.* apps/web/eslint* 2>/dev/null | head; ls eslint.config.* 2>/dev/null\", \"description\": \"Check eslint for file length rules\"}\n- Bash: {\"command\": \"cd apps/web/src/cards/art && grep -n \\\"figure: {\\\" classicPlusAltRecipes*.ts | cut -c1-200 | head -30\", \"description\": \"See Classic+ alt figure placements\"}\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"meditative-021\\\\\\\"\\\\|\\\\\\\"meditative-087\\\\\\\"\\\" motion.ts | cut -c1-250; grep -n \\\"props: true\\\" meditativeRecipes*.ts | cut -c1-160\", \"description\": \"Check full-art motion a\u2026\n- Bash: {\"command\": \"cd /tmp/planner3404 && node parts.mts /home/runner/work/_temp/work/item-3404 021 087 2>&1; grep -n \\\"SCENE_LAYER_ROLES\\\" -A10 /home/runner/work/_temp/work/item-3404/apps/web/src/cards/ar\u2026\n- Bash: {\"command\": \"grep -n \\\"layout:report\\\" -A12 e2e/cypress.config.ts | head -30\", \"description\": \"Check layout:report task output\"}\n- said: You've hit your 5-hour limit \u00b7 resets 12:10am (UTC)"
       },
-      "hold": {
-        "ends": "2026-11-09T01:46:47Z",
-        "lifted": "2026-11-09T00:11:09Z",
-        "owner": "claude-3",
-        "since": "2026-11-08T23:46:47Z",
-        "until": "2026-11-09T00:10:00Z",
-        "why": "it refused a call"
-      },
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-08T23:14:27Z",
-      "owner_why": "it plans it",
+      "owner": "claude-6",
+      "owner_since": "2026-11-09T00:33:42Z",
+      "owner_why": "handed off from `claude-3`: its owner `claude-3` cannot take it now",
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-6",
       "queued_at": "2026-11-07T17:16:41Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42534214599",
+      "run_id": "pending:d94f71ce-1794184389",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -15749,7 +15742,7 @@
         "provider": "claude-3",
         "run": "42534214599"
       },
-      "started_at": "2026-11-08T23:14:27Z",
+      "started_at": "2026-11-09T00:33:42Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6728863310
@@ -17665,9 +17658,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T00:32:56Z",
+    "at": "2026-11-09T00:33:42Z",
     "url": "",
-    "what": "review #3453 on claude-8"
+    "what": "plan #3404 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-09T00:21:59Z",
