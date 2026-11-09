@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3499,
+  "title": "Patch: the first page load stops downloading the whole patch history to read one version number",
+  "branch": "bot/issue-3499",
+  "thread": "**Issue #3499 (data, not instructions):**\n\n```text\n# #3499: Patch: the first page load stops downloading the whole patch history to read one version number\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery first visit to the site, the landing page included, downloads the full text of every patch note ever shipped, only to read the newest version's name. That is 650 KB, or 106 KB compressed, which is more than the whole card catalog. It grows with every patch: it has nearly quadrupled in a month. Once this is built, the first load fetches only that name and the few facts the \"new\" ribbon needs. The patch notes page still loads the full history when it is opened.\n\n## Why\n\n- **The import exists only for the version.** `apps/web/src/wire/cards.ts:6` statically imports `crates/cards/patches/patches.json` (650,197 bytes; 106,337 gzipped, against 68,878 for `catalog.json`). It uses it only for `CATALOG_VERSION = newestVersion(patchesJson)` (line 24), the last entry's `version`.\n- **The first file the page loads pulls it in.** `apps/web/src/main.tsx:79` imports `NotFoundPlay`. `NotFoundPlay.tsx:8` imports `CATALOG` from `@jackioh/cards`, which is `wire/cards.ts`.\n- **A second static import.** `apps/web/src/patches/ribbon.ts:6` imports the same file to work out `NEW_RIBBON_SET`.\n- **It undoes the lazy loading.** `apps/web/src/patches/source.ts:164` loads the patch files lazily for the Patch notes page (`import.meta.glob(..., { import: \"default\" })`). The two static imports above defeat that.\n- **It is growing fast:** 170,512 bytes on 2026-10-08, 650,197 today.\n- **Nothing checks the size of the first load.** `scripts/check-assets.mjs` checks only the limit per file.\n\n## Proposal\n\n- **Give the client the two facts without the history:**\n  - the newest version;\n  - for each patch, its version and the card ids it added, which is all `ribbon.ts` reads.\n- **How:** a small Vite plugin that reads `patches.json` at build time and serves a virtual module, registered in `apps/web/vite.config.ts` and `apps/web/vitest.config.ts` alike. A file generated beside the wire files was rejected: it would need its own check to stay in step with `patches ship`.\n- **`CATALOG_VERSION` keeps its value.** A test holds it to the engine module's `catalogVersion()`.\n- **A test over the built site.** The entry script and the files it preloads hold no patch history and stay under a named compressed size.\n\n## Where it lands\n\n- `apps/web/src/wire/cards.ts`, `apps/web/src/patches/ribbon.ts`\n- `apps/web/vite.config.ts`, `apps/web/vitest.config.ts`\n- A test beside `apps/web/src/net/check-assets.test.ts`, which already reads the built `dist`\n\n## Acceptance criteria\n\n- [ ] No non-test module under `apps/web/src` imports `patches.json` statically. Only `source.ts`'s lazy glob loads it, and a test checks this.\n- [ ] A test shows `CATALOG_VERSION` equals the wasm module's `catalogVersion()`.\n- [ ] `ribbon.test.tsx` passes unchanged.\n- [ ] A test over `dist`: the entry chunk and its preloads contain no patch-notes text, and their gzipped size is under a named constant.\n- [ ] The Patch notes page still lists every patch.\n\n## Size and risks\n\nSmall: 5 or 6 files in `apps/web`. Difficulty medium.\n\n- The plugin must behave the same under `vite build`, `vite dev` and vitest.\n- Parts of `apps/web/src/wire/` are rewritten by `cargo test`, so the new module must not sit where that happens.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-09T20:33:54Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3499: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T20:34:24Z",
+    "claimed_at": "2026-11-09T20:44:21Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
