@@ -164,7 +164,8 @@ export type FxFogCue = {
  * and a shockwave crosses both sides when it lands at `landMs`, all inside the entry and gone within
  * the effects' tail (R200). R3400000: "summit", "canvas" and "napkin" draw art of their own over the dark
  * (takeoverArt.ts), the same art Reduce Motion's still shows (game/TakeoverStill.tsx). R3405000: Meditative's
- * Mythics' twelve, from "ascent" to "fortress", each with art of its own.
+ * Mythics' twelve, from "ascent" to "fortress", each with art of its own. R3399002: Classic+'s four Mythics'
+ * looks, "zealot", "portal", "stair" and "vineyard", each draw a picture of their own (takeoverArt.ts).
  */
 export type TakeoverLook =
   | "prismatic"
@@ -185,7 +186,11 @@ export type TakeoverLook =
   | "studyHall"
   | "caneRack"
   | "warRoom"
-  | "fortress";
+  | "fortress"
+  | "zealot"
+  | "portal"
+  | "stair"
+  | "vineyard";
 /**
  * R3345000: what a takeover's set piece shows of the card: its own picture, one CSS `background-image` per depth plane
  * (`ART_PLANES` order, far to nearest), its name and the hand it signs in (R2715002). It is the picture and the

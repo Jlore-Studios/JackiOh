@@ -14,6 +14,7 @@ import type { CardDef } from "@jackioh/shared";
 
 import { COSMETIC_OFFERS } from "../../wire/generated/cosmetics.ts";
 import { FULL_ART_CARDS, FULL_ART_TOKEN_PARENT, artMotionOf } from "../fullArt.ts";
+import { ART_WEAR_LEVELS } from "../constants.ts";
 import { VERSION_ALT_FULL_ART_SIGNED_ID, VERSION_FULL_ART_SIGNED_ID, VERSION_SKETCH_FULL_ART_SIGNED_ID } from "../versions.ts";
 import { CardArt } from "./CardArt.tsx";
 import {
@@ -24,8 +25,12 @@ import {
   PARTICLE_COUNT,
   artMotionFor,
   motionStyle,
+  particleMarkup,
+  particleStyle,
   type ArtMotion,
 } from "./motion.ts";
+import { particleLayerUri } from "./svg.ts";
+import { crackPaths } from "./wear.ts";
 
 afterEach(cleanup);
 
@@ -94,7 +99,8 @@ describe("R2715001 the full-art cards' moving art", () => {
       expect(seen.get(key), `${id} moves as ${seen.get(key) ?? ""} does`).toBeUndefined();
       seen.set(key, id);
     }
-    expect(Object.keys(FULL_ART_MOTION).sort()).toEqual([...FULL_ART_CARDS].sort());
+    // R3340000: every full-art card keeps an entry, beside the recipes of the Legendaries and Mythics.
+    for (const id of FULL_ART_CARDS) expect(FULL_ART_MOTION[id], id).toBeDefined();
   });
 
   it("R2715001 the keyframes use transform and opacity alone inside the reduced-motion gate", () => {
@@ -156,6 +162,106 @@ describe("R3015002 a signed level's motion", () => {
       for (const role of ["subject", "back"] as const) if (motion[role] !== undefined) expect(doc.querySelector(`.art-m-${role}`), `${id}: ${role}`).not.toBeNull();
       expect(doc.querySelectorAll(".art-m-particle").length, id).toBe(PARTICLE_COUNT);
       expect(motionStyle(motion, "50px 50px").startsWith("<style>@media (prefers-reduced-motion: no-preference){"), id).toBe(true);
+    }
+  });
+});
+
+describe("R3340000 art that lives in play", () => {
+  /** The Legendaries and Mythics of the catalog with no recipe of their own: their art would borrow a motion by id. */
+  const borrowing = Object.values(CATALOG)
+    .filter((card) => (card.rarity === "Legendary" || card.rarity === "Mythic") && FULL_ART_MOTION[card.id] === undefined)
+    .map((card) => card.id)
+    .sort();
+
+  it("R3340000 no Legendary or Mythic borrows a motion by hash: the list is empty and may only stay so", () => {
+    const BORROWING: readonly string[] = [];
+    expect(borrowing).toEqual([...BORROWING]);
+    const rare = Object.values(CATALOG).filter((card) => card.rarity === "Legendary" || card.rarity === "Mythic");
+    expect(rare.length).toBeGreaterThan(100);
+    for (const card of rare) expect(artMotionOf(card.id), card.id).toBe(FULL_ART_MOTION[card.id]);
+  });
+
+  it("R3340000 every recipe's JSON is its own, and a rare recipe moves three roles on beats of their own", () => {
+    const seen = new Map<string, string>();
+    for (const [id, motion] of Object.entries(FULL_ART_MOTION)) {
+      const key = JSON.stringify(motion);
+      expect(seen.get(key), `${id} moves as ${seen.get(key) ?? ""} does`).toBeUndefined();
+      seen.set(key, id);
+      expect(motion.detached, id).toBeUndefined();
+    }
+    for (const card of Object.values(CATALOG)) {
+      if ((card.rarity !== "Legendary" && card.rarity !== "Mythic") || FULL_ART_CARDS.has(card.id)) continue;
+      const motion = FULL_ART_MOTION[card.id];
+      expect(motion, card.id).toBeDefined();
+      if (motion === undefined) continue;
+      expect(ART_ROLES.filter((role) => motion[role] !== undefined).length, card.id).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it("R3340000 R2725004 no rare recipe's particles are drawn in gold, and every one's keyframes are transform and opacity alone", () => {
+    for (const card of Object.values(CATALOG)) {
+      if ((card.rarity !== "Legendary" && card.rarity !== "Mythic") || FULL_ART_CARDS.has(card.id)) continue;
+      const motion = FULL_ART_MOTION[card.id];
+      expect(motion, card.id).toBeDefined();
+      if (motion === undefined) continue;
+      expect(GOLD_PARTICLES.has(motion.particles.kind), card.id).toBe(false);
+      const style = motionStyle(motion, "50px 50px");
+      expect(style.startsWith("<style>@media (prefers-reduced-motion: no-preference){"), card.id).toBe(true);
+      const frames = style.split("@keyframes").slice(1);
+      expect(frames.length, card.id).toBeGreaterThan(0);
+      for (const text of frames) for (const property of properties(text)) expect(["transform", "opacity"], `${card.id}: ${property}`).toContain(property);
+    }
+  });
+
+  it("R3340000 a detached motion draws no particles and no rule for them, and its particle layer draws them alone", () => {
+    const motion = FULL_ART_MOTION["core-004"];
+    expect(motion).toBeDefined();
+    if (motion === undefined) return;
+    const detached: ArtMotion = { ...motion, detached: true };
+    expect(particleMarkup(motion, "core-004")).not.toBe("");
+    expect(particleMarkup(detached, "core-004")).toBe("");
+    expect(motionStyle(motion, "50px 50px")).toContain(".art-m-particle{");
+    expect(motionStyle(detached, "50px 50px")).not.toContain(".art-m-particle");
+    expect(motionStyle(detached, "50px 50px")).not.toContain(`@keyframes art-${motion.particles.beat.move}{`);
+    expect(particleStyle(motion).startsWith("<style>@media (prefers-reduced-motion: no-preference){.art-m-particle{")).toBe(true);
+    const uri = particleLayerUri(motion, "core-004");
+    expect(uri.startsWith(DATA_PREFIX)).toBe(true);
+    const doc = new DOMParser().parseFromString(decodeURIComponent(uri.slice(DATA_PREFIX.length)), "image/svg+xml");
+    expect(doc.querySelector("parsererror")).toBeNull();
+    expect(doc.querySelectorAll(".art-m-particle").length).toBe(PARTICLE_COUNT);
+    expect(doc.querySelector("style")?.textContent ?? "").toContain(`@keyframes art-${motion.particles.beat.move}{`);
+    expect(particleLayerUri(motion, "core-004")).toBe(uri);
+  });
+
+  it("R3340000 a painter's detached backdrop and its subject layer split the picture's layers between them", () => {
+    for (const id of ["core-004", "stinkyscape-006", "traininggrounds-016"]) {
+      const motion = artMotionOf(id);
+      expect(motion, id).not.toBeNull();
+      if (motion === null) continue;
+      const card = def(id);
+      const draw = (part: "backdrop" | "subject", m: ArtMotion): Document => {
+        const { container } = render(
+          createElement(CardArt, { defId: id, radiant: false, tags: card.tags, type: card.type, shape: "full", name: card.name, motion: m, part }),
+        );
+        const uri = /^url\("(.*)"\)$/u.exec(container.querySelector<HTMLElement>(".cf-art")?.style.backgroundImage ?? "")?.[1] ?? "";
+        cleanup();
+        return new DOMParser().parseFromString(decodeURIComponent(uri.slice(DATA_PREFIX.length)), "image/svg+xml");
+      };
+      const backdrop = draw("backdrop", { ...motion, detached: true });
+      const subject = draw("subject", motion);
+      expect(backdrop.querySelectorAll(".art-m-particle").length, `${id}: backdrop`).toBe(0);
+      expect(backdrop.querySelector(".art-m-subject"), `${id}: backdrop's subject`).toBeNull();
+      expect(subject.querySelector(".art-m-subject"), `${id}: subject`).not.toBeNull();
+      expect(subject.querySelectorAll(".art-m-particle").length, `${id}: subject's particles`).toBe(0);
+    }
+  });
+
+  it("R3340000 a crack at one level begins the same crack at the next, and the levels are ART_WEAR_LEVELS", () => {
+    for (let level = 1; level < ART_WEAR_LEVELS; level += 1) {
+      const lower = crackPaths("core-004", level);
+      const higher = crackPaths("core-004", level + 1);
+      expect(higher.length).toBe(level + 1);
+      lower.forEach((path, k) => expect(higher[k]?.startsWith(path)).toBe(true));
     }
   });
 });

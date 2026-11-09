@@ -1,11 +1,12 @@
 // R1973002, R3324000: the patch tabs and the patches either side of the one shown, the newest patch collecting its
-// data, and (R3324001) the current patch (stats/patches.ts).
+// data, (R3324001) the current patch and (R3447000) the patch a card's figures were collected on (stats/patches.ts).
 
 import { describe, expect, it } from "vitest";
 
 import { CATALOG_VERSION } from "@jackioh/cards";
 import { STATS_PATCH_MIN_GAMES, STATS_PATCHES_OFFERED } from "./config.ts";
 import {
+  collectedOn,
   currentVersion,
   isCollecting,
   neighbours,
@@ -69,6 +70,19 @@ describe("R1973002 the patches /stats can show", () => {
     expect(currentVersion(PATCHES)).toBe("v8b");
     expect(currentVersion(PATCHES.slice(1))).toBe("v7");
     expect(currentVersion([])).toBe(CATALOG_VERSION);
+  });
+
+  it("R3447000 a card's figures name the listed patch holding the first version they count, else that version", () => {
+    // The previous window's figures while v8 gathers its games, and a window a micro opened: each its patch's name.
+    expect(collectedOn(PATCHES, ["v7"])).toBe("v7");
+    expect(collectedOn(PATCHES, ["v5b", "v5c"])).toBe("v5");
+    expect(collectedOn(PATCHES, ["v8", "v8b"])).toBe("v8");
+    // A version the list does not hold, or no list (an older server), names the version itself.
+    expect(collectedOn(PATCHES, ["v9"])).toBe("v9");
+    expect(collectedOn([], ["v5b"])).toBe("v5b");
+    // No window, or one that counts nothing, names none.
+    expect(collectedOn(PATCHES, undefined)).toBeNull();
+    expect(collectedOn(PATCHES, [])).toBeNull();
   });
 
   it("R1973002 steps to the patch before and after the one shown", () => {

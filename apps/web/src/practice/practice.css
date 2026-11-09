@@ -887,8 +887,7 @@
 /* ---- the result dialog -------------------------------------------------------------------- */
 
 /* The practice result (R3220000) and a lesson's (TutorialResult.tsx, R3221000) draw through Dialog.tsx,
-   whose scrim is dialog.css's: the `.dialog` twins below give its panel this look. */
-.practice-result,
+   whose scrim is dialog.css's: the `.dialog` selectors below give its panel this look. */
 .dialog.practice-result {
   --glow: var(--radiant);
   position: relative;
@@ -1032,7 +1031,6 @@
   filter: grayscale(1) brightness(0.72) drop-shadow(0 6px 18px rgb(0 0 0 / 70%));
 }
 
-.app-shell .practice-result__title,
 .app-shell .practice-result .dialog__title {
   margin: 2px 0 0;
   background: linear-gradient(
@@ -1052,7 +1050,6 @@
   filter: drop-shadow(0 2px 0 rgb(0 0 0 / 60%)) drop-shadow(0 0 18px color-mix(in srgb, var(--glow) 45%, transparent));
 }
 
-.app-shell .practice-result__reason,
 .app-shell .practice-result .dialog__body {
   color: var(--text);
   font-size: 16px;
@@ -1066,22 +1063,11 @@
   text-transform: uppercase;
 }
 
-.practice-result__actions,
 .practice-result .dialog__actions {
   display: flex;
   gap: 10px;
   width: 100%;
   margin-top: 10px;
-}
-
-.practice-result__actions > * {
-  flex: 1 1 0;
-}
-
-.practice .practice-result__actions .practice-play {
-  min-width: 0;
-  padding: 12px 16px;
-  font-size: 16px;
 }
 
 .practice .practice-result__secondary {
@@ -1131,7 +1117,6 @@
   .practice-thinking__core,
   .practice-hud[data-thinking="true"]::after,
   .practice-shuffle span,
-  .practice-result,
   .dialog.practice-result,
   .practice-result__rays {
     animation: none;
@@ -1385,7 +1370,6 @@
 
 /* Landscape phones: the dialog loses height, not content. */
 @media (max-height: 500px) {
-  .practice-result,
   .dialog.practice-result {
     gap: 6px;
     padding: 14px 20px 10px;
@@ -1405,30 +1389,25 @@
     height: 63px;
   }
 
-  .app-shell .practice-result__title,
   .app-shell .practice-result .dialog__title {
     font-size: 36px;
   }
 
-  .practice-result__actions,
   .practice-result .dialog__actions {
     margin-top: 4px;
   }
 
-  .practice .practice-result__actions .practice-play,
   .practice .practice-result__secondary {
     min-height: 48px;
   }
 }
 
 @media (max-width: 420px) {
-  .practice-result__actions,
   .practice-result .dialog__actions,
   .practice-result__replay {
     flex-direction: column;
   }
 
-  .app-shell .practice-result__title,
   .app-shell .practice-result .dialog__title {
     font-size: 38px;
   }
