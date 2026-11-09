@@ -17006,7 +17006,18 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 6723738531
+      "waiting_comment": 6723738531,
+      "waiting_turn": {
+        "behind": [
+          3426
+        ],
+        "ends": "2026-11-09T03:14:18Z",
+        "from_run": "42536825321",
+        "head": "94f613f58729f96af1cf8fdf65162ac5d4b3936c",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-09T01:14:18Z"
+      }
     },
     "3438": {
       "action": "review",
