@@ -59,8 +59,9 @@ import {
 import { cachedRead } from "../net/readCache.ts";
 import { spendOutNow, useSpendOut } from "../net/spending.ts";
 import { markNewLevels } from "../collection/newLevels.ts";
+import GrantReveal, { type GrantItem } from "../economy/GrantReveal.tsx";
 import { useSetting } from "../settings/store.ts";
-import { withBought } from "../shop/shop.ts";
+import { isPerCardKind, withBought } from "../shop/shop.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import {
@@ -85,6 +86,25 @@ import "./packs.css";
 
 /** The scene shakes nothing: the pack is not the board. */
 const NO_SHAKE: FxShakeSink = { apply: () => undefined, clear: () => undefined };
+
+/**
+ * R3349000: a slot's cosmetic roll as a reveal item, the card wearing it where the cosmetic goes on a card
+ * (a level, foil, finish or border) and no card where it is the account's (a playmat, a portrait, a card
+ * back): the slot's card is then only the one pulled, and the reveal and the Collection's "new" mark must
+ * not name it. A cosmetic the registry does not know has no look to reveal.
+ */
+function revealOf(slot: OpenedPackResponse["slots"][number]): GrantItem | null {
+  const grant = slot.grant;
+  if (grant.kind !== "cosmetic") return null;
+  const kind = COSMETICS.find((entry) => entry.id === grant.cosmeticId)?.kind;
+  if (kind === undefined) return null;
+  return {
+    cosmeticId: grant.cosmeticId,
+    cardId: isPerCardKind(kind) ? slot.cardId : null,
+    rarity: grant.cosmeticRarity,
+    below: grant.below,
+  };
+}
 
 function PackSlotFace({ slot, look }: { slot: OpenedPackResponse["slots"][number]; look: string | null }): ReactElement {
   const def = CATALOG[slot.cardId];
@@ -137,6 +157,9 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
 
   const [torn, setTorn] = useState(false);
   const [takeover, setTakeover] = useState(true);
+  // R3349000: the roll whose reveal plays over the scene, queued by its slot's flip; reduced motion and Reveal all
+  // deal every slot face-up at once, as they skip the Mythic takeover, so they flip nothing.
+  const [reveals, setReveals] = useState<GrantItem[]>([]);
   const [skipped, setSkipped] = useState(false);
   const [flipped, setFlipped] = useState<ReadonlySet<number>>(new Set());
   const [holding, setHolding] = useState<number | null>(null);
@@ -201,19 +224,6 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
     if (error !== null) setSkipped(false);
   }, [error]);
 
-  // R3349000: a Legendary cosmetic pull flares on its sealed tile once the pack tears, before any flip.
-  useEffect(() => {
-    if (!torn || reduced || skipped || opened === null || flared.current) return;
-    flared.current = true;
-    director.current?.play(
-      opened.slots.flatMap((slot, slotIndex) =>
-        slot.grant.kind === "cosmetic" && slot.grant.cosmeticRarity === "Legendary"
-          ? legendaryFlareCues(packTestid.slot(slotIndex), intensity)
-          : [],
-      ),
-    );
-  }, [torn, reduced, skipped, opened, intensity]);
-
   useEffect(
     () => () => {
       if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
@@ -246,11 +256,25 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
     };
   }, [showTakeover, bigMoments]);
 
+  // R3349000: a Legendary card pulled flares on its sealed tile once its tile shows, before any flip.
+  useEffect(() => {
+    if (!showSlots || !torn || reduced || skipped || opened === null || flared.current) return;
+    flared.current = true;
+    director.current?.play(
+      opened.slots.flatMap((slot, slotIndex) =>
+        slot.rarity === "Legendary" ? legendaryFlareCues(packTestid.slot(slotIndex), intensity) : [],
+      ),
+    );
+  }, [showSlots, torn, reduced, skipped, opened, intensity]);
+
   const reveal = (index: number): void => {
     const slot = slots[index];
     if (slot === undefined) return;
     setFlipped((before) => new Set(before).add(index));
     playStinger(slot.rarity);
+    // R3349000: a duplicate's roll reveals the card wearing its new level, by the level's own rarity.
+    const item = revealOf(slot);
+    if (item !== null) setReveals([item]);
     director.current?.play(revealCues(slot.rarity, packTestid.slot(index), intensity));
   };
 
@@ -378,9 +402,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
                 data-cosmetic-rarity={cosmetic?.cosmeticRarity}
                 data-revealed={shown ? "true" : "false"}
                 data-holding={holding === index ? "true" : undefined}
-                data-flare={
-                  slot.grant.kind === "cosmetic" && slot.grant.cosmeticRarity === "Legendary" && torn && !shown ? "true" : undefined
-                }
+                data-flare={slot.rarity === "Legendary" && torn && !shown ? "true" : undefined}
               >
                 {shown ? (
                   <>
@@ -467,6 +489,15 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
 
       {/* R3221000: the scene keeps its own body and closes by the one ✕ every dialog shows, not while busy. */}
       <DialogClose testid={packTestid.close} disabled={busy} onClick={onClose} />
+
+      {reveals.length === 0 ? null : (
+        <GrantReveal
+          items={reveals}
+          onDone={() => {
+            setReveals([]);
+          }}
+        />
+      )}
     </div>,
     document.body,
   );
@@ -583,14 +614,15 @@ export default function PackOpening({
           const last = rest.at(-1) ?? first;
           if (first === undefined || last === undefined) return;
           queued.current = rest;
-          // R3349000: every granted level marks its card "new" until the Collection views it.
+          // R3349000: every granted level marks its card "new" until the Collection views it; an account
+          // cosmetic's slot card earned nothing, so its entry names no card.
           markNewLevels(
             token,
             [first, ...rest].flatMap((opening) =>
               opening.slots.flatMap((slot) => {
-                const grant = slot.grant;
-                if (grant.kind !== "cosmetic") return [];
-                return [{ id: grant.cosmeticId, cardId: slot.cardId }, ...(grant.below ?? []).map((below) => ({ id: below, cardId: slot.cardId }))];
+                const item = revealOf(slot);
+                if (item === null) return [];
+                return [item.cosmeticId, ...(item.below ?? [])].map((id) => ({ id, cardId: item.cardId }));
               }),
             ),
           );

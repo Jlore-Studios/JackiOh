@@ -20,7 +20,9 @@ import {
   writeCardPick,
   writeCosmetics,
 } from "../cards/cosmetics.ts";
+import { hasUnseen, unseenForCard } from "../collection/newLevels.ts";
 import { flightsMs } from "../economy/bars.ts";
+import { grantTestid } from "../economy/GrantReveal.tsx";
 import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { keptPaths, type OpenedPackResponse, type PacksResponse } from "../net/api.ts";
@@ -322,27 +324,80 @@ describe("#1308 the pack-opening scene", () => {
 
   it("R3349000 a Legendary pull flares before it flips", () => {
     const fixture = openedPack();
-    const [, second, third, fourth, fifth] = fixture.slots;
+    const [first, second, third, fourth, fifth] = fixture.slots;
+    // Slot 1 is a Legendary card pulled; slot 2 a Common duplicate whose roll is a Legendary level.
     const opened: OpenedPackResponse = {
       ...fixture,
       slots: [
-        { rarity: "Common", cardId: "core-002", grant: { kind: "card" } },
-        second!,
-        { ...third!, grant: { kind: "cosmetic", cosmeticId: "foil-molten-gold", cosmeticRarity: "Legendary" as const } },
+        { ...first!, rarity: "Epic" },
+        { ...second!, rarity: "Legendary" },
+        { ...third!, grant: { kind: "cosmetic", cosmeticId: "full-art-gary-the-gambler-animated", cosmeticRarity: "Legendary" } },
         fourth!,
         fifth!,
       ],
     };
     torn({ opened });
-    const flared = screen.getByTestId(T.slot(2));
+    const flared = screen.getByTestId(T.slot(1));
     expect(flared).toHaveAttribute("data-flare", "true");
     expect(flared, "the flaring tile stays sealed").toHaveAttribute("data-revealed", "false");
-    expect(screen.getByTestId(T.slot(0))).not.toHaveAttribute("data-flare");
+    expect(screen.getByTestId(T.slot(0)), "an Epic pull does not flare").not.toHaveAttribute("data-flare");
+    expect(screen.getByTestId(T.slot(2)), "a Legendary roll on a Common card has its own reveal, not the card's flare").not.toHaveAttribute(
+      "data-flare",
+    );
+
+    flipSlot(opened, 1);
+    expect(screen.getByTestId(T.outcome(1))).toHaveTextContent("New card");
+    expect(screen.getByTestId(T.slot(1))).toHaveAttribute("data-revealed", "true");
+    expect(screen.getByTestId(T.slot(1))).not.toHaveAttribute("data-flare");
+  });
+
+  /** The fixture with its slot 2, a Common duplicate of core-004, rolling `cosmeticId` at `cosmeticRarity`. */
+  function rolling(cosmeticId: string, cosmeticRarity: "Rare" | "Epic" | "Legendary" | "Mythic"): OpenedPackResponse {
+    const fixture = openedPack();
+    return {
+      ...fixture,
+      slots: fixture.slots.map((slot, index) => (index === 2 ? { ...slot, grant: { kind: "cosmetic", cosmeticId, cosmeticRarity } } : slot)),
+    };
+  }
+
+  it("R3349000 a duplicate's roll reveals the card wearing its new level when its slot flips", () => {
+    const opened = rolling("full-art-gary-the-gambler", "Epic");
+    torn({ opened });
+    expect(screen.queryByTestId(grantTestid.scene), "nothing plays before the slot is opened").toBeNull();
 
     flipSlot(opened, 2);
-    expect(screen.getByTestId(T.outcome(2))).toHaveTextContent("New cosmetic: Molten gold");
-    expect(screen.getByTestId(T.slot(2))).toHaveAttribute("data-revealed", "true");
-    expect(screen.getByTestId(T.slot(2))).not.toHaveAttribute("data-flare");
+    // Rare and Epic play on the panel: the card in its previous look first, the new level named beneath it.
+    const scene = screen.getByTestId(grantTestid.scene);
+    expect(scene).toHaveAttribute("data-treatment", "panel");
+    expect(screen.getByTestId(grantTestid.before(0))).toBeInTheDocument();
+    expect(screen.getByTestId(grantTestid.name(0))).toHaveTextContent(`${GARY} · Epic`);
+    fireEvent.click(scene);
+    expect(screen.getByTestId(grantTestid.after(0))).toBeInTheDocument();
+    expect(screen.getByTestId(grantTestid.name(0))).toHaveTextContent(`${GARY} · Epic`);
+
+    // A tap moves on, back to the slot, which says what it became.
+    fireEvent.click(scene);
+    expect(screen.queryByTestId(grantTestid.scene)).toBeNull();
+    expect(screen.getByTestId(T.outcome(2))).toHaveTextContent(`New cosmetic: ${GARY}`);
+    // The other slots stay sealed: one reveal per slot opened.
+    expect(screen.getByTestId(T.slot(1))).toHaveAttribute("data-revealed", "false");
+  });
+
+  it("R3349000 a roll takes its level's own rarity's treatment, not its card's", () => {
+    const treatments: [string, "Legendary" | "Mythic", string][] = [
+      ["full-art-gary-the-gambler-animated", "Legendary", "grow"],
+      ["full-art-gary-the-gambler-signed", "Mythic", "takeover"],
+    ];
+    for (const [cosmeticId, rarity, treatment] of treatments) {
+      const opened = rolling(cosmeticId, rarity);
+      torn({ opened });
+      flipSlot(opened, 2);
+      expect(screen.getByTestId(grantTestid.scene), cosmeticId).toHaveAttribute("data-treatment", treatment);
+      // The slot's card is Common, so neither is the card's treatment: a Mythic roll on it takes the screen.
+      expect(screen.getByTestId(T.slot(2))).toHaveAttribute("data-rarity", "Common");
+      if (treatment === "takeover") expect(screen.getByTestId(grantTestid.scene).querySelector('[data-testid="fullscreen-art"]')).not.toBeNull();
+      cleanup();
+    }
   });
 
   it("R3349000 a Mythic pull tears into its takeover", () => {
@@ -800,6 +855,26 @@ async function panel(): Promise<void> {
 const text = (id: string): string => screen.getByTestId(id).textContent ?? "";
 
 describe("#1308 the card packs panel", () => {
+  it("R3349000 an account cosmetic dropped in a pack reveals no card and marks none new", async () => {
+    // Slot 0's card earned a playmat, the account's; slot 2's card earned a level of its own.
+    const fixture = openedPack();
+    const opened: OpenedPackResponse = {
+      ...fixture,
+      slots: fixture.slots.map((slot, index) =>
+        index === 0 ? { ...slot, grant: { kind: "cosmetic", cosmeticId: "table-wood", cosmeticRarity: "Epic" } } : slot,
+      ),
+    };
+    packsServer({ open: () => ({ status: 200, body: opened }) });
+    await panel();
+    fireEvent.click(screen.getByTestId(T.open("Core")));
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    await screen.findByTestId(T.outcome(0));
+
+    expect(unseenForCard(TOKEN, "core-096"), "the playmat marks no card").toEqual([]);
+    expect(hasUnseen(TOKEN, "core-096")).toBe(false);
+    expect(unseenForCard(TOKEN, "core-004"), "the level marks the card wearing it").toEqual(["full-art-gary-the-gambler"]);
+  });
+
   it("the panel lists the packs held, before opening and after, and shows neither pity nor odds", async () => {
     const server = packsServer();
     await panel();

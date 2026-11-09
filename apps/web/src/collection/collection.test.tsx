@@ -1439,18 +1439,23 @@ describe("R3349000 new levels and ladder looks", () => {
       />,
     );
 
+    // An animated rung moves its picture's own layers (CardArt's `motion`), as the face of that level does.
     const animated = screen.getByTestId(T.rung(VERSION_FULL_ART_ANIMATED_ID));
-    expect(animated.querySelector(".collection-strip__picture")).toHaveAttribute("data-cosmetic-motion", "animated");
+    expect(animated.querySelector(".collection-strip__picture")).toHaveAttribute("data-art-motion", "animated");
+    expect(animated.querySelector("[data-art-moving]")).toHaveAttribute("data-art-moving", "true");
     expect(animated.querySelector(".cf-signature")).toBeNull();
 
+    // A signed rung is an animated one with its signature written over it.
     const signed = screen.getByTestId(T.rung(VERSION_FULL_ART_SIGNED_ID));
-    expect(signed.querySelector(".collection-strip__picture")).toHaveAttribute("data-cosmetic-motion", "animated");
+    expect(signed.querySelector(".collection-strip__picture")).toHaveAttribute("data-art-motion", "animated");
+    expect(signed.querySelector("[data-art-moving]")).toHaveAttribute("data-art-moving", "true");
     expect(signed.querySelector(".cf-signature")).not.toBeNull();
 
     // The first full-art level adds the frame alone: it neither moves nor signs.
-    expect(screen.getByTestId(T.rung(VERSION_FULL_ART_ID)).querySelector(".collection-strip__picture")).not.toHaveAttribute(
-      "data-cosmetic-motion",
-    );
+    const still = screen.getByTestId(T.rung(VERSION_FULL_ART_ID));
+    expect(still.querySelector(".collection-strip__picture")).not.toHaveAttribute("data-art-motion");
+    expect(still.querySelector("[data-art-moving]")).toBeNull();
+    expect(still.querySelector(".cf-signature")).toBeNull();
   });
 });
 
