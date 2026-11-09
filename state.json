@@ -17964,7 +17964,11 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
-      "merge_owner": "claude-4",
+      "merge_owner_gave_up": {
+        "at": "2026-11-09T09:01:12Z",
+        "provider": "claude-4",
+        "sha": "bfaa8dc72838cc889520f6d31ac1d9e7109aa3bc"
+      },
       "pending_request": false,
       "provider": "claude-4",
       "question": "",
