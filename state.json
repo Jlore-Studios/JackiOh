@@ -15636,17 +15636,8 @@
       ]
     },
     "3477": {
-      "action": "plan",
-      "asks": [
-        "c:6741703152"
-      ],
-      "build_next": {
-        "from_run": "42639849353",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-09T15:06:55Z",
-        "until": "2026-11-09T15:36:55Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-09T15:06:42Z",
         "difficulty": "hard",
@@ -15665,10 +15656,9 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3477; git log --oneline -1; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nold=''' - After `jackioh_cards::register_all()`, `plain` is'''\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3477; git diff --stat 71ef2a3bd0 b5832e5676 | tail -5\", \"description\": \"Check what the new main commit changed\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 3: the shared host machine, both server protocols and the web wire must agree on a new field; rule 5: about 45 files with tests\"} --> ## Goal Each seat's own view carries the engine's `combat_forecast` of its attacks. That covers: - every practice snaps\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-09T13:59:30Z",
       "owner_why": "it plans it",
@@ -15682,16 +15672,18 @@
       "queued_at": "2026-11-09T13:51:12Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
-      "run_id": "42639849353",
+      "run_id": "pending:26584416-1794236866",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-09T14:58:00Z",
+      "started_at": "2026-11-09T15:08:24Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6741703152"
+      ],
       "verdict_rounds": 0
     },
     "3478": {
@@ -16155,9 +16147,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T14:58:00Z",
+    "at": "2026-11-09T15:08:24Z",
     "url": "",
-    "what": "plan #3477 on claude-6"
+    "what": "build #3477 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-09T14:51:23Z",
