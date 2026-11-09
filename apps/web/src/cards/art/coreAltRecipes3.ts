@@ -323,7 +323,7 @@ const MISS_MROW_ALT: SceneRecipe = {
       { part: "fern", x: 88, y: 78, scale: 2.4, paint: "green-500" },
     ],
     near: [
-      { part: "teapot", x: 60, y: 70, scale: 1.4 },
+      { part: "pouring-teapot", x: 60, y: 70, scale: 1.4 },
       { part: "cup", x: 74, y: 84, scale: 2.2, props: true },
       { part: "fern-sprig", x: 90, y: 99, scale: 2, paint: "green-700" },
     ],

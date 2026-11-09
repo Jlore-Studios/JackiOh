@@ -5,10 +5,11 @@
 // cauldron), locks and chains (a padlock, a chain, a key), the dead and the humble (a candle, bones, pebbles,
 // bread), a drum, a lyre, a pair of scales and a bamboo chute; R3398000's Core Alt art scenes (#3398) added a hay
 // bale, a picnic blanket, a rug, a hammock (`beach-hammock`, apart from the Legacy touches' `hammock`), a sleeping
-// bag and a teapot. sceneKit.ts spreads the table into `SCENE_KIT`. Each part keeps the kit's rules: one to twelve
-// filled shapes drawn in its own frame (`local`), varied by the scene's stream alone, every colour a palette name
-// out of Radiant's gold window (brass and orange stand for gold), a glow a stack of translucent shapes, and no two
-// sub-paths of one shape overlapping but for a hole.
+// bag and a teapot pouring (`pouring-teapot`, apart from the Meditative ink kit's `teapot`). sceneKit.ts spreads the
+// table into `SCENE_KIT`. Each part keeps the kit's rules: one to twelve filled shapes drawn in its own frame
+// (`local`), varied by the scene's stream alone, every colour a palette name out of Radiant's gold window (brass and
+// orange stand for gold), a glow a stack of translucent shapes, and no two sub-paths of one shape overlapping but for
+// a hole.
 
 import { fmt } from "./hash.ts";
 import { between, blob, DEGREES, INKED, local, MAIN, MAIN_INKED, shape, sparkle, spiralArm, turned, whole, type Local, type Point } from "./kitDraw.ts";
@@ -1185,11 +1186,11 @@ export const OBJECTS_KIT = {
   bread: { category: "objects", draw: bread },
   quill: { category: "objects", draw: quill },
   chute: { category: "objects", draw: chute },
-  // R3398000: the Core Alt art scenes' hay bale, picnic blanket, rug, hammock, sleeping bag and teapot.
+  // R3398000: the Core Alt art scenes' hay bale, picnic blanket, rug, hammock, sleeping bag and pouring teapot.
   "hay-bale": { category: "objects", draw: hayBale },
   "picnic-blanket": { category: "objects", draw: picnicBlanket },
   rug: { category: "objects", draw: rug },
   "beach-hammock": { category: "objects", draw: hammock },
   "sleeping-bag": { category: "objects", draw: sleepingBag },
-  teapot: { category: "objects", draw: teapot },
+  "pouring-teapot": { category: "objects", draw: teapot },
 } as const satisfies Readonly<Record<string, KitPart>>;

@@ -114,7 +114,7 @@ const NEW_PARTS: Readonly<Record<string, readonly string[]>> = {
   rug: ["core-048"],
   "beach-hammock": ["core-043"],
   "sleeping-bag": ["core-050"],
-  teapot: ["core-086"],
+  "pouring-teapot": ["core-086"],
 };
 
 function def(id: string): CardDef {

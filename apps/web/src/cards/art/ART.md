@@ -480,8 +480,9 @@ in a tide pool, drawn from the kits, with no giant, so `ownSubject` stays its no
 
 The briefs' places added ten parts: a palm and a camel (`sceneKitNature.ts`), a crater and a van
 (`sceneKitPlaces.ts`), and a hay bale, a picnic blanket, a rug, a hammock, a sleeping bag and a teapot
-(`sceneKitObjects.ts`; the hammock is `beach-hammock`, apart from the Legacy touches' `hammock`); a brief's smaller
-details stand in with parts the kits hold, each named in its recipe's doc comment, and the sleepers sit.
+(`sceneKitObjects.ts`; the hammock is `beach-hammock`, apart from the Legacy touches' `hammock`, and the teapot
+`pouring-teapot`, apart from the Meditative ink kit's `teapot`); a brief's smaller details stand in with parts the
+kits hold, each named in its recipe's doc comment, and the sleepers sit.
 `coreAltScenes.test.tsx` holds every recipe to the rules and every Alt art level's face to its picture and its
 Radiant marks, and `core-alt-scenes.cy.tsx` measures each window's share against `ALT_PICTURE_CHANGE_MIN` and
 screenshots each normal face beside its Alt art face.
