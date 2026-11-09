@@ -16380,6 +16380,13 @@
     "3501": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42679612003",
+        "model": "sonnet",
+        "provider": "claude-6",
+        "since": "2026-11-09T19:23:42Z",
+        "until": "2026-11-09T19:53:42Z"
+      },
       "difficulty_by": {
         "at": "2026-11-09T19:23:31Z",
         "difficulty": "medium",
