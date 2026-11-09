@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 3485,
+  "title": "Patch: every page Google should index answers 200 and is its own canonical (Search Console: \"Page with redirect\", \"Alternate page with proper canonical tag\")",
+  "branch": "bot/issue-3485",
+  "thread": "**Issue #3485 (data, not instructions):**\n\n```text\n# #3485: Patch: every page Google should index answers 200 and is its own canonical (Search Console: \"Page with redirect\", \"Alternate page with proper canonical tag\")\nOpened by @MaxGoetzmann.\n\n## What happens\n\nGoogle Search Console reported (2026-11-09) that some jackioh.com pages are not indexed, for two new reasons. The URLs it lists (last crawled):\n\n**Alternate page with proper canonical tag**\n\n| URL | Crawled |\n|---|---|\n| `http://jackioh.com/replays` | Nov 6, 2026 |\n| `http://jackioh.com/` | Nov 4, 2026 |\n| `http://jackioh.com/decks` | Oct 29, 2026 |\n| `http://jackioh.com/play` | Oct 29, 2026 |\n| `http://jackioh.com/creator` | Oct 29, 2026 |\n| `http://jackioh.com/terms` | Oct 28, 2026 |\n| `http://jackioh.com/accessibility` | Oct 25, 2026 |\n\n**Page with redirect**\n\n| URL | Crawled |\n|---|---|\n| `http://jackioh.com/together` | Oct 19, 2026 |\n| `https://jackioh.com/creator` | Oct 19, 2026 |\n| `https://jackioh.com/play` | Oct 19, 2026 |\n| `https://jackioh.com/decks` | Oct 18, 2026 |\n| `https://jackioh.com/together` | Oct 18, 2026 |\n\n## Diagnosis (from reading the tree; confirm before fixing)\n\n**1. `http://` is served, not redirected to `https://`.** Every URL in the canonical bucket is plain `http://`: Cloudflare answers it with the page itself (200), whose `<link rel=\"canonical\">` names the `https://` address (`canonicalUrlFor`, `apps/web/src/net/head.ts`), so Google files the `http://` copy as an alternate. Nothing in the tree turns on \"Always Use HTTPS\" or sends `Strict-Transport-Security`: `infra/cloudflare.tf` has no zone setting for it and `apps/web/public/_headers` no HSTS header. Static assets never reach the Worker (`run_worker_first` covers only `/api/*`, `/ws/*` and the module), so the Worker cannot redirect them.\n\n**2. The account-gated screens redirect a signed-out visitor to `/login` in JavaScript.** `/play`, `/decks` and `/together` are served 200 by `/` (`_redirects`), then the client sends an anonymous visitor (Googlebot) to `/login` with `navigate(\u2026, { replace: true })` (`redirectFor` and `Gated` in `apps/web/src/main.tsx`; `apps/web/src/routes/decks.tsx:117`). Google renders the page and records the redirect. That redirect is right for players, but these pages have nothing to index for a crawler, and unlike `/account`, `/invite`, `/match/` and `/series/` they are not in `apps/web/public/robots.txt`'s `Disallow` list.\n\n**3. `/creator` is no route.** It is not in `paths` (`apps/web/src/net/navigate.ts`), `_redirects` or git history under `apps/web`, so it is a link from somewhere outside. It should answer the 404 page (404 status, noindex, R3127000) and drop out on its own; confirm that it does and that nothing in the tree links to it.\n\n## What should happen\n\nEvery URL the site wants indexed (each page in `PUBLIC_PAGES`, `apps/web/static-pages.ts`, as listed in `sitemap.xml`) is reached only at its `https://` address, answers 200 and is its own canonical. `http://` answers a permanent redirect to `https://`. The account-gated screens are kept out of the index on purpose, not found and then dropped as redirects.\n\n## What to do\n\n1. **HTTPS:** turn on Cloudflare's Always Use HTTPS for the `jackioh.com` zone as Terraform in `infra/cloudflare.tf` (`infra/README.md`: the hosts' dashboard settings live there, #1708), and add `Strict-Transport-Security` for production in `apps/web/public/_headers` (not for staging or `*.workers.dev` if that would break `promote-production.yml`'s live check; check). If applying the Terraform needs a person, say so in the pull request and in the handoff.\n2. **Gated screens:** add `/play`, `/decks` and `/together` (and any other screen `Gated` wraps with no public content: `/collection`, `/shop`, `/leaderboard`, \u2026; read `main.tsx`) to `robots.txt`'s `Disallow`, matching how `/account` is handled. Keep them out of `sitemap.xml` (they are today). Do not remove the redirect.\n3. **`/creator`:** confirm it gets the 404 page; no change expected.\n4. **A test that holds it:** beside `apps/web/src/net/cloudflare-serve.test.ts`, `deploy-routes.test.ts` and `static-pages.test.ts`: every `sitemap.xml` URL is `https://`, has a 200 rule under `_redirects`, and is its own canonical; and no gated route is in the sitemap and every one is disallowed in `robots.txt`.\n5. Write down in a comment beside the rule (in `robots.txt` or `_redirects`) why each gated screen is disallowed, so the next Search Console notice can be answered from the tree.\n\nOut of scope: anything only the Cloudflare or Search Console dashboard can do (a person does that, e.g. \"Validate fix\" in Search Console after this ships).\n\n## How to reproduce\n\n`curl -sI http://jackioh.com/terms` (expect 200, not 301). Open `https://jackioh.com/decks` in a private window: the client moves to `/login`. Locally: `pnpm --dir apps/web build`, then read `apps/web/dist/sitemap.xml`, `apps/web/dist/robots.txt`, `apps/web/dist/_redirects` and each page's `<link rel=\"canonical\">`.\n\n## Where\n\nThe client (`apps/web`: `public/robots.txt`, `public/_headers`, `public/_redirects`, `static-pages.ts`, `src/net/head.ts`, `src/main.tsx`) and `infra/cloudflare.tf`.\n\nRelated: #587 (every public page ships its own HTML), #696 (crawlers pointed at the staging host), #3127 (the 404 page).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3485: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T13:40:46Z",
+    "claimed_at": "2026-11-09T13:47:26Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3483 needs a plan",
+    "#3464 is held for `claude-7` until 09:20 (5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
