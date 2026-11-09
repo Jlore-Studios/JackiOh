@@ -15215,8 +15215,11 @@
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
-      "ci_fixes": 1,
+      "ci_fixes": 0,
       "ci_on_head": true,
+      "ci_reruns": {
+        "84c59caed84408301c095ed299599dd9c4f382ca": 1
+      },
       "ci_run_id": 42683040063,
       "ci_sha": "84c59caed84408301c095ed299599dd9c4f382ca",
       "cleared": {
