@@ -183,6 +183,12 @@ describe("a GIF's code loads on demand", () => {
     });
   }
 
+  // The walk's calls, read off `ts` once: under vitest an external CommonJS import is a Proxy, so every
+  // `ts.…` read in the walk, one per node and call, runs its trap (as wording.test.ts found, a walk over
+  // the client many times slower).
+  const { forEachChild, isCallExpression, isExportDeclaration, isImportDeclaration, isNamedImports, isStringLiteral, isStringLiteralLike } = ts;
+  const IMPORT_KEYWORD = ts.SyntaxKind.ImportKeyword;
+
   /** The modules a file loads at once, and those it loads with `import()`; a type-only import loads nothing. */
   function importsOf(path: string): { statics: string[]; dynamics: string[] } {
     const text = readFileSync(path, "utf8");
@@ -190,19 +196,19 @@ describe("a GIF's code loads on demand", () => {
     const statics: string[] = [];
     const dynamics: string[] = [];
     const visit = (node: ts.Node): void => {
-      if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier) && node.importClause?.isTypeOnly !== true) {
+      if (isImportDeclaration(node) && isStringLiteral(node.moduleSpecifier) && node.importClause?.isTypeOnly !== true) {
         const names = node.importClause?.namedBindings;
-        const onlyTypes = names !== undefined && ts.isNamedImports(names) && node.importClause?.name === undefined && names.elements.every((element) => element.isTypeOnly);
+        const onlyTypes = names !== undefined && isNamedImports(names) && node.importClause?.name === undefined && names.elements.every((element) => element.isTypeOnly);
         if (!onlyTypes) statics.push(node.moduleSpecifier.text);
       }
-      if (ts.isExportDeclaration(node) && node.moduleSpecifier !== undefined && ts.isStringLiteral(node.moduleSpecifier) && !node.isTypeOnly) {
+      if (isExportDeclaration(node) && node.moduleSpecifier !== undefined && isStringLiteral(node.moduleSpecifier) && !node.isTypeOnly) {
         statics.push(node.moduleSpecifier.text);
       }
-      if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      if (isCallExpression(node) && node.expression.kind === IMPORT_KEYWORD) {
         const [argument] = node.arguments;
-        if (argument !== undefined && ts.isStringLiteralLike(argument)) dynamics.push(argument.text);
+        if (argument !== undefined && isStringLiteralLike(argument)) dynamics.push(argument.text);
       }
-      ts.forEachChild(node, visit);
+      forEachChild(node, visit);
     };
     visit(file);
     return { statics, dynamics };

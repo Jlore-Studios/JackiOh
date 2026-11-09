@@ -10,7 +10,6 @@
 
 import { getLocale } from "../i18n/i18n.ts";
 import { face } from "../wasm/index.ts";
-import type { CardDef } from "../wire/generated/CardDef.ts";
 import type { FaceModel } from "../wire/generated/FaceModel.ts";
 import type { FaceSource } from "../wire/generated/FaceSource.ts";
 import type { RichText } from "../wire/generated/RichText.ts";
@@ -57,6 +56,3 @@ export function wordDiff(before: string, after: string): { added: Utf16Range[]; 
   if (answer.answer !== "diff") throw new Error(`the face model answered ${answer.answer} for a diff`);
   return { added: answer.added, removed: answer.removed };
 }
-
-/** A card definition's name in the face's words is the face's own; this is the definition a face was made from. */
-export type FaceDef = CardDef;

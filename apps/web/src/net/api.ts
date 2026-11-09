@@ -1179,23 +1179,6 @@ export async function restoreDeckVersion(
 
 export type TrioInput = { name: string; deckIds: TrioSlots };
 
-/**
- * `PUT /api/trios/:id`: as `putDeck`. A slot naming a deck the server does not have yet is a 409
- * `conflict` with `details.unknownDeck`: save the deck first.
- */
-export async function putTrio(token: string, id: string, input: TrioInput): Promise<{ trio: SavedTrio }> {
-  const answer = await apiRequest<{ trio: SavedTrio }>(`/api/trios/${encodeURIComponent(id)}`, {
-    method: "PUT",
-    token,
-    body: input,
-  });
-  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => ({
-    ...before,
-    trios: withItem(before.trios, answer.trio),
-  }));
-  return answer;
-}
-
 /** One deck of an imported trio; its id is minted here (R256). */
 export type ImportedDeckInput = { id: string; name: string; cards: readonly string[] };
 
@@ -1224,19 +1207,6 @@ export async function importTrio(
     ...before,
     decks: answer.decks.reduce((decks, deck) => withItem(decks, deck), before.decks),
     trios: withItem(before.trios, answer.trio),
-  }));
-  return answer;
-}
-
-export async function deleteTrio(token: string, id: string, options: SendOptions = {}): Promise<{ deleted: boolean }> {
-  const answer = await apiRequest<{ deleted: boolean }>(`/api/trios/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-    token,
-    ...options,
-  });
-  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => ({
-    ...before,
-    trios: before.trios.filter((trio) => trio.id !== id),
   }));
   return answer;
 }

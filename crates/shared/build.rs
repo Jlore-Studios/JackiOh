@@ -248,7 +248,6 @@ fn main() {
     for (name, field) in [
         ("TYPES", "types"),
         ("TAGS", "tags"),
-        ("RARITIES", "rarities"),
         ("KEYWORDS", "keywords"),
         ("LABELS", "labels"),
     ] {

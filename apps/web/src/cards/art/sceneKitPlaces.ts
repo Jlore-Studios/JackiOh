@@ -6,18 +6,21 @@
 // centred on it (a portal ring, a rune circle, a fortune wheel, a clock face); and three big things (a jet in
 // flight, a hand cart, a chest of drawers). R3396000: the Classic+ Alt art scenes (#3396) added a waterfall, a
 // tent and a sailing boat. R3397000: the Meditative+ and Training Grounds Alt art scenes (#3397) added a
-// smoking crater, a sandcastle, a snowman, a mill's water wheel and a rowboat. sceneKit.ts spreads them into
-// `SCENE_KIT`. Every colour is a palette.css name, none in Radiant's gold window; a glow is a stack of
-// translucent shapes, never a gradient; shapes are filled even-odd, so a hole is a second sub-path and no
+// smoking crater, a sandcastle, a snowman, a mill's water wheel and a rowboat, and R3398000's Core Alt art scenes
+// (#3398) a field holding a clean crater (`crater-field`, apart from R3397000's `crater`) and a van. sceneKit.ts
+// spreads them into `SCENE_KIT`. Every colour is a palette.css name, none in Radiant's gold window; a glow is a
+// stack of translucent shapes, never a gradient; shapes are filled even-odd, so a hole is a second sub-path and no
 // two sub-paths of one shape overlap otherwise.
 
 import { fmt } from "./hash.ts";
 import {
+  bandPath,
   between,
   DEGREES,
   EDGE,
   ellipsePath,
   FAR_EDGE,
+  groundBand,
   INKED,
   leant,
   local,
@@ -1355,6 +1358,56 @@ function waterWheel(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+// R3398000: the places the Core Alt art scenes added.
+
+/** R3398000: ground from the placement's y down across the box, as a field's (main), holding a clean crater about 30 wide at the placement's x: a lit raised rim, a dark floor, the shade of its far wall and clods thrown round it. */
+function craterField(at: PartPlace, rng: Rng): KitShape[] {
+  const top = at.y;
+  const cy = top + (FAR_EDGE - top) * between(rng, 0.36, 0.44);
+  const rx = 15 * at.s * between(rng, 0.94, 1.06);
+  const ry = rx * between(rng, 0.26, 0.32);
+  let rows = "";
+  for (const k of [1, 2]) {
+    const y = top + (FAR_EDGE - top) * (k / 3) ** 1.3;
+    rows += bandPath([[EDGE, y + between(rng, -1, 1)], [50, y], [FAR_EDGE, y + between(rng, -1, 1)]], 0.6 + 0.5 * k * at.s);
+  }
+  let clods = "";
+  const lumps = whole(rng, 5, 7);
+  for (let k = 0; k < lumps; k += 1) {
+    const [dx, dy] = polar(1.18 + between(rng, 0, 0.3), (k * 360) / lumps + between(rng, -14, 14));
+    clods += ellipsePath(at.x + dx * rx, cy + dy * ry, between(rng, 0.7, 1.3) * at.s, between(rng, 0.4, 0.7) * at.s);
+  }
+  return [
+    shape(groundBand(rng, top, 1.2 * at.s, 4), "green-700", 1, MAIN),
+    shape(rows, "green-500", 0.3),
+    shape(ellipsePath(at.x, cy, rx * 1.1, ry * 1.18) + ellipsePath(at.x, cy, rx * 0.94, ry * 0.9), "stone-500", 0.9),
+    shape(ellipsePath(at.x, cy + ry * 0.04, rx * 0.94, ry * 0.9), "wood-800", 1),
+    shape(`M${pt(at.x - rx * 0.94, cy)}A${fmt(rx * 0.94)} ${fmt(ry * 0.9)} 0 0 1 ${pt(at.x + rx * 0.94, cy)}Q${pt(at.x, cy - ry * 0.1)} ${pt(at.x - rx * 0.94, cy)}Z`, "black", 0.35),
+    shape(ellipsePath(at.x, cy + ry * 0.3, rx * 0.4, ry * 0.25), "wood-700", 0.6),
+    shape(clods, "wood-700", 0.9),
+  ];
+}
+
+/** R3398000: a boxy van side on, standing on the anchor and nosing the way it faces: its body (main) with a sloped cab, a cab window, a door seam, a band along its flank, a headlight and bumper, two wheels and a ladder on its roof rack; about 26 wide and 14 tall at scale 1. */
+function van(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const nose = between(rng, 10, 11);
+  const stripe = between(rng, -7, -6);
+  let rungs = "";
+  for (let x = -10; x <= 2; x += 2) rungs += rect(f, x - 0.2, -14.4, x + 0.2, -13.8);
+  return [
+    shape(f.ellipse(0, 0.3, 13.4, 0.9), "black", 0.25),
+    shape(`M${f.p(-13, -2.4)}L${f.p(-13, -12.4)}Q${f.p(-13, -13)} ${f.p(-12.4, -13)}L${f.p(6, -13)}L${f.p(nose, -8)}L${f.p(13, -7.4)}L${f.p(13, -2.4)}Z`, "slate-100", 1, MAIN_INKED),
+    shape(rect(f, -13, stripe, 13, stripe + 1.2), "orange-400", 0.95),
+    shape(f.poly([[6.6, -12.2], [nose - 0.6, -8.4], [6.6, -8.4]]), "slate-900", 0.85),
+    shape(f.band([[-2, -12.4], [-2, -3]], 0.25) + f.band([[5.2, -12.4], [5.2, -3]], 0.25) + rect(f, 3.4, -8.4, 4.6, -7.8), "slate-700", 0.7),
+    shape(rect(f, -12, -14.6, 3, -14.4) + rect(f, -12, -13.8, 3, -13.6) + rungs, "slate-700", 0.9),
+    shape(f.circle(12.4, -6.2, 0.6) + rect(f, 11.6, -3.4, 13.4, -2.4), "white", 0.9),
+    shape(f.circle(-8, -2.2, 2.3) + f.circle(8, -2.2, 2.3), "slate-900", 1, INKED),
+    shape(f.circle(-8, -2.2, 0.9) + f.circle(8, -2.2, 0.9), "slate-400", 1),
+  ];
+}
+
 /** R3390000: the places the Classic+ scenes added, by id, each with its kind. */
 export const PLACES_KIT = {
   water: { category: "terrain", draw: water },
@@ -1399,4 +1452,7 @@ export const PLACES_KIT = {
   snowman: { category: "objects", draw: snowman },
   "water-wheel": { category: "architecture", draw: waterWheel },
   rowboat: { category: "objects", draw: rowboat },
+  // R3398000: the Core Alt art scenes' crater field and van.
+  "crater-field": { category: "terrain", draw: craterField },
+  van: { category: "objects", draw: van },
 } as const satisfies Readonly<Record<string, KitPart>>;

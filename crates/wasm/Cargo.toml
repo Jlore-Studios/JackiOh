@@ -23,7 +23,6 @@ preview = ["jackioh-wasm-core/preview"]
 duos = ["jackioh-wasm-core/duos"]
 
 [dependencies]
-jackioh-engine = { workspace = true }
 jackioh-cards = { workspace = true }
 # By path, not through the workspace: the crate sits inside this one.
 jackioh-wasm-core = { path = "core" }
