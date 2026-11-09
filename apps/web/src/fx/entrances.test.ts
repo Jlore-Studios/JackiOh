@@ -211,10 +211,13 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
   });
 
   it("R3405000 a Mythic entrance starts after its entry's hold", () => {
-    // Meditative's Mythics' entrances read their lead (R3405001); the older ones never needed to.
-    const mythics = ENTERING.filter(([defId]) => defId.startsWith("meditative-") && (CATALOG[defId]?.printedRarity ?? CATALOG[defId]?.rarity) === "Mythic");
+    // Meditative's Mythics' entrances read their lead (R3405001), and Core's Heroic Power's (R3402001); the older
+    // ones never needed to.
+    const mythics = ENTERING.filter(
+      ([defId]) => (defId.startsWith("meditative-") || defId === "core-098") && (CATALOG[defId]?.printedRarity ?? CATALOG[defId]?.rarity) === "Mythic",
+    );
     expect(mythics.map(([defId]) => defId).sort()).toEqual(
-      ["meditative-039-5", "meditative-049", "meditative-049-1", "meditative-049-2", "meditative-049-3", "meditative-071", "meditative-071-1", "meditative-097-9"].sort(),
+      ["core-098", "meditative-039-5", "meditative-049", "meditative-049-1", "meditative-049-2", "meditative-049-3", "meditative-071", "meditative-071-1", "meditative-097-9"].sort(),
     );
     const hold = 1000;
     const D = hold + ANIMATIONS.summoned.durationMs;

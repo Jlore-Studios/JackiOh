@@ -31,11 +31,14 @@ const DIAMOND_AT: FxPoint = { x: 0.5, y: 0.2 };
 
 const HOLY = FLAVOR_LOOKS.Holy;
 
-export const heroicPedestal: Entrance = ({ D, tgt, intensity: i }) => {
+export const heroicPedestal: Entrance = ({ D, tgt, intensity: i, leadMs }) => {
   const at = tid(tgt);
-  const slam = frac(FX_SLAM_AT, D);
+  // R3405000: a Mythic's entrance starts after its entry's hold, so its rotunda takeover plays first and the
+  // pedestal lands as it ends.
+  const lead = leadMs ?? 0;
+  const slam = lead + frac(FX_SLAM_AT, D - lead);
   return [
-    raysCue(D, "holy", at, 0),
+    raysCue(D, "holy", at, lead),
     ringCue(D, "holy", at, slam),
     { ...tunedBurst(i, "holy", at, "area", slam, TUNING.light), colors: HOLY.colors },
     tunedBurst(i, "sparkle", tid(tgt, DIAMOND_AT), "point", slam, TUNING.diamond),
