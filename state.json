@@ -17784,7 +17784,7 @@
       "verdict_rounds": 1
     },
     "3460": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "medium",
       "cross_rounds": 1,
@@ -17816,17 +17816,17 @@
           "where": "apps/web/src/packs/PackOpening.tsx:586"
         }
       ],
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-09T03:47:06Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "42556899208",
+      "run_id": "pending:9c971e11-1794196125",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "cross-review",
-      "started_at": "2026-11-09T03:31:44Z",
+      "started_at": "2026-11-09T03:49:15Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18120,9 +18120,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T03:32:25Z",
+    "at": "2026-11-09T03:49:15Z",
     "url": "",
-    "what": "revise #3461 on claude-8"
+    "what": "revise #3460 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-09T03:39:04Z",
