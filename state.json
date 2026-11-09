@@ -18495,12 +18495,11 @@
     "what": "revise #3462 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-09T11:09:40Z",
+    "at": "2026-11-09T11:17:41Z",
     "notes": [
-      "#3406 is held for `claude-5` until 05:10 (5-hour usage is 37%, too close to its 40% cap to start a long run (it starts under 35%))",
-      "started build #3406 on claude-5 (run 42606955825)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered revise #3462 on claude-4 (run 42599837265): approved",
+      "started revise #3462 on claude-4 (run 42608143126)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19206,7 +19205,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T11:09:40Z",
+  "loop_tick": "2026-11-09T11:17:41Z",
   "machine_disk": {
     "issue": null,
     "reading": {
