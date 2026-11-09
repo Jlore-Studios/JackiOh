@@ -13208,11 +13208,8 @@
       "run_id": "42448841031",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-08T04:57:18Z",
-      "strike_log": [
-        "`claude-1` (claude, opus) rejected it: `spec/rulings/R3391000.md:39`: The ruling says a part a brief names that R3390000's pass already drew is that pass's part, 'not a second of the same name or kind",
-        "`claude-3` (claude, opus) rejected it: `task`: The pull request's per-card verdict table and its 'What changed' and 'Decisions' sections describe the code as it was before the last revise"
-      ],
-      "strikes": 2,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": []
     },
     "3392": {
