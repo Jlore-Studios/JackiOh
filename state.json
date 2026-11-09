@@ -15586,17 +15586,8 @@
       }
     },
     "3476": {
-      "action": "plan",
-      "asks": [
-        "c:6741712749"
-      ],
-      "build_next": {
-        "from_run": "42630242984",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-09T14:17:36Z",
-        "until": "2026-11-09T14:47:36Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-09T14:17:23Z",
         "difficulty": "medium",
@@ -15615,10 +15606,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "nding/3476.md` with one line: `**[[R3476000]] <title> (issue #3476, 2026-11-09; amends [[R2706000]] and [[R2972000]]):** \u2026`, in the style of `spec/pending/3471.md`.\n- 3. **Spec, section + old rulings.** In `spec/15-dungeon-run.md` `\u00a715.6`, replace \"Leaving a fight unfinished asks first: it is dealt again from its seed \u2026\" with words meaning the fight waits where it stood and is resumed when the run starts it again, linking `[[R3476000]]` and keeping `[[R2972000]]\u2026\n- 4. **Shared, save** (`crates/shared/src/host/practice/host.rs`, `save()`): remove the `is_run` early return so a run fight emits `PracticeOutput::Save` exactly like a free game (`Some` in progress, `None` when over, which clears the slot); keep the lesson skip. Update the function comment and the `\u2026\n- 5. **Shared, resume** (same file, `resume()`): after the existing seed/seat/difficulty/sandbox checks, refuse when `asked.is_run() != save.config.is_run()` (\"the saved game is not the one the page remembers\" family of messages). Both-run resumes then rely on the existing seed check, which identifie\u2026\n- 6. **Web, store slots** (`apps/web/src/practice/saveStore.ts`): add `RUN_FIGHT_KEY = \"runFight\"` in the same `STORE`; extend `PracticeSaveStore` with `readRunFight()`/`writeRunFight()`; implement in `memorySaveStore` (second field) and `indexedDbSaveStore` (second in-memory copy, read at boot, writ\u2026\n- 7. **Web, driver routing** (`apps/web/src/practice/driver.ts`): add an `isRun: boolean` parameter to `carryOut`, computed by callers from `machine.config.run` (`begin` after assignment, `step` from `current()`); a `Save` output goes to `writeRunFight` when run, `write` otherwise. In the `\"resume\"` \u2026\n- 8. **Web, controller guard** (`apps/web/src/practice/controller.ts`, `begin()`): change the resume-failure line to `if (body.type === \"resume\" && config.run === undefined) clearPracticeResume();` so a missed run resume never wipes the free game's page marker. Update the `R668`/`R2706000` comments t\u2026\n- 9. **Web, fight screen** (`apps/web/src/dungeon/fight/FightScreen.tsx`): build the start config once (`seed: fight.seed`, `difficulty: FIGHT_DIFFICULTY`, `humanSeat: \"p1\"`, `deck: { kind: \"random\" }`, `run: fight`). When `restart === 0`, `void next.resume(config).then(() => { if (next.getState().ph\u2026\n- 10. **Web, dialog + store + i18n.** `ConfirmLeaveFight.tsx`: description becomes a new `t()` sentence meaning the fight waits and picks up where left (e.g. \"It waits here and picks up where you left it.\"), header comment updated. `apps/web/src/i18n/zh-CN.json`: add the matching translation (keep th\u2026\n- 11. **Tests, shared** (`crates/shared/tests/practice.rs`, real catalog, `Session` helper): add `r3476000_a_run_fight_is_saved_and_resumes_to_the_same_state_and_ai_stream` (start `run_config`, answer mulligans, play ~24 mixed actions like the `r668` fold test, take `save`, `PracticeHost::resume`, as\u2026\n- 12. **Tests, web driver** (`driver-run.test.ts`): add `it(\"R3476000 a run fight played three turns resumes on its turn with its board, hands and log\", { timeout: 120_000 })`: start `FIGHT` on a `memorySaveStore` that already holds a free save; drive three turns (answer mulligans, loop `aiStep`/lega\u2026\n- 13. **Tests, web page** (`controller.test.ts`): add `it(\"R3476000 a run fight's missed resume and start leave practice's memory alone\")`: with a stored free resume and last board, `resume(FIGHT)` answered `failed` leaves both stored values untouched and a following `start(FIGHT)` sends `{ type: \"st\u2026\n- 14. **Checks.** Run `cargo test -p jackioh-shared --test practice r3476000`, the `r668`/run-fight tests in the same file, `cargo fmt --check`, `cargo clippy -p jackioh-shared --all-targets -- -D warnings`, `pnpm --dir apps/web test` for each touched test file, and `cargo jackioh spec check`.\n- ## Done when\n- - [ ] A 3-turn run fight resumes on its turn with identical board/hands/log, hash, and next AI action.\n- - [ ] Free and run saves never overwrite each other in either direction.\n- - [ ] Finished fight, abandoned run, and new run's first fight find no kept fight.\n- - [ ] No response to the page carries the fight's log (extended rule-7 assertion).\n- - [ ] Leave dialog shows the new words (`FightScreen.test.tsx` green, incl. `zh-CN`).\n- - [ ] Try again still deals fresh from the seed.\n- - [ ] `cargo jackioh spec check`, touched crate/web tests, `fmt`, and `clippy` all pass.\n- ## Risks\n- - **Determinism:** resume reuses `R668`'s nonce/hash/cursor fold unchanged; the mirrored-play assertions in both shared and web tests catch drift.\n- - **Hidden information:** the save never crosses to the page (same `Save` output, new slot); `clearStoredRunFight` deletes without reading; `expectRule7`-style and `nonce` assertions guard it.\n- - **Stale same-seed saves:** a daily run abandoned and restarted the same day shares fight seeds, so abandon/start clear explicitly rather than relying on mismatch-drop.\n- - **Cross-tab:** a free game in another tab writes the free slot only; slots never collide.\n- - **No IndexedDB:** resume is refused and the fight deals fresh, same as today; no new failure mode.\n- - **Flash of the stopped screen** between a refused resume and the fallback start is possible but transient; the effect issues both before paint in the common case.\n- ## Open questions\n- - The reversal of `R2706000`'s \"never saved\" sentence needs the owner's agreement; if declined, this plan does not work.\n- - The exact leave-dialog wording is a proposal; rewording is safe (keep it inside `t()` with a `zh-CN` entry, and keep the test's assertion verbatim-equal).\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-3476 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-3476/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-09T13:58:47Z",
       "owner_why": "it plans it",
@@ -15631,12 +15621,14 @@
       "provider": "muse",
       "queued_at": "2026-11-09T13:51:40Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "42630242984",
+      "run_id": "pending:cf89c055-1794234099",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-09T13:58:47Z",
+      "started_at": "2026-11-09T14:22:19Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6741712749"
+      ]
     },
     "3477": {
       "action": "plan",
@@ -15921,9 +15913,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T14:21:22Z",
+    "at": "2026-11-09T14:22:19Z",
     "url": "",
-    "what": "build #3478 on muse"
+    "what": "build #3476 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T13:55:11Z",
