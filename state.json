@@ -36899,6 +36899,9 @@
     "readings": [
       "2026-11-09T05:54:44Z,claude-3,stream,call,42565812608,4,2026-11-09T10:10:00Z,,,allowed,,,",
       "2026-11-09T05:56:00Z,claude-3,stream,call,42565812608,5,2026-11-09T10:10:00Z,,,allowed,,,"
+    ],
+    "runs": [
+      "2026-11-09T05:57:37Z,42565812608,claude-3,opus,review,3464,hard,approved,,3.1,30,9656,2036370,1.6768,4,5,,,60.4,claude-3,none,,1"
     ]
   },
   "version": 1
