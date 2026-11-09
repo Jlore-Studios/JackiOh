@@ -17934,15 +17934,6 @@
       "failures": 0,
       "feedback_since": "2026-11-09T02:39:23Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-09T03:23:08Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\n\n- Build run 2 (2026-11-09, opus), base 6e9b0e5148. DONE: all batches A-D built (run 1) + run 2's fix of cues.ts's unused FX_MAX_TAIL_MS import (eslint).\n- Every check passed in run 2: fmt, clippy, all-features cargo check, workspace cargo test (wire clean), spec/patches/catalog, classify --claims, typecheck, eslint, plan's vitest list, harness web tests, py_compile.\n- Left: only the final report. Dead end: typecheck + eslint at once got OOM-killed (run 1); run them one at a time.\n\n## Log\n- run 2: rewrote State; verifying diff and running checks.\n- run 2: diff read, matches plan. Building wasm (bg), then fmt/typecheck/eslint one at a time.\n- run 2: wasm built; typecheck exit 0. Next eslint (alone).\n- run 2: eslint found cues.ts's unused FX_MAX_TAIL_MS import; removed. Re-running eslint on fx.\n- run 2: eslint exit 0. Running plan's vitest list.\n- run 2: plan's vitest list: 18 files, 693 tests passed. Running workspace clippy.\n- run 2: clippy exit 0. Running spec/patches/catalog checks.\n- run 2: spec/patches/catalog/classify --claims all exit 0. Running workspace cargo test (bg).\n- run 2: report evidence gathered (greps vs origin/main; spot-checked flagged items). Waiting on cargo test.\n- run 2: report draft = plan's table (A Rust: rarity_word+CHINESE_RARITIES row, reader_name, power_title, decide_at_budget, duos seats_to_act, BotRow::rating_on, wasm's jackioh-engine dep, is_boss called; B web: FaceDef, isUnitView, viewFaces, putTrio, deleteTrio; C merges: isBoardNamesOption, ghostCue/bannerCue/viewportCenter, stage tid/frac, atOf, sameCard, isNumberOrNull, requestQueue, figureKit DEGREES/between, browserStorage; D: write_lines, Prepared.turn) + Keep + For a person lists from the plan, spot-checked.\n- run 2: cargo test workspace exit 0 (62 binaries ok), wire clean. Running step-9 all-features check.\n- run 2: all-features cargo check exit 0, 0 warnings. Running harness web tests (--changed origin/main).\n- run 2: harness web tests: 373 files, 7073 passed, 109 skipped (pre-existing). Re-running typecheck after the cues.ts edit.\n- run 2: typecheck exit 0 again; writing the final report.\n",
-        "provider": "claude-4",
-        "reason": "built and checked; its own review run, on this subscription, reviews it next",
-        "trail": ""
-      },
       "interruptions": 0,
       "issue": 3423,
       "kind": "review",
