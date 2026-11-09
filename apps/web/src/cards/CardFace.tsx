@@ -136,7 +136,7 @@ import { StarshipPieces } from "./StarshipPieces.tsx";
 import { setMarkOf, watermarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
 import { pixelNameUri } from "./pixelName.ts";
-import { useCardTilt, type TiltMode } from "./tilt.ts";
+import { useCardTilt, type TiltBox, type TiltMode } from "./tilt.ts";
 import {
   NORMAL_LOOK,
   VERSION_EXTENDED_ART_ID,
@@ -189,6 +189,11 @@ export type CardFaceProps = {
    * "off" by default, so a face in a list or a picker never tilts.
    */
   tilt?: TiltMode;
+  /**
+   * R3344001: with `tilt="window"`, the box of the card the face is anchored to (the hover preview's anchor): the
+   * pointer is on it, never over the face, so the pose is read against it. Without it a window face reads its host's box.
+   */
+  tiltAnchor?: TiltBox;
 };
 
 /** The art window's shape follows the card type, as Hearthstone's minion oval and spell frame do. */
@@ -332,7 +337,7 @@ export function CardFace({
   ascentLevel,
   worn = false,
   ownHand = false, onBoard = false, gemDrain = null,
-  tilt = "off", }: CardFaceProps): ReactElement {
+  tilt = "off", tiltAnchor }: CardFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides;
@@ -417,7 +422,7 @@ export function CardFace({
   const depth = wantsDepth && !flat;
   const shape: ArtShape = fullArt || extended || artFirst ? "full" : ART_SHAPE[face.type];
   const breaks = depth && breaksFrame(rarity, ownHand, tilt);
-  useCardTilt(faceRef, depth ? tilt : "off", !flat);
+  useCardTilt(faceRef, depth ? tilt : "off", !flat, tiltAnchor);
   // R1295000: what the face wears, judged by the rarity its frame shows as its rarity foil is.
   // R1956000: a grid's faces hold theirs still, so the slots stay with the card a player opens.
   const foilMoves = settings.animatedFoil && !(fxOff && wantsDepth);
