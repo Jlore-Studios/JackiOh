@@ -13,6 +13,8 @@
 // (`cardPicksSync.ts`, `subscribeCardPickWrites`); it keeps what it is given, and the wear path and
 // `useCanEquip` apply ownership. A Mythic face wearing its rarity foil (R2721000) wears no cosmetic
 // foil, and a Radiant face no foil, finish or border.
+// R3335000: the store also holds the four Starship picks (`STARSHIP_SLOT_KINDS`), which a launched Starship wears by
+// the same rule (`useStarshipLook`). R3335002: a Fleet track reward or a Jlorious one is earned only (`earnedOnly`).
 
 import {
   createContext,
@@ -31,6 +33,7 @@ import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
 import { useOsReducedMotion } from "../game/useOsReducedMotion.ts";
 import { useSetting } from "../settings/store.ts";
 import type { SeatLoadout } from "./loadouts.ts";
+import type { StarshipLook } from "./art/starshipLooks.ts";
 import { foilFor } from "./frame.ts";
 import type { FaceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, useCardSettings } from "./settings.ts";
@@ -38,13 +41,17 @@ import { getStored, localStorageOrNull, setStored } from "../net/storage.ts";
 import { ANIMATED_ART_ID_PREFIX, AUGMENT_ID_PREFIX, FULL_ART_ID_PREFIX, VERSION_ID_PREFIX, isOfferedId, offeredOn } from "./versions.ts";
 
 export { ANIMATED_ART_ID_PREFIX };
+export type { StarshipLook };
 
 export type CosmeticKind = (typeof COSMETIC_KINDS)[number];
 /** R1297000: the kinds a card wears, and the kinds a deck carries (the registry's order). */
 export const CARD_SLOT_KINDS = ["foil", "finish", "border"] as const satisfies readonly CosmeticKind[];
 export const DECK_SLOT_KINDS = ["table", "field", "cardBack"] as const satisfies readonly CosmeticKind[];
+/** R3335000: the kinds that dress every Starship the account launches, account-wide (the registry's order). */
+export const STARSHIP_SLOT_KINDS = ["starshipHull", "starshipLivery", "starshipTrail", "starshipPieceSkin"] as const satisfies readonly CosmeticKind[];
 export type CardSlotKind = (typeof CARD_SLOT_KINDS)[number];
 export type DeckSlotKind = (typeof DECK_SLOT_KINDS)[number];
+export type StarshipSlotKind = (typeof STARSHIP_SLOT_KINDS)[number];
 export type Cosmetic = (typeof COSMETICS)[number];
 export type CosmeticId = Cosmetic["id"];
 /** A pick per kind. A stored pick is any short text, an id this client may not know among them. */
@@ -71,7 +78,24 @@ export const DEFAULT_CARD_COSMETICS: Readonly<Record<CosmeticKind, CosmeticId>> 
   table: defaultOf("table"),
   field: defaultOf("field"),
   cardBack: defaultOf("cardBack"),
+  starshipHull: defaultOf("starshipHull"),
+  starshipLivery: defaultOf("starshipLivery"),
+  starshipTrail: defaultOf("starshipTrail"),
+  starshipPieceSkin: defaultOf("starshipPieceSkin"),
 });
+
+/**
+ * R3335002: whether a cosmetic is earned only, never bought: the Jlorious one's (R2755000) and a Fleet track reward's
+ * (`track`). No roll, pack, token or Chase Shard offers one; the server refuses it (CLAUDE.md rule 7), and the client
+ * offers none.
+ */
+export function earnedOnly(cosmetic: {
+  readonly kind: string;
+  readonly jlorious?: boolean | undefined;
+  readonly track?: string | null | undefined;
+}): boolean {
+  return cosmetic.jlorious === true || (cosmetic.track !== undefined && cosmetic.track !== null);
+}
 
 /** `id` when it is one of `kind`'s, and the kind's default otherwise: never an error. */
 export function resolveCosmetic(kind: CosmeticKind, id: unknown): CosmeticId {
@@ -597,6 +621,45 @@ export function ownsAccountCosmetic(owned: AccountOwnership, id: string): boolea
 export function useOwnsAccountCosmetic(): (id: string) => boolean {
   const owned = useContext(AccountOwnershipContext);
   return useCallback((id) => ownsAccountCosmetic(owned, id), [owned]);
+}
+
+// R3335000: the Starship slots, account-wide picks a launched Starship wears (cards/art/starshipLooks.ts).
+
+/**
+ * The Starship look a face wears: when `worn` (the viewer's own card), the account's picks, each one `owns` refuses or
+ * an id this client does not know its kind's default (R1833000); else `seat`'s, the frozen loadout of the seat that
+ * owns the copy (R1834004, which the server judged, R1834001), each unknown id its default; else every default.
+ */
+export function wornStarshipLook(
+  worn: boolean,
+  account: CardCosmetics,
+  seat: CardCosmetics | null,
+  owns: (cosmeticId: string) => boolean = () => true,
+): StarshipLook {
+  const pickOf = (kind: StarshipSlotKind): CosmeticId => {
+    if (worn) {
+      const id = resolveCosmetic(kind, account[kind]);
+      return owns(id) ? id : DEFAULT_CARD_COSMETICS[kind];
+    }
+    return seat === null ? DEFAULT_CARD_COSMETICS[kind] : resolveCosmetic(kind, seat[kind]);
+  };
+  return {
+    starshipHull: pickOf("starshipHull"),
+    starshipLivery: pickOf("starshipLivery"),
+    starshipTrail: pickOf("starshipTrail"),
+    starshipPieceSkin: pickOf("starshipPieceSkin"),
+  };
+}
+
+/**
+ * R3335000: the Starship look a face wears (`wornStarshipLook`): the account's owned picks when `worn`, below a
+ * `TheirCopy` that seat's, else the defaults. Its hooks run on every face.
+ */
+export function useStarshipLook(worn: boolean): StarshipLook {
+  const account = useCosmetics();
+  const owns = useOwnsAccountCosmetic();
+  const theirs = useContext(TheirCopyContext);
+  return wornStarshipLook(worn, account, theirs?.seat ?? null, owns);
 }
 
 // The cap on moving foils. A face that wants its foil to move claims a slot when it mounts and

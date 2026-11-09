@@ -14,6 +14,8 @@
 //! - [`bars`]: the token bars (§14.5; R1305000, R1953000, R2728000): the points a slot adds, a bar settled
 //!   into the tokens it pays, the cosmetic cycle's steps, and a dev account's fill of a bar (R1310003).
 //! - [`track_rewards`]: what reaching a set-track level pays (§14.7, #1302).
+//! - [`fleet`]: the Fleet track (§14.15, #3335): what a recorded game pays it, under its daily cap, and the
+//!   cosmetic each level pays (R3335001).
 //! - [`rewards`]: what a finished game pays (§14.7 to §14.9, R1483000, R1302006): [`rewards::pay_game`] over the
 //!   records the store read, the smaller [`rewards::pay_xp`], [`rewards::starting_rewards`] and
 //!   [`rewards::complete_quest`], and the rates, the cap and the track curve they decide with.
@@ -27,6 +29,7 @@
 pub mod bars;
 pub mod boundary;
 pub mod cosmetic_pack;
+pub mod fleet;
 pub mod ledger;
 pub mod math;
 pub mod open;

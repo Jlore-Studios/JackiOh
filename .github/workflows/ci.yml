@@ -1172,13 +1172,13 @@ jobs:
   # Only on a dispatch with `e2e: all`, as super.yml's `component` job runs it: the 10-unit/10-backrow
   # fixture board mounted in a real browser (BUILD M5-T1's layout at 1280x720 and 390x844). No client
   # build and no server: the component dev server compiles apps/web/src itself and only needs the
-  # WASM module.
+  # WASM module. The same time as super.yml's (#3439).
   e2e-component:
     name: e2e component (chrome)
     needs: [changes, web-build]
     if: ${{ needs.changes.outputs.full == 'true' && inputs.e2e == 'all' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup

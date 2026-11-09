@@ -6,6 +6,7 @@
 import { CATALOG } from "@jackioh/cards";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { ART_PLANES } from "../cards/art/pictures.ts";
 import { TAKEOVER_ART_MAX_SHAPES } from "./constants.ts";
 import { mountDomEffect } from "./dom.ts";
 import { TAKEOVER_TINTS, takeoverLookOf } from "./takeover.ts";
@@ -77,8 +78,9 @@ describe("R3402000 a Core Mythic's takeover art", () => {
     const root = document.createElement("div");
     document.body.appendChild(root);
     const at = { x: 100, y: 200, width: 80, height: 120 };
-    const cue = (look: TakeoverLook): FxDomCue => ({
+    const cue = (look: TakeoverLook): Extract<FxDomCue, { kind: "takeover" }> => ({
       kind: "takeover",
+      stage: null,
       look,
       tint: TAKEOVER_TINTS[look],
       at: { kind: "testid", testid: "card-u1" },
@@ -101,6 +103,11 @@ describe("R3402000 a Core Mythic's takeover art", () => {
     expect(rotunda?.textContent).toBe("");
     expect(rotunda?.outerHTML).not.toMatch(/card-u1|core-/);
     rotunda?.remove();
+
+    // R3345000: a set piece's full-art stage sits over the dark and under the scene, as under every look's own art.
+    const staged = mountDomEffect(root, { ...cue("rotunda"), stage: { planes: ART_PLANES.map(() => "none"), name: "", face: "ink" } }, { at })?.el;
+    expect([...(staged?.children ?? [])].map((child) => child.className).slice(0, 3)).toEqual(["fx-takeover-dark", "fx-takeover-stage", "fx-takeover-art"]);
+    staged?.remove();
 
     for (const look of NONE) {
       const plain = mountDomEffect(root, cue(look), { at })?.el;

@@ -12,10 +12,14 @@
 //
 // The order: merge-queue builds first, the oldest first (the queue lands them in that order, and
 // each holds up every pull request behind it), and each as long as fewer than `QueueLimit` of
-// GitHub's runners' jobs are queued for one; then pull requests' runs, the oldest first, one a
-// tick (`PullsPerTick`), each while fewer than `PullLimit` are queued. A run counts for `RunJobs`
-// jobs from its approval on, within the tick, since it asks for most of its jobs only once its
-// first has run. Any run that has waited `MaxWaitQueue` (a merge-queue build) or `MaxWaitPull` (a
+// GitHub's runners' jobs are queued for one; then pull requests' runs, one a tick
+// (`PullsPerTick`), each while fewer than `PullLimit` are queued: a ready pull request's before a
+// draft's (a ready one's CI is all that keeps it out of the merge queue, while a draft's runs beside
+// its own review run), each the oldest first. A CI run asks for most of its jobs only once its first,
+// `FirstJob`, has run, about a minute after it starts, so until then it counts for `RunJobs` queued
+// jobs: from its approval on, and on every later tick until that job has finished (`Queued`), so
+// runs approved a tick apart are not all let in before the first of them asks for its runners. Any
+// run that has waited `MaxWaitQueue` (a merge-queue build) or `MaxWaitPull` (a
 // pull request's) starts whatever is queued, so the gate only orders and delays CI, never starves
 // it; and when the jobs queued cannot be read, every waiting run starts. The status loop runs a
 // tick every `--gate-every` seconds, and every sweep runs one too (bot-commands' schedule among
@@ -59,8 +63,14 @@ var PullLimit = 6
 // PullsPerTick is how many pull requests' runs start in one tick at most.
 var PullsPerTick = 1
 
-// RunJobs is how many queued jobs a run counts for from its approval on, within the tick.
-var RunJobs = 12
+// RunJobs is how many queued jobs a CI run counts for from its approval until its `FirstJob` has
+// finished: the jobs a full run asks for at once when it does, its builds and its Rust test groups
+// (20 of a merge-queue build's on 2026-11-06).
+var RunJobs = 20
+
+// FirstJob is the name of ci.yml's `changes` job, the one every other job needs: until it has
+// finished, a CI run has asked for none of its other jobs.
+var FirstJob = "what the change touches"
 
 // MaxWaitQueue and MaxWaitPull: a run that has waited this long starts whatever is queued.
 var (
@@ -91,10 +101,20 @@ func tick(ctx *hctx.Context) string {
 	if len(waiting) == 0 {
 		return ""
 	}
+	drafts := Drafts(ctx, waiting)
+	rank := func(run *pyjson.Object) int {
+		switch {
+		case isQueue(run):
+			return 0
+		case drafts[py.OrStr(run.Get("head_branch"), "")]:
+			return 2
+		}
+		return 1
+	}
 	sort.SliceStable(waiting, func(i, j int) bool {
-		qi, qj := isQueue(waiting[i]), isQueue(waiting[j])
-		if qi != qj {
-			return qi
+		ri, rj := rank(waiting[i]), rank(waiting[j])
+		if ri != rj {
+			return ri < rj
 		}
 		return py.OrStr(waiting[i].Get("created_at"), "") < py.OrStr(waiting[j].Get("created_at"), "")
 	})
@@ -146,7 +166,9 @@ func tick(ctx *hctx.Context) string {
 }
 
 // Queued is how many jobs are queued for one of GitHub's own runners now (a self-hosted runner's
-// queue is its box's), from the runs going and queued, and whether they could be read.
+// queue is its box's), from the runs going and queued, and whether they could be read. A CI run
+// whose `FirstJob` has not finished counts for `RunJobs` more: it has not asked for the rest of its
+// jobs yet, and will within a minute or so.
 func Queued(ctx *hctx.Context) (int, bool) {
 	var runs []*pyjson.Object
 	if _, failed := herr.Catch[*herr.GitHubError](func() {
@@ -160,13 +182,48 @@ func Queued(ctx *hctx.Context) (int, bool) {
 		if _, failed := herr.Catch[*herr.GitHubError](func() { jobs = ctx.GH.ListJobs(run.Get("id"), true) }); failed {
 			return 0, false
 		}
+		first := false // its FirstJob has finished
 		for _, job := range jobs {
 			if job.Str("status") == "queued" && hosted(job) {
 				count++
 			}
+			if job.Str("name") == FirstJob && job.Str("status") == "completed" {
+				first = true
+			}
+		}
+		if isCI(run) && !first {
+			count += RunJobs
 		}
 	}
 	return count, true
+}
+
+// Drafts is the head branches of the open pull requests that are drafts, read only when two or more
+// of the `waiting` runs are pull requests' (it orders those alone); empty when they could not be
+// read, so every pull request then counts as ready.
+func Drafts(ctx *hctx.Context, waiting []*pyjson.Object) map[string]bool {
+	found := map[string]bool{}
+	pulls := 0
+	for _, run := range waiting {
+		if !isQueue(run) {
+			pulls++
+		}
+	}
+	if pulls < 2 {
+		return found
+	}
+	var open []*pyjson.Object
+	if _, failed := herr.Catch[*herr.GitHubError](func() { open = ctx.GH.ListPulls("open", "", 100) }); failed {
+		return found
+	}
+	for _, pull := range open {
+		if pull.Truthy("draft") {
+			if ref := py.OrStr(pull.Obj("head").Get("ref"), ""); ref != "" {
+				found[ref] = true
+			}
+		}
+	}
+	return found
 }
 
 // approve approves a run's wait in `Environment`, saying why in the approval; "" when it did,
@@ -196,6 +253,13 @@ func approve(ctx *hctx.Context, run *pyjson.Object, reason string) string {
 }
 
 func isQueue(run *pyjson.Object) bool { return pyjson.Equal(run.Get("event"), "merge_group") }
+
+// isCI is whether a run is one of `Workflow`'s: the API names its file in `path`
+// (`.github/workflows/ci.yml`).
+func isCI(run *pyjson.Object) bool {
+	return strings.HasSuffix(py.OrStr(run.Get("path"), ""), "/"+Workflow) ||
+		pyjson.Equal(run.Get("workflow"), Workflow)
+}
 
 // describe names a run: the merge queue's build of a pull request, or a pull request's branch.
 func describe(run *pyjson.Object) string {

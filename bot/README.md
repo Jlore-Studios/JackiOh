@@ -1242,10 +1242,16 @@ runner, and start in order, once there is room
   pace rather than stopping CI. A tick counts the jobs queued for one of GitHub's own runners (the
   bot's boxes' queues are theirs) and approves:
   - merge-queue builds first, the oldest first, each while fewer than `QueueLimit` (16) are queued;
-  - then pull requests' runs, the oldest first, one a tick (`PullsPerTick`), each while fewer than
-    `PullLimit` (6) are queued;
-  - a run approved counts for `RunJobs` (12) for the rest of the tick, since it asks for most of
-    its jobs only once its first has run;
+  - then pull requests' runs, one a tick (`PullsPerTick`), each while fewer than `PullLimit` (6)
+    are queued: a ready pull request's before a draft's, each the oldest first (a ready one's CI is
+    all that keeps it out of the merge queue, while a draft's runs beside its own review run; the
+    open pull requests are read once a tick, and only when two or more pull requests' runs wait);
+  - a CI run counts for `RunJobs` (20, the builds and Rust test groups a full run asks for at once)
+    from its approval until its first job (`FirstJob`, `what the change touches`) has finished, on
+    every tick in between: it asks for the rest of its jobs only then, about a minute after it
+    starts, and before #3292's follow-up the gate forgot it after its own tick, so runs approved a
+    tick apart all got in before the first of them asked for its runners. `main`'s CI counts the
+    same way, as it takes runners too;
   - and any run that has waited `MaxWaitQueue` (10 minutes, a queue build) or `MaxWaitPull` (30, a
     pull request's) whatever is queued, and every waiting run when the jobs queued cannot be read:
     the gate orders and delays CI, and never starves it.
