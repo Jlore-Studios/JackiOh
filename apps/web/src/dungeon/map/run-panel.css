@@ -1,0 +1,68 @@
+/* The dungeon run's Your run panel (#3501): the HUD's button, and the Dialog it opens (Dialog.tsx) with the
+   seed, the deck, the relics, the blessings and the curses. Spacing, radii, shadows, type and the touch
+   target are the tokens' (spacing.css, surfaces.css, typescale.css, index.css). The scrim scrolls a panel
+   taller than the screen, so the panel has no height of its own; on a phone the deck grid fits three
+   columns and nothing runs past the panel's edge. */
+
+.dungeon-run-hud__open {
+  min-height: var(--hit-min);
+}
+
+.dialog.dungeon-run-panel {
+  align-items: stretch;
+  gap: var(--space-6);
+  width: min(720px, 100%);
+  padding: var(--space-7);
+  overflow-x: hidden;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  text-align: start;
+}
+
+.dialog.dungeon-run-panel .dialog__title {
+  padding-inline: 0 var(--space-11);
+  font-size: var(--type-xl);
+}
+
+.dungeon-run-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.dungeon-run-panel__heading {
+  margin: 0;
+  font-size: var(--type-md);
+}
+
+.dungeon-run-panel__seed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.dungeon-run-panel__seed-code {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.dungeon-run-panel__deck {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dungeon-run-panel__deck > li {
+  min-width: 0;
+}
+
+.dungeon-run-panel .dungeon-run-passive-row {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
