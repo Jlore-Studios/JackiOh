@@ -16872,6 +16872,9 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-09T17:26:31Z",
+      "requeued": {
+        "19d085e52df1b06fcf49b64486f97f8a39195a91": "a52cde4f26605370688a2e096e32ed236da1787d"
+      },
       "run_id": "42664880941",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
