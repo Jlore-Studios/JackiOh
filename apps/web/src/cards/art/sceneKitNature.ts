@@ -5,7 +5,7 @@
 // light (a shockwave, a tornado, flames, a fireball, a ribbon of light, a thought bubble, spores, snow,
 // static, bubbles, smoke, rain, dust, a sun, falling petals). R3396000: the Classic+ Alt art scenes (#3396)
 // added a clump of bamboo, a cactus and a fox. R3397000: the Meditative+ and Training Grounds Alt art scenes
-// (#3397) added a mountain goat, a deer, a paddling duck, a halved melon and a heap of walnuts. sceneKit.ts
+// (#3397) added a mountain goat, a deer, a paddling duck and a heap of walnuts. sceneKit.ts
 // spreads the table into `SCENE_KIT`. Each part keeps the kit's rules: one to twelve filled shapes drawn in
 // its own frame (`local`), varied by the scene's stream alone, every colour a palette name out of Radiant's
 // gold window (food's golds are brass, butter is slate), a glow a stack of translucent shapes, and no two
@@ -895,39 +895,6 @@ function pancakes(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
-/** R3397000: a melon halved on the anchor, its cut face toward the viewer (a green rind, main, round red flesh and black seeds), and one or two slices beside it the way it faces; about 16 wide and 5 tall at scale 1. */
-function melon(at: PartPlace, rng: Rng): KitShape[] {
-  const f = local(at);
-  const half = (r: number, lift: number): string => `M${f.p(-r, -lift)}Q${f.p(-r, -r - lift)} ${f.p(0, -r - lift)}Q${f.p(r, -r - lift)} ${f.p(r, -lift)}Z`;
-  const slices = whole(rng, 1, 2);
-  let flesh = "";
-  let rind = "";
-  let pips = "";
-  for (let k = 0; k < slices; k += 1) {
-    const sx = 7.4 + k * 4.6 + between(rng, -0.3, 0.3);
-    const tip = between(rng, 3, 3.6);
-    flesh += `M${f.p(sx - 1.9, -0.5)}Q${f.p(sx, 0.2)} ${f.p(sx + 1.9, -0.5)}L${f.p(sx + 0.2, -tip)}Z`;
-    rind += `M${f.p(sx - 2.1, -0.4)}Q${f.p(sx, 0.4)} ${f.p(sx + 2.1, -0.4)}Q${f.p(sx, 1)} ${f.p(sx - 2.1, -0.4)}Z`;
-    pips += f.ellipse(sx - 0.4, -1.4, 0.18, 0.28) + f.ellipse(sx + 0.5, -1.2, 0.18, 0.28);
-  }
-  let seeds = "";
-  for (const [angle, reach] of [[200, 2.8], [235, 2.4], [270, 2.9], [305, 2.4], [340, 2.8], [250, 1.3], [290, 1.3]] as const) {
-    const [sx, sy] = onEllipse(0, -0.2, reach, reach, angle + between(rng, -6, 6));
-    seeds += f.ellipse(sx, sy, 0.2, 0.32);
-  }
-  return [
-    shape(f.ellipse(2, 0.3, 9, 0.7), "black", 0.2),
-    shape(half(5, 0), "green-700", 1, MAIN_INKED),
-    shape(half(4.55, 0.1), "lime-200", 1),
-    shape(half(4.15, 0.2), "red-500", 1),
-    shape(seeds, "black", 0.85),
-    shape(rind, "green-700", 1, INKED),
-    shape(flesh, "red-500", 1, INKED),
-    shape(pips, "black", 0.85),
-    shape(f.band([[-4.2, -2.6], [-2.6, -4.3]], 0.35), "white", 0.3),
-  ];
-}
-
 /** R3397000: a heap of walnuts on the anchor, two rows of round wrinkled shells (main) with their seams, and cracked half-shells and kernels on either side; about 18 wide and 5 tall at scale 1. */
 function walnuts(at: PartPlace, rng: Rng): KitShape[] {
   const f = local(at);
@@ -1329,8 +1296,7 @@ export const NATURE_KIT = {
   papaya: { category: "objects", draw: papaya },
   basket: { category: "objects", draw: basket },
   pancakes: { category: "objects", draw: pancakes },
-  // R3397000: the Meditative+ and Training Grounds Alt art scenes' melon and walnuts.
-  melon: { category: "objects", draw: melon },
+  // R3397000: the Meditative+ and Training Grounds Alt art scenes' walnuts.
   walnuts: { category: "objects", draw: walnuts },
   shockwave: { category: "weather", draw: shockwave },
   tornado: { category: "weather", draw: tornado },

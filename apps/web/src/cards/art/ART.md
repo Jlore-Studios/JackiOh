@@ -139,7 +139,8 @@ still a pure function of the card's id, name, tags and type. The cache keys the 
 served for another's. The normal picture's seed is the card's id alone, so every still picture and
 golden hash stands. A later version with a picture of its own adds its own name to `ArtPicture`, so it
 draws apart from every other. A Starship's art, a Legacy card's and a delivered file keep their one picture.
-A Classic+ card offered Alt art draws an alt recipe of its own instead (R3396000, below).
+A Classic+, Meditative+ or Training Grounds card offered Alt art draws an alt recipe of its own instead (R3396000,
+R3397000, below).
 
 ## One picture per variant (R3015002)
 
@@ -543,6 +544,36 @@ picture changes; `ink-seal`, `ink-round-window` and the figure kit's `item-ink-b
 Meditative+'s and Training Grounds' pass (#3438) gave its own. Every entry clears its rarity's floor and is off the short list, whose cap fell from 289 to 157;
 `meditativeScenes.test.ts` holds the set to all of it, and `meditative-scenes.cy.tsx` shows every Epic, Legendary
 and Mythic entry at hand size and the rest as a contact sheet, at desktop size and at 390x844.
+
+## Meditative+ and Training Grounds Alt art restaged (R3397000)
+
+Each of the 36 Meditative+ and Training Grounds cards offered Alt art (14 and 22) draws an alt recipe of its own,
+written from #3397's brief for it, under Classic+'s rules (above): the same subject and idea in another place, time
+or story moment, read under the card's Alt art seed alone, one picture at every Alt art level. The recipes are
+`meditativePlusAltRecipes.ts` and `trainingGroundsAltRecipes.ts`, spread into `ALT_SCENE_RECIPES` after Classic+'s.
+A Training Grounds card's painter (`trainingGroundsArtUri`) reads its scene under the seed it is given, so its Alt
+art level draws the alt recipe as its normal face draws its own.
+
+- **The family.** A Meditative+ alt keeps the ink line and exactly one red `seal` in the near layer, where the
+  normal picture stamps it, inside the band every face shows; it drops the ink-wash peaks where its brief leaves the
+  mountains (under a lake, in bamboo, on a picnic blanket). A Training Grounds alt keeps the carved-wood line and,
+  as its normal picture, no seal, and leaves the yard wherever its brief does.
+- **The same subject.** A figure both pictures draw is the normal one's person (`normalLookOf`); a person the brief
+  keeps beside it is the extra at the same index in both pictures, with the normal one's head and outfit
+  (`normalExtraLookOf`: Bloodbloom's mage, Dogpile's foe, Group leader's column, Right-Hand Felinor's knight,
+  Seance's recruits, Tutorial Master's recruit, Call to Chaos's instructor); a subject that is a part stays in the
+  subject layer.
+- **Camera and detail.** Classic+'s new camera (the subject moved, rescaled or a figure come or gone); the rarity's
+  floor and the byte ceiling on both faces, far, mid, subject and near layers from Epic up, and Goetzmann Game
+  Design, the one with full-art motion, a layer for each role it moves.
+
+A detail the kit lacks is left out and named in the recipe's comment, never drawn as another part. The briefs added
+thirteen parts: a goat, a deer, a duck and walnuts (`sceneKitNature.ts`); a crater, a sandcastle, a snowman, a
+water wheel and a rowboat (`sceneKitPlaces.ts`, the rowboat apart from the sailing `boat`); and a cork board, a
+washing line, a picnic blanket and a hanging rope (`sceneKitObjects.ts`). KY's Competition shares #3401's split
+`melon`. `setAltScenes.test.tsx` holds every recipe to the rules and every Alt art level's face to its picture and
+its Radiant marks, and `set-alt-scenes.cy.tsx` measures each window against `ALT_PICTURE_CHANGE_MIN` and screenshots
+each normal face beside its Alt art face.
 
 ## The detail floor (R3331001)
 

@@ -345,7 +345,7 @@ const GRUBBY_GLOVES_ALT: SceneRecipe = {
   },
 };
 
-/** KY's Competition (Meditative+ #20, Rare), Alt art: after the contest, a wide back view: KY and Lil' Kenny on a cliff bench sharing a melon, an emptied hourglass between them; warm coral sunset. Their backs are drawn as the kit's figures face the viewer. */
+/** KY's Competition (Meditative+ #20, Rare), Alt art: after the contest, a wide back view: KY and Lil' Kenny on a cliff bench sharing a melon, an emptied hourglass between them; warm coral sunset. Their backs are drawn as the kit's figures face the viewer, and the melon is the kit's split melon on its board (#3401's). */
 const KYS_COMPETITION_ALT: SceneRecipe = {
   family: "meditative",
   sky: ["violet-500", "red-300"],

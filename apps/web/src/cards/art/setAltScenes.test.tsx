@@ -96,7 +96,6 @@ const NEW_PARTS: Readonly<Record<string, readonly string[]>> = {
   goat: ["meditativeplus-012"],
   deer: ["traininggrounds-011"],
   duck: ["traininggrounds-030"],
-  melon: ["meditativeplus-020"],
   walnuts: ["traininggrounds-004"],
   crater: ["meditativeplus-017"],
   sandcastle: ["traininggrounds-025"],
