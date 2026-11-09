@@ -565,6 +565,7 @@ mod tests {
         }
 
         /// Whether `legal_actions` offers p1 a play of a Prestige in their hand.
+        // Differs from Scenario::offered: whether Prestige can be played, not the seat's whole legal list.
         fn offered(s: &Scenario) -> bool {
             let held: Vec<String> = s
                 .hand("p1")

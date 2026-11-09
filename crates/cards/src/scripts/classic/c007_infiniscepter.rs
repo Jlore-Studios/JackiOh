@@ -175,10 +175,6 @@ mod tests {
             .collect()
     }
 
-    fn count(events: &[GameEvent], event_type: &str) -> usize {
-        events.iter().filter(|event| event.event_type().as_str() == event_type).count()
-    }
-
     fn remembered(s: &Scenario, card: &str) -> Option<Value> {
         s.card(card).memory.get("scepter").cloned()
     }
@@ -305,7 +301,7 @@ mod tests {
 
                 s.activate(SCEPTER, json!({}));
 
-                assert_eq!(count(s.last_events(), "drawn"), 2);
+                assert_eq!(s.last_count("drawn"), 2);
                 s.expect_health(P1, 22);
                 s.expect_mana(P1, 3);
                 assert_eq!(s.state().players.p1.turn_log.cards_played, played + 1);
@@ -462,7 +458,7 @@ mod tests {
                 s.expect_in_zone(CALL, "exile");
                 s.activate(SCEPTER, json!({}));
 
-                assert!(count(s.last_events(), "summoned") > 0);
+                assert!(s.last_count("summoned") > 0);
             }
 
             #[test]
@@ -542,7 +538,7 @@ mod tests {
 
                 s.activate(&scepter, json!({}));
 
-                assert_eq!(count(s.last_events(), "drawn"), 2);
+                assert_eq!(s.last_count("drawn"), 2);
                 s.expect_health(P1, 22);
                 assert_eq!(
                     s.pile(P1, "graveyard").iter().filter(|card| card.def_id == STOCKPILE).count(),

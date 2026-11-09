@@ -76,6 +76,7 @@ mod tests {
         applicable_changes(s.state(), s.card(card), direction).iter().map(js).collect()
     }
 
+    // Differs from Scenario::offered: one card's play targets as ids, not the seat's whole legal list.
     fn offered(s: &Scenario, player: PlayerId) -> Vec<String> {
         let rewind = s
             .hand(player)

@@ -63,10 +63,6 @@ mod tests {
     const ANTI_ONESHOT: &str = "core-073"; // (2) Field Spell: "Your hero can't take more than 5 damage at a time."
     const FILLER: &str = "core-005"; // (1) Spell, a spare card so a hand never runs out (§2.5).
 
-    fn events_of(s: &Scenario, kind: GameEventType) -> Vec<GameEvent> {
-        s.events().iter().filter(|event| event.event_type() == kind).cloned().collect()
-    }
-
     fn play_at(s: &mut Scenario, player: PlayerId) -> &mut Scenario {
         s.play(VITAL, json!({ "targets": [{ "pick": "hero", "player": player }] }))
     }
@@ -124,7 +120,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER], "health": 4 }, "p2": { "hand": [FILLER], "library": [FILLER] } }));
                 play_at(&mut s, P1);
                 s.expect_health(P1, 13);
-                assert!(events_of(&s, GameEventType::Healed).is_empty());
+                assert!(s.events_of(GameEventType::Healed).is_empty());
             }
 
             #[test]
@@ -139,7 +135,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "library": [FILLER], "health": 13 } }));
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
-                assert_eq!(events_of(&s, GameEventType::HealthSet).len(), 1);
+                assert_eq!(s.events_of(GameEventType::HealthSet).len(), 1);
             }
 
             #[test]
@@ -151,9 +147,9 @@ mod tests {
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
                 assert_eq!(hero_of(s.state(), P2).armor, 5);
-                assert!(events_of(&s, GameEventType::Damage).is_empty());
-                assert!(events_of(&s, GameEventType::Healed).is_empty());
-                assert!(events_of(&s, GameEventType::Redirected).is_empty());
+                assert!(s.events_of(GameEventType::Damage).is_empty());
+                assert!(s.events_of(GameEventType::Healed).is_empty());
+                assert!(s.events_of(GameEventType::Redirected).is_empty());
             }
 
             #[test]
@@ -167,7 +163,7 @@ mod tests {
                 let gambit = s.backrow(P2, 1);
                 assert_eq!(gambit.as_ref().map(|card| card.def_id.clone()), Some(GAMBIT.to_string()));
                 assert_eq!(gambit.as_ref().and_then(|card| card.face_up), Some(false));
-                assert!(events_of(&s, GameEventType::TrapFired).is_empty());
+                assert!(s.events_of(GameEventType::TrapFired).is_empty());
                 let fauci = s.unit(P2, 1);
                 assert_eq!(fauci.and_then(|card| card.counters.plague).unwrap_or(0), 0);
             }
@@ -180,7 +176,7 @@ mod tests {
                 }));
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
-                assert!(events_of(&s, GameEventType::Damage).is_empty());
+                assert!(s.events_of(GameEventType::Damage).is_empty());
             }
 
             #[test]
@@ -212,7 +208,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "library": [FILLER], "health": 30 } }));
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
-                assert_eq!(events_of(&s, GameEventType::TurnEnded).len(), 1);
+                assert_eq!(s.events_of(GameEventType::TurnEnded).len(), 1);
                 assert_eq!(s.state().active, P2);
             }
         }
@@ -229,7 +225,7 @@ mod tests {
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
                 assert_eq!(def_ids(&s.hand(P1)), vec![FILLER]);
-                assert!(events_of(&s, GameEventType::TurnEnded).is_empty());
+                assert!(s.events_of(GameEventType::TurnEnded).is_empty());
                 assert_eq!(s.state().active, P1);
             }
 

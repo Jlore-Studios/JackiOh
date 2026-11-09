@@ -82,10 +82,6 @@ mod tests {
             .collect()
     }
 
-    fn count(s: &Scenario, kind: GameEventType) -> usize {
-        s.events().iter().filter(|event| event.event_type() == kind).count()
-    }
-
     fn contains_all(actual: &[String], expected: &[&str]) -> bool {
         expected.iter().all(|wanted| actual.iter().any(|have| have == wanted))
     }
@@ -196,7 +192,7 @@ mod tests {
 
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.hand(P1).len(), 6);
-                assert_eq!(count(&s, GameEventType::Burned), 4);
+                assert_eq!(s.count(GameEventType::Burned), 4);
                 assert!(contains_all(&def_ids(&s.pile(P1, "graveyard")), &[B, C, D, E]));
                 assert_eq!(discarded_defs(&s).len(), 4);
             }
@@ -210,7 +206,7 @@ mod tests {
 
                 s.play(RAPID, json!({}));
 
-                assert_eq!(count(&s, GameEventType::DrawLimited), 4);
+                assert_eq!(s.count(GameEventType::DrawLimited), 4);
                 assert_eq!(discarded_defs(&s), vec![A]);
                 let library = def_ids(&s.pile(P1, "library"));
                 assert_eq!(library, vec![B, C, D]);

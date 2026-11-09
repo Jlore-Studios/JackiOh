@@ -102,6 +102,7 @@ mod tests {
         loc(SHRIMP)
     }
 
+    // Differs from Scenario::offered: one card's play targets as an id set, not the seat's whole legal list.
     fn offered(s: &Scenario, player: PlayerId) -> IndexSet<String> {
         let Some(shrimp) = s.hand(player).into_iter().find(|card| card.def_id == SHRIMP) else {
             panic!("Hired Shrimp should be in hand");

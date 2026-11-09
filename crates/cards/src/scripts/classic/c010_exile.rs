@@ -141,10 +141,6 @@ mod tests {
         }))
     }
 
-    fn count(events: &[GameEvent], kind: GameEventType) -> usize {
-        events.iter().filter(|event| event.event_type() == kind).count()
-    }
-
     use crate::js;
 
     #[test]
@@ -183,8 +179,8 @@ mod tests {
 
             s.expect_in_zone(&timmy, "exile");
             assert!(s.unit(P2, 1).is_none());
-            assert_eq!(count(s.last_events(), GameEventType::CardPlayed), 0);
-            assert_eq!(count(s.last_events(), GameEventType::Summoned), 0);
+            assert_eq!(s.last_count(GameEventType::CardPlayed), 0);
+            assert_eq!(s.last_count(GameEventType::Summoned), 0);
             s.expect_events(json!(["cardAnnounced", "trapFired", "countered", "exiled"]));
             assert!(!s.pile(P2, "graveyard").iter().any(|card| card.id == timmy.id));
         }
@@ -198,7 +194,7 @@ mod tests {
             s.play(TOKEN_MAN, json!({ "zone": 1 }));
 
             assert!(s.unit(P2, 2).is_none());
-            assert_eq!(count(s.last_events(), GameEventType::Summoned), 0);
+            assert_eq!(s.last_count(GameEventType::Summoned), 0);
             assert_eq!(s.state().players.p2.turn_log.cards_played, played);
             assert_eq!(s.state().counters.played, game);
             s.expect_mana(P2, 3);
@@ -212,7 +208,7 @@ mod tests {
             s.play(&spell, json!({}));
 
             s.expect_in_zone(&spell, "exile");
-            assert_eq!(count(s.last_events(), GameEventType::Drawn), 0);
+            assert_eq!(s.last_count(GameEventType::Drawn), 0);
         }
 
         #[test]
@@ -246,7 +242,7 @@ mod tests {
             s.play(MENACE, json!({ "zone": 1 }));
 
             s.expect_in_zone(MENACE, "field");
-            assert_eq!(count(s.events(), GameEventType::Countered), 0);
+            assert_eq!(s.count(GameEventType::Countered), 0);
             assert_eq!(s.backrow(P1, 2).and_then(|card| card.face_up), Some(false));
         }
 
@@ -318,7 +314,7 @@ mod tests {
 
             s.play("core-043", json!({ "zone": 1 }));
 
-            assert_eq!(count(s.events(), GameEventType::Countered), 0);
+            assert_eq!(s.count(GameEventType::Countered), 0);
         }
 
         #[test]
@@ -465,7 +461,7 @@ mod tests {
             step_param(s.card_mut(EXILE), "threshold", -1);
 
             s.play(MENACE, json!({ "zone": 2 }));
-            assert_eq!(count(s.events(), GameEventType::Countered), 0);
+            assert_eq!(s.count(GameEventType::Countered), 0);
             s.play(TIMMY, json!({ "zone": 3 }));
 
             s.expect_in_zone(TIMMY, "exile");

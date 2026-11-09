@@ -131,6 +131,7 @@ mod tests {
         active_brittle_count(s.card(ID))
     }
 
+    // Differs from Scenario::offered: how many activations of one card, not the seat's whole legal list.
     fn offered(s: &Scenario) -> usize {
         let id = s.card(ID).id.clone();
         legal_actions(s.state(), P1)

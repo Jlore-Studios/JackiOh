@@ -238,6 +238,7 @@ mod tests {
         }))
     }
 
+    // Differs from Scenario::count: whether any trap fired (a bool), not how many.
     fn fired(s: &Scenario) -> bool {
         s.events().iter().any(|event| event.event_type() == GameEventType::TrapFired)
     }
@@ -247,10 +248,6 @@ mod tests {
             .iter()
             .filter(|event| matches!(event, GameEvent::Drawn { player, .. } if *player == who))
             .count()
-    }
-
-    fn count(events: &[GameEvent], kind: GameEventType) -> usize {
-        events.iter().filter(|event| event.event_type() == kind).count()
     }
 
     fn backrow_def(s: &Scenario, player: PlayerId, lane: i32) -> Option<String> {
@@ -483,7 +480,7 @@ mod tests {
             s.play(STOCKPILE, json!({})); // both draws stopped
             assert!(!fired(&s));
             assert_eq!(backrow_def(&s, P2, 1), Some(TAX.to_string()));
-            assert_eq!(count(s.events(), GameEventType::DrawLimited), 2);
+            assert_eq!(s.count(GameEventType::DrawLimited), 2);
         }
 
         #[test]
@@ -535,7 +532,7 @@ mod tests {
             hand.extend(vec![MENACE; 8]);
             let mut s = tax_board(json!({ "p1Hand": hand, "p1Library": [FELINORS, SEVEN] }));
             s.play(STOCKPILE, json!({}));
-            assert_eq!(count(s.events(), GameEventType::Burned), 1);
+            assert_eq!(s.count(GameEventType::Burned), 1);
             assert!(fired(&s));
             assert_eq!(open(&s).player_id, P1);
         }
@@ -558,7 +555,7 @@ mod tests {
                 "p2": { "hand": [VANILLA], "backrow": [{ "def": TAX, "faceUp": false }], "library": [VANILLA, VANILLA] },
             }));
             s.start_turn();
-            assert_eq!(count(s.events(), GameEventType::Fatigue), 1);
+            assert_eq!(s.count(GameEventType::Fatigue), 1);
             assert!(!fired(&s));
             s.play(VANILLA, json!({}));
             assert_eq!(s.pile(P1, "library").len(), 3);
@@ -580,7 +577,7 @@ mod tests {
         fn r521_a_draw_from_an_empty_deck_draws_no_card_and_fires_nothing() {
             let mut s = tax_board(json!({ "p1Library": [] }));
             s.play(STOCKPILE, json!({}));
-            assert_eq!(count(s.events(), GameEventType::Fatigue), 2);
+            assert_eq!(s.count(GameEventType::Fatigue), 2);
             assert!(!fired(&s));
             assert_eq!(backrow_def(&s, P2, 1), Some(TAX.to_string()));
         }

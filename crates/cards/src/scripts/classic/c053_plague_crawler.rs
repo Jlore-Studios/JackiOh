@@ -119,6 +119,7 @@ mod tests {
             .count()
     }
 
+    // Differs from Scenario::offered: the open prompt's instance ids, not the seat's legal actions.
     fn offered(s: &Scenario) -> Vec<String> {
         let mut ids: IndexSet<String> = IndexSet::new();
         for option in &s.state().pending.as_ref().expect("the Cry's prompt").options {

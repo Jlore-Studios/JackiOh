@@ -76,6 +76,7 @@ mod tests {
         s.stats(card).keywords.iter().filter(|keyword| keyword.kind() == kind).count()
     }
 
+    // Differs from Scenario::offered: one card's play targets, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<Selection> {
         let fortify = s.card(FORTIFY).id.clone();
         legal_actions(s.state(), P1)

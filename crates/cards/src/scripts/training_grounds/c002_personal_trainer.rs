@@ -55,6 +55,7 @@ mod tests {
     }
 
     /// The instance ids `legalActions` offers the Trainer as targets.
+    // Differs from Scenario::offered: one card's play targets as unique ids, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<String> {
         let trainer = s.card(TRAINER).id.clone();
         legal_actions(s.state(), P1)

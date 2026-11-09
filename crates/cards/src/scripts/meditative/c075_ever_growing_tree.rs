@@ -153,6 +153,7 @@ mod tests {
     }
 
     /// The def ids the open Discover offers.
+    // Differs from Scenario::offered: the open choice's modes, not the seat's legal actions.
     fn offered(s: &Scenario) -> Vec<String> {
         s.state()
             .pending

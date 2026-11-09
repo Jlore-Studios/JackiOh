@@ -113,6 +113,7 @@ mod tests {
         s.state_mut().rng_cursor = cursor;
     }
 
+    // Differs from Scenario::last_count: whether any trap fired in the last step (a bool), not how many.
     fn fired(s: &Scenario) -> bool {
         s.last_events().iter().any(|event| event.event_type() == GameEventType::TrapFired)
     }

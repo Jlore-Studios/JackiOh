@@ -137,6 +137,7 @@ mod tests {
             .collect()
     }
 
+    // Differs from Scenario::events_of: the trapFired events as JSON (`Vec<Value>`), not typed events.
     fn fired(s: &Scenario) -> Vec<Value> {
         s.events().iter().map(js).filter(|event| event["type"] == "trapFired").collect()
     }

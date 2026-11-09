@@ -129,6 +129,7 @@ mod tests {
     }
 
     /// The targets `legal_actions` offers p1 for the Cannon's Activate, one per action.
+    // Differs from Scenario::offered: one card's activation targets as JSON, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<Value> {
         let cannon = s.card(ID).id.clone();
         legal_actions(s.state(), P1)

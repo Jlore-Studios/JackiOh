@@ -145,6 +145,7 @@ mod tests {
         keys
     }
 
+    // Differs from Scenario::last_events_of: the last step's events as JSON (`Vec<Value>`).
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
         s.last_events()
             .iter()
