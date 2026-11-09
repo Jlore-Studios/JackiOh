@@ -15634,9 +15634,7 @@
     },
     "3477": {
       "action": "build",
-      "asks": [
-        "c:6741703152"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-09T15:06:42Z",
         "difficulty": "hard",
@@ -15659,9 +15657,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-6",
-      "owner_since": "2026-11-09T13:59:30Z",
-      "owner_why": "it plans it",
+      "owner": "claude-7",
+      "owner_since": "2026-11-09T15:42:00Z",
+      "owner_why": "handed off from `claude-6`: `claude-6` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-09T19:00:00Z; it can start again only in 2h 18m, more than the 120 minutes an item waits for its owner",
       "paused": {
         "at": "2026-11-09T15:32:28Z",
         "interrupt": "usage",
@@ -15673,11 +15671,11 @@
       "planned_by_id": "claude-6",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-6",
+      "provider": "claude-7",
       "queued_at": "2026-11-09T13:51:12Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "42641609388",
+      "run_id": "pending:a772b9a0-1794238881",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -15696,14 +15694,16 @@
         "provider": "claude-6",
         "run": "42641609388"
       },
-      "started_at": "2026-11-09T15:08:24Z",
+      "started_at": "2026-11-09T15:42:00Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6741703152"
+      ],
       "verdict_rounds": 0
     },
     "3478": {
@@ -16365,9 +16365,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T15:41:06Z",
+    "at": "2026-11-09T15:42:00Z",
     "url": "",
-    "what": "spot-check #3489 on claude-8"
+    "what": "build #3477 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-09T15:15:59Z",
