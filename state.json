@@ -15790,8 +15790,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-6",
-      "owner_since": "2026-11-09T05:19:45Z",
-      "owner_why": "its approval shipped `98c798a24384`, and the last approver owns the merge, so it fixes what CI found",
+      "owner_since": "2026-11-09T08:02:28Z",
+      "owner_why": "its turn came (it conflicts with `main` now), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-08T04:47:50Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -17769,14 +17769,14 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3403,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "live": "reviewing",
       "merge_owner": "claude-6",
       "pending_request": false,
       "provider": "claude-6",
       "question": "",
-      "queued_at": "2026-11-09T06:25:40Z",
+      "queued_at": "2026-11-09T08:02:28Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
@@ -17801,10 +17801,17 @@
         "provider": "claude-6",
         "run": "42567213341"
       },
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-11-09T06:27:16Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-6",
+        "since": "2026-11-09T08:02:28Z",
+        "until": "2026-11-09T08:32:28Z",
+        "why": "it conflicts with `main` now"
+      },
       "verdict_rounds": 3,
       "votes": {
         "approvals": [
@@ -17826,20 +17833,7 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 6731148803,
-      "waiting_turn": {
-        "behind": [
-          3464,
-          3457,
-          3456
-        ],
-        "ends": "2026-11-09T09:39:12Z",
-        "from_run": "42573119803",
-        "head": "08d9629fa62c3129102e30ab00d286ddb55204ef",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-09T07:39:12Z"
-      }
+      "waiting_comment": 6731148803
     },
     "3459": {
       "action": "build",
