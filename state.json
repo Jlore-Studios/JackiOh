@@ -15573,11 +15573,11 @@
           {
             "family": "claude",
             "provider": "claude-4",
-            "run": "42623983934",
+            "run": "42639717297",
             "tier": "strong"
           }
         ],
-        "sha": "2f4e105475c2ac423bed87d1f26ed7e71c66496a",
+        "sha": "25a003c3d0276e59df431eb91b67b1793e9563c4",
         "tiers": {
           "claude": "strong"
         }
