@@ -15943,6 +15943,8 @@
       "taken_asks": []
     },
     "3488": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-09T13:57:24Z",
@@ -15956,8 +15958,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every page Google should index answers 200 and is its own canonical (Search Console: \\\"Page with redirect\\\", \\\"Alternate page with proper canonical tag\\\")\"} -->\n- ## What changed and why\n- Search Console filed `http://` copies of public pages as alternates of their `https://` canonicals, and recorded the gated screens' JS sign-in redirect as \"Page with redirect\". Four edits plus one new test, exactly per the plan:\n- - [`infra/cloudflare.tf`](/home/agent-muse/actions-runner/_work/_temp/work/item-3485/infra/cloudflare.tf): new `cloudflare_zone_setting.always_use_https` (`on`), with a comment. Zone settings are updated in place, so no `import` block. This flips `http://` from 200 to a 301 to `https://`.\n- - [`apps/web/public/_headers`](/home/agent-muse/actions-runner/_work/_temp/work/item-3485/apps/web/public/_headers): `Strict-Transport-Security: max-age=31536000; includeSubDomains` in the `/*` block, plus a comment recording why it ships to staging and `*.workers.dev` too and why `preload` is abse\u2026\n- - [`apps/web/public/robots.txt`](/home/agent-muse/actions-runner/_work/_temp/work/item-3485/apps/web/public/robots.txt): `Disallow` for `/play`, `/decks`, `/together`, `/leaderboard`, `/collection`, `/shop`, `/watch/`, `/duos/` beside the existing `/account`, `/invite`, `/match/`, `/series/`, with \u2026\n- - [`apps/web/src/net/cloudflare-config.test.ts`](/home/agent-muse/actions-runner/_work/_temp/work/item-3485/apps/web/src/net/cloudflare-config.test.ts): HSTS key and value assertions in the security-headers test.\n- - [`apps/web/src/net/search-index.test.ts`](/home/agent-muse/actions-runner/_work/_temp/work/item-3485/apps/web/src/net/search-index.test.ts) (new): five tests holding sitemap-is-https-and-own-canonical, sitemap pages have 200 rules (`/` exempt, served directly), gated routes out of the sitemap, ga\u2026\n- No ruling added: this is an ops/SEO change, no Hearthstone-semantics decision. The one `R3127000` mention is a comment citation of the existing 404 note, which `spec check` allows.\n- ## How it was tested\n- - `pnpm --dir apps/web test src/net/search-index.test.ts` \u2014 5 passed.\n- - `pnpm --dir apps/web test src/net/cloudflare-config.test.ts src/net/cloudflare-serve.test.ts src/net/deploy-routes.test.ts src/static-pages.test.ts` \u2014 46 passed.\n- - `pnpm --dir apps/web typecheck` \u2014 clean (it caught a type-predicate error in my first draft of the new test; fixed by spelling it as `deploy-routes.test.ts` does).\n- - `pnpm exec eslint` on both test files \u2014 clean. `pnpm exec vitest run --project edge apps/edge/src/config.test.ts` \u2014 15 passed (it reads `public/_headers`).\n- - Sensitivity: base `robots.txt` has only 4 `Disallow`s and base `_headers` no HSTS, so the new/updated tests fail without the changes. `/creator` confirmed as no route, no `_redirects` rule, no link (only the game-event `creator` field and \"card creator\" prose), `canonicalUrlFor` null.\n- ## Decisions the issue did not settle\n- - HSTS comment placed above the `/*` block (plan's wording); rejected putting it inline beside the header line, since the parser and the blast-radius reasoning both live at block level.\n- - The gated-not-in-sitemap test compares `new URL(loc).pathname` rather than `endsWith`, rejecting the looser match as prone to false positives (e.g. a future `/display` vs `/play`).\n- - `terraform` is not installed on this machine, so fmt/init/validate were not run locally; the HCL copies the file's existing style and CI runs those gates per `infra/README.md`.\n- ## For a person, after merge\n- - Run `terraform plan` / `terraform apply` from `infra/README.md` (needs `CLOUDFLARE_API_TOKEN`); the `http://` \u2192 301 flip only takes effect then.\n- - Click \"Validate fix\" in Search Console (dashboard-only, out of scope here).\n- Reviewer, look twice at: the `cloudflare_zone_setting` resource shape against provider 5.28.1 (could not validate locally), and that `Disallow: /play` also keeps the anonymous Play hub out of the index \u2014 intended, since it was never a `PUBLIC_PAGES` page.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3485 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3485/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3485,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-09T14:37:17Z",
         "from_run": "42630038445",
         "gates": [
           {
@@ -16016,8 +16021,15 @@
         "source": "build",
         "until": "2026-11-09T15:06:00Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-09T14:36:00Z",
+      "run_id": "pending:3526e933-1794235003",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-09T14:37:17Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -16031,9 +16043,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T14:25:00Z",
+    "at": "2026-11-09T14:37:17Z",
     "url": "",
-    "what": "plan #3477 on claude-6"
+    "what": "review #3488 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T14:14:22Z",
