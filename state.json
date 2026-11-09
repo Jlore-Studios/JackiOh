@@ -34034,9 +34034,9 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-09T04:30:00Z",
-          "utilization": 0.86
+          "utilization": 0.88
         },
-        "observed_at": "2026-11-09T01:27:52Z",
+        "observed_at": "2026-11-09T03:47:30Z",
         "status": "allowed"
       }
     },
@@ -36764,7 +36764,8 @@
       "2026-11-09T02:53:55Z,muse,usage-command,call,42549682376,2,2026-11-09T05:06:00Z,0,2026-11-16T00:00:00Z,allowed,100,100,",
       "2026-11-09T03:04:00Z,muse,usage-command,call,42549682376,3,2026-11-09T05:06:00Z,1,2026-11-16T00:00:00Z,allowed,100,100,",
       "2026-11-09T03:43:24Z,claude-3,stream,call,42556899208,89,2026-11-09T05:10:00Z,,,allowed,,,",
-      "2026-11-09T03:44:09Z,claude-3,stream,call,42556899208,90,2026-11-09T05:10:00Z,,,allowed_warning,,,"
+      "2026-11-09T03:44:09Z,claude-3,stream,call,42556899208,90,2026-11-09T05:10:00Z,,,allowed_warning,,,",
+      "2026-11-09T03:42:53Z,claude-8,ping,before,42556843145,88,2026-11-09T04:30:00Z,,,allowed,85,,"
     ],
     "runs": [
       "2026-11-09T03:23:08Z,42552135823,claude-4,opus,revise,3462,hard,built,,0,0,0,0,,3,3,,,14.5,,none,,0",
