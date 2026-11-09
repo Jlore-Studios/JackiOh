@@ -18424,13 +18424,14 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-8",
       "queued_at": "2026-11-09T09:48:13Z",
-      "run_id": "42596311871",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:ed69648f-1794219960",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 165,
-      "started_at": "2026-11-09T09:49:11Z",
+      "started_at": "2026-11-09T10:26:23Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18457,9 +18458,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T10:18:20Z",
+    "at": "2026-11-09T10:26:23Z",
     "url": "",
-    "what": "revise #3464 on claude-7"
+    "what": "spot-check #3472 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-09T10:19:50Z",
@@ -36775,7 +36776,15 @@
         "n": 165,
         "pr": 3472,
         "queued_at": "2026-11-09T10:21:30Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:ed69648f-1794219960",
         "sha": "f7ec3ec20192b97ac9b6b2c3d97119094881a3df",
+        "started_at": "2026-11-09T10:26:23Z",
         "status": "queued",
         "title": "Patch: patches ship refused to promote the pending patches",
         "tries": 0
