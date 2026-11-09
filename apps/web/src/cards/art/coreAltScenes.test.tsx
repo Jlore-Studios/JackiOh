@@ -218,11 +218,11 @@ describe("R3398000 Core Alt art restaged", () => {
     const offered = offeredIn("Core").sort();
     expect(offered).toHaveLength(61);
     expect(ALT_IDS).toEqual(offered);
-    // With R3396000's Classic+ cards and R3397000's Meditative+ and Training Grounds cards, the alt recipes are every
-    // card offered Alt art in the four sets, and no other.
-    const others = ["Classic+", "Meditative+", "Training Grounds"].flatMap(offeredIn);
+    // With R3396000's Classic+ cards, R3397000's Meditative+ and Training Grounds cards and R3404000's Meditative
+    // cards, the alt recipes are every card offered Alt art in the five sets, and no other.
+    const others = ["Classic+", "Meditative+", "Training Grounds", "Meditative"].flatMap(offeredIn);
     expect(Object.keys(ALT_SCENE_RECIPES).sort()).toEqual([...others, ...offered].sort());
-    expect(Object.keys(ALT_SCENE_RECIPES)).toHaveLength(137);
+    expect(Object.keys(ALT_SCENE_RECIPES)).toHaveLength(191);
     expect(ALT_PICTURE_CHANGE_MIN).toBe(0.6);
     const seen = new Map<string, string>(Object.entries(SCENE_RECIPES).map(([id, scene]) => [JSON.stringify(scene), id]));
     for (const id of ALT_IDS) {

@@ -42,18 +42,18 @@ function textOf(path: string): string {
   return text;
 }
 
-// The walk's calls, read off `ts` once: under vitest an external CommonJS import is a Proxy, so every
-// `ts.…` read in the walk, millions of them, runs its trap (a walk over the client ~14 times slower).
+// The walk's calls, read off `ts` once: each of its exports is a getter, and under vitest the walk's
+// millions of reads took most of the first guard's time (3.3 s of its 5 s alone, over it in CI, #3461).
 const {
   forEachChild,
-  isImportDeclaration,
   isExportDeclaration,
-  isStringLiteral,
+  isImportDeclaration,
+  isJsxText,
   isNoSubstitutionTemplateLiteral,
+  isStringLiteral,
   isTemplateHead,
   isTemplateMiddle,
   isTemplateTail,
-  isJsxText,
 } = ts;
 
 /**
