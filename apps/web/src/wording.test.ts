@@ -9,7 +9,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import ts from "typescript";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 
@@ -62,6 +62,12 @@ function wordsIn(path: string): { at: string; text: string }[] {
   WORDS.set(path, out);
   return out;
 }
+
+// The one pass over every source is setup, not an assertion, as in writing.test.ts: it runs here, once, so a loaded
+// runner does not spend the first guard's own budget on it (#3439: R373's, the first, overran its 5 s in CI).
+beforeAll(() => {
+  for (const path of sources(SRC)) wordsIn(path);
+});
 
 describe("R373 players read Deck and Tribute", () => {
   it("R373 no text a player can read in the client says library or sacrifice", () => {
