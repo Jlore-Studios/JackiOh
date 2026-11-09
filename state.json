@@ -15566,12 +15566,11 @@
     "what": "suggestions on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-09T12:46:01Z",
+    "at": "2026-11-09T12:54:46Z",
     "notes": [
-      "delivered suggest on claude-3 (run 42617198818): interrupted",
-      "started suggest on claude-7 (run 42619975451)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "delivered suggest on claude-7 (run 42619975451): interrupted",
+      "started suggest on claude-8 (run 42621157313)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16277,7 +16276,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T12:46:01Z",
+  "loop_tick": "2026-11-09T12:54:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
