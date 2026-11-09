@@ -42,7 +42,8 @@ import StarscapeMap from "./StarscapeMap.tsx";
 import { BurnNotice, PileNotice, noticesFrom, noticeTestid, type OverflowNotices } from "./OverflowNotices.tsx";
 import Zone from "./Zone.tsx";
 import { listedFace, namedFace } from "./faces.ts";
-import { countedTestids, glowAttr, hasMovesLeft } from "./glow.ts";
+import { glowAttr, hasMovesLeft } from "./glow.ts";
+import { HoveredHandCardProvider } from "./hoveredHandCard.tsx";
 import { revealedOpponentHand } from "./reveal.ts";
 import { CardListPreview, CardListSheet, useInspectTrigger, type CardListEntry, type InspectOverlayState } from "../cards/index.ts";
 import { SettingsButton, useSetting } from "../settings/index.ts";
@@ -610,10 +611,6 @@ export default function Board({
   const [armedFor, setArmedFor] = useState<PlayerView | null>(null);
   const [pressedFor, setPressedFor] = useState<PlayerView | null>(null);
   const [logOpen, setLogOpen] = useState(false);
-  // #991, R583: the hand card under the pointer, whose preview's ids the field rings.
-  const [hovered, setHovered] = useState<string | null>(null);
-  const counted = countedTestids(view, highlight, hovered);
-  const fieldHighlight: Highlight = counted.size === 0 ? highlight : { ...highlight, counted };
   const actionsRemain = hasMovesLeft(highlight);
   const needsConfirm = confirmEndTurn && actionsRemain;
   const armed = needsConfirm && armedFor === view;
@@ -729,33 +726,39 @@ export default function Board({
         {/* R434: at the game's end the view shows the opponent's hand, and the row turns it face up. */}
         <Hand side="opponent" seat={view.opponent.player} hand={revealedOpponentHand(view) ?? view.opponent.hand} cap={view.opponent.handCap} marked={view.opponent.handMarked} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
 
-        <div className="field" aria-label={t("Field")} data-table={table} data-their-table={theirTable} ref={field}>
-          {theirTable === undefined ? null : <span className="field-their-mat" aria-hidden="true" />}
-          <SandSurface field={field} disabled={sandDisabled} table={table} theirTable={theirTable} />
-          {/* R3348001: each half's playmat props, from its seat's raw slot (the default mat has props too). The viewer's own answer taps, quietly while the queue drains; the opponent's are still. */}
-          <CornerProps mat={slots.table} half="yours" draining={draining} />
-          <CornerProps mat={theirSlots.table} half="theirs" />
-          {LANES.map((lane) => (
-            <div className="lane" key={lane} data-lane={lane}>
-              {FIELD_ROWS.map((slot) => (
-                <Zone
-                  key={`${slot.side}-${slot.row}`}
-                  view={view}
-                  side={slot.side}
-                  row={slot.row}
-                  lane={lane}
-                  highlight={fieldHighlight}
-                  animating={animating}
-                  onClick={onClick}
-                  pops={pops}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+        {/* #3478: the hovered hand card's state lives in this provider, so a hover re-renders the
+            field's zones and nothing else. The viewer's `Seat` sits between the field and the hand in
+            `board.css`'s grid order, so it stands inside the provider too; it consumes no hover state
+            and keeps today's rendering, exactly as if it stood outside. */}
+        <HoveredHandCardProvider>
+          <div className="field" aria-label={t("Field")} data-table={table} data-their-table={theirTable} ref={field}>
+            {theirTable === undefined ? null : <span className="field-their-mat" aria-hidden="true" />}
+            <SandSurface field={field} disabled={sandDisabled} table={table} theirTable={theirTable} />
+            {/* R3348001: each half's playmat props, from its seat's raw slot (the default mat has props too). The viewer's own answer taps, quietly while the queue drains; the opponent's are still. */}
+            <CornerProps mat={slots.table} half="yours" draining={draining} />
+            <CornerProps mat={theirSlots.table} half="theirs" />
+            {LANES.map((lane) => (
+              <div className="lane" key={lane} data-lane={lane}>
+                {FIELD_ROWS.map((slot) => (
+                  <Zone
+                    key={`${slot.side}-${slot.row}`}
+                    view={view}
+                    side={slot.side}
+                    row={slot.row}
+                    lane={lane}
+                    highlight={highlight}
+                    animating={animating}
+                    onClick={onClick}
+                    pops={pops}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
 
-        <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} aside={heroAside?.own} />
-        <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} view={view} highlight={highlight} animating={animating} onClick={onClick} onHover={setHovered} notice={burnNotice("you")} />
+          <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} aside={heroAside?.own} />
+          <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} view={view} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("you")} />
+        </HoveredHandCardProvider>
 
         <div className="control-bar" aria-label={t("Controls")}>
           {boardRail === undefined ? null : <div className="board-rail">{boardRail}</div>}
