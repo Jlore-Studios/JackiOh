@@ -15900,15 +15900,8 @@
       "verdict_rounds": 0
     },
     "3486": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42630456418",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-09T14:34:56Z",
-        "until": "2026-11-09T15:04:56Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15920,10 +15913,9 @@
         "reason": "planned on opus",
         "trail": "pe\\\\|groups\\\\|map\\\" | head\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; grep -n \\\"install_catalog\\\\|HELPER_FAMILIES\\\\|fn helpers_\\\\|const FAMILIES\\\" crates/tools/tests/acceptance.rs | head -20\", \"description\": \"Chec\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; sed -n 1150,1296p crates/tools/tests/acceptance.rs\", \"description\": \"Read helper family scan definitions\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; grep -n \\\"SHARED_TEST_HELPERS: \\\" -A60 crates/tools/tests/acceptance.rs | grep -n \\\"home\\\\|dirs\\\\|names\\\" | head -40\", \"description\": \"List sha\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; sed -n 960,1000p crates/tools/tests/acceptance.rs; grep -n \\\"const KIT_READERS\\\" -A5 crates/tools/tests/acceptance.rs\", \"description\": \"Read ha\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; grep -n \\\"pub fn run_as_p1\\\\|pub fn run_effect\\\\|pub fn apply_now\\\" -A22 crates/engine/tests/rules/fixtures/harness.rs | head -75; grep -n \\\"pu\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; grep -ln \\\"scenario(json\\\" crates/engine/tests/rules/*.rs | head -5; f=crates/engine/tests/rules/sick_view.rs; sed -n 1,60p $f\", \"description\":\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; grep -rn \\\"text\\\\.is_empty()\\\\|text\\\\.trim()\\\\.is_empty()\\\\|fn has_text\\\\|fn textless\\\\|no_text\\\" crates/engine/src crates/cards/src --include=\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; grep -o '\\\"text\\\": \\\"[^\\\"]*Spell Damage[^\\\"]*\\\"' crates/cards/catalog.json | head -3; grep -o '\\\"text\\\": \\\"[^\\\"]*Temporary[^\\\"]*\\\"' crates/card\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; grep -rn \\\"fn rust_sources\\\\|fn walk\\\\|fn rs_files\\\\|fn files_under\\\\|fn collect_rs\\\\|read_dir\\\" crates/tools/src/*.rs | head -12; grep -n \\\"pu\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; sed -n 1220,1250p crates/tools/src/retcon.rs; grep -rn \\\"fn repo_root\\\" -A6 crates/tools/src/ | head -10\", \"description\": \"Read retcon recursiv\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; sed -n 380,392p crates/cards/README.md; grep -n \\\"stand-in\\\\|helper\\\" crates/engine/README.md | head\", \"description\": \"Read cards README names \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; grep -n \\\"pub use\\\\|keyword_key\\\" crates/engine/src/wire/mod.rs | head; grep -n \\\"pub fn unit_def\\\" -A25 crates/engine/tests/rules/fixtures/cat\u2026\n- Bash: {\"command\": \"cat > /tmp/scan3486/swap.py <<'EOF'\\nimport re, json, sys, os, collections\\nroot = sys.argv[1]\\ncat = json.load(open(os.path.join(root, \\\"crates/cards/catalog.json\\\")))\\nSWAP = {\\\"core-0\u2026\n- Bash: {\"command\": \"cd /tmp/scan3486 && python3 -I - /home/runner/work/_temp/work/item-3486 <<'EOF'\\nimport re, json, sys, os, collections\\nroot = sys.argv[1]\\ncat = json.load(open(os.path.join(root, \\\"crat\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; grep -n \\\"pub use\\\\|pub mod catalog\\\\|pub mod rng\\\" crates/engine/src/lib.rs | head -30\", \"description\": \"Check engine crate root re-exports\"}\n- Bash: {\"command\": \"cd /tmp/scan3486 && python3 -I - /home/runner/work/_temp/work/item-3486 <<'EOF'\\nimport re, json, sys, os, collections, random\\nroot = sys.argv[1]\\ncat = json.load(open(os.path.join(root\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; grep -n \\\"pub fn shipped\\\\|pub static SHIPPED\\\\|pub fn versions\\\\|pub fn shipped_versions\\\\|pub fn find_shipped\\\\|pub fn snapshot\\\" crates/card\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; cat >> .bot-plan.md <<'EOF'\\n\\n## Decisions (draft)\\n- Grammar: `stand-in (C) A/H[ K][ RA'/H'[ K']]` Unit; `stand-in (C) Spell|Field Spell|Trap\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; grep -n \\\"pub use rng\\\\|pub use scenario\\\" crates/engine/src/lib.rs crates/engine/src/testkit/mod.rs; grep -n \\\"s.attack(\\\" -A4 crates/engine/s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; sed -n 1,12p crates/engine/tests/rules/mod_3.rs; grep -n \\\"pub fn query\\\\b\\\\|pub fn is_digest_id\\\\|pub fn fused_id_parts\\\" crates/engine/src/ca\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3486/.bot-plan.md\", \"content\": \"## Goal\\n\\nA card test names a script-less helper card by an id that is its definition (`\\\"stand-in (1) 4/4 R12/12\\\"`)\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count words in plan draft\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; grep -n \\\" CardDef {\\\" crates/engine/src/wire/catalog_types.rs | head -3; grep -n \\\"fn test_override\\\" crates/engine/src/catalog.rs\", \"descript\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; python3 -I - <<'EOF'\\np = \\\".bot-plan.md\\\"\\nt = open(p).read()\\nrep = [\\n(\\\"A card test names a script-less helper card by an id that is its de\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3486/.bot-plan.md\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3486/.bot-plan.md\", \"content\": \"## Goal\\n\\nCard tests can name a script-less helper by an id that defines it (`\\\"stand-in (1) 4/4 R12/12\\\"`). Under `t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; wc -w .bot-plan.md; git status --porcelain | head\", \"description\": \"Count plan words and confirm tree clean\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3486; python3 -I - <<'EOF'\\np=\\\".bot-plan.md\\\"; t=open(p).read()\\nreps=[\\n(\\\"**M6. Table.** Put it in the final report, one row per M1 id: `id | name\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3486/.bot-plan.md\"}\n- said: ## Goal Card tests can name a helper card that has no script by an id that defines it (`\"stand-in (1) 4/4 R12/12\"`). Under `testkit` only, `catalog::find_def` builds the card on a miss and caches it outside `registered()`. No pool, query or seeded draw moves, and production compiles none of it. `ca\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-09T14:00:14Z",
       "owner_why": "it plans it",
@@ -15936,9 +15928,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-09T13:53:04Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "42630456418",
+      "run_id": "pending:6ba9416a-1794235051",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-09T14:00:14Z",
+      "started_at": "2026-11-09T14:38:05Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16043,9 +16035,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T14:37:17Z",
+    "at": "2026-11-09T14:38:05Z",
     "url": "",
-    "what": "review #3488 on muse"
+    "what": "build #3486 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-09T14:14:22Z",
