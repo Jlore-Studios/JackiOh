@@ -17749,16 +17749,12 @@
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
-        "builder": "muse",
-        "built_by": "muse",
-        "rejections": [
-          "claude"
-        ],
+        "builder": "claude",
+        "built_by": "claude-3",
+        "rejections": [],
         "reviews": [],
-        "sha": "68c62dfbe4f0913f4b12692596e0ff5933f32863",
-        "tiers": {
-          "claude": "medium"
-        }
+        "sha": "9ed63fadd18c73e45048ab8e41f390a8f60b1ecd",
+        "tiers": {}
       }
     },
     "3461": {
