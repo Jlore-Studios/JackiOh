@@ -42,8 +42,9 @@ on:
 permissions:
   contents: read
 
+# One run per branch and area at a time: a dispatch of one area never waits for another's.
 concurrency:
-  group: mutants-${{ github.ref }}
+  group: mutants-${{ github.ref }}-${{ inputs.area }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
