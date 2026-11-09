@@ -17718,7 +17718,7 @@
       "verdict_rounds": 1
     },
     "3460": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cross_rounds": 1,
@@ -17738,10 +17738,12 @@
       },
       "interruptions": 0,
       "issue": 3349,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "revising",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-09T04:50:11Z",
         "from_run": "42558456309",
         "gates": [
           {
@@ -17840,7 +17842,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "42558456309",
+      "run_id": "pending:898c971c-1794199782",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17861,7 +17863,7 @@
         "run": "42558456309"
       },
       "source": "",
-      "started_at": "2026-11-09T03:49:15Z",
+      "started_at": "2026-11-09T04:50:11Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -18219,9 +18221,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T04:40:48Z",
+    "at": "2026-11-09T04:50:11Z",
     "url": "",
-    "what": "revise #3461 on claude-8"
+    "what": "review #3460 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-09T04:38:29Z",
