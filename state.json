@@ -17018,10 +17018,28 @@
     "what": "plan #3503 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-09T20:24:57Z",
+    "at": "2026-11-09T20:38:28Z",
     "notes": [
-      "delivered review #3522 on claude-6 (run 42691595326): approved",
-      "delivered revise #3464 on claude-3 (run 42688725650): built"
+      "#3497 needs a plan",
+      "#3498 needs a plan",
+      "#3499 needs a plan",
+      "#3500 needs a plan",
+      "#3502 needs a plan",
+      "#3503 needs a plan",
+      "#3504 needs a plan",
+      "#3493: @MaxGoetzmann answered its question, so it is queued again with the answer",
+      "delivered review #3520 on claude-4 (run 42685278684): approved",
+      "started revise #3493 on muse (run 42695418981)",
+      "started plan #3496 on muse (run 42695550662)",
+      "started plan #3497 on muse (run 42695681300)",
+      "started plan #3499 on muse (run 42695817116)",
+      "started plan #3502 on claude-7 (run 42695952376)",
+      "started plan #3500 on claude-8 (run 42696085887)",
+      "started plan #3498 on claude-8 (run 42696216906)",
+      "started plan #3504 on claude-1 (run 42696348082)",
+      "started plan #3503 on claude-4 (run 42696486418)",
+      "nothing more to start: nothing is queued",
+      "pruned 5 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17727,7 +17745,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T20:24:57Z",
+  "loop_tick": "2026-11-09T20:38:28Z",
   "machine_disk": {
     "issue": null,
     "reading": {
