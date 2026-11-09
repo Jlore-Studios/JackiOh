@@ -64,6 +64,7 @@ import { withBought } from "../shop/shop.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import {
+  GRANT_TAKEOVER_SHORT_MS,
   PACK_FLIP_MS,
   PACK_HOLD_MS,
   PACK_SWIPE_PX,
@@ -225,11 +226,25 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
   const all = opened !== null && slots.every((_, index) => shows(index));
   // R3349000: a Mythic card pull tears the pack open into its takeover, with its own art, closing to
   // the slots grid on tap; reduced motion keeps today's instant all-revealed path, and Reveal all skips it.
+  // R2785000: `bigMoments` off skips the takeover for the grid, short holds it briefly like GrantReveal's.
+  const bigMoments = fx.bigMoments;
   const mythicFirst = opened === null ? -1 : opened.slots.findIndex((slot) => slot.rarity === "Mythic");
   const mythicSlot = mythicFirst >= 0 ? opened?.slots[mythicFirst] : undefined;
   const mythicDef = mythicSlot === undefined ? undefined : CATALOG[mythicSlot.cardId];
-  const showTakeover = mythicSlot !== undefined && mythicDef !== undefined && torn && !reduced && !skipped && takeover;
+  const showTakeover =
+    mythicSlot !== undefined && mythicDef !== undefined && torn && !reduced && !skipped && takeover && bigMoments !== "off";
   const showSlots = opened !== null && (reduced || skipped || torn) && !showTakeover;
+
+  // R2785000: a short Big moment holds the Mythic takeover briefly, then moves on to the grid; a tap moves on at once.
+  useEffect(() => {
+    if (!showTakeover || bigMoments !== "short") return undefined;
+    const timer = window.setTimeout(() => {
+      setTakeover(false);
+    }, GRANT_TAKEOVER_SHORT_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [showTakeover, bigMoments]);
 
   const reveal = (index: number): void => {
     const slot = slots[index];

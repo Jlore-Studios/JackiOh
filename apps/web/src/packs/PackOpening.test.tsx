@@ -21,7 +21,7 @@ import {
   writeCosmetics,
 } from "../cards/cosmetics.ts";
 import { flightsMs } from "../economy/bars.ts";
-import { resetFxSettingsForTests } from "../fx/settings.ts";
+import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { keptPaths, type OpenedPackResponse, type PacksResponse } from "../net/api.ts";
 import { expireRead } from "../net/readCache.ts";
@@ -33,6 +33,7 @@ import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
 import { openedPack, packsInfo } from "./fixtures.ts";
 import PackOpening, { PackScene, type PackSceneProps } from "./PackOpening.tsx";
 import {
+  GRANT_TAKEOVER_SHORT_MS,
   PACK_BURSTS,
   PACK_HOLD_MS,
   PACK_SWIPE_PX,
@@ -360,6 +361,27 @@ describe("#1308 the pack-opening scene", () => {
     expect(screen.queryByTestId(T.takeover)).toBeNull();
     expect(screen.getByTestId(T.slots)).toBeInTheDocument();
     expect(screen.getByTestId(T.slot(0))).toHaveAttribute("data-revealed", "false");
+  });
+
+  it("R3349000 bigMoments off stills the Mythic takeover to the grid", () => {
+    setFxSettings({ bigMoments: "off" });
+    const given = props({ opened: openedPack() });
+    render(<PackScene {...given} />);
+    advance(PACK_TEAR_MS);
+    expect(screen.queryByTestId(T.takeover)).toBeNull();
+    expect(screen.getByTestId(T.slots)).toBeInTheDocument();
+    expect(screen.getByTestId(T.slot(0))).toHaveAttribute("data-revealed", "false");
+  });
+
+  it("R3349000 bigMoments short holds the Mythic takeover briefly", () => {
+    setFxSettings({ bigMoments: "short" });
+    const given = props({ opened: openedPack() });
+    render(<PackScene {...given} />);
+    advance(PACK_TEAR_MS);
+    expect(screen.getByTestId(T.takeover)).toBeInTheDocument();
+    advance(GRANT_TAKEOVER_SHORT_MS);
+    expect(screen.queryByTestId(T.takeover)).toBeNull();
+    expect(screen.getByTestId(T.slots)).toBeInTheDocument();
   });
 
   it("R3349000 no slot shows before it is opened", () => {
