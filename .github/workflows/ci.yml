@@ -90,7 +90,10 @@
 # `changes` job scopes the group's diff against the queue's base as it scopes a pull request's, and
 # the push to main still runs everything after it. A run here gets the smoke list, as a pull request,
 # stops once one of the five has failed (`queue-cancel-*`, at the end), and cancels its own pull
-# request's older builds, which the queue rebuilt and GitHub leaves running (`queue-supersede`).
+# request's older builds, which the queue rebuilt and GitHub leaves running (`queue-supersede`). The
+# night bot's status loop goes sooner: once a job of a build fails for its own pull request, it takes
+# that pull request out of the queue and only then cancels the run (bot/go/internal/events
+# `EvacQueue`, bot/README.md "Evacuating the merge queue").
 name: CI
 
 on:
@@ -1172,13 +1175,13 @@ jobs:
   # Only on a dispatch with `e2e: all`, as super.yml's `component` job runs it: the 10-unit/10-backrow
   # fixture board mounted in a real browser (BUILD M5-T1's layout at 1280x720 and 390x844). No client
   # build and no server: the component dev server compiles apps/web/src itself and only needs the
-  # WASM module.
+  # WASM module. The same time as super.yml's (#3439).
   e2e-component:
     name: e2e component (chrome)
     needs: [changes, web-build]
     if: ${{ needs.changes.outputs.full == 'true' && inputs.e2e == 'all' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -1445,7 +1448,10 @@ jobs:
   # and the bot that owns the pull request answers the cancelled run with a CI fix
   # (bot/go/internal/events `OnQueueCI`). Never sooner, at a failed piece: a run cancelled before a
   # summary job runs leaves that required check skipped, and a skipped required check counts as
-  # passing, which here would let the queue land the pull request.
+  # passing, which here would let the queue land the pull request. The night bot's status loop goes
+  # sooner only by taking the pull request out of the queue first, at a failed piece, and cancelling
+  # the run once GitHub says it is out (bot/go/internal/events `EvacQueue`); these jobs stop the
+  # builds it did not, and every one while the loop is down.
   queue-cancel-rust:
     name: cancel the queue build (rust)
     needs: rust

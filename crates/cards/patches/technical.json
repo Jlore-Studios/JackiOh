@@ -2997,6 +2997,34 @@
     "player": "The statistics page can show each token's win rate: turn on Show tokens on the Cards tab."
   },
   {
+    "version": "v0.5.4b",
+    "commit": "eab368f635f1fdb0cfb47843e0fa756fc1139f1f",
+    "pr": 2373,
+    "title": "the backrow builds suspense: set, wait, flip",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.4b",
+    "commit": "70ed19e032d2188d7fd5c7e0271a7edf691379fe",
+    "pr": 2331,
+    "title": "patches log: eba6392..da5a454",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.4b",
+    "commit": "ca042e1d76202fa39e6f92fca2307976d449b6a8",
+    "pr": 2376,
+    "title": "WIP: the AI prices a Radiant Call to Chaos's extra effects in hand (R423)",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.4b",
+    "commit": "25aa9548bbf5cc1f470419eac907a885e81148cc",
+    "pr": 2374,
+    "title": "patches ship: v0.5.4c",
+    "kind": "app"
+  },
+  {
     "version": "v0.5.5b",
     "commit": "5f8bff82c0b301e62d7db658a9ab9f54d1f562f6",
     "pr": 2377,

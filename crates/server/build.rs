@@ -2,7 +2,7 @@
 //! path and the bytes of every file under `RULES`, walked in path order. `actor::checkpoint` stamps it
 //! on every checkpoint it writes and refuses one stamped with another, so a checkpoint written under
 //! different rules (an engine or card change, the catalog's data, the server's own fold and recorder)
-//! is never resumed: the match folds its whole log instead. A root that is missing hashes as nothing.
+//! is never resumed: the match folds its whole log instead. Every root must exist: Cargo takes a missing `rerun-if-changed` path for changed on every build, which recompiled this crate on every `cargo` call (#3436; tests/actor/checkpoints.rs holds the list to it).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -16,7 +16,6 @@ const RULES: &[&str] = &[
     "../cards/src",
     "../cards/build.rs",
     "../cards/catalog.json",
-    "../cards/data",
     "../cards/patches",
     "src/actor/engine.rs",
     "src/actor/telemetry.rs",
