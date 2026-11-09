@@ -246,7 +246,7 @@ const CLOAKED_TOE_CRACKER: SceneRecipe = {
     y: 84,
     scale: 0.95,
     pose: "pose-crouch",
-    look: { ...figureLookFor(["Human"]), hair: "hood", outfit: "outfit-cloak", item: null, cloth: "slate-800" },
+    look: { ...figureLookFor(["Human"]), hair: "hood", outfit: "outfit-travel-cloak", item: null, cloth: "slate-800" },
   },
   layers: {
     far: [

@@ -30,6 +30,9 @@ import { MEDITATIVE_RECIPES_3 } from "./meditativeRecipes3.ts";
 import { MEDITATIVE_RECIPES_4 } from "./meditativeRecipes4.ts";
 import { MEDITATIVE_RECIPES_5 } from "./meditativeRecipes5.ts";
 import type { SceneRecipe } from "./scene.ts";
+import { STINKYSCAPE_91_RECIPES_1 } from "./stinkyscape91Recipes1.ts";
+import { STINKYSCAPE_91_RECIPES_2 } from "./stinkyscape91Recipes2.ts";
+import { STINKYSCAPE_91_RECIPES_3 } from "./stinkyscape91Recipes3.ts";
 import { CORE_SCENES_1 } from "./sceneRecipesCore1.ts";
 import { CORE_SCENES_2 } from "./sceneRecipesCore2.ts";
 import { CORE_SCENES_3 } from "./sceneRecipesCore3.ts";
@@ -157,7 +160,14 @@ const ARG_ARG_DEFENDER: SceneRecipe = {
   },
 };
 
-/** R3331000: the cards that draw from a scene, by id: the proof cards, R3390000 every Classic+ entry, R3392000 every Core entry, R3393000 every Meditative+ and Training Grounds entry, R3401000 every Meditative entry and R3352000 every Classic entry. */
+/** R3403000: every entry of #3403's table (Stinkyscape #91 to #176 and their tokens, and the early cards' tokens it names), by id. */
+export const STINKYSCAPE_91_RECIPES: Readonly<Record<string, SceneRecipe>> = {
+  ...STINKYSCAPE_91_RECIPES_1,
+  ...STINKYSCAPE_91_RECIPES_2,
+  ...STINKYSCAPE_91_RECIPES_3,
+};
+
+/** R3331000: the cards that draw from a scene, by id: the proof cards, R3390000 every Classic+ entry, R3392000 every Core entry, R3393000 every Meditative+ and Training Grounds entry, R3401000 every Meditative entry, R3403000 #3403's Stinkyscape entries and R3352000 every Classic entry. */
 export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   "classic-074": CORPSE_PLANTATION,
   "core-100": CEASELESS_VOID,
@@ -171,6 +181,7 @@ export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   ...CLASSIC_PLUS_RECIPES_1,
   ...CLASSIC_PLUS_RECIPES_2,
   ...CLASSIC_PLUS_RECIPES_3,
+  ...STINKYSCAPE_91_RECIPES,
   ...MEDITATIVE_RECIPES_1,
   ...MEDITATIVE_RECIPES_2,
   ...MEDITATIVE_RECIPES_3,

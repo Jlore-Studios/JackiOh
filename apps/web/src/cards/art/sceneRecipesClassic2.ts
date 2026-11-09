@@ -867,7 +867,7 @@ const RECURRING_FELINOR: SceneRecipe = {
   sky: ["slate-900", "jade-400"],
   light: { x: 50, y: 70, r: 32, paint: "cyan-400", opacity: 0.4 },
   emblem: { x: 84, y: 70, size: 5, rotate: 0 },
-  figure: { x: 50, y: 74, scale: 0.95, pose: "pose-run", look: { ...figureLookFor(["Felinor"]), hair: "hood", outfit: "outfit-cloak", item: null, skin: "orange-400", cloth: "slate-700" } },
+  figure: { x: 50, y: 74, scale: 0.95, pose: "pose-run", look: { ...figureLookFor(["Felinor"]), hair: "hood", outfit: "outfit-travel-cloak", item: null, skin: "orange-400", cloth: "slate-700" } },
   layers: {
     sky: [{ part: "moon", x: 80, y: 18, scale: 0.8 }],
     far: [
@@ -929,7 +929,7 @@ const VOIDWALKER: SceneRecipe = {
   sky: ["slate-700", "grey-500"],
   light: { x: 50, y: 56, r: 34, paint: "slate-400", opacity: 0.35 },
   emblem: { x: 22, y: 64, size: 5, rotate: 0 },
-  figure: { x: 50, y: 86, scale: 1.1, pose: "pose-stride", look: { ...figureLookFor([]), head: "head-void", hair: "hood", outfit: "outfit-cloak", item: null, skin: "black", cloth: "slate-900" } },
+  figure: { x: 50, y: 86, scale: 1.1, pose: "pose-stride", look: { ...figureLookFor([]), head: "head-void", hair: "hood", outfit: "outfit-travel-cloak", item: null, skin: "black", cloth: "slate-900" } },
   layers: {
     sky: [{ part: "cloud", x: 70, y: 22, scale: 1, count: 2, spread: [14, 4], paint: "slate-400" }],
     far: [

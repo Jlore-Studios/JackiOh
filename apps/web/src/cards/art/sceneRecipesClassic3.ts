@@ -275,7 +275,7 @@ const FELINOR_FEELER: SceneRecipe = {
     y: 86,
     scale: 1.15,
     pose: "pose-crouch",
-    look: { ...figureLookFor(["Human"]), hair: "cat-hood", outfit: "outfit-cloak", item: null, cloth: "violet-700" },
+    look: { ...figureLookFor(["Human"]), hair: "cat-hood", outfit: "outfit-travel-cloak", item: null, cloth: "violet-700" },
   },
   extras: [
     { layer: "subject", x: 16, y: 86, scale: 0.58, pose: "pose-kneel", look: SHIELD_SOLDIER },
@@ -952,7 +952,7 @@ const KING_WAGTOGGLE: SceneRecipe = {
     y: 84,
     scale: 1.05,
     pose: "pose-point",
-    look: { ...figureLookFor(["Human"]), hair: "king-crown", outfit: "outfit-cloak", item: null, skin: "red-300", cloth: "red-600" },
+    look: { ...figureLookFor(["Human"]), hair: "king-crown", outfit: "outfit-travel-cloak", item: null, skin: "red-300", cloth: "red-600" },
   },
   extras: [
     {
@@ -1180,7 +1180,7 @@ const IN_TOO_DEEP: SceneRecipe = {
     y: 64,
     scale: 0.5,
     pose: "pose-hold",
-    look: { ...figureLookFor(["Human"]), hair: "hair-long", outfit: "outfit-cloak", item: "item-lantern", cloth: "blue-700" },
+    look: { ...figureLookFor(["Human"]), hair: "hair-long", outfit: "outfit-travel-cloak", item: "item-lantern", cloth: "blue-700" },
   },
   layers: {
     sky: [

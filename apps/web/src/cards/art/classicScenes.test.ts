@@ -58,7 +58,7 @@ const CLASSIC_FIGURE_PARTS = [
   "king-crown",
   "jagged-crown",
   "outfit-harlequin",
-  "outfit-cloak",
+  "outfit-travel-cloak",
   "outfit-spider",
   "item-card-fan",
   "item-rake",
