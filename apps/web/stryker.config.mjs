@@ -36,6 +36,9 @@ export default {
   // A module-level value runs once for a whole test file, so each such mutant would run every test
   // again; left out (and counted as Ignored).
   ignoreStatic: true,
+  // No `// @ts-nocheck` written into the source files: vitest strips the types and checks none, and
+  // in place the line lands in every file under src/, which a test reading a file's first line sees.
+  disableTypeChecks: false,
   // The first, unmutated run of every related test file, instrumented: a layer the board imports
   // (the drag's) relates most of the web's tests, which took past Stryker's default 5 minutes.
   dryRunTimeoutMinutes: 60,
