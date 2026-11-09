@@ -17865,21 +17865,33 @@
       }
     },
     "3459": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-09T02:02:40Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-09T02:01:41Z",
       "requested_by": "jgoetzmann",
-      "stop_requested": false
+      "run_id": "pending:c2c6bcda-1794189732",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-09T02:02:40Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T02:02:00Z",
+    "at": "2026-11-09T02:02:40Z",
     "url": "",
-    "what": "build #3352 on claude-3"
+    "what": "plan #3459 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T01:47:42Z",
