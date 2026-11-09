@@ -17149,7 +17149,7 @@
     "what": "plan #3498 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-09T21:20:08Z",
+    "at": "2026-11-09T21:28:16Z",
     "notes": [
       "#3504 is held for `claude-1` until 15:30 (5-hour usage is 100%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
     ],
@@ -17857,7 +17857,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T21:20:08Z",
+  "loop_tick": "2026-11-09T21:28:16Z",
   "machine_disk": {
     "issue": null,
     "reading": {
