@@ -35202,10 +35202,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "runs": [
-      "2026-11-09T16:06:06Z,42646596149,muse,muse-spark-1.3-contributor,review,3492,medium,approved,,23.9,0,0,0,,,,,,1.4,,none,,1"
-    ]
-  },
   "version": 1
 }
