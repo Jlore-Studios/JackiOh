@@ -21,6 +21,7 @@ mod gate;
 mod golden;
 mod names;
 mod patches;
+mod perf;
 mod positions;
 mod promote;
 mod replay;
@@ -74,6 +75,8 @@ enum Command {
     Patches(patches::Args),
     /// The AI's quality gates and `gate merge <dir>` (part 22).
     Gate(gate::Args),
+    /// The engine's and the replay fold's speed on a frozen corpus, each median held to its budget (#3429).
+    Perf(perf::Args),
     /// R186's shadow-ban sweep (part 22).
     Sweep(sweep::Args),
     /// R378's development run for the card statistics (part 22).
@@ -111,6 +114,7 @@ fn main() -> ExitCode {
         Command::CatalogVersion(args) => catalog::run_version(args),
         Command::Patches(args) => patches::run(args),
         Command::Gate(args) => gate::run(args),
+        Command::Perf(args) => perf::run(args),
         Command::Sweep(args) => sweep::run(args),
         Command::Stats(args) => stats::run(args),
         Command::Golden(args) => golden::run(args),

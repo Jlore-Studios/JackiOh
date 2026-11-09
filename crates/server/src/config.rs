@@ -1466,3 +1466,30 @@ pub const NEWS_POSTS_PAGE: i64 = 100;
 pub const NEWS_POST_TITLE_MAX_CHARS: usize = 80;
 /// §14.13, R3074003: the most characters a post's summary holds. Exported to `serverConfig.ts`.
 pub const NEWS_POST_SUMMARY_MAX_CHARS: usize = 400;
+
+// ---- The match actor's speed (#3429) ----
+// `tests/actor/perf.rs`, daily: bot-against-bot matches played at once through the match actor on
+// the in-memory store. Not in SPEC, and no R-row. Never exported to `serverConfig.ts`.
+
+/// #3429: the matches the daily perf test plays at once.
+pub const SERVER_PERF_MATCHES: usize = 16;
+/// #3429: the matches the per-pull-request smoke test plays at once, so the harness keeps working.
+pub const SERVER_PERF_SMOKE_MATCHES: usize = 2;
+/// #3429: the worker threads of the runtime the perf tests play on: a GitHub `ubuntu-latest`
+/// runner's four vCPUs.
+pub const SERVER_PERF_WORKER_THREADS: usize = 4;
+/// #3429: the most actions a perf match takes before its test fails it as a stall (golden's
+/// `STEP_CAP`, §13.1).
+pub const SERVER_PERF_ACTION_CAP: usize = 3_000;
+/// #3429: the most the median action may take from `submit` to its answer, which comes only after
+/// the actor has pushed both seats' views, in milliseconds, at `cargo test`'s profile. Measured on
+/// 2026-11-09 on a 4-vCPU GitHub Actions ubuntu runner (AMD EPYC 7763), `SERVER_PERF_MATCHES` at once,
+/// in eleven runs: medians from 88.6 to 98.75 ms (91.77, 92.24 and 92.43 in three in a row). 5x the
+/// most, rounded up to two significant figures. The in-memory store's transactions take one lock and
+/// copy every table (`db/fake.rs`), so the matches queue on it: a run kept about 1.3 of the 4 cores
+/// busy (22.7 s of CPU in 17.8 s).
+pub const SERVER_PERF_BROADCAST_MS_BUDGET: f64 = 500.0;
+/// #3429: the fewest matches per second the actor must finish, `SERVER_PERF_MATCHES` at once, at
+/// `cargo test`'s profile. Measured in the same eleven runs: 16 matches of 1,887 actions in all, in
+/// 16.5 to 18.68 s, so 0.86 to 0.97 a second. The least divided by 5, rounded down.
+pub const SERVER_PERF_MATCHES_PER_SECOND_FLOOR: f64 = 0.17;
