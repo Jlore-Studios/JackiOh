@@ -17803,10 +17803,14 @@
         "approvals": [],
         "builder": "muse",
         "built_by": "muse",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "68c62dfbe4f0913f4b12692596e0ff5933f32863",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       }
     },
     "3461": {
