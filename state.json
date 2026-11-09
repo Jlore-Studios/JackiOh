@@ -16353,9 +16353,9 @@
     "what": "review #3493 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-09T16:09:11Z",
+    "at": "2026-11-09T16:18:25Z",
     "notes": [
-      "delivered review #3492 on muse (run 42646596149): approved"
+      "#3491: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17061,7 +17061,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T16:09:11Z",
+  "loop_tick": "2026-11-09T16:18:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
