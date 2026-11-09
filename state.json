@@ -34774,7 +34774,9 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-09T15:52:16Z",
         "every": 5,
+        "findings": 0,
         "head": "cd7e1424e7697d0135ab86212b0f4cc4dc5b5302",
         "issue": 3478,
         "merged_at": "2026-11-09T15:29:29Z",
@@ -34787,12 +34789,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:399e4a72-1794238831",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42647147320",
         "sha": "3f8896c61dfa5f03681695ac31204429cafd7c85",
         "started_at": "2026-11-09T15:41:06Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: hovering your hand no longer redraws the whole board, and each card's face is built once per change instead of on every redraw",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 170
