@@ -990,10 +990,15 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   while the Lethal hint setting is on, and the board shows it (`data-lethal-hint` on the game, which
   outlines the enemy hero and End turn, and the `lethal-hint` line "You have lethal") once it shows
   the newest view, never on a replay. Online and hotseat boards never set it.
-- In a lesson the snapshot also adds `forecast`, the engine's `combatForecast(state, human)` (R3100000): what
+- Every snapshot adds `forecast` (R3477000), the engine's `combatForecast(state, human)` (R3100000): what
   each of the human's legal attacks would do, as the board shows it, and whether the attackers that reach the
   enemy hero finish it. It reads nothing the human cannot see, and the tutorial's coach names its attacks by it
-  (`tutorial/advice.ts`), so the client does no combat maths.
+  (`tutorial/advice.ts`), so the client does no combat maths. Outside a lesson the board draws it too: while
+  an attacker is selected or dragged, each legal target with an entry wears a label (`game/AttackOutcome.tsx`,
+  `outcome-<target testid>`) with the damage dealt, the damage taken back, a skull on whichever dies and the
+  struck-through shield mark for a broken Divine Shield; the Show attack outcomes setting (`attackOutcomes`,
+  on by default) hides it. A seat's 1v1 and Duos `view` frames carry the same field (`net.ts`,
+  `duos/socket.ts`), and a watcher's never does.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
 - A question sequence's 60 seconds (Meditative+ #20 KY's Competition, R1563006) are the machine's: an answer carries `timers`
   (`PracticeTimer`, a delay in ms from the answer), the controller keeps each as a timeout and sends `timerFired` when it is
