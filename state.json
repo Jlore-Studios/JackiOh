@@ -16836,7 +16836,7 @@
       "waiting_comment": 6724520976
     },
     "3437": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -16865,19 +16865,11 @@
       "failures": 0,
       "feedback_since": "2026-11-08T22:27:58Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-09T05:18:41Z",
-        "lifted": "2026-11-09T03:30:22Z",
-        "owner": "claude-8",
-        "since": "2026-11-09T03:18:41Z",
-        "until": "2026-11-09T03:30:00Z",
-        "why": "5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "interruptions": 0,
       "issue": 3395,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
@@ -16885,7 +16877,7 @@
       "queued_at": "2026-11-09T03:17:19Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "42536825321",
+      "run_id": "pending:0e22173b-1794195041",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16906,16 +16898,9 @@
         "run": "42536825321"
       },
       "source": "conflict",
-      "started_at": "2026-11-08T23:47:01Z",
+      "started_at": "2026-11-09T03:31:07Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-09T03:17:19Z",
-        "until": "2026-11-09T03:47:19Z",
-        "why": "it waited 120 minutes for #3426, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
-      },
       "verdict_rounds": 2,
       "votes": {
         "approvals": [
@@ -18142,9 +18127,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T03:30:30Z",
+    "at": "2026-11-09T03:31:07Z",
     "url": "",
-    "what": "review #3463 on muse"
+    "what": "revise #3437 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-09T03:16:48Z",
