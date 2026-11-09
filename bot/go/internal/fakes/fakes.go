@@ -98,6 +98,9 @@ type FakeGitHub struct {
 	AutoMergeHeads map[string]string
 	// Pull requests in `main`'s merge queue, by node id (`queue.hold_merge`).
 	MergeQueue map[string]bool
+	// The queue's order, by node id, the first first (`GitHub.QueueOrder`): one queued and not
+	// named here comes after these, by node id.
+	MergeQueueOrder []string
 	// How the queue last took a pull request out, by node id (`GitHub.queue_removal`).
 	QueueRemovals map[string]map[string]string
 	Blockers      map[int][]int
@@ -763,6 +766,24 @@ func (o *Own) Dequeue(nodeID string) {
 		panic(githubError("not in the merge queue", 200))
 	}
 	delete(o.MergeQueue, nodeID)
+}
+
+func (o *Own) QueueOrder(branch string) []int {
+	ids := append([]string{}, o.MergeQueueOrder...)
+	rest := []string{}
+	for id := range o.MergeQueue {
+		rest = append(rest, id)
+	}
+	sort.Strings(rest)
+	out := []int{}
+	seen := map[string]bool{}
+	for _, id := range append(ids, rest...) {
+		if o.MergeQueue[id] && !seen[id] {
+			seen[id] = true
+			out = append(out, py.MustInt(o.self().pullByNode(id).Get("number")))
+		}
+	}
+	return out
 }
 
 func (o *Own) MarkReady(nodeID string) { o.self().pullByNode(nodeID).Set("draft", false) }

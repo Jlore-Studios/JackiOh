@@ -86,7 +86,7 @@ flowchart TD
   end
   D -- "approved: its own lane owns the merge" --> CI["CI on the PR: rust (fmt, clippy, tests, checks, fuzz),<br/>web, e2e smoke, db, bot selftest"]
   CI -- "green" --> M["squash-merged into main;<br/>the issue closes"]
-  CI -- "a required job red: the rest of the run stopped<br/>within 3 minutes of the status loop's look,<br/>or out of the merge queue" --> E
+  CI -- "a required job red: the rest of the run stopped<br/>within 3 minutes of the status loop's look;<br/>in the merge queue, out of it at the next look" --> E
   E -- "a CI fix, the merge owner's first" --> XF
   XF -- "a CI fix whose failing check passes locally:<br/>no commit, CI runs again (once a head)" --> CI
   M -- "every 5th medium or hard merge" --> SP["after-merge spot-check: Opus on another subscription;<br/>blocks nothing, findings open a follow-up issue"]
@@ -1210,16 +1210,63 @@ required job went red in its third, so the harness does not wait for it on a bot
   code, and the harness runs the full local checks before it pushes, as any CI fix.
 - **No jobs are skipped on the fix commit**: no path filter or `[skip ci]`; every required check
   runs in full on every head, and the merge queue runs them again.
-- **The merge queue's own CI** is left as it was: ci.yml's `queue-cancel-*` jobs stop a failed
-  build there, and `events.OnQueueCI` queues its fix at once. A build the queue rebuilt (a pull
-  request ahead of it left the queue) is cancelled by its newer build (ci.yml's `queue-supersede`),
-  since GitHub leaves it running; a build cancelled with no job failed says nothing about its pull
-  request, so `OnQueueCI` leaves it alone (`events.QueueBuildFailed`).
+- **The merge queue's own CI** has a look of its own, faster and with its own rules:
+  [Evacuating the merge queue](#evacuating-the-merge-queue). Past it, ci.yml's `queue-cancel-*`
+  jobs stop a failed build once its required check reports, and `events.OnQueueCI` queues its fix
+  at once. A build the queue rebuilt (a pull request ahead of it left the queue) is cancelled by its
+  newer build (ci.yml's `queue-supersede`), since GitHub leaves it running; a build cancelled with
+  no job failed says nothing about its pull request, so `OnQueueCI` leaves it alone
+  (`events.QueueBuildFailed`).
 
 Squishy runs the same code under its own labels (`squishy:revise`, `squishy:fixing-ci`) and branches
 (`squishy/…`), with no status loop of its own: its sweep, which the night bot's loop runs for it
 each tick (`--companions`, every five minutes), is where its red CI is stopped, and
 `squishy-commands.yml` delivers its CI events to `OnCI`.
+
+### Evacuating the merge queue
+
+`main`'s merge queue ([`infra/github.tf`](../infra/github.tf)) takes a pull request out only once a
+required check reports red, and each of ci.yml's summary checks (`rust`, `web`, `e2e smoke`, `db`)
+reports only once every job it gathers has ended. So a job that failed in a build's third minute
+held the queue, and every pull request behind it, until the slowest of those jobs ended, often
+twenty minutes on and mostly spent waiting for runners. The harness does not wait for it
+([`go/internal/events/evac.go`](go/internal/events/evac.go), the owner's ask of 2026-11-07):
+
+- **Looking.** At every tick of the [runner gate](#the-runner-gate) (every 30 seconds in the status
+  loop, and every sweep, so a stopped loop slows it to the sweep's pace), the night bot's process
+  (Squishy's skips it, as it skips the gate) reads CI's newest runs (`EvacRuns`, 100) and the jobs
+  of the queue's builds still going, by conditional requests that cost no rate limit while a
+  build's jobs are unchanged. Only when a required job (as [Stopping red CI
+  early](#stopping-red-ci-early) counts them) has failed in one does it read the queue's order.
+- **The current build.** The queue builds each pull request on top of every one ahead of it, on
+  `gh-readonly-queue/main/pr-<n>-<sha>`, where `<sha>` is the commit the build stands on: the head
+  of the build ahead of it, or `main`'s for the first (a group that lands fast-forwards `main` to
+  its head). So the first pull request's current build is its newest one on `main`'s head, and
+  each one after it is its newest on the head of the current build ahead of it. Any other build was
+  rebuilt and is never read (`queue-supersede` cancels it); a pull request whose build has not
+  started yet on what is ahead of it ends the look there.
+- **Whose failure it is.** A build holds the changes of every pull request ahead of it, so a job
+  that failed in it may have failed for one of those, which the queue then takes out instead,
+  building this one again without it. A failure is the pull request's own only when every build
+  ahead of it has already passed that same job (or skipped it, or passed whole). The look goes down
+  the queue from the first pull request and stops at the first build with a required job red: that
+  pull request goes out when the failure is its own, and otherwise it waits, a tick at a time, for
+  the builds ahead to pass the job (or fail, and go out themselves). A build that ended is left to
+  the queue, which has its checks.
+- **Taking it out.** It dequeues the pull request with the bot's token (the Actions token may not),
+  and goes on only once GitHub says it is out of the queue: a build cancelled while its pull request
+  is still queued leaves its summary checks skipped, which count as passing, which is why
+  `queue-cancel-*` wait for the summary job. Then it records the build in `ci_stopped`, so
+  `events.OnCI` ignores its completed event, and cancels the rest of it, which only holds runners
+  now. If the queue keeps it (the dequeue refused, or its answer could not be read), nothing is
+  cancelled, and its check takes it out as before.
+- **The fix.** A bot pull request gets its CI fix in the same tick, as `OnQueueCI` would give it at
+  the build's end (`events.queueFix`: held ones, people's and heads the reviews never cleared are
+  left alone), marked early, so its fix reads only the failed jobs; queuing it at once keeps the
+  housekeeping pass from finding it out of the queue unheld and putting it back
+  (`queue.RequeueCleared`). A person's pull request gets a comment that says which job failed and
+  links the build. Another bot's (Squishy's) is that bot's: its own `OnQueueCI` hears of the
+  cancelled build, whose failed job says why.
 
 ### The runner gate
 
