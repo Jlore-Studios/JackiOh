@@ -91,6 +91,9 @@
 // (`worn`), the seat's frozen one below a `TheirCopy`; ProficiencyStamp.tsx draws it in stamps.css's slot, clear
 // of every part, base and Radiant alike.
 //
+// R3335000: a launched Starship's art wears its Starship look (cosmetics.ts `useStarshipLook`): the account's picks on
+// the viewer's own copy (`worn`), the seat's frozen ones below a `TheirCopy`, else the standard.
+//
 // R3338002: given `gemDrain` (Card.tsx, a Ceaseless Void in its owner's own hand), the cost gem's level falls as its
 // cost does (`data-gem-drain`, `--cost-drain`, cards.css); every other face's gem is drawn whole.
 //
@@ -115,7 +118,7 @@ import { useArtLive } from "./artLive.ts";
 import { useImmersiveShift } from "./immersive.ts";
 import { slotRarityOf } from "./motionSlots.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { cosmeticAttributes, useArtMotion, useCosmeticAppearance } from "./cosmetics.ts";
+import { cosmeticAttributes, useArtMotion, useCosmeticAppearance, useStarshipLook } from "./cosmetics.ts";
 import {
   CARD_DEPTH_STEP_CQW,
   CARD_FRAME_BREAK_PX,
@@ -376,6 +379,8 @@ export function CardFace({
   const rarity = frameRarity(face);
   const cosmeticAppearance = useCosmeticAppearance({ ...face, rarity }, worn);
   const stamp = useCardStamp(face, worn);
+  // R3335000: the Starship look a launched Starship wears: the viewer's own picks, or its seat's below a `TheirCopy`.
+  const starshipLook = useStarshipLook(worn);
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
   const glitch = isGlitch(face.defId);
@@ -520,6 +525,7 @@ export function CardFace({
               shape={shape}
               lazy={lazyArt}
               starship={starship}
+              look={starshipLook}
               anomaly={anomaly}
               picture={picture}
               motion={motion}
@@ -538,6 +544,7 @@ export function CardFace({
               className="cf-art--cutout"
               lazy={lazyArt}
               starship={starship}
+              look={starshipLook}
               anomaly={anomaly}
               picture={picture}
               motion={motion}
@@ -556,6 +563,7 @@ export function CardFace({
                 className="cf-art--near"
                 lazy={lazyArt}
                 starship={starship}
+                look={starshipLook}
                 anomaly={anomaly}
                 picture="normal"
                 motion={motion}

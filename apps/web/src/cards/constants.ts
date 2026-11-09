@@ -254,3 +254,7 @@ export const HAND_TEXT_BOX_MIN_CQH = 12;
  * crack, from the first (some health gone) to the last (a quarter of it left or less).
  */
 export const ART_WEAR_LEVELS = 4;
+/** R3345000: how long a press or click is held to open the full-screen art view anywhere. */
+export const FULLSCREEN_HOLD_MS = 450;
+/** R3345000: slop in px before movement is considered a drag instead of a hold. */
+export const FULLSCREEN_SLOP_PX = 10;

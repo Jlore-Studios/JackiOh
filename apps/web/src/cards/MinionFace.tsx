@@ -29,6 +29,7 @@
 // ranked by the pointer, focus and the attack in flight (`useArtMotion`, motionSlots.ts), and answers the pointer, a press and
 // `attackDeclared` (artLive.ts, `data-art-hover`, `data-art-attacking`); its art wears cracks for the health it is missing, a
 // glow in its card's colours when buffed and frost when frozen (`wear`, art/ArtWear.tsx), from the view's numbers and keywords alone.
+// R3335000: a launched Starship's art wears its seat's Starship look, as CardFace's does.
 // R3334000: a Dormant Starship with pieces idles in its shipyard over its picture (ShipyardIdle.tsx).
 
 import { useRef, type ReactElement } from "react";
@@ -42,7 +43,7 @@ import { CardStates } from "./CardStates.tsx";
 import { costDigits, hasCrest } from "./CardFace.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useArtLive } from "./artLive.ts";
-import { cosmeticAttributes, useArtMotion, useCosmeticAppearance } from "./cosmetics.ts";
+import { cosmeticAttributes, useArtMotion, useCosmeticAppearance, useStarshipLook } from "./cosmetics.ts";
 import { slotRarityOf } from "./motionSlots.ts";
 import { useFitText } from "./fit.ts";
 import { artMotionOf, boardLookOf, boardNameOf, useCardLook } from "./fullArt.ts";
@@ -159,6 +160,8 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
   useLocale();
   const settings = useCardSettings();
   const stamp = useCardStamp(face, worn);
+  // R3335000: a launched Starship wears the viewer's own Starship picks, or its seat's below a `TheirCopy`.
+  const starshipLook = useStarshipLook(worn);
   const plan = keywordFxPlan(unit);
   // R3046000, R3339000: the look a full-art unit wears, still (null: the art up to the frame).
   const cardLook = useCardLook(face.defId, worn);
@@ -228,6 +231,7 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             type={face.type}
             shape={artFirst || look !== null ? "full" : "frame"}
             starship={face.starship}
+            look={starshipLook}
             ship={shipArtOf(face.defId, unit)}
             picture={look !== null ? artPictureOf(look.version, face.set) : artFirst ? artPictureOf(cardLook.version, face.set) : "normal"}
             motion={motion}

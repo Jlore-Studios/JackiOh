@@ -1024,10 +1024,12 @@ mod db_seed_catalog_writes_the_cosmetics_registry {
                 // the server reads from the registry alone (R2755000); and R1313000:
                 // `public.cosmetics` keeps no card, since a full art's card is the `card_id` of its
                 // ownership row; and no offer, which the server reads from the registry alone (R2725001), nor a
-                // level's place on its ladder (R3015000).
+                // level's place on its ladder (R3015000), nor (R3335002) the track that alone pays it and its level.
                 if let Some(fields) = row.as_object_mut() {
                     fields.remove("starter");
                     fields.remove("jlorious");
+                    fields.remove("track");
+                    fields.remove("trackLevel");
                     fields.remove("card");
                     fields.remove("offer");
                     fields.remove("level");

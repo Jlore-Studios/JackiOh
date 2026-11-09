@@ -2,15 +2,21 @@
 // doors. Cards and Cosmetics open in place by `?section=`, so Back and Forward move between them and
 // the hub. Gated like `/account` (main.tsx). Every panel renders what the server answered and decides
 // nothing (CLAUDE.md rule 7); each reads for itself, so one refused read never blanks the others (#1691).
-// Until the economy goes live everyone owns every card (§14.12).
+// Until the economy goes live everyone owns every card (§14.12). R3335001: the Fleet track's panel is the tracks'
+// read's `fleet`, shown once that answer holds one. R3335000: the Cosmetics section's Starship tab equips the looks
+// every Starship the account launches wears.
 
 import { useEffect, useState, type ReactElement } from "react";
+
+import type { FleetTrackView } from "../wire/generated/FleetTrackView.ts";
 
 import { AccountError } from "../auth/AccountError.tsx";
 import OwnedCards from "../collection/OwnedCards.tsx";
 import TracksPanel from "../collection/TracksPanel.tsx";
 import WalletPanel from "../collection/WalletPanel.tsx";
 import AccountCosmeticTiles from "../collection/AccountCosmeticTiles.tsx";
+import FleetTrackPanel from "../collection/FleetTrackPanel.tsx";
+import StarshipLooks from "../collection/StarshipLooks.tsx";
 import { collectionSectionOf, collectionTestid, type CollectionPart } from "../collection/collection.ts";
 import { t } from "../i18n/i18n.ts";
 import {
@@ -30,6 +36,7 @@ import { readFailureOf, type ReadFailure } from "../net/gate.ts";
 import { paths, useSearch } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
+import { Tabs } from "../tabs/Tabs.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import QuestsPanel from "./QuestsPanel.tsx";
 import { Wordmark } from "./Wordmark.tsx";
@@ -215,11 +222,17 @@ function Hub(): ReactElement {
   );
 }
 
-/** The owned cards, the wallet, the set tracks and the quests. */
+/** R3335001: the Fleet track's part of the tracks' read: ready once the answer holds it, else none (a server from before #3335). */
+function fleetOf(tracks: Read<TracksResponse>): Read<FleetTrackView> | null {
+  return tracks.kind === "ready" && tracks.value.fleet !== undefined ? { kind: "ready", value: tracks.value.fleet } : null;
+}
+
+/** The owned cards, the wallet, the set tracks, the Fleet track and the quests. */
 function CardsSection({ token }: { token: string }): ReactElement {
   const cards = useRead(token, getCollection, keptCollection);
   const wallet = useRead(token, readWallet, keptWallet);
   const tracks = useRead(token, getTracks, keptTracks);
+  const fleet = fleetOf(tracks);
 
   return (
     <>
@@ -233,11 +246,19 @@ function CardsSection({ token }: { token: string }): ReactElement {
         <Section part="tracks" title={t("Set tracks")} loading={t("Loading your tracks…")} read={tracks}>
           {(value) => <TracksPanel tracks={value.tracks} />}
         </Section>
+        {fleet === null ? null : (
+          <Section part="fleet" title={t("Fleet track")} loading={t("Loading your tracks…")} read={fleet}>
+            {(value) => <FleetTrackPanel fleet={value} />}
+          </Section>
+        )}
         <QuestsPanel token={token} />
       </div>
     </>
   );
 }
+
+/** R3335000: the Cosmetics section's tabs: the board's slots, and the Starship's. */
+type CosmeticsTab = "board" | "starship";
 
 /**
  * What is equipped, the only place to pick it (R1579000). R1655000: a card's own picks are set from the
@@ -246,17 +267,46 @@ function CardsSection({ token }: { token: string }): ReactElement {
  * the tiles and the cards already show.
  */
 function CosmeticsSection({ token }: { token: string }): ReactElement {
+  const [tab, setTab] = useState<CosmeticsTab>("board");
   return (
     <>
       <div className="collection-body" data-testid={collectionTestid.body}>
         <section className="collection-section">
           <h2 className="account-heading">{t("Equipped")}</h2>
-          <p>
-            {t(
-              "Your side of the board wears these in every game. A deck can pick its own playmat, backdrop and card back in the deck builder.",
-            )}
-          </p>
-          <AccountCosmeticTiles token={token} />
+          <Tabs
+            label={t("Cosmetics")}
+            idPrefix="collection-cosmetics"
+            value={tab}
+            onChange={setTab}
+            items={[
+              {
+                id: "board",
+                label: t("Board"),
+                testId: collectionTestid.cosmeticsTab("board"),
+                panel: (
+                  <>
+                    <p>
+                      {t(
+                        "Your side of the board wears these in every game. A deck can pick its own playmat, backdrop and card back in the deck builder.",
+                      )}
+                    </p>
+                    <AccountCosmeticTiles token={token} />
+                  </>
+                ),
+              },
+              {
+                id: "starship",
+                label: t("Starship"),
+                testId: collectionTestid.cosmeticsTab("starship"),
+                panel: (
+                  <>
+                    <p>{t("Every Starship you launch wears these in every game. A Dormant Starship keeps its shipyard.")}</p>
+                    <StarshipLooks />
+                  </>
+                ),
+              },
+            ]}
+          />
         </section>
       </div>
     </>

@@ -1,0 +1,22 @@
+{
+  "title": "Patch: the Fleet track, a Stinkyscape cosmetic track: Starship hull designs, liveries and launch trails earned by playing the set, with a Jlorious Starship gated like the Jlorious card back",
+  "sources": "#3335",
+  "notes": "How Starships and the board look, and a cosmetic track of their own; nothing plays differently.",
+  "player": {
+    "title": "The Fleet track",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "The Fleet track: 30 levels earned in ladder, unranked and Conquest games for each Stinkyscape card you play, Starship Piece you fuse and Starship you launch, up to a daily limit.",
+      "A win with a deck at least half Stinkyscape earns more.",
+      "Every level pays a Stinkyscape cosmetic earned only there: hull designs, liveries, engine trails, module skins, a card back, a playmat and a backdrop.",
+      "Level 30 pays the Stinkyscape hull, a flagship.",
+      "A new Starship tab in the Collection picks the hull, livery, trail and module skin every Starship you launch wears, and your opponent sees them.",
+      "Reaching Jlorious now also earns the Jlorious Starship, and everyone who has already reached Jlorious has it."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

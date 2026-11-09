@@ -528,3 +528,53 @@ describe("R2125000 the Cards section opens on what the last visit kept", () => {
     expect(screen.getByTestId(T.error("wallet"))).toBeInTheDocument();
   });
 });
+
+describe("R3335001 R3335000 the Fleet track and the Starship tab", () => {
+  afterEach(() => {
+    localStorage.clear();
+    resetCosmeticsForTests();
+  });
+
+  it("R3335001 the Cards section shows the Fleet track right after the set tracks, only when the tracks answer has it", async () => {
+    answerAll();
+    const fleet = { level: 3, xp: 1300, levelXp: 600, xpToNext: 200, xpToday: 150, nextRewards: ["starship-piece-skin-gunmetal"] };
+    vi.mocked(getTracks).mockResolvedValue({ ...tracksOf(), fleet });
+    render(<CollectionRoute token={TOKEN} />);
+    fireEvent.click(screen.getByTestId(T.door("cards")));
+
+    const panel = await screen.findByTestId(T.fleet);
+    expect(within(panel).getByTestId(T.fleetLevel)).toHaveTextContent("Level 3 of");
+    expect(within(panel).getByTestId(T.fleetReward("starship-piece-skin-gunmetal"))).toHaveTextContent("Gunmetal modules");
+    const headings = screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
+    expect(headings.indexOf("Fleet track")).toBe(headings.indexOf("Set tracks") + 1);
+    cleanup();
+
+    // A server from before #3335 answers no Fleet track: no panel, no heading, nothing loading.
+    vi.mocked(getTracks).mockResolvedValue(tracksOf());
+    render(<CollectionRoute token={TOKEN} />);
+    expect(await screen.findByTestId(T.track(newestShippedSet()))).toBeInTheDocument();
+    expect(screen.queryByTestId(T.fleet)).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Fleet track" })).toBeNull();
+    expect(screen.queryByTestId(T.loading("fleet"))).toBeNull();
+  });
+
+  it("R3335000 the Cosmetics section's Starship tab equips a Starship look through the same store, with no request", async () => {
+    answerAll();
+    render(<CollectionRoute token={TOKEN} />);
+    fireEvent.click(screen.getByTestId(T.door("cosmetics")));
+    expect(await screen.findByTestId(T.tiles("table"))).toBeInTheDocument();
+
+    // The Board tab is open first; the Starship tab holds the Starship looks alone.
+    expect(screen.getByTestId(T.cosmeticsTab("board"))).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByTestId(T.starshipLooks)).toBeNull();
+    fireEvent.click(screen.getByTestId(T.cosmeticsTab("starship")));
+    expect(screen.getByTestId(T.cosmeticsTab("starship"))).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId(T.starshipLooks)).toBeInTheDocument();
+    expect(screen.queryByTestId(T.tiles("table"))).toBeNull();
+
+    fireEvent.click(within(screen.getByTestId(T.tile("starship-trail-ion"))).getByRole("button"));
+    expect(readCosmetics().starshipTrail).toBe("starship-trail-ion");
+    expect(SETTINGS_GROUPS.find((candidate) => candidate.id === "cosmetics")?.read()["starshipTrail"]).toBe("starship-trail-ion");
+    for (const read of [getCollection, getWallet, getPacks, getCosmeticPacks, getTracks, getQuests, getOwnedCosmetics]) expect(read).not.toHaveBeenCalled();
+  });
+});

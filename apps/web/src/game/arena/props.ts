@@ -1,5 +1,5 @@
-// The corner props of the ten playmats (#3348, R3348001): two each, one by each corner, drawn in the
-// mat's look (`PropArt.tsx`). A prop's sound is one of the field taps' recipes (audio RAPID_SFX) with a
+// The corner props of the playmats (#3348, R3348001): two each, one by each corner, drawn in the
+// mat's look (`PropArt.tsx`); R3335001's Fleet track playmat, Stinkyscape, among them. A prop's sound is one of the field taps' recipes (audio RAPID_SFX) with a
 // variant and a pitch, so it never spends the game's voices; the playmats' tap families stay the
 // tiles' (`SandSurface.tsx`). Public ids only: a mat is a cosmetic (R1834004), never hidden state.
 
@@ -76,6 +76,10 @@ export const CORNER_PROPS: Readonly<Record<TableId, readonly [CornerPropDef, Cor
   "table-astral": [
     prop("astral-comet", "left", "tapAstral", 0, 0.8, "hop", "leap"),
     prop("astral-satellite", "right", "tapNeon", 2, 0.4, "tilt", "spin"),
+  ],
+  "table-stinkyscape": [
+    prop("stinkyscape-rocket", "left", "tapNeon", 1, 0.65, "hop", "flare"),
+    prop("stinkyscape-planet", "right", "tapAstral", 3, 0.3, "tilt", "spin"),
   ],
 };
 

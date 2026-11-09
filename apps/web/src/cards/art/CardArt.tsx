@@ -26,7 +26,8 @@
 // R3338001: a procedural picture draws the card's own composition where it has one (themes.ts `compositionOf`:
 // Ceaseless Void's giant-shaped hole), else its type's.
 // R3333000: a Starship's art is drawn from the pieces its view lists, oldest first, and its launch, in the hull design
-// of the name it launched under (the face's, `name`), a Dormant one in its shipyard (`data-art-design`).
+// of the name it launched under (the face's, `name`), a Dormant one in its shipyard (`data-art-design`). R3335000: a
+// launched one wears the Starship look its face gives (`look`), a hull pick's design in place of its name's.
 // R3340000: a board face given `live` draws its moving picture in three layers, the backdrop on the window itself and the
 // subject (`.cf-art-subject`) and the motes (`.cf-art-motes`) over it (`data-art-live`), which artLive.css turns toward the
 // pointer, presses and swings; where the picture has no parts (a delivered file, a restyle, a Starship's, a Legacy card's, a
@@ -49,6 +50,7 @@ import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
 import { artSeedOf, isRepaint, restyleOf, type ArtPart, type ArtPicture } from "./pictures.ts";
 import { starshipArtOf } from "./starshipHulls.ts";
+import type { StarshipLook } from "./starshipLooks.ts";
 import { isStinkyscapeArt, shipDecksOf, stinkySubject, type ShipArt } from "./stinkyscape.ts";
 import { anomalyArtUri, legacyArtUri, particleLayerUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
@@ -92,6 +94,8 @@ export type CardArtProps = {
   live?: boolean;
   /** R3340000: what the unit's art wears: its damage level (wear.ts), buffed and frozen. Null or absent: nothing. */
   wear?: ArtWearState | null;
+  /** R3335000: the Starship look a launched Starship wears (cosmetics.ts `useStarshipLook`); null draws it in none. */
+  look?: StarshipLook | null;
 };
 
 /** R3340000: the marks a unit's art wears (`ArtWear`). */
@@ -152,6 +156,7 @@ export function CardArt({
   ship = null,
   live = false,
   wear = null,
+  look = null,
 }: CardArtProps): ReactElement {
   // Keep failures per source so cards and faces retry independently.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -221,7 +226,8 @@ export function CardArt({
   }
 
   // R3333000: the design a Starship wears is its launched name's, the face's (`artSubjectOf` may stand another for it).
-  const starshipArt = starship === null ? null : starshipArtOf(starship.list, starship.launched, shownName, radiant);
+  // R3335000: a launched one in its seat's look, its hull pick's design in place of its name's.
+  const starshipArt = starship === null ? null : starshipArtOf(starship.list, starship.launched, shownName, radiant, look);
   // R3340000: the picture as `m` moves it, whole or one part of it (a live face's layers).
   const drawn = (m: ArtMotion | null, p: ArtPart): string =>
     starshipArt !== null
