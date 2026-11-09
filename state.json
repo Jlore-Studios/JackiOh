@@ -18474,6 +18474,24 @@
           "muse": "medium"
         }
       }
+    },
+    "3468": {
+      "difficulty_by": {
+        "at": "2026-11-09T08:01:05Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "the after-merge spot-check's follow-up of #3467, a medium change"
+      },
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-09T08:01:05Z",
+      "requested_by": "jgoetzmann-bot",
+      "spot_check_of": 3467,
+      "stop_requested": false
     }
   },
   "labels_synced": "fce3910f5abefcbe",
