@@ -1,4 +1,5 @@
-// R2797000: Stinkyscape's Flourishes (fx/cards/stinkyscape/): Imitated Instrumentality's boots and Drone
+// R2797000: Stinkyscape's Flourishes (fx/cards/stinkyscape/): Imitated Instrumentality's boots (R3395000: its
+// signature now, the cores behind its caster's hero, then each boot in its own hue) and Drone
 // Core X's warp, planned the way FxLayer plans them (remember, then plan), each held inside its entry and
 // its tail (R200), keyed by readable plays only (R202) and drawing nothing with the effects off. Olivian
 // Expanse's rift became its set piece (R3338000, fx/terminus/terminus.test.ts).
@@ -9,11 +10,8 @@ import { describe, expect, it } from "vitest";
 import { SET_PIECE_HOLD_CAP_MS, planEntries, type AnimationEntry } from "../../../game/animations.ts";
 import { testid } from "../../../game/contract.ts";
 import { fullBoardView, withEvents } from "../../../test/fixtures.ts";
-import { frac } from "../../build.ts";
 import {
   FX_INTENSITY_SCALE,
-  FX_MAGI_BOOTS,
-  FX_MAGI_STAGGER,
   FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   FX_SHIP_ARRIVAL_BEATS,
@@ -21,12 +19,14 @@ import {
   FX_SHIP_LOCK_TRAUMA,
   FX_WARP_FROM,
 } from "../../constants.ts";
+import { planCardFx } from "../../cardFx.ts";
 import { planFx } from "../../cues.ts";
 import { createFxMemory } from "../../memory.ts";
 import { motifScale, timesOf } from "../../motifs/build.ts";
 import type { FxAnchor, FxCue, FxPlanEnv } from "../../types.ts";
 import { CARD_RECIPES } from "../bespoke.ts";
 import { FX_CARD_TABLE } from "../tables.ts";
+import { STINKYSCAPE_SIGNATURE_BOARDS } from "./signatureFixtures.ts";
 
 const MAGI = "stinkyscape-018";
 const WARP = "stinkyscape-036";
@@ -104,39 +104,57 @@ function inside(results: ReturnType<typeof planAll>): FxCue[][] {
 
 describe("R2797000 Stinkyscape's Flourishes", () => {
   it("R2797000 the recipes are their cards' bespoke entries", () => {
-    expect(FX_CARD_TABLE.get(MAGI)).toEqual({ kind: "bespoke", key: "magiBoot" });
+    expect(FX_CARD_TABLE.get(MAGI)).toEqual({ kind: "bespoke", key: "magiBoot", signature: true });
     expect(FX_CARD_TABLE.get(WARP)).toEqual({ kind: "bespoke", key: "battleshipWarp" });
   });
 
-  it("R2797000 magiBoot boots each MAGI with a hologram beam from its caster's hero into its zone, the beams of one entry FX_MAGI_STAGGER of D apart", () => {
-    const view = fullBoardView();
-    const boots = planAll(PLAYS[MAGI]?.("p1", "ex") ?? [], view).filter(({ entry }) => entry.events.some((event) => event.type === "summoned"));
+  it("R3395000 magiBoot raises three cores behind the caster's hero as it is cast, then boots each MAGI in its zone in its own hue, replacing its summon's row", () => {
+    // Over the gallery's board, its three backrow zones open (a summon lands in an empty zone, §3.2).
+    const view = STINKYSCAPE_SIGNATURE_BOARDS.magiBoot(fullBoardView());
+    const results = planAll(PLAYS[MAGI]?.("p1", "ex") ?? [], view);
+    const hero = tid(testid.hero("you"));
+    // The cast: the cores' figure, a hologram burst and a ring behind the hero.
+    const [cast] = cuesOn(results, "cardPlayed");
+    expect(cast?.map((cue) => cue.kind)).toEqual(["figure", "burst", "ring"]);
+    expect(cast?.[0]).toMatchObject({ kind: "figure", figure: "magiCores", at: hero, delayMs: 0 });
+    expect(cast?.[1]).toMatchObject({ kind: "burst", at: hero, delayMs: 0, spread: "area" });
+    const boots = results.filter(({ entry }) => entry.events.some((event) => event.type === "summoned"));
     expect(boots).toHaveLength(3);
-    boots.forEach(({ entry, cues }, k) => {
-      // Each its own entry: each boots from Travel to Land, rings its zone and shakes the board.
-      const t = timesOf(entry.durationMs);
-      const zoneId = testid.zone("you", "backrow", 3 + k);
-      const zone = tid(zoneId);
-      // R3407000: each MAGI's own entrance draws beside the boot, so the boot's beam is the one from the hero.
-      const beam = cues.find((cue) => cue.kind === "shot" && cue.from.kind === "testid" && cue.from.testid === testid.hero("you"));
-      expect(beam).toEqual(expect.objectContaining({ shot: { motion: "beam" }, from: tid(testid.hero("you")), to: zone, delayMs: t.T, flightMs: t.L - t.T }));
-      expect(cues.some((cue) => cue.kind === "ring" && cue.delayMs === t.L && cue.at.kind === "testid" && cue.at.testid === zoneId)).toBe(true);
-      expect(cues.some((cue) => cue.kind === "shake" && cue.delayMs === t.L)).toBe(true);
+    const tints = new Set<string>();
+    boots.forEach(({ entry, cues: drawn }, k) => {
+      const zone = tid(testid.zone("you", "backrow", 3 + k));
+      // R3407000: each MAGI's own entrance draws beside the boot (its card's entry alone plans it), so the boot is the rest.
+      const landing = entry.events.find((event) => event.type === "summoned");
+      const magi = landing?.type === "summoned" ? FX_CARD_TABLE.get(landing.defId) : undefined;
+      if (landing?.type !== "summoned" || magi === undefined) throw new Error(`boot ${String(k)} has no MAGI`);
+      const entrance = (planCardFx(landing, { entry, view: entry.view, env: envOf(), D: entry.durationMs }, new Map([[landing.defId, magi]]))?.cues ?? []).map((cue) => JSON.stringify(cue));
+      expect(entrance.length, `${landing.defId}'s own entrance`).toBeGreaterThan(0);
+      for (const cue of entrance) expect(drawn.map((own) => JSON.stringify(own)), landing.defId).toContain(cue);
+      // Each of the entrance's cues once: the boot's own sheen may match one of the entrance's.
+      const left = [...entrance];
+      const cues = drawn.filter((cue) => {
+        const at = left.indexOf(JSON.stringify(cue));
+        if (at >= 0) left.splice(at, 1);
+        return at < 0;
+      });
+      // Its own hue's brand and a sheen, a ring for the first two, the first's shake; no particles after the cast.
+      const brand = cues.find((cue) => cue.kind === "brand");
+      expect(brand).toMatchObject({ at: zone, delayMs: 0, durationMs: entry.durationMs });
+      if (brand?.kind === "brand") tints.add(JSON.stringify(brand.tint));
+      expect(cues.some((cue) => cue.kind === "sheen" && JSON.stringify(cue.at) === JSON.stringify(zone))).toBe(true);
+      expect(cues.some((cue) => cue.kind === "ring"), `boot ${String(k)} ring`).toBe(k < 2);
+      expect(cues.filter((cue) => cue.kind === "shake")).toHaveLength(k === 0 ? 1 : 0);
+      expect(cues.some((cue) => cue.kind === "burst" || cue.kind === "shot" || cue.kind === "projectile")).toBe(false);
     });
-    // One entry holding several: each beam leaves FX_MAGI_STAGGER of D after the one before, the fourth no later than the third.
-    const D = 400;
-    const t = timesOf(D);
-    const events = [0, 1, 2, 3].map((k) => summoned("p1", `m${String(k)}`, "stinkyscape-018-1", "backrow", 1 + k));
-    const entry: AnimationEntry = { events, type: "summoned", durationMs: D, frames: new Map(), view };
+    expect(tints.size).toBe(3);
+    // Each summon's own row is replaced: the boot alone draws it.
     const env = envOf();
-    env.memory.remember([played("p1", "ex", MAGI), ...events]);
+    const event = summoned("p1", "m1", "stinkyscape-018-1", "backrow", 3);
+    env.memory.remember([played("p1", "ex", MAGI), event]);
     const play = env.memory.resolving();
     if (play === undefined) throw new Error("no play resolving");
-    const leaves = events.map((event) => CARD_RECIPES.magiBoot(event, { entry, view, env, D }, play)?.cues.find((cue) => cue.kind === "shot")?.delayMs);
-    const s = frac(FX_MAGI_STAGGER, D);
-    expect(leaves).toEqual([0, 1, 2, FX_MAGI_BOOTS - 1].map((k) => t.T + k * s));
-    const shakes = events.map((event) => CARD_RECIPES.magiBoot(event, { entry, view, env, D }, play)?.cues.filter((cue) => cue.kind === "shake").length);
-    expect(shakes).toEqual([1, 0, 0, 0]);
+    const entry: AnimationEntry = { events: [event], type: "summoned", durationMs: 250, frames: new Map(), view };
+    expect(CARD_RECIPES.magiBoot(event, { entry, view, env, D: 250 }, play)?.row).toBe("replace");
   });
 
   it("R2797000 R3336000 battleshipWarp warps the Battleship in as three beats, one per layer: the keel in starlight, the hangar locking on, the superstructure's dome", () => {

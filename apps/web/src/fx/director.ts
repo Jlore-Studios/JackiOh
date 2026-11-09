@@ -26,6 +26,7 @@ import { createParticleSystem } from "./particles.ts";
 import { artBoxOf, pointIn } from "./anchors.ts";
 import { createRng } from "./rng.ts";
 import { createShake } from "./shake.ts";
+import { setShedLevel, shedEmissionScale, shedLevel as shedStage } from "./shed.ts";
 import type { FxSurface } from "./surface.ts";
 import type {
   FxAnchor,
@@ -83,6 +84,11 @@ export type FxDirector = {
   active(): number;
   particles(): number;
   capacity(): number;
+  /**
+   * R3351000: the shed stage the adaptive cap has reached: 0 full, 1 motes, 2 far auras, 3 the
+   * moving faces past the pointer's own. The effects layer reads it through `shed.ts`.
+   */
+  shedLevel(): number;
   dispose(): void;
 };
 
@@ -213,6 +219,10 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     windowSum += raw;
     if (windowSum > FX_ADAPT_WINDOW * slowMs) {
       setCap(Math.max(FX_PARTICLE_CAP_MIN, Math.floor(cap / 2)));
+      // R3351000: a slow window sheds one stage deeper — motes, then far auras, then faces — on the
+      // same trip that lowers the cap, and a set piece's beats never shed (they are DOM cues with no
+      // particle counts, so emission scaling cannot touch them).
+      setShedLevel(shedStage() + 1);
       healthyWindows = 0;
       resetWindow();
       return;
@@ -220,8 +230,9 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     if (windowCount < FX_ADAPT_WINDOW) return;
     resetWindow();
     healthyWindows += 1;
-    if (healthyWindows >= FX_ADAPT_RECOVER_WINDOWS && cap < initialCap) {
+    if (healthyWindows >= FX_ADAPT_RECOVER_WINDOWS && (cap < initialCap || shedStage() > 0)) {
       setCap(Math.min(initialCap, cap * 2));
+      setShedLevel(shedStage() - 1);
       healthyWindows = 0;
     }
   };
@@ -465,15 +476,20 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         const box = measure(cue.at);
         if (box === null) return;
         const origin = pointIn(box, atOf(cue.at));
+        // R3351000: past shed stage 0 the burst throws half its motes, but at least one, so every
+        // burst still reads. A set piece's beats are DOM cues with no particle counts, so they never
+        // shed here.
+        const scale = shedEmissionScale();
+        const count = scale === 1 ? cue.count : Math.max(1, Math.floor(cue.count * scale));
         particles.emit(cue.preset, origin.x, origin.y, {
-          count: cue.count,
+          count,
           spread: cue.spread,
           box,
           power: cue.power,
           ...(cue.scale === undefined ? {} : { scale: cue.scale }),
           ...(cue.colors === undefined ? {} : { colors: cue.colors }),
         });
-        canvasFx.flash(cue.preset, origin, box, cue.count, cue.colors);
+        canvasFx.flash(cue.preset, origin, box, count, cue.colors);
         return;
       }
       case "projectile": {
@@ -481,7 +497,8 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         if (from === null) return;
         const to = measure(cue.to);
         if (to === null) return;
-        canvasFx.projectile(cue.preset, pointIn(from, atOf(cue.from)), pointIn(to, atOf(cue.to)), cue.flightMs, cue.density);
+        // R3351000: past shed stage 0 the trail and the arrival burst thin to the emission scale.
+        canvasFx.projectile(cue.preset, pointIn(from, atOf(cue.from)), pointIn(to, atOf(cue.to)), cue.flightMs, cue.density * shedEmissionScale());
         return;
       }
       case "shot": {
@@ -496,7 +513,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
           pointIn(from, atOf(cue.from)),
           pointIn(to, atOf(cue.to)),
           cue.flightMs,
-          cue.density,
+          cue.density * shedEmissionScale(),
         );
         return;
       }
@@ -674,6 +691,9 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     },
     capacity(): number {
       return cap;
+    },
+    shedLevel(): number {
+      return shedStage();
     },
     dispose(): void {
       if (disposed) return;

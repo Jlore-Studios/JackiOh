@@ -43,7 +43,9 @@ import type { FxAnchor, FxCue, FxPlanEnv, FxTakeoverCue, FxTint, TakeoverLook } 
  * #1 Bob's Plan's "summit", #26 Scratch Pad's "canvas", Training Grounds #40 Goetzmann Game Design's
  * "napkin"; R3389000 Classic #90 In Too Deep's "abyss"; R3405000 Meditative's other Mythics' twelve, from
  * #8 Reach the Summit's "ascent" to #97.9 Jlockeed's Headquarters' "fortress"; R3399002 Classic+'s four
- * Mythics' "zealot", "portal", "stair" and "vineyard"), else the shared "prismatic".
+ * Mythics' "zealot", "portal", "stair" and "vineyard"; R3395001 Stinkyscape #6 Tylannt's "vault", #16 Rod of
+ * Ages' "rod", #44 Great Paperclip Theory's "wire", #74 Paragon-X's "whiteDwarf", #86 Prototype-X2's "forge"),
+ * else the shared "prismatic".
  */
 export function takeoverLookOf(defId: string, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): TakeoverLook {
   const entry = table.get(defId);
@@ -92,6 +94,13 @@ export const TAKEOVER_TINTS: Readonly<Record<TakeoverLook, FxTint>> = {
   portal: { rim: "#a16207", core: "#fef3c7", glow: "#d6a35c" },
   stair: { rim: "#7c3aed", core: "#ede9fe", glow: "#22d3ee" },
   vineyard: { rim: "#9333ea", core: "#f3e8ff", glow: "#65a30d" },
+  // R3395001: Tylannt's steel vault and its green gap, Rod of Ages' pale bands in an indigo gulf, the paperclip's silver wire
+  // and blue cores, Paragon-X's white dwarf, Prototype-X2's molten forge.
+  vault: { rim: "#94a3b8", core: "#e2e8f0", glow: "#22c55e" },
+  rod: { rim: "#cbd5e1", core: "#f8fafc", glow: "#a5b4fc" },
+  wire: { rim: "#d1d5db", core: "#f9fafb", glow: "#60a5fa" },
+  whiteDwarf: { rim: "#f8fafc", core: "#ffffff", glow: "#7dd3fc" },
+  forge: { rim: "#f97316", core: "#fed7aa", glow: "#ef4444" },
 };
 
 /** R3407000: the looks that draw their card's own picture filling the screen (`takeoverArtOf`). */

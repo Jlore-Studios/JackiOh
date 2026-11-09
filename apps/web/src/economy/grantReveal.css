@@ -1,0 +1,136 @@
+/* R3349000: a variant-level grant's reveal. The queue plays over the panel that granted it: Rare
+   and Epic on the panel itself, Legendary with the panel dimmed and the card growing in with light
+   from behind, Mythic (and a Legendary or Mythic chase) in the full-screen view. Each animation
+   takes its duration from the constants in packs.ts through `--grant-wipe`. */
+
+.grant-scene {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* A short screen scrolls from the top rather than clipping it. */
+  justify-content: safe center;
+  gap: var(--space-7);
+  padding: var(--space-7);
+  overflow-y: auto;
+  background: color-mix(in srgb, var(--pal-black) 72%, transparent);
+  color: var(--pal-slate-100);
+  cursor: var(--cursor-glove-point, pointer);
+}
+
+/* Legendary: the panel dims and the card grows in with light from behind. */
+.grant-scene[data-treatment="grow"] {
+  background: color-mix(in srgb, var(--pal-black) 88%, transparent);
+}
+
+.grant-item {
+  --grant-glow: var(--rarity-common);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: 24rem;
+}
+
+.grant-item[data-rarity="Rare"] {
+  --grant-glow: var(--rarity-rare);
+}
+
+.grant-item[data-rarity="Epic"] {
+  --grant-glow: var(--rarity-epic);
+}
+
+.grant-item[data-rarity="Legendary"] {
+  --grant-glow: var(--rarity-legendary);
+}
+
+.grant-item[data-rarity="Mythic"] {
+  --grant-glow: var(--rarity-mythic);
+}
+
+.grant-before,
+.grant-after {
+  position: relative;
+  display: block;
+  width: clamp(9rem, 30vw, 13rem);
+  aspect-ratio: 5 / 7;
+}
+
+.grant-before .cf,
+.grant-after .cf {
+  width: 100%;
+  height: auto;
+}
+
+.grant-after .cosmetic-look {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+
+/* The wipe into the new level: the full-art frame unfolding. */
+.grant-scene[data-motion="full"] .grant-wipe {
+  animation: grant-wipe var(--grant-wipe) var(--ease-out) both;
+  filter: drop-shadow(0 0 1.25rem var(--grant-glow));
+}
+
+/* Legendary: the card grows in with light from behind. */
+.grant-scene[data-treatment="grow"][data-motion="full"] .grant-wipe {
+  animation:
+    grant-wipe var(--grant-wipe) var(--ease-out) both,
+    grant-grow var(--grant-wipe) var(--ease-out) both;
+}
+
+.grant-name {
+  margin: 0;
+  font-size: var(--type-lg);
+  text-align: center;
+}
+
+.grant-actions {
+  display: flex;
+  justify-content: center;
+}
+
+/* The full-screen view keeps the level's name and rarity under the card. */
+.grant-name--over {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  text-align: center;
+  text-shadow: 0 1px 3px var(--pal-black);
+}
+
+@keyframes grant-wipe {
+  from {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes grant-grow {
+  from {
+    transform: scale(0.82);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grant-wipe {
+    animation: none;
+  }
+}

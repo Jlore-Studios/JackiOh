@@ -129,7 +129,7 @@ const FIELD_OF_DREAMS_ALT: SceneRecipe = {
     mid: [
       { part: "field", x: 50, y: 66, paint: "lime-400" },
       { part: "flowers", x: 20, y: 74, count: 3, spread: [10, 3] },
-      { part: "picnic-blanket", x: 50, y: 82, scale: 1.4 },
+      { part: "gingham-blanket", x: 50, y: 82, scale: 1.4 },
     ],
     subject: [
       { part: "open-hand", x: 42, y: 80, scale: 1.4 },

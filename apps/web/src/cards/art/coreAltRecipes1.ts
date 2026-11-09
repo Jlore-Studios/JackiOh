@@ -277,7 +277,7 @@ const BREAD_AND_BUTTER_ALT: SceneRecipe = {
       { part: "sea", x: 50, y: 60 },
       { part: "field", x: 50, y: 74, paint: "green-900" },
       { part: "reed", x: 8, y: 80, scale: 2, count: 3, spread: [5, 1] },
-      { part: "picnic-blanket", x: 48, y: 88, scale: 2.2, paint: "blue-600" },
+      { part: "gingham-blanket", x: 48, y: 88, scale: 2.2, paint: "blue-600" },
     ],
     subject: [{ part: "loaf", x: 46, y: 84, scale: 2.4 }],
     near: [
@@ -568,7 +568,7 @@ const COLLATERAL_DAMAGE_ALT: SceneRecipe = {
       { part: "tree", x: 88, y: 60, scale: 1.1 },
     ],
     mid: [
-      { part: "crater", x: 56, y: 62 },
+      { part: "crater-field", x: 56, y: 62 },
       { part: "fence", x: 14, y: 70, scale: 0.8 },
     ],
     subject: [{ part: "playing-card", x: 66, y: 46, scale: 0.8 }],

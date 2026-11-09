@@ -1,4 +1,4 @@
-// `node scripts/shard-specs.mjs [--smoke] <k> <K>` (from e2e/): the e2e specs shard k of K runs in
+// `node scripts/shard-specs.mjs [--smoke | --component] <k> <K>` (from e2e/): the e2e specs shard k of K runs in
 // CI, as one comma-separated `--spec` list (.github/actions/e2e-shard). The daily super run
 // (.github/workflows/super.yml) splits every spec over K jobs; a pull request's `e2e smoke`
 // (.github/workflows/ci.yml) runs only SMOKE, with `--smoke`. Each job boots its own client and
@@ -7,13 +7,15 @@
 // The split balances measured time: longest spec first, each to the shard with the least so far
 // (WEIGHTS, seconds per spec on a CI runner; a spec not listed counts DEFAULT_WEIGHT). Within a shard
 // the specs keep their numeric order, as a full run would play them. Every spec lands in exactly one
-// shard for any K, so a new spec is never left out; refresh WEIGHTS when the timings drift.
+// shard for any K, so a new spec is never left out; refresh WEIGHTS when the timings drift. `--component` splits
+// cypress/component/*.cy.tsx by COMPONENT_WEIGHTS the same way, for the super run's component jobs (#3439).
 
 import { readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SPEC_DIR = "cypress/e2e";
+const COMPONENT_DIR = "cypress/component";
 
 /**
  * The per-pull-request smoke list (docs/v0.3.0/README.md §7), one spec per user-facing flow: 01 a
@@ -41,8 +43,26 @@ const WEIGHTS = {
 };
 const DEFAULT_WEIGHT = 30;
 
-export function shardSpecs(specs, k, count) {
-  const weight = (spec) => WEIGHTS[spec.slice(0, 2)] ?? DEFAULT_WEIGHT;
+/**
+ * Seconds per component spec over 30 s, by file name: each spec's Cypress "Duration" in a run of all 59 on a 4-core
+ * machine (Chrome 156, main at 41a9e93, #3439); a spec not listed counts DEFAULT_COMPONENT_WEIGHT.
+ */
+const COMPONENT_WEIGHTS = {
+  "anomaly-moments.cy.tsx": 88, "arena-corners.cy.tsx": 81, "board-layout.cy.tsx": 35, "card-faces.cy.tsx": 233,
+  "deck-cosmetics.cy.tsx": 77, "deckbuilder-layout.cy.tsx": 126, "emotes-layout.cy.tsx": 55,
+  "fx-gallery-captures.cy.tsx": 91, "fx-layer.cy.tsx": 36, "fx-phone-frame.cy.tsx": 64,
+  "fx-signature-classic.cy.tsx": 51, "fx-signature-stinkyscape.cy.tsx": 67, "fx-signature.cy.tsx": 30,
+  "fx-terminus.cy.tsx": 103, "meditative-faces.cy.tsx": 50, "mobile-ux.cy.tsx": 56, "practice-table.cy.tsx": 59,
+  "starship-moments.cy.tsx": 191,
+};
+const DEFAULT_COMPONENT_WEIGHT = 10;
+
+/** A component spec's weight, for `shardSpecs`. */
+export function componentWeight(spec) {
+  return COMPONENT_WEIGHTS[spec] ?? DEFAULT_COMPONENT_WEIGHT;
+}
+
+export function shardSpecs(specs, k, count, weight = (spec) => WEIGHTS[spec.slice(0, 2)] ?? DEFAULT_WEIGHT) {
   const shards = Array.from({ length: count }, () => ({ load: 0, specs: [] }));
   const byWeight = [...specs].sort((a, b) => weight(b) - weight(a) || (a < b ? -1 : 1));
   for (const spec of byWeight) {
@@ -68,14 +88,17 @@ export function smokeSpecs(specs) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const smoke = args[0] === "--smoke";
-  const k = Number(args[smoke ? 1 : 0]);
-  const count = Number(args[smoke ? 2 : 1]);
-  if (args.length !== (smoke ? 3 : 2) || !Number.isInteger(k) || !Number.isInteger(count) || k < 1 || k > count) {
-    process.stderr.write("usage: node scripts/shard-specs.mjs [--smoke] <k> <K>, 1 <= k <= K\n");
+  const component = args[0] === "--component";
+  const flagged = smoke || component;
+  const k = Number(args[flagged ? 1 : 0]);
+  const count = Number(args[flagged ? 2 : 1]);
+  if (args.length !== (flagged ? 3 : 2) || !Number.isInteger(k) || !Number.isInteger(count) || k < 1 || k > count) {
+    process.stderr.write("usage: node scripts/shard-specs.mjs [--smoke | --component] <k> <K>, 1 <= k <= K\n");
     process.exit(2);
   }
   const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-  const every = readdirSync(join(root, SPEC_DIR)).filter((name) => name.endsWith(".cy.ts"));
+  const dir = component ? COMPONENT_DIR : SPEC_DIR;
+  const every = readdirSync(join(root, dir)).filter((name) => name.endsWith(component ? ".cy.tsx" : ".cy.ts"));
   let specs = every;
   if (smoke) {
     try {
@@ -85,10 +108,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       process.exit(1);
     }
   }
-  const picked = shardSpecs(specs, k, count);
+  const picked = component ? shardSpecs(specs, k, count, componentWeight) : shardSpecs(specs, k, count);
   if (picked.length === 0) {
     process.stderr.write(`shard ${k}/${count} has no specs; lower the shard count\n`);
     process.exit(1);
   }
-  process.stdout.write(picked.map((spec) => `${SPEC_DIR}/${spec}`).join(","));
+  process.stdout.write(picked.map((spec) => `${dir}/${spec}`).join(","));
 }

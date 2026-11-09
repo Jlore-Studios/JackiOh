@@ -107,10 +107,10 @@ const PROPS_CARDS: readonly string[] = ["core-011", "core-012", "core-018", "cor
 const NEW_PARTS: Readonly<Record<string, readonly string[]>> = {
   palm: ["core-007", "core-043"],
   camel: ["core-059"],
-  crater: ["core-034"],
+  "crater-field": ["core-034"],
   van: ["core-085"],
   "hay-bale": ["core-011"],
-  "picnic-blanket": ["core-018", "core-076"],
+  "gingham-blanket": ["core-018", "core-076"],
   rug: ["core-048"],
   "beach-hammock": ["core-043"],
   "sleeping-bag": ["core-050"],
@@ -218,9 +218,11 @@ describe("R3398000 Core Alt art restaged", () => {
     const offered = offeredIn("Core").sort();
     expect(offered).toHaveLength(61);
     expect(ALT_IDS).toEqual(offered);
-    // With R3396000's Classic+ cards, the alt recipes are every card offered Alt art in the two sets, and no other.
-    expect(Object.keys(ALT_SCENE_RECIPES).sort()).toEqual([...offeredIn("Classic+"), ...offered].sort());
-    expect(Object.keys(ALT_SCENE_RECIPES)).toHaveLength(101);
+    // With R3396000's Classic+ cards and R3397000's Meditative+ and Training Grounds cards, the alt recipes are every
+    // card offered Alt art in the four sets, and no other.
+    const others = ["Classic+", "Meditative+", "Training Grounds"].flatMap(offeredIn);
+    expect(Object.keys(ALT_SCENE_RECIPES).sort()).toEqual([...others, ...offered].sort());
+    expect(Object.keys(ALT_SCENE_RECIPES)).toHaveLength(137);
     expect(ALT_PICTURE_CHANGE_MIN).toBe(0.6);
     const seen = new Map<string, string>(Object.entries(SCENE_RECIPES).map(([id, scene]) => [JSON.stringify(scene), id]));
     for (const id of ALT_IDS) {

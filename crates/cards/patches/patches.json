@@ -23055,5 +23055,56 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.12y",
+    "date": "2026-11-09",
+    "title": "Patch: art that lives in play",
+    "source": "#3340",
+    "notes": "A board face's art moves for an animated or signed level and for every Mythic, in the motion slots the hand shares (ranked by the pointer or focus first, then Mythics, Legendaries and the rest newest first). A moving face's art answers the pointer, a press and an attack, and a unit's art wears cracks for the health it is missing, a glow when buffed and frost when frozen. Every Legendary and Mythic has its own motion recipe. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Art that lives in play",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "On the board, the art of every animated or signed card, and of every Mythic, keeps moving, a few cards at a time: the one under your pointer first, then Mythics, Legendaries and the rest.",
+        "A card's art answers you: its subject leans toward your pointer and the sparks scatter and settle, it flinches when you press it, and it swings toward its target when it attacks.",
+        "A damaged unit's art shows cracks that grow as its health falls, a buffed unit glows in its card's colours and a frozen one frosts over, even with reduced motion on.",
+        "Every Legendary and Mythic has a moving picture of its own."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "43c6712bc16acdb9e8604d5918ef5d0bef4538ea"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12z",
+    "date": "2026-11-09",
+    "title": "Patch: daily super run failed: a crafted trap that reveals on an attack ignores a forced one",
+    "source": "#3439",
+    "notes": "The daily super run on staging (run 42488997384). Fuzz 3/4: a crafted Trap whose reveal hat is 'when your opponent attacks' armed on forced attacks too, which R121 forbids (a forced attack is declared by the effect, not the opponent); in the handicapped game of seed 6091 it summoned a Sheep, Warp Disruptor II forced another attack on it, and the resolution loop never settled. Its trigger (craft.rs reveal_trigger) now refuses a forced AttackDeclared, as Core #96 My Pawn's does. useFitText (fit.ts) refits a box its ResizeObserver reports resized in the next frame, not inside the observer's callback, so an Extended-art rules box that grows with its text no longer raises 'ResizeObserver loop completed with undelivered notifications'. The rest is tests and layout: e2e spec 38 waits for the opening deal before axe, the auth screen's landscape footer takes its own row, the deck builder's 'Back to decks' keeps to one line on a phone, seven component specs follow the cards and looks that moved under them, and shard-specs.mjs splits the component specs (--component) for the super run's component jobs.",
+    "player": {
+      "title": "A crafted trap ignores forced attacks",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A crafted Trap that reveals when your opponent attacks no longer reveals on an attack another card forces."
+      ]
+    },
+    "commits": [
+      "1aa185cc3b5834992c2e01f5effd9b7a2a5e5146"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

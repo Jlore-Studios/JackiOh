@@ -99,6 +99,10 @@ describe("R3389000 a signature's own aura", () => {
       "stinkyscape-148": "starpath",
       "stinkyscape-150-1": "stinkvapour",
       "stinkyscape-152": "pages",
+      // R3395001: Stinkyscape's signature Field Spells.
+      "stinkyscape-007": "laserGrid",
+      "stinkyscape-016": "silverRise",
+      "stinkyscape-039": "labHaze",
     });
   });
 
