@@ -27,7 +27,7 @@ import { createPortal } from "react-dom";
 import { CATALOG } from "@jackioh/cards";
 import { PACKS_OPEN_ALL_MAX } from "@jackioh/server-config";
 
-import { CardBack, CardFace, faceModel, useFullScreenTrigger } from "../cards/index.ts";
+import { CardBack, CardFace, FullScreenArt, faceModel, useFullScreenTrigger } from "../cards/index.ts";
 import { readerName } from "../cards/chinese.ts";
 import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
 import { useModalOverlay } from "../cards/inspect/store.ts";
@@ -58,6 +58,7 @@ import {
 } from "../net/api.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { spendOutNow, useSpendOut } from "../net/spending.ts";
+import { markNewLevels } from "../collection/newLevels.ts";
 import { useSetting } from "../settings/store.ts";
 import { withBought } from "../shop/shop.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
@@ -69,6 +70,7 @@ import {
   PACK_TEAR_MS,
   bestRarity,
   holdsToFlip,
+  legendaryFlareCues,
   packName,
   packTestid,
   playStinger,
@@ -133,6 +135,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
   const intensity: number = FX_INTENSITY_SCALE[fx.intensity];
 
   const [torn, setTorn] = useState(false);
+  const [takeover, setTakeover] = useState(true);
   const [skipped, setSkipped] = useState(false);
   const [flipped, setFlipped] = useState<ReadonlySet<number>>(new Set());
   const [holding, setHolding] = useState<number | null>(null);
@@ -142,6 +145,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
   const holdTimer = useRef<number | null>(null);
   const swipeFrom = useRef<number | null>(null);
   const stung = useRef(false);
+  const flared = useRef(false);
   const director = useRef<FxDirector | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const domRef = useRef<HTMLDivElement | null>(null);
@@ -196,6 +200,19 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
     if (error !== null) setSkipped(false);
   }, [error]);
 
+  // R3349000: a Legendary cosmetic pull flares on its sealed tile once the pack tears, before any flip.
+  useEffect(() => {
+    if (!torn || reduced || skipped || opened === null || flared.current) return;
+    flared.current = true;
+    director.current?.play(
+      opened.slots.flatMap((slot, slotIndex) =>
+        slot.grant.kind === "cosmetic" && slot.grant.cosmeticRarity === "Legendary"
+          ? legendaryFlareCues(packTestid.slot(slotIndex), intensity)
+          : [],
+      ),
+    );
+  }, [torn, reduced, skipped, opened, intensity]);
+
   useEffect(
     () => () => {
       if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
@@ -206,7 +223,13 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
   const slots = opened?.slots ?? [];
   const shows = (index: number): boolean => reduced || skipped || flipped.has(index);
   const all = opened !== null && slots.every((_, index) => shows(index));
-  const showSlots = opened !== null && (reduced || skipped || torn);
+  // R3349000: a Mythic card pull tears the pack open into its takeover, with its own art, closing to
+  // the slots grid on tap; reduced motion keeps today's instant all-revealed path, and Reveal all skips it.
+  const mythicFirst = opened === null ? -1 : opened.slots.findIndex((slot) => slot.rarity === "Mythic");
+  const mythicSlot = mythicFirst >= 0 ? opened?.slots[mythicFirst] : undefined;
+  const mythicDef = mythicSlot === undefined ? undefined : CATALOG[mythicSlot.cardId];
+  const showTakeover = mythicSlot !== undefined && mythicDef !== undefined && torn && !reduced && !skipped && takeover;
+  const showSlots = opened !== null && (reduced || skipped || torn) && !showTakeover;
 
   const reveal = (index: number): void => {
     const slot = slots[index];
@@ -278,7 +301,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
     >
       <h2 className="pack-scene__title">{title}</h2>
 
-      {showSlots ? null : (
+      {showSlots || showTakeover ? null : (
         <button
           type="button"
           className="pack-hit"
@@ -302,6 +325,25 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
         </button>
       )}
 
+      {showTakeover && mythicSlot !== undefined ? (
+        <div
+          className="pack-takeover"
+          data-testid={packTestid.takeover}
+          data-card={mythicSlot.cardId}
+          onClick={() => {
+            setTakeover(false);
+          }}
+        >
+          <FullScreenArt
+            defId={mythicSlot.cardId}
+            name={mythicDef === undefined ? mythicSlot.cardId : readerName(mythicDef)}
+            onClose={() => {
+              setTakeover(false);
+            }}
+          />
+        </div>
+      ) : null}
+
       {showSlots && opened !== null ? (
         <div className="pack-slots" data-testid={packTestid.slots}>
           {opened.slots.map((slot, index) => {
@@ -321,6 +363,9 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
                 data-cosmetic-rarity={cosmetic?.cosmeticRarity}
                 data-revealed={shown ? "true" : "false"}
                 data-holding={holding === index ? "true" : undefined}
+                data-flare={
+                  slot.grant.kind === "cosmetic" && slot.grant.cosmeticRarity === "Legendary" && torn && !shown ? "true" : undefined
+                }
               >
                 {shown ? (
                   <>
@@ -523,6 +568,17 @@ export default function PackOpening({
           const last = rest.at(-1) ?? first;
           if (first === undefined || last === undefined) return;
           queued.current = rest;
+          // R3349000: every granted level marks its card "new" until the Collection views it.
+          markNewLevels(
+            token,
+            [first, ...rest].flatMap((opening) =>
+              opening.slots.flatMap((slot) => {
+                const grant = slot.grant;
+                if (grant.kind !== "cosmetic") return [];
+                return [{ id: grant.cosmeticId, cardId: slot.cardId }, ...(grant.below ?? []).map((below) => ({ id: below, cardId: slot.cardId }))];
+              }),
+            ),
+          );
           setOpened(first);
           // The last opening's counters are the account's; the panel and the page take them once.
           setInfo((before) => (before === null ? before : withOpening(before, last)));

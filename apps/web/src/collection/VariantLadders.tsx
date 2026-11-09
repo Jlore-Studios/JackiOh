@@ -14,6 +14,7 @@ import type { CardDef } from "@jackioh/shared";
 
 import { CardArt, INSPECT_KEY_SHORTCUT, useCardSettings } from "../cards/index.ts";
 import { normalizeCosmetics, wornCosmetics } from "../cards/cosmetics.ts";
+import { FullArtSignature } from "../cards/FullArtSignature.tsx";
 import type { FaceModel } from "../cards/model.ts";
 import { DEFAULT_VARIANT, artPartOf, artPictureOf, levelOf, lookOn } from "../cards/versions.ts";
 import { t } from "../i18n/i18n.ts";
@@ -31,9 +32,17 @@ export function RungPicture({ def, face, rung }: { def: CardDef; face: FaceModel
   const { rarityFoil, fullArt } = useCardSettings();
   const variant = rung.id === NO_FULL_ART_ID ? DEFAULT_VARIANT : levelOf(rung.id)?.variant;
   const look = variant === DEFAULT_VARIANT ? lookOn(def.id, null, fullArt).version : rung.id;
+  // R3349000: each rung draws its own level's look: an animated level moves, a signed one signs.
+  const adds = levelOf(rung.id)?.adds;
+  const motion = adds === "animated" || adds === "signed" ? "animated" : undefined;
+  const signed = adds === "signed";
   if (look !== null) {
     return (
-      <span className="collection-strip__picture collection-strip__picture--full-art">
+      <span
+        className="collection-strip__picture collection-strip__picture--full-art"
+        data-cosmetic-motion={motion}
+        data-signed={signed ? "true" : undefined}
+      >
         <CardArt
           defId={def.id}
           radiant={false}
@@ -44,6 +53,7 @@ export function RungPicture({ def, face, rung }: { def: CardDef; face: FaceModel
           picture={artPictureOf(look, def.set)}
           part={artPartOf(look)}
         />
+        {signed ? <FullArtSignature name={def.name} defId={def.id} /> : null}
       </span>
     );
   }

@@ -40,11 +40,14 @@ import {
   bestRarity,
   cosmeticName,
   holdsToFlip,
+  legendaryFlareCues,
+  orderGrantsRarestLast,
   packTestid as T,
   percent,
   playStinger,
   revealCues,
   slotOutcome,
+  treatmentOf,
   withOpening,
 } from "./packs.ts";
 
@@ -180,6 +183,44 @@ describe("#1308 the pack model", () => {
       ["entrance", { mythic: true }],
     ]);
   });
+
+  it("R3349000 grants reveal rarest last, ties keeping their order", () => {
+    const items = [
+      { cosmeticId: "table-wood", cardId: null as string | null, rarity: "Common" as const },
+      { cosmeticId: "version-alt-full-art", cardId: "core-004", rarity: "Legendary" as const },
+      { cosmeticId: "version-alt-art", cardId: "core-004", rarity: "Rare" as const },
+      { cosmeticId: "version-sketch", cardId: "core-004", rarity: "Rare" as const },
+    ];
+    expect(orderGrantsRarestLast(items).map((item) => item.cosmeticId)).toEqual([
+      "table-wood",
+      "version-alt-art",
+      "version-sketch",
+      "version-alt-full-art",
+    ]);
+    expect(
+      items.map((item) => item.cosmeticId),
+      "the order given is not changed",
+    ).toEqual(["table-wood", "version-alt-full-art", "version-alt-art", "version-sketch"]);
+  });
+
+  it("R3349000 each rarity takes its treatment, and a chase takes the screen from Legendary up", () => {
+    expect(treatmentOf("Common", false)).toBe("panel");
+    expect(treatmentOf("Rare", false)).toBe("panel");
+    expect(treatmentOf("Epic", false)).toBe("panel");
+    expect(treatmentOf("Legendary", false)).toBe("grow");
+    expect(treatmentOf("Mythic", false)).toBe("takeover");
+    expect(treatmentOf("Epic", true)).toBe("panel");
+    expect(treatmentOf("Legendary", true)).toBe("takeover");
+    expect(treatmentOf("Mythic", true)).toBe("takeover");
+  });
+
+  it("R3349000 a Legendary flare is its reveal's rays and rising burst", () => {
+    const at = { kind: "testid", testid: "pack-slot-0" };
+    const flare = legendaryFlareCues("pack-slot-0", 1);
+    expect(flare.map((cue) => cue.kind)).toEqual(["rays", "burst"]);
+    expect(flare[0]).toMatchObject({ kind: "rays", tone: "legendary", at });
+    expect(flare[1]).toMatchObject({ kind: "burst", preset: "gold" });
+  });
 });
 
 function props(over: Partial<PackSceneProps> = {}): PackSceneProps {
@@ -207,6 +248,9 @@ function torn(over: Partial<PackSceneProps> = {}): PackSceneProps {
   const given = props({ opened: openedPack(), ...over });
   render(<PackScene {...given} />);
   advance(PACK_TEAR_MS);
+  // A Mythic pull tears into its takeover first; a tap moves on to the slots grid.
+  const takeover = screen.queryByTestId(T.takeover);
+  if (takeover !== null) fireEvent.click(takeover);
   return given;
 }
 
@@ -254,12 +298,84 @@ describe("#1308 the pack-opening scene", () => {
     expect(screen.queryByTestId(T.slots)).toBeNull();
 
     advance(PACK_TEAR_MS);
+    // The fixture's Mythic pull tears into its takeover first; a tap moves on to the slots grid.
+    fireEvent.click(screen.getByTestId(T.takeover));
     expect(screen.queryByTestId(T.pack)).toBeNull();
     for (let index = 0; index < 5; index += 1) {
       expect(screen.getByTestId(T.slot(index))).toHaveAttribute("data-revealed", "false");
       expect(screen.getByTestId(T.flip(index))).toBeInTheDocument();
     }
     expect(screen.getByTestId(T.slot(0))).toHaveAttribute("data-rarity", "Mythic");
+  });
+
+  /** A hold's slot turns after its hold; any other turns on a click. */
+  function flipSlot(opened: OpenedPackResponse, index: number): void {
+    const back = screen.getByTestId(T.flip(index));
+    if (holdsToFlip(opened.slots[index]!.rarity)) {
+      fireEvent.pointerDown(back);
+      advance(PACK_HOLD_MS);
+    } else {
+      fireEvent.click(back);
+    }
+  }
+
+  it("R3349000 a Legendary pull flares before it flips", () => {
+    const fixture = openedPack();
+    const [, second, third, fourth, fifth] = fixture.slots;
+    const opened: OpenedPackResponse = {
+      ...fixture,
+      slots: [
+        { rarity: "Common", cardId: "core-002", grant: { kind: "card" } },
+        second!,
+        { ...third!, grant: { kind: "cosmetic", cosmeticId: "foil-molten-gold", cosmeticRarity: "Legendary" as const } },
+        fourth!,
+        fifth!,
+      ],
+    };
+    torn({ opened });
+    const flared = screen.getByTestId(T.slot(2));
+    expect(flared).toHaveAttribute("data-flare", "true");
+    expect(flared, "the flaring tile stays sealed").toHaveAttribute("data-revealed", "false");
+    expect(screen.getByTestId(T.slot(0))).not.toHaveAttribute("data-flare");
+
+    flipSlot(opened, 2);
+    expect(screen.getByTestId(T.outcome(2))).toHaveTextContent("New cosmetic: Molten gold");
+    expect(screen.getByTestId(T.slot(2))).toHaveAttribute("data-revealed", "true");
+    expect(screen.getByTestId(T.slot(2))).not.toHaveAttribute("data-flare");
+  });
+
+  it("R3349000 a Mythic pull tears into its takeover", () => {
+    const given = props({ opened: openedPack() });
+    render(<PackScene {...given} />);
+    advance(PACK_TEAR_MS);
+
+    // Slot 0 is the fixture's Mythic pull: the pack tears open into its takeover, not the grid.
+    const takeover = screen.getByTestId(T.takeover);
+    expect(takeover).toHaveAttribute("data-card", "core-096");
+    expect(takeover.querySelector('[data-testid="fullscreen-art"]')).not.toBeNull();
+    expect(screen.queryByTestId(T.slots)).toBeNull();
+
+    // A tap moves on to the slots grid.
+    fireEvent.click(takeover);
+    expect(screen.queryByTestId(T.takeover)).toBeNull();
+    expect(screen.getByTestId(T.slots)).toBeInTheDocument();
+    expect(screen.getByTestId(T.slot(0))).toHaveAttribute("data-revealed", "false");
+  });
+
+  it("R3349000 no slot shows before it is opened", () => {
+    const opened = openedPack();
+    torn({ opened });
+    for (let index = 0; index < 5; index += 1) {
+      expect(screen.getByTestId(T.slot(index))).toHaveAttribute("data-revealed", "false");
+    }
+    // The pack's order: each card turns alone, the others staying sealed.
+    for (let index = 0; index < 5; index += 1) {
+      flipSlot(opened, index);
+      expect(screen.getByTestId(T.slot(index))).toHaveAttribute("data-revealed", "true");
+      for (let other = index + 1; other < 5; other += 1) {
+        expect(screen.getByTestId(T.slot(other))).toHaveAttribute("data-revealed", "false");
+      }
+    }
   });
 
   it("cards are revealed one at a time, each saying what it became", () => {
