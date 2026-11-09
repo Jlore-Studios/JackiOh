@@ -22633,10 +22633,6 @@
       "refused_until": "2026-11-09T00:10:00Z",
       "spent": [
         {
-          "at": "2026-11-01T21:55:03Z",
-          "minutes": 17.4
-        },
-        {
           "at": "2026-11-01T22:15:17Z",
           "minutes": 23.6
         },
@@ -23431,16 +23427,13 @@
         {
           "at": "2026-11-09T04:10:21Z",
           "minutes": 65.3
+        },
+        {
+          "at": "2026-11-09T04:49:02Z",
+          "minutes": 13.8
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-01T06:53:42Z",
-          "cache": 221723,
-          "cost": 5.6526,
-          "input": 1,
-          "output": 8284
-        },
         {
           "at": "2026-11-01T07:00:58Z",
           "cache": 17438224,
@@ -24833,15 +24826,22 @@
           "cost": 29.7597,
           "input": 8,
           "output": 9619
+        },
+        {
+          "at": "2026-11-09T04:49:02Z",
+          "cache": 5751197,
+          "cost": 1.5804,
+          "input": 96,
+          "output": 42560
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-09T05:10:00Z",
-          "utilization": 0.88
+          "utilization": 0.94
         },
-        "observed_at": "2026-11-09T04:10:21Z",
-        "status": "allowed"
+        "observed_at": "2026-11-09T04:49:02Z",
+        "status": "allowed_warning"
       }
     },
     "claude-4": {
@@ -36744,7 +36744,12 @@
       "2026-11-09T04:35:10Z,claude-6,stream,call,42562036246,7,2026-11-09T08:20:00Z,,,allowed,50,,",
       "2026-11-09T04:35:25Z,claude-6,stream,call,42562036246,8,2026-11-09T08:20:00Z,,,allowed,50,,",
       "2026-11-09T04:37:55Z,claude-6,stream,call,42562036246,9,2026-11-09T08:20:00Z,,,allowed,50,,",
-      "2026-11-09T04:38:55Z,claude-6,stream,call,42562036246,10,2026-11-09T08:20:00Z,,,allowed,50,,"
+      "2026-11-09T04:38:55Z,claude-6,stream,call,42562036246,10,2026-11-09T08:20:00Z,,,allowed,50,,",
+      "2026-11-09T03:56:33Z,claude-3,stream,call,42558456309,90,2026-11-09T05:10:00Z,,,allowed_warning,,,",
+      "2026-11-09T03:56:48Z,claude-3,stream,call,42558456309,91,2026-11-09T05:10:00Z,,,allowed_warning,,,",
+      "2026-11-09T03:58:33Z,claude-3,stream,call,42558456309,92,2026-11-09T05:10:00Z,,,allowed_warning,,,",
+      "2026-11-09T04:04:04Z,claude-3,stream,call,42558456309,93,2026-11-09T05:10:00Z,,,allowed_warning,,,",
+      "2026-11-09T04:05:19Z,claude-3,stream,call,42558456309,94,2026-11-09T05:10:00Z,,,allowed_warning,,,"
     ],
     "runs": [
       "2026-11-09T04:44:38Z,42562036246,claude-6,opus,review,3458,hard,approved,,9.7,63,12921,4577590,2.3144,6,10,,,0.9,claude-6,none,,1"
