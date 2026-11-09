@@ -36742,7 +36742,10 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-09T08:01:04Z",
         "every": 5,
+        "findings": 3,
+        "follow_up": 3468,
         "head": "826a80a0581bf1f00150c61e8a6ff8fb1127334b",
         "issue": 3351,
         "merged_at": "2026-11-09T07:45:39Z",
@@ -36755,12 +36758,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:3c63f106-1794210758",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42582126293",
         "sha": "e8d5f21f9b55ccb441515cee55a2694c1d274a4d",
         "started_at": "2026-11-09T07:53:08Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the living game on a phone: a pass at 390x844 and on a throttled CPU over every look, animation and sound #3330 adds, with one budget they share",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 162
