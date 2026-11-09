@@ -15575,13 +15575,8 @@
     "what": "build #3406 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-09T11:39:26Z",
-    "notes": [
-      "delivered build #3406 on claude-5 (run 42606955825): interrupted",
-      "delivered revise #3444 on claude-1 (run 42604798688): approved",
-      "started build #3406 on claude-3 (run 42611394318)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-11-09T11:50:51Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -16286,7 +16281,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T11:39:26Z",
+  "loop_tick": "2026-11-09T11:50:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
