@@ -14067,9 +14067,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-3",
-      "owner_since": "2026-11-09T07:59:20Z",
-      "owner_why": "its turn came (it waited 120 minutes for #3444, #3457, #3458, #3461 and #3462, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
+      "owner": "claude-7",
+      "owner_since": "2026-11-09T10:18:20Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-09T11:06:47Z",
       "pending_request": false,
       "planned_at": "2026-11-07T18:22:23Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -18084,9 +18084,9 @@
       "live": "resolving",
       "merge_owner": "claude-3",
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-7",
       "queued_at": "2026-11-09T10:16:46Z",
-      "run_id": "42583174739",
+      "run_id": "pending:f0a2ba83-1794219475",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -18107,7 +18107,7 @@
         "run": "42560436722"
       },
       "source": "conflict",
-      "started_at": "2026-11-09T08:02:55Z",
+      "started_at": "2026-11-09T10:18:20Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18454,9 +18454,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T10:17:42Z",
+    "at": "2026-11-09T10:18:20Z",
     "url": "",
-    "what": "revise #3462 on claude-4"
+    "what": "revise #3464 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-09T10:03:37Z",
