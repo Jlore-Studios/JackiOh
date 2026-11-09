@@ -37,6 +37,17 @@ import {
   id = "${local.cloudflare_account_id}/4a0a902b4d034376d00a1f4e6286cadf7f927235"
 }
 
+# #3485: Cloudflare answered http://jackioh.com with the page itself, so Google filed it
+# as an alternate of the https:// canonical. Always Use HTTPS answers every http request
+# with a 301 to https instead; public/_headers' HSTS keeps browsers there. This updates the
+# zone's existing setting in place (no import block: there is no separate object to import).
+# A person runs plan/apply with the tokens (README.md, Running it).
+resource "cloudflare_zone_setting" "always_use_https" {
+  zone_id    = data.cloudflare_zone.jackioh.id
+  setting_id = "always_use_https"
+  value      = "on"
+}
+
 # The zone's records beyond the custom domains' own, read-only AAAAs, each with its import block
 # (<zone id>/<record id>, the zone's id written out, since an import's id must be known before the
 # plan reads the zone; README.md, The first import, step 2): a record this file does not name is one

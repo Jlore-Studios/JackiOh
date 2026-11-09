@@ -6,12 +6,17 @@
 # apps/web/src/net/cloudflare-config.test.ts holds this file.
 # R2983000: Google's own sign-in button (Google Identity Services, on /login) needs its script, its
 # frames, its styles and its requests (static-pages.ts `GOOGLE_IDENTITY_SOURCE`), and nothing else.
+# #3485: Strict-Transport-Security pairs with Always Use HTTPS (infra/cloudflare.tf). It ships to
+# staging and *.workers.dev deliberately: all are HTTPS-only, and promote-production.yml's live check
+# (bundle content, /decks 200, a Content-Security-Policy header, /not-a-page 404) asserts nothing it
+# breaks. No `preload`: the domain was never submitted.
 /*
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; worker-src 'self'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; frame-src 'self' https://accounts.google.com/gsi/; connect-src %CONNECT_SRC%; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
 
 # The web fonts (src/fonts.css): a file's name carries its version, so a browser keeps it a year.
 /fonts/*
