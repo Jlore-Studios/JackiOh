@@ -318,7 +318,8 @@ export function anomalyMarkup(code: AnomalyCode, radiant: boolean): string {
 /**
  * R3331000: the picture of a card with a scene recipe, drawn by the procedural painter from its scene whichever
  * set's painter would draw it, so the Stinkyscape and Training Grounds painters hand their recipe cards here;
- * null for a card with none, which its own painter draws as before.
+ * null for a card with none, which its own painter draws as before. R3406000: a Starship Piece's, a Jlockeed weapon's
+ * and Dice of Doom's Alt art seed finds its alt recipe here, while every other seed of theirs falls to the painter.
  */
 function sceneArtSvg(seedId: string, tags: readonly Tag[], type: CardType, radiant: boolean, motion: ArtMotion | null, part: ArtPart): string | null {
   const scene = sceneRecipeOf(seedId);
