@@ -15813,15 +15813,26 @@
     "what": "plan #3479 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-09T13:45:34Z",
+    "at": "2026-11-09T13:55:11Z",
     "notes": [
-      "#3485 needs a plan",
+      "#3476 needs a plan",
+      "#3477 needs a plan",
+      "#3478 needs a plan",
+      "#3479 needs a plan",
+      "#3481 needs a plan",
+      "#3486 needs a plan",
       "#3464 is held for `claude-7` until 09:20 (5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%))",
-      "delivered suggest on claude-8 (run 42626097218): interrupted",
-      "started plan #3485 on muse (run 42628567110)",
-      "started plan #3483 on muse (run 42628667787)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-09T16:40:00Z; `claude-7` 5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-09T15:20:00Z; it can start a build or a plan again in 1h 31m; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-09T14:50:00Z; it can start a build or a plan again in 1m; `claude-1` is idle, but nothing queued is for it; `claude-4` is idle, but nothing queued is for it; `claude-6` is idle, but nothing queued is for it; `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-11-09T16:10:00Z; it can start a build or a plan again in 2h 21m; `muse` is idle, but nothing queued is for it; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it; waiting for their owners: #3464 held for `claude-7` until 09:20 (5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%))",
-      "pruned 3 plan file(s) older than 7 days"
+      "#3462: green and waiting for a person to merge it, so `claude-4` gives up its claim on it",
+      "delivered plan #3485 on muse (run 42628567110): planned",
+      "started build #3485 on muse (run 42630038445)",
+      "started plan #3478 on muse (run 42630140782)",
+      "started plan #3476 on muse (run 42630242984)",
+      "started plan #3477 on claude-6 (run 42630341358)",
+      "started plan #3486 on claude-6 (run 42630456418)",
+      "started plan #3481 on claude-4 (run 42630591699)",
+      "started plan #3479 on claude-1 (run 42630715468)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-09T16:40:00Z; `claude-7` 5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-09T15:20:00Z; it can start a build or a plan again in 1h 17m; `claude-8` is idle, but nothing queued is for it; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-11-09T16:10:00Z; it can start a build or a plan again in 2h 07m; `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it; waiting for their owners: #3464 held for `claude-7` until 09:20 (5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%))",
+      "pruned 6 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16527,7 +16538,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T13:45:34Z",
+  "loop_tick": "2026-11-09T13:55:11Z",
   "machine_disk": {
     "issue": null,
     "reading": {
