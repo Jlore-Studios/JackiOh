@@ -17,9 +17,12 @@ const MEGABASE_ALT: SceneRecipe = {
       { part: "glass-spire", x: 10, y: 100, scale: 1.2 },
       { part: "glass-spire", x: 90, y: 100, scale: 1.2 },
       { part: "shuttle", x: 58, y: 16, scale: 0.4 },
+      { part: "escalator", x: 60, y: 70, scale: 0.6, flip: -1 },
+      { part: "ceiling-lights", x: 50, y: 4, scale: 1 },
     ],
     mid: [
       { part: "glass-wall", x: 74, y: 88, scale: 1, paint: "sky-300" },
+      { part: "awning", x: 74, y: 72, scale: 1, paint: "red-300" },
       { part: "crew-crowd", x: 74, y: 90, scale: 0.9 },
     ],
     subject: [
@@ -27,7 +30,7 @@ const MEGABASE_ALT: SceneRecipe = {
       { part: "escalator", x: 34, y: 66, scale: 0.9 },
       { part: "crew-crowd", x: 30, y: 80, scale: 0.6 },
     ],
-    near: [{ part: "crew-crowd", x: 52, y: 104, scale: 2 }],
+    near: [{ part: "crew-crowd", x: 52, y: 104, scale: 2, count: 2, spread: [20, 2] }],
     light: [
       { part: "god-rays", x: 50, y: 0, scale: 1.2, paint: "red-300" },
       { part: "halo", x: 50, y: 18, scale: 1.4, paint: "red-300" },
@@ -36,7 +39,7 @@ const MEGABASE_ALT: SceneRecipe = {
   },
 };
 
-/** Core System (Stinkyscape #117, Epic), Alt art: the morning after the reset: an empty, dust-sheeted tactical floor lit rose by sunrise through tall windows, one technician sipping tea beside a rebooting console. */
+/** Core System (Stinkyscape #117, Epic), Alt art: the morning after the reset: an empty, dust-sheeted tactical floor lit rose by sunrise through tall windows, one technician sipping tea beside a rebooting console. The kit has no dust sheet, so the floor's dust hangs in the sunlight. */
 const CORE_SYSTEM_ALT: SceneRecipe = {
   family: "stinkyscape",
   sky: ["red-300", "violet-300"],

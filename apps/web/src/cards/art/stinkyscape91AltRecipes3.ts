@@ -5,7 +5,7 @@ import { figureLookFor, type FigureLook } from "./figureKit.ts";
 import type { SceneRecipe } from "./scene.ts";
 import { normalExtraLookOf, normalLookOf } from "./stinkyscape91AltRecipes1.ts";
 
-/** IN33DH3 (Stinkyscape #147, Legendary), Alt art: IN33DH3 off duty in a cluttered dorm pod, cross-legged on his bunk asking his AI companion which snack to eat; tangerine lamp light, overhead view. */
+/** IN33DH3 (Stinkyscape #147, Legendary), Alt art: IN33DH3 off duty in a cluttered dorm pod, cross-legged on his bunk asking his AI companion which snack to eat; tangerine lamp light, overhead view. The figure kit has no cross-legged pose, so he sits. */
 const IN33DH3_ALT: SceneRecipe = {
   family: "stinkyscape",
   sky: ["orange-400", "brass-600"],
@@ -55,6 +55,7 @@ const ALTERAN_REACH_ALT: SceneRecipe = {
       { part: "moon", x: 72, y: 12, scale: 0.25 },
       { part: "stars", x: 50, y: 20, scale: 0.8 },
       { part: "cloud", x: 24, y: 30, scale: 1, paint: "white" },
+      { part: "cloud", x: 88, y: 36, scale: 0.7, paint: "white" },
     ],
     far: [
       { part: "planet-limb", x: 50, y: 64, paint: "green-400" },
@@ -62,13 +63,14 @@ const ALTERAN_REACH_ALT: SceneRecipe = {
     ],
     mid: [
       { part: "sand", x: 50, y: 82, paint: "green-200" },
-      { part: "crystal", x: 88, y: 84, scale: 0.8, paint: "cyan-400" },
+      { part: "crystal", x: 88, y: 84, scale: 0.8, count: 2, spread: [4, 2], paint: "cyan-400" },
     ],
     subject: [{ part: "shuttle", x: 70, y: 50, scale: 1.4 }],
     near: [
       { part: "seashell", x: 48, y: 64, scale: 0.7 },
-      { part: "crystal", x: 10, y: 98, scale: 1, paint: "cyan-400" },
+      { part: "crystal", x: 10, y: 98, scale: 1, count: 2, spread: [4, 2], paint: "cyan-400" },
       { part: "pebbles", x: 80, y: 98, scale: 1.2 },
+      { part: "pebbles", x: 20, y: 92, scale: 0.9 },
     ],
     light: [
       { part: "halo", x: 48, y: 64, scale: 0.8, paint: "cyan-400" },
@@ -77,7 +79,7 @@ const ALTERAN_REACH_ALT: SceneRecipe = {
       { part: "god-rays", x: 72, y: 12, scale: 0.6, paint: "white" },
     ],
     particles: [
-      { part: "spray", x: 24, y: 76, scale: 1 },
+      { part: "spray", x: 24, y: 76, scale: 1, count: 2, spread: [10, 3] },
       { part: "motes", x: 50, y: 50, scale: 1.2, paint: "white" },
       { part: "dust", x: 70, y: 76, scale: 1, paint: "white" },
       { part: "sparks", x: 48, y: 60, scale: 0.6, paint: "cyan-400" },
@@ -152,17 +154,25 @@ const SANCTUM_ALT: SceneRecipe = {
   layers: {
     sky: [
       { part: "nebula", x: 30, y: 30, scale: 1.6, paint: "green-400" },
+      { part: "nebula", x: 78, y: 76, scale: 1.2, paint: "jade-400" },
+      { part: "stars", x: 50, y: 50, scale: 1.4 },
       { part: "sun", x: 80, y: 20, scale: 0.6 },
     ],
-    far: [{ part: "asteroid", x: 18, y: 30, scale: 0.6, count: 3, spread: [10, 10] }],
+    far: [{ part: "asteroid", x: 18, y: 30, scale: 0.6, count: 5, spread: [12, 12] }],
     mid: [{ part: "asteroid", x: 54, y: 52, scale: 3.4, paint: "stone-500" }],
     subject: [{ part: "porthole", x: 54, y: 52, scale: 1.2 }],
-    near: [{ part: "shuttle", x: 22, y: 80, scale: 1 }],
+    near: [
+      { part: "shuttle", x: 22, y: 80, scale: 1 },
+      { part: "asteroid", x: 88, y: 92, scale: 0.9, count: 2, spread: [6, 4] },
+    ],
     light: [
       { part: "halo", x: 54, y: 52, scale: 1, paint: "red-300" },
       { part: "god-rays", x: 80, y: 20, scale: 1, paint: "white" },
     ],
-    particles: [{ part: "motes", x: 50, y: 50, scale: 1.2, paint: "green-200" }],
+    particles: [
+      { part: "motes", x: 50, y: 50, scale: 1.2, paint: "green-200" },
+      { part: "sparks", x: 54, y: 52, scale: 0.8, paint: "red-300" },
+    ],
   },
 };
 
@@ -188,7 +198,7 @@ const STIMMYCHECK_ALT: SceneRecipe = {
     light: [{ part: "halo", x: 48, y: 56, scale: 1, paint: "slate-100" }],
     particles: [
       { part: "rain", x: 50, y: 40, scale: 1.4, paint: "slate-100" },
-      { part: "drops", x: 30, y: 60, scale: 1, paint: "slate-100" },
+      { part: "drops", x: 30, y: 60, scale: 1, count: 2, spread: [16, 6], paint: "slate-100" },
     ],
   },
 };
@@ -215,11 +225,14 @@ const DICE_OF_DOOM_ALT: SceneRecipe = {
       { part: "ruin-wall", x: 16, y: 72, scale: 1 },
       { part: "ruin-wall", x: 86, y: 74, scale: 0.9, flip: -1 },
       { part: "fallen-column", x: 72, y: 84, scale: 0.9 },
+      { part: "fallen-column", x: 30, y: 66, scale: 0.6, flip: -1 },
+      { part: "ruin-wall", x: 60, y: 46, scale: 0.6 },
     ],
     subject: [{ part: "d100", x: 44, y: 72, scale: 1.7 }],
     near: [
-      { part: "pebbles", x: 82, y: 98, scale: 1.4 },
+      { part: "pebbles", x: 82, y: 98, scale: 1.4, count: 2, spread: [6, 2] },
       { part: "pebbles", x: 18, y: 96, scale: 1.2 },
+      { part: "fallen-column", x: 8, y: 100, scale: 1.1 },
     ],
     light: [
       { part: "god-rays", x: 76, y: 28, scale: 1, paint: "orange-400" },
@@ -320,7 +333,7 @@ const STRATOS_SWARM_ALT: SceneRecipe = {
   },
 };
 
-/** Faction: ETHICS (Stinkyscape #159, Rare), Alt art: after the meeting: six silhouettes cross a skybridge between tower rings at violet dusk, papers tucked under their arms; wide view. */
+/** Faction: ETHICS (Stinkyscape #159, Rare), Alt art: after the meeting: six silhouettes cross a skybridge between tower rings at violet dusk, papers tucked under their arms; wide view. Every other member carries the papers, a scroll, so six held scrolls do not take the picture past the byte ceiling. */
 const FACTION_ETHICS_ALT: SceneRecipe = {
   family: "stinkyscape",
   sky: ["violet-700", "red-300"],
@@ -333,11 +346,11 @@ const FACTION_ETHICS_ALT: SceneRecipe = {
     y: 60,
     scale: 0.3,
     pose: "pose-stride" as const,
-    look: { ...normalExtraLookOf("stinkyscape-159", k), item: "item-scroll" as const },
+    look: { ...normalExtraLookOf("stinkyscape-159", k), item: k % 2 === 1 ? ("item-scroll" as const) : null },
   })),
   layers: {
     sky: [{ part: "stars", x: 50, y: 16, scale: 1 }],
-    far: [{ part: "city-skyline", x: 50, y: 92, paint: "violet-500" }],
+    far: [{ part: "tower", x: 50, y: 92, scale: 1.2, count: 3, spread: [36, 3], paint: "violet-500" }],
     mid: [
       { part: "glass-spire", x: 6, y: 100, scale: 1.4 },
       { part: "glass-spire", x: 94, y: 100, scale: 1.4 },

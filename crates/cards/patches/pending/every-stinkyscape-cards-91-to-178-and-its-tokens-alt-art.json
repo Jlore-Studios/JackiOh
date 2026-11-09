@@ -1,0 +1,17 @@
+{
+  "title": "Patch: every Stinkyscape (cards 91 to 178 and its tokens) Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
+  "sources": "#3406",
+  "notes": "Stinkyscape's later cards' Alt art pass (#3330, on #3403's scenes, after #3396's Classic+ and #3397's Meditative+ and Training Grounds passes). Every card of #3406's table, the 54 Stinkyscape cards from #91 on and tokens offered Alt art but the Dormant Starship, now draws an alt scene recipe of its own from a brief per card (R3406000): its subject restaged in another place, time or moment, under a sky sharing no colour with its normal picture's and a new camera, where Alt art had redrawn the normal picture from another seed. A figure keeps the normal picture's person, and a person the brief keeps beside it stays the normal one's. The Starship Pieces, Jlockeed's three weapons and Dice of Doom keep their own painter's normal face and stand their piece in the alt scene as a new part of the scene kit. Every Alt art level draws the one alt picture, base and Radiant; each clears its rarity's detail floor and the byte ceiling, and in a real browser changes at least 60% of the normal window's sampled points (ALT_PICTURE_CHANGE_MIN). Repaints keep the normal picture. The scene kit gains a nanobot swarm, a hull plate, a cartridge, an overdrive engine, a warp ring, a rail gun, a great cannon, a missile pod, a capacitor cell, a flank pod, a launcher tube, a hundred-sided die, a pineapple, an escalator and a seashell. How cards look only: nothing plays differently.",
+  "player": {
+    "title": "Every later Stinkyscape Alt art restaged",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Stinkyscape's later cards, the Starship Pieces among them, now show their subject somewhere else in their Alt art: a new place, time or moment, clearly apart from their normal art."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

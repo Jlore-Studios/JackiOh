@@ -162,7 +162,7 @@ const HULL_BOOSTER_ALT: SceneRecipe = {
   },
 };
 
-/** No-No Words (Stinkyscape #99, Common), Alt art: the aftermath close-up: a shocked grandmother claps a hand over a young pilot's mouth at a sunny family dinner on a garden station, a dented robot beside them. */
+/** No-No Words (Stinkyscape #99, Common), Alt art: the aftermath close-up: a shocked grandmother claps a hand over a young pilot's mouth at a sunny family dinner on a garden station, a dented robot beside them. The figure kit has no hand-over-mouth gesture, so the grandmother raises her hand. */
 const NO_NO_WORDS_ALT: SceneRecipe = {
   family: "stinkyscape",
   sky: ["sky-300", "green-200"],
@@ -384,6 +384,7 @@ const XXFRESHJACK_ALT: SceneRecipe = {
       { part: "bulkhead", x: 50, y: 72, paint: "slate-400" },
       { part: "gantry", x: 90, y: 76, scale: 1.2 },
       { part: "ceiling-lights", x: 50, y: 4, scale: 1 },
+      { part: "fighter", x: 86, y: 40, scale: 0.6, flip: -1 },
     ],
     mid: [
       { part: "tile-floor", x: 50, y: 76, paint: "slate-100" },
@@ -391,7 +392,7 @@ const XXFRESHJACK_ALT: SceneRecipe = {
     ],
     subject: [{ part: "ramp", x: 40, y: 96, scale: 1.4, paint: "slate-400" }],
     near: [
-      { part: "crate", x: 88, y: 100, scale: 1.4, paint: "slate-400" },
+      { part: "crate", x: 88, y: 100, scale: 1.4, count: 2, spread: [6, 2], paint: "slate-400" },
       { part: "cable", x: 6, y: 96, scale: 1 },
       { part: "helmet", x: 58, y: 96, scale: 0.9 },
     ],
@@ -431,13 +432,16 @@ const IKWZKI_ALT: SceneRecipe = {
     far: [
       { part: "bulkhead", x: 50, y: 64, paint: "blue-800" },
       { part: "shuttle", x: 54, y: 28, scale: 0.8 },
+      { part: "shuttle", x: 16, y: 34, scale: 0.45, flip: -1 },
+      { part: "pipes", x: 90, y: 36, scale: 0.8 },
     ],
     mid: [
       { part: "crew-crowd", x: 52, y: 72, scale: 1.8 },
       { part: "crew-crowd", x: 18, y: 78, scale: 1.4 },
+      { part: "console", x: 92, y: 82, scale: 0.9 },
     ],
     near: [
-      { part: "crate", x: 6, y: 102, scale: 1.6, paint: "blue-800" },
+      { part: "crate", x: 6, y: 102, scale: 1.6, count: 3, spread: [4, 3], paint: "blue-800" },
       { part: "cable", x: 92, y: 98, scale: 0.9, flip: -1 },
     ],
     light: [
@@ -468,11 +472,15 @@ const SHOCKWAVE447_ALT: SceneRecipe = {
     mid: [
       { part: "pipes", x: 14, y: 40, scale: 0.8 },
       { part: "shelf", x: 92, y: 62, scale: 0.9 },
+      { part: "lantern", x: 40, y: 24, scale: 0.7, count: 2, spread: [10, 1] },
+      { part: "console", x: 86, y: 84, scale: 0.8, paint: "wood-700" },
     ],
     subject: [{ part: "light-diagram", x: 64, y: 50, scale: 0.6, paint: "sky-300" }],
     near: [
       { part: "hammer", x: 80, y: 94, scale: 0.7 },
-      { part: "gear", x: 64, y: 98, scale: 0.8, paint: "slate-400" },
+      { part: "pages", x: 48, y: 100, scale: 0.8 },
+      { part: "cable", x: 6, y: 98, scale: 1 },
+      { part: "gear", x: 64, y: 98, scale: 0.8, count: 3, spread: [6, 2], paint: "slate-400" },
       { part: "cog", x: 92, y: 86, scale: 0.8, paint: "slate-400" },
     ],
     light: [

@@ -7,9 +7,9 @@
 // procedural painter's `ArtSpec`, so every painter that hands it a recipe card prints, moves, splits
 // (Out of frame) and restyles it as it does any other picture. A card with no recipe never reaches
 // here and draws its picture byte for byte. R3396000, R3397000, R3406000: a Classic+, Meditative+ or
-// Training Grounds card offered Alt art, and one of Stinkyscape's later cards #3406 lists, draws an alt recipe
-// of its own (sceneRecipes.ts `ALT_SCENE_RECIPES`) under its Alt art seed alone. Presentation only (CLAUDE.md rule 7): the art reads a card's id, never anything
-// hidden.
+// Training Grounds card offered Alt art, and one of Stinkyscape's later cards #3406 lists, draws an alt
+// recipe of its own (sceneRecipes.ts `ALT_SCENE_RECIPES`) under its Alt art seed alone. Presentation only
+// (CLAUDE.md rule 7): the art reads a card's id, never anything hidden.
 
 import { hashId, round2, seededRandom } from "./hash.ts";
 import { drawFigure, type FigureLook, type PoseId, type FigurePartId } from "./figureKit.ts";
