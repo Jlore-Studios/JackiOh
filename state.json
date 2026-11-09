@@ -311,12 +311,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:6635610985": {
-      "at": "2026-11-04T16:10:12Z",
-      "lines": [
-        "/harness revise CI is red on this head (`7182401fd`): `rust (classify)` says the pending fragments' claims do not match the change, and `rust` is red with it. Merge `main`, run `cargo jackioh classify --base origin/main --claims` and make the fragments match what this change does (or drop a fragment that claims a change it does not make), then run the full checks. Keep the `#[cfg(test)]` gate on the nine `WALK_*` constants from the last revision. The block was not this pull request's fault: GitHub lost the last delivery's record (an HTTP 500), and the retried delivery took its own push for a moved branch (fixed in #3030)."
-      ]
-    },
     "c:6642962040": {
       "at": "2026-11-04T21:48:21Z",
       "lines": [
@@ -519,6 +513,12 @@
       "at": "2026-11-09T13:53:27Z",
       "lines": [
         "@jgoetzmann-bot One requirement to add when you plan this: **the switch has to keep working for future sets too.** Stinkyscape and Training Grounds are the sets missing from the network today, but the next set to reach AI decks will be missing in the same way until a person retrains it. That case should need no code change."
+      ]
+    },
+    "c:6748725467": {
+      "at": "2026-11-09T19:00:55Z",
+      "lines": [
+        "approve"
       ]
     }
   },
