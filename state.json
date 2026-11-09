@@ -15565,21 +15565,33 @@
       "suggestion": true
     },
     "3485": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-09T13:47:26Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-09T13:40:46Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:868fe3b3-1794232019",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-09T13:47:26Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T13:30:34Z",
+    "at": "2026-11-09T13:47:26Z",
     "url": "",
-    "what": "suggestions on claude-8"
+    "what": "plan #3485 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T13:37:43Z",
