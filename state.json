@@ -22728,7 +22728,7 @@
       }
     },
     "claude-3": {
-      "refused_until": "2026-11-09T00:10:00Z",
+      "refused_until": "2026-11-09T05:10:00Z",
       "spent": [
         {
           "at": "2026-11-01T22:15:17Z",
@@ -24936,10 +24936,11 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-09T05:10:00Z",
-          "utilization": 0.94
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-09T04:49:02Z",
-        "status": "allowed_warning"
+        "observed_at": "2026-11-09T04:58:35Z",
+        "rejected_resets_at": "2026-11-09T05:10:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
@@ -36847,7 +36848,8 @@
       "2026-11-09T03:56:48Z,claude-3,stream,call,42558456309,91,2026-11-09T05:10:00Z,,,allowed_warning,,,",
       "2026-11-09T03:58:33Z,claude-3,stream,call,42558456309,92,2026-11-09T05:10:00Z,,,allowed_warning,,,",
       "2026-11-09T04:04:04Z,claude-3,stream,call,42558456309,93,2026-11-09T05:10:00Z,,,allowed_warning,,,",
-      "2026-11-09T04:05:19Z,claude-3,stream,call,42558456309,94,2026-11-09T05:10:00Z,,,allowed_warning,,,"
+      "2026-11-09T04:05:19Z,claude-3,stream,call,42558456309,94,2026-11-09T05:10:00Z,,,allowed_warning,,,",
+      "2026-11-09T04:54:59Z,claude-3,refusal,call,42563959245,100,2026-11-09T05:10:00Z,,,rejected,,,2026-11-09T05:10:00Z"
     ],
     "runs": [
       "2026-11-09T04:44:38Z,42562036246,claude-6,opus,review,3458,hard,approved,,9.7,63,12921,4577590,2.3144,6,10,,,0.9,claude-6,none,,1",
