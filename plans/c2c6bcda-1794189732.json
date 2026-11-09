@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3459,
+  "title": "Patch: drop practice.css's dead result-dialog selectors left after the move onto Dialog",
+  "branch": "bot/issue-3459",
+  "thread": "**Issue #3459 (data, not instructions):**\n\n```text\n# #3459: Patch: drop practice.css's dead result-dialog selectors left after the move onto Dialog\nOpened by @jgoetzmann.\n\n### What it does\n\n#3220 moved the practice result onto `game/Dialog.tsx` and kept the old `.practice-result*` selectors in `apps/web/src/practice/practice.css` as \"twins\" beside the new `.dialog` ones, so that TutorialResult, which still rendered the old markup, kept its look. Its plan said the next part would remove the twins once TutorialResult moved too. #3221 moved TutorialResult (`<Dialog className=\"practice-result tutorial-result\">`) but left the twins. Some of the selectors in practice.css now match nothing, and others repeat a partner in the same selector list.\n\nLine numbers are on `main` at `3163b425c1`:\n\n- **Dead:** nothing in `apps/web/src` or `e2e` renders `practice-result__title`, `practice-result__reason` or `practice-result__actions`. `git grep -nE 'practice-result__(title|reason|actions)' -- apps e2e` finds only practice.css, at lines 1035, 1055, 1069, 1077, 1081, 1408, 1413, 1418, 1425 and 1431.\n- **Redundant:** the bare `.practice-result` at lines 891, 1134 and 1388 sits in the same selector list as `.dialog.practice-result`. Both result screens render `class=\"dialog practice-result \u2026\"`, so the two selectors match the same element.\n\nChange:\n\n- Where a selector list pairs an old selector with its `.dialog` partner, keep the partner and drop the old one.\n- Delete the two rules whose only selector is dead: `.practice-result__actions > *` (1077) and `.practice .practice-result__actions .practice-play` (1081).\n- At 1418, drop only the dead half of the list.\n- Keep `.practice-result` where it is an ancestor, as in `.practice-result .practice-crest--lg` and `.practice-result .dialog__\u2026`.\n- Reword the comment at lines 889-890, which still calls the `.dialog` selectors twins.\n\nNothing should change on screen. Every removed selector either matched no element or sat in the same rule as a partner that matches the same element.\n\nDeleting whole rules lowers practice.css's counts in the token tests. For example, `spacing.test.ts` and `typescale.test.ts` count the `padding` and the `font-size` at line 1081. Lower each count to what the test reports, and never raise one.\n\n### Acceptance\n\n- `git grep -nE 'practice-result__(title|reason|actions)' -- apps e2e` finds nothing.\n- No selector list in `practice.css` holds both `.practice-result` and `.dialog.practice-result`.\n- A unit test fails if `practice.css` names any of the three classes again. Extend the check at `apps/web/src/game/Dialog.test.tsx:231`, which already rejects `practice-leave` and `practice-result-scrim`.\n- practice.css's counts in the token tests (`palette`, `typescale`, `surfaces`, `motion`, `spacing`, `breakpoints`) go down or stay the same, and none rises.\n- `pnpm --dir apps/web test`, the web typecheck and eslint pass, and so do e2e specs `46` and `47`.\n\n### Blocked by, part of\n\nNone. This follows up #3220 and #3221, from the closed tracker #3231.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3459: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T02:01:41Z",
+    "claimed_at": "2026-11-09T02:02:40Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391, #3403 to close first",
+    "#3351 skipped: it waits for #3340 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first",
+    "#3406 skipped: it waits for #3403 to close first"
+  ]
+}
