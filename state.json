@@ -16380,6 +16380,13 @@
     "3501": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-09T19:23:31Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "apps/web only, about 14 files, with no engine, AI, migration or cross-crate contract, so none of the rule's five lines holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
