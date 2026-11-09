@@ -258,8 +258,10 @@ describe("R3401000 Meditative drawn as scenes", () => {
   });
 
   it("R3401000 Alt art grows the same parts from its own seed", () => {
-    for (const card of ENTRIES) {
-      expect(Object.hasOwn(ALT_SCENE_RECIPES, card.id), card.id).toBe(false);
+    // R3404000: the 54 offered Alt art draw an alt recipe of their own instead (meditativeAltScenes.test.tsx).
+    const reseeded = ENTRIES.filter((card) => !Object.hasOwn(ALT_SCENE_RECIPES, card.id));
+    expect(reseeded).toHaveLength(78);
+    for (const card of reseeded) {
       const scene = recipe(card.id);
       const normal = composeScene(scene, card.id);
       const seed = artSeedOf(card.id, "alt");

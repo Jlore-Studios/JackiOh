@@ -42,8 +42,8 @@ function textOf(path: string): string {
   return text;
 }
 
-// Read off `ts` once: vitest hands a CommonJS module over behind a Proxy, so each `ts.<name>` in the walk,
-// up to nine for every node of the client, went through its trap, and took R373's scan past its 5 s in CI.
+// The walk's calls, read off `ts` once: each of its exports is a getter, and under vitest the walk's
+// millions of reads took most of the first guard's time (3.3 s of its 5 s alone, over it in CI, #3461).
 const {
   forEachChild,
   isExportDeclaration,
