@@ -17810,6 +17810,8 @@
       }
     },
     "3458": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-08T23:48:32Z",
@@ -17823,8 +17825,11 @@
         "trail": "on3 - <<'EOF'\\nimport re\\nparts=[\\\"game-board\\\",\\\"cracker\\\",\\\"price-bars\\\",\\\"light-ring\\\",\\\"energy-beam\\\",\\\"magic-bo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web; IDS=stinkyscape-008-1,stinkyscape-011-2,stinkyscape-011-3,stinkyscape-012-1,stinkyscape-012-2,stinkyscape-097,stinkyscape-121,stinkysc\u2026\n- Bash: {\"command\": \"grep -E 'Test Files|Tests |EXIT|FAIL' /tmp/web-changed.log | head -20\", \"description\": \"Read web test results\"}\n- Read: {\"file_path\": \"/tmp/png/faces3.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web; sed -i 's/{ part: \\\"cracker\\\", x: 55.5, y: 48.5, scale: 0.9 },/{ part: \\\"cracker\\\", x: 55.5, y: 48.5, scale: 1.4 },/' src/cards/art/st\u2026\n- Read: {\"file_path\": \"/tmp/png/faces4.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web; sed -i 's/{ part: \\\"cracker\\\", x: 55.5, y: 48.5, scale: 1.4 },/{ part: \\\"cracker\\\", x: 56, y: 50, scale: 1.2 },/' src/cards/art/stinky\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/e2e; E2E_COMPONENT_PORT=5281 timeout 1500 pnpm test:component --spec cypress/component/stinkyscape91-scenes.cy.tsx > /tmp/cy.log 2>&1; echo EXIT\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; grep -n 'classify' crates/tools/README.md | head -10\", \"description\": \"Read classify docs in tools README\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; git fetch --dry-run 2>&1 | head -2; timeout 1500 cargo jackioh classify --base origin/main --claims > /tmp/classify.log 2>&1; echo EXIT $? >> /\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web; IDS=$(python3 -c \\\"\\nimport re\\nids=[]\\nfor n in '123':\\n ids+=re.findall(r'^ \\\\\\\"(stinkyscape-[^\\\\\\\"]+)\\\\\\\": [A-Z0-9_]+,$', open(f'sr\u2026\n- Read: {\"file_path\": \"/tmp/png/faces5.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web; IDS=$(python3 -c \\\"\\nimport re\\nids=[]\\nfor n in '123':\\n ids+=re.findall(r'^ \\\\\\\"(stinkyscape-[^\\\\\\\"]+)\\\\\\\": [A-Z0-9_]+,$', open(f'sr\u2026\n- Read: {\"file_path\": \"/tmp/png/faces6.png\"}\n- Bash: {\"command\": \"tail -5 /tmp/classify.log; tail -25 /tmp/cy.log | cut -c1-200\", \"description\": \"Check classify and Cypress progress\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; python3 -c \\\"\\nimport json;d=json.load(open('crates/cards/patches/pending/every-stinkyscape-cards-91-to-178-and-its-tokens-card-drawn.json'));p\u2026\n- Bash: {\"command\": \"until grep -q '^EXIT' /tmp/cy.log; do sleep 10; done; grep -E '\\u2713|\\u2716|[0-9]+\\\\) |passing|failing|EXIT|Error' /tmp/cy.log | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | head -20\", \"description\": \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; git status --short | grep -v zz-scratch; find e2e/cypress/screenshots -name 'stinkyscape91*' 2>/dev/null | head -3; git check-ignore -v e2e/cyp\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; find / -name 'stinkyscape91-scenes-desktop-deep-1*.png' -newer /tmp/cy.log -o -name 'stinkyscape91-scenes-desktop-deep-1*.png' 2>/dev/null | gr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/classify.log | grep -v 'Compiling\\\\|Finished\\\\|Running' | tail -20; git check-ignore -v e2e/artifacts 2>&1 | h\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3403/e2e/artifacts/component/screenshots/stinkyscape91-scenes.cy.tsx/stinkyscape91-scenes-desktop-deep-1.png\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; rm -f apps/web/src/cards/art/zz-scratch-*.test.ts; ls apps/web/src/cards/art/ | grep -c zz-; git status --short | cat; echo \\\"- pass 4: cypress\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; (cd apps/web && timeout 900 pnpm exec vitest run src/cards/art src/patches > /tmp/art2.log 2>&1); grep -E 'Test Files|Tests |FAIL' /tmp/art2.lo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; timeout 900 pnpm --dir apps/web typecheck 2>&1 | tail -3; timeout 900 pnpm exec eslint $(git diff --name-only origin/main -- 'apps/web/**/*.ts'\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; timeout 1500 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/ca\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## Log')\\nstate='''## State\\n\\n(build pass 4, opus) Work is complete; only t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403/apps/web; cat > src/cards/art/zz-scratch-3403-j.test.ts <<'EOF'\\nimport { it } from \\\"vitest\\\";\\nimport { writeFileSync, readFileSync } from \\\"n\u2026\n- Bash: {\"command\": \"cat /tmp/table.md\", \"description\": \"Print the per-card table\"}\n- Bash: {\"command\": \"until grep -q '^EXIT' /tmp/web-changed2.log; do sleep 10; done; grep -E 'Test Files|Tests |EXIT|FAIL' /tmp/web-changed2.log | head -20\", \"description\": \"Wait for the second web test run\"\u2026\n- Bash: {\"command\": \"until grep -q '^EXIT' /tmp/web-changed2.log; do sleep 10; done; grep -E 'Test Files|Tests |EXIT|FAIL' /tmp/web-changed2.log | head -20\", \"description\": \"Keep waiting for the second web r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3403; git status --short | cat; echo \\\"- pass 4: second web changed run green (315 files, 6154 passed); done, writing report\\\" >> .bot-notes.md\", \"de\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every Stinkyscape (cards 91 to 178 and its tokens) card drawn as what it is: a scene of its own for each, richer the rarer\"} --> ## What changed All 103 entries in #3403's table now draw from their own scene recipe, built from their brief in Stinkyscape\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every Stinkyscape (cards 91 to 178 and its tokens) card drawn as what it is: a scene of its own for each, richer the rarer\"} --> ## What changed All 103 entries in #3403's table now draw from their own scene recipe, built from their brief in Stinkyscape\u2026"
       },
       "issue": 3403,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-09T01:50:10Z",
         "from_run": "42536945182",
         "gates": [
           {
@@ -17916,8 +17921,15 @@
         "source": "build",
         "until": "2026-11-09T02:19:09Z"
       },
+      "pending_request": false,
+      "provider": "claude-2",
       "queued_at": "2026-11-09T01:49:09Z",
+      "run_id": "pending:e2b0af66-1794188983",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "started_at": "2026-11-09T01:50:10Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17931,9 +17943,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T01:40:55Z",
+    "at": "2026-11-09T01:50:10Z",
     "url": "",
-    "what": "review #3457 on claude-2"
+    "what": "review #3458 on claude-2"
   },
   "last_sweep": {
     "at": "2026-11-09T01:38:45Z",
