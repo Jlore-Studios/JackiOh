@@ -30,7 +30,7 @@ import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { artPictureOf, isFullBleed, ladderOf, levelsOn, offeredOn, VERSION_ALT_ART_ID } from "../versions.ts";
 import { MEDITATIVE_PLUS_ALT_RECIPES } from "./meditativePlusAltRecipes.ts";
 import { motifFor } from "./motifs.ts";
-import { ART_ROLES, FULL_ART_MOTION, type ArtMotion } from "./motion.ts";
+import { ART_ROLES, FULL_ART_CARD_MOTION, FULL_ART_MOTION, type ArtMotion } from "./motion.ts";
 import { artSeedOf } from "./pictures.ts";
 import { ART_BOX, artSpec, type ArtSpec } from "./procedural.ts";
 import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, artElements } from "./richness.ts";
@@ -386,8 +386,9 @@ describe("R3397000 Meditative+ and Training Grounds Alt art restaged", () => {
         }
       }
     }
-    // The one full-art card of the pass moves its Alt picture's every layer its motion names.
-    const fullArt = ALT_IDS.filter((id) => FULL_ART_MOTION[id] !== undefined);
+    // The one full-art card of the pass moves its Alt picture's every layer its motion names: the full-art cards' own
+    // motions (R2715001), not R3340000's recipes for every other Legendary and Mythic.
+    const fullArt = ALT_IDS.filter((id) => FULL_ART_CARD_MOTION[id] !== undefined);
     expect(fullArt).toEqual(["traininggrounds-040"]);
     for (const id of fullArt) {
       const motion = FULL_ART_MOTION[id] ?? null;
