@@ -19,7 +19,7 @@ import {
 } from "../constants.ts";
 import { figureLookFor } from "./figureKit.ts";
 import { motifFor } from "./motifs.ts";
-import { ART_ROLES, FULL_ART_MOTION } from "./motion.ts";
+import { ART_ROLES, FULL_ART_CARD_MOTION, FULL_ART_MOTION } from "./motion.ts";
 import { artSeedOf } from "./pictures.ts";
 import { artSpec, type ArtSpec } from "./procedural.ts";
 import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } from "./richness.ts";
@@ -229,7 +229,8 @@ describe("R3401000 Meditative drawn as scenes", () => {
         for (const placed of scene.layers[layer] ?? []) if (placed.props === true) expect(layer, `${card.id} ${placed.part}`).not.toBe("subject");
       }
     }
-    const fullArt = ENTRIES.filter((card) => FULL_ART_MOTION[card.id] !== undefined);
+    // The full-art cards' own motions (R2715001), not R3340000's recipes for every other Legendary and Mythic.
+    const fullArt = ENTRIES.filter((card) => FULL_ART_CARD_MOTION[card.id] !== undefined);
     expect(fullArt.map((card) => card.id).sort()).toEqual(["meditative-021", "meditative-087"]);
     for (const card of fullArt) {
       const motion = FULL_ART_MOTION[card.id] ?? null;

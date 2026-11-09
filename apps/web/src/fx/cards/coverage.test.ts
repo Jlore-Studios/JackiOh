@@ -54,11 +54,13 @@ describe("R2803000 the audit's coverage", () => {
     const recipes = CARDS.filter((id) => CATALOG[id]?.type === "Field Spell" && entryOf(id).kind === "bespoke");
     // R3407000: and Stinkyscape part two's Job Application, Alteran Reach and Sanctum.
     // R3405001: Meditative's eight signature Field Spells with a recipe (The Cane's is its entrance alone).
+    // R3399000: and Classic+'s Claude's Datacenter (its three token Field Spells are no card of the census).
     expect(recipes).toEqual([
     "classic-004",
     "classic-007",
     "classic-028",
     "classic-090",
+    "classicplus-078",
       "meditative-007",
       "meditative-011",
       "meditative-026",

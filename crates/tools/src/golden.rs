@@ -57,7 +57,7 @@ const HANDICAP_FIRST: u32 = 201;
 const HANDICAP_LAST: u32 = 240;
 
 /// §13.1: a game is recorded to its end or to this many actions, whichever comes first.
-const STEP_CAP: usize = 3000;
+pub(crate) const STEP_CAP: usize = 3000;
 
 // The command line (SURFACE §12)
 
@@ -295,20 +295,20 @@ fn run_check(args: &CheckArgs) -> Result<()> {
 // The decks and policy streams, dealt by `fuzz.rs`
 
 /// One seed's game: its setup and its two policy streams.
-struct GameSpec {
-    seed: String,
-    decks: (Vec<String>, Vec<String>),
+pub(crate) struct GameSpec {
+    pub(crate) seed: String,
+    pub(crate) decks: (Vec<String>, Vec<String>),
     /// R180, R187: the handicapped seat's handicap, or `None` for a game on this spec's resources.
-    handicaps: Option<PerPlayerOpt<Handicap>>,
+    pub(crate) handicaps: Option<PerPlayerOpt<Handicap>>,
     /// The policy's stream (§10.7), separate from the game rng, as the fuzz has it.
-    policy: String,
+    pub(crate) policy: String,
     /// R265: the stream that picks which seat answers first while both mulligans are open.
-    order: String,
+    pub(crate) order: String,
 }
 
 /// §13.1: seed k's game, dealt and seeded as the fuzz file that owns k deals it, from the shipped
 /// sets alone (R1420), so a set still being built never moves a recorded game.
-fn spec_for_seed(k: u32) -> Result<GameSpec> {
+pub(crate) fn spec_for_seed(k: u32) -> Result<GameSpec> {
     if (HANDICAP_FIRST..=HANDICAP_LAST).contains(&k) {
         let SeedHandicap { seat, handicap, .. } = handicap_for_seed(k);
         let mut handicaps = PerPlayerOpt::default();

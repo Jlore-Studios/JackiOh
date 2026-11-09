@@ -7,6 +7,8 @@
 // both sizes: a Mythic's own takeover draws its art, the rest their figures or their canvas.
 // R3405001: Meditative's 32 signatures the same way, at both sizes: each Mythic's own takeover draws its
 // own art, every other card its figure.
+// R3399000: so does every Classic+ signature, at both sizes, each Mythic's takeover drawing its own picture
+// (R3399002) in its art layer.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-signature.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -16,7 +18,7 @@ import Game from "../../../apps/web/src/game/Game.tsx";
 import { GALLERY_FELINORS, GALLERY_FELINOR_LANES } from "../../../apps/web/src/fx/cards/core/felinorFiender.ts";
 import { FX_CARD_TABLE } from "../../../apps/web/src/fx/cards/tables.ts";
 import { FX_SETTINGS_KEY, FX_SPEED_MIN } from "../../../apps/web/src/fx/constants.ts";
-import { galleryBoardOf, galleryCardEvents, galleryFieldView, galleryPlayOf } from "../../../apps/web/src/fx/motifs/gallery.ts";
+import { galleryBoardOf, galleryCardEvents, galleryFieldView, galleryHandOf, galleryPlayOf } from "../../../apps/web/src/fx/motifs/gallery.ts";
 import { DEFAULT_FX_SETTINGS, setFxSettings } from "../../../apps/web/src/fx/settings.ts";
 import { fullBoardView, withEvents } from "../../../apps/web/src/test/fixtures.ts";
 
@@ -242,6 +244,72 @@ describe("R3405001 Meditative's signatures in a real browser", () => {
           // Its own figure: a still pool, floodlights, a compass, a porcelain mask, a key ring, a jade die.
           cy.get(`${FX_DOM} [data-fx="figure"]`).should("exist");
         }
+        cy.screenshot(`fx-signature-${defId}-${String(w)}x${String(h)}`, { capture: "viewport", overwrite: true });
+      });
+    }
+  }
+});
+
+/** R3399000: every Classic+ signature, in table order, with its Mythic's own takeover look. */
+const CLASSIC_PLUS = [...FX_CARD_TABLE].flatMap(([defId, entry]) =>
+  defId.startsWith("classicplus-") && entry.kind !== "none" && entry.signature === true ? [{ defId, entry, look: entry.takeover }] : [],
+);
+
+/** True once the effects canvas has drawn or the DOM layer holds a cue (a ghost, a sheen, a takeover). */
+function drawsSomething(): Cypress.Chainable<boolean> {
+  return cy.window({ timeout: 20_000 }).then(
+    (win) =>
+      new Cypress.Promise<boolean>((resolve) => {
+        const start = win.performance.now();
+        const tick = (): void => {
+          const dom = win.document.querySelector('[data-testid="fx-dom"]');
+          if (canvasLit(win) || (dom !== null && dom.childElementCount > 0)) {
+            resolve(true);
+            return;
+          }
+          if (win.performance.now() - start > 15_000) resolve(false);
+          else win.requestAnimationFrame(tick);
+        };
+        win.requestAnimationFrame(tick);
+      }),
+  );
+}
+
+describe("R3399000 Classic+'s signatures in a real browser", () => {
+  before(() => {
+    Cypress.config("defaultCommandTimeout", 20_000);
+  });
+  after(() => {
+    Cypress.config("defaultCommandTimeout", 4_000);
+  });
+  afterEach(() => {
+    setFxSettings({ ...DEFAULT_FX_SETTINGS });
+    window.localStorage.removeItem(FX_SETTINGS_KEY);
+  });
+
+  it("R3399000 the spec plays all 35 of Classic+'s Legendaries and Mythics", () => {
+    expect(CLASSIC_PLUS).to.have.length(35);
+  });
+
+  for (const { defId, entry, look } of CLASSIC_PLUS) {
+    for (const { width: w, height: h } of VIEWPORTS) {
+      it(`R3399000 ${defId}'s signature at ${String(w)}x${String(h)}`, () => {
+        cy.viewport(w, h);
+        cy.then(() => {
+          setFxSettings({ speed: FX_SPEED_MIN });
+        });
+        const play = galleryPlayOf(defId, entry);
+        if (play === null) throw new Error(`${defId} has no gallery play`);
+        const board = galleryBoardOf(defId, fullBoardView());
+        const events = galleryCardEvents(defId, play, board, 1);
+        // As a real play starts: the card in its player's hand, so its cast and a Mythic's takeover rise from it.
+        mountShown(galleryHandOf(defId, board, 1), withEvents(galleryFieldView(defId, board), events));
+        cy.get(GAME).find("[data-animating]").should("exist");
+        // R3399002: a Mythic's takeover wears its own look and draws its own picture in its art layer.
+        if (look !== undefined) cy.get(`${FX_DOM} [data-fx="takeover"][data-look="${look}"] .takeover-art[data-look="${look}"] .takeover-art-drawing`).should("exist");
+        drawsSomething().then((drawn) => {
+          expect(drawn, `${defId}'s signature draws`).to.eq(true);
+        });
         cy.screenshot(`fx-signature-${defId}-${String(w)}x${String(h)}`, { capture: "viewport", overwrite: true });
       });
     }

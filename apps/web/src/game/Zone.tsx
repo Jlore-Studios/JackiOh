@@ -109,8 +109,10 @@ export default function Zone(props: ZoneProps): ReactElement {
       <TileAura view={view} side={side} row={row} lane={lane} highlight={props.highlight} animating={props.animating} />
       {locked && <LockIcon />}
       {reserved && !locked && <span className="lock-icon reserved-icon" aria-label={t("Reserved zone")} title={heldFor(lookup, view, side, row, lane)} />}
+      {/* R3340000: a replacement in this lane is a new face with a new motion age, even when no empty view renders between them. */}
       {unit !== null && (
         <Card
+          key={unit.instanceId}
           testId={testid.card(unit.instanceId)}
           card={unit}
           unit={unit}
