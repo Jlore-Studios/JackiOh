@@ -15600,6 +15600,13 @@
     "3476": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-09T14:17:23Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: crates/engine's rules loop and the AI are untouched, one existing worker output is reused rather than a new cross-crate contract, there is no migration, and about 15 files change."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
