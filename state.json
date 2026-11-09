@@ -15110,11 +15110,10 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
-      "merge_owner": "claude-4",
       "merge_owner_gave_up": {
-        "at": "2026-11-09T09:01:12Z",
+        "at": "2026-11-09T13:55:52Z",
         "provider": "claude-4",
-        "sha": "bfaa8dc72838cc889520f6d31ac1d9e7109aa3bc"
+        "sha": "531f786f061afafcae58fba1ea8c3db911c69253"
       },
       "pending_request": false,
       "provider": "claude-4",
