@@ -12,8 +12,8 @@
 #                                                  builder's check of their own tests before pushing;
 #                                                  it fails when one survives
 #   sh scripts/mutants.sh areas                    every area: its mutants, those left out, its shards
-#   sh scripts/mutants.sh score <area>             the finished run's row of the summary table, and
-#                                                  its survivors
+#   sh scripts/mutants.sh score <area>             the finished run's row of the summary table, its
+#                                                  survivors and its counts by file (an audit's rows)
 #
 # The areas: engine, ai, run, shared, server, tools and wasm (each crate, the three WebAssembly ones
 # as one); the cards by set, cards-<set> for each of crates/cards/src/scripts/<set>/ and cards-lib for
@@ -285,6 +285,14 @@ if lines:
     print(f"\n<details><summary>{area}: {len(lines)} survived</summary>\n\n```")
     print("\n".join(lines[:shown]) + ("\n…" if len(lines) > shown else ""))
     print("```\n</details>\n")
+# By file, an audit's rows (no leading pipe, so the report's summary table takes none of them).
+killed_as = {"Killed", "Timeout"}
+survived_as = {"Survived", "NoCoverage"}
+print(f"<details><summary>{area} by file</summary>\n\nfile | killed | survived | ignored\n--- | ---: | ---: | ---:")
+for name, f in sorted(files.items()):
+    by = collections.Counter(m["status"] for m in f["mutants"])
+    print(f"{name} | {sum(by[s] for s in killed_as)} | {sum(by[s] for s in survived_as)} | {by['Ignored']}")
+print("\n</details>\n")
 EOF
     return 0
   fi
@@ -311,6 +319,16 @@ EOF
     [ "$missed" -le "$SURVIVORS_SHOWN" ] || echo "…"
     printf '```\n</details>\n\n'
   fi
+  # By file, an audit's rows (no leading pipe, so the report's summary table takes none of them).
+  [ "$done" -gt 0 ] || return 0
+  printf '<details><summary>%s by file</summary>\n\nfile | killed | survived | unviable\n--- | ---: | ---: | ---:\n' "$area"
+  for outcome in caught timeout missed unviable; do
+    if [ -f "$dir/$outcome.txt" ]; then sed "s/:.*/ $outcome/" "$dir/$outcome.txt"; fi
+  done | awk '{ n[$1 " " $2]++; files[$1] = 1 }
+    END {
+      for (f in files) printf "%s | %d | %d | %d\n", f, n[f " caught"] + n[f " timeout"], n[f " missed"], n[f " unviable"]
+    }' | sort
+  printf '\n</details>\n\n'
 }
 
 case "${1:-}" in
