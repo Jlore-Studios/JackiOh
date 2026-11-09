@@ -16750,7 +16750,16 @@
       "feedback_since": "2026-11-09T19:25:54Z",
       "issue": 3501,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-6",
+        "rejections": [],
+        "reviews": [],
+        "sha": "d0f872aed2b8ee6203c8a5eec377414a3cd3c58a",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
