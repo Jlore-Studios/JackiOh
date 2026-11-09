@@ -17858,6 +17858,9 @@
       "question": "",
       "queued_at": "2026-11-09T09:03:11Z",
       "requested_by": "jgoetzmann-bot",
+      "requeued": {
+        "ef0542ab68f1349b50d839ee5a8b242dfc6c9c11": "cf108f4ccd99f3f122675a2f8cc8a1ccd2d34a28"
+      },
       "round_tier": "strong",
       "run_id": "42590480142",
       "runs_on": "ubuntu-latest",
