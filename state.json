@@ -17141,9 +17141,14 @@
     "what": "plan #3504 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-09T21:28:16Z",
+    "at": "2026-11-09T21:36:13Z",
     "notes": [
-      "#3504 is held for `claude-1` until 15:30 (5-hour usage is 100%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+      "#3504: `claude-1` can start again, so its hold is lifted",
+      "delivered plan #3498 on claude-8 (run 42699646474): planned",
+      "started build #3498 on claude-8 (run 42704532019)",
+      "started plan #3504 on claude-1 (run 42704654345)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17849,7 +17854,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T21:28:16Z",
+  "loop_tick": "2026-11-09T21:36:13Z",
   "machine_disk": {
     "issue": null,
     "reading": {
