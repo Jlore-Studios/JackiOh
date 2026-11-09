@@ -17223,7 +17223,7 @@
         "provider": "claude-1",
         "round_tier": "strong",
         "rounds_on": 3444,
-        "rounds_used": 1,
+        "rounds_used": 2,
         "since": "2026-11-09T02:37:46Z",
         "source": "ci",
         "until": "2026-11-09T03:06:02Z"
