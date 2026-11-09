@@ -15836,8 +15836,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-8",
-      "owner_since": "2026-11-09T03:32:25Z",
-      "owner_why": "handed off from `claude-6`: `claude-6` is busy: its lanes are all taken",
+      "owner_since": "2026-11-09T09:03:11Z",
+      "owner_why": "its turn came (it conflicts with `main` now), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-09T01:00:14Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -17869,14 +17869,14 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3404,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "live": "reviewing",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
-      "queued_at": "2026-11-09T06:15:43Z",
+      "queued_at": "2026-11-09T09:03:11Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
       "run_id": "42572049283",
@@ -17899,10 +17899,17 @@
         "provider": "claude-8",
         "run": "42572049283"
       },
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-11-09T06:16:34Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-09T09:03:11Z",
+        "until": "2026-11-09T09:33:11Z",
+        "why": "it conflicts with `main` now"
+      },
       "verdict_rounds": 3,
       "votes": {
         "approvals": [
@@ -17924,20 +17931,7 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 6731924796,
-      "waiting_turn": {
-        "behind": [
-          3464,
-          3458,
-          3457
-        ],
-        "ends": "2026-11-09T09:51:21Z",
-        "from_run": "42572049283",
-        "head": "b053e6312b7af075a5bf0ffb65956cbb9acde19d",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-09T07:51:21Z"
-      }
+      "waiting_comment": 6731924796
     },
     "3462": {
       "action": "review",
