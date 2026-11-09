@@ -15250,7 +15250,7 @@
       "failures": 0,
       "feedback_since": "2026-11-09T11:32:47Z",
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "issue": 3352,
       "kind": "revise",
       "last_findings": [],
