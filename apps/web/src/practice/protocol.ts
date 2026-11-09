@@ -72,10 +72,11 @@ export type PracticeStartConfig = {
    */
   dailyDeal?: string;
   /**
-   * DR14, R2706000: a dungeon run's fight (`docs/dungeon-run.md` DR5). When set, its decks,
-   * handicaps, deck marks and seed replace `deck`, `difficulty`'s handicap and the dealt AI deck: the
-   * run deck, its handicap and marks at `humanSeat`, the enemy's deck and handicap at the AI's seat.
-   * It brings no last board and leaves none, is never saved or kept for replay, and earns nothing.
+   * DR14, R2706000, R3476000: a dungeon run's fight (`docs/dungeon-run.md` DR5). When set, its
+   * decks, handicaps, deck marks and seed replace `deck`, `difficulty`'s handicap and the dealt AI
+   * deck: the run deck, its handicap and marks at `humanSeat`, the enemy's deck and handicap at the
+   * AI's seat. It brings no last board and leaves none, is kept in its own save slot while in
+   * progress but never kept for replay, and earns nothing.
    */
   run?: RunFightSetup;
 };
@@ -100,7 +101,10 @@ export type PracticeTimer =
 
 export type PracticeRequest =
   | { id: number; type: "start"; config: PracticeStartConfig }
-  /** R668: pick up the game saved on this device, named by the setup the page remembers (`resume.ts`). */
+  /**
+   * R668: pick up the game saved on this device, named by the setup the page remembers
+   * (`resume.ts`); R3476000: a run fight resumes its own kept fight the same way, from its own slot.
+   */
   | { id: number; type: "resume"; config: PracticeStartConfig }
   | { id: number; type: "act"; action: ActionBody }
   | { id: number; type: "aiStep" }

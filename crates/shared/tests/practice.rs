@@ -793,11 +793,90 @@ fn r668_a_lesson_is_never_saved_a_finished_game_clears_the_save_and_a_run_leaves
     assert!(matches!(session.save, Some(Some(_))));
     session.concede();
     assert_eq!(session.save, Some(None), "a finished game clears it");
-    let run = Session::start(&run_config("practice-r668-run")).expect("starts");
+    // R3476000: a run fight in progress is saved in its own slot, and a finished one clears it.
+    let mut run = Session::start(&run_config("practice-r668-run")).expect("starts");
+    assert!(matches!(run.save, Some(Some(_))), "a fight in progress is saved");
+    run.concede();
+    assert_eq!(run.save, Some(None), "a finished fight clears it");
+}
+
+// R3476000: a dungeon run's unfinished fight waits where it stood
+
+#[test]
+fn r3476000_a_run_fight_is_saved_and_resumes_to_the_same_state_and_ai_stream() {
+    let mut session = Session::start(&run_config("practice-r3476000")).expect("starts");
+    session.answer_mulligans();
+    let mut human = Rng::new("practice-r3476000:human", 0);
+    for _ in 0..24 {
+        if !session.ai_turn() {
+            let seat = session.host.human_seat();
+            let body = random_action(session.state(), seat, &mut human).expect("an action");
+            session.act(body);
+        }
+    }
+    assert!(!session.host.is_over(), "the walk leaves the fight in progress");
+    let save = session
+        .save
+        .clone()
+        .expect("a save was asked for")
+        .expect("a fight in progress is saved");
+    assert_eq!(save.log, session.log());
+    let (host, outputs) = PracticeHost::resume(
+        &save.config,
+        Some(&save),
+        &session.catalog,
+        Some(Vec::new()),
+        EPOCH,
+    )
+    .expect("the fight resumes");
+    let mut resumed = Session::of(host, session.catalog.clone(), outputs);
     assert_eq!(
-        run.save, None,
-        "a run fight leaves the free game's save as it was"
+        jackioh_engine::hash_state(resumed.state()),
+        jackioh_engine::hash_state(session.state())
     );
+    assert_eq!(resumed.snapshot(), session.snapshot());
+    // Plays on exactly as it would have.
+    let mut same = |one: &mut Session, other: &mut Session| {
+        for _ in 0..6 {
+            let a = one.ai_turn();
+            let b = other.ai_turn();
+            assert_eq!(a, b);
+            if !a {
+                let body = random_action(one.state(), one.host.human_seat(), &mut human).expect("an action");
+                one.act(body.clone());
+                other.act(body);
+            }
+        }
+    };
+    same(&mut resumed, &mut session);
+    assert_eq!(resumed.log(), session.log());
+}
+
+#[test]
+fn r3476000_resume_refuses_across_free_and_run_and_another_fight() {
+    let mut free = started("practice-r3476000-free", P2);
+    free.answer_mulligans();
+    let free_save = free.save.clone().expect("a save").expect("in progress");
+    let mut fight = Session::start(&run_config("practice-r3476000-fight")).expect("starts");
+    fight.answer_mulligans();
+    let fight_save = fight.save.clone().expect("a save").expect("in progress");
+    let build = free.catalog.clone();
+
+    // A free game never resumes a run fight's save, nor a run fight a free game's.
+    let mut as_run = free_save.config.clone();
+    as_run.run = fight_save.config.run.clone();
+    let refused = PracticeHost::resume(&as_run, Some(&free_save), &build, None, EPOCH)
+        .expect_err("a free save asked as a fight is refused");
+    assert!(refused.contains("not the one the page remembers"), "{refused}");
+    let mut as_free = fight_save.config.clone();
+    as_free.run = None;
+    let refused = PracticeHost::resume(&as_free, Some(&fight_save), &build, None, EPOCH)
+        .expect_err("a fight save asked as a free game is refused");
+    assert!(refused.contains("not the one the page remembers"), "{refused}");
+    // A save from another fight is refused, so that fight is dealt fresh.
+    let mut other_fight = fight_save.config.clone();
+    other_fight.seed = "practice-r3476000-other".to_string();
+    assert!(PracticeHost::resume(&other_fight, Some(&fight_save), &build, None, EPOCH).is_err());
 }
 
 // R923000: a practice sandbox game
@@ -923,11 +1002,12 @@ fn b22_r2706000_a_run_fight_is_created_from_its_setup_a_game_of_its_own_kind() {
         (Some(run.human_handicap), Some(run.enemy_handicap))
     );
     assert!(args.deck_marks.is_none() && args.dealt.is_none() && args.last_boards.is_none());
-    // It brings no last board and leaves none, is never saved or kept, and earns nothing.
+    // It brings no last board and leaves none, is never kept, and earns nothing. R3476000: its
+    // save lives in its own slot while in progress, which a finished fight clears.
     session.concede();
     assert!(session.snapshot().last_board.is_none());
     assert!(session.kept.is_empty());
-    assert_eq!(session.save, None);
+    assert_eq!(session.save, Some(None));
     assert_eq!(session.records.len(), 1);
     // B25: its report is the run's, never the log.
     session.feed(PracticeEvent::RunReport);

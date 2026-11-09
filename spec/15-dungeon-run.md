@@ -164,7 +164,7 @@ The player steps onto any node of the next row.
 
 **The enemy:** its deck, with Easy's handicap (`AI_DIFFICULTY`), Medium's when it carries Looming Presence and Hard's with Overwhelming Presence; elites and bosses carry them. Its deck size is its deck's length and its hero health is `RUN_ENEMY_HEALTH` by kind.
 
-The game seed is the run's seed, row and column. Leaving a fight unfinished asks first: it is dealt again from its seed ([[R2706000]], [[R2972000]]).
+The game seed is the run's seed, row and column. A fight left unfinished waits where it stood: when the run, still on its fight, starts it again, the kept fight is resumed on its turn ([[R3476000]]). Leaving still asks first ([[R2706000]], [[R2972000]]).
 
 Enemy decks are random for now: the enemy's own cards, then the open pool up to `RUN_ENEMY_DECK_SIZE`.
 
@@ -274,7 +274,7 @@ Today, beating the final boss ends the run, won.
 
 The designer's content replaces the placeholders.
 
-**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill and prints each kind of fight's win rate and HP cost, the HP at each boss, the rows reached, the score and the Embers (#3065): a guide to tuning the strawmen, not a target.
+**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill, from level 1 with no artifact or curse unless `--level`, `--artifacts` and `--curses` set them (each refused when the content lacks it), and prints each kind of fight's and each act's win rate, HP cost and turns, the HP at each boss, the rows reached, the score by term (rows, wins, damage, healing, cards drawn, and what the boss percents and the curse percent add) and the Embers (#3065, #3481): a guide to tuning the strawmen, not a target.
 
 ### 15.13 Open questions
 

@@ -223,7 +223,8 @@ describe("R3397000 Meditative+ and Training Grounds Alt art restaged", () => {
     .map((card) => card.id)
     .sort();
     expect(everyOffered).toHaveLength(191);
-    expect(Object.keys(ALT_SCENE_RECIPES).sort()).toEqual(everyOffered);
+    // R3406000: and Stinkyscape's later cards' (stinkyscape91AltScenes.test.tsx).
+    expect(Object.keys(ALT_SCENE_RECIPES).filter((id) => ["Classic+", "Meditative", "Core", ...SETS].includes(CATALOG[id]?.set ?? "")).sort()).toEqual(everyOffered);
     expect(ALT_PICTURE_CHANGE_MIN).toBe(0.6);
     const seen = new Map<string, string>(Object.entries(SCENE_RECIPES).map(([id, scene]) => [JSON.stringify(scene), id]));
     for (const [id, scene] of Object.entries(ALT_SCENE_RECIPES)) if (!ALT_IDS.includes(id)) seen.set(JSON.stringify(scene), `${id}#alt`);

@@ -377,6 +377,13 @@ small.
   simulated reply (it plays no hidden card) as 6 to 7 points each, which a launch to pay for spends: the
   line that kills a Starship Piece scored above the line that kills a vanilla, against the hand eval's
   12 to 15 points the other way (R2566000). It lifts at the next retrain that has seen one.
+- **A decision whose view names mostly cards the network has no row for:** keep the hand eval for every
+  line of it (R3479000): more than `LEARNED_MAX_UNKNOWN_SHARE` of the card copies the root's redacted view
+  names (R3112002's count: the seat's own hand, both fields, the backrow it can read) are ids no key of the
+  network names. Unknown is read off the network's own keys, so a set that reaches the AI's decks after a
+  fit counts from its first day and a retrain on it lifts the switch with no edit. Screened at a half
+  against the control `3f8896c61d` (the network's catalog v0.3.17): 400 games on improve-dev, 204-196,
+  edge +0.020 (−0.017 to +0.057), even, so it ships on R3038003's ground with no gain measured (#3479).
 - **The tutorial:** it plays the AI every tier plays (R290), and its lesson tests have vetoed real
   gains before (#850, finding 5). The default is to ship to it too and let the R293 tests decide. If
   they fail, the fallback, the tutorial keeping the hand eval, changes R290 and is a person's call.

@@ -1,17 +1,23 @@
-//! `cargo jackioh run-sim --seeds N [--from N] [--skill S,…] [--budget tiny|full]` (#3065): whole dungeon
-//! runs on the catalog's content (§15), each fight played to its end. Run `n` starts from the seed
-//! `run_seed("run-sim-{n}")`, the first `RUN_STARTER_SIZE` starting cards, no artifact or curse and the
-//! first level's unlocks. Each fight is `run_fight_setup`'s game, its marked cards dealt Radiant and Buffed
-//! (R2702000), played by `play_match` with the AI in both seats: the player's at R747000's skill (each
-//! `--skill`, full by default), the enemy's at full skill, both at the budget. Its record must end clean
-//! (no throw, refusal, fallback or caught search panic, and a result) and fold to its hash, and its report
-//! goes back through `run_fight_report`. Every other choice (a column, the artifact, a pack and what to
+//! `cargo jackioh run-sim --seeds N [--from N] [--skill S,…] [--budget tiny|full] [--curses ID,…]
+//! [--artifacts ID,…] [--level N]` (#3065, #3481): whole dungeon runs on the catalog's content (§15), each
+//! fight played to its end. Run `n` starts from the seed `run_seed("run-sim-{n}")`, the first
+//! `RUN_STARTER_SIZE` starting cards, the `--curses`, the `--artifacts` (which count as unlocked) and the
+//! `--level`'s unlocks: none, none and level 1 by default. An id the content lacks and a level past the
+//! ladder are refused before any fight is played. Today the level changes only the slot check of the
+//! starting cards, which are Commons and Rares, so the first ten fit every level. Each fight is
+//! `run_fight_setup`'s game, its marked cards dealt Radiant and Buffed (R2702000), played by `play_match`
+//! with the AI in both seats: the player's at R747000's skill (each `--skill`, full by default), the
+//! enemy's at full skill, both at the budget. Its record must end clean (no throw, refusal, fallback or
+//! caught search panic, and a result) and fold to its hash, and its report goes back through
+//! `run_fight_report`. Every other choice (a column, the artifact, a pack and what to
 //! keep, a shop's buys and upgrades, a campfire, an event, a blessing) follows a seeded policy.
 //!
-//! For each skill it prints, by kind of fight, how many were played and won, the HP they cost and their
-//! turns, then the HP entering each boss, the rows reached, the runs won, the score and the Embers. The
-//! AI plays the player's seat better or worse than a person would, so the table is a guide to tuning
-//! the strawmen (§15.13), not a target. A lost fight is data; an unclean fight, a dead end of the policy
+//! For each skill it prints, by kind of fight and again by act, how many were played and won, the HP they
+//! cost and their turns, then the HP entering each boss, the rows reached, the runs won, the score by term
+//! (rows, wins, damage, healing, cards drawn, and what the boss percents and the curse percent add, each
+//! mean and max: only a breakdown shows whether stalling pays), the score and the Embers. The AI plays
+//! the player's seat better or worse than a person would, so the table is a guide to tuning the strawmen
+//! (§15.13), not a target. A lost fight is data; an unclean fight, a dead end of the policy
 //! or a run file that does not fold to the run's end is a fault, which exits 1 and names the command
 //! that plays its run again.
 //!
@@ -23,6 +29,7 @@
 //! cargo jackioh run-sim --seeds 8                              # eight runs at full skill and budget
 //! cargo jackioh run-sim --seeds 4 --skill 1,0.5 --budget tiny  # a quick look at two skills
 //! cargo jackioh run-sim --from 3 --seeds 1 --skill 0.5         # one run again
+//! cargo jackioh run-sim --seeds 4 --curses temp-curse-2 --artifacts temp-thick-skin --level 3
 //! cargo test -p jackioh-tools --bin jackioh run_sim                        # a pull request's
 //! cargo test -p jackioh-tools --bin jackioh run_sim -- --ignored --nocapture   # the daily one
 //! ```
@@ -37,11 +44,14 @@ use jackioh_engine::{
     CreateGameOptions, PerPlayer, PerPlayerOpt, PlayerId, Rng, SetupKind, fold, hash_state,
     registered_catalog, validate_setup,
 };
-use jackioh_run::config::{RUN_ACT_FIGHTS, RUN_STARTER_CARDS, RUN_STARTER_SIZE};
+use jackioh_run::config::{
+    RUN_ACT_FIGHTS, RUN_SCORE_CARD_DRAWN, RUN_SCORE_DAMAGE, RUN_SCORE_FIGHT, RUN_SCORE_HEALING,
+    RUN_SCORE_ROW, RUN_SLOT_LADDER, RUN_STARTER_CARDS, RUN_STARTER_SIZE,
+};
 use jackioh_run::{
-    RunAction, RunContent, RunFightSetup, RunFile, RunNodeKind, RunPhase, RunSetup, RunState, RunUnlocks,
-    run_catalog_content, run_create, run_embers, run_fight_report, run_fight_setup, run_fold, run_max_hp,
-    run_node, run_reduce, run_score, run_seed,
+    RunAction, RunContent, RunFightSetup, RunFile, RunNodeKind, RunPassiveKind, RunPhase, RunSetup, RunState,
+    RunUnlocks, run_catalog_content, run_check_setup, run_create, run_embers, run_fight_report,
+    run_fight_setup, run_fold, run_max_hp, run_node, run_reduce, run_score, run_seed,
 };
 use rayon::prelude::*;
 
@@ -67,6 +77,9 @@ const KINDS: [(RunNodeKind, &str); 5] = [
 /// A run's bosses: one at the end of each act (§15.5), the last the final boss.
 const BOSSES: usize = RUN_ACT_FIGHTS.len();
 
+/// A run's acts (§15.5): one table row each.
+const ACTS: usize = RUN_ACT_FIGHTS.len();
+
 #[derive(clap::Args, Debug)]
 pub struct Args {
     /// How many runs to play for each skill.
@@ -81,6 +94,59 @@ pub struct Args {
     /// Both seats' search budget: `tiny` is a test's, `full` the practice AI's.
     #[arg(long, value_parser = ["tiny", "full"], default_value = "full")]
     budget: String,
+    /// The curses every run starts with, by id (#3481).
+    #[arg(long, value_delimiter = ',')]
+    curses: Vec<String>,
+    /// The artifacts every run starts with, by id; they count as unlocked (#3481).
+    #[arg(long, value_delimiter = ',')]
+    artifacts: Vec<String>,
+    /// The starting deck's level, from 1 (the first by default).
+    #[arg(long)]
+    level: Option<usize>,
+}
+
+/// What every run of a sweep starts with beyond its seed and starting cards: its curses, its artifacts
+/// (counted as unlocked) and the level of its starting deck's slots.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Start {
+    curses: Vec<String>,
+    artifacts: Vec<String>,
+    level: usize,
+}
+
+impl Default for Start {
+    fn default() -> Self {
+        Start {
+            curses: Vec::new(),
+            artifacts: Vec::new(),
+            level: RunUnlocks::default().level,
+        }
+    }
+}
+
+impl Start {
+    fn from_args(args: &Args) -> Start {
+        Start {
+            curses: args.curses.clone(),
+            artifacts: args.artifacts.clone(),
+            level: args.level.unwrap_or(Start::default().level),
+        }
+    }
+
+    /// The flags that give this start back, each with its leading space; none for the default start.
+    fn flags(&self) -> String {
+        let mut out = String::new();
+        if self.level != Start::default().level {
+            out.push_str(&format!(" --level {}", self.level));
+        }
+        if !self.curses.is_empty() {
+            out.push_str(&format!(" --curses {}", self.curses.join(",")));
+        }
+        if !self.artifacts.is_empty() {
+            out.push_str(&format!(" --artifacts {}", self.artifacts.join(",")));
+        }
+        out
+    }
 }
 
 /// R747000: a skill is in `AI_SKILL_MIN..=AI_SKILL_MAX`; a NaN is outside it.
@@ -345,6 +411,8 @@ fn choose(state: &RunState, content: &RunContent, rng: &mut Rng) -> Result<(RunA
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct FightRow {
     kind: RunNodeKind,
+    /// 0-based, `act_of`'s.
+    act: usize,
     hp_before: i32,
     hp_after: i32,
     won: bool,
@@ -360,31 +428,91 @@ struct RunOutcome {
     faults: Vec<String>,
 }
 
-/// Run `n`'s start: its seed, the first `RUN_STARTER_SIZE` starting cards, no artifact or curse, and the
-/// first level's unlocks.
-fn run_setup(n: u32) -> (RunSetup, RunUnlocks) {
+/// Run `n`'s start: its seed, the first `RUN_STARTER_SIZE` starting cards, `start`'s artifacts and curses,
+/// and unlocks at `start`'s level with its artifacts among them (a starting artifact needs no unlock; a
+/// relic that is not one needs it to start a run).
+fn run_setup(n: u32, start: &Start) -> (RunSetup, RunUnlocks) {
     let setup = RunSetup {
         seed: run_seed(&format!("run-sim-{n}")),
         starter: RUN_STARTER_CARDS[..RUN_STARTER_SIZE]
             .iter()
             .map(|id| (*id).to_string())
             .collect(),
-        artifacts: Vec::new(),
-        curses: Vec::new(),
+        artifacts: start.artifacts.clone(),
+        curses: start.curses.clone(),
     };
-    (setup, RunUnlocks::default())
+    let unlocks = RunUnlocks {
+        level: start.level,
+        artifacts: start.artifacts.clone(),
+        ..RunUnlocks::default()
+    };
+    (setup, unlocks)
 }
 
-/// Run `n` played until it is won or lost, or until `max_fights` fights when given: each fight by
-/// `fight`, every other choice by the policy on its own stream. A fault stops the run; a clean run's
-/// file must fold to its end. Only a run `run_create` refuses is an `Err`.
+/// Why `start` cannot begin a run on `content`, before any fight is played: a curse or an artifact the
+/// content lacks, a level past the ladder, or what `run_check_setup` refuses of the whole start.
+fn check_start(start: &Start, content: &RunContent) -> Result<(), String> {
+    let ids = |ids: Vec<&str>| ids.join(", ");
+    if let Some(id) = start
+        .curses
+        .iter()
+        .find(|id| !content.curses.iter().any(|curse| &curse.id == *id))
+    {
+        return Err(format!(
+            "{id} is no curse; the content has {}",
+            ids(content.curses.iter().map(|curse| curse.id.as_str()).collect())
+        ));
+    }
+    let relics: Vec<&str> = content
+        .passives
+        .iter()
+        .filter(|passive| {
+            matches!(passive.kind, RunPassiveKind::Combat | RunPassiveKind::Economic) && !passive.unobtainable
+        })
+        .map(|passive| passive.id.as_str())
+        .collect();
+    if let Some(id) = start.artifacts.iter().find(|id| !relics.contains(&id.as_str())) {
+        return Err(format!(
+            "{id} is no artifact a run may start with; the content has {}",
+            ids(relics)
+        ));
+    }
+    if !(1..=RUN_SLOT_LADDER.len()).contains(&start.level) {
+        return Err(format!(
+            "there is no level {}: the levels are 1 to {}",
+            start.level,
+            RUN_SLOT_LADDER.len()
+        ));
+    }
+    let (setup, unlocks) = run_setup(0, start);
+    run_check_setup(&setup, &unlocks, content)
+}
+
+/// The 0-based act `state` stands in: the mini-boss and boss rows before its row, each the last of an act
+/// (§15.5); 0 before the first step. A boss's own row is in its act.
+fn act_of(state: &RunState) -> usize {
+    let Some(row) = state.row else {
+        return 0;
+    };
+    state
+        .map
+        .iter()
+        .take(row)
+        .filter(|nodes| nodes.iter().any(|node| node.kind.is_boss()))
+        .count()
+}
+
+/// Run `n` from `start`, played until it is won or lost, or until `max_fights` fights when given: each
+/// fight by `fight`, every other choice by the policy on its own stream. A fault stops the run; a clean
+/// run's file must fold to its end. Only a run `run_create` refuses is an `Err`.
 fn play_run(
     n: u32,
     content: &RunContent,
+    start: &Start,
     fight: &dyn Fn(&RunState) -> Result<RunAction, String>,
     max_fights: Option<usize>,
 ) -> Result<RunOutcome, String> {
-    let (setup, unlocks) = run_setup(n);
+    let (setup, unlocks) = run_setup(n, start);
     let mut state = run_create(&setup, &unlocks, content)?;
     let mut rng = Rng::new(&format!("run-sim-policy-{n}"), 0);
     let mut log: Vec<RunAction> = Vec::new();
@@ -408,6 +536,7 @@ fn play_run(
                 let next = run_reduce(&state, content, &action)?;
                 fights.push(FightRow {
                     kind: run_node(&state).ok_or("the fight stands on no node")?.kind,
+                    act: act_of(&state),
                     hp_before: state.hp,
                     hp_after: next.hp,
                     won: !matches!(next.phase, RunPhase::Dead),
@@ -454,13 +583,86 @@ fn play_run(
     Ok(outcome)
 }
 
-/// One kind of fight's sums over the runs.
+/// One group of fights' sums over the runs: a kind's or an act's.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 struct KindTally {
     fights: usize,
     won: usize,
     hp_lost: i64,
     turns: i64,
+}
+
+impl KindTally {
+    fn add(&mut self, fight: &FightRow) {
+        self.fights += 1;
+        self.won += usize::from(fight.won);
+        self.hp_lost += i64::from(fight.hp_before - fight.hp_after);
+        self.turns += i64::from(fight.turns);
+    }
+}
+
+/// One run's score by term (§15.10, `run_score`'s): what each part of a run adds, the percents' share
+/// beside the sums. The terms add up to the run's score.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct ScoreParts {
+    rows: i64,
+    wins: i64,
+    damage: i64,
+    healing: i64,
+    drawn: i64,
+    /// What the mini-bosses' and the final boss's percents add.
+    bosses: i64,
+    /// What the curse points' percent adds.
+    curses: i64,
+}
+
+impl ScoreParts {
+    /// Each term with its label, in the order they print.
+    fn terms(&self) -> [(&'static str, i64); 7] {
+        [
+            ("rows", self.rows),
+            ("wins", self.wins),
+            ("damage", self.damage),
+            ("healing", self.healing),
+            ("cards drawn", self.drawn),
+            ("boss percents", self.bosses),
+            ("curse percent", self.curses),
+        ]
+    }
+}
+
+/// `end`'s score by term. The five sums are `run_score`'s own; the percents' shares are what `run_score`
+/// adds to them, uncursed first and then cursed, so its percent rules are not repeated here.
+fn score_parts(end: &RunState, content: &RunContent) -> ScoreParts {
+    let s = &end.stats;
+    let won = |kind: RunNodeKind, n: i32| i64::from(RUN_SCORE_FIGHT.of(kind)) * i64::from(n);
+    let normal = s.fights_won - s.elites_won - s.ghosts_won - s.mini_bosses_won - s.bosses_won;
+    let rows = RUN_SCORE_ROW * i64::try_from(end.row.map_or(0, |r| r + 1)).unwrap_or(0);
+    let wins = won(RunNodeKind::Fight, normal)
+        + won(RunNodeKind::Elite, s.elites_won)
+        + won(RunNodeKind::Ghost, s.ghosts_won)
+        + won(RunNodeKind::MiniBoss, s.mini_bosses_won)
+        + won(RunNodeKind::Boss, s.bosses_won);
+    let damage = RUN_SCORE_DAMAGE * i64::from(s.damage_dealt);
+    let healing = RUN_SCORE_HEALING * i64::from(s.healing_done);
+    let drawn = RUN_SCORE_CARD_DRAWN * i64::from(s.cards_drawn);
+    let base = rows + wins + damage + healing + drawn;
+    let uncursed = run_score(
+        &RunState {
+            curses: Vec::new(),
+            ..end.clone()
+        },
+        content,
+    );
+    ScoreParts {
+        rows,
+        wins,
+        damage,
+        healing,
+        drawn,
+        bosses: uncursed - base,
+        curses: run_score(end, content) - uncursed,
+    }
 }
 
 /// What the table prints, summed over one skill's runs.
@@ -470,6 +672,8 @@ struct Tally {
     runs_won: usize,
     /// By `KINDS`.
     kinds: [KindTally; KINDS.len()],
+    /// By act, from the first.
+    acts: [KindTally; ACTS],
     /// The HP entering each boss, summed, and how many runs reached it.
     boss_hp: [(i64, usize); BOSSES],
     /// Each run's rows reached.
@@ -478,6 +682,8 @@ struct Tally {
     map_rows: usize,
     /// Each run's score at its end.
     scores: Vec<i64>,
+    /// Each run's score by term.
+    parts: Vec<ScoreParts>,
 }
 
 fn tally(outcomes: &[RunOutcome], content: &RunContent) -> Tally {
@@ -489,11 +695,10 @@ fn tally(outcomes: &[RunOutcome], content: &RunContent) -> Tally {
         let mut bosses = 0;
         for fight in &outcome.fights {
             if let Some(at) = KINDS.iter().position(|(kind, _)| *kind == fight.kind) {
-                let sums = &mut out.kinds[at];
-                sums.fights += 1;
-                sums.won += usize::from(fight.won);
-                sums.hp_lost += i64::from(fight.hp_before - fight.hp_after);
-                sums.turns += i64::from(fight.turns);
+                out.kinds[at].add(fight);
+            }
+            if let Some(sums) = out.acts.get_mut(fight.act) {
+                sums.add(fight);
             }
             if fight.kind.is_boss() {
                 if let Some((hp, reached)) = out.boss_hp.get_mut(bosses) {
@@ -507,6 +712,7 @@ fn tally(outcomes: &[RunOutcome], content: &RunContent) -> Tally {
         out.rows.push(outcome.end.row.map_or(0, |r| r + 1));
         out.map_rows = out.map_rows.max(outcome.end.map.len());
         out.scores.push(run_score(&outcome.end, content));
+        out.parts.push(score_parts(&outcome.end, content));
     }
     out
 }
@@ -529,23 +735,38 @@ fn mean_and_max(values: &[i64]) -> String {
     format!("mean {}, max {max}", mean(values.iter().sum(), values.len()))
 }
 
+/// A table's header line, its first column named `first`.
+fn table_header(first: &str) -> String {
+    format!(
+        "{:<10}{:>8}{:>6}{:>7}{:>9}{:>7}\n",
+        first, "fights", "won", "win %", "HP lost", "turns"
+    )
+}
+
+/// A table's line for the group of fights `name` names.
+fn table_line(name: &str, sums: &KindTally) -> String {
+    format!(
+        "{:<10}{:>8}{:>6}{:>7}{:>9}{:>7}\n",
+        name,
+        sums.fights,
+        sums.won,
+        mean(sums.won as i64 * i64::from(PERCENT), sums.fights),
+        mean(sums.hp_lost, sums.fights),
+        mean(sums.turns, sums.fights)
+    )
+}
+
 impl Tally {
     fn render(&self, header: &str) -> String {
         let mut out = format!("{header}\n");
-        out.push_str(&format!(
-            "{:<10}{:>8}{:>6}{:>7}{:>9}{:>7}\n",
-            "kind", "fights", "won", "win %", "HP lost", "turns"
-        ));
+        out.push_str(&table_header("kind"));
         for ((_, name), sums) in KINDS.iter().zip(&self.kinds) {
-            out.push_str(&format!(
-                "{:<10}{:>8}{:>6}{:>7}{:>9}{:>7}\n",
-                name,
-                sums.fights,
-                sums.won,
-                mean(sums.won as i64 * i64::from(PERCENT), sums.fights),
-                mean(sums.hp_lost, sums.fights),
-                mean(sums.turns, sums.fights)
-            ));
+            out.push_str(&table_line(name, sums));
+        }
+        out.push('\n');
+        out.push_str(&table_header("act"));
+        for (at, sums) in self.acts.iter().enumerate() {
+            out.push_str(&table_line(&(at + 1).to_string(), sums));
         }
         out.push_str("(HP lost is the HP entering a fight minus the HP leaving it, so a lost fight loses all of it.)\n");
         for (at, (hp, reached)) in self.boss_hp.iter().enumerate() {
@@ -562,6 +783,10 @@ impl Tally {
             self.map_rows
         ));
         out.push_str(&format!("runs won: {} of {}\n", self.runs_won, self.runs));
+        for (at, (label, _)) in ScoreParts::default().terms().iter().enumerate() {
+            let values: Vec<i64> = self.parts.iter().map(|parts| parts.terms()[at].1).collect();
+            out.push_str(&format!("score from {label}: {}\n", mean_and_max(&values)));
+        }
         let embers: Vec<i64> = self.scores.iter().map(|&score| run_embers(score)).collect();
         out.push_str(&format!("score: {}\n", mean_and_max(&self.scores)));
         out.push_str(&format!("Embers: {}\n", mean_and_max(&embers)));
@@ -569,10 +794,18 @@ impl Tally {
     }
 }
 
-/// `seeds` runs from `from` at each skill and `budget`: one table each, in order, and every fault, each
-/// with the command that plays its run again.
-fn sweep(seeds: u32, from: u32, skills: &[f64], budget: &str, content: &RunContent) -> (String, Vec<String>) {
+/// `seeds` runs from `from` at each skill and `budget`, each from `start`: one table each, in order, and
+/// every fault, each with the command that plays its run again.
+fn sweep(
+    seeds: u32,
+    from: u32,
+    skills: &[f64],
+    budget: &str,
+    start: &Start,
+    content: &RunContent,
+) -> (String, Vec<String>) {
     let search = budget_of(budget);
+    let flags = start.flags();
     let mut text = String::new();
     let mut faults: Vec<String> = Vec::new();
     for &skill in skills {
@@ -580,11 +813,13 @@ fn sweep(seeds: u32, from: u32, skills: &[f64], budget: &str, content: &RunConte
             .into_par_iter()
             .map(|n| {
                 let fight = |state: &RunState| play_fight(state, content, skill, search);
-                (n, play_run(n, content, &fight, None))
+                (n, play_run(n, content, start, &fight, None))
             })
             .collect();
         let again = |n: u32| {
-            format!(" (again: cargo jackioh run-sim --from {n} --seeds 1 --skill {skill} --budget {budget})")
+            format!(
+                " (again: cargo jackioh run-sim --from {n} --seeds 1 --skill {skill} --budget {budget}{flags})"
+            )
         };
         let mut outcomes: Vec<RunOutcome> = Vec::new();
         for (n, run) in runs {
@@ -596,7 +831,7 @@ fn sweep(seeds: u32, from: u32, skills: &[f64], budget: &str, content: &RunConte
                 Err(error) => faults.push(format!("run {n}: no run: {error}{}", again(n))),
             }
         }
-        let header = format!("run-sim: {seeds} runs from {from}, budget {budget}, skill {skill}");
+        let header = format!("run-sim: {seeds} runs from {from}, budget {budget}, skill {skill}{flags}");
         text.push_str(&tally(&outcomes, content).render(&header));
         text.push('\n');
     }
@@ -606,12 +841,14 @@ fn sweep(seeds: u32, from: u32, skills: &[f64], budget: &str, content: &RunConte
 pub fn run(args: Args) -> anyhow::Result<()> {
     jackioh_cards::register_all();
     let content = run_catalog_content(registered_catalog());
+    let start = Start::from_args(&args);
+    check_start(&start, &content).map_err(|e| anyhow::anyhow!("run-sim: {e}"))?;
     let skills = if args.skill.is_empty() {
         vec![AI_SKILL_MAX]
     } else {
         args.skill
     };
-    let (text, faults) = sweep(args.seeds, args.from, &skills, &args.budget, &content);
+    let (text, faults) = sweep(args.seeds, args.from, &skills, &args.budget, &start, &content);
     print!("{text}");
     for fault in &faults {
         eprintln!("{fault}");
@@ -625,6 +862,8 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::DeckMark;
+    use jackioh_run::config::{RUN_STARTER_ARTIFACT_POINTS, RUN_STARTER_ARTIFACTS_MAX};
+    use jackioh_run::{RunStats, run_artifact_points, run_curse_points};
 
     use super::*;
 
@@ -646,7 +885,8 @@ mod tests {
     fn a_runs_first_fights_end_clean_and_its_file_folds_to_its_end() {
         let content = content();
         let fight = |state: &RunState| play_fight(state, &content, AI_SKILL_MAX, TEST_BUDGET);
-        let outcome = play_run(0, &content, &fight, Some(PR_FIGHTS)).expect("run 0 is created");
+        let outcome =
+            play_run(0, &content, &Start::default(), &fight, Some(PR_FIGHTS)).expect("run 0 is created");
         assert!(outcome.faults.is_empty(), "{:#?}", outcome.faults);
         assert!(
             outcome.fights.len() == PR_FIGHTS || outcome.end.phase == RunPhase::Dead,
@@ -660,7 +900,7 @@ mod tests {
     #[test]
     fn a_fights_marks_reach_its_game_and_it_ends_clean() {
         let content = content();
-        let (setup, unlocks) = run_setup(0);
+        let (setup, unlocks) = run_setup(0, &Start::default());
         let start = run_create(&setup, &unlocks, &content).expect("run 0 is created");
         let col = start.map[0]
             .iter()
@@ -709,7 +949,7 @@ mod tests {
             })
         };
         for n in 0..POLICY_SEEDS {
-            let outcome = play_run(n, &content, &won, None).expect("the run is created");
+            let outcome = play_run(n, &content, &Start::default(), &won, None).expect("the run is created");
             assert!(outcome.faults.is_empty(), "run {n}: {:#?}", outcome.faults);
             assert_eq!(outcome.end.phase, RunPhase::Won, "run {n}");
             assert_eq!(
@@ -725,9 +965,196 @@ mod tests {
         }
     }
 
+    /// A won fight for every fight a stub run is asked to play.
+    fn won(state: &RunState) -> Result<RunAction, String> {
+        Ok(RunAction::FightOver {
+            won: true,
+            hp: state.hp,
+            damage_dealt: 0,
+            healing_done: 0,
+            cards_drawn: 0,
+            turns: 1,
+        })
+    }
+
+    /// The first curse, and the first Combat artifact any start may take, of the content: a start that
+    /// sets all three flags, with its ids read from the content so the designer's lists may change.
+    fn full_start(content: &RunContent) -> Start {
+        let curse = content
+            .curses
+            .first()
+            .expect("the content has a curse")
+            .id
+            .clone();
+        let artifact = content
+            .passives
+            .iter()
+            .find(|p| p.kind == RunPassiveKind::Combat && p.starter && !p.unobtainable)
+            .expect("the content has a starting Combat artifact")
+            .id
+            .clone();
+        Start {
+            curses: vec![curse],
+            artifacts: vec![artifact],
+            level: 3,
+        }
+    }
+
+    #[test]
+    fn the_act_is_the_count_of_boss_rows_before_a_row() {
+        let content = content();
+        let (setup, unlocks) = run_setup(0, &Start::default());
+        let start = run_create(&setup, &unlocks, &content).expect("run 0 is created");
+        // §15.5: an act is its fight rows, a tile row between each two, a campfire and its boss.
+        let spans: Vec<usize> = RUN_ACT_FIGHTS.iter().map(|fights| 2 * fights + 1).collect();
+        assert_eq!(start.map.len(), spans.iter().sum::<usize>());
+        let mut ends = Vec::new();
+        let mut end = 0;
+        for span in &spans {
+            end += span;
+            ends.push(end - 1);
+        }
+        for &last in &ends {
+            assert!(
+                start.map[last].len() == 1 && start.map[last][0].kind.is_boss(),
+                "row {last} is no boss row"
+            );
+        }
+        assert_eq!(
+            start.map.iter().filter(|nodes| nodes[0].kind.is_boss()).count(),
+            ACTS
+        );
+        assert_eq!(act_of(&start), 0, "before the first step");
+        for row in 0..start.map.len() {
+            let at = RunState {
+                row: Some(row),
+                ..start.clone()
+            };
+            let expected = ends.iter().filter(|&&last| last < row).count();
+            assert_eq!(act_of(&at), expected, "row {row}");
+        }
+    }
+
+    #[test]
+    fn a_run_with_a_curse_an_artifact_and_a_level_folds_to_its_end() {
+        let content = content();
+        let start = full_start(&content);
+        for n in 0..3 {
+            let outcome = play_run(n, &content, &start, &won, None).expect("the run is created");
+            assert!(outcome.faults.is_empty(), "run {n}: {:#?}", outcome.faults);
+            let (file, end) = (&outcome.file, &outcome.end);
+            assert_eq!(end.phase, RunPhase::Won, "run {n}");
+            assert_eq!(run_fold(file, &content).as_ref(), Ok(end), "run {n}");
+            assert_eq!(file.setup.curses, start.curses);
+            assert_eq!(file.setup.artifacts, start.artifacts);
+            assert_eq!(file.unlocks.level, 3);
+            assert_eq!(file.unlocks.artifacts, start.artifacts);
+            assert_eq!(end.curses, start.curses);
+            assert!(run_curse_points(end, &content) > 0);
+            assert!(
+                end.artifacts.iter().any(|a| a.id == start.artifacts[0]),
+                "run {n}"
+            );
+            for (act, fights) in RUN_ACT_FIGHTS.iter().enumerate() {
+                let played = outcome.fights.iter().filter(|fight| fight.act == act).count();
+                assert_eq!(played, fights + 1, "run {n} act {act}");
+            }
+            assert!(outcome.fights.iter().all(|fight| fight.act < ACTS), "run {n}");
+        }
+    }
+
+    #[test]
+    fn a_cursed_runs_first_fight_ends_clean() {
+        let content = content();
+        let start = full_start(&content);
+        let fight = |state: &RunState| play_fight(state, &content, AI_SKILL_MAX, TEST_BUDGET);
+        let outcome = play_run(0, &content, &start, &fight, Some(1)).expect("run 0 is created");
+        assert!(outcome.faults.is_empty(), "{:#?}", outcome.faults);
+        assert_eq!(run_fold(&outcome.file, &content), Ok(outcome.end.clone()));
+    }
+
+    #[test]
+    fn check_start_refuses_what_the_content_lacks() {
+        let content = content();
+        let refused = |start: &Start| check_start(start, &content).expect_err("the start is refused");
+        let with = |edit: &dyn Fn(&mut Start)| {
+            let mut start = Start::default();
+            edit(&mut start);
+            start
+        };
+        assert_eq!(check_start(&Start::default(), &content), Ok(()));
+        assert_eq!(check_start(&full_start(&content), &content), Ok(()));
+        assert!(refused(&with(&|s| s.curses = vec!["no-such-curse".into()])).contains("no-such-curse"));
+        assert!(refused(&with(&|s| s.artifacts = vec!["no-such-relic".into()])).contains("no-such-relic"));
+        let enemy = content
+            .passives
+            .iter()
+            .find(|p| p.kind == RunPassiveKind::Enemy)
+            .expect("the content has an enemy artifact")
+            .id
+            .clone();
+        assert!(refused(&with(&|s| s.artifacts = vec![enemy.clone()])).contains(&enemy));
+        for level in [0, RUN_SLOT_LADDER.len() + 1] {
+            assert!(
+                refused(&with(&|s| s.level = level)).contains(&format!("level {level}")),
+                "level {level}"
+            );
+        }
+        for level in 1..=RUN_SLOT_LADDER.len() {
+            assert_eq!(
+                check_start(&with(&|s| s.level = level), &content),
+                Ok(()),
+                "level {level}"
+            );
+        }
+        let relics: Vec<String> = content
+            .passives
+            .iter()
+            .filter(|p| {
+                matches!(p.kind, RunPassiveKind::Combat | RunPassiveKind::Economic) && !p.unobtainable
+            })
+            .map(|p| p.id.clone())
+            .collect();
+        let too_many: Vec<String> = relics
+            .iter()
+            .take(RUN_STARTER_ARTIFACTS_MAX + 1)
+            .cloned()
+            .collect();
+        assert_eq!(too_many.len(), RUN_STARTER_ARTIFACTS_MAX + 1);
+        assert!(check_start(&with(&|s| s.artifacts = too_many.clone()), &content).is_err());
+        // A relic that is no starter is unlocked by naming it.
+        let unlocked = content
+            .passives
+            .iter()
+            .find(|p| {
+                matches!(p.kind, RunPassiveKind::Combat | RunPassiveKind::Economic)
+                    && !p.starter
+                    && !p.unobtainable
+                    && run_artifact_points(&content, &p.id) <= RUN_STARTER_ARTIFACT_POINTS
+            })
+            .expect("the content has a relic that is no starter")
+            .id
+            .clone();
+        let start = with(&|s| s.artifacts = vec![unlocked.clone()]);
+        assert_eq!(check_start(&start, &content), Ok(()));
+        assert_eq!(run_setup(0, &start).1.artifacts, [unlocked]);
+    }
+
+    #[test]
+    fn a_start_prints_the_flags_that_give_it_back() {
+        assert_eq!(Start::default().flags(), "");
+        let start = Start {
+            curses: vec!["a".into(), "b".into()],
+            artifacts: vec!["x".into()],
+            level: 2,
+        };
+        assert_eq!(start.flags(), " --level 2 --curses a,b --artifacts x");
+    }
+
     fn row(kind: RunNodeKind, hp_before: i32, hp_after: i32, won: bool, turns: i32) -> FightRow {
         FightRow {
             kind,
+            act: 0,
             hp_before,
             hp_after,
             won,
@@ -738,7 +1165,7 @@ mod tests {
     #[test]
     fn the_tally_counts_each_kind_and_prints_a_dash_for_none() {
         let content = content();
-        let (setup, unlocks) = run_setup(0);
+        let (setup, unlocks) = run_setup(0, &Start::default());
         let start = run_create(&setup, &unlocks, &content).expect("run 0 is created");
         let file = RunFile {
             setup,
@@ -838,7 +1265,7 @@ mod tests {
     #[test]
     fn the_tally_puts_each_mini_boss_and_the_final_boss_in_act_order() {
         let content = content();
-        let (setup, unlocks) = run_setup(0);
+        let (setup, unlocks) = run_setup(0, &Start::default());
         let start = run_create(&setup, &unlocks, &content).expect("run 0 is created");
         let outcomes = [RunOutcome {
             file: RunFile {
@@ -863,11 +1290,139 @@ mod tests {
         assert_eq!(sums.boss_hp, [(28, 1), (16, 1), (12, 1)]);
     }
 
+    fn in_act(act: usize, row: FightRow) -> FightRow {
+        FightRow { act, ..row }
+    }
+
+    #[test]
+    fn the_tally_splits_the_fights_by_act_and_the_score_by_term() {
+        let content = content();
+        let (setup, unlocks) = run_setup(0, &Start::default());
+        let start = run_create(&setup, &unlocks, &content).expect("run 0 is created");
+        let file = RunFile {
+            setup,
+            unlocks,
+            log: Vec::new(),
+        };
+        // No boss won and no curse: only the five sums.
+        let plain = RunState {
+            row: Some(3),
+            phase: RunPhase::Dead,
+            hp: 0,
+            stats: RunStats {
+                fights_won: 3,
+                elites_won: 1,
+                damage_dealt: 40,
+                healing_done: 7,
+                cards_drawn: 12,
+                ..RunStats::default()
+            },
+            ..start.clone()
+        };
+        // A mini-boss and the final boss won, and a curse held: the percents add.
+        let cursed = RunState {
+            row: Some(8),
+            phase: RunPhase::Won,
+            curses: vec![content.curses[0].id.clone()],
+            stats: RunStats {
+                fights_won: 5,
+                mini_bosses_won: 1,
+                bosses_won: 1,
+                damage_dealt: 90,
+                healing_done: 20,
+                cards_drawn: 30,
+                ..RunStats::default()
+            },
+            ..start.clone()
+        };
+        let outcomes = [
+            RunOutcome {
+                file: file.clone(),
+                end: plain.clone(),
+                fights: vec![
+                    in_act(0, row(RunNodeKind::Fight, 30, 25, true, 10)),
+                    in_act(0, row(RunNodeKind::Elite, 25, 0, false, 14)),
+                    in_act(0, row(RunNodeKind::Fight, 30, 30, true, 8)),
+                    in_act(0, row(RunNodeKind::MiniBoss, 30, 20, true, 20)),
+                ],
+                faults: Vec::new(),
+            },
+            RunOutcome {
+                file,
+                end: cursed.clone(),
+                fights: vec![
+                    in_act(1, row(RunNodeKind::Fight, 20, 18, true, 6)),
+                    in_act(1, row(RunNodeKind::Ghost, 18, 18, true, 10)),
+                    in_act(1, row(RunNodeKind::MiniBoss, 18, 10, true, 16)),
+                ],
+                faults: Vec::new(),
+            },
+        ];
+        let sums = tally(&outcomes, &content);
+        let sums_of = |fights, won, hp_lost, turns| KindTally {
+            fights,
+            won,
+            hp_lost,
+            turns,
+        };
+        assert_eq!(sums.acts[0], sums_of(4, 3, 40, 52));
+        assert_eq!(sums.acts[1], sums_of(3, 3, 10, 32));
+        assert_eq!(sums.acts[2], KindTally::default());
+
+        let text = sums.render("header");
+        let line = |name: &str| {
+            text.lines()
+                .find(|line| line.split_whitespace().next() == Some(name))
+                .unwrap_or_else(|| panic!("no {name} line in:\n{text}"))
+                .to_string()
+        };
+        let words = |name: &str| {
+            line(name)
+                .split_whitespace()
+                .map(String::from)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(words("1"), ["1", "4", "3", "75.0", "10.0", "13.0"]);
+        assert_eq!(words("2"), ["2", "3", "3", "100.0", "3.3", "10.7"]);
+        assert!(line("3").ends_with('-'), "{text}");
+        assert!(text.contains("\nact "), "{text}");
+
+        let plain_parts = score_parts(&plain, &content);
+        assert_eq!((plain_parts.bosses, plain_parts.curses), (0, 0));
+        assert_eq!(
+            plain_parts.rows
+                + plain_parts.wins
+                + plain_parts.damage
+                + plain_parts.healing
+                + plain_parts.drawn,
+            run_score(&plain, &content)
+        );
+        let cursed_parts = score_parts(&cursed, &content);
+        assert!(
+            cursed_parts.bosses > 0 && cursed_parts.curses > 0,
+            "{cursed_parts:?}"
+        );
+        for (end, parts) in [(&plain, plain_parts), (&cursed, cursed_parts)] {
+            assert_eq!(
+                parts.terms().iter().map(|(_, n)| n).sum::<i64>(),
+                run_score(end, &content)
+            );
+        }
+        assert_eq!(sums.parts, [plain_parts, cursed_parts]);
+        for (at, (label, _)) in ScoreParts::default().terms().iter().enumerate() {
+            let values = [plain_parts.terms()[at].1, cursed_parts.terms()[at].1];
+            assert!(
+                text.contains(&format!("score from {label}: {}\n", mean_and_max(&values))),
+                "{label}: {text}"
+            );
+        }
+    }
+
     #[test]
     #[ignore = "daily: DAILY_SEEDS whole runs per skill at full budget; the two run-fight tests above play at the tiny budget per pull request"]
     fn the_daily_sweep_plays_whole_runs_at_full_budget_and_prints_the_report() {
         let content = content();
-        let (text, faults) = sweep(DAILY_SEEDS, 0, &DAILY_SKILLS, "full", &content);
+        let (text, faults) = sweep(DAILY_SEEDS, 0, &DAILY_SKILLS, "full", &Start::default(), &content);
         println!("{text}");
         assert!(faults.is_empty(), "{faults:#?}");
         assert!(text.contains("runs won"), "{text}");
