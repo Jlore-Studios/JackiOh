@@ -16517,15 +16517,8 @@
       }
     },
     "3507": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42669109821",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-09T18:08:26Z",
-        "until": "2026-11-09T18:38:26Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16537,10 +16530,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "uling note, `proven_in` listing both test files |\n- | `spec/pending/3507.md` | new | The \u00a711 paragraph for `R3507000` |\n- Do not touch: `.github/`, `.harness/`, `.squishy/`, `bot/`; `crates/*`, `apps/edge`, `e2e`, `apps/web/src/wire/`; other providers' rows; no CSS file. Governing spec: \u00a79.2 and rulings `R666`, `R3025000`, `R3147000`, `R3147003`.\n- ## Steps\n- 1. Re-read `spec/09-architecture.md` \u00a79.2, `spec/rulings/R3025000.md`, `spec/rulings/R3147000.md`, `spec/rulings/R3147003.md`, and `apps/web/src/auth/claims.ts` (the non-empty-string-or-null pattern to copy).\n- 2. In `apps/web/src/net/auth.ts`, above `identitiesOf`: add `export const ROBLOX_AVATAR_IMAGE_HOST = \"tr.rbxcdn.com\";` (client-names-its-own-numbers precedent: `GIS_SCRIPT_URL` in `auth/googleIdentity.ts`). Widen the type to `export type LinkedIdentity = { id: string; provider: string; username?: s\u2026\n- 3. In the same file, extend `identitiesOf`: only when `record.provider === \"custom:roblox\"`, read `record.identity_data` as an object; `username` is its `preferred_username` trimmed, kept only when non-empty; `displayName` is its `name` trimmed else its `nickname` trimmed, kept only when non-empty;\u2026\n- 4. In `apps/web/src/net/auth-methods.test.ts`, add `describe(\"R3507000 a linked Roblox identity keeps its username and headshot\")`: keeps trimmed `preferred_username` plus `displayName` from `name` (else `nickname`) plus `avatarUrl` for `https://tr.rbxcdn.com/\u2026picture`; drops a non-string, empty, o\u2026\n- 5. Run `pnpm --dir apps/web test src/net/auth-methods.test.ts`; all green before continuing.\n- 6. In `apps/web/src/auth/LinkedAccounts.tsx`: add `const LINKED_ROBLOX_AVATAR_PX = 32;` beside the component (precedent: `OAUTH_MARK_PX` in `OAuthButtons.tsx`) and `identity: \"account-linked-identity\"`, `avatar: \"account-linked-avatar\"` in `linkedTestid`. Add a `RobloxIdentity` subcomponent taking \u2026\n- 7. In `apps/web/src/auth/LinkedAccounts.test.tsx`: widen `serve` entries to `{ identity_id: string; provider: string; identity_data?: Record<string, unknown> }`. Add `describe(\"R3507000 the linked Roblox account's username and headshot\")` with `VITE_AUTH_OAUTH_PROVIDERS` stubbed to `\"google,custom:\u2026\n- 8. Run `pnpm --dir apps/web test src/auth/LinkedAccounts.test.tsx`; all green before continuing.\n- 9. In `apps/web/public/_headers` line 10, change `img-src 'self' data: blob:` to `img-src 'self' data: blob: https://tr.rbxcdn.com`. In `apps/web/src/net/cloudflare-config.test.ts`, make the identical change in the `CSP` const; in the `R2983000` test, extend the `sources` expectation to ` [GIS_SCRI\u2026\n- 10. Run `pnpm --dir apps/web test src/net/cloudflare-config.test.ts`.\n- 11. Write `spec/rulings/R3507000.md` (front matter `id: R3507000`, title `The account screen names the linked Roblox account`, `cards: \"\u00a79.2, R3025000, R3147000\"`, `proven_in` listing `apps/web/src/net/auth-methods.test.ts` and `apps/web/src/auth/LinkedAccounts.test.tsx`; body with `[[R3025000]]`, \u2026\n- 12. Run `cargo jackioh spec check`, `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web`, and `cargo fmt --check`.\n- ## Tests\n- - `apps/web/src/net/auth-methods.test.ts`, new `describe(\"R3507000 \u2026\")`: keeps username/displayName/avatar from a Roblox `identity_data`; drops non-string, empty, non-`https:`, wrong-host, and malformed values; ignores `identity_data` for other providers. Command: `pnpm --dir apps/web test src/net/\u2026\n- - `apps/web/src/auth/LinkedAccounts.test.tsx`, new `describe(\"R3507000 \u2026\")`: handle plus `<img>` with both fields; handle without image with username alone; today's row with neither; nothing on an unlinked row; image removed on `error`. Command: `pnpm --dir apps/web test src/auth/LinkedAccounts.tes\u2026\n- - `apps/web/src/net/cloudflare-config.test.ts` (updated `CSP` const, `R2983000` sources, new `img-src` assertion). Command: `pnpm --dir apps/web test src/net/cloudflare-config.test.ts`.\n- ## Done when\n- - `identitiesOf` keeps the three display fields with the stated gating, and drops each bad value.\n- - The Roblox row shows the handle and headshot per the matrix above; other providers' rows are byte-for-byte today's behavior.\n- - `_headers` `img-src` names exactly the one added host and `cloudflare-config.test.ts` passes.\n- - `R3507000.md` exists, lists its tests in `proven_in`, `pending/3507.md` holds the \u00a711 paragraph, and `spec check` passes.\n- - `typecheck`, the three web test files, `eslint apps/web`, and `fmt --check` pass.\n- ## Risks\n- - The real `identity_data` claim names or picture host may differ from the task's stated values; the parser only accepts the known shape and otherwise renders today's row, so a mismatch degrades to no display, never a broken box. A person with a linked staging account confirms the names (see Open q\u2026\n- - The `R2983000` test asserts the exact cross-directive `https:` source list, so any CSP edit must update it in the same change (step 9 does).\n- - Usernames render as React text, never markup, so the no-raw-HTML scan is unaffected; the fields are display-only per rule 7 and decide nothing.\n- ## Open questions\n- - Staging confirmation needs a person: someone with a Roblox-linked staging account should compare a real `identity_data` against `preferred_username` / `name` / `nickname` / `picture` and the `tr.rbxcdn.com` host. If the host differs, a follow-up changes `ROBLOX_AVATAR_IMAGE_HOST`, `_headers`, and\u2026\n- - Rejected alternatives: a wildcard or multi-host `img-src`; reading `identity_data` for Google too (out of scope, gated to `custom:roblox`); always showing the display name even when identical to the username.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3507 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3507/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-09T17:54:10Z",
       "owner_why": "it plans it",
@@ -16553,18 +16545,18 @@
       "provider": "muse",
       "queued_at": "2026-11-09T17:47:12Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "42669109821",
+      "run_id": "pending:a6226071-1794247789",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-09T17:54:10Z",
+      "started_at": "2026-11-09T18:10:31Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T17:54:10Z",
+    "at": "2026-11-09T18:10:31Z",
     "url": "",
-    "what": "plan #3507 on muse"
+    "what": "build #3507 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T17:52:41Z",
