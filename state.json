@@ -34404,7 +34404,8 @@
       "2026-11-09T12:42:18Z,claude-3,refusal,call,42617198818,100,2026-11-09T16:40:00Z,,,rejected,,,2026-11-09T16:40:00Z"
     ],
     "runs": [
-      "2026-11-09T12:21:20Z,42609899753,claude-7,opus,revise,3464,hard,approved,,16.6,114,38697,11189604,7.8611,9,17,,,0.3,claude-7,resumed,,2"
+      "2026-11-09T12:21:20Z,42609899753,claude-7,opus,revise,3464,hard,approved,,16.6,114,38697,11189604,7.8611,9,17,,,0.3,claude-7,resumed,,2",
+      "2026-11-09T12:42:18Z,42617198818,claude-3,opus,suggest,,,interrupted,refusal,12.6,0,0,0,38.3713,18,100,,,,,none,,1"
     ]
   },
   "version": 1
