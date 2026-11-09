@@ -16198,6 +16198,7 @@
     "3423": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "handoff": {
         "at": "2026-11-08T22:56:41Z",
         "family": "claude",
@@ -16220,7 +16221,9 @@
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 3462,
       "provider": "claude-4",
+      "question": "",
       "round_tier": "strong",
       "run_id": "42542467282",
       "runs_on": "ubuntu-latest",
