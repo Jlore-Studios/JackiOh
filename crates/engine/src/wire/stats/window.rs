@@ -1012,7 +1012,8 @@ mod tests {
                 PatchTier::Micro
             ]
         );
-        let listed: Vec<(Vec<&str>, i64)> = patch_windows(&history, games, none)
+        let windows = patch_windows(&history, games, none);
+        let listed: Vec<(Vec<&str>, i64)> = windows
             .iter()
             .map(|window| (window.versions.iter().map(String::as_str).collect(), window.games))
             .collect();
