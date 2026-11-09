@@ -18057,8 +18057,16 @@
       "stop_requested": false
     },
     "3569": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
       "onto": "bot/issue-3534",
-      "part_of": 3534
+      "part_of": 3534,
+      "pending_request": false,
+      "queued_at": "2026-11-09T23:50:03Z",
+      "requested_by": "squishy-squooby",
+      "stop_requested": false
     },
     "3570": {
       "onto": "bot/issue-3534",
