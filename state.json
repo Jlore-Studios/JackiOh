@@ -15765,11 +15765,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-09T14:33:54Z",
+        "at": "2026-11-09T15:33:08Z",
         "difficulty": "hard",
         "provider": "claude-1",
-        "tier": "medium",
-        "why": "Rule 2: it changes the practice AI's and the ladder bots' decisions (`crates/ai/src`), and its threshold comes from an arena screen."
+        "tier": "strong",
+        "why": "rule 2: it changes the AI's decisions (crates/ai/src/learned.rs, decide.rs) and needs an arena screen to set the threshold"
       },
       "failures": 0,
       "forced": false,
