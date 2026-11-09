@@ -16838,15 +16838,9 @@
     "what": "review #3520 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-09T19:33:12Z",
+    "at": "2026-11-09T19:45:43Z",
     "notes": [
-      "delivered build #3507 on claude-4 (run 42673197667): built",
-      "delivered revise #3506 on claude-7 (run 42673094737): built",
-      "delivered review #3493 on muse (run 42649693631): blocked",
-      "started review #3506 on claude-7 (run 42685156666)",
-      "started review #3520 on claude-4 (run 42685278684)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "#3464: `e2e smoke (1/2)` red in CI run 42683040063; its other early jobs have until 2026-11-09T19:47:25Z to report"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17552,7 +17546,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T19:33:12Z",
+  "loop_tick": "2026-11-09T19:45:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
