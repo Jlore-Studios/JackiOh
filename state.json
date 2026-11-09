@@ -18070,9 +18070,11 @@
         "by": "`muse` (medium)",
         "sha": "82d6aa5e1ae937899ff69361503e149ac4b5a7b9"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-09T02:12:59Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-09T03:20:18Z",
         "family": "muse",
@@ -18082,6 +18084,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: drop practice.css's dead result-dialog selectors left after the move onto Dialog\"} -->\n- ## What changed\n- Removed the dead result-dialog selectors from [practice.css](/home/agent-muse/actions-runner-3/_work/_temp/work/item-3459/apps/web/src/practice/practice.css) and the stale \"twins\" wording, exactly per the plan:\n- - Deleted the bare `.practice-result` wherever it shared a selector list with its `.dialog.practice-result` partner (3 lists), keeping the partner.\n- - Deleted the two rules whose only selector was dead (`.practice-result__actions > *`, `.practice .practice-result__actions .practice-play`) and the dead halves of the paired lists (`.practice-result__title`, `__reason`, `__actions`), leaving single blank lines between neighbors.\n- - Reworded the comment to \"the `.dialog` selectors below\".\n- - Ancestor selectors (`.practice-result .practice-crest--lg`, `.practice-result .dialog__\u2026`, `__meta`, live `__emblem`/`__rays`/etc.) untouched.\n- - Extended the guard in [Dialog.test.tsx:231](/home/agent-muse/actions-runner-3/_work/_temp/work/item-3459/apps/web/src/game/Dialog.test.tsx) with `practice-result__(title|reason|actions)` in the same `it`, no new test name.\n- - Lowered [spacing.test.ts](/home/agent-muse/actions-runner-3/_work/_temp/work/item-3459/apps/web/src/spacing.test.ts) 131\u2192129 and [typescale.test.ts](/home/agent-muse/actions-runner-3/_work/_temp/work/item-3459/apps/web/src/typescale.test.ts) 33\u219232, copying exactly what each failing test reported;\u2026\n- ## How I tested it\n- - `git grep -nE 'practice-result__(title|reason|actions)' -- apps e2e` finds nothing; no selector list pairs `.practice-result` with `.dialog.practice-result`.\n- - `pnpm --dir apps/web test src/game/Dialog.test.tsx` \u2014 19/19 pass; spacing + typescale + Dialog re-run \u2014 30/30 pass; palette, surfaces, motion, breakpoints each pass unchanged.\n- - `pnpm --dir apps/web typecheck` clean; eslint on the touched TS files reports 0 errors (CSS file ignored, as expected).\n- - e2e specs 46 (54/54) and 47 (30/30) pass on Chrome against a local release server + `build:e2e` preview. Both detatched processes were stopped afterwards and ports verified free.\n- ## Decisions and notes for the reviewer\n- - No departures from the plan; no new ruling note (no behavior change, so no Hearthstone-semantics decision).\n- - Environment friction worth knowing, not code: the Cypress binary was absent (`CYPRESS_INSTALL_BINARY=0` is set and its installer 404s), so I downloaded the 16.1.0 zip manually to `/tmp` (removed after) and ran with the Xvfb at `~/bin/Xvfb` on `PATH`. Worth a look: whether that env setting and the\u2026\n- - Final diff is exactly the 4 intended files (4 insertions, 25 deletions); `git status` shows nothing else.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-3459 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-3459/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 3459,
       "kind": "review",
       "live": "reviewing",
