@@ -1,6 +1,7 @@
 // The effects layer's contract (docs/polish/1-animations.md, Surface S1).
 
 import type { CardType, GameEvent, KeywordKind, PlayerId, PlayerView, Rarity, Row, Tag } from "@jackioh/shared";
+import type { SignatureFace } from "../cards/signatureFaces.ts";
 import type { Side } from "../game/contract.ts";
 import type { FxFigure } from "./figures.ts";
 import type { FxCardHook } from "./motifs/names.ts";
@@ -192,11 +193,19 @@ export type TakeoverLook =
   | "whiteDwarf"
   | "forge";
 /**
+ * R3345000: what a takeover's set piece shows of the card: its own picture, one CSS `background-image` per depth plane
+ * (`ART_PLANES` order, far to nearest), its name and the hand it signs in (R2715002). It is the picture and the
+ * name, never the definition, so the cue names no card (R202; a takeover plans only for a readable play).
+ */
+export type FxTakeoverStage = { planes: readonly string[]; name: string; face: SignatureFace };
+/**
  * R3407000: `art`, a look of its own that draws its card's picture over the dark (`TAKEOVER_ART_LOOKS`), the
  * picture's URI: only ever a card the seat's own event names (R202).
  */
 export type FxTakeoverCue = {
   kind: "takeover";
+  /** R3345000: the card's art that takes the window while the entry holds a set piece; null without one (Big moments off, the cap): only the board's darkening and the sweep play. */
+  stage: FxTakeoverStage | null;
   look: TakeoverLook;
   tint: FxTint;
   at: FxAnchor;

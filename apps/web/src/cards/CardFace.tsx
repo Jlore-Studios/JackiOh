@@ -87,6 +87,9 @@
 // (`worn`), the seat's frozen one below a `TheirCopy`; ProficiencyStamp.tsx draws it in stamps.css's slot, clear
 // of every part, base and Radiant alike.
 //
+// R3335000: a launched Starship's art wears its Starship look (cosmetics.ts `useStarshipLook`): the account's picks on
+// the viewer's own copy (`worn`), the seat's frozen ones below a `TheirCopy`, else the standard.
+//
 // R3338002: given `gemDrain` (Card.tsx, a Ceaseless Void in its owner's own hand), the cost gem's level falls as its
 // cost does (`data-gem-drain`, `--cost-drain`, cards.css); every other face's gem is drawn whole.
 //
@@ -109,7 +112,7 @@ import { ART_PLANES, showcaseFamilyOf } from "./art/pictures.ts";
 import { CardStates } from "./CardStates.tsx";
 import { useImmersiveShift } from "./immersive.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { useArtMotion, useCosmeticAttributes } from "./cosmetics.ts";
+import { useArtMotion, useCosmeticAttributes, useStarshipLook } from "./cosmetics.ts";
 import {
   CARD_DEPTH_STEP_CQW,
   CARD_FRAME_BREAK_PX,
@@ -133,7 +136,7 @@ import { StarshipPieces } from "./StarshipPieces.tsx";
 import { setMarkOf, watermarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
 import { pixelNameUri } from "./pixelName.ts";
-import { useCardTilt, type TiltMode } from "./tilt.ts";
+import { useCardTilt, type TiltBox, type TiltMode } from "./tilt.ts";
 import {
   NORMAL_LOOK,
   VERSION_EXTENDED_ART_ID,
@@ -186,6 +189,11 @@ export type CardFaceProps = {
    * "off" by default, so a face in a list or a picker never tilts.
    */
   tilt?: TiltMode;
+  /**
+   * R3344001: with `tilt="window"`, the box of the card the face is anchored to (the hover preview's anchor): the
+   * pointer is on it, never over the face, so the pose is read against it. Without it a window face reads its host's box.
+   */
+  tiltAnchor?: TiltBox;
 };
 
 /** The art window's shape follows the card type, as Hearthstone's minion oval and spell frame do. */
@@ -329,7 +337,7 @@ export function CardFace({
   ascentLevel,
   worn = false,
   ownHand = false, onBoard = false, gemDrain = null,
-  tilt = "off", }: CardFaceProps): ReactElement {
+  tilt = "off", tiltAnchor }: CardFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides;
@@ -369,6 +377,8 @@ export function CardFace({
   const scales = { "--cf-name-scale": String(TIER_SCALE[names]), "--cf-text-scale": String(TIER_SCALE[texts]) } as CSSProperties;
   const rarity = frameRarity(face);
   const stamp = useCardStamp(face, worn);
+  // R3335000: the Starship look a launched Starship wears: the viewer's own picks, or its seat's below a `TheirCopy`.
+  const starshipLook = useStarshipLook(worn);
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
   const glitch = isGlitch(face.defId);
@@ -412,7 +422,7 @@ export function CardFace({
   const depth = wantsDepth && !flat;
   const shape: ArtShape = fullArt || extended || artFirst ? "full" : ART_SHAPE[face.type];
   const breaks = depth && breaksFrame(rarity, ownHand, tilt);
-  useCardTilt(faceRef, depth ? tilt : "off", !flat);
+  useCardTilt(faceRef, depth ? tilt : "off", !flat, tiltAnchor);
   // R1295000: what the face wears, judged by the rarity its frame shows as its rarity foil is.
   // R1956000: a grid's faces hold theirs still, so the slots stay with the card a player opens.
   const foilMoves = settings.animatedFoil && !(fxOff && wantsDepth);
@@ -501,6 +511,7 @@ export function CardFace({
               shape={shape}
               lazy={lazyArt}
               starship={starship}
+              look={starshipLook}
               anomaly={anomaly}
               picture={picture}
               motion={motion}
@@ -518,6 +529,7 @@ export function CardFace({
               className="cf-art--cutout"
               lazy={lazyArt}
               starship={starship}
+              look={starshipLook}
               anomaly={anomaly}
               picture={picture}
               motion={motion}
@@ -536,6 +548,7 @@ export function CardFace({
                 className="cf-art--near"
                 lazy={lazyArt}
                 starship={starship}
+                look={starshipLook}
                 anomaly={anomaly}
                 picture="normal"
                 motion={motion}

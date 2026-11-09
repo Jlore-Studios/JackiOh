@@ -30,11 +30,15 @@ import {
   REVEAL_AT_NOTE,
   TermTips,
   UNREVEALED_NOTE,
+  useCanOpenFullScreen,
   faceDownLabel,
   faceModel,
+  isHeld,
   isInspectKey,
+  openFullScreenArt,
   useCardSettings,
   useInspectTrigger,
+  useIsHeld,
   type FaceModel,
   type InspectRenderSubject,
   type InspectSubject,
@@ -295,11 +299,33 @@ export default function Card(props: CardProps): ReactElement {
               ),
           }
         : null;
+  // R3345000: Mythic / full-art view trigger. On the board, only own cards and not while the queue drains: `draining`
+  // is subscribed, so the hold follows the queue, and the callback asks again as the hold fires.
+  const draining = useIsHeld();
+  const inHand = props.inOwnHand === true;
+  const opensFullScreen = useCanOpenFullScreen(card === null ? null : face, card?.defId ?? "", worn);
+  const canFullScreen =
+    card !== null &&
+    opensFullScreen &&
+    (inHand || (unit !== undefined && unit !== null && worn && !draining));
+
   // Lines of code is a hidden stat in matches.
   const inspect = useInspectTrigger(subject, {
     prefer: form === "full" ? "above" : "beside",
     showLoc: false,
     keyHint: SHORTCUTS.inspect,
+    holdAnyPointer: canFullScreen ? true : undefined,
+    onLongPress: canFullScreen
+      ? (pointerId) => {
+          if (!inHand && isHeld()) return;
+          openFullScreenArt({
+            defId: card.defId,
+            radiant: card.radiant,
+            name: face.name,
+            heldPointerId: pointerId,
+          });
+        }
+      : undefined,
   });
 
   const legal = isLegal(props.highlight, testId);
