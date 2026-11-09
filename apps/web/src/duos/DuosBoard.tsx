@@ -67,6 +67,11 @@ export type DuosBoardProps = {
   economy?: GameEconomy | null;
   /** #965: a finished game's step to look at (`DuosReplay.tsx`): nothing is offered, and nothing is sent. */
   replay?: boolean;
+  /**
+   * R3497000: a live co-op board drains its animation queue while the page is hidden, as the 1v1
+   * board does. The teammate's `silent` board and replay boards never drain.
+   */
+  drainWhenHidden?: boolean;
   /** R2990004: the watchers' emotes, drawn on one board: the own one, or the teammate's while the portal shows it alone. */
   sideline?: GameSideline;
 };
@@ -292,6 +297,7 @@ export function DuosBoard({
   economy = null,
   replay = false,
   sideline,
+  drainWhenHidden,
 }: DuosBoardProps): ReactElement {
   useLocale();
   // #1664: the result paid this seat's person, so the pill reads the wallet again, once however many views say so.
@@ -473,6 +479,7 @@ export function DuosBoard({
               legal={replay ? NOTHING : duelLegal}
               onAction={replay ? ignore : sendDuel}
               replay={replay}
+              drainWhenHidden={drainWhenHidden ?? !replay}
               wearCosmetics
               error={error ?? null}
               autoEndTurn={false}
@@ -531,6 +538,7 @@ export function DuosBoard({
           legal={replay ? NOTHING : duelLegal}
           onAction={replay ? ignore : sendDuel}
           replay={replay}
+          drainWhenHidden={drainWhenHidden ?? !replay}
           wearCosmetics
           error={error ?? null}
           autoEndTurn={false}

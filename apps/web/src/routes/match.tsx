@@ -459,6 +459,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       view={view}
       legal={match.legal}
       onAction={match.send}
+      drainWhenHidden
       emotes={emotes}
       sideline={sideline}
       aim={aim}
