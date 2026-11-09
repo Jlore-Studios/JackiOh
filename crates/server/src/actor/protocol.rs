@@ -195,8 +195,12 @@ pub enum ServerMessage {
     ChoiceHover { from: PlayerId, index: Option<i32> },
     /// R1834002, R1834003: both seats' loadouts as the match froze them, naming no card (R1953001
     /// defaults); sent on join and reconnect before the view, and to watchers. Never in `PlayerView`
-    /// (CLAUDE.md rule 7).
-    Loadouts { p1: SeatLoadout, p2: SeatLoadout },
+    /// (CLAUDE.md rule 7). Each half boxed since #3335's Starship picks grew it (R3335000), so this frame does
+    /// not size every other; the wire shape is the same.
+    Loadouts {
+        p1: Box<SeatLoadout>,
+        p2: Box<SeatLoadout>,
+    },
     /// R1834003: card picks for `seat`'s deck, each sent after the first view showing it, not again
     /// until a hello or attach (`loadout::cards_due`); an unshown card never travels (§10.8).
     /// R3013002: with the stamps of those cards that wear one, left out when none does.
@@ -264,8 +268,8 @@ pub fn portraits_message(p1: PortraitId, p2: PortraitId, emotes: &[EmoteId]) -> 
 /// R1834002: the seat-level loadouts frame, the same for every receiver.
 pub fn loadouts_message(loadouts: &(Loadout, Loadout)) -> ServerMessage {
     ServerMessage::Loadouts {
-        p1: loadouts.0.seat.clone(),
-        p2: loadouts.1.seat.clone(),
+        p1: Box::new(loadouts.0.seat.clone()),
+        p2: Box::new(loadouts.1.seat.clone()),
     }
 }
 

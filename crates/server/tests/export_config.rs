@@ -289,6 +289,9 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("SET_TRACK_LEVELS", json!(c::SET_TRACK_LEVELS)),
         ("SET_TRACK_XP_PER_LEVEL", json!(c::SET_TRACK_XP_PER_LEVEL)),
         ("SET_TRACK_UNLOCK_LEVEL", json!(c::SET_TRACK_UNLOCK_LEVEL)),
+        // #3335's Fleet track (§14.15, R3335001): its levels and its daily cap, which its panel shows.
+        ("FLEET_TRACK_LEVELS", json!(c::FLEET_TRACK_LEVELS)),
+        ("FLEET_TRACK_XP_DAILY_MAX", json!(c::FLEET_TRACK_XP_DAILY_MAX)),
         // #3013's card proficiency (§14.14, R3013000): each level's plays and the level count.
         ("PROFICIENCY_LEVEL_PLAYS", json!(c::PROFICIENCY_LEVEL_PLAYS)),
         ("PROFICIENCY_LEVELS", json!(c::PROFICIENCY_LEVELS)),
@@ -411,8 +414,9 @@ fn every_name_is_listed_once() {
         // #3207: QUEUE_POPULATION_POLL_SECONDS and LIVE_GAME_POLL_SECONDS (R3207000, R3207001).
         // #3212: PACKS_OPEN_ALL_MAX and DECK_SYNC_ITEMS_MAX (R3212000, R3212001).
         // #3213: POST_GAME_FRAME_VERSION (R3213000).
+        // #3335: FLEET_TRACK_LEVELS and FLEET_TRACK_XP_DAILY_MAX (R3335001).
         listed,
-        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2 + 2 + 2 + 1,
+        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2 + 2 + 2 + 1 + 2,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
