@@ -13271,15 +13271,8 @@
       "verdict_rounds": 1
     },
     "3394": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42717494980",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-09T23:47:24Z",
-        "until": "2026-11-10T00:17:24Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13291,10 +13284,9 @@
         "reason": "planned on opus",
         "trail": "stall.log\", \"description\": \"Check install result\"}\n- Bash: {\"command\": \"E2E_ARTIFACTS=/tmp/planner/art E2E_COMPONENT_PORT=5281 timeout 1200 pnpm --dir e2e test:component --spec cypress/component/stinkyscape91-alt-scenes.cy.tsx > /tmp/planner/cy.log 2>&1; ech\u2026\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/cards/art/convention.test.ts | cut -c1-200\", \"description\": \"Check what convention.test enforces\"}\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Decisions so far\\n- Ruling R3394000 (block 3394000-3394999 free). spec/pending/3394.md. Amend notes: R2940001, R3333000 (collection Dormant Starship),\\n\u2026\n- Bash: {\"command\": \"ls apps/web/src/wasm/pkg >/dev/null 2>&1 || echo \\\"no wasm pkg\\\"; time (timeout 600 pnpm --dir apps/web exec vitest run src/cards/art/stinkyscape91AltScenes.test.tsx 2>&1 | tail -15)\", \"\u2026\n- Bash: {\"command\": \"grep -v \\\"^\\\\s*$\\\" /tmp/planner/cy.log | tail -40 | cut -c1-250\", \"description\": \"Read the component spec run output\"}\n- Bash: {\"command\": \"time (timeout 1500 sh scripts/build-wasm.sh > /tmp/planner/wasm.log 2>&1; echo exit=$? >> /tmp/planner/wasm.log)\", \"description\": \"Build the engine's WebAssembly module for web tests\", \"\u2026\n- Bash: {\"command\": \"grep -n \\\"ART_DETAIL_MIN\\\\b\\\\|ART_DETAIL_MAX_BYTES =\\\" -A 8 apps/web/src/cards/art/richness.ts | head -30; grep -n \\\"export type FigureLook\\\" -A 10 apps/web/src/cards/art/figureKit.ts; h\u2026\n- Bash: {\"command\": \"grep -n \\\"ART_DETAIL_MIN_[A-Z]* =\\\\|ART_DETAIL_MIN_[A-Z]*:\\\" -A 1 apps/web/src/cards/art/richness.ts | head -20; grep -rn \\\"ART_DETAIL_MIN_COMMON\\\\b\\\" apps/web/src --include=*.ts -l | he\u2026\n- Bash: {\"command\": \"cat > /tmp/planner/gold.mts <<'EOF'\\nimport { SCENE_PALETTE } from \\\"/home/runner/work/_temp/work/item-3394/apps/web/src/cards/art/scene.ts\\\";\\nimport * as C from \\\"/home/runner/work/_te\u2026\n- Bash: {\"command\": \"tail -5 /tmp/planner/wasm.log\", \"description\": \"Check the wasm build progress\"}\n- Bash: {\"command\": \"grep -rn \\\"artSeedOf\\\\|\\\\\\\"alt\\\\\\\"\\\\|'alt'\\\" apps/web/src/cards/art/stinkyscape.test.tsx apps/web/src/cards/starship.test.tsx apps/web/src/cards/art/starshipModules.test.ts apps/web/src/\u2026\n- Bash: {\"command\": \"grep -rnoE \\\"stinkyscape-(001|004|005|006|010|011|014|018|020|021|025|026|030|033|034|035|039|041|042|043|044|045|048|050|051|054|055|056|062|064|065|066|068|069|070|072|073|075|077|078|\u2026\n- Bash: {\"command\": \"grep -nE \\\"stinkyscape-(001|004|005|006|010|011|014|018|020|021|025|026|030|033|034|035|039|041|042|043|044|045|048|050|051|054|055|056|062|064|065|066|068|069|070|072|073|075|077|078|07\u2026\n- Bash: {\"command\": \"grep -n \\\"STARSHIP\\\\b\\\" apps/web/src/cards/depth.test.tsx | head -5; grep -n \\\"STARSHIP\\\\b\\\" apps/web/src/cards/versionLooks6.test.tsx | head -5; grep -n \\\"DORMANT_STARSHIP\\\" apps/web/sr\u2026\n- Bash: {\"command\": \"tail -3 /tmp/planner/wasm.log\", \"description\": \"Check the wasm build progress\"}\n- Bash: {\"command\": \"ls spec/; grep -rn \\\"^### 14.2\\\" spec/*.md | head -3\", \"description\": \"Locate spec section 14.2\"}\n- Bash: {\"command\": \"grep -n \\\"export function local\\\\|export const MAIN\\\\|export const INKED\\\\|export const MAIN_INKED\\\\|export function shape\\\" -A 6 apps/web/src/cards/art/kitDraw.ts | head -50\", \"descript\u2026\n- Bash: {\"command\": \"tail -3 /tmp/planner/wasm.log\", \"description\": \"Check the wasm build progress\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3394/.bot-plan.md\", \"content\": \"**Goal.** Each of the 48 cards in #3394's table gets an alt scene recipe written from its brief: the Stinkyscape cards\u2026\n- Bash: {\"command\": \"cat > /tmp/planner/offered.mts <<'EOF'\\nimport { offeredOn, VERSION_ALT_ART_ID } from \\\"/home/runner/work/_temp/work/item-3394/apps/web/src/cards/versions.ts\\\";\\nimport cat from \\\"/home/\u2026\n- Bash: {\"command\": \"node /tmp/planner/offered.mts 2>&1 | head -8 | cut -c1-300\", \"description\": \"Show the error from the offered script\"}\n- Bash: {\"command\": \"tail -3 /tmp/planner/wasm.log; ls apps/web/src/wasm/pkg 2>/dev/null | head\", \"description\": \"Check the wasm build progress\"}\n- Bash: {\"command\": \"tail -2 /tmp/planner/wasm.log; ls apps/web/src/wasm/pkg 2>/dev/null | head -3\", \"description\": \"Check the wasm build progress\"}\n- said: The WebAssembly build finished. Next I'm confirming that the sibling vitest file and the component spec both run here, so the plan's commands are known to work.\n- Bash: {\"command\": \"time (timeout 600 pnpm --dir apps/web exec vitest run src/cards/art/stinkyscape91AltScenes.test.tsx 2>&1 | tail -6)\", \"description\": \"Run the sibling alt scenes vitest file\", \"timeout\": \u2026\n- Bash: {\"command\": \"E2E_ARTIFACTS=/tmp/planner/art E2E_COMPONENT_PORT=5281 timeout 1200 pnpm --dir e2e test:component --spec cypress/component/stinkyscape91-alt-scenes.cy.tsx > /tmp/planner/cy.log 2>&1; ech\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n**Steps**\\n\\n1. `sceneKitStinkyAlt.ts`: add `export` to `type Pen` and to the functions `tilted`, `box`, `cut` and `rounded`. Change nothing else.\\n\\n2. Ne\u2026\n- Bash: {\"command\": \"grep -a \\\"M5-T1 layout\\\\|passing\\\\|failing\\\\|exit=\\\" /tmp/planner/cy.log | cut -c1-400 | head -12\", \"description\": \"Read the component spec's result\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3394/.bot-plan.md\", \"offset\": 147}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3394/.bot-plan.md\", \"content\": \"**Goal.** Each of the 48 cards in #3394's table (the Stinkyscape cards 1 to 90 offered `version-alt-art`, plus the Dor\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md; git status --porcelain | head\", \"description\": \"Count the plan's words and confirm no tracked changes\"}\n- Bash: {\"command\": \"tr -s ' ' '\\\\n' < .bot-plan.md | grep -cxE '\\\\||[-|]+'\", \"description\": \"Count table separator tokens in the plan\"}\n- said: **Goal.** Each of the 48 cards in #3394's table (the Stinkyscape cards 1 to 90 offered `version-alt-art`, plus the Dormant Starship) draws an alt scene recipe written from its brief. `sceneRecipeOf` reads that recipe under the card's Alt art seed alone, so the same picture shows at every Alt art le\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-09T23:05:08Z",
       "owner_why": "it plans it",
@@ -13307,9 +13299,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-07T16:50:03Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42717494980",
+      "run_id": "pending:c268de74-1794268181",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-09T23:05:08Z",
+      "started_at": "2026-11-09T23:50:16Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18271,9 +18263,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T23:49:27Z",
+    "at": "2026-11-09T23:50:16Z",
     "url": "",
-    "what": "review #3578 on claude-8"
+    "what": "build #3394 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-09T23:12:59Z",
