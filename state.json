@@ -14001,14 +14001,26 @@
       "stop_requested": false
     },
     "3351": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-09T06:17:12Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-07T00:02:50Z",
       "requested_by": "jgoetzmann",
-      "stop_requested": false
+      "run_id": "pending:7d3aaa03-1794205006",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-09T06:17:12Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "3352": {
       "action": "build",
@@ -18361,9 +18373,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T06:16:34Z",
+    "at": "2026-11-09T06:17:12Z",
     "url": "",
-    "what": "review #3461 on claude-8"
+    "what": "plan #3351 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T06:05:18Z",
