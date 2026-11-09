@@ -15219,10 +15219,17 @@
     },
     "3391": {
       "action": "build",
+      "archived": {
+        "at": "2026-11-09T02:56:49Z",
+        "branch": "bot/issue-3391",
+        "head": "34ae1b09114c57e4a041d28c6d0f0bbffad6458f",
+        "issue": 3391,
+        "item": 3431,
+        "pr": 3431,
+        "why": "Please restore the five files to main's versions on bot/issue-3391: `git checkout origin/main -- .github/workflows/ci.yml .github/workflows/super.yml bot/README.md bot/go/internal/cigate/cigate.go bot/go/tests/cigate_test.go`, then commit and push. Check that `git diff --stat origin/main HEAD -- .github bot` is empty. Alternatively, fix the harness's path guard so it compares against the merged parent (3163b425c1) instead of the base from before the merge. After that, nothing on the branch touches the forbidden paths, and the art work can go through review as it stands."
+      },
       "asks": [],
       "died": 0,
-      "failures": 0,
-      "forced": false,
       "handoff": {
         "at": "2026-11-08T06:28:23Z",
         "family": "claude",
@@ -15233,13 +15240,9 @@
         "trail": "cycler, whose brief names one. The previous run stood a repainted drone core in for it.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/cards/art/sceneKit.ts'\\ns=open(p).read()\\ndef rep(a,b):\\n global s\\n assert s.count(a)==1, a\\n s=s.replace(a,b)\\nanchor='/** A small war drum standing \u2026\n- Bash: {\"command\": \"grep -n \\\"RADIANT_GOLD_\\\\(HUE\\\\|SATURATION\\\\|LIGHTNESS\\\\)\\\" apps/web/src/cards/constants.ts; grep -c '\\\"wood-600\\\"' apps/web/src/cards/art/sceneKit.ts; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/w\u2026\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/webtest.log | tail -4 | cut -c1-200\", \"description\": \"Show web suite log tail\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R3391000.md'\\ns=open(p).read()\\na='''containment sphere, a wire, a rope and a blank\\ncard;'''\\nassert s.count(a)==1\\ns=s.replace(a,'''containment spher\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/gen && cat > /tmp/gen/verdicts.py <<'EOF'\\nV = {\\n 3: \\\"changed: the scorched landing pad is the cracked red desert floor (regolith and debris) the walker stands on; the ki\u2026\n- Bash: {\"command\": \"grep -n \\\"^/\\\\*\\\\* \\\" apps/web/src/cards/art/sceneKit.ts | grep -iE \\\"flagship|fused|frame|sleeper|containment|server|walker|skiff|tram|gun-ring|ring of guns|wreck|ghost|helper\\\" | cut -\u2026\n- Bash: {\"command\": \"cat >> /tmp/gen/verdicts.py <<'EOF'\\nV[26] = \\\"changed: the domed campus is a tower and an arch behind the rail\\\"\\nEOF\\nuntil grep -q \\\"^exit\\\" /tmp/webtest.log; do sleep 5; done; sed 's\u2026\n- Bash: {\"command\": \"git status --short; git diff --stat 1fbbecc15e | tail -3\", \"description\": \"Show the branch's diff summary\"}\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/webtest.log; do sleep 5; done; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/webtest.log | grep -E \\\"Test Files|Tests |FAIL|\\u00d7\\\" | head -20; tail -1 /tmp/webtest.log\"\u2026\n- said: The whole web suite ran: 596 of 597 files passed. The one failure is the new brief-parts test, which I edited while the suite was running, so I'm rerunning the art tests on the final files.\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/webtest.log | grep -A 12 \\\"FAIL |web| src/cards/art/stinkyscapeScenes\\\" | head -16; cd apps/web && timeout 900 pnpm exec vitest run src/cards/art 2>&1 | \u2026\n- said: Art tests are green on the final files: 15 files, 232 tests. Next I'm running the harness's own web command (`--changed origin/main`) over everything my edits touch.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3391 && timeout 1700 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3391 && echo \\\"- run 3: full web suite 596/597 files (the 1 fail was my mid-run edit); art rerun 232/232; harness --changed web command running\\\" >> \u2026\n- Bash: {\"command\": \"$CARGO_TARGET_DIR/release/jackioh spec check 2>&1 | tail -2; $CARGO_TARGET_DIR/release/jackioh patches check 2>&1 | tail -1; cargo fmt --check >/dev/null 2>&1; echo \\\"fmt exit $?\\\"\", \"de\u2026\n- Bash: {\"command\": \"grep -rln \\\"patches/pending\\\" crates/*/src crates/*/tests crates/*/build.rs 2>/dev/null | head\", \"description\": \"Find Rust code reading pending fragments\"}\n- Bash: {\"command\": \"grep -n \\\"patches/pending\\\" -B5 -A25 crates/cards/tests/cross/card_text.rs | grep -n \\\"fn \\\\|assert\\\" | head -20\", \"description\": \"See what the card text test checks in fragments\"}\n- Bash: {\"command\": \"grep -n \\\"patches/pending\\\" crates/cards/tests/cross/card_text.rs; n=$(grep -n \\\"patches/pending\\\" crates/cards/tests/cross/card_text.rs | head -1 | cut -d: -f1); sed -n \\\"$((n-30)),$((n\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/harnessweb.log; do sleep 5; done; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/harnessweb.log | grep -E \\\"Test Files|Tests |FAIL|\\u00d7\\\" | head -20; tail -1 /tmp/harnes\u2026\n- Bash: {\"command\": \"git diff 1fbbecc15e -- apps/web e2e | grep -nE \\\"^\\\\+.*(\\\\.skip|\\\\.only|it\\\\.todo|eslint-disable|@ts-ignore|@ts-expect-error)\\\" | head; echo \\\"none above = clean\\\"; (E2E_COMPONENT_PORT=5\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/cypress2.log; do sleep 5; done; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cypress2.log | grep -E \\\"\\u2713|\\u2717|[0-9]\\\\) |passing|failing|^exit\\\" | head\", \"descripti\u2026\n- said: Now a throwaway measuring test (deleted right after) to refresh the three changed cards' numbers and draw a sheet of them.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3391/apps/web && cat > src/cards/art/zz-measure.test.ts <<'EOF'\\n// TEMPORARY (#3391 build tooling, deleted before delivery).\\nimport { writeFileSync\u2026\n- tool error: Exit code 2 Tests 1 passed (1) D src/cards/art/zz-measure.test.ts D src/cards/art/zz-preview.ts D src/cards/art/zz-table.test.ts stinkyscape-033 71 19747 stinkyscape-046 87 23115 stinkyscape-077 73 1\u2026\n- Bash: {\"command\": \"cd /tmp/rec && for f in new-0 new-1 new-2; do sed -i 's/<svg width=\\\"400\\\" height=\\\"400\\\" /<svg /' $f.svg; done && S=$(ls -d /home/runner/work/_temp/work/item-3391/node_modules/.pnpm/sha\u2026\n- Read: {\"file_path\": \"/tmp/rec/new-all.png\"}\n- said: The coffee bulb reads clearly next to the dozing pilot. Now I'm putting together the verdict table from the fresh measures.\n- Bash: {\"command\": \"cd /tmp/gen && python3 - <<'EOF'\\nexec(open('/tmp/gen/verdicts.py').read())\\nmeas = {}\\nfor line in open('/tmp/measure2.tsv'):\\n i, el, uri = line.strip().split('\\\\t'); meas[i] = (el, ur\u2026\n- Bash: {\"command\": \"git status --short; git check-ignore -q e2e/artifacts && echo \\\"artifacts ignored\\\"; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## Log')\\nstate='''## State\\n\\n- R\u2026\n- Bash: {\"command\": \"cat /tmp/gen/verdict-table.md\", \"description\": \"Print the verdict table\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every Stinkyscape (cards 1 to 90) card drawn as what it is: a scene of its own for each, richer the rarer\"} --> ## What changed Each of the 64 Stinkyscape cards in #3391's table now draws a scene recipe of its own, built from its brief, on both the base\u2026"
       },
       "interruptions": 0,
-      "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-3",
-      "owner_since": "2026-11-08T19:31:20Z",
-      "owner_why": "its final audit of `9cd6e106b139` asked for changes, and the auditor fixes its own findings",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-07T19:16:44Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
@@ -15248,21 +15251,15 @@
       "pr": 3431,
       "provider": "claude-1",
       "question": "",
-      "queued_at": "2026-11-07T16:46:36Z",
-      "requested_by": "jgoetzmann",
-      "round_tier": "",
       "run_id": "42448841031",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-08T04:57:18Z",
-      "stop_requested": false,
       "strike_log": [
         "`claude-1` (claude, opus) rejected it: `spec/rulings/R3391000.md:39`: The ruling says a part a brief names that R3390000's pass already drew is that pass's part, 'not a second of the same name or kind",
         "`claude-3` (claude, opus) rejected it: `task`: The pull request's per-card verdict table and its 'What changed' and 'Decisions' sections describe the code as it was before the last revise"
       ],
       "strikes": 2,
-      "taken_asks": [],
-      "verdict_rounds": 0,
-      "waiting_comment": 6713003469
+      "taken_asks": []
     },
     "3392": {
       "action": "build",
@@ -16523,14 +16520,20 @@
     },
     "3431": {
       "action": "review",
+      "archived": {
+        "at": "2026-11-09T02:56:49Z",
+        "branch": "bot/issue-3391",
+        "head": "34ae1b09114c57e4a041d28c6d0f0bbffad6458f",
+        "issue": 3391,
+        "pr": 3431,
+        "why": "Please restore the five files to main's versions on bot/issue-3391: `git checkout origin/main -- .github/workflows/ci.yml .github/workflows/super.yml bot/README.md bot/go/internal/cigate/cigate.go bot/go/tests/cigate_test.go`, then commit and push. Check that `git diff --stat origin/main HEAD -- .github bot` is empty. Alternatively, fix the harness's path guard so it compares against the merged parent (3163b425c1) instead of the base from before the merge. After that, nothing on the branch touches the forbidden paths, and the art work can go through review as it stands."
+      },
       "asks": [],
       "audit_tier": "",
       "cross_rounds": 2,
       "died": 0,
       "difficulty": "hard",
-      "failures": 0,
       "feedback_since": "2026-11-08T19:32:35Z",
-      "forced": false,
       "handoff": {
         "at": "2026-11-08T23:41:08Z",
         "family": "claude",
@@ -16542,41 +16545,17 @@
       },
       "interruptions": 0,
       "issue": 3391,
-      "kind": "review",
       "last_findings": [],
       "live": "reviewing",
-      "pending_request": false,
       "provider": "claude-3",
-      "question": "",
-      "queued_at": "2026-11-08T22:08:03Z",
+      "question": "Please restore the five files to main's versions on bot/issue-3391: `git checkout origin/main -- .github/workflows/ci.yml .github/workflows/super.yml bot/README.md bot/go/internal/cigate/cigate.go bot/go/tests/cigate_test.go`, then commit and push. Check that `git diff --stat origin/main HEAD -- .github bot` is empty. Alternatively, fix the harness's path guard so it compares against the merged parent (3163b425c1) instead of the base from before the merge. After that, nothing on the branch touches the forbidden paths, and the art work can go through review as it stands.",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "strong",
       "run_id": "42538992067",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "session": {
-        "action": "review",
-        "artifact": 13638694048,
-        "artifact_bytes": 352147,
-        "artifact_name": "work",
-        "at": "2026-11-08T23:45:48Z",
-        "bytes": 432388,
-        "cwd": "/home/runner/work/_temp/work/item-3431",
-        "ended": "interrupted: `claude-3` stops: it refused a call; its limit resets at 2026-11-09T00:10:00Z",
-        "head": "34ae1b09114c57e4a041d28c6d0f0bbffad6458f",
-        "id": "858fef0d-57f7-4b3f-b674-d98718573cfb",
-        "kind": "build",
-        "model": "opus",
-        "project": "-home-runner-work--temp-work-item-3431",
-        "provider": "claude-3",
-        "run": "42528797335"
-      },
-      "source": "",
       "started_at": "2026-11-09T00:13:11Z",
-      "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16585,8 +16564,7 @@
         "reviews": [],
         "sha": "0672bc82611a1d3b060cb19466a4dd93a9415172",
         "tiers": {}
-      },
-      "waiting_comment": 6722170318
+      }
     },
     "3432": {
       "action": "revise",
