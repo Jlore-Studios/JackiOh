@@ -15625,6 +15625,13 @@
     "3477": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-09T14:16:20Z",
+        "difficulty": "hard",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "Rule 3: the shared crate, the server and the web must agree on one new wire field (a forecast beside the view in practice snapshots, 1v1 frames and Duos frames), plus a new ruling and a setting; no engine, AI or migration change."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
