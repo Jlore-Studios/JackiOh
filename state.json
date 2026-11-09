@@ -15209,10 +15209,12 @@
           "provider": "claude-7",
           "tier": "strong"
         },
-        "at": "2026-11-09T12:25:48Z",
+        "at": "2026-11-09T16:49:29Z",
         "built_by": "claude-7",
         "by": "`claude` (strong)",
-        "sha": "4360831bcf82b1064865cb3c369f5c1a979bba3b"
+        "carried_from": "4360831bcf82b1064865cb3c369f5c1a979bba3b",
+        "resolved_by": "`claude` (strong)",
+        "sha": "b6645ab38ec1f8f3ed54e3dd54b8c18e65b8448e"
       },
       "died": 0,
       "difficulty": "hard",
