@@ -15634,7 +15634,7 @@
         "tier": "strong",
         "why": "rule 3: the shared host machine, both server protocols and the web wire must agree on a new field; rule 5: about 45 files with tests"
       },
-      "failures": 1,
+      "failures": 0,
       "forced": false,
       "handoff": {
         "at": "2026-11-09T15:21:11Z",
@@ -15658,7 +15658,9 @@
       "planned_by_id": "claude-6",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 3506,
       "provider": "claude-7",
+      "question": "",
       "queued_at": "2026-11-09T13:51:12Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
