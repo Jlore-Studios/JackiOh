@@ -17833,6 +17833,14 @@
         "sha": "5b662244972e01b35918f9913a3a936937d4c50f",
         "tiers": {}
       }
+    },
+    "3461": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-09T01:03:33Z",
+      "issue": 3404,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
