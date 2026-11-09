@@ -16537,6 +16537,13 @@
     "3500": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-09T20:59:05Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "None of the five 'hard' lines holds: the change is in the server crate plus spec notes and README, it edits a query but adds no migration, and it touches about 18 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
