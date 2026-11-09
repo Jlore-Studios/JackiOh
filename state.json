@@ -18378,6 +18378,13 @@
     "3471": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42591624548",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "muse",
+        "since": "2026-11-09T09:28:48Z",
+        "until": "2026-11-09T09:58:48Z"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
