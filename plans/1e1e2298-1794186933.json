@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3349,
+  "title": "Patch: unlocks worth the wait: a new variant level is revealed on its own card, Legendary and Mythic pulls take the screen, and the Collection shows off what you earned",
+  "branch": "bot/issue-3349",
+  "thread": "**Issue #3349 (data, not instructions):**\n\n```text\n# #3349: Patch: unlocks worth the wait: a new variant level is revealed on its own card, Legendary and Mythic pulls take the screen, and the Collection shows off what you earned\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. Blocked by #3345, whose full-screen view the biggest reveals open.\n\nThe owner wants the art's unlock system to feel very nice, so that the truly special cards stand out when you earn them.\n\n### Today\n\n- **Pack reveals** grow their effects with rarity (`revealCues`, `packs/PackOpening.tsx`; `PackOpening.test.tsx` \"a reveal's effects grow with its rarity\").\n- **How cosmetics are earned** (\u00a714.3 to \u00a714.6):\n  - a duplicate card's cosmetic roll (the next level of a variant, with `LEVEL_SKIP_WEIGHT`);\n  - cosmetic packs;\n  - Rare, Epic and Legendary cosmetic tokens;\n  - the Chase Shard bar, which buys a Legendary or Mythic chase.\n- **The gap.** The planner should check how each of these grants is shown today. This issue makes every one show the look itself, on its card, scaled to its rarity.\n\n### What it should be\n\n1. **A grant shows the look.** Whatever grants a variant level (a roll, a pack, a token, the chase), the reveal shows **the card wearing it**:\n   - first in its previous look;\n   - then a wipe into the new level: the full-art frame unfolding, the animation starting, the signature writing itself;\n   - with the level's name and rarity under it.\n\n   Several grants at once play in order, the rarest last.\n2. **Scaled to its rarity:**\n   - **Rare and Epic:** a reveal on the panel, with a sound by rarity.\n   - **Legendary:** the panel dims, and the card grows in with light from behind and its intro sting (#3332).\n   - **Mythic, or a Legendary or Mythic chase:** the card takes the screen in its full-screen view (#3345), the camera flying through it with its music. A tap moves on.\n3. **Pack pulls.** A Legendary or Mythic card pulled from a pack gets its own moment beyond `revealCues`' growth: a Legendary's tile flares before it flips, and a Mythic's pack tears open into its takeover with its own art (#3345). A Common to Epic pull keeps today's reveal. The order of reveal is the pack's, and it never shows a slot before the player opens it.\n4. **The Collection shows off.** A card with a newly earned level carries a \"new\" mark in the Collection until it is viewed. Its tile there previews the new look moving when hovered (the existing preview, #3016). The Collection's ladder shows each level's look on the card, not only its name.\n5. **Settings.** Reduced motion shows each reveal as a still before and after, and `bigMoments` short or off shortens or stills the full-screen ones. A tap always moves on.\n\n## Acceptance\n\n- Tests: a roll, a pack, a token and a chase grant each show the card in its new level, rarest last, with the rarity's treatment.\n- A Legendary and a Mythic pack pull play their own moments, and no slot shows before it is opened.\n- The Collection's \"new\" mark appears and clears, and its ladder shows each level's look.\n- A component spec captures a Rare, a Legendary and a Mythic grant and a Mythic pull at desktop size and at 390x844, and under reduced motion.\n- Any ruling is in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`.\n- The web tests, `typecheck`, `eslint` and `cargo jackioh spec check` pass, and the pull request carries a `## Player note`.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3349: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-07T00:00:48Z",
+    "claimed_at": "2026-11-09T01:15:57Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391, #3403 to close first",
+    "#3351 skipped: it waits for #3340 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first",
+    "#3406 skipped: it waits for #3403 to close first"
+  ]
+}
