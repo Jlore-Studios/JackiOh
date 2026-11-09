@@ -4,11 +4,12 @@
 // bird), food (an apple, a pear, grapes, a papaya, a basket of fruit, a stack of pancakes) and weather and
 // light (a shockwave, a tornado, flames, a fireball, a ribbon of light, a thought bubble, spores, snow,
 // static, bubbles, smoke, rain, dust, a sun, falling petals). R3396000: the Classic+ Alt art scenes (#3396)
-// added a clump of bamboo, a cactus and a fox. sceneKit.ts spreads the table into
-// `SCENE_KIT`. Each part keeps the kit's rules: one to twelve filled shapes drawn in its own frame
-// (`local`), varied by the scene's stream alone, every colour a palette name out of Radiant's gold window
-// (food's golds are brass, butter is slate), a glow a stack of translucent shapes, and no two sub-paths of
-// one shape overlapping but for a hole.
+// added a clump of bamboo, a cactus and a fox. R3397000: the Meditative+ and Training Grounds Alt art scenes
+// (#3397) added a mountain goat, a deer, a paddling duck and a heap of walnuts. sceneKit.ts
+// spreads the table into `SCENE_KIT`. Each part keeps the kit's rules: one to twelve filled shapes drawn in
+// its own frame (`local`), varied by the scene's stream alone, every colour a palette name out of Radiant's
+// gold window (food's golds are brass, butter is slate), a glow a stack of translucent shapes, and no two
+// sub-paths of one shape overlapping but for a hole.
 
 import { fmt } from "./hash.ts";
 import { between, blob, DEGREES, FULL_TURN, INKED, local, MAIN, MAIN_INKED, shape, sparkle, turned, whole, type Local, type Point } from "./kitDraw.ts";
@@ -656,6 +657,88 @@ function fox(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+/** R3397000: a shaggy white mountain goat standing on the anchor, facing the way it faces: a stocky body (main), a bearded head held up, two swept-back horns, dark hooves and a stub tail; about 14 long and 12 tall at scale 1. */
+function goat(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const lift = between(rng, -0.8, 0.8);
+  const horn = between(rng, 2.6, 3.6);
+  const hx = 5.4;
+  const hy = -8.6 + lift;
+  const hornPath = (dx: number): Point[] => [
+    [hx - 0.3 + dx, hy - 1],
+    [hx - 0.9 + dx, hy - 1 - horn * 0.6],
+    [hx - 2 + dx, hy - 1 - horn],
+    [hx - 2.8 + dx, hy - 1 - horn * 0.8],
+  ];
+  return [
+    shape(f.ellipse(0, 0.2, 6.4, 0.6), "black", 0.2),
+    shape(f.band([[-3.6, -3.2], [-3.8, -0.4]], 0.9) + f.band([[-2, -3.2], [-1.8, -0.4]], 0.9) + f.band([[2.4, -3.2], [2.2, -0.4]], 0.9) + f.band([[3.9, -3.2], [4.1, -0.4]], 0.9), "slate-100", 1, INKED),
+    shape(f.band([[-4.25, -0.25], [-3.35, -0.25]], 0.6) + f.band([[-2.25, -0.25], [-1.35, -0.25]], 0.6) + f.band([[1.75, -0.25], [2.65, -0.25]], 0.6) + f.band([[3.65, -0.25], [4.55, -0.25]], 0.6), "slate-900", 1),
+    shape(f.poly([[-5.6, -4], [-4.4, -4.2], [-5.2, -5.6]]), "white", 1, INKED),
+    shape(`M${f.p(-5.2, -4.6)}Q${f.p(-5.8, -7.8)} ${f.p(-2, -7.9)}L${f.p(2.6, -7.9)}Q${f.p(5.4, -7.7)} ${f.p(5.2, -4.8)}Q${f.p(5, -2.6)} ${f.p(3, -2.6)}L${f.p(-3.4, -2.6)}Q${f.p(-5.4, -2.8)} ${f.p(-5.2, -4.6)}Z`, "white", 1, MAIN_INKED),
+    shape(f.band([[3.4, -6.4], [hx - 0.2, hy + 0.8]], 2.4), "white", 1, INKED),
+    shape(`M${f.p(hx - 1.2, hy - 1.1)}Q${f.p(hx + 0.8, hy - 1.8)} ${f.p(hx + 2.8, hy - 0.2)}Q${f.p(hx + 3, hy + 0.8)} ${f.p(hx + 2.2, hy + 0.9)}L${f.p(hx - 0.6, hy + 1.2)}Z`, "white", 1, INKED),
+    shape(f.poly([[hx + 1.5, hy + 0.8], [hx + 1.3, hy + 3], [hx + 2.4, hy + 0.8]]), "slate-400", 0.9),
+    shape(f.band(hornPath(-0.9), 0.55), "stone-500", 0.85),
+    shape(f.band(hornPath(0), 0.6), "wood-800", 1, INKED),
+    shape(f.circle(hx + 0.9, hy - 0.4, 0.26), "black", 0.9),
+  ];
+}
+
+/** R3397000: a deer walking on the anchor the way it faces, one foreleg lifted: a slim body (main), a long neck and pointed head, its ear back, branched antlers and a white rump; about 16 long and 15 tall at scale 1. */
+function deer(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const step = between(rng, 0.6, 1.6);
+  const tines = whole(rng, 2, 3);
+  const hx = 6.6;
+  const hy = -10.6 + between(rng, -0.5, 0.5);
+  const beam = (dx: number): Point[] => [
+    [hx - 0.6 + dx, hy - 1],
+    [hx - 1.2 + dx, hy - 3.2],
+    [hx - 0.6 + dx, hy - 5.4],
+    [hx + 0.6 + dx, hy - 6.6],
+  ];
+  let prongs = "";
+  for (let k = 0; k < tines; k += 1) {
+    const [bx, by] = beam(0)[k + 1] ?? [hx, hy];
+    prongs += f.band([[bx, by], [bx + 1.6, by - 1.2]], 0.42);
+  }
+  return [
+    shape(f.ellipse(0, 0.2, 7, 0.55), "black", 0.2),
+    shape(f.band([[-4.2, -5], [-4.6, 0]], 0.75) + f.band([[-2.6, -5], [-2.2, 0]], 0.75) + f.band([[3, -5], [3.4, 0]], 0.75) + f.band([[4.8, -5], [5.4 + step * 0.6, -2.4 + step * 0.4], [5.2 + step, -step]], 0.75), "wood-700", 1, INKED),
+    shape(`M${f.p(-5.6, -7)}Q${f.p(-5.8, -9.4)} ${f.p(-2.8, -9.4)}L${f.p(3, -9.2)}Q${f.p(5.8, -9.2)} ${f.p(5.6, -6.6)}Q${f.p(5.2, -4.6)} ${f.p(3, -4.6)}L${f.p(-3.6, -4.6)}Q${f.p(-5.6, -4.8)} ${f.p(-5.6, -7)}Z`, "wood-600", 1, MAIN_INKED),
+    shape(f.ellipse(-5, -6.8, 1.2, 1.6), "white", 0.85),
+    shape(f.band([[3.8, -8.4], [hx - 0.4, hy + 0.6]], 2.2), "wood-600", 1, INKED),
+    shape(`M${f.p(hx - 1.2, hy - 1)}Q${f.p(hx + 0.6, hy - 1.6)} ${f.p(hx + 3, hy + 0.4)}Q${f.p(hx + 3, hy + 1.2)} ${f.p(hx + 2.2, hy + 1.2)}L${f.p(hx - 0.8, hy + 1.3)}Z`, "wood-600", 1, INKED),
+    shape(f.poly([[hx - 0.8, hy - 0.6], [hx - 3, hy - 1.8], [hx - 1.4, hy + 0.2]]), "wood-700", 1, INKED),
+    shape(f.band(beam(-0.8), 0.45), "wood-800", 0.75),
+    shape(f.band(beam(0), 0.5), "wood-800", 1, INKED),
+    shape(prongs, "wood-800", 1),
+    shape(f.circle(hx + 0.7, hy - 0.2, 0.24) + f.circle(hx + 2.9, hy + 0.6, 0.3), "black", 0.9),
+  ];
+}
+
+/** R3397000: a mallard paddling, its waterline on the anchor, facing the way it faces: a grey body (main), a brown chest and wing with its blue flash, a green head on a white-ringed neck, an orange bill and a ripple ring; about 9 long and 7 tall at scale 1. */
+function duck(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const bob = between(rng, -0.4, 0.5);
+  const hx = 3.1;
+  const hy = -5.1 + bob;
+  return [
+    shape(f.ellipse(0, 0.2, 5.6, 0.9) + f.ellipse(0, 0.2, 4.4, 0.55), "white", 0.4),
+    shape(f.poly([[-3.4, -2.4], [-5.2, -3.6], [-4.6, -2.2], [-3.6, -1.4]]), "slate-900", 1, INKED),
+    shape(`M${f.p(-3.8, -1.4)}Q${f.p(-4.4, -3.4)} ${f.p(-2, -3.4)}L${f.p(1.6, -3.2)}Q${f.p(3.4, -3)} ${f.p(3.3, -1.4)}Q${f.p(2.8, 0)} ${f.p(0.4, 0)}L${f.p(-2.6, 0)}Q${f.p(-3.8, -0.2)} ${f.p(-3.8, -1.4)}Z`, "stone-500", 1, MAIN_INKED),
+    shape(f.ellipse(2.3, -1.7, 1.3, 1.2), "wood-700", 1),
+    shape(f.ellipse(-0.6, -2.1, 2.4, 0.85), "wood-600", 0.9, INKED),
+    shape(f.band([[-1.6, -1.95], [0.2, -1.95]], 0.4), "blue-600", 1),
+    shape(f.band([[2.4, -2.6], [hx - 0.2, hy + 0.8]], 1.3), "green-700", 1, INKED),
+    shape(f.band([[2.25, -2.85], [3.05, -2.75]], 0.35), "white", 1),
+    shape(f.circle(hx, hy, 1.25), "green-700", 1, INKED),
+    shape(f.poly([[hx + 0.9, hy - 0.1], [hx + 2.6, hy + 0.3], [hx + 0.9, hy + 0.6]]), "orange-400", 1, INKED),
+    shape(f.circle(hx + 0.3, hy - 0.4, 0.22), "black", 0.9),
+  ];
+}
+
 // Food
 
 /** An apple standing on the anchor, with a stem, a leaf and a shine; about 3.7 across and 4.3 tall (leaf included) at scale 1. */
@@ -809,6 +892,37 @@ function pancakes(at: PartPlace, rng: Rng): KitShape[] {
     shape(syrup, "wood-700", 0.95),
     shape(f.band([[-1.8, ty - 0.2], [0.4, ty - 0.45]], 0.18), "white", 0.3),
     shape(f.poly([[bx - 0.8, ty - 0.35], [bx + 0.6, ty - 0.35], [bx + 0.85, ty - 1.05], [bx - 0.55, ty - 1.05]]), "slate-100", 1, INKED),
+  ];
+}
+
+/** R3397000: a heap of walnuts on the anchor, two rows of round wrinkled shells (main) with their seams, and cracked half-shells and kernels on either side; about 18 wide and 5 tall at scale 1. */
+function walnuts(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const top = whole(rng, 2, 3);
+  let low = "";
+  let high = "";
+  let seams = "";
+  for (const x of [-4.5, -1.5, 1.5, 4.5]) {
+    const y = -1.35 + between(rng, -0.1, 0.1);
+    low += f.ellipse(x, y, 1.42, 1.3);
+    seams += f.band([[x + 0.1, y - 1], [x - 0.1, y + 0.9]], 0.25);
+  }
+  for (let k = 0; k < top; k += 1) {
+    const x = (k - (top - 1) / 2) * 3;
+    const y = -3.75 + between(rng, -0.1, 0.1);
+    high += f.ellipse(x, y, 1.42, 1.3);
+    seams += f.band([[x + 0.1, y - 1], [x - 0.1, y + 0.9]], 0.25);
+  }
+  const cup = (cx: number): string => `M${f.p(cx - 1.6, -1.2)}Q${f.p(cx - 1.6, 0.3)} ${f.p(cx, 0.3)}Q${f.p(cx + 1.6, 0.3)} ${f.p(cx + 1.6, -1.2)}Z`;
+  return [
+    shape(f.ellipse(0, 0.25, 9, 0.6), "black", 0.2),
+    shape(low, "wood-600", 1, MAIN_INKED),
+    shape(high, "wood-600", 1, MAIN_INKED),
+    shape(seams, "wood-900", 0.6),
+    shape(cup(-7.6) + cup(7.4), "wood-700", 1, INKED),
+    shape(f.ellipse(-7.6, -1.2, 1.6, 0.4) + f.ellipse(7.4, -1.2, 1.6, 0.4), "wood-900", 0.8),
+    shape(blob(f, rng, -7.6, -1.3, 0.8, 6) + blob(f, rng, 7.4 + between(rng, -0.3, 0.3), -1.2, 0.7, 6), "brass-500", 1),
+    shape(f.circle(-4.9, -1.9, 0.35) + f.circle(-0.4, -4.3, 0.35), "white", 0.3),
   ];
 }
 
@@ -1164,6 +1278,10 @@ export const NATURE_KIT = {
   bamboo: { category: "plants", draw: bamboo },
   cactus: { category: "plants", draw: cactus },
   fox: { category: "creatures", draw: fox },
+  // R3397000: the Meditative+ and Training Grounds Alt art scenes' goat, deer and duck.
+  goat: { category: "creatures", draw: goat },
+  deer: { category: "creatures", draw: deer },
+  duck: { category: "creatures", draw: duck },
   snake: { category: "creatures", draw: snake },
   grub: { category: "creatures", draw: grub },
   boar: { category: "creatures", draw: boar },
@@ -1178,6 +1296,8 @@ export const NATURE_KIT = {
   papaya: { category: "objects", draw: papaya },
   basket: { category: "objects", draw: basket },
   pancakes: { category: "objects", draw: pancakes },
+  // R3397000: the Meditative+ and Training Grounds Alt art scenes' walnuts.
+  walnuts: { category: "objects", draw: walnuts },
   shockwave: { category: "weather", draw: shockwave },
   tornado: { category: "weather", draw: tornado },
   flames: { category: "weather", draw: flames },

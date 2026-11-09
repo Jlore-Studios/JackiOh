@@ -403,14 +403,21 @@ export function useFitText(ref: RefObject<HTMLElement | null>, content: string, 
         cancel();
       };
     }
+    // A refit inside the observer's callback can resize the box it observes (an Extended art rules box grows with its
+    // text, R3343001), which the browser reports as "ResizeObserver loop completed with undelivered notifications".
+    let frame: number | undefined;
     const observer = new ResizeObserver(() => {
-      if (last === undefined || boxOf(element) === last) return;
-      refit();
+      if (last === undefined || boxOf(element) === last || frame !== undefined) return;
+      frame = requestAnimationFrame(() => {
+        frame = undefined;
+        refit();
+      });
     });
     observer.observe(element);
     return () => {
       refitOnFonts.delete(refit);
       observer.disconnect();
+      if (frame !== undefined) cancelAnimationFrame(frame);
       cancel();
     };
   }, [ref, content, floorPx, long]);

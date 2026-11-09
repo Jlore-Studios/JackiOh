@@ -201,9 +201,11 @@ describe("R3404000 Meditative Alt art restaged", () => {
     const offered = offeredIn("Meditative").sort();
     expect(offered).toHaveLength(54);
     expect(ALT_IDS).toEqual(offered);
-    // With Classic+'s (R3396000), the table holds those two sets' cards offered Alt art and no other.
-    expect(Object.keys(ALT_SCENE_RECIPES).sort()).toEqual([...offeredIn("Classic+"), ...offered].sort());
-    expect(Object.keys(ALT_SCENE_RECIPES)).toHaveLength(94);
+    // With Classic+'s (R3396000) and Meditative+'s and Training Grounds' (R3397000), the table holds those four sets'
+    // cards offered Alt art and no other.
+    const others = ["Classic+", "Meditative+", "Training Grounds"].flatMap(offeredIn);
+    expect(Object.keys(ALT_SCENE_RECIPES).sort()).toEqual([...others, ...offered].sort());
+    expect(Object.keys(ALT_SCENE_RECIPES)).toHaveLength(130);
     expect(ALT_PICTURE_CHANGE_MIN).toBe(0.6);
     const seen = new Map<string, string>(Object.entries(SCENE_RECIPES).map(([id, scene]) => [JSON.stringify(scene), id]));
     for (const id of ALT_IDS) {

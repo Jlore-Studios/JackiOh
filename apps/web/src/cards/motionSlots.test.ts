@@ -7,11 +7,13 @@ import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
+import { resetShedForTests, setShedLevel } from "../fx/shed.ts";
 import { REST_RANK, allocate, resetMotionSlotsForTests, slotRarityOf, useMotionSlot, usePageVisible, type SlotRank } from "./motionSlots.ts";
 
 afterEach(() => {
   cleanup();
   resetMotionSlotsForTests();
+  resetShedForTests();
 });
 
 const MAX = COSMETIC_FOIL_ANIMATED_MAX;
@@ -154,6 +156,33 @@ describe("R3340000 a re-rank keeps a face's age", () => {
     });
     // Face 0 is still the oldest after returning; reacquiring its claim must not displace face 1 as a fresh newest face.
     expect(holders(container)).toEqual(Array.from({ length: MAX }, (_unused, index) => index + 1));
+  });
+});
+
+describe("R3351000 at shed stage 3 only the face under the pointer keeps moving", () => {
+  it("R3351000 the faces past the pointer's own release their slots and reclaim their old rank on recovery", () => {
+    const rankOf = (id: number): SlotRank => (id === 0 ? HOVERED : REST_RANK);
+    const { container } = render(faces(3, rankOf));
+    expect(holders(container)).toEqual([0, 1, 2]);
+    // Shed to stage 3: the hovered face is the nearest to the pointer, so it alone keeps its claim.
+    act(() => {
+      setShedLevel(3);
+    });
+    expect(holders(container)).toEqual([0]);
+    // Recovery reclaims with the same age: the order is what it was.
+    act(() => {
+      setShedLevel(0);
+    });
+    expect(holders(container)).toEqual([0, 1, 2]);
+  });
+
+  it("R3351000 below stage 3 shedding changes no slot", () => {
+    const rankOf = (id: number): SlotRank => (id === 0 ? HOVERED : REST_RANK);
+    const { container } = render(faces(3, rankOf));
+    act(() => {
+      setShedLevel(2);
+    });
+    expect(holders(container)).toEqual([0, 1, 2]);
   });
 });
 

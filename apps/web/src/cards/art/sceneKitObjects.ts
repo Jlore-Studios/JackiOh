@@ -3,10 +3,12 @@
 // a gift box), tools and machines (a gear, pipes, an hourglass, an astrolabe, a spatula, bellows, a slate board),
 // weapons and training (an axe, a ring of blades, an arrow, a weapon rack, weights, knuckles), potions (a flask, a
 // cauldron), locks and chains (a padlock, a chain, a key), the dead and the humble (a candle, bones, pebbles,
-// bread), a drum, a lyre, a pair of scales and a bamboo chute. sceneKit.ts spreads the table into `SCENE_KIT`. Each
-// part keeps the kit's rules: one to twelve filled shapes drawn in its own frame (`local`), varied by the scene's
-// stream alone, every colour a palette name out of Radiant's gold window (brass and orange stand for gold), a glow
-// a stack of translucent shapes, and no two sub-paths of one shape overlapping but for a hole.
+// bread), a drum, a lyre, a pair of scales and a bamboo chute; R3397000: the Meditative+ and Training Grounds Alt art
+// scenes (#3397) added a cork board, a washing line, a picnic blanket and a hanging rope. sceneKit.ts spreads the
+// table into `SCENE_KIT`. Each part keeps the kit's rules: one to twelve filled shapes drawn in its own frame
+// (`local`), varied by the scene's stream alone, every colour a palette name out of Radiant's gold window (brass and
+// orange stand for gold), a glow a stack of translucent shapes, and no two sub-paths of one shape overlapping but for
+// a hole.
 
 import { fmt } from "./hash.ts";
 import { between, blob, DEGREES, INKED, local, MAIN, MAIN_INKED, shape, sparkle, spiralArm, turned, whole, type Local, type Point } from "./kitDraw.ts";
@@ -1024,6 +1026,118 @@ function chute(at: PartPlace, rng: Rng): KitShape[] {
   ];
 }
 
+// R3397000: the objects the Meditative+ and Training Grounds Alt art scenes added.
+
+/** R3397000: a cork board hung flat, centred on the anchor: a timber frame round its cork (main), the cork's speckle and four to six round pins, red and blue; about 24 wide and 16 tall at scale 1. */
+function corkboard(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  let specks = "";
+  for (let i = 0; i < 5; i += 1) {
+    for (let j = 0; j < 3; j += 1) specks += f.circle(-8.6 + i * 4.3 + between(rng, -1, 1), -4.4 + j * 4.4 + between(rng, -1, 1), 0.3);
+  }
+  const pins = whole(rng, 4, 6);
+  let red = "";
+  let blue = "";
+  let glints = "";
+  for (let k = 0; k < pins; k += 1) {
+    const x = -9 + (18 * (k + 0.5)) / pins + between(rng, -0.6, 0.6);
+    const y = k % 2 === 0 ? between(rng, -5.6, -4.4) : between(rng, 3.4, 5);
+    if (k % 3 === 1) blue += f.circle(x, y, 0.55);
+    else red += f.circle(x, y, 0.55);
+    glints += f.circle(x - 0.18, y - 0.18, 0.16);
+  }
+  return [
+    shape(box(f, -11.4, -7.2, 12.6, 8.8), "black", 0.2),
+    shape(box(f, -12, -8, 12, 8) + box(f, -10.8, -6.8, 10.8, 6.8), "wood-700", 1, INKED),
+    shape(box(f, -10.8, -6.8, 10.8, 6.8), "brass-600", 1, MAIN_INKED),
+    shape(specks, "wood-600", 0.6),
+    shape(red, "red-500", 1, INKED),
+    shape(blue, "blue-600", 1, INKED),
+    shape(glints, "white", 0.7),
+  ];
+}
+
+/** R3397000: a washing line strung between two T-topped posts 28 apart about the anchor, sagging between them, two or three pegs clipped on it; about 30 wide and 16 tall at scale 1. */
+function washingLine(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const sag = between(rng, 2, 4);
+  const on = (t: number): Point => [-14 + 28 * t, -15 + 4 * sag * t * (1 - t)];
+  const line: Point[] = [];
+  for (let i = 0; i <= 12; i += 1) line.push(on(i / 12));
+  const count = whole(rng, 2, 3);
+  let pegs = "";
+  for (let k = 0; k < count; k += 1) {
+    const [px, py] = on((k + 1) / (count + 1) + between(rng, -0.04, 0.04));
+    pegs += box(f, px - 0.3, py - 0.9, px + 0.3, py + 0.8);
+  }
+  return [
+    shape(f.ellipse(-14, 0.2, 1.8, 0.4) + f.ellipse(14, 0.2, 1.8, 0.4), "black", 0.2),
+    shape(seg(f, [-14, 0], [-14, -15.2], 0.9) + seg(f, [14, 0], [14, -15.2], 0.9), "wood-700", 1, MAIN_INKED),
+    shape(seg(f, [-15.4, -15.8], [-12.6, -15.8], 0.6) + seg(f, [12.6, -15.8], [15.4, -15.8], 0.6), "wood-800", 1, INKED),
+    shape(f.band(line, 0.28), "slate-700", 0.9),
+    shape(pegs, "wood-600", 1, INKED),
+  ];
+}
+
+/** R3397000: a checked picnic blanket spread on the ground in perspective, its near edge centred on the anchor: the cloth (main), its red checks, a hem and one corner folded back; about 30 wide and 9 deep at scale 1. */
+function picnicBlanket(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const skew = between(rng, -1.5, 1.5);
+  const tilt = between(rng, -0.6, 0.6);
+  const corners = { nl: [-15, tilt] as Point, nr: [15, -tilt] as Point, fl: [-11 + skew, -9 + tilt] as Point, fr: [11 + skew, -9 - tilt] as Point };
+  const at2 = (u: number, v: number): Point => {
+    const near: Point = [corners.nl[0] + (corners.nr[0] - corners.nl[0]) * u, corners.nl[1] + (corners.nr[1] - corners.nl[1]) * u];
+    const far: Point = [corners.fl[0] + (corners.fr[0] - corners.fl[0]) * u, corners.fl[1] + (corners.fr[1] - corners.fl[1]) * u];
+    return [near[0] + (far[0] - near[0]) * v, near[1] + (far[1] - near[1]) * v];
+  };
+  const cols = 6;
+  const rows = 4;
+  let checks = "";
+  for (let i = 0; i < cols; i += 1) {
+    for (let j = 0; j < rows; j += 1) {
+      if ((i + j) % 2 !== 0) continue;
+      checks += f.poly([at2(i / cols, j / rows), at2((i + 1) / cols, j / rows), at2((i + 1) / cols, (j + 1) / rows), at2(i / cols, (j + 1) / rows)]);
+    }
+  }
+  const { nl, nr, fl, fr } = corners;
+  return [
+    shape(f.poly([[nl[0] + 0.4, nl[1] + 0.8], [nr[0] + 0.4, nr[1] + 0.8], [fr[0], fr[1] + 0.4], [fl[0], fl[1] + 0.4]]), "black", 0.2),
+    shape(f.poly([nl, nr, fr, fl]), "white", 1, MAIN_INKED),
+    shape(checks, "red-500", 0.9),
+    shape(f.band([[nl[0] + 0.6, nl[1] - 0.5], [nr[0] - 0.6, nr[1] - 0.5]], 0.35), "red-600", 0.7),
+    shape(f.poly([[nr[0], nr[1]], [nr[0] - 4.2, nr[1] - 0.2], [nr[0] - 1.6, nr[1] - 2.6]]), "white", 1, INKED),
+  ];
+}
+
+/** R3397000: a rope hanging from the box's top down to the anchor, bowing a little as it takes the weight: its strand (main), a lit side and twists, and a knot with two loose ends at the anchor; about 3 wide at scale 1. */
+function rope(at: PartPlace, rng: Rng): KitShape[] {
+  const f = local(at);
+  const top = Math.min(-2, (-2 - at.y) / at.s);
+  const bow = between(rng, -1.2, 1.2);
+  const along = (t: number): Point => [bow * Math.sin(Math.PI * t), top + (-1.4 - top) * t];
+  const strand: Point[] = [];
+  const lit: Point[] = [];
+  for (let i = 0; i <= 10; i += 1) {
+    const [x, y] = along(i / 10);
+    strand.push([x, y]);
+    lit.push([x - 0.3, y]);
+  }
+  const length = -1.4 - top;
+  const marks = Math.max(1, Math.floor(length / 2.4));
+  let twists = "";
+  for (let k = 0; k < marks; k += 1) {
+    const [x, y] = along((k + 0.5) / marks);
+    twists += seg(f, [x - 0.5, y - 0.4], [x + 0.5, y + 0.4], 0.22);
+  }
+  return [
+    shape(f.band(strand, 1.1), "wood-600", 1, MAIN_INKED),
+    shape(f.band(lit, 0.25), "brass-500", 0.45),
+    shape(twists, "wood-800", 0.7),
+    shape(seg(f, [-0.3, 0.4], [-0.6, 2.6], 0.6) + seg(f, [0.4, 0.4], [0.8, 2.2], 0.6), "wood-600", 1, INKED),
+    shape(f.ellipse(0, -0.6, 1.2, 1), "wood-700", 1, INKED),
+  ];
+}
+
 export const OBJECTS_KIT = {
   scroll: { category: "objects", draw: scroll },
   tome: { category: "objects", draw: tome },
@@ -1060,4 +1174,9 @@ export const OBJECTS_KIT = {
   bread: { category: "objects", draw: bread },
   quill: { category: "objects", draw: quill },
   chute: { category: "objects", draw: chute },
+  // R3397000: the Meditative+ and Training Grounds Alt art scenes' cork board, washing line, picnic blanket and rope.
+  corkboard: { category: "objects", draw: corkboard },
+  "washing-line": { category: "objects", draw: washingLine },
+  "picnic-blanket": { category: "objects", draw: picnicBlanket },
+  rope: { category: "objects", draw: rope },
 } as const satisfies Readonly<Record<string, KitPart>>;

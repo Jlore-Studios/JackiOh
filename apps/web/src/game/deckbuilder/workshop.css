@@ -1008,6 +1008,12 @@
     min-width: 0;
   }
 
+  /* "Back to decks" (#3380) keeps to one line, so the head stays one control tall; the name field gives up the width. */
+  .deckbuilder.app-shell .ws-back {
+    flex: none;
+    white-space: nowrap;
+  }
+
   .deckbuilder.app-shell .portrait-current {
     padding: 0;
   }
