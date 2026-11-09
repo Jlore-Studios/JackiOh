@@ -17109,6 +17109,7 @@
     "3439": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-08T21:12:01Z",
         "difficulty": "hard",
@@ -17117,6 +17118,7 @@
         "why": "Rule 1, engine rules: the fix changes when crafted traps fire in the resolution loop, in crates/engine/src/subsystems/craft.rs"
       },
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-11-08T23:50:42Z",
         "family": "claude",
