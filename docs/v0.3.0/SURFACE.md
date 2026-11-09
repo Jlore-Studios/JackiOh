@@ -1042,7 +1042,9 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   both seats through the `deal_emote_hand` binding.
 - **Loadouts** (#1834, R1834000–R1834005): two frames ride beside `portraits`, never in `PlayerView`.
   `{ "type": "loadouts", "p1", "p2" }` (`ServerMessage::Loadouts { p1, p2 }`), each a `SeatLoadout`
-  `{ table, field, cardBack, foil, finish, border }` of registry ids, goes on `hello` and attach
+  `{ table, field, cardBack, foil, finish, border, starshipHull, starshipLivery, starshipTrail,
+  starshipPieceSkin }` of registry ids (the four Starship picks since #3335, R3335000, each its kind's
+  default when a stored frame lacks it), goes on `hello` and attach
   before the view and to a watcher as it attaches; `{ "type": "cardLoadouts", "seat", "cards" }`
   (`ServerMessage::CardLoadouts { seat, cards }`), `cards` a list of `{ cardId, foil?, finish?,
   border?, fullArt? }` (`fullArt` `true` for the card's still Epic full art, or a Legendary's, a

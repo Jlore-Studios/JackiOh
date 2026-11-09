@@ -142,6 +142,7 @@ fn won_game(profile: &str, match_id: &str, tally: GameTally, at: i64) -> GameSum
         bot: false,
         tally,
         proficiency: Vec::new(),
+        fleet: Default::default(),
     }
 }
 

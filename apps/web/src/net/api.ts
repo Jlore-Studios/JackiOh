@@ -13,6 +13,7 @@ import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
 import type { CardTier } from "../wire/generated/CardTier.ts";
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
+import type { FleetTrackView } from "../wire/generated/FleetTrackView.ts";
 import {
   forgetRead,
   freshRead,
@@ -833,8 +834,11 @@ export type TrackView = {
   unlocked: boolean;
 };
 
-/** `GET /api/tracks`: one track per shipped set, in catalog order (R1302003 unlocks them). */
-export type TracksResponse = { tracks: TrackView[] };
+/**
+ * `GET /api/tracks`: one track per shipped set, in catalog order (R1302003 unlocks them). R3335001: and the Fleet
+ * track's, which a server from before #3335 leaves out.
+ */
+export type TracksResponse = { tracks: TrackView[]; fleet?: FleetTrackView };
 
 export function getTracks(token: string): Promise<TracksResponse> {
   return keptGet<TracksResponse>(keptPaths.tracks, token);

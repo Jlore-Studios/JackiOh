@@ -30,6 +30,7 @@ use serde_json::{Value, json};
 use tokio::task::JoinHandle;
 
 use jackioh_engine::{Action, Difficulty, LastBoardEntry, PlayerId};
+use jackioh_shared::economy::fleet::FleetPlay;
 
 use crate::actor::engine::{self, Pinned};
 use crate::api::collection::caller_profile;
@@ -350,6 +351,8 @@ async fn settle(
         tally: tally_seat(verified.seat.as_ref(), verified.attacks, &app.catalog.defs),
         // R3013000: a game against the AI counts no proficiency.
         proficiency: Vec::new(),
+        // R3335001: nor any Fleet XP: the browser ran it.
+        fleet: FleetPlay::default(),
     };
     let board = live.then_some(verified.last_board.as_slice());
     Ok(match pay_with_retries(app, &seed, &summary, board).await? {

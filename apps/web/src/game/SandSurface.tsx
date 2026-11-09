@@ -44,6 +44,8 @@ export const TAP_FAMILY: Readonly<Record<TableId, TapFamily>> = {
   "table-neon-grid": "neon",
   "table-ancient-map": "parchment",
   "table-astral": "astral",
+  // R3335001: the Fleet track's playmat, the neon grid recolored, taps as the grid does.
+  "table-stinkyscape": "neon",
 };
 
 /** The family of `table` (Board's data-table); absent or unknown is the default, which taps as sand. */

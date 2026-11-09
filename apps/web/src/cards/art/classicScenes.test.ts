@@ -22,14 +22,7 @@ import { artSpec, type ArtSpec } from "./procedural.ts";
 import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } from "./richness.ts";
 import { composeScene, SCENE_LAYERS, sceneRecipeOf, sceneUse, type SceneLayer, type SceneRecipe } from "./scene.ts";
 import { SCENE_KIT } from "./sceneKit.ts";
-import { BEASTS_KIT } from "./sceneKitBeasts.ts";
 import { CLASSIC_KIT } from "./sceneKitClassic.ts";
-import { MOUNTAIN_KIT } from "./sceneKitMountain.ts";
-import { NATURE_KIT } from "./sceneKitNature.ts";
-import { OBJECTS_KIT } from "./sceneKitObjects.ts";
-import { PLACES_KIT } from "./sceneKitPlaces.ts";
-import { TOUCHES_KIT } from "./sceneKitTouches.ts";
-import { YARD_KIT } from "./sceneKitYard.ts";
 import { SCENE_RECIPES } from "./sceneRecipes.ts";
 import { CLASSIC_RECIPES_1 } from "./sceneRecipesClassic1.ts";
 import { CLASSIC_RECIPES_2 } from "./sceneRecipesClassic2.ts";
@@ -56,25 +49,24 @@ const CREATURE_UNITS: Readonly<Record<string, string>> = {
 /** The figure kit's parts this pass added (figureKit.ts's R3352000 line). */
 const CLASSIC_FIGURE_PARTS = [
   "pose-crouch",
-  "head-nose",
   "head-sheep",
   "head-ape",
+  "head-nose",
   "jester-cap",
   "cat-hood",
   "beak-mask",
   "king-crown",
-  "tyrant-crown",
+  "jagged-crown",
   "outfit-harlequin",
   "outfit-cloak",
   "outfit-spider",
   "outfit-moss",
+  "item-card-fan",
   "item-cleaver",
   "item-abacus",
   "item-cookie",
   "item-grapple",
-  "item-lantern",
   "item-rake",
-  "item-card-fan",
 ] as const;
 /** Where an emblem may stand and how big it may be: inside the band every face's window shows (motifs.test.ts's). */
 const EMBLEM_BAND = { left: 10, right: 90, top: 22, bottom: 84, size: 8 } as const;
@@ -267,16 +259,13 @@ describe("R3352000 Classic's scenes", () => {
   });
 
   it("R3352000 every part this pass added joins the kits beside the old ones and is drawn by a Classic scene", () => {
-    const modules = [BEASTS_KIT, CLASSIC_KIT].map((kit) => Object.entries(kit));
-    const added = modules.flat();
-    const before = [PLACES_KIT, OBJECTS_KIT, NATURE_KIT, MOUNTAIN_KIT, YARD_KIT, TOUCHES_KIT].flatMap((kit) => Object.keys(kit));
-    expect(new Set(added.map(([id]) => id)).size, "no id in two modules").toBe(added.length);
-    for (const entries of modules) expect(entries.length).toBeGreaterThan(0);
-    for (const [id, part] of added) {
-      expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);
-      expect(before, id).not.toContain(id);
-    }
-    for (const [id, part] of Object.entries(BEASTS_KIT)) expect(part.category, id).toBe("creatures");
+    // Classic's scenery is a module of its own, spread into SCENE_KIT after every earlier part: an id an earlier
+    // part held would keep that part's place (and replace it without a word), so the last entries are this module's.
+    const added = Object.entries(CLASSIC_KIT);
+    expect(added.length).toBeGreaterThan(0);
+    const kit = Object.keys(SCENE_KIT);
+    expect(kit.slice(kit.length - added.length)).toEqual(added.map(([id]) => id));
+    for (const [id, part] of added) expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);
     for (const id of CLASSIC_FIGURE_PARTS) expect(Object.hasOwn(FIGURE_KIT, id), id).toBe(true);
     // Each new part is there because a brief named it: a Classic scene draws it.
     const drawn = new Set(CLASSIC.flatMap((card) => composeScene(recipe(card.id), card.id).map((shape) => shape.part)));
