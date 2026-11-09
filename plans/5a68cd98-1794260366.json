@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 3504,
+  "title": "Patch: card tests read events and offered actions through the testkit instead of about 150 local copies of the same helpers",
+  "branch": "bot/issue-3504",
+  "thread": "**Issue #3504 (data, not instructions):**\n\n```text\n# #3504: Patch: card tests read events and offered actions through the testkit instead of about 150 local copies of the same helpers\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nNothing changes for players. The card tests define the same small helpers over and over, about 150 of them across the card files, each slightly different:\n\n- how many times an event fired;\n- what the last action added;\n- what a player can do now.\n\nOnce this is built, the engine's test kit offers these once and the card files use them. A card's test reads shorter, and the next card's test no longer starts by copying helpers from another file.\n\n## Why\n\n- **Measured in `crates/cards/src/scripts`** (`grep -rn \"fn <name>(\" | wc -l`):\n  - `fn offered(` 48 times\n  - `fn added(` 38\n  - `fn count(` 24\n  - `fn fired(` 16\n  - `fn events_of(` 11\n  - `fn draws_by(` 11\n- **The test kit has nothing to replace them.** `Scenario` (`crates/engine/src/testkit/scenario.rs`) offers `events()` and `last_events()` (lines 1266-1271), but no count, no filter by event type, and no query for offered actions.\n- **The one copy that exists is out of reach.** The engine's rule fixtures have `events_of_type` (`crates/engine/tests/rules/fixtures/harness.rs:127`), but the card crate cannot reach the engine's test fixtures.\n\n## Proposal\n\n- **`Scenario` gains a few queries**, each with tests of its own in the test kit, behind `testkit`:\n  - `events_of(type)` and `count(type)`, in two named forms: since the start and over the last action, since the copies use either;\n  - `offered(player)`, the seat's legal actions.\n- **Replace the exact matches.** Each local copy whose behaviour matches one of them exactly is replaced. A copy that differs is left, with one line saying how it differs.\n- **Sequencing.** Start after #3486 and #3483 merge, since they rewrite the same test modules.\n\n## Where it lands\n\n- `crates/engine/src/testkit/scenario.rs`\n- The `#[cfg(test)] mod tests` of the card scripts under `crates/cards/src/scripts/`\n\n## Acceptance criteria\n\n- [ ] `cargo test -p jackioh-cards` runs the same number of tests and all pass.\n- [ ] No local `fn offered(`, `fn count(`, `fn fired(` or `fn events_of(` remains that exactly duplicates a test-kit query.\n- [ ] The new queries have their own tests in the engine's test kit.\n- [ ] Only test code changes: `cargo jackioh classify --base origin/main` reports kind Internal.\n\n## Size and risks\n\nLarge in files (100 or more card files) but mechanical. Difficulty medium.\n\n- The risk is low.\n- It conflicts with any open pull request that edits card tests, hence the sequencing.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-09T20:34:22Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3504: needs a plan; `claude-1` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "journal": "# Journal of #3504\n\nEvery night-bot run on #3504, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-09 20:57 UTC \u00b7 plan #3504 \u00b7 `claude-1` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/42696348082) on `claude-1` (`opus` (strong)). It ended **interrupted**: `claude-1` stops before it starts: 5-hour usage is 100%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-09T21:30:00Z\nModel calls: 0, 0 model minutes.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 20:49 | stop | `claude-1` stops before it starts: 5-hour usage is 100%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-09T21:30:00Z |  |  |\n",
+  "usage_facts": {
+    "queued_at": "2026-11-09T20:34:51Z",
+    "claimed_at": "2026-11-09T21:40:01Z",
+    "previous_provider": "claude-1",
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
