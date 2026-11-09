@@ -16207,9 +16207,11 @@
         "by": "`muse` (medium)",
         "sha": "eac0cd13a9a20ca4d38055cb8a11bff5442d16c1"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-09T14:22:19Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-09T15:25:58Z",
         "family": "muse",
@@ -16219,6 +16221,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- File list matches the plan (20 files; `resume.ts` needed no change \u2014 it already strips `run` from page memory). Waiting on the spec check and web test runs now.Both checks are still running; waiting for their terminal results before finishing.\n- Spec check passed (`1872 rulings, 4840 proofs, 60184 citations in 3939 files, 24847 links: ok`). The web test run is still going; waiting for its terminal result.Still running \u2014 waiting for the terminal result to confirm the web tests before the final report.<!-- bot: {\"status\": \"done\", \"title\": \"P\u2026\n- What changed and why: a run fight left unfinished now resumes where it stood instead of being redealt from its seed, per new ruling [R3476000](/home/agent-muse/actions-runner-2/_work/_temp/work/item-3476/spec/rulings/R3476000.md) (amends R2706000/R2972000, \u00a715.6 edited). The shared host emits run-f\u2026\n- How I tested it (all observed): `cargo test -p jackioh-shared --test practice r3476000` (2 passed: save+resume to same hash/snapshot/AI stream with mirrored play, cross-slot/another-fight refusal), plus updated `r668`/`b22`/`b25` tests; web batch `saveStore, controller, driver-run, FightScreen, sto\u2026\n- Decisions the issue didn't settle: kept the old leave-dialog zh-CN key next to the new one; resume must name the fight's seed (FightScreen builds `seed: fight.seed`, so production always matches); `clearStoredRunFight` deletes page-side without ever reading the log. One pre-existing gap to know: ba\u2026\n- Review twice: the `isRun` routing in `driver.ts` (Save output slot by game kind, resume read by `config.run`) and the FightScreen resume-then-fallback-start effect, where a refused resume flashes the stopped screen only until the fallback start answers.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-3476 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-3476/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 3476,
       "kind": "review",
       "live": "reviewing",
