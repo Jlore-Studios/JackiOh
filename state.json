@@ -17871,12 +17871,19 @@
       "interruptions": 0,
       "issue": 3404,
       "kind": "revise",
+      "last_findings": [],
       "live": "fixing-ci",
       "merge_owner": "claude-6",
+      "paused": {
+        "at": "2026-11-09T04:00:06Z",
+        "interrupt": "usage",
+        "provider": "claude-8"
+      },
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-09T03:23:40Z",
       "requested_by": "jgoetzmann-bot",
+      "round_tier": "",
       "run_id": "42556961902",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -17884,6 +17891,7 @@
       "started_at": "2026-11-09T03:32:25Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
