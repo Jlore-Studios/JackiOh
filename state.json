@@ -17897,11 +17897,6 @@
       "last_findings": [],
       "live": "fixing-ci",
       "merge_owner": "claude-6",
-      "paused": {
-        "at": "2026-11-09T04:00:06Z",
-        "interrupt": "usage",
-        "provider": "claude-8"
-      },
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-09T03:23:40Z",
