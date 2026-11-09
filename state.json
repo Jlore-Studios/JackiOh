@@ -17493,6 +17493,8 @@
       }
     },
     "3454": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-09T00:02:23Z",
@@ -17506,8 +17508,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #3383 from the after-merge spot-check\"} -->\n- ## What changed and why\n- The hover preview's tilt pose was read against the preview's own box, but the pointer is never inside that box (`placePreview` stands the preview `PREVIEW_GAP_PX` clear of the anchor). The pose therefore clamped to \u00b11 on one axis for as long as the preview showed. The preview now reads the pose aga\u2026\n- - [tilt.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-3412/apps/web/src/cards/tilt.ts): `Box` is now exported as `TiltBox`; `attach` takes an anchor ref and window mode reads `anchor.current` when present (host's box otherwise, and always in host/drag modes); `useCardTilt` takes an opti\u2026\n- - [CardFace.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-3412/apps/web/src/cards/CardFace.tsx): new `tiltAnchor?: TiltBox` prop, passed through to `useCardTilt`.\n- - [HoverPreview.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-3412/apps/web/src/cards/inspect/HoverPreview.tsx): passes `tiltAnchor={anchor}`, the same rect `placePreview` places it by.\n- - [tilt.test.tsx](/home/agent-muse/actions-runner/_work/_temp/work/item-3412/apps/web/src/cards/tilt.test.tsx): anchored preview test (level at anchor middle, cap at edge, fraction in between, cap held far past), anchor-change test (new anchor read at next move, no re-attach), the old window body k\u2026\n- - Docs: `spec/rulings/R3344001.md` amended (\"The tilt\", \"Where it runs\", \"Rejected\" now names the preview's own box and the keep-the-slot alternative); the R3344001 paragraph in `spec/11-rulings.md` edited in place plus the \"Amended by issue #3412\" sentence; `apps/web/README.md` \"Card depth\" `\"wind\u2026\n- ## How it was tested\n- - `pnpm --dir apps/web test src/cards/tilt.test.tsx`: 24 passed.\n- - `pnpm --dir apps/web test src/cards/depth.test.tsx src/cards/CardFace.test.tsx src/cards/inspect`: 9 files, 254 passed.\n- - `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web/src/cards`, `cargo fmt --check`: all clean.\n- - `cargo jackioh spec check`: ok (1853 rulings, 4770 proofs, 59108 citations).\n- - Harness scope `vitest run --project web --changed origin/main` (with the harness's excludes): 218 files, 4421 passed, 109 skipped \u2014 none of the skips are in touched files (verified no `.skip` in them) and no test was weakened or removed.\n- ## Decisions the issue did not settle\n- - `spec/pending/3344.md` is already folded (absent on disk), so per the plan's Risks the R3344001 paragraph was edited where it stands in `spec/11-rulings.md` \u2014 one paragraph in place, no fold or index run.\n- - The plan's suggested `attach`/`poseAt`/`useCardTilt` shape was followed verbatim; the only addition is one doc sentence on `attach` for the new parameter.\n- - The alternative from the issue (letting the hovered hand card keep the slot) was rejected as the plan directs: the preview would then not tilt at all. It is recorded in R3344001's Rejected list.\n- ## For the reviewer\n- Worth a second look: the `??` fallback in `boxOf` (anchor `undefined` \u2192 host rect) and the anchor-change test pinning no-reattach; everything else follows the existing slot/priority behavior untouched.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3412 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3412/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3412,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-09T00:50:00Z",
         "from_run": "42538038001",
         "gates": [
           {
@@ -17566,8 +17571,15 @@
         "source": "build",
         "until": "2026-11-09T01:17:47Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-09T00:47:47Z",
+      "run_id": "pending:88adb097-1794185367",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-09T00:50:00Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -17581,9 +17593,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T00:33:42Z",
+    "at": "2026-11-09T00:50:00Z",
     "url": "",
-    "what": "plan #3404 on claude-6"
+    "what": "review #3454 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T00:29:20Z",
