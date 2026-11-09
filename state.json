@@ -17166,10 +17166,12 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "at": "2026-11-09T04:01:21Z",
-        "built_by": "",
+        "at": "2026-11-09T06:58:40Z",
+        "built_by": "claude-1",
         "by": "`claude` (strong)",
-        "sha": "269ae59183bc37eb25c960ed1801b7fc4e545c91"
+        "carried_from": "269ae59183bc37eb25c960ed1801b7fc4e545c91",
+        "resolved_by": "`claude` (strong)",
+        "sha": "abcf0d8274cc36927e6dbff97185b198e6421cce"
       },
       "died": 0,
       "difficulty": "hard",
