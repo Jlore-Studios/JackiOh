@@ -3,11 +3,11 @@
 // signature in ink and light. After its takeover's hold the colossal scholar unfurls in a wash of ink, a
 // hundred glowing brushes spinning into a ring behind it, and lands at the slam under mythic rays. Its Cry's
 // brush ring then stops on each pick in turn: on each Claude's Datacenter it summons into its backrow (its
-// `summoned`, a card with no entrance of its own), on each enemy card the board or the viewer's hand shows as
-// it dims (`degraded`; one in a Deck or a hidden hand has no anchor, so its row plays), and on each card it
-// adds, whose card back flies from it to the hand pile, a sheen there on its owner's seat alone (a Radiant
-// card's face is theirs to read). The AI Girlfriend and the Yile's Viruses it summons play their own
-// entrances, never this recipe. It keys on its play and the event's player and zone, never on a card's
+// `summoned`, after the Datacenter's own entrance, R3399000), on each enemy card the board or the viewer's
+// hand shows as it dims (`degraded`; one in a Deck or a hidden hand has no anchor, so its row plays), and on
+// each card it adds, whose card back flies from it to the hand pile, a sheen there on its owner's seat alone
+// (a Radiant card's face is theirs to read). The AI Girlfriend and the Yile's Viruses it summons play their
+// own entrances, never this recipe. It keys on its play and the event's player and zone, never on a card's
 // definition, and draws card backs alone (R202).
 
 import { animTestid, locateInstance } from "../../../game/animations.ts";

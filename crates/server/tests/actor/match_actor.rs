@@ -2090,6 +2090,70 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
             jackioh_engine::find_instance(&state, &plantation).expect("the Plantation is on the field");
         assert_eq!(card.counters.plague, Some(1));
     }
+
+    /// The (attacker, target) ids of `actions`' attacks, or of `forecast.attacks`, in their order.
+    fn attack_ids(actions: &[Value]) -> Vec<(Value, Value)> {
+        actions
+            .iter()
+            .filter(|action| action.get("type").is_none_or(|kind| kind == "attack"))
+            .map(|action| (action["attackerId"].clone(), action["targetId"].clone()))
+            .collect()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3477000_each_seats_view_frame_carries_the_forecast_of_its_listed_attacks() {
+        let h = harness(Options {
+            decks: Decks::Scripted {
+                p1: vec![VANILLA],
+                p2: vec![VANILLA],
+            },
+            ..Options::default()
+        })
+        .await;
+        let mine = in_hand(&h.p1, VANILLA);
+        let theirs = in_hand(&h.p2, VANILLA);
+        send(&h, &h.p1, "p1-vanilla", listed_on(&h.p1, "play", &mine)).await;
+        send(&h, &h.p1, "p1-end", json!({ "type": "endTurn" })).await;
+        send(&h, &h.p2, "p2-vanilla", listed_on(&h.p2, "play", &theirs)).await;
+        send(&h, &h.p2, "p2-end", json!({ "type": "endTurn" })).await;
+        assert_eq!(errors(&h.p1), Vec::<Value>::new());
+        assert_eq!(errors(&h.p2), Vec::<Value>::new());
+
+        for socket in [&h.p1, &h.p2] {
+            let frames = socket.of_type("view");
+            assert!(!frames.is_empty());
+            for frame in frames {
+                assert!(
+                    frame["forecast"]["attacks"].is_array(),
+                    "R3477000: a seat's view frame carries its forecast: {}",
+                    frame["forecast"]
+                );
+            }
+        }
+        // p1's turn 2: its Vanilla may hit p2's or p2's hero, and the forecast names exactly those.
+        let frame = h.p1.of_type("view").last().cloned().expect("a view frame");
+        let legal = frame["legal"].as_array().cloned().expect("the legal array");
+        let forecast = frame["forecast"]["attacks"]
+            .as_array()
+            .cloned()
+            .expect("the forecast's attacks");
+        assert!(attack_ids(&legal).len() >= 2, "the premise: {legal:?}");
+        assert_eq!(attack_ids(&forecast), attack_ids(&legal));
+        let trade = forecast
+            .iter()
+            .find(|entry| entry["attackerId"] == mine.as_str() && entry["targetId"] == theirs.as_str())
+            .expect("the Vanilla-on-Vanilla attack is forecast");
+        // Two 4/4s trade: each deals the other 4 and both are destroyed.
+        assert_eq!(
+            (
+                &trade["dealt"],
+                &trade["taken"],
+                &trade["kills"],
+                &trade["survives"]
+            ),
+            (&json!(4), &json!(4), &json!(true), &json!(false))
+        );
+    }
 }
 
 // R643 — the emote protocol and its shared rate limit (§9.5, §10.10)

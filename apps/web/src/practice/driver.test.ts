@@ -144,9 +144,9 @@ function untilHumanMain(d: Driver, human: PlayerId, from: PracticeSnapshot): Pra
 }
 
 /**
- * B34, for one response: the snapshot holds exactly its four keys (`lastBoard` once over, `lethal`
+ * B34, for one response: the snapshot holds exactly its five keys (`lastBoard` once over, `lethal`
  * while R2102000's hint is lit), each the true state's, and no AI hand or library id that the human's
- * own view does not already name appears anywhere in it.
+ * own view does not already name appears anywhere in it. R3477000: `forecast` is one of the five.
  */
 function expectRule7(d: Driver, response: PracticeResponse, human: PlayerId, ai: PlayerId): void {
   const snapshot = snapshotOf(response);
@@ -158,11 +158,13 @@ function expectRule7(d: Driver, response: PracticeResponse, human: PlayerId, ai:
   expect(Object.keys(snapshot).sort()).toEqual([
     "aiToAct",
     "error",
+    "forecast",
     ...(over ? ["lastBoard"] : []),
     "legal",
     ...(lethal ? ["lethal"] : []),
     "view",
   ]);
+  expect(snapshot.forecast).toEqual(combatForecast(state, human));
   if (over) expect(snapshot.lastBoard).toEqual(lastBoardFor(state, human));
   if (lethal) expect(lethalHint(state, human)).toBe(true);
 
@@ -955,7 +957,7 @@ describe("R508 a practice game's last board", () => {
 
 // R3100000: a lesson's snapshot carries the engine's forecast of the human's attacks, for its coach
 describe("R3100000 a lesson's snapshot adds the engine's combat forecast", () => {
-  it("R3100000 a lesson's every snapshot holds combatForecast(state, human), and a free game's none", () => {
+  it("R3100000 a lesson's every snapshot holds combatForecast(state, human)", () => {
     const lesson = TUTORIAL_LESSONS[0];
     if (lesson === undefined) throw new Error("the tutorial has no lesson");
     const d = driver();
@@ -967,8 +969,15 @@ describe("R3100000 a lesson's snapshot adds the engine's combat forecast", () =>
       expect(Object.keys(last.forecast ?? {}).sort()).toEqual(["attacks", "lethal"]);
       last = snapshotOf(d.send(last.aiToAct ? { type: "aiStep" } : { type: "act", action: last.legal.find((each) => each.type === "endTurn") ?? last.legal[0] ?? { type: "concede" } }));
     }
+  });
+
+  it("R3477000 a free game's snapshot holds combatForecast(state, human) too", () => {
     const free = driver();
-    expect(snapshotOf(free.send({ type: "start", config: config({ seed: "r3100000-free", humanSeat: "p1" }) })).forecast).toBeUndefined();
+    let last = snapshotOf(free.send({ type: "start", config: config({ seed: "r3477000-free", humanSeat: "p1" }) }));
+    for (let n = 0; n < 12 && last.view.result === null; n += 1) {
+      expect(last.forecast, `request ${String(n)}`).toEqual(combatForecast(stateOf(debugOf(free)), "p1"));
+      last = snapshotOf(free.send(last.aiToAct ? { type: "aiStep" } : { type: "act", action: last.legal.find((each) => each.type === "endTurn") ?? last.legal[0] ?? { type: "concede" } }));
+    }
   });
 });
 

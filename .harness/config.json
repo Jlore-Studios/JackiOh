@@ -14,7 +14,8 @@
         "label_prefix": "squishy:",
         "home": ".squishy",
         "token_env": "SQUISHY_GITHUB_TOKEN",
-        "workflow": "squishy-run.yml"
+        "workflow": "squishy-run.yml",
+        "marker": "<!-- jackioh-squishy -->"
       }
     ]
   },

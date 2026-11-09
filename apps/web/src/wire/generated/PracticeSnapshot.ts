@@ -39,6 +39,6 @@ replay?: KeptAs,
  */
 lethal?: true, 
 /**
- * R3100000: in a tutorial lesson, what each of the human's legal attacks would do.
+ * R3100000, R3477000: what each of the human's legal attacks would do, in every snapshot.
  */
 forecast?: CombatForecast, };

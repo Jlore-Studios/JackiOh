@@ -45,6 +45,8 @@ const CREATURE_UNITS: Readonly<Record<string, string>> = {
 };
 /** The parts sceneKit.ts draws itself: the first kit's 56 (#3331) and the 199 Core's scenes added beside them (R3392000). */
 const FIRST_KIT_PARTS = 56 + 199;
+/** The parts Stinkyscape's pass (#3391, R3391000) added to sceneKit.ts itself, after the first kit's. */
+const STINKYSCAPE_KIT_PARTS = 81;
 /** Where an emblem may stand and how big it may be: inside the band every face's window shows (motifs.test.ts's). */
 const EMBLEM_BAND = { left: 10, right: 90, top: 22, bottom: 84, size: 8 } as const;
 
@@ -242,8 +244,10 @@ describe("R3390000 Classic+ drawn as scenes", () => {
     expect(new Set(added.map(([id]) => id)).size, "no id in two modules").toBe(added.length);
     for (const entries of modules) expect(entries.length).toBeGreaterThan(0);
     for (const [id, part] of added) expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);
-    // None takes the place of one of the first kit's parts: they follow its own in order (the modules #3393 and #3401
-    // added follow them, and meditativeScenes.test.ts counts the whole kit).
-    expect(Object.keys(SCENE_KIT).slice(FIRST_KIT_PARTS, FIRST_KIT_PARTS + added.length)).toEqual(added.map(([id]) => id));
+    // None takes the place of one of sceneKit.ts's own parts, the first kit's or Stinkyscape's pass's (R3391000): they
+    // follow them in order (the modules #3393 and #3401 added follow them, and meditativeScenes.test.ts counts the
+    // whole kit).
+    const own = FIRST_KIT_PARTS + STINKYSCAPE_KIT_PARTS;
+    expect(Object.keys(SCENE_KIT).slice(own, own + added.length)).toEqual(added.map(([id]) => id));
   });
 });

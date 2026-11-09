@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
-import type { ActionBody, Aim, EmojiEmoteId, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind } from "@jackioh/shared";
+import type { ActionBody, Aim, CombatForecast, EmojiEmoteId, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind } from "@jackioh/shared";
 import { isEmoteId, isPortraitId, parseAim } from "@jackioh/shared";
 import { POST_GAME_FRAME_VERSION, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
@@ -17,6 +17,7 @@ import { isSpectatorHand, spectatorEmoteOf } from "../sideline/wire.ts";
 import type { PostGameFrame } from "../wire/generated/PostGameFrame.ts";
 import { isRecord } from "../wire/json.ts";
 import { messageOf } from "../net/errors.ts";
+import { forecastField } from "./attackOutcome.ts";
 
 /** BUILD M5-T3: the dev handle exists only outside a production build. */
 const DEV_ONLY = import.meta.env.MODE !== "production";
@@ -369,6 +370,8 @@ export type ServerFrame =
       legal: readonly ActionBody[] | null;
       jloreCapped: boolean;
       economy?: GameEconomy;
+      /** R3477000: the engine's forecast of this seat's attacks; a watcher's frame has none. */
+      forecast?: CombatForecast;
     }
   | { type: "ack"; nonce: string; seq: number }
   | { type: "error"; code: string; message: string; nonce?: string }
@@ -419,6 +422,7 @@ export function parseServerFrame(text: string): ServerFrame | null {
         legal: parsed.legal === undefined ? null : parseLegal(parsed.legal),
         jloreCapped: parsed.jloreCapped === true,
         ...economyField(parsed.economy),
+        ...forecastField(parsed.forecast),
       };
     }
     case "ack": {
@@ -566,6 +570,11 @@ export type MatchSnapshot = {
    * before the result is written, for a seat the server paid nothing and after a view without it.
    */
   economy: GameEconomy | null;
+  /**
+   * R3477000: the engine's forecast of this seat's attacks, from the last view; null before one and after a
+   * view without it. Never computed here (CLAUDE.md rule 7).
+   */
+  forecast: CombatForecast | null;
   /** The last `error` frame's message, relayed verbatim (§9.3), or null. */
   error: string | null;
   /** The last `error` frame's code, for a caller that wants to branch without parsing prose. */
@@ -655,6 +664,7 @@ const INITIAL: MatchSnapshot = {
   legalSource: "none",
   jloreCapped: false,
   economy: null,
+  forecast: null,
   error: null,
   errorCode: null,
   clock: null,
@@ -742,6 +752,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
           view: frame.view,
           jloreCapped: frame.jloreCapped,
           economy: frame.economy ?? null,
+          forecast: frame.forecast ?? null,
           // A view without `legal` does not blank an earlier legal-action array.
           ...(frame.legal === null ? {} : { legal: frame.legal, legalSource: "view" as const }),
           ...(fresh ? { error: null, errorCode: null } : {}),

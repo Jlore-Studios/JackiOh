@@ -9,10 +9,10 @@
 use serde::Serialize;
 use serde_json::{Map, Value, json};
 
-use jackioh_engine::PlayerId;
 use jackioh_engine::config::{BACKROW_ZONES, UNIT_ZONES};
 use jackioh_engine::duos::DUOS_NONCE_PREFIX;
 use jackioh_engine::wire::{DuosActionBody, DuosSeat, DuosView};
+use jackioh_engine::{CombatForecast, PlayerId};
 
 pub use crate::actor::protocol::encode;
 use crate::actor::protocol::{
@@ -260,10 +260,13 @@ pub struct GraceDeadlines {
 pub enum DuosServerMessage {
     /// B23, B35: the seat's own view and legal actions. `jlore_capped` indicates whether
     /// `JLORE_GAMES_DAILY_CAP` held back Jlore for this seat (R1483000). `economy` is what the
-    /// result paid this seat's person (#1657).
+    /// result paid this seat's person (#1657). R3477000: `forecast` is the engine's forecast of the
+    /// attacks among `legal`, never a watcher's.
     View {
         view: Box<DuosView>,
         legal: Vec<DuosActionBody>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        forecast: Option<CombatForecast>,
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         jlore_capped: bool,
         #[serde(skip_serializing_if = "Option::is_none")]

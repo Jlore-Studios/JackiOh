@@ -14,8 +14,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use jackioh_engine::{
-    ActionBody, ActionType, Aim, EmoteId, PlagueSpend, PlayerId, PlayerView, PortraitId, PromptKind,
-    RevealAt, Row, Selection, ZoneChoice, is_emote_id, parse_aim,
+    ActionBody, ActionType, Aim, CombatForecast, EmoteId, PlagueSpend, PlayerId, PlayerView, PortraitId,
+    PromptKind, RevealAt, Row, Selection, ZoneChoice, is_emote_id, parse_aim,
 };
 
 use crate::db::store::MatchClocks;
@@ -141,10 +141,13 @@ pub enum ServerMessage {
     /// §10.8 `PlayerView`, plus the viewer's own `legalActions` (BUILD M5-T2, §10.2), here so they
     /// never disagree and BUILD §1 needs no seventh name; never the opponent's, which would name its
     /// hand (§9.1). `jlore_capped` (R1483000) and `economy`, the result's pay (#1657), are only the
-    /// receiving seat's, never a watcher's or a bot's, and are left off until set.
+    /// receiving seat's, never a watcher's or a bot's, and are left off until set. R3477000: `forecast`,
+    /// the engine's forecast of the receiving seat's attacks, likewise; a watcher's view has none.
     View {
         view: Box<PlayerView>,
         legal: Vec<ActionBody>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        forecast: Option<CombatForecast>,
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         jlore_capped: bool,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -221,17 +224,20 @@ pub enum ServerMessage {
 // Builders
 
 /// `legal` must be `legal_actions(state, view.viewer)`; the actor is the only caller (`push_view`).
-/// `jlore_capped` is the viewer's own account's flag, false for a watcher (R1483000), and
+/// `forecast` is `combat_forecast(state, view.viewer)`, `None` for a watcher (R3477000),
+/// `jlore_capped` the viewer's own account's flag, false for a watcher (R1483000), and
 /// `economy` what the result paid the viewer's own account, `None` for a watcher (#1657).
 pub fn view_message(
     view: PlayerView,
     legal: &[ActionBody],
+    forecast: Option<CombatForecast>,
     jlore_capped: bool,
     economy: Option<GameEconomy>,
 ) -> ServerMessage {
     ServerMessage::View {
         view: Box::new(view),
         legal: legal.to_vec(),
+        forecast,
         jlore_capped,
         economy,
     }
