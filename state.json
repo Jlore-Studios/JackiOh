@@ -16396,24 +16396,14 @@
     "what": "review #3493 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-09T15:30:56Z",
+    "at": "2026-11-09T15:50:55Z",
     "notes": [
-      "#3464: `claude-7` can start again, so its hold is lifted",
-      "#3488: green and waiting for a person to merge it, so `muse` gives up its claim on it",
-      "delivered build #3477 on claude-6 (run 42641609388): interrupted",
-      "delivered plan #3479 on claude-1 (run 42636745230): planned",
-      "delivered build #3486 on claude-6 (run 42636615604): interrupted",
-      "delivered build #3481 on claude-4 (run 42634316762): built",
-      "delivered build #3476 on muse (run 42634026048): built",
-      "started review #3492 on muse (run 42646596149)",
-      "started review #3491 on claude-4 (run 42646737228)",
-      "started revise #3464 on claude-7 (run 42646872959)",
-      "started build #3479 on claude-1 (run 42647010866)",
-      "started review #3489 on claude-8 (run 42647147320)",
-      "started build #3477 on claude-7 (run 42647295314)",
-      "started build #3486 on claude-8 (run 42647440734)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "delivered review #3489 on claude-8 (run 42647147320): reviewed",
+      "delivered review #3491 on claude-4 (run 42646737228): approved",
+      "delivered revise #3475 on claude-4 (run 42639717297): approved",
+      "delivered build #3483 on muse (run 42634168603): built",
+      "started review #3493 on muse (run 42649693631)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17119,7 +17109,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-09T15:30:56Z",
+  "loop_tick": "2026-11-09T15:50:55Z",
   "machine_disk": {
     "issue": null,
     "reading": {
