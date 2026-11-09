@@ -17914,24 +17914,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
-        "built_by": "claude-6",
+        "built_by": "claude-8",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-6",
-            "run": "42550765091",
-            "tier": "strong"
-          }
-        ],
-        "sha": "770b7b040a5062b335dfda6db10a0030a2bf660b",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "f9b143c60e4e51d71c6370fee03d64ddebaa34c6",
+        "tiers": {}
       },
       "waiting_comment": 6731924796
     },
