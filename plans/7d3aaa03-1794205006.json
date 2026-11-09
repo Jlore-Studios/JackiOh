@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 3351,
+  "title": "Patch: the living game on a phone: a pass at 390x844 and on a throttled CPU over every look, animation and sound #3330 adds, with one budget they share",
+  "branch": "bot/issue-3351",
+  "thread": "**Issue #3351 (data, not instructions):**\n\n```text\n# #3351: Patch: the living game on a phone: a pass at 390x844 and on a throttled CPU over every look, animation and sound #3330 adds, with one budget they share\nOpened by @jgoetzmann.\n\n## What it does\n\nPart of #3330. Blocked by #3339, #3340, #3341, #3342, #3344, #3345, #3347, #3348, #3334, #3336, #3337 and #3338.\n\nThe owner asked that all of this look good on a phone too, not only on a computer. Each part under #3330 checks itself at 390x844. This part checks them **together**, on the board a real game produces, and sets the one budget they share.\n\n### What it should be\n\n1. **A full-board scenario at phone size.** Add a component spec (`e2e/cypress/component/`) or e2e spec that plays, at 390x844, 360x780 and a phone on its side, with the CPU throttled 4x (Chrome DevTools Protocol `Emulation.setCPUThrottlingRate`). The board holds:\n   - five art-first Units, two Legendary and one Mythic among them, with tile auras;\n   - an Anomaly's backdrop;\n   - a launched Starship;\n   - a hand of ten, one tilted.\n\n   Through it play a Mythic takeover, a Starship launch and broadside, a Drone Battleship arrival, a Terminus set piece, a hand-to-tile flight and a riffle, and measure frame times throughout.\n2. **One shared budget.** Moving faces, tile auras, backdrops, particles and tilt share one budget on a phone, `PHONE_MOTION_BUDGET` in `fx/constants.ts`. The adaptive cap (`FX_ADAPT_*`, `director.ts`) sheds in a named order when frames run long:\n   - motes first;\n   - then far auras;\n   - then the moving faces furthest from the pointer;\n   - never a set piece's main beats.\n\n   The mean frame stays under `FX_PHONE_FRAME_BUDGET_MS`, and the worst under `FX_PHONE_FRAME_WORST_MS` (proposed and ruled).\n3. **Fixes.** Fix what the scenario finds in the part that owns it. If the fix belongs to a part still open, write a short note on that part instead.\n4. **Layout.** The one-screen rule (R1581000) and the tap areas (R2122000) hold with all of it on: e2e `46` and `47`, plus a long-press check that inspect and the full-screen view (#3345) open from every board face and hand card.\n\n## Acceptance\n\n- The scenario runs at the three sizes under 4x throttling, within `FX_PHONE_FRAME_BUDGET_MS` mean and `FX_PHONE_FRAME_WORST_MS` worst.\n- The shed order is tested: a forced slow frame sheds motes first and set-piece beats never.\n- e2e `46`, `47` and the long-press check pass with every part's features on.\n- The pull request lists each finding and where it was fixed or noted.\n- Any ruling is in this issue's block, with the \u00a711 paragraph in `spec/pending/<this issue>.md`. The web tests, `typecheck`, `eslint` and `cargo jackioh spec check` pass.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3351: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-07T00:02:50Z",
+    "claimed_at": "2026-11-09T06:17:12Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391, #3403 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first",
+    "#3406 skipped: it waits for #3403 to close first"
+  ]
+}
