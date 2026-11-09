@@ -16414,17 +16414,8 @@
       }
     },
     "3496": {
-      "action": "plan",
-      "asks": [
-        "c:6750718420"
-      ],
-      "build_next": {
-        "from_run": "42695550662",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-09T21:02:58Z",
-        "until": "2026-11-09T21:32:58Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-09T21:02:47Z",
         "difficulty": "medium",
@@ -16443,10 +16434,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": " `crates/wasm/core/src/lib.rs` after `run_content`, add `pub fn run_content_at(version_json: &str) -> Result<String, String>`: parse a `String` (`parse(\"runContentAt: the version\", \u2026)`); if it equals `jackioh_cards::catalog_version()` return `run_content()`; else match `jacki\u2026\n- 2. **Both wrappers.** In `crates/wasm/src/lib.rs` add `#[wasm_bindgen] pub fn run_content_at(version_json: &str) -> Result<String, JsError>` calling `js(wasm_core::run_content_at(\u2026))`. In `crates/wasm/c/src/lib.rs` add `#[unsafe(no_mangle)] pub extern \"C\" fn run_content_at(version_ptr: *const u8, v\u2026\n- 3. **Fight deck filter.** In `crates/run/src/fight.rs`'s `run_fight_setup`, read `registered_catalog()` (already imported) and filter both decks: build the human deck/marks from `state.deck.iter().filter(|c| catalog.contains_key(&c.id))` (re-enumerate for `DeckMark.index`), and `enemy_deck` from `e\u2026\n- 4. **TS wrapper.** In `apps/web/src/wasm/index.ts` after `runContent` add `export function runContentAt(version: string): RunContent | null { return call(\"runContentAt\", () => parsed<RunContent | null>(normal.run_content_at(json(version)))); }`.\n- 5. **Store shape.** In `apps/web/src/dungeon/store.ts`: extend the import from `../wasm/index.ts` with `catalogVersion, runContentAt`; change `KeptRun` to `{ file; startedAt; daily; catalog: string | null; extractedCards: string[]; extractedArtifacts: string[] }` (`null` = written before versions).\u2026\n- 6. **Lost settle and notice.** Add `const EMPTY_RUN_STATS: RunStats` (all fields `0`; copy field names from `apps/web/src/wire/generated/RunStats.ts`) and `settleUnfoldable(base: Core, kept: KeptRun, now: number): Core`: current `contentOf()`; keep only `kept.extractedCards` in `content.pool` ids a\u2026\n- 7. **Start screen.** In `apps/web/src/dungeon/testids.ts` add `notice: \"dungeon-notice\"`. In `StartScreen.tsx`'s panel before `<Progress/>`: `{dungeon.notice === null ? null : (<p className=\"notice\" role=\"status\" data-testid={dungeonTestid.notice}>{dungeon.notice}</p>)}` (`.notice` exists in `dunge\u2026\n- 8. **Fixtures.** In `apps/web/src/dungeon/test/fixtures.ts` add `catalogVersion: vi.fn((): string => \"test-catalog\")`, `runContentAt: vi.fn((_v: string): RunContent | null => null)`, export `CONTENT_B = { ...CONTENT, pool: [...CONTENT.pool].reverse() }`, and reset both in `resetBindings`.\n- 9. **Spec and ruling.** Append to \u00a715.2 after the `RunFile` sentence: `A run folds under the catalog version it started on: the device keeps the version with the run file, and the rest of the run plays on the content it was dealt from ([[R3496000]]). A run kept before versions were kept folds as to\u2026\n- ## Tests\n- - `crates/wasm/c/src/tests.rs`: extend `run_exports_answer_what_the_core_bodies_answer` with `run_content_at` parity lines; new `fn r3496000_run_content_at_answers_the_carried_and_current_versions_and_null_for_unknown`: current version equals `run_content()`; oldest of `carried_versions()` returns \u2026\n- - `crates/run/src/fight_tests.rs`: new `fn r3496000_removed_cards_leave_the_fight_deck_but_stay_in_the_run`: from `fight_at(&content, 0)`, push `RunCard { id: \"removed-card-xyz\", radiant: false, buffs: 0 }` into `state.deck` (and a bogus id into the current node\u2019s enemy deck via `state.map`), asser\u2026\n- - `apps/web/src/dungeon/store.test.ts`: update the two exact stored-shape assertions (start test; B19 reload test) to `{ v: 1, file, startedAt, daily, catalog, extractedCards: [], extractedArtifacts: [] }`. Rewrite the line-169 case as `R3496000 a kept run that will not fold settles once as lost an\u2026\n- - `apps/web/src/dungeon/start/StartScreen.test.tsx`: `dungeonOf` gains `notice: null`; new `R3496000` test (notice renders with testid; absent when `null`). Run `pnpm --dir apps/web test src/dungeon/start/StartScreen.test.tsx`, plus `pnpm --dir apps/web test src/i18n/i18n.test.ts` for the new strin\u2026\n- ## Done when\n- - [ ] Version-A run reloads onto A's content (same state, map, deck) while the build is on B\n- - [ ] Uncarried/\u200brefused run settles once as lost: history record, filtered extractions banked, run key gone, one-line notice on the start screen\n- - [ ] Pre-change kept run (no `catalog`) loads as today; silent-drop case updated to the new rule\n- - [ ] `runContentAt` covered for carried and unknown versions; C-module import-freedom intact\n- - [ ] Ruling note, proving tests, pending paragraph in place; `cargo jackioh spec check` passes\n- - [ ] Touched crates' tests, touched web test files, `cargo fmt --check`, per-crate clippy, web typecheck/eslint clean\n- ## Risks\n- - Determinism: folding under the old content reproduces the old deal \u2014 the point of the change. Confirm `engine::validate_setup` refuses unknown deck ids (justifies the fight filter; harmless if it does not).\n- - Hidden information: pool content and extractions are public/device data (DR1); stored extractions are filtered against current content, never trusted blindly.\n- - No migration: storage version stays 1; old saves parse with defaults. A refused `runFold` under a *carried* version also settles lost per the proposal \u2014 intended, since the log can no longer replay.\n- - Kept-fight resume across a patch still drops the save per `R3476000` and deals fresh from the (filtered) setup; no change there. Removed cards on the map display fall back to their id (`RunDisplay.tsx`); no display change.\n- - Sequencing: the sibling \"run time counts only while played\" item also edits `KeptRun` \u2014 build the two in turn, not in parallel.\n- ## Open questions\n- None. The Chinese notice wording is proposed above; the reviewer reads it as usual.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3496 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3496/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-09T20:42:36Z",
       "owner_why": "it plans it",
@@ -16459,12 +16449,14 @@
       "provider": "muse",
       "queued_at": "2026-11-09T20:32:18Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "42695550662",
+      "run_id": "pending:de6b5008-1794258220",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-09T20:42:36Z",
+      "started_at": "2026-11-09T21:04:20Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6750718420"
+      ]
     },
     "3497": {
       "action": "plan",
@@ -17184,9 +17176,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T20:48:33Z",
+    "at": "2026-11-09T21:04:20Z",
     "url": "",
-    "what": "plan #3503 on claude-4"
+    "what": "build #3496 on muse"
   },
   "last_sweep": {
     "at": "2026-11-09T20:49:46Z",
