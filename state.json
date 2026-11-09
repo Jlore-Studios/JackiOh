@@ -15942,7 +15942,7 @@
       "verdict_rounds": 1
     },
     "3412": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "difficulty_by": {
         "at": "2026-11-08T08:41:18Z",
@@ -15964,23 +15964,23 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-2",
-      "owner_since": "2026-11-08T08:32:05Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "muse",
+      "owner_since": "2026-11-09T00:02:23Z",
+      "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
       "pending_request": false,
       "planned_at": "2026-11-08T08:41:23Z",
       "planned_by": "`claude-2` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-2",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-2",
+      "provider": "muse",
       "queued_at": "2026-11-07T19:02:22Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "42463346495",
-      "runs_on": "ubuntu-latest",
+      "run_id": "pending:2266a9bd-1794182506",
+      "runs_on": "night-vm-muse",
       "spot_check_of": 3383,
-      "started_at": "2026-11-08T08:32:05Z",
+      "started_at": "2026-11-09T00:02:23Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17528,9 +17528,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-08T23:48:32Z",
+    "at": "2026-11-09T00:02:23Z",
     "url": "",
-    "what": "build #3403 on claude-2"
+    "what": "build #3412 on muse"
   },
   "last_sweep": {
     "at": "2026-11-08T23:43:19Z",
