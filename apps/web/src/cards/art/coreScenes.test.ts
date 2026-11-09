@@ -173,10 +173,11 @@ describe("R3392000 Core's scenes", () => {
 
   it("R3392000 the scenes this pass does not own draw as #3331 left them", () => {
     // Measured on the base of #3392 (1fbbecc): a recipe with no extra figure draws the same stream, and no kit part changed.
+    // R3391000: the fifth proof, Arg Arg Defender (stinkyscape-015), is Stinkyscape's pass's since, redrawn from its brief
+    // (stinkyscapeScenes.test.ts holds it).
     const pinned: Readonly<Record<string, readonly [number, number]>> = {
       "classic-074": [1210823500, 2735167760],
       "core-100": [894252645, 4246782103],
-      "stinkyscape-015": [4157590552, 724339904],
     };
     for (const [id, [base, radiant]] of Object.entries(pinned)) {
       const card = CATALOG[id];
