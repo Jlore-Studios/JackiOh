@@ -15723,7 +15723,7 @@
       "provider": "claude-6",
       "queued_at": "2026-11-07T17:16:41Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:d94f71ce-1794184389",
+      "run_id": "42540853787",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
