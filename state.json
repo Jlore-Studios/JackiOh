@@ -16521,6 +16521,8 @@
       }
     },
     "3506": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-09T15:42:00Z",
@@ -16534,8 +16536,11 @@
         "trail": "browse.sh -s=r3477 eval \\\"async () => { const sleep = (ms) => new Promise((r) => setTimeout(r, ms)); await sleep(\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3477/.cache/browse/r3477-phone.png\"}\n- Bash: {\"command\": \"sh scripts/browse.sh -s=r3477 close 2>&1 | tail -1; rm -f .cache/browse/r3477-desktop.png .cache/browse/r3477-phone.png\", \"description\": \"Close the browser session and remove screenshots\u2026\n- ToolSearch: {\"query\": \"select:TaskStop\", \"max_results\": 1}\n- TaskStop: {\"task_id\": \"b8q9sm6ex\"}\n- said: Running the harness's exact web command in the background (it covers every test importing a changed module) while I update the notes.\n- Bash: {\"command\": \"timeout 3500 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' > /tmp/web-chan\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State')\\nend=s.index('## Goal')\\nstate=\\\"\\\"\\\"## State\\n\\nPlan: the issue's `jackioh-bot:plan` section. Build run\u2026\n- said: While that runs, a final read of the web diff:\n- Bash: {\"command\": \"git diff -- apps/web/src/game/Game.tsx apps/web/src/game/Card.tsx apps/web/src/game/Hero.tsx apps/web/src/duos/DuosBoard.tsx apps/web/src/routes/practice.tsx | grep \\\"^[+-]\\\" | grep -v \\\u2026\n- said: The diff reads as intended. Waiting on the harness-equivalent web run.\n- Bash: {\"command\": \"tail -c 600 /tmp/web-changed.log\", \"description\": \"Peek at the changed-files web run progress\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Monitor: {\"description\": \"changed-files web run: failures or its end\", \"timeout_ms\": 600000, \"command\": \"until grep -qE \\\"^exit [0-9]+\\\" /tmp/web-changed.log; do sleep 5; done; grep -E \\\"Test Files|Tests |^ex\u2026\n- tool error: This Bash command contains multiple operations. The following part requires approval: until grep -qE \"^exit [0-9]+\" /tmp/web-changed.log; do sleep 5; done; grep -E \"Test Files|Tests |^exit|FAIL \" /tm\u2026\n- Monitor: {\"description\": \"changed-files web run: failures or its summary\", \"timeout_ms\": 600000, \"command\": \"tail -f /tmp/web-changed.log | grep --line-buffered -E \\\"Test Files|Tests |^exit|FAIL \\\"\"}\n- tool error: This Bash command contains multiple operations. The following part requires approval: tail -f /tmp/web-changed.log\n- said: Monitors need approval here, so I'll use the wait to run the workspace-wide clippy the harness runs:\n- Bash: {\"command\": \"cargo clippy --workspace --all-targets -- -D warnings 2>&1 | grep -E \\\"^(warning|error)\\\" -A 8 | head -30; echo \\\"workspace clippy finished\\\"\", \"description\": \"Run workspace-wide clippy\"\u2026\n- Bash: {\"command\": \"cargo clippy --workspace --all-targets -- -D warnings 2>&1 | tail -2; grep -E \\\"Test Files|Tests |^exit\\\" /tmp/web-changed.log\", \"description\": \"Confirm clippy result and check web run s\u2026\n- said: Workspace clippy is clean. Next, the harness's cargo-test step in the foreground (all crates, `ts` on, then the wire-clean check) while the web run finishes:\n- Bash: {\"command\": \"timeout 590 cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts 2>&1 | grep -E \\\"test result: FAILED|panicked|^error|FAILED\\\" | head -20; echo \\\"cargo-exit ${PIPES\u2026\n- said: It needs more than the 10-minute foreground cap, so I'll run it in the background with a full log:\n- Bash: {\"command\": \"cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts > /tmp/cargo-ws.log 2>&1; echo \\\"exit $?\\\" >> /tmp/cargo-ws.log; git status --porcelain -- apps/web/src/wire >>\u2026\n- Bash: {\"command\": \"grep -E \\\"Test Files|Tests |^exit\\\" /tmp/web-changed.log; grep -c \\\"\\u2713\\\\|passed\\\" /tmp/web-changed.log\", \"description\": \"Check the web run progress\"}\n- Bash: {\"command\": \"git diff --stat 3f8896c61d -- . ':!apps/web/src/wasm' | tail -3; git status --short | grep \\\"^??\\\"\", \"description\": \"Summarize the branch's diff size\"}\n- Bash: {\"command\": \"git diff --stat 3f8896c61d HEAD | tail -1; git log --oneline -1 origin/main\", \"description\": \"Confirm the merge brought no outside files\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport time, re\\ndeadline = time.time() + 540\\nwhile time.time() < deadline:\\n s = open('/tmp/web-changed.log').read()\\n if re.search(r'^exit \\\\d+', s, re.M):\\n break\\\u2026\n- said: Three failures. `i18n` and `writing` passed in my earlier wide run, so these may be timeouts from the cargo build competing for CPU, but `shortcuts.test.tsx` is new to me. Reading the errors:\n- Bash: {\"command\": \"grep -n \\\"FAIL \\\\|Error:\\\\|AssertionError\\\\|timed out\\\\|Timeout\\\" /tmp/web-changed.log | head -20\", \"description\": \"Read the failure messages\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport time, re\\ndeadline = time.time() + 560\\nwhile time.time() < deadline:\\n s = open('/tmp/cargo-ws.log').read()\\n if 'wire-checked' in s:\\n break\\n time.sleep(10)\\\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport time, re\\ndeadline = time.time() + 570\\nwhile time.time() < deadline:\\n s = open('/tmp/cargo-ws.log').read()\\n if 'wire-checked' in s:\\n break\\n time.sleep(10)\\\u2026\n- said: The workspace `cargo test` (with `ts`) exits 0 and the wire stays clean. Now the three timed-out web files on an idle machine:\n- Bash: {\"command\": \"cd apps/web && timeout 900 pnpm exec vitest run src/writing.test.ts src/i18n/i18n.test.ts src/shortcuts/shortcuts.test.tsx 2>&1 | grep -E \\\"Test Files|Tests |FAIL |timed out\\\" | head\", \"\u2026\n- said: All three pass alone. Updating the notes, then the report.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3477 && cat >> .bot-notes.md <<'EOF'\\n- Build run 2 end: workspace clippy + `cargo test --workspace --features testkit,ts` green, wire clean. Harness\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: aiming an attack shows what it will do: the damage each side takes and whether either dies\"} --> ## What changed When you pick up one of your units to attack, each legal target now shows a small label. It gives the damage the target takes, the damage yo\u2026"
       },
       "issue": 3477,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-09T17:38:16Z",
         "from_run": "42647295314",
         "gates": [
           {
@@ -16627,7 +16632,11 @@
         "source": "build",
         "until": "2026-11-09T18:06:56Z"
       },
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-09T17:36:56Z",
+      "run_id": "pending:7b79f741-1794245865",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16646,6 +16655,9 @@
         "provider": "claude-7",
         "run": "42647295314"
       },
+      "started_at": "2026-11-09T17:38:16Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16659,9 +16671,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T17:27:55Z",
+    "at": "2026-11-09T17:38:16Z",
     "url": "",
-    "what": "review #3505 on claude-8"
+    "what": "review #3506 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-09T17:24:28Z",
