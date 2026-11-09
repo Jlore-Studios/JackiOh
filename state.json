@@ -17594,6 +17594,14 @@
         "sha": "edb551660335036ec9aef9e2aa8b4d8d7ba06f76",
         "tiers": {}
       }
+    },
+    "3455": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-09T00:03:10Z",
+      "issue": 3436,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
