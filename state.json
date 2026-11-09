@@ -15121,7 +15121,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-09T11:19:38Z",
+      "feedback_since": "2026-11-09T12:10:28Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3423,
@@ -15160,11 +15160,11 @@
         "provider": "claude-4",
         "run": "42578124952"
       },
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-09T12:10:28Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 5,
+      "verdict_rounds": 6,
       "votes": {
         "approvals": [
           "claude"
