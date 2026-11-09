@@ -274,7 +274,7 @@ Today, beating the final boss ends the run, won.
 
 The designer's content replaces the placeholders.
 
-**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill and prints each kind of fight's win rate and HP cost, the HP at each boss, the rows reached, the score and the Embers (#3065): a guide to tuning the strawmen, not a target.
+**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill, from level 1 with no artifact or curse unless `--level`, `--artifacts` and `--curses` set them (each refused when the content lacks it), and prints each kind of fight's and each act's win rate, HP cost and turns, the HP at each boss, the rows reached, the score by term (rows, wins, damage, healing, cards drawn, and what the boss percents and the curse percent add) and the Embers (#3065, #3481): a guide to tuning the strawmen, not a target.
 
 ### 15.13 Open questions
 
