@@ -16,8 +16,9 @@ caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
 The Death, the turn-hook, the activation, the attack-hook and the awakening prices of a decision (R2424000,
 R2477000, R2564000, R2688000, R3064000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
-through the search to the scorers that read them, with the one fact about the root they ride with, whether it
-holds a Starship (`starship_root`, R3038003); a call outside a decision passes `Prices::NONE` (plain
+through the search to the scorers that read them, with the two facts about the root they ride with: whether it
+holds a Starship (`starship_root`, R3038003) and whether its view names mostly cards the network has no row
+for (`unknown_root`, R3479000); a call outside a decision passes `Prices::NONE` (plain
 `evaluate`, the probes, the baselines, the tools) and prices nothing. The crate holds no thread-local.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
@@ -418,6 +419,7 @@ pub const LEARNED: Network<'static>;              // compiled in from src/learne
 pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing, prices: &Prices) -> f64;
 impl Learned<'a> { pub fn known_card_ids(&self) -> Vec<&'a str>; }   // the ids its keys name, sorted
 pub fn unknown_cards(sparse: &[(String, i32)], known: &[&str]) -> UnknownCards;   // { named, unknown }
+pub fn unknown_root(view: &GameState, seat: PlayerId, network: &Learned<'_>) -> bool;   // R3479000
 ```
 
 - With `Hand` nothing changes. With `Learned`, `reply_score` scores a finalist after the opponent's
@@ -428,7 +430,9 @@ pub fn unknown_cards(sparse: &[(String, i32)], known: &[&str]) -> UnknownCards; 
   or launched Starship on either side, or a Starship Piece on either field or in the seat's own hand, read
   off the redacted view once and carried in `Prices.starship_root`), every line of it alike: the network
   was fitted before the set, and the hand eval holds what a Starship leaves behind (R2566000, R2380000,
-  R3064000).
+  R3064000). So does a decision whose redacted root view names mostly cards the network has no row for
+  (`unknown_root`, R3479000: more than `LEARNED_MAX_UNKNOWN_SHARE` of the copies `unknown_cards` counts,
+  carried in `Prices.unknown_root`), until a retrain gives them rows.
 - `src/learned/weights.json` is what `training/ml/jackioh_ml/export.py` writes from a fit: the feature
   version and dense names it was fitted on (a test fails on a mismatch), the standardizer, the sparse
   keys it has rows for (an unknown key is no input), the layers and the skip connection. `build.rs`

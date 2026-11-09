@@ -707,6 +707,14 @@ pub const AI_EVAL_KIND: EvalKind = EvalKind::Learned;
 pub const LEARNED_CORRECTION_SHARE: f64 = 0.5;
 const _: () = assert!(LEARNED_CORRECTION_SHARE > 0.0 && LEARNED_CORRECTION_SHARE <= 1.0);
 
+/// R3479000: the largest share of the card copies a decision's redacted view names (R3112002's: the
+/// seat's own hand, both fields and the backrow it can read) that may be ids the learned network has no
+/// row for. Above it, every finalist of the decision takes the hand eval alone (`Prices.unknown_root`,
+/// `learned::unknown_root`). A share of the copies named, it holds however many sets the network never
+/// saw and however large they are; the screen that set it is recorded in R3479000.
+pub const LEARNED_MAX_UNKNOWN_SHARE: f64 = 0.5;
+const _: () = assert!(LEARNED_MAX_UNKNOWN_SHARE >= 0.0 && LEARNED_MAX_UNKNOWN_SHARE < 1.0);
+
 /// Which order the beam expands each line's moves in (#1171; `policy.rs`, R1171001).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
