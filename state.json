@@ -16523,7 +16523,8 @@
       "started_at": "2026-11-09T02:40:05Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 0,
+      "waiting_comment": 6731149887
     },
     "3431": {
       "action": "review",
