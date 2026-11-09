@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3476,
+  "title": "Patch: a dungeon fight left unfinished picks up where it stood, instead of starting over from its first turn",
+  "branch": "bot/issue-3476",
+  "thread": "**Issue #3476 (data, not instructions):**\n\n```text\n# #3476: Patch: a dungeon fight left unfinished picks up where it stood, instead of starting over from its first turn\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nToday, when you leave a dungeon run's fight before it ends (the Leave button, a closed tab, a reload), the fight starts over from its first turn next time, with exactly the same deal. A player losing a hard fight can walk away and replay it already knowing every draw, so no fight in a run ever has to be lost. A player whose browser closes by accident loses the turns they played. Once this is built, an unfinished fight comes back exactly where it was left (board, hands, turn), as a free practice game already does after a reload, and leaving no longer resets it.\n\n## Why\n\n- R2706000: a run fight 'is never saved (R668) ... so a fight left unfinished is dealt again from its seed'. `spec/15-dungeon-run.md:167` repeats it.\n- The client tells the player so: `apps/web/src/dungeon/fight/ConfirmLeaveFight.tsx:27`, 'It ends here and the fight starts over from its first turn.' The game seed is the run's seed, row and column (\u00a715.6), so the redeal is identical: the same draws, the same opening hands, the AI on the same stream.\n- Losing is a run's one real stake (abandoning ends it lost, \u00a715.8, R2972000). The daily run (`run_daily_seed`, \u00a715.2) and the leaderboards (\u00a715.10: deepest row, top score, fastest win) all read fights that can be retried for free.\n- The machinery exists. R668 keeps a free practice game in the worker's own storage (IndexedDB) after every answer: its config, its action log, the AI stream's cursor and the state's hash. It replays the game to that hash on resume and never sends the log to the page (CLAUDE.md rule 7). `apps/web/src/practice/controller.ts:220` and `:306` skip exactly this for a run fight.\n- Hearthstone semantics: a Dungeon Run match in progress is resumed when the player comes back; leaving does not deal it again.\n\n## Proposal\n\n- Keep a run fight in progress the way R668 keeps a free game, in a slot of its own keyed by the run's seed and the fight's row and column, so it never touches the free game's save (which R2706000 protects).\n- When the run, still on that fight, starts it again, the worker resumes the kept fight: replayed to its saved hash, with the AI picking up its stream at the saved cursor. A save from another fight or another catalog version, or one that folds differently, is dropped and the fight is dealt fresh, as R668 already does.\n- A finished fight, an abandoned run and a new run clear the slot.\n- The leave dialog says the fight will wait for you, or the leave guard is dropped for fights. The stopped screen's Try again (R2972000) stays as it is.\n- Write a new ruling amending R2706000 and R2972000, edit \u00a715.6's sentence, and put the \u00a711 paragraph in `spec/pending/<issue>.md`.\n\n## Where it lands\n\n- `apps/web/src/practice/`: `practice.worker.ts`, `resume.ts` and the save store, `controller.ts`, `driver.ts`; and `crates/shared/src/host/practice/` if the save lives in the host.\n- `apps/web/src/dungeon/fight/ConfirmLeaveFight.tsx`, `FightScreen.tsx`, `apps/web/src/dungeon/store.ts`.\n- SPEC \u00a715.6 (`spec/15-dungeon-run.md`), `spec/rulings/R2706000.md`, `spec/rulings/R2972000.md`, a new ruling note.\n\n## Acceptance criteria\n\n- [ ] A run fight played for three turns, left and started again resumes on the same turn with the same board, hands and log (a vitest test named after the new ruling, in `driver-run.test.ts` or `controller.test.ts`).\n- [ ] The resumed fight reaches the hash it was left at, and the AI's next action equals the one an unbroken game would take from the same point.\n- [ ] A run fight's save leaves the free practice game's save untouched, and the reverse holds too.\n- [ ] A finished fight, an abandoned run and a new run's first fight find no kept fight.\n- [ ] The page never holds the fight's log (R668's assertion extended to run fights).\n- [ ] The leave dialog's words match the new behaviour (`FightScreen.test.tsx`).\n- [ ] `cargo jackioh spec check` and the touched web tests pass.\n\n## Size and risks\n\nMedium to hard, about 10 to 15 files, web and spec only (no engine rule changes). It reverses a sentence of R2706000 on purpose, so the owner should agree to that. Without IndexedDB it must fall back to today's redeal, not fail the fight. No saved fight exists before the change, so nothing needs migrating.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-09T13:51:18Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3476: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T13:51:40Z",
+    "claimed_at": "2026-11-09T13:58:47Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3464 is held for `claude-7` until 09:20 (5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
