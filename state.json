@@ -16270,39 +16270,6 @@
       "action": "revise",
       "asks": [],
       "audit_tier": "",
-      "decision": {
-        "answer": "1",
-        "answer_url": "https://github.com/Jlore-Studios/JackiOh/pull/3493#issuecomment-6750842527",
-        "answered_at": "2026-11-09T20:39:14Z",
-        "answered_by": "MaxGoetzmann",
-        "asked_at": "2026-11-09T19:36:26Z",
-        "assigned": [
-          "jgoetzmann",
-          "MaxGoetzmann"
-        ],
-        "default": 1,
-        "hours": 24,
-        "kind": "revise",
-        "model": "muse-spark-1.3-contributor",
-        "options": [
-          {
-            "change": "Ship the branch as-is with corrected numbers (per-file -2,370, net -1,321 including the shared module).",
-            "tradeoff": "The net-1,500 text stays unmet under the reviewer's reading, but every test-integrity criterion passes and no further churn is needed."
-          },
-          {
-            "change": "Force unlike bodies and oracles into shared helpers to chase net -1,500.",
-            "tradeoff": "Likely still falls short since moves net zero or worse, while blurring coverage and violating the plan's do-not-force rule."
-          },
-          {
-            "change": "Delete or merge tests to cut lines.",
-            "tradeoff": "Directly violates the same-tests, test-count, and name-preservation criteria."
-          }
-        ],
-        "problem": "I pushed honest net shrinkage from the reviewer's -1,108 to -1,321, but I cannot reach the -1,500 net criterion without breaking other acceptance rules. Every remaining per-file test line is either a single-use oracle (its expected vector is the test), a unique body (VII cost/kept, X pile, c050 starship sources), or a floor-level one-line wrapper call. Moving single-use bodies into the shared module nets zero or worse (helper plus call site exceeds the inline body), and parametrizing oracles would move the proof out of the file the ruling cites. The issue's own survey caps the honest outcome: about 2,387 duplicated lines across families of three copies can save at most roughly two thirds minus call overhead, around 1,300-1,400 net. So -1,500 net is structurally out of reach no matter how much honest sharing I do.",
-        "provider": "muse",
-        "question": "Do you accept the branch as-is on the per-file reading of the criterion (family files shrink 4,280 to 1,910 lines, -2,370, with every other acceptance item green), or do you direct a specific scope expansion to chase net -1,500?",
-        "why": "it is the only path that keeps test count, test names, seeds, coverage, and all green gates intact, and the per-file measurement the plan prescribed passes the 1,500 bar by a wide margin."
-      },
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
