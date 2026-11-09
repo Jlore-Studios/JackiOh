@@ -15,7 +15,9 @@ const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
 fn face(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
-            vec![summon(json_as(json!({ "defId": INTERCEPTOR, "radiant": radiant })))]
+            vec![summon(json_as(
+                json!({ "defId": INTERCEPTOR, "radiant": radiant }),
+            ))]
         })),
         ..Script::default()
     }
@@ -34,28 +36,22 @@ mod tests {
     use jackioh_engine::effects::drawn_combat_keywords;
     use jackioh_engine::testkit::*;
 
-    use crate::{filler, scenario};
+    use crate::stinkyscape_family as fam;
 
     const P1: PlayerId = PlayerId::P1;
 
     const CORE: &str = "stinkyscape-028";
     const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
     const VANILLA: &str = "core-008"; // (1) 4/4.
-    const FILLER: &str = "core-005";
-
-    fn cast(radiant: bool, field: Value) -> Scenario {
-        let mut s = scenario(json!({
-            "seed": "drone-core-ii",
-            "p1": { "hand": [{ "def": CORE, "radiant": radiant }, FILLER], "field": field, "library": filler(4) },
-            "p2": { "hand": [FILLER], "library": filler(4) },
-        }));
-        s.play(CORE, json!({}));
-        s
-    }
 
     #[test]
     fn r64_summons_into_the_leftmost_open_zone_with_its_combat_keywords() {
-        let s = cast(false, json!([{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 3 }]));
+        let s = fam::drone_single_cast(
+            CORE,
+            "drone-core-ii",
+            false,
+            json!([{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 3 }]),
+        );
         let drone = s.unit(P1, 2).expect("the Interceptor in lane 2");
         assert_eq!(drone.def_id, INTERCEPTOR);
         assert!(!drone.radiant);
@@ -70,7 +66,7 @@ mod tests {
 
     #[test]
     fn r2248000_a_full_unit_row_puts_the_interceptor_in_the_backrow() {
-        let mut s = cast(false, json!(vec![VANILLA; 5]));
+        let mut s = fam::drone_single_cast(CORE, "drone-core-ii", false, json!(vec![VANILLA; 5]));
         for lane in 1..=5 {
             assert_eq!(s.unit(P1, lane).expect("a Vanilla").def_id, VANILLA);
         }
@@ -81,7 +77,7 @@ mod tests {
 
     #[test]
     fn radiant_summons_a_radiant_one() {
-        let s = cast(true, json!([]));
+        let s = fam::drone_single_cast(CORE, "drone-core-ii", true, json!([]));
         let drone = s.unit(P1, 1).expect("the Interceptor");
         assert_eq!(drone.def_id, INTERCEPTOR);
         assert!(drone.radiant);

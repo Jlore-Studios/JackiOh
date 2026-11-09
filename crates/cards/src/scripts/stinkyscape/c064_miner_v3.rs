@@ -60,93 +60,30 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::ID;
-    use crate::{next_turn_of, weapon_board};
-    use jackioh_engine::testkit::*;
-
-    const P1: PlayerId = PlayerId::P1;
-
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const REKNITE: &str = "stinkyscape-t-reknite"; // a Common Resource.
-
-    fn mining(radiant: bool, seed: &str) -> Scenario {
-        weapon_board(seed, json!({ "field": [{ "def": ID, "radiant": radiant }] }), json!({}))
-    }
-
-    fn dig() -> Value {
-        json!({ "ability": "mine" })
-    }
-
-    fn mined(s: &Scenario) -> Vec<CardInstance> {
-        resources_in_hand_of(s.state(), P1)
-    }
+    use crate::stinkyscape_family as fam;
 
     #[test]
     fn r1872000_r2250000_its_activate_gains_one_random_resource_into_the_hand() {
-        let mut s = mining(false, "s064");
-        let hand = s.hand(P1).len();
-        s.activate(ID, dig());
-        let in_hand = mined(&s);
-        assert_eq!(in_hand.len(), 1);
-        assert!(crate::card_def(&in_hand[0].def_id).resource.is_some(), "{}", in_hand[0].def_id);
-        assert!(!in_hand[0].radiant);
-        assert_eq!(s.hand(P1).len(), hand + 1, "it takes a hand slot");
-        // R1840002: the roll replays from the seed.
-        let mut again = mining(false, "s064");
-        again.activate(ID, dig());
-        assert_eq!(resources_in_hand_of(again.state(), P1)[0].def_id, in_hand[0].def_id);
+        fam::miner_gains_one(ID, "s064");
     }
 
     #[test]
     fn r1840001_r2250000_into_a_full_hand_the_resource_burns() {
-        let full = vec![REKNITE; HAND_CAP as usize];
-        let mut s = weapon_board(
-            "s064-full",
-            json!({ "field": [ID], "hand": full }),
-            json!({}),
-        );
-        s.activate(ID, dig());
-        assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
-        assert!(
-            s.last_events()
-                .iter()
-                .any(|event| event.event_type() == GameEventType::Burned)
-        );
+        fam::miner_burns_when_full(ID, "s064");
     }
 
     #[test]
     fn r384_2_uses_a_turn_a_third_use_refused_and_again_next_turn() {
-        let mut s = mining(false, "s064-uses");
-        for _ in 0..super::USES {
-            s.activate(ID, dig());
-        }
-        let refusal = format!("used {} times this turn", super::USES);
-        s.expect_refused_with(|s| s.activate(ID, dig()), &refusal);
-        assert_eq!(mined(&s).len(), super::USES as usize);
-        next_turn_of(&mut s, P1);
-        s.activate(ID, dig());
-        assert_eq!(mined(&s).len(), super::USES as usize + 1);
+        fam::miner_uses_limit(ID, "s064", super::USES);
     }
 
     #[test]
     fn r1086_r1872000_equipped_onto_a_unit_the_host_takes_the_activate() {
-        let mut s = weapon_board(
-            "s064-equip",
-            json!({ "hand": [ID], "field": [VANILLA], "mana": 10 }),
-            json!({}),
-        );
-        let host = s.unit_at(P1, 1).id;
-        s.play(ID, json!({ "zone": 1, "equip": true }));
-        assert_eq!(s.unit_at(P1, 1).id, host);
-        s.activate(host.as_str(), dig());
-        assert_eq!(mined(&s).len(), 1);
+        fam::miner_equip(ID, "s064");
     }
 
     #[test]
     fn radiant_the_resource_is_radiant() {
-        let mut s = mining(true, "s064-radiant");
-        s.activate(ID, dig());
-        let in_hand = mined(&s);
-        assert_eq!(in_hand.len(), 1);
-        assert!(in_hand[0].radiant);
+        fam::miner_radiant_gain(ID, "s064");
     }
 }
