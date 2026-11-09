@@ -53,7 +53,10 @@ function literals(node: ts.Expression): (ts.StringLiteral | ts.NoSubstitutionTem
 
 /** Each literal sentence a source wraps in `t()`, with the `file:line` it stands at. */
 function sentencesIn(path: string, text: string): { at: string; key: string }[] {
-  const file = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  // Neither doc comments (the walk never enters one) nor parent pointers (it goes down only, and `getStart` is
+  // handed the file): the same calls, parsed in less time.
+  const options = { languageVersion: ts.ScriptTarget.Latest, jsDocParsingMode: ts.JSDocParsingMode.ParseNone };
+  const file = ts.createSourceFile(path, text, options, false, path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const out: { at: string; key: string }[] = [];
   const visit = (node: ts.Node): void => {
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "t") {
@@ -237,7 +240,12 @@ describe("R711000 internationalisation and reader language", () => {
   it("R711000 every sentence the client wraps in t() has a zh-CN entry", () => {
     const files = sources(SRC);
     expect(files.length).toBeGreaterThan(100);
-    const sentences = files.flatMap((path) => sentencesIn(path, readFileSync(path, "utf8")));
+    // A call of `t` writes its name as the word `t`, or escapes it with `\`, so a file holding neither has none
+    // and is not parsed: most of the card art's data, whose parse outgrew the test's time (#3403).
+    const sentences = files.flatMap((path) => {
+      const text = readFileSync(path, "utf8");
+      return text.includes("\\") || /\bt\b/u.test(text) ? sentencesIn(path, text) : [];
+    });
     expect(sentences.length).toBeGreaterThan(1000);
     expect(untranslated(sentences)).toEqual([]);
   });

@@ -218,7 +218,14 @@ describe("a GIF's code loads on demand", () => {
     const files = sources(SRC);
     expect(files.length).toBeGreaterThan(100);
     const outside = files.map((path) => relative(SRC, path)).filter((name) => !name.startsWith("replay/gif/"));
-    const importers = outside.filter((name) => importsOf(join(SRC, name)).statics.some((specifier) => /(^|\/)gif\//u.test(specifier)));
+    // A specifier is its source but for escapes, each of which starts with `\`, so a file holding neither `gif/`
+    // nor `\` names no GIF module and is not parsed: most of the card art's data, whose parse outgrew the test's
+    // time (#3403).
+    const importers = outside.filter((name) => {
+      const text = readFileSync(join(SRC, name), "utf8");
+      if (!text.includes("gif/") && !text.includes("\\")) return false;
+      return importsOf(join(SRC, name)).statics.some((specifier) => /(^|\/)gif\//u.test(specifier));
+    });
     expect(importers, "nothing outside replay/gif/ loads it at once").toEqual([]);
 
     const player = importsOf(join(SRC, "replay/ShareGif.tsx"));
