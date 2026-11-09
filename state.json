@@ -18459,6 +18459,7 @@
       "run_id": "42576625059",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 160,
       "started_at": "2026-11-09T07:01:07Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36706,9 +36707,33 @@
         "title": "Patch: promotions stop timing out: the patch source test loads a bounded set of snapshots, and each ci-scope case answers for one file",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "826a80a0581bf1f00150c61e8a6ff8fb1127334b",
+        "issue": 3351,
+        "merged_at": "2026-11-09T07:45:39Z",
+        "n": 160,
+        "pr": 3467,
+        "queued_at": "2026-11-09T07:45:39Z",
+        "sha": "e8d5f21f9b55ccb441515cee55a2694c1d274a4d",
+        "status": "queued",
+        "title": "Patch: the living game on a phone: a pass at 390x844 and on a throttled CPU over every look, animation and sound #3330 adds, with one budget they share",
+        "tries": 0
       }
     ],
-    "count": 159
+    "count": 160
   },
   "statistics": {
     "at": "2026-11-09T07:44:06Z"
