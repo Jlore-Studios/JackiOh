@@ -18116,9 +18116,11 @@
         "by": "`claude` (strong)",
         "sha": "c349ffa7ca4e96e3e97e41c1679d976ba3430ddf"
       },
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-09T02:02:00Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-09T04:48:37Z",
         "family": "claude",
@@ -18128,6 +18130,7 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -50; git diff 1b69bb256877b86e3332e37959c33b95e2390c1e...HEAD --stat | tail -3; git log --oneline -1 origin/main; git merge-base HEAD origin/main\"}\n- Bash: {\"command\": \"git diff 3163b425 HEAD -- apps/web/src/cards/art/ART.md | head -400; echo ----; git show 3163b425:apps/web/src/cards/art/ART.md | grep -n '^## '; echo; grep -n '^## ' apps/web/src/cards/\u2026\n- Bash: {\"command\": \"git diff 3163b425 HEAD -- apps/web/src/cards/art/ART.md | sed -n '400,1000p'; git diff 3163b425 HEAD --stat -- apps/web/src/cards/art/ART.md; git diff 3163b425 origin/main --stat -- apps\u2026\n- Bash: {\"command\": \"cd apps/web/src/cards/art && git show 3163b425:apps/web/src/cards/art/ART.md > /tmp/art_base.md && sed -n 425,445p ART.md && grep -rn \\\"Classic's scenes\\\" --include=*.ts . | head; grep -\u2026\n- Bash: {\"command\": \"grep -n '^ \\\"[a-z-]*\\\":' sceneKitClassic.ts sceneKitClassicProps.ts | head -40; sed -n 15,25p figureKit.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3464 && python3 - <<'EOF'\\ncur=open('apps/web/src/cards/art/ART.md').read()\\nbase=open('/tmp/art_base.md').read()\\nstart_marker=\\\"placements that mov\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/cards/art/ART.md'\\ns=open(p).read()\\nold='''Each of the 28 Units that are a person is a figure whose look starts from its tags' and is dressed as who i\u2026\n- Grep: {\"pattern\": \"ART\\\\.md\", \"glob\": \"*.test.ts*\", \"path\": \"apps/web/src\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"grep -n \\\"ART.md\\\\|readFileSync\\\" apps/web/src/cards/art/convention.test.ts | head; cargo jackioh spec check 2>&1 | tail -3\"}\n- Bash: {\"command\": \"sed -n '/^## Classic.s scenes/,/^## The detail floor/p' apps/web/src/cards/art/ART.md | head -20; git status --short\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/cards/art/ART.md'\\ns=open(p).read()\\nold=\\\"\\\"\\\"no picture; the contact sheet\\nshows it.\\\"\\\"\\\"\\nnew=\\\"\\\"\\\"no picture;\\n`classic-scenes.cy.tsx`'s contact\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every Classic card drawn as what it is: a scene of its own for each, richer the rarer\"} --> Closes #3352 ## The review finding (pass 2) **It held: the ART.md hunk had deleted other sets' documentation.** At the merge base `3163b425`, `ART.md` had three \u2026"
       },
+      "interruptions": 0,
       "issue": 3352,
       "kind": "review",
       "live": "reviewing",
