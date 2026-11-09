@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3501,
+  "title": "Patch: a dungeon run shows your deck, relics, blessings, curses and seed between fights, and a past run's curses by name",
+  "branch": "bot/issue-3501",
+  "thread": "**Issue #3501 (data, not instructions):**\n\n```text\n# #3501: Patch: a dungeon run shows your deck, relics, blessings, curses and seed between fights, and a past run's curses by name\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nBetween fights, the dungeon's top bar shows only your health, coins and tickets, how many cards your deck holds, and your relics' names. There is no way to:\n\n- look at the deck you have built;\n- read what a relic does;\n- see the blessings and curses you carry;\n- see the run's seed, which you would share so a friend can play the same run.\n\nOn the dungeon stats page, a past run's curses show as internal names such as \"temp-curse-1\". Once this is built, a \"Your run\" button on the map opens all of that in one panel, the seed shows on the run-over screen, and curses show their names everywhere.\n\n## Why\n\n- **The HUD shows little.** `apps/web/src/dungeon/map/RunScreen.tsx:36-76` shows HP, Coins, Tickets, `Deck: {run.deck.length}`, each relic's name and level, and the score. Nothing else of the run is shown.\n- **Curses never appear during a fight.** The fight tray (`apps/web/src/dungeon/fight/FightScreen.tsx:249-254`) shows relics and blessings.\n- **The deck is seen only in passing.** Its faces appear only on the shop, campfire and extraction screens.\n- **Past curses print as ids.** `apps/web/src/dungeon/stats/DungeonStats.tsx:228-229` renders each of a record's curses as `t(curse)`. The record holds ids such as `temp-curse-1` (`crates/run/src/placeholder.json:738`), and no translation exists for them, so the id is printed.\n- **Seeds are meant to be shared.** \u00a715.2 (`spec/15-dungeon-run.md:87`): \"Seeds can be shared and typed in.\" No screen shows a run's seed during or after the run.\n\n## Proposal\n\n- **A \"Your run\" button in the HUD** opens the shared `Dialog` (`apps/web/src/game/Dialog.tsx`). It lists:\n  - the deck, as `RunCardFace`s with their Radiant and buff marks, in a compact grid;\n  - the relics and blessings, with their text;\n  - the curses, with name and text from the run's content;\n  - the seed, with a copy button.\n- **`RunOverScreen` shows the seed.**\n- **`DungeonStats` shows curse names** from the content. An id the content no longer has falls back to the id.\n- **Strings** are added to `zh-CN.json`.\n\n## Where it lands\n\n- `apps/web/src/dungeon/map/RunScreen.tsx` and its test, plus a panel component beside it\n- `apps/web/src/dungeon/map/RunOverScreen.tsx`\n- `apps/web/src/dungeon/stats/DungeonStats.tsx` and its test\n- `apps/web/src/i18n/zh-CN.json`\n- spec \u00a715.5 and \u00a715.10, if they list what the screens show\n\n## Acceptance criteria\n\n- [ ] `RunScreen.test.tsx`: the panel lists every deck card with its Radiant and buff marks, each relic, blessing and curse with its text, and the seed.\n- [ ] The panel takes focus and closes on Escape, as the shared Dialog does.\n- [ ] `RunOverScreen` shows the run's seed.\n- [ ] `DungeonStats.test.tsx`: a record's curses show by name, not by id.\n- [ ] At phone width the panel scrolls and nothing overflows sideways.\n\n## Size and risks\n\nSmall to medium: about 7 files in `apps/web`. Difficulty medium.\n\n- A deck of 40 or more cards on a phone needs the compact layout.\n- It reuses existing faces and passive presentation, so no new art.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-09T19:00:37Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3501: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T19:01:03Z",
+    "claimed_at": "2026-11-09T19:03:05Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3350 skipped: it waits for #3352, #3391 to close first",
+    "#3388 skipped: it waits for #3352 to close first",
+    "#3394 skipped: it waits for #3391 to close first"
+  ]
+}
