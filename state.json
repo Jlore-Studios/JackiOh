@@ -15174,22 +15174,21 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "apps/web/src/cards/art/figureKit.ts",
             "apps/web/src/wording.test.ts"
           ],
-          "from": "517ce8b770d2e3fc65e08345ac38588880ae5657",
-          "main": "d1857b55fb611a28c2c9afb7f5ada6949aa67b1f"
+          "from": "fb54b9206d52894defd5a2058e3b7ac966244a20",
+          "main": "648bc1df4ef740b4e75c807dabc010e4955bfadb"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-4",
-            "run": "42608143126",
+            "run": "42614803930",
             "tier": "strong"
           }
         ],
-        "sha": "fb54b9206d52894defd5a2058e3b7ac966244a20",
+        "sha": "531f786f061afafcae58fba1ea8c3db911c69253",
         "tiers": {
           "claude": "strong"
         }
