@@ -17460,6 +17460,7 @@
       "run_id": "42540785168",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 155,
       "started_at": "2026-11-09T00:32:56Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36265,9 +36266,33 @@
         "title": "Patch: every Meditative+ and Training Grounds card drawn as what it is: a scene of its own for each, richer the rarer",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "d37fd5eeee5296253a70142dea16d2cba9c0b6ce",
+        "issue": 3418,
+        "merged_at": "2026-11-09T02:54:33Z",
+        "n": 155,
+        "pr": 3453,
+        "queued_at": "2026-11-09T02:54:33Z",
+        "sha": "31af522cf0568cdddd12de8f948b58d0753a8e14",
+        "status": "queued",
+        "title": "Patch: promotions stop timing out: the patch source test loads a bounded set of snapshots, and each ci-scope case answers for one file",
+        "tries": 0
       }
     ],
-    "count": 154
+    "count": 155
   },
   "statistics": {
     "at": "2026-11-09T02:30:09Z"
