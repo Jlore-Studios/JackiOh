@@ -16678,6 +16678,8 @@
       "verdict_rounds": 0
     },
     "3520": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-09T18:20:33Z",
@@ -16691,8 +16693,11 @@
         "trail": " status --short | head; ls -la .bot-notes.md .bot-journal.md; sed -n 1,200p .bot-notes.md | head -150\", \"description\": \"Show git status and the bot notes\"}\n- Bash: {\"command\": \"grep -n '^## ' .bot-notes.md; echo ----; cat .bot-journal.md\", \"description\": \"Show notes headings and the journal\"}\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n\\n## State\\n\\nRun 3 (sonnet): earlier runs did nothing on the branch (plan, then an infra failure). Starting the plan from step 1. Nothing done yet.\\n\\n## L\u2026\n- Bash: {\"command\": \"cat apps/web/src/auth/claims.ts; cat apps/web/public/_headers; cat spec/rulings/R3025000.md spec/rulings/R3147003.md; ls spec/pending | head; \", \"description\": \"Read claims.ts, headers, \u2026\n- Bash: {\"command\": \"cat spec/pending/3349.md; echo ----; cat spec/rulings/R3147000.md | head -20; grep -n \\\"OAUTH_MARK_PX\\\" -r apps/web/src | head -5; cat apps/web/src/net/cloudflare-config.test.ts | head -\u2026\n- Bash: {\"command\": \"sed -n 120,220p apps/web/src/net/cloudflare-config.test.ts; grep -n \\\"img-src\\\\|rbxcdn\\\\|roblox\\\" -ri apps/web/static-pages.ts apps/web/src --include=*.ts --include=*.tsx -l | head -20; \u2026\n- Bash: {\"command\": \"grep -n \\\"img-src\\\" -B3 -A3 apps/web/src/net/check-production-bundle.test.ts apps/web/src/static-pages.test.ts; grep -rn \\\"img-src\\\\|connect-src\\\" apps/web/static-pages.ts apps/web/scrip\u2026\n- Bash: {\"command\": \"grep -n \\\"GIS_SCRIPT_URL\\\" apps/web/src/auth/googleIdentity.ts | head -3; grep -n \\\"identitiesOf\\\\|listIdentities\\\\|describe(\\\\|^import\\\" apps/web/src/net/auth-methods.test.ts | head -60\u2026\n- Bash: {\"command\": \"sed -n 1,95p apps/web/src/net/auth-methods.test.ts; sed -n 465,560p apps/web/src/net/auth-methods.test.ts\", \"description\": \"Read test setup and R3025000 tests\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/net/auth.ts'\\ns=open(p).read()\\nold=s[s.index('export type LinkedIdentity = { id: string; provider: string };'):s.index('/** R3025000: the account\\\\'s \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/net/auth-methods.test.ts'\\ns=open(p).read()\\ns=s.replace(''' identityLinkUrl,\\n listIdentities,\\n unlinkIdentity,\\n} from \\\"./auth.ts\\\";''',''' identit\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- run 3: DONE steps 2-5: auth.ts (LinkedIdentity, ROBLOX_AVATAR_IMAGE_HOST, identitiesOf) + R3507000 describe in auth-methods.test.ts (46 pass). NEXT: Linke\u2026\n- Bash: {\"command\": \"grep -n \\\"account-actions\\\" -A12 apps/web/src/auth/two-step.css | head -50; grep -rn \\\"account-actions\\\" apps/web/src --include=*.css | head\", \"description\": \"Check CSS for account-actio\u2026\n- Bash: {\"command\": \"sed -n 620,660p apps/web/src/auth/tavern.css\", \"description\": \"Read account-actions CSS\"}\n- Bash: {\"command\": \"cat apps/web/src/auth/two-step.css | head -60; grep -rn \\\"border-radius\\\" apps/web/src/auth/two-step.css | head -3\", \"description\": \"Read two-step.css\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/auth/LinkedAccounts.tsx'\\ns=open(p).read()\\ns=s.replace(''' moving: \\\"account-linked-moving\\\",\\n error: \\\"account-linked-error\\\",\\n} as const;\\n''','''\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/auth/LinkedAccounts.tsx'\\ns=open(p).read()\\na=s.index('/**\\\\n * R3507000: which Roblox account')\\nb=s.index('type Phase =')\\nnew='''/**\\n * R3507000: w\u2026\n- Bash: {\"command\": \"sed -n 134,200p apps/web/src/auth/LinkedAccounts.test.tsx\", \"description\": \"Read Roblox test pattern\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/auth/LinkedAccounts.test.tsx'\\ns=open(p).read()\\ns=s.replace('function serve(identities: { identity_id: string; provider: string }[], deleteStatus = 20\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- run 3: DONE steps 6-8: LinkedAccounts.tsx (RobloxIdentity needs a username: departure from plan, an avatar alone shows nothing, per issue \\\"with no userna\u2026\n- Bash: {\"command\": \"grep -n \\\"Adding a ruling\\\" -A30 spec/README.md | head -60; ls spec/rulings | tail -5; ls spec/rulings | grep R35\", \"description\": \"Read ruling-adding instructions\"}\n- Bash: {\"command\": \"grep -rn \\\"R3025000\\\" spec --include=*.md -l | grep -v \\\"rulings/R3025000\\\"; grep -rn \\\"R3025000\\\" spec/09-architecture.md | head; grep -rn \\\"R3147000\\\" docs/architecture.md | head -3\", \u2026\n- Bash: {\"command\": \"cat > spec/rulings/R3507000.md <<'EOF'\\n---\\nid: R3507000\\ntitle: \\\"The account screen names the linked Roblox account\\\"\\ncards: \\\"\\u00a79.2, R666, R3025000, R3147000, R3147003\\\"\\nproven\u2026\n- Bash: {\"command\": \"mv spec/rulings/R3507000.md /tmp/R3507000.md.bak && (cargo jackioh spec check 2>&1 | tail -5); mv /tmp/R3507000.md.bak spec/rulings/R3507000.md; ls spec/rulings/R3507000.md\", \"descriptio\u2026\n- said: It checks this worktree. Now the remaining checks.\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- run 3: DONE steps 9-11: _headers + cloudflare-config test pass; spec/rulings/R3507000.md + spec/pending/3507.md written, spec check ok. NEXT: typecheck, e\u2026\n- Bash: {\"command\": \"ls -a | grep -i prettier; grep -n \\\"prettier\\\" package.json | head; awk 'length>160' apps/web/src/auth/LinkedAccounts.tsx apps/web/src/net/auth.ts | head\", \"description\": \"Check prettier\u2026\n- Bash: {\"command\": \"pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' 2>&1 | tail -30\", \"descripti\u2026\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main --claims 2>&1 | tail -8; git status --short\", \"description\": \"Run classify claims check\", \"timeout\": 600000}\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- run 3: ALL DONE. typecheck, eslint apps/web, fmt --check, spec check, classify (Internal), harness's changed web tests (241 files, 4970 tests) all green. \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: show the linked Roblox account's username and avatar on the account screen\"} --> ## What changed `/account`'s Roblox row now says which Roblox account is linked. Once linked, it shows `@username`, with the display name in front when it differs, and Robl\u2026"
       },
       "issue": 3507,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-09T19:38:21Z",
         "from_run": "42673197667",
         "gates": [
           {
@@ -16784,7 +16789,11 @@
         "source": "build",
         "until": "2026-11-09T20:04:41Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-09T19:34:41Z",
+      "run_id": "pending:dcff0152-1794253068",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16803,6 +16812,9 @@
         "provider": "claude-4",
         "run": "42673197667"
       },
+      "started_at": "2026-11-09T19:38:21Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16816,9 +16828,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-09T19:37:34Z",
+    "at": "2026-11-09T19:38:21Z",
     "url": "",
-    "what": "review #3506 on claude-7"
+    "what": "review #3520 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-09T19:22:21Z",
