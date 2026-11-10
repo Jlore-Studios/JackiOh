@@ -17672,7 +17672,7 @@
       "provider": "claude-3",
       "queued_at": "2026-11-10T08:52:34Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:15f5c94e-1794301097",
+      "run_id": "42786947920",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "request",
