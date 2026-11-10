@@ -16776,7 +16776,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-10T16:48:52Z",
+      "feedback_since": "2026-11-10T17:23:32Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3518,
@@ -16790,15 +16790,15 @@
       "queued_at": "2026-11-10T17:22:54Z",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "medium",
+      "round_tier": "",
       "run_id": "42864485782",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-10T17:23:32Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 3,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "muse"
