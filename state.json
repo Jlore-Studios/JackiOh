@@ -20284,22 +20284,24 @@
     "what": "build #3563 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T07:31:14Z",
+    "at": "2026-11-10T07:58:35Z",
     "notes": [
-      "#3629 needs a plan",
-      "delivered review #3627 on claude-7 (run 42774787840): reviewed",
-      "delivered plan #3538 on claude-7 (run 42771515781): planned",
-      "delivered review #3626 on muse (run 42771237173): approved",
-      "delivered plan #3517 on claude-3 (run 42757432233): failed",
-      "started build #3515 on claude-1 (run 42776724168)",
-      "started plan #3630 on claude-1 (run 42776865043)",
-      "started build #3516 on claude-7 (run 42777018983)",
-      "started build #3538 on muse (run 42777173760)",
-      "started build #3629 on muse (run 42777324712)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is idle, but nothing queued is for it; `claude-8` is idle, but nothing queued is for it; `claude-1` is busy; `claude-4` is idle, but nothing queued is for it; `claude-6` is busy; `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-11-10T08:20:00Z; it can start a build or a plan again in 34m; `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it",
-      "pruned 1 plan file(s) older than 7 days",
-      "#3629: typed it Task",
-      "runner gate: started 3 of 7 waiting run(s) (run 42773486241 on bot/issue-3589, run 42773820750 on bot/issue-3388, run 42773960537 on bot/issue-3605); 4 wait for room"
+      "#3633 needs a plan",
+      "delivered plan #3563 on claude-4 (run 42774646599): planned",
+      "delivered plan #3539 on claude-8 (run 42774493260): interrupted",
+      "delivered review #3594 on muse (run 42774351331): approved",
+      "delivered plan #3514 on claude-3 (run 42769157544): planned",
+      "delivered revise #3591 on claude-3 (run 42767660211): approved",
+      "delivered build #3350 on claude-6 (run 42755762040): built",
+      "started review #3635 on claude-6 (run 42780327345)",
+      "started build #3514 on claude-3 (run 42780504718)",
+      "started plan #3517 on claude-3 (run 42780680712)",
+      "started plan #3539 on claude-8 (run 42780839126)",
+      "started plan #3633 on claude-8 (run 42781003998)",
+      "started build #3563 on muse (run 42781178302)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is idle, but nothing queued is for it; `claude-8` is busy; `claude-1` is busy; `claude-4` 5-hour usage is 70%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-10T08:20:00Z; it can start a build or a plan again in 3m; `claude-6` is busy; `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-11-10T08:20:00Z; it can start a build or a plan again in 3m; `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it",
+      "pruned 4 plan file(s) older than 7 days",
+      "runner gate: started 2 of 5 waiting run(s) (run 42776380292 on bot/issue-3615, run 42777650255 on claude/zealous-carson-5tzubr); 3 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -21005,7 +21007,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T07:31:14Z",
+  "loop_tick": "2026-11-10T07:58:35Z",
   "machine_disk": {
     "issue": null,
     "reading": {
