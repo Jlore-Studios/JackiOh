@@ -19904,6 +19904,8 @@
       }
     },
     "3627": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-10T04:26:42Z",
@@ -19917,9 +19919,17 @@
         "trail": "d -40\", \"description\": \"Read the worktree helper script\"}\n- Bash: {\"command\": \"sh scripts/worktree.sh base3388 origin/main > /tmp/t3388/wt.log 2>&1; tail -3 /tmp/t3388/wt.log; ls -d ../jackioh-wt/base3388 && cp -r apps/web/src/wasm/pkg ../jackioh-wt/base3388/apps/w\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/base3388/apps/web && git log --oneline -1 && for i in 1 2; do timeout 600 pnpm exec vitest run src/cards/art/art.test.ts --reporter=verbose 2>&\u2026\n- Bash: {\"command\": \"ls apps/web/src/cards/art/*.test.ts* | wc -l; echo \\\"- run 3: vitest --changed: 330/331 files pass; art.test.ts B1 times out at 5000ms under load (5.4s); alone 3.0s branch vs 3.1s base (\u2026\n- Bash: {\"command\": \"E2E_COMPONENT_PORT=5281 timeout 1200 pnpm --dir e2e test:component --spec cypress/component/classic-alt-scenes.cy.tsx > /tmp/t3388/cypress.log 2>&1; echo \\\"exit $?\\\"; grep -E \\\"passing|f\u2026\n- Bash: {\"command\": \"timeout 600 pnpm exec vitest list --project web --changed origin/main --filesOnly --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' 2>/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/base3388 && grep -v classicAltScenes /tmp/t3388/files.txt > /tmp/t3388/files-base.txt; wc -l < /tmp/t3388/files-base.txt; (timeout 3000 pnpm ex\u2026\n- Bash: {\"command\": \"cd apps/web && ../../node_modules/.bin/tsx /tmp/t3388/table.mts > /tmp/t3388/table.md 2>&1; wc -l /tmp/t3388/table.md; grep -c \\\"| pass |\\\" /tmp/t3388/table.md; head -5 /tmp/t3388/table.\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/t3388/vitest-base.log; do sleep 20; done; grep -E \\\"Test Files|Tests |exit|\\u00d7|Duration\\\" /tmp/t3388/vitest-base.log | head\", \"description\": \"Wait for the\u2026\n- said: The base comparison run is going; meanwhile I'll write the PR description draft.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-3388/.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## Goal')\\nnew='''## State\\n\\n- Run 3 (build, opus, 2026-\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/t3388/vitest-base.log; do sleep 20; done; grep -E \\\"Test Files|Tests |exit|\\u00d7|Duration\\\" /tmp/t3388/vitest-base.log | head\", \"description\": \"Block until \u2026\n- Bash: {\"command\": \"grep -E \\\"\\u00d7|\\u276f \\\\|web\\\" /tmp/t3388/vitest-base.log | head\", \"description\": \"Peek at base run failures so far\"}\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/t3388/vitest-base.log; do sleep 20; done; grep -E \\\"Test Files|Tests |exit|\\u00d7|Duration\\\" /tmp/t3388/vitest-base.log | head\", \"description\": \"Block until \u2026\n- Bash: {\"command\": \"grep -n \\\"art.test.ts\\\\|B1 equal\\\" /tmp/t3388/vitest-base.log | head; grep -n \\\"art/art.test.ts\\\\|B1 equal\\\" /tmp/t3388/vitest-changed.log | head\", \"description\": \"Compare art.test.ts ti\u2026\n- Bash: {\"command\": \"git log --oneline --grep=\\\"#3461\\\" -3 | cat; git log -3 --format=\\\"%h %s\\\" -- apps/web/src/cards/art/art.test.ts | cat\", \"description\": \"Look at #3461 and art.test.ts history\"}\n- Bash: {\"command\": \"git log -5 --format=\\\"%h %ad %s\\\" --date=short -- apps/web/src/cards/art/art.test.ts | cat; git show 648bc1df4e --stat --format= | grep -v \\\"Recipes\\\\|ART.md\\\" | cat\", \"description\": \"Se\u2026\n- Bash: {\"command\": \"sed -n 1,58p src/cards/art/art.test.ts | grep -n \\\"import\\\\|const DEFS\\\\|function compositionFor\\\" | head -30\", \"description\": \"Read art.test.ts imports and DEFS\"}\n- Bash: {\"command\": \"mkdir -p /tmp/t3388/prof && cat > /tmp/t3388/prof/b1.test.ts <<'EOF'\\nimport { expect, it } from \\\"vitest\\\";\\nimport { CATALOG } from \\\"@jackioh/cards\\\";\\nimport { artSpec, artDataUri, m\u2026\n- Bash: {\"command\": \"sed -n 13,30p src/cards/art/art.test.ts; cat > /tmp/t3388/prof/b1.mts <<'EOF'\\nimport catalog from \\\"/home/runner/work/_temp/work/item-3388/crates/cards/catalog.json\\\" with { type: \\\"jso\u2026\n- Bash: {\"command\": \"ls -d node_modules/.pnpm/@vitest+expect*/node_modules/@vitest/expect/dist/index.js ../../node_modules/.pnpm/@vitest+expect*/node_modules/@vitest/expect/dist/index.js 2>/dev/null | head -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3388 && find node_modules/.pnpm -maxdepth 1 -name \\\"@vitest+expect*\\\" | head -2\", \"description\": \"Locate @vitest/expect package\"}\n- Bash: {\"command\": \"find node_modules/.pnpm -maxdepth 1 -name \\\"*vitest*\\\" | head -5\", \"description\": \"List vitest packages in the pnpm store\"}\n- Bash: {\"command\": \"cat > apps/web/src/cards/art/zzprof3388.test.ts <<'EOF'\\nimport { expect, it } from \\\"vitest\\\";\\nimport { CATALOG } from \\\"@jackioh/cards\\\";\\nimport { artDataUri, artSpec, compositionFor\u2026\n- Bash: {\"command\": \"cat > src/cards/art/zzprof3388.test.ts <<'EOF'\\nimport { expect, it } from \\\"vitest\\\";\\nimport { CATALOG } from \\\"@jackioh/cards\\\";\\nimport { artDataUri, artSpec, compositionFor, motifFo\u2026\n- Bash: {\"command\": \"nproc; cd /home/runner/work/_temp/work/item-3388 && git worktree remove ../jackioh-wt/base3388 --force && git branch -D wt/base3388 && git worktree list; rmdir ../jackioh-wt 2>/dev/null;\u2026\n- Bash: {\"command\": \"timeout 600 pnpm --dir apps/web typecheck > /tmp/t3388/typecheck.log 2>&1; echo \\\"typecheck exit $?\\\"; timeout 600 pnpm exec eslint apps/web/src/cards/art/classicAltRecipes1.ts apps/web/\u2026\n- Bash: {\"command\": \"J=/home/runner/work/JackiOh/JackiOh/target/release/jackioh; timeout 900 $J classify --base origin/main --claims 2>&1 | tail -3; echo \\\"exit ${PIPESTATUS[0]}\\\"; git status --short\", \"desc\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-3388/.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## Goal')\\nnew='''## State\\n\\n- Run 3 (build, opus, 2026-\u2026\n- Bash: {\"command\": \"cat /tmp/t3388/table.md\", \"description\": \"Print the per-card table\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every Classic Alt art somewhere else: the same subject in a new place, time or moment, one brief per card\"} --> Each of the 50 Classic cards offered Alt art now has its own alt scene, written from that card's brief in #3388. The Alt art seed (`<id>#alt`\u2026"
       },
       "issue": 3388,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-10T07:16:46Z",
+      "run_id": "pending:de1be63f-1794295261",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "started_at": "2026-11-10T07:21:59Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -20042,9 +20052,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T07:20:46Z",
+    "at": "2026-11-10T07:21:59Z",
     "url": "",
-    "what": "plan #3563 on claude-4"
+    "what": "review #3627 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-10T06:42:39Z",
