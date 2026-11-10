@@ -19998,6 +19998,77 @@
       "feedback_since": "2026-11-10T03:39:36Z",
       "issue": 3605,
       "kind": "revise",
+      "own_review": {
+        "from_run": "42750875022",
+        "gates": [
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "install",
+            "ok": true,
+            "pre_existing": false,
+            "run": "rustup toolchain install && pnpm install --frozen-lockfile",
+            "seconds": 3.1,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rustfmt",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo fmt --check",
+            "seconds": 31.8,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 124,
+            "inconclusive": true,
+            "name": "catalog",
+            "ok": false,
+            "pre_existing": false,
+            "run": "cargo jackioh catalog check",
+            "seconds": 1200.1,
+            "skipped": "",
+            "tail": "\n   Compiling syn v3.0.6\n   Compiling serde_core v1.0.229\n   Compiling zmij v1.0.23\n   Compiling crossbeam-utils v0.8.23\n   Compiling serde_json v1.0.151\n   Compiling serde v1.0.229\n   Compiling crossbeam-epoch v0.9.21\n   Compiling itoa v1.0.18\n   Compiling memchr v2.8.3\n   Compiling serde_derive v1.0.229\n   Compiling equivalent v1.0.2\n   Compiling hashbrown v0.17.1\n   Compiling indexmap v2.14.2\n   Compiling utf8parse v0.2.2\n   Compiling crossbeam-deque v0.8.8\n   Compiling anstyle-parse v1.0.0\n   Compiling jackioh-engine v0.5.0 (/home/agent-muse/actions-runner/_work/_temp/work/item-3605/crates/engine)\n   Compiling is_terminal_polyfill v1.70.2\n   Compiling colorchoice v1.0.5\n   Compiling anstyle v1.0.14\n   Compiling rayon-core v1.13.0\n   Compiling anstyle-query v1.1.5\n   Compiling anstream v1.0.0\n   Compiling strsim v0.11.1\n   Compiling clap_lex v1.1.1\n   Compiling anyhow v1.0.104\n   Compiling heck v0.5.0\n   Compiling clap_derive v4.6.7\n   Compiling clap_builder v4.6.7\n   Compiling jackioh-cards v0.5.0 (/home/agent-muse/actions-runner/_work/_temp/work/item-3605/crates/cards)\n   Compiling jackioh-ai v0.5.0 (/home/agent-muse/actions-runner/_work/_temp/work/item-3605/crates/ai)\n   Compiling either v1.19.0\n   Compiling rayon v1.12.0\n   Compiling clap v4.6.7\n   Compiling jackioh-run v0.5.0 (/home/agent-muse/actions-runner/_work/_temp/work/item-3605/crates/run)\n   Compiling jackioh-tools v0.5.0 (/home/agent-muse/actions-runner/_work/_temp/work/item-3605/crates/tools)\n\n(timed out after 1200s)"
+          },
+          {
+            "exit_code": 124,
+            "inconclusive": true,
+            "name": "patches",
+            "ok": false,
+            "pre_existing": false,
+            "run": "cargo jackioh patches check",
+            "seconds": 600.1,
+            "skipped": "",
+            "tail": "\n   Compiling jackioh-tools v0.5.0 (/home/agent-muse/actions-runner/_work/_temp/work/item-3605/crates/tools)\n\n(timed out after 600s)"
+          },
+          {
+            "exit_code": 124,
+            "inconclusive": true,
+            "name": "rulings",
+            "ok": false,
+            "pre_existing": false,
+            "run": "cargo jackioh spec check",
+            "seconds": 600.1,
+            "skipped": "",
+            "tail": "\n   Compiling jackioh-tools v0.5.0 (/home/agent-muse/actions-runner/_work/_temp/work/item-3605/crates/tools)\n\n(timed out after 600s)"
+          }
+        ],
+        "head": "a5a67c6b5e885c4f2ef1079105487aac0484ed3c",
+        "kind": "build",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "muse",
+        "round_tier": "medium",
+        "rounds_on": 3605,
+        "rounds_used": 0,
+        "since": "2026-11-10T07:15:12Z",
+        "source": "build",
+        "until": "2026-11-10T07:45:12Z"
+      },
+      "queued_at": "2026-11-10T07:15:12Z",
       "self_check_findings": [],
       "votes": {
         "approvals": [],
