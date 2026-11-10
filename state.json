@@ -13114,6 +13114,13 @@
     "3388": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42746731024",
+        "model": "opus",
+        "provider": "claude-1",
+        "since": "2026-11-10T03:35:43Z",
+        "until": "2026-11-10T04:05:43Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
