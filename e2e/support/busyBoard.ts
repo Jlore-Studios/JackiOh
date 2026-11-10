@@ -10,7 +10,7 @@ import type { KeywordKind } from "@jackioh/shared";
 
 import { KEYWORD_VISUALS } from "../../apps/web/src/cards/keywordVisuals.ts";
 import { constants, seedFor } from "./config.ts";
-import { handCountId, handRegionId, ts, zoneId } from "./testids.ts";
+import { cardId, handCountId, handRegionId, ts, zoneId } from "./testids.ts";
 import type { ActionInput, GameStateLike, Lane, PlayerId } from "./types.ts";
 
 /**
@@ -203,7 +203,34 @@ function setupTurn(player: PlayerId, units: readonly BusyBoardUnit[]): void {
   cy.gameState()
     .then((state) => plannedPlays(player, units, state))
     .then((plays) => {
-      for (const play of plays) cy.dispatchAction(play);
+      for (const play of plays) {
+        cy.dispatchAction(play);
+        // The dispatch reaches the engine synchronously while the client renders it
+        // behind a queue of full-board renders; ending the turn while that queue is
+        // still draining races the End-turn control's legality on a loaded machine, so
+        // each play waits its own card into its zone first (issue #3605). A set trap is
+        // re-issued a fresh instance id as the hand card is consumed, so its wait reads
+        // the new id back off state instead of the played one.
+        if (play.type === "play" && play.zone !== undefined) {
+          const lane = play.zone.lane as Lane;
+          if (play.zone.row === "backrow") {
+            cy.gameState().then((state) => {
+              const slot = (state.players[player] as { backrow?: ({ id: string } | null)[] })
+                .backrow?.[lane - 1];
+              expect(slot?.id, `a set trap in ${player} backrow lane ${String(lane)}`).to.be.a(
+                "string",
+              );
+              cy.get(ts(zoneId("you", "backrow", lane)))
+                .find(ts(cardId(slot?.id ?? "")))
+                .should("exist");
+            });
+          } else {
+            cy.get(ts(zoneId("you", play.zone.row, lane)))
+              .find(ts(cardId(play.instanceId)))
+              .should("exist");
+          }
+        }
+      }
     });
   cy.endTurn();
 }
@@ -239,8 +266,12 @@ function assertBusyBoard(): void {
     for (const lane of [1, 2, 3, 4, 5] as const) {
       cy.get(ts(zoneId(side, "units", lane))).find('[data-testid^="card-"]').should("exist");
     }
+    // SPEC §5.1, R370/R371: a set trap hides from the opponent only. The opponent's backrow
+    // shows backs (`data-face-down`), your own shows its faces veiled (`data-unrevealed`, with
+    // the "Face down" tag), so each side asserts the view's own marker (CLAUDE.md rule 7).
+    const hidden = side === "opponent" ? '[data-face-down="true"]' : '[data-unrevealed="true"]';
     for (const lane of [1, 2] as const) {
-      cy.get(ts(zoneId(side, "backrow", lane))).find('[data-face-down="true"]').should("exist");
+      cy.get(ts(zoneId(side, "backrow", lane))).find(hidden).should("exist");
     }
     cy.get(ts(handCountId(side))).should("have.text", String(constants.HAND_CAP));
   }

@@ -67,7 +67,9 @@ describe("Spec 50 — busy-board frame probe (issue #3605)", () => {
       .then((sample: FrameSample) => {
         const report = reportPhase("idle", sample, IDLE_BUDGET);
         logReport({ seed: BUSY_BOARD_SEED, phases: [report], idleAnimations: sample.runningAnimations });
-        expectPass(report);
+        // The verdict throw runs as its own command so the numbers above print first:
+        // a throw inside this callback would skip the queued `log` task.
+        cy.then(() => expectPass(report));
       });
   });
 
@@ -77,45 +79,47 @@ describe("Spec 50 — busy-board frame probe (issue #3605)", () => {
     cy.window({ log: false }).then((win) => {
       collect = startProbe(win, FRAME_PROBE_COMBAT_SECONDS).done;
     });
-    // Paragon Mk2 (lane 3) and the lane-4 looper hit the lane-1 Megabase: 0 attack back, 20
-    // health, so both attackers live and the board stays the worst case throughout the window.
+    // The only legal attack target is the lane-5 Taunt wall (Right-house defender):
+    // the lane-1 Megabase cannot be attacked (Can't Defend) and cannot be spell-targeted
+    // (Immune to Spells). Paragon Mk2 (lane 3) pops the wall's Divine Shield and Tylannt
+    // (lane 2, 4 HP) survives the strike back; the wall then dies and Reborns while Pocket
+    // Peptides answers on its own, so no prompt ever opens mid-window. Neither side set
+    // Traitorous Blood, My Pawn wants a lethal hero attack and Explosive Runes a hero
+    // attack, so the attacks trigger nothing else.
     cy.unitIds("p1").then((attackers) => {
       const charger = attackers[2];
-      const looper = attackers[3];
-      if (charger === undefined || looper === undefined) throw new Error("combat: p1 lacks attackers");
+      const second = attackers[1];
+      if (charger === undefined || second === undefined) throw new Error("combat: p1 lacks attackers");
       cy.unitIds("p2").then((defenders) => {
-        const wall = defenders[0];
-        if (wall === undefined) throw new Error("combat: p2 holds no target");
+        const wall = defenders[4];
+        if (wall === undefined) throw new Error("combat: p2 holds no wall to hit");
         cy.attack(charger, { card: wall });
         cy.unitIds("p2").then((rest) => {
-          const still = rest[0];
-          if (still === undefined) throw new Error("combat: p2 holds no second target");
-          cy.attack(looper, { card: still });
+          const still = rest[4];
+          if (still === undefined) throw new Error("combat: p2 holds no wall to hit");
+          cy.attack(second, { card: still });
         });
       });
     });
     // The first preference spell in hand, through the play picker as any player casts it;
-    // a targeted one declares the lane-1 wall, which outlives the window.
-    cy.unitIds("p2").then((defenders) => {
-      const target = defenders[0];
-      if (target === undefined) throw new Error("combat: p2 holds no target");
-      cy.gameState().then((state) => {
-        const hand = (state.players.p1 as { hand?: { id: string; defId: string }[] }).hand ?? [];
-        const pick = BUSY_BOARD_COMBAT_SPELL_DEF_IDS.find((defId) =>
-          hand.some((card) => card.defId === defId),
-        );
-        if (pick === undefined) throw new Error("combat: p1 holds no combat spell");
-        return pick;
-      }).then((defId: string) => {
-        cy.handCardByName(busyBoardNameOf(defId)).then((instanceId) => {
-          if (BUSY_BOARD_TARGETED_SPELLS.includes(defId)) {
-            cy.playCard(instanceId, { answers: [{ kind: "target", cards: [target] }] });
-          } else {
-            cy.playCard(instanceId);
-          }
-        });
-        cy.get(PROMPT).should("not.exist");
+    // a targeted one declares the opposing hero, which outlives the window while no set
+    // trap answers a spell on the hero.
+    cy.gameState().then((state) => {
+      const hand = (state.players.p1 as { hand?: { id: string; defId: string }[] }).hand ?? [];
+      const pick = BUSY_BOARD_COMBAT_SPELL_DEF_IDS.find((defId) =>
+        hand.some((card) => card.defId === defId),
+      );
+      if (pick === undefined) throw new Error("combat: p1 holds no combat spell");
+      return pick;
+    }).then((defId: string) => {
+      cy.handCardByName(busyBoardNameOf(defId)).then((instanceId) => {
+        if (BUSY_BOARD_TARGETED_SPELLS.includes(defId)) {
+          cy.playCard(instanceId, { answers: [{ kind: "target", hero: "opponent" }] });
+        } else {
+          cy.playCard(instanceId);
+        }
       });
+      cy.get(PROMPT).should("not.exist");
     });
     cy.then({ timeout: PROBE_TIMEOUT_MS }, () => {
       if (collect === null) throw new Error("combat: the probe never started");
@@ -123,7 +127,9 @@ describe("Spec 50 — busy-board frame probe (issue #3605)", () => {
     }).then((sample: FrameSample) => {
       const report = reportPhase("combat", sample, COMBAT_BUDGET);
       logReport({ seed: BUSY_BOARD_SEED, phases: [report], idleAnimations: null });
-      expectPass(report);
+      // The verdict throw runs as its own command so the numbers above print first:
+      // a throw inside this callback would skip the queued `log` task.
+      cy.then(() => expectPass(report));
     });
   });
 

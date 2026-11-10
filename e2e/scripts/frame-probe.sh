@@ -12,6 +12,8 @@ set -eu
 JSON=0
 for arg in "$@"; do
   case "$arg" in
+    # pnpm passes its own `--` separator through (`probe:frames -- --json`).
+    --) ;;
     --json) JSON=1 ;;
     *)
       echo "usage: sh scripts/frame-probe.sh [--json]" >&2

@@ -26,14 +26,24 @@ export const FRAME_PROBE_LOOP_SECONDS = 3;
  * 5×-of-three-runs recipe (`crates/tools/src/perf.rs` header): five times the largest p95 the
  * probe measured on the bot's shared machine, rounded up to two significant figures, so CI's
  * shared runners hold it with headroom.
+ *
+ * Measured 2026-11-10 on the bot's shared machine (headless Chromium 156, software
+ * rendering) via `pnpm --dir e2e probe:frames` (runs 1-2) and the same with `-- --json`
+ * (run 3); medians/p95 in ms, long tasks per phase, idle running animations 54 every run:
+ *   run 1: idle p95 250.1/350.0, tasks 1/1; combat p95 466.7/466.7, tasks 35/34
+ *   run 2: idle p95 266.7/283.4, tasks 1/1; combat p95 400.0/566.7, tasks 37/39
+ *   run 3: idle p95 233.4/300.1, tasks 1/1; combat p95 316.7/483.3, tasks 31/34
+ * Largest p95: idle 350.0 -> budget 1800; combat 566.7 -> budget 2900. Largest task
+ * counts: idle 1 -> 5; combat 39 -> 200. Dropped share stays 100% (every frame over the
+ * 25 ms threshold under software rendering), so only p95 and long tasks gate.
  */
-export const FRAME_P95_BUDGET_IDLE_MS = 25;
+export const FRAME_P95_BUDGET_IDLE_MS = 1800;
 
 /** Issue #3605: the combat phase's 95th-percentile frame time, in milliseconds. Same recipe. */
-export const FRAME_P95_BUDGET_COMBAT_MS = 30;
+export const FRAME_P95_BUDGET_COMBAT_MS = 2900;
 
 /** Issue #3605: long tasks (`PerformanceObserver "longtask"`) the idle phase may hold. Same recipe. */
-export const FRAME_LONG_TASK_BUDGET_IDLE = 1;
+export const FRAME_LONG_TASK_BUDGET_IDLE = 5;
 
 /** Issue #3605: long tasks the combat phase may hold. Same recipe. */
-export const FRAME_LONG_TASK_BUDGET_COMBAT = 2;
+export const FRAME_LONG_TASK_BUDGET_COMBAT = 200;

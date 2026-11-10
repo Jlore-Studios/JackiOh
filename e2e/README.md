@@ -213,7 +213,13 @@ pnpm --dir e2e probe:frames            # build the e2e client, serve it on :4173
 pnpm --dir e2e probe:frames -- --json  # the same report as one JSON object per phase
 ```
 
-Baseline (main at `83c9c775`, bot's shared machine, `<date>`): idle median … ms, p95 … ms,
-dropped …%, … long tasks, … running animations; combat median … ms, p95 … ms, dropped …%,
-… long tasks. Re-measure on a CI runner before trusting the budgets: the 5× headroom is
-designed to survive it, but the numbers above are one machine's.
+Baseline (main at `c704b537`, bot's shared machine, 2026-11-10; headless Chromium 156,
+software rendering): three `probe:frames` runs (run 3 with `-- --json`), worst attempt each —
+idle median 233.3 ms, p95 350.0 ms, dropped 100.0%, 1 long task, 54 running animations;
+combat median 283.3 ms, p95 566.7 ms, dropped 100.0%, 39 long tasks. Budgets are 5× those
+worst p95/task counts rounded up to two significant figures (idle p95 1800 ms, combat p95
+2900 ms; idle tasks 5, combat tasks 200). Per-run numbers live in the budget comments in
+`apps/web/src/perf/frameBudgets.ts`; the dropped share stays 100% because every frame
+exceeds the 25 ms threshold under software rendering, so only p95 and long tasks gate.
+Re-measure on a CI runner before trusting the budgets: the 5× headroom is designed to
+survive it, but the numbers above are one machine's.
