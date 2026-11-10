@@ -17876,11 +17876,10 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
-      "merge_owner": "claude-6",
       "merge_owner_gave_up": {
-        "at": "2026-11-10T17:19:43Z",
+        "at": "2026-11-10T21:43:53Z",
         "provider": "claude-6",
-        "sha": "6c46655f81e350d719a3c581a791f35e71dd72df"
+        "sha": "bc5a44665dc99ea55bb050460557be6266b473fa"
       },
       "pending_request": false,
       "provider": "claude-6",
