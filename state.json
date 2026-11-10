@@ -17712,24 +17712,13 @@
       ],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "built_by": "muse",
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-3",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "provider": "muse",
-            "run": "42717247157",
-            "tier": "medium"
-          }
-        ],
-        "sha": "d250e47a4088ebe09c25e88015ae93a78d36ac0c",
-        "tiers": {
-          "muse": "medium"
-        }
+        "reviews": [],
+        "sha": "4ede3868005cbf49a89e97f5c7fd7e38e432bf0e",
+        "tiers": {}
       }
     },
     "3531": {
