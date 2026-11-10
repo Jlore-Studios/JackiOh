@@ -138,9 +138,12 @@ describe("R2784000 #2796 Meditative's and Meditative+'s card animations", () => 
         ...fixture,
         { type: "cardResolved", player: "p2", instanceId: "hidden", defId: "hidden", permanent: false, costPaid: 1 },
       ];
+      // R3399000, R3407000: the card's own entry alone, so another card's public entrance (a Claude's Datacenter
+      // landing face up under YileGPT Prime's Cry) stays that card's own and is not this play's.
+      const own = new Map(ENTRIES.filter(([id]) => id === card.defId));
       planEach(stream, view, (entry, env) => {
         expect(planCardMotif(entry, entry.view, env), card.defId).toBeNull();
-        for (const event of entry.events) expect(planCardFx(event, { entry, view: entry.view, env, D: entry.durationMs }), `${card.defId} ${event.type}`).toBeNull();
+        for (const event of entry.events) expect(planCardFx(event, { entry, view: entry.view, env, D: entry.durationMs }, own), `${card.defId} ${event.type}`).toBeNull();
       });
       // A readable play draws its entry, and no cue names a card.
       const readable: GameEvent[] = [

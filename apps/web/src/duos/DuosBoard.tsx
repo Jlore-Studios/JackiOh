@@ -24,7 +24,7 @@ import {
   type ReactElement,
 } from "react";
 
-import type { ActionBody, PlayerView } from "@jackioh/shared";
+import type { ActionBody, CombatForecast, PlayerView } from "@jackioh/shared";
 import { PING_SHOW_MS } from "@jackioh/server-config";
 
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
@@ -65,6 +65,11 @@ export type DuosBoardProps = {
   jloreCapped: boolean;
   /** #1664: what the result paid this seat's person, from the server's last view; none when it paid nothing. */
   economy?: GameEconomy | null;
+  /**
+   * R3477000: the engine's forecast of the attacks the seat is offered, from the server's last view; drawn
+   * on the own board while it aims one, never on the teammate's or a replay's. Absent or null, none.
+   */
+  forecast?: CombatForecast | null;
   /** #965: a finished game's step to look at (`DuosReplay.tsx`): nothing is offered, and nothing is sent. */
   replay?: boolean;
   /**
@@ -295,6 +300,7 @@ export function DuosBoard({
   error,
   jloreCapped,
   economy = null,
+  forecast = null,
   replay = false,
   sideline,
   drainWhenHidden,
@@ -338,6 +344,8 @@ export function DuosBoard({
     [legal],
   );
   const concedeLegal = legal.some((body) => body.kind === "concede");
+  // R3477000: the own duel's forecast; a replay's board, which is offered nothing, shows none.
+  const ownForecast = replay || forecast === null ? undefined : forecast;
 
   const sendDuel = useCallback(
     (body: ActionBody) => {
@@ -478,6 +486,7 @@ export function DuosBoard({
               view={view.own}
               legal={replay ? NOTHING : duelLegal}
               onAction={replay ? ignore : sendDuel}
+              forecast={ownForecast}
               replay={replay}
               drainWhenHidden={drainWhenHidden ?? !replay}
               wearCosmetics
@@ -537,6 +546,7 @@ export function DuosBoard({
           view={view.own}
           legal={replay ? NOTHING : duelLegal}
           onAction={replay ? ignore : sendDuel}
+          forecast={ownForecast}
           replay={replay}
           drainWhenHidden={drainWhenHidden ?? !replay}
           wearCosmetics

@@ -25,6 +25,8 @@ import { EmoteMenu, EmoteShow as EmoteShowEl, MuteMenu } from "../emotes/ui.tsx"
 import { useSetting } from "../settings/store.ts";
 import { ACTIVATED_EVENT } from "./ActivateControl.tsx";
 import { cx, isLegal, isSelected, legalAttr, PopLayer, type Pops } from "./Card.tsx";
+import AttackOutcome from "./AttackOutcome.tsx";
+import { outcomeFor } from "./attackOutcome.ts";
 import HeroTray, { RIFT_SPENT_LABEL, RIFT_SPENT_NOTE } from "./HeroTray.tsx";
 import {
   sideView,
@@ -81,6 +83,8 @@ export default function Hero(props: HeroProps): ReactElement {
   const legal = isLegal(props.highlight, testId);
   const selected = isSelected(props.highlight, testId);
   const target: ClickTarget = { on: "hero", side };
+  // R3477000: the engine's forecast of the aimed attack on this hero, while it is a target of one.
+  const outcome = outcomeFor(props.highlight, testId);
 
   // R1331: the portrait reacts as its menu or its view opens, and not at all under either Reduce
   // Motion switch.
@@ -247,6 +251,7 @@ export default function Hero(props: HeroProps): ReactElement {
       <HeroTray side={side} seat={seat} animating={props.animating} />
 
       <PopLayer pops={props.pops} />
+      {outcome !== undefined && <AttackOutcome outcome={outcome} target={testId} strikesBack={false} />}
 
       {emotes !== undefined && menu !== null && inspect && (
         <HeroInspect

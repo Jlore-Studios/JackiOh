@@ -9,7 +9,9 @@
 // here and draws its picture byte for byte. R3396000, R3397000, R3404000, R3398000, R3406000: a Classic+,
 // Meditative+, Training Grounds, Meditative or Core card offered Alt art, and one of Stinkyscape's later cards
 // #3406 lists, draws an alt recipe of its own (sceneRecipes.ts `ALT_SCENE_RECIPES`) under its Alt art seed
-// alone. Presentation only (CLAUDE.md rule 7): the art reads a card's id, never anything hidden.
+// alone. R3391000: a seventh kind of scenery, craft (ships, drones and vehicles), and a placement may turn a
+// pointing part (`rotate`); a placement with none draws from its stream exactly as before. Presentation only
+// (CLAUDE.md rule 7): the art reads a card's id, never anything hidden.
 
 import { hashId, round2, seededRandom } from "./hash.ts";
 import { drawFigure, type FigureLook, type PoseId, type FigurePartId } from "./figureKit.ts";
@@ -94,7 +96,7 @@ export const SCENE_PALETTE = {
 
 export type PaletteName = keyof typeof SCENE_PALETTE;
 
-/** What a kit part is: six kinds of scenery and the five of a figure. */
+/** What a kit part is: seven kinds of scenery (craft holds R3391000's ships, drones and vehicles; R3403000's are objects and creatures) and the five of a figure. */
 export type KitCategory =
   | "terrain"
   | "architecture"
@@ -102,6 +104,7 @@ export type KitCategory =
   | "creatures"
   | "objects"
   | "weather"
+  | "craft"
   | "pose"
   | "head"
   | "hair"
@@ -122,8 +125,11 @@ export type KitShape = {
   readonly skin?: boolean;
 };
 
-/** Where a part is drawn: its anchor, its scale and which way it faces. */
-export type PartPlace = { readonly x: number; readonly y: number; readonly s: number; readonly flip: 1 | -1 };
+/**
+ * Where a part is drawn: its anchor, its scale and which way it faces; a pointing part (a beam, a meteor)
+ * also turns by `rotate` degrees clockwise about its anchor (R3391000), which every other part ignores.
+ */
+export type PartPlace = { readonly x: number; readonly y: number; readonly s: number; readonly flip: 1 | -1; readonly rotate?: number };
 
 export type KitPart = { readonly category: KitCategory; draw(at: PartPlace, rng: Rng): readonly KitShape[] };
 
@@ -142,6 +148,8 @@ export type ScenePlacement = {
   readonly paint?: PaletteName;
   /** R3390000: its shapes move on the props beat (R2715001), as a painter's glyphs do; never in the subject layer. */
   readonly props?: true;
+  /** R3391000: how far a pointing part turns, in degrees clockwise; none leaves it as drawn. */
+  readonly rotate?: number;
   /** R3393000: scales every shape's opacity, for a ghost, a copy or a far thing half seen. */
   readonly fade?: number;
 };
@@ -257,7 +265,7 @@ export function composeScene(recipe: SceneRecipe, seedId: string): SceneShape[] 
         const x = copy === 0 ? placed.x : placed.x + between(rng, -dx, dx);
         const y = copy === 0 ? placed.y : placed.y + between(rng, -dy, dy);
         const s = (placed.scale ?? 1) * (1 + between(rng, -SCENE_SCALE_JITTER, SCENE_SCALE_JITTER));
-        for (const shape of kit.draw({ x, y, s, flip: placed.flip ?? 1 }, rng)) {
+        for (const shape of kit.draw({ x, y, s, flip: placed.flip ?? 1, rotate: placed.rotate }, rng)) {
           const paint = shape.main === true && placed.paint !== undefined ? placed.paint : shape.paint;
           out.push({ ...faded(shape, placed.fade), paint, layer, part: placed.part, ...(placed.props === true ? { props: true as const } : {}) });
         }

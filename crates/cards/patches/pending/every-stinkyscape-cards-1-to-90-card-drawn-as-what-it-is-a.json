@@ -1,0 +1,18 @@
+{
+  "title": "Patch: every Stinkyscape (cards 1 to 90) card drawn as what it is: a scene of its own for each, richer the rarer",
+  "sources": "#3391",
+  "notes": "Part of #3330, on #3331's art bible, scene kits and detail floor. Each of the 64 Stinkyscape cards in #3391's table (cards 1 to 90 but the Starship Pieces, which #3333 draws, and Olivian Expanse, #3338's) draws a scene recipe of its own from its brief, base and Radiant, in the set's deep space (stinkyscapeRecipes.ts, R3391000): Arg Arg Defender's proof redrawn to its brief and 63 new. The scene kit gains a seventh kind, craft (ships, drones and vehicles), and the parts the briefs name in every kind; the figure kit gains a pose, heads, headgear, outfits and held items for the set's people; a placement may turn a pointing part (a beam, a meteor), opt-in, so every other recipe draws byte for byte as before; where Core's pass (R3392000) had already drawn a part a brief names, the card wears Core's. A Unit draws its character, a person from the figure kit or its ship, and its crew or squad stand as R3390000's further figures. Each card clears its rarity's floor and leaves the detail floor's short list (R3331001), the median element count rising from Common to Mythic, and each Mythic places a part no other card does. How cards look only: nothing plays differently.",
+  "player": {
+    "title": "Stinkyscape's cards drawn as scenes",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Every Stinkyscape card from Freeze Ray to Spice now shows a scene of its own: its people or ships, its station or planet and its moment, more detailed the rarer the card.",
+      "The Starship Pieces and Olivian Expanse keep their pictures for now; their own patches redraw them."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

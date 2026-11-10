@@ -25,7 +25,7 @@ import {
   type ReactNode,
 } from "react";
 
-import type { ActionBody, Aim, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
+import type { ActionBody, Aim, CombatForecast, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
 
 import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import type { SeatLoadouts } from "../cards/loadouts.ts";
@@ -46,6 +46,7 @@ import OpponentAim from "./aim/OpponentAim.tsx";
 import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
 import { IDLE, answerPlaguePlacement, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
+import { attackOutcomes, withOutcomes } from "./attackOutcome.ts";
 import {
   HIDDEN_ID,
   SET_PIECE_SKIP_HINT_MS,
@@ -123,6 +124,11 @@ export type GameProps = {
   onAction: (body: ActionBody) => void;
   /** The engine's refusal for the last action, if any. `PlayerView` has no error channel. */
   error?: string | null;
+  /**
+   * R3477000: the engine's forecast of this seat's attacks, sent with `view` (a seat's frame, a practice
+   * snapshot). While an attacker is picked, each of its legal targets shows its entry. Absent, none does.
+   */
+  forecast?: CombatForecast;
   /** The route's ways on from a finished game, drawn in the result panel (Result.tsx). */
   resultActions?: ReactNode;
   /** `chip` when the route draws its own result dialog (practice); `panel` otherwise. */
@@ -244,6 +250,7 @@ export default function Game({
   legal: offered,
   onAction,
   error,
+  forecast,
   resultActions,
   resultForm = "panel",
   enemyLabel,
@@ -776,10 +783,17 @@ export default function Game({
     dispatch({ type: "concede" });
   }, [dispatch, refocusConcede]);
 
+  // R3477000: the aimed attack's outcomes, the forecast sent with the newest view; a board held back on an
+  // older view shows none, as it offers no moves (`legal` above), and a replay none at all.
+  const showOutcomes = useSetting("attackOutcomes");
+  const outcomes = useMemo(
+    () => (replay || !showOutcomes || shown !== view ? undefined : attackOutcomes(shown, interaction, forecast)),
+    [replay, showOutcomes, shown, view, interaction, forecast],
+  );
   // A replay lights nothing: not even the cells an open prompt in the view names (`pendingHighlight`).
   const highlight = useMemo(
-    () => (replay ? NO_HIGHLIGHT : highlightFor(shown, legal, interaction)),
-    [replay, shown, legal, interaction],
+    () => withOutcomes(replay ? NO_HIGHLIGHT : highlightFor(shown, legal, interaction), outcomes),
+    [replay, shown, legal, interaction, outcomes],
   );
   // R738: what this seat aims at goes to the opponent; theirs is drawn below until the game ends.
   useAimEmitter(shown, legal, interaction, aim?.emit);
