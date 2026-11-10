@@ -3,6 +3,10 @@
 // source, and the showcase itself, not an arrow or a dot, is the control. R2649000: Brittle's and
 // Temporary's aura is on the card before the beat it warns of, and a beat played twice starts again.
 
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,7 +22,7 @@ import { EMPTY_STATS, NO_COUNTS, type CardCounters, type PlayerStats } from "./m
 import type { PocketPick } from "./pocketPick.ts";
 import { showcaseStats, type ShowcaseKey, type ShowcaseStat } from "./showcase.ts";
 import { STAGE_INSTANCE_ID, firstBeatAt, stageScript } from "./showcaseStage.ts";
-import { StatShowcase } from "./StatShowcase.tsx";
+import { StatShowcase, toLayerBox } from "./StatShowcase.tsx";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -414,5 +418,67 @@ describe("R2649000 the aura before the beat", () => {
     expect(zone()).not.toBe(second);
     advance(ms("summoned") + SHOWCASE_BEAT_GAP_MS);
     expect(document.querySelector("[data-animating]")).toBeNull();
+  });
+});
+
+describe("R1584000 the showcase stays below the gold line", () => {
+  const HERE = dirname(fileURLToPath(import.meta.url));
+  const landingCss = readFileSync(resolve(HERE, "..", "routes", "landing.css"), "utf8");
+  const fxCss = readFileSync(resolve(HERE, "..", "fx", "fx.css"), "utf8");
+
+  /** The declarations of the first rule whose selector list holds `selector`. */
+  const ruleOf = (css: string, selector: string): string => {
+    const at = css.indexOf(selector);
+    expect(at, `${selector} has a rule`).toBeGreaterThanOrEqual(0);
+    const open = css.indexOf("{", at);
+    const close = css.indexOf("}", open);
+    return css.slice(open + 1, close);
+  };
+
+  it("R1584000 the stats section clips its painting at the gold rule", () => {
+    const stats = ruleOf(landingCss, ".landing .landing-stats");
+    // inset(0) clips at the border box's outer edge: the 1px gold border-top stays
+    // visible and everything above it is cut, fixed-position descendants included
+    // (overflow: hidden would not cut those).
+    expect(stats).toMatch(/clip-path:\s*inset\(0\)/);
+    expect(ruleOf(landingCss, ".landing .landing-hero")).not.toMatch(/clip-path|overflow/);
+  });
+
+  it("R1584000 the board's effects layer stays viewport-fixed and landing-free", () => {
+    expect(ruleOf(fxCss, ".fx-layer")).toMatch(/position:\s*fixed/);
+    expect(fxCss).not.toMatch(/\.landing/);
+  });
+
+  it("R1584000 the layer-relative measure keeps the card's pixels", () => {
+    // A zero origin is the identity (what jsdom measures, so the old tests still hold).
+    expect(toLayerBox({ x: 100, y: 200, width: 80, height: 112 }, { x: 0, y: 0 })).toEqual({
+      x: 100,
+      y: 200,
+      width: 80,
+      height: 112,
+    });
+    // Otherwise only the origin moves; widths and heights pass through untouched.
+    expect(toLayerBox({ x: 100, y: 200, width: 80, height: 112 }, { x: 40, y: 150 })).toEqual({
+      x: 60,
+      y: 50,
+      width: 80,
+      height: 112,
+    });
+  });
+
+  it("R2035000 the quests' and news' parchment still hangs over the stats", () => {
+    // The panels belong to the hero and unroll over the floor: no clip-path on them, and the
+    // lists' own pre-existing `overflow-y: auto` untouched (it scrolls their rows, not the section).
+    for (const selector of [".landing .landing-quests-panel", ".landing .landing-news-panel"]) {
+      const panel = ruleOf(landingCss, selector);
+      expect(panel).not.toMatch(/clip-path/);
+      expect(panel).toMatch(/overflow-y:\s*auto/);
+    }
+  });
+
+  it("R1743000 the showcase keeps its focus ring", () => {
+    expect(ruleOf(landingCss, ".landing .landing-showcase[role=\"button\"]:focus-visible")).toMatch(
+      /outline-offset:\s*2px/,
+    );
   });
 });
