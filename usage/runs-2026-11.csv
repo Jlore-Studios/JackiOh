@@ -1537,3 +1537,12 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-10T06:36:51Z,42765362342,muse,muse-spark-1.3-contributor,plan,3537,medium,planned,,38.4,0,0,0,,9,20,23,27,370.8,,none,,1
 2026-11-10T06:35:06Z,42760630717,claude-2,opus,plan,3564,hard,planned,,70,262,118803,26924303,10.0836,8,71,74,79,96,,fresh,,1
 2026-11-10T06:36:07Z,42759217730,muse,muse-spark-1.3-contributor,build,3518,medium,built,,94.8,0,0,0,,3,19,21,27,2.5,muse,none,,1
+2026-11-10T06:53:36Z,42763766278,muse,muse-spark-1.3-contributor,revise,3594,medium,built,,70.3,0,0,0,,7,25,22,29,4.4,muse,none,,1
+2026-11-10T07:06:56Z,42760523204,claude-3,opus,plan,3516,hard,planned,,103.1,59,49272,10661525,14.1641,21,81,,,590,claude-4,fresh,cap,1
+2026-11-10T06:56:54Z,42760431359,claude-2,opus,plan,3515,hard,planned,,95.4,209,67475,14205464,5.6453,1,75,73,79,589.2,claude-4,fresh,cap,1
+2026-11-10T06:49:14Z,42755914153,claude-6,opus,build,3388,hard,built,,66.4,308,87776,28814532,9.4659,51,20,,,3584.3,claude-1,fresh,cap,1
+2026-11-10T06:53:24Z,42750875022,muse,muse-spark-1.3-contributor,build,3605,medium,built,,150,0,0,0,,20,14,17,25,25.7,muse,none,,1
+2026-11-10T07:26:01Z,42774787840,claude-7,opus,review,3627,hard,reviewed,,1.5,19,7939,1189975,1.3205,23,26,,,5.2,,none,,1
+2026-11-10T07:28:31Z,42771515781,claude-7,opus,plan,3538,hard,planned,,31.8,252,181055,33333661,13.5525,0,29,,,426.2,,fresh,,1
+2026-11-10T07:27:16Z,42771237173,muse,muse-spark-1.3-contributor,review,3626,medium,approved,,35.4,0,0,0,,25,37,28,32,5,,none,,3
+2026-11-10T07:23:41Z,42757432233,claude-3,opus,plan,3517,hard,failed,,150,285,76932,27272740,9.0784,8,85,,,71.2,,fresh,,1
