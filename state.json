@@ -17168,23 +17168,6 @@
       "provider": "claude-2",
       "run_id": "42760431359",
       "runs_on": "ubuntu-latest",
-      "session": {
-        "action": "plan",
-        "artifact": 13736324718,
-        "artifact_bytes": 753536,
-        "artifact_name": "work",
-        "at": "2026-11-10T05:09:17Z",
-        "bytes": 988188,
-        "cwd": "/home/runner/work/_temp/work/item-3515",
-        "ended": "interrupted: `claude-4` stops mid-call: 5-hour usage is 50%, at or over its 50% cap outside its hours; it resets at 2026-11-10T08:20:00Z",
-        "head": "efe8cdab2ebe80c92b15d04a80678eb5a60d6c53",
-        "id": "f7db83d3-1173-44f9-9772-00fdc5cebdef",
-        "kind": "plan",
-        "model": "opus",
-        "project": "-home-runner-work--temp-work-item-3515",
-        "provider": "claude-4",
-        "run": "42748461663"
-      },
       "started_at": "2026-11-10T05:10:21Z",
       "stop_requested": false,
       "taken_asks": []
