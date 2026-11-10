@@ -789,7 +789,7 @@ describe("R3351000 the living game's shared shed order", () => {
   const TINT = { rim: "#ffffff", core: "#000000", glow: "#ff0000" };
 
   it("R3351000 a forced slow frame sheds motes first while the beats still play", () => {
-    const h = harness({ phone: true });
+    const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     expect(h.director.shedLevel()).toBe(1);
@@ -803,7 +803,7 @@ describe("R3351000 the living game's shared shed order", () => {
   });
 
   it("R3351000 further slow windows shed far auras, then faces, and healthy windows recover one stage at a time", () => {
-    const h = harness({ phone: true });
+    const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     expect(h.director.shedLevel()).toBe(1);
@@ -828,7 +828,7 @@ describe("R3351000 the living game's shared shed order", () => {
   });
 
   it("R3351000 a set piece's main beats never shed, at any stage", () => {
-    const h = harness({ phone: true });
+    const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
@@ -850,7 +850,7 @@ describe("R3351000 the living game's shared shed order", () => {
   });
 
   it("R3351000 disposing a director resets the shared shed level to full", () => {
-    const h = harness({ phone: true });
+    const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
@@ -859,11 +859,11 @@ describe("R3351000 the living game's shared shed order", () => {
     h.director.dispose();
     expect(h.director.shedLevel()).toBe(0);
     // A director mounted after it starts full too: no cross-route leak.
-    expect(harness({ phone: true }).director.shedLevel()).toBe(0);
+    expect(harness().director.shedLevel()).toBe(0);
   });
 
   it("R3351000 an idle shed board recovers to full on healthy frames with no effect work", () => {
-    const h = harness({ phone: true });
+    const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
@@ -882,14 +882,56 @@ describe("R3351000 the living game's shared shed order", () => {
     expect(h.frames.pending()).toBe(0);
   });
 
-  it("R3351000 a desktop director halves its cap on slow windows but never sheds", () => {
+  it("R3606000 a desktop director sheds motes, then far auras, then faces, and recovers one stage per healthy run", () => {
+    const h = harness();
+    settled(h);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(1);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(2);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(3);
+    // Past the last stage nothing more sheds.
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(3);
+
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(2);
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(1);
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(0);
+    expect(h.director.capacity()).toBe(FX_PARTICLE_CAP);
+  });
+
+  it("R3606000 healthy desktop frames at the display's refresh never leave full", () => {
+    const h = harness();
+    settled(h);
+    h.frameEvery(16, FX_ADAPT_WINDOW * 5);
+    expect(h.director.shedLevel()).toBe(0);
+    expect(h.director.capacity()).toBe(FX_PARTICLE_CAP);
+  });
+
+  it("R3606000 a desktop shed still plays a set piece's main beats", () => {
     const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
-    expect(h.director.shedLevel()).toBe(0);
-    expect(h.director.capacity()).toBeLessThan(FX_PARTICLE_CAP);
+    expect(h.director.shedLevel()).toBe(3);
+    // Every set piece's beats: a takeover, a fold, a launch, a rift and a title card. They are DOM
+    // cues with no particle counts, so emission scaling cannot touch them.
+    h.director.play([
+      { kind: "takeover", stage: null, look: "prismatic", tint: TINT, at: at("card-a"), landMs: 100, delayMs: 0, durationMs: 1000 },
+      { kind: "setPiece", shape: "fold", tint: TINT, spin: 1, side: null, at: at("card-a"), holdMs: 200, delayMs: 0, durationMs: 1000 },
+      { kind: "launch", at: at("card-a"), tint: TINT, size: "large", countsMs: [0, 600, 1200], igniteMs: 100, delayMs: 0, durationMs: 1000 },
+      { kind: "rift", at: at("card-a"), side: "you", tint: TINT, tearMs: 50, flareMs: 150, delayMs: 0, durationMs: 1000 },
+      { kind: "anomalyTitle", at: at("card-a"), text: "Found", picture: "<svg></svg>", tint: TINT, delayMs: 0, durationMs: 1000 },
+    ]);
+    h.frame(h.clock.now() + STEP);
+    for (const kind of ["takeover", "setPiece", "launch", "rift", "anomalyTitle"]) {
+      expect(h.root.querySelectorAll(`[data-fx="${kind}"]`)).toHaveLength(1);
+    }
   });
 });
 
