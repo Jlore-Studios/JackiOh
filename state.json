@@ -20164,7 +20164,7 @@
       "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-1",
-      "run_id": "pending:b1900635-1794300942",
+      "run_id": "42786605664",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-10T08:56:43Z",
       "stop_requested": false,
