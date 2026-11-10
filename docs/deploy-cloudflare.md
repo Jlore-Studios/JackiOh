@@ -225,7 +225,12 @@ For each Worker (`--env staging`, then `--env=""` for production), from `apps/ed
 pnpm exec wrangler secret put SUPABASE_SECRET_KEY --config ../../wrangler.jsonc --env staging
 pnpm exec wrangler secret put DATABASE_URL --config ../../wrangler.jsonc --env staging
 pnpm exec wrangler secret put CODE_PEPPER --config ../../wrangler.jsonc --env staging
+pnpm exec wrangler secret put STATS_INGEST_TOKEN --config ../../wrangler.jsonc --env staging
 ```
+
+`STATS_INGEST_TOKEN` (R1023000) is the Bearer [REDACTED] that opens the training lanes' write-only
+`POST /api/stats/dev-records` route and no other route; generate it with `openssl rand -hex 32`.
+Without it the route answers 404 and the lanes keep only their files.
 
 Staging's values are the ones Render's `jackioh-server` holds now (Environment), since staging keeps
 the project production used (JackiOh-Staging, section 8), with one change: `DATABASE_URL` is
@@ -283,7 +288,8 @@ Replace `$SITE` with `https://staging.jackioh.com`. A browser asks for an Access
 1. Step 3's secrets for `--env=""`, from JackiOh-Production (Project Settings -> API Keys, and its
    own session pooler URI), with the `CODE_PEPPER` and `DEV_PROFILE_IDS` Render holds: the copy
    keeps every invite code's hash and every account's id, so the same pepper and ids still fit.
-   Actions -> cutover, step `production-secrets`.
+   Generate a fresh `STATS_INGEST_TOKEN` for production (`openssl rand -hex 32`) rather than copying
+   staging's, so revoking one never touches the other. Actions -> cutover, step `production-secrets`.
 2. Copy the data into JackiOh-Production (section 8, The copy), straight before the next item: Render
    writes to the old project until the redeploy, so anything a player saves between the two stays
    on staging. Actions -> cutover, step `drop-ping` first, then `copy` with `dry_run` and without.

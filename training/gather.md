@@ -68,6 +68,7 @@ until `main` ships another.
   ending, the turn quartiles, and, over the games whose records carry R1256000's counts, the share with
   a draw from an empty library, the fatigue damage a game, the Traps fired per Trap set, and the position switches and Radiant upgrades in all and a game. They are
   AI-against-AI figures: the first seat's edge between two AIs is not the people's;
-- `imported.txt`, the days already loaded into Postgres when the box has `DATABASE_URL`.
+- `imported.txt`, the days already posted to the dev-records ingest route when the box has
+  `STATS_INGEST_TOKEN` and `JACKIOH_API_URL`.
 
 `training/README.md` (The gather lane) says how to read them.

@@ -342,8 +342,10 @@ login and opens no pull request. Each cycle:
 
 1. Fetch `main`, check out `origin/main` (a new `loop.sh` there restarts the lane, as for the others)
    and build `jackioh` from it. The AI that plays is always the one on `main`.
-2. Load the finished days' record files into Postgres with `stats-import`, once each, when the box has
-   `DATABASE_URL` (the same step as the other lanes').
+2. Post the finished days' record files to the server's dev-records ingest route
+   (`POST /api/stats/dev-records`) with curl, once each, when the box has `STATS_INGEST_TOKEN` and
+   `JACKIOH_API_URL` (the same step as the other lanes'). Each batch is also posted right after it is
+   appended below, so its games reach the card statistics within `CARD_STATS_CACHE_TTL_SECONDS`.
 3. Play the next `TRAIN_GATHER_GAMES` (100) games with `jackioh stats --series gather --patch <patch>`,
    where `<patch>` is `cargo jackioh catalog-version`, `main`'s. Game `n`'s seed is `gather:<n>`, so
    the lane's games are neither the gate's nor a person's `dev` run's. The file `cursor-<patch>` in
@@ -355,9 +357,10 @@ login and opens no pull request. Each cycle:
    the lane's games, some 50 MB, is all the detail held (R1044000, R1044001). The files here keep
    every game's detail.
 4. Append the batch to `~/training-out/gather/<date>.jsonl`, advancing the cursor first, so a batch
-   the loop never finished is played again and none is appended twice (`stats-import` skips the ids it
-   holds, too), and rewrite the patch's card figures, `cards-<patch>.txt` and `.json`, and its game
-   figures, `games-<patch>.txt` and `.json`, from every game the lane's files hold.
+   the loop never finished is played again and none is appended twice (held records are skipped on
+   ingest, too), post the batch when posting is configured, and rewrite the patch's card figures,
+   `cards-<patch>.txt` and `.json`, and its game figures, `games-<patch>.txt` and `.json`, from every
+   game the lane's files hold.
 5. Sleep `TRAIN_PAUSE_SECONDS` (60) and repeat.
 
 The records are `source: "dev"`, mode `random`, both pilots `ai`, with the id
@@ -374,8 +377,11 @@ does this once:
 - Run `setup.sh --training` on the training box (`bot/machine/README.md`, The training box),
   whose `TRAIN_LANES` already holds `gather`. It creates the user `agent-train-gather` with its own
   checkout and the service `jackioh-train@gather`.
-- To load its records into Postgres, run `sudo systemctl edit jackioh-train@gather` and add
-  `Environment=DATABASE_URL=…`. Without it the lane keeps only the files.
+- To post its records to the dev-records ingest route, run `sudo systemctl edit
+  jackioh-train@gather` and add `Environment=STATS_INGEST_TOKEN=…` and
+  `Environment=JACKIOH_API_URL=…` (the server's address, no trailing slash). Without both, the lane
+  keeps only the files. The improve and unban lanes take the same two variables, in a drop-in of
+  their own, if their records should load too.
 - It needs no Muse login. A `gh` login is needed only if the repository is private, so the lane can
   read it.
 
@@ -464,11 +470,11 @@ never edits `crates/server`, and a promotion does not wait for it.
 | What | Where |
 |---|---|
 | Every game the arena plays (a promotion run or an experiment): one `GameRecord` (R376) per line, `source: "dev"`, `mode: "random"` | `~/training-out/<lane>/<date>.jsonl` (`$JACKIOH_TRAINING_OUT`; `arena` without it prints to stdout) |
-| The same records in Postgres, loaded once per finished day when the box has `DATABASE_URL`: folded into the card statistics' totals as they load, each record's detail kept a week (R1044000, R1044001) | `jackioh-server stats-import`, read back with `jackioh-server stats-cards --source=dev` (the totals) or `stats-export --source=dev` (the last week's records) |
+| The same records in Postgres, posted once per finished day (and each gather batch at once) when the box has `STATS_INGEST_TOKEN` and `JACKIOH_API_URL`: folded into the card statistics' totals as they load, each record's detail kept a week (R1044000, R1044001) | `POST /api/stats/dev-records` (R1023000), read back with `jackioh-server stats-cards --source=dev` (the totals) or `stats-export --source=dev` (the last week's records) |
 | The gather lane's records: one `GameRecord` per line, a file a day | `~/training-out/gather/<date>.jsonl` |
 | The gather lane's next game number for a patch, and that patch's card figures and game figures, rewritten each cycle | `~/training-out/gather/cursor-<patch>`, `cards-<patch>.txt` and `.json`, `games-<patch>.txt` and `.json` |
 | The learn lane's exports as development records: one `GameRecord` per line (`stats from-selfplay`) | the file `--out` names, loaded with `stats-import` |
-| The days already loaded into Postgres (each lane's `~/training-out/<lane>/`) | `imported.txt` |
+| The days already posted to the dev-records ingest (each lane's `~/training-out/<lane>/`) | `imported.txt` |
 | A promotion's gate numbers | `training/history/<lane>.jsonl` and `crates/ai/generation.json`, committed with it |
 | The latest pass of the gate (any mode, failed ones included), in Markdown: the top of the lane's draft pull request | `~/training-out/<lane>/last-pass.md`, rewritten by every run of `promote` |
 | What each Muse session tried, with each screen's numbers and interval, why the loop set a promotion back, and what it did with the improve stack (a rebase conflict, a re-measure) | `~/training-out/<lane>/attempts.md`, quoted in each session's comment on the lane's pull request |

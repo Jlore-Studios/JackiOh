@@ -19,13 +19,14 @@ use axum::response::{IntoResponse, Response};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
+use subtle::ConstantTimeEq;
 
 use crate::app::{App, Handler, Route};
 use crate::auth::AuthUser;
 use crate::config::{
     API_MAX_BODY_BYTES, API_REJECTION_ALERT_THRESHOLD, API_REJECTION_ALERT_WINDOW_MS,
-    API_REQUESTS_PER_MINUTE, IPV6_RATE_LIMIT_PREFIX_BITS, KNOWN_PROFILES_MAX, MAX_TRUSTED_PROXY_HOPS,
-    RATING_START,
+    API_REQUESTS_PER_MINUTE, DEV_RECORDS_MAX_BODY_BYTES, IPV6_RATE_LIMIT_PREFIX_BITS, KNOWN_PROFILES_MAX,
+    MAX_TRUSTED_PROXY_HOPS, RATING_START,
 };
 use crate::db::store::{Profile, ProfileCreateInput, ProfileStatus, StoreError};
 
@@ -349,12 +350,15 @@ pub fn error_response(error: &ApiError) -> Response {
 /// - `query`: the URL's search parameters, the first value of each name.
 /// - `body`: the parsed JSON body; `{}` for a request without one. Anything but a JSON object is
 ///   refused before a handler runs.
+/// - `raw_body`: the body as text, set only on the dev-records ingest route (R1023000), whose
+///   body is JSON Lines rather than one JSON object.
 /// - `address`: §9.4, §9.8: the client address is only ever seen hashed.
 pub struct Req {
     pub caller: Option<Caller>,
     pub params: IndexMap<String, String>,
     pub query: IndexMap<String, String>,
     pub body: Value,
+    pub raw_body: Option<String>,
     pub address: String,
     pub headers: HeaderMap,
 }
@@ -554,16 +558,15 @@ pub fn bearer_token(headers: &HeaderMap) -> Option<String> {
     Some(token.to_string())
 }
 
-/// The refusal for a body past `API_MAX_BODY_BYTES`, raised before any JSON parsing.
+/// The refusal for a body past its cap, raised before any parsing.
 fn body_too_large() -> ApiError {
     bad_request("the request body is too large")
 }
 
-/// The body as text, refused once it passes `API_MAX_BODY_BYTES`. A declared `content-length` over
+/// The body as text, refused once it passes `cap`. A declared `content-length` over
 /// the cap is refused without reading; otherwise the body is read up to the cap and abandoned the
 /// moment it passes it, so a huge body is never buffered whole.
-async fn read_body_text(headers: &HeaderMap, body: Body) -> Result<String, ApiError> {
-    let cap = API_MAX_BODY_BYTES;
+async fn read_body_text(headers: &HeaderMap, body: Body, cap: usize) -> Result<String, ApiError> {
     if let Some(declared) = header_text(headers, "content-length")
         && let Ok(length) = declared.trim().parse::<f64>()
         && length > cap as f64
@@ -584,7 +587,7 @@ async fn read_body(method: &Method, headers: &HeaderMap, body: Body) -> Result<V
     if *method == Method::GET || *method == Method::HEAD {
         return Ok(Value::Object(Map::new()));
     }
-    let text = read_body_text(headers, body).await?;
+    let text = read_body_text(headers, body, API_MAX_BODY_BYTES).await?;
     if text.trim().is_empty() {
         return Ok(Value::Object(Map::new()));
     }
@@ -647,11 +650,15 @@ pub type ApiResult = Result<Response, ApiError>;
 /// - `User`: a valid access token and a profile, whatever its status: the code screen (§9.4).
 /// - `Active`: also `profiles.status == active`, which gives a pending account a 403 from
 ///   collection, decks and queue (§9.4, BUILD M6-T1).
+/// - `Ingest`: the `STATS_INGEST_TOKEN` Bearer [REDACTED] (R1023000), which opens the dev-records
+///   route only and never touches Supabase.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum AuthLevel {
     None,
     User,
     Active,
+    /// R1023000: the dev-records ingest token, which opens this route only.
+    Ingest,
 }
 
 /// Percent-decodes a URI component, or None for a `%` not followed by two hex digits or for bytes that
@@ -1179,7 +1186,7 @@ async fn run_route(
     // of bad tokens is still counted — against its address, since it named no account.
     let mut caller: Option<Caller> = None;
     let mut auth_error: Option<ApiError> = None;
-    if auth != AuthLevel::None {
+    if auth != AuthLevel::None && auth != AuthLevel::Ingest {
         match resolve_caller(app, &parts.headers, path).await {
             Ok(resolved) => caller = Some(resolved),
             Err(error) if error.code == ApiErrorCode::Internal => return Err(error),
@@ -1187,6 +1194,25 @@ async fn run_route(
             // already logged and counted.
             Err(error) if error.code == ApiErrorCode::RateLimited => return Err(error),
             Err(error) => auth_error = Some(error),
+        }
+    }
+
+    // R1023000: the dev-records ingest route's own credential. Unset, the route reads as an
+    // unknown path, so probes learn nothing of its existence. Otherwise the bearer is compared in
+    // constant time and Supabase is never called; the refusal is held, so a flood of bad tokens is
+    // still counted against its address by the shared check below, as a bad user token is.
+    let mut ingest_error: Option<ApiError> = None;
+    if auth == AuthLevel::Ingest {
+        match &app.env.stats_ingest_token {
+            None => {
+                return Err(ApiError::new(ApiErrorCode::NotFound, "no such endpoint"));
+            }
+            Some(expected) => {
+                let presented = bearer_token(&parts.headers).unwrap_or_default();
+                if !bool::from(expected.as_bytes().ct_eq(presented.as_bytes())) {
+                    ingest_error = Some(ApiError::new(ApiErrorCode::Unauthorized, "invalid ingest token"));
+                }
+            }
         }
     }
 
@@ -1206,6 +1232,9 @@ async fn run_route(
     if let Some(error) = auth_error {
         return Err(error);
     }
+    if let Some(error) = ingest_error {
+        return Err(error);
+    }
     if auth == AuthLevel::Active
         && let Some(resolved) = &caller
     {
@@ -1221,11 +1250,22 @@ async fn run_route(
         crate::social::presence::touch_on_request(app, &resolved.profile).await;
     }
 
+    // R1023000: the ingest body is JSON Lines, not one JSON object, so it is read as text under
+    // its own cap; every other route reads JSON under the shared cap.
+    let (body, raw_body) = if auth == AuthLevel::Ingest {
+        (
+            Value::Object(Map::new()),
+            Some(read_body_text(&parts.headers, body, DEV_RECORDS_MAX_BODY_BYTES).await?),
+        )
+    } else {
+        (read_body(&parts.method, &parts.headers, body).await?, None)
+    };
     let req = Req {
         caller,
         params,
         query: parse_query(parts.uri.query().unwrap_or("")),
-        body: read_body(&parts.method, &parts.headers, body).await?,
+        body,
+        raw_body,
         address,
         headers: parts.headers.clone(),
     };
@@ -1291,6 +1331,7 @@ mod tests {
             params: IndexMap::new(),
             query: IndexMap::new(),
             body: json!({}),
+            raw_body: None,
             address: String::new(),
             headers: HeaderMap::new(),
         };

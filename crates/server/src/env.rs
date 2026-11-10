@@ -104,6 +104,9 @@ pub struct Env {
     /// `off`: every `/api/admin/*` route then needs the two-step code (`aal2`), and a hand-set
     /// rating is off the public ladder until it is reset (R3074001). Production leaves it unset.
     pub dev_strict: bool,
+    /// R1023000: `STATS_INGEST_TOKEN`, the Bearer [REDACTED] that opens `POST /api/stats/dev-records`
+    /// and no other route. Unset, the route answers 404. Server-only, secret.
+    pub stats_ingest_token: Option<String>,
 }
 
 impl std::fmt::Debug for Env {
@@ -135,6 +138,10 @@ impl std::fmt::Debug for Env {
             // A dev account's id is its account secret ID (R1300000): only how many are listed.
             .field("dev_profile_ids", &self.dev_profile_ids.len())
             .field("dev_strict", &self.dev_strict)
+            .field(
+                "stats_ingest_token",
+                &self.stats_ingest_token.as_ref().map(|_| REDACTED),
+            )
             .finish()
     }
 }
@@ -203,6 +210,7 @@ pub const SERVER_ONLY_ENV_VARS: &[&str] = &[
     "GITHUB_ISSUES_REPO",
     DEV_PROFILE_IDS,
     DEV_STRICT,
+    "STATS_INGEST_TOKEN",
 ];
 
 const MIN_CODE_PEPPER_LENGTH: usize = 32;
@@ -386,6 +394,14 @@ fn parse_github_issues_token(value: Option<&str>) -> Option<String> {
         .map(|raw| js_trim(raw).to_string())
 }
 
+/// R1023000: `STATS_INGEST_TOKEN`, the Bearer [REDACTED] that opens `POST /api/stats/dev-records`.
+/// Optional, and never a boot problem: unset or blank leaves the route answering 404.
+fn parse_stats_ingest_token(value: Option<&str>) -> Option<String> {
+    value
+        .filter(|text| is_non_empty(Some(text)))
+        .map(|raw| js_trim(raw).to_string())
+}
+
 fn parse_github_issues_repo(value: Option<&str>, problems: &mut Vec<String>) -> String {
     let Some(raw) = value.filter(|text| is_non_empty(Some(text))) else {
         return BUG_REPORT_REPO_DEFAULT.to_string();
@@ -563,6 +579,7 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
         Vec::new()
     });
     let dev_strict = parse_dev_strict(read(DEV_STRICT), &mut problems);
+    let stats_ingest_token = parse_stats_ingest_token(read("STATS_INGEST_TOKEN"));
 
     if e2e && node_env == NodeEnv::Production {
         problems.push(
@@ -605,6 +622,7 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
         github_issues_repo,
         dev_profile_ids,
         dev_strict,
+        stats_ingest_token,
     })
 }
 

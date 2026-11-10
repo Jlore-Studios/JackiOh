@@ -35,6 +35,7 @@ jsonwebtoken = { version = "11.1.0", features = ["rust_crypto"] }
 reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls"] }
 hmac = { version = "0.13.0" }
 sha2 = { version = "0.11.0" }
+subtle = { version = "2.6.1" }
 base64 = { version = "0.23.1" }
 uuid = { version = "1.27.0", features = ["v4", "serde"] }
 time = { version = "0.3.55", features = ["serde", "formatting", "parsing"] }

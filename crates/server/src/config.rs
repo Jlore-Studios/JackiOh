@@ -285,6 +285,11 @@ pub const IPV6_RATE_LIMIT_PREFIX_BITS: u32 = 56;
 /// parsed.
 pub const API_MAX_BODY_BYTES: usize = PLAYER_STATS_BYTES_MAX;
 
+/// R1023000: the largest dev-records ingest a lane may post, about 550 records at ~1.8 KB each; a
+/// gather batch of 100 games is about 180 KB. Server-only: the lanes post to it, no client reads
+/// it (`tests/export_config.rs`).
+pub const DEV_RECORDS_MAX_BODY_BYTES: usize = 1_048_576;
+
 /// The client's sign-up check. Twelve characters, not Supabase Auth's default of six: a six-letter
 /// password falls to guessing and credential stuffing. The auth provider's own minimum must be set
 /// to the same number in the Supabase dashboard (Authentication > Providers > Email), or it lets a

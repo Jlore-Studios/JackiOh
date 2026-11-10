@@ -52,6 +52,7 @@ use crate::api::catalog::load_patch_versions;
 use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, lock, now_ms, ok_of, to_json};
 use crate::app::App;
+use crate::cli::import_dev_records;
 use crate::config::{
     CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_CO_PLAYED_TOP, CARD_STATS_CURVE_TOP, CARD_STATS_KEPT_REPORTS,
     CARD_STATS_MIN_SAMPLE, MS_PER_SECOND, PLAY_RATES_MIN_GAMES, PLAY_RATES_REFRESH_SECONDS,
@@ -1610,6 +1611,20 @@ pub async fn put_player(app: &Arc<App>, req: Req) -> ApiResult {
     tx.commit().await?;
     let stats_json: Map<String, Value> = stats.into_iter().collect();
     ok_of(&json!({ "stats": Value::Object(stats_json), "isPrivate": is_private, "updatedAt": now }))
+}
+
+/// POST /api/stats/dev-records (R1023000): the training lanes' write-only ingest. The body is
+/// the JSON Lines `cargo jackioh stats --out` writes, one `GameRecord` per line, read as text
+/// under `DEV_RECORDS_MAX_BODY_BYTES`. It calls `import_dev_records` unchanged, so R378's
+/// refusals hold exactly as they do for `stats-import`: a record that is not `source: "dev"`, one
+/// whose id does not begin `dev:`, or a forced-run record refuses the whole body with 400 and
+/// writes nothing. A record the database already holds is skipped.
+pub async fn post_dev_records(app: &Arc<App>, req: Req) -> ApiResult {
+    let contents = req.raw_body.clone().unwrap_or_default();
+    match import_dev_records::import_dev_records(&app.db, &contents).await {
+        Ok(outcome) => ok_of(&outcome),
+        Err(error) => Err(bad_request(error.to_string())),
+    }
 }
 
 /// GET /api/stats/players: public player summaries, private players excluded.

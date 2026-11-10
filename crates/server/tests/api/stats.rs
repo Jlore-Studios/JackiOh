@@ -2807,3 +2807,165 @@ mod r3049000_the_win_rate_snapshot {
         assert_eq!(card["games"], json!(row.games));
     }
 }
+
+mod r1023000_dev_records_route {
+    use super::*;
+    use std::time::Duration;
+
+    use axum::body::Body;
+    use jackioh_server::config::DEV_RECORDS_MAX_BODY_BYTES;
+
+    use crate::support::deps::{DEFAULT_TEST_IP, TestAppOptions, send, test_app_with};
+
+    /// The `STATS_INGEST_TOKEN` the token app runs with.
+    const INGEST_TOKEN: &str = "s3cr3t-test-token";
+
+    /// The app with `STATS_INGEST_TOKEN` set; the default app leaves it unset.
+    async fn token_app() -> Arc<App> {
+        test_app_with(TestAppOptions {
+            env: vec![("STATS_INGEST_TOKEN".to_string(), INGEST_TOKEN.to_string())],
+            ..TestAppOptions::default()
+        })
+        .await
+    }
+
+    /// One raw-text POST to the ingest route through the real router.
+    async fn post_raw(app: &Arc<App>, text: &str, token: Option<&str>) -> (u16, HeaderMap, Value) {
+        let mut request = axum::http::Request::builder()
+            .method("POST")
+            .uri("https://server.test/api/stats/dev-records")
+            .header("content-type", "text/plain")
+            .header("x-forwarded-for", DEFAULT_TEST_IP);
+        if let Some(token) = token {
+            request = request.header("authorization", format!("Bearer {token}"));
+        }
+        let request = request
+            .body(Body::from(text.to_string()))
+            .expect("a test request");
+        send(app, request).await
+    }
+
+    /// A body of `n` development records, one `GameRecord` per line.
+    fn dev_body(n: usize) -> String {
+        (1..=n)
+            .map(|i| {
+                make_game_record(
+                    &format!("r1023-{i}"),
+                    RecordOptions {
+                        source: Some("dev"),
+                        ..RecordOptions::default()
+                    },
+                )
+                .to_string()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    #[tokio::test]
+    async fn r1023000_without_token_answers_404() {
+        let app = test_app().await;
+        let (status, _, data) = post_raw(&app, &dev_body(1), Some(INGEST_TOKEN)).await;
+        assert_eq!(status, 404);
+        assert_eq!(data["error"]["code"], json!("not_found"));
+    }
+
+    #[tokio::test]
+    async fn r1023000_missing_wrong_and_user_tokens_are_401() {
+        let app = token_app().await;
+        let body = dev_body(1);
+        for token in [None, Some("wrong"), Some(USER_TOKEN)] {
+            let (status, _, data) = post_raw(&app, &body, token).await;
+            assert_eq!(status, 401, "token {token:?}");
+            assert_eq!(data["error"]["code"], json!("unauthorized"));
+        }
+    }
+
+    #[tokio::test]
+    async fn r1023000_live_record_is_400_and_writes_nothing() {
+        let app = token_app().await;
+        let body = make_game_record("live-1", RecordOptions::default()).to_string();
+        let (status, _, data) = post_raw(&app, &body, Some(INGEST_TOKEN)).await;
+        assert_eq!(status, 400);
+        assert!(
+            data["error"]["message"].as_str().unwrap_or("").contains("R378"),
+            "{data}"
+        );
+
+        let (status, _, dev) = get_public(&app, "/api/stats/cards?source=dev").await;
+        assert_eq!(status, 200);
+        assert_eq!(dev["totalGames"], json!(0));
+    }
+
+    #[tokio::test]
+    async fn r1023000_dev_id_without_prefix_is_400() {
+        let app = token_app().await;
+        let mut record = make_game_record(
+            "r1023-bad",
+            RecordOptions {
+                source: Some("dev"),
+                ..RecordOptions::default()
+            },
+        );
+        record["id"] = json!("oops-1");
+        let (status, _, data) = post_raw(&app, &record.to_string(), Some(INGEST_TOKEN)).await;
+        assert_eq!(status, 400);
+        assert!(
+            data["error"]["message"].as_str().unwrap_or("").contains("R378"),
+            "{data}"
+        );
+    }
+
+    #[tokio::test]
+    async fn r1023000_good_body_writes_then_skips() {
+        let app = token_app().await;
+        let body = dev_body(3);
+        let (status, _, first) = post_raw(&app, &body, Some(INGEST_TOKEN)).await;
+        assert_eq!(status, 200);
+        assert_eq!(first, json!({ "read": 3, "written": 3, "skipped": 0 }));
+
+        let (status, _, again) = post_raw(&app, &body, Some(INGEST_TOKEN)).await;
+        assert_eq!(status, 200);
+        assert_eq!(again, json!({ "read": 3, "written": 0, "skipped": 3 }));
+    }
+
+    #[tokio::test]
+    async fn r1023000_body_over_cap_refused_before_parsing() {
+        let app = token_app().await;
+        let body = "x".repeat(DEV_RECORDS_MAX_BODY_BYTES + 1);
+        let (status, _, data) = post_raw(&app, &body, Some(INGEST_TOKEN)).await;
+        assert_eq!(status, 400);
+        assert!(
+            data["error"]["message"]
+                .as_str()
+                .unwrap_or("")
+                .contains("too large"),
+            "{data}"
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1023000_dev_games_count_after_cache_ttl() {
+        let app = token_app().await;
+        let (status, _, before) = get_public(&app, "/api/stats/cards?source=dev").await;
+        assert_eq!(status, 200);
+        assert_eq!(before["totalGames"], json!(0));
+
+        let (status, _, _) = post_raw(&app, &dev_body(3), Some(INGEST_TOKEN)).await;
+        assert_eq!(status, 200);
+
+        let ttl = u64::try_from(CARD_STATS_CACHE_TTL_SECONDS).expect("the TTL is not negative");
+        tokio::time::advance(Duration::from_secs(ttl + 1)).await;
+        let (status, _, after) = get_public(&app, "/api/stats/cards?source=dev").await;
+        assert_eq!(status, 200);
+        assert_eq!(after["totalGames"], json!(3));
+    }
+
+    #[tokio::test]
+    async fn r1023000_ingest_token_opens_no_user_route() {
+        let app = token_app().await;
+        let (status, _, data) = request(&app, "GET", "/api/auth/me", Some(INGEST_TOKEN), None).await;
+        assert_eq!(status, 401);
+        assert_eq!(data["error"]["code"], json!("unauthorized"));
+    }
+}

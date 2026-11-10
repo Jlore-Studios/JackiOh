@@ -37,9 +37,9 @@
 #      promotion, the improve lane saves the session's commits as its stack (`save_stack`);
 #   5. sleep and repeat.
 #
-# Each cycle also loads the finished days' game records (~/training-out/<lane>/<date>.jsonl) into
-# Postgres with `jackioh-server stats-import`, once per file, when the box has DATABASE_URL.
-# Everything goes to ~/logs/<lane>.log.
+# Each cycle also posts the finished days' game records (~/training-out/<lane>/<date>.jsonl) to
+# the server's dev-records ingest route (`POST /api/stats/dev-records`) with curl, once per file,
+# when the box has STATS_INGEST_TOKEN and JACKIOH_API_URL. Everything goes to ~/logs/<lane>.log.
 #
 # The box cleans itself (`free_disk`), as the night box does (bot/machine/clean.sh): each cycle
 # starts, with no session of its lane going, by reading the disk, and under TRAIN_DISK_FLOOR_GB
@@ -49,7 +49,7 @@
 # two weeks and left the disk 6 GB free (2026-10-19).
 #
 # The gather lane (`loop.sh gather`, training/gather.md) improves nothing and opens no pull request,
-# so it needs neither Muse nor gh: each cycle checks out main, builds jackioh from it, loads the
+# so it needs neither Muse nor gh: each cycle checks out main, builds jackioh from it, posts the
 # finished days as above, and plays the next TRAIN_GATHER_GAMES games of its own seed series with
 # `jackioh stats` (R378: the AI on main against itself on All Random decks), without end. It
 # appends them to ~/training-out/gather/<date>.jsonl and rewrites the patch's card figures,
@@ -60,7 +60,9 @@
 #
 # Environment: MUSE_MODEL (required, but by the gather lane), MUSE_EFFORT (default xhigh),
 # MUSE_STEPS (default 1000: the most model steps one session may take), GH_TOKEN (the lane user's
-# own, for gh), DATABASE_URL (optional), TRAIN_PAUSE_SECONDS (default 60), TRAIN_SESSION_SECONDS
+# own, for gh), STATS_INGEST_TOKEN (optional: the dev-records ingest token, which posts the
+# lane's records), JACKIOH_API_URL (optional: the server's address, posts with the token),
+# TRAIN_PAUSE_SECONDS (default 60), TRAIN_SESSION_SECONDS
 # (default 18000: the standing prompt's four hours, plus an hour for the last gate run to finish,
 # since the improve lane's 400 games take half an hour or more on the box's two cores),
 # TRAIN_PROGRESS_SECONDS (default 900), TRAIN_IDLE_SECONDS (default 900: how long an idle unban lane
@@ -294,9 +296,37 @@ save_promoted_stack() {
   log "cannot keep the promotion as $stack"
 }
 
-# Loads every finished day's record file not loaded yet (today's is still being written).
+# Posts one record file ($1) to the server's dev-records ingest route (R1023000), in pieces
+# under the route's body cap. The file is split without ever splitting a line (`split -C`), and
+# one record is about 2 KB, so every piece stays far under the 1 MiB cap. The first piece that
+# fails to post stops the post, and the file is tried again next cycle. An empty file yields no
+# pieces and counts as posted. Records the database already holds are skipped there, so posting a
+# file twice is harmless. Expects STATS_INGEST_TOKEN and JACKIOH_API_URL to be set.
+post_records() {
+  pieces="$work/chunks"
+  rm -rf "$pieces"
+  mkdir -p "$pieces" || return 1
+  if ! split -C 900000 --numeric-suffixes=1 "$1" "$pieces/chunk-"; then
+    log "cannot split $1 for posting"
+    return 1
+  fi
+  for piece in "$pieces"/chunk-*; do
+    [ -f "$piece" ] || continue
+    if ! curl --fail -sS --data-binary "@$piece" -H "Authorization: Bearer $STATS_INGEST_TOKEN" \
+      "$JACKIOH_API_URL/api/stats/dev-records" >/dev/null; then
+      log "posting $1 failed on $(basename "$piece"); it is tried again next cycle"
+      return 1
+    fi
+  done
+  return 0
+}
+
+# Posts every finished day's record file not posted yet (today's is still being written) to the
+# server's dev-records ingest route (R1023000). Without the token or the server's address the lane
+# keeps only the files.
 import_records() {
-  [ -n "${DATABASE_URL:-}" ] || return 0
+  [ -n "${STATS_INGEST_TOKEN:-}" ] || return 0
+  [ -n "${JACKIOH_API_URL:-}" ] || return 0
   today=$(date -u +%Y-%m-%d)
   loaded="$out/imported.txt"
   for file in "$out"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].jsonl; do
@@ -306,11 +336,11 @@ import_records() {
     if [ -f "$loaded" ] && grep -qxF "$name" "$loaded"; then
       continue
     fi
-    if cargo run --release --quiet -p jackioh-server -- stats-import "$file"; then
+    if post_records "$file"; then
       echo "$name" >>"$loaded"
-      log "loaded $name into Postgres"
+      log "posted $name to the dev-records ingest"
     else
-      log "stats-import failed on $name; it is tried again next cycle"
+      log "posting $name failed; it is tried again next cycle"
     fi
   done
 }
@@ -362,6 +392,13 @@ gather() {
   fi
   echo "$((from + games))" >"$cursor"
   [ ! -f "$batch" ] || cat "$batch" >>"$out/$(date -u +%Y-%m-%d).jsonl"
+  # The batch reaches the card statistics within the cache's TTL; the day's file sends its records
+  # again at midnight, which is harmless because held records are skipped. Only when posting is
+  # configured: otherwise the midnight run keeps only the files.
+  if [ -f "$batch" ] && [ -n "${STATS_INGEST_TOKEN:-}" ] && [ -n "${JACKIOH_API_URL:-}" ] &&
+    ! post_records "$batch"; then
+    log "the batch was appended but not posted; the day's file sends it again at midnight"
+  fi
   cards="$out/cards-$patch"
   if "$jackioh" stats report --source=dev --patch "$patch" "$out"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].jsonl >"$cards.txt.new" &&
     "$jackioh" stats report --source=dev --patch "$patch" --json "$out"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].jsonl >"$cards.json.new"; then

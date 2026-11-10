@@ -710,6 +710,13 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::stats::put_player),
     ),
+    // R1023000: the training lanes' write-only dev-records ingest, behind `STATS_INGEST_TOKEN`.
+    (
+        "POST",
+        "/api/stats/dev-records",
+        AuthLevel::Ingest,
+        h!(api::stats::post_dev_records),
+    ),
     (
         "GET",
         "/api/stats/players",
