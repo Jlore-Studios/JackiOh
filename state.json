@@ -16567,6 +16567,18 @@
       "action": "review",
       "asks": [],
       "audit_tier": "",
+      "cleared": {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "at": "2026-11-10T12:00:11Z",
+        "built_by": "muse",
+        "by": "`muse` (medium)",
+        "sha": "5f2ff045a8ddd9103f73ba76c3562e219e87ba19"
+      },
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -16586,6 +16598,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
+      "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
       "question": "",
