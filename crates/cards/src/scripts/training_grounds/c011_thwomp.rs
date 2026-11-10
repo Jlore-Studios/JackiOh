@@ -64,6 +64,7 @@ mod tests {
     }
 
     /// Every selection a legal play of the Thwomp offers.
+    // Differs from Scenario::offered: one card's play targets, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<Selection> {
         let thwomp = s.card(THWOMP).id.clone();
         legal_actions(s.state(), P1)

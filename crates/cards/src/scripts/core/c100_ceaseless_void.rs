@@ -96,14 +96,6 @@ mod tests {
     /// R55's four game counters.
     type Counters = GameCounters;
 
-    fn events_of(s: &Scenario, event_type: GameEventType) -> Vec<GameEvent> {
-        s.events()
-            .iter()
-            .filter(|event| event.event_type() == event_type)
-            .cloned()
-            .collect()
-    }
-
     fn units_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
         [1, 2, 3, 4, 5].into_iter().filter_map(|lane| s.unit(player, lane)).collect()
     }
@@ -161,7 +153,7 @@ mod tests {
 
     /// The first `cardPlayed` event's `costPaid`.
     fn first_cost_paid(s: &Scenario) -> Option<i32> {
-        events_of(s, GameEventType::CardPlayed).first().and_then(|event| match event {
+        s.events_of(GameEventType::CardPlayed).first().and_then(|event| match event {
             GameEvent::CardPlayed { cost_paid, .. } => Some(*cost_paid),
             _ => None,
         })
@@ -455,7 +447,7 @@ mod tests {
             assert!(backrow_of(&s, P1).is_empty());
             assert!(units_of(&s, P2).is_empty());
             assert!(backrow_of(&s, P2).is_empty());
-            assert_eq!(events_of(&s, GameEventType::Exiled).len(), 5);
+            assert_eq!(s.events_of(GameEventType::Exiled).len(), 5);
         }
 
         #[test]
@@ -477,8 +469,8 @@ mod tests {
             let before = s.state().counters.destroyed;
 
             s.play(VOID, json!({}));
-            assert!(events_of(&s, GameEventType::Destroyed).is_empty());
-            assert!(events_of(&s, GameEventType::EnteredGraveyard).is_empty());
+            assert!(s.events_of(GameEventType::Destroyed).is_empty());
+            assert!(s.events_of(GameEventType::EnteredGraveyard).is_empty());
             assert_eq!(s.state().counters.destroyed, before);
             assert!(s.pile(P1, "graveyard").is_empty());
             assert!(s.pile(P2, "graveyard").is_empty());
@@ -525,7 +517,7 @@ mod tests {
             s.play(VOID, json!({}));
             assert_eq!(def_ids(&units_of(&s, P1)), vec![VOID.to_string()]);
             assert!(units_of(&s, P2).is_empty());
-            assert_eq!(events_of(&s, GameEventType::Exiled).len(), 5);
+            assert_eq!(s.events_of(GameEventType::Exiled).len(), 5);
         }
     }
 

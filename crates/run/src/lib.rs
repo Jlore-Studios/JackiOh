@@ -1237,6 +1237,18 @@ fn place_fights(rows: &mut [Vec<Spot>], rng: &mut Rng) {
     }
 }
 
+/// §15.5: a fight node is an Elite at `RUN_ELITE_PERCENT`, else a Ghost at `RUN_GHOST_PERCENT`, else
+/// a Fight. The second roll is drawn only when the first is no Elite.
+fn fight_kind(rng: &mut Rng) -> RunNodeKind {
+    if rng.int(PERCENT) < RUN_ELITE_PERCENT {
+        RunNodeKind::Elite
+    } else if rng.int(PERCENT) < RUN_GHOST_PERCENT {
+        RunNodeKind::Ghost
+    } else {
+        RunNodeKind::Fight
+    }
+}
+
 /// DR4, R3583000: the whole map, dealt at the start: `RUN_ACTS` acts of `RUN_ACT_ROWS` rows from
 /// seeded walks, each act ending at its boss's row of one node, the fights placed so every route holds
 /// the bounds (R3583001), then each node's kind and what it holds: a fight's an Elite at
@@ -1258,14 +1270,7 @@ fn deal_map(content: &RunContent, held: &[&str], rng: &mut Rng) -> Vec<Vec<RunNo
                 };
                 fight_node(content, boss, held, rng)
             } else if spot.fight {
-                let kind = if rng.int(PERCENT) < RUN_ELITE_PERCENT {
-                    RunNodeKind::Elite
-                } else if rng.int(PERCENT) < RUN_GHOST_PERCENT {
-                    RunNodeKind::Ghost
-                } else {
-                    RunNodeKind::Fight
-                };
-                fight_node(content, kind, held, rng)
+                fight_node(content, fight_kind(rng), held, rng)
             } else {
                 tile_node(content, weighted(&RUN_TILE_WEIGHTS, rng), rng)
             };
@@ -1947,7 +1952,7 @@ fn apply(
             make_radiant(state, *index)?;
         }
         (RunPhase::Shop { .. }, RunAction::Buff { index }) => {
-            if *index < state.deck.len() {
+            if state.deck.get(*index).is_some() {
                 spend_tickets(state, RUN_BUFF_TICKETS)?;
             }
             buff(state, *index)?;
