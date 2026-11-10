@@ -14739,11 +14739,10 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
-      "merge_owner": "claude-3",
       "merge_owner_gave_up": {
-        "at": "2026-11-10T02:19:25Z",
-        "provider": "muse",
-        "sha": "d250e47a4088ebe09c25e88015ae93a78d36ac0c"
+        "at": "2026-11-10T16:23:07Z",
+        "provider": "claude-3",
+        "sha": "4c9c59c8728e30e891bf827debe122537962bdf6"
       },
       "pending_request": false,
       "provider": "claude-3",
