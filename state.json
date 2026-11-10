@@ -17639,7 +17639,9 @@
     },
     "3529": {
       "action": "review",
-      "asks": [],
+      "asks": [
+        "c:6763114095"
+      ],
       "ci_fixed_head": "d250e47a4088ebe09c25e88015ae93a78d36ac0c",
       "ci_fixes": 1,
       "cleared": {
@@ -17661,7 +17663,7 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3499,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner_gave_up": {
         "at": "2026-11-10T02:19:25Z",
@@ -17670,10 +17672,12 @@
       },
       "pending_request": false,
       "provider": "muse",
-      "queued_at": "2026-11-09T23:00:08Z",
+      "queued_at": "2026-11-10T08:52:34Z",
+      "requested_by": "jgoetzmann",
       "run_id": "42717247157",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "source": "request",
       "started_at": "2026-11-09T23:03:21Z",
       "stop_requested": false,
       "taken_asks": [],
