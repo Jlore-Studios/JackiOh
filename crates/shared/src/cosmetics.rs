@@ -1450,6 +1450,32 @@ pub fn owns_account_cosmetic(id: &str, account: &[String]) -> bool {
 mod tests {
     use super::*;
 
+    /// R2655000: `false` prints no full art, `true` the card's Epic one and an id the one it names; a
+    /// row of `public.card_cosmetic_picks` holds the switch and, beside a switch that is on, the id
+    /// (migration 0072), and reads back as the pick it was written from.
+    #[test]
+    fn r2655000_a_full_art_pick_prints_names_its_id_and_reads_back_from_its_row() {
+        let id = "full-art-mutants-mythic".to_owned();
+        let named = FullArtPick::Id(id.clone());
+        assert!(!FullArtPick::On(false).prints());
+        assert!(FullArtPick::On(true).prints());
+        assert!(named.prints());
+        assert_eq!(FullArtPick::On(false).id(), None);
+        assert_eq!(FullArtPick::On(true).id(), None);
+        assert_eq!(named.id(), Some(id.as_str()));
+        assert_eq!(FullArtPick::of_row(Some(true), Some(id.clone())), Some(named));
+        assert_eq!(FullArtPick::of_row(Some(true), None), Some(FullArtPick::On(true)));
+        assert_eq!(
+            FullArtPick::of_row(Some(false), Some(id.clone())),
+            Some(FullArtPick::On(false))
+        );
+        assert_eq!(
+            FullArtPick::of_row(Some(false), None),
+            Some(FullArtPick::On(false))
+        );
+        assert_eq!(FullArtPick::of_row(None, Some(id)), None);
+    }
+
     fn entry(id: &str, kind: CosmeticKind, default: bool) -> Cosmetic {
         Cosmetic {
             id: id.to_owned(),
