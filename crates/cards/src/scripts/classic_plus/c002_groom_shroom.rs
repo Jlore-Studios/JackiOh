@@ -153,10 +153,6 @@ mod tests {
             .collect()
     }
 
-    fn count(s: &Scenario, type_: &str) -> usize {
-        s.events().iter().filter(|event| event.event_type().as_str() == type_).count()
-    }
-
     fn kinds(keywords: &[Keyword]) -> Vec<KeywordKind> {
         keywords.iter().map(|k| k.kind()).collect()
     }
@@ -192,7 +188,7 @@ mod tests {
                 assert!(kinds(&s.stats(&card).keywords).contains(&KeywordKind::Taunt));
             }
             // R1: summoned, not played — no Cry (a Duplicating Felinors' copy, a Big Felinor's sweep).
-            assert_eq!(count(&s, "cardPlayed"), 0);
+            assert_eq!(s.count("cardPlayed"), 0);
             assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(VANILLA.to_string()));
             s.expect_in_zone(&groom, "graveyard");
         }
@@ -206,7 +202,7 @@ mod tests {
             s.attack(&attacker, "hero");
 
             s.expect_health(P1, 27);
-            assert_eq!(count(&s, "redirected"), 0);
+            assert_eq!(s.count("redirected"), 0);
         }
 
         #[test]
@@ -222,7 +218,7 @@ mod tests {
                 assert_eq!(defs.len(), 5);
                 // R1: no Cry ran — Big Felinor's would destroy the attacker, Felinor Fuser's would open a
                 // Discover, Felinor Flagbearer's would give armor.
-                assert_eq!(count(&s, "destroyed"), 0);
+                assert_eq!(s.count("destroyed"), 0);
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.state().players.p1.hero.armor, 0);
                 if defs.iter().cloned().collect::<IndexSet<_>>().len() < defs.len() {
@@ -282,7 +278,7 @@ mod tests {
             let target = s.unit(P1, 1).unwrap();
             s.attack(&attacker, &target);
 
-            assert_eq!(count(&s, "trapFired"), 0);
+            assert_eq!(s.count("trapFired"), 0);
             assert!(matches!(s.card(GROOM).zone, Zone::Field { row: Row::Backrow, lane: 1, .. }));
         }
 

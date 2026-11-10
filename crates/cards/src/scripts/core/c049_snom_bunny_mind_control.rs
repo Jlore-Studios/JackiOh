@@ -98,6 +98,7 @@ mod tests {
     const COST: i32 = 5;
 
     /// The target lists of every `play` `legal_actions` offers p1 for this card (R81).
+    // Differs from Scenario::offered: that card's targets as ids, per play, not the seat's whole legal list.
     fn offered(state: &GameState, card: &CardInstance) -> Vec<Vec<String>> {
         legal_actions(state, P1)
             .into_iter()

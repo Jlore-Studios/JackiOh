@@ -68,10 +68,6 @@ mod tests {
         json!([{ "def": MY_PAWN, "faceUp": false, "lane": 1 }, { "def": MANA_WELL, "lane": 3 }])
     }
 
-    fn count(s: &Scenario, type_: &str) -> usize {
-        s.events().iter().filter(|event| event.event_type().as_str() == type_).count()
-    }
-
     mod base {
         use super::*;
 
@@ -90,7 +86,7 @@ mod tests {
             for card in &theirs {
                 assert_eq!(s.card(card).zone.z(), ZoneName::Field);
             }
-            assert_eq!(count(&s, "destroyed"), 2);
+            assert_eq!(s.count("destroyed"), 2);
         }
 
         /// R1081000: a Unit standing in a backrow zone is no backrow card (§6.1 Animated): it stays.
@@ -191,7 +187,7 @@ mod tests {
             assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(GUY.to_string()));
             assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some(SHEEPISH.to_string()));
             assert_eq!(s.backrow(P1, 2).map(|card| card.def_id), Some(MANA_WELL.to_string()));
-            assert_eq!(count(&s, "destroyed"), 0);
+            assert_eq!(s.count("destroyed"), 0);
         }
 
         #[test]
@@ -201,7 +197,7 @@ mod tests {
 
             s.play(GUY, json!({ "zone": 1 }));
 
-            assert_eq!(count(&s, "destroyed"), 0);
+            assert_eq!(s.count("destroyed"), 0);
         }
     }
 
@@ -235,7 +231,7 @@ mod tests {
 
             s.play(GUY, json!({ "zone": 1 }));
 
-            assert_eq!(count(&s, "trapFired"), 0);
+            assert_eq!(s.count("trapFired"), 0);
             assert!(s.view(P1).opponent.graveyard.iter().any(|card| card.def_id == MY_PAWN));
             assert!(s.view(P2).you.graveyard.iter().any(|card| card.def_id == MY_PAWN));
         }
