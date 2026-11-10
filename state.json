@@ -19835,10 +19835,14 @@
         "approvals": [],
         "builder": "muse",
         "built_by": "muse",
-        "rejections": [],
+        "rejections": [
+          "muse"
+        ],
         "reviews": [],
         "sha": "91e1c02691ec1700c82516a2d84f5384e8ead692",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "3624": {
