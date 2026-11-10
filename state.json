@@ -20134,6 +20134,13 @@
     "3630": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42776865043",
+        "model": "sonnet",
+        "provider": "claude-1",
+        "since": "2026-11-10T08:53:23Z",
+        "until": "2026-11-10T09:23:23Z"
+      },
       "difficulty_by": {
         "at": "2026-11-10T08:53:08Z",
         "difficulty": "medium",
