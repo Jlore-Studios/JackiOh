@@ -18022,9 +18022,12 @@
     "what": "suggestions on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-10T16:12:40Z",
+    "at": "2026-11-10T16:21:47Z",
     "notes": [
-      "#3641 is held for `claude-1` until 11:30 (5-hour usage is 46%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+      "#3641 is held for `claude-1` until 11:30 (5-hour usage is 46%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))",
+      "#3529: green and waiting for a person to merge it, so `claude-3` gives up its claim on it",
+      "delivered review #3628 on muse (run 42823253398): approved",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18730,7 +18733,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T16:12:40Z",
+  "loop_tick": "2026-11-10T16:21:47Z",
   "machine_disk": {
     "issue": null,
     "reading": {
