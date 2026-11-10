@@ -1601,3 +1601,11 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-10T13:22:10Z,42820243426,claude-4,opus,plan,3545,medium,planned,,18.1,186,110443,18263922,4.0469,53,64,,,790.1,,fresh,,1
 2026-11-10T13:20:24Z,42818471796,claude-7,opus,plan,3544,medium,planned,,19.1,4,7438,297552,3.8592,10,24,,,777.6,,fresh,,1
 2026-11-10T13:25:10Z,42803016447,muse,muse-spark-1.3-contributor,build,3538,hard,part,,150,0,0,0,,8,41,44,55,667,muse,none,,1
+2026-11-10T13:43:55Z,42826014586,claude-8,opus,review,3627,hard,reviewed,,1.2,16,6361,967158,1.3025,0,2,,,,,none,,1
+2026-11-10T13:33:39Z,42823571990,claude-4,opus,review,3635,hard,reviewed,,4.6,69,24754,5355538,2.9916,64,3,,,21,claude-8,none,,1
+2026-11-10T13:41:15Z,42823418938,muse,muse-spark-1.3-contributor,review,3647,medium,approved,,21.2,0,0,0,,40,43,54,55,3.8,,none,,1
+2026-11-10T13:42:47Z,42818315268,claude-1,opus,plan,3543,hard,interrupted,5-hour cap,46.3,285,100018,29242065,17.181,3,46,,,776.7,,fresh,,1
+2026-11-10T13:53:13Z,42815203929,claude-7,sonnet+opus,build,3541,medium,part,,84.2,289,119746,35057758,6.0755,2,28,,,755,muse,fresh,other,1
+2026-11-10T13:33:05Z,42807531331,claude-3,sonnet+opus,build,3542,hard,part,,116.4,232,92581,24751537,4.5942,42,67,,,699.2,claude-7,fresh,other,1
+2026-11-10T14:09:55Z,42825807477,muse,muse-spark-1.3-contributor,revise,3626,medium,built,,33.9,0,0,0,,41,47,55,57,5.1,muse,none,,1
+2026-11-10T13:58:38Z,42817952953,claude-6,opus,review,3645,hard,approved,,45.9,61,17621,2786920,3.1729,44,52,,,4.1,,fresh,,3
