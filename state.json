@@ -17665,6 +17665,7 @@
     "3529": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "ci_fixed_head": "d250e47a4088ebe09c25e88015ae93a78d36ac0c",
       "ci_fixes": 1,
       "cleared": {
@@ -17682,11 +17683,12 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-09T21:05:57Z",
+      "feedback_since": "2026-11-10T08:59:24Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3499,
       "kind": "revise",
+      "last_findings": [],
       "live": "revising",
       "merge_owner_gave_up": {
         "at": "2026-11-10T02:19:25Z",
@@ -17695,17 +17697,20 @@
       },
       "pending_request": false,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-11-10T08:52:34Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "medium",
       "run_id": "42786947920",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "request",
+      "source": "",
       "started_at": "2026-11-10T08:59:24Z",
       "stop_requested": false,
       "taken_asks": [
         "c:6763114095"
       ],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "muse"
