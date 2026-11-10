@@ -18213,6 +18213,8 @@
       }
     },
     "3663": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-10T19:25:25Z",
@@ -18226,8 +18228,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch (part 2 of 6): the desktop sheds load too: a slow frame window steps the shed ladder on every viewport\"} -->\n- What changed and why: a desktop director never published shed stages (`phone` gated `setShedLevel`), so a weak laptop GPU or high-refresh desktop kept every layer running however slow it got. Every viewport's director now sheds in `R3351000`'s ruled order on the same slow test and recovery, keeping\u2026\n- Files: [director.ts](/home/agent-muse/actions-runner-3/_work/_temp/work/item-3606/apps/web/src/fx/director.ts) (`phone` option, gate, and stale docs removed), [shed.ts](/home/agent-muse/actions-runner-3/_work/_temp/work/item-3606/apps/web/src/fx/shed.ts) (header re-scoped), [FxLayer.tsx](/home/agen\u2026\n- How tested (commands run, output seen):\n- - `pnpm --dir apps/web test src/fx/director.test.ts` \u2014 49 passed, including the three new `R3606000` tests (shed 1\u21922\u21923 and recover 2\u21921\u21920, healthy 16 ms frames stay full, beats mount at stage 3).\n- - `pnpm --dir apps/web test src/fx/shed.test.ts src/cards/motionSlots.test.ts src/fx/aura/AuraLayer.test.tsx src/fx/aura/TileAura.test.tsx` \u2014 38 passed.\n- - `pnpm --dir apps/web typecheck`, `cargo fmt --check`, eslint on all touched files \u2014 clean.\n- - `cargo jackioh spec check` \u2014 `1898 rulings, 4922 proofs, 61863 citations in 4063 files, 25241 links: ok`.\n- Decisions the issue did not settle: none beyond the plan \u2014 no desktop-specific threshold constant, per the plan's decided open question (the existing slow test already clears a healthy desktop; a future probe regression is a new issue). No departure from the plan.\n- Reviewers should look twice at: the `R3606000.md` body wording (new ruling prose) and the `R3351000.md` one-line re-scope, since `spec check` only validates ids, links, and proofs, not meaning.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-3606 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-3606/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3606,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T20:06:46Z",
         "from_run": "42885123250",
         "gates": [
           {
@@ -18286,8 +18291,15 @@
         "source": "build",
         "until": "2026-11-10T20:34:25Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-10T20:04:25Z",
+      "run_id": "pending:82685bd7-1794341169",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-10T20:06:46Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -18301,9 +18313,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T19:53:41Z",
+    "at": "2026-11-10T20:06:46Z",
     "url": "",
-    "what": "plan #3549 on muse"
+    "what": "review #3663 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T19:47:44Z",
