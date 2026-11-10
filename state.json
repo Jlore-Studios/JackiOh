@@ -17351,7 +17351,7 @@
       "question": "Should the next pass take on the React render refactor (memoize the board's cards, one commit per queue step, attributes instead of volatile :has() rules), or should a person rule on what this spec measures or its worst-frame bound?",
       "queued_at": "2026-11-10T13:53:58Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42798679876",
+      "run_id": "pending:eba51c8b-1794319192",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -17370,7 +17370,7 @@
         "provider": "claude-8",
         "run": "42798679876"
       },
-      "started_at": "2026-11-10T10:23:01Z",
+      "started_at": "2026-11-10T14:00:47Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18223,9 +18223,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T13:38:23Z",
+    "at": "2026-11-10T14:00:47Z",
     "url": "",
-    "what": "build #3545 on claude-8"
+    "what": "build #3633 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-10T13:28:47Z",
