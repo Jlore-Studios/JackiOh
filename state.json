@@ -36053,10 +36053,6 @@
       "refused_until": "2026-11-09T00:00:00Z",
       "spent": [
         {
-          "at": "2026-10-30T08:23:52Z",
-          "minutes": 131.9
-        },
-        {
           "at": "2026-10-30T09:52:19Z",
           "minutes": 89.3
         },
@@ -36851,17 +36847,21 @@
         {
           "at": "2026-11-10T06:15:09Z",
           "minutes": 56.7
+        },
+        {
+          "at": "2026-11-10T06:45:00Z",
+          "minutes": 32.8
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-10T09:54:00Z",
-          "utilization": 0.09
+          "utilization": 0.17
         },
-        "observed_at": "2026-11-10T06:15:09Z",
+        "observed_at": "2026-11-10T06:45:00Z",
         "seven_day": {
           "resets_at": "2026-11-16T00:00:00Z",
-          "utilization": 0.23
+          "utilization": 0.26
         },
         "status": "allowed"
       }
@@ -38651,7 +38651,12 @@
       "2026-11-10T06:18:17Z,claude-7,stream,call,42763886341,95,2026-11-10T06:40:00Z,,,allowed_warning,100,,",
       "2026-11-10T06:19:47Z,claude-7,stream,call,42763886341,96,2026-11-10T06:40:00Z,,,allowed_warning,100,,",
       "2026-11-10T06:21:02Z,claude-7,stream,call,42763886341,97,2026-11-10T06:40:00Z,,,allowed_warning,100,,",
-      "2026-11-10T06:21:47Z,claude-7,stream,call,42763886341,98,2026-11-10T06:40:00Z,,,allowed_warning,100,,"
+      "2026-11-10T06:21:47Z,claude-7,stream,call,42763886341,98,2026-11-10T06:40:00Z,,,allowed_warning,100,,",
+      "2026-11-10T05:59:24Z,muse,usage-command,before,42765480528,9,2026-11-10T09:54:00Z,23,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-10T06:02:35Z,muse,usage-command,after,42765480528,10,2026-11-10T09:54:00Z,24,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-10T06:12:42Z,muse,usage-command,call,42765480528,14,2026-11-10T09:54:00Z,25,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-10T06:22:47Z,muse,usage-command,call,42765480528,16,2026-11-10T09:54:00Z,26,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-10T06:32:26Z,muse,usage-command,after,42765480528,17,2026-11-10T09:54:00Z,26,2026-11-16T00:00:00Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-10T05:55:32Z,42759143140,muse,muse-spark-1.3-contributor,review,3622,medium,approved,,56.7,0,0,0,,0,9,20,23,2.8,,none,,1",
