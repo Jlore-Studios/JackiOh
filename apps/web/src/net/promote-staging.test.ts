@@ -330,14 +330,13 @@ describe("the freeze: staging holds still while the super run on it is red (the 
   it("waits for a green commit pushed after the close, never one from before it", () => {
     const w = world();
     frozen(w, [{ number: 7, title: GATE, state: "CLOSED", closedAt: ago(30) }]);
-    let r = ok(run(w, "schedule"));
-    expect(r.text).toContain(`#7 closed at ${ago(30)}; it moves to main's first commit after that whose CI passes.`);
+    expect(ok(run(w, "schedule")).text).toContain(`#7 closed at ${ago(30)}; it moves to main's first commit after that whose CI passes.`);
     expect(staging(w)).toBe(w.sha.c1);
     commit(w, "c4", false, 20);
     ok(run(w, "workflow_run"));
     expect(staging(w)).toBe(w.sha.c1);
     edit(w, (s) => s.green.push(w.sha.c4 as string));
-    r = ok(run(w, "workflow_run"));
+    expect(ok(run(w, "workflow_run")).output).toBe(`moved=true\nsha=${w.sha.c4}\n`);
     expect(staging(w)).toBe(w.sha.c4);
     expect(gh(w).started).toEqual(["super.yml --ref staging"]);
   });
