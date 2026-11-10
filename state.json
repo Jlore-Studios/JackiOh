@@ -20079,6 +20079,13 @@
     "3629": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-10T08:51:44Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "CLAUDE.md rule 11: web-only test change copying the #3418 precedent in the same files; no hard line (engine rules, AI, cross-crate design, migration, 40+ files) holds"
+      },
       "kind": "build",
       "live": "building",
       "owner": "muse",
