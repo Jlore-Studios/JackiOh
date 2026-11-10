@@ -13139,15 +13139,8 @@
       "verdict_rounds": 3
     },
     "3388": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42746731024",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-10T03:35:43Z",
-        "until": "2026-11-10T04:05:43Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13159,10 +13152,9 @@
         "reason": "planned on opus",
         "trail": "eb/src/cards/art/scene.ts | head -50\", \"description\": \"Read Placement type\"}\n- Bash: {\"command\": \"sed -n 120,173p apps/web/src/cards/art/scene.ts; grep -n \\\"FigureRecipe = \\\\|type FigureRecipe\\\\|ExtraFigure = \\\" -A 14 apps/web/src/cards/art/figureKit.ts apps/web/src/cards/art/scene.t\u2026\n- Bash: {\"command\": \"grep -n \\\"^function lizard\\\" -A 40 apps/web/src/cards/art/sceneKitClassic.ts | head -50; grep -n \\\"^export function shape\\\\|^export const INKED\\\\|^export const MAIN_INKED\\\\|^export const\u2026\n- Bash: {\"command\": \"sed -n 60,102p apps/web/src/cards/art/kitDraw.ts; grep -n \\\"^export\\\" apps/web/src/cards/art/kitDraw.ts\", \"description\": \"Read Local type and kitDraw exports\"}\n- Bash: {\"command\": \"grep -rn \\\"component\\\" .github/workflows/*.yml | grep -i \\\"cypress\\\\|test:component\\\\|--component\\\" | head -10\", \"description\": \"Find where Cypress component specs run in CI\"}\n- Bash: {\"command\": \"sed -n 1160,1200p .github/workflows/ci.yml\", \"description\": \"Read ci.yml component job context\"}\n- Bash: {\"command\": \"grep -n \\\"| \\\\`names\\\" crates/tools/README.md | cut -c1-900\", \"description\": \"Check what the names command scans\"}\n- Bash: {\"command\": \"sed -n 183,200p apps/web/src/cards/art/classicPlusAltScenes.test.tsx; sed -n 200,214p apps/web/src/cards/art/meditativeAltScenes.test.tsx; sed -n 258,280p apps/web/src/cards/art/stinkysc\u2026\n- Bash: {\"command\": \"grep -n \\\"CLASSIC_KIT\\\\|STINKY_ALT_KIT\\\\|^import\\\" apps/web/src/cards/art/meditativeScenes.test.ts | head -40; sed -n 280,290p apps/web/src/cards/art/meditativeScenes.test.ts\", \"descript\u2026\n- Bash: {\"command\": \"tail -25 apps/web/src/cards/art/coreAltRecipes1.ts; head -12 apps/web/src/cards/art/coreAltRecipes2.ts\", \"description\": \"Read Core alt recipes export block and file 2 header\"}\n- Bash: {\"command\": \"grep -rln \\\"R503 \\\" apps/web/src --include=*.test.ts --include=*.test.tsx | head; grep -rn \\\"it(\\\\\\\"R503\\\\|describe(\\\\\\\"R503\\\" apps/web/src | head -5; grep -rn \\\"R2725004\\\" apps/web/src \u2026\n- Bash: {\"command\": \"ls spec/ | head -30; grep -rn \\\"^#\\\\+ .*10\\\\.10\\\\|^#\\\\+ .*14\\\\.2\\\" spec/*.md | head\", \"description\": \"Locate spec sections 10.10 and 14.2\"}\n- Bash: {\"command\": \"grep -n \\\"layout:report\\\" -A 8 e2e/cypress.config.ts | head -20\", \"description\": \"Find where layout:report writes shares\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3388/.bot-plan.md\", \"content\": \"## Goal\\n\\nAll 50 Classic cards offered `version-alt-art` (the issue's table, which is `COSMETIC_OFFERS[\\\"version-alt-\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count words in the plan draft\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3388/.bot-plan.md\", \"content\": \"## Goal\\n\\nAll 50 Classic cards offered `version-alt-art` (exactly the issue's table: `COSMETIC_OFFERS[\\\"version-alt-a\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count words in the trimmed plan\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3388/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe 50 Classic cards offered `version-alt-art` (exactly the issue's table, `COSMETIC_OFFERS[\\\"version-alt-a\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count words in the plan\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3388/.bot-plan.md\", \"old_string\": \" - **Floor and ceiling:**\\n\\n | Rarity | Elements | Layers |\\n |---|---|---|\\n | Common | \\u2\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3388/.bot-plan.md\", \"old_string\": \"5. **The recipes.** Build each brief's place from these kit parts:\\n\\n | Place | Parts |\\n |-\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3388/.bot-plan.md\", \"old_string\": \"- **`KEPT_SUBJECT`** (prefix each id with `classic-`):\\n\\n | Card | Kept parts |\\n |---|---|\\\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount words\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3388/.bot-plan.md\", \"limit\": 80}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3388/.bot-plan.md\", \"old_string\": \"The 50 Classic cards offered `version-alt-art` (exactly the issue's table, `COSMETIC_OFFERS[\\\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3388/.bot-plan.md\", \"old_string\": \"5. **The recipes.** Build each brief's place from the kit's parts, among them `snowfield`, `s\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; sed -n '/^## Tests/,$p' .bot-plan.md | wc -w\", \"description\": \"Recount words\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3388/.bot-plan.md\", \"offset\": 130}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3388/.bot-plan.md\", \"old_string\": \"4. **No figure where the brief is a close-up of hands or an object:** hands stand in for it i\u2026\n- Bash: {\"command\": \"tr -s '[:space:]' '\\\\n' < .bot-plan.md | grep -c '[A-Za-z0-9]'\", \"description\": \"Count tokens containing letters or digits\"}\n- Bash: {\"command\": \"cat > /tmp/planwork/fig.mts <<'EOF'\\nconst base = process.argv[2];\\nconst { FIGURE_KIT } = await import(base + \\\"/figureKit.ts\\\");\\nfor (const id of [\\\"space-helmet\\\",\\\"tonsure\\\",\\\"hat-b\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np = \\\".bot-plan.md\\\"\\ns = open(p).read()\\nsubs = [\\n (\\\"- **014** `cyan-400/orange-400`: figure 0.6; a merchant extra in `outfit-kaftan`; the black shadow r\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3388/.bot-plan.md\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3388/.bot-plan.md\", \"old_string\": \"083 draws the lance and shield alone.\", \"new_string\": \"083 draws the fireball (the lance) and\u2026\n- said: ## Goal The 50 Classic cards offered `version-alt-art` (the issue's table) each get an alt scene recipe of their own, written from #3388's brief and read under the Alt art seed (`<id>#alt`) only. Every Alt art level draws it on the base and the Radiant face (R3015002), and the repaints keep the nor\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-10T03:01:57Z",
       "owner_why": "it plans it",
@@ -13175,9 +13167,9 @@
       "provider": "claude-1",
       "queued_at": "2026-11-07T16:42:23Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42746731024",
+      "run_id": "pending:1ec41b3d-1794282036",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-10T03:01:57Z",
+      "started_at": "2026-11-10T03:41:08Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -19134,9 +19126,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T03:40:23Z",
+    "at": "2026-11-10T03:41:08Z",
     "url": "",
-    "what": "revise #3592 on muse"
+    "what": "build #3388 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-10T03:10:15Z",
