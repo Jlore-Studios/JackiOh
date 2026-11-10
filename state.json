@@ -18324,9 +18324,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T20:40:51Z",
+    "at": "2026-11-10T21:00:16Z",
     "url": "",
-    "what": "build #3548 on muse"
+    "what": "suggestions on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-10T20:48:55Z",
@@ -37518,11 +37518,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-10T20:50:13Z",
-    "last_run": "2026-11-09T16:51:43Z",
-    "provider": null,
+    "idle_since": "2026-11-10T21:00:16Z",
+    "last_run": "2026-11-10T21:00:16Z",
+    "provider": "claude-3",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:d69ddcbf-1794344376",
     "taken_asks": []
   },
   "usage": null,
