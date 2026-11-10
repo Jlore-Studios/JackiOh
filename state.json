@@ -18440,6 +18440,14 @@
       "started_at": "2026-11-10T01:12:59Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "3590": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-10T00:05:25Z",
+      "issue": 3503,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
