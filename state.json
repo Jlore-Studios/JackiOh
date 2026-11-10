@@ -19949,9 +19949,7 @@
       "source": "",
       "started_at": "2026-11-10T09:59:27Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6763735587"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
