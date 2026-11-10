@@ -291,6 +291,31 @@ fn a_run_played_to_the_end_wins_and_its_file_folds_back_to_the_same_state() {
 }
 
 #[test]
+fn an_old_heal_rest_reads_as_gain_max_hp_and_folds() {
+    let content = content();
+    let setup = setup(&content);
+    let (end, log) = play_out(&content, &setup);
+    assert!(log.contains(&RunAction::GainMaxHp));
+    // New writes keep the new name: the alias reads only.
+    assert_eq!(
+        serde_json::to_value(RunAction::GainMaxHp).unwrap(),
+        serde_json::json!({ "type": "gainMaxHp" })
+    );
+    let file = RunFile {
+        setup,
+        unlocks: RunUnlocks::default(),
+        log,
+    };
+    // What the device kept before #3644: the campfire screen sent `{ type: "heal" }`.
+    let json = serde_json::to_string(&file)
+        .unwrap()
+        .replace("\"gainMaxHp\"", "\"heal\"");
+    let back: RunFile = serde_json::from_str(&json).unwrap();
+    assert!(back.log.contains(&RunAction::GainMaxHp));
+    assert_eq!(run_fold(&back, &content), Ok(end));
+}
+
+#[test]
 fn the_final_boss_drop_cannot_be_extracted() {
     let content = content();
     let mut state = start(&content);

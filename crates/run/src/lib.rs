@@ -633,6 +633,8 @@ pub enum RunAction {
         index: usize,
     },
     /// A campfire's rest: `RUN_CAMPFIRE_MAX_HP` more max HP, for the rest of the run.
+    /// Spelled `heal` in logs kept before #3644, which reads as it.
+    #[serde(alias = "heal")]
     GainMaxHp,
     /// An event's option.
     Choose {
