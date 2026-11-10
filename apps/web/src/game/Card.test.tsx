@@ -497,6 +497,24 @@ describe("B17: everything Card.tsx rendered before, it still renders", () => {
     }
   });
 
+  it("R3540005 a unit's Burn and Toxic draw as their own badges beside its Plague Counters", () => {
+    const view = fullBoardView();
+    const unit = yourUnit(view, 2);
+    unit.counters = { ...unit.counters, burn: 5, toxic: 2 };
+    renderBoard(view);
+
+    const counted = cardRoot(unit.instanceId);
+    expect(inside(counted, '.counter.counter-burn[data-counter="burn"]')).toHaveTextContent("5");
+    expect(inside(counted, '.counter.counter-toxic[data-counter="toxic"]')).toHaveTextContent("2");
+    expect(inside(counted, '.counter.counter-plague[data-counter="plague"]')).toHaveTextContent("2");
+    expect(inside(counted, ".counter-burn").getAttribute("title")).toBe("Burn counters");
+    expect(inside(counted, ".counter-toxic").getAttribute("title")).toBe("Toxic counters");
+    // A unit with neither draws neither.
+    const plain = cardRoot(yourUnit(view, 1).instanceId);
+    expect(plain.querySelector(".counter-burn")).toBeNull();
+    expect(plain.querySelector(".counter-toxic")).toBeNull();
+  });
+
   it("B17 counters, the buried badge, the position tag and the switch button survive, outside .cf", () => {
     const view = fullBoardView();
     renderBoard(view);

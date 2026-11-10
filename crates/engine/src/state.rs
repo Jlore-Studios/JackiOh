@@ -1489,6 +1489,15 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub evolutions: Option<i32>,
+    /// R3540000: the Burn on this player's hero (`afflictions::afflict`), ticking at the start of their
+    /// turn (R3540001). Absent at none, so a game without one hashes as before this field existed (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hero_burn: Option<i32>,
+    /// R3540000: the Toxic on this player's hero, as `hero_burn`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hero_toxic: Option<i32>,
 }
 
 /// R1843000: one player's votes to remove them from the game, on turn `turn` (`PlayerState.votes`).
@@ -2126,6 +2135,8 @@ pub fn create_player_state() -> PlayerState {
         starscape: None,
         anomaly_misses: None,
         evolutions: None,
+        hero_burn: None,
+        hero_toxic: None,
     }
 }
 

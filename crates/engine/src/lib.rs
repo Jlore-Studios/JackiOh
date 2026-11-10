@@ -13,6 +13,7 @@
 pub mod wire;
 
 // The engine, alphabetical.
+pub mod afflictions;
 pub mod alt_play;
 pub mod animated;
 pub mod announce;

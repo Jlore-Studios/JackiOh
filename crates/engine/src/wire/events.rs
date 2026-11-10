@@ -35,6 +35,10 @@ string_union! {
         Plague = "plague",
         Grade = "grade",
         Brittle = "brittle",
+        /// R3540000: a Unit's or a hero's Burn.
+        Burn = "burn",
+        /// R3540000: a Unit's or a hero's Toxic.
+        Toxic = "toxic",
     }
 }
 
@@ -586,7 +590,9 @@ pub enum GameEvent {
     },
     /// `brittle` is B3.3's count (R385). `placed` (B5 E19) is how many Plague Counters one placement put
     /// on the card — set on a placement only, so "whenever Plague Counters are placed on this" answers the
-    /// placement once however many tokens it placed, and never a removal.
+    /// placement once however many tokens it placed, and never a removal. R3540000: for `burn` and
+    /// `toxic`, `instance_id` may be `hero-<player>` (a hero holds them too), and `placed` is the amount a
+    /// gain added; a tick's drop and a Vanilla's clearing carry none.
     CounterChanged {
         instance_id: String,
         counter: CounterKind,

@@ -185,7 +185,7 @@ export type CardProps = {
    */
   backOf?: PlayerId;
   /** `gradeLetter` is the letter the view names #93's grade by (R372); the badge prints it. */
-  counters?: { plague?: number; grade?: number; gradeLetter?: string };
+  counters?: { plague?: number; grade?: number; gradeLetter?: string; burn?: number; toxic?: number };
   /**
    * R370: a face-down backrow trap's back; absent for every other back. `at` names its zone ("opponent-3"),
    * which keys its inspect overlay (a back has no instance id). R437, R33: `marks`. R471: Plague Counters, public.
@@ -558,6 +558,18 @@ export default function Card(props: CardProps): ReactElement {
           title={counters.gradeLetter === undefined ? t("Grade counters") : t("Grade {letter}", { letter: counters.gradeLetter })}
         >
           {counters.gradeLetter ?? counters.grade}
+        </span>
+      )}
+      {counters?.burn !== undefined && (
+        // R3540000: the Burn the Unit ticks at the start of its controller's turn (board.css `.counter-burn`).
+        <span className="counter counter-burn" data-counter="burn" title={t("Burn counters")}>
+          {counters.burn}
+        </span>
+      )}
+      {counters?.toxic !== undefined && (
+        // R3540000: and its Toxic (board.css `.counter-toxic`).
+        <span className="counter counter-toxic" data-counter="toxic" title={t("Toxic counters")}>
+          {counters.toxic}
         </span>
       )}
 

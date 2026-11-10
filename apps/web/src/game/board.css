@@ -185,6 +185,8 @@
 .hero-health,
 .hero-armor,
 .hero-jade,
+.hero-burn,
+.hero-toxic,
 .hero-credits,
 .hero-luck {
   display: inline-flex;
@@ -215,6 +217,17 @@
 .hero-jade {
   border: 1px solid color-mix(in srgb, var(--pal-jade-400) 55%, transparent);
   background: var(--pal-green-700);
+}
+
+/* R3540000: the hero's Burn and Toxic, ember and green beside the Jade Counter's. */
+.hero-burn {
+  border: 1px solid color-mix(in srgb, var(--burn) 55%, transparent);
+  background: color-mix(in srgb, var(--burn) 70%, var(--pal-black));
+}
+
+.hero-toxic {
+  border: 1px solid color-mix(in srgb, var(--toxic) 55%, transparent);
+  background: color-mix(in srgb, var(--toxic) 70%, var(--pal-black));
 }
 
 /* R1840005: the Credits, gold beside the Jade Counter's green. */
@@ -399,6 +412,8 @@ button.modifier-badge[data-open="true"] {
    armor do (`emotes.css` anchors those): Jade top left, Credits top right, at the badges'
    overlay metrics, so gaining or spending one never moves the plate. */
 .hero-portrait .hero-jade,
+.hero-portrait .hero-burn,
+.hero-portrait .hero-toxic,
 .hero-portrait .hero-credits {
   position: absolute;
   top: -6px;
@@ -410,6 +425,16 @@ button.modifier-badge[data-open="true"] {
 
 .hero-portrait .hero-jade {
   left: -6px;
+}
+
+/* R3540000: Burn under the Jade Counter, Toxic beside it. */
+.hero-portrait .hero-burn {
+  left: -6px;
+  top: 22px;
+}
+
+.hero-portrait .hero-toxic {
+  left: 18px;
 }
 
 .hero-portrait .hero-credits {
@@ -1566,6 +1591,19 @@ button.modifier-badge[data-open="true"] {
   left: 18px;
   bottom: 2px;
   background: var(--grade);
+}
+
+/* R3540000: a Unit's Burn and Toxic follow the grade badge along the bottom edge. */
+.counter-burn {
+  left: 34px;
+  bottom: 2px;
+  background: var(--burn);
+}
+
+.counter-toxic {
+  left: 50px;
+  bottom: 2px;
+  background: var(--toxic);
 }
 
 /* R90 (#992): the viewer's own hand card whose listed plays were cut (Card.tsx): an ellipsis pill

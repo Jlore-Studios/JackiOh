@@ -125,6 +125,7 @@ builds reads its own game's hold without the state (R2201001).
 - `evolution.rs` is Evolve and Evolves (§6.2, §6.3, R1849001, R3536000–R3536005): the once-only
   `evolve_now` verb body, the settled state check's `evolve_standing`, the deck-marking
   `mark_library`, the `Evolved` event and the per-player `evolutions` count.
+- `afflictions.rs` is Burn and Toxic (§6.3, R3540000–R3540005); the verbs are `effects/burn_toxic.rs`.
 - `effects/anomaly.rs` is Stinkyscape's Anomalies and Scanning Probes (R1855000–R1855003):
   `replace_board` exiles what its card reaches of its caster's side, lays a preset as summons into
   their named zones with their riders in memory, then fires each laid Unit's Cry under R452's random

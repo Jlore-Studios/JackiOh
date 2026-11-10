@@ -258,6 +258,7 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
             card.counters = Counters {
                 plague: Some(2),
                 grade: Some(3),
+                ..Default::default()
             };
             card.memory = [("meal".to_string(), json!("felinor"))].into_iter().collect();
             card.exertion = Exertion {

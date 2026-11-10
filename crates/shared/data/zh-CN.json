@@ -265,6 +265,8 @@
   "{target} plague counters: {value}": "{target}的瘟疫指示物：{value}",
   "{target} grade counters: {value}": "{target}的等级指示物：{value}",
   "{target} brittle counters: {value}": "{target}的易碎指示物：{value}",
+  "{target} burn counters: {value}": "{target}的燃烧指示物：{value}",
+  "{target} toxic counters: {value}": "{target}的剧毒指示物：{value}",
   "{whose} Jade Counter is {value}": "{whose}青玉指示物为{value}",
   "{whose} starscape map reaches node {node}": "{whose}星图到达第{node}个节点",
   "{target} changed cost": "{target}的法力值消耗改变了",

@@ -5,4 +5,12 @@
  * letter that number is, E..S, which the engine names so a client prints it rather than working it
  * out (R372). `plague` is the card's Plague Counters (§6.3, B5 E19), absent at none.
  */
-export type BackrowCounters = { grade?: number, gradeLetter?: string, plague?: number, };
+export type BackrowCounters = { grade?: number, gradeLetter?: string, plague?: number, 
+/**
+ * R3540000: the Burn on a Unit standing in the backrow, absent at none.
+ */
+burn?: number, 
+/**
+ * R3540000: the Toxic on a Unit standing in the backrow, absent at none.
+ */
+toxic?: number, };

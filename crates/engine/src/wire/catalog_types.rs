@@ -777,9 +777,11 @@ string_union! {
         CantDefend = "Can't Defend",
         /// R3535002: declared for SP3 E1; no rule yet.
         Evolve = "Evolve",
-        /// R3535002: declared for SP3 E2; no rule yet.
+        /// R3535002: declared for SP3 E2; no rule yet. R3540001: the `via` of its tick's hit; the counter
+        /// is `Counters.burn`, not this keyword.
         Burn = "Burn",
-        /// R3535002: declared for SP3 E2; no rule yet.
+        /// R3535002: declared for SP3 E2; no rule yet. R3540001: the `via` of its tick's hit; the counter
+        /// is `Counters.toxic`, not this keyword.
         Toxic = "Toxic",
         /// R3535002: declared for SP3 E4; no rule yet.
         Giga = "GIGA",

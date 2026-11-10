@@ -4,4 +4,12 @@
  * `{ plague?: number; grade?: number }`: a unit's counters (`UnitView.counters`,
  * `CardInstance.counters`).
  */
-export type Counters = { plague?: number, grade?: number, };
+export type Counters = { plague?: number, grade?: number, 
+/**
+ * R3540000: the Burn on the Unit, absent at none; it ticks at the start of its controller's turn.
+ */
+burn?: number, 
+/**
+ * R3540000: the Toxic on the Unit, absent at none; it ticks at the start of its controller's turn.
+ */
+toxic?: number, };

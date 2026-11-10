@@ -185,6 +185,17 @@ export default function Hero(props: HeroProps): ReactElement {
             {seat.jade}
           </span>
         )}
+        {/* R3540000: the Burn and Toxic on the hero, as the Jade Counter rides, on both seats. */}
+        {(hero.burn ?? 0) > 0 && (
+          <span className="hero-burn" data-burn={hero.burn} title={t("Burn counters")}>
+            {hero.burn}
+          </span>
+        )}
+        {(hero.toxic ?? 0) > 0 && (
+          <span className="hero-toxic" data-toxic={hero.toxic} title={t("Toxic counters")}>
+            {hero.toxic}
+          </span>
+        )}
         {/* R1840005: the Credits, 0 included, once the view carries them. */}
         {seat.marketCredits !== undefined && (
           <span

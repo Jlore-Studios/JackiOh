@@ -33,6 +33,7 @@ pub mod balance_2727;
 pub mod blueprint;
 pub mod board_history;
 pub mod brittle;
+pub mod burn_toxic;
 pub mod call_to_chaos;
 pub mod call_to_chaos_meditative;
 pub mod call_to_chaos_plus;

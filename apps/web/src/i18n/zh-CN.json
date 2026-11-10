@@ -288,6 +288,8 @@
   "End of your next turn": "你的下回合结束时",
   "When you reveal it": "在你揭示它时",
   "Plague counters": "瘟疫指示物",
+  "Burn counters": "燃烧指示物",
+  "Toxic counters": "剧毒指示物",
   "Plague Counters: {count}": "瘟疫指示物：{count}",
   "{label}, Plague Counters: {count}": "{label}，瘟疫指示物：{count}",
   "Grade counters": "等级指示物",

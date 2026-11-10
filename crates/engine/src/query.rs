@@ -317,6 +317,9 @@ pub fn killer_of<'a>(state: &'a GameState, card: Option<&CardInstance>) -> Optio
 // `permanents_on_field` is every permanent on the field in R68's order, face-down included.
 pub use crate::plague::{permanents_on_field, plague_multiplier_of, plague_on, plague_on_field};
 
+// Burn and Toxic (Stinkyscape+ E2, R3540000), ruled by `afflictions.rs`.
+pub use crate::afflictions::{burn_on, hero_burn_of, hero_toxic_of, toxic_on};
+
 // Readers: play pipeline A (B5 E1 announces, E4 play counters, R448, R451)
 
 /// B5 E4: how many cards this player has played this turn of these types, each as the type it was

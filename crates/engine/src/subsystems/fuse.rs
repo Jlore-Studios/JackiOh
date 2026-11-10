@@ -1131,6 +1131,10 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 pilots_turn: flags(|f| f.pilots_turn),
                 hints_plays: flags(|f| f.hints_plays),
                 lends_equip: flags(|f| f.lends_equip),
+                burns_on_damage: sum_defined(defined.iter().map(|f| f.burns_on_damage)),
+                toxic_on_damage: sum_defined(defined.iter().map(|f| f.toxic_on_damage)),
+                damage_burns: flags(|f| f.damage_burns),
+                damage_is_toxic: flags(|f| f.damage_is_toxic),
             })
         }
     }

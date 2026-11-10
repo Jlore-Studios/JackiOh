@@ -505,6 +505,14 @@ pub struct Counters {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub grade: Option<i32>,
+    /// R3540000: the Burn on the Unit, absent at none; it ticks at the start of its controller's turn.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub burn: Option<i32>,
+    /// R3540000: the Toxic on the Unit, absent at none; it ticks at the start of its controller's turn.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub toxic: Option<i32>,
 }
 
 /// `UnitView.animated`: B3.1, R383.
@@ -710,6 +718,14 @@ pub struct BackrowCounters {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub plague: Option<i32>,
+    /// R3540000: the Burn on a Unit standing in the backrow, absent at none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub burn: Option<i32>,
+    /// R3540000: the Toxic on a Unit standing in the backrow, absent at none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub toxic: Option<i32>,
 }
 
 /// The public member of `BackrowView`: `CardView & { faceDown: false; type: CardType; … }`. Every
@@ -949,6 +965,14 @@ pub struct HeroView {
     /// Long), which R124 adds up. So it drops back when a granting card leaves the backrow, exactly
     /// like a unit's `armor` above.
     pub armor: i32,
+    /// R3540000: the Burn on this hero, absent at none; it ticks at the start of its owner's turn.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub burn: Option<i32>,
+    /// R3540000: the Toxic on this hero, absent at none; it ticks at the start of its owner's turn.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub toxic: Option<i32>,
     /// Every Heroic Power this player controls, in board order. Usually none or one, but #36 radiant
     /// and #49 steal a backrow permanent and a Field Spell is one (§3), so a player holding their own
     /// #98 can come to control the opponent's as well — and each is separately once-per-turn (R43).

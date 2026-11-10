@@ -1011,6 +1011,9 @@ fn backrow_view(
             grade,
             grade_letter: grade.map(|grade| grade_name(grade).to_string()),
             plague: plague_shown,
+            // R3540000: a standing Unit's Burn and Toxic are public like its keywords.
+            burn: card.counters.burn,
+            toxic: card.counters.toxic,
         },
         owner: card.owner,
         controller: card.controller,
@@ -1418,6 +1421,9 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             // §10.8's "armor": the number §4.4 step 2 will subtract, never the stored field alone, with
             // every backrow grant (#84 Going Long) summed per R124.
             armor: hero_armor_of(state, player),
+            // R3540000: a hero's Burn and Toxic, public on both seats, absent at none.
+            burn: side.hero_burn,
+            toxic: side.hero_toxic,
             power: powers.first().cloned(),
             powers,
             // #936 S3: a Duos duel's pool and spent flag, public on both seats (absent in 1v1).

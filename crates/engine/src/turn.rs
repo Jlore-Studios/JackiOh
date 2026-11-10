@@ -2,8 +2,9 @@
 //! R389). Each part belongs to its module: the turn hooks to `triggers::queue_hooks_in_trigger_order` (R68's
 //! order), the end-of-turn trap window to `traps::run_trap_window` (R100), the delayed effects to
 //! `modifiers::due_delayed`, mana to `mana.rs`. A turn starts: refresh → Brittle tick (B3.3), Dormant
-//! countdowns (R1839001), quests' waits (R1854004) → animate (B3.1) → delayed effects, rest-of-game ones
-//! among them (B5 E28, R458) → start-of-turn triggers → draw. Animated cards go home last in cleanup.
+//! countdowns (R1839001), quests' waits (R1854004), Burn and Toxic ticks (R3540001) → animate (B3.1) →
+//! delayed effects, rest-of-game ones among them (B5 E28, R458) → start-of-turn triggers → draw. Animated
+//! cards go home last in cleanup.
 //!
 //! Any part can pause on a question (§9.3, §10.6), so both boundaries are resumable: a pause parks the
 //! rest of R62's order on `state.work` through `owe`, and `run_owed_start_of_turn` / `run_owed_end_of_turn`
@@ -411,6 +412,8 @@ fn start_of_turn_brittle(sink: &mut EngineSink, player: PlayerId, due_before: u3
     // R1854004: then `player`'s quests waiting to hear back count the turn; one whose wait ends opens
     // its stage.
     crate::subsystems::quests::hear_back_at_turn_start(sink, player);
+    // R3540001: then the Burn and Toxic ticks, settled with the stage.
+    crate::afflictions::tick_at_turn_start(sink, player);
     after_start_stage(sink, player, START_BRITTLE_STEP, due_before);
 }
 

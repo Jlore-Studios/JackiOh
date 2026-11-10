@@ -608,6 +608,8 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
                 CounterKind::Plague => "{target} plague counters: {value}",
                 CounterKind::Grade => "{target} grade counters: {value}",
                 CounterKind::Brittle => "{target} brittle counters: {value}",
+                CounterKind::Burn => "{target} burn counters: {value}",
+                CounterKind::Toxic => "{target} toxic counters: {value}",
             };
             s(
                 english,

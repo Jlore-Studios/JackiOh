@@ -66,7 +66,8 @@ pub struct DamageFlags {
     /// R2783001: the hit's route, the keyword the engine sent it by — Cleave's neighbour hit, a Trample
     /// excess, the strike First Strike moved ahead — which its `damage` (or `damageAbsorbed`) carries as
     /// `via`. Set only by the engine's combat and Trample verbs and never serialized, so no card can
-    /// state it and nothing a state holds carries it.
+    /// state it and nothing a state holds carries it. R3540001: the start-of-turn ticks of Burn and Toxic
+    /// (`afflictions::tick_at_turn_start`) set it too, each to its own keyword.
     #[serde(skip)]
     pub via: Option<KeywordKind>,
 }
@@ -93,7 +94,7 @@ pub struct DamageArgs {
 /// Every caller hands the engine's sink (SURFACE §6.5).
 pub type DamageSink<'a> = EngineSink<'a>;
 
-fn target_id(target: &DamageTarget) -> String {
+pub(crate) fn target_id(target: &DamageTarget) -> String {
     match target {
         DamageTarget::Unit { instance } => instance.id.clone(),
         DamageTarget::Hero { player } => format!("hero-{player}"),
@@ -523,6 +524,25 @@ fn land(
         (DamageTarget::Unit { .. }, None) => {}
     }
 
+    // R3540003, §4.4 step 3a: a hit from a source that states "Damage dealt Burns" (or "is Toxic"), past
+    // Armor and the caps, is its target's Burn (or Toxic) instead of damage: nothing of steps 4 to 9
+    // happens. A Unit that takes no damage (Indestructible, step 4) gains none, and a hit of 0 converts
+    // nothing.
+    if amount > 0
+        && let Some(kind) = source.and_then(|source| crate::afflictions::converts_to(sink.state, source))
+    {
+        let indestructible = unit.as_ref().is_some_and(|live| {
+            has_keyword(
+                &crate::layers::unit_view(sink.state, live).keywords,
+                KeywordKind::Indestructible,
+            )
+        });
+        if !indestructible {
+            crate::afflictions::afflict(sink, target, kind, amount);
+        }
+        return Landed::default();
+    }
+
     // E5, E9: after the caps and before step 5, a hit that alone would bring its hero to 0 or less (R44)
     // meets the lethal-hit replacements, which may send it to the other hero or cancel it (R1704001).
     // #936 B17: in a Duos duel the hit is judged against own HP and the team's pool together.
@@ -690,6 +710,12 @@ fn land(
         && let Some(card) = find_instance_mut(sink.state, &live.id)
     {
         card.marked_exiled = Some(true);
+    }
+
+    // R3540002: "Damage also Burns N / applies Toxic N" adds N to a target the hit left standing, after
+    // Poisonous and the exile have had their say.
+    if let Some(source_card) = source {
+        crate::afflictions::ride_damage(sink, source_card, target);
     }
 
     // Step 8: Lifesteal heals the source's controller's hero by the amount dealt; R85: an effect may

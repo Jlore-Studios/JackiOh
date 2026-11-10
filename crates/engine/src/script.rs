@@ -710,6 +710,22 @@ pub struct StaticFlags {
     /// it as an Equip play (R1086) though it has no Equip (`play_choices::equip_onto_at`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lends_equip: Option<bool>,
+    // Stinkyscape+ E2 (issue #3540)
+    /// R3540002: "Damage also Burns N": each hit this card deals that its target survives adds N Burn to
+    /// the target (`afflictions::ride_damage`). N is the card's declared number `burns` where it declares
+    /// one (R386).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub burns_on_damage: Option<i32>,
+    /// R3540002: "Damage also applies Toxic N", as `burns_on_damage`; N is the declared number `toxic`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub toxic_on_damage: Option<i32>,
+    /// R3540003: "Damage dealt Burns": a hit this card deals, past Armor and the caps, is its target's Burn
+    /// instead of damage (`afflictions::converts_to`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub damage_burns: Option<bool>,
+    /// R3540003: "Damage dealt is Toxic", as `damage_burns` but Toxic; a card with both burns.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub damage_is_toxic: Option<bool>,
 }
 
 /// R1849004 (Stinkyscape #5 Masochism Unmasked): "Redirect all damage you take on your turn to your

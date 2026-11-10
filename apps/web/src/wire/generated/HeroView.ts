@@ -11,6 +11,14 @@ export type HeroView = { health: number,
  */
 armor: number, 
 /**
+ * R3540000: the Burn on this hero, absent at none; it ticks at the start of its owner's turn.
+ */
+burn?: number, 
+/**
+ * R3540000: the Toxic on this hero, absent at none; it ticks at the start of its owner's turn.
+ */
+toxic?: number, 
+/**
  * Every Heroic Power this player controls, in board order. Usually none or one, but #36 radiant
  * and #49 steal a backrow permanent and a Field Spell is one (§3), so a player holding their own
  * #98 can come to control the opponent's as well — and each is separately once-per-turn (R43).

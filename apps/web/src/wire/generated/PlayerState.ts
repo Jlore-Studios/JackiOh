@@ -190,4 +190,13 @@ anomalyMisses?: number,
  * R3536004: how many of this player's cards evolved this game (`evolution::begin`). Absent
  * until the first, so a game without one hashes as before this field existed (D3).
  */
-evolutions?: number, };
+evolutions?: number, 
+/**
+ * R3540000: the Burn on this player's hero (`afflictions::afflict`), ticking at the start of their
+ * turn (R3540001). Absent at none, so a game without one hashes as before this field existed (D3).
+ */
+heroBurn?: number, 
+/**
+ * R3540000: the Toxic on this player's hero, as `hero_burn`.
+ */
+heroToxic?: number, };

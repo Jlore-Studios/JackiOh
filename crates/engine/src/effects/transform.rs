@@ -343,6 +343,8 @@ pub fn vanilla(args: TransformTarget) -> Effect {
         });
         // R1174000: a Vanilla removes Frozen, as Hearthstone's Silence removes Freeze.
         crate::freeze::unfreeze(&mut ctx.sink, &card.id);
+        // R3540004: and Burn and Toxic, as it removes Frozen.
+        crate::afflictions::clear_afflictions(&mut ctx.sink, &card.id);
     })
 }
 
