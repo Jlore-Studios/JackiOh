@@ -63,6 +63,12 @@ pub fn run_content() -> Result<String, JsError> {
     js(wasm_core::run_content())
 }
 
+/// R3496000: `RunContent` for a catalog version: the build's own, a carried version's, or `null`.
+#[wasm_bindgen]
+pub fn run_content_at(version_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_content_at(version_json))
+}
+
 /// `null` when the setup may start a run, else the reason.
 #[wasm_bindgen]
 pub fn run_check_setup(setup_json: &str, unlocks_json: &str, content_json: &str) -> Result<String, JsError> {

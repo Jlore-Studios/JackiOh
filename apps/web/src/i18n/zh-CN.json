@@ -3754,6 +3754,7 @@
   "Your starting deck is at its top level.": "你的起始牌组已是最高等级。",
   "Raise to level {level} for {cost} Embers": "花 {cost} 余烬升到 {level} 级",
   "You have a run in progress.": "你有一场进行中的探险。",
+  "The patch ended your last run as lost. What you had extracted is kept.": "版本更新结束了你的上次探险（记为失败）。你已提取的卡牌和遗物已保留。",
   "Continue the run": "继续探险",
   "Abandon the run": "放弃探险",
   "Campaign": "战役",
