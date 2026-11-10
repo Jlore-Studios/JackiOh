@@ -201,6 +201,37 @@ mod tests {
         assert_eq!(rename_versions_with("(v0.5.13aa)", map), "(NEW)");
     }
 
+    // R3631001: a record marked 3 names the micros after v0.5.12z as the v0.5.13 line did before the
+    // v0.5.13 retcon, and is read through `aliases.json`'s `marked`; one marked 4 is today's, where
+    // v0.5.13 is the next patch's name.
+    #[test]
+    fn r3631001_a_record_marked_3_names_the_v0_5_13_line_as_it_was() {
+        let three = line(
+            "dev:v0.5.13b:learned-v0.5.13-20261110-1:2",
+            "v0.5.13b",
+            r#","versions":3"#,
+        );
+        let four = line("dev:v0.5.13:gather:1", "v0.5.13", r#","versions":4"#);
+        let records = read_game_record_lines(&format!("{three}\n{four}\n")).expect("the records");
+        assert_eq!(
+            records[0].patch, "v0.5.12ab",
+            "the old v0.5.13b is the new v0.5.12ab"
+        );
+        assert_eq!(records[0].id, "dev:v0.5.12ab:learned-v0.5.12aa-20261110-1:2");
+        assert_eq!(
+            records[1].patch, "v0.5.13",
+            "a record marked 4 names today's v0.5.13"
+        );
+        assert_eq!(version_name_from(3, "v0.5.13h"), "v0.5.12ah");
+        assert_eq!(version_name_from(3, "v0.5.12z"), "v0.5.12z");
+        assert_eq!(
+            version_name_from(2, "v0.5.11"),
+            "v0.5.7",
+            "scheme 2's map still reads"
+        );
+        assert_eq!(version_name_from(VERSIONS_SCHEME, "v0.5.13"), "v0.5.13");
+    }
+
     // R2532000: a record marked 2 names the v0.5 line as it was before the v0.5 retcon, and is read
     // through `aliases.json`'s `marked`; one marked 3 is today's; an unmarked one is scheme 1's.
     #[test]

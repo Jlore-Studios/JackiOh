@@ -5507,26 +5507,37 @@ mod tests {
             }
         }
 
-        // R3471000, superseded by R3631000: the micro it named past `z`, v0.5.13, keeps that
-        // patch-form name with its micro tier, since a shipped version never reopens (R646).
-        mod r3471000_r3631000_the_shipped_history {
+        // R3471000, superseded by R3631000: the micro it named past `z`, v0.5.13, and the seven after
+        // it took R3631000's letters in the v0.5.13 retcon (R3631001): v0.5.12z is followed by
+        // v0.5.12aa … v0.5.12ah, all micros. The next patch takes v0.5.13 again (scheme 4).
+        mod r3471000_r3631001_the_shipped_history {
             use super::*;
             use crate::classify::Tier;
 
             #[test]
-            fn r3471000_r3631000_v0_5_13_keeps_its_name_and_its_micro_tier() {
+            fn r3471000_r3631001_the_micros_after_v0_5_12z_take_two_letters() {
                 let patches = patches();
                 let at = patches
                     .iter()
                     .position(|patch| patch.version == "v0.5.12z")
                     .expect("v0.5.12z shipped");
-                let next: Vec<(&str, Option<Tier>)> = patches[at + 1..at + 3]
+                let next: Vec<(&str, Option<Tier>)> = patches[at + 1..at + 9]
                     .iter()
                     .map(|patch| (patch.version.as_str(), patch.tier))
                     .collect();
+                let micro = Some(Tier::Micro);
                 assert_eq!(
                     next,
-                    [("v0.5.13", Some(Tier::Micro)), ("v0.5.13b", Some(Tier::Micro))]
+                    [
+                        ("v0.5.12aa", micro),
+                        ("v0.5.12ab", micro),
+                        ("v0.5.12ac", micro),
+                        ("v0.5.12ad", micro),
+                        ("v0.5.12ae", micro),
+                        ("v0.5.12af", micro),
+                        ("v0.5.12ag", micro),
+                        ("v0.5.12ah", micro),
+                    ]
                 );
             }
         }
