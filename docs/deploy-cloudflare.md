@@ -49,7 +49,8 @@ the daily super run tests one commit, and the night bot fixes one commit, instea
 
 1. A pull request merges into `main` through the merge queue (branch protection requires the five
    CI checks).
-2. CI runs again on the push to main, unscoped. Every two hours `promote-staging.yml`
+2. CI runs again on the push to main: every piece but the ones the merge queue's build of the same
+   commit ran and passed, which it skips (ci.yml's `changes` job). Every two hours `promote-staging.yml`
    (`scripts/promote-staging.sh`) fast-forwards `staging` to main's newest commit whose push-to-main
    CI run passed; it never moves it backwards. GitHub fires this repository's schedules late, so each
    green push-to-main CI run wakes it as well, and it moves `staging` then once the last move is two

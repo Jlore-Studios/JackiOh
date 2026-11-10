@@ -5,7 +5,9 @@
 # Three branches, each a site's (docs/deploy-cloudflare.md, section 2):
 #   main        every merge, through the merge queue and its five required checks. No site.
 #   staging     this script's: fast-forwarded to main's newest commit whose push-to-main CI run
-#               passed (ci.yml runs everything on a push to main, unscoped). deploy-staging.yml
+#               passed (ci.yml runs on a push to main every piece the merge queue's build of
+#               the same commit did not pass already, so a green run means every piece passed
+#               on that commit, there or in the queue). deploy-staging.yml
 #               deploys each push of it to https://staging.jackioh.com.
 #   production  promote-production.yml's: once a day, the commit of staging the daily super run
 #               passed every job on (super.yml runs on staging, scripts/promote-production.sh).

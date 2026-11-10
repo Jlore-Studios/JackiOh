@@ -53,8 +53,9 @@
 # scopes on its own (`bot`). The `changes` job decides; each job below it runs `if:
 # needs.changes.outputs.full == 'true'`, so a skip is a job-level skip, which counts as passing for a
 # required check (a workflow-level `paths:` filter would leave the check pending forever), and the
-# summary jobs accept "skipped" only on `full == 'false'`. A push to main, a dispatch, and any doubt
-# run everything.
+# summary jobs accept "skipped" only on `full == 'false'`. A dispatch and any doubt run everything;
+# a push to main runs everything but what the merge queue's build of the same commit ran and passed
+# (the `changes` job's scope step says how).
 #
 # Past `full`, each piece runs only when the pull request touches what that piece reads (#751):
 # scripts/ci-scope.sh prints one line per piece (its header says what turns each on) and the
@@ -73,7 +74,8 @@
 # checks, fuzz 200 and the classifier run on `full`, whatever changed. A summary accepts a skip only
 # where the skipped piece's own line is exactly `false`, and the lines are held by
 # apps/web/src/net/ci-scope.test.ts and crates/tools/tests/acceptance.rs. A scoping mistake
-# still meets the push to main, which runs everything, and the next morning's super run.
+# still meets the push to main, which runs every piece the queue's build of that commit left out,
+# and the next morning's super run.
 #
 # `workflow_dispatch` lets a person run all of it on any branch (`gh workflow run ci.yml --ref
 # staging`); the v0.3.0 rewrite's first full run is its cutover pull request (part 38). Its `e2e`
@@ -88,7 +90,8 @@
 # pass on that commit too, so two pull requests each green alone but red together (four of the five
 # red runs on main of 2026-10-29) never both land: the queue takes the second one out. Its
 # `changes` job scopes the group's diff against the queue's base as it scopes a pull request's, and
-# the push to main still runs everything after it. A run here gets the smoke list, as a pull request,
+# the push to main after it runs every piece that scope left out. A run here gets the smoke list, as a
+# pull request,
 # stops once one of the five has failed (`queue-cancel-*`, at the end), and cancels its own pull
 # request's older builds, which the queue rebuilt and GitHub leaves running (`queue-supersede`). The
 # night bot's status loop goes sooner: once a job of a build fails for its own pull request, it takes
@@ -204,22 +207,45 @@ jobs:
       # the script itself changes, and a line only the pull request's copy declares (the scope of a job
       # it adds, read from its `LINES=` and never run) is emitted `true`, so that job runs on the pull
       # request that adds it. A base without the script runs every line that copy declares, each `true`.
+      #
+      # A push to main runs every piece but the ones the merge queue's build of the same commit ran
+      # and passed (#3292). The queue lands a commit only once that build's five checks passed, and
+      # main then holds the very commit it tested, so running those pieces again tests nothing new
+      # and only meets their flakes (#3564). The pieces that build's scope left out still run here,
+      # which is what catches a scoping mistake (the daily super run too). The step finds the build
+      # by the commit (`queue_build`, a run that passed), scopes it again exactly as its own
+      # `changes` job did (`scope`, from the commit it stood on, this one's parent once it landed),
+      # and turns each line it printed `true` to `false` here, which its summary job accepts as a
+      # skip. Every line stays `true`, as before: with no such build (a push past the queue, or one
+      # still going after QUEUE_BUILD_WAIT_SECONDS); for a commit that changes what the build caches
+      # are keyed on, since only main saves them (.github/actions/setup); and always for `full`,
+      # `db` and `db_deploy`, because the deploy rehearsal leaves the `deploy-image` artifact the
+      # deploys load (scripts/server-image.sh) and fills the layer cache they build from, which only
+      # main and staging write.
       - id: scope
         env:
           EVENT: ${{ github.event_name }}
           BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           HEAD: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          # How long a push waits for the queue's build of its commit to end: GitHub lands a group
+          # once its five checks passed, which can be seconds before the build's run itself ends.
+          QUEUE_BUILD_WAIT_SECONDS: "120"
         run: |
-          if [ "$EVENT" = pull_request ] || [ "$EVENT" = merge_group ]; then
-            # No name may expand as a glob in the loops below.
-            set -f
+          # No name may expand as a glob in the loops below.
+          set -f
+          # The lines of the diff $1...$2, by $1's copy of the script: a pull request's, a merge
+          # group's, and on a push to main the merge queue's build of the same commit again.
+          scope() {
             based=$(mktemp)
             : > "$based.lines"
-            if git show "$BASE:scripts/ci-scope.sh" > "$based" 2>/dev/null; then
-              sh "$based" "$BASE" "$HEAD" > "$based.lines"
-              tee -a "$GITHUB_OUTPUT" < "$based.lines"
+            if git show "$1:scripts/ci-scope.sh" > "$based" 2>/dev/null; then
+              sh "$based" "$1" "$2" > "$based.lines" || return 1
+              cat "$based.lines"
             else
-              echo "ci-scope: $BASE has no scripts/ci-scope.sh, running everything" >&2
+              echo "ci-scope: $1 has no scripts/ci-scope.sh, running everything" >&2
             fi
             # The lines the pull request's copy declares (its `LINES=`), read and never run: no
             # code of the pull request's runs in this step, so none can write $GITHUB_OUTPUT.
@@ -227,10 +253,10 @@ jobs:
             for name in $names; do
               if ! grep -q "^$name=" "$based.lines"; then
                 echo "ci-scope: only the pull request's copy declares $name, so it runs" >&2
-                echo "$name=true" | tee -a "$GITHUB_OUTPUT"
+                echo "$name=true"
               fi
             done
-            files=$(git diff --no-renames --name-only "$BASE...$HEAD") || files=
+            files=$(git diff --no-renames --name-only "$1...$2") || files=
             bot=false
             if [ -z "$files" ]; then bot=true; fi
             for file in $files; do
@@ -240,10 +266,63 @@ jobs:
                 rust-toolchain.toml | .cargo/*) bot=true ;;
               esac
             done
-            echo "bot=$bot" | tee -a "$GITHUB_OUTPUT"
+            echo "bot=$bot"
+          }
+          # The merge queue's build of $SHA that passed, as "<run id> <the commit it stood on>", or
+          # a failure: none, none that passed, or none ended within QUEUE_BUILD_WAIT_SECONDS.
+          queue_build() {
+            waited=0
+            while :; do
+              found=$(gh api "repos/$REPO/actions/runs?event=merge_group&head_sha=$SHA&per_page=20" --jq '
+                [.workflow_runs[] | select(.path == ".github/workflows/ci.yml")]
+                | (map(select(.conclusion == "success"))[0] // map(select(.status != "completed"))[0] // empty)
+                | "\(.id) \(.conclusion // "going") \(.head_branch)"') || found=
+              case "$found" in
+                *" success "*) echo "${found%% *} ${found##*-}"; return 0 ;;
+                *" going "*) ;;
+                *) return 1 ;;
+              esac
+              [ "$waited" -lt "$QUEUE_BUILD_WAIT_SECONDS" ] || return 1
+              sleep 10
+              waited=$((waited + 10))
+            done
+          }
+          if [ "$EVENT" = pull_request ] || [ "$EVENT" = merge_group ]; then
+            lines=$(mktemp)
+            scope "$BASE" "$HEAD" > "$lines"
+            tee -a "$GITHUB_OUTPUT" < "$lines"
           else
-            sh scripts/ci-scope.sh | tee -a "$GITHUB_OUTPUT"
-            echo "bot=true" | tee -a "$GITHUB_OUTPUT"
+            every=$(mktemp)
+            passed=$(mktemp)
+            sh scripts/ci-scope.sh > "$every"
+            echo "bot=true" >> "$every"
+            if [ "$EVENT" = push ] && build=$(queue_build); then
+              run=${build%% *}
+              stood=${build#* }
+              if ! printf '%s\n' "$stood" | grep -Eq '^[0-9a-f]{40}$' ||
+                ! git merge-base --is-ancestor "$stood" "$SHA" 2>/dev/null; then
+                echo "ci-scope: the queue's build (run $run) stood on $stood, no commit before this one, so everything runs" >&2
+              elif git diff --no-renames --name-only "$stood" "$SHA" |
+                grep -Eq '(^|/)Cargo\.(toml|lock)$|^rust-toolchain\.toml$|^\.cargo/|(^|/)pnpm-lock\.yaml$'; then
+                echo "ci-scope: this commit changes what the build caches are keyed on, which only main saves, so everything runs" >&2
+              elif ! scope "$stood" "$SHA" > "$passed"; then
+                : > "$passed"
+                echo "ci-scope: scoping the queue's build (run $run) again failed, so everything runs" >&2
+              fi
+            fi
+            out=$(mktemp)
+            while IFS='=' read -r name value; do
+              case "$name" in
+                full | db | db_deploy) ;;
+                *) if grep -qx "$name=true" "$passed"; then value=false; fi ;;
+              esac
+              echo "$name=$value"
+            done < "$every" > "$out"
+            tee -a "$GITHUB_OUTPUT" < "$out"
+            skipped=$(sed -n 's/=false$//p' "$out" | tr '\n' ' ')
+            if [ -n "$skipped" ]; then
+              echo "::notice::The merge queue's build of this commit (run $run) passed these, so they are skipped here: $skipped"
+            fi
           fi
 
   # ------------------------------------------------------------------------------------------------
