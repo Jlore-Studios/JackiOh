@@ -18947,15 +18947,8 @@
       "taken_asks": []
     },
     "3605": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42748279463",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-10T03:34:22Z",
-        "until": "2026-11-10T04:04:22Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -18967,10 +18960,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "s.test.ts`: tests from the Tests section. Run `pnpm --dir apps/web exec vitest run src/perf/frameStats.test.ts`.\n- 4. `e2e/fixtures/decks/50-busy-a.json`, `50-busy-b.json`: copy `e2e/fixtures/decks/32-tribute-a.json` structure (`id`, `spec`, `description`, `cards` as catalog defIds, `handicap`). Each deck holds: 1\u00d7 `stinkyscape-074` Paragon-X (Mythic anchor), 1\u00d7 `stinkyscape-116` Megabase (Legendary anchor), 1\u00d7\u2026\n- 5. `e2e/support/busyBoard.ts`: export `BUSY_BOARD_SEED = seedFor(\"50-busy-board\")`, deck ids, and `setupBusyBoard()`: `cy.seedGame({ seed, a: \"50-busy-a\", b: \"50-busy-b\" })`, then per side `cy.dispatchAction` of legal `play` actions for five units (lanes 1\u20135) and two backrow traps (setup-only use, \u2026\n- 6. `e2e/support/frameProbe.ts`: export `samplePhase(win, seconds)`: install `PerformanceObserver(\"longtask\")` counting entries; collect `requestAnimationFrame` deltas for `seconds`; dispatch `mouseover`/`mousemove` on the given board-minion element first (headless has no real pointer; record this a\u2026\n- 7. Measure budgets: run the probe three times locally (step 9's command), take each judged measure's largest median/p95, set each budget to 5\u00d7 that value rounded up to two significant figures (`crates/tools/src/perf.rs` header documents this recipe). This is the CI-shared-runner headroom. Record th\u2026\n- 8. `e2e/cypress/e2e/50-busy-board-frames.cy.ts`: header cites SPEC \u00a72.4/\u00a73/\u00a74.1/\u00a76 and BUILD M5-T3/M5-T4. Three `it`s sharing `setupBusyBoard()`: (a) idle \u2014 hover a p1 board minion, `samplePhase(win, FRAME_PROBE_IDLE_SECONDS)`, `cy.task(\"log\", table)` then assert verdict ok; (b) combat \u2014 start samp\u2026\n- 9. `e2e/scripts/frame-probe.sh` + `e2e/package.json` `probe:frames`: the script builds (`pnpm --dir apps/web build:e2e`), starts `vite preview --port 4173 --strictPort` with a trap kill, polls the port with curl up to 60 s, then runs `E2E_BASE_URL=http://localhost:4173 cypress run --spec cypress/e2\u2026\n- 10. PR description (not a file): the super.yml note \u2014 \"daily super run picks up spec 50 via `shard-specs.mjs` automatically; no workflow change needed; add a dedicated frame-history job only if wanted (a person's `.github/` change)\" \u2014 plus today's numbers on `main` as the baseline table.\n- ## Tests\n- - `apps/web/src/perf/frameStats.test.ts`, `it(\"summarizes median, p95 and dropped share\")`: samples `[8, 8, 16.7, 16.7, 50]` \u2192 median 16.7, p95 50, dropped share 1/5 (over 25 ms).\n- - Same file, `it(\"judges p95 over its budget as failed, naming the constant\")`: stats with p95 40 vs budget 25 \u2192 `ok === false`, message contains budget name, value, budget.\n- - Same file, `it(\"fails a board with a deliberately expensive loop\")`: base 300\u00d716.7 ms samples plus an injected 40 ms block every third frame \u2192 p95 over budget, `ok === false`; and the pure-idle samples pass. This is the required failure test at unit level; the spec's third `it` repeats it against\u2026\n- - `e2e/cypress/e2e/50-busy-board-frames.cy.ts`: the three `it`s above, run via `pnpm --dir e2e probe:frames` and `pnpm --dir e2e probe:frames -- --json`.\n- - Commands: `pnpm --dir apps/web exec vitest run src/perf/frameStats.test.ts`; `pnpm --dir e2e check:fixtures`; `pnpm --dir e2e typecheck`; `pnpm exec eslint e2e apps/web` for the touched files.\n- ## Done when\n- - [ ] `pnpm --dir e2e probe:frames` builds the client, serves preview, prints both phases' median/p95/dropped-share/long-tasks plus idle animation count, and exits 0 on the busy board.\n- - [ ] `--json` form prints the same report as one JSON object.\n- - [ ] A phase over its p95 or long-task budget fails the run, naming the constant.\n- - [ ] The expensive-loop test (unit + spec) fails without the detector and passes with it.\n- - [ ] `setupBusyBoard` is imported by the probe spec only, with no probe-specific logic inside, so #3604 parts 2\u20136 can quote it.\n- - [ ] Budgets are named constants in `apps/web/src/perf/frameBudgets.ts`, set by the 5\u00d7-of-three-runs recipe.\n- - [ ] Docs updated (`e2e/README.md`, `apps/web/README.md`, CLAUDE.md command list); PR text holds the super.yml note and today's `main` baseline numbers.\n- - [ ] Checks green: web unit test file, `check:fixtures`, e2e typecheck, eslint on touched files.\n- ## Risks\n- - Headless CI timing flake: mitigated by the 5\u00d7 headroom recipe, durations in seconds (not frame counts), judging only p95 + long-tasks, and keeping the spec out of the PR smoke list (daily-only, like other statistical suites).\n- - Cypress `trigger(\"mouseover\")` does not always engage CSS `:hover`: the idle phase dispatches real `MouseEvent`s on the minion and records that hover-driven costs are approximated, not pointer-exact.\n- - Ten 1\u20134-cost units plus traps exceed one turn's mana even with `manaBonus`: the fixture sizes the handicap for a two-turn setup and asserts counts, so a bad seed or catalog change fails loudly in setup, not in measurement.\n- - `document.getAnimations()` counts compositor + CSS animations alike: reported only, never judged, so browser animation-count differences cannot flake the gate.\n- - Importing `apps/web/src/perf/*` from `e2e/support` by relative path follows the component-spec precedent; if `e2e/tsconfig.json` rejects it, widen its `include` rather than duplicating the numbers (rule 9 forbids a second source).\n- ## Open questions\n- - None blocking. Two for people: whether the daily super run should additionally archive the probe's JSON per night (a person's `.github/` change; the plan keeps history out of the repo); and whether the baseline budgets the builder measures on the bot's shared machine should be re-measured on a CI\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3605 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3605/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-10T03:15:44Z",
       "owner_why": "it plans it",
@@ -18983,9 +18975,9 @@
       "provider": "muse",
       "queued_at": "2026-11-10T03:13:54Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "42748279463",
+      "run_id": "pending:127b765b-1794281939",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-10T03:15:44Z",
+      "started_at": "2026-11-10T03:39:36Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -19142,9 +19134,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T03:20:43Z",
+    "at": "2026-11-10T03:39:36Z",
     "url": "",
-    "what": "build #3602 on muse"
+    "what": "build #3605 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T03:10:15Z",
