@@ -19410,7 +19410,16 @@
       "feedback_since": "2026-11-10T03:20:43Z",
       "issue": 3602,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "b17cf36809374b986de9a7ddefd4408111583c1e",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
