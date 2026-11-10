@@ -18263,9 +18263,15 @@
     "what": "plan #3549 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T19:33:23Z",
+    "at": "2026-11-10T19:47:44Z",
     "notes": [
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
+      "delivered build #3658 on muse (run 42883141984): built",
+      "delivered build #3546 on muse (run 42872228541): part",
+      "started review #3662 on muse (run 42889517255)",
+      "started plan #3548 on claude-3 (run 42889665960)",
+      "started plan #3549 on muse (run 42889819466)",
+      "nothing more to start: nothing is queued",
+      "runner gate: started 1 of 3 waiting run(s) (run 42884878390 on claude/inspiring-gauss-3vwxm0); 2 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18971,7 +18977,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T19:33:23Z",
+  "loop_tick": "2026-11-10T19:47:44Z",
   "machine_disk": {
     "issue": null,
     "reading": {
