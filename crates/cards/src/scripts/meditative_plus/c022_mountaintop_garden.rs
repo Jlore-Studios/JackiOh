@@ -106,6 +106,7 @@ mod tests {
             .expect("the card is in the hand")
     }
 
+    // Differs from Scenario::offered: one card's face-up embiggen flags, not the seat's whole legal list.
     fn offered(s: &Scenario, id: &str) -> Vec<Option<bool>> {
         let mut flags: Vec<Option<bool>> = legal_actions(s.state(), P1)
             .into_iter()

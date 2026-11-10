@@ -10,8 +10,8 @@ export { CardDetail } from "./CardDetail.tsx";
 export { CardListPreview, CardListSheet } from "./CardList.tsx";
 export { FaceDownPreview, FaceDownSheet } from "./FaceDown.tsx";
 export type { CardListEntry } from "./CardList.tsx";
-export { placePreview } from "./placement.ts";
-export type { Rect } from "./placement.ts";
+export { estimatedPreviewSize, isPhoneViewport, placePreview, previewCardHeight } from "./placement.ts";
+export type { PreviewPanels, Rect } from "./placement.ts";
 export { HOVER_DELAY_MS, LIST_PREVIEW_MAX, LONG_PRESS_MS } from "./constants.ts";
 export {
   INSPECT_CLOSE,

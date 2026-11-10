@@ -83,6 +83,7 @@ mod tests {
     const CAPACITOR: &str = "stinkyscape-133"; // Ultra Capacitor: When launched: +attack/+health per other piece.
     const VANILLA: &str = "core-008"; // Mr. Vanilla
 
+    // Differs from Scenario::offered: the open Discover's options, not the seat's legal actions.
     fn offered(s: &Scenario) -> Vec<String> {
         s.state()
             .pending

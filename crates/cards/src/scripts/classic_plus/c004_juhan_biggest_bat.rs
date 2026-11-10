@@ -58,10 +58,6 @@ mod tests {
         beneath_at(s.state(), LANE_1).to_vec()
     }
 
-    fn count(s: &Scenario, type_: &str) -> usize {
-        s.events().iter().filter(|event| event.event_type().as_str() == type_).count()
-    }
-
     fn kinds(keywords: &[Keyword]) -> Vec<KeywordKind> {
         keywords.iter().map(|k| k.kind()).collect()
     }
@@ -103,7 +99,7 @@ mod tests {
             let under = beneath(&s);
             assert_eq!(def_ids(&under), vec![JUHAN, JUHAN]);
             assert!(under.iter().all(|card| !card.radiant && card.owner == P1 && card.controller == P1));
-            assert_eq!(count(&s, "transformed"), 2);
+            assert_eq!(s.count("transformed"), 2);
             for id in &old_ids {
                 s.expect_in_zone(id, "gone");
             }
@@ -117,8 +113,8 @@ mod tests {
 
             s.play(&juhan, json!({ "zone": 1 }));
 
-            assert_eq!(count(&s, "cardPlayed"), 1);
-            assert_eq!(count(&s, "transformed"), 2);
+            assert_eq!(s.count("cardPlayed"), 1);
+            assert_eq!(s.count("transformed"), 2);
             // The one `summoned` is the played Juhan's own arrival; a copy is made in place, not summoned.
             let summoned: Vec<String> = s
                 .events()
@@ -165,7 +161,7 @@ mod tests {
             s.play(JUHAN, json!({ "zone": 1 }));
 
             assert_eq!(def_ids(&beneath(&s)), vec![JUHAN, MENACE]);
-            assert_eq!(count(&s, "transformed"), 1);
+            assert_eq!(s.count("transformed"), 1);
         }
 
         #[test]
@@ -225,7 +221,7 @@ mod tests {
 
             s.play(JUHAN, json!({ "zone": 2 }));
 
-            assert_eq!(count(&s, "transformed"), 0);
+            assert_eq!(s.count("transformed"), 0);
             assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(VANILLA.to_string()));
             assert!(beneath_at(s.state(), ZoneSlot { player: P1, row: Row::Units, lane: 2 }).is_empty());
         }

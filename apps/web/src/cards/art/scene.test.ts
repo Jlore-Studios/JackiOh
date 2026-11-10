@@ -319,7 +319,7 @@ describe("R3331000 the five proof cards", () => {
       for (const picture of ["alt", "night"] as const) {
         const seed = artSeedOf(id, picture);
         expect(seed, id).not.toBe(id);
-        // R3398000: Heroic Power and Ceaseless Void, offered Alt art, draw an alt recipe of their own under its seed (coreAltScenes.test.tsx).
+        // R3398000: Heroic Power and Ceaseless Void, offered Alt art, draw an alt recipe of their own under its seed (coreAltScenes.test.tsx); R3388000: and Corpse Plantation (classicAltScenes.test.tsx).
         if (picture === "alt" && Object.hasOwn(ALT_SCENE_RECIPES, id)) {
           expect(sceneRecipeOf(seed), id).toBe(ALT_SCENE_RECIPES[id]);
           continue;

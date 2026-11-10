@@ -212,10 +212,6 @@ mod tests {
         json!({ "def": def, "costMod": 1 })
     }
 
-    fn count(events: &[GameEvent], event_type: &str) -> usize {
-        events.iter().filter(|event| event.event_type().as_str() == event_type).count()
-    }
-
     fn draws_by(events: &[GameEvent], player: PlayerId) -> usize {
         events
             .iter()
@@ -256,8 +252,8 @@ mod tests {
 
                 assert_eq!(draws_by(s.last_events(), P2), 1);
                 assert_eq!(s.pile(P2, "library").len(), DECK.len() - 1);
-                assert_eq!(count(s.last_events(), "drawLimited"), 1);
-                assert_eq!(count(s.last_events(), "fatigue"), 0);
+                assert_eq!(s.last_count("drawLimited"), 1);
+                assert_eq!(s.last_count("fatigue"), 0);
             }
 
             #[test]
@@ -273,7 +269,7 @@ mod tests {
                 s.play(STOCKPILE, json!({}));
 
                 assert_eq!(draws_by(s.last_events(), P2), 0);
-                assert_eq!(count(s.last_events(), "drawLimited"), 2);
+                assert_eq!(s.last_count("drawLimited"), 2);
             }
 
             #[test]
@@ -300,7 +296,7 @@ mod tests {
                 s.play(STOCKPILE, json!({}));
 
                 assert_eq!(draws_by(s.last_events(), P2), 1);
-                assert_eq!(count(s.last_events(), "fatigue"), 0);
+                assert_eq!(s.last_count("fatigue"), 0);
                 s.expect_health(P2, 32);
             }
 
@@ -327,7 +323,7 @@ mod tests {
 
                 assert_eq!(s.state().active, P1);
                 assert_eq!(draws_by(s.events(), P2), 1);
-                assert_eq!(count(s.last_events(), "drawLimited"), 2);
+                assert_eq!(s.last_count("drawLimited"), 2);
                 assert_eq!(s.pile(P2, "library").len(), 2);
             }
 
@@ -410,9 +406,9 @@ mod tests {
                 s.play(&stockpile, json!({}));
 
                 assert!(s.state().pending.is_none());
-                assert_eq!(count(s.events(), "promptOpened"), 0);
+                assert_eq!(s.count("promptOpened"), 0);
                 s.expect_in_zone(&palantir, "graveyard");
-                assert_eq!(count(s.events(), "countered"), 1);
+                assert_eq!(s.count("countered"), 1);
                 assert_eq!(s.state().players.p2.turn_log.cards_played, 0);
                 assert_eq!(draws_by(s.events(), P2), 0);
                 assert_eq!(draws_by(s.events(), P1), 2);
@@ -463,7 +459,7 @@ mod tests {
                 s.play(STOCKPILE, json!({}));
 
                 s.expect_in_zone(&palantir, "field");
-                assert_eq!(count(s.events(), "countered"), 0);
+                assert_eq!(s.count("countered"), 0);
                 assert!(s.state().pending.is_none());
             }
 
@@ -542,7 +538,7 @@ mod tests {
                 s.play(BOOK, json!({}));
 
                 s.expect_in_zone(&palantir, "field");
-                assert_eq!(count(s.events(), "countered"), 0);
+                assert_eq!(s.count("countered"), 0);
                 assert!(s.state().pending.is_none());
                 assert_eq!(draws_by(s.events(), P1), 0);
                 assert!(draws_by(s.events(), P2) >= 1);
@@ -558,7 +554,7 @@ mod tests {
                 s.play(CALL, json!({}));
 
                 s.expect_in_zone(&palantir, "graveyard");
-                assert_eq!(count(s.events(), "countered"), 1);
+                assert_eq!(s.count("countered"), 1);
                 let recruits = |player: PlayerId| (1..=5).filter(|lane| s.unit(player, *lane).is_some()).count();
                 assert_eq!(recruits(P1), 3);
                 assert_eq!(recruits(P2), 0);
@@ -656,7 +652,7 @@ mod tests {
 
                 s.expect_in_zone(TWINSPELL, "field");
                 s.expect_in_zone(VANILLA, "field");
-                assert_eq!(count(s.events(), "countered"), 0);
+                assert_eq!(s.count("countered"), 0);
                 assert!(stolen(&s, &palantir).is_none());
             }
 
@@ -745,7 +741,7 @@ mod tests {
 
                 s.play(STOCKPILE, json!({}));
 
-                assert_eq!(count(s.events(), "countered"), 0);
+                assert_eq!(s.count("countered"), 0);
                 assert_eq!(draws_by(s.events(), P1), 2);
             }
 
@@ -761,7 +757,7 @@ mod tests {
                 s.play(BOOK, json!({}));
 
                 s.expect_in_zone(&palantir, "field");
-                assert_eq!(count(s.events(), "countered"), 0);
+                assert_eq!(s.count("countered"), 0);
                 assert!(stolen(&s, &palantir).is_none());
                 assert_eq!(draws_by(s.events(), P1), 0);
             }
@@ -775,7 +771,7 @@ mod tests {
                 s.play(CALL, json!({}));
 
                 s.expect_in_zone(&palantir, "field");
-                assert_eq!(count(s.events(), "countered"), 1);
+                assert_eq!(s.count("countered"), 1);
                 assert_eq!(stolen(&s, &palantir), Some(json!(1)));
                 assert_eq!((1..=5).filter(|lane| s.unit(P1, *lane).is_some()).count(), 3);
             }
@@ -791,11 +787,11 @@ mod tests {
 
                     s.play(CALL, json!({}));
                     s.expect_in_zone(&palantir, "field");
-                    assert_eq!(count(s.events(), "countered"), 0);
+                    assert_eq!(s.count("countered"), 0);
                     assert_eq!((1..=5).filter(|lane| s.unit(P2, *lane).is_some()).count(), 3);
 
                     s.play(STOCKPILE, json!({}));
-                    assert_eq!(count(s.events(), "countered"), 1);
+                    assert_eq!(s.count("countered"), 1);
                     assert_eq!(draws_by(s.events(), P1), 2, "radiant {radiant}: Stockpile is stolen and cast by you");
                 });
             }

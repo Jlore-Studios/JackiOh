@@ -718,13 +718,30 @@
   }
 }
 
-/* A phone has no room beside the enlarged card for the glossary, and a hover there is rare anyway
-   (touch opens the sheet), so the preview shows the card alone rather than spilling off-screen. */
-@media (max-width: 600px) {
+/* #3602: a phone stacks the hover preview so it stays on screen. A touch hold is the hover
+   (R2617000), so the preview opens on touch too; there is no room beside the enlarged card for the
+   side panels, and the full-text panel stacks across the card's width instead of sitting beside it. */
+@media (max-width: 600px) { /* PREVIEW_PHONE_WIDTH_PX */
   .inspect-hover .inspect-glossary,
   .inspect-hover .inspect-side,
   .inspect-hover .inspect-refs {
     display: none;
+  }
+  /* #3602: the face and its full text (Extended.tsx) stand one above the other, the text first, and
+     the group never outgrows the hover box (capped at the viewport less 16px above): a full-art
+     card's watermark image at its intrinsic width (R2718000) would otherwise size the whole group
+     past the screen, so it shrinks to the laid-out width with the words wrapping under it. */
+  .inspect-facegroup {
+    flex-direction: column;
+    max-width: 100%;
+  }
+  /* #3602: the full text runs across the card's width, scrolling past
+     PREVIEW_EXTENDED_STACKED_MAX_PX, instead of standing 280px wide beside it. */
+  .inspect-hover .inspect-extended {
+    align-self: stretch;
+    width: auto;
+    max-height: 200px; /* PREVIEW_EXTENDED_STACKED_MAX_PX */
+    overflow-y: auto;
   }
 }
 

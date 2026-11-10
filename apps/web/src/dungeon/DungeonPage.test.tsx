@@ -10,7 +10,7 @@ import { DUNGEON_RUN_KEY } from "./config.ts";
 import DungeonPage from "./DungeonPage.tsx";
 import { __resetDungeonForTests, type Dungeon } from "./store.ts";
 import { dungeonTestid } from "./testids.ts";
-import { STARTERS, resetBindings, setupOf, unlocks } from "./test/fixtures.ts";
+import { resetBindings, setupOf, unlocks } from "./test/fixtures.ts";
 
 vi.mock("../wasm/index.ts", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -125,7 +125,7 @@ describe("B19 the page's screens", () => {
     expect(byId(dungeonTestid.start)).toBeInTheDocument();
     expect(screen.queryByTestId(dungeonTestid.saved)).toBeNull();
 
-    for (const id of STARTERS) fireEvent.click(byId(dungeonTestid.card(id)));
+    fireEvent.click(byId(dungeonTestid.preset("first-charge")));
     fireEvent.click(byId(dungeonTestid.startRun));
 
     expect(screen.queryByTestId(dungeonTestid.start)).toBeNull();

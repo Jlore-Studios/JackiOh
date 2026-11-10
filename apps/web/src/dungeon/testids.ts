@@ -19,11 +19,16 @@ export const dungeonTestid = {
   seedValue: "dungeon-seed-value",
   /** B15: a typed seed that is not capital letters of the right length; role="alert". */
   seedError: "dungeon-seed-error",
-  /** B16: a slot of the level's ladder, the cards offered, one card, and how many are chosen. */
+  /** B16: a slot of the level's ladder, one card of the deck, and how many are chosen. */
   slot: (name: string): string => `dungeon-slot-${name}`,
   card: (id: string): string => `dungeon-card-${id}`,
-  cards: "dungeon-cards",
   chosenCount: "dungeon-chosen-count",
+  /** The preset starting decks, one tile each, and the deck the builder holds. */
+  presets: "dungeon-presets",
+  preset: (id: string): string => `dungeon-preset-${id}`,
+  deck: "dungeon-deck",
+  /** The slots meter: one row per nonzero slot column, "{slot} {filled} of {count}". */
+  slotsMeter: "dungeon-slots-meter",
   /** B16: a relic offered, how many are taken and their points out of the most. */
   relic: (id: string): string => `dungeon-relic-${id}`,
   relicCount: "dungeon-relic-count",
