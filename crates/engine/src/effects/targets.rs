@@ -244,6 +244,10 @@ pub struct BoardScope {
     /// Leave the card running the script standing (#100 "all *other* permanents").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exclude_self: Option<bool>,
+    /// R3538007 (S+ #164 KPIs): keep only the cards whose rate is strictly lower than the named
+    /// card's (`win_rates::lower_win_rate`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub win_rate_below: Option<String>,
 }
 
 /// R68's walk order: the active player's side first, then the opponent's. Public for a sweep that hits
@@ -303,6 +307,11 @@ pub fn matches_scope(ctx: &EffectContext<'_>, card: &CardInstance, scope: &Board
     }
     if let Some(not_tags) = &scope.not_tags
         && not_tags.iter().any(|tag| tags.contains(tag))
+    {
+        return false;
+    }
+    if let Some(bar) = &scope.win_rate_below
+        && !crate::win_rates::lower_win_rate(&card.def_id, bar)
     {
         return false;
     }

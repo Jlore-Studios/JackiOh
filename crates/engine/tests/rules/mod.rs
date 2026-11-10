@@ -194,5 +194,6 @@ pub mod mplus_b07;
 pub mod mulligan_concurrent;
 pub mod night_market;
 pub mod outside_data;
+pub mod outside_data_records;
 pub mod overflow_events;
 pub mod own_library;

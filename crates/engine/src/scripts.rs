@@ -39,8 +39,22 @@ pub fn register_scripts(scripts: IndexMap<String, CardScripts>) {
 
 /// One registered entry, borrowed: the script kept for it in the shipped catalog a replay is folding
 /// under (R767000), else the testkit's override while one is set, else the production registry. A
-/// fused id is never in it.
+/// fused id is never in it. A past id (R3538002) runs the script kept for its game version, else the
+/// scripts of the card it is a past version of.
 pub fn registered_entry(def_id: &str) -> Option<&'static CardScripts> {
+    // R3538002: a past id runs the script kept for its game version, else the scripts of the card
+    // it is a past version of. Never the folding kept map: `kept` already applies R767000's
+    // covering rule for the past version's own game version.
+    if crate::catalog::split_past_id(def_id).is_some() {
+        if let Some(kept) = crate::catalog::past_scripts(def_id) {
+            return Some(kept);
+        }
+        let card = crate::catalog::past_card_of(def_id);
+        return match override_map() {
+            Some(over) => over.get(card),
+            None => REGISTERED.get().and_then(|map| map.get(card)),
+        };
+    }
     if let Some(kept) = crate::catalog::folding_script(def_id) {
         return Some(kept);
     }

@@ -30318,7 +30318,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 63,
     "base": {
       "attack": 3,
       "health": 3,
@@ -30345,7 +30345,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 5,
       "health": 3,
@@ -32867,7 +32867,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 45,
     "base": {
       "keywords": [],
       "text": "Fill your hand with random S tier cards (or A tier if none exist). Summon {jlarna} Jlarna and lose {mana} mana for the rest of the game."
@@ -32920,7 +32920,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "Fill your hand with random F tier cards (or D tier if none exist)."
@@ -32941,7 +32941,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 37,
     "base": {
       "keywords": [],
       "text": "Fill your hand with random Radiant S tier cards (or A tier if none exist)."
@@ -36678,7 +36678,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Destroy every card with a lower winrate than this."

@@ -159,6 +159,12 @@ pub fn register_all() {
         });
         jackioh_engine::scripts::register_scripts(scripts_of());
         jackioh_engine::catalog::register_shipped(history::shipped_catalog);
+        jackioh_engine::catalog::register_past_versions(jackioh_engine::catalog::PastVersions {
+            ids: history::past_ids,
+            def: history::past_def,
+            kept: history::past_scripts,
+            record: history::record_at,
+        });
     });
 }
 

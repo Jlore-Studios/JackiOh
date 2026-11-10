@@ -98,6 +98,14 @@ pub const WIN_RATE_BOUND_SCALE: u128 = 1_000_000;
 /// the game makes reads the same card off what it keeps as off the whole snapshot.
 pub const WIN_RATE_SNAPSHOT_ENDS: usize = 4;
 
+/// R3538000 (S+ #164 KPIs): the fewest games a win-rate row needs before it is a card's winrate of
+/// record. A thinner row is no record, so a new patch's first games cannot move the tiers.
+pub const WIN_RATE_RECORD_MIN_GAMES: i32 = CN_TECH_MIN_GAMES;
+
+/// R3538000 (S+ #164 KPIs): the winrate a card with no record counts as, the owner's 50%
+/// (2026-11-09): an even game.
+pub const NO_RECORD_WIN_RATE: f64 = ADJUSTED_WIN_RATE_CENTER;
+
 /// R1183004 (Meditative+ #25 KY's Intuition): the most lines a card's code block shows, its script's
 /// first lines of code. `crates/cards/build.rs` reads this line to cut the blocks it compiles in.
 pub const CODE_BLOCK_MAX_LINES: usize = 12;

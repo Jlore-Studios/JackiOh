@@ -15,10 +15,11 @@ pub use crate::cast_on_draw_now::*;
 // `catalog` but its `register_catalog`, which is `jackioh_cards::register_all`'s to call (by path) and
 // whose test twin the testkit exports: a card's `mod tests` globs both the prelude and the testkit.
 pub use crate::catalog::{
-    CatalogQueryArgs, DrawTally, FUSED_DIGEST_MARK, GlitchOdds, RADIANT_INGREDIENT_MARK, TransientHolder,
-    catalog_version, def_by_index, def_of, excluding_def_id, find_def, fused_id_parts, fused_id_specs,
-    glitch_or_not, held_out, is_digest_id, pick_generated, pick_generated_unique, pick_unique, query,
-    query_cost, registered_catalog, roll_grape, roll_weighted, self_def_ids,
+    CatalogQueryArgs, DrawTally, FUSED_DIGEST_MARK, GlitchOdds, PAST_ID_MARK, PastPool, PastVersions,
+    RADIANT_INGREDIENT_MARK, TransientHolder, catalog_version, def_by_index, def_of, excluding_def_id,
+    find_def, fused_id_parts, fused_id_specs, glitch_or_not, held_out, is_digest_id, past_card_of, past_def,
+    past_ids_of, pick_generated, pick_generated_unique, pick_unique, query, query_cost,
+    register_past_versions, registered_catalog, roll_grape, roll_weighted, self_def_ids, split_past_id,
 };
 pub use crate::combat::*;
 pub use crate::config::*;

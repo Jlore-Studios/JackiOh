@@ -10,10 +10,18 @@
 //!
 //! A version's catalog is built the first time a replay asks for it and kept for the process: one of
 //! the catalog statics a pure crate may hold (CLAUDE.md rule 4), never game state.
+//!
+//! R3538000, R3538002: the same frozen history answers what a card's past looked like: `PAST` groups
+//! each card's carried definitions into play-alike runs (`past_ids`, `past_def`), `TABLE_ROWS` reads
+//! the winrate of record (`record_at`), and `past_scripts` runs a past version under the script its
+//! game version kept. Every host computes the same past: the walk starts at `PAST_FROM`, the oldest
+//! version the browser's module carries (`build.rs`'s `BROWSER_CARRIED_FROM`), so the browser and the
+//! server read the same runs from the same tables.
 
 use std::sync::{LazyLock, OnceLock};
 
 use indexmap::{IndexMap, IndexSet};
+use jackioh_engine::config::WIN_RATE_RECORD_MIN_GAMES;
 use jackioh_engine::{CardDef, CardDefs, CardLists, CardScripts, ShippedCatalog, WinRateTable};
 use serde::Deserialize;
 use serde_json::{Map, Value};
@@ -56,10 +64,10 @@ use crate::scripts::stinkyscape::{
     c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c045_drone_commander, c050_beam_v3,
     c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4,
     c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c074_paragon_x,
-    c086_prototype_x2, c094_tmack_trav, c115_scornboi, c116_megabase, c129_jlockeeds_missile_pod,
-    c140_rush_token_launcher, c143_book_launcher, c149_wildar, c153_stimmycheck, c163_swear_loyalities,
-    c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
-    c173_abandoned_spice_tower, t_narcor, t_red_narcor,
+    c086_prototype_x2, c094_tmack_trav, c109_xxfreshjack, c115_scornboi, c116_megabase,
+    c129_jlockeeds_missile_pod, c140_rush_token_launcher, c143_book_launcher, c149_wildar, c153_stimmycheck,
+    c163_swear_loyalities, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
+    c172_huge_asteroid, c173_abandoned_spice_tower, t_narcor, t_red_narcor,
 };
 use crate::scripts::training_grounds::{
     c036_training_dummy, c038_tutorial_master, c045_jlockeeds_weapons,
@@ -642,6 +650,11 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c016_conjure_rush_token::script_v0_5_11o,
     ),
     (c047_taotie::ID, "v0.5.11r", c047_taotie::script_v0_5_11o),
+    (
+        c109_xxfreshjack::ID,
+        "v0.5.13g",
+        c109_xxfreshjack::script_v0_5_13g,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -839,13 +852,19 @@ fn patched(version: &str, id: &str, raw: Option<&Value>, patch: &DefPatch) -> Ca
 /// the earliest version at or after `version` in `order`, since a script is kept under the last
 /// version that ran it. `None` when none is, or when `order` does not hold `version`.
 fn covering<'a, T>(order: &[String], kept: &'a [(&str, &str, T)], version: &str, id: &str) -> Option<&'a T> {
+    covering_at(order, kept, version, id).map(|at| &kept[at].2)
+}
+
+/// R3538002: `covering` as an index into `kept`, so a kept script builds once and is shared.
+fn covering_at<T>(order: &[String], kept: &[(&str, &str, T)], version: &str, id: &str) -> Option<usize> {
     let from = order.iter().position(|listed| listed == version)?;
     kept.iter()
-        .filter(|(kept_id, _, _)| *kept_id == id)
-        .filter_map(|(_, at, script)| Some((order.iter().position(|listed| listed == at)?, script)))
+        .enumerate()
+        .filter(|(_, (kept_id, _, _))| *kept_id == id)
+        .filter_map(|(at, (_, kept_at, _))| Some((order.iter().position(|listed| listed == kept_at)?, at)))
         .filter(|(at, _)| *at >= from)
         .min_by_key(|(at, _)| *at)
-        .map(|(_, script)| script)
+        .map(|(_, at)| at)
 }
 
 /// R1266000, R1329000: the win-rate table `delta`'s version shipped with: the one its
@@ -867,6 +886,178 @@ fn lists_of(history: &'static History, delta: &VersionDelta) -> Option<CardLists
         busted: ids(&file.busted),
         complicated: ids(&file.complicated),
     })
+}
+
+/// R3538002: the oldest version the past walks from: the oldest version the browser's module
+/// carries (`build.rs`'s `BROWSER_CARRIED_FROM`), so every host computes the same past.
+const PAST_FROM: &str = env!("JACKIOH_PAST_FROM");
+
+/// R3538002: `catalog.json` parsed once, what a carried version's definition is patched from.
+static RAW: LazyLock<Map<String, Value>> = LazyLock::new(|| {
+    serde_json::from_str(catalog_json()).unwrap_or_else(|error| panic!("crates/cards/catalog.json: {error}"))
+});
+
+/// R3538002: whether two definitions play alike: one could stand in for the other without changing
+/// a game. Cost, tags, numbers and both faces; neither the name, the flavor, the text's wording
+/// nor `loc` changes how a card plays.
+fn plays_alike(a: &CardDef, b: &CardDef) -> bool {
+    a.type_ == b.type_
+        && a.rarity == b.rarity
+        && a.tags == b.tags
+        && a.cost == b.cost
+        && a.params == b.params
+        && a.base == b.base
+        && a.radiant == b.radiant
+}
+
+/// R3538002: one stretch of carried versions a card played alike through: `first` and `last` index
+/// `HISTORY.versions`, and `def` is its definition with the past id `<card>@<last version>`.
+struct Run {
+    first: usize,
+    last: usize,
+    def: CardDef,
+}
+
+/// R3538002: every card's play-alike runs from `PAST_FROM` on, by card id, built once. About 1–2 MB;
+/// tier pools never touch it.
+static PAST: LazyLock<IndexMap<String, Vec<Run>>> = LazyLock::new(|| {
+    let from = HISTORY
+        .versions
+        .iter()
+        .position(|delta| delta.version == PAST_FROM)
+        .unwrap_or(HISTORY.versions.len());
+    let mut out: IndexMap<String, Vec<Run>> = IndexMap::new();
+    for (id, _) in CATALOG.iter() {
+        let mut built: IndexMap<usize, CardDef> = IndexMap::new();
+        let mut runs: Vec<Run> = Vec::new();
+        for (at, delta) in HISTORY.versions.iter().enumerate().skip(from) {
+            if delta.absent.contains(id) {
+                continue;
+            }
+            let mut def = match delta.changed.get(id) {
+                None => CATALOG.get(id).expect("iterated").clone(),
+                Some(&patch_at) => built
+                    .entry(patch_at)
+                    .or_insert_with(|| patched(&delta.version, id, RAW.get(id), &HISTORY.patches[patch_at]))
+                    .clone(),
+            };
+            def.id = format!("{id}@{}", HISTORY.versions[at].version);
+            match runs.last_mut() {
+                Some(run) if plays_alike(&run.def, &def) => {
+                    run.last = at;
+                    run.def = def;
+                }
+                _ => runs.push(Run {
+                    first: at,
+                    last: at,
+                    def,
+                }),
+            }
+        }
+        out.insert(id.clone(), runs);
+    }
+    out
+});
+
+/// R3538002: the past ids of `card` before `version`, oldest first: each play-alike run that ended
+/// before the reference and plays differently from what the card is then, keeping only the latest
+/// of runs that play alike each other. Empty for a version the history does not hold.
+pub fn past_ids(card: &str, version: &str) -> Vec<String> {
+    let Some(runs) = PAST.get(card) else {
+        return Vec::new();
+    };
+    let Some(reference) = HISTORY.versions.iter().position(|delta| delta.version == version) else {
+        return Vec::new();
+    };
+    let now: &CardDef = if version == crate::CATALOG_VERSION {
+        let Some(def) = CATALOG.get(card) else {
+            return Vec::new();
+        };
+        def
+    } else {
+        let Some(run) = runs
+            .iter()
+            .find(|run| run.first <= reference && reference <= run.last)
+        else {
+            return Vec::new();
+        };
+        &run.def
+    };
+    let mut out: Vec<&Run> = Vec::new();
+    for run in runs.iter().rev() {
+        if run.last >= reference || plays_alike(&run.def, now) {
+            continue;
+        }
+        if out.iter().any(|kept| plays_alike(&run.def, &kept.def)) {
+            continue;
+        }
+        out.push(run);
+    }
+    out.reverse();
+    out.iter().map(|run| run.def.id.clone()).collect()
+}
+
+/// R3538002: a past id's definition: the run whose last version is the id's. `None` for any other id.
+pub fn past_def(past_id: &str) -> Option<&'static CardDef> {
+    let (card, version) = jackioh_engine::catalog::split_past_id(past_id)?;
+    PAST.get(card)?
+        .iter()
+        .find_map(|run| (HISTORY.versions[run.last].version == version).then_some(&run.def))
+}
+
+/// R3538002: one built kept script per `KEPT_SCRIPTS` row, shared by every past version it covers.
+static KEPT_BUILT: LazyLock<Vec<OnceLock<CardScripts>>> =
+    LazyLock::new(|| (0..KEPT_SCRIPTS.len()).map(|_| OnceLock::new()).collect());
+
+/// R3538002: the script a past id's game ran: the kept script covering its version, `None` for a
+/// past version with no kept row, which runs its card's own script.
+pub fn past_scripts(past_id: &str) -> Option<&'static CardScripts> {
+    let (card, version) = jackioh_engine::catalog::split_past_id(past_id)?;
+    let at = covering_at(&HISTORY.order, KEPT_SCRIPTS, version, card)?;
+    Some(KEPT_BUILT[at].get_or_init(|| (KEPT_SCRIPTS[at].2)()))
+}
+
+/// R3538000: every frozen win-rate table, each card's `(wins, games)` by id, in `HISTORY.win_rates`
+/// order.
+static TABLE_ROWS: LazyLock<Vec<IndexMap<String, (i32, i32)>>> = LazyLock::new(|| {
+    HISTORY
+        .win_rates
+        .iter()
+        .map(|table| {
+            table
+                .cards
+                .iter()
+                .map(|row| (row.id.clone(), (row.wins, row.games)))
+                .collect()
+        })
+        .collect()
+});
+
+/// R3538000: the winrate of record for `card` at or before `version`: the newest table from
+/// `PAST_FROM` on that holds a row for the card with at least `WIN_RATE_RECORD_MIN_GAMES` games.
+/// `None` for a version the history does not hold, or when no table that far back names the card.
+pub fn record_at(card: &str, version: &str) -> Option<(i32, i32)> {
+    let reference = HISTORY
+        .versions
+        .iter()
+        .position(|delta| delta.version == version)?;
+    let from = HISTORY
+        .versions
+        .iter()
+        .position(|delta| delta.version == PAST_FROM)?;
+    let mut at = reference + 1;
+    while at > from {
+        at -= 1;
+        let Some(table_at) = HISTORY.versions[at].win_rates else {
+            continue;
+        };
+        if let Some(&(wins, games)) = TABLE_ROWS[table_at].get(card)
+            && games >= WIN_RATE_RECORD_MIN_GAMES
+        {
+            return Some((wins, games));
+        }
+    }
+    None
 }
 
 /// R767000: whether `id` has a script on `version`: one kept for it, or the build's own.
@@ -1112,6 +1303,62 @@ mod tests {
             vec!["discard".to_string()]
         );
         assert_eq!(abilities(&s, c054_money_machine::ID), vec!["coin".to_string()]);
+    }
+
+    #[test]
+    fn r3538002_past_ids_are_play_alike_runs_before_the_reference() {
+        // Core #13 Jlockeed Shredder-10 played three ways since v0.3.0c: two past versions.
+        let ids = past_ids("core-013", crate::CATALOG_VERSION);
+        assert_eq!(ids.len(), 2, "{ids:?}");
+        assert!(
+            ids.windows(2).all(|pair| pair[0] < pair[1]),
+            "oldest first: {ids:?}"
+        );
+        let now = crate::card_def("core-013");
+        for id in &ids {
+            let past = past_def(id).expect("a past definition");
+            assert!(past.id == *id, "its id is the past id");
+            assert!(!plays_alike(past, &now), "{id} plays differently from today's");
+        }
+        // At an older version only the runs before it show, a subset of today's.
+        let then = past_ids("core-013", "v0.4.0");
+        assert_eq!(then.len(), 1, "{then:?}");
+        assert!(then.iter().all(|id| ids.contains(id)), "{then:?} of {ids:?}");
+        // A held card never shipped: no past. Neither has a version the history does not hold.
+        assert!(past_ids("stinkyscapeplus-033", crate::CATALOG_VERSION).is_empty());
+        assert!(past_ids("core-013", "v0.0.0-unknown").is_empty());
+        assert!(past_def("core-013@v0.0.0-unknown").is_none());
+    }
+
+    #[test]
+    fn r3538002_a_past_id_runs_the_script_kept_for_its_version() {
+        // Pickle kept its v0.3.16 script under v0.4.0b: a past version from then runs it.
+        let at = covering_at(&HISTORY.order, KEPT_SCRIPTS, "v0.4.0b", "classic-008")
+            .expect("Pickle's kept row covers v0.4.0b");
+        assert_eq!(KEPT_SCRIPTS[at].0, c008_pickle::ID);
+        assert_eq!(KEPT_SCRIPTS[at].1, "v0.4.0b");
+        assert!(KEPT_SCRIPTS[at].2 == c008_pickle::script_v0_3_16);
+        assert!(past_scripts("classic-008@v0.4.0b").is_some());
+        // Core #13 has no kept row: its past versions run the card's own script.
+        for id in past_ids("core-013", crate::CATALOG_VERSION) {
+            assert!(past_scripts(&id).is_none(), "{id}");
+        }
+    }
+
+    #[test]
+    fn r3538000_a_record_is_the_newest_table_row_at_or_before_the_version() {
+        // The v0.5.12k file's own rows: the record at that version is the file's row.
+        assert_eq!(record_at("classic-002", "v0.5.12k"), Some((21, 43)));
+        // The v0.4.0 file's: an older reference reads the older row.
+        assert_eq!(record_at("classic-002", "v0.4.0"), Some((51, 113)));
+        // No table ships after v0.5.12k, so the catalog version reads its row too.
+        assert_eq!(record_at("classic-002", crate::CATALOG_VERSION), Some((21, 43)));
+        // A thin row is no record: v0.5.12k holds classic-001 at 10/16, so the record walks back
+        // to an older table with enough games.
+        let walked = record_at("classic-001", "v0.5.12k").expect("an older row");
+        assert!(walked.1 >= WIN_RATE_RECORD_MIN_GAMES, "{walked:?}");
+        assert_ne!(walked, (10, 16), "not the thin row");
+        assert!(record_at("core-001", "v0.0.0-unknown").is_none());
     }
 
     #[test]

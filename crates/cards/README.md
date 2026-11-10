@@ -263,7 +263,8 @@ card's number, or a catalog id with no file. It also compiles in `CATALOG_VERSIO
 of `patches/patches.json`.
 
 `register_all()` hands the catalog and every script to the engine, once per process, and where the
-older shipped catalogs are found (`register_shipped`); the WASM module, the server and the tools
+older shipped catalogs are found (`register_shipped`) and where a card's past versions are found
+(`register_past_versions`, R3538002); the WASM module, the server and the tools
 call it at start. A card test calls `crate::register_all()` first.
 
 R767000: `build.rs` also writes `$OUT_DIR/history.json`, how each shipped version but the newest

@@ -2507,11 +2507,22 @@ pub fn validate_setup(
 /// bare counter (fuse's scratch numbering, `{ nextId: 0 }` in TS).
 pub trait NextId {
     fn next_id_mut(&mut self) -> &mut u32;
+    /// R3538002: note that an instance of `def_id` is minted, so a past version's definition rides
+    /// along in `transient_defs` and the view ships it (R243). Nothing for any other id.
+    fn note_def(&mut self, _def_id: &str) {}
 }
 
 impl NextId for GameState {
     fn next_id_mut(&mut self) -> &mut u32 {
         &mut self.next_id
+    }
+
+    fn note_def(&mut self, def_id: &str) {
+        if crate::catalog::split_past_id(def_id).is_some() && !self.transient_defs.contains_key(def_id) {
+            if let Some(def) = crate::catalog::find_def(None, def_id) {
+                self.transient_defs.insert(def_id.to_string(), def.clone());
+            }
+        }
     }
 }
 
@@ -2522,6 +2533,7 @@ impl NextId for u32 {
 }
 
 pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone: Zone) -> CardInstance {
+    state.note_def(def_id);
     let next_id = state.next_id_mut();
     let instance = CardInstance {
         id: format!("c{next_id}"),
