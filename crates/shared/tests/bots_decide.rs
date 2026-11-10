@@ -12,8 +12,10 @@ use jackioh_ai::{
 use jackioh_engine::testkit::{Value, json, scenario};
 use jackioh_engine::wire::PLAYER_IDS;
 use jackioh_engine::{
-    Action, ActionBody, ActionType, CardType, GameState, PlayerId, Rng, Row, Zone, seat_to_act,
+    Action, ActionBody, ActionType, Aim, AimEnd, CardType, GameState, PlayerId, RANDOM_ATTACK_TARGET, Rng,
+    Row, Selection, Zone, seat_to_act,
 };
+use jackioh_shared::bots::aim::bot_aim;
 use jackioh_shared::bots::decide::{BotAsk, BotChoice, decide};
 use jackioh_shared::bots::signals::{accepts_draw, concedes, offers_draw, standard_normal, standing};
 use jackioh_shared::bots::think::{THINK_MODEL, ThinkFor, ThinkModel, decision_deadline_ms, think_ms};
@@ -507,6 +509,96 @@ fn facing(p1: Value, p2: Value) -> GameState {
         .clone()
 }
 
+/// R738, R639000: the aim a bot shows is the one a person's client would. An attack runs from its unit's
+/// zone to its target's, a play from its card's place in the hand to the last target it declares, an
+/// Activate from its unit and a hero power from the hero; a random attack, a play declaring no target
+/// (none, or only a mode) and every other move show none.
+#[test]
+fn r738_a_bots_aim_runs_from_its_moves_source_to_the_last_target_it_declares() {
+    jackioh_cards::register_all();
+    let built = scenario(json!({
+        "seed": "aim",
+        "active": "p1",
+        "p1": { "field": ["core-011"], "hand": ["core-010", "core-025"] },
+        "p2": { "field": ["core-008"] },
+    }));
+    let state = built.state().clone();
+    let (bot, other) = (PlayerId::P1, PlayerId::P2);
+    let mine = built.unit(bot, 1).expect("p1's unit in lane 1").id;
+    let theirs = built.unit(other, 1).expect("p2's unit in lane 1").id;
+    let zone = |player: PlayerId| AimEnd::Zone {
+        player,
+        row: Row::Units,
+        lane: 1,
+    };
+    let hero = |player: PlayerId| AimEnd::Hero { player };
+    let aim = |source: AimEnd, target: AimEnd| {
+        Some(Aim {
+            source,
+            target: Some(target),
+        })
+    };
+
+    let attack = |target_id: &str| ActionBody::Attack {
+        attacker_id: mine.clone(),
+        target_id: target_id.to_owned(),
+    };
+    assert_eq!(
+        bot_aim(&state, bot, &attack(theirs.as_str())),
+        aim(zone(bot), zone(other))
+    );
+    assert_eq!(
+        bot_aim(&state, bot, &attack("hero-p2")),
+        aim(zone(bot), hero(other))
+    );
+    assert_eq!(bot_aim(&state, bot, &attack(RANDOM_ATTACK_TARGET)), None);
+
+    // The second card of the hand, so its place is not the first card's.
+    let card = state.players[bot].hand[1].id.clone();
+    let from_hand = AimEnd::Hand {
+        player: bot,
+        index: 1,
+    };
+    let play = |targets: Value| -> ActionBody {
+        serde_json::from_value(json!({ "type": "play", "instanceId": card.as_str(), "targets": targets }))
+            .expect("a play reads")
+    };
+    let at_hero = json!({ "pick": "hero", "player": "p2" });
+    let at_unit = json!({ "pick": "instance", "instanceId": theirs.as_str() });
+    let a_mode = json!({ "pick": "mode", "option": "first" });
+    assert_eq!(
+        bot_aim(&state, bot, &play(json!([at_hero.clone()]))),
+        aim(from_hand, hero(other))
+    );
+    assert_eq!(
+        bot_aim(&state, bot, &play(json!([at_hero.clone(), at_unit.clone()]))),
+        aim(from_hand, zone(other))
+    );
+    assert_eq!(
+        bot_aim(&state, bot, &play(json!([at_unit, a_mode.clone(), at_hero]))),
+        aim(from_hand, hero(other))
+    );
+    assert_eq!(bot_aim(&state, bot, &play(json!([a_mode]))), None);
+    assert_eq!(bot_aim(&state, bot, &play(Value::Null)), None);
+
+    let at_their_hero = vec![Selection::Hero { player: other }];
+    let activate = ActionBody::Activate {
+        instance_id: mine.clone(),
+        ability: None,
+        targets: Some(at_their_hero.clone()),
+        modes: None,
+        tributes: None,
+    };
+    assert_eq!(bot_aim(&state, bot, &activate), aim(zone(bot), hero(other)));
+    // A hero's power stands in no zone, so its aim starts at the hero.
+    let power = ActionBody::ActivatePower {
+        instance_id: "heroic-power".to_owned(),
+        targets: Some(at_their_hero),
+    };
+    assert_eq!(bot_aim(&state, bot, &power), aim(hero(bot), hero(other)));
+    assert_eq!(bot_aim(&state, bot, &ActionBody::EndTurn), None);
+}
+
 #[test]
 fn r2660000_a_bot_facing_an_unstoppable_lethal_concedes_at_its_turn_start_and_only_then() {
     // A Tempo Timmy 3/3 and a Mr. Vanilla 4/4 swing for 7 at a bot on 6 with nothing to stop them.
@@ -878,6 +970,79 @@ fn r747000_bot_seat_applies_strength_skill() {
         assert_eq!(played.ai_cursor, cursor, "{seed} keeps the AI: {keeps}");
         assert_eq!(play(job_at(&state, bot, &seed, false, 0.5)), played);
     }
+}
+
+/// R639000: only a bot that passes for a person answers a draw offer as a person does; one that shows
+/// as a bot keeps the plain decline (R188), whatever its roll would have answered.
+#[test]
+fn r639000_a_bot_that_shows_as_a_bot_declines_a_draw_offer_whatever_its_roll() {
+    let mut state = opened_at("seed-shown-draw", 1);
+    let person = state.active;
+    let bot = person.opponent();
+    state.players[bot].hero.health = 1;
+    let offered = reduce(
+        Pinned,
+        &state,
+        &Action::new(ActionBody::OfferDraw, person, "offer".to_string()),
+    );
+    assert!(offered.error.is_none(), "{:?}", offered.error);
+    let state = offered.state;
+    let seed = seed_where("shown-draw", |seed| {
+        let standing = standing(&state, bot, seed, bot);
+        accepts_draw(seed, bot, state.turn, &standing, &BOT_DRAW_ANSWER_FIT)
+    });
+    let job = job_at(&state, bot, &seed, false, AI_SKILL_MIN);
+    jackioh_cards::register_all();
+    let shown = decide(
+        &BotAsk {
+            state: &job.state,
+            seat: job.seat,
+            home: job.home,
+            seed: &job.seed,
+            strength: &job.strength,
+            hidden: false,
+            own_turn_start: job.own_turn_start,
+            ai_cursor: 0,
+        },
+        None,
+        None,
+    );
+    assert_eq!(
+        shown.body,
+        Some(ActionBody::AnswerDraw { accept: false }),
+        "{seed}"
+    );
+    assert_eq!(
+        play(job).body,
+        Some(ActionBody::AnswerDraw { accept: true }),
+        "{seed}"
+    );
+}
+
+/// R639000: the bot's choice says when its move is a lethal one, which its think time takes the shift
+/// on, and not when it is not.
+#[test]
+fn r639000_a_bots_choice_marks_a_lethal_move_lethal_and_no_other() {
+    let bot = PlayerId::P1;
+    // Its search never passes a lethal over (R1452), so a lethal is always played as one.
+    let sure = |state: &GameState| {
+        let job = job(state, bot, "lethal", false);
+        Job {
+            strength: BotStrength {
+                missed_lethal_chance: 0.0,
+                ..job.strength
+            },
+            ..job
+        }
+    };
+    // A Tempo Timmy 3/3 and a Mr. Vanilla 4/4 swing for 7 at a hero on 6, then at a full one.
+    let lethal = facing(
+        json!({ "field": ["core-011", "core-008"] }),
+        json!({ "health": 6 }),
+    );
+    assert!(play(sure(&lethal)).lethal, "7 at a hero on 6");
+    let plain = facing(json!({ "field": ["core-011", "core-008"] }), json!({}));
+    assert!(!play(sure(&plain)).lethal, "7 at a full hero");
 }
 
 #[test]

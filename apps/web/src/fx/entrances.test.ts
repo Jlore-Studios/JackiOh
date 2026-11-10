@@ -125,8 +125,11 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
   });
 
   it("R670 a plain Legendary still gets the rarity entrance", () => {
-    // Classic+ #13 Mommy Barker, a Legendary Unit with no entrance of its own (Core's and Classic's have theirs).
-    const cues = planAll([summoned("p1", "m1", "classicplus-013")]);
+    // The rarity's shared entrance (cues.ts `summon`) plays for a Legendary the table has no entrance for: no
+    // shipped card is one now, so the defId is a stand-in the table does not hold.
+    const NO_ENTRANCE = "legendary-with-no-entrance";
+    expect(FX_CARD_TABLE.has(NO_ENTRANCE)).toBe(false);
+    const cues = planAll([summoned("p1", "m1", NO_ENTRANCE)]);
     expect(cues.some((cue) => cue.kind === "rays" && cue.tone === "legendary")).toBe(true);
     expect(cues.some((cue) => cue.kind === "burst" && cue.preset === "gold" && cue.spread === "area")).toBe(true);
   });

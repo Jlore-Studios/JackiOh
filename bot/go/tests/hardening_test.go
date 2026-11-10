@@ -372,5 +372,5 @@ func TestHardening_AnUnfinishedSurveyIsDueAgain(t *testing.T) {
 		"reason", "the usage limit was reached"))
 	hardeningDeliver(h, planned, out)
 	assertIsNone(t, dig(t, h.ctx.Store.Load(), "suggest", "last_run"))
-	assertTrue(t, plan.SuggestionsDue(h.ctx, h.ctx.Store.Load(), false))
+	assertTrue(t, plan.SuggestionsDue(h.ctx, h.ctx.Store.Load(), false, h.ctx.Cfg.SuggestionsSpareLanes))
 }
