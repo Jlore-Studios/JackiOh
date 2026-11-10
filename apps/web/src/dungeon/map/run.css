@@ -274,6 +274,67 @@ button.dungeon-run-card:disabled {
   list-style: none;
 }
 
+/* The four reward packs (#3588): tearable shop-style packs side by side, wrapping on a phone. */
+.dungeon-run-packs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dungeon-run-pack-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  color: inherit;
+  transition: transform 120ms ease-out;
+}
+
+.dungeon-run-pack-pick:hover,
+.dungeon-run-pack-pick:focus-visible {
+  transform: translateY(-4px);
+}
+
+.dungeon-run-pack-pick__label {
+  font-weight: 700;
+}
+
+.dungeon-run-pack-pick__enemy,
+.dungeon-run-pack-pick__boss {
+  font-size: var(--type-sm);
+}
+
+.dungeon-run-pack-pick__enemy {
+  overflow-wrap: anywhere;
+}
+
+.dungeon-run-pack-pick__boss {
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+/* The sealed pack before its keep: a pack to press and tear. */
+.dungeon-run-pack-tear {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+
+.dungeon-run-pack-counter {
+  margin: 0;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
 .dungeon-run-choice {
   width: 100%;
   min-height: var(--hit-min);

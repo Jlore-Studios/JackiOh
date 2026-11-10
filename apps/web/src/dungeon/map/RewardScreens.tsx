@@ -4,11 +4,22 @@
 // the code keeps the run's word, artifact (WRITING.md's jargon). Presentation only (CLAUDE.md
 // rule 7): the run answers every rule, and every word goes through `t()` at render.
 
-import { useState, type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 
 import type { RunContent, RunPackKind, RunPhase, RunState } from "@jackioh/run";
 
+import { useFxSettings } from "../../fx/settings.ts";
+import { reducedMotionNow } from "../../game/animations.ts";
 import { t } from "../../i18n/i18n.ts";
+import {
+  DUNGEON_BOSS_PACK,
+  DUNGEON_ENEMY_PACK,
+  DUNGEON_FILTER_PACK,
+  DUNGEON_RANDOM_PACK,
+  PACK_TEAR_MS,
+} from "../../packs/packs.ts";
+import PackObject from "../../packs/PackObject.tsx";
+import { useSetting } from "../../settings/store.ts";
 import { dungeonMapTestid } from "./testids.ts";
 import {
   cardName,
@@ -21,6 +32,37 @@ import {
 
 type RewardPhase = Extract<RunPhase, { phase: "reward" }>;
 type PackPhase = Extract<RunPhase, { phase: "pack" }>;
+
+/**
+ * The enemy just beaten, with whether its node was a boss's (#3588): the reward draws the enemy's
+ * deck pack in its name, with a boss look on a boss node. Null before the first step, when the run
+ * stands on no row yet.
+ */
+function beatenEnemy(run: RunState): { name: string | null; boss: boolean } | null {
+  if (run.row === null) return null;
+  const node = run.map[run.row]?.[run.col];
+  if (node === undefined) return null;
+  return { name: node.enemy?.name ?? null, boss: node.kind === "miniBoss" || node.kind === "boss" };
+}
+
+/**
+ * The shop-style pack a reward kind draws as (#3588): a set's own pack, the enemy's deck (a boss
+ * look on a boss node), or a distinct look for the random and the type, tag or rarity packs.
+ */
+function packIdFor(kind: RunPackKind, boss: boolean): string {
+  switch (kind.type) {
+    case "set":
+      return kind.set;
+    case "boss":
+      return boss ? DUNGEON_BOSS_PACK : DUNGEON_ENEMY_PACK;
+    case "random":
+      return DUNGEON_RANDOM_PACK;
+    case "cardType":
+    case "tag":
+    case "rarity":
+      return DUNGEON_FILTER_PACK;
+  }
+}
 
 /** A pack's label: its kind, translated. */
 function packLabel(kind: RunPackKind): string {
@@ -51,7 +93,7 @@ type RewardScreenProps = {
  * The fight's reward: the dropped relic first, taken or left, and only after it the four packs,
  * one to open.
  */
-export function RewardScreen({ content, phase, send }: RewardScreenProps): ReactElement {
+export function RewardScreen({ run, content, phase, send }: RewardScreenProps): ReactElement {
   if (phase.artifact !== null) {
     const id = phase.artifact;
     return (
@@ -84,21 +126,34 @@ export function RewardScreen({ content, phase, send }: RewardScreenProps): React
       </section>
     );
   }
+  const enemy = beatenEnemy(run);
   return (
     <section className="dungeon-run-reward" data-testid={dungeonMapTestid.reward}>
       <h2 className="dungeon-run-title">{t("Choose a pack")}</h2>
-      <ul className="dungeon-run-choices" data-testid={dungeonMapTestid.packs}>
+      <ul className="dungeon-run-packs" data-testid={dungeonMapTestid.packs}>
         {phase.packs.map((kind, index) => (
           <li key={index}>
             <button
               type="button"
-              className="dungeon-run-choice"
+              className="dungeon-run-pack-pick"
               data-testid={dungeonMapTestid.pack(index)}
               onClick={() => {
                 send({ type: "openPack", index });
               }}
             >
-              {packLabel(kind)}
+              <PackObject
+                pack={packIdFor(kind, enemy?.boss ?? false)}
+                size="shelf"
+                testid={dungeonMapTestid.packObject(index)}
+              >
+                {kind.type === "boss" && enemy?.name !== null && enemy?.name !== undefined ? (
+                  <span className="dungeon-run-pack-pick__enemy">{enemy.name}</span>
+                ) : undefined}
+              </PackObject>
+              <span className="dungeon-run-pack-pick__label">{packLabel(kind)}</span>
+              {kind.type === "boss" && enemy?.boss === true ? (
+                <span className="dungeon-run-pack-pick__boss">{t("Boss")}</span>
+              ) : null}
             </button>
           </li>
         ))}
@@ -117,6 +172,21 @@ type PackScreenProps = {
 /** The opened pack: exactly `keep` cards are kept, or none with a Skip passive. */
 export function PackScreen({ run, content, phase, send }: PackScreenProps): ReactElement {
   const [selected, setSelected] = useState<readonly string[]>([]);
+  // The shop scene's motion lines (#3588): reduced motion or fx intensity off shows the cards at once.
+  const [fx] = useFxSettings();
+  const panelReduces = useSetting("reduceMotion");
+  const reduced = panelReduces || reducedMotionNow(fx);
+  const instant = reduced || fx.intensity === "off";
+  const [stage, setStage] = useState<"sealed" | "tearing" | "open">(() => (instant ? "open" : "sealed"));
+  useEffect(() => {
+    if (stage !== "tearing") return undefined;
+    const timer = window.setTimeout(() => {
+      setStage("open");
+    }, PACK_TEAR_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [stage]);
   const toggle = (id: string): void => {
     setSelected((was) => {
       if (was.includes(id)) return was.filter((kept) => kept !== id);
@@ -125,9 +195,33 @@ export function PackScreen({ run, content, phase, send }: PackScreenProps): Reac
     });
   };
   const skip = hasSkipPassive(run, content);
+  // The run already decided the pack's cards, so the sealed pack is its own tear, not the
+  // server-driven `PackScene`: it tears for `PACK_TEAR_MS`, then reveals its cards face up.
+  if (stage !== "open") {
+    return (
+      <section className="dungeon-run-pack" data-testid={dungeonMapTestid.packScreen}>
+        <h2 className="dungeon-run-title">{t("Keep {count} cards", { count: String(phase.keep) })}</h2>
+        <button
+          type="button"
+          className="dungeon-run-pack-tear"
+          data-testid={dungeonMapTestid.packTear}
+          onClick={() => {
+            setStage("tearing");
+          }}
+        >
+          <PackObject pack={DUNGEON_FILTER_PACK} size="scene" state={stage === "tearing" ? "tearing" : "idle"}>
+            <span className="dungeon-run-pack-tear__hint">{t("Tap to open")}</span>
+          </PackObject>
+        </button>
+      </section>
+    );
+  }
   return (
     <section className="dungeon-run-pack" data-testid={dungeonMapTestid.packScreen}>
       <h2 className="dungeon-run-title">{t("Keep {count} cards", { count: String(phase.keep) })}</h2>
+      <p className="dungeon-run-pack-counter" data-testid={dungeonMapTestid.packCounter}>
+        {t("{kept} of {keep} kept", { kept: String(selected.length), keep: String(phase.keep) })}
+      </p>
       <ul className="dungeon-run-cards">
         {phase.cards.map((id) => (
           <li className="dungeon-run-cards__item" key={id}>

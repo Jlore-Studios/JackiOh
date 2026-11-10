@@ -105,6 +105,42 @@
   --pack-crimp-b: #a04880;
 }
 
+/* The dungeon run's reward packs (#3588): ember red for the beaten enemy's deck. */
+.pack-object[data-pack="dungeon-enemy"] {
+  --pack-foil-a: #8c2f39;
+  --pack-foil-b: #2b0e12;
+  --pack-accent: #ff9a5c;
+  --pack-crimp-a: #d46a5c;
+  --pack-crimp-b: #5c1a12;
+}
+
+/* Near-black foil with a gold face and a red seal for the boss's deck. */
+.pack-object[data-pack="dungeon-boss"] {
+  --pack-foil-a: #26221e;
+  --pack-foil-b: #0d0b09;
+  --pack-accent: #ffd76a;
+  --pack-crimp-a: #c8322b;
+  --pack-crimp-b: #5a0f0b;
+}
+
+/* Deep teal for the random pack. */
+.pack-object[data-pack="dungeon-random"] {
+  --pack-foil-a: #1f6f6b;
+  --pack-foil-b: #0a2e2c;
+  --pack-accent: #7df0e0;
+  --pack-crimp-a: #4aa89a;
+  --pack-crimp-b: #134039;
+}
+
+/* Olive khaki for the type, tag or rarity pack. */
+.pack-object[data-pack="dungeon-filter"] {
+  --pack-foil-a: #6b6234;
+  --pack-foil-b: #26240f;
+  --pack-accent: #efe68a;
+  --pack-crimp-a: #b8ad5c;
+  --pack-crimp-b: #4a4416;
+}
+
 /* --------------------------------------------------------------------------------- the object --- */
 
 /* The tilt leans the whole pack toward the pointer. */

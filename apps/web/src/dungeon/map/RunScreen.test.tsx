@@ -18,7 +18,10 @@ import type {
   RunStats,
 } from "@jackioh/run";
 
+import { resetFxSettingsForTests, setFxSettings } from "../../fx/settings.ts";
+import { PACK_TEAR_MS } from "../../packs/packs.ts";
 import { navTestid } from "../../routes/nav.tsx";
+import { __resetSettingsForTests, writeSettings } from "../../settings/store.ts";
 import { readSheet } from "../../test/setup.ts";
 import { at } from "../../test/stubServer.ts";
 import { runConstants, runShopPrices } from "../../wasm/index.ts";
@@ -214,11 +217,16 @@ beforeEach(() => {
   plan.maxHp = 20;
   plan.score = 130;
   plan.embers = 13;
+  __resetSettingsForTests();
+  resetFxSettingsForTests();
 });
 
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
+  __resetSettingsForTests();
+  resetFxSettingsForTests();
+  vi.useRealTimers();
 });
 
 /** B30: HP, Coins, Tickets, the deck, the relic held and the score, on every screen. */
@@ -379,6 +387,12 @@ describe("B28 the relic comes before the packs, and the pack keeps its count", (
     expect(screen.getByTestId(dungeonMapTestid.pack(1))).toHaveTextContent("Random");
     expect(screen.getByTestId(dungeonMapTestid.pack(2))).toHaveTextContent("Set: Core");
     expect(screen.getByTestId(dungeonMapTestid.pack(3))).toHaveTextContent("Type: Unit");
+    // #3588: each pack draws its kind's look, and the enemy's deck carries the beaten enemy's name.
+    expect(screen.getByTestId(dungeonMapTestid.packObject(0))).toHaveAttribute("data-pack", "dungeon-enemy");
+    expect(screen.getByTestId(dungeonMapTestid.packObject(1))).toHaveAttribute("data-pack", "dungeon-random");
+    expect(screen.getByTestId(dungeonMapTestid.packObject(2))).toHaveAttribute("data-pack", "Core");
+    expect(screen.getByTestId(dungeonMapTestid.packObject(3))).toHaveAttribute("data-pack", "dungeon-filter");
+    expect(screen.getByTestId(dungeonMapTestid.pack(0))).toHaveTextContent("Cave Troll");
     fireEvent.click(screen.getByTestId(dungeonMapTestid.pack(2)));
     expect(act).toHaveBeenCalledWith({ type: "openPack", index: 2 });
     expectHud();
@@ -397,25 +411,45 @@ describe("B28 the relic comes before the packs, and the pack keeps its count", (
     render(<RunScreen dungeon={tagged.dungeon} />);
     expect(screen.getByTestId(dungeonMapTestid.pack(0))).toHaveTextContent("Tag: Pack tag");
     expect(screen.getByTestId(dungeonMapTestid.pack(1))).toHaveTextContent("Rarity: Rare");
+    expect(screen.getByTestId(dungeonMapTestid.packObject(0))).toHaveAttribute("data-pack", "dungeon-filter");
+    expect(screen.getByTestId(dungeonMapTestid.packObject(1))).toHaveAttribute("data-pack", "dungeon-filter");
     fireEvent.click(screen.getByTestId(dungeonMapTestid.pack(1)));
     expect(tagged.act).toHaveBeenCalledWith({ type: "openPack", index: 1 });
   });
 
+  // #3588
+  it("#3588 on a boss node the enemy's deck wears the boss look with its name", () => {
+    const { dungeon, act } = fakeDungeon(runWith(packs(DEFAULT_PACKS), { row: 3, col: 0 }));
+    render(<RunScreen dungeon={dungeon} />);
+    expect(screen.getByTestId(dungeonMapTestid.packObject(0))).toHaveAttribute("data-pack", "dungeon-boss");
+    const first = within(screen.getByTestId(dungeonMapTestid.pack(0)));
+    expect(first.getByText("Mini Boss")).toBeInTheDocument();
+    expect(first.getByText("Boss")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.pack(0)));
+    expect(act).toHaveBeenCalledWith({ type: "openPack", index: 0 });
+  });
+
   // B28
   it("B28 the pack keeps exactly keep cards, and no Skip without the passive", () => {
+    // #3588: reduced motion shows the cards at once, past the sealed pack.
+    writeSettings({ reduceMotion: true });
     const { dungeon, act } = fakeDungeon(
       runWith({ phase: "pack", cards: ["core-001", "core-002", "core-003", "core-004"], keep: 2 }),
     );
     render(<RunScreen dungeon={dungeon} />);
     const keep = screen.getByTestId(dungeonMapTestid.packKeep);
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("0 of 2 kept");
     expect(keep).toBeDisabled();
     fireEvent.click(screen.getByTestId(dungeonMapTestid.packCard("core-001")));
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("1 of 2 kept");
     expect(keep).toBeDisabled();
     fireEvent.click(screen.getByTestId(dungeonMapTestid.packCard("core-003")));
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("2 of 2 kept");
     expect(keep).toBeEnabled();
     // Past keep, a third card does not join the keep.
     fireEvent.click(screen.getByTestId(dungeonMapTestid.packCard("core-002")));
     expect(screen.getByTestId(dungeonMapTestid.packCard("core-002"))).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("2 of 2 kept");
     fireEvent.click(keep);
     expect(act).toHaveBeenCalledWith({ type: "keep", cards: ["core-001", "core-003"] });
     expect(screen.queryByTestId(dungeonMapTestid.packSkip)).not.toBeInTheDocument();
@@ -423,6 +457,8 @@ describe("B28 the relic comes before the packs, and the pack keeps its count", (
 
   // B28
   it("B28 with a Skip passive the pack may be kept empty", () => {
+    // #3588: reduced motion shows the cards at once, past the sealed pack.
+    writeSettings({ reduceMotion: true });
     const { dungeon, act } = fakeDungeon(
       runWith(
         { phase: "pack", cards: ["core-001", "core-002", "core-003", "core-004"], keep: 2 },
@@ -432,6 +468,44 @@ describe("B28 the relic comes before the packs, and the pack keeps its count", (
     render(<RunScreen dungeon={dungeon} />);
     fireEvent.click(screen.getByTestId(dungeonMapTestid.packSkip));
     expect(act).toHaveBeenCalledWith({ type: "keep", cards: [] });
+  });
+
+  // #3588
+  it("#3588 the sealed pack tears open before its keep", () => {
+    vi.useFakeTimers();
+    const { dungeon } = fakeDungeon(
+      runWith({ phase: "pack", cards: ["core-001", "core-002", "core-003", "core-004"], keep: 2 }),
+    );
+    render(<RunScreen dungeon={dungeon} />);
+    expect(screen.getByTestId(dungeonMapTestid.packTear)).toHaveTextContent("Tap to open");
+    expect(screen.queryByTestId(dungeonMapTestid.packCard("core-001"))).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.packTear));
+    // Tearing: the pack is open neither sealed nor showing its cards yet.
+    expect(screen.getByTestId(dungeonMapTestid.packTear)).toBeInTheDocument();
+    expect(screen.queryByTestId(dungeonMapTestid.packCard("core-001"))).not.toBeInTheDocument();
+    flush(() => {
+      vi.advanceTimersByTime(PACK_TEAR_MS);
+    });
+    expect(screen.queryByTestId(dungeonMapTestid.packTear)).not.toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.packCard("core-001"))).toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("0 of 2 kept");
+  });
+
+  // #3588
+  it("#3588 reduced motion and fx intensity off show the cards at once", () => {
+    const pack = (): RunPhase => ({ phase: "pack", cards: ["core-001", "core-002"], keep: 1 });
+    writeSettings({ reduceMotion: true });
+    render(<RunScreen dungeon={fakeDungeon(runWith(pack())).dungeon} />);
+    expect(screen.queryByTestId(dungeonMapTestid.packTear)).not.toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.packCard("core-001"))).toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("0 of 1 kept");
+    cleanup();
+
+    __resetSettingsForTests();
+    setFxSettings({ intensity: "off" });
+    render(<RunScreen dungeon={fakeDungeon(runWith(pack())).dungeon} />);
+    expect(screen.queryByTestId(dungeonMapTestid.packTear)).not.toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.packCard("core-002"))).toBeInTheDocument();
   });
 });
 
