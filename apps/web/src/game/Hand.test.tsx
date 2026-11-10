@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { __resetSettingsForTests } from "../settings/store.ts";
 import { renderBoard } from "../test/board.tsx";
-import { baseView, card, emptySide, fullBoardView } from "../test/fixtures.ts";
+import { baseView, card, emptyHandView, emptySide, fullBoardView, hiddenCardsView } from "../test/fixtures.ts";
 import Board from "./Board.tsx";
 import { RIFFLE_LEAVES } from "./config.ts";
 import Hand, { HAND_EMPTY_TEXT, handEmptyTestid } from "./Hand.tsx";
@@ -41,11 +41,8 @@ afterEach(() => {
 });
 
 describe("R504 an empty hand keeps its place", () => {
-  const empty = (): PlayerView =>
-    baseView({ you: emptySide("p1", { hand: [] }), opponent: emptySide("p2", { hand: { count: 0 } }) });
-
   it("R504 either seat's empty hand keeps its element, its count and one card-sized outline", () => {
-    render(<Board view={empty()} />);
+    render(<Board view={emptyHandView()} />);
     for (const side of ["you", "opponent"] as const) {
       const hand = screen.getByTestId(`hand-${side}`);
       expect(hand, side).toHaveAttribute("data-empty", "true");
@@ -188,6 +185,20 @@ describe("R1143 and R1141 the hand pile shows its size and its marks", () => {
     renderBoard(baseView());
     expect(screen.queryByTestId("hand-cap-you")).toBeNull();
     expect(screen.queryByTestId("hand-cap-opponent")).toBeNull();
+  });
+
+  it("§10.8 hidden cards render as backs with no identity, beside your own face-up card", () => {
+    const view = hiddenCardsView();
+    renderBoard(view);
+
+    const hand = screen.getByTestId("hand-opponent");
+    expect(hand.querySelectorAll(".card-back")).toHaveLength(5);
+    expect(screen.getByTestId("hand-count-opponent")).toHaveTextContent("5");
+    expect(hand.querySelector("[data-def-id]")).toBeNull();
+    expect(hand.querySelectorAll('[data-testid^="hand-card-"]')).toHaveLength(0);
+
+    const yours = screen.getByTestId("hand-you");
+    expect(yours.querySelectorAll('[data-testid^="hand-card-"]')).toHaveLength(1);
   });
 
   it("R1141 the opponent's hand shows how many cards are marked, never which", () => {
