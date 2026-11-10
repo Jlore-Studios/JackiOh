@@ -17136,37 +17136,34 @@
       "action": "build",
       "asks": [],
       "decision": {
-        "answer": "1",
-        "answer_url": "https://github.com/Jlore-Studios/JackiOh/issues/3633#issuecomment-6769135619",
-        "answered_at": "2026-11-10T13:53:58Z",
-        "answered_by": "MaxGoetzmann",
-        "asked_at": "2026-11-10T12:19:42Z",
+        "asked_at": "2026-11-10T16:47:02Z",
         "assigned": [
           "jgoetzmann",
           "MaxGoetzmann"
         ],
         "default": 1,
+        "ends": "2026-11-11T16:47:02Z",
         "hours": 24,
         "kind": "build",
         "model": "opus",
         "options": [
           {
-            "change": "Keep fixing the product: memoize the board's cards so a queue step re-renders only what changed, fold the per-step nested update into one commit, replace the volatile `.game:has()` rules with attributes that Game and FxLayer set, and make the spec's takeover replay use fresh instance ids.",
-            "tradeoff": "A refactor of Board, Zone, Hand, Card and Game rendering that every board shares. It is not certain to reach 120 ms worst under the development build at 4x: production React spikes are 150\u2013350 ms today."
+            "change": "Land this pass now: the pull request merges once CI passes. Open a new issue (hard) for the living board's standing cost: animate the moving faces' art, the backs' breathing and the portrait motes on composited HTML layers instead of SVG groups and filters, so a frame restyles none of them, and let the phone director shed within a moment.",
+            "tradeoff": "The daily super run's living spec stays red until the new issue lands, and that work changes the art's animation plumbing in apps/web/src/cards/art, a large change with no certainty."
           },
           {
-            "change": "Rule that this spec measures React's production build, since the harness serves the development build and its owner-stack instrumentation is about 35% of a spike's script time. Then do option 1's work for whatever still misses.",
-            "tradeoff": "Changes what the spec measures, which needs a person's ruling, and still needs most of option 1's product work."
+            "change": "Keep this branch unmerged and do the standing-scene work on it in the next pass.",
+            "tradeoff": "None of the measured improvements reach players or the other boards meanwhile, and the branch keeps conflicting with main as it grows."
           },
           {
-            "change": "Revise R3351000's worst-frame bound by ruling, for example letting the frame that starts a queue entry exceed FX_PHONE_FRAME_WORST_MS.",
-            "tradeoff": "Loosens a bound that R3351000 and R2803000 refused to loosen, which the issue forbids without a person's ruling."
+            "change": "Revise R3351000 by ruling, for example measure the living board with the shed at its deepest stage and leave out a set piece's first, mounting frame from the worst-frame bound.",
+            "tradeoff": "Loosens a bound that R3351000 and R2803000 refused to loosen; the issue forbids it without a person's ruling."
           }
         ],
-        "problem": "The three structural causes the plan named are fixed and tested. The Anomaly's cast went from 170\u2013960 ms mean frames on CI to about 39 ms mean and 106 ms worst at 390x844 under 4x throttling. It now holds the budget at 390x844 and 844x390, and is borderline at 360x780.\n\nFive other moments still miss: the Mythic takeover, the broadside, the Battleship, the riffle, and the flight at 360x780. Each has one spike frame of 350\u2013500 ms. The profile shows what it is: every animation-queue step re-renders the whole Game. React's Profiler records an update commit plus a nested update of 100\u2013250 ms each, in the development build at 4x. On top of that, Blink restyles about 780 elements through `:has()` invalidation. With React's production build the spikes are still 150\u2013350 ms. So the component harness's development build roughly doubles the cost, but it does not explain all of it.\n\nBringing these frames under 120 ms means re-architecting how the board renders: memoizing the cards and folding each queue step into one commit. Separately, the spec's replay of the takeover at 844x390 can never pass after its first attempt: replaying the same events after re-rendering the plain board plays nothing. The alternatives touch the spec's measurement basis or the budget, which the issue reserves for a person.",
+        "problem": "I carried out option 1: the board's cards are memoized, so a queue step re-renders only what changed. The nested update per step is now tens of fibers instead of a second full-board commit. The volatile .game:has() rules are replaced with attributes that Game, FxLayer and the open prompt set. The spec's takeover replay plays a fresh card each attempt. The profile also showed custom properties set on the game root restyling the whole game each time an entry started or ended, so those are now written onto the elements that read them. A queue step used to commit about 540 fibers twice (150-330 ms each, dev build, 4x). It now commits a few dozen, and the cast went from 170-960 ms mean frames on CI to about 45 ms mean.\n\nThe living spec still fails. Run locally at 4x, the cast passes at 390x844 (45 ms mean, 104 ms worst) but the Mythic takeover misses (63 ms / 229 ms). At 360x780 the cast misses by a few milliseconds (43 ms / 125 ms, then 51 ms / 120 ms), and at 844x390 too (50.5 ms / 93 ms, then 50.8 ms / 138 ms). In my scratch harness the other moments run 38-78 ms mean and 104-413 ms worst.\n\nThe idle living board on its own (traced, nothing playing) already costs about 45-49 ms a frame. Its CSS animations (the moving faces' art, the face-down backs breathing, the hero portraits' motes, the tile motes) restyle about 130 elements a frame, and paint, layerize and commit take about 20 ms more. With the shed forced to its deepest stage, and again with React's production build, the moments still miss. So what is left is the scene itself, not React or the test harness. Bringing it in means reworking how the card art animates, which is a separate piece of work. Whether to land this pass now or keep it back is a person's call.",
         "provider": "claude-8",
-        "question": "Should the next pass take on the React render refactor (memoize the board's cards, one commit per queue step, attributes instead of volatile :has() rules), or should a person rule on what this spec measures or its worst-frame bound?",
-        "why": "it stays inside the issue's limits (fix the product, keep the budget, the throttle and the spec), and the measurements show the remaining cost is the board's own re-rendering, which production React also pays"
+        "question": "Should this pass land now as #3633's pull request, with a new issue opened for the standing scene's cost, or should the work stay unmerged until the spec passes, or should R3351000's bounds be revised by ruling?",
+        "why": "the fixes are tested and make every board faster, with layout and smoke specs unchanged, and what still misses is the scene's own animation cost, a separate piece of work better tracked on its own issue than held behind this one"
       },
       "died": 0,
       "failures": 0,
@@ -17194,7 +17191,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-8",
-      "question": "Should the next pass take on the React render refactor (memoize the board's cards, one commit per queue step, attributes instead of volatile :has() rules), or should a person rule on what this spec measures or its worst-frame bound?",
+      "question": "Should this pass land now as #3633's pull request, with a new issue opened for the standing scene's cost, or should the work stay unmerged until the spec passes, or should R3351000's bounds be revised by ruling?",
       "queued_at": "2026-11-10T13:53:58Z",
       "requested_by": "jgoetzmann",
       "run_id": "42829835912",
