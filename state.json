@@ -20805,28 +20805,10 @@
     "what": "build #3538 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T10:09:25Z",
+    "at": "2026-11-10T10:50:40Z",
     "notes": [
-      "delivered plan #3584 on muse (run 42795103197): planned",
-      "delivered review #3623 on muse (run 42794922193): reviewed",
-      "delivered review #3635 on claude-8 (run 42794724454): reviewed",
-      "delivered review #3640 on claude-4 (run 42794151393): approved",
-      "delivered plan #3540 on claude-3 (run 42790267670): planned",
-      "delivered revise #3626 on muse (run 42790069329): blocked",
-      "delivered revise #3529 on claude-3 (run 42786947920): built",
-      "delivered plan #3633 on claude-8 (run 42781003998): planned",
-      "started review #3529 on claude-3 (run 42798478001)",
-      "started build #3633 on claude-8 (run 42798679876)",
-      "started build #3584 on muse (run 42798885895)",
-      "started revise #3635 on claude-8 (run 42799097097)",
-      "started revise #3623 on muse (run 42799299918)",
-      "started build #3630 on claude-1 (run 42799484078)",
-      "started plan #3583 on claude-6 (run 42799671420)",
-      "started build #3514 on claude-6 (run 42799881995)",
-      "started build #3539 on muse (run 42800079978)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is idle, but nothing queued is for it; `claude-8` is busy; `claude-1` is idle, but nothing queued is for it; `claude-4` is idle, but nothing queued is for it; `claude-6` is busy; `claude-5` is idle, but nothing queued is for it; `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it",
-      "pruned 6 plan file(s) older than 7 days",
-      "runner gate: started 3 of 4 waiting run(s) (queue build 42796629901, queue build 42796632236, run 42793694889 on bot/issue-3564); 1 wait for room"
+      "started a night run, as a lane was free: #3538 (hard) is queued to build, for `muse`: build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+      "runner gate: started 1 of 2 waiting run(s) (run 42797984388 on bot/issue-3499); 1 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
