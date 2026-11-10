@@ -1525,3 +1525,4 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-10T04:56:10Z,42755995514,claude-7,opus,plan,3514,hard,interrupted,5-hour cap,6.5,0,0,0,,42,50,,,546.4,claude-1,fresh,cap,1
 2026-11-10T05:00:52Z,42748553108,claude-4,opus,plan,3516,hard,interrupted,5-hour cap,96.3,285,122560,27736602,14.1295,1,50,,,477,,fresh,,1
 2026-11-10T05:01:27Z,42748461663,claude-4,opus,plan,3515,hard,interrupted,5-hour cap,97.8,286,122191,27507190,10.1166,0,50,,,476.3,,fresh,,1
+2026-11-10T05:13:29Z,42755841093,claude-3,opus,build,3613,hard,built,,10.2,47,12847,1291291,0.8994,5,8,,,73.7,claude-3,fresh,,1
