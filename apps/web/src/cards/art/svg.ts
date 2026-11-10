@@ -167,6 +167,11 @@ function encodeSvg(svg: string): string {
   return encodeURIComponent(svg).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
 }
 
+/** R3350000: an SVG document as the data URI a face's window draws it from (a diorama's slice, dioramas/index.ts). */
+export function svgDataUri(svg: string): string {
+  return `${DATA_PREFIX}${encodeSvg(svg)}`;
+}
+
 /** R2715001: moving as `motion` says, its particles placed by `defId`; the still picture with none. */
 export function artDataUri(spec: ArtSpec, motion: ArtMotion | null = null, defId = ""): string {
   return `${DATA_PREFIX}${encodeSvg(artSvg(spec, motion, defId))}`;
