@@ -18459,14 +18459,11 @@
     "what": "review #3591 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-10T22:36:32Z",
+    "at": "2026-11-10T22:46:05Z",
     "notes": [
-      "#3586 needs a plan",
-      "#3587 needs a plan",
-      "delivered revise #3591 on claude-4 (run 42903476613): built",
+      "#3607 needs a plan",
       "could not start review #3591 on claude-4: POST /repos/Jlore-Studios/JackiOh/actions/workflows/bot-night.yml/dispatches: HTTP 422: Cannot trigger a 'workflow_dispatch' on a disabled workflow",
-      "pruned 1 plan file(s) older than 7 days",
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
+      "#3664: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19172,7 +19169,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T22:36:32Z",
+  "loop_tick": "2026-11-10T22:46:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
