@@ -6,7 +6,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
-// SpoolKey is the state file's spool (`bot-state:state.json`): the rows a delivery hands the
+// SpoolKey is the state file's spool (`_bot-state:state.json`): the rows a delivery hands the
 // status loop, each a CSV line under its kind's name (`{"readings": […], "runs": […]}`), until
 // the loop has pushed them to the branch and takes them out (`Unspool`). Deliver writes the state
 // file anyway, so a run's readings ride on its usage write (`providers.NoteUsage`) and only its

@@ -1,6 +1,6 @@
 // The site and its game server on Cloudflare Workers, one Worker per environment
 // (docs/deploy-cloudflare.md). The top level is production: `jackioh`, at jackioh.com, deployed from
-// the `production` branch by promote-production.yml. `env.staging` is staging: `jackioh-staging`, at
+// the `_production` branch by promote-production.yml. `env.staging` is staging: `jackioh-staging`, at
 // staging.jackioh.com behind Cloudflare Access, deployed from main by deploy-staging.yml.
 //
 // Each serves apps/web/dist as static assets, which no Worker code runs for, and sends `/api/*` and

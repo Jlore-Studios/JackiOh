@@ -5,7 +5,7 @@
 # the releases sit in the order and on the days the patches shipped, back to v0.1.0 at the initial
 # commit. A release line's major also opens with the line's summary and technical changes.
 #
-# Staging is main and production is the `production` branch (docs/deploy-cloudflare.md). A version
+# Staging is main and production is the `_production` branch (docs/deploy-cloudflare.md). A version
 # main's patches.json holds and production's does not is a pre-release, "on staging". The run after a
 # production merge brings it makes it a release, and the newest version production holds is Latest.
 # Production moves only past a super run that passed (promote-production.yml), so a patch
@@ -41,7 +41,7 @@ name: releases
 
 on:
   push:
-    branches: [main, production]
+    branches: [main, _production]
     paths:
       - crates/cards/patches/patches.json
       - crates/cards/patches/technical.json
@@ -85,7 +85,7 @@ jobs:
       - name: write every release
         run: |
           set -euo pipefail
-          git fetch --depth=1 origin production
+          git fetch --depth=1 origin _production
           git show FETCH_HEAD:crates/cards/patches/patches.json > "$RUNNER_TEMP/production.json"
           pnpm --dir apps/web exec tsx scripts/github-releases.ts --production "$RUNNER_TEMP/production.json" > "$RUNNER_TEMP/releases.json"
           jq -r '"\(.releases | length) releases, \([.releases[] | select(.prerelease)] | length) on staging only; Latest \(.latest)"' "$RUNNER_TEMP/releases.json"

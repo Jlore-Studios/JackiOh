@@ -1,5 +1,5 @@
 // scripts/promote-production.sh, the logic of .github/workflows/promote-production.yml: production
-// follows the super run on `staging` (#3275), the branch promote-staging.yml moves to main's newest
+// follows the super run on `_staging` (#3275), the branch promote-staging.yml moves to main's newest
 // green commit every two hours. When the daily super run on staging passes, the commit it tested
 // merges into production at once (the daily promotion, the owners' call of 2026-11-03). `/promote` on
 // the one production issue goes sooner: it opens a pull request of staging's commit into production,
@@ -211,7 +211,7 @@ const edit = (w: World, change: (state: Gh) => void): void => {
 
 /**
  * A commit on main (pushed, and recorded green); `files` are written whole. A green one also moves
- * `staging` to it, as promote-staging.yml would at its next move, unless `staged` says otherwise.
+ * `_staging` to it, as promote-staging.yml would at its next move, unless `staged` says otherwise.
  */
 function commit(w: World, name: string, files: Record<string, string>, green = true, subject = `change ${name}`, staged = green): string {
   if (Object.keys(w.sha).length > 0) git(w.work, "checkout", "-q", "main");
@@ -234,9 +234,9 @@ function commit(w: World, name: string, files: Record<string, string>, green = t
   return sha;
 }
 
-/** Moves `staging` to commit `sha` of main, as promote-staging.yml's fast-forward does. */
+/** Moves `_staging` to commit `sha` of main, as promote-staging.yml's fast-forward does. */
 function stage(w: World, sha: string): void {
-  git(w.origin, "update-ref", "refs/heads/staging", sha);
+  git(w.origin, "update-ref", "refs/heads/_staging", sha);
 }
 
 /** crates/cards/patches/patches.json, whose newest entry is the catalog version a commit ships. */
@@ -258,7 +258,7 @@ function world(): World {
   const empty: Gh = { next: 1, nextComment: 1000, issues: [], prs: [], reactions: [], labels: [], green: [], failed: [], running: [], newestGreen: "", super: {}, stagingSuper: [], deploys: [], failMerges: 0, fail: [], log: [], tokens: [] };
   writeFileSync(stateFile(w), JSON.stringify(empty));
   commit(w, "c1", { [PATCHES]: patches("v0.2.0a", "v0.2.0b"), "app.txt": "one\n" });
-  git(w.work, "push", "-q", "origin", `${w.sha.c1}:refs/heads/production`);
+  git(w.work, "push", "-q", "origin", `${w.sha.c1}:refs/heads/_production`);
   commit(w, "c2", { "app.txt": "two\n" });
   commit(w, "c3", { "app.txt": "three\n" });
   return w;
@@ -321,7 +321,7 @@ const openIssues = (w: World): Issue[] => gh(w).issues.filter((i) => i.state ===
 const openPrs = (w: World): Pr[] => gh(w).prs.filter((p) => p.state === "open");
 const marker = (i: Issue): string => /promote-production (last=\d+ reported=[0-9.-]+)/u.exec(i.body)?.[1] ?? "";
 const daily = (i: Issue): string => /promote-production last=\d+ reported=[0-9.-]+ daily=([0-9-]+) -->/u.exec(i.body)?.[1] ?? "";
-const production = (w: World): string => git(w.origin, "rev-parse", "refs/heads/production");
+const production = (w: World): string => git(w.origin, "rev-parse", "refs/heads/_production");
 const tree = (w: World, rev: string): string => git(w.origin, "rev-parse", `${rev}^{tree}`);
 const head = (w: World, p: Pr): string => git(w.origin, "rev-parse", `refs/heads/${p.head}`);
 const short = (sha: string | undefined, n = 7): string => (sha ?? "").slice(0, n);
@@ -341,7 +341,7 @@ const superRun = (w: World, sha: string, conclusion: string | null, attempt = 1,
     s.super[sha] = { databaseId: 77, attempt, status, conclusion, url: "https://github.com/acme/game/actions/runs/77" };
   });
 
-/** A super run on staging, as `gh run list --workflow super.yml --branch staging` reports it. */
+/** A super run on staging, as `gh run list --workflow super.yml --branch _staging` reports it. */
 const stagingRun = (w: World, sha: string, id: number, conclusion = "success"): void =>
   edit(w, (s) => {
     s.stagingSuper.push({ databaseId: id, headSha: sha, conclusion, url: `https://github.com/acme/game/actions/runs/${id}` });
@@ -380,10 +380,10 @@ describe("the production issue", () => {
     for (const command of ["`/promote`", "`/promote <sha>`", "`/skip-super <reason>`", "`/cancel`"]) {
       expect(only?.body).toContain(`| ${command} |`);
     }
-    expect(only?.body).toContain("**Next for production:** the next daily full test run (super) on `staging` that passes every job puts the commit it tested live.");
+    expect(only?.body).toContain("**Next for production:** the next daily full test run (super) on `_staging` that passes every job puts the commit it tested live.");
     expect(only?.body).toContain("### How the sites move");
     expect(only?.body).toContain(
-      "- **Staging** moves by itself every two hours: the `staging` branch takes `main`'s newest commit whose checks (`ci.yml`) passed, and the site deploys it. It never waits for the full test run.",
+      "- **Staging** moves by itself every two hours: the `_staging` branch takes `main`'s newest commit whose checks (`ci.yml`) passed, and the site deploys it. It never waits for the full test run.",
     );
     expect(gh(w).labels).toEqual([LABEL]);
     expect(gh(w).prs).toEqual([]);
@@ -487,7 +487,7 @@ describe("the production issue", () => {
     ok(run(w, "issue_comment", { COMMENT_ISSUE: "1" }));
     expect(reactions(w, id)).toEqual(["+1"]);
     expect(openPrs(w).map((p) => p.number)).toEqual([3]);
-    expect(issue(w, 2).comments.at(-1)?.body).toContain(`Opened #3 (@maintainer): 2 commit(s) of \`staging\` up to \`${short(w.sha.c3, 12)}\``);
+    expect(issue(w, 2).comments.at(-1)?.body).toContain(`Opened #3 (@maintainer): 2 commit(s) of \`_staging\` up to \`${short(w.sha.c3, 12)}\``);
     expect(marker(issue(w, 2))).toBe(`last=${id} reported=-`);
     ok(run(w, "issue_comment", { COMMENT_ISSUE: "1" }));
     expect(reactions(w, id)).toEqual(["+1"]);
@@ -530,13 +530,13 @@ describe("the daily promotion", () => {
     const r = ok(run(w, "workflow_run", { GH_TOKEN: "actions", PROMOTE_TOKEN: "bot" }));
     expect(r.output).toContain("promoted=true");
     const p = pr(w, 2);
-    expect(p).toMatchObject({ base: "production", state: "closed", merged: true, labels: [LABEL, "human"], assignees: PEOPLE });
-    expect(p.body).toContain("The daily promotion: the super run on `staging` passed every job on this commit ([run](https://github.com/acme/game/actions/runs/501)), so this merges at once");
+    expect(p).toMatchObject({ base: "_production", state: "closed", merged: true, labels: [LABEL, "human"], assignees: PEOPLE });
+    expect(p.body).toContain("The daily promotion: the super run on `_staging` passed every job on this commit ([run](https://github.com/acme/game/actions/runs/501)), so this merges at once");
     expect(p.body).toContain("- Started by: the daily promotion\n");
-    expect(tree(w, "production")).toBe(tree(w, w.sha.c3 as string));
+    expect(tree(w, "_production")).toBe(tree(w, w.sha.c3 as string));
     expect(git(w.origin, "for-each-ref", "refs/heads/promote")).toBe("");
     expect(lastReply(w)).toContain(
-      `Merged to production in #2, the daily promotion: the super run on \`staging\` passed every job on \`${short(w.sha.c3, 12)}\` ([run](https://github.com/acme/game/actions/runs/501)). 2 commit(s), catalog v0.2.0b; the deploy follows.`,
+      `Merged to production in #2, the daily promotion: the super run on \`_staging\` passed every job on \`${short(w.sha.c3, 12)}\` ([run](https://github.com/acme/game/actions/runs/501)). 2 commit(s), catalog v0.2.0b; the deploy follows.`,
     );
     expect(daily(issue(w, 1))).toBe("501");
     expect(issue(w, 1).title).toBe("Production: everything on main is live");
@@ -552,14 +552,14 @@ describe("the daily promotion", () => {
     const w = started();
     stagingRun(w, w.sha.c2 as string, 501);
     ok(run(w, "workflow_run"));
-    expect(tree(w, "production")).toBe(tree(w, w.sha.c2 as string));
+    expect(tree(w, "_production")).toBe(tree(w, w.sha.c2 as string));
     commit(w, "c4", { "app.txt": "four\n" });
     const r = ok(run(w, "workflow_run"));
     expect(r.output).not.toContain("promoted=true");
     expect(gh(w).prs).toHaveLength(1);
     stagingRun(w, w.sha.c4 as string, 502);
     expect(ok(run(w, "workflow_run")).output).toContain("promoted=true");
-    expect(tree(w, "production")).toBe(tree(w, w.sha.c4 as string));
+    expect(tree(w, "_production")).toBe(tree(w, w.sha.c4 as string));
     expect(daily(issue(w, 1))).toBe("502");
   });
 
@@ -596,7 +596,7 @@ describe("the daily promotion", () => {
     stagingRun(w, red, 501);
     expect(ok(run(w, "workflow_run")).output).not.toContain("promoted=true");
     expect(gh(w).prs).toEqual([]);
-    expect(lastReply(w)).toBe(`The super run on \`staging\` passed on \`${short(red, 12)}\` ([run](https://github.com/acme/game/actions/runs/501)), but it is not promoted: \`${short(red, 12)}\` has no passing push-to-main CI run.`);
+    expect(lastReply(w)).toBe(`The super run on \`_staging\` passed on \`${short(red, 12)}\` ([run](https://github.com/acme/game/actions/runs/501)), but it is not promoted: \`${short(red, 12)}\` has no passing push-to-main CI run.`);
   });
 
   it("merges an open /promote of the same commit, leaves one of a newer commit to its own run, and supersedes an older one", () => {
@@ -617,7 +617,7 @@ describe("the daily promotion", () => {
     expect(ok(run(older, "workflow_run")).output).toContain("promoted=true");
     expect(pr(older, 2)).toMatchObject({ state: "closed", merged: false });
     expect(pr(older, 3)).toMatchObject({ merged: true });
-    expect(tree(older, "production")).toBe(tree(older, older.sha.c3 as string));
+    expect(tree(older, "_production")).toBe(tree(older, older.sha.c3 as string));
   });
 
   it("takes over an issue from before it, whose state line has no `daily`", () => {
@@ -639,7 +639,7 @@ describe("/promote", () => {
     const { id, run: r } = say(w, "/promote");
     expect(ok(r).output).not.toContain("promoted=true");
     const p = pr(w, 2);
-    expect(p).toMatchObject({ base: "production", state: "open", merged: false, labels: [LABEL, "human"], assignees: PEOPLE });
+    expect(p).toMatchObject({ base: "_production", state: "open", merged: false, labels: [LABEL, "human"], assignees: PEOPLE });
     expect(p.head).toMatch(/^promote\/\d{8}-[0-9a-f]{7}$/u);
     expect(head(w, p)).toBe(w.sha.c3);
     expect(p.title).toBe(`Promote main to production: 2 commit(s) up to ${short(w.sha.c3)}`);
@@ -650,7 +650,7 @@ describe("/promote", () => {
     expect(p.body).toMatch(/~~~\n[0-9a-f]{7} change c3\n[0-9a-f]{7} change c2\n~~~/u);
     expect(production(w)).toBe(before);
     expect(reactions(w, id)).toEqual(["+1"]);
-    expect(lastReply(w)).toContain(`Opened #2 (@maintainer): 2 commit(s) of \`staging\` up to \`${short(w.sha.c3, 12)}\``);
+    expect(lastReply(w)).toContain(`Opened #2 (@maintainer): 2 commit(s) of \`_staging\` up to \`${short(w.sha.c3, 12)}\``);
     expect(issue(w, 1).title).toBe(`Production: the super run is testing ${short(w.sha.c3)} (#2)`);
     expect(issue(w, 1).body).toContain(`**Next for production:** #2 moves it up to \`${short(w.sha.c3, 12)}\` once the full test run (super) passes on it.`);
   });
@@ -671,7 +671,7 @@ describe("/promote", () => {
     let { id } = say(w, `/promote ${short(ahead, 12)}`);
     expect(reactions(w, id)).toEqual(["confused"]);
     expect(lastReply(w)).toBe(
-      `\`${short(ahead, 12)}\` is not on \`staging\` yet: promote-staging.yml moves it to main's newest green commit every two hours (Actions -> promote staging -> Run workflow does it now).`,
+      `\`${short(ahead, 12)}\` is not on \`_staging\` yet: promote-staging.yml moves it to main's newest green commit every two hours (Actions -> promote staging -> Run workflow does it now).`,
     );
 
     // On staging by hand: promote-staging.yml never moves it to a commit whose CI did not pass.
@@ -688,7 +688,7 @@ describe("/promote", () => {
     const side = git(w.work, "rev-parse", "HEAD");
     ({ id } = say(w, `/promote ${short(side, 12)}`));
     expect(reactions(w, id)).toEqual(["confused"]);
-    expect(lastReply(w)).toMatch(new RegExp(`^\`${short(side, 12)}\` is not on \`staging\` yet`, "u"));
+    expect(lastReply(w)).toMatch(new RegExp(`^\`${short(side, 12)}\` is not on \`_staging\` yet`, "u"));
 
     ({ id } = say(w, "/promote abcdef1234"));
     expect(reactions(w, id)).toEqual(["confused"]);
@@ -699,7 +699,7 @@ describe("/promote", () => {
   it("says there is nothing to merge when production has the commit already", () => {
     const w = started();
     ok(say(w, `/promote ${short(w.sha.c1, 12)}`).run);
-    expect(lastReply(w)).toBe(`Nothing to merge: \`production\` already has \`${short(w.sha.c1, 12)}\`.`);
+    expect(lastReply(w)).toBe(`Nothing to merge: \`_production\` already has \`${short(w.sha.c1, 12)}\`.`);
     expect(gh(w).prs).toEqual([]);
   });
 
@@ -713,7 +713,7 @@ describe("/promote", () => {
     commit(w, "c4", { "app.txt": "four\n" });
     ok(say(w, "/promote").run);
     expect(pr(w, 2)).toMatchObject({ state: "closed", merged: false });
-    expect(pr(w, 2).comments).toEqual([`Superseded by the promotion of \`${short(w.sha.c4, 12)}\`, a newer commit of staging.`]);
+    expect(pr(w, 2).comments).toEqual([`Superseded by the promotion of \`${short(w.sha.c4, 12)}\`, a newer commit of _staging.`]);
     expect(git(w.origin, "for-each-ref", `refs/heads/${old}`)).toBe("");
     expect(openPrs(w).map((p) => p.number)).toEqual([3]);
     expect(head(w, pr(w, 3))).toBe(w.sha.c4);
@@ -728,8 +728,8 @@ describe("the super run", () => {
     expect(r.output).toContain("promoted=true");
     expect(pr(w, 2)).toMatchObject({ state: "closed", merged: true });
     // Production holds main's files, through a merge commit, and the promote branch is gone.
-    expect(tree(w, "production")).toBe(tree(w, w.sha.c3 as string));
-    expect(git(w.origin, "rev-list", "--parents", "-n1", "production").split(" ")).toHaveLength(3);
+    expect(tree(w, "_production")).toBe(tree(w, w.sha.c3 as string));
+    expect(git(w.origin, "rev-list", "--parents", "-n1", "_production").split(" ")).toHaveLength(3);
     expect(git(w.origin, "for-each-ref", "refs/heads/promote")).toBe("");
     expect(lastReply(w)).toContain(`Merged to production in #2: the super run passed every job on \`${short(w.sha.c3, 12)}\` ([run](https://github.com/acme/game/actions/runs/77)). 2 commit(s), catalog v0.2.0b`);
     expect(issue(w, 1)).toMatchObject({ state: "open", title: "Production: everything on main is live" });
@@ -768,7 +768,7 @@ describe("the super run", () => {
 
     superRun(w, w.sha.c3 as string, "success", 3);
     expect(ok(run(w, "workflow_run")).output).toContain("promoted=true");
-    expect(tree(w, "production")).toBe(tree(w, w.sha.c3 as string));
+    expect(tree(w, "_production")).toBe(tree(w, w.sha.c3 as string));
   });
 
   it("counts only the run on the pull request's head commit", () => {
@@ -797,7 +797,7 @@ describe("/skip-super", () => {
     expect(lastReply(w)).toContain(
       `Merged #2 into production without the super run, at @jgoetzmann's word: the fuzz wave is red on a seed this does not touch (2 commit(s) up to \`${short(w.sha.c3, 12)}\``,
     );
-    expect(tree(w, "production")).toBe(tree(w, w.sha.c3 as string));
+    expect(tree(w, "_production")).toBe(tree(w, w.sha.c3 as string));
     expect(issue(w, 1).title).toBe("Production: everything on main is live");
   });
 
@@ -825,7 +825,7 @@ describe("/skip-super", () => {
     ok(say(w, "/skip-super sign-in is down").run);
     expect(gh(w).prs).toHaveLength(1);
     expect(pr(w, 2)).toMatchObject({ merged: true });
-    expect(tree(w, "production")).toBe(tree(w, w.sha.c3 as string));
+    expect(tree(w, "_production")).toBe(tree(w, w.sha.c3 as string));
   });
 
   it("is refused without a reason", () => {
@@ -838,14 +838,14 @@ describe("/skip-super", () => {
 
   it("is the only way to create production when there is none", () => {
     const w = started();
-    git(w.origin, "update-ref", "-d", "refs/heads/production");
+    git(w.origin, "update-ref", "-d", "refs/heads/_production");
     ok(say(w, "/promote").run);
-    expect(lastReply(w)).toContain("`production` does not exist yet");
+    expect(lastReply(w)).toContain("`_production` does not exist yet");
     expect(gh(w).prs).toEqual([]);
     expect(ok(say(w, "/skip-super first deploy").run).output).toContain("promoted=true");
     expect(production(w)).toBe(w.sha.c3);
     expect(gh(w).prs).toEqual([]);
-    expect(lastReply(w)).toContain("Created `production`");
+    expect(lastReply(w)).toContain("Created `_production`");
   });
 });
 
@@ -893,7 +893,7 @@ describe("the commands", () => {
       const { id } = say(w, command);
       expect(reactions(w, id)).toEqual(["confused"]);
       expect(lastReply(w)).toBe(
-        "There is nothing to hold, resume or delay: production follows the super run, promoting itself when the daily run on `staging` passes, or a `/promote` here once its own run passes. `/cancel` closes an open promotion pull request.",
+        "There is nothing to hold, resume or delay: production follows the super run, promoting itself when the daily run on `_staging` passes, or a `/promote` here once its own run passes. `/cancel` closes an open promotion pull request.",
       );
     }
     expect(gh(w).prs).toEqual([]);
@@ -930,7 +930,7 @@ describe("by hand", () => {
     const red = commit(w, "c4", { "app.txt": "four\n" }, false);
     const r = run(w, "workflow_dispatch", { INPUT_SHA: red });
     expect(r.status).not.toBe(0);
-    expect(r.text).toContain("is not on `staging` yet");
+    expect(r.text).toContain("is not on `_staging` yet");
   });
 
   it("is in the workflow, with redeploy for deploying production as it is", () => {
@@ -1040,7 +1040,7 @@ describe("a catalog bump", () => {
     expect(pr(w, 2).body).toContain("- Catalog: v0.2.1\n");
     superRun(w, bump, "success");
     ok(run(w, "workflow_run"));
-    expect(tree(w, "production")).toBe(tree(w, bump));
+    expect(tree(w, "_production")).toBe(tree(w, bump));
     expect(lastReply(w)).toContain(", catalog v0.2.1;");
     expect(readFileSync(SCRIPT, "utf8")).not.toContain("render.yaml");
   });
@@ -1065,11 +1065,11 @@ describe("what stops it", () => {
   it("refuses to open a promotion into a production that carries something main does not", () => {
     const w = started();
     git(w.work, "fetch", "-q", "origin");
-    git(w.work, "checkout", "-q", "-B", "hand", "origin/production");
+    git(w.work, "checkout", "-q", "-B", "hand", "origin/_production");
     writeFileSync(join(w.work, "hotfix.txt"), "by hand\n");
     git(w.work, "add", "-A");
     git(w.work, "commit", "-q", "-m", "a hand edit on production");
-    git(w.work, "push", "-q", "origin", "hand:production");
+    git(w.work, "push", "-q", "origin", "hand:_production");
     const r = say(w, "/promote").run;
     expect(r.status).not.toBe(0);
     expect(r.text).toContain("production has diverged");
@@ -1126,13 +1126,13 @@ describe("what stops it", () => {
     const red = commit(w, "c4", { ".github/workflows/new.yml": "on: push\n" }, false);
     const waited = ok(say(w, "/promote").run);
     expect(waited.text).toContain("::notice::Not promoting");
-    expect(lastReply(w)).toContain("Ask again once `staging` has main's change");
+    expect(lastReply(w)).toContain("Ask again once `_staging` has main's change");
     expect(gh(w).prs).toEqual([]);
     expect(git(w.origin, "for-each-ref", "refs/heads/promote")).toBe("");
 
     const manual = run(w, "workflow_dispatch");
     expect(manual.status).not.toBe(0);
-    expect(manual.text).toContain("Run this again once staging has main's change");
+    expect(manual.text).toContain("Run this again once _staging has main's change");
 
     edit(w, (s) => {
       s.green.push(red);
@@ -1196,9 +1196,9 @@ describe("the workflow", () => {
     expect(WORKFLOW).not.toMatch(/^ {2}schedule:/mu);
     expect(SUPER).toMatch(/^ {2}schedule:\n {4}- cron: /mu);
     expect(WORKFLOW).toContain(
-      "github.event.workflow_run.name == 'super' && github.event.workflow_run.event != 'pull_request'\n            && github.event.workflow_run.head_branch == 'staging' && github.event.workflow_run.conclusion == 'success'",
+      "github.event.workflow_run.name == 'super' && github.event.workflow_run.event != 'pull_request'\n            && github.event.workflow_run.head_branch == '_staging' && github.event.workflow_run.conclusion == 'success'",
     );
-    expect(WORKFLOW).toMatch(/^ {2}workflow_run:\n {4}workflows: \[CI, super\]\n {4}types: \[completed\]\n {4}branches: \[main, staging, "promote\/\*\*"\]\n/mu);
+    expect(WORKFLOW).toMatch(/^ {2}workflow_run:\n {4}workflows: \[CI, super\]\n {4}types: \[completed\]\n {4}branches: \[main, _staging, "promote\/\*\*"\]\n/mu);
     expect(WORKFLOW).toContain("github.event.workflow_run.name == 'super' && github.event.workflow_run.event == 'pull_request'");
     expect(WORKFLOW).toContain("startsWith(github.event.workflow_run.head_branch, 'promote/')");
   });
@@ -1232,19 +1232,19 @@ describe("the workflow", () => {
 
 describe("the super run as production's gate", () => {
   it("runs on every pull request into production", () => {
-    expect(SUPER).toMatch(/^ {2}pull_request:\n {4}branches: \[production\]\n/mu);
+    expect(SUPER).toMatch(/^ {2}pull_request:\n {4}branches: \[_production\]\n/mu);
   });
 
   it("hands staging's red run to the night bot as high priority, since production waits for a run on staging that passes", () => {
     expect(SUPER).toContain('--add-assignee "$BOT_LOGIN" --add-label "bot:build" \\\n              --add-label "priority:high" \\\n');
-    expect(SUPER).toContain("STAGING_BRANCH: staging");
+    expect(SUPER).toContain("STAGING_BRANCH: _staging");
     expect(SUPER).toContain('if [ "$candidate" = false ] && { [ "$REF" = "$STAGING_BRANCH" ] || [ "$REF" = "$DEFAULT_BRANCH" ]; }; then\n            gate=true');
     expect(SUPER).toContain('            if [ "$gate" = false ]; then\n              echo "a run on $REF: #$1 is not handed to @$BOT_LOGIN"');
   });
 
   it("runs the daily run on staging: its schedule starts it there, and every other job skips on the schedule (#3275)", () => {
     expect(SUPER).toMatch(/^ {2}daily:\n {4}name: start the daily run on staging\n {4}if: github\.event_name == 'schedule'\n/mu);
-    expect(SUPER).toContain("          gh workflow run super.yml --ref staging\n");
+    expect(SUPER).toContain("          gh workflow run super.yml --ref _staging\n");
     expect(SUPER).toMatch(/^ {4}permissions:\n {6}actions: write\n/mu);
     const jobs = SUPER.slice(SUPER.indexOf("\njobs:\n"));
     const blocks = jobs.split(/^ {2}(?=[a-z0-9-]+:$)/mu).slice(1);
@@ -1273,6 +1273,6 @@ describe("the super run as production's gate", () => {
     expect(title).toBe("CI: super run failed on a production candidate");
     expect(SUPER).toContain(`CANDIDATE_TITLE: "${title}"`);
     expect(SUPER).toContain('--add-label "priority:high" --add-label "difficulty:hard"');
-    expect(SUPER).toContain('if [ "$EVENT" = pull_request ] && [ "$BASE" = production ]; then');
+    expect(SUPER).toContain('if [ "$EVENT" = pull_request ] && [ "$BASE" = _production ]; then');
   });
 });

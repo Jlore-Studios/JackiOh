@@ -231,7 +231,7 @@ What "operating a server" costs us, and the mitigation each cost already has in 
 ### 4.2 The deployment config
 
 `wrangler.jsonc` deploys both halves §3's table describes, the client and the server, as one
-Cloudflare Worker per environment: `jackioh` at jackioh.com (production, from the `production`
+Cloudflare Worker per environment: `jackioh` at jackioh.com (production, from the `_production`
 branch) and `jackioh-staging` at staging.jackioh.com (staging, from main, behind Cloudflare Access).
 `docs/deploy-cloudflare.md` is the runbook and `apps/edge/README.md` the Worker's contract. Four
 things in it are not obvious:

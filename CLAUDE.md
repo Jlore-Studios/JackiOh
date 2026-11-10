@@ -170,7 +170,7 @@ whose header says what turns each on; #751), so a file a test newly reads from o
 script's map in the same pull request, and a path joins its skip list (a pull request of only those paths skips
 every job but `bot selftest`) only with proof that nothing in `crates/`, `apps/`, `e2e/` or `spec/` reads it. A
 push to `main` runs everything. Everything slow or statistical runs daily in `super.yml`, whose header lists it,
-and on every pull request into `production` (`docs/deploy-cloudflare.md` §2.1). A test moves there
+and on every pull request into `_production` (`docs/deploy-cloudflare.md` §2.1). A test moves there
 (`#[ignore = "daily: <why>"]` in Rust, `apps/web/src/test/daily.ts` in the web) only when a cheaper test keeps
 its rule per pull request, which its `daily:` reason names. Each workflow's header says what it does, `ci.yml`'s
 the five-minute budget of every job.

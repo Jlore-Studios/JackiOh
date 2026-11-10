@@ -1,5 +1,5 @@
 // scripts/promote-staging.sh, the logic of .github/workflows/promote-staging.yml (#3275): every two
-// hours `staging` fast-forwards to main's newest commit whose push-to-main CI run passed, never
+// hours `_staging` fast-forwards to main's newest commit whose push-to-main CI run passed, never
 // backwards, and deploy-staging.yml deploys each push of it. Each case runs the real script in a
 // fresh clone of a throwaway "origin", with a stand-in for `gh` that answers the CI runs and the
 // repository's activity (when staging was last pushed) from a JSON file.
@@ -47,9 +47,9 @@ if (pos[0] === "run" && pos[1] === "list" && flag["--workflow"] === "ci.yml") {
   // Newest run first, as GitHub lists them.
   const runs = [...st.green].reverse().filter((sha) => flag["--commit"] === undefined || sha === flag["--commit"]);
   out(runs.map((headSha) => ({ headSha })));
-} else if (pos[0] === "api" && /^repos\/acme\/game\/activity\?ref=refs\/heads\/staging&per_page=1$/.test(pos[1])) {
+} else if (pos[0] === "api" && /^repos\/acme\/game\/activity\?ref=refs\/heads\/_staging&per_page=1$/.test(pos[1])) {
   if (st.activityFails) { process.stderr.write("HTTP 403\n"); process.exit(1); }
-  out(st.pushedAt ? [{ timestamp: st.pushedAt, activity_type: "push", ref: "refs/heads/staging" }] : []);
+  out(st.pushedAt ? [{ timestamp: st.pushedAt, activity_type: "push", ref: "refs/heads/_staging" }] : []);
 } else { process.stderr.write("fake gh: unsupported " + argv.join(" ") + "\n"); process.exit(2); }
 `;
 
@@ -69,7 +69,7 @@ const edit = (w: World, change: (state: Gh) => void): void => {
   change(state);
   writeFileSync(stateFile(w), JSON.stringify(state));
 };
-const staging = (w: World): string => git(w.origin, "rev-parse", "refs/heads/staging");
+const staging = (w: World): string => git(w.origin, "rev-parse", "refs/heads/_staging");
 /** When staging was last pushed, `minutes` before NOW. */
 const pushedAgo = (w: World, minutes: number): void =>
   edit(w, (s) => {
@@ -102,7 +102,7 @@ function world(): World {
   git(root, "init", "-q", "-b", "main", w.work);
   git(w.work, "remote", "add", "origin", w.origin);
   commit(w, "c1");
-  git(w.work, "push", "-q", "origin", `${w.sha.c1}:refs/heads/staging`);
+  git(w.work, "push", "-q", "origin", `${w.sha.c1}:refs/heads/_staging`);
   commit(w, "c2");
   commit(w, "c3");
   pushedAgo(w, 180);
@@ -146,9 +146,9 @@ describe("the move", () => {
     const r = ok(run(w, "schedule"));
     expect(staging(w)).toBe(w.sha.c3);
     expect(r.output).toBe(`moved=true\nsha=${w.sha.c3}\n`);
-    expect(r.text).toContain(`Moved staging from ${w.sha.c1?.slice(0, 12)} to ${w.sha.c3?.slice(0, 12)} (2 commit(s))`);
+    expect(r.text).toContain(`Moved _staging from ${w.sha.c1?.slice(0, 12)} to ${w.sha.c3?.slice(0, 12)} (2 commit(s))`);
     // A fast-forward: the old head is in the new one's history.
-    expect(git(w.origin, "merge-base", "--is-ancestor", w.sha.c1 as string, "refs/heads/staging")).toBe("");
+    expect(git(w.origin, "merge-base", "--is-ancestor", w.sha.c1 as string, "refs/heads/_staging")).toBe("");
   });
 
   it("skips main's newer commits whose CI has not passed", () => {
@@ -164,7 +164,7 @@ describe("the move", () => {
     for (const event of ["schedule", "workflow_run"]) {
       const r = ok(run(w, event));
       expect(r.output).toBe("");
-      expect(r.text).toContain("staging moved 119 minute(s) ago; it moves again once it is 120 old");
+      expect(r.text).toContain("_staging moved 119 minute(s) ago; it moves again once it is 120 old");
       expect(staging(w)).toBe(w.sha.c1);
     }
     pushedAgo(w, 120);
@@ -185,7 +185,7 @@ describe("the move", () => {
       s.activityFails = true;
     });
     const r = ok(run(w, "schedule"));
-    expect(r.text).toContain("::notice::When staging was last pushed could not be read; moving it now.");
+    expect(r.text).toContain("::notice::When _staging was last pushed could not be read; moving it now.");
     expect(staging(w)).toBe(w.sha.c3);
   });
 
@@ -245,7 +245,7 @@ describe("what it refuses", () => {
     writeFileSync(join(w.work, "hand.txt"), "x\n");
     git(w.work, "add", "-A");
     git(w.work, "commit", "-q", "-m", "by hand");
-    git(w.work, "push", "-q", "origin", "hand:staging");
+    git(w.work, "push", "-q", "origin", "hand:_staging");
     const before = staging(w);
     const r = run(w, "schedule");
     expect(r.status).not.toBe(0);
@@ -255,10 +255,10 @@ describe("what it refuses", () => {
 
   it("a repository with no staging branch, saying how to make one", () => {
     const w = world();
-    git(w.origin, "update-ref", "-d", "refs/heads/staging");
+    git(w.origin, "update-ref", "-d", "refs/heads/_staging");
     const r = run(w, "schedule");
     expect(r.status).not.toBe(0);
-    expect(r.text).toContain("The staging branch does not exist.");
+    expect(r.text).toContain("The _staging branch does not exist.");
   });
 
   it("an event it does not know", () => {
@@ -290,8 +290,8 @@ describe("the workflows", () => {
   });
 
   it("deploys staging on each push of the staging branch, not on main's CI", () => {
-    expect(DEPLOY).toMatch(/^on:\n {2}push:\n {4}branches: \[staging\]\n {2}workflow_dispatch:\n/mu);
+    expect(DEPLOY).toMatch(/^on:\n {2}push:\n {4}branches: \[_staging\]\n {2}workflow_dispatch:\n/mu);
     expect(DEPLOY).not.toContain("workflow_run");
-    expect(DEPLOY).toContain('compare/$sha...staging');
+    expect(DEPLOY).toContain('compare/$sha..._staging');
   });
 });

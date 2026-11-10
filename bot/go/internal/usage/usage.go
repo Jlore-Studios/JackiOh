@@ -1,5 +1,5 @@
 // Package usage is the usage history (#2749): every subscription's usage over time, kept as CSV
-// files on the unprotected `bot-usage` branch (the identity's `usage_branch`), so any spreadsheet
+// files on the unprotected `_bot-usage` branch (the identity's `usage_branch`), so any spreadsheet
 // opens them, for tuning the limits in `.harness/providers.json` from evidence.
 //
 // Six kinds of row, each a Go type with its header (`Reading`, `Tick`, `PoolTick`, `Session`,
@@ -20,7 +20,7 @@
 //     handed it on, a tick row per subscription when anything in it changed (and at least hourly)
 //     and a pool row; every 30 minutes it writes them and the spool's rows to its clone of the
 //     branch, derives the sessions and weeks that closed (`Derive`), and pushes.
-//   - The first time it finds the branch without `usage/backfill.json`, it reads `bot-journal`
+//   - The first time it finds the branch without `usage/backfill.json`, it reads `_bot-journal`
 //     into runs and cut-off readings since `BackfillSince` (`Backfill`).
 //
 // The history is a record, never a gate: a failed read or write is logged, and the loop, the run
