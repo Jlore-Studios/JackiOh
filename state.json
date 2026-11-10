@@ -19806,6 +19806,8 @@
     "3623": {
       "action": "review",
       "asks": [],
+      "audit_tier": "medium",
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -19822,16 +19824,25 @@
       },
       "interruptions": 0,
       "issue": 3518,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "Four of nine audit areas are untouched while the PR closes the issue.",
+          "evidence": "PR body table rows read 'web-animations, audio, cards, effects | not measured | untouched | not audited'; diff touches 0 files under fx/, cards/, audio/, animations (grep count 0), carries no killed/survived/excluded numbers and no before/after scores for any web area, and says 'Closes #3518'. Acceptance requires every survivor sorted, the table with per-layer scores, and each layer's score rising; only edge's does. No pending-choice component coverage either: pendingFor is defined but no new/changed test renders one (only pre-existing suites reference it).",
+          "severity": "blocking",
+          "where": "task"
+        }
+      ],
       "live": "reviewing",
       "pending_request": false,
       "provider": "muse",
-      "queued_at": "2026-11-10T09:15:46Z",
+      "queued_at": "2026-11-10T10:13:19Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "42794922193",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-11-10T09:56:35Z",
       "stop_requested": false,
       "taken_asks": [],
