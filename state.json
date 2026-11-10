@@ -18581,8 +18581,10 @@
     "what": "review #3592 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T02:10:19Z",
+    "at": "2026-11-10T02:18:25Z",
     "notes": [
+      "#3529: green and waiting for a person to merge it, so `muse` gives up its claim on it",
+      "delivered review #3592 on muse (run 42739998132): approved",
       "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -19289,7 +19291,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T02:10:19Z",
+  "loop_tick": "2026-11-10T02:18:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
