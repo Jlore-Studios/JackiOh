@@ -16791,11 +16791,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-09T22:31:41Z",
+        "at": "2026-11-10T00:03:03Z",
         "difficulty": "hard",
         "provider": "claude-4",
-        "tier": "medium",
-        "why": "Rule line 1: it rewrites the engine's resumable hook sequences (crates/engine/src/combat.rs), the resolution loop's pause/resume path, and when in doubt the rule says hard."
+        "tier": "strong",
+        "why": "rule 1: it rewrites how the engine's resolution loop runs and resumes the attack hooks in crates/engine/src/combat.rs (R113's paused work), and the bot already rated it hard"
       },
       "failures": 0,
       "forced": false,
