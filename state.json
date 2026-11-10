@@ -11974,6 +11974,10 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-10T04:25:15Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-8` (claude, opus) rejected it: `apps/web/src/cards/FullScreenArt.tsx:58`: The last commit (164782542c, made when the builder ran out of quota mid-call, after round 1's gates) adds `fullscreenC"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1
     },
