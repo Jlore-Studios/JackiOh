@@ -34,7 +34,7 @@ owners' call of 2026-11-05):
 | Branch | Site | Moves | Gate |
 | --- | --- | --- | --- |
 | `main` | none | every merge, through the merge queue | the five required checks |
-| `staging` | staging.jackioh.com | every two hours, by fast-forward to a snapshot of `main` (`promote-staging.yml`) | that commit's push-to-main CI run passed |
+| `staging` | staging.jackioh.com | every two hours, by fast-forward to a snapshot of `main` (`promote-staging.yml`); while the super run on it is red, only to test the night bot's fix (section 2.2, the freeze) | that commit's push-to-main CI run passed |
 | `production` | jackioh.com | once a day, to the commit of `staging` the daily super run tested (`promote-production.yml`) | the super run passed every job on that commit |
 
 `staging` is a pointer to "the commit of main that is live on staging.jackioh.com", and it only ever
@@ -148,6 +148,13 @@ staging -> Run workflow moves it now (to its `sha`, or main's newest green commi
 
 ### 2.2 The rules the promotion enforces
 
+- While the newest finished super run on `staging` failed, `staging` holds still (the freeze, the
+  owners' call of 2026-11-10): the schedule and main's green CI runs leave it be until the night bot's
+  fix closes the run's issue, "CI: daily super run failed"; then it takes main's newest green commit
+  pushed after the close, at once, and starts the super run on it. A run that passes ends the freeze
+  and promotes production; a run still red opens a new issue. A red run with no issue (its `report`
+  never ran) gets one from `scripts/promote-staging.sh`, and the daily run never tests a commit a
+  finished run already tested. A manual run of *promote staging* moves it as ever.
 - `staging` only moves forward along `main`, to a commit whose push-to-main CI run passed: a
   candidate it already has is a no-op, and a `staging` that holds anything `main` does not fails the
   run. Its ruleset (`infra/github.tf`) refuses deletion and force pushes.
