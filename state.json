@@ -18362,9 +18362,10 @@
     "what": "build #3580 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T00:38:38Z",
+    "at": "2026-11-10T00:46:38Z",
     "notes": [
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
+      "delivered revise #3493 on muse (run 42725508439): approved",
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19070,7 +19071,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T00:38:38Z",
+  "loop_tick": "2026-11-10T00:46:38Z",
   "machine_disk": {
     "issue": null,
     "reading": {
