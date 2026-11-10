@@ -17744,6 +17744,8 @@
       }
     },
     "3644": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-10T10:24:27Z",
@@ -17757,8 +17759,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: dungeon HP refills after every fight, and each win adds 5 max HP\"} -->\n- ## What changed\n- Every won fight of any kind adds `RUN_WIN_MAX_HP` (5) to a new `RunState.max_hp_bonus` and refills HP to the new max, so HP outside a fight always equals max HP and every fight starts full. A lost fight still drops HP to 0 and ends the run. Events trade max HP (`RunEventOption.hp` renamed to `max_h\u2026\n- ## In-fight healing finding (for the PR notes)\n- A hero starting above `HERO_HEALTH` can heal past its starting health inside a fight: `heal_hero` is uncapped for heroes (`crates/engine/src/damage.rs`: \"units are capped at max health, heroes are not\"), and `validate_setup` requires only `hero_health >= 1` with no upper cap. The engine is unchange\u2026\n- ## How tested (commands I ran, what they printed)\n- - `cargo test -p jackioh-run` \u2014 51 passed, 0 failed (new `r3584000_*`/`r3584001_*` tests, whole-run walks on both contents).\n- - `cargo test -p jackioh-run --features ts` \u2014 ok; regenerated `RunAction/RunConstants/RunEventOption/RunState.ts` diff committed.\n- - `cargo test -p jackioh-tools --bin jackioh run_sim` \u2014 11 passed, 1 daily-ignored.\n- - `cargo clippy -p jackioh-run -p jackioh-tools --all-targets -- -D warnings` and `-p jackioh-wasm-core` \u2014 clean; `cargo fmt --check` (whole tree) \u2014 clean.\n- - `cargo jackioh spec check` \u2014 \"1891 rulings, 4902 proofs, 61421 citations in 3989 files, 25125 links: ok\".\n- - `cargo jackioh run-sim --seeds 1` \u2014 exit 0, no faults, new labels render (seed 0 lost its first fight at full skill: data, not a fault).\n- - `pnpm --dir apps/web test src/dungeon/map/RunScreen.test.tsx` \u2014 35 passed; `pnpm --dir apps/web typecheck` and eslint on touched files \u2014 clean.\n- ## Decisions the issue did not settle (with rejected alternatives)\n- - Damage accounting: `damage_taken` counts `max_before \u2212 final`, floored at 0, so an overhealed report counts none; the refill and the campfire rise are not `healed` (rejected: healing the rise, which would pay score for the refill, and clamping overheal to the max).\n- - Event floor is 1 with no new constant (rejected: a separate floor constant); rename has no serde alias since event content never persists in `RunFile` (kept runs are #3496's).\n- - `run-sim` counts won fights as `hp_before \u2212 final_hp` and keeps `hp_before \u2212 hp_after` for losses (rejected: using the post-refill HP, which would print negative HP lost); its campfire policy always rests first since HP is always full now.\n- - Departure from the plan: the campfire test asserts from full HP, not \"from HP 10 \u2192 hp == max\" \u2014 that state is unreachable (HP always equals max outside a fight), and `with_max_hp` from 10 would give 15, not max.\n- ## Reviewer, look twice\n- - `fight_won` accounts damage against `max_before` rather than `state.hp` (equal under the invariant, but explicit).\n- - A positive max-HP event option's HP rise counts as `healed` via the kept delta bookkeeping.\n- - \u00a715.7's pay order gained a \"First, health\" step and renumbered the rest, matching code order.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3584 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3584/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3584,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T12:03:54Z",
         "from_run": "42798885895",
         "gates": [
           {
@@ -17817,8 +17822,15 @@
         "source": "build",
         "until": "2026-11-10T12:32:18Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-10T12:02:18Z",
+      "run_id": "pending:11804983-1794312186",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-10T12:03:54Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -17832,9 +17844,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T11:42:03Z",
+    "at": "2026-11-10T12:03:54Z",
     "url": "",
-    "what": "plan #3517 on claude-3"
+    "what": "review #3644 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T11:36:06Z",
