@@ -78,13 +78,15 @@ function mean(values: readonly number[]): number {
   return values.reduce((a, b) => a + b, 0) / Math.max(1, values.length);
 }
 
-/** A sample's mean frame time (its first delta, which runs from the sample's start, left out) and the line the log carries. */
-function summary(label: string, deltas: readonly number[]): { meanMs: number; worstMs: number; line: string } {
+/** A sample of this many frames or fewer is a starved window, too few to read a mean from. */
+const MIN_FRAMES = 10;
+
+/** A sample's mean frame time (its first delta, which runs from the sample's start, left out), its frame count and the line the log carries. */
+function summary(label: string, deltas: readonly number[]): { meanMs: number; worstMs: number; frames: number; line: string } {
   const frames = deltas.slice(1);
-  expect(frames.length, `${label}: frames sampled`).to.be.greaterThan(10);
   const sorted = [...frames].sort((a, b) => a - b);
   const dist = `min=${sorted[0]?.toFixed(0)} p50=${sorted[Math.floor(sorted.length / 2)]?.toFixed(0)} p90=${sorted[Math.floor(sorted.length * 0.9)]?.toFixed(0)} max=${sorted[sorted.length - 1]?.toFixed(0)}`;
-  return { meanMs: mean(frames), worstMs: sorted[sorted.length - 1] ?? 0, line: `${label}: mean frame ${mean(frames).toFixed(1)}ms over ${String(frames.length)} frames [${dist}]` };
+  return { meanMs: mean(frames), worstMs: sorted[sorted.length - 1] ?? 0, frames: frames.length, line: `${label}: mean frame ${mean(frames).toFixed(1)}ms over ${String(frames.length)} frames [${dist}]` };
 }
 
 /**
@@ -94,17 +96,23 @@ function summary(label: string, deltas: readonly number[]): { meanMs: number; wo
  * rerenders the plain board, since the runner only plays events it has not seen. A frame time is a
  * measurement a loaded runner inflates and noise only ever adds time, so the lowest of a few
  * windows is the moment's own cost; a moment that really breaks the budget breaks it in every
- * window. Each sample is logged, as the report cites them.
+ * window. A starved window, MIN_FRAMES or fewer (a moment's first play pays its one-time costs, an
+ * image's decode among them), is one more such window: it is played again, and the last play must
+ * hold every bound. Each sample is logged, as the report cites them.
  */
 function holdsLivingBudget(label: string, scene: (attempt: number) => Cypress.Chainable<number[]>, attempt = 1): void {
   scene(attempt).then((deltas) => {
-    const { meanMs, worstMs, line } = summary(label, deltas);
+    const { meanMs, worstMs, frames, line } = summary(label, deltas);
     const full = `${line} worst ${worstMs.toFixed(0)}ms`;
     cy.log(`${full} (attempt ${String(attempt)})`);
     cy.then(() => {
       Cypress.log({ name: "frame times", message: `${full} (attempt ${String(attempt)})` });
     });
-    if ((meanMs <= FX_PHONE_FRAME_BUDGET_MS && worstMs <= FX_PHONE_FRAME_WORST_MS) || attempt >= FRAME_ATTEMPTS) {
+    // The run's output carries every sample too (cy.log prints nothing in run mode), so a CI log reads them.
+    cy.task("layout:report", { spec: "fx-phone-living-game", sample: full, attempt }, { log: false });
+    const holds = frames > MIN_FRAMES && meanMs <= FX_PHONE_FRAME_BUDGET_MS && worstMs <= FX_PHONE_FRAME_WORST_MS;
+    if (holds || attempt >= FRAME_ATTEMPTS) {
+      expect(frames, `${label}: frames sampled`).to.be.greaterThan(MIN_FRAMES);
       expect(meanMs, line).to.be.lessThanOrEqual(FX_PHONE_FRAME_BUDGET_MS);
       expect(worstMs, `${label}: worst single frame`).to.be.lessThanOrEqual(FX_PHONE_FRAME_WORST_MS);
       return;
