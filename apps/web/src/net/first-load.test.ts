@@ -83,6 +83,16 @@ describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
     }
   });
 
+  it("#3499 no built script, a worker's included, holds patch-meta.ts's disk reader", () => {
+    // A bundle that lacks `patchMeta()` (a worker's has its own plugin list) takes the real file,
+    // whose `node:fs` is an empty stub in a browser: the practice worker would die on load.
+    const assets = join(BUILT, "assets");
+    const scripts = readdirSync(assets).filter((name) => name.endsWith(".js"));
+    expect(scripts.length).toBeGreaterThan(0);
+    const readers = scripts.filter((name) => readFileSync(join(assets, name), "utf8").includes("holds an entry with no version"));
+    expect(readers).toEqual([]);
+  });
+
   it("#3499 the entry chunk and its preloads fit the gzip budget", () => {
     const files = entryAndPreloads().map((file) => readFileSync(file));
     expect(gzipSync(Buffer.concat(files)).length).toBeLessThanOrEqual(FIRST_LOAD_GZIP_BUDGET_BYTES);

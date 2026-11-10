@@ -51,8 +51,10 @@ export default defineConfig({
   optimizeDeps: { exclude: ["./src/wasm/pkg/jackioh_wasm.js"] },
   // The practice worker (`src/practice/practice.worker.ts`) is a module worker; "es" keeps its
   // chunk an ES module, so a dynamic import inside it cannot break the build the way it would an
-  // IIFE worker bundle.
-  worker: { format: "es" },
+  // IIFE worker bundle. A worker's bundle runs its own plugin list, none of the page's, and the
+  // practice worker reaches `wire/cards.ts`, so it needs `patchMeta()` too: without it
+  // `#jackioh-patch-meta` resolves to the real file, whose `node:fs` is an empty stub in a browser.
+  worker: { format: "es", plugins: () => [patchMeta()] },
   build: {
     // Rollup warns about nothing else, so keep warnings fatal.
     rollupOptions: { onwarn: (warning, warn) => warn(warning) },
