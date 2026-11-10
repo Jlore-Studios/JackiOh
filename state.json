@@ -19876,7 +19876,16 @@
       "feedback_since": "2026-11-10T04:26:42Z",
       "issue": 3388,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-6",
+        "rejections": [],
+        "reviews": [],
+        "sha": "9917058ec8b443761ffdcab8c0daa22c0aa5d162",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
