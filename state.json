@@ -17430,7 +17430,7 @@
       }
     },
     "3531": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "medium",
       "cross_rounds": 1,
@@ -17450,17 +17450,17 @@
           "where": "apps/web/src/dungeon/store.ts:348"
         }
       ],
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-11-10T01:25:42Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "42734262190",
+      "run_id": "pending:b95eefec-1794274162",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "cross-review",
-      "started_at": "2026-11-10T01:13:41Z",
+      "started_at": "2026-11-10T01:29:53Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18531,9 +18531,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T01:29:10Z",
+    "at": "2026-11-10T01:29:53Z",
     "url": "",
-    "what": "review #3590 on claude-4"
+    "what": "revise #3531 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-10T01:07:49Z",
