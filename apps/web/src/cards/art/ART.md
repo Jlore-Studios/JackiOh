@@ -164,6 +164,23 @@ A card on the board moves its art too, and answers the player (`artLive.ts`, `ar
   level's), a glow in its card's theme colour when buffed (`--art-glow`) and frost when frozen
   (`ArtWear.tsx`). They read the view's numbers and keywords only, and are still drawings: reduced motion keeps them.
 
+## Dioramas (R3350000)
+
+Every Mythic card and every token printed Mythic has a diorama (`dioramas/`): its still picture recomposed as a small model
+of five to eight depth slices, composed for that card. `dioramas/pieces.ts` cuts the picture its painter draws for its id
+into keyed pieces: a scene card's sky, glow, Radiant rays, each shape (`scene:<layer>:<part>:<n>`, the painter's own subject
+`own:<n>`), emblem and vignette; a Stinkyscape painter's sky elements (`sky:<n>`), rays (`rays:<n>`), subject elements
+(`subject:<n>`, in the subject's placing transform, `stinkyParts`) and vignette. The pieces joined are the picture byte for
+byte. A card's file, `dioramas/<set>/<name>.ts`, lists its slices back to front: the farthest (`rest`) holds what no other
+picks, the sky among it, and each other picks keys, prefixes (`scene:mid:gate:`) or runs (`subject:3-7`), stands in a plane
+at a depth, may bend about one axis (`DIORAMA_BEND_MAX_DEG`) and may loop by one of `ART_MOVES` (staggered piece by piece on
+a small slice). A slice draws the picture's head and its own pieces, so no colour, text or byte the picture lacks; given
+the card's moving art (an animated level, a moving board face) it also moves them as the moving picture does, each piece
+knowing its role, under the picture's own style, the nearest slice drawing the particles;
+`dioramas.test.ts` holds every one to that, to `ART_DETAIL_MAX_BYTES` and to loops of transform and opacity inside the
+reduced-motion gate, and no two cards' loops are alike. A new Mythic gets a file in its set's directory and a line in that
+directory's `index.ts`; until then the test fails, since `PENDING` is empty and only shrinks.
+
 ## Pictures (R2940001)
 
 A look with a picture of its own, Alt art's today, draws the card's own painter re-seeded:

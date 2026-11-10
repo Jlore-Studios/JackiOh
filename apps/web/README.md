@@ -302,6 +302,18 @@ on (`deviceTilt`, a device-only card setting; iOS asks leave once, inside the sw
 none while the animation queue drains (`useTiltHold`, `game/Game.tsx`). The face's rotation is the one 3D thing: `.cf` is
 an isolated group, which draws what it holds flat, so the planes move by `translate`. Presentation only (rule 7).
 
+**Dioramas** (R3350000): a Mythic's normal picture, and a token printed Mythic's, draws a diorama of its own in place of the
+planes, one file per card in `cards/art/dioramas/<set>/` (`DIORAMA`: five to eight slices, back to front, each a pick of
+the painter's still picture's pieces, `dioramas/pieces.ts`, at a depth and in a plane, some bent, two or more on a loop
+written for the card). Each slice is a picture of its own (`dioramaSliceUri`, from the card's id and face alone); the face
+draws the farthest in its window and the rest as `.cf-plane[data-slice]`s over it (`data-diorama`), their loops running
+only in a motion slot (`data-diorama-motion`); at an animated level, and on the board, each slice also moves its pieces as
+the card's moving picture does (its roles' layers, the particles in the nearest), so the level keeps its motion. It turns up to `DIORAMA_TURN_MAX_DEG` in inspect, the hover preview and the
+Collection (`CardFace`'s `turn`), `CARD_TILT_MAX_DEG` in hand; a board Mythic stacks every slice in its window while it
+moves (`CardArt`'s `diorama` "all"); the full-screen view draws the slices and the takeover flies through them
+(`fx/takeover.ts`, `fx-takeover-fly`). Alt art, a restyle and every flat face draw none. `dioramas.test.ts` lists any
+Mythic without one (`PENDING`, empty) and holds every slice to its picture's colours, no text and `ART_DETAIL_MAX_BYTES`.
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and

@@ -16,6 +16,7 @@ import { CATALOG } from "@jackioh/cards";
 
 import { CardDefsProvider } from "./refContext.tsx";
 import { CardArt, hasArtPlanes } from "./art/CardArt.tsx";
+import { dioramaOf } from "./art/dioramas/index.ts";
 import { artMotionFor, type ArtMotion } from "./art/motion.ts";
 import { ART_PLANES, PLANE_OF_ROLE, partDraws, partHolds, type ArtPart, type ArtPlane } from "./art/pictures.ts";
 import { trainingGroundsSvg } from "./art/traininggrounds.ts";
@@ -161,6 +162,10 @@ describe("R3344000 the cards under test", () => {
 
 describe("R3344000 an Epic or rarer face draws its picture as depth planes", () => {
   it("R3344000 an Epic or rarer face draws far, middle, near and nearest planes", () => {
+    // R3350000: a Mythic's normal picture draws its diorama in place of the planes (diorama.test.tsx); in Alt art it draws
+    // the planes as every other face with depth does.
+    expect(offeredOn(VERSION_ALT_ART_ID, MYTHIC)).toBe(true);
+    writeCardLevel(MYTHIC, VERSION_ALT_ART_ID);
     for (const id of [EPIC, LEGENDARY, MYTHIC]) {
       for (const radiant of [false, true]) {
         const where = `${id} ${radiant ? "Radiant" : "base"}`;
@@ -725,8 +730,10 @@ describe("R3344000 the depth stylesheet's perspective, planes and spring", () =>
     // R3343001: a Mythic's Default prints full art while the Full-art cards setting is on, its normal face otherwise.
     writeCardSettings({ ...CARD_SETTINGS_DEFAULTS, fullArt: false });
     const cf = faceIn(MYTHIC);
-    // A plane's picture is a `cf-art--plane`, never a `cf-art--full`, which marks a face printing full art.
-    expect(cf.querySelectorAll(".cf-art--plane")).toHaveLength(3);
+    // A plane's picture is a `cf-art--plane`, never a `cf-art--full`, which marks a face printing full art. R3350000: the
+    // Mythic's are its diorama's slices over its farthest.
+    expect(cf.getAttribute("data-diorama")).toBe("true");
+    expect(cf.querySelectorAll(".cf-art--plane")).toHaveLength((dioramaOf(MYTHIC)?.slices.length ?? 0) - 1);
     expect(cf.querySelector(".cf-art--full")).toBeNull();
     expect(cf.hasAttribute("data-full-art")).toBe(false);
     const art = readFileSync(join(HERE, "art", "art.css"), "utf8");

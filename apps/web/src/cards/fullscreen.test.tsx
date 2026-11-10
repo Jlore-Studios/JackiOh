@@ -15,18 +15,27 @@ import { WearerProvider } from "../game/wearer.ts";
 import { card as cardView, unit as unitView } from "../test/fixtures.ts";
 import { LONG_PRESS_MS } from "./inspect/constants.ts";
 import { ART_PLANES } from "./art/index.ts";
-import { FULLSCREEN_HOLD_MS, FULLSCREEN_SLOP_PX } from "./constants.ts";
+import { dioramaOf, dioramaSliceBackground } from "./art/dioramas/index.ts";
+import {
+  CARD_TILT_MAX_DEG,
+  DIORAMA_TURN_MAX_DEG,
+  FULLSCREEN_HOLD_MS,
+  FULLSCREEN_SLICE_SHIFT_FAR_PX,
+  FULLSCREEN_SLICE_SHIFT_NEAR_PX,
+  FULLSCREEN_SLOP_PX,
+} from "./constants.ts";
 import {
   canOpenFullScreen,
   closeFullScreenArt,
   useFullScreenTrigger,
 } from "./fullscreen.ts";
-import { FullScreenArt, FullScreenArtHost } from "./FullScreenArt.tsx";
+import { FullScreenArt, FullScreenArtHost, sliceShiftPx } from "./FullScreenArt.tsx";
 import { InspectSheet } from "./inspect/InspectSheet.tsx";
 import { faceModel } from "./model.ts";
 import { FullArtShown } from "./fullArt.ts";
 import { VERSION_ALT_FULL_ART_ID } from "./versions.ts";
 import { isHeld, resetTiltForTests, useTiltHold } from "./tilt.ts";
+import { setReducedMotion } from "../test/setup.ts";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -57,12 +66,13 @@ describe("R3345000 canOpenFullScreen", () => {
 describe("R3345000 FullScreenArt rendering and depth planes", () => {
   it("R3345000 renders 4 depth planes, close button, and aria modal dialog", () => {
     const onClose = vi.fn();
-    render(<FullScreenArt defId="core-100" name="The Ceaseless Void" onClose={onClose} />);
+    // R3350000: a Mythic with a diorama draws its slices instead (below); a card with none draws the four planes.
+    render(<FullScreenArt defId="core-052" name="Silly Silas" onClose={onClose} />);
 
     const dialog = screen.getByTestId("fullscreen-art");
     expect(dialog).toHaveAttribute("role", "dialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
-    expect(dialog).toHaveAttribute("aria-label", "The Ceaseless Void");
+    expect(dialog).toHaveAttribute("aria-label", "Silly Silas");
 
     const planes = dialog.querySelectorAll(".fullscreen-art-plane");
     expect(planes.length).toBe(4);
@@ -167,9 +177,63 @@ describe("R3345000 FullScreenArt rendering and depth planes", () => {
     expect(dialog.style.getPropertyValue("--cf-glare-x")).toContain("%");
     expect(dialog.style.getPropertyValue("--cf-glare-y")).toContain("%");
   });
+
+  it("R3350000 the full-screen view draws a diorama's slices by depth and turns to DIORAMA_TURN_MAX_DEG", () => {
+    const diorama = dioramaOf("core-100");
+    if (diorama === null) throw new Error("Ceaseless Void has no diorama");
+    render(<FullScreenArt defId="core-100" radiant onClose={vi.fn()} />);
+    const dialog = screen.getByTestId("fullscreen-art");
+    expect(dialog.querySelector(".fullscreen-art-planes")?.getAttribute("data-diorama")).toBe("true");
+    const slices = [...dialog.querySelectorAll<HTMLElement>(".fullscreen-art-plane")];
+    expect(slices.map((slice) => slice.getAttribute("data-slice"))).toEqual(diorama.slices.map((_, index) => String(index)));
+    expect(slices.map((slice) => slice.getAttribute("data-plane"))).toEqual(diorama.slices.map((slice) => slice.plane));
+    diorama.slices.forEach((slice, index) => {
+      const shown = slices[index];
+      // Its own slice's picture, moving by its loop (the viewer's motion settings allow it here), on the face asked for.
+      expect(shown?.style.backgroundImage).toBe(dioramaSliceBackground("core-100", true, index, true));
+      // The farthest shifts against the tilt, the nearest with it, by depth.
+      expect(shown?.style.getPropertyValue("--fs-slice-shift")).toBe(`${sliceShiftPx(slice.depth)}px`);
+      expect(shown?.getAttribute("data-bend") ?? undefined).toBe(slice.bend?.axis);
+      expect(shown?.style.getPropertyValue("--cf-slice-bend")).toBe(slice.bend === undefined ? "" : `${slice.bend.deg}deg`);
+    });
+    expect(sliceShiftPx(0)).toBe(FULLSCREEN_SLICE_SHIFT_FAR_PX);
+    expect(sliceShiftPx(1)).toBe(FULLSCREEN_SLICE_SHIFT_NEAR_PX);
+    // The pointer at the right edge turns it the diorama's whole way, at the top the whole way back.
+    fireEvent.pointerMove(window, { clientX: window.innerWidth, clientY: 0 });
+    expect(dialog.style.getPropertyValue("--cf-tilt-ry")).toBe(`${DIORAMA_TURN_MAX_DEG}deg`);
+    expect(dialog.style.getPropertyValue("--cf-tilt-rx")).toBe(`${DIORAMA_TURN_MAX_DEG}deg`);
+    cleanup();
+    // A card with no diorama turns as far as a face does.
+    render(<FullScreenArt defId="core-052" onClose={vi.fn()} />);
+    fireEvent.pointerMove(window, { clientX: window.innerWidth, clientY: window.innerHeight / 2 });
+    expect(screen.getByTestId("fullscreen-art").style.getPropertyValue("--cf-tilt-ry")).toBe(`${CARD_TILT_MAX_DEG}deg`);
+  });
+
+  it("R3350000 under reduced motion the full-screen view draws a diorama's slices still", () => {
+    setReducedMotion(true);
+    try {
+      render(<FullScreenArt defId="core-100" onClose={vi.fn()} />);
+      const slices = [...screen.getByTestId("fullscreen-art").querySelectorAll<HTMLElement>(".fullscreen-art-plane[data-slice]")];
+      expect(slices.length).toBe(dioramaOf("core-100")?.slices.length);
+      slices.forEach((slice, index) => expect(slice.style.backgroundImage).toBe(dioramaSliceBackground("core-100", false, index, false)));
+    } finally {
+      setReducedMotion(false);
+    }
+  });
 });
 
 describe("R3345000 the full-screen stylesheet's planes", () => {
+  it("R3350000 a diorama's slice shifts by its depth after the planes' steps, and a bent one turns about its axis", () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const css = readFileSync(join(here, "fullscreen.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const slice = /\.fullscreen-art-plane\[data-slice\]\s*\{([^}]*)\}/.exec(css);
+    expect(slice?.[1]).toMatch(/translate:\s*calc\(var\(--cf-tilt-x, 0\) \* var\(--fs-slice-shift, 0px\)\)\s+calc\(var\(--cf-tilt-y, 0\) \* var\(--fs-slice-shift, 0px\)\)/);
+    // It follows every plane's rule, so its shift is the one a slice takes.
+    expect(css.indexOf(".fullscreen-art-plane[data-slice]")).toBeGreaterThan(css.lastIndexOf('.fullscreen-art-plane[data-plane="nearest"]'));
+    expect(css).toMatch(/\.fullscreen-art-planes\[data-diorama\] \.fullscreen-art-plane\[data-bend="y"\]\s*\{\s*rotate: y var\(--cf-slice-bend, 0deg\);\s*\}/);
+    expect(css).toMatch(/\.fullscreen-art-planes\[data-diorama\] \.fullscreen-art-plane\[data-bend="x"\]\s*\{\s*rotate: x var\(--cf-slice-bend, 0deg\);\s*\}/);
+  });
+
   it("R3345000 each plane's tilt parallax is a translate, so its dolly keyframes' transform does not replace it", () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const css = readFileSync(join(here, "fullscreen.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");

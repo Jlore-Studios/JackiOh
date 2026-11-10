@@ -31,12 +31,15 @@
 // glow in its card's colours when buffed and frost when frozen (`wear`, art/ArtWear.tsx), from the view's numbers and keywords alone.
 // R3335000: a launched Starship's art wears its seat's Starship look, as CardFace's does.
 // R3334000: a Dormant Starship with pieces idles in its shipyard over its picture (ShipyardIdle.tsx).
+// R3350000: while it moves, a Mythic's normal picture with a diorama (art/dioramas/) draws every slice of it, each on its
+// loop, stacked in its window (CardArt's `diorama` "all"), which answers a hover and a press as one image does (R3340000).
 
 import { useRef, type ReactElement } from "react";
 
 import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/shared";
 
 import { CardArt } from "./art/index.ts";
+import { dioramaOf } from "./art/dioramas/index.ts";
 import { damageLevel } from "./art/wear.ts";
 import { shipArtOf } from "./art/stinkyscape.ts";
 import { CardStates } from "./CardStates.tsx";
@@ -191,6 +194,11 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
     { hovered: engaged, rarity: slotRarityOf(rarity) },
   );
   const motion = faceMotion.moving && (artMoves || engaged) ? artMotionOf(face.defId) : null;
+  const picture = look !== null ? artPictureOf(look.version, face.set) : artFirst ? artPictureOf(cardLook.version, face.set) : "normal";
+  const ship = shipArtOf(face.defId, unit);
+  // R3350000: a moving Mythic with a diorama draws its slices, each on its own loop (and its art's motion where it has one, a
+  // token printed Mythic having none), in place of its live layers.
+  const diorama = faceMotion.moving && (artMoves || engaged) && picture === "normal" && ship === null && dioramaOf(face.defId) !== null;
   const cosmetics = cosmeticAttributes(cosmeticAppearance, faceMotion.moving);
   // R3340000: what its art wears: cracks for the health it is missing, a glow when buffed, frost when frozen (the view's own).
   const damage = damageLevel(unit.health, unit.maxHealth);
@@ -232,10 +240,11 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             shape={artFirst || look !== null ? "full" : "frame"}
             starship={face.starship}
             look={starshipLook}
-            ship={shipArtOf(face.defId, unit)}
-            picture={look !== null ? artPictureOf(look.version, face.set) : artFirst ? artPictureOf(cardLook.version, face.set) : "normal"}
+            ship={ship}
+            picture={picture}
             motion={motion}
-            live={motion !== null}
+            live={motion !== null && !diorama}
+            diorama={diorama ? { slice: "all", moving: true } : null}
             wear={wear}
           />
           {/* R3334000, R3340000: the Dormant Starship's shipyard uses this face's one ranked, on-screen motion slot. */}

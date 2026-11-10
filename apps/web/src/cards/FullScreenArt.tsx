@@ -1,7 +1,10 @@
 // R3345000: full-screen art view with depth planes, dolly camera, tilt, and intro audio.
-// Presentation only (CLAUDE.md rule 7).
+// R3350000: a Mythic with a diorama (art/dioramas/) draws its slices in place of the planes, each shifted with the tilt by its
+// depth (`--fs-slice-shift`, FULLSCREEN_SLICE_SHIFT_FAR_PX far to FULLSCREEN_SLICE_SHIFT_NEAR_PX near), bent as it says and
+// moving by its loop unless the viewer's motion settings ask for the flat picture, and the view turns up to
+// DIORAMA_TURN_MAX_DEG. Presentation only (CLAUDE.md rule 7).
 
-import { useEffect, useId, useRef, useState, type ReactElement } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 
 import { getMusicPlayer } from "../audio/music.ts";
@@ -9,12 +12,23 @@ import { MUSIC_CARDS } from "../audio/musicData.ts";
 import { DialogClose } from "../game/Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useModalKeys } from "../together/modalKeys.ts";
+import { dioramaOf, dioramaSliceBackground } from "./art/dioramas/index.ts";
 import { ART_PLANES, artPlaneBackground } from "./art/pictures.ts";
+import { CARD_TILT_MAX_DEG, DIORAMA_TURN_MAX_DEG, FULLSCREEN_SLICE_SHIFT_FAR_PX, FULLSCREEN_SLICE_SHIFT_NEAR_PX } from "./constants.ts";
+import { useDepthMotion } from "./depth.ts";
 import { closeFullScreenArt, openFullScreenArt, useCanOpenFullScreen, useFullScreenArt, type FullScreenState } from "./fullscreen.ts";
 import { useCardSettings } from "./settings.ts";
 import { devicePose, glareOf, pointerPose, tiltDegrees } from "./tilt.ts";
 
 import "./fullscreen.css";
+
+/** R3350000: the digits a slice's shift is written with, in px. */
+const SLICE_SHIFT_DIGITS = 2;
+
+/** R3350000: how far a slice at `depth` (0 the farthest, 1 the nearest) shifts at full tilt, in px. */
+export function sliceShiftPx(depth: number): number {
+  return Number((FULLSCREEN_SLICE_SHIFT_FAR_PX + depth * (FULLSCREEN_SLICE_SHIFT_NEAR_PX - FULLSCREEN_SLICE_SHIFT_FAR_PX)).toFixed(SLICE_SHIFT_DIGITS));
+}
 
 export type FullScreenArtProps = {
   defId: string;
@@ -29,6 +43,10 @@ export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onC
   const [paused, setPaused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { deviceTilt } = useCardSettings();
+  // R3350000: a Mythic's diorama, its loops held still where the viewer's motion settings ask for the flat picture.
+  const diorama = dioramaOf(defId);
+  const { flat } = useDepthMotion();
+  const maxDeg = diorama !== null ? DIORAMA_TURN_MAX_DEG : CARD_TILT_MAX_DEG;
 
   // Audio: play intro sting/music on mount, stop on unmount or pause
   useEffect(() => {
@@ -72,7 +90,7 @@ export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onC
     const onPointerMove = (e: PointerEvent) => {
       const box = { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
       const pose = pointerPose(e.clientX, e.clientY, box);
-      const angles = tiltDegrees(pose);
+      const angles = tiltDegrees(pose, maxDeg);
       const glare = glareOf(pose);
       container.style.setProperty("--cf-tilt-x", String(pose.x));
       container.style.setProperty("--cf-tilt-y", String(pose.y));
@@ -86,7 +104,7 @@ export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onC
       if (!deviceTilt) return;
       const pose = devicePose(e.gamma, e.beta);
       if (!pose) return;
-      const angles = tiltDegrees(pose);
+      const angles = tiltDegrees(pose, maxDeg);
       const glare = glareOf(pose);
       container.style.setProperty("--cf-tilt-x", String(pose.x));
       container.style.setProperty("--cf-tilt-y", String(pose.y));
@@ -106,7 +124,7 @@ export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onC
         window.removeEventListener("deviceorientation", onDevice);
       }
     };
-  }, [deviceTilt]);
+  }, [deviceTilt, maxDeg]);
 
   const handleClick = (e: React.MouseEvent) => {
     if (e.detail === 2) {
@@ -128,15 +146,32 @@ export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onC
       aria-label={name ?? defId}
       onClick={handleClick}
     >
-      <div className="fullscreen-art-planes">
-        {ART_PLANES.map((plane) => (
-          <div
-            key={plane}
-            className="fullscreen-art-plane"
-            data-plane={plane}
-            style={{ backgroundImage: artPlaneBackground(defId, plane, radiant) }}
-          />
-        ))}
+      <div className="fullscreen-art-planes" data-diorama={diorama !== null ? "true" : undefined}>
+        {diorama !== null
+          ? diorama.slices.map((slice, index) => (
+              <div
+                key={slice.name}
+                className="fullscreen-art-plane"
+                data-plane={slice.plane}
+                data-slice={index}
+                data-bend={slice.bend?.axis}
+                style={
+                  {
+                    backgroundImage: dioramaSliceBackground(defId, radiant, index, !flat),
+                    "--fs-slice-shift": `${sliceShiftPx(slice.depth)}px`,
+                    ...(slice.bend === undefined ? {} : { "--cf-slice-bend": `${slice.bend.deg}deg` }),
+                  } as CSSProperties
+                }
+              />
+            ))
+          : ART_PLANES.map((plane) => (
+              <div
+                key={plane}
+                className="fullscreen-art-plane"
+                data-plane={plane}
+                style={{ backgroundImage: artPlaneBackground(defId, plane, radiant) }}
+              />
+            ))}
       </div>
       {/* R3221000: the one ✕ every dialog closes by. */}
       <DialogClose
