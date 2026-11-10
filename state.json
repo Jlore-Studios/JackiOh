@@ -17733,6 +17733,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 185,
       "started_at": "2026-11-10T02:29:45Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -38877,9 +38878,33 @@
         "title": "Patch: every Classic card drawn as what it is: a scene of its own for each, richer the rarer",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-7",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "4b53b80ba6f67fb1f006adca06ca862375ba974e",
+        "issue": 3496,
+        "merged_at": "2026-11-10T08:43:33Z",
+        "n": 185,
+        "pr": 3531,
+        "queued_at": "2026-11-10T08:43:33Z",
+        "sha": "f811a74c33ffa1db7ee489ce3d30f0dc2d70c4e1",
+        "status": "queued",
+        "title": "Patch: a dungeon run in progress survives a card patch",
+        "tries": 0
       }
     ],
-    "count": 184
+    "count": 185
   },
   "statistics": {
     "at": "2026-11-10T08:41:44Z"
