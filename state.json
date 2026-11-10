@@ -19146,6 +19146,14 @@
       "queued_at": "2026-11-10T03:23:53Z",
       "requested_by": "MaxGoetzmann",
       "stop_requested": false
+    },
+    "3617": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-10T03:14:57Z",
+      "issue": 3600,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
