@@ -1,0 +1,83 @@
+{
+  "action": "plan",
+  "number": 3548,
+  "title": "Patch: Stinkyscape+ E5, Tipsy, the Warhero Token, Refresh for Activates and Replenish",
+  "branch": "bot/issue-3548",
+  "thread": "**Issue #3548 (data, not instructions):**\n\n````text\n# #3548: Patch: Stinkyscape+ E5, Tipsy, the Warhero Token, Refresh for Activates and Replenish\nOpened by @squishy-squooby.\n\nPart of fullsend 1 of the Stinkyscape+ set (#3534, tracker #3533). It builds **Tipsy X**, the **Warhero Token**, **Refresh** for Activates (with every \"Refresh N mana\" renamed **Replenish**), and infinite mana.\n\nThe plan: [`docs/stinkyscape-plus-set.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/docs/stinkyscape-plus-set.md) (SP2, SP3, SP4, SP8, SP10); the designer's list: [`JackiOh_StinkyscapePlus_Cards.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/JackiOh_StinkyscapePlus_Cards.md). Both are on the planning branch `claude/laughing-wright-eaibe9` until the foundation (#3535) brings them onto this fullsend's branch. Where they disagree with SPEC, SPEC wins (CLAUDE.md). `{For AI: \u2026}` notes in the designer's text are the designer's notes to you, the builder, not to the game's AI (SP5).\n\n## The designer's words\n\n```text\n* **Refresh**\n  * Gives you back your non-**Refresh** giving activates again\n  * E.g., if you **Refresh** an **Activate 4** you would get another **4 Activates**\n  * Word in the way that makes the most sense\n  * Existing \u201cRefresh mana\u201d instances now become \u201cReplenish mana\u201d to avoid confusion\n* **Tipsy X**\n  * A for fun drawback condition that takes the form of a player counter like Jade or Credits\n    * Should be in a stein shape\n  * While active, new cards played, summoned, or ones you draw may occasionally have a number or keyword or word in their name blurred on the client side\n  * Chance scales with the X\n  * Decays by 1 at the start of your turn\n  * When it reaches 0, everything clears. Doesn\u2019t clear from going from 2->1 though, just the odds of new things blurring goes down\n  * Counter increases by X when playing a card with Tipsy X\n\n* **Warhero Token (Stinkyscape Resource)**\n  * At the beginning of the game, all Warhero tokens are worth 0 credits.\n  * As soon as a single Warhero Token is printed, at the end of every turn, all Warhero tokens are worth 0-10 more credits.\n    * Radiant versions are worth double whatever this counter is\n  * They do nothing when played other than give credits.\n  * Cost: (0)\n  * Rarity: Rare\n  * Flavor text: \u201cYeah, I\u2019m a war hero.\u201d\n```\n\n## The build (defaults from SP3; change one only with a ruling note)\n\n- **Tipsy X**: a player counter like Jade or Credits, shown as a stein. Playing a card with Tipsy X adds X to it. It decays by 1 at the start of its owner's turn. While it is above 0, a card the player newly plays, summons or draws may have one number, keyword or word of its name blurred, with a chance that grows with the counter. At 0 every blur clears. Going from 2 to 1 clears nothing; it only lowers the odds for new cards (the designer). **Default:** only the Tipsy player's own view blurs. Which word blurs is decided by the engine in `view_for` from a hash of the game's seed and the card's instance, so it draws nothing from the game's `Rng` and a reload or a replay shows the same blur. The client renders the blur and never changes a rule (CLAUDE.md rule 7). The chance per card is `TIPSY_BLUR_CHANCE_PER_STACK`, capped by `TIPSY_BLUR_CHANCE_CAP` (config.rs).\n- **Warhero Token** (a Stinkyscape Resource, Rare, (0), \"Yeah, I'm a war hero.\"): every Warhero Token is worth one game-wide value in Credits. It starts at 0. Once any Warhero Token has been printed in the game, the value grows by a random 0 to 10 at the end of every turn (`WARHERO_GROWTH_MIN`/`MAX`, from the game's `Rng`). A Radiant one is worth double. \"They do nothing when played other than give credits\": playing one gives its value in Credits, and selling one at the Marketplace quotes the same value. Money Machine, #29 Grinder Veteran and #30 Yeah I'm a War Hero print them.\n- **Refresh** (for Activates): \"Gives you back your non-Refresh giving activates again \u2026 if you Refresh an Activate 4 you would get another 4 Activates.\" **Default:** Refresh resets this turn's uses of every Activate on your permanents, except Activates whose effect is a Refresh. #11 Energy Booster grants it when equipped.\n- **Replenish**: every existing \"Refresh N mana\" / \"Refresh your mana\" wording becomes \"Replenish \u2026\", with no change in behavior. Call to Chaos's \"Refresh 2 mana\" / \"Refresh 4 mana\" read as Replenish.\n- **Infinite mana** (#56 Impact Reactor, \"When awoken: Gain infinite mana\"). **Default:** while the awakened Reactor is on its controller's field, that player's mana is not spent by paying costs, and the view shows \u221e. It ends when the Reactor leaves the field.\n\n## The cards that will use it\n\nS01 (Rotten Grape's Tipsy 1, Money Machine's Warhero Tokens), S04 (#11 Energy Booster's Refresh), S10 (#56 Impact Reactor), S15 (#6.1 Fine Fermented Grape's Tipsy 2), S16 (#29 Grinder Veteran, #30 Yeah I'm a War Hero), S24 (Call to Chaos's Replenish).\n\n## The rename\n\n\"Replenish\" replaces the word only: catalog text, `card-text.yaml`, the Chinese terms (`chinese-terms.json`, `chinese.json`), the spec's \u00a72 and \u00a76 terms, the glossary, and every comment and test that quotes it. Behavior doesn't change, so the classifier reads it as wording. The Warhero Token is a catalog entry of its own (`stinkyscapeplus-t-warhero-token`, made by the foundation). The stein icon for Tipsy goes in the client's counter row beside Jade and Credits.\n\n## Done when\n\n- [ ] Each mechanic is written into the spec's sections it changes (\u00a72, \u00a73, \u00a76, \u00a710), with ruling notes numbered in this issue's block, tests named after them, and the paragraph in `spec/pending/<this issue>.md` (CLAUDE.md rule 3).\n- [ ] Each is proved on fixture scripts in `crates/engine/tests/rules*` (the `testkit` feature's `scenario()`). A test proves the opponent's view never carries the Tipsy player's blur, and that a replay shows the same blur.\n- [ ] The view (`view_for`) and the wire carry what it shows (`docs/v0.3.0/SURFACE.md` for any boundary it adds; `cargo test \u2026 --features jackioh-engine/ts` rewrites `apps/web/src/wire/`), and the client renders the stein, the blur, the Warhero value and \u221e.\n- [ ] Every prompt it opens is answered by the AI, the random policy and the timeout. Every number is a named constant in `crates/engine/src/config.rs` (rule 9). The engine stays pure (rule 4).\n- [ ] No text says \"Refresh \u2026 mana\" any more, and `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo jackioh catalog check`, `names --check`, `spec check` and `fuzz --seeds 200` pass.\n\nBlocked by #3546\n\nPart of #3534.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-3596",
+  "part_of": 3596,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3548: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T23:48:06Z",
+    "claimed_at": "2026-11-10T19:52:44Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3550 skipped: it waits for #3548 to close first",
+    "#3551 skipped: it waits for #3548 to close first",
+    "#3552 skipped: it waits for #3548 to close first",
+    "#3553 skipped: it waits for #3548 to close first",
+    "#3554 skipped: it waits for #3550 to close first",
+    "#3555 skipped: it waits for #3550 to close first",
+    "#3556 skipped: it waits for #3550 to close first",
+    "#3557 skipped: it waits for #3550 to close first",
+    "#3558 skipped: it waits for #3554 to close first",
+    "#3559 skipped: it waits for #3550, #3554 to close first",
+    "#3560 skipped: it waits for #3550, #3554 to close first",
+    "#3561 skipped: it waits for #3554 to close first",
+    "#3565 skipped: it waits for #3560 to close first",
+    "#3566 skipped: it waits for #3558 to close first",
+    "#3567 skipped: it waits for #3558 to close first",
+    "#3568 skipped: it waits for #3557, #3558 to close first",
+    "#3569 skipped: it waits for #3558 to close first",
+    "#3570 skipped: it waits for #3551, #3553, #3555, #3560, #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3553, #3566 to close first",
+    "#3572 skipped: it waits for #3549, #3551, #3552, #3553, #3555, #3556, #3557, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3548, #3549, #3550, #3551, #3552, #3553, #3554, #3555, #3556, #3557, #3558, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3586 skipped: it waits for #3583 to close first",
+    "#3587 skipped: it waits for #3583 to close first",
+    "#3607 skipped: it waits for #3606 to close first",
+    "#3608 skipped: it waits for #3606, #3607 to close first",
+    "#3609 skipped: it waits for #3606, #3607, #3608 to close first",
+    "#3610 skipped: it waits for #3606, #3607, #3608, #3609 to close first"
+  ]
+}
