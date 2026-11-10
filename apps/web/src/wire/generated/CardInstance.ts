@@ -206,4 +206,12 @@ fixedX?: number,
  * without them (R57). Absent on every other card, so a game nothing hides a Nerf in serializes
  * and hashes as before (D3).
  */
-hiddenNerfs?: number, };
+hiddenNerfs?: number, 
+/**
+ * R3536000: has evolved, so it evolves no more; R78's reset takes it off; only `Some(true)`.
+ */
+evolved?: true, 
+/**
+ * R3536002: marked to enter the field evolved; rides every zone until the state check after it enters.
+ */
+entersEvolved?: true, };

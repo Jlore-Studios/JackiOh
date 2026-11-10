@@ -433,6 +433,12 @@ pub fn anomaly_misses_of(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].anomaly_misses.unwrap_or(0)
 }
 
+/// R3536004: how many of `player`'s cards evolved this game (`evolution::begin`), which
+/// Accelerationist counts (`evolution`).
+pub fn evolutions_of(state: &GameState, player: PlayerId) -> i32 {
+    state.players[player].evolutions.unwrap_or(0)
+}
+
 /// R1849004, R2476000: how much more `card`'s own-turn redirect (Stinkyscape #5 Masochism Unmasked)
 /// may take off its controller's hero this turn: its declared `cap` (R386) less what it has taken this
 /// turn, at least 0. `None` for a card with no such redirect.

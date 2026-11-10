@@ -686,6 +686,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   autopilotEngaged: { sfx: "notify", cues: () => [sfx("notify")] },
   // R1839002: a Dormant card awakens.
   awakened: { sfx: "radiant", cues: () => [sfx("radiant")] },
+  // R3536005: a card evolves.
+  evolved: { sfx: "radiant", cues: () => [sfx("radiant")] },
   // R1838001: a Trade sends a card into the deck with a shuffle-in's whoosh, naming no card (R203).
   traded: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
   // R1840005: the Credits count ticks, as the Jade Counter's does.

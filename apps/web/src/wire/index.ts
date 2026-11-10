@@ -195,6 +195,8 @@ export const GAME_EVENT_TYPES = [
   "autopilotEngaged",
   // Stinkyscape's Dormant: a Dormant card awakened (issue #1839, R1839002).
   "awakened",
+  // Stinkyscape+ Evolve: a card evolved (issue #3536, R3536005).
+  "evolved",
   // Issue #1838's Trade (R1838001).
   "traded",
   // Issue #1840's Credits (R1840005); its Resources are hand cards since #2250 (R2250000).

@@ -30,6 +30,12 @@ created?: true,
  */
 createdBy?: string, 
 /**
+ * R3536005: the card has evolved, or is marked to enter the field evolved
+ * (`CardInstance.evolved`, `.enters_evolved`). Only on a card the viewer may read, as `created`
+ * is. Only ever `Some(true)`.
+ */
+evolved?: true, 
+/**
  * Cost as it stands now (§6.3 Cost, R65); "X" cards show 0 until X is chosen.
  */
 cost: number, 

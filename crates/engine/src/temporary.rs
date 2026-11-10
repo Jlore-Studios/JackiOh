@@ -71,7 +71,7 @@ pub fn discard_temporary_cards(sink: &mut EngineSink<'_>, player: PlayerId) {
         };
         let left = count - 1;
         if left <= 0 {
-            crate::effects::move_::discard_from_hand(sink, card);
+            crate::effects::move_::discard_by_temporary(sink, card);
         } else if let Some(live) = find_instance_mut(sink.state, &card.id) {
             live.temporary = Some(left);
         }

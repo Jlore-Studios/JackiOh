@@ -1080,9 +1080,15 @@ pub struct Script {
     /// there, then on the snapshot it fought with (R78, R89). Not for a Cleave splash nor an attack on the
     /// hero (MD-C26, R1026). `ctx.data`: `combat::after_attacked_of`.
     pub after_attacked: Option<Hook>,
-    /// R1849001 (Stinkyscape #91 The Propagation's Wasp): "Evolve: X", run for this Unit only when an
-    /// effect evolves it (`effects::evolve`), resumably like `fusedInto` (`prompts::run_evolve`).
+    /// R1849001, R3536000 (Stinkyscape #91 The Propagation's Wasp): "Evolve: X", run for this Unit
+    /// only when an effect evolves it (`effects::evolve`), resumably like `fusedInto`
+    /// (`prompts::run_evolve`); once per instance (`evolution::evolve_now`).
     pub evolve: Option<Hook>,
+    /// R3536001: "Evolves when …" as a standing condition, read at every settled state check.
+    pub evolves_when: Option<HasHook>,
+    /// R3536003: "Your evolutions trigger twice/thrice": N extra runs of its controller's Evolve
+    /// texts, the highest holding.
+    pub evolve_extra: Option<TriggerExtraHook>,
     /// R1849008 (Stinkyscape #14 Arm of the Jempire): "When one of your Units is attacked". Run for each
     /// card acting on the defender's side once a declared attack on one of its Units has come through
     /// §4.2 step 4's trap window, before its combat, in R68's order; never for an attack on the hero or a

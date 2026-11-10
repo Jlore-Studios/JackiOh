@@ -59,6 +59,12 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub created_by: Option<String>,
+    /// R3536005: the card has evolved, or is marked to enter the field evolved
+    /// (`CardInstance.evolved`, `.enters_evolved`). Only on a card the viewer may read, as `created`
+    /// is. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub evolved: Option<bool>,
     /// Cost as it stands now (§6.3 Cost, R65); "X" cards show 0 until X is chosen.
     pub cost: i32,
     /// #492, R81, §10.8: an "A embiggen B" card in the viewer's own hand, what a play of it at its
@@ -655,6 +661,12 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub created_by: Option<String>,
+    /// R3536005: the card has evolved, or is marked to enter the field evolved
+    /// (`CardInstance.evolved`, `.enters_evolved`). Only on a card the viewer may read, as `created`
+    /// is. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub evolved: Option<bool>,
     /// ME-GRANT (MD-D13): the Death abilities other cards granted this Unit, as its lines read them
     /// (`grants::grant_texts`). Absent when it holds none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -732,6 +744,12 @@ pub struct PublicBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub created_by: Option<String>,
+    /// R3536005: the card has evolved, or is marked to enter the field evolved
+    /// (`CardInstance.evolved`, `.enters_evolved`). Only on a card the viewer may read, as `created`
+    /// is. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub evolved: Option<bool>,
     pub cost: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]

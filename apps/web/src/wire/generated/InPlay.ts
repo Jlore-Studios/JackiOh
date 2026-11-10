@@ -96,6 +96,10 @@ starship?: StarshipIn,
  */
 created?: boolean, 
 /**
+ * R3536005: the card has evolved.
+ */
+evolved?: boolean, 
+/**
  * R1956001: the card that generated the viewer's own Created card.
  */
 createdBy?: string, 

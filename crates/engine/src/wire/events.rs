@@ -523,6 +523,11 @@ pub enum GameEvent {
         instance_id: String,
         def_id: String,
         owner: PlayerId,
+        /// R3536001: Temporary discarded it (`temporary::discard_temporary_cards`). Only ever
+        /// `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        by_temporary: Option<bool>,
     },
     /// `turnDraw` (B5 E4, R457): this draw's number among `player`'s draws this turn, whoever's turn it
     /// is (1 for the first; a fatigue draw counts, a limited one does not). Public: the hand count and
@@ -1068,6 +1073,14 @@ pub enum GameEvent {
         instance_id: String,
         def_id: String,
     },
+    /// R3536000, R3536005: `player`'s card evolved — its `evolved` mark landed — and its Evolve text
+    /// runs next (inline, or queued behind extra runs). Public: the card was acting on the field or
+    /// lying in a graveyard its viewer may read.
+    Evolved {
+        player: PlayerId,
+        instance_id: String,
+        def_id: String,
+    },
     /// R1838000, R1838001: `player` Traded a Tradable card from their hand. Public, and it names no
     /// card: the card going into the deck is the `shuffledIn` after it and the card coming out the
     /// `drawn` after that, each hidden per zone (R97), so the other player learns that a card was
@@ -1371,6 +1384,7 @@ string_union! {
         CurveDrawn = "curveDrawn",
         AutopilotEngaged = "autopilotEngaged",
         Awakened = "awakened",
+        Evolved = "evolved",
         Traded = "traded",
         MarketCreditsChanged = "marketCreditsChanged",
         MarketBought = "marketBought",
@@ -1636,6 +1650,7 @@ impl GameEvent {
             GameEvent::CurveDrawn { .. } => GameEventType::CurveDrawn,
             GameEvent::AutopilotEngaged { .. } => GameEventType::AutopilotEngaged,
             GameEvent::Awakened { .. } => GameEventType::Awakened,
+            GameEvent::Evolved { .. } => GameEventType::Evolved,
             GameEvent::Traded { .. } => GameEventType::Traded,
             GameEvent::MarketCreditsChanged { .. } => GameEventType::MarketCreditsChanged,
             GameEvent::MarketBought { .. } => GameEventType::MarketBought,
@@ -1740,8 +1755,9 @@ mod tests {
         // three, `voteCast`, `votedOut` and `fled` (R1843000, R1843002); the starscape map one,
         // `starscapeTravelled` (R1847001); #1850's one, `held` (R1850003); the Marketplace's two,
         // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000); and
-        // #2652's `rolled` (R2652001); and #2783's `hookResolving` (R2783000).
-        assert_eq!(GAME_EVENT_TYPES.len(), 93);
+        // #2652's `rolled` (R2652001); and #2783's `hookResolving` (R2783000); and Stinkyscape+'s
+        // `evolved` (R3536005).
+        assert_eq!(GAME_EVENT_TYPES.len(), 94);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

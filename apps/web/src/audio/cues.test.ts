@@ -239,6 +239,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
   // Stinkyscape's Dormant (R1839002).
   awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
+  // Stinkyscape+ Evolve (R3536005).
+  evolved: { type: "evolved", player: "p1", instanceId: "u1", defId: "core-008" },
   // Issue #1838 (Tradable, R1838001).
   traded: { type: "traded", player: "p1" },
   // Issue #1840 (Credits, R1840005); its Resources are hand cards since #2250 (R2250000).
@@ -349,6 +351,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   curveDrawn: "whoosh",
   autopilotEngaged: "notify",
   awakened: "radiant",
+  evolved: "radiant",
   traded: "whoosh",
   marketCreditsChanged: "uiClick",
   marketBought: "draw",
@@ -392,6 +395,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "turnAutoEnded",
   "autopilotEngaged",
   "awakened",
+  "evolved",
   // R1838001: a Trade's whoosh, whatever the seat.
   "traded",
   // R1840005: the Credits' sound, whatever the seat.

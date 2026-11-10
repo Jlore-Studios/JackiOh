@@ -122,6 +122,9 @@ builds reads its own game's hold without the state (R2201001).
   effects' (`effects/quests.rs`: `complete_quests`, `complete_this_quest`, `open_stage`, `next_stage`,
   `hear_back`), and "steal your enemy's mana crystals" is `effects::steal_mana_crystals`, the count
   `PlayerState.mana_crystals` moves inside §2.3's cap (R1854003).
+- `evolution.rs` is Evolve and Evolves (§6.2, §6.3, R1849001, R3536000–R3536005): the once-only
+  `evolve_now` verb body, the settled state check's `evolve_standing`, the deck-marking
+  `mark_library`, the `Evolved` event and the per-player `evolutions` count.
 - `effects/anomaly.rs` is Stinkyscape's Anomalies and Scanning Probes (R1855000–R1855003):
   `replace_board` exiles what its card reaches of its caster's side, lays a preset as summons into
   their named zones with their riders in memory, then fires each laid Unit's Cry under R452's random

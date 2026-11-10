@@ -1087,6 +1087,8 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
         ),
         // R1839002: a Dormant card awakened, its countdown run out or an effect's doing.
         GameEvent::Awakened { def_id, .. } => s("{card} awakened", vec![p("card", names.def(def_id))]),
+        // R3536005: a card evolved, its Evolve text running next.
+        GameEvent::Evolved { def_id, .. } => s("{card} evolved", vec![p("card", names.def(def_id))]),
         // R1838001: a Trade names its player alone; the card going in and the one drawn log as their own.
         GameEvent::Traded { player } => s("{seat} traded a card", vec![p("seat", seat(*player))]),
         // R1840005: Credits are public.

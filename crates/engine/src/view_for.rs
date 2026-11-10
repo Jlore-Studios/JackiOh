@@ -479,6 +479,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         chinese: None,
         created: None,
         created_by: None,
+        evolved: None,
         cost,
         // filled in by `card_view` from the instance data; bare views carry none.
         tags: None,
@@ -538,6 +539,8 @@ fn card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardVi
     view.chinese = card.chinese;
     // MD-B6, R943: so is Created.
     view.created = card.created;
+    // R3536005: so is Evolved: evolved, or marked to enter the field evolved.
+    view.evolved = (card.evolved == Some(true) || card.enters_evolved == Some(true)).then_some(true);
     // R1956001: and the card that generated it, to its owner alone.
     view.created_by = crate::generators::generator_shown_to(state, card, viewer);
     // R1848003: a set X is the card's price, read where the card is.
@@ -866,6 +869,8 @@ fn unit_view_of(
         // MD-B6, R943: likewise.
         created: card.created,
         created_by: card.created_by,
+        // R3536005: likewise.
+        evolved: card.evolved,
         // ME-GRANT (MD-D13): the granted Death abilities, as the Unit's lines read them.
         grants: crate::grants::grant_texts(state, top),
         // R849000: summoning sick with neither Rush nor Charge, from public facts on the field.
@@ -980,6 +985,7 @@ fn backrow_view(
         chinese: view.chinese,
         created: view.created,
         created_by: view.created_by,
+        evolved: view.evolved,
         tags: view.tags,
         cost: view.cost,
         attack: view.attack,
@@ -2581,7 +2587,10 @@ fn redact_event(
         | GameEventType::Deanimated
         | GameEventType::Flickered
         // R1839002: an awakening names a card face-up on the field, public as the card is.
-        | GameEventType::Awakened => {
+        // R3536005: an evolution names a card acting on the field or lying readable in a
+        // graveyard, public as the card is.
+        | GameEventType::Awakened
+        | GameEventType::Evolved => {
             if !hidden(&instance) {
                 return event.clone();
             }

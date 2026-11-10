@@ -429,6 +429,14 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub hidden_nerfs: Option<i32>,
+    /// R3536000: has evolved, so it evolves no more; R78's reset takes it off; only `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub evolved: Option<bool>,
+    /// R3536002: marked to enter the field evolved; rides every zone until the state check after it enters.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub enters_evolved: Option<bool>,
 }
 
 /// R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
@@ -1476,6 +1484,11 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub anomaly_misses: Option<i32>,
+    /// R3536004: how many of this player's cards evolved this game (`evolution::begin`). Absent
+    /// until the first, so a game without one hashes as before this field existed (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub evolutions: Option<i32>,
 }
 
 /// R1843000: one player's votes to remove them from the game, on turn `turn` (`PlayerState.votes`).
@@ -2112,6 +2125,7 @@ pub fn create_player_state() -> PlayerState {
         fled: None,
         starscape: None,
         anomaly_misses: None,
+        evolutions: None,
     }
 }
 
@@ -2567,6 +2581,8 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         grants: None,
         fixed_x: None,
         hidden_nerfs: None,
+        evolved: None,
+        enters_evolved: None,
     };
     *next_id += 1;
     instance

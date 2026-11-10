@@ -334,6 +334,10 @@ pub struct InPlay {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub created: Option<bool>,
+    /// R3536005: the card has evolved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub evolved: Option<bool>,
     /// R1956001: the card that generated the viewer's own Created card.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -709,6 +713,7 @@ pub enum StateBadgeKind {
     Dormant,
     Starship,
     Created,
+    Evolved,
 }
 
 /// The icons a badge may draw, by the name the web's icon set gives them.

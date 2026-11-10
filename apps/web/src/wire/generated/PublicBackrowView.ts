@@ -37,7 +37,13 @@ created?: true,
  * (`GameState.generators`), whose foil, finish and border the client dresses it in. Never on
  * another player's card.
  */
-createdBy?: string, cost: number, attack?: number, health?: number, power?: string, conditionActive?: true, counteredOnPlay?: true, preview?: Array<PreviewValue>, brittle?: number, element?: CardElement, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, keywords?: Array<Keyword>, marks?: Array<CardMark>, activations?: Array<ActivationView>, quest?: QuestView, copies?: CopiedTextView, 
+createdBy?: string, 
+/**
+ * R3536005: the card has evolved, or is marked to enter the field evolved
+ * (`CardInstance.evolved`, `.enters_evolved`). Only on a card the viewer may read, as `created`
+ * is. Only ever `Some(true)`.
+ */
+evolved?: true, cost: number, attack?: number, health?: number, power?: string, conditionActive?: true, counteredOnPlay?: true, preview?: Array<PreviewValue>, brittle?: number, element?: CardElement, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, keywords?: Array<Keyword>, marks?: Array<CardMark>, activations?: Array<ActivationView>, quest?: QuestView, copies?: CopiedTextView, 
 /**
  * Always `false` here (the discriminant).
  */

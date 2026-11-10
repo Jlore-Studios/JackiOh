@@ -169,6 +169,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
   awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
+  evolved: { type: "evolved", player: "p1", instanceId: "u1", defId: "core-008" },
   traded: { type: "traded", player: "p1" },
   // Issue #1840 (Credits, R1840005); its Resources are hand cards since #2250 (R2250000).
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
@@ -311,6 +312,8 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   autopilotEngaged: "banner",
   // R1839002: a Dormant card awakens with the brand flourish.
   awakened: "brand",
+  // R3536005: a card evolves with the brand flourish.
+  evolved: "brand",
   // Issue #1838 (R1838001): a Trade sends a card back from the hand into the deck.
   traded: "shuffle",
   // Issue #1840 (R1840005): the Credits badge animates with no effect.
@@ -459,6 +462,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   curveDrawn: ["jk-curve-drawn", 700, "board"],
   autopilotEngaged: ["jk-banner", 600, "turn-banner"],
   awakened: ["jk-radiant-pulse", 400, "card-<instanceId>"],
+  evolved: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   traded: ["jk-shuffle-in", 300, "library-<side>"],
   marketCreditsChanged: ["jk-badge-tick", 200, "hero-<side>"],
   marketBought: ["jk-hand-edge", 250, "hand-<side>"],
@@ -476,10 +480,10 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 65 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the Trade (R1838001), the launch (R1852003), #1843's two endings (R1843000, R1843002) and #2652's rolls (R2652001) carry fx with the listed recipe and the other 29 carry none", () => {
+  it("B1 exactly the 66 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the evolution (R3536005), the Trade (R1838001), the launch (R1852003), #1843's two endings (R1843000, R1843002) and #2652's rolls (R2652001) carry fx with the listed recipe and the other 28 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
-    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(65);
+    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(66);
   });
 
   it("B1 an fx descriptor is data only: one recipe field and nothing else", () => {

@@ -270,6 +270,9 @@ fn to_placeholder(card: &mut CardInstance) {
     card.set_as = None;
     // MD-B6, R943: whether the hidden card was minted after the deal goes with its face.
     card.created = None;
+    // R3536002, CLAUDE.md rule 7: a hidden card carries neither Evolve mark.
+    card.evolved = None;
+    card.enters_evolved = None;
     card.buffs = AttackHealth { attack: 0, health: 0 };
     card.damage = 0;
     card.cost_override = None;
@@ -325,6 +328,9 @@ fn to_placeholder_json(card: &mut Value) {
         "setAs",
         // MD-B6, R943: whether the hidden card was minted after the deal goes with its face.
         "created",
+        // R3536002, CLAUDE.md rule 7: a hidden card carries neither Evolve mark.
+        "evolved",
+        "entersEvolved",
     ] {
         object.remove(key);
     }

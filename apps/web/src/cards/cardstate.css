@@ -100,6 +100,16 @@
   background: radial-gradient(circle, #5b8cff 0%, #10183d 100%);
 }
 
+/* R3536005: Evolved, the star on a green disc. */
+.cf .cf-state[data-state="evolved"] {
+  background: radial-gradient(circle, #7dffa1 0%, #0d6b33 100%);
+}
+
+/* R3536005: an Evolved card glows green. */
+.cf[data-evolved="true"] {
+  box-shadow: 0 0 1.2cqh 0.4cqh rgb(125 255 161 / 0.7);
+}
+
 .cf .cf-state[data-state="starship"][data-starship="launched"] {
   background: radial-gradient(circle, #ffd36b 0%, #7a3d00 100%);
 }

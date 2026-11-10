@@ -609,6 +609,9 @@ fn hide(card: &mut CardInstance, def_id: &str) {
     card.chinese = None;
     card.set_as = None;
     card.created = None;
+    // R3536002, CLAUDE.md rule 7: a hidden card carries neither Evolve mark.
+    card.evolved = None;
+    card.enters_evolved = None;
     card.damage = 0;
     card.embiggen_cost_override = None;
     card.x = None;

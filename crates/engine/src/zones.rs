@@ -1197,6 +1197,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.reborn_spent = None;
     // B5 E35: Berserk is a status of the unit on the field, lost as it leaves (R78).
     instance.berserk = None;
+    // R3536000: so is Evolved; a card back after leaving the field may evolve again.
+    instance.evolved = None;
     // R1174000: so is Frozen, which a Bounce, a death or an exile takes off with it.
     instance.frozen = None;
     // R1839000: and so is Dormant; a card printing it starts it again as it next enters the field.

@@ -389,7 +389,13 @@ pub fn send_to_graveyard(args: SendToGraveyardArgs) -> Effect {
 /// Hand to GY for one card, with §10.3's discard events, for a discard paid as a price or a rule (R450's
 /// targeting cost, R637's Temporary), which R800's discard guard never reads.
 pub fn discard_from_hand(ctx: &mut EngineSink<'_>, card: &CardInstance) {
-    discard_card(ctx, card);
+    discard_card(ctx, card, false);
+}
+
+/// R3536001: hand to GY for one card Temporary discarded (`temporary::discard_temporary_cards`),
+/// reported with `by_temporary` so a card can evolve in its graveyard on it.
+pub fn discard_by_temporary(ctx: &mut EngineSink<'_>, card: &CardInstance) {
+    discard_card(ctx, card, true);
 }
 
 /// R800: whether a discard guard (`draw::discard_guarded`) stops an effect's discard of `count` cards;
@@ -402,7 +408,7 @@ fn guard_stops(ctx: &mut EngineSink<'_>, player: PlayerId, count: i32) -> bool {
     true
 }
 
-fn discard_card(ctx: &mut EngineSink<'_>, card: &CardInstance) {
+fn discard_card(ctx: &mut EngineSink<'_>, card: &CardInstance, by_temporary: bool) {
     if card.zone.z() != ZoneName::Hand {
         return;
     }
@@ -413,6 +419,7 @@ fn discard_card(ctx: &mut EngineSink<'_>, card: &CardInstance) {
         instance_id: card.id.clone(),
         def_id: card.def_id.clone(),
         owner: card.owner,
+        by_temporary: by_temporary.then_some(true),
     });
     // R11: a unit-token card reaches no graveyard; B5 E5: a replaced move is reported where it went.
     report_graveyard_landing(ctx, &card, moved);
@@ -441,7 +448,7 @@ pub fn discard(args: DiscardArgs) -> Effect {
         {
             return;
         }
-        discard_card(ctx, &card);
+        discard_card(ctx, &card, false);
     })
 }
 
@@ -479,7 +486,7 @@ pub fn discard_random_cards(ctx: &mut EngineSink<'_>, player: PlayerId, count: i
         let Some(card) = ctx.rng.pick(&ctx.state.players[player].hand).cloned() else {
             return;
         };
-        discard_card(ctx, &card);
+        discard_card(ctx, &card, false);
     }
 }
 
@@ -504,7 +511,7 @@ pub fn discard_hand(args: DiscardHandArgs) -> Effect {
             return;
         }
         for card in &hand {
-            discard_card(ctx, card);
+            discard_card(ctx, card, false);
         }
     })
 }

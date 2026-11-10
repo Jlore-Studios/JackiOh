@@ -28,6 +28,11 @@ const FROZEN_GLYPH: &str = "\u{2744}\u{FE0E}";
 const DORMANT_GLYPH: &str = "\u{263E}\u{FE0E}";
 /// R1852000: the Starship badge's glyph, a comet in text presentation (U+FE0E).
 const STARSHIP_GLYPH: &str = "\u{2604}\u{FE0E}";
+/// R3536005: the Evolved badge's glyph, a star in text presentation (U+FE0E).
+pub const EVOLVED_GLYPH: &str = "\u{2726}\u{FE0E}";
+/// R3536005, §6.3: what an Evolved card's badge says.
+pub const EVOLVED_WORDS: &str =
+    "Evolved: its Evolve has happened, or happens as it enters the field; it evolves only once";
 
 /// B5 E35, §6.1: what a Berserk unit's badge says.
 const BERSERK_WORDS: &str = "Berserk: at the start and end of its controller's turn it attacks its own hero";
@@ -246,6 +251,7 @@ pub struct BadgeFacts<'a> {
     pub dormant: Option<&'a DormantFace>,
     pub starship: Option<&'a StarshipFace>,
     pub created: bool,
+    pub evolved: bool,
 }
 
 fn data(pairs: &[(&str, String)]) -> IndexMap<String, String> {
@@ -381,6 +387,16 @@ pub fn state_badges(facts: &BadgeFacts<'_>) -> Vec<StateBadge> {
                 "data-frozen",
                 if facts.frozen_forever { "forever" } else { "true" }.to_string(),
             )]),
+        });
+    }
+    // R3536005: an Evolved card, its Evolve behind or ahead of it.
+    if facts.evolved {
+        badges.push(StateBadge {
+            kind: StateBadgeKind::Evolved,
+            text: Some(EVOLVED_GLYPH.to_string()),
+            icon: None,
+            words: words.say(EVOLVED_WORDS),
+            data: data(&[("data-evolved", "true".to_string())]),
         });
     }
     if let Some(dormant) = facts.dormant {

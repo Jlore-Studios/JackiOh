@@ -98,6 +98,12 @@ created?: true,
  */
 createdBy?: string, 
 /**
+ * R3536005: the card has evolved, or is marked to enter the field evolved
+ * (`CardInstance.evolved`, `.enters_evolved`). Only on a card the viewer may read, as `created`
+ * is. Only ever `Some(true)`.
+ */
+evolved?: true, 
+/**
  * ME-GRANT (MD-D13): the Death abilities other cards granted this Unit, as its lines read them
  * (`grants::grant_texts`). Absent when it holds none.
  */

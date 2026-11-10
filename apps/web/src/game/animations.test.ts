@@ -121,6 +121,8 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   autopilotEngaged: 600,
   // Stinkyscape's Dormant (R1839002).
   awakened: 400,
+  // Stinkyscape+ Evolve (R3536005).
+  evolved: 400,
   // Issue #1838 (Tradable, R1838001).
   traded: 300,
   marketCreditsChanged: 200,
@@ -253,6 +255,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
   awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
+  evolved: { type: "evolved", player: "p1", instanceId: "u1", defId: "core-008" },
   traded: { type: "traded", player: "p1" },
   // Issue #1840 (Credits, R1840005); its Resources are hand cards since #2250 (R2250000).
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
@@ -341,7 +344,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(93);
+    expect(rows).toHaveLength(94);
   });
 
   it("gives every row an animation name and a testid template", () => {

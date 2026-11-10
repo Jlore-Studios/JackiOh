@@ -20,6 +20,7 @@ pub mod credit;
 pub mod damage_combat;
 pub mod datacenter;
 pub mod endings;
+pub mod evolution;
 pub mod feng_shui;
 pub mod field;
 pub mod freeze;

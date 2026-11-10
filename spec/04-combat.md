@@ -74,4 +74,6 @@ The check runs after every resolved action, every fully resolved effect or trigg
 4. Reborn: each collected unit that had Reborn returns to its reserved zone (Locked meanwhile or not, [[R688]]) at 1 health without Reborn, as a reset instance ([[R78]]); its Cry does not fire, and because it has entered the field again it is summoning sick for the rest of that turn ([[R83]]). Then each collected Starship Piece fuses a copy of itself into the Dormant Starship of the player whose graveyard it entered, in [[R68]] order, summoning one first if they have none ([[§6.1]] Starship Piece, [[R1852000]]).
 5. Repeat until nothing changes, and at most `STATE_CHECK_PASS_CAP` (100) times. A check still finding work on the hundredth pass is an engine bug rather than a game state, so the engine throws there instead of returning a state no rule produced.
 
+Once the board has settled with nothing dying, the standing evolutions happen: each permanent whose "Evolves when" holds, and each card marked to enter the field evolved, evolves in [[R68]]'s order, queueing its Evolve text behind the check — after any Cry the entry ran ([[R3536001]], [[R3536002]]).
+
 **Ruling:** Death triggers fire on both deaths of a Reborn unit, so radiant Right-house defender summons a base copy on its first death and again on its second ([[R8]]).

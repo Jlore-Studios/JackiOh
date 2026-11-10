@@ -446,6 +446,7 @@ mod summarize_game_over_real_cards_s9_11 {
                                 instance_id,
                                 def_id,
                                 owner,
+                                ..
                             } = event
                                 && !drawn_here.contains(&instance_id)
                                 && !created(instance_id)

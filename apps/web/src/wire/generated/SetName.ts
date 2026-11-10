@@ -6,4 +6,4 @@
  * Training Grounds (issue #2193, R2194000; released by #2204) ship; Boss and Boss-X are
  * reserved.
  */
-export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Stinkyscape" | "Training Grounds" | "Boss" | "Boss-X";
+export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Stinkyscape" | "Training Grounds" | "Boss" | "Boss-X" | "Stinkyscape+";

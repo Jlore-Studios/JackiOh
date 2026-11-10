@@ -219,6 +219,8 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
       data-vanilla={unit.vanilla === true ? "true" : undefined}
       data-tuned={face.tuning?.verdict}
       data-dormant={dormant}
+      // R3536005: an Evolved unit glows green (cardstate.css).
+      data-evolved={unit.evolved === true ? "true" : undefined}
       {...cosmetics}
     >
       <span className="cf-scale">

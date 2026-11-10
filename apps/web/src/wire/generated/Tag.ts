@@ -24,5 +24,8 @@
  * Issue #3038 adds Starship (the Stinkyscape set's Dormant Starship, on both faces, so every
  * Starship, Dormant or launched): a family tag with a rule, a card holding it having Flying and
  * Ranged through the layers (R3038000), which the server admits from migration 0080.
+ * Issue #3535 adds Mindustrial, Mineral, Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω,
+ * Automa-ζ and Paperclip (the held Stinkyscape+ set's family tags, R3535002), which the server
+ * admits from migration 0087.
  */
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Legacy" | "Resource" | "Faction" | "Starship" | "Token";
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Legacy" | "Resource" | "Faction" | "Starship" | "Mindustrial" | "Mineral" | "Automa-α" | "Automa-β" | "Automa-γ" | "Automa-δ" | "Automa-Ω" | "Automa-ζ" | "Paperclip" | "Token";

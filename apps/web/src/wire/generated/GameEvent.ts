@@ -154,7 +154,12 @@ radiant?: true,
  * made by that card, and a face-down trap's copy does not name it (R97). Engine bookkeeping: a
  * view never forwards it.
  */
-copyOf?: string, } | { "type": "discarded", instanceId: string, defId: string, owner: PlayerId, } | { "type": "drawn", player: PlayerId, instanceId: string, defId: string, turnDraw?: number, 
+copyOf?: string, } | { "type": "discarded", instanceId: string, defId: string, owner: PlayerId, 
+/**
+ * R3536001: Temporary discarded it (`temporary::discard_temporary_cards`). Only ever
+ * `Some(true)`.
+ */
+byTemporary?: true, } | { "type": "drawn", player: PlayerId, instanceId: string, defId: string, turnDraw?: number, 
 /**
  * B5 E33: this draw took the last card of the drawer's own library — Classic #90's quest 9, "a
  * draw of yours takes the last card of your deck". Present, and `true`, only then. Public: the
@@ -205,7 +210,7 @@ zone: "field", } | { "type": "degraded", instanceId: string, defId: string, chan
  * the client's cue; the engine sets it where the keyword applies, never a card (CLAUDE.md rule 5).
  * No rule reads it (`as_rules_read`), and a view that hides the card hides it too (R97).
  */
-via?: KeywordKind, } | { "type": "jadeChanged", player: PlayerId, value: number, } | { "type": "secretChosen", player: PlayerId, secretId: string, } | { "type": "secretRevealed", player: PlayerId, secretId: string, choice: SecretChoice, } | { "type": "predicted", player: PlayerId, secretId: string, guess: SecretChoice, outcome: PredictOutcome, } | { "type": "curveDrawn", player: PlayerId, cells: Array<ZoneRef>, } | { "type": "autopilotEngaged", player: PlayerId, turn: number, } | { "type": "awakened", player: PlayerId, instanceId: string, defId: string, } | { "type": "traded", player: PlayerId, } | { "type": "marketCreditsChanged", player: PlayerId, value: number, } | { "type": "marketBought", player: PlayerId, instanceId: string, defId: string, 
+via?: KeywordKind, } | { "type": "jadeChanged", player: PlayerId, value: number, } | { "type": "secretChosen", player: PlayerId, secretId: string, } | { "type": "secretRevealed", player: PlayerId, secretId: string, choice: SecretChoice, } | { "type": "predicted", player: PlayerId, secretId: string, guess: SecretChoice, outcome: PredictOutcome, } | { "type": "curveDrawn", player: PlayerId, cells: Array<ZoneRef>, } | { "type": "autopilotEngaged", player: PlayerId, turn: number, } | { "type": "awakened", player: PlayerId, instanceId: string, defId: string, } | { "type": "evolved", player: PlayerId, instanceId: string, defId: string, } | { "type": "traded", player: PlayerId, } | { "type": "marketCreditsChanged", player: PlayerId, value: number, } | { "type": "marketBought", player: PlayerId, instanceId: string, defId: string, 
 /**
  * Set when the card bought is Radiant (a Radiant lot, R1853001). It is the card's, so a view
  * that hides the card hides this too (R97). Only ever `Some(true)`.

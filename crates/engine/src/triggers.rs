@@ -37,7 +37,7 @@ use crate::traps::{
     resume_event_to_traps, trap_controllers_of,
 };
 use crate::wire::{
-    GameEvent, GameEventType, HookKind, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone, ZoneRef,
+    GameEvent, GameEventType, HookKind, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone, ZoneName, ZoneRef,
 };
 
 /// The zones a card can hold a trigger from (§10.3). `library`: B5 E26's deck triggers (R464).
@@ -101,6 +101,11 @@ pub const PLAY_WATCH: &str = "@playWatch";
 
 /// R1882004: the `hook` of a death watcher's queue entry (Stinkyscape #150 Call to Chaos, entry 8).
 pub const DEATH_WATCH: &str = "@deathWatch";
+
+/// R3536000, R3536003: the `hook` of an Evolve text's queued run (`evolution::begin`): one entry per
+/// run past the inline one, so a prompt in the text pauses the queue rather than dropping the rest.
+/// No card's trigger id starts with `@`.
+pub const EVOLVE_RUN: &str = "@evolve";
 
 /// How many times `settle` may go round before the board is called stuck (§10.3). Each pass resolves
 /// something, so the cap holds every trigger one legal action can set off, as R58 bounds it: #95 draws
@@ -557,6 +562,46 @@ pub fn queue_hook(sink: &mut EngineSink<'_>, holder: &TriggerHolder, hook: HookN
     };
     sink.state.trigger_queue.push(entry.clone());
     entry
+}
+
+/// R3536000, R3536003: queue one more run of an evolved card's Evolve text, built like `queue_hook`'s
+/// entry: the running definition is the card's text face now (`unit_text::text_def_of`), and the run
+/// answers for the card's controller.
+pub fn queue_evolve_run(sink: &mut EngineSink<'_>, card: &CardInstance) {
+    let (id, seq) = next_entry_id(sink.state, false, "e");
+    let mut data: IndexMap<String, Value> = IndexMap::new();
+    data.insert("controller".to_string(), player_value(card.controller));
+    let (def_id, radiant) = crate::subsystems::unit_text::text_def_of(card);
+    sink.state.trigger_queue.push(QueuedTrigger {
+        id,
+        seq,
+        instance_id: card.id.clone(),
+        hook: EVOLVE_RUN.to_string(),
+        resume: Resume {
+            def_id: def_id.to_string(),
+            hook: EVOLVE_RUN.to_string(),
+            step: TRIGGER_STEP.to_string(),
+            radiant,
+            instance_id: Some(card.id.clone()),
+            data,
+        },
+    });
+}
+
+/// R3536000: run one queued Evolve-text run: the card is found again now, and runs only while still
+/// evolved and either acting on the field or lying in a graveyard (R3536001's Temporary discard);
+/// anywhere else it fizzles.
+fn run_evolve_entry(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
+    let Some(card) = find_instance(sink.state, &entry.instance_id).cloned() else {
+        return;
+    };
+    if card.evolved != Some(true) {
+        return;
+    }
+    if !crate::zones::acts_on_field(sink.state, &card) && card.zone.z() != ZoneName::Graveyard {
+        return;
+    }
+    crate::prompts::run_evolve(sink, &card, card.controller);
 }
 
 /// Queue one hook across the board in R68's order (§6.2, R62); the caller's `settle` drains it.
@@ -1138,6 +1183,11 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
     }
     if entry.hook == TURN_HOOKS_ROUND {
         run_turn_hooks_round(sink, entry);
+        return;
+    }
+    // R3536000: a queued extra run of an Evolve text.
+    if entry.hook == EVOLVE_RUN {
+        run_evolve_entry(sink, entry);
         return;
     }
     // MD-B22, R946: a lane watcher's answer — the stored resume runs as its owner; R1863000: a play

@@ -40,6 +40,7 @@ pub mod duos_life;
 pub mod echo;
 pub mod effects;
 pub mod enchantments;
+pub mod evolution;
 pub mod faces;
 pub mod float;
 pub mod freeze;

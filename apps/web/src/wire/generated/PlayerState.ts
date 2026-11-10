@@ -185,4 +185,9 @@ starscape?: StarscapeMap,
  * scans have missed (`effects::scan_for_anomaly`), each adding to their later scans' chances.
  * Absent until the first miss, so a game without one hashes as before this field existed (D3).
  */
-anomalyMisses?: number, };
+anomalyMisses?: number, 
+/**
+ * R3536004: how many of this player's cards evolved this game (`evolution::begin`). Absent
+ * until the first, so a game without one hashes as before this field existed (D3).
+ */
+evolutions?: number, };

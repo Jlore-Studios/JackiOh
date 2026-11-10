@@ -928,7 +928,7 @@ fn forget_spent_killers(sink: &mut EngineSink<'_>, survivors: &[CardInstance]) {
 }
 
 /// The cards acting on the field, the active player's side first (units, then the backrow, lane 1 up).
-fn permanents_in_play(state: &GameState) -> Vec<CardInstance> {
+pub(crate) fn permanents_in_play(state: &GameState) -> Vec<CardInstance> {
     let first = state.active;
     let mut out: Vec<CardInstance> = Vec::new();
     for player in [first, first.opponent()] {
@@ -1055,6 +1055,9 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             if hero_check(sink) || crate::win_conditions::win_check(sink) {
                 return;
             }
+            // R3536001, R3536002: the settled board: standing "Evolves when" conditions and cards
+            // marked to enter evolved evolve now, queuing their Evolve texts behind the check.
+            crate::evolution::evolve_standing(sink);
             // B5 E33, R404: the board has settled, so a quest completed by what happened is noticed now.
             crate::subsystems::quests::notice_quests(sink);
             return;

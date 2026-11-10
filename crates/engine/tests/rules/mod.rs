@@ -137,6 +137,7 @@ pub mod endgame;
 pub mod endings;
 pub mod enters_hand;
 pub mod equip;
+pub mod evolution;
 pub mod exile_on_damage;
 pub mod extra_turns;
 pub mod face_down_text;
