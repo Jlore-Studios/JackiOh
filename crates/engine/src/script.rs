@@ -648,6 +648,14 @@ pub struct StaticFlags {
     /// and its awakening launches it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub starship_hull: Option<bool>,
+    /// R3539000 (S+ #80 The Last Voyage, #155 The Far Vagabond's Terminus Starships): a hull that
+    /// can't be launched by hand; only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub no_hand_launch: Option<bool>,
+    /// R3539004 (S+ #157 Phantom Shipyard): a Dormant hull that fuses in a random Starship Piece at
+    /// the start of its controller's turn, a Radiant one on a Radiant card; only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub starship_yard: Option<bool>,
     // Stinkyscape M15 (issue #1849)
     /// R1849000 (Stinkyscape #74 Paragon-X): "Immune to Spell Damage". While this Unit is on the field,
     /// a hit from a Spell deals it nothing and is no damage instance (§4.4 step 0); Spells may still

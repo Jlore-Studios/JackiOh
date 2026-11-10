@@ -63,7 +63,7 @@ fn def_id_at(index: &str) -> Option<String> {
 }
 
 /// R1878000: the Starship Piece pool, the same query as the cards crate's `starship_pieces()`.
-fn starship_pieces_query() -> Value {
+pub(crate) fn starship_pieces_query() -> Value {
     json!({ "set": SET, "keywords": [KeywordKind::StarshipPiece] })
 }
 

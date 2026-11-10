@@ -161,6 +161,11 @@ pub struct StarshipMemory {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub launched: Option<u32>,
+    /// R3539000 (S+ #155 The Far Vagabond): the price of its launch by hand, set by the card that
+    /// made it; absent launches for `launch_cost` as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub price: Option<i32>,
 }
 
 /// R1852005: one piece a Starship holds — the definition its copy fused in on, and whether on its

@@ -32309,11 +32309,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Exile your hand, deck, and board ; summon {starships|random Terminus Starship|random Terminus Starships} . Now and the start of its owner's turn launch a random one."
+      "text": "Exile your hand, deck and board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one now and at the start of each of your turns."
     },
     "radiant": {
       "keywords": [],
-      "text": "Exile your hand, deck, and board ; summon {starships|random Terminus Starship|random Terminus Starships} . Now and the start of its owner's turn launch a random one.\nAlso exile your opponent's board."
+      "text": "Exile your hand, deck and board and your opponent's board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one now and at the start of each of your turns."
     },
     "params": [
       {
@@ -36447,24 +36447,14 @@
       "attack": 0,
       "health": 0,
       "keywords": [],
-      "text": "Start of turn: Fuse a random Starship Piece into this.\nDormant until launched.\nActivate: {exile}: Exile the shipyard and launch as a Starship."
+      "text": "Start of turn: Fuse a random Starship Piece into this.\nDormant until launched.\nActivate 3: Exile the shipyard and launch as a Starship."
     },
     "radiant": {
       "attack": 0,
       "health": 0,
       "keywords": [],
-      "text": "Start of turn: Fuse a random Radiant Starship Piece into this.\nDormant until launched.\nActivate: {exile}: Exile the shipyard and launch as a Starship."
-    },
-    "params": [
-      {
-        "key": "exile",
-        "base": 3,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ]
+      "text": "Start of turn: Fuse a random Radiant Starship Piece into this.\nDormant until launched.\nActivate 3: Exile the shipyard and launch as a Starship."
+    }
   },
   "stinkyscapeplus-158": {
     "id": "stinkyscapeplus-158",
@@ -36950,7 +36940,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Patcher Nanobots, Defensive Crystal and Hull Booster, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -36963,10 +36953,15 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Radiant Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Patcher Nanobots, Radiant Defensive Crystal and Radiant Hull Booster, and can't be launched by hand.",
       "attack": 0,
       "health": 0
-    }
+    },
+    "refs": [
+      "stinkyscape-093",
+      "stinkyscape-098",
+      "stinkyscape-132"
+    ]
   },
   "stinkyscapeplus-t-terminus-starship-dying-ember": {
     "id": "stinkyscapeplus-t-terminus-starship-dying-ember",
@@ -36993,7 +36988,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding After Burner, Ultralight Chassis, Spacemine and AP Rounds, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37006,10 +37001,16 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Radiant Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant After Burner, Radiant Ultralight Chassis, Radiant Spacemine and Radiant AP Rounds, and can't be launched by hand.",
       "attack": 0,
       "health": 0
-    }
+    },
+    "refs": [
+      "stinkyscape-048",
+      "stinkyscape-049",
+      "stinkyscape-090",
+      "stinkyscape-100"
+    ]
   },
   "stinkyscapeplus-t-terminus-starship-heat-death-pilgrim": {
     "id": "stinkyscapeplus-t-terminus-starship-heat-death-pilgrim",
@@ -37036,7 +37037,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Trila 3, RR-5000, Healing Capsule and Vamp Rounds, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37049,10 +37050,16 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Radiant Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Trila 3, Radiant RR-5000, Radiant Healing Capsule and Radiant Vamp Rounds, and can't be launched by hand.",
       "attack": 0,
       "health": 0
-    }
+    },
+    "refs": [
+      "stinkyscape-043",
+      "stinkyscape-107",
+      "stinkyscape-108",
+      "stinkyscape-122"
+    ]
   },
   "stinkyscapeplus-t-terminus-starship-entropys-wake": {
     "id": "stinkyscapeplus-t-terminus-starship-entropys-wake",
@@ -37079,7 +37086,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Disintegrex, Flak v4, Shield Amplifier and Hull Booster, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37092,10 +37099,16 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Radiant Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Disintegrex, Radiant Flak v4, Radiant Shield Amplifier and Radiant Hull Booster, and can't be launched by hand.",
       "attack": 0,
       "health": 0
-    }
+    },
+    "refs": [
+      "stinkyscape-038",
+      "stinkyscape-057",
+      "stinkyscape-098",
+      "stinkyscape-105"
+    ]
   },
   "stinkyscapeplus-t-terminus-starship-red-giant-requiem": {
     "id": "stinkyscapeplus-t-terminus-starship-red-giant-requiem",
@@ -37122,7 +37135,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Cannon v5, Trila 3 and Ultra Capacitor, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37135,10 +37148,15 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Radiant Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Cannon v5, Radiant Trila 3 and Radiant Ultra Capacitor, and can't be launched by hand.",
       "attack": 0,
       "health": 0
-    }
+    },
+    "refs": [
+      "stinkyscape-060",
+      "stinkyscape-108",
+      "stinkyscape-133"
+    ]
   },
   "stinkyscapeplus-t-terminus-starship-cold-exodus": {
     "id": "stinkyscapeplus-t-terminus-starship-cold-exodus",
@@ -37165,7 +37183,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Frost Module, Reflective Plating, Defensive Crystal and Beam v4, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37178,10 +37196,16 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Radiant Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Frost Module, Radiant Reflective Plating, Radiant Defensive Crystal and Radiant Beam v4, and can't be launched by hand.",
       "attack": 0,
       "health": 0
-    }
+    },
+    "refs": [
+      "stinkyscape-054",
+      "stinkyscape-104",
+      "stinkyscape-132",
+      "stinkyscape-175"
+    ]
   },
   "stinkyscapeplus-t-terminus-starship-omega-drift": {
     "id": "stinkyscapeplus-t-terminus-starship-omega-drift",
@@ -37208,7 +37232,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Beam v5, Warpfield Amplifier, Magic Module and RR-5000, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37221,10 +37245,16 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Radiant Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Beam v5, Radiant Warpfield Amplifier, Radiant Magic Module and Radiant RR-5000, and can't be launched by hand.",
       "attack": 0,
       "health": 0
-    }
+    },
+    "refs": [
+      "stinkyscape-058",
+      "stinkyscape-106",
+      "stinkyscape-107",
+      "stinkyscape-136"
+    ]
   },
   "stinkyscapeplus-t-terminus-starship-farthest-shore": {
     "id": "stinkyscapeplus-t-terminus-starship-farthest-shore",
@@ -37251,7 +37281,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Repeater v5, After Burner, Patcher Nanobots, Ultra Capacitor and Healing Capsule, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37264,10 +37294,17 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Radiant Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Repeater v5, Radiant After Burner, Radiant Patcher Nanobots, Radiant Ultra Capacitor and Radiant Healing Capsule, and can't be launched by hand.",
       "attack": 0,
       "health": 0
-    }
+    },
+    "refs": [
+      "stinkyscape-043",
+      "stinkyscape-059",
+      "stinkyscape-090",
+      "stinkyscape-093",
+      "stinkyscape-133"
+    ]
   },
   "stinkyscapeplus-t-terminus-starship-nightfall-covenant": {
     "id": "stinkyscapeplus-t-terminus-starship-nightfall-covenant",
@@ -37294,7 +37331,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Flak v5, Cannon v4, Vamp Rounds, Shield Amplifier and Spacemine, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37307,10 +37344,17 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Radiant Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Flak v5, Radiant Cannon v4, Radiant Vamp Rounds, Radiant Shield Amplifier and Radiant Spacemine, and can't be launched by hand.",
       "attack": 0,
       "health": 0
-    }
+    },
+    "refs": [
+      "stinkyscape-038",
+      "stinkyscape-049",
+      "stinkyscape-056",
+      "stinkyscape-061",
+      "stinkyscape-122"
+    ]
   },
   "stinkyscapeplus-t-terminus-starship-vacuum-psalm": {
     "id": "stinkyscapeplus-t-terminus-starship-vacuum-psalm",
@@ -37337,7 +37381,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Cannon v5, Beam v5 and Flak v5, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37350,10 +37394,15 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding random Radiant Starship Pieces, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Cannon v5, Radiant Beam v5 and Radiant Flak v5, and can't be launched by hand.",
       "attack": 0,
       "health": 0
-    }
+    },
+    "refs": [
+      "stinkyscape-058",
+      "stinkyscape-060",
+      "stinkyscape-061"
+    ]
   },
   "stinkyscapeplus-t-ai-01": {
     "id": "stinkyscapeplus-t-ai-01",
