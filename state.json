@@ -18681,6 +18681,8 @@
       }
     },
     "3594": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-10T01:12:59Z",
@@ -18694,8 +18696,11 @@
         "trail": "s); B33 acceptance (`dungeon_`) 2 pass; `jackioh-wasm-core` 32 and `jackioh-wasm-c` 17 pass untouched.\n- - Headless-browser walkthrough at 1280\u00d7720 and 390\u00d7844: presets, builder with filter bar and pool, picked deck with meter (`dungeon-filled-desktop.png`, `dungeon-builder-phone3.png`, etc. in `.cache/browse/`, gitignored per repo rules); console clean.\n- ## Decisions and departures\n- - `SLOT_IDS`/`slotName` moved from `StartScreen.tsx` into `DeckBuilder.tsx` (shared by the ladder and the meter, avoids a component cycle) instead of staying put.\n- - The browser sits in a `deckbuilder app-shell` wrapper div (the workshop scopes its button rules that way) with `dungeon.css` neutralizing only the viewport-height sizing; the dungeon shell itself is untouched.\n- - Screenshotting caught a real phone bug: `.app-shell`'s `margin: 0 auto` un-stretches the browser's grid item (auto margins take free space over stretch), clipping the Filters toggle at 390px \u2014 fixed with an explicit side-margin reset plus `--db-card-w: 150px` so the narrower column pages several \u2026\n- - Rejected: putting the `deckbuilder` class on the dungeon shell (would restyle the whole start screen via `.tavern.deckbuilder.app-shell`) and duplicating workshop button styles in `dungeon.css` (forks shared CSS).\n- A reviewer should look twice at `DeckBuilder.tsx`'s slot-rank mapping (rarity \u2192 column, boss cards \u2192 Anything; the pool has no boss cards and `runCheckSetup` remains the judge) and the `.dungeon-browser` scope overrides in `dungeon.css`.<!-- bot: {\"status\": \"done\", \"title\": \"Patch: start a dungeon \u2026\n- ## What changed\n- The dungeon start screen now offers three named preset 10-card decks as one-click tiles, plus a build-your-own deck builder that reuses the deck workshop's browse pane. No rules changed, so no ruling note.\n- **Rules side (`crates/run`):** new `RUN_PRESET_DECKS` in `config.rs` \u2014 First Charge (units), Spell Tricks (spells + helpers), Hold the Line (tough units) \u2014 each 10 distinct `RUN_STARTER_CARDS` fitting level 1's slots, documented as placeholders until the designer's lists. New `RunPresetDeck` struct\u2026\n- **Start screen (presentation only, rule 7):** `PresetDecks.tsx` (tiles with name, theme line, 10-card fan; one click picks, still tweakable), `DeckBuilder.tsx` (the workshop's `CardBrowser` \u2014 filter bar, search, sort, pool grid, detail view \u2014 limited to unlocked cards, beside the deck list and a pe\u2026\n- ## Screenshots\n- I walked the page in a headless browser at 1280\u00d7720 and 390\u00d7844 and inspected every shot below pixel by pixel; console clean. The bot has no credential or API to upload images and repo rules forbid committing screenshots (`.cache/browse/` is gitignored), so the files wait at these paths for attachi\u2026\n- - Desktop presets \u2014 `.cache/browse/dungeon-presets-desktop.png` (three tiles with name, theme, 10-card fan) and `.cache/browse/dungeon-start-desktop.png` (page top: progress, mode, slots, presets).\n- - Desktop builder \u2014 `.cache/browse/dungeon-builder-desktop2.png` (filter bar, result count, 3-column pool) and `.cache/browse/dungeon-filled-desktop.png` (picked First Charge deck with gold selection, meter reading Common 7 of 5, Rare 3 of 4, Anything 0 of 1).\n- - Phone presets \u2014 `.cache/browse/dungeon-start-phone.png` (stacked tiles) and `.cache/browse/dungeon-presets-phone.png` (fans with art loaded).\n- - Phone builder \u2014 `.cache/browse/dungeon-builder-phone3.png` (single column, wrapped filters, 2-column pool, all controls reachable).\n- Superseded shots from before the CSS fixes (`dungeon-builder-desktop.png`, `dungeon-full-desktop.png`, `dungeon-builder-phone.png`, `dungeon-builder-phone2.png`) should not be attached.\n- ## How I tested it\n- - `cargo test -p jackioh-run` (45 pass, incl. new `b12_\u2026` proving each preset is 10 unlocked starters passing setup at level 1) and `--features ts` (75 pass, types regenerated); `cargo clippy -p jackioh-run --all-targets -- -D warnings`, `cargo fmt --check` clean.\n- - `pnpm --dir apps/web test src/dungeon` \u2014 127 pass across 11 files (new preset-fill-and-start, unlocked-only pool, search/filter narrowing, meter counts, verbatim refusal tests; `DungeonPage.test.tsx` migrated to the preset pick); `src/i18n/i18n.test.ts` 6 pass; `typecheck` and `eslint apps/edge a\u2026\n- - `cargo jackioh spec check` ok (1881 rulings); B33 acceptance (`dungeon_`) 2 pass; `jackioh-wasm-core` 32 and `jackioh-wasm-c` 17 pass untouched.\n- ## Decisions and departures\n- - `SLOT_IDS`/`slotName` moved from `StartScreen.tsx` into `DeckBuilder.tsx` (shared by the ladder and the meter, avoids a component cycle) instead of staying put.\n- - The browser sits in a `deckbuilder app-shell` wrapper div (the workshop scopes its button rules that way) with `dungeon.css` neutralizing only the viewport-height sizing; the dungeon shell itself is untouched.\n- - Screenshotting caught a real phone bug: `.app-shell`'s `margin: 0 auto` un-stretches the browser's grid item (auto margins take free space over stretch), clipping the Filters toggle at 390px \u2014 fixed with an explicit side-margin reset plus `--db-card-w: 150px` so the narrower column pages several \u2026\n- - Rejected: putting the `deckbuilder` class on the dungeon shell (would restyle the whole start screen via `.tavern.deckbuilder.app-shell`) and duplicating workshop button styles in `dungeon.css` (forks shared CSS).\n- A reviewer should look twice at `DeckBuilder.tsx`'s slot-rank mapping (rarity \u2192 column, boss cards \u2192 Anything; the pool has no boss cards and `runCheckSetup` remains the judge) and the `.dungeon-browser` scope overrides in `dungeon.css`.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3589 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3589/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3589,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T02:43:09Z",
         "from_run": "42734170166",
         "gates": [
           {
@@ -18754,8 +18759,15 @@
         "source": "build",
         "until": "2026-11-10T03:12:13Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-10T02:42:13Z",
+      "run_id": "pending:4a0895a5-1794278559",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-10T02:43:09Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -18769,9 +18781,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T02:29:45Z",
+    "at": "2026-11-10T02:43:09Z",
     "url": "",
-    "what": "review #3531 on claude-7"
+    "what": "review #3594 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T02:27:08Z",
