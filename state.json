@@ -18242,7 +18242,7 @@
       }
     },
     "3579": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -18264,12 +18264,12 @@
       "interruptions": 0,
       "issue": 3504,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-10T03:32:53Z",
-      "run_id": "42725429002",
+      "run_id": "pending:392a0974-1794282125",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -18290,16 +18290,9 @@
         "run": "42725429002"
       },
       "source": "conflict",
-      "started_at": "2026-11-10T00:04:09Z",
+      "started_at": "2026-11-10T03:42:41Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-10T03:32:53Z",
-        "until": "2026-11-10T04:02:53Z",
-        "why": "it waited 120 minutes for #3493, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -19118,9 +19111,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T03:41:52Z",
+    "at": "2026-11-10T03:42:41Z",
     "url": "",
-    "what": "build #1023 on muse"
+    "what": "revise #3579 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-10T03:10:15Z",
