@@ -25,7 +25,7 @@ import {
   type ReactNode,
 } from "react";
 
-import type { ActionBody, Aim, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
+import type { ActionBody, Aim, CombatForecast, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
 
 import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import type { SeatLoadouts } from "../cards/loadouts.ts";
@@ -46,6 +46,7 @@ import OpponentAim from "./aim/OpponentAim.tsx";
 import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
 import { IDLE, answerPlaguePlacement, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
+import { attackOutcomes, withOutcomes } from "./attackOutcome.ts";
 import {
   HIDDEN_ID,
   SET_PIECE_SKIP_HINT_MS,
@@ -73,6 +74,7 @@ import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import { usePhonePortrait } from "./phoneBar.ts";
 import FxLayer from "../fx/FxLayer.tsx";
+import type { FxVisibility } from "../fx/types.ts";
 import { getFxSettings, useFxSettings } from "../fx/settings.ts";
 import { getAudioEngine } from "../audio/engine.ts";
 import AuraLayer from "../fx/aura/AuraLayer.tsx";
@@ -87,6 +89,7 @@ import { SHORTCUTS } from "../shortcuts/shortcuts.ts";
 import { isTyping } from "../replay/ReplayToolbar.tsx";
 import "./animations.css";
 import { useGameAudio, usePickupSound, useVoiceSpeaking } from "../audio/index.ts";
+import { defaultVisibility } from "./visibility.ts";
 import { useGameStats } from "../stats/useGameStats.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { SidelineStrip } from "../sideline/SidelineStrip.tsx";
@@ -121,6 +124,11 @@ export type GameProps = {
   onAction: (body: ActionBody) => void;
   /** The engine's refusal for the last action, if any. `PlayerView` has no error channel. */
   error?: string | null;
+  /**
+   * R3477000: the engine's forecast of this seat's attacks, sent with `view` (a seat's frame, a practice
+   * snapshot). While an attacker is picked, each of its legal targets shows its entry. Absent, none does.
+   */
+  forecast?: CombatForecast;
   /** The route's ways on from a finished game, drawn in the result panel (Result.tsx). */
   resultActions?: ReactNode;
   /** `chip` when the route draws its own result dialog (practice); `panel` otherwise. */
@@ -193,6 +201,14 @@ export type GameProps = {
    */
   silent?: boolean;
   /**
+   * R3497000: an online board drains its animation queue while the page is hidden (and when it turns
+   * visible with steps still queued), so coming back shows the live board at once. Practice, dungeon
+   * and opened-replay boards leave it off.
+   */
+  drainWhenHidden?: boolean;
+  /** R3497000: the page-visibility source, injectable in tests; the page's own when absent. */
+  visibility?: FxVisibility;
+  /**
    * R2785000: claims an entry as a set piece, asked before the takeover; read at each enqueue. The
    * /dev/fx gallery's fixture set piece is its one caller until issue #2782's set pieces.
    */
@@ -234,6 +250,7 @@ export default function Game({
   legal: offered,
   onAction,
   error,
+  forecast,
   resultActions,
   resultForm = "panel",
   enemyLabel,
@@ -262,6 +279,8 @@ export default function Game({
   tradeBar = true,
   showOfferDraw = true,
   silent = false,
+  drainWhenHidden = false,
+  visibility,
   setPieceOf,
   concedeBody,
 }: GameProps): ReactElement {
@@ -462,6 +481,9 @@ export default function Game({
     });
   }
   const runner = queue.current;
+  // R3497000: the page-visibility source; the page's own unless a test injects one.
+  const fallbackVisibility = useMemo(() => defaultVisibility(), []);
+  const source = visibility ?? fallbackVisibility;
   useGameStats(view, trackStats);
   useGameAudio(runner, view, silent); // before the layout effects below: it must see each view before the runner is fed (audio/useGameAudio.ts)
   // A voice line holding the channel marks the board `data-speaking`, the one attribute practice's
@@ -621,13 +643,25 @@ export default function Game({
         if (mythic !== undefined) setStill({ defId: mythic.defId, instanceId: mythic.instanceId, view: previous });
       }
       runner.enqueue(fresh, previous);
+      // R3497000: a hidden tab drains each new view instead of replaying the backlog on throttled
+      // timers. Enqueue-then-drain, never skip-enqueue, so the drain signal still reaches `FxLayer`,
+      // the director still owes then flushes on idle, and `onSettled` sets `shown`.
+      if (drainWhenHidden && !silent && source.hidden()) runner.drain();
     }
     if (previous !== null && previous.viewer !== view.viewer) {
       stillSeen.current.clear();
       setStill(null);
     }
     if (runner.idle()) setShown(view);
-  }, [view, runner, reducedMotion, triggerHitStop, triggerHitStopMs, slamResolver, entranceResolver, silent, replay, motion]);
+  }, [view, runner, reducedMotion, triggerHitStop, triggerHitStopMs, slamResolver, entranceResolver, silent, replay, motion, drainWhenHidden, source]);
+
+  // R3497000: a tab that turns visible with steps still queued shows the newest view at once.
+  useEffect(() => {
+    if (!drainWhenHidden || silent) return undefined;
+    return source.subscribe(() => {
+      if (!source.hidden() && !runner.idle()) runner.drain();
+    });
+  }, [drainWhenHidden, silent, source, runner]);
 
   // The moves `offered` are the newest view's; they apply once the board shows it (see the header).
   const legal = shown === view ? offered : NOTHING_LEGAL;
@@ -749,10 +783,17 @@ export default function Game({
     dispatch({ type: "concede" });
   }, [dispatch, refocusConcede]);
 
+  // R3477000: the aimed attack's outcomes, the forecast sent with the newest view; a board held back on an
+  // older view shows none, as it offers no moves (`legal` above), and a replay none at all.
+  const showOutcomes = useSetting("attackOutcomes");
+  const outcomes = useMemo(
+    () => (replay || !showOutcomes || shown !== view ? undefined : attackOutcomes(shown, interaction, forecast)),
+    [replay, showOutcomes, shown, view, interaction, forecast],
+  );
   // A replay lights nothing: not even the cells an open prompt in the view names (`pendingHighlight`).
   const highlight = useMemo(
-    () => (replay ? NO_HIGHLIGHT : highlightFor(shown, legal, interaction)),
-    [replay, shown, legal, interaction],
+    () => withOutcomes(replay ? NO_HIGHLIGHT : highlightFor(shown, legal, interaction), outcomes),
+    [replay, shown, legal, interaction, outcomes],
   );
   // R738: what this seat aims at goes to the opponent; theirs is drawn below until the game ends.
   useAimEmitter(shown, legal, interaction, aim?.emit);

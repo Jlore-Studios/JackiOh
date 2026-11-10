@@ -64,7 +64,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const LAWYER: &str = "meditative-027";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4, no text: the R129 comparison.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: no text: the R129 comparison
     const FILLER: &str = "core-005";
 
     /// p1 plays the Lawyer (base unless `radiant_face`).

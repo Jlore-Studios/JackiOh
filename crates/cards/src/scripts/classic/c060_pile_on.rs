@@ -51,15 +51,15 @@ mod tests {
     use crate::def_ids;
 
     const PILE_ON: &str = "classic-060";
-    const VANILLA: &str = "core-008"; // Unit 4/4
-    const GARY: &str = "core-004"; // Unit 1/1, Cry: flip 5 coins
-    const SPECIESIST: &str = "core-002"; // Unit 6/1, Cry: destroy target enemy non-Human Unit
-    const MANA_WELL: &str = "core-006"; // Field Spell
-    const SHEEPISH: &str = "core-041"; // Trap
-    const BREAD: &str = "core-018"; // Field Trap
-    const STOCKPILE: &str = "core-005"; // Spell: draw 2, heal 2
-    const LUNAR: &str = "core-035"; // Spell
-    const ZAO_GAO: &str = "core-080"; // Spell: discard 2 random cards; summon 2 Rush Tokens
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const GARY: &str = "core-004"; // Gary the Gambler: Cry: flip 5 coins
+    const SPECIESIST: &str = "core-002"; // Speciesist: Cry: destroy target enemy non-Human Unit
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const BREAD: &str = "core-018"; // Bread and Butter: a Field Trap
+    const STOCKPILE: &str = "core-005"; // Stockpile: draw 2, heal 2
+    const LUNAR: &str = "core-035"; // Lunar Eclipse: a Spell
+    const ZAO_GAO: &str = "core-080"; // Zao Gao: discard 2 random cards; summon 2 Rush Tokens
     const RUSH_TOKEN: &str = "core-t-rush";
     const FILLER: &str = "core-005";
 

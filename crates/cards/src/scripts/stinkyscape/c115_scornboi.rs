@@ -77,13 +77,13 @@ mod tests {
     use super::ID;
     use crate::{filler, scenario};
 
-    const VANILLA: &str = "core-008"; // (1) 4/4, a Human: a tribute.
-    const MENACE: &str = "core-019"; // (3) 9/9, no tag.
-    const CHASSIS: &str = "stinkyscape-048"; // (1) 4/1, a Starship Piece.
-    const STRATOS: &str = "stinkyscape-068"; // (1) 3/1 Flying, Ranged: no piece since #2521.
-    const PARAGON_MK1: &str = "stinkyscape-072"; // (3) 6/1 Charge, Flying, Ranged: no piece since #2521.
-    const ARMOR: &str = "core-073"; // (2) Field Spell: no Unit.
-    const MELTDOWN: &str = "stinkyscape-t-meltdown-layer"; // A Drone Battleship's layer: no Starship.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: a Human: a tribute
+    const MENACE: &str = "core-019"; // Midrange Menace: no tag
+    const CHASSIS: &str = "stinkyscape-048"; // Ultralight Chassis: a Starship Piece
+    const STRATOS: &str = "stinkyscape-068"; // Stratos: Flying, Ranged: no piece since #2521
+    const PARAGON_MK1: &str = "stinkyscape-072"; // Paragon Mk1: Charge, Flying, Ranged: no piece since #2521
+    const ARMOR: &str = "core-073"; // Anti-oneshot Armor: no Unit
+    const MELTDOWN: &str = "stinkyscape-t-meltdown-layer"; // Drone Battleship (Meltdown Layer): a layer, no Starship
     const FILLER: &str = "core-005";
 
     fn board(radiant: bool) -> Scenario {

@@ -51,15 +51,15 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    const ROCK: &str = "traininggrounds-054"; // Unit 10/10 → 20/20, cost 4, Human. Tribute 1, Indestructible.
-    const TIMMY: &str = "core-011"; // Tempo Timmy, a plain 1-cost 3/3: a body to tribute or to attack with.
-    const SHEEP: &str = "core-t-sheep"; // Sheep Token, 1/1, "worth 2 Tributes while on the field" (§3.2).
-    const RUSH: &str = "core-t-rush"; // Rush Token, 3/3: a second body, so an action can run a state check.
-    const AURA: &str = "core-046"; // Suppressive Aura, Field Spell, embiggen price 4 — R69's −10/−10.
+    const ROCK: &str = "traininggrounds-054"; // Legacy: The Rock: Human. Tribute 1, Indestructible.
+    const TIMMY: &str = "core-011"; // Tempo Timmy: a plain unit: a body to tribute or to attack with
+    const SHEEP: &str = "core-t-sheep"; // Sheep Token: "worth 2 Tributes while on the field" (§3.2).
+    const RUSH: &str = "core-t-rush"; // Rush Token: a second body, so an action can run a state check
+    const AURA: &str = "core-046"; // Suppressive Aura: a Field Spell, embiggen price 4 — R69's debuff
 
     /// R82 auto-ends a turn whose only legal actions are ending it, conceding and offering a draw, so
     /// every scenario keeps this free Spell in p1's hand; it is never played.
-    const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: a Spell, always an affordable play
 
     /// The refusal names the Tribute, capitalised or not, so the word's common tail is matched.
     const TRIBUTE_TEXT: &str = "ribute";

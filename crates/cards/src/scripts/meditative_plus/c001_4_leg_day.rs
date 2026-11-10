@@ -33,8 +33,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005";
-    const VANILLA: &str = "core-008"; // 4/4.
-    const TIMMY: &str = "core-011"; // 3/3.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
 
     fn leg_day(radiant: bool) -> Scenario {
         scenario(json!({

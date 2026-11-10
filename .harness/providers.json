@@ -11,7 +11,7 @@
       { "model": "muse-spark-1.3-contributor", "note": "Meta through Muse: the most reliable builder (#305), first among the medium models." },
       { "model": "gemini-3.8-flash-high", "note": "Google through agy, on Gemini 3.8 Flash (High): a medium model that plans, builds and reviews. Gemini 4 Argon was tried in #2748 and is not on the owner's Google account (checked on the box on 2026-11-02, agy CLI 1.4.12). To try a newer model later, confirm its name with `agy models` and that it answers a headless `agy -p` call first." },
       { "model": "gpt-5.6-sol", "note": "ChatGPT through Codex, on GPT-5.6 Sol: medium again since 2026-10-20 (weak from 2026-10-11, on Terra), after agy and before Sonnet." },
-      { "model": "sonnet", "note": "Claude Sonnet at xhigh (#317 part 5): a medium seat on every Claude account, which switches between it and Opus as the work needs (work.Worker.Switch)." }
+      { "model": "sonnet", "note": "Claude Sonnet (#317 part 5): a medium seat on every Claude account, at xhigh on claude-2, -3, -4 and -7 and at high on claude-1, -5, -6 and -8 (the Sonnet effort test, 2026-11-09), which switches between it and Opus as the work needs (work.Worker.Switch)." }
     ],
     "strong": [
       { "model": "opus", "note": "Claude Opus, on every Claude account, beside its Sonnet." }
@@ -19,7 +19,7 @@
   },
   "providers": {
     "claude-1": {
-      "note": "The Claude subscription the bot has always used; shared with its owner and bright-bots-harness. Second in the usage order: Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. Two lanes in its hours (100%), one outside them (40%), by lanes_by_cap (#2748; one lane until then, #695).",
+      "note": "The Claude subscription the bot has always used; shared with its owner and bright-bots-harness. Second in the usage order: Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. Two lanes in its hours (100%), one outside them (40%), by lanes_by_cap (#2748; one lane until then, #695). Its Sonnet seat runs at `high` (the Sonnet effort test, 2026-11-09: bot/README.md, The Sonnet effort test).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -27,7 +27,7 @@
       "effort": "xhigh",
       "fix_effort": "high",
       "tier": "strong",
-      "extra_models": [{ "model": "sonnet", "effort": "xhigh", "tier": "medium" }],
+      "extra_models": [{ "model": "sonnet", "effort": "high", "tier": "medium" }],
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN",
       "runs_on": "ubuntu-latest",
@@ -92,7 +92,7 @@
       "quiet_check": false
     },
     "claude-5": {
-      "note": "A fifth Claude account (token added 2026-10-04): any hour, capped at 40% of its 5-hour session and 60% of its week, and from Sunday 17:00 Central until its week resets (Monday at 09:00 UTC, 03:00 Central in winter) at 80% of its 5-hour session and 90% of its week, with its session's last hour up to 90% too (`late_week`): its only time past those caps. A hard cap of 90% on both windows (`hard_cap`) that nothing lifts, neither its late week nor its last hour, and a run stops a point under it, so no call spills past 90%. Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. One lane at its 40% cap, two in its late week (80%) and its last hours there, by lanes_by_cap (#2748).",
+      "note": "A fifth Claude account (token added 2026-10-04): any hour, capped at 40% of its 5-hour session and 60% of its week, and from Sunday 17:00 Central until its week resets (Monday at 09:00 UTC, 03:00 Central in winter) at 80% of its 5-hour session and 90% of its week, with its session's last hour up to 90% too (`late_week`): its only time past those caps. A hard cap of 90% on both windows (`hard_cap`) that nothing lifts, neither its late week nor its last hour, and a run stops a point under it, so no call spills past 90%. Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. One lane at its 40% cap, two in its late week (80%) and its last hours there, by lanes_by_cap (#2748). Its Sonnet seat runs at `high` (the Sonnet effort test, 2026-11-09: bot/README.md, The Sonnet effort test).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -100,7 +100,7 @@
       "effort": "xhigh",
       "fix_effort": "high",
       "tier": "strong",
-      "extra_models": [{ "model": "sonnet", "effort": "xhigh", "tier": "medium" }],
+      "extra_models": [{ "model": "sonnet", "effort": "high", "tier": "medium" }],
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_5",
       "runs_on": "ubuntu-latest",
@@ -111,7 +111,7 @@
       "quiet_check": false
     },
     "claude-6": {
-      "note": "A sixth Claude account (token added 2026-10-05), same rules as claude-4 with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of it. Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. Two lanes in its window, one outside it, by lanes_by_cap (#2748).",
+      "note": "A sixth Claude account (token added 2026-10-05), same rules as claude-4 with no weekly cap: any hour under 50% of its 5-hour session (off_hours), and from 03:00 to 15:00 Central (its window) up to 70% of it. Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. Two lanes in its window, one outside it, by lanes_by_cap (#2748). Its Sonnet seat runs at `high` (the Sonnet effort test, 2026-11-09: bot/README.md, The Sonnet effort test).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -119,7 +119,7 @@
       "effort": "xhigh",
       "fix_effort": "high",
       "tier": "strong",
-      "extra_models": [{ "model": "sonnet", "effort": "xhigh", "tier": "medium" }],
+      "extra_models": [{ "model": "sonnet", "effort": "high", "tier": "medium" }],
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
       "runs_on": "ubuntu-latest",
@@ -149,7 +149,7 @@
       "quiet_check": false
     },
     "claude-8": {
-      "note": "An eighth Claude account (token added 2026-10-23): any hour, capped at 85% of its 5-hour session with no weekly cap. Third in the usage order, after claude-3 and claude-7: Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. Two lanes at its 85% cap, by lanes_by_cap (#2748; three on 2026-10-27, #2112; two since #2129), so it works up to two items at once: each run takes its own reading before it starts and watches it during every call, so they pass its cap by at most one reading's worth.",
+      "note": "An eighth Claude account (token added 2026-10-23): any hour, capped at 85% of its 5-hour session with no weekly cap. Third in the usage order, after claude-3 and claude-7: Opus for strong roles, Sonnet (medium) for medium builds and plans, and each run switches between the two as the work needs. Two lanes at its 85% cap, by lanes_by_cap (#2748; three on 2026-10-27, #2112; two since #2129), so it works up to two items at once: each run takes its own reading before it starts and watches it during every call, so they pass its cap by at most one reading's worth. Its Sonnet seat runs at `high` (the Sonnet effort test, 2026-11-09: bot/README.md, The Sonnet effort test).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -157,7 +157,7 @@
       "effort": "xhigh",
       "fix_effort": "high",
       "tier": "strong",
-      "extra_models": [{ "model": "sonnet", "effort": "xhigh", "tier": "medium" }],
+      "extra_models": [{ "model": "sonnet", "effort": "high", "tier": "medium" }],
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
       "runs_on": "ubuntu-latest",

@@ -65,16 +65,16 @@ mod tests {
 
     use super::ID;
 
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const LAR: &str = "classicplus-076"; // (1) 1/1: "Death: Summon a Brother Ping."
-    const SORCERER: &str = "core-068"; // (2) 5/5: "Cry: Deal 4 damage."
-    const ARMOR: &str = "core-073"; // (2) Field Spell: "… Cry: Draw 1."
-    const RUSH_TOKEN: &str = "core-t-rush"; // a unit token.
-    const JAMMED: &str = "core-036"; // (1) Spell: "Destroy a backrow card. Lock its zone."
-    const COLLATERAL: &str = "core-034"; // (4) Spell: "Exile a permanent and a random card …"
-    const TRAP: &str = "core-041"; // (1) Trap Sheepish, to set face-down.
-    const CORE_SYSTEM: &str = "stinkyscape-117"; // (3) Spell: "Bounce all permanents. …"
+    const FILLER: &str = "core-005"; // Stockpile: a Spell, a card in hand, so no turn ends by itself
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const LAR: &str = "classicplus-076"; // Brother Lar: "Death: Summon a Brother Ping."
+    const SORCERER: &str = "core-068"; // Twisted Sorcerer: "Cry: Deal 4 damage."
+    const ARMOR: &str = "core-073"; // Anti-oneshot Armor: "… Cry: Draw 1."
+    const RUSH_TOKEN: &str = "core-t-rush"; // Rush Token: a unit token
+    const JAMMED: &str = "core-036"; // Magic Jammed: "Destroy a backrow card. Lock its zone."
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: "Exile a permanent and a random card …"
+    const TRAP: &str = "core-041"; // Sheepish: a Trap, to set face-down
+    const CORE_SYSTEM: &str = "stinkyscape-117"; // Core System: "Bounce all permanents. …"
 
     fn board(radiant: bool, hand: Value, field: Value, backrow: Value) -> Scenario {
         let mut cards = vec![json!({ "def": ID, "radiant": radiant }), json!(FILLER)];

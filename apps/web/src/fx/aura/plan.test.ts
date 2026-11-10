@@ -2,6 +2,7 @@
 // what it covers, how auras stack, how each begins and ends, and the motes' budget. R3337003: an
 // Anomaly's backdrop over its caster's side. R3400000: a face-up Unit's `tile` aura over its own unit zone,
 // R3399001 a Classic+ signature Unit's own look among them.
+// R3402000: Core's three signature looks, on Silly Silas's tile and Combo-Index's and Heroic Power's zones.
 
 import type { BackrowView, GameEvent, PlayerId, PlayerView, Row } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -9,13 +10,14 @@ import { describe, expect, it } from "vitest";
 import { laneZoneTestids } from "../../game/actions.ts";
 import { testid, type Side } from "../../game/contract.ts";
 import { baseView, emptySide, faceDownBackrow, faceUpBackrow, resetIds, unit } from "../../test/fixtures.ts";
-import { parseFxCardTable } from "../cards/tables.ts";
+import { FX_CARD_TABLE, parseFxCardTable } from "../cards/tables.ts";
 import {
   AURA_FADE_IN_MS,
   AURA_FADE_OUT_MS,
   AURA_MAX_PER_ZONE,
   AURA_MOTES_PER_AURA,
   AURA_PARTICLE_SHARE,
+  AURA_SIGNATURE_MAX_INTENSITY,
   AURA_SOURCES_LIMIT,
   FX_INTENSITY_SCALE,
   FX_PARTICLE_CAP,
@@ -24,7 +26,7 @@ import {
 import type { AnomalyCode } from "../../cards/anomalies.ts";
 import { FLAVOR_LOOKS, FLAVOR_SUB_LOOKS, paletteLook } from "../flavors.ts";
 import { createFxMemory } from "../memory.ts";
-import { AURA_LOOK_NAMES, AURA_LOOKS, AURA_SCOPES, type AuraLook, type AuraScope } from "./looks.ts";
+import { AURA_LOOK_NAMES, AURA_LOOKS, AURA_SCOPES, AURA_SIGNATURE_LOOKS, isSignatureAuraLook, type AuraLook, type AuraScope } from "./looks.ts";
 import {
   attributeModifiers,
   auraBudget,
@@ -376,6 +378,39 @@ describe("R3337003 an Anomaly's backdrop", () => {
     noteAnomalies([{ type: "gameOver", winner: "p1", reason: "hero-death" }], boards);
     expect(boards.size).toBe(0);
     expect(backdrops()).toEqual([]);
+  });
+});
+
+describe("R3402000 Core's signature auras", () => {
+  it("R3402000 Silly Silas's mirrorball stands on his own tile, Combo-Index's stadium and Heroic Power's pedestal on their zones, never hidden", () => {
+    resetIds();
+    const silas = unit("p2", { defId: "core-052" });
+    const view = board([field("p1", "core-093"), field("p1", "core-098")], []);
+    view.opponent.units = [null, silas, null, null, null];
+    const planned = planAuras(view, new Map(), FX_CARD_TABLE);
+    expect(planned.map((aura) => [aura.defId, aura.side, aura.lane, aura.scope, aura.look])).toEqual([
+      ["core-093", "you", 1, "zone", "stadium"],
+      ["core-098", "you", 2, "zone", "pedestal"],
+      ["core-052", "opponent", 2, "tile", "mirrorball"],
+    ]);
+    const mirrorball = planned[2];
+    if (mirrorball === undefined) throw new Error("no mirrorball");
+    expect(mirrorball.key).toBe(`unit-${silas.instanceId}`);
+    expect(auraZones(mirrorball)).toEqual([testid.zone("opponent", "units", 2)]);
+    expect(mirrorball.colors).toEqual(FLAVOR_SUB_LOOKS.Tech?.hologram?.colors);
+    // R202: a hidden Unit, the other seat's unknown, wears none; nor does a Unit off the field.
+    view.opponent.units = [null, unit("p2", { defId: "hidden", instanceId: "hidden" }), null, null, null];
+    expect(planAuras(view, new Map(), FX_CARD_TABLE).some((aura) => aura.scope === "tile")).toBe(false);
+    view.opponent.units = [null, null, null, null, null];
+    expect(planAuras(view, new Map(), FX_CARD_TABLE).some((aura) => aura.scope === "tile")).toBe(false);
+  });
+
+  it("R3402000 the three are signature looks, within a signature aura's cap", () => {
+    for (const name of ["mirrorball", "stadium", "pedestal"] as const) {
+      expect(isSignatureAuraLook(name), name).toBe(true);
+      const look = AURA_SIGNATURE_LOOKS[name];
+      for (const value of [look.alpha, look.tint, look.edge]) expect(value, name).toBeLessThanOrEqual(AURA_SIGNATURE_MAX_INTENSITY);
+    }
   });
 });
 

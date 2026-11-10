@@ -88,6 +88,9 @@ pub struct App {
     /// SPEC §11 R2422000: how many practice claims are settling now (`api::practice`), so the
     /// shutdown drain waits for every one before it closes the store.
     pub practice_settles: tokio::sync::watch::Sender<usize>,
+    /// SPEC §11 R3500001: the seeds whose settle runs now in this process (`api::practice`), so the
+    /// retention sweep never folds a claim a live settle still works on.
+    pub practice_settling: Mutex<std::collections::BTreeSet<String>>,
     /// SPEC §11 R2378000: each account's spends, one running and the rest waiting their turn
     /// (`economy::spend_slots`).
     pub spends: crate::economy::spend_slots::SpendSlots,
@@ -1062,6 +1065,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         economy_live: crate::config::ECONOMY_LIVE,
         practice_verifications: tokio::sync::Semaphore::new(crate::config::PRACTICE_VERIFY_CONCURRENCY),
         practice_settles: tokio::sync::watch::Sender::new(0),
+        practice_settling: Mutex::new(std::collections::BTreeSet::new()),
         spends: crate::economy::spend_slots::SpendSlots::default(),
         news,
     });

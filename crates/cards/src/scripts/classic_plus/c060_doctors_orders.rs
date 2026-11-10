@@ -48,7 +48,7 @@ mod tests {
 
     const ORDERS: &str = "classicplus-060";
     const APPLE: &str = "classicplus-059";
-    const WELL: &str = "core-006"; // Mana Well, a Field Spell to fill a backrow
+    const WELL: &str = "core-006"; // Mana Well: a Field Spell to fill a backrow
     const FILLER: &str = "core-005";
 
     use crate::scenario;

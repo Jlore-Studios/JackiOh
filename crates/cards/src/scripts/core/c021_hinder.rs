@@ -80,9 +80,9 @@ mod tests {
     const HINDER: &str = "core-021";
     /// Tempo Timmy: drawn into a hand it does nothing, and on the board it keeps the turn alive.
     const CONTROL: &str = "core-011";
-    const P1_FILLER: &str = "core-016"; // Hit Job, a spell with no hand trigger.
-    const P1_SECOND: &str = "core-044"; // True Strike, the other card a choice would weigh.
-    const P2_FILLER: &str = "core-005"; // Stockpile, likewise.
+    const P1_FILLER: &str = "core-016"; // Hit Job: a spell with no hand trigger
+    const P1_SECOND: &str = "core-044"; // True Strike: the other card a choice would weigh
+    const P2_FILLER: &str = "core-005"; // Stockpile: likewise
 
     fn hinder_on_top(seed: &str, is_radiant: bool, turn: Option<i32>, hand: &[&str]) -> Scenario {
         let mut options = json!({

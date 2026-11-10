@@ -365,6 +365,7 @@ impl PracticeHost {
             rng: Rng::new(&ask.rng_seed, ask.rng_cursor),
             budget,
             should_stop: None,
+            wrap_up: None,
         };
         let decision = catch_unwind(AssertUnwindSafe(|| {
             jackioh_ai::decide(&self.game, ask.seat, &mut options)
@@ -599,11 +600,9 @@ impl PracticeHost {
             last_board: keeps_board.then(|| jackioh_engine::last_board_for(&self.game, human)),
             replay: self.kept_as,
             lethal: None,
-            // R3100000: a lesson's coach names its attacks by the engine's forecast of them.
-            forecast: self
-                .config
-                .is_lesson()
-                .then(|| jackioh_engine::combat_forecast(&self.game, human)),
+            // R3100000, R3477000: every snapshot; a lesson's coach names its attacks by it, and the
+            // page decides where to draw it.
+            forecast: Some(jackioh_engine::combat_forecast(&self.game, human)),
         }
     }
 

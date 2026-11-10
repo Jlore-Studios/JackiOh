@@ -44,8 +44,8 @@ mod tests {
 
     const CARD: &str = "classicplus-015";
     const RUSH_TOKEN: &str = "core-t-rush";
-    const FILLER: &str = "core-005"; // a card in hand, so a turn never auto-ends under the test
-    const BODY: &str = "core-019"; // Midrange Menace, 9/9 Taunt: a unit to fill a zone
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so a turn never auto-ends under the test
+    const BODY: &str = "core-019"; // Midrange Menace: Taunt: a unit to fill a zone
 
     use crate::scenario;
 

@@ -87,14 +87,14 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const VANILLA: &str = "core-008"; // a (1) 4/4 with no text.
-    const SPARE: &str = "core-010"; // (0) Spell, never played: it only keeps the turn open (R82).
-    const JELLY: &str = "core-027"; // (1) Spell, cast on draw.
-    const SHEEPISH: &str = "core-041"; // (1) Trap: transform a played Unit into a Sheep Token.
-    const SHEEP: &str = "core-t-sheep"; // Sheep Token.
-    const COUNTER: &str = "classic-017"; // (2) Trap: counter an opponent's Spell.
-    const CRAFT: &str = "core-099"; // (4) Spell: Discover 2 Units, fuse them, the result costs (0).
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const SPARE: &str = "core-010"; // Rapid Replenish: a Spell, never played: it only keeps the turn open (R82)
+    const JELLY: &str = "core-027"; // Blood Ridden Glowy Jelly Bean: a Spell, cast on draw
+    const SHEEPISH: &str = "core-041"; // Sheepish: transform a played Unit into a Sheep Token.
+    const SHEEP: &str = "core-t-sheep"; // Sheep Token
+    const COUNTER: &str = "classic-017"; // Counterspell: counter an opponent's Spell
+    const CRAFT: &str = "core-099"; // Craft a Card: Discover 2 Units, fuse them, the result costs nothing
 
     /// A side with mana to play and a stocked library, so no turn auto-ends (§2.5) or fatigues.
     fn side(extra: Value) -> Value {

@@ -5,6 +5,8 @@
 // (fx/cards/tiers.test.ts); what only a browser can say is that the scene draws, captured here.
 // R3400001: Meditative+'s and Training Grounds' eight signatures, each played as the gallery plays it, at
 // both sizes: a Mythic's own takeover draws its art, the rest their figures or their canvas.
+// R3402001: Core's ten other signatures (fx/cards/core/), each played as the gallery plays it at both
+// sizes, its effects mounting on the page, and each Mythic's takeover drawing its own art (R3402000).
 // R3405001: Meditative's 32 signatures the same way, at both sizes: each Mythic's own takeover draws its
 // own art, every other card its figure.
 // R3399000: so does every Classic+ signature, at both sizes, each Mythic's takeover drawing its own picture
@@ -72,6 +74,14 @@ const MEDITATIVE: readonly { defId: string; name: string; look?: string }[] = [
   { defId: "meditative-097-9", name: "Jlockeed's Headquarters", look: "fortress" },
 ];
 const FX_DOM = '[data-testid="fx-dom"]';
+/** R3402001: Core's ten signatures of issue #3402, in catalog order, and which of them are Mythics. */
+const CORE_SIGNATURES = ["core-052", "core-083", "core-085", "core-087", "core-093", "core-095", "core-096", "core-097", "core-098", "core-099"] as const;
+const CORE_MYTHICS: ReadonlySet<string> = new Set(["core-096", "core-097", "core-098", "core-099"]);
+/** R3402000: a Core Mythic's own scene, a drawing in its takeover's art layer (R3399002). */
+const TAKEOVER_ART = `${FX_DOM} [data-fx="takeover"] .takeover-art .takeover-art-drawing`;
+/** How often and how long `watchScene` samples a scene. */
+const SCENE_SAMPLE_MS = 50;
+const SCENE_WATCH_MS = 15_000;
 const LAYER = '[data-testid="fx-layer"]';
 const CANVAS = '[data-testid="fx-canvas"]';
 const GAME = '[data-testid="game"]';
@@ -127,6 +137,34 @@ function waitLit(): Cypress.Chainable<boolean> {
         win.requestAnimationFrame(tick);
       }),
   );
+}
+
+/** What a scene drew: its canvas, its effects on the page and, for a Mythic, its takeover's own art. */
+type SceneSeen = { lit: boolean; dom: boolean; art: boolean };
+
+/**
+ * R3402001: watches a scene from before it plays, sampling every SCENE_SAMPLE_MS, until it has drawn on
+ * the canvas or mounted an effect on the page and, for a Mythic, its takeover's own art has shown
+ * (R3402000), or SCENE_WATCH_MS have passed. A takeover's art stands only through its hold, so it is
+ * watched alongside rather than after. The canvas alone is no proof here: a frame a software-rendered
+ * runner stalls past a burst's life ages its particles out before they draw (R200: no backlog replays),
+ * while every one of the ten also mounts an effect of its own on the page (rays, a fracture, a ghost, a
+ * sheen, its roll or its takeover).
+ */
+function watchScene(win: Window, mythic: boolean): Promise<SceneSeen> {
+  return new Promise((resolve) => {
+    const start = win.performance.now();
+    const seen: SceneSeen = { lit: false, dom: false, art: !mythic };
+    const tick = (): void => {
+      seen.lit = seen.lit || canvasLit(win);
+      // A turn banner is the board's, not the play's.
+      seen.dom = seen.dom || win.document.querySelector(`${FX_DOM} [data-fx]:not([data-fx="banner"])`) !== null;
+      seen.art = seen.art || win.document.querySelector(TAKEOVER_ART) !== null;
+      if ((seen.lit && seen.dom && seen.art) || win.performance.now() - start > SCENE_WATCH_MS) resolve(seen);
+      else win.setTimeout(tick, SCENE_SAMPLE_MS);
+    };
+    tick();
+  });
 }
 
 describe("R3332001 Felinor Fiender's signature in a real browser", () => {
@@ -245,6 +283,52 @@ describe("R3405001 Meditative's signatures in a real browser", () => {
           cy.get(`${FX_DOM} [data-fx="figure"]`).should("exist");
         }
         cy.screenshot(`fx-signature-${defId}-${String(w)}x${String(h)}`, { capture: "viewport", overwrite: true });
+      });
+    }
+  }
+});
+
+describe("R3402001 R3402000 Core's signatures in a real browser, each Mythic's takeover drawing its own art", () => {
+  before(() => {
+    Cypress.config("defaultCommandTimeout", 20_000);
+  });
+  after(() => {
+    Cypress.config("defaultCommandTimeout", 4_000);
+  });
+  afterEach(() => {
+    setFxSettings({ ...DEFAULT_FX_SETTINGS });
+    window.localStorage.removeItem(FX_SETTINGS_KEY);
+  });
+
+  for (const defId of CORE_SIGNATURES) {
+    for (const { width: w, height: h } of VIEWPORTS) {
+      it(`R3402001 ${defId}'s signature at ${String(w)}x${String(h)}`, () => {
+        cy.viewport(w, h);
+        cy.then(() => {
+          setFxSettings({ speed: FX_SPEED_MIN });
+        });
+        const entry = FX_CARD_TABLE.get(defId);
+        const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+        if (play === null) throw new Error(`${defId} has no gallery play`);
+        const board = galleryBoardOf(defId, fullBoardView());
+        const events = galleryCardEvents(defId, play, board, 1);
+        const mythic = CORE_MYTHICS.has(defId);
+        let seen: Promise<SceneSeen> = Promise.resolve({ lit: false, dom: false, art: false });
+        cy.window().then((win) => {
+          seen = watchScene(win, mythic);
+        });
+        // As /dev/fx plays it: over the board with the card still in the hand, where a Spell's takeover lands.
+        mountShown(galleryHandOf(defId, board, 1), withEvents(galleryFieldView(defId, board), events));
+        cy.get(GAME).find("[data-animating]").should("exist");
+        cy.then({ timeout: SCENE_WATCH_MS + 5_000 }, () => seen).then((result) => {
+          cy.log(`${defId}: canvas ${result.lit ? "drew" : "stayed dark"}`);
+          expect(result.dom, `${defId}'s signature mounts its effects`).to.eq(true);
+          // R3402000: a Mythic's takeover draws its own scene over the dark.
+          expect(result.art, `${defId}'s takeover draws its own art`).to.eq(true);
+        });
+        cy.screenshot(`fx-signature-${defId}-${String(w)}x${String(h)}`, { capture: "viewport", overwrite: true });
+        // The scene plays out before the next mounts, so nothing of it runs on into the next test.
+        cy.get("[data-animating]", { timeout: SCENE_WATCH_MS * 2 }).should("not.exist");
       });
     }
   }

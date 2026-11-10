@@ -375,7 +375,7 @@ mod tests {
     #[test]
     fn r1884005_a_copier_of_the_maestro_s_text_reads_its_price_off_the_copy() {
         const TNACK_TRAV: &str = "stinkyscape-020";
-        const FIENDER: &str = "core-092"; // Legendary, so the fusion is.
+        const FIENDER: &str = "core-092"; // Felinor Fiender: Legendary, so the fusion is
         let mut s = scenario(json!({
             "seed": "maestro-copied",
             "p1": { "hand": [TNACK_TRAV, FILLER], "library": filler(4), "mana": 10 },

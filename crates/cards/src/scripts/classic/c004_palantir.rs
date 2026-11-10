@@ -170,19 +170,19 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const PALANTIR: &str = "classic-004";
-    const BOOK: &str = "classic-024"; // (1) Spell, Book: Draw 3.
-    const FLAME: &str = "classic-016"; // (1) Spell, Book: Trample. Deal 4 damage (a declared target).
-    const CURSE: &str = "meditative-028-1"; // (2) Spell token: Cast on draw: take 7 damage.
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const REPLENISH: &str = "core-010"; // (0) Spell.
-    const DIVIDEND: &str = "core-024"; // (X) Spell.
-    const HINDER: &str = "core-021"; // (0) Spell, cast on draw.
+    const BOOK: &str = "classic-024"; // Book of Knowledge: a Book Spell, Draw 3
+    const FLAME: &str = "classic-016"; // Book of Flame: a Book Spell, Trample. Deal 4 damage (a declared target).
+    const CURSE: &str = "meditative-028-1"; // Ancient Curse: a Spell token. Cast on draw: take 7 damage.
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const REPLENISH: &str = "core-010"; // Rapid Replenish: a Spell
+    const DIVIDEND: &str = "core-024"; // Efficiency Dividend: a Spell
+    const HINDER: &str = "core-021"; // Hinder: a Spell, cast on draw
     const VANILLA: &str = "core-008";
     const TIMMY: &str = "core-011";
-    const TWINSPELL: &str = "core-079"; // (2) Field Spell.
-    const CALL: &str = "core-069"; // (2) Spell: Recruit 3 Units of (3) Cost or less.
-    const COUNTERSPELL: &str = "classic-017"; // Trap: counters the opponent's Spell.
-    const GAMBIT: &str = "classic-052"; // Trap: reveals at a lethal hit on your hero; cancels it, heals 10, draws 3.
+    const TWINSPELL: &str = "core-079"; // Twinspell: a Field Spell
+    const CALL: &str = "core-069"; // Call to Arms: Recruit 3 Units
+    const COUNTERSPELL: &str = "classic-017"; // Counterspell: counters the opponent's Spell
+    const GAMBIT: &str = "classic-052"; // Final Gambit: reveals at a lethal hit on your hero; cancels it, heals 10, draws 3
 
     const DECK: [&str; 6] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 

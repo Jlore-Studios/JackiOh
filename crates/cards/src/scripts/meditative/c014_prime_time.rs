@@ -91,17 +91,17 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const PRIME: &str = "meditative-014";
-    const FIVE: &str = "core-005"; // Index 5: prime. (1) Spell.
-    const THREE: &str = "core-003"; // Index 3: prime. (1) Unit.
-    const ELEVEN: &str = "core-011"; // Index 11: prime. (1) Unit.
-    const NINETEEN: &str = "core-019"; // Index 19: prime. (3) Unit.
-    const MED_FIVE: &str = "meditative-005"; // Index 5: prime, another set. (1) Spell.
-    const EIGHT: &str = "core-008"; // Index 8: not prime.
-    const TEN: &str = "core-010"; // Index 10: not prime.
-    const FIFTEEN: &str = "core-015"; // Index 15: not prime.
-    const TWENTY_FIVE: &str = "core-025"; // Index 25: not prime.
-    const RUSH_TOKEN: &str = "core-t-rush"; // Index "T-rush": never prime.
-    const FILLER: &str = "core-005"; // (1) Spell.
+    const FIVE: &str = "core-005"; // Stockpile: Index 5: prime. Spell.
+    const THREE: &str = "core-003"; // Right-house defender: Index 3: prime. Unit.
+    const ELEVEN: &str = "core-011"; // Tempo Timmy: Index 11: prime.
+    const NINETEEN: &str = "core-019"; // Midrange Menace: Index 19: prime. Unit.
+    const MED_FIVE: &str = "meditative-005"; // Death by 1000 cuts: Index 5: prime, another set. Spell.
+    const EIGHT: &str = "core-008"; // Mr. Vanilla: Index 8: not prime
+    const TEN: &str = "core-010"; // Rapid Replenish: Index 10: not prime
+    const FIFTEEN: &str = "core-015"; // Me and Mr Token: Index 15: not prime
+    const TWENTY_FIVE: &str = "core-025"; // 4-mana 7/7: Index 25: not prime
+    const RUSH_TOKEN: &str = "core-t-rush"; // Rush Token: Index "T-rush": never prime
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
 
     fn drawn_defs(s: &Scenario) -> Vec<String> {
         s.events()

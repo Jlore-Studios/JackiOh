@@ -431,8 +431,9 @@ painter's own subject (`ownSubject`), the giant its composition draws (R3338001)
 Classic+'s pass draws every Classic+ entry from a recipe of its own (below, R3390000), Core's pass every Core
 entry but Ceaseless Void, Speciesist's and Heroic Power's redrawn from their briefs (Core's scenes, below,
 R3392000), the Meditative+ and Training Grounds pass every entry of those two sets (below, R3393000), Meditative's
-every Meditative entry (below, R3401000), Stinkyscape's the 64 cards of its table (below, R3391000), and
-Stinkyscape's later cards theirs (below, R3403000).
+every Meditative entry (below, R3401000), Stinkyscape's the 64 cards of its table (below, R3391000),
+Stinkyscape's later cards theirs (below, R3403000), and Classic's every Classic entry but Corpse Plantation (below,
+R3352000).
 Every other card draws its picture byte for byte as before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
 old pictures now, not pins (R3331002), each holding every card with no recipe to its old hash and each card
 with one to a new picture. A set's pass adds its cards' recipes from its own per-card brief table, takes them
@@ -779,6 +780,39 @@ hundred-sided die with no digits), a pineapple, an escalator and a glowing seash
 holds every recipe to the rules and every Alt art level's face to its picture and its Radiant marks, and
 `stinkyscape91-alt-scenes.cy.tsx` measures each window against `ALT_PICTURE_CHANGE_MIN` and screenshots each normal
 face beside its Alt art face.
+
+## Classic's scenes (R3352000)
+
+Classic's pass draws every Classic entry from a recipe of its own, each from its brief (#3352's table), in the art
+bible's temple-stone look, base and Radiant: Classic #1 to #73, #75 to #90 and the Glitch, while Corpse Plantation
+keeps its proof recipe (above). The recipes are three files in id order, spread into `SCENE_RECIPES` after
+Meditative's: `sceneRecipesClassic1.ts` (#1 to #30), `sceneRecipesClassic2.ts` (#31 to #60) and
+`sceneRecipesClassic3.ts` (#61 to #90 and the Glitch). Each keeps its brief's subject, setting and idea and
+Classic+'s rules (its main subject within x 30 to 70 and y 25 to 85, its emblem small on its subject), draws one
+geometry on both faces, and grows richer with its rarity: the median element count climbs from Common to Mythic,
+and In Too Deep, the Mythic, draws a part no other scene draws, its spiralling shaft (`spiral-shaft`).
+
+Each of 28 Units is a figure whose look starts from its tags' and is dressed as who it is, no two alike and none
+the hooded traveller; Paul Allen's Ghost is one of them, a void head in hood and rags inside a shield bubble. The
+six that are no person draw their creature part of the scene kit as their subject, with no figure:
+Turtinator, Pestilent Slime, Hired Shrimp, Plague Crawler, Plague Charger and Lane Eater. A scene's other people are
+its `extras` (R3390000). The Glitch draws a recipe though its card's window shows no picture;
+`classic-scenes.cy.tsx`'s contact sheet shows it. In Too Deep, whose full-art motion moves its props (R2715001), marks its
+ladders and hanging ropes `props`, its motion unchanged.
+
+The parts the briefs named joined the kits: the figure kit's crouch (`pose-crouch`), three heads (`head-sheep`,
+`head-ape`, `head-nose`), five headgears (`jester-cap`, `cat-hood`, `beak-mask`, `king-crown`, `jagged-crown`), three
+outfits (`outfit-harlequin`, `outfit-travel-cloak`, `outfit-spider`) and six held items (`item-card-fan`,
+`item-cleaver`, `item-abacus`, `item-cookie`, `item-grapple`, `item-rake`), after the old ones of their kinds in
+`figureKit.ts`, and eighteen scenery parts in a module of their own, `sceneKitClassic.ts` (its props in
+`sceneKitClassicProps.ts`), spread into `SCENE_KIT` after Stinkyscape's, with only the Stinkyscape Alt art pass's
+module after it (above): the creatures (`tortoise`, `slime`, `shrimp`, `crawler`, `maw`, `skeleton`, `lizard`,
+`leaping-deer`, `mule`), the objects (`pickle`, `sceptre`, `spike-trap`, `tesla-coil`, `web`, `vat`, `chalice`), a
+`blast-crater`, and In Too Deep's `spiral-shaft`, none taking an old part's name (the deer and the crater beside
+R3397000's `deer` and `crater`, the cloak beside R3403000's `outfit-cloak`, above). Every Classic entry is off the
+short list, whose cap fell from 129 to 40; `classicScenes.test.ts` holds the recipes to all of it, and
+`classic-scenes.cy.tsx` shows every Epic, Legendary and Mythic scene at hand size, base and Radiant, and a contact
+sheet of the rest, at desktop size and at 390x844.
 
 ## The detail floor (R3331001)
 

@@ -83,6 +83,10 @@ describe("R3389000 a signature's own aura", () => {
       "classicplus-074": "stairCracks",
       "classicplus-075": "jungleLeaves",
       "classicplus-078": "serverLights",
+      // R3402000: Core's three.
+      "core-052": "mirrorball",
+      "core-093": "stadium",
+      "core-098": "pedestal",
       // R3407000: Stinkyscape part two's.
       "stinkyscape-018-1": "scanline",
       "stinkyscape-018-2": "heartbeat",

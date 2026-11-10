@@ -4,6 +4,7 @@
 // set's signature pass takes each card off as it gives it one; the list only shrinks, and the last pass
 // empties it. A new Legendary or Mythic comes with its signature, or joins the list where the catalog puts it.
 // R3389001: Classic's pass (#3389) took its eleven off. R3399000: Classic+'s pass (#3399) took its thirty-five off.
+// R3402001: Core's pass (#3402) took its ten off, leaving Ceaseless Void (#3338).
 
 import { describe, expect, it } from "vitest";
 
@@ -13,7 +14,7 @@ import { FX_CARD_TABLE, isSignature } from "./tables.ts";
 /** Every Legendary and Mythic still owed a signature, in catalog order, by set. */
 const SIGNATURE_PENDING: readonly string[] = [
   // Core
-  "core-052", "core-083", "core-085", "core-087", "core-093", "core-095", "core-096", "core-097", "core-098", "core-099", "core-100",
+  "core-100",
   // Stinkyscape
   "stinkyscape-004", "stinkyscape-004-1", "stinkyscape-004-2", "stinkyscape-004-3", "stinkyscape-004-4", "stinkyscape-004-5", "stinkyscape-004-6",
   "stinkyscape-036",

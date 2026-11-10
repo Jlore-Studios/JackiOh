@@ -142,6 +142,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
             jackioh_server::config::PRACTICE_VERIFY_CONCURRENCY,
         ),
         practice_settles: tokio::sync::watch::Sender::new(0),
+        practice_settling: Mutex::new(std::collections::BTreeSet::new()),
         spends: jackioh_server::economy::spend_slots::SpendSlots::default(),
         news: jackioh_server::economy::news::shipped().expect("news.json passes news::parse"),
     });

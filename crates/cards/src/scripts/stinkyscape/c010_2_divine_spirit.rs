@@ -49,8 +49,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const SPIRIT: &str = "stinkyscape-010-2";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const IMMUNE: &str = "classicplus-019-1"; // Radiant: Immune to Spells.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const IMMUNE: &str = "classicplus-019-1"; // Top Loser: Radiant: Immune to Spells.
     const FILLER: &str = "core-005";
 
     fn stats_override(attack: i32, health: i32) -> Value {

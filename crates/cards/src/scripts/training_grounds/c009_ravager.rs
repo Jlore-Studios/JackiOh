@@ -42,10 +42,10 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    const VANILLA: &str = "core-008"; // (1) Mr. Vanilla, 4/4.
-    const MOTHS: &str = "core-009"; // (2) 1/14.
-    const DEFENDER: &str = "core-003"; // (1) Right-house defender, 1/1 Taunt, Divine Shield, Reborn.
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const MOTHS: &str = "core-009"; // Moths to the Flame
+    const DEFENDER: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself.
 
     /// p1 has a Ravager (`radiant` its face) in lane 1, not summoning sick; p2 has `theirs`.
     fn board(radiant: bool, theirs: Value) -> Scenario {

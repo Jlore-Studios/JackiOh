@@ -102,13 +102,13 @@ mod tests {
         s.unit(player, lane).map(|card| card.def_id)
     }
 
-    const POINTMASTER: &str = "core-020"; // (2) Unit.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const SEVEN_SEVEN: &str = "core-025"; // (4) Unit 7/7.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const ROCK: &str = "core-066"; // (4) Unit 10/10, Indestructible.
+    const POINTMASTER: &str = "core-020"; // Pointmaster
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const SEVEN_SEVEN: &str = "core-025"; // 4-mana 7/7
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const ROCK: &str = "core-066"; // The Rock: Indestructible
     const FELINOR_TOKEN: &str = "core-t-felinor";
-    const HINDER: &str = "core-021"; // (0) Spell: a card in hand, so no turn ends by itself (R82).
+    const HINDER: &str = "core-021"; // Hinder: a card in hand, so no turn ends by itself (R82)
 
     /// Three non-Felinor Units of p1's and four of p2's, a Felinor on each side; Big Felinor waits in p1's
     /// hand. The enemy's Units are `enemy` and p1's are the Pointmaster, the Menace and a Vanilla.

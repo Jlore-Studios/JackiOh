@@ -55,9 +55,9 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const FILLER: &str = "core-005"; // (1) Spell: a non-Unit hand card.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const FILLER: &str = "core-005"; // Stockpile: a non-Unit hand card.
 
     fn board(radiant: bool, seed: &str, theirs: Value) -> Scenario {
         let mut s = scenario(json!({

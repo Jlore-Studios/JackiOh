@@ -46,7 +46,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BOMB: &str = "meditative-030-1";
-    const MOON: &str = "classicplus-022"; // Trap: a heal on its controller's enemy becomes Pierce damage.
+    const MOON: &str = "classicplus-022"; // Blood Moon: a heal on its controller's enemy becomes Pierce damage.
     const FILLER: &str = "core-005";
 
     /// The `healed` events on `target` ("hero-p1"), as amounts.

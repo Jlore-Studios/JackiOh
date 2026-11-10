@@ -37,16 +37,16 @@ mod tests {
     use crate::scenario;
 
     const STATE: &str = "classic-041";
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
-    const WHIRLWIND: &str = "classicplus-021"; // (0) Spell: Pierce. Deal 1 damage to all Units.
-    const NETHER: &str = "core-088"; // (4) Spell: Destroy all permanents.
-    const LAG: &str = "classic-025"; // (0) Spell: Exile every (1) Cost or less card on the field.
-    const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
-    const CUBE: &str = "core-022"; // (3) Unit: Cry: Tribute one of your other Units and remember it.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4, no text.
-    const FILLER: &str = "core-005"; // (1) Spell, a card to keep a hand from auto-ending the turn (§2.5).
-    const FLAME: &str = "classic-016"; // (1) Spell, Book: Deal 4 damage.
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const WHIRLWIND: &str = "classicplus-021"; // Whirlwind: Pierce. Deal 1 damage to all Units.
+    const NETHER: &str = "core-088"; // Twisting Nether: Destroy all permanents.
+    const LAG: &str = "classic-025"; // Lag in the System: Exile every low-cost card on the field.
+    const FLOOD: &str = "core-017"; // Flood: Bounce all Units.
+    const CUBE: &str = "core-022"; // Carnivorous Cube: Cry: Tribute one of your other Units and remember it.
+    const MENACE: &str = "core-019"; // Midrange Menace: Unit Taunt
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FILLER: &str = "core-005"; // Stockpile: a Spell, a card to keep a hand from auto-ending the turn (§2.5).
+    const FLAME: &str = "classic-016"; // Book of Flame: a Book Spell, Deal 4 damage
 
     use crate::js;
 

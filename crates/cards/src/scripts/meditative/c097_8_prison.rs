@@ -133,13 +133,13 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-010"; // (0) Spell.
-    const SPARE: &str = "core-005"; // (1) Spell: library spare.
-    const VANILLA: &str = "core-008"; // (1) Unit.
-    const FIENDER: &str = "core-092"; // (2) Unit: Stack.
-    const FELINORS: &str = "core-012"; // (2) Unit: Cry summons a copy.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const FIELD_SPELL: &str = "core-073"; // Field Spell: Anti-oneshot Armor.
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const SPARE: &str = "core-005"; // Stockpile: library spare
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const FELINORS: &str = "core-012"; // Duplicating Felinors: Cry summons a copy.
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const FIELD_SPELL: &str = "core-073"; // Anti-oneshot Armor: Field Spell
 
     fn slot(player: PlayerId, lane: i32) -> ZoneSlot {
         ZoneSlot {
@@ -437,7 +437,7 @@ mod tests {
     mod luck {
         use super::*;
 
-        const FENG_SHUI: &str = "meditative-040"; // (3) Field Spell, no longer "Aura: You have Luck 1" (R3140000).
+        const FENG_SHUI: &str = "meditative-040"; // Feng Shui: a Field Spell, no longer "Aura: You have Luck 1" (R3140000).
 
         /// The draws Prison's capture takes as p2 plays VANILLA at chance 100: the play's move of the
         /// rng cursor with Prison on p1's field, less the same play's without it (Gary's control,

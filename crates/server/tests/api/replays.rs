@@ -2,6 +2,8 @@
 //! R677: steps follow seat after Glitch swap; paging, cache and rate limits.
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Duration;
 
 use serde_json::{Value, json};
 
@@ -16,8 +18,8 @@ use jackioh_server::api::replays::ReplayCache;
 use jackioh_server::api::retention::purge_expired;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    MATCH_ACTION_RETENTION_DAYS, REPLAY_CACHE_MATCHES, REPLAY_CACHE_TTL_SECONDS, REPLAY_LIST_PAGE,
-    REPLAY_REQUESTS_PER_MINUTE,
+    MATCH_ACTION_RETENTION_DAYS, REPLAY_CACHE_MATCHES, REPLAY_CACHE_TTL_SECONDS, REPLAY_FOLD_RETRY_AFTER_MS,
+    REPLAY_FOLD_WAIT_MS, REPLAY_FOLDS_RUNNING_MAX, REPLAY_LIST_PAGE, REPLAY_REQUESTS_PER_MINUTE,
 };
 use jackioh_server::db::store::{MatchActionRow, MatchRow, ResultRow, Room, StoreError};
 
@@ -1223,6 +1225,171 @@ mod off_the_runtime {
         assert_eq!(panicked[0].data["matchId"], "m-panics");
         let (status, _headers, _body) = call(&app, "GET", "/healthz", None, Value::Null).await;
         assert_eq!(status, 200);
+    }
+}
+
+// R3500000 — the server-wide cap on replay folds
+
+/// R3500000: one account opening many uncached replays folds them one at a time, the opens of a match
+/// share one fold, and an open that waits too long is a 429 stating its wait.
+mod r3500000_the_fold_cap {
+    use super::*;
+
+    use jackioh_server::api::replays::REPLAY_BUSY_MESSAGE;
+
+    /// The threads of the folds counted below are the process's: these tests take turns.
+    static COUNTING: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+    /// How many folds' jobs began, and how many run now and ran at once at most.
+    static STARTED: AtomicUsize = AtomicUsize::new(0);
+    static RUNNING: AtomicUsize = AtomicUsize::new(0);
+    static PEAK: AtomicUsize = AtomicUsize::new(0);
+    /// How long a counted job stays running, so jobs that were let run at once overlap.
+    const JOB_PAUSE: Duration = Duration::from_millis(30);
+    /// How many uncached replays the burst opens at once.
+    const BURST: usize = 20;
+
+    /// The test app's `EngineThread` (`tests/support/test_app.rs`) that also counts the jobs
+    /// running at once: each job, setup included, holds the fold's permit while it counts.
+    fn counting_thread() -> Box<dyn FnOnce() + Send> {
+        let overrides = jackioh_engine::testkit::thread_overrides();
+        Box::new(move || {
+            jackioh_cards::register_all();
+            overrides.install();
+            let running = RUNNING.fetch_add(1, Ordering::SeqCst) + 1;
+            PEAK.fetch_max(running, Ordering::SeqCst);
+            STARTED.fetch_add(1, Ordering::SeqCst);
+            std::thread::sleep(JOB_PAUSE);
+            RUNNING.fetch_sub(1, Ordering::SeqCst);
+        })
+    }
+
+    fn zero_counters() {
+        for counter in [&STARTED, &RUNNING, &PEAK] {
+            counter.store(0, Ordering::SeqCst);
+        }
+    }
+
+    async fn counting_app() -> (Arc<App>, Tokens) {
+        let (mut app, tokens) = app_with_players().await;
+        Arc::get_mut(&mut app)
+            .expect("the test app has no second handle yet")
+            .engine_thread = counting_thread;
+        (app, tokens)
+    }
+
+    #[tokio::test]
+    async fn r3500000_twenty_concurrent_opens_of_uncached_replays_fold_at_most_the_cap_at_once() {
+        let _turn = COUNTING.lock().await;
+        zero_counters();
+        let (app, tokens) = counting_app().await;
+        let played = played_game("replay-folds-1", PLAYED_ACTIONS);
+        for n in 0..BURST {
+            seed_finished(
+                &app,
+                Finish::new(&format!("m-fold-{n}"), &played, now_ms()),
+                &played,
+            )
+            .await;
+        }
+
+        let opens: Vec<_> = (0..BURST)
+            .map(|n| {
+                let (app, token) = (Arc::clone(&app), tokens.a.clone());
+                tokio::spawn(async move {
+                    call(
+                        &app,
+                        "GET",
+                        &format!("/api/replays/m-fold-{n}"),
+                        Some(&token),
+                        Value::Null,
+                    )
+                    .await
+                })
+            })
+            .collect();
+        let mut opened = 0;
+        for open in opens {
+            let (status, headers, body) = open.await.expect("the request ran");
+            match status {
+                200 => opened += 1,
+                429 => {
+                    assert_eq!(error_code(&body), "rate_limited", "{body}");
+                    assert_eq!(body["error"]["message"], REPLAY_BUSY_MESSAGE);
+                    assert!(body["error"]["details"]["retryAfterMs"].is_number(), "{body}");
+                    assert!(headers.contains_key("retry-after"));
+                }
+                other => panic!("an open answered {other}: {body}"),
+            }
+        }
+
+        // Each fold ran for an open that answered, and no two ran at once past the cap.
+        assert!(opened >= 2, "{opened} of {BURST} opens were answered");
+        assert_eq!(STARTED.load(Ordering::SeqCst), opened);
+        let peak = PEAK.load(Ordering::SeqCst);
+        assert!(
+            (1..=REPLAY_FOLDS_RUNNING_MAX).contains(&peak),
+            "{peak} folds ran at once"
+        );
+        assert_eq!(RUNNING.load(Ordering::SeqCst), 0);
+    }
+
+    #[tokio::test]
+    async fn r3500000_two_concurrent_opens_of_one_uncached_match_fold_it_once() {
+        let _turn = COUNTING.lock().await;
+        zero_counters();
+        let (app, tokens) = counting_app().await;
+        let played = played_game("replay-folds-2", PLAYED_ACTIONS);
+        seed_finished(&app, Finish::new("m-fold-one", &played, now_ms()), &played).await;
+
+        let ((first, first_body), (second, second_body)) = tokio::join!(
+            get(&app, "/api/replays/m-fold-one", &tokens.a),
+            get(&app, "/api/replays/m-fold-one", &tokens.a),
+        );
+        assert_eq!((first, second), (200, 200), "{first_body} {second_body}");
+        assert_eq!(first_body, second_body);
+        assert_eq!(STARTED.load(Ordering::SeqCst), 1);
+        // The replay is kept now: a third open folds nothing.
+        assert_eq!(get(&app, "/api/replays/m-fold-one", &tokens.a).await.0, 200);
+        assert_eq!(STARTED.load(Ordering::SeqCst), 1);
+    }
+
+    /// Paused time passes the wait at once, the permit taken for all of it.
+    #[tokio::test(start_paused = true)]
+    async fn r3500000_an_open_past_the_wait_answers_429_with_retry_after_ms() {
+        let _turn = COUNTING.lock().await;
+        zero_counters();
+        let (app, tokens) = counting_app().await;
+        let played = played_game("replay-folds-3", PLAYED_ACTIONS);
+        seed_finished(&app, Finish::new("m-fold-wait", &played, now_ms()), &played).await;
+        let taken = Arc::clone(&app.replays.folds)
+            .acquire_many_owned(u32::try_from(REPLAY_FOLDS_RUNNING_MAX).expect("a small cap"))
+            .await
+            .expect("the permits are free");
+
+        let started = tokio::time::Instant::now();
+        let (status, headers, body) = call(
+            &app,
+            "GET",
+            "/api/replays/m-fold-wait",
+            Some(&tokens.a),
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 429, "{body}");
+        assert_eq!(error_code(&body), "rate_limited");
+        assert_eq!(body["error"]["message"], REPLAY_BUSY_MESSAGE);
+        assert_eq!(
+            body["error"]["details"]["retryAfterMs"],
+            REPLAY_FOLD_RETRY_AFTER_MS
+        );
+        assert!(headers.contains_key("retry-after"));
+        assert!(started.elapsed() >= Duration::from_millis(REPLAY_FOLD_WAIT_MS));
+        assert_eq!(STARTED.load(Ordering::SeqCst), 0);
+
+        // The permits back, the same replay opens.
+        drop(taken);
+        assert_eq!(get(&app, "/api/replays/m-fold-wait", &tokens.a).await.0, 200);
+        assert_eq!(STARTED.load(Ordering::SeqCst), 1);
     }
 }
 

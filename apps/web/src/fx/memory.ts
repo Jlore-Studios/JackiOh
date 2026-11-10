@@ -6,7 +6,8 @@
 // a card's hook is an entry too, innermost while it runs: a Death, a turn hook or a Whenever (`trigger`)
 // and an Activate open one at their `hookResolving` marker (R2783000; a Cry's opens none, its play is the
 // entry), a Trap's `cast` at its `trapFired`; the next marker or firing, a `cardResolved` or `countered`,
-// an attack, a turn's end or start and the game's end close it. R202: only ids the viewer may read are
+// an attack, a turn's end or start and the game's end close it (but a revealed Cloaked Spell's own Cry
+// marker, which runs inside its firing's `cast`, R3402001). R202: only ids the viewer may read are
 // kept, so every hidden card looks the same to the planner. R3338000: a Terminus card that owes its
 // controller a turn (Event Horizon, Last Word: a `modifierChanged` added as it resolves) is owed its
 // follow-up, which the next turn that player starts opens (`opening`), and `openPlay` finds the outermost
@@ -122,6 +123,10 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
           dropHooks();
           close(event.player, event.instanceId);
         } else if (event.type === "hookResolving") {
+          // R2722002, R3402001: a revealed Cloaked Spell's Cry runs inside the firing that cast it, so the
+          // `cast` its `trapFired` opened stays open across that Cry's own marker and keeps its text's events.
+          const innermost = resolving[resolving.length - 1];
+          if (event.hook === "cry" && innermost?.hook === "cast" && innermost.instanceId === event.sourceId) continue;
           dropHooks();
           // A hidden card's marker opens its entry all the same, so its events go to no play around it (R202).
           const hook = HOOK_OF[event.hook];

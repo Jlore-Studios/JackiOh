@@ -37,8 +37,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const HORIZON: &str = "stinkyscape-004-3";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
 
     fn board(hand: Value) -> Scenario {
         scenario(json!({

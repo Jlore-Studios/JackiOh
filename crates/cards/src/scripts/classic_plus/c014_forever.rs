@@ -43,14 +43,14 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FOREVER: &str = "classicplus-014";
-    const LUNAR: &str = "core-035"; // (1) Spell: 3 damage; your next Spell this turn costs (1) less
-    const STOCKPILE: &str = "core-005"; // (1) Spell: draw 2, heal 2
-    const MENACE: &str = "core-019"; // a Unit
-    const MANA_WELL: &str = "core-006"; // a Field Spell
-    const SHEEPISH: &str = "core-041"; // a Trap
-    const RAPID_DRAW: &str = "classic-026"; // (0) Spell: draw 4, then discard 4 at random
-    const COUNTERSPELL: &str = "classic-017"; // Trap: counters the opponent's Spell
-    const JELLY_BEAN: &str = "core-027"; // (1) Spell, cast on draw: make a random hand card Radiant, lose 7 health
+    const LUNAR: &str = "core-035"; // Lunar Eclipse: 3 damage; your next Spell this turn costs 1 less
+    const STOCKPILE: &str = "core-005"; // Stockpile: draw 2, heal 2
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const RAPID_DRAW: &str = "classic-026"; // Rapid Draw: draw 4, then discard 4 at random
+    const COUNTERSPELL: &str = "classic-017"; // Counterspell: counters the opponent's Spell
+    const JELLY_BEAN: &str = "core-027"; // Blood Ridden Glowy Jelly Bean: a Spell, cast on draw: make a random hand card Radiant, lose 7 health
     const FILLER: &str = "core-008"; // Mr. Vanilla: a Unit, inert
 
     use crate::scenario;

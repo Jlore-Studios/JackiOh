@@ -44,12 +44,12 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    const VANILLA: &str = "core-008"; // (1) Mr. Vanilla, 4/4.
-    const FIENDER: &str = "core-092"; // (2) Felinor Fiender, 5/7 Stack.
-    const STATE_OF_THE_GAME: &str = "classic-041"; // (1) 3/3 Indestructible.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const PLAGUE_NUKE: &str = "classic-043"; // (4) Spell: Destroy all Units.
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const STATE_OF_THE_GAME: &str = "classic-041"; // State of the Game: Indestructible
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const PLAGUE_NUKE: &str = "classic-043"; // Plague Nuke: Destroy all Units.
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself.
 
     fn board(radiant: bool, mine: Value, hand: Value) -> Scenario {
         let mut field = vec![json!({ "def": ID, "radiant": radiant, "lane": 1 })];

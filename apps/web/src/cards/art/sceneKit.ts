@@ -13,6 +13,7 @@
 // the old ones of its kind.
 // R3391000: a pointing part (a beam, a light stream, a light cone, a meteor, a smoke trail, a comet streak) also
 // turns by its placement's `rotate` about its anchor, extending along +x unturned; every other part ignores it.
+// R3352000: Classic's scenes added theirs in a module of their own (sceneKitClassic.ts), spread in last.
 
 import { fmt } from "./hash.ts";
 import {
@@ -45,6 +46,7 @@ import {
   type Point,
 } from "./kitDraw.ts";
 import type { KitPart, KitShape, PaletteName, PartPlace, Rng } from "./scene.ts";
+import { CLASSIC_KIT } from "./sceneKitClassic.ts";
 import { COSMOS_KIT } from "./sceneKitCosmos.ts";
 import { CRAFT_KIT } from "./sceneKitCraft.ts";
 import { GEAR_KIT } from "./sceneKitGear.ts";
@@ -7044,6 +7046,8 @@ export const SCENE_KIT = {
   ...CRAFT_KIT,
   ...GEAR_KIT,
   ...COSMOS_KIT,
+  // R3352000: the parts Classic's scenes added.
+  ...CLASSIC_KIT,
   // R3406000: the parts the Stinkyscape Alt art pass added.
   ...STINKY_ALT_KIT,
 } as const satisfies Readonly<Record<string, KitPart>>;

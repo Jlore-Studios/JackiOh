@@ -1122,7 +1122,47 @@ export async function signInWithGoogleIdToken(
 
 // Linking a provider to the signed-in account (R3025000)
 
-export type LinkedIdentity = { id: string; provider: string };
+/**
+ * R3507000: a linked Roblox account's username, display name and headshot, for the account screen's wording
+ * alone (they come from `identity_data`, which decides nothing); the other providers' identities carry none.
+ */
+export type LinkedIdentity = { id: string; provider: string; username?: string; displayName?: string; avatarUrl?: string };
+
+/** R3507000: the one host Roblox's headshots (the `picture` claim) are served from, and the one `public/_headers`' `img-src` names. */
+export const ROBLOX_AVATAR_IMAGE_HOST = "tr.rbxcdn.com";
+
+/** R3507000: a non-empty string, trimmed, or nothing. */
+function shown(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/** R3507000: an `https:` URL on Roblox's image host as written, or nothing (a malformed one included). */
+function robloxAvatar(value: unknown): string | undefined {
+  const written = shown(value);
+  if (written === undefined) return undefined;
+  try {
+    const url = new URL(written);
+    return url.protocol === "https:" && url.hostname === ROBLOX_AVATAR_IMAGE_HOST ? written : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** R3507000: Roblox's `profile`-scope claims (R3147000) in an identity's `identity_data`, each kept only when usable. */
+function robloxDisplay(data: unknown): Pick<LinkedIdentity, "username" | "displayName" | "avatarUrl"> {
+  if (typeof data !== "object" || data === null) return {};
+  const claims = data as Record<string, unknown>;
+  const username = shown(claims["preferred_username"]);
+  const displayName = shown(claims["name"]) ?? shown(claims["nickname"]);
+  const avatarUrl = robloxAvatar(claims["picture"]);
+  return {
+    ...(username === undefined ? {} : { username }),
+    ...(displayName === undefined ? {} : { displayName }),
+    ...(avatarUrl === undefined ? {} : { avatarUrl }),
+  };
+}
 
 function identitiesOf(body: unknown): LinkedIdentity[] {
   if (typeof body !== "object" || body === null) return [];
@@ -1130,10 +1170,11 @@ function identitiesOf(body: unknown): LinkedIdentity[] {
   if (!Array.isArray(identities)) return [];
   return identities.flatMap((entry: unknown): LinkedIdentity[] => {
     if (typeof entry !== "object" || entry === null) return [];
-    const record = entry as { identity_id?: unknown; provider?: unknown };
+    const record = entry as { identity_id?: unknown; provider?: unknown; identity_data?: unknown };
     if (typeof record.identity_id !== "string" || record.identity_id.length === 0) return [];
     if (typeof record.provider !== "string" || record.provider.length === 0) return [];
-    return [{ id: record.identity_id, provider: record.provider }];
+    const display = record.provider === "custom:roblox" ? robloxDisplay(record.identity_data) : {};
+    return [{ id: record.identity_id, provider: record.provider, ...display }];
   });
 }
 

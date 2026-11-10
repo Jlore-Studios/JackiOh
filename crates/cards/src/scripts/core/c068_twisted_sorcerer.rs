@@ -58,12 +58,12 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const SOURCERER: &str = "core-068"; // Unit 5/5 → 10/10, cost 2.
-    const SPONGE: &str = "core-019"; // Midrange Menace, 9/9 → 18/18, no Armor: a target that survives.
+    const SOURCERER: &str = "core-068"; // Twisted Sorcerer
+    const SPONGE: &str = "core-019"; // Midrange Menace: no Armor: a target that survives
 
     /// R82: a turn left with only end, concede and offer-draw auto-ends after every action, so each
     /// scenario keeps this free Spell in p1's hand, never played, as one legal action on the turn.
-    const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: a Spell, always an affordable play
 
     /// The refusal's word, checked by hand (no regex crate): it is lower-case.
     const TARGET_TEXT: &str = "target";

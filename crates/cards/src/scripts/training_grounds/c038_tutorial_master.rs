@@ -57,8 +57,8 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::P1;
     use jackioh_engine::testkit::*;
 
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself.
 
     fn game(radiant: bool, seed: &str) -> Scenario {
         crate::scenario(json!({

@@ -98,8 +98,8 @@ mod tests {
     const ACQUISITION: &str = "classic-034";
     const GAMBIT: &str = "classic-052";
     const REWIND: &str = "classic-054";
-    const SHEEPISH: &str = "core-041"; // Trap: when your opponent plays a Unit, after its Cry: transform it into a Sheep.
-    const BREAD: &str = "core-018"; // Field Trap: when a turn ends with mana unspent, summon a Bread Token.
+    const SHEEPISH: &str = "core-041"; // Sheepish: when your opponent plays a Unit, after its Cry: transform it into a Sheep
+    const BREAD: &str = "core-018"; // Bread and Butter: when a turn ends with mana unspent, summon a Bread Token
     const VANILLA: &str = "core-008";
     const GARY: &str = "core-004";
     const LUNAR: &str = "core-035";

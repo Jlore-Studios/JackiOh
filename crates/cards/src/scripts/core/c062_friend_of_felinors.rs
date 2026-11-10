@@ -42,9 +42,9 @@ mod tests {
 
     use crate::scenario;
 
-    const FRIEND: &str = "core-062"; // Spell, 1
-    const FELINOR: &str = "core-t-felinor"; // §7's shared Felinor Token, 1/1
-    const TIMMY: &str = "core-011"; // Unit, 3/3 — the unit already on the board
+    const FRIEND: &str = "core-062"; // Friend of Felinors: a Spell
+    const FELINOR: &str = "core-t-felinor"; // Felinor Token: §7's shared token
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // the unit already on the board
     const LANES: [i32; 5] = [1, 2, 3, 4, 5];
 
     fn defs_of(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {

@@ -50,7 +50,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FILLER: &str = "core-016";
-    const FLOOD: &str = "core-017"; // Bounce every Unit.
+    const FLOOD: &str = "core-017"; // Flood: Bounce every Unit.
 
     /// p1 holds Touched by KY (Radiant on `radiant`) and `others` fillers, with a deck of `deck`.
     fn holding(seed: &str, radiant: bool, others: usize, deck: usize) -> Scenario {

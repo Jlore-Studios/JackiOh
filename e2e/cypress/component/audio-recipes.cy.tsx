@@ -52,6 +52,9 @@ const EXPECTED_IDS = [
   "starshipFlak", "starshipLauncher", "starshipRam", "starshipWreck",
   // R3400001: Meditative+'s and Training Grounds' signatures.
   "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
+  // R3402001: the ten Core signatures.
+  "silasScratch", "crucibleChoir", "hatchWeld", "pocketZip", "stadiumCheer", "jackpotReels", "pawnWaltz",
+  "wishWind", "heroicFanfare", "forgeAnvil",
   // R3407001: Stinkyscape's signatures.
   "ballotBeep", "lullabySigh", "compactTut", "glitchDrop", "harpGliss", "markerThunder", "stampTrill", "tillRattle",
   "gavelSlam", "dockingChime", "keyboardPing", "synthSnap", "blobDrum", "warpSparkle", "tearChoir", "cackleThunder",
@@ -193,6 +196,17 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   diceGong: 1600,
   timberLash: 1200,
   pencilArpeggio: 1400,
+  // R3402001: the ten Core signatures.
+  silasScratch: 1250,
+  crucibleChoir: 1170,
+  hatchWeld: 1550,
+  pocketZip: 1170,
+  stadiumCheer: 1550,
+  jackpotReels: 1190,
+  pawnWaltz: 2500,
+  wishWind: 1900,
+  heroicFanfare: 2500,
+  forgeAnvil: 1900,
   // R3407001: Stinkyscape's signatures.
   ballotBeep: 1300,
   lullabySigh: 1500,
@@ -512,6 +526,10 @@ const ROUTINE: readonly Cue[] = [
   ),
   // R3400001: the signatures, each a card's own moment at a routine level.
   ...(["inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio"] as const).map((id): Cue => ({ id, params: {} })),
+  // R3402001: the ten Core signatures.
+  ...(["silasScratch", "crucibleChoir", "hatchWeld", "pocketZip", "stadiumCheer", "jackpotReels", "pawnWaltz", "wishWind", "heroicFanfare", "forgeAnvil"] as const).map(
+    (id): Cue => ({ id, params: {} }),
+  ),
   // R3407001: Stinkyscape's signatures, at the same routine level.
   ...(
     [

@@ -340,9 +340,9 @@ mod r211_concede_is_on_offer_while_a_prompt_is_open {
 
 // Round 9: every pick a play may make is one legalActions offers (R81, R90, R101, R102)
 
-const LAVA_GOLEM: &str = "core-055"; // Tribute 3; may tribute enemy units (§8 #55, R101)
-const KPOP_FANATIC: &str = "core-050"; // Unit: Cry: choose an enemy permanent (unit or backrow)
-const RUSH_TOKEN_FARM: &str = "core-058"; // a public Field Spell that acts only at its start of turn
+const LAVA_GOLEM: &str = "core-055"; // Lava Golem: Tribute 3; may tribute enemy units (§8 #55, R101)
+const KPOP_FANATIC: &str = "core-050"; // K-Pop Fanatic: Cry: choose an enemy permanent (unit or backrow)
+const RUSH_TOKEN_FARM: &str = "core-058"; // Rush Token Farm: a public Field Spell that acts only at its start of turn
 
 fn units_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
     [1, 2, 3, 4, 5]

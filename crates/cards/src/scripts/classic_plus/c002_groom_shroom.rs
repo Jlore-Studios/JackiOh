@@ -90,8 +90,8 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const GROOM: &str = "classicplus-002";
-    const TIMMY: &str = "core-011"; // (1) 3/3 Rush, First Strike.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
     /// Every non-token Felinor-tagged Unit of every set (R405, R380): Meditative's are §8.8 #25, #30,

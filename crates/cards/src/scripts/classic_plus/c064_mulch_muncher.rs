@@ -49,10 +49,10 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const MULCH: &str = "classicplus-064";
-    const FIG: &str = "core-047"; // Fig of Life: (3) Spell, Fruit. "Heal a target 20."
-    const GRAPE: &str = "classicplus-065-1"; // Rotten Grape: (1) Spell, Fruit, Token.
-    const TREE: &str = "classicplus-063"; // Fruit Tree: (3) Field Spell, no Fruit since #1837.
-    const PRODUCE: &str = "classicplus-068"; // Organic Produce: (4) Field Spell, no Fruit since #1837.
+    const FIG: &str = "core-047"; // Fig of Life: a Spell, Fruit. "Heal a target 20."
+    const GRAPE: &str = "classicplus-065-1"; // Rotten Grape: a Spell, Fruit, Token
+    const TREE: &str = "classicplus-063"; // Fruit Tree: a Field Spell, no Fruit since #1837.
+    const PRODUCE: &str = "classicplus-068"; // Organic Produce: a Field Spell, no Fruit since #1837.
     const FILLER: &str = "core-005";
 
     use crate::scenario;

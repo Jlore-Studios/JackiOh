@@ -97,14 +97,14 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const PLANTATION: &str = "classic-074";
-    const CRAWLER: &str = "classic-053"; // (1) Unit: Cry: place a Plague Counter on a permanent (a prompt).
-    const SLIME: &str = "classic-027"; // (0) Unit 1/1.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const MR_TOKEN: &str = "core-015"; // (1) Unit 1/1: Cry: Summon a Rush Token.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const COLLATERAL: &str = "core-034"; // (4) Spell: Exile target permanent and a random card from your opponent's deck.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+    const CRAWLER: &str = "classic-053"; // Plague Crawler: Cry: place a Plague Counter on a permanent (a prompt).
+    const SLIME: &str = "classic-027"; // Pestilent Slime
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: Cry: Summon a Rush Token.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: Exile target permanent and a random card from your opponent's deck.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: a Spell (§2.5).
     const RUSH_TOKEN: &str = "core-t-rush";
 
     const GRAVEYARD: [&str; 4] = [MENACE, MR_TOKEN, STOCKPILE, SLIME];

@@ -67,16 +67,16 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const VOID: &str = "classic-050";
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy target Unit.
-    const ZAO_GAO: &str = "core-080"; // (2) Spell: discard 2 random cards; summon 2 Rush Tokens with 2 random keywords.
-    const STOCKPILE: &str = "core-005"; // (1) Spell: draw 2, heal your hero 2.
-    const SHEEPISH: &str = "core-041"; // (1) Trap: when your opponent plays a Unit, after its Cry, transform it into a Sheep.
-    const MIND_CONTROL: &str = "core-049"; // (5) Spell: steal an enemy card.
-    const FIENDER: &str = "core-092"; // (2) Unit, Stack.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const GARY: &str = "core-004"; // (1) Unit 1/1
-    const LUNAR: &str = "core-035"; // (1) Spell: deal 3 damage to a target.
-    const DEFENDER: &str = "core-003"; // (1) Unit 1/1, Reborn; Radiant: Death: summon a base Right-house defender.
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
+    const ZAO_GAO: &str = "core-080"; // Zao Gao: discard 2 random cards; summon 2 Rush Tokens with 2 random keywords.
+    const STOCKPILE: &str = "core-005"; // Stockpile: draw 2, heal your hero 2
+    const SHEEPISH: &str = "core-041"; // Sheepish: when your opponent plays a Unit, after its Cry, transform it into a Sheep
+    const MIND_CONTROL: &str = "core-049"; // Snom Bunny Mind Control: steal an enemy card
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const GARY: &str = "core-004"; // Gary the Gambler
+    const LUNAR: &str = "core-035"; // Lunar Eclipse: deal 3 damage to a target
+    const DEFENDER: &str = "core-003"; // Right-house defender: Reborn; Radiant: Death: summon a base Right-house defender
     const RUSH_TOKEN: &str = "core-t-rush";
     const FILLER: &str = "core-005";
 

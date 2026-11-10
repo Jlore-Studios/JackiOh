@@ -53,14 +53,14 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const REWIND: &str = "classic-054";
-    const GARY: &str = "core-004"; // 1/1, Cry: flip 5 coins, +1 attack per heads, +1 health per tails.
-    const MR_TOKEN: &str = "core-015"; // 1/1, Cry: summon a Rush Token.
-    const DUPLICATING: &str = "core-012"; // 3/4, Cry: summon a copy of this.
-    const SPECIESIST: &str = "core-002"; // 6/1 Human, Cry: destroy target enemy non-Human Unit.
-    const SORCERER: &str = "core-068"; // 5/5, Cry: deal 4 damage to a target (8 under 10 health).
-    const VANILLA: &str = "core-008"; // 4/4, no text.
-    const MENACE: &str = "core-019"; // 9/9 Taunt.
-    const FIENDER: &str = "core-092"; // Stack.
+    const GARY: &str = "core-004"; // Gary the Gambler: Cry: flip 5 coins, +1 attack per heads, +1 health per tails
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
+    const DUPLICATING: &str = "core-012"; // Duplicating Felinors: Cry: summon a copy of this
+    const SPECIESIST: &str = "core-002"; // Speciesist: Human, Cry: destroy target enemy non-Human Unit
+    const SORCERER: &str = "core-068"; // Twisted Sorcerer: Cry: deal 4 damage to a target (8 under 10 health)
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: no text
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
     const RUSH_TOKEN: &str = "core-t-rush";
     const LUNAR: &str = "core-035";
     const FILLER: &str = "core-005";

@@ -736,6 +736,7 @@ mod free_replays_r1965000 {
                     rng,
                     budget: AI_BUDGET,
                     should_stop: Some(&stop),
+                    wrap_up: None,
                 };
                 let decision = decide(&state, AI, &mut ai).expect("the AI acts");
                 rng = ai.rng;

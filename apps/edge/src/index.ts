@@ -22,7 +22,7 @@ import {
 } from "./routing.ts";
 
 /** How long the server runs with no request before it is stopped; the next request starts it again. */
-const SLEEP_AFTER = "10m";
+const SLEEP_AFTER = "5m";
 
 /**
  * How long a request waits for a sleeping server to listen. The library's own wait is 20 s, which a

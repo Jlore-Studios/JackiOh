@@ -1761,7 +1761,12 @@ mod r1367000_card_stats_by_window {
         assert_eq!((&held["games"], &held["liveGames"]), (&json!(8), &json!(5)));
         assert!(versions(held).contains(&micro));
         // R1973001: no other patch had a game, so each folds into the window before it, and only a
-        // major, X or the newest version opens one.
+        // major, X or (R3526000) the newest patch, whose window holds the newest version, opens one.
+        let newest_patch = &history
+            .iter()
+            .rfind(|step| step.tier != PatchTier::Micro)
+            .expect("a major has shipped")
+            .version;
         for window in patches {
             let first = &versions(window)[0];
             let step = history
@@ -1769,7 +1774,7 @@ mod r1367000_card_stats_by_window {
                 .find(|step| &step.version == first)
                 .expect("a shipped version");
             assert!(
-                step.tier == PatchTier::Major || *first == x || first == newest,
+                step.tier == PatchTier::Major || *first == x || first == newest_patch,
                 "{first} opens a window with no game played on it"
             );
         }
@@ -1777,6 +1782,44 @@ mod r1367000_card_stats_by_window {
         let listed: Vec<String> = patches.iter().rev().flat_map(versions).collect();
         let shipped: Vec<String> = history.iter().map(|step| step.version.clone()).collect();
         assert_eq!(listed, shipped);
+    }
+
+    #[tokio::test]
+    async fn r3526000_a_patch_whose_games_are_its_micros_opens_its_window_as_does_the_newest_patch() {
+        let history = jackioh_cards::patch_history();
+        // A patch a later patch replaced, with a micro right after it: as v0.5.11 shipped in one
+        // commit with v0.5.11b, every game was filed under the micro and none under the patch.
+        let at = (0..history.len().saturating_sub(1))
+            .rev()
+            .find(|&at| {
+                history[at].tier == PatchTier::Patch
+                    && history[at + 1].tier == PatchTier::Micro
+                    && history[at + 1..].iter().any(|step| step.tier != PatchTier::Micro)
+            })
+            .expect("a replaced patch has a micro after it");
+        let (patch, micro) = (&history[at].version, &history[at + 1].version);
+        let app = test_app().await;
+        let records: Vec<Value> = (0..4)
+            .map(|n| live(format!("micro-{n}"), micro, "core-002"))
+            .collect();
+        insert_records(&app, records).await;
+        let (status, _, data) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(status, 200);
+        let patches = data["patches"].as_array().expect("the patches are a list");
+        let first = |window: &Value| window["versions"][0].as_str().expect("a version").to_string();
+        let held = patches
+            .iter()
+            .find(|window| first(window) == *patch)
+            .expect("the patch opens a window");
+        assert_eq!((&held["games"], &held["liveGames"]), (&json!(4), &json!(4)));
+        assert_eq!(held["versions"][1], json!(micro));
+        // The newest patch opens the newest window, with no game on any of its versions yet.
+        let newest_patch = &history
+            .iter()
+            .rfind(|step| step.tier != PatchTier::Micro)
+            .expect("a major has shipped")
+            .version;
+        assert_eq!(first(&patches[0]), *newest_patch);
     }
 }
 

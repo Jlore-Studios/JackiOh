@@ -59,8 +59,8 @@ mod tests {
     use crate::scenario;
 
     const SCALING: &str = "classicplus-t-ai-02";
-    const HALLUCINATION: &str = "classicplus-t-ai-03"; // (0) Spell, AI.
-    const ASSISTANT: &str = "classicplus-t-ai-01"; // (1) Unit, AI.
+    const HALLUCINATION: &str = "classicplus-t-ai-03"; // Hallucination: AI
+    const ASSISTANT: &str = "classicplus-t-ai-01"; // Helpful Assistant: AI
     const FILLER: &str = "core-005";
 
     const P1: PlayerId = PlayerId::P1;

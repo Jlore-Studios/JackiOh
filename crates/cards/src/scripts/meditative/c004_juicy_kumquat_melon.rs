@@ -113,16 +113,16 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const MELON: &str = "meditative-004";
-    const GIFT: &str = "meditative-006"; // (0) Spell.
-    const CUTS: &str = "meditative-005"; // (1) Spell.
-    const DISRUPTOR: &str = "meditative-001"; // (2) Field Spell.
-    const INTROSPECTION: &str = "meditative-007"; // (4) Field Spell.
-    const FISHING: &str = "meditative-021"; // (0, embiggen 1) Spell.
-    const FILLER: &str = "core-005"; // (1) Spell.
-    const CHEAP: &str = "core-010"; // (0) Spell.
-    const MENACE: &str = "core-019"; // (3) Unit.
-    const BIG: &str = "classic-060"; // (5) Spell.
-    const DIVIDEND: &str = "core-024"; // (X) Spell.
+    const GIFT: &str = "meditative-006"; // Me no Likey: a Spell
+    const CUTS: &str = "meditative-005"; // Death by 1000 cuts: a Spell
+    const DISRUPTOR: &str = "meditative-001"; // Disruptive Disruptor: a Field Spell
+    const INTROSPECTION: &str = "meditative-007"; // Introspection: a Field Spell
+    const FISHING: &str = "meditative-021"; // API Key Fishing: embiggen 1, a Spell
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const CHEAP: &str = "core-010"; // Rapid Replenish: a Spell
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const BIG: &str = "classic-060"; // Pile On: a Spell
+    const DIVIDEND: &str = "core-024"; // Efficiency Dividend: a Spell
 
     /// The def ids of p1's `drawn` events, in order.
     fn drawn_defs(s: &Scenario) -> Vec<String> {

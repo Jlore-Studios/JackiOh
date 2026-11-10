@@ -78,12 +78,12 @@ mod tests {
     const FOUR: &str = "core-043";
     
     // p2's plays.
-    const VANILLA: &str = "core-008"; // (1) Unit
-    const SPECIESIST: &str = "core-002"; // (2) Unit
-    const BIG_FELINOR: &str = "core-043"; // (4) Unit
-    const TRUE_STRIKE: &str = "core-044"; // a Spell
-    const TOKEN_MAKER: &str = "core-015"; // (1) Unit, Cry: summon a Rush Token
-    const HIT_JOB: &str = "core-016"; // rides along so the turn does not auto-end (R82)
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const SPECIESIST: &str = "core-002"; // Speciesist
+    const BIG_FELINOR: &str = "core-043"; // Big Felinor
+    const TRUE_STRIKE: &str = "core-044"; // True Strike: a Spell
+    const TOKEN_MAKER: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
+    const HIT_JOB: &str = "core-016"; // Hit Job: rides along so the turn does not auto-end (R82)
 
     fn setup(radiant: bool, p2_hand: Value) -> Scenario {
         crate::register_all();

@@ -208,12 +208,12 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const CUBE: &str = "core-022"; // 2/4, radiant 4/8, cost 2 (4/6, 8/12 and cost 3 until issue #3136).
-    const TIMMY: &str = "core-011"; // Tempo Timmy, a plain 3/3 unit.
-    const MANA_WELL: &str = "core-006"; // A Field Spell: a backrow permanent.
-    const HITTER: &str = "core-025"; // 4-mana 7/7.
-    const SPECIESIST: &str = "core-002"; // Set to 6/1 (it prints 4/1): the second hit that finishes the radiant Cube.
-    const FILLER: &str = "core-005"; // A card in hand, so no turn auto-ends mid-fixture.
+    const CUBE: &str = "core-022"; // Carnivorous Cube: as printed since issue #3136
+    const TIMMY: &str = "core-011"; // Tempo Timmy: a plain unit
+    const MANA_WELL: &str = "core-006"; // Mana Well: a backrow permanent
+    const HITTER: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const SPECIESIST: &str = "core-002"; // Speciesist: set by the fixture, not as printed: the second hit that finishes the radiant Cube.
+    const FILLER: &str = "core-005"; // Stockpile: A card in hand, so no turn auto-ends mid-fixture
 
     /// The controller's unit row as def ids, lane 1 to 5.
     fn row(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {

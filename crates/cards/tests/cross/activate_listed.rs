@@ -132,16 +132,16 @@ const ACTIVATE_CARDS: [&str; 75] = [
     "stinkyscape-t-propagation-layer",
 ];
 
-const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2. A spare that keeps R82's auto-end away.
-const MANA_WELL: &str = "core-006"; // (3) Field Spell: a backrow card of p1's to hold a Plague Counter.
-const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-const FILLER: &str = "core-010"; // (0) Spell.
-const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-const X: &str = "core-020"; // library filler.
-const CONJURE_KY: &str = "core-057"; // (2) Spell: Add 3 random KY cards to your hand.
-const APPLE: &str = "classicplus-059"; // All Purpose Apple, Doctors Orders' card.
-const THE_COIN: &str = "core-t-coin"; // Money Machine's card.
-const AUSPICIOUS_ROCK: &str = "meditative-039-1"; // Feng Shui's card.
+const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2. A spare that keeps R82's auto-end away.
+const MANA_WELL: &str = "core-006"; // Mana Well: a backrow card of p1's to hold a Plague Counter
+const VANILLA: &str = "core-008"; // Mr. Vanilla
+const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+const MENACE: &str = "core-019"; // Midrange Menace: Taunt Unit
+const X: &str = "core-020"; // Pointmaster: library filler
+const CONJURE_KY: &str = "core-057"; // Conjure KY: Add 3 random KY cards to your hand
+const APPLE: &str = "classicplus-059"; // All Purpose Apple: Doctors Orders' card
+const THE_COIN: &str = "core-t-coin"; // The Coin: Money Machine's card
+const AUSPICIOUS_ROCK: &str = "meditative-039-1"; // Auspicious Rock: Feng Shui's card
 
 fn on(def: &str, radiant: bool) -> Value {
     json!({ "def": def, "radiant": radiant })
@@ -2068,7 +2068,7 @@ mod stinkyscape {
         #[test]
         fn r384_its_launch_through_the_listed_activate() {
             const HIT_JOB: &str = "core-016";
-            const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce.
+            const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": AP_ROUNDS, "lane": 2 }], "hand": [HIT_JOB, STOCKPILE], "library": [X, X], "mana": 10 },
                 "p2": { "hand": [FILLER], "library": [X, X] },

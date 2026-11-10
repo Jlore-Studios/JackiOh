@@ -49,9 +49,9 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const PAPAYA: &str = "classicplus-062";
-    const UNIT: &str = "core-008"; // Mr. Vanilla, a plain 4/4.
-    const FIELD: &str = "core-006"; // Mana Well, a Field Spell.
-    const TRAP: &str = "core-041"; // Sheepish, set face-down.
+    const UNIT: &str = "core-008"; // Mr. Vanilla: a plain card
+    const FIELD: &str = "core-006"; // Mana Well: a Field Spell
+    const TRAP: &str = "core-041"; // Sheepish: set face-down
     const TOKEN: &str = "core-t-rush";
     const FILLER: &str = "core-005";
 

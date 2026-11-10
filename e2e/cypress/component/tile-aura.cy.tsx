@@ -8,11 +8,18 @@ import { baseView, emptySide, faceUpBackrow, unit } from "../../../apps/web/src/
 
 const noop = (): void => undefined;
 
+/**
+ * Four Legendary and Mythic permanents that wear the default tile aura: a card's own aura replaces it (R3342000),
+ * a `{ bespoke }` entry's too (R3400000), and every signature permanent now wears its own (Core's, R3402000;
+ * Classic+'s, R3399001; Stinkyscape's, R3395001), so the board takes the ones that wear none: Felinor Fiender
+ * and two Ceaseless Voids in the unit rows, and the Dormant Starship, a Legendary Flying Unit standing in the
+ * backrow (R1081000).
+ */
 function fourTileBoard() {
   return baseView({
     you: emptySide("p1", {
       units: [
-        unit("p1", { defId: "core-052", instanceId: "u-leg-1" }),
+        unit("p1", { defId: "core-092", instanceId: "u-leg-1" }),
         unit("p1", { defId: "core-100", instanceId: "u-myth-1" }),
         null,
         null,
@@ -21,18 +28,15 @@ function fourTileBoard() {
       backrow: [null, null, null, null, null],
     }),
     opponent: emptySide("p2", {
-      units: [null, null, null, null, null],
-      // A card's own aura replaces its tile aura (R3400000), and every Legendary and Mythic Field Spell wears one
-      // (R3399001: Frostspatula's frostMist), as Paragon-X does (R3395000): a face-up Legendary Trap and a Mythic
-      // Flying token standing in the backrow (R1081000), neither with an aura of its own, wear it instead.
+      units: [null, unit("p2", { defId: "core-100", instanceId: "u-myth-2" }), null, null, null],
       backrow: [
-        faceUpBackrow("p2", { defId: "core-085", instanceId: "b-leg-2", type: "Trap" }),
         faceUpBackrow("p2", {
-          defId: "stinkyscape-t-shield-layer",
-          instanceId: "b-myth-2",
+          defId: "stinkyscape-t-dormant-starship",
+          instanceId: "b-leg-2",
           type: "Unit",
-          unit: unit("p2", { defId: "stinkyscape-t-shield-layer", instanceId: "b-myth-2" }),
+          unit: unit("p2", { defId: "stinkyscape-t-dormant-starship", instanceId: "b-leg-2" }),
         }),
+        null,
         null,
         null,
         null,
