@@ -17428,6 +17428,8 @@
     "3531": {
       "action": "review",
       "asks": [],
+      "audit_tier": "medium",
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -17444,16 +17446,25 @@
       },
       "interruptions": 0,
       "issue": 3496,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The record for a run that settles as lost takes its `timeMs` from the calendar (`now - kept.startedAt`) instead of the run's played time, which R3502000 requires.",
+          "evidence": "`settleUnfoldable` sets `timeMs: Math.max(DUNGEON_ELAPSED_MIN_MS, now - kept.startedAt)`. R3502000 says `startedAt` no longer times a run and the record holds the kept `elapsedMs` total. It rejects timing from `startedAt` because it made a run paused overnight read twenty hours. A run left across a patch is by definition left a long time, so every unfoldable record would show the gap. `KeptRun.elapsedMs` is parsed and available as `kept.elapsedMs`. The new tests never assert `timeMs`, so nothing catches it. Fix: use `Math.max(DUNGEON_ELAPSED_MIN_MS, kept.elapsedMs)` (or just `kept.elapsedMs`) and assert it in the lost-settle tests.",
+          "severity": "blocking",
+          "where": "apps/web/src/dungeon/store.ts:348"
+        }
+      ],
       "live": "reviewing",
       "pending_request": false,
       "provider": "claude-7",
-      "queued_at": "2026-11-10T01:11:21Z",
+      "queued_at": "2026-11-10T01:25:42Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "42734262190",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-11-10T01:13:41Z",
       "stop_requested": false,
       "taken_asks": [],
