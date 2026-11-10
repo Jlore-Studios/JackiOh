@@ -630,6 +630,8 @@ function startRun(setup: RunSetup): string | null {
     };
     const next: Core = {
       ...from,
+      // The patch notice told of an earlier run; a new run ends it.
+      notice: null,
       daily: daily
         ? { date, started: (from.daily?.date === date ? from.daily.started : 0) + DUNGEON_RUN_STEP }
         : from.daily,
@@ -693,7 +695,7 @@ function abandonRun(): void {
   if (live === null) return;
   // An unfinished run is given up first, which settles its loss; a finished one has settled already.
   const settled = runFinished(live.run) ? from : step(from, live, { type: "abandon" });
-  if (typeof settled !== "string") commit({ ...settled, live: null });
+  if (typeof settled !== "string") commit({ ...settled, live: null, notice: null });
   // R3476000: an abandoned run keeps no fight.
   clearStoredRunFight();
 }
@@ -706,6 +708,7 @@ function buyNextLevel(): string | null {
   if (embers < cost) return t("You need {cost} Embers to raise your starting deck.", { cost: String(cost) });
   const next: Core = {
     ...from,
+    notice: null,
     progress: { unlocks: { ...unlocks, level: unlocks.level + DUNGEON_LEVEL_STEP }, embers: embers - cost },
   };
   persistProgress(next);

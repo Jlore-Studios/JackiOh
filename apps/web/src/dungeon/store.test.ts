@@ -253,6 +253,21 @@ describe("B19 a run in progress survives a reload", () => {
     expect(readRunHistory()).toHaveLength(1);
   });
 
+  it("R3496000 the patch notice goes once a new run starts", () => {
+    const file: RunFile = { setup: setupOf({ seed: "QWERTY" }), unlocks: unlocks(), log: [{ type: "go", col: 0 }] };
+    window.localStorage.setItem(
+      DUNGEON_RUN_KEY,
+      JSON.stringify({ v: 1, file, startedAt: Date.now(), elapsedMs: 0, daily: false, catalog: "test-catalog", extractedCards: [], extractedArtifacts: [] }),
+    );
+    wasmBindings.runFold.mockReturnValue({ error: "step 0: row 0 has no node 1" });
+    const dungeon = mount();
+    expect(dungeon.current.notice).not.toBeNull();
+    expect(press(() => dungeon.current.start(setupOf()))).toBeNull();
+    expect(dungeon.current.notice).toBeNull();
+    dungeon.current.abandon();
+    expect(dungeon.current.notice).toBeNull();
+  });
+
   it("R3496000 a run kept under version A folds on A's content after the build moves to B", () => {
     wasmBindings.catalogVersion.mockReturnValue("catalog-a");
     const dungeon = mount();
