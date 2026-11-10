@@ -18137,13 +18137,9 @@
     "what": "build #3606 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T19:22:33Z",
+    "at": "2026-11-10T19:33:23Z",
     "notes": [
-      "delivered plan #3606 on muse (run 42883290694): planned",
-      "started build #3606 on muse (run 42885123250)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days",
-      "runner gate: started 0 of 3 waiting run(s); 3 wait for room"
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18849,7 +18845,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T19:22:33Z",
+  "loop_tick": "2026-11-10T19:33:23Z",
   "machine_disk": {
     "issue": null,
     "reading": {
