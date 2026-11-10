@@ -51,6 +51,10 @@ pub struct AiOptions<'a> {
     /// Wall-clock safety cap, polled before every node; true = stop and answer with the best so far.
     /// The browser's clock (SURFACE §10.1): this crate never reads one.
     pub should_stop: Option<&'a dyn Fn() -> bool>,
+    /// R3498000: polled only by the beam, before each of its nodes; true = explore no further, while the
+    /// reply and the other determinizations run on until `should_stop`. A host with a clock fires it at
+    /// `AI_WRAP_UP_SHARE` of its limit (`wrap_up_after_ms`).
+    pub wrap_up: Option<&'a dyn Fn() -> bool>,
 }
 
 impl<'a> AiOptions<'a> {
@@ -59,6 +63,7 @@ impl<'a> AiOptions<'a> {
             rng,
             budget: crate::config::AI_BUDGET,
             should_stop: None,
+            wrap_up: None,
         }
     }
 
@@ -67,6 +72,7 @@ impl<'a> AiOptions<'a> {
             rng,
             budget,
             should_stop: None,
+            wrap_up: None,
         }
     }
 }
@@ -148,6 +154,14 @@ pub struct SearchStats {
     /// loses the whole decision, so the gates fail on any.
     pub sim_panics: usize,
     pub stopped_by: StoppedBy,
+    /// R3498000: the shortlisted lines on determinization 0 scored after a simulated reply (a line that
+    /// passed or yielded the turn); 0 when the decision never reached step 6's reply.
+    #[serde(default)]
+    pub replied: usize,
+    /// R3498000: the determinizations the finalists were scored on, determinization 0 included; 0 when
+    /// the decision never reached step 6's finalists.
+    #[serde(default)]
+    pub worlds_scored: usize,
     /// Mean score of the chosen line across determinizations (0 for forced/mulligan/draw-offer).
     pub score: f64,
 }
@@ -165,6 +179,16 @@ pub struct Decision {
     pub first_sim_panic: Option<String>,
 }
 
+impl Decision {
+    /// R3498000: a searched decision that left its finalists unscored on a sampled world. A refused
+    /// reply refuses every later node, so it shows here too, except at one determinization.
+    pub fn fell_short(&self) -> bool {
+        matches!(self.reason, DecisionReason::Search | DecisionReason::Prompt)
+            && self.stats.determinizations > 0
+            && self.stats.worlds_scored < self.stats.determinizations
+    }
+}
+
 /// Shared node accounting for one decision.
 pub trait NodeCounter {
     fn used(&self) -> usize;
@@ -172,6 +196,9 @@ pub trait NodeCounter {
     /// Polls shouldStop, then takes one node; false when the budget or the clock is spent.
     fn take(&self) -> bool;
     fn stopped_by(&self) -> StoppedBy;
+    /// R3498000: from here the beam only ends its open lines' turns, which a wrap-up no longer refuses;
+    /// a counter with no wrap-up ignores it.
+    fn end_exploring(&self) {}
     /// The failed simulations this counter tallies (`SearchStats.simErrors`), if it tallies them.
     fn sim_error_tally(&self) -> Option<usize> {
         None

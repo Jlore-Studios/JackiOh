@@ -459,6 +459,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       view={view}
       legal={match.legal}
       onAction={match.send}
+      drainWhenHidden
       // R3477000: the forecast the seat's own view frame carried; a watcher's carries none.
       forecast={match.forecast ?? undefined}
       emotes={emotes}

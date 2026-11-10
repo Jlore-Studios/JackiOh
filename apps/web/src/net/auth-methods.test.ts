@@ -25,6 +25,7 @@ import {
   verifySecondFactor,
   identityLinkUrl,
   listIdentities,
+  ROBLOX_AVATAR_IMAGE_HOST,
   unlinkIdentity,
 } from "./auth.ts";
 
@@ -533,5 +534,89 @@ describe("R3025000 linking a provider to the signed-in account", () => {
     expect((await refusal(unlinkIdentity(SESSION_TOKEN, "id-google"))).failure).toBe("lastIdentity");
     serve(500, {});
     expect((await refusal(unlinkIdentity(SESSION_TOKEN, "id-google"))).failure).toBe("service");
+  });
+});
+
+describe("R3507000 a linked Roblox identity keeps its username and headshot", () => {
+  const SESSION_TOKEN = tokenWith({ sub: "user-1", aal: "aal1" });
+  const PICTURE = "https://tr.rbxcdn.com/30DAY-AvatarHeadshot-ABC-Png/150/150/AvatarHeadshot/Png/noFilter";
+
+  /** What `listIdentities` keeps of one Roblox identity whose `identity_data` is `data`. */
+  async function robloxOf(data: unknown, provider = "custom:roblox"): Promise<unknown> {
+    serve(200, { identities: [{ identity_id: "id-roblox", provider, identity_data: data }] });
+    return (await listIdentities(SESSION_TOKEN))[0];
+  }
+
+  it("R3507000 keeps the trimmed username, the display name and the headshot on Roblox's image host", async () => {
+    expect(ROBLOX_AVATAR_IMAGE_HOST).toBe("tr.rbxcdn.com");
+    expect(
+      await robloxOf({ preferred_username: "  Builderman ", name: "Builder Man", nickname: "Builder", picture: PICTURE, sub: "156" }),
+    ).toEqual({ id: "id-roblox", provider: "custom:roblox", username: "Builderman", displayName: "Builder Man", avatarUrl: PICTURE });
+    // `nickname` names the person when `name` does not.
+    expect(await robloxOf({ preferred_username: "Builderman", nickname: "Builder" })).toEqual({
+      id: "id-roblox",
+      provider: "custom:roblox",
+      username: "Builderman",
+      displayName: "Builder",
+    });
+    expect(await robloxOf({ preferred_username: "Builderman", name: " ", nickname: "Builder" })).toEqual({
+      id: "id-roblox",
+      provider: "custom:roblox",
+      username: "Builderman",
+      displayName: "Builder",
+    });
+  });
+
+  it("R3507000 drops a username that is not a string, or is empty or only spaces", async () => {
+    for (const bad of [42, null, true, ["Builderman"], { name: "Builderman" }, "", "   "]) {
+      expect(await robloxOf({ preferred_username: bad, picture: PICTURE }), JSON.stringify(bad)).toEqual({
+        id: "id-roblox",
+        provider: "custom:roblox",
+        avatarUrl: PICTURE,
+      });
+    }
+  });
+
+  it("R3507000 drops a headshot that is not an https: URL on Roblox's image host, whatever else it is", async () => {
+    const bad: unknown[] = [
+      null,
+      7,
+      "",
+      "   ",
+      "not a url",
+      "/images/headshot.png",
+      "//tr.rbxcdn.com/headshot.png",
+      "http://tr.rbxcdn.com/headshot.png",
+      "javascript:alert(1)",
+      "data:image/png;base64,AAAA",
+      "https://example.com/headshot.png",
+      "https://t0.rbxcdn.com/headshot.png",
+      "https://rbxcdn.com/headshot.png",
+      "https://evil.tr.rbxcdn.com/headshot.png",
+      "https://tr.rbxcdn.com.evil.test/headshot.png",
+      "https://tr.rbxcdn.com@evil.test/headshot.png",
+    ];
+    for (const picture of bad) {
+      expect(await robloxOf({ preferred_username: "Builderman", picture }), JSON.stringify(picture)).toEqual({
+        id: "id-roblox",
+        provider: "custom:roblox",
+        username: "Builderman",
+      });
+    }
+  });
+
+  it("R3507000 keeps today's { id, provider } for a Roblox identity with no usable claim, or no identity_data at all", async () => {
+    for (const data of [undefined, null, "Builderman", 3, ["x"], {}, { preferred_username: "", picture: "" }]) {
+      expect(await robloxOf(data), JSON.stringify(data)).toEqual({ id: "id-roblox", provider: "custom:roblox" });
+    }
+  });
+
+  it("R3507000 reads no identity_data of another provider", async () => {
+    for (const provider of ["google", "email", "github", "custom:other"]) {
+      expect(await robloxOf({ preferred_username: "Builderman", name: "Builder Man", picture: PICTURE }, provider), provider).toEqual({
+        id: "id-roblox",
+        provider,
+      });
+    }
   });
 });

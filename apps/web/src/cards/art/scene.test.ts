@@ -4,6 +4,7 @@
 // clear their floors, and every card with no recipe draws the spec it drew before. The pixels are
 // e2e/cypress/component/scene-proofs.cy.tsx's. R3393000: the recipes are the proofs' and every Meditative+
 // and Training Grounds entry's (setScenes.test.ts holds those), and none of them paints in the gold window.
+// R3352000: and every Classic entry's (classicScenes.test.ts).
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -240,11 +241,11 @@ describe("R3331000 the five proof cards", () => {
     expect(SCENE_BOX).toBe(ART_BOX);
     // R3392000: the proofs and every Core entry draw from a recipe, and every Classic+ entry (R3390000, which
     // classicPlusScenes.test.ts checks); R3393000: so does every Meditative+ and Training Grounds entry
-    // (setScenes.test.ts); R3401000: and every Meditative entry (meditativeScenes.test.ts); R3403000: and #3403's
-    // Stinkyscape entries (stinkyscape91Scenes.test.ts); R3391000: and Stinkyscape's cards 1 to 90 of its pass, which
-    // hold Arg Arg Defender's (stinkyscapeScenes.test.ts).
+    // (setScenes.test.ts); R3401000: so does every Meditative entry (meditativeScenes.test.ts); R3403000: so do #3403's
+    // Stinkyscape entries (stinkyscape91Scenes.test.ts); R3391000: so do Stinkyscape's cards 1 to 90 of its pass, which
+    // hold Arg Arg Defender's (stinkyscapeScenes.test.ts); R3352000: and every Classic entry (classicScenes.test.ts).
     const core = Object.values(CATALOG).filter((card) => card.set === "Core").map((card) => card.id);
-    const passes = Object.values(CATALOG).filter((card) => card.set === "Meditative+" || card.set === "Training Grounds").map((card) => card.id);
+    const passes = Object.values(CATALOG).filter((card) => card.set === "Meditative+" || card.set === "Training Grounds" || card.set === "Classic").map((card) => card.id);
     const checkedElsewhere = (id: string): boolean => id.startsWith("classicplus-") || id.startsWith("meditative-");
     expect(Object.keys(SCENE_RECIPES).filter((id) => !checkedElsewhere(id) && !Object.hasOwn(STINKYSCAPE_91_RECIPES, id)).sort()).toEqual(
       [...new Set<string>([...PROOFS, ...core, ...passes, ...Object.keys(STINKYSCAPE_RECIPES)])].sort(),

@@ -365,6 +365,7 @@ impl PracticeHost {
             rng: Rng::new(&ask.rng_seed, ask.rng_cursor),
             budget,
             should_stop: None,
+            wrap_up: None,
         };
         let decision = catch_unwind(AssertUnwindSafe(|| {
             jackioh_ai::decide(&self.game, ask.seat, &mut options)
