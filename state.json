@@ -18318,15 +18318,15 @@
     "what": "review #3663 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T19:47:44Z",
+    "at": "2026-11-10T20:01:43Z",
     "notes": [
-      "delivered build #3658 on muse (run 42883141984): built",
-      "delivered build #3546 on muse (run 42872228541): part",
-      "started review #3662 on muse (run 42889517255)",
-      "started plan #3548 on claude-3 (run 42889665960)",
-      "started plan #3549 on muse (run 42889819466)",
+      "delivered review #3662 on muse (run 42889517255): approved",
+      "delivered build #3606 on muse (run 42885123250): built",
+      "delivered revise #3645 on claude-6 (run 42878350979): approved",
+      "started review #3663 on muse (run 42892011178)",
       "nothing more to start: nothing is queued",
-      "runner gate: started 1 of 3 waiting run(s) (run 42884878390 on claude/inspiring-gauss-3vwxm0); 2 wait for room"
+      "pruned 1 plan file(s) older than 7 days",
+      "runner gate: started 2 of 6 waiting run(s) (queue build 42891213782, run 42886147470 on claude/loving-fermi-6a4wk0); 4 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19032,7 +19032,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T19:47:44Z",
+  "loop_tick": "2026-11-10T20:01:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
