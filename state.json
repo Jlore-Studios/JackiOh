@@ -15379,9 +15379,9 @@
       "last_findings": [],
       "live": "building",
       "onto": "bot/issue-3596",
-      "owner": "claude-8",
-      "owner_since": "2026-11-10T21:17:34Z",
-      "owner_why": "handed off from `claude-3`: it could not take it",
+      "owner": "claude-1",
+      "owner_since": "2026-11-10T21:36:05Z",
+      "owner_why": "handed off from `claude-8`: it could not take it",
       "part_of": 3596,
       "pending_request": false,
       "planned_at": "2026-11-10T20:17:22Z",
@@ -15389,11 +15389,11 @@
       "planned_by_id": "muse",
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
-      "provider": "claude-8",
+      "provider": "claude-1",
       "queued_at": "2026-11-10T21:34:46Z",
       "requested_by": "squishy-squooby",
       "round_tier": "",
-      "run_id": "42903612881",
+      "run_id": "pending:1df4bfdf-1794346529",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -15412,7 +15412,7 @@
         "provider": "claude-3",
         "run": "42894395397"
       },
-      "started_at": "2026-11-10T21:17:34Z",
+      "started_at": "2026-11-10T21:36:05Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
@@ -18353,9 +18353,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T21:17:34Z",
+    "at": "2026-11-10T21:36:05Z",
     "url": "",
-    "what": "build #3549 on claude-8"
+    "what": "build #3549 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-10T21:25:22Z",
