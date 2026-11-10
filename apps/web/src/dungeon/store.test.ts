@@ -225,7 +225,9 @@ describe("B19 a run in progress survives a reload", () => {
       JSON.stringify({
         v: 1,
         file,
-        startedAt: Date.now(),
+        // Left across a patch for a day, after five minutes played: the record holds the five.
+        startedAt: Date.now() - 24 * HOUR_MS,
+        elapsedMs: 5 * MINUTE_MS,
         daily: false,
         catalog: "test-catalog",
         extractedCards: [EXTRACTABLE, "not-a-card"],
@@ -241,7 +243,7 @@ describe("B19 a run in progress survives a reload", () => {
     expect(dungeon.current.progress).toEqual({ unlocks: unlocks({ level: 3, cards: [EXTRACTABLE] }), embers: 7 });
     // Its record joins the history, lost with no row and no score.
     expect(readRunHistory()).toEqual([
-      expect.objectContaining({ seed: "QWERTY", won: false, rowReached: 0, score: 0, embers: 0, stats: ZERO_STATS }),
+      expect.objectContaining({ seed: "QWERTY", won: false, rowReached: 0, score: 0, embers: 0, timeMs: 5 * MINUTE_MS, stats: ZERO_STATS }),
     ]);
     expect(stored(DUNGEON_HISTORY_KEY)).toEqual({ v: 1, runs: readRunHistory() });
     // The start screen says so, once.
@@ -301,7 +303,8 @@ describe("B19 a run in progress survives a reload", () => {
       JSON.stringify({
         v: 1,
         file,
-        startedAt: Date.now(),
+        startedAt: Date.now() - 24 * HOUR_MS,
+        elapsedMs: 2 * MINUTE_MS,
         daily: false,
         catalog: "v0.0.0-unknown",
         extractedCards: [EXTRACTABLE],
@@ -316,7 +319,7 @@ describe("B19 a run in progress survives a reload", () => {
     // Only what the current content knows is banked.
     expect(dungeon.current.progress.unlocks).toEqual(unlocks({ cards: [EXTRACTABLE], artifacts: ["locked-sigil"] }));
     expect(readRunHistory()).toEqual([
-      expect.objectContaining({ seed: "QWERTY", mode: "sandbox", won: false, score: 0, embers: 0 }),
+      expect.objectContaining({ seed: "QWERTY", mode: "sandbox", won: false, score: 0, embers: 0, timeMs: 2 * MINUTE_MS }),
     ]);
     expect(dungeon.current.notice).toBe("The patch ended your last run as lost. What you had extracted is kept.");
   });

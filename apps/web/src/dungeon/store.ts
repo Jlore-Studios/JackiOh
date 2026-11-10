@@ -345,7 +345,8 @@ function settleUnfoldable(base: Core, kept: KeptRun, now: number): Core {
     won: false,
     score: 0,
     embers: 0,
-    timeMs: Math.max(DUNGEON_ELAPSED_MIN_MS, now - kept.startedAt),
+    // R3502000: the time played the run was kept with, not the calendar's gap since `startedAt`.
+    timeMs: playedMs(kept.elapsedMs, null, now),
     endedAt: new Date(now).toISOString(),
     stats: EMPTY_RUN_STATS,
   };
