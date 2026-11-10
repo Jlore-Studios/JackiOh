@@ -107,6 +107,7 @@ mod tests {
         s
     }
 
+    // Differs from Scenario::offered: the open Discover's options, not the seat's legal actions.
     fn offered(s: &Scenario) -> Vec<String> {
         let pending = s.state().pending.clone().expect("a Discover is open");
         assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));

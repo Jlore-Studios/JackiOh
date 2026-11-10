@@ -26,6 +26,7 @@ import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } f
 import { composeScene, SCENE_LAYERS, sceneRecipeOf, sceneUse, type SceneLayer, type SceneRecipe } from "./scene.ts";
 import { SCENE_KIT } from "./sceneKit.ts";
 import { CLASSIC_KIT } from "./sceneKitClassic.ts";
+import { CLASSIC_ALT_KIT } from "./sceneKitClassicAlt.ts";
 import { COSMOS_KIT } from "./sceneKitCosmos.ts";
 import { CRAFT_KIT } from "./sceneKitCraft.ts";
 import { GEAR_KIT } from "./sceneKitGear.ts";
@@ -299,9 +300,10 @@ describe("R3401000 Meditative drawn as scenes", () => {
     // None takes the place of one of the first kit's parts or of an earlier module's; R3403000: Stinkyscape's four
     // modules follow them (stinkyscape91Scenes.test.ts), and R3406000 the Stinkyscape Alt art pass's
     // (stinkyscape91AltScenes.test.tsx), and R3394000 the early Stinkyscape Alt art pass's (stinkyscapeAltScenes.test.tsx);
-    // R3352000: Classic's module comes after Stinkyscape's four and before the Alt art passes' (classicScenes.test.ts).
+    // R3352000: Classic's module comes after Stinkyscape's four and before the Alt art passes' (classicScenes.test.ts);
+    // R3388000: and Classic's Alt art pass's after it (classicAltScenes.test.tsx).
     const after = [SPACE_KIT, CRAFT_KIT, GEAR_KIT, COSMOS_KIT, STINKY_ALT_KIT, STINKY_EARLY_ALT_KIT].flatMap((kit) => Object.keys(kit));
-    const later = Object.keys(CLASSIC_KIT);
+    const later = [CLASSIC_KIT, CLASSIC_ALT_KIT].flatMap((kit) => Object.keys(kit));
     expect(Object.keys(SCENE_KIT)).toHaveLength(FIRST_KIT_PARTS + ids.length + after.length + later.length);
     expect(Object.keys(SCENE_KIT).slice(FIRST_KIT_PARTS + before.length, FIRST_KIT_PARTS + ids.length)).toEqual(ink.map(([id]) => id));
   });

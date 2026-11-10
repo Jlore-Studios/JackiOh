@@ -169,6 +169,18 @@ pub extern "C" fn run_content() -> i32 {
     boundary(wasm_core::run_content)
 }
 
+/// R3496000: `RunContent` for a catalog version: the build's own, a carried version's, or `null`.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_content_at(version_json_ptr: *const u8, version_json_len: usize) -> i32 {
+    boundary(|| {
+        wasm_core::run_content_at(arg(
+            "runContentAt: the version",
+            version_json_ptr,
+            version_json_len,
+        )?)
+    })
+}
+
 /// `null` when the setup may start a run, else the reason.
 #[unsafe(no_mangle)]
 pub extern "C" fn run_check_setup(

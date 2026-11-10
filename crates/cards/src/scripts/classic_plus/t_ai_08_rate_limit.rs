@@ -110,10 +110,6 @@ mod tests {
         }))
     }
 
-    fn count(events: &[GameEvent], kind: &str) -> usize {
-        events.iter().filter(|event| js(*event)["type"] == kind).count()
-    }
-
     fn view_text(s: &Scenario, player: PlayerId) -> String {
         serde_json::to_string(&s.view(player)).expect("serializes")
     }
@@ -142,7 +138,7 @@ mod tests {
                 s.play(VANILLA, json!({ "zone": 1 })).play(REPLENISH, json!({}));
                 assert_eq!(s.state().active, P2);
                 assert_eq!(s.card(RATE_LIMIT).face_up, Some(false));
-                assert_eq!(count(s.events(), "trapFired"), 0);
+                assert_eq!(s.count("trapFired"), 0);
             }
 
             #[test]
@@ -254,7 +250,7 @@ mod tests {
                 let target = s.unit(P1, 1).map(|unit| unit.id).unwrap_or_default();
                 s.play(VANILLA, json!({ "zone": 1 }))
                     .play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": target }] }));
-                assert_eq!(count(s.events(), "countered"), 1);
+                assert_eq!(s.count("countered"), 1);
                 s.play(REPLENISH, json!({}));
                 // Two plays made: the Hit Job never was one.
                 assert_eq!(s.state().active, P2);

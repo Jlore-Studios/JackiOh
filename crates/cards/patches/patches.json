@@ -23275,5 +23275,29 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.13h",
+    "date": "2026-11-10",
+    "title": "Patch: every Classic card drawn as what it is: a scene of its own for each, richer the rarer",
+    "source": "#3352",
+    "notes": "Classic's picture pass (#3330, #3331's foundation). Every Classic entry but Corpse Plantation, #3331's proof, the Glitch included, draws from a scene recipe of its own, from a brief per card, in Classic's temple-stone look, base and Radiant (R3352000): a Common one clear subject in a simple setting, a Rare its props, an Epic a scene with a foreground, a middle and a background, a Legendary or Mythic every layer. Each person Unit is a figure dressed as who it is, six Units that are no person are drawn as a creature of the scene kit (the tortoise, the slime, the shrimp, the crawler, the warboar, the worm-maw), a scene stands its other people as extra figures, In Too Deep marks the placements its props beat moves, and the figure kit and the scene kit grow by the parts the briefs name. All 89 measured entries clear their rarity's detail floor and leave the short list, whose cap falls from 157 to 68 (R3331001). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every Classic card redrawn as a scene",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Classic card now shows a picture of its own, composed as a whole scene and more detailed the rarer the card: its Units as the characters they are, its Spells as real places and moments."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "efe8cdab2ebe80c92b15d04a80678eb5a60d6c53"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

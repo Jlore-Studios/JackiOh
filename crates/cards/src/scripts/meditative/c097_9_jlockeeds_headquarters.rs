@@ -124,13 +124,6 @@ mod tests {
             .collect()
     }
 
-    fn count(s: &Scenario, kind: GameEventType) -> usize {
-        s.last_events()
-            .iter()
-            .filter(|event| event.event_type() == kind)
-            .count()
-    }
-
     #[test]
     fn is_a_4_cost_0_20_jlockeed_token_printed_mythic_with_tribute_5_indestructible_and_activate_2_radiant() {
         crate::register_all();
@@ -224,7 +217,7 @@ mod tests {
                 assert_eq!(unit.controller, P1);
             }
             assert_eq!(s.unit(P1, 3).map(|unit| unit.def_id), Some(VANILLA.to_string()));
-            assert_eq!(count(&s, GameEventType::CardPlayed), 0);
+            assert_eq!(s.last_count(GameEventType::CardPlayed), 0);
             assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(ID.to_string()));
         }
 

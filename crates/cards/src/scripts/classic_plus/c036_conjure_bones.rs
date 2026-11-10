@@ -51,6 +51,7 @@ mod tests {
         s.pile(player, "library").into_iter().filter(|card| card.def_id == BONE_STORM).count()
     }
 
+    // Differs from Scenario::events_of: the events as JSON (`Vec<Value>`), not typed `GameEvent`s.
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
         s.events()
             .iter()

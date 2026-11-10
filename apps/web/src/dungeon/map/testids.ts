@@ -74,6 +74,14 @@ export const dungeonMapTestid = {
   packs: "dungeon-run-packs",
   /** B28: one pack, by its place in the reward's list. */
   pack: (index: number): string => `dungeon-run-pack-${String(index)}`,
+  /** #3588: the pack object drawn on one pack's button, by its place in the reward's list. */
+  packObject: (index: number): string => `dungeon-run-pack-object-${String(index)}`,
+  /** #3588: the sealed pack tearing open before its keep. */
+  packTear: "dungeon-run-pack-tear",
+  /** #3588: the pack object the sealed tear wears: the chosen pack's look. */
+  packTearObject: "dungeon-run-pack-tear-object",
+  /** #3588: the kept count, like "2 of 3 kept". */
+  packCounter: "dungeon-run-pack-counter",
   /** B28: the opened pack's cards. */
   packScreen: "dungeon-run-pack",
   /** B28: one of the pack's cards, by its catalog id. */
