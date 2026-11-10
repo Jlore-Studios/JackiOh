@@ -1,6 +1,6 @@
-// The dungeon run's map (DR4, DR14 part F, #2707): the whole current act ahead, each node's kind
-// with a drawn icon and a label, each boss's preseeded relic, and where the player stands. Only the
-// next row's nodes can be chosen (`go`); every other node stays visible but disabled.
+// The dungeon run's map (DR4, DR14 part F, #2707): the whole map, each node's kind with a drawn
+// icon and a label, each boss's preseeded relic, and where the player stands. Only the nodes the one
+// stood on leads to can be chosen (`go`, R3583000); every other node stays visible but disabled.
 // Presentation only (CLAUDE.md rule 7): the run answers every rule, and every word goes through
 // `t()` at render, never at module scope.
 
@@ -27,32 +27,14 @@ const NODE_LABELS: Readonly<Record<RunNodeKind, string>> = {
   shrine: "Shrine",
 };
 
-/** Whether the row holds an act's end: a mini-boss's or the final boss's row. */
-function isBossRow(run: RunState, row: number): boolean {
-  return (run.map[row] ?? []).some((node) => node.kind === "miniBoss" || node.kind === "boss");
-}
-
 /**
- * The current act's rows with their absolute numbers: from row 0, or just past the last boss row
- * before the next row to visit, through the next row holding a mini-boss or boss, inclusive. Just
- * past a beaten boss the completed act stays behind, so the only selectable row is always shown.
+ * R3583000: the next row's nodes the run lets `go` step onto, by index, as the run's own `next` says:
+ * every node of the first row before the first step, then those the node stood on leads to. The run
+ * still answers every step (CLAUDE.md rule 7); this only says which buttons are live.
  */
-function currentActRows(run: RunState): { row: number }[] {
-  const next = (run.row ?? -1) + 1;
-  let start = 0;
-  for (let row = 0; row < next && row < run.map.length; row += 1) {
-    if (isBossRow(run, row)) start = row + 1;
-  }
-  let end = run.map.length - 1;
-  for (let row = next; row < run.map.length; row += 1) {
-    if (isBossRow(run, row)) {
-      end = row;
-      break;
-    }
-  }
-  const rows: { row: number }[] = [];
-  for (let row = start; row <= end; row += 1) rows.push({ row });
-  return rows;
+function nextCols(run: RunState): readonly number[] {
+  if (run.row === null) return (run.map[0] ?? []).map((_node, col) => col);
+  return run.map[run.row]?.[run.col]?.next ?? [];
 }
 
 type MapScreenProps = {
@@ -61,16 +43,17 @@ type MapScreenProps = {
   send: SendRunAction;
 };
 
-/** The current act: every node visible, only the next row's nodes live. */
+/** The whole map: every node visible, only the nodes the one stood on leads to live. */
 export function MapScreen({ run, content, send }: MapScreenProps): ReactElement {
   const next = (run.row ?? -1) + 1;
+  const open = nextCols(run);
   return (
     <section className="dungeon-run-map" data-testid={dungeonMapTestid.map} aria-label={t("Map")}>
-      {currentActRows(run).map(({ row }) => (
+      {run.map.map((nodes, row) => (
         <div className="dungeon-run-map__row" data-testid={dungeonMapTestid.mapRow(row)} key={row}>
-          {(run.map[row] ?? []).map((node, col) => {
+          {nodes.map((node, col) => {
             const name = t(NODE_LABELS[node.kind]);
-            const live = row === next;
+            const live = row === next && open.includes(col);
             const current = run.row === row && run.col === col;
             const label = t("{node} {col}", { node: name, col: String(col + 1) });
             return (

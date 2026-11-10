@@ -29,6 +29,7 @@ import {
   type EntranceResolver,
 } from "../game/animations.ts";
 import { ART_PLANES } from "../cards/art/index.ts";
+import { dioramaOf, dioramaSliceBackground } from "../cards/art/dioramas/index.ts";
 import { signatureFaceOf } from "../cards/signatureFaces.ts";
 import { testid } from "../game/contract.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
@@ -501,7 +502,7 @@ describe("R2722002 a hidden card's entrance centres on the zone that flipped", (
 });
 
 describe("R3345000 Mythic takeover in depth planes", () => {
-  it("R3345000 every Mythic in the catalog plans a takeover with its defId and mounts depth planes", () => {
+  it("R3345000 R3350000 every Mythic in the catalog plans a takeover with its defId and mounts its diorama's slices or its depth planes", () => {
     const mythics = Object.values(CATALOG).filter((def) => def.rarity === "Mythic" || def.printedRarity === "Mythic");
     expect(mythics.length).toBeGreaterThan(0);
     const catalogResolver: EntranceResolver = (defId) => {
@@ -524,7 +525,17 @@ describe("R3345000 Mythic takeover in depth planes", () => {
       const takeover = takeoverOf(cues);
       expect(takeover, mythic.id).toBeDefined();
       // R202: the cue is plain data holding the card's picture and name, never its definition, so a second plan equals it.
-      expect(takeover?.stage?.planes.length, mythic.id).toBe(ART_PLANES.length);
+      // R3350000: a Mythic with a diorama holds its slices, far to near, and no planes.
+      const diorama = dioramaOf(mythic.id);
+      if (diorama === null) {
+        expect(takeover?.stage?.planes.length, mythic.id).toBe(ART_PLANES.length);
+        expect(takeover?.stage?.slices, mythic.id).toBeUndefined();
+      } else {
+        expect(takeover?.stage?.planes, mythic.id).toEqual([]);
+        expect(takeover?.stage?.slices, mythic.id).toEqual(
+          diorama.slices.map((slice, index) => ({ image: dioramaSliceBackground(mythic.id, false, index), plane: slice.plane, depth: slice.depth })),
+        );
+      }
       expect(takeover?.stage?.name, mythic.id).toBe(mythic.name);
       expect(JSON.stringify(takeover?.stage).includes(mythic.id), mythic.id).toBe(false);
       expect(takeoverOf(planFx(found, p1, env())), mythic.id).toEqual(takeover);
@@ -537,21 +548,46 @@ describe("R3345000 Mythic takeover in depth planes", () => {
       expect(stage, mythic.id).not.toBeNull();
       const planes = root.querySelector(".fx-takeover-planes");
       expect(planes, mythic.id).not.toBeNull();
-      for (const plane of ART_PLANES) {
+      for (const plane of diorama === null ? ART_PLANES : []) {
         const el = planes?.querySelector(`.fx-takeover-plane[data-plane="${plane}"]`);
         expect(el, `${mythic.id} plane ${plane}`).not.toBeNull();
       }
+      expect(planes?.querySelectorAll(".fx-takeover-plane[data-slice]").length, mythic.id).toBe(diorama?.slices.length ?? 0);
       // R2715002: the name signs in the card's set's hand, which cosmetics.css styles under `.cf-signature`.
       const hand = root.querySelector(".fx-takeover-signature .cf-signature");
       expect(hand, mythic.id).not.toBeNull();
       expect(hand?.getAttribute("data-signature-face"), mythic.id).toBe(signatureFaceOf(mythic.id));
       expect(hand?.querySelector(".cf-signature-text")?.textContent, mythic.id).toBe(mythic.name);
-      // B27: the plane's picture is set through the cards' helper, one per plane.
-      for (const plane of ART_PLANES) {
-        const el = planes?.querySelector<HTMLElement>(`.fx-takeover-plane[data-plane="${plane}"]`);
-        expect(el?.style.backgroundImage, `${mythic.id} plane ${plane} picture`).not.toBe("");
+      // B27: the plane's picture is set through the cards' helper, one per plane (R3350000: one per slice).
+      for (const el of planes?.querySelectorAll<HTMLElement>(".fx-takeover-plane") ?? []) {
+        expect(el.style.backgroundImage, `${mythic.id} plane ${el.getAttribute("data-plane") ?? ""} picture`).not.toBe("");
       }
     }
+  });
+
+  it("R3350000 a takeover flies through its diorama's slices", () => {
+    const diorama = dioramaOf("core-100");
+    if (diorama === null) throw new Error("Ceaseless Void has no diorama");
+    const events = [play("core-100"), summon("core-100")];
+    const entered = entranceEntries(planEntries(events, p1, false), resolve, { seen: new Set() });
+    const found = setPieceEntries(entered, takeoverClaim, { reduced: false, bigMoments: "full", speed: 1 }).find((e) => e.entrance !== undefined);
+    if (found === undefined) throw new Error("no takeover");
+    const takeover = takeoverOf(planFx(found, p1, env()));
+    if (takeover === undefined) throw new Error("no takeover cue");
+    const root = document.createElement("div");
+    expect(mountDomEffect(root, takeover, { at: { x: 0, y: 0, width: 100, height: 100 } })).not.toBeNull();
+    const slices = [...root.querySelectorAll<HTMLElement>(".fx-takeover-planes > .fx-takeover-plane")];
+    // Every slice, far to near, each its plane, its depth and its own still picture: the takeover is the motion.
+    expect(slices.map((el) => el.getAttribute("data-slice"))).toEqual(diorama.slices.map((_, index) => String(index)));
+    expect(slices.map((el) => el.getAttribute("data-plane"))).toEqual(diorama.slices.map((slice) => slice.plane));
+    expect(slices.map((el) => el.style.getPropertyValue("--fx-slice-depth"))).toEqual(diorama.slices.map((slice) => String(slice.depth)));
+    slices.forEach((el, index) => expect(el.style.backgroundImage).toBe(dioramaSliceBackground("core-100", false, index, false)));
+    // The camera flies toward each by its depth, past the nearest, in transform and opacity alone.
+    const css = fxCss.replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(css).toMatch(/\.fx-takeover-plane\[data-slice\]\s*\{\s*animation: fx-takeover-fly var\(--fx-land\) var\(--ease-out\) both;\s*\}/);
+    const frames = /@keyframes fx-takeover-fly\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
+    expect(frames).toContain("var(--fx-slice-depth, 0)");
+    for (const property of [...frames.matchAll(/([a-z-]+)\s*:/g)].map((match) => match[1])) expect(["transform", "opacity"]).toContain(property);
   });
 
   it("R3345000 bigMoments short gives 500ms hold and off gives 0ms hold", () => {

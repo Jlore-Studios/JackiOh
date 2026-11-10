@@ -146,6 +146,7 @@ cargo build --release -p jackioh-tools         # target/release/jackioh: the spe
 cd e2e && pnpm exec cypress run --spec cypress/e2e/01-hotseat-full-game.cy.ts
 pnpm --dir e2e test:component                  # component/pixel specs, no server needed
 pnpm --dir apps/web build:e2e && pnpm --dir apps/web exec vite preview --port 5173 --strictPort   # a built client, as CI serves it
+pnpm --dir e2e probe:frames                                                             # the busy-board frame probe (spec 50, issue #3605): build:e2e + preview on :4173 + the spec; -- --json for the JSON report
 ```
 
 `vite dev` reloads the page whenever `apps/web/src` changes, restarting a hotseat game at turn 0, so serve a

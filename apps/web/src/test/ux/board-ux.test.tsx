@@ -840,7 +840,7 @@ describe("B44 the picker says which route opened it", () => {
     const text = css("prompt.css");
     const portrait = text.slice(text.lastIndexOf("@media (max-width: 600px) {"));
 
-    expect(portrait).toContain('.game:has(> .board[data-drag="on"]) .prompt[data-prompt-source="play"]:is(');
+    expect(portrait).toContain('.game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:is(');
     expect(portrait).toMatch(/> :is\(\.prompt-count, \.prompt-zones, \.prompt-list, \.prompt-board-note\) \{\s*display: none;/);
   });
 

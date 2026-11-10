@@ -115,8 +115,8 @@ const CONTENT: RunContent = {
       id: "test-event",
       text: "A stranger offers a deal.",
       options: [
-        { text: "Pay 5 Coins", hp: 0, coins: -5, tickets: 0, card: false, artifact: false },
-        { text: "Walk away", hp: 0, coins: 0, tickets: 0, card: false, artifact: false },
+        { text: "Lose 5 max HP for 5 Coins", maxHp: -5, coins: 5, tickets: 0, card: false, artifact: false },
+        { text: "Walk away", maxHp: 0, coins: 0, tickets: 0, card: false, artifact: false },
       ],
     },
   ],
@@ -140,7 +140,7 @@ function statsWith(values: Partial<RunStats> = {}): RunStats {
 }
 
 function node(kind: RunNode["kind"], extra: Partial<RunNode> = {}): RunNode {
-  return { kind, enemy: null, event: null, artifact: null, ...extra };
+  return { kind, enemy: null, event: null, artifact: null, column: 0, next: [], ...extra };
 }
 
 /** The node's drawn icon (#3229): an SVG tagged with its kind, in place of a system emoji. */
@@ -152,15 +152,31 @@ function enemy(name: string): RunNode["enemy"] {
   return { id: `enemy-${name}`, name, heroHealth: 20, deck: ["core-001"], artifacts: [] };
 }
 
-/** The map's two acts: rows 0–3 end at the mini-boss, rows 4–6 at the final boss. */
+/**
+ * The map's two acts: rows 0–3 end at the mini-boss, rows 4–6 at the final boss. Each node leads to
+ * the next row's nodes its `next` names (R3583000): row 0's fight to row 1's first three, its elite to
+ * the three after the first, and the mini-boss to both of row 4's.
+ */
 const MAP: RunState["map"] = [
-  [node("fight", { enemy: enemy("Cave Troll") }), node("elite", { enemy: enemy("Elite Guard") })],
-  [node("shop"), node("campfire"), node("event", { event: "test-event" }), node("shrine"), node("chest")],
-  [node("campfire")],
-  [node("miniBoss", { enemy: enemy("Mini Boss"), artifact: "test-relic-might" })],
-  [node("fight", { enemy: enemy("Road Thug") }), node("ghost", { enemy: enemy("Ghost") })],
-  [node("campfire")],
-  [node("boss", { enemy: enemy("Final Boss"), artifact: "test-boss-crown" })],
+  [
+    node("fight", { enemy: enemy("Cave Troll"), column: 2, next: [0, 1, 2] }),
+    node("elite", { enemy: enemy("Elite Guard"), column: 3, next: [1, 2, 3] }),
+  ],
+  [
+    node("shop", { column: 1, next: [0] }),
+    node("campfire", { column: 2, next: [0] }),
+    node("event", { event: "test-event", column: 3, next: [0] }),
+    node("shrine", { column: 4, next: [0] }),
+    node("chest", { column: 5, next: [0] }),
+  ],
+  [node("campfire", { column: 3, next: [0] })],
+  [node("miniBoss", { enemy: enemy("Mini Boss"), artifact: "test-relic-might", column: 3, next: [0, 1] })],
+  [
+    node("fight", { enemy: enemy("Road Thug"), column: 2, next: [0] }),
+    node("ghost", { enemy: enemy("Ghost"), column: 3, next: [0] }),
+  ],
+  [node("campfire", { column: 3, next: [0] })],
+  [node("boss", { enemy: enemy("Final Boss"), artifact: "test-boss-crown", column: 3 })],
 ];
 
 const DECK: RunState["deck"] = [
@@ -177,6 +193,7 @@ function runWith(phase: RunPhase, extra: Partial<RunState> = {}): RunState {
     row: 0,
     col: 0,
     hp: 7,
+    maxHpBonus: 0,
     deck: DECK,
     artifacts: [{ id: "test-relic-might", level: 2 }],
     blessings: [],
@@ -229,9 +246,9 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-/** B30: HP, Coins, Tickets, the deck, the relic held and the score, on every screen. */
+/** B30: HP (the run's max), Coins, Tickets, the deck, the relic held and the score, on every screen. */
 function expectHud(coins = "11", tickets = "3"): void {
-  expect(screen.getByTestId(dungeonMapTestid.hp)).toHaveTextContent("7 / 20");
+  expect(screen.getByTestId(dungeonMapTestid.hp)).toHaveTextContent("HP: 20");
   expect(screen.getByTestId(dungeonMapTestid.coins)).toHaveTextContent(coins);
   expect(screen.getByTestId(dungeonMapTestid.tickets)).toHaveTextContent(tickets);
   expect(screen.getByTestId(dungeonMapTestid.deckSize)).toHaveTextContent("3");
@@ -282,15 +299,16 @@ describe("R2972000 the run map links back to the Play menu", () => {
   });
 });
 
-describe("B27 the map shows the current act and only the next row goes", () => {
-  // B27
-  it("B27 shows the current act and only sends go for the next row", () => {
+describe("B27 the map shows the whole map and only the nodes the one stood on leads to go", () => {
+  // B27, R3583000
+  it("B27 R3583000 shows the whole map and only sends go for a node the one stood on leads to", () => {
     const { dungeon, act } = fakeDungeon(runWith({ phase: "map" }));
     render(<RunScreen dungeon={dungeon} />);
 
-    // The whole first act: rows 0–3, each node's kind with its icon and label.
-    for (const row of [0, 1, 2, 3]) expect(screen.getByTestId(dungeonMapTestid.mapRow(row))).toBeInTheDocument();
-    expect(screen.queryByTestId(dungeonMapTestid.mapRow(4))).not.toBeInTheDocument();
+    // The whole map: both acts, each node's kind with its icon and label.
+    for (const row of [0, 1, 2, 3, 4, 5, 6]) {
+      expect(screen.getByTestId(dungeonMapTestid.mapRow(row))).toBeInTheDocument();
+    }
     const kinds: [number, number, string, RunNodeKind][] = [
       [0, 0, "Fight", "fight"],
       [0, 1, "Elite", "elite"],
@@ -301,25 +319,28 @@ describe("B27 the map shows the current act and only the next row goes", () => {
       [1, 4, "Chest", "chest"],
       [2, 0, "Campfire", "campfire"],
       [3, 0, "Mini-boss", "miniBoss"],
+      [4, 0, "Fight", "fight"],
+      [6, 0, "Final boss", "boss"],
     ];
     for (const [row, col, label, kind] of kinds) {
       const held = within(screen.getByTestId(dungeonMapTestid.mapNode(row, col)));
       expect(held.getByText(label)).toBeInTheDocument();
       expectIcon(screen.getByTestId(dungeonMapTestid.mapNode(row, col)), kind);
     }
-    // The fight's name, the boss's preseeded relic, and where the player stands.
+    // The fight's name, the bosses' preseeded relics, and where the player stands.
     expect(screen.getByTestId(dungeonMapTestid.mapNode(0, 0))).toHaveTextContent("Cave Troll");
     expect(screen.getByTestId(dungeonMapTestid.mapArtifact(3, 0))).toHaveTextContent("Might Relic");
+    expect(screen.getByTestId(dungeonMapTestid.mapArtifact(6, 0))).toHaveTextContent("Boss Crown");
     expect(screen.queryByTestId(dungeonMapTestid.mapArtifact(0, 0))).not.toBeInTheDocument();
     expect(
       within(screen.getByTestId(dungeonMapTestid.mapNode(0, 0))).getByTestId(dungeonMapTestid.mapCurrent),
     ).toBeInTheDocument();
 
-    // Only the next row's nodes can be chosen.
-    for (const col of [0, 1, 2, 3, 4]) {
+    // Only the nodes the fight stood on leads to can be chosen: the next row's first three.
+    for (const col of [0, 1, 2]) {
       expect(screen.getByTestId(dungeonMapTestid.mapNode(1, col))).toBeEnabled();
     }
-    for (const [row, col] of [[0, 0], [0, 1], [2, 0], [3, 0]] as const) {
+    for (const [row, col] of [[0, 0], [0, 1], [1, 3], [1, 4], [2, 0], [3, 0], [4, 0], [6, 0]] as const) {
       expect(screen.getByTestId(dungeonMapTestid.mapNode(row, col))).toBeDisabled();
     }
     fireEvent.click(screen.getByTestId(dungeonMapTestid.mapNode(1, 2)));
@@ -328,23 +349,38 @@ describe("B27 the map shows the current act and only the next row goes", () => {
     expectHud();
   });
 
-  // B27
-  it("B27 past a beaten boss the next act shows, with no marker on the old one", () => {
+  // B27, R3583000
+  it("B27 R3583000 before the first step any node of the first row can be chosen", () => {
+    const { dungeon, act } = fakeDungeon(runWith({ phase: "map" }, { row: null, col: 0 }));
+    render(<RunScreen dungeon={dungeon} />);
+
+    expect(screen.queryByTestId(dungeonMapTestid.mapCurrent)).not.toBeInTheDocument();
+    for (const col of [0, 1]) expect(screen.getByTestId(dungeonMapTestid.mapNode(0, col))).toBeEnabled();
+    for (const col of [0, 1, 2, 3, 4]) {
+      expect(screen.getByTestId(dungeonMapTestid.mapNode(1, col))).toBeDisabled();
+    }
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.mapNode(0, 1)));
+    expect(act).toHaveBeenCalledWith({ type: "go", col: 1 });
+  });
+
+  // B27, R3583000
+  it("B27 R3583000 past a beaten boss the whole map stays, and the boss leads to every node of the next act", () => {
     const { dungeon, act } = fakeDungeon(runWith({ phase: "map" }, { row: 3, col: 0 }));
     render(<RunScreen dungeon={dungeon} />);
 
-    expect(screen.queryByTestId(dungeonMapTestid.mapRow(0))).not.toBeInTheDocument();
-    for (const row of [4, 5, 6]) expect(screen.getByTestId(dungeonMapTestid.mapRow(row))).toBeInTheDocument();
-    expect(screen.queryByTestId(dungeonMapTestid.mapCurrent)).not.toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.mapRow(0))).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId(dungeonMapTestid.mapNode(3, 0))).getByTestId(dungeonMapTestid.mapCurrent),
+    ).toBeInTheDocument();
     const ghost = screen.getByTestId(dungeonMapTestid.mapNode(4, 1));
     expect(ghost).toHaveTextContent("Ghost");
     expectIcon(ghost, "ghost");
     expect(ghost).toBeEnabled();
+    expect(screen.getByTestId(dungeonMapTestid.mapNode(4, 0))).toBeEnabled();
     const boss = screen.getByTestId(dungeonMapTestid.mapNode(6, 0));
     expect(boss).toHaveTextContent("Final boss");
     expectIcon(boss, "boss");
     expect(boss).toBeDisabled();
-    expect(screen.getByTestId(dungeonMapTestid.mapArtifact(6, 0))).toHaveTextContent("Boss Crown");
     expect(screen.getByTestId(dungeonMapTestid.mapNode(5, 0))).toBeDisabled();
     fireEvent.click(screen.getByTestId(dungeonMapTestid.mapNode(4, 0)));
     expect(act).toHaveBeenCalledWith({ type: "go", col: 0 });
@@ -689,11 +725,12 @@ describe("B30 the tiles send their actions under the always-on HUD", () => {
   });
 
   // B30
-  it("B30 the campfire heals, Radiants, buffs and removes the toggled cards", () => {
+  it("B30 the campfire offers max HP, Radiants, buffs and removes the toggled cards", () => {
     const { dungeon, act } = fakeDungeon(runWith({ phase: "campfire" }));
     render(<RunScreen dungeon={dungeon} />);
-    fireEvent.click(screen.getByTestId(dungeonMapTestid.campfireHeal));
-    expect(act).toHaveBeenCalledWith({ type: "heal" });
+    expect(screen.getByTestId(dungeonMapTestid.campfireMaxHp)).toHaveTextContent("Gain 5 max HP");
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.campfireMaxHp));
+    expect(act).toHaveBeenCalledWith({ type: "gainMaxHp" });
     fireEvent.click(screen.getByTestId(dungeonMapTestid.campfireRadiant(1)));
     expect(act).toHaveBeenCalledWith({ type: "makeRadiant", index: 1 });
     fireEvent.click(screen.getByTestId(dungeonMapTestid.campfireBuff(0)));
@@ -757,9 +794,9 @@ describe("B30 the tiles send their actions under the always-on HUD", () => {
     const { dungeon, act } = fakeDungeon(runWith({ phase: "event", id: "test-event" }));
     render(<RunScreen dungeon={dungeon} />);
     expect(screen.getByTestId(dungeonMapTestid.event)).toHaveTextContent("A stranger offers a deal.");
-    expect(screen.getByTestId(dungeonMapTestid.eventOption(0))).toHaveTextContent("Pay 5 Coins");
-    fireEvent.click(screen.getByTestId(dungeonMapTestid.eventOption(1)));
-    expect(act).toHaveBeenCalledWith({ type: "choose", index: 1 });
+    expect(screen.getByTestId(dungeonMapTestid.eventOption(0))).toHaveTextContent("Lose 5 max HP for 5 Coins");
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.eventOption(0)));
+    expect(act).toHaveBeenCalledWith({ type: "choose", index: 0 });
     expectHud();
   });
 

@@ -34,7 +34,7 @@ owners' call of 2026-11-05):
 | Branch | Site | Moves | Gate |
 | --- | --- | --- | --- |
 | `main` | none | every merge, through the merge queue | the five required checks |
-| `_staging` | staging.jackioh.com | every two hours, by fast-forward to a snapshot of `main` (`promote-staging.yml`) | that commit's push-to-main CI run passed |
+| `_staging` | staging.jackioh.com | every two hours, by fast-forward to a snapshot of `main` (`promote-staging.yml`); while the super run on it is red, only to test the night bot's fix (section 2.2, the freeze) | that commit's push-to-main CI run passed |
 | `_production` | jackioh.com | once a day, to the commit of `_staging` the daily super run tested (`promote-production.yml`) | the super run passed every job on that commit |
 
 `_staging` is a pointer to "the commit of main that is live on staging.jackioh.com", and it only ever
@@ -152,6 +152,13 @@ staging -> Run workflow moves it now (to its `sha`, or main's newest green commi
 
 ### 2.2 The rules the promotion enforces
 
+- While the newest finished super run on `_staging` failed, `_staging` holds still (the freeze, the
+  owners' call of 2026-11-10): the schedule and main's green CI runs leave it be until the night bot's
+  fix closes the run's issue, "CI: daily super run failed"; then it takes main's newest green commit
+  pushed after the close, at once, and starts the super run on it. A run that passes ends the freeze
+  and promotes production; a run still red opens a new issue. A red run with no issue (its `report`
+  never ran) gets one from `scripts/promote-staging.sh`, and the daily run never tests a commit a
+  finished run already tested. A manual run of *promote staging* moves it as ever.
 - `_staging` only moves forward along `main`, to a commit whose push-to-main CI run passed: a
   candidate it already has is a no-op, and a `_staging` that holds anything `main` does not fails the
   run. Its ruleset (`infra/github.tf`) refuses deletion and force pushes.
@@ -351,6 +358,9 @@ later, so Render would stop billing:
   ancestor of" means someone pushed to `_staging` by hand: an admin resets it to a green commit of
   main with `git push --force origin <sha>:staging` (temporarily allowing force pushes in the
   `staging` ruleset; `terraform -chdir=infra apply` puts the rule back).
+- **GitHub releases stopped:** the issue "CI: GitHub releases failed" (`releases.yml`, #3632) names
+  the failed run. The next run that publishes writes every release the failed ones left out and
+  closes it; Actions -> releases -> Run workflow starts one by hand.
 - **A dev account (SPEC §14.10):** the `DEV_PROFILE_IDS` secret of that site's Worker, each
   developer's profile id comma-separated (from `/account`: "Manage sign-in & account", then "Show
   account secret ID"); then redeploy. A malformed id refuses the boot, and the Worker's logs name it.

@@ -695,9 +695,13 @@ type Config struct {
 	CIReruns           int // `ci_reruns`: CI runs again on a head with no commit at most this often (#2948)
 	SuggestionsEnabled bool
 	SuggestionsMaxOpen int
-	// SuggestionsIdleMinutes: a survey is due once a free lane has had nothing to start for this
-	// long (#797).
+	// SuggestionsIdleMinutes: a survey is due once the excess compute has stood at
+	// `SuggestionsSpareLanes` or more for this long (#797, #3659).
 	SuggestionsIdleMinutes int
+	// SuggestionsSpareLanes: the spare lanes (`plan.Spare`, the excess compute) a survey waits for
+	// (#3659): lanes free on subscriptions that may start a build or a plan now, with nothing queued
+	// they can start.
+	SuggestionsSpareLanes int
 	// SuggestionPriorities: suggestion class -> the priority level it opens with (#1409).
 	SuggestionPriorities map[string]string
 	Quiet                *Quiet

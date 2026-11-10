@@ -18,6 +18,7 @@ import Game from "./Game.tsx";
 import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
+import { readRootVar } from "./rootVars.ts";
 
 const lookup = lookupFromDefs(CATALOG);
 const NETHER = "core-088";
@@ -92,7 +93,7 @@ describe("R2800000 Twisting Nether's set piece on the board", () => {
     expect(game).toHaveAttribute("data-set-piece", "nether");
     expect(game).toHaveAttribute("data-set-piece-shape", "vortex");
     expect(game).toHaveAttribute("data-set-piece-sides", "you opponent");
-    expect(game.style.getPropertyValue("--set-piece-hold")).toBe(`${String(SET_PIECE_HOLD_MS)}ms`);
+    expect(readRootVar(game, "--set-piece-hold")).toBe(`${String(SET_PIECE_HOLD_MS)}ms`);
     expect(screen.getByTestId(SKIP_HINT)).toBeInTheDocument();
     expect(animating()).not.toBeNull();
     // The hold, then the wipe's own motion, and the board is the board again.
@@ -130,7 +131,7 @@ describe("R2800000 Twisting Nether's set piece on the board", () => {
   it("R2800000 short holds SET_PIECE_SHORT_HOLD_MS; off holds nothing and plays WIPE_MS", () => {
     setFxSettings({ bigMoments: "short" });
     const short = castNether();
-    expect(short.style.getPropertyValue("--set-piece-hold")).toBe(`${String(SET_PIECE_SHORT_HOLD_MS)}ms`);
+    expect(readRootVar(short, "--set-piece-hold")).toBe(`${String(SET_PIECE_SHORT_HOLD_MS)}ms`);
     cleanup();
 
     setFxSettings({ bigMoments: "off" });
@@ -153,7 +154,7 @@ describe("R2800000 Twisting Nether's set piece on the board", () => {
     setFxSettings({ speed: 2 });
     const game = castNether();
     expect(game).toHaveAttribute("data-set-piece", "nether");
-    expect(game.style.getPropertyValue("--set-piece-hold")).toBe(`${String(scaleForSpeed(SET_PIECE_HOLD_MS, 2))}ms`);
+    expect(readRootVar(game, "--set-piece-hold")).toBe(`${String(scaleForSpeed(SET_PIECE_HOLD_MS, 2))}ms`);
     expect(scaleForSpeed(SET_PIECE_HOLD_MS, 2)).toBe(SET_PIECE_HOLD_MS / 2);
   });
 
@@ -163,7 +164,7 @@ describe("R2800000 Twisting Nether's set piece on the board", () => {
     expect(game).toHaveAttribute("data-reduced-motion", "true");
     expect(game).not.toHaveAttribute("data-set-piece");
     expect(game).not.toHaveAttribute("data-set-piece-shape");
-    expect(game.style.getPropertyValue("--set-piece-hold")).toBe("");
+    expect(readRootVar(game, "--set-piece-hold")).toBe("");
     expect(screen.queryByTestId(SKIP_HINT)).toBeNull();
     expect(animating()).toBeNull();
     expect(screen.getByTestId("fx-layer")).toHaveAttribute("data-fx", "off");

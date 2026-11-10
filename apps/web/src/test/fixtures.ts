@@ -287,6 +287,33 @@ export function fullBoardView(over: Partial<PlayerView> = {}): PlayerView {
   });
 }
 
+/**
+ * R504's outline case: neither seat holds a card. The opponent's empty hand is a count of zero,
+ * as §10.8 sends it, so the hand keeps its element, its count and one card-sized outline.
+ */
+export function emptyHandView(over: Partial<PlayerView> = {}): PlayerView {
+  return baseView({
+    you: emptySide("p1", { hand: [] }),
+    opponent: emptySide("p2", { hand: { count: 0 } }),
+    ...over,
+  });
+}
+
+/**
+ * Hidden cards (§10.8): the opponent's hand as a count of backs and their backrow face-down, beside
+ * one of the viewer's own hand cards. What the viewer may not read has no identity in the view.
+ */
+export function hiddenCardsView(over: Partial<PlayerView> = {}): PlayerView {
+  return baseView({
+    you: emptySide("p1", { hand: [card({ defId: "core-002", cost: 1 })] }),
+    opponent: emptySide("p2", {
+      hand: { count: 5 },
+      backrow: [faceDownBackrow, faceDownBackrow, faceDownBackrow, faceDownBackrow, faceDownBackrow],
+    }),
+    ...over,
+  });
+}
+
 export function pendingFor(kind: PromptKind, options: PendingOption[], over: Partial<Extract<PendingView, { forYou: true }>> = {}): PendingView {
   return {
     forYou: true,

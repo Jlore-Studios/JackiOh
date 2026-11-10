@@ -2,7 +2,7 @@
 // game-over state (Result.tsx), and animations that played twice.
 
 import { CATALOG } from "@jackioh/cards";
-import type { ActionBody, GameEvent, PlayerView } from "@jackioh/shared";
+import type { ActionBody, AttackForecast, GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { StrictMode, useState, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,12 +10,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ANIMATIONS, HIDDEN_ID } from "./animations.ts";
 import { DAMAGE_FEEL, SLAM_LAND_AT, UNIT_SLAM } from "./damageFeel.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
-import { testid } from "./contract.ts";
-import Game from "./Game.tsx";
+import { testid, type Highlight } from "./contract.ts";
+import Game, { GAME_HOST_ATTRIBUTE, sameHighlight } from "./Game.tsx";
 import { resultReason } from "./Result.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, card, emptySide, faceDownBackrow, pendingFor, unit, waitingPending, withEvents } from "../test/fixtures.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
+import { readRootVar } from "./rootVars.ts";
 
 const END_TURN: ActionBody = { type: "endTurn" };
 
@@ -122,7 +123,9 @@ describe("issue #185 unit slam on the board", () => {
     const game = screen.getByTestId("game");
     expect(game).toHaveAttribute("data-slam-tier", "massive");
     expect(game).toHaveAttribute("data-slam-side", "opponent");
-    expect(game.style.getPropertyValue("--slam-anticipation")).toBe(`${String(UNIT_SLAM.massive.anticipationMs)}ms`);
+    expect(readRootVar(game, "--slam-anticipation")).toBe(`${String(UNIT_SLAM.massive.anticipationMs)}ms`);
+    // #3633: written onto its readers, never onto the root's own style, which restyled the whole game.
+    expect(game.style.getPropertyValue("--slam-anticipation")).toBe("");
     expect(game).not.toHaveAttribute("data-hit-stop");
     act(() => {
       vi.advanceTimersByTime(UNIT_SLAM.massive.anticipationMs + ANIMATIONS.summoned.durationMs * SLAM_LAND_AT);
@@ -163,6 +166,76 @@ describe("issue #57 board-mounted match chrome", () => {
     expect(screen.getByText("Read-only replay").closest(".board")).not.toBeNull();
     expect(screen.getByTestId("action-error").closest(".board")).not.toBeNull();
     expect(document.querySelector(".game > .game-error")).toBeNull();
+  });
+});
+
+describe("#3633 the game screen's host", () => {
+  it("#3633 Game marks its parent as a game host while mounted", () => {
+    const shell = (showGame: boolean): ReactElement => (
+      <div className="app-shell app-shell--wide" data-testid="shell">
+        <nav className="screen-nav" />
+        {showGame ? <Game view={withEvents(baseView(), START)} legal={[]} onAction={vi.fn()} /> : null}
+      </div>
+    );
+    const { rerender, unmount } = render(shell(true));
+    const host = screen.getByTestId("shell");
+    expect(host).toHaveAttribute(GAME_HOST_ATTRIBUTE, "true");
+    expect(document.querySelector(`.app-shell--wide[${GAME_HOST_ATTRIBUTE}] > .game`)).not.toBeNull();
+    // The route takes the game down and keeps its shell: the shell is no game's host any more.
+    rerender(shell(false));
+    expect(host).not.toHaveAttribute(GAME_HOST_ATTRIBUTE);
+    rerender(shell(true));
+    expect(host).toHaveAttribute(GAME_HOST_ATTRIBUTE, "true");
+    unmount();
+    expect(host).not.toHaveAttribute(GAME_HOST_ATTRIBUTE);
+  });
+});
+
+describe("#3633 the highlight the cards keep", () => {
+  it("#3633 sameHighlight keeps a highlight that lights the same things and drops one that does not", () => {
+    const outcome: AttackForecast = { attackerId: "u1", targetId: "u2", dealt: 2, taken: 1, kills: false, survives: true, pops: false, attackerSize: 3, targetSize: 3 };
+    const outcomes = new Map([[testid.card("u2"), outcome]]);
+    const hovered = { attacker: testid.card("u1"), target: testid.card("u2"), strikesBack: true };
+    const base: Highlight = { legal: new Set(["a", "b"]), selected: new Set(["a"]), outcomes, hoveredAttack: hovered };
+    // Built again from the same facts: kept.
+    expect(sameHighlight(base, { ...base, legal: new Set(["b", "a"]), outcomes: new Map(outcomes), hoveredAttack: { ...hovered } })).toBe(true);
+    expect(sameHighlight(base, { ...base, legal: new Set(["a"]) })).toBe(false);
+    expect(sameHighlight(base, { ...base, glow: new Set(["a"]) })).toBe(false);
+    expect(sameHighlight(base, { ...base, outcomes: undefined })).toBe(false);
+    // R3615000: the pointer moves to another target, or off it, under the same outcomes.
+    expect(sameHighlight(base, { ...base, hoveredAttack: { ...hovered, target: testid.card("u3") } })).toBe(false);
+    expect(sameHighlight(base, { ...base, hoveredAttack: { ...hovered, strikesBack: false } })).toBe(false);
+    expect(sameHighlight(base, { ...base, hoveredAttack: undefined })).toBe(false);
+  });
+});
+
+describe("#3633 the game root's marks", () => {
+  it("#3633 Game marks its root where the stylesheets read a :has() on it: a play animating, the drag setting and the end", () => {
+    const before = withEvents(baseView({ you: emptySide("p1", { hand: [card({ instanceId: "c9", defId: "core-002", cost: 1 })] }) }), START);
+    const played: GameEvent = { type: "cardPlayed", player: "p1", instanceId: "c9", defId: "core-002", costPaid: 1 };
+    const after = withEvents(before, [...START, played]);
+    const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
+    const game = screen.getByTestId("game");
+    expect(game).not.toHaveAttribute("data-card-played");
+    // The drag setting, as the board draws it (Board's `data-drag`).
+    expect(game).toHaveAttribute("data-drag", screen.getByTestId(testid.board).getAttribute("data-drag") ?? "");
+    rerender(<Game view={after} legal={[]} onAction={vi.fn()} />);
+    expect(game).toHaveAttribute("data-card-played", "true");
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(game).not.toHaveAttribute("data-card-played");
+    act(() => {
+      writeSettings({ dragToPlay: false });
+    });
+    expect(game).toHaveAttribute("data-drag", "off");
+    expect(game).not.toHaveAttribute("data-game-over");
+    rerender(<Game view={{ ...after, result: { winner: "p2", reason: "hero-death" } }} legal={[]} onAction={vi.fn()} />);
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(game).toHaveAttribute("data-game-over", "true");
+    expect(document.querySelector('.game[data-game-over] > [data-testid="result-overlay"]')).not.toBeNull();
   });
 });
 

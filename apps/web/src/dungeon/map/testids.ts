@@ -120,8 +120,8 @@ export const dungeonMapTestid = {
   shopLeave: "dungeon-run-shop-leave",
   /** B30: the campfire. */
   campfire: "dungeon-run-campfire",
-  /** B30: heal at the campfire. */
-  campfireHeal: "dungeon-run-campfire-heal",
+  /** B30: gain max HP at the campfire. */
+  campfireMaxHp: "dungeon-run-campfire-max-hp",
   /** B30: make one of the deck's cards Radiant, by its place in the deck. */
   campfireRadiant: (index: number): string => `dungeon-run-campfire-radiant-${String(index)}`,
   /** B30: buff one of the deck's cards, by its place in the deck. */

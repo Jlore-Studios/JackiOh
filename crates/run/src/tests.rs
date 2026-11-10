@@ -34,12 +34,14 @@ fn won(hp: i32) -> RunAction {
     }
 }
 
-/// A player who always takes the first node, wins every fight at 20 HP, takes every artifact, opens
+/// A player who always takes the first node it may step onto, wins every fight at 20 HP, takes every artifact, opens
 /// the first pack and keeps its first cards, extracts the first card at a mini-boss and nothing at the
-/// final boss, leaves shops, heals at campfires, walks away from events and takes the first blessing.
+/// final boss, leaves shops, rests at campfires, walks away from events and takes the first blessing.
 fn autoplay(state: &RunState) -> RunAction {
     match &state.phase {
-        RunPhase::Map => RunAction::Go { col: 0 },
+        RunPhase::Map => RunAction::Go {
+            col: run_next_cols(state)[0],
+        },
         RunPhase::Fight => won(20),
         RunPhase::Reward {
             artifact: Some(_), ..
@@ -51,7 +53,7 @@ fn autoplay(state: &RunState) -> RunAction {
         RunPhase::ExtractCard => RunAction::Extract { index: Some(0) },
         RunPhase::ExtractArtifact => RunAction::Extract { index: None },
         RunPhase::Shop { .. } => RunAction::Leave,
-        RunPhase::Campfire => RunAction::Heal,
+        RunPhase::Campfire => RunAction::GainMaxHp,
         RunPhase::Event { .. } => RunAction::Choose { index: 2 },
         RunPhase::Shrine { .. } => RunAction::Bless { index: Some(0) },
         RunPhase::Won | RunPhase::Dead => unreachable!("the run is over"),
@@ -92,21 +94,21 @@ fn a_seed_is_six_capital_letters_and_the_daily_one_is_the_same_for_everyone() {
 }
 
 #[test]
-fn the_map_holds_sixteen_fights_three_of_them_bosses_each_after_a_campfire() {
+fn the_map_holds_three_acts_each_ending_at_a_lone_boss_with_its_drop() {
     let content = content();
     let state = start(&content);
-    assert_eq!(state.map.iter().filter(|row| row[0].kind.is_fight()).count(), 16);
+    assert_eq!(state.map.len(), RUN_ACTS * (RUN_ACT_ROWS + 1));
     let bosses: Vec<usize> = (0..state.map.len())
-        .filter(|r| state.map[*r][0].kind.is_boss())
+        .filter(|r| state.map[*r].iter().any(|node| node.kind.is_boss()))
         .collect();
-    assert_eq!(bosses.len(), 3);
-    assert_eq!(state.map[bosses[2]][0].kind, RunNodeKind::Boss);
-    assert_eq!(
-        state.map[bosses[2]][0].artifact.as_deref(),
-        Some("temp-final-relic")
-    );
+    let expected: Vec<usize> = (0..RUN_ACTS).map(|a| (a + 1) * (RUN_ACT_ROWS + 1) - 1).collect();
+    assert_eq!(bosses, expected);
+    let last = bosses[RUN_ACTS - 1];
+    assert_eq!(state.map[last].len(), 1);
+    assert_eq!(state.map[last][0].kind, RunNodeKind::Boss);
+    assert_eq!(state.map[last][0].artifact.as_deref(), Some("temp-final-relic"));
     for r in bosses {
-        assert_eq!(state.map[r - 1][0].kind, RunNodeKind::Campfire);
+        assert_eq!(state.map[r].len(), 1, "row {r} holds its boss alone");
         let drop = state.map[r][0]
             .artifact
             .as_deref()
@@ -262,7 +264,18 @@ fn a_run_played_to_the_end_wins_and_its_file_folds_back_to_the_same_state() {
     let setup = setup(&content);
     let (end, log) = play_out(&content, &setup);
     assert_eq!(end.phase, RunPhase::Won);
-    assert_eq!(end.stats.fights_won, 16);
+    assert!(
+        (RUN_ROUTE_FIGHTS_MIN..=RUN_ROUTE_FIGHTS_MAX).contains(&end.stats.fights_won),
+        "R3583001: {} fights on the route",
+        end.stats.fights_won
+    );
+    // R3584000: every won fight raised the max, and HP is refilled to it.
+    let rests = log.iter().filter(|a| **a == RunAction::GainMaxHp).count() as i32;
+    assert_eq!(
+        end.max_hp_bonus,
+        end.stats.fights_won * RUN_WIN_MAX_HP + rests * RUN_CAMPFIRE_MAX_HP
+    );
+    assert_eq!(end.hp, run_max_hp(&end, &content));
     assert_eq!(end.stats.mini_bosses_won, 2);
     assert_eq!(end.stats.bosses_won, 1);
     assert_eq!(end.extracted_cards.len(), 2, "one card at each mini-boss");
@@ -280,6 +293,31 @@ fn a_run_played_to_the_end_wins_and_its_file_folds_back_to_the_same_state() {
     };
     let json = serde_json::to_string(&file).unwrap();
     let back: RunFile = serde_json::from_str(&json).unwrap();
+    assert_eq!(run_fold(&back, &content), Ok(end));
+}
+
+#[test]
+fn an_old_heal_rest_reads_as_gain_max_hp_and_folds() {
+    let content = content();
+    let setup = setup(&content);
+    let (end, log) = play_out(&content, &setup);
+    assert!(log.contains(&RunAction::GainMaxHp));
+    // New writes keep the new name: the alias reads only.
+    assert_eq!(
+        serde_json::to_value(RunAction::GainMaxHp).unwrap(),
+        serde_json::json!({ "type": "gainMaxHp" })
+    );
+    let file = RunFile {
+        setup,
+        unlocks: RunUnlocks::default(),
+        log,
+    };
+    // What the device kept before #3644: the campfire screen sent `{ type: "heal" }`.
+    let json = serde_json::to_string(&file)
+        .unwrap()
+        .replace("\"gainMaxHp\"", "\"heal\"");
+    let back: RunFile = serde_json::from_str(&json).unwrap();
+    assert!(back.log.contains(&RunAction::GainMaxHp));
     assert_eq!(run_fold(&back, &content), Ok(end));
 }
 
@@ -304,6 +342,9 @@ fn the_final_boss_drop_cannot_be_extracted() {
 fn a_lost_fight_ends_the_run() {
     let content = content();
     let mut state = act(&start(&content), &content, RunAction::Go { col: 0 });
+    // R3584000: a bonus from a win earlier changes nothing about a loss.
+    state.max_hp_bonus = RUN_WIN_MAX_HP;
+    state.hp = run_max_hp(&state, &content);
     let lost = RunAction::FightOver {
         won: false,
         hp: 0,
@@ -314,7 +355,92 @@ fn a_lost_fight_ends_the_run() {
     };
     state = act(&state, &content, lost);
     assert_eq!(state.phase, RunPhase::Dead);
+    assert_eq!(state.hp, 0);
     assert!(run_reduce(&state, &content, &RunAction::Go { col: 0 }).is_err());
+}
+
+/// `state` played on by `autoplay` until it is back on the map.
+fn back_on_the_map(state: &RunState, content: &RunContent) -> RunState {
+    let mut state = state.clone();
+    while state.phase != RunPhase::Map {
+        let action = autoplay(&state);
+        state = act(&state, content, action);
+    }
+    state
+}
+
+#[test]
+fn r3583000_go_steps_only_onto_a_node_the_one_stood_on_leads_to() {
+    let content = content();
+    let state = start(&content);
+    assert_eq!(
+        run_next_cols(&state),
+        (0..state.map[0].len()).collect::<Vec<_>>(),
+        "any start before the first step"
+    );
+    let (mut accepted, mut refused) = (false, false);
+    for col in 0..state.map[0].len() {
+        let at = back_on_the_map(&act(&state, &content, RunAction::Go { col }), &content);
+        assert_eq!((at.row, at.col), (Some(0), col));
+        let next = &at.map[0][col].next;
+        assert_eq!(&run_next_cols(&at), next);
+        for to in 0..at.map[1].len() {
+            match run_reduce(&at, &content, &RunAction::Go { col: to }) {
+                Ok(after) => {
+                    assert!(next.contains(&to), "({col}) -> {to} is no edge");
+                    assert_eq!((after.row, after.col), (Some(1), to));
+                    accepted = true;
+                }
+                Err(error) => {
+                    assert!(!next.contains(&to), "({col}) -> {to} is an edge");
+                    assert_eq!(error, "no path leads there from here");
+                    refused = true;
+                }
+            }
+        }
+    }
+    assert!(accepted && refused);
+}
+
+#[test]
+fn r3583000_a_mini_boss_leads_to_every_node_of_the_next_acts_first_row() {
+    let content = content();
+    let state = start(&content);
+    let row = mini_boss_rows(&state)[0];
+    let at = back_on_the_map(&act(&fighting_on(&state, row), &content, won(20)), &content);
+    let first: Vec<usize> = (0..at.map[row + 1].len()).collect();
+    assert_eq!(first.len(), RUN_MAP_PATHS);
+    assert_eq!(run_next_cols(&at), first);
+    for col in first {
+        let after = act(&at, &content, RunAction::Go { col });
+        assert_eq!((after.row, after.col), (Some(row + 1), col));
+    }
+}
+
+#[test]
+fn r3583000_a_log_stepping_off_the_paths_does_not_fold() {
+    let content = content();
+    let mut state = start(&content);
+    let mut log = Vec::new();
+    while log.is_empty() || state.phase != RunPhase::Map {
+        let action = autoplay(&state);
+        state = act(&state, &content, action.clone());
+        log.push(action);
+    }
+    let off = (0..state.map[1].len())
+        .find(|col| !run_next_cols(&state).contains(col))
+        .expect("a node of the second row the first step does not lead to");
+    log.push(RunAction::Go { col: off });
+    let step = log.len() - 1;
+    let file = RunFile {
+        setup: setup(&content),
+        unlocks: RunUnlocks::default(),
+        log,
+    };
+    assert_eq!(
+        run_fold(&file, &content),
+        Err(format!("step {step}: no path leads there from here"))
+    );
 }
 
 /// The map's mini-boss rows, the first act's first.
@@ -499,15 +625,17 @@ fn the_artifact_comes_before_the_pack_and_greedy_keeps_one_more() {
 }
 
 #[test]
-fn a_campfire_heals_makes_radiant_buffs_or_removes_two() {
+fn a_campfire_gains_max_hp_makes_radiant_buffs_or_removes_two() {
     let content = content();
     let mut state = start(&content);
-    state.hp = 10;
     state.phase = RunPhase::Campfire;
-    assert_eq!(
-        act(&state, &content, RunAction::Heal).hp,
-        10 + RUN_MAX_HP * RUN_CAMPFIRE_HEAL_PERCENT / PERCENT
-    );
+    // HP outside a fight always equals the max, so the rise lands full; a rise is not healing.
+    let rested = act(&state, &content, RunAction::GainMaxHp);
+    assert_eq!(rested.max_hp_bonus, RUN_CAMPFIRE_MAX_HP);
+    assert_eq!(rested.hp, RUN_MAX_HP + RUN_CAMPFIRE_MAX_HP);
+    assert_eq!(rested.hp, run_max_hp(&rested, &content));
+    assert_eq!(rested.stats.healed, 0);
+    assert_eq!(rested.phase, RunPhase::Map);
     assert!(act(&state, &content, RunAction::MakeRadiant { index: 0 }).deck[0].radiant);
     assert_eq!(
         act(&state, &content, RunAction::Buff { index: 0 }).deck[0].buffs,
@@ -517,6 +645,104 @@ fn a_campfire_heals_makes_radiant_buffs_or_removes_two() {
     assert_eq!(removed.deck.len(), RUN_STARTER_SIZE - RUN_CAMPFIRE_REMOVE);
     assert!(!in_deck(&removed, &state.deck[0].id) && !in_deck(&removed, &state.deck[3].id));
     assert!(run_reduce(&state, &content, &RunAction::RemoveCards { indices: vec![1, 1] }).is_err());
+}
+
+#[test]
+fn r3584000_a_won_fight_of_each_kind_raises_max_hp_and_refills() {
+    // R3584000: a win of any kind adds `RUN_WIN_MAX_HP` for the rest of the run, then refills HP
+    // to the new max, whatever the hero's final health was; the fight's damage is the max before
+    // minus the final health, and the refill is not healing.
+    let content = content();
+    for kind in [
+        RunNodeKind::Fight,
+        RunNodeKind::Elite,
+        RunNodeKind::Ghost,
+        RunNodeKind::MiniBoss,
+        RunNodeKind::Boss,
+    ] {
+        let mut state = start(&content);
+        state.map[0][0].kind = kind;
+        let max_before = run_max_hp(&state, &content);
+        let reward = act(&fighting_on(&state, 0), &content, won(1));
+        assert_eq!(reward.max_hp_bonus, RUN_WIN_MAX_HP, "{kind:?}");
+        assert_eq!(reward.hp, max_before + RUN_WIN_MAX_HP, "{kind:?}");
+        assert_eq!(reward.hp, run_max_hp(&reward, &content), "{kind:?}");
+        assert_eq!(reward.stats.damage_taken, max_before - 1, "{kind:?}");
+        assert_eq!(reward.stats.healed, 0, "{kind:?}");
+    }
+}
+
+#[test]
+fn r3584000_a_second_win_stacks_on_the_first() {
+    // R3584000: each win adds its own `RUN_WIN_MAX_HP`.
+    let content = content();
+    let state = start(&content);
+    let row: usize = (0..state.map.len())
+        .filter(|r| state.map[*r][0].kind == RunNodeKind::Fight)
+        .nth(1)
+        .expect("a second fight row");
+    let once = act(&fighting_on(&state, 0), &content, won(1));
+    let twice = act(&fighting_on(&once, row), &content, won(1));
+    assert_eq!(twice.max_hp_bonus, 2 * RUN_WIN_MAX_HP);
+    assert_eq!(twice.hp, run_max_hp(&twice, &content));
+    assert_eq!(twice.hp, RUN_MAX_HP + 2 * RUN_WIN_MAX_HP);
+}
+
+#[test]
+fn r3584000_a_relic_or_blessing_max_hp_effect_stacks_on_the_bonus_once_per_level() {
+    // R3584000: `run_max_hp` is `RUN_MAX_HP`, plus the run's own bonus, plus the max-HP effects
+    // held; an artifact's counts once per level, a blessing's once.
+    let content = content();
+    let mut state = start(&content);
+    state.max_hp_bonus = RUN_WIN_MAX_HP;
+    assert_eq!(run_max_hp(&state, &content), RUN_MAX_HP + RUN_WIN_MAX_HP);
+    hold(&mut state, "temp-big-heart");
+    assert_eq!(run_max_hp(&state, &content), RUN_MAX_HP + RUN_WIN_MAX_HP + 5);
+    state.artifacts[1].level = 2;
+    assert_eq!(run_max_hp(&state, &content), RUN_MAX_HP + RUN_WIN_MAX_HP + 10);
+    state.blessings.push("temp-blessing-vitality".into());
+    assert_eq!(run_max_hp(&state, &content), RUN_MAX_HP + RUN_WIN_MAX_HP + 20);
+}
+
+#[test]
+fn r3584001_an_event_option_trades_max_hp_and_hp_follows_it() {
+    // R3584001: "Lose 5 max HP for 50 Coins" lowers the max by 5, and HP with it.
+    let content = content();
+    let mut state = start(&content);
+    state.phase = RunPhase::Event {
+        id: "temp-event-stranger".into(),
+    };
+    let max_before = run_max_hp(&state, &content);
+    let after = act(&state, &content, RunAction::Choose { index: 1 });
+    assert_eq!(after.max_hp_bonus, -5);
+    assert_eq!(after.hp, max_before - 5);
+    assert_eq!(after.hp, run_max_hp(&after, &content));
+    assert_eq!(after.coins, 50);
+    assert_eq!(after.stats.damage_taken, 5);
+    assert_eq!(after.stats.healed, 0);
+    assert_eq!(after.phase, RunPhase::Map);
+}
+
+#[test]
+fn r3584001_an_event_refused_below_one_max_hp_leaves_the_state_unchanged() {
+    // R3584001: an option that would leave max HP below 1 is refused, the state unchanged.
+    let content = content();
+    let mut state = start(&content);
+    for _ in 0..5 {
+        state.phase = RunPhase::Event {
+            id: "temp-event-stranger".into(),
+        };
+        state = act(&state, &content, RunAction::Choose { index: 1 });
+    }
+    assert_eq!(run_max_hp(&state, &content), RUN_MAX_HP - 25);
+    assert_eq!(state.hp, RUN_MAX_HP - 25);
+    state.phase = RunPhase::Event {
+        id: "temp-event-stranger".into(),
+    };
+    let before = state.clone();
+    let err = run_reduce(&state, &content, &RunAction::Choose { index: 1 }).unwrap_err();
+    assert!(err.contains("not enough max HP"), "{err}");
+    assert_eq!(state, before, "a refused option leaves the state unchanged");
 }
 
 #[test]
@@ -834,20 +1060,6 @@ fn a_weighted_draw_gives_each_item_its_own_span_of_rolls() {
     }
 }
 
-/// §15.5: fight and tile rows hold `RUN_ROW_WIDTH_MIN` to `RUN_ROW_WIDTH_MAX` nodes, and each width
-/// comes up.
-#[test]
-fn a_row_holds_the_fewest_to_the_most_nodes() {
-    let widths: Vec<i32> = (0..256)
-        .map(|cursor| row_width(&mut Rng::new("width", cursor)))
-        .collect();
-    let range = RUN_ROW_WIDTH_MIN..=RUN_ROW_WIDTH_MAX;
-    assert!(widths.iter().all(|w| range.contains(w)), "{widths:?}");
-    for width in range {
-        assert!(widths.contains(&width), "width {width} came up");
-    }
-}
-
 /// §15.5: a fight node is an Elite when its first roll is under `RUN_ELITE_PERCENT`, else a Ghost
 /// when its second is under `RUN_GHOST_PERCENT`, else a Fight: a roll at either percent is not under
 /// it.
@@ -912,6 +1124,8 @@ fn a_chest_pays_its_coins_and_tickets_and_the_stats_count_them() {
         enemy: None,
         event: None,
         artifact: None,
+        column: 0,
+        next: Vec::new(),
     }];
     let opened = act(&state, &content, RunAction::Go { col: 0 });
     assert_eq!(
@@ -1012,21 +1226,24 @@ fn each_shop_service_makes_its_change_and_the_stats_count_it() {
     assert!(run_reduce(&last, &content, &RunAction::RemoveCard { index: 0 }).is_err());
 }
 
-/// §15.8: a campfire heals `RUN_CAMPFIRE_HEAL_PERCENT` of max HP, capped at the max, or removes
-/// `RUN_CAMPFIRE_REMOVE` different cards, leaving at least one; §15.10 counts both.
+/// §15.8: a campfire gains `RUN_CAMPFIRE_MAX_HP` max HP, healing HP by the rise up to the new
+/// max, or removes `RUN_CAMPFIRE_REMOVE` different cards, leaving at least one; §15.10 counts both.
 #[test]
-fn a_campfire_heals_its_percent_up_to_the_max_or_removes_its_cards_and_the_stats_count_them() {
+fn a_campfire_gains_its_max_hp_up_to_the_new_max_or_removes_its_cards_and_the_stats_count_them() {
     let content = content();
     let mut state = start(&content);
     state.phase = RunPhase::Campfire;
     let max = run_max_hp(&state, &content);
-    let heal = max * RUN_CAMPFIRE_HEAL_PERCENT / PERCENT;
     state.hp = 1;
-    let healed = act(&state, &content, RunAction::Heal);
-    assert_eq!((healed.hp, healed.stats.healed), (1 + heal, heal));
+    let rested = act(&state, &content, RunAction::GainMaxHp);
+    assert_eq!(rested.max_hp_bonus, RUN_CAMPFIRE_MAX_HP);
+    assert_eq!((rested.hp, rested.stats.healed), (1 + RUN_CAMPFIRE_MAX_HP, 0));
     state.hp = max - 1;
-    let topped = act(&state, &content, RunAction::Heal);
-    assert_eq!((topped.hp, topped.stats.healed), (max, 1));
+    let topped = act(&state, &content, RunAction::GainMaxHp);
+    assert_eq!(
+        (topped.hp, topped.stats.healed),
+        (max - 1 + RUN_CAMPFIRE_MAX_HP, 0)
+    );
 
     let first: Vec<usize> = (0..RUN_CAMPFIRE_REMOVE).collect();
     let removed = act(
@@ -1052,32 +1269,33 @@ fn a_campfire_heals_its_percent_up_to_the_max_or_removes_its_cards_and_the_stats
     assert!(run_reduce(&small, &content, &RunAction::RemoveCards { indices: first }).is_err());
 }
 
-/// §15.8: an event's option moves HP and Coins and Tickets by what it says, refused when it costs more
-/// than the run holds; §15.10 counts the HP lost and healed and the Coins and Tickets spent and
-/// earned.
+/// §15.8: an event's option moves max HP (and HP with it) and Coins and Tickets by what it says,
+/// refused when it costs more than the run holds; §15.10 counts the HP lost and healed and the
+/// Coins and Tickets spent and earned.
 #[test]
-fn an_event_option_moves_hp_and_pays_or_earns_exactly_what_it_says() {
+fn an_event_option_moves_max_hp_and_pays_or_earns_exactly_what_it_says() {
     let mut content = content();
-    let option = |hp: i32, coins: i32, tickets: i32| RunEventOption {
+    let option = |max_hp: i32, coins: i32, tickets: i32| RunEventOption {
         text: String::new(),
-        hp,
+        max_hp,
         coins,
         tickets,
         card: false,
         artifact: false,
     };
     let (lost, cost, fee) = (5, 30, 3);
-    let (healed, earned, gained) = (7, 50, 2);
+    let (raised, earned, gained) = (7, 50, 2);
     content.events.push(RunEventDef {
         id: "audit-event".into(),
         text: String::new(),
-        options: vec![option(-lost, -cost, -fee), option(healed, earned, gained)],
+        options: vec![option(-lost, -cost, -fee), option(raised, earned, gained)],
     });
     let mut state = start(&content);
     state.phase = RunPhase::Event {
         id: "audit-event".into(),
     };
-    state.hp = run_max_hp(&state, &content) - 2 * healed;
+    // HP outside a fight always equals the max, so the max-HP trade moves HP by the same amount.
+    state.hp = run_max_hp(&state, &content);
     state.coins = cost;
     state.tickets = fee;
 
@@ -1101,7 +1319,7 @@ fn an_event_option_moves_hp_and_pays_or_earns_exactly_what_it_says() {
     let rich = act(&state, &content, RunAction::Choose { index: 1 });
     assert_eq!(
         (rich.hp, rich.coins, rich.tickets),
-        (state.hp + healed, cost + earned, fee + gained)
+        (state.hp + raised, cost + earned, fee + gained)
     );
     assert_eq!(
         (
@@ -1109,7 +1327,7 @@ fn an_event_option_moves_hp_and_pays_or_earns_exactly_what_it_says() {
             rich.stats.coins_earned,
             rich.stats.tickets_earned
         ),
-        (healed, earned, gained)
+        (raised, earned, gained)
     );
 }
 
@@ -1183,7 +1401,8 @@ fn extraction_takes_a_card_of_the_deck_but_never_past_its_end_or_the_last() {
 }
 
 /// §15.7: a won fight pays `RUN_COINS` and `RUN_TICKETS` of its kind plus the per-fight relics'; §15.6
-/// sets HP to the report's; §15.10 counts the HP lost, the report and the win by its kind.
+/// raises the max by `RUN_WIN_MAX_HP` and refills HP to it; §15.10 counts the HP lost, the report
+/// and the win by its kind.
 #[test]
 fn a_won_fight_pays_by_its_kind_and_relics_and_counts_its_report() {
     let content = content();
@@ -1222,7 +1441,9 @@ fn a_won_fight_pays_by_its_kind_and_relics_and_counts_its_report() {
             turns,
         };
         let after = act(&fighting, &content, report);
-        assert_eq!(after.hp, fighting.hp - lost, "{kind:?}");
+        // R3584000: a win raises the max by `RUN_WIN_MAX_HP` and refills HP to the new max.
+        assert_eq!(after.max_hp_bonus, RUN_WIN_MAX_HP, "{kind:?}");
+        assert_eq!(after.hp, run_max_hp(&after, &content), "{kind:?}");
         assert_eq!(
             (after.coins, after.tickets),
             (RUN_COINS.of(kind) + coins, RUN_TICKETS.of(kind) + tickets),
@@ -1294,6 +1515,8 @@ fn a_shrine_offers_only_blessings_not_held_and_the_stats_count_nodes_events_and_
         enemy: None,
         event,
         artifact: None,
+        column: 0,
+        next: Vec::new(),
     };
     state.map[0] = vec![tile(RunNodeKind::Shrine, None)];
     let shrine = act(&state, &content, RunAction::Go { col: 0 });
@@ -1327,6 +1550,8 @@ fn a_chest_holds_a_relic_on_a_roll_under_its_percent_not_at_it() {
         enemy: None,
         event: None,
         artifact: None,
+        column: 0,
+        next: Vec::new(),
     }];
     let relics_at = |roll: i32| {
         let mut at = state.clone();

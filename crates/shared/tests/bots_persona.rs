@@ -313,6 +313,21 @@ fn r645_the_weights_are_40_25_20_15_in_deal_order_and_sum_to_one() {
     assert!((sum - 1.0).abs() < 5e-11, "the weights sum to {sum}");
 }
 
+/// R645: a persona's name as TS spells it (`PersonaName`), the text its JSON carries too.
+#[test]
+fn r645_each_persona_s_name_is_the_text_ts_and_its_json_spell() {
+    assert_eq!(
+        PERSONA_NAMES.map(PersonaName::as_str),
+        ["balanced", "polite", "bm", "silent"]
+    );
+    for persona in PERSONA_NAMES {
+        assert_eq!(
+            serde_json::to_value(persona).expect("a persona serializes"),
+            json!(persona.as_str())
+        );
+    }
+}
+
 // Trigger table
 
 /// Every persona × trigger pair, with its row when the table gives it one.

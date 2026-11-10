@@ -12,7 +12,8 @@
 // Ceaseless Void's fold and Dice of Doom's 67.
 // R3340000: a board of six moving faces (every Mythic's art moves on the board, in the six motion slots).
 // R3344001: a hand with one face tilted under a pointer that keeps moving over it, its planes parallaxing
-// under its glare. R3334002: a launched Starship's broadside of eight guns, at the slowest effects speed.
+// under its glare; R3350000: the face a Mythic's, its diorama's slices parallaxing and looping, and a Mythic takeover
+// flying through its diorama's slices. R3334002: a launched Starship's broadside of eight guns, at the slowest effects speed.
 // R3400001: Goetzmann Game Design's and Bob's Plan's signatures, the two heaviest of Meditative+'s and Training
 // Grounds', their takeovers drawing full-screen art. R3395000: Imitated Instrumentality's and Flak v5's, the two
 // heaviest of Stinkyscape 001 to 090's, the MAGI landing with their own entrances under the boots (R3407000)
@@ -25,6 +26,7 @@
 
 import { CATALOG } from "@jackioh/cards";
 
+import { dioramaOf } from "../../../apps/web/src/cards/art/dioramas/index.ts";
 import { planAuras } from "../../../apps/web/src/fx/aura/plan.ts";
 import { planTileAuras } from "../../../apps/web/src/fx/aura/tile.ts";
 import { FX_CARD_TABLE } from "../../../apps/web/src/fx/cards/tables.ts";
@@ -284,7 +286,7 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
     cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
   });
 
-  it("R3345000 a Mythic takeover with its own art holds the phone frame budget mid-flight", () => {
+  it("R3345000 R3350000 a Mythic takeover with its own art holds the phone frame budget mid-flight, flying through its diorama", () => {
     cy.viewport(PHONE.width, PHONE.height);
     const view = fullBoardView();
     holdsBudget("Mythic takeover own art", () => {
@@ -294,6 +296,8 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       ]);
       cy.get(GAME).should("have.attr", "data-takeover", "mythic");
       cy.get(`${FX_DOM} [data-fx="takeover"] .fx-takeover-planes`).should("exist");
+      // R3350000: the camera flies through Ceaseless Void's diorama, one plane a slice.
+      cy.get(`${FX_DOM} [data-fx="takeover"] .fx-takeover-plane[data-slice]`).should("have.length", dioramaOf("core-100")?.slices.length ?? 0);
       cy.get(`${FX_DOM} [data-fx="takeover"] .fx-takeover-signature`).should("exist");
       cy.get(CANVAS).should("exist");
       return sampleFrames();
@@ -551,11 +555,12 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
     });
   });
 
-  it("R3344001 a hand with one tilted face holds the phone frame budget", () => {
+  it("R3344001 R3350000 a hand with one turning diorama holds the phone frame budget", () => {
     cy.viewport(PHONE.width, PHONE.height);
     // A Mythic leads the hand, so its face has depth; the pointer circles over it for the whole sample, so the face
-    // tilts, its four planes shift and its glare moves on every frame. R3343001: a Mythic's Default is its Full art, which
-    // has depth; a Legendary's is Extended art, which keeps to one picture (R3344000), and this scene wears no picks.
+    // tilts, its diorama's slices shift (R3350000: in place of the four planes, their loops running in its slot) and its
+    // glare moves on every frame. R3343001: a Mythic's Default is its Full art, which has depth; a Legendary's is Extended
+    // art, which keeps to one picture (R3344000), and this scene wears no picks.
     const TILTED = "hand-card-fx-tilt";
     const view = fullBoardView();
     const hand = [
@@ -567,7 +572,7 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
     const shown: PlayerView = { ...view, you: { ...view.you, hand } };
     holdsBudget("A hand with one tilted face", () => {
       mountScene(shown, shown, []);
-      cy.get(`[data-testid="${TILTED}"] .cf[data-depth="true"] .cf-plane`).should("have.length", 3);
+      cy.get(`[data-testid="${TILTED}"] .cf[data-diorama="true"] .cf-plane[data-slice]`).should("have.length", (dioramaOf("core-100")?.slices.length ?? 1) - 1);
       let stop = (): void => undefined;
       cy.get(`[data-testid="${TILTED}"]`).then(($card) => {
         const element = $card[0] as HTMLElement;

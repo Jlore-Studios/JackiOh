@@ -31,12 +31,16 @@
 // glow in its card's colours when buffed and frost when frozen (`wear`, art/ArtWear.tsx), from the view's numbers and keywords alone.
 // R3335000: a launched Starship's art wears its seat's Starship look, as CardFace's does.
 // R3334000: a Dormant Starship with pieces idles in its shipyard over its picture (ShipyardIdle.tsx).
+// R3350000: while it moves, a Mythic's normal picture with a diorama (art/dioramas/) draws every slice of it, each on its
+// loop, stacked in its window (CardArt's `diorama` "all") in place of its live layers: the window answers a hover and a
+// press as one image does (R3340000), and on an attack its slices over the farthest swing as a subject does (artLive.css).
 
-import { useRef, type ReactElement } from "react";
+import { memo, useRef, type ReactElement } from "react";
 
 import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/shared";
 
 import { CardArt } from "./art/index.ts";
+import { dioramaOf } from "./art/dioramas/index.ts";
 import { damageLevel } from "./art/wear.ts";
 import { shipArtOf } from "./art/stinkyscape.ts";
 import { CardStates } from "./CardStates.tsx";
@@ -156,7 +160,7 @@ function fxAttributesOf(plan: readonly KeywordFxPlan[], kind: Keyword["kind"]): 
   return entry === undefined ? {} : keywordFxAttributes(entry);
 }
 
-export function MinionFace({ face, unit, className, worn = false, keywordsOffFace = false, attacking = false }: MinionFaceProps): ReactElement {
+function MinionFace({ face, unit, className, worn = false, keywordsOffFace = false, attacking = false }: MinionFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   const stamp = useCardStamp(face, worn);
@@ -191,6 +195,11 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
     { hovered: engaged, rarity: slotRarityOf(rarity) },
   );
   const motion = faceMotion.moving && (artMoves || engaged) ? artMotionOf(face.defId) : null;
+  const picture = look !== null ? artPictureOf(look.version, face.set) : artFirst ? artPictureOf(cardLook.version, face.set) : "normal";
+  const ship = shipArtOf(face.defId, unit);
+  // R3350000: a moving Mythic with a diorama draws its slices, each on its own loop (and its art's motion where it has one, a
+  // token printed Mythic having none), in place of its live layers.
+  const diorama = faceMotion.moving && (artMoves || engaged) && picture === "normal" && ship === null && dioramaOf(face.defId) !== null;
   const cosmetics = cosmeticAttributes(cosmeticAppearance, faceMotion.moving);
   // R3340000: what its art wears: cracks for the health it is missing, a glow when buffed, frost when frozen (the view's own).
   const damage = damageLevel(unit.health, unit.maxHealth);
@@ -232,10 +241,11 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             shape={artFirst || look !== null ? "full" : "frame"}
             starship={face.starship}
             look={starshipLook}
-            ship={shipArtOf(face.defId, unit)}
-            picture={look !== null ? artPictureOf(look.version, face.set) : artFirst ? artPictureOf(cardLook.version, face.set) : "normal"}
+            ship={ship}
+            picture={picture}
             motion={motion}
-            live={motion !== null}
+            live={motion !== null && !diorama}
+            diorama={diorama ? { slice: "all", moving: true } : null}
             wear={wear}
           />
           {/* R3334000, R3340000: the Dormant Starship's shipyard uses this face's one ranked, on-screen motion slot. */}
@@ -330,3 +340,10 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
     </span>
   );
 }
+
+/**
+ * #3633: a card drawn again with the face it had (its hint row, its highlight or a queue step changed
+ * around it) does not draw the face again: the art, the text and the marks are most of a card's work.
+ */
+const MemoMinionFace = memo(MinionFace);
+export { MemoMinionFace as MinionFace };

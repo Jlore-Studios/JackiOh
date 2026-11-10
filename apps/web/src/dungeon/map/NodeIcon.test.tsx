@@ -29,7 +29,7 @@ const KIND_SET: Record<RunNodeKind, true> = {
 const KINDS = Object.keys(KIND_SET) as RunNodeKind[];
 
 function node(kind: RunNodeKind): RunNode {
-  return { kind, enemy: null, event: null, artifact: null };
+  return { kind, enemy: null, event: null, artifact: null, column: 0, next: [] };
 }
 
 describe("#3229 the node icons are drawn", () => {

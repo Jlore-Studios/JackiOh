@@ -24,7 +24,7 @@
 import { CATALOG } from "../../wire/cards.ts";
 import { fmt, hashId } from "./hash.ts";
 import { motifFor } from "./motifs.ts";
-import type { ArtRole } from "./motion.ts";
+import type { ArtMotion, ArtRole } from "./motion.ts";
 import { ART_BOX } from "./procedural.ts";
 import { isStinkyscapeArt } from "./stinkyscape.ts";
 import { proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
@@ -105,20 +105,21 @@ export const PLANE_OF_ROLE: Readonly<Record<ArtRole, ArtPlane>> = {
 };
 
 /**
- * R3345000: returns a data URI for one depth plane of `defId`'s picture.
+ * R3345000: returns a data URI for one depth plane of `defId`'s picture. R3350000: or for its whole picture (`plane`
+ * "whole"), which a Mythic's diorama cuts its slices from (dioramas/pieces.ts), moving as `motion` says (still with none).
  */
-export function artPlaneUri(defId: string, plane: ArtPlane, radiant: boolean = false): string {
+export function artPlaneUri(defId: string, plane: ArtPlane | "whole", radiant: boolean = false, motion: ArtMotion | null = null): string {
   const def = CATALOG[defId];
   if (!def) return "";
   const { name, type, tags } = def;
   const theme = themeFor(tags, type);
   if (isStinkyscapeArt(defId)) {
-    return stinkyscapeArtUri(defId, name, tags, type, radiant, null, defId, null, plane);
+    return stinkyscapeArtUri(defId, name, tags, type, radiant, motion, defId, null, plane);
   }
   if (isTrainingGroundsArt(defId)) {
-    return trainingGroundsArtUri(defId, name, tags, type, radiant, null, defId, null, plane);
+    return trainingGroundsArtUri(defId, name, tags, type, radiant, motion, defId, null, plane);
   }
-  return proceduralArtUri(defId, theme, compositionOf(defId, type), radiant, motifFor(name, theme), null, null, plane);
+  return proceduralArtUri(defId, theme, compositionOf(defId, type), radiant, motifFor(name, theme), motion, null, plane);
 }
 
 /** R3345000: `artPlaneUri` as a CSS `background-image` value (the effects layer holds no `url(` of its own: B27). */

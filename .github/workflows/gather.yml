@@ -9,14 +9,18 @@
 # plays GATHER_GAMES games of a new patch or set (a `patch` or `major` tier, v0.Z.X; never a micro,
 # v0.Z.Xb, docs/issues-and-patches.md, Version numbers) as soon as it ships. A push that ships only
 # micros since the last push run that succeeded plays nothing (the `due` step), so a micro's changed
-# cards wait for the next patch's games or the next export's. A push plays the commit it pushed, so
-# the next run knows exactly what this one played. `cargo jackioh stats --series
-# gather`, AI against AI on R258's All Random deals at the browser's budget, the records filed with
-# `jackioh-server stats-import --totals-only` over STATS_IMPORT_DATABASE_URL (staging's) and then
-# PRODUCTION_STATS_IMPORT_DATABASE_URL (no row per game, the file claimed once by its SHA-256 in each
-# database, so a rerun files neither twice). Game `n` of run `r` is `gather:<(r - 1) * GATHER_STRIDE + n>`,
-# so no two runs play the same game and no two of its files hold one (R1976000, What it does not
-# catch). The file is kept as the run's artifact, `gather-<run>`, for GATHER_RETENTION_DAYS.
+# cards wait for the next patch's games or the next export's. A run plays the commit that started it
+# (a push's, or main's newest when a dispatch was made), so the next run knows exactly what this one
+# played, and a rerun plays the same games byte for byte. `cargo jackioh stats --series
+# gather`, AI against AI on R258's All Random deals at the browser's budget, GATHER_FILE_GAMES at a
+# time (about an hour of the PC's gather half), each batch filed as it finishes with
+# `training/file-records.sh`: `jackioh-server stats-import --totals-only` over
+# STATS_IMPORT_DATABASE_URL (staging's) and then PRODUCTION_STATS_IMPORT_DATABASE_URL (no row per
+# game, each batch's file claimed once by its SHA-256 in each database, so a rerun files no batch
+# twice), so a patch's games reach the card statistics an hour at a time, not once all of them have
+# played. Game `n` of run `r` is `gather:<(r - 1) * GATHER_STRIDE + n>`, so no two runs play the same
+# game and no two of its files hold one (R1976000, What it does not catch). The batches' files are
+# kept as the run's artifact, `gather-<run>`, for GATHER_RETENTION_DAYS.
 #
 # Off until the repository variable GATHER_ON_PATCH is `true` (Settings -> Secrets and variables ->
 # Actions -> Variables). Each patch's development totals take about 3 MB of the database however few
@@ -50,6 +54,10 @@ permissions:
 env:
   # Games a run plays of each new patch, on the PC's gather half.
   GATHER_GAMES: "5000"
+  # Games played and then filed at a time: about an hour of the gather half (run 46 played 5,000
+  # in 6 h 42 min), so the statistics take a patch's games an hour at a time. Each batch is one
+  # file in each database (`game_record_batches`), whose totals are the patch's however many.
+  GATHER_FILE_GAMES: "750"
   # Game numbers each run owns: run r plays from (r - 1) * GATHER_STRIDE + 1.
   GATHER_STRIDE: "100000"
   # Days the run's record file is kept as its artifact.
@@ -69,10 +77,12 @@ jobs:
     timeout-minutes: 1440
     steps:
       # A push plays the commit it pushed, so the `due` step of the next run reads exactly what this
-      # one played; a dispatch plays main as it is when the job starts.
+      # one played; a dispatch plays main's newest commit when it was dispatched. Either way a rerun
+      # plays the same commit, so its batches are byte for byte the ones a database may hold already
+      # (a record names the build that played it, R1367000), and each is folded once.
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'push' && github.sha || 'main' }}
+          ref: ${{ github.sha }}
           persist-credentials: false
       # A new patch or set since the last push run that succeeded, whether it played or found only
       # micros. A run that failed or was cancelled moves nothing, so the next push plays what it
@@ -113,12 +123,18 @@ jobs:
       - name: build
         if: ${{ steps.due.outputs.play == 'true' }}
         run: cargo build --release -q -p jackioh-tools -p jackioh-server
-      - name: play (cargo jackioh stats --series gather)
+      # GATHER_FILE_GAMES at a time: each batch is played, then filed into staging's and production's
+      # (R1933001) before the next starts, so the statistics take the games an hour at a time. A
+      # batch a database refuses or cannot take is reported and the games go on; the run then fails
+      # at its end, and a rerun plays the same batches and files only those a database is missing.
+      - name: play and file, a batch at a time (cargo jackioh stats --series gather, stats-import --totals-only)
         id: play
         if: ${{ steps.due.outputs.play == 'true' }}
         env:
           GAMES: ${{ inputs.games || env.GATHER_GAMES }}
           RUN: ${{ github.run_number }}
+          STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+          PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}
         run: |
           set -euo pipefail
           if ! [[ "$GAMES" =~ ^[1-9][0-9]*$ ]] || [ "$GAMES" -gt "$GATHER_STRIDE" ]; then
@@ -127,44 +143,39 @@ jobs:
           fi
           patch=$(jq -r '.[-1].version' crates/cards/patches/patches.json)
           from=$(( (RUN - 1) * GATHER_STRIDE + 1 ))
-          file="$RUNNER_TEMP/gather-$patch-$RUN.jsonl"
-          target/release/jackioh stats --series gather --patch "$patch" --from "$from" --games "$GAMES" \
-            --out "$file" > "$RUNNER_TEMP/cards.txt"
-          filed=$(grep -c . "$file" || true)
-          {
-            echo "file=$file"
-            echo "filed=$filed"
-          } >> "$GITHUB_OUTPUT"
-          {
-            echo "## gather: $patch, games $from to $((from + GAMES - 1))"
-            echo "$filed of $GAMES games finished and were filed."
-          } >> "$GITHUB_STEP_SUMMARY"
-      - name: file them (stats-import --totals-only), into staging's and production's
-        if: ${{ steps.play.outputs.filed != '' && steps.play.outputs.filed != '0' }}
-        env:
-          STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
-          PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}
-          FILE: ${{ steps.play.outputs.file }}
-        run: |
-          set -euo pipefail
-          # R1933001: staging's first, then production's. Each database claims the file by its SHA-256,
-          # so after a failure the rerun files only where it is missing.
-          for where in staging production; do
-            case "$where" in
-              staging) url=$STATS_IMPORT_DATABASE_URL secret=STATS_IMPORT_DATABASE_URL ;;
-              production) url=$PRODUCTION_STATS_IMPORT_DATABASE_URL secret=PRODUCTION_STATS_IMPORT_DATABASE_URL ;;
-            esac
-            if [ -z "$url" ]; then
-              echo "::notice::$secret is not set, so $where's statistics get none of these games"
-              continue
+          end=$(( from + GAMES ))
+          dir="$RUNNER_TEMP/gather-$patch-$RUN"
+          mkdir -p "$dir"
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+          [ -n "$STATS_IMPORT_DATABASE_URL" ] || echo "::notice::STATS_IMPORT_DATABASE_URL is not set, so staging's statistics get none of these games"
+          [ -n "$PRODUCTION_STATS_IMPORT_DATABASE_URL" ] || echo "::notice::PRODUCTION_STATS_IMPORT_DATABASE_URL is not set, so production's statistics get none of these games"
+          echo "## gather: $patch, games $from to $((end - 1)), filed $GATHER_FILE_GAMES at a time" >> "$GITHUB_STEP_SUMMARY"
+          finished=0
+          unfiled=0
+          start=$from
+          while [ "$start" -lt "$end" ]; do
+            n=$(( end - start < GATHER_FILE_GAMES ? end - start : GATHER_FILE_GAMES ))
+            file="$dir/gather-$patch-$RUN-$start.jsonl"
+            target/release/jackioh stats --series gather --patch "$patch" --from "$start" --games "$n" \
+              --out "$file" > /dev/null
+            got=$(grep -c . "$file" || true)
+            finished=$(( finished + got ))
+            echo "### Games $start to $(( start + n - 1 )): $got finished" >> "$GITHUB_STEP_SUMMARY"
+            if ! sh training/file-records.sh target/release/jackioh-server "$file" | tee -a "$GITHUB_STEP_SUMMARY"; then
+              echo "::warning::games $start to $(( start + n - 1 )) were not filed everywhere; the run fails at its end, and a rerun files them"
+              unfiled=$(( unfiled + 1 ))
             fi
-            echo "### Filed into $where's" >> "$GITHUB_STEP_SUMMARY"
-            DATABASE_URL=$url target/release/jackioh-server stats-import --totals-only "$FILE" | tee -a "$GITHUB_STEP_SUMMARY"
+            start=$(( start + n ))
           done
+          echo "$finished of $GAMES games finished." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$unfiled" -gt 0 ]; then
+            echo "::error::$unfiled batches were not filed everywhere (above); rerun this job to file them"
+            exit 1
+          fi
       - uses: actions/upload-artifact@v4
-        if: ${{ always() && steps.play.outputs.file != '' }}
+        if: ${{ always() && steps.play.outputs.dir != '' }}
         with:
           name: gather-${{ github.run_number }}
-          path: ${{ steps.play.outputs.file }}
+          path: ${{ steps.play.outputs.dir }}
           if-no-files-found: ignore
           retention-days: ${{ env.GATHER_RETENTION_DAYS }}

@@ -1,5 +1,6 @@
-// #797: a survey once a free lane has had nothing to start for 30 minutes, and a log of the
-// suggestions that came to nothing, which no survey offers again. (bot/tests/test_declined.py)
+// #797: a survey once lanes stand spare (since #3659, `suggestions.spare_lanes` of them, at one
+// sweep tick and the next), and a log of the suggestions that came to nothing, which no survey
+// offers again. (bot/tests/test_declined.py)
 package tests
 
 import (
@@ -37,14 +38,13 @@ func declinedPlanRunner(text string) *runner.FakeRunner {
 
 func TestDeclined_QueuedWorkThatWaitsForAnotherSubscriptionNoLongerStopsASurvey(t *testing.T) {
 	// By day only Muse is free, and a hard item needs a strong model: Muse has nothing it can
-	// start, so after 30 minutes it surveys, though the queue is not empty.
+	// start, so its lanes are spare (its four and the two it fills while gpt and agy are off: the
+	// night box's six), and once a tick has seen them it surveys, though the queue is not empty.
 	h := ratingDayHarness(t, "muse")
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild, "difficulty:hard"}})
 	look := plan.Peek_(h.ctx, false, nil, "auto")
-	assertEqual(t, []bool{look.Work, look.Idle}, []bool{false, true})
-	testsupport.IdleFor(h.ctx, 29)
-	assertFalse(t, plan.Peek_(h.ctx, false, nil, "auto").Work)
-	testsupport.IdleFor(h.ctx, 30)
+	assertEqual(t, []any{look.Work, look.Idle, look.Spare}, []any{false, true, 6})
+	testsupport.IdleFor(h.ctx, 0)
 	planned := plan.Make(h.ctx, false, nil, "auto", nil)
 	assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), planned.Get("count")},
 		[]any{"suggest", "muse", 10})
@@ -57,8 +57,9 @@ func TestDeclined_NoSecondSurveyWhileOneRuns(t *testing.T) {
 		s.Obj("suggest").Update(pyjson.New("provider", "claude-3", "run_id", "9"))
 		return nil
 	}, "state")
-	assertEqual(t, plan.SuggestionsDue(h.ctx, h.ctx.Store.Load(), false), 0)
-	assertEqual(t, plan.SuggestionsDue(h.ctx, h.ctx.Store.Load(), true), 10)
+	spare := h.ctx.Cfg.SuggestionsSpareLanes
+	assertEqual(t, plan.SuggestionsDue(h.ctx, h.ctx.Store.Load(), false, spare), 0)
+	assertEqual(t, plan.SuggestionsDue(h.ctx, h.ctx.Store.Load(), true, spare), 10)
 }
 
 func TestDeclined_TheCapStillHolds(t *testing.T) {
@@ -71,7 +72,7 @@ func TestDeclined_TheCapStillHolds(t *testing.T) {
 }
 
 func TestDeclined_AnUnfinishedSurveyGivesTheClockBack(t *testing.T) {
-	h := newFlowHarness(t)
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll}) // every account's lanes spare
 	testsupport.IdleFor(h.ctx, 45)
 	before := h.ctx.Store.Load().Obj("suggest").Get("idle_since")
 	planned, _ := h.night(runner.NewFakeRunner(map[string][]runner.Handler{"suggest": {
@@ -98,7 +99,7 @@ func TestDeclined_ARejectVoteIsLogged(t *testing.T) {
 }
 
 func TestDeclined_TheSurveyReadsEveryOneAndARepeatIsNotOpened(t *testing.T) {
-	h := newFlowHarness(t)
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll}) // every account's lanes spare
 	// Closed by hand long ago (#777's way), and rejected by a vote.
 	h.gh.AddIssue(30, fakes.Issue{Title: "Architecture: a fuzz monitor for piles", State: "closed",
 		Labels: []string{config.LabelSuggestion}})

@@ -1096,13 +1096,16 @@
   }
 }
 
+/* #3633: FxLayer marks the game `data-fx-layer="on"` while its effects are on and `data-fx-banner` while a
+   banner is up, where these rules read `.game:has(> .fx-layer ...)`: a `:has()` on the game made every
+   change under it restyle the whole board. The doubled `[data-fx-layer]` keeps the old specificity. */
 /* A focused card keeps its focus ring. */
-.game:has(> .fx-layer[data-fx="on"]) [data-testid^="card-"]:has([data-keyword="Divine Shield"]):not(:focus-visible) {
+.game[data-fx-layer][data-fx-layer="on"] [data-testid^="card-"]:has([data-keyword="Divine Shield"]):not(:focus-visible) {
   outline: 2px solid color-mix(in srgb, var(--radiant, #ffd24a) 80%, white);
   outline-offset: 2px;
 }
 
-.game:has(> .fx-layer[data-fx="on"]) [data-testid^="card-"]:has([data-keyword="Divine Shield"])::after {
+.game[data-fx-layer][data-fx-layer="on"] [data-testid^="card-"]:has([data-keyword="Divine Shield"])::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -1124,7 +1127,7 @@
 }
 
 /* The pop: during its own divineShieldLost entry the cocoon flashes and bursts outward. */
-.game:has(> .fx-layer[data-fx="on"]) [data-testid^="card-"][data-animating="divineShieldLost"]:has([data-keyword="Divine Shield"])::after {
+.game[data-fx-layer][data-fx-layer="on"] [data-testid^="card-"][data-animating="divineShieldLost"]:has([data-keyword="Divine Shield"])::after {
   animation: fx-shield-pop calc(250ms * var(--anim-scale, 1) * var(--anim-squeeze, 1)) ease-out both;
 }
 
@@ -1132,14 +1135,14 @@
 
 /* The splats replace the old floating numbers. They stay in the DOM (only hidden), so BUILD's
    `.damage-pop` text assertions still hold. */
-.game:has(> .fx-layer[data-fx="on"]) :is(.damage-pop, .heal-pop, .loss-pop) {
+.game[data-fx-layer][data-fx-layer="on"] :is(.damage-pop, .heal-pop, .loss-pop) {
   visibility: hidden;
 }
 
 /* While the layer's big turn banner is up, the small status line under it would contradict it: it is
    drawn from the view the board still shows, so it says "Your turn" while the banner already says
    "Opponent's turn". It steps aside for the banner's life and stays in the DOM (role="status"). */
-.game:has(> .fx-layer [data-fx="banner"]) > .turn-banner {
+.game[data-fx-layer][data-fx-banner] > .turn-banner {
   visibility: hidden;
 }
 
@@ -2519,6 +2522,22 @@
   100% {
     transform: scale(1.6);
     opacity: 0;
+  }
+}
+
+/* R3350000: a Mythic's diorama: the camera flies through its slices, each toward it by its depth (`--fx-slice-depth`, 0 the
+   farthest to 1 the nearest, scaled up to 1.6 times), and past the nearest, which fade out from three quarters deep. */
+.fx-takeover-plane[data-slice] {
+  animation: fx-takeover-fly var(--fx-land) var(--ease-out) both;
+}
+
+@keyframes fx-takeover-fly {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(calc(1 + var(--fx-slice-depth, 0) * 0.6));
+    opacity: clamp(0, calc((1 - var(--fx-slice-depth, 0)) * 4), 1);
   }
 }
 

@@ -257,6 +257,25 @@ fn r3335000_a_loadout_frozen_before_3335_reads_starship_defaults() {
     assert_eq!(read.starship_piece_skin, "starship-piece-skin-standard");
 }
 
+/// R672: a rematch replays the deck slots a seat wore, each one picked: its playmat, backdrop and card back.
+#[test]
+fn r672_a_seats_deck_slots_are_its_playmat_backdrop_and_card_back_each_picked() {
+    let seat = SeatLoadout {
+        table: "table-mutants".to_owned(),
+        field: "field-mutants".to_owned(),
+        card_back: "card-back-mutants".to_owned(),
+        ..SeatLoadout::defaults_of(registry())
+    };
+    assert_eq!(
+        seat.deck_slots(),
+        DeckSlots {
+            table: Some("table-mutants".to_owned()),
+            field: Some("field-mutants".to_owned()),
+            card_back: Some("card-back-mutants".to_owned()),
+        }
+    );
+}
+
 #[test]
 fn r1834002_per_card_only_for_owned_deck_cards() {
     let registry = test_registry();

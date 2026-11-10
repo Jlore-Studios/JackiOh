@@ -302,6 +302,20 @@ on (`deviceTilt`, a device-only card setting; iOS asks leave once, inside the sw
 none while the animation queue drains (`useTiltHold`, `game/Game.tsx`). The face's rotation is the one 3D thing: `.cf` is
 an isolated group, which draws what it holds flat, so the planes move by `translate`. Presentation only (rule 7).
 
+**Dioramas** (R3350000): a Mythic's normal picture, and a token printed Mythic's, draws a diorama of its own in place of the
+planes, one file per card in `cards/art/dioramas/<set>/` (`DIORAMA`: five to eight slices, back to front, each a pick of
+the painter's still picture's pieces, `dioramas/pieces.ts`, at a depth and in a plane, some bent, two or more on a loop
+written for the card). Each slice is a picture of its own (`dioramaSliceUri`, from the card's id and face alone); the face
+draws the farthest in its window and the rest as `.cf-plane[data-slice]`s over it (`data-diorama`), their loops running
+only in a motion slot (`data-diorama-motion`); at an animated level, and on the board, each slice also moves its pieces as
+the card's moving picture does (its roles' layers, the particles in the nearest), so the level keeps its motion. It turns up to `DIORAMA_TURN_MAX_DEG` in inspect, the hover preview and the
+Collection (`CardFace`'s `turn`), `CARD_TILT_MAX_DEG` in hand, and never breaks the frame; a board Mythic stacks every slice
+in its window while it moves (`CardArt`'s `diorama` "all"), in place of the live layers, its window swelling on a hover and
+its slices over the farthest swinging on an attack (`artLive.css`); the full-screen view draws the slices, scaled as it turns
+as little as keeps the screen covered (`fullscreenCoverScale`), and the takeover flies through them (`fx/takeover.ts`,
+`fx-takeover-fly`). Alt art, a restyle and every flat face draw none. `dioramas.test.ts` lists any
+Mythic without one (`PENDING`, empty) and holds every slice to its picture's colours, no text and `ART_DETAIL_MAX_BYTES`.
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and
@@ -509,6 +523,11 @@ pnpm --dir apps/web test           # vitest (jsdom)
 `dev`, `build`, `build:staging`, `build:e2e` and `test` first run `scripts/build-wasm.sh` (their `pre`
 scripts), which needs the Rust toolchain `rust-toolchain.toml` pins; `typecheck` reads the module's
 generated `.d.ts`, so run one of them (or the script) once first.
+
+`src/perf/` owns the busy-board frame probe's numbers and statistics (issue #3605):
+`frameBudgets.ts` names every budget and duration (CLAUDE.md rule 9), `frameStats.ts` the pure
+summarize-and-judge the e2e spec shares. The probe itself runs as e2e spec 50
+(`pnpm --dir e2e probe:frames`).
 
 Both deployed builds are `production` mode, so neither serves the dev-only routes; `build:staging`
 puts `.env.staging` in the build's environment (`node --env-file`), where Vite never overwrites a

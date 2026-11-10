@@ -138,8 +138,10 @@ func Render(ctx *hctx.Context, extra []string /* = () */, statistics string /* =
 			"%d. Times are Central; hover one "+
 			"to see how long it ran. `%s status` gives the same facts on demand.</sub>",
 			EveryMinutes, RunnersMinutes, int(stats.StatsEvery/time.Minute), config.Slash), "")
-	// What waits for a person's decision first (#2986), then what is handed to one (#3009): it is
-	// what a person can unblock.
+	// The excess compute first (#3659): whether people should open more issues. Then what waits
+	// for a person's decision (#2986), then what is handed to one (#3009): it is what a person can
+	// unblock.
+	lines = append(lines, ExcessSection(ctx, state, explained, extra, issues)...)
 	lines = append(lines, DecisionsSection(ctx, state, issues)...)
 	lines = append(lines, "## ⚡ Running now", "")
 	var running []string

@@ -13,6 +13,9 @@
  * Nothing here styles a foil, Radiant's shimmer (`.cf[data-foil]::after`, cards.css) or a worn foil's (cosmetics.css's
  * `.cf-art::after`): the planes take none (their pseudo-elements are off), the far plane keeps the window's, and the glare
  * is white alone, so it never draws a colour in Radiant's gold window (R2725004; cosmetics.test.tsx).
+ *
+ * R3350000 (#3350): a Mythic's diorama (`data-diorama`) stacks its slices as the planes (`data-slice`, `--cf-plane` its
+ * depth in steps), some bent about one axis (`data-bend`).
  */
 
 /* The perspective, on the face's parent: CARD_PERSPECTIVE_PX (constants.ts). Only a parent of a face with depth. */
@@ -147,6 +150,20 @@
 .cf[data-frame-break="true"] .cf-plane[data-plane="near"] > .cf-art {
   transform-origin: 50% 100%;
   scale: var(--cf-frame-break-scale, 1);
+}
+
+/* R3350000: a diorama's bent slice turns about one axis (`data-bend`) under its own perspective, DIORAMA_BEND_PERSPECTIVE_PX
+   (constants.ts), by its `--cf-slice-bend`, so it reads as a curved surface; it stays inside its plane's clip. */
+.cf[data-diorama] .cf-plane[data-bend] {
+  perspective: 400px;
+}
+
+.cf[data-diorama] .cf-plane[data-bend="y"] > .cf-art {
+  rotate: y var(--cf-slice-bend, 0deg);
+}
+
+.cf[data-diorama] .cf-plane[data-bend="x"] > .cf-art {
+  rotate: x var(--cf-slice-bend, 0deg);
 }
 
 @media (prefers-reduced-motion: no-preference) {

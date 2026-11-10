@@ -322,6 +322,22 @@ mod tests {
             });
         }
 
+        /// R767000: the script kept for the replays of v0.4.0f and before is Quickdraw, and adds Spa Day
+        /// alone for Aestheticize the Game, with no Discover.
+        #[test]
+        fn r767000_the_script_kept_for_v0_4_0f_is_quickdraw_and_adds_spa_day_alone_with_aestheticize_the_game() {
+            assert_eq!(script_v0_4_0f().base.flags().quickdraw, Some(true));
+            assert_eq!(script_v0_4_0f().radiant.flags().quickdraw, Some(true));
+            crate::under_kept(ID, script_v0_4_0f(), || {
+                let mut s = casting_for(AESTHETICIZE, false, 1);
+                s.play(ID, json!({}));
+                assert!(s.state().pending.is_none(), "no Discover");
+                let cards = added(&s);
+                assert_eq!(def_ids(&cards), vec![AESTHETICIZE, SPA_DAY]);
+                assert!(cards.iter().all(|card| !card.radiant), "the base face adds them base");
+            });
+        }
+
         #[test]
         fn r1185000_a_full_hand_burns_the_plan_then_the_card() {
             let mut s = casting_for(SUMMIT, false, 9);
@@ -387,6 +403,19 @@ mod tests {
             let cards = added(&s);
             assert_eq!(def_ids(&cards), vec![ALTERAN_REACH, STAR_CHART]);
             assert!(cards.iter().all(|card| card.radiant));
+        }
+
+        /// R767000: the Radiant face of the script kept for v0.4.0f adds both Radiant.
+        #[test]
+        fn r767000_the_radiant_script_kept_for_v0_4_0f_adds_both_radiant() {
+            crate::under_kept(ID, script_v0_4_0f(), || {
+                let mut s = casting_for(AESTHETICIZE, true, 1);
+                s.play(ID, json!({}));
+                assert!(s.state().pending.is_none(), "no Discover");
+                let cards = added(&s);
+                assert_eq!(def_ids(&cards), vec![AESTHETICIZE, SPA_DAY]);
+                assert!(cards.iter().all(|card| card.radiant));
+            });
         }
 
         #[test]

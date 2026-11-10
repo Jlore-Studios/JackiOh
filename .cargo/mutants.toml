@@ -39,6 +39,15 @@ cap_lints = true
 timeout_multiplier = 3.0
 minimum_test_timeout = 120
 
+# A mutant whose build never ends is killed by its timeout too: three times the unmutated build's
+# time, which built every dependency as well, so a mutant's own build (its package and its tests,
+# about 40 s in crates/shared against a 107 s baseline) never comes near it. cargo-mutants times no
+# build by default: in crates/shared's first shard (mutants.yml on main, 2026-11-10) 248 of 249
+# mutants finished, the test timeout killing two, and the last held its job until the step's five
+# hours ended. One way a build never ends: with `cap_lints`, rustc's limit on a long constant
+# evaluation is only a warning.
+build_timeout_multiplier = 3.0
+
 exclude_globs = [
   # The tests' own harness: scenario(), its verbs, the invariant monitor and the pool probe. A mutant
   # there asks whether the tests are right, which the tests that use it answer by failing for a
@@ -65,10 +74,22 @@ exclude_re = [
   # whether a card's slot is at or above each rank, so any index at or past the last fits the same
   # slots (`len - 1`, `len + 1` and `len / 1` alike).
   'replace - with (\+|/) in slot_needed',
-  # crates/run (#3513): the row's spread, `MAX - MIN + 1`, is `MAX / MIN + 1` too at the widths
-  # config.rs sets (3 and 2); the width test fails the other mutants of the line.
-  'replace - with / in row_width',
   # crates/run (#3513): `weighted`'s fallback, `rows[rows.len() - 1]`, after the loop: a roll under the
   # weights' total always falls in one of them inside the loop, so the fallback is never reached.
   'replace - with (\+|/) in weighted',
+  # crates/shared (#3513): `game_in_play` asks that the series be Playing and its last game have no
+  # result, and `abandon_unstarted` that the last game be the one `next_match_id` names and have no
+  # result. On every row the transitions make, a series is Playing exactly while its last game has no
+  # result and carries `next_match_id`: `begin` pushes that game and sets Playing, `game_ended` gives it
+  # its result and then ends the series or reopens the picks under a new id, `abandon_unstarted` pops
+  # it, and `forfeit_series` runs only between games. So either half alone decides as both do.
+  'replace && with \|\| in (game_in_play|abandon_unstarted)',
+  # crates/shared (#3513): the bots' cosmetic draws compare a roll of the engine's Rng, in [0, 1), against
+  # a share (`draw_wardrobe`) or a running sum of weights (`pick_by`): `<` and `<=` part only on a roll
+  # exactly equal to it, one draw in 2^32 at a given bound, which no seed a test can find makes.
+  'replace < with <= in (draw_wardrobe|pick_by)',
+  # crates/shared (#3513): `pick_by`'s fallback after its loop, the last candidate of any weight: the
+  # running sum adds the weights in the order `total` summed them, so it ends at `total` exactly, and a
+  # roll of `next() * total` is below it, so the loop always returns first.
+  'replace > with (==|<|>=) in pick_by',
 ]

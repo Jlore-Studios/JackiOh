@@ -31,9 +31,10 @@ Goetzmann, with Maximoose Goetzmann)
 A single-player run in the style of Slay the Spire, played against the AI.
 
 1. You pick a starting deck of 10 cards and up to 8 points of artifacts.
-2. You climb a seeded map of three acts, about 16 fights: normal enemies, elites, ghosts, two mini-bosses
-   and the final boss, with shops, campfires, events, chests and shrines between them.
-3. Your HP carries from fight to fight, and one lost fight ends the run.
+2. You climb a seeded map of three acts along a path you choose, 12 to 16 fights on any route: normal
+   enemies, elites, ghosts, two mini-bosses and the final boss, with shops, campfires, events, chests and
+   shrines between them.
+3. Every fight starts at full health: each win adds 5 max HP and refills it, and one lost fight ends the run.
 4. After every fight you open one of four packs and keep 3 of its cards, so the deck grows. Shops,
    events, campfires and artifacts thin it.
 5. Beating a mini-boss lets you extract a card, and beating the final boss lets you extract an artifact.
@@ -108,11 +109,15 @@ A few artifacts start unlocked. Final bosses unlock the rest, one extraction at 
 
 ## DR4. The map
 
-- Three acts. Act 1 ends at mini-boss 1, act 2 at mini-boss 2 and act 3 at the final boss, about 16 fights
-  in all.
-- A branching map: you pick your path row by row and see the whole act ahead, elites included.
+- Three acts. Act 1 ends at mini-boss 1, act 2 at mini-boss 2 and act 3 at the final boss.
+- A path map: seeded paths go up each act, splitting and merging, each step to a node the one you stand
+  on leads to, so each step closes off the paths it does not lead to. You see the whole map, elites
+  included.
+- The bosses are choke points: every path of an act meets at its boss, and after each mini-boss the map
+  fans out again.
+- Every route from a start to the final boss holds 12 to 16 fights, the bosses counted, and at least 8
+  tiles: fewer fights is the fast way, more the slow way.
 - The node kinds: Fight, Elite, Ghost, Mini-boss, Final boss, Shop, Campfire, Event, Chest and Shrine.
-- A campfire always stands on the row before each boss.
 
 ## DR5. The fights
 
@@ -145,9 +150,9 @@ Strawman enemy hero health: normal 20, elite 30, mini-boss 40, final boss 50.
 ## DR7. The tiles
 
 - **Shop:** cards and artifacts for Coins; upgrades for Tickets; removing a card.
-- **Campfire:** one of: heal, make a card Radiant, remove 2 cards, or buff a card (the Buff keyword; a
+- **Campfire:** one of: +5 max HP, make a card Radiant, remove 2 cards, or buff a card (the Buff keyword; a
   shop buffs one for Tickets too).
-- **Event:** a short story with choices. Placeholders for now.
+- **Event:** a short story with choices that trade max HP, Coins and Tickets. Placeholders for now.
 - **Chest:** Coins, Tickets, sometimes an artifact.
 - **Shrine** (a monastery or a statue): a god offers a blessing for the rest of the run.
 
@@ -407,8 +412,8 @@ Each is proved by a test that names it in a comment (`// B7`).
 - **B24** A timer shows the run's time played on screen (R3502000).
 - **B25** When the game ends, the page asks the worker for `runReport` and sends its `FightOver` to the run.
 - **B26** A lost fight ends the run, and the run-over screen follows.
-- **B27** The map shows the whole current act, each node's kind, each boss's preseeded artifact and where
-  the player stands; only the next row's nodes can be chosen.
+- **B27** The map shows the whole map, each node's kind, each boss's preseeded artifact and where the
+  player stands; only the nodes the one stood on leads to can be chosen.
 - **B28** The reward screen offers the artifact (take or leave) before the four packs; the pack screen
   keeps exactly `keep` cards, or none with a Skip passive.
 - **B29** Extraction: a card after a mini-boss, an artifact after the final boss, the boss's own refused.

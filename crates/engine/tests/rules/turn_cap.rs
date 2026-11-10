@@ -6,7 +6,7 @@
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{act, new_game, put, slot};
+use crate::rules::fixtures::harness::{act, act_result, new_game, put, slot};
 use crate::rules::fixtures::scripts::infinite_reserves;
 
 /// Past both mulligans, in p1's main phase on turn 1, with nothing ending a turn but End turn.
@@ -69,6 +69,35 @@ mod r389_b4_3_the_turn_cap {
         assert_eq!(over.turn, TURN_CAP_PLAYER_TURNS);
         assert_eq!(over.players.p1.turns_started, 30);
         assert_eq!(over.players.p2.turns_started, 30);
+    }
+
+    /// §2.5, R2, R389 (#3514): the 60th player-turn is still played, the game ends with it, and past the
+    /// cap nothing moves: an action is refused and the turn count stays at the cap.
+    #[test]
+    fn r2_r389_nothing_moves_past_the_turn_cap() {
+        let mut state = playing("past");
+        for player in [PlayerId::P1, PlayerId::P2] {
+            put(
+                &mut state,
+                &infinite_reserves().id,
+                slot(player, Row::Backrow, 1),
+                Default::default(),
+            );
+        }
+        while state.turn < TURN_CAP_PLAYER_TURNS && state.result.is_none() {
+            state = act(&state, json!({ "type": "endTurn", "playerId": state.active }));
+        }
+        assert_eq!(state.turn, TURN_CAP_PLAYER_TURNS);
+        assert_eq!(state.result, None);
+
+        let over = act(&state, json!({ "type": "endTurn", "playerId": state.active }));
+        assert_eq!(
+            over.result.as_ref().map(|result| result.reason),
+            Some(GameOverReason::TurnCap)
+        );
+        let past = act_result(&over, json!({ "type": "endTurn", "playerId": over.active }));
+        assert_eq!(past.error.as_deref(), Some("the game is over"));
+        assert_eq!(past.state.turn, TURN_CAP_PLAYER_TURNS);
     }
 
     #[test]
