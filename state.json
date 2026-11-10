@@ -17982,7 +17982,7 @@
       }
     },
     "3645": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -18004,12 +18004,12 @@
       "interruptions": 0,
       "issue": 3583,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-6",
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-11-10T14:18:37Z",
-      "run_id": "42817952953",
+      "run_id": "pending:1cf92478-1794320376",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -18030,16 +18030,9 @@
         "run": "42817952953"
       },
       "source": "conflict",
-      "started_at": "2026-11-10T12:41:44Z",
+      "started_at": "2026-11-10T14:20:28Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-10T14:18:37Z",
-        "until": "2026-11-10T14:48:37Z",
-        "why": "it conflicts with `main` now"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -18191,9 +18184,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T14:19:21Z",
+    "at": "2026-11-10T14:20:28Z",
     "url": "",
-    "what": "review #3626 on muse"
+    "what": "revise #3645 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-10T13:52:53Z",
