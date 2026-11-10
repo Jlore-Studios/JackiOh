@@ -19833,6 +19833,9 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-10T05:20:48Z",
+      "requeued": {
+        "ecacf11fcaee255516061d500e741a776e6f4865": "c90baa34ff6bb382b4392a985bfe12a945cac121"
+      },
       "run_id": "42761753427",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
