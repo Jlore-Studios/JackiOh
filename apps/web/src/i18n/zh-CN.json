@@ -4083,5 +4083,13 @@
   "Singularity": "奇点",
   "Ark": "方舟",
   "Chrome modules": "镀铬模块",
-  "Flagship colors": "旗舰配色"
+  "Flagship colors": "旗舰配色",
+  "Preset decks": "预设牌组",
+  "Build your own": "自组牌组",
+  "{slot} {filled} of {count}": "{slot}：{filled} / {count}",
+  "First Charge": "先锋冲锋",
+  "Cheap units that hit fast and hit hard.": "廉价随从，先发制人，重拳出击。",
+  "Spell tricks": "法术戏法",
+  "Spells and helpers that out-trick the enemy.": "用法术和帮手智取敌人。",
+  "Tough bodies that hold the line, then win late.": "以坚韧之躯守住防线，后期取胜。"
 }

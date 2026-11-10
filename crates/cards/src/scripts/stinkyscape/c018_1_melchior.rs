@@ -181,6 +181,7 @@ mod tests {
         active_units_of(s.state(), player).iter().map(|unit| unit.id.clone()).collect()
     }
 
+    // Differs from Scenario::offered: the open Mode prompt's options, not the seat's legal actions.
     fn offered(s: &Scenario) -> Vec<String> {
         let pending = s.state().pending.as_ref().expect("MELCHIOR's Discover");
         assert_eq!(pending.kind, PromptKind::Mode);

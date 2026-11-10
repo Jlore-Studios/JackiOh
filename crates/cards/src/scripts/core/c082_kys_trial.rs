@@ -146,6 +146,7 @@ mod tests {
     }
 
     /// The catalog ids those numbers name in `set`.
+    // Differs from Scenario::offered: the Discover's numbers as catalog ids, not the seat's legal actions.
     fn offered(s: &Scenario, set: &str) -> Vec<String> {
         numbers(s)
             .into_iter()

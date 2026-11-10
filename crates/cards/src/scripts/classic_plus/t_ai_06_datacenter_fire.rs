@@ -127,10 +127,6 @@ mod tests {
             .collect()
     }
 
-    fn count(events: &[GameEvent], kind: &str) -> usize {
-        events.iter().filter(|event| js(*event)["type"] == kind).count()
-    }
-
     fn up(def_id: &str, lane: i32) -> Value {
         json!({ "def": def_id, "faceUp": true, "lane": lane })
     }
@@ -167,7 +163,7 @@ mod tests {
                 s.expect_in_zone(DATACENTER, "graveyard")
                     .expect_in_zone(TWINSPELL, "graveyard")
                     .expect_in_zone(FARM, "graveyard");
-                assert_eq!(count(s.last_events(), "destroyed"), 3);
+                assert_eq!(s.last_count("destroyed"), 3);
             }
 
             #[test]
@@ -216,8 +212,8 @@ mod tests {
             #[test]
             fn r129_none_destroyed_no_damage() {
                 let mut s = fire(json!({ "backrow": [up(HEROIC_POWER, 1), down(BEAR, 2)] }), json!({}), false);
-                assert_eq!(count(s.last_events(), "damage"), 0);
-                assert_eq!(count(s.last_events(), "destroyed"), 0);
+                assert_eq!(s.last_count("damage"), 0);
+                assert_eq!(s.last_count("destroyed"), 0);
                 s.expect_health(P1, 30).expect_health(P2, 30);
             }
 
@@ -284,7 +280,7 @@ mod tests {
             fn r46_r129_an_enemy_heroic_power_stays_none_destroyed_no_damage() {
                 let mut s = fire(json!({}), json!({ "backrow": [up(HEROIC_POWER, 1), down(BEAR, 2)] }), true);
                 s.expect_in_zone(HEROIC_POWER, "field");
-                assert_eq!(count(s.last_events(), "damage"), 0);
+                assert_eq!(s.last_count("damage"), 0);
             }
         }
     }
