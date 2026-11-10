@@ -422,11 +422,14 @@ One tracker, `Patch: the Stinkyscape+ set` (labels `tracking`, `major version`, 
 fullsends as sub-issues, along with the road to production (SP9). Each fullsend is built by the night bot
 in its fullsend mode (`bot/README.md`, Fullsend):
 
-- **Fullsend 1** is split by hand. Its parts below are its sub-issues. **The owner's change of 2026-11-09:**
-  F is built in a Claude session and lands on `main` first, in its own pull request with the set still
-  `Held`. Then the parent is labelled `bot:fullsend`, and the bot adopts the open parts (E1–E9, S01–S26 and
-  R, `queue.Adopt`). They land on `bot/issue-<fullsend 1>`, cut from a `main` that already holds the
-  foundation, and the reconcile opens one pull request into `main`.
+- **Fullsend 1** is split by hand. Its parts below are its sub-issues. **The owner's change of 2026-11-10:**
+  F and E1–E9 are built in a Claude session by parallel agents and land on `main` first, in one pull
+  request with the set still `Held`. So that it changes no shipped card, E3's shipped-card migration
+  (Evasive, Frenzy) and E5's Replenish rewording move to S01, and E9's unique draws ship behind
+  `UNIQUE_RANDOM_DRAWS = false`, which R turns on. Then the parent is labelled `bot:fullsend`, and the bot
+  adopts the open parts (S01–S26 and R, `queue.Adopt`). They land on `bot/issue-<fullsend 1>`, cut from a
+  `main` that already holds the foundation and the mechanics, and the reconcile opens one pull request
+  into `main`.
 - **Fullsends 2 and 3** have no parts opened by hand. Labelled `bot:fullsend`, each waits on its `Blocked by`
   line, and the bot's split cuts it into parts once the fullsend before it has merged. Which cards the AI
   fails is only known then.
