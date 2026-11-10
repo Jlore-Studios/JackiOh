@@ -13134,9 +13134,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-1",
-      "owner_since": "2026-11-10T03:01:57Z",
-      "owner_why": "it plans it",
+      "owner": "claude-6",
+      "owner_since": "2026-11-10T04:26:42Z",
+      "owner_why": "handed off from `claude-1`: `claude-1` 5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-10T07:30:00Z; it can start again only in 3h 03m, more than the 120 minutes an item waits for its owner",
       "paused": {
         "at": "2026-11-10T04:24:14Z",
         "interrupt": "usage",
@@ -13148,13 +13148,13 @@
       "planned_by_id": "claude-1",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-1",
+      "provider": "claude-6",
       "queued_at": "2026-11-07T16:42:23Z",
       "requested_by": "jgoetzmann",
       "round_tier": "strong",
-      "run_id": "42751037205",
+      "run_id": "pending:16be6c99-1794284769",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-10T03:41:08Z",
+      "started_at": "2026-11-10T04:26:42Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -19251,9 +19251,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T04:25:58Z",
+    "at": "2026-11-10T04:26:42Z",
     "url": "",
-    "what": "build #3613 on claude-3"
+    "what": "build #3388 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-10T03:52:56Z",
