@@ -20393,15 +20393,8 @@
       "taken_asks": []
     },
     "3633": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42781003998",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-10T10:19:24Z",
-        "until": "2026-11-10T10:49:24Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20413,10 +20406,9 @@
         "reason": "planned on opus",
         "trail": "F, '{ if ($3+0 > 60) print }' | head -20; python3 /tmp/planner-tools/layouts.py /tmp/trace-riffle.json | head -8\", \"des\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3633 && grep -rn \\\"text-wrap: balance\\\\|text-wrap: pretty\\\" apps/web/src --include=*.css | wc -l; grep -rn \\\"container-type\\\" apps/web/src/cards/card\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3633 && for spec in \\\"apps/web/src/game/board.css:882\\\" \\\"apps/web/src/game/board.css:1127\\\" \\\"apps/web/src/game/board.css:1154\\\" \\\"apps/web/src/game\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='e2e/cypress/component/zz-planner-prof.cy.tsx'\\ns=open(p).read()\\ns=s.replace(''' probe(\\\"v-shell-noprof\\\",''',''' probe(\\\"b-lane\\\", { bench: true, tilt: false, rewr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3633 && sed -n 2925,2960p apps/web/src/game/board.css; sed -n 3185,3215p apps/web/src/game/board.css; git log --format='%h %ad %s' --date=short -L294\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='e2e/cypress/component/zz-planner-prof.cy.tsx'\\ns=open(p).read()\\ns=s.replace(''' probe(\\\"v-shell-noprof\\\",''',''' probe(\\\"b-zoneonly\\\", { bench: true, tilt: false, \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3633 && python3 - <<'EOF'\\np='e2e/cypress/component/zz-planner-living.cy.tsx'\\ns=open(p).read()\\ns=s.replace(''' if (FIXES.includes(\\\"F2\\\") && doc.ge\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3633 && grep -n \\\"data-takeover\\\" apps/web/src/game/Game.tsx | head -5; grep -rn \\\"takeoverFor\\\\|function takeover\\\\|takeoverClaim\\\" apps/web/src/gam\u2026\n- Bash: {\"command\": \"sed -n 850,860p apps/web/src/game/Game.tsx; grep -n \\\"useRef<HTMLDivElement\\\\|rootRef\\\\|gameRef\\\" apps/web/src/game/Game.tsx | head -5; sed -n 1,30p apps/web/src/fx/css.test.ts | grep -n\u2026\n- Bash: {\"command\": \"grep -n \\\"export function readSheet\\\" -A12 apps/web/src/test/setup.ts; grep -n \\\"const attach\\\\b\\\\|attach = \\\" apps/web/src/game/Game.tsx | head -3; ls apps/web/src/game/Game*.test.tsx |\u2026\n- Bash: {\"command\": \"sed -n 290,320p apps/web/src/game/Game.tsx\", \"description\": \"Read Game root attach callback\"}\n- Bash: {\"command\": \"sed -i 's/ return bool(re.search(r.\\\\[.#\\\\\\\\\\\\[\\\\]|^\\\\[a-zA-Z\\\\]., c2))/ return bool(re.search(r\\\"[.#\\\\\\\\[]\\\", c2))/' /tmp/planner-tools/hasscan.py && grep -n \\\"return bool\\\" /tmp/planne\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='e2e/cypress/component/zz-planner-prof.cy.tsx'\\ns=open(p).read()\\ns=s.replace(''' probe(\\\"v-shell-noprof\\\",''',''' probe(\\\"b-lanesize\\\", { bench: true, tilt: false, \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='e2e/cypress/component/zz-planner-prof.cy.tsx'\\ns=open(p).read()\\ns=s.replace(''' probe(\\\"v-shell-noprof\\\",''',''' probe(\\\"b-va\\\", { bench: true, tilt: false, rewrit\u2026\n- tool error: Exit code 1 Traceback (most recent call last): File \"<stdin>\", line 2, in <module> FileNotFoundError: [Errno 2] No such file or directory: 'e2e/cypress/component/zz-planner-prof.cy.tsx' /bin/bash: li\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3633 && python3 - <<'EOF'\\np='e2e/cypress/component/zz-planner-prof.cy.tsx'\\ns=open(p).read()\\ns=s.replace(''' probe(\\\"v-shell-noprof\\\",''',''' probe\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3633 && grep -n \\\"^\\\\s*\\\\.field\\\\s*{\\\" -A14 apps/web/src/game/board.css | grep -E \\\"\\\\{|grid|align|height|display\\\" | head -20\", \"description\": \"Read\u2026\n- Bash: {\"command\": \"sed -n 3186,3200p apps/web/src/game/board.css; python3 - <<'EOF'\\np='e2e/cypress/component/zz-planner-prof.cy.tsx'\\ns=open(p).read()\\ns=s.replace(''' probe(\\\"v-shell-noprof\\\",''',''' pro\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3633 && python3 - <<'EOF'\\np='e2e/cypress/component/zz-planner-prof.cy.tsx'\\ns=open(p).read()\\ns=s.replace(''' cy.task(\\\"layout:report\\\", { probe: na\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3633 && python3 - <<'EOF'\\np='e2e/cypress/component/zz-planner-prof.cy.tsx'\\ns=open(p).read()\\ns=s.replace(''' probe(\\\"v-shell-noprof\\\",''',''' probe\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3633 && sed -n 1128,1160p apps/web/src/game/board.css | grep -n \\\"@media\\\\|gap\\\\|row-gap\\\\|padding\\\" ; awk 'NR>=1100 && NR<=1140 && /@media/ {print N\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3633/e2e && E2E_COMPONENT_PORT=5283 E2E_ARTIFACTS=/tmp/e2e-art timeout 1800 pnpm exec cypress run --component --browser chrome --spec cypress/compone\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3633 && awk 'NR<=3192 && /^@media/ {l=NR\\\": \\\"$0} END{} NR==3192{print l}' apps/web/src/game/board.css; awk 'NR<=1144 && /^@media/ {l=NR\\\": \\\"$0} NR=\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3633/.bot-plan.md\", \"content\": \"# Draft plan, issue #3633 (planner notes; final plan = final message)\\n\\nMeasured locally (Chrome 156, Cypress 16.1, 4\u2026\n- Bash: {\"command\": \"grep -n \\\"createFxDirector(\\\" apps/web/src/fx/director.test.ts | head -3; grep -n \\\"^function \\\\|^const .*= (.*) =>\\\" apps/web/src/fx/director.test.ts | head -10; grep -n \\\"^function ren\u2026\n- Bash: {\"command\": \"sed -n 200,270p apps/web/src/fx/director.test.ts\", \"description\": \"Read the director test harness\"}\n- Bash: {\"command\": \"sed -n 796,830p apps/web/src/fx/dom.ts | grep -n \\\"append\\\\|insert\\\" \", \"description\": \"Check how DOM effects are inserted\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3633/.bot-plan.md\", \"content\": \"**Goal.** Make `e2e/cypress/component/fx-phone-living-game.cy.tsx` pass 4/4 in `e2e component (chrome)` by fixing what\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md && git status --porcelain && ls e2e/cypress/component | grep -c zz-\", \"description\": \"Check plan length and clean worktree\"}\n- said: **Goal.** Make `e2e/cypress/component/fx-phone-living-game.cy.tsx` pass 4/4 in `e2e component (chrome)` by fixing what the product spends its frames on. Every moment at 390x844, 360x780 and 844x390 must hold a mean frame \u2264 `FX_PHONE_FRAME_BUDGET_MS` and a worst frame \u2264 `FX_PHONE_FRAME_WORST_MS` in \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-10T08:13:51Z",
       "owner_why": "it plans it",
@@ -20429,9 +20421,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-10T07:48:35Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42781003998",
+      "run_id": "pending:779f3de9-1794306113",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-10T08:13:51Z",
+      "started_at": "2026-11-10T10:23:01Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -20799,9 +20791,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T10:21:36Z",
+    "at": "2026-11-10T10:23:01Z",
     "url": "",
-    "what": "review #3529 on claude-3"
+    "what": "build #3633 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-10T09:39:46Z",
