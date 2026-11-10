@@ -15303,6 +15303,7 @@
         "by": "`claude` (strong)",
         "sha": "84c59caed84408301c095ed299599dd9c4f382ca"
       },
+      "closed_at": "2026-11-10T02:52:26Z",
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -15323,6 +15324,7 @@
       "last_findings": [],
       "live": "fixing-ci",
       "merge_owner": "claude-3",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
