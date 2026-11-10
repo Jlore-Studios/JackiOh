@@ -150,7 +150,9 @@ does to the cards through the classifier and names it:
   games (`RULE_MIN_GAMES`), or a base build that refuses the head's decks. A patch restarts every
   card's statistics (R1367000), so it waits for a change broad enough to move them (#2455,
   R2455000); the bar was 10 families, and any one divergence without a card, until then.
-- **Micro, the newest version with the next letter** (after v0.3.18, v0.3.18b, then v0.3.18c):
+- **Micro, the newest version with the next letters** (after v0.3.18, v0.3.18b, then v0.3.18c;
+  after v0.3.18z, v0.3.18aa, then v0.3.18ab … v0.3.18zz and v0.3.18aaa, so a line never runs out,
+  R3631000; v0.5.13, which R3471000 named after v0.5.12z before then, is a micro too):
   anything smaller, any change to wording alone however many cards it touches, and any change to how
   cards look (the client's `apps/web/src/cards/`: faces, art, frames, foils, marks), which plays no
   card (R2529000).
