@@ -18793,13 +18793,30 @@
         "mode": "fullsend",
         "onto": "bot/issue-3596"
       }
+    },
+    "3600": {
+      "action": "plan",
+      "asks": [],
+      "in_lane": true,
+      "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-10T03:02:39Z",
+      "owner_why": "it plans it",
+      "pending_request": false,
+      "provider": "muse",
+      "run_id": "pending:275438a2-1794279730",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-10T03:02:39Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T03:01:57Z",
+    "at": "2026-11-10T03:02:39Z",
     "url": "",
-    "what": "plan #3388 on claude-1"
+    "what": "plan #3600 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T02:50:31Z",
