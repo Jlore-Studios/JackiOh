@@ -16800,30 +16800,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
+        "approvals": [],
         "builder": "muse",
         "built_by": "muse",
-        "carried": {
-          "by": "`muse` (medium)",
-          "conflicts": [],
-          "from": "c5231f685a6bf3e3e1dcd9313c937ae8f005b33a",
-          "main": "92c0696b2174bd6fb03998af5d9b3390eefbabe5"
-        },
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "provider": "muse",
-            "run": "42858399133",
-            "tier": "medium"
-          }
-        ],
+        "reviews": [],
         "sha": "f3945b9fc62055f9058d423fdcad3c6d54a358eb",
-        "tiers": {
-          "muse": "medium"
-        }
+        "tiers": {}
       }
     },
     "3624": {
