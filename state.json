@@ -18194,9 +18194,11 @@
         "by": "`muse` (medium)",
         "sha": "5fd6138b34156ac243d542379ed0bc851f2f7574"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-10T19:25:25Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-10T19:48:56Z",
         "family": "muse",
@@ -18206,6 +18208,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch (part 2 of 6): the desktop sheds load too: a slow frame window steps the shed ladder on every viewport\"} -->\n- What changed and why: a desktop director never published shed stages (`phone` gated `setShedLevel`), so a weak laptop GPU or high-refresh desktop kept every layer running however slow it got. Every viewport's director now sheds in `R3351000`'s ruled order on the same slow test and recovery, keeping\u2026\n- Files: [director.ts](/home/agent-muse/actions-runner-3/_work/_temp/work/item-3606/apps/web/src/fx/director.ts) (`phone` option, gate, and stale docs removed), [shed.ts](/home/agent-muse/actions-runner-3/_work/_temp/work/item-3606/apps/web/src/fx/shed.ts) (header re-scoped), [FxLayer.tsx](/home/agen\u2026\n- How tested (commands run, output seen):\n- - `pnpm --dir apps/web test src/fx/director.test.ts` \u2014 49 passed, including the three new `R3606000` tests (shed 1\u21922\u21923 and recover 2\u21921\u21920, healthy 16 ms frames stay full, beats mount at stage 3).\n- - `pnpm --dir apps/web test src/fx/shed.test.ts src/cards/motionSlots.test.ts src/fx/aura/AuraLayer.test.tsx src/fx/aura/TileAura.test.tsx` \u2014 38 passed.\n- - `pnpm --dir apps/web typecheck`, `cargo fmt --check`, eslint on all touched files \u2014 clean.\n- - `cargo jackioh spec check` \u2014 `1898 rulings, 4922 proofs, 61863 citations in 4063 files, 25241 links: ok`.\n- Decisions the issue did not settle: none beyond the plan \u2014 no desktop-specific threshold constant, per the plan's decided open question (the existing slow test already clears a healthy desktop; a future probe regression is a new issue). No departure from the plan.\n- Reviewers should look twice at: the `R3606000.md` body wording (new ruling prose) and the `R3351000.md` one-line re-scope, since `spec check` only validates ids, links, and proofs, not meaning.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-3606 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-3606/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 3606,
       "kind": "review",
       "live": "reviewing",
