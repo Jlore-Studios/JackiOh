@@ -227,7 +227,7 @@ Discounts cut Coin prices only, and a price the run cannot pay is refused.
 
 **Shrine** (a monastery or a statue): up to `RUN_SHRINE_OFFERS` blessings not held; the player takes one or none, for the rest of the run.
 
-Abandoning at any time ends a run, lost. A run whose version this build no longer carries ends the same way ([[R3496000]]). The start screen asks first, and the map links back to the Play menu ([[R2972000]]). An ended run refuses every action.
+Abandoning at any time ends a run, lost, still scored and paid Embers under [[§15.10]]. A run whose version this build no longer carries, or whose log folds under no carried version, ends lost with no row, no score and no Embers because there is nothing to fold to score it ([[R3496000]]). The start screen asks first, and the map links back to the Play menu ([[R2972000]]). An ended run refuses every action.
 
 ### 15.9 Curses
 
