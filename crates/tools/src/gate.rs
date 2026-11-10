@@ -887,6 +887,11 @@ pub(crate) struct Timing {
     raw_ms: f64,
     nodes: i64,
     reason: String,
+    /// R3498000: the decision's `SearchStats.replied` and `worldsScored`, and whether it fell short
+    /// (`Decision::fell_short`). Reported only: the gate's search has no clock, so nothing fails on them.
+    replied: usize,
+    worlds_scored: usize,
+    fell_short: bool,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -1024,6 +1029,7 @@ pub(crate) fn time_decision(
     let mut raw_ms = f64::INFINITY;
     let mut nodes: i64 = 0;
     let mut reason = String::new();
+    let (mut replied, mut worlds_scored, mut fell_short) = (0, 0, false);
     for _ in 0..AI_GATE.perf_repeats {
         let unit = yardstick_ms()?;
         let started = Instant::now();
@@ -1031,6 +1037,7 @@ pub(crate) fn time_decision(
             rng: rng.clone(),
             budget,
             should_stop: None,
+            wrap_up: None,
         };
         let decision = decide(state, seat, &mut options);
         let ms = started.elapsed().as_secs_f64() * MS_PER_SECOND;
@@ -1042,6 +1049,13 @@ pub(crate) fn time_decision(
         reason = decision
             .as_ref()
             .map_or_else(|| "none".to_string(), |decision| literal(&decision.reason));
+        (replied, worlds_scored, fell_short) = decision.as_ref().map_or((0, 0, false), |decision| {
+            (
+                decision.stats.replied,
+                decision.stats.worlds_scored,
+                decision.fell_short(),
+            )
+        });
         if ratio * reference < limit_ms {
             break;
         }
@@ -1051,6 +1065,9 @@ pub(crate) fn time_decision(
         raw_ms,
         nodes,
         reason,
+        replied,
+        worlds_scored,
+        fell_short,
     })
 }
 

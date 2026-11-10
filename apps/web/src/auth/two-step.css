@@ -31,3 +31,16 @@
   -webkit-user-select: all;
   user-select: all;
 }
+
+/* R3507000: the linked Roblox account's headshot and name (auth/LinkedAccounts.tsx), on one line; the
+   image's size is the component's own constant. */
+.tavern.app-shell .account-linked-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.tavern.app-shell .account-linked-identity > img {
+  flex: none;
+  border-radius: var(--radius-round);
+}

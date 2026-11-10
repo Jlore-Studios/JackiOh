@@ -130,215 +130,68 @@ pub fn script_v0_5_11() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{give_lucky, hits, next_turn_of, weapon_board};
-    use jackioh_engine::testkit::*;
+    use crate::stinkyscape_family as fam;
 
-    const P1: PlayerId = PlayerId::P1;
-    const P2: PlayerId = PlayerId::P2;
-
-    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
-
-    /// The printed ranges, base and Radiant, the Radiant face's Lucky and its health.
-    const BASE_RANGE: (i32, i32) = (1, 3);
-    const RADIANT_RANGE: (i32, i32) = (2, 4);
-    const RADIANT_LUCKY: i32 = 1;
-    const RADIANT_HEALTH: i32 = 4;
-    const ROUNDS: i32 = 1;
-    /// The printed odds as the test reads them, lowest first.
-    const PRINTED: [i32; 3] = [60, 30, 10];
     /// How many seeds a sweep of seeds walks.
     const SEEDS: usize = 100;
-
-    /// A Menace no activation can bring down, so every round hits it.
-    fn wall() -> Value {
-        json!({ "def": MENACE, "statsOverride": { "attack": 9, "health": 40 } })
-    }
-
-    fn flak_on(radiant: bool, seed: &str, p2: Value) -> Scenario {
-        weapon_board(
-            seed,
-            json!({ "field": [{ "def": ID, "radiant": radiant }, VANILLA] }),
-            p2,
-        )
-    }
-
-    /// Two walls for p2.
-    fn walls() -> Value {
-        json!({ "field": [wall(), wall()] })
-    }
-
-    /// One roll over `lo..=hi` as the text reads: 60, 30 and 10 from the low end, a value past the
-    /// third weighted as the third.
-    fn printed_roll(rng: &mut Rng, (lo, hi): (i32, i32)) -> i32 {
-        let weight = |amount: i32| PRINTED[((amount - lo) as usize).min(PRINTED.len() - 1)];
-        let mut at = rng.int((lo..=hi).map(weight).sum());
-        for amount in lo..=hi {
-            if at < weight(amount) {
-                return amount;
-            }
-            at -= weight(amount);
-        }
-        hi
-    }
-
-    /// Activates `card` and holds its hits to the rolls a copy of the match rng gives: each enemy Unit
-    /// in lane order, round after round, each its own roll over `range` with `lucky` more kept at the
-    /// higher, and no other draw; the enemy hero takes nothing (#2657).
-    fn fire(s: &mut Scenario, card: &str, range: (i32, i32), lucky: i32) -> Vec<(String, i32)> {
-        let targets: Vec<String> = (1..=UNIT_ZONES)
-            .filter_map(|lane| s.unit(P2, lane))
-            .map(|unit| unit.id)
-            .collect();
-        let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
-        let health = s.state().players.p2.hero.health;
-        s.activate(card, json!({}));
-        let mut expected: Vec<(String, i32)> = Vec::new();
-        for _ in 0..ROUNDS {
-            for target in &targets {
-                let amount = rng.lucky(lucky, |rng| printed_roll(rng, range), Ord::max);
-                expected.push((target.clone(), amount));
-            }
-        }
-        let got = hits(s.last_events());
-        assert_eq!(got, expected, "one roll per target and round");
-        assert_eq!(s.state().rng_cursor, rng.cursor(), "1 + Lucky draws per hit, no other");
-        assert!(got.iter().all(|(target, _)| target != "hero-p2"), "no hero hit since #2657");
-        s.expect_health(P2, health);
-        s.expect_health(P1, HERO_HEALTH);
-        got
-    }
-
-    /// Activations over `SEEDS` seeds of the given face against two walls; how often each amount came
-    /// up, and whether the two walls ever took different amounts in one round.
-    fn over_the_seeds(radiant: bool, range: (i32, i32), lucky: i32) -> (IndexMap<i32, usize>, bool) {
-        let mut counts: IndexMap<i32, usize> = IndexMap::new();
-        let mut differed = false;
-        for seed in 0..SEEDS {
-            let mut s = flak_on(radiant, &format!("s053-seeds-{radiant}-{seed}"), walls());
-            let got = fire(&mut s, ID, range, lucky);
-            differed |= got[0].1 != got[1].1;
-            for (_, amount) in got {
-                *counts.entry(amount).or_default() += 1;
-            }
-        }
-        (counts, differed)
-    }
+    const ROUNDS: i32 = 1;
 
     mod base {
         use super::*;
 
-        /// R767000: the script kept for the replays of v0.5.9f and before rolls for the enemy hero too,
-        /// after each enemy Unit.
         #[test]
         fn r767000_the_script_kept_for_v0_5_9f_hits_the_enemy_hero_too() {
-            crate::under_kept(ID, script_v0_5_9f(), || {
-                let mut s = flak_on(false, "s005-kept-9e", json!({ "field": [wall()] }));
-                let target = s.unit_at(P2, 1).id;
-                s.activate(ID, json!({}));
-                let got = hits(s.last_events());
-                let round: Vec<String> = vec![target, "hero-p2".to_string()];
-                let expected: Vec<String> = (0..ROUNDS).flat_map(|_| round.clone()).collect();
-                let targets: Vec<String> = got.into_iter().map(|(target, _)| target).collect();
-                assert_eq!(targets, expected);
-            });
+            fam::flak_kept_v9(ID, "s005-kept-9e", ROUNDS, script_v0_5_9f);
         }
 
-        /// R767000: the script kept for the replays of v0.5.11 and before, under that version's declared
-        /// `damage`, dealt it to each enemy Unit and then the enemy hero, round after round, rolling
-        /// nothing.
         #[test]
         fn r767000_the_script_kept_for_v0_5_11_deals_its_declared_damage_and_rolls_nothing() {
-            // v0.5.11's number, which its definition declared and the replay carries.
-            const DAMAGE: i32 = 2;
-            let old = |def: &mut CardDef| {
-                let declared: Vec<Param> = serde_json::from_value(json!([{
-                    "key": "damage", "base": DAMAGE, "radiant": 4, "better": "up", "step": 1, "min": 1
-                }]))
-                .expect("v0.5.11's damage");
-                def.params.get_or_insert_with(Vec::new).extend(declared);
-            };
-            crate::under_kept_as(ID, script_v0_5_11(), old, || {
-                let mut s = flak_on(false, "s053-kept", json!({ "field": [wall()] }));
-                let target = s.unit_at(P2, 1).id;
-                let cursor = s.state().rng_cursor;
-                s.activate(ID, json!({}));
-                let round = [(target, DAMAGE), ("hero-p2".to_string(), DAMAGE)];
-                let expected: Vec<(String, i32)> = (0..ROUNDS).flat_map(|_| round.clone()).collect();
-                assert_eq!(hits(s.last_events()), expected);
-                assert_eq!(s.state().rng_cursor, cursor, "no roll drawn");
-            });
+            fam::flak_kept_v11(ID, "s053-kept", ROUNDS, script_v0_5_11);
         }
 
         #[test]
         fn r1862001_r2521001_each_enemy_unit_takes_its_own_1_to_3_and_the_hero_none() {
-            let (counts, differed) = over_the_seeds(false, BASE_RANGE, 0);
-            assert!(differed, "two enemies can take different amounts");
-            let (lo, hi) = BASE_RANGE;
+            let seen = fam::flak_over_the_seeds(ID, "s053", false, fam::FLAK_BASE_RANGE, 0, ROUNDS, SEEDS);
+            let counts = &seen.counts;
+            assert!(seen.differed, "two enemies can take different amounts");
+            let (lo, hi) = fam::FLAK_BASE_RANGE;
             let [one, two, three] = [lo, lo + 1, hi].map(|amount| counts.get(&amount).copied().unwrap_or(0));
-            assert_eq!(one + two + three, counts.values().sum::<usize>(), "1 to 3 only: {counts:?}");
+            assert_eq!(
+                one + two + three,
+                counts.values().sum::<usize>(),
+                "1 to 3 only: {counts:?}"
+            );
             assert!(one > two && two > three && three > 0, "60/30/10: {counts:?}");
         }
 
         #[test]
         fn r2521001_r1438_given_lucky_rolls_each_target_again_keeping_the_higher() {
-            for seed in 0..SEEDS {
-                let mut s = flak_on(false, &format!("s053-given-{seed}"), walls());
-                give_lucky(&mut s, ID, 1);
-                fire(&mut s, ID, BASE_RANGE, 1);
-            }
+            fam::flak_lucky_again(ID, "s053", fam::FLAK_BASE_RANGE, SEEDS, ROUNDS);
         }
 
         #[test]
         fn r384_once_a_turn_a_second_use_refused() {
-            let mut s = flak_on(false, "s053-once", json!({}));
-            fire(&mut s, ID, BASE_RANGE, 0);
-            s.expect_refused_with(|s| s.activate(ID, json!({})), "already been used");
-            next_turn_of(&mut s, P1);
-            fire(&mut s, ID, BASE_RANGE, 0);
+            fam::flak_once_a_turn(ID, "s053", fam::FLAK_BASE_RANGE, ROUNDS);
         }
 
         #[test]
         fn r1086_r1852001_an_equipped_host_takes_the_activate_and_is_no_starship_piece() {
-            let mut s = weapon_board(
-                "s053-equip",
-                json!({ "hand": [ID], "field": [VANILLA] }),
-                walls(),
-            );
-            let host = s.unit_at(P1, 1).id;
-            s.play(ID, json!({ "zone": 1, "equip": true }));
-            let fused = s.card(host.as_str()).clone();
-            assert!(!unit_has(s.state(), &fused, KeywordKind::StarshipPiece));
-            fire(&mut s, host.as_str(), BASE_RANGE, 0);
+            fam::flak_equip_takes_activate(ID, "s053", fam::FLAK_BASE_RANGE, ROUNDS);
         }
 
         #[test]
         fn r386_r2521001_an_upgrade_of_most_rolls_past_the_third_at_the_thirds_weight() {
-            let mut seen: IndexSet<i32> = IndexSet::new();
-            for seed in 0..SEEDS {
-                let mut s = flak_on(false, &format!("s053-most-{seed}"), walls());
-                let most = crate::upgrade_number(&mut s, ID, "most");
-                seen.extend(fire(&mut s, ID, (BASE_RANGE.0, most), 0).into_iter().map(|(_, a)| a));
-            }
-            assert!(seen.contains(&(BASE_RANGE.1 + 1)), "{seen:?}");
+            fam::flak_upgrade_most(ID, "s053", fam::FLAK_BASE_RANGE, SEEDS, ROUNDS);
         }
 
         #[test]
         fn r386_r2521001_an_upgrade_of_least_lifts_the_low_end() {
-            let mut s = flak_on(false, "s053-least", walls());
-            let least = crate::upgrade_number(&mut s, ID, "least");
-            let got = fire(&mut s, ID, (least, BASE_RANGE.1), 0);
-            assert!(got.iter().all(|(_, amount)| *amount >= least), "{got:?}");
+            fam::flak_upgrade_least(ID, "s053", fam::FLAK_BASE_RANGE, ROUNDS);
         }
 
         #[test]
         fn r2521001_a_lift_of_least_past_most_rolls_between_the_two() {
-            for seed in 0..SEEDS {
-                let mut s = flak_on(false, &format!("s053-crossed-{seed}"), walls());
-                step_param(s.card_mut(ID), "least", BASE_RANGE.1);
-                // least 4 and most 3: between 3 and 4, 3 first.
-                fire(&mut s, ID, (BASE_RANGE.1, BASE_RANGE.1 + 1), 0);
-            }
+            fam::flak_roll_between(ID, "s053", fam::FLAK_BASE_RANGE, SEEDS, ROUNDS);
         }
     }
 
@@ -347,34 +200,39 @@ mod tests {
 
         #[test]
         fn r1862001_r2521001_each_enemy_rolls_2_to_4_twice_keeping_the_higher() {
-            let (counts, differed) = over_the_seeds(true, RADIANT_RANGE, RADIANT_LUCKY);
-            assert!(differed, "two enemies can take different amounts");
+            let seen = fam::flak_over_the_seeds(
+                ID,
+                "s053",
+                true,
+                fam::FLAK_RADIANT_RANGE,
+                fam::FLAK_RADIANT_LUCKY,
+                ROUNDS,
+                SEEDS,
+            );
+            let counts = &seen.counts;
+            assert!(seen.differed, "two enemies can take different amounts");
             let total: usize = counts.values().sum();
-            let (lo, hi) = RADIANT_RANGE;
-            assert!(counts.keys().all(|amount| (lo..=hi).contains(amount)), "{counts:?}");
+            let (lo, hi) = fam::FLAK_RADIANT_RANGE;
+            assert!(
+                counts.keys().all(|amount| (lo..=hi).contains(amount)),
+                "{counts:?}"
+            );
             assert!((lo..=hi).all(|amount| counts.contains_key(&amount)), "{counts:?}");
             // Lucky 1 lifts the odds off the low end: a 2 needs both rolls to be 2s (36%, not 60%).
-            let low = counts.get(&RADIANT_RANGE.0).copied().unwrap_or(0);
+            let low = counts.get(&fam::FLAK_RADIANT_RANGE.0).copied().unwrap_or(0);
             assert!(2 * low < total, "{counts:?}");
         }
 
         #[test]
         fn r2521001_a_radiant_first_hit_is_the_higher_of_its_two_rolls() {
-            for seed in 0..SEEDS {
-                let mut s = flak_on(true, &format!("s053-radiant-pair-{seed}"), walls());
-                let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
-                let first = printed_roll(&mut rng, RADIANT_RANGE);
-                let second = printed_roll(&mut rng, RADIANT_RANGE);
-                let got = fire(&mut s, ID, RADIANT_RANGE, RADIANT_LUCKY);
-                assert_eq!(got[0].1, first.max(second));
-            }
-        }
-
-        #[test]
-        fn its_health_is_doubled() {
-            let s = flak_on(true, "s053-health", json!({}));
-            let view = s.stats(ID);
-            assert_eq!((view.attack, view.health), (0, RADIANT_HEALTH));
+            fam::flak_radiant_pair(
+                ID,
+                "s053",
+                fam::FLAK_RADIANT_RANGE,
+                fam::FLAK_RADIANT_LUCKY,
+                SEEDS,
+                ROUNDS,
+            );
         }
     }
 }

@@ -283,7 +283,9 @@ pub fn beam_search_with(
 
     // Open lines at maxDepth, or where the counter refused, are closed where they stand; then the lane
     // variants (#1797), after every line the beam would close without them, so a tie goes to the first
-    // lane.
+    // lane. R3498000: a wrap-up that refused the beam's exploring lets these endTurns through, so that the
+    // lines it cut short end their turn and can be replied to; a counter without one ignores this.
+    counter.end_exploring();
     let open_lines = left_open
         .into_iter()
         .map(|line| (line.state, line.actions))

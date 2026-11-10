@@ -177,6 +177,11 @@ pub(crate) fn never_defense_kept(mut scripts: CardScripts, base: bool, radiant: 
     scripts
 }
 
+/// #3483: the Stinkyscape families' shared card-test bodies (beam, repeater, cannon, flak,
+/// miner, asteroid and drone helpers), one body per family instead of one copy per card.
+#[cfg(test)]
+pub(crate) mod stinkyscape_family;
+
 /// Scenario helper with shipped cards registered.
 #[cfg(test)]
 pub(crate) fn scenario(opts: serde_json::Value) -> jackioh_engine::testkit::Scenario {
