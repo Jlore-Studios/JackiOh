@@ -18044,19 +18044,9 @@
     "what": "plan #3546 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-10T17:34:54Z",
+    "at": "2026-11-10T17:55:52Z",
     "notes": [
-      "#3641: `claude-1` can start again, so its hold is lifted",
-      "delivered review #3635 on claude-6 (run 42864677465): reviewed",
-      "delivered revise #3623 on muse (run 42864485782): built",
-      "delivered suggest on claude-7 (run 42861071882): interrupted",
-      "delivered plan #3546 on claude-6 (run 42858589147): failed",
-      "started revise #3641 on claude-1 (run 42867395922)",
-      "started revise #3623 on muse (run 42867564621)",
-      "started plan #3546 on claude-4 (run 42867729541)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
+      "runner gate: started 1 of 2 waiting run(s) (run 42865157964 on patches/ship-48f21c55aa); 1 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18762,7 +18752,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T17:34:54Z",
+  "loop_tick": "2026-11-10T17:55:52Z",
   "machine_disk": {
     "issue": null,
     "reading": {
