@@ -3184,15 +3184,30 @@ button.modifier-badge[data-open="true"] {
   }
 
   /* #2876: the lanes share the field's height, so no band of mat stays above the opponent's
-     backrow or below yours (the roomy pattern: the field is the board's `1fr` row). */
+     backrow or below yours (the roomy pattern: the field is the board's `1fr` row).
+
+     #3633: the field and its row of lanes state their minimum height, the lanes' four rows at
+     their floor (`--lane-row-min`) and the three gaps, instead of having Blink learn it. Learning
+     it laid the lanes out twice on every layout that reached them, a shake's, a hand's or a
+     card's: once with no height, where each row is at its floor, and once in the field, where each
+     row is the lanes' share. Each zone is a size container and its card is sized off it (`cqw`,
+     `cqh`, below), so both passes restyled every field card, over a hundred milliseconds a time on
+     a phone throttled 4x (R3351000). The minimum is the one Blink learnt: `content-box` makes the
+     field's `min-height` its rows', whatever its padding and border, so every box is where it was. */
   .field {
+    --lane-row-min: var(--card-h);
+    --lanes-min: calc(4 * var(--lane-row-min) + 3 * var(--gap));
+
+    box-sizing: content-box;
+    min-height: var(--lanes-min);
+    grid-template-rows: minmax(var(--lanes-min), 1fr);
     align-content: stretch;
   }
 
   .lane {
     align-self: center;
     height: 100%;
-    grid-template-rows: repeat(4, minmax(var(--card-h), 1fr));
+    grid-template-rows: repeat(4, minmax(var(--lane-row-min), 1fr));
   }
 
   /* #2876: a zone answers its card's size to itself, so the card below reads the zone's own
@@ -3801,8 +3816,13 @@ button.modifier-badge[data-open="true"] {
    End turn, and on a phone held landscape your whole hand, below the screen.
 
    Only the top edge is padded for a notch here: the board pads its own sides and bottom
-   (`env(safe-area-inset-*)`, the phone layouts above), and the chrome row is inset to match. */
-.app-shell.app-shell--wide:has(> .game) {
+   (`env(safe-area-inset-*)`, the phone layouts above), and the chrome row is inset to match.
+
+   The shell is the game's host by `[data-game-host]`, which Game sets on its parent while it is
+   mounted (Game.tsx), not by `:has(> .game)`: a `:has()` followed by `> *` or `> :not(.game)`
+   made Blink restyle the whole shell, the board and its effects included, on every change under
+   it, a hundred milliseconds a time on a throttled phone (#3633; hasSelectors.test.ts). */
+.app-shell.app-shell--wide[data-game-host] {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-rows: auto auto auto minmax(0, 1fr);
@@ -3812,24 +3832,24 @@ button.modifier-badge[data-open="true"] {
   padding-top: max(var(--space-6), env(safe-area-inset-top));
 }
 
-.app-shell--wide:has(> .game) > * {
+.app-shell--wide[data-game-host] > * {
   grid-column: 1 / -1;
   min-width: 0;
   margin: 0 0 var(--space-4);
 }
 
-.app-shell--wide:has(> .game) > .screen-nav {
+.app-shell--wide[data-game-host] > .screen-nav {
   grid-column: 1;
   grid-row: 1;
   align-self: center;
 }
 
-.app-shell--wide:has(> .game) > .screen-nav + .match-bar {
+.app-shell--wide[data-game-host] > .screen-nav + .match-bar {
   grid-column: 2;
   grid-row: 1;
 }
 
-.app-shell--wide:has(> .game) > :not(.game) {
+.app-shell--wide[data-game-host] > :not(.game) {
   margin-inline: max(0px, calc(env(safe-area-inset-left) - var(--space-6))) max(0px, calc(env(safe-area-inset-right) - var(--space-6)));
 }
 
@@ -3850,25 +3870,25 @@ button.modifier-badge[data-open="true"] {
 /* Phones: the shell's frame and the chrome row come down to what a thumb needs. The match bar is
    one line, cut with an ellipsis rather than wrapped into a second. */
 @media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
-  .app-shell.app-shell--wide:has(> .game) {
+  .app-shell.app-shell--wide[data-game-host] {
     padding: max(var(--space-3), env(safe-area-inset-top)) var(--space-6) var(--space-3);
   }
 
-  .app-shell--wide:has(> .game) > * {
+  .app-shell--wide[data-game-host] > * {
     margin-bottom: var(--space-3);
   }
 
-  .app-shell--wide:has(> .game) > .game {
+  .app-shell--wide[data-game-host] > .game {
     margin-bottom: 0;
   }
 
-  .app-shell--wide:has(> .game) > .match-bar {
+  .app-shell--wide[data-game-host] > .match-bar {
     flex-wrap: nowrap;
     padding: var(--space-2) var(--space-4);
     font-size: var(--type-sm);
   }
 
-  .app-shell--wide:has(> .game) > .match-bar > span:first-child {
+  .app-shell--wide[data-game-host] > .match-bar > span:first-child {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3878,7 +3898,7 @@ button.modifier-badge[data-open="true"] {
   /* B46: the clock keeps its words on one line beside the cut first span (clock.css keeps the
      urgent pill's words too). Squeezed word-by-word it stood the bar three lines tall, and the
      board's cards — already at their 44px floor at 390x664 — spilled 9px past the screen. */
-  .app-shell--wide:has(> .game) > .match-bar > .clock {
+  .app-shell--wide[data-game-host] > .match-bar > .clock {
     flex: none;
     white-space: nowrap;
   }

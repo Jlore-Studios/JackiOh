@@ -43,7 +43,10 @@
 
 /* R658: a card option lifts on touch, so the browser must not pan under it; list and plain options
    keep the panel scrolling, and are dragged with a mouse or a pen. */
-.game:has(> .board[data-drag="on"]) .prompt .prompt-card {
+/* #3633: Game's `data-drag` and FxLayer's `data-fx-hold` stand on the game root where `.game:has()`
+   read the board's and the effects layer's (a `:has()` on the game restyled the whole board on every
+   change). The doubled `[data-drag]` keeps the specificity of `:has(> .board[data-drag="on"])`. */
+.game[data-drag][data-drag="on"] .prompt .prompt-card {
   touch-action: none;
 }
 
@@ -157,7 +160,7 @@
 }
 
 /* #3347: once the effects layer's stand-in flies the played card in, the landing ghost steps aside. */
-.game:has(.fx-hold) .drag-landing {
+.game[data-fx-hold] .drag-landing {
   visibility: hidden;
 }
 

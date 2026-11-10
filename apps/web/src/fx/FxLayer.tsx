@@ -22,6 +22,7 @@ import {
   type RunnerSignal,
 } from "../game/animations.ts";
 import { CatalogContext, type CardLookup } from "../game/catalog.ts";
+import { rootVars, type RootVars } from "../game/rootVars.ts";
 import { boardShakeSink, resolveAnchor } from "./anchors.ts";
 import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE, FX_MOBILE_WIDTH, FX_NEXT_REFRESH_MODIFIER_ID } from "./constants.ts";
 import { delayCues, planFx, planHandover, planLethal, planResult } from "./cues.ts";
@@ -80,6 +81,17 @@ export type FxLayerProps = {
 const SQUEEZE = "--anim-squeeze";
 const SCALE = "--anim-scale";
 
+/**
+ * #3633: what the layer marks on its parent, the game, while it is so: its effects on, a turn banner
+ * up, a stand-in held. animations.css, fx.css and drag.css key off these where they read
+ * `.game:has(> .fx-layer[data-fx="on"])`, `.game:has(> .fx-layer [data-fx="banner"])` and
+ * `.game:has(.fx-hold)`: a `:has()` on the game made every change under it restyle the board, a
+ * hundred milliseconds a frame on a throttled phone (R3351000).
+ */
+export const FX_LAYER_MARK = "data-fx-layer";
+export const FX_BANNER_MARK = "data-fx-banner";
+export const FX_HOLD_MARK = "data-fx-hold";
+
 export function defaultNow(): number {
   return performance.now();
 }
@@ -122,9 +134,6 @@ function riderSides(entry: AnimationEntry): Side[] {
   );
 }
 
-function removeSqueeze(root: HTMLElement | null): void {
-  root?.parentElement?.style.removeProperty(SQUEEZE);
-}
 
 export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerProps): ReactElement {
   const [settings] = useFxSettings();
@@ -139,6 +148,20 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   const lookup = useContext(CatalogContext);
 
   const rootRef = useRef<HTMLDivElement | null>(null);
+  // #3633: `--anim-squeeze` goes onto the elements that read it (game/rootVars.ts), not onto the parent's
+  // own style: there each entry's start restyled the whole game.
+  const squeeze = useRef<RootVars | null>(null);
+  useLayoutEffect(() => {
+    const parent = rootRef.current?.parentElement ?? null;
+    if (parent === null) return undefined;
+    const owned = rootVars(parent);
+    squeeze.current = owned;
+    return () => {
+      owned.release();
+      if (squeeze.current === owned) squeeze.current = null;
+    };
+  }, []);
+  const removeSqueeze = (): void => squeeze.current?.remove(SQUEEZE);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const domRef = useRef<HTMLDivElement | null>(null);
   const director = useRef<FxDirector | null>(null);
@@ -206,6 +229,32 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     else director.current?.resume();
   }, [paused]);
 
+  // #3633: the marks above. The banner and the holds come and go inside the effects' own root, so they
+  // are read off it as it changes; a mutation's record is read before the frame it lands in is drawn.
+  useLayoutEffect(() => {
+    const parent = rootRef.current?.parentElement ?? null;
+    if (parent === null || !enabled) return undefined;
+    parent.setAttribute(FX_LAYER_MARK, "on");
+    return () => parent.removeAttribute(FX_LAYER_MARK);
+  }, [enabled]);
+  useLayoutEffect(() => {
+    const parent = rootRef.current?.parentElement ?? null;
+    const domRoot = domRef.current;
+    if (parent === null || domRoot === null) return undefined;
+    const mark = (): void => {
+      parent.toggleAttribute(FX_BANNER_MARK, domRoot.querySelector('[data-fx="banner"]') !== null);
+      parent.toggleAttribute(FX_HOLD_MARK, domRoot.querySelector(".fx-hold") !== null);
+    };
+    mark();
+    const observer = new MutationObserver(mark);
+    observer.observe(domRoot, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      parent.removeAttribute(FX_BANNER_MARK);
+      parent.removeAttribute(FX_HOLD_MARK);
+    };
+  }, [enabled, still]);
+
   // The reduce setting acts like the media query (R200): index.css zeroes --anim-scale on :root,
   // this zeroes it on the game root.
   useLayoutEffect(() => {
@@ -236,8 +285,8 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
             // A slam's anticipation and a set piece's hold (R2722001, R2785000) are a wait before the motion, not a slower motion.
             const motionMs = entry.durationMs - leadMs(entry);
             // An event type this build does not know has no row (issue #769): no squeeze.
-            if (table > 0) parent.style.setProperty(SQUEEZE, (motionMs / table).toFixed(3));
-            else removeSqueeze(root);
+            if (table > 0) squeeze.current?.set(SQUEEZE, (motionMs / table).toFixed(3));
+            else removeSqueeze();
           }
           const reached = riderSides(entry);
           if (reached.length > 0) {
@@ -273,11 +322,11 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
           planEnv().memory.remember(signal.entry.events);
           return;
         case "idle":
-          removeSqueeze(root);
+          removeSqueeze();
           played.current = [];
           return;
         case "drain": {
-          removeSqueeze(root);
+          removeSqueeze();
           director.current?.clear();
           memory.current?.clear();
           const cut = signal.entries.filter((entry) => !played.current.includes(entry));
@@ -287,11 +336,11 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
         }
         case "skip":
           // R2785000: a skipped set piece cuts to its end; the next entry's start plays on as ever.
-          removeSqueeze(root);
+          removeSqueeze();
           director.current?.cut();
           return;
         case "reset":
-          removeSqueeze(root);
+          removeSqueeze();
           director.current?.clear();
           memory.current?.clear();
           played.current = [];
@@ -302,7 +351,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     const unsubscribe = queue.subscribeSignals(onSignal);
     return () => {
       unsubscribe();
-      removeSqueeze(rootRef.current);
+      removeSqueeze();
     };
     // `planEnv` reads refs only, so the subscription depends on the queue alone.
   }, [queue]);

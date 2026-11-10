@@ -35,7 +35,7 @@
 // loop, stacked in its window (CardArt's `diorama` "all") in place of its live layers: the window answers a hover and a
 // press as one image does (R3340000), and on an attack its slices over the farthest swing as a subject does (artLive.css).
 
-import { useRef, type ReactElement } from "react";
+import { memo, useRef, type ReactElement } from "react";
 
 import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/shared";
 
@@ -160,7 +160,7 @@ function fxAttributesOf(plan: readonly KeywordFxPlan[], kind: Keyword["kind"]): 
   return entry === undefined ? {} : keywordFxAttributes(entry);
 }
 
-export function MinionFace({ face, unit, className, worn = false, keywordsOffFace = false, attacking = false }: MinionFaceProps): ReactElement {
+function MinionFace({ face, unit, className, worn = false, keywordsOffFace = false, attacking = false }: MinionFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   const stamp = useCardStamp(face, worn);
@@ -340,3 +340,10 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
     </span>
   );
 }
+
+/**
+ * #3633: a card drawn again with the face it had (its hint row, its highlight or a queue step changed
+ * around it) does not draw the face again: the art, the text and the marks are most of a card's work.
+ */
+const MemoMinionFace = memo(MinionFace);
+export { MemoMinionFace as MinionFace };

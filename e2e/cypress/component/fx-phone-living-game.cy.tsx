@@ -110,14 +110,17 @@ function holdsLivingBudget(label: string, scene: (attempt: number) => Cypress.Ch
     });
     // The run's output carries every sample too (cy.log prints nothing in run mode), so a CI log reads them.
     cy.task("layout:report", { spec: "fx-phone-living-game", sample: full, attempt }, { log: false });
-    const holds = frames > MIN_FRAMES && meanMs <= FX_PHONE_FRAME_BUDGET_MS && worstMs <= FX_PHONE_FRAME_WORST_MS;
-    if (holds || attempt >= FRAME_ATTEMPTS) {
-      expect(frames, `${label}: frames sampled`).to.be.greaterThan(MIN_FRAMES);
-      expect(meanMs, line).to.be.lessThanOrEqual(FX_PHONE_FRAME_BUDGET_MS);
-      expect(worstMs, `${label}: worst single frame`).to.be.lessThanOrEqual(FX_PHONE_FRAME_WORST_MS);
-      return;
-    }
-    holdsLivingBudget(label, scene, attempt + 1);
+    // Judged after the task has run, so the last play's row is in the log even when it fails (#3633).
+    cy.then(() => {
+      const holds = frames > MIN_FRAMES && meanMs <= FX_PHONE_FRAME_BUDGET_MS && worstMs <= FX_PHONE_FRAME_WORST_MS;
+      if (holds || attempt >= FRAME_ATTEMPTS) {
+        expect(frames, `${label}: frames sampled`).to.be.greaterThan(MIN_FRAMES);
+        expect(meanMs, line).to.be.lessThanOrEqual(FX_PHONE_FRAME_BUDGET_MS);
+        expect(worstMs, `${label}: worst single frame`).to.be.lessThanOrEqual(FX_PHONE_FRAME_WORST_MS);
+        return;
+      }
+      holdsLivingBudget(label, scene, attempt + 1);
+    });
   });
 }
 
@@ -306,15 +309,16 @@ describe("R3351000 the living game holds the phone budget", () => {
       /**
        * Plays the moment's events over `shown` and samples its flight. A retry resets the board
        * first, since the runner only plays events it has not seen: replaying the same events over
-       * the same board would sample an idle board and pass for nothing.
+       * the same board would sample an idle board and pass for nothing. `events` may name each
+       * attempt's own (the takeover's, below).
        */
-      const moment = (label: string, shown: PlayerView, events: GameEvent[], flight: () => void): void => {
+      const moment = (label: string, shown: PlayerView, events: GameEvent[] | ((attempt: number) => GameEvent[]), flight: () => void): void => {
         holdsLivingBudget(label, (attempt) => {
           if (attempt > 1) {
             rerender(shown);
             cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
           }
-          play(shown, events);
+          play(shown, typeof events === "function" ? events(attempt) : events);
           flight();
           return sampleFrames();
         });
@@ -344,10 +348,16 @@ describe("R3351000 the living game holds the phone budget", () => {
         cy.get(`${FX_DOM} [data-fx="rift"]`).should("exist");
       });
 
-      moment("Mythic takeover", dormant, [
-        { type: "cardPlayed", player: dormant.viewer, instanceId: "fx-yile", defId: "meditative-049", costPaid: 2 },
-        { type: "summoned", player: dormant.viewer, instanceId: "fx-yile", defId: "meditative-049", row: "units", lane: 3 },
-      ], () => {
+      // #3633: each attempt plays a Mythic of its own, as the forced shed's second takeover below does:
+      // the same card's takeover replayed over the plain board played no set piece (at 844x390 its
+      // second attempt never saw `data-takeover`).
+      moment("Mythic takeover", dormant, (attempt) => {
+        const instanceId = attempt === 1 ? "fx-yile" : `fx-yile-${String(attempt)}`;
+        return [
+          { type: "cardPlayed", player: dormant.viewer, instanceId, defId: "meditative-049", costPaid: 2 },
+          { type: "summoned", player: dormant.viewer, instanceId, defId: "meditative-049", row: "units", lane: 3 },
+        ];
+      }, () => {
         cy.get(GAME).should("have.attr", "data-takeover", "mythic");
         cy.get(`${FX_DOM} [data-fx="takeover"]`).should("have.attr", "data-look", "ai");
         cy.get(`${FX_DOM} [data-fx="takeover"] .fx-takeover-planes`).should("exist");

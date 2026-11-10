@@ -9,9 +9,11 @@
  * Every duration is also multiplied by `--anim-squeeze` (R201). The runner can hand an entry less
  * time than the table's figure: the effects-speed setting divides the table, and the burst budget
  * squeezes long bursts. The effects layer (src/fx/FxLayer.tsx) writes the ratio
- * `entry.durationMs / table duration` on the game root for each entry in flight and removes it when
+ * `entry.durationMs / table duration` for the game for each entry in flight and removes it when
  * the runner goes idle, so a shortened entry plays its whole motion instead of being cut off by the
- * view swap. Without the layer the fallback is 1 and every duration is exactly BUILD's.
+ * view swap. Without the layer the fallback is 1 and every duration is exactly BUILD's. #3633: it is
+ * written onto the elements that read it (game/rootVars.ts), not onto the root's own style, where
+ * each change restyled every element of the game.
  *
  * The keyframes keep their BUILD names (animations.ts `ANIMATIONS[type].animation`); the effects
  * pass enriched what happens inside them (flashes, a hotter burn, a charred edge climbing a dying
@@ -25,6 +27,20 @@
  * never drop-shadow or blur). A glow is a static layer faded by opacity. The one exception is
  * BUILD's own jk-chain-close, whose motion is the inset ring closing. css.test.ts enforces this.
  */
+
+/* #3633: the entry's times Game writes for board.css (game/rootVars.ts, `ROOT_VARS`), each
+   read on the element it is written onto. Registered not to inherit, so writing one restyles its
+   readers and none of what lies under them. */
+@property --impact-number-scale { syntax: "*"; inherits: false; }
+@property --impact-number-linger { syntax: "*"; inherits: false; }
+@property --slam-anticipation { syntax: "*"; inherits: false; }
+@property --slam-land-ms { syntax: "*"; inherits: false; }
+@property --set-piece-hold { syntax: "*"; inherits: false; }
+@property --set-piece-skip-delay { syntax: "*"; inherits: false; }
+@property --takeover-land-ms { syntax: "*"; inherits: false; }
+@property --riffle-ms { syntax: "*"; inherits: false; }
+@property --riffle-delay { syntax: "*"; inherits: false; }
+@property --deal-ms { syntax: "*"; inherits: false; }
 
 :root {
   /* Sign of the attackDeclared lunge: -1 lunges up the board (the viewer's own attacker),
@@ -170,15 +186,20 @@
   animation-fill-mode: both;
 }
 
+/* #3633: the game root's marks stand where `.game:has(...)` did: Game's `data-card-played` (a card's
+   play animating) and `data-game-over`, FxLayer's `data-fx-layer` (its effects on). A `:has()` on the
+   game made every change under it restyle the whole board. The doubled `[data-fx-layer]` keeps the
+   specificity of the `:has(> .fx-layer[data-fx="on"])` it replaces. */
+
 /* Played from a hand, the summon rides the 400 ms cardPlayed entry and the fx slam lands at 60% of
    it, so the silhouette waits for the card to leave the hand before it drops. */
-.game:has([data-animating="cardPlayed"]) .zone[data-animating="summoned"]::after {
+.game[data-card-played] .zone[data-animating="summoned"]::after {
   animation-delay: calc(110ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }
 
 /* The effects layer's stand-in carries the card in (B46); a silhouette as well would be the same card
    in two places at once. */
-.game:has(> .fx-layer[data-fx="on"]) .zone[data-animating="summoned"]::after {
+.game[data-fx-layer][data-fx-layer="on"] .zone[data-animating="summoned"]::after {
   content: none;
 }
 
@@ -1283,14 +1304,14 @@
 
 /* With the effects layer on, a stand-in of the stolen card flies to its new zone (fx/stage.ts), so
    the zone itself stays put and only glows where the card lands, as a summon's zone does. */
-.game:has(> .fx-layer[data-fx="on"]) .zone[data-animating="controlChanged"] {
+.game[data-fx-layer][data-fx-layer="on"] .zone[data-animating="controlChanged"] {
   --jk-land: var(--plague);
   animation-name: none;
   /* Under the effects layer, so the stand-in lands on the zone rather than behind it. */
   z-index: auto;
 }
 
-.game:has(> .fx-layer[data-fx="on"]) .zone[data-animating="controlChanged"]::before {
+.game[data-fx-layer][data-fx-layer="on"] .zone[data-animating="controlChanged"]::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -1837,7 +1858,7 @@
 }
 
 /* A finished game has no turn: the status line would still say whose turn the last view gave. */
-.game:has(> [data-testid="result-overlay"]) > [data-testid="turn-banner"] {
+.game[data-game-over] > [data-testid="turn-banner"] {
   visibility: hidden;
 }
 

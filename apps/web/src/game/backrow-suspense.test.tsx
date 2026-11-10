@@ -64,7 +64,8 @@ describe("R2111000 the set", () => {
 
   it("R2111000 the set lands where its thud sounds", () => {
     const set = keyframes(ANIM, "jk-trap-set");
-    const delay = /\.game:has\(\[data-animating="cardPlayed"\]\) \.zone\[data-animating="summoned"\]::after \{ animation-delay: calc\((\d+)ms/.exec(ANIM)?.[1];
+    // #3633: Game marks its root `data-card-played` where this rule read `.game:has([data-animating="cardPlayed"])`.
+    const delay = /\.game\[data-card-played\] \.zone\[data-animating="summoned"\]::after \{ animation-delay: calc\((\d+)ms/.exec(ANIM)?.[1];
     const landing = /(\d+)% \{ transform: translateY\(0\) scale\(1\.03, 0\.94\);/.exec(set)?.[1];
     expect(delay).toBeDefined();
     expect(landing).toBeDefined();

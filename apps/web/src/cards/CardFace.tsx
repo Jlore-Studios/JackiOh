@@ -112,7 +112,7 @@
 // Collection's grid, `turn`) it turns up to DIORAMA_TURN_MAX_DEG, its parallax scaled with it; in hand CARD_TILT_MAX_DEG.
 // It never breaks the frame: its subject stands in slices of more than one plane.
 
-import { useRef, type CSSProperties, type ReactElement } from "react";
+import { memo, useRef, type CSSProperties, type ReactElement } from "react";
 
 import { keywordKey, type CardType, type Rarity } from "@jackioh/shared";
 
@@ -353,7 +353,7 @@ export function hasCrest(face: FaceModel): boolean {
   return crested(frameRarity(face));
 }
 
-export function CardFace({
+function CardFace({
   face,
   layout = "full",
   className,
@@ -778,3 +778,10 @@ export function CardFace({
     </span>
   );
 }
+
+/**
+ * #3633: a card drawn again with the face it had (its hint row, its highlight or a queue step changed
+ * around it) does not draw the face again: the art, the text and the marks are most of a card's work.
+ */
+const MemoCardFace = memo(CardFace);
+export { MemoCardFace as CardFace };

@@ -230,7 +230,9 @@ describe("B16: a face-down card is a back and nothing else", () => {
 
 describe("B17: everything Card.tsx rendered before, it still renders", () => {
   it("B17 Card.tsx keeps every export", () => {
-    expect(typeof CardModule.default).toBe("function");
+    // #3633: the default export is the card component, memoized on `sameCardProps`.
+    expect(CardModule.default).toMatchObject({ $$typeof: Symbol.for("react.memo"), compare: CardModule.sameCardProps });
+    expect(typeof (CardModule.default as unknown as { type: unknown }).type).toBe("function");
     expect(CardModule.default).toBe(Card);
     for (const name of [
       "cx",
@@ -1033,5 +1035,39 @@ describe("R2098000 a hand card's term shows its rule on hover and on a long pres
     fireEvent.pointerUp(term, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
     fireEvent.click(term);
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("#3633 a card draws again only for what it draws", () => {
+  const onClick = (): void => undefined;
+  const base = (): CardModule.CardProps => ({
+    testId: "card-u1",
+    card: card({ instanceId: "u1" }),
+    target: { on: "unit", instanceId: "u1", side: "you", lane: 1 },
+    animating: new Map([["card-u7", "damage"]]) as AnimatingMap,
+    pops: { damage: 2 },
+    onClick,
+  });
+
+  it("#3633 sameCardProps: a queue step that names other cards, and inline data that holds the same, change nothing", () => {
+    const prev = base();
+    // A queue step hands every card a new map: one naming only other cards is the same to this one.
+    expect(CardModule.sameCardProps(prev, { ...prev, animating: new Map([["card-u8", "destroyed"]]) as AnimatingMap })).toBe(true);
+    // The target and the pops a parent builds anew each render count by what they hold.
+    expect(CardModule.sameCardProps(prev, { ...prev, target: { on: "unit", instanceId: "u1", side: "you", lane: 1 }, pops: { damage: 2 } })).toBe(true);
+    expect(CardModule.sameCardProps(prev, { ...prev, pops: { damage: 3 } })).toBe(false);
+    expect(CardModule.sameCardProps(prev, { ...prev, target: { on: "unit", instanceId: "u1", side: "you", lane: 2 } })).toBe(false);
+  });
+
+  it("#3633 sameCardProps: its own testid, its card- testid and its switch's animating, and any other new prop, draw it again", () => {
+    const prev = base();
+    for (const id of ["card-u1", testid.switchPosition("u1")]) {
+      expect(CardModule.sameCardProps(prev, { ...prev, animating: new Map([[id, "damage"]]) as AnimatingMap }), id).toBe(false);
+    }
+    const inHand = { ...prev, testId: testid.handCard("u1") };
+    expect(CardModule.sameCardProps(inHand, { ...inHand, animating: new Map([["card-u1", "activated"]]) as AnimatingMap })).toBe(false);
+    expect(CardModule.cardAnimatingKeys(inHand)).toEqual([testid.handCard("u1"), "card-u1", testid.switchPosition("u1")]);
+    expect(CardModule.sameCardProps(prev, { ...prev, onClick: () => undefined })).toBe(false);
+    expect(CardModule.sameCardProps(prev, { ...prev, card: card({ instanceId: "u1" }) })).toBe(false);
   });
 });
