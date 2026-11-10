@@ -17196,7 +17196,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-7",
-      "run_id": "pending:3eb59563-1794296407",
+      "run_id": "42777018983",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-10T07:41:08Z",
       "stop_requested": false,
