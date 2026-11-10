@@ -16960,18 +16960,18 @@
       "interruptions": 0,
       "issue": 3615,
       "kind": "revise",
-      "live": "fixing-ci",
+      "live": "revising",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
       "question": "No question; resuming when the test run delivers.",
       "queued_at": "2026-11-10T13:29:37Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "42790069329",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:8e28e09a-1794317615",
+      "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
       "source": "decision",
-      "started_at": "2026-11-10T09:21:43Z",
+      "started_at": "2026-11-10T13:34:42Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18220,9 +18220,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T13:20:03Z",
+    "at": "2026-11-10T13:34:42Z",
     "url": "",
-    "what": "review #3635 on claude-4"
+    "what": "revise #3626 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T13:11:33Z",
