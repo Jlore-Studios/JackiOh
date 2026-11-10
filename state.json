@@ -17862,16 +17862,24 @@
         ],
         "builder": "claude",
         "built_by": "claude-6",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/run/src/lib.rs"
+          ],
+          "from": "20b262ca86c95a8314ef58f0e7245d133125be2a",
+          "main": "903d3480b0334afbbd9fe82fc6295247d534268d"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-6",
-            "run": "42817952953",
+            "run": "42833097603",
             "tier": "strong"
           }
         ],
-        "sha": "20b262ca86c95a8314ef58f0e7245d133125be2a",
+        "sha": "6c46655f81e350d719a3c581a791f35e71dd72df",
         "tiers": {
           "claude": "strong"
         }
