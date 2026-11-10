@@ -61,8 +61,8 @@ mod tests {
     const FIELD_SPELL: &str = "core-064"; // Gifted Program
     const TRAP: &str = "core-060"; // Bear Honeypot
     const FIELD_TRAP: &str = "core-018"; // Bread and Butter
-    const FROSTSPATULA: &str = "classicplus-012-8"; // a Field Spell, "Animated on your turn"
-    const TOWER: &str = "classicplus-033"; // Ivory Tower, a Field Spell that fuses the first Unit stacked onto it
+    const FROSTSPATULA: &str = "classicplus-012-8"; // Frostspatula: a Field Spell, "Animated on your turn"
+    const TOWER: &str = "classicplus-033"; // Ivory Tower: a Field Spell that fuses the first Unit stacked onto it
     const VANILLA: &str = "core-008";
     const FILLER: &str = "core-005";
     const DECK: [&str; 4] = ["core-005", "core-005", "core-005", "core-005"];

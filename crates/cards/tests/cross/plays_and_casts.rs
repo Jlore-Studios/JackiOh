@@ -30,9 +30,9 @@ const GIFTED: &str = "core-064";
 const ROCK: &str = "core-066";
 const FULLSEND: &str = "core-078";
 const TWINSPELL: &str = "core-079";
-const INFINITE_RESERVES: &str = "core-075"; // an empty library gives a Rush Token card, not fatigue
-const GOING_LONG: &str = "core-084"; // hero Armor 2, so Super-Virus's 1 damage is absorbed
-const SUPER_VIRUS: &str = "core-090-1"; // Cast on draw: take 1 damage; shuffle 2 copies of this into your library
+const INFINITE_RESERVES: &str = "core-075"; // Infinite Reserves: an empty library gives a Rush Token card, not fatigue
+const GOING_LONG: &str = "core-084"; // Going Long: hero Armor 2, so Super-Virus's 1 damage is absorbed
+const SUPER_VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw: take 1 damage; shuffle 2 copies of this into your library
 const LIBRARY: &[&str] = &[
     VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
 ];
@@ -189,7 +189,7 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
 mod r2179002_a_card_answering_a_play_passes_a_cast_on_draw_by {
     use super::*;
 
-    const HONEYPOT: &str = "core-060"; // #60 Bear Honeypot: when your opponent plays a (1) Cost or less card.
+    const HONEYPOT: &str = "core-060"; // Bear Honeypot: when your opponent plays a cheap card.
 
     #[test]
     fn r2179002_unstable_clone_machine_copies_no_card_cast_on_draw_and_copies_the_next_card_played() {
@@ -426,8 +426,8 @@ mod r217_a_draw_a_cast_makes_continues_its_chain {
     }
 }
 
-const RECYCLER: &str = "classic-064"; // C #64 Malzahar's Recycler: "Whenever you discard cards, draw that many."
-const ALUNETH: &str = "meditative-080"; // M #80: "End of turn: Draw 3. They cost (1) less." (M #7 Introspection drew at the end of turn until #3140.)
+const RECYCLER: &str = "classic-064"; // Malzahar's Recycler: "Whenever you discard cards, draw that many."
+const ALUNETH: &str = "meditative-080"; // Aluneth: M #80: "End of turn: Draw 3. They cost less." (M #7 Introspection drew at the end of turn until #3140.)
 
 mod r2067000_one_action_casts_at_most_cast_on_draw_action_cap_cards {
     use super::*;
@@ -478,8 +478,8 @@ mod r2067000_one_action_casts_at_most_cast_on_draw_action_cap_cards {
     }
 }
 
-const CHAOS: &str = "core-095"; // #95 Call to Chaos (Core Edition), Spell, 4
-const MENACE: &str = "core-019"; // #19 Midrange Menace, a spare 3-cost Unit, so the turn never auto-ends
+const CHAOS: &str = "core-095"; // Call to Chaos (Core Edition): a Spell
+const MENACE: &str = "core-019"; // Midrange Menace: a spare Unit, so the turn never auto-ends
 
 /// #95's roll is the first rng draw of its play, so the cursor picks the effect. The seed is arbitrary,
 /// since `chaos_cursor_for` finds the cursor where the roll is the effect the test needs.

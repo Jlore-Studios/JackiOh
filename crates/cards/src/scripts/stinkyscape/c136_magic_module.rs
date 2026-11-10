@@ -38,8 +38,8 @@ mod tests {
     use crate::{built_starship, card_def, launch_starship};
     use jackioh_engine::testkit::*;
 
-    const LUNAR: &str = "core-035"; // (1) Spell: deal 3 damage.
-    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
+    const LUNAR: &str = "core-035"; // Lunar Eclipse: deal 3 damage
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
 
     fn added_on_launch(seed: &str, radiant: bool) -> Vec<CardDef> {
         let (mut s, ship) = built_starship(

@@ -53,8 +53,8 @@ mod tests {
     use crate::scenario;
 
     const BOIL: &str = "classicplus-012-2";
-    const MENACE: &str = "core-019"; // 9/9
-    const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const SOLARIUS: &str = "classicplus-038"; // Solarius: Spell Damage +2
     const FILLER: &str = "core-005";
 
     use crate::merged;

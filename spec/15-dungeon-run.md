@@ -160,6 +160,8 @@ The whole map (enemies, decks, bosses' drops, events) is dealt at the start, and
 
 The player steps onto any node of the next row.
 
+Between fights the top bar shows HP, Coins, Tickets, the deck's size, the relics held and the score, and a Your run panel lists the deck (Radiant and buffed cards marked), the relics and blessings held with their text, the curses taken with their names and text, and the seed, which can be copied.
+
 ### 15.6 The fights
 
 **The human:** the run deck in order, with `HUMAN_HANDICAP`, its deck size the deck's length and its hero health the run's HP ([[R180]], [[R290]]). At setup, before the opening draw, each Radiant card is dealt Radiant ([[§5.2]]) and each buff is applied as one Buff ([[§6.3]]). A fight's game is built under the current catalog, as a fight started today is: a card the run holds that the catalog no longer knows is left out of the fight's deck, and stays in the run ([[R3496000]]).
@@ -246,11 +248,13 @@ Each also makes every fight's enemy stronger ([[§15.6]], [[R2922001]]).
 - `RUN_SCORE_DAMAGE`, `RUN_SCORE_HEALING` and `RUN_SCORE_CARD_DRAWN` per point of every fight's report, a lost fight's included;
 - then `RUN_SCORE_MINI_BOSS_PERCENT` percent per mini-boss beaten, then `RUN_SCORE_FINAL_BOSS_PERCENT` percent for the final boss, then the curse points' percent (`RUN_SCORE_CURSE_POINT_PERCENT`).
 
-Time and turns are shown beside the score, not in it.
+Time and turns are shown beside the score, not in it. A run's time is the time it was played: it counts only while the run is open and shown, so a run left and picked up later is not timed by the calendar ([[R3502000]]).
 
 **Embers** are earned only by playing: `run_embers`, the score divided by `RUN_SCORE_PER_EMBER`, paid when a run ends. They buy levels ([[§15.3]]) at `RUN_LEVEL_EMBERS`. Spending them on upgrading artifacts or buying buffs is not built.
 
 **Leaderboards:** deepest row, most curse points, top score and fastest win, with an on-screen timer. The Sandbox's stay on the device; the Campaign's hold checked runs.
+
+The run-over screen shows the run's seed, and a past run's details name its curses from the run's content; an id the content no longer holds shows as itself.
 
 **Stats:** `RunStats`'s fields, in words: nodes visited; fights, elites, ghosts, mini-bosses and bosses won; damage dealt, healing done, cards drawn and turns; damage taken and healing taken; Coins and Tickets earned and spent; cards kept, bought, removed, made Radiant and buffed; packs skipped; artifacts taken and leveled; blessings taken; events seen; chests opened.
 

@@ -33,11 +33,11 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MODULE: &str = "stinkyscape-177";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const NETHER: &str = "core-088"; // (4) Spell: Destroy all permanents.
-    const POWDER_SPRAY: &str = "classicplus-012-4"; // (1) Spell: Deal 3 damage to each enemy.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const NETHER: &str = "core-088"; // Twisting Nether: Destroy all permanents.
+    const POWDER_SPRAY: &str = "classicplus-012-4"; // Powder Spray: Deal 3 damage to each enemy
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: Spell (§2.5).
 
     fn standing(radiant: bool, hand: Value, p2_hand: Value) -> Scenario {
         scenario(json!({

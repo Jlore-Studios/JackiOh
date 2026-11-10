@@ -47,8 +47,8 @@ mod tests {
 
     const BONE_STORM: &str = "classicplus-036-1";
     const SOLARIUS: &str = "classicplus-038";
-    const MENACE: &str = "core-019"; // 9/9 Taunt.
-    const TIMMY: &str = "core-011"; // a 3/3 Unit that keeps p1's turns alive.
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // keeps p1's turns alive.
     const FILLER: &str = "core-005";
 
     use crate::scenario;

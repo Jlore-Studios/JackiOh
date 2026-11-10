@@ -82,12 +82,12 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const GIRLFRIEND: &str = "meditative-049-3";
-    const TOUGH: &str = "core-012"; // 3/4, surviving the strike-back.
-    const BIG: &str = "core-043"; // 3/10, surviving even the Radiant strike-back.
-    const WEAK: &str = "core-007"; // 1/1, dying to it.
+    const TOUGH: &str = "core-012"; // Duplicating Felinors: surviving the strike-back
+    const BIG: &str = "core-043"; // Big Felinor: surviving even the Radiant strike-back.
+    const WEAK: &str = "core-007"; // Jewelosco Scarab: dying to it
     const FILLER: &str = "core-005";
-    const VIRUS: &str = "meditative-049-2"; // 0/8, Can't attack.
-    const CLEAVER: &str = "classic-073"; // Nurse Cleaver 3/6, Rush, Cleave, Lifesteal.
+    const VIRUS: &str = "meditative-049-2"; // Yile's Virus: Can't attack
+    const CLEAVER: &str = "classic-073"; // Nurse Cleaver: Rush, Cleave, Lifesteal
 
     /// The forced attacks the game declared, attacker then target, in order.
     fn forced(s: &Scenario) -> Vec<(String, String)> {

@@ -99,18 +99,18 @@ mod tests {
     use crate::scenario;
 
     const REFUSAL: &str = "classicplus-t-ai-09";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
-    const TRUE_STRIKE: &str = "core-044"; // (1) Spell: Pierce. Deal 4 damage. Exile this.
-    const MAGIC_JAMMED: &str = "core-036"; // (1) Spell: Destroy target backrow card. Lock its zone.
-    const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const TWINSPELL: &str = "core-079"; // (2) Field Spell: Activate: your next Spell this turn gains Echo +1.
-    const BEAR: &str = "core-060"; // (1) Trap
-    const COUNTERSPELL_TEST_FILLER: &str = "core-011"; // (1) Unit
-    const SCEPTER: &str = "classic-007"; // (1) Field Spell: Cry: exile a (1) Cost or less Spell from your hand. Activate: cast a copy of it.
-    const FLAME: &str = "classic-016"; // (1) Spell, Book: Deal 4 damage.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const TRUE_STRIKE: &str = "core-044"; // True Strike: Pierce. Deal 4 damage. Exile this.
+    const MAGIC_JAMMED: &str = "core-036"; // Magic Jammed: Destroy target backrow card. Lock its zone.
+    const FLOOD: &str = "core-017"; // Flood: Bounce all Units.
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const TWINSPELL: &str = "core-079"; // Twinspell: Activate: your next Spell this turn gains Echo +1.
+    const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
+    const COUNTERSPELL_TEST_FILLER: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const SCEPTER: &str = "classic-007"; // InfiniScepter: Cry: exile a cheap Spell from your hand. Activate: cast a copy of it.
+    const FLAME: &str = "classic-016"; // Book of Flame: a Spell, Book: Deal 4 damage
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;

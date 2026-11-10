@@ -23,9 +23,9 @@ mod tests {
     use crate::scenario;
 
     const WRONG: &str = "classicplus-006";
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const VANILLA: &str = "core-008"; // (1) 4/4, no keywords.
-    const HIT_JOB: &str = "core-016"; // (3) Destroy target Unit.
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: no keywords
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
 

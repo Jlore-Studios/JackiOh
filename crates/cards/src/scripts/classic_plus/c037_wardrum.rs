@@ -169,19 +169,19 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const WARDRUM: &str = "classicplus-037";
-    const REPLENISH: &str = "core-010"; // (0) Spell: Combo 3: draw 3.
-    const STOCKPILE: &str = "core-005"; // (1) Spell: draw 2, heal your hero 2.
-    const LUNAR: &str = "core-035"; // (1) Spell: 3 damage to a target.
-    const BONE_STORM: &str = "classicplus-036-1"; // (1) Spell: 1 damage to each enemy.
-    const SHEEPISH: &str = "core-041"; // (1) Trap.
-    const BREAD: &str = "core-018"; // (1) Field Trap.
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell.
-    const VANILLA: &str = "core-008"; // (1) Unit, no text.
+    const REPLENISH: &str = "core-010"; // Rapid Replenish: Combo 3: draw 3
+    const STOCKPILE: &str = "core-005"; // Stockpile: draw 2, heal your hero 2
+    const LUNAR: &str = "core-035"; // Lunar Eclipse: 3 damage to a target
+    const BONE_STORM: &str = "classicplus-036-1"; // Bone Storm: 1 damage to each enemy
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const BREAD: &str = "core-018"; // Bread and Butter: a Field Trap
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const MENACE: &str = "core-019";
-    const POINTMASTER: &str = "core-020"; // (2) 7/1.
-    const TIMMY: &str = "core-011"; // (1) 3/3 Rush, First Strike.
-    const FOREVER: &str = "classicplus-014"; // (1) Spell: the next Spell you play returns to your hand after it resolves.
-    const SPATULA: &str = "classicplus-012-8"; // (2) Field Spell token: Animated on your turn, Rush, 10/3.
+    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield";
+    const TIMMY: &str = "core-011"; // Tempo Timmy: Rush, First Strike
+    const FOREVER: &str = "classicplus-014"; // Forever&: the next Spell you play returns to your hand after it resolves.
+    const SPATULA: &str = "classicplus-012-8"; // Frostspatula: Field Spell token: Animated on your turn, Rush.
     const FILLER: &str = STOCKPILE;
 
     const LIBRARY: [&str; 8] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];

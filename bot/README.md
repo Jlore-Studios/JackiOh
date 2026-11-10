@@ -2398,7 +2398,13 @@ sub-issues too (for the night bot's, Squishy comments `@jgoetzmann-bot stop`).
 **One owner per issue.** Neither bot takes an issue that is the other's: the other's queue,
 state, pull request, mode or tree labels on it, or assigned to the other's account
 (`queue.Owner`). Take those off to hand it over. A bot acts on the other's comment only when the
-line is a bare `stop`, and never answers it with a hint, so the two never talk for ever.
+line is a bare `stop`, and never answers it with a hint, so the two never talk for ever. The night
+bot knows Squishy's words by Squishy's marker (`marker` in `.harness/config.json`'s `others`,
+`identity.Other.Wrote`), which its harness puts on everything it writes: a comment or review from
+`@squishy-squooby` without it was typed by a person working as that account, a Claude session
+among them, and is answered as anyone's, a vote or a question's answer included (#961, #3508).
+Squishy still reads everything from `@jgoetzmann-bot` as the night bot's, since workflows such as
+the promotions post as that account without the harness's marker.
 
 **The weekly hygiene run.** Every Tuesday at 22:07 UTC, just after Squishy's weekly reset,
 `.github/workflows/hygiene.yml` (#839, #888) opens two issues for Squishy (`squishy:build`,

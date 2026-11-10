@@ -42,20 +42,20 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BACK_BREAKER: &str = "classic-051";
-    const VANILLA: &str = "core-008"; // 4/4
-    const MENACE: &str = "core-019"; // 9/9 Taunt
-    const HIT_JOB: &str = "core-016"; // Spell 3: destroy target Unit
-    const FLOOD: &str = "core-017"; // Spell 4: bounce all Units
-    const COLLATERAL: &str = "core-034"; // Spell 4: exile target permanent and a random card of the enemy deck
-    const THE_ROCK: &str = "core-066"; // Tribute 1, Indestructible
-    const MANA_WELL: &str = "core-006"; // Field Spell
-    const GOING_LONG: &str = "core-084"; // Field Spell
-    const SHEEPISH: &str = "core-041"; // Trap
-    const HONEYPOT: &str = "core-060"; // Trap
-    const HEROIC_POWER: &str = "core-098"; // Field Spell, Indestructible
-    const LOCKDOWN: &str = "classic-084"; // Field Spell, Indestructible
-    const IN_TOO_DEEP: &str = "classic-090"; // Field Spell, Indestructible
-    const TESLA: &str = "classic-005"; // Field Trap, Animated
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
+    const FLOOD: &str = "core-017"; // Flood: bounce all Units
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: exile target permanent and a random card of the enemy deck
+    const THE_ROCK: &str = "core-066"; // The Rock: Tribute 1, Indestructible
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const GOING_LONG: &str = "core-084"; // Going Long: a Field Spell
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const HONEYPOT: &str = "core-060"; // Bear Honeypot: a Trap
+    const HEROIC_POWER: &str = "core-098"; // Heroic Power: a Field Spell, Indestructible
+    const LOCKDOWN: &str = "classic-084"; // Lockdown: a Field Spell, Indestructible
+    const IN_TOO_DEEP: &str = "classic-090"; // In Too Deep: a Field Spell, Indestructible
+    const TESLA: &str = "classic-005"; // Tesla: a Field Trap, Animated
     const STOCKPILE: &str = "core-005";
 
     use crate::js;

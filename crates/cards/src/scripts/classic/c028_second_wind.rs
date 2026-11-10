@@ -94,17 +94,17 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const WIND: &str = "classic-028";
-    const REPLENISH: &str = "core-010"; // (0) Spell
-    const STOCKPILE: &str = "core-005"; // (1) Spell: "Draw 2. Heal your hero 2."
-    const ECLIPSE: &str = "core-035"; // (1) Spell: "Deal 3 damage to a target."
-    const MR_TOKEN: &str = "core-015"; // (1) Unit 1/1: "Cry: Summon a Rush Token."
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const SHEEPISH: &str = "core-041"; // (1) Trap
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell
-    const MENACE: &str = "core-019"; // (3) Unit 9/9
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy target Unit
-    const COLLATERAL: &str = "core-034"; // (4) Spell: exile target permanent and a random card from their deck
-    const TOE_CRACKER: &str = "classic-006"; // (2) Unit: "Aura: Your Traps cost (0)."
+    const REPLENISH: &str = "core-010"; // Rapid Replenish: a Spell
+    const STOCKPILE: &str = "core-005"; // Stockpile: "Draw 2. Heal your hero 2."
+    const ECLIPSE: &str = "core-035"; // Lunar Eclipse: "Deal 3 damage to a target."
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: "Cry: Summon a Rush Token."
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: exile target permanent and a random card from their deck
+    const TOE_CRACKER: &str = "classic-006"; // Cloaked Toe Cracker: "Aura: Your Traps are free."
     const RUSH_TOKEN: &str = "core-t-rush";
 
     struct Played {

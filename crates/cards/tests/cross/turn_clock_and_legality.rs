@@ -10,28 +10,28 @@ use jackioh_engine::effects;
 use jackioh_engine::subsystems;
 use jackioh_engine::testkit::*;
 
-const SCARAB: &str = "core-007"; // Cry: Discover a 2-cost card — one prompt
+const SCARAB: &str = "core-007"; // Jewelosco Scarab: Cry: Discover a card — one prompt
 const VANILLA: &str = "core-008";
 const STOCKPILE: &str = "core-005";
-const GARY: &str = "core-004"; // Unit, cost 1
-const HINDER: &str = "core-021"; // cast on draw
+const GARY: &str = "core-004"; // Gary the Gambler
+const HINDER: &str = "core-021"; // Hinder: cast on draw
 const PANTHER: &str = "core-032";
 const MAGIC_JAMMED: &str = "core-036";
 const QUICKSTRIKER: &str = "core-038";
 const SHEEPISH: &str = "core-041";
 const BIG_FELINOR: &str = "core-043";
-const TUTOR: &str = "core-051"; // three chained prompts
+const TUTOR: &str = "core-051"; // KY's Private Tutor: three chained prompts
 const MENACE: &str = "core-019";
 const RENO: &str = "core-053";
 const REMINISCE: &str = "core-072";
 const FIENDER: &str = "core-092";
 const HEROIC: &str = "core-098";
-const CRAFT: &str = "core-099"; // two chained Discovers
+const CRAFT: &str = "core-099"; // Craft a Card: two chained Discovers
 const FELINORS: &str = "core-012";
-const JELLY_BEAN: &str = "core-026"; // Choose a card in your hand; it becomes Radiant (radiant: choose 2)
-const TWINSPELL: &str = "core-079"; // Activate: the next Spell you play this turn gains Echo +1
-const MC_TECH: &str = "classic-040"; // Radiant: "Cry: … steal one of your choice", a prompt at resolution
-const CHAOS_GOLEM: &str = "core-095-1"; // a Token: no random pool or Discover may ever offer it (§5.1)
+const JELLY_BEAN: &str = "core-026"; // Glowy Jelly Bean: Choose a card in your hand; it becomes Radiant (radiant: choose 2)
+const TWINSPELL: &str = "core-079"; // Twinspell: Activate: the next Spell you play this turn gains Echo +1
+const MC_TECH: &str = "classic-040"; // MC Tech: Radiant: "Cry: … steal one of your choice", a prompt at resolution
+const CHAOS_GOLEM: &str = "core-095-1"; // Chaos Golem: a Token: no random pool or Discover may ever offer it (§5.1)
 const LIBRARY: [&str; 5] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
 use super::{fixture, in_hand, scenario, targets_of, tributes_of};

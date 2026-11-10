@@ -98,7 +98,7 @@ mod tests {
 
     const TWINSPELL: &str = "core-079";
     const COIN: &str = "core-t-coin";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
 
     const LIBRARY: [&str; 4] = ["core-008", "core-008", "core-008", "core-008"];
 

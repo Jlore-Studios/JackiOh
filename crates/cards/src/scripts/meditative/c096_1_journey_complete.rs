@@ -90,9 +90,9 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const SEVEN: &str = "core-025"; // (4) Unit 7/7, no text.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const FILLER: &str = "core-005"; // (1) Spell, never played here.
+    const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell, never played here
 
     /// p1 with `exile` in their exile pile, `hand` in hand and a Journey Complete (on `radiant`'s face)
     /// on top of their library, so their next draw casts it; the draw repeats onto a FILLER (§2.4).

@@ -14,15 +14,15 @@
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 
-const STOCKPILE: &str = "core-005"; // keeps a hand non-empty, so no turn auto-ends (§2.5)
+const STOCKPILE: &str = "core-005"; // Stockpile: keeps a hand non-empty, so no turn auto-ends (§2.5)
 const GARY: &str = "core-004";
 const RENO: &str = "core-053";
 const LAVA_GOLEM: &str = "core-055";
 const TWISTED_SORCERER: &str = "core-068";
 const RADIANT_SAINTESS: &str = "core-081";
 const RIGHT_HOUSE: &str = "core-003";
-const POSTDOC: &str = "core-061"; // radiant: "choose any unit on the field; summon a Vanilla copy"
-const SHEEP: &str = "core-t-sheep"; // "Worth 2 Tributes while on the field."
+const POSTDOC: &str = "core-061"; // Prejudiced Postdoc: radiant: "choose any unit on the field; summon a Vanilla copy"
+const SHEEP: &str = "core-t-sheep"; // Sheep Token: "Worth 2 Tributes while on the field."
 
 use super::{craft_fused, scenario};
 

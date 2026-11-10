@@ -1037,7 +1037,7 @@ mod tests {
 
         crate::register_all();
         let v0_3_7b = catalog_at("v0.3.1").expect("v0.3.1 is carried");
-        let menace = "core-019"; // (3) Unit
+        let menace = "core-019"; // Midrange Menace
         let filler = "core-005";
         let board = || {
             crate::scenario(json!({

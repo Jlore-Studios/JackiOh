@@ -61,22 +61,22 @@ mod tests {
     use crate::scenario;
 
     const JORO: &str = "classic-033";
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
-    const SEVEN: &str = "core-025"; // (4) Unit 7/7
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const TIMMY: &str = "core-011"; // (1) Unit 3/3
-    const ECLIPSE: &str = "core-035"; // (1) Spell: "Deal 3 damage to a target."
-    const STAB: &str = "core-070"; // (3) Spell: "Deal 2 damage to a target, +1 per ..."
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy target Unit
-    const BIG_FELINOR: &str = "core-043"; // (4) Unit: "Cry: Destroy all non-Felinor Units."
-    const MOTHS: &str = "core-009"; // (2) Unit 1/14: "Start of turn: Every enemy Unit attacks this."
-    const TWINSPELL: &str = "core-079"; // (2) Field Spell: Activate: your next Spell this turn gains Echo +1.
-    const TOXINS: &str = "classic-042"; // (2) Field Spell: "Activate: Place a Plague Counter on each of 2 random Units."
-    const STOCKPILE: &str = "core-005"; // (1) Spell, a spare card (§2.5)
-    const SPECIESIST: &str = "core-002"; // (2) Unit: "Cry: Destroy an enemy non-Human Unit.", a declared target.
-    const BRINGER: &str = "classic-076"; // (2) Unit: "Cry: Place 2 Plague Counters; draw 1."
-    const PUNISH: &str = "classic-020"; // (2) Field Spell: "Activate: Choose one: Deal 2 damage; ..."
-    const TESLA: &str = "classic-005"; // (2) Field Trap: "Activates when your opponent summons a Unit: Deal 4 damage to it."
+    const MENACE: &str = "core-019"; // Midrange Menace: Unit Taunt
+    const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const TIMMY: &str = "core-011"; // Tempo Timmy
+    const ECLIPSE: &str = "core-035"; // Lunar Eclipse: "Deal 3 damage to a target."
+    const STAB: &str = "core-070"; // Spiteful Stab: "Deal 2 damage to a target, +1 per..."
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
+    const BIG_FELINOR: &str = "core-043"; // Big Felinor: "Cry: Destroy all non-Felinor Units."
+    const MOTHS: &str = "core-009"; // Moths to the Flame: "Start of turn: Every enemy Unit attacks this."
+    const TWINSPELL: &str = "core-079"; // Twinspell: Activate: your next Spell this turn gains Echo +1.
+    const TOXINS: &str = "classic-042"; // Transmutable Toxins: "Activate: Place a Plague Counter on each of 2 random Units."
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell, a spare card (§2.5)
+    const SPECIESIST: &str = "core-002"; // Speciesist: "Cry: Destroy an enemy non-Human Unit.", a declared target.
+    const BRINGER: &str = "classic-076"; // Plague Bringer: "Cry: Place 2 Plague Counters; draw 1."
+    const PUNISH: &str = "classic-020"; // The Power to Punish: "Activate: Choose one: Deal 2 damage..."
+    const TESLA: &str = "classic-005"; // Tesla: "Activates when your opponent summons a Unit: Deal 4 damage to it."
 
     use crate::js;
 

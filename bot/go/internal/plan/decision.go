@@ -162,14 +162,20 @@ func syncDecision(ctx *hctx.Context, number int, record, decision *pyjson.Object
 }
 
 // reply is the first trusted person's answer to `number`'s question (#3009): their first comment
-// (no bot's) after it was asked, on the item or on the pull request its record names, that is no
+// (no bot's: the other bot's are its account's with its marker, `identity.Other.Wrote`, #3508) after
+// it was asked, on the item or on the pull request its record names, that is no
 // command (`commands.Parse`, a mention of the bot, a vote on a suggestion: each is answered as a
 // command) and no session's handoff (`config.IsSessionHandoff`). nil for none.
 func reply(ctx *hctx.Context, number int, record, decision *pyjson.Object, names map[string]bool) *pyjson.Object {
 	since := clock.ParseISOValue(decision.Get("asked_at"))
 	bots := map[string]bool{strings.ToLower(ctx.Cfg.BotLogin): true, "github-actions[bot]": true}
-	for _, other := range config.Others {
-		bots[strings.ToLower(other.Login)] = true
+	otherBots := func(login, body string) bool {
+		for _, other := range config.Others {
+			if other.Wrote(login, body) {
+				return true
+			}
+		}
+		return false
 	}
 	read := []int{number}
 	if pr := py.MustInt(py.Or(record.Get("pr"), 0)); pr != 0 && pr != number {
@@ -187,7 +193,7 @@ func reply(ctx *hctx.Context, number int, record, decision *pyjson.Object, names
 			login := py.OrStr(user.Get("login"), "")
 			at := clock.ParseISOValue(comment.Get("created_at"))
 			body := py.OrStr(comment.Get("body"), "")
-			if bots[strings.ToLower(login)] || at.IsZero() || !at.After(since) || strings.Contains(body, config.Marker) ||
+			if bots[strings.ToLower(login)] || otherBots(login, body) || at.IsZero() || !at.After(since) || strings.Contains(body, config.Marker) ||
 				config.IsSessionHandoff(body) || len(commands.Parse(body, ctx.Cfg.BotLogin)) > 0 ||
 				commands.NamesTheBot(body, ctx.Cfg.BotLogin) {
 				continue

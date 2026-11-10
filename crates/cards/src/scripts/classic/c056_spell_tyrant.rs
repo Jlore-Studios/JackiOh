@@ -78,15 +78,15 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TYRANT: &str = "classic-056";
-    const STOCKPILE: &str = "core-005"; // (1) Spell: draw 2, heal your hero 2.
-    const FRIENDS: &str = "core-062"; // (1) Spell: fill your board with Felinor Tokens.
-    const SPEK: &str = "core-048"; // (0) Spell: switch the position of every Unit.
-    const LUNAR: &str = "core-035"; // (1) Spell: deal 3 damage to a target.
-    const ZAO_GAO: &str = "core-080"; // (2) Spell: discard 2 random cards; summon 2 Rush Tokens.
-    const PILE_ON: &str = "classic-060"; // C #60 (5) Spell: Recruit every permanent in your deck; if this would go to your graveyard, bottom of your deck instead.
-    const MANA_WELL: &str = "core-006"; // Field Spell
-    const VANILLA: &str = "core-008"; // Unit
-    const MENACE: &str = "core-019"; // 9/9
+    const STOCKPILE: &str = "core-005"; // Stockpile: draw 2, heal your hero 2
+    const FRIENDS: &str = "core-062"; // Friend of Felinors: fill your board with Felinor Tokens
+    const SPEK: &str = "core-048"; // 5pek Controller: switch the position of every Unit
+    const LUNAR: &str = "core-035"; // Lunar Eclipse: deal 3 damage to a target
+    const ZAO_GAO: &str = "core-080"; // Zao Gao: discard 2 random cards; summon 2 Rush Tokens
+    const PILE_ON: &str = "classic-060"; // Pile On: Recruit every permanent in your deck; if this would go to your graveyard, bottom of your deck instead.
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const MENACE: &str = "core-019"; // Midrange Menace
     const FILLER: &str = "core-016"; // Hit Job: a Spell to hold.
     const DECK: [&str; 4] = [FILLER, FILLER, FILLER, FILLER];
 

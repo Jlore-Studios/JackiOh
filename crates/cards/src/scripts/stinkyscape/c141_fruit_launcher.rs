@@ -72,8 +72,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const FIG: &str = "core-047"; // Fig of Life, a Fruit: "Heal a target {heal}."
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FIG: &str = "core-047"; // Fig of Life: a Fruit, "Heal a target {heal}."
     /// C+ #65.1 to #65.5, the Fruit tokens (R382).
     const GRAPES: [&str; 5] = [
         "classicplus-065-1",
@@ -189,7 +189,7 @@ mod tests {
     mod random_choice {
         use super::*;
 
-        const ARMOR: &str = "core-073"; // (2) Field Spell: no Unit, nothing a heal reaches.
+        const ARMOR: &str = "core-073"; // Anti-oneshot Armor: no Unit, nothing a heal reaches
 
         fn fire_at_field_spell(seed: &str) -> (Scenario, String, Vec<String>) {
             let mut s = weapon_board(

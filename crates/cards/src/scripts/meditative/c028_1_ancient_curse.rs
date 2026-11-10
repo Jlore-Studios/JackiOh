@@ -48,7 +48,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const CURSE: &str = "meditative-028-1";
-    const RESOURCES: &str = "classic-058"; // (2) Field Spell: start of turn, draw from the bottom of the opponent's deck.
+    const RESOURCES: &str = "classic-058"; // Common Resources: start of turn, draw from the bottom of the opponent's deck
     const FILLER: &str = "core-005";
 
     /// The `damage` events on `target` ("hero-p1"), as amounts.

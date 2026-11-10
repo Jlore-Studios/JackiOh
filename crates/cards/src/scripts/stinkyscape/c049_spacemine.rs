@@ -54,9 +54,9 @@ mod tests {
     use crate::filler;
 
     const SPACEMINE: &str = "stinkyscape-049";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: Spell (§2.5).
 
     fn destroy(s: &mut Scenario, victim: &CardInstance) {
         s.play(HIT_JOB, json!({ "targets": pick::instance(victim) }));

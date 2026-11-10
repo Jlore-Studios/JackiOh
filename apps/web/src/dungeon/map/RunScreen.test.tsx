@@ -4,7 +4,7 @@
 // and the campfire's count come from the real module (`runShopPrices`, `runConstants`), and the fake
 // store's `act` records every `RunAction` the screens send and answers the configured refusal.
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act as flush, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
@@ -19,6 +19,7 @@ import type {
 } from "@jackioh/run";
 
 import { navTestid } from "../../routes/nav.tsx";
+import { readSheet } from "../../test/setup.ts";
 import { at } from "../../test/stubServer.ts";
 import { runConstants, runShopPrices } from "../../wasm/index.ts";
 import { fightTestid } from "../fight/testids.ts";
@@ -116,7 +117,14 @@ const CONTENT: RunContent = {
       ],
     },
   ],
-  curses: [],
+  curses: [
+    {
+      id: "test-curse-heavy",
+      name: "Heavy Hands",
+      text: "Enemies start each fight with 5 more health.",
+      points: 2,
+    },
+  ],
 };
 
 const STAT_KEYS = Object.keys(RUN_STAT_LABELS) as (keyof RunStats)[];
@@ -191,7 +199,8 @@ function fakeDungeon(
     content: CONTENT,
     progress: { unlocks: { level: 1, cards: [], artifacts: [], owned: null }, embers: 0 },
     run,
-    startedAt: 1_000,
+    elapsedMs: 0,
+    resumedAt: 1_000,
     timeMs,
     start: vi.fn(() => null),
     act,
@@ -724,5 +733,149 @@ describe("B31 the run-over screen settles the run", () => {
     expect(screen.getByTestId(dungeonMapTestid.runOver)).toHaveTextContent("Defeat");
     expect(screen.getByTestId(dungeonMapTestid.extractedCards)).toHaveTextContent("No cards extracted.");
     expect(screen.getByTestId(dungeonMapTestid.extractedArtifacts)).toHaveTextContent("No relics extracted.");
+  });
+});
+
+describe("#3501 the run's panel", () => {
+  const FULL = {
+    artifacts: [
+      { id: "test-relic-might", level: 2 },
+      { id: "test-relic-skip", level: 1 },
+    ],
+    blessings: ["test-blessing-dawn"],
+    curses: ["test-curse-heavy"],
+  };
+
+  /** Renders the run on its map and opens the panel; returns it, scoped to its dialog. */
+  function openPanel(extra: Partial<RunState> = FULL, phase: RunPhase = { phase: "map" }): ReturnType<typeof within> {
+    render(<RunScreen dungeon={fakeDungeon(runWith(phase, extra)).dungeon} />);
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.yourRun));
+    return within(screen.getByRole("dialog", { name: "Your run" }));
+  }
+
+  /** Replaces the clipboard, which jsdom lacks, for the call. */
+  async function withClipboard(writeText: (text: string) => Promise<void>, body: () => Promise<void>): Promise<void> {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    try {
+      await body();
+    } finally {
+      Reflect.deleteProperty(navigator, "clipboard");
+    }
+  }
+
+  it("#3501 Your run lists every deck card with its marks, each relic, blessing and curse with its text, and the seed", () => {
+    const panel = openPanel();
+    DECK.forEach((card, index) => {
+      const face = panel.getByTestId(dungeonMapTestid.panelCard(index));
+      expect(face).toHaveAttribute("data-card", card.id);
+      // Only the Radiant card is dealt on the Radiant face.
+      expect(face.querySelector('[data-radiant-face="true"]') !== null).toBe(card.radiant);
+    });
+    expect(panel.getByTestId(dungeonMapTestid.panelCard(1))).toHaveTextContent("Buffs: 2");
+    expect(panel.getByTestId(dungeonMapTestid.panelCard(0))).not.toHaveTextContent("Buffs");
+    expect(panel.getByTestId(dungeonMapTestid.panelCard(2))).not.toHaveTextContent("Buffs");
+    expect(panel.getByRole("heading", { name: "Deck: 3" })).toBeInTheDocument();
+
+    const might = panel.getByTestId(dungeonMapTestid.panelArtifact(0));
+    expect(might).toHaveTextContent("Might Relic");
+    expect(might).toHaveTextContent("Level 2");
+    expect(might).toHaveTextContent("Gain 1 more Coin after each fight.");
+    const skip = panel.getByTestId(dungeonMapTestid.panelArtifact(1));
+    expect(skip).toHaveTextContent("Skip Relic");
+    expect(skip).toHaveTextContent("Level 1");
+    expect(skip).toHaveTextContent("A pack may be kept empty, for Coins.");
+    const blessing = panel.getByTestId(dungeonMapTestid.panelBlessing(0));
+    expect(blessing).toHaveTextContent("Blessing of Dawn");
+    expect(blessing).toHaveTextContent("Heal 3 after each fight.");
+    const curse = panel.getByTestId(dungeonMapTestid.panelCurse(0));
+    expect(curse).toHaveTextContent("Heavy Hands");
+    expect(curse).toHaveTextContent("Enemies start each fight with 5 more health.");
+    expect(curse).toHaveTextContent("Points: 2");
+    expect(panel.getByTestId(dungeonMapTestid.panelSeed)).toHaveTextContent("ABCDEF");
+  });
+
+  it("#3501 a run holding none says so, and a curse the content lacks shows its id", () => {
+    const empty = openPanel({ artifacts: [], blessings: [], curses: [] });
+    expect(empty.getByTestId(dungeonMapTestid.panelArtifacts)).toHaveTextContent("No relics");
+    expect(empty.getByTestId(dungeonMapTestid.panelBlessings)).toHaveTextContent("No blessings");
+    expect(empty.getByTestId(dungeonMapTestid.panelCurses)).toHaveTextContent("No curses");
+    cleanup();
+
+    const gone = openPanel({ curses: ["gone-curse"] });
+    expect(gone.getByTestId(dungeonMapTestid.panelCurses)).toHaveTextContent("gone-curse");
+  });
+
+  it("#3501 an empty deck says so instead of drawing an empty grid", () => {
+    const panel = openPanel({ deck: [] });
+    expect(panel.getByText("No cards yet.")).toBeInTheDocument();
+    expect(panel.queryByTestId(dungeonMapTestid.panelDeck)).not.toBeInTheDocument();
+    expect(panel.getByRole("heading", { name: "Deck: 0" })).toBeInTheDocument();
+  });
+
+  it("#3501 the panel takes focus on its ✕, Escape closes it and the focus returns to Your run", () => {
+    openPanel();
+    expect(screen.getByTestId(dungeonMapTestid.panelClose)).toHaveFocus();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.yourRun)).toHaveFocus();
+
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.yourRun));
+    expect(screen.getByRole("dialog", { name: "Your run" })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.panelClose));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("#3501 Copy seed writes the seed to the clipboard and says Copied", async () => {
+    const writeText = vi.fn(async (_text: string): Promise<void> => {});
+    await withClipboard(writeText, async () => {
+      const panel = openPanel();
+      const copy = panel.getByTestId(dungeonMapTestid.panelSeedCopy);
+      expect(copy).toHaveTextContent("Copy seed");
+      await flush(async () => {
+        fireEvent.click(copy);
+        await Promise.resolve();
+      });
+      await waitFor(() => {
+        expect(copy).toHaveTextContent("Copied");
+      });
+      expect(writeText).toHaveBeenCalledWith("ABCDEF");
+    });
+  });
+
+  it("#3501 a refused clipboard leaves the button as Copy seed", async () => {
+    const writeText = vi.fn(async (_text: string): Promise<void> => {
+      throw new Error("refused");
+    });
+    await withClipboard(writeText, async () => {
+      const panel = openPanel();
+      const copy = panel.getByTestId(dungeonMapTestid.panelSeedCopy);
+      await flush(async () => {
+        fireEvent.click(copy);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      expect(writeText).toHaveBeenCalledWith("ABCDEF");
+      expect(copy).toHaveTextContent("Copy seed");
+    });
+  });
+
+  it("#3501 the panel is on the run-over screen too", () => {
+    render(<RunScreen dungeon={fakeDungeon(runWith({ phase: "won" })).dungeon} />);
+    expect(screen.getByTestId(dungeonMapTestid.yourRun)).toBeInTheDocument();
+  });
+
+  it("#3501 the run-over screen shows the run's seed", () => {
+    render(<RunScreen dungeon={fakeDungeon(runWith({ phase: "dead" }, { seed: "QWERTY" })).dungeon} />);
+    expect(screen.getByTestId(dungeonMapTestid.endSeed)).toHaveTextContent("Seed: QWERTY");
+  });
+
+  it("#3501 at phone width the panel scrolls and nothing overflows sideways", () => {
+    // jsdom lays nothing out, so the sheet's rules are the proof: the panel never outgrows its screen, hides
+    // what runs past its side, and has no height of its own, so the scrim scrolls it; the deck's columns
+    // shrink to three at a phone's width.
+    const sheet = readSheet("src/dungeon/map/run-panel.css");
+    expect(sheet).toContain("width: min(720px, 100%)");
+    expect(sheet).toContain("overflow-x: hidden");
+    expect(sheet).toContain("repeat(auto-fill, minmax(96px, 1fr))");
+    expect(sheet).not.toContain("max-height");
   });
 });

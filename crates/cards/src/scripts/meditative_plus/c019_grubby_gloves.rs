@@ -65,10 +65,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const GLOVES: &str = "meditativeplus-019";
-    const MENACE: &str = "core-019"; // (3) Unit
-    const VANILLA: &str = "core-008"; // (1) Unit
-    const LUNAR: &str = "core-035"; // (1) Spell
-    const FILLER: &str = "core-005"; // (1) Spell
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const LUNAR: &str = "core-035"; // Lunar Eclipse: a Spell
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
 
     use crate::scenario;
 

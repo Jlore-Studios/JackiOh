@@ -634,7 +634,7 @@ mod r3039000_an_awakened_dormant_starship_that_returns_is_not_dormant {
         STARSHIP_LAUNCH_ABILITY, dormant_starship_of, is_launched_starship, starship_pieces_of,
     };
 
-    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
 
     /// p1 plays a Hit Job on `id`, mana to spare.
     fn hit(g: &mut Scenario, id: &str) {

@@ -66,9 +66,9 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const GROWTH: &str = "classicplus-050";
-    const VANILLA: &str = "core-008"; // Mr. Vanilla 4/4
-    const ROCK: &str = "core-066"; // The Rock, Indestructible
-    const FIENDER: &str = "core-092"; // Felinor Fiender, Stack
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const ROCK: &str = "core-066"; // The Rock: Indestructible
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
     const FILLER: &str = "core-005";
 
     use crate::scenario;

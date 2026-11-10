@@ -103,15 +103,15 @@ mod tests {
 
     const PACT: &str = "classic-023";
     const BOOK: &str = "classic-016"; // Book of Flame: Deal 4 damage (Radiant 8).
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const TIMMY: &str = "core-011"; // (1) Unit 3/3.
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal 2.
-    const BEAR: &str = "core-060"; // (1) Trap.
-    const PANTHER: &str = "core-032"; // Unit 5/4 Rush: whenever this attacks, draw 2 per Unit it destroyed.
-    const HINDER: &str = "core-021"; // (0) Spell, cast on draw.
-    const FILLER: &str = "core-010"; // (0) Spell Rapid Replenish.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9.
-    const WIND: &str = "classic-028"; // Second Wind: Radiant Aura lets you play cards costing (1) or more from your graveyard.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal 2.
+    const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
+    const PANTHER: &str = "core-032"; // Prem Panther: Rush: whenever this attacks, draw 2 per Unit it destroyed.
+    const HINDER: &str = "core-021"; // Hinder: a Spell, cast on draw
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const WIND: &str = "classic-028"; // Second Wind: Radiant Aura lets you play cards from your graveyard.
 
     const EIGHT: [&str; 8] = [VANILLA, VANILLA, TIMMY, TIMMY, STOCKPILE, STOCKPILE, FILLER, BEAR];
 
@@ -481,8 +481,8 @@ mod tests {
         mod keywords {
             use super::*;
 
-            const LUNAR: &str = "core-035"; // (1) Spell: 3 damage to a target.
-            const NETHER: &str = "core-088"; // (4) Spell: destroy every permanent.
+            const LUNAR: &str = "core-035"; // Lunar Eclipse: 3 damage to a target
+            const NETHER: &str = "core-088"; // Twisting Nether: destroy every permanent
 
             #[test]
             fn r1563002_its_spell_damage_raises_your_spells_1_base_2_radiant() {

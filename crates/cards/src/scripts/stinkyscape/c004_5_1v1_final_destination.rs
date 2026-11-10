@@ -100,13 +100,13 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile.
-    const LUNAR: &str = "core-035"; // (1) Spell.
-    const WELL: &str = "core-006"; // (3) Field Spell.
-    const GAMBIT: &str = "classic-052"; // (2) Trap.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const LUNAR: &str = "core-035"; // Lunar Eclipse: a Spell
+    const WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const GAMBIT: &str = "classic-052"; // Final Gambit: a Trap
     const BOOK_OF_BUFF: &str = "classicplus-071";
-    const DISRUPTOR: &str = "meditative-001"; // (2) Field Spell, a discard guard (R800).
+    const DISRUPTOR: &str = "meditative-001"; // Disruptive Disruptor: a Field Spell, a discard guard (R800)
     const DECK: [&str; 6] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
     fn board(seed: &str, active: &str, radiant: bool) -> Scenario {

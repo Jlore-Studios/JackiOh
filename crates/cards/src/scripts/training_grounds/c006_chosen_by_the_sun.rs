@@ -20,7 +20,7 @@ mod tests {
     use crate::scenario;
 
     const FILLER: &str = "core-005";
-    const BODY: &str = "core-008"; // Mr. Vanilla 4/4
+    const BODY: &str = "core-008"; // Mr. Vanilla
 
     /// p2 holds a Chosen by the Sun in lane 1; p1 has two Mr. Vanillas to hit it with.
     fn shielded(radiant: bool) -> Scenario {

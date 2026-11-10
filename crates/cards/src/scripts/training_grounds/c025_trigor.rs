@@ -95,13 +95,13 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    const VANILLA: &str = "core-008"; // (1) Mr. Vanilla, 4/4.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
-    const COLLATERAL: &str = "core-034"; // (4) Spell: Exile a permanent and a random card from the enemy deck.
-    const SUPPRESSIVE: &str = "core-046"; // (2) Field Spell: Aura: All Units −1/−1; Radiant: enemy Units −2/−2.
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
-    const MOTHS: &str = "core-009"; // (2) 1/14.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const FLOOD: &str = "core-017"; // Flood: Bounce all Units.
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: Exile a permanent and a random card from the enemy deck.
+    const SUPPRESSIVE: &str = "core-046"; // Suppressive Aura: Aura: shrinks all Units; Radiant: shrinks enemy Units
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself.
+    const MOTHS: &str = "core-009"; // Moths to the Flame
     /// TG #34 Dino-size: "Set a Unit's Attack and Health to 10/10."
     const DINO: &str = "traininggrounds-034";
     /// S #24 Warp Disruptor II: "After your opponent summons a Unit, each of your Units attacks it."

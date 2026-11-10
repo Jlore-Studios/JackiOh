@@ -329,7 +329,8 @@ export type Dungeon = {
   content: RunContent;
   progress: DungeonProgress;
   run: RunState | null;
-  startedAt: number | null;               // Date.now() when the run started, for the timer
+  elapsedMs: number | null;               // the run's time played as of resumedAt, for the timer (R3502000)
+  resumedAt: number | null;               // Date.now() when the session now running began; null while paused
   timeMs: number | null;                  // the finished run's time, as its record holds it; null on the way
   start(setup: RunSetup): string | null;  // the refusal, or null
   act(action: RunAction): string | null;  // the refusal, or null
@@ -403,7 +404,7 @@ Each is proved by a test that names it in a comment (`// B7`).
 - **B22** A Fight node starts a practice game from `runFightSetup`, the AI playing the enemy, its name
   shown.
 - **B23** Both sides' artifacts show in a tray beside their hero; a button opens each one's name and text.
-- **B24** A timer shows the run's time on screen.
+- **B24** A timer shows the run's time played on screen (R3502000).
 - **B25** When the game ends, the page asks the worker for `runReport` and sends its `FightOver` to the run.
 - **B26** A lost fight ends the run, and the run-over screen follows.
 - **B27** The map shows the whole current act, each node's kind, each boss's preseeded artifact and where

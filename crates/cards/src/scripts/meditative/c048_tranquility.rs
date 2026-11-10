@@ -61,8 +61,8 @@ mod tests {
 
     const TRANQUILITY: &str = "meditative-048";
     const FILLER: &str = "core-005";
-    const MENACE: &str = "core-019"; // Midrange Menace 9/9: "End of turn: Heal this to full."
-    const JILLIAX: &str = "core-056"; // 3/2 Rush, Taunt, Lifesteal, Divine Shield.
+    const MENACE: &str = "core-019"; // Midrange Menace: "End of turn: Heal this to full."
+    const JILLIAX: &str = "core-056"; // Jilliax: Rush, Taunt, Lifesteal, Divine Shield
     const ECLIPSE: &str = "core-035"; // Lunar Eclipse: deal 3 damage.
 
     /// Runs `effects` as `player`'s, then settles: an effect from outside any card (the shape the

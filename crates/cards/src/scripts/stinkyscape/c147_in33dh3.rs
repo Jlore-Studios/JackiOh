@@ -46,8 +46,8 @@ mod tests {
 
     const IN33DH3: &str = "stinkyscape-147";
     const PRIME: &str = "stinkyscape-147-1";
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const MENACE: &str = "core-019"; // 9/9 Taunt.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
     const FILLER: &str = "core-005";
 
     fn marked(s: &Scenario) -> Vec<String> {

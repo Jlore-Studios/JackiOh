@@ -76,8 +76,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-005"; // (1) Spell.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
 
     fn played(radiant: bool, seed: &str, theirs: usize) -> (Scenario, Vec<String>, Vec<String>) {
         let mut s = scenario(json!({

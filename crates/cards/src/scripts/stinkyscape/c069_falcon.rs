@@ -26,9 +26,9 @@ mod tests {
     use crate::filler;
 
     const FALCON: &str = "stinkyscape-069";
-    const ARMORED: &str = "core-025"; // (4) Unit 7/7, Armor 7.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: Spell (§2.5).
 
     #[test]
     fn charge_may_attack_the_hero_the_turn_it_is_played() {

@@ -2730,8 +2730,8 @@ mod r59_10_5_step_4_a_trigger_that_answered_the_play_and_asked_is_followed_by_th
 const EXPERIMENTATION: &str = "core-085";
 
 const GENNS_GREED: &str = "core-094";
-const SPECIESIST: &str = "core-002"; // Unit, 2
-const SEVEN_SEVEN: &str = "core-025"; // Unit, 4
+const SPECIESIST: &str = "core-002"; // Speciesist
+const SEVEN_SEVEN: &str = "core-025"; // 4-mana 7/7
 
 fn fixture_card(s: &mut Scenario, id: &str, ty: &str, script: Script, cost: i32) {
     let face = fixture_face(id, ty, &json!({ "attack": 2, "health": 2 }), &json!([]));

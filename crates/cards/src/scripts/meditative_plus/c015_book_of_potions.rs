@@ -39,7 +39,7 @@ mod tests {
     const BOOK: &str = "meditativeplus-015";
     /// The Potion pool of the sets that ship (R1179003): M+ #11 to #13, nothing else.
     const POTIONS: [&str; 3] = ["meditativeplus-011", "meditativeplus-012", "meditativeplus-013"];
-    const FILLER: &str = "core-005"; // (1) Spell
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
 
     use crate::scenario;
 

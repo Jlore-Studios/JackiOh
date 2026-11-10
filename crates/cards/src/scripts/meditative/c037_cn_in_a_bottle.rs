@@ -118,7 +118,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BOTTLE: &str = "meditative-037";
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2.
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2
     const FILLER: &str = "core-005";
 
     /// `effects` applied for p1 on a sink over the scenario's state, then settled; their events.

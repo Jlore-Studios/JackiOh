@@ -1055,8 +1055,8 @@ mod tests {
     }
     #[test]
     fn r1884004_fused_onto_a_unit_the_board_holds_at_0_health_it_stays_dead() {
-        const TAOTIE: &str = "meditative-047"; // (4) 2/2.
-        const SUPPRESSIVE_AURA: &str = "core-046"; // −1/−1 to all Units, −2/−2 Embiggened.
+        const TAOTIE: &str = "meditative-047"; // 饕餮
+        const SUPPRESSIVE_AURA: &str = "core-046"; // Suppressive Aura: shrinks all Units, more when Embiggened
         let library = vec![MENACE; LIBRARY];
         let mut s = scenario(json!({
             "seed": "ja-fused-at-0",

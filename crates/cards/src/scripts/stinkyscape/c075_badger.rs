@@ -49,10 +49,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005";
     const VANILLA: &str = "core-008";
-    const BODY: &str = "core-019"; // 9/9
-    const MOTHS: &str = "core-009"; // Start of turn: every enemy unit attacks this.
-    const PAWN: &str = "core-096"; // Trap: cancels an attack lethal to its controller's hero.
-    const NETHER: &str = "core-088"; // (4) Spell: destroy all permanents
+    const BODY: &str = "core-019"; // Midrange Menace
+    const MOTHS: &str = "core-009"; // Moths to the Flame: Start of turn: every enemy unit attacks this.
+    const PAWN: &str = "core-096"; // My Pawn: cancels an attack lethal to its controller's hero
+    const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
 
     fn badger(radiant: bool, p2: Value) -> Scenario {
         scenario(json!({

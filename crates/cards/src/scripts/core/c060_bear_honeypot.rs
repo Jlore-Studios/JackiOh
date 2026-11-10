@@ -656,7 +656,7 @@ mod tests {
     mod glows_while_its_controller_has_an_open_unit_zone_r662_r430 {
         use super::*;
 
-        const VANILLA: &str = "core-008"; // Mr. Vanilla, a 1-cost Unit
+        const VANILLA: &str = "core-008"; // Mr. Vanilla
         const FULL: [&str; 5] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
         fn face(radiant: bool) -> &'static str {

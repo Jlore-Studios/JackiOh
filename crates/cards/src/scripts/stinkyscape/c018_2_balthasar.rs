@@ -108,9 +108,9 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const BALTHASAR: &str = "stinkyscape-018-2";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
     const FILLER: &str = "core-016"; // Hit Job: inert in a hand.
-    const BEAR: &str = "core-060"; // (1) Trap, set face-down.
+    const BEAR: &str = "core-060"; // Bear Honeypot: a Trap, set face-down
 
     fn table(radiant: bool, hand: Value) -> Scenario {
         scenario(json!({
