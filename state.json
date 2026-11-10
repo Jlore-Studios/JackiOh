@@ -36731,7 +36731,9 @@
           "provider": "claude-8"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-10T17:36:57Z",
         "every": 5,
+        "findings": 0,
         "head": "9209e8a92a1f6771dcc9b221c33b371cc6871546",
         "issue": 3350,
         "merged_at": "2026-11-10T17:21:28Z",
@@ -36744,12 +36746,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:6c4d0559-1794331429",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42864677465",
         "sha": "48f21c55aa77b723f0805ce5210399fea40e926c",
         "started_at": "2026-11-10T17:24:40Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: quasi-3D models for the Mythics: each Mythic a diorama of its own, turned by a drag in inspect, with an idle loop of its own and its takeover flown through it",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 196
