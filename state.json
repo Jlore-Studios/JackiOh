@@ -18527,6 +18527,8 @@
       }
     },
     "3591": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-10T00:06:40Z",
@@ -18540,8 +18542,11 @@
         "trail": "\n- Bash: {\"command\": \"pkill -f \\\"find / -name stinkyscape-alt\\\" ; find e2e/artifacts/component/screenshots -name \\\"*stinkyscape-alt-scenes*\\\"; git check-ignore -v e2e/artifacts/component/screenshots/x.png\", \"\u2026\n- tool error: Exit code 144\n- Bash: {\"command\": \"find /home/runner/work/_temp/work/item-3394/e2e/artifacts -name \\\"*alt-scenes*\\\"; cd /home/runner/work/_temp/work/item-3394 && git check-ignore -v e2e/artifacts/component/screenshots/x.p\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3394/e2e/artifacts/component/screenshots/stinkyscape-alt-scenes.cy.tsx/stinkyscape-alt-scenes-1.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3394/e2e/artifacts/component/screenshots/stinkyscape-alt-scenes.cy.tsx/stinkyscape-alt-scenes-2.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3394/e2e/artifacts/component/screenshots/stinkyscape-alt-scenes.cy.tsx/stinkyscape-alt-scenes-3.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3394/e2e/artifacts/component/screenshots/stinkyscape-alt-scenes.cy.tsx/stinkyscape-alt-scenes-4.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3394/e2e/artifacts/component/screenshots/stinkyscape-alt-scenes.cy.tsx/stinkyscape-alt-scenes-5.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3394/e2e/artifacts/component/screenshots/stinkyscape-alt-scenes.cy.tsx/stinkyscape-alt-scenes-6.png\"}\n- said: The screenshots look right: every Alt face is clearly a different scene from its normal face. Next I'll skim the recipe files' headers and comments.\n- Bash: {\"command\": \"cd apps/web/src/cards/art && sed -n 1,25p stinkyscapeAltRecipes1.ts; for f in stinkyscapeAltRecipes2.ts stinkyscapeAltRecipes3.ts; do sed -n 1,8p $f; done; grep -h \\\"^/\\\\*\\\\* .*Alt art:\\\u2026\n- said: The comments match the briefs and name each left-out detail. Running the full `src/cards` suite now.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3394 && timeout 1800 pnpm --dir apps/web exec vitest run src/cards > /tmp/vitest-cards.log 2>&1; echo exit $?; grep -E \\\"Test Files|Tests |FAIL|\\u271\u2026\n- said: All 98 files pass; the 109 skipped are the suite's existing daily tests, which I didn't touch. Now typecheck and lint.\n- Bash: {\"command\": \"grep -n \\\"typecheck\\\" apps/web/package.json e2e/package.json; (timeout 900 pnpm --dir apps/web typecheck > /tmp/tc-web.log 2>&1; echo \\\"web exit $?\\\" >> /tmp/tc-web.log) ; tail -5 /tmp/t\u2026\n- Bash: {\"command\": \"(timeout 900 pnpm --dir e2e typecheck:component 2>&1 | tail -5); (timeout 900 pnpm exec eslint apps/web e2e 2>&1 | tail -10); echo eslint-exit ${PIPESTATUS[0]}\", \"description\": \"Typechec\u2026\n- said: Typecheck and eslint are clean. Now `classify --claims` and `spec check` once more.\n- Bash: {\"command\": \"timeout 1500 cargo jackioh classify --base origin/main --claims 2>&1 | tail -25\", \"description\": \"Run classify with claims against origin/main\", \"timeout\": 1550000}\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main --claims >/tmp/classify.log 2>&1; echo exit $?; tail -3 /tmp/classify.log; cargo jackioh spec check 2>&1 | tail -1; cargo jackioh patches check \u2026\n- said: All green. Now I'll make the ruling and ART.md name the left-out details, and correct \"on a tray\" (the kit has no tray, so the recipe uses a steel table).\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef edit(p, pairs):\\n s=open(p).read()\\n for a,b in pairs:\\n assert s.count(a)==1, (p,a)\\n s=s.replace(a,b)\\n open(p,'w').write(s)\\nleft = (\\\"the last star a small gla\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport textwrap\\np='spec/rulings/R3394000.md'\\ns=open(p).read()\\nparas=s.split(\\\"\\\\n\\\\n\\\")\\nfor i,para in enumerate(paras):\\n if para.startswith(\\\"**What still holds.*\u2026\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | tail -1; (timeout 2400 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/car\u2026\n- said: While that runs, I'll build the per-card verdict table from the Cypress log.\n- Bash: {\"command\": \"python3 - <<'EOF' > /tmp/verdict.md\\nimport json,re\\nc=json.load(open('crates/cards/catalog.json'))\\ncards=c['cards'] if 'cards' in c else c\\nshares={}\\nfor line in open('/tmp/cy1.log'):\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=s[s.index('## State'):s.index('# Plan')]\\nnew='''## State\\n\\nBuild pass 1 (opus, 2026-11-10). Plan below (the issue's), follow\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/vitest-changed.log; do sleep 5; done; grep -E \\\"Test Files|Tests |FAIL|exit\\\" /tmp/vitest-changed.log | head -20\", \"description\": \"Wait for the harness web t\u2026\n- Bash: {\"command\": \"tail -c 600 /tmp/vitest-changed.log; grep -c \\\"\\u2713\\\" /tmp/vitest-changed.log\", \"description\": \"Peek at the web test progress\"}\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/vitest-changed.log; do sleep 10; done; grep -E \\\"Test Files|Tests |FAIL|^exit\\\" /tmp/vitest-changed.log | head -20\", \"description\": \"Wait again for the web t\u2026\n- said: The harness's web command passes: 327 files, 6588 tests. Last, the sibling R3406000 Cypress spec, which the plan lists.\n- Bash: {\"command\": \"E2E_COMPONENT_PORT=5281 timeout 1200 pnpm --dir e2e test:component --spec cypress/component/stinkyscape91-alt-scenes.cy.tsx > /tmp/cy91.log 2>&1; echo exit $?; grep -E \\\"passing|failing\\\u2026\n- Bash: {\"command\": \"git status --short; git diff --stat | tail -2; cargo fmt --check && echo fmt-ok\", \"description\": \"Final status and fmt check\", \"timeout\": 300000}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Running: harness web command (vitest --changed origin/main) -> /tmp/vitest-changed.log.\\\\n- Left: (optional) 91 Cy\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every Stinkyscape (cards 1 to 90) Alt art somewhere else: the same subject in a new place, time or moment, one brief per card\"} --> ## What changed Each of the 48 cards in #3394's table now has an alt scene recipe written from its brief. That is the 47 \u2026"
       },
       "issue": 3394,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T01:40:28Z",
         "from_run": "42725760441",
         "gates": [
           {
@@ -18633,8 +18638,15 @@
         "source": "build",
         "until": "2026-11-10T02:09:30Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-10T01:39:30Z",
+      "run_id": "pending:ce7d4d68-1794274799",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "started_at": "2026-11-10T01:40:28Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18648,9 +18660,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T01:30:40Z",
+    "at": "2026-11-10T01:40:28Z",
     "url": "",
-    "what": "build #3582 on claude-6"
+    "what": "review #3591 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-10T01:24:18Z",
