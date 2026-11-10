@@ -16763,10 +16763,12 @@
           "provider": "muse",
           "tier": "medium"
         },
-        "at": "2026-11-10T14:37:22Z",
+        "at": "2026-11-10T17:21:34Z",
         "built_by": "muse",
         "by": "`muse` (medium)",
-        "sha": "c5231f685a6bf3e3e1dcd9313c937ae8f005b33a"
+        "carried_from": "c5231f685a6bf3e3e1dcd9313c937ae8f005b33a",
+        "resolved_by": "`muse` (medium)",
+        "sha": "f3945b9fc62055f9058d423fdcad3c6d54a358eb"
       },
       "cross_rounds": 1,
       "died": 0,
