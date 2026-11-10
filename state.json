@@ -18913,15 +18913,8 @@
       "stop_requested": false
     },
     "3584": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42795103197",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-10T10:12:12Z",
-        "until": "2026-11-10T10:42:12Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -18933,10 +18926,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": " is 1 (decision 3).\n- 3. In `crates/run/src/lib.rs`, add `#[serde(default)] pub max_hp_bonus: i32` to `RunState` (beside `hp`), and make `run_max_hp` return `RUN_MAX_HP + state.max_hp_bonus + passive_total(MaxHp)`. Init it to 0 in `run_create`.\n- 4. Rewrite `fight_won`: clamp the report to `>= 1` only (drop the max clamp); `damage_taken += (max_before - final).max(0)` where `max_before` is `run_max_hp` before the win; then `state.max_hp_bonus += RUN_WIN_MAX_HP; state.hp = run_max_hp(state, content)`. The refill is not counted as `healed` (R\u2026\n- 5. Rename `RunEventOption.hp` to `max_hp` (plain rename, no serde alias \u2014 content never persists in `RunFile`; kept runs are #3496's, decision 4). Event arm: refuse with `\"not enough max HP\"` when `run_max_hp(state, content) + option.max_hp < 1`, state unchanged; else apply inside `with_max_hp(stat\u2026\n- 6. Rename `RunAction::Heal` to `GainMaxHp` (wire `\"gainMaxHp\"`). Campfire arm becomes `with_max_hp(state, content, |s| s.max_hp_bonus += RUN_CAMPFIRE_MAX_HP); state.phase = Map` (no `stats.healed`; a rise is not healing). Radiant/buff/remove arms unchanged.\n- 7. Add `pub campfire_max_hp: usize`\u2026 (type `i32`) to `RunConstants` returned from `run_constants()` as `RUN_CAMPFIRE_MAX_HP`, so the client states no number (rule 9).\n- 8. Update `placeholder.json` event options per the table (texts + `hp` \u2192 `maxHp` keys).\n- 9. Write `spec/rulings/R3584000.md` (win of any kind: `+RUN_WIN_MAX_HP` bonus then refill; `damage_taken` counts `max_before \u2212 final`, refill not healed; Hearthstone semantics) and `R3584001.md` (event floor 1, no new constant; rename needs no alias), each with `proven_in` listing its test file; wr\u2026\n- 10. In `crates/tools/src/run_sim.rs`: campfire `candidates` becomes `[GainMaxHp, MakeRadiant, Buff]` (drop the `HEAL_BELOW_PERCENT` branch \u2014 HP is always full); event free-option check reads `option.max_hp`; add `final_hp: i32` to `FightRow` (from the `FightOver` action's `hp`), make `KindTally::ad\u2026\n- 11. Web: `RunHud` in `RunScreen.tsx` renders `{t(\"HP\")}: {max}` (drop `run.hp`); `CampfireScreen` button reads `runConstants().campfireMaxHp` and shows `t(\"Gain {n} max HP\", \u2026)`, sending `{ type: \"gainMaxHp\" }`; rename the testid; add `\"Gain {n} max HP\"` to `zh-CN.json` following the file's pattern\u2026\n- 12. Run `cargo test -p jackioh-run --features ts` and commit the regenerated `apps/web/src/wire/generated/` diff.\n- ## Tests\n- - `crates/run/src/tests.rs`: `r3584000_won_fight_of_each_kind_raises_max_hp_and_refills` (set `state.map[row][0].kind` to Fight/Elite/Ghost/MiniBoss/Boss in turn, win at `hp: 1`; assert `max_hp_bonus == RUN_WIN_MAX_HP`, `hp == run_max_hp`, `damage_taken == max_before - 1`); `r3584000_second_win_sta\u2026\n- - `crates/run/src/fight_tests.rs`: `r3584000_fight_setup_gives_max_hp` (bonus set, `hero_health == run_max_hp` including above `HERO_HEALTH`, plus `engine_takes` accepts it); extend `b11_\u2026` for `campfire_max_hp` and the `\"campfireMaxHp\"` JSON key.\n- - `walk_tests.rs`: no new tests; the existing whole-run walk (both contents) plus `cargo test -p jackioh-run` covers replay.\n- - `crates/tools`: `cargo test -p jackioh-tools --bin jackioh run_sim`, then `cargo jackioh run-sim --seeds 1` runs clean.\n- - `apps/web/src/dungeon/map/RunScreen.test.tsx`: update `CONTENT` test-event to a max-HP option (`{ text: \"Lose 5 max HP for 5 Coins\", maxHp: -5, \u2026 }`); B30 campfire test clicks the new testid, expects `{ type: \"gainMaxHp\" }` and the `\"Gain \u2026 max HP\"` words; event test asserts the max-HP words show\u2026\n- - `cargo jackioh spec check` passes; \u00a715 constants table matches `config.rs`.\n- ## Done when\n- - [ ] Win of each of the five kinds at 1 HP \u2192 max +5, HP = new max; loss \u2192 `Dead`, HP 0.\n- - [ ] Every fight setup carries hero health = run max HP, including above `HERO_HEALTH`.\n- - [ ] Event max-HP cost lowers max and HP; below-1 refused with state unchanged.\n- - [ ] Campfire max-HP choice raises max by 5; relic/blessing effects stack on top, once per level.\n- - [ ] `run_fold` replays end-to-end, both walk contents pass, `run-sim --seeds 1` clean.\n- - [ ] Vitest campfire + event words pass; all commands above green: crate tests, clippy (`-p jackioh-run`, `-p jackioh-tools`), fmt, web file test, `ts` regen diff committed, spec check.\n- - [ ] PR notes the uncapped in-fight healing finding and names every unsettled decision with its rejected alternative.\n- ## Risks\n- - Replay determinism: the bonus lives in `RunState` and only `fight_won`/campfire/event arms mutate it, so `run_fold` replays it; `rng_cursor` flow untouched. `walk_tests` + fold-back asserts guard this.\n- - Hidden info / client rules: unchanged \u2014 screens render `runMaxHp`/`runConstants` and send actions; refusal sentences unchanged except the new max-HP one.\n- - `RunConstants` wire change: additive field, camelCase; old web + new core cannot meet (bundled together), and content JSON is never persisted in `RunFile`, so the `hp`\u2192`max_hp` rename needs no migration.\n- - `run-sim` tuning drift: HP now ratchets +5/win and campfires add max HP, so boss-HP and HP-lost numbers shift upward by construction; that is the feature, not a regression \u2014 read the table accordingly.\n- - #3496 interplay: do not end, migrate, or special-case kept runs here; that issue owns it.\n- ## Open questions\n- None for the builder \u2014 medium stands (one crate's design; tools and web changes are call sites and presentation). One person-side note: the harness's blocked-by (#3496) must land first or with this, otherwise kept runs with old event JSON fold differently; nothing in this plan handles that on purpo\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-3584 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-3584/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-10T09:57:55Z",
       "owner_why": "it plans it",
@@ -18949,9 +18941,9 @@
       "provider": "muse",
       "queued_at": "2026-11-10T01:00:41Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42795103197",
+      "run_id": "pending:855d06b1-1794306200",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-10T09:57:55Z",
+      "started_at": "2026-11-10T10:24:27Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -20791,9 +20783,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T10:23:01Z",
+    "at": "2026-11-10T10:24:27Z",
     "url": "",
-    "what": "build #3633 on claude-8"
+    "what": "build #3584 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T09:39:46Z",
