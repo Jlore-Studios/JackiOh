@@ -17670,15 +17670,15 @@
       "ci_fixes": 1,
       "cleared": {
         "approver": {
-          "family": "muse",
-          "model": "muse-spark-1.3-contributor",
-          "provider": "muse",
-          "tier": "medium"
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
         },
-        "at": "2026-11-10T00:57:19Z",
-        "built_by": "muse",
-        "by": "`muse` (medium)",
-        "sha": "d250e47a4088ebe09c25e88015ae93a78d36ac0c"
+        "at": "2026-11-10T11:39:24Z",
+        "built_by": "claude-3",
+        "by": "`claude` (strong)",
+        "sha": "a91826f760f82fc08a782d1d3b2bd28ec6850af5"
       },
       "died": 0,
       "difficulty": "medium",
@@ -17699,6 +17699,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
+      "merge_owner": "claude-3",
       "merge_owner_gave_up": {
         "at": "2026-11-10T02:19:25Z",
         "provider": "muse",
