@@ -18416,21 +18416,17 @@
     "what": "review #3531 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-10T00:55:06Z",
+    "at": "2026-11-10T01:07:49Z",
     "notes": [
-      "delivered build #3580 on muse (run 42728530616): built",
-      "delivered review #3529 on muse (run 42717247157): approved",
-      "started review #3585 on muse (run 42732323451)",
-      "started plan #3582 on claude-6 (run 42732394160)",
-      "started plan #3588 on muse (run 42732470386)",
-      "started plan #3589 on muse (run 42732554923)",
+      "delivered plan #3589 on muse (run 42732554923): planned",
+      "delivered plan #3588 on muse (run 42732470386): planned",
+      "delivered review #3585 on muse (run 42732323451): approved",
+      "delivered review #3531 on muse (run 42717120444): built",
+      "started build #3588 on muse (run 42734083194)",
+      "started build #3589 on muse (run 42734170166)",
+      "started review #3531 on claude-7 (run 42734262190)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "#3589: typed it Task",
-      "#3588: typed it Task",
-      "#3587: typed it Task",
-      "#3586: typed it Task",
-      "runner gate: started 0 of 5 waiting run(s); 5 wait for room"
+      "runner gate: started 1 of 5 waiting run(s) (queue build 42732393919); 4 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19136,7 +19132,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T00:55:06Z",
+  "loop_tick": "2026-11-10T01:07:49Z",
   "machine_disk": {
     "issue": null,
     "reading": {
