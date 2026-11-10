@@ -17196,6 +17196,36 @@
     "3633": {
       "action": "build",
       "asks": [],
+      "decision": {
+        "asked_at": "2026-11-10T12:19:42Z",
+        "assigned": [
+          "jgoetzmann",
+          "MaxGoetzmann"
+        ],
+        "default": 1,
+        "ends": "2026-11-11T12:19:42Z",
+        "hours": 24,
+        "kind": "build",
+        "model": "opus",
+        "options": [
+          {
+            "change": "Keep fixing the product: memoize the board's cards so a queue step re-renders only what changed, fold the per-step nested update into one commit, replace the volatile `.game:has()` rules with attributes that Game and FxLayer set, and make the spec's takeover replay use fresh instance ids.",
+            "tradeoff": "A refactor of Board, Zone, Hand, Card and Game rendering that every board shares. It is not certain to reach 120 ms worst under the development build at 4x: production React spikes are 150\u2013350 ms today."
+          },
+          {
+            "change": "Rule that this spec measures React's production build, since the harness serves the development build and its owner-stack instrumentation is about 35% of a spike's script time. Then do option 1's work for whatever still misses.",
+            "tradeoff": "Changes what the spec measures, which needs a person's ruling, and still needs most of option 1's product work."
+          },
+          {
+            "change": "Revise R3351000's worst-frame bound by ruling, for example letting the frame that starts a queue entry exceed FX_PHONE_FRAME_WORST_MS.",
+            "tradeoff": "Loosens a bound that R3351000 and R2803000 refused to loosen, which the issue forbids without a person's ruling."
+          }
+        ],
+        "problem": "The three structural causes the plan named are fixed and tested. The Anomaly's cast went from 170\u2013960 ms mean frames on CI to about 39 ms mean and 106 ms worst at 390x844 under 4x throttling. It now holds the budget at 390x844 and 844x390, and is borderline at 360x780.\n\nFive other moments still miss: the Mythic takeover, the broadside, the Battleship, the riffle, and the flight at 360x780. Each has one spike frame of 350\u2013500 ms. The profile shows what it is: every animation-queue step re-renders the whole Game. React's Profiler records an update commit plus a nested update of 100\u2013250 ms each, in the development build at 4x. On top of that, Blink restyles about 780 elements through `:has()` invalidation. With React's production build the spikes are still 150\u2013350 ms. So the component harness's development build roughly doubles the cost, but it does not explain all of it.\n\nBringing these frames under 120 ms means re-architecting how the board renders: memoizing the cards and folding each queue step into one commit. Separately, the spec's replay of the takeover at 844x390 can never pass after its first attempt: replaying the same events after re-rendering the plain board plays nothing. The alternatives touch the spec's measurement basis or the budget, which the issue reserves for a person.",
+        "provider": "claude-8",
+        "question": "Should the next pass take on the React render refactor (memoize the board's cards, one commit per queue step, attributes instead of volatile :has() rules), or should a person rule on what this spec measures or its worst-frame bound?",
+        "why": "it stays inside the issue's limits (fix the product, keep the budget, the throttle and the spec), and the measurements show the remaining cost is the board's own re-rendering, which production React also pays"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17220,6 +17250,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-8",
+      "question": "Should the next pass take on the React render refactor (memoize the board's cards, one commit per queue step, attributes instead of volatile :has() rules), or should a person rule on what this spec measures or its worst-frame bound?",
       "queued_at": "2026-11-10T07:48:35Z",
       "requested_by": "jgoetzmann",
       "run_id": "42798679876",
