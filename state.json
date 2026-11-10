@@ -15391,7 +15391,7 @@
       "queued_at": "2026-11-10T21:34:46Z",
       "requested_by": "squishy-squooby",
       "round_tier": "",
-      "run_id": "",
+      "run_id": "pending:b2f36106-1794348953",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -15410,7 +15410,7 @@
         "provider": "claude-3",
         "run": "42894395397"
       },
-      "started_at": "2026-11-10T22:07:57Z",
+      "started_at": "2026-11-10T22:16:31Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
@@ -18350,7 +18350,7 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T22:07:57Z",
+    "at": "2026-11-10T22:16:31Z",
     "url": "",
     "what": "build #3549 on claude-7"
   },
