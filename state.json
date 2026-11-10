@@ -18367,12 +18367,11 @@
     "what": "plan #3607 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T22:14:41Z",
+    "at": "2026-11-10T22:23:21Z",
     "notes": [
-      "#3666 needs a plan",
-      "#3591: approved and green, so its strikes are cleared",
-      "could not start build #3549 on claude-7: POST /repos/Jlore-Studios/JackiOh/actions/workflows/bot-night.yml/dispatches: HTTP 422: Cannot trigger a 'workflow_dispatch' on a disabled workflow",
-      "#3666: typed it Task"
+      "#3607 needs a plan",
+      "could not start plan #3607 on muse: POST /repos/Jlore-Studios/JackiOh/actions/workflows/bot-night.yml/dispatches: HTTP 422: Cannot trigger a 'workflow_dispatch' on a disabled workflow",
+      "#3663: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19078,7 +19077,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T22:14:41Z",
+  "loop_tick": "2026-11-10T22:23:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
