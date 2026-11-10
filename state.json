@@ -17263,7 +17263,7 @@
       "question": "Should this pass land now as #3633's pull request, with a new issue opened for the standing scene's cost, or should the work stay unmerged until the spec passes, or should R3351000's bounds be revised by ruling?",
       "queued_at": "2026-11-10T18:43:25Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42829835912",
+      "run_id": "pending:86278ad5-1794336200",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -17282,7 +17282,7 @@
         "provider": "claude-8",
         "run": "42829835912"
       },
-      "started_at": "2026-11-10T14:00:47Z",
+      "started_at": "2026-11-10T18:44:11Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18054,9 +18054,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T18:08:59Z",
+    "at": "2026-11-10T18:44:11Z",
     "url": "",
-    "what": "build #3546 on muse"
+    "what": "build #3633 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-10T18:31:35Z",
