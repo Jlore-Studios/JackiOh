@@ -18194,22 +18194,16 @@
     "what": "revise #3645 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-10T13:52:53Z",
+    "at": "2026-11-10T14:13:46Z",
     "notes": [
-      "#3633: @MaxGoetzmann answered its question, so it is queued again with the answer",
-      "delivered review #3627 on claude-8 (run 42826014586): reviewed",
-      "delivered review #3635 on claude-4 (run 42823571990): reviewed",
-      "delivered review #3647 on muse (run 42823418938): approved",
-      "delivered plan #3543 on claude-1 (run 42818315268): interrupted",
-      "delivered build #3541 on claude-7 (run 42815203929): part",
-      "delivered build #3542 on claude-3 (run 42807531331): part",
-      "started build #3633 on claude-8 (run 42829835912)",
-      "started revise #3529 on claude-3 (run 42830067513)",
-      "started plan #3543 on claude-4 (run 42830239514)",
-      "started revise #3591 on claude-4 (run 42830444340)",
+      "#3635: approved and green, so its strikes are cleared",
+      "delivered revise #3626 on muse (run 42825807477): built",
+      "delivered review #3645 on claude-6 (run 42817952953): approved",
+      "started review #3626 on muse (run 42832906965)",
+      "started revise #3645 on claude-6 (run 42833097603)",
       "nothing more to start: nothing is queued",
       "pruned 8 plan file(s) older than 7 days",
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
+      "runner gate: started 2 of 3 waiting run(s) (queue build 42832823638, run 42827143026 on patches/ship-c704b53714); 1 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18915,7 +18909,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T13:52:53Z",
+  "loop_tick": "2026-11-10T14:13:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
