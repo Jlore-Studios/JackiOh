@@ -87,4 +87,12 @@ exclude_re = [
   # its result and then ends the series or reopens the picks under a new id, `abandon_unstarted` pops
   # it, and `forfeit_series` runs only between games. So either half alone decides as both do.
   'replace && with \|\| in (game_in_play|abandon_unstarted)',
+  # crates/shared (#3513): the bots' cosmetic draws compare a roll of the engine's Rng, in [0, 1), against
+  # a share (`draw_wardrobe`) or a running sum of weights (`pick_by`): `<` and `<=` part only on a roll
+  # exactly equal to it, one draw in 2^32 at a given bound, which no seed a test can find makes.
+  'replace < with <= in (draw_wardrobe|pick_by)',
+  # crates/shared (#3513): `pick_by`'s fallback after its loop, the last candidate of any weight: the
+  # running sum adds the weights in the order `total` summed them, so it ends at `total` exactly, and a
+  # roll of `next() * total` is below it, so the loop always returns first.
+  'replace > with (==|<|>=) in pick_by',
 ]
