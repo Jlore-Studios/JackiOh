@@ -24,6 +24,7 @@ pub mod endings;
 pub mod evolution;
 pub mod feng_shui;
 pub mod field;
+pub mod flexible_evasive_frenzy;
 pub mod freeze;
 pub mod fruit;
 pub mod generation;

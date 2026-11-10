@@ -716,11 +716,12 @@ pub enum Keyword {
     /// R3535002: declared for SP3 E4; no rule yet.
     #[serde(rename = "GIGA")]
     Giga,
-    /// R3535002: declared for SP3 E3; no rule yet.
+    /// R3535002: declared for SP3 E3. R3543000: a Unit's backrow placement, which Flying has
+    /// innately; R3543001: a Field Spell's unit-zone placement.
     Flexible,
-    /// R3535002: declared for SP3 E3; no rule yet.
+    /// R3535002: declared for SP3 E3. R3543003: after it attacks and destroys a Unit, it may attack again.
     Frenzy,
-    /// R3535002: declared for SP3 E3; no rule yet.
+    /// R3535002: declared for SP3 E3. R3543002: "Can't be attacked" as a keyword, implying Can't Defend.
     Evasive,
     /// R3535002: declared for SP3 E5; no rule yet.
     Tipsy {
@@ -785,11 +786,12 @@ string_union! {
         Toxic = "Toxic",
         /// R3535002: declared for SP3 E4; no rule yet.
         Giga = "GIGA",
-        /// R3535002: declared for SP3 E3; no rule yet.
+        /// R3535002: declared for SP3 E3. R3543000: a Unit's backrow placement, which Flying has
+        /// innately; R3543001: a Field Spell's unit-zone placement.
         Flexible = "Flexible",
-        /// R3535002: declared for SP3 E3; no rule yet.
+        /// R3535002: declared for SP3 E3. R3543003: after it attacks and destroys a Unit, it may attack again.
         Frenzy = "Frenzy",
-        /// R3535002: declared for SP3 E3; no rule yet.
+        /// R3535002: declared for SP3 E3. R3543002: "Can't be attacked" as a keyword, implying Can't Defend.
         Evasive = "Evasive",
         /// R3535002: declared for SP3 E5; no rule yet.
         Tipsy = "Tipsy",

@@ -1622,8 +1622,9 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
             let stack = plays_on_stack(sink.state, &card) || base.is_some() || run.equip_host.is_some();
             let options = PlaceOnFieldOptions { stack: Some(stack) };
             if zone.row == Row::Backrow {
-                // R1081000: a Unit played into the backrow was vetted as Flying in hand
-                // (`play_choices::flies`) or carried, so it stands whatever its keywords read now.
+                // R1081000: a Unit played into the backrow was vetted as a Flexible Unit (Flying has
+                // it innately, R3543000) in hand (`play_choices::flies`) or carried, so it stands
+                // whatever its keywords read now.
                 place_standing_on_field(sink.state, &mut card, zone, options)
             } else {
                 place_on_field(sink.state, &mut card, zone, options)

@@ -166,6 +166,13 @@
       "aliases": []
     },
     {
+      "id": "Frenzy",
+      "label": "Frenzy",
+      "rule": "After it attacks and destroys a unit, it may attack again",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
       "id": "Temporary",
       "label": "Temporary",
       "rule": "At the end of its owner's turn the count drops by 1; at 0 the card is discarded from their hand. Temporary alone is Temporary 1",
@@ -205,6 +212,13 @@
       "id": "Flying",
       "label": "Flying",
       "rule": "Only Units with Flying or Ranged can attack it, unless it is in Defense Position. It may be played into your backrow as well as into a unit zone",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Flexible",
+      "label": "Flexible",
+      "rule": "Can be played into your backrow as well as into a unit zone, and is a unit in either. Every Flying unit has it",
       "section": "§6.1",
       "aliases": []
     },
@@ -261,6 +275,13 @@
       "id": "Can't be attacked",
       "label": "Can't be attacked",
       "rule": "No attack may target it",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Evasive",
+      "label": "Evasive",
+      "rule": "No attack may target it, and it can't be in Defense Position",
       "section": "§6.1",
       "aliases": []
     },
