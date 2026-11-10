@@ -84,7 +84,7 @@ pub const RUN_TIER_POINTS: [(RunTier, i32); 5] = [
     (RunTier::Diamond, 5),
 ];
 
-/// DR5: the health a run starts with and the most it heals to, before passives raise it.
+/// DR5: the health a run starts with, before wins, campfires, events and passives raise it.
 pub const RUN_MAX_HP: i32 = HERO_HEALTH;
 /// DR5, a strawman: each enemy's hero health by its kind of fight.
 pub const RUN_ENEMY_HEALTH: RunByFight = RunByFight {

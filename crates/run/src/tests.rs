@@ -624,8 +624,10 @@ fn r3584001_an_event_refused_below_one_max_hp_leaves_the_state_unchanged() {
     state.phase = RunPhase::Event {
         id: "temp-event-stranger".into(),
     };
+    let before = state.clone();
     let err = run_reduce(&state, &content, &RunAction::Choose { index: 1 }).unwrap_err();
     assert!(err.contains("not enough max HP"), "{err}");
+    assert_eq!(state, before, "a refused option leaves the state unchanged");
 }
 
 #[test]
