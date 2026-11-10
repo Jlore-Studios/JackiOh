@@ -1179,7 +1179,7 @@ mod run_body_tests {
         );
     }
 
-    // B12: a `go` from the initial Map answers `{ state }`, a `heal` answers `{ error }`.
+    // B12: a `go` from the initial Map answers `{ state }`, a `gainMaxHp` answers `{ error }`.
     #[test]
     fn run_reduce_body_serializes_state_and_refusal() {
         let content = content();
@@ -1192,16 +1192,21 @@ mod run_body_tests {
             jackioh_run::run_reduce(&state, &content, &go).unwrap()
         );
         assert!(answer.error.is_none());
-        let text = run_reduce(&json_of(&state), &json_of(&content), &json_of(&RunAction::Heal)).unwrap();
+        let text = run_reduce(
+            &json_of(&state),
+            &json_of(&content),
+            &json_of(&RunAction::GainMaxHp),
+        )
+        .unwrap();
         let answer: StateAnswer = serde_json::from_str(&text).unwrap();
         assert!(answer.state.is_none());
         assert_eq!(
             answer.error.unwrap(),
-            jackioh_run::run_reduce(&state, &content, &RunAction::Heal).unwrap_err()
+            jackioh_run::run_reduce(&state, &content, &RunAction::GainMaxHp).unwrap_err()
         );
     }
 
-    // B12: folding one `go` answers `{ state }`, folding a `heal` names the refused step.
+    // B12: folding one `go` answers `{ state }`, folding a `gainMaxHp` names the refused step.
     #[test]
     fn run_fold_body_serializes_state_and_refusal() {
         let content = content();
@@ -1222,7 +1227,7 @@ mod run_body_tests {
         let bad = jackioh_run::RunFile {
             setup,
             unlocks,
-            log: vec![RunAction::Heal],
+            log: vec![RunAction::GainMaxHp],
         };
         let text = run_fold(&json_of(&bad), &json_of(&content)).unwrap();
         let answer: StateAnswer = serde_json::from_str(&text).unwrap();

@@ -241,10 +241,12 @@ describe("B19 a run in progress survives a reload", () => {
     expect(dungeon.current.run).toBeNull();
     expect(window.localStorage.getItem(DUNGEON_RUN_KEY)).toBeNull();
     expect(dungeon.current.progress).toEqual({ unlocks: unlocks({ level: 3, cards: [EXTRACTABLE] }), embers: 7 });
-    // Its record joins the history, lost with no row and no score.
+    // Its record joins the history, lost with no row and no score: the unfoldable path never scores.
     expect(readRunHistory()).toEqual([
       expect.objectContaining({ seed: "QWERTY", won: false, rowReached: 0, score: 0, embers: 0, timeMs: 5 * MINUTE_MS, stats: ZERO_STATS }),
     ]);
+    expect(wasmBindings.runScore).not.toHaveBeenCalled();
+    expect(wasmBindings.runEmbers).not.toHaveBeenCalled();
     expect(stored(DUNGEON_HISTORY_KEY)).toEqual({ v: 1, runs: readRunHistory() });
     // The start screen says so, once.
     expect(dungeon.current.notice).toBe("The patch ended your last run as lost. What you had extracted is kept.");
@@ -336,6 +338,8 @@ describe("B19 a run in progress survives a reload", () => {
     expect(readRunHistory()).toEqual([
       expect.objectContaining({ seed: "QWERTY", mode: "sandbox", won: false, score: 0, embers: 0, timeMs: 2 * MINUTE_MS }),
     ]);
+    expect(wasmBindings.runScore).not.toHaveBeenCalled();
+    expect(wasmBindings.runEmbers).not.toHaveBeenCalled();
     expect(dungeon.current.notice).toBe("The patch ended your last run as lost. What you had extracted is kept.");
   });
 
@@ -531,8 +535,8 @@ describe("B20 a finished run", () => {
     expect(dungeon.current.run).toBeNull();
     expect(dungeon.current.elapsedMs).toBeNull();
     expect(window.localStorage.getItem(DUNGEON_RUN_KEY)).toBeNull();
-    // Before its first step the run stood on no row.
-    expect(readRunHistory()).toEqual([expect.objectContaining({ seed: "QWERTY", won: false, rowReached: 0 })]);
+    // Before its first step the run stood on no row, but abandoning still scores and pays Embers.
+    expect(readRunHistory()).toEqual([expect.objectContaining({ seed: "QWERTY", won: false, rowReached: 0, score: 120, embers: 12 })]);
 
     // With no run on, there is nothing to give up and nothing is recorded.
     press(() => dungeon.current.abandon());

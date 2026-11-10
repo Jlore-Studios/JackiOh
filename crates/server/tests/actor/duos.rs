@@ -650,22 +650,24 @@ struct Duos {
 }
 
 async fn duos(difficulty: &str) -> Duos {
-    duos_with(difficulty, None, None).await
+    duos_with(difficulty, None, None, None).await
 }
 
 /// A Duos match whose host brings `host_deck` and whose guest brings `guest_deck` as saved decks
-/// (each dealt at random when `None`).
+/// (each dealt at random when `None`), dealt from `seed` when one is given (R143: the test app is in
+/// end-to-end mode, which takes a room's seed), else from a fresh one.
 async fn duos_with(
     difficulty: &str,
     host_deck: Option<Vec<String>>,
     guest_deck: Option<Vec<String>>,
+    seed: Option<&str>,
 ) -> Duos {
     jackioh_cards::register_all();
     let app = empty_test_app().await;
     let host = account(&app, 1, "Hana").await;
     let guest = account(&app, 2, "Gus").await;
     let outsider = account(&app, 3, "Otto").await;
-    let room = match &host_deck {
+    let mut room = match &host_deck {
         Some(cards) => {
             let deck_id = uuid(800);
             save_deck(&app, &host, &deck_id, cards).await;
@@ -673,6 +675,9 @@ async fn duos_with(
         }
         None => json!({ "difficulty": difficulty, "random": true }),
     };
+    if let Some(seed) = seed {
+        room["seed"] = json!(seed);
+    }
     let guest_choice = match &guest_deck {
         Some(cards) => {
             let deck_id = uuid(801);
@@ -1008,6 +1013,9 @@ mod b35_the_socket {
 mod b36_the_ai_seats {
     use super::*;
 
+    /// The deal the AI team's round is played on: one fixed game, so a run can be played again.
+    const B36_SEED: &str = "seed-b36";
+
     #[tokio::test(start_paused = true)]
     async fn b36_the_ai_seats_answer_their_own_mulligans_before_the_mulligan_clock_and_leave_the_humans_theirs()
      {
@@ -1078,7 +1086,7 @@ mod b36_the_ai_seats {
 
     #[tokio::test(start_paused = true)]
     async fn b36_the_ai_team_plays_its_round_a_step_at_a_time_and_hands_it_back_before_the_round_clock() {
-        let h = duos("easy").await;
+        let h = duos_with("easy", None, None, Some(B36_SEED)).await;
         let a1 = h.seat(&h.host).await;
         let a2 = h.seat(&h.guest).await;
         h.ai_mulligans_answered(&a1).await;
@@ -1092,10 +1100,15 @@ mod b36_the_ai_seats {
 
         let (r2_index, r2_at) = round_reached(&a1, &a2, 0, 2, round_clock + PROMPTLY, &mut acted)
             .await
-            .expect("round 2, the AI team's, opens");
+            .unwrap_or_else(|| panic!("round 2, the AI team's, never opened: {}", last_view(&a1)));
         let (r3_index, r3_at) = round_reached(&a1, &a2, r2_index, 3, round_clock, &mut acted)
             .await
-            .expect("the AI team ends its round before the round clock would");
+            .unwrap_or_else(|| {
+                panic!(
+                    "the AI team did not end its round before the round clock would: {}",
+                    last_view(&a1)
+                )
+            });
 
         assert!(r3_at < r2_at + round_clock);
         // One action per DUOS_AI_STEP_DELAY_MS: never more than one per AI seat at one instant, the
@@ -1891,12 +1904,15 @@ mod a_coop_seat_is_sent_its_own_pay {
 mod r268_the_mulligan_clock {
     use super::*;
 
+    /// The deal the clock runs out on: one fixed game, so a run can be played again.
+    const R268_SEED: &str = "seed-r268";
+
     #[tokio::test(start_paused = true)]
     async fn r268_the_mulligan_clock_keeps_each_owing_persons_whole_hand_never_the_ais_mulligan() {
         // Every card costs 4 or more: the AI's own mulligan, which keeps the cheap ones, would send
         // nearly all of the host's opening hand back.
         let costly = deck_where(|def| def["cost"].as_i64().is_some_and(|cost| cost >= 4));
-        let h = duos_with("easy", Some(costly), None).await;
+        let h = duos_with("easy", Some(costly), None, Some(R268_SEED)).await;
         let a1 = h.seat(&h.host).await;
         let a2 = h.seat(&h.guest).await;
         let dealt_a1 = hand_ids(&first_view(&a1)["view"]["own"]);
@@ -1908,37 +1924,37 @@ mod r268_the_mulligan_clock {
 
         // Neither person answers: the clock runs out, and round 1 opens once it has answered both.
         let within = ms(DUOS_MULLIGAN_CLOCK_MS) + ms(DUOS_AI_STEP_DELAY_MS) * 4 + PROMPTLY;
-        let (_, _, opened) = a1
-            .wait_for(0, within, |frame| round_of(frame) >= 1)
+        a1.wait_for(0, within, |frame| round_of(frame) >= 1)
             .await
             .unwrap_or_else(|| panic!("round 1 never opened: {:?}", a1.frames()));
 
-        let holds_a1 = hand_ids(&opened["view"]["own"]);
-        let holds_a2 = hand_ids(&opened["view"]["teammate"]);
-        for card in &dealt_a1 {
-            assert!(
-                holds_a1.contains(card),
-                "A1 keeps {card}: dealt {dealt_a1:?}, holds {holds_a1:?}"
-            );
-        }
-        for card in &dealt_a2 {
-            assert!(
-                holds_a2.contains(card),
-                "A2 keeps {card}: dealt {dealt_a2:?}, holds {holds_a2:?}"
-            );
-        }
-        // Each person's answer is the one mulligan that keeps every card.
+        // Each person's answer is the one mulligan that keeps every card dealt: nothing goes back, as the
+        // AI's own mulligan would send back nearly all of the host's. The hand is not read once round 1
+        // is open: the last answer opens it, and turn 1's draws and what they set off may already have
+        // moved a kept card on (#3564: a Cognitive Offloading drawn there played A2's turn, summoning the
+        // EU Striker A2 kept).
         let log = h.logged().await;
-        for seat in ["a1", "a2"] {
+        for (seat, dealt) in [("a1", &dealt_a1), ("a2", &dealt_a2)] {
             let answer = log
                 .iter()
                 .find(|row| row.action["seat"] == seat && row.action["body"]["body"]["type"] == "mulligan")
                 .unwrap_or_else(|| panic!("{seat}'s mulligan was answered: {log:?}"));
-            let kept = answer.action["body"]["body"]["keep"]
+            let mut kept: Vec<String> = answer.action["body"]["body"]["keep"]
                 .as_array()
-                .map_or(0, Vec::len);
-            let dealt = if seat == "a1" { &dealt_a1 } else { &dealt_a2 };
-            assert_eq!(kept, dealt.len(), "{seat}: {:?}", answer.action);
+                .map(|ids| {
+                    ids.iter()
+                        .filter_map(|id| id.as_str().map(str::to_string))
+                        .collect()
+                })
+                .unwrap_or_default();
+            let mut whole = dealt.clone();
+            kept.sort();
+            whole.sort();
+            assert_eq!(
+                kept, whole,
+                "{seat}: dealt {dealt:?}, answered {:?}",
+                answer.action
+            );
         }
     }
 }
@@ -1953,7 +1969,7 @@ mod b37_b38_the_ais_hold {
         // Units of cost 1 or less: playing A1's round 1 outright, the AI always has a card to play.
         let cheap =
             deck_where(|def| def["type"] == "Unit" && def["cost"].as_i64().is_some_and(|cost| cost <= 1));
-        let h = duos_with("easy", Some(cheap), None).await;
+        let h = duos_with("easy", Some(cheap), None, None).await;
         let a1 = h.seat(&h.host).await;
         let a2 = h.seat(&h.guest).await;
         h.ai_mulligans_answered(&a1).await;
@@ -2351,7 +2367,7 @@ mod r1253000_a_live_coop_action_the_engine_panics_on {
             deck_where(|def| def["type"] == "Unit" && def["cost"].as_i64().is_some_and(|cost| cost <= 1));
         let runs = Arc::new(AtomicUsize::new(0));
         install_panicking_plays(&cheap, Arc::clone(&runs));
-        let h = duos_with("easy", Some(cheap.clone()), Some(cheap)).await;
+        let h = duos_with("easy", Some(cheap.clone()), Some(cheap), None).await;
         let a1 = h.seat(&h.host).await;
         let a2 = h.seat(&h.guest).await;
         h.ai_mulligans_answered(&a1).await;

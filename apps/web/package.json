@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "imports": {
+    "#jackioh-patch-meta": "./patch-meta.ts"
+  },
   "scripts": {
     "// predev": "The engine is the Rust one compiled to WebAssembly (docs/v0.3.0/SURFACE.md §10.2): each of dev, build, build:staging, build:e2e and test first builds crates/wasm into src/wasm/pkg. Idempotent, and quick when nothing changed.",
     "predev": "JACKIOH_WASM_DUOS=1 sh ../../scripts/build-wasm.sh",

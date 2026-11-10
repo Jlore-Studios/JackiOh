@@ -705,8 +705,8 @@
      "card": true
     },
     {
-     "text": "Lose 5 HP for 50 Coins",
-     "hp": -5,
+     "text": "Lose 5 max HP for 50 Coins",
+     "maxHp": -5,
      "coins": 50
     },
     {
@@ -719,8 +719,8 @@
    "text": "A dusty altar hums. (Placeholder story.)",
    "options": [
     {
-     "text": "Bleed on it (8 HP) for an artifact",
-     "hp": -8,
+     "text": "Bleed on it (8 max HP) for an artifact",
+     "maxHp": -8,
      "artifact": true
     },
     {

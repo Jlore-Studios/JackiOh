@@ -15,6 +15,10 @@
 //! `aliases.json` names an older scheme than `VERSIONS_SCHEME`: versions from `--from` on take the tier
 //! the classifier names now (R2455000, R2499000), `--rule` naming a rule every game meets, since no
 //! record holds it; `aliases.json` keeps scheme 1's names, mapped to today's, and gains `marked`.
+//!
+//! R3631001: the same `--from` run over a tree of scheme 3 is the v0.5.13 retcon (#3631), which names
+//! the micros R3471000 had put on the v0.5.13 line by R3631000's letters (v0.5.13 is v0.5.12aa). Each
+//! older marked scheme's names are carried on to today's, and scheme 3's renames join them.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -272,27 +276,49 @@ pub fn scoped_tier(
     (classification.tier.unwrap_or(Tier::Micro), classification.cards)
 }
 
-/// R2532000: the map file after a second run: scheme 1's names mapped on to today's, and the
-/// renames of the scheme `held` names, under its number. A third run would compose the marked
-/// schemes too, so it is refused until it is needed.
+/// R2532000: the map file after a scoped run: scheme 1's names mapped on to today's, and the
+/// renames of the scheme `held` names, under its number. R3631001: each older marked scheme's names
+/// are mapped on to today's too, so a file of any scheme is read through one map, once. A scheme's
+/// map holds only the names a retcon took from it, since a file of it names no version shipped after.
 pub fn scoped_aliases(held: &Aliases, map: &[Renamed]) -> anyhow::Result<Aliases> {
-    if !held.marked.is_empty() {
-        bail!("aliases.json already maps a marked scheme; a third retcon must compose them");
+    if held.versions >= VERSIONS_SCHEME {
+        bail!(
+            "aliases.json names scheme {}, today's: nothing is left to retcon",
+            held.versions
+        );
     }
     let renames: IndexMap<String, String> = map
         .iter()
         .filter(|renamed| renamed.old != renamed.new)
         .map(|renamed| (renamed.old.clone(), renamed.new.clone()))
         .collect();
-    let now = |name: &String| renames.get(name).cloned().unwrap_or_else(|| name.clone());
+    let onward = |names: &IndexMap<String, String>| -> IndexMap<String, String> {
+        names
+            .iter()
+            .map(|(old, new)| {
+                (
+                    old.clone(),
+                    renames.get(new).cloned().unwrap_or_else(|| new.clone()),
+                )
+            })
+            .collect()
+    };
+    let mut marked: IndexMap<String, IndexMap<String, String>> = held
+        .marked
+        .iter()
+        .map(|(scheme, names)| (scheme.clone(), onward(names)))
+        .collect();
+    if marked.contains_key(&held.versions.to_string()) {
+        bail!(
+            "aliases.json already maps scheme {}, the one it names",
+            held.versions
+        );
+    }
+    marked.insert(held.versions.to_string(), renames.clone());
     Ok(Aliases {
         versions: VERSIONS_SCHEME,
-        aliases: held
-            .aliases
-            .iter()
-            .map(|(old, new)| (old.clone(), now(new)))
-            .collect(),
-        marked: [(held.versions.to_string(), renames)].into_iter().collect(),
+        aliases: onward(&held.aliases),
+        marked,
     })
 }
 
@@ -521,7 +547,7 @@ pub fn run(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
             );
             return Ok(());
         }
-        let written = write_with(repo_root, &map, &aliases, &V05_RETCON)?;
+        let written = write_with(repo_root, &map, &aliases, scoped_retcon(held.versions)?)?;
         println!(
             "patches retcon: renamed the versions from {from} ({} snapshots), rewrote {} file(s), renamed {}, wrote {} and {}",
             written.snapshots,
@@ -587,17 +613,19 @@ const SKIP_PREFIXES: &[&str] = &[
 ];
 
 /// Files whose versions are not the shipped ones: fixtures that name made-up versions, and the old
-/// retcon's test, which re-runs migration 0025 over its own names (R743).
+/// retcons' tests, which re-run their migrations over their own names (R743, R2532000, R3631001).
 const SKIP_FILES: &[&str] = &[
     "crates/cards/src/versions.rs",
     "apps/web/src/replay/retcon.test.ts",
     "apps/web/src/replay/retcon-v05.test.ts",
+    "apps/web/src/replay/retcon-v0513.test.ts",
     "crates/tools/src/patches.rs",
     "crates/tools/src/classify.rs",
     "crates/tools/src/retcon.rs",
     "crates/server/tests/sql/14_patch_retcon.sql",
     "crates/server/tests/sql/28_version_retcon.sql",
     "crates/server/tests/sql/38_v0_5_retcon.sql",
+    "crates/server/tests/sql/52_v0_5_13_retcon.sql",
 ];
 
 /// How a file's versions are found: everywhere in a data file, in a code file's string literals.
@@ -807,13 +835,32 @@ pub const FIRST_RETCON: RetconSql = RetconSql {
     suffix: "_version_retcon.sql",
 };
 
-/// R2532000: the v0.5 retcon's.
+/// R2532000: the v0.5 retcon's, migration 0068, its records marked 3 (R3631001: the scheme it left,
+/// pinned, since 0068 already ran).
 pub const V05_RETCON: RetconSql = RetconSql {
     issue: 2532,
     title: "the v0.5 retcon (issue #2532, R2532000)",
-    marker: VERSIONS_SCHEME,
+    marker: 3,
     suffix: "_v0_5_retcon.sql",
 };
+
+/// R3631001: the v0.5.13 retcon's, migration 0087.
+pub const V0513_RETCON: RetconSql = RetconSql {
+    issue: 3631,
+    title: "the v0.5.13 retcon (issue #3631, R3631001)",
+    marker: VERSIONS_SCHEME,
+    suffix: "_v0_5_13_retcon.sql",
+};
+
+/// R3631001: the retcon a scoped run over a tree of `scheme` writes: the v0.5 retcon over scheme 2,
+/// the v0.5.13 retcon over scheme 3. A later one names its own.
+fn scoped_retcon(scheme: u32) -> anyhow::Result<&'static RetconSql> {
+    match scheme {
+        2 => Ok(&V05_RETCON),
+        3 => Ok(&V0513_RETCON),
+        _ => bail!("no retcon is named for a tree of scheme {scheme}: add its RetconSql"),
+    }
+}
 
 /// R1371000: the season a version plays in (R609's `v<major>.<minor>`), `None` for a name it cannot read.
 fn season_of(version: &str) -> Option<String> {
@@ -830,7 +877,8 @@ fn season_of(version: &str) -> Option<String> {
 /// R1371000: the migration that renames every catalog version the database holds, once: one statement
 /// per column joined to the map, so a name the map reuses is renamed from its old value only, and a key
 /// column goes through a `~` name first, so no row meets a name another still holds. R2532000:
-/// `retcon` names the run, the first (`FIRST_RETCON`) or the v0.5 retcon (`V05_RETCON`).
+/// `retcon` names the run, the first (`FIRST_RETCON`), the v0.5 retcon (`V05_RETCON`) or the v0.5.13
+/// retcon (`V0513_RETCON`, R3631001).
 pub fn migration_sql_for(number: u32, map: &[Renamed], retcon: &RetconSql) -> String {
     let RetconSql {
         issue, title, marker, ..
@@ -1721,7 +1769,7 @@ mod tests {
         assert!(!two.contains_key("v0.5.0"), "a name kept is no rename");
         assert!(
             scoped_aliases(&aliases, &map).is_err(),
-            "a third run must compose"
+            "a map file of today's scheme has nothing left to retcon"
         );
 
         let out = dir.0.join("training-out");
@@ -1747,9 +1795,59 @@ mod tests {
         let sql = migration_sql_for(70, &map, &V05_RETCON);
         assert!(sql.contains("create temporary table retcon_2532"));
         assert!(sql.contains("('v0.5.1', 'v0.5.0b')"));
-        assert!(sql.contains(&format!("'versions', {VERSIONS_SCHEME}")));
+        assert!(sql.contains("'versions', 3"));
         assert!(sql.contains("update public.game_totals t set patch = '~' || m.new"));
         assert!(!sql.contains("public.seasons (id"), "v0.5 stays v0.5");
+    }
+
+    // R3631001: a third run carries each older marked scheme's names on to today's, and adds the
+    // renames of the scheme it was run over under that scheme's number; its migration is the
+    // v0.5.13 retcon's, and a tree of any other scheme names none.
+    #[test]
+    fn r3631001_a_third_run_composes_every_older_scheme() {
+        let pairs = |rows: &[(&str, &str)]| -> IndexMap<String, String> {
+            rows.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect()
+        };
+        let held = Aliases {
+            versions: 3,
+            aliases: pairs(&[("v0.3.15", "v0.4.0"), ("v0.3.98", "v0.5.13")]),
+            marked: [(
+                "2".to_string(),
+                pairs(&[("v0.5.11", "v0.5.7"), ("v0.5.99", "v0.5.13b")]),
+            )]
+            .into_iter()
+            .collect(),
+        };
+        let renamed = |old: &str, new: &str| Renamed {
+            old: old.to_string(),
+            new: new.to_string(),
+            tier: Tier::Micro,
+            plays: Vec::new(),
+        };
+        let map = [
+            renamed("v0.5.12z", "v0.5.12z"),
+            renamed("v0.5.13", "v0.5.12aa"),
+            renamed("v0.5.13b", "v0.5.12ab"),
+        ];
+        let aliases = scoped_aliases(&held, &map).expect("the map file");
+        assert_eq!(aliases.versions, VERSIONS_SCHEME);
+        assert_eq!(
+            aliases.aliases,
+            pairs(&[("v0.3.15", "v0.4.0"), ("v0.3.98", "v0.5.12aa")])
+        );
+        assert_eq!(
+            aliases.renames_from(2),
+            pairs(&[("v0.5.11", "v0.5.7"), ("v0.5.99", "v0.5.12ab")])
+        );
+        assert_eq!(
+            aliases.renames_from(3),
+            pairs(&[("v0.5.13", "v0.5.12aa"), ("v0.5.13b", "v0.5.12ab")])
+        );
+        assert!(aliases.renames_from(VERSIONS_SCHEME).is_empty());
+        assert_eq!(scoped_retcon(2).expect("scheme 2").issue, 2532);
+        assert_eq!(scoped_retcon(3).expect("scheme 3").issue, 3631);
+        assert!(scoped_retcon(VERSIONS_SCHEME).is_err());
+        assert_eq!((V05_RETCON.marker, V0513_RETCON.marker), (3, VERSIONS_SCHEME));
     }
 
     // R2532000: migration 0068 is what the generator writes from the map its own header lists, so a
@@ -1791,6 +1889,83 @@ mod tests {
             !written.contains("jsonb_each(t.co)"),
             "a co-played map is renamed as one text"
         );
+    }
+
+    // R3631001: migration 0087 is what the generator writes from the map its own header lists, as
+    // 0068 is (this run rewrites it when they differ: commit it). It renames the v0.5.13 line's eight
+    // micros by R3631000's letters, longest name first, so v0.5.13 is never read inside v0.5.13b, and
+    // its records take scheme 4; v0.5 stays v0.5, so no season moves.
+    #[test]
+    fn r3631001_migration_0087_is_what_the_generator_writes() {
+        let path = repo_root().join(MIGRATIONS_REL).join("0087_v0_5_13_retcon.sql");
+        let held = fs::read_to_string(&path).expect("migration 0087");
+        let map: Vec<Renamed> = held
+            .lines()
+            .skip_while(|line| !line.starts_with("--   old"))
+            .skip(1)
+            .map_while(|line| line.strip_prefix("--   "))
+            .filter_map(|row| {
+                let mut names = row.split_whitespace();
+                Some(Renamed {
+                    old: names.next()?.to_string(),
+                    new: names.next()?.to_string(),
+                    tier: Tier::Micro,
+                    plays: Vec::new(),
+                })
+            })
+            .collect();
+        let renamed: Vec<(&str, &str)> = map
+            .iter()
+            .filter(|renamed| renamed.old != renamed.new)
+            .map(|renamed| (renamed.old.as_str(), renamed.new.as_str()))
+            .collect();
+        assert_eq!(
+            renamed,
+            [
+                ("v0.5.13", "v0.5.12aa"),
+                ("v0.5.13b", "v0.5.12ab"),
+                ("v0.5.13c", "v0.5.12ac"),
+                ("v0.5.13d", "v0.5.12ad"),
+                ("v0.5.13e", "v0.5.12ae"),
+                ("v0.5.13f", "v0.5.12af"),
+                ("v0.5.13g", "v0.5.12ag"),
+                ("v0.5.13h", "v0.5.12ah"),
+            ]
+        );
+        let written = migration_sql_for(87, &map, &V0513_RETCON);
+        if written != held {
+            fs::write(&path, &written).expect("rewrite migration 0087");
+            panic!(
+                "{} differed from what the generator writes; this run rewrote it: commit the result",
+                path.display()
+            );
+        }
+        assert!(written.contains("array['v0.5.13b', 'v0.5.13c', 'v0.5.13d', 'v0.5.13e', 'v0.5.13f', 'v0.5.13g', 'v0.5.13h', 'v0.5.13']"));
+        assert!(written.contains(&format!("'versions', {VERSIONS_SCHEME}")));
+        assert!(!written.contains("public.seasons (id"), "v0.5 stays v0.5");
+    }
+
+    // R3631001: the tree as the v0.5.13 retcon left it: the map file names scheme 4, scheme 3's eight
+    // renames, and every older scheme's names carried on, none of them to a name it took away.
+    #[test]
+    fn r3631001_the_map_file_holds_the_v0_5_13_line_under_scheme_3() {
+        let aliases = read_aliases(&repo_root()).expect("the map file");
+        assert_eq!(aliases.versions, VERSIONS_SCHEME);
+        let three = aliases.renames_from(3);
+        assert_eq!(three.len(), 8);
+        assert_eq!(three.get("v0.5.13").map(String::as_str), Some("v0.5.12aa"));
+        assert_eq!(three.get("v0.5.13h").map(String::as_str), Some("v0.5.12ah"));
+        assert_eq!(aliases.renames_from(2).len(), 17);
+        let gone: Vec<&String> = three.keys().collect();
+        for scheme in [1, 2] {
+            assert!(
+                aliases
+                    .renames_from(scheme)
+                    .values()
+                    .all(|now| !gone.contains(&now)),
+                "scheme {scheme} maps a name to one the retcon took away"
+            );
+        }
     }
 
     // The repository itself, retconned.

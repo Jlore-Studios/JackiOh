@@ -14,7 +14,12 @@ map: Array<Array<RunNode>>,
 /**
  * The row stood on; none before the first step.
  */
-row: number | null, col: number, hp: number, deck: Array<RunCard>, artifacts: Array<RunArtifact>, blessings: Array<string>, curses: Array<string>, coins: number, tickets: number, 
+row: number | null, col: number, hp: number, 
+/**
+ * The run's own permanent max-HP changes: each won fight's `RUN_WIN_MAX_HP`, each campfire's
+ * `RUN_CAMPFIRE_MAX_HP` and each event option's `max_hp`, so `run_fold` replays them.
+ */
+maxHpBonus: number, deck: Array<RunCard>, artifacts: Array<RunArtifact>, blessings: Array<string>, curses: Array<string>, coins: number, tickets: number, 
 /**
  * What this run extracted, for the caller to add to the unlocks.
  */

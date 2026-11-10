@@ -30,16 +30,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::{
     RUN_ACT_ROWS, RUN_ACTS, RUN_ARTIFACT_LEVEL_MAX, RUN_ARTIFACT_PERCENT, RUN_ARTIFACT_PRICE,
-    RUN_BUFF_TICKETS, RUN_CAMPFIRE_HEAL_PERCENT, RUN_CAMPFIRE_REMOVE, RUN_CARD_PRICE,
-    RUN_CHEST_ARTIFACT_PERCENT, RUN_CHEST_COINS, RUN_CHEST_TICKETS, RUN_COINS, RUN_DECK_MAX,
-    RUN_ELITE_PERCENT, RUN_ENEMY_DECK_SIZE, RUN_ENEMY_HEALTH, RUN_GHOST_PERCENT, RUN_KEEP, RUN_KEEP_MAX,
-    RUN_LEVEL_EMBERS, RUN_LEVEL_TICKETS, RUN_MAP_COLUMNS, RUN_MAP_PATHS, RUN_MAX_HP, RUN_MINI_BOSS_DROP_TIER,
-    RUN_PACK_SIZE, RUN_PRESET_DECKS, RUN_RADIANT_TICKETS, RUN_REMOVE_PRICE, RUN_ROUTE_FIGHTS_MAX,
-    RUN_ROUTE_FIGHTS_MIN, RUN_ROUTE_TILES_MIN, RUN_SCORE_CARD_DRAWN, RUN_SCORE_CURSE_POINT_PERCENT,
-    RUN_SCORE_DAMAGE, RUN_SCORE_FIGHT, RUN_SCORE_FINAL_BOSS_PERCENT, RUN_SCORE_HEALING,
-    RUN_SCORE_MINI_BOSS_PERCENT, RUN_SCORE_PER_EMBER, RUN_SCORE_ROW, RUN_SEED_LENGTH, RUN_SHOP_ARTIFACTS,
-    RUN_SHOP_CARDS, RUN_SHRINE_OFFERS, RUN_SLOT_LADDER, RUN_STARTER_ARTIFACT_POINTS,
-    RUN_STARTER_ARTIFACTS_MAX, RUN_STARTER_SIZE, RUN_TICKETS, RUN_TIER_POINTS, RUN_TILE_WEIGHTS,
+    RUN_BUFF_TICKETS, RUN_CAMPFIRE_MAX_HP, RUN_CAMPFIRE_REMOVE, RUN_CARD_PRICE, RUN_CHEST_ARTIFACT_PERCENT,
+    RUN_CHEST_COINS, RUN_CHEST_TICKETS, RUN_COINS, RUN_DECK_MAX, RUN_ELITE_PERCENT, RUN_ENEMY_DECK_SIZE,
+    RUN_ENEMY_HEALTH, RUN_GHOST_PERCENT, RUN_KEEP, RUN_KEEP_MAX, RUN_LEVEL_EMBERS, RUN_LEVEL_TICKETS,
+    RUN_MAP_COLUMNS, RUN_MAP_PATHS, RUN_MAX_HP, RUN_MINI_BOSS_DROP_TIER, RUN_PACK_SIZE, RUN_PRESET_DECKS,
+    RUN_RADIANT_TICKETS, RUN_REMOVE_PRICE, RUN_ROUTE_FIGHTS_MAX, RUN_ROUTE_FIGHTS_MIN, RUN_ROUTE_TILES_MIN,
+    RUN_SCORE_CARD_DRAWN, RUN_SCORE_CURSE_POINT_PERCENT, RUN_SCORE_DAMAGE, RUN_SCORE_FIGHT,
+    RUN_SCORE_FINAL_BOSS_PERCENT, RUN_SCORE_HEALING, RUN_SCORE_MINI_BOSS_PERCENT, RUN_SCORE_PER_EMBER,
+    RUN_SCORE_ROW, RUN_SEED_LENGTH, RUN_SHOP_ARTIFACTS, RUN_SHOP_CARDS, RUN_SHRINE_OFFERS, RUN_SLOT_LADDER,
+    RUN_STARTER_ARTIFACT_POINTS, RUN_STARTER_ARTIFACTS_MAX, RUN_STARTER_SIZE, RUN_TICKETS, RUN_TIER_POINTS,
+    RUN_TILE_WEIGHTS, RUN_WIN_MAX_HP,
 };
 
 // Content: data the caller passes in
@@ -242,7 +242,8 @@ pub struct RunEventDef {
     pub options: Vec<RunEventOption>,
 }
 
-/// An event's choice and what it changes. A cost the run cannot pay, or HP it cannot spare, refuses it.
+/// An event's choice and what it changes. A cost the run cannot pay, or max HP it cannot spare
+/// ([[R3584001]]), refuses it.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(
     feature = "ts",
@@ -252,8 +253,9 @@ pub struct RunEventDef {
 #[serde(rename_all = "camelCase")]
 pub struct RunEventOption {
     pub text: String,
+    /// What it adds to the run's max HP, for the rest of the run; HP follows the max.
     #[serde(default)]
-    pub hp: i32,
+    pub max_hp: i32,
     #[serde(default)]
     pub coins: i32,
     #[serde(default)]
@@ -568,7 +570,7 @@ pub enum RunPhase {
     Shop {
         stock: Vec<RunShopItem>,
     },
-    /// `Heal`, `MakeRadiant`, `Buff` or `RemoveCards`, free.
+    /// `GainMaxHp`, `MakeRadiant`, `Buff` or `RemoveCards`, free.
     Campfire,
     Event {
         id: String,
@@ -636,7 +638,8 @@ pub enum RunAction {
     LevelArtifact {
         index: usize,
     },
-    Heal,
+    /// A campfire's rest: `RUN_CAMPFIRE_MAX_HP` more max HP, for the rest of the run.
+    GainMaxHp,
     /// An event's option.
     Choose {
         index: usize,
@@ -705,6 +708,10 @@ pub struct RunState {
     pub row: Option<usize>,
     pub col: usize,
     pub hp: i32,
+    /// The run's own permanent max-HP changes: each won fight's `RUN_WIN_MAX_HP`, each campfire's
+    /// `RUN_CAMPFIRE_MAX_HP` and each event option's `max_hp`, so `run_fold` replays them.
+    #[serde(default)]
+    pub max_hp_bonus: i32,
     pub deck: Vec<RunCard>,
     pub artifacts: Vec<RunArtifact>,
     pub blessings: Vec<String>,
@@ -904,6 +911,7 @@ pub fn run_create(setup: &RunSetup, unlocks: &RunUnlocks, content: &RunContent) 
         row: None,
         col: 0,
         hp: RUN_MAX_HP,
+        max_hp_bonus: 0,
         deck: setup
             .starter
             .iter()
@@ -1324,8 +1332,11 @@ fn passive_total(state: &RunState, content: &RunContent, read: impl Fn(RunEffect
         .sum()
 }
 
+/// `RUN_MAX_HP`, plus the run's own permanent changes (`max_hp_bonus`: wins, campfires, events),
+/// plus the max-HP effects held.
 pub fn run_max_hp(state: &RunState, content: &RunContent) -> i32 {
     RUN_MAX_HP
+        + state.max_hp_bonus
         + passive_total(state, content, |e| match e {
             RunEffect::MaxHp { n } => Some(n),
             _ => None,
@@ -1404,6 +1415,8 @@ pub struct RunConstants {
     pub starter_artifact_points: i32,
     /// `RUN_TIER_POINTS`: an artifact's points by its tier.
     pub tier_points: Vec<(RunTier, i32)>,
+    /// `RUN_CAMPFIRE_MAX_HP`: the max HP a campfire's rest adds.
+    pub campfire_max_hp: i32,
     /// `RUN_CAMPFIRE_REMOVE`: the cards a campfire removes.
     pub campfire_remove: usize,
     /// `RUN_PRESET_DECKS`: the named starting decks the start screen offers.
@@ -1446,6 +1459,7 @@ pub fn run_constants() -> RunConstants {
         starter_artifacts_max: RUN_STARTER_ARTIFACTS_MAX,
         starter_artifact_points: RUN_STARTER_ARTIFACT_POINTS,
         tier_points: RUN_TIER_POINTS.to_vec(),
+        campfire_max_hp: RUN_CAMPFIRE_MAX_HP,
         campfire_remove: RUN_CAMPFIRE_REMOVE,
         presets: run_preset_decks(),
     }
@@ -1745,12 +1759,15 @@ struct FightReport {
     turns: i32,
 }
 
+/// A won fight of any kind: `RUN_WIN_MAX_HP` more max HP for the rest of the run, then HP
+/// refilled to the new max, whatever the hero's final health was ([[R3584000]]).
 fn fight_won(state: &mut RunState, content: &RunContent, report: &FightReport, rng: &mut Rng) {
     let node = run_node(state).expect("a fight stands on a node").clone();
     let kind = node.kind;
-    let hp = report.hp.clamp(1, run_max_hp(state, content));
+    let max_before = run_max_hp(state, content);
+    let final_hp = report.hp.max(1);
     let s = &mut state.stats;
-    s.damage_taken += (state.hp - hp).max(0);
+    s.damage_taken += (max_before - final_hp).max(0);
     s.fights_won += 1;
     s.damage_dealt += report.damage_dealt;
     s.healing_done += report.healing_done;
@@ -1763,7 +1780,9 @@ fn fight_won(state: &mut RunState, content: &RunContent, report: &FightReport, r
         RunNodeKind::Boss => s.bosses_won += 1,
         _ => {}
     }
-    state.hp = hp;
+    // The rise heals by the rise, as `with_max_hp` does, and the refill is not healing.
+    state.max_hp_bonus += RUN_WIN_MAX_HP;
+    state.hp = run_max_hp(state, content);
     let coins = RUN_COINS.of(kind)
         + passive_total(state, content, |e| match e {
             RunEffect::CoinsPerFight { n } => Some(n),
@@ -1998,11 +2017,9 @@ fn apply(
             state.stats.artifacts_leveled += 1;
         }
         (RunPhase::Shop { .. }, RunAction::Leave) => state.phase = RunPhase::Map,
-        (RunPhase::Campfire, RunAction::Heal) => {
-            let max = run_max_hp(state, content);
-            let healed = (max * RUN_CAMPFIRE_HEAL_PERCENT / PERCENT).min(max - state.hp);
-            state.hp += healed;
-            state.stats.healed += healed;
+        (RunPhase::Campfire, RunAction::GainMaxHp) => {
+            // A rise is not healing: no `stats.healed`.
+            with_max_hp(state, content, |s| s.max_hp_bonus += RUN_CAMPFIRE_MAX_HP);
             state.phase = RunPhase::Map;
         }
         (RunPhase::Campfire, RunAction::MakeRadiant { index }) => {
@@ -2035,14 +2052,15 @@ fn apply(
                 .find(|e| e.id == id)
                 .ok_or("no such event")?;
             let option = def.options.get(*index).ok_or("no such option")?;
-            if state.hp + option.hp < 1 {
-                return Err("not enough HP".into());
+            // R3584001: the option trades max HP, and is refused when it would leave max HP below 1.
+            if run_max_hp(state, content) + option.max_hp < 1 {
+                return Err("not enough max HP".into());
             }
             if state.coins + option.coins < 0 || state.tickets + option.tickets < 0 {
                 return Err("not enough to pay".into());
             }
             let before = state.hp;
-            state.hp = (state.hp + option.hp).min(run_max_hp(state, content));
+            with_max_hp(state, content, |s| s.max_hp_bonus += option.max_hp);
             state.stats.damage_taken += (before - state.hp).max(0);
             state.stats.healed += (state.hp - before).max(0);
             spend_coins(state, (-option.coins).max(0))?;
