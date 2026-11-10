@@ -16133,27 +16133,17 @@
           "claude"
         ],
         "builder": "claude",
-        "built_by": "claude-3",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/cards/art/ART.md",
-            "apps/web/src/cards/art/meditativeScenes.test.ts",
-            "apps/web/src/cards/art/sceneRecipes.ts"
-          ],
-          "from": "384131ff6844250cd465baab3d14c5e78056face",
-          "main": "58900682c90803a88c71ba340ef736b378f74bd7"
-        },
+        "built_by": "claude-4",
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "provider": "claude-3",
-            "run": "42767660211",
+            "provider": "claude-4",
+            "run": "42830444340",
             "tier": "strong"
           }
         ],
-        "sha": "2fbbfdbee78c163ee15884448d67c5886dd1315a",
+        "sha": "c42bf1cba89333c19ade147e720875cad77207ff",
         "tiers": {
           "claude": "strong"
         }
