@@ -18589,12 +18589,10 @@
     "what": "review #3591 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-10T01:38:05Z",
+    "at": "2026-11-10T01:47:49Z",
     "notes": [
-      "delivered build #3394 on claude-3 (run 42725760441): built",
-      "started review #3591 on claude-3 (run 42737457567)",
-      "nothing more to start: nothing is queued",
-      "runner gate: started 2 of 5 waiting run(s) (queue build 42736045777, run 42733937563 on bot/issue-3496); 3 wait for room"
+      "delivered review #3590 on claude-4 (run 42736108134): approved",
+      "runner gate: started 0 of 4 waiting run(s); 4 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19300,7 +19298,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T01:38:05Z",
+  "loop_tick": "2026-11-10T01:47:49Z",
   "machine_disk": {
     "issue": null,
     "reading": {
