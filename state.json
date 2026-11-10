@@ -20310,12 +20310,16 @@
       "taken_asks": [],
       "votes": {
         "approvals": [],
-        "builder": "claude",
-        "built_by": "claude-6",
-        "rejections": [],
+        "builder": "",
+        "built_by": "",
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
-        "sha": "da99c909905aaf4bd7cbfa41cba4389beae48ddb",
-        "tiers": {}
+        "sha": "164782542c63c79f66ca22105d919fbe26e2d307",
+        "tiers": {
+          "claude": "strong"
+        }
       },
       "waiting_comment": 6763178029
     },
