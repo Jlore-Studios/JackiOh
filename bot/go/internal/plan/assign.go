@@ -168,6 +168,18 @@ func Ranked(pool *providers.Pool, seats []*providers.Seat, spread Balance /* = N
 // seatKey is `(TIER_RANK[s.tier], s.rank)`.
 func seatKey(seat *providers.Seat) []any { return []any{tierRank[seat.Tier], seat.Rank} }
 
+// SentBackSeat is the seat a fullsend part its tree's reconcile sent back is built on again, by the
+// subscription that built it (`own`): its seat at the item's own floor when it has one, so a Claude
+// account rebuilds a hard part on Opus, not on the Sonnet that built it and was sent back (a hard part
+// is built on Sonnet first, 2026-11-09), and the part seat (`BuilderSeat`'s `part`) when it has none,
+// so Muse rebuilds what Muse built (#2748, section 2).
+func SentBackSeat(pool *providers.Pool, own []*providers.Provider, difficulty string, planMeets bool, spread Balance /* = None */) (*providers.Seat, string) {
+	if seat, note := BuilderSeat(pool, own, difficulty, false, "", "", spread); seat != nil {
+		return seat, note
+	}
+	return BuilderSeat(pool, own, difficulty, planMeets, "", "", spread)
+}
+
 // BuilderSeat is who builds an item of `difficulty`: the first free seat in the lane's tier
 // order (#695: Muse before agy before GPT before Sonnet), on its weakest seat that meets
 // the tier; with a note when that seat is above the tier, saying why (none of that tier is
@@ -201,8 +213,12 @@ func BuilderSeat(pool *providers.Pool, offered []*providers.Provider, difficulty
 		if providers.TierAtLeast(seat.Tier, floorOf(provider)) {
 			return true
 		}
-		return part && providers.TierAtLeast(seat.Tier, config.PartFloor) &&
-			pool.BestSeat(provider, floorOf(provider)) == nil
+		// A part whose plan meets its floor (an Opus plan for a hard one) may be built on any seat
+		// at `PartFloor`, a Claude account's Sonnet beside Muse: the tree's reconcile (Opus) checks
+		// and reviews it, and the hard item's own review is Opus too. Until 2026-11-09 only a
+		// subscription with no seat at the item's floor (Muse) could, so a Claude account built a
+		// hard part on Opus.
+		return part && providers.TierAtLeast(seat.Tier, config.PartFloor)
 	}
 	buildingSeats := func(provider *providers.Provider) []*providers.Seat {
 		return filter(pool.Seats(provider), func(seat *providers.Seat) bool { return builds(provider, seat) })
@@ -578,7 +594,7 @@ func Assign(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate,
 		// A part its tree's reconcile sent back goes to the subscription that built it first, its
 		// owner (#2748, section 2): Muse rebuilds what Muse built.
 		own := filter(builders, func(p *providers.Provider) bool { return p.ID == candidate.Owner })
-		if builder, note = BuilderSeat(pool, own, candidate.Difficulty, queue.PlanMeets(candidate), "", "",
+		if builder, note = SentBackSeat(pool, own, candidate.Difficulty, queue.PlanMeets(candidate),
 			spread); builder != nil {
 			note = py.Strip(fmt.Sprintf("its builder `%s` builds it again: its tree's reconcile sent it "+
 				"back. %s", candidate.Owner, note))
@@ -647,11 +663,18 @@ func Assign(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate,
 // ownReviewer is who takes `candidate`'s own review run (#2748, 2026-11-02): the subscription whose
 // run built the change (`candidate.Owner`), when it may start a run as long as a revision now
 // (`RoleFor`), in the lane its build reserved for it (`lanes` has let that go). The model that built
-// the head (`candidate.BuiltOn`, its reservation's) reviews it in fresh sessions and fixes what the
-// review finds (#2903, the owner's decision of 2026-11-03: one model, not the subscription's
-// strongest seat): Sonnet what Sonnet built, Opus a hard item. A reservation from before names no
-// model, and its weakest seat at the item's tier does both, as its builds go. nil when it cannot
-// (`Owning` then holds it for it or hands it off to a final audit).
+// the head (`candidate.BuiltOn`, its reservation's) fixes what the review finds (#2903, the owner's
+// decision of 2026-11-03: one model fixes, not the subscription's strongest seat): Sonnet what Sonnet
+// built, Opus a hard item. A reservation from before names no model, and its weakest seat at the item's
+// tier does both, as its builds go.
+//
+// The review is the subscription's strongest seat at or above the item's tier (`RunReviewer`), as a
+// build's in-run review was before #2903: Opus on a Claude account, so a medium item Sonnet built is
+// approved by Opus, in the same run and on the same lane, as a fresh session of its own. The review
+// never shares a session with the fix (each is a new instance, `work.Worker.resumes`), so a different
+// model reviewing than fixing rereads nothing. A subscription with one seat (Muse, agy, Codex) reviews
+// on it, as before. nil when the run cannot start (`Owning` then holds it for its owner or hands it
+// off to a final audit).
 func ownReviewer(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candidate, lanes *Lanes, forced bool, quietOK string) *Assignment {
 	pool := ctx.Cfg.Pool
 	provider := pool.Get(candidate.Owner)
@@ -668,8 +691,13 @@ func ownReviewer(ctx *hctx.Context, state *pyjson.Object, candidate *queue.Candi
 		return nil
 	}
 	reviewer, builder := seat, seat
-	notes := []string{fmt.Sprintf("#%d: its own review run: `%s`, whose run built it, reviews it and fixes "+
-		"what it finds on %s, the model that built it", candidate.Number, provider.ID, seat.Describe())}
+	if best := RunReviewer(pool, provider, candidate.Difficulty); best != nil &&
+		providers.TierAtLeast(best.Tier, seat.Tier) {
+		reviewer = best
+	}
+	notes := []string{fmt.Sprintf("#%d: its own review run: `%s`, whose run built it, reviews it on %s and "+
+		"fixes what it finds on %s, the model that built it", candidate.Number, provider.ID,
+		reviewer.Describe(), seat.Describe())}
 	return &Assignment{Provider: provider, Action: "review", Difficulty: candidate.Difficulty,
 		Build: builder, Review: reviewer, Notes: notes, OwnReview: true,
 		RunsOn: RunnerFor(ctx, state, provider, lanes, RoleFor(candidate))}

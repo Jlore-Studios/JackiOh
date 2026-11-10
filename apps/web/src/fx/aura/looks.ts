@@ -9,7 +9,8 @@
 // R3389000: a signature's own looks beside the shared seventeen, each worn by one signature alone (the
 // loader fails one on any other entry, tables.ts) and each within AURA_SIGNATURE_MAX_INTENSITY.
 // R3399001: eighteen more join them, one of each Classic+ signature permanent's own (#3399), each moving as its
-// card's concept does (syrup creeping down, steam rising, a banner in a breeze).
+// card's concept does (syrup creeping down, steam rising, a banner in a breeze). R3402000: Core's three join
+// them: Silly Silas's `mirrorball`, Combo-Index's `stadium` and Heroic Power's `pedestal`.
 // R3407000: fifteen more join them, each one Stinkyscape card's own "on its tile" (part two).
 // R3395001: three join them for Stinkyscape's signature Field Spells: The Greatest Heist's sweeping green
 // `laserGrid`, Rod of Ages' rising `silverRise` and The Narcor Project's slow `labHaze`.
@@ -47,6 +48,7 @@ export const AURA_FIELD_TYPES = ["Field Spell", "Field Trap"] as const;
  * Tyrant's crown-sigil, BOOM! Big Max's crater smoke, King Wagtoggle's cloak and In Too Deep's whirlpool.
  * R3395001: Stinkyscape's three signature Field Spells', The Greatest Heist's laser grid, Rod of Ages' silver
  * bands and The Narcor Project's lab haze.
+ * R3402000: then Core's (#3402): Silly Silas's mirrorball, Combo-Index's stadium and Heroic Power's pedestal.
  */
 export const AURA_SIGNATURE_LOOK_NAMES = [
   "seeingIris",
@@ -81,6 +83,10 @@ export const AURA_SIGNATURE_LOOK_NAMES = [
   "stairCracks",
   "jungleLeaves",
   "serverLights",
+  // R3402000: Core's three.
+  "mirrorball",
+  "stadium",
+  "pedestal",
   // R3407000: Stinkyscape part two's: the MAGI's scan line, heartbeat and glint, xxFreshJack's pixel crawl,
   // iKwzki's halo, Shockwave447's arcs, Job Application's step lights, Scornboi's searchlight, Megabase's
   // rings, IN33DH3's wisp, Prime's crown, the Wardrum Blob's drumbeat, Alteran Reach's star path, the
@@ -232,6 +238,12 @@ export const AURA_SIGNATURE_LOOKS: Readonly<Record<AuraSignatureLook, AuraLookSp
   jungleLeaves: { vx: [-10, 10], vy: [8, 18], size: [3, 5], life: [2600, 4000], alpha: 0.6, tint: 0.09, glow: 10, edge: 0.45, blend: S },
   // Claude's Datacenter: blinking status lights and a gentle heat shimmer above its racks.
   serverLights: { vx: [-1, 1], vy: [-12, -6], size: [1.5, 2.5], life: [700, 1300], alpha: 0.8, tint: 0.1, glow: 12, edge: 0.6, blend: L },
+  // Silly Silas: quick small mirrorball glints sweeping across his tile.
+  mirrorball: { vx: [18, 40], vy: [-6, 6], size: [1.5, 3], life: [700, 1400], alpha: 0.8, tint: 0.08, glow: 12, edge: 0.55, blend: L },
+  // Combo-Index: large slow motes rising like its stadium's lit rings.
+  stadium: { vx: [-3, 3], vy: [-12, -4], size: [4, 7], life: [2800, 4400], alpha: 0.5, tint: 0.1, glow: 16, edge: 0.55, blend: L },
+  // Heroic Power: a few slow glints over its crystal pedestal.
+  pedestal: { vx: [-2, 2], vy: [-6, -2], size: [2.5, 4.5], life: [3000, 4800], alpha: 0.7, tint: 0.09, glow: 18, edge: 0.6, blend: L },
   // R3407000: MELCHIOR's scan line sweeping its zone, counting.
   scanline: { vx: [30, 50], vy: [-1, 1], size: [1.5, 2.5], life: [800, 1400], alpha: 0.7, tint: 0.08, glow: 10, edge: 0.55, blend: L },
   // BALTHASAR's gentle heartbeat pulsing along its zone's edge.

@@ -6,7 +6,10 @@
 // softer shake, and takeover rays trimmed to the same visible disc), a board with 4 auras, and R3337003's
 // Anomaly cast (its rift, flare, title card and landing). R3332001: Felinor Fiender's signature, the first,
 // over the gallery's board with its three Felinors. R3389001: Classic's two heaviest signatures, In Too Deep's
-// (its own abyss takeover) and BOOM! Big Max's. R3338000: Ceaseless Void's fold and Dice of Doom's 67.
+// (its own abyss takeover) and BOOM! Big Max's. R3402001: the heaviest of Core's other signatures, each a
+// Mythic takeover with its own art (R3402000): My Pawn's and Craft a Card's, which plan the most particles of
+// the ten (its strings and its forge), and Heroic Power's, whose rotunda draws the most shapes. R3338000:
+// Ceaseless Void's fold and Dice of Doom's 67.
 // R3340000: a board of six moving faces (every Mythic's art moves on the board, in the six motion slots).
 // R3344001: a hand with one face tilted under a pointer that keeps moving over it, its planes parallaxing
 // under its glare. R3334002: a launched Starship's broadside of eight guns, at the slowest effects speed.
@@ -33,6 +36,7 @@ import {
   galleryBoardOf,
   galleryCardEvents,
   galleryFieldView,
+  galleryHandOf,
   galleryPlayOf,
 } from "../../../apps/web/src/fx/motifs/gallery.ts";
 import { DEFAULT_FX_SETTINGS, setFxSettings } from "../../../apps/web/src/fx/settings.ts";
@@ -438,6 +442,31 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       holdsBudget(`${defId}'s signature`, () => {
         mountScene(board, galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
         cy.get(GAME).find("[data-animating]").should("exist");
+        cy.get(CANVAS).should("exist");
+        return sampleFrames();
+      });
+      cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+    });
+  }
+
+  // R3402001: Core's two heaviest by particles, and Heroic Power's rotunda, the most shapes of its art.
+  for (const [defId, name] of [
+    ["core-096", "My Pawn"],
+    ["core-099", "Craft a Card"],
+    ["core-098", "Heroic Power"],
+  ] as const) {
+    it(`R3402001 ${name}'s signature holds the phone frame budget mid-flight`, () => {
+      cy.viewport(PHONE.width, PHONE.height);
+      const entry = FX_CARD_TABLE.get(defId);
+      const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${name} has no gallery play`);
+      const board = galleryBoardOf(defId, fullBoardView());
+      holdsBudget(`${name}'s signature`, () => {
+        // Over the board with the card still in the hand, as /dev/fx plays it, where a Spell's takeover lands.
+        mountScene(galleryHandOf(defId, board, 1), galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
+        cy.get(GAME).should("have.attr", "data-takeover", "mythic");
+        // R3402000: its own scene, a drawing in its takeover's art layer (R3399002).
+        cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art .takeover-art-drawing`).should("exist");
         cy.get(CANVAS).should("exist");
         return sampleFrames();
       });

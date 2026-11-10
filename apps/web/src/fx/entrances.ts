@@ -3,7 +3,8 @@
 // in place of its rarity's (cues.ts `summon`) for a card whose entry in its set's effects table names it
 // as its `entrance` (R2784000, R3332000, fx/cards/tables.ts); each recipe is its card's own file in
 // fx/cards/<set>/. R3332001: #92 Felinor Fiender "felinorAssembly", the first signature's. R3334004: the
-// Dormant Starship's "shipyardRollout" and #137 Starfleet Commander's "fleetCommand". R3332000: a
+// Dormant Starship's "shipyardRollout" and #137 Starfleet Commander's "fleetCommand". R3402001: #52 Silly
+// Silas "silasSpotlight", #93 Combo-Index "comboStadium" and #98 Heroic Power "heroicPedestal". R3332000: a
 // Field Spell's own entrance plays as it lands face up in the backrow. R3400001: Meditative+ #24 Bob's
 // "snowplowHeave", Training Grounds #38 Tutorial Master's "chalkboardLesson" and #39.1 the Training-Grounds
 // Golem's "golemLashing". R3389001: Classic's signatures' six (#4 Palantir "seeingOrb", #7 InfiniScepter
@@ -33,7 +34,10 @@ import { seeingOrb } from "./cards/classic/palantir.ts";
 import { galeBurst } from "./cards/classic/secondWind.ts";
 import { tyrantSigil } from "./cards/classic/spellTyrant.ts";
 import { voidCollapse } from "./cards/core/ceaselessVoid.ts";
+import { comboStadium } from "./cards/core/comboIndex.ts";
 import { felinorAssembly } from "./cards/core/felinorFiender.ts";
+import { heroicPedestal } from "./cards/core/heroicPower.ts";
+import { silasSpotlight } from "./cards/core/sillySilas.ts";
 import { flexBurst } from "./cards/classicplus/botLoser.ts";
 import { templeStack } from "./cards/classicplus/classicGolem.ts";
 import { obeliskRise } from "./cards/classicplus/datacenter.ts";
@@ -128,6 +132,9 @@ export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = {
   felinorAssembly,
   shipyardRollout,
   fleetCommand,
+  silasSpotlight,
+  comboStadium,
+  heroicPedestal,
   snowplowHeave,
   chalkboardLesson,
   golemLashing,

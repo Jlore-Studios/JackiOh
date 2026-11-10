@@ -9,6 +9,9 @@
 // Meditative+'s and Training Grounds' Legendaries and Mythics (Bob's Plan, Bob, Scratch Pad, Seance, Tutorial
 // Master, Call to Chaos (Training-Grounds Edition); Goetzmann Game Design's grows from its flourish).
 // R3389001: Classic's eleven signatures' recipes (#3389), King Wagtoggle's crownSwap grown among them.
+// R3402001: Core's signatures add Silly Silas's mirrorball shuffle, Unlicensed Experimentation's clamp weld,
+// Pocket Chaos's swap, Combo-Index's grade rings, Call to Chaos's reels, My Pawn's strings and Heroic Power's
+// doors.
 // R3407000: Stinkyscape part two's signatures.
 // R3405001: Meditative's Legendaries' and Mythics' signatures (fx/cards/meditative/), every one but The
 // Cane's and Mayor Medinamogger's, whose signatures are their entrances alone. R3399000: Classic+'s signatures'
@@ -18,9 +21,16 @@
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
+import { chaosReels } from "./core/callToChaos.ts";
+import { gradeRings } from "./core/comboIndex.ts";
 import { fusionForge } from "./core/craftACard.ts";
+import { heroicDoors } from "./core/heroicPower.ts";
 import { manaCrack } from "./core/hinder.ts";
+import { pawnStrings } from "./core/myPawn.ts";
+import { pocketSwap } from "./core/pocketChaos.ts";
+import { mirrorballShuffle } from "./core/sillySilas.ts";
 import { legendaryTide } from "./core/transmogulate.ts";
+import { clampWeld } from "./core/unlicensedExperimentation.ts";
 import { perfectWish } from "./core/zephrys.ts";
 import { inkTear } from "./classicplus/bookOfPain.ts";
 import { crushingWalls } from "./classicplus/crushingWalls.ts";
@@ -162,6 +172,13 @@ export const CARD_RECIPES = {
   legendaryTide,
   perfectWish,
   fusionForge,
+  mirrorballShuffle,
+  clampWeld,
+  pocketSwap,
+  gradeRings,
+  chaosReels,
+  pawnStrings,
+  heroicDoors,
   rollbackSweep,
   constantStamp,
   inkTear,
