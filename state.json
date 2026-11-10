@@ -16694,14 +16694,10 @@
         "approvals": [],
         "builder": "muse",
         "built_by": "muse",
-        "rejections": [
-          "muse"
-        ],
+        "rejections": [],
         "reviews": [],
-        "sha": "91e1c02691ec1700c82516a2d84f5384e8ead692",
-        "tiers": {
-          "muse": "medium"
-        }
+        "sha": "c5231f685a6bf3e3e1dcd9313c937ae8f005b33a",
+        "tiers": {}
       }
     },
     "3624": {
