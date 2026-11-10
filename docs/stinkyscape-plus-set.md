@@ -423,13 +423,10 @@ fullsends as sub-issues, along with the road to production (SP9). Each fullsend 
 in its fullsend mode (`bot/README.md`, Fullsend):
 
 - **Fullsend 1** is split by hand. Its parts below are its sub-issues. **The owner's change of 2026-11-09:**
-  F and E1–E9 are built in a Claude session by parallel agents and land on `main` first, in one pull
-  request with the set still `Held`. In that pull request, E3's shipped-card migration (Evasive, Frenzy) and
-  E5's Replenish rewording move to S01, and E9's unique draws ship behind `UNIQUE_RANDOM_DRAWS = false`,
-  which R turns on, so no shipped card plays differently before the release. Then the parent is labelled
-  `bot:fullsend`, and the bot adopts the open parts (S01–S26 and R, `queue.Adopt`). They land on
-  `bot/issue-<fullsend 1>`, cut from a `main` that already holds the foundation and the mechanics, and the
-  reconcile opens one pull request into `main`.
+  F is built in a Claude session and lands on `main` first, in its own pull request with the set still
+  `Held`. Then the parent is labelled `bot:fullsend`, and the bot adopts the open parts (E1–E9, S01–S26 and
+  R, `queue.Adopt`). They land on `bot/issue-<fullsend 1>`, cut from a `main` that already holds the
+  foundation, and the reconcile opens one pull request into `main`.
 - **Fullsends 2 and 3** have no parts opened by hand. Labelled `bot:fullsend`, each waits on its `Blocked by`
   line, and the bot's split cuts it into parts once the fullsend before it has merged. Which cards the AI
   fails is only known then.
@@ -466,7 +463,7 @@ fullsend 3 #3575.
 | E6 | `E6, combat and reaction verbs` | SP3 E6 | E5 | hard |
 | E7 | `E7, board geometry and damage routing` | SP3 E7 | E6 | hard |
 | E8 | `E8, hand, deck and fuse verbs` | SP3 E8 | E7 | hard |
-| E9 | `E9, random cards are unique` | SP3 E9 (the owner's system change) | E8 | hard |
+| E9 | `E9, random cards are unique` | SP3 E9 (the owner's system change); beside the chain, since no card part needs it | F | hard |
 | S01 | `S01, the patches to shipped cards` | SP4: Jay Fungus, Selective Breeding, Rotten Grape, Money Machine, Heroic Power, Great Paperclip Theory I | E1, E5 | hard |
 | S02 | `S02, the Swarm evolvers` | #2, #27, #27.1, #28, #83, #86, #88, #92, #101, #161 | E1 | medium |
 | S03 | `S03, Swarm rule benders` | #3, #75, #75.1, #87, #93, #163 | E1 | hard |
@@ -495,7 +492,7 @@ fullsend 3 #3575.
 | S26 | `S26, the set's look and sound` | all: set mark, chips, `FILTER_TAGS`, the `RELEASES` line, keyword icons (stein, Burn, Toxic, Evolved, GIGA), intro music for every Legendary and Mythic, the voice lines, every face read in the browser | every other S part | hard |
 | R | `R, the release` | the set ships, the AI dealing itself none of it | every other part (E9 included) | hard |
 
-The engine parts form one chain (F → E1 → … → E9). Each one touches the engine's shared surfaces
+The engine parts form one chain (F → E1 → … → E8), with E9 beside it. Each one touches the engine's shared surfaces
 (`state.rs`, `effects/mod.rs`, `script.rs`, `wire/events.rs`, the keyword tables), and two of them landing
 side by side would conflict on the integration branch, where a parked engine part would leave every card
 part after it without its verbs. The card parts touch their own script files. Each may edit only its own
