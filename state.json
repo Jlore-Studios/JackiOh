@@ -18450,20 +18450,30 @@
         "built_by": "claude-3",
         "carried": {
           "by": "`claude` (strong)",
-          "conflicts": [],
-          "from": "f5333c6f30ea8a32a9aa0d3eb5bb11a9e822f28a",
-          "main": "83c9c7751aff7d4391e33ccf30022ec2f0dea0e0"
+          "conflicts": [
+            "crates/cards/src/scripts/stinkyscape/c050_beam_v3.rs",
+            "crates/cards/src/scripts/stinkyscape/c051_repeater_v3.rs",
+            "crates/cards/src/scripts/stinkyscape/c052_cannon_v3.rs",
+            "crates/cards/src/scripts/stinkyscape/c054_beam_v4.rs",
+            "crates/cards/src/scripts/stinkyscape/c055_repeater_v4.rs",
+            "crates/cards/src/scripts/stinkyscape/c056_cannon_v4.rs",
+            "crates/cards/src/scripts/stinkyscape/c058_beam_v5.rs",
+            "crates/cards/src/scripts/stinkyscape/c059_repeater_v5.rs",
+            "crates/cards/src/scripts/stinkyscape/c060_cannon_v5.rs"
+          ],
+          "from": "03d6f59629c5c1a62a47b8aa0ef84997aba48678",
+          "main": "442c884399730b8c2092cf3add9cc1c23a6e0f43"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-3",
-            "run": "42751197402",
+            "run": "42757356962",
             "tier": "strong"
           }
         ],
-        "sha": "03d6f59629c5c1a62a47b8aa0ef84997aba48678",
+        "sha": "c2d9a93e100e69d139d5b8087fe2703bf2fc7faa",
         "tiers": {
           "claude": "strong"
         }
