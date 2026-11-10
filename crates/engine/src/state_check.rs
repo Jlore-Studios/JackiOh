@@ -62,6 +62,11 @@ fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 /// §4.5 step 1: a unit dies at 0 or less health or when marked destroyed; an Indestructible one only
 /// when its max health has fallen to 0 or less (R69).
 fn is_dying(auras: &AuraTable<'_>, unit: &CardInstance) -> bool {
+    // R3539003: no damage or aura reaches a Dormant card, so no health judges it; only a destroy mark
+    // does.
+    if crate::slumber::is_slumbering(unit) {
+        return unit.marked_destroyed == Some(true);
+    }
     let view = auras.unit_view(unit);
     let indestructible = has_keyword(&view.keywords, KeywordKind::Indestructible);
     if indestructible {

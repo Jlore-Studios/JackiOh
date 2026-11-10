@@ -23,6 +23,7 @@ pub mod stand_in;
 pub mod starscape;
 pub mod starship;
 pub mod starship_base_piece;
+pub mod starship_made;
 pub mod start_of_opponent_turn;
 pub mod state;
 pub mod statecheck;

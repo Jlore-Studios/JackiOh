@@ -1114,6 +1114,10 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 slumber: defined.iter().find_map(|f| f.slumber.clone()),
                 // R1852000: a fusion the Dormant Starship is in is still its hull.
                 starship_hull: any_flag(defined.iter().map(|f| f.starship_hull)),
+                // R3539000: a fusion a sealed hull is in still can't be launched by hand.
+                no_hand_launch: flags(|f| f.no_hand_launch),
+                // R3539004: a fusion a shipyard is in is still a yard.
+                starship_yard: flags(|f| f.starship_yard),
                 immune_to_spell_damage: flags(|f| f.immune_to_spell_damage),
                 destroyed_exiled: flags(|f| f.destroyed_exiled),
                 enemy_destroyed_exiled: flags(|f| f.enemy_destroyed_exiled),

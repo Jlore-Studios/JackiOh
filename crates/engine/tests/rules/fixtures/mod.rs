@@ -61,6 +61,7 @@ pub mod spell_verbs;
 pub mod staged_quests;
 pub mod starscape;
 pub mod starship;
+pub mod starship_made;
 pub mod stinkyscape_verbs;
 pub mod terminus;
 pub mod tg_spells;

@@ -186,6 +186,56 @@ pub fn exile_all_piles(args: BoardScope) -> Effect {
     })
 }
 
+/// `exileBoard`'s arguments: `player` defaults to "self".
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct ExileBoardArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// R3539002 (S+ #80 The Last Voyage): exile every card on `player`'s side of the board — the unit
+/// piles whole, top first, then the backrow, the backrow piles and the carried Units. Dormant cards
+/// go too (R1839000's reach does not stop a board exile), while a card no effect reaches is spared,
+/// as a harmful walk spares it (R940). With no rng draw, as on `exile_hand`.
+pub fn exile_board(args: ExileBoardArgs) -> Effect {
+    Effect::new("exileBoard", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        // A snapshot: exiling a pile uncovers the cards beneath it.
+        let side = &ctx.state.players[player];
+        let mut ids: Vec<String> = Vec::new();
+        for pile in side.units.iter().flatten() {
+            for card in pile {
+                ids.push(card.id.clone());
+            }
+        }
+        for card in side.backrow.iter().flatten() {
+            ids.push(card.id.clone());
+        }
+        for card in side.backrow_piles.iter().flatten().flatten() {
+            ids.push(card.id.clone());
+        }
+        for card in side.carried.iter().flatten().flatten() {
+            ids.push(card.id.clone());
+        }
+        for id in ids {
+            let Some(card) = find_instance(ctx.state, &id).cloned() else {
+                continue;
+            };
+            if card.zone.z() != ZoneName::Field {
+                continue;
+            }
+            // A Dormant card goes too; only a card no effect reaches is spared (R940).
+            if !crate::slumber::is_slumbering(&card) && crate::restrictions::unaffected_by(ctx, &card)
+            {
+                continue;
+            }
+            exile_to_pile(ctx, card);
+        }
+    })
+}
+
 /// `exileAdjacentTo`'s arguments: the target, and the scope its neighbours must match
 /// (TS `{ target: TargetSpec } & BoardScope`, the scope's keys beside `target`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

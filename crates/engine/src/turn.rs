@@ -409,6 +409,8 @@ fn start_of_turn_brittle(sink: &mut EngineSink, player: PlayerId, due_before: u3
     // R1839001: then `player`'s Dormant cards count down and one whose countdown ends awakens, in this
     // stage so its events settle with the tick's.
     crate::slumber::awaken_at_turn_start(sink, player);
+    // R3539004: then each of `player`'s shipyards fuses in a random Starship Piece.
+    crate::starship::yard_at_turn_start(sink, player);
     // R1854004: then `player`'s quests waiting to hear back count the turn; one whose wait ends opens
     // its stage.
     crate::subsystems::quests::hear_back_at_turn_start(sink, player);
