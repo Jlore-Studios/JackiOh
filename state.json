@@ -17077,6 +17077,22 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "3518": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
+      "live": "building",
+      "owner": "muse",
+      "owner_since": "2026-11-10T03:19:52Z",
+      "owner_why": "it took it up",
+      "pending_request": false,
+      "provider": "muse",
+      "run_id": "pending:6b2b16fb-1794280754",
+      "runs_on": "night-vm-muse-fill",
+      "started_at": "2026-11-10T03:19:52Z",
+      "stop_requested": false,
+      "taken_asks": []
+    },
     "3520": {
       "action": "review",
       "asks": [],
@@ -19127,9 +19143,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T03:19:01Z",
+    "at": "2026-11-10T03:19:52Z",
     "url": "",
-    "what": "plan #1023 on muse"
+    "what": "build #3518 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T03:03:02Z",
