@@ -279,7 +279,7 @@ button.dungeon-run-card:disabled {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 12px;
+  gap: var(--space-6);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -289,13 +289,13 @@ button.dungeon-run-card:disabled {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 10px 12px;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--bg-raised);
   color: inherit;
-  transition: transform 120ms ease-out;
+  transition: transform var(--motion-fast) var(--ease-out);
 }
 
 .dungeon-run-pack-pick:hover,
