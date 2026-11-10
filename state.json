@@ -536,6 +536,12 @@
       "lines": [
         "(named the bot)"
       ]
+    },
+    "c:6763114095": {
+      "at": "2026-11-10T08:52:18Z",
+      "lines": [
+        "/harness revise The merge queue took this out: its build on `main` f811a74 ([run 42776640780](https://github.com/Jlore-Studios/JackiOh/actions/runs/42776640780), `web (unit 4/8)`) failed this PR's own `src/net/first-load.test.ts`, \"the entry chunk and its preloads fit the gzip budget\": `expected 960130 to be less than or equal to 933888`. Nothing else failed."
+      ]
     }
   },
   "items": {
