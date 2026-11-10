@@ -1,7 +1,7 @@
 //! Bot series deck picks (`src/bots/pick.rs`, SPEC §9.5, R641000, R331, R332, R333).
 
 use jackioh_engine::config::DECK_SIZE;
-use jackioh_engine::{CardDefs, GameOverReason, PlayerId, Winner, query_cost};
+use jackioh_engine::{CardDefs, GameOverReason, PlayerId, Rng, Winner, query_cost};
 use jackioh_shared::bots::pick::{bot_pick, pick_due_at, pick_is_due, pick_slot, rule_slot};
 use jackioh_shared::config::{
     BOT_PICK_DELAY_MAX_MS, BOT_PICK_DELAY_MIN_MS, BOT_PICK_RULE_SHARE, SERIES_PICK_SECONDS,
@@ -333,5 +333,31 @@ fn r641000_the_pick_waits_a_person_s_delay_inside_the_clock() {
         deadline - 1,
     ] {
         assert!(!pick_is_due(&game_3, BOT_SEAT, at), "due at {at}");
+    }
+}
+
+/// R641000: the delay is one uniform draw over every whole millisecond of the window, both ends
+/// included, from the bot's own stream, `{seed_base}:bot-pick-delay:{seat}:{game}` (pick.rs): the
+/// soonest plus one of the BOT_PICK_DELAY_MAX_MS − BOT_PICK_DELAY_MIN_MS + 1 milliseconds from it.
+#[test]
+fn r641000_the_pick_delay_is_one_draw_over_every_millisecond_of_the_window() {
+    let trios = trios();
+    let first_game = 1;
+    let span = i32::try_from(BOT_PICK_DELAY_MAX_MS - BOT_PICK_DELAY_MIN_MS + 1).expect("a span");
+    for k in 0..SEEDS {
+        let row = series(&trios, &format!("delay-{k}"));
+        let mut rng = Rng::new(
+            &format!(
+                "{}:bot-pick-delay:{}:{first_game}",
+                row.seed_base,
+                BOT_SEAT.as_str()
+            ),
+            0,
+        );
+        assert_eq!(
+            pick_due_at(&row, BOT_SEAT),
+            Some(NOW + BOT_PICK_DELAY_MIN_MS + i64::from(rng.int(span))),
+            "seed {k}"
+        );
     }
 }

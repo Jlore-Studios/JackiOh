@@ -92,4 +92,9 @@ exclude_re = [
   # running sum adds the weights in the order `total` summed them, so it ends at `total` exactly, and a
   # roll of `next() * total` is below it, so the loop always returns first.
   'replace > with (==|<|>=) in pick_by',
+  # crates/shared (#3513): a bot's username draws its register and its shape (`weighted`) and its
+  # number's kind (`number`) by comparing a roll of the engine's Rng, in [0, 1), against a share or what
+  # is left of one, none of them 0: as above, `<` and `<=` part only on a roll exactly equal to it. The
+  # file's path keeps crates/run's own `weighted`, whose integer draw can equal its weight, out of it.
+  'bots/names/mod\.rs:.*replace < with <= in (weighted|number)',
 ]
