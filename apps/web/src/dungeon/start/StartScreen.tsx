@@ -254,6 +254,71 @@ function Setup({ dungeon, onEnter }: StartScreenProps): ReactElement {
       </section>
 
       <section className="dungeon-block">
+        <h2>{t("Relics")}</h2>
+        <p data-testid={dungeonTestid.relicCount}>
+          {t("Relics: {chosen} of {max}", { chosen: String(taken.length), max: String(constants.starterArtifactsMax) })}
+        </p>
+        <p data-testid={dungeonTestid.relicPoints}>
+          {t("Relic points: {points} of {max}", { points: String(relicPoints), max: String(constants.starterArtifactPoints) })}
+        </p>
+        <ul className="dungeon-relics">
+          {relics.map((relic) => {
+            const chosen = taken.includes(relic.id);
+            return (
+              <li key={relic.id}>
+                <button
+                  type="button"
+                  className="dungeon-relic"
+                  aria-pressed={chosen}
+                  disabled={!chosen && taken.length >= constants.starterArtifactsMax}
+                  data-testid={dungeonTestid.relic(relic.id)}
+                  data-tier={relic.tier ?? "none"}
+                  onClick={() => {
+                    pick(() => {
+                      setPickedRelics(toggled(taken, relic.id));
+                    });
+                  }}
+                >
+                  <span className="dungeon-relic__name">{relic.name}</span>
+                  <span className="dungeon-relic__text">{relic.text}</span>
+                  <span className="dungeon-relic__points">{t("Points: {points}", { points: String(pointsOf(relic.tier)) })}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <section className="dungeon-block">
+        <h2>{t("Curses")}</h2>
+        <p data-testid={dungeonTestid.cursePoints}>{t("Curse points: {points}", { points: String(cursePoints) })}</p>
+        <ul className="dungeon-relics">
+          {content.curses.map((curse) => {
+            const chosen = curses.includes(curse.id);
+            return (
+              <li key={curse.id}>
+                <button
+                  type="button"
+                  className="dungeon-relic"
+                  aria-pressed={chosen}
+                  data-testid={dungeonTestid.curse(curse.id)}
+                  onClick={() => {
+                    pick(() => {
+                      setPickedCurses(toggled(curses, curse.id));
+                    });
+                  }}
+                >
+                  <span className="dungeon-relic__name">{curse.name}</span>
+                  <span className="dungeon-relic__text">{curse.text}</span>
+                  <span className="dungeon-relic__points">{t("Points: {points}", { points: String(curse.points) })}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <section className="dungeon-block">
         <h2>{t("Choose a seed")}</h2>
         <div className="dungeon-choices">
           <label className="dungeon-choice" data-selected={seedChoice === "daily" ? "true" : "false"}>
@@ -326,71 +391,6 @@ function Setup({ dungeon, onEnter }: StartScreenProps): ReactElement {
           </p>
         ) : null}
         {seedUsable ? <p data-testid={dungeonTestid.seedValue}>{t("Seed: {seed}", { seed })}</p> : null}
-      </section>
-
-      <section className="dungeon-block">
-        <h2>{t("Relics")}</h2>
-        <p data-testid={dungeonTestid.relicCount}>
-          {t("Relics: {chosen} of {max}", { chosen: String(taken.length), max: String(constants.starterArtifactsMax) })}
-        </p>
-        <p data-testid={dungeonTestid.relicPoints}>
-          {t("Relic points: {points} of {max}", { points: String(relicPoints), max: String(constants.starterArtifactPoints) })}
-        </p>
-        <ul className="dungeon-relics">
-          {relics.map((relic) => {
-            const chosen = taken.includes(relic.id);
-            return (
-              <li key={relic.id}>
-                <button
-                  type="button"
-                  className="dungeon-relic"
-                  aria-pressed={chosen}
-                  disabled={!chosen && taken.length >= constants.starterArtifactsMax}
-                  data-testid={dungeonTestid.relic(relic.id)}
-                  data-tier={relic.tier ?? "none"}
-                  onClick={() => {
-                    pick(() => {
-                      setPickedRelics(toggled(taken, relic.id));
-                    });
-                  }}
-                >
-                  <span className="dungeon-relic__name">{relic.name}</span>
-                  <span className="dungeon-relic__text">{relic.text}</span>
-                  <span className="dungeon-relic__points">{t("Points: {points}", { points: String(pointsOf(relic.tier)) })}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      <section className="dungeon-block">
-        <h2>{t("Curses")}</h2>
-        <p data-testid={dungeonTestid.cursePoints}>{t("Curse points: {points}", { points: String(cursePoints) })}</p>
-        <ul className="dungeon-relics">
-          {content.curses.map((curse) => {
-            const chosen = curses.includes(curse.id);
-            return (
-              <li key={curse.id}>
-                <button
-                  type="button"
-                  className="dungeon-relic"
-                  aria-pressed={chosen}
-                  data-testid={dungeonTestid.curse(curse.id)}
-                  onClick={() => {
-                    pick(() => {
-                      setPickedCurses(toggled(curses, curse.id));
-                    });
-                  }}
-                >
-                  <span className="dungeon-relic__name">{curse.name}</span>
-                  <span className="dungeon-relic__text">{curse.text}</span>
-                  <span className="dungeon-relic__points">{t("Points: {points}", { points: String(curse.points) })}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
       </section>
 
       {shownRefusal === null ? null : (
