@@ -18318,15 +18318,8 @@
       }
     },
     "3580": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42727191254",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-10T00:26:26Z",
-        "until": "2026-11-10T00:56:26Z"
-      },
       "difficulty_by": {
         "at": "2026-11-10T00:26:16Z",
         "difficulty": "medium",
@@ -18343,9 +18336,8 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- | `bot/tests/test_ci_matrix.py` | change by a person | `JOBS` gains the four shard names; the `{(1, 1)}` shards assertion gains the four shard tuples (exact lines in Open questions) |\n- | `.github/ci/rust-test.toml` | change by a person, conditional | Split the `server api` group into lib-only and integration-only groups (exact TOML in Open questions), only if the new shards still miss 5 minutes |\n- Must not touch: `.github/` (bot), `bot/` (bot), `.harness/`, `.squishy/`, `crates/`, `apps/`, `e2e/`, `spec/` (no game rule is involved, so no spec section or ruling governs this; the governing docs are the `ci.yml` header's five-minute budget, `ci-duration.yml`'s TARGET 5 / ALERT 7, and the `scrip\u2026\n- ## Steps\n- 1. Re-read `scripts/ci-shards.toml` lines 15-29 (the `[rust-test]` table and the comment explaining why a count never skips a test) and `.github/ci/matrix.py` `shard()` (CRC-32 of the test name decides its shard, so every test lands in exactly one shard for any count).\n- 2. In `scripts/ci-shards.toml`, replace the line `\"server api\" = 1` with the following, keeping every other line byte-identical:\n- ```toml\n- # `server api` ran 7m 24s (#3580): about 1,200 tests (every tests/api module but\n- # practice, plus the lib's api:: tests). 4 shards of about 300 tests each, so each\n- # shard should finish under five minutes with headroom; each shard recompiles the\n- # group's binaries again, as above.\n- \"server api\" = 4\n- ```\n- Why 4, decided here since the builder cannot see CI times: 444 s total is compile (repeats per shard, likely 200-260 s given the engine and cards take about two minutes per job per the `rust-test.toml` header plus the server lib and two test binaries) plus run (splits three or four ways, ~1,200 fas\u2026\n- 3. Verify the matrix locally with `python3 .github/ci/matrix.py matrix > /tmp/matrix-3580.out 2> /tmp/matrix-3580.err`, then `grep \"rust (test server api\" /tmp/matrix-3580.err`. Expect exactly four lines: `rust (test server api 1/4)` through `rust (test server api 4/4)`, and no other new job name. \u2026\n- 4. Run `cd bot && python3 -m unittest test_ci_matrix -v`. Expect every test to pass except `test_the_committed_files_give_todays_jobs`, which must fail on the `JOBS` list and the `{(1, 1)}` assertion. That single failure is the person's follow-up in Open questions, not a defect: do not edit `bot/` \u2026\n- 5. Run `git status --porcelain`. Expect only `M scripts/ci-shards.toml`. No Rust, catalog, patch, ruling, web, or e2e file may change, so no cargo test, typecheck, or spec check is needed from the builder; the harness re-runs its checks after.\n- ## Tests\n- - `python3 .github/ci/matrix.py matrix` (stdout/stderr as in step 3): asserts the four `server api k/4` jobs exist with the group's unchanged `test` filters, scope `server`, and cache `server`. Shard 1 alone carries the binaries check; the group has no doc tests.\n- - `cd bot && python3 -m unittest test_ci_matrix -v`: asserts the sharding contract still holds (`ShardTests`: every name in exactly one shard for any count) and pins the one expected failure above, which the person's edit in Open questions resolves.\n- - No new tests are added: the hash-sharding property is already proven by `ShardTests`, and there is no behavior change to cover. No existing test is edited, deleted, or skipped by the builder.\n- ## Done when\n- - [ ] `scripts/ci-shards.toml` holds `\"server api\" = 4` with the comment from step 2, and nothing else differs.\n- - [ ] `matrix.py matrix` lists exactly `server api 1/4` through `server api 4/4`.\n- - [ ] `test_ci_matrix` shows only the expected `test_the_committed_files_give_todays_jobs` failure; all other tests pass.\n- - [ ] `git status` shows only `scripts/ci-shards.toml` modified.\n- - [ ] A person has applied the Open questions pin update, so `bot selftest` (a required check) is green before merge.\n- - [ ] The pull request's CI shows every `rust (test server api k/4)` shard under 5 minutes; if any is not, a person has applied the conditional split.\n- ## Risks\n- - Hash skew: if a few of the ~1,200 tests dominate runtime, one shard could still run long, since a count cannot split a single test. Four shards of ~300 keep this unlikely; the conditional person-side split is the fallback.\n- - Compile dominates: each shard recompiles the group's binaries, so if compile alone nears 5 minutes no count helps. The estimate says otherwise, but only the pull request's CI proves it; the conditional split covers it.\n- - `bot selftest` stays red until the person updates the pin test (as happened after #3263, fixed by a person in #3280). The pull request must not merge before that edit.\n- - The issue lists only jobs over 7 minutes; another job sitting between 5 and 7 minutes is invisible to the bot and out of scope for this change.\n- ## Open questions\n- - Person, required before merge: in `bot/tests/test_ci_matrix.py`, replace `\"cards\", \"server\", \"server api\", \"server practice\", \"server practice rulings\", \"ai\", \"ai slow\",` with `\"cards\", \"server\", \"server api 1/4\", \"server api 2/4\", \"server api 3/4\", \"server api 4/4\", \"server practice\", \"server pr\u2026\n- - Person, conditional: if any new shard still runs 5 minutes or more, replace the `server api` group in `.github/ci/rust-test.toml` (lines 117-121) with two groups sharing its scope, cache, and `--config` flags, one with `test = \"-p jackioh-server --lib --config profile.test.package.jackioh-engine.\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-3580 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-3580/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-10T00:17:38Z",
       "owner_why": "it plans it",
@@ -18356,18 +18348,18 @@
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
       "provider": "muse",
-      "run_id": "42727191254",
+      "run_id": "pending:bae254ec-1794270459",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-10T00:17:38Z",
+      "started_at": "2026-11-10T00:28:06Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T00:17:38Z",
+    "at": "2026-11-10T00:28:06Z",
     "url": "",
-    "what": "plan #3580 on muse"
+    "what": "build #3580 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T00:14:32Z",
