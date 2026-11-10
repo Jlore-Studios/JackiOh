@@ -19262,28 +19262,15 @@
     "what": "plan #3514 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-10T03:31:57Z",
+    "at": "2026-11-10T03:52:56Z",
     "notes": [
-      "#3579: its turn came (it waited 120 minutes for #3493, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway)",
-      "delivered plan #1023 on muse (run 42748640931): planned",
-      "delivered plan #3605 on muse (run 42748279463): planned",
-      "delivered review #3614 on claude-6 (run 42748099343): approved",
-      "delivered plan #3388 on claude-1 (run 42746731024): planned",
-      "delivered plan #3350 on claude-8 (run 42746649575): interrupted",
-      "delivered plan #3535 on claude-8 (run 42746479290): interrupted",
-      "delivered review #3594 on muse (run 42744665654): approved",
-      "delivered review #3531 on claude-7 (run 42743154487): approved",
-      "started build #3605 on muse (run 42750875022)",
-      "started revise #3592 on muse (run 42750958198)",
-      "started build #3388 on claude-1 (run 42751037205)",
-      "started build #1023 on muse (run 42751113069)",
-      "started revise #3579 on claude-3 (run 42751197402)",
-      "started plan #3535 on claude-7 (run 42751278164)",
-      "started plan #3350 on claude-6 (run 42751360989)",
-      "started plan #3613 on claude-3 (run 42751441194)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-10T08:00:00Z; it can start a build or a plan again in 3h 14m; `claude-1` is idle, but nothing queued is for it; `claude-4` is busy; `claude-6` is busy; `claude-5` is busy; `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it",
-      "pruned 2 plan file(s) older than 7 days",
-      "runner gate: started 5 of 7 waiting run(s) (queue build 42749153688, run 42747116372 on main-ci-skips-queue-passed, run 42747865120 on claude/laughing-lovelace-0mhz2a, run 42747944257 on bot/issue-3582, run 42747993727 on claude/upbeat-lamport-pn2n7j); 2 wait for room"
+      "delivered plan #3514 on claude-5 (run 42748363957): interrupted",
+      "delivered build #3600 on muse (run 42748182551): built",
+      "started review #3617 on muse (run 42752622028)",
+      "started plan #3514 on claude-1 (run 42752696584)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-10T08:00:00Z; it can start a build or a plan again in 3h 02m; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-11-10T08:20:00Z; it can start a build or a plan again in 4h 22m; `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it",
+      "pruned 4 plan file(s) older than 7 days",
+      "runner gate: started 0 of 3 waiting run(s); 3 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19989,7 +19976,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T03:31:57Z",
+  "loop_tick": "2026-11-10T03:52:56Z",
   "machine_disk": {
     "issue": null,
     "reading": {
