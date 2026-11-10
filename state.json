@@ -17896,6 +17896,8 @@
       }
     },
     "3645": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-10T11:09:36Z",
@@ -17909,8 +17911,11 @@
         "trail": "_multiple_of(RUN_AC\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo fmt-ok; cargo test -p jackioh-run 2>&1 | grep -E \\\"test result|FAILED|panicked\\\" | head; cargo test -p jackioh-tools --test acceptance dungeon_ 2>&1 | grep -E \\\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-wasm-core -p jackioh-wasm-c 2>&1 | grep -E \\\"test result|FAILED|panicked|error\\\" | head; cargo test -p jackioh-shared 2>&1 | grep -E \\\"test result|FAILED|panicked\\\"\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Next: fmt, clippy, workspace-ish tests (run, tools run_sim + acceptance dungeon_, wasm core/c), run-sim --seeds 1.\u2026\n- Bash: {\"command\": \"git diff crates/run/src/lib.rs | head -400\", \"description\": \"Review the lib.rs diff\"}\n- Bash: {\"command\": \"grep -rn \\\"\\\\.map\\\\.length\\\\|run\\\\.map\\\\[\\\" apps/web/src --include=*.ts --include=*.tsx | grep -v \\\"test\\\\.\\\\|generated\\\" | head\", \"description\": \"Find other client readers of the map's \u2026\n- Bash: {\"command\": \"sleep 120; cat /tmp/runsim.log | tail -40\", \"description\": \"Wait briefly and read the run-sim output\", \"timeout\": 200000}\n- tool error: <tool_use_error>Blocked: sleep 120 followed by: cat /tmp/runsim.log tail -40. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command y\u2026\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-3583/064663ac-80da-4648-b9ac-cfc9343ccc38/tasks/bykqpy5gp.output\"}\n- Bash: {\"command\": \"tail -5 /tmp/runsim.log; ps aux | grep -c \\\"jackioh run-sim\\\"\", \"description\": \"Peek at the run-sim log\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index(\\\"## State\\\")\\nj=s.index(\\\"## Log\\\")\\nstate='''## State\\n\\n- Run 2 (build, opus), 2026-11-10. Run 1 only planned.\\n- Don\u2026\n- Bash: {\"command\": \"git diff crates/run/README.md docs/dungeon-run.md | head -90\", \"description\": \"Review the README and plan-doc diffs\"}\n- Bash: {\"command\": \"grep -rn \\\"// B\\\\|\\\\\\\"B{\\\\|B27\\\\|behaviors\\\" crates/tools/tests/acceptance.rs | head -10; grep -rln \\\"// B2[0-9]\\\\b\\\" apps/web/src | head\", \"description\": \"Check whether behavior ids in \u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Monitor: {\"description\": \"run-sim --seeds 1 finishing\", \"timeout_ms\": 600000, \"command\": \"until grep -q \\\"^exit \\\" /tmp/runsim.log; do sleep 5; done; grep -E \\\"^exit |fights on the route|runs won|rows reached\u2026\n- tool error: This Bash command contains multiple operations. The following parts require approval: grep -q \"^exit \" /tmp/runsim.log, grep -E \"^exit |fights on the route|runs won|rows reached|fault|error\" /tmp/run\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/runsim.log; do sleep 5; done; tail -45 /tmp/runsim.log\", \"description\": \"Wait for run-sim to finish and show its report\", \"timeout\": 1800000, \"run_in_backgr\u2026\n- Bash: {\"command\": \"git status --short; git diff --stat | tail -3\", \"description\": \"Show the working tree's changed files\"}\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-3583/064663ac-80da-4648-b9ac-cfc9343ccc38/tasks/b190pcmyw.output\"}\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/runsim.log; do sleep 10; done; tail -42 /tmp/runsim.log\", \"description\": \"Block until run-sim finishes and print its tail\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo jackioh catalog check 2>&1 | tail -2; cargo jackioh patches check 2>&1 | tail -2; git fetch -q origin main 2>/dev/null; cargo jackioh classify --base origin/main --claims 2>&1 | ta\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Left: run-sim --seeds 1 (running), catalog/patches check, classify --claims, workspace cargo test.\\\",\\\"- Also gree\u2026\n- Bash: {\"command\": \"pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' > /tmp/web-changed.log 2>&1;\u2026\n- Bash: {\"command\": \"grep -n -B5 -A40 \\\"R1017002 across a long visit\\\" /tmp/web-changed.log | grep -v \\\"^\\\\s*$\\\" | head -80\", \"description\": \"Read the landing test failure\"}\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/ws-test.log; do sleep 15; done; grep -E \\\"^exit |FAILED|panicked|test result: FAILED|error(\\\\[|:)\\\" /tmp/ws-test.log | head -20; grep -c \\\"test result: ok\\\"\u2026\n- Bash: {\"command\": \"grep -c \\\"test result\\\" /tmp/ws-test.log; grep -E \\\"Running\\\" /tmp/ws-test.log | tail -2; grep -E \\\"FAILED|panicked\\\" /tmp/ws-test.log | head\", \"description\": \"Check the workspace test p\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/ws-test.log; do sleep 15; done; grep -E \\\"^exit |FAILED|panicked\\\" /tmp/ws-test.log | head -20; grep -c \\\"test result: ok\\\" /tmp/ws-test.log; tail -3 /tmp/w\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/ws-test.log; do sleep 20; done; echo done\", \"description\": \"Block until the workspace tests end\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -E \\\"^exit |FAILED|panicked\\\" /tmp/ws-test.log | head -20; grep -c \\\"test result: ok\\\" /tmp/ws-test.log; grep -c \\\"test result: FAILED\\\" /tmp/ws-test.log; tail -4 /tmp/ws-test.log; \u2026\n- Bash: {\"command\": \"pnpm --dir apps/web exec vitest run src/routes/landing.test.tsx 2>&1 | grep -E \\\"Test Files|Tests |FAIL|\\u00d7\\\" | head\", \"description\": \"Rerun the landing test file alone\", \"timeout\": 9\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo fmt-ok; cargo jackioh spec check 2>&1 | tail -1\", \"description\": \"Recheck formatting and the spec\", \"timeout\": 900000}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Left: the workspace cargo test as the harness runs it (running).\\\",\\\"- Also green: `cargo test --workspace --featu\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the dungeon map as branching paths that meet at the bosses\"} --> ## What changed The run's map is now a path map. Each act is `RUN_ACT_ROWS` (7) rows built from `RUN_MAP_PATHS` (6) seeded walks on a grid `RUN_MAP_COLUMNS` (7) wide. Each act ends at a bo\u2026"
       },
       "issue": 3583,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T12:41:44Z",
         "from_run": "42805170804",
         "gates": [
           {
@@ -18002,7 +18007,11 @@
         "source": "build",
         "until": "2026-11-10T13:07:37Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-10T12:37:37Z",
+      "run_id": "pending:dd8bcf14-1794314441",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -18021,6 +18030,9 @@
         "provider": "claude-6",
         "run": "42805170804"
       },
+      "started_at": "2026-11-10T12:41:44Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18170,9 +18182,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T12:22:26Z",
+    "at": "2026-11-10T12:41:44Z",
     "url": "",
-    "what": "build #3541 on claude-7"
+    "what": "review #3645 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-10T12:15:52Z",
