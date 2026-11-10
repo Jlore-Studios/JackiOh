@@ -542,6 +542,12 @@
       "lines": [
         "/harness revise The merge queue took this out: its build on `main` f811a74 ([run 42776640780](https://github.com/Jlore-Studios/JackiOh/actions/runs/42776640780), `web (unit 4/8)`) failed this PR's own `src/net/first-load.test.ts`, \"the entry chunk and its preloads fit the gzip budget\": `expected 960130 to be less than or equal to 933888`. Nothing else failed."
       ]
+    },
+    "c:6763735587": {
+      "at": "2026-11-10T09:27:48Z",
+      "lines": [
+        "/harness revise The person's part is done. #3625 landed on `main` as 636fc88: `bot/tests/test_ci_matrix.py` now lists `server api 1/4` to `4/4`, and its count test matches the sharded jobs, so `main`'s `bot selftest` is green again. The `human required` label is off."
+      ]
     }
   },
   "items": {
