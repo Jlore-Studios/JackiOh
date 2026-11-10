@@ -810,9 +810,10 @@ module after it (above): the creatures (`tortoise`, `slime`, `shrimp`, `crawler`
 `leaping-deer`, `mule`), the objects (`pickle`, `sceptre`, `spike-trap`, `tesla-coil`, `web`, `vat`, `chalice`), a
 `blast-crater`, and In Too Deep's `spiral-shaft`, none taking an old part's name (the deer and the crater beside
 R3397000's `deer` and `crater`, the cloak beside R3403000's `outfit-cloak`, above). Every Classic entry is off the
-short list, whose cap fell from 129 to 40; `classicScenes.test.ts` holds the recipes to all of it, and
-`classic-scenes.cy.tsx` shows every Epic, Legendary and Mythic scene at hand size, base and Radiant, and a contact
-sheet of the rest, at desktop size and at 390x844.
+short list, whose cap fell from 129 to 10 (Stinkyscape's first pass, #3391, had taken 30 off and left the cap at
+129); `classicScenes.test.ts` holds the recipes to all of it, and `classic-scenes.cy.tsx` shows every Epic,
+Legendary and Mythic scene at hand size, base and Radiant, and a contact sheet of the rest, at desktop size and at
+390x844.
 
 ## The detail floor (R3331001)
 
@@ -821,9 +822,9 @@ elements it draws after its `<defs>` (`artElements`), and for a scene the layers
 Each rarity has a floor (`ART_DETAIL_MIN_<RARITY>`): Common 30 elements, Rare 40, Epic 60, Legendary 90 and
 Mythic 140, Legendary and Mythic in every layer; a token is held to Common's. The Glitch is not measured: its
 window draws no picture. The floor starts as a ratchet: `fixtures/art-detail-short.json`
-(`ART_DETAIL_SHORT`) names, sorted, the cards under their floor as #3331 left them, at most
-`ART_DETAIL_SHORT_MAX`, and the test fails on a card under its floor the list does not name and on a listed
-card that clears its floor, so a set's pass takes its cards off as it lifts them, the list only shrinks, and
-the last pass empties it. A ceiling keeps phones fast: no picture's data URI, base or Radiant, is longer than
-`ART_DETAIL_MAX_BYTES` (48 KiB), and the art cache (`ART_CACHE_MAX`) and the lazy drawing of faces scrolled
-past (`near.ts`) are unchanged.
+(`ART_DETAIL_SHORT`) names, sorted, the cards under their floor as #3331 left them, exactly
+`ART_DETAIL_SHORT_MAX` of them (a pass that takes cards off lowers the cap with them, #3613), and the test fails
+on a card under its floor the list does not name and on a listed card that clears its floor, so a set's pass takes
+its cards off as it lifts them, the list only shrinks, and the last pass empties it. A ceiling keeps phones fast:
+no picture's data URI, base or Radiant, is longer than `ART_DETAIL_MAX_BYTES` (48 KiB), and the art cache
+(`ART_CACHE_MAX`) and the lazy drawing of faces scrolled past (`near.ts`) are unchanged.
