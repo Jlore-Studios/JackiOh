@@ -17697,16 +17697,26 @@
         ],
         "builder": "claude",
         "built_by": "claude-1",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/test/tileBoard.ts",
+            "e2e/cypress/component/card-fullscreen.cy.tsx",
+            "e2e/cypress/component/full-art-tiers.cy.tsx"
+          ],
+          "from": "09b5bf3f16f56d6a9add3d46a528a4c44fdadfa9",
+          "main": "ff0215660e1f5dcec63576e51cf72d8a6717d899"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-1",
-            "run": "42809475095",
+            "run": "42867395922",
             "tier": "strong"
           }
         ],
-        "sha": "09b5bf3f16f56d6a9add3d46a528a4c44fdadfa9",
+        "sha": "b767617e263a78df9b7f08f6dd5bd33855b054ff",
         "tiers": {
           "claude": "strong"
         }
