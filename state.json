@@ -18857,6 +18857,14 @@
       "requested_by": "jgoetzmann-bot",
       "spot_check_of": 3464,
       "stop_requested": false
+    },
+    "3614": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-10T01:30:40Z",
+      "issue": 3582,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
