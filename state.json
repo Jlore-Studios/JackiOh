@@ -18774,11 +18774,8 @@
     "what": "review #3594 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T02:40:41Z",
+    "at": "2026-11-10T02:50:31Z",
     "notes": [
-      "delivered build #3589 on muse (run 42734170166): built",
-      "started review #3594 on muse (run 42744665654)",
-      "nothing more to start: nothing is queued",
       "runner gate: started 0 of 4 waiting run(s); 4 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -19485,7 +19482,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T02:40:41Z",
+  "loop_tick": "2026-11-10T02:50:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
