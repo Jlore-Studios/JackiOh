@@ -17645,10 +17645,12 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "at": "2026-11-10T12:17:48Z",
+        "at": "2026-11-10T18:42:37Z",
         "built_by": "claude-1",
         "by": "`claude` (strong)",
-        "sha": "09b5bf3f16f56d6a9add3d46a528a4c44fdadfa9"
+        "carried_from": "09b5bf3f16f56d6a9add3d46a528a4c44fdadfa9",
+        "resolved_by": "`claude` (strong)",
+        "sha": "b767617e263a78df9b7f08f6dd5bd33855b054ff"
       },
       "died": 0,
       "difficulty": "medium",
