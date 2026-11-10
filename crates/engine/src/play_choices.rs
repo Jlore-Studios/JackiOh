@@ -576,6 +576,23 @@ pub fn legal_zones_for(
     if !needs_zone(state, card) {
         return Vec::new();
     }
+    // R3546000: a GIGA permanent is offered only the left lanes where it fits in both rows —
+    // no Stack, carrier, Flexible or R3543001 zone ever holds one.
+    if crate::giga::enters_giga(state, card) {
+        let row = row_for_card(state, card);
+        return crate::zones::slots_of(player, row)
+            .into_iter()
+            .filter(|slot| {
+                crate::giga::fits(*slot, |s| {
+                    crate::zones::is_open(state, s) || freed_by_tribute(state, &s, tributes)
+                })
+            })
+            .map(|slot| ZoneChoice {
+                row: slot.row,
+                lane: slot.lane,
+            })
+            .collect();
+    }
     let row = row_for_card(state, card);
     let stack = plays_on_stack(state, card);
     let mut slots: Vec<ZoneSlot> = crate::zones::slots_of(player, row)
@@ -679,6 +696,16 @@ pub fn default_zone_for(
     tributes: &[String],
 ) -> Option<ZoneSlot> {
     let row = row_for_card(state, card);
+    // R3546000: a GIGA takes the leftmost fit, Tribute-emptied zones counting as R391's do.
+    if crate::giga::enters_giga(state, card) {
+        return crate::giga::first_anchor(player, row, |slot| crate::zones::is_open(state, slot)).or_else(
+            || {
+                crate::giga::first_anchor(player, row, |slot| {
+                    crate::zones::is_open(state, slot) || freed_by_tribute(state, &slot, tributes)
+                })
+            },
+        );
+    }
     let own = crate::zones::first_free_zone(state, player, row).or_else(|| {
         crate::zones::slots_of(player, row)
             .into_iter()
@@ -2176,8 +2203,10 @@ fn why_unplayable(
             tribute_sets.iter().map(Vec::as_slice).collect()
         };
         let nowhere = sets.iter().all(|tributes| {
-            default_zone_for(state, player, card, tributes).is_none()
-                && legal_zones_for(state, player, card, tributes).is_empty()
+            // R3546002: read off this price's probe, as the listing reads it, so an
+            // "Embiggen: GIGA" card is refused at its embiggened size.
+            default_zone_for(state, player, &cheapest.probe, tributes).is_none()
+                && legal_zones_for(state, player, &cheapest.probe, tributes).is_empty()
                 && legal_equip_zones_for(state, player, &cheapest.probe, tributes).is_empty()
         });
         if nowhere {
@@ -2206,7 +2235,15 @@ fn why_unplayable(
     let probe = PlayAction {
         instance_id: card.id.clone(),
         zone: if needs_zone(state, card) {
-            default_zone_for(state, player, card, paid).map(|slot| ZoneChoice {
+            // R3546002: the probe is the stamped card, so an "Embiggen: GIGA" card takes its
+            // embiggened size here too.
+            default_zone_for(
+                state,
+                player,
+                &stamped_for_play(state, card, cheapest.x, cheapest.embiggen),
+                paid,
+            )
+            .map(|slot| ZoneChoice {
                 row: slot.row,
                 lane: slot.lane,
             })
@@ -2405,8 +2442,9 @@ pub fn priced_play_actions(
             // R1086: the plain zones first, then the Equip host zones after them (D14: a game that
             // never plays Equip lists what it listed before).
             let zones: Vec<(Option<ZoneChoice>, Option<bool>)> = if needs_zone(state, card) {
+                // R3546002: an "Embiggen: GIGA" card lists zones at its embiggened size.
                 let mut paired: Vec<(Option<ZoneChoice>, Option<bool>)> =
-                    legal_zones_for(state, player, card, tributes)
+                    legal_zones_for(state, player, &probe, tributes)
                         .into_iter()
                         .map(|zone| (Some(zone), None))
                         .collect();
@@ -2563,6 +2601,15 @@ fn refuse_zone(
     };
     if !needs {
         return refuse(format!("{name} takes no zone"));
+    }
+    // R3546000: a GIGA names only a left lane where it fits, as `legal_zones_for` lists them.
+    if crate::giga::enters_giga(state, card) {
+        if legal_zones_for(state, player, card, tributes).contains(zone) {
+            return Ok(());
+        }
+        return refuse(format!(
+            "{name} is GIGA: it needs that lane and the next free in both rows"
+        ));
     }
 
     let row = row_for_card(state, card);
@@ -2961,7 +3008,8 @@ pub fn why_choices_refused(
     if action.equip == Some(true) {
         refuse_equip(state, player, &stamped, action.zone.as_ref(), tributes)?;
     } else {
-        refuse_zone(state, player, card, action.zone.as_ref(), tributes)?;
+        // R3546002: read off the embiggen-stamped card, as the listing does.
+        refuse_zone(state, player, &stamped, action.zone.as_ref(), tributes)?;
     }
     refuse_x(state, player, card, action.x)?;
     refuse_embiggen(state, card, action.embiggen)?;

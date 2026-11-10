@@ -941,8 +941,8 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
 /// that no play made (`exits_from` absent: a played card answers through its resolution, so once).
 /// Each match queues one `LANE_WATCH` entry, its data holding `instanceId` and `watcher`, in R68's order.
 fn offer_to_lane_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<QueuedTrigger> {
-    // The owner, id and lane of the card the event puts into a lane, if it puts one there.
-    let placed: Option<(PlayerId, String, i32)> = match event {
+    // The owner, id and lanes of the card the event puts into a lane, if it puts one there.
+    let placed: Option<(PlayerId, String, Vec<i32>)> = match event {
         GameEvent::CardResolved {
             permanent,
             player,
@@ -953,22 +953,27 @@ fn offer_to_lane_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<Qu
                 return Vec::new();
             };
             match card.zone {
-                Zone::Field { player: at, lane, .. } if at == *player => {
-                    Some((*player, instance_id.clone(), lane))
+                // R3546001: a GIGA answers its watchers in both its lanes.
+                Zone::Field { player: at, .. } if at == *player => {
+                    Some((*player, instance_id.clone(), crate::giga::lanes_of(card)))
                 }
                 _ => None,
             }
         }
         GameEvent::Summoned {
             player,
-            lane,
-            exits_from: None,
             instance_id,
+            exits_from: None,
             ..
-        } => Some((*player, instance_id.clone(), *lane)),
+        } => {
+            let lanes = find_instance(sink.state, instance_id)
+                .map(crate::giga::lanes_of)
+                .unwrap_or_default();
+            Some((*player, instance_id.clone(), lanes))
+        }
         _ => None,
     };
-    let Some((player, instance_id, lane)) = placed else {
+    let Some((player, instance_id, lanes)) = placed else {
         return Vec::new();
     };
     let mut queued: Vec<QueuedTrigger> = Vec::new();
@@ -1000,7 +1005,7 @@ fn offer_to_lane_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<Qu
             })
             .collect();
         for (id, watched, resume) in watches {
-            if watched != lane {
+            if !lanes.contains(&watched) {
                 continue;
             }
             let (entry_id, seq) = next_entry_id(sink.state, false, "w");

@@ -17,7 +17,7 @@ use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, GameState};
 use crate::wire::{GameEvent, PlayerId, Row, Zone, opponent_of};
 use crate::zones::{
-    PlaceOnFieldOptions, RemoveFromFieldOptions, ZoneSlot, carried_at, is_locked, is_reserved,
+    PlaceOnFieldOptions, RemoveFromFieldOptions, ZoneSlot, carried_at, is_empty, is_locked, is_reserved,
     place_on_field, place_standing_on_field, remove_from_field, slots_of, zone_contents,
 };
 
@@ -144,6 +144,17 @@ fn swap_board_now(ctx: &mut EffectContext<'_>) {
 
     for entry in &entries {
         if !can_accept(ctx.state, &entry.to) {
+            for card in &entry.cards {
+                bounce_home(ctx, card);
+            }
+            continue;
+        }
+        // R3546003: a GIGA swaps whole or bounces: every spanned slot must take it.
+        if entry.cards.first().is_some_and(crate::giga::is_giga)
+            && !crate::giga::fits(entry.to, |slot| {
+                can_accept(ctx.state, &slot) && is_empty(ctx.state, slot)
+            })
+        {
             for card in &entry.cards {
                 bounce_home(ctx, card);
             }

@@ -596,27 +596,34 @@ pub fn emotes_heard(state: &GameState, player: PlayerId) -> bool {
 /// MD-D19, R1122: the acting Units beside the attacker on its own side that a redirect may re-aim it at,
 /// in lane order: §4.2 step 2's restrictions apply, never step 3's Taunt wall.
 pub fn redirect_neighbours(state: &GameState, attacker: &CardInstance) -> Vec<CardInstance> {
-    let Some(at) = slot_of(state, attacker) else {
-        return Vec::new();
-    };
-    crate::zones::adjacent(at)
-        .into_iter()
-        .filter_map(|slot| card_at(state, slot).cloned())
-        .filter(|unit| {
-            // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
-            crate::zones::is_adjacent_card(state, attacker, unit)
-                && crate::zones::acts_on_field(state, unit)
-                && !crate::zones::is_carried(state, unit)
-                && crate::restrictions::attack_restriction(
-                    state,
-                    attacker,
-                    &DamageTarget::Unit {
-                        instance: unit.clone(),
-                    },
-                )
-                .is_ok()
-        })
-        .collect()
+    // R3546001: beside a GIGA in either of its lanes, in both; a GIGA beside the attacker is met once.
+    let mut met: Vec<String> = vec![attacker.id.clone()];
+    let mut out: Vec<CardInstance> = Vec::new();
+    for slot in crate::giga::adjacent_slots(state, attacker) {
+        let Some(unit) = crate::giga::occupant_at(state, slot).cloned() else {
+            continue;
+        };
+        if met.contains(&unit.id) {
+            continue;
+        }
+        met.push(unit.id.clone());
+        // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
+        if crate::zones::is_adjacent_card(state, attacker, &unit)
+            && crate::zones::acts_on_field(state, &unit)
+            && !crate::zones::is_carried(state, &unit)
+            && crate::restrictions::attack_restriction(
+                state,
+                attacker,
+                &DamageTarget::Unit {
+                    instance: unit.clone(),
+                },
+            )
+            .is_ok()
+        {
+            out.push(unit);
+        }
+    }
+    out
 }
 
 /// R901 (Meditative #30 Fickle E-Kitten's "a more expensive permanent than you"): the highest R396
@@ -661,10 +668,11 @@ pub fn credit_used_this_turn(state: &GameState, player: PlayerId) -> bool {
 /// R831008 (Meditative #98 Showdown's "an empty lane"): whether both players' unit and backrow zones of
 /// this lane are empty. A face-down card occupies its zone: the opponent sees it taken, never by what.
 pub fn lane_is_empty(state: &GameState, lane: i32) -> bool {
+    // R3546001: a lane a GIGA covers is no empty lane (`zones::is_empty` reads the cover).
     [PlayerId::P1, PlayerId::P2].into_iter().all(|player| {
         [Row::Units, Row::Backrow]
             .into_iter()
-            .all(|row| card_at(state, crate::zones::ZoneSlot { player, row, lane }).is_none())
+            .all(|row| crate::zones::is_empty(state, crate::zones::ZoneSlot { player, row, lane }))
     })
 }
 

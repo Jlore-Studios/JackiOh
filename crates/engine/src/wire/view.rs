@@ -675,6 +675,11 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub evolved: Option<bool>,
+    /// R3546004: fills four zones from here, the three others empty in the view; public,
+    /// face-down too. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub giga: Option<bool>,
     /// ME-GRANT (MD-D13): the Death abilities other cards granted this Unit, as its lines read them
     /// (`grants::grant_texts`). Absent when it holds none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -766,6 +771,11 @@ pub struct PublicBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub evolved: Option<bool>,
+    /// R3546004: fills four zones from here, the three others empty in the view; public,
+    /// face-down too. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub giga: Option<bool>,
     pub cost: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -890,6 +900,11 @@ pub struct FaceDownBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub marks: Option<Vec<CardMark>>,
+    /// R3546004: fills four zones from here, the three others empty in the view; public,
+    /// face-down too. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub giga: Option<bool>,
 }
 
 /// A backrow zone: a public card or a face-down trap (§3, §10.8); an empty zone is `None` where it is

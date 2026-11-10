@@ -1283,6 +1283,43 @@ button.modifier-badge[data-open="true"] {
   border-radius: var(--radius-round);
 }
 
+/* R3546004: a GIGA permanent draws across its four zones — its anchor's card spans two lanes in
+   both rows, while the three covered zones read empty. The anchor's lane paints above the next,
+   which the span reaches into; the span grows toward its side's other row (down for your units
+   and the enemy backrow, up for the other two). */
+.lane:has(> .zone[data-giga="anchor"]) {
+  z-index: calc(var(--z-content) + 1);
+}
+
+.zone[data-side="you"][data-row="units"][data-giga="anchor"] > .card,
+.zone[data-side="opponent"][data-row="backrow"][data-giga="anchor"] > .card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: auto;
+  width: calc(200% + var(--gap));
+  height: calc(200% + var(--gap));
+  max-width: none;
+  aspect-ratio: auto;
+}
+
+.zone[data-side="opponent"][data-row="units"][data-giga="anchor"] > .card,
+.zone[data-side="you"][data-row="backrow"][data-giga="anchor"] > .card {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  top: auto;
+  width: calc(200% + var(--gap));
+  height: calc(200% + var(--gap));
+  max-width: none;
+  aspect-ratio: auto;
+}
+
+.zone[data-giga="covered"] {
+  border-color: transparent;
+  background: transparent;
+}
+
 .resolving {
   display: inline-flex;
   gap: var(--gap);

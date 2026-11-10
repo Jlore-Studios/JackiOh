@@ -390,7 +390,8 @@ export function treatedKinds(source: KeywordFxSource): KeywordKind[] {
   const kinds: KeywordKind[] = [];
   for (const keyword of source.keywords) {
     // R2577000: a keyword that does nothing on the field draws no treatment there.
-    if (KEYWORD_VISUALS[keyword.kind].onField && !kinds.includes(keyword.kind)) kinds.push(keyword.kind);
+    // R3546004: a kind with no visual (GIGA, until S26's chip) draws nothing, not a throw.
+    if (KEYWORD_VISUALS[keyword.kind]?.onField === true && !kinds.includes(keyword.kind)) kinds.push(keyword.kind);
   }
   // R385: a Brittle count the view gives (one an effect gave, "Give Brittle N") is Brittle whether or
   // not the keyword list names it, a Vanilla unit's included (a Vanilla keeps a given count, §6.1).

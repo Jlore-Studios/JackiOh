@@ -156,7 +156,11 @@ pub fn gauntlet_acts(state: &GameState) -> bool {
 /// R1849005: whether the unit stands in the Gauntlet — a unit zone of one of `GAUNTLET_LANES`, on either
 /// side. A Unit a carrier holds or one standing in the backrow is outside it.
 pub fn in_gauntlet(state: &GameState, unit: &CardInstance) -> bool {
-    slot_of(state, unit).is_some_and(|at| at.row == Row::Units && GAUNTLET_LANES.contains(&at.lane))
+    // R3546001: a GIGA is in the Gauntlet in either of its lanes.
+    slot_of(state, unit).is_some_and(|at| at.row == Row::Units)
+        && crate::giga::lanes_of(unit)
+            .iter()
+            .any(|lane| GAUNTLET_LANES.contains(lane))
 }
 
 /// R1849006: whether an aura that Units cannot be in Defense Position acts on the field now (Stinkyscape
@@ -229,16 +233,9 @@ pub fn attack_restriction_in(
     if cannot_be_attacked(state, defender) || auras.unit_has(defender, KeywordKind::Evasive) {
         return Err(EngineError::new("that unit cannot be attacked"));
     }
-    if attackable_only_from_lane(state, defender) {
-        let from = slot_of(state, attacker);
-        let to = slot_of(state, defender);
-        let same_lane = match (from, to) {
-            (Some(from), Some(to)) => from.lane == to.lane,
-            _ => false,
-        };
-        if !same_lane {
-            return Err(EngineError::new("only a unit in its lane may attack that unit"));
-        }
+    // R3546001: a GIGA meets "this lane" from either of its lanes (Top Loser's attacker included).
+    if attackable_only_from_lane(state, defender) && !crate::giga::lanes_meet(attacker, defender) {
+        return Err(EngineError::new("only a unit in its lane may attack that unit"));
     }
     if flies_out_of_reach(auras, attacker, defender) {
         return Err(EngineError::new(

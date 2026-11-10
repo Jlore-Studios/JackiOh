@@ -104,6 +104,11 @@ createdBy?: string,
  */
 evolved?: true, 
 /**
+ * R3546004: fills four zones from here, the three others empty in the view; public,
+ * face-down too. Only ever `Some(true)`.
+ */
+giga?: true, 
+/**
  * ME-GRANT (MD-D13): the Death abilities other cards granted this Unit, as its lines read them
  * (`grants::grant_texts`). Absent when it holds none.
  */

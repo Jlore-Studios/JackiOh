@@ -157,6 +157,7 @@ pub mod fuse_registry;
 pub mod fuse_variants;
 pub mod game_summary;
 pub mod generation_replay;
+pub mod giga;
 pub mod glitch;
 pub mod glow_facts;
 pub mod granted_tags;

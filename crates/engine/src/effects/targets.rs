@@ -13,8 +13,7 @@ use crate::state::{CardInstance, find_instance};
 use crate::stays::{exit_mark, left_field_after};
 use crate::wire::{CardType, PlayerId, Row, Selection, Tag, TargetAim, ZoneName, opponent_of};
 use crate::zones::{
-    ZoneSlot, adjacent, card_at, carried_units_of, is_buried, is_standing_unit, row_size, slot_of, slots_of,
-    standing_units_of,
+    ZoneSlot, card_at, carried_units_of, is_buried, is_standing_unit, row_size, slots_of, standing_units_of,
 };
 
 /// Which card or hero an effect names (discriminated on `of`).
@@ -396,18 +395,18 @@ fn adjacent_to_with(
     if card.zone.z() != ZoneName::Field {
         return Vec::new();
     }
-    let Some(slot) = slot_of(ctx.state, &card) else {
-        return Vec::new();
-    };
 
+    // R3546001: beside a GIGA in either of its lanes, in both; a GIGA beside the card is met once.
     let mut out: Vec<CardInstance> = Vec::new();
-    for neighbour in adjacent(slot) {
-        let Some(found) = card_at(ctx.state, neighbour) else {
+    let mut met: Vec<String> = vec![card.id.clone()];
+    for neighbour in crate::giga::adjacent_slots(ctx.state, &card) {
+        let Some(found) = crate::giga::occupant_at(ctx.state, neighbour) else {
             continue;
         };
-        if found.id == card.id {
+        if met.contains(&found.id) {
             continue;
         }
+        met.push(found.id.clone());
         // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
         if !crate::zones::is_adjacent_card(ctx.state, &card, found) {
             continue;

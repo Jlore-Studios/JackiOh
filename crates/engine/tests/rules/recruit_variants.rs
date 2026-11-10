@@ -71,6 +71,7 @@ fn face_down_marker() -> BackrowView {
         plague: None,
         buried: None,
         marks: None,
+        giga: None,
     })
 }
 

@@ -713,7 +713,7 @@ pub enum Keyword {
     Toxic {
         n: i32,
     },
-    /// R3535002: declared for SP3 E4; no rule yet.
+    /// R3535002: declared for SP3 E4. R3546000: two lanes wide in both rows, four zones (`giga.rs`).
     #[serde(rename = "GIGA")]
     Giga,
     /// R3535002: declared for SP3 E3. R3543000: a Unit's backrow placement, which Flying has
@@ -784,7 +784,7 @@ string_union! {
         /// R3535002: declared for SP3 E2; no rule yet. R3540001: the `via` of its tick's hit; the counter
         /// is `Counters.toxic`, not this keyword.
         Toxic = "Toxic",
-        /// R3535002: declared for SP3 E4; no rule yet.
+        /// R3535002: declared for SP3 E4. R3546000: two lanes wide in both rows, four zones (`giga.rs`).
         Giga = "GIGA",
         /// R3535002: declared for SP3 E3. R3543000: a Unit's backrow placement, which Flying has
         /// innately; R3543001: a Field Spell's unit-zone placement.
