@@ -17848,12 +17848,12 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "at": "2026-11-10T15:26:12Z",
+        "at": "2026-11-10T20:05:26Z",
         "built_by": "claude-6",
         "by": "`claude` (strong)",
-        "carried_from": "20b262ca86c95a8314ef58f0e7245d133125be2a",
+        "carried_from": "6c46655f81e350d719a3c581a791f35e71dd72df",
         "resolved_by": "`claude` (strong)",
-        "sha": "6c46655f81e350d719a3c581a791f35e71dd72df"
+        "sha": "bc5a44665dc99ea55bb050460557be6266b473fa"
       },
       "died": 0,
       "difficulty": "hard",
@@ -17865,6 +17865,7 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
+      "merge_owner": "claude-6",
       "merge_owner_gave_up": {
         "at": "2026-11-10T17:19:43Z",
         "provider": "claude-6",
