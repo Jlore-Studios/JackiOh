@@ -17287,6 +17287,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 195,
       "started_at": "2026-11-10T13:20:03Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36714,9 +36715,33 @@
         "title": "Patch: every Classic Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "9209e8a92a1f6771dcc9b221c33b371cc6871546",
+        "issue": 3350,
+        "merged_at": "2026-11-10T17:21:28Z",
+        "n": 195,
+        "pr": 3635,
+        "queued_at": "2026-11-10T17:21:28Z",
+        "sha": "48f21c55aa77b723f0805ce5210399fea40e926c",
+        "status": "queued",
+        "title": "Patch: quasi-3D models for the Mythics: each Mythic a diorama of its own, turned by a drag in inspect, with an idle loop of its own and its takeover flown through it",
+        "tries": 0
       }
     ],
-    "count": 194
+    "count": 195
   },
   "statistics": {
     "at": "2026-11-10T17:12:52Z"
