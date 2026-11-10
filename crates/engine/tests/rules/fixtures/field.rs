@@ -208,6 +208,23 @@ pub static mote: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
+/// The Attack and Health a Plague Counter gives `bloom`.
+pub const BLOOM_STATS: i32 = 3;
+
+/// Stinkyscape+ #87 Frontier Flora's shape: a stat-less Animated Field Spell whose text gives it
+/// `BLOOM_STATS`/`BLOOM_STATS` per Plague Counter, so it has a stat line only while it carries one (R3542000).
+pub static bloom: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "bloom",
+        9423,
+        "Field Spell",
+        json!({
+            "base": { "keywords": [animated()], "text": "bloom" },
+            "radiant": { "keywords": [animated()], "text": "bloom" },
+        }),
+    )
+});
+
 pub static FIELD_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
         tesla.clone(),
@@ -232,6 +249,7 @@ pub static FIELD_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         blink.clone(),
         mourner.clone(),
         mote.clone(),
+        bloom.clone(),
     ]
 });
 
@@ -390,6 +408,28 @@ pub static FIELD_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::ne
             }),
         ),
         (wisp.id.clone(), both(Script::default())),
+        (
+            bloom.id.clone(),
+            both(Script {
+                stat_line_when: Some(read_hook(|args| plague_on(args.self_) > 0)),
+                aura: Some(aura_hook(|args| {
+                    let tokens = plague_on(args.self_);
+                    if tokens == 0 {
+                        return Vec::new();
+                    }
+                    let id = args.self_.id.clone();
+                    vec![AuraEntry {
+                        applies: Box::new(move |card: &CardInstance| card.id == id),
+                        mod_: StatMod {
+                            attack: Some(tokens * BLOOM_STATS),
+                            max_health: Some(tokens * BLOOM_STATS),
+                            ..StatMod::default()
+                        },
+                    }]
+                })),
+                ..Script::default()
+            }),
+        ),
         (
             banner.id.clone(),
             both(Script {

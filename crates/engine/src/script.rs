@@ -1093,6 +1093,9 @@ pub struct Script {
     /// R3536003: "Your evolutions trigger twice/thrice": N extra runs of its controller's Evolve
     /// texts, the highest holding.
     pub evolve_extra: Option<TriggerExtraHook>,
+    /// R3542000 (S+ #87 Frontier Flora): a stat line this card's own text gives it while this holds
+    /// ("3X/3X stats for each Plague Counter": while it carries one), read by `layers::has_stat_line`.
+    pub stat_line_when: Option<HasHook>,
     /// R1849008 (Stinkyscape #14 Arm of the Jempire): "When one of your Units is attacked". Run for each
     /// card acting on the defender's side once a declared attack on one of its Units has come through
     /// §4.2 step 4's trap window, before its combat, in R68's order; never for an attack on the hero or a

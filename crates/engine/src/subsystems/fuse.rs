@@ -1247,10 +1247,11 @@ fn combine_objects(records: &[Script]) -> Script {
         start_of_opponent_turn: hooks(|s| s.start_of_opponent_turn.clone(), "startOfOpponentTurn"),
         turn_hook_extra: None,
         cry_death_extra: None,
-        // R3536001, R3536003: a fusion drops "Evolves when" and the evolution multiplier, as it drops
-        // `tributeWhen` (R403).
+        // R3536001, R3536003, R3542000: a fusion drops "Evolves when", the evolution multiplier and a
+        // stat line its text gave, as it drops `tributeWhen` (R403).
         evolves_when: None,
         evolve_extra: None,
+        stat_line_when: None,
         // R1487000, R767000: a fusion's text works face-down when any ingredient's did.
         live_face_down: records.iter().any(|s| s.live_face_down),
         // R1850002, R1850005: every ingredient's exile auras, and the first keyword count printed.
@@ -1358,6 +1359,7 @@ fn script_record(script: &Script, def_id: &str, radiant: bool, index: usize) -> 
         cry_death_extra: None,
         evolves_when: None,
         evolve_extra: None,
+        stat_line_when: None,
         triggers: namespaced(&script.triggers),
         hand_triggers: namespaced(&script.hand_triggers),
         deck_triggers: namespaced(&script.deck_triggers),

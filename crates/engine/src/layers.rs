@@ -97,8 +97,9 @@ pub fn face_of(state: &GameState, instance: &CardInstance) -> FaceStats {
 }
 
 /// R2280000: whether the card has a stat line its definition gives it: its own printed one or a fused
-/// definition's (R77, R102), a summon's `statsOverride` or X stats. Buffs, auras and `tuning` never
-/// make one, and a Field Spell, Trap or Field Trap animates only with one (`animated::animated_with_stats`).
+/// definition's (R77, R102), a summon's `statsOverride` or X stats, or (R3542000) one its own text gives
+/// it while its `stat_line_when` holds. Buffs, auras and `tuning` never make one, and a Field Spell, Trap
+/// or Field Trap animates only with one (`animated::animated_with_stats`).
 pub fn has_stat_line(state: &GameState, instance: &CardInstance) -> bool {
     let def = def_of(Some(state), &instance.def_id);
     let face = if instance.radiant { &def.radiant } else { &def.base };
@@ -106,6 +107,16 @@ pub fn has_stat_line(state: &GameState, instance: &CardInstance) -> bool {
         || face.x_stats.is_some()
         || face.attack.is_some()
         || face.health.is_some()
+        || crate::scripts::script_of(state, instance)
+            .stat_line_when
+            .as_ref()
+            .is_some_and(|when| {
+                when(crate::script::HookArgs {
+                    state,
+                    self_: instance,
+                    radiant: instance.radiant,
+                })
+            })
 }
 
 /// The keywords the running face prints, before tuning (§5.2): what a Degrade takes off and what a
