@@ -92,6 +92,9 @@ pub struct EffectContext<'a> {
     /// R136: the units this run summoned in the actions before a prompt split it, which the resumed list's
     /// `events_from` window misses (`work::RunMarks`). Absent for a run that has not paused.
     pub summoned: Option<Vec<String>>,
+    /// R3563000: the catalog cards this run has drawn from random pools; fresh in every context
+    /// `make_context` builds, not carried across a prompt.
+    pub draw_tally: crate::catalog::DrawTally,
     /// R98: the running card sat in the resolving zone as the run began (§10.5 step 4: a Spell, or a
     /// permanent that found no zone), so a continuation re-entered once it has left resumes with no self
     /// (`prompts::run_resume`). Carried across a pause (`work::RunMarks`); absent for any other card.
@@ -128,6 +131,7 @@ impl<'a> EffectContext<'a> {
             chosen_from: None,
             event_stay: None,
             summoned: None,
+            draw_tally: crate::catalog::DrawTally::new(),
             self_resolving: None,
             controller,
             self_: None,

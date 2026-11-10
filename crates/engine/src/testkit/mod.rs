@@ -13,6 +13,8 @@
 //! builders, #1826) are not globbed in: callers name the module (`golden::<item>`). `must` (#2023) comes in
 //! with the glob, the effects library (its verbs share names with engine functions) does not.
 //! `stand_in.rs` (#3486) builds the card a `stand-in …` id spells out; no catalog lists it.
+//! `unique_draws.rs` (R3563000) switches `UNIQUE_RANDOM_DRAWS` on for one call, which is off until the
+//! Stinkyscape+ release.
 
 pub mod duos_scenario;
 pub mod glow;
@@ -25,6 +27,7 @@ pub mod scenario;
 pub mod seams;
 pub mod seed_search;
 pub mod stand_in;
+pub mod unique_draws;
 
 pub use crate::*;
 
@@ -37,7 +40,7 @@ pub use scenario::*;
 pub use seams::*;
 pub use seed_search::*;
 pub use stand_in::*;
-
+pub use unique_draws::*;
 // The thread-local override wins over the production registries `crate::*` re-exports.
 pub use scenario::{register_catalog, register_scripts, register_shipped};
 

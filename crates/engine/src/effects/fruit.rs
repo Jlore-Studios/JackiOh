@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
+use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated_unique, query};
 use crate::config::{AUSPICIOUS_ROCK_ODDS, GRAPE_ODDS, RollOdds};
 use crate::draw::{DrawOutcome, draw_one};
 use crate::effects::add_to_hand::{AddToHandArgs, add_to_hand};
@@ -339,8 +339,9 @@ pub struct ReplaceHandWithRandomArgs {
 
 /// C+ #65.5 Mythic Grape: "Replace your hand with random Mythic cards. They cost (0)." Every card in the
 /// hand is moved, NOT discarded (no `discarded` event), to its owner's graveyard (a unit token ceases to
-/// exist, R11), and as many random cards of `query` arrive, repeats allowed (R60), through §6.3's Add to
-/// hand (Core #76's reading), never the running card's own (R387). An empty hand draws no rng (R129).
+/// exist, R11), and as many random cards of `query` arrive, repeats allowed (R60) unless
+/// `UNIQUE_RANDOM_DRAWS` holds (R3563000), through §6.3's Add to hand (Core #76's reading), never the
+/// running card's own (R387). An empty hand draws no rng (R129).
 pub fn replace_hand_with_random(args: ReplaceHandWithRandomArgs) -> Effect {
     Effect::new("replaceHandWithRandom", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -383,7 +384,13 @@ pub fn replace_hand_with_random(args: ReplaceHandWithRandomArgs) -> Effect {
                 return;
             }
             // R673: a card generated into a hand may be Glitch.
-            let Some(def) = pick_generated(&mut *ctx.sink.rng, &pool, Some(&*ctx.sink.state)) else {
+            // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
+            let Some(def) = pick_generated_unique(
+                &mut *ctx.sink.rng,
+                &pool,
+                Some(&*ctx.sink.state),
+                &mut ctx.draw_tally,
+            ) else {
                 return;
             };
             let def_id = def.id.clone();

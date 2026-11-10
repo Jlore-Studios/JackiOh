@@ -3,7 +3,7 @@
 //!            Embiggened (4): Your board too."
 //!   Radiant: "... with a random Radiant Legendary." — the same zones with `radiant: true` on every
 //!            replacement (§8 Conventions).
-//! Embiggened (4) in play action (R81, R65, §10.6). Replaces cards with random Legendaries (R35; §5.1, R387, R60; CLAUDE.md rule 4, §9.3).
+//! Embiggened (4) in play action (R81, R65, §10.6). Replaces cards with random Legendaries (R35; §5.1, R387, R60, R3563000; CLAUDE.md rule 4, §9.3).
 //! Board replacement transforms units (R57, §6.3, §10.4; traps/field spells replaced in place).
 
 use jackioh_engine::prelude::*;
@@ -80,8 +80,9 @@ fn pile_cards(ctx: &EffectContext<'_>, zone: OffFieldZone) -> Vec<CardInstance> 
 }
 
 /// §6.3 Replace: one card, one random Legendary from its pool, named by instance (R81 does not apply).
+/// R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
 fn replace(ctx: &mut EffectContext<'_>, card: &CardInstance, pool: &[&'static CardDef], radiant_result: bool) -> Vec<Effect> {
-    let Some(pick) = ctx.rng.pick(pool) else {
+    let Some(pick) = pick_unique(&mut *ctx.sink.rng, pool, &mut ctx.draw_tally) else {
         return vec![];
     };
     vec![transform(json_as(json!({
@@ -447,6 +448,29 @@ mod tests {
             );
             assert_eq!(s.unit(P1, 1).map(|card| card.radiant), Some(false));
             assert_eq!(s.backrow(P1, 1).map(|card| card.radiant), Some(false));
+        }
+
+        #[test]
+        fn r3563000_under_unique_draws_every_replacement_is_a_different_legendary() {
+            crate::register_all();
+            for n in 0..5 {
+                let library = vec!["core-020"; 20];
+                let s = with_unique_draws(true, || {
+                    let mut s = scenario(json!({
+                        "seed": format!("r3563000-transmogulate-{n}"),
+                        "p1": { "hand": [TRANSMOGULATE], "library": library },
+                        "p2": { "field": ["core-011"], "library": ["core-020"] },
+                    }));
+                    s.play(TRANSMOGULATE, json!({}));
+                    s
+                });
+                let replaced = def_ids(&s.pile(P1, "library"));
+                assert_eq!(replaced.len(), 20, "seed {n}");
+                let mut sorted = replaced.clone();
+                sorted.sort();
+                sorted.dedup();
+                assert_eq!(sorted.len(), 20, "seed {n}: {replaced:?}");
+            }
         }
 
         #[test]

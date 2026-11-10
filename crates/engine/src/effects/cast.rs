@@ -14,7 +14,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
+use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated_unique, query};
 use crate::effects::each::{ForEachCardArgs, for_each_card};
 use crate::effects::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
 use crate::modifiers::add_modifier;
@@ -331,7 +331,8 @@ fn cast_one_random(asked: CatalogQueryArgs, radiant: bool, how: CastHow) -> Effe
             .map(|card| card.def_id.clone())
             .or_else(|| ctx.def_id.clone());
         let pool = query(&excluding_def_id(Some(&*ctx.sink.state), &asked, own.as_deref()));
-        let Some(def) = pick_generated(&mut *ctx.sink.rng, &pool, None) else {
+        // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
+        let Some(def) = pick_generated_unique(&mut *ctx.sink.rng, &pool, None, &mut ctx.draw_tally) else {
             return;
         };
         let def_id = def.id.clone();

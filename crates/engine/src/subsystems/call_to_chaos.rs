@@ -106,8 +106,8 @@ fn on_instance(effect: Effect, instance_id: String) -> Effect {
 
 // The ten effects, in the order §8 #95 lists them.
 
-/// 1. "Summon 3 random 3-cost Units": three independent picks (R60), placed per R64, each drawing
-///    only when its unit has a zone to go to (R129).
+/// 1. "Summon 3 random 3-cost Units": three independent picks (R60; unique within the run, R3563000),
+///    placed per R64, each drawing only when its unit has a zone to go to (R129).
 pub fn summon_random_three_cost_units() -> Effect {
     chaos_effect(ChaosEffectName::Units, |_ctx| {
         (0..CHAOS_UNIT_COUNT)
@@ -205,8 +205,9 @@ pub fn summon_chaos_golem() -> Effect {
     })
 }
 
-/// 9. "Summon 5 random Field Spells or Traps into your backrow": five picks (R60), Traps face-down
-///    and Field Spells public (§3.2, R33), each drawing only when it has a zone (R129).
+/// 9. "Summon 5 random Field Spells or Traps into your backrow": five picks (R60; unique within the
+///    run, R3563000), Traps face-down and Field Spells public (§3.2, R33), each drawing only when it
+///    has a zone (R129).
 pub fn summon_random_backrow() -> Effect {
     chaos_effect(ChaosEffectName::Backrow, |_ctx| {
         (0..CHAOS_BACKROW_CARDS)
@@ -226,8 +227,10 @@ pub fn cast_random_call_to_chaos() -> Effect {
         }
 
         let pool = crate::catalog::query(&json_as(json!({ "tags": [CHAOS_TAG] })));
+        // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
         let Some(def_id) =
-            crate::catalog::pick_generated(&mut *ctx.sink.rng, &pool, None).map(|def| def.id.clone())
+            crate::catalog::pick_generated_unique(&mut *ctx.sink.rng, &pool, None, &mut ctx.draw_tally)
+                .map(|def| def.id.clone())
         else {
             return;
         };

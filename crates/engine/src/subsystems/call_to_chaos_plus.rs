@@ -85,8 +85,13 @@ pub fn replace_deck_with_call_to_chaos() -> Effect {
                         return;
                     };
                     // R673: into a deck.
-                    let picked =
-                        crate::catalog::pick_generated(inner.sink.rng, &pool, Some(&*inner.sink.state));
+                    // R3563000: the pick draws through the run's tally, unique while it holds.
+                    let picked = crate::catalog::pick_generated_unique(
+                        inner.sink.rng,
+                        &pool,
+                        Some(&*inner.sink.state),
+                        &mut inner.draw_tally,
+                    );
                     let Some(def) = picked else {
                         return;
                     };

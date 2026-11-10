@@ -71,10 +71,11 @@ pub fn plans_of(def_id: &str) -> &'static [&'static str] {
     plans_in(WINCON_PLANS, def_id)
 }
 
-/// The Wincon card, from the pool by the match rng (R380, R60, R673).
+/// The Wincon card, from the pool by the match rng (R380, R60, R673, R3563000).
 fn picked_wincon(ctx: &mut EffectContext<'_>) -> Option<String> {
     let pool = crate::query::pool(ID, &json_as(json!({ "tags": ["Wincon"] })));
-    pick_generated(&mut *ctx.sink.rng, &pool, Some(&*ctx.sink.state)).map(|def| def.id.clone())
+    pick_generated_unique(&mut *ctx.sink.rng, &pool, Some(&*ctx.sink.state), &mut ctx.draw_tally)
+        .map(|def| def.id.clone())
 }
 
 /// `table`: `WINCON_PLANS`, or the one a kept script ran (R767000).

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::animated::animate_on_entry;
-use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, pick_generated, query};
+use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, pick_generated_unique, query};
 use crate::config::CRY_ON_PLAY_ONLY;
 use crate::damage::DamageTarget;
 use crate::effects::buff::{grant_keyword, grant_random_keywords};
@@ -739,6 +739,7 @@ impl SummonRandomArgs {
 /// `query({ …, excludeDefId })` (§10.7, §5.1, R387), drawn inside `apply`, never as the effect is built,
 /// which would desync every later replay (§9.3, R60), and before placement, as the def drawn picks the
 /// row (R64, R47, §3.2/R33). R129: it draws only when some card of the pool has a zone to go to.
+/// R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
 pub fn summon_random(args: SummonRandomArgs) -> Effect {
     Effect::new("summonRandom", move |ctx| {
         // §5.1: a random pool never offers the card that generated it.
@@ -769,7 +770,9 @@ pub fn summon_random(args: SummonRandomArgs) -> Effect {
             return;
         }
 
-        let Some(def_id) = pick_generated(ctx.sink.rng, &pool, None).map(|def| def.id.clone()) else {
+        let Some(def_id) =
+            pick_generated_unique(ctx.sink.rng, &pool, None, &mut ctx.draw_tally).map(|def| def.id.clone())
+        else {
             return;
         };
         summon_fresh(ctx, &def_id, player, &at);
@@ -1119,8 +1122,9 @@ pub struct FillBoardRandomArgs {
 }
 
 /// R1080 (M #51): "fill your board" with a pick from the match rng (R60) for each unit zone `fill_board`
-/// fills (R64, R1136000), repeats allowed, from `summon_random`'s pool (every set, R380, but the card
-/// that generated it, R387) kept to Units. With no zone to fill nothing is drawn (R129).
+/// fills (R64, R1136000), repeats allowed unless `UNIQUE_RANDOM_DRAWS` holds (R3563000), from
+/// `summon_random`'s pool (every set, R380, but the card that generated it, R387) kept to Units. With
+/// no zone to fill nothing is drawn (R129).
 pub fn fill_board_random(args: FillBoardRandomArgs) -> Effect {
     Effect::new("fillBoardRandom", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -1142,7 +1146,9 @@ pub fn fill_board_random(args: FillBoardRandomArgs) -> Effect {
             return;
         }
         for slot in slots {
-            let Some(def_id) = pick_generated(ctx.sink.rng, &pool, None).map(|def| def.id.clone()) else {
+            let Some(def_id) = pick_generated_unique(ctx.sink.rng, &pool, None, &mut ctx.draw_tally)
+                .map(|def| def.id.clone())
+            else {
                 return;
             };
             let at = SummonPlacement {

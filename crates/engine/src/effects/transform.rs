@@ -8,7 +8,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, glitch_or_not, pick_generated, query};
+use crate::catalog::{
+    CatalogQueryArgs, def_of, excluding_def_id, glitch_or_not, pick_generated_unique, query,
+};
 use crate::damage::DamageTarget;
 use crate::enchantments::add_enchantment;
 use crate::faces::card_type_of;
@@ -461,7 +463,7 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
                 .into_iter()
                 .filter(|def| olds.iter().all(|old| can_replace(&*ctx.state, old, def)))
                 .collect();
-            pick_generated(ctx.sink.rng, &pool, None).cloned()
+            pick_generated_unique(ctx.sink.rng, &pool, None, &mut ctx.draw_tally).cloned()
         } else {
             None
         };
@@ -481,7 +483,8 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
                         .filter(|def| can_replace(&*ctx.state, old, def))
                         .collect();
                     let glitch: Option<&GameState> = if held { Some(&*ctx.sink.state) } else { None };
-                    pick_generated(ctx.sink.rng, &pool, glitch).cloned()
+                    // R3563000: each pick draws through the run's tally, unique while it holds.
+                    pick_generated_unique(ctx.sink.rng, &pool, glitch, &mut ctx.draw_tally).cloned()
                 }
             };
             let Some(def) = def else {
@@ -611,7 +614,8 @@ pub fn swap_book(args: SwapBookArgs) -> Effect {
             .into_iter()
             .filter(|def| def.id != old.def_id && def.id != args.from)
             .collect();
-        let Some(def) = pick_generated(ctx.sink.rng, &pool, None) else {
+        // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
+        let Some(def) = pick_generated_unique(ctx.sink.rng, &pool, None, &mut ctx.draw_tally) else {
             return;
         };
         let temporary = is_temporary_card(ctx.state, &old)

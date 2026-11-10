@@ -576,6 +576,7 @@ fn derive_context<'b>(ctx: &'b mut EffectContext<'_>) -> EffectContext<'b> {
     let chosen_from = ctx.chosen_from;
     let event_stay = ctx.event_stay.clone();
     let summoned = ctx.summoned.clone();
+    let draw_tally = ctx.draw_tally.clone();
     let self_resolving = ctx.self_resolving;
     let controller = ctx.controller;
     let self_ = ctx.self_.clone();
@@ -594,6 +595,7 @@ fn derive_context<'b>(ctx: &'b mut EffectContext<'_>) -> EffectContext<'b> {
         chosen_from,
         event_stay,
         summoned,
+        draw_tally,
         self_resolving,
         controller,
         self_,
@@ -704,16 +706,24 @@ fn in_ingredient(effect: Effect, patch: IndexMap<String, Value>) -> Effect {
     let apply = effect.apply.clone();
     let apply_patch = patch.clone();
     let run = move |ctx: &mut EffectContext<'_>| {
-        let mut inner = in_place(ctx, &apply_patch);
-        apply(&mut inner);
+        // R3563000: the inner run's draws join the outer run's tally.
+        let tally = {
+            let mut inner = in_place(ctx, &apply_patch);
+            apply(&mut inner);
+            inner.draw_tally
+        };
+        ctx.draw_tally = tally;
     };
     match effect.expand.clone() {
         None => Effect::new(effect.kind, run),
         Some(expand) => Effect::with_expand(effect.kind, run, move |ctx, memo| {
-            let built = {
+            // R3563000: the inner run's draws join the outer run's tally.
+            let (built, tally) = {
                 let mut inner = in_place(ctx, &patch);
-                expand(&mut inner, memo)
+                let built = expand(&mut inner, memo);
+                (built, inner.draw_tally)
             };
+            ctx.draw_tally = tally;
             EffectPart {
                 effects: built
                     .effects
@@ -734,10 +744,13 @@ fn ingredient_part(
 ) -> Effect {
     crate::resolve::lazy_part(part_kind(index), move |at, _memo| {
         let patch = part_data(&at.data, index);
-        let effects = {
+        // R3563000: the inner run's draws join the outer run's tally.
+        let (effects, tally) = {
             let mut inner = in_place(at, &patch);
-            build(&mut inner)
+            let effects = build(&mut inner);
+            (effects, inner.draw_tally)
         };
+        at.draw_tally = tally;
         // The part needs nothing handed to its rebuild; `null` says so in a form JSON keeps, where an
         // absent memo would sit in a paused list's `memo` array as `undefined` and come back as `null`,
         // so the paused state and its JSON round trip would differ (§9.3).
@@ -1594,10 +1607,15 @@ fn with_choices(effect: Effect, targets: Vec<Selection>, modes: Vec<String>) -> 
     Effect {
         kind: effect.kind,
         apply: effect_apply(move |ctx| {
-            let mut inner = derive_context(ctx);
-            inner.targets = targets.clone();
-            inner.modes = modes.clone();
-            apply(&mut inner);
+            // R3563000: the inner run's draws join the outer run's tally.
+            let tally = {
+                let mut inner = derive_context(ctx);
+                inner.targets = targets.clone();
+                inner.modes = modes.clone();
+                apply(&mut inner);
+                inner.draw_tally
+            };
+            ctx.draw_tally = tally;
         }),
         expand: effect.expand,
     }
@@ -1670,12 +1688,15 @@ fn fused_cry(faces: &[Face]) -> Option<Hook> {
                 ingredient_part(index, move |at| match &cry {
                     None => Vec::new(),
                     Some(cry) => {
-                        let built = {
+                        // R3563000: the inner run's draws join the outer run's tally.
+                        let (built, tally) = {
                             let mut inner = derive_context(at);
                             inner.targets = targets.clone();
                             inner.modes = modes.clone();
-                            cry(&mut inner)
+                            let built = cry(&mut inner);
+                            (built, inner.draw_tally)
                         };
+                        at.draw_tally = tally;
                         built
                             .into_iter()
                             .map(|effect| with_choices(effect, targets.clone(), modes.clone()))
