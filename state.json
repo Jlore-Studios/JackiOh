@@ -14297,7 +14297,9 @@
     "3514": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-11-10T08:19:54Z",
         "family": "claude",
