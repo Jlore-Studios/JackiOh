@@ -16667,7 +16667,7 @@
       "stop_requested": false
     },
     "3623": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cross_rounds": 1,
@@ -16687,10 +16687,12 @@
       },
       "interruptions": 0,
       "issue": 3518,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "revising",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T12:05:06Z",
         "from_run": "42799299918",
         "gates": [
           {
@@ -16756,11 +16758,11 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "42799299918",
+      "run_id": "pending:38702e22-1794312251",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-10T10:27:22Z",
+      "started_at": "2026-11-10T12:05:06Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17844,9 +17846,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T12:03:54Z",
+    "at": "2026-11-10T12:05:06Z",
     "url": "",
-    "what": "review #3644 on muse"
+    "what": "review #3623 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T11:36:06Z",
