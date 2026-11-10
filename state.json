@@ -18226,19 +18226,19 @@
     "what": "build #3545 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-10T13:11:33Z",
+    "at": "2026-11-10T13:28:47Z",
     "notes": [
-      "delivered review #3646 on claude-6 (run 42818138676): approved",
-      "delivered build #3637 on muse (run 42813082486): built",
-      "delivered build #3539 on muse (run 42800079978): part",
-      "started review #3628 on muse (run 42823253398)",
-      "started review #3647 on muse (run 42823418938)",
-      "started review #3635 on claude-4 (run 42823571990)",
+      "#3626: @jgoetzmann answered its question, so it is queued again with the answer",
+      "delivered plan #3545 on claude-4 (run 42820243426): planned",
+      "delivered plan #3544 on claude-7 (run 42818471796): planned",
+      "delivered build #3538 on muse (run 42803016447): part",
+      "started revise #3626 on muse (run 42825807477)",
+      "started review #3627 on claude-8 (run 42826014586)",
+      "started build #3544 on muse (run 42826176232)",
+      "started build #3545 on claude-8 (run 42826373193)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "#3627: closed, so `bot:merging` is off",
-      "#3594: closed, so `bot:merging` is off",
-      "runner gate: started 1 of 3 waiting run(s) (queue build 42821700462); 2 wait for room"
+      "pruned 2 plan file(s) older than 7 days",
+      "runner gate: started 1 of 2 waiting run(s) (queue build 42823275389); 1 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18944,7 +18944,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T13:11:33Z",
+  "loop_tick": "2026-11-10T13:28:47Z",
   "machine_disk": {
     "issue": null,
     "reading": {
