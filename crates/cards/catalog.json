@@ -30604,7 +30604,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 47,
     "base": {
       "keywords": [],
       "text": "Discover a random Mindustrial Unit, give it Starpiece and Equip."
@@ -31017,7 +31017,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 37,
     "base": {
       "keywords": [
         {
@@ -31048,7 +31048,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 30,
     "base": {
       "keywords": [
         {
@@ -31079,7 +31079,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "End of turn: Add a random Minerals or Resources to your hand."
@@ -31253,7 +31253,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "attack": 0,
       "health": 3,
@@ -31839,7 +31839,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Add {card|random Mindustrial card|random Mindustrial cards} to your hand."
@@ -36672,7 +36672,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 31,
     "base": {
       "keywords": [],
       "text": "For the rest of the game at the start of its owner's turn add a random Mindustrial card to your hand."
