@@ -18206,7 +18206,16 @@
       "feedback_since": "2026-11-10T19:25:25Z",
       "issue": 3606,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "5fd6138b34156ac243d542379ed0bc851f2f7574",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
