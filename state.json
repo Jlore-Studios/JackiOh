@@ -19718,6 +19718,8 @@
       }
     },
     "3626": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-10T05:58:58Z",
@@ -19731,8 +19733,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the attack preview's numbers on both cards, only for the hovered target, drawn as tentative hit markers\"} -->\n- ## What changed and why\n- The attack-outcome preview (R3477000) wore both numbers on every legal target at once. Now it shows only for the hovered target, with each number on the card that takes it, drawn as a tentative hit marker. Client only; no engine, wire, or server change. This amends R3477000 with new ruling R3615000.\n- - New [useHoveredAimTarget.ts](apps/web/src/game/aim/useHoveredAimTarget.ts): the hovered legal target, read with the aim relay's own `pickDropSpot`-against-`aimTargets` reader. Tracking is ungated by `emit` so hotseat/practice preview too.\n- - [useAimEmitter.ts](apps/web/src/game/aim/useAimEmitter.ts): shares that hook for its send path (relay behavior unchanged) and returns the hovered target, so exactly one hit-test listener exists.\n- - [attackOutcome.ts](apps/web/src/game/attackOutcome.ts): new `HoveredAttack` (`attacker`/`target` testids, `strikesBack` false on heroes) and `hoveredAttack()`; `withOutcomes()` carries it. [contract.ts](apps/web/src/game/contract.ts): new `testid.attackOutcomeTaken` and `Highlight.hoveredAttack`.\n- - [AttackOutcome.tsx](apps/web/src/game/AttackOutcome.tsx): `AttackTargetPreview` (wears `dealt`, plus `kills`/`pops`) and `AttackTakenPreview` (wears `taken`, plus `falls`). Effects on renders the splat's exact markup (`fx-splat` + `data-amount`) with `data-tentative`; effects off renders `.damage\u2026\n- - [attackOutcome.css](apps/web/src/game/attackOutcome.css): chip rules deleted; wrappers are absolute, centered, `pointer-events: none`; tentative modifiers only override animation (`none`), opacity (`0.55`), and ghosting (desaturate/brighten) on the real classes; DEF counter-rotation covers both m\u2026\n- - [Game.tsx](apps/web/src/game/Game.tsx), [Card.tsx](apps/web/src/game/Card.tsx), [Hero.tsx](apps/web/src/game/Hero.tsx): hovered attack computed under the same gate as outcomes (setting off, lesson with no forecast, replay all render none); hero wears the target marker only; `taken: 0` renders no \u2026\n- - Spec: new [R3615000.md](spec/rulings/R3615000.md), new [pending/3615.md](spec/pending/3615.md), R3477000's label paragraph amended with an `Amended by [[R3615000]]` line, and the \u00a710.10 forecast paragraph in [10-engine-guide.md](spec/10-engine-guide.md) updated.\n- ## How tested\n- - `pnpm --dir apps/web test src/game/attackOutcome.test.tsx`: 12/12 pass (10 `R3615000`, 2 `R3477000`). Covers no-hover renders none, hover moves both markers, hover-leave clears, hero-alone, `taken: 0`, skull/falls/pops placement, splat-vs-pop variants with the tentative modifier, stillness + redu\u2026\n- - Neighbors: `aim.test.tsx` + `Card` + `Hero` + `Game` suites 100/100 (relay send behavior unchanged); `Board` + settings suites 89/89.\n- - `pnpm --dir apps/web typecheck` clean (one narrowing error in `Card.tsx` found and fixed along the way); `pnpm exec eslint apps/web` clean; `cargo jackioh spec check` ok (1888 rulings, 4895 proofs); `cargo fmt --check` clean. No Rust, e2e, or wire files touched.\n- ## Decisions the issue left open\n- - One shared hover source instead of the plan's two hook instances: `useAimEmitter` returns the hovered target, so there is literally one reader and one listener. Rejected the plan's double subscription as weaker compliance with \"no second hit test\".\n- - The splat's `data-amount` uses U+2212 (`\u22122`) like the old chip and the issue text, not the ASCII hyphen `fx/dom.ts` `signedAmount` uses for real hits. Rejected ASCII for consistency with the pop variant and the issue's `\u22126` example.\n- - Skull/shield are absolute badges on the splat's spikes (the splat's number is a `::after`, so no DOM can ride inside it) and inline after the amount in the pop variant. Tentative ghosting is opacity 0.55 with desaturation/brightening.\n- - Meaning still rides on the minus sign and skull in every variant, never color alone.\n- ## For the reviewer\n- - The 7/7 \u2192 3/3 (DEF) hovered screenshot with effects on and off still needs to be attached to the PR manually; no browser was booted in this run.\n- - Worth a second look: the skull/shield badge offsets in `attackOutcome.css` (placed against the splat's fixed ~84px geometry) and the `usePreviewFxOn` mirror of the `FxLayer` switch \u2014 if that expression ever drifts, the wrong variant shows.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-3615 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-3615/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3615,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T06:50:42Z",
         "from_run": "42765480528",
         "gates": [
           {
@@ -19791,8 +19796,15 @@
         "source": "build",
         "until": "2026-11-10T07:15:40Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-10T06:45:40Z",
+      "run_id": "pending:8b09c14b-1794293380",
+      "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
+      "started_at": "2026-11-10T06:50:42Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -19806,9 +19818,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T06:33:15Z",
+    "at": "2026-11-10T06:50:42Z",
     "url": "",
-    "what": "build #3536 on muse"
+    "what": "review #3626 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T06:27:52Z",
