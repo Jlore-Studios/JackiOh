@@ -20124,6 +20124,8 @@
       "stop_requested": false
     },
     "3635": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-10T04:25:15Z",
@@ -20137,8 +20139,11 @@
         "trail": "game/__snapshots__/; git diff\u2026\n- Bash: {\"command\": \"timeout 580 bash -c 'while pgrep -f \\\"vitest run -u src/game/Board\\\" >/dev/null; do sleep 3; done'; cat /tmp/claude-1001/-home-runner-work--temp-work-item-3350/7a1a56a4-4c3a-4edc-8eba-21\u2026\n- Bash: {\"command\": \"git diff --stat apps/web/src/game/__snapshots__/; git diff apps/web/src/game/__snapshots__/Board.test.tsx.snap | grep -E \\\"^[-+]\\\" | grep -vE \\\"background-image\\\" | cut -c1-150 | head -3\u2026\n- Bash: {\"command\": \"timeout 1200 cargo jackioh classify --base origin/main --claims > /tmp/classify.log 2>&1; echo EXIT $?; tail -15 /tmp/classify.log\", \"description\": \"Run classify with claims against orig\u2026\n- Bash: {\"command\": \"timeout 900 pnpm --dir apps/web exec vitest run src/game/Board.test.tsx src/cards/fullscreen.test.tsx src/cards/tilt.test.tsx 2>&1 | grep -aE \\\"Test Files|Tests \\\" \", \"description\": \"Rec\u2026\n- Bash: {\"command\": \"cat /tmp/classify.log | grep -v \\\"Compiling\\\\|Finished\\\\|Running\\\" | tail -15\", \"description\": \"Read the classify result\"}\n- Bash: {\"command\": \"which Xvfb xvfb-run 2>&1 | head; grep -n \\\"E2E_COMPONENT_PORT\\\\|port\\\" e2e/cypress.config.ts | head -5\", \"description\": \"Check for Xvfb and the component port setting\"}\n- Bash: {\"command\": \"echo \\\"- build pass 1: full web suite: 3 red, 2 fail identically at base (fx/cardFx R3332000, fx/entrances R670 plain Legendary); Board snapshot updated (board Mythic now stacks slices).\u2026\n- Bash: {\"command\": \"timeout 300 bash -c 'until grep -qaE \\\"Running:|passing|failing|EXIT|Error\\\" /tmp/cy-diorama.log; do sleep 5; done'; tail -c 1500 /tmp/cy-diorama.log\", \"description\": \"Check that Cypress\u2026\n- Bash: {\"command\": \"timeout 900 pnpm exec eslint $(git status --short | awk '{print $2}' | grep -E \\\"\\\\.(ts|tsx)$\\\" | grep -v \\\"/$\\\") apps/web/src/cards/art/dioramas 2>&1 | tail -10; echo lint-exit $?\", \"de\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -qaE \\\"EXIT\\\" /tmp/cy-diorama.log; do sleep 15; done'; grep -aoE \\\"[0-9]+ passing|[0-9]+ failing|EXIT [0-9]+\\\" /tmp/cy-diorama.log | tail -3; grep -ac \\\"\\\u2026\n- Bash: {\"command\": \"grep -a \\\"\\u2713\\\\|\\u2717\\\\|[0-9]) \\\" /tmp/cy-diorama.log | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | tail -8\", \"description\": \"See Cypress progress lines\"}\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy-diorama.log | grep -a -B2 -A3 \\\"^\\\\s*1) R3350000\\\" | head -20; ls e2e/cypress/screenshots/ 2>/dev/null | head\", \"description\": \"Find the first Cypress\u2026\n- Bash: {\"command\": \"pkill -f \\\"cypress run --component\\\" ; sleep 2; pkill -f \\\"Cypress\\\" ; sed 's/for (const diorama of DIORAMAS.values()) {/for (const diorama of [...DIORAMAS.values()].slice(0, 1)) {/; s/f\u2026\n- tool error: Exit code 144\n- Bash: {\"command\": \"ls e2e/cypress/component/zz-one.cy.tsx; (cd e2e && E2E_COMPONENT_PORT=5282 timeout 900 pnpm test:component --spec cypress/component/zz-one.cy.tsx > /tmp/cy-one.log 2>&1); sed 's/\\\\x1b\\\\[\u2026\n- Bash: {\"command\": \"pgrep -af \\\"cypress|vite\\\" | grep -v pgrep | cut -c1-120 | head\", \"description\": \"List leftover Cypress or Vite processes\"}\n- Bash: {\"command\": \"kill 140244 140455 2>/dev/null; sleep 3; pgrep -af \\\"Cypress/16\\\" | grep -v pgrep | wc -l\", \"description\": \"Stop the leftover Cypress processes\"}\n- Bash: {\"command\": \"sed 's/for (const diorama of DIORAMAS.values()) {/for (const diorama of [...DIORAMAS.values()].slice(0, 1)) {/; s/for (const viewport of VIEWPORTS) {/for (const viewport of VIEWPORTS.sli\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='e2e/cypress/component/card-diorama.cy.tsx'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert old in s, old[:90]\\n s=s.replace(old,new,1)\\nrep('''/** The poin\u2026\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy-one.log | grep -aE \\\"\\\\.png|card-diorama-\\\" | head -10; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy-one.log | grep -a -A12 \\\"1) R3350000\\\" | tail -14\", \"descr\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='e2e/cypress/component/card-diorama.cy.tsx'\\ns=open(p).read()\\nstart=s.index(' for (const diorama of DIORAMAS.values()) {')\\nend=s.index(' it(\\\"R3350000 under reduce\u2026\n- Bash: {\"command\": \"find e2e/cypress/screenshots -name \\\"*core-097-base-right*\\\" | head -2; find e2e/cypress/screenshots -name \\\"*.png\\\" | wc -l\", \"description\": \"Find a screenshot to inspect\"}\n- Bash: {\"command\": \"grep -n \\\"screenshotsFolder\\\\|screenshots\\\" e2e/cypress.config.ts | head -3; find /home/runner/work/_temp/work/item-3350/e2e -name \\\"*core-097-base-right*\\\" -newer /tmp/cy-one.log 2>/dev\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3350/e2e/artifacts/component/screenshots/zz-one.cy.tsx/card-diorama-phone-core-097-base-right.png\"}\n- Bash: {\"command\": \"git status --short e2e | head; git check-ignore -v e2e/artifacts | head -2\", \"description\": \"Check the e2e artifacts are ignored\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\ns=open('e2e/cypress/component/fx-phone-frame.cy.tsx').read()\\ns=s.replace('it(\\\"R3345000 R3350000 a Mythic takeover','it.only(\\\"R3345000 R3350000 a Mythic takeover',1)\u2026\n- Bash: {\"command\": \"rm e2e/cypress/component/zz-one.cy.tsx; echo \\\"- build pass 1: cypress: fx-phone-frame's 2 changed cases + card-depth (20) pass; card-diorama one test per face now (a remount in one test\u2026\n- Bash: {\"command\": \"git worktree remove --force /home/runner/work/_temp/work/jackioh-wt/base3350 && git branch -D wt/base3350; git worktree list\", \"description\": \"Remove the base comparison worktree and its\u2026\n- Bash: {\"command\": \"git diff | grep -E \\\"^\\\\+.*(eslint-disable|@ts-ignore|@ts-expect-error|\\\\.only\\\\(|\\\\.skip\\\\(|#\\\\[allow)\\\" | head; git status --short | wc -l; git diff --stat | tail -3\", \"description\": \"\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -qa \\\"EXIT\\\" /tmp/cy-diorama.log; do sleep 15; done'; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy-diorama.log | grep -acE \\\"\\u2713\\\"; sed 's/\\\\x1b\\\\[[0-9;]*m//g' \u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -qa \\\"EXIT\\\" /tmp/cy-diorama.log; do sleep 15; done'; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy-diorama.log | grep -acE \\\"\\u2713\\\"; sed 's/\\\\x1b\\\\[[0-9;]*m//g' \u2026\n- tool error: Exit code 137"
       },
       "issue": 3350,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T08:08:31Z",
         "from_run": "42755762040",
         "gates": [
           {
@@ -20230,7 +20235,11 @@
         "source": "build",
         "until": "2026-11-10T08:36:28Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-10T08:06:28Z",
+      "run_id": "pending:9de6ff97-1794298044",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -20249,6 +20258,9 @@
         "provider": "claude-6",
         "run": "42755762040"
       },
+      "started_at": "2026-11-10T08:08:31Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -20262,9 +20274,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T07:43:47Z",
+    "at": "2026-11-10T08:08:31Z",
     "url": "",
-    "what": "build #3629 on muse"
+    "what": "review #3635 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-10T07:31:14Z",
