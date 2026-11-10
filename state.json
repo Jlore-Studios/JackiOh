@@ -18055,6 +18055,24 @@
           "claude": "strong"
         }
       }
+    },
+    "3658": {
+      "difficulty_by": {
+        "at": "2026-11-10T18:56:22Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "the after-merge spot-check's follow-up of #3644, a medium change"
+      },
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-10T18:56:22Z",
+      "requested_by": "jgoetzmann-bot",
+      "spot_check_of": 3644,
+      "stop_requested": false
     }
   },
   "labels_synced": "fce3910f5abefcbe",
