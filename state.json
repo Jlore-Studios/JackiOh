@@ -17733,18 +17733,19 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-11-10T02:28:42Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "42743154487",
+      "run_id": "pending:e8b12230-1794301021",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 185,
-      "started_at": "2026-11-10T02:29:45Z",
+      "started_at": "2026-11-10T08:58:02Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -20449,9 +20450,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T08:56:43Z",
+    "at": "2026-11-10T08:58:02Z",
     "url": "",
-    "what": "build #3630 on claude-1"
+    "what": "spot-check #3531 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-10T08:24:41Z",
@@ -39057,7 +39058,15 @@
         "n": 185,
         "pr": 3531,
         "queued_at": "2026-11-10T08:43:33Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:e8b12230-1794301021",
         "sha": "f811a74c33ffa1db7ee489ce3d30f0dc2d70c4e1",
+        "started_at": "2026-11-10T08:58:02Z",
         "status": "queued",
         "title": "Patch: a dungeon run in progress survives a card patch",
         "tries": 0
