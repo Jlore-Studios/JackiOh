@@ -20085,6 +20085,7 @@
     "3629": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-10T08:51:44Z",
         "difficulty": "medium",
@@ -20093,6 +20094,8 @@
         "why": "CLAUDE.md rule 11: web-only test change copying the #3418 precedent in the same files; no hard line (engine rules, AI, cross-crate design, migration, 40+ files) holds"
       },
       "failures": 0,
+      "forced": false,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "live": "building",
