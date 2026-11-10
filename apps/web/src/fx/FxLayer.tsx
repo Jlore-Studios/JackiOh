@@ -191,7 +191,6 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
       shakeSink: s.shakeSink ?? boardShakeSink(document),
       seed: s.seed ?? FX_DEFAULT_SEED,
       capacity: capacityFor(s.viewportWidth?.() ?? window.innerWidth),
-      phone: (s.viewportWidth?.() ?? window.innerWidth) < FX_MOBILE_WIDTH,
       element: s.element,
     });
     director.current = created;

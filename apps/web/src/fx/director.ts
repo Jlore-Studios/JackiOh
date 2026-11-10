@@ -53,8 +53,6 @@ export type FxDirectorOptions = {
   shakeSink: FxShakeSink;
   seed: number;
   capacity: number;
-  /** True on a phone viewport (narrower than `FX_MOBILE_WIDTH`): only then does `adapt` publish shed stages; default false. */
-  phone?: boolean;
   /** Stage-cue target lookup; defaults to a `document` query. */
   element?: (testid: string) => HTMLElement | null;
   /** Scroll/resize subscription for tracking parked stand-ins; defaults to window events. */
@@ -87,8 +85,8 @@ export type FxDirector = {
   capacity(): number;
   /**
    * R3351000: the shed stage the adaptive cap has reached: 0 full, 1 motes, 2 far auras, 3 the
-   * moving faces past the pointer's own. The effects layer reads it through `shed.ts`. Only a phone
-   * director publishes stages past full (`phone`); a desktop director never sheds.
+   * moving faces past the pointer's own. The effects layer reads it through `shed.ts`. Every
+   * viewport's director publishes stages past full on slow windows (R3606000).
    */
   shedLevel(): number;
   dispose(): void;
@@ -160,7 +158,6 @@ function isCanvasCue(cue: FxCue): boolean {
 
 export function createFxDirector(options: FxDirectorOptions): FxDirector {
   const { surface, domRoot, now, frames, visibility, shakeSink, seed } = options;
-  const phone = options.phone ?? false;
   const element = options.element ?? defaultElement;
 
   // Effects aimed at a carried card must target its stand-in, not the concealed source.
@@ -218,11 +215,10 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     windowSum += raw;
     if (windowSum > FX_ADAPT_WINDOW * slowMs) {
       setCap(Math.max(FX_PARTICLE_CAP_MIN, Math.floor(cap / 2)));
-      // R3351000: a slow window on a phone sheds one stage deeper — motes, then far auras,
-      // then faces — on the same trip that lowers the cap, and a set piece's beats never shed (they
-      // are DOM cues with no particle counts, so emission scaling cannot touch them). Desktop keeps
-      // the cap halving (B34) without shedding.
-      if (phone) setShedLevel(shedStage() + 1);
+      // R3606000: a slow window sheds one stage deeper — motes, then far auras, then
+      // faces — on the same trip that lowers the cap, and a set piece's beats never shed (they
+      // are DOM cues with no particle counts, so emission scaling cannot touch them).
+      setShedLevel(shedStage() + 1);
       healthyWindows = 0;
       resetWindow();
       return;
