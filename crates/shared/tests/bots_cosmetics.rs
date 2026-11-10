@@ -1298,3 +1298,132 @@ fn r1834005_an_aging_bot_drops_a_cards_pick_it_does_not_own() {
         aged.cosmetics.cards
     );
 }
+
+/// A fit of people's earned wear alone: two earned foils on core-001, each worn by everyone who owns
+/// it, and no card picks.
+static EARNED_TWO: CosmeticFit = CosmeticFit {
+    max_age_days: None,
+    samples: BOT_COSMETIC_FIT_MIN_SAMPLES,
+    slots: &[],
+    per_card_share: 0.0,
+    cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+    card_picks: &[],
+    earned_wear: &[
+        CosmeticWear {
+            cosmetic: "foil-glitter",
+            card: "core-001",
+            share: 1.0,
+        },
+        CosmeticWear {
+            cosmetic: "foil-sunburst",
+            card: "core-001",
+            share: 1.0,
+        },
+    ],
+    full_art_wear: &[],
+    ownership: &[],
+};
+
+/// R1834005: a fit holding only people's earned wear on cards, and no card picks, still has a bot wear
+/// what it earned; and a card takes the first of its earned foils that rolls, never a later one.
+#[test]
+fn r1834005_a_card_wears_the_first_earned_foil_that_rolls_under_a_fit_of_earned_wear_alone() {
+    let registry = registry();
+    let owned = wardrobe(
+        &[("foil-glitter", "core-001"), ("foil-sunburst", "core-001")],
+        &[],
+    );
+    let first = registry
+        .iter()
+        .find(|cosmetic| cosmetic.id == "foil-glitter" || cosmetic.id == "foil-sunburst")
+        .expect("both foils are in the registry");
+    let deck = vec!["core-001".to_string()];
+    let cards = draw_card_picks(
+        "earned-two",
+        registry,
+        &EARNED_TWO,
+        &owned,
+        &AccountPicks::default(),
+        &[deck.as_slice()],
+    );
+    let [card] = cards.as_slice() else {
+        panic!("one card of its own, not {cards:?}");
+    };
+    assert_eq!(card.card_id, "core-001");
+    assert_eq!(card.foil.as_deref(), Some(first.id.as_str()));
+}
+
+/// Two non-starter tables, each worn by 40% of seats and owned by every bot.
+static TWO_TABLES: CosmeticFit = CosmeticFit {
+    max_age_days: None,
+    samples: BOT_COSMETIC_FIT_MIN_SAMPLES,
+    slots: &[("table-marble", 0.4), ("table-chessboard", 0.4)],
+    per_card_share: 0.0,
+    cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+    card_picks: &[],
+    earned_wear: &[],
+    full_art_wear: &[],
+    ownership: &[
+        CosmeticOwnership {
+            cosmetic: "table-marble",
+            card: None,
+            share: 1.0,
+        },
+        CosmeticOwnership {
+            cosmetic: "table-chessboard",
+            card: None,
+            share: 1.0,
+        },
+    ],
+};
+
+/// R1834005: two fitted non-starters of one kind are each worn at their share of seats, the second as
+/// often as the first: its chance is taken over the seats the first left undrawn.
+#[test]
+fn r1834005_each_fitted_non_starter_of_a_kind_is_worn_at_its_share_the_second_as_the_first() {
+    let registry = registry();
+    let owned = wardrobe(&[], &["table-marble", "table-chessboard"]);
+    let mut worn: BTreeMap<String, usize> = BTreeMap::new();
+    for n in 0..POOL {
+        let picks = draw_account(&format!("two-tables:{n}"), registry, &TWO_TABLES, &owned);
+        let table = picks.get(CosmeticKind::Table).unwrap_or_default().to_string();
+        *worn.entry(table).or_default() += 1;
+    }
+    for id in ["table-marble", "table-chessboard"] {
+        close(worn.get(id).copied().unwrap_or(0) as f64 / POOL as f64, 0.4, id);
+    }
+}
+
+/// A fit that lists a table and nothing of any other kind.
+static TABLE_ONLY: CosmeticFit = CosmeticFit {
+    max_age_days: None,
+    samples: BOT_COSMETIC_FIT_MIN_SAMPLES,
+    slots: &[("table-felt", 1.0)],
+    per_card_share: 0.0,
+    cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+    card_picks: &[],
+    earned_wear: &[],
+    full_art_wear: &[],
+    ownership: &[],
+};
+
+/// R1834005: a kind the fit lists nothing of takes the prior's split among what the bot owns, whatever
+/// the fit lists of other kinds: a new bot under a fit of tables alone still wears a starter foil at
+/// the prior's share, not only the default.
+#[test]
+fn r1834005_a_kind_the_fit_lists_nothing_of_takes_the_priors_split() {
+    let registry = registry();
+    let none = OwnedCosmetics::default();
+    let starters = (0..POOL)
+        .filter(|n| {
+            let picks = draw_account(&format!("table-only:{n}"), registry, &TABLE_ONLY, &none);
+            assert_eq!(picks.get(CosmeticKind::Table), Some("table-felt"), "{n}");
+            picks.get(CosmeticKind::Foil) != Some("foil-none")
+        })
+        .count();
+    close(
+        starters as f64 / POOL as f64,
+        1.0 - BOT_COSMETIC_PRIOR_DEFAULT_SHARE,
+        "a starter foil under the prior",
+    );
+}
