@@ -17098,15 +17098,8 @@
       "verdict_rounds": 3
     },
     "3514": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42769157544",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-10T08:04:04Z",
-        "until": "2026-11-10T08:34:04Z"
-      },
       "handoff": {
         "at": "2026-11-10T07:58:45Z",
         "family": "claude",
@@ -17116,9 +17109,8 @@
         "reason": "planned on opus",
         "trail": " /tmp/planner-scripts\u2026\n- Bash: {\"command\": \"timeout 400 sh -c 'until grep -q \\\"^exit\\\" /tmp/mutA.log; do sleep 10; done'; grep -v \\\"^::warning\\\" /tmp/mutA.log | tail -3; python3 -I -c \\\"\\nimport json,collections;d=json.load(open('\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nimport re\\ns=re.sub(r'^STATUS: .*$', 'STATUS: setA DONE 07:33 UTC (51 min): 72 mutant\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514/crates/engine/tests/rules; grep -n \\\"^fn board\\\\|pub fn board\\\" fixtures/prompt_harness.rs | head -2; grep -n \\\"mod e18_the_reward_kind_classic_\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514/crates/engine/tests/rules; grep -n \\\"quest()\\\" fixtures/prompts.rs | head -5; grep -n \\\"QUEST\\\\b\\\\|\\\\\\\"quest\\\\\\\"\\\\|quest().id\\\" -B2 -A12 fixture\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514/crates/engine/tests/rules; grep -n \\\"fn r28_caps_the_recursion\\\" -B2 call_to_chaos.rs | head -3; grep -n \\\"^mod \\\\|^ use super\\\" call_to_chaos.r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514; wc -l /tmp/mutC/mutants.out/caught.txt /tmp/mutC/mutants.out/missed.txt 2>/dev/null; grep -n \\\"PromptKind::Target\\\" crates/engine/tests/rules/r\u2026\n- Write: {\"file_path\": \"/tmp/planner-scripts/plan.md\", \"content\": \"## Goal\\n\\nThis is the first of #3514's pull requests, the **limits and deaths** group. It is part of #3514 and must not close it: the descri\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514; { echo; echo \\\"## PLAN TEXT (run 4; TABLE_PLACEHOLDER = fill from setA above + setC)\\\"; cat /tmp/planner-scripts/plan.md; } >> .bot-plan.md; wc\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514/crates/engine/tests/rules; grep -n \\\"^fn card_def_of\\\" -A22 rulings_b.rs | grep -n \\\"cost\\\\|json\\\" | head -5; grep -n \\\"fn hand_card\\\" fixtures/\u2026\n- Bash: {\"command\": \"timeout 590 sh -c 'cd /tmp/mutC/mutants.out; until [ \\\"$(cat caught.txt missed.txt timeout.txt unviable.txt 2>/dev/null | wc -l)\\\" -ge 12 ]; do sleep 15; done'; cd /tmp/mutC/mutants.out;\u2026\n- Bash: {\"command\": \"timeout 590 sh -c 'until grep -q \\\"^exit\\\" /tmp/mutC.log 2>/dev/null; do sleep 15; done'; cd /tmp/mutC/mutants.out; wc -l caught.txt missed.txt unviable.txt timeout.txt; cat missed.txt u\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514/crates/engine/src; sed -n 341,362p effects/summon.rs; grep -n \\\"lane\\\" effects/anomaly.rs | head -20\", \"description\": \"Read summon_fresh_standin\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514/crates/engine/src; sed -n 30,60p effects/anomaly.rs; sed -n 100,140p effects/anomaly.rs | grep -n \\\"lane\\\\|entries\\\\|row_size\\\\|valid\\\\|filter\\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514/crates/engine/tests/rules; grep -n \\\"fn r1879001\\\\|fn r1855000\\\\|backrow\\\\\\\"\\\\|\\\\\\\"lane\\\\\\\"\\\" anomalies.rs | head -12\", \"description\": \"Find R18\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514/crates/engine/tests/rules; sed -n 252,266p anomalies.rs; sed -n 640,690p anomalies.rs\", \"description\": \"Read the entry-does-not-fit and flier te\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514/crates/engine/tests/rules; grep -rn \\\"misfit\\\\|hangar\\\" fixtures/*.rs anomalies.rs | grep -v \\\"^anomalies.rs:2[5-6][0-9]\\\\|s.play\\\\|board(\\\" | h\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514/crates/engine/tests/rules; sed -n 318,335p fixtures/anomalies.rs; sed -n 378,395p fixtures/anomalies.rs; grep -n \\\"^fn preset\\\\|fn preset(\\\" -A8\u2026\n- Bash: {\"command\": \"cd /tmp/mutC/mutants.out; for f in caught missed unviable; do echo \\\"$f: $(sed 's/:.*//' $f.txt | sort | uniq -c | tr '\\\\n' ' ')\\\"; done; cd /home/runner/work/_temp/work/item-3514; cargo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514/crates/engine/src; sed -n 112,141p effects/anomaly.rs\", \"description\": \"Read anomaly entry loop before the summon\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514/crates/engine/src; grep -rn \\\"pub fn is_empty\\\\b\\\\|pub(crate) fn is_empty\\\\b\\\\|fn is_empty(\\\" --include=*.rs . | grep -v testkit | head -3; f=$(\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514; cat >> .bot-plan.md <<'EOF'\\n\\n## setC DONE 07:53 (20 min): 27 mutants: summon.rs 15 caught/1 missed (341:17 || -> &&)/3 unviable;\\nplay_choice\u2026\n- Write: {\"file_path\": \"/tmp/planner-scripts/plan.md\", \"content\": \"## Goal\\n\\nThis is the first of #3514's pull requests, the **limits and deaths** group. Its description says \\\"Part of #3514\\\", never \\\"Close\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3514; wc -w /tmp/planner-scripts/plan.md; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ni=s.find('## PLAN TEXT')\\nif i>0: s=s[:i]\\ns+= '\\\u2026\n- Bash: {\"command\": \"cd /tmp/planner-scripts; python3 -I - <<'EOF'\\np='plan.md'\\ns=open(p).read()\\nreps = [\\n(\\\"- **Determinism.** Only test fixtures are added, appended last in `defs()` and `scripts()`, so \u2026\n- Bash: {\"command\": \"cd /tmp/planner-scripts; python3 -I - <<'EOF'\\np='plan.md'\\ns=open(p).read()\\nreps = [\\n(\\\"- **Determinism.** Only test fixtures are added, appended last in `defs()` and `scripts()`, so \u2026\n- Bash: {\"command\": \"cd /tmp/planner-scripts; python3 -I - <<'EOF'\\np='plan.md'\\ns=open(p).read()\\nreps = [\\n(\\\"- **The limits.** Every limit the issue names has a test at it, below it and past it, citing th\u2026\n- Read: {\"file_path\": \"/tmp/planner-scripts/plan.md\"}\n- Bash: {\"command\": \"cd /tmp/planner-scripts; python3 -I - <<'EOF'\\np='plan.md'\\ns=open(p).read()\\nreps=[(\\\" - This kills `play_choices.rs:2569:22`.\\\\n\\\",\\\" - This kills `play_choices.rs:2569:22`.\\\\n\\\"),\\n(\\\u2026\n- said: ## Goal This is the first of #3514's pull requests, the **limits and deaths** group. Its description says \"Part of #3514\", never \"Closes\". Done means: - **The limits.** Every limit the issue names has a test at it, below it and past it, either existing or new, and each test cites its section or rul\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-10T06:32:03Z",
       "owner_why": "it plans it; released from its hold: `claude-7` has no runner free where it runs",
@@ -17131,9 +17123,9 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-3",
-      "run_id": "42769157544",
+      "run_id": "pending:0f17d153-1794298129",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-10T06:32:03Z",
+      "started_at": "2026-11-10T08:09:56Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6759571937
@@ -20274,9 +20266,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T08:08:31Z",
+    "at": "2026-11-10T08:09:56Z",
     "url": "",
-    "what": "review #3635 on claude-6"
+    "what": "build #3514 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-10T07:31:14Z",
