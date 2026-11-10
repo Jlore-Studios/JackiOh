@@ -17231,36 +17231,25 @@
     "3635": {
       "action": "revise",
       "asks": [],
-      "audit_tier": "strong",
+      "audit_tier": "",
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-10T04:25:15Z",
+      "feedback_since": "2026-11-10T10:25:54Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3350,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The last commit (164782542c, made when the builder ran out of quota mid-call, after round 1's gates) adds `fullscreenCovers`, `fullscreenCoverScale`, `fullscreenDioramaPerspectivePx` and the `--fs-perspective`/`--fs-cover` writes with no test. The new `FULLSCREEN_BLEED_PCT` doc claims a test that does not exist.",
-          "evidence": "`git show HEAD --stat` touches FullScreenArt.tsx, constants.ts, fullscreen.css, CardFace.tsx, depth.test.tsx and diorama.test.tsx, but not fullscreen.test.tsx. `git grep 'fullscreenCover\\|FULLSCREEN_BLEED_PCT\\|fs-cover' -- apps e2e` finds only the definitions. constants.ts says `FULLSCREEN_BLEED_PCT` is 'Mirrored in fullscreen.css's inset on .fullscreen-art-planes (fullscreen.test.tsx holds them equal)', and no test compares them. The PR's gate table (round 1, 'green') ran before this commit, so its typecheck, lint and tests have never run. Fix: add R3350000 tests for fullscreenCovers/fullscreenCoverScale (1 when level, more than 1 and at most FULLSCREEN_COVER_SCALE_MAX at the 25\u00b0/25\u00b0 corner pose on 1280x720 and 390x844, and covers(result) true), a test that `--fs-cover` and `--fs-perspective` are written on pointermove, and the bleed-equality test the comment names. Or drop the claim.",
-          "severity": "blocking",
-          "where": "apps/web/src/cards/FullScreenArt.tsx:58"
-        },
-        {
-          "claim": "The change overrides two existing rulings for every Mythic but neither the R3350000 note nor its \u00a711 paragraph records it. A board Mythic loses R3340000's three live layers, so the subject no longer aims at the pointer, flinches on a press or swings on an attack. A diorama Mythic in hand or inspect no longer breaks the frame (R3344000). The pending paragraph says it amends only R3344000 and R3345000.",
-          "evidence": "MinionFace.tsx passes `live={motion !== null && !diorama}`, and the Board snapshot drops `data-art-live` and the `.cf-art-subject`/`.cf-art-motes` layers. artLive.css's hover, press and `data-art-attacking` rules target `.cf-art-subject`; only a hover/press swell exists for `.cf-art:not([data-art-live])`, so no attack response is left. R3340000 says 'every card, procedural, Stinkyscape and Training Grounds, gets them' and lists the Attacking swing. artLive.test.tsx was moved off a Mythic to keep passing. CardFace.tsx sets `breaks = depth && diorama === null && \u2026` (added in the WIP commit), against R3344000 L43 ('A Legendary or Mythic face in the viewer's own hand \u2026 or inspect \u2026 rise over the window's top edge'). The R3350000 body never mentions the frame-break or the attack swing. Fix: state both decisions and the alternatives rejected in R3350000.md, name R3340000 in spec/pending/3350.md's 'amends', and either keep an attack response on the diorama window or say it is dropped.",
-          "severity": "blocking",
-          "where": "spec/rulings/R3350000.md:46"
-        }
-      ],
+      "last_findings": [],
       "live": "revising",
       "pending_request": false,
       "provider": "claude-8",
+      "question": "",
       "queued_at": "2026-11-10T10:14:17Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "42799097097",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -17281,10 +17270,11 @@
         "provider": "claude-6",
         "run": "42780327345"
       },
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-11-10T10:25:54Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [],
         "builder": "",
