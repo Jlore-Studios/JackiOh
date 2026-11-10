@@ -46,8 +46,35 @@ afterEach(() => {
 
 describe("Board", () => {
   it("renders the full board from a PlayerView", () => {
-    const { container } = render(<Board view={fullBoardView()} />);
-    expect(container.firstChild).toMatchSnapshot();
+    // Once a bless-whatever snapshot; now the root contract and every region the animation table
+    // reads, named one by one, so a dropped region fails here by name instead of by a diff.
+    const view = fullBoardView();
+    render(<Board view={view} />);
+
+    const board = screen.getByTestId(testid.board);
+    expect(board.getAttribute("data-viewer")).toBe("p1");
+    expect(board.getAttribute("data-turn")).toBe("3");
+    expect(board.getAttribute("data-phase")).toBe("main");
+    expect(board.getAttribute("data-active")).toBe("you");
+
+    for (const [side, player] of [
+      ["you", "p1"],
+      ["opponent", "p2"],
+    ] as const) {
+      const seat = board.querySelector(`.seat-${side}`);
+      expect(seat?.getAttribute("data-player")).toBe(player);
+      // Every region the animation table reads that the board renders: the backrow has none, its
+      // zones are the elements (`zone-<side>-backrow-<lane>`, pinned below with the field).
+      for (const region of ["hand", "library", "graveyard", "exile", "mana", "modifiers"] as const) {
+        expect(screen.getByTestId(`${region}-${side}`), `${region}-${side}`).toBeInTheDocument();
+      }
+      expect(screen.getByTestId(testid.hero(side))).toBeInTheDocument();
+      for (const lane of LANES) {
+        for (const row of ["units", "backrow"] as const) {
+          expect(screen.getByTestId(testid.zone(side, row, lane)), `${side} ${row} ${lane}`).toBeInTheDocument();
+        }
+      }
+    }
   });
 
   it("shows the random-targets badge only when the view flags it", () => {
