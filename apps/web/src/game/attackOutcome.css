@@ -22,8 +22,17 @@
   pointer-events: none;
 }
 
-/* The tentative starburst: the splat's own shape, size, font and placement, held still and ghosted. */
+/* The tentative starburst: the splat's own shape, size, font and placement, held still and ghosted.
+   Outside `.fx-dom` nothing gives the splat `position: absolute` (fx.css gives that to `.fx-dom > *`
+   alone), so the preview gives it its own positioned box: without one the starburst's `::before`
+   (absolute, `inset: 0`) would paint against the whole-card wrapper and the base
+   `translate: -50% -50%` would shove the centered grid item off-center. The wrapper's grid still
+   centers it; shape, size, font and placement still come from the splat's own rules. */
 .fx-splat[data-tentative="true"] {
+  position: relative;
+  left: auto;
+  top: auto;
+  translate: none;
   margin: 0;
   animation: none;
   opacity: 0.55;

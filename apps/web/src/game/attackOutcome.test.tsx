@@ -275,6 +275,12 @@ describe("R3615000 a hovered attack's preview wears each number on the card that
     const body = tentativeBody('.fx-splat[data-tentative="true"]');
     expect(body).toContain("animation: none");
     expect(tentativeOpacity(body)).toBeLessThan(1);
+    // The splat's base rule expects `.fx-dom`'s absolute positioning context, which the preview is
+    // not inside: the modifier must give the starburst its own positioned box (so `::before` paints
+    // the ~84px splat, not the whole card) and neutralize the base `translate: -50% -50%` (so the
+    // centered grid item stays centered).
+    expect(body).toMatch(/position:\s*(relative|absolute)/);
+    expect(body).not.toContain("-50%");
   });
 
   it("R3615000 with effects off the marker is damage-pop with the modifier", () => {
