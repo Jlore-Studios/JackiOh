@@ -18848,6 +18848,24 @@
       "queued_at": "2026-11-10T03:06:27Z",
       "requested_by": "MaxGoetzmann",
       "stop_requested": false
+    },
+    "3613": {
+      "difficulty_by": {
+        "at": "2026-11-10T03:12:16Z",
+        "difficulty": "hard",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "the after-merge spot-check's follow-up of #3464, a hard change"
+      },
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-10T03:12:16Z",
+      "requested_by": "jgoetzmann-bot",
+      "spot_check_of": 3464,
+      "stop_requested": false
     }
   },
   "labels_synced": "fce3910f5abefcbe",
