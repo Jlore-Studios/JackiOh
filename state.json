@@ -18459,12 +18459,9 @@
     "what": "review #3591 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-10T22:54:06Z",
+    "at": "2026-11-10T23:02:11Z",
     "notes": [
-      "#3667 needs a plan",
-      "could not start review #3591 on claude-4: POST /repos/Jlore-Studios/JackiOh/actions/workflows/bot-night.yml/dispatches: HTTP 422: Cannot trigger a 'workflow_dispatch' on a disabled workflow",
-      "#3667: typed it Bug",
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
+      "could not start review #3591 on claude-4: POST /repos/Jlore-Studios/JackiOh/actions/workflows/bot-night.yml/dispatches: HTTP 422: Cannot trigger a 'workflow_dispatch' on a disabled workflow"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19170,7 +19167,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T22:54:06Z",
+  "loop_tick": "2026-11-10T23:02:11Z",
   "machine_disk": {
     "issue": null,
     "reading": {
