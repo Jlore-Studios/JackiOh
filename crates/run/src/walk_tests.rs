@@ -73,7 +73,7 @@ fn free_action(state: &RunState, content: &RunContent) -> RunAction {
         },
         RunPhase::ExtractCard | RunPhase::ExtractArtifact => RunAction::Extract { index: None },
         RunPhase::Shop { .. } => RunAction::Leave,
-        RunPhase::Campfire => RunAction::Heal,
+        RunPhase::Campfire => RunAction::GainMaxHp,
         RunPhase::Event { id } => {
             let options = &content
                 .events
@@ -83,7 +83,7 @@ fn free_action(state: &RunState, content: &RunContent) -> RunAction {
                 .options;
             let index = options
                 .iter()
-                .rposition(|option| option.hp >= 0 && option.coins >= 0 && option.tickets >= 0)
+                .rposition(|option| option.max_hp >= 0 && option.coins >= 0 && option.tickets >= 0)
                 .expect("walk: the event has a free option");
             RunAction::Choose { index }
         }
@@ -167,7 +167,7 @@ fn random_action(state: &RunState, content: &RunContent, rng: &mut Rng) -> RunAc
             },
         },
         RunPhase::Campfire => match rng.int(4) {
-            0 => RunAction::Heal,
+            0 => RunAction::GainMaxHp,
             1 => RunAction::MakeRadiant {
                 index: deck_index(rng, state.deck.len()),
             },

@@ -53,7 +53,7 @@ function RunHud({
     <header className="dungeon-run-hud" data-testid={dungeonMapTestid.hud}>
       {runFinished(run) ? null : <RunTimer elapsedMs={elapsedMs} resumedAt={resumedAt} />}
       <span className="dungeon-run-hud__stat" data-testid={dungeonMapTestid.hp}>
-        {t("HP")}: {run.hp} / {max}
+        {t("HP")}: {max}
       </span>
       <span className="dungeon-run-hud__stat" data-testid={dungeonMapTestid.coins}>
         {t("Coins")}: {run.coins}
