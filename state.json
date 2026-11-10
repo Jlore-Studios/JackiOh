@@ -17828,7 +17828,7 @@
       "started_at": "2026-11-10T10:21:36Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [],
         "builder": "claude",
