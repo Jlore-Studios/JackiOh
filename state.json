@@ -17277,16 +17277,12 @@
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
-        "builder": "",
-        "built_by": "",
-        "rejections": [
-          "claude"
-        ],
+        "builder": "claude",
+        "built_by": "claude-8",
+        "rejections": [],
         "reviews": [],
-        "sha": "164782542c63c79f66ca22105d919fbe26e2d307",
-        "tiers": {
-          "claude": "strong"
-        }
+        "sha": "9209e8a92a1f6771dcc9b221c33b371cc6871546",
+        "tiers": {}
       },
       "waiting_comment": 6763178029
     },
