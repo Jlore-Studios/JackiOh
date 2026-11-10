@@ -17137,7 +17137,8 @@
       },
       "started_at": "2026-11-10T04:27:27Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 6759571937
     },
     "3515": {
       "action": "plan",
