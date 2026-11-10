@@ -29264,7 +29264,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 47,
     "base": {
       "attack": 0,
       "health": 2,
@@ -29318,7 +29318,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 47,
     "base": {
       "attack": 0,
       "health": 3,
@@ -29372,7 +29372,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 47,
     "base": {
       "attack": 0,
       "health": 4,
@@ -31327,7 +31327,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 1,
       "health": 1,
@@ -36498,7 +36498,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 0,
-    "loc": 6,
+    "loc": 23,
     "base": {
       "attack": 1,
       "health": 1,
@@ -36534,7 +36534,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 55,
     "base": {
       "attack": 2,
       "health": 8,
