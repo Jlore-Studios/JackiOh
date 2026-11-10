@@ -17338,6 +17338,10 @@
       "source": "request",
       "started_at": "2026-11-10T04:58:55Z",
       "stop_requested": false,
+      "strike_log": [
+        "`muse` (muse, muse-spark-1.3-contributor) rejected it: `task`: Four of nine audit areas are untouched while the PR closes the issue."
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 3
     },
