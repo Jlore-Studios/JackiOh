@@ -18978,16 +18978,26 @@
         ],
         "builder": "claude",
         "built_by": "claude-3",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/cards/art/ART.md",
+            "apps/web/src/cards/art/meditativeScenes.test.ts",
+            "apps/web/src/cards/art/sceneRecipes.ts"
+          ],
+          "from": "384131ff6844250cd465baab3d14c5e78056face",
+          "main": "58900682c90803a88c71ba340ef736b378f74bd7"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-3",
-            "run": "42737457567",
+            "run": "42767660211",
             "tier": "strong"
           }
         ],
-        "sha": "384131ff6844250cd465baab3d14c5e78056face",
+        "sha": "2fbbfdbee78c163ee15884448d67c5886dd1315a",
         "tiers": {
           "claude": "strong"
         }
