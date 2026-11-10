@@ -16601,13 +16601,24 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "42805020414",
+            "tier": "medium"
+          }
+        ],
         "sha": "5f2ff045a8ddd9103f73ba76c3562e219e87ba19",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "3622": {
