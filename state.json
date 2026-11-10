@@ -17615,9 +17615,11 @@
         "by": "`claude` (strong)",
         "sha": "09b5bf3f16f56d6a9add3d46a528a4c44fdadfa9"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-10T10:28:44Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-10T11:26:55Z",
         "family": "claude",
@@ -17627,6 +17629,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -50; git status --short; git log --oneline -2\"}\n- Bash: {\"command\": \"cd apps/web/src/fx; grep -n \\\"FIELD\\\" cardFx.test.ts | head -20; sed -n 320,365p cardFx.test.ts; sed -n 115,145p entrances.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3630 && python3 - <<'EOF'\\np='apps/web/src/fx/cardFx.test.ts'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\" // Classic+ #78 Claude's Datacenter, a Legendary \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/test/tileBoard.ts'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\" return baseView({\\\"\\\"\\\",\\\"\\\"\\\" // The units cycle too: the cards still wearing the tile aura k\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='e2e/cypress/component/full-art-tiers.cy.tsx'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"function Faces({ width }: { width: number }) {\\\"\\\"\\\",\\\"\\\"\\\"function Faces({ width,\u2026\n- Bash: {\"command\": \"sed -n 200,250p e2e/cypress/component/card-fullscreen.cy.tsx\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='e2e/cypress/component/card-fullscreen.cy.tsx'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\" const pointerId = 100 + index;\\n\\\"\\\"\\\",\\\"\\\"\\\" const pointerId = 100 + index;\\n /\u2026\n- Bash: {\"command\": \"grep -n \\\"testid\\\" e2e/cypress/component/card-fullscreen.cy.tsx | sed -n 1,30p\"}\n- Monitor: {\"query\": \"select:Monitor\"}\n- tool error: <tool_use_error>InputValidationError: Monitor failed due to the following issue: The required parameter `description` is missing This tool's schema was not sent to the API \u2014 it was not in the discove\u2026\n- Bash: {\"command\": \"until [ -d apps/web/src/wasm/pkg ] && ! pgrep -f build-wasm >/dev/null; do sleep 5; done; ls apps/web/src/wasm/pkg | head -3\", \"timeout\": 600000}\n- Bash: {\"command\": \"tail -3 /tmp/wasm.log; ls apps/web/src/wasm/pkg | head -3; pkill -f \\\"until \\\\[ -d\\\" ; true\"}\n- Bash: {\"command\": \"cd apps/web && JACKIOH_DAILY=1 timeout 580 pnpm exec vitest run --project web src/fx/cardFx.test.ts src/fx/entrances.test.ts src/test src/fx/aura 2>&1 | tail -15\", \"timeout\": 600000}\n- said: Vitest is green. Next I'll run the full fx directory, eslint, typecheck and Cypress.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3630 && (cd apps/web && JACKIOH_DAILY=1 timeout 500 pnpm exec vitest run --project web src/fx/ 2>&1 | grep -E \\\"Test Files|Tests |FAIL\\\" ); pnpm exec\u2026\n- Bash: {\"command\": \"cd e2e && timeout 590 pnpm exec cypress run --component --browser chrome --spec cypress/component/full-art-tiers.cy.tsx,cypress/component/card-fullscreen.cy.tsx,cypress/component/fx-phon\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3630 && git status --short; cat >> .bot-notes.md <<'EOF'\\n\\n## State (build run)\\nAll 5 plan steps done and verified (vitest src/fx full: 97 files pa\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: daily super run failed\"} --> ## What changed All five edits are test or fixture changes. No production code, ruling or spec file changes. The two meditative R202 failures from the issue were already fixed on `main` by #3509, so I left them alone. The failu\u2026"
       },
+      "interruptions": 0,
       "issue": 3630,
       "kind": "review",
       "live": "reviewing",
