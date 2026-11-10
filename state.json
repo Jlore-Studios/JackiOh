@@ -17071,6 +17071,7 @@
         "by": "`claude` (medium)",
         "sha": "825e442b231ed380cb49be0ba55d6bb85829a8f8"
       },
+      "closed_at": "2026-11-10T02:38:20Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -17085,6 +17086,7 @@
         "provider": "claude-4",
         "sha": "825e442b231ed380cb49be0ba55d6bb85829a8f8"
       },
+      "merged": true,
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-09T19:34:41Z",
