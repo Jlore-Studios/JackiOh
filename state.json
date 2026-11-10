@@ -17229,6 +17229,7 @@
       "run_id": "42706444318",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 175,
       "started_at": "2026-11-09T21:51:24Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36852,9 +36853,33 @@
         "title": "Patch: hovering your hand no longer redraws the whole board, and each card's face is built once per change instead of on every redraw",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-7",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "ab3de5db3fe835168cd198f30c055adecaf355ef",
+        "issue": 3502,
+        "merged_at": "2026-11-10T00:05:13Z",
+        "n": 175,
+        "pr": 3523,
+        "queued_at": "2026-11-10T00:05:13Z",
+        "sha": "1ccfe15d24dcf108041c75323e8c6e089d4302bc",
+        "status": "queued",
+        "title": "Patch: a dungeon run's time counts only while it is played, so a run picked up the next day is not timed by the calendar",
+        "tries": 0
       }
     ],
-    "count": 174
+    "count": 175
   },
   "statistics": {
     "at": "2026-11-09T23:55:50Z"
