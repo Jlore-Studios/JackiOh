@@ -16717,7 +16717,7 @@
       "stop_requested": false
     },
     "3623": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "cleared": {
@@ -16742,7 +16742,7 @@
       "issue": 3518,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
@@ -16751,20 +16751,13 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "42812754700",
+      "run_id": "pending:e4da96a7-1794329275",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-11-10T12:05:06Z",
+      "started_at": "2026-11-10T16:48:52Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-10T16:44:30Z",
-        "until": "2026-11-10T17:14:30Z",
-        "why": "it waited 120 minutes for #3635, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
-      },
       "verdict_rounds": 2,
       "votes": {
         "approvals": [
@@ -18005,9 +17998,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T16:03:48Z",
+    "at": "2026-11-10T16:48:52Z",
     "url": "",
-    "what": "suggestions on claude-3"
+    "what": "revise #3623 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T16:21:47Z",
