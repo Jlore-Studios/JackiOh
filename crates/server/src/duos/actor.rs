@@ -78,17 +78,26 @@ struct AiJob {
 
 impl AiJob {
     /// B26–B29: `duos_decide` on `{seed}:duos-ai:{seat}` (never the match rng) within
-    /// `BOT_DECISION_DEADLINE_MS`.
+    /// `BOT_DECISION_DEADLINE_MS`, its beam wrapped up at `wrap_up_after_ms` of it (R3498000).
     fn ask(&self) -> (Option<DuosActionBody>, u32) {
         jackioh_cards::register_all();
+        let started = std::time::Instant::now();
         let wait = Duration::from_millis(u64::try_from(BOT_DECISION_DEADLINE_MS).unwrap_or(0));
-        let deadline = std::time::Instant::now() + wait;
+        let deadline = started + wait;
+        // R3498000: past the wrap-up the beam explores no further; the reply and the other worlds run on
+        // to the deadline.
+        let wrap_up_at = started
+            + Duration::from_millis(
+                u64::try_from(jackioh_ai::wrap_up_after_ms(BOT_DECISION_DEADLINE_MS)).unwrap_or(0),
+            );
         let should_stop = move || std::time::Instant::now() >= deadline;
+        let wrap_up = move || std::time::Instant::now() >= wrap_up_at;
         // R2575000: the practice AI's budget before #2575 doubled it, cut short by the deadline.
         let mut options = AiOptions {
             rng: Rng::new(&format!("{}:duos-ai:{}", self.seed, self.seat), self.cursor),
             budget: DUOS_AI_BUDGET,
             should_stop: Some(&should_stop),
+            wrap_up: Some(&wrap_up),
         };
         let body = self
             .pinned

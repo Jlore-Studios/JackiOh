@@ -82,8 +82,15 @@ impl BotChoice {
 /// concedes (temper, then only facing a lethal it cannot stop inside the deadline, R2660000), else
 /// whether it offers a draw when R36 lets it (R2660001). `should_stop` is the host's wall-clock cap
 /// (`BOT_DECISION_DEADLINE_MS`, `think::decision_deadline_ms`): past it the search plays the best line
-/// found so far; a host with no clock passes none and the search ends at the strength's budget.
-pub fn decide(ask: &BotAsk<'_>, should_stop: Option<&dyn Fn() -> bool>) -> BotChoice {
+/// found so far; a host with no clock passes none and the search ends at the strength's budget. R3498000:
+/// `wrap_up` is the same host's earlier stop for the search's beam alone (`AiOptions.wrap_up`, fired at
+/// `wrap_up_after_ms` of the deadline), so that the reply and the other worlds still run; the concession
+/// check is held to `should_stop` only.
+pub fn decide(
+    ask: &BotAsk<'_>,
+    should_stop: Option<&dyn Fn() -> bool>,
+    wrap_up: Option<&dyn Fn() -> bool>,
+) -> BotChoice {
     let BotAsk {
         state,
         seat,
@@ -137,6 +144,7 @@ pub fn decide(ask: &BotAsk<'_>, should_stop: Option<&dyn Fn() -> bool>) -> BotCh
             rng: ai_rng,
             budget: strength.budget,
             should_stop,
+            wrap_up,
         };
         let style = AiStyle {
             temperature: strength.temperature,

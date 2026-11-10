@@ -61,6 +61,13 @@ enum CounterKind<'a> {
         start: usize,
         limit: usize,
         capped: Cell<bool>,
+        /// R3498000: the beam's stop short of the clock, polled once `floor` nodes are drawn.
+        wrap_up: Option<&'a dyn Fn() -> bool>,
+        floor: usize,
+        /// The wrap-up fired: no node is taken until `closing`.
+        wrapped: Cell<bool>,
+        /// `end_exploring` was called: the wrap-up no longer refuses.
+        closing: Cell<bool>,
     },
 }
 
@@ -147,10 +154,26 @@ impl NodeCounter for CountingNodeCounter<'_> {
                 start,
                 limit,
                 capped,
+                wrap_up,
+                floor,
+                wrapped,
+                closing,
             } => {
                 if parent.used().saturating_sub(*start) >= *limit {
                     capped.set(true);
                     return false;
+                }
+                if !closing.get() {
+                    if wrapped.get() {
+                        return false;
+                    }
+                    if let Some(wrap_up) = wrap_up
+                        && parent.used().saturating_sub(*start) >= *floor
+                        && wrap_up()
+                    {
+                        wrapped.set(true);
+                        return false;
+                    }
                 }
                 parent.take()
             }
@@ -160,9 +183,18 @@ impl NodeCounter for CountingNodeCounter<'_> {
     fn stopped_by(&self) -> StoppedBy {
         match &self.kind {
             CounterKind::Root { stopped_by, .. } => stopped_by.get(),
-            CounterKind::Sub { parent, capped, .. } => {
+            CounterKind::Sub {
+                parent,
+                capped,
+                wrapped,
+                ..
+            } => {
                 if parent.stopped_by() != StoppedBy::Exhausted {
                     return parent.stopped_by();
+                }
+                // R3498000: the wrap-up is the host's clock, ahead of its deadline.
+                if wrapped.get() {
+                    return StoppedBy::Clock;
                 }
                 if capped.get() {
                     StoppedBy::Budget
@@ -170,6 +202,12 @@ impl NodeCounter for CountingNodeCounter<'_> {
                     StoppedBy::Exhausted
                 }
             }
+        }
+    }
+
+    fn end_exploring(&self) {
+        if let CounterKind::Sub { closing, .. } = &self.kind {
+            closing.set(true);
         }
     }
 
@@ -229,12 +267,28 @@ pub fn create_node_counter<'a>(
 /// A slice of `parent`: at most `limit` more nodes, drawn from the parent. Running out of the slice
 /// does not stop the parent, so the lethal solver can hand what it left over to the beam.
 pub fn create_sub_counter<'a>(parent: &'a dyn NodeCounter, limit: usize) -> CountingNodeCounter<'a> {
+    create_wrap_up_counter(parent, limit, None, 0)
+}
+
+/// R3498000: `create_sub_counter` that also refuses once `wrap_up` answers true, polled before each node
+/// from the `floor`th node it has drawn on, until `end_exploring`; its parent runs on. The beam's slice:
+/// with `wrap_up` None it is `create_sub_counter`'s, node for node.
+pub fn create_wrap_up_counter<'a>(
+    parent: &'a dyn NodeCounter,
+    limit: usize,
+    wrap_up: Option<&'a dyn Fn() -> bool>,
+    floor: usize,
+) -> CountingNodeCounter<'a> {
     CountingNodeCounter {
         kind: CounterKind::Sub {
             parent,
             start: parent.used(),
             limit,
             capped: Cell::new(false),
+            wrap_up,
+            floor,
+            wrapped: Cell::new(false),
+            closing: Cell::new(false),
         },
     }
 }

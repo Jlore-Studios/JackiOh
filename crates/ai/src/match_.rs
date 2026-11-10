@@ -218,6 +218,7 @@ fn choose_for(
                 rng: rng.clone(),
                 budget: budget.unwrap_or(AI_BUDGET),
                 should_stop: None,
+                wrap_up: None,
             };
             let decision = decide(state, seat, &mut options);
             *rng = options.rng;

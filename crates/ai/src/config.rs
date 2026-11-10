@@ -70,6 +70,13 @@ pub const AI_BUDGET: SearchBudget = SearchBudget {
 /// (docs/polish/3-ai.md B28–B31) and the sweep (R186) measure the AI that ships.
 pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 
+/// R3498000: the share of a host's time limit, counted from the host's start, after which the beam
+/// explores no further (`AiOptions.wrap_up`, `wrap_up_after_ms`). The rest of the time pays for the open
+/// lines' endTurns, the finalists' replies and their scores on the other sampled worlds, which a clock
+/// that fired mid-beam would refuse. A judgement that no clocked strength screen has tested; a plain
+/// const, not an `AiSearch` field, since that struct derives `Eq`.
+pub const AI_WRAP_UP_SHARE: f64 = 0.6;
+
 /// R2102000: the stream the practice AI's lethal hint (`lethal::lethal_hint`, SPEC §9.9) draws
 /// its worlds from, its own: never the match's, nor the AI's, so asking it moves no other stream.
 pub const LETHAL_HINT_SEED: &str = "ai:lethal-hint";
