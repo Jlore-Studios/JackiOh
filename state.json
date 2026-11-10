@@ -17810,10 +17810,12 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "at": "2026-11-10T14:17:25Z",
+        "at": "2026-11-10T15:26:12Z",
         "built_by": "claude-6",
         "by": "`claude` (strong)",
-        "sha": "20b262ca86c95a8314ef58f0e7245d133125be2a"
+        "carried_from": "20b262ca86c95a8314ef58f0e7245d133125be2a",
+        "resolved_by": "`claude` (strong)",
+        "sha": "6c46655f81e350d719a3c581a791f35e71dd72df"
       },
       "died": 0,
       "difficulty": "hard",
