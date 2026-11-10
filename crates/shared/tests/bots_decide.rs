@@ -12,8 +12,10 @@ use jackioh_ai::{
 use jackioh_engine::testkit::{Value, json, scenario};
 use jackioh_engine::wire::PLAYER_IDS;
 use jackioh_engine::{
-    Action, ActionBody, ActionType, CardType, GameState, PlayerId, Rng, Row, Zone, seat_to_act,
+    Action, ActionBody, ActionType, Aim, AimEnd, CardType, GameState, PlayerId, RANDOM_ATTACK_TARGET, Rng,
+    Row, Selection, Zone, seat_to_act,
 };
+use jackioh_shared::bots::aim::bot_aim;
 use jackioh_shared::bots::decide::{BotAsk, BotChoice, decide};
 use jackioh_shared::bots::signals::{accepts_draw, concedes, offers_draw, standard_normal, standing};
 use jackioh_shared::bots::think::{THINK_MODEL, ThinkFor, ThinkModel, decision_deadline_ms, think_ms};
@@ -505,6 +507,96 @@ fn facing(p1: Value, p2: Value) -> GameState {
     scenario(json!({ "seed": "facing", "active": "p1", "p1": p1, "p2": p2 }))
         .state()
         .clone()
+}
+
+/// R738, R639000: the aim a bot shows is the one a person's client would. An attack runs from its unit's
+/// zone to its target's, a play from its card's place in the hand to the last target it declares, an
+/// Activate from its unit and a hero power from the hero; a random attack, a play declaring no target
+/// (none, or only a mode) and every other move show none.
+#[test]
+fn r738_a_bots_aim_runs_from_its_moves_source_to_the_last_target_it_declares() {
+    jackioh_cards::register_all();
+    let built = scenario(json!({
+        "seed": "aim",
+        "active": "p1",
+        "p1": { "field": ["core-011"], "hand": ["core-010", "core-025"] },
+        "p2": { "field": ["core-008"] },
+    }));
+    let state = built.state().clone();
+    let (bot, other) = (PlayerId::P1, PlayerId::P2);
+    let mine = built.unit(bot, 1).expect("p1's unit in lane 1").id;
+    let theirs = built.unit(other, 1).expect("p2's unit in lane 1").id;
+    let zone = |player: PlayerId| AimEnd::Zone {
+        player,
+        row: Row::Units,
+        lane: 1,
+    };
+    let hero = |player: PlayerId| AimEnd::Hero { player };
+    let aim = |source: AimEnd, target: AimEnd| {
+        Some(Aim {
+            source,
+            target: Some(target),
+        })
+    };
+
+    let attack = |target_id: &str| ActionBody::Attack {
+        attacker_id: mine.clone(),
+        target_id: target_id.to_owned(),
+    };
+    assert_eq!(
+        bot_aim(&state, bot, &attack(theirs.as_str())),
+        aim(zone(bot), zone(other))
+    );
+    assert_eq!(
+        bot_aim(&state, bot, &attack("hero-p2")),
+        aim(zone(bot), hero(other))
+    );
+    assert_eq!(bot_aim(&state, bot, &attack(RANDOM_ATTACK_TARGET)), None);
+
+    // The second card of the hand, so its place is not the first card's.
+    let card = state.players[bot].hand[1].id.clone();
+    let from_hand = AimEnd::Hand {
+        player: bot,
+        index: 1,
+    };
+    let play = |targets: Value| -> ActionBody {
+        serde_json::from_value(json!({ "type": "play", "instanceId": card.as_str(), "targets": targets }))
+            .expect("a play reads")
+    };
+    let at_hero = json!({ "pick": "hero", "player": "p2" });
+    let at_unit = json!({ "pick": "instance", "instanceId": theirs.as_str() });
+    let a_mode = json!({ "pick": "mode", "option": "first" });
+    assert_eq!(
+        bot_aim(&state, bot, &play(json!([at_hero.clone()]))),
+        aim(from_hand, hero(other))
+    );
+    assert_eq!(
+        bot_aim(&state, bot, &play(json!([at_hero.clone(), at_unit.clone()]))),
+        aim(from_hand, zone(other))
+    );
+    assert_eq!(
+        bot_aim(&state, bot, &play(json!([at_unit, a_mode.clone(), at_hero]))),
+        aim(from_hand, hero(other))
+    );
+    assert_eq!(bot_aim(&state, bot, &play(json!([a_mode]))), None);
+    assert_eq!(bot_aim(&state, bot, &play(Value::Null)), None);
+
+    let at_their_hero = vec![Selection::Hero { player: other }];
+    let activate = ActionBody::Activate {
+        instance_id: mine.clone(),
+        ability: None,
+        targets: Some(at_their_hero.clone()),
+        modes: None,
+        tributes: None,
+    };
+    assert_eq!(bot_aim(&state, bot, &activate), aim(zone(bot), hero(other)));
+    // A hero's power stands in no zone, so its aim starts at the hero.
+    let power = ActionBody::ActivatePower {
+        instance_id: "heroic-power".to_owned(),
+        targets: Some(at_their_hero),
+    };
+    assert_eq!(bot_aim(&state, bot, &power), aim(hero(bot), hero(other)));
+    assert_eq!(bot_aim(&state, bot, &ActionBody::EndTurn), None);
 }
 
 #[test]

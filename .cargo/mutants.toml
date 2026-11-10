@@ -80,4 +80,11 @@ exclude_re = [
   # crates/run (#3513): `weighted`'s fallback, `rows[rows.len() - 1]`, after the loop: a roll under the
   # weights' total always falls in one of them inside the loop, so the fallback is never reached.
   'replace - with (\+|/) in weighted',
+  # crates/shared (#3513): `game_in_play` asks that the series be Playing and its last game have no
+  # result, and `abandon_unstarted` that the last game be the one `next_match_id` names and have no
+  # result. On every row the transitions make, a series is Playing exactly while its last game has no
+  # result and carries `next_match_id`: `begin` pushes that game and sets Playing, `game_ended` gives it
+  # its result and then ends the series or reopens the picks under a new id, `abandon_unstarted` pops
+  # it, and `forfeit_series` runs only between games. So either half alone decides as both do.
+  'replace && with \|\| in (game_in_play|abandon_unstarted)',
 ]

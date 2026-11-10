@@ -173,6 +173,24 @@ fn close(actual: f64, expected: f64, what: &str) {
 
 // One seed, one wardrobe and one loadout
 
+/// R1834005: what a bot held stays in its wardrobe while it is still eligible, even on a seed whose
+/// fresh draw would not deal it.
+#[test]
+fn r1834005_a_held_holding_still_eligible_stays_where_a_fresh_draw_would_not_deal_it() {
+    let held = holding("table-velvet", None);
+    let eligible = vec![held.clone()];
+    let none = OwnedCosmetics::default();
+    let seed = (0..1_000)
+        .map(|n| format!("kept:{n}"))
+        .find(|seed| holdings(&draw_wardrobe(seed, &BOT_COSMETIC_PRIOR, &eligible, &none)).is_empty())
+        .expect("a seed whose fresh draw deals nothing");
+    let owned = wardrobe(&[], &["table-velvet"]);
+    assert_eq!(
+        holdings(&draw_wardrobe(&seed, &BOT_COSMETIC_PRIOR, &eligible, &owned)),
+        BTreeSet::from([held])
+    );
+}
+
 #[test]
 fn r1834005_deterministic_from_the_seed() {
     let registry = registry();

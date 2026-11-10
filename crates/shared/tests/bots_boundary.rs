@@ -9,7 +9,8 @@ use jackioh_engine::{PerPlayer, Rng, WinRateRow, WinRateSource, WinRateTable, de
 use jackioh_shared::bots::boundary::{BotAnswer, BotCall, GameFacts, TicketFacts, apply};
 use jackioh_shared::bots::cosmetics::{CosmeticOwners, Holding, eligible, redraw};
 use jackioh_shared::bots::fallback::{
-    BotMode, bot_match_gap_passed, bot_matches, choose_bot, fallback_due_keyed, hour_of,
+    BotMode, bot_match_gap_passed, bot_matches, choose_bot, fallback_due_keyed, fallback_seconds_keyed,
+    hour_of,
 };
 use jackioh_shared::bots::pool::{
     BotDeck, BotFacts, BotLadder, draw_decks, draw_new_bot, draw_trio, plan_grind, plan_pool, pool_target,
@@ -300,6 +301,89 @@ fn the_kickoff_calls_count_the_matches_between_bots_and_the_gap_since_the_last()
         BotAnswer::Passed { passed: true }
     );
     assert!(bot_match_gap_passed(&games, NOW + gap));
+}
+
+/// R1453: a hidden bot pairs with a ticket once that ticket has waited its own fallback time, drawn
+/// from its id, and not a millisecond before.
+#[test]
+fn r1453_a_tickets_fallback_time_is_its_own_drawn_from_its_id() {
+    let ids = ["ticket-1", "ticket-2", "ticket-3", "ticket-4", "ticket-5"];
+    let waits: IndexSet<i64> = ids.iter().map(|id| fallback_seconds_keyed("key", id)).collect();
+    assert!(
+        waits.len() > 1,
+        "PREMISE: the tickets wait different times, {waits:?}"
+    );
+    for id in ids {
+        let waiting = ticket(id, BotMode::Bo1, 1500.0);
+        let due_at = waiting.enqueued_at + fallback_seconds_keyed("key", id) * MS_PER_SECOND;
+        let due = |now: i64| {
+            apply(over_json(&BotCall::FallbackDue {
+                key: "key".to_string(),
+                ticket: waiting.clone(),
+                now,
+                hidden: true,
+            }))
+        };
+        assert_eq!(due(due_at - 1), BotAnswer::Due { due: false }, "{id}");
+        assert_eq!(due(due_at), BotAnswer::Due { due: true }, "{id}");
+    }
+}
+
+/// R1453, R1555000: a bot the host holds busy is never chosen, however close its rating; and only a
+/// game between two bots holds the gap before the next, never one with a person.
+#[test]
+fn r1555000_a_busy_bot_is_not_chosen_and_only_a_game_between_bots_holds_the_gap() {
+    let bots = vec![bot("far", 900.0), bot("near", 1480.0)];
+    let choose = |busy: Vec<String>| {
+        apply(over_json(&BotCall::ChooseBot {
+            ticket: ticket("t", BotMode::Random, 1500.0),
+            bots: bots.clone(),
+            recent: Vec::new(),
+            busy,
+            hour: hour_of(NOW),
+            catalog_version: "v".to_string(),
+        }))
+    };
+    assert_eq!(
+        choose(Vec::new()),
+        BotAnswer::Chosen {
+            bot: Some("near".to_string())
+        }
+    );
+    let held = choose(vec!["near".to_string()]);
+    assert_ne!(
+        held,
+        BotAnswer::Chosen {
+            bot: Some("near".to_string())
+        }
+    );
+    let busy: IndexSet<String> = ["near".to_string()].into_iter().collect();
+    assert_eq!(
+        held,
+        BotAnswer::Chosen {
+            bot: choose_bot(
+                &ticket("t", BotMode::Random, 1500.0),
+                &bots,
+                &[],
+                &busy,
+                hour_of(NOW),
+                "v"
+            )
+            .map(|chosen| chosen.profile_id.clone())
+        }
+    );
+
+    let with_a_person = vec![GameFacts {
+        between_bots: false,
+        ended_at: NOW,
+    }];
+    assert_eq!(
+        apply(over_json(&BotCall::BotMatchGapPassed {
+            games: with_a_person,
+            now: NOW + 1,
+        })),
+        BotAnswer::Passed { passed: true }
+    );
 }
 
 #[test]
