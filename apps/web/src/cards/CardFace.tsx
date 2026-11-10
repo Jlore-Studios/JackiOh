@@ -110,6 +110,7 @@
 // depth and bent as it says, each moving by its own loop while the face holds a motion slot (`data-diorama-motion`, the
 // slot Animated's motion shares), and at an animated level by the art's own layers too (R2715001). Where the player turns it to look at it (inspect's drag, the hover preview, and the
 // Collection's grid, `turn`) it turns up to DIORAMA_TURN_MAX_DEG, its parallax scaled with it; in hand CARD_TILT_MAX_DEG.
+// It never breaks the frame: its subject stands in slices of more than one plane.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -461,7 +462,9 @@ export function CardFace({
   const outOfFrame = look.version === VERSION_OUT_OF_FRAME_ID && !fullArt && !glitch && hasArtParts(face.defId, starship, anomaly);
   const motion = faceMotion.moving && (artMoves || engaged) ? artMotionOf(face.defId) : null;
   const shape: ArtShape = fullArt || extended || artFirst ? "full" : ART_SHAPE[face.type];
-  const breaks = depth && breaksFrame(rarity, ownHand, tilt);
+  // R3350000: a diorama never breaks the frame: its subject is a stack across slices of every plane, so lifting and growing
+  // the near plane alone would pull one part of the model away from the rest.
+  const breaks = depth && diorama === null && breaksFrame(rarity, ownHand, tilt);
   // R3350000: a diorama turns further where the player turns it to look at it, its parallax with it.
   const turnMax = diorama !== null && (tilt === "drag" || tilt === "window" || turn) ? DIORAMA_TURN_MAX_DEG : CARD_TILT_MAX_DEG;
   useCardTilt(faceRef, depth ? tilt : "off", !flat, tiltAnchor, turnMax);

@@ -644,7 +644,9 @@ describe("R3344000 Legendary and Mythic faces in hand and inspect may break the 
       expect(breaksFrame(rarity, true, "host"), String(rarity)).toBe(false);
       expect(breaksFrame(rarity, true, "drag"), String(rarity)).toBe(false);
     }
-    // On the face.
+    // On the face. R3350000: a Mythic's normal picture draws its diorama, which never breaks the frame (diorama.test.tsx),
+    // so the Mythic under test wears Alt art, where it draws the planes.
+    writeCardLevel(MYTHIC, VERSION_ALT_ART_ID);
     for (const [id, options, breaks] of [
       [LEGENDARY, { ownHand: true, tilt: "host" }, true],
       [MYTHIC, { ownHand: true, tilt: "host" }, true],

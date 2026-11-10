@@ -264,6 +264,31 @@ describe("R3350000 a Mythic's face draws its diorama", () => {
     expect(alt.style.getPropertyValue("--cf-tilt-ry")).toBe(`${CARD_TILT_MAX_DEG}deg`);
   });
 
+  it("R3350000 a diorama never breaks the frame, where the planes of a Mythic in Alt art do", () => {
+    // In hand, the hover preview and inspect: where R3344000 lets a Mythic's near plane break the window's top edge.
+    const where = [{ ownHand: true, tilt: "host" }, { tilt: "window" }, { tilt: "drag" }] as const;
+    for (const id of [MYTHIC, TOKEN]) {
+      for (const options of where) {
+        const at = `${id} ${JSON.stringify(options)}`;
+        const cf = faceIn(id, options);
+        expect(cf.getAttribute("data-diorama"), at).toBe("true");
+        expect(cf.hasAttribute("data-frame-break"), at).toBe(false);
+        expect(cf.style.getPropertyValue("--cf-frame-break"), at).toBe("");
+        expect(cf.style.getPropertyValue("--cf-frame-break-scale"), at).toBe("");
+        cleanup();
+        resetTiltForTests();
+      }
+    }
+    writeCardLevel(MYTHIC, VERSION_ALT_ART_ID);
+    for (const options of where) {
+      const cf = faceIn(MYTHIC, options);
+      expect(cf.hasAttribute("data-diorama"), JSON.stringify(options)).toBe(false);
+      expect(cf.getAttribute("data-frame-break"), JSON.stringify(options)).toBe("true");
+      cleanup();
+      resetTiltForTests();
+    }
+  });
+
   it("R3350000 the loop runs only in a slot", () => {
     // Alone, the face holds a slot: every slice that has a loop draws it, and those with none their still picture.
     const diorama = dioramaOf(MYTHIC);

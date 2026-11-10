@@ -17,6 +17,18 @@
   transition: transform var(--motion-base) var(--ease-out);
 }
 
+/* R3350000: a diorama turns further (DIORAMA_TURN_MAX_DEG), so the view turns it under a perspective of the screen's own size
+   (`--fs-perspective`, FULLSCREEN_DIORAMA_PERSPECTIVE_VMAX of its longer side, FullScreenArt sets it) and scales it up by as
+   much as its pose needs to keep the screen covered (`--fs-cover`, FullScreenArt `fullscreenCoverScale`), so no turn shows
+   the black past its pictures. */
+.fullscreen-art[data-diorama] {
+  perspective: var(--fs-perspective, 200vmax);
+}
+
+.fullscreen-art-planes[data-diorama] {
+  transform: rotateX(var(--cf-tilt-rx, 0deg)) rotateY(var(--cf-tilt-ry, 0deg)) scale(var(--fs-cover, 1));
+}
+
 /* Each plane's tilt parallax is the standalone `translate` property, which composes with the dolly's
    `transform` keyframes instead of being replaced by them (R3345000). */
 .fullscreen-art-plane {
