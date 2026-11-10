@@ -62,6 +62,8 @@ function reset(): void {
 function dress(): void {
   writeCardSettings({ ...CARD_SETTINGS_DEFAULTS, fullArt: false });
   writeCardLevel("core-052", VERSION_ALT_ART_ID);
+  // R3350000: a Mythic's normal picture draws its diorama (card-diorama.cy.tsx); in Alt art it draws the four planes here.
+  writeCardLevel("core-100", VERSION_ALT_ART_ID);
 }
 
 /** A hand card of `id`: the face, in a host whose box the tilt reads, as game/Card.tsx draws it in the viewer's hand. */

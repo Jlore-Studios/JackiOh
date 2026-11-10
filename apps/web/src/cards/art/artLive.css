@@ -9,6 +9,9 @@
  * and under `:root:not([data-reduce-motion="true"])`, as cards.css gates its own, and take their times and curves from
  * motion.css. The marks of state (cracks, glow, frost: ArtWear.tsx) are still drawings outside the gate, so a face under
  * reduced motion shows them all the same; only the glow's fade is gated.
+ *
+ * R3350000 (#3350): a board Mythic whose art moves draws its diorama's slices in place of the live layers; its window swells
+ * and presses in as one image's does, and its slices over the farthest swing on an attack as a subject does.
  */
 
 .cf-art-layer {
@@ -102,6 +105,12 @@
 
   :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-attacking="true"] .cf-art-motes {
     animation: cf-art-fire var(--motion-base) var(--ease-out) 1;
+  }
+
+  /* R3350000: a board Mythic's diorama (CardArt's `diorama` "all") draws no live layers: the slices over its farthest
+     (`.cf-art-slice`) are its subject, so they swing as one toward the target, the farthest staying behind as a backdrop. */
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-attacking="true"] .cf-art-slice {
+    animation: cf-art-swing var(--motion-base) var(--ease-out) 1;
   }
 
   /* Art that is one image (a delivered file, a restyle, a Starship's, a Legacy card's, a face holding no slot) answers a

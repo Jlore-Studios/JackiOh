@@ -39,6 +39,15 @@ cap_lints = true
 timeout_multiplier = 3.0
 minimum_test_timeout = 120
 
+# A mutant whose build never ends is killed by its timeout too: three times the unmutated build's
+# time, which built every dependency as well, so a mutant's own build (its package and its tests,
+# about 40 s in crates/shared against a 107 s baseline) never comes near it. cargo-mutants times no
+# build by default: in crates/shared's first shard (mutants.yml on main, 2026-11-10) 248 of 249
+# mutants finished, the test timeout killing two, and the last held its job until the step's five
+# hours ended. One way a build never ends: with `cap_lints`, rustc's limit on a long constant
+# evaluation is only a warning.
+build_timeout_multiplier = 3.0
+
 exclude_globs = [
   # The tests' own harness: scenario(), its verbs, the invariant monitor and the pool probe. A mutant
   # there asks whether the tests are right, which the tests that use it answer by failing for a
