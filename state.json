@@ -14436,15 +14436,8 @@
       "verdict_rounds": 1
     },
     "3517": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42809606855",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-10T11:59:04Z",
-        "until": "2026-11-10T12:29:04Z"
-      },
       "failures": 1,
       "forced": false,
       "handoff": {
@@ -14456,10 +14449,9 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3517; git log --oneline -1; git diff --stat 442c884399 HEAD -- crates/cards/src/scripts/meditative_plus .cargo/mutants.toml scripts/mutants.sh crates\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3517; git diff 442c884399 HEAD -- crates/cards/src/scripts/meditative_plus .cargo/mutants.toml scripts/mutants.sh crates/cards/src/lib.rs; git log --\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3517/.bot-plan.md\", \"limit\": 3}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3517/.bot-plan.md\", \"content\": \"## Goal\\n\\nThis PR audits the **Meditative+ set**, the area `cards-meditative_plus`: 33 scripts and 216 mutants. Every\u2026\n- said: ## Goal This PR audits the **Meditative+ set**, the area `cards-meditative_plus`: 33 scripts and 216 mutants. Every mutant that survives cargo-mutants gets one of #3490's four verdicts: - **Test gap:** a test in the card's own `#[cfg(test)] mod tests`, for base and Radiant per its spec \u00a78.9 row. - \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-10T11:42:03Z",
       "owner_why": "it plans it; released from its hold: `claude-3` has no runner free where it runs",
@@ -14473,9 +14465,9 @@
       "queued_at": "2026-11-10T03:30:02Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "42809606855",
+      "run_id": "pending:b112d0f4-1794312321",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-10T11:42:03Z",
+      "started_at": "2026-11-10T12:06:16Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: timed out after 9000s"
@@ -17846,9 +17838,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T12:05:06Z",
+    "at": "2026-11-10T12:06:16Z",
     "url": "",
-    "what": "review #3623 on muse"
+    "what": "build #3517 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-10T11:36:06Z",
