@@ -36898,7 +36898,9 @@
           "provider": "claude-6"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-10T13:55:00Z",
         "every": 5,
+        "findings": 0,
         "head": "9917058ec8b443761ffdcab8c0daa22c0aa5d162",
         "issue": 3388,
         "merged_at": "2026-11-10T13:32:41Z",
@@ -36911,12 +36913,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:eed93ff1-1794317698",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42826014586",
         "sha": "e8580b25bda38b9729a6acb6d85f788edaef2c5b",
         "started_at": "2026-11-10T13:36:03Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: every Classic Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 190
