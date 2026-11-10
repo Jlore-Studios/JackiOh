@@ -18481,10 +18481,21 @@
     "what": "plan #3589 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T00:46:38Z",
+    "at": "2026-11-10T00:55:06Z",
     "notes": [
-      "delivered revise #3493 on muse (run 42725508439): approved",
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
+      "delivered build #3580 on muse (run 42728530616): built",
+      "delivered review #3529 on muse (run 42717247157): approved",
+      "started review #3585 on muse (run 42732323451)",
+      "started plan #3582 on claude-6 (run 42732394160)",
+      "started plan #3588 on muse (run 42732470386)",
+      "started plan #3589 on muse (run 42732554923)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days",
+      "#3589: typed it Task",
+      "#3588: typed it Task",
+      "#3587: typed it Task",
+      "#3586: typed it Task",
+      "runner gate: started 0 of 5 waiting run(s); 5 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19190,7 +19201,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T00:46:38Z",
+  "loop_tick": "2026-11-10T00:55:06Z",
   "machine_disk": {
     "issue": null,
     "reading": {
