@@ -33526,7 +33526,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 2,
       "health": 2,
@@ -33593,7 +33593,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 13,
     "base": {
       "attack": 6,
       "health": 3,
@@ -33659,7 +33659,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 13,
     "base": {
       "attack": 8,
       "health": 5,
@@ -33731,7 +33731,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 12,
       "health": 8,
@@ -33932,7 +33932,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 5,
       "health": 3,
@@ -33950,7 +33950,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 1, Flying, Ranged, Pierce, Can't Defend\nDamage alsoBurns {damage}."
+      "text": "Tribute 1, Flying, Ranged, Pierce, Can't Defend\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 10,
@@ -33972,11 +33972,11 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 1, Flying, Ranged, Pierce, Rush, Can't Defend\nDamage also Burns {damage}."
+      "text": "Tribute 1, Flying, Ranged, Pierce, Rush, Can't Defend\nDamage also Burns {burns}."
     },
     "params": [
       {
-        "key": "damage",
+        "key": "burns",
         "base": 3,
         "radiant": 6,
         "better": "up",
@@ -34000,7 +34000,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 6,
       "health": 13,
@@ -34068,7 +34068,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 7,
       "health": 15,
