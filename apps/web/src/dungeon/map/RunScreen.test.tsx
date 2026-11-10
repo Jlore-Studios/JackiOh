@@ -115,8 +115,8 @@ const CONTENT: RunContent = {
       id: "test-event",
       text: "A stranger offers a deal.",
       options: [
-        { text: "Pay 5 Coins", hp: 0, coins: -5, tickets: 0, card: false, artifact: false },
-        { text: "Walk away", hp: 0, coins: 0, tickets: 0, card: false, artifact: false },
+        { text: "Lose 5 max HP for 5 Coins", maxHp: -5, coins: 5, tickets: 0, card: false, artifact: false },
+        { text: "Walk away", maxHp: 0, coins: 0, tickets: 0, card: false, artifact: false },
       ],
     },
   ],
@@ -177,6 +177,7 @@ function runWith(phase: RunPhase, extra: Partial<RunState> = {}): RunState {
     row: 0,
     col: 0,
     hp: 7,
+    maxHpBonus: 0,
     deck: DECK,
     artifacts: [{ id: "test-relic-might", level: 2 }],
     blessings: [],
@@ -229,9 +230,9 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-/** B30: HP, Coins, Tickets, the deck, the relic held and the score, on every screen. */
+/** B30: HP (the run's max), Coins, Tickets, the deck, the relic held and the score, on every screen. */
 function expectHud(coins = "11", tickets = "3"): void {
-  expect(screen.getByTestId(dungeonMapTestid.hp)).toHaveTextContent("7 / 20");
+  expect(screen.getByTestId(dungeonMapTestid.hp)).toHaveTextContent("HP: 20");
   expect(screen.getByTestId(dungeonMapTestid.coins)).toHaveTextContent(coins);
   expect(screen.getByTestId(dungeonMapTestid.tickets)).toHaveTextContent(tickets);
   expect(screen.getByTestId(dungeonMapTestid.deckSize)).toHaveTextContent("3");
@@ -689,11 +690,12 @@ describe("B30 the tiles send their actions under the always-on HUD", () => {
   });
 
   // B30
-  it("B30 the campfire heals, Radiants, buffs and removes the toggled cards", () => {
+  it("B30 the campfire offers max HP, Radiants, buffs and removes the toggled cards", () => {
     const { dungeon, act } = fakeDungeon(runWith({ phase: "campfire" }));
     render(<RunScreen dungeon={dungeon} />);
-    fireEvent.click(screen.getByTestId(dungeonMapTestid.campfireHeal));
-    expect(act).toHaveBeenCalledWith({ type: "heal" });
+    expect(screen.getByTestId(dungeonMapTestid.campfireMaxHp)).toHaveTextContent("Gain 5 max HP");
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.campfireMaxHp));
+    expect(act).toHaveBeenCalledWith({ type: "gainMaxHp" });
     fireEvent.click(screen.getByTestId(dungeonMapTestid.campfireRadiant(1)));
     expect(act).toHaveBeenCalledWith({ type: "makeRadiant", index: 1 });
     fireEvent.click(screen.getByTestId(dungeonMapTestid.campfireBuff(0)));
@@ -757,9 +759,9 @@ describe("B30 the tiles send their actions under the always-on HUD", () => {
     const { dungeon, act } = fakeDungeon(runWith({ phase: "event", id: "test-event" }));
     render(<RunScreen dungeon={dungeon} />);
     expect(screen.getByTestId(dungeonMapTestid.event)).toHaveTextContent("A stranger offers a deal.");
-    expect(screen.getByTestId(dungeonMapTestid.eventOption(0))).toHaveTextContent("Pay 5 Coins");
-    fireEvent.click(screen.getByTestId(dungeonMapTestid.eventOption(1)));
-    expect(act).toHaveBeenCalledWith({ type: "choose", index: 1 });
+    expect(screen.getByTestId(dungeonMapTestid.eventOption(0))).toHaveTextContent("Lose 5 max HP for 5 Coins");
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.eventOption(0)));
+    expect(act).toHaveBeenCalledWith({ type: "choose", index: 0 });
     expectHud();
   });
 

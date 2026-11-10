@@ -33,7 +33,7 @@ A single-player run in the style of Slay the Spire, played against the AI.
 1. You pick a starting deck of 10 cards and up to 8 points of artifacts.
 2. You climb a seeded map of three acts, about 16 fights: normal enemies, elites, ghosts, two mini-bosses
    and the final boss, with shops, campfires, events, chests and shrines between them.
-3. Your HP carries from fight to fight, and one lost fight ends the run.
+3. Every fight starts at full health: each win adds 5 max HP and refills it, and one lost fight ends the run.
 4. After every fight you open one of four packs and keep 3 of its cards, so the deck grows. Shops,
    events, campfires and artifacts thin it.
 5. Beating a mini-boss lets you extract a card, and beating the final boss lets you extract an artifact.
@@ -145,9 +145,9 @@ Strawman enemy hero health: normal 20, elite 30, mini-boss 40, final boss 50.
 ## DR7. The tiles
 
 - **Shop:** cards and artifacts for Coins; upgrades for Tickets; removing a card.
-- **Campfire:** one of: heal, make a card Radiant, remove 2 cards, or buff a card (the Buff keyword; a
+- **Campfire:** one of: +5 max HP, make a card Radiant, remove 2 cards, or buff a card (the Buff keyword; a
   shop buffs one for Tickets too).
-- **Event:** a short story with choices. Placeholders for now.
+- **Event:** a short story with choices that trade max HP, Coins and Tickets. Placeholders for now.
 - **Chest:** Coins, Tickets, sometimes an artifact.
 - **Shrine** (a monastery or a statue): a god offers a blessing for the rest of the run.
 

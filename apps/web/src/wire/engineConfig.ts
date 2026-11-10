@@ -68,5 +68,5 @@ export const TURN_CAP_PLAYER_TURNS = 60;
 export const TUTORIAL_BARRED_RARITIES: readonly Rarity[] = ["Legendary","Mythic"];
 export const TUTORIAL_CARD_SET: SetName = "Training Grounds";
 export const TUTORIAL_HUMAN: Handicap = {"deckSize":20,"manaBonus":0,"manaCap":4,"extraOpeningCards":0,"extraDrawsPerTurn":0,"heroFloor":1,"deckCopies":4};
-export const VERSIONS_SCHEME = 3;
+export const VERSIONS_SCHEME = 4;
 export const VOTE_TALLY_SIZE = 3;

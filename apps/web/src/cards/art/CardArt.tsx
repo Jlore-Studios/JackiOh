@@ -34,6 +34,10 @@
 // Battleship's) it is one image. Given `wear`, its cracks, glow and frost sit over the picture whatever draws it (ArtWear.tsx).
 // R3337001: an Anomaly Found! in play holding a board (`FaceModel.anomaly`) wears that board's picture
 // (`data-art-anomaly`), one picture as a Starship's is; a code that is none of the ten draws the card's own.
+// R3350000: given `diorama`, a Mythic's normal picture with a diorama (dioramas/) draws one slice of it (`data-art-slice`),
+// moving by its own loop when the face says so and by the card's moving art when given `motion`, or every slice ("all", a
+// board face's), the farthest on the window itself and the rest over it (`.cf-art-slice`); a restyle, Alt art, a Starship,
+// an Anomaly's board, a Legacy card and a Battleship's decks draw as before.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -55,6 +59,7 @@ import { isStinkyscapeArt, shipDecksOf, stinkySubject, type ShipArt } from "./st
 import { anomalyArtUri, legacyArtUri, particleLayerUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
 import { compositionOf, themeFor, THEME_PALETTES, type ArtThemeId } from "./themes.ts";
+import { dioramaOf, dioramaSliceUri } from "./dioramas/index.ts";
 
 import "./art.css";
 import "./artLive.css";
@@ -96,6 +101,11 @@ export type CardArtProps = {
   wear?: ArtWearState | null;
   /** R3335000: the Starship look a launched Starship wears (cosmetics.ts `useStarshipLook`); null draws it in none. */
   look?: StarshipLook | null;
+  /**
+   * R3350000: which slice of the card's diorama the window draws (its index, or "all" of them stacked), and whether its loop
+   * runs; null or absent, or a picture with no diorama, draws the picture as before.
+   */
+  diorama?: { slice: number | "all"; moving: boolean } | null;
 };
 
 /** R3340000: the marks a unit's art wears (`ArtWear`). */
@@ -157,6 +167,7 @@ export function CardArt({
   live = false,
   wear = null,
   look = null,
+  diorama = null,
 }: CardArtProps): ReactElement {
   // Keep failures per source so cards and faces retry independently.
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
@@ -241,9 +252,29 @@ export function CardArt({
             : coreId !== null
               ? legacyArtUri(defId, coreId, cardName, tags, type, radiant, restyle)
               : proceduralArtUri(seedId, theme, compositionOf(defId, type), radiant, motif, m, restyle, p);
+  // R3350000: a Mythic's normal picture with a diorama draws its slice of it, or all of them, where the painter draws it.
+  const sliced =
+    diorama !== null &&
+    near &&
+    starshipArt === null &&
+    anomaly === null &&
+    coreId === null &&
+    restyle === null &&
+    picture === "normal" &&
+    ship === null &&
+    dioramaOf(defId) !== null;
+  const sliceIndex = diorama === null || diorama.slice === "all" ? 0 : diorama.slice;
+  const overSlices = sliced && diorama?.slice === "all" ? (dioramaOf(defId)?.slices.slice(1) ?? []) : [];
   // R3340000: a live face's picture is in layers where it has parts to lay: a painter's own, whole, with a motion, no Battleship and no Anomaly's board (one picture).
-  const layered = live && motion !== null && near && starshipArt === null && anomaly === null && coreId === null && restyle === null && split === "whole" && ship === null;
-  const uri = !near ? null : layered ? drawn({ ...motion, detached: true }, "backdrop") : drawn(motion, split);
+  const layered =
+    !sliced && live && motion !== null && near && starshipArt === null && anomaly === null && coreId === null && restyle === null && split === "whole" && ship === null;
+  const uri = !near
+    ? null
+    : sliced
+      ? dioramaSliceUri(defId, radiant, sliceIndex, diorama?.moving === true, motion)
+      : layered
+        ? drawn({ ...motion, detached: true }, "backdrop")
+        : drawn(motion, split);
   const family =
     starship !== null
       ? "starship"
@@ -272,6 +303,7 @@ export function CardArt({
       data-art-pending={uri === null ? "true" : undefined}
       data-art-moving={uri !== null && starship === null && anomaly === null && coreId === null && motion !== null ? "true" : undefined}
       data-art-live={layered ? "true" : undefined}
+      data-art-slice={sliced ? sliceIndex : undefined}
       data-art-damage={wear !== null && wear.damage > 0 ? wear.damage : undefined}
       data-art-buffed={wear?.buffed === true ? "true" : undefined}
       data-art-frozen={wear?.frozen === true ? "true" : undefined}
@@ -288,6 +320,14 @@ export function CardArt({
           <span className="cf-art-layer cf-art-motes" style={{ backgroundImage: `url("${particleLayerUri(motion, seedId)}")` }} />
         </>
       )}
+      {overSlices.map((_, k) => (
+        <span
+          key={k + 1}
+          className="cf-art-layer cf-art-slice"
+          data-slice={k + 1}
+          style={{ backgroundImage: `url("${dioramaSliceUri(defId, radiant, k + 1, diorama?.moving === true, motion)}")` }}
+        />
+      ))}
       {wear !== null && <ArtWear damage={wear.damage} buffed={wear.buffed} frozen={wear.frozen} seedId={seedId} />}
     </span>
   );

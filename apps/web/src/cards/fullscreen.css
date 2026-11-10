@@ -17,6 +17,18 @@
   transition: transform var(--motion-base) var(--ease-out);
 }
 
+/* R3350000: a diorama turns further (DIORAMA_TURN_MAX_DEG), so the view turns it under a perspective of the screen's own size
+   (`--fs-perspective`, FULLSCREEN_DIORAMA_PERSPECTIVE_VMAX of its longer side, FullScreenArt sets it) and scales it up by as
+   much as its pose needs to keep the screen covered (`--fs-cover`, FullScreenArt `fullscreenCoverScale`), so no turn shows
+   the black past its pictures. */
+.fullscreen-art[data-diorama] {
+  perspective: var(--fs-perspective, 200vmax);
+}
+
+.fullscreen-art-planes[data-diorama] {
+  transform: rotateX(var(--cf-tilt-rx, 0deg)) rotateY(var(--cf-tilt-ry, 0deg)) scale(var(--fs-cover, 1));
+}
+
 /* Each plane's tilt parallax is the standalone `translate` property, which composes with the dolly's
    `transform` keyframes instead of being replaced by them (R3345000). */
 .fullscreen-art-plane {
@@ -46,6 +58,21 @@
 .fullscreen-art-plane[data-plane="nearest"] {
   translate: calc(var(--cf-tilt-x, 0) * 20px) calc(var(--cf-tilt-y, 0) * 20px);
   animation: fullscreen-dolly-nearest var(--fs-dolly-period, 12s) var(--ease-in-out) infinite alternate;
+}
+
+/* R3350000: a Mythic's diorama: each slice shifts with the tilt by its depth (`--fs-slice-shift`, FullScreenArt `sliceShiftPx`),
+   the farthest against it and the nearest with it, in place of its plane's step, and a bent one turns about its axis by
+   `--cf-slice-bend` under the view's own perspective, as the dolly scales it. */
+.fullscreen-art-plane[data-slice] {
+  translate: calc(var(--cf-tilt-x, 0) * var(--fs-slice-shift, 0px)) calc(var(--cf-tilt-y, 0) * var(--fs-slice-shift, 0px));
+}
+
+.fullscreen-art-planes[data-diorama] .fullscreen-art-plane[data-bend="y"] {
+  rotate: y var(--cf-slice-bend, 0deg);
+}
+
+.fullscreen-art-planes[data-diorama] .fullscreen-art-plane[data-bend="x"] {
+  rotate: x var(--cf-slice-bend, 0deg);
 }
 
 @keyframes fullscreen-dolly-far {

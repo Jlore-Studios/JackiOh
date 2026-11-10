@@ -2,9 +2,10 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 import { jackiohAliases } from "./vite.config.ts";
+import { patchMeta } from "./patch-meta.ts";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), patchMeta()],
   // The `@jackioh/*` specifiers resolve to the client's wire layer, as in the page's build
   // (docs/v0.3.0/SURFACE.md §10.4).
   resolve: { alias: jackiohAliases },

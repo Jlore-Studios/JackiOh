@@ -2,7 +2,7 @@
 // game-over state (Result.tsx), and animations that played twice.
 
 import { CATALOG } from "@jackioh/cards";
-import type { ActionBody, GameEvent, PlayerView } from "@jackioh/shared";
+import type { ActionBody, AttackForecast, GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { StrictMode, useState, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,8 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ANIMATIONS, HIDDEN_ID } from "./animations.ts";
 import { DAMAGE_FEEL, SLAM_LAND_AT, UNIT_SLAM } from "./damageFeel.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
-import { testid } from "./contract.ts";
-import Game, { GAME_HOST_ATTRIBUTE } from "./Game.tsx";
+import { testid, type Highlight } from "./contract.ts";
+import Game, { GAME_HOST_ATTRIBUTE, sameHighlight } from "./Game.tsx";
 import { resultReason } from "./Result.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, card, emptySide, faceDownBackrow, pendingFor, unit, waitingPending, withEvents } from "../test/fixtures.ts";
@@ -188,6 +188,24 @@ describe("#3633 the game screen's host", () => {
     expect(host).toHaveAttribute(GAME_HOST_ATTRIBUTE, "true");
     unmount();
     expect(host).not.toHaveAttribute(GAME_HOST_ATTRIBUTE);
+  });
+});
+
+describe("#3633 the highlight the cards keep", () => {
+  it("#3633 sameHighlight keeps a highlight that lights the same things and drops one that does not", () => {
+    const outcome: AttackForecast = { attackerId: "u1", targetId: "u2", dealt: 2, taken: 1, kills: false, survives: true, pops: false, attackerSize: 3, targetSize: 3 };
+    const outcomes = new Map([[testid.card("u2"), outcome]]);
+    const hovered = { attacker: testid.card("u1"), target: testid.card("u2"), strikesBack: true };
+    const base: Highlight = { legal: new Set(["a", "b"]), selected: new Set(["a"]), outcomes, hoveredAttack: hovered };
+    // Built again from the same facts: kept.
+    expect(sameHighlight(base, { ...base, legal: new Set(["b", "a"]), outcomes: new Map(outcomes), hoveredAttack: { ...hovered } })).toBe(true);
+    expect(sameHighlight(base, { ...base, legal: new Set(["a"]) })).toBe(false);
+    expect(sameHighlight(base, { ...base, glow: new Set(["a"]) })).toBe(false);
+    expect(sameHighlight(base, { ...base, outcomes: undefined })).toBe(false);
+    // R3615000: the pointer moves to another target, or off it, under the same outcomes.
+    expect(sameHighlight(base, { ...base, hoveredAttack: { ...hovered, target: testid.card("u3") } })).toBe(false);
+    expect(sameHighlight(base, { ...base, hoveredAttack: { ...hovered, strikesBack: false } })).toBe(false);
+    expect(sameHighlight(base, { ...base, hoveredAttack: undefined })).toBe(false);
   });
 });
 

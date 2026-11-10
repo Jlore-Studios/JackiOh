@@ -388,8 +388,8 @@ function animation(step: ArtBeat): string {
   return `art-${step.move} ${fmt(step.seconds)}s ${ART_MOVES[step.move].timing} infinite`;
 }
 
-/** One role's (or the particles') rule: its box, its origin and its loop. */
-function roleRule(selector: string, step: ArtBeat, viewOrigin: string): string {
+/** One role's (or the particles') rule: its box, its origin and its loop. R3350000: a diorama's slice writes its loop's with it. */
+export function roleRule(selector: string, step: ArtBeat, viewOrigin: string): string {
   const spec = ART_MOVES[step.move];
   const box = spec.box === "view" ? "view-box" : "fill-box";
   const origin = spec.box === "view" ? viewOrigin : "center";
