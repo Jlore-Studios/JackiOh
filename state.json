@@ -17226,6 +17226,7 @@
         "question": "Should the next pass take on the React render refactor (memoize the board's cards, one commit per queue step, attributes instead of volatile :has() rules), or should a person rule on what this spec measures or its worst-frame bound?",
         "why": "it stays inside the issue's limits (fix the product, keep the budget, the throttle and the spec), and the measurements show the remaining cost is the board's own re-rendering, which production React also pays"
       },
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
