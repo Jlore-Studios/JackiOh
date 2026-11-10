@@ -20311,24 +20311,15 @@
     "what": "build #3537 on claude-5"
   },
   "last_sweep": {
-    "at": "2026-11-10T07:58:35Z",
+    "at": "2026-11-10T08:24:41Z",
     "notes": [
-      "#3633 needs a plan",
-      "delivered plan #3563 on claude-4 (run 42774646599): planned",
-      "delivered plan #3539 on claude-8 (run 42774493260): interrupted",
-      "delivered review #3594 on muse (run 42774351331): approved",
-      "delivered plan #3514 on claude-3 (run 42769157544): planned",
-      "delivered revise #3591 on claude-3 (run 42767660211): approved",
-      "delivered build #3350 on claude-6 (run 42755762040): built",
-      "started review #3635 on claude-6 (run 42780327345)",
-      "started build #3514 on claude-3 (run 42780504718)",
-      "started plan #3517 on claude-3 (run 42780680712)",
-      "started plan #3539 on claude-8 (run 42780839126)",
-      "started plan #3633 on claude-8 (run 42781003998)",
-      "started build #3563 on muse (run 42781178302)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is idle, but nothing queued is for it; `claude-8` is busy; `claude-1` is busy; `claude-4` 5-hour usage is 70%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-10T08:20:00Z; it can start a build or a plan again in 3m; `claude-6` is busy; `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-11-10T08:20:00Z; it can start a build or a plan again in 3m; `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it",
+      "delivered plan #3517 on claude-3 (run 42780680712): interrupted",
+      "delivered build #3514 on claude-3 (run 42780504718): interrupted",
+      "started build #3564 on claude-4 (run 42783177418)",
+      "started build #3537 on claude-5 (run 42783364181)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-10T08:50:00Z; `claude-7` is idle, but nothing queued is for it; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` is busy; `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it",
       "pruned 4 plan file(s) older than 7 days",
-      "runner gate: started 2 of 5 waiting run(s) (run 42776380292 on bot/issue-3615, run 42777650255 on claude/zealous-carson-5tzubr); 3 wait for room"
+      "runner gate: started 0 of 3 waiting run(s); 3 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -21034,7 +21025,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T07:58:35Z",
+  "loop_tick": "2026-11-10T08:24:41Z",
   "machine_disk": {
     "issue": null,
     "reading": {
