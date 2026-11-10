@@ -36303,10 +36303,6 @@
       "refused_until": "2026-11-09T00:00:00Z",
       "spent": [
         {
-          "at": "2026-10-30T11:28:28Z",
-          "minutes": 140.8
-        },
-        {
           "at": "2026-10-30T12:23:49Z",
           "minutes": 98.6
         },
@@ -37101,17 +37097,21 @@
         {
           "at": "2026-11-10T06:48:20Z",
           "minutes": 94.8
+        },
+        {
+          "at": "2026-11-10T07:10:28Z",
+          "minutes": 70.3
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-10T09:54:00Z",
-          "utilization": 0.19
+          "utilization": 0.25
         },
-        "observed_at": "2026-11-10T06:48:20Z",
+        "observed_at": "2026-11-10T07:10:28Z",
         "seven_day": {
           "resets_at": "2026-11-16T00:00:00Z",
-          "utilization": 0.27
+          "utilization": 0.29
         },
         "status": "allowed"
       }
@@ -38844,6 +38844,18 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-10T05:42:31Z,muse,usage-command,before,42763766278,7,2026-11-10T09:54:00Z,22,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-10T05:52:48Z,muse,usage-command,call,42763766278,9,2026-11-10T09:54:00Z,23,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-10T06:02:52Z,muse,usage-command,call,42763766278,10,2026-11-10T09:54:00Z,24,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-10T06:13:00Z,muse,usage-command,call,42763766278,14,2026-11-10T09:54:00Z,25,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-10T06:23:08Z,muse,usage-command,call,42763766278,16,2026-11-10T09:54:00Z,26,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-10T06:33:15Z,muse,usage-command,call,42763766278,17,2026-11-10T09:54:00Z,26,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-10T06:43:21Z,muse,usage-command,call,42763766278,23,2026-11-10T09:54:00Z,28,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-10T06:53:04Z,muse,usage-command,after,42763766278,25,2026-11-10T09:54:00Z,29,2026-11-16T00:00:00Z,allowed,100,100,"
+    ]
   },
   "version": 1
 }
