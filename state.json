@@ -15371,12 +15371,18 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "onto": "bot/issue-3596",
       "owner": "claude-3",
       "owner_since": "2026-11-10T20:20:52Z",
       "owner_why": "handed off from `muse`: it could not take it",
       "part_of": 3596,
+      "paused": {
+        "at": "2026-11-10T21:15:14Z",
+        "interrupt": "usage",
+        "provider": "claude-3"
+      },
       "pending_request": false,
       "planned_at": "2026-11-10T20:17:22Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -15386,11 +15392,13 @@
       "provider": "claude-3",
       "queued_at": "2026-11-09T23:48:11Z",
       "requested_by": "squishy-squooby",
+      "round_tier": "",
       "run_id": "42894395397",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-10T20:20:52Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3550": {
       "failures": 0,
