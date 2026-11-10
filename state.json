@@ -18020,9 +18020,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T16:51:09Z",
+    "at": "2026-11-10T17:04:05Z",
     "url": "",
-    "what": "plan #3547 on muse"
+    "what": "suggestions on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-10T16:43:27Z",
@@ -37148,11 +37148,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-10T15:27:05Z",
-    "last_run": "2026-11-09T16:51:43Z",
-    "provider": null,
+    "idle_since": "2026-11-10T17:04:05Z",
+    "last_run": "2026-11-10T17:04:05Z",
+    "provider": "claude-7",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:efe3a2ae-1794330190",
     "taken_asks": []
   },
   "usage": null,
