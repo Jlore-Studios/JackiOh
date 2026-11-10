@@ -2522,6 +2522,22 @@
   }
 }
 
+/* R3350000: a Mythic's diorama: the camera flies through its slices, each toward it by its depth (`--fx-slice-depth`, 0 the
+   farthest to 1 the nearest, scaled up to 1.6 times), and past the nearest, which fade out from three quarters deep. */
+.fx-takeover-plane[data-slice] {
+  animation: fx-takeover-fly var(--fx-land) var(--ease-out) both;
+}
+
+@keyframes fx-takeover-fly {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(calc(1 + var(--fx-slice-depth, 0) * 0.6));
+    opacity: clamp(0, calc((1 - var(--fx-slice-depth, 0)) * 4), 1);
+  }
+}
+
 .fx-takeover-signature {
   position: absolute;
   bottom: 8vh;

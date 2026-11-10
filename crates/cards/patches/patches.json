@@ -23108,7 +23108,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.13",
+    "version": "v0.5.12aa",
     "date": "2026-11-09",
     "title": "Patch: every Meditative+ and Training Grounds Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
     "source": "#3397",
@@ -23132,7 +23132,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.13b",
+    "version": "v0.5.12ab",
     "date": "2026-11-09",
     "title": "Patch: every Stinkyscape (cards 91 to 178 and its tokens) card drawn as what it is: a scene of its own for each, richer the rarer",
     "source": "#3403",
@@ -23156,7 +23156,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.13c",
+    "version": "v0.5.12ac",
     "date": "2026-11-09",
     "title": "Patch: every Meditative Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
     "source": "#3404",
@@ -23180,7 +23180,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.13d",
+    "version": "v0.5.12ad",
     "date": "2026-11-09",
     "title": "Patch: every Core Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
     "source": "#3398",
@@ -23204,7 +23204,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.13e",
+    "version": "v0.5.12ae",
     "date": "2026-11-09",
     "title": "Patch: audit the codebase for dead code, duplicates and zombie routes, 2026-11-08",
     "source": "#3423",
@@ -23228,7 +23228,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.13f",
+    "version": "v0.5.12af",
     "date": "2026-11-09",
     "title": "Patch: every Stinkyscape (cards 91 to 178 and its tokens) Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
     "source": "#3406",
@@ -23252,7 +23252,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.13g",
+    "version": "v0.5.12ag",
     "date": "2026-11-09",
     "title": "Patch: every Stinkyscape (cards 1 to 90) card drawn as what it is: a scene of its own for each, richer the rarer",
     "source": "#3391",
@@ -23277,7 +23277,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.13h",
+    "version": "v0.5.12ah",
     "date": "2026-11-10",
     "title": "Patch: every Classic card drawn as what it is: a scene of its own for each, richer the rarer",
     "source": "#3352",

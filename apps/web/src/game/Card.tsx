@@ -51,7 +51,7 @@ import { BRITTLE_LAST_COUNT, TEMPORARY_LAST_COUNT } from "../cards/keywordVisual
 import { TheirCopy } from "../cards/loadouts.ts";
 import { BRITTLE_LAST_COLOR, TEMPORARY_LAST_COLOR, marksOf } from "../cards/marks.ts";
 import ActivateControls from "./ActivateControl.tsx";
-import AttackOutcome from "./AttackOutcome.tsx";
+import { AttackTakenPreview, AttackTargetPreview } from "./AttackOutcome.tsx";
 import { outcomeFor } from "./attackOutcome.ts";
 import FieldBadges from "./FieldBadges.tsx";
 import { usePhonePortrait } from "./phoneBar.ts";
@@ -331,8 +331,14 @@ export default function Card(props: CardProps): ReactElement {
   const selected = isSelected(props.highlight, testId);
   const clickable = target !== null && target !== undefined;
   const animatingEvent = testId === undefined ? undefined : props.animating?.get(testId);
-  // R3477000: the engine's forecast of the aimed attack on this card, while it is a target of one.
-  const outcome = outcomeFor(props.highlight, testId);
+  // R3615000: the hovered attack's markers. The card wears the blow it takes when it is the hovered
+  // target, and what it takes back when it is the hovering attacker (a strike back of 0 shows none).
+  const hovered = props.highlight?.hoveredAttack;
+  const targetOutcome = hovered?.target === testId ? outcomeFor(props.highlight, testId) : undefined;
+  const takenOutcome =
+    hovered !== undefined && hovered.attacker === testId && hovered.strikesBack
+      ? outcomeFor(props.highlight, hovered.target)
+      : undefined;
   // #1598: a `keywordGranted` that takes the keyword away plays as the icon going (keywordLoss.ts).
   const keywordLost = useKeywordLost(testId);
   // #2435: an `awakened` in flight breaks the card's Dormant seal until the board catches up
@@ -596,7 +602,12 @@ export default function Card(props: CardProps): ReactElement {
       {offFace ? null : <ActivateControls card={unit ?? card} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />}
 
       <PopLayer pops={props.pops} />
-      {outcome !== undefined && testId !== undefined && <AttackOutcome outcome={outcome} target={testId} strikesBack />}
+      {targetOutcome !== undefined && testId !== undefined && (
+        <AttackTargetPreview outcome={targetOutcome} target={testId} />
+      )}
+      {takenOutcome !== undefined && takenOutcome.taken > 0 && testId !== undefined && (
+        <AttackTakenPreview outcome={takenOutcome} attacker={testId} />
+      )}
     </div>
   );
 

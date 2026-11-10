@@ -164,6 +164,23 @@ A card on the board moves its art too, and answers the player (`artLive.ts`, `ar
   level's), a glow in its card's theme colour when buffed (`--art-glow`) and frost when frozen
   (`ArtWear.tsx`). They read the view's numbers and keywords only, and are still drawings: reduced motion keeps them.
 
+## Dioramas (R3350000)
+
+Every Mythic card and every token printed Mythic has a diorama (`dioramas/`): its still picture recomposed as a small model
+of five to eight depth slices, composed for that card. `dioramas/pieces.ts` cuts the picture its painter draws for its id
+into keyed pieces: a scene card's sky, glow, Radiant rays, each shape (`scene:<layer>:<part>:<n>`, the painter's own subject
+`own:<n>`), emblem and vignette; a Stinkyscape painter's sky elements (`sky:<n>`), rays (`rays:<n>`), subject elements
+(`subject:<n>`, in the subject's placing transform, `stinkyParts`) and vignette. The pieces joined are the picture byte for
+byte. A card's file, `dioramas/<set>/<name>.ts`, lists its slices back to front: the farthest (`rest`) holds what no other
+picks, the sky among it, and each other picks keys, prefixes (`scene:mid:gate:`) or runs (`subject:3-7`), stands in a plane
+at a depth, may bend about one axis (`DIORAMA_BEND_MAX_DEG`) and may loop by one of `ART_MOVES` (staggered piece by piece on
+a small slice). A slice draws the picture's head and its own pieces, so no colour, text or byte the picture lacks; given
+the card's moving art (an animated level, a moving board face) it also moves them as the moving picture does, each piece
+knowing its role, under the picture's own style, the nearest slice drawing the particles;
+`dioramas.test.ts` holds every one to that, to `ART_DETAIL_MAX_BYTES` and to loops of transform and opacity inside the
+reduced-motion gate, and no two cards' loops are alike. A new Mythic gets a file in its set's directory and a line in that
+directory's `index.ts`; until then the test fails, since `PENDING` is empty and only shrinks.
+
 ## Pictures (R2940001)
 
 A look with a picture of its own, Alt art's today, draws the card's own painter re-seeded:
@@ -849,9 +866,10 @@ it, Classic's (below) and then the two Stinkyscape ones' (above): the creatures 
 `tesla-coil`, `web`, `vat`, `chalice`), a
 `blast-crater`, and In Too Deep's `spiral-shaft`, none taking an old part's name (the deer and the crater beside
 R3397000's `deer` and `crater`, the cloak beside R3403000's `outfit-cloak`, above). Every Classic entry is off the
-short list, whose cap fell from 129 to 40; `classicScenes.test.ts` holds the recipes to all of it, and
-`classic-scenes.cy.tsx` shows every Epic, Legendary and Mythic scene at hand size, base and Radiant, and a contact
-sheet of the rest, at desktop size and at 390x844.
+short list, whose cap fell from 129 to 10 (Stinkyscape's first pass, #3391, had taken 30 off and left the cap at
+129); `classicScenes.test.ts` holds the recipes to all of it, and `classic-scenes.cy.tsx` shows every Epic,
+Legendary and Mythic scene at hand size, base and Radiant, and a contact sheet of the rest, at desktop size and at
+390x844.
 
 ## Classic's Alt art restaged (R3388000)
 
@@ -900,9 +918,9 @@ elements it draws after its `<defs>` (`artElements`), and for a scene the layers
 Each rarity has a floor (`ART_DETAIL_MIN_<RARITY>`): Common 30 elements, Rare 40, Epic 60, Legendary 90 and
 Mythic 140, Legendary and Mythic in every layer; a token is held to Common's. The Glitch is not measured: its
 window draws no picture. The floor starts as a ratchet: `fixtures/art-detail-short.json`
-(`ART_DETAIL_SHORT`) names, sorted, the cards under their floor as #3331 left them, at most
-`ART_DETAIL_SHORT_MAX`, and the test fails on a card under its floor the list does not name and on a listed
-card that clears its floor, so a set's pass takes its cards off as it lifts them, the list only shrinks, and
-the last pass empties it. A ceiling keeps phones fast: no picture's data URI, base or Radiant, is longer than
-`ART_DETAIL_MAX_BYTES` (48 KiB), and the art cache (`ART_CACHE_MAX`) and the lazy drawing of faces scrolled
-past (`near.ts`) are unchanged.
+(`ART_DETAIL_SHORT`) names, sorted, the cards under their floor as #3331 left them, exactly
+`ART_DETAIL_SHORT_MAX` of them (a pass that takes cards off lowers the cap with them, #3613), and the test fails
+on a card under its floor the list does not name and on a listed card that clears its floor, so a set's pass takes
+its cards off as it lifts them, the list only shrinks, and the last pass empties it. A ceiling keeps phones fast:
+no picture's data URI, base or Radiant, is longer than `ART_DETAIL_MAX_BYTES` (48 KiB), and the art cache
+(`ART_CACHE_MAX`) and the lazy drawing of faces scrolled past (`near.ts`) are unchanged.

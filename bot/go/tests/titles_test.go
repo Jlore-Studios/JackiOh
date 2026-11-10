@@ -18,6 +18,7 @@ func TestTitles_WhatItDoesDropsAnyPrefixOldOrNewAndKeepsThePart(t *testing.T) {
 		{"Patch v0.3.X: Bigot costs (3)", "", "Bigot costs (3)"},
 		{"Patch v0.3.Y: a fix", "", "a fix"},
 		{"Patch v0.3.17b: a fix", "", "a fix"},
+		{"Patch v0.5.13aa: a fix", "", "a fix"}, // R3631000
 		{"Patch: a fix", "", "a fix"},
 		{"v0.6.0: daily quests", "", "daily quests"},
 		{"Night bot: a seventh subscription", "", "a seventh subscription"},

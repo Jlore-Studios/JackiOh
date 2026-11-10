@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Alias } from "vite";
 
+import { patchMeta } from "./patch-meta.ts";
 import { staticPages } from "./static-pages.ts";
 
 // The client is a pure `PlayerView` renderer (CLAUDE.md rule 7, SPEC §10.8): it sends intent
@@ -37,7 +38,7 @@ export const jackiohAliases: Alias[] = [
 
 export default defineConfig({
   // `staticPages` writes each public page's own HTML and `sitemap.xml` after the bundle (static-pages.ts).
-  plugins: [react(), staticPages()],
+  plugins: [react(), patchMeta(), staticPages()],
   resolve: { alias: jackiohAliases },
   server: {
     port: 5173,
@@ -50,8 +51,10 @@ export default defineConfig({
   optimizeDeps: { exclude: ["./src/wasm/pkg/jackioh_wasm.js"] },
   // The practice worker (`src/practice/practice.worker.ts`) is a module worker; "es" keeps its
   // chunk an ES module, so a dynamic import inside it cannot break the build the way it would an
-  // IIFE worker bundle.
-  worker: { format: "es" },
+  // IIFE worker bundle. A worker's bundle runs its own plugin list, none of the page's, and the
+  // practice worker reaches `wire/cards.ts`, so it needs `patchMeta()` too: without it
+  // `#jackioh-patch-meta` resolves to the real file, whose `node:fs` is an empty stub in a browser.
+  worker: { format: "es", plugins: () => [patchMeta()] },
   build: {
     // Rollup warns about nothing else, so keep warnings fatal.
     rollupOptions: { onwarn: (warning, warn) => warn(warning) },

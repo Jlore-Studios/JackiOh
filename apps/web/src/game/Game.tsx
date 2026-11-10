@@ -46,7 +46,7 @@ import OpponentAim from "./aim/OpponentAim.tsx";
 import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
 import { IDLE, answerPlaguePlacement, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
-import { attackOutcomes, withOutcomes } from "./attackOutcome.ts";
+import { attackOutcomes, hoveredAttack, withOutcomes } from "./attackOutcome.ts";
 import {
   HIDDEN_ID,
   SET_PIECE_SKIP_HINT_MS,
@@ -125,8 +125,9 @@ export type GameProps = {
   /** The engine's refusal for the last action, if any. `PlayerView` has no error channel. */
   error?: string | null;
   /**
-   * R3477000: the engine's forecast of this seat's attacks, sent with `view` (a seat's frame, a practice
-   * snapshot). While an attacker is picked, each of its legal targets shows its entry. Absent, none does.
+   * R3477000, R3615000: the engine's forecast of this seat's attacks, sent with `view` (a seat's frame,
+   * a practice snapshot). While an attacker is picked, the hovered legal target shows its entry.
+   * Absent, none does.
    */
   forecast?: CombatForecast;
   /** The route's ways on from a finished game, drawn in the result panel (Result.tsx). */
@@ -783,6 +784,10 @@ export default function Game({
     dispatch({ type: "concede" });
   }, [dispatch, refocusConcede]);
 
+  // R738: what this seat aims at goes to the opponent; theirs is drawn below until the game ends.
+  // R3615000: the same hovered-target reader feeds the attack preview, so a click-selected or dragged
+  // attack previews exactly the target under the pointer.
+  const hoveredTarget = useAimEmitter(shown, legal, interaction, aim?.emit);
   // R3477000: the aimed attack's outcomes, the forecast sent with the newest view; a board held back on an
   // older view shows none, as it offers no moves (`legal` above), and a replay none at all.
   const showOutcomes = useSetting("attackOutcomes");
@@ -790,13 +795,20 @@ export default function Game({
     () => (replay || !showOutcomes || shown !== view ? undefined : attackOutcomes(shown, interaction, forecast)),
     [replay, showOutcomes, shown, view, interaction, forecast],
   );
+  // R3615000: the one hovered attack whose markers show, under the same gate as `outcomes`: a lesson's
+  // board passes no forecast and a replay none at all, so both still render none.
+  const hovered = useMemo(
+    () =>
+      replay || !showOutcomes || shown !== view
+        ? undefined
+        : hoveredAttack(shown, interaction, outcomes, hoveredTarget?.testid ?? null),
+    [replay, showOutcomes, shown, view, interaction, outcomes, hoveredTarget],
+  );
   // A replay lights nothing: not even the cells an open prompt in the view names (`pendingHighlight`).
   const highlight = useMemo(
-    () => withOutcomes(replay ? NO_HIGHLIGHT : highlightFor(shown, legal, interaction), outcomes),
-    [replay, shown, legal, interaction, outcomes],
+    () => withOutcomes(replay ? NO_HIGHLIGHT : highlightFor(shown, legal, interaction), outcomes, hovered),
+    [replay, shown, legal, interaction, outcomes, hovered],
   );
-  // R738: what this seat aims at goes to the opponent; theirs is drawn below until the game ends.
-  useAimEmitter(shown, legal, interaction, aim?.emit);
   const animated = useMemo(
     () => [...burst, ...lingering].map((entry) => ({ frames: entry.frames, events: entry.events })),
     [burst, lingering],
