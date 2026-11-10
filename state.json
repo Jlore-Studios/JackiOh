@@ -18057,6 +18057,8 @@
       }
     },
     "3658": {
+      "action": "plan",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-10T18:56:22Z",
         "difficulty": "medium",
@@ -18066,20 +18068,30 @@
       },
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "muse",
+      "owner_since": "2026-11-10T18:57:34Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-10T18:56:22Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "pending:4632d0f5-1794337016",
+      "runs_on": "night-vm-muse",
       "spot_check_of": 3644,
-      "stop_requested": false
+      "started_at": "2026-11-10T18:57:34Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T18:46:54Z",
+    "at": "2026-11-10T18:57:34Z",
     "url": "",
-    "what": "spot-check #3644 on claude-8"
+    "what": "plan #3658 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T18:40:56Z",
