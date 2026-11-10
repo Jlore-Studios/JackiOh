@@ -188,8 +188,8 @@ describe("B16 the starting deck", () => {
     const presets = byId(dungeonTestid.presets);
     for (const [id, name, theme] of [
       ["first-charge", "First Charge", "Cheap units that hit fast and hit hard."],
-      ["spell-tricks", "Spell Tricks", "Spells and helpers that out-trick the enemy."],
-      ["hold-the-line", "Hold the Line", "Tough bodies that hold the line, then win late."],
+      ["spell-tricks", "Spell tricks", "Spells and helpers that out-trick the enemy."],
+      ["hold-the-line", "Hold the line", "Tough bodies that hold the line, then win late."],
     ] as Array<[string, string, string]>) {
       const tile = within(presets).getByTestId(dungeonTestid.preset(id));
       expect(tile).toHaveTextContent(name);

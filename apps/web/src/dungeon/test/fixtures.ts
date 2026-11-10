@@ -62,13 +62,13 @@ export const CONSTANTS: RunConstants = {
     },
     {
       id: "spell-tricks",
-      name: "Spell Tricks",
+      name: "Spell tricks",
       theme: "Spells and helpers that out-trick the enemy.",
       cards: [...STARTERS.slice(2), ...STARTERS.slice(0, 2)],
     },
     {
       id: "hold-the-line",
-      name: "Hold the Line",
+      name: "Hold the line",
       theme: "Tough bodies that hold the line, then win late.",
       cards: [...STARTERS].reverse(),
     },

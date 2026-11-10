@@ -92,7 +92,7 @@ pub const RUN_PRESET_DECKS: [(&str, &str, &str, [&str; RUN_STARTER_SIZE]); 3] = 
     ),
     (
         "spell-tricks",
-        "Spell Tricks",
+        "Spell tricks",
         "Spells and helpers that out-trick the enemy.",
         [
             "traininggrounds-011",
@@ -109,7 +109,7 @@ pub const RUN_PRESET_DECKS: [(&str, &str, &str, [&str; RUN_STARTER_SIZE]); 3] = 
     ),
     (
         "hold-the-line",
-        "Hold the Line",
+        "Hold the line",
         "Tough bodies that hold the line, then win late.",
         [
             "traininggrounds-002",
