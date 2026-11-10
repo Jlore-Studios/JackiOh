@@ -16266,6 +16266,9 @@
     },
     "3596": {
       "closeout": false,
+      "parked": [
+        "bot/issue-3538"
+      ],
       "tree": {
         "adopted": true,
         "at": "2026-11-10T02:56:37Z",
