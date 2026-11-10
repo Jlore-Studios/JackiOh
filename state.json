@@ -23067,12 +23067,8 @@
       }
     },
     "claude-3": {
-      "refused_until": "2026-11-10T19:00:00Z",
+      "refused_until": "2026-11-11T00:50:00Z",
       "spent": [
-        {
-          "at": "2026-11-03T09:49:53Z",
-          "minutes": 105.0
-        },
         {
           "at": "2026-11-03T10:52:17Z",
           "minutes": 55.1
@@ -23868,6 +23864,10 @@
         {
           "at": "2026-11-10T20:37:27Z",
           "minutes": 24.7
+        },
+        {
+          "at": "2026-11-10T21:14:35Z",
+          "minutes": 7.6
         }
       ],
       "tokens_spent": [
@@ -25275,10 +25275,11 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-11T00:50:00Z",
-          "utilization": 0.5
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-10T20:37:27Z",
-        "status": "allowed"
+        "observed_at": "2026-11-10T21:14:35Z",
+        "rejected_resets_at": "2026-11-11T00:50:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
@@ -37527,6 +37528,37 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-10T21:03:41Z,claude-3,stream,call,42900738645,62,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:04:26Z,claude-3,stream,call,42900738645,63,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:04:41Z,claude-3,stream,call,42900738645,64,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:04:56Z,claude-3,stream,call,42900738645,67,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:05:11Z,claude-3,stream,call,42900738645,69,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:05:26Z,claude-3,stream,call,42900738645,71,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:05:41Z,claude-3,stream,call,42900738645,73,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:05:56Z,claude-3,stream,call,42900738645,75,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:06:11Z,claude-3,stream,call,42900738645,76,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:06:26Z,claude-3,stream,call,42900738645,77,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:06:41Z,claude-3,stream,call,42900738645,79,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:06:56Z,claude-3,stream,call,42900738645,81,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:07:11Z,claude-3,stream,call,42900738645,82,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:07:26Z,claude-3,stream,call,42900738645,83,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:07:41Z,claude-3,stream,call,42900738645,85,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:07:56Z,claude-3,stream,call,42900738645,86,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:08:11Z,claude-3,stream,call,42900738645,87,2026-11-11T00:50:00Z,,,allowed,,,",
+      "2026-11-10T21:08:26Z,claude-3,stream,call,42900738645,90,2026-11-11T00:50:00Z,,,allowed_warning,,,",
+      "2026-11-10T21:08:56Z,claude-3,stream,call,42900738645,92,2026-11-11T00:50:00Z,,,allowed_warning,,,",
+      "2026-11-10T21:09:11Z,claude-3,stream,call,42900738645,93,2026-11-11T00:50:00Z,,,allowed_warning,,,",
+      "2026-11-10T21:09:26Z,claude-3,stream,call,42900738645,94,2026-11-11T00:50:00Z,,,allowed_warning,,,",
+      "2026-11-10T21:09:41Z,claude-3,stream,call,42900738645,95,2026-11-11T00:50:00Z,,,allowed_warning,,,",
+      "2026-11-10T21:09:56Z,claude-3,stream,call,42900738645,96,2026-11-11T00:50:00Z,,,allowed_warning,,,",
+      "2026-11-10T21:10:11Z,claude-3,stream,call,42900738645,98,2026-11-11T00:50:00Z,,,allowed_warning,,,",
+      "2026-11-10T21:10:26Z,claude-3,stream,call,42900738645,99,2026-11-11T00:50:00Z,,,allowed_warning,,,",
+      "2026-11-10T21:10:41Z,claude-3,stream,call,42900738645,100,2026-11-11T00:50:00Z,,,rejected,,,",
+      "2026-11-10T21:11:03Z,claude-3,refusal,call,42900738645,100,2026-11-11T00:50:00Z,,,rejected,,,2026-11-11T00:50:00Z"
+    ]
   },
   "version": 1
 }
