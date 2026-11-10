@@ -478,6 +478,8 @@ describe("B28 the relic comes before the packs, and the pack keeps its count", (
     );
     render(<RunScreen dungeon={dungeon} />);
     expect(screen.getByTestId(dungeonMapTestid.packTear)).toHaveTextContent("Tap to open");
+    // No choice was made in this session (a refresh lands straight here): the neutral look.
+    expect(screen.getByTestId(dungeonMapTestid.packTearObject)).toHaveAttribute("data-pack", "dungeon-filter");
     expect(screen.queryByTestId(dungeonMapTestid.packCard("core-001"))).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId(dungeonMapTestid.packTear));
     // Tearing: the pack is open neither sealed nor showing its cards yet.
@@ -489,6 +491,38 @@ describe("B28 the relic comes before the packs, and the pack keeps its count", (
     expect(screen.queryByTestId(dungeonMapTestid.packTear)).not.toBeInTheDocument();
     expect(screen.getByTestId(dungeonMapTestid.packCard("core-001"))).toBeInTheDocument();
     expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("0 of 2 kept");
+  });
+
+  // #3588
+  it("#3588 the tear wears the chosen pack's look, then keeps exactly keep cards", () => {
+    vi.useFakeTimers();
+    const reward = fakeDungeon(runWith(packs(DEFAULT_PACKS), { row: 3, col: 0 }));
+    const { rerender } = render(<RunScreen dungeon={reward.dungeon} />);
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.pack(0)));
+    expect(reward.act).toHaveBeenCalledWith({ type: "openPack", index: 0 });
+
+    // The run answers with its pack phase: the sealed tear wears the boss pack's look and name.
+    const opened = fakeDungeon(
+      runWith({ phase: "pack", cards: ["core-001", "core-002", "core-003", "core-004"], keep: 2 }, { row: 3, col: 0 }),
+    );
+    rerender(<RunScreen dungeon={opened.dungeon} />);
+    const tear = screen.getByTestId(dungeonMapTestid.packTear);
+    expect(screen.getByTestId(dungeonMapTestid.packTearObject)).toHaveAttribute("data-pack", "dungeon-boss");
+    expect(tear).toHaveTextContent("Mini Boss");
+    expect(within(tear).getByText("Boss")).toBeInTheDocument();
+    expect(screen.queryByTestId(dungeonMapTestid.packCard("core-001"))).not.toBeInTheDocument();
+
+    // Tearing reveals the cards; the keep then works exactly as today.
+    fireEvent.click(tear);
+    flush(() => {
+      vi.advanceTimersByTime(PACK_TEAR_MS);
+    });
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("0 of 2 kept");
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.packCard("core-001")));
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.packCard("core-003")));
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("2 of 2 kept");
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.packKeep));
+    expect(opened.act).toHaveBeenCalledWith({ type: "keep", cards: ["core-001", "core-003"] });
   });
 
   // #3588

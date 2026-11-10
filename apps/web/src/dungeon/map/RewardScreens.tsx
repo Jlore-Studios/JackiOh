@@ -64,6 +64,32 @@ function packIdFor(kind: RunPackKind, boss: boolean): string {
   }
 }
 
+/**
+ * What the sealed tear wears (#3588): the chosen pack's shop-style look, with the beaten enemy's
+ * name and the boss tag when the choice was the enemy's deck on a boss node. Null when the pack
+ * phase was reached without choosing in this session (a refresh): the tear falls back to the
+ * neutral filter look, since `RunPhase::Pack` carries no kind.
+ */
+export type OpenedPackLook = {
+  pack: string;
+  enemyName: string | null;
+  boss: boolean;
+};
+
+/** The look the tear wears for the pack at `index`, chosen from this run's reward (#3588). */
+export function openedPackLook(run: RunState, index: number): OpenedPackLook | null {
+  if (run.phase.phase !== "reward") return null;
+  const kind = run.phase.packs[index];
+  if (kind === undefined) return null;
+  const enemy = beatenEnemy(run);
+  const boss = kind.type === "boss" && (enemy?.boss ?? false);
+  return {
+    pack: packIdFor(kind, enemy?.boss ?? false),
+    enemyName: kind.type === "boss" ? (enemy?.name ?? null) : null,
+    boss,
+  };
+}
+
 /** A pack's label: its kind, translated. */
 function packLabel(kind: RunPackKind): string {
   switch (kind.type) {
@@ -167,10 +193,12 @@ type PackScreenProps = {
   content: RunContent;
   phase: PackPhase;
   send: SendRunAction;
+  /** The chosen pack's look, remembered when it was opened (#3588); null on a refresh. */
+  opened?: OpenedPackLook | null;
 };
 
 /** The opened pack: exactly `keep` cards are kept, or none with a Skip passive. */
-export function PackScreen({ run, content, phase, send }: PackScreenProps): ReactElement {
+export function PackScreen({ run, content, phase, send, opened }: PackScreenProps): ReactElement {
   const [selected, setSelected] = useState<readonly string[]>([]);
   // The shop scene's motion lines (#3588): reduced motion or fx intensity off shows the cards at once.
   const [fx] = useFxSettings();
@@ -196,7 +224,8 @@ export function PackScreen({ run, content, phase, send }: PackScreenProps): Reac
   };
   const skip = hasSkipPassive(run, content);
   // The run already decided the pack's cards, so the sealed pack is its own tear, not the
-  // server-driven `PackScene`: it tears for `PACK_TEAR_MS`, then reveals its cards face up.
+  // server-driven `PackScene`: the chosen pack's look tears for `PACK_TEAR_MS`, then reveals its
+  // cards face up. Without a remembered choice (a refresh) it wears the neutral filter look.
   if (stage !== "open") {
     return (
       <section className="dungeon-run-pack" data-testid={dungeonMapTestid.packScreen}>
@@ -209,9 +238,18 @@ export function PackScreen({ run, content, phase, send }: PackScreenProps): Reac
             setStage("tearing");
           }}
         >
-          <PackObject pack={DUNGEON_FILTER_PACK} size="scene" state={stage === "tearing" ? "tearing" : "idle"}>
+          <PackObject
+            pack={opened?.pack ?? DUNGEON_FILTER_PACK}
+            size="scene"
+            state={stage === "tearing" ? "tearing" : "idle"}
+            testid={dungeonMapTestid.packTearObject}
+          >
+            {opened?.enemyName == null ? undefined : (
+              <span className="dungeon-run-pack-tear__enemy">{opened.enemyName}</span>
+            )}
             <span className="dungeon-run-pack-tear__hint">{t("Tap to open")}</span>
           </PackObject>
+          {opened?.boss === true ? <span className="dungeon-run-pack-tear__boss">{t("Boss")}</span> : null}
         </button>
       </section>
     );

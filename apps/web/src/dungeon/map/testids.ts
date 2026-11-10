@@ -78,6 +78,8 @@ export const dungeonMapTestid = {
   packObject: (index: number): string => `dungeon-run-pack-object-${String(index)}`,
   /** #3588: the sealed pack tearing open before its keep. */
   packTear: "dungeon-run-pack-tear",
+  /** #3588: the pack object the sealed tear wears: the chosen pack's look. */
+  packTearObject: "dungeon-run-pack-tear-object",
   /** #3588: the kept count, like "2 of 3 kept". */
   packCounter: "dungeon-run-pack-counter",
   /** B28: the opened pack's cards. */
