@@ -842,18 +842,24 @@ fn adjacent_units_of(
     struck: &CardInstance,
     source: Option<&CardInstance>,
 ) -> Vec<CardInstance> {
-    let Some(at) = crate::zones::slot_of(state, struck) else {
-        return Vec::new();
-    };
-    crate::zones::adjacent(at)
-        .into_iter()
-        .filter_map(|slot| crate::zones::card_at(state, slot).cloned())
-        .filter(|neighbour| {
-            neighbour.id != struck.id
-                && crate::zones::is_adjacent_card(state, struck, neighbour)
-                && !crate::restrictions::spell_cannot_reach(state, source, neighbour)
-        })
-        .collect()
+    // R3546001: beside a GIGA in either of its lanes, in both; a GIGA beside the struck is met once.
+    let mut met: Vec<String> = vec![struck.id.clone()];
+    let mut out: Vec<CardInstance> = Vec::new();
+    for slot in crate::giga::adjacent_slots(state, struck) {
+        let Some(neighbour) = crate::giga::occupant_at(state, slot).cloned() else {
+            continue;
+        };
+        if met.contains(&neighbour.id) {
+            continue;
+        }
+        met.push(neighbour.id.clone());
+        if crate::zones::is_adjacent_card(state, struck, &neighbour)
+            && !crate::restrictions::spell_cannot_reach(state, source, &neighbour)
+        {
+            out.push(neighbour);
+        }
+    }
+    out
 }
 
 /// R1849004: where a card with an own-turn redirect notes how much it has moved this turn,

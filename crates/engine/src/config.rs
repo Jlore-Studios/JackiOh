@@ -147,6 +147,8 @@ pub const CHINESE_TAG: Tag = Tag::Cn;
 pub const UNIT_ZONES: i32 = 5;
 /// §3
 pub const BACKROW_ZONES: i32 = 5;
+/// R3546000: the lanes a GIGA permanent spans in each row.
+pub const GIGA_LANES: i32 = 2;
 /// Classic #18 Glitch in the System's number choice (SPEC §8.6 row 18, BUILD §2): the numbers 0 to 10,
 /// the same eleven options every time, so the options reveal nothing about any hand or deck.
 pub const GLITCH_NUMBERS: &[i32] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];

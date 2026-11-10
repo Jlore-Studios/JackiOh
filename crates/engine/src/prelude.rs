@@ -25,6 +25,7 @@ pub use crate::config::*;
 pub use crate::cost_rules::*;
 pub use crate::faces::*;
 pub use crate::float::*;
+pub use crate::giga::{enters_giga, is_giga, lanes_of, occupant_at};
 pub use crate::grants::*;
 pub use crate::graveyard_play::*;
 pub use crate::kill_credit::*;

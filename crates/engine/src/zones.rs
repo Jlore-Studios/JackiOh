@@ -212,7 +212,10 @@ pub fn card_at(state: &GameState, slot: impl Into<ZoneSlot>) -> Option<&CardInst
 
 pub fn is_empty(state: &GameState, slot: impl Into<ZoneSlot>) -> bool {
     let slot = slot.into();
-    card_at(state, slot).is_none() && (slot.row == Row::Units || carried_at(state, slot).is_none())
+    // R3546000: a zone a GIGA covers holds no card, but nothing enters it either.
+    card_at(state, slot).is_none()
+        && (slot.row == Row::Units || carried_at(state, slot).is_none())
+        && crate::giga::covering(state, slot).is_none()
 }
 
 // Backrow piles and carried Units (docs/classic-sets.md B5 E21, R446, R447)
@@ -354,6 +357,10 @@ pub fn accepts_stack_card(
         return false;
     }
     if options.move_ != Some(true) && is_locked(state, slot) {
+        return false;
+    }
+    // R3546000: nothing stacks onto a GIGA, covered zones included (`equip_host_at` reads this).
+    if crate::giga::covering(state, slot).is_some() {
         return false;
     }
     slot.row == Row::Units || carried_at(state, slot).is_none()
@@ -676,6 +683,24 @@ fn place_with(
     if is_reserved(state, slot) {
         return false;
     }
+    // R3546000: a GIGA's covered zones take nothing, whatever lands there.
+    if let Some(found) = crate::giga::covering(state, slot)
+        && found.id != instance.id
+    {
+        return false;
+    }
+    // R3546002: the size is stamped as the card enters the field — printed, granted in the hand or
+    // embiggened alike — and a move keeps the size it has.
+    let giga = if instance.zone.z() == ZoneName::Field {
+        crate::giga::is_giga(instance)
+    } else {
+        crate::giga::enters_giga(state, instance)
+    };
+    // R3546000: a GIGA lands only where all four zones are free (or made free by its own placement
+    // rules, as Crater does — the caller empties those first).
+    if giga && !crate::giga::fits(slot, |s| is_empty(state, s) && !is_reserved(state, s)) {
+        return false;
+    }
     let Some(index) = lane_index(slot.lane) else {
         return false;
     };
@@ -750,6 +775,8 @@ fn place_with(
     crate::slumber::start_slumber_on_field(state, instance, from_off_field, as_unit);
     // R1852000: and a Starship's hull starts its memory as it does.
     crate::starship::start_starship_on_field(state, instance, from_off_field, as_unit);
+    // R3546000: stamp the size the checks above read, so the stored card carries it.
+    instance.giga = giga.then_some(true);
 
     let placed = instance.clone();
     match landing {
@@ -901,6 +928,8 @@ pub fn replace_in_zone(state: &mut GameState, old: &CardInstance, replacement: &
 
     replacement.controller = player;
     replacement.zone = old.zone.clone();
+    // R3546002: a Transform keeps the size (Flicker does too, `flicker_in_place`).
+    replacement.giga = old.giga;
     if (row == Row::Units || is_unit_face(state, replacement)) && replacement.position.is_none() {
         replacement.position = Some(Position::Atk);
     }
@@ -1199,6 +1228,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.berserk = None;
     // R3536000: so is Evolved; a card back after leaving the field may evolve again.
     instance.evolved = None;
+    // R3546000: so is GIGA; a card back after leaving the field enters at its new size.
+    instance.giga = None;
     // R1174000: so is Frozen, which a Bounce, a death or an exile takes off with it.
     instance.frozen = None;
     // R1839000: and so is Dormant; a card printing it starts it again as it next enters the field.
@@ -1729,6 +1760,10 @@ pub fn slot_of(_state: &GameState, instance: &CardInstance) -> Option<ZoneSlot> 
 pub fn step_into_unit_zone(state: &mut GameState, card: &CardInstance, to: impl Into<ZoneSlot>) -> bool {
     let to = to.into();
     let mut moving = live_or(state, card);
+    // R3546003: a GIGA never steps rows; it moves only whole.
+    if crate::giga::is_giga(&moving) {
+        return false;
+    }
     let Some(from) = slot_of(state, &moving) else {
         return false;
     };
@@ -1764,6 +1799,10 @@ pub fn step_into_backrow(
 ) -> bool {
     let to = to.into();
     let mut moving = live_or(state, card);
+    // R3546003: a GIGA never steps rows; it moves only whole.
+    if crate::giga::is_giga(&moving) {
+        return false;
+    }
     let Some(from) = slot_of(state, &moving) else {
         return false;
     };
@@ -1818,6 +1857,8 @@ pub fn flicker_in_place(state: &mut GameState, card: &CardInstance) -> bool {
     if let Some(live) = find_instance_mut(state, &current.id) {
         forget_set_stats(live);
         reset_instance(live);
+        // R3546002: Flicker keeps the size R78's reset takes off.
+        live.giga = current.giga;
         if let Some(face) = token_face {
             live.stats_override = face.stats_override;
             live.armor_override = face.armor_override;

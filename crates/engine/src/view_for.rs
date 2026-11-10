@@ -871,6 +871,8 @@ fn unit_view_of(
         created_by: card.created_by,
         // R3536005: likewise.
         evolved: card.evolved,
+        // R3546004: the size it stands in, from the instance; the covered zones read empty.
+        giga: top.giga,
         // ME-GRANT (MD-D13): the granted Death abilities, as the Unit's lines read them.
         grants: crate::grants::grant_texts(state, top),
         // R849000: summoning sick with neither Rush nor Charge, from public facts on the field.
@@ -974,6 +976,8 @@ fn backrow_view(
             plague: plague_shown,
             buried,
             marks: with_marks(state, &card.id),
+            // R3546004: the size is public on a face-down card too.
+            giga: card.giga,
         }));
     }
     let grade = card.counters.grade;
@@ -986,6 +990,8 @@ fn backrow_view(
         created: view.created,
         created_by: view.created_by,
         evolved: view.evolved,
+        // R3546004: the size it stands in, from the instance.
+        giga: card.giga,
         tags: view.tags,
         cost: view.cost,
         attack: view.attack,

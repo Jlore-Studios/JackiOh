@@ -43,7 +43,12 @@ createdBy?: string,
  * (`CardInstance.evolved`, `.enters_evolved`). Only on a card the viewer may read, as `created`
  * is. Only ever `Some(true)`.
  */
-evolved?: true, cost: number, attack?: number, health?: number, power?: string, conditionActive?: true, counteredOnPlay?: true, preview?: Array<PreviewValue>, brittle?: number, element?: CardElement, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, keywords?: Array<Keyword>, marks?: Array<CardMark>, activations?: Array<ActivationView>, quest?: QuestView, copies?: CopiedTextView, 
+evolved?: true, 
+/**
+ * R3546004: fills four zones from here, the three others empty in the view; public,
+ * face-down too. Only ever `Some(true)`.
+ */
+giga?: true, cost: number, attack?: number, health?: number, power?: string, conditionActive?: true, counteredOnPlay?: true, preview?: Array<PreviewValue>, brittle?: number, element?: CardElement, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, keywords?: Array<Keyword>, marks?: Array<CardMark>, activations?: Array<ActivationView>, quest?: QuestView, copies?: CopiedTextView, 
 /**
  * Always `false` here (the discriminant).
  */

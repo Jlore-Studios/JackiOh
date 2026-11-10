@@ -223,6 +223,13 @@
       "aliases": []
     },
     {
+      "id": "GIGA",
+      "label": "GIGA",
+      "rule": "Fills two adjacent lanes in both rows, four zones, and is in both lanes for every rule that reads one",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
       "id": "Cloaked",
       "label": "Cloaked",
       "rule": "Can be played face-down as a Trap. Activate: Reveal",

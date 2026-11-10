@@ -32,7 +32,7 @@ use crate::wire::{
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, fresh_face_down_id, is_empty,
     is_reserved, is_unit_token, lands_face_down, open_zones, place_on_field, place_standing_on_field,
-    remove_from_any_zone, row_size,
+    remove_from_any_zone, row_size, takes_move,
 };
 
 // R1: no verb placing a card without a play fires a Cry (Transform, Flicker, Reborn, `summon_this`).
@@ -193,7 +193,7 @@ fn can_place(ctx: &EffectContext<'_>, slot: &ZoneSlot, stack: bool) -> bool {
 
 /// R64 with no lane named, the named lane otherwise; `None` when the summon fizzles (§3.2).
 fn zone_for(ctx: &EffectContext<'_>, player: PlayerId, row: Row, at: &SummonPlacement) -> Option<ZoneSlot> {
-    zone_and_stance_for(ctx, player, row, at, false).map(|(slot, _)| slot)
+    zone_and_stance_for(ctx, player, row, at, false, false).map(|(slot, _)| slot)
 }
 
 /// `zone_for`, and whether the card stands in a backrow zone (`entry_zone`, R1081000, R2248000).
@@ -203,15 +203,23 @@ fn zone_and_stance_for(
     row: Row,
     at: &SummonPlacement,
     flies: bool,
+    giga: bool,
 ) -> Option<(ZoneSlot, bool)> {
     let Some(lane) = at.lane else {
-        return entry_zone(ctx.state, player, row, flies);
+        return entry_zone(ctx.state, player, row, flies, giga);
     };
     if lane < 1 || lane > row_size(row) {
         return None;
     }
     let slot = ZoneSlot { player, row, lane };
-    if can_place(ctx, &slot, at.stack == Some(true)) {
+    // R3546000: a named lane takes a GIGA only whole — every spanned slot a move may enter (R688).
+    if giga {
+        if crate::giga::fits(slot, |s| takes_move(ctx.state, s)) {
+            Some((slot, false))
+        } else {
+            None
+        }
+    } else if can_place(ctx, &slot, at.stack == Some(true)) {
         Some((slot, false))
     } else {
         None
@@ -220,7 +228,17 @@ fn zone_and_stance_for(
 
 /// R64, R688, R2248000: the zone a summon that names no lane enters, the leftmost entry zone of its
 /// row, else, for a Unit that `flies`, the backrow's, where it stands (R1081000).
-fn entry_zone(state: &GameState, player: PlayerId, row: Row, flies: bool) -> Option<(ZoneSlot, bool)> {
+fn entry_zone(
+    state: &GameState,
+    player: PlayerId,
+    row: Row,
+    flies: bool,
+    giga: bool,
+) -> Option<(ZoneSlot, bool)> {
+    // R3546000: a GIGA takes the leftmost fit (R64, R688), never standing.
+    if giga {
+        return crate::giga::entry_anchor(state, player, row).map(|slot| (slot, false));
+    }
     if let Some(slot) = first_entry_zone(state, player, row) {
         return Some((slot, false));
     }
@@ -240,8 +258,16 @@ fn summon_flies(state: &GameState, card: &CardInstance) -> bool {
 /// Unit's (Flying has it innately, R3543000) in the backrow included, for a caller that must know
 /// before it draws or moves anything (R129).
 pub(crate) fn summon_lands(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
-    row_of(card_type_of(state, card))
-        .is_some_and(|row| entry_zone(state, player, row, summon_flies(state, card)).is_some())
+    row_of(card_type_of(state, card)).is_some_and(|row| {
+        entry_zone(
+            state,
+            player,
+            row,
+            summon_flies(state, card),
+            crate::giga::enters_giga(state, card),
+        )
+        .is_some()
+    })
 }
 
 /// The body every summon shares: place the card (standing in a backrow zone if `stands`, R1081000,
@@ -325,7 +351,9 @@ pub(crate) fn summon_fresh(
     let probe = face_probe(def_id, player, at.radiant == Some(true));
     let row = row_of(card_type_of(ctx.state, &probe))?;
     let flies = summon_flies(ctx.state, &probe);
-    let (slot, stands) = zone_and_stance_for(ctx, player, row, at, flies)?;
+    // R3546000: a fresh card printing GIGA takes the leftmost fit, else nothing lands.
+    let giga = crate::giga::enters_giga(ctx.state, &probe);
+    let (slot, stands) = zone_and_stance_for(ctx, player, row, at, flies, giga)?;
     summon_fresh_into(ctx, def_id, player, &slot, at, stands)
 }
 
@@ -416,7 +444,16 @@ fn summon_existing(
     let row = row_of(card_type_of(ctx.state, &probe))?;
     // R2248000: the card's Flying as it stands where it is (a hand's, a graveyard's printed one).
     let flies = summon_flies(ctx.state, card);
-    let (slot, stands) = zone_and_stance_for(ctx, player, row, at, flies)?;
+    // R3546002: the size is read off the card with the summon's riders, as `place_with` reads it.
+    let mut giga_probe = card.clone();
+    if at.radiant == Some(true) {
+        giga_probe.radiant = true;
+    }
+    if let Some(x) = at.x {
+        giga_probe.x = Some(x);
+    }
+    let giga = crate::giga::enters_giga(ctx.state, &giga_probe);
+    let (slot, stands) = zone_and_stance_for(ctx, player, row, at, flies, giga)?;
 
     let mut moving = card.clone();
     remove_from_any_zone(ctx.state, &mut moving);
@@ -697,7 +734,9 @@ pub fn summon_copy(args: SummonCopyArgs) -> Effect {
         // R2248000: a Flying copy stands in the backrow when the unit row is full.
         let at = args.placement();
         let flies = summon_flies(ctx.state, &source);
-        let Some((slot, stands)) = zone_and_stance_for(ctx, player, row, &at, flies) else {
+        // R3546000: a copy of a GIGA lands whole or not at all.
+        let giga = crate::giga::enters_giga(ctx.state, &source);
+        let Some((slot, stands)) = zone_and_stance_for(ctx, player, row, &at, flies, giga) else {
             return;
         };
         let mut copy = clone_of(ctx, &source, player, &args);

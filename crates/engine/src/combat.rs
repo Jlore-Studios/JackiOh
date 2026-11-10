@@ -595,10 +595,11 @@ pub fn lane_multiplier_for(state: &GameState, striker: &CardInstance, struck: &C
         return 1;
     };
     // R1081000: a Unit standing in a backrow zone is in that zone's lane, as one in its unit zone is.
+    // R3546001: a GIGA meets a lane in either of its lanes.
     if crate::zones::in_units_row_or_standing(state, striker)
         && crate::zones::in_units_row_or_standing(state, struck)
         && striker_slot.player != struck_slot.player
-        && striker_slot.lane == struck_slot.lane
+        && crate::giga::lanes_meet(striker, struck)
     {
         crate::params::declared_or(state, striker, "multiplier", printed)
     } else {
@@ -629,13 +630,16 @@ fn cleave(
     let Some(defender) = live_card(sink.state, instance) else {
         return;
     };
-    let Some(at) = crate::zones::slot_of(sink.state, &defender) else {
-        return;
-    };
-    for slot in crate::zones::adjacent(at) {
-        let Some(neighbour) = crate::zones::card_at(sink.state, slot).cloned() else {
+    // R3546001: beside a GIGA in either of its lanes, in both; a GIGA beside the target is hit once.
+    let mut met: Vec<String> = vec![defender.id.clone()];
+    for slot in crate::giga::adjacent_slots(sink.state, &defender) {
+        let Some(neighbour) = crate::giga::occupant_at(sink.state, slot).cloned() else {
             continue;
         };
+        if met.contains(&neighbour.id) {
+            continue;
+        }
+        met.push(neighbour.id.clone());
         // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
         if !crate::zones::is_adjacent_card(sink.state, &defender, &neighbour) {
             continue;

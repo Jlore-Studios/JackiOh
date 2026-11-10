@@ -915,6 +915,8 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
         card.counters = counters;
     }
     apply_cost_setup(&mut card, Some(&entry.entry.cost));
+    // R3546000: a fixture card printing GIGA is placed at its size, as `place_with` stamps one.
+    card.giga = crate::giga::enters_giga(&*sink.state, &card).then_some(true);
     let id = card.id.clone();
 
     // §3.2 Stack: `place_on_field` puts the arriving card on top of whatever the lane holds.

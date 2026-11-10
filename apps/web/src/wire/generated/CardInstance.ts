@@ -214,4 +214,8 @@ evolved?: true,
 /**
  * R3536002: marked to enter the field evolved; rides every zone until the state check after it enters.
  */
-entersEvolved?: true, };
+entersEvolved?: true, 
+/**
+ * R3546000: fills four zones; stamped as it enters the field, fixed there, taken off by R78's reset.
+ */
+giga?: true, };

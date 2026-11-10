@@ -74,20 +74,22 @@ pub enum LaneSpec {
     Card(TargetSpec),
 }
 
-fn lane_of(ctx: &EffectContext<'_>, spec: &LaneSpec) -> Option<i32> {
+/// R3546001: the lanes a `lockLane` locks: the named one, or every lane the card stands in
+/// (both, for a GIGA).
+fn lane_of(ctx: &EffectContext<'_>, spec: &LaneSpec) -> Vec<i32> {
     let card = match spec {
         LaneSpec::Lane(lane) => {
             return if *lane >= 1 && *lane <= row_size(Row::Units) {
-                Some(*lane)
+                vec![*lane]
             } else {
-                None
+                Vec::new()
             };
         }
         // The card as it stands now.
         LaneSpec::Card(TargetSpec::SelfCard) => ctx.live_self().cloned(),
         LaneSpec::Card(other) => instance_of(ctx, other),
-    }?;
-    slot_of(ctx.state, &card).map(|at| at.lane)
+    };
+    card.map(|card| crate::giga::lanes_of(&card)).unwrap_or_default()
 }
 
 /// `lockLane`'s argument: `{ lane? } & ZoneScope` (TS default `{}`).
@@ -107,11 +109,12 @@ pub struct LockLaneArgs {
 pub fn lock_lane(args: LockLaneArgs) -> Effect {
     Effect::new("lockLane", move |ctx| {
         let spec = args.lane.clone().unwrap_or(LaneSpec::Card(TargetSpec::SelfCard));
-        let Some(lane) = lane_of(ctx, &spec) else {
+        let lanes = lane_of(ctx, &spec);
+        if lanes.is_empty() {
             return;
-        };
+        }
         for slot in zones_in_scope(ctx, &args.scope) {
-            if slot.lane == lane {
+            if lanes.contains(&slot.lane) {
                 lock_one(ctx, &slot);
             }
         }

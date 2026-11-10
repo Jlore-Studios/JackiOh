@@ -253,6 +253,9 @@ pub struct PlayRun {
     /// Where a permanent goes; null for a Spell, which resolves instead (§10.5 step 4).
     #[serde(default)]
     pub zone: Option<ZoneSlot>,
+    /// R3546003: the other three zones a GIGA play holds with its anchor (R210), released at step 4.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub giga_zones: Option<Vec<ZoneSlot>>,
     #[serde(default)]
     pub targets: Vec<Selection>,
     #[serde(default)]
@@ -430,6 +433,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         player,
         cost_paid: 0,
         zone: None,
+        giga_zones: None,
         targets: Vec::new(),
         modes: Vec::new(),
         tributes: Vec::new(),
@@ -933,6 +937,16 @@ fn pay_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         && !run.tributes.is_empty()
     {
         reserve_zone(sink.state, zone);
+        // R3546003: a GIGA play holds its other three zones with its anchor (R210).
+        if crate::giga::enters_giga(sink.state, &card)
+            && let Some(span) = crate::giga::spanned_slots(zone)
+        {
+            let rest: Vec<ZoneSlot> = span.into_iter().filter(|slot| *slot != zone).collect();
+            for slot in &rest {
+                reserve_zone(sink.state, *slot);
+            }
+            run.giga_zones = Some(rest);
+        }
     }
     if tributes_an_enemy(sink.state, run) {
         run.enemy_tributed = Some(true);
@@ -1537,6 +1551,12 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     if let Some(zone) = run.zone {
         release_zone(sink.state, zone);
     }
+    // R3546003: a GIGA play's other three zones go with it.
+    if let Some(zones) = run.giga_zones.take() {
+        for slot in zones {
+            release_zone(sink.state, slot);
+        }
+    }
     let Some(mut card) = snapshot(sink.state, &run.instance_id) else {
         return false;
     };
@@ -1554,15 +1574,17 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
         run.zone = if type_ == CardType::Spell {
             None
         } else {
-            first_free_zone(
-                sink.state,
-                run.player,
-                if type_ == CardType::Unit {
-                    Row::Units
-                } else {
-                    Row::Backrow
-                },
-            )
+            let row = if type_ == CardType::Unit {
+                Row::Units
+            } else {
+                Row::Backrow
+            };
+            // R3546000: a cast or replaced GIGA takes the leftmost fit, not the leftmost zone.
+            if crate::giga::enters_giga(sink.state, &card) {
+                crate::giga::first_anchor(run.player, row, |slot| is_open(sink.state, slot))
+            } else {
+                first_free_zone(sink.state, run.player, row)
+            }
         };
     } else {
         // R360: #55's base face, paid for with an opposing unit, is summoned for the opponent: still

@@ -442,6 +442,10 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub enters_evolved: Option<bool>,
+    /// R3546000: fills four zones; stamped as it enters the field, fixed there, taken off by R78's reset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub giga: Option<bool>,
 }
 
 /// R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
@@ -2599,6 +2603,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         hidden_nerfs: None,
         evolved: None,
         enters_evolved: None,
+        giga: None,
     };
     *next_id += 1;
     instance

@@ -260,6 +260,9 @@ pub struct RebornEntry {
     /// R1081000: the unit stood in a backrow zone itself, so it returns standing there. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub standing: Option<bool>,
+    /// R3546003: the other three zones a returning GIGA holds with its anchor, released at its return.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub giga_zones: Option<Vec<ZoneRef>>,
 }
 
 /// One of step 5's reports (`DeathPass.collected`).
@@ -413,6 +416,12 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             continue;
         }
         crate::zones::release_zone(sink.state, entry.at);
+        // R3546003: a returning GIGA's other three zones go with its anchor.
+        if let Some(zones) = &entry.giga_zones {
+            for slot in zones {
+                crate::zones::release_zone(sink.state, *slot);
+            }
+        }
         // R127: found by id, so a unit a Death hook exiled or unmade in between is not resurrected; a
         // unit token is in no pile (R11, R175), so the pass carries it, reset as R78 resets any body.
         let mut copy = match &entry.token {
@@ -788,6 +797,20 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             && let Some(at) = card.at
         {
             crate::zones::reserve_zone(sink.state, at);
+            // R3546003: a returning GIGA holds its other three zones with its anchor.
+            let giga_zones = if crate::giga::is_giga(&card.snapshot) {
+                let rest: Vec<ZoneRef> = crate::giga::spanned_slots(at)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter(|slot| *slot != at)
+                    .collect();
+                for slot in &rest {
+                    crate::zones::reserve_zone(sink.state, *slot);
+                }
+                if rest.is_empty() { None } else { Some(rest) }
+            } else {
+                None
+            };
             // R175: a unit token is in no pile, so the pass carries its return with the X/X it was
             // summoned as, read off the snapshot since the move above reset the instance (R78).
             let face = reborn_face_of(sink.state, &card.snapshot);
@@ -803,6 +826,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 },
                 face,
                 standing: if card.standing { Some(true) } else { None },
+                giga_zones,
             });
         }
         sink.state.counters.destroyed += 1;
