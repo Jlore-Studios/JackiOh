@@ -15268,16 +15268,16 @@
       "kind": "build",
       "live": "planning",
       "onto": "bot/issue-3596",
-      "owner": "claude-6",
-      "owner_since": "2026-11-10T16:49:59Z",
-      "owner_why": "it plans it",
+      "owner": "claude-4",
+      "owner_since": "2026-11-10T17:42:39Z",
+      "owner_why": "handed off from `claude-6`: it could not take it",
       "part_of": 3596,
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-4",
       "queued_at": "2026-11-09T23:47:56Z",
       "requested_by": "squishy-squooby",
       "round_tier": "",
-      "run_id": "42858589147",
+      "run_id": "pending:d7a28c24-1794332515",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -15296,7 +15296,7 @@
         "provider": "claude-6",
         "run": "42858589147"
       },
-      "started_at": "2026-11-10T16:49:59Z",
+      "started_at": "2026-11-10T17:42:39Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -18030,9 +18030,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T17:41:40Z",
+    "at": "2026-11-10T17:42:39Z",
     "url": "",
-    "what": "revise #3623 on muse"
+    "what": "plan #3546 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-10T17:18:00Z",
