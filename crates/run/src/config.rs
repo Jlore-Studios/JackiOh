@@ -68,6 +68,63 @@ pub const RUN_STARTER_CARDS: [&str; 20] = [
     "traininggrounds-058",
     "traininggrounds-059",
 ];
+/// DR3: the named starting decks the start screen offers, as `(id, name, theme, cards)`.
+/// Placeholders until the designer's lists (as `RUN_STARTER_CARDS` is): each holds
+/// `RUN_STARTER_SIZE` distinct cards of `RUN_STARTER_CARDS` fitting level 1's slots, so any player
+/// may pick any of them from their first run, then tweak the picks in the builder.
+pub const RUN_PRESET_DECKS: [(&str, &str, &str, [&str; RUN_STARTER_SIZE]); 3] = [
+    (
+        "first-charge",
+        "First Charge",
+        "Cheap units that hit fast and hit hard.",
+        [
+            "traininggrounds-001",
+            "traininggrounds-002",
+            "traininggrounds-004",
+            "traininggrounds-006",
+            "traininggrounds-007",
+            "traininggrounds-008",
+            "traininggrounds-043",
+            "traininggrounds-017",
+            "traininggrounds-023",
+            "traininggrounds-044",
+        ],
+    ),
+    (
+        "spell-tricks",
+        "Spell Tricks",
+        "Spells and helpers that out-trick the enemy.",
+        [
+            "traininggrounds-011",
+            "traininggrounds-042",
+            "traininggrounds-058",
+            "traininggrounds-059",
+            "traininggrounds-002",
+            "traininggrounds-006",
+            "traininggrounds-020",
+            "traininggrounds-050",
+            "traininggrounds-017",
+            "traininggrounds-023",
+        ],
+    ),
+    (
+        "hold-the-line",
+        "Hold the Line",
+        "Tough bodies that hold the line, then win late.",
+        [
+            "traininggrounds-002",
+            "traininggrounds-004",
+            "traininggrounds-008",
+            "traininggrounds-043",
+            "traininggrounds-047",
+            "traininggrounds-048",
+            "traininggrounds-054",
+            "traininggrounds-023",
+            "traininggrounds-044",
+            "traininggrounds-051",
+        ],
+    ),
+];
 /// DR3, DR9, a strawman: the Embers each level of the starting deck costs from the one before it, so
 /// `RUN_LEVEL_EMBERS[0]` buys level 2. One per step of `RUN_SLOT_LADDER`.
 pub const RUN_LEVEL_EMBERS: [i64; RUN_SLOT_LADDER.len() - 1] = [10, 25, 45, 70, 100];

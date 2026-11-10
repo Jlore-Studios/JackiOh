@@ -164,3 +164,132 @@
 .app-shell .dungeon-start {
   align-self: flex-start;
 }
+
+/* The preset starting decks: tiles reusing the choice and relic patterns, each with a fan of its
+   ten card faces. */
+.dungeon-presets > h3 {
+  margin: 0 0 8px;
+}
+
+.dungeon-presets {
+  margin: 12px 0 0;
+  padding: 0;
+  border: none;
+}
+
+.dungeon-preset__fan {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  width: 100%;
+}
+
+.dungeon-preset__face {
+  display: block;
+  min-width: 0;
+  aspect-ratio: 5 / 7;
+}
+
+.dungeon-presets > h3,
+.dungeon-preset__name {
+  font-weight: 600;
+}
+
+.dungeon-preset__theme {
+  color: var(--text-dim);
+}
+
+.dungeon-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+  gap: 8px;
+}
+
+.app-shell .dungeon-preset {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+}
+
+.app-shell .dungeon-preset[aria-pressed="true"] {
+  border-color: var(--selected);
+  background: color-mix(in srgb, var(--selected) 8%, var(--bg-sunken));
+}
+
+/* The build-your-own builder: the workshop's browse pane beside the deck list and slots meter. */
+.dungeon-builder {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 12px;
+  align-items: start;
+  margin-top: 12px;
+}
+
+.dungeon-deck {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dungeon-deck > h4,
+.dungeon-deck > p {
+  margin: 0;
+}
+
+.dungeon-meter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The browse pane's own scope: the workshop sizes it to the viewport, but here the page scrolls,
+   so the wrapper and the pool frame stay out of that sizing. The shell's `margin: 0 auto` would
+   un-stretch this grid item (auto margins take the free space instead) and hold the filter row's
+   width open; with no side margins it fills its track and the row wraps instead. */
+.dungeon-browser.deckbuilder.app-shell {
+  min-width: 0;
+  min-height: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.dungeon-browser .db-pool-frame {
+  display: block;
+  min-height: 0;
+  container-type: normal;
+}
+
+/* The builder's column is narrower than the workshop's pool: fix the height-based card width so
+   the pool pages several cards across instead of two large ones. */
+.dungeon-browser .db-pool {
+  --db-card-w: 150px;
+}
+
+@media (min-width: 761px) and (min-height: 501px) {
+  .dungeon-browser.deckbuilder.app-shell {
+    height: auto;
+  }
+}
+
+@media (max-width: 760px) and (min-height: 501px) {
+  .dungeon-browser.deckbuilder.app-shell {
+    height: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .dungeon-builder {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

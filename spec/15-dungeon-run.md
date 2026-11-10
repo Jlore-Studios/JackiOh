@@ -22,6 +22,7 @@ Every value is a constant of `crates/run/src/config.rs`. One the plan marks a st
 | `RUN_STARTER_SIZE` | The cards of a starting deck, at every level | [[§15.3]] |
 | `RUN_SLOT_LADDER` | The starting deck's slots at each level, from level 1, as counts of Common, Rare, Epic, Legendary, Mythic and Anything slots, each row holding `RUN_STARTER_SIZE`; a strawman | [[§15.3]] |
 | `RUN_STARTER_CARDS` | The cards any starting deck may hold before anything is extracted; placeholders until the designer's list, the Training Grounds Commons and Rares with the fewest script lines, in catalog order, the first `RUN_STARTER_SIZE` fitting level 1's slots | [[§15.3]] |
+| `RUN_PRESET_DECKS` | The named starting decks the start screen offers; placeholders | [[§15.3]] |
 | `RUN_LEVEL_EMBERS` | The Embers each step of `RUN_SLOT_LADDER` costs from the level before it; a strawman | [[§15.3]], [[§15.10]] |
 | `RUN_STARTER_ARTIFACTS_MAX` | The most artifacts a run starts with | [[§15.3]], [[§15.4]] |
 | `RUN_STARTER_ARTIFACT_POINTS` | The most points of artifacts a run starts with | [[§15.3]], [[§15.4]] |
@@ -105,6 +106,8 @@ Embers buy the next level at `RUN_LEVEL_EMBERS`, up to the ladder's top.
 Artifacts: at most `RUN_STARTER_ARTIFACTS_MAX`, distinct, worth at most `RUN_STARTER_ARTIFACT_POINTS` by `RUN_TIER_POINTS`. Each is Combat or Economic, not Unobtainable, and a starter or extracted ([[§15.4]]).
 
 Curses: any of the content's ([[§15.9]]).
+
+The start screen offers the named starting decks of `RUN_PRESET_DECKS` (placeholders until the designer's lists): each holds `RUN_STARTER_SIZE` distinct cards of `RUN_STARTER_CARDS` fitting level 1's slots, so any player may pick any of them from their first run, then tweak the picks in the builder.
 
 `run_check_setup` gives the reason for a refusal. `run_create` also refuses content that lacks a normal, elite, mini-boss or final-boss enemy, or an event.
 
