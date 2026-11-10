@@ -60,7 +60,7 @@ const CURSE_OF_THE_FORGOTTEN_CLASSIC_ALT: SceneRecipe = {
   },
 };
 
-/** Palantir (Classic #4, Legendary), Alt art: Wide vista from outside: the Jlockeed watchtower on a rust-red desert ridge at noon, the orb's beam sweeping a rival army's camp below; red sand, pale sky. Stand-ins: a `light-cone` for the orb's beam. */
+/** Palantir (Classic #4, Legendary), Alt art: Wide vista from outside: the Jlockeed watchtower on a rust-red desert ridge at noon, the orb's beam sweeping a rival army's camp below; red sand, pale sky. Stand-ins: cyan `god-rays` fanning down from the orb for its sweeping beam. */
 const PALANTIR_ALT: SceneRecipe = {
   family: "classic",
   sky: ["sky-300", "blue-200"],
@@ -86,7 +86,6 @@ const PALANTIR_ALT: SceneRecipe = {
     subject: [
       { part: "orb", x: 30, y: 38, scale: 0.9, paint: "slate-900" },
       { part: "eye", x: 30, y: 38, scale: 0.3 },
-      { part: "light-cone", x: 31, y: 39, scale: 0.9, rotate: 28, paint: "cyan-400" },
     ],
     near: [
       { part: "cactus", x: 10, y: 96, scale: 1.2 },
@@ -94,6 +93,7 @@ const PALANTIR_ALT: SceneRecipe = {
       { part: "tall-grass", x: 92, y: 98, scale: 1, paint: "wood-600" },
     ],
     light: [
+      { part: "god-rays", x: 30, y: 38, scale: 0.7, paint: "cyan-400" },
       { part: "halo", x: 30, y: 38, scale: 0.9, paint: "cyan-400" },
       { part: "halo", x: 74, y: 76, scale: 1, paint: "cyan-400" },
     ],
@@ -405,11 +405,11 @@ const COUNTERSPELL_ALT: SceneRecipe = {
     far: [{ part: "sea", x: 50, y: 58, paint: "green-900" }],
     mid: [{ part: "mesa", x: 36, y: 75, scale: 0.8, paint: "wood-700" }],
     subject: [
-      { part: "meteor", x: 46, y: 46, scale: 0.6, rotate: 40 },
+      { part: "meteor", x: 42, y: 54, scale: 0.7 },
       { part: "spray", x: 70, y: 66, scale: 1.4, paint: "white" },
     ],
     near: [{ part: "spray", x: 50, y: 92, scale: 1, paint: "sky-300" }],
-    particles: [{ part: "sparks", x: 46, y: 46, count: 2, spread: [8, 4], paint: "orange-400" }],
+    particles: [{ part: "sparks", x: 42, y: 54, count: 2, spread: [8, 4], paint: "orange-400" }],
   },
 };
 

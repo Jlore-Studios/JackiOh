@@ -377,8 +377,8 @@ const PLAGUE_NUKE_ALT: SceneRecipe = {
     ],
     subject: [
       { part: "spores", x: 50, y: 40, scale: 3.6, paint: "slate-100" },
-      { part: "open-hand", x: 28, y: 72, scale: 2.4 },
-      { part: "crystal", x: 50, y: 60, scale: 1.8, paint: "sky-400" },
+      { part: "open-hand", x: 34, y: 76, scale: 3.6 },
+      { part: "crystal", x: 56, y: 62, scale: 2.6, paint: "sky-400" },
     ],
     near: [
       { part: "smoke", x: 12, y: 98, scale: 1.4, paint: "slate-700" },
@@ -587,19 +587,19 @@ const FINAL_GAMBIT_ALT: SceneRecipe = {
     ],
     mid: [{ part: "still-water", x: 50, y: 60 }],
     subject: [
-      { part: "die", x: 58, y: 54, scale: 3, paint: "white" },
-      { part: "open-hand", x: 28, y: 70, scale: 2.8 },
+      { part: "die", x: 58, y: 50, scale: 7, paint: "white" },
+      { part: "open-hand", x: 34, y: 72, scale: 4 },
     ],
     near: [
       { part: "reed", x: 88, y: 98, scale: 2, count: 3, spread: [5, 1] },
       { part: "grass-tuft", x: 12, y: 98, count: 2, spread: [6, 1], paint: "green-700" },
     ],
     light: [
-      { part: "halo", x: 58, y: 54, scale: 1.4, paint: "white" },
+      { part: "halo", x: 58, y: 50, scale: 1.8, paint: "white" },
       { part: "god-rays", x: 74, y: 56, scale: 0.8, paint: "white" },
     ],
     particles: [
-      { part: "sparks", x: 58, y: 54, scale: 1.4, paint: "white" },
+      { part: "sparks", x: 58, y: 50, scale: 1.6, paint: "white" },
       { part: "motes", x: 50, y: 60, scale: 1.2, paint: "white" },
     ],
   },

@@ -402,6 +402,223 @@ const BOOM_BIG_MAX_ALT: SceneRecipe = {
   },
 };
 
+/** The Power to Thrive (Classic #81, Rare), Alt art: The three blessings on a rain-washed riverboat shrine at dusk, lanterns glowing on the water; indigo and rose. Stand-ins: a `boat` for the riverboat shrine. */
+const THE_POWER_TO_THRIVE_ALT: SceneRecipe = {
+  family: "classic",
+  sky: ["violet-700", "red-300"],
+  light: { x: 50, y: 60, r: 38, paint: "red-300", opacity: 0.4 },
+  emblem: { x: 20, y: 30, size: 5, rotate: 0 },
+  layers: {
+    sky: [
+      { part: "cloud", x: 30, y: 22, scale: 1.3, count: 3, spread: [30, 4], paint: "violet-500" },
+      { part: "moon", x: 80, y: 20, scale: 0.5 },
+    ],
+    far: [
+      { part: "hills", x: 50, y: 54, paint: "violet-700" },
+      { part: "house", x: 14, y: 58, scale: 0.6, paint: "blue-900" },
+      { part: "house", x: 86, y: 57, scale: 0.5, flip: -1, paint: "blue-900" },
+    ],
+    mid: [
+      { part: "water", x: 50, y: 64, paint: "blue-900" },
+      { part: "ripples", x: 30, y: 74, scale: 1.2, paint: "red-300" },
+      { part: "paper-lantern", x: 18, y: 72, scale: 0.8, paint: "red-400" },
+      { part: "paper-lantern", x: 82, y: 74, scale: 0.7, paint: "red-400" },
+    ],
+    subject: [
+      { part: "fruit-tree", x: 50, y: 62, scale: 0.8, paint: "green-700" },
+      { part: "heal-fountain", x: 36, y: 70, scale: 0.7 },
+      { part: "lifting-stone", x: 64, y: 58, scale: 0.35, paint: "stone-500" },
+      { part: "boat", x: 50, y: 76, scale: 1.4, paint: "wood-700" },
+    ],
+    near: [
+      { part: "paper-lantern", x: 66, y: 90, scale: 1.1, paint: "red-400" },
+      { part: "ripples", x: 66, y: 96, scale: 1.4, paint: "red-300" },
+      { part: "reed", x: 8, y: 98, scale: 1.6, count: 2, spread: [5, 1], paint: "blue-800" },
+    ],
+    light: [
+      { part: "halo", x: 66, y: 90, scale: 1, paint: "red-300" },
+      { part: "halo", x: 18, y: 72, scale: 0.7, paint: "red-300" },
+      { part: "halo", x: 64, y: 54, scale: 0.6, paint: "green-200" },
+    ],
+    particles: [
+      { part: "rain", x: 50, y: 40, scale: 1.4, paint: "violet-300" },
+      { part: "heal-glow", x: 36, y: 60, scale: 0.8, paint: "green-200" },
+    ],
+  },
+};
+
+/** Flame Lance (Classic #83, Common), Alt art: Close-up of the lance's tip piercing a shield on a frozen lake at noon, steam bursting; white and red. Stand-ins: the `fireball` for the lance's tip. */
+const FLAME_LANCE_ALT: SceneRecipe = {
+  family: "classic",
+  sky: ["slate-100", "blue-200"],
+  light: { x: 44, y: 54, r: 36, paint: "white", opacity: 0.5 },
+  emblem: { x: 80, y: 30, size: 5, rotate: 0 },
+  layers: {
+    sky: [
+      { part: "sun-disc", x: 22, y: 22, scale: 0.8 },
+      { part: "cloud", x: 70, y: 22, scale: 1.1, count: 2, spread: [16, 3], paint: "white" },
+    ],
+    far: [
+      { part: "mountains", x: 50, y: 50, paint: "slate-400" },
+      { part: "pine", x: 88, y: 56, scale: 0.7, count: 3, spread: [6, 1], paint: "slate-700" },
+    ],
+    mid: [{ part: "ice-floor", x: 50, y: 62 }],
+    subject: [
+      { part: "fireball", x: 36, y: 56, scale: 2.2, paint: "red-500" },
+      { part: "shield", x: 58, y: 60, scale: 2.4, paint: "slate-400" },
+      { part: "burst", x: 56, y: 58, scale: 1.2, paint: "red-400" },
+    ],
+    near: [
+      { part: "steam", x: 62, y: 74, scale: 1.6, paint: "white" },
+      { part: "frost-shard", x: 20, y: 92, scale: 1.2, paint: "blue-200" },
+      { part: "pebbles", x: 78, y: 96, paint: "slate-400" },
+    ],
+    light: [{ part: "halo", x: 44, y: 56, scale: 1.4, paint: "red-300" }],
+    particles: [
+      { part: "sparks", x: 56, y: 56, scale: 1.2, paint: "red-300" },
+      { part: "steam", x: 74, y: 44, scale: 1, paint: "white" },
+    ],
+  },
+};
+
+/** Lockdown (Classic #84, Rare), Alt art: Aerial view of a desert walled city sealing itself at sunset, every gate's portcullis dropping; terracotta and violet. Stand-ins: rows of `whitewashed-house` for the city seen from above. */
+const LOCKDOWN_ALT: SceneRecipe = {
+  family: "classic",
+  sky: ["red-600", "violet-500"],
+  light: { x: 76, y: 22, r: 36, paint: "orange-400", opacity: 0.4 },
+  emblem: { x: 20, y: 28, size: 5, rotate: 0 },
+  layers: {
+    sky: [{ part: "sun-disc", x: 78, y: 24, scale: 0.9 }],
+    far: [
+      { part: "sand", x: 50, y: 36, paint: "red-600" },
+      { part: "long-wall", x: 50, y: 48, scale: 0.9, paint: "red-900" },
+    ],
+    mid: [
+      { part: "whitewashed-house", x: 50, y: 58, scale: 0.5, count: 3, spread: [34, 2] },
+      { part: "whitewashed-house", x: 50, y: 68, scale: 0.6, count: 3, spread: [30, 2] },
+      { part: "palm", x: 84, y: 64, scale: 0.55, flip: -1, paint: "green-700" },
+    ],
+    subject: [
+      { part: "portcullis", x: 50, y: 46, scale: 0.5, paint: "slate-800" },
+      { part: "long-wall", x: 50, y: 84, scale: 1.2, paint: "red-900" },
+      { part: "gate", x: 28, y: 86, scale: 0.8, paint: "wood-800" },
+      { part: "portcullis", x: 28, y: 84, scale: 0.7, paint: "slate-800" },
+      { part: "gate", x: 72, y: 86, scale: 0.8, paint: "wood-800" },
+      { part: "portcullis", x: 72, y: 84, scale: 0.7, paint: "slate-800" },
+    ],
+    near: [
+      { part: "sand", x: 50, y: 98, paint: "red-600" },
+      { part: "camel", x: 88, y: 96, scale: 0.8, flip: -1 },
+    ],
+    light: [{ part: "rim-light", x: 50, y: 50, scale: 1.4, paint: "orange-400" }],
+    particles: [{ part: "dust", x: 50, y: 90, scale: 1.4, paint: "red-300" }],
+  },
+};
+
+/** King Wagtoggle (Classic #85, Legendary), Alt art: The king at a windy hilltop picnic, trading decks with a shepherd over a checkered blanket; green hills and sky blue. */
+const KING_WAGTOGGLE_ALT: SceneRecipe = {
+  family: "classic",
+  sky: ["sky-400", "blue-200"],
+  light: { x: 76, y: 22, r: 40, paint: "white", opacity: 0.45 },
+  emblem: { x: 50, y: 26, size: 6, rotate: 0 },
+  figure: { x: 30, y: 80, scale: 0.8, pose: "pose-sit", look: { ...normalClassicLookOf("classic-085") } },
+  extras: [
+    {
+      layer: "subject",
+      x: 70,
+      y: 80,
+      scale: 0.75,
+      flip: -1,
+      pose: "pose-sit",
+      look: { ...figureLookFor(["Human"]), hair: "hat-brim", outfit: "outfit-tunic", item: "item-staff", cloth: "green-700" },
+    },
+  ],
+  layers: {
+    sky: [
+      { part: "sun-disc", x: 78, y: 20, scale: 0.8 },
+      { part: "cloud", x: 30, y: 20, scale: 1.2, count: 3, spread: [30, 5], paint: "white" },
+    ],
+    far: [
+      { part: "hills", x: 50, y: 54, paint: "green-500" },
+      { part: "tree", x: 12, y: 56, scale: 0.6, count: 2, spread: [6, 1], paint: "green-700" },
+    ],
+    mid: [
+      { part: "field", x: 50, y: 66, paint: "green-400" },
+      { part: "sheep", x: 18, y: 68, scale: 0.6 },
+      { part: "sheep", x: 84, y: 70, scale: 0.55, flip: -1 },
+      { part: "sheep", x: 64, y: 64, scale: 0.4 },
+      { part: "fence", x: 50, y: 62, scale: 0.8, paint: "wood-600" },
+    ],
+    subject: [
+      { part: "gingham-blanket", x: 50, y: 86, scale: 1.4, paint: "red-500" },
+      { part: "deck", x: 44, y: 62, scale: 0.9 },
+      { part: "deck", x: 56, y: 62, scale: 0.9, flip: -1 },
+      { part: "basket", x: 50, y: 84, scale: 0.8 },
+    ],
+    near: [
+      { part: "grass-tuft", x: 10, y: 98, scale: 1.4, count: 3, spread: [6, 1], paint: "green-500" },
+      { part: "grass-tuft", x: 90, y: 98, scale: 1.4, count: 3, spread: [6, 1], paint: "green-500" },
+    ],
+    light: [
+      { part: "rim-light", x: 50, y: 60, scale: 1.4, paint: "white" },
+      { part: "halo", x: 50, y: 62, scale: 0.9, paint: "white" },
+    ],
+    particles: [
+      { part: "gust", x: 30, y: 40, scale: 1.2 },
+      { part: "leaves", x: 64, y: 44, scale: 1, paint: "green-400" },
+      { part: "petals", x: 50, y: 50, scale: 1, paint: "white" },
+    ],
+  },
+};
+
+/** In Too Deep (Classic #90, Mythic), Alt art: Topside at sunrise: the cavern's mouth in a sunny highland meadow, the adventurer's rope vanishing down it, packs left on the grass; green and pink. Stand-ins: the `spiral-shaft` small for the cavern's mouth; a `red-thread` painted brown, tied to a `fence-post`, for the rope; `duffel`s for the packs. */
+const IN_TOO_DEEP_ALT: SceneRecipe = {
+  family: "classic",
+  sky: ["red-300", "sky-300"],
+  light: { x: 22, y: 40, r: 40, paint: "red-300", opacity: 0.45 },
+  emblem: { x: 80, y: 28, size: 5, rotate: 0 },
+  layers: {
+    sky: [
+      { part: "sun-disc", x: 20, y: 40, scale: 1 },
+      { part: "cloud", x: 64, y: 20, scale: 1.2, count: 3, spread: [30, 4], paint: "red-300" },
+    ],
+    far: [
+      { part: "mountains", x: 50, y: 46, paint: "violet-500" },
+      { part: "hills", x: 50, y: 54, paint: "green-700" },
+      { part: "pine", x: 86, y: 56, scale: 0.6, count: 3, spread: [8, 1], paint: "green-900" },
+    ],
+    mid: [
+      { part: "field", x: 50, y: 64, paint: "green-500" },
+      { part: "flowers", x: 14, y: 70, count: 2, spread: [8, 2], paint: "red-400" },
+      { part: "flowers", x: 86, y: 72, count: 2, spread: [8, 2], paint: "violet-300" },
+      { part: "fence-post", x: 22, y: 70, scale: 1, paint: "wood-700" },
+      { part: "red-thread", x: 50, y: 74, scale: 0.9, flip: -1, paint: "wood-600", props: true },
+      { part: "duffel", x: 30, y: 80, scale: 0.8, props: true },
+      { part: "duffel", x: 78, y: 80, scale: 0.7, flip: -1, props: true },
+    ],
+    subject: [
+      { part: "spiral-shaft", x: 50, y: 74, scale: 0.6 },
+      { part: "pebbles", x: 50, y: 86, scale: 1.4, paint: "slate-700" },
+    ],
+    near: [
+      { part: "tall-grass", x: 8, y: 98, scale: 1.4, count: 3, spread: [6, 1], paint: "green-700" },
+      { part: "tall-grass", x: 92, y: 98, scale: 1.4, count: 3, spread: [6, 1], paint: "green-700" },
+      { part: "flowers", x: 40, y: 98, scale: 1.2, count: 2, spread: [10, 1], paint: "red-300" },
+      { part: "pouch", x: 66, y: 94, scale: 0.9 },
+    ],
+    light: [
+      { part: "god-rays", x: 20, y: 40, scale: 1, paint: "red-300" },
+      { part: "halo", x: 50, y: 74, scale: 1.2, paint: "violet-300" },
+      { part: "rim-light", x: 50, y: 64, scale: 1.2, paint: "white" },
+    ],
+    particles: [
+      { part: "petals", x: 50, y: 50, scale: 1.2, count: 2, spread: [20, 10], paint: "red-300" },
+      { part: "motes", x: 50, y: 70, scale: 1.2, count: 2, spread: [16, 8], paint: "violet-300" },
+      { part: "leaves", x: 70, y: 40, scale: 1, paint: "green-400" },
+    ],
+  },
+};
+
 /** R3388000: Classic's alt recipes #55 to #90, by card id. */
 export const CLASSIC_ALT_RECIPES_3: Readonly<Record<string, SceneRecipe>> = {
   "classic-055": BOOK_OF_WILDFIRE_ALT,
@@ -415,4 +632,9 @@ export const CLASSIC_ALT_RECIPES_3: Readonly<Record<string, SceneRecipe>> = {
   "classic-075": ARGUSLAND_ALT,
   "classic-076": PLAGUE_BRINGER_ALT,
   "classic-080": BOOM_BIG_MAX_ALT,
+  "classic-081": THE_POWER_TO_THRIVE_ALT,
+  "classic-083": FLAME_LANCE_ALT,
+  "classic-084": LOCKDOWN_ALT,
+  "classic-085": KING_WAGTOGGLE_ALT,
+  "classic-090": IN_TOO_DEEP_ALT,
 };
