@@ -16821,6 +16821,7 @@
         "resolved_by": "`muse` (medium)",
         "sha": "a1dd22f46b95abb21f0fafaedc16791f3c79a9e8"
       },
+      "closed_at": "2026-11-10T19:48:48Z",
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
@@ -16837,6 +16838,7 @@
         "provider": "muse",
         "sha": "a1dd22f46b95abb21f0fafaedc16791f3c79a9e8"
       },
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "question": "",
