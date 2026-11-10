@@ -16822,13 +16822,32 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
+        "carried": {
+          "by": "`muse` (medium)",
+          "conflicts": [
+            "apps/web/src/game/__snapshots__/Board.test.tsx.snap"
+          ],
+          "from": "f3945b9fc62055f9058d423fdcad3c6d54a358eb",
+          "main": "ff0215660e1f5dcec63576e51cf72d8a6717d899"
+        },
         "rejections": [],
-        "reviews": [],
-        "sha": "f3945b9fc62055f9058d423fdcad3c6d54a358eb",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "42867564621",
+            "tier": "medium"
+          }
+        ],
+        "sha": "a1dd22f46b95abb21f0fafaedc16791f3c79a9e8",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "3624": {
