@@ -36825,7 +36825,10 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-10T18:56:20Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 3658,
         "head": "af99c28c2ec79cf4515aef338398fda44f59edfc",
         "issue": 3584,
         "merged_at": "2026-11-10T18:36:19Z",
@@ -36838,12 +36841,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:782ba8e1-1794336377",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42878659477",
         "sha": "62b8ed2e3d69493ed774ffd64b66b2d36df2bbae",
         "started_at": "2026-11-10T18:46:54Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: dungeon HP refills after every fight, and each win adds 5 max HP",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 200
