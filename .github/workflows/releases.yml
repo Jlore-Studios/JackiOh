@@ -17,6 +17,13 @@
 # (each body's first line says so). It deletes nothing: a version a retcon renames (R1371000) keeps its
 # old release beside the new one until a person deletes it.
 #
+# The script diffs a changed card's words with the WebAssembly module (#3161 moved the face model into
+# Rust), so the job builds it first (scripts/build-wasm.sh, on setup's Rust half and its cache) and the
+# script loads it. Without it every run failed from 2026-11-06 to #3601 and v0.5.12c on went
+# unpublished; the next green run creates whatever is missing, as every run does. github.test.ts runs
+# the script in a process of its own on each pull request that changes the web, so this cannot fail
+# only here again.
+#
 # Three ways in:
 #   push to main        patches.json (a ship or a retcon), technical.json (the technical log, whose
 #                       player lines a release carries), or what writes the releases
@@ -58,7 +65,9 @@ jobs:
   publish:
     name: publish the releases
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The WASM build takes about four minutes on a warm Rust cache (ci.yml's `web (wasm module)`) and
+    # longer on this job's first, cold one; the releases after it, about three seconds each.
+    timeout-minutes: 30
     env:
       # The install covers the whole workspace, e2e/ included; no browser is needed here.
       CYPRESS_INSTALL_BINARY: "0"
@@ -67,9 +76,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
+      # Both halves: the Rust's for the WASM module the script loads.
       - uses: ./.github/actions/setup
-        with:
-          rust: "false"
+
+      - name: the WASM module
+        run: sh scripts/build-wasm.sh
 
       - name: write every release
         run: |

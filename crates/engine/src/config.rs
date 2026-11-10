@@ -1624,8 +1624,9 @@ pub const REPLAY_PAGE_STEPS: usize = 16;
 /// game-record or self-play file that carries no marker names them as they were before the version
 /// retcon (#1371), and its reader maps each through `patches/aliases.json`. R2532000: 3 since the
 /// v0.5 retcon (#2532); a file marked 2 names the v0.5 line as it was before it, and its reader maps
-/// those names through the same file's `marked`.
-pub const VERSIONS_SCHEME: u32 = 3;
+/// those names through the same file's `marked`. R3631001: 4 since the v0.5.13 retcon (#3631); a file
+/// marked 3 names the micros after v0.5.12z as v0.5.13 to v0.5.13h, which are v0.5.12aa to v0.5.12ah now.
+pub const VERSIONS_SCHEME: u32 = 4;
 
 // ---------------------------------------------------------------------------------------------
 // The testkit's seed search (issue #848).

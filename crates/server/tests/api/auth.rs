@@ -424,11 +424,16 @@ pub(crate) fn supabase_auth_no_secret(gotrue: &GoTrue, clock: &Clock) -> Auth {
 }
 
 /// An HS256 token over `claims`, with §9.2's audience and an expiry far ahead.
-pub(crate) fn sign(gotrue: &GoTrue, user_id: &str, mut claims: Value) -> String {
+pub(crate) fn sign(gotrue: &GoTrue, user_id: &str, claims: Value) -> String {
+    sign_at(gotrue, user_id, claims, FAR_FUTURE)
+}
+
+/// `sign`, expiring at `exp` (epoch seconds).
+pub(crate) fn sign_at(gotrue: &GoTrue, user_id: &str, mut claims: Value, exp: i64) -> String {
     claims["sub"] = json!(user_id);
     claims["iss"] = json!(gotrue.issuer());
     claims["aud"] = json!("authenticated");
-    claims["exp"] = json!(FAR_FUTURE);
+    claims["exp"] = json!(exp);
     jsonwebtoken::encode(
         &Header::new(Algorithm::HS256),
         &claims,
@@ -2063,5 +2068,89 @@ mod r3209000_requests_that_arrive_together_share_one_provider_check {
         // The set was replaced whole: the old kid is refused.
         assert!(auth.verify(&token_a).await.is_err());
         assert_eq!(gotrue.jwks_calls(), 2);
+    }
+}
+
+/// #3490's expired session (#3516): §9.2's `exp` and `nbf` are checked with no tolerance on either
+/// local tier, so a token past its expiry is refused before anything is asked of the provider.
+mod an_expired_token_is_refused {
+    use super::*;
+    use crate::api::es256_test_only as es256;
+
+    /// 2001-09-09: an expiry every run of this suite is past.
+    const LONG_PAST: i64 = 1_000_000_000;
+
+    /// The claims `Harness::token_for` signs.
+    fn claims(user_id: &str) -> Value {
+        json!({ "email": format!("{user_id}@example.test"), "app_metadata": { "provider": "email" } })
+    }
+
+    #[tokio::test]
+    async fn an_hs256_token_past_its_exp_is_refused_with_no_call_upstream() {
+        let h = Harness::new().await;
+        let expired = sign_at(&h.gotrue, ALICE, claims(ALICE), LONG_PAST);
+
+        assert!(h.auth.verify(&expired).await.is_err());
+        assert_eq!(
+            (h.gotrue.total(), h.gotrue.user_calls(), h.gotrue.jwks_calls()),
+            (0, 0, 0)
+        );
+        let (status, _, body) = call(h.app().await, "GET", "/api/auth/me", Some(&expired), Value::Null).await;
+        assert_eq!(status, 401, "{body}");
+        assert_eq!(body["error"]["code"], "unauthorized");
+
+        // PREMISE: the same claims, unexpired, verify.
+        let live = sign_at(&h.gotrue, ALICE, claims(ALICE), FAR_FUTURE);
+        assert_eq!(h.auth.verify(&live).await.expect("a live token").user_id, ALICE);
+    }
+
+    #[tokio::test]
+    async fn an_hs256_token_before_its_nbf_is_refused() {
+        let h = Harness::new().await;
+        let mut early = claims(ALICE);
+        early["nbf"] = json!(FAR_FUTURE);
+
+        assert!(h.auth.verify(&sign(&h.gotrue, ALICE, early)).await.is_err());
+        assert_eq!(
+            (h.gotrue.total(), h.gotrue.user_calls(), h.gotrue.jwks_calls()),
+            (0, 0, 0)
+        );
+    }
+
+    #[tokio::test]
+    async fn an_es256_token_past_its_exp_is_refused_by_the_published_set() {
+        let gotrue = GoTrue::start().await;
+        let auth = supabase_auth_no_secret(&gotrue, &Clock::new());
+        gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+        let expired = es256::sign_with_kid_at(
+            es256::TEST_ONLY_ES256_KID,
+            &gotrue.issuer(),
+            ALICE,
+            claims(ALICE),
+            LONG_PAST,
+        );
+
+        assert!(auth.verify(&expired).await.is_err());
+        assert_eq!((gotrue.total(), gotrue.user_calls()), (0, 0));
+
+        // PREMISE: the same claims, unexpired, verify through the same set.
+        let live = es256::sign_with_kid(es256::TEST_ONLY_ES256_KID, &gotrue.issuer(), ALICE, claims(ALICE));
+        assert_eq!(auth.verify(&live).await.expect("a live token").user_id, ALICE);
+    }
+
+    #[tokio::test]
+    async fn an_expired_token_naming_its_session_is_refused_before_the_session_is_checked() {
+        let h = Harness::new().await;
+        let mut session = claims(ALICE);
+        session["session_id"] = json!("session-1");
+
+        // R194's session check asks the provider; an expired token never gets that far.
+        assert!(
+            h.auth
+                .verify(&sign_at(&h.gotrue, ALICE, session, LONG_PAST))
+                .await
+                .is_err()
+        );
+        assert_eq!(h.gotrue.user_calls(), 0);
     }
 }

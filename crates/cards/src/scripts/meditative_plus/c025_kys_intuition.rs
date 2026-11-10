@@ -80,6 +80,7 @@ mod tests {
         s
     }
 
+    // Differs from Scenario::offered: the open Discover's offered ids, not the seat's legal actions.
     fn offered(s: &Scenario) -> Vec<String> {
         let pending = s.state().pending.as_ref().expect("the Discover is open");
         pending.resume.data[CODE_OFFERS_KEY]

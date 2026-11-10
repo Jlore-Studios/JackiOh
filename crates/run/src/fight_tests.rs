@@ -379,6 +379,7 @@ fn b11_a_level_costs_its_embers_until_the_ladders_top_and_the_constants_are_the_
             starter_artifact_points: RUN_STARTER_ARTIFACT_POINTS,
             tier_points: RUN_TIER_POINTS.to_vec(),
             campfire_remove: RUN_CAMPFIRE_REMOVE,
+            presets: run_preset_decks(),
         }
     );
     let json = serde_json::to_value(&constants).unwrap();
@@ -389,9 +390,55 @@ fn b11_a_level_costs_its_embers_until_the_ladders_top_and_the_constants_are_the_
         "starterArtifactPoints",
         "tierPoints",
         "campfireRemove",
+        "presets",
     ] {
         assert!(json.get(key).is_some(), "{key}");
     }
+}
+
+#[test]
+fn b12_preset_decks_are_ten_unlocked_starters_that_fit_level_one() {
+    // B12: each of `RUN_PRESET_DECKS` holds 10 distinct cards of `RUN_STARTER_CARDS`, passes
+    // `run_check_setup` at level 1 with no extractions, and `run_constants()` returns them all.
+    use crate::config::RUN_PRESET_DECKS;
+    let content = catalog_content();
+    let expected: Vec<RunPresetDeck> = run_preset_decks();
+    assert_eq!(RUN_PRESET_DECKS.len(), expected.len());
+    for (entry, preset) in RUN_PRESET_DECKS.iter().zip(expected.iter()) {
+        let (id, name, theme, cards) = entry;
+        assert_eq!(&preset.id, id, "preset id");
+        assert_eq!(&preset.name, name, "preset name");
+        assert_eq!(&preset.theme, theme, "preset theme");
+        assert_eq!(preset.cards.len(), RUN_STARTER_SIZE, "preset {id}");
+        let held: Vec<String> = cards.iter().map(|card| (*card).to_string()).collect();
+        assert_eq!(preset.cards, held, "preset {id}");
+        let mut distinct = preset.cards.clone();
+        distinct.sort();
+        distinct.dedup();
+        assert_eq!(
+            distinct.len(),
+            RUN_STARTER_SIZE,
+            "preset {id} holds distinct cards"
+        );
+        for card in &preset.cards {
+            assert!(
+                RUN_STARTER_CARDS.contains(&card.as_str()),
+                "preset {id}: {card} is no starting card"
+            );
+        }
+        let setup = RunSetup {
+            seed: run_daily_seed("2026-11-01", 1),
+            starter: preset.cards.clone(),
+            artifacts: Vec::new(),
+            curses: Vec::new(),
+        };
+        assert_eq!(
+            run_check_setup(&setup, &RunUnlocks::default(), &content),
+            Ok(()),
+            "preset {id}"
+        );
+    }
+    assert_eq!(run_constants().presets, expected);
 }
 
 /// A fight's setup as the `createGame` options the caller builds from it.

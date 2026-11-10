@@ -533,7 +533,9 @@ defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (
 
 `scripts/github-releases.ts` prints every shipped version's GitHub release as JSON (`src/patches/github.ts`:
 the Patch notes page as Markdown, a pre-release while only staging has the version), which
-`.github/workflows/releases.yml` publishes. It needs no WebAssembly; to read the newest one's notes:
+`.github/workflows/releases.yml` publishes. It loads the WebAssembly module from `src/wasm/pkg` (a card's
+words are diffed by the face model, #3161), so run `sh scripts/build-wasm.sh` first, as the workflow does
+(#3601); `src/patches/github.test.ts` runs it in a process of its own. To read the newest one's notes:
 `pnpm --dir apps/web exec tsx scripts/github-releases.ts | jq -r '.releases[-1].body'`.
 
 The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `reduce` in the

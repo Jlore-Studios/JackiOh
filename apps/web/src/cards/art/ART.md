@@ -805,14 +805,56 @@ The parts the briefs named joined the kits: the figure kit's crouch (`pose-crouc
 outfits (`outfit-harlequin`, `outfit-travel-cloak`, `outfit-spider`) and six held items (`item-card-fan`,
 `item-cleaver`, `item-abacus`, `item-cookie`, `item-grapple`, `item-rake`), after the old ones of their kinds in
 `figureKit.ts`, and eighteen scenery parts in a module of their own, `sceneKitClassic.ts` (its props in
-`sceneKitClassicProps.ts`), spread into `SCENE_KIT` after Stinkyscape's, with only the Stinkyscape Alt art pass's
-module after it (above): the creatures (`tortoise`, `slime`, `shrimp`, `crawler`, `maw`, `skeleton`, `lizard`,
-`leaping-deer`, `mule`), the objects (`pickle`, `sceptre`, `spike-trap`, `tesla-coil`, `web`, `vat`, `chalice`), a
+`sceneKitClassicProps.ts`), spread into `SCENE_KIT` after Stinkyscape's, with only the Alt art passes' modules after
+it, Classic's (below) and then the Stinkyscape one's (above): the creatures (`tortoise`, `slime`, `shrimp`,
+`crawler`, `maw`, `skeleton`, `lizard`, `leaping-deer`, `mule`), the objects (`pickle`, `sceptre`, `spike-trap`,
+`tesla-coil`, `web`, `vat`, `chalice`), a
 `blast-crater`, and In Too Deep's `spiral-shaft`, none taking an old part's name (the deer and the crater beside
 R3397000's `deer` and `crater`, the cloak beside R3403000's `outfit-cloak`, above). Every Classic entry is off the
-short list, whose cap fell from 129 to 40; `classicScenes.test.ts` holds the recipes to all of it, and
-`classic-scenes.cy.tsx` shows every Epic, Legendary and Mythic scene at hand size, base and Radiant, and a contact
-sheet of the rest, at desktop size and at 390x844.
+short list, whose cap fell from 129 to 10 (Stinkyscape's first pass, #3391, had taken 30 off and left the cap at
+129); `classicScenes.test.ts` holds the recipes to all of it, and `classic-scenes.cy.tsx` shows every Epic,
+Legendary and Mythic scene at hand size, base and Radiant, and a contact sheet of the rest, at desktop size and at
+390x844.
+
+## Classic's Alt art restaged (R3388000)
+
+Each of the 50 Classic cards offered Alt art draws an alt recipe of its own, written from #3388's brief for it, under
+Classic+'s rules (above), but with both a new sky and a new camera, never one alone: the same subject and idea in
+another place, time or story moment, in Classic's family, read under the card's Alt art seed alone, one picture at
+every Alt art level. Corpse Plantation is one of them: its normal face keeps the proof scene, and its Alt art is the
+plantation at harvest noon. The recipes are three files in id order, spread into `ALT_SCENE_RECIPES` after the other
+sets': `classicAltRecipes1.ts` (#1 to #26, with `normalClassicLookOf` and `normalClassicExtraLookOf`, read from
+Classic's three recipe files so no import goes round), `classicAltRecipes2.ts` (#27 to #54) and
+`classicAltRecipes3.ts` (#55 to #90).
+
+- **The same subject.** A figure both pictures draw is the normal one's person (`normalClassicLookOf`; only its
+  cloth, headgear or held item may change); Felinor Feelings, Ancient Acquisition, Nature Titan, Common Resources and
+  Pile On keep their people, the extras at the same index (`normalClassicExtraLookOf`); a new person is a new extra
+  (Shadowstep's merchant, Anti-Greed Machine's treasure hunter, Corpse Plantation's farmhands, King Wagtoggle's
+  shepherd); and a subject that is a part stays in the subject layer. A close-up of hands or of an object draws no
+  figure: Book of Blood, Prep, Final Gambit and Plague Nuke draw open hands, Flame Lance the fiery tip through a
+  shield, and In Too Deep only the shaft's mouth, its adventurer gone down it.
+- **Camera and detail.** A head-and-shoulders close-up stands its figure at scale 1.6 to 1.9 low in the window (Boots
+  on the Ground's ground-level shot larger still), a wide view at 0.6 or less; the rarity's floor and the byte ceiling
+  on both faces, far, mid, subject and near layers from Epic up, all seven from Legendary up; and In Too Deep, the one
+  with full-art motion, marks its rope and packs `props`.
+
+A detail the kit lacks is drawn with a part it holds, named in the recipe's comment: cyan rays from the Palantir's orb
+for its beam, a reaching hand holding the InfiniScepter, lanes for Pickle's paths, a small void swirl for Exile's
+portal, a red road and white trees for Book of Blood's stream and birches, a black ghost figure for Shadowstep's
+shadow, violet flowers for lavender and crocuses, a mesa for Counterspell's sea stack, three steam curls for Lizard's
+Breath's wisps, a temple for the tribunal, coral-painted bushes and ferns for Turtinator's reef, a snowfield for Rapid
+Draw's roof, a cascade for the alpine stream, an awning for the umbrella, sparks for Joro's silk (he hangs upright: a
+figure cannot be turned), a space helmet for the diver's, a big crate for the auction block, the vat spilling for the
+lab's outflow, grey spores for ash, a cargo net for the fisher's net, a cot and a set-down helmet for Hired Shrimp's
+bunk, steam for breath, boards for the pier, ice shards for icicles, a boat for Living Bomb's barge and the riverboat
+shrine, a statue and a boulder for broken golems and the glow chute for the recycler's hopper, brimmed hats and rakes
+for straw hats and scythes, a sack for the souvenir, rows of whitewashed houses for Lockdown's city from above, and a
+brown thread tied to a post and duffels for In Too Deep's rope and packs. Two parts joined the kit in a module of
+their own, `sceneKitClassicAlt.ts`, spread into `SCENE_KIT` after Classic's own and before the Stinkyscape Alt art
+pass's: a frog (Transmutable Toxins) and a shark (Turtinator). `classicAltScenes.test.tsx` holds every recipe to the
+rules and every Alt art level's face to its picture and its Radiant marks, and `classic-alt-scenes.cy.tsx` measures
+each window against `ALT_PICTURE_CHANGE_MIN` and screenshots each normal face beside its Alt art face.
 
 ## The detail floor (R3331001)
 
@@ -821,9 +863,9 @@ elements it draws after its `<defs>` (`artElements`), and for a scene the layers
 Each rarity has a floor (`ART_DETAIL_MIN_<RARITY>`): Common 30 elements, Rare 40, Epic 60, Legendary 90 and
 Mythic 140, Legendary and Mythic in every layer; a token is held to Common's. The Glitch is not measured: its
 window draws no picture. The floor starts as a ratchet: `fixtures/art-detail-short.json`
-(`ART_DETAIL_SHORT`) names, sorted, the cards under their floor as #3331 left them, at most
-`ART_DETAIL_SHORT_MAX`, and the test fails on a card under its floor the list does not name and on a listed
-card that clears its floor, so a set's pass takes its cards off as it lifts them, the list only shrinks, and
-the last pass empties it. A ceiling keeps phones fast: no picture's data URI, base or Radiant, is longer than
-`ART_DETAIL_MAX_BYTES` (48 KiB), and the art cache (`ART_CACHE_MAX`) and the lazy drawing of faces scrolled
-past (`near.ts`) are unchanged.
+(`ART_DETAIL_SHORT`) names, sorted, the cards under their floor as #3331 left them, exactly
+`ART_DETAIL_SHORT_MAX` of them (a pass that takes cards off lowers the cap with them, #3613), and the test fails
+on a card under its floor the list does not name and on a listed card that clears its floor, so a set's pass takes
+its cards off as it lifts them, the list only shrinks, and the last pass empties it. A ceiling keeps phones fast:
+no picture's data URI, base or Radiant, is longer than `ART_DETAIL_MAX_BYTES` (48 KiB), and the art cache
+(`ART_CACHE_MAX`) and the lazy drawing of faces scrolled past (`near.ts`) are unchanged.
