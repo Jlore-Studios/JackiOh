@@ -18357,12 +18357,9 @@
     "what": "build #3549 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-10T21:56:49Z",
+    "at": "2026-11-10T22:06:04Z",
     "notes": [
-      "could not start build #3549 on claude-6: POST /repos/Jlore-Studios/JackiOh/actions/workflows/bot-night.yml/dispatches: HTTP 422: Cannot trigger a 'workflow_dispatch' on a disabled workflow",
-      "pruned 1 plan file(s) older than 7 days",
-      "#3662: closed, so `bot:merging` is off",
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
+      "could not start build #3549 on claude-7: POST /repos/Jlore-Studios/JackiOh/actions/workflows/bot-night.yml/dispatches: HTTP 422: Cannot trigger a 'workflow_dispatch' on a disabled workflow"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19068,7 +19065,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T21:56:49Z",
+  "loop_tick": "2026-11-10T22:06:04Z",
   "machine_disk": {
     "issue": null,
     "reading": {
