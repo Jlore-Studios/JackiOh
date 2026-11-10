@@ -535,6 +535,13 @@
     "1023": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42748640931",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "muse",
+        "since": "2026-11-10T03:33:42Z",
+        "until": "2026-11-10T04:03:42Z"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
