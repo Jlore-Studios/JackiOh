@@ -19648,9 +19648,12 @@
         "pr": 3621,
         "why": "Update bot/tests/test_ci_matrix.py on main to pin the sharded jobs: replace the single \"server api\" entry in JOBS with \"server api 1/4\" through \"server api 4/4\" in order, and fix the count arithmetic in test_a_count_splits_a_group_into_that_many_jobs for the new 19-job base. Once that lands on main, re-run this PR's CI; this branch needs no change."
       },
-      "asks": [],
+      "asks": [
+        "c:6763735587"
+      ],
       "died": 0,
       "difficulty": "medium",
+      "failures": 0,
       "feedback_since": "2026-11-10T03:41:52Z",
       "forced": false,
       "handoff": {
@@ -19664,14 +19667,19 @@
       },
       "interruptions": 0,
       "issue": 1023,
+      "kind": "revise",
       "live": "reviewing",
       "pending_request": false,
       "provider": "muse",
       "question": "Update bot/tests/test_ci_matrix.py on main to pin the sharded jobs: replace the single \"server api\" entry in JOBS with \"server api 1/4\" through \"server api 4/4\" in order, and fix the count arithmetic in test_a_count_splits_a_group_into_that_many_jobs for the new 19-job base. Once that lands on main, re-run this PR's CI; this branch needs no change.",
+      "queued_at": "2026-11-10T09:27:54Z",
+      "requested_by": "jgoetzmann",
       "run_id": "42759069124",
       "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
+      "source": "request",
       "started_at": "2026-11-10T04:57:24Z",
+      "stop_requested": false,
       "taken_asks": [],
       "votes": {
         "approvals": [],
