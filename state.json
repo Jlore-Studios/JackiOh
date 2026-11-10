@@ -19034,7 +19034,9 @@
     },
     "42900738645": {
       "at": "2026-11-10T21:14:23Z",
+      "done": true,
       "ref": "d69ddcbf-1794344376",
+      "status": "interrupted",
       "tries": 1
     }
   },
