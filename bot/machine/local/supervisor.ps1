@@ -227,7 +227,9 @@ function Get-QueuedLabels([string[]]$servable) {
   $seen = @{}
   $workflows = @($cfg.serve | Where-Object { $_.label -in $servable } | ForEach-Object { $_.workflows } | Select-Object -Unique)
   foreach ($wf in $workflows) {
-    foreach ($status in 'queued', 'in_progress') {
+    # GitHub can list a run as `pending` while its job is `queued` for a runner (a gather run behind
+    # its concurrency group did, 2026-11-09), so `pending` runs are read too.
+    foreach ($status in 'queued', 'pending', 'in_progress') {
       try {
         $runs = (GhJson @('api', "repos/$repo/actions/workflows/$wf/runs?status=$status&per_page=30")).workflow_runs
       } catch { continue }
