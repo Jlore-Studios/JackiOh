@@ -19048,11 +19048,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-10T03:12:16Z",
+        "at": "2026-11-10T04:22:11Z",
         "difficulty": "hard",
-        "provider": "claude-1",
+        "provider": "claude-3",
         "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #3464, a hard change"
+        "why": "Already rated hard, and a rating can't go lower. By the rule alone it would be medium: one web constant, one test assertion and five docs, about 7 files, no engine or AI code."
       },
       "failures": 0,
       "forced": false,
