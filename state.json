@@ -18330,6 +18330,110 @@
       "feedback_since": "2026-11-10T18:44:11Z",
       "issue": 3633,
       "kind": "revise",
+      "own_review": {
+        "from_run": "42878204329",
+        "gates": [
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "install",
+            "ok": true,
+            "pre_existing": false,
+            "run": "rustup toolchain install && pnpm install --frozen-lockfile",
+            "seconds": 0.4,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rustfmt",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo fmt --check",
+            "seconds": 6.5,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "catalog",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh catalog check",
+            "seconds": 0.1,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "patches",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh patches check",
+            "seconds": 1.5,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rulings",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh spec check",
+            "seconds": 3.0,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "clippy",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo clippy --workspace --all-targets -- -D warnings",
+            "seconds": 140.2,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "cargo tests",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts && test -z \"$(git status --porcelain -- apps/web/src/wire)\"",
+            "seconds": 1551.7,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "web tests",
+            "ok": true,
+            "pre_existing": false,
+            "run": "sh scripts/build-wasm.sh && pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'",
+            "seconds": 751.8,
+            "skipped": "",
+            "tail": ""
+          }
+        ],
+        "head": "a5db15c0b37d8650061d5bead22ed4dce7115d69",
+        "kind": "build",
+        "model": "opus",
+        "provider": "claude-8",
+        "round_tier": "strong",
+        "rounds_on": 3633,
+        "rounds_used": 0,
+        "since": "2026-11-10T20:18:31Z",
+        "source": "build",
+        "until": "2026-11-10T20:48:31Z"
+      },
+      "queued_at": "2026-11-10T20:18:31Z",
       "self_check_findings": [],
       "votes": {
         "approvals": [],
