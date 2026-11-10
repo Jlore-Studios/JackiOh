@@ -215,8 +215,8 @@ pnpm --dir e2e probe:frames -- --json  # the same report as one JSON object per 
 
 Baseline (main at `c704b537`, bot's shared machine, 2026-11-10; headless Chromium 156,
 software rendering): three `probe:frames` runs (run 3 with `-- --json`), worst attempt each —
-idle median 233.3 ms, p95 350.0 ms, dropped 100.0%, 1 long task, 54 running animations;
-combat median 283.3 ms, p95 566.7 ms, dropped 100.0%, 39 long tasks. Budgets are 5× those
+idle median 266.7 ms, p95 350.0 ms, dropped 100.0%, 1 long task, 54 running animations;
+combat median 466.7 ms, p95 566.7 ms, dropped 100.0%, 39 long tasks. Budgets are 5× those
 worst p95/task counts rounded up to two significant figures (idle p95 1800 ms, combat p95
 2900 ms; idle tasks 5, combat tasks 200). Per-run numbers live in the budget comments in
 `apps/web/src/perf/frameBudgets.ts`; the dropped share stays 100% because every frame
