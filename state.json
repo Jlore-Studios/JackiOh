@@ -17242,6 +17242,13 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3517; git log --oneline -1; ls /tmp/mplus-iter-lib-out 2>/dev/null; cat /tmp/finish2.log 2>/dev/null; wc -l /tmp/mplus-iter/mutants.out/*.txt 2>/dev/\u2026\n- tool error: Exit code 2 b050f7f5ca bot: build pass 1 for #3582 (#3614)\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3517; git diff --stat 442c884399 HEAD -- crates/cards/src/scripts/meditative_plus .cargo/mutants.toml scripts/mutants.sh crates/cards/src/lib.rs | ta\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3517/.bot-plan.md\", \"content\": \"## Goal\\n\\nThis PR audits the **Meditative+ set**, the area `cards-meditative_plus`: 33 scripts and 216 mutants. Every\u2026\n- tool error: <tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>\n- said: You've hit your 5-hour limit \u00b7 resets 8:50am (UTC)"
       },
+      "hold": {
+        "ends": "2026-11-10T10:30:02Z",
+        "owner": "claude-3",
+        "since": "2026-11-10T08:30:02Z",
+        "until": "2026-11-10T08:50:00Z",
+        "why": "it refused a call"
+      },
       "in_lane": true,
       "interruptions": 0,
       "kind": "build",
