@@ -266,3 +266,21 @@ describe("GitHub releases of the real history", () => {
     SCRIPT_MS,
   );
 });
+
+// The workflow runs only on main, production and by hand, so a pull request holds its text here.
+describe("the workflow that publishes them (.github/workflows/releases.yml)", () => {
+  const workflow = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../../../.github/workflows/releases.yml"), "utf8");
+
+  it("builds the WebAssembly module before the script loads it (#3601)", () => {
+    const build = workflow.indexOf("run: sh scripts/build-wasm.sh");
+    expect(build).toBeGreaterThan(-1);
+    expect(build).toBeLessThan(workflow.indexOf("exec tsx scripts/github-releases.ts"));
+    expect(workflow).not.toContain('rust: "false"');
+  });
+
+  it("hands a failed run to Squishy, and closes it when a run publishes (#3632)", () => {
+    expect(workflow).toContain('TITLE: "CI: GitHub releases failed"');
+    expect(workflow).toContain('--add-assignee "$SQUISHY_LOGIN" --add-label "$SQUISHY_QUEUE"');
+    expect(workflow).toContain("needs.publish.result == 'failure' || needs.publish.result == 'success'");
+  });
+});

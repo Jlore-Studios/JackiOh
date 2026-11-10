@@ -24,6 +24,10 @@
 # the script in a process of its own on each pull request that changes the web, so this cannot fail
 # only here again.
 #
+# Those 22 runs failed unseen, so a run whose `publish` fails now opens "CI: GitHub releases failed"
+# for Squishy (`report`, #3632), as promote-staging.yml's does, and the next run that publishes
+# closes it.
+#
 # Three ways in:
 #   push to main        patches.json (a ship or a retcon), technical.json (the technical log, whose
 #                       player lines a release carries), or what writes the releases
@@ -139,3 +143,59 @@ jobs:
             echo "Latest is $latest"
           fi
           echo "### releases: $created created, $edited edited, Latest ${latest:-none}" >> "$GITHUB_STEP_SUMMARY"
+
+  # A run that failed wrote no release, and nothing else says so: it goes to Squishy, as
+  # promote-staging.yml's report does, at `priority:medium` since nothing waits on a release. A later
+  # failure comments on the open issue, and a run that published closes it. It never checks out or
+  # runs code.
+  report:
+    name: report
+    needs: publish
+    if: ${{ !cancelled() && (needs.publish.result == 'failure' || needs.publish.result == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PUBLISH: ${{ needs.publish.result }}
+          TITLE: "CI: GitHub releases failed"
+          # Who fixes it: Squishy (.squishy/config.json's bot_login) and its queue label.
+          SQUISHY_LOGIN: squishy-squooby
+          SQUISHY_QUEUE: "squishy:build"
+        run: |
+          set -euo pipefail
+          open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$TITLE\"" \
+            --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          if [ "$PUBLISH" = success ]; then
+            if [ -n "$open" ]; then
+              gh issue close "$open" --repo "$REPO" --reason completed --comment "[This run]($RUN_URL) wrote every release."
+              echo "closed #$open"
+            fi
+            exit 0
+          fi
+          body=$(printf '%s\n' \
+            "[releases run]($RUN_URL) failed, so the GitHub releases were not written: a version shipped since has no release, and a release whose title, notes or pre-release flag moved kept the old ones (the failed step's log says why)." \
+            "" \
+            "Squishy: this is yours (\`priority:medium\`: nothing waits on a release, but none is written until it is fixed). Read the failed job's log, find the cause and fix it in a pull request on \`main\`. A failure outside your reach (\`.github/\`, a secret such as BOT_GITHUB_TOKEN, GitHub's settings) is a person's: say exactly what they must do. The next run that publishes closes this and writes whatever the failed runs left out." \
+            "" \
+            "---" \
+            "_Posted by \`.github/workflows/releases.yml\`._")
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$REPO" --body "$body"
+            echo "commented on #$open"
+            [ "$(gh issue view "$open" --repo "$REPO" --json assignees --jq '.assignees | length')" = 0 ] || exit 0
+            number=$open
+          else
+            url=$(gh issue create --repo "$REPO" --title "$TITLE" --body "$body")
+            echo "opened $url"
+            number=${url##*/}
+          fi
+          gh issue edit "$number" --repo "$REPO" --add-assignee "$SQUISHY_LOGIN" --add-label "$SQUISHY_QUEUE" \
+            --add-label "priority:medium" \
+            && echo "handed #$number to @$SQUISHY_LOGIN, medium priority" \
+            || echo "::warning::could not hand #$number to @$SQUISHY_LOGIN"

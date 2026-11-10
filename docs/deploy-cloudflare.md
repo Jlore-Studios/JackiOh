@@ -347,6 +347,9 @@ later, so Render would stop billing:
   ancestor of" means someone pushed to `staging` by hand: an admin resets it to a green commit of
   main with `git push --force origin <sha>:staging` (temporarily allowing force pushes in the
   `staging` ruleset; `terraform -chdir=infra apply` puts the rule back).
+- **GitHub releases stopped:** the issue "CI: GitHub releases failed" (`releases.yml`, #3632) names
+  the failed run. The next run that publishes writes every release the failed ones left out and
+  closes it; Actions -> releases -> Run workflow starts one by hand.
 - **A dev account (SPEC §14.10):** the `DEV_PROFILE_IDS` secret of that site's Worker, each
   developer's profile id comma-separated (from `/account`: "Manage sign-in & account", then "Show
   account secret ID"); then redeploy. A malformed id refuses the boot, and the Worker's logs name it.
