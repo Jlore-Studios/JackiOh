@@ -18421,17 +18421,9 @@
     "what": "build #3548 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T20:34:06Z",
+    "at": "2026-11-10T20:48:55Z",
     "notes": [
-      "delivered review #3664 on claude-8 (run 42894243346): approved",
-      "delivered review #3663 on muse (run 42892011178): approved",
-      "delivered plan #3548 on claude-3 (run 42889665960): planned",
-      "delivered revise #3591 on claude-4 (run 42878516524): built",
-      "started review #3591 on claude-4 (run 42897530147)",
-      "started build #3548 on muse (run 42897668944)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days",
-      "runner gate: started 2 of 5 waiting run(s) (run 42891581205 on bot/issue-3606, run 42891760908 on bot/issue-3583); 3 wait for room"
+      "runner gate: started 0 of 4 waiting run(s); 4 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19137,7 +19129,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T20:34:06Z",
+  "loop_tick": "2026-11-10T20:48:55Z",
   "machine_disk": {
     "issue": null,
     "reading": {
