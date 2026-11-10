@@ -972,6 +972,79 @@ fn r747000_bot_seat_applies_strength_skill() {
     }
 }
 
+/// R639000: only a bot that passes for a person answers a draw offer as a person does; one that shows
+/// as a bot keeps the plain decline (R188), whatever its roll would have answered.
+#[test]
+fn r639000_a_bot_that_shows_as_a_bot_declines_a_draw_offer_whatever_its_roll() {
+    let mut state = opened_at("seed-shown-draw", 1);
+    let person = state.active;
+    let bot = person.opponent();
+    state.players[bot].hero.health = 1;
+    let offered = reduce(
+        Pinned,
+        &state,
+        &Action::new(ActionBody::OfferDraw, person, "offer".to_string()),
+    );
+    assert!(offered.error.is_none(), "{:?}", offered.error);
+    let state = offered.state;
+    let seed = seed_where("shown-draw", |seed| {
+        let standing = standing(&state, bot, seed, bot);
+        accepts_draw(seed, bot, state.turn, &standing, &BOT_DRAW_ANSWER_FIT)
+    });
+    let job = job_at(&state, bot, &seed, false, AI_SKILL_MIN);
+    jackioh_cards::register_all();
+    let shown = decide(
+        &BotAsk {
+            state: &job.state,
+            seat: job.seat,
+            home: job.home,
+            seed: &job.seed,
+            strength: &job.strength,
+            hidden: false,
+            own_turn_start: job.own_turn_start,
+            ai_cursor: 0,
+        },
+        None,
+        None,
+    );
+    assert_eq!(
+        shown.body,
+        Some(ActionBody::AnswerDraw { accept: false }),
+        "{seed}"
+    );
+    assert_eq!(
+        play(job).body,
+        Some(ActionBody::AnswerDraw { accept: true }),
+        "{seed}"
+    );
+}
+
+/// R639000: the bot's choice says when its move is a lethal one, which its think time takes the shift
+/// on, and not when it is not.
+#[test]
+fn r639000_a_bots_choice_marks_a_lethal_move_lethal_and_no_other() {
+    let bot = PlayerId::P1;
+    // Its search never passes a lethal over (R1452), so a lethal is always played as one.
+    let sure = |state: &GameState| {
+        let job = job(state, bot, "lethal", false);
+        Job {
+            strength: BotStrength {
+                missed_lethal_chance: 0.0,
+                ..job.strength
+            },
+            ..job
+        }
+    };
+    // A Tempo Timmy 3/3 and a Mr. Vanilla 4/4 swing for 7 at a hero on 6, then at a full one.
+    let lethal = facing(
+        json!({ "field": ["core-011", "core-008"] }),
+        json!({ "health": 6 }),
+    );
+    assert!(play(sure(&lethal)).lethal, "7 at a hero on 6");
+    let plain = facing(json!({ "field": ["core-011", "core-008"] }), json!({}));
+    assert!(!play(sure(&plain)).lethal, "7 at a full hero");
+}
+
 #[test]
 fn r747000_a_random_bot_still_answers_a_draw_offer_by_its_own_roll() {
     let mut state = opened_at("seed-skill-draw", 1);
