@@ -11916,15 +11916,8 @@
       "verdict_rounds": 3
     },
     "3350": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42751360989",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-10T04:22:59Z",
-        "until": "2026-11-10T04:52:59Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -11936,10 +11929,9 @@
         "reason": "planned on opus",
         "trail": "build status\"}\n- Bash: {\"command\": \"cd apps/web/src && sed -n 80,95p collection/OwnedCards.tsx; grep -n \\\"tilt=\\\" -r --include=*.tsx . | grep -v test | head; grep -n \\\"export function useArtMotion\\\" -A 12 cards/cosmetics.t\u2026\n- Bash: {\"command\": \"cd cards/art && grep -n \\\"^export function artSpec\\\" -A 30 procedural.ts | head -50; grep -n \\\"export type ArtSpec\\\" -A 30 procedural.ts | grep -n \\\"ridges\\\\|rays\\\\|motes\\\\|motifGlyphs\\\\\u2026\n- Bash: {\"command\": \"tail -2 /tmp/scratch/wasm.log\", \"description\": \"Check wasm build status\"}\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-3350/.bot-plan.md <<'EOF'\\n\\n## Design details (run 2, decided)\\n- Types in `cards/art/dioramas/types.ts`: Diorama {id, slices}; DioramaSlice {na\u2026\n- Bash: {\"command\": \"grep -n \\\"data-art-live\\\\|data-art-response\\\\|data-depth\\\\|cf-art-layer\\\\|cf-art-subject\\\\|swell\\\\|scale:\\\" artLive.css | head -30\", \"description\": \"Survey artLive.css selectors\"}\n- Bash: {\"command\": \"tail -2 /tmp/scratch/wasm.log; sed -n 14,24p artLive.css\", \"description\": \"Check wasm and the layer class\"}\n- Bash: {\"command\": \"sed -n 1,30p convention.test.ts | head -30; grep -rn \\\"from \\\\\\\"\\\\.\\\\./constants\\\" *.ts | head -3; tail -2 /tmp/scratch/wasm.log\", \"description\": \"Check art convention test and constants\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3350/apps/web && timeout 300 pnpm exec vitest run src/zz_scratch_probe.test.ts 2>&1 | tail -5; cat /tmp/scratch/probe.txt | cut -c1-600\", \"descriptio\u2026\n- Bash: {\"command\": \"cd src && grep -rln \\\"layersOf\\\\|facePicture\\\\|wholePicture\\\" --include=*.ts --include=*.tsx . | wc -l; grep -rn \\\"layersOf(\\\" --include=*.ts --include=*.tsx . | grep -v \\\"test/artPictur\u2026\n- tool error: Exit code 2 11 ./cards/depth.test.tsx:229: const split = planes.map(({ plane, picture }) => ({ plane, picture, ...layersOf(picture.slice(picture.indexOf(\"<svg\"), picture.lastIndexOf(\"</svg>\") + 6)) }\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3350 && git status --porcelain | head; sed -n 195,260p apps/web/src/cards/depth.test.tsx\", \"description\": \"Confirm clean tree; read depth partition t\u2026\n- Bash: {\"command\": \"grep -n \\\"R3344000\\\\|R3345000\\\\|R3340000\\\" spec/1*.md spec/0*.md | cut -c1-300 | head; grep -n \\\"OVER_PLANES\\\\|^ tilt?\\\\|tiltAnchor?:\\\" apps/web/src/cards/CardFace.tsx | head\", \"descript\u2026\n- Bash: {\"command\": \"sed -n 107p spec/14-economy.md | grep -o \\\"R3344000[^.]*\\\\.[^.]*\\\\.\\\" | head -3; grep -c \\\"\\\" spec/10-engine-guide.md; grep -n \\\"depth planes\\\\|quasi\\\" spec/10-engine-guide.md spec/14-ec\u2026\n- Bash: {\"command\": \"sed -n 107p spec/14-economy.md | grep -o \\\"[^.]*R3344000[^.]*\\\\.\\\" | head -3\", \"description\": \"Extract the \\u00a714.2 sentence citing R3344000\"}\n- Bash: {\"command\": \"sed -n 40,75p apps/web/src/cards/fullscreen.test.tsx; grep -n \\\"planes\\\\|core-100\\\" apps/web/src/fx/takeover.test.ts | head -12\", \"description\": \"Read fullscreen plane test and takeover \u2026\n- Bash: {\"command\": \"grep \\\"^core-098\\\" /tmp/scratch/probe.txt | cut -d'|' -f6; grep \\\"^stinkyscape-154\\\" /tmp/scratch/probe.txt | cut -c1-200\", \"description\": \"Get Heroic Power's full part list\"}\n- Bash: {\"command\": \"cd apps/web/src/cards && grep -ln \\\"\\\\\\\"core-100\\\\\\\"\\\" art/coreAltRecipes*.ts; grep -n \\\"radiantMoving\\\\|function grantSlot\\\\|motionSlot\\\\|resetMotionSlots\\\" depth.test.tsx | head -5; se\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3350/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery Mythic (30) and every token printed Mythic (20, all pictures landed) gets a hand-composed **diorama**\u2026\n- Bash: {\"command\": \"wc -w -c /home/runner/work/_temp/work/item-3350/.bot-plan.md; grep -n \\\"^export const CENTER_ORIGIN\\\\|^import.*stinkyDraw\\\" /home/runner/work/_temp/work/item-3350/apps/web/src/cards/art/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3350/apps/web/src/cards/art && sed -n 1,35p stinkyscape.ts | grep -n \\\"import\\\"; grep -n \\\"^const BOX\\\\|BOX =\\\" stinkyscape.ts | head -3\", \"descripti\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3350 && python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\"`export type StinkyParts = { defs: Defs; sky\\\", \\\"`export type StinkyParts\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\"| `apps/web/src/cards/art/dioramas/types.ts` | new | `Diorama`, `DioramaSlice`, `DioramaBend`, `DioramaLoop` |\\\\n| `app\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3350/.bot-plan.md\", \"offset\": 1, \"limit\": 40}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\"| `apps/web/src/cards/art/dioramas/types.ts`, `pieces.ts`, `index.ts` | new | types; piece split; registry and slice pi\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3350/.bot-plan.md\", \"offset\": 48, \"limit\": 80}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\"(loop over `DIORAMA` ids, log `picturePieces(id, false).pieces.map(p => p.key)`); delete it.\\\",\\n \\\"logging `picturePie\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\"decode the still whole URI routed as `pictures.ts` `artPlaneUri` routes (stinky \\u2192 `stinkyscapeArtUri`, yard \\u2192\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\"- **Delivered art file:** none over one (`hasArtPlanes` false).\\\\n\\\", \\\"\\\"),\\n(\\\"- The component spec takes ~600 screen\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3350/.bot-plan.md\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[(\\\"for each of the 50 ids); delete it.\\\",\\\"for each of the 50 ids; delete it.\\\"),\\n(\\\"pictures are \\u224848.2 KB of the 48 KiB\u2026\n- said: ## Goal The 30 Mythics and 20 printed-Mythic tokens each get a **diorama**. All of those tokens' pictures have landed. Each diorama is one file per card in `apps/web/src/cards/art/dioramas/<set>/`, holding 5\u20138 slices cut from the painter's still picture (base and Radiant). The slices stand at depth\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-10T03:44:15Z",
       "owner_why": "handed off from `claude-8`: `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-10T08:00:00Z; it can start again only in 3h 15m, more than the 120 minutes an item waits for its owner",
@@ -11952,9 +11944,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-07T00:01:03Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42751360989",
+      "run_id": "pending:2ebf6b4f-1794284681",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-10T03:44:15Z",
+      "started_at": "2026-11-10T04:25:15Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -19267,9 +19259,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T03:56:57Z",
+    "at": "2026-11-10T04:25:15Z",
     "url": "",
-    "what": "plan #3514 on claude-1"
+    "what": "build #3350 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-10T03:52:56Z",
