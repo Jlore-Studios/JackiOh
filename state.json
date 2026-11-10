@@ -37161,11 +37161,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": null,
-    "last_run": "2026-11-10T17:04:05Z",
-    "provider": "claude-7",
+    "idle_since": "2026-11-10T15:27:05Z",
+    "last_run": "2026-11-09T16:51:43Z",
+    "provider": null,
     "requested": false,
-    "run_id": "42861071882",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": null,
