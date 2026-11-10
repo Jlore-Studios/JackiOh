@@ -541,10 +541,17 @@
   "items": {
     "1023": {
       "action": "build",
+      "archived": {
+        "at": "2026-11-10T05:54:42Z",
+        "branch": "bot/issue-1023",
+        "head": "9d86aebd7aeaaa342c8cc32414bfad001cf3b4ef",
+        "issue": 1023,
+        "item": 3621,
+        "pr": 3621,
+        "why": "Update bot/tests/test_ci_matrix.py on main to pin the sharded jobs: replace the single \"server api\" entry in JOBS with \"server api 1/4\" through \"server api 4/4\" in order, and fix the count arithmetic in test_a_count_splits_a_group_into_that_many_jobs for the new 19-job base. Once that lands on main, re-run this PR's CI; this branch needs no change."
+      },
       "asks": [],
       "died": 0,
-      "failures": 0,
-      "forced": false,
       "handoff": {
         "at": "2026-11-10T04:53:36Z",
         "family": "muse",
@@ -555,15 +562,11 @@
         "trail": "- `cargo check -p jackioh-server` is green. The new route tests are still compiling and running; I'll report once they land.Tests still compiling after ~10 minutes \u2014 the server test binary is large and the earlier `cargo check` took 9 minutes itself. The run_route re-read confirmed the logic (Ingest \u2026\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the training lanes send their game records to the server's API, not straight to Postgres\"} -->\n- This build adds the write-only `POST /api/stats/dev-records` route behind its own token and switches the training lanes from `DATABASE_URL` + `cargo run -p jackioh-server` to posting records with `curl`, recording the decision as ruling R1023000.\n- What changed:\n- - Server: new `AuthLevel::Ingest` and `POST /api/stats/dev-records` (`crates/server/src/api/http.rs`, `app.rs`). The handler (`api/stats.rs`) calls `import_dev_records` unchanged, so R378's refusals hold exactly. New optional `STATS_INGEST_TOKEN` (`env.rs`, redacted in `Debug`, listed in `SERVER_ON\u2026\n- - Lanes: `training/loop.sh` gains `post_records` (splits each file with `split -C 900000`, posts pieces with `curl --fail --data-binary` + bearer header) and `import_records` now posts finished days; the gather lane also posts each batch right after appending it. No `DATABASE_URL`, no `jackioh-serv\u2026\n- - Docs: `training/README.md`, `training/gather.md`, `crates/server/README.md` (env row, route row, both body caps), `docs/deploy-cloudflare.md` (staging secret + fresh production token).\n- - Spec: `spec/rulings/R1023000.md`, `spec/pending/1023.md`, \u00a79.11 Sources names both entries. `stats-import` stays untouched.\n- How tested (commands I ran, what they printed):\n- - `cargo test -p jackioh-server --test server api::stats::r1023000` \u2014 8 passed, 0 failed (404 unset; 401 missing/wrong/user token; 400 live-source and bad-id with nothing written; `{read:3,written:3,skipped:0}` then `{read:3,written:0,skipped:3}`; over-cap 400 \"too large\"; dev games count on `?sour\u2026\n- - `cargo test -p jackioh-server --test server api::stats` \u2014 54 passed, 0 failed.\n- - `cargo test -p jackioh-server` \u2014 100 + 6 + 2 + 1658 + 691 passed, 0 failed (2 ignored are the pre-existing `daily:` marks).\n- - `cargo clippy -p jackioh-server --all-targets -- -D warnings` \u2014 clean. `cargo fmt --check` \u2014 clean. `sh -n training/loop.sh` \u2014 passes.\n- - `cargo jackioh spec check` \u2014 \"1888 rulings, 4895 proofs, 61337 citations in 3985 files, 25086 links: ok\".\n- Decisions the issue did not settle (alternative rejected):\n- - `parse_stats_ingest_token` duplicates the issues-token parser's body under its own name (rejected: reusing a github-named parser for another variable).\n- - `gather` posts the fresh batch only when both variables are set (rejected: the plan's bare call, which would log a curl failure every cycle on an unconfigured lane).\n- - Step 6 mints a fresh production token instead of copying staging's (rejected: shared secret couples revocation).\n- - README body-cap sentence uses 131,072 bytes \u2014 the code sets `API_MAX_BODY_BYTES = PLAYER_STATS_BYTES_MAX`, not the issue's stale 64 KiB.\n- Reviewer, look twice at: the held-401-then-counted ordering in `run_route` (mirrors the bad-user-token path so floods still burn address budget); the 404-before-limiter for the unset token (matches unknown-path behavior exactly); `curl` posts the token only in a header with stdout discarded, never \u2026\n- Gaps: `shellcheck` is not installed on this box, so `loop.sh` has `sh -n` only \u2014 it uses POSIX constructs alone (no `local`, no bashisms). People's part after merge (token generation, Render/Cloudflare secrets, box drop-ins, service restart) is not in this build, as the issue says.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-1023 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-1023/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "interruptions": 0,
-      "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "muse",
-      "owner_since": "2026-11-10T03:19:01Z",
-      "owner_why": "it plans it",
+      "owner": "",
       "pending_at": "2026-11-10T03:31:19Z",
       "pending_by": "jgoetzmann",
-      "pending_request": false,
       "planned_at": "2026-11-10T03:33:35Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
@@ -572,13 +575,10 @@
       "pr": 3621,
       "provider": "muse",
       "question": "",
-      "round_tier": "medium",
       "run_id": "42751113069",
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-10T03:41:52Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 0
+      "taken_asks": []
     },
     "2701": {
       "action": "build",
@@ -19426,9 +19426,16 @@
     },
     "3621": {
       "action": "review",
+      "archived": {
+        "at": "2026-11-10T05:54:42Z",
+        "branch": "bot/issue-1023",
+        "head": "9d86aebd7aeaaa342c8cc32414bfad001cf3b4ef",
+        "issue": 1023,
+        "pr": 3621,
+        "why": "Update bot/tests/test_ci_matrix.py on main to pin the sharded jobs: replace the single \"server api\" entry in JOBS with \"server api 1/4\" through \"server api 4/4\" in order, and fix the count arithmetic in test_a_count_splits_a_group_into_that_many_jobs for the new 19-job base. Once that lands on main, re-run this PR's CI; this branch needs no change."
+      },
       "asks": [],
       "difficulty": "medium",
-      "failures": 0,
       "feedback_since": "2026-11-10T03:41:52Z",
       "handoff": {
         "at": "2026-11-10T04:53:36Z",
@@ -19440,16 +19447,13 @@
         "trail": "- `cargo check -p jackioh-server` is green. The new route tests are still compiling and running; I'll report once they land.Tests still compiling after ~10 minutes \u2014 the server test binary is large and the earlier `cargo check` took 9 minutes itself. The run_route re-read confirmed the logic (Ingest \u2026\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the training lanes send their game records to the server's API, not straight to Postgres\"} -->\n- This build adds the write-only `POST /api/stats/dev-records` route behind its own token and switches the training lanes from `DATABASE_URL` + `cargo run -p jackioh-server` to posting records with `curl`, recording the decision as ruling R1023000.\n- What changed:\n- - Server: new `AuthLevel::Ingest` and `POST /api/stats/dev-records` (`crates/server/src/api/http.rs`, `app.rs`). The handler (`api/stats.rs`) calls `import_dev_records` unchanged, so R378's refusals hold exactly. New optional `STATS_INGEST_TOKEN` (`env.rs`, redacted in `Debug`, listed in `SERVER_ON\u2026\n- - Lanes: `training/loop.sh` gains `post_records` (splits each file with `split -C 900000`, posts pieces with `curl --fail --data-binary` + bearer header) and `import_records` now posts finished days; the gather lane also posts each batch right after appending it. No `DATABASE_URL`, no `jackioh-serv\u2026\n- - Docs: `training/README.md`, `training/gather.md`, `crates/server/README.md` (env row, route row, both body caps), `docs/deploy-cloudflare.md` (staging secret + fresh production token).\n- - Spec: `spec/rulings/R1023000.md`, `spec/pending/1023.md`, \u00a79.11 Sources names both entries. `stats-import` stays untouched.\n- How tested (commands I ran, what they printed):\n- - `cargo test -p jackioh-server --test server api::stats::r1023000` \u2014 8 passed, 0 failed (404 unset; 401 missing/wrong/user token; 400 live-source and bad-id with nothing written; `{read:3,written:3,skipped:0}` then `{read:3,written:0,skipped:3}`; over-cap 400 \"too large\"; dev games count on `?sour\u2026\n- - `cargo test -p jackioh-server --test server api::stats` \u2014 54 passed, 0 failed.\n- - `cargo test -p jackioh-server` \u2014 100 + 6 + 2 + 1658 + 691 passed, 0 failed (2 ignored are the pre-existing `daily:` marks).\n- - `cargo clippy -p jackioh-server --all-targets -- -D warnings` \u2014 clean. `cargo fmt --check` \u2014 clean. `sh -n training/loop.sh` \u2014 passes.\n- - `cargo jackioh spec check` \u2014 \"1888 rulings, 4895 proofs, 61337 citations in 3985 files, 25086 links: ok\".\n- Decisions the issue did not settle (alternative rejected):\n- - `parse_stats_ingest_token` duplicates the issues-token parser's body under its own name (rejected: reusing a github-named parser for another variable).\n- - `gather` posts the fresh batch only when both variables are set (rejected: the plan's bare call, which would log a curl failure every cycle on an unconfigured lane).\n- - Step 6 mints a fresh production token instead of copying staging's (rejected: shared secret couples revocation).\n- - README body-cap sentence uses 131,072 bytes \u2014 the code sets `API_MAX_BODY_BYTES = PLAYER_STATS_BYTES_MAX`, not the issue's stale 64 KiB.\n- Reviewer, look twice at: the held-401-then-counted ordering in `run_route` (mirrors the bad-user-token path so floods still burn address budget); the 404-before-limiter for the unset token (matches unknown-path behavior exactly); `curl` posts the token only in a header with stdout discarded, never \u2026\n- Gaps: `shellcheck` is not installed on this box, so `loop.sh` has `sh -n` only \u2014 it uses POSIX constructs alone (no `local`, no bashisms). People's part after merge (token generation, Render/Cloudflare secrets, box drop-ins, service restart) is not in this build, as the issue says.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-1023 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-1023/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 1023,
-      "kind": "review",
       "live": "reviewing",
-      "pending_request": false,
       "provider": "muse",
-      "queued_at": "2026-11-10T04:54:26Z",
+      "question": "Update bot/tests/test_ci_matrix.py on main to pin the sharded jobs: replace the single \"server api\" entry in JOBS with \"server api 1/4\" through \"server api 4/4\" in order, and fix the count arithmetic in test_a_count_splits_a_group_into_that_many_jobs for the new 19-job base. Once that lands on main, re-run this PR's CI; this branch needs no change.",
       "run_id": "42759069124",
       "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
       "started_at": "2026-11-10T04:57:24Z",
-      "stop_requested": false,
       "taken_asks": [],
       "votes": {
         "approvals": [],
