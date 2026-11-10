@@ -18094,16 +18094,15 @@
     "what": "plan #3658 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T18:40:56Z",
+    "at": "2026-11-10T18:54:54Z",
     "notes": [
-      "delivered revise #3641 on claude-1 (run 42867395922): approved",
-      "started build #3633 on claude-8 (run 42878204329)",
-      "started revise #3645 on claude-6 (run 42878350979)",
-      "started revise #3591 on claude-4 (run 42878516524)",
-      "started review #3644 on claude-8 (run 42878659477)",
+      "#3623: green and waiting for a person to merge it, so `muse` gives up its claim on it",
+      "delivered review #3644 on claude-8 (run 42878659477): reviewed",
+      "started plan #3658 on muse (run 42880428699)",
       "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days",
-      "runner gate: started 1 of 4 waiting run(s) (queue build 42877555538); 3 wait for room"
+      "pruned 5 plan file(s) older than 7 days",
+      "#3658: typed it Task",
+      "runner gate: started 0 of 4 waiting run(s); 4 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18809,7 +18808,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T18:40:56Z",
+  "loop_tick": "2026-11-10T18:54:54Z",
   "machine_disk": {
     "issue": null,
     "reading": {
