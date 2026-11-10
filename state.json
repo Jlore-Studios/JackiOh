@@ -18138,7 +18138,16 @@
       "feedback_since": "2026-11-10T19:13:38Z",
       "issue": 3658,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "f4d4a655f84af1d0c26f6737b4eb79c0f293e0b2",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
