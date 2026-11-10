@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import { entryOf, expectPassTable, playMotif, playMotifs, setCards } from "../../test/setPass.ts";
 import { CATALOG } from "../../wire/cards.ts";
+import { entryAura } from "./tables.ts";
 import { FX_SET_PASS_FLOOR } from "../constants.ts";
 import { isDrawnMotif } from "../motifs/names.ts";
 import rawTable from "./core.md?raw";
@@ -31,7 +32,8 @@ describe("R2784000 #2793 Core's card animation pass", () => {
       const entry = entryOf(id);
       const plays = entry.kind === "bespoke" || entry.kind === "setPiece" || (entry.kind === "hooks" && entry.hooks.cast !== undefined);
       expect(plays, `${id} (${String(type)})`).toBe(true);
-      if (type === "Field Spell") expect(entry.kind === "hooks" ? entry.aura : undefined, id).toBeDefined();
+      // R3402000: a `{ bespoke }` entry may wear it too (Combo-Index's, Heroic Power's).
+      if (type === "Field Spell") expect(entryAura(entry), id).toBeDefined();
     }
   });
 

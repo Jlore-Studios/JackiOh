@@ -345,6 +345,27 @@ describe("B25 events the runner never started are flushed once, condensed, by on
     expect(sent(sink)).toEqual(["sfx:impact@0", "sfx:victory@0"]);
   });
 
+  it("R3497000 a flushed burst ending with the seat's turn start still sends the turn-start cue", () => {
+    const { sink, director } = rig();
+    // More distinct sounds than FLUSH_MAX_SFX, then the viewer's turn begins: a hidden tab drains
+    // the whole burst and the runner goes idle with nothing started.
+    begin(director, [
+      damage(2),
+      healed(1),
+      drawn("c1"),
+      buffed("u1"),
+      locked(2),
+      burned("c9"),
+      { type: "turnStarted", player: "p1", turn: 4 },
+    ]);
+    director.onIdle();
+
+    const sfxIds = sfxSent(sink).map((s) => s.id);
+    expect(sfxIds).toEqual(["impact", "heal", "draw", "buff", "lock", "turnStart"]);
+    expect(sfxSent(sink).find((s) => s.id === "turnStart")?.params).toEqual({ mine: true });
+    expect(director.owedCount()).toBe(0);
+  });
+
   it("B25 events skipped ahead of the entry the runner starts are flushed first, then that entry plays", () => {
     const { sink, director } = rig();
     const view = begin(director, [damage(2), drawn("c1"), healed(3)]);

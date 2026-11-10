@@ -523,9 +523,29 @@ func TestFullsend_MuseBuildsAHardPartFromItsPlanAndLandsIt(t *testing.T) {
 	assertEqual(t, dig(t, planned, "seats", "plan", "tier"), "medium")
 }
 
+// With no Muse, a Claude account builds the hard part from its Opus plan on its Sonnet seat (2026-11-09):
+// the part is built blind and lands on the tree's branch as any other, and the tree's reconcile, on
+// Opus, is the first to check it.
+func TestFullsend_AClaudeAccountBuildsAHardPartOnSonnetFromItsPlanAndLandsIt(t *testing.T) {
+	world := fullsendAdoptWorld(t)
+	fullsendAdopt(world)
+	fakes.Git(world.origin, "branch", fullsendTrackerOnto, "main") // what the adoption made on GitHub
+	planned := world.claim()
+	assertEqual(t, []any{planned.Get("number"), planned.Get("onto")}, []any{fullsendPlanned, fullsendTrackerOnto})
+	assertEqual(t, []any{dig(t, planned, "seats", "build", "model"), dig(t, planned, "seats", "build", "tier")},
+		[]any{"sonnet", "medium"})
+	assertEqual(t, dig(t, planned, "seats", "plan"), nil) // built from the strong plan on record
+	result := world.deliver(planned, world.work(planned, fullsendBuilds(map[string]string{"src/batch1.txt": "one\n"})))
+	assertEqual(t, result.Get("status"), "part")
+	assertTrue(t, world.has(fullsendTrackerOnto, "src/batch1.txt"))
+	assertFalse(t, world.has("main", "src/batch1.txt"))
+}
+
 // ---------------------------------------------------------------------------- PartBuilderTests
 
-func TestFullsend_APartGoesToTheMediumSubscriptionsFirstAndNeverToSonnetAtHard(t *testing.T) {
+// A hard part built from its plan goes to the medium subscriptions first (Muse), then to a Claude
+// account's Sonnet seat, no longer to its Opus one (2026-11-09); the item itself is still Opus alone.
+func TestFullsend_APartGoesToTheMediumSubscriptionsFirstThenToSonnetNeverOpusAtHard(t *testing.T) {
 	pool := testsupport.MakeConfig(testsupport.Config{Machine: []string{"muse", "lite"}}).Pool
 	claude, muse, lite := pool.Get("claude-3"), pool.Get("muse"), pool.Get("lite")
 	who := func(offered []*providers.Provider, difficulty string, part bool) []any {
@@ -539,10 +559,29 @@ func TestFullsend_APartGoesToTheMediumSubscriptionsFirstAndNeverToSonnetAtHard(t
 	assertEqual(t, who(p(claude, muse), "hard", false), []any{[]any{"claude-3", "strong"}, ""})
 	assertEqual(t, who(p(claude, muse), "hard", true), []any{[]any{"muse", "medium"},
 		"a fullsend part, built on medium from its plan: its tree's reconcile checks and reviews it"})
-	assertEqual(t, who(p(claude), "hard", true), []any{[]any{"claude-3", "strong"}, ""})
+	assertEqual(t, who(p(claude), "hard", true), []any{[]any{"claude-3", "medium"},
+		"a fullsend part, built on medium from its plan: its tree's reconcile checks and reviews it"})
 	assertEqual(t, who(p(claude, muse), "medium", false)[0], []any{"muse", "medium"})
 	assertEqual(t, who(p(claude, muse), "medium", true), []any{[]any{"muse", "medium"}, ""})
 	assertEqual(t, who(p(lite), "hard", true), []any{nil, ""}) // never under PART_FLOOR
+}
+
+// A part the reconcile sent back goes to the subscription that built it, on its seat at the item's
+// own floor when it has one: a Claude account rebuilds a hard part on Opus, not on the Sonnet that
+// was sent back, and Muse, with no strong seat, rebuilds what Muse built on its part seat.
+func TestFullsend_ASentBackHardPartGoesToOpusOnAClaudeAccountAndToMuseOnMuse(t *testing.T) {
+	pool := testsupport.MakeConfig(testsupport.Config{Machine: []string{"muse"}}).Pool
+	claude, muse := pool.Get("claude-3"), pool.Get("muse")
+	who := func(p *providers.Provider, difficulty string) []any {
+		seat, _ := plan.SentBackSeat(pool, []*providers.Provider{p}, difficulty, true, nil)
+		if seat == nil {
+			return []any{nil}
+		}
+		return []any{seat.Provider.ID, seat.Model, seat.Tier}
+	}
+	assertEqual(t, who(claude, "hard"), []any{"claude-3", "opus", "strong"})
+	assertEqual(t, who(muse, "hard"), []any{"muse", "muse-spark-1.3-contributor", "medium"})
+	assertEqual(t, who(claude, "medium"), []any{"claude-3", "sonnet", "medium"})
 }
 
 // ---------------------------------------------------------------------------- ReconcileTests

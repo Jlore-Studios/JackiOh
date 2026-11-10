@@ -167,12 +167,16 @@ export type FxFogCue = {
  * Mythics' twelve, from "ascent" to "fortress", each with art of its own. R3399002: Classic+'s four Mythics'
  * looks, "zealot", "portal", "stair" and "vineyard", each draw a picture of their own (takeoverArt.ts).
  * R3395001: Stinkyscape's "vault", "rod", "wire", "whiteDwarf" and "forge" have art of their own too.
+ * R3402000: Core's Heroic Power's "rotunda" and Craft a Card's "crystalForge" join them, and My Pawn's
+ * "pawn" and Zephrys's "genie" draw a drawing of their own too.
  */
 export type TakeoverLook =
   | "prismatic"
   | "void"
   | "pawn"
   | "genie"
+  | "rotunda"
+  | "crystalForge"
   | "ai" | "abyss" | "freshJack" | "ikwzki" | "shockwave" | "alteran" | "edge" | "redNarcor" | "summit"
   | "canvas"
   | "napkin"

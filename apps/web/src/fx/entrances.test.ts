@@ -1,7 +1,8 @@
 // R670: the bespoke entrances of the marquee Legendary and Mythic Units (entrances.ts), planned the
 // way FxLayer plans them. A card whose entry is a set piece lands with its set piece's entrance (R2800000).
-// R3389001: a Field Spell's own entrance (Classic's signatures') lands face up in the backrow, which
-// fx/cards/classic/signatures.test.ts plays card by card. R3405000: here every signature Field Spell's
+// R3389001: a Field Spell's own entrance (Classic's signatures', and R3402000's Combo-Index's and Heroic
+// Power's) lands face up in the backrow, which fx/cards/classic/signatures.test.ts, cardFx.test.ts and
+// fx/cards/core/signatures.test.ts play card by card. R3405000: here every signature Field Spell's
 // entrance plays as it lands face up in its backrow zone, never as it is set face down, and Meditative's
 // Mythics' entrances start after their entry's hold (`leadMs`).
 
@@ -124,7 +125,8 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
   });
 
   it("R670 a plain Legendary still gets the rarity entrance", () => {
-    const cues = planAll([summoned("p1", "m1", "core-052")]);
+    // Classic+ #13 Mommy Barker, a Legendary Unit with no entrance of its own (Core's and Classic's have theirs).
+    const cues = planAll([summoned("p1", "m1", "classicplus-013")]);
     expect(cues.some((cue) => cue.kind === "rays" && cue.tone === "legendary")).toBe(true);
     expect(cues.some((cue) => cue.kind === "burst" && cue.preset === "gold" && cue.spread === "area")).toBe(true);
   });
@@ -209,10 +211,13 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
   });
 
   it("R3405000 a Mythic entrance starts after its entry's hold", () => {
-    // Meditative's Mythics' entrances read their lead (R3405001); the older ones never needed to.
-    const mythics = ENTERING.filter(([defId]) => defId.startsWith("meditative-") && (CATALOG[defId]?.printedRarity ?? CATALOG[defId]?.rarity) === "Mythic");
+    // Meditative's Mythics' entrances read their lead (R3405001), and Core's Heroic Power's (R3402001); the older
+    // ones never needed to.
+    const mythics = ENTERING.filter(
+      ([defId]) => (defId.startsWith("meditative-") || defId === "core-098") && (CATALOG[defId]?.printedRarity ?? CATALOG[defId]?.rarity) === "Mythic",
+    );
     expect(mythics.map(([defId]) => defId).sort()).toEqual(
-      ["meditative-039-5", "meditative-049", "meditative-049-1", "meditative-049-2", "meditative-049-3", "meditative-071", "meditative-071-1", "meditative-097-9"].sort(),
+      ["core-098", "meditative-039-5", "meditative-049", "meditative-049-1", "meditative-049-2", "meditative-049-3", "meditative-071", "meditative-071-1", "meditative-097-9"].sort(),
     );
     const hold = 1000;
     const D = hold + ANIMATIONS.summoned.durationMs;

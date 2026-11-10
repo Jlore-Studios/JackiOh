@@ -8,7 +8,8 @@
 // (#725, #2748): one approval from a medium or strong model for a medium item, one strong model's
 // (Opus) for a hard item. The approval may come from any subscription, the builder's own included
 // (the owner's decision of 2026-11-02): the run's own adversarial reviewer, a fresh session on
-// the builder's lane (on a Claude account, Opus on the same account for a hard item), ships the
+// the builder's lane (on a Claude account, Opus on the same account, for a medium item Sonnet built as
+// for a hard one), ships the
 // commit it approves, so an item normally ships at the end of its own build or revision run. Only
 // when those rounds end without an approval does a review run audit it, on another subscription
 // of the item's tier when one is free and on its own when none is (`plan.ReviewSeat`). Approvals

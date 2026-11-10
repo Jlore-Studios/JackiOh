@@ -4,6 +4,8 @@
 // R3332000: an entrance is an entry's `entrance`, beside any entry of a Unit or a Field Spell, or alone.
 // R3400001: Bob's "snowplowHeave", Tutorial Master's "chalkboardLesson" and the Training-Grounds Golem's "golemLashing".
 // R3389001: Classic's signatures' six new entrances, their shakes and the beats they time (rule 9).
+// R3402001: Core's three signature entrances, Silly Silas's spotlight, Combo-Index's stadium and Heroic
+// Power's pedestal, join them.
 // R3405000: an entrance reads its entry's lead (`leadMs`, a Mythic's takeover hold) and starts after it;
 // R3405001: Meditative's signature Units' and Field Spells' entrances, and each recipe's gallery fixture.
 // R3395000: Stinkyscape 001 to 090's signature Units' and Field Spells' (fx/cards/stinkyscape/).
@@ -128,6 +130,10 @@ export const ENTRANCE_TRAUMA = {
   templeStack: FX_LEGENDARY_TRAUMA,
   vineSwing: FX_LEGENDARY_TRAUMA,
   obeliskRise: FX_LEGENDARY_TRAUMA,
+  // R3402001: Core's signature Unit's and Field Spells' entrances, inside SIGNATURE_PERMANENT_MAX_TRAUMA.
+  silasSpotlight: 0.6,
+  comboStadium: 0.5,
+  heroicPedestal: FX_LEGENDARY_TRAUMA,
   // R3407000: Stinkyscape part two's (fx/cards/stinkyscape/), each within SIGNATURE_PERMANENT_MAX_TRAUMA.
   melchiorBoot: 0.3,
   balthasarLamp: 0.2,

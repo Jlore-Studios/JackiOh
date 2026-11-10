@@ -175,7 +175,7 @@ func cannotTake(pool *providers.Pool, provider *providers.Provider, c *queue.Can
 	if c.Kind == "revise" && rankOr(c.AuditTier, -1) > rankOr(floor, -1) {
 		floor = c.AuditTier
 	}
-	if c.Kind == "build" && c.Part && queue.PlanMeets(c) && pool.BestSeat(provider, floor) == nil {
+	if c.Kind == "build" && c.Part && queue.PlanMeets(c) {
 		floor = config.PartFloor // a part's builder may be a tier under it (`BuilderSeat`)
 	}
 	switch {

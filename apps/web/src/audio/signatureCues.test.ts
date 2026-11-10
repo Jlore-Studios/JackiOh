@@ -3,43 +3,165 @@
 // unit zone; R3405000: The Cane, which Pareto Optimality puts onto the field without a play, as it lands face
 // up in the backrow. A hidden play, a face-down set and every other card sound nothing more (R203), and
 // `cuesFor` appends it after the event's row.
+// R3402001: Core's ten Legendaries and Mythics each sound a signature of their own, once, on the event that
+// is the card's first beat (a Trap's firing, a Unit's landing, every other card's play), each sound within the
+// card's signature ceiling (fx/constants.ts), and none for a card the viewer cannot read (R203), a face-down
+// set or another card.
 // R3407001: Stinkyscape's 23 signature cards join them, a Field Spell sounding as it lands face up in the
 // backrow, each with a recipe of its own.
 // R3395000: Stinkyscape 001 to 090's 24 signatures join them on the same terms, its three Field Spells
 // sounding as they land face up in the backrow.
 
-import type { GameEvent } from "@jackioh/shared";
+import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
-import { baseView } from "../test/fixtures.ts";
 import { CATALOG } from "../wire/cards.ts";
+import { SIGNATURE_LEGENDARY_MAX_MS, SIGNATURE_MYTHIC_MAX_MS, SIGNATURE_SPELL_SHARE } from "../fx/constants.ts";
+import { lookupFromDefs } from "../game/catalog.ts";
+import { baseView, emptySide } from "../test/fixtures.ts";
 import { HIDDEN_DEF_ID } from "./constants.ts";
 import { cuesFor, type CueContext } from "./cues.ts";
-import { SFX } from "./sfx.ts";
+import { SFX, SFX_IDS } from "./sfx.ts";
 import { SIGNATURE_SFX, signatureCues } from "./signatureCues.ts";
 import { FakeAudio } from "./test/fakeAudio.ts";
 import type { SfxId, SoundCue } from "./types.ts";
+import { cueCard } from "./useGameAudio.ts";
+import { CARD_AUDIO } from "./voiceData.ts";
 
-const NO_LINES: CueContext["lines"] = { voices: {}, effects: {}, cards: {}, emotes: {} };
-const ctx: CueContext = { view: baseView(), lines: NO_LINES, manaBefore: () => 0 };
+/** R3402001: Core's ten, beside R3400001's eight. */
+const SIGNATURES = Object.entries(SIGNATURE_SFX).filter(([defId]) => defId.startsWith("core-"));
+const SIGNATURE_IDS: ReadonlySet<SfxId> = new Set(Object.values(SIGNATURE_SFX).map((signature) => signature.sfx));
+const LOOKUP = lookupFromDefs(CATALOG);
+
+/** The shipped sound table and catalog, as the board reads them, from either seat. */
+function ctxFor(viewer: PlayerId = "p1"): CueContext {
+  const other: PlayerId = viewer === "p1" ? "p2" : "p1";
+  const view = baseView({ viewer, you: emptySide(viewer), opponent: emptySide(other, { hand: { count: 4 } }) });
+  return { view, lines: CARD_AUDIO, manaBefore: () => 0, card: (defId) => cueCard(LOOKUP, defId) };
+}
 
 const played = (defId: string, over: Partial<Extract<GameEvent, { type: "cardPlayed" }>> = {}): GameEvent => ({
   type: "cardPlayed",
   player: "p1",
-  instanceId: "sig",
+  instanceId: defId === HIDDEN_DEF_ID ? HIDDEN_DEF_ID : "c1",
   defId,
-  costPaid: 1,
+  costPaid: 4,
+  ...over,
+});
+const fired = (defId: string, over: Partial<Extract<GameEvent, { type: "trapFired" }>> = {}): GameEvent => ({
+  type: "trapFired",
+  instanceId: defId === HIDDEN_DEF_ID ? HIDDEN_DEF_ID : "b1",
+  defId,
+  controller: "p1",
+  row: "backrow",
+  lane: 2,
   ...over,
 });
 const summoned = (defId: string, over: Partial<Extract<GameEvent, { type: "summoned" }>> = {}): GameEvent => ({
   type: "summoned",
   player: "p1",
-  instanceId: "sig",
+  instanceId: "c1",
   defId,
   row: "units",
-  lane: 3,
+  lane: 2,
   ...over,
 });
+const beatOf = (defId: string, on: "cardPlayed" | "summoned" | "trapFired"): GameEvent =>
+  on === "cardPlayed" ? played(defId) : on === "summoned" ? summoned(defId) : fired(defId);
+
+/** The signature sounds among an event's cues, whatever else it sounds. */
+const signaturesIn = (cues: readonly SoundCue[]): SfxId[] =>
+  cues.flatMap((cue) => (cue.kind === "sfx" && SIGNATURE_IDS.has(cue.id) ? [cue.id] : []));
+
+/** The card's ceiling: its rarity's signature budget, a Spell's SIGNATURE_SPELL_SHARE of it. */
+function ceilingMs(defId: string): number {
+  const def = CATALOG[defId];
+  const rarity = def?.printedRarity ?? def?.rarity;
+  const base = rarity === "Mythic" ? SIGNATURE_MYTHIC_MAX_MS : SIGNATURE_LEGENDARY_MAX_MS;
+  return def?.type === "Spell" ? base * SIGNATURE_SPELL_SHARE : base;
+}
+
+describe("R3402001 ten Core signatures", () => {
+  it("R3402001 the ten are ten sounds of their own, each a Legendary's or a Mythic's and within its ceiling", () => {
+    expect(SIGNATURES).toHaveLength(10);
+    expect(SIGNATURE_IDS.size, "no two cards share a sound").toBe(Object.keys(SIGNATURE_SFX).length);
+    for (const [defId, { sfx: id, on }] of SIGNATURES) {
+      const def = CATALOG[defId];
+      expect(def, defId).toBeDefined();
+      expect(["Legendary", "Mythic"], defId).toContain(def?.printedRarity ?? def?.rarity);
+      expect(SFX_IDS, defId).toContain(id);
+      expect(SFX[id].durationMs, `${defId} ${id}`).toBeLessThanOrEqual(ceilingMs(defId));
+      // A Trap's first beat is its firing: its play is a face-down set that every Trap's sounds like. A Unit's
+      // is its landing face up, as R3400001's are.
+      expect(on, defId).toBe(def?.type === "Trap" ? "trapFired" : def?.type === "Unit" ? "summoned" : "cardPlayed");
+    }
+  });
+
+  it("R3402001 each signature sounds its own sfx once, on its first beat", () => {
+    for (const [defId, { sfx: id, on }] of SIGNATURES) {
+      const event = beatOf(defId, on);
+      expect(signatureCues(event), defId).toEqual([{ kind: "sfx", id, delayMs: 0 }]);
+      // Through the whole table, from either seat: once, and no other card's.
+      for (const viewer of ["p1", "p2"] as const) expect(signaturesIn(cuesFor(event, ctxFor(viewer))), `${defId} to ${viewer}`).toEqual([id]);
+    }
+  });
+
+  it("R3402001 cuesFor sounds the signature after the row's own, unpanned", () => {
+    for (const [defId, { sfx: id, on }] of SIGNATURES) {
+      const cues = cuesFor(beatOf(defId, on), ctxFor());
+      expect(cues.length, defId).toBeGreaterThan(1);
+      expect(cues.at(-1), defId).toEqual({ kind: "sfx", id, delayMs: 0 });
+    }
+  });
+
+  it("R3402001 a card the viewer cannot read sounds no signature", () => {
+    for (const event of [played(HIDDEN_DEF_ID), fired(HIDDEN_DEF_ID), fired(HIDDEN_DEF_ID, { controller: "p2" })]) {
+      expect(signatureCues(event), JSON.stringify(event)).toEqual([]);
+      expect(signaturesIn(cuesFor(event, ctxFor())), JSON.stringify(event)).toEqual([]);
+    }
+  });
+
+  it("R3402001 a Trap's face-down set, or any card set face down, sounds no signature", () => {
+    for (const [defId, { on }] of SIGNATURES) {
+      // The owner's own set names the card, but a set sounds as every set does.
+      const sets =
+        on === "trapFired"
+          ? [played(defId)]
+          : on === "summoned"
+            ? [summoned(defId, { instanceId: "c2", formerId: "c1" }), summoned(defId, { row: "backrow" })]
+            : [played(defId, { instanceId: "c2", formerId: "c1" })];
+      for (const event of sets) {
+        expect(signatureCues(event), defId).toEqual([]);
+        expect(signaturesIn(cuesFor(event, ctxFor())), defId).toEqual([]);
+      }
+    }
+    // A Trap's set is the set click alone, as before.
+    expect(cuesFor(played("core-096"), ctxFor())).toEqual([{ kind: "sfx", id: "trapSet", delayMs: 0 }]);
+  });
+
+  it("R3402001 a different card, or the card on another event, sounds no signature", () => {
+    const others: GameEvent[] = [
+      played("core-004"),
+      played("core-005"),
+      fired("core-018"),
+      fired("core-018", { again: true }),
+      // A signature card on an event that is not its beat: a Spell never fires, a Unit's play is not its landing.
+      fired("core-097"),
+      played("core-052"),
+      { type: "cardResolved", player: "p1", instanceId: "c1", defId: "core-099", permanent: false, costPaid: 4 },
+      { type: "destroyed", instanceId: "u1", defId: "core-052", owner: "p1", controller: "p1", attack: 3, maxHealth: 3, killerId: null },
+      // A Trap firing again (R2657001) reveals nothing, so its signature has sounded already.
+      fired("core-096", { again: true }),
+    ];
+    for (const event of others) {
+      expect(signatureCues(event), JSON.stringify(event)).toEqual([]);
+      expect(signaturesIn(cuesFor(event, ctxFor())), JSON.stringify(event)).toEqual([]);
+    }
+  });
+});
+
+const NO_LINES: CueContext["lines"] = { voices: {}, effects: {}, cards: {}, emotes: {} };
+const ctx: CueContext = { view: baseView(), lines: NO_LINES, manaBefore: () => 0 };
 const landed = (defId: string, over: Partial<Extract<GameEvent, { type: "summoned" }>> = {}): GameEvent => summoned(defId, { row: "backrow", ...over });
 
 /** R3400001's eight. */
@@ -155,7 +277,9 @@ const STINKYSCAPE_ONE = [
 describe("R3400001 R3405001 the signature sounds", () => {
   it("R3400001 R3405001 each card sounds its own effect once, a Spell or Field Spell on its play and a Unit on its summon", () => {
     expect(MEDITATIVE).toHaveLength(MEDITATIVE_COUNT);
-    expect(Object.keys(SIGNATURE_SFX)).toEqual([...EIGHT, ...STINKYSCAPE, ...MEDITATIVE, ...STINKYSCAPE_ONE]);
+    // R3402001: Core's ten follow the eight (above); R3395000: Stinkyscape 001 to 090's close the table.
+    const core = SIGNATURES.map(([defId]) => defId);
+    expect(Object.keys(SIGNATURE_SFX)).toEqual([...EIGHT, ...core, ...STINKYSCAPE, ...MEDITATIVE, ...STINKYSCAPE_ONE]);
     const sounds = Object.values(SIGNATURE_SFX).map((own) => own.sfx);
     expect(new Set(sounds).size, "each sound is its own").toBe(sounds.length);
     const all = [...EIGHT, ...MEDITATIVE];
@@ -249,9 +373,12 @@ const moments = (defId: string): { played: GameEvent; units: GameEvent; backrow:
 
 describe("R3407001 Stinkyscape's signature sounds", () => {
   it("R3407001 the table holds the eight and then Stinkyscape's 23, each with a sound of its own", () => {
-    expect(Object.keys(SIGNATURE_SFX).slice(0, EIGHT.length + STINKYSCAPE.length)).toEqual([...EIGHT, ...STINKYSCAPE]);
-    const sounds = [...EIGHT, ...STINKYSCAPE].map((defId) => SIGNATURE_SFX[defId]?.sfx);
-    expect(new Set(sounds).size, "no two cards share a sound").toBe(EIGHT.length + STINKYSCAPE.length);
+    // R3402001: Core's ten sit between them; R3405001: Meditative's follow.
+    const core = SIGNATURES.map(([defId]) => defId);
+    const before = [...EIGHT, ...core, ...STINKYSCAPE];
+    expect(Object.keys(SIGNATURE_SFX).slice(0, before.length)).toEqual(before);
+    const sounds = before.map((defId) => SIGNATURE_SFX[defId]?.sfx);
+    expect(new Set(sounds).size, "no two cards share a sound").toBe(before.length);
   });
 
   it("R3407001 each of the 23 sounds once on its own moment: a Spell's play, a Unit's landing in a unit zone, a Field Spell's in the backrow", () => {
@@ -335,7 +462,8 @@ describe("R3407001 Stinkyscape's signature sounds", () => {
 
 describe("R3395000 Stinkyscape 001 to 090's signature sounds", () => {
   it("R3395000 each of the 24 sounds its own effect once on its own moment: a Spell's play, a Unit's landing in a unit zone, a Field Spell's in the backrow", () => {
-    expect(Object.keys(SIGNATURE_SFX).slice(EIGHT.length + STINKYSCAPE.length + MEDITATIVE.length)).toEqual(STINKYSCAPE_ONE);
+    // R3402001: after Core's ten too.
+    expect(Object.keys(SIGNATURE_SFX).slice(EIGHT.length + SIGNATURES.length + STINKYSCAPE.length + MEDITATIVE.length)).toEqual(STINKYSCAPE_ONE);
     // The three Field Spells are among them, so a Field Spell's landing is proven, not only a Spell's play.
     expect(STINKYSCAPE_ONE.filter((defId) => CATALOG[defId]?.type === "Field Spell")).toEqual(["stinkyscape-007", "stinkyscape-016", "stinkyscape-039"]);
     for (const defId of STINKYSCAPE_ONE) {

@@ -233,15 +233,16 @@ R3400000: beside a `{ bespoke }` recipe too (`entryAura` reads either).
   only a Unit may name `tile`; the loader fails any other card's.
 - **Signature looks** (R3389000, `AURA_SIGNATURE_LOOKS`): `seeingIris`, `sceptreLoop`, `graveBreeze`,
   `silkWeb`, `mossCreep`, `crownSigil`, `craterSmoke`, `cloakShimmer` and `abyssWhirl`, each one
-  Classic signature's own, and (R3407000) fifteen more, each one Stinkyscape part two card's own:
-  `scanline`, `heartbeat`, `glint`, `pixelcrawl`, `duohalo`, `arcflick`, `steplights`, `searchlight`,
-  `stationrings`, `aiwisp`, `crownpulse`, `drumbeat`, `starpath`, `stinkvapour` and `pages`, and (R3399001)
-  eighteen more, each one Classic+ signature permanent's own: `syrup`, `waffleDome`, `frostMist`, `ovenSteam`,
-  `laneWall`, `snoreLeaves`, `coinGlint`, `staffBreath`, `bowNotch`, `warHeartbeat`, `appleRibbon`,
-  `bannerBreeze`, `greatBannerShade`, `laserDot`, `stoneFaces`, `stairCracks`, `jungleLeaves` and
-  `serverLights`, its Units' on their tiles, and (R3395001) `laserGrid`, `silverRise` and `labHaze`,
-  Stinkyscape's part one's three signature Field Spells'; all within `AURA_SIGNATURE_MAX_INTENSITY`. The
-  loader fails one on any entry that is no signature, and
+  Classic signature's own, (R3402000) Core's `mirrorball` (quick small glints sweeping across),
+  `stadium` (large slow motes rising like lit rings) and `pedestal` (a few slow glints), and (R3407000)
+  fifteen more, each one Stinkyscape part two card's own: `scanline`, `heartbeat`, `glint`, `pixelcrawl`,
+  `duohalo`, `arcflick`, `steplights`, `searchlight`, `stationrings`, `aiwisp`, `crownpulse`, `drumbeat`,
+  `starpath`, `stinkvapour` and `pages`, and (R3399001) eighteen more, each one Classic+ signature
+  permanent's own: `syrup`, `waffleDome`, `frostMist`, `ovenSteam`, `laneWall`, `snoreLeaves`, `coinGlint`,
+  `staffBreath`, `bowNotch`, `warHeartbeat`, `appleRibbon`, `bannerBreeze`, `greatBannerShade`, `laserDot`,
+  `stoneFaces`, `stairCracks`, `jungleLeaves` and `serverLights`, its Units' on their tiles, and (R3395001)
+  `laserGrid`, `silverRise` and `labHaze`, Stinkyscape's part one's three signature Field Spells'; all
+  within `AURA_SIGNATURE_MAX_INTENSITY`. The loader fails one on any entry that is no signature, and
   `auraLookSpec` reads either kind.
 - **What wears one** (`fx/aura/plan.ts`, read off the shown view alone): every face-up Field Spell or
   Field Trap whose entry has an aura, every face-up Unit whose entry has a `tile` aura (R3400000), and every modifier the view lists that a readable play added
@@ -280,8 +281,10 @@ Ten Field Spells wear one as the pattern for the set passes:
 
 No modifier example is wired yet. A bespoke entry may wear an aura beside its recipe (R3400000), as
 Bob's and Tutorial Master's signatures do on their tiles, Meditative's signature Field Spells on
-their zones and lanes (R3405001), and Classic's nine permanents' signatures each wear their own look
-(R3389000); a modifier a Unit's play installs wears no tile aura, which stands with the Unit.
+their zones and lanes (R3405001), Classic's nine permanents' signatures each wear their own look
+(R3389000), and Core's three theirs (R3402000: #52 Silly Silas `mirrorball` on his tile, #93 Combo-Index
+`stadium` and #98 Heroic Power `pedestal` on their zones, [Signatures](#signatures)); a modifier a Unit's
+play installs wears no tile aura, which stands with the Unit.
 
 ### Tile auras
 
@@ -296,8 +299,8 @@ under the card (`fx/aura/TileAura.tsx`, `tile.css`).
   Core, runes for Classic, ink for Meditative, starfield for Stinkyscape, roots for Training Grounds),
   a wider edge glow and motes (`TILE_MOTES_MYTHIC`).
 - **Signature replacement:** a card whose entry carries an `aura` (such as Feng Shui, or R3400000 a
-  bespoke entry's, Bob's, Tutorial Master's, Classic's and R3399001 Classic+'s signatures') uses that
-  standing aura in `AuraLayer` instead.
+  bespoke entry's, Bob's, Tutorial Master's, Classic's, R3399001 Classic+'s and R3402000 Core's
+  signatures') uses that standing aura in `AuraLayer` instead.
 - **Interactions:** hover, press or tap sends a ripple, plays a bell in its hue (`auraTouch`) and
   buzzes on a phone (`Haptics.touch()`). Being picked as a target brightens the glow; damage or
   divine shield loss flickers it; Dormant, Frozen or Silenced dims it; destroyed or exiled fades
@@ -339,8 +342,8 @@ Stinkyscape is split so its two set passes merge without conflicts.
     (#100). A Field Spell's plays as it lands face up in the backrow, in place of the shared Legendary
     or Mythic rays. Any other card fails the loader: a Trap's entrance is its firing, its `cast`.
   - **takeover:** a Mythic's own takeover look (`void`, `pawn`, `genie`, `ai`; R3400000 `summit`, `canvas`,
-    `napkin`; R3389000 `abyss`; R3395001 `vault`, `rod`, `wire`, `whiteDwarf`, `forge`: `takeoverLookOf`,
-    `fx/takeover.ts`); every other Mythic takes the shared `prismatic`.
+    `napkin`; R3389000 `abyss`; R3395001 `vault`, `rod`, `wire`, `whiteDwarf`, `forge`; R3402000 `rotunda`,
+    `crystalForge`: `takeoverLookOf`, `fx/takeover.ts`); every other Mythic takes the shared `prismatic`.
   - **signature:** `true` on a Legendary's or a Mythic's entry (a token's by the rarity it prints) that
     is its signature, which must name its first beat: a Unit's `entrance`, a Field Spell's `entrance`
     or its own cast, any other card's own cast (`bespoke` or `setPiece`).
@@ -593,6 +596,38 @@ motifs most of them played; #3332 laid the frame (R3332000) and each set's pass 
   own (R3399004). `classicplus/signatures.test.ts`
   holds each signature's own cues to its ceiling of the entry it plays in, the per-beat measure a person
   chose for every set's signatures, which `tiers.test.ts` applies since (R3399005).
+- **Gallery timing** (R3402000): each later action of a gallery play (a Trap's firing, a trigger, an
+  Activate) is timed against the budget from its own start, as a game deals it; R3399005's per-beat
+  measure in `tiers.test.ts`, each own cue from the start of its own entry, holds it so.
+- **Takeover art** (R3402000, `fx/takeoverArt.ts`): beside R3399002's drawings of coloured paths, a
+  Mythic's own look may draw a scene of SVG shapes (`TAKEOVER_ART_DRAWINGS`, a drawing's `shapes`) in the
+  same art layer over the board's dark, shapes on a 100 × 100 view sliced to cover the screen, at most
+  `TAKEOVER_ART_MAX_SHAPES`, each classed by its part (`takeover-drawing-<part>`) and painted and moved by
+  part in `fx.css` (transform and opacity alone) from the look's tint. Under Reduce Motion `TakeoverStill`
+  draws the same scene at rest in that layer, its tint on the layer. A scene is shapes only, no text and no
+  card's face or name (R202): `pawn` (a hooded hand over a glass chessboard, strings snapping taut), `genie`
+  (a wind spirit in a cyclone of silk, card backs orbiting), `rotunda` (a marble hall of thirteen glowing
+  doors) and `crystalForge` (two rails converging on an anvil under a hammer, gears overhead).
+- **Core** (#3402, R3402001): every Core Legendary and Mythic has its signature; Ceaseless Void (#100)
+  is the set's last on the ratchet, owned by #3338. Each recipe is its card's file in `fx/cards/core/`:
+
+  | Card | Entry | First beat | What its text does |
+  |---|---|---|---|
+  | #52 Silly Silas | entrance `silasSpotlight`, bespoke `mirrorballShuffle`, aura `mirrorball` tile | a pirouette down a spotlight, a crater and a hat-tip glint | on `rotated` a mirrorball ring and confetti, a sheen on each occupied unit zone; a brand in the new owner's colour on `controlChanged` |
+  | #83 Transmogulate | bespoke `legendaryTide` | a crucible over the caster's hero: a poison gather, rays, a ring, prismatic vials | its first `transformed` washes the Deck and hand piles; a readable hand card takes a sheen, an Embiggened Unit a ripple |
+  | #85 Unlicensed Experimentation | bespoke `clampWeld` | at its `trapFired`, a hatch fracturing open in green arc light and smoke | on `fused` a ring at the seized card, a seam, a sheen and a flash at the result |
+  | #87 Pocket Chaos | bespoke `pocketSwap` | a pocket at the board's centre, both heroes' light tugged in, a dice cloud | on `swapped` the pair trades places (heroes, the middle unit zones or the Deck piles); a card back to the other hand pile |
+  | #93 Combo-Index | entrance `comboStadium`, bespoke `gradeRings`, aura `stadium` zone | three rings rising, radiant rays, confetti | each trigger's grade rise (`counterChanged` of its grade) lights a ring; its grade's events show (a card back to hand, gold tags, a burn, a spark, a beam) |
+  | #95 Call to Chaos | bespoke `chaosReels` | a slot-wheel's rays and ring, three reels blurring in sparks | on `chaosRolled` the roll's reveal stands `FX_REELS_MS` with a gold ring and its jackpot shake |
+  | #96 My Pawn | bespoke `pawnStrings`, takeover `pawn` | its takeover at its `trapFired`; strings from the top of the screen to every enemy Unit and hero | on `attackCancelled` the attack shatters into shards at the attacker |
+  | #97 Zephrys | bespoke `perfectWish`, takeover `genie` | its takeover; silk gathering at the centre | on `addedToHand` a card back gusts from the far hero into the caster's hand pile |
+  | #98 Heroic Power | entrance `heroicPedestal`, bespoke `heroicDoors`, takeover `rotunda`, aura `pedestal` zone | its takeover; a crystal pedestal landing in holy light, a diamond glint | each Activate's `activated` flares the pedestal (keyed on the card's own `activated`, which the engine sends before the Activate's `hookResolving` marker); inside the hook its power flies to where it went |
+  | #99 Craft a Card | bespoke `fusionForge`, takeover `crystalForge` | its takeover; two card backs riding in from the board's edges | the hand pile rings as the card is added; on `fused` it flies from the forge into the hand pile |
+
+  Each sounds its own sound once, on its first beat (`audio/signatureCues.ts`: a Trap's firing, Silly
+  Silas's landing, every other card's play), never for a card the seat cannot read (R203). Each Spell's
+  and Trap's own cast draws no shared rays, burst or ring, a Mythic's takeover keeping only its own look
+  (R3400000 `ownCast`).
 - **Meditative** (#3405, R3405000, R3405001): every Meditative Legendary and Mythic, its tokens by their
   printed rarity among them, is a signature after its concept, in `fx/cards/meditative/`: a Unit's
   entrance of its own, then its text's beat and a standing look on its tile; a Spell's cast of its own; a

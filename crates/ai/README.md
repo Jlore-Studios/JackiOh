@@ -11,8 +11,8 @@ rely on.
 Pure and seeded like the engine (CLAUDE.md rule 4): its `Cargo.toml` depends on the engine, `serde`,
 `serde_json` and `indexmap` only, and its `clippy.toml` is the engine's (no clock, no I/O, no
 environment, no threads, no `HashMap`, no `RefCell`). Every random draw comes from an `Rng` the
-caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`, `SweepOptions`'s
-`now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
+caller passes in. The clock arrives only as a callback (`AiOptions::should_stop` and `wrap_up`,
+`SweepOptions`'s `now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
 The Death, the turn-hook, the activation, the attack-hook and the awakening prices of a decision (R2424000,
 R2477000, R2564000, R2688000, R3064000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
@@ -38,7 +38,12 @@ and Duos's `duos_ai_team` in `crates/engine/src/config.rs`).
 pub fn decide(state: &GameState, seat: PlayerId, options: &mut AiOptions) -> Option<Decision>;
 pub fn decide_styled(state: &GameState, seat: PlayerId, options: &mut AiOptions, style: &AiStyle) -> Option<Decision>;
 pub struct AiStyle { pub temperature: f64, pub missed_lethal_chance: f64 }
-pub struct AiOptions<'a> { pub rng: Rng, pub budget: SearchBudget, pub should_stop: Option<&'a dyn Fn() -> bool> }
+pub struct AiOptions<'a> {
+    pub rng: Rng,
+    pub budget: SearchBudget,
+    pub should_stop: Option<&'a dyn Fn() -> bool>,
+    pub wrap_up: Option<&'a dyn Fn() -> bool>, // R3498000: the beam's earlier stop
+}
 ```
 
 `decide` is the one entry point. It reads the true `GameState` only through `ai_to_act` and `redact`
@@ -250,7 +255,12 @@ that hands a turn over is scored where that turn begins (#1337).
 `AI_BUDGET` is what the browser plays with; `AI_GATE_BUDGET`, the gates' and the sweep's, is the
 same budget, so both measure the AI that ships. The same state, seed and budget always give the
 same `Decision`. The browser's wall-clock cap arrives as `should_stop` (the WASM binding's deadline),
-which ends the search early with the best line found.
+which ends the search early with the best line found. R3498000: every host with a clock also passes
+`wrap_up`, fired at `AI_WRAP_UP_SHARE` of its limit (`wrap_up_after_ms`), which stops the beam's slice
+of the counter alone: the beam's open lines end their turn and the reply and the other determinizations
+run on until `should_stop`. `SearchStats.replied` and `worldsScored` say how far they got, and
+`Decision::fell_short` names a decision that left its finalists unscored on a sampled world. With no
+clock, or a wrap-up that never fires, a decision is node for node what it was.
 
 ## Decks and the shadow ban (R184, R186, R390, R1370, R1390, R817000, R976000)
 

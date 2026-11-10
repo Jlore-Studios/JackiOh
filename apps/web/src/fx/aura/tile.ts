@@ -15,7 +15,7 @@ import { LANES, laneIndex, sideView, testid, type AnimatingMap, type Highlight, 
 import { CATALOG } from "../../wire/cards.ts";
 import type { PublicBackrowView } from "../../wire/generated/PublicBackrowView.ts";
 import type { UnitView } from "../../wire/generated/UnitView.ts";
-import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
+import { FX_CARD_TABLE, entryAura, type FxCardEntry } from "../cards/tables.ts";
 import { capacityFor } from "../director.ts";
 import { createRng } from "../rng.ts";
 import {
@@ -207,9 +207,8 @@ export function planTileAura(
   const tier = tierOf(def);
   if (tier === null) return null;
 
-  // Signature aura replaces the default (R3400000: a bespoke entry's too, Bob's and Tutorial Master's tiles).
-  const tableEntry = table.get(live.defId);
-  if ((tableEntry?.kind === "hooks" || tableEntry?.kind === "bespoke") && tableEntry.aura !== undefined) return null;
+  // Signature aura replaces the default (R3400000: a bespoke entry's too, Bob's and Tutorial Master's tiles; R3402000 `entryAura`).
+  if (entryAura(table.get(live.defId)) !== undefined) return null;
 
   const radiant = live.radiant ?? false;
   const rawColors = pictureColors(live.defId, def, radiant);

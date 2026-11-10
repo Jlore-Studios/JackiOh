@@ -727,7 +727,10 @@ pub struct AiOptions<'a> {
     pub rng: Rng,                                   // the caller reads rng.cursor() back afterwards
     pub budget: SearchBudget,                       // default AI_BUDGET
     pub should_stop: Option<&'a dyn Fn() -> bool>,  // TS shouldStop; the browser's clock, never read by this crate
+    pub wrap_up: Option<&'a dyn Fn() -> bool>,      // R3498000: the beam's earlier stop, a host's clock at AI_WRAP_UP_SHARE of its limit (wrap_up_after_ms)
 }
+pub fn wrap_up_after_ms(limit_ms: i64) -> i64;      // R3498000: the ms into a host's limit at which it fires wrap_up
+    // SearchStats gains replied and worldsScored, and Decision::fell_short() a finalist left unscored on a sampled world (R3498000)
 pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<String>;
     // AiDeckOptions { banned, include, theme, mana_cap, boost, lean_set: Option<SetName> } (serde camelCase;
     // `leanSet`, R1370: at least ceil(size × AI_DECK.lean_min_share) of the deck from that set; absent, the
@@ -768,7 +771,8 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn ai_to_act(state_json: &str, seat: &str) -> bool;
 #[wasm_bindgen] pub fn ai_decide(state_json: &str, seat: &str, options_json: &str, deadline_ms: f64) -> String;
     // options: { rngSeed, rngCursor, budget? }; answers { decision: Decision | null, rngCursor };
-    // should_stop = js_sys::Date::now() >= deadline_ms (deadline_ms <= 0: no clock)
+    // should_stop = js_sys::Date::now() >= deadline_ms (deadline_ms <= 0: no clock), and wrap_up the same at
+    // AI_WRAP_UP_SHARE of the time from the call to deadline_ms (R3498000)
 #[wasm_bindgen] pub fn lethal_hint(state_json: &str, seat: &str, deadline_ms: f64) -> bool;  // R2102000: jackioh_ai::lethal_hint, the practice AI's lethal hint; deadline_ms as ai_decide's
 #[wasm_bindgen] pub fn build_ai_deck(options_json: &str) -> String;
     // options: { rngSeed, rngCursor, size, banned?, manaCap?, theme?, include?, boost?, leanSet? }; answers { deck, rngCursor }
@@ -806,7 +810,7 @@ keeps behind its opaque `EngineState` brand.
     // a BotAnswer out ({ answer: "chosen", bot } | { change } | { ids } | { bot } | { decks } | { trio } | { due } | { row } | { refused } | { holdings } | { draw } | …); the host reads its store into plain records and writes what comes out
 #[wasm_bindgen] pub fn bot_decide(call_json: &str, deadline_ms: f64) -> String;
     // #3103: the move a ladder bot owes (SPEC §9.12, R1452, R639000, R747000). A DecideCall in ({ host: DuelHost, request: DecideRequest }), the BotChoice out ({ body, aiCursor, legalCount, lethal, aim }), which the host feeds the machine back as { event: "decided", home, version, turn, choice };
-    // once Date.now() passes deadline_ms the search answers with its best line (<= 0: no clock)
+    // once Date.now() passes deadline_ms the search answers with its best line (<= 0: no clock), its beam wrapped up as ai_decide's (R3498000)
 #[wasm_bindgen] pub fn log(call_json: &str) -> String;
     // #3108: jackioh-shared's game log (SPEC §10.10, R97, R745). A LogCall in ({ call: "view", view, locale } | { call: "gap", locale }), a LogAnswer out ({ answer: "lines", lines: (LogLine | null)[] } | { answer: "line", line }):
     // a line for each event of the view's window, final text as spans in the reader's words, naming no card the viewer may not read; the catalog is the one init registered (crates/shared/README.md, src/log/)
