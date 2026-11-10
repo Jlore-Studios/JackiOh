@@ -17287,18 +17287,19 @@
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-6",
       "question": "",
       "queued_at": "2026-11-10T12:59:04Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "42823571990",
+      "run_id": "pending:6c4d0559-1794331429",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 195,
-      "started_at": "2026-11-10T13:20:03Z",
+      "started_at": "2026-11-10T17:24:40Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -18020,9 +18021,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T17:23:32Z",
+    "at": "2026-11-10T17:24:40Z",
     "url": "",
-    "what": "revise #3623 on muse"
+    "what": "spot-check #3635 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-10T17:00:11Z",
@@ -36736,7 +36737,15 @@
         "n": 195,
         "pr": 3635,
         "queued_at": "2026-11-10T17:21:28Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:6c4d0559-1794331429",
         "sha": "48f21c55aa77b723f0805ce5210399fea40e926c",
+        "started_at": "2026-11-10T17:24:40Z",
         "status": "queued",
         "title": "Patch: quasi-3D models for the Mythics: each Mythic a diorama of its own, turned by a drag in inspect, with an idle loop of its own and its takeover flown through it",
         "tries": 0
