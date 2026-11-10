@@ -18943,10 +18943,12 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "at": "2026-11-10T02:00:53Z",
+        "at": "2026-11-10T08:05:15Z",
         "built_by": "claude-3",
         "by": "`claude` (strong)",
-        "sha": "384131ff6844250cd465baab3d14c5e78056face"
+        "carried_from": "384131ff6844250cd465baab3d14c5e78056face",
+        "resolved_by": "`claude` (strong)",
+        "sha": "2fbbfdbee78c163ee15884448d67c5886dd1315a"
       },
       "died": 0,
       "difficulty": "hard",
