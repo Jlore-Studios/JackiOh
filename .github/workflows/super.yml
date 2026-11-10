@@ -84,7 +84,10 @@ jobs:
 
   # The scheduled run starts the daily run on `staging` (the header says why) and does nothing else:
   # every job below skips on `schedule`, those that need one through it. The Actions token may start a
-  # workflow_dispatch.
+  # workflow_dispatch. A commit a finished run already tested is not run again: while that run is red,
+  # staging holds still for the night bot's fix (scripts/promote-staging.sh, the freeze, the owners'
+  # call of 2026-11-10), which starts the run itself on the commit that carries the fix, and a second
+  # run on the same commit would only open a second issue for the same failures.
   daily:
     name: start the daily run on staging
     if: github.event_name == 'schedule'
@@ -98,8 +101,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
+          set -euo pipefail
+          sha=$(gh api "repos/$GH_REPO/commits/staging" --jq .sha)
+          tested=$(gh run list --workflow super.yml --branch staging --commit "$sha" --status completed --limit 20 \
+            --json conclusion --jq '[.[] | select(.conclusion != "cancelled" and .conclusion != "skipped")] | length')
+          if [ "$tested" != 0 ]; then
+            echo "### \`staging\` (${sha:0:12}) has a finished super run already, so none starts today" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           gh workflow run super.yml --ref staging
-          echo "### started the daily super run on \`staging\` ($(gh api "repos/$GH_REPO/commits/staging" --jq '.sha[0:12]'))" >> "$GITHUB_STEP_SUMMARY"
+          echo "### started the daily super run on \`staging\` (${sha:0:12})" >> "$GITHUB_STEP_SUMMARY"
 
   rust-build:
     name: release build
@@ -556,7 +567,7 @@ jobs:
           if [ "$candidate" = true ]; then
             owner="Night bot: production waits on this run, so it is yours and it comes first (\`priority:high\`, and you take it before every other queued item). #$PR promotes \`${SHA:0:12}\`, a commit of \`$STAGING_BRANCH\` (and so of \`$DEFAULT_BRANCH\`), so the fix lands on \`$DEFAULT_BRANCH\` like any other. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). Say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them. Once the fix is on \`$DEFAULT_BRANCH\`, promote-staging.yml brings it to \`$STAGING_BRANCH\` within two hours; the next daily run there that passes promotes it, or a \`/promote\` on the production issue tests staging's newer commit sooner."
           elif [ "$gate" = true ]; then
-            owner="Night bot: this run is on \`$REF\`, so it is yours, and it comes first (\`priority:high\`, and you take it before every other queued item): production promotes itself only from a daily run on \`$STAGING_BRANCH\` that passes every job, so it waits on this fix. The fix lands on \`$DEFAULT_BRANCH\` like any other, and promote-staging.yml brings it to \`$STAGING_BRANCH\` within two hours; the next daily run there that passes promotes it, or a \`/promote\` on the production issue tests staging's newer commit sooner. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked \`#[ignore = \"daily: …\"]\` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
+            owner="Night bot: this run is on \`$REF\`, so it is yours, and it comes first (\`priority:high\`, and you take it before every other queued item): production promotes itself only from a daily run on \`$STAGING_BRANCH\` that passes every job, so it waits on this fix, and \`$STAGING_BRANCH\` holds still until this issue closes (scripts/promote-staging.sh, the freeze). Fix every failed job here, in the one pull request on \`$DEFAULT_BRANCH\` that closes this: when it closes, \`$STAGING_BRANCH\` takes main's first green commit after the close and the super run starts on it at once, and a run still red opens a new issue. Before you start, look for an open pull request or issue already fixing one of these jobs, and build on it instead of fixing the same test twice. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked \`#[ignore = \"daily: …\"]\` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
           else
             owner="This run is on \`$REF\`, not \`$STAGING_BRANCH\` or \`$DEFAULT_BRANCH\`: it tests that branch's change, so the branch's author fixes it, and it is not handed to the night bot."
           fi
@@ -577,8 +588,9 @@ jobs:
 
           # Hands the issue to the night bot: assigned to it and queued, as a person assigning it
           # would, for a red run on `staging`, the default branch or a promotion pull request only, all
-          # as high priority since production waits on them, the promotion's as hard too
-          # (docs/issues-and-patches.md). A failure here leaves the report standing for a person.
+          # as high priority and hard since production waits on them (docs/issues-and-patches.md; the
+          # daily one too since 2026-11-10, after a medium plan fixed part of a red run). A failure here
+          # leaves the report standing for a person.
           hand_over() {
             if [ "$candidate" = true ]; then
               gh issue edit "$1" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
@@ -592,7 +604,7 @@ jobs:
               return 0
             fi
             gh issue edit "$1" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
-              --add-label "priority:high" \
+              --add-label "priority:high" --add-label "difficulty:hard" \
               && echo "handed #$1 to @$BOT_LOGIN, high priority" \
               || echo "::warning::could not hand #$1 to @$BOT_LOGIN"
           }
