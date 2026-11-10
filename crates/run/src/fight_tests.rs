@@ -776,3 +776,44 @@ fn r2922001_thick_skins_armor_reaches_the_fights_hero_and_every_cursed_setup_sta
     let all = cursed(&holding(&fight_at(&content, 0), &combat), &every);
     assert_eq!(engine_takes(&run_fight_setup(&all, &content).unwrap()), Ok(()));
 }
+
+#[test]
+fn r3496000_removed_cards_leave_the_fight_deck_but_stay_in_the_run() {
+    // R3496000: a card the run holds that the current catalog no longer knows is left out of the
+    // fight's deck, human and enemy alike, and stays in the run.
+    let content = catalog_content();
+    let mut state = fight_at(&content, 0);
+    state.deck.insert(
+        0,
+        RunCard {
+            id: "removed-card-xyz".to_string(),
+            radiant: false,
+            buffs: 0,
+        },
+    );
+    state.deck[2].radiant = true;
+    let (row, col) = (state.row.unwrap(), state.col);
+    state.map[row][col]
+        .enemy
+        .as_mut()
+        .expect("a fight node has an enemy")
+        .deck
+        .push("removed-enemy-card-xyz".to_string());
+
+    let setup = run_fight_setup(&state, &content).unwrap();
+    assert!(!setup.human_deck.contains(&"removed-card-xyz".to_string()));
+    assert_eq!(setup.human_deck.len(), state.deck.len() - 1);
+    assert!(!setup.enemy_deck.contains(&"removed-enemy-card-xyz".to_string()));
+    assert_eq!(setup.enemy_deck.len(), RUN_ENEMY_DECK_SIZE);
+    // The marks index the fight's deck, not the run's.
+    assert_eq!(
+        setup.human_marks,
+        vec![DeckMark {
+            index: 1,
+            radiant: true,
+            upgrades: 0
+        }]
+    );
+    assert!(state.deck.iter().any(|card| card.id == "removed-card-xyz"));
+    assert_eq!(engine_takes(&setup), Ok(()));
+}

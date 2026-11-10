@@ -1243,7 +1243,8 @@ twenty minutes on and mostly spent waiting for runners. The harness does not wai
   (Squishy's skips it, as it skips the gate) reads CI's newest runs (`EvacRuns`, 100) and the jobs
   of the queue's builds still going, by conditional requests that cost no rate limit while a
   build's jobs are unchanged. Only when a required job (as [Stopping red CI
-  early](#stopping-red-ci-early) counts them) has failed in one does it read the queue's order.
+  early](#stopping-red-ci-early) counts them) has failed in one, or a build ended without passing
+  between a minute and the queue's check timeout ago (below), does it read the queue's order.
 - **The current build.** The queue builds each pull request on top of every one ahead of it, on
   `gh-readonly-queue/main/pr-<n>-<sha>`, where `<sha>` is the commit the build stands on: the head
   of the build ahead of it, or `main`'s for the first (a group that lands fast-forwards `main` to
@@ -1257,8 +1258,20 @@ twenty minutes on and mostly spent waiting for runners. The harness does not wai
   ahead of it has already passed that same job (or skipped it, or passed whole). The look goes down
   the queue from the first pull request and stops at the first build with a required job red: that
   pull request goes out when the failure is its own, and otherwise it waits, a tick at a time, for
-  the builds ahead to pass the job (or fail, and go out themselves). A build that ended is left to
-  the queue, which has its checks.
+  the builds ahead to pass the job (or fail, and go out themselves).
+- **A build that ended.** One that ended without passing is left to the queue, which takes its pull
+  request out within seconds of a required check reporting red, for a minute (`EvacEndedAfter`).
+  One still in the queue after that is waiting on a required check that never reported: GitHub
+  dropped the jobs it gathers, or the check itself, and the queue would hold it, and every pull
+  request behind it, for its whole check timeout (`check_response_timeout_minutes`, 240 minutes,
+  `EvacEndedWithin`). On 2026-11-09 #3505's build ended at 18:15 with `rust`, `web` and `e2e
+  smoke` never reported, and nothing landed until the queue gave up at 22:01. The look takes it
+  out (`events.unstick`). With a required job of its own red, it goes out as a red build's does,
+  below, with nothing left to cancel. With none, nothing says it failed, so it goes straight back
+  in at the back of the queue, whoever's it is, which builds it again: once for each commit `main`
+  is at, by the item's `requeued` record, which `queue.RequeueCleared` keeps too. One that sticks
+  again stays out: the night bot's own goes back from the housekeeping pass once `main` moves, and
+  a person's or Squishy's gets a comment saying why.
 - **Taking it out.** It dequeues the pull request with the bot's token (the Actions token may not),
   and goes on only once GitHub says it is out of the queue: a build cancelled while its pull request
   is still queued leaves its summary checks skipped, which count as passing, which is why
