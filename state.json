@@ -18360,7 +18360,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-10T03:36:13Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:7761fbd3-1794299345",
+      "run_id": "42783177418",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-10T08:30:25Z",
       "stop_requested": false,
