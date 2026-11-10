@@ -19856,7 +19856,7 @@
       }
     },
     "3621": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "died": 0,
@@ -19875,10 +19875,12 @@
       },
       "interruptions": 0,
       "issue": 1023,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "revising",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T11:08:30Z",
         "from_run": "42795309120",
         "gates": [
           {
@@ -19943,11 +19945,11 @@
       "queued_at": "2026-11-10T11:06:42Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
-      "run_id": "42795309120",
+      "run_id": "pending:3bb1600e-1794308854",
       "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-10T09:59:27Z",
+      "started_at": "2026-11-10T11:08:30Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -20882,9 +20884,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T10:55:20Z",
+    "at": "2026-11-10T11:08:30Z",
     "url": "",
-    "what": "build #3540 on claude-7"
+    "what": "review #3621 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T10:47:56Z",
