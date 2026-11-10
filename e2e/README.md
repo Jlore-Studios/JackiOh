@@ -194,3 +194,26 @@ pnpm --dir apps/web build:e2e
 pnpm --dir apps/web exec vite preview --port 5173 --strictPort
 E2E_BASE_URL=http://localhost:5173 pnpm --dir e2e exec cypress run --spec cypress/e2e/14-landing-and-sign-in.cy.ts
 ```
+
+## The frame probe (spec 50, issue #3605)
+
+Spec `50-busy-board-frames.cy.ts` measures how smoothly the worst-case board draws: both sides
+at the lane cap with looping keyword treatments, Mythic and Legendary animated faces, face-down
+traps and a full playable hand (`support/busyBoard.ts`, quoted by #3604's later parts). It
+samples requestAnimationFrame deltas over an idle window and over a scripted combat turn, and
+reports per phase the median and p95 frame time, the dropped-frame share (frames over one
+expected frame times `FRAME_DROPPED_FACTOR`), the `longtask` count and the idle board's running
+`document.getAnimations()` count. A phase over its p95 or long-task budget fails the run, naming
+the constant. The budgets live in `apps/web/src/perf/frameBudgets.ts` (CLAUDE.md rule 9) with 5×
+headroom for CI's shared runners; judged are only the p95 and the long tasks, so the spec stays
+out of the PR smoke list and runs in the daily super run.
+
+```
+pnpm --dir e2e probe:frames            # build the e2e client, serve it on :4173, run spec 50
+pnpm --dir e2e probe:frames -- --json  # the same report as one JSON object per phase
+```
+
+Baseline (main at `83c9c775`, bot's shared machine, `<date>`): idle median … ms, p95 … ms,
+dropped …%, … long tasks, … running animations; combat median … ms, p95 … ms, dropped …%,
+… long tasks. Re-measure on a CI runner before trusting the budgets: the 5× headroom is
+designed to survive it, but the numbers above are one machine's.
