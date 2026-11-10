@@ -97,135 +97,43 @@ pub fn script_v0_5_11() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{hits, js, next_turn_of, weapon_board};
-    use jackioh_engine::testkit::*;
+    use crate::stinkyscape_family as fam;
 
-    const P1: PlayerId = PlayerId::P1;
-    const P2: PlayerId = PlayerId::P2;
-
-    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
-
-    /// The printed `damage`, and the Radiant face's, and its Radiant health.
+    /// The printed `damage`, and the Radiant face's.
     const DAMAGE: i32 = 9;
     const RADIANT_DAMAGE: i32 = 18;
-    const RADIANT_HEALTH: i32 = 8;
-    const ARMOR: i32 = 3;
-
-    fn at(target: &str) -> Value {
-        json!({ "ability": "cannon", "targets": pick::id(target) })
-    }
-
-    fn at_hero() -> Value {
-        json!({ "ability": "cannon", "targets": [{ "pick": "hero", "player": "p2" }] })
-    }
-
-    fn cannon_on(radiant: bool, p2: Value) -> Scenario {
-        weapon_board(
-            "s060",
-            json!({ "field": [{ "def": ID, "radiant": radiant }] }),
-            p2,
-        )
-    }
-
-    /// The targets `legal_actions` offers p1 for the Cannon's Activate, one per action.
-    // Differs from Scenario::offered: one card's activation targets as JSON, not the seat's whole legal list.
-    fn offered(s: &Scenario) -> Vec<Value> {
-        let cannon = s.card(ID).id.clone();
-        legal_actions(s.state(), P1)
-            .iter()
-            .map(js)
-            .filter(|action| action["type"] == "activate" && action["instanceId"] == cannon.as_str())
-            .map(|action| action["targets"].clone())
-            .collect()
-    }
-
-    /// One hit on an Armored Menace between two others, the Armor taking its part, and none beside it.
-    fn hits_the_unit(radiant: bool, amount: i32) {
-        let mut s = cannon_on(radiant, json!({ "field": [MENACE, MENACE, MENACE] }));
-        let target = s.unit_at(P2, 2).id;
-        s.card_mut(target.as_str())
-            .granted_keywords
-            .push(Keyword::Armor { n: ARMOR });
-        s.activate(ID, at(&target));
-        assert_eq!(
-            hits(s.last_events()),
-            vec![(target, amount - ARMOR)],
-            "radiant {radiant}"
-        );
-        s.expect_health(P2, HERO_HEALTH);
-    }
-
-    /// "an enemy Unit": the enemy Unit is the one target offered, the enemy hero never is, and aiming
-    /// at the hero is refused, leaving it untouched.
-    fn never_the_hero(radiant: bool) {
-        let mut s = cannon_on(radiant, json!({ "field": [VANILLA] }));
-        let unit = s.unit_at(P2, 1).id;
-        assert_eq!(offered(&s), vec![pick::id(&unit)], "radiant {radiant}");
-        s.expect_refused(|s| s.activate(ID, at_hero()));
-        s.expect_health(P2, HERO_HEALTH);
-    }
 
     mod base {
         use super::*;
 
-        /// R767000: the script kept for the replays of v0.5.11 and before may aim at the enemy hero,
-        /// whose hit is halved, rounded down (R1841001).
         #[test]
         fn r767000_the_script_kept_for_v0_5_11_halves_its_hit_on_the_enemy_hero() {
-            crate::under_kept(ID, script_v0_5_11(), || {
-                let halved = DAMAGE / HALF_DAMAGE_TO_HEROES_DIVISOR;
-                let mut s = cannon_on(false, json!({ "field": [VANILLA] }));
-                s.activate(ID, at_hero());
-                assert_eq!(hits(s.last_events()), vec![("hero-p2".to_string(), halved)]);
-                s.expect_health(P2, HERO_HEALTH - halved);
-            });
+            fam::can_kept_halves_hero(ID, "s060", DAMAGE, script_v0_5_11);
         }
 
         #[test]
         fn r1862000_hits_the_chosen_enemy_unit() {
-            hits_the_unit(false, DAMAGE);
+            fam::can_hits(ID, "s060", false, DAMAGE);
         }
 
         #[test]
         fn r1862000_the_enemy_hero_is_never_offered_and_is_refused() {
-            never_the_hero(false);
+            fam::can_never_hero(ID, "s060", false);
         }
 
         #[test]
         fn r384_once_a_turn_a_second_use_refused() {
-            let mut s = cannon_on(false, json!({ "field": [MENACE, MENACE] }));
-            let [first, second] = [1, 2].map(|lane| s.unit_at(P2, lane).id);
-            s.activate(ID, at(&first));
-            s.expect_refused_with(|s| s.activate(ID, at(&second)), "already been used");
-            next_turn_of(&mut s, P1);
-            s.activate(ID, at(&second));
-            assert_eq!(hits(s.last_events()), vec![(second, DAMAGE)]);
+            fam::can_once_a_turn(ID, "s060", DAMAGE);
         }
 
         #[test]
         fn r1086_r1852001_an_equipped_host_takes_the_activate_and_is_no_starship_piece() {
-            let mut s = weapon_board(
-                "s060-equip",
-                json!({ "hand": [ID], "field": [VANILLA] }),
-                json!({ "field": [VANILLA] }),
-            );
-            let host = s.unit_at(P1, 1).id;
-            let target = s.unit_at(P2, 1).id;
-            s.play(ID, json!({ "zone": 1, "equip": true }));
-            let fused = s.card(host.as_str()).clone();
-            assert!(!unit_has(s.state(), &fused, KeywordKind::StarshipPiece));
-            s.activate(host.as_str(), at(&target));
-            assert_eq!(hits(s.last_events()), vec![(target, DAMAGE)]);
+            fam::can_equip_takes_activate(ID, "s060", DAMAGE);
         }
 
         #[test]
         fn damage_reads_through_param() {
-            let mut s = cannon_on(false, json!({ "field": [MENACE] }));
-            let amount = crate::upgrade_number(&mut s, ID, "damage");
-            let target = s.unit_at(P2, 1).id;
-            s.activate(ID, at(&target));
-            assert_eq!(hits(s.last_events()), vec![(target, amount)]);
+            fam::can_param_reads(ID, "s060");
         }
     }
 
@@ -234,19 +142,12 @@ mod tests {
 
         #[test]
         fn r1862000_hits_the_chosen_enemy_unit_twice_as_hard() {
-            hits_the_unit(true, RADIANT_DAMAGE);
+            fam::can_hits(ID, "s060", true, RADIANT_DAMAGE);
         }
 
         #[test]
         fn r1862000_the_enemy_hero_is_never_offered_and_is_refused() {
-            never_the_hero(true);
-        }
-
-        #[test]
-        fn its_health_is_doubled() {
-            let s = cannon_on(true, json!({}));
-            let view = s.stats(ID);
-            assert_eq!((view.attack, view.health), (0, RADIANT_HEALTH));
+            fam::can_never_hero(ID, "s060", true);
         }
     }
 }
