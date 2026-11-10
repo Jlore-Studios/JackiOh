@@ -509,3 +509,21 @@ fn r1840006_a_mining_node_pays_its_resources_on_death() {
         );
     }
 }
+
+#[test]
+fn r3563000_a_gain_of_six_from_six_resources_gives_each_once() {
+    let pool: Vec<String> = RESOURCES.iter().map(|(id, _)| id.to_string()).collect();
+    let mut want = pool.clone();
+    want.sort();
+    for n in 0..20 {
+        let seed = format!("r3563000-resources-{n}");
+        let s = board(&seed, "p1", json!({}), json!({}));
+        with_unique_draws(true, || {
+            let mut state = s.state().clone();
+            gain(&mut state, P1, json!({ "count": 6, "pool": pool }));
+            let mut gained: Vec<String> = held(&state, P1).into_iter().map(|card| card.def_id).collect();
+            gained.sort();
+            assert_eq!(gained, want, "{seed}");
+        });
+    }
+}

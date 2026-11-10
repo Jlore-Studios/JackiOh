@@ -13,7 +13,7 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
-use crate::catalog::{CatalogQueryArgs, excluding_def_id, query};
+use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_unique, query};
 use crate::config::FUSE_MIN_INGREDIENTS;
 use crate::effects::choose::{DiscoverFromCatalogArgs, chosen_options, discover_from_catalog};
 use crate::effects::targets::{PlayerSpec, TargetSpec, instance_of, player_of, self_on_its_stay};
@@ -405,7 +405,8 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
             if !keepable(ctx.sink.state, &card) {
                 continue;
             }
-            let Some(picked) = ctx.sink.rng.pick(&pool) else {
+            // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
+            let Some(picked) = pick_unique(ctx.sink.rng, &pool, &mut ctx.draw_tally) else {
                 return;
             };
             let picked_id = picked.id.clone();
@@ -625,8 +626,8 @@ pub struct FuseGeneratedArgs {
     pub cost_override: Option<i32>,
 }
 
-/// E23 (Classic+ #43 AI Slop): `count` independent picks from the pool (they may repeat, R60; never
-/// the running card or its ingredients, B4.1), fused per R77 with no target: the shared type, else the
+/// E23 (Classic+ #43 AI Slop): `count` independent picks from the pool (they may repeat, R60, unless
+/// `UNIQUE_RANDOM_DRAWS` holds, R3563000; never the running card or its ingredients, B4.1), fused per R77 with no target: the shared type, else the
 /// first pick's (R102), a Token when every pick is one; the result a fresh hand card at `handPrice`
 /// (default `"free"`, R352) that a full hand burns (R4). A Radiant pick goes in on its Radiant face
 /// (R469). Fewer than two picks or an empty pool draws nothing (R77, R129).
@@ -642,7 +643,8 @@ pub fn fuse_generated(args: FuseGeneratedArgs) -> Effect {
                 if args.distinct == Some(true) {
                     pool.retain(|def| !picked_ids.contains(&def.id));
                 }
-                let Some(picked) = ctx.sink.rng.pick(&pool) else {
+                // R3563000: each pick draws through the run's tally, unique while it holds.
+                let Some(picked) = pick_unique(ctx.sink.rng, &pool, &mut ctx.draw_tally) else {
                     return;
                 };
                 picked_ids.push(picked.id.clone());
@@ -659,7 +661,8 @@ pub fn fuse_generated(args: FuseGeneratedArgs) -> Effect {
             }
             let mut picked_ids: Vec<String> = Vec::with_capacity(count as usize);
             for _ in 0..count {
-                let Some(picked) = ctx.sink.rng.pick(&pool) else {
+                // R3563000: each pick draws through the run's tally, unique while it holds.
+                let Some(picked) = pick_unique(ctx.sink.rng, &pool, &mut ctx.draw_tally) else {
                     return;
                 };
                 picked_ids.push(picked.id.clone());

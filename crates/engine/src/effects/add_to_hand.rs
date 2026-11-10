@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
-use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
+use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated_unique, query};
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance, find_instance_mut, new_instance};
 use crate::wire::{AttackHealth, Keyword, Tuning, Zone, ZoneName};
@@ -382,8 +382,9 @@ impl AddRandomFromCatalogArgs {
 }
 
 /// §6.3 Add to hand, N times, from a §10.7 catalog pool (#54, #57, #59); the hand cap burns the
-/// overflow (§2.4, R4). Repeats are allowed (R60), so it picks `count` times rather than shuffling and
-/// slicing, as `discover_from_catalog` does to draw "without replacement".
+/// overflow (§2.4, R4). Repeats are allowed (R60) unless `UNIQUE_RANDOM_DRAWS` holds (R3563000), so it
+/// picks `count` times through the run's tally rather than shuffling and slicing, as
+/// `discover_from_catalog` does to draw "without replacement".
 pub fn add_random_from_catalog(args: AddRandomFromCatalogArgs) -> Effect {
     Effect::new("addRandomFromCatalog", move |ctx| {
         let pool = query(&pool_query(ctx, args.query.as_ref()));
@@ -395,7 +396,13 @@ pub fn add_random_from_catalog(args: AddRandomFromCatalogArgs) -> Effect {
         let count = args.count.unwrap_or(1).max(0);
         for _ in 0..count {
             // R673: a card generated into a hand may be Glitch (`catalog::GlitchOdds` is the state).
-            let Some(def) = pick_generated(&mut *ctx.sink.rng, &pool, Some(&*ctx.sink.state)) else {
+            // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
+            let Some(def) = pick_generated_unique(
+                &mut *ctx.sink.rng,
+                &pool,
+                Some(&*ctx.sink.state),
+                &mut ctx.draw_tally,
+            ) else {
                 return;
             };
             let def_id = def.id.clone();

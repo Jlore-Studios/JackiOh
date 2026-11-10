@@ -130,7 +130,8 @@ fn build_acclaimed() -> Effect {
                 "tags": [Tag::Acclaimed],
                 "set": SET
             })));
-            let Some(def) = ctx.sink.rng.pick(&pool).copied() else {
+            // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
+            let Some(def) = crate::catalog::pick_unique(ctx.sink.rng, &pool, &mut ctx.draw_tally) else {
                 return;
             };
             let controller = ctx.controller;

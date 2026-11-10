@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::{
     DORMANT_STARSHIP_DEF_ID, GLITCH_DEF_ID, GLITCH_ODDS_DENOMINATOR, GLITCH_ODDS_PER_SYSTEM_PLAY, GRAPE_ODDS,
-    POOL_TOKEN_TAGS, RollOdds,
+    POOL_TOKEN_TAGS, RollOdds, UNIQUE_RANDOM_DRAWS,
 };
 use crate::rng::Rng;
 use crate::script::CardScripts;
@@ -1076,6 +1076,66 @@ fn is_grape_def_id(def_id: &str) -> bool {
 /// R673: what the Glitch roll reads: the match's count of "… in the System" plays (`system_plays`).
 pub type GlitchOdds = GameState;
 
+// R3563000: random cards unique within one run (issue #3563).
+
+/// R3563000: how many times one run has drawn each catalog id from its random pools.
+pub type DrawTally = IndexMap<String, u32>;
+
+/// R3563000: the testkit's unique-draws override on this thread, if any.
+#[cfg(feature = "testkit")]
+fn test_unique_draws() -> Option<bool> {
+    crate::testkit::unique_draws::unique_draws_override()
+}
+
+/// R3563000: no override without the testkit, so no game changes there.
+#[cfg(not(feature = "testkit"))]
+fn test_unique_draws() -> Option<bool> {
+    None
+}
+
+/// R3563000: whether random cards draw unique within one run: the testkit's override first, else
+/// `UNIQUE_RANDOM_DRAWS`, off until the Stinkyscape+ release.
+pub fn unique_draws() -> bool {
+    test_unique_draws().unwrap_or(UNIQUE_RANDOM_DRAWS)
+}
+
+/// R3563000: how many times the run has drawn `def_id`: 0 when absent.
+pub fn times_drawn(tally: &DrawTally, def_id: &str) -> u32 {
+    tally.get(def_id).copied().unwrap_or(0)
+}
+
+/// R3563000: count one draw of `def_id`, while unique draws hold; nothing when they do not, so the
+/// tally stays empty and filters nothing.
+pub fn record_draw(tally: &mut DrawTally, def_id: &str) {
+    if unique_draws() {
+        *tally.entry(def_id.to_string()).or_default() += 1;
+    }
+}
+
+/// R3563000: the pool's cards drawn fewest times this run, in pool order; an empty pool gives none.
+pub fn least_drawn<'a>(pool: &[&'a CardDef], tally: &DrawTally) -> Vec<&'a CardDef> {
+    let Some(fewest) = pool.iter().map(|def| times_drawn(tally, &def.id)).min() else {
+        return Vec::new();
+    };
+    pool.iter()
+        .filter(|def| times_drawn(tally, &def.id) == fewest)
+        .copied()
+        .collect()
+}
+
+/// R3563000: draw one card of the pool: with unique draws, evenly among the run's least-drawn (no
+/// card twice until the whole pool has come once, then evenly from the whole pool again); without
+/// them, today's draw, exactly `rng.pick`.
+pub fn pick_unique<'a>(rng: &mut Rng, pool: &[&'a CardDef], tally: &mut DrawTally) -> Option<&'a CardDef> {
+    if !unique_draws() {
+        return rng.pick(pool).copied();
+    }
+    let fewest = least_drawn(pool, tally);
+    let picked = rng.pick(&fewest).copied()?;
+    record_draw(tally, &picked.id);
+    Some(picked)
+}
+
 /// R382: draw the generated card from a pool with `rng.pick`, except that a Grape pick is rolled again
 /// on `GRAPE_ODDS` (one extra draw, only then), so the Grape rarity pool persists across every kind of
 /// Grape generation. A caller generating into a hand or a deck passes the state as `glitch`, so the pick
@@ -1085,7 +1145,18 @@ pub fn pick_generated<'a>(
     pool: &[&'a CardDef],
     glitch: Option<&GlitchOdds>,
 ) -> Option<&'a CardDef> {
-    let picked: Option<&'a CardDef> = rng.pick(pool).copied();
+    pick_generated_unique(rng, pool, glitch, &mut DrawTally::new())
+}
+
+/// R3563000: `pick_generated` through the run's tally: the tally counts the pool's pick, which comes
+/// before R382's Grape roll and R673's Glitch.
+pub fn pick_generated_unique<'a>(
+    rng: &mut Rng,
+    pool: &[&'a CardDef],
+    glitch: Option<&GlitchOdds>,
+    tally: &mut DrawTally,
+) -> Option<&'a CardDef> {
+    let picked: Option<&'a CardDef> = pick_unique(rng, pool, tally);
     let def = match picked {
         Some(grape) if is_grape_def_id(&grape.id) => {
             let rolled = roll_grape(rng, 0);

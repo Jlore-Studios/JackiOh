@@ -104,8 +104,10 @@ fn add_cards(name: &'static str, count: i32, radiant: bool, mana: i32) -> Effect
 fn add_random_call() -> Effect {
     Effect::new("callToChaosTrainingGrounds:addCall", |ctx| {
         let pool = crate::catalog::query(&json_as(json!({ "tags": [CHAOS_TAG] })));
+        // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
         let Some(def_id) =
-            crate::catalog::pick_generated(&mut *ctx.sink.rng, &pool, None).map(|def| def.id.clone())
+            crate::catalog::pick_generated_unique(&mut *ctx.sink.rng, &pool, None, &mut ctx.draw_tally)
+                .map(|def| def.id.clone())
         else {
             return;
         };

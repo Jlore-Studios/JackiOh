@@ -66,6 +66,7 @@ pub fn make_context<'b>(
         chosen_from: None,
         event_stay: None,
         summoned: None,
+        draw_tally: crate::catalog::DrawTally::new(),
         self_resolving,
         controller,
         self_: self_.cloned(),
