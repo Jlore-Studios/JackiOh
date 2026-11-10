@@ -24,7 +24,7 @@ use crate::prelude::json_as;
 use crate::prompts::run_start_of_game;
 use crate::resolve::lazy_part;
 use crate::script::{Effect, EffectContext, EffectPart};
-use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
+use crate::state::{CardInstance, GameState, Slumber, find_instance, find_instance_mut, new_instance};
 use crate::stays::exit_mark;
 use crate::wire::{
     AttackHealth, CardType, CostRange, GameEvent, Keyword, OneOrMany, PlayerId, Row, Tag, Zone, ZoneName,
@@ -91,6 +91,11 @@ pub struct SummonPlacement {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(type = "Record<string, unknown>", optional))]
     pub memory: Option<IndexMap<String, Value>>,
+    /// S+ #28 Zombie-Box (R3541002): the fresh summon enters Dormant for this many of its controller's
+    /// turns though its text prints no Dormant ("Summon a Dormant 1 Gargantuar"); absent or 0 enters
+    /// awake. Fresh summons only, and never a card that has awakened before (R3039000).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dormant_turns: Option<i32>,
 }
 
 /// `summon`'s arguments, the placement's keys beside the rest.
@@ -144,6 +149,9 @@ pub struct SummonArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(type = "Record<string, unknown>", optional))]
     pub memory: Option<IndexMap<String, Value>>,
+    /// R3541002: the fresh card enters Dormant for this many turns (`SummonPlacement.dormant_turns`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dormant_turns: Option<i32>,
 }
 
 impl SummonArgs {
@@ -160,6 +168,7 @@ impl SummonArgs {
             source_id: None,
             chinese: None,
             memory: self.memory.clone(),
+            dormant_turns: self.dormant_turns,
         }
     }
 }
@@ -376,6 +385,13 @@ fn summon_fresh_into(
     }
     if let Some(memory) = &at.memory {
         card.memory.extend(memory.clone());
+    }
+    // R3541002: asleep before it lands, as a card printing Dormant is (`slumber::start_slumber_on_field`
+    // then finds it Dormant already and leaves its countdown as it is). A fresh card has never awakened.
+    if at.dormant_turns.is_some_and(|turns| turns > 0) {
+        card.slumber = Some(Slumber {
+            turns: at.dormant_turns,
+        });
     }
     crate::generators::record_generator(ctx, &card);
     if summon_onto(ctx, &mut card, slot, at, None, stands) {
