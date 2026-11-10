@@ -413,7 +413,7 @@ fn timeout(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError
             continue;
         }
 
-        if !turn_clock || sink.state.active != who || sink.state.phase != Phase::Main {
+        if !turn_clock || sink.state.phase != Phase::Main {
             return Ok(());
         }
         end_turn(sink);

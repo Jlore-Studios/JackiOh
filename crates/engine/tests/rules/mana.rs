@@ -241,4 +241,26 @@ mod r65_cost_calculation_m1_t6 {
         mana::spend_mana(side, 10);
         assert_eq!(side.mana.current, 0); // and never goes below 0
     }
+
+    /// §2.3, R1854003 (#3514): max mana is the turns started up to `MAX_MANA`, below, at and past it,
+    /// plus the persistent modifiers and never below 0; the crystals are the turns started moved by those
+    /// an effect stole.
+    #[test]
+    fn max_mana_is_turns_started_up_to_max_mana_then_holds_and_floors_at_0() {
+        let mut state = new_game("max-mana", None);
+        let side = &mut state.players.p1;
+        for (turns, max) in [(MAX_MANA - 1, 3), (MAX_MANA, 4), (MAX_MANA + 1, 4)] {
+            side.turns_started = turns;
+            assert_eq!(mana::max_mana_for(side), max);
+        }
+
+        side.turns_started = 9;
+        side.mana.perm_mod = -(MAX_MANA + 2);
+        assert_eq!(mana::max_mana_for(side), 0);
+
+        side.turns_started = 2;
+        side.mana.perm_mod = 0;
+        side.mana_crystals = Some(-1);
+        assert_eq!(mana::mana_crystal_count(side), 1);
+    }
 }

@@ -155,6 +155,59 @@ mod r1143_a_hand_size_for_the_rest_of_the_game {
         assert_eq!(room_in(&state, P1, OffFieldZone::Exile), i32::MAX);
     }
 
+    /// §2.4, R1143 (#3514): a set hand size is held to `HAND_CAP_MAX`, below, at and past it.
+    #[test]
+    fn r1143_a_hand_size_is_held_to_hand_cap_max_below_at_and_past_it() {
+        let mut state = board("hand-size-max");
+        for (set, read) in [
+            (HAND_CAP_MAX - 1, HAND_CAP_MAX - 1),
+            (HAND_CAP_MAX, HAND_CAP_MAX),
+            (HAND_CAP_MAX + 1, HAND_CAP_MAX),
+        ] {
+            run(&mut state, sets(set), P1);
+            assert_eq!(hand_cap_of(&state, P1), read);
+        }
+    }
+
+    /// §2.4, R4, R1143 (#3514): a hand at `HAND_CAP_MAX` burns the next card drawn.
+    #[test]
+    fn r1143_a_hand_at_hand_cap_max_burns_the_next_card() {
+        let mut state = board("hand-size-at-max");
+        state.players[P1].hand.clear();
+        run(&mut state, sets(HAND_CAP_MAX), P1);
+        in_hand(&mut state, &plain.id, P1, HAND_CAP_MAX - 1);
+        set_library(&mut state, P1, &[plain.id.clone(), plain.id.clone()]);
+        let events = draws(&mut state, P1, 2);
+        assert_eq!(state.players[P1].hand.len() as i32, HAND_CAP_MAX);
+        assert_eq!(events_of_type(&events, GameEventType::Burned).len(), 1);
+    }
+
+    /// R3514000 (§2.4, R4, R1143; #3514): a hand size set at or below 0 is 0, so the hand has no room
+    /// and every card arriving is burned.
+    #[test]
+    fn r3514000_a_hand_size_set_at_or_below_0_is_0_and_burns_every_card_arriving() {
+        let mut state = board("hand-size-zero");
+        state.players[P1].hand.clear();
+        run(&mut state, sets(0), P1);
+        assert_eq!(hand_cap_of(&state, P1), 0);
+        run(&mut state, sets(-1), P1);
+        assert_eq!(hand_cap_of(&state, P1), 0);
+        assert_eq!(room_in(&state, P1, OffFieldZone::Hand), 0);
+
+        let drawn = set_library(&mut state, P1, std::slice::from_ref(&plain.id));
+        let events = draws(&mut state, P1, 1);
+        assert!(state.players[P1].hand.is_empty());
+        assert_eq!(events_of_type(&events, GameEventType::Burned).len(), 1);
+        assert_eq!(
+            state.players[P1]
+                .graveyard
+                .iter()
+                .map(|card| card.id.clone())
+                .collect::<Vec<String>>(),
+            vec![drawn[0].id.clone()]
+        );
+    }
+
     #[test]
     fn r1143_both_views_show_it() {
         let mut state = board("hand-size-views");
