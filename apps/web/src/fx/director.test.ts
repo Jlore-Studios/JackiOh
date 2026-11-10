@@ -1026,3 +1026,72 @@ describe("B41 — bursts of a flash preset bloom at their origin", () => {
     expect(h.surface.calls).toContain("set globalCompositeOperation");
   });
 });
+
+describe("#3633 a frame reads every box before it writes", () => {
+  /** A harness whose reads (`measure`) log `r` and whose mounts (`appendChild` on the root) log `w`. */
+  function logged(over: Partial<FxDirectorOptions> = {}) {
+    const log: string[] = [];
+    const h = harness({
+      measure: (anchor) => {
+        log.push("r");
+        return anchor.kind === "testid" && anchor.testid === "hero-opponent" ? HERO : CARD;
+      },
+      ...over,
+    });
+    const append = h.root.appendChild.bind(h.root);
+    h.root.appendChild = <T extends Node>(node: T): T => {
+      log.push("w");
+      return append(node);
+    };
+    return { h, log };
+  }
+
+  it("#3633 a frame measures every due cue before it mounts any", () => {
+    const { h, log } = logged();
+    h.director.play([
+      { kind: "rays", tone: "legendary", at: at("card-a"), delayMs: 100, durationMs: D },
+      { kind: "sheen", at: at("card-a"), delayMs: 100, durationMs: D },
+      { kind: "splat", tone: "damage", amount: 8, at: at("card-a"), delayMs: 100, durationMs: D },
+      { kind: "burst", preset: "spark", at: at("hero-opponent"), delayMs: 100, count: 24, spread: "point", power: 1 },
+    ]);
+    h.frame(T0 + 50);
+    expect(log).toEqual([]);
+    h.frame(T0 + 100);
+    expect(log.join("")).toMatch(/^r+w+$/);
+    expect(log.join("")).toBe("rrrrwww");
+    expect(h.root.childElementCount).toBe(3);
+    expect(h.director.particles()).toBeGreaterThan(0);
+  });
+
+  it("#3633 a stage cue keeps its place: the cues before it mount first and the cues after it read the board it moved", () => {
+    const card = document.createElement("div");
+    const { h, log } = logged({ element: (testid) => (testid === "card-b" ? card : null) });
+    const set = card.setAttribute.bind(card);
+    card.setAttribute = (name: string, value: string): void => {
+      if (name === "data-fx-pulled") log.push("s");
+      set(name, value);
+    };
+    h.director.play([
+      { kind: "splat", tone: "damage", amount: 8, at: at("card-a"), delayMs: 100, durationMs: D },
+      { kind: "pull", testid: "card-b", to: at("card-a"), delayMs: 100, durationMs: D },
+      { kind: "sheen", at: at("card-a"), delayMs: 100, durationMs: D },
+    ]);
+    h.frame(T0 + 100);
+    // The splat reads and mounts, the pull reads its centre and moves its card, then the sheen reads and mounts.
+    expect(log.join("")).toBe("rwrsrw");
+    expect(card.getAttribute("data-fx-pulled")).toBe("true");
+  });
+
+  it("#3633 a cue whose life ran out in a stalled tab is neither measured nor mounted, and the cues beside it still are", () => {
+    const { h, log } = logged();
+    h.director.play([
+      { kind: "sheen", at: at("card-a"), delayMs: 0, durationMs: 50 },
+      { kind: "splat", tone: "damage", amount: 8, at: at("card-a"), delayMs: 0, durationMs: D },
+    ]);
+    // The first frame comes after the sheen's life is over.
+    h.frame(T0 + 60);
+    expect(log.join("")).toBe("rw");
+    expect(h.root.querySelectorAll('[data-fx="sheen"]')).toHaveLength(0);
+    expect(h.root.querySelectorAll('[data-fx="splat"]')).toHaveLength(1);
+  });
+});

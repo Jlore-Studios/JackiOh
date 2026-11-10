@@ -95,6 +95,9 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import { SidelineStrip } from "../sideline/SidelineStrip.tsx";
 import type { GameSideline } from "../sideline/useSideline.ts";
 
+/** The attribute a mounted Game sets on its parent, the element board.css lays the game screen out by (#3633). */
+export const GAME_HOST_ATTRIBUTE = "data-game-host";
+
 /** The turn banner, which `Board` does not render: one `turn-banner` (M5-T4, `e2e/support/testids.ts` BANNER). */
 function isTurnEvent(event: GameEvent): event is Extract<GameEvent, { type: "turnStarted" | "turnAutoEnded" }> {
   return event.type === "turnStarted" || event.type === "turnAutoEnded";
@@ -299,6 +302,18 @@ export default function Game({
     root.current = element;
     setHost(element);
   }, []);
+  // #3633: the shell's layout keys off this instead of `:has(> .game)`, whose universal tail made
+  // Blink restyle the whole document on every effect (board.css, the game screen).
+  useLayoutEffect(() => {
+    const parent = host?.parentElement;
+    if (!parent) return;
+    parent.setAttribute(GAME_HOST_ATTRIBUTE, "true");
+    return () => {
+      // React runs this before it detaches `host`, so only another Game in the same parent keeps the mark.
+      const another = Array.from(parent.children).some((child) => child !== host && child.classList.contains("game"));
+      if (!another) parent.removeAttribute(GAME_HOST_ATTRIBUTE);
+    };
+  }, [host]);
   /** The seat whose Concede control asked; a hotseat hand-over or the game's end closes it. */
   const [concedeFor, setConcedeFor] = useState<PlayerId | null>(null);
   /**

@@ -1,5 +1,5 @@
 // S8 effects director. R200: it only decorates; every visual stays within planned duration, FX_MAX_TAIL_MS and FX_MAX_PARTICLE_LIFE_MS.
-// Cues measure anchors when firing and expire from scheduled due time; frames loop only while active work remains.
+// Cues measure anchors when firing (a frame's due effect cues read before any of them mounts, #3633) and expire from scheduled due time; frames loop only while active work remains.
 
 import { createCanvasFx } from "./canvasFx.ts";
 import {
@@ -20,7 +20,7 @@ import {
   FX_STARSHIP_RAM_TURN_DEG,
 } from "./constants.ts";
 import { dropPointOfTestid } from "../game/drag/landing.ts";
-import { landingBox, mountDomEffect, mountHold, type DomEffect, type DomEffectBoxes } from "./dom.ts";
+import { landingBox, mountDomEffect, mountHold, type DomEffect } from "./dom.ts";
 import { createFrameLoop, type FxFrame } from "./loop.ts";
 import { createParticleSystem } from "./particles.ts";
 import { artBoxOf, atOf, pointIn } from "./anchors.ts";
@@ -95,6 +95,10 @@ export type FxDirector = {
 };
 
 type PendingCue = { cue: FxCue; due: number };
+/** A cue that is not the stage's: the canvas's, the shake and the DOM effects. */
+type FxEffectCue = Exclude<FxCue, FxStageCue>;
+/** The boxes an effect cue lands on, measured before its frame mounts anything (#3633). */
+type Landing = { at?: FxBox; from?: FxBox; to?: FxBox };
 type MountedEffect = { effect: DomEffect; expiresAt: number; kind: FxDomCue["kind"]; tone?: string; key?: string };
 type StagedEffect = { undo(): void; track?: () => void; expiresAt: number };
 
@@ -237,11 +241,13 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     }
   };
 
-  const mountDom = (cue: FxDomCue, due: number, at: number): void => {
-    const expiresAt = due + cue.durationMs;
+  /**
+   * The boxes a DOM cue lands on: `at`, or `from` and `to`; none for a viewport effect. Null when it
+   * lands nowhere: an anchor gone, or a life that ran out in a stalled tab.
+   */
+  const domBoxes = (cue: FxDomCue, due: number, at: number): Landing | null => {
     // Do not mount an effect whose lifetime passed in a stalled tab.
-    if (expiresAt <= at) return;
-    let boxes: DomEffectBoxes = {};
+    if (due + cue.durationMs <= at) return null;
     switch (cue.kind) {
       case "splat":
       case "rays":
@@ -264,30 +270,27 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       case "doctrine":
       case "wreck":
       case "scorch":
-      case "figure": {
-        const box = measure(cue.at);
-        if (box === null) return;
-        boxes = { at: box };
-        break;
-      }
+      case "figure":
       case "zone": {
         const box = measure(cue.at);
-        if (box === null) return;
-        boxes = { at: box };
-        break;
+        return box === null ? null : { at: box };
       }
       case "ghost":
       case "fog":
       case "module": {
         const from = measure(cue.from);
-        if (from === null) return;
+        if (from === null) return null;
         const to = measure(cue.to);
-        if (to === null) return;
-        boxes = { from, to };
-        break;
+        return to === null ? null : { from, to };
       }
       // Viewport effects need no anchor.
+      default:
+        return {};
     }
+  };
+
+  const mountDom = (cue: FxDomCue, boxes: Landing, due: number): void => {
+    const expiresAt = due + cue.durationMs;
     // Never overlap fading banners.
     if (cue.kind === "banner") {
       mounted = mounted.filter((item) => {
@@ -466,15 +469,35 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     staged = kept;
   };
 
-  const fire = (cue: FxCue, due: number, at: number): void => {
-    if (isStageCue(cue)) {
-      stage(cue, due, at);
-      return;
+  /** The boxes an effect cue lands on, null when it lands nowhere (#3633: read before its frame writes). */
+  const measureCue = (cue: FxEffectCue, due: number, at: number): Landing | null => {
+    switch (cue.kind) {
+      case "burst":
+      case "crack":
+      case "ring": {
+        const box = measure(cue.at);
+        return box === null ? null : { at: box };
+      }
+      case "projectile":
+      case "shot": {
+        const from = measure(cue.from);
+        if (from === null) return null;
+        const to = measure(cue.to);
+        return to === null ? null : { from, to };
+      }
+      case "shake":
+        return {};
+      default:
+        return domBoxes(cue, due, at);
     }
+  };
+
+  /** Fires an effect cue at the boxes `measureCue` read for it. */
+  const apply = (cue: FxEffectCue, boxes: Landing, due: number): void => {
     switch (cue.kind) {
       case "burst": {
-        const box = measure(cue.at);
-        if (box === null) return;
+        const box = boxes.at;
+        if (box === undefined) return;
         const origin = pointIn(box, atOf(cue.at));
         // R3351000: past shed stage 0 the burst throws half its motes, but at least one, so every
         // burst still reads. A set piece's beats are DOM cues with no particle counts, so they never
@@ -493,19 +516,15 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         return;
       }
       case "projectile": {
-        const from = measure(cue.from);
-        if (from === null) return;
-        const to = measure(cue.to);
-        if (to === null) return;
+        const { from, to } = boxes;
+        if (from === undefined || to === undefined) return;
         // R3351000: past shed stage 0 the trail and the arrival burst thin to the emission scale.
         canvasFx.projectile(cue.preset, pointIn(from, atOf(cue.from)), pointIn(to, atOf(cue.to)), cue.flightMs, cue.density * shedEmissionScale());
         return;
       }
       case "shot": {
-        const from = measure(cue.from);
-        if (from === null) return;
-        const to = measure(cue.to);
-        if (to === null) return;
+        const { from, to } = boxes;
+        if (from === undefined || to === undefined) return;
         canvasFx.shot(
           cue.shot,
           cue.colors,
@@ -518,24 +537,47 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         return;
       }
       case "crack": {
-        const box = measure(cue.at);
-        if (box === null) return;
-        canvasFx.crack(box, cue.durationMs);
+        if (boxes.at === undefined) return;
+        canvasFx.crack(boxes.at, cue.durationMs);
         return;
       }
       case "ring": {
-        const box = measure(cue.at);
-        if (box === null) return;
-        canvasFx.ring(cue.preset, box, cue.durationMs);
+        if (boxes.at === undefined) return;
+        canvasFx.ring(cue.preset, boxes.at, cue.durationMs);
         return;
       }
       case "shake":
         shake.add(cue.trauma);
         return;
       default:
-        mountDom(cue, due, at);
+        mountDom(cue, boxes, due);
         return;
     }
+  };
+
+  /**
+   * #3633: fires a frame's due cues in their order, but reads every box a run of effect cues lands
+   * on before it mounts any of them. A mount dirties the page's style, so with a read after each,
+   * every cue of a beat forced a restyle and a layout of its own, up to a hundred milliseconds apiece
+   * on a throttled phone (R3351000). A stage cue moves what the cues after it measure (its
+   * stand-in, a pulled or lunging card), so it ends the run before it and fires in its place.
+   */
+  const fireDue = (due: readonly PendingCue[], at: number): void => {
+    const run: { cue: FxEffectCue; due: number; boxes: Landing | null }[] = [];
+    const flush = (): void => {
+      for (const item of run) if (item.boxes !== null) apply(item.cue, item.boxes, item.due);
+      run.length = 0;
+    };
+    for (const item of due) {
+      const { cue } = item;
+      if (isStageCue(cue)) {
+        flush();
+        stage(cue, item.due, at);
+      } else {
+        run.push({ cue, due: item.due, boxes: measureCue(cue, item.due, at) });
+      }
+    }
+    flush();
   };
 
   // R3351000: a shed stage keeps the loop alive, so healthy windows drain a stranded level back
@@ -558,7 +600,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
       const later: PendingCue[] = [];
       for (const item of pending) (item.due <= at ? due : later).push(item);
       pending = later;
-      for (const item of due) fire(item.cue, item.due, at);
+      fireDue(due, at);
     }
 
     const age = Math.max(0, frame.raw);

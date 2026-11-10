@@ -104,7 +104,23 @@ describe("#2932 a phone held upright draws field cards in a card shape that grow
     const lane = /\.lane\s*\{([\s\S]*?)\}/.exec(phone)?.[1];
     expect(lane, "the phone block sizes the lane").toBeDefined();
     expect(lane).toContain("height: 100%;");
-    expect(lane).toContain("grid-template-rows: repeat(4, minmax(var(--card-h), 1fr));");
+    expect(lane).toContain("grid-template-rows: repeat(4, minmax(var(--lane-row-min), 1fr));");
+  });
+
+  it("#3633 the field states its lanes' minimum height, so no layout of the board measures the lanes for it", () => {
+    const field = /\.field\s*\{([^}]*)\}/.exec(phoneBlock())?.[1];
+    expect(field, "the phone block sizes the field").toBeDefined();
+    // A row's floor is a card height, and the lanes' minimum is four of them and the three gaps.
+    expect(field).toContain("--lane-row-min: var(--card-h);");
+    expect(field).toContain("--lanes-min: calc(4 * var(--lane-row-min) + 3 * var(--gap));");
+    // The board's row and the field's own row read it, not the lanes' laid-out height.
+    expect(field).toContain("box-sizing: content-box;");
+    expect(field).toContain("min-height: var(--lanes-min);");
+    expect(field).toContain("grid-template-rows: minmax(var(--lanes-min), 1fr);");
+    // The arena's tall phone lowers the floor through the same property, and sizes no lane itself.
+    const arena = readSheet("src/game/arena/arena.css").replace(/\/\*[\s\S]*?\*\//g, " ");
+    expect(arena).toMatch(/\.board \.field\s*\{[^}]*--lane-row-min:\s*calc\(var\(--card-h\) \* 0\.9\);/);
+    expect(arena).not.toMatch(/\.lane\s*\{[^}]*grid-template-rows/);
   });
 
   it("#3257 an empty zone's placeholder is sized to the box a field card takes there, less an inset", () => {

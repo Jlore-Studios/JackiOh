@@ -11,7 +11,7 @@ import { ANIMATIONS, HIDDEN_ID } from "./animations.ts";
 import { DAMAGE_FEEL, SLAM_LAND_AT, UNIT_SLAM } from "./damageFeel.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { testid } from "./contract.ts";
-import Game from "./Game.tsx";
+import Game, { GAME_HOST_ATTRIBUTE } from "./Game.tsx";
 import { resultReason } from "./Result.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, card, emptySide, faceDownBackrow, pendingFor, unit, waitingPending, withEvents } from "../test/fixtures.ts";
@@ -163,6 +163,28 @@ describe("issue #57 board-mounted match chrome", () => {
     expect(screen.getByText("Read-only replay").closest(".board")).not.toBeNull();
     expect(screen.getByTestId("action-error").closest(".board")).not.toBeNull();
     expect(document.querySelector(".game > .game-error")).toBeNull();
+  });
+});
+
+describe("#3633 the game screen's host", () => {
+  it("#3633 Game marks its parent as a game host while mounted", () => {
+    const shell = (showGame: boolean): ReactElement => (
+      <div className="app-shell app-shell--wide" data-testid="shell">
+        <nav className="screen-nav" />
+        {showGame ? <Game view={withEvents(baseView(), START)} legal={[]} onAction={vi.fn()} /> : null}
+      </div>
+    );
+    const { rerender, unmount } = render(shell(true));
+    const host = screen.getByTestId("shell");
+    expect(host).toHaveAttribute(GAME_HOST_ATTRIBUTE, "true");
+    expect(document.querySelector(`.app-shell--wide[${GAME_HOST_ATTRIBUTE}] > .game`)).not.toBeNull();
+    // The route takes the game down and keeps its shell: the shell is no game's host any more.
+    rerender(shell(false));
+    expect(host).not.toHaveAttribute(GAME_HOST_ATTRIBUTE);
+    rerender(shell(true));
+    expect(host).toHaveAttribute(GAME_HOST_ATTRIBUTE, "true");
+    unmount();
+    expect(host).not.toHaveAttribute(GAME_HOST_ATTRIBUTE);
   });
 });
 
