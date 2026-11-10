@@ -15335,6 +15335,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 180,
       "started_at": "2026-11-09T20:00:08Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -37255,9 +37256,25 @@
         "title": "Patch: a dungeon run's time counts only while it is played, so a run picked up the next day is not timed by the calendar",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {},
+        "builder": {},
+        "difficulty": "hard",
+        "every": 5,
+        "head": "72da274dca621ddd52711b97f90801d6ef48d1e2",
+        "issue": 3352,
+        "merged_at": "2026-11-10T02:52:35Z",
+        "n": 180,
+        "pr": 3464,
+        "queued_at": "2026-11-10T02:52:35Z",
+        "sha": "efe8cdab2ebe80c92b15d04a80678eb5a60d6c53",
+        "status": "queued",
+        "title": "Patch: every Classic card drawn as what it is: a scene of its own for each, richer the rarer",
+        "tries": 0
       }
     ],
-    "count": 179
+    "count": 180
   },
   "statistics": {
     "at": "2026-11-10T02:35:23Z"
