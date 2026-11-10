@@ -9,8 +9,18 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { FACE_ASPECT } from "../constants.ts";
-import { PREVIEW_HEIGHT_PX, PREVIEW_HEIGHT_SHARE, PREVIEW_MAX_VIEWPORT_SHARE, PREVIEW_SHEET_HEIGHT_PX, PREVIEW_SHEET_SHARE } from "./constants.ts";
-import { previewHeight } from "./placement.ts";
+import {
+  PREVIEW_EXTENDED_STACKED_MAX_PX,
+  PREVIEW_GLOSSARY_GAP_PX,
+  PREVIEW_HEIGHT_PX,
+  PREVIEW_HEIGHT_SHARE,
+  PREVIEW_MARGIN_PX,
+  PREVIEW_MAX_VIEWPORT_SHARE,
+  PREVIEW_PHONE_WIDTH_PX,
+  PREVIEW_SHEET_HEIGHT_PX,
+  PREVIEW_SHEET_SHARE,
+} from "./constants.ts";
+import { previewCardHeight, previewHeight } from "./placement.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const read = (path: string): string => readFileSync(join(HERE, path), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\s+/g, " ");
@@ -49,6 +59,33 @@ describe("#3341 the hover preview is larger", () => {
       const preview = previewHeight(height) * FACE_ASPECT * art;
       expect(preview, `${screen}: the preview's art against twice a unit's face`).toBeGreaterThanOrEqual(2 * 0.86 * row);
     }
+  });
+});
+
+describe("#3602 the phone preview stacks the full text across the card's width", () => {
+  it("#3602 the phone breakpoint and the stacked panel's height are named, and the CSS mirrors them", () => {
+    expect(PREVIEW_PHONE_WIDTH_PX).toBe(600);
+    expect(PREVIEW_EXTENDED_STACKED_MAX_PX).toBe(200);
+    const css = read("inspect.css");
+    expect(css).toContain("@media (max-width: 600px)");
+    expect(css).toContain(".inspect-facegroup { flex-direction: column; max-width: 100%; }");
+    expect(css).toContain(
+      ".inspect-hover .inspect-extended { align-self: stretch; width: auto; max-height: 200px; overflow-y: auto; }",
+    );
+  });
+
+  it("#3602 the card keeps its desktop height where it fits, and reserves the stacked panel where it does not", () => {
+    // 390x844 with the text: previewHeight(844) fits the width and leaves card, gap and panel inside.
+    expect(previewCardHeight({ width: 390, height: 844 }, true)).toBe(PREVIEW_HEIGHT_PX);
+    // 430x932: the taller screen's share, as on a desktop.
+    expect(previewCardHeight({ width: 430, height: 932 }, true)).toBe(932 * PREVIEW_HEIGHT_SHARE);
+    // 360x640 with the text: card, one gap and the stacked panel exactly fill the height's margins.
+    expect(previewCardHeight({ width: 360, height: 640 }, true)).toBe(
+      640 - 2 * PREVIEW_MARGIN_PX - PREVIEW_GLOSSARY_GAP_PX - PREVIEW_EXTENDED_STACKED_MAX_PX,
+    );
+    // Off a phone the card is previewHeight, with or without the text.
+    expect(previewCardHeight({ width: 1280, height: 720 }, true)).toBe(previewHeight(720));
+    expect(previewCardHeight({ width: 1280, height: 720 }, false)).toBe(previewHeight(720));
   });
 });
 
