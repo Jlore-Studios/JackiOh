@@ -259,8 +259,8 @@ func MakeCtx(gh *fakes.FakeGitHub, opts ...Ctx) *hctx.Context {
 	return ctx
 }
 
-// A free lane has had nothing to start for `minutes` (#797; default 31): a survey is due once
-// that is `suggestions.idle_minutes` (30) or more.
+// Lanes have stood spare with nothing to start for `minutes` (#797, #3659; default 31): a survey
+// is due once that is `suggestions.idle_minutes` (0) or more and they are spare still.
 func IdleFor(ctx *hctx.Context, minutes ...int) {
 	m := optional(minutes, "IdleFor", 31)
 	ctx.Store.Update(func(s *pyjson.Object) any {

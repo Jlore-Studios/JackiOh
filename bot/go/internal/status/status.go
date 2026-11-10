@@ -588,12 +588,16 @@ func Report(ctx *hctx.Context) string {
 	}
 	idleText := ""
 	if pyjson.Truthy(idle) {
-		idleText = fmt.Sprintf(" (idle since %s)", py.Str(idle))
+		idleText = fmt.Sprintf(" (spare since %s)", py.Str(idle))
+	}
+	stood := "at the sweep's next tick"
+	if cfg.SuggestionsIdleMinutes > 0 {
+		stood = fmt.Sprintf("for %d minutes", cfg.SuggestionsIdleMinutes)
 	}
 	lines = append(lines, fmt.Sprintf("- Suggestions open: %d of %d"+
-		"%s; a survey "+
-		"once a free lane has had nothing to start for %d "+
-		"minutes", len(suggestions), cfg.SuggestionsMaxOpen, asked, cfg.SuggestionsIdleMinutes)+idleText+"; "+
+		"%s; a survey once %d or more lanes are spare (the excess compute: free on a subscription "+
+		"that may start a build or a plan, with nothing queued it can start), still spare %s",
+		len(suggestions), cfg.SuggestionsMaxOpen, asked, cfg.SuggestionsSpareLanes, stood)+idleText+"; "+
 		fmt.Sprintf("%d that came to nothing are never offered again.", len(declined.Entries(state))))
 	last := state.Obj("last_run")
 	if last.Truthy("url") {

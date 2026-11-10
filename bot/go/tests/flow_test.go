@@ -363,17 +363,24 @@ func TestFlow_EitherQueueLabelOnEitherKindOfThread(t *testing.T) {
 }
 
 func TestFlow_SuggestionsWhenIdleUpToTheCap(t *testing.T) {
-	gh, ctx := newFlowPlanWorld()
+	gh := fakes.NewFakeGitHub()
+	// Every account's secret set, so their lanes are spare (`suggestions.spare_lanes`, #3659).
+	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{Cfg: testsupport.MakeConfig(testsupport.Config{Env: crossAll})})
 	for n := 20; n < 29; n++ {
 		gh.AddIssue(n, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
 	}
-	assertEqual(t, flowMake(ctx).Get("action"), "none") // not idle for 30 minutes
+	assertEqual(t, flowMake(ctx).Get("action"), "none") // no tick has seen the lanes spare yet
 	testsupport.IdleFor(ctx)
 	planned := flowMake(ctx)
 	assertEqual(t, []any{planned.Get("action"), planned.Get("count")}, []any{"suggest", 1})
-	// Claimed: the clock starts again, so not due until another 30 idle minutes (#797).
+	// Claimed: the clock starts again (#797), and no second survey starts while it runs.
 	assertEqual(t, dig(t, ctx.Store.Load(), "suggest", "idle_since"), clock.ISO(ctx.Now()))
+	gh.Runs.Set(ctx.Cfg.RunID, pyjson.New("status", "in_progress"))
 	assertEqual(t, flowMake(ctx).Get("action"), "none")
+	// Once it has ended, with the lanes spare still and the cap not full, the next is due at once
+	// (`suggestions.idle_minutes` is 0, #3659).
+	gh.Runs.Set(ctx.Cfg.RunID, pyjson.New("status", "completed"))
+	assertEqual(t, flowMake(ctx).Get("action"), "suggest")
 	gh.AddIssue(29, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
 	assertTrue(t, plan.SuggestionPlan(ctx, &plan.Lanes{Limit: 3}, true, "") == nil, "suggestion_plan is None")
 }
@@ -748,7 +755,7 @@ func TestFlow_ARevisionTheReviewerRejectsGoesToItsFinal(t *testing.T) {
 }
 
 func TestFlow_SuggestionsOpenIssuesUpToTheCap(t *testing.T) {
-	h := newFlowHarness(t)
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll}) // every account's lanes spare
 	h.gh.AddIssue(20, fakes.Issue{Labels: flowLabels(config.LabelSuggestion)})
 	ideas := []string{}
 	for i := 0; i < 11; i++ {
