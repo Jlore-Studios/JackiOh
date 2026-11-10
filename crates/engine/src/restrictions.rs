@@ -225,7 +225,8 @@ pub fn attack_restriction_in(
     if crate::slumber::is_slumbering(defender) {
         return Err(EngineError::new(SLUMBER_REFUSAL));
     }
-    if cannot_be_attacked(state, defender) {
+    // R3543002: Evasive is "Can't be attacked" as a keyword.
+    if cannot_be_attacked(state, defender) || auras.unit_has(defender, KeywordKind::Evasive) {
         return Err(EngineError::new("that unit cannot be attacked"));
     }
     if attackable_only_from_lane(state, defender) {

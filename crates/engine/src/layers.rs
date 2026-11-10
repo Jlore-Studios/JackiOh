@@ -566,3 +566,17 @@ pub fn keywords_of(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
 pub fn unit_has(state: &GameState, instance: &CardInstance, kind: KeywordKind) -> bool {
     has_keyword(&unit_view(state, instance).keywords, kind)
 }
+
+/// R3543000: whether a keyword lets its Unit enter its backrow as well as its unit row: Flexible, and
+/// Flying, which has it innately (never added to the keywords, so a Flying Unit's view is unchanged).
+pub fn grants_flexible(kind: KeywordKind) -> bool {
+    matches!(kind, KeywordKind::Flexible | KeywordKind::Flying)
+}
+
+/// R3543000: whether `instance`, read through the layers where it is (§10.4), is Flexible.
+pub fn is_flexible(state: &GameState, instance: &CardInstance) -> bool {
+    unit_view(state, instance)
+        .keywords
+        .iter()
+        .any(|keyword| grants_flexible(keyword.kind()))
+}

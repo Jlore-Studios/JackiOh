@@ -387,8 +387,8 @@ fn accepts_stack(state: &GameState, slot: &ZoneSlot) -> bool {
     crate::zones::accepts_stack_card(state, slot, Default::default())
 }
 
-/// R1081000: whether this card may also be played into a backrow zone: a Unit with Flying, played
-/// face-up, read off its keywords where it is (§10.4).
+/// R1081000: whether this card may also be played into a backrow zone: a Flexible Unit (Flying has
+/// it innately, R3543000), played face-up, read off its keywords where it is (§10.4).
 fn flies(state: &GameState, card: &CardInstance) -> bool {
     if card.set_as.is_some() {
         return false;
@@ -399,12 +399,13 @@ fn flies(state: &GameState, card: &CardInstance) -> bool {
     if row_for_card(state, card) != Row::Units {
         return false;
     }
-    crate::layers::unit_has(state, card, KeywordKind::Flying)
+    crate::layers::is_flexible(state, card)
 }
 
-/// R1081000: whether a Flying play stands in this backrow zone, the predicate `legal_zones_for` lists
-/// by. Without Stack the zone must be open or freed by the play's own Tribute; with Stack occupancy is
-/// waived, but a carrier takes a Unit only as its Unit (R446, `zones::why_cannot_carry`, R653).
+/// R1081000: whether a Flexible Unit (Flying has it innately, R3543000) play stands in this backrow
+/// zone, the predicate `legal_zones_for` lists by. Without Stack the zone must be open or freed by the
+/// play's own Tribute; with Stack occupancy is waived, but a carrier takes a Unit only as its Unit
+/// (R446, `zones::why_cannot_carry`, R653).
 fn flying_takes_backrow(
     state: &GameState,
     card: &CardInstance,
@@ -420,6 +421,16 @@ fn flying_takes_backrow(
     } else {
         crate::zones::is_open(state, slot) || freed_by_tribute(state, slot, tributes)
     }
+}
+
+/// R3543001: whether this backrow card may also be played into an open unit zone: a Field Spell played
+/// face-up with Flexible and stats (`layers::has_stat_line`). One without stats keeps to its backrow, since a
+/// card in a unit zone is a Unit (`faces::card_type_of`, R2280000).
+fn flexes_into_units(state: &GameState, card: &CardInstance) -> bool {
+    card.set_as.is_none()
+        && crate::faces::card_type_of(state, card) == CardType::FieldSpell
+        && crate::layers::has_stat_line(state, card)
+        && crate::layers::unit_has(state, card, KeywordKind::Flexible)
 }
 
 /// R446: whether the card acting in this zone is a carrier, which a Unit enters only as its Unit.
@@ -586,10 +597,21 @@ pub fn legal_zones_for(
                 .filter(|slot| !immutable_fuser(state, slot)),
         );
     }
-    // R1081000: a Flying Unit is also offered the backrow zones it stands in, after its unit-row zones.
+    // R1081000: a Flexible Unit (Flying has it innately, R3543000) is also offered the backrow
+    // zones it stands in, after its unit-row zones.
     if flies(state, card) {
         for slot in crate::zones::slots_of(player, Row::Backrow) {
             if flying_takes_backrow(state, card, &slot, tributes) && !slots.contains(&slot) {
+                slots.push(slot);
+            }
+        }
+    }
+    // R3543001: a Flexible Field Spell with stats is also offered the open unit zones it is a Unit in.
+    if flexes_into_units(state, card) {
+        for slot in crate::zones::slots_of(player, Row::Units) {
+            if (crate::zones::is_open(state, slot) || freed_by_tribute(state, &slot, tributes))
+                && !slots.contains(&slot)
+            {
                 slots.push(slot);
             }
         }
@@ -647,7 +669,8 @@ pub fn freed_by_tribute(state: &GameState, slot: &ZoneSlot, tributes: &[String])
 }
 
 /// R64, R391: the zone a play that names none takes: the leftmost open zone of its row, else the
-/// leftmost its own Tribute empties; R1081000: a Flying Unit then tries the backrow the same way. One
+/// leftmost its own Tribute empties; R1081000: a Flexible Unit (Flying has it innately, R3543000) then
+/// tries the backrow the same way, R3543001: a Flexible Field Spell with stats the unit row. One
 /// function for `refuse_zone`'s no-zone arm and §10.5 step 4's assignment, so the two cannot disagree.
 pub fn default_zone_for(
     state: &GameState,
@@ -661,11 +684,18 @@ pub fn default_zone_for(
             .into_iter()
             .find(|slot| freed_by_tribute(state, slot, tributes))
     });
-    if own.is_some() || !flies(state, card) {
+    if own.is_some() {
         return own;
     }
-    crate::zones::first_free_zone(state, player, Row::Backrow).or_else(|| {
-        crate::zones::slots_of(player, Row::Backrow)
+    let other = if flies(state, card) {
+        Row::Backrow
+    } else if flexes_into_units(state, card) {
+        Row::Units
+    } else {
+        return None;
+    };
+    crate::zones::first_free_zone(state, player, other).or_else(|| {
+        crate::zones::slots_of(player, other)
             .into_iter()
             .find(|slot| freed_by_tribute(state, slot, tributes))
     })
@@ -2561,6 +2591,22 @@ fn refuse_zone(
             return refuse("an Immutable card takes no Unit in".to_string());
         }
         return Ok(());
+    }
+    // R3543001: a Flexible Field Spell with stats may name a unit zone, as `legal_zones_for` lists
+    // them: out of range is refused, an open one (or one its Tribute empties) accepted.
+    if row == Row::Backrow && zone.row == Row::Units && flexes_into_units(state, card) {
+        if zone.lane < 1 || zone.lane > crate::zones::row_size(zone.row) {
+            return refuse(format!("there is no {} zone {}", zone.row, zone.lane));
+        }
+        let slot = ZoneSlot {
+            player,
+            row: zone.row,
+            lane: zone.lane,
+        };
+        if crate::zones::is_open(state, slot) || freed_by_tribute(state, &slot, tributes) {
+            return Ok(());
+        }
+        return refuse(format!("that {} zone is not open", zone.row));
     }
     if zone.row != row {
         return refuse(format!("{name} goes in the {row} row"));

@@ -2594,10 +2594,12 @@ impl InvariantMonitor {
                         && !attack.killed
                     {
                         attack.killed = true;
-                        // R1869002: a kill readies its attacker only through its own `afterAttack` text.
+                        // R1869002: a kill readies its attacker only through its own `afterAttack` text;
+                        // R3543003: or its Frenzy, which answers the same kill.
                         let attacker_id = attack.attacker_id.clone();
                         let answers = find_instance(state, &attacker_id).is_some_and(|attacker| {
                             crate::scripts::script_of(state, attacker).after_attack.is_some()
+                                || crate::layers::unit_has(state, attacker, KeywordKind::Frenzy)
                         });
                         if answers {
                             self.credit_kill(&attacker_id);

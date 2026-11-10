@@ -277,12 +277,14 @@ pub fn why_cannot_switch_in(
     // §4.1: a Unit with Can't Defend cannot be switched to Defense Position, by an action or by an
     // effect (R2657000; `never_defense` is the flag it took over from, as #65.1 Spikey Pillow printed it),
     // nor can any Unit while an aura says Units cannot be (R1849006, Stinkyscape #23 Warp Disruptor), nor
-    // an Indestructible one, whatever made it so (R2179000).
+    // an Indestructible one, whatever made it so (R2179000), nor an Evasive one, which implies Can't
+    // Defend as an Indestructible one does (R3543002).
     if to == Position::Def
         && (crate::scripts::flags_of(auras.state(), unit).never_defense == Some(true)
             || auras.unit_has(unit, KeywordKind::CantDefend)
             || crate::restrictions::defense_barred(auras.state())
-            || auras.unit_has(unit, KeywordKind::Indestructible))
+            || auras.unit_has(unit, KeywordKind::Indestructible)
+            || auras.unit_has(unit, KeywordKind::Evasive))
     {
         return Err(EngineError::new("that unit cannot be in Defense Position"));
     }
@@ -2028,6 +2030,9 @@ struct OwedAfterAttack {
     /// Judged once, as the hook first runs, when the check has closed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     survived: Option<bool>,
+    /// R3543003: whether Frenzy answers, judged once with survived.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    frenzy: Option<bool>,
     /// The hook is done and only the state check that follows it is owed. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     check_only: Option<bool>,
@@ -2206,10 +2211,11 @@ fn combatant_hooks(
     from: usize,
 ) {
     let attacker_id = snapshot.id.clone();
-    if crate::scripts::script_of(sink.state, &snapshot)
+    let hooked = crate::scripts::script_of(sink.state, &snapshot)
         .after_attack
-        .is_some()
-    {
+        .is_some();
+    // R3543003: a Frenzy Unit answers its combat as an `afterAttack` hook does, judged when it runs.
+    if hooked || crate::layers::unit_has(sink.state, &snapshot, KeywordKind::Frenzy) {
         let destroyed_ids: Vec<String> = sink.events[from.min(sink.events.len())..]
             .iter()
             .filter_map(|event| match event {
@@ -2229,13 +2235,18 @@ fn combatant_hooks(
             forced,
             since,
             survived: None,
+            frenzy: None,
             check_only: None,
         };
         if is_paused(sink) {
             owe_after_attack(sink, &owed);
-            return;
+            // A Frenzy-only attacker still lets the defender's `afterAttacked` be owed after it.
+            if hooked {
+                return;
+            }
+        } else {
+            run_after_attack(sink, &owed, None);
         }
-        run_after_attack(sink, &owed, None);
     }
     // MD-C26: then the defender's `afterAttacked`, once per combat it was attacked in (never a hero).
     if let Some(defender) = defender_snapshot
@@ -2270,9 +2281,7 @@ fn owe_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack) {
 /// The attacker's hook, from `paused` when a question split it, then the check that follows it.
 fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: Option<PausedStep>) {
     let script = crate::scripts::script_of(sink.state, &owed.snapshot);
-    let Some(hook) = script.after_attack.clone() else {
-        return;
-    };
+    let hook = script.after_attack.clone();
     if sink.state.result.is_some() {
         return;
     }
@@ -2283,6 +2292,17 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
                 && !crate::stays::left_field_after(sink.state, owed.since, &live.id)
         })
     });
+    // R3543003: judged once, as `survived` is: Frenzy as the check closes, and its target among its kills.
+    let frenzy = owed.frenzy.unwrap_or_else(|| {
+        survived
+            && owed.destroyed_ids.contains(&owed.target_id)
+            && live
+                .as_ref()
+                .is_some_and(|live| crate::layers::unit_has(sink.state, live, KeywordKind::Frenzy))
+    });
+    if hook.is_none() && !frenzy {
+        return;
+    }
     // R2285001, R2396000 (above): an "After this attacks" for a gone attacker does nothing and owes no
     // check; a "Whenever this attacks" runs as the snapshot it fought with, as `run_after_attacked` runs
     // a dead defender; a Reborn body is not it, so it runs once.
@@ -2293,6 +2313,7 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
     };
     let judged = OwedAfterAttack {
         survived: Some(survived),
+        frenzy: Some(frenzy),
         ..owed.clone()
     };
     // `{ ...facts, ...(survived ? {} : { [SELF_KEY]: snapshot }) }`, in that key order.
@@ -2334,7 +2355,21 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
                 ctx.summoned = Some(summoned.clone());
             }
         }
-        let effects = hook(&mut ctx);
+        // R3543003: Frenzy's "this may attack again" runs first in the step, before the card's own
+        // "After this attacks".
+        let mut effects = Vec::new();
+        if frenzy {
+            effects.push(crate::effects::may_attack_again(
+                crate::effects::MayAttackAgainArgs {
+                    target: crate::effects::targets::TargetSpec::SelfCard,
+                    keep_sick: Some(true),
+                    lift_sick: None,
+                },
+            ));
+        }
+        if let Some(hook) = &hook {
+            effects.extend(hook(&mut ctx));
+        }
         crate::prompts::run_resumable_list(&mut ctx, &plan, effects, paused)
     };
     match status {

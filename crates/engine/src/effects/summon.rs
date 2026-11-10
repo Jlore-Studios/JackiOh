@@ -230,15 +230,15 @@ fn entry_zone(state: &GameState, player: PlayerId, row: Row, flies: bool) -> Opt
     None
 }
 
-/// R2248000: whether this Unit's face, as it stands where it is (§10.4), has Flying, so a summon into a
-/// full unit row may stand it in the backrow.
+/// R2248000: whether this Unit's face, as it stands where it is (§10.4), is a Flexible Unit (Flying
+/// has it innately, R3543000), so a summon into a full unit row may stand it in the backrow.
 fn summon_flies(state: &GameState, card: &CardInstance) -> bool {
-    card_type_of(state, card) == CardType::Unit
-        && crate::layers::unit_has(state, card, crate::wire::KeywordKind::Flying)
+    card_type_of(state, card) == CardType::Unit && crate::layers::is_flexible(state, card)
 }
 
-/// R2248000: whether a summon of `card` that names no lane finds a zone on `player`'s side, a Flying
-/// Unit's in the backrow included, for a caller that must know before it draws or moves anything (R129).
+/// R2248000: whether a summon of `card` that names no lane finds a zone on `player`'s side, a Flexible
+/// Unit's (Flying has it innately, R3543000) in the backrow included, for a caller that must know
+/// before it draws or moves anything (R129).
 pub(crate) fn summon_lands(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
     row_of(card_type_of(state, card))
         .is_some_and(|row| entry_zone(state, player, row, summon_flies(state, card)).is_some())
@@ -753,7 +753,8 @@ pub fn summon_random(args: SummonRandomArgs) -> Effect {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let at = args.placement();
         let rows: IndexSet<Row> = pool.iter().filter_map(|def| row_of(def.type_)).collect();
-        // R2248000: a Flying Unit of the pool may stand in the backrow when the unit row is full.
+        // R2248000: a Flexible Unit of the pool (Flying has it innately, R3543000) may stand in
+        // the backrow when the unit row is full.
         let a_flier_lands = || {
             at.lane.is_none()
                 && pool.iter().any(|def| {
@@ -762,7 +763,7 @@ pub fn summon_random(args: SummonRandomArgs) -> Effect {
                             .base
                             .keywords
                             .iter()
-                            .any(|keyword| keyword.kind() == crate::wire::KeywordKind::Flying)
+                            .any(|keyword| crate::layers::grants_flexible(keyword.kind()))
                 })
                 && first_entry_zone(ctx.state, player, Row::Backrow).is_some()
         };

@@ -149,6 +149,7 @@ pub mod tutorial_cards;
 #[allow(dead_code)]
 pub mod fixtures;
 pub mod flashback;
+pub mod flexible_evasive_frenzy;
 pub mod freeze;
 pub mod fuse;
 pub mod fuse_random;
