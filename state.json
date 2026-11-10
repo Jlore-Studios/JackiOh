@@ -17257,6 +17257,23 @@
       "requested_by": "jgoetzmann",
       "run_id": "42798679876",
       "runs_on": "ubuntu-latest",
+      "session": {
+        "action": "build",
+        "artifact": 13762482144,
+        "artifact_bytes": 872273,
+        "artifact_name": "work",
+        "at": "2026-11-10T12:19:57Z",
+        "bytes": 1132272,
+        "cwd": "/home/runner/work/_temp/work/item-3633",
+        "ended": "blocked: the builder needs a person to decide something",
+        "head": "2ca47d2a3ef91857c1749506e2b9f25495f74d75",
+        "id": "e6961ad6-97a1-4f58-96ee-8852cd327cd5",
+        "kind": "build",
+        "model": "opus",
+        "project": "-home-runner-work--temp-work-item-3633",
+        "provider": "claude-8",
+        "run": "42798679876"
+      },
       "started_at": "2026-11-10T10:23:01Z",
       "stop_requested": false,
       "taken_asks": []
