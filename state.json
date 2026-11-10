@@ -19026,15 +19026,8 @@
       "stop_requested": false
     },
     "3613": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42751441194",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-10T04:22:21Z",
-        "until": "2026-11-10T04:52:21Z"
-      },
       "difficulty_by": {
         "at": "2026-11-10T04:22:11Z",
         "difficulty": "hard",
@@ -19053,10 +19046,9 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"sed -n 1,120p apps/web/src/cards/art/richness.ts && wc -l apps/web/src/cards/art/fixtures/art-detail-short.json 2>/dev/null; ls apps/web/src/cards/art/fixtures/ 2>/dev/null; cat .bot-pla\u2026\n- Bash: {\"command\": \"cat apps/web/src/cards/art/fixtures/art-detail-short.json; git show efe8cdab2e --stat | head -80; git show efe8cdab2e^:apps/web/src/cards/art/fixtures/art-detail-short.json | wc -l\", \"de\u2026\n- Bash: {\"command\": \"git log --format='%h %ad %s' --date=short -- apps/web/src/cards/art/fixtures/art-detail-short.json | head -20; echo ---; for c in $(git log --format='%h' -- apps/web/src/cards/art/fixtur\u2026\n- Bash: {\"command\": \"git show 739619602a --stat | head -40; git show 739619602a -- apps/web/src/cards/art/richness.ts | head -40\", \"description\": \"Inspect #3431 commit\"}\n- Bash: {\"command\": \"cat spec/rulings/R3352000.md; echo ----; cat spec/pending/3352.md; echo ----; cat crates/cards/patches/pending/every-classic-card-drawn-as-what-it-is-a-scene-3352.json\", \"description\": \"\u2026\n- Grep: {\"pattern\": \"ART_DETAIL_SHORT_MAX|short list|art-detail-short\", \"output_mode\": \"content\", \"-n\": true}\n- Bash: {\"command\": \"sed -n 68,85p spec/rulings/R3391000.md; echo ----; cat spec/pending/3391.md | fold -w 200 | grep -n -i 'cap\\\\|maximum\\\\|short' ; echo ----; grep -n -i 'short list\\\\|cap fell\\\\|maximum' a\u2026\n- Bash: {\"command\": \"sed -n 1,100p apps/web/src/cards/art/artRichness.test.ts; echo ----; cat spec/rulings/R3331001.md\", \"description\": \"Read richness test and R3331001\"}\n- Bash: {\"command\": \"grep -n -i 'starship piece\\\\|olivian\\\\|stinkyscape-004\\\\|still on\\\\|the last pass\\\\|empties' apps/web/src/cards/art/ART.md | head -30; sed -n 805,830p apps/web/src/cards/art/ART.md\", \"de\u2026\n- Bash: {\"command\": \"grep -c R3352000 spec/11-rulings.md spec/INDEX.md; grep -o '.\\\\{80\\\\}129 to 40.\\\\{40\\\\}' -r spec crates/cards/patches apps/web/src docs 2>/dev/null; grep -rn '157 to 68\\\\|to 68' crates/c\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3613/.bot-plan.md\", \"content\": \"# Draft plan #3613 (planner notes)\\n\\nFound:\\n- fixture apps/web/src/cards/art/fixtures/art-detail-short.json: 10 ids \u2026\n- Bash: {\"command\": \"grep -n -i 'fragment' docs/issues-and-patches.md | head -40\", \"description\": \"Check fragment rules in issues-and-patches doc\"}\n- Bash: {\"command\": \"sed -n 115,180p docs/issues-and-patches.md\", \"description\": \"Read patch kind and claims rules\"}\n- Bash: {\"command\": \"grep -n -i 'visual' crates/tools/src/classify.rs | head -40; grep -rn -i '\\\"visual\\\"\\\\|visual:' crates/tools/src/patches*.rs 2>/dev/null | head; ls crates/tools/src | head -50\", \"descrip\u2026\n- Bash: {\"command\": \"sed -n 235,275p crates/tools/src/classify.rs; sed -n 1595,1615p crates/tools/src/classify.rs; sed -n 1220,1250p crates/tools/src/classify.rs; grep -n 'visual' crates/tools/src/claims.rs \u2026\n- Bash: {\"command\": \"sed -n 200,234p crates/tools/src/classify.rs; sed -n 455,480p crates/tools/src/classify.rs; sed -n 85,125p crates/tools/src/claims.rs\", \"description\": \"Read area classification and claim\u2026\n- Bash: {\"command\": \"grep -n 'cap falls\\\\|89 new\\\\|list.s length as' spec/rulings/R3352000.md; grep -n 'may never be longer' spec/rulings/R3331001.md; grep -n 'whose cap fell from 129 to 40\\\\|at most$\\\\|^`AR\u2026\n- Grep: {\"pattern\": \"ART_DETAIL_SHORT|art-detail-short|cap fell\", \"glob\": \"*.{ts,tsx,rs}\", \"output_mode\": \"files_with_matches\"}\n- Bash: {\"command\": \"grep -n 'ART_DETAIL_SHORT\\\\b\\\\|ART_DETAIL_SHORT_MAX\\\\|art-detail-short\\\\|\\\\.size' apps/web/src/cards/art/{stinkyscape91Scenes,stinkyscapeScenes,setScenes,meditativeScenes,coreScenes,clas\u2026\n- Bash: {\"command\": \"timeout 300 pnpm --dir apps/web exec vitest run src/cards/art/artRichness.test.ts 2>&1 | tail -15\", \"description\": \"Run the detail floor test at base\", \"timeout\": 320000}\n- Bash: {\"command\": \"sed -n 352,365p docs/issues-and-patches.md\", \"description\": \"Read fragment wording checks\"}\n- Bash: {\"command\": \"sed -n 20,24p spec/rulings/R3352000.md; echo; sed -n 52,54p spec/rulings/R3352000.md; echo; sed -n 21,25p spec/rulings/R3331001.md; echo; sed -n 812,814p apps/web/src/cards/art/ART.md; s\u2026\n- Bash: {\"command\": \"ls apps/web/src/wording.test.ts && grep -n 'pending' apps/web/src/wording.test.ts | head -5; git status --porcelain\", \"description\": \"Confirm wording test reads pending fragments\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3613/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Already rated hard, and a rating can't go lower. By the rule alone it \u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Already rated hard, and a rating can't go lower. By the rule alone it would be medium: one web constant, one test assertion and five docs, about 7 files, no engine or AI code.\"} --> ## Goal Correct `ART_DETAIL_SHORT_MAX` in `apps/web/src/cards/art/richness.t\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-10T03:45:01Z",
       "owner_why": "it plans it",
@@ -19069,10 +19061,10 @@
       "provider": "claude-3",
       "queued_at": "2026-11-10T03:12:16Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "42751441194",
+      "run_id": "pending:b85a86a9-1794284727",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 3464,
-      "started_at": "2026-11-10T03:45:01Z",
+      "started_at": "2026-11-10T04:25:58Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -19259,9 +19251,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T04:25:15Z",
+    "at": "2026-11-10T04:25:58Z",
     "url": "",
-    "what": "build #3350 on claude-6"
+    "what": "build #3613 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-10T03:52:56Z",
