@@ -19560,6 +19560,8 @@
       }
     },
     "3623": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-10T04:58:55Z",
@@ -19573,8 +19575,11 @@
         "trail": "- Pass 1 (committed on this branch) fully audited `edge`: 56.70% \u2192 100.00%, plus `emptyHandView`/`hiddenCardsView` fixtures, the Board bless-whatever snapshot replaced by explicit assertions, and `wire/aim.test.ts` (16 tests). This pass adds the Stryker-independent half of the web audit \u2014 colocated g\u2026\n- - **web-wire**: `emotes.test.ts` (13 tests: gate boundaries at the cooldown/window edges against the engine config's own numbers, id predicates, portrait clamp, seat limits), `json.test.ts` (3: `isRecord` truth table).\n- - **web-settings**: `motion.test.ts` (7: query, panel switch, fx store, handed-motion override), `groups.test.ts` (5: flat read/apply, R2718000 device exclusion both ways, sync silence on device-only writes, R1295000 unknown-id keep), `store.test.ts` (10: defaults, boolean-only merge, notify/unsubs\u2026\n- - **web-drag**: `landing.test.ts` (10: name/clear, notify-once, point move without notice, copy semantics), `targets.test.ts` (18: place/target/drop-spot/locked-zone incl. R1081000), `cues.test.ts` (3: engine + haptics fakes, failures dropped).\n- - **web-wasm**: `WhenEngineReady.test.tsx` (3: ready branch draws children, fallback absent, no-fallback render).\n- Prove-nothing re-scan over all 238 in-scope test files: none assertion-light, no snapshots left.\n- ## #3490 table\n- | Area | Before | After | Left standing |\n- |---|---|---|---|\n- | edge | 56.70% | 100.00% | none |\n- | web-wire (3 files) | no direct tests | gap tests, kills shown | unmeasured, see below |\n- | web-settings (4 files) | no direct tests | gap tests, kills shown | unmeasured, see below |\n- | web-drag (3 files) | no direct tests | gap tests, kills shown | unmeasured, see below |\n- | web-wasm (2 files) | no direct tests | gap tests, kills shown | unmeasured, see below |\n- | web-animations, audio, cards, effects | not measured | untouched | not audited |\n- Only `edge`'s score demonstrably rises. Kill evidence for the web files: 10 hand-applied mutants, one per new test file, each failed exactly its boundary test and was reverted with the tracked tree verified clean after each (emotes `<=`, json array-check removal, store guard removal, landing equali\u2026\n- ## How tested\n- - `pnpm --dir apps/web exec vitest run <13 files>`: 13 passed, 141 passed (re-run after all mutant reverts).\n- - `pnpm exec vitest run --project edge`: 3 files, 45 passed.\n- - `pnpm --dir apps/web typecheck`, `pnpm --dir apps/edge typecheck`: clean.\n- - `pnpm exec eslint` on all 24 changed/new files: clean. `cargo fmt --check`: clean.\n- - `cargo jackioh spec check`: ok (1887 rulings, 4894 proofs, 61359 citations).\n- - `sh scripts/mutants.sh edge` (pass 1): 100.00%, 0 survived, 0 no-coverage.\n- ## Real bug for its own issue (not fixed here)\n- `src/fx/cardFx.test.ts` \u2192 \"R3332000 a Field Spell's own entrance\u2026\" expects `entranceKeyOf(\"classicplus-078\")` to be undefined, but shipped `src/fx/cards/classicplus.json5:124` gives it entrance `obeliskRise`. #3424 (Nov 9 04:22 UTC) shipped the entrance; #3426 (Nov 9 23:52 UTC) rewrote the test aro\u2026\n- ## Decisions (alternative rejected)\n- - Web scores reported as unmeasured rather than fiction: scoped Stryker runs die in the dry run on the bug above, on this branch and on base alike.\n- - No Stryker/vitest timeout or config change to get green: that weakens a check.\n- - No preemptive `// Stryker disable` comments: a disable needs a run proving equivalence.\n- - Deleted my drafted `settings/tabs.test.ts`: `tabs.test.tsx` already covers the unit (my coverage scan had a `.tsx` suffix bug; fixed and re-mapped).\n- - `wire/rng.ts` still untouched: exact-stream pinning would rot against Rust (pass 1 reason stands).\n- - The fx failure left red per this issue's own rule (real bug \u2192 its own issue, filed by a person), not reinterpreted by the audit lane.\n- ## Look twice\n- - My one mistake this session: a status check accidentally launched a second concurrent Stryker run; killed at once, restored all three sources from `.stryker-tmp` backup after verifying byte-original content, removed every dropping. Final `git status` is pass-1 plus exactly the 10 new test files; \u2026\n- - The `// Stryker disable` in `apps/edge/src/routing.ts` (pass 1, rerun-proven to 100%).\n- - Note for CI: this PR inherits main's web-unit red (`cardFx.test.ts`) until the fx issue above is fixed; every gate I own is green.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-fill/_work/_temp/work/item-3518 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-fill/_work/_temp/work/item-3518/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3518,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T06:51:55Z",
         "from_run": "42759217730",
         "gates": [
           {
@@ -19633,8 +19638,15 @@
         "source": "build",
         "until": "2026-11-10T07:18:50Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-10T06:48:50Z",
+      "run_id": "pending:a9783bef-1794293458",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-10T06:51:55Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -19818,9 +19830,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T06:50:42Z",
+    "at": "2026-11-10T06:51:55Z",
     "url": "",
-    "what": "review #3626 on muse"
+    "what": "review #3623 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T06:27:52Z",
