@@ -19089,15 +19089,6 @@
       "failures": 0,
       "feedback_since": "2026-11-10T05:42:04Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-10T06:53:36Z",
-        "family": "muse",
-        "kind": "work",
-        "notes": "",
-        "provider": "muse",
-        "reason": "built and checked; its own review run, on this subscription, reviews it next",
-        "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: start a dungeon run from a preset deck, or build your own in the deck workshop's card browser\"} -->\n- ## CI revision: both failing checks reproduced locally, then fixed\n- CI's `web` job failed on two unit tests. I ran both locally first and saw the exact same failures, then fixed the causes. No check was skipped, weakened, or edited.\n- **1. `src/spacing.test.ts` \u2014 `dungeon/dungeon.css` went from 14 to 24 fixed spacings.**\n- The branch's new preset/builder styles used ten hardcoded lengths in `gap`/`padding`/`margin` (`8px`, `12px`, `4px`, `8px`, `6px`, `12px` + `margin-top: 12px`, `8px`, `6px 16px`). Fix: all ten now name the identical steps from `spacing.css` (`var(--space-2)` for 4px, `--space-3` for 6px, `--space-4\u2026\n- **2. `src/writing.test.ts` (R3230000) \u2014 `Spell Tricks` and `Hold the Line` capitalize a second word outside the allowlist.**\n- Fix: sentence case \u2014 `Spell tricks` and `Hold the line` (`Spell` and `Charge` stay capitalized as game/keyword terms the cards print, which is why `First Charge` already passed). Changed in `crates/run/src/config.rs`, `fixtures.ts`, and `StartScreen.test.tsx`, with `zh-CN.json` keys updated to matc\u2026\n- ## How I tested it\n- - `vitest run src/spacing.test.ts src/writing.test.ts` \u2014 failed locally exactly as in CI before the fix, 13/13 pass after.\n- - `vitest run src/dungeon src/i18n/i18n.test.ts` \u2014 12 files, 133 pass.\n- - `cargo test -p jackioh-run` \u2014 45 pass (incl. `b12` presets test); `--features ts` run exits 0 with `apps/web/src/wire` clean (no regenerated diff).\n- - `cargo jackioh spec check` \u2014 ok (1887 rulings).\n- - `cargo fmt --check` clean; `cargo clippy -p jackioh-run --all-targets -- -D warnings` clean; `pnpm --dir apps/web typecheck` clean; `eslint` on the changed web files clean.\n- No new tests: the two failing gates are the repo's maintained coverage for exactly these rules, and they failed-then-passed around the fix. Only the 5 intended files changed; no extra worktrees were created.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-3594 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-3594/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
-      },
       "interruptions": 0,
       "issue": 3589,
       "kind": "review",
