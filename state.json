@@ -18322,6 +18322,8 @@
       "stop_requested": false
     },
     "3585": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-10T00:28:06Z",
@@ -18335,8 +18337,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: shard the slow server api CI job into 4\"} -->\n- ## What changed and why\n- `rust (test server api)` ran 7m 24s in CI run 42716908774, tripping the 7-minute alert (#73). The fix is the bot-alone tool from #3072: a shard count in [scripts/ci-shards.toml](/home/agent-muse/actions-runner-2/_work/_temp/work/item-3580/scripts/ci-shards.toml). `\"server api\"` goes from 1 to 4, wi\u2026\n- ## How I tested it\n- - `python3 .github/ci/matrix.py matrix` \u2014 exit 0; stderr lists exactly `rust (test server api 1/4)` through `rust (test server api 4/4)`, no other new job. Each shard keeps the group's unchanged test filter, scope `server`, and cache `server`; the group declares no doc tests or binaries check, so t\u2026\n- - `cd bot && python3 -m unittest discover -s tests -t .` \u2014 54 tests, 52 pass. The 2 failures are both pin tests that hold the committed counts to 1, i.e. the known person follow-up (see below), not defects: `test_the_committed_files_give_todays_jobs` (JOBS list and `{(1, 1)}` assertion) and `test_a\u2026\n- - `git status --porcelain` \u2014 only `M scripts/ci-shards.toml`. No Rust, catalog, patch, ruling, web, or e2e file changed, so no cargo test, fmt, or spec check applies; the harness re-runs its checks after.\n- ## Decisions the issue did not settle\n- - Kept the plan's count of 4 (rejected: 2 with no headroom, 8 with almost no gain since compile repeats per shard, and a new group first since that needs `.github/`, which the bot may not change).\n- - Departure from the plan: it predicted exactly one pin-test failure, but there are two. The second, `test_a_count_splits_a_group_into_that_many_jobs` (line 108), copies the committed counts into a temp repo, so it inherits the `= 4` and its `len(JOBS) + 1 + 2` assertion fails. I recommend the pers\u2026\n- ## For a person before merge (cannot be done by the bot)\n- 1. Required: in [bot/tests/test_ci_matrix.py](/home/agent-muse/actions-runner-2/_work/_temp/work/item-3580/bot/tests/test_ci_matrix.py), apply the plan's Open-questions pin update (JOBS gains `server api 1/4`\u2013`4/4`; the shards assertion gains `(1, 4)`\u2013`(4, 4)`) **plus** the line-108 fix above. `bot\u2026\n- 2. Conditional: if this pull request's CI still shows any `server api k/4` shard at or over 5 minutes, split the group in `.github/ci/rust-test.toml` (lines 117\u2013121) into lib-only and integration-only groups per the plan's Open-questions TOML.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-3580 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-3580/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3580,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T00:58:19Z",
         "from_run": "42728530616",
         "gates": [
           {
@@ -18395,8 +18400,15 @@
         "source": "build",
         "until": "2026-11-10T01:26:27Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-10T00:56:27Z",
+      "run_id": "pending:0186e7d7-1794272269",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-10T00:58:19Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -18410,9 +18422,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T00:28:06Z",
+    "at": "2026-11-10T00:58:19Z",
     "url": "",
-    "what": "build #3580 on muse"
+    "what": "review #3585 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T00:46:38Z",
