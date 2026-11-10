@@ -34,12 +34,12 @@ use crate::config::{
     RUN_CHEST_ARTIFACT_PERCENT, RUN_CHEST_COINS, RUN_CHEST_TICKETS, RUN_COINS, RUN_DECK_MAX,
     RUN_ELITE_PERCENT, RUN_ENEMY_DECK_SIZE, RUN_ENEMY_HEALTH, RUN_GHOST_PERCENT, RUN_KEEP, RUN_KEEP_MAX,
     RUN_LEVEL_EMBERS, RUN_LEVEL_TICKETS, RUN_MAP_COLUMNS, RUN_MAP_PATHS, RUN_MAX_HP, RUN_MINI_BOSS_DROP_TIER,
-    RUN_PACK_SIZE, RUN_RADIANT_TICKETS, RUN_REMOVE_PRICE, RUN_ROUTE_FIGHTS_MAX, RUN_ROUTE_FIGHTS_MIN,
-    RUN_ROUTE_TILES_MIN, RUN_SCORE_CARD_DRAWN, RUN_SCORE_CURSE_POINT_PERCENT, RUN_SCORE_DAMAGE,
-    RUN_SCORE_FIGHT, RUN_SCORE_FINAL_BOSS_PERCENT, RUN_SCORE_HEALING, RUN_SCORE_MINI_BOSS_PERCENT,
-    RUN_SCORE_PER_EMBER, RUN_SCORE_ROW, RUN_SEED_LENGTH, RUN_SHOP_ARTIFACTS, RUN_SHOP_CARDS,
-    RUN_SHRINE_OFFERS, RUN_SLOT_LADDER, RUN_STARTER_ARTIFACT_POINTS, RUN_STARTER_ARTIFACTS_MAX,
-    RUN_STARTER_SIZE, RUN_TICKETS, RUN_TIER_POINTS, RUN_TILE_WEIGHTS,
+    RUN_PACK_SIZE, RUN_PRESET_DECKS, RUN_RADIANT_TICKETS, RUN_REMOVE_PRICE, RUN_ROUTE_FIGHTS_MAX,
+    RUN_ROUTE_FIGHTS_MIN, RUN_ROUTE_TILES_MIN, RUN_SCORE_CARD_DRAWN, RUN_SCORE_CURSE_POINT_PERCENT,
+    RUN_SCORE_DAMAGE, RUN_SCORE_FIGHT, RUN_SCORE_FINAL_BOSS_PERCENT, RUN_SCORE_HEALING,
+    RUN_SCORE_MINI_BOSS_PERCENT, RUN_SCORE_PER_EMBER, RUN_SCORE_ROW, RUN_SEED_LENGTH, RUN_SHOP_ARTIFACTS,
+    RUN_SHOP_CARDS, RUN_SHRINE_OFFERS, RUN_SLOT_LADDER, RUN_STARTER_ARTIFACT_POINTS,
+    RUN_STARTER_ARTIFACTS_MAX, RUN_STARTER_SIZE, RUN_TICKETS, RUN_TIER_POINTS, RUN_TILE_WEIGHTS,
 };
 
 // Content: data the caller passes in
@@ -1406,6 +1406,36 @@ pub struct RunConstants {
     pub tier_points: Vec<(RunTier, i32)>,
     /// `RUN_CAMPFIRE_REMOVE`: the cards a campfire removes.
     pub campfire_remove: usize,
+    /// `RUN_PRESET_DECKS`: the named starting decks the start screen offers.
+    pub presets: Vec<RunPresetDeck>,
+}
+
+/// DR3: a named starting deck the start screen offers (`RUN_PRESET_DECKS`).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct RunPresetDeck {
+    pub id: String,
+    pub name: String,
+    pub theme: String,
+    pub cards: Vec<String>,
+}
+
+/// The named starting decks the start screen offers (`RUN_PRESET_DECKS`).
+pub fn run_preset_decks() -> Vec<RunPresetDeck> {
+    RUN_PRESET_DECKS
+        .iter()
+        .map(|(id, name, theme, cards)| RunPresetDeck {
+            id: (*id).to_string(),
+            name: (*name).to_string(),
+            theme: (*theme).to_string(),
+            cards: cards.iter().map(|card| (*card).to_string()).collect(),
+        })
+        .collect()
 }
 
 /// `RunConstants` from `config.rs`.
@@ -1417,6 +1447,7 @@ pub fn run_constants() -> RunConstants {
         starter_artifact_points: RUN_STARTER_ARTIFACT_POINTS,
         tier_points: RUN_TIER_POINTS.to_vec(),
         campfire_remove: RUN_CAMPFIRE_REMOVE,
+        presets: run_preset_decks(),
     }
 }
 

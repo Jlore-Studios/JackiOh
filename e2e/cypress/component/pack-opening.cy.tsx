@@ -114,7 +114,8 @@ describe("#1308 the pack-opening scene", () => {
     cy.tick(PACK_TEAR_MS);
     // R3349000: the fixture's Mythic pull tears into its takeover first; a tap moves on to the grid.
     cy.get(ts(packTestid.takeover)).should("have.attr", "data-card", "core-096");
-    cy.get(ts(packTestid.takeover)).click();
+    // The takeover has no box of its own: its full-screen view is fixed, so the tap lands there and bubbles up.
+    cy.get(`${ts(packTestid.takeover)} [data-testid="fullscreen-art"]`).click();
     cy.get(ts(packTestid.pack)).should("not.exist");
     cy.get(".pack-slot").should("have.length", 5);
     cy.get(ts(packTestid.slot(0))).should("have.attr", "data-rarity", "Mythic");
@@ -194,7 +195,7 @@ describe("#1999 the pack-opening scene on a phone", () => {
       cy.get(ts(packTestid.pack)).should("have.attr", "data-state", "tearing");
       cy.tick(PACK_TEAR_MS);
       // R3349000: the fixture's Mythic pull tears into its takeover first; a tap moves on to the grid.
-      cy.get(ts(packTestid.takeover)).click();
+      cy.get(`${ts(packTestid.takeover)} [data-testid="fullscreen-art"]`).click();
       // The Common and the Rare turn on a tap; the Mythic and the Epic wait for a hold.
       cy.get(ts(packTestid.flip(4))).click({ scrollBehavior: false });
       cy.get(ts(packTestid.flip(3))).click({ scrollBehavior: false });
