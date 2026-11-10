@@ -30,8 +30,9 @@ fn dealt_by_a_rule(card: &CardDef) -> bool {
 const MAKER_STILL_TO_COME: &[(&str, &[&str])] = &[];
 
 /// R381 (B2.8): card names that are also rules words. A text using one names that card only when the
-/// card's `refs` lists it.
-const RULES_WORDS: &[&str] = &["Exile", "Burn", "Echo", "Recycle"];
+/// card's `refs` lists it. R3535001: "Fuse" joins them for the held Stinkyscape+ set's #107 Fuse,
+/// whose verb the set's texts use everywhere.
+const RULES_WORDS: &[&str] = &["Exile", "Burn", "Echo", "Recycle", "Fuse"];
 
 /// R961: rules phrases that hold a card's name without naming it (R381): "Jade Counter" holds
 /// "Jade" (Meditative #39.2), which names nothing inside it. R2198004: "Fortify Mind" (M #22.1)
@@ -91,6 +92,16 @@ const TOKEN_POOLS: &[TokenPool] = &[
     TokenPool {
         tag: Tag::WarDoctrine,
         phrase: "War Doctrine",
+    },
+    // R3535001: the held Stinkyscape+ set's #80 and #155 name its ten Terminus Starships as
+    // "Terminus Starship", and #133 its five Automa-ζ fusion tokens as "Automa-ζ".
+    TokenPool {
+        tag: Tag::Starship,
+        phrase: "Terminus Starship",
+    },
+    TokenPool {
+        tag: Tag::AutomaZeta,
+        phrase: "Automa-ζ",
     },
 ];
 
@@ -408,15 +419,18 @@ mod r279_the_reference_map_spec_5_7_10_10 {
     }
 
     #[test]
-    fn r381_reads_exile_burn_echo_and_recycle_as_rules_words_a_text_that_says_one_names_no_card_unless_its_refs_list_it()
+    fn r381_reads_exile_burn_echo_recycle_and_fuse_as_rules_words_a_text_that_says_one_names_no_card_unless_its_refs_list_it()
      {
         for word in RULES_WORDS {
             let card = entries().into_iter().find(|entry| entry.name == *word);
-            assert_eq!(
-                card.map(|card| card.set),
-                Some(SetName::Classic),
-                "{word} is a Classic card"
-            );
+            // R3535001: every rules word but Fuse is a Classic card; Fuse is the held
+            // Stinkyscape+ set's #107, whose verb the set's texts use everywhere.
+            let set = if *word == "Fuse" {
+                SetName::StinkyscapePlus
+            } else {
+                SetName::Classic
+            };
+            assert_eq!(card.map(|card| card.set), Some(set), "{word} is a {set} card");
         }
         let uses_exile = entries()
             .into_iter()

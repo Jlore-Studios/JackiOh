@@ -369,6 +369,7 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             !entry.starts_with("meditativeplus-")
                 && !entry.starts_with("stinkyscape-")
                 && !entry.starts_with("traininggrounds-")
+                && !entry.starts_with("stinkyscapeplus-")
         });
         let (meditative, shipped): (Vec<String>, Vec<String>) = base_only
             .into_iter()
@@ -455,6 +456,7 @@ mod r1430_r1431_the_numbers_a_change_reaches {
                 entry.starts_with("meditativeplus-")
                     || entry.starts_with("stinkyscape-")
                     || entry.starts_with("traininggrounds-")
+                    || entry.starts_with("stinkyscapeplus-")
             })
             .count();
         // #2657's Anti-oneshot Armor `armor`, its Radiant face's "Your hero has Armor 1", and less
@@ -554,6 +556,12 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-t-korrelite", KEYWORD),
         ("stinkyscape-t-axnit", KEYWORD),
         ("traininggrounds-010", KEYWORD),
+        // R3535001: the held Stinkyscape+ set's numbered-keyword counts (S+ #6.1's Tipsy,
+        // #20's Lucky, #42's and #55's Armor).
+        ("stinkyscapeplus-006-1", KEYWORD),
+        ("stinkyscapeplus-020", KEYWORD),
+        ("stinkyscapeplus-042", KEYWORD),
+        ("stinkyscapeplus-055", KEYWORD),
         ("core-042", PRICE),
         ("core-046", PRICE),
         ("core-051", PRICE),
@@ -583,6 +591,33 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-004", PRICE),
         ("stinkyscape-012-3", PRICE),
         ("stinkyscape-149", PRICE),
+        // R3535001: the held Stinkyscape+ set's costs, thresholds and launch prices, which no
+        // Buff or Nerf moves (S+ #24's and #138's and #139's embiggen lines; #39's, #52's, #53's,
+        // #57's, #59's, #68's, #69.1's, #75.1's, #82's, #97's, #98's, #103's, #104's, #128's,
+        // #129's, #130's and #131's Tribute counts, #142's, #155's and #166's).
+        ("stinkyscapeplus-024", PRICE),
+        ("stinkyscapeplus-039", PRICE),
+        ("stinkyscapeplus-052", PRICE),
+        ("stinkyscapeplus-053", PRICE),
+        ("stinkyscapeplus-057", PRICE),
+        ("stinkyscapeplus-059", PRICE),
+        ("stinkyscapeplus-068", PRICE),
+        ("stinkyscapeplus-069-1", PRICE),
+        ("stinkyscapeplus-075-1", PRICE),
+        ("stinkyscapeplus-082", PRICE),
+        ("stinkyscapeplus-097", PRICE),
+        ("stinkyscapeplus-098", PRICE),
+        ("stinkyscapeplus-103", PRICE),
+        ("stinkyscapeplus-104", PRICE),
+        ("stinkyscapeplus-128", PRICE),
+        ("stinkyscapeplus-129", PRICE),
+        ("stinkyscapeplus-130", PRICE),
+        ("stinkyscapeplus-131", PRICE),
+        ("stinkyscapeplus-138", PRICE),
+        ("stinkyscapeplus-139", PRICE),
+        ("stinkyscapeplus-142", PRICE),
+        ("stinkyscapeplus-155", PRICE),
+        ("stinkyscapeplus-166", PRICE),
         ("core-038", ENGINE),
         ("core-093", ENGINE),
         ("core-095", ENGINE),
@@ -600,10 +635,15 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-153", ENGINE),
         ("stinkyscape-166", ENGINE),
         ("stinkyscape-167", ENGINE),
+        // R3535001: S+ #136's Activate count, which its script declares.
+        ("stinkyscapeplus-136", ENGINE),
         ("core-024", FORMULA),
         ("core-031", FORMULA),
         ("core-070", FORMULA),
         ("classicplus-053", FORMULA),
+        // R3535001: S+ #87's 3X stats, a term of a formula (#162's Combo X gains are on a
+        // Unit, which R1748003 does not hold to this).
+        ("stinkyscapeplus-087", FORMULA),
         ("core-082", STRUCTURE),
         ("classic-074", STRUCTURE),
         ("classicplus-019", STRUCTURE),
@@ -635,6 +675,10 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-t-ai-03", AI_PRINTED),
         ("stinkyscape-t-ai-05", AI_PRINTED),
         ("stinkyscape-t-ai-06", AI_PRINTED),
+        // R3535001: the held Stinkyscape+ set's AI cards print their numbers (ST15).
+        ("stinkyscapeplus-t-ai-01", AI_PRINTED),
+        ("stinkyscapeplus-t-ai-02", AI_PRINTED),
+        ("stinkyscapeplus-t-ai-06", AI_PRINTED),
         ("meditative-080", IMMUTABLE),
         ("stinkyscape-095", CARD_NAME),
         ("stinkyscape-159", CARD_NAME),

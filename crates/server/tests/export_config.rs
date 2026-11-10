@@ -487,6 +487,20 @@ fn r3114000_each_shipped_set_s_offset_is_its_catalog_place_in_thousands() {
     }
 }
 
+// R3535000: the held Stinkyscape+ set keeps its catalog place (offset 7000) for the day it ships,
+// but no deck holds it yet, so the client is not given an offset for it (CLAUDE.md rule 3).
+#[test]
+fn r3535000_the_held_stinkyscape_plus_set_keeps_its_offset_but_is_not_exported() {
+    assert_eq!(c::catalog_number_set_offset(SetName::StinkyscapePlus), Some(7000));
+    assert!(
+        !catalog_number_set_offsets()
+            .as_object()
+            .expect("offsets are a record")
+            .contains_key("Stinkyscape+"),
+        "a held set is in no deck"
+    );
+}
+
 /// The exported value of one name.
 fn exported(name: &str) -> Value {
     constants()

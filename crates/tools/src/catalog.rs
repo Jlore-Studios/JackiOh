@@ -56,7 +56,15 @@ fn keyword_kinds() -> Vec<&'static str> {
 }
 
 /// §6.1, R385, E6: the keywords that carry a number; every other kind is bare.
-const NUMBERED_KEYWORDS: &[&str] = &["Armor", "Lucky", "Brittle", "Spell Damage"];
+const NUMBERED_KEYWORDS: &[&str] = &[
+    "Armor",
+    "Lucky",
+    "Brittle",
+    "Spell Damage",
+    "Burn",
+    "Toxic",
+    "Tipsy",
+];
 
 /* expectations */
 

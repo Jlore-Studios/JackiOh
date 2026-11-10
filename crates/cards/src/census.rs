@@ -213,6 +213,52 @@ pub const CENSUS: &[SetCensus] = &[
             ("Mythic", 1),
         ],
     },
+    // R1420, R3535000: the Stinkyscape+ set (issue #3535, docs/stinkyscape-plus-set.md SP1): its 166
+    // numbered cards (the second card on each reused number moved to #161 to #166), the 16 tokens
+    // its cards define, and its shared tokens: the four Terminus `#Token`s, the Warhero Token, the
+    // ten Terminus Starships and the seven AI generated cards. Held, so it counts toward no total
+    // until it ships.
+    SetCensus {
+        set: "Stinkyscape+",
+        segment: "stinkyscapeplus",
+        cards: 166,
+        shared_cards: &[],
+        card_defined_tokens: &[
+            "6.1", "6.2", "26.1", "27.1", "61.1", "69.1", "75.1", "76.1", "121.1", "133.1", "133.2", "133.3",
+            "133.4", "133.5", "142.1", "142.2",
+        ],
+        shared_tokens: &[
+            "T-tears-of-the-kwzki-tree",
+            "T-supernova",
+            "T-alnilam",
+            "T-the-enigmata",
+            "T-warhero-token",
+            "T-terminus-starship-ark-of-ashes",
+            "T-terminus-starship-dying-ember",
+            "T-terminus-starship-heat-death-pilgrim",
+            "T-terminus-starship-entropys-wake",
+            "T-terminus-starship-red-giant-requiem",
+            "T-terminus-starship-cold-exodus",
+            "T-terminus-starship-omega-drift",
+            "T-terminus-starship-farthest-shore",
+            "T-terminus-starship-nightfall-covenant",
+            "T-terminus-starship-vacuum-psalm",
+            "T-AI-1",
+            "T-AI-2",
+            "T-AI-3",
+            "T-AI-4",
+            "T-AI-5",
+            "T-AI-6",
+            "T-AI-7",
+        ],
+        rarities: &[
+            ("Common", 36),
+            ("Rare", 47),
+            ("Epic", 43),
+            ("Legendary", 28),
+            ("Mythic", 12),
+        ],
+    },
 ];
 
 /// §5, §7, §8, B2.4: how many catalog entries carry each tag, tokens included, so a tag that drifts
@@ -309,6 +355,17 @@ pub fn tag_count(tag: Tag) -> usize {
         Tag::Faction => stinkyscape(5),
         // R3038000: the Dormant Starship, the tag's only card; the Drone Battleships are no Starships.
         Tag::Starship => stinkyscape(1),
+        // R3535002: the held Stinkyscape+ set's family tags (counts from SP6, held to 0 until it
+        // ships; recount against catalog.json before the release).
+        Tag::Mindustrial => stinkyscape_plus(0),
+        Tag::Mineral => stinkyscape_plus(0),
+        Tag::AutomaAlpha => stinkyscape_plus(0),
+        Tag::AutomaBeta => stinkyscape_plus(0),
+        Tag::AutomaGamma => stinkyscape_plus(0),
+        Tag::AutomaDelta => stinkyscape_plus(0),
+        Tag::AutomaOmega => stinkyscape_plus(0),
+        Tag::AutomaZeta => stinkyscape_plus(0),
+        Tag::Paperclip => stinkyscape_plus(0),
         // Every token of the sets that ship carries it, so its count is their tokens' sum (R1420).
         Tag::Token => CENSUS
             .iter()
@@ -341,6 +398,15 @@ fn stinkyscape(count: usize) -> usize {
 /// R2194000: `count` once the Training Grounds set ships (#2204), else 0.
 fn training_grounds(count: usize) -> usize {
     if set_ships(SetName::TrainingGrounds) {
+        count
+    } else {
+        0
+    }
+}
+
+/// R3535000: `count` once the Stinkyscape+ set ships, else 0.
+fn stinkyscape_plus(count: usize) -> usize {
+    if set_ships(SetName::StinkyscapePlus) {
         count
     } else {
         0

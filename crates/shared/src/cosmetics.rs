@@ -541,10 +541,16 @@ impl OfferSample {
 }
 
 /// The shipped catalog's definitions, read once: what an offer is judged against (R2725001).
+/// R1420, R3535000: only the sets that ship — a held set's cards get no version offer and join no
+/// cosmetic pool until the set ships.
 pub fn shipped_defs() -> &'static CardDefs {
     static DEFS: OnceLock<CardDefs> = OnceLock::new();
     DEFS.get_or_init(|| {
-        serde_json::from_str(jackioh_cards::catalog_json()).expect("the compiled catalog parses as CardDefs")
+        let all: CardDefs = serde_json::from_str(jackioh_cards::catalog_json())
+            .expect("the compiled catalog parses as CardDefs");
+        all.into_iter()
+            .filter(|(_, def)| jackioh_engine::set_ships(def.set))
+            .collect()
     })
 }
 
@@ -5622,6 +5628,24 @@ mod tests {
             Some([Rarity::Mythic].as_slice())
         );
         assert!(COSMETICS_JSON.contains(r#""defaultOn": ["Legendary"]"#));
+    }
+
+    // R1420, R3535000: a held set's cards get no version offer and join no cosmetic pool
+    // (CLAUDE.md rule 3).
+    #[test]
+    fn r3535000_shipped_defs_holds_no_card_of_a_held_set() {
+        for (card, def) in shipped_defs() {
+            assert!(
+                jackioh_engine::set_ships(def.set),
+                "{card} is held but shipped_defs holds it"
+            );
+        }
+        assert!(
+            shipped_defs()
+                .iter()
+                .all(|(_, def)| def.set != SetName::StinkyscapePlus),
+            "the held Stinkyscape+ set is not in shipped_defs"
+        );
     }
 
     #[test]

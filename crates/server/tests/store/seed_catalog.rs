@@ -6,7 +6,8 @@
 //! The second (`test:db` only: it runs when `DATABASE_URL` is set): `seed_catalog` writes the real catalog
 //! into `public.cards`, where every migration's constraints apply. `cards_tags_check` (0002) admits each
 //! later tag from the migration that adds it, 'Jlockeed' (R278, #13 and #14) from 0010, Book, Pancake
-//! and AI (B2.4) from 0015 and #3038's Starship (R3038000) from 0083 among them. The seed runs in one
+//! and AI (B2.4) from 0015, #3038's Starship (R3038000) from 0083 and #3535's nine Stinkyscape+ tags
+//! (R3535002) from 0087 among them. The seed runs in one
 //! transaction, so one such row fails the whole catalog. The first half compares the tags with the
 //! migrations' text; the second checks that the database accepts them. Both count the catalog of the
 //! sets that ship (`SHIPPED_SETS`), so they hold before and after the patches that ship the Meditative,
@@ -286,8 +287,8 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .expect("the real catalog is read");
         let (file, tags) = admitted_tags();
         assert_eq!(
-            file, "0083_starship_tag.sql",
-            "0083 re-adds the check with #3038's Starship (R3038000), after 0070's Resource and Faction"
+            file, "0087_stinkyscape_plus_tags.sql",
+            "0087 re-adds the check with #3535's nine Stinkyscape+ tags (R3535002), after 0083's Starship"
         );
         let mut carried: Vec<String> = entries
             .iter()
@@ -351,7 +352,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     async fn r1411_the_tag_check_admits_exactly_the_engine_s_tags_so_every_set_the_catalog_holds_seeds_the_day_it_ships()
      {
         let (file, tags) = admitted_tags();
-        assert_eq!(file, "0083_starship_tag.sql");
+        assert_eq!(file, "0087_stinkyscape_plus_tags.sql");
         for tag in [
             "Wincon",
             "Potion",
@@ -368,6 +369,15 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             "Resource",
             "Faction",
             "Starship",
+            "Mindustrial",
+            "Mineral",
+            "Automa-α",
+            "Automa-β",
+            "Automa-γ",
+            "Automa-δ",
+            "Automa-Ω",
+            "Automa-ζ",
+            "Paperclip",
         ] {
             assert!(tags.iter().any(|admitted| admitted == tag), "{tag}: {tags:?}");
         }
@@ -425,6 +435,30 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
                     .contains(&entry["rarity"].as_str().unwrap_or_default()),
                 "{}",
                 entry["id"]
+            );
+        }
+    }
+
+    /// R3535002: the latest check admits the Stinkyscape+ tags (CLAUDE.md rule 3).
+    #[tokio::test]
+    async fn r3535002_the_latest_check_admits_the_stinkyscape_plus_tags() {
+        let (file, tags) = admitted_tags();
+        assert_eq!(file, "0087_stinkyscape_plus_tags.sql");
+        for tag in [
+            "Mindustrial",
+            "Mineral",
+            "Automa-α",
+            "Automa-β",
+            "Automa-γ",
+            "Automa-δ",
+            "Automa-Ω",
+            "Automa-ζ",
+            "Paperclip",
+        ] {
+            assert!(tags.iter().any(|admitted| admitted == tag), "{tag}: {tags:?}");
+            assert!(
+                Tag::ALL.iter().any(|each| each.as_str() == tag),
+                "{tag} is one of the engine's tags"
             );
         }
     }

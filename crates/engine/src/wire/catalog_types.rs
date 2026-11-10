@@ -198,6 +198,9 @@ string_union! {
     /// Issue #3038 adds Starship (the Stinkyscape set's Dormant Starship, on both faces, so every
     /// Starship, Dormant or launched): a family tag with a rule, a card holding it having Flying and
     /// Ranged through the layers (R3038000), which the server admits from migration 0080.
+    /// Issue #3535 adds Mindustrial, Mineral, Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω,
+    /// Automa-ζ and Paperclip (the held Stinkyscape+ set's family tags, R3535002), which the server
+    /// admits from migration 0087.
     pub enum Tag {
         Human = "Human",
         Felinor = "Felinor",
@@ -229,6 +232,15 @@ string_union! {
         Resource = "Resource",
         Faction = "Faction",
         Starship = "Starship",
+        Mindustrial = "Mindustrial",
+        Mineral = "Mineral",
+        AutomaAlpha = "Automa-α",
+        AutomaBeta = "Automa-β",
+        AutomaGamma = "Automa-γ",
+        AutomaDelta = "Automa-δ",
+        AutomaOmega = "Automa-Ω",
+        AutomaZeta = "Automa-ζ",
+        Paperclip = "Paperclip",
         Token = "Token",
     }
 }
@@ -393,7 +405,8 @@ const SINGLE_PLAYER_STAGES: &[SetStage] = &[SetStage::SinglePlayer];
 /// when it ships, so a seeded pick over a pool replays the same before and after (R1420).
 /// Meditative+ follows Meditative (issue #1173, R1178000), and the Stinkyscape set follows
 /// Meditative+ (issue #1857, R1857000; shipped by issue #1884), and the Training Grounds set
-/// follows Stinkyscape (issue #2194, R2194000; shipped by issue #2204). The set table's
+/// follows Stinkyscape (issue #2194, R2194000; shipped by issue #2204), and the held Stinkyscape+
+/// set follows Training Grounds (issue #3535, R3535000). The set table's
 /// `Shipped` and `Held` rows, in its order (R3114000).
 pub const CATALOG_SETS: [SetName; count_in(CATALOG_STAGES)] = sets_in(CATALOG_STAGES);
 
@@ -454,6 +467,7 @@ set_table![
     TrainingGrounds = "Training Grounds" { stage: Shipped, segment: "traininggrounds", abbreviation: Some("TG"), shadow_ban_share: Some((1, 2)) },
     Boss = "Boss" { stage: SinglePlayer, segment: "boss", abbreviation: None, shadow_ban_share: None },
     BossX = "Boss-X" { stage: SinglePlayer, segment: "bossx", abbreviation: None, shadow_ban_share: None },
+    StinkyscapePlus = "Stinkyscape+" { stage: Held, segment: "stinkyscapeplus", abbreviation: Some("S+"), shadow_ban_share: Some((1, 5)) },
 ];
 
 /// R924000: what "More cards from" picks for a player's dealt Random deck (R1372, R1373): the newest
@@ -689,6 +703,29 @@ pub enum Keyword {
     /// keyword that took over from "Can't be in Defense Position" (`StaticFlags::never_defense`).
     #[serde(rename = "Can't Defend")]
     CantDefend,
+    /// R3535002: declared for SP3 E1; no rule yet.
+    Evolve,
+    /// R3535002: declared for SP3 E2; no rule yet.
+    Burn {
+        n: i32,
+    },
+    /// R3535002: declared for SP3 E2; no rule yet.
+    Toxic {
+        n: i32,
+    },
+    /// R3535002: declared for SP3 E4; no rule yet.
+    #[serde(rename = "GIGA")]
+    Giga,
+    /// R3535002: declared for SP3 E3; no rule yet.
+    Flexible,
+    /// R3535002: declared for SP3 E3; no rule yet.
+    Frenzy,
+    /// R3535002: declared for SP3 E3; no rule yet.
+    Evasive,
+    /// R3535002: declared for SP3 E5; no rule yet.
+    Tipsy {
+        n: i32,
+    },
 }
 
 string_union! {
@@ -738,6 +775,22 @@ string_union! {
         StarshipPiece = "Starship Piece",
         Starship = "Starship",
         CantDefend = "Can't Defend",
+        /// R3535002: declared for SP3 E1; no rule yet.
+        Evolve = "Evolve",
+        /// R3535002: declared for SP3 E2; no rule yet.
+        Burn = "Burn",
+        /// R3535002: declared for SP3 E2; no rule yet.
+        Toxic = "Toxic",
+        /// R3535002: declared for SP3 E4; no rule yet.
+        Giga = "GIGA",
+        /// R3535002: declared for SP3 E3; no rule yet.
+        Flexible = "Flexible",
+        /// R3535002: declared for SP3 E3; no rule yet.
+        Frenzy = "Frenzy",
+        /// R3535002: declared for SP3 E3; no rule yet.
+        Evasive = "Evasive",
+        /// R3535002: declared for SP3 E5; no rule yet.
+        Tipsy = "Tipsy",
     }
 }
 
@@ -793,6 +846,14 @@ impl Keyword {
             Keyword::StarshipPiece => KeywordKind::StarshipPiece,
             Keyword::Starship => KeywordKind::Starship,
             Keyword::CantDefend => KeywordKind::CantDefend,
+            Keyword::Evolve => KeywordKind::Evolve,
+            Keyword::Burn { .. } => KeywordKind::Burn,
+            Keyword::Toxic { .. } => KeywordKind::Toxic,
+            Keyword::Giga => KeywordKind::Giga,
+            Keyword::Flexible => KeywordKind::Flexible,
+            Keyword::Frenzy => KeywordKind::Frenzy,
+            Keyword::Evasive => KeywordKind::Evasive,
+            Keyword::Tipsy { .. } => KeywordKind::Tipsy,
         }
     }
 
@@ -806,6 +867,9 @@ impl Keyword {
             Keyword::Armor { n }
             | Keyword::Lucky { n }
             | Keyword::Brittle { n }
+            | Keyword::Burn { n }
+            | Keyword::Toxic { n }
+            | Keyword::Tipsy { n }
             | Keyword::SpellDamage { n } => Some(n),
             Keyword::Temporary { n } => n,
             _ => None,
@@ -853,6 +917,14 @@ impl Keyword {
             KeywordKind::StarshipPiece => Keyword::StarshipPiece,
             KeywordKind::Starship => Keyword::Starship,
             KeywordKind::CantDefend => Keyword::CantDefend,
+            KeywordKind::Evolve => Keyword::Evolve,
+            KeywordKind::Burn => Keyword::Burn { n },
+            KeywordKind::Toxic => Keyword::Toxic { n },
+            KeywordKind::Giga => Keyword::Giga,
+            KeywordKind::Flexible => Keyword::Flexible,
+            KeywordKind::Frenzy => Keyword::Frenzy,
+            KeywordKind::Evasive => Keyword::Evasive,
+            KeywordKind::Tipsy => Keyword::Tipsy { n },
         }
     }
 }
@@ -2022,6 +2094,54 @@ mod tests {
                 .all(|set| set_row(*set).stage != SetStage::Held || !set_ships(*set))
         );
         assert_eq!(SINGLE_PLAYER_SETS, [Boss, BossX]);
+    }
+
+    // R3535002: the new kinds and tags read and write their printed names (CLAUDE.md rule 3).
+    #[test]
+    fn r3535002_the_new_kinds_and_tags_read_and_write_their_printed_names() {
+        let kinds: Vec<Keyword> = vec![
+            Keyword::Evolve,
+            Keyword::Burn { n: 2 },
+            Keyword::Toxic { n: 3 },
+            Keyword::Giga,
+            Keyword::Flexible,
+            Keyword::Frenzy,
+            Keyword::Evasive,
+            Keyword::Tipsy { n: 1 },
+        ];
+        let names = [
+            "Evolve", "Burn", "Toxic", "GIGA", "Flexible", "Frenzy", "Evasive", "Tipsy",
+        ];
+        for (keyword, name) in kinds.iter().zip(names) {
+            assert_eq!(keyword.kind().as_str(), name);
+            let json = serde_json::to_value(keyword).expect("keyword serializes");
+            assert_eq!(json["kind"], name);
+            let back: Keyword = serde_json::from_value(json).expect("keyword reads back");
+            assert_eq!(&back, keyword);
+        }
+        assert_eq!(Keyword::Burn { n: 2 }.n(), Some(2));
+        assert_eq!(Keyword::Toxic { n: 3 }.n(), Some(3));
+        assert_eq!(Keyword::Tipsy { n: 1 }.n(), Some(1));
+        assert_eq!(Keyword::Evolve.n(), None);
+        assert_eq!(Keyword::Giga.n(), None);
+        for tag in [
+            Tag::Mindustrial,
+            Tag::Mineral,
+            Tag::AutomaAlpha,
+            Tag::AutomaBeta,
+            Tag::AutomaGamma,
+            Tag::AutomaDelta,
+            Tag::AutomaOmega,
+            Tag::AutomaZeta,
+            Tag::Paperclip,
+        ] {
+            let json = serde_json::to_value(tag).expect("tag serializes");
+            let back: Tag = serde_json::from_value(json).expect("tag reads back");
+            assert_eq!(back, tag);
+        }
+        assert_eq!(Tag::AutomaAlpha.as_str(), "Automa-α");
+        assert_eq!(Tag::AutomaOmega.as_str(), "Automa-Ω");
+        assert_eq!(Tag::AutomaZeta.as_str(), "Automa-ζ");
     }
 
     // R3114001: a set's shadow-ban ceiling is its share of its non-token cards, rounded down.
