@@ -35710,10 +35710,6 @@
       "refused_until": "2026-11-09T00:00:00Z",
       "spent": [
         {
-          "at": "2026-10-30T05:24:55Z",
-          "minutes": 95.7
-        },
-        {
           "at": "2026-10-30T05:47:09Z",
           "minutes": 49.9
         },
@@ -36508,17 +36504,21 @@
         {
           "at": "2026-11-10T03:54:41Z",
           "minutes": 22.5
+        },
+        {
+          "at": "2026-11-10T04:36:45Z",
+          "minutes": 26.2
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-10T04:53:00Z",
-          "utilization": 0.06
+          "utilization": 0.18
         },
-        "observed_at": "2026-11-10T03:54:41Z",
+        "observed_at": "2026-11-10T04:36:45Z",
         "seven_day": {
           "resets_at": "2026-11-16T00:00:00Z",
-          "utilization": 0.13
+          "utilization": 0.17
         },
         "status": "allowed"
       }
@@ -38341,7 +38341,10 @@
       "2026-11-10T03:59:04Z,claude-1,stream,call,42751037205,97,2026-11-10T07:30:00Z,,,allowed_warning,100,,",
       "2026-11-10T03:59:34Z,claude-1,stream,call,42751037205,98,2026-11-10T07:30:00Z,,,allowed_warning,100,,",
       "2026-11-10T04:00:19Z,claude-1,stream,call,42751037205,99,2026-11-10T07:30:00Z,,,allowed_warning,100,,",
-      "2026-11-10T04:01:19Z,claude-1,stream,call,42751037205,100,2026-11-10T07:30:00Z,,,rejected,100,,"
+      "2026-11-10T04:01:19Z,claude-1,stream,call,42751037205,100,2026-11-10T07:30:00Z,,,rejected,100,,",
+      "2026-11-10T03:56:52Z,muse,usage-command,before,42752622028,18,2026-11-10T04:53:00Z,17,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-10T04:07:13Z,muse,usage-command,call,42752622028,21,2026-11-10T04:53:00Z,17,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-10T04:17:21Z,muse,usage-command,call,42752622028,22,2026-11-10T04:53:00Z,18,2026-11-16T00:00:00Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-10T04:09:41Z,42752696584,claude-1,opus,plan,3514,hard,interrupted,5-hour cap,0,0,0,0,,100,100,,,515.9,claude-5,none,cap,0",
