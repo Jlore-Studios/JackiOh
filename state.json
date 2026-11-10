@@ -19127,6 +19127,7 @@
         "by": "`muse` (medium)",
         "sha": "fce0525e43fbfaa026baad0ec64ed1b4b2add9e7"
       },
+      "closed_at": "2026-11-10T09:59:39Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -19138,6 +19139,7 @@
       "last_findings": [],
       "live": "reviewing",
       "merge_owner": "muse",
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "question": "",
