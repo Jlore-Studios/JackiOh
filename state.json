@@ -19356,6 +19356,8 @@
       "runs_on": "night-vm-muse-fill",
       "started_at": "2026-11-10T03:20:43Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 1
     },
