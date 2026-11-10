@@ -1450,6 +1450,21 @@ pub fn owns_account_cosmetic(id: &str, account: &[String]) -> bool {
 mod tests {
     use super::*;
 
+    /// R633: a cosmetic's id is a setting's text, so it may be as long as PLAYER_SETTINGS_TEXT_MAX_LENGTH
+    /// characters and no longer.
+    #[test]
+    fn r633_a_cosmetic_id_may_be_as_long_as_a_setting_and_no_longer() {
+        let too_long = |length: usize| {
+            let mut cosmetics = defaults();
+            cosmetics.push(entry(&"a".repeat(length), CosmeticKind::Foil, false));
+            problems(&cosmetics)
+                .iter()
+                .any(|problem| problem.contains("is longer than a setting's"))
+        };
+        assert!(!too_long(PLAYER_SETTINGS_TEXT_MAX_LENGTH));
+        assert!(too_long(PLAYER_SETTINGS_TEXT_MAX_LENGTH + 1));
+    }
+
     /// R2655000: `false` prints no full art, `true` the card's Epic one and an id the one it names; a
     /// row of `public.card_cosmetic_picks` holds the switch and, beside a switch that is on, the id
     /// (migration 0072), and reads back as the pick it was written from.
@@ -4597,6 +4612,27 @@ mod tests {
             "{:?}",
             problems(&dropped)
         );
+        // The capstone is a Mythic hull design: a Mythic of another kind, or a hull of another rarity, is
+        // refused.
+        for (kind, rarity) in [
+            (CosmeticKind::StarshipLivery, CosmeticRarity::Mythic),
+            (CosmeticKind::StarshipHull, CosmeticRarity::Legendary),
+        ] {
+            let mut changed = cosmetics.clone();
+            for cosmetic in &mut changed {
+                if cosmetic.id == FLEET_CAPSTONE {
+                    cosmetic.kind = kind;
+                    cosmetic.rarity = rarity;
+                }
+            }
+            assert!(
+                problems(&changed)
+                    .iter()
+                    .any(|problem| problem.contains("but it is a Mythic hull design")),
+                "{kind:?} {rarity:?}: {:?}",
+                problems(&changed)
+            );
+        }
     }
 
     use CosmeticRarity::{Epic, Legendary, Mythic, Rare};
@@ -5088,6 +5124,22 @@ mod tests {
                 }];
             },
             "the Default variant's offer does not take",
+        );
+        // R3015001: the cards it must take are the catalog's, not its tokens: an offer that leaves out one
+        // card is refused by that card's name.
+        let (card, _) = shipped_defs()
+            .iter()
+            .find(|(_, def)| !def.is_token())
+            .expect("the shipped catalog holds a card");
+        refused(
+            &|c| {
+                let i = at(c, "version-animated");
+                c[i].offer = vec![OfferClause {
+                    except: vec![card.clone()],
+                    ..OfferClause::default()
+                }];
+            },
+            &format!("the Default variant's offer does not take {card:?}"),
         );
     }
 
