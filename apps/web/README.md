@@ -524,6 +524,11 @@ pnpm --dir apps/web test           # vitest (jsdom)
 scripts), which needs the Rust toolchain `rust-toolchain.toml` pins; `typecheck` reads the module's
 generated `.d.ts`, so run one of them (or the script) once first.
 
+`src/perf/` owns the busy-board frame probe's numbers and statistics (issue #3605):
+`frameBudgets.ts` names every budget and duration (CLAUDE.md rule 9), `frameStats.ts` the pure
+summarize-and-judge the e2e spec shares. The probe itself runs as e2e spec 50
+(`pnpm --dir e2e probe:frames`).
+
 Both deployed builds are `production` mode, so neither serves the dev-only routes; `build:staging`
 puts `.env.staging` in the build's environment (`node --env-file`), where Vite never overwrites a
 variable. Cloudflare serves `dist/` (wrangler.jsonc): `public/_redirects` routes the screens,

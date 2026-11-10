@@ -1,0 +1,35 @@
+{
+  "id": "50-busy-a",
+  "spec": "50-busy-board-frames.cy.ts",
+  "description": "Player 1 deck for spec 50 (issue #3605): the busy-board frame probe's worst case. Five units that fill lanes 1-5 (Megabase the Legendary wall, Tylannt the Mythic anchor, Paragon Mk2 the Charger, Wrong-House Attacker and Stratos the one-cost loopers: every non-Mythic unit carries two or more when:\"always\" keyword loops), two one-cost traps for backrow lanes 1-2, and single-copy cheap spells and traps (Stockpile, True Strike, Knockoff, Rapid Draw, Burn and the rest of the one-cost traps) so the ten cards left in hand once the board is built are all playable. The handicap (R180) is spec 32's pattern with room to redraw: three bonus draws a turn refill the hand to HAND_CAP by player-turn 5, and 10 mana a turn plays the 9-mana unit row over the first two turns.",
+  "cards": [
+    "stinkyscape-116",
+    "stinkyscape-073",
+    "stinkyscape-006",
+    "classicplus-006",
+    "stinkyscape-068",
+    "classic-014",
+    "classic-063",
+    "core-005",
+    "core-044",
+    "core-028",
+    "classic-026",
+    "core-041",
+    "core-060",
+    "core-096",
+    "meditative-064",
+    "stinkyscape-135",
+    "stinkyscape-138",
+    "stinkyscape-144",
+    "traininggrounds-013",
+    "traininggrounds-014",
+    "classic-036"
+  ],
+  "handicap": {
+    "deckSize": 21,
+    "manaBonus": 9,
+    "manaCap": 10,
+    "extraOpeningCards": 6,
+    "extraDrawsPerTurn": 3
+  }
+}

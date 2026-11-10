@@ -1,0 +1,35 @@
+{
+  "id": "50-busy-b",
+  "spec": "50-busy-board-frames.cy.ts",
+  "description": "Player 2 deck for spec 50 (issue #3605): p1's mirror with different one-cost loopers (State of the Game and Right-house defender instead of Wrong-House Attacker and Stratos), so both sides carry two-loop units without sharing them. Same shape otherwise: five lane units, two backrow traps, single-copy cheap spells and traps so the hand left over is all playable, and the same handicap, so both seats build their worst-case board over the first two turns and redraw to HAND_CAP by player-turn 5.",
+  "cards": [
+    "stinkyscape-116",
+    "stinkyscape-073",
+    "stinkyscape-006",
+    "classic-041",
+    "core-003",
+    "classic-014",
+    "classic-063",
+    "core-005",
+    "core-044",
+    "core-028",
+    "classic-026",
+    "core-041",
+    "core-060",
+    "core-096",
+    "meditative-064",
+    "stinkyscape-135",
+    "stinkyscape-138",
+    "stinkyscape-144",
+    "traininggrounds-013",
+    "traininggrounds-014",
+    "classic-036"
+  ],
+  "handicap": {
+    "deckSize": 21,
+    "manaBonus": 9,
+    "manaCap": 10,
+    "extraOpeningCards": 6,
+    "extraDrawsPerTurn": 3
+  }
+}

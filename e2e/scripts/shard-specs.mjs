@@ -32,13 +32,14 @@ export const SMOKE = ["01", "06", "10", "13", "19", "46", "47"];
  * spec's Cypress "Duration"; 19's All random test alone waits about 50 s for the rating window to
  * widen after the rated game before it. Specs 29-36 are estimates (29-32 from the turns
  * they play, spec 03's length per turn; 36 from its play-through of the Meditative set, about six
- * minutes in Chromium on a loaded machine); 47 from a local run, 30 tests in about 30 s; once they
- * have run, replace them with measured times (#79).
+ * minutes in Chromium on a loaded machine); 47 from a local run, 30 tests in about 30 s; 50 from
+ * its sampling windows (5 s idle + 8 s combat) plus its setup turns, until it has run (#3605);
+ * once they have run, replace them with measured times (#79).
  */
 const WEIGHTS = {
   "01": 82, "02": 124, "03": 30, "04": 46, "05": 20, "06": 17, "07": 38, "08": 170, "09": 32,
   "10": 4, "11": 26, "12": 43, "13": 49, "14": 22, "15": 17, "16": 28, "17": 55, "18": 51,
-  "19": 99, "20": 28, "21": 20, "22": 28, "23": 11, "24": 26, "25": 36, "26": 11, "27": 4,
+  "19": 99, "20": 28, "21": 20, "22": 28, "23": 11, "24": 26, "25": 36, "26": 11, "27": 4, "50": 90,
   "28": 25, "29": 40, "30": 25, "31": 25, "32": 15, "33": 15, "34": 20, "35": 20, "36": 360, "46": 52, "47": 35, "99": 1,
 };
 const DEFAULT_WEIGHT = 30;
