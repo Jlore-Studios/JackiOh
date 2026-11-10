@@ -20134,6 +20134,13 @@
     "3630": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-10T08:53:08Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "Test and test-fixture edits in apps/web and e2e only, no engine, AI, cross-crate, migration or 40-file change."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
