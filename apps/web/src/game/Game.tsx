@@ -74,6 +74,7 @@ import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import { usePhonePortrait } from "./phoneBar.ts";
 import FxLayer from "../fx/FxLayer.tsx";
+import type { FxVisibility } from "../fx/types.ts";
 import { getFxSettings, useFxSettings } from "../fx/settings.ts";
 import { getAudioEngine } from "../audio/engine.ts";
 import AuraLayer from "../fx/aura/AuraLayer.tsx";
@@ -88,6 +89,7 @@ import { SHORTCUTS } from "../shortcuts/shortcuts.ts";
 import { isTyping } from "../replay/ReplayToolbar.tsx";
 import "./animations.css";
 import { useGameAudio, usePickupSound, useVoiceSpeaking } from "../audio/index.ts";
+import { defaultVisibility } from "./visibility.ts";
 import { useGameStats } from "../stats/useGameStats.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { SidelineStrip } from "../sideline/SidelineStrip.tsx";
@@ -199,6 +201,14 @@ export type GameProps = {
    */
   silent?: boolean;
   /**
+   * R3497000: an online board drains its animation queue while the page is hidden (and when it turns
+   * visible with steps still queued), so coming back shows the live board at once. Practice, dungeon
+   * and opened-replay boards leave it off.
+   */
+  drainWhenHidden?: boolean;
+  /** R3497000: the page-visibility source, injectable in tests; the page's own when absent. */
+  visibility?: FxVisibility;
+  /**
    * R2785000: claims an entry as a set piece, asked before the takeover; read at each enqueue. The
    * /dev/fx gallery's fixture set piece is its one caller until issue #2782's set pieces.
    */
@@ -269,6 +279,8 @@ export default function Game({
   tradeBar = true,
   showOfferDraw = true,
   silent = false,
+  drainWhenHidden = false,
+  visibility,
   setPieceOf,
   concedeBody,
 }: GameProps): ReactElement {
@@ -469,6 +481,9 @@ export default function Game({
     });
   }
   const runner = queue.current;
+  // R3497000: the page-visibility source; the page's own unless a test injects one.
+  const fallbackVisibility = useMemo(() => defaultVisibility(), []);
+  const source = visibility ?? fallbackVisibility;
   useGameStats(view, trackStats);
   useGameAudio(runner, view, silent); // before the layout effects below: it must see each view before the runner is fed (audio/useGameAudio.ts)
   // A voice line holding the channel marks the board `data-speaking`, the one attribute practice's
@@ -628,13 +643,25 @@ export default function Game({
         if (mythic !== undefined) setStill({ defId: mythic.defId, instanceId: mythic.instanceId, view: previous });
       }
       runner.enqueue(fresh, previous);
+      // R3497000: a hidden tab drains each new view instead of replaying the backlog on throttled
+      // timers. Enqueue-then-drain, never skip-enqueue, so the drain signal still reaches `FxLayer`,
+      // the director still owes then flushes on idle, and `onSettled` sets `shown`.
+      if (drainWhenHidden && !silent && source.hidden()) runner.drain();
     }
     if (previous !== null && previous.viewer !== view.viewer) {
       stillSeen.current.clear();
       setStill(null);
     }
     if (runner.idle()) setShown(view);
-  }, [view, runner, reducedMotion, triggerHitStop, triggerHitStopMs, slamResolver, entranceResolver, silent, replay, motion]);
+  }, [view, runner, reducedMotion, triggerHitStop, triggerHitStopMs, slamResolver, entranceResolver, silent, replay, motion, drainWhenHidden, source]);
+
+  // R3497000: a tab that turns visible with steps still queued shows the newest view at once.
+  useEffect(() => {
+    if (!drainWhenHidden || silent) return undefined;
+    return source.subscribe(() => {
+      if (!source.hidden() && !runner.idle()) runner.drain();
+    });
+  }, [drainWhenHidden, silent, source, runner]);
 
   // The moves `offered` are the newest view's; they apply once the board shows it (see the header).
   const legal = shown === view ? offered : NOTHING_LEGAL;

@@ -23,7 +23,7 @@ import { laneZoneTestids } from "../../game/actions.ts";
 import { LANES, sideView, testid, type Side } from "../../game/contract.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { ANOMALY_FX } from "../anomaly.ts";
-import { FX_CARD_TABLE, type FxAuraSpec, type FxCardEntry } from "../cards/tables.ts";
+import { FX_CARD_TABLE, entryAura, type FxAuraSpec, type FxCardEntry } from "../cards/tables.ts";
 import { AURA_FADE_IN_MS, AURA_FADE_OUT_MS, AURA_MAX_PER_ZONE, AURA_MOTES_PER_AURA, AURA_PARTICLE_SHARE, AURA_SOURCES_LIMIT } from "../constants.ts";
 import { FLAVOR_LOOKS, paletteLook, type FlavorColors } from "../flavors.ts";
 import { flavorLookOf } from "../flavorSource.ts";
@@ -70,10 +70,9 @@ function specOf(key: string, defId: string, instanceId: string, side: Side, lane
   return { key, defId, instanceId, side, lane, scope, look: aura.look, colors };
 }
 
-/** R3400000: the aura of a hooks entry or a bespoke one. */
+/** R3400000: the aura of a hooks entry or a bespoke one (R3402000 `entryAura`). */
 function auraOf(table: ReadonlyMap<string, FxCardEntry>, defId: string): FxAuraSpec | undefined {
-  const entry = table.get(defId);
-  return entry?.kind === "hooks" || entry?.kind === "bespoke" ? entry.aura : undefined;
+  return entryAura(table.get(defId));
 }
 
 /** R3337003: `code`'s backdrop over `side`, in its set piece's palette. */

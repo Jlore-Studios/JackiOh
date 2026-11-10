@@ -141,6 +141,7 @@ fn decide_trades_into_the_taunt_rather_than_cast_hit_job_on_a_hand_that_fills_th
             rng: create_rng("ai-even-trades-root", 0),
             budget: AI_BUDGET,
             should_stop: None,
+            wrap_up: None,
         },
     )
     .expect("a decision");

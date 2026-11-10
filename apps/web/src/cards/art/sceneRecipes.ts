@@ -19,7 +19,9 @@
 // coreAltRecipes3.ts), and R3406000 every card of #3406's table, Stinkyscape's later cards
 // (stinkyscape91AltRecipes1.ts to stinkyscape91AltRecipes3.ts), and R3394000 every card of #3394's table,
 // Stinkyscape's cards 1 to 90 offered Alt art and the Dormant Starship (stinkyscapeAltRecipes1.ts to
-// stinkyscapeAltRecipes3.ts).
+// stinkyscapeAltRecipes3.ts). R3352000: Classic's scenes, every Classic entry but
+// Corpse Plantation (the proof above) and the Glitch among them, keep theirs in three files of their own
+// (sceneRecipesClassic1.ts to sceneRecipesClassic3.ts).
 
 import { CLASSIC_PLUS_ALT_RECIPES_1 } from "./classicPlusAltRecipes1.ts";
 import { CLASSIC_PLUS_ALT_RECIPES_2 } from "./classicPlusAltRecipes2.ts";
@@ -49,6 +51,9 @@ import { CORE_SCENES_1 } from "./sceneRecipesCore1.ts";
 import { CORE_SCENES_2 } from "./sceneRecipesCore2.ts";
 import { CORE_SCENES_3 } from "./sceneRecipesCore3.ts";
 import { LEGACY_RECIPES } from "./sceneRecipesLegacy.ts";
+import { CLASSIC_RECIPES_1 } from "./sceneRecipesClassic1.ts";
+import { CLASSIC_RECIPES_2 } from "./sceneRecipesClassic2.ts";
+import { CLASSIC_RECIPES_3 } from "./sceneRecipesClassic3.ts";
 import { MEDITATIVE_PLUS_RECIPES } from "./sceneRecipesMeditativePlus.ts";
 import { TRAINING_GROUNDS_RECIPES } from "./sceneRecipesTrainingGrounds.ts";
 import { STINKYSCAPE_ALT_RECIPES_1 } from "./stinkyscapeAltRecipes1.ts";
@@ -168,7 +173,7 @@ export const STINKYSCAPE_ALT_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   ...STINKYSCAPE_ALT_RECIPES_3,
 };
 
-/** R3331000: the cards that draw from a scene, by id: the proof cards left here, R3390000 every Classic+ entry, R3391000 every Stinkyscape entry of its pass (cards 1 to 90), R3392000 every Core entry, R3393000 every Meditative+ and Training Grounds entry, R3401000 every Meditative entry and R3403000 #3403's Stinkyscape entries. */
+/** R3331000: the cards that draw from a scene, by id: the proof cards left here, R3390000 every Classic+ entry, R3391000 every Stinkyscape entry of its pass (cards 1 to 90), R3392000 every Core entry, R3393000 every Meditative+ and Training Grounds entry, R3401000 every Meditative entry, R3403000 #3403's Stinkyscape entries and R3352000 every Classic entry. */
 export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   "classic-074": CORPSE_PLANTATION,
   "core-100": CEASELESS_VOID,
@@ -188,6 +193,9 @@ export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   ...MEDITATIVE_RECIPES_3,
   ...MEDITATIVE_RECIPES_4,
   ...MEDITATIVE_RECIPES_5,
+  ...CLASSIC_RECIPES_1,
+  ...CLASSIC_RECIPES_2,
+  ...CLASSIC_RECIPES_3,
 };
 
 /**

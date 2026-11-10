@@ -721,7 +721,8 @@ describe("R3399002 — a takeover's own drawing", () => {
   it("R3399002 a drawn look's takeover draws its picture in its art layer, and a look with no art none", () => {
     for (const look of ["zealot", "portal", "stair", "vineyard"] as const) {
       const drawing = TAKEOVER_ART_DRAWINGS[look];
-      if (drawing === undefined) throw new Error(`no drawing for ${look}`);
+      // R3402000: Classic+'s four are drawn as paths (Core's four as scenes, takeoverArt.test.ts).
+      if (drawing === undefined || !("paths" in drawing)) throw new Error(`no drawing of paths for ${look}`);
       const cue = takeover(look);
       const el = expectMounted(mountDomEffect(root, cue, { at: AT }), cue);
       expectCenteredOn(el, AT);
@@ -746,7 +747,8 @@ describe("R3399002 — a takeover's own drawing", () => {
       root.innerHTML = "";
     }
 
-    for (const look of ["prismatic", "void", "pawn", "genie"] as const) {
+    // R3402000: "pawn" and "genie" draw a scene of their own now (takeoverArt.test.ts).
+    for (const look of ["prismatic", "void"] as const) {
       const cue = takeover(look);
       const el = expectMounted(mountDomEffect(root, cue, { at: AT }), cue);
       expect(el.querySelector(".takeover-art")).toBeNull();

@@ -975,8 +975,10 @@ impl Tx<'_> {
         economy_dispatch!(self, practice_seed_release(profile_id, seed))
     }
 
-    /// R1483000: how many of the profile's seeds are unclaimed and issued at or after
-    /// `issued_since`, the ones `economy_practice_seeds_prune` keeps.
+    /// R1483000, R3500001: how many of the profile's seeds issued at or after `issued_since` are
+    /// unclaimed, or claimed and not yet settled (`economy_practice_seeds_unsettled`'s rows), so a
+    /// claim waiting for its check keeps its place; a claim whose settle never came stops counting
+    /// at `issued_since`, with the seed's lifetime.
     pub async fn economy_practice_seeds_open(
         &mut self,
         profile_id: &str,
@@ -2617,8 +2619,9 @@ mod pg {
         run_as(t, Some(profile_id)).await?;
         let open: i64 = sqlx::query_scalar(
             "select count(*) from public.practice_seeds
-              where profile_id = $1::uuid and claimed_at is null
-                and issued_at >= to_timestamp($2::double precision / 1000.0)",
+              where profile_id = $1::uuid
+                and issued_at >= to_timestamp($2::double precision / 1000.0)
+                and (claimed_at is null or (claim is not null and settled_at is null))",
         )
         .bind(profile_id)
         .bind(issued_since)
@@ -3603,7 +3606,9 @@ mod fake {
             .practice_seeds
             .iter()
             .filter(|held| {
-                held.profile_id == profile_id && held.claimed_at.is_none() && held.issued_at >= issued_since
+                held.profile_id == profile_id
+                    && held.issued_at >= issued_since
+                    && (held.claimed_at.is_none() || (held.claim.is_some() && held.settled.is_none()))
             })
             .count();
         Ok(i64::try_from(open).unwrap_or(i64::MAX))

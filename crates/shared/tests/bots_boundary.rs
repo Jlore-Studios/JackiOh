@@ -362,9 +362,9 @@ fn the_bot_seats_decision_runs_from_the_machine_as_json() {
     // The call is JSON for a host with no Rust types; the answer is the choice the machine is fed back.
     let json = serde_json::to_string(&call).expect("a decide call serializes");
     let read: DecideCall = serde_json::from_str(&json).expect("a decide call reads back");
-    let choice = decide(&read, None).expect("a bot plays at p2");
+    let choice = decide(&read, None, None).expect("a bot plays at p2");
     assert!(choice.body.is_some(), "{choice:?}");
-    assert_eq!(decide(&call, None), Some(choice));
+    assert_eq!(decide(&call, None, None), Some(choice));
     // Nobody to decide for at p1.
     let nobody = DecideCall {
         request: DecideRequest {
@@ -373,7 +373,7 @@ fn the_bot_seats_decision_runs_from_the_machine_as_json() {
         },
         ..call
     };
-    assert!(decide(&nobody, None).is_none());
+    assert!(decide(&nobody, None, None).is_none());
 }
 
 #[test]

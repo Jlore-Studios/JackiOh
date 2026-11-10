@@ -18,8 +18,8 @@ use serde::Serialize;
 use serde_json::Value;
 
 use jackioh_ai::{
-    AI_BUDGET, AI_EVAL, AI_GATE_BUDGET, AiOptions, DecisionReason, NextSwing, SearchStats, decide, evaluate,
-    redact,
+    AI_BUDGET, AI_EVAL, AI_GATE_BUDGET, AiOptions, Decision, DecisionReason, NextSwing, SearchStats, decide,
+    evaluate, redact,
 };
 use jackioh_engine::replay::{ReplayInput, fold, hash_state};
 use jackioh_engine::{
@@ -77,6 +77,8 @@ struct Inspection {
     line: Vec<ActionBody>,
     line_described: Vec<String>,
     stats: Option<SearchStats>,
+    /// R3498000: `Decision::fell_short`, a search that left its finalists unscored on a sampled world.
+    fell_short: bool,
     /// The nonces of the folded entries the reducer refused (their messages are not shown).
     fold_errors: Vec<String>,
 }
@@ -126,8 +128,10 @@ fn inspect(
         rng: decision_rng(&input.seed, seat),
         budget,
         should_stop: None,
+        wrap_up: None,
     };
     let decision = decide(&state, seat, &mut options);
+    let fell_short = decision.as_ref().is_some_and(Decision::fell_short);
     let (reason, action, line, stats) = match decision {
         Some(decision) => (
             Some(decision.reason),
@@ -156,6 +160,7 @@ fn inspect(
         line_described: line.iter().map(|action| in_words(&view, seat, action)).collect(),
         line,
         stats,
+        fell_short,
         fold_errors,
     })
 }
@@ -204,15 +209,20 @@ fn render(found: &Inspection) -> String {
             out.push_str(&format!("   line: {}\n", found.line_described.join(" | ")));
             out.push_str(&format!(
                 "   stats nodes {} determinizations {} lines {} simErrors {} simPanics {} stoppedBy {} \
-                 score {}\n",
+                 replied {} worldsScored {} score {}\n",
                 stats.nodes,
                 stats.determinizations,
                 stats.lines,
                 stats.sim_errors,
                 stats.sim_panics,
                 stats.stopped_by.as_str(),
+                stats.replied,
+                stats.worlds_scored,
                 to_fixed(stats.score, EVAL_DECIMALS)
             ));
+            if found.fell_short {
+                out.push_str("   fell short: a finalist went unscored on a sampled world\n");
+            }
         }
         _ => out.push_str(&format!("decision none: {} owes no action\n", found.seat)),
     }
@@ -417,10 +427,15 @@ mod tests {
             "stats nodes ",
             " simPanics ",
             "stoppedBy ",
+            " replied ",
+            " worldsScored ",
         ] {
             assert!(text.contains(needle), "{needle:?} missing from:\n{text}");
         }
         assert!(!text.contains("foldErrors"));
+        // R3498000: with no clock the search scores its finalists on every world.
+        assert!(!found.fell_short);
+        assert!(!text.contains("fell short"));
         // R185: the match seed rebuilds both libraries' order, so it is never printed.
         let seed = hotseat().seed;
         assert!(!text.contains(&seed));

@@ -56,7 +56,9 @@ game has not finished reports `{ "error": "…" }` from `run_fight_report`, as a
 
 The pure crates never read a clock (CLAUDE.md rule 4). The AI's wall-clock cap is this crate's:
 `ai_decide` gives `decide` a `should_stop` that compares `js_sys::Date::now()` with `deadline_ms`
-(`deadline_ms <= 0`: no clock).
+(`deadline_ms <= 0`: no clock), and a `wrap_up` that fires `AI_WRAP_UP_SHARE` of the way from the call to
+`deadline_ms`, past which the beam explores no further (R3498000, `core`'s `SearchClock`); `bot_decide`
+gives the ladder bot's search the same two.
 
 ## Build and the client's seams
 

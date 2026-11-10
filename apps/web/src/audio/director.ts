@@ -188,6 +188,8 @@ export function createSoundDirector(
   function flush(items: readonly Owed[], offsetMs = 0): void {
     const effects: SoundCue[] = [];
     let endCue: SoundCue | null = null;
+    // R3497000: the viewer's own turn-start cue, kept like the game-over sting.
+    let turnCue: Extract<SoundCue, { kind: "sfx" }> | null = null;
     let line: Extract<SoundCue, { kind: "voice" }> | null = null;
     let cardEffect: Extract<SoundCue, { kind: "effect" }> | null = null;
 
@@ -202,6 +204,14 @@ export function createSoundDirector(
           if (cardEffect === null || cue.priority > cardEffect.priority) cardEffect = cue;
         } else if (item.event.type === "gameOver") {
           if (endCue === null) endCue = cue;
+        } else if (
+          cue.kind === "sfx" &&
+          cue.id === "turnStart" &&
+          item.event.type === "turnStarted" &&
+          item.event.player === item.view.viewer
+        ) {
+          // The last viewer-own turn start wins: the cue that matters when your clock runs.
+          turnCue = cue;
         } else {
           effects.push(cue);
         }
@@ -209,9 +219,10 @@ export function createSoundDirector(
     }
 
     // First cue of each SfxId, in stream order. The game-over stinger is held back for the end, so
-    // a same-id cue earlier in the burst gives way to it.
+    // a same-id cue earlier in the burst gives way to it; the turn-start cue is reserved the same way.
     const ids = new Set<string>();
     if (endCue !== null && endCue.kind === "sfx") ids.add(endCue.id);
+    if (turnCue !== null) ids.add(turnCue.id);
     const unique: SoundCue[] = [];
     for (const cue of effects) {
       if (cue.kind !== "sfx" || ids.has(cue.id)) continue;
@@ -219,6 +230,7 @@ export function createSoundDirector(
       unique.push(cue);
     }
     const kept = unique.slice(0, endCue === null ? FLUSH_MAX_SFX : FLUSH_MAX_SFX - 1);
+    if (turnCue !== null && !kept.includes(turnCue)) kept.push(turnCue);
     if (endCue !== null) kept.push(endCue);
     kept.forEach((cue, j) => {
       send(cue, offsetMs + j * FLUSH_GAP_MS);

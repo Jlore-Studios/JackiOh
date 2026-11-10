@@ -57,13 +57,16 @@ func TestLeftovers_AFixPassRunsAtTheFixEffort(t *testing.T) {
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"fix":    workBuilder(map[string]any{"src/game.txt": "v3\n"}),
 		"review": []runner.Handler{workReviewer(workChanges("Not yet.")), workReviewer(workApprove)}})
-	h.night(r)
-	efforts := map[string]string{}
+	planned, _ := h.night(r)
+	efforts, models := map[string]string{}, map[string]string{}
 	for _, c := range r.Calls {
-		efforts[c.Role] = c.Effort
+		efforts[c.Role], models[c.Role] = c.Effort, c.Model
 	}
-	// Builds run at the seat's effort, fix and review one notch down (#695).
-	assertEqual(t, []string{efforts["build"], efforts["fix"], efforts["review"]}, []string{"xhigh", "high", "high"})
+	// Builds run at the seat's own effort (`xhigh` or `high` for a Sonnet seat, by account: the
+	// Sonnet effort test), fix and review at the fix and review efforts, `high` (#695).
+	seat := h.cfg.Pool.Seat(planned.Str("provider"), models["build"])
+	assertEqual(t, []string{efforts["build"], efforts["fix"], efforts["review"]},
+		[]string{seat.Effort, "high", "high"})
 }
 
 // ---------------------------------------------------------------------------- CatchUpTests

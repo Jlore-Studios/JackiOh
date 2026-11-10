@@ -325,8 +325,10 @@ describe("R502 the per-card table", () => {
   });
 
   it("R3332000 a Field Spell's own entrance plays as it lands face up and the shared Legendary entrance yields", () => {
-    // #93 Combo-Index, a Legendary Field Spell, given an entrance of its own beside its hooks and aura.
-    const FIELD = "core-093";
+    // Classic+ #78 Claude's Datacenter, a Legendary Field Spell, given an entrance of its own beside its hooks
+    // and aura (R3402000: Combo-Index, the first example, has its own in the shipped table now, as R3389001
+    // Classic's do; R3405001: and so does Meditative #40 Feng Shui).
+    const FIELD = "classicplus-078";
     const table = parseFxCardTable("test.json5", `{ "${FIELD}": { cast: { motif: "conjure" }, aura: { look: "storm", scope: "zone" }, entrance: "titanBloom" } }`);
     expect(entranceKeyOf(FIELD, table)).toBe("titanBloom");
     expect(entranceKeyOf(FIELD)).toBeUndefined();

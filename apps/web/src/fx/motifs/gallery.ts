@@ -467,11 +467,19 @@ export function galleryPlayOf(defId: string, entry: FxCardEntry): GalleryCardPla
  * Edition) rolls its Golem. R2794000: Classic's Flourishes take their own
  * fixtures (fx/cards/classic/): Book of Heal heals the viewer's first unit, Recycle shuffles two cards
  * into the deck and draws one, and King Wagtoggle swaps the decks. R3334004: Preemptive Strike wakes its
- * player's Dormant Starship, which the board does not show, so its brand falls on the hero. R3407000:
- * Stinkyscape part two's signatures take their modules' own (fx/cards/stinkyscape/), each told the card it
- * plays (`defId`), so a hook's marker names it.
+ * player's Dormant Starship, which the board does not show, so its brand falls on the hero. R3402001: Silly
+ * Silas's Cry rotates the field left, handing the other side's first unit over; Unlicensed Experimentation
+ * fires and fuses that unit onto the viewer's second; Pocket Chaos swaps the boards and hands the other
+ * player a hidden card; Combo-Index's end-of-turn trigger raises its grade (the engine's `counterChanged` of
+ * it) and adds a card; Call to Chaos rolls a draw; My Pawn fires and cancels the other side's first unit's
+ * attack; and Heroic Power is activated, drawing its caster a card (its dart and its sprinter are the other
+ * powers, which its tests plan). R3407000: Stinkyscape part two's signatures take their modules' own
+ * (fx/cards/stinkyscape/), each told the card it plays (`defId`), so a hook's marker names it.
  * R3395000: Stinkyscape 001 to 090's signatures take theirs from fx/cards/stinkyscape/signatureFixtures.ts.
  */
+/** R3402001: the grade Combo-Index's gallery trigger raises it to, D (the engine counts E as 1, combo_index.rs). */
+const GALLERY_GRADE_D = 2;
+
 export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView, instanceId: string, player: PlayerId, defId?: string) => GameEvent[] } = {
   manaCrack: (_view, _instanceId, player) => [{ type: "modifierChanged", player: player === "p1" ? "p2" : "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true }],
   bloodDrain: (view, instanceId, player) => [...motifFixture("radiance", view, instanceId, player), { type: "healthLost", player, amount: 3 }],
@@ -647,6 +655,43 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   tyrantCommand: tyrantCommandFixture,
   craterLock: (_view, _instanceId, player) => [{ type: "locked", player, row: "units", lane: GALLERY_ENTRANCE_LANE }],
   shrineDescent: shrineDescentFixture,
+  // R3402001: Core's signatures, each on the fewest events its beats read, with ids off the view.
+  mirrorballShuffle: (view) => {
+    const foe = unitsOf(view.opponent)[0];
+    return [
+      { type: "rotated", direction: "left" },
+      ...(foe === undefined ? [] : [{ type: "controlChanged", instanceId: foe.instanceId, controller: view.viewer, row: "units", lane: 1 } satisfies GameEvent]),
+    ];
+  },
+  clampWeld: (view, instanceId, player) => {
+    const foe = unitsOf(view.opponent)[0];
+    const mine = unitsOf(view.you)[1];
+    const fired: GameEvent = { type: "trapFired", instanceId, defId: "core-085", controller: player, row: "backrow", lane: GALLERY_TRAP_LANE };
+    return foe === undefined || mine === undefined
+      ? [fired]
+      : [fired, { type: "fused", instanceIds: [foe.instanceId, mine.instanceId], resultInstanceId: mine.instanceId, defId: mine.defId }];
+  },
+  pocketSwap: (_view, _instanceId, player) => [
+    { type: "swapped", what: "board" },
+    { type: "addedToHand", player: player === "p1" ? "p2" : "p1", instanceId: "hidden", defId: "hidden" },
+  ],
+  gradeRings: (_view, instanceId, player) => [
+    { type: "hookResolving", sourceId: instanceId, defId: "core-093", controller: player, hook: "endOfTurn" },
+    { type: "counterChanged", instanceId, counter: "grade", value: GALLERY_GRADE_D },
+    { type: "addedToHand", player, instanceId: "fx-graded", defId: "core-055" },
+  ],
+  chaosReels: (_view, instanceId, player) => [{ type: "chaosRolled", player, instanceId, defId: "core-095", effects: ["draw"] }],
+  pawnStrings: (view, instanceId, player) => {
+    const foe = unitsOf(view.opponent)[0];
+    const fired: GameEvent = { type: "trapFired", instanceId, defId: "core-096", controller: player, row: "backrow", lane: GALLERY_TRAP_LANE };
+    return foe === undefined ? [fired] : [fired, { type: "attackCancelled", attackerId: foe.instanceId, targetId: `hero-${player}`, byInstanceId: instanceId }];
+  },
+  // In the engine's order: an Activate's `activated` comes before its hook's marker (activate.rs).
+  heroicDoors: (_view, instanceId, player) => [
+    { type: "activated", player, instanceId, defId: "core-098", ability: "power" },
+    { type: "hookResolving", sourceId: instanceId, defId: "core-098", controller: player, hook: "activate" },
+    { type: "drawn", player, instanceId: "fx-power-drawn", defId: "core-003" },
+  ],
   // R3407000: Stinkyscape part two's signatures, each on its module's own fixture (fx/cards/stinkyscape/).
   melchiorTally: melchiorTallyFixture,
   balthasarCradle: balthasarCradleFixture,

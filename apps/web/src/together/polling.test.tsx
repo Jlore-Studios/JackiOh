@@ -1,7 +1,8 @@
 // #936 review (finding 8): how often the social screens ask the server again. The friends list is the
 // social layer's dearest read, so off its screen it is read only while the friends panel is open
 // (#1831); an open conversation keeps CHAT_POLL_MS (`ChatPanel.test.tsx`). R3214000: while the tab's
-// social socket is live the poll sends nothing, and a push stands in for it.
+// social socket is live the poll sends nothing, and a push stands in for it. R3576000: a tab hidden for
+// HIDDEN_QUIET_MS lets its socket go, so the server can sleep.
 // The server is a stubbed `fetch` (`test/stubServer.ts`), the social socket a fake one
 // (`test/fakeSocket.ts`), and time is vitest's fake clock.
 
@@ -20,7 +21,7 @@ import { settle } from "../test/settle.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { must, stubServer, type StubServer } from "../test/stubServer.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
-import { FRIENDS_POLL_MS, SOCIAL_POLL_MS } from "./config.ts";
+import { FRIENDS_POLL_MS, HIDDEN_QUIET_MS, SOCIAL_POLL_MS } from "./config.ts";
 import { FriendsButton } from "./FriendsButton.tsx";
 import { setSocialSocketFactory } from "./socialSocket.ts";
 import { TogetherRoute } from "./TogetherRoute.tsx";
@@ -439,5 +440,65 @@ describe("R3214000 the social socket stands in for the polls", () => {
     socket().deliver({ type: "friends" });
     await settle({ advance: 0 });
     expect(reads(server).friends).toBe(2);
+  });
+
+  it("R3576000 a tab hidden for HIDDEN_QUIET_MS lets its socket go and reads nothing, and opens one again when it shows", async () => {
+    const server = serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive();
+    const before = reads(server).social;
+
+    setVisibility("hidden");
+    await settle({ advance: HIDDEN_QUIET_MS - 1 });
+    expect(socket().closedWith, "hidden for less, the socket stays").toBeNull();
+    await settle({ advance: 1 });
+    expect(socket().closedWith, "quiet: the socket is let go").not.toBeNull();
+
+    await settle({ advance: 5 * SOCIAL_POLL_MS });
+    expect(reads(server).social, "quiet: the paused poll reads nothing (R3205000)").toBe(before);
+    expect(sockets, "and no socket opens while it stays hidden").toHaveLength(1);
+
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(sockets, "shown: a socket opens again").toHaveLength(2);
+    expect(reads(server).social, "shown: one read").toBe(before + 1);
+    await goLive();
+    await settle({ advance: 3 * SOCIAL_POLL_MS });
+    expect(reads(server).social, "live again: no poll").toBe(before + 1);
+  });
+
+  it("R3576000 a tab that shows again before HIDDEN_QUIET_MS keeps its socket, and the count starts over", async () => {
+    serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive();
+
+    for (let glance = 0; glance < 3; glance += 1) {
+      setVisibility("hidden");
+      await settle({ advance: HIDDEN_QUIET_MS - 1 });
+      setVisibility("visible");
+      // Answers the woken page's probe (R1441), as the server would.
+      socket().deliver({ type: "social", incoming: [], outgoing: [], unread: {} });
+      await settle({ advance: 0 });
+    }
+    expect(sockets).toHaveLength(1);
+    expect(socket().closedWith).toBeNull();
+  });
+
+  it("R3576000 a quiet tab with a challenge of its own open goes on polling for it (R3205000)", async () => {
+    const server = serve(() => ({ incoming: [], outgoing: [OUTGOING] }));
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive({ incoming: [], outgoing: [OUTGOING] });
+    const before = reads(server).social;
+
+    setVisibility("hidden");
+    await settle({ advance: HIDDEN_QUIET_MS });
+    const atQuiet = reads(server).social;
+    expect(socket().closedWith, "quiet: the socket is let go").not.toBeNull();
+    expect(atQuiet, "the drop reads at once, since the challenge keeps the poll running").toBeGreaterThan(before);
+    await settle({ advance: 2 * SOCIAL_POLL_MS });
+    expect(reads(server).social, "and at its pace").toBe(atQuiet + 2);
   });
 });
