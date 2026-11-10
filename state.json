@@ -17312,6 +17312,13 @@
         "reason": "`claude-8` reached its usage limit",
         "trail": "- said: You've hit your 5-hour limit \u00b7 resets 1:10pm (UTC)"
       },
+      "hold": {
+        "ends": "2026-11-10T14:57:41Z",
+        "owner": "claude-8",
+        "since": "2026-11-10T12:57:41Z",
+        "until": "2026-11-10T13:10:00Z",
+        "why": "it refused a call"
+      },
       "interruptions": 0,
       "issue": 3350,
       "kind": "review",
