@@ -1,61 +1,38 @@
 // R738: this seat's aim, sent to the opponent as it changes.
 //
 // It reads the board's own `interaction` — what a drag lifts and what a click-select picks are the
-// same state — and the target under the pointer with the drag layer's own reader (`pickDropSpot`)
-// against `aimTargets`, so a drag and a hover over click-selected targets aim alike. Only a change is
-// sent (`aimKey`), the server coalesces the rest (`AIM_RELAY_INTERVAL_MS`). Nothing here decides a rule.
+// same state — and the target under the pointer comes from the shared hovered-target reader
+// (`useHoveredAimTarget`: the drag layer's own `pickDropSpot` against `aimTargets`), so a drag and a
+// hover over click-selected targets aim alike. Only a change is sent (`aimKey`), the server coalesces
+// the rest (`AIM_RELAY_INTERVAL_MS`). Nothing here decides a rule. R3615000: the same hovered target
+// feeds the attack preview, so this returns it (tracked even where `emit` is undefined and nothing is
+// sent, as in hotseat).
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import { aimKey, type ActionBody, type Aim, type PlayerView } from "@jackioh/shared";
 
 import type { Interaction } from "../actions.ts";
-import type { ClickTarget } from "../contract.ts";
-import { pickDropSpot } from "../drag/targets.ts";
 import { aimFor, aimTargets } from "./aim.ts";
-
-type Hovered = { target: ClickTarget; testid: string };
+import { useHoveredAimTarget, type HoveredAimTarget } from "./useHoveredAimTarget.ts";
 
 const NONE: ReadonlySet<string> = new Set();
 
-function stackAt(x: number, y: number): readonly Element[] {
-  try {
-    return document.elementsFromPoint(x, y);
-  } catch {
-    // jsdom has no elementsFromPoint: nothing is under the pointer.
-    return [];
-  }
-}
-
-/** Sends `emit` this seat's aim on every change; does nothing when `emit` is undefined (hotseat). */
+/**
+ * Sends `emit` this seat's aim on every change; does nothing when `emit` is undefined (hotseat).
+ * Returns the legal target under the pointer while `interaction` aims one, for the attack preview.
+ */
 export function useAimEmitter(
   view: PlayerView,
   legal: readonly ActionBody[],
   interaction: Interaction,
   emit: ((aim: Aim | null) => void) | undefined,
-): void {
+): HoveredAimTarget | null {
   const targets = useMemo(
     () => (emit === undefined ? NONE : aimTargets(view, legal, interaction)),
     [emit, view, legal, interaction],
   );
-  const [hovered, setHovered] = useState<Hovered | null>(null);
-  const latestTargets = useRef(targets);
-  latestTargets.current = targets;
-
-  const aiming = targets.size > 0;
-  useEffect(() => {
-    if (!aiming) return undefined;
-    function onMove(event: PointerEvent): void {
-      const spot = pickDropSpot(stackAt(event.clientX, event.clientY), latestTargets.current);
-      const next = spot.at === "target" ? { target: spot.target, testid: spot.testid } : null;
-      setHovered((prev) => (prev?.testid === next?.testid ? prev : next));
-    }
-    window.addEventListener("pointermove", onMove, { capture: true, passive: true });
-    return () => {
-      window.removeEventListener("pointermove", onMove, { capture: true });
-      setHovered(null);
-    };
-  }, [aiming]);
+  const hovered = useHoveredAimTarget(view, legal, interaction);
 
   const over = hovered !== null && targets.has(hovered.testid) ? hovered.target : null;
   const aim = useMemo(() => aimFor(view, interaction, targets, over), [view, interaction, targets, over]);
@@ -76,4 +53,6 @@ export function useAimEmitter(
     },
     [],
   );
+
+  return hovered;
 }
