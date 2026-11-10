@@ -558,7 +558,7 @@
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
       "provider": "muse",
-      "run_id": "pending:6ed27bc6-1794282080",
+      "run_id": "42751113069",
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-10T03:41:52Z",
       "stop_requested": false,
