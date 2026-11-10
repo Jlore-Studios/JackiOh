@@ -18066,11 +18066,9 @@
     "what": "review #3649 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-10T15:34:31Z",
+    "at": "2026-11-10T15:45:54Z",
     "notes": [
-      "delivered revise #3591 on claude-4 (run 42830444340): approved",
-      "delivered build #3544 on muse (run 42826176232): part",
-      "runner gate: started 1 of 5 waiting run(s) (run 42840716274 on bot/issue-3584); 4 wait for room"
+      "runner gate: started 0 of 4 waiting run(s); 4 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18776,7 +18774,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T15:34:31Z",
+  "loop_tick": "2026-11-10T15:45:54Z",
   "machine_disk": {
     "issue": null,
     "reading": {
