@@ -36857,7 +36857,9 @@
           "provider": "claude-7"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-10T00:15:53Z",
         "every": 5,
+        "findings": 0,
         "head": "ab3de5db3fe835168cd198f30c055adecaf355ef",
         "issue": 3502,
         "merged_at": "2026-11-10T00:05:13Z",
@@ -36870,12 +36872,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:a43ac6f8-1794269137",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42725672064",
         "sha": "1ccfe15d24dcf108041c75323e8c6e089d4302bc",
         "started_at": "2026-11-10T00:06:01Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a dungeon run's time counts only while it is played, so a run picked up the next day is not timed by the calendar",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 175
