@@ -162,8 +162,11 @@ run_rust() {
     shard="--shard $((k % n))/$n"
     label="$((k % n + 1))/$n"
   fi
-  mine=$(cargo mutants --list $FILTER $shard | count_lines)
   mkdir -p "$out"
+  # The shard's mutants by name, as the outcome files name them, so `score` can name any it never
+  # finished.
+  cargo mutants --list $FILTER $shard >"$out/list.txt"
+  mine=$(count_lines <"$out/list.txt")
   printf 'shard=%s\nmutants=%s\nexcluded=%s\n' "$label" "$mine" "$((all - total))" >"$out/area.env"
   echo "mutants: $area shard $label, $mine of the area's $total mutants ($((all - total)) left out)"
   code=0
@@ -321,6 +324,20 @@ EOF
     head -n "$SURVIVORS_SHOWN" "$dir/missed.txt"
     [ "$missed" -le "$SURVIVORS_SHOWN" ] || echo "…"
     printf '```\n</details>\n\n'
+  fi
+  # The mutants the shard never finished (a build or a test that outlived the step), named when
+  # their count is the shortfall's, so the next audit can see which held the job.
+  if [ "$done" != "$mutants" ] && [ -f "$out/list.txt" ]; then
+    for outcome in caught missed timeout unviable; do
+      if [ -f "$dir/$outcome.txt" ]; then cat "$dir/$outcome.txt"; fi
+    done | LC_ALL=C sort >"$out/finished.txt"
+    LC_ALL=C sort "$out/list.txt" | LC_ALL=C comm -23 - "$out/finished.txt" >"$out/unfinished.txt"
+    unfinished=$(count_lines <"$out/unfinished.txt")
+    if [ "$unfinished" -gt 0 ] && [ "$unfinished" -eq $((mutants - done)) ]; then
+      printf '<details><summary>%s: %s not finished</summary>\n\n```\n' "$area" "$unfinished"
+      head -n "$SURVIVORS_SHOWN" "$out/unfinished.txt"
+      printf '```\n</details>\n\n'
+    fi
   fi
   # By file, an audit's rows (no leading pipe, so the report's summary table takes none of them).
   [ "$done" -gt 0 ] || return 0
