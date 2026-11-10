@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
@@ -73,6 +74,11 @@ func (w *evacWorld) build(id, pr int, base, head, status, conclusion string, job
 		"head_sha", head, "run_attempt", 1, "pull_requests", []any{},
 		"html_url", fmt.Sprintf("https://github.com/x/actions/runs/%d", id)))
 	w.gh.Jobs[strconv.Itoa(id)] = jobs
+}
+
+// ended dates build `id`'s end (`updated_at`) `ago` before the world's now.
+func (w *evacWorld) ended(id int, ago time.Duration) {
+	w.gh.Runs.Obj(strconv.Itoa(id)).Set("updated_at", clock.ISO(w.ctx.Now().Add(-ago)))
 }
 
 // evacJob is a job named `name` that ended with `conclusion`; evacGoing one still going.
@@ -189,8 +195,11 @@ func TestEvac_OnlyTheCurrentBuildOfAQueuedPullRequestCounts(t *testing.T) {
 	w.queue(9, 10)
 	w.gh.Runs.Pop("77")
 	assertEqual(t, events.EvacQueue(w.ctx), []string(nil))
-	// A build that ended red is the queue's to take out, through its check.
+	// A build that ended red is the queue's to take out, through its check, for its first minute (and
+	// one that says no time, always).
 	w.build(77, 9, evacMain, "bbbb", "completed", "failure", evacJob(2, "rust (test engine)", "failure"))
+	assertEqual(t, events.EvacQueue(w.ctx), []string(nil))
+	w.ended(77, 59*time.Second)
 	assertEqual(t, events.EvacQueue(w.ctx), []string(nil))
 	// A job no required check gathers.
 	w.build(77, 9, evacMain, "bbbb", "in_progress", "", evacJob(2, "cancel the pull request's older queue builds", "failure"))
@@ -266,4 +275,114 @@ func TestEvac_TheNightBotsSweepLooksAndSquishysDoesNot(t *testing.T) {
 	assertIn(t, "merge queue: #9: `rust (test engine)` red in its queue build (run 77); took it out of the "+
 		"merge queue", strings.Join(sweep.Sweep(w.ctx), "\n"))
 	assertEqual(t, w.queued(), []string{})
+}
+
+// A build that ended without passing while the queue still holds its pull request a minute on waits
+// on a required check that never reported (GitHub dropped the jobs it gathers: #3505's build of
+// 2026-11-09 held the queue four hours). With no required job red, nothing says it failed: it goes
+// out and straight back in at the back, whoever's it is, nothing cancelled and no fix queued. Past
+// the queue's own check timeout the queue has taken it out itself, so the look leaves it.
+func TestEvac_ABuildThatEndedWithItsChecksUnreportedGoesOutAndBackIn(t *testing.T) {
+	w := newEvacWorld()
+	w.gh.AddPull(10, "people/x", fakes.Pull{SHA: "p1"})
+	w.queue(9, 10)
+	w.build(77, 9, evacMain, "bbbb", "completed", "failure", evacJob(1, "rust (test engine)", "success"),
+		evacJob(2, "db", "success"))
+	w.build(78, 10, "bbbb", "cccc", "completed", "success")
+	w.ended(77, 2*time.Minute)
+	notes := events.EvacQueue(w.ctx)
+	assertEqual(t, notes, []string{"#9: its queue build (run 77) ended failure with no required job red, the " +
+		"queue waiting on a required check that never reported; took it out of the merge queue and put it " +
+		"back at the back of it"})
+	assertEqual(t, w.queued(), []string{"PR_10"})
+	assertEqual(t, w.gh.AutoMerge["PR_9"], w.ctx.Cfg.MergeMethod)
+	assertEqual(t, w.gh.AutoMergeHeads["PR_9"], "s1")
+	assertEqual(t, dig(t, w.ctx.Store.Load(), "items", "9", "requeued", "s1"), evacMain)
+	assertEqual(t, w.gh.Cancels, []any{})
+	assertEqual(t, w.gh.BotComments(9), []string{})
+	assertNotIn(t, config.LabelRevise, w.gh.LabelNames(9))
+	assertNotIn(t, "source", dig(t, w.ctx.Store.Load(), "items", "9"))
+
+	// Past the queue's check timeout the queue took it out itself.
+	late := newEvacWorld()
+	late.build(77, 9, evacMain, "bbbb", "completed", "cancelled")
+	late.ended(77, events.EvacEndedWithin)
+	assertEqual(t, events.EvacQueue(late.ctx), []string(nil))
+	assertEqual(t, late.queued(), []string{"PR_9"})
+
+	// A person's goes back in all the same, and so does Squishy's.
+	person := newEvacWorld()
+	person.gh.AddPull(10, "people/x", fakes.Pull{SHA: "p1"})
+	person.queue(10)
+	person.build(77, 10, evacMain, "bbbb", "completed", "failure")
+	person.ended(77, 5*time.Minute)
+	assertIn(t, "#10: its queue build (run 77) ended failure", strings.Join(events.EvacQueue(person.ctx), " "))
+	assertEqual(t, person.gh.AutoMergeHeads["PR_10"], "p1")
+	assertEqual(t, person.gh.BotComments(10), []string{})
+
+	other := newEvacWorld()
+	squishy := config.Others[0]
+	other.gh.AddPull(12, "squishy/issue-3", fakes.Pull{Labels: []string{squishy.LabelPrefix + "pr"}, SHA: "q1"})
+	other.queue(12)
+	other.build(80, 12, evacMain, "bbbb", "completed", "failure")
+	other.ended(80, 5*time.Minute)
+	assertIn(t, "took it out of the merge queue and put it back", strings.Join(events.EvacQueue(other.ctx), " "))
+	assertEqual(t, other.gh.AutoMergeHeads["PR_12"], "q1")
+}
+
+// One put back once at this commit of `main` that sticks again stays out: the night bot's own waits
+// for `main` to move (the housekeeping pass's `queue.RequeueCleared` keeps the same record), and a
+// person is told why. Nor is one the queue kept read again.
+func TestEvac_OneThatSticksAgainAtTheSameMainStaysOut(t *testing.T) {
+	w := newEvacWorld()
+	flowUpdateItem(w.ctx, 9, pyjson.New("requeued", pyjson.New("s1", evacMain)))
+	w.build(77, 9, evacMain, "bbbb", "completed", "failure")
+	w.ended(77, 2*time.Minute)
+	assertEqual(t, events.EvacQueue(w.ctx), []string{"#9: its queue build (run 77) ended failure with no " +
+		"required job red, the queue waiting on a required check that never reported; took it out of the merge " +
+		"queue, and it went back once already at this commit of `main`, so it waits for `main` to move, when " +
+		"the housekeeping pass puts it back"})
+	assertEqual(t, w.queued(), []string{})
+	assertNotIn(t, "PR_9", w.gh.AutoMerge)
+	assertEqual(t, w.gh.BotComments(9), []string{})
+
+	person := newEvacWorld()
+	person.gh.AddPull(10, "people/x", fakes.Pull{SHA: "p1"})
+	flowUpdateItem(person.ctx, 10, pyjson.New("requeued", pyjson.New("p1", evacMain)))
+	person.queue(10)
+	person.build(77, 10, evacMain, "bbbb", "completed", "failure")
+	person.ended(77, 2*time.Minute)
+	assertIn(t, "told its author", strings.Join(events.EvacQueue(person.ctx), " "))
+	assertNotIn(t, "PR_10", person.gh.AutoMerge)
+	comment := lastOf(t, person.gh.BotComments(10))
+	assertIn(t, "ended ([run](https://github.com/x/actions/runs/77)) without a required check reporting", comment)
+	assertIn(t, "queue it again once you have looked", comment)
+
+	// The queue refusing to let it go leaves it, and puts nothing back.
+	kept := newEvacWorld()
+	kept.build(77, 9, evacMain, "bbbb", "completed", "failure")
+	kept.ended(77, 2*time.Minute)
+	kept.gh.Patch.Dequeue = func(string) { panic(&herr.GitHubError{Msg: "not allowed", Status: 403}) }
+	assertIn(t, "and the merge queue kept it", strings.Join(events.EvacQueue(kept.ctx), " "))
+	assertEqual(t, kept.queued(), []string{"PR_9"})
+	assertNotIn(t, "PR_9", kept.gh.AutoMerge)
+}
+
+// A build that ended with a required job of its own red, while the queue kept its pull request
+// (the check that gathers it never reported), goes out as a red build's: its CI fix queued with no
+// early mark, and nothing to cancel.
+func TestEvac_ABuildThatEndedRedWithItsCheckUnreportedGoesOutAsARedOne(t *testing.T) {
+	w := newEvacWorld()
+	w.build(77, 9, evacMain, "bbbb", "completed", "failure", evacJob(1, "rust (test engine)", "failure"))
+	w.ended(77, 2*time.Minute)
+	assertEqual(t, events.EvacQueue(w.ctx), []string{"#9: `rust (test engine)` red in its queue build (run 77); " +
+		"took it out of the merge queue, which kept it after the build ended, waiting on a required check that " +
+		"never reported; queued a CI fix"})
+	assertEqual(t, w.queued(), []string{})
+	assertEqual(t, w.gh.Cancels, []any{})
+	assertNotIn(t, "PR_9", w.gh.AutoMerge)
+	assertIn(t, config.LabelRevise, w.gh.LabelNames(9))
+	assertEqual(t, dig(t, w.ctx.Store.Load(), "items", "9", "ci_early"), false)
+	assertIn(t, "failed `rust (test engine)`, and the queue kept this in it after the build ended",
+		lastOf(t, w.gh.BotComments(9)))
 }
