@@ -29873,7 +29873,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Give a Unit +{buff}/+{buff}, Deft, and Freeze it."
@@ -30744,7 +30744,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Give a Unit +{attack} attack and Cleave, lock the tile it is on."
@@ -30778,7 +30778,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Give a Unit Rush attack and Windfury."
@@ -30802,7 +30802,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Give a Unit Immutable and Immune to Spells."
@@ -30826,7 +30826,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Give a Unit +{health} health and Divine Shield."
@@ -30860,7 +30860,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Give a Unit +{buff}/+{buff} and Brittle {brittle2}."
@@ -30912,7 +30912,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "Give a Unit Ranged."
@@ -30947,7 +30947,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 26,
     "base": {
       "keywords": [],
       "text": "Give a Unit Pierce, Deft, Frenzy this may attack again."
