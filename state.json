@@ -18396,6 +18396,13 @@
     "3580": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-10T00:26:16Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard-rule line fires: not engine rules, AI, cross-crate design, migration, or ~40 files (1 file by bot), so medium"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
