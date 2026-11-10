@@ -7,6 +7,7 @@ import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { TAKEOVER_HOLD_MS, TAKEOVER_SET_PIECE } from "../game/animations.ts";
 import { planCardFx } from "../fx/cardFx.ts";
+import { FX_CARD_TABLE, type FxCardEntry } from "../fx/cards/tables.ts";
 import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS } from "../fx/constants.ts";
 import { createFxMemory } from "../fx/memory.ts";
 import { galleryEntry } from "../fx/motifs/gallery.ts";
@@ -61,6 +62,7 @@ export function castOf(defId: string, D: number, hold: number = HOLD, player: Pl
  * Plays `defId` as `player` and each of `events` under it, an entry each lasting D, as the layer does:
  * remember, then plan through the dispatch. With `hook`, the events run under that hook's marker
  * (`hookResolving`) of the card on the board as `instanceId` "ex" in place of its play (R2797000).
+ * With `table`, the dispatch reads those entries alone (R3399000: a summoned card's own entrance is that card's).
  */
 export function run(
   defId: string,
@@ -69,13 +71,14 @@ export function run(
   player: PlayerId = "p1",
   view: PlayerView = fullBoardView(),
   hook?: Exclude<HookKind, "cry">,
+  table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE,
 ): Planned[] {
   const env = envOf();
   env.memory.remember([hook === undefined ? played(player, "ex", defId) : { type: "hookResolving", sourceId: "ex", defId, controller: player, hook }]);
   return events.map((event) => {
     env.memory.remember([event]);
     const entry = { ...galleryEntry([event], view), durationMs: D };
-    const result = planCardFx(event, { entry, view, env, D });
+    const result = planCardFx(event, { entry, view, env, D }, table);
     return { cues: result?.cues ?? [], row: result?.row };
   });
 }

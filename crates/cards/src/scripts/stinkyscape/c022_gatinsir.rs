@@ -106,7 +106,7 @@ mod tests {
 
     use super::{ID, PHALANX, WARP_DISRUPTOR};
 
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const MOTHS: &str = "core-009";
     const PHALANX_PICKS: usize = 2;
     const CHANCE: i32 = 30;

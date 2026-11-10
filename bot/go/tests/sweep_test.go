@@ -28,10 +28,12 @@ import (
 const sweepTrust = "jgoetzmann 3 id:95732896\nhelper 2\n"
 
 var (
-	sweepSquishy   = pyjson.New("login", "squishy-squooby", "id", 334289562)
-	sweepAnHourAgo = clock.ISO(testsupport.Day.Add(-time.Hour))
-	sweepJustNow   = clock.ISO(testsupport.Day.Add(-2 * time.Minute))
-	sweepLastWeek  = clock.ISO(testsupport.Day.Add(-5 * 24 * time.Hour))
+	sweepSquishy = pyjson.New("login", "squishy-squooby", "id", 334289562)
+	// sweepSquishysMarker ends everything Squishy's harness writes (`gh.WithMarker`).
+	sweepSquishysMarker = "\n\n<!-- jackioh-squishy -->"
+	sweepAnHourAgo      = clock.ISO(testsupport.Day.Add(-time.Hour))
+	sweepJustNow        = clock.ISO(testsupport.Day.Add(-2 * time.Minute))
+	sweepLastWeek       = clock.ISO(testsupport.Day.Add(-5 * 24 * time.Hour))
 )
 
 // sweepBase is Base's world.
@@ -122,18 +124,32 @@ func TestSweep_WhatTheSweepLeavesAlone(t *testing.T) {
 }
 
 func TestSweep_TheOtherBotsWordsAreNeverReportedAsAnswered(t *testing.T) {
-	// #504: a comment from Squishy's account that names the night bot is no command of its
-	// own, so every sweep left it unanswered, and every sweep said it had answered it.
+	// #504: a comment of Squishy's that names the night bot is no command of its own, so every
+	// sweep left it unanswered, and every sweep said it had answered it.
 	w := newSweepBase(t)
 	w.ctx.Trust = trust.TrustParse(sweepTrust + "squishy-squooby 3 id:334289562\n")
 	for _, body := range []string{"@jgoetzmann\n\n#5 is the night bot's (@jgoetzmann-bot): it carries the " +
 		"night bot's labels, so I leave it alone.",
 		"/harness revised. Just pushed the rust patch in, see if this is still needed"} {
-		sweepComment(w.gh, 5, body, sweepSquishy, "COLLABORATOR", sweepAnHourAgo)
+		sweepComment(w.gh, 5, body+sweepSquishysMarker, sweepSquishy, "COLLABORATOR", sweepAnHourAgo)
 	}
 	assertEqual(t, sweep.Sweep(w.ctx), []string{})
 	assertEqual(t, sweep.Sweep(w.ctx), []string{})
 	assertEqual(t, w.replies(5), []string{})
+}
+
+func TestSweep_APersonsVoteFromSquishysAccountIsAnsweredByTheSweep(t *testing.T) {
+	// #961, #3508: "Approve" typed as squishy-squooby carries no marker of Squishy's, so it is a
+	// person's vote, and the sweep answers the ones the event dropped.
+	w := newSweepBase(t)
+	w.ctx.Trust = trust.TrustParse(sweepTrust + "squishy-squooby 3 id:334289562\n")
+	w.gh.AddIssue(6, fakes.Issue{Title: "A suggestion", Labels: []string{config.LabelSuggestion}})
+	sweepComment(w.gh, 6, "Approve", sweepSquishy, "MEMBER", sweepAnHourAgo)
+	notes := sweep.Sweep(w.ctx)
+	assertIn(t, config.LabelBuild, w.gh.LabelNames(6))
+	assertIn(t, "Queued #6", w.lastReply(6))
+	assertIn(t, "answered a comment on #6", notes[0])
+	assertEqual(t, sweep.Sweep(w.ctx), []string{})
 }
 
 func TestSweep_ALineCommentOnADiffIsAnsweredToo(t *testing.T) {

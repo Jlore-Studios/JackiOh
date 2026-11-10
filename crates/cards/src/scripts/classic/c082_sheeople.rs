@@ -62,17 +62,17 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SHEEOPLE: &str = "classic-082";
-    const ROCK: &str = "core-066"; // (4) Unit 10/10: Tribute 1, Indestructible.
-    const GOLEM: &str = "core-055"; // (3) Unit 10/5: Taunt, Tribute 3.
-    const CUBE: &str = "core-022"; // (3) Unit: Cry: Tribute one of your other Units and remember it.
-    const TURTINATOR: &str = "classic-021"; // (2) Unit 5/4: Activate: Tribute a Unit; deal damage equal to its attack.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
-    const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
-    const COLLATERAL: &str = "core-034"; // (4) Spell: Exile target permanent and a random card from your opponent's deck.
-    const FILLER: &str = "core-005"; // (1) Spell (§2.5).
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
-    const X: &str = "core-020"; // library filler.
+    const ROCK: &str = "core-066"; // The Rock: Tribute 1, Indestructible
+    const GOLEM: &str = "core-055"; // Lava Golem: Taunt, Tribute 3
+    const CUBE: &str = "core-022"; // Carnivorous Cube: Cry: Tribute one of your other Units and remember it.
+    const TURTINATOR: &str = "classic-021"; // Turtinator: Activate: Tribute a Unit; deal damage equal to its attack.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const FLOOD: &str = "core-017"; // Flood: Bounce all Units.
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: Exile target permanent and a random card from your opponent's deck.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell (§2.5).
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: a Spell (§2.5).
+    const X: &str = "core-020"; // Pointmaster: library filler
 
     use crate::scenario;
 

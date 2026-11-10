@@ -50,14 +50,14 @@ mod tests {
     use crate::def_ids;
 
     const RESOURCES: &str = "classic-058";
-    const MACHINE: &str = "classic-049"; // Radiant: your opponent can't draw more than 1 card each turn.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const MENACE: &str = "core-019"; // (3) Unit 9/9
-    const STOCKPILE: &str = "core-005"; // (1) Spell
-    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage
-    const FILLER: &str = "core-010"; // (0) Spell
-    const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: your opponent has 1 less mana next turn. Discard 1 random card.
-    const INCOME_TAX: &str = "classic-009"; // Trap: when the cards your opponent has drawn in a turn reach 2 …
+    const MACHINE: &str = "classic-049"; // Anti-Greed Machine: Radiant: your opponent can't draw more than 1 card each turn
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
+    const SUPER_VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw: take 1 damage
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const HINDER: &str = "core-021"; // Hinder: Cast on draw: your opponent has 1 less mana next turn. Discard 1 random card.
+    const INCOME_TAX: &str = "classic-009"; // Income Tax: when the cards your opponent has drawn in a turn reach 2 …
 
     use crate::js;
 

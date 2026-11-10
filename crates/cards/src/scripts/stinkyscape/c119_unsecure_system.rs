@@ -56,8 +56,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const UNSECURE: &str = "stinkyscape-119";
-    const STATE_OF_THE_GAME: &str = "classic-041"; // (1) Unit 3/3, Indestructible.
-    const BIG_D: &str = "core-001"; // (2) Unit 0/7.
+    const STATE_OF_THE_GAME: &str = "classic-041"; // State of the Game: Indestructible
+    const BIG_D: &str = "core-001"; // Big D-fender
     const FILLER: &str = "core-005";
 
     fn first_strike(s: &Scenario, card: &CardInstance) -> bool {

@@ -97,7 +97,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const GOLEM: &str = "classicplus-073-1";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
 
     use crate::js;
 

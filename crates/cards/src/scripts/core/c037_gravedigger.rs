@@ -63,9 +63,9 @@ mod tests {
 
     const GRAVEDIGGER: &str = "core-037";
     /// Three distinct graveyard cards, so a random pick and a Discover are both readable by defId.
-    const STOCKPILE: &str = "core-005"; // cost 1
-    const HIT_JOB: &str = "core-016"; // cost 2
-    const MANA_WELL: &str = "core-006"; // cost 3
+    const STOCKPILE: &str = "core-005"; // Stockpile
+    const HIT_JOB: &str = "core-016"; // Hit Job
+    const MANA_WELL: &str = "core-006"; // Mana Well
     /// What the turn's draw puts in hand, so "before the draw" has something to be before.
     const DRAWN: &str = "core-011";
 

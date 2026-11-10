@@ -42,10 +42,10 @@ mod tests {
 
     use super::ID;
 
-    const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt: kills a Wasp that attacks it.
-    const MOTHS: &str = "core-009"; // (2) 1/14: at its controller's start of turn every enemy Unit attacks it.
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt: kills a Wasp that attacks it.
+    const MOTHS: &str = "core-009"; // Moths to the Flame: at its controller's start of turn every enemy Unit attacks it.
 
     fn board(radiant: bool, p1_field: Value, p2_field: Value) -> Scenario {
         let mut field = vec![json!({ "def": ID, "radiant": radiant })];

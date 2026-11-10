@@ -74,12 +74,12 @@ mod tests {
     use crate::scenario;
 
     const LEGION: &str = "classicplus-012-7";
-    const TOKENS: &str = "core-015"; // (1) Unit 1/1, Cry: summon a Rush Token
-    const MENACE: &str = "core-019"; // (3) Unit
-    const POINTMASTER: &str = "core-020"; // (2) Unit
+    const TOKENS: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield";
     const RUSH: &str = "core-t-rush";
-    const LUNAR: &str = "core-035"; // a Spell
-    const STOCKPILE: &str = "core-005"; // a Spell
+    const LUNAR: &str = "core-035"; // Lunar Eclipse: a Spell
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
 
     use crate::merged;
 

@@ -144,7 +144,7 @@ mod tests {
     /// The printed `damage`, and the Radiant face's.
     const DAMAGE: i32 = 5;
     const RADIANT_DAMAGE: i32 = 10;
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
 
     /// R3291000: an ability's id, and the card and face its `printed_on` names, if any.
     type Sourced = (String, Option<(String, Option<bool>)>);

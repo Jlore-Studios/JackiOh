@@ -41,7 +41,7 @@ mod tests {
 
     const CORE: &str = "stinkyscape-032";
     const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
 
     #[test]
     fn r64_summons_five_into_an_empty_unit_row() {

@@ -606,7 +606,7 @@ mod tests {
     mod n96_my_pawn_glows_while_an_enemy_unit_could_swing_for_lethal_r662_r44 {
         use super::*;
 
-        const SEVEN_SEVEN: &str = "core-025"; // 4-mana 7/7 Armor 7: a plain 7-attack swing (Pointmaster is a 6/1 since issue #3136)
+        const SEVEN_SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // a plain hitter
 
         fn face_of(radiant: bool) -> &'static str {
             if radiant { "radiant" } else { "base" }

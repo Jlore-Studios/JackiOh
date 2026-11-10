@@ -19,14 +19,15 @@ use crate::{
 
 /// (3) 9/9 Taunt, the wall every weapon family shoots through.
 pub(crate) const MENACE: &str = "core-019";
-/// (1) 4/4.
-pub(crate) const VANILLA: &str = "core-008";
+/// The 4/4 stand-in every family fields as its victim and neighbour.
+pub(crate) const VANILLA: &str = "stand-in (1) 4/4 R12/12";
 /// (4) Spell: "Bounce all Units."
 pub(crate) const FLOOD: &str = "core-017";
 /// A Common Resource, for the Miners' full-hand burn.
 pub(crate) const REKNITE: &str = "stinkyscape-t-reknite";
-/// (2) 7/1 First Strike, destroyed by one Flak round.
-pub(crate) const POINTMASTER: &str = "core-020";
+/// First Strike, destroyed by one Flak round.
+pub(crate) const POINTMASTER: &str =
+    "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield";
 /// Filler copies of Core #5 (Stockpile), as a card id.
 pub(crate) const FILLER: &str = "core-005";
 /// 9/9, the body the Asteroids' victim leaves and their combat partner.

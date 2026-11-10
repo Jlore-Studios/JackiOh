@@ -56,8 +56,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const WINDFAST: &str = "meditative-091";
-    const UNIT: &str = "core-011"; // A plain 3/3 Unit for the hand.
-    const OTHER: &str = "classic-086"; // A plain 14/14 Unit, so two different Units can be held.
+    const UNIT: &str = "core-011"; // Tempo Timmy: A plain Unit for the hand.
+    const OTHER: &str = "stand-in (4) 14/14 R42/42"; // so two different Units can be held
     const FILLER: &str = "core-005";
     const GRUNT: &str = "core-011";
 

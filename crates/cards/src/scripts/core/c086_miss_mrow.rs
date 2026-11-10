@@ -51,14 +51,14 @@ mod tests {
     const MROW: &str = "core-086";
 
     // Field fixtures whose only text is a Cry, which a unit placed by `field` never fires: inert boards.
-    const GARY: &str = "core-004"; // 1/1
-    const FELINORS: &str = "core-012"; // 3/4, kills a 1/1 Mrow and survives the 1 back
-    const POSTDOC: &str = "core-061"; // 2/4
-    const RENO: &str = "core-053"; // 4/6
-    const SORCERER: &str = "core-068"; // 5/5; its Cry deals 4 damage to a target
-    const STRAAZA: &str = "core-054"; // 8/8
-    const HIT_JOB: &str = "core-016"; // Spell: destroy target Unit
-    const LUNAR_ECLIPSE: &str = "core-035"; // Spell: deal 3 damage to a target
+    const GARY: &str = "core-004"; // Gary the Gambler
+    const FELINORS: &str = "core-012"; // Duplicating Felinors: kills a Mrow and survives the 1 back
+    const POSTDOC: &str = "core-061"; // Prejudiced Postdoc
+    const RENO: &str = "core-053"; // Reno
+    const SORCERER: &str = "core-068"; // Twisted Sorcerer: its Cry deals 4 damage to a target
+    const STRAAZA: &str = "core-054"; // Straaza
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
+    const LUNAR_ECLIPSE: &str = "core-035"; // Lunar Eclipse: deal 3 damage to a target
 
     // §2.5: a turn with only `endTurn` left auto-ends, so each hand holds one always-playable card.
     const FILLER: &str = "core-005";

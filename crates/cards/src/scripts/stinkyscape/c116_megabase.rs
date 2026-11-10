@@ -114,8 +114,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005";
-    const TURTINATOR: &str = "classic-021"; // Activate: Tribute another Unit; deal damage equal to its attack.
-    const TRUE_STRIKE: &str = "core-044"; // (1) Spell: deal 4 damage to a target.
+    const TURTINATOR: &str = "classic-021"; // Turtinator: Activate: Tribute another Unit; deal damage equal to its attack.
+    const TRUE_STRIKE: &str = "core-044"; // True Strike: deal 4 damage to a target
 
     fn landed(radiant: bool, p1: Value) -> Scenario {
         let mut side = json!({ "hand": [{ "def": ID, "radiant": radiant }, FILLER], "library": filler(4) });

@@ -46,7 +46,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005";
     const VANILLA: &str = "core-008";
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
 
     fn landing(radiant: bool) -> Scenario {
         scenario(json!({

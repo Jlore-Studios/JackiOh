@@ -77,10 +77,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SHRIMP: &str = "classic-048";
-    const GAMBIT: &str = "classic-052"; // a Trap with fewer lines than Hired Shrimp
+    const GAMBIT: &str = "classic-052"; // Final Gambit: a Trap with fewer lines than Hired Shrimp
     const CUBE: &str = "core-022"; // Carnivorous Cube: a Unit with many more lines
     const VANILLA: &str = "core-008"; // Mr. Vanilla: a Unit with very few
-    const MANA_WELL: &str = "core-006"; // a Field Spell with few
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell with few
     const HONEYPOT: &str = "core-060"; // Bear Honeypot: a Trap with more
     const ROCK: &str = "core-066"; // The Rock: Indestructible, few lines
     const SPECIESIST: &str = "core-002";

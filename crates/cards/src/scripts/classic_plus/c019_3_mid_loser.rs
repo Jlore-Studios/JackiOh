@@ -72,9 +72,9 @@ mod tests {
 
     const MID: &str = "classicplus-019-3";
     const LEAGUE: &str = "classicplus-019";
-    const CUBE: &str = "core-022"; // Cry: Tribute one of your other Units and remember it. Death: summon 2 copies of it.
+    const CUBE: &str = "core-022"; // Carnivorous Cube: Cry: Tribute one of your other Units and remember it. Death: summon 2 copies of it.
     const HIT_JOB: &str = "core-016";
-    const TESLA: &str = "classic-005"; // Field Trap: when your opponent summons a Unit, deal 4 damage to it
+    const TESLA: &str = "classic-005"; // Tesla: when your opponent summons a Unit, deal 4 damage to it
     const FILLER: &str = "core-005";
     const DECK: [&str; 4] = [FILLER, FILLER, FILLER, FILLER];
 

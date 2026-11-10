@@ -69,7 +69,7 @@ mod tests {
     const CORE: &str = "stinkyscape-033";
     const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
     const CORVETTE: &str = "stinkyscape-t-drone-corvette";
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
     use super::script_v0_5_11o;

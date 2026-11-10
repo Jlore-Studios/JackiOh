@@ -91,8 +91,8 @@ mod tests {
     const TAILS: usize = 2;
     /// The Radiant face's keywords on each token.
     const RADIANT_KEYWORDS: usize = 5;
-    const FILLER: &str = "core-005"; // a card in hand, so a turn never auto-ends under the test
-    const BODY: &str = "core-019"; // Midrange Menace, a unit to fill a zone
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so a turn never auto-ends under the test
+    const BODY: &str = "core-019"; // Midrange Menace: a unit to fill a zone
 
     use crate::scenario;
 

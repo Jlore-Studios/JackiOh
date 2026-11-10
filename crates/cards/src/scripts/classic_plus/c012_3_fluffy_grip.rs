@@ -48,11 +48,11 @@ mod tests {
     use crate::scenario;
 
     const GRIP: &str = "classicplus-012-3";
-    const MENACE: &str = "core-019"; // (3) Unit
-    const ROCK: &str = "core-066"; // (4) Unit
-    const LUNAR: &str = "core-035"; // a Spell
-    const FILLER: &str = "core-005"; // a Spell
-    const RUSH_TOKEN: &str = "core-t-rush"; // a unit-token card (R11)
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const ROCK: &str = "core-066"; // The Rock
+    const LUNAR: &str = "core-035"; // Lunar Eclipse: a Spell
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const RUSH_TOKEN: &str = "core-t-rush"; // Rush Token: a unit-token card (R11)
 
     use crate::merged;
 

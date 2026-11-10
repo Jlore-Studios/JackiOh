@@ -14,6 +14,8 @@ export type Settings = {
   hoverPreviews: boolean;
   /** R2102000: the lethal hint against the practice AI (R2291000). */
   lethalHint: boolean;
+  /** R3477000: while an attack is aimed, each legal target shows the engine's forecast of it. */
+  attackOutcomes: boolean;
   reduceMotion: boolean;
   /** R644 (§5): kept per device. */
   muteOpponentEmotes: boolean;
@@ -31,6 +33,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   autoEndTurn: true,
   hoverPreviews: true,
   lethalHint: true,
+  attackOutcomes: true,
   reduceMotion: false,
   muteOpponentEmotes: false,
   muteSpectatorEmotes: false,
@@ -43,6 +46,7 @@ const SETTING_KEYS: readonly SettingKey[] = [
   "autoEndTurn",
   "hoverPreviews",
   "lethalHint",
+  "attackOutcomes",
   "reduceMotion",
   "muteOpponentEmotes",
   "muteSpectatorEmotes",

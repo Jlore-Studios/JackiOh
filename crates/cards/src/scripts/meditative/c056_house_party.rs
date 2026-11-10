@@ -35,9 +35,9 @@ mod tests {
     const PARTY: &str = "meditative-056";
     const DEFENDER: &str = "core-003";
     const TIMMY: &str = "core-011";
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy a Unit
     const FILLER: &str = "core-005";
-    const SHOWDOWN: &str = "meditative-098"; // (1) Spell: Lock every lane but an empty one you choose.
+    const SHOWDOWN: &str = "meditative-098"; // Showdown: Lock every lane but an empty one you choose.
 
     fn defs_of(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
         (1..=5)

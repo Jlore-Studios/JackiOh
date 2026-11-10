@@ -80,10 +80,10 @@ mod tests {
     ];
     const JADE_BEAUTY: &str = "meditative-039-5";
     const GOLEM: &str = "meditative-095-1";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt; Radiant, Immutable too
-    const TIMMY: &str = "core-011"; // (1) Unit
-    const BEAR: &str = "core-060"; // (1) Trap
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Unit Taunt; Radiant, Immutable too
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
 
     const SEED: &str = "chaos-meditative";
     /// How many cursors the sweep of R423's list order walks.

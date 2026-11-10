@@ -144,7 +144,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const DREAM: &str = "traininggrounds-049"; // cost 1.
+    const DREAM: &str = "traininggrounds-049"; // Legacy: Reoccurring Dream
     const OTHERS: [&str; 4] = ["core-002", "core-003", "core-004", "core-011"];
 
     /// Ten other cards: playing the Dream leaves the hand exactly at HAND_CAP.

@@ -59,9 +59,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const PRODUCE: &str = "classicplus-068";
-    const TREE: &str = "classicplus-063"; // Fruit Tree: (3) Field Spell, no Fruit since #1837 (R1837000).
-    const FIG: &str = "core-047"; // Fig of Life: (3) Spell, Fruit. "Heal a target 20." / Radiant 40.
-    const TRAP: &str = "core-041"; // Sheepish, a Trap with no Fruit tag.
+    const TREE: &str = "classicplus-063"; // Fruit Tree: a Field Spell, no Fruit since #1837 (R1837000).
+    const FIG: &str = "core-047"; // Fig of Life: a Spell, Fruit. "Heal a target 20." / Radiant 40.
+    const TRAP: &str = "core-041"; // Sheepish: a Trap with no Fruit tag.
     const FILLER: &str = "core-005";
 
     /// The Fruit query's ids, Organic Produce left out.

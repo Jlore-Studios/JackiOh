@@ -75,12 +75,12 @@ mod tests {
 
     const BOT: &str = "classicplus-019-5";
     const JUNGLE: &str = "classicplus-019-2";
-    const VANILLA: &str = "core-008"; // 4/4
-    const MOTHS: &str = "core-009"; // 1/14; start of turn: every enemy Unit attacks this
-    const ANTI_ONESHOT: &str = "core-073"; // hits on the hero capped at 5
-    const HIT_JOB: &str = "core-016"; // destroy a target Unit
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MOTHS: &str = "core-009"; // Moths to the Flame: start of turn: every enemy Unit attacks this
+    const ANTI_ONESHOT: &str = "core-073"; // Anti-oneshot Armor: hits on the hero capped at 5
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy a target Unit
     const FILLER: &str = "core-005";
-    const TIMMY: &str = "core-011"; // 3/3 Rush, First Strike
+    const TIMMY: &str = "core-011"; // Tempo Timmy: Rush, First Strike
     const DECK: [&str; 6] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 
     fn bot(s: &Scenario, player: PlayerId) -> CardInstance {

@@ -72,13 +72,13 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const GOING_LONG: &str = "core-084"; // Field Spell, cost 2 embiggen 4, no Quickdraw (#2521)
-    const SPECIESIST: &str = "core-002"; // set to 6/1 by `six_one()` (it prints 4/1 since patch v0.3.10)
-    const MAGIC_JAMMED: &str = "core-036"; // Spell, 1 — "Destroy target backrow card; Lock its zone"
-    const STOCKPILE: &str = "core-005"; // the spare card that keeps a turn meaningful (§2.5)
+    const GOING_LONG: &str = "core-084"; // Going Long: a Field Spell, embiggen 4, no Quickdraw (#2521)
+    const SPECIESIST: &str = "core-002"; // Speciesist: set by `six_one()` (it prints differently since patch v0.3.10)
+    const MAGIC_JAMMED: &str = "core-036"; // Magic Jammed: a Spell, "Destroy target backrow card; Lock its zone"
+    const STOCKPILE: &str = "core-005"; // Stockpile: the spare card that keeps a turn meaningful (§2.5)
     const MENACE: &str = "core-019";
     const TIMMY: &str = "core-011";
-    const SCARAB: &str = "core-007"; // 1/1, no Taunt — a body of p1's so §2.5 never auto-ends the turn
+    const SCARAB: &str = "core-007"; // Jewelosco Scarab: no Taunt — a body of p1's so §2.5 never auto-ends the turn
 
     /// Speciesist at the 6/1 these hits are measured with.
     fn six_one() -> Value {

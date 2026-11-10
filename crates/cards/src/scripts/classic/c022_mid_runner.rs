@@ -91,14 +91,14 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const RUNNER: &str = "classic-022";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9.
-    const TEMPO: &str = "core-011"; // (1) Unit 3/3.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const TEMPO: &str = "core-011"; // Tempo Timmy
     const RUSH_TOKEN: &str = "core-t-rush";
-    const BIG_FELINOR: &str = "core-043"; // (4) Unit 3/10, under the Stack pile below.
+    const BIG_FELINOR: &str = "core-043"; // Big Felinor: under the Stack pile below.
     const FIENDER: &str = "core-092"; // Felinor Fiender: Stack.
-    const PAWN: &str = "core-096"; // (1) Trap; answers only a lethal attack.
-    const FIELD_SPELL: &str = "core-073"; // (2) Field Spell.
+    const PAWN: &str = "core-096"; // My Pawn: answers only a lethal attack
+    const FIELD_SPELL: &str = "core-073"; // Anti-oneshot Armor: a Field Spell
     const FILLER: &str = "core-005";
     const ANCHOR: &str = "core-010";
 

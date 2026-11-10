@@ -52,8 +52,8 @@ mod tests {
     use crate::scenario;
 
     const PACK: &str = "classicplus-075-1";
-    const STOCKPILE: &str = "core-005"; // (1) "Draw 2. Heal your hero 2."
-    const FILLER: &str = "core-011"; // Tempo Timmy, deck filler
+    const STOCKPILE: &str = "core-005"; // Stockpile: "Draw 2. Heal your hero 2."
+    const FILLER: &str = "core-011"; // Tempo Timmy: deck filler
     const MENACE: &str = "core-019";
 
     const P1: PlayerId = PlayerId::P1;

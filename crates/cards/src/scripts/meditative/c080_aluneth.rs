@@ -106,9 +106,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const VANILLA: &str = "core-008";
-    const MENACE: &str = "core-019"; // (3) Unit
+    const MENACE: &str = "core-019"; // Midrange Menace
     const FILLER: &str = "core-016";
-    const JAMMED: &str = "core-036"; // destroy target backrow card, Lock its zone
+    const JAMMED: &str = "core-036"; // Magic Jammed: destroy target backrow card, Lock its zone
     const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
 
     /// Aluneth in p1's backrow, both sides with hands and libraries to draw into.

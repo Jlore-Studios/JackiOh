@@ -184,11 +184,11 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const MASK: &str = "core-065"; // Field Spell, 2, Quickdraw
-    const PILLOW: &str = "core-065-1"; // #65.1, the token the third option summons
-    const MENACE: &str = "core-019"; // library filler: the top card, so the start-of-turn draw is known
+    const MASK: &str = "core-065"; // Masochism Mask: a Field Spell, Quickdraw
+    const PILLOW: &str = "core-065-1"; // Spikey Pillow: #65.1, the token the third option summons
+    const MENACE: &str = "core-019"; // Midrange Menace: library filler: the top card, so the start-of-turn draw is known
     const TIMMY: &str = "core-011";
-    const POSTDOC: &str = "core-061"; // the bottom card of the library in the exile test
+    const POSTDOC: &str = "core-061"; // Prejudiced Postdoc: the bottom card of the library in the exile test
 
     // The prompt options as §8.3 words them, pinned where the client reads them (R81).
     const EXILE_BOTTOM: &str = "exile bottom";

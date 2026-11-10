@@ -65,11 +65,11 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const NOSE: &str = "classic-015";
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card to discard, or to keep a hand from auto-ending (§2.5).
-    const VANILLA: &str = "core-008"; // (1) 4/4 Unit.
-    const TIMMY: &str = "core-011"; // (1) 3/3.
-    const MENACE: &str = "core-019"; // (3) 9/9.
-    const POINTMASTER: &str = "core-020"; // (2) 7/1.
+    const FILLER: &str = "core-005"; // Stockpile: a card to discard, or to keep a hand from auto-ending (§2.5).
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const TIMMY: &str = "core-011"; // Tempo Timmy
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const POINTMASTER: &str = "core-020"; // Pointmaster
 
     const DECK: [&str; 3] = [VANILLA, TIMMY, POINTMASTER];
 

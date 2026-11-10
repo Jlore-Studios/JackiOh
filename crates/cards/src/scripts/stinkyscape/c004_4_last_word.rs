@@ -106,9 +106,9 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const LUNAR: &str = "core-035"; // (1) Spell: deal 3 damage to a target.
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const LUNAR: &str = "core-035"; // Lunar Eclipse: deal 3 damage to a target
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
     const DECK: [&str; 6] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
     const MANA: i32 = 100;
 

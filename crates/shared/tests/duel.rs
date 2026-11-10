@@ -1444,3 +1444,144 @@ mod the_checkpoint {
         );
     }
 }
+
+mod the_forecast {
+    use super::*;
+    use jackioh_engine::testkit::{Value, json, scenario};
+    use jackioh_engine::{CombatForecast, PLAYER_IDS};
+
+    /// What a view from the machine to p1 holds.
+    struct Sent {
+        state: GameState,
+        /// p2's unit in lane 1.
+        target: String,
+        legal: Vec<ActionBody>,
+        forecast: Option<CombatForecast>,
+    }
+
+    /// The legal actions and forecast in the last view the machine sent p1, once it is here.
+    fn sent_to_p1(options: Value) -> Sent {
+        jackioh_cards::register_all();
+        let built = scenario(options);
+        let target = built.unit(P2, 1).expect("p2's unit").id;
+        let state = built.state().clone();
+        let mut table = Table::new(setup(state.clone()));
+        table.feed(DuelEvent::Arm);
+        table.connect(P1);
+        let (legal, forecast) = table
+            .sent
+            .p1
+            .iter()
+            .rev()
+            .find_map(|message| match message {
+                SeatMessage::View { legal, forecast, .. } => Some((legal.clone(), forecast.clone())),
+                _ => None,
+            })
+            .expect("p1 is sent a view");
+        Sent {
+            state,
+            target,
+            legal,
+            forecast,
+        }
+    }
+
+    #[test]
+    fn r3477000_a_seats_view_carries_the_forecast_and_reads_no_hidden_card() {
+        let side = |hand: &str, backrow: &str, library: [&str; 2]| json!({ "field": ["core-008"], "hand": [hand], "backrow": [backrow], "library": library });
+        let plain = json!({
+            "seed": "r3477000",
+            "active": "p1",
+            "p1": { "field": ["core-011"], "library": ["core-008", "core-011"] },
+            "p2": side("core-008", "core-041", ["core-041", "core-008"]),
+        });
+        // The same board, every card it hides from p1 another: p2's hand and face-down trap, both libraries.
+        let hidden = json!({
+            "seed": "r3477000",
+            "active": "p1",
+            "p1": { "field": ["core-011"], "library": ["core-011", "core-008"] },
+            "p2": side("core-041", "core-060", ["core-008", "core-041"]),
+        });
+        let plain = sent_to_p1(plain);
+        let hidden = sent_to_p1(hidden);
+        assert_ne!(
+            serde_json::to_value(&plain.state).unwrap(),
+            serde_json::to_value(&hidden.state).unwrap(),
+            "the premise: the two states differ"
+        );
+        assert_eq!(
+            jackioh_engine::view_for(&plain.state, P1),
+            jackioh_engine::view_for(&hidden.state, P1),
+            "the premise: p1 is shown the same board"
+        );
+        let forecast = plain
+            .forecast
+            .expect("R3477000: a seat's view carries its forecast");
+        assert_eq!(Some(&forecast), hidden.forecast.as_ref());
+        assert_eq!(forecast, jackioh_engine::combat_forecast(&plain.state, P1));
+        let attacks: Vec<(String, String)> = plain
+            .legal
+            .iter()
+            .filter_map(|body| match body {
+                ActionBody::Attack {
+                    attacker_id,
+                    target_id,
+                } => Some((attacker_id.clone(), target_id.clone())),
+                _ => None,
+            })
+            .collect();
+        let forecast_ids: Vec<(String, String)> = forecast
+            .attacks
+            .iter()
+            .map(|entry| (entry.attacker_id.clone(), entry.target_id.clone()))
+            .collect();
+        assert_eq!(forecast_ids, attacks);
+        // Tempo Timmy (3/3, First Strike) into Mr. Vanilla (4/4): its blow lands first and leaves 1, and
+        // the answer destroys it.
+        let trade = forecast
+            .attacks
+            .iter()
+            .find(|entry| entry.target_id == plain.target)
+            .expect("Tempo Timmy may attack Mr. Vanilla");
+        assert_eq!((trade.dealt, trade.taken), (3, 4));
+        assert!(!trade.kills && !trade.survives);
+    }
+
+    #[test]
+    fn r3477000_a_view_the_machine_pushes_mid_game_carries_the_forecast_of_its_seat() {
+        let mut table = Table::new(setup(opening("r3477000-opening")));
+        table.feed(DuelEvent::Arm);
+        table.connect(P1);
+        table.connect(P2);
+        table.through_the_mulligans();
+        for home in PLAYER_IDS {
+            let views: Vec<&SeatMessage> = table.sent[home]
+                .iter()
+                .filter(|message| matches!(message, SeatMessage::View { .. }))
+                .collect();
+            assert!(!views.is_empty());
+            for message in views {
+                let SeatMessage::View { view, forecast, .. } = message else {
+                    unreachable!()
+                };
+                assert_eq!(view.viewer, home);
+                assert!(
+                    forecast.is_some(),
+                    "R3477000: every seat's view carries a forecast"
+                );
+            }
+        }
+        let active = table.active();
+        let Some(SeatMessage::View { forecast, .. }) = table.sent[active]
+            .iter()
+            .rev()
+            .find(|message| matches!(message, SeatMessage::View { .. }))
+        else {
+            unreachable!()
+        };
+        assert_eq!(
+            forecast.as_ref(),
+            Some(&jackioh_engine::combat_forecast(table.host.game(), active))
+        );
+    }
+}

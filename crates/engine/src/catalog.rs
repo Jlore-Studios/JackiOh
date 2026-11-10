@@ -203,10 +203,30 @@ pub fn catalog_version() -> &'static str {
 /// What holds the transient definitions: the state.
 pub type TransientHolder = GameState;
 
+/// A definition by id: the state's transient ones first, then the catalog every reader searches, then,
+/// under `testkit`, the stand-in card the id spells out (#3486). No `query`, pool or `registered()`
+/// reader ever reaches a stand-in.
 pub fn find_def<'a>(state: Option<&'a GameState>, def_id: &str) -> Option<&'a CardDef> {
     if let Some(def) = state.and_then(|state| state.transient_defs.get(def_id)) {
         return Some(def);
     }
+    catalog_def(def_id).or_else(|| stand_in(def_id))
+}
+
+/// #3486: the testkit's stand-in card for an id that spells one out (`testkit/stand_in.rs`).
+#[cfg(feature = "testkit")]
+fn stand_in(def_id: &str) -> Option<&'static CardDef> {
+    crate::testkit::stand_in::stand_in_def(def_id)
+}
+
+#[cfg(not(feature = "testkit"))]
+fn stand_in(_def_id: &str) -> Option<&'static CardDef> {
+    None
+}
+
+/// `find_def`'s catalog lookup: the shipped catalog a replay folds under, a test's override or the
+/// registered catalog.
+fn catalog_def(def_id: &str) -> Option<&'static CardDef> {
     if let Some(shipped) = folding() {
         return shipped.find(def_id);
     }

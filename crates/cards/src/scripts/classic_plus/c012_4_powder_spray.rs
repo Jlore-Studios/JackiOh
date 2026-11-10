@@ -27,10 +27,10 @@ mod tests {
     use crate::scenario;
 
     const SPRAY: &str = "classicplus-012-4";
-    const MENACE: &str = "core-019"; // 9/9
-    const POINTMASTER: &str = "core-020"; // 7/1
-    const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2
-    const TOP_LOSER: &str = "classicplus-019-1"; // Radiant: Immune to Spells
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const POINTMASTER: &str = "core-020"; // Pointmaster
+    const SOLARIUS: &str = "classicplus-038"; // Solarius: Spell Damage +2
+    const TOP_LOSER: &str = "classicplus-019-1"; // Top Loser: Radiant: Immune to Spells
     const FILLER: &str = "core-005";
 
     use crate::merged;

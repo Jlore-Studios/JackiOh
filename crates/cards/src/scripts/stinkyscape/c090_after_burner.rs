@@ -38,7 +38,7 @@ mod tests {
     use jackioh_engine::prelude::{dormant_starship_of, random_pool_keywords};
     use jackioh_engine::testkit::*;
 
-    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
 
     fn kinds(s: &Scenario, id: &str) -> Vec<KeywordKind> {
         s.stats(id).keywords.iter().map(Keyword::kind).collect()

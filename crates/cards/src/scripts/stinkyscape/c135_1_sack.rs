@@ -50,13 +50,13 @@ mod tests {
     use super::ID;
 
     const SACKED: &str = "stinkyscape-135";
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const SORCERER: &str = "core-068"; // (2) 5/5: "Cry: Deal 4 damage."
-    const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."
-    const FLOOD: &str = "core-017"; // (4) Spell: "Bounce all Units."
-    const COLLATERAL: &str = "core-034"; // (4) Spell: "Exile a permanent and a random card …"
-    const POLYMORPH: &str = "meditative-024"; // (3) Spell: "Transform a Unit into a Sheep Token."
+    const FILLER: &str = "core-005"; // Stockpile: a Spell, a card in hand, so no turn ends by itself
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const SORCERER: &str = "core-068"; // Twisted Sorcerer: "Cry: Deal 4 damage."
+    const HIT_JOB: &str = "core-016"; // Hit Job: "Destroy a Unit."
+    const FLOOD: &str = "core-017"; // Flood: "Bounce all Units."
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: "Exile a permanent and a random card …"
+    const POLYMORPH: &str = "meditative-024"; // Polymorph: "Transform a Unit into a Sheep Token."
 
     fn sacked(radiant: bool, p1_field: Value, hand: Value) -> (Scenario, String) {
         let mut s = crate::scenario(json!({

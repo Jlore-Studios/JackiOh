@@ -98,12 +98,12 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TATCHES: &str = "meditative-087";
-    const VANILLA: &str = "core-008"; // (1) Human Unit: a tribal play.
-    const STATELESS: &str = "classic-041"; // (1) Unit with no tribal tag.
-    const GROOM: &str = "classicplus-002"; // (3) Trap with the Felinor tag.
-    const FEELINGS: &str = "classic-032"; // (2) Spell, Felinor Feelings; no tag since #1837.
-    const BEAN: &str = "core-028"; // (2) Spell, Knockoff Temu Glowy Jelly Bean: Jelly Bean, no tribe.
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt Unit.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: Human Unit: a tribal play
+    const STATELESS: &str = "classic-041"; // State of the Game: Unit with no tribal tag.
+    const GROOM: &str = "classicplus-002"; // Groom Shroom: Trap with the Felinor tag.
+    const FEELINGS: &str = "classic-032"; // Felinor Feelings: a Spell; no tag since #1837
+    const BEAN: &str = "core-028"; // Knockoff Temu Glowy Jelly Bean: a Spell, Jelly Bean, no tribe
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt Unit
     const FILLER: &str = "core-005";
 
     /// p1's deck holds Tatches between fillers; both sides hold fillers and p1 has mana to play.

@@ -83,8 +83,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const HIT_JOB: &str = "core-016"; // Spell: destroy a target Unit.
-    const VANILLA: &str = "core-008"; // 4/4
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy a target Unit
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
 
     fn potion_recipe() -> Value {
         json!({

@@ -75,7 +75,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const REWARDS: [&str; 3] = ["meditative-039-2", "meditative-039-3", "meditative-039-4"];
     const DAMAGE: i32 = 2;
 

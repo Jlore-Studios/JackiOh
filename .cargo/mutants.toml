@@ -1,0 +1,64 @@
+# cargo-mutants' settings (#3490). Coverage (super.yml's llvm-cov, held to .github/coverage-floor.txt)
+# proves a line ran; a mutant proves whether any test fails when the line is wrong. cargo-mutants
+# changes one thing at a time (a function's body to a default value, an operator to another) and
+# runs the mutated package's tests: a mutant they fail is killed, one they pass survived.
+# `sh scripts/mutants.sh` runs it, one area's shard at a time or a branch's changed lines
+# (`--in-diff`), and mutants.yml runs a shard of every area each week and writes each one's score to
+# its summary.
+#
+# It is a tool, installed on its own (`cargo install cargo-mutants --locked`) and never a dependency:
+# no crate takes the `mutants` crate (CLAUDE.md rule 4), so `#[mutants::skip]` is never used. A
+# mutant no test can or should kill is left out below, by file or by name, each with its reason.
+
+# Each mutant is tested by its own package's tests alone: the engine's rules are its own tests' to
+# prove (CLAUDE.md, Architecture: the engine's tests use fixture scripts), never the cards'.
+test_workspace = false
+
+# The engine's testkit, which its `rules*` and `golden` tests require and every other crate's tests
+# turn on through their dev-dependencies. Not `ts`, whose export_bindings tests only write
+# apps/web/src/wire/. The opt-levels are ci.yml's `engine rules` group's
+# (.github/ci/rust-test.toml): each mutant compiles its package and its tests again, so compiling is
+# most of a mutant's time. No debug info, which only a debugger reads.
+additional_cargo_args = [
+  "--features",
+  "jackioh-engine/testkit",
+  "--config",
+  "profile.test.package.jackioh-engine.opt-level=1",
+  "--config",
+  "profile.test.package.jackioh-cards.opt-level=0",
+  "--config",
+  "profile.test.debug=0",
+]
+
+# A mutant whose change breaks a lint the crate denies is still a mutant to test, not unviable.
+cap_lints = true
+
+# A mutant that loops forever is killed by its timeout: three times the unmutated tests' own time
+# (cargo-mutants times them first), and never under two minutes, as long as the AI's tests and the
+# games the golden replay and the tools' fuzz play take on a runner's four cores.
+timeout_multiplier = 3.0
+minimum_test_timeout = 120
+
+exclude_globs = [
+  # The tests' own harness: scenario(), its verbs, the invariant monitor and the pool probe. A mutant
+  # there asks whether the tests are right, which the tests that use it answer by failing for a
+  # reason of their own; it judges no rule.
+  "crates/engine/src/testkit/**",
+  # Test modules in files of their own (`#[cfg(test)] mod tests;`).
+  "**/tests.rs",
+  "**/*_tests.rs",
+  # The binaries' command lines: argument parsing and dispatch, which call the modules the tests
+  # reach (crates/tools: every `cargo jackioh` command; crates/server: the server's boot).
+  "crates/tools/src/main.rs",
+  "crates/server/src/main.rs",
+]
+
+exclude_re = [
+  # Display and Debug text: what a person reads in a log or a message, which no rule reads.
+  '<impl (std::|core::)?(fmt::)?(Display|Debug) for ',
+  # The plain build's stand-ins for the testkit's overrides (crates/engine/src/catalog.rs,
+  # scripts.rs), each one `None` or `false`: under the testkit, which every test runs with, they are
+  # compiled out, so no test can see them. Their testkit twins share their names and only reach the
+  # harness (above).
+  'replace (test_override|shipped_override|previewed|override_map) -> ',
+]

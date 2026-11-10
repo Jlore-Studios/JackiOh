@@ -90,16 +90,16 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const EATER: &str = "traininggrounds-056"; // 5/5 → 10/10, cost 4 (2/2 → 4/4 until issue #3136)
+    const EATER: &str = "traininggrounds-056"; // Legacy: Corpse Eater: changed in issue #3136
 
     // Inert fixtures: every unit below has a Cry and nothing else, and the harness's `field` setup
     // never fires a Cry.
-    const GARY: &str = "core-004"; // 1/1
-    const FELINORS: &str = "core-012"; // 3/4
-    const RENO: &str = "core-053"; // 4/6
-    const STRAAZA: &str = "core-054"; // 8/8
-    const FELINOR_TOKEN: &str = "core-t-felinor"; // 1/1 unit token (§7)
-    const SUPPRESSIVE_AURA: &str = "core-046"; // −2/−2 to enemy units
+    const GARY: &str = "core-004"; // Gary the Gambler
+    const FELINORS: &str = "core-012"; // Duplicating Felinors
+    const RENO: &str = "core-053"; // Reno
+    const STRAAZA: &str = "core-054"; // Straaza
+    const FELINOR_TOKEN: &str = "core-t-felinor"; // Felinor Token: unit token (§7)
+    const SUPPRESSIVE_AURA: &str = "core-046"; // Suppressive Aura: shrinks enemy units
 
     // §2.5: one always-playable card per hand keeps a scenario on the turn it started on.
     const FILLER: &str = "core-005";

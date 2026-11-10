@@ -44,23 +44,23 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FELINOR: &str = "meditative-025";
-    const SPECIESIST: &str = "core-002"; // Cry: destroy target enemy non-Human; radiant: destroy all such.
-    const GAOKAO: &str = "meditative-034"; // Destroy neither-CN-nor-KY, then Buff either.
-    const MANDATE: &str = "meditative-078"; // Exile every non-CN permanent.
-    const RCTA: &str = "meditative-035"; // Give a non-CN permanent the CN tag (aim: help).
-    const ANXIETY: &str = "meditative-052"; // +3 Attack attacking a Unit sharing no tag.
-    const SCARAB: &str = "core-007"; // Jewelosco Scarab: (1) 1/1 with no tag and no Taunt.
-    const HIT_JOB: &str = "core-016"; // Destroy target unit, no tag filter.
-    const VANILLA: &str = "core-008"; // Mr. Vanilla: (1) 4/4 Human, neither CN nor KY.
-    const MENACE: &str = "core-019"; // Midrange Menace: (3) 9/9 with no tag, so not Human.
+    const SPECIESIST: &str = "core-002"; // Speciesist: Cry: destroy target enemy non-Human; radiant: destroy all such
+    const GAOKAO: &str = "meditative-034"; // 高考: Destroy neither-CN-nor-KY, then Buff either.
+    const MANDATE: &str = "meditative-078"; // Occidentless Mandate: Exile every non-CN permanent.
+    const RCTA: &str = "meditative-035"; // RCTA (CN): Give a non-CN permanent the CN tag (aim: help).
+    const ANXIETY: &str = "meditative-052"; // Economic Anxiety: +3 Attack attacking a Unit sharing no tag.
+    const SCARAB: &str = "core-007"; // Jewelosco Scarab: no tag and no Taunt
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target unit, no tag filter.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: Human, neither CN nor KY
+    const MENACE: &str = "core-019"; // Midrange Menace: with no tag, so not Human
     const FILLER: &str = "core-005";
-    const TRIBUTE_A: &str = "core-011"; // Tempo Timmy: (1) 3/3, tribute fodder.
-    const TRIBUTE_B: &str = "core-020"; // Pointmaster: (2) 7/1, tribute fodder.
-    const LAR: &str = "classicplus-076"; // Brother Lar: (1) 1/1 CN Human.
-    const BREAKER: &str = "meditative-045"; // Cry: Nerf every other CN or KY card, field and hands (decks too through v0.5.2).
-    const PRIME: &str = "meditative-045-1"; // Cry: destroy (radiant: exile) every other CN or KY permanent.
-    const FLAGBEARER: &str = "classicplus-046"; // Aura: your other Felinors have +1/+1.
-    const FIENDER: &str = "core-092"; // Also has the stats of all your Felinors.
+    const TRIBUTE_A: &str = "core-011"; // Tempo Timmy: tribute fodder
+    const TRIBUTE_B: &str = "core-020"; // Pointmaster: tribute fodder
+    const LAR: &str = "classicplus-076"; // Brother Lar: CN Human
+    const BREAKER: &str = "meditative-045"; // Knowledge Breaker: Cry: Nerf every other CN or KY card, field and hands (decks too through v0.5.2).
+    const PRIME: &str = "meditative-045-1"; // Knowledge Breaker Prime: Cry: destroy (radiant: exile) every other CN or KY permanent
+    const FLAGBEARER: &str = "classicplus-046"; // Felinor Flagbearer: Aura: your other Felinors get +attack/+health
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Also has the stats of all your Felinors.
 
     use jackioh_engine::effects::{degrade, transform, upgrade, vanilla};
     use jackioh_engine::resolve::{HookOptions, make_context};

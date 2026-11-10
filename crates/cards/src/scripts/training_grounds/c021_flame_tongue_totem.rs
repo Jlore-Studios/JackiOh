@@ -49,11 +49,11 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    const VANILLA: &str = "core-008"; // (1) Mr. Vanilla, 4/4.
-    const FIENDER: &str = "core-092"; // (2) Felinor Fiender, 5/7 Stack.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const FARM: &str = "core-058"; // (2) Field Spell Rush Token Farm.
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const FARM: &str = "core-058"; // Rush Token Farm: a Field Spell
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself.
     const PRINTED: i32 = 4;
     const AURA: i32 = 3;
 

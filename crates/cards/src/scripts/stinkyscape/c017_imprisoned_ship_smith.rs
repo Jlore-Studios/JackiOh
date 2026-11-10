@@ -50,14 +50,14 @@ mod tests {
 
     use super::{DORMANT_TURNS, ID, WARAXE};
 
-    const FILLER: &str = "core-010"; // (0) Spell: a play always open, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const RESERVES: &str = "core-075"; // (0) Field Spell that does nothing here: a backrow zone taken.
-    const FARM: &str = "core-058"; // (2) Field Spell: Start of turn: Summon a Rush Token.
+    const FILLER: &str = "core-010"; // Rapid Replenish: a play always open, so no turn ends by itself
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const RESERVES: &str = "core-075"; // Infinite Reserves: Field Spell that does nothing here: a backrow zone taken.
+    const FARM: &str = "core-058"; // Rush Token Farm: Start of turn: Summon a Rush Token.
     const RUSH_TOKEN: &str = "core-t-rush";
-    const WHIRLWIND: &str = "classicplus-021"; // (0) Spell: "Pierce. Deal {damage} damage to all Units."
-    const NETHER: &str = "core-088"; // (4) Spell: "Destroy all permanents."
+    const WHIRLWIND: &str = "classicplus-021"; // Whirlwind: "Pierce. Deal {damage} damage to all Units."
+    const NETHER: &str = "core-088"; // Twisting Nether: "Destroy all permanents."
 
     fn played(radiant: bool, p1_backrow: Value) -> Scenario {
         let mut s = crate::scenario(json!({

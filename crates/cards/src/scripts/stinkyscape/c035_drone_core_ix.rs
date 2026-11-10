@@ -60,7 +60,7 @@ mod tests {
 
     const CORE: &str = "stinkyscape-035";
     const CORVETTE: &str = "stinkyscape-t-drone-corvette";
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
     use crate::{filler, scenario};
