@@ -18819,9 +18819,18 @@
     "what": "plan #3600 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T02:50:31Z",
+    "at": "2026-11-10T02:58:09Z",
     "notes": [
-      "runner gate: started 0 of 4 waiting run(s); 4 wait for room"
+      "#3350 needs a plan",
+      "#3388 needs a plan",
+      "#3535 needs a plan",
+      "started plan #3535 on claude-8 (run 42746479290)",
+      "started review #3464 on claude-1 (run 42746562979)",
+      "started plan #3350 on claude-8 (run 42746649575)",
+      "started plan #3388 on claude-1 (run 42746731024)",
+      "started plan #3600 on muse (run 42746803806)",
+      "nothing more to start: nothing is queued",
+      "runner gate: started 2 of 7 waiting run(s) (queue build 42745611482, run 42743028545 on bot/issue-3496); 5 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19527,7 +19536,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T02:50:31Z",
+  "loop_tick": "2026-11-10T02:58:09Z",
   "machine_disk": {
     "issue": null,
     "reading": {
