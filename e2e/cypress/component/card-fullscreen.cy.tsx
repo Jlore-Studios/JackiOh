@@ -23,6 +23,36 @@ const VIEWPORTS = [
   { label: "phone", width: 390, height: 844 },
 ] as const;
 
+/** R3351000: the shares of a card's width a press is tried at, across its middle and then leftward. */
+const PRESS_SHARES = [0.5, 0.4, 0.3, 0.2, 0.1] as const;
+
+/**
+ * R3351000: where on `card`, from its box's top left, a finger lands on the card itself: its middle, or, in a fanned hand
+ * whose next card covers a card's right part (board.css `--fan-step`), the part of it that shows. Null when none of it does.
+ */
+function pressPoint(card: HTMLElement): { x: number; y: number } | null {
+  const box = card.getBoundingClientRect();
+  const y = box.height / 2;
+  for (const share of PRESS_SHARES) {
+    const x = box.width * share;
+    const hit = card.ownerDocument.elementFromPoint(box.left + x, box.top + y);
+    if (hit !== null && card.contains(hit)) return { x, y };
+  }
+  return null;
+}
+
+/** Triggers `type` on the card `testid` at its press point, once some of the card shows. */
+function pressCard(testid: string, type: "pointerdown" | "pointerup", options: { pointerId: number; pointerType?: string }): void {
+  cy.get(`[data-testid="${testid}"]`)
+    .should(($card) => {
+      expect(pressPoint($card[0] as HTMLElement), `${testid}: some of it shows to press`).not.to.eq(null);
+    })
+    .then(($card) => {
+      const at = pressPoint($card[0] as HTMLElement) ?? { x: 0, y: 0 };
+      cy.wrap($card).trigger(type, at.x, at.y, options);
+    });
+}
+
 function TriggerCard({ id, name }: { id: string; name: string }) {
   const { handlers } = useFullScreenTrigger({
     defId: id,
@@ -203,11 +233,9 @@ describe("R3351000 a long press opens inspect and the full-screen view from ever
 
     for (const [index, press] of cases.entries()) {
       const pointerId = 100 + index;
-      // The hand's fan overlaps its cards, so a hand card's centre is another card's: the events go to the card
-      // itself, and `force` only skips Cypress's coverage check.
-      const force = press.testid.startsWith("hand-");
-      // A touch held past LONG_PRESS_MS: the hover on a phone (R2617000), or the full-screen view.
-      cy.get(`[data-testid="${press.testid}"]`).trigger("pointerdown", { pointerId, pointerType: "touch", clientX: 120, clientY: 200, force });
+      // A touch held past LONG_PRESS_MS where the card shows (in the ten-card fan each card's neighbour covers its middle,
+      // the last card's aside): the hover on a phone (R2617000), or the full-screen view.
+      pressCard(press.testid, "pointerdown", { pointerId, pointerType: "touch" });
       cy.wait(LONG_PRESS_MS + 100);
       if (press.fullscreen) {
         cy.get('[data-testid="fullscreen-art"]').should("be.visible");
@@ -217,7 +245,7 @@ describe("R3351000 a long press opens inspect and the full-screen view from ever
       } else {
         cy.get(`[data-testid="${INSPECT_HOVER}"]`).should("exist");
         cy.get('[data-testid="fullscreen-art"]').should("not.exist");
-        cy.get(`[data-testid="${press.testid}"]`).trigger("pointerup", { pointerId, force });
+        pressCard(press.testid, "pointerup", { pointerId });
         cy.get(`[data-testid="${INSPECT_HOVER}"]`).should("not.exist");
       }
     }

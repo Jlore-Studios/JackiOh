@@ -3096,3 +3096,29 @@ mod r1989000_the_seed_coin_seats_the_pair {
         assert_eq!(e2e_seat_count(), 0);
     }
 }
+
+/// #3490's duplicate request (#3516): §9.5's enqueue holds one open ticket a player, and a second
+/// is told which ticket is already open rather than queued twice.
+mod a_second_enqueue_is_refused {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn a_second_enqueue_is_409_already_queued_naming_the_open_ticket() {
+        let app = test_app().await;
+        let token = active_profile(&app, "again", 1000.0).await;
+        let [deck, ..] = decks_from();
+        let deck_id = save_deck_for(&app, "again", &deck, "again's deck").await;
+
+        let (status, queued) = enqueue(&app, &token, &deck_id).await;
+        assert_eq!(status, 200, "{queued}");
+        let ticket_id = queued["ticketId"].as_str().unwrap_or("").to_string();
+        assert!(!ticket_id.is_empty());
+
+        let (status, refused) = enqueue(&app, &token, &deck_id).await;
+        assert_eq!(status, 409, "{refused}");
+        assert_eq!(refused["error"]["code"], "already_queued");
+        assert_eq!(refused["error"]["details"]["ticketId"], json!(ticket_id));
+        assert_eq!(open_count(&app).await, 1);
+        assert_eq!(tickets_table(&app).await.len(), 1);
+    }
+}

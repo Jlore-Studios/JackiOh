@@ -302,6 +302,20 @@ on (`deviceTilt`, a device-only card setting; iOS asks leave once, inside the sw
 none while the animation queue drains (`useTiltHold`, `game/Game.tsx`). The face's rotation is the one 3D thing: `.cf` is
 an isolated group, which draws what it holds flat, so the planes move by `translate`. Presentation only (rule 7).
 
+**Dioramas** (R3350000): a Mythic's normal picture, and a token printed Mythic's, draws a diorama of its own in place of the
+planes, one file per card in `cards/art/dioramas/<set>/` (`DIORAMA`: five to eight slices, back to front, each a pick of
+the painter's still picture's pieces, `dioramas/pieces.ts`, at a depth and in a plane, some bent, two or more on a loop
+written for the card). Each slice is a picture of its own (`dioramaSliceUri`, from the card's id and face alone); the face
+draws the farthest in its window and the rest as `.cf-plane[data-slice]`s over it (`data-diorama`), their loops running
+only in a motion slot (`data-diorama-motion`); at an animated level, and on the board, each slice also moves its pieces as
+the card's moving picture does (its roles' layers, the particles in the nearest), so the level keeps its motion. It turns up to `DIORAMA_TURN_MAX_DEG` in inspect, the hover preview and the
+Collection (`CardFace`'s `turn`), `CARD_TILT_MAX_DEG` in hand, and never breaks the frame; a board Mythic stacks every slice
+in its window while it moves (`CardArt`'s `diorama` "all"), in place of the live layers, its window swelling on a hover and
+its slices over the farthest swinging on an attack (`artLive.css`); the full-screen view draws the slices, scaled as it turns
+as little as keeps the screen covered (`fullscreenCoverScale`), and the takeover flies through them (`fx/takeover.ts`,
+`fx-takeover-fly`). Alt art, a restyle and every flat face draw none. `dioramas.test.ts` lists any
+Mythic without one (`PENDING`, empty) and holds every slice to its picture's colours, no text and `ART_DETAIL_MAX_BYTES`.
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and
@@ -533,7 +547,9 @@ defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (
 
 `scripts/github-releases.ts` prints every shipped version's GitHub release as JSON (`src/patches/github.ts`:
 the Patch notes page as Markdown, a pre-release while only staging has the version), which
-`.github/workflows/releases.yml` publishes. It needs no WebAssembly; to read the newest one's notes:
+`.github/workflows/releases.yml` publishes. It loads the WebAssembly module from `src/wasm/pkg` (a card's
+words are diffed by the face model, #3161), so run `sh scripts/build-wasm.sh` first, as the workflow does
+(#3601); `src/patches/github.test.ts` runs it in a process of its own. To read the newest one's notes:
 `pnpm --dir apps/web exec tsx scripts/github-releases.ts | jq -r '.releases[-1].body'`.
 
 The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `reduce` in the

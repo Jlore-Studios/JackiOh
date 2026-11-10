@@ -3041,7 +3041,7 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         // The opposite case: step 3's Anti-oneshot cap is a *ceiling*, so two such cards give the smaller.
         let mut capped = game("r124-cap-mins");
         capped.players.p2.hero.armor = 0;
-        put(&mut capped, GUARD, slot(P2, Row::Backrow, 1)); // base: cap 5
+        put(&mut capped, GUARD, slot(P2, Row::Backrow, 1)); // base: cap 4
         assert_eq!(damage::hero_damage_cap(&capped, P2), Some(ANTI_ONESHOT_CAP.base));
         put_radiant(&mut capped, GUARD, slot(P2, Row::Backrow, 2)); // radiant: cap 3
         assert_eq!(
@@ -3050,6 +3050,30 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         );
         const { assert!(ANTI_ONESHOT_CAP.radiant < ANTI_ONESHOT_CAP.base) };
         assert_eq!(hit_hero(&mut capped, 10).0, ANTI_ONESHOT_CAP.radiant);
+    }
+
+    /// §4.4 step 3, §8 #73, R1021 (#3514): Anti-oneshot Armor's cap, on each face, lets a hit below it
+    /// through whole, a hit at it through whole, and clamps a hit past it to it.
+    #[test]
+    fn anti_oneshot_armor_caps_a_hit_below_at_and_past_its_cap_on_each_face_s4_4_step_3() {
+        for (seed, radiant, cap) in [
+            ("cap-base", false, ANTI_ONESHOT_CAP.base),
+            ("cap-radiant", true, ANTI_ONESHOT_CAP.radiant),
+        ] {
+            let mut state = game(seed);
+            state.players.p2.hero.armor = 0;
+            if radiant {
+                put_radiant(&mut state, GUARD, slot(P2, Row::Backrow, 1));
+            } else {
+                put(&mut state, GUARD, slot(P2, Row::Backrow, 1));
+            }
+            assert_eq!(damage::hero_damage_cap(&state, P2), Some(cap));
+            for (hit, dealt) in [(cap - 1, cap - 1), (cap, cap), (cap + 1, cap)] {
+                let before = state.players.p2.hero.health;
+                assert_eq!(hit_hero(&mut state, hit).0, dealt);
+                assert_eq!(before - state.players.p2.hero.health, dealt);
+            }
+        }
     }
 
     #[test]
@@ -4181,6 +4205,40 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
             zones::card_at(&state, slot(P1, Row::Units, 1)).map(|card| card.def_id.clone()),
             Some(BODY.to_string())
         );
+    }
+
+    /// §3.2 (#3514): a row's zones are numbered 1 to its size, `UNIT_ZONES` or `BACKROW_ZONES`, so a play
+    /// may name the first and the last, and one naming zone 0 or one past the last is refused.
+    #[test]
+    fn zone_numbers_run_1_to_the_rows_size_and_a_play_naming_0_or_one_past_is_refused_s3_2() {
+        let mut state = game("s3-2-zone-numbers");
+        let unit = must(
+            in_hand(&mut state, &stacker.id, P1, 1).into_iter().next(),
+            "a Unit in hand",
+        );
+        let trap = must(
+            in_hand(&mut state, BARE_TRAP, P1, 1).into_iter().next(),
+            "a Trap in hand",
+        );
+        let play = |state: &GameState, card: &CardInstance, row: &str, lane: i32| -> Option<String> {
+            refusal(play_choices::why_choices_refused(
+                state,
+                P1,
+                card,
+                &play_action(json!({ "instanceId": card.id, "zone": { "row": row, "lane": lane } })),
+            ))
+        };
+
+        for (card, row, size) in [(&unit, "units", UNIT_ZONES), (&trap, "backrow", BACKROW_ZONES)] {
+            assert_eq!(play(&state, card, row, 1), None);
+            assert_eq!(play(&state, card, row, size), None);
+            for lane in [0, size + 1] {
+                assert_eq!(
+                    play(&state, card, row, lane),
+                    Some(format!("there is no {row} zone {lane}"))
+                );
+            }
+        }
     }
 
     #[test]

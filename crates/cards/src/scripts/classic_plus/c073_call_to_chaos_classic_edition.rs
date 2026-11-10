@@ -142,6 +142,7 @@ mod tests {
             .insert(subsystems::CHAOS_CHAIN_KEY.to_string(), json!(chain));
     }
 
+    // Differs from Scenario::events_of: the events as JSON (`Vec<Value>`), not typed `GameEvent`s.
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
         s.events().iter().filter(|event| event.event_type().as_str() == kind).map(js).collect()
     }

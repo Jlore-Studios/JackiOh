@@ -136,6 +136,7 @@ mod tests {
         chaos_in(seed, cursor_in(seed, entry), side(false, json!([])), json!({ "hand": [VANILLA] }))
     }
 
+    // Differs from Scenario::events_of: the events as JSON (`Vec<Value>`), not typed `GameEvent`s.
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
         s.events()
             .iter()

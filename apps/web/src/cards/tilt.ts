@@ -79,10 +79,11 @@ export function devicePose(gamma: number | null, beta: number | null): TiltPose 
 
 /**
  * R3344001: the angles a pose turns the face by, in degrees: toward the pointer (the edge it points at turns away, as a
- * card pressed at that edge), never past CARD_TILT_MAX_DEG either way.
+ * card pressed at that edge), never past CARD_TILT_MAX_DEG either way. R3350000: or past `maxDeg`, a diorama's turn
+ * (DIORAMA_TURN_MAX_DEG) where the player turns it to look at it.
  */
-export function tiltDegrees(pose: TiltPose): { rx: number; ry: number } {
-  return { rx: -pose.y * CARD_TILT_MAX_DEG, ry: pose.x * CARD_TILT_MAX_DEG };
+export function tiltDegrees(pose: TiltPose, maxDeg: number = CARD_TILT_MAX_DEG): { rx: number; ry: number } {
+  return { rx: -pose.y * maxDeg, ry: pose.x * maxDeg };
 }
 
 /** R3344001: where the glare lies for a pose, in percent of its layer: opposite the tilt, CARD_GLARE_TRAVEL_PCT at the far edge. */
@@ -177,7 +178,7 @@ function touches(event: PointerEvent): boolean {
  * Listens for what tilts `face` in `mode` on `host`, and writes its pose to `face`. Returns what stops it, which also
  * puts the face level. `deviceTilt` adds the device's orientation, from the start in the window's and the drag's modes
  * and while a pointer hovers or presses in the host's. In the window's mode the pose is read against `anchor`'s box
- * when it has one (the hover preview's anchor), else the host's.
+ * when it has one (the hover preview's anchor), else the host's. R3350000: the face turns up to `maxDeg` each way.
  */
 function attach(
   face: HTMLElement,
@@ -185,6 +186,7 @@ function attach(
   mode: Exclude<TiltMode, "off">,
   deviceTilt: boolean,
   anchor: { readonly current: TiltBox | undefined },
+  maxDeg: number,
 ): () => void {
   let pressed = false;
   let device = false;
@@ -202,7 +204,7 @@ function attach(
 
   const write = (pose: TiltPose): void => {
     if (!claim(slot)) return;
-    const { rx, ry } = tiltDegrees(pose);
+    const { rx, ry } = tiltDegrees(pose, maxDeg);
     const glare = glareOf(pose);
     face.style.setProperty(TILT_X_PROPERTY, plain(pose.x, POSE_DIGITS));
     face.style.setProperty(TILT_Y_PROPERTY, plain(pose.y, POSE_DIGITS));
@@ -306,9 +308,16 @@ function attach(
 /**
  * R3344001: while `mode` is not "off", `allowed` and no hold stands, the face at `faceRef` tilts as `mode` says (`attach`),
  * and once not it listens to nothing and holds no property, so it rests level. `anchor` is for the window's mode (the
- * hover preview's anchor): without one a window face reads its host's box.
+ * hover preview's anchor): without one a window face reads its host's box. R3350000: it turns up to `maxDeg` each way
+ * (CARD_TILT_MAX_DEG; a diorama's DIORAMA_TURN_MAX_DEG where the player turns it to look at it).
  */
-export function useCardTilt(faceRef: RefObject<HTMLElement | null>, mode: TiltMode, allowed: boolean, anchor?: TiltBox): void {
+export function useCardTilt(
+  faceRef: RefObject<HTMLElement | null>,
+  mode: TiltMode,
+  allowed: boolean,
+  anchor?: TiltBox,
+  maxDeg: number = CARD_TILT_MAX_DEG,
+): void {
   const held = useIsHeld();
   const { deviceTilt } = useCardSettings();
   const anchorRef = useRef(anchor);
@@ -320,6 +329,6 @@ export function useCardTilt(faceRef: RefObject<HTMLElement | null>, mode: TiltMo
     const face = faceRef.current;
     const host = face?.parentElement ?? null;
     if (!active || face === null || host === null) return undefined;
-    return attach(face, host, mode, deviceTilt, anchorRef);
-  }, [faceRef, active, mode, deviceTilt]);
+    return attach(face, host, mode, deviceTilt, anchorRef, maxDeg);
+  }, [faceRef, active, mode, deviceTilt, maxDeg]);
 }
