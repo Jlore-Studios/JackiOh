@@ -841,6 +841,36 @@ pub const BUG_REPORT_LISTED_ACTIONS: usize = 10;
 pub const BUG_REPORT_LISTED_MATCHES: usize = 20;
 
 // ---------------------------------------------------------------------------------------------
+// Alerts (`alerts.rs`, #3595): an alert told to people, as a GitHub issue and an email. Not in
+// SPEC, and no R-row: operational, as the bug reports are.
+// ---------------------------------------------------------------------------------------------
+
+/// An event makes at most one notice in this long per process: an hour. The rest are counted, and
+/// the next notice says how many.
+pub const ALERT_WINDOW_MS: i64 = 60 * 60 * 1000;
+/// How many alerts wait for the notifier's task before a new one is dropped (its log line stays).
+pub const ALERT_QUEUE: usize = 64;
+/// The labels an alert's issue carries: the repository's type and people's (`human`, which triage
+/// assigns to both of them and which keeps the bots off it).
+pub const ALERT_ISSUE_LABELS: &[&str] = &["architecture", "human"];
+/// Events whose own issue is filed elsewhere, which an alert's issue would only repeat: `bug.found`
+/// (`bug_reports.rs`). They are still emailed.
+pub const ALERTS_FILED_ELSEWHERE: &[&str] = &["bug.found"];
+/// Resend's API, which an alert's email is sent through.
+pub const ALERT_EMAIL_API_URL: &str = "https://api.resend.com/emails";
+/// Who an alert's email is from: an address on the domain Resend sends jackioh.com's mail for
+/// (infra/cloudflare.tf), as the sign-in mail is (docs/deploy-cloudflare.md section 8).
+pub const ALERT_EMAIL_FROM: &str = "JackiOh alerts <no-reply@jackioh.com>";
+/// How many alert emails one process sends in `ALERT_EMAIL_DAY_MS`. Resend's free plan sends 100 a
+/// day, the sign-in mail's included, so alerts keep well under it.
+pub const ALERT_EMAILS_PER_DAY: usize = 10;
+/// The day `ALERT_EMAILS_PER_DAY` counts in.
+pub const ALERT_EMAIL_DAY_MS: i64 = 24 * 60 * 60 * 1000;
+/// How long the request to Resend may take before the email is given up (logged). GitHub's take
+/// `BUG_REPORT_TIMEOUT_MS`, through the bug reports' own request builder.
+pub const ALERT_TIMEOUT_MS: u64 = 10_000;
+
+// ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).
 // ---------------------------------------------------------------------------------------------
 

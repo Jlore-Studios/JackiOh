@@ -105,6 +105,42 @@
   --pack-crimp-b: #a04880;
 }
 
+/* The dungeon run's reward packs (#3588), from palette.css: ember red for the beaten enemy's deck. */
+.pack-object[data-pack="dungeon-enemy"] {
+  --pack-foil-a: var(--pal-red-600);
+  --pack-foil-b: var(--pal-wood-950);
+  --pack-accent: var(--pal-orange-400);
+  --pack-crimp-a: var(--pal-ember-500);
+  --pack-crimp-b: var(--pal-red-900);
+}
+
+/* Near-black foil with a gold face and a red seal for the boss's deck. */
+.pack-object[data-pack="dungeon-boss"] {
+  --pack-foil-a: var(--pal-wood-800);
+  --pack-foil-b: var(--pal-black);
+  --pack-accent: var(--pal-gold-300);
+  --pack-crimp-a: var(--pal-red-600);
+  --pack-crimp-b: var(--pal-red-900);
+}
+
+/* Deep water blue for the random pack. */
+.pack-object[data-pack="dungeon-random"] {
+  --pack-foil-a: var(--pal-blue-800);
+  --pack-foil-b: var(--pal-slate-900);
+  --pack-accent: var(--pal-cyan-400);
+  --pack-crimp-a: var(--pal-sky-300);
+  --pack-crimp-b: var(--pal-blue-900);
+}
+
+/* Aged brass for the type, tag or rarity pack. */
+.pack-object[data-pack="dungeon-filter"] {
+  --pack-foil-a: var(--pal-brass-600);
+  --pack-foil-b: var(--pal-brass-950);
+  --pack-accent: var(--pal-gold-200);
+  --pack-crimp-a: var(--pal-brass-500);
+  --pack-crimp-b: var(--pal-brass-800);
+}
+
 /* --------------------------------------------------------------------------------- the object --- */
 
 /* The tilt leans the whole pack toward the pointer. */

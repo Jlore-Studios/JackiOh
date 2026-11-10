@@ -460,6 +460,11 @@ export function StartScreen({ dungeon, onEnter }: StartScreenProps): ReactElemen
       <BackLink to={paths.play} title={t("Dungeon run")} />
       <section className="panel panel--auth dungeon-panel">
         <Wordmark />
+        {dungeon.notice === null ? null : (
+          <p className="notice" role="status" data-testid={dungeonTestid.notice}>
+            {dungeon.notice}
+          </p>
+        )}
         <Progress dungeon={dungeon} />
         {unfinished ? <SavedRun dungeon={dungeon} onEnter={onEnter} /> : <Setup dungeon={dungeon} onEnter={onEnter} />}
       </section>

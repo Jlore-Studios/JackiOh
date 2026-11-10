@@ -154,6 +154,8 @@ placeholders (`app::load_server_env`).
 | `GITHUB_ISSUES_REPO` | no | the `owner/name` those issues go to; default `Jlore-Studios/JackiOh` (`BUG_REPORT_REPO_DEFAULT`) |
 | `STATS_INGEST_TOKEN` | no | the Bearer [REDACTED] that opens `POST /api/stats/dev-records` and no other route (R1023000); unset, the route answers 404. Optional secret: without it the lanes keep only their files |
 | `DEV_PROFILE_IDS` | no | the dev accounts (§14.10, R1300000): comma-separated profile ids, each the account secret ID `/account` shows; unset, none. A malformed id refuses the boot, naming it. Only the boot reads it: no catalog stamp grants anyone (R1310001), so `seed-catalog` does not. The boot logs how many, never which |
+| `ALERT_RESEND_API_KEY` | no | a Resend API key with Sending access for jackioh.com, with which an alert is emailed to `ALERT_EMAILS` ([Alerts](#alerts), #3595); unset, no alert is emailed. Secret |
+| `ALERT_EMAILS` | no | the addresses an alert is emailed to, comma-separated; an entry that is not an address is left out with a warning that never prints it, and nothing here refuses the boot. A Worker secret, since the repository is public; the boot logs how many, never which |
 | `DEV_STRICT` | no | the dev dashboard's strict mode (§14.10, R3074000): `on` (the default when unset) makes every `/api/admin/*` route need the two-step code (`aal2`) and keeps a hand-set rating off the public ladder until it is reset (R3074001); `off` skips both. wrangler.jsonc sets `on` for production and `off` for staging, and end-to-end mode defaults it to `off`. Any other value refuses the boot |
 
 `mint-code`, `moderate` and `seed-accounts` read the same environment (`seed-accounts` also
@@ -679,6 +681,32 @@ select jsonb_build_object(
   'log', (select jsonb_agg(a.action order by a.seq) from public.duos_match_actions a where a.match_id = m.id))::text
 from public.duos_matches m where m.id = '<match id>';
 ```
+
+## Alerts
+
+An alert is an error log line marked `alert = true`: `api::http::log_alert`'s (`api.rejections.unusual`,
+`match.rejections.unusual`, `ranked.profile_missing`, `game_records.fold_poison`, `bug.found`,
+`bug.reports.refused`) and `loops.rs`'s (`loop.crashed`, `loop.returned`). `alerts.rs` (#3595) tells people
+of each, from a tracing layer beside the JSON log, at most once an hour per event in a process
+(`ALERT_WINDOW_MS`; the rest are logged as `alert.held`, and the next notice says how many):
+
+- **A GitHub issue**, with `CREATE_ISSUES_TOKEN`, titled `Patch: alert <event> on <site>` (the site being the
+  first of `PUBLIC_ORIGINS`) and labelled `ALERT_ISSUE_LABELS` (`architecture`, `human`: triage assigns both
+  people). The repository is public, so it names the event, the site, the build and the time, never the
+  alert's data: a profile id is an account secret ID and a rate limit's key a player's address. While the
+  event's issue is open, its next notice comments there; close it once handled, and the next opens another.
+  `bug.found` gets none, since its report has its own ([above](#a-match-its-log-does-not-reproduce)).
+- **An email** through Resend to `ALERT_EMAILS`, with `ALERT_RESEND_API_KEY`, holding every field of the
+  line. It goes with each new issue, and with each notice no issue carries (no token, GitHub failing,
+  `bug.found`); a comment on an open issue sends none. Resend's free plan sends 100 a day, the sign-in
+  mail's included (docs/deploy-cloudflare.md section 8), so a process sends at most `ALERT_EMAILS_PER_DAY` a
+  day, and each email carries an `Idempotency-Key` (`alerts::email_key`) that Resend keeps a day: one email
+  per new issue, or else one per event and site a day, however often the container restarts.
+
+Either alone works. The boot logs `alerts.ready` (`issues`, and how many addresses) or `alerts.off`; a notice
+that fails logs `alert.issue.failed` or `alert.email.failed`, never another alert. The end-to-end server tells
+nobody. A server that cannot boot cannot tell anyone, nor can one the Worker cannot reach: those are #3595's
+next steps, in the Worker.
 
 ## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000, R747000)
 

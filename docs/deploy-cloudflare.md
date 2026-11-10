@@ -168,7 +168,8 @@ staging -> Run workflow moves it now (to its `sha`, or main's newest green commi
 | Where | What | Used by |
 | --- | --- | --- |
 | Cloudflare | the Workers Paid plan (Containers need it) | both Workers |
-| Cloudflare | each Worker's secrets: `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `CODE_PEPPER`, and optionally `CREATE_ISSUES_TOKEN`, `DEV_PROFILE_IDS` (`apps/edge/README.md`, Settings) | the servers |
+| Cloudflare | each Worker's secrets: `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `CODE_PEPPER`, and optionally `CREATE_ISSUES_TOKEN`, `DEV_PROFILE_IDS`, `ALERT_RESEND_API_KEY`, `ALERT_EMAILS` (`apps/edge/README.md`, Settings) | the servers |
+| Resend | a sending-only API key for jackioh.com, the Worker secret `ALERT_RESEND_API_KEY`, beside the sign-in mail's (section 8) | the server's alert emails (`crates/server/README.md`, Alerts) |
 | Cloudflare Zero Trust | the team's organisation, and a service token for staging's deploy check | Access |
 | GitHub secret | `CLOUDFLARE_API_TOKEN`: the Edit Cloudflare Workers template, plus Containers if wrangler asks for it | both deploy jobs |
 | GitHub secrets | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`: the service token's pair | staging's live check |
@@ -358,6 +359,11 @@ later, so Render would stop billing:
   server did not report the commit in time: Workers & Pages -> the Worker -> Logs shows the server's
   boot, and a failed migration there). Fix it on `main`; for production, then run promote
   production with **redeploy**.
+- **An alert:** the server opens `Patch: alert <event> on <site>` (labelled `human`) and emails
+  `ALERT_EMAILS` the details (`crates/server/README.md`, Alerts). Read the event in the Worker's logs
+  (Workers & Pages -> the Worker -> Logs), and close the issue once it is handled, so the next one emails
+  again. To turn the emails on or change who gets them, `wrangler secret put ALERT_RESEND_API_KEY` and
+  `ALERT_EMAILS` on that Worker, then redeploy it.
 - **The server will not start:** its boot runs `release` (migrate, seed the catalog) and exits on
   any failure; with one container there is no older instance to keep serving. The Worker's logs
   show the error. CI's `db` job boots the image against Postgres before any merge that changes the

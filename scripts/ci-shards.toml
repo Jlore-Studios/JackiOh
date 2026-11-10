@@ -21,7 +21,11 @@
 "cards lib" = 1
 "cards" = 1
 "server" = 1
-"server api" = 1
+# `server api` ran 7m 24s (#3580): about 1,200 tests (every tests/api module but
+# practice, plus the lib's api:: tests). 4 shards of about 300 tests each, so each
+# shard should finish under five minutes with headroom; each shard recompiles the
+# group's binaries again, as above.
+"server api" = 4
 # `server practice` and `server practice rulings` stay at 1 (#3314). Both ran over seven minutes
 # because three tests in each waited about 150 s for the slowest game of `honest_win`'s batch
 # (crates/server/tests/api/practice.rs), which #3305 fixed: each group's tests now run in about

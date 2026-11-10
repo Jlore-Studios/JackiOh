@@ -19,8 +19,10 @@ import { MapScreen } from "./MapScreen.tsx";
 import {
   ExtractArtifactScreen,
   ExtractCardScreen,
+  openedPackLook,
   PackScreen,
   RewardScreen,
+  type OpenedPackLook,
 } from "./RewardScreens.tsx";
 import { dungeonMapTestid } from "./testids.ts";
 import { CampfireScreen, EventScreen, ShopScreen, ShrineScreen } from "./TileScreens.tsx";
@@ -92,6 +94,9 @@ export function RunScreen({ dungeon }: { dungeon: Dungeon }): ReactElement {
   // Re-render on a live language change, so every `t()` and card face follows it.
   useLocale();
   const [refusal, setRefusal] = useState<string | null>(null);
+  // The chosen pack's look (#3588): the pack phase carries no kind, so the choice is remembered
+  // here when `openPack` is sent and the sealed tear wears it. Null on a refresh.
+  const [opened, setOpened] = useState<OpenedPackLook | null>(null);
   const run = dungeon.run;
   const content = dungeon.content;
   // Impossible while part D's page stands guard (it renders the start screen with no run), but a
@@ -106,6 +111,10 @@ export function RunScreen({ dungeon }: { dungeon: Dungeon }): ReactElement {
     );
   }
   const send = (action: RunAction): void => {
+    // Remember the chosen pack before the run answers with its kind-less pack phase (#3588).
+    if (action.type === "openPack") {
+      setOpened(openedPackLook(run, action.index));
+    }
     setRefusal(dungeon.act(action));
   };
   return (
@@ -119,7 +128,7 @@ export function RunScreen({ dungeon }: { dungeon: Dungeon }): ReactElement {
         </p>
       )}
       <div className="dungeon-run-body" data-testid={dungeonMapTestid.body}>
-        <PhaseBody dungeon={dungeon} run={run} content={content} send={send} />
+        <PhaseBody dungeon={dungeon} run={run} content={content} send={send} opened={opened} />
       </div>
     </div>
   );
@@ -130,10 +139,12 @@ type PhaseBodyProps = {
   run: RunState;
   content: RunContent;
   send: SendRunAction;
+  /** The chosen pack's look, remembered when it was opened (#3588). */
+  opened: OpenedPackLook | null;
 };
 
 /** The phase's screen. Every `RunPhase` has its case; the switch below is total. */
-function PhaseBody({ dungeon, run, content, send }: PhaseBodyProps): ReactElement {
+function PhaseBody({ dungeon, run, content, send, opened }: PhaseBodyProps): ReactElement {
   const phase = run.phase;
   switch (phase.phase) {
     case "map":
@@ -144,7 +155,7 @@ function PhaseBody({ dungeon, run, content, send }: PhaseBodyProps): ReactElemen
     case "reward":
       return <RewardScreen run={run} content={content} phase={phase} send={send} />;
     case "pack":
-      return <PackScreen run={run} content={content} phase={phase} send={send} />;
+      return <PackScreen run={run} content={content} phase={phase} send={send} opened={opened} />;
     case "extractCard":
       return <ExtractCardScreen run={run} content={content} send={send} />;
     case "extractArtifact":
