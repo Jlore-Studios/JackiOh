@@ -18124,14 +18124,14 @@
     "what": "plan #3606 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T18:54:54Z",
+    "at": "2026-11-10T19:10:41Z",
     "notes": [
-      "#3623: green and waiting for a person to merge it, so `muse` gives up its claim on it",
-      "delivered review #3644 on claude-8 (run 42878659477): reviewed",
-      "started plan #3658 on muse (run 42880428699)",
+      "#3606 needs a plan",
+      "delivered plan #3658 on muse (run 42880428699): planned",
+      "started build #3658 on muse (run 42883141984)",
+      "started plan #3606 on muse (run 42883290694)",
       "nothing more to start: nothing is queued",
-      "pruned 5 plan file(s) older than 7 days",
-      "#3658: typed it Task",
+      "pruned 1 plan file(s) older than 7 days",
       "runner gate: started 0 of 4 waiting run(s); 4 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -18838,7 +18838,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T18:54:54Z",
+  "loop_tick": "2026-11-10T19:10:41Z",
   "machine_disk": {
     "issue": null,
     "reading": {
