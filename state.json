@@ -16651,9 +16651,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "muse",
-      "owner_since": "2026-11-09T20:44:21Z",
-      "owner_why": "it plans it",
+      "owner": "claude-3",
+      "owner_since": "2026-11-10T08:59:24Z",
+      "owner_why": "handed off from `muse`: `muse` has no runner free where it runs",
       "pending_request": false,
       "planned_at": "2026-11-09T21:00:57Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -17638,10 +17638,8 @@
       }
     },
     "3529": {
-      "action": "review",
-      "asks": [
-        "c:6763114095"
-      ],
+      "action": "revise",
+      "asks": [],
       "ci_fixed_head": "d250e47a4088ebe09c25e88015ae93a78d36ac0c",
       "ci_fixes": 1,
       "cleared": {
@@ -17664,23 +17662,25 @@
       "interruptions": 0,
       "issue": 3499,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "revising",
       "merge_owner_gave_up": {
         "at": "2026-11-10T02:19:25Z",
         "provider": "muse",
         "sha": "d250e47a4088ebe09c25e88015ae93a78d36ac0c"
       },
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-3",
       "queued_at": "2026-11-10T08:52:34Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42717247157",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:15f5c94e-1794301097",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "request",
-      "started_at": "2026-11-09T23:03:21Z",
+      "started_at": "2026-11-10T08:59:24Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6763114095"
+      ],
       "votes": {
         "approvals": [
           "muse"
@@ -20450,9 +20450,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T08:58:02Z",
+    "at": "2026-11-10T08:59:24Z",
     "url": "",
-    "what": "spot-check #3531 on claude-3"
+    "what": "revise #3529 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-10T08:24:41Z",
