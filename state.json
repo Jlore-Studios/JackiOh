@@ -18179,15 +18179,8 @@
       "verdict_rounds": 1
     },
     "3582": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42732394160",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-10T01:26:23Z",
-        "until": "2026-11-10T01:56:23Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -18199,10 +18192,9 @@
         "reason": "planned on opus",
         "trail": "pts.rs\", \"offset\": 140, \"limit\": 30}\n- Bash: {\"command\": \"grep -rn \\\"stockpile()\\\" crates/engine/tests/rules/*.rs | head -5; grep -n \\\"fn play_card\\\\|fn play\\\\b\\\\|ActionBody::Play {\\\" crates/engine/tests/rules/fixtures/harness.rs | head\", \"desc\u2026\n- Bash: {\"command\": \"sed -n 540,600p crates/engine/tests/rules/effects_core.rs\", \"description\": \"See a test that plays Stockpile\"}\n- Bash: {\"command\": \"grep -rn \\\"pub fn run(\\\\|pub struct RunOptions\\\\|pub fn as_p\\\" crates/engine/src/testkit/ | head; grep -n \\\"^use\\\\|fn game\\\" crates/engine/tests/rules/effects_core.rs | head\", \"descripti\u2026\n- Bash: {\"command\": \"grep -rn \\\"fn run\\\\b\\\\|fn run(\\\\|struct RunOptions\\\\|fn as_p\\\" crates/engine/src crates/engine/tests/rules/fixtures | head\", \"description\": \"Locate the run helper definition\"}\n- Bash: {\"command\": \"sed -n 1,140p crates/engine/tests/rules/fixtures/harness.rs\", \"description\": \"Read the engine test harness helpers\"}\n- Bash: {\"command\": \"sed -n 1,58p crates/engine/tests/rules/fixtures/scripts.rs; grep -rn \\\"ActionBody::Play {\\\" crates/engine/tests/rules/*.rs | head -3\", \"description\": \"Read fixture def helper and a Play \u2026\n- Bash: {\"command\": \"grep -rn \\\"seat_swaps\\\" crates/engine/src --include=*.rs | head -5; grep -n \\\"pub seat_swaps\\\" -B6 crates/engine/src/state.rs | head -20\", \"description\": \"Check what seat swaps do\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3582/crates/engine/src/subsystems/glitch.rs\", \"offset\": 120, \"limit\": 60}\n- Bash: {\"command\": \"grep -n -i \\\"draws\\\\? at\\\\|start-of-turn draw\\\\|turn draw\\\\|DRAWS_PER_TURN\\\\|extra_draws\\\" crates/engine/src/testkit/invariants.rs crates/engine/src/testkit/*.rs | head\", \"description\": \u2026\n- Bash: {\"command\": \"sed -n 1,40p crates/engine/tests/rules/config.rs; grep -rn \\\"config.rs\\\\b\\\" crates/tools/tests/acceptance.rs | head -5\", \"description\": \"Check config tests for constant enumeration\"}\n- Bash: {\"command\": \"grep -rn \\\"pub use crate::config\\\\|pub use config\\\\|pub use crate::\\\\*\\\\|pub use super::config\\\" crates/engine/src/lib.rs crates/engine/src/testkit/mod.rs crates/engine/src/prelude.rs 2>\u2026\n- Bash: {\"command\": \"grep -n \\\"HELPER\\\\|fn helpers\\\\|\\\\\\\"fn \\\" crates/tools/tests/acceptance.rs | head -40\", \"description\": \"Find the helper names the acceptance test refuses\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3582/crates/tools/tests/acceptance.rs\", \"offset\": 965, \"limit\": 120}\n- Bash: {\"command\": \"sed -n 150,200p crates/engine/tests/rules/hero_armor.rs; grep -n \\\"pub struct EngineError\\\" -A8 crates/engine/src/state.rs\", \"description\": \"See how hero_armor tests assert refusals\"}\n- Bash: {\"command\": \"sed -n 1,95p crates/engine/tests/rules/hero_armor.rs\", \"description\": \"Read hero_armor test header and helpers\"}\n- Bash: {\"command\": \"grep -n \\\"ActionBody::Play\\\\|legal_actions\\\" crates/engine/tests/rules/handicap.rs | head; grep -n \\\"legal_actions(\\\" crates/engine/tests/rules/auto_end_turn.rs | head -3; sed -n 245,262\u2026\n- Bash: {\"command\": \"grep -n \\\"validate_handicap(\\\" crates/engine/src/*.rs crates/engine/src/**/*.rs | head; grep -n \\\"Fatigue {\\\" crates/engine/src/wire/events.rs | head -3\", \"description\": \"Find validate_h\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3582/crates/engine/src/state.rs\", \"offset\": 2460, \"limit\": 30}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3582/crates/engine/src/state.rs\", \"offset\": 3000, \"limit\": 30}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3582/crates/engine/src/config.rs\", \"offset\": 55, \"limit\": 20}\n- Bash: {\"command\": \"grep -n \\\"^use crate::config\\\\|^use crate::config::{\\\" -A6 crates/engine/src/state.rs | head -12; grep -n \\\"^use crate::config\\\" crates/engine/src/setup.rs crates/engine/src/turn.rs\", \"d\u2026\n- Bash: {\"command\": \"sed -n 1,20p crates/engine/src/lib.rs; grep -n \\\"pub use state\\\\|pub use turn\\\\|pub use setup\\\" crates/engine/src/lib.rs; grep -rn \\\"takes_turn_draws\\\\|DRAW_EVERY_TURN\\\\|MIN_OPENING_HAND\u2026\n- Bash: {\"command\": \"grep -n -o \\\".\\\\{150\\\\}heroFloor.\\\\{150\\\\}\\\" spec/10-engine-guide.md spec/09-architecture.md spec/15-dungeon-run.md | head -5; grep -n -o \\\".\\\\{100\\\\}handicap.\\\\{150\\\\}\\\" spec/15-dungeon\u2026\n- Bash: {\"command\": \"grep -n -i \\\"handicap\\\" spec/15-dungeon-run.md spec/10-engine-guide.md | cut -c1-300 | head -10\", \"description\": \"Find handicap mentions in dungeon and engine spec\"}\n- Bash: {\"command\": \"grep -rn \\\"handicap\\\" crates/server/src --include=*.rs | grep -v \\\"^\\\\s*//\\\" | cut -c1-200 | head -15\", \"description\": \"Check how the server handles handicaps\"}\n- Bash: {\"command\": \"ls spec/rulings/R0244.md spec/rulings/R0003.md; grep -n \\\"Ruling numbers\\\" -A12 docs/issues-and-patches.md | head -20\", \"description\": \"Confirm R244 exists and read ruling numbering rule\u2026\n- Bash: {\"command\": \"grep -n \\\"lints\\\\|deny\\\\|warn(\\\" crates/engine/Cargo.toml Cargo.toml crates/engine/src/lib.rs | head; cat crates/engine/clippy.toml | head -20\", \"description\": \"Check engine lint configu\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\[\\\\[test\\\\]\\\\]\\\" -A4 crates/engine/Cargo.toml | head -30; ls crates/engine/tests/ | head -20\", \"description\": \"Check engine test binary targets\"}\n- Bash: {\"command\": \"head -30 crates/engine/tests/rules.rs; grep -n \\\"handicap\\\" crates/engine/tests/rules*.rs\", \"description\": \"See which rules binary includes handicap.rs\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3582/.bot-plan.md\", \"content\": \"# Draft plan, issue #3582 (planner notes) \\u2014 complete; final message = the plan below the line\\n\\nFound: Handicap \u2026\n- Bash: {\"command\": \"grep -n \\\"pub use script\\\\|pub use subsystems\\\\|pub mod subsystems\\\" crates/engine/src/lib.rs; grep -n \\\"Fatigue {\\\" -A5 crates/engine/src/wire/events.rs | head -8\", \"description\": \"Conf\u2026\n- said: **Goal** Add two optional `Handicap` fields to the engine, both proven by ruling R3582000: - `fewer_opening_cards` (`fewerOpeningCards`) takes cards off a seat's opening draw, which is \u00a72.1's entry plus `extraOpeningCards`. The hand never drops below `MIN_OPENING_HAND` (1), and the mulligan works o\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-10T00:58:56Z",
       "owner_why": "it plans it",
@@ -18215,9 +18207,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-10T00:57:29Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42732394160",
+      "run_id": "pending:57f7c954-1794274207",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-10T00:58:56Z",
+      "started_at": "2026-11-10T01:30:40Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18531,9 +18523,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T01:29:53Z",
+    "at": "2026-11-10T01:30:40Z",
     "url": "",
-    "what": "revise #3531 on claude-7"
+    "what": "build #3582 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-10T01:07:49Z",
