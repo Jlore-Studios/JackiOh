@@ -37600,7 +37600,8 @@
       "2026-11-10T21:13:35Z,claude-3,refusal,call,42894395397,100,2026-11-11T00:50:00Z,,,rejected,,,2026-11-11T00:50:00Z"
     ],
     "runs": [
-      "2026-11-10T21:11:03Z,42900738645,claude-3,opus,suggest,,,interrupted,refusal,7.6,0,0,0,17.1126,62,100,,,,,none,,1"
+      "2026-11-10T21:11:03Z,42900738645,claude-3,opus,suggest,,,interrupted,refusal,7.6,0,0,0,17.1126,62,100,,,,,none,,1",
+      "2026-11-10T21:13:36Z,42894395397,claude-3,sonnet+opus,build,3549,medium,interrupted,refusal,47.7,184,104051,19249357,4.0966,52,100,,,1232.7,muse,fresh,other,1"
     ]
   },
   "version": 1
