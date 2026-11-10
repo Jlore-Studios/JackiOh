@@ -16772,7 +16772,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-10T10:27:22Z",
+      "feedback_since": "2026-11-10T16:48:52Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3518,
@@ -16790,11 +16790,11 @@
       "run_id": "42858399133",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-10T16:48:52Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "muse"
