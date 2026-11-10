@@ -12,13 +12,15 @@
 // it reads at once when the socket drops and goes on at its pace until another is live. The socket's
 // `chat` and `friends` pushes go to their listeners (`onChatPush`, `onFriendsPush`): an open chat and an
 // open friends list read again.
+// R3576000: a tab hidden for `HIDDEN_QUIET_MS` closes its socket, so the server can sleep, and the poll
+// takes over as for any drop (paused while hidden, R3205000); it opens again when the tab shows.
 
 import { useEffect, useSyncExternalStore } from "react";
 
-import { pollWhileVisible } from "../game/net.ts";
+import { pollWhileVisible, quietWhileHidden } from "../game/net.ts";
 import { readSession } from "../net/session.ts";
 import { getSocial, type Challenge, type SocialRead } from "../net/social.ts";
-import { SOCIAL_POLL_MS } from "./config.ts";
+import { HIDDEN_QUIET_MS, SOCIAL_POLL_MS } from "./config.ts";
 import { followingChallenge } from "./follow.ts";
 import { isRefusedSession, unreadCountsOf } from "./session.ts";
 import { openSocialSocket, socialSocketFactory, type SocialPush, type SocialSocket } from "./socialSocket.ts";
@@ -62,6 +64,8 @@ let generation = 0;
 let refusedToken: string | null = null;
 /** R3214000: the tab's social socket, while a screen polls and the socket is on. */
 let socket: SocialSocket | null = null;
+/** R3576000: stops watching for the tab going quiet, while a screen polls. */
+let stopQuiet: (() => void) | null = null;
 const chatListeners = new Set<(friendId: string) => void>();
 const friendsListeners = new Set<() => void>();
 
@@ -158,13 +162,32 @@ function onPush(push: SocialPush): void {
   }
 }
 
-function start(): void {
+function openSocket(): void {
   const factory = socialSocketFactory();
-  if (factory !== null) {
-    socket = openSocialSocket({ token: () => readSession()?.accessToken ?? null, socketFactory: factory, onLive, onPush });
+  if (factory === null || socket !== null) return;
+  socket = openSocialSocket({ token: () => readSession()?.accessToken ?? null, socketFactory: factory, onLive, onPush });
+}
+
+/**
+ * R3576000: a tab hidden for `HIDDEN_QUIET_MS` lets its socket go, which is a drop to the poll (it runs
+ * hidden only for a challenge of the player's own), and opens one again when it shows.
+ */
+function onQuiet(quiet: boolean): void {
+  if (!quiet) {
+    openSocket();
+    return;
   }
+  const current = socket;
+  socket = null;
+  current?.close();
+  if (reads.live) onLive(false);
+}
+
+function start(): void {
+  openSocket();
   tick();
   stopPolling = pollWhileVisible(tick, SOCIAL_POLL_MS, keepPolling);
+  stopQuiet = quietWhileHidden(onQuiet, HIDDEN_QUIET_MS);
 }
 
 function stop(): void {
@@ -172,6 +195,8 @@ function stop(): void {
   socket = null;
   stopPolling?.();
   stopPolling = null;
+  stopQuiet?.();
+  stopQuiet = null;
   generation += 1;
   refusedToken = null;
   publish(EMPTY);

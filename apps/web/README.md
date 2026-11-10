@@ -863,7 +863,8 @@ together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unr
                          the button and /together share, and the badge's count (paused while the tab is
                          hidden unless a challenge of the player's is open, R3205000); it holds the tab's
                          social socket and sends no read while it is live, and hands its chat and
-                         friends pushes to onChatPush and onFriendsPush (R3214000)
+                         friends pushes to onChatPush and onFriendsPush (R3214000); a tab hidden for
+                         HIDDEN_QUIET_MS lets the socket go and opens it again when it shows (R3576000)
 together/socialSocket.ts  the tab's one /ws/social socket (R3214000): the token as a subprotocol
                          (R1379000), the server's social read and chat and friends nudges pushed over it,
                          the match socket's backoff and wake probe (R1441), a 4401 reopened with a renewed
@@ -872,14 +873,16 @@ together/socialSocket.ts  the tab's one /ws/social socket (R3214000): the token 
                          unless a test installs a factory (test/fakeSocket.ts)
 together/config.ts       the social reads' pace: the friends list every FRIENDS_POLL_MS (a heartbeat,
                          PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS;
-                         both paused while the tab is hidden
+                         both paused while the tab is hidden; HIDDEN_QUIET_MS, how long a hidden tab
+                         waits before it goes quiet (R3576000)
 together/ChallengeToast.tsx  mounted once in the shell; reads the challenges (socialPoll.ts's GET /api/social) while signed in and
                          toasts an incoming challenge anywhere with a deck picker (the last deck used for
                          its mode): Accept joins the room with it and goes to the game (R1831000), a
                          refused join offers Open in lobby, /play with the room code filled in (R767);
                          Decline declines
 together/presence.ts     usePresenceHeartbeat: POST /api/presence once PRESENCE_HEARTBEAT_MS passes with
-                         no signed-in request (onSignedInRequest, R3210000)
+                         no signed-in request (onSignedInRequest, R3210000), none while the tab has
+                         been hidden for HIDDEN_QUIET_MS (R3576000)
 duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one), show its code,
                          offer its link, invite a friend by sending the link in chat, join by code or by
                          a co-op link that fills the join form and focuses Join (R2094000); both players

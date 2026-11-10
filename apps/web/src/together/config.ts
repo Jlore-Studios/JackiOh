@@ -15,6 +15,12 @@ export const FRIENDS_POLL_MS = PRESENCE_HEARTBEAT_MS;
  */
 export { SOCIAL_POLL_MS };
 
+/**
+ * R3576000: how long a tab stays hidden before it goes quiet, closing its social socket and sending no
+ * presence beat, so its server can sleep. Long enough that a glance at another tab keeps the socket.
+ */
+export const HIDDEN_QUIET_MS = 120_000;
+
 /** The watch socket (B50): how long after an unexpected close it opens again, and how often it tries. */
 export const WATCH_RECONNECT_MS = 2_000;
 export const WATCH_RECONNECT_ATTEMPTS = 5;
