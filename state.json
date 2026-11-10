@@ -20357,6 +20357,8 @@
       "waiting_comment": 6763178029
     },
     "3636": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-10T07:43:47Z",
@@ -20370,8 +20372,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"CI: a job ran over 7 minutes\"} -->\n- ## What changed and why\n- `web (unit 2/8)` ran 8m 48s against the 5-minute target, and `[web] unit` is already at the 8-shard maximum, so no count in `scripts/ci-shards.toml` can split it. The shard's weight was three full-history walks in two files. Each now runs per pull request over a constant 9 snapshots (the first six \u2026\n- - [diff.test.ts](/home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-3629/apps/web/src/patches/diff.test.ts): the `:295` walk split into a bounded `it` (2.4 s, was 64 s) and a `daily` full walk with its original `R388` title.\n- - [placeholders.test.tsx](/home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-3629/apps/web/src/patches/placeholders.test.tsx): the `:53` and `:77` walks split the same way. Bounded change walk is 1.3 s (was 68 s). Bounded face walk is ~54 s on a slow box: nine snapshots still draw 2730 fa\u2026\n- - No test deleted, emptied, or renamed out of R388. Untouched: `.github/`, `scripts/ci-shards.toml`, `bot/`, spec, catalog, and Rust files (`git status` shows only the two test files).\n- ## How tested\n- - `pnpm --dir apps/web test src/patches/diff.test.ts` \u2014 22 passed, 1 skipped (daily), 9.35 s total.\n- - `pnpm --dir apps/web test src/patches/placeholders.test.tsx` \u2014 3 passed, 2 skipped (dailies), 68.7 s total.\n- - `JACKIOH_DAILY=1 ... diff.test.ts -t \"every card every patch\"` \u2014 full walk passes, 64 s.\n- - `JACKIOH_DAILY=1 ... placeholders.test.tsx -t \"every change of every card\"` \u2014 full walk passes (68 s) plus bounded (1.3 s).\n- - `pnpm exec eslint` on both files \u2014 clean. `cargo fmt --check` \u2014 clean. `cargo jackioh spec check` \u2014 ok (1888 rulings, 4895 proofs).\n- - The `every face` full walk was not re-run locally: the planner recorded its worker OOM at 178 s on this shared machine as environmental (it passes on CI runners), and it runs nowhere per-PR now.\n- ## Decisions the issue did not settle\n- - Bounded face walk gets `EVERY_SNAPSHOT_MS` (180 s), not the planned 60 s. Measured 59.3 s then an actual 60 s timeout failure on this machine, so 60 s has zero headroom and flakes. Same body, read set, and assertions as planned. Rejected alternative: shrinking the read set (e.g. newest-only or ch\u2026\n- - The `:77` daily walk uses `EVERY_SNAPSHOT_MS` instead of its old 60 s timeout, since it is a new daily-only test over all 151 snapshots. Rejected: keeping 60 s, which the full walk demonstrably exceeds (68 s).\n- - `EVERY_SNAPSHOT_MS` comment shortened from `source.test.ts`'s wording, which names these two files and would be self-referential here.\n- ## Person ask (the bot may not edit `.github/`)\n- In `.github/workflows/super.yml`, job `web-extra`, append the two files to the vitest path list so the moved daily walks actually run daily:\n- - before: `pnpm exec vitest run --project web src/audio/ src/fx/ src/cards/art/convention.test.ts src/net/promote-production.test.ts src/net/promote-staging.test.ts src/tutorial/scripts/`\n- - after: the same line plus ` src/patches/diff.test.ts src/patches/placeholders.test.tsx`\n- (The same line could also take `src/patches/source.test.ts`, whose #3418 `daily` cases likewise run nowhere today.)\n- ## Reviewer, look twice\n- - The bounded face walk at ~54 s is the shard's remaining lump. It is O(1) in history length, but catalog growth still grows it. If shard 2/8 stays near 5 minutes, that walk is where to cut next.\n- - The three `daily()` walks run nowhere until the person ask above lands \u2014 the same standing gap #3418 left. R388 per-PR rests on the bounded cases plus the Rust `patches.rs` snapshot test cited in the `daily:` reason.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-3629 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-3629/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3629,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T08:55:27Z",
         "from_run": "42777324712",
         "gates": [
           {
@@ -20430,8 +20435,15 @@
         "source": "build",
         "until": "2026-11-10T09:22:16Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-10T08:52:16Z",
+      "run_id": "pending:1f50b7e5-1794300855",
+      "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
+      "started_at": "2026-11-10T08:55:27Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -20445,9 +20457,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T08:31:48Z",
+    "at": "2026-11-10T08:55:27Z",
     "url": "",
-    "what": "build #3537 on claude-5"
+    "what": "review #3636 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T08:24:41Z",
