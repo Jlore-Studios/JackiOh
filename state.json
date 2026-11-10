@@ -23308,10 +23308,11 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-10T07:30:00Z",
-          "utilization": 0.64
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-10T03:35:32Z",
-        "status": "allowed"
+        "observed_at": "2026-11-10T04:21:43Z",
+        "rejected_resets_at": "2026-11-10T07:30:00Z",
+        "status": "rejected"
       }
     },
     "claude-2": {
@@ -38249,6 +38250,11 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-10T04:09:41Z,claude-1,ping,before,42752696584,100,2026-11-10T07:30:00Z,,,rejected,100,,"
+    ]
   },
   "version": 1
 }
