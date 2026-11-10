@@ -61,11 +61,11 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const PILLOW: &str = "core-065-1"; // Unit, Token, 0/2 → 0/4
-    const TIMMY: &str = "core-011"; // Unit, 3/3
-    const FELINOR: &str = "core-t-felinor"; // Unit, 1/1 — the floor case
-    const SURGERY: &str = "core-063"; // #63, +3/+3: the only way to give a Pillow attack to drain
-    const FRIEND: &str = "core-062"; // #62, fills the board: a unit that arrives after the aura
+    const PILLOW: &str = "core-065-1"; // Spikey Pillow: Token
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const FELINOR: &str = "core-t-felinor"; // Felinor Token: the floor case
+    const SURGERY: &str = "core-063"; // Plastic Surgery: #63: the only way to give a Pillow attack to drain
+    const FRIEND: &str = "core-062"; // Friend of Felinors: #62, fills the board: a unit that arrives after the aura
 
     fn sel(card: &CardInstance) -> Value {
         json!({ "pick": "instance", "instanceId": card.id })

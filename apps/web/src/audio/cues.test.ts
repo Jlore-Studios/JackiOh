@@ -43,8 +43,10 @@ import {
   type CueContext,
   type PlayFrame,
 } from "./cues.ts";
+import { battleshipCues } from "./battleshipCues.ts";
 import { MUSIC_CARDS } from "./musicData.ts";
 import { SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
+import { signatureCues } from "./signatureCues.ts";
 import type { SfxId, SoundCue, CardAudioTable } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
 import { ANOMALY_CODES } from "../cards/anomalies.ts";
@@ -498,7 +500,10 @@ describe("B17 SOUND_CUES is total over GameEvent types", () => {
     for (const type of GAME_EVENT_TYPES) {
       const event = SAMPLES[type];
       const row = SOUND_CUES[type] as unknown as { cues: (e: GameEvent, c: CueContext) => readonly SoundCue[] };
-      expect(cuesFor(event, ctx()).map(said), type).toEqual(row.cues(event, ctx()).map(said));
+      // Then the card sources it appends: the Battleship's (R3336000) and a signature's (R3402001, the sample
+      // trap #96 My Pawn's firing).
+      const appended = [...battleshipCues(event, ctx()), ...signatureCues(event)];
+      expect(cuesFor(event, ctx()).map(said), type).toEqual([...row.cues(event, ctx()), ...appended].map(said));
     }
   });
 
@@ -710,7 +715,8 @@ describe("R203: audio reveals no more than the screen", () => {
   });
 
   it("R203 (B20) a trapFired with a readable defId gives the sting and its cast line on the controller's seat", () => {
-    expect(shape(trapFired(TRAP))).toEqual([sfx("trapSnap"), sfx("trapSting"), voice(TRAP, "cast", VOICE_DELAY_MS)].sort());
+    // #96 My Pawn's firing is its signature's beat too (R3402001).
+    expect(shape(trapFired(TRAP))).toEqual([sfx("trapSnap"), sfx("trapSting"), voice(TRAP, "cast", VOICE_DELAY_MS), sfx("pawnWaltz")].sort());
     expect(shape(trapFired(FIELD_TRAP))).toEqual([sfx("trapSnap"), sfx("trapSting"), voice(FIELD_TRAP, "cast", VOICE_DELAY_MS)].sort());
   });
 
@@ -746,7 +752,9 @@ describe("R203: audio reveals no more than the screen", () => {
   it("R2734000 the other seat hears a fired trap's sting and its cast line once its view names it", () => {
     // p1's trap fires; on p2's seat the event names it wherever it lies public, as on p1's.
     const opponentSeat = ctx({ view: baseView({ viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") }) });
-    expect(shape(trapFired(TRAP, "p1"), opponentSeat)).toEqual([sfx("trapSnap"), sfx("trapSting"), voice(TRAP, "cast", VOICE_DELAY_MS)].sort());
+    expect(shape(trapFired(TRAP, "p1"), opponentSeat)).toEqual(
+      [sfx("trapSnap"), sfx("trapSting"), voice(TRAP, "cast", VOICE_DELAY_MS), sfx("pawnWaltz")].sort(),
+    );
   });
 });
 
@@ -1179,7 +1187,8 @@ describe("R3332002 a Legendary's or a Mythic's own intro is its sting", () => {
     expect(entranceOf(landedAs(FELINOR_FIENDER))).toBeUndefined();
     expect(entranceOf(landedAs(CEASELESS_VOID))).toBeUndefined();
     expect(entranceOf(played(ZEPHRYS, "p2"))).toBeUndefined();
-    expect(shape(played(ZEPHRYS, "p2"), either())).toEqual([sfx("play"), sfx("playImpact"), sfx("spell", 60)].sort());
+    // Its own signature (R3402001) is no shared sting.
+    expect(shape(played(ZEPHRYS, "p2"), either())).toEqual([sfx("play"), sfx("playImpact"), sfx("spell", 60), sfx("wishWind")].sort());
     expect(entranceOf(trapFired(EXPERIMENT, "p2"))).toBeUndefined();
     // The thud still carries what the catalog says of the card (#92 is a Human): only the shared sting yields.
     expect(sfxOf(cuesFor(landedAs(FELINOR_FIENDER), either()), "summon")?.params?.timbre).toBe("human");
@@ -1374,8 +1383,15 @@ describe("R655 a card's hook may carry an effect beside or instead of its line",
     expect(shape(played(SPELL), fx())).toContain(effect(SPELL, "cast", VOICE_DELAY_MS));
     expect(shape(played(SPELL), fx())).toContain(voice(SPELL, "cast", VOICE_DELAY_MS + CARD_EFFECT_DELAY_MS));
     expect(shape(played(FIELD_SPELL), fx()).filter((c) => !c.startsWith("sfx:"))).toEqual([effect(FIELD_SPELL, "cast", VOICE_DELAY_MS)]);
+    // #96 My Pawn's signature (R3402001) rides its firing beside its effect and line.
     expect(shape(trapFired(TRAP), fx())).toEqual(
-      [sfx("trapSnap"), sfx("trapSting"), effect(TRAP, "cast", VOICE_DELAY_MS), voice(TRAP, "cast", VOICE_DELAY_MS + CARD_EFFECT_DELAY_MS)].sort(),
+      [
+        sfx("trapSnap"),
+        sfx("trapSting"),
+        effect(TRAP, "cast", VOICE_DELAY_MS),
+        voice(TRAP, "cast", VOICE_DELAY_MS + CARD_EFFECT_DELAY_MS),
+        sfx("pawnWaltz"),
+      ].sort(),
     );
     const trapCues = cuesFor(trapFired(TRAP), fx()).filter((c) => c.kind === "effect");
     expect(trapCues.map((c) => c.priority)).toEqual([VOICE_PRIORITY.react]);

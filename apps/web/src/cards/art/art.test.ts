@@ -8,6 +8,7 @@ import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 import type { CardDef, CardType, Tag } from "@jackioh/shared";
 
+import { fmt, round2 } from "./hash.ts";
 import { BACKDROPS, LAYOUTS, SKY_SCHEMES } from "./procedural.ts";
 import {
   ART_MANIFEST,
@@ -134,6 +135,14 @@ describe("B1: artSpec is pure and deterministic", () => {
     const s1 = seededRandom(7);
     const s2 = seededRandom(8);
     expect(Array.from({ length: 5 }, () => s1())).not.toEqual(Array.from({ length: 5 }, () => s2()));
+  });
+
+  it("B1 fmt writes what String(round2(value)) writes: rounded, no exponent, no -0", () => {
+    const next = seededRandom(hashId("fmt"));
+    const values = [0, -0, 0.004, -0.004, -0.005, 0.005, 1.005, 2.675, 0.1, -0.05, 12.3, -12.3, 99.999, 100, -250.5, 1e15, 1e21, -1e21, 1e-9];
+    for (let i = 0; i < 20_000; i += 1) values.push((next() - 0.4) * 400);
+    for (const value of values) expect(fmt(value), String(value)).toBe(String(round2(value)));
+    expect([fmt(-0.004), fmt(1.5), fmt(-3.07), fmt(42)]).toEqual(["0", "1.5", "-3.07", "42"]);
   });
 });
 

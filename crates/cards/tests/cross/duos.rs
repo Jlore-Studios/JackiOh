@@ -18,8 +18,8 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::DuosSeat::{A1, A2, B1, B2};
 
-const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-const FILLER: &str = "core-005"; // (1) Spell Stockpile: draw 1, heal your hero 3.
+const VANILLA: &str = "core-008"; // Mr. Vanilla
+const FILLER: &str = "core-005"; // Stockpile: draw 1, heal your hero 3
 const COIN: &str = "core-t-coin";
 const TEMPO: &str = "classicplus-026"; // Tommy Tempo: cast on draw, ends its caster's turn (R456).
 
@@ -701,8 +701,8 @@ mod glitch {
 mod lethal {
     use super::*;
 
-    const BOARD: &str = "core-011"; // a 3/3
-    const CHARGER: &str = "core-045"; // (2) 4-attack Charge
+    const BOARD: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const CHARGER: &str = "core-045"; // Deft Duelist: Charge
 
     fn lethal_ids(state: &GameState) -> Vec<String> {
         rank(state, P1, &ScorerOptions { radiant: None })
@@ -759,7 +759,7 @@ mod lethal {
     #[test]
     fn r1168003_the_radiant_mayors_lucky_ranks_a_hero_by_its_whole_life() {
         const MAYOR: &str = "meditative-086";
-        const WALL: &str = "core-001"; // 0/7
+        const WALL: &str = "core-001"; // Big D-fender
         let board = |health: i32| -> Scenario {
             jackioh_cards::register_all();
             scenario(json!({
@@ -786,8 +786,8 @@ mod lethal {
         assert_eq!(hero_picks(&one), hero_picks(&duos));
     }
 
-    const CHAOS_GOLEM: &str = "core-095-1"; // 10/10 Lifesteal, Divine Shield, First Strike
-    const GOLIATH: &str = "classic-061"; // Trample
+    const CHAOS_GOLEM: &str = "core-095-1"; // Chaos Golem: Lifesteal, Divine Shield, First Strike
+    const GOLIATH: &str = "classic-061"; // Plague Bringer Goliath: Trample
     const PAWN: &str = "core-096";
 
     #[test]

@@ -75,9 +75,9 @@ mod tests {
         assert_eq!(s.hand(P1).len(), 3, "the filler and two draws");
     }
 
-    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."
-    const COMMANDER: &str = "stinkyscape-137"; // Cry: launches your Dormant Starship free.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce
+    const HIT_JOB: &str = "core-016"; // Hit Job: "Destroy a Unit."
+    const COMMANDER: &str = "stinkyscape-137"; // Starfleet Commander: Cry: launches your Dormant Starship free.
 
     #[test]
     fn r1881003_cast_before_any_starship_the_later_launch_costs_1_and_spends_it() {

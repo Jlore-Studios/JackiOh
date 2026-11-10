@@ -128,13 +128,13 @@ mod tests {
     use crate::scenario;
 
     const PREP: &str = "classic-035";
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const ARMOR: &str = "core-073"; // (2) Field Spell; Cry: Draw 1.
-    const SHEEPISH: &str = "core-041"; // (1) Trap.
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const FLOOD: &str = "core-017"; // Flood: Bounce all Units.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const ARMOR: &str = "core-073"; // Anti-oneshot Armor: Cry: Draw 1
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
     const VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw: take 1 damage.
-    const ANCHOR: &str = "core-010"; // (0) Spell, Combo 3 — a free play that keeps a turn open.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: a Spell, Combo 3 — a free play that keeps a turn open
     const MENACE: &str = "core-019";
 
     use crate::js;

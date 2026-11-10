@@ -1,6 +1,6 @@
 // B32 (DR14 part G, #2708): the device leaderboards rank the deepest row, the most curse
 // points, the top score and the fastest win, and each entry opens that run's stats. Only
-// `../store.ts`'s `readRunHistory` is stubbed; part D owns that module, so its types are
+// `../store.ts`'s `readRunHistory` and `contentOf` are stubbed; part D owns that module, so its types are
 // imported, never copied.
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
@@ -18,11 +18,19 @@ import { dungeonStatsTestid, type DungeonLeaderboard } from "./testids.ts";
 
 const historyPlan = vi.hoisted<{ records: unknown[]; calls: number }>(() => ({ records: [], calls: 0 }));
 
+/** #3501: the run content a record's curse ids are named from; only its curses are read. */
+const content = vi.hoisted(() => ({
+  curses: [
+    { id: "heavy-hands", name: "Heavy Hands", text: "Enemies start each fight with 5 more health.", points: 2 },
+  ],
+}));
+
 vi.mock("../store.ts", () => ({
   readRunHistory: () => {
     historyPlan.calls += 1;
     return historyPlan.records;
   },
+  contentOf: () => ({ pool: [], starterAccess: [], enemies: [], passives: [], events: [], curses: content.curses }),
 }));
 
 /** Every `RunStats` field's player label, as the details table shows it. */
@@ -276,6 +284,17 @@ describe("B32 the device leaderboards and each run's stats", () => {
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByTestId(dungeonStatsTestid.dialog)).toBeNull();
     expect(opener).toHaveFocus();
+  });
+
+  it("#3501 a record's curses show by name from the content, and an id the content lacks shows as the id", () => {
+    historyPlan.records = [recordFixture({ seed: "EEEEEE", curses: ["heavy-hands", "gone-curse"] })];
+    render(<DungeonStats />);
+
+    fireEvent.click(entryAt("deepest", 0));
+    const curses = within(screen.getByTestId(dungeonStatsTestid.detailCurses));
+    expect(curses.getByText("Heavy Hands")).toBeInTheDocument();
+    expect(curses.getByText("gone-curse")).toBeInTheDocument();
+    expect(curses.queryByText("heavy-hands")).not.toBeInTheDocument();
   });
 
   it("B32 a fastest board with matching runs but no wins says so", () => {

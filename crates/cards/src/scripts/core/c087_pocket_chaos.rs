@@ -100,11 +100,11 @@ mod tests {
 
     // Inert fixtures: each unit's only text is a Cry, which `field` never fires; Sheepish watches for a
     // Unit the opponent plays, so a Spell never sets it off.
-    const GARY: &str = "core-004"; // 1/1
-    const RENO: &str = "core-053"; // 4/6
-    const POSTDOC: &str = "core-061"; // 2/4
-    const SHEEPISH: &str = "core-041"; // Trap
-    const MANA_WELL: &str = "core-006"; // Field Spell; start-of-turn only
+    const GARY: &str = "core-004"; // Gary the Gambler
+    const RENO: &str = "core-053"; // Reno
+    const POSTDOC: &str = "core-061"; // Prejudiced Postdoc
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const MANA_WELL: &str = "core-006"; // Mana Well: start-of-turn only
 
     // §2.5: one always-playable card per hand keeps a scenario on the turn it started on.
     const FILLER: &str = "core-005";

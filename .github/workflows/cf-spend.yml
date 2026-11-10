@@ -22,7 +22,7 @@ env:
   # promote-production.yml's and deploy-staging.yml's account.
   CLOUDFLARE_ACCOUNT_ID: 3c0495fcdd2622a08e1a91b8de248b46
   # The issue opens once the period's usage spend, or its projection, reaches this many dollars: about
-  # what both sites' `basic` containers would cost if neither ever slept, which the ten-minute sleep
+  # what both sites' `basic` containers would cost if neither ever slept, which the five-minute sleep
   # (apps/edge) keeps far below.
   ALERT_DOLLARS: "15"
   # A projection counts only once this many days of the period have usage behind them; before then a
@@ -116,7 +116,7 @@ jobs:
             "|---|---|" \
             "$services" \
             "" \
-            "Where to look: the account's Billable Usage dashboard (Manage Account -> Billing -> Billable Usage) for the days that grew, then Workers & Pages -> \`jackioh\` or \`jackioh-staging\` -> Metrics and Logs for what kept a container awake. A container sleeps after ten idle minutes (\`SLEEP_AFTER\`, \`apps/edge/src/index.ts\`), so one awake all day has a caller: an open tab's presence beat, a monitor, or traffic to \`/api\` or \`/ws\`." \
+            "Where to look: the account's Billable Usage dashboard (Manage Account -> Billing -> Billable Usage) for the days that grew, then Workers & Pages -> \`jackioh\` or \`jackioh-staging\` -> Metrics and Logs for what kept a container awake. A container sleeps after five idle minutes (\`SLEEP_AFTER\`, \`apps/edge/src/index.ts\`), so one awake all day has a caller: an open tab's presence beat, a monitor, or traffic to \`/api\` or \`/ws\`." \
             "" \
             "One of these, then close this issue:" \
             "- Stop what keeps a container awake, or lower \`instance_type\` or \`max_instances\` in \`wrangler.jsonc\` (docs/deploy-cloudflare.md section 6)." \

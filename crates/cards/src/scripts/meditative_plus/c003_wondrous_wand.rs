@@ -96,11 +96,11 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const WAND: &str = "meditativeplus-003";
-    const FILLER: &str = "core-005"; // (1) Spell
-    const VANILLA: &str = "core-008"; // (1) Unit
-    const STOCKPILE: &str = "core-073"; // (2) Field Spell
-    const MENACE: &str = "core-019"; // (3) Unit
-    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const STOCKPILE: &str = "core-073"; // Anti-oneshot Armor: a Field Spell
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const SUPER_VIRUS: &str = "core-090-1"; // Super-Virus: a Spell, Cast on draw
 
     use crate::scenario;
 

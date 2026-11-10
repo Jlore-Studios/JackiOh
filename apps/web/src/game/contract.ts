@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 
 import type {
   ActionBody,
+  AttackForecast,
   EmoteGate,
   EmoteId,
   GameEvent,
@@ -141,6 +142,11 @@ export const testid = {
   marketBuy: (offer: number): string => `market-buy-${offer}`,
   /** R1853003: the sale of a Resource in the viewer's own tray, at the Marketplace's quote. */
   marketSell: (instanceId: string): string => `market-sell-${instanceId}`,
+  /**
+   * R3477000: the attack outcome on a legal target of the aimed attack (AttackOutcome.tsx), `target` its
+   * `card-…` or `hero-…` testid. No drag target reads it (drag/targets.ts), so a press walks up to the target.
+   */
+  attackOutcome: (target: string): string => `outcome-${target}`,
 } as const;
 
 /** The CSS selector for the element whose testid is `id`, its quotes and backslashes escaped. */
@@ -228,6 +234,12 @@ export type Highlight = {
    * no click reads it. Absent means nothing is ringed.
    */
   counted?: ReadonlySet<string>;
+  /**
+   * R3477000: the forecast of each legal target of the selected or dragged attacker, keyed by the
+   * target's testid (attackOutcome.ts): the engine's entries, picked by their ids and never computed
+   * here (CLAUDE.md rule 7). No click reads it. Absent means no target shows an outcome.
+   */
+  outcomes?: ReadonlyMap<string, AttackForecast>;
 };
 
 export const NO_HIGHLIGHT: Highlight = { legal: new Set(), selected: new Set() };

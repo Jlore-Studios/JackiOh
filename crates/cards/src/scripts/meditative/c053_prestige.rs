@@ -136,7 +136,7 @@ mod tests {
 
     const PRESTIGE: &str = "meditative-053";
     const FILLER: &str = "core-005";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4, no text.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
 
     /// p1 holds Prestige (base unless `radiant_face`) with a Radiant vanilla Unit on each side's
     /// field; both sides keep cards in hand so no turn auto-ends.

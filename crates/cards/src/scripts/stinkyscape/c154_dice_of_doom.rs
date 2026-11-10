@@ -98,7 +98,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
 
     fn board_with(seed: &str, radiant: bool, fillers: usize) -> Scenario {
         let mut hand = vec![json!({ "def": ID, "radiant": radiant })];

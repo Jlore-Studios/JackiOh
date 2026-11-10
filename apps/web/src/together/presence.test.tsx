@@ -1,6 +1,6 @@
 // R3210000: the presence heartbeat goes only once PRESENCE_HEARTBEAT_MS passes with no signed-in request, since
 // the server counts every signed-in request as presence. The server is a stubbed `fetch` (`test/stubServer.ts`)
-// and time is vitest's fake clock.
+// and time is vitest's fake clock. R3576000: a tab hidden for HIDDEN_QUIET_MS sends none.
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,6 +13,7 @@ import { settle } from "../test/settle.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { meBody, signIn, stubServer, type StubServer } from "../test/stubServer.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
+import { HIDDEN_QUIET_MS } from "./config.ts";
 import { usePresenceHeartbeat } from "./presence.ts";
 
 function serve(): StubServer {
@@ -121,5 +122,38 @@ describe("R3210000 the presence heartbeat as a fallback", () => {
     await settle({ advance: PRESENCE_HEARTBEAT_MS });
     expect(beats(server)).toBe(2);
     expect(server.to("GET", "/api/social"), "the hidden tab's social poll stays paused").toHaveLength(1);
+  });
+});
+
+describe("R3576000 a quiet tab sends no heartbeat", () => {
+  it("R3576000 a tab hidden for HIDDEN_QUIET_MS stops beating, and beats again once it shows", async () => {
+    const server = serve();
+    render(<Heartbeat />);
+    await settle({ advance: 0 });
+    setVisibility("hidden");
+
+    await settle({ advance: HIDDEN_QUIET_MS });
+    const quietAt = beats(server);
+    expect(quietAt, "it beats at its pace until it goes quiet").toBe(Math.floor(HIDDEN_QUIET_MS / PRESENCE_HEARTBEAT_MS));
+    await settle({ advance: 10 * PRESENCE_HEARTBEAT_MS });
+    expect(beats(server), "quiet: no beat, so the server can sleep").toBe(quietAt);
+
+    setVisibility("visible");
+    await settle({ advance: PRESENCE_HEARTBEAT_MS - 1 });
+    expect(beats(server)).toBe(quietAt);
+    await settle({ advance: 1 });
+    expect(beats(server), "shown: a heartbeat later it beats again").toBe(quietAt + 1);
+  });
+
+  it("R3576000 a tab that shows again before HIDDEN_QUIET_MS goes on beating", async () => {
+    const server = serve();
+    render(<Heartbeat />);
+    await settle({ advance: 0 });
+    setVisibility("hidden");
+    await settle({ advance: HIDDEN_QUIET_MS - 1 });
+    setVisibility("visible");
+    setVisibility("hidden");
+    await settle({ advance: HIDDEN_QUIET_MS - 1 });
+    expect(beats(server)).toBe(Math.floor((2 * HIDDEN_QUIET_MS - 2) / PRESENCE_HEARTBEAT_MS));
   });
 });

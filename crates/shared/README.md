@@ -279,7 +279,7 @@ order. Nothing in the machine reads a clock, draws from the OS or does I/O.
 
 | Output | What the host does |
 | --- | --- |
-| `send` | a message for the account that began in `home`: a seat's `view` (only that seat's `view_for` with its clock, and its own legal actions, CLAUDE.md rule 7), `clock`, `promptForYou`, `promptForOpponent`, `aim`, `choiceHover` |
+| `send` | a message for the account that began in `home`: a seat's `view` (only that seat's `view_for` with its clock, its own legal actions and the forecast of its attacks, R3477000, CLAUDE.md rule 7), `clock`, `promptForYou`, `promptForOpponent`, `aim`, `choiceHover` |
 | `timer` | `set` (key, id, at) or `cancel` a timer; a firing comes back as `timerFired` with the same key and id, and a stale one does nothing |
 | `persistClocks`, `append` | write the clocks (§9.5), or the row of an action (row before state, §9.3) and feed `logged` |
 | `answer` | what an action's sender is told (`ack`, `illegal`, `matchOver`, `panicked`, `notRecorded`) |
@@ -355,7 +355,9 @@ export (below).
 The AI's search is a body of its own, `bot_decide(call, deadline_ms)`: a `DecideCall` (the `DuelHost` and the
 `DecideRequest` a `decide` output made) in, the `BotChoice` to feed back as `decided` out. A host with a clock
 (the browser) passes the `deadline_ms` the request's `deadlineMs` makes of its clock, and the search ends
-there with its best line; the C module has no clock, so the search ends at the strength's budget.
+there with its best line, its beam wrapped up at `AI_WRAP_UP_SHARE` of the time so that the reply and the
+other worlds still run (R3498000: `bots::decide`, `DecideJob::run` and `boundary::decide` take the
+wrap-up beside the hard stop); the C module has no clock, so the search ends at the strength's budget.
 
 ### Duos co-op (`src/host/duos.rs`, `src/host/again.rs`)
 
@@ -416,7 +418,7 @@ step(host, event, now) -> (host, outputs)
 | Output | What the host does |
 | --- | --- |
 | `began` | the game is on: the seat the AI plays |
-| `snapshot` | what the page is told (CLAUDE.md rule 7): `view_for` and the legal actions of the human's seat, whether the AI owes a move, the engine's last refusal, the last board of a finished game (R508), the kept game's number (R768000), a lesson's combat forecast (R3100000) |
+| `snapshot` | what the page is told (CLAUDE.md rule 7): `view_for` and the legal actions of the human's seat, whether the AI owes a move, the engine's last refusal, the last board of a finished game (R508), the kept game's number (R768000), the combat forecast of the human's attacks (R3100000, R3477000) |
 | `timer` | R1563006: set or take back a timer, as the 1v1 machine's (`TimerCommand`); the one practice sets is the window of the human's question sequence (Meditative+ #20 KY's Competition), read from the match clock's own rule (`MatchClock::sync_sequence`): `KY_COMPETITION_SECONDS` from the sequence's first question, kept over the questions after it, cleared when none is open or the game ends. Practice keeps no turn clock |
 | `lethal` | R2102000: ask the lethal check for that seat under `PRACTICE_LETHAL_HINT_CLOCK_MS`; when it says yes, the snapshot says `lethal`. A host without the check leaves it out |
 | `decide` | the AI owes a move: search for it under `PRACTICE_AI_CLOCK_MS` (the node budget stays the real bound, R2560000) on `ai.seat`, from `rng_seed` at `rng_cursor`, and feed `decided`: one separate, deadline-bounded step |

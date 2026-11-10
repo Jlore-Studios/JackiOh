@@ -611,8 +611,8 @@ mod summarize_game_over_real_cards_s9_11 {
 mod r831001_a_stolen_cast_is_no_play {
     use super::*;
 
-    const CALL: &str = "core-069"; // (2) Spell: Recruit 3 Units of (3) Cost or less.
-    const PALANTIR: &str = "classic-004"; // (2) Field Spell: steals the opponent's (2) Cost Spell and casts it (R3139000).
+    const CALL: &str = "core-069"; // Call to Arms: Recruit 3 Units
+    const PALANTIR: &str = "classic-004"; // Palantir: steals the opponent's Spell and casts it (R3139000).
 
     fn act(state: &GameState, log: &mut Vec<Action>, body: Value) -> GameState {
         let mut action = body;
@@ -742,9 +742,9 @@ mod r831001_a_stolen_cast_is_no_play {
 mod r1256000_per_seat_counts {
     use super::*;
 
-    const SHEEPISH: &str = "core-041"; // (1) Trap: set face-down, fires when the opponent plays a Unit.
-    const VANILLA: &str = "core-008"; // (1) 4/4 Unit with no text.
-    const GLOWY: &str = "core-026"; // (3) Spell: make a card in your hand Radiant.
+    const SHEEPISH: &str = "core-041"; // Sheepish: set face-down, fires when the opponent plays a Unit
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: Unit with no text.
+    const GLOWY: &str = "core-026"; // Glowy Jelly Bean: make a card in your hand Radiant
 
     fn fatigue_pool() -> Vec<String> {
         let mut ids: Vec<String> = CATALOG
@@ -1076,15 +1076,15 @@ mod r2089000_created_cards {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const VANILLA: &str = "core-008"; // (1) Unit with no text.
-    const DUPLICATING: &str = "core-012"; // (2) Unit, Cry: Summon a copy of this.
-    const TOKEN_MAKER: &str = "core-015"; // (1) Unit, Cry: Summon a Rush Token.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: Unit with no text.
+    const DUPLICATING: &str = "core-012"; // Duplicating Felinors: Cry: Summon a copy of this.
+    const TOKEN_MAKER: &str = "core-015"; // Me and Mr Token: Cry: Summon a Rush Token.
     const RUSH_TOKEN: &str = "core-t-rush";
-    const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
-    const RECYCLING: &str = "core-039"; // (0) Spell, end of turn: copies of the cards played go to the hand.
-    const SHADE_IRIS: &str = "meditative-028"; // (2) Unit, Cry: Ancient Curses into the opponent's deck.
-    const CURSE: &str = "meditative-028-1"; // Spell token, Cast on draw: take damage.
-    const FATE: &str = "meditative-026"; // (4) Field Spell, end of turn: a Mana Well into every empty backrow.
+    const FLOOD: &str = "core-017"; // Flood: Bounce all Units.
+    const RECYCLING: &str = "core-039"; // Recycling Initiative: a Spell, end of turn: copies of the cards played go to the hand
+    const SHADE_IRIS: &str = "meditative-028"; // Shade-iris: Cry: Ancient Curses into the opponent's deck.
+    const CURSE: &str = "meditative-028-1"; // Ancient Curse: Spell token, Cast on draw: take damage.
+    const FATE: &str = "meditative-026"; // Alternate Fate: a Field Spell, end of turn: a Mana Well into every empty backrow.
     const WELL: &str = "core-006";
 
     fn step(reader: &mut SummaryReader, s: &mut Scenario, verb: impl FnOnce(&mut Scenario)) {

@@ -53,7 +53,7 @@ mod tests {
     const MYTHIC_GRAPE: &str = "classicplus-065-5";
     const FILLER: &str = "core-005";
     const TIMMY: &str = "core-011";
-    const RUSH: &str = "core-t-rush"; // a unit-token card
+    const RUSH: &str = "core-t-rush"; // Rush Token: a unit-token card
 
     use crate::js;
 

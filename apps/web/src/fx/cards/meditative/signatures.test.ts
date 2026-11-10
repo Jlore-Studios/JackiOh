@@ -124,7 +124,11 @@ describe("R3405001 Meditative's signatures", () => {
       const text = JSON.stringify(cues);
       expect(text, defId).not.toMatch(CARD_ID);
       expect(text, defId).not.toContain(`"${HIDDEN}"`);
-      expect(cues.some((cue) => cue.kind === "sheen"), defId).toBe(false);
+      // No sheen of its own (a face is its owner's to read). R3399000: a card it summons lands by that card's own
+      // entrance, public, its shimmer included (Claude's Datacenter under YileGPT Prime's Cry).
+      const own = new Map([...FX_CARD_TABLE].filter(([id]) => id === defId));
+      const owned = run(defId, events, 400, "p2", view, undefined, own).flatMap((entry) => entry.cues);
+      expect([...owned, ...castOf(defId, 1400, HOLD, "p2", view).cues].some((cue) => cue.kind === "sheen"), defId).toBe(false);
       const piles = new Set([animTestid.hand("opponent"), animTestid.library("opponent"), animTestid.hand("you"), animTestid.library("you"), animTestid.graveyard("you"), animTestid.graveyard("opponent"), animTestid.exile("you"), animTestid.exile("opponent")]);
       // Or, set face down (Knowledge Breaker Prime's Cry), into a backrow zone.
       for (const side of ["you", "opponent"] as const) for (const lane of LANES) piles.add(testid.zone(side, "backrow", lane));

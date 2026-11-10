@@ -74,13 +74,13 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const GRAND: &str = "classic-072";
-    const STOCKPILE: &str = "core-005"; // (1) Spell
-    const ARMOR: &str = "core-073"; // (2) Field Spell
-    const HONEYPOT: &str = "core-060"; // (1) Trap
-    const BREAD: &str = "core-018"; // (1) Field Trap
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
-    const FILLER: &str = "core-010"; // (0) Spell
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
+    const ARMOR: &str = "core-073"; // Anti-oneshot Armor: a Field Spell
+    const HONEYPOT: &str = "core-060"; // Bear Honeypot: a Trap
+    const BREAD: &str = "core-018"; // Bread and Butter: a Field Trap
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const SUPER_VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
 
     use crate::scenario;
 

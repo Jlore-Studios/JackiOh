@@ -8,7 +8,8 @@
 // the eight marquee cards' entrances and looks folded into it. R3400000: a bespoke entry's aura, a Unit's
 // `tile` aura, and Meditative+'s and Training Grounds' takeover looks and entrances among them. R3389000: a
 // signature look a signature's alone, and In Too Deep's "abyss". R3395001: Stinkyscape 001 to 090's signature
-// entrances, its five Mythics' own looks and its Field Spells' three signature looks.
+// entrances, its five Mythics' own looks and its Field Spells' three signature looks. R3402000: `entryAura`, and
+// Core's two more own takeover looks; R3402001 Core's three signature entrances.
 
 import { describe, expect, it } from "vitest";
 
@@ -288,9 +289,13 @@ describe("R2784000 the per-set effects tables", () => {
   it("R3332000 R3400000 R3389001 R3405000 the eight marquee cards keep their entrances and looks, beside the signatures'", () => {
     const entrances = { "core-100": "voidCollapse", "classic-080": "bigBoom", "classic-045": "titanBloom", "classic-056": "tyrantSigil" };
     for (const [defId, key] of Object.entries(entrances)) expect(entranceKeyOf(defId), defId).toBe(key);
-    // R3400000: the signature Units' entrances and the signature Mythics' own looks.
+    // R3400000: the signature Units' entrances and the signature Mythics' own looks; R3402001: Core's Silly Silas's,
+    // Combo-Index's and Heroic Power's entrances, and R3402000 Heroic Power's rotunda and Craft a Card's crystalForge.
     const signatureEntrances = {
+      "core-052": "silasSpotlight",
       "core-092": "felinorAssembly",
+      "core-093": "comboStadium",
+      "core-098": "heroicPedestal",
       "meditativeplus-024": "snowplowHeave",
       "traininggrounds-038": "chalkboardLesson",
       "traininggrounds-039-1": "golemLashing",
@@ -377,6 +382,8 @@ describe("R2784000 the per-set effects tables", () => {
       "core-096": "pawn",
       "core-097": "genie",
       "meditative-049": "ai",
+      "core-098": "rotunda",
+      "core-099": "crystalForge",
       "meditativeplus-001": "summit",
       "meditativeplus-026": "canvas",
       "traininggrounds-040": "napkin",
@@ -483,9 +490,32 @@ describe("R2784000 the per-set effects tables", () => {
     expect(parse(`"core-035": { aura: { look: "ember", scope: "side" } }`).get("core-035")).toEqual({ kind: "hooks", hooks: {}, aura: { look: "ember", scope: "side" } });
     expect(parse(`"core-035": { aura: { look: "ember", scope: "board" } }`).get("core-035")?.kind).toBe("hooks");
     says(`"core-021": { bespoke: "manaCrack", aura: { look: "frost", scope: "zone" } }`, /core-021: a zone aura stands in a zone; this card is a Spell, whose aura is side or board$/);
-    // R3400000: a bespoke entry may wear one too (its test below).
+    // R3400000: a bespoke entry may wear one too (its test below); a `{ setPiece }` still may not.
     expect(parse(`"core-021": { bespoke: "manaCrack", aura: { look: "frost", scope: "side" } }`).get("core-021")).toEqual({ kind: "bespoke", key: "manaCrack", aura: { look: "frost", scope: "side" } });
+    says(`"core-088": { setPiece: "nether", aura: { look: "frost", scope: "side" } }`, /core-088: a setPiece entry holds nothing else but its frame$/);
     says(`"core-035": {}`, /core-035: names no hook/);
+  });
+
+  it("R3402000 entryAura reads a hooks or a bespoke entry's aura, and rotunda and crystalForge are a Mythic's", () => {
+    const parse = (body: string) => parseFxCardTable("test.json5", `{ ${body} }`);
+    const says = (body: string, problem: RegExp): void => {
+      expect(() => parse(body)).toThrow(problem);
+    };
+    // Silly Silas's on his own tile, Combo-Index's and Heroic Power's on their zones, each beside its recipe.
+    expect(entryAura(FX_CARD_TABLE.get("core-052"))).toEqual({ look: "mirrorball", palette: "Tech/hologram", scope: "tile" });
+    expect(entryAura(FX_CARD_TABLE.get("core-093"))).toEqual({ look: "stadium", palette: "Tech/starfield", scope: "zone" });
+    expect(entryAura(FX_CARD_TABLE.get("core-098"))).toEqual({ look: "pedestal", palette: "Holy", scope: "zone" });
+    expect(entryAura(FX_CARD_TABLE.get("core-014"))).toEqual({ look: "storm", scope: "side" });
+    // None of a set piece, a `none` or a missing entry.
+    expect(entryAura(FX_CARD_TABLE.get("core-088"))).toBeUndefined();
+    expect(entryAura(FX_CARD_TABLE.get("core-003"))).toBeUndefined();
+    expect(entryAura(undefined)).toBeUndefined();
+    // The two looks are a Mythic's own, and the table names each once.
+    for (const [defId, key, look] of [["core-098", "heroicDoors", "rotunda"], ["core-099", "fusionForge", "crystalForge"]] as const) {
+      expect(parse(`"${defId}": { bespoke: "${key}", takeover: "${look}" }`).get(defId), defId).toMatchObject({ takeover: look });
+      expect(takeoverLookOf(defId), defId).toBe(look);
+    }
+    says(`"core-087": { bespoke: "pocketSwap", takeover: "crystalForge" }`, /core-087: a takeover is a Mythic's; this card is Legendary$/);
   });
 
   it("R3400000 a bespoke entry may wear an aura, a tile aura is a Unit's, and summit, canvas and napkin are a Mythic's", () => {

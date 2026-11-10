@@ -52,13 +52,13 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const WILDFIRE: &str = "classic-055";
-    const VANILLA: &str = "core-008"; // 4/4, no text
-    const MENACE: &str = "core-019"; // 9/9 Taunt
-    const DEFENDER: &str = "core-003"; // 1/1 Taunt, Divine Shield, Reborn
-    const TOP_LOSER: &str = "classicplus-019-1"; // Radiant: Immune to Spells
-    const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2
-    const FILLER: &str = "core-005"; // a hand card, so a turn never auto-ends (§2.5)
-    const PALANTIR: &str = "classic-004"; // Base: when your opponent plays a (2) Cost Spell, Tribute this to steal it and cast it yourself.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const DEFENDER: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
+    const TOP_LOSER: &str = "classicplus-019-1"; // Top Loser: Radiant: Immune to Spells
+    const SOLARIUS: &str = "classicplus-038"; // Solarius: Spell Damage +2
+    const FILLER: &str = "core-005"; // Stockpile: a hand card, so a turn never auto-ends (§2.5)
+    const PALANTIR: &str = "classic-004"; // Palantir: Base: when your opponent plays a Spell, Tribute this to steal it and cast it yourself.
     const BOOK_OF_FLAME: &str = "classic-016";
 
     use crate::js;

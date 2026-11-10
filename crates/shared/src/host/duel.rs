@@ -31,8 +31,8 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use jackioh_engine::{
-    Action, ActionBody, ActionType, Aim, EmoteId, GameOverReason, GameState, PLAYER_IDS, PendingView,
-    PerPlayer, PlayerId, PlayerView, Rng, aim_key,
+    Action, ActionBody, ActionType, Aim, CombatForecast, EmoteId, GameOverReason, GameState, PLAYER_IDS,
+    PendingView, PerPlayer, PlayerId, PlayerView, Rng, aim_key,
 };
 
 use super::bot::{BotSeat, DecideJob, RematchPlan, fallback_action, never_played};
@@ -529,6 +529,12 @@ impl DuelHost {
         jackioh_engine::legal_actions(&self.game, player)
     }
 
+    /// R3477000: what each attack `player` may declare now would do, read from the face-up board alone
+    /// (`combat_forecast`, R3100000); it is sent with that seat's own view and never to a watcher.
+    pub fn forecast(&self, player: PlayerId) -> CombatForecast {
+        jackioh_engine::combat_forecast(&self.game, player)
+    }
+
     /// R672, R1452, R639000: seats with an open socket; a bot's seat is present during play and, after a
     /// ranked game, lingers until its plan or its pending reply finishes, after which it is absent.
     pub fn presence(&self, now: i64) -> PerPlayer<bool> {
@@ -586,7 +592,15 @@ impl DuelHost {
         }
         let view = Box::new(self.view_for(player, now));
         let legal = self.legal(player);
-        self.send_to_home(home, SeatMessage::View { view, legal });
+        let forecast = Some(self.forecast(player));
+        self.send_to_home(
+            home,
+            SeatMessage::View {
+                view,
+                legal,
+                forecast,
+            },
+        );
     }
 
     fn push_clock(&mut self, player: PlayerId, now: i64) {

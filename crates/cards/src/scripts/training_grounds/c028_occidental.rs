@@ -57,12 +57,12 @@ mod tests {
 
     const OCCIDENTAL: &str = super::ID;
     const LANE: i32 = super::RIGHTMOST;
-    const BODY: &str = "core-008"; // Mr. Vanilla 4/4
-    const ROCK: &str = "core-066"; // Indestructible
-    const FIENDER: &str = "core-092"; // Stack
+    const BODY: &str = "core-008"; // Mr. Vanilla
+    const ROCK: &str = "core-066"; // The Rock: Indestructible
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
     const FIELD_SPELL: &str = "core-064";
     const TRAP: &str = "core-060";
-    const FLAGBEARER: &str = "classicplus-046"; // Death: shuffle a Felinor Flagbearer Prime into your deck
+    const FLAGBEARER: &str = "classicplus-046"; // Felinor Flagbearer: Death: shuffle a Felinor Flagbearer Prime into your deck
     const PRIME: &str = "classicplus-046-1";
     const FILLER: &str = "core-005";
 

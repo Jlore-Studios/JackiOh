@@ -38,6 +38,7 @@ hands back on every call; a run's `RunState` crosses the same way, as plain JSON
 | `duos_create(options)`, `duos_begin(state)`, `duos_reduce(state, action)`, `duos_legal_actions(state, seat)`, `duos_view_for(state, seat)` | #936: the Duos wrapper for `/dev/duos`: a `DuosState` (its four decks and handicaps checked first, as `create_game`'s setup is), then `{ state, events, error? }`, `DuosActionBody[]` and `DuosView`; the seat crosses as its string (`"a1"`). Built only with the `duos` feature (the dev server's build only: `JACKIOH_WASM_DUOS=1`, off by default); without it each throws the reason |
 | `craft_preview(recipe, cost, prompt)` | ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe — a `CraftPreview` — so the block editor shows what the reducer will say; `prompt` is the open prompt's `{ craftMode, craftOffer }`, its frame, points (R3043000) and offer (R1563007) |
 | `run_content()` | `RunContent`: `run_catalog_content` over the compiled-in catalog |
+| `run_content_at(version)` | R3496000: `RunContent` for a catalog version: the build's own, a carried version's, or `null` when this build carries it no longer |
 | `run_check_setup(setup, unlocks, content)`, `run_create(setup, unlocks, content)` | whether the setup may start a run (`null`, or the reason), then the run's `{ state }` |
 | `run_reduce(state, content, action)`, `run_fold(file, content)` | the run after one action, or a run file folded from its start: `{ state }` |
 | `run_fight_setup(state, content)` | the fight being played (`RunFightSetup`), or `null` outside one |
@@ -56,7 +57,9 @@ game has not finished reports `{ "error": "…" }` from `run_fight_report`, as a
 
 The pure crates never read a clock (CLAUDE.md rule 4). The AI's wall-clock cap is this crate's:
 `ai_decide` gives `decide` a `should_stop` that compares `js_sys::Date::now()` with `deadline_ms`
-(`deadline_ms <= 0`: no clock).
+(`deadline_ms <= 0`: no clock), and a `wrap_up` that fires `AI_WRAP_UP_SHARE` of the way from the call to
+`deadline_ms`, past which the beam explores no further (R3498000, `core`'s `SearchClock`); `bot_decide`
+gives the ladder bot's search the same two.
 
 ## Build and the client's seams
 

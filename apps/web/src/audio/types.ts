@@ -45,6 +45,9 @@ export type SfxId =
   | "starshipFlak" | "starshipLauncher" | "starshipRam" | "starshipWreck"
   // R3400001: Meditative+'s and Training Grounds' signature Legendaries and Mythics, one each (signatureCues.ts).
   | "inkSummit" | "plowHeave" | "cursorTear" | "seanceChant" | "slateRap" | "diceGong" | "timberLash" | "pencilArpeggio"
+  // R3402001: ten Core Legendaries' and Mythics' signatures, one each (signatureCues.ts).
+  | "silasScratch" | "crucibleChoir" | "hatchWeld" | "pocketZip" | "stadiumCheer" | "jackpotReels" | "pawnWaltz"
+  | "wishWind" | "heroicFanfare" | "forgeAnvil"
   // R3407001: Stinkyscape's signature cards, one each (signatureCues.ts).
   | "ballotBeep" | "lullabySigh" | "compactTut" | "glitchDrop" | "harpGliss" | "markerThunder" | "stampTrill" | "tillRattle"
   | "gavelSlam" | "dockingChime" | "keyboardPing" | "synthSnap" | "blobDrum" | "warpSparkle" | "tearChoir" | "cackleThunder"

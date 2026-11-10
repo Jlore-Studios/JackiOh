@@ -202,7 +202,8 @@ export default function FxGallery(): ReactElement {
     setSetPieceId(asSetPiece ? galleryPlayId(plays.current) : null);
     // R3332001: a board of the entrance's own goes up first, with no new events, so the board plans the
     // play against it (Game plans against the view it still shows).
-    // R3399000: and the card in the viewer's hand, where its play starts (a cast's and a takeover's anchor).
+    // R3399000: and the card in the viewer's hand, where its play starts (a cast's and a takeover's anchor;
+    // R3402001 a Spell's entrance and a Mythic Spell's takeover among them).
     const board = galleryBoardOf(card.defId, base);
     flushSync(() => setShown(galleryHandOf(card.defId, board, plays.current)));
     setShown(withEvents(galleryFieldView(card.defId, board), galleryCardEvents(card.defId, card.play, board, plays.current)));

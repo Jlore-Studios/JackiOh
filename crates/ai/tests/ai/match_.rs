@@ -214,6 +214,7 @@ mod play_match_b26 {
                 rng: rng.clone(),
                 budget: AI_GATE_BUDGET,
                 should_stop: None,
+                wrap_up: None,
             };
             let again = decide(state, *seat, &mut options).map(|decision| decision.action);
             assert_eq!(again.as_ref(), Some(&record.log[at].body), "position {at}");

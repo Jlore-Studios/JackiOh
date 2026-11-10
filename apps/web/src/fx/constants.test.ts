@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 
 import { animationRow, SET_PIECE_HOLD_CAP_MS, TAKEOVER_HOLD_MS } from "../game/animations.ts";
+import { LANES } from "../game/contract.ts";
 import { COSMETIC_FOIL_ANIMATED_MAX } from "../cards/constants.ts";
 import { AURA_LOOKS } from "./aura/looks.ts";
 import * as constants from "./constants.ts";
@@ -52,6 +53,8 @@ const S2 = {
   FX_PLAY_MASSIVE_TRAUMA: 0.7,
   FX_TAKEOVER_TAIL_MS: 700,
   FX_TAKEOVER_TRAUMA: 0.6,
+  // R3402000: a Mythic's own takeover art.
+  TAKEOVER_ART_MAX_SHAPES: 48,
   FX_TRAP_TRAUMA: 0.4,
   FX_RESULT_TRAUMA: 0.9,
   FX_LETHAL_LEAD_MAX_MS: 600,
@@ -222,6 +225,16 @@ const S2 = {
   FX_CHAOS_DICE_REEL_MS: 500,
   FX_CHAOS_DICE_PANEL_MS: 760,
   FX_BOBS_PLAN_TRAUMA: 0.6,
+  // Issue #3402: Core's signatures (R3402001).
+  FX_CRUCIBLE_TRAUMA: 0.4,
+  FX_CLAMP_TRAUMA: 0.5,
+  FX_POCKET_TRAUMA: 0.45,
+  FX_REELS_TRAUMA: 0.55,
+  FX_PAWN_TRAUMA: 0.5,
+  FX_GRADE_TRAUMA: 0.3,
+  FX_SIGNATURE_BURSTS_MAX: 5,
+  FX_PAWN_STRINGS_MAX: 6,
+  FX_REELS_MS: 800,
   // Issue #2787: the auras (R2787000).
   AURA_MAX_PER_ZONE: 2,
   AURA_MOTES_PER_AURA: 24,
@@ -590,6 +603,19 @@ describe("R3332000 the signature budgets", () => {
     expect(constants.FX_CHAOS_DICE_REEL_MS).toBeLessThan(constants.FX_CHAOS_DICE_PANEL_MS);
     expect(constants.FX_CHAOS_DICE_PANEL_MS).toBeLessThanOrEqual(chaos + constants.FX_MAX_TAIL_MS);
     expect(constants.FX_BOBS_PLAN_TRAUMA).toBeLessThanOrEqual(SIGNATURE_SPELL_MAX_TRAUMA);
+  });
+
+  it("R3402001 Core's signature shakes sit inside their type's caps, and its roll inside a Spell's budget", () => {
+    const { SIGNATURE_LEGENDARY_MAX_MS, SIGNATURE_SPELL_SHARE, SIGNATURE_SPELL_MAX_TRAUMA, SIGNATURE_PERMANENT_MAX_TRAUMA } = constants;
+    // Transmogulate's crucible, Pocket Chaos's pocket and Call to Chaos's reels are Spells'; the rest a permanent's.
+    for (const trauma of [constants.FX_CRUCIBLE_TRAUMA, constants.FX_POCKET_TRAUMA, constants.FX_REELS_TRAUMA]) expect(trauma).toBeLessThanOrEqual(SIGNATURE_SPELL_MAX_TRAUMA);
+    for (const trauma of [constants.FX_CLAMP_TRAUMA, constants.FX_PAWN_TRAUMA, constants.FX_GRADE_TRAUMA]) expect(trauma).toBeLessThanOrEqual(SIGNATURE_PERMANENT_MAX_TRAUMA);
+    // The reels' reveal fits a Legendary Spell's share.
+    expect(constants.FX_REELS_MS).toBeLessThan(SIGNATURE_LEGENDARY_MAX_MS * SIGNATURE_SPELL_SHARE);
+    // At most one follow-up beat per unit zone, and one string per enemy piece (five Units and the hero).
+    expect(constants.FX_SIGNATURE_BURSTS_MAX).toBeGreaterThan(0);
+    expect(constants.FX_PAWN_STRINGS_MAX).toBeLessThanOrEqual(LANES.length + 1);
+    expect(constants.TAKEOVER_ART_MAX_SHAPES).toBeGreaterThan(0);
   });
 
   it("R3332001 Felinor Fiender's streaks all leave before its slam", () => {

@@ -143,8 +143,8 @@ mod tests {
 
     const MIND: &str = "meditative-022";
     const FORTIFY: &str = "meditative-022-1";
-    const FILLER: &str = "core-005"; // (1) Spell.
-    const MENACE: &str = "core-019"; // (3) 9/9.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const MENACE: &str = "core-019"; // Midrange Menace
 
     /// p1 plays Mind Games with `mode` (or the Radiant face), over `p1field`/`p2field` units.
     fn mind(mode: &str, radiant: bool, p1field: Value, p2field: Value) -> Scenario {

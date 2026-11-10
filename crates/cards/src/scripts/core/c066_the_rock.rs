@@ -37,12 +37,12 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    const ROCK: &str = "core-066"; // Unit 10/10 → 20/20, cost 4, Human. Tribute 1, Indestructible.
-    const TIMMY: &str = "core-011"; // Tempo Timmy, a plain 1-cost 3/3: a body to tribute or to attack with.
+    const ROCK: &str = "core-066"; // The Rock: Human. Tribute 1, Indestructible.
+    const TIMMY: &str = "core-011"; // Tempo Timmy: a plain unit: a body to tribute or to attack with
 
     /// R82: a turn left with only end, concede and offer-draw auto-ends after every action, so each
     /// scenario keeps this free Spell in p1's hand, never played, as one legal action on the turn.
-    const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: a Spell, always an affordable play
 
     /// The refusal names the Tribute, capitalised or not, so the word's common tail is matched.
     const TRIBUTE_TEXT: &str = "ribute";

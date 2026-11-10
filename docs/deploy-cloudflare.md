@@ -383,8 +383,10 @@ the first hours. Staging's container sleeps whenever the team is away. Supabase 
 a month for the organization (jlore-studios), whose compute credit covers one project's smallest
 instance; the second project's instance is billed on top, and each project's disk past 8 GB
 (`db-size.yml` warns before then). GitHub Actions (a public repository) costs nothing. The levers are `SLEEP_AFTER`
-(`apps/edge/src/index.ts`) and `instance_type` (`wrangler.jsonc`); a signed-in tab keeps its site's
-server awake through its presence beat.
+(`apps/edge/src/index.ts`, five minutes) and `instance_type` (`wrangler.jsonc`); a signed-in tab keeps its
+site's server awake through its presence beat and its social socket until it has been hidden for
+`HIDDEN_QUIET_MS` (two minutes, `apps/web/src/together/config.ts`, R3576000), so a tab left in the
+background lets the server sleep about seven minutes later.
 
 Cloudflare has no spend cap, so two things watch the usage bill (the plan's $5 aside). The account's
 budget alerts (Notifications -> Budget Alert: one at $1 and the auto-created one at $10) email the

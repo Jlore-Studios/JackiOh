@@ -80,15 +80,15 @@ mod tests {
     /// Odd — what the exile clause names.
     const ODD_COST: [&str; 4] = ["core-008", "core-005", "core-053", "core-019"]; // 1, 1, 3, 3
     /// A (2) Cost Spell on top of a library the test does not look at: Greed draws it.
-    const FILLER_SPELL: &str = "core-069"; // #69 Call to Arms
+    const FILLER_SPELL: &str = "core-069"; // Call to Arms
     /// Even and not 2, so neither clause touches it.
     const FOUR_COST: &str = "core-025";
     /// X-cost, exempt from both clauses (R66).
-    const X_COST: &str = "core-074"; // #74 Adaptive UI
+    const X_COST: &str = "core-074"; // Adaptive UI
     /// A keyword-only unit parked on the board. §2.5 auto-ends a turn with nothing meaningful left, and
     /// an auto-end starts the opponent's turn — with their draw — inside the same `play` step, which
     /// would move cards these tests are watching. A unit that could still switch position prevents it.
-    const KEEP_TURN: &str = "core-008"; // #8 Mr. Vanilla
+    const KEEP_TURN: &str = "core-008"; // Mr. Vanilla
 
     /// p1's four off-field piles, by def id.
     struct Zones {

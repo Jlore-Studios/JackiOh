@@ -67,10 +67,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const DEATH: &str = "stinkyscape-012-1";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const WEAPONS: &str = "core-014"; // (4) Field Spell: your units have +2 Attack.
-    const ROCK: &str = "core-066"; // (10) 10/10 Indestructible.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your units have +2 Attack
+    const ROCK: &str = "core-066"; // The Rock: Indestructible
+    const MENACE: &str = "core-019"; // Midrange Menace
     const FILLER: &str = "core-005";
 
     fn stats_override(attack: i32, health: i32) -> Value {

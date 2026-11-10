@@ -25,6 +25,7 @@ import { artSpec, type ArtSpec } from "./procedural.ts";
 import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } from "./richness.ts";
 import { composeScene, SCENE_LAYERS, sceneRecipeOf, sceneUse, type SceneLayer, type SceneRecipe } from "./scene.ts";
 import { SCENE_KIT } from "./sceneKit.ts";
+import { CLASSIC_KIT } from "./sceneKitClassic.ts";
 import { COSMOS_KIT } from "./sceneKitCosmos.ts";
 import { CRAFT_KIT } from "./sceneKitCraft.ts";
 import { GEAR_KIT } from "./sceneKitGear.ts";
@@ -82,8 +83,11 @@ const CHARACTER_UNITS: Readonly<Record<string, string>> = {
 };
 /** The kit modules #3401 added, which sceneKit.ts spreads into `SCENE_KIT` after Classic+'s and #3393's. */
 const INK_MODULES = [INK_PLACES_KIT, INK_BUILDINGS_KIT, INK_OBJECTS_KIT, INK_CURIOS_KIT, INK_MACHINES_KIT, INK_NATURE_KIT, INK_CREATURES_KIT, INK_CHARACTERS_KIT];
-/** The parts sceneKit.ts draws itself: the first kit's (#3331) and the 199 Core's scenes added after them (R3392000). */
-const FIRST_KIT_PARTS = 56 + 199;
+/**
+ * The parts sceneKit.ts draws itself: the first kit's (#3331), the 199 Core's scenes added after them (R3392000) and the
+ * 81 Stinkyscape's pass added after those (R3391000, classicPlusScenes.test.ts's `STINKYSCAPE_KIT_PARTS`).
+ */
+const FIRST_KIT_PARTS = 56 + 199 + 81;
 /** Where an emblem or the seal may stand, and how big an emblem may be: inside the band every face's window shows (motifs.test.ts's). */
 const SHOWN_BAND = { left: 10, right: 90, top: 22, bottom: 84, size: 8 } as const;
 
@@ -293,9 +297,11 @@ describe("R3401000 Meditative drawn as scenes", () => {
     for (const [id, part] of ink) expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);
     // None takes the place of one of the first kit's parts or of an earlier module's; R3403000: Stinkyscape's four
     // modules follow them (stinkyscape91Scenes.test.ts), and R3406000 the Stinkyscape Alt art pass's
-    // (stinkyscape91AltScenes.test.tsx).
+    // (stinkyscape91AltScenes.test.tsx); R3352000: Classic's module comes after Stinkyscape's four and before the Alt
+    // art pass's (classicScenes.test.ts).
     const after = [SPACE_KIT, CRAFT_KIT, GEAR_KIT, COSMOS_KIT, STINKY_ALT_KIT].flatMap((kit) => Object.keys(kit));
-    expect(Object.keys(SCENE_KIT)).toHaveLength(FIRST_KIT_PARTS + ids.length + after.length);
+    const later = Object.keys(CLASSIC_KIT);
+    expect(Object.keys(SCENE_KIT)).toHaveLength(FIRST_KIT_PARTS + ids.length + after.length + later.length);
     expect(Object.keys(SCENE_KIT).slice(FIRST_KIT_PARTS + before.length, FIRST_KIT_PARTS + ids.length)).toEqual(ink.map(([id]) => id));
   });
 });

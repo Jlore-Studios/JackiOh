@@ -84,7 +84,7 @@ mod tests {
 
     use super::{ID, PARAGON_MK1, WARP_DISRUPTOR};
 
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const MOTHS: &str = "core-009";
     const CHANCE: i32 = 30;
     const PARAGONS: usize = 5;

@@ -73,11 +73,11 @@ mod tests {
 
     const PRIME: &str = "meditative-045-1";
     const BREAKER: &str = "meditative-045";
-    const CN_UNIT: &str = "meditative-039"; // 赌石 Addict, a CN Unit.
-    const KY_UNIT: &str = "meditative-079"; // Touched by KY, a KY Unit.
+    const CN_UNIT: &str = "meditative-039"; // 赌石 Addict: a CN Unit
+    const KY_UNIT: &str = "meditative-079"; // Touched by KY: a KY Unit
     const VANILLA: &str = "core-008";
-    const ROCK: &str = "core-066"; // Indestructible.
-    const MANA_WELL: &str = "core-006"; // An untagged Field Spell.
+    const ROCK: &str = "core-066"; // The Rock: Indestructible
+    const MANA_WELL: &str = "core-006"; // Mana Well: An untagged Field Spell.
     const BEAUTY: &str = "meditative-039-5"; // Jade Beauty: CN, Indestructible.
 
     fn trap_count(s: &Scenario, player: PlayerId) -> usize {

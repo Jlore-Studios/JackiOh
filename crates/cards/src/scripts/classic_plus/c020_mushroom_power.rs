@@ -45,9 +45,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MUSHROOM: &str = "classicplus-020";
-    const BODY: &str = "core-019"; // Midrange Menace 9/9 Taunt
-    const SMALL: &str = "core-012"; // Duplicating Felinors 3/4
-    const FIELD_SPELL: &str = "core-075"; // Infinite Reserves, which touches no Unit
+    const BODY: &str = "core-019"; // Midrange Menace: Taunt
+    const SMALL: &str = "core-012"; // Duplicating Felinors
+    const FIELD_SPELL: &str = "core-075"; // Infinite Reserves: which touches no Unit
     const FILLER: &str = "core-005";
 
     /// The unit on top of `player`'s pile in `lane`, which the setup must have put there.

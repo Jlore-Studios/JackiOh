@@ -35,7 +35,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const FELINORS: &str = super::ID;
-    const BODY: &str = "core-008"; // Mr. Vanilla 4/4
+    const BODY: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
     fn felinors(radiant: bool, field: Value) -> Scenario {

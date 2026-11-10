@@ -53,9 +53,9 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const FILLER: &str = "core-005"; // (1) Spell.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
 
     /// The Rare and the Epic Weapons (§8.10 row 82).
     const RARE: [&str; 6] = [

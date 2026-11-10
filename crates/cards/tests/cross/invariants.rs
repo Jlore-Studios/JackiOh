@@ -1079,11 +1079,11 @@ mod i8_an_attack_or_a_switch_reduce_accepts_that_the_list_leaves_out {
 mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
     use super::*;
 
-    const CRATER: &str = "classicplus-034"; // C+ #34 Memory Leak: Field Spell with Crater, Locks its zone
-    const CARRIER: &str = "classicplus-033"; // C+ #33 Ivory Tower: a Unit may stack onto its zone
-    const FLYING: &str = "classicplus-051"; // C+ #51 Jlockeed's J15 Fighter: Flying
-    const TRIBUTE: &str = "core-066"; // #66 The Rock: Tribute 1
-    const FIENDER: &str = "core-092"; // (2) 5/7 Stack
+    const CRATER: &str = "classicplus-034"; // Memory Leak: Field Spell with Crater, Locks its zone
+    const CARRIER: &str = "classicplus-033"; // Ivory Tower: a Unit may stack onto its zone
+    const FLYING: &str = "classicplus-051"; // Jlockeed's J15 Fighter: Flying
+    const TRIBUTE: &str = "core-066"; // The Rock: Tribute 1
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
 
     fn board() -> Scenario {
         scenario(json!({
@@ -1247,9 +1247,9 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
 mod i8_an_activation_reduce_accepts_that_the_list_leaves_out {
     use super::*;
 
-    const PING: &str = "classicplus-076-1"; // C+ #76.1 Brother Ping: Activate (once a turn), deal 1 to any target
-    const SCARAB: &str = "core-007"; // #7 Jewelosco Scarab: Cry: Discover, a prompt of one pick
-    const DIVIDEND: &str = "core-024"; // #24 Efficiency Dividend: an X-cost Spell of three modes
+    const PING: &str = "classicplus-076-1"; // Brother Ping: Activate (once a turn), deal 1 to any target
+    const SCARAB: &str = "core-007"; // Jewelosco Scarab: Cry: Discover, a prompt of one pick
+    const DIVIDEND: &str = "core-024"; // Efficiency Dividend: a Spell of three modes
 
     fn board() -> (Scenario, CardInstance) {
         let g = scenario(json!({
@@ -1679,8 +1679,8 @@ mod r1122_r2285002_a_redirected_classic_golem_that_kills_its_new_defender {
 mod r1200_i8_an_activation_left_with_no_pick_while_a_mayor_acts {
     use super::*;
 
-    const FUSION_LAB: &str = "classicplus-031"; // C+ #31 Fusion Lab: Activate, choose a card in your hand
-    const MAYOR: &str = "meditative-086"; // M #86 Mayor Medinamogger: all targets are chosen at random
+    const FUSION_LAB: &str = "classicplus-031"; // Fusion Lab: Activate, choose a card in your hand
+    const MAYOR: &str = "meditative-086"; // Mayor Medinamogger: all targets are chosen at random
 
     /// Fuzz seed 2870's board (#1728): p1's Fusion Lab with nothing in p1's hand while p2's Mayor acts.
     fn board() -> (Scenario, CardInstance) {
@@ -1740,7 +1740,7 @@ mod r1200_i8_an_activation_left_with_no_pick_while_a_mayor_acts {
 mod r1829000_a_card_uncovered_beneath_a_stack {
     use super::*;
 
-    const FIENDER: &str = "core-092"; // (2) 5/7 Stack.
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
 
     fn covered_on_an_earlier_turn() -> (Scenario, InvariantMonitor, CardInstance, CardInstance, i32) {
         let mut g = scenario(json!({
@@ -1956,7 +1956,7 @@ mod r1869002_i2_a_kill_credit {
     #[test]
     fn r3139004_a_corpse_eater_attacks_the_units_it_survives_again_with_no_violation() {
         const EATER: &str = "core-089";
-        const FENDER: &str = "core-001"; // 0/7: it hits back for nothing and does not die to the 2 attack.
+        const FENDER: &str = "core-001"; // Big D-fender: it hits back for nothing and does not die to the 2 attack
         let mut g = scenario(json!({
             "p1": { "field": [{ "def": EATER, "lane": 1 }], "hand": [VANILLA] },
             "p2": { "field": [{ "def": FENDER, "lane": 1 }, { "def": FENDER, "lane": 2 }], "hand": [VANILLA] },

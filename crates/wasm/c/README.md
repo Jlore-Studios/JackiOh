@@ -146,6 +146,7 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `learned_parity(fixture)` | string | the learned evaluation's answers for a fixture, to hold a port to |
 | `preview_sets(sets)` | string | nothing (an empty result); a module built with `preview` previews the sets |
 | `run_content()`, `run_constants()` | | the dungeon run's content and numbers |
+| `run_content_at(version)` | string | R3496000: the dungeon run's content for a catalog version: the build's own, a carried version's, or `null` when this build carries it no longer |
 | `run_check_setup(setup, unlocks, content)`, `run_create(setup, unlocks, content)` | strings | whether the setup may start a run, a run started |
 | `run_reduce(state, content, action)`, `run_fold(file, content)` | strings | a run after one action, a run file folded |
 | `run_fight_setup(state, content)`, `run_fight_report(game, human)` | strings | the fight being played, the `FightOver` it sends |

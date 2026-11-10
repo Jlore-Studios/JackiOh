@@ -42,9 +42,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const OUTFITTER: &str = "meditative-082";
-    const VANILLA: &str = "core-008"; // (1) Human Unit, no text.
-    const STOCKPILE: &str = "core-005"; // (1) Spell: draw 2.
-    const MENACE: &str = "core-019"; // Radiant: Immutable.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: Human Unit, no text
+    const STOCKPILE: &str = "core-005"; // Stockpile: draw 2
+    const MENACE: &str = "core-019"; // Midrange Menace: Radiant: Immutable
     /// (3) Field Spell, none of the hand cards above: p2's own hand shows in p2's view, so a filler
     /// that were Stockpile would put its id there and hide the leak the view check looks for.
     const FILLER: &str = "core-006";

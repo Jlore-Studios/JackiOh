@@ -138,10 +138,10 @@ stays inside. `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`,
 
 Since #3221 (R3221000) the menus' dialogs draw through it too: `SettingsPanel`, the friends panel
 (`FriendsButton`), `ChatPanel`, `ChallengeDialog`, `TokenOffer`'s and the shop's chase question, the
-account's delete question, `/stats`'s card breakdown, `DungeonStats`'s run details, `FieldGuide`,
-`PatchNotes`'s card, `ItemPreview`, `CardCosmeticsView`, `LooksScreen`, `DevButton`'s panel,
-`CommandMenu` and `TutorialResult`. A caller may also give it an `id`, its own `closeTestid` and
-`closeLabel` for the ✕, a `scrimTestid`, `focus` (what takes the focus on open, else the first answer,
+account's delete question, `/stats`'s card breakdown, `DungeonStats`'s run details, the dungeon's Your run
+panel (`RunPanel`), `FieldGuide`, `PatchNotes`'s card, `ItemPreview`, `CardCosmeticsView`, `LooksScreen`,
+`DevButton`'s panel, `CommandMenu` and `TutorialResult`. A caller may also give it an `id`, its own
+`closeTestid` and `closeLabel` for the ✕, a `scrimTestid`, `focus` (what takes the focus on open, else the first answer,
 else the ✕), `panelRef`, a `title` with markup of its own, and answers that are `disabled` or `busy`
 (`aria-busy`), the `cancel` disabled too while a request is out. `sheet` makes it a sheet: centred on a
 wide screen, at the foot of an upright phone and down the right edge of a phone on its side (Settings,
@@ -863,7 +863,8 @@ together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unr
                          the button and /together share, and the badge's count (paused while the tab is
                          hidden unless a challenge of the player's is open, R3205000); it holds the tab's
                          social socket and sends no read while it is live, and hands its chat and
-                         friends pushes to onChatPush and onFriendsPush (R3214000)
+                         friends pushes to onChatPush and onFriendsPush (R3214000); a tab hidden for
+                         HIDDEN_QUIET_MS lets the socket go and opens it again when it shows (R3576000)
 together/socialSocket.ts  the tab's one /ws/social socket (R3214000): the token as a subprotocol
                          (R1379000), the server's social read and chat and friends nudges pushed over it,
                          the match socket's backoff and wake probe (R1441), a 4401 reopened with a renewed
@@ -872,14 +873,16 @@ together/socialSocket.ts  the tab's one /ws/social socket (R3214000): the token 
                          unless a test installs a factory (test/fakeSocket.ts)
 together/config.ts       the social reads' pace: the friends list every FRIENDS_POLL_MS (a heartbeat,
                          PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS;
-                         both paused while the tab is hidden
+                         both paused while the tab is hidden; HIDDEN_QUIET_MS, how long a hidden tab
+                         waits before it goes quiet (R3576000)
 together/ChallengeToast.tsx  mounted once in the shell; reads the challenges (socialPoll.ts's GET /api/social) while signed in and
                          toasts an incoming challenge anywhere with a deck picker (the last deck used for
                          its mode): Accept joins the room with it and goes to the game (R1831000), a
                          refused join offers Open in lobby, /play with the room code filled in (R767);
                          Decline declines
 together/presence.ts     usePresenceHeartbeat: POST /api/presence once PRESENCE_HEARTBEAT_MS passes with
-                         no signed-in request (onSignedInRequest, R3210000)
+                         no signed-in request (onSignedInRequest, R3210000), none while the tab has
+                         been hidden for HIDDEN_QUIET_MS (R3576000)
 duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one), show its code,
                          offer its link, invite a friend by sending the link in chat, join by code or by
                          a co-op link that fills the join form and focuses Join (R2094000); both players
@@ -990,10 +993,15 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   while the Lethal hint setting is on, and the board shows it (`data-lethal-hint` on the game, which
   outlines the enemy hero and End turn, and the `lethal-hint` line "You have lethal") once it shows
   the newest view, never on a replay. Online and hotseat boards never set it.
-- In a lesson the snapshot also adds `forecast`, the engine's `combatForecast(state, human)` (R3100000): what
+- Every snapshot adds `forecast` (R3477000), the engine's `combatForecast(state, human)` (R3100000): what
   each of the human's legal attacks would do, as the board shows it, and whether the attackers that reach the
   enemy hero finish it. It reads nothing the human cannot see, and the tutorial's coach names its attacks by it
-  (`tutorial/advice.ts`), so the client does no combat maths.
+  (`tutorial/advice.ts`), so the client does no combat maths. Outside a lesson the board draws it too: while
+  an attacker is selected or dragged, each legal target with an entry wears a label (`game/AttackOutcome.tsx`,
+  `outcome-<target testid>`) with the damage dealt, the damage taken back, a skull on whichever dies and the
+  struck-through shield mark for a broken Divine Shield; the Show attack outcomes setting (`attackOutcomes`,
+  on by default) hides it. A seat's 1v1 and Duos `view` frames carry the same field (`net.ts`,
+  `duos/socket.ts`), and a watcher's never does.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
 - A question sequence's 60 seconds (Meditative+ #20 KY's Competition, R1563006) are the machine's: an answer carries `timers`
   (`PracticeTimer`, a delay in ms from the answer), the controller keeps each as a timeout and sends `timerFired` when it is

@@ -66,11 +66,11 @@ mod tests {
     use super::ID;
     use crate::def_ids;
 
-    const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself; a non-Unit.
-    const VANILLA: &str = "core-008"; // (1) 4/4, no Death.
-    const SAINTESS: &str = "core-081"; // (1) 2/2, "Death: Make your other Units Radiant."
-    const CUBE: &str = "core-022"; // (3) 4/6, a Cry and a Death.
-    const MR_TOKEN: &str = "core-015"; // (1) 1/1, "Cry: Summon a Rush Token.": a Cry and no Death.
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself; a non-Unit
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // no Death.
+    const SAINTESS: &str = "core-081"; // Radiant Saintess: "Death: Make your other Units Radiant."
+    const CUBE: &str = "core-022"; // Carnivorous Cube: a Cry and a Death.
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: "Cry: Summon a Rush Token.": a Cry and no Death.
 
     fn holding(radiant: bool, graveyard: Value, field: Value) -> Scenario {
         crate::scenario(json!({

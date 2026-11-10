@@ -123,9 +123,9 @@ mod tests {
 
     const AUDIT: &str = "classicplus-045";
     const LOW: &str = "core-008"; // Mr. Vanilla
-    const HIGH: &str = "core-022"; // Carnivorous Cube, whose Death an exile never fires
+    const HIGH: &str = "core-022"; // Carnivorous Cube: whose Death an exile never fires
     const HIGH_TRAP: &str = "core-060"; // Bear Honeypot
-    const FIENDER: &str = "core-092"; // Felinor Fiender, Stack
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
     const FILLER: &str = "core-005";
     const ALL: &str = "All permanents";
     const THEIRS: &str = "Only your opponent's";

@@ -36,7 +36,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const CLEAVER: &str = "classic-073";
-    const VANILLA: &str = "core-008"; // 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const STOCKPILE: &str = "core-005";
 
     use crate::scenario;

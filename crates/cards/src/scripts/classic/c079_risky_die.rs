@@ -104,14 +104,14 @@ mod tests {
 
     const RISKY: &str = "classic-079";
     const MACHINE: &str = "classic-049"; // Anti-Greed Machine: players can't draw more than 1 card each turn.
-    const FILLER: &str = "core-010"; // (0) Spell
-    const STOCKPILE: &str = "core-005"; // (1) Spell
-    const ARMOR: &str = "core-073"; // (2) Field Spell
-    const MENACE: &str = "core-019"; // (3) Unit
-    const DIVIDEND: &str = "core-024"; // (X) Spell
-    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
-    const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: … Discard 1 random card.
-    const VANILLA: &str = "core-008"; // (1) Unit
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
+    const ARMOR: &str = "core-073"; // Anti-oneshot Armor: a Field Spell
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const DIVIDEND: &str = "core-024"; // Efficiency Dividend: a Spell
+    const SUPER_VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw
+    const HINDER: &str = "core-021"; // Hinder: Cast on draw: … Discard 1 random card.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
 
     use crate::scenario;
 

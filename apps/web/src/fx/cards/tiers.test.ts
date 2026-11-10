@@ -14,6 +14,9 @@
 // R3395001: a signature's ceiling counts its own beats: another signature's own entrance its play summons
 // (the MAGI's under Imitated Instrumentality, R3407000) is that card's, held to its own ceiling in its own
 // gallery play, and still to R200 by the test above.
+// R3402000: a later action of a gallery play (a Trap's firing, a trigger at a turn's end, an Activate on a later
+// click) comes in a game a turn or more after the play, so it is timed from its own start: R3399005's measure
+// does so, timing each own cue from the start of its own entry.
 
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -204,7 +207,7 @@ function othersEntrances(defId: string, planned: AnimationEntry, env: FxPlanEnv)
 }
 
 describe("R3332000 every signature keeps its loudness budget", () => {
-  it("R3332000 R3399005 each of a signature's own cues ends within its rarity's and type's ceiling of its entry's start, shakes within its type's, and its aura within AURA_SIGNATURE_MAX_INTENSITY", () => {
+  it("R3332000 R3399005 R3402000 each of a signature's own cues ends within its rarity's and type's ceiling of its entry's start, a later action's among them, shakes within its type's, and its aura within AURA_SIGNATURE_MAX_INTENSITY", () => {
     const view = fullBoardView();
     const signatures = [...FX_CARD_TABLE].filter(([, entry]) => isSignature(entry));
     expect(signatures.length).toBeGreaterThan(0);
@@ -231,7 +234,8 @@ describe("R3332000 every signature keeps its loudness budget", () => {
         env.memory.remember(entryPlanned.events);
         if (cuesOf(entryPlanned, env).length > 0) drawn = true;
         // Each own cue from the start of the entry it plays in: the shared rows of the card's text's events, in
-        // entries after its cast or its landing, count against no signature (R3399005).
+        // entries after its cast or its landing, count against no signature (R3399005); a later action's entries
+        // (R3402000) among them.
         const { entrance, rest } = ownCuesOf(entryPlanned, env);
         const beats: readonly (readonly [readonly FxCue[], number])[] = [
           [entrance, entranceCeiling],

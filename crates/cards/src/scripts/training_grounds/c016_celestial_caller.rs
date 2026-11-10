@@ -50,7 +50,7 @@ mod tests {
     const CALLER: &str = super::ID;
     const SUN: &str = super::SUN;
     const MOON: &str = super::MOON;
-    const BODY: &str = "core-008"; // Mr. Vanilla 4/4
+    const BODY: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
     fn caller(radiant: bool, field: Value) -> Scenario {

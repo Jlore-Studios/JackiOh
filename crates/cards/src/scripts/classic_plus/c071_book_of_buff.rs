@@ -53,10 +53,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BOOK: &str = "classicplus-071";
-    const UNIT: &str = "core-008"; // Mr. Vanilla 4/4.
-    const MENACE: &str = "core-019"; // Midrange Menace; Radiant it is Immutable.
-    const TRAP: &str = "core-041"; // Sheepish, set face-down.
-    const FIELD: &str = "core-006"; // Mana Well.
+    const UNIT: &str = "core-008"; // Mr. Vanilla
+    const MENACE: &str = "core-019"; // Midrange Menace: Radiant it is Immutable.
+    const TRAP: &str = "core-041"; // Sheepish: set face-down
+    const FIELD: &str = "core-006"; // Mana Well
     const FILLER: &str = "core-005";
 
     use crate::js;

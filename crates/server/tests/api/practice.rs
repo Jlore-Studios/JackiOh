@@ -1208,7 +1208,7 @@ async fn r1483000_the_open_seed_limit_refuses_without_insert_and_claim_or_expiry
         "nothing was issued"
     );
 
-    // A claim, paid or refused, burns its seed and frees its place.
+    // A claim settled, paid or refused, frees its place (R3500001).
     let setup = kept_setup(&app, &seeds[0]).await;
     let (log, _, _) = play(&seeds[0], &setup, Human::Concede);
     assert_eq!(
@@ -1281,6 +1281,91 @@ async fn r1483000_concurrent_seed_requests_never_exceed_the_open_limit() {
         fake_ref(&app).lock().await.tables.economy.practice_seeds.len(),
         PRACTICE_SEEDS_OPEN_MAX as usize
     );
+}
+
+#[tokio::test]
+async fn r3500001_a_claim_still_being_checked_keeps_its_place_among_the_open_seeds() {
+    let (app, token) = authed().await;
+    let mut claims = Vec::new();
+    for _ in 0..PRACTICE_SEEDS_OPEN_MAX {
+        let (seed, _) = issue(&app, &token).await;
+        let (log, _, _) = play(&seed, &kept_setup(&app, &seed).await, Human::Concede);
+        claims.push((seed, log));
+    }
+    let seeds_held =
+        |app: Arc<App>| async move { fake_ref(&app).lock().await.tables.economy.practice_seeds.len() };
+
+    // Every claim burns its seed and waits for a verification permit: none settles.
+    let held = app
+        .practice_verifications
+        .acquire_many(PRACTICE_VERIFY_CONCURRENCY as u32)
+        .await
+        .expect("the permits are open");
+    let waiting: Vec<_> = claims
+        .into_iter()
+        .map(|(seed, log)| {
+            let (app, token) = (app.clone(), token.clone());
+            tokio::spawn(async move { claim(&app, &token, &seed, "loss", &log).await })
+        })
+        .collect();
+    while *app.practice_settles.borrow() < PRACTICE_SEEDS_OPEN_MAX as usize {
+        tokio::task::yield_now().await;
+    }
+    // Burned, none is open to claim, yet each keeps its place: a burst of claims takes no new seed.
+    let (status, body) = request_seed(&app, &token).await;
+    assert_eq!(status, 409, "{body}");
+    assert_eq!(seeds_held(app.clone()).await, PRACTICE_SEEDS_OPEN_MAX as usize);
+    assert_unpaid(&app).await;
+
+    drop(held);
+    for waiting in waiting {
+        let answer = waiting.await.expect("the claim answers");
+        assert_eq!(answer["paid"], json!(true), "{answer}");
+    }
+    // Settled, they free their places.
+    let (status, body) = request_seed(&app, &token).await;
+    assert_eq!(status, 201, "{body}");
+}
+
+#[tokio::test]
+async fn r3500001_the_sweep_skips_a_claim_whose_settle_is_still_running() {
+    let logs = record_logs();
+    let (app, token) = authed().await;
+    let (seed, _) = issue(&app, &token).await;
+    let (log, _, _) = play(&seed, &kept_setup(&app, &seed).await, Human::Concede);
+    let xp = game_xp(GameMode::Practice, human_actions(&log), false);
+    let held = app
+        .practice_verifications
+        .acquire_many(PRACTICE_VERIFY_CONCURRENCY as u32)
+        .await
+        .expect("the permits are open");
+    let waiting = {
+        let (app, token, seed) = (app.clone(), token.clone(), seed.clone());
+        tokio::spawn(async move { claim(&app, &token, &seed, "loss", &log).await })
+    };
+    while *app.practice_settles.borrow() < 1 {
+        tokio::task::yield_now().await;
+    }
+
+    // Past its grace and still waiting for a permit, the claim is no lapsed one: the sweep takes
+    // none of it, where a second settle would wait for a permit as long as the first.
+    age_claim(&app, &seed).await;
+    let swept = tokio::time::timeout(Duration::from_secs(10), sweep(&app))
+        .await
+        .expect("the sweep skips the claim, so it waits for no permit");
+    assert_eq!(swept, Swept::default());
+    assert_unpaid(&app).await;
+
+    drop(held);
+    let answer = waiting.await.expect("the claim answers");
+    assert_eq!(answer["paid"], json!(true), "{answer}");
+    assert_paid(&app, &seed, JLORE_PRACTICE_LOSS, xp).await;
+    assert_eq!(
+        logs.named("practice.claim.verified").len(),
+        1,
+        "the claim's own check ran, and no sweep checked it again"
+    );
+    assert_eq!(sweep(&app).await, Swept::default());
 }
 
 // A seed given back (R2379000).

@@ -65,10 +65,10 @@ mod tests {
     use crate::filler;
 
     const AMPLIFIER: &str = "stinkyscape-038";
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const CLEAVER: &str = "classic-073"; // Nurse Cleaver 3/6, Rush, Cleave, Lifesteal.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+    const MENACE: &str = "core-019"; // Midrange Menace: a Unit, Taunt
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const CLEAVER: &str = "classic-073"; // Nurse Cleaver: Rush, Cleave, Lifesteal
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: Spell (§2.5).
 
     fn buffed_on(s: &Scenario, id: &str) -> usize {
         s.events()

@@ -100,13 +100,13 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const CURSE: &str = "classic-001";
-    const STOCKPILE: &str = "core-005"; // (1) Spell
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
-    const MR_TOKEN: &str = "core-015"; // (1) Unit 1/1: "Cry: Summon a Rush Token."
-    const SHEEPISH: &str = "core-041"; // (1) Trap
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy target Unit
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Unit Taunt
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: "Cry: Summon a Rush Token."
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
     const RUSH_TOKEN: &str = "core-t-rush";
 
     use crate::js;

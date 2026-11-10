@@ -82,7 +82,7 @@ mod tests {
         "classicplus-019-5",
     ];
     const MID: &str = "classicplus-019-3";
-    const BODY: &str = "core-008"; // 4/4
+    const BODY: &str = "stand-in (1) 4/4 R12/12";
     const CUBE: &str = "core-022";
     const HIT_JOB: &str = "core-016";
     const FILLER: &str = "core-005";

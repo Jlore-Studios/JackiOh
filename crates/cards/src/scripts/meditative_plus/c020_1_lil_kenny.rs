@@ -67,7 +67,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const COMPETITION: &str = "meditativeplus-020";
-    const SILENCE: &str = "classicplus-009"; // (0) Spell: Vanilla a Unit.
+    const SILENCE: &str = "classicplus-009"; // Silence: Vanilla a Unit.
     const FILLER: &str = "core-005";
 
     use KeywordKind::{Cleave, DivineShield, FirstStrike, Indestructible, Lifesteal, Rush};

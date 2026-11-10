@@ -6,6 +6,9 @@
 // backrow (a `summoned` into the backrow, R3407001's row). A row reads only the `defId` the event itself carries,
 // so a hidden play (R97's sentinel), a card set face down (its `formerId`, R227) and every other card sound
 // nothing more (R203).
+// R3402001: Core's ten Legendaries and Mythics sound theirs the same way, on their first beat: a Trap's on
+// its `trapFired` (its play is a face-down set, and a face-up Field Trap firing again reveals nothing,
+// R2657001), Core's two Field Spells' on their `cardPlayed`.
 // R3407001: Stinkyscape's 23 signature cards joined, one sound each, so that every card with a signature of
 // its own also sounds its own; a Field Spell lands face up in the backrow with a `summoned` of its own, the
 // moment its signature starts, so it sounds there (never on its `cardPlayed`, which would sound it twice),
@@ -17,10 +20,11 @@ import type { GameEvent, Row } from "@jackioh/shared";
 import { HIDDEN_DEF_ID } from "./constants.ts";
 import type { SfxId, SoundCue } from "./types.ts";
 
-/** A signature card's own sound and its moment: a Spell's play, or a Unit's or Field Spell's landing in its row. */
+/** A signature card's own sound and its moment: a Spell's play, a Unit's or Field Spell's landing in its row, or a Trap's firing. */
 export type SignatureSound =
   | { readonly sfx: SfxId; readonly on: "cardPlayed" }
-  | { readonly sfx: SfxId; readonly on: "summoned"; readonly row: Row };
+  | { readonly sfx: SfxId; readonly on: "summoned"; readonly row: Row }
+  | { readonly sfx: SfxId; readonly on: "trapFired" };
 
 /** Each signature card's own sound, and the event it sounds on. */
 export const SIGNATURE_SFX: Readonly<Record<string, SignatureSound>> = {
@@ -40,6 +44,17 @@ export const SIGNATURE_SFX: Readonly<Record<string, SignatureSound>> = {
   "traininggrounds-039-1": { sfx: "timberLash", on: "summoned", row: "units" },
   // Goetzmann Game Design: a pencil scratching, a napkin rustle, a rising arpeggio.
   "traininggrounds-040": { sfx: "pencilArpeggio", on: "cardPlayed" },
+  // R3402001: Core's ten.
+  "core-052": { sfx: "silasScratch", on: "summoned", row: "units" }, // Silly Silas
+  "core-083": { sfx: "crucibleChoir", on: "cardPlayed" }, // Transmogulate
+  "core-085": { sfx: "hatchWeld", on: "trapFired" }, // Unlicensed Experimentation
+  "core-087": { sfx: "pocketZip", on: "cardPlayed" }, // Pocket Chaos
+  "core-093": { sfx: "stadiumCheer", on: "cardPlayed" }, // Combo-Index
+  "core-095": { sfx: "jackpotReels", on: "cardPlayed" }, // Call to Chaos (Core Edition)
+  "core-096": { sfx: "pawnWaltz", on: "trapFired" }, // My Pawn
+  "core-097": { sfx: "wishWind", on: "cardPlayed" }, // Zephrys
+  "core-098": { sfx: "heroicFanfare", on: "cardPlayed" }, // Heroic Power
+  "core-099": { sfx: "forgeAnvil", on: "cardPlayed" }, // Craft a Card
   // R3407001: Stinkyscape.
   // MELCHIOR: a sterile beep count, a ballot clack, a rising tone.
   "stinkyscape-018-1": { sfx: "ballotBeep", on: "summoned", row: "backrow" },
@@ -206,8 +221,10 @@ const NONE: readonly SoundCue[] = [];
 
 /** R3400001, R3405000, R3407001: the signature sound `event` starts, or none: another event or row, another card, or a card the viewer cannot read. */
 export function signatureCues(event: GameEvent): readonly SoundCue[] {
-  if (event.type !== "cardPlayed" && event.type !== "summoned") return NONE;
-  if (event.defId === HIDDEN_DEF_ID || event.formerId !== undefined) return NONE;
+  if (event.type !== "cardPlayed" && event.type !== "summoned" && event.type !== "trapFired") return NONE;
+  if (event.defId === HIDDEN_DEF_ID) return NONE;
+  // R3402001: a firing again has sounded its signature already (R2657001); a set face down is a set (R227).
+  if (event.type === "trapFired" ? event.again === true : event.formerId !== undefined) return NONE;
   const own = Object.prototype.hasOwnProperty.call(SIGNATURE_SFX, event.defId) ? SIGNATURE_SFX[event.defId] : undefined;
   if (own === undefined || own.on !== event.type) return NONE;
   if (own.on === "summoned" && event.type === "summoned" && own.row !== event.row) return NONE;

@@ -26,11 +26,11 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MAGE: &str = "meditativeplus-008";
-    const LUNAR_ECLIPSE: &str = "core-035"; // (1) Spell: Deal 3 damage to a target.
-    const TRUE_STRIKE: &str = "core-044"; // (1) Spell, Pierce: 4 damage to a declared Unit or hero.
-    const ECHOES: &str = "core-040"; // Field Spell: start of turn, damage to the enemy hero = your exile count.
+    const LUNAR_ECLIPSE: &str = "core-035"; // Lunar Eclipse: Deal 3 damage to a target
+    const TRUE_STRIKE: &str = "core-044"; // True Strike: a Spell, Pierce: 4 damage to a declared Unit or hero.
+    const ECHOES: &str = "core-040"; // Echoes of the Forgotten: start of turn, damage to the enemy hero = your exile count
     const FILLER: &str = "core-005";
-    const TRAP: &str = "classic-052"; // (2) Trap: a lethal hit is canceled, then heal and draw.
+    const TRAP: &str = "classic-052"; // Final Gambit: a lethal hit is canceled, then heal and draw
 
     use crate::scenario;
 

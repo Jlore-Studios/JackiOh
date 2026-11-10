@@ -113,6 +113,7 @@ pub fn play_game(seed: &str, p1: &BotStrength, p2: &BotStrength) -> Option<Winne
                 rng,
                 budget: strength.budget,
                 should_stop: None,
+                wrap_up: None,
             };
             let style = AiStyle {
                 temperature: strength.temperature,

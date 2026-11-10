@@ -113,10 +113,10 @@ mod tests {
     const JUNGLE: &str = "classicplus-019-2";
     const BOT: &str = "classicplus-019-5";
     const TOP: &str = "classicplus-019-1";
-    const VANILLA: &str = "core-008"; // 4/4
-    const FELINORS: &str = "core-012"; // 3/4; seeded on the field, its Cry never fires (R1)
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FELINORS: &str = "core-012"; // Duplicating Felinors: seeded on the field, its Cry never fires (R1)
     const FIGHTER: &str = "classicplus-051"; // Jlockeed's J15 Fighter: Can't be attacked
-    const MROW: &str = "core-086"; // 1/1, Can't attack; Death: take control of the Unit that destroyed this
+    const MROW: &str = "core-086"; // "Miss" Mrow: Can't attack; Death: take control of the Unit that destroyed this
     const FILLER: &str = "core-005";
     const DECK: [&str; 6] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 
