@@ -1,55 +1,79 @@
-/* R3477000: the outcome an aimed attack's legal target wears (AttackOutcome.tsx).
+/* R3615000: the hovered attack's preview, one tentative hit marker on each card that takes it
+   (AttackOutcome.tsx), amending R3477000's chip.
 
-   It sits over the middle of its target, out of flow, so it moves nothing, and it shows only while an
-   attacker is picked or dragged. It is still: no animation. Its words carry the meaning, never color
-   alone: the minus sign for the blow, the arrow for the strike back, a skull for a kill and a
-   struck-through shield mark for a broken Divine Shield. */
+   Each marker reuses the real damage hit's design through a `data-tentative` modifier on the same
+   classes, never a copy of their rules into this sheet: the `fx-splat` starburst when effects are on
+   (`fx/fx.css` "splat: the damage starburst") and `.damage-pop` when they are off
+   (`game/animations.css`, `game/board.css`). What makes it clearly a preview: lowered opacity plus a
+   ghosted fill, and no animation, so it holds still while hovered (Reduce motion changes nothing, since
+   nothing moves). The `fx-layer` hides `.damage-pop` while effects are on (fx.css "the classic numbers
+   while effects are on"), and the preview renders only the splat then, so exactly one style of marker
+   is ever visible. Its words carry the meaning, never color alone: the minus sign for the blow and a
+   skull for a kill. */
 
-/* A card clips what overflows it (board.css), so on a narrow one the chip wraps between its parts
-   rather than past the card's edge: centered across the full width, never wider than its target. */
-.attack-outcome {
-  position: absolute;
-  inset-inline: 0;
-  top: 50%;
-  translate: 0 -50%;
-  z-index: var(--z-overlay);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  width: fit-content;
-  max-width: 100%;
-  margin-inline: auto;
-  gap: 0.3em;
-  padding: 0.05em 0.4em;
-  border: 1px solid color-mix(in srgb, var(--pal-slate-100) 70%, transparent);
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--pal-wood-900) 82%, transparent);
-  box-shadow: var(--shadow-1);
-  color: var(--pal-slate-100);
-  font-size: clamp(var(--type-3xs), var(--type-sm-em), var(--type-md));
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
-}
-
-.attack-outcome > span {
-  white-space: nowrap;
-}
-
-.attack-outcome-dealt {
-  color: var(--pal-gold-200);
-}
-
+.attack-outcome-target,
 .attack-outcome-taken {
-  color: var(--pal-red-300);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: var(--z-overlay);
+  /* The marker takes no click: a press on it belongs to the card under it. Out of flow, so nothing moves. */
+  pointer-events: none;
 }
 
-.attack-outcome-pops {
+/* The tentative starburst: the splat's own shape, size, font and placement, held still and ghosted. */
+.fx-splat[data-tentative="true"] {
+  margin: 0;
+  animation: none;
+  opacity: 0.55;
+  filter: saturate(0.35) brightness(1.3) drop-shadow(0 3px 2px rgb(0 0 0 / 55%));
+}
+
+/* The tentative number: `.damage-pop`'s own placement and type, held still, paler and ghosted. */
+.damage-pop[data-tentative="true"] {
+  animation: none;
+  opacity: 0.55;
+  color: color-mix(in srgb, var(--pal-red-400) 60%, white);
+  filter: saturate(0.4);
+}
+
+/* The skull on the card the forecast says is destroyed: a badge on the starburst's lower spikes, above
+   its fill (the splat paints at `z-index: 3`). In the number variant it rides inline after the amount. */
+.attack-outcome-skull {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: calc(-50% + 26px) calc(-50% + 24px);
+  z-index: 4;
+  font-size: var(--type-md);
+  line-height: 1;
+  color: white;
+  text-shadow:
+    0 0 1px black,
+    1px 1px 0 black,
+    -1px 1px 0 black,
+    1px -1px 0 black,
+    -1px -1px 0 black;
+}
+
+/* The struck-through Divine Shield mark when the blow pops one, on the starburst's upper spikes. */
+.attack-outcome-shield {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: calc(-50% + 24px) calc(-50% - 26px);
+  z-index: 4;
+  font-size: var(--type-xs);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--pal-slate-100);
   text-decoration: line-through;
+  text-shadow: 0 1px 2px var(--pal-black);
 }
 
-/* A DEF card is turned a quarter by its inline transform (Card.tsx); the chip turns back to read level. */
-.card[data-position="DEF"] > .attack-outcome {
+/* A DEF card is turned a quarter by its inline transform (Card.tsx); both markers turn back to read level. */
+.card[data-position="DEF"] > .attack-outcome-target,
+.card[data-position="DEF"] > .attack-outcome-taken {
   rotate: -90deg;
 }
