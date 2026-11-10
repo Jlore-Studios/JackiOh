@@ -139,8 +139,10 @@ pub const RUN_KEEP_MAX: usize = 5;
 /// is one the engine starts. A card a full deck would gain is not gained.
 pub const RUN_DECK_MAX: usize = LIBRARY_CAP as usize;
 
-/// DR7: a campfire's heal, in percent of the run's max HP.
-pub const RUN_CAMPFIRE_HEAL_PERCENT: i32 = 30;
+/// DR5/DR6: the max HP every won fight adds for the rest of the run, before refilling to the new max.
+pub const RUN_WIN_MAX_HP: i32 = 5;
+/// DR7: the max HP a campfire's rest adds for the rest of the run.
+pub const RUN_CAMPFIRE_MAX_HP: i32 = 5;
 /// DR7: the cards a campfire removes.
 pub const RUN_CAMPFIRE_REMOVE: usize = 2;
 /// DR7: the cards a shop sells.

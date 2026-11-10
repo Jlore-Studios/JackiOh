@@ -1,7 +1,10 @@
 //! DR14 part B on the real catalog: the run's content, a fight's setup and a fight's report.
 
 use super::*;
-use crate::config::{RUN_DECK_MAX, RUN_LOOMING_PRESENCE, RUN_OVERWHELMING_PRESENCE, RUN_STARTER_CARDS};
+use crate::config::{
+    RUN_CAMPFIRE_MAX_HP, RUN_DECK_MAX, RUN_LOOMING_PRESENCE, RUN_OVERWHELMING_PRESENCE, RUN_STARTER_CARDS,
+    RUN_WIN_MAX_HP,
+};
 use jackioh_engine::catalog::{deckable, registered_catalog};
 use jackioh_engine::config::{AI_DIFFICULTY, HUMAN_HANDICAP, Handicap, LIBRARY_CAP};
 use jackioh_engine::reduce::{begin_game, legal_actions, reduce, seat_to_act};
@@ -378,6 +381,7 @@ fn b11_a_level_costs_its_embers_until_the_ladders_top_and_the_constants_are_the_
             starter_artifacts_max: RUN_STARTER_ARTIFACTS_MAX,
             starter_artifact_points: RUN_STARTER_ARTIFACT_POINTS,
             tier_points: RUN_TIER_POINTS.to_vec(),
+            campfire_max_hp: RUN_CAMPFIRE_MAX_HP,
             campfire_remove: RUN_CAMPFIRE_REMOVE,
         }
     );
@@ -388,10 +392,26 @@ fn b11_a_level_costs_its_embers_until_the_ladders_top_and_the_constants_are_the_
         "starterArtifactsMax",
         "starterArtifactPoints",
         "tierPoints",
+        "campfireMaxHp",
         "campfireRemove",
     ] {
         assert!(json.get(key).is_some(), "{key}");
     }
+}
+
+#[test]
+fn r3584000_a_fights_setup_carries_the_runs_max_hp_past_hero_health() {
+    // R3584000: every fight's setup gives the human's hero health equal to the run's max HP, even
+    // past `HERO_HEALTH`, and the engine takes it (in-fight healing is uncapped for heroes).
+    use jackioh_engine::config::HERO_HEALTH;
+    let content = catalog_content();
+    let mut state = fight_at(&content, 0);
+    state.max_hp_bonus = RUN_WIN_MAX_HP;
+    state.hp = run_max_hp(&state, &content);
+    assert!(state.hp > HERO_HEALTH);
+    let setup = run_fight_setup(&state, &content).unwrap();
+    assert_eq!(setup.human_handicap.hero_health, Some(state.hp));
+    assert_eq!(engine_takes(&setup), Ok(()));
 }
 
 /// A fight's setup as the `createGame` options the caller builds from it.

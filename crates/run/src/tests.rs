@@ -36,7 +36,7 @@ fn won(hp: i32) -> RunAction {
 
 /// A player who always takes the first node, wins every fight at 20 HP, takes every artifact, opens
 /// the first pack and keeps its first cards, extracts the first card at a mini-boss and nothing at the
-/// final boss, leaves shops, heals at campfires, walks away from events and takes the first blessing.
+/// final boss, leaves shops, rests at campfires, walks away from events and takes the first blessing.
 fn autoplay(state: &RunState) -> RunAction {
     match &state.phase {
         RunPhase::Map => RunAction::Go { col: 0 },
@@ -51,7 +51,7 @@ fn autoplay(state: &RunState) -> RunAction {
         RunPhase::ExtractCard => RunAction::Extract { index: Some(0) },
         RunPhase::ExtractArtifact => RunAction::Extract { index: None },
         RunPhase::Shop { .. } => RunAction::Leave,
-        RunPhase::Campfire => RunAction::Heal,
+        RunPhase::Campfire => RunAction::GainMaxHp,
         RunPhase::Event { .. } => RunAction::Choose { index: 2 },
         RunPhase::Shrine { .. } => RunAction::Bless { index: Some(0) },
         RunPhase::Won | RunPhase::Dead => unreachable!("the run is over"),
@@ -263,6 +263,13 @@ fn a_run_played_to_the_end_wins_and_its_file_folds_back_to_the_same_state() {
     let (end, log) = play_out(&content, &setup);
     assert_eq!(end.phase, RunPhase::Won);
     assert_eq!(end.stats.fights_won, 16);
+    // R3584000: every won fight raised the max, and HP is refilled to it.
+    let rests = log.iter().filter(|a| **a == RunAction::GainMaxHp).count() as i32;
+    assert_eq!(
+        end.max_hp_bonus,
+        16 * RUN_WIN_MAX_HP + rests * RUN_CAMPFIRE_MAX_HP
+    );
+    assert_eq!(end.hp, run_max_hp(&end, &content));
     assert_eq!(end.stats.mini_bosses_won, 2);
     assert_eq!(end.stats.bosses_won, 1);
     assert_eq!(end.extracted_cards.len(), 2, "one card at each mini-boss");
@@ -304,6 +311,9 @@ fn the_final_boss_drop_cannot_be_extracted() {
 fn a_lost_fight_ends_the_run() {
     let content = content();
     let mut state = act(&start(&content), &content, RunAction::Go { col: 0 });
+    // R3584000: a bonus from a win earlier changes nothing about a loss.
+    state.max_hp_bonus = RUN_WIN_MAX_HP;
+    state.hp = run_max_hp(&state, &content);
     let lost = RunAction::FightOver {
         won: false,
         hp: 0,
@@ -314,6 +324,7 @@ fn a_lost_fight_ends_the_run() {
     };
     state = act(&state, &content, lost);
     assert_eq!(state.phase, RunPhase::Dead);
+    assert_eq!(state.hp, 0);
     assert!(run_reduce(&state, &content, &RunAction::Go { col: 0 }).is_err());
 }
 
@@ -499,15 +510,17 @@ fn the_artifact_comes_before_the_pack_and_greedy_keeps_one_more() {
 }
 
 #[test]
-fn a_campfire_heals_makes_radiant_buffs_or_removes_two() {
+fn a_campfire_gains_max_hp_makes_radiant_buffs_or_removes_two() {
     let content = content();
     let mut state = start(&content);
-    state.hp = 10;
     state.phase = RunPhase::Campfire;
-    assert_eq!(
-        act(&state, &content, RunAction::Heal).hp,
-        10 + RUN_MAX_HP * RUN_CAMPFIRE_HEAL_PERCENT / PERCENT
-    );
+    // HP outside a fight always equals the max, so the rise lands full; a rise is not healing.
+    let rested = act(&state, &content, RunAction::GainMaxHp);
+    assert_eq!(rested.max_hp_bonus, RUN_CAMPFIRE_MAX_HP);
+    assert_eq!(rested.hp, RUN_MAX_HP + RUN_CAMPFIRE_MAX_HP);
+    assert_eq!(rested.hp, run_max_hp(&rested, &content));
+    assert_eq!(rested.stats.healed, 0);
+    assert_eq!(rested.phase, RunPhase::Map);
     assert!(act(&state, &content, RunAction::MakeRadiant { index: 0 }).deck[0].radiant);
     assert_eq!(
         act(&state, &content, RunAction::Buff { index: 0 }).deck[0].buffs,
@@ -517,6 +530,102 @@ fn a_campfire_heals_makes_radiant_buffs_or_removes_two() {
     assert_eq!(removed.deck.len(), RUN_STARTER_SIZE - RUN_CAMPFIRE_REMOVE);
     assert!(!in_deck(&removed, &state.deck[0].id) && !in_deck(&removed, &state.deck[3].id));
     assert!(run_reduce(&state, &content, &RunAction::RemoveCards { indices: vec![1, 1] }).is_err());
+}
+
+#[test]
+fn r3584000_a_won_fight_of_each_kind_raises_max_hp_and_refills() {
+    // R3584000: a win of any kind adds `RUN_WIN_MAX_HP` for the rest of the run, then refills HP
+    // to the new max, whatever the hero's final health was; the fight's damage is the max before
+    // minus the final health, and the refill is not healing.
+    let content = content();
+    for kind in [
+        RunNodeKind::Fight,
+        RunNodeKind::Elite,
+        RunNodeKind::Ghost,
+        RunNodeKind::MiniBoss,
+        RunNodeKind::Boss,
+    ] {
+        let mut state = start(&content);
+        state.map[0][0].kind = kind;
+        let max_before = run_max_hp(&state, &content);
+        let reward = act(&fighting_on(&state, 0), &content, won(1));
+        assert_eq!(reward.max_hp_bonus, RUN_WIN_MAX_HP, "{kind:?}");
+        assert_eq!(reward.hp, max_before + RUN_WIN_MAX_HP, "{kind:?}");
+        assert_eq!(reward.hp, run_max_hp(&reward, &content), "{kind:?}");
+        assert_eq!(reward.stats.damage_taken, max_before - 1, "{kind:?}");
+        assert_eq!(reward.stats.healed, 0, "{kind:?}");
+    }
+}
+
+#[test]
+fn r3584000_a_second_win_stacks_on_the_first() {
+    // R3584000: each win adds its own `RUN_WIN_MAX_HP`.
+    let content = content();
+    let state = start(&content);
+    let row: usize = (0..state.map.len())
+        .filter(|r| state.map[*r][0].kind == RunNodeKind::Fight)
+        .nth(1)
+        .expect("a second fight row");
+    let once = act(&fighting_on(&state, 0), &content, won(1));
+    let twice = act(&fighting_on(&once, row), &content, won(1));
+    assert_eq!(twice.max_hp_bonus, 2 * RUN_WIN_MAX_HP);
+    assert_eq!(twice.hp, run_max_hp(&twice, &content));
+    assert_eq!(twice.hp, RUN_MAX_HP + 2 * RUN_WIN_MAX_HP);
+}
+
+#[test]
+fn r3584000_a_relic_or_blessing_max_hp_effect_stacks_on_the_bonus_once_per_level() {
+    // R3584000: `run_max_hp` is `RUN_MAX_HP`, plus the run's own bonus, plus the max-HP effects
+    // held; an artifact's counts once per level, a blessing's once.
+    let content = content();
+    let mut state = start(&content);
+    state.max_hp_bonus = RUN_WIN_MAX_HP;
+    assert_eq!(run_max_hp(&state, &content), RUN_MAX_HP + RUN_WIN_MAX_HP);
+    hold(&mut state, "temp-big-heart");
+    assert_eq!(run_max_hp(&state, &content), RUN_MAX_HP + RUN_WIN_MAX_HP + 5);
+    state.artifacts[1].level = 2;
+    assert_eq!(run_max_hp(&state, &content), RUN_MAX_HP + RUN_WIN_MAX_HP + 10);
+    state.blessings.push("temp-blessing-vitality".into());
+    assert_eq!(run_max_hp(&state, &content), RUN_MAX_HP + RUN_WIN_MAX_HP + 20);
+}
+
+#[test]
+fn r3584001_an_event_option_trades_max_hp_and_hp_follows_it() {
+    // R3584001: "Lose 5 max HP for 50 Coins" lowers the max by 5, and HP with it.
+    let content = content();
+    let mut state = start(&content);
+    state.phase = RunPhase::Event {
+        id: "temp-event-stranger".into(),
+    };
+    let max_before = run_max_hp(&state, &content);
+    let after = act(&state, &content, RunAction::Choose { index: 1 });
+    assert_eq!(after.max_hp_bonus, -5);
+    assert_eq!(after.hp, max_before - 5);
+    assert_eq!(after.hp, run_max_hp(&after, &content));
+    assert_eq!(after.coins, 50);
+    assert_eq!(after.stats.damage_taken, 5);
+    assert_eq!(after.stats.healed, 0);
+    assert_eq!(after.phase, RunPhase::Map);
+}
+
+#[test]
+fn r3584001_an_event_refused_below_one_max_hp_leaves_the_state_unchanged() {
+    // R3584001: an option that would leave max HP below 1 is refused, the state unchanged.
+    let content = content();
+    let mut state = start(&content);
+    for _ in 0..5 {
+        state.phase = RunPhase::Event {
+            id: "temp-event-stranger".into(),
+        };
+        state = act(&state, &content, RunAction::Choose { index: 1 });
+    }
+    assert_eq!(run_max_hp(&state, &content), RUN_MAX_HP - 25);
+    assert_eq!(state.hp, RUN_MAX_HP - 25);
+    state.phase = RunPhase::Event {
+        id: "temp-event-stranger".into(),
+    };
+    let err = run_reduce(&state, &content, &RunAction::Choose { index: 1 }).unwrap_err();
+    assert!(err.contains("not enough max HP"), "{err}");
 }
 
 #[test]

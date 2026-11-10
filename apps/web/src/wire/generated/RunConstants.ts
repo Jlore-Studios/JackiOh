@@ -27,6 +27,10 @@ starterArtifactPoints: number,
  */
 tierPoints: Array<[RunTier, number]>, 
 /**
+ * `RUN_CAMPFIRE_MAX_HP`: the max HP a campfire's rest adds.
+ */
+campfireMaxHp: number, 
+/**
  * `RUN_CAMPFIRE_REMOVE`: the cards a campfire removes.
  */
 campfireRemove: number, };

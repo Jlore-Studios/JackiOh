@@ -16,7 +16,7 @@ import type {
   RunUnlocks,
 } from "@jackioh/run";
 
-/** DR3's ladder, its 10 cards and its 3 artifacts worth 8 points, the five tiers' points and a campfire's two cards. */
+/** DR3's ladder, its 10 cards and its 3 artifacts worth 8 points, the five tiers' points, a campfire's max HP and its two cards. */
 export const CONSTANTS: RunConstants = {
   slotLadder: [
     [5, 4, 0, 0, 0, 1],
@@ -36,7 +36,8 @@ export const CONSTANTS: RunConstants = {
     ["platinum", 4],
     ["diamond", 5],
   ],
-  // A campfire removes two cards.
+  // A campfire adds 5 max HP and removes two cards.
+  campfireMaxHp: 5,
   campfireRemove: 2,
 };
 
@@ -140,6 +141,7 @@ export function runState(over: Partial<RunState> = {}): RunState {
     row: null,
     col: 0,
     hp: 30,
+    maxHpBonus: 0,
     deck: [],
     artifacts: [],
     blessings: [],
