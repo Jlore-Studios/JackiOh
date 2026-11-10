@@ -17024,15 +17024,16 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-8",
       "queued_at": "2026-11-10T07:16:46Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "42774787840",
+      "run_id": "pending:eed93ff1-1794317698",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 190,
-      "started_at": "2026-11-10T07:21:59Z",
+      "started_at": "2026-11-10T13:36:03Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18220,9 +18221,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T13:34:42Z",
+    "at": "2026-11-10T13:36:03Z",
     "url": "",
-    "what": "revise #3626 on muse"
+    "what": "spot-check #3627 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-10T13:11:33Z",
@@ -36903,7 +36904,15 @@
         "n": 190,
         "pr": 3627,
         "queued_at": "2026-11-10T13:32:41Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:eed93ff1-1794317698",
         "sha": "e8580b25bda38b9729a6acb6d85f788edaef2c5b",
+        "started_at": "2026-11-10T13:36:03Z",
         "status": "queued",
         "title": "Patch: every Classic Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
         "tries": 0
