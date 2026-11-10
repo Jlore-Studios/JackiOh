@@ -13,12 +13,16 @@ Every value is a constant of `crates/run/src/config.rs`. One the plan marks a st
 | Constant | What it holds | Where |
 | --- | --- | --- |
 | `RUN_SEED_LENGTH` | The letters of a seed | [[§15.2]] |
-| `RUN_ACT_FIGHTS` | The fights before each act's boss | [[§15.5]] |
-| `RUN_ROW_WIDTH_MIN` | The fewest nodes a row of the map offers | [[§15.5]] |
-| `RUN_ROW_WIDTH_MAX` | The most nodes a row of the map offers | [[§15.5]] |
+| `RUN_ACTS` | The map's acts, each ending at its boss's row: a mini-boss's, then the final boss's for the last | [[§15.5]] |
+| `RUN_ACT_ROWS` | The rows of nodes in each act before its boss's row; a strawman | [[§15.5]] |
+| `RUN_MAP_COLUMNS` | The columns of the grid the map's rows lie on; a strawman | [[§15.5]] |
+| `RUN_MAP_PATHS` | The seeded walks up each act, each from its own column of the act's first row; a strawman | [[§15.5]] |
+| `RUN_ROUTE_FIGHTS_MIN` | The fewest fights on any route from a start to the final boss, the bosses counted | [[§15.5]] |
+| `RUN_ROUTE_FIGHTS_MAX` | The most fights on any route from a start to the final boss, the bosses counted | [[§15.5]] |
+| `RUN_ROUTE_TILES_MIN` | The fewest tiles on any route from a start to the final boss | [[§15.5]] |
 | `RUN_ELITE_PERCENT` | The chance, in percent, that a fight node of the map is an elite | [[§15.5]] |
 | `RUN_GHOST_PERCENT` | The chance, in percent, that a fight node that is no elite is a ghost | [[§15.5]] |
-| `RUN_TILE_WEIGHTS` | The weights of the tiles a row between two fight rows deals; a campfire also always stands on the row before each boss | [[§15.5]] |
+| `RUN_TILE_WEIGHTS` | The weights of a tile node's kind | [[§15.5]] |
 | `RUN_STARTER_SIZE` | The cards of a starting deck, at every level | [[§15.3]] |
 | `RUN_SLOT_LADDER` | The starting deck's slots at each level, from level 1, as counts of Common, Rare, Epic, Legendary, Mythic and Anything slots, each row holding `RUN_STARTER_SIZE`; a strawman | [[§15.3]] |
 | `RUN_STARTER_CARDS` | The cards any starting deck may hold before anything is extracted; placeholders until the designer's list, the Training Grounds Commons and Rares with the fewest script lines, in catalog order, the first `RUN_STARTER_SIZE` fitting level 1's slots | [[§15.3]] |
@@ -152,17 +156,21 @@ A few artifacts start unlocked (the content's starters). Final bosses unlock the
 
 ### 15.5 The map
 
-One act per entry of `RUN_ACT_FIGHTS`; the entry is the act's fights before its boss.
+The map is `RUN_ACTS` acts. Each act is `RUN_ACT_ROWS` rows of nodes, then its boss's row of one node: a mini-boss for each act but the last, the final boss for the last.
 
-An act is its fight rows with a tile row between each two, then a row of one campfire, then its boss's row. Each act but the last ends at a mini-boss; the last ends at the final boss.
+The rows lie on a grid `RUN_MAP_COLUMNS` wide. `RUN_MAP_PATHS` seeded walks go up each act, each from a column of its own on the act's first row. Each step goes to the column left, the same or right, never across an edge an earlier walk took. Every node a walk visits is kept with every edge it takes, so the paths split and merge ([[R3583000]]).
 
-Fight and tile rows hold `RUN_ROW_WIDTH_MIN` to `RUN_ROW_WIDTH_MAX` nodes.
+A boss stands on the middle column. Every node of its act's last row leads to it, and a mini-boss leads to every node of the next act's first row. Those fans are the only edges wider than a column, and every route passes both mini-bosses and the final boss.
 
-A fight node is an Elite at `RUN_ELITE_PERCENT`, else a Ghost at `RUN_GHOST_PERCENT`, else a Fight. A tile is a Shop, Campfire, Event, Chest or Shrine, by `RUN_TILE_WEIGHTS`.
+Before the first step the player steps onto any node of the first row. After it, only a node of the next row that the node stood on leads to may be chosen; any other step is refused, the run unchanged ([[R3583000]]).
 
-The whole map (enemies, decks, bosses' drops, events) is dealt at the start, and the whole act ahead is shown.
+The first row's nodes are all fights, so a run opens on one. A fight node is an Elite at `RUN_ELITE_PERCENT`, else a Ghost at `RUN_GHOST_PERCENT`, else a Fight. A tile is a Shop, Campfire, Event, Chest or Shrine, by `RUN_TILE_WEIGHTS`. A row may mix fights and tiles.
 
-The player steps onto any node of the next row.
+Every route from a start to the final boss holds `RUN_ROUTE_FIGHTS_MIN` to `RUN_ROUTE_FIGHTS_MAX` fights, the bosses counted, and at least `RUN_ROUTE_TILES_MIN` tiles. The deal holds the bounds for every route, not on average ([[R3583001]]). A route with fewer fights is the fast way, one with more the slow way.
+
+The whole map (its paths, enemies, decks, bosses' drops and events) is dealt at the start from the seed, and the whole of it is shown.
+
+A run kept from before the map had paths is folded on the map its seed deals today. It ends lost at its first refused step and still banks what it had extracted ([[R3496000]]); one whose every step that map accepts plays on.
 
 Between fights the top bar shows HP, Coins, Tickets, the deck's size, the relics held and the score, and a Your run panel lists the deck (Radiant and buffed cards marked), the relics and blessings held with their text, the curses taken with their names and text, and the seed, which can be copied.
 
@@ -286,7 +294,7 @@ Today, beating the final boss ends the run, won.
 
 The designer's content replaces the placeholders.
 
-**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill, from level 1 with no artifact or curse unless `--level`, `--artifacts` and `--curses` set them (each refused when the content lacks it), and prints each kind of fight's and each act's win rate, HP cost and turns, the max HP at each boss, the rows reached, the score by term (rows, wins, damage, healing, cards drawn, and what the boss percents and the curse percent add) and the Embers (#3065, #3481): a guide to tuning the strawmen, not a target.
+**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill, from level 1 with no artifact or curse unless `--level`, `--artifacts` and `--curses` set them (each refused when the content lacks it), and prints each kind of fight's and each act's win rate, HP cost and turns, the max HP at each boss, the rows reached, the fights on each run's route, the score by term (rows, wins, damage, healing, cards drawn, and what the boss percents and the curse percent add) and the Embers (#3065, #3481): a guide to tuning the strawmen, not a target.
 
 ### 15.13 Open questions
 

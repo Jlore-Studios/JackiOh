@@ -34,12 +34,14 @@ fn won(hp: i32) -> RunAction {
     }
 }
 
-/// A player who always takes the first node, wins every fight at 20 HP, takes every artifact, opens
+/// A player who always takes the first node it may step onto, wins every fight at 20 HP, takes every artifact, opens
 /// the first pack and keeps its first cards, extracts the first card at a mini-boss and nothing at the
 /// final boss, leaves shops, rests at campfires, walks away from events and takes the first blessing.
 fn autoplay(state: &RunState) -> RunAction {
     match &state.phase {
-        RunPhase::Map => RunAction::Go { col: 0 },
+        RunPhase::Map => RunAction::Go {
+            col: run_next_cols(state)[0],
+        },
         RunPhase::Fight => won(20),
         RunPhase::Reward {
             artifact: Some(_), ..
@@ -92,21 +94,21 @@ fn a_seed_is_six_capital_letters_and_the_daily_one_is_the_same_for_everyone() {
 }
 
 #[test]
-fn the_map_holds_sixteen_fights_three_of_them_bosses_each_after_a_campfire() {
+fn the_map_holds_three_acts_each_ending_at_a_lone_boss_with_its_drop() {
     let content = content();
     let state = start(&content);
-    assert_eq!(state.map.iter().filter(|row| row[0].kind.is_fight()).count(), 16);
+    assert_eq!(state.map.len(), RUN_ACTS * (RUN_ACT_ROWS + 1));
     let bosses: Vec<usize> = (0..state.map.len())
-        .filter(|r| state.map[*r][0].kind.is_boss())
+        .filter(|r| state.map[*r].iter().any(|node| node.kind.is_boss()))
         .collect();
-    assert_eq!(bosses.len(), 3);
-    assert_eq!(state.map[bosses[2]][0].kind, RunNodeKind::Boss);
-    assert_eq!(
-        state.map[bosses[2]][0].artifact.as_deref(),
-        Some("temp-final-relic")
-    );
+    let expected: Vec<usize> = (0..RUN_ACTS).map(|a| (a + 1) * (RUN_ACT_ROWS + 1) - 1).collect();
+    assert_eq!(bosses, expected);
+    let last = bosses[RUN_ACTS - 1];
+    assert_eq!(state.map[last].len(), 1);
+    assert_eq!(state.map[last][0].kind, RunNodeKind::Boss);
+    assert_eq!(state.map[last][0].artifact.as_deref(), Some("temp-final-relic"));
     for r in bosses {
-        assert_eq!(state.map[r - 1][0].kind, RunNodeKind::Campfire);
+        assert_eq!(state.map[r].len(), 1, "row {r} holds its boss alone");
         let drop = state.map[r][0]
             .artifact
             .as_deref()
@@ -262,12 +264,16 @@ fn a_run_played_to_the_end_wins_and_its_file_folds_back_to_the_same_state() {
     let setup = setup(&content);
     let (end, log) = play_out(&content, &setup);
     assert_eq!(end.phase, RunPhase::Won);
-    assert_eq!(end.stats.fights_won, 16);
+    assert!(
+        (RUN_ROUTE_FIGHTS_MIN..=RUN_ROUTE_FIGHTS_MAX).contains(&end.stats.fights_won),
+        "R3583001: {} fights on the route",
+        end.stats.fights_won
+    );
     // R3584000: every won fight raised the max, and HP is refilled to it.
     let rests = log.iter().filter(|a| **a == RunAction::GainMaxHp).count() as i32;
     assert_eq!(
         end.max_hp_bonus,
-        16 * RUN_WIN_MAX_HP + rests * RUN_CAMPFIRE_MAX_HP
+        end.stats.fights_won * RUN_WIN_MAX_HP + rests * RUN_CAMPFIRE_MAX_HP
     );
     assert_eq!(end.hp, run_max_hp(&end, &content));
     assert_eq!(end.stats.mini_bosses_won, 2);
@@ -351,6 +357,90 @@ fn a_lost_fight_ends_the_run() {
     assert_eq!(state.phase, RunPhase::Dead);
     assert_eq!(state.hp, 0);
     assert!(run_reduce(&state, &content, &RunAction::Go { col: 0 }).is_err());
+}
+
+/// `state` played on by `autoplay` until it is back on the map.
+fn back_on_the_map(state: &RunState, content: &RunContent) -> RunState {
+    let mut state = state.clone();
+    while state.phase != RunPhase::Map {
+        let action = autoplay(&state);
+        state = act(&state, content, action);
+    }
+    state
+}
+
+#[test]
+fn r3583000_go_steps_only_onto_a_node_the_one_stood_on_leads_to() {
+    let content = content();
+    let state = start(&content);
+    assert_eq!(
+        run_next_cols(&state),
+        (0..state.map[0].len()).collect::<Vec<_>>(),
+        "any start before the first step"
+    );
+    let (mut accepted, mut refused) = (false, false);
+    for col in 0..state.map[0].len() {
+        let at = back_on_the_map(&act(&state, &content, RunAction::Go { col }), &content);
+        assert_eq!((at.row, at.col), (Some(0), col));
+        let next = &at.map[0][col].next;
+        assert_eq!(&run_next_cols(&at), next);
+        for to in 0..at.map[1].len() {
+            match run_reduce(&at, &content, &RunAction::Go { col: to }) {
+                Ok(after) => {
+                    assert!(next.contains(&to), "({col}) -> {to} is no edge");
+                    assert_eq!((after.row, after.col), (Some(1), to));
+                    accepted = true;
+                }
+                Err(error) => {
+                    assert!(!next.contains(&to), "({col}) -> {to} is an edge");
+                    assert_eq!(error, "no path leads there from here");
+                    refused = true;
+                }
+            }
+        }
+    }
+    assert!(accepted && refused);
+}
+
+#[test]
+fn r3583000_a_mini_boss_leads_to_every_node_of_the_next_acts_first_row() {
+    let content = content();
+    let state = start(&content);
+    let row = mini_boss_rows(&state)[0];
+    let at = back_on_the_map(&act(&fighting_on(&state, row), &content, won(20)), &content);
+    let first: Vec<usize> = (0..at.map[row + 1].len()).collect();
+    assert_eq!(first.len(), RUN_MAP_PATHS);
+    assert_eq!(run_next_cols(&at), first);
+    for col in first {
+        let after = act(&at, &content, RunAction::Go { col });
+        assert_eq!((after.row, after.col), (Some(row + 1), col));
+    }
+}
+
+#[test]
+fn r3583000_a_log_stepping_off_the_paths_does_not_fold() {
+    let content = content();
+    let mut state = start(&content);
+    let mut log = Vec::new();
+    while log.is_empty() || state.phase != RunPhase::Map {
+        let action = autoplay(&state);
+        state = act(&state, &content, action.clone());
+        log.push(action);
+    }
+    let off = (0..state.map[1].len())
+        .find(|col| !run_next_cols(&state).contains(col))
+        .expect("a node of the second row the first step does not lead to");
+    log.push(RunAction::Go { col: off });
+    let step = log.len() - 1;
+    let file = RunFile {
+        setup: setup(&content),
+        unlocks: RunUnlocks::default(),
+        log,
+    };
+    assert_eq!(
+        run_fold(&file, &content),
+        Err(format!("step {step}: no path leads there from here"))
+    );
 }
 
 /// The map's mini-boss rows, the first act's first.
@@ -970,20 +1060,6 @@ fn a_weighted_draw_gives_each_item_its_own_span_of_rolls() {
     }
 }
 
-/// §15.5: fight and tile rows hold `RUN_ROW_WIDTH_MIN` to `RUN_ROW_WIDTH_MAX` nodes, and each width
-/// comes up.
-#[test]
-fn a_row_holds_the_fewest_to_the_most_nodes() {
-    let widths: Vec<i32> = (0..256)
-        .map(|cursor| row_width(&mut Rng::new("width", cursor)))
-        .collect();
-    let range = RUN_ROW_WIDTH_MIN..=RUN_ROW_WIDTH_MAX;
-    assert!(widths.iter().all(|w| range.contains(w)), "{widths:?}");
-    for width in range {
-        assert!(widths.contains(&width), "width {width} came up");
-    }
-}
-
 /// §15.5: a fight node is an Elite when its first roll is under `RUN_ELITE_PERCENT`, else a Ghost
 /// when its second is under `RUN_GHOST_PERCENT`, else a Fight: a roll at either percent is not under
 /// it.
@@ -1048,6 +1124,8 @@ fn a_chest_pays_its_coins_and_tickets_and_the_stats_count_them() {
         enemy: None,
         event: None,
         artifact: None,
+        column: 0,
+        next: Vec::new(),
     }];
     let opened = act(&state, &content, RunAction::Go { col: 0 });
     assert_eq!(
@@ -1437,6 +1515,8 @@ fn a_shrine_offers_only_blessings_not_held_and_the_stats_count_nodes_events_and_
         enemy: None,
         event,
         artifact: None,
+        column: 0,
+        next: Vec::new(),
     };
     state.map[0] = vec![tile(RunNodeKind::Shrine, None)];
     let shrine = act(&state, &content, RunAction::Go { col: 0 });
@@ -1470,6 +1550,8 @@ fn a_chest_holds_a_relic_on_a_roll_under_its_percent_not_at_it() {
         enemy: None,
         event: None,
         artifact: None,
+        column: 0,
+        next: Vec::new(),
     }];
     let relics_at = |roll: i32| {
         let mut at = state.clone();

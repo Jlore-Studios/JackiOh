@@ -10,18 +10,25 @@ use crate::{RunByFight, RunNodeKind, RunTier};
 /// DR2: the letters of a seed.
 pub const RUN_SEED_LENGTH: usize = 6;
 
-/// DR4: the fights before each act's boss. With the 2 mini-bosses and the final boss, 16 fights.
-pub const RUN_ACT_FIGHTS: [usize; 3] = [5, 4, 4];
-/// DR4: the fewest nodes a row of the map offers.
-pub const RUN_ROW_WIDTH_MIN: i32 = 2;
-/// DR4: the most nodes a row of the map offers.
-pub const RUN_ROW_WIDTH_MAX: i32 = 3;
+/// DR4: the map's acts, each ending at its boss's row: a mini-boss's, then the final boss's for the last.
+pub const RUN_ACTS: usize = 3;
+/// DR4, a strawman: the rows of nodes in each act before its boss's row.
+pub const RUN_ACT_ROWS: usize = 7;
+/// DR4, a strawman: the columns of the grid the map's rows lie on.
+pub const RUN_MAP_COLUMNS: usize = 7;
+/// DR4, a strawman: the seeded walks up each act, each from its own column of the act's first row.
+pub const RUN_MAP_PATHS: usize = 6;
+/// DR4: the fewest fights on any route from a start to the final boss, the bosses counted.
+pub const RUN_ROUTE_FIGHTS_MIN: i32 = 12;
+/// DR4: the most fights on any route from a start to the final boss, the bosses counted.
+pub const RUN_ROUTE_FIGHTS_MAX: i32 = 16;
+/// DR4: the fewest tiles on any route from a start to the final boss.
+pub const RUN_ROUTE_TILES_MIN: i32 = 8;
 /// DR4: the chance, in percent, that a fight node of the map is an elite.
 pub const RUN_ELITE_PERCENT: i32 = 30;
 /// DR5: the chance, in percent, that a fight node that is no elite is a ghost.
 pub const RUN_GHOST_PERCENT: i32 = 10;
-/// DR4, DR7: the weights of the tiles a row between two fight rows deals. A campfire also always stands
-/// on the row before each boss.
+/// DR4, DR7: the weights of a tile node's kind.
 pub const RUN_TILE_WEIGHTS: [(RunNodeKind, i32); 5] = [
     (RunNodeKind::Shop, 2),
     (RunNodeKind::Campfire, 2),
@@ -283,7 +290,7 @@ pub const WALK_WAY_ON_PERCENT: i32 = 10;
 /// Tests only: the percent of a walk's fights lost, so losses and dead runs stay covered.
 #[cfg(test)]
 pub const WALK_LOSS_PERCENT: i32 = 10;
-/// Tests only: the steps before a walk is a loop: the map is 29 rows, and every shop stay spends
+/// Tests only: the steps before a walk is a loop: the map is 24 rows, and every shop stay spends
 /// stock or funds, so only a real loop reaches it.
 #[cfg(test)]
 pub const WALK_MAX_STEPS: usize = 5000;
@@ -299,3 +306,6 @@ pub const WALK_DRAWN_MAX: i32 = 15;
 /// Tests only: the most turns a walk's random fight report lasts.
 #[cfg(test)]
 pub const WALK_TURNS_MAX: i32 = 12;
+/// Tests only: the seeds `map_tests` deals a map from on each content (R3583000, R3583001).
+#[cfg(test)]
+pub const MAP_SEEDS: usize = 200;
