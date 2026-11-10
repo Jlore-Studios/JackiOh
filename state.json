@@ -20378,9 +20378,9 @@
       "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-1",
-      "run_id": "42786605664",
+      "run_id": "pending:c7ab5bbe-1794306458",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-10T08:56:43Z",
+      "started_at": "2026-11-10T10:28:44Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -20783,9 +20783,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T10:27:22Z",
+    "at": "2026-11-10T10:28:44Z",
     "url": "",
-    "what": "revise #3623 on muse"
+    "what": "build #3630 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-10T09:39:46Z",
