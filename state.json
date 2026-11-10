@@ -18903,15 +18903,8 @@
       "verdict_rounds": 1
     },
     "3583": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42799671420",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-10T11:05:37Z",
-        "until": "2026-11-10T11:35:37Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -18923,10 +18916,9 @@
         "reason": "planned on opus",
         "trail": "ll | head -20; gre\u2026\n- Bash: {\"command\": \"grep -rln \\\"15-dungeon-run\\\\|RUN_SEED_LENGTH\\\" crates/ --include=*.rs | head; grep -rn \\\"15-dungeon-run\\\" crates --include=*.rs | head -5\", \"description\": \"Find the constants-table test\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3583/crates/tools/tests/acceptance.rs\", \"offset\": 1830, \"limit\": 70}\n- Bash: {\"command\": \"cat crates/run/clippy.toml | head -40; grep -n \\\"pub fn\\\" crates/engine/src/rng.rs\", \"description\": \"Check purity lint and Rng API\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3583/crates/engine/src/rng.rs\", \"offset\": 55, \"limit\": 40}\n- Bash: {\"command\": \"sed -n 255,335p crates/run/src/tests.rs; grep -n \\\"Go {\\\\|map\\\\[\\\\|\\\\.map\\\\.\\\\|row\\\" crates/run/src/fight_tests.rs | head -40\", \"description\": \"Read run tests' walk-dependent parts\"}\n- Bash: {\"command\": \"sed -n 1,60p crates/run/src/fight_tests.rs; sed -n 215,240p crates/run/src/fight_tests.rs; grep -n \\\"fighting(\\\\|fn known_fight\\\\|first_fight\\\\|stepped(\\\" crates/run/src/fight_tests.rs |\u2026\n- Bash: {\"command\": \"grep -rn \\\"jackioh-run\\\\|jackioh-shared\\\" --include=Cargo.toml . | grep -v \\\"^./target\\\" ; grep -n \\\"ts\\\" crates/run/Cargo.toml\", \"description\": \"Check which crates enable run's ts featu\u2026\n- Bash: {\"command\": \"grep -n \\\"run-sim\\\" crates/tools/README.md | head; grep -n \\\"Refusal\\\\|refusal\\\" apps/web/WRITING.md | head -5\", \"description\": \"Check tools README run-sim entry and WRITING refusals\"}\n- Bash: {\"command\": \"git show --stat 4de1c24711 | head -40; ls patches 2>/dev/null | head; ls | head -50\", \"description\": \"See files a recent dungeon patch touched\"}\n- Bash: {\"command\": \"git log --format='%h %s' -6 -- crates/run/src/lib.rs; git show --stat $(git log --format=%h -1 -- crates/run/src/lib.rs) | tail -30\", \"description\": \"See recent run crate commits' files\"}\n- Bash: {\"command\": \"grep -n \\\"fn config_constants\\\" -A 22 crates/tools/tests/acceptance.rs\", \"description\": \"Read config_constants parser\"}\n- Bash: {\"command\": \"grep -n \\\"unread_constants(\\\" -B 3 -A 12 crates/tools/tests/acceptance.rs | grep -n \\\"run\\\\|readers\\\\|fn \\\" | head -20\", \"description\": \"Check unread-constants test readers for run\"}\n- Bash: {\"command\": \"grep -n \\\"MapScreen\\\\|isBoss\\\\|Act\\\\b\\\\|act \\\" apps/web/src/dungeon/map/RunScreen.tsx apps/web/src/dungeon/map/RunDisplay.tsx | head; grep -rn \\\"You are here\\\\|{node} {col}\\\" apps/web/sr\u2026\n- Bash: {\"command\": \"grep -n \\\"RunNode\\\\|pub map\\\\|map: Vec\\\" docs/dungeon-run.md | head; sed -n 246,262p docs/dungeon-run.md\", \"description\": \"Check frozen surface for RunNode\"}\n- Bash: {\"command\": \"grep -m1 \\\"^name\\\" crates/wasm/core/Cargo.toml crates/wasm/c/Cargo.toml crates/wasm/Cargo.toml crates/tools/Cargo.toml; grep -n \\\"\\\\[\\\\[bin\\\\]\\\\]\\\" -A2 crates/tools/Cargo.toml | head; gr\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3583/.bot-plan.md\", \"content\": \"# Draft plan for #3583 (planner's notes)\\n\\n## Found\\n- deal_map/row_width in crates/run/src/lib.rs:1049-1090; Go in a\u2026\n- Bash: {\"command\": \"grep -rn \\\"RunNode {\\\" crates --include=*.rs | grep -v \\\"RunNodeKind\\\"; grep -n \\\"WALK_MAX_STEPS\\\\|29 rows\\\" crates/run/src/config.rs\", \"description\": \"Find RunNode struct literals\"}\n- Bash: {\"command\": \"mkdir -p /tmp/proto3583 && cat > /tmp/proto3583/sim.py <<'EOF'\\nimport random\\nACTS, ROWS, COLS, PATHS = 3, 7, 7, 6\\nMIN, MAX, TMIN = 12, 16, 8\\ndef crosses(a,b,c,d): return (a<c and b>d\u2026\n- Bash: {\"command\": \"cat >> /tmp/proto3583/sim.py <<'EOF'\\nlh=collections.Counter()\\nfor seed in range(1000):\\n r=random.Random(seed); rows=layout(r); steps,lo,hi=place(rows,r); lh[(lo,hi)]+=1\\nprint(sorted(\u2026\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/dungeon/map/NodeIcon.test.tsx | grep -n \\\"runState\\\\|import\\\" ; grep -n \\\"export function runState\\\" -A3 apps/web/src/dungeon/test/fixtures.ts\", \"description\": \u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Prototype (Python, /tmp/proto3583/sim.py, 3000 seeds)\\n- place_fights always ends with fewest 12, most 16; 12-16 fix steps; 4-6 mixed rows typical (max \u2026\n- Bash: {\"command\": \"cat > /tmp/proto3583/plan.md <<'EOF'\\n## Goal\\n\\n`deal_map` (`crates/run/src/lib.rs`) deals one map of `RUN_ACTS` acts, each `RUN_ACT_ROWS` rows of nodes on a `RUN_MAP_COLUMNS` grid made\u2026\n- Bash: {\"command\": \"cat > /tmp/proto3583/plan.md <<'EOF'\\n## Goal\\n\\n`deal_map` deals `RUN_ACTS` acts of `RUN_ACT_ROWS` rows on a `RUN_MAP_COLUMNS` grid, made of `RUN_MAP_PATHS` seeded non-crossing walks (s\u2026\n- Bash: {\"command\": \"cd /tmp/proto3583 && python3 -I - <<'EOF'\\np='plan.md'; s=open(p).read()\\ndef rep(a,b):\\n global s\\n assert a in s, a[:60]\\n s=s.replace(a,b)\\nrep(\\\"\\\"\\\"`deal_map` deals `RUN_ACTS` acts \u2026\n- Bash: {\"command\": \"cd /tmp/proto3583 && python3 -I - <<'EOF'\\np='plan.md'; s=open(p).read()\\ndef rep(a,b):\\n global s\\n assert a in s, a[:60]\\n s=s.replace(a,b)\\nrep(\\\"\\\"\\\"Helpers: `deal(content, n, placeh\u2026\n- Bash: {\"command\": \"cd /tmp/proto3583 && python3 -I - <<'EOF'\\np='plan.md'; s=open(p).read()\\ndef rep(a,b):\\n global s\\n assert a in s, a[:60]\\n s=s.replace(a,b)\\nrep(\\\"\\\"\\\"- [ ] Constants in and out; nothi\u2026\n- Bash: {\"command\": \"cd /tmp/proto3583 && python3 -I - <<'EOF'\\np='plan.md'; s=open(p).read()\\ndef rep(a,b):\\n global s\\n assert a in s, a[:60]\\n s=s.replace(a,b)\\nrep(\\\"\\\"\\\" Fix the config import list; `car\u2026\n- Bash: {\"command\": \"cd /tmp/proto3583 && python3 -I - <<'EOF'\\np='plan.md'; s=open(p).read()\\ndef rep(a,b):\\n global s\\n assert a in s, a[:60]\\n s=s.replace(a,b)\\nrep(\\\"\\\"\\\"- **Determinism:** every draw on \u2026\n- Bash: {\"command\": \"cd /tmp/proto3583 && python3 -I - <<'EOF'\\np='plan.md'; s=open(p).read()\\ndef rep(a,b):\\n global s\\n assert a in s, a[:60]\\n s=s.replace(a,b)\\nrep(\\\"\\\"\\\"each matching its error word.\\\"\\\"\u2026\n- said: ## Goal `deal_map` deals `RUN_ACTS` acts of `RUN_ACT_ROWS` rows built from `RUN_MAP_PATHS` non-crossing seeded walks on a `RUN_MAP_COLUMNS` grid, each act ending at a lone boss. A `RunNode` carries its grid `column` and `next`; `Go` elsewhere is refused. Every route holds 12\u201316 fights (bosses count\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-10T10:30:05Z",
       "owner_why": "it plans it",
@@ -18939,9 +18931,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-10T00:59:09Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42799671420",
+      "run_id": "pending:21a9c75b-1794308927",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-10T10:30:05Z",
+      "started_at": "2026-11-10T11:09:36Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -20884,9 +20876,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T11:08:30Z",
+    "at": "2026-11-10T11:09:36Z",
     "url": "",
-    "what": "review #3621 on muse"
+    "what": "build #3583 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-10T10:47:56Z",
