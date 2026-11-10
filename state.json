@@ -18620,14 +18620,9 @@
     "what": "review #3592 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T01:59:27Z",
+    "at": "2026-11-10T02:10:19Z",
     "notes": [
-      "delivered review #3591 on claude-3 (run 42737457567): approved",
-      "delivered build #3588 on muse (run 42734083194): built",
-      "started review #3592 on muse (run 42739998132)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days",
-      "runner gate: started 1 of 3 waiting run(s) (queue build 42738800619); 2 wait for room"
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19333,7 +19328,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T01:59:27Z",
+  "loop_tick": "2026-11-10T02:10:19Z",
   "machine_disk": {
     "issue": null,
     "reading": {
