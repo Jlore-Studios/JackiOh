@@ -17279,7 +17279,7 @@
       "taken_asks": []
     },
     "3635": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cross_rounds": 1,
@@ -17299,10 +17299,12 @@
       },
       "interruptions": 0,
       "issue": 3350,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "revising",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T12:21:26Z",
         "from_run": "42799097097",
         "gates": [
           {
@@ -17401,7 +17403,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "42799097097",
+      "run_id": "pending:9e5a0978-1794313230",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17422,7 +17424,7 @@
         "run": "42799097097"
       },
       "source": "",
-      "started_at": "2026-11-10T10:25:54Z",
+      "started_at": "2026-11-10T12:21:26Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17910,9 +17912,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T12:07:26Z",
+    "at": "2026-11-10T12:21:26Z",
     "url": "",
-    "what": "build #3637 on muse"
+    "what": "review #3635 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-10T11:57:14Z",
