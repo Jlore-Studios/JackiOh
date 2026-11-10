@@ -36,70 +36,81 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    use crate::{filler, scenario};
-
-    const P1: PlayerId = PlayerId::P1;
+    use crate::stinkyscape_family as fam;
 
     const CORE: &str = "stinkyscape-030";
     const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
-    const FILLER: &str = "core-005";
-
-    fn setup(radiant: bool, field: Value) -> Scenario {
-        scenario(json!({
-            "seed": "drone-core-iv",
-            "p1": { "hand": [{ "def": CORE, "radiant": radiant }, FILLER], "field": field, "library": filler(4) },
-            "p2": { "hand": [FILLER], "library": filler(4) },
-        }))
-    }
-
-    fn row(s: &Scenario) -> Vec<Option<(String, bool)>> {
-        (1..=5)
-            .map(|lane| s.unit(P1, lane).map(|unit| (unit.def_id, unit.radiant)))
-            .collect()
-    }
-
-    fn backrow(s: &Scenario) -> Vec<Option<(String, bool)>> {
-        (1..=5)
-            .map(|lane| s.backrow(P1, lane).map(|card| (card.def_id, card.radiant)))
-            .collect()
-    }
-
-    fn drone(radiant: bool) -> Option<(String, bool)> {
-        Some((INTERCEPTOR.to_string(), radiant))
-    }
-
-    fn vanilla() -> Option<(String, bool)> {
-        Some((VANILLA.to_string(), false))
-    }
 
     #[test]
     fn r64_summons_three_left_to_right() {
-        let mut s = setup(false, json!([{ "def": VANILLA, "lane": 1 }]));
+        let mut s = fam::drone_multi_setup(
+            CORE,
+            "drone-core-iv",
+            false,
+            json!([{ "def": VANILLA, "lane": 1 }]),
+        );
         s.play(CORE, json!({}));
-        assert_eq!(row(&s), vec![vanilla(), drone(false), drone(false), drone(false), None]);
+        let (drone, vanilla) = (
+            fam::drone_cell(INTERCEPTOR, false),
+            fam::drone_cell(VANILLA, false),
+        );
+        assert_eq!(
+            fam::drone_unit_row(&s),
+            vec![vanilla, drone.clone(), drone.clone(), drone, None]
+        );
     }
 
     #[test]
     fn r64_r2248000_what_the_unit_row_cannot_hold_flies_into_the_backrow() {
-        let mut s = setup(false, json!([{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 4 }, { "def": VANILLA, "lane": 5 }]));
+        let mut s = fam::drone_multi_setup(
+            CORE,
+            "drone-core-iv",
+            false,
+            json!([{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 4 }, { "def": VANILLA, "lane": 5 }]),
+        );
         s.play(CORE, json!({}));
-        assert_eq!(row(&s), vec![vanilla(), drone(false), drone(false), vanilla(), vanilla()]);
-        assert_eq!(backrow(&s), vec![drone(false), None, None, None, None]);
+        let (drone, vanilla) = (
+            fam::drone_cell(INTERCEPTOR, false),
+            fam::drone_cell(VANILLA, false),
+        );
+        assert_eq!(
+            fam::drone_unit_row(&s),
+            vec![
+                vanilla.clone(),
+                drone.clone(),
+                drone.clone(),
+                vanilla.clone(),
+                vanilla
+            ]
+        );
+        assert_eq!(fam::drone_backrow_row(&s), vec![drone, None, None, None, None]);
     }
 
     #[test]
     fn interceptors_reads_through_param() {
-        let mut s = setup(false, json!([]));
+        let mut s = fam::drone_multi_setup(CORE, "drone-core-iv", false, json!([]));
         set_param(s.card_mut(CORE), "interceptors", 1);
         s.play(CORE, json!({}));
-        assert_eq!(row(&s), vec![drone(false), None, None, None, None]);
+        assert_eq!(
+            fam::drone_unit_row(&s),
+            vec![fam::drone_cell(INTERCEPTOR, false), None, None, None, None]
+        );
     }
 
     #[test]
     fn radiant_summons_three_radiant_ones() {
-        let mut s = setup(true, json!([]));
+        let mut s = fam::drone_multi_setup(CORE, "drone-core-iv", true, json!([]));
         s.play(CORE, json!({}));
-        assert_eq!(row(&s), vec![drone(true), drone(true), drone(true), None, None]);
+        assert_eq!(
+            fam::drone_unit_row(&s),
+            vec![
+                fam::drone_cell(INTERCEPTOR, true),
+                fam::drone_cell(INTERCEPTOR, true),
+                fam::drone_cell(INTERCEPTOR, true),
+                None,
+                None
+            ]
+        );
     }
 }
