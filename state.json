@@ -17430,11 +17430,11 @@
       "action": "build",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-10T09:11:56Z",
+        "at": "2026-11-10T13:14:43Z",
         "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #3531, a medium change"
+        "provider": "muse",
+        "tier": "medium",
+        "why": "None of the five hard triggers holds: spec reword plus one web test file, no engine/AI/cross-crate/migration/40-file change"
       },
       "failures": 0,
       "forced": false,
