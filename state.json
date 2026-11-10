@@ -18021,9 +18021,10 @@
     "what": "build #3546 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-10T18:18:12Z",
+    "at": "2026-11-10T18:31:35Z",
     "notes": [
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
+      "delivered build #3547 on claude-4 (run 42864914773): part",
+      "runner gate: started 1 of 2 waiting run(s) (queue build 42875958171); 1 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18729,7 +18730,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T18:17:14Z",
+  "loop_tick": "2026-11-10T18:31:35Z",
   "machine_disk": {
     "issue": null,
     "reading": {
