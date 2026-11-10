@@ -78,11 +78,11 @@ function pickFor(id: string, tier: FullArtTier): boolean | string {
   return fullArtPickOf(source, fullArt);
 }
 
-function Faces({ width }: { width: number }) {
+function Faces({ width, cards = CARDS }: { width: number; cards?: readonly (typeof CARDS)[number][] }) {
   return (
     <OwnCopy own>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8, background: "#1b1f2b" }}>
-        {CARDS.flatMap(({ id }) =>
+        {cards.flatMap(({ id }) =>
           FULL_ART_LAYOUT_TIERS.map((tier) => (
             <div key={`${id}-${tier}`} data-face={`${id}-${tier}`} style={{ width, height: heightFor(width), flex: "none" }}>
               <FullArtShown defId={fullArtSource(id)} pick={pickFor(id, tier)}>
@@ -175,10 +175,13 @@ describe("R2655003 the full-art tiers on real faces", () => {
     });
   }
 
-  it("R2655003 with motion allowed the Legendary and Mythic move and the Epic holds still, and the name writes itself once", () => {
-    cy.mount(<Faces width={170} />);
-    cy.document().should((doc) => {
-      for (const { id } of CARDS) {
+  // R3340000 lets at most a few faces move at once, Mythics first: a card's three tiers use two of the slots, and
+  // mounting every card together would give them all to the Mythics and starve the Legendaries. So one card at a time.
+  for (const card of CARDS) {
+    it(`R2655003 with motion allowed the Legendary and Mythic move and the Epic holds still, and the name writes itself once (${card.id})`, () => {
+      const { id } = card;
+      cy.mount(<Faces width={170} cards={[card]} />);
+      cy.document().should((doc) => {
         const animations = (tier: FullArtTier) => {
           const cf = faceIn(doc, id, tier);
           return [cf.querySelector(".cf-art-frame > .cf-art"), cf.querySelector(".cf-full-art-sweep")].map((element) =>
@@ -190,11 +193,9 @@ describe("R2655003 the full-art tiers on real faces", () => {
         expect(animations("Mythic"), `${id} Mythic`).to.deep.eq(["full-art-drift", "full-art-sweep"]);
         const wipe = faceIn(doc, id, "Mythic").querySelector(".cf-signature-wipe");
         expect(wipe === null ? "none" : getComputedStyle(wipe).animationName, `${id}'s wipe`).to.eq("full-art-sign-wipe");
-      }
-    });
-    // Once the wipe has run, the name stands whole and still: no transform left on the wipe or the ink.
-    cy.document({ timeout: SETTLE_TIMEOUT_MS }).should((doc) => {
-      for (const { id } of CARDS) {
+      });
+      // Once the wipe has run, the name stands whole and still: no transform left on the wipe or the ink.
+      cy.document({ timeout: SETTLE_TIMEOUT_MS }).should((doc) => {
         const cf = faceIn(doc, id, "Mythic");
         for (const selector of [".cf-signature-wipe", ".cf-signature-ink"]) {
           const element = cf.querySelector(selector);
@@ -203,9 +204,9 @@ describe("R2655003 the full-art tiers on real faces", () => {
         }
         const running = cf.getAnimations({ subtree: true }).filter((animation) => animation.playState === "running");
         expect(running.length, `${id}: the drift and the sweep go on`).to.be.greaterThan(0);
-      }
+      });
     });
-  });
+  }
 
   it("R2655003 under Reduce motion no tier moves and the signature stands whole", () => {
     writeSettings({ reduceMotion: true });

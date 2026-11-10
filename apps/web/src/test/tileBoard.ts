@@ -34,13 +34,18 @@ export function tileBoardView(): PlayerView {
   const fieldsAt = (from: number): string[] =>
     eligibleFields.length === 0 ? [] : Array.from({ length: 5 }, (_, i) => eligibleFields[(from + i) % eligibleFields.length] ?? "");
 
+  // The units cycle too: the cards still wearing the tile aura keep shrinking (seven today, each pass giving some an
+  // aura of their own), so a side's five zones take them in turn. When none is left the 20-tile count needs a new premise.
+  const unitsAt = (from: number): string[] =>
+    eligibleUnits.length === 0 ? [] : Array.from({ length: 5 }, (_, i) => eligibleUnits[(from + i) % eligibleUnits.length] ?? "");
+
   return baseView({
     you: emptySide("p1", {
-      units: eligibleUnits.slice(0, 5).map((defId, i) => unit("p1", { defId, instanceId: `tile-unit-you-${i + 1}` })),
+      units: unitsAt(0).map((defId, i) => unit("p1", { defId, instanceId: `tile-unit-you-${i + 1}` })),
       backrow: fieldsAt(0).map((defId, i) => faceUpBackrow("p1", { defId, instanceId: `tile-back-you-${i + 1}`, type: CATALOG[defId]?.type ?? "Field Spell" })),
     }),
     opponent: emptySide("p2", {
-      units: eligibleUnits.slice(5, 10).map((defId, i) => unit("p2", { defId, instanceId: `tile-unit-opp-${i + 1}` })),
+      units: unitsAt(5).map((defId, i) => unit("p2", { defId, instanceId: `tile-unit-opp-${i + 1}` })),
       backrow: fieldsAt(5).map((defId, i) => faceUpBackrow("p2", { defId, instanceId: `tile-back-opp-${i + 1}`, type: CATALOG[defId]?.type ?? "Field Spell" })),
     }),
   });

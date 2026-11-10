@@ -203,8 +203,11 @@ describe("R3351000 a long press opens inspect and the full-screen view from ever
 
     for (const [index, press] of cases.entries()) {
       const pointerId = 100 + index;
+      // The hand's fan overlaps its cards, so a hand card's centre is another card's: the events go to the card
+      // itself, and `force` only skips Cypress's coverage check.
+      const force = press.testid.startsWith("hand-");
       // A touch held past LONG_PRESS_MS: the hover on a phone (R2617000), or the full-screen view.
-      cy.get(`[data-testid="${press.testid}"]`).trigger("pointerdown", { pointerId, pointerType: "touch", clientX: 120, clientY: 200 });
+      cy.get(`[data-testid="${press.testid}"]`).trigger("pointerdown", { pointerId, pointerType: "touch", clientX: 120, clientY: 200, force });
       cy.wait(LONG_PRESS_MS + 100);
       if (press.fullscreen) {
         cy.get('[data-testid="fullscreen-art"]').should("be.visible");
@@ -214,7 +217,7 @@ describe("R3351000 a long press opens inspect and the full-screen view from ever
       } else {
         cy.get(`[data-testid="${INSPECT_HOVER}"]`).should("exist");
         cy.get('[data-testid="fullscreen-art"]').should("not.exist");
-        cy.get(`[data-testid="${press.testid}"]`).trigger("pointerup", { pointerId });
+        cy.get(`[data-testid="${press.testid}"]`).trigger("pointerup", { pointerId, force });
         cy.get(`[data-testid="${INSPECT_HOVER}"]`).should("not.exist");
       }
     }
