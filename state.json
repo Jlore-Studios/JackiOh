@@ -19476,8 +19476,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-3",
-      "owner_since": "2026-11-10T03:45:01Z",
-      "owner_why": "it plans it",
+      "owner_since": "2026-11-10T09:51:37Z",
+      "owner_why": "its approval shipped `ecacf11fcaee`, and the last approver owns the merge, so it resolves the conflict",
       "pending_request": false,
       "planned_at": "2026-11-10T04:22:14Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -19827,12 +19827,12 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3613,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-3",
-      "queued_at": "2026-11-10T05:20:48Z",
+      "queued_at": "2026-11-10T09:51:37Z",
       "requeued": {
         "ecacf11fcaee255516061d500e741a776e6f4865": "c90baa34ff6bb382b4392a985bfe12a945cac121"
       },
@@ -19856,6 +19856,7 @@
         "provider": "claude-3",
         "run": "42755841093"
       },
+      "source": "conflict",
       "started_at": "2026-11-10T05:22:38Z",
       "stop_requested": false,
       "taken_asks": [],
