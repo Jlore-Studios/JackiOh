@@ -54,7 +54,9 @@ fn walk_setup(tag: &str, n: usize, content: &RunContent, rng: &mut Rng) -> (RunS
 /// "Walk away"); content without one fails loudly here instead of hanging.
 fn free_action(state: &RunState, content: &RunContent) -> RunAction {
     match &state.phase {
-        RunPhase::Map => RunAction::Go { col: 0 },
+        RunPhase::Map => RunAction::Go {
+            col: run_next_cols(state).first().copied().unwrap_or(0),
+        },
         // `fight_won` clamps HP, so any won report is accepted.
         RunPhase::Fight => RunAction::FightOver {
             won: true,
@@ -371,7 +373,14 @@ fn walks_play_whole_runs_in_bounds_start_every_fight_and_replay() {
         };
         let mut seen: Vec<&'static str> = Vec::new();
         for n in 0..WALK_SEEDS {
-            walk(&content, tag, n, engine, &mut seen);
+            let (end, _) = walk(&content, tag, n, engine, &mut seen);
+            if end.phase == RunPhase::Won {
+                assert!(
+                    (RUN_ROUTE_FIGHTS_MIN..=RUN_ROUTE_FIGHTS_MAX).contains(&end.stats.fights_won),
+                    "walk {tag} {n}: R3583001: {} fights on the route",
+                    end.stats.fights_won
+                );
+            }
         }
         for phase in [
             "Map",

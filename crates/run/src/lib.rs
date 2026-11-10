@@ -15,6 +15,8 @@ mod fight;
 #[cfg(test)]
 mod fight_tests;
 #[cfg(test)]
+mod map_tests;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod walk_tests;
@@ -27,16 +29,17 @@ use jackioh_engine::wire::{CardType, PrintedRarity, SINGLE_PLAYER_SETS, SetName}
 use serde::{Deserialize, Serialize};
 
 use crate::config::{
-    RUN_ACT_FIGHTS, RUN_ARTIFACT_LEVEL_MAX, RUN_ARTIFACT_PERCENT, RUN_ARTIFACT_PRICE, RUN_BUFF_TICKETS,
-    RUN_CAMPFIRE_HEAL_PERCENT, RUN_CAMPFIRE_REMOVE, RUN_CARD_PRICE, RUN_CHEST_ARTIFACT_PERCENT,
-    RUN_CHEST_COINS, RUN_CHEST_TICKETS, RUN_COINS, RUN_DECK_MAX, RUN_ELITE_PERCENT, RUN_ENEMY_DECK_SIZE,
-    RUN_ENEMY_HEALTH, RUN_GHOST_PERCENT, RUN_KEEP, RUN_KEEP_MAX, RUN_LEVEL_EMBERS, RUN_LEVEL_TICKETS,
-    RUN_MAX_HP, RUN_MINI_BOSS_DROP_TIER, RUN_PACK_SIZE, RUN_RADIANT_TICKETS, RUN_REMOVE_PRICE,
-    RUN_ROW_WIDTH_MAX, RUN_ROW_WIDTH_MIN, RUN_SCORE_CARD_DRAWN, RUN_SCORE_CURSE_POINT_PERCENT,
-    RUN_SCORE_DAMAGE, RUN_SCORE_FIGHT, RUN_SCORE_FINAL_BOSS_PERCENT, RUN_SCORE_HEALING,
-    RUN_SCORE_MINI_BOSS_PERCENT, RUN_SCORE_PER_EMBER, RUN_SCORE_ROW, RUN_SEED_LENGTH, RUN_SHOP_ARTIFACTS,
-    RUN_SHOP_CARDS, RUN_SHRINE_OFFERS, RUN_SLOT_LADDER, RUN_STARTER_ARTIFACT_POINTS,
-    RUN_STARTER_ARTIFACTS_MAX, RUN_STARTER_SIZE, RUN_TICKETS, RUN_TIER_POINTS, RUN_TILE_WEIGHTS,
+    RUN_ACT_ROWS, RUN_ACTS, RUN_ARTIFACT_LEVEL_MAX, RUN_ARTIFACT_PERCENT, RUN_ARTIFACT_PRICE,
+    RUN_BUFF_TICKETS, RUN_CAMPFIRE_HEAL_PERCENT, RUN_CAMPFIRE_REMOVE, RUN_CARD_PRICE,
+    RUN_CHEST_ARTIFACT_PERCENT, RUN_CHEST_COINS, RUN_CHEST_TICKETS, RUN_COINS, RUN_DECK_MAX,
+    RUN_ELITE_PERCENT, RUN_ENEMY_DECK_SIZE, RUN_ENEMY_HEALTH, RUN_GHOST_PERCENT, RUN_KEEP, RUN_KEEP_MAX,
+    RUN_LEVEL_EMBERS, RUN_LEVEL_TICKETS, RUN_MAP_COLUMNS, RUN_MAP_PATHS, RUN_MAX_HP, RUN_MINI_BOSS_DROP_TIER,
+    RUN_PACK_SIZE, RUN_RADIANT_TICKETS, RUN_REMOVE_PRICE, RUN_ROUTE_FIGHTS_MAX, RUN_ROUTE_FIGHTS_MIN,
+    RUN_ROUTE_TILES_MIN, RUN_SCORE_CARD_DRAWN, RUN_SCORE_CURSE_POINT_PERCENT, RUN_SCORE_DAMAGE,
+    RUN_SCORE_FIGHT, RUN_SCORE_FINAL_BOSS_PERCENT, RUN_SCORE_HEALING, RUN_SCORE_MINI_BOSS_PERCENT,
+    RUN_SCORE_PER_EMBER, RUN_SCORE_ROW, RUN_SEED_LENGTH, RUN_SHOP_ARTIFACTS, RUN_SHOP_CARDS,
+    RUN_SHRINE_OFFERS, RUN_SLOT_LADDER, RUN_STARTER_ARTIFACT_POINTS, RUN_STARTER_ARTIFACTS_MAX,
+    RUN_STARTER_SIZE, RUN_TICKETS, RUN_TIER_POINTS, RUN_TILE_WEIGHTS,
 };
 
 // Content: data the caller passes in
@@ -434,6 +437,10 @@ pub struct RunNode {
     /// A boss's preseeded drop, shown on the map (DR6).
     #[serde(default)]
     pub artifact: Option<String>,
+    /// R3583000: its column of the map's grid, for drawing; `Go`'s `col` is its index in its row.
+    pub column: usize,
+    /// R3583000: the indices of the next row's nodes it leads to, ascending; none for the final boss.
+    pub next: Vec<usize>,
 }
 
 /// An enemy as the map dealt it: what the fight's setup needs (`run_fight_setup`).
@@ -540,7 +547,7 @@ pub struct RunShopItem {
 )]
 #[serde(tag = "phase", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum RunPhase {
-    /// Choose a node of the next row (`Go`).
+    /// Choose a node the one stood on leads to (`Go`, `run_next_cols`).
     Map,
     /// The node's fight is being played (`FightOver`).
     Fight,
@@ -691,7 +698,8 @@ pub struct RunStats {
 pub struct RunState {
     pub seed: String,
     pub rng_cursor: u32,
-    /// Rows of nodes; any node of the next row may be chosen.
+    /// Rows of nodes, the first the bottom; `Go` steps onto a node the one stood on leads to, or any of
+    /// the first row before the first step (R3583000).
     pub map: Vec<Vec<RunNode>>,
     /// The row stood on; none before the first step.
     pub row: Option<usize>,
@@ -1008,6 +1016,8 @@ fn fight_node(content: &RunContent, kind: RunNodeKind, held: &[&str], rng: &mut 
             enemy: Some(enemy),
             event: None,
             artifact: None,
+            column: 0,
+            next: Vec::new(),
         };
     }
     let defs: Vec<&RunEnemyDef> = content.enemies.iter().filter(|e| e.tier == kind).collect();
@@ -1032,6 +1042,8 @@ fn fight_node(content: &RunContent, kind: RunNodeKind, held: &[&str], rng: &mut 
         enemy: Some(enemy),
         event: None,
         artifact,
+        column: 0,
+        next: Vec::new(),
     }
 }
 
@@ -1043,48 +1055,227 @@ fn tile_node(content: &RunContent, kind: RunNodeKind, rng: &mut Rng) -> RunNode 
         enemy: None,
         event,
         artifact: None,
+        column: 0,
+        next: Vec::new(),
     }
 }
 
-fn row_width(rng: &mut Rng) -> i32 {
-    RUN_ROW_WIDTH_MIN + rng.int(RUN_ROW_WIDTH_MAX - RUN_ROW_WIDTH_MIN + 1)
+/// R3583000: a node of the map laid out before it is dealt: its grid column, the next row's nodes it
+/// leads to, and whether it is a fight (R3583001).
+struct Spot {
+    column: usize,
+    next: Vec<usize>,
+    fight: bool,
 }
 
-/// DR4: per act, its fight rows with a tile row between each two, a campfire, and the boss.
-fn deal_map(content: &RunContent, held: &[&str], rng: &mut Rng) -> Vec<Vec<RunNode>> {
-    let mut rows = Vec::new();
-    for (act, fights) in RUN_ACT_FIGHTS.iter().enumerate() {
-        for f in 0..*fights {
-            if f > 0 {
-                let width = row_width(rng);
-                rows.push(
-                    (0..width)
-                        .map(|_| tile_node(content, weighted(&RUN_TILE_WEIGHTS, rng), rng))
-                        .collect(),
-                );
-            }
-            let width = row_width(rng);
-            let row = (0..width)
-                .map(|_| {
-                    let kind = if rng.int(PERCENT) < RUN_ELITE_PERCENT {
-                        RunNodeKind::Elite
-                    } else if rng.int(PERCENT) < RUN_GHOST_PERCENT {
-                        RunNodeKind::Ghost
-                    } else {
-                        RunNodeKind::Fight
-                    };
-                    fight_node(content, kind, held, rng)
-                })
+/// Whether row `row` of the map is a boss's: the last of each act.
+fn is_boss_row(row: usize) -> bool {
+    (row + 1).is_multiple_of(RUN_ACT_ROWS + 1)
+}
+
+/// Whether two edges between the same two rows cross, each as its column below and its column above.
+fn crosses((a, b): (usize, usize), (c, d): (usize, usize)) -> bool {
+    (a < c && b > d) || (a > c && b < d)
+}
+
+/// R3583000: one act's rows before its boss, from `RUN_MAP_PATHS` seeded walks up the grid, each from
+/// a column of its own. Each step goes to the column left, the same or right, never across an edge an
+/// earlier walk took (going straight up crosses none). Every node a walk visits is kept with every edge
+/// it takes, and the act's last row leads to its boss.
+fn act_spots(rng: &mut Rng) -> Vec<Vec<Spot>> {
+    let columns: Vec<usize> = (0..RUN_MAP_COLUMNS).collect();
+    let mut walks: Vec<Vec<usize>> = Vec::new();
+    for start in rng.shuffle(&columns).into_iter().take(RUN_MAP_PATHS) {
+        let mut walk = vec![start];
+        for row in 1..RUN_ACT_ROWS {
+            let from = walk[row - 1];
+            let options: Vec<usize> = [from.checked_sub(1), Some(from), Some(from + 1)]
+                .into_iter()
+                .flatten()
+                .filter(|to| *to < RUN_MAP_COLUMNS)
+                .filter(|to| !walks.iter().any(|w| crosses((w[row - 1], w[row]), (from, *to))))
                 .collect();
-            rows.push(row);
+            walk.push(*rng.pick(&options).expect("going straight up crosses no edge"));
         }
-        rows.push(vec![tile_node(content, RunNodeKind::Campfire, rng)]);
-        let boss = if act + 1 == RUN_ACT_FIGHTS.len() {
-            RunNodeKind::Boss
-        } else {
-            RunNodeKind::MiniBoss
-        };
-        rows.push(vec![fight_node(content, boss, held, rng)]);
+        walks.push(walk);
+    }
+    // The columns some walk visits on a row, ascending: the row's nodes in order.
+    let at = |row: usize| -> Vec<usize> {
+        let mut cols: Vec<usize> = walks.iter().map(|w| w[row]).collect();
+        cols.sort_unstable();
+        cols.dedup();
+        cols
+    };
+    (0..RUN_ACT_ROWS)
+        .map(|row| {
+            let above = if row + 1 < RUN_ACT_ROWS {
+                at(row + 1)
+            } else {
+                Vec::new()
+            };
+            at(row)
+                .into_iter()
+                .map(|column| {
+                    let mut next: Vec<usize> = if row + 1 == RUN_ACT_ROWS {
+                        // The act's boss, its row's one node.
+                        vec![0]
+                    } else {
+                        walks
+                            .iter()
+                            .filter(|w| w[row] == column)
+                            .filter_map(|w| above.iter().position(|c| *c == w[row + 1]))
+                            .collect()
+                    };
+                    next.sort_unstable();
+                    next.dedup();
+                    Spot {
+                        column,
+                        next,
+                        fight: false,
+                    }
+                })
+                .collect()
+        })
+        .collect()
+}
+
+/// R3583000: the whole map's spots, act by act: the act's rows, then its boss's row of one node on the
+/// middle column, which leads to every node of the next act's first row (to none after the last act).
+fn lay_out(rng: &mut Rng) -> Vec<Vec<Spot>> {
+    let acts: Vec<Vec<Vec<Spot>>> = (0..RUN_ACTS).map(|_| act_spots(rng)).collect();
+    let firsts: Vec<usize> = acts.iter().map(|act| act.first().map_or(0, Vec::len)).collect();
+    let mut rows = Vec::new();
+    for (a, act) in acts.into_iter().enumerate() {
+        rows.extend(act);
+        rows.push(vec![Spot {
+            column: RUN_MAP_COLUMNS / 2,
+            next: (0..firsts.get(a + 1).copied().unwrap_or(0)).collect(),
+            fight: true,
+        }]);
+    }
+    rows
+}
+
+/// R3583001: the fewest and the most fights on any route through `rows`, from any node of the first
+/// row to any of the last, by dynamic programming over the rows.
+fn route_fights(rows: &[Vec<Spot>]) -> (i32, i32) {
+    let mut counts: Vec<(i32, i32)> = rows
+        .first()
+        .map_or(&[][..], Vec::as_slice)
+        .iter()
+        .map(|s| (i32::from(s.fight), i32::from(s.fight)))
+        .collect();
+    for pair in rows.windows(2) {
+        let (below, above) = (&pair[0], &pair[1]);
+        counts = above
+            .iter()
+            .enumerate()
+            .map(|(i, spot)| {
+                let from: Vec<(i32, i32)> = below
+                    .iter()
+                    .zip(&counts)
+                    .filter(|(s, _)| s.next.contains(&i))
+                    .map(|(_, count)| *count)
+                    .collect();
+                let own = i32::from(spot.fight);
+                let fewest = from.iter().map(|c| c.0).min().expect("every node is a walk's");
+                let most = from.iter().map(|c| c.1).max().expect("every node is a walk's");
+                (fewest + own, most + own)
+            })
+            .collect();
+    }
+    let fewest = counts.iter().map(|c| c.0).min().unwrap_or(0);
+    let most = counts.iter().map(|c| c.1).max().unwrap_or(0);
+    (fewest, most)
+}
+
+/// R3583001: which nodes are fights, so every route from a start to the final boss holds
+/// `RUN_ROUTE_FIGHTS_MIN` to `RUN_ROUTE_FIGHTS_MAX` fights and `RUN_ROUTE_TILES_MIN` tiles. Every route
+/// holds every row once, so its tiles are the rows less its fights. The bosses and the first row are
+/// fights; every other node is one at the chance that puts a route at the bounds' middle. Then, while a
+/// route breaks a bound, a whole row is made fights (too few) or tiles (too many): a row of the other
+/// kind alone while the spread between the fewest and the most fits the bounds, which moves every route
+/// by one and so never overshoots, else a row of both kinds, which leaves one fewer such row. It ends,
+/// on the run's own `Rng`, with no deal again.
+fn place_fights(rows: &mut [Vec<Spot>], rng: &mut Rng) {
+    let len = i32::try_from(rows.len()).unwrap_or(i32::MAX);
+    let most_allowed = RUN_ROUTE_FIGHTS_MAX.min(len - RUN_ROUTE_TILES_MIN);
+    for spot in rows.iter_mut().take(1).flatten() {
+        spot.fight = true;
+    }
+    let free: Vec<usize> = (1..rows.len()).filter(|r| !is_boss_row(*r)).collect();
+    let free_len = i32::try_from(free.len()).unwrap_or(i32::MAX);
+    // The free rows' share of the bounds' middle, beside the rows that are always fights.
+    let middle = (RUN_ROUTE_FIGHTS_MIN + most_allowed) / 2 - (len - free_len);
+    for &r in &free {
+        for spot in &mut rows[r] {
+            spot.fight = rng.int(free_len) < middle;
+        }
+    }
+    loop {
+        let (fewest, most) = route_fights(rows);
+        let raise = fewest < RUN_ROUTE_FIGHTS_MIN;
+        if !raise && most <= most_allowed {
+            return;
+        }
+        let fits = most - fewest <= most_allowed - RUN_ROUTE_FIGHTS_MIN;
+        let other: Vec<usize> = free
+            .iter()
+            .copied()
+            .filter(|r| rows[*r].iter().all(|s| s.fight != raise))
+            .collect();
+        let mixed: Vec<usize> = free
+            .iter()
+            .copied()
+            .filter(|r| rows[*r].iter().any(|s| s.fight) && rows[*r].iter().any(|s| !s.fight))
+            .collect();
+        let pool = if fits && !other.is_empty() { other } else { mixed };
+        let row = *rng.pick(&pool).expect("the route bounds fit the map (config.rs)");
+        for spot in &mut rows[row] {
+            spot.fight = raise;
+        }
+    }
+}
+
+/// DR4, R3583000: the whole map, dealt at the start: `RUN_ACTS` acts of `RUN_ACT_ROWS` rows from
+/// seeded walks, each act ending at its boss's row of one node, the fights placed so every route holds
+/// the bounds (R3583001), then each node's kind and what it holds: a fight's an Elite at
+/// `RUN_ELITE_PERCENT`, else a Ghost at `RUN_GHOST_PERCENT`, else a Fight, and a tile's by
+/// `RUN_TILE_WEIGHTS`.
+fn deal_map(content: &RunContent, held: &[&str], rng: &mut Rng) -> Vec<Vec<RunNode>> {
+    let mut spots = lay_out(rng);
+    place_fights(&mut spots, rng);
+    let last = spots.len().saturating_sub(1);
+    let mut rows = Vec::new();
+    for (r, row) in spots.into_iter().enumerate() {
+        let mut nodes = Vec::new();
+        for spot in row {
+            let node = if is_boss_row(r) {
+                let boss = if r == last {
+                    RunNodeKind::Boss
+                } else {
+                    RunNodeKind::MiniBoss
+                };
+                fight_node(content, boss, held, rng)
+            } else if spot.fight {
+                let kind = if rng.int(PERCENT) < RUN_ELITE_PERCENT {
+                    RunNodeKind::Elite
+                } else if rng.int(PERCENT) < RUN_GHOST_PERCENT {
+                    RunNodeKind::Ghost
+                } else {
+                    RunNodeKind::Fight
+                };
+                fight_node(content, kind, held, rng)
+            } else {
+                tile_node(content, weighted(&RUN_TILE_WEIGHTS, rng), rng)
+            };
+            nodes.push(RunNode {
+                column: spot.column,
+                next: spot.next,
+                ..node
+            });
+        }
+        rows.push(nodes);
     }
     rows
 }
@@ -1094,6 +1285,15 @@ fn deal_map(content: &RunContent, held: &[&str], rng: &mut Rng) -> Vec<Vec<RunNo
 /// The node stood on.
 pub fn run_node(state: &RunState) -> Option<&RunNode> {
     state.row.map(|r| &state.map[r][state.col])
+}
+
+/// R3583000: the next row's nodes `Go` may step onto, by index: every node of the first row before the
+/// first step, then those the node stood on leads to.
+pub fn run_next_cols(state: &RunState) -> Vec<usize> {
+    match run_node(state) {
+        Some(node) => node.next.clone(),
+        None => (0..state.map.first().map_or(0, Vec::len)).collect(),
+    }
 }
 
 /// The enemy of the fight being played, for the game's setup (`run_fight_setup`).
@@ -1582,6 +1782,9 @@ fn apply(
             let row = state.row.map_or(0, |r| r + 1);
             if *col >= state.map.get(row).map_or(0, Vec::len) {
                 return Err(format!("row {row} has no node {col}"));
+            }
+            if !run_next_cols(state).contains(col) {
+                return Err("no path leads there from here".into());
             }
             state.row = Some(row);
             state.col = *col;
