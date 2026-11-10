@@ -17216,13 +17216,14 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-6",
       "queued_at": "2026-11-09T21:49:11Z",
-      "run_id": "42706444318",
+      "run_id": "pending:a43ac6f8-1794269137",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 175,
-      "started_at": "2026-11-09T21:51:24Z",
+      "started_at": "2026-11-10T00:06:01Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18380,9 +18381,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T00:05:25Z",
+    "at": "2026-11-10T00:06:01Z",
     "url": "",
-    "what": "build #3503 on claude-4"
+    "what": "spot-check #3523 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-09T23:45:59Z",
@@ -36865,7 +36866,15 @@
         "n": 175,
         "pr": 3523,
         "queued_at": "2026-11-10T00:05:13Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:a43ac6f8-1794269137",
         "sha": "1ccfe15d24dcf108041c75323e8c6e089d4302bc",
+        "started_at": "2026-11-10T00:06:01Z",
         "status": "queued",
         "title": "Patch: a dungeon run's time counts only while it is played, so a run picked up the next day is not timed by the calendar",
         "tries": 0
