@@ -17356,6 +17356,8 @@
       }
     },
     "3637": {
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-10T09:11:56Z",
         "difficulty": "medium",
@@ -17367,11 +17369,20 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "live": "building",
+      "owner": "muse",
+      "owner_since": "2026-11-10T12:07:26Z",
+      "owner_why": "it took it up",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-10T09:11:56Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "pending:07bf3392-1794312391",
+      "runs_on": "night-vm-muse-fill",
       "spot_check_of": 3531,
-      "stop_requested": false
+      "started_at": "2026-11-10T12:07:26Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "3638": {
       "action": "review",
@@ -17838,9 +17849,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T12:06:16Z",
+    "at": "2026-11-10T12:07:26Z",
     "url": "",
-    "what": "build #3517 on claude-3"
+    "what": "build #3637 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T11:36:06Z",
