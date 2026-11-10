@@ -57,6 +57,11 @@ const PROOFS = ["classic-074", "core-002", "core-098", "core-100", "stinkyscape-
 const SCENERY: readonly KitCategory[] = ["terrain", "architecture", "plants", "creatures", "objects", "weather", "craft"];
 /** The seeds every part is drawn from, enough to reach each branch its stream picks. */
 const SEEDS = 40;
+/**
+ * The two sweeps that draw every part of both kits from each of the SEEDS: heavy by design, 1.6 and 2.0 s on an idle
+ * 4-core machine and 5,027 ms on CI's loaded unit shard (#3564), past vitest's default 5 s, and they grow with the kits.
+ */
+const SWEEP_TIMEOUT_MS = 30_000;
 const PATH = /^M[-\d. MLQCAZ]+$/;
 /** The rarer than Rare: a scene with a foreground, a middle and a background. */
 const DEEP: readonly Rarity[] = ["Epic", "Legendary", "Mythic"];
@@ -149,7 +154,7 @@ describe("R3331000 the scene kits", () => {
     expect(Object.keys(SCENE_KIT).filter((id) => Object.hasOwn(FIGURE_KIT, id))).toEqual([]);
   });
 
-  it("R3331000 every part draws clean shapes from any seed", () => {
+  it("R3331000 every part draws clean shapes from any seed", { timeout: SWEEP_TIMEOUT_MS }, () => {
     // Each shape's checks are plain tests, gathered per part into one expect that names every fault by its seed
     // and shape: a vitest expect per check cost ten times the drawing and held this test at its timeout once the
     // kits passed 230 parts (#3396).
@@ -170,7 +175,7 @@ describe("R3331000 the scene kits", () => {
     }
   });
 
-  it("R3331000 SCENE_PALETTE is palette.css's, and no base-face scene colour is in Radiant's gold window", () => {
+  it("R3331000 SCENE_PALETTE is palette.css's, and no base-face scene colour is in Radiant's gold window", { timeout: SWEEP_TIMEOUT_MS }, () => {
     const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../palette.css"), "utf8");
     const declared = Object.fromEntries([...css.matchAll(/^\s*--pal-([a-z0-9-]+):\s*(#[0-9a-f]{6});$/gm)].map((match) => [match[1] ?? "", match[2] ?? ""]));
     expect(Object.keys(declared).length).toBeGreaterThan(0);
