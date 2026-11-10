@@ -17034,6 +17034,7 @@
       "run_id": "42774787840",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 190,
       "started_at": "2026-11-10T07:21:59Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36880,9 +36881,33 @@
         "title": "Patch: a dungeon run in progress survives a card patch",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-6"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "9917058ec8b443761ffdcab8c0daa22c0aa5d162",
+        "issue": 3388,
+        "merged_at": "2026-11-10T13:32:41Z",
+        "n": 190,
+        "pr": 3627,
+        "queued_at": "2026-11-10T13:32:41Z",
+        "sha": "e8580b25bda38b9729a6acb6d85f788edaef2c5b",
+        "status": "queued",
+        "title": "Patch: every Classic Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
+        "tries": 0
       }
     ],
-    "count": 189
+    "count": 190
   },
   "statistics": {
     "at": "2026-11-10T13:06:20Z"
