@@ -19,6 +19,10 @@ import { dioramaOf, dioramaSliceBackground } from "./art/dioramas/index.ts";
 import {
   CARD_TILT_MAX_DEG,
   DIORAMA_TURN_MAX_DEG,
+  FULLSCREEN_BLEED_PCT,
+  FULLSCREEN_COVER_DIGITS,
+  FULLSCREEN_COVER_SCALE_MAX,
+  FULLSCREEN_DIORAMA_PERSPECTIVE_VMAX,
   FULLSCREEN_HOLD_MS,
   FULLSCREEN_SLICE_SHIFT_FAR_PX,
   FULLSCREEN_SLICE_SHIFT_NEAR_PX,
@@ -29,7 +33,14 @@ import {
   closeFullScreenArt,
   useFullScreenTrigger,
 } from "./fullscreen.ts";
-import { FullScreenArt, FullScreenArtHost, sliceShiftPx } from "./FullScreenArt.tsx";
+import {
+  FullScreenArt,
+  FullScreenArtHost,
+  fullscreenCoverScale,
+  fullscreenCovers,
+  fullscreenDioramaPerspectivePx,
+  sliceShiftPx,
+} from "./FullScreenArt.tsx";
 import { InspectSheet } from "./inspect/InspectSheet.tsx";
 import { faceModel } from "./model.ts";
 import { FullArtShown } from "./fullArt.ts";
@@ -219,6 +230,128 @@ describe("R3345000 FullScreenArt rendering and depth planes", () => {
     } finally {
       setReducedMotion(false);
     }
+  });
+
+  it("R3350000 a tap that pauses the view holds a diorama's loops still, and the next sets them going again", () => {
+    const diorama = dioramaOf("core-100");
+    if (diorama === null) throw new Error("Ceaseless Void has no diorama");
+    render(<FullScreenArt defId="core-100" onClose={vi.fn()} />);
+    const dialog = screen.getByTestId("fullscreen-art");
+    // Whether every slice draws its moving picture (`moving`) or its still one.
+    const draws = (moving: boolean): boolean =>
+      [...dialog.querySelectorAll<HTMLElement>(".fullscreen-art-plane[data-slice]")].every(
+        (shown, index) => shown.style.backgroundImage === dioramaSliceBackground("core-100", false, index, moving),
+      );
+    // Its loops run inside its slices' own pictures, so a slice with one draws a picture of its own while the view moves.
+    expect(diorama.slices.some((_, index) => dioramaSliceBackground("core-100", false, index, true) !== dioramaSliceBackground("core-100", false, index, false))).toBe(true);
+    expect(draws(true)).toBe(true);
+    expect(draws(false)).toBe(false);
+    fireEvent.click(dialog, { detail: 1 });
+    expect(dialog).toHaveAttribute("data-paused", "true");
+    expect(draws(false)).toBe(true);
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    fireEvent.click(dialog, { detail: 1 });
+    expect(draws(true)).toBe(true);
+  });
+
+  it("R3350000 the full-screen view writes a diorama's perspective and cover scale as it turns, and a card with none writes neither", () => {
+    const { innerWidth: width, innerHeight: height } = window;
+    render(<FullScreenArt defId="core-100" onClose={vi.fn()} />);
+    const dialog = screen.getByTestId("fullscreen-art");
+    expect(dialog).toHaveAttribute("data-diorama", "true");
+    // Level as it opens, at its pictures' own size, under the screen's own perspective.
+    expect(dialog.style.getPropertyValue("--fs-perspective")).toBe(`${String(fullscreenDioramaPerspectivePx(width, height))}px`);
+    expect(dialog.style.getPropertyValue("--fs-cover")).toBe("1");
+    // The pointer at the top right turns it the whole way about both axes, and it grows as far as the screen needs.
+    fireEvent.pointerMove(window, { clientX: width, clientY: 0 });
+    const cover = fullscreenCoverScale(width, height, DIORAMA_TURN_MAX_DEG, DIORAMA_TURN_MAX_DEG);
+    expect(cover).toBeGreaterThan(1);
+    expect(dialog.style.getPropertyValue("--fs-cover")).toBe(String(cover));
+    expect(dialog.style.getPropertyValue("--fs-perspective")).toBe(`${String(fullscreenDioramaPerspectivePx(width, height))}px`);
+    // Back in the middle, level and its own size again.
+    fireEvent.pointerMove(window, { clientX: width / 2, clientY: height / 2 });
+    expect(dialog.style.getPropertyValue("--fs-cover")).toBe("1");
+    cleanup();
+    // A card with no diorama keeps the view's own perspective and size.
+    render(<FullScreenArt defId="core-052" onClose={vi.fn()} />);
+    const plain = screen.getByTestId("fullscreen-art");
+    fireEvent.pointerMove(window, { clientX: width, clientY: 0 });
+    expect(plain).not.toHaveAttribute("data-diorama");
+    expect(plain.style.getPropertyValue("--fs-perspective")).toBe("");
+    expect(plain.style.getPropertyValue("--fs-cover")).toBe("");
+  });
+});
+
+describe("R3350000 a turned diorama keeps the full-screen view covered", () => {
+  /** The component specs' desktop and phone (1280x720, 390x844), a phone on its side, and two wide screens. */
+  const SCREENS = [
+    [1280, 720],
+    [390, 844],
+    [844, 390],
+    [1920, 1080],
+    [2560, 1080],
+  ] as const;
+  const MAX = DIORAMA_TURN_MAX_DEG;
+  /** One step of the cover scale as it is written. */
+  const STEP = 10 ** -FULLSCREEN_COVER_DIGITS;
+
+  it("R3350000 a level view keeps its pictures' own size, and a turned one grows as far as it must to cover the screen, never past FULLSCREEN_COVER_SCALE_MAX", () => {
+    for (const [width, height] of SCREENS) {
+      const at = `${String(width)}x${String(height)}`;
+      const perspective = fullscreenDioramaPerspectivePx(width, height);
+      expect(perspective, at).toBe(FULLSCREEN_DIORAMA_PERSPECTIVE_VMAX * Math.max(width, height));
+      expect(fullscreenCovers(width, height, 0, 0, perspective, 1), at).toBe(true);
+      expect(fullscreenCoverScale(width, height, 0, 0), at).toBe(1);
+      for (const [rx, ry] of [
+        [MAX, MAX],
+        [-MAX, MAX],
+        [MAX, 0],
+        [0, -MAX],
+      ] as const) {
+        const pose = `${at} turned ${String(rx)}° and ${String(ry)}°`;
+        // At its own size the turn would show the black past its pictures.
+        expect(fullscreenCovers(width, height, rx, ry, perspective, 1), pose).toBe(false);
+        const scale = fullscreenCoverScale(width, height, rx, ry);
+        expect(scale, pose).toBeGreaterThan(1);
+        expect(scale, pose).toBeLessThanOrEqual(FULLSCREEN_COVER_SCALE_MAX);
+        // It covers at the scale it gives, and a step below it does not.
+        expect(fullscreenCovers(width, height, rx, ry, perspective, scale), pose).toBe(true);
+        expect(fullscreenCovers(width, height, rx, ry, perspective, scale - STEP), pose).toBe(false);
+        // Either sign of a turn is the same.
+        expect(fullscreenCoverScale(width, height, -rx, -ry), pose).toBe(scale);
+      }
+      // The corner pose needs more than either axis alone.
+      expect(fullscreenCoverScale(width, height, MAX, MAX), at).toBeGreaterThan(Math.max(fullscreenCoverScale(width, height, MAX, 0), fullscreenCoverScale(width, height, 0, MAX)));
+    }
+  });
+
+  it("R3350000 the farthest a slice shifts counts against the bleed, and a corner behind the eye covers nothing", () => {
+    // A screen whose bleed (FULLSCREEN_BLEED_PCT a side) is less than the farthest a slice shifts grows even level.
+    const shift = Math.max(Math.abs(FULLSCREEN_SLICE_SHIFT_FAR_PX), Math.abs(FULLSCREEN_SLICE_SHIFT_NEAR_PX));
+    const small = Math.floor((shift * 100) / FULLSCREEN_BLEED_PCT) - 10;
+    expect(fullscreenCovers(small, small, 0, 0, fullscreenDioramaPerspectivePx(small, small), 1)).toBe(false);
+    expect(fullscreenCoverScale(small, small, 0, 0)).toBeGreaterThan(1);
+    // Under a perspective shorter than the planes reach toward the eye, a turned corner passes behind it.
+    expect(fullscreenCovers(1280, 720, MAX, MAX, 10, 1)).toBe(false);
+    expect(fullscreenCovers(1280, 720, MAX, MAX, fullscreenDioramaPerspectivePx(1280, 720), FULLSCREEN_COVER_SCALE_MAX)).toBe(true);
+  });
+
+  it("R3350000 the stylesheet turns a diorama as fullscreenCovers models it: its bleed, its perspective and its transform", () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const css = readFileSync(join(here, "fullscreen.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    // The planes run FULLSCREEN_BLEED_PCT past the viewport on each side.
+    const planes = /\.fullscreen-art-planes\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(planes).toMatch(new RegExp(`(^|;|\\s)inset:\\s*-${String(FULLSCREEN_BLEED_PCT)}%;`));
+    // A diorama's view takes FullScreenArt's perspective, its fallback the same FULLSCREEN_DIORAMA_PERSPECTIVE_VMAX.
+    expect(css).toMatch(
+      new RegExp(`\\.fullscreen-art\\[data-diorama\\]\\s*\\{\\s*perspective: var\\(--fs-perspective, ${String(FULLSCREEN_DIORAMA_PERSPECTIVE_VMAX * 100)}vmax\\);\\s*\\}`),
+    );
+    // Scaled first, then turned about y, then about x: the order fullscreenCovers turns its corners in.
+    expect(css).toMatch(
+      /\.fullscreen-art-planes\[data-diorama\]\s*\{\s*transform: rotateX\(var\(--cf-tilt-rx, 0deg\)\) rotateY\(var\(--cf-tilt-ry, 0deg\)\) scale\(var\(--fs-cover, 1\)\);\s*\}/,
+    );
   });
 });
 

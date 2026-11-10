@@ -309,9 +309,11 @@ written for the card). Each slice is a picture of its own (`dioramaSliceUri`, fr
 draws the farthest in its window and the rest as `.cf-plane[data-slice]`s over it (`data-diorama`), their loops running
 only in a motion slot (`data-diorama-motion`); at an animated level, and on the board, each slice also moves its pieces as
 the card's moving picture does (its roles' layers, the particles in the nearest), so the level keeps its motion. It turns up to `DIORAMA_TURN_MAX_DEG` in inspect, the hover preview and the
-Collection (`CardFace`'s `turn`), `CARD_TILT_MAX_DEG` in hand; a board Mythic stacks every slice in its window while it
-moves (`CardArt`'s `diorama` "all"); the full-screen view draws the slices and the takeover flies through them
-(`fx/takeover.ts`, `fx-takeover-fly`). Alt art, a restyle and every flat face draw none. `dioramas.test.ts` lists any
+Collection (`CardFace`'s `turn`), `CARD_TILT_MAX_DEG` in hand, and never breaks the frame; a board Mythic stacks every slice
+in its window while it moves (`CardArt`'s `diorama` "all"), in place of the live layers, its window swelling on a hover and
+its slices over the farthest swinging on an attack (`artLive.css`); the full-screen view draws the slices, scaled as it turns
+as little as keeps the screen covered (`fullscreenCoverScale`), and the takeover flies through them (`fx/takeover.ts`,
+`fx-takeover-fly`). Alt art, a restyle and every flat face draw none. `dioramas.test.ts` lists any
 Mythic without one (`PENDING`, empty) and holds every slice to its picture's colours, no text and `ART_DETAIL_MAX_BYTES`.
 
 ## Three flows at the table

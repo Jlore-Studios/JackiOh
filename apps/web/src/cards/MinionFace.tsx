@@ -32,7 +32,8 @@
 // R3335000: a launched Starship's art wears its seat's Starship look, as CardFace's does.
 // R3334000: a Dormant Starship with pieces idles in its shipyard over its picture (ShipyardIdle.tsx).
 // R3350000: while it moves, a Mythic's normal picture with a diorama (art/dioramas/) draws every slice of it, each on its
-// loop, stacked in its window (CardArt's `diorama` "all"), which answers a hover and a press as one image does (R3340000).
+// loop, stacked in its window (CardArt's `diorama` "all") in place of its live layers: the window answers a hover and a
+// press as one image does (R3340000), and on an attack its slices over the farthest swing as a subject does (artLive.css).
 
 import { useRef, type ReactElement } from "react";
 

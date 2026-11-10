@@ -99,6 +99,24 @@ function uriOf(element: Element | null | undefined): string {
   return /^url\("(.*)"\)$/u.exec((element as HTMLElement | null | undefined)?.style.backgroundImage ?? "")?.[1] ?? "";
 }
 
+/** The Mythic as a Unit on the board, in a `.card.cf-host` as Card.tsx sets it, every look owned: its `MinionFace`. */
+function boardMythic(attacking = false): HTMLElement {
+  const printed = defOf(MYTHIC).base;
+  const health = printed.health ?? 4;
+  const u = unit("p1", { defId: MYTHIC, attack: printed.attack ?? 0, health, maxHealth: health });
+  const face = faceModel({ defId: MYTHIC, def: defOf(MYTHIC), radiant: false, live: { attack: u.attack, health: u.health, maxHealth: u.maxHealth, keywords: u.keywords } });
+  const { container } = render(
+    <FullArtOwned owned="every">
+      <div className="card cf-host">
+        <MinionFace face={face} unit={u} worn attacking={attacking} />
+      </div>
+    </FullArtOwned>,
+  );
+  const cf = container.querySelector<HTMLElement>(".cf--minion");
+  if (cf === null) throw new Error("no minion");
+  return cf;
+}
+
 function pointer(target: EventTarget, type: string, x: number, y: number): void {
   act(() => {
     target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y }));
@@ -328,33 +346,12 @@ describe("R3350000 a Mythic's face draws its diorama", () => {
   });
 
   it("R3350000 a board Mythic draws its slices while moving", () => {
-    const Minion = (): ReactElement => {
-      const printed = defOf(MYTHIC).base;
-      const health = printed.health ?? 4;
-      const u = unit("p1", { defId: MYTHIC, attack: printed.attack ?? 0, health, maxHealth: health });
-      const face = faceModel({ defId: MYTHIC, def: defOf(MYTHIC), radiant: false, live: { attack: u.attack, health: u.health, maxHealth: u.maxHealth, keywords: u.keywords } });
-      return (
-        <div className="card cf-host">
-          <MinionFace face={face} unit={u} worn />
-        </div>
-      );
-    };
     const diorama = dioramaOf(MYTHIC);
     if (diorama === null) throw new Error("no diorama");
-    const board = (): HTMLElement => {
-      const { container } = render(
-        <FullArtOwned owned="every">
-          <Minion />
-        </FullArtOwned>,
-      );
-      const cf = container.querySelector<HTMLElement>(".cf--minion");
-      if (cf === null) throw new Error("no minion");
-      return cf;
-    };
     // A Mythic on the board moves in its slot: its window holds every slice, each on its loop and moving as its art does
     // (R3340000), and no live layers.
     const motion = artMotionOf(MYTHIC);
-    const moving = board();
+    const moving = boardMythic();
     expect(moving.getAttribute("data-art-motion")).toBe("animated");
     const art = moving.querySelector<HTMLElement>(".cf-portrait > .cf-art");
     expect(art?.getAttribute("data-art-slice")).toBe("0");
@@ -370,10 +367,35 @@ describe("R3350000 a Mythic's face draws its diorama", () => {
     resetMotionSlotsForTests();
     // Held still (Animated foil off), it draws its one still picture, as before.
     writeCardSettings({ ...CARD_SETTINGS_DEFAULTS, animatedFoil: false });
-    const still = board();
+    const still = boardMythic();
     const plain = still.querySelector<HTMLElement>(".cf-portrait > .cf-art");
     expect(plain?.hasAttribute("data-art-slice")).toBe(false);
     expect(plain?.querySelector(".cf-art-slice")).toBeNull();
+  });
+
+  it("R3350000 a board diorama answers a hover and a press as one image, and an attack by swinging its slices over the farthest", () => {
+    const css = readFileSync(join(HERE, "art", "artLive.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const gate = css.indexOf("@media (prefers-reduced-motion: no-preference)");
+    expect(gate).toBeGreaterThan(0);
+    // Its window holds no live layers, so it swells on a hover and presses in on a press, as one image does (R3340000).
+    for (const selector of ['[data-art-hover="true"] .cf-art:not([data-art-live])', '[data-art-press="true"] .cf-art:not([data-art-live])']) {
+      expect(css).toContain(selector);
+    }
+    // On an attack its slices over the farthest swing toward the target as a subject does, inside the motion gate.
+    const swing =
+      /:root:not\(\[data-reduce-motion="true"\]\) \.cf\[data-art-response="true"\]\[data-art-attacking="true"\] \.cf-art-slice\s*\{\s*animation: cf-art-swing [^}]*\}/u.exec(
+        css,
+      );
+    expect(swing).not.toBeNull();
+    expect(swing?.index ?? -1).toBeGreaterThan(gate);
+    // The attacker holds a slot and draws every slice, the farthest on the window and the rest over it.
+    const attacking = boardMythic(true);
+    expect(attacking.getAttribute("data-art-attacking")).toBe("true");
+    expect(attacking.getAttribute("data-art-response")).toBe("true");
+    const art = attacking.querySelector<HTMLElement>(".cf-portrait > .cf-art");
+    expect(art?.getAttribute("data-art-slice")).toBe("0");
+    expect(art?.hasAttribute("data-art-live")).toBe(false);
+    expect(art?.querySelectorAll(":scope > .cf-art-slice").length).toBe((dioramaOf(MYTHIC)?.slices.length ?? 0) - 1);
   });
 
   it("R3350000 a bent slice turns under DIORAMA_BEND_PERSPECTIVE_PX, about the axis it names", () => {
