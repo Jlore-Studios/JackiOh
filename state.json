@@ -16466,6 +16466,10 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-09T21:04:20Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-7` (claude, opus) rejected it: `apps/web/src/dungeon/store.ts:348`: The record for a run that settles as lost takes its `timeMs` from the calendar (`now - kept.startedAt`) instead of the run's"
+      ],
+      "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 3
