@@ -46,10 +46,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MACHINE: &str = "classicplus-070";
-    const UNIT: &str = "core-008"; // Mr. Vanilla 4/4.
-    const MENACE: &str = "core-019"; // Midrange Menace; Radiant it is Immutable.
+    const UNIT: &str = "core-008"; // Mr. Vanilla
+    const MENACE: &str = "core-019"; // Midrange Menace: Radiant it is Immutable.
     const FILLER: &str = "core-005";
-    const NETHER: &str = "core-088"; // Twisting Nether: a (4) Spell with no keywords and no declared numbers.
+    const NETHER: &str = "core-088"; // Twisting Nether: Spell with no keywords and no declared numbers.
 
     use crate::js;
 

@@ -90,13 +90,13 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-005"; // (1) Spell, Stockpile: a spare card that stays in hand.
-    const POINTMASTER: &str = "core-020"; // (2) Unit 7/1
-    const MENACE: &str = "core-019"; // (3) Unit 9/9
-    const HIT_JOB: &str = "core-016"; // (3) Spell
-    const SEVEN: &str = "core-025"; // (4) Unit 7/7
-    const BIG_FELINOR: &str = "core-043"; // (4) Unit
-    const RUSH_TOKEN: &str = "core-t-rush"; // (1) Unit, token
+    const FILLER: &str = "core-005"; // Stockpile: a Spell, a spare card that stays in hand
+    const POINTMASTER: &str = "core-020"; // Pointmaster
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const HIT_JOB: &str = "core-016"; // Hit Job: a Spell
+    const SEVEN: &str = "core-025"; // 4-mana 7/7
+    const BIG_FELINOR: &str = "core-043"; // Big Felinor
+    const RUSH_TOKEN: &str = "core-t-rush"; // Rush Token: token
 
     /// p1 holding the Journey on the given face, then `hand` (each def once), over `library`; 30 mana and a
     /// spare card on each side, so no turn ends by itself.

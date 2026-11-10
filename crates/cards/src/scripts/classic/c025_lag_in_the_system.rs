@@ -102,24 +102,24 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const LAG: &str = "classic-025";
-    const REPLENISH: &str = "core-010"; // (0) Spell
-    const INFINITE: &str = "core-075"; // (0) Field Spell
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const TIMMY: &str = "core-011"; // (1) Unit 3/3
-    const STOCKPILE: &str = "core-005"; // (1) Spell
-    const SHEEPISH: &str = "core-041"; // (1) Trap
-    const BREAD: &str = "core-018"; // (1) Field Trap
-    const STATE_OF_GAME: &str = "classic-041"; // (1) Unit, Indestructible
-    const IN_TOO_DEEP: &str = "classic-090"; // (1) Field Spell, Indestructible
-    const DIVIDEND: &str = "core-024"; // (X) Spell
-    const BILLY: &str = "classicplus-069"; // (X) Unit
-    const FELINORS: &str = "core-012"; // (2) Unit 3/4
-    const TWO_TRAP: &str = "classic-052"; // Final Gambit, a (2) Trap that answers nothing these tests do (Unlicensed Experimentation, core-085, costs 3 since issue #3136)
-    const MENACE: &str = "core-019"; // (3) Unit 9/9
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell
-    const SEVEN: &str = "core-025"; // (4) Unit 7/7
-    const TOE_CRACKER: &str = "classic-006"; // (2) Unit: "Aura: Your Traps cost (0)."
-    const RUSH_TOKEN: &str = "core-t-rush"; // (1) Unit token
+    const REPLENISH: &str = "core-010"; // Rapid Replenish: a Spell
+    const INFINITE: &str = "core-075"; // Infinite Reserves: a Field Spell
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const BREAD: &str = "core-018"; // Bread and Butter: a Field Trap
+    const STATE_OF_GAME: &str = "classic-041"; // State of the Game: Indestructible
+    const IN_TOO_DEEP: &str = "classic-090"; // In Too Deep: a Field Spell, Indestructible
+    const DIVIDEND: &str = "core-024"; // Efficiency Dividend: a Spell
+    const BILLY: &str = "classicplus-069"; // Buff Billy
+    const FELINORS: &str = "core-012"; // Duplicating Felinors
+    const TWO_TRAP: &str = "classic-052"; // Final Gambit: Trap that answers nothing these tests do (Unlicensed Experimentation, core-085 since issue #3136)
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const TOE_CRACKER: &str = "classic-006"; // Cloaked Toe Cracker: "Aura: Your Traps are free."
+    const RUSH_TOKEN: &str = "core-t-rush"; // Rush Token: Unit token
 
     fn lag_board(radiant_face: bool) -> Scenario {
         scenario(json!({

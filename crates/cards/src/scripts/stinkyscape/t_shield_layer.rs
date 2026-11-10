@@ -49,10 +49,10 @@ mod tests {
     const SHIELD: &str = "stinkyscape-t-shield-layer";
     const PROPAGATION: &str = "stinkyscape-t-propagation-layer";
     const MELTDOWN: &str = "stinkyscape-t-meltdown-layer";
-    const ALLY: &str = "core-008"; // (1) 4/4.
-    const BURN: &str = "classic-036"; // (0) Spell: deal {damage} damage.
-    const STRIKER: &str = "classic-049"; // (3) 9/9 Rush.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
+    const ALLY: &str = "stand-in (1) 4/4 R12/12";
+    const BURN: &str = "classic-036"; // Burn: deal {damage} damage
+    const STRIKER: &str = "classic-049"; // Anti-Greed Machine: Rush
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy a Unit
     const FILLER: &str = "core-005";
 
     const HIT: i32 = 9;
@@ -189,7 +189,7 @@ mod tests {
     #[test]
     fn r3038002_it_has_flying_and_ranged_is_never_launched_and_takes_no_piece() {
         use jackioh_engine::prelude::{STARSHIP_LAUNCH_ABILITY, is_launched_starship, tags_of};
-        const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce.
+        const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce
         for radiant in [false, true] {
             let (mut s, ship) = crate::built_starship(
                 "r3038002-shield",

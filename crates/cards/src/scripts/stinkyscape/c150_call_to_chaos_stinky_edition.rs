@@ -80,10 +80,10 @@ mod tests {
     ];
     /// S #87 Siva 1, a 2/2 Acclaimed Unit.
     const SIVA: &str = "stinkyscape-087";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
-    const FILLER: &str = "core-005"; // (1) Spell
-    const BEAR: &str = "core-060"; // (1) Trap
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const MENACE: &str = "core-019"; // Midrange Menace: a Unit, Taunt
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
 
     const SEED: &str = "chaos-stinky";
     const SWEEP: u32 = 800;

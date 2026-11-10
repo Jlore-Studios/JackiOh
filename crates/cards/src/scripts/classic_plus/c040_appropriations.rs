@@ -146,13 +146,13 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const APPROPRIATIONS: &str = "classicplus-040";
-    const TIMMY: &str = "core-011"; // (1) 3/3 Rush, First Strike
-    const VANILLA: &str = "core-008"; // (1) 4/4
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt
-    const ARMORED: &str = "core-025"; // (4) 7/7 Armor 7
-    const ECLIPSE: &str = "core-035"; // a Spell
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const ECLIPSE: &str = "core-035"; // Lunar Eclipse: a Spell
     const FILLER: &str = "core-005";
-    const FIENDER: &str = "core-092"; // Felinor Fiender, Stack
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
 
     use crate::scenario;
 

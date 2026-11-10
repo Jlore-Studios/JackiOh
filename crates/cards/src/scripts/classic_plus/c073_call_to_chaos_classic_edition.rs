@@ -66,16 +66,16 @@ mod tests {
         "traininggrounds-039",
     ];
     const GOLEM: &str = "classicplus-073-1";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
-    const TIMMY: &str = "core-011"; // (1) Unit
-    const STOCKPILE: &str = "core-005"; // (1) Spell
-    const BEAR: &str = "core-060"; // (1) Trap
-    const TWINSPELL: &str = "core-079"; // (2) Field Spell
-    const HEROIC_POWER: &str = "core-098"; // Field Spell, Indestructible
-    const BIG_FELINOR: &str = "core-043"; // (4) Unit
-    const FIENDER: &str = "core-092"; // (2) Unit, Stack
-    const HINDER: &str = "core-021"; // (0) Spell, cast on draw; base face: discard 1 (R431)
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const TIMMY: &str = "core-011"; // Tempo Timmy
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
+    const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
+    const TWINSPELL: &str = "core-079"; // Twinspell: a Field Spell
+    const HEROIC_POWER: &str = "core-098"; // Heroic Power: a Field Spell, Indestructible
+    const BIG_FELINOR: &str = "core-043"; // Big Felinor
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const HINDER: &str = "core-021"; // Hinder: a Spell, cast on draw; base face: discard 1 (R431)
 
     const SEED: &str = "chaos-plus";
     const CURSOR_SEARCH: u32 = 800;

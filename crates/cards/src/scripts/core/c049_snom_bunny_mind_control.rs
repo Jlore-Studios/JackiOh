@@ -90,7 +90,7 @@ mod tests {
     const TOKEN_MAKER: &str = "core-015";
     const SHEEPISH: &str = "core-041";
     const WEAPONS: &str = "core-014";
-    const FILLER: &str = "core-005"; // (1) Spell: a card kept in hand, so a Float has mana to leave.
+    const FILLER: &str = "core-005"; // Stockpile: a card kept in hand, so a Float has mana to leave.
 
     const P1: PlayerId = PlayerId::P1;
 

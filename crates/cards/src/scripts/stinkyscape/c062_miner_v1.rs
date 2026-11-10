@@ -66,8 +66,8 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const REKNITE: &str = "stinkyscape-t-reknite"; // a Common Resource.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const REKNITE: &str = "stinkyscape-t-reknite"; // Reknite: a Common Resource
 
     fn mining(radiant: bool, seed: &str) -> Scenario {
         weapon_board(seed, json!({ "field": [{ "def": ID, "radiant": radiant }] }), json!({}))

@@ -134,10 +134,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MELCHIOR: &str = "stinkyscape-018-1";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4, no keyword.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // no keyword.
     const FILLER: &str = "core-016"; // Hit Job: inert in a hand.
-    const HONEYPOT: &str = "core-060"; // A Trap to set beside it.
-    const GUY_ATT: &str = "classicplus-005"; // Cry: Destroy every backrow card you control.
+    const HONEYPOT: &str = "core-060"; // Bear Honeypot: A Trap to set beside it.
+    const GUY_ATT: &str = "classicplus-005"; // Guy Att: Cry: Destroy every backrow card you control.
 
     fn table(radiant: bool, mine: Value, theirs: Value) -> Scenario {
         scenario(json!({

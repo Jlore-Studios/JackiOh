@@ -79,9 +79,9 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const STORM: &str = "classicplus-008";
-    const VANILLA: &str = "core-008"; // (1) 4/4: a Degrade can change its cost or its stats.
-    const NETHER: &str = "core-088"; // (4) Spell, no keywords, no numbers: no Degrade reaches it.
-    const HINDER: &str = "core-021"; // Cast on draw: … Discard 1 at random with no prompt (R682).
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: a Degrade can change its cost or its stats.
+    const NETHER: &str = "core-088"; // Twisting Nether: no keywords, no numbers: no Degrade reaches it.
+    const HINDER: &str = "core-021"; // Hinder: Cast on draw: … Discard 1 at random with no prompt (R682).
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
 

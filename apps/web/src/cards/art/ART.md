@@ -53,9 +53,11 @@ cards have a look of their own (R3142002): a Human Unit whose name holds "drone"
 the `drone` family; and the Stinkyscape Golem, which prints no Starship Piece, is the `fleet` family's `golem`,
 a stone-plated humanoid with engine nozzles, wing fins and a cockpit visor, found by its name (`FLEET_NAMES`)
 and no longer by `STARSHIP_PIECES`, which `stinkyscape.test.tsx` holds to the catalog's. A card with a scene
-recipe draws its scene instead (R3331000, below): Arg Arg Defender is the first, and #3403's 103 entries, Stinkyscape
-#91 to #176 with their tokens, draw theirs (R3403000, below); the cards other issues draw (the Starship Pieces, the
-Drone Battleship's layers, Anomaly Found!, the Terminus tokens and Dice of Doom) keep their pictures.
+recipe draws its scene instead (R3331000, below): since #3391 the 64 cards of its table, every card numbered 1 to
+90 but the Starship Pieces (#3333's) and Olivian Expanse (#3338's), each draw a scene of their own (R3391000,
+"Stinkyscape's scenes" below), and #3403's 103 entries, Stinkyscape #91 to #176 with their tokens, draw theirs
+(R3403000, below); the cards other issues draw (the Starship Pieces, the Drone Battleship's layers, Anomaly Found!,
+the Terminus tokens and Dice of Doom) keep their pictures.
 
 The Drone Battleship's three layers (`stinkyscape-t-meltdown-layer`, `-propagation-layer`, `-shield-layer`) are the
 decks of one ship (R3336000): the reactor keel with its core glowing through the vents, the hangar decks with their
@@ -388,7 +390,10 @@ parts apart), and never reads the face: the Radiant face draws the same shapes, 
 gold (`SCENE_RADIANT_GOLD`), with the painter's rays. The figure stands in front of its subject layer's own
 parts, and a recipe's further figures (`extras`, R3390000: a crowd, a companion, a rival) each in front of its
 own layer's parts, after the main figure in the subject layer; a placement, a figure or a further figure may
-`fade` (R3393000), its shapes' opacity scaled, for a ghost, a copy or a recruit flickering into being. `withScene` lays the scene into the procedural painter's `ArtSpec` (`artSpec`'s last argument, read
+`fade` (R3393000), its shapes' opacity scaled, for a ghost, a copy or a recruit flickering into being. R3391000:
+a placement may turn a pointing part (`rotate`, in degrees clockwise: a beam, a light stream, a light cone, a
+meteor, a smoke trail or a comet, each extending along +x unturned); every other part ignores the turn, and a
+placement with none draws exactly as before. `withScene` lays the scene into the procedural painter's `ArtSpec` (`artSpec`'s last argument, read
 from the card's id), so it prints, moves (each layer on its role's beat: `back`, `subject`, `over`, `light`,
 `motes`, and its marked placements `props`), splits for Out of frame (the subject layer and the emblem) and restyles as every procedural
 picture does, and keeps the card's theme, layout, backdrop, sky scheme, emblem glyph and motif. The
@@ -397,25 +402,36 @@ card draws its own scene wearing its Core card's frozen emblem (`legacySceneSvg`
 card's scene.
 
 The **scene kit** (`sceneKit.ts`, `SCENE_KIT`) holds the scenery, at least `SCENE_KIT_MIN_PER_CATEGORY` of
-each kind, 355 parts since Classic+'s pass (R3390000) and Core's (R3392000): 32 of terrain (fields, furrows,
-grave-mounds, cliffs, floors, rooms, streets, hills, asteroids, water, sand, snow, stages, a cavern, a chessboard,
-a floating island...), 63 of architecture (fences, posts, gates, ruins, towers, columns, arches, tombstones,
-windows, doors, houses, domes, a lighthouse, a rotunda...), 19 plants, 38 creatures (a scarab, a gelatin cube, a
-panther, a dragon, a sheep, a loaf, a Rush Token, soldiers, a crowd...), 143 objects and tools, and 60 of weather
-and light (moons, stars, clouds, mist, shafts, halos, rays, sparks, embers, motes, a void, lightning, nebulae,
-planets, a rim light, waves, a rainbow, a cyclone...). The **figure kit** (`figureKit.ts`, `FIGURE_KIT`)
-replaces the painter's one silhouette: 17 poses, 19 heads, 23 hairs and headgears, 35 outfits and 36 held items,
-put together by a look (`FIGURE_LOOKS`, `figureLookFor`), so a Unit reads as who it is: a Terminus, a CN or KY character, a Felinor, a Pancake, a Fruit, Jlockeed's people or a Human. The two kits
+each kind, 770 parts since the passes of Classic+ (R3390000), Core (R3392000), Classic+'s Alt art (R3396000),
+Meditative+ and Training Grounds (R3393000), Stinkyscape (R3391000), Meditative (R3401000), Stinkyscape's later cards
+(R3403000) and the Alt art passes after them: 64 of terrain (fields, furrows, grave-mounds, cliffs, floors, rooms, streets, hills,
+asteroids, water, sand, snow, stages, a cavern, a chessboard, a floating island, ship decks, corridors, regolith,
+lava flats, floating platforms...), 149 of architecture (fences, posts, gates, ruins, towers, columns, arches,
+tombstones, windows, doors, houses, domes, a lighthouse, a rotunda, stations, docks, hangars, vaults, server cores,
+cells, consoles, masts, bunks, seats, cockpits, portholes and the open space they look out on, cases, stalls,
+disruptor beacons, reactors...), 35 plants, 84 creatures (a scarab, a gelatin cube, a panther, a dragon, a sheep, a
+loaf, a Rush Token, soldiers, a crowd...), 306 objects and tools, 109 of weather and light (moons, stars, clouds,
+mist, shafts, halos, rays, sparks, embers, motes, a void, lightning, nebulae, planets, a rim light, waves, a
+rainbow, a cyclone, beams, light streams, light cones, meteors, smoke, comets, star glare, gas giants, shattered
+space, light grids, rifts, frost, missiles, flame, hex shields...), and 23 craft (R3391000: fighters, a scout, a
+walker, a skiff, drones (a helper with arms among them) and their corvette and battleship, a gunship, miners and a
+barge, a trader, a flagship, a frame, a fused hull, wrecks, a ghost ship, a rocket, a tram, a ring of guns), each
+facing +x about its anchor. The **figure kit** (`figureKit.ts`, `FIGURE_KIT`) replaces the painter's one
+silhouette: 22 poses, 24 heads, 43 hairs and headgears, 57 outfits and 69 held items, put together by a look
+(`FIGURE_LOOKS`, `figureLookFor`), so a Unit reads as who it is: a Terminus, a CN or KY character, a Felinor, a
+Pancake, a Fruit, Jlockeed's people or a Human; a set's pass dresses a look further for one card
+(`{ ...figureLookFor(tags), outfit, item, cloth }`). The two kits
 hold at least `SCENE_KIT_MIN_PARTS` parts; each part draws one to twelve filled shapes, a line drawn as a
 thin band.
 
 Five proof cards drew from recipes first and set the bar each set's pass meets: Corpse Plantation (Classic
 #74), Speciesist (Core #2), Heroic Power (Core #98), Ceaseless Void (Core #100) and Arg Arg Defender
-(Stinkyscape #15). Ceaseless Void's recipe keeps its painter's own subject (`ownSubject`), the giant its
-composition draws (R3338001), in place of a figure. Classic+'s pass draws every Classic+ entry from a recipe
-of its own (below, R3390000), Core's pass every Core entry but Ceaseless Void, Speciesist's and Heroic
-Power's redrawn from their briefs (Core's scenes, below, R3392000), the Meditative+ and Training Grounds
-pass every entry of those two sets (below, R3393000), Meditative's every Meditative entry (below, R3401000), and
+(Stinkyscape #15, since redrawn to its brief by Stinkyscape's pass). Ceaseless Void's recipe keeps its
+painter's own subject (`ownSubject`), the giant its composition draws (R3338001), in place of a figure.
+Classic+'s pass draws every Classic+ entry from a recipe of its own (below, R3390000), Core's pass every Core
+entry but Ceaseless Void, Speciesist's and Heroic Power's redrawn from their briefs (Core's scenes, below,
+R3392000), the Meditative+ and Training Grounds pass every entry of those two sets (below, R3393000), Meditative's
+every Meditative entry (below, R3401000), Stinkyscape's the 64 cards of its table (below, R3391000), and
 Stinkyscape's later cards theirs (below, R3403000).
 Every other card draws its picture byte for byte as before, and the golden fixtures stand for it: `core-art-v0.1.json`, `art-before-2724.json` and `stinkyscape-art-v0.5.0.json` are records of the
 old pictures now, not pins (R3331002), each holding every card with no recipe to its old hash and each card
@@ -603,6 +619,38 @@ picture changes; `ink-seal`, `ink-round-window` and the figure kit's `item-ink-b
 Meditative+'s and Training Grounds' pass (#3438) gave its own. Every entry clears its rarity's floor and is off the short list, whose cap fell from 289 to 157;
 `meditativeScenes.test.ts` holds the set to all of it, and `meditative-scenes.cy.tsx` shows every Epic, Legendary
 and Mythic entry at hand size and the rest as a contact sheet, at desktop size and at 390x844.
+
+## Stinkyscape's scenes (R3391000)
+
+Each of the 64 Stinkyscape cards of #3391's table draws from a recipe of its own (`stinkyscapeRecipes.ts`,
+`STINKYSCAPE_RECIPES`, spread into `SCENE_RECIPES`), drawn from its brief: the subject, the setting and the idea
+the brief names, a part it named that the kit lacked added to the kit. A person is the figure kit's, its look
+starting from its tag's (a Human's head, a Felinor's) and dressed for the card; a ship Unit's character is its own
+craft part in the subject layer (Stratos' boxy fighter, Falcon's needle, Paragon-X's blade, Ozark's barge), and
+Imprisoned Cosmality is its creature. The bible's palette is the set's base, and a brief's own colours are drawn
+in palette.css's nearest names (pink `red-300` and `purple-400`, teal `cyan-400` or `jade-400`, crimson `red-600`
+or `red-900`, rust `wood-700`, amber `orange-400`). Each card clears its rarity's floor, the median rising from
+Common to Mythic (Commons about 40 drawn elements, Rares about 60, Epics about 85, Legendaries about 115 and
+Mythics 150 to 160), and each Mythic places a part no other card does: Tylannt's skiff, Rod of Ages' rod, Drone
+Core X's battleship, Great Paperclip Theory's wire, Paragon-X's blade fighter and Prototype-X2's fused hull. The
+Starship Pieces, the Dormant Starship (#3333) and Olivian Expanse (#3338) keep their pictures.
+`stinkyscapeScenes.test.ts` holds the pass to its table, and `e2e/cypress/component/stinkyscape-scenes.cy.tsx`
+shows it at hand size and on a contact sheet, at desktop size and at 390x844. Its further figures (a crew, a
+squad, a rival on a leash) are R3390000's `extras`, and it wears the parts the passes before it added where a
+brief names the same thing: Classic+'s spread and seated poses, goggles, lectern, shockwave, drum, playing card
+and scales (R3390000), and Core's lab coat, work apron, anvil (a red-hot axe head of its own, `axe-head`, lying on
+it) and conveyor (R3392000). A part of its own that looks like one of theirs draws something else or turns where
+that one does not (a light stream, a light cone and a smoke trail that point and turn, a meteor, a column of
+flame, a computer core, credit chips, lava rivers seen from high above, a gloved hand reaching up, a robot arm
+whose tool bends down onto its work where Core's clamp grips upward), and where Core's pass had taken a name for
+something else, its part took another (`head-wraith` beside Core's lantern head, `cracked-helmet` beside its
+knight's helmet, `light-cone` beside its hanging spotlight). So did each part whose name a pass that landed
+before it had taken, each named for what sets it apart, so no module's spread replaces it: beside #3403's parts
+(R3403000) its `wedge-fighter`, `eye-drone`, `retro-rocket`, `welding-arm`, `reaching-hand`, `control-desk`,
+`herb-cracker`, `ship-deck`, `moon-surface`, `riveted-porthole`, `reactor-core`, `ice-cube` and `comet-streak`
+(the comet that turns), and the figure kit's `hair-professor` beside its `hair-silver` (its bubble helmet is
+`space-helmet`, so the cracked one is `cracked-helmet`); beside the Meditative pass's (R3401000) its
+`ring-station` and `ringed-rift`; and beside the Alt art passes' rope (R3397000) its `swing-rope`.
 
 ## Stinkyscape's later cards drawn as scenes (R3403000)
 

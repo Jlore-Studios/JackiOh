@@ -61,7 +61,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const RAPID: &str = "classic-026";
-    const PALANTIR: &str = "classic-004"; // Field Spell; Aura: Your opponent can't draw more than 1 card each turn.
+    const PALANTIR: &str = "classic-004"; // Palantir: Aura: Your opponent can't draw more than 1 card each turn.
     const FILLER: &str = "core-005"; // Stockpile
     const VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw: take 1 damage.
     const A: &str = "core-019";

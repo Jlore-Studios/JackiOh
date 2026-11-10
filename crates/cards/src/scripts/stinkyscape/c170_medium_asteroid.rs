@@ -89,9 +89,9 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005";
-    const BODY: &str = "core-019"; // 9/9
-    const ROCK: &str = "core-066"; // 10/10, Indestructible
-    const NETHER: &str = "core-088"; // (4) Spell: destroy all permanents
+    const BODY: &str = "core-019"; // Midrange Menace
+    const ROCK: &str = "core-066"; // The Rock: Indestructible
+    const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
     const SELF_DAMAGE: i32 = 3;
     const RESOURCES: usize = 2;
 

@@ -26,8 +26,11 @@ export const DUNGEON_RUN_STEP = 1;
 /** DR9: a run's row is shown counting from 1, as the map numbers its rows; the state counts from 0. */
 export const DUNGEON_ROW_OFFSET = 1;
 
-/** A run's elapsed time is never negative, whatever the clock did between its start and its end. */
+/** A stretch of a run's played time is never negative, whatever the clock did inside it. */
 export const DUNGEON_ELAPSED_MIN_MS = 0;
+
+/** R3502000: a run's time played before its first moment on screen; a run kept before the time played was kept starts here. */
+export const DUNGEON_ELAPSED_START_MS = 0;
 
 /** B15: the date a daily seed hashes is written `YYYY-MM-DD`, as `runDailySeed` reads it. */
 export const DUNGEON_DATE_FORMAT = "YYYY-MM-DD";

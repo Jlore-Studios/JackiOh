@@ -58,16 +58,16 @@ mod tests {
     use crate::upgrade_number;
 
     const TRAP: &str = super::ID;
-    const RENO: &str = "core-053"; // (3) 4/6, Cry: heal your hero up to 30.
-    const SAINTESS: &str = "core-081"; // (1) 1/2.
-    const ARMORED: &str = "core-025"; // (4) 7/7, Armor 7.
-    const DEFENDER: &str = "core-003"; // (1) 1/1 Taunt, Divine Shield, Reborn.
-    const TOKEN_MAKER: &str = "core-015"; // (1) 1/1, Cry: summon a Rush Token.
-    const TRUE_STRIKE: &str = "core-044"; // a Spell.
-    const MANA_WELL: &str = "core-006"; // a Field Spell.
-    const HIT_JOB: &str = "core-016"; // rides along so the turn does not auto-end (R82).
-    const PEA: &str = "meditative-013"; // (2) 2/6, Armor 2.
-    const BOOTS: &str = "classic-013"; // Radiant (1) 4/2 Charge: when this attacks, Recruit a card.
+    const RENO: &str = "core-053"; // Reno: Cry: heal your hero up to 30
+    const SAINTESS: &str = "core-081"; // Radiant Saintess
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const DEFENDER: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
+    const TOKEN_MAKER: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
+    const TRUE_STRIKE: &str = "core-044"; // True Strike: a Spell
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const HIT_JOB: &str = "core-016"; // Hit Job: rides along so the turn does not auto-end (R82)
+    const PEA: &str = "meditative-013"; // Gatling Pea: Armor 2
+    const BOOTS: &str = "classic-013"; // Boots on the Ground: Charge: when this attacks, Recruit a card.
     const RUSH_TOKEN: &str = "core-t-rush";
 
     fn trap_set(hand: Value, radiant_trap: bool) -> Scenario {

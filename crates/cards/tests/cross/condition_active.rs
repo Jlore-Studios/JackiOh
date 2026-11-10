@@ -304,8 +304,8 @@ mod c53_reno_lights_up_below_its_floor_r195_b6 {
 mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
     use super::*;
 
-    const SORCERER: &str = "core-068"; // Unit 5/5 → 10/10.
-    const SPONGE: &str = "core-019"; // Midrange Menace 9/9 → 18/18, no Armor.
+    const SORCERER: &str = "core-068"; // Twisted Sorcerer
+    const SPONGE: &str = "core-019"; // Midrange Menace: no Armor
     /// A free Spell that keeps the turn open (§2.5's auto-end); never played.
     const ANCHOR: &str = "core-010";
 
@@ -676,7 +676,7 @@ mod r196_a_crafted_c53_reno_c68_twisted_sorcerer_glows_when_either_printed_condi
 
     const RENO: &str = "core-053";
     const SORCERER: &str = "core-068";
-    const SPONGE: &str = "core-019"; // Midrange Menace 9/9, no Armor.
+    const SPONGE: &str = "core-019"; // Midrange Menace: no Armor
     /// A free Spell that keeps the turn open (§2.5's auto-end); never played.
     const ANCHOR: &str = "core-010";
 
@@ -856,7 +856,7 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
     use super::*;
 
     const BURN: &str = "classic-036";
-    const MONKEY: &str = "classic-077"; // Anti-Magic Monkey: Aura: Spells cost (1) more.
+    const MONKEY: &str = "classic-077"; // Anti-Magic Monkey: Aura: Spells cost more.
     const ANCHOR: &str = "core-010";
     const LIBRARY: [&str; 2] = ["core-008", "core-011"];
 
@@ -1236,7 +1236,7 @@ mod classic_c69_plague_charger_lights_up_while_it_has_a_plague_counter_r195 {
     use super::*;
 
     const CHARGER: &str = "classic-069";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
     const FILLER: &str = "core-005";
 
     fn hits_on(s: &Scenario, instance_id: &str) -> usize {

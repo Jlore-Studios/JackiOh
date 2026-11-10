@@ -76,12 +76,12 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SCREAM: &str = "stinkyscape-012-3";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9.
-    const SILAS: &str = "core-052"; // (4) Unit 4/4.
-    const WELL: &str = "core-006"; // (3) Field Spell.
-    const SHEEPISH: &str = "core-041"; // (1) Trap.
-    const SHEEP: &str = "core-t-sheep"; // Unit token.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const SILAS: &str = "core-052"; // Silly Silas
+    const WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const SHEEP: &str = "core-t-sheep"; // Sheep Token: Unit token.
     const FILLER: &str = "core-005";
 
     fn shuffled(s: &Scenario) -> Vec<String> {

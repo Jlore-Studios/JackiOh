@@ -91,14 +91,14 @@ mod tests {
     use crate::scenario;
 
     const FIRE: &str = "classicplus-t-ai-06";
-    const DATACENTER: &str = "classicplus-078"; // (2) Field Spell
-    const TWINSPELL: &str = "core-079"; // (2) Field Spell
-    const FARM: &str = "core-058"; // Rush Token Farm, Field Spell
-    const HEROIC_POWER: &str = "core-098"; // Field Spell, Indestructible
-    const BEAR: &str = "core-060"; // (1) Trap
-    const BREAD: &str = "core-018"; // Field Trap
-    const SOLARIUS: &str = "classicplus-038"; // Unit printing Spell Damage +2
-    const BAUBLE: &str = "classicplus-061"; // (1) Field Spell: "Death: Add 2 Stockpiles to your hand. Each costs (0)."
+    const DATACENTER: &str = "classicplus-078"; // Claude's Datacenter: a Field Spell
+    const TWINSPELL: &str = "core-079"; // Twinspell: a Field Spell
+    const FARM: &str = "core-058"; // Rush Token Farm: a Field Spell
+    const HEROIC_POWER: &str = "core-098"; // Heroic Power: a Field Spell, Indestructible
+    const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
+    const BREAD: &str = "core-018"; // Bread and Butter: a Field Trap
+    const SOLARIUS: &str = "classicplus-038"; // Solarius: Unit printing Spell Damage +2
+    const BAUBLE: &str = "classicplus-061"; // Bauble Bubble: "Death: Add 2 Stockpiles to your hand. Each costs 0."
     const STOCKPILE: &str = "core-005";
     const VANILLA: &str = "core-008";
 

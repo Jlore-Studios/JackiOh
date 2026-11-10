@@ -200,7 +200,7 @@ mod tests {
         use super::*;
 
         const JILLIAX: &str = "core-056";
-        const VANILLA: &str = "core-008"; // (1) 4/4 Unit with no hooks: an Equip host.
+        const VANILLA: &str = "core-008"; // Mr. Vanilla: a Unit with no hooks: an Equip host.
 
         /// p1 holds Jilliax (Radiant on `radiant`) with a Vanilla of theirs on the field in lane 1.
         fn holding(radiant: bool) -> Scenario {

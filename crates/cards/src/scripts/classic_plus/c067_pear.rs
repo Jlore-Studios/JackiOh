@@ -54,8 +54,8 @@ mod tests {
     const PEAR: &str = "classicplus-067";
     const FILLER: &str = "core-005";
     const MENACE: &str = "core-019";
-    const ME_AND_MR_TOKEN: &str = "core-015"; // (1) Common Unit, "Cry: Summon a Rush Token."
-    const TRAP: &str = "core-085"; // (2) Trap, set face down to fill the backrow.
+    const ME_AND_MR_TOKEN: &str = "core-015"; // Me and Mr Token: "Cry: Summon a Rush Token."
+    const TRAP: &str = "core-085"; // Unlicensed Experimentation: a Trap, set face down to fill the backrow
 
     use crate::js;
 

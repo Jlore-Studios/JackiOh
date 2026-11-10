@@ -109,12 +109,12 @@ mod tests {
     use std::collections::BTreeSet;
 
     const DOCTOR: &str = "classic-059";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const FIENDER: &str = "core-092"; // (2) Unit 5/7 Stack.
-    const PAWN: &str = "core-096"; // (1) Trap: answers only an attack that would be lethal.
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const PAWN: &str = "core-096"; // My Pawn: answers only an attack that would be lethal
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: a Spell (§2.5).
 
     use crate::js;
 

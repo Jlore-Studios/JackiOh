@@ -29,7 +29,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const GOLEM: &str = "core-095-1"; // Unit token, 10/10 → 20/20
+    const GOLEM: &str = "core-095-1"; // Chaos Golem: Unit token
     /// #61 Postdoc is a 2/4 with no Taunt, so nothing but the Golem's own keywords decides a target.
     const POSTDOC: &str = "core-061";
     /// A radiant #91 Fed Fauci is 2/12: it survives a 10-attack First Strike and strikes back.

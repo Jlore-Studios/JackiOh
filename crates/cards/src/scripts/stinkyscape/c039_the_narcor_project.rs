@@ -107,7 +107,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005";
-    const NETHER: &str = "core-088"; // (4) Spell: destroy all permanents
+    const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
     const REKNITE: &str = "stinkyscape-t-reknite";
 
     fn project(radiant: bool, held: Value) -> Scenario {

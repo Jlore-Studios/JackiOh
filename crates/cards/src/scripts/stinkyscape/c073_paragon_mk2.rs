@@ -26,10 +26,10 @@ mod tests {
     use crate::filler;
 
     const PARAGON: &str = "stinkyscape-073";
-    const STRATOS: &str = "stinkyscape-068"; // (1) 3/1 Flying, Ranged.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+    const STRATOS: &str = "stinkyscape-068"; // Stratos: Flying, Ranged
+    const MENACE: &str = "core-019"; // Midrange Menace: a Unit, Taunt
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: Spell (§2.5).
 
     fn live_kinds(s: &Scenario, card: &str) -> Vec<String> {
         s.stats(card)

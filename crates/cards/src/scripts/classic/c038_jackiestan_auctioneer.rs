@@ -109,13 +109,13 @@ mod tests {
 
     const AUCTION: &str = "classic-038";
     const COUNTER: &str = "classic-017"; // Counterspell: counters the opponent's Spell.
-    const FILLER: &str = "core-039"; // (0) Spell Recycling Initiative: exiles itself; its effect waits for the turn's end.
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2, heal 2.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const TIMMY: &str = "core-011"; // (1) 3/3.
-    const MENACE: &str = "core-019"; // 9/9.
-    const HINDER: &str = "core-021"; // (0) cast on draw.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
+    const FILLER: &str = "core-039"; // Recycling Initiative: exiles itself; its effect waits for the turn's end
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2, heal 2
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const TIMMY: &str = "core-011"; // Tempo Timmy
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const HINDER: &str = "core-021"; // Hinder: cast on draw
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;

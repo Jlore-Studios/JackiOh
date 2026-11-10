@@ -75,9 +75,9 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-005"; // Stockpile, a Spell that prints no Tradable.
-    const PRESTIGE: &str = "meditative-053"; // Prints Tradable.
-    const TRADE_UNION: &str = "stinkyscape-165"; // The same aura, and no roll.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell that prints no Tradable.
+    const PRESTIGE: &str = "meditative-053"; // Prestige: Prints Tradable
+    const TRADE_UNION: &str = "stinkyscape-165"; // The Trade Union: The same aura, and no roll.
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     enum Outcome {

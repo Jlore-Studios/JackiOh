@@ -172,6 +172,15 @@ given, #1859), `launch_starship`, and `upgrade_number`, `degrade_number`, `can_u
 `can_degrade_number`. Take the engine testkit's `Scenario::unit_at`, `pick::…` and `must` the same way;
 `crates/tools/tests/acceptance.rs` refuses a copy, and a `register_all();` on the line above a `scenario(` (#1826, #2023, #2930). Read events and offered actions through `Scenario::count`, `last_count`, `events_of`, `last_events_of` and `offered(seat)` rather than a copy (#3504). Keep a local helper only when its body differs.
 
+**Helper cards** (#3486). A test that needs only a card's numbers (some 3-cost 9/9, a textless Spell to fill a
+hand) names a stand-in, a card its id spells out, `const BIG: &str = "stand-in (3) 9/9";`, rather than a real
+card a balance patch may change; the grammar is in `crates/engine/src/testkit/stand_in.rs` (`"stand-in (1) 4/4
+R12/12"`, `"stand-in (4) 7/7 Armor 7"`, `"stand-in (1) 3/3 Rush, First Strike"`, `"stand-in (0) Spell"`, `"stand-in
+(1) Trap"`). A helper kept for its text, name, tag or set keeps its real id, with the card's name in its comment
+and an optional role, `const KILL: &str = "core-016"; // Hit Job: the removal`, which `cargo jackioh names`
+writes. No comment beside a real card's id gives a cost or stats: `names --check`, which a `jackioh-tools` test
+runs over the card tests, refuses one.
+
 ## 3. The patch, and its order
 
 A change to a card is a patch (R388, R646). No one names its version: `patches ship` names it when it

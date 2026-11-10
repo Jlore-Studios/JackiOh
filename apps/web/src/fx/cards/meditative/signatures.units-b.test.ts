@@ -258,13 +258,17 @@ describe("R3405001 Meditative's Unit signatures, second batch", () => {
     // Its Cry, standing as "ex": a Datacenter into its backrow, an enemy Unit dimmed, a card added to its hand.
     const view = standing();
     const foe = tid(testid.card(unitAt(view, "opponent", 0).instanceId));
-    const datacenter: GameEvent = { type: "summoned", player: "p1", instanceId: "fx-datacenter", defId: "classicplus-078", row: "backrow", lane: 2 };
+    const datacenter: Extract<GameEvent, { type: "summoned" }> = { type: "summoned", player: "p1", instanceId: "fx-datacenter", defId: "classicplus-078", row: "backrow", lane: 2 };
     const dim = (card: { instanceId: string; defId: string }): GameEvent => ({ type: "degraded", instanceId: card.instanceId, defId: card.defId, change: NERF });
     const [raised, dimmed, gift, unseen] = run(YILE_PRIME, [datacenter, dim(unitAt(view, "opponent", 0)), added("p1", "fx-glitch", "classic-018"), dim({ instanceId: "hidden", defId: "hidden" })], D, "p1", view);
     const zone = tid(testid.zone("you", "backrow", 2));
     const card = tid(testid.card("ex"));
     const hand = tid(animTestid.hand("you"));
-    expect(raised).toMatchObject({ cues: [{ kind: "figure", figure: "brushRing", size: "small", at: zone, delayMs: 0 }, { kind: "burst", spread: "area", at: zone }], row: "replace" });
+    // R3399000: the Datacenter lands by its own entrance (Classic+'s obeliskRise) before the ring stops on it.
+    const obelisks = ENTRANCES.obeliskRise({ D, tgt: testid.zone("you", "backrow", 2), intensity: FX_INTENSITY_SCALE.normal, view, landing: datacenter, leadMs: 0 });
+    expect(raised?.cues.slice(0, obelisks.length)).toEqual(obelisks);
+    expect(raised?.cues.slice(obelisks.length)).toMatchObject([{ kind: "figure", figure: "brushRing", size: "small", at: zone, delayMs: 0 }, { kind: "burst", spread: "area", at: zone }]);
+    expect(raised?.row).toBe("replace");
     expect(dimmed).toMatchObject({ cues: [{ figure: "brushRing", size: "small", at: foe }, { kind: "burst", preset: "smoke", at: foe }], row: "replace" });
     expect(gift).toMatchObject({ cues: [{ figure: "brushRing", at: card }, { kind: "ghost", from: card, to: hand }, { kind: "sheen", at: hand, delayMs: 0, durationMs: D }], row: "replace" });
     // R202: a card dimmed in a Deck or a hand this seat cannot read has no anchor: its row plays.

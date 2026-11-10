@@ -78,11 +78,11 @@ mod tests {
     use crate::scenario;
 
     const WASTES: &str = "classicplus-012-6";
-    const MENACE: &str = "core-019"; // 9/9
-    const ROCK: &str = "core-066"; // Indestructible
-    const DEFENDER: &str = "core-003"; // Taunt, Divine Shield, Reborn
-    const MANA_WELL: &str = "core-006"; // Field Spell
-    const MAGIC_JAMMED: &str = "core-036"; // destroy target backrow card
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const ROCK: &str = "core-066"; // The Rock: Indestructible
+    const DEFENDER: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const MAGIC_JAMMED: &str = "core-036"; // Magic Jammed: destroy target backrow card
     const STOCKPILE: &str = "core-005";
     const LUNAR: &str = "core-035";
 

@@ -62,7 +62,7 @@ mod tests {
 
     const HONEYPOT: &str = "stinkyscape-t-ai-09";
     const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     /// #44, a Spell aimed at a hero.
     const SPELL: &str = "core-044";
     const HIT_JOB: &str = "core-016";

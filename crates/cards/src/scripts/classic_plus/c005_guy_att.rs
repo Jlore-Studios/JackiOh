@@ -32,15 +32,15 @@ mod tests {
     use crate::scenario;
 
     const GUY: &str = "classicplus-005";
-    const SHEEPISH: &str = "core-041"; // (1) Trap.
-    const MY_PAWN: &str = "core-096"; // (1) Trap: fires only on a lethal attack, so a play never sets it off.
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell.
-    const HEROIC_POWER: &str = "core-098"; // Indestructible Field Spell.
-    const FROSTSPATULA: &str = "classicplus-012-8"; // Field Spell token: Animated on your turn, Rush.
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const MY_PAWN: &str = "core-096"; // My Pawn: fires only on a lethal attack, so a play never sets it off
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const HEROIC_POWER: &str = "core-098"; // Heroic Power: Indestructible Field Spell
+    const FROSTSPATULA: &str = "classicplus-012-8"; // Frostspatula: Field Spell token: Animated on your turn, Rush.
     const TOWER: &str = "classicplus-033"; // Ivory Tower: the first Unit stacked onto it is fused into it.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const COOKIE_GUILD: &str = "classic-031"; // (2) Cry: Recruit 1 Unit of (2) Cost or less.
-    const MR_TOKEN: &str = "core-015"; // (1) 1/1, Cry: summon a Rush Token.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const COOKIE_GUILD: &str = "classic-031"; // Cookie Guild: Cry: Recruit 1 cheap Unit.
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
 

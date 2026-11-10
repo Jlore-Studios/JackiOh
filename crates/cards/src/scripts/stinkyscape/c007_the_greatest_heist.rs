@@ -159,13 +159,13 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const TYLANNT: &str = "stinkyscape-006"; // Cry: complete the current stage on all your Quests.
-    const WARDRUM: &str = "classicplus-037"; // an Acclaimed Unit that ships.
-    const JELLY: &str = "core-026"; // (3) Spell: Make a card in your hand Radiant.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const MIND_CONTROL: &str = "core-049"; // (4) Spell: Steal an enemy Unit.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const CORE_SYSTEM: &str = "stinkyscape-117"; // (3) Spell: Bounce all permanents.
+    const TYLANNT: &str = "stinkyscape-006"; // Tylannt: Cry: complete the current stage on all your Quests
+    const WARDRUM: &str = "classicplus-037"; // Wardrum: an Acclaimed Unit that ships.
+    const JELLY: &str = "core-026"; // Glowy Jelly Bean: Make a card in your hand Radiant.
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const MIND_CONTROL: &str = "core-049"; // Snom Bunny Mind Control: Steal an enemy Unit.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const CORE_SYSTEM: &str = "stinkyscape-117"; // Core System: Bounce all permanents.
 
     const MANA: i32 = 20;
 

@@ -50,14 +50,14 @@ mod tests {
     use crate::def_ids;
 
     const CHAIN: &str = "classicplus-t-ai-04";
-    const TIMMY: &str = "core-011"; // (1) Unit
-    const RAPID: &str = "core-010"; // (0) Spell
-    const D_FENDER: &str = "core-001"; // (2) Unit
-    const MENACE: &str = "core-019"; // (3) Unit
-    const ADAPTIVE_UI: &str = "core-074"; // (X) Spell
-    const HINDER: &str = "core-021"; // (0) Spell, cast on draw; the base face discards 1 at random with no prompt (R431, R682)
-    const VANILLA: &str = "core-008"; // (1) Unit, the spare in hand
-    const PALANTIR: &str = "classic-004"; // (2) Field Spell: "Aura: Your opponent can't draw more than 1 card each turn."
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const RAPID: &str = "core-010"; // Rapid Replenish: a Spell
+    const D_FENDER: &str = "core-001"; // Big D-fender
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const ADAPTIVE_UI: &str = "core-074"; // Adaptive UI: a Spell
+    const HINDER: &str = "core-021"; // Hinder: a Spell, cast on draw; the base face discards 1 at random with no prompt (R431, R682)
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // the spare in hand
+    const PALANTIR: &str = "classic-004"; // Palantir: "Aura: Your opponent can't draw more than 1 card each turn."
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;

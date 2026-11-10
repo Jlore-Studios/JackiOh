@@ -78,22 +78,22 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TAOTIE: &str = "meditative-047";
-    const BODY: &str = "core-012"; // Duplicating Felinors 3/4, the meal.
+    const BODY: &str = "core-012"; // Duplicating Felinors: the meal
     const FILLER: &str = "core-005";
-    const MROW: &str = "core-086"; // "Miss" Mrow 1/1 Felinor, Can't attack, a Death.
-    const D_FENDER: &str = "core-001"; // Big D-fender 0/7: "Aura: … Defense Position … +2 Armor."
+    const MROW: &str = "core-086"; // "Miss" Mrow: Felinor, Can't attack, a Death
+    const D_FENDER: &str = "core-001"; // Big D-fender: "Aura: … Defense Position … +2 Armor."
     const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: "End of turn: Deal 2 damage …".
     const SPECIESIST: &str = "core-002"; // Speciesist: "Cry: Destroy an enemy non-Human Unit."
-    const SAINTESS: &str = "core-081"; // Radiant Saintess 2/2: "Death: Make your other Units Radiant."
-    const SHEEPISH: &str = "core-041"; // a Trap, set face-down.
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell, a backrow card.
-    const BIG_FELINOR: &str = "core-043"; // the bottom of a Stack pile.
-    const FIENDER: &str = "core-092"; // Felinor Fiender, Stack, the pile's top.
-    const WALL: &str = "meditative-097-7"; // The Great Wall, printed Immutable.
+    const SAINTESS: &str = "core-081"; // Radiant Saintess: "Death: Make your other Units Radiant."
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap, set face-down
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell, a backrow card
+    const BIG_FELINOR: &str = "core-043"; // Big Felinor: the bottom of a Stack pile.
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack, the pile's top
+    const WALL: &str = "meditative-097-7"; // The Great Wall: printed Immutable
     const ECLIPSE: &str = "core-035"; // Lunar Eclipse: deal 3 damage.
-    const WORMHOLE: &str = "stinkyscape-139"; // a Trap: counters an opponent's Spell aimed at their own side.
-    const BOOK: &str = "classicplus-057"; // Book of Stats: "Give a Unit +5/+5."
-    const VANILLA: &str = "core-008"; // Mr. Vanilla 4/4, no text.
+    const WORMHOLE: &str = "stinkyscape-139"; // Wormhole: counters an opponent's Spell aimed at their own side.
+    const BOOK: &str = "classicplus-057"; // Book of Stats: gives a Unit +attack/+health
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: no text
 
     fn meal(n: i32) -> Value {
         json!([{ "def": BODY, "lane": n }])

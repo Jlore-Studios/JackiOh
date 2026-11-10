@@ -50,11 +50,11 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const TAX: &str = "classicplus-t-ai-07";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
-    const FELINOR: &str = "core-043"; // (4) Spell
-    const ADAPTIVE_UI: &str = "core-074"; // (X) Spell
-    const STOCKPILE: &str = "core-005"; // (1) Spell
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const FELINOR: &str = "core-043"; // Big Felinor: a Spell
+    const ADAPTIVE_UI: &str = "core-074"; // Adaptive UI: a Spell
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;

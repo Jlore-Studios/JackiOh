@@ -57,8 +57,8 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce: keywords only
 
     fn launched(seed: &str, radiant: bool) -> (Scenario, String) {
         let (mut s, ship) = built_starship(

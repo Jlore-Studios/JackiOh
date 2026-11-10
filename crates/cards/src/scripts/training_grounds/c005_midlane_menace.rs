@@ -46,7 +46,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MENACE: &str = super::ID;
-    const BODY: &str = "core-008"; // Mr. Vanilla 4/4
+    const BODY: &str = "core-008"; // Mr. Vanilla
     const FILLER: &str = "core-005";
 
     fn menace(radiant: bool) -> Scenario {

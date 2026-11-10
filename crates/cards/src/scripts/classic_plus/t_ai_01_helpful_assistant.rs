@@ -51,7 +51,7 @@ mod tests {
 
     const ASSISTANT: &str = "classicplus-t-ai-01";
     const FILLER: &str = "core-005";
-    const HINDER: &str = "core-021"; // Cast on draw
+    const HINDER: &str = "core-021"; // Hinder: Cast on draw
     const MENACE: &str = "core-019";
     const TIMMY: &str = "core-011";
     const RENO: &str = "core-053";

@@ -29,12 +29,12 @@ const PREVIEWED: [&str; 6] = [
 ];
 
 /// Patch v0.2.0's Classic cards that declare one (R280), each proved in its own block below.
-const CURSE: &str = "classic-001"; // C #1 Curse of the Forgotten Classic
-const PLAGUE_NUKE: &str = "classic-043"; // C #43 Plague Nuke
-const LIZARDS_BREATH: &str = "classic-019"; // C #19 Lizard's Breath
-const PLAGUE_DOCTOR: &str = "classic-059"; // C #59 Plague Doctor
-const SIPHON_SQUAD: &str = "classic-088"; // C #88 Siphon Squad
-const DIVINE_FAVOR: &str = "classic-046"; // C #46 Divine Favor
+const CURSE: &str = "classic-001"; // Curse of the Forgotten Classic
+const PLAGUE_NUKE: &str = "classic-043"; // Plague Nuke
+const LIZARDS_BREATH: &str = "classic-019"; // Lizard's Breath
+const PLAGUE_DOCTOR: &str = "classic-059"; // Plague Doctor
+const SIPHON_SQUAD: &str = "classic-088"; // Siphon Squad
+const DIVINE_FAVOR: &str = "classic-046"; // Divine Favor
 const CLASSIC_PREVIEWED: [&str; 6] = [
     CURSE,
     LIZARDS_BREATH,
@@ -49,9 +49,9 @@ const TWICE_FORWARD: &str = "classicplus-074";
 const NEW_SET_PREVIEWED: [&str; 2] = [TWICE_FORWARD, DATACENTER_FIRE];
 
 /// Patch v0.2.0's Classic+ cards #1–#39 that declare one (R280), each proved in its own test file.
-const SNAKE: &str = "classicplus-003"; // C+ #3's hits: test/classic-plus/003-second-amendment-snake.test.ts
-const FROZEN_WASTES: &str = "classicplus-012-6"; // C+ #12.6's exiles: test/classic-plus/012-6-frozen-wastes.test.ts
-const BOOK_WORM: &str = "classicplus-039"; // C+ #39 Book Worm's N: test/classic-plus/039-book-worm.test.ts
+const SNAKE: &str = "classicplus-003"; // Second Amendment Snake: C+ #3's hits: test/classic-plus/003-second-amendment-snake.test.ts
+const FROZEN_WASTES: &str = "classicplus-012-6"; // Frozen Wastes: C+ #12.6's exiles: test/classic-plus/012-6-frozen-wastes.test.ts
+const BOOK_WORM: &str = "classicplus-039"; // Book Worm: C+ #39 Book Worm's N: test/classic-plus/039-book-worm.test.ts
 const CLASSIC_PLUS_C_PREVIEWED: [&str; 3] = [SNAKE, FROZEN_WASTES, BOOK_WORM];
 
 /// Meditative cards that declare one, each proved in its own script file: #8, and #40 Feng Shui's
@@ -100,10 +100,10 @@ const REMEMBERED: [&str; 33] = [
 const BASE_FACE_ONLY: &str = "classicplus-034";
 const RADIANT_FACE_ONLY: &str = "classic-004";
 
-const RAPID_REPLENISH: &str = "core-010"; // 0-cost Spell; Combo 3, so nothing at one play — a free anchor
-const TEMPO_TIMMY: &str = "core-011"; // 1-cost Unit
-const BIG_D_FENDER: &str = "core-001"; // 2-cost Unit
-const MENACE: &str = "core-019"; // library filler, and a 9/9 target that survives
+const RAPID_REPLENISH: &str = "core-010"; // Rapid Replenish: Combo 3, so nothing at one play — a free anchor
+const TEMPO_TIMMY: &str = "core-011"; // Tempo Timmy
+const BIG_D_FENDER: &str = "core-001"; // Big D-fender
+const MENACE: &str = "core-019"; // Midrange Menace: library filler, and a target that survives
 const STOCKPILE: &str = "core-005";
 
 fn at_enemy_hero() -> Value {
@@ -775,9 +775,9 @@ mod c91_fed_fauci_previews_the_mana_its_next_start_of_turn_gives_r280 {
 mod t_ai_6_datacenter_fire_previews_the_damage_each_hero_would_take_r280 {
     use super::*;
 
-    const TWINSPELL: &str = "core-079"; // (2) Field Spell
-    const FARM: &str = "core-058"; // (2) Field Spell
-    const HEROIC_POWER: &str = "core-098"; // Field Spell, Indestructible
+    const TWINSPELL: &str = "core-079"; // Twinspell: a Field Spell
+    const FARM: &str = "core-058"; // Rush Token Farm: a Field Spell
+    const HEROIC_POWER: &str = "core-098"; // Heroic Power: a Field Spell, Indestructible
 
     fn up(def_id: &str, lane: i32) -> Value {
         json!({ "def": def_id, "faceUp": true, "lane": lane })
@@ -1751,7 +1751,7 @@ mod c_74_twice_forward_previews_the_plays_it_has_counted_to_its_controller_alone
     use super::*;
 
     const LABEL: &str = "your opponent plays";
-    const TIMMY: &str = "core-011"; // (1) Unit
+    const TIMMY: &str = "core-011"; // Tempo Timmy
 
     fn counted(face: FaceKind) -> Scenario {
         scenario(json!({

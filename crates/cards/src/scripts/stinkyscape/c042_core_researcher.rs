@@ -44,7 +44,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const RESEARCHER: &str = "stinkyscape-042";
-    const CALL_TO_ARMS: &str = "core-069"; // (2) Spell: Recruit Units of (1) Cost or less; Radiant (2).
+    const CALL_TO_ARMS: &str = "core-069"; // Call to Arms: Recruit cheap Units; Radiant raises the cap.
     const FILLER: &str = "core-005";
 
     fn cores(s: &Scenario) -> Vec<(String, bool)> {

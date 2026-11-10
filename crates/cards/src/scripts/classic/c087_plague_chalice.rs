@@ -78,17 +78,17 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const CHALICE: &str = "classic-087";
-    const BRINGER: &str = "classic-076"; // (2) Unit: Rush; Cry: place 2 Plague Counters (two placements). Draw 1.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
-    const MUTATE: &str = "classic-078"; // (1) Field Spell: Activate ♾️: remove a Plague Counter from a permanent …
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const POINTMASTER: &str = "core-020"; // (2) Unit 7/1 First Strike.
-    const HINDER: &str = "core-021"; // (0) Spell: Cast on draw: your opponent has 1 less mana next turn. Discard 1 random card.
-    const PAWN: &str = "core-096"; // (1) Trap: answers only an attack that would be lethal.
-    const COLLATERAL: &str = "core-034"; // (4) Spell: Exile target permanent and a random card from your opponent's deck.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
-    const FILLER: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const X: &str = "core-019"; // library filler.
+    const BRINGER: &str = "classic-076"; // Plague Bringer: Rush; Cry: place 2 Plague Counters (two placements). Draw 1.
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const MUTATE: &str = "classic-078"; // Mutate Spell: Activate ♾️: remove a Plague Counter from a permanent …
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield";
+    const HINDER: &str = "core-021"; // Hinder: Cast on draw: your opponent has 1 less mana next turn. Discard 1 random card.
+    const PAWN: &str = "core-096"; // My Pawn: answers only an attack that would be lethal
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: Exile target permanent and a random card from your opponent's deck.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: a Spell (§2.5).
+    const FILLER: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const X: &str = "core-019"; // Midrange Menace: library filler
 
     use crate::scenario;
 

@@ -85,7 +85,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
     const PLAYABLE: [&str; 5] = [
         "stinkyscape-004-3",
         "stinkyscape-004-1",

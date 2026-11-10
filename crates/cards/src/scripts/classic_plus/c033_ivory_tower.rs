@@ -124,18 +124,18 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TOWER: &str = "classicplus-033";
-    const TOKENS: &str = "core-015"; // (1) 1/1, Cry: summon a Rush Token (Radiant: 3).
+    const TOKENS: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token (Radiant: 3)
     const RUSH: &str = "core-t-rush";
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const TOE_CRACKER: &str = "classic-006"; // (2) 3/4, Aura: your Traps cost (0).
-    const JAY: &str = "classicplus-049"; // (2) 3/6 Taunt, End of turn: a random card in your hand costs (2) less.
-    const SHEEPLE: &str = "classic-082"; // (1) 1/1, Death: draw 2.
-    const GUY_ATT: &str = "classicplus-005"; // (2) 6/8, Cry: destroy every backrow card you control.
-    const SHEEPISH: &str = "core-041"; // (1) Trap: transforms an opponent's played Unit once its Cry resolves.
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const TOE_CRACKER: &str = "classic-006"; // Cloaked Toe Cracker: Aura: your Traps cost 0.
+    const JAY: &str = "classicplus-049"; // Jay Fungus: Taunt, End of turn: a random card in your hand costs 2 less.
+    const SHEEPLE: &str = "classic-082"; // Sheeople: Death: draw 2
+    const GUY_ATT: &str = "classicplus-005"; // Guy Att: Cry: destroy every backrow card you control
+    const SHEEPISH: &str = "core-041"; // Sheepish: transforms an opponent's played Unit once its Cry resolves.
     const SHEEP: &str = "core-t-sheep";
-    const MAGIC_JAMMED: &str = "core-036"; // (1) Spell: destroy target backrow card, Lock its zone.
-    const BIG_SPELL: &str = "core-035"; // (1) Spell, a hand card to discount.
+    const MAGIC_JAMMED: &str = "core-036"; // Magic Jammed: destroy target backrow card, Lock its zone.
+    const BIG_SPELL: &str = "core-035"; // Lunar Eclipse: a hand card to discount
     const FILLER: &str = "core-005";
     const DECK: [&str; 4] = [FILLER, FILLER, FILLER, FILLER];
 

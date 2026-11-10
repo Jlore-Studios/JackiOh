@@ -43,7 +43,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const FILLER: &str = "core-005";
-    const NETHER: &str = "core-088"; // (4) Spell: destroy all permanents
+    const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
 
     fn crash(radiant: bool) -> Scenario {
         scenario(json!({

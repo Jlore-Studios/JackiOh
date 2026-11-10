@@ -2941,6 +2941,43 @@ mod r2881000_watching_a_coop_game {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn r3477000_a_duos_seats_view_frames_carry_a_forecast_and_its_watchers_none() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let _a2 = h.seat(&h.guest).await;
+        h.ai_mulligans_answered(&a1).await;
+        let fan = account(&h.app, 4, "Fay").await;
+        befriend(&h.app, &fan, &h.host).await;
+        let watcher = watch(&h, &fan, &h.host).await;
+        assert_admitted(&watcher);
+
+        h.keep(&a1, "a1-keep").await;
+        watcher
+            .wait_for(0, ms(SPECTATE_DELAY_MS) + DELAY_SLACK, |frame| {
+                frame["type"] == "view" && mulligan_answered(&frame["view"]["own"])
+            })
+            .await
+            .unwrap_or_else(|| panic!("the watcher never saw the keep: {:?}", watcher.frames()));
+
+        let seats = a1.of_type("view");
+        assert!(!seats.is_empty());
+        for frame in seats {
+            assert!(
+                frame["forecast"]["attacks"].is_array(),
+                "R3477000: the seat's forecast: {frame}"
+            );
+        }
+        let shown = watcher.of_type("view");
+        assert!(!shown.is_empty());
+        for frame in shown {
+            assert!(
+                frame.get("forecast").is_none(),
+                "R3477000: a watcher's forecast: {frame}"
+            );
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn r2881000_a_watcher_is_held_to_the_friends_duos_view_for_and_never_sent_a_ping_or_the_ai_teams_hand()
      {
         let h = duos("easy").await;

@@ -51,11 +51,11 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FAREWELL: &str = "stinkyscape-004-1";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const SHEEPLE: &str = "classic-082"; // Death: draw 1.
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile.
-    const WELL: &str = "core-006"; // (3) Field Spell.
-    const HONEYPOT: &str = "core-060"; // a Trap.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const SHEEPLE: &str = "classic-082"; // Sheeople: Death: draw 1
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const HONEYPOT: &str = "core-060"; // Bear Honeypot: a Trap
 
     fn farewell(radiant: bool) -> Value {
         json!({ "def": FAREWELL, "radiant": radiant })

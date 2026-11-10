@@ -68,14 +68,14 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4, Human.
-    const WALL: &str = "classic-041"; // 3/3 Indestructible.
-    const SHEEPISH: &str = "core-041"; // A Trap, set face-down.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: Human
+    const WALL: &str = "classic-041"; // State of the Game: Indestructible
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap, set face-down
     const BAT: &str = "classicplus-004"; // Juhan Biggest Bat: a CN Unit.
     const RUSH_TOKEN: &str = "core-t-rush";
     const BIG_FELINOR: &str = "core-043";
-    const FIENDER: &str = "core-092"; // Stack: played onto a pile, the cards beneath it are dormant.
-    const TOP_LOSER: &str = "classicplus-019-1"; // Radiant: Immune to Spells.
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack: played onto a pile, the cards beneath it are dormant
+    const TOP_LOSER: &str = "classicplus-019-1"; // Top Loser: Radiant: Immune to Spells.
     const FILLER: &str = "core-016";
 
     fn decreed(seed: &str, radiant: bool, mine: Value, theirs: Value) -> Scenario {

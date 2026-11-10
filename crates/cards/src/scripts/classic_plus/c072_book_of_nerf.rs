@@ -41,9 +41,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BOOK: &str = "classicplus-072";
-    const UNIT: &str = "core-008"; // Mr. Vanilla 4/4.
-    const MROW: &str = "core-086"; // "Miss" Mrow: (1) 1/1, Can't attack.
-    const MENACE: &str = "core-019"; // Midrange Menace; Radiant it is Immutable.
+    const UNIT: &str = "core-008"; // Mr. Vanilla
+    const MROW: &str = "core-086"; // "Miss" Mrow: Can't attack
+    const MENACE: &str = "core-019"; // Midrange Menace: Radiant it is Immutable.
     const TRAP: &str = "core-041";
     const FILLER: &str = "core-005";
 

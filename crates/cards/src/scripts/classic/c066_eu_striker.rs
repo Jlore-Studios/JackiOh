@@ -90,14 +90,14 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const STRIKER: &str = "classic-066";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const BIG_FELINOR: &str = "core-043"; // (4) Unit: Cry: Destroy all non-Felinor Units.
-    const STOCKPILE: &str = "core-005"; // (1) Spell
-    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
-    const GRAND: &str = "classic-072"; // Trap: counters the opponent's non-Unit plays.
-    const FILLER: &str = "core-010"; // (0) Spell
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
-    const LOCKDOWN: &str = "classic-084"; // After a permanent is played, Lock its zone.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const BIG_FELINOR: &str = "core-043"; // Big Felinor: Cry: Destroy all non-Felinor Units.
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
+    const SUPER_VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw
+    const GRAND: &str = "classic-072"; // Grand Counterspell: counters the opponent's non-Unit plays.
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const LOCKDOWN: &str = "classic-084"; // Lockdown: After a permanent is played, Lock its zone.
 
     use crate::js;
 

@@ -1099,6 +1099,9 @@ function PracticeScreen({
         legal={snapshot.legal}
         onAction={onAction}
         error={snapshot.error}
+        // R3477000: a lesson draws no attack outcome, so its trades stay the player's to find; its coach
+        // reads the snapshot's forecast itself.
+        forecast={config.lesson === undefined ? snapshot.forecast : undefined}
         resultForm="chip"
         emotes={emotes}
         // R639: a practice game is logged; a lesson is not, nor (R923000) a sandbox game, nor

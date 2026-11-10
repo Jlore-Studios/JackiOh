@@ -121,13 +121,13 @@ mod tests {
     use crate::scenario;
 
     const OUTBREAK: &str = "classic-039";
-    const SLIME: &str = "classic-027"; // (0) Unit 1/1: placements on it doubled.
-    const CHALICE: &str = "classic-087"; // (X) Field Spell.
-    const BILLY: &str = "classicplus-069"; // (X) Unit 2X/3X; its Cry Upgrades it, never its cost (R396).
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9.
-    const PAWN: &str = "core-096"; // (1) Trap, answers only a lethal attack.
-    const UNLICENSED: &str = "classic-052"; // Final Gambit, a (2) Trap that answers nothing here (Unlicensed Experimentation, core-085, costs 3 since issue #3136).
+    const SLIME: &str = "classic-027"; // Pestilent Slime: placements on it doubled
+    const CHALICE: &str = "classic-087"; // Plague Chalice: a Field Spell
+    const BILLY: &str = "classicplus-069"; // Buff Billy: its Cry Upgrades it, never its cost (R396).
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const PAWN: &str = "core-096"; // My Pawn: a Trap, answers only a lethal attack
+    const UNLICENSED: &str = "classic-052"; // Final Gambit: Trap that answers nothing here (Unlicensed Experimentation, core-085 since issue #3136).
     const FILLER: &str = "core-005";
     const ANCHOR: &str = "core-010";
     const X: &str = "core-020";

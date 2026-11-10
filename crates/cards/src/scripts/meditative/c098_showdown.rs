@@ -184,9 +184,9 @@ mod tests {
 
     const SHOWDOWN: &str = "meditative-098";
     const BOOK: &str = "classicplus-071";
-    const VANILLA: &str = "core-008"; // (1) 4/4 Human.
-    const RECRUIT: &str = "core-069"; // (2) Spell: Recruit a 3-or-less Unit.
-    const FIENDER: &str = "core-092"; // (2) 5/7 Stack: played onto a taken unit zone.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: Human
+    const RECRUIT: &str = "core-069"; // Call to Arms: Recruit a 3-or-less Unit.
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack: played onto a taken unit zone
     const FILLER: &str = "core-005";
 
     fn library() -> Value {
@@ -372,8 +372,8 @@ mod tests {
     mod r831008_only_an_empty_lane {
         use super::*;
 
-        const PALANTIR: &str = "classic-004"; // C #4: steals a (2) Cost Spell and casts it at random.
-        const TRAP: &str = "core-096"; // My Pawn, a Trap, set face down.
+        const PALANTIR: &str = "classic-004"; // Palantir: C #4: steals a Spell and casts it at random.
+        const TRAP: &str = "core-096"; // My Pawn: a Trap, set face down
 
         /// p1 (Showdown on the Radiant face on `radiant`) faces p2's Vanillas in lanes 2 and 3 and a
         /// face-down Trap in p2's backrow lane 5, so lanes 1 and 4 are the empty ones.

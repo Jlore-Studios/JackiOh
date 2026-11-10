@@ -84,16 +84,16 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-010"; // (0) Spell.
-    const SPARE: &str = "core-005"; // (1) Spell: library spare.
-    const CHEAP_UNIT: &str = "core-008"; // (1) Unit.
-    const DEAR_UNIT: &str = "core-025"; // (4) Unit.
-    const CHEAP_SPELL: &str = "core-041"; // (1) Trap.
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const SPARE: &str = "core-005"; // Stockpile: library spare
+    const CHEAP_UNIT: &str = "core-008"; // Mr. Vanilla
+    const DEAR_UNIT: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const CHEAP_SPELL: &str = "core-041"; // Sheepish: a Trap
     const VANILLA: &str = "core-008";
-    const SHEEP: &str = "core-t-sheep"; // Worth 2 Tributes.
-    const LAR: &str = "classicplus-076"; // (1) Brother Lar, Death: summon a Brother Ping.
+    const SHEEP: &str = "core-t-sheep"; // Sheep Token: Worth 2 Tributes
+    const LAR: &str = "classicplus-076"; // Brother Lar: Death: summon a Brother Ping
     const PING: &str = "classicplus-076-1";
-    const TWO_COST: &str = "core-056"; // (2) Jilliax.
+    const TWO_COST: &str = "core-056"; // Jilliax
 
     #[test]
     fn is_a_3_cost_unit_token_printed_rare() {

@@ -85,13 +85,13 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const STAB: &str = "core-070"; // Spell, cost 3.
-    const SPONGE: &str = "core-019"; // Midrange Menace, 9/9, no Armor: a target that survives.
-    const FODDER: &str = "core-010"; // Rapid Replenish, a Spell: filler for an exile pile.
+    const STAB: &str = "core-070"; // Spiteful Stab: a Spell
+    const SPONGE: &str = "core-019"; // Midrange Menace: no Armor: a target that survives
+    const FODDER: &str = "core-010"; // Rapid Replenish: filler for an exile pile
 
     /// R82: a turn left with only end, concede and offer-draw auto-ends after every action, so each
     /// scenario keeps this free Spell in p1's hand, never played, as one legal action on the turn.
-    const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: a Spell, always an affordable play
 
     /// The refusal's word, lower-case (a hand check: no regex crate).
     const TARGET_TEXT: &str = "target";

@@ -696,6 +696,16 @@ it too), and `catalog::registered_catalog()`/`scripts::script_of()` consult it f
 `#[cfg(feature = "testkit")]` only. That one `thread_local!` is the only allowed exception to §3's
 `RefCell` ban (`#[allow(clippy::disallowed_types)]` on that item alone).
 
+**Stand-in cards** (#3486, `testkit/stand_in.rs`). A test that needs only a card's numbers names a
+card whose id spells them out, `"stand-in (3) 9/9"`, `"stand-in (1) 4/4 R12/12"`, `"stand-in (4) 7/7 Armor 7"`
+or `"stand-in (0) Spell"` (`STAND_IN_GRAMMAR` gives the grammar; a Unit with no Radiant face written takes
+R349's fallback), rather than borrowing a real card a balance patch may change. Under `testkit`,
+`catalog::find_def` builds the card on a miss and caches it in a thread-local beside the overrides, each
+card leaked as `register_catalog` leaks; a malformed id panics with the grammar. The cache stays out of
+`registered()`, so no `query`, random pool, `def_by_index` or deck validation reaches a stand-in and no
+seeded draw moves; production builds compile none of it. A stand-in is a Common Core card with no tags,
+no script and no text but its keywords, named by its id.
+
 A card reference resolves by catalog id, §5 index or name, as in TS. `s.unit_at(p, lane)` is `s.unit(p, lane)`
 that panics on an empty lane, and `testkit::pick` holds the one-instance selection builders (`id`, `instance`,
 `card`, `unit_at`); tests take these rather than a copy (#1826). `testkit::must(value, what)` is an

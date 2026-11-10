@@ -3,7 +3,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ActionBody, PlayerView } from "@jackioh/shared";
+import type { ActionBody, CombatForecast, PlayerView } from "@jackioh/shared";
 import { POST_GAME_FRAME_VERSION, SPECTATOR_EMOTE_HAND_SIZE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import { DEFAULT_CARD_COSMETICS, cosmeticsOf, type CardCosmetics, type CosmeticKind } from "../cards/cosmetics.ts";
@@ -291,6 +291,29 @@ describe("server frames", () => {
       type: "view",
       economy: ECONOMY,
     });
+  });
+
+  it("R3477000 a view frame's forecast is kept with its view and one without clears it", () => {
+    const forecast: CombatForecast = {
+      attacks: [
+        { attackerId: "u1", targetId: "e1", dealt: 2, taken: 3, kills: true, survives: false, pops: false, attackerSize: 5, targetSize: 4 },
+      ],
+      lethal: false,
+    };
+    const h = connected();
+    expect(h.client.snapshot().forecast).toBeNull();
+    h.socket().deliver({ type: "view", view: baseView({ turn: 2 }), legal: [], forecast });
+    expect(h.client.snapshot().forecast).toEqual(forecast);
+    // A watcher's frame, or one from a server without it, carries none: the seat shows none.
+    h.socket().deliver({ type: "view", view: baseView({ turn: 3 }), legal: [] });
+    expect(h.client.snapshot().view?.turn).toBe(3);
+    expect(h.client.snapshot().forecast).toBeNull();
+    // A forecast that is no forecast is dropped, never the view.
+    h.socket().deliver({ type: "view", view: baseView({ turn: 4 }), forecast: { attacks: "no" } });
+    expect(h.client.snapshot().view?.turn).toBe(4);
+    expect(h.client.snapshot().forecast).toBeNull();
+    expect(parseServerFrame(JSON.stringify({ type: "view", view: baseView() }))).not.toHaveProperty("forecast");
+    expect(parseServerFrame(JSON.stringify({ type: "view", view: baseView(), forecast }))).toMatchObject({ type: "view", forecast });
   });
 
   it("#1664 an economy that is not whole is no economy, and never costs the board its view", () => {

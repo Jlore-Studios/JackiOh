@@ -31,13 +31,13 @@ mod tests {
     use crate::scenario;
 
     const SILENCE: &str = "classicplus-009";
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt. End of turn: heal to full. Radiant: Immutable.
-    const SURGERY: &str = "core-063"; // (1) Give target Unit +3/+3 and 1 random keyword.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const WEAPONS: &str = "core-014"; // Field Spell: your Units have +2 attack, Rush and First Strike.
-    const SHEEPISH: &str = "core-041"; // (1) Trap: transforms the opponent's played Unit.
-    const TESLA: &str = "classic-005"; // Animated Field Trap: fires when the opponent summons a Unit.
-    const FROSTSPATULA: &str = "classicplus-012-8"; // Field Spell token: Animated on your turn, Rush.
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt. End of turn: heal to full. Radiant: Immutable.
+    const SURGERY: &str = "core-063"; // Plastic Surgery: Give target Unit +attack/+health and 1 random keyword.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your Units have +2 attack, Rush and First Strike.
+    const SHEEPISH: &str = "core-041"; // Sheepish: transforms the opponent's played Unit
+    const TESLA: &str = "classic-005"; // Tesla: Animated Field Trap: fires when the opponent summons a Unit
+    const FROSTSPATULA: &str = "classicplus-012-8"; // Frostspatula: Field Spell token: Animated on your turn, Rush.
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
 

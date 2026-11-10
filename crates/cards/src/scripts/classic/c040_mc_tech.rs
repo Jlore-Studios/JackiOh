@@ -100,11 +100,11 @@ mod tests {
     use crate::scenario;
 
     const TECH: &str = "classic-040";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9.
-    const TEMPO: &str = "core-011"; // (1) Unit 3/3 Rush.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const TEMPO: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
     const FIENDER: &str = "core-092"; // Felinor Fiender: Stack.
-    const FIELD_SPELL: &str = "core-073"; // (2) Field Spell.
+    const FIELD_SPELL: &str = "core-073"; // Anti-oneshot Armor: a Field Spell
     const PAWN: &str = "core-096";
     const BREAD: &str = "core-018";
     const STIMMY: &str = "core-071";

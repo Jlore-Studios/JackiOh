@@ -53,7 +53,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SUBROUTINE: &str = "stinkyscape-t-ai-07";
-    const VANILLA: &str = "core-008"; // (1) 4/4, no keywords.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
     fn played(radiant: bool, seed: &str) -> Scenario {
@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn r1881004_a_dormant_card_is_passed_by() {
-        const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce.
+        const AP_ROUNDS: &str = "stinkyscape-100"; // AP Rounds: Starship Piece, Equip, Pierce
         let (mut s, ship) = crate::built_starship(
             "subroutine-dormant",
             json!([{ "def": AP_ROUNDS, "lane": 2 }]),
