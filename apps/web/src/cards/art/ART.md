@@ -175,9 +175,9 @@ still a pure function of the card's id, name, tags and type. The cache keys the 
 served for another's. The normal picture's seed is the card's id alone, so every still picture and
 golden hash stands. A later version with a picture of its own adds its own name to `ArtPicture`, so it
 draws apart from every other. A Starship's art, a Legacy card's and a delivered file keep their one picture.
-A Classic+, Meditative+, Training Grounds, Meditative or Core card offered Alt art, and a card of #3406's table,
-Stinkyscape's later cards, draws an alt recipe of its own instead (R3396000, R3397000, R3404000, R3398000 and
-R3406000, below).
+A Classic+, Meditative+, Training Grounds, Meditative or Core card offered Alt art, a card of #3406's table,
+Stinkyscape's later cards, and a card of #3394's table, Stinkyscape's cards 1 to 90 and the Dormant Starship, draws an
+alt recipe of its own instead (R3396000, R3397000, R3404000, R3398000, R3406000 and R3394000, below).
 
 ## One picture per variant (R3015002)
 
@@ -633,8 +633,9 @@ or `red-900`, rust `wood-700`, amber `orange-400`). Each card clears its rarity'
 Common to Mythic (Commons about 40 drawn elements, Rares about 60, Epics about 85, Legendaries about 115 and
 Mythics 150 to 160), and each Mythic places a part no other card does: Tylannt's skiff, Rod of Ages' rod, Drone
 Core X's battleship, Great Paperclip Theory's wire, Paragon-X's blade fighter and Prototype-X2's fused hull. The
-Starship Pieces, the Dormant Starship (#3333) and Olivian Expanse (#3338) keep their pictures.
-`stinkyscapeScenes.test.ts` holds the pass to its table, and `e2e/cypress/component/stinkyscape-scenes.cy.tsx`
+Starship Pieces, the Dormant Starship (#3333) and Olivian Expanse (#3338) keep their pictures. R3394000 gives every
+card here offered Alt art, and those three's offered it, an alt recipe of its own, their normal faces unchanged
+(below). `stinkyscapeScenes.test.ts` holds the pass to its table, and `e2e/cypress/component/stinkyscape-scenes.cy.tsx`
 shows it at hand size and on a contact sheet, at desktop size and at 390x844. Its further figures (a crew, a
 squad, a rival on a leash) are R3390000's `extras`, and it wears the parts the passes before it added where a
 brief names the same thing: Classic+'s spread and seated poses, goggles, lectern, shockwave, drum, playing card
@@ -749,7 +750,7 @@ face to its picture and its Radiant marks, and `meditative-alt-scenes.cy.tsx` me
 ## Stinkyscape's later Alt art restaged (R3406000)
 
 Each of the 54 cards of #3406's table, every Stinkyscape card from #91 on and every Stinkyscape token offered Alt art
-but the Dormant Starship, draws an alt recipe of its own, written from #3406's brief for it, under Classic+'s rules
+but the Dormant Starship (which #3394's table restages, R3394000, below), draws an alt recipe of its own, written from #3406's brief for it, under Classic+'s rules
 (above): the same subject and idea in another place, time or story moment, read under the card's Alt art seed alone,
 one picture at every Alt art level. The recipes are three files in id order, spread into `ALT_SCENE_RECIPES` as
 `STINKYSCAPE_91_ALT_RECIPES` after the other sets': `stinkyscape91AltRecipes1.ts` (#93 to #115, with
@@ -779,6 +780,43 @@ hundred-sided die with no digits), a pineapple, an escalator and a glowing seash
 holds every recipe to the rules and every Alt art level's face to its picture and its Radiant marks, and
 `stinkyscape91-alt-scenes.cy.tsx` measures each window against `ALT_PICTURE_CHANGE_MIN` and screenshots each normal
 face beside its Alt art face.
+
+## Stinkyscape's early Alt art restaged (R3394000)
+
+Each of the 48 cards of #3394's table, every Stinkyscape card from #1 to #90 offered Alt art and the Dormant Starship
+(which #3406's table left out), draws an alt recipe of its own, written from #3394's brief for it, under Classic+'s
+rules (above): the same subject and idea in another place, time or story moment, read under the card's Alt art seed
+alone, one picture at every Alt art level. The recipes are three files in id order, spread into `ALT_SCENE_RECIPES`
+as `STINKYSCAPE_ALT_RECIPES` after #3406's: `stinkyscapeAltRecipes1.ts` (#1 to #26, with `normalLookOf`, read from
+`stinkyscapeRecipes.ts`), `stinkyscapeAltRecipes2.ts` (#30 to #56) and `stinkyscapeAltRecipes3.ts` (#62 to #88 and
+the Dormant Starship).
+
+- **A piece of its own painter.** Fourteen of the 48 have no normal recipe: Olivian Expanse (R3338001), the twelve
+  early Starship Pieces (R3333001) and the Dormant Starship (R3333000). Their normal face and every seed but the Alt
+  art one keep their own painter's picture, the Stinkyscape painter trying the scene first (svg.ts `sceneArtSvg`);
+  a Starship in play never reads the Alt art seed, so the Dormant Starship's alt picture shows only out of play.
+  Each stands its piece in its subject layer as a part of the scene kit, under a sky that is neither `black` nor
+  `slate-900` (Olivian Expanse's not violet either, its expanse's colour): the survey ship's cockpit and console,
+  Healing Capsule's flank pod on hull plates and Cannon v4's great cannon (#3406's parts, reused), the drills on
+  their comet, asteroid or pebble, and the parts below.
+- **The same subject.** A figure both pictures draw is the normal one's person (`normalLookOf`; only its item, cloth
+  or hair may change); a subject that is a part stays in the subject layer; Masochism Unmasked's mask, cracked in its
+  normal picture, waits whole as a `chrome-mask` before the hit; and Halo, a ship whose normal picture seats its
+  pilot in the ring, draws the ring alone.
+- **Camera and detail.** Classic+'s new camera and new sky for the 34 with a normal recipe; the rarity's floor and
+  the byte ceiling on both faces, and far, mid, subject and near layers from Epic up. None of the 48 has full-art
+  motion of its own.
+
+A detail the kit lacks is left out and named in the recipe's comment (Olivian Expanse's rear-view mirror, the
+infirmary's tray, Tylannt's lockpick, which is the figure kit's key, the oil can, the stolen heroes' outlines, which
+are faint ghost figures, ZolarKeth's medals and harness, the cleaner drones' brushes, the Core Researcher's loose
+goggles, Z'Zoth's and Badger's curl, Phalanx's folded quills, Siva's leash, Siva 2's crystal glass), and no placement
+turns a part, so the Falcon stands crooked by its place alone. Seven parts joined
+the kit in a module of their own, `sceneKitStinkyEarlyAlt.ts`, spread into `SCENE_KIT` after #3406's: a chrome face
+mask, a bare chassis frame, a beam emitter, a repeater gun, an orca-shaped mining hull, a pair of solar panels and a
+dormant hull with no flame. `stinkyscapeAltScenes.test.tsx` holds every recipe to the rules and every Alt art level's
+face to its picture and its Radiant marks, and `stinkyscape-alt-scenes.cy.tsx` measures each window against
+`ALT_PICTURE_CHANGE_MIN` and screenshots each normal face beside its Alt art face.
 
 ## The detail floor (R3331001)
 

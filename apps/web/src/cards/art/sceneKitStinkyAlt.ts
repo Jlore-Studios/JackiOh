@@ -13,10 +13,10 @@ import type { KitPart, KitShape, PartPlace, Rng } from "./scene.ts";
 // Helpers
 
 /** What a part draws with: its own frame, or that frame turned about a pivot (`tilted`). */
-type Pen = Pick<Local, "p" | "poly" | "circle" | "band">;
+export type Pen = Pick<Local, "p" | "poly" | "circle" | "band">;
 
 /** A part's frame turned `degrees` about (`cx`, `cy`), clockwise on screen as drawn facing right. */
-function tilted(f: Local, degrees: number, cx = 0, cy = 0): Pen {
+export function tilted(f: Local, degrees: number, cx = 0, cy = 0): Pen {
   const T = (dx: number, dy: number): Point => {
     const [x, y] = turned([dx, dy], degrees);
     return [cx + x, cy + y];
@@ -30,7 +30,7 @@ function tilted(f: Local, degrees: number, cx = 0, cy = 0): Pen {
 }
 
 /** An upright rectangle from (x0, y0) to (x1, y1). */
-function box(f: Pen, x0: number, y0: number, x1: number, y1: number): string {
+export function box(f: Pen, x0: number, y0: number, x1: number, y1: number): string {
   return f.poly([
     [x0, y0],
     [x1, y0],
@@ -40,7 +40,7 @@ function box(f: Pen, x0: number, y0: number, x1: number, y1: number): string {
 }
 
 /** A rectangle from (x0, y0) to (x1, y1), its corners cut `c` deep: a plate. */
-function cut(f: Pen, x0: number, y0: number, x1: number, y1: number, c: number): string {
+export function cut(f: Pen, x0: number, y0: number, x1: number, y1: number, c: number): string {
   return f.poly([
     [x0 + c, y0],
     [x1 - c, y0],
@@ -54,7 +54,7 @@ function cut(f: Pen, x0: number, y0: number, x1: number, y1: number, c: number):
 }
 
 /** A rectangle from (x0, y0) to (x1, y1), its corners rounded `r`. */
-function rounded(f: Pen, x0: number, y0: number, x1: number, y1: number, r: number): string {
+export function rounded(f: Pen, x0: number, y0: number, x1: number, y1: number, r: number): string {
   return (
     `M${f.p(x0 + r, y0)}L${f.p(x1 - r, y0)}Q${f.p(x1, y0)} ${f.p(x1, y0 + r)}L${f.p(x1, y1 - r)}Q${f.p(x1, y1)} ${f.p(x1 - r, y1)}` +
     `L${f.p(x0 + r, y1)}Q${f.p(x0, y1)} ${f.p(x0, y1 - r)}L${f.p(x0, y0 + r)}Q${f.p(x0, y0)} ${f.p(x0 + r, y0)}Z`

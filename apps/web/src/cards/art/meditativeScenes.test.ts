@@ -42,6 +42,7 @@ import { OBJECTS_KIT } from "./sceneKitObjects.ts";
 import { PLACES_KIT } from "./sceneKitPlaces.ts";
 import { SPACE_KIT } from "./sceneKitSpace.ts";
 import { STINKY_ALT_KIT } from "./sceneKitStinkyAlt.ts";
+import { STINKY_EARLY_ALT_KIT } from "./sceneKitStinkyEarlyAlt.ts";
 import { TOUCHES_KIT } from "./sceneKitTouches.ts";
 import { YARD_KIT } from "./sceneKitYard.ts";
 import { ALT_SCENE_RECIPES } from "./sceneRecipes.ts";
@@ -296,8 +297,8 @@ describe("R3401000 Meditative drawn as scenes", () => {
     for (const [id, part] of ink) expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);
     // None takes the place of one of the first kit's parts or of an earlier module's; R3403000: Stinkyscape's four
     // modules follow them (stinkyscape91Scenes.test.ts), and R3406000 the Stinkyscape Alt art pass's
-    // (stinkyscape91AltScenes.test.tsx).
-    const after = [SPACE_KIT, CRAFT_KIT, GEAR_KIT, COSMOS_KIT, STINKY_ALT_KIT].flatMap((kit) => Object.keys(kit));
+    // (stinkyscape91AltScenes.test.tsx), and R3394000 the early Stinkyscape Alt art pass's (stinkyscapeAltScenes.test.tsx).
+    const after = [SPACE_KIT, CRAFT_KIT, GEAR_KIT, COSMOS_KIT, STINKY_ALT_KIT, STINKY_EARLY_ALT_KIT].flatMap((kit) => Object.keys(kit));
     expect(Object.keys(SCENE_KIT)).toHaveLength(FIRST_KIT_PARTS + ids.length + after.length);
     expect(Object.keys(SCENE_KIT).slice(FIRST_KIT_PARTS + before.length, FIRST_KIT_PARTS + ids.length)).toEqual(ink.map(([id]) => id));
   });

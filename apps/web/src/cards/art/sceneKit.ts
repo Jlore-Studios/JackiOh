@@ -62,6 +62,7 @@ import { PLACES_KIT } from "./sceneKitPlaces.ts";
 import { MOUNTAIN_KIT } from "./sceneKitMountain.ts";
 import { SPACE_KIT } from "./sceneKitSpace.ts";
 import { STINKY_ALT_KIT } from "./sceneKitStinkyAlt.ts";
+import { STINKY_EARLY_ALT_KIT } from "./sceneKitStinkyEarlyAlt.ts";
 import { TOUCHES_KIT } from "./sceneKitTouches.ts";
 import { YARD_KIT } from "./sceneKitYard.ts";
 
@@ -7046,6 +7047,8 @@ export const SCENE_KIT = {
   ...COSMOS_KIT,
   // R3406000: the parts the Stinkyscape Alt art pass added.
   ...STINKY_ALT_KIT,
+  // R3394000: the parts the early Stinkyscape Alt art pass added.
+  ...STINKY_EARLY_ALT_KIT,
 } as const satisfies Readonly<Record<string, KitPart>>;
 
 export type SceneryPartId = keyof typeof SCENE_KIT;

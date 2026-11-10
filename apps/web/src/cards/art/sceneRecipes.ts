@@ -17,7 +17,9 @@
 // trainingGroundsAltRecipes.ts), and R3404000: so does a Meditative card offered Alt art
 // (meditativeAltRecipes1.ts to meditativeAltRecipes3.ts), and R3398000 a Core card (coreAltRecipes1.ts to
 // coreAltRecipes3.ts), and R3406000 every card of #3406's table, Stinkyscape's later cards
-// (stinkyscape91AltRecipes1.ts to stinkyscape91AltRecipes3.ts).
+// (stinkyscape91AltRecipes1.ts to stinkyscape91AltRecipes3.ts), and R3394000 every card of #3394's table,
+// Stinkyscape's cards 1 to 90 offered Alt art and the Dormant Starship (stinkyscapeAltRecipes1.ts to
+// stinkyscapeAltRecipes3.ts).
 
 import { CLASSIC_PLUS_ALT_RECIPES_1 } from "./classicPlusAltRecipes1.ts";
 import { CLASSIC_PLUS_ALT_RECIPES_2 } from "./classicPlusAltRecipes2.ts";
@@ -49,6 +51,9 @@ import { CORE_SCENES_3 } from "./sceneRecipesCore3.ts";
 import { LEGACY_RECIPES } from "./sceneRecipesLegacy.ts";
 import { MEDITATIVE_PLUS_RECIPES } from "./sceneRecipesMeditativePlus.ts";
 import { TRAINING_GROUNDS_RECIPES } from "./sceneRecipesTrainingGrounds.ts";
+import { STINKYSCAPE_ALT_RECIPES_1 } from "./stinkyscapeAltRecipes1.ts";
+import { STINKYSCAPE_ALT_RECIPES_2 } from "./stinkyscapeAltRecipes2.ts";
+import { STINKYSCAPE_ALT_RECIPES_3 } from "./stinkyscapeAltRecipes3.ts";
 import { STINKYSCAPE_RECIPES } from "./stinkyscapeRecipes.ts";
 import { TRAINING_GROUNDS_ALT_RECIPES } from "./trainingGroundsAltRecipes.ts";
 
@@ -156,6 +161,13 @@ export const STINKYSCAPE_91_ALT_RECIPES: Readonly<Record<string, SceneRecipe>> =
   ...STINKYSCAPE_91_ALT_RECIPES_3,
 };
 
+/** R3394000: the alt recipes of #3394's table (Stinkyscape's cards 1 to 90 offered Alt art, and the Dormant Starship), by id. */
+export const STINKYSCAPE_ALT_RECIPES: Readonly<Record<string, SceneRecipe>> = {
+  ...STINKYSCAPE_ALT_RECIPES_1,
+  ...STINKYSCAPE_ALT_RECIPES_2,
+  ...STINKYSCAPE_ALT_RECIPES_3,
+};
+
 /** R3331000: the cards that draw from a scene, by id: the proof cards left here, R3390000 every Classic+ entry, R3391000 every Stinkyscape entry of its pass (cards 1 to 90), R3392000 every Core entry, R3393000 every Meditative+ and Training Grounds entry, R3401000 every Meditative entry and R3403000 #3403's Stinkyscape entries. */
 export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   "classic-074": CORPSE_PLANTATION,
@@ -186,7 +198,10 @@ export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
  * R3404000: and so does every Meditative card offered Alt art (meditativeAltRecipes1.ts to meditativeAltRecipes3.ts).
  * R3398000: and every Core card offered it (coreAltRecipes1.ts to coreAltRecipes3.ts). R3406000: and every card of
  * #3406's table (`STINKYSCAPE_91_ALT_RECIPES`), a Starship Piece's, a Jlockeed weapon's and Dice of Doom's among them,
- * whose normal face their own painter still draws.
+ * whose normal face their own painter still draws. R3394000: and every card of #3394's table
+ * (`STINKYSCAPE_ALT_RECIPES`), Stinkyscape's cards 1 to 90 offered Alt art and the Dormant Starship, Olivian
+ * Expanse's, an early Starship Piece's and the Dormant Starship's among them, whose normal face their own painter
+ * still draws.
  */
 export const ALT_SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   ...CLASSIC_PLUS_ALT_RECIPES_1,
@@ -200,6 +215,7 @@ export const ALT_SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   ...CORE_ALT_RECIPES_2,
   ...CORE_ALT_RECIPES_3,
   ...STINKYSCAPE_91_ALT_RECIPES,
+  ...STINKYSCAPE_ALT_RECIPES,
 };
 
 /**
@@ -209,6 +225,7 @@ export const ALT_SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
  * e2e/cypress/component/set-alt-scenes.cy.tsx for Meditative+'s and Training Grounds'; R3404000: and
  * e2e/cypress/component/meditative-alt-scenes.cy.tsx for Meditative's; R3398000: and
  * e2e/cypress/component/core-alt-scenes.cy.tsx the Core cards' the same way; R3406000: and
- * e2e/cypress/component/stinkyscape91-alt-scenes.cy.tsx for Stinkyscape's later cards'.
+ * e2e/cypress/component/stinkyscape91-alt-scenes.cy.tsx for Stinkyscape's later cards'; R3394000: and
+ * e2e/cypress/component/stinkyscape-alt-scenes.cy.tsx for Stinkyscape's cards 1 to 90 and the Dormant Starship.
  */
 export const ALT_PICTURE_CHANGE_MIN = 0.6;
