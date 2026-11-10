@@ -776,6 +776,26 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         assert_eq!(state.next_id, before.next_id);
     }
 
+    /// R28 (#3514): one link short of `CALL_TO_CHAOS_CHAIN_CAP` a cast still resolves, and the copy it
+    /// casts is the cap's, which resolves into nothing: exactly one more card is played.
+    #[test]
+    fn r28_a_cast_one_short_of_the_cap_plays_exactly_one_more() {
+        let mut state = game(
+            "chaos-short",
+            Some(hook(|_ctx| vec![cast_random_call_to_chaos()])),
+        );
+        let mut events: Vec<GameEvent> = Vec::new();
+        let short = chaos_card(&mut state, false, Some(CALL_TO_CHAOS_CHAIN_CAP - 1));
+
+        sink_events(&mut state, &mut events, |sink| {
+            run(sink, cast_random_call_to_chaos(), Some(&short), P1);
+        });
+
+        assert_eq!(events_of_type(&events, GameEventType::CardPlayed).len(), 1);
+        assert_eq!(state.counters.played, 1);
+        assert_eq!(state.players.p1.graveyard.len(), 1);
+    }
+
     #[test]
     fn r28_the_chain_counter_is_instance_state_so_two_calls_in_one_turn_do_not_share_it() {
         let mut state = game(

@@ -2458,8 +2458,9 @@ mod spec_11_rulings_r43_r84_m3_gate {
         // `crates/server/src/config.rs` (BUILD §2, M6/M7).
     }
 
-    /// R79, `TIMEOUT_ANSWER_CAP` (#3514): a card that keeps asking has its first 500 prompts answered by
-    /// one timeout, which then stops with the turn still running; the next expiry answers 500 more.
+    /// R79, `TIMEOUT_ANSWER_CAP` (#3514): a card that keeps asking has its first `TIMEOUT_ANSWER_CAP`
+    /// prompts answered by one timeout, which then stops with the turn still running; the next expiry
+    /// answers as many more.
     #[test]
     fn r79_one_timeout_answers_at_most_timeout_answer_cap_prompts_and_the_next_carries_on() {
         let mut state = playing("r79-cap");
@@ -2518,14 +2519,15 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert_eq!(created.phase, Phase::Setup);
         assert!(created.mulligan.is_none());
         assert!(created.pending.is_none());
-        let timed_out = act_result(
-            &created,
-            json!({ "type": "timeout", "playerId": created.active }),
-        );
+        let timed_out = act_result(&created, json!({ "type": "timeout", "playerId": created.active }));
         assert_eq!(timed_out.error, None);
         assert!(timed_out.events.is_empty());
         assert_eq!(
-            (timed_out.state.turn, timed_out.state.active, timed_out.state.phase),
+            (
+                timed_out.state.turn,
+                timed_out.state.active,
+                timed_out.state.phase
+            ),
             (created.turn, created.active, created.phase)
         );
 
@@ -2536,7 +2538,11 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert_eq!(timed_out.error, None);
         assert!(timed_out.events.is_empty());
         assert_eq!(
-            (timed_out.state.turn, timed_out.state.active, timed_out.state.phase),
+            (
+                timed_out.state.turn,
+                timed_out.state.active,
+                timed_out.state.phase
+            ),
             (state.turn, state.active, Phase::Main)
         );
     }
