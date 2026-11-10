@@ -36814,6 +36814,9 @@
     "readings": [
       "2026-11-10T11:47:34Z,claude-3,stream,call,42809606855,51,2026-11-10T14:00:00Z,,,allowed,,,",
       "2026-11-10T11:49:22Z,claude-3,stream,call,42809606855,52,2026-11-10T14:00:00Z,,,allowed,,,"
+    ],
+    "runs": [
+      "2026-11-10T11:49:22Z,42809606855,claude-3,opus,plan,3517,hard,planned,,2,9,16811,1319774,14.8291,51,52,,,492,claude-3,resumed,cap,1"
     ]
   },
   "version": 1
