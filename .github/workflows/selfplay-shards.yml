@@ -1,7 +1,17 @@
 # One round of a self-play export's shards (#466; selfplay.yml calls it once a round, never anything
 # else): one job per range on `runner`, `jackioh selfplay --from <k> --games <n> --seed <base>` with
-# the release `jackioh` the caller's build job uploaded, its log file uploaded as
+# the release `jackioh` the caller's build job uploaded, its log files uploaded as
 # `selfplay-<base>-<k>` (kept `retention` days, 90 at most).
+#
+# With `file_every` (the learn lane's), a shard plays its range `file_every` games at a time, one log
+# file each (a game is a function of its seed, R1006001, so the pieces hold the games one run would
+# have played), and files each piece's games into the card statistics as it finishes: `jackioh stats
+# from-selfplay` with the build that played them (R1676000) writes `records-<base>-<first>-<last>.jsonl`
+# beside the piece's log, and `training/file-records.sh` files it as totals only into staging's and
+# production's databases (R1976000, R1933001). That filing is best effort: a piece not filed is a
+# warning, and learn.yml's import files every shard's records files once the retrain has ended, each
+# database folding a file it holds already no second time. Without it, a shard plays its range in one
+# go and files nothing, as a dispatched export does.
 #
 # On GitHub's runners the export is one round, at most 12 shards at once. On the local runner a round
 # holds a fifth of the shards, played one after another, and selfplay.yml starts a round only once the
@@ -26,6 +36,16 @@ on:
       retention:
         type: string
         required: true
+      file_every:
+        description: "Games to play, then file into the card statistics, at a time; empty files nothing"
+        type: string
+        required: false
+        default: ""
+    secrets:
+      STATS_IMPORT_DATABASE_URL:
+        required: false
+      PRODUCTION_STATS_IMPORT_DATABASE_URL:
+        required: false
 
 permissions:
   contents: read
@@ -56,12 +76,41 @@ jobs:
           SEED: ${{ inputs.seed }}
           FROM: ${{ matrix.range.from }}
           GAMES: ${{ matrix.range.games }}
+          FILE_EVERY: ${{ inputs.file_every }}
+          STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+          PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}
         run: |
           echo "cores: $(nproc)"
           mkdir -p "$RUNNER_TEMP/logs"
+          bin="$RUNNER_TEMP/target/release"
+          every=${FILE_EVERY:-$GAMES}
           start=$(date +%s)
-          "$RUNNER_TEMP/target/release/jackioh" selfplay --from "$FROM" --games "$GAMES" --seed "$SEED" \
-            --out "$RUNNER_TEMP/logs" | tee "$RUNNER_TEMP/logs/summary.json"
+          at=$FROM
+          end=$(( FROM + GAMES ))
+          while [ "$at" -lt "$end" ]; do
+            n=$(( end - at < every ? end - at : every ))
+            "$bin/jackioh" selfplay --from "$at" --games "$n" --seed "$SEED" \
+              --out "$RUNNER_TEMP/logs" | tee -a "$RUNNER_TEMP/logs/summary.json"
+            played=${PIPESTATUS[0]}
+            # A piece selfplay did not finish is filed by no one here: its log may lack games a rerun
+            # would add, and a file that differs is another batch, so its games would count twice.
+            if [ -n "$FILE_EVERY" ] && [ "$played" != 0 ]; then
+              echo "::warning::selfplay stopped in games $at to $(( at + n - 1 )) (exit $played): not filed here"
+            elif [ -n "$FILE_EVERY" ]; then
+              # selfplay's file name (selfplay::file_name); the base takes no `:` or `/` (selfplay.yml).
+              range="$SEED-$at-$(( at + n - 1 ))"
+              records="$RUNNER_TEMP/logs/records-$range.jsonl"
+              if ! "$bin/jackioh" stats from-selfplay "$RUNNER_TEMP/logs/selfplay-$range.jsonl" \
+                --out "$records" > /dev/null; then
+                # learn.yml's import files this piece from its log instead.
+                rm -f "$records"
+                echo "::warning::games $at to $(( at + n - 1 )) could not be made records here; the import files them"
+              elif ! sh "$RUNNER_TEMP/training/file-records.sh" "$bin/jackioh-server" "$records"; then
+                echo "::warning::games $at to $(( at + n - 1 )) were not filed everywhere; the import files them"
+              fi
+            fi
+            at=$(( at + n ))
+          done
           echo "seconds: $(( $(date +%s) - start ))" | tee -a "$RUNNER_TEMP/logs/timing.txt"
           # The CPUs the shard may use: its container's quota when it has one (the local runner's
           # --cpus; nproc there counts every processor WSL has), else every processor nproc sees.
