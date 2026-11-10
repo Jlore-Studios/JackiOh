@@ -18322,13 +18322,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-8",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-8",
+            "run": "42894243346",
+            "tier": "strong"
+          }
+        ],
         "sha": "a5db15c0b37d8650061d5bead22ed4dce7115d69",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     }
   },
