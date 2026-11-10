@@ -38975,7 +38975,10 @@
           "provider": "claude-7"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-10T09:11:53Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 3637,
         "head": "4b53b80ba6f67fb1f006adca06ca862375ba974e",
         "issue": 3496,
         "merged_at": "2026-11-10T08:43:33Z",
@@ -38988,12 +38991,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:e8b12230-1794301021",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42786771943",
         "sha": "f811a74c33ffa1db7ee489ce3d30f0dc2d70c4e1",
         "started_at": "2026-11-10T08:58:02Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a dungeon run in progress survives a card patch",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 185
