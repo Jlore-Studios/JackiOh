@@ -17622,7 +17622,7 @@
       }
     },
     "3641": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -17641,23 +17641,15 @@
       "failures": 0,
       "feedback_since": "2026-11-10T10:28:44Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-10T18:03:25Z",
-        "lifted": "2026-11-10T17:35:50Z",
-        "owner": "claude-1",
-        "since": "2026-11-10T16:03:25Z",
-        "until": "2026-11-10T17:30:00Z",
-        "why": "5-hour usage is 46%, too close to its 40% cap outside its hours to start a long run (it starts under 35%)"
-      },
       "interruptions": 0,
       "issue": 3630,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-1",
       "pending_request": false,
       "provider": "claude-1",
       "queued_at": "2026-11-10T16:02:55Z",
-      "run_id": "42809475095",
+      "run_id": "pending:e4cb80d2-1794332387",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17678,7 +17670,7 @@
         "run": "42799484078"
       },
       "source": "conflict",
-      "started_at": "2026-11-10T11:41:03Z",
+      "started_at": "2026-11-10T17:40:40Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18038,9 +18030,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T17:26:01Z",
+    "at": "2026-11-10T17:40:40Z",
     "url": "",
-    "what": "build #3547 on claude-4"
+    "what": "revise #3641 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-10T17:18:00Z",
