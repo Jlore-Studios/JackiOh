@@ -18060,10 +18060,16 @@
     "what": "spot-check #3644 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-10T18:31:35Z",
+    "at": "2026-11-10T18:40:56Z",
     "notes": [
-      "delivered build #3547 on claude-4 (run 42864914773): part",
-      "runner gate: started 1 of 2 waiting run(s) (queue build 42875958171); 1 wait for room"
+      "delivered revise #3641 on claude-1 (run 42867395922): approved",
+      "started build #3633 on claude-8 (run 42878204329)",
+      "started revise #3645 on claude-6 (run 42878350979)",
+      "started revise #3591 on claude-4 (run 42878516524)",
+      "started review #3644 on claude-8 (run 42878659477)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days",
+      "runner gate: started 1 of 4 waiting run(s) (queue build 42877555538); 3 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18769,7 +18775,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T18:31:35Z",
+  "loop_tick": "2026-11-10T18:40:56Z",
   "machine_disk": {
     "issue": null,
     "reading": {
