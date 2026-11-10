@@ -109,6 +109,15 @@ function offenders(css: string): string[] {
   });
 }
 
+/**
+ * Selectors where a compound on the game root (`.game`) holds `:has(` and a combinator follows it. The
+ * root's marks (Game.tsx, FxLayer.tsx, Prompt.tsx) stand for such a `:has()`, which made every change
+ * anywhere on the board restyle the elements after it, the board's every testid among them.
+ */
+function gameAnchored(css: string): string[] {
+  return selectorsOf(css).filter((selector) => compoundsOf(selector).slice(0, -1).some((compound) => /\.game(?![\w-])/.test(compound) && compound.includes(":has(")));
+}
+
 describe("#3633 the stylesheets' :has() selectors", () => {
   it("#3633 the reader flags a :has() followed by a universal compound and nothing else", () => {
     const sheet = `
@@ -136,6 +145,25 @@ describe("#3633 the stylesheets' :has() selectors", () => {
 
   it("#3633 no :has() selector is followed by a universal compound", () => {
     const found = cssFiles(SRC).flatMap((path) => offenders(readFileSync(path, "utf8")).map((selector) => `${relative(SRC, path)}: ${selector}`));
+    expect(found).toEqual([]);
+  });
+
+  it("#3633 the reader flags a :has() on the game root with a combinator after it, and nothing else", () => {
+    const sheet = `
+      .game:has(> .fx-layer[data-fx="on"]) .zone { content: none; }
+      .table > .game:has(> .result) .notices:has(> .x) { display: none; }
+      .game:has([data-prompt-kind="cell"]) > .zone::after { content: ""; }
+      .game[data-fx-layer="on"] .zone, .game:has(> .x), .games:has(> .x) .y, .board .zone:has(> .card) > .lock { margin: 0; }
+    `;
+    expect(gameAnchored(sheet)).toEqual([
+      '.game:has(> .fx-layer[data-fx="on"]) .zone',
+      ".table > .game:has(> .result) .notices:has(> .x)",
+      '.game:has([data-prompt-kind="cell"]) > .zone::after',
+    ]);
+  });
+
+  it("#3633 no :has() on the game root has a combinator after it", () => {
+    const found = cssFiles(SRC).flatMap((path) => gameAnchored(readFileSync(path, "utf8")).map((selector) => `${relative(SRC, path)}: ${selector}`));
     expect(found).toEqual([]);
   });
 });

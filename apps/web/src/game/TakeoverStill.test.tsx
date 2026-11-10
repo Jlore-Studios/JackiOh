@@ -24,6 +24,7 @@ import { TAKEOVER_TINTS, takeoverArtOf, takeoverLookOf } from "../fx/takeover.ts
 import { TAKEOVER_ART_DRAWINGS, TAKEOVER_ART_PARTS } from "../fx/takeoverArt.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, withEvents } from "../test/fixtures.ts";
+import { readRootVar } from "./rootVars.ts";
 
 const lookup = lookupFromDefs(CATALOG);
 /** The board's stylesheet, for the stills' looks. */
@@ -79,7 +80,7 @@ describe("R2722001 a Mythic's takeover on the board", () => {
     const game = screen.getByTestId("game");
     expect(game).toHaveAttribute("data-takeover", "mythic");
     expect(game).toHaveAttribute("data-set-piece", TAKEOVER_SET_PIECE);
-    expect(game.style.getPropertyValue("--set-piece-hold")).toBe(`${String(TAKEOVER_HOLD_MS)}ms`);
+    expect(readRootVar(game, "--set-piece-hold")).toBe(`${String(TAKEOVER_HOLD_MS)}ms`);
     expect(screen.queryByTestId("takeover-still")).toBeNull();
   });
 

@@ -106,7 +106,7 @@
 // own hand or in inspect lets its subject break the window's top edge (`data-frame-break`). R3344001: given `tilt`, the face
 // tilts with the pointer, the device or a drag (tilt.ts `useCardTilt`), one face at a time.
 
-import { useRef, type CSSProperties, type ReactElement } from "react";
+import { memo, useRef, type CSSProperties, type ReactElement } from "react";
 
 import { keywordKey, type CardType, type Rarity } from "@jackioh/shared";
 
@@ -335,7 +335,7 @@ export function hasCrest(face: FaceModel): boolean {
   return crested(frameRarity(face));
 }
 
-export function CardFace({
+function CardFace({
   face,
   layout = "full",
   className,
@@ -715,3 +715,10 @@ export function CardFace({
     </span>
   );
 }
+
+/**
+ * #3633: a card drawn again with the face it had (its hint row, its highlight or a queue step changed
+ * around it) does not draw the face again: the art, the text and the marks are most of a card's work.
+ */
+const MemoCardFace = memo(CardFace);
+export { MemoCardFace as CardFace };

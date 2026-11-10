@@ -3,7 +3,7 @@
 // Match-made cards (R77, R102, R179) and rolled Heroic Powers come from `PlayerView.defs` and
 // `HeroView.powers` (R243), after the catalog in `useCardInfo`.
 
-import { createContext, createElement, useContext, useMemo, type ReactElement, type ReactNode } from "react";
+import { createContext, createElement, useContext, useMemo, useRef, type ReactElement, type ReactNode } from "react";
 
 import {
   fillParams,
@@ -83,9 +83,20 @@ export function matchCardsOf(view: PlayerView): MatchCards {
   return { defs: view.defs ?? {}, powers };
 }
 
+/** #3633: the same match-made definitions (one object, or none on either side) and the same rolled powers. */
+export function sameMatchCards(a: MatchCards, b: MatchCards): boolean {
+  if (a.defs !== b.defs && (Object.keys(a.defs).length > 0 || Object.keys(b.defs).length > 0)) return false;
+  if (a.powers.size !== b.powers.size) return false;
+  for (const [instanceId, power] of a.powers) if (b.powers.get(instanceId)?.name !== power.name) return false;
+  return true;
+}
+
 export function MatchCardsProvider({ view, children }: { view: PlayerView; children?: ReactNode }): ReactElement {
-  const value = useMemo(() => matchCardsOf(view), [view]);
-  return createElement(MatchCardsContext.Provider, { value }, children);
+  const fresh = useMemo(() => matchCardsOf(view), [view]);
+  // #3633: a new view that makes and rolls nothing new keeps the value, so no card is drawn again for it.
+  const kept = useRef(fresh);
+  if (kept.current !== fresh && !sameMatchCards(kept.current, fresh)) kept.current = fresh;
+  return createElement(MatchCardsContext.Provider, { value: kept.current }, children);
 }
 
 /** A lookup that reads the catalog first and the match's own definitions next (R243). */

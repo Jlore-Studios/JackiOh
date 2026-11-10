@@ -40,7 +40,8 @@ export function keywordLossesFrom(
     );
     if (event?.lost === true) lost.add(testId);
   }
-  return lost;
+  // #3633: none is the one empty set, so a queue step that loses no keyword changes no card's context.
+  return lost.size === 0 ? NO_LOSSES : lost;
 }
 
 const KeywordLossContext = createContext<ReadonlySet<string>>(NO_LOSSES);

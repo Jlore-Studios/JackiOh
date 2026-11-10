@@ -32,7 +32,7 @@
 // R3335000: a launched Starship's art wears its seat's Starship look, as CardFace's does.
 // R3334000: a Dormant Starship with pieces idles in its shipyard over its picture (ShipyardIdle.tsx).
 
-import { useRef, type ReactElement } from "react";
+import { memo, useRef, type ReactElement } from "react";
 
 import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/shared";
 
@@ -156,7 +156,7 @@ function fxAttributesOf(plan: readonly KeywordFxPlan[], kind: Keyword["kind"]): 
   return entry === undefined ? {} : keywordFxAttributes(entry);
 }
 
-export function MinionFace({ face, unit, className, worn = false, keywordsOffFace = false, attacking = false }: MinionFaceProps): ReactElement {
+function MinionFace({ face, unit, className, worn = false, keywordsOffFace = false, attacking = false }: MinionFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   const stamp = useCardStamp(face, worn);
@@ -330,3 +330,10 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
     </span>
   );
 }
+
+/**
+ * #3633: a card drawn again with the face it had (its hint row, its highlight or a queue step changed
+ * around it) does not draw the face again: the art, the text and the marks are most of a card's work.
+ */
+const MemoMinionFace = memo(MinionFace);
+export { MemoMinionFace as MinionFace };

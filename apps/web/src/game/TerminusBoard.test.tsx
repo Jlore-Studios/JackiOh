@@ -18,6 +18,7 @@ import { fullBoardView, withEvents } from "../test/fixtures.ts";
 import { SET_PIECE_SHORT_HOLD_MS } from "./animations.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Game from "./Game.tsx";
+import { readRootVar } from "./rootVars.ts";
 
 const lookup = lookupFromDefs(CATALOG);
 const START: GameEvent[] = [{ type: "turnStarted", player: "p1", turn: 5 }];
@@ -76,7 +77,7 @@ describe("R3338000 a Terminus card's set piece on the board", () => {
     expect(game).toHaveAttribute("data-set-piece", key);
     expect(game).toHaveAttribute("data-set-piece-shape", SET_PIECES[key].shape);
     const hold = SET_PIECES[key].holdMs;
-    expect(game.style.getPropertyValue("--set-piece-hold")).toBe(`${String(hold)}ms`);
+    expect(readRootVar(game, "--set-piece-hold")).toBe(`${String(hold)}ms`);
     expect(screen.getByTestId(SKIP_HINT)).toBeInTheDocument();
     // A click skips it.
     fireEvent.click(game);
@@ -89,7 +90,7 @@ describe("R3338000 a Terminus card's set piece on the board", () => {
     setFxSettings({ bigMoments: "short" });
     const short = playOn(key);
     expect(short).toHaveAttribute("data-set-piece", key);
-    expect(short.style.getPropertyValue("--set-piece-hold")).toBe(`${String(SET_PIECE_SHORT_HOLD_MS)}ms`);
+    expect(readRootVar(short, "--set-piece-hold")).toBe(`${String(SET_PIECE_SHORT_HOLD_MS)}ms`);
   });
 
   it.each(KEYS)("R3338000 Big moments off holds nothing: %s", (key) => {

@@ -133,6 +133,7 @@ mod tests {
         }))
     }
 
+    // Differs from Scenario::count: it counts any event list, and one call passes a list no scenario holds.
     fn count(events: &[GameEvent], kind: GameEventType) -> usize {
         events.iter().filter(|event| event.event_type() == kind).count()
     }

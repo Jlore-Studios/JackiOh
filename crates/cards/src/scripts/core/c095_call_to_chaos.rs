@@ -272,6 +272,7 @@ mod tests {
         chaos(None, ChaosOpts { cursor: Some(recast_of_core_cursor(opts.chain)), ..opts })
     }
 
+    // Differs from Scenario::events_of: the events as JSON (`Vec<Value>`), not typed `GameEvent`s.
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
         events_json(s).into_iter().filter(|event| event["type"] == kind).collect()
     }

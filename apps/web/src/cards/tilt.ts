@@ -136,9 +136,17 @@ export function isHeld(): boolean {
   return holds > 0;
 }
 
-/** R3345000: `isHeld`, subscribed: a component reading it renders again whenever the queue starts or stops draining. */
-export function useIsHeld(): boolean {
-  return useSyncExternalStore(subscribeHold, isHeld, () => false);
+function notHeld(): boolean {
+  return false;
+}
+
+/**
+ * R3345000: `isHeld`, subscribed: a component reading it renders again whenever the queue starts or stops draining.
+ * #3633: one that says the hold is not `relevant` to it reads `false` and renders again for none, so a queue
+ * starting to drain does not draw every card on the board again.
+ */
+export function useIsHeld(relevant = true): boolean {
+  return useSyncExternalStore(subscribeHold, relevant ? isHeld : notHeld, notHeld);
 }
 
 function notifyHold(): void {
@@ -309,7 +317,8 @@ function attach(
  * hover preview's anchor): without one a window face reads its host's box.
  */
 export function useCardTilt(faceRef: RefObject<HTMLElement | null>, mode: TiltMode, allowed: boolean, anchor?: TiltBox): void {
-  const held = useIsHeld();
+  // #3633: a face that does not tilt has no use for the hold.
+  const held = useIsHeld(mode !== "off" && allowed);
   const { deviceTilt } = useCardSettings();
   const anchorRef = useRef(anchor);
   useLayoutEffect(() => {
