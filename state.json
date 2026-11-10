@@ -17909,21 +17909,26 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "crates/run/src/lib.rs"
+            "crates/run/README.md",
+            "crates/run/src/lib.rs",
+            "crates/run/src/tests.rs",
+            "crates/tools/src/run_sim.rs",
+            "docs/dungeon-run.md",
+            "spec/15-dungeon-run.md"
           ],
-          "from": "20b262ca86c95a8314ef58f0e7245d133125be2a",
-          "main": "903d3480b0334afbbd9fe82fc6295247d534268d"
+          "from": "6c46655f81e350d719a3c581a791f35e71dd72df",
+          "main": "62b8ed2e3d69493ed774ffd64b66b2d36df2bbae"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-6",
-            "run": "42833097603",
+            "run": "42878350979",
             "tier": "strong"
           }
         ],
-        "sha": "6c46655f81e350d719a3c581a791f35e71dd72df",
+        "sha": "bc5a44665dc99ea55bb050460557be6266b473fa",
         "tiers": {
           "claude": "strong"
         }
