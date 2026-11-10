@@ -18183,13 +18183,19 @@
     "what": "review #3635 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-10T12:54:20Z",
+    "at": "2026-11-10T13:11:33Z",
     "notes": [
-      "delivered review #3635 on claude-8 (run 42815057512): interrupted",
-      "started plan #3545 on claude-4 (run 42820243426)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` it refused a call; its limit resets at 2026-11-10T13:10:00Z; `claude-1` is idle, but nothing queued is for it; `claude-4` is idle, but nothing queued is for it; `claude-6` is busy; `claude-5` is idle, but nothing queued is for it; `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it",
-      "pruned 2 plan file(s) older than 7 days",
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
+      "delivered review #3646 on claude-6 (run 42818138676): approved",
+      "delivered build #3637 on muse (run 42813082486): built",
+      "delivered build #3539 on muse (run 42800079978): part",
+      "started review #3628 on muse (run 42823253398)",
+      "started review #3647 on muse (run 42823418938)",
+      "started review #3635 on claude-4 (run 42823571990)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days",
+      "#3627: closed, so `bot:merging` is off",
+      "#3594: closed, so `bot:merging` is off",
+      "runner gate: started 1 of 3 waiting run(s) (queue build 42821700462); 2 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18895,7 +18901,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T12:54:20Z",
+  "loop_tick": "2026-11-10T13:11:33Z",
   "machine_disk": {
     "issue": null,
     "reading": {
