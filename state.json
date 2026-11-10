@@ -17457,10 +17457,14 @@
         "approvals": [],
         "builder": "muse",
         "built_by": "muse",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "f8e0668a24f7a581f8d1c8ca24d20ad1679ef1ef",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       }
     },
     "3534": {
