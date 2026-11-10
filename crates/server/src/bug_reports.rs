@@ -663,8 +663,9 @@ pub fn report_of(signature: &Signature, findings: &[Finding]) -> BugReport {
     }
 }
 
-/// A request to GitHub's REST API with the token and the headers it asks for.
-fn github(builder: reqwest::RequestBuilder, token: &str) -> reqwest::RequestBuilder {
+/// A request to GitHub's REST API with the token and the headers it asks for: the bug reports' and
+/// the alerts' (`alerts.rs`).
+pub(crate) fn github(builder: reqwest::RequestBuilder, token: &str) -> reqwest::RequestBuilder {
     builder
         .bearer_auth(token)
         .header("accept", "application/vnd.github+json")
