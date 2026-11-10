@@ -19456,6 +19456,8 @@
       }
     },
     "3622": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-10T03:20:43Z",
@@ -19469,8 +19471,11 @@
         "trail": "- Status: source edits, unit tests, and the Cypress spec are written. The web unit tests are still running in the background (the WASM build runs first). `typecheck:component` currently fails only on the not-yet-built `wasm/pkg` types \u2014 no errors in the new spec \u2014 and gets re-run once the build lands\u2026\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a held card's preview fits a phone screen, its full text and full art no longer clipped off the right edge\"} -->\n- ## What changed and why\n- On phone-width screens a touch hold opens the hover preview (R2617000), but the full-text panel still sat 280px beside the card, so the pair ran ~650px wide off a ~390px screen with the card clipped at the right edge. The preview now stacks on viewports \u2264600px wide: the full-text panel goes across \u2026\n- - [constants.ts](/home/agent-muse/actions-runner-fill/_work/_temp/work/item-3602/apps/web/src/cards/inspect/constants.ts): added `PREVIEW_PHONE_WIDTH_PX = 600` and `PREVIEW_EXTENDED_STACKED_MAX_PX = 200` (rule 9).\n- - [placement.ts](/home/agent-muse/actions-runner-fill/_work/_temp/work/item-3602/apps/web/src/cards/inspect/placement.ts): added `isPhoneViewport`, `previewCardHeight` (desktop returns `previewHeight` unchanged; phone also fits the width and reserves gap + stacked panel), `PreviewPanels` and `estim\u2026\n- - [HoverPreview.tsx](/home/agent-muse/actions-runner-fill/_work/_temp/work/item-3602/apps/web/src/cards/inspect/HoverPreview.tsx): deleted the private `estimatedSize`, uses the new helpers with a viewport-aware face height; `useLayoutEffect` re-places on image `load` too (see decisions).\n- - [index.ts](/home/agent-muse/actions-runner-fill/_work/_temp/work/item-3602/apps/web/src/cards/inspect/index.ts): re-exports.\n- - [inspect.css](/home/agent-muse/actions-runner-fill/_work/_temp/work/item-3602/apps/web/src/cards/inspect/inspect.css): fixed the stale \"touch opens the sheet\" comment (names R2617000); phone block stacks `.inspect-facegroup` (`column`, capped at `max-width: 100%`) and restyles `.inspect-extended`\u2026\n- - Tests: `#3602` cases in [placement.test.ts](/home/agent-muse/actions-runner-fill/_work/_temp/work/item-3602/apps/web/src/cards/inspect/placement.test.ts) (estimate fits width, placed box inside at 390\u00d7844 and 430\u00d7932, landing-like `above` and center `beside` anchors, plus no-extended) and [previe\u2026\n- ## How it was tested (commands I ran, output I saw)\n- - `pnpm --dir apps/web test src/cards/inspect/placement.test.ts src/cards/inspect/previewSize.test.ts` \u2192 30/30 pass (after the ~13min cold WASM pretest build).\n- - `pnpm --dir apps/web exec vitest run` on all four inspect files \u2192 114/114 pass, including the R1017000/R2718000/R280 desktop-order and watermark regressions.\n- - `pnpm --dir apps/web typecheck`, `pnpm --dir e2e typecheck:component`, `pnpm exec eslint` on the touched dir + new spec, `cargo fmt --check` \u2192 all clean.\n- - Cypress spec typechecks and lints but is **unrun locally**: the runner binary is missing here (`CYPRESS_INSTALL_BINARY=0` in env, and the installer's version URL 404s; I manually fetched 16.1.0 and verified it) and there is no Xvfb with no root to install it. CI runs it.\n- - Real-browser proof instead (Playwright, iPhone 13, 390 wide, touch holds): landing fan card with full text \u2192 hover 44.8..345.1 \u00d7 161.1..645.9, face whole inside, panel stacked above; board unit Gary the Gambler (watermarked) \u2192 8..382 \u00d7 102..655.6, all three boxes inside even in the 664px-tall vis\u2026\n- ## Decisions the task did not settle\n- - Stacking over side-by-side shrinking (task prefers stacking so the card stays large). Rejected alternative implemented nowhere.\n- - `.inspect-facegroup { max-width: 100%; }` (plan had only `flex-direction: column`): measuring a real board unit showed the full-art watermark `img` (intrinsic ~731px) sizing the shrink-wrapped group to right edge 735 while the hover box itself fit. The cap makes image + words shrink/wrap to the l\u2026\n- - Re-place on image `load` in `HoverPreview`: the watermark loads after first layout and grew the panel ~32px past the bottom in a 664px-tall viewport; after the change the box sits exactly inside. Desktop inherits the same listener harmlessly (same values). Rejected: leaving late-load growth unhan\u2026\n- - `previewCardHeight` floors at 0 for absurdly short viewports (plan-exact values on all real sizes).\n- - Cypress unrunnable here \u2192 Playwright measurement as the layout proof; the Cypress spec still ships for CI. Also left another agent's `item-3518` vitest processes alone, and did not run `cargo jackioh spec check` (only pre-existing, proven R-ids cited; harness checks cover it).\n- Reviewer, look twice at: the `%`-`max-width` cycle resolution in the phone CSS (verified by measurement, not just reasoning), and the `load`-capture listener's interaction with future images inside the preview.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-fill/_work/_temp/work/item-3602 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-fill/_work/_temp/work/item-3602/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3602,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T04:58:10Z",
         "from_run": "42748830963",
         "gates": [
           {
@@ -19529,8 +19534,15 @@
         "source": "build",
         "until": "2026-11-10T05:25:23Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-10T04:55:23Z",
+      "run_id": "pending:c940d2e1-1794286656",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-10T04:58:10Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -19561,9 +19573,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T04:57:24Z",
+    "at": "2026-11-10T04:58:10Z",
     "url": "",
-    "what": "review #3621 on muse"
+    "what": "review #3622 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T04:35:33Z",
