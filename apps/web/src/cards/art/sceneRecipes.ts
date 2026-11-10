@@ -17,10 +17,14 @@
 // trainingGroundsAltRecipes.ts), and R3404000: so does a Meditative card offered Alt art
 // (meditativeAltRecipes1.ts to meditativeAltRecipes3.ts), and R3398000 a Core card (coreAltRecipes1.ts to
 // coreAltRecipes3.ts), and R3406000 every card of #3406's table, Stinkyscape's later cards
-// (stinkyscape91AltRecipes1.ts to stinkyscape91AltRecipes3.ts). R3352000: Classic's scenes, every Classic entry but
+// (stinkyscape91AltRecipes1.ts to stinkyscape91AltRecipes3.ts), and R3388000 every Classic card offered it
+// (classicAltRecipes1.ts to classicAltRecipes3.ts). R3352000: Classic's scenes, every Classic entry but
 // Corpse Plantation (the proof above) and the Glitch among them, keep theirs in three files of their own
 // (sceneRecipesClassic1.ts to sceneRecipesClassic3.ts).
 
+import { CLASSIC_ALT_RECIPES_1 } from "./classicAltRecipes1.ts";
+import { CLASSIC_ALT_RECIPES_2 } from "./classicAltRecipes2.ts";
+import { CLASSIC_ALT_RECIPES_3 } from "./classicAltRecipes3.ts";
 import { CLASSIC_PLUS_ALT_RECIPES_1 } from "./classicPlusAltRecipes1.ts";
 import { CLASSIC_PLUS_ALT_RECIPES_2 } from "./classicPlusAltRecipes2.ts";
 import { CLASSIC_PLUS_RECIPES_1 } from "./classicPlusRecipes1.ts";
@@ -194,7 +198,8 @@ export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
  * R3404000: and so does every Meditative card offered Alt art (meditativeAltRecipes1.ts to meditativeAltRecipes3.ts).
  * R3398000: and every Core card offered it (coreAltRecipes1.ts to coreAltRecipes3.ts). R3406000: and every card of
  * #3406's table (`STINKYSCAPE_91_ALT_RECIPES`), a Starship Piece's, a Jlockeed weapon's and Dice of Doom's among them,
- * whose normal face their own painter still draws.
+ * whose normal face their own painter still draws. R3388000: and every Classic card offered it (classicAltRecipes1.ts
+ * to classicAltRecipes3.ts), Corpse Plantation's among them.
  */
 export const ALT_SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   ...CLASSIC_PLUS_ALT_RECIPES_1,
@@ -208,6 +213,9 @@ export const ALT_SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   ...CORE_ALT_RECIPES_2,
   ...CORE_ALT_RECIPES_3,
   ...STINKYSCAPE_91_ALT_RECIPES,
+  ...CLASSIC_ALT_RECIPES_1,
+  ...CLASSIC_ALT_RECIPES_2,
+  ...CLASSIC_ALT_RECIPES_3,
 };
 
 /**
@@ -217,6 +225,7 @@ export const ALT_SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
  * e2e/cypress/component/set-alt-scenes.cy.tsx for Meditative+'s and Training Grounds'; R3404000: and
  * e2e/cypress/component/meditative-alt-scenes.cy.tsx for Meditative's; R3398000: and
  * e2e/cypress/component/core-alt-scenes.cy.tsx the Core cards' the same way; R3406000: and
- * e2e/cypress/component/stinkyscape91-alt-scenes.cy.tsx for Stinkyscape's later cards'.
+ * e2e/cypress/component/stinkyscape91-alt-scenes.cy.tsx for Stinkyscape's later cards'; R3388000: and
+ * e2e/cypress/component/classic-alt-scenes.cy.tsx for Classic's.
  */
 export const ALT_PICTURE_CHANGE_MIN = 0.6;

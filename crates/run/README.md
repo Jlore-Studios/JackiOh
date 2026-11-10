@@ -27,7 +27,7 @@ constant in `src/config.rs` (rule 9), named by the plan's section.
 | `run_fight_setup(&RunState, &RunContent) -> Option<RunFightSetup>` | in `RunPhase::Fight`, the game to start: its seed (`"{run seed}-{row}-{col}"`), both decks, the human's marks (Radiant and buffed cards) and both handicaps, the human's with the run's HP and each Combat artifact held, once per level, the enemy's its Presence's tier with its health and each curse taken (DR5, R2922001); `None` in any other phase |
 | `run_fight_report(&ReplayInput, PlayerId) -> Result<RunAction, _>` | the `RunAction::FightOver` a finished game sends for that seat, folded from its record: the win, the hero's final health, the damage dealt to the enemy's side, the healing on its own, its draws and the turns; a game with no result, or a setup the engine refuses, is refused |
 | `run_level_cost(level)` | the Embers from `level` to the next (`RUN_LEVEL_EMBERS`), `None` at the ladder's top |
-| `run_constants()` | the numbers the screens show (the slot ladder, the starting deck's size, its artifacts' count and points, the tiers' points, the cards a campfire removes), so the client states none (rule 9) |
+| `run_constants()` | the numbers the screens show (the slot ladder, the starting deck's size, its artifacts' count and points, the tiers' points, the cards a campfire removes, the named preset starting decks), so the client states none (rule 9) |
 | `run_shop_prices(&RunState, &RunContent) -> RunShopPrices` | what a shop's services cost this run, the ones `apply` spends: the remove price after the shop discount, the Radiant and buff Tickets, each held relic's next level (`None` at `RUN_ARTIFACT_LEVEL_MAX`) and each stock item's Coins after the discount |
 
 ## What the caller does

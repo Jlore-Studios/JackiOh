@@ -49,8 +49,11 @@ SIZE_SHARED=250
 SIZE_SERVER=80
 SIZE_TOOLS=120
 SIZE_WASM=200
-# Source files per Stryker shard: Stryker runs each mutant against only the tests that cover it.
-SIZE_WEB_FILES=40
+# Source files per Stryker shard. Stryker runs each mutant against only the tests that cover it, but a
+# layer the board imports relates most of the web's tests: on #3512's branch the drag's 8 files took 11.5
+# minutes for the first test run, then about 10 s a mutant (586 of their 1,729 in 1 h 34 min), so about
+# 4.5 hours in all. Stryker writes its report only at the end, so a shard must finish inside the step.
+SIZE_WEB_FILES=3
 # cargo-mutants' --jobs: mutants tested at once, each in its own copy of the tree.
 JOBS=${MUTANTS_JOBS:-2}
 # Survivors listed under a summary's row, so a summary stays readable; the report has them all.

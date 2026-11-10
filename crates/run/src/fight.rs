@@ -118,16 +118,26 @@ fn apply_fight_effect(effect: RunFightEffect, times: i32, human: &mut Handicap, 
 pub fn run_fight_setup(state: &RunState, content: &RunContent) -> Option<RunFightSetup> {
     let enemy = run_enemy(state)?;
     let row = state.row?;
-    let human_deck: Vec<String> = state.deck.iter().map(|card| card.id.clone()).collect();
-    let human_marks = state
+    // R3496000: a fight's game is built under the current catalog, as a fight started today is: a
+    // card the run holds that the catalog no longer knows is left out of the fight's deck, and stays
+    // in the run.
+    let catalog = registered_catalog();
+    let kept: Vec<usize> = state
         .deck
         .iter()
         .enumerate()
-        .filter(|(_, card)| card.radiant || card.buffs > 0)
-        .map(|(index, card)| DeckMark {
+        .filter(|(_, card)| catalog.contains_key(&card.id))
+        .map(|(index, _)| index)
+        .collect();
+    let human_deck: Vec<String> = kept.iter().map(|&index| state.deck[index].id.clone()).collect();
+    let human_marks: Vec<DeckMark> = kept
+        .iter()
+        .enumerate()
+        .filter(|&(_, &index)| state.deck[index].radiant || state.deck[index].buffs > 0)
+        .map(|(index, &at)| DeckMark {
             index,
-            radiant: card.radiant,
-            upgrades: card.buffs,
+            radiant: state.deck[at].radiant,
+            upgrades: state.deck[at].buffs,
         })
         .collect();
     let carries = |id: &str| enemy.artifacts.iter().any(|a| a == id);
@@ -138,13 +148,19 @@ pub fn run_fight_setup(state: &RunState, content: &RunContent) -> Option<RunFigh
     } else {
         AI_DIFFICULTY.easy
     };
+    let enemy_deck: Vec<String> = enemy
+        .deck
+        .iter()
+        .filter(|id| catalog.contains_key(*id))
+        .cloned()
+        .collect();
     let mut human_handicap = Handicap {
         deck_size: deck_size(&human_deck),
         hero_health: Some(state.hp),
         ..HUMAN_HANDICAP
     };
     let mut enemy_handicap = Handicap {
-        deck_size: deck_size(&enemy.deck),
+        deck_size: deck_size(&enemy_deck),
         hero_health: Some(enemy.hero_health),
         ..tier
     };
@@ -168,7 +184,7 @@ pub fn run_fight_setup(state: &RunState, content: &RunContent) -> Option<RunFigh
         human_handicap,
         human_deck,
         human_marks,
-        enemy_deck: enemy.deck.clone(),
+        enemy_deck,
         enemy_handicap,
         enemy: enemy.clone(),
     })

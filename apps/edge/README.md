@@ -58,7 +58,10 @@ pnpm exec wrangler secret put DATABASE_URL --config ../../wrangler.jsonc --env="
 pnpm exec wrangler secret put CODE_PEPPER --config ../../wrangler.jsonc --env=""
 ```
 
-and the same three with `--env staging`. `CREATE_ISSUES_TOKEN` and `DEV_PROFILE_IDS` are optional.
+and the same three with `--env staging`. `CREATE_ISSUES_TOKEN`, `DEV_PROFILE_IDS`, `ALERT_RESEND_API_KEY`
+and `ALERT_EMAILS` are optional. The last two email the server's alerts (#3595, `crates/server/README.md`,
+Alerts): a Resend API key with Sending access for jackioh.com, and the addresses, comma-separated, kept a
+secret since the repository is public.
 `DATABASE_URL` is Supabase's pooler URI (Connect -> Session pooler), which works over IPv4; the
 direct database host is IPv6 only. A container reads its settings when it starts, so after changing
 one, deploy again (or wait for the next sleep).

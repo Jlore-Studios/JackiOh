@@ -170,7 +170,7 @@ for a library), `ids` (the cards' ids), `def_ids` (the cards' def ids), `events_
 `stand_in_backrow`, `give_flying`, `give_lucky`, `built_starship` (p1's Dormant Starship built from the pieces
 given, #1859), `launch_starship`, and `upgrade_number`, `degrade_number`, `can_upgrade_number` and
 `can_degrade_number`. Take the engine testkit's `Scenario::unit_at`, `pick::…` and `must` the same way;
-`crates/tools/tests/acceptance.rs` refuses a copy, and a `register_all();` on the line above a `scenario(` (#1826, #2023, #2930). Keep a local helper only when its body differs.
+`crates/tools/tests/acceptance.rs` refuses a copy, and a `register_all();` on the line above a `scenario(` (#1826, #2023, #2930). Read events and offered actions through `Scenario::count`, `last_count`, `events_of`, `last_events_of` and `offered(seat)` rather than a copy (#3504). Keep a local helper only when its body differs.
 
 **Helper cards** (#3486). A test that needs only a card's numbers (some 3-cost 9/9, a textless Spell to fill a
 hand) names a stand-in, a card its id spells out, `const BIG: &str = "stand-in (3) 9/9";`, rather than a real
