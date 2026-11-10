@@ -38308,7 +38308,8 @@
       "2026-11-10T03:16:30Z,42746649575,claude-8,opus,plan,3350,hard,interrupted,5-hour cap,11.3,0,0,0,,5,86,,,4500.2,,fresh,,1",
       "2026-11-10T03:15:52Z,42746479290,claude-8,opus,plan,3535,hard,interrupted,5-hour cap,13.5,0,0,0,,0,85,,,3.1,,fresh,,1",
       "2026-11-10T03:26:22Z,42744665654,muse,muse-spark-1.3-contributor,review,3594,medium,approved,,35.6,0,0,0,,6,7,12,13,0.9,,none,,3",
-      "2026-11-10T03:14:37Z,42743154487,claude-7,sonnet,review,3531,medium,approved,,10,58,17385,1733715,0.9438,0,3,,,1.1,claude-7,fresh,,3"
+      "2026-11-10T03:14:37Z,42743154487,claude-7,sonnet,review,3531,medium,approved,,10,58,17385,1733715,0.9438,0,3,,,1.1,claude-7,fresh,,3",
+      "2026-11-10T03:42:14Z,42748363957,claude-5,opus,plan,3514,hard,interrupted,5-hour cap,19.8,0,0,0,,1,40,21,24,475.5,,fresh,,1"
     ]
   },
   "version": 1
