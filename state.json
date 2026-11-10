@@ -14741,10 +14741,102 @@
         "provider": "muse",
         "sha": "d250e47a4088ebe09c25e88015ae93a78d36ac0c"
       },
+      "own_review": {
+        "from_run": "42830067513",
+        "gates": [
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rustfmt",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo fmt --check",
+            "seconds": 4.5,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "catalog",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh catalog check",
+            "seconds": 150.6,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "patches",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh patches check",
+            "seconds": 1.2,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rulings",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh spec check",
+            "seconds": 2.1,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "clippy",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo clippy --workspace --all-targets -- -D warnings",
+            "seconds": 113.0,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "cargo tests",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts && test -z \"$(git status --porcelain -- apps/web/src/wire)\"",
+            "seconds": 1159.0,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "web tests",
+            "ok": true,
+            "pre_existing": false,
+            "run": "sh scripts/build-wasm.sh && pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'",
+            "seconds": 748.9,
+            "skipped": "",
+            "tail": ""
+          }
+        ],
+        "head": "4c9c59c8728e30e891bf827debe122537962bdf6",
+        "kind": "revise",
+        "model": "sonnet",
+        "provider": "claude-3",
+        "round_tier": "medium",
+        "rounds_on": 3529,
+        "rounds_used": 2,
+        "since": "2026-11-10T15:03:04Z",
+        "source": "ci",
+        "until": "2026-11-10T15:33:04Z"
+      },
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
-      "queued_at": "2026-11-10T13:48:49Z",
+      "queued_at": "2026-11-10T15:03:04Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
       "run_id": "42830067513",
