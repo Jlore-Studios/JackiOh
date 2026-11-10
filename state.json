@@ -17424,9 +17424,11 @@
     "3531": {
       "action": "review",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-09T21:04:20Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-09T22:52:42Z",
         "family": "muse",
@@ -17436,6 +17438,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Work is complete and in the worktree; verification runs are underway.Run-crate proving test passes; waiting on the wasm-C result.Still compiling the wasm-C crate; waiting for its result to arrive.\n- wasm-C suite is green (18 passed); export parity is still compiling and its result will arrive on its own.<!-- bot: {\"status\": \"done\", \"title\": \"Patch: a dungeon run in progress survives a card patch\"} -->\n- A run left half-played across a card patch now picks up where it stood, folding and playing on the catalog version it started on. A run that cannot be folded at all settles once as lost, banks what it had extracted, and the start screen says so in one line instead of dropping it silently. One rulin\u2026\n- What changed: `KeptRun` carries `catalog` plus the extractions its last fold showed; `foldKept` folds on the kept version's content via the new `runContentAt` binding (all three wasm surfaces) and keeps it as `Live.content`; an unfoldable kept run settles as lost with only ids the current content s\u2026\n- How I tested it (every command I ran, what it printed):\n- - `cargo test -p jackioh-run` \u2014 45 passed, including `r3496000_removed_cards_leave_the_fight_deck_but_stay_in_the_run`\n- - `cargo test -p jackioh-wasm-c` \u2014 18 passed, including `r3496000_run_content_at_answers_the_carried_and_current_versions_and_null_for_unknown`\n- - `cargo test -p jackioh-wasm --test export_parity` \u2014 4 passed\n- - `pnpm --dir apps/web test src/dungeon/store.test.ts` \u2014 23 passed (rewrote the silent-drop case as a lost-settle; new version-A\u2192B, old-shape, and unknown-version tests)\n- - `pnpm --dir apps/web test src/dungeon/start/StartScreen.test.tsx` \u2014 18 passed; `src/i18n/i18n.test.ts` \u2014 6 passed\n- - `pnpm --dir apps/web typecheck` and `eslint` on the touched files \u2014 clean\n- - `cargo fmt --check` and `cargo clippy -p jackioh-run -p jackioh-wasm-core -p jackioh-wasm -p jackioh-wasm-c --all-targets -- -D warnings` \u2014 clean\n- - `cargo jackioh spec check` \u2014 1875 rulings, 4847 proofs, 60284 citations: ok\n- - `JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh` \u2014 built `jackioh_wasm_c.wasm`, which imports nothing\n- Decisions the issue did not settle (alternatives rejected): a binding throw inside `contentForVersion` reads as unreadable and drops silently rather than settling, because a transient failure must never mint a history record; the lost settle keeps Embers unchanged with an all-zero `EMPTY_RUN_STATS`\u2026\n- A reviewer should look twice at: `setup.enemy` still lists the full enemy deck while the game builds from the filtered `enemy_deck`; and `Live` carries the stored extraction arrays in memory but `keptOf` refreshes them from the run state on every persist, so storage never goes stale.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-3496 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-3496/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 3496,
       "kind": "review",
       "live": "reviewing",
