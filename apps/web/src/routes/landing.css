@@ -972,6 +972,11 @@
   border-top: 1px solid rgba(201, 149, 63, 0.55);
   background: linear-gradient(180deg, var(--tavern-night), #1a0e07 60%, var(--tavern-night));
   text-align: center;
+  /* R1584000: clip the showcase's painting at the gold rule, so its fixed `.fx-layer`
+     and the card's keyframes paint nothing over the hero above (clip-path, unlike
+     overflow, also clips fixed-position descendants). R2035000: the quests'/news'
+     parchment belongs to the hero, so it still hangs over. */
+  clip-path: inset(0);
 }
 
 .landing .landing-stats-record {
