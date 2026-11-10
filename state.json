@@ -16935,6 +16935,7 @@
     "3626": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "ci_early": false,
       "ci_fixes": 1,
       "ci_on_head": true,
@@ -16971,7 +16972,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-10T05:58:58Z",
+      "feedback_since": "2026-11-10T13:34:42Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-10T09:51:32Z",
@@ -16985,20 +16986,23 @@
       "interruptions": 0,
       "issue": 3615,
       "kind": "revise",
+      "last_findings": [],
       "live": "revising",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
-      "question": "No question; resuming when the test run delivers.",
+      "question": "",
       "queued_at": "2026-11-10T13:29:37Z",
       "requested_by": "jgoetzmann-bot",
+      "round_tier": "medium",
       "run_id": "42825807477",
       "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
-      "source": "decision",
+      "source": "",
       "started_at": "2026-11-10T13:34:42Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "muse"
