@@ -333,7 +333,10 @@ fn r1453_a_tickets_fallback_time_is_its_own_drawn_from_its_id() {
 /// game between two bots holds the gap before the next, never one with a person.
 #[test]
 fn r1555000_a_busy_bot_is_not_chosen_and_only_a_game_between_bots_holds_the_gap() {
-    let bots = vec![bot("far", 900.0), bot("near", 1480.0)];
+    // A bot rated at the ticket, in a match: so the ticket is not above every bot (R1555000's grinder
+    // rule), and no free bot is closer than "near".
+    let mut bots = vec![bot("far", 900.0), bot("near", 1480.0), bot("playing", 1500.0)];
+    bots[2].in_match_id = Some("m".to_string());
     let choose = |busy: Vec<String>| {
         apply(over_json(&BotCall::ChooseBot {
             ticket: ticket("t", BotMode::Random, 1500.0),
