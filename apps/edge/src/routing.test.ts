@@ -82,6 +82,12 @@ describe("containerEnv", () => {
     });
   });
 
+  it("#3595 hands the container the alert email's key and addresses", () => {
+    const vars = containerEnv({ ALERT_RESEND_API_KEY: "re_key", ALERT_EMAILS: "a@example.com,b@example.com" });
+    expect(vars.ALERT_RESEND_API_KEY).toBe("re_key");
+    expect(vars.ALERT_EMAILS).toBe("a@example.com,b@example.com");
+  });
+
   it("leaves out an optional secret that is unset or empty, and anything that is not a server setting", () => {
     const settings = { CREATE_ISSUES_TOKEN: "", SERVER: "a binding" } as Parameters<typeof containerEnv>[0];
     expect(Object.keys(containerEnv(settings)).sort()).toEqual(["NODE_ENV", "PORT"]);

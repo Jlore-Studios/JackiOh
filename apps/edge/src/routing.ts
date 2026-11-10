@@ -84,6 +84,9 @@ export const SERVER_SECRETS = [
   "CODE_PEPPER",
   "CREATE_ISSUES_TOKEN",
   "DEV_PROFILE_IDS",
+  // #3595: an alert's email (crates/server/src/alerts.rs): a sending-only Resend key and the addresses.
+  "ALERT_RESEND_API_KEY",
+  "ALERT_EMAILS",
 ] as const;
 
 export type ServerSetting = (typeof SERVER_VARS)[number] | (typeof SERVER_SECRETS)[number];

@@ -14,6 +14,7 @@ import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { __resetDungeonForTests, dailyRunNumber, readRunHistory, useDungeon, type Dungeon } from "./store.ts";
 import {
   CONTENT,
+  CONTENT_B,
   EXTRACTABLE,
   ZERO_STATS,
   resetBindings,
@@ -131,6 +132,9 @@ describe("the store's start", () => {
       file: { setup: setupOf(), unlocks: unlocks(), log: [] },
       startedAt: Date.now(),
       daily: false,
+      catalog: "test-catalog",
+      extractedCards: [],
+      extractedArtifacts: [],
       elapsedMs: 0,
     });
   });
@@ -178,7 +182,16 @@ describe("B19 a run in progress survives a reload", () => {
       unlocks: unlocks(),
       log: [{ type: "go", col: 1 }],
     };
-    expect(stored(DUNGEON_RUN_KEY)).toEqual({ v: 1, file, startedAt, daily: false, elapsedMs: 0 });
+    expect(stored(DUNGEON_RUN_KEY)).toEqual({
+      v: 1,
+      file,
+      startedAt,
+      daily: false,
+      catalog: "test-catalog",
+      extractedCards: [],
+      extractedArtifacts: [],
+    elapsedMs: 0,
+    });
 
     // A reload folds it back, as it was. The page closes first, as a reload's does (R3502000).
     window.dispatchEvent(new Event("pagehide"));
@@ -200,19 +213,175 @@ describe("B19 a run in progress survives a reload", () => {
     expect((stored(DUNGEON_RUN_KEY) as { file: RunFile }).file.log).toHaveLength(2);
   });
 
-  it("B19 a kept run that no longer folds is dropped alone: the progress and the history stay", () => {
+  it("R3496000 a kept run that will not fold settles once as lost and banks its extractions", () => {
     window.localStorage.setItem(DUNGEON_PROGRESS_KEY, JSON.stringify({ v: 1, unlocks: unlocks({ level: 3 }), embers: 7, daily: null }));
-    const dungeon = mount();
-    press(() => dungeon.current.start(setupOf({ seed: "QWERTY" })));
-    cleanup();
-    __resetDungeonForTests();
-
+    const file: RunFile = {
+      setup: setupOf({ seed: "QWERTY" }),
+      unlocks: unlocks(),
+      log: [{ type: "go", col: 0 }],
+    };
+    window.localStorage.setItem(
+      DUNGEON_RUN_KEY,
+      JSON.stringify({
+        v: 1,
+        file,
+        // Left across a patch for a day, after five minutes played: the record holds the five.
+        startedAt: Date.now() - 24 * HOUR_MS,
+        elapsedMs: 5 * MINUTE_MS,
+        daily: false,
+        catalog: "test-catalog",
+        extractedCards: [EXTRACTABLE, "not-a-card"],
+        extractedArtifacts: [],
+      }),
+    );
     wasmBindings.runFold.mockReturnValue({ error: "step 0: row 0 has no node 1" });
-    const again = mount();
+    const dungeon = mount();
 
-    expect(again.current.run).toBeNull();
+    // The run is gone, and only the run: the progress stays bar what it extracted.
+    expect(dungeon.current.run).toBeNull();
     expect(window.localStorage.getItem(DUNGEON_RUN_KEY)).toBeNull();
-    expect(again.current.progress).toEqual({ unlocks: unlocks({ level: 3 }), embers: 7 });
+    expect(dungeon.current.progress).toEqual({ unlocks: unlocks({ level: 3, cards: [EXTRACTABLE] }), embers: 7 });
+    // Its record joins the history, lost with no row and no score.
+    expect(readRunHistory()).toEqual([
+      expect.objectContaining({ seed: "QWERTY", won: false, rowReached: 0, score: 0, embers: 0, timeMs: 5 * MINUTE_MS, stats: ZERO_STATS }),
+    ]);
+    expect(stored(DUNGEON_HISTORY_KEY)).toEqual({ v: 1, runs: readRunHistory() });
+    // The start screen says so, once.
+    expect(dungeon.current.notice).toBe("The patch ended your last run as lost. What you had extracted is kept.");
+    const again = reload();
+    expect(again.current.notice).toBeNull();
+    expect(readRunHistory()).toHaveLength(1);
+  });
+
+  it("R3496000 the patch notice goes once a new run starts", () => {
+    const file: RunFile = { setup: setupOf({ seed: "QWERTY" }), unlocks: unlocks(), log: [{ type: "go", col: 0 }] };
+    window.localStorage.setItem(
+      DUNGEON_RUN_KEY,
+      JSON.stringify({ v: 1, file, startedAt: Date.now(), elapsedMs: 0, daily: false, catalog: "test-catalog", extractedCards: [], extractedArtifacts: [] }),
+    );
+    wasmBindings.runFold.mockReturnValue({ error: "step 0: row 0 has no node 1" });
+    const dungeon = mount();
+    expect(dungeon.current.notice).not.toBeNull();
+    expect(press(() => dungeon.current.start(setupOf()))).toBeNull();
+    expect(dungeon.current.notice).toBeNull();
+    dungeon.current.abandon();
+    expect(dungeon.current.notice).toBeNull();
+  });
+
+  it("R3496000 a run kept under version A folds on A's content after the build moves to B", () => {
+    wasmBindings.catalogVersion.mockReturnValue("catalog-a");
+    const dungeon = mount();
+    expect(press(() => dungeon.current.start(setupOf()))).toBeNull();
+    expect(press(() => dungeon.current.act({ type: "go", col: 1 }))).toBeNull();
+    const file = (stored(DUNGEON_RUN_KEY) as { file: RunFile }).file;
+    expect(stored(DUNGEON_RUN_KEY)).toEqual(expect.objectContaining({ catalog: "catalog-a" }));
+
+    // The build moves to a catalog B whose patch reshuffles the deal.
+    wasmBindings.catalogVersion.mockReturnValue("catalog-b");
+    wasmBindings.runContent.mockReturnValue(CONTENT_B);
+    wasmBindings.runContentAt.mockImplementation((version: string) => (version === "catalog-a" ? CONTENT : null));
+    const again = reload();
+
+    // The run picks up where it was, on the map it was dealt, on A's content.
+    expect(wasmBindings.runFold).toHaveBeenCalledWith(file, CONTENT);
+    expect(again.current.run).toEqual(dungeon.current.run);
+    expect(again.current.content).toBe(CONTENT);
+    expect(again.current.run?.phase).toEqual({ phase: "fight" });
+    // And it plays on from A's content, not B's.
+    wasmBindings.runReduce.mockClear();
+    expect(press(() => again.current.act({ type: "fightOver", won: true, hp: 20, damageDealt: 5, healingDone: 0, cardsDrawn: 3, turns: 4 }))).toBeNull();
+    expect(wasmBindings.runReduce).toHaveBeenCalledWith(expect.anything(), CONTENT, expect.anything());
+  });
+
+  it("R3496000 a kept run written before versions loads as today's", () => {
+    const dungeon = mount();
+    press(() => dungeon.current.start(setupOf()));
+    const kept = stored(DUNGEON_RUN_KEY) as { file: RunFile; startedAt: number };
+    window.localStorage.setItem(DUNGEON_RUN_KEY, JSON.stringify({ v: 1, file: kept.file, startedAt: kept.startedAt, daily: false }));
+    wasmBindings.runFold.mockClear();
+    wasmBindings.runContentAt.mockClear();
+
+    const again = reload();
+    expect(wasmBindings.runFold).toHaveBeenCalledWith(kept.file, CONTENT);
+    expect(wasmBindings.runContentAt).not.toHaveBeenCalled();
+    expect(again.current.run?.seed).toBe("ABCDEF");
+  });
+
+  it("R3496000 a kept run whose version this build does not carry settles once as lost", () => {
+    const file: RunFile = {
+      setup: setupOf({ seed: "QWERTY" }),
+      unlocks: unlocks(),
+      log: [],
+    };
+    window.localStorage.setItem(
+      DUNGEON_RUN_KEY,
+      JSON.stringify({
+        v: 1,
+        file,
+        startedAt: Date.now() - 24 * HOUR_MS,
+        elapsedMs: 2 * MINUTE_MS,
+        daily: false,
+        catalog: "v0.0.0-unknown",
+        extractedCards: [EXTRACTABLE],
+        extractedArtifacts: ["locked-sigil", "not-a-relic"],
+      }),
+    );
+    const dungeon = mount();
+
+    expect(wasmBindings.runFold).not.toHaveBeenCalled();
+    expect(dungeon.current.run).toBeNull();
+    expect(window.localStorage.getItem(DUNGEON_RUN_KEY)).toBeNull();
+    // Only what the current content knows is banked.
+    expect(dungeon.current.progress.unlocks).toEqual(unlocks({ cards: [EXTRACTABLE], artifacts: ["locked-sigil"] }));
+    expect(readRunHistory()).toEqual([
+      expect.objectContaining({ seed: "QWERTY", mode: "sandbox", won: false, score: 0, embers: 0, timeMs: 2 * MINUTE_MS }),
+    ]);
+    expect(dungeon.current.notice).toBe("The patch ended your last run as lost. What you had extracted is kept.");
+  });
+
+  it("R3496000 a kept run the version bindings throw on is dropped silently, never settled", () => {
+    const file: RunFile = {
+      setup: setupOf({ seed: "QWERTY" }),
+      unlocks: unlocks(),
+      log: [],
+    };
+    const kept = {
+      v: 1,
+      file,
+      startedAt: Date.now(),
+      daily: false,
+      catalog: "catalog-a",
+      extractedCards: [EXTRACTABLE],
+      extractedArtifacts: [],
+    };
+    // `runContentAt` throwing is transient: the run is dropped, never settled.
+    window.localStorage.setItem(DUNGEON_RUN_KEY, JSON.stringify(kept));
+    wasmBindings.runContentAt.mockImplementation(() => {
+      throw new Error("the engine is not loaded");
+    });
+    const dropped = mount();
+    expect(wasmBindings.runFold).not.toHaveBeenCalled();
+    expect(dropped.current.run).toBeNull();
+    expect(window.localStorage.getItem(DUNGEON_RUN_KEY)).toBeNull();
+    expect(readRunHistory()).toEqual([]);
+    expect(dropped.current.notice).toBeNull();
+    expect(dropped.current.progress).toEqual({ unlocks: unlocks(), embers: 0 });
+    cleanup();
+
+    // `catalogVersion` throwing drops the same way, before `runContentAt` is reached.
+    window.localStorage.setItem(DUNGEON_RUN_KEY, JSON.stringify(kept));
+    __resetDungeonForTests();
+    resetBindings();
+    wasmBindings.catalogVersion.mockImplementation((): string => {
+      throw new Error("the engine is not loaded");
+    });
+    const droppedAgain = mount();
+    expect(wasmBindings.runContentAt).not.toHaveBeenCalled();
+    expect(wasmBindings.runFold).not.toHaveBeenCalled();
+    expect(droppedAgain.current.run).toBeNull();
+    expect(window.localStorage.getItem(DUNGEON_RUN_KEY)).toBeNull();
+    expect(readRunHistory()).toEqual([]);
+    expect(droppedAgain.current.notice).toBeNull();
   });
 
   it("B19 a kept run the binding throws on, or of a shape nothing wrote, is dropped too", () => {

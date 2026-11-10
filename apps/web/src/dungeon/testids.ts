@@ -43,6 +43,8 @@ export const dungeonTestid = {
   saved: "dungeon-saved",
   continueRun: "dungeon-continue",
   abandonRun: "dungeon-abandon",
+  /** R3496000: why the kept run ended without being played, shown once. */
+  notice: "dungeon-notice",
   /** R2972000: abandoning asks first; only Confirm gives the run up. */
   abandonAsk: "dungeon-abandon-ask",
   abandonConfirm: "dungeon-abandon-confirm",
