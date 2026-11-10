@@ -15226,7 +15226,7 @@
       "stop_requested": false
     },
     "3464": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -15266,23 +15266,24 @@
       },
       "interruptions": 0,
       "issue": 3352,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "fixing-ci",
+      "live": "reviewing",
       "merge_owner": "claude-3",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-1",
       "question": "",
       "queued_at": "2026-11-09T19:51:34Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "42688725650",
+      "run_id": "pending:dd0715b4-1794279601",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 180,
-      "started_at": "2026-11-09T20:00:08Z",
+      "started_at": "2026-11-10T03:00:31Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 5,
@@ -18772,9 +18773,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T02:59:49Z",
+    "at": "2026-11-10T03:00:31Z",
     "url": "",
-    "what": "plan #3535 on claude-8"
+    "what": "spot-check #3464 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-10T02:50:31Z",
@@ -37288,7 +37289,15 @@
         "n": 180,
         "pr": 3464,
         "queued_at": "2026-11-10T02:52:35Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:dd0715b4-1794279601",
         "sha": "efe8cdab2ebe80c92b15d04a80678eb5a60d6c53",
+        "started_at": "2026-11-10T03:00:31Z",
         "status": "queued",
         "title": "Patch: every Classic card drawn as what it is: a scene of its own for each, richer the rarer",
         "tries": 0
