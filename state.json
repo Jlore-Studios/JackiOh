@@ -17562,8 +17562,16 @@
       }
     },
     "3535": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
       "onto": "bot/issue-3596",
-      "part_of": 3596
+      "part_of": 3596,
+      "pending_request": false,
+      "queued_at": "2026-11-10T02:56:41Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false
     },
     "3536": {
       "failures": 0,
