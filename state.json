@@ -18159,9 +18159,11 @@
         "by": "`muse` (medium)",
         "sha": "f4d4a655f84af1d0c26f6737b4eb79c0f293e0b2"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-10T19:13:38Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-10T19:37:58Z",
         "family": "muse",
@@ -18171,6 +18173,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #3644 from the after-merge spot-check\"} -->\n- ## What changed and why\n- A run kept on a device before #3644 held `{\"type\":\"heal\"}` in its `RunFile` log (the old campfire screen sent `{ type: \"heal\" }`). #3644 renamed `RunAction::Heal` to `GainMaxHp` with no serde alias, so that kept file no longer deserializes: `run_fold` throws, `foldKept` returns null, and `loadCore`\u2026\n- ## Tests\n- - `cargo test -p jackioh-run an_old_heal_rest_reads_as_gain_max_hp_and_folds` \u2014 passed (1 passed).\n- - Alias removed temporarily \u2014 test FAILED as expected (unknown variant `heal`), then restored and passing.\n- - `cargo test -p jackioh-run` \u2014 75 passed, 0 failed.\n- - `cargo test -p jackioh-run --features ts ...` \u2014 passed, and `git status --porcelain -- apps/web/src/wire` empty (alias is deserialization-only; codegen unchanged).\n- - `cargo fmt --check` \u2014 clean. `cargo clippy -p jackioh-run --all-targets -- -D warnings` \u2014 clean.\n- ## Decisions\n- - Rejected the issue's store-reroute alternative (routing kept-file parse failures to `\"gone\"`): `foldKept`'s null path exists so a transient wasm failure never mints a history record, and settling parse throws as lost would bank a run as lost on a transient error. The alias fixes the root cause wi\u2026\n- - Deviated from the plan's test body in one spot: used `log.contains(&RunAction::GainMaxHp)` instead of `iter().any(...)` because clippy's deny-by-default `manual_contains` fires otherwise; semantics are identical.\n- Reviewer should look twice at the quoted `\"gainMaxHp\"` \u2192 `\"heal\"` replace in the test: the quotes confine it to action tags, and `play_out` rests at every campfire so the replaced file exercises the alias on a real kept log.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-3658 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-3658/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 3658,
       "kind": "review",
       "live": "reviewing",
