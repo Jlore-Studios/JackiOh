@@ -248,15 +248,12 @@ function contentOf(): RunContent {
 
 /**
  * R3496000: the content a kept run folds on: today's when it started on no kept version, else its
- * version's, or null when this build no longer carries it.
+ * version's, or null when this build no longer carries it. A binding that throws lets the throw
+ * out: `foldKept` drops it silently, since a transient failure must never mint a history record.
  */
 function contentForVersion(version: string | null): RunContent | null {
-  try {
-    if (version === null || version === catalogVersion()) return contentOf();
-    return runContentAt(version);
-  } catch {
-    return null;
-  }
+  if (version === null || version === catalogVersion()) return contentOf();
+  return runContentAt(version);
 }
 
 /**

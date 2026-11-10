@@ -286,6 +286,51 @@ describe("B19 a run in progress survives a reload", () => {
     expect(dungeon.current.notice).toBe("The patch ended your last run as lost. What you had extracted is kept.");
   });
 
+  it("R3496000 a kept run the version bindings throw on is dropped silently, never settled", () => {
+    const file: RunFile = {
+      setup: setupOf({ seed: "QWERTY" }),
+      unlocks: unlocks(),
+      log: [],
+    };
+    const kept = {
+      v: 1,
+      file,
+      startedAt: Date.now(),
+      daily: false,
+      catalog: "catalog-a",
+      extractedCards: [EXTRACTABLE],
+      extractedArtifacts: [],
+    };
+    // `runContentAt` throwing is transient: the run is dropped, never settled.
+    window.localStorage.setItem(DUNGEON_RUN_KEY, JSON.stringify(kept));
+    wasmBindings.runContentAt.mockImplementation(() => {
+      throw new Error("the engine is not loaded");
+    });
+    const dropped = mount();
+    expect(wasmBindings.runFold).not.toHaveBeenCalled();
+    expect(dropped.current.run).toBeNull();
+    expect(window.localStorage.getItem(DUNGEON_RUN_KEY)).toBeNull();
+    expect(readRunHistory()).toEqual([]);
+    expect(dropped.current.notice).toBeNull();
+    expect(dropped.current.progress).toEqual({ unlocks: unlocks(), embers: 0 });
+    cleanup();
+
+    // `catalogVersion` throwing drops the same way, before `runContentAt` is reached.
+    window.localStorage.setItem(DUNGEON_RUN_KEY, JSON.stringify(kept));
+    __resetDungeonForTests();
+    resetBindings();
+    wasmBindings.catalogVersion.mockImplementation((): string => {
+      throw new Error("the engine is not loaded");
+    });
+    const droppedAgain = mount();
+    expect(wasmBindings.runContentAt).not.toHaveBeenCalled();
+    expect(wasmBindings.runFold).not.toHaveBeenCalled();
+    expect(droppedAgain.current.run).toBeNull();
+    expect(window.localStorage.getItem(DUNGEON_RUN_KEY)).toBeNull();
+    expect(readRunHistory()).toEqual([]);
+    expect(droppedAgain.current.notice).toBeNull();
+  });
+
   it("B19 a kept run the binding throws on, or of a shape nothing wrote, is dropped too", () => {
     window.localStorage.setItem(DUNGEON_RUN_KEY, JSON.stringify({ v: 1, file: { setup: 3 } }));
     expect(mount().current.run).toBeNull();
