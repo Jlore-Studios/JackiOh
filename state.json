@@ -18078,6 +18078,8 @@
       }
     },
     "3647": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-10T12:07:26Z",
@@ -18091,8 +18093,11 @@
         "trail": "- Web test still running (it builds WASM first, which takes a while). Pausing here; I'll run `spec check` and finalize once it completes.Still waiting on the WASM build + web test; ending the turn here and will pick up when its result is delivered.`spec check` is still compiling the release tools bin\u2026\n- ## What changed and why\n- The spot-check found \u00a715.8 and R3496000 contradicting themselves and the code: the ruling attributed the unfoldable run's 0 row / 0 score / 0 Embers to \"\u00a715.8's abandon rule\", and \u00a715.8 said an uncarried run \"ends the same way\" as abandoning \u2014 but an abandoned run is scored and paid Embers (\u00a715.10,\u2026\n- - [spec/15-dungeon-run.md](/home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-3637/spec/15-dungeon-run.md) \u00a715.8: split the sentence. Abandoning ends a run lost, still scored and paid Embers under `[[\u00a715.10]]`; a run whose version this build no longer carries, or whose log folds under no \u2026\n- - [spec/rulings/R3496000.md](/home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-3637/spec/rulings/R3496000.md): the 0/0/0 settlement is now the ruling's own decision (\"because nothing can be folded to score it\"), keeping the `[[\u00a715.8]]` link; the \"abandon rule\" attribution is gone.\n- - [apps/web/src/dungeon/store.test.ts](/home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-3637/apps/web/src/dungeon/store.test.ts): `B20 abandon records a loss` now asserts `score: 120, embers: 12` (the fixture defaults), proving abandon pays; both R3496000 unfoldable tests keep their `sc\u2026\n- ## How it was tested\n- - `pnpm --dir apps/web test src/dungeon/store.test.ts` \u2014 34/34 passed (the run first rebuilt the WASM module, ~37 min on the shared machine).\n- - `cargo jackioh spec check` \u2014 ok: 1889 rulings, 4899 proofs, 61409 citations in 3988 files, 25110 links.\n- - `cargo fmt --check` \u2014 clean.\n- - `git status` shows exactly the three intended files; no new ruling note, no `spec/pending/3637.md`, nothing under `crates/` or `store.ts`.\n- ## Decisions the issue did not settle\n- None of substance \u2014 the plan fixed every wording choice. One small style call: in R3496000 I kept the `[[\u00a715.8]]` citation at the end of the reworded sentence (now reading \"\u2026to score it ([[\u00a715.8]]), with the time played\u2026\") rather than dropping the link, since the plan required keeping it and the ru\u2026\n- Reviewers should look twice at the reworded \u00a715.8 sentence: it now covers both unfoldable cases (unversioned build *and* log folding under none), matching the ruling's first paragraph.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-3637 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-3637/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3637,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T13:19:01Z",
         "from_run": "42813082486",
         "gates": [
           {
@@ -18151,8 +18156,15 @@
         "source": "build",
         "until": "2026-11-10T13:45:13Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-10T13:15:13Z",
+      "run_id": "pending:e1fbcc75-1794316693",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-10T13:19:01Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -18166,9 +18178,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T13:17:57Z",
+    "at": "2026-11-10T13:19:01Z",
     "url": "",
-    "what": "review #3628 on muse"
+    "what": "review #3647 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T12:54:20Z",
