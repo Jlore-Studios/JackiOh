@@ -19300,6 +19300,77 @@
       "feedback_since": "2026-11-10T03:41:52Z",
       "issue": 1023,
       "kind": "revise",
+      "own_review": {
+        "from_run": "42751113069",
+        "gates": [
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "install",
+            "ok": true,
+            "pre_existing": false,
+            "run": "rustup toolchain install && pnpm install --frozen-lockfile",
+            "seconds": 1.0,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rustfmt",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo fmt --check",
+            "seconds": 6.2,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "catalog",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh catalog check",
+            "seconds": 0.3,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "patches",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh patches check",
+            "seconds": 1.6,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rulings",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh spec check",
+            "seconds": 5.6,
+            "skipped": "",
+            "tail": ""
+          }
+        ],
+        "head": "9d86aebd7aeaaa342c8cc32414bfad001cf3b4ef",
+        "kind": "build",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "muse",
+        "round_tier": "medium",
+        "rounds_on": 1023,
+        "rounds_used": 0,
+        "since": "2026-11-10T04:54:26Z",
+        "source": "build",
+        "until": "2026-11-10T05:24:26Z"
+      },
+      "queued_at": "2026-11-10T04:54:26Z",
       "self_check_findings": [],
       "votes": {
         "approvals": [],
