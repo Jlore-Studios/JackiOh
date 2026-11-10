@@ -20234,6 +20234,7 @@
           }
         ],
         "head": "da99c909905aaf4bd7cbfa41cba4389beae48ddb",
+        "interruptions": 0,
         "kind": "build",
         "model": "opus",
         "provider": "claude-6",
