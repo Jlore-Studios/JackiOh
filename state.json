@@ -20602,7 +20602,7 @@
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-10T09:47:56Z",
-      "run_id": "pending:f2373fd6-1794304191",
+      "run_id": "42794151393",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
