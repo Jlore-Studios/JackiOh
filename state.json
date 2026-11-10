@@ -19157,6 +19157,8 @@
       "stop_requested": false
     },
     "3617": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-10T03:14:57Z",
@@ -19170,8 +19172,11 @@
         "trail": " (parchment behavior unchanged).\n- - `pnpm --dir apps/web test src/routes/landing.test.tsx` \u2014 **35 passed**.\n- - `pnpm --dir apps/web typecheck` \u2014 clean. `pnpm exec eslint apps/web` \u2014 clean (only a pre-existing unrelated warning in `apps/web/src/game/cardPlayPreview.ts`).\n- - `cargo jackioh spec check` not needed: no ruling note added or cited (presentation-only fix, no game semantic).\n- ## Decisions the issue did not settle\n- - The parchment test asserts no `clip-path` on the panels plus their pre-existing `overflow-y: auto` intact, rather than the plan's literal \"no `clip-path|overflow`\" \u2014 the panel rule already carries `overflow-y: auto` for its scrolling rows, so the literal assertion would fail on unchanged code. Al\u2026\n- - No `spec/rulings/R*.md` note and no `spec/pending/` paragraph: cutting painting at the section edge decides no game semantic (rejected alternative: filing a ruling for a CSS-only change).\n- - Screenshots: the `ui-walkthrough` skill was read and the walkthrough was planned (serve dev on 5173, seed `jackioh.stats.v1`, scroll the gold rule mid-viewport, step death-burn/summon/Divine Shield/Freeze beats on desktop 1280x720 and phone-landscape `max-height: 500px`, plus a keyboard-focus rin\u2026\n- ## Reviewer: please look twice\n- - The `measure` closure reads `domRef.current.getBoundingClientRect()` per cue; under jsdom both rects are zero so the wrapper is the identity there \u2014 the translation logic itself is covered only by the `toLayerBox` unit tests, not by a laid-out browser.\n- - `clip-path: inset(0)` creates a stacking context on the section; the hero (`z-index: 1` + `isolate`) still paints above it, verified by the parchment test and the green quests/news suites, not by pixels.\n- - **Not done: before/after walkthrough screenshots.** The issue requires mid-beat screenshots on desktop and phone-landscape showing no pixel above the line. I did not run the headless-browser walkthrough in this session; please confirm visually before merge.<!-- bot: {\"status\": \"done\", \"title\": \"P\u2026\n- The fix is complete and visually verified. What changed and why is below.\n- ## What changed\n- - [landing.css](/home/agent-muse/actions-runner-2/_work/_temp/work/item-3600/apps/web/src/routes/landing.css) \u2014 added `clip-path: inset(0);` (with an R1584000/R2035000 comment) to the existing `.landing .landing-stats` rule. `inset(0)` clips at the border box's outer edge, so the 1px gold `border-t\u2026\n- - [StatShowcase.tsx](/home/agent-muse/actions-runner-2/_work/_temp/work/item-3600/apps/web/src/stats/StatShowcase.tsx) \u2014 the section clip makes the section the containing block of the fixed `.fx-layer`, so the layer now fills the section instead of the viewport. Added the exported `toLayerBox(box, \u2026\n- - [StatShowcase.test.tsx](/home/agent-muse/actions-runner-2/_work/_temp/work/item-3600/apps/web/src/stats/StatShowcase.test.tsx) \u2014 new `describe(\"R1584000 the showcase stays below the gold line\")` with 5 tests: stats section clips at the gold rule (hero has no clip), board `.fx-layer` stays `positi\u2026\n- ## How I tested it\n- - `pnpm --dir apps/web test src/stats/StatShowcase.test.tsx` \u2014 **34 passed** (5 new); `landing-quests` **28**, `landing-news` **28**, `landing` **35** \u2014 all green.\n- - `pnpm --dir apps/web typecheck` clean; `pnpm exec eslint apps/web` clean (one pre-existing unrelated warning in `game/cardPlayPreview.ts`).\n- - No `spec check` impact: no ruling note added or cited (presentation-only fix, no game semantic).\n- - Walkthrough in headless Chromium (dev on 5173, seeded `jackioh.stats.v1`, gold rule mid-viewport; 250\u2013400ms beats were frozen mid-flight by pausing CSS and holding the last canvas frame, animations themselves untouched). 13 shots under `.cache/browse/` (gitignored, not in the repo): desktop after\u2026\n- - Decisive pair on phone landscape: `3600-before-radiant-phone.png` shows the record's rays bursting across the gold line over the hero; `3600-after-radiant-phone.png` shows them cut exactly at the line, playing fully below it. Desktop death/summon/shield/freeze/lunge after-shots show nothing above\u2026\n- - Focus: `activeElement` + `:focus-visible` both true, gold ring visible around the whole showcase on the full page.\n- - Responsiveness: 466 frames in 8001ms (~58fps) across live `attackDeclared` + `marked` beats \u2014 the clip adds no per-frame cost.\n- ## Decisions the issue did not settle\n- - The parchment test asserts no `clip-path` plus the pre-existing `overflow-y: auto` intact, rather than the plan's literal \"no `clip-path|overflow`\" \u2014 the panel rule already carries `overflow-y: auto` for its scrolling rows, so the literal assertion would fail on unchanged code. Alternative reject\u2026\n- - \"Before\" shots reproduce `main` by disabling only the new declaration inline (`clip-path: none` on the section, the fix being the sole `clip-path` affecting it) instead of serving a second checkout \u2014 same pixels, stated in the PR.\n- - No `spec/rulings/R*.md` note and no `spec/pending/` paragraph: cutting painting at the section edge decides no game semantic (rejected alternative: filing a ruling for a CSS-only change).\n- ## Reviewer: please look twice\n- - The `measure` closure reads `domRef.current.getBoundingClientRect()` per cue; under jsdom both rects are zero so the wrapper is the identity there \u2014 the translation itself is covered only by the `toLayerBox` unit tests, not by a laid-out browser.\n- - `clip-path: inset(0)` creates a stacking context on the section; the hero (`z-index: 1` + `isolate`) still paints above it, verified by the parchment test and the green quests/news suites, not by pixels.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-3600 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-3600/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3600,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-10T03:56:10Z",
         "from_run": "42748182551",
         "gates": [
           {
@@ -19230,8 +19235,15 @@
         "source": "build",
         "until": "2026-11-10T04:25:03Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-10T03:55:03Z",
+      "run_id": "pending:9c02101b-1794282938",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-10T03:56:10Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -19245,9 +19257,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-10T03:45:01Z",
+    "at": "2026-11-10T03:56:10Z",
     "url": "",
-    "what": "plan #3613 on claude-3"
+    "what": "review #3617 on muse"
   },
   "last_sweep": {
     "at": "2026-11-10T03:31:57Z",
