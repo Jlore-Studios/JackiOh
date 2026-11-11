@@ -12774,6 +12774,11 @@
       "owner_since": "2026-11-11T15:45:13Z",
       "owner_why": "a person answered its question, so the lane that asked carries the answer out",
       "part_of": 3596,
+      "paused": {
+        "at": "2026-11-11T16:35:18Z",
+        "interrupt": "usage",
+        "provider": "muse"
+      },
       "pending_request": false,
       "planned_at": "2026-11-11T14:54:23Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -12784,11 +12789,13 @@
       "question": "How should #3566 proceed while #3558's engine verbs are not on this branch?",
       "queued_at": "2026-11-11T15:45:13Z",
       "requested_by": "squishy-squooby",
+      "round_tier": "",
       "run_id": "43057426029",
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-11T16:20:52Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3567": {
       "action": "build",
