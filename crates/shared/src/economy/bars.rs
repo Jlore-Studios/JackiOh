@@ -570,6 +570,108 @@ mod tests {
         assert!(settle_bars(&AccountCounters::default(), vec![]).1.is_empty());
     }
 
+    /// R2728000, R1305001: a gain that pays several steps grants each at the cycle place it stands on, in
+    /// order from the stored position, the pack's step as a pack with no key, then the position advances by
+    /// the steps paid.
+    #[test]
+    fn settle_bars_grants_each_step_a_gain_pays_from_the_stored_position() {
+        // At the Epic step (place 4), 180 points pay Epic (75) and the cosmetic pack (100), keeping 5.
+        let counters = AccountCounters {
+            cosmetic_cycle: 4,
+            ..AccountCounters::default()
+        };
+        let (settled, grants) = settle_bars(&counters, vec![180]);
+        assert_eq!(settled.cosmetic_paid, [Epic, CosmeticPack]);
+        assert_eq!(settled.cosmetic_sizes, [75, 100, 50]);
+        assert_eq!(
+            (
+                settled.cosmetic.before,
+                settled.cosmetic.after,
+                settled.cosmetic.size
+            ),
+            (0, 5, 50)
+        );
+        assert_eq!(
+            grants,
+            [
+                LedgerGrant::Counter {
+                    counter: Counter::CardTokenBar,
+                    delta: 180,
+                    cause: Cause::PackOpen
+                },
+                LedgerGrant::Counter {
+                    counter: Counter::CosmeticTokenBar,
+                    delta: 5,
+                    cause: Cause::TokenBar
+                },
+                LedgerGrant::Inventory {
+                    item: InventoryItem::CosmeticToken,
+                    key: "Epic".to_string(),
+                    delta: 1,
+                    cause: Cause::TokenBar,
+                    reference: None,
+                },
+                LedgerGrant::Inventory {
+                    item: InventoryItem::CosmeticPack,
+                    key: String::new(),
+                    delta: 1,
+                    cause: Cause::TokenBar,
+                    reference: None,
+                },
+                LedgerGrant::Counter {
+                    counter: Counter::CosmeticTokenCycle,
+                    delta: 2,
+                    cause: Cause::TokenBar
+                },
+            ]
+        );
+    }
+
+    /// R1310003, R2728000: a cosmetic bar already past its step's size pays what it holds first, and the fill
+    /// tops up the size of the step it then stands at, each payout granted at its own place of the cycle.
+    #[test]
+    fn a_fill_of_a_cosmetic_bar_past_its_step_tops_up_the_next_steps_size() {
+        // 60 points at the Rare step (50) pay it and keep 10; the Epic step (75) then lacks 65, so the fill
+        // pays Rare and Epic and keeps nothing.
+        let fill = fill_bar(
+            BarKind::Cosmetic,
+            &AccountCounters {
+                cosmetic_bar: 60,
+                ..AccountCounters::default()
+            },
+        );
+        assert_eq!((fill.held, fill.remainder, fill.pays), (60, 0, 2));
+        assert_eq!(
+            fill.grants,
+            [
+                LedgerGrant::Counter {
+                    counter: Counter::CosmeticTokenBar,
+                    delta: -60,
+                    cause: Cause::Dev
+                },
+                LedgerGrant::Inventory {
+                    item: InventoryItem::CosmeticToken,
+                    key: "Rare".to_string(),
+                    delta: 1,
+                    cause: Cause::Dev,
+                    reference: None,
+                },
+                LedgerGrant::Inventory {
+                    item: InventoryItem::CosmeticToken,
+                    key: "Epic".to_string(),
+                    delta: 1,
+                    cause: Cause::Dev,
+                    reference: None,
+                },
+                LedgerGrant::Counter {
+                    counter: Counter::CosmeticTokenCycle,
+                    delta: 2,
+                    cause: Cause::Dev
+                },
+            ]
+        );
+    }
+
     /// R1310003: a fill tops the bar up to its size and pays; a bar past its size pays what it holds first.
     #[test]
     fn r1310003_a_fill_pays_as_the_duplicates_filling_the_bar_would() {

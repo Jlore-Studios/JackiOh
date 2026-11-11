@@ -1621,3 +1621,171 @@ fn a_pack_shows_its_size_plus_the_relics_and_only_cards_of_its_kind() {
         "{boss:?}"
     );
 }
+
+/// DR3: an artifact's points are its tier's in `RUN_TIER_POINTS`; an id that is no artifact (a blessing, a
+/// presence, an unknown one) is worth nothing.
+#[test]
+fn an_artifacts_points_follow_its_tier() {
+    let content = content();
+    for (id, tier) in [
+        ("temp-picky", RunTier::Bronze),
+        ("temp-wide-net", RunTier::Silver),
+        ("temp-greedy", RunTier::Gold),
+        ("temp-war-chest", RunTier::Platinum),
+        ("temp-crown", RunTier::Diamond),
+    ] {
+        let expected = RUN_TIER_POINTS
+            .iter()
+            .find(|(t, _)| *t == tier)
+            .map(|(_, points)| *points)
+            .unwrap();
+        assert_eq!(run_artifact_points(&content, id), expected, "{id}");
+    }
+    // Hand-checked against DR3's table: bronze 1 up to diamond 5.
+    assert_eq!(run_artifact_points(&content, "temp-picky"), 1);
+    assert_eq!(run_artifact_points(&content, "temp-crown"), 5);
+    assert_eq!(
+        run_artifact_points(&content, crate::config::RUN_LOOMING_PRESENCE),
+        0
+    );
+    assert_eq!(run_artifact_points(&content, "no-such-artifact"), 0);
+}
+
+/// §15 (the map): the node stood on is none before the first step, and the node at `row`, `col` after it.
+#[test]
+fn the_node_stood_on_is_none_before_the_first_step_and_the_map_node_after() {
+    let content = content();
+    let state = start(&content);
+    assert!(run_node(&state).is_none());
+    let state = act(&state, &content, RunAction::Go { col: 1 });
+    let node = run_node(&state).expect("a step stands on a node");
+    assert_eq!(state.row, Some(0));
+    assert_eq!(state.col, 1);
+    assert_eq!(node, &state.map[0][1]);
+}
+
+/// DR8: the run's curse points are the sum of the points of the curses it holds; one the content does not
+/// define counts nothing.
+#[test]
+fn the_curse_points_are_the_sum_of_the_curses_held() {
+    let content = content();
+    let mut state = start(&content);
+    assert_eq!(run_curse_points(&state, &content), 0);
+    state.curses = vec!["temp-curse-1".into()];
+    assert_eq!(run_curse_points(&state, &content), 1);
+    state.curses = vec![
+        "temp-curse-3".into(),
+        "temp-curse-2".into(),
+        "no-such-curse".into(),
+    ];
+    assert_eq!(run_curse_points(&state, &content), 5);
+}
+
+/// DR2: a seed is exactly `RUN_SEED_LENGTH` capital letters: one short and one past are refused, by the seed
+/// check and by the setup check alike.
+#[test]
+fn a_seed_one_letter_short_or_past_the_length_is_refused() {
+    let content = content();
+    for (length, ok) in [
+        (RUN_SEED_LENGTH - 1, false),
+        (RUN_SEED_LENGTH, true),
+        (RUN_SEED_LENGTH + 1, false),
+    ] {
+        let seed = "A".repeat(length);
+        assert_eq!(seed_is_valid(&seed), ok, "{length} letters");
+        let setup = RunSetup {
+            seed,
+            ..setup(&content)
+        };
+        assert_eq!(
+            run_check_setup(&setup, &RunUnlocks::default(), &content).is_ok(),
+            ok,
+            "{length} letters"
+        );
+    }
+}
+
+/// DR6: a pack keeps `RUN_KEEP` cards, more with a keep-more artifact by its level, never more than
+/// `RUN_KEEP_MAX`, nor more than the pack shows or the deck has room for (R2701000).
+#[test]
+fn a_pack_keeps_no_more_than_the_keep_max_the_cards_shown_or_the_room_in_the_deck() {
+    let content = content();
+    let mut state = start(&content);
+    let greedy = state
+        .artifacts
+        .iter_mut()
+        .find(|a| a.id == "temp-greedy")
+        .expect("the starting Greedy");
+    // Keep 1 more per level: level 1 keeps one past `RUN_KEEP`; a level that would pass the max stops at it.
+    greedy.level = 1;
+    assert_eq!(keep_count(&state, &content, RUN_PACK_SIZE), RUN_KEEP + 1);
+    state.artifacts[0].level = RUN_ARTIFACT_LEVEL_MAX;
+    assert!(RUN_KEEP + RUN_ARTIFACT_LEVEL_MAX as usize > RUN_KEEP_MAX);
+    assert_eq!(keep_count(&state, &content, RUN_PACK_SIZE), RUN_KEEP_MAX);
+    // Fewer cards shown than the keep.
+    assert_eq!(keep_count(&state, &content, 2), 2);
+    // A deck one card from the cap has room for one.
+    state.deck.truncate(RUN_DECK_MAX - 1);
+    while state.deck.len() < RUN_DECK_MAX - 1 {
+        state.deck.push(state.deck[0].clone());
+    }
+    assert_eq!(keep_count(&state, &content, RUN_PACK_SIZE), 1);
+}
+
+/// DR7: a shop stocks `RUN_SHOP_CARDS` cards the deck lacks and then `RUN_SHOP_ARTIFACTS` artifacts it does
+/// not hold, each at its price.
+#[test]
+fn a_shop_stocks_its_cards_and_its_artifacts() {
+    let content = content();
+    let state = start(&content);
+    let stock = roll_shop(&state, &content, &mut Rng::new("SHOPPY", 0));
+    let cards: Vec<&RunShopItem> = stock
+        .iter()
+        .filter(|item| matches!(item.good, RunShopGood::Card { .. }))
+        .collect();
+    let artifacts: Vec<&RunShopItem> = stock
+        .iter()
+        .filter(|item| matches!(item.good, RunShopGood::Artifact { .. }))
+        .collect();
+    assert_eq!(cards.len(), RUN_SHOP_CARDS);
+    assert_eq!(artifacts.len(), RUN_SHOP_ARTIFACTS);
+    assert_eq!(stock.len(), RUN_SHOP_CARDS + RUN_SHOP_ARTIFACTS);
+    assert!(stock.iter().all(|item| !item.sold));
+    for item in &cards {
+        let RunShopGood::Card { id } = &item.good else {
+            unreachable!()
+        };
+        assert!(!in_deck(&state, id), "{id} is in the deck already");
+        assert_eq!(
+            item.price,
+            by(&RUN_CARD_PRICE, card_def(&content, id).unwrap().rarity)
+        );
+    }
+    let mut seen: Vec<&str> = state.artifacts.iter().map(|a| a.id.as_str()).collect();
+    for item in &artifacts {
+        let RunShopGood::Artifact { id } = &item.good else {
+            unreachable!()
+        };
+        assert!(!seen.contains(&id.as_str()), "{id} is held or twice in the stock");
+        seen.push(id);
+        let tier = passive_def(&content, id).and_then(|p| p.tier).unwrap();
+        assert_eq!(item.price, by(&RUN_ARTIFACT_PRICE, tier));
+    }
+}
+
+/// DR3: a starting deck holds exactly `RUN_STARTER_SIZE` cards: one fewer (`a_starting_deck_fits_its_levels_slots`)
+/// and one more are both refused, with the count they hold named.
+#[test]
+fn a_starting_deck_one_card_past_the_size_is_refused() {
+    let content = content();
+    let mut setup = setup(&content);
+    setup.starter = content.starter_access[..RUN_STARTER_SIZE + 1].to_vec();
+    let refused = run_check_setup(&setup, &RunUnlocks::default(), &content).unwrap_err();
+    assert!(
+        refused.contains(&format!(
+            "holds {RUN_STARTER_SIZE} cards, not {}",
+            RUN_STARTER_SIZE + 1
+        )),
+        "{refused}"
+    );
+}
