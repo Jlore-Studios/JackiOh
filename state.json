@@ -35304,45 +35304,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-11T16:25:09Z,muse,usage-command,before,43057964878,11,2026-11-11T18:03:00Z,100,2026-11-16T00:00:00Z,allowed,100,100,",
-      "2026-11-11T16:26:49Z,muse,usage-command,before,43057794788,11,2026-11-11T18:03:00Z,100,2026-11-16T00:00:00Z,allowed,100,100,",
-      "2026-11-11T16:22:19Z,muse,usage-command,before,43057604516,11,2026-11-11T18:03:00Z,100,2026-11-16T00:00:00Z,allowed,100,100,",
-      "2026-11-11T16:21:46Z,muse,usage-command,before,43057426029,11,2026-11-11T18:03:00Z,99,2026-11-16T00:00:00Z,allowed,100,100,",
-      "2026-11-11T16:22:13Z,muse,refusal,call,43057426029,11,2026-11-11T18:03:00Z,100,2026-11-16T00:00:00Z,allowed,100,100,2026-11-16T00:00:00Z",
-      "2026-11-11T16:21:46Z,muse,usage-command,before,43057253671,11,2026-11-11T18:03:00Z,99,2026-11-16T00:00:00Z,allowed,100,100,",
-      "2026-11-11T16:22:14Z,muse,refusal,call,43057253671,11,2026-11-11T18:03:00Z,100,2026-11-16T00:00:00Z,allowed,100,100,2026-11-16T00:00:00Z",
-      "2026-11-11T15:09:10Z,muse,usage-command,before,43045260278,1,2026-11-11T18:03:00Z,96,2026-11-16T00:00:00Z,allowed,100,100,",
-      "2026-11-11T15:19:33Z,muse,usage-command,call,43045260278,3,2026-11-11T18:03:00Z,97,2026-11-16T00:00:00Z,allowed,100,100,",
-      "2026-11-11T15:29:37Z,muse,usage-command,call,43045260278,6,2026-11-11T18:03:00Z,98,2026-11-16T00:00:00Z,allowed,100,100,",
-      "2026-11-11T15:39:43Z,muse,usage-command,call,43045260278,8,2026-11-11T18:03:00Z,98,2026-11-16T00:00:00Z,allowed,100,100,",
-      "2026-11-11T15:49:47Z,muse,usage-command,call,43045260278,9,2026-11-11T18:03:00Z,99,2026-11-16T00:00:00Z,allowed,100,100,",
-      "2026-11-11T15:59:52Z,muse,usage-command,call,43045260278,9,2026-11-11T18:03:00Z,99,2026-11-16T00:00:00Z,allowed,100,100,",
-      "2026-11-11T16:09:56Z,muse,usage-command,call,43045260278,10,2026-11-11T18:03:00Z,99,2026-11-16T00:00:00Z,allowed,100,100,",
-      "2026-11-11T16:20:01Z,muse,usage-command,call,43045260278,11,2026-11-11T18:03:00Z,99,2026-11-16T00:00:00Z,allowed,100,100,",
-      "2026-11-11T16:21:30Z,muse,refusal,call,43045260278,11,2026-11-11T18:03:00Z,99,2026-11-16T00:00:00Z,allowed,100,100,2026-11-16T00:00:00Z",
-      "2026-11-11T14:35:42Z,claude-8,ping,before,43039645831,13,2026-11-11T15:00:00Z,,,allowed,100,,",
-      "2026-11-11T14:36:06Z,claude-8,stream,call,43039645831,14,2026-11-11T15:00:00Z,,,allowed,100,,",
-      "2026-11-11T14:41:58Z,claude-8,stream,call,43039645831,15,2026-11-11T15:00:00Z,,,allowed,100,,",
-      "2026-11-11T15:01:10Z,claude-8,stream,call,43039645831,0,2026-11-11T20:00:00Z,,,allowed,85,,",
-      "2026-11-11T15:32:00Z,claude-8,stream,call,43039645831,2,2026-11-11T20:00:00Z,,,allowed,85,,",
-      "2026-11-11T15:53:01Z,claude-8,stream,call,43039645831,4,2026-11-11T20:00:00Z,,,allowed,85,,",
-      "2026-11-11T16:03:07Z,claude-8,stream,call,43039645831,4,2026-11-11T20:00:00Z,,,allowed,85,,",
-      "2026-11-11T16:03:44Z,claude-8,stream,call,43039645831,5,2026-11-11T20:00:00Z,,,allowed,85,,",
-      "2026-11-11T16:14:50Z,claude-8,stream,call,43039645831,6,2026-11-11T20:00:00Z,,,allowed,85,,",
-      "2026-11-11T16:16:05Z,claude-8,stream,call,43039645831,7,2026-11-11T20:00:00Z,,,allowed,85,,",
-      "2026-11-11T16:25:20Z,claude-8,stream,call,43039645831,8,2026-11-11T20:00:00Z,,,allowed,85,,"
-    ],
-    "runs": [
-      "2026-11-11T16:25:09Z,43057964878,muse,muse-spark-1.3-contributor,build,3696,medium,interrupted,weekly cap,0,0,0,0,,11,11,100,100,45,,none,,0",
-      "2026-11-11T16:26:49Z,43057794788,muse,muse-spark-1.3-contributor,build,3693,medium,interrupted,weekly cap,0,0,0,0,,11,11,100,100,44.3,,none,,0",
-      "2026-11-11T16:22:19Z,43057604516,muse,muse-spark-1.3-contributor,plan,3694,medium,interrupted,weekly cap,0,0,0,0,,11,11,100,100,43.6,,none,,0",
-      "2026-11-11T16:22:13Z,43057426029,muse,muse-spark-1.3-contributor,build,3566,hard,interrupted,refusal,0.1,0,0,0,,11,11,99,100,35.6,muse,none,,1",
-      "2026-11-11T16:22:14Z,43057253671,muse,muse-spark-1.3-contributor,build,3561,hard,interrupted,refusal,0.1,0,0,0,,11,11,99,100,34.8,muse,none,,1",
-      "2026-11-11T16:21:31Z,43045260278,muse,muse-spark-1.3-contributor,build,3567,hard,interrupted,refusal,72,0,0,0,,1,11,96,99,2358,claude-7,none,other,1",
-      "2026-11-11T16:25:50Z,43039645831,claude-8,sonnet+opus,review,3702,medium,approved,,68.3,51,15059,1252436,3.071,13,8,,,1.1,claude-8,fresh,,5"
-    ]
-  },
   "version": 1
 }
