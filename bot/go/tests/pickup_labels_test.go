@@ -137,7 +137,7 @@ func TestPickupLabels_AMixOfTiersIsPickedHighMediumNoneLow(t *testing.T) {
 	assertEqual(t, pickupLabelsPicks(gh, ctx), []int{6, 5, 4, 3})
 }
 
-// #3275: the issue a red super run on `staging` (or on a promotion) opens goes before every tier,
+// #3275: the issue a red super run on `_staging` (or on a promotion) opens goes before every tier,
 // `priority:high` included, whatever its labels: production waits on its fix.
 func TestPickupLabels_ARedSuperRunGoesBeforeEveryTier(t *testing.T) {
 	gh := fakes.NewFakeGitHub()

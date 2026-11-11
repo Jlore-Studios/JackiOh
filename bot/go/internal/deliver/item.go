@@ -501,7 +501,7 @@ func (x *Deliverer) keepHandoff(number int) {
 	x.Ctx.Store.Update(change, fmt.Sprintf("handoff #%d", number))
 }
 
-// Append this run to the item's journal on `bot-journal` (#342): what it was, each step
+// Append this run to the item's journal on `_bot-journal` (#342): what it was, each step
 // the work job took and why, how it ended, and the builder's notes. A record, never a gate:
 // a failure is logged and the delivery stands.
 func (x *Deliverer) journal(number int) {

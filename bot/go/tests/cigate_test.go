@@ -287,7 +287,7 @@ func TestCigate_EverySweepTicksTheGate(t *testing.T) {
 
 // ci.yml's `changes` job, which every other job of the run needs, waits in the environment the
 // repository variable names, for a pull request into `main` and a merge-queue build only: never a
-// push to `main`, a promotion's pull request (into `production`) or a dispatch, and nothing waits
+// push to `main`, a promotion's pull request (into `_production`) or a dispatch, and nothing waits
 // with the variable unset. The status loop ticks the gate every 30 seconds.
 func TestWorkflows_OnlyAPullRequestIntoMainAndAMergeQueueBuildWaitForTheRunnerGate(t *testing.T) {
 	text := workflowsRead(t, "ci.yml")

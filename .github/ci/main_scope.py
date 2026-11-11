@@ -54,7 +54,7 @@ RUN_ALL = (
 ALWAYS = (
     ("db_deploy", "the deploy rehearsal's `deploy-image` artifact is what a deploy loads "
                   "(scripts/server-image.sh, step 2), from the push-to-main run alone, and only "
-                  "main and staging write the image's layer cache; without them a deploy builds "
+                  "`main` and `_staging` write the image's layer cache; without them a deploy builds "
                   "the image from a cold cache"),
 )
 

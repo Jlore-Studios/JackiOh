@@ -16,7 +16,7 @@
 # Those runs also stop red CI early (#2948, `events.StopRedCI`, bot/README.md "Stopping red CI
 # early"): once a required job has failed on a bot pull request's current head (its own branch,
 # never a person's, `main` or the merge queue's), the loop waits up to three minutes from the
-# failure for the run's other early jobs, records the run on bot-state, turns its auto-merge off,
+# failure for the run's other early jobs, records the run on _bot-state, turns its auto-merge off,
 # cancels the rest of the run and queues the CI fix on the lane that owns the pull request (only
 # cancels while a run holds it). Each tick's sweep does the same, and Squishy's sweep for Squishy's
 # pull requests, which have no loop of their own. The deliveries it runs re-run a CI run with no
@@ -36,12 +36,12 @@
 # this job's write grants: the plans go on the state branch, the runs start from its token, and a
 # delivery pushes the branch and opens or updates the pull request with the bot's.
 # With the config's `usage_history` on (#2749), the loop also records every subscription's usage
-# over time on the `bot-usage` branch (bot/go/internal/usage, bot/README.md "The usage history"):
+# over time on the `_bot-usage` branch (bot/go/internal/usage, bot/README.md "The usage history"):
 # each tick takes its rows from what the rewrite already read (no GitHub call of its own), and
 # every 30 minutes, with the statistics, and once more as the loop ends, it writes them to a clone
 # of the branch in RUNNER_TEMP, derives the sessions and weeks that closed and pushes it with the
 # job's own token (`contents: write`, whose pushes start no workflow). The first time it finds the
-# branch without its backfill marker, it reads bot-journal into it. No model call reads usage.
+# branch without its backfill marker, it reads _bot-journal into it. No model call reads usage.
 # At the same 30-minute flush (never on the five-minute tick) it also rewrites the pinned "Night bot
 # usage" issue from that clone (bot/README.md "The usage issue"): its charts and tuning suggestions.
 # Each tick also runs Squishy (#60) in a process of its own (`--companions`): its sweep, with
@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 345
     permissions:
-      contents: write        # the state file on bot-state keeps the issue's number; a delivery's push; bot-usage
+      contents: write        # the state file on _bot-state keeps the issue's number; a delivery's push; _bot-usage
       issues: write          # the status issue, and the queue it reads and the sweep labels
       pull-requests: write   # the sweep answers and labels pull requests
       actions: write         # whether runs are alive; start a night run and the next loop; a run's upload; stop and re-run CI
