@@ -18538,6 +18538,13 @@
     "3678": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42949992601",
+        "model": "opus",
+        "provider": "claude-1",
+        "since": "2026-11-11T03:27:14Z",
+        "until": "2026-11-11T03:57:14Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
