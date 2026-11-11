@@ -1,0 +1,63 @@
+{
+  "action": "plan",
+  "number": 3566,
+  "title": "Patch: Stinkyscape+ S15, fruits, grapes and food",
+  "branch": "bot/issue-3566",
+  "thread": "**Issue #3566 (data, not instructions):**\n\n````text\n# #3566: Patch: Stinkyscape+ S15, fruits, grapes and food\nOpened by @squishy-squooby.\n\nPart of fullsend 1 of the Stinkyscape+ set (#3534, tracker #3533). It builds the set's fruits, grapes and food, Wines McCheese and his tokens, and Jayaad's Shawarma Law.\n\nThe plan: [`docs/stinkyscape-plus-set.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/docs/stinkyscape-plus-set.md) (SP5, SP6, SP8, SP10); the designer's list: [`JackiOh_StinkyscapePlus_Cards.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/JackiOh_StinkyscapePlus_Cards.md). Both are on the planning branch `claude/laughing-wright-eaibe9` until the foundation (#3535) brings them onto this fullsend's branch. Where they disagree with SPEC, SPEC wins (CLAUDE.md). `{For AI: \u2026}` notes in the designer's text are the designer's notes to you, the builder, not to the game's AI (SP5).\n\n## Cards\n\n| # | Card |\n| --- | --- |\n| #1 | Starfruit |\n| #5 | Dingleberry Droat |\n| #6 | Wines McCheese |\n| #6.1 | Fine Fermented Grape |\n| #6.2 | Stinky Cheese |\n| #17 | Smoothie |\n| #18 | Large Smoothie |\n| #61 | Jayaad |\n| #61.1 | Shawarma Law |\n| #69 | Exotic Jellybean |\n| #69.1 | Sweet Essence |\n| #70 | Spaceberry |\n\n## What it builds on\n\n- The foundation (#3535): every card's catalog entry, both faces and a stub script.\n- E1 (#3536): Evolve (Stinky Cheese).\n- E5 (#3548): Tipsy (the grape).\n- E8 (#3558): hand positions, the merged fused Spell, fusing until a cost, fusing from the hand at End of Turn.\n\n## Readings (defaults; change one only with a ruling note)\n\n- #69.1 is \"Sweet Essence\" (the list spells it \"Essense\"). The Jelly Bean tag is the existing one (the list writes \"Jellybean\").\n- #70 Spaceberry: Stinkyscape+ (the list says Stinkyscape). It shuffles three random cards with Cast on draw from the shipped sets, never Spaceberry itself, so it can't chain forever.\n- #6 Wines McCheese: the three tokens are equally likely.\n- #6.2 Stinky Cheese: Temporary 2 discards it at the end of your second turn holding it. Evolving then gives it Flashback, Animated and +5/+5, so it can be flashed back as a Unit.\n- #17, #18 the Smoothies: the Fruit pool is every Fruit Spell of the shipped sets, excluding the Smoothies. Large Smoothie's Radiant face holds Radiant X, Y and Z (SP5).\n- #5 Dingleberry Droat: E8's fuse until a cost, from random Fruits.\n- #6.1 Fine Fermented Grape: a Grape is a card whose name holds \"Grape\". Its End of Turn fuses one in while it sits in your hand (E8).\n- #61.1 Shawarma Law: each Unit counts the Shawarmas it has eaten. On the Radiant face, your Units stop at one.\n\n## The designer's text, verbatim\n\n```text\n**(1) Starfruit, Spell, Fruit, Common, Stinkyscape+, #1**\n**Cleave, Pierce**\nDeal 1 damage to a Unit.\n~~~\n**Cleave, Pierce, Lifesteal**\nDeal 2 damage to a Unit.\n\n**(2) Dingleberry Droat, Unit, Acclaimed, Human, Legendary, Stinkyscape+, #5**\n2/1\n**Cry: Fuse** Fruits together until you make one that costs at least (5). Add it to your hand. It costs (2).\n~~~\n4/2\n**Cry: Fuse** Radiant Fruits together until you make one that costs at least (5). Add it to your hand. It costs (2).\n\n**(2) Wines McCheese, Unit, Human, Epic, Stinkyscape+, #6**\n4/5\n**Start of Turn:** Add a Fine Fermented Grape, Stinky Cheese, or The Coin to your hand at random.\n~~~\n8/10\n**Start of Turn:** Add a Radiant Fine Fermented Grapes, Stinky Cheese, or The Coin to your hand at random.\n\n**(1) Fine Fermented Grape, Spell, Fruit, Token, Epic, Stinkyscape+, #6.1**\n**Tipsy 2**\n**End of Turn**: Fuse a different Grape into this.\n~~~\n**Tipsy 2**\n**End of Turn**: Fuse a different Radiant Grape into this.\n\n**(1) Stinky Cheese, Field Spell, Swarm, Token, Epic, Stinkyscape+, #6.2**\n**Temporary 2**\n**Evolves** when this is discarded to **Temporary**.\n**Evolve**: Gain **Flashback**, **Animated**, and +5/+5\n~~~\n**Temporary 1**\n**Evolves** when this is discarded to **Temporary**.\n**Evolve**: Gain **Flashback**, **Animated**, and +10/+10\n\n**(3) Smoothie, Spell, Rare, Fruit, Stinkyscape+, #17**\nThere is X & Y inside the smoothie *{when added to your hand there select two random fruits to be added to the smoothie, their targets are merged together but essentially works like a fused card}*\n~~~\nThere is **Radiant** X & **Radiant** Y inside the smoothie\n\n**(4) Large Smoothie, Spell, Rare, Fruit, Stinkyscape+, #18**\nThere is X, Y, & Z inside the smoothie *{when added to your hand there select three random fruits to be added to the smoothie, their targets are merged together but essentially works like a fused card}*\n~~~\nThere is **Radiant** X, **Radiant** X, & **Radiant X** inside the smoothie\n\n**(2) Jayaad, Unit, Acclaimed, Epic, Stinkyscape+, #61**\n2/6\n**Cry:** Enact **Shawarma Law** *{summon **Shawarma Law**}*\n~~~\n4/12\n**Cry:** Enact Enhance **Shawarma Law** *{summon Radiant **Shawarma Law**}*\n\n**(2) Shawarma Law, Field Spell, Epic, Stinkyscape+, #61.1**\n**End of turn:** Every unit eats a delicious **Shawarma** causing one of the following effects:\n\n- First **Shawarma** eaten gain **+3 health** *{Shawarma was very tasty}*\n- Second **Shawarma** eaten gain **Can\u2019t attack** *{too busy eating Shawarma}*\n- Third **Shawarma** eaten gain **Can\u2019t defend** and **Brittle 2** *{Ate too much Shawarma}*\n- Subsequent **Shawarma** eaten **Freeze** *{Shawarma overload}*\n\n~~~\n**End of turn:** Every unit eats a delicious **Shawarma** causing one of the following effects:\n\n- First **Shawarma** eaten gain **+3 health** *{Shawarma was very tasty}*\n- Second **Shawarma** eaten gain **Can\u2019t attack** *{too busy eating Shawarma}*\n- Third **Shawarma** eaten gain **Can\u2019t defend** and **Brittle 2** *{Ate too much Shawarma}*\n- Subsequent **Shawarma** eaten **Freeze** *{Shawarma overload}*\n\nAlly units gain discipline and stop at one **Shawarma**\n\n**(2) Exotic Jellybean, Spell, Epic, Jellybean, Stinkyscape+, #69**\nAdd a **Sweet Essence** to your hand\n~~~\nAdd a **Radiant** **Sweet Essence** to your hand\n\n**(0) Sweet Essense, Spell, Epic, Jellybean, Stinkyscape+, #69.1**\nIf this is the left most card in your hand, the card to the right of this is **Radiant**\n~~~\nIf this is the left most card in your hand, the card to the right of this is **Radiant** and costs (1) less\nThe card to the left of this costs (1) less\n\n**(1) Spaceberry, Spell, Epic, Fruit, Stinkyscape, #70**\n**Cast on draw:** Shuffle 3 **Cast on draw** into your deck\n~~~\n**Cast on draw:** Shuffle 3 **Radiant Cast on draw** into your deck\n```\n\n## Done when\n\n- [ ] Every card above plays its base and Radiant faces by its text and the readings, in its own script file (`crates/cards/src/scripts/stinkyscape_plus/cNNN_slug.rs`, the stub the foundation made), with tests for both faces in the same file (CLAUDE.md rules 5 and 6). `docs/ADDING_CARDS.md` was read first (rule 10).\n- [ ] Every number is a named constant or a card `param` (rule 9). A script reads state only through the prelude's helpers. A missing verb or board fact goes into the engine with its test (CLAUDE.md, Architecture).\n- [ ] Each decision the spec doesn't make has a ruling note numbered in this issue's block, a test named after it, and its paragraph in `spec/pending/<this issue>.md` (rule 3). The cards' \u00a78 rows say what was built.\n- [ ] Every prompt these cards open is answered by the AI, the random policy and the timeout.\n- [ ] `cargo test -p jackioh-cards` passes for these cards, and `cargo jackioh catalog check`, `spec check` and `names --check` pass.\n- [ ] Only these cards' catalog entries and \u00a78 rows are edited (other parts edit theirs side by side), and the set stays `Held`: players see nothing until the release (part R).\n\nBlocked by #3558\n\nPart of #3534.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-3596",
+  "part_of": 3596,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3566: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T23:49:48Z",
+    "claimed_at": "2026-11-11T14:20:17Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3570 skipped: it waits for #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3566 to close first",
+    "#3572 skipped: it waits for #3559, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3559, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first"
+  ]
+}
