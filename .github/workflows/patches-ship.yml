@@ -105,8 +105,12 @@ jobs:
           versions=$(sed -n 's/^patches ship: shipped //p' "$RUNNER_TEMP/ship.log" | paste -sd, - | sed 's/,/, /g')
           head=$(git rev-parse HEAD)
           branch="patches/ship-$(git rev-parse --short HEAD)"
-          login=$(gh api user --jq .login)
-          id=$(gh api user --jq .id)
+          # GraphQL's viewer, not REST's `gh api user`: the bot's token runs out of REST calls for
+          # hours at a time, which stopped two promotions here (#3714), while GraphQL keeps its own
+          # limit and `gh pr create`, `gh pr merge` and `gh pr list` below spend it already.
+          who=$(gh api graphql -f query='{viewer{login databaseId}}' --jq '.data.viewer | "\(.login) \(.databaseId)"')
+          login=${who% *}
+          id=${who#* }
 
           git checkout -b "$branch"
           git add -A
