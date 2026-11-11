@@ -386,6 +386,10 @@ pub struct KillDeadlineArgs {
     /// fails. Absent: none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub coins_on_fail: Option<i32>,
+    /// "They have N turns" (R3557006): the deadline is the end of its controller's Nth turn from now.
+    /// Absent, or below 1: the next one, as the verb always did.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turns: Option<i32>,
 }
 
 /// R3550006 (Stinkyscape+ #94 PIP): "they have 1 turn to get a kill otherwise they are destroyed" —
@@ -422,7 +426,8 @@ pub fn kill_deadline(args: KillDeadlineArgs) -> Effect {
             data,
         };
         let owner = ctx.controller;
-        let not_before = next_turn_mark(ctx);
+        // R3557006: each turn past the first is one more round of both players' turns.
+        let not_before = next_turn_mark(ctx) + 2 * (args.turns.unwrap_or(1).max(1) - 1);
         let entry = schedule_delayed(ctx, owner, at, resume, Some(unit.id.clone()), Some(not_before));
         mark_delayed(
             ctx,

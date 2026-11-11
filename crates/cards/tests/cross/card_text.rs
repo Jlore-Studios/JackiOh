@@ -103,6 +103,9 @@ const RETURNS_OFF_THE_FIELD: &[&str] = &[
     // R2195003: Core #23's snapshot, TG #49.
     "traininggrounds-049 base",
     "traininggrounds-049 radiant",
+    // R3557004: S+ #104 returns from the graveyard at the end of the turn, as Core #23 does.
+    "stinkyscapeplus-104 base",
+    "stinkyscapeplus-104 radiant",
 ];
 
 /// Whether `label`, found at `index` of `line`, is the tail of a longer label that opens the line ("Cry &

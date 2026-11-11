@@ -91,6 +91,10 @@ pub struct SummonPlacement {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(type = "Record<string, unknown>", optional))]
     pub memory: Option<IndexMap<String, Value>>,
+    /// R3557003: "in the backrow if possible" — a Unit that names no lane enters the leftmost open
+    /// backrow zone, standing there as a Unit (R1081000), and only with none open the unit row (R64).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backrow_first: Option<bool>,
 }
 
 /// `summon`'s arguments, the placement's keys beside the rest.
@@ -144,6 +148,10 @@ pub struct SummonArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(type = "Record<string, unknown>", optional))]
     pub memory: Option<IndexMap<String, Value>>,
+    /// R3557003: "in the backrow if possible" — a Unit that names no lane enters the leftmost open
+    /// backrow zone, standing there as a Unit (R1081000), and only with none open the unit row (R64).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backrow_first: Option<bool>,
 }
 
 impl SummonArgs {
@@ -160,6 +168,7 @@ impl SummonArgs {
             source_id: None,
             chinese: None,
             memory: self.memory.clone(),
+            backrow_first: self.backrow_first,
         }
     }
 }
@@ -206,6 +215,14 @@ fn zone_and_stance_for(
     giga: bool,
 ) -> Option<(ZoneSlot, bool)> {
     let Some(lane) = at.lane else {
+        // R3557003: backrow first, where a Unit stands as it does there (R1081000); else R64's row.
+        if at.backrow_first == Some(true)
+            && row == Row::Units
+            && !giga
+            && let Some(slot) = first_entry_zone(ctx.state, player, Row::Backrow)
+        {
+            return Some((slot, true));
+        }
         return entry_zone(ctx.state, player, row, flies, giga);
     };
     if lane < 1 || lane > row_size(row) {
