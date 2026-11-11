@@ -14352,7 +14352,7 @@
       "question": "",
       "queued_at": "2026-11-11T02:56:18Z",
       "requested_by": "an assignment",
-      "round_tier": "medium",
+      "round_tier": "",
       "run_id": "42956715308",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-11T04:03:23Z",
