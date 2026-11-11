@@ -16558,15 +16558,8 @@
       }
     },
     "3727": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43108745341",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-11T22:35:37Z",
-        "until": "2026-11-11T23:05:37Z"
-      },
       "died": 1,
       "handoff": {
         "at": "2026-11-11T22:25:25Z",
@@ -16577,9 +16570,8 @@
         "reason": "planned on opus",
         "trail": "test | head -5; \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/crates/server && sed -n 505,612p src/actor/rooms.rs\", \"description\": \"Read room join's match start section\"}\n- Bash: {\"command\": \"grep -n \\\"fn room_seats\\\\|let seed = \\\\|host_is_p1 = \\\\|fn seat_coin\\\\|freeze_choice\\\\|fn frozen_choice\\\\|let frozen = \\\" src/actor/rooms.rs | head; grep -n \\\"pub async fn assert_free_to\u2026\n- Bash: {\"command\": \"sed -n 195,240p src/actor/rooms.rs; sed -n 405,420p src/actor/rooms.rs; sed -n 446,462p src/actor/rooms.rs; sed -n 1225,1260p src/api/decks.rs\", \"description\": \"Read room_seats, freeze_c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727 && grep -n \\\"^## \\\\|^### \\\" docs/v0.3.0/SURFACE.md | head -40; grep -n \\\"^### 8\\\\.\\\\|^## 8\\\\|^### 3.2\\\" docs/architecture.md; grep -n \\\"^## \\\\|^\u2026\n- Bash: {\"command\": \"grep -n \\\"9\\\\.12\\\\|Ranked ladder\\\" spec/README.md SPEC.md | head; grep -n \\\"9\\\\.12\\\" docs/architecture.md | head -3; grep -n \\\"^| `/api/challenges\\\" crates/server/README.md | head -3; gr\u2026\n- tool error: Exit code 2 /bin/bash: eval: line 1: unexpected EOF while looking for matching ``'\n- Bash: {\"command\": \"grep -n '9\\\\.12\\\\|Ranked ladder' spec/README.md SPEC.md | head; grep -n '/api/challenges' crates/server/README.md docs/v0.3.0/SURFACE.md | head -5\", \"description\": \"Check where \\u00a79.1\u2026\n- Bash: {\"command\": \"cd apps/web && ls src/i18n 2>/dev/null | head; ls src/*.ts | head -20; grep -rn \\\"missing translation\\\\|every string\\\\|untranslated\\\" src/i18n/*.test.ts 2>/dev/null | head -5; grep -n \\\"\u2026\n- Bash: {\"command\": \"sed -n 225,255p src/i18n/i18n.test.ts; ls src/wording.test.ts src/writing.test.ts src/dialogs.test.ts src/in-app-links.test.ts >/dev/null && head -20 src/writing.test.ts\", \"description\":\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727 && grep -n \\\"seat_coin_p1_first\\\\|pub fn new_seed\\\" -r crates/server/src --include=*.rs | grep \\\"fn \\\" | head -3; grep -n \\\"SERVER_NONCE_PREFIX\\\u2026\n- Bash: {\"command\": \"sed -n 736,760p crates/server/src/actor/protocol.rs; grep -n \\\"fn matches_put_checkpoint\\\\|MATCH_CHECKPOINT_MIN_ACTIONS\\\" crates/server/src/db/store.rs crates/server/src/config.rs crates\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3727/.bot-plan.md\", \"content\": \"# Plan #3727 \\u2014 status: COMPLETE DRAFT (run 3, claude-8). Final message = everything below the line.\\nFacts verifi\u2026\n- Bash: {\"command\": \"sed -n '/^---$/,$p' .bot-plan.md | wc -w -c\", \"description\": \"Count words and characters of the plan\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn opponent_of\\\" -r crates/engine/src | head -2; grep -n \\\"pub email\\\" crates/server/src/db/store.rs | head -2\", \"description\": \"Verify opponent_of export and Profile email\u2026\n- said: Now trimming the plan to the word budget.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3727/.bot-plan.md\", \"content\": \"# Plan #3727 \\u2014 status: COMPLETE (run 3, claude-8). Final message = everything below the line.\\n\\n---\\n\\n**Goal.**\u2026\n- Bash: {\"command\": \"sed -n '/^---$/,$p' .bot-plan.md | tail -n +2 | wc -w -c\", \"description\": \"Recount words of the trimmed plan\"}\n- Bash: {\"command\": \"awk '/^\\\\*\\\\*Files to touch/{f=1} /^\\\\*\\\\*Steps/{f=0} f' .bot-plan.md | wc -w; awk '/^\\\\*\\\\*Steps/{f=1} /^\\\\*\\\\*Tests/{f=0} f' .bot-plan.md | wc -w; awk '/^\\\\*\\\\*Tests/{f=1} /^\\\\*\\\\*Done\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport re\\np='/home/runner/work/_temp/work/item-3727/.bot-plan.md'\\ns=open(p).read()\\nsteps=s[s.index('**Steps**'):s.index('**Tests**')]\\nfor m in re.finditer(r'(?m\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3727/.bot-plan.md\", \"content\": \"# Plan #3727 \\u2014 status: COMPLETE (run 3, claude-8). Final message = everything below the line.\\n\\n---\\n\\n**Goal.**\u2026\n- Bash: {\"command\": \"sed -n '/^---$/,$p' .bot-plan.md | tail -n +2 | wc -w -c\", \"description\": \"Recount the plan's words\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3727/.bot-plan.md'\\ns=open(p).read()\\nR=[\\n(\\\"| `crates/server/src/db/migrate.rs`, `crates/server/tests/store/migrations_pinned\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3727/.bot-plan.md'\\ns=open(p).read()\\nR=[\\n(\\\"**Goal.** Unranked daily games: Best of 1 or All Random at 1, 3, 7 or 14 days per\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3727/.bot-plan.md'\\ns=open(p).read()\\nR=[\\n(\\\" - `act` (`POST \\u2026/actions {after, nonce, action}`), in this order:\\\\n 1. set\u2026\n- Bash: {\"command\": \"grep -n \\\"^12\\\\. \\\\|^13\\\\. \\\\|^19\\\\. \\\\|^20\\\\. \\\\|^22\\\\. \\\\|^5\\\\. \\\" -A 8 .bot-plan.md | head -80\", \"description\": \"Show steps to trim further\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3727/.bot-plan.md'\\ns=open(p).read()\\nR=[\\n(\\\" - `sweep(app, now)`: expire stale invites and settle the overdue games. Then, fo\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3727/.bot-plan.md'\\ns=open(p).read()\\nR=[\\n(\\\"20. `DailyBoard.tsx`:\\\\n - `<Game view legal onAction>`, sending `{after: seq, no\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3727/.bot-plan.md'\\ns=open(p).read()\\na=\\\"- **Size:** this is well over 40 files. If one build is too much, split it into parts\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/home/runner/work/_temp/work/item-3727/.bot-plan.md'\\ns=open(p).read()\\na=\\\"- **The hourly cron** wakes the container every hour.\\\"\\nb=\\\"- **The hourly cron** wa\u2026\n- Bash: {\"command\": \"grep -m1 \\\"^name\\\" crates/wasm/core/Cargo.toml; ls apps/edge/src/routing.test.ts; head -12 crates/server/tests/server_store.rs | grep -n \\\"mod\\\"\", \"description\": \"Verify crate and test t\u2026\n- said: **Goal.** Unranked daily games (Best of 1 or All Random, 1/3/7/14 days per move), started by a challenge to any friend or the daily queue (no bots). Each action is one HTTPS request, with nothing in memory between moves. An expired move loses on time, whether the hourly cron sweep or a read finds i\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-11T22:05:16Z",
       "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
@@ -16591,9 +16583,9 @@
       "planned_tier": "strong",
       "provider": "claude-8",
       "queued_at": "2026-11-11T21:06:25Z",
-      "run_id": "43108745341",
+      "run_id": "pending:0460351f-1794436602",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-11T22:05:16Z",
+      "started_at": "2026-11-11T22:37:12Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
@@ -16826,9 +16818,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T22:26:03Z",
+    "at": "2026-11-11T22:37:12Z",
     "url": "",
-    "what": "plan #3695 on claude-3"
+    "what": "build #3727 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-11T22:24:01Z",
