@@ -16193,6 +16193,7 @@
           "claude": "strong"
         }
       },
+      "waiting_comment": 6809685904,
       "wip": {
         "at": "2026-11-11T23:27:48Z",
         "provider": "claude-3",
