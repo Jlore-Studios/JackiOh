@@ -177,6 +177,41 @@ fn mulligan_window(owed: &[PlayerId]) -> ClockView {
 mod match_clock {
     use super::*;
 
+    /// The timers a call asked the host to set, by key.
+    fn sets(commands: &[TimerCommand]) -> Vec<TimerKey> {
+        commands
+            .iter()
+            .filter_map(|command| match command {
+                TimerCommand::Set { key, .. } => Some(*key),
+                TimerCommand::Cancel { .. } => None,
+            })
+            .collect()
+    }
+
+    /// R79, R268: a sync that changes nothing asks for no timer the clock already holds, the turn's or the
+    /// mulligan window's.
+    #[test]
+    fn r79_a_sync_that_changes_nothing_sets_no_timer_again() {
+        let mut h = Sim::new(0);
+        h.sync(&view());
+        h.clock.sync(&view(), h.now + SECOND, &mut h.fx);
+        assert!(!sets(&h.fx.take()).contains(&TimerKey::Turn));
+        let mut m = Sim::new(0);
+        m.sync(&mulligan_window(&[P1, P2]));
+        m.clock
+            .sync(&mulligan_window(&[P1, P2]), m.now + SECOND, &mut m.fx);
+        assert!(!sets(&m.fx.take()).contains(&TimerKey::Mulligan));
+    }
+
+    /// R79: a stopped clock says so.
+    #[test]
+    fn r79_a_stopped_clock_says_so() {
+        let mut h = Sim::new(0);
+        assert!(!h.clock.is_stopped());
+        h.stop();
+        assert!(h.clock.is_stopped());
+    }
+
     #[test]
     fn r79_expires_the_turn_clock_after_turn_clock_seconds_and_names_the_active_player() {
         let mut h = Sim::new(0);

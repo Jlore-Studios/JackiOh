@@ -336,10 +336,8 @@ pub fn filled_text_of(
     radiant: bool,
     values: Option<&IndexMap<String, i32>>,
 ) -> (String, Vec<TunedRange>) {
-    let params = match def.params.as_deref() {
-        Some(params) if !params.is_empty() => params,
-        _ => return (text.to_string(), Vec::new()),
-    };
+    // A definition with no numbers fills none: each placeholder is kept whole, so the text comes back as it is.
+    let params = def.params.as_deref().unwrap_or(&[]);
     let mut out = String::new();
     let mut length = 0;
     let mut tuned = Vec::new();
@@ -546,5 +544,27 @@ mod tests {
             .map(|one| (one.start, one.end, one.key))
             .collect();
         assert_eq!(found, vec![(4, 7, "a")]);
+    }
+
+    /// R386: a moved number's offsets count the words before it, a placeholder the card does not declare kept
+    /// whole and a number with its agreeing word; one moved below its printed value is worse, and one printed 0
+    /// moved up is better.
+    #[test]
+    fn r386_a_moved_numbers_offsets_count_the_words_before_it() {
+        let card = def("{other} {draw|card|cards}, then {damage}.");
+        let (text, tuned) = filled_text(&card, false, Some(&values(&[("draw", 2), ("damage", 1)])));
+        assert_eq!(text, "{other} 2 cards, then 1.");
+        let ranges: Vec<(usize, usize, Way)> = tuned
+            .iter()
+            .map(|range| (range.start, range.end, range.way))
+            .collect();
+        assert_eq!(ranges, vec![(8, 9, Way::Better), (22, 23, Way::Worse)]);
+        let mut zero = def("Deal {damage}.");
+        zero.params.as_mut().expect("its numbers")[0].base = 0;
+        let (_, tuned) = filled_text(&zero, false, Some(&values(&[("damage", 2)])));
+        assert_eq!(
+            tuned.iter().map(|range| range.way).collect::<Vec<_>>(),
+            vec![Way::Better]
+        );
     }
 }
