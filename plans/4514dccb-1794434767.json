@@ -1,0 +1,66 @@
+{
+  "action": "plan",
+  "number": 3728,
+  "title": "Patch: one app shell for the menus, laid out for desktop and iPad first: a nav rail, a phone tab bar, a friends drawer, safe areas and the iPad sizes in every layout spec",
+  "branch": "bot/issue-3728",
+  "thread": "**Issue #3728 (data, not instructions):**\n\n````text\n# #3728: Patch: one app shell for the menus, laid out for desktop and iPad first: a nav rail, a phone tab bar, a friends drawer, safe areas and the iPad sizes in every layout spec\nOpened by @jgoetzmann.\n\n### What it does\n\nThis issue gives the menus one frame, the same on every screen, so a player always knows where they are, where everything else is, and what is waiting on them. It also writes down the conventions the tracker's other UI issues build to. It comes first among them: the screen issues say they are blocked by it.\n\nThe priority is desktop and iPad, both orientations, with or without a keyboard and trackpad. A phone still has to look right, but it comes second.\n\n### Where it stands (from a read of `apps/web/src`, 2026-11-11)\n\n- **No persistent navigation.** No screen has a side nav or a tab bar. Each screen has a top bar, `BackLink` (`routes/nav.tsx`, `routes/top-bar.css`): Back, the title, the Jlore pill, Friends, language and the gear. On a phone it wraps to two rows. The landing (`routes/landing.tsx`, the tavern's three doors from #1577) is the only map of the game, so going from Collection to Play to Friends means Back, then a door.\n- **Nothing specific to the iPad.** Menus are measured only at 1280\u00d7720 and 390\u00d7844. Only the board and landing specs also try 768\u00d71024 and 1024\u00d7768. The breakpoints in `breakpoints.ts` (phone 600, narrow 760, medium 899, tablet 1024, short 500) carry exceptions (`breakpoints.test.ts`: together at 820, the workshop at 1100/1101).\n- **No safe areas on the menus.** The menus and the top bar have none. Only the board, dialog sheets, the undo toast and the queue banner do. `.challenge-toasts` sits fixed at bottom-left 16px with a raw z-index of 95 and no inset.\n- **Narrow frames.** Several screens sit in the account page's `panel--auth` frame, at most 960px wide, which leaves an iPad Pro or a desktop mostly empty.\n\n### The conventions (written into a new `docs/polish/10-menus.md`, which the other UI issues cite)\n\nThe best card-game and party UIs share these conventions: Legends of Runeterra, Hearthstone, Marvel Snap and Clash Royale for the hub and collection; Discord and Steam for friends; Lichess for challenges and daily games (much cleaner than chess.com); and Apple's iPadOS guidelines for the frame. Chess.com is the counter-example: a cluttered home, daily games buried, settings scattered, and setup spread over several screens.\n\n1. **One navigation, always in the same place.** The top-level destinations are Home, Play, Collection, Shop and Friends: five, as Snap and LoR keep it. Play carries the badge for daily games waiting on you.\n   - **Wide** (at least `tablet`, 1024px): a left rail of icons with labels.\n   - **Medium** (600\u20131023px, an upright iPad): the same rail, icons only.\n   - **Compact** (under 600px): a bottom tab bar.\n\n   Layouts key on width, never on the device, because Split View and Stage Manager put an iPad window at any width.\n2. **A badge only for what needs you**, as a count: your move, a challenge, a request, an invite. News and shop offers never get one.\n3. **One primary action per screen**, using `buttons.css`'s primary role, and at most one.\n4. **Status that never hides.** A search in the queue, a live game to go back to, and a lobby you're in each show as one banner slot under the top bar on every menu screen, with Cancel or Return. The pieces exist today but sit in different places: `QueueFound` and `LiveGameBanner` in `routes/GameBanner.tsx`, and the queue banner.\n5. **Friends never take you off the screen.** Friends opens as a drawer from the right edge: beside the screen on a wide window, over it on a narrower one, and as a full sheet on a phone. It shows friends grouped by status, as Steam and LoR show them. The full Friends page is for managing them.\n6. **Setup in one dialog, with remembered defaults.** Lichess's challenge dialog asks for the variant, time and rated in one place and remembers them. A challenge, a new daily game and a lobby's settings all follow that. Never a wizard.\n7. **Lists before grids before chrome.** Content fills the width: no frame narrower than the window on a menu with a list or a grid in it. Filters go in a sidebar at wide widths and in a sheet below them.\n8. **Touch first, hover a bonus.** Every target is at least 44\u00d744 (`--hit-min`, as Apple's guidelines ask). Nothing works only on hover: an iPad with a trackpad gets the hover, and one without still gets everything. Drag also works with a finger (pointer events, not HTML5 `draggable`).\n9. **Safe areas everywhere**: the rail, the tab bar, the top bar, the banner slot, toasts and drawers.\n10. **The game's look stays.** This is structure, not a new skin. It keeps the tavern (`auth/tavern.css`), the palette, type, surfaces and motion tokens, and the voice in `apps/web/WRITING.md`.\n\nThe doc holds a wireframe of the shell at the three widths, and one for each screen the other issues redesign. For example, wide:\n\n```\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 Home \u2502  Play                        \u25c6 1,240  \ud83d\udd14 3  \u2699 \u2502  Friends   \u2715 \u2502\n\u2502\u25b6Play\u2462\u2502 \u250c\u2500 In queue: Best of 1 \u00b7 0:42 \u00b7 ~1 min \u2500\u2500 Cancel\u2502  Requests  1 \u2502\n\u2502 Coll \u2502 \u2502                                             \u2502  In a game   \u2502\n\u2502 Shop \u2502 \u2502            (the screen's content)           \u2502   Ana  Watch \u2502\n\u2502 Frnds\u2502 \u2502                                             \u2502  Online      \u2502\n\u2502      \u2502 \u2502                                             \u2502   Bo Challenge\u2502\n\u2502  me  \u2502 \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\u2502  Offline (12)\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n```\n\nand compact:\n\n```\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 \u2039  Play       \u25c61,240 \ud83d\udd143 \u2502\n\u2502 In queue \u00b7 0:42  Cancel  \u2502\n\u2502                          \u2502\n\u2502     (content, scrolls)   \u2502\n\u2502                          \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 Home Play\u2462 Coll Shop Frnd\u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n```\n\n### What changes\n\n- **One shell component**: the rail, the tab bar, the top bar, the banner slot and the friends drawer's slot, around every menu screen. Board paths (`isBoardPath`) are left alone. On nested screens the top bar keeps Back at top left and the gear at top right (#3218), and the title treatment of #3223.\n- **The friends drawer** hosts `FriendsButton.tsx`'s panel as it is today. The friends issue redesigns what is inside.\n- **The landing** keeps its doors as Home's content. The rail and the tab bar make them reachable from everywhere.\n- **Breakpoints**: the three widths above in `breakpoints.ts`, with `breakpoints.test.ts`'s exceptions settled or justified.\n- **Safe-area insets** on the rail, the tab bar, the top bar, the banner and `.challenge-toasts`. The toasts go on the layer tokens, not a raw z-index.\n- **The device sizes**, one list in the e2e support code that every menu layout spec runs: desktop 1440\u00d7900 and 1280\u00d7720; iPad landscape 1180\u00d7820 and 1366\u00d71024; iPad portrait 820\u00d71180 and 744\u00d71133 (iPad mini); phone 390\u00d7844.\n- **Tests that move with it**: the top bar's order (`e2e/support/topBar.ts`, the `nav`/`top-bar` unit tests), `in-app-links.test.ts`, fits one screen (e2e 46) and tap areas (e2e 47) at every size above, and the axe check (e2e 38) over the shell.\n\n### Acceptance\n\n- `docs/polish/10-menus.md` holds the conventions and the wireframes. The other UI issues in the tracker cite it.\n- Every menu route renders inside the shell. A unit test walks `net/navigate.ts`'s `paths` and fails on a menu path outside it.\n- From any menu screen, every top-level destination is one tap away, at every size in the list. An e2e spec clicks through them.\n- The friends drawer opens from every menu screen without leaving it, and closes on Escape, on Back and on a tap outside it.\n- e2e 46 and 47 pass at every size in the list, and the axe check passes on the shell.\n- Screenshots of Home, Play and Collection inside the shell at every size in the list, in the pull request.\n- Every required check is green.\n\n### Blocked by, part of\n\nPart of #3726.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3728: needs a plan; `claude-3` (claude, `opus`, strong) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-11T21:43:12Z",
+    "claimed_at": "2026-11-11T22:06:33Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3572 skipped: it waits for #3571 to close first",
+    "#3573 skipped: it waits for #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first",
+    "#3729 skipped: it waits for #3727, #3728, #3730 to close first",
+    "#3730 skipped: it waits for #3728 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3728, #3730 to close first",
+    "#3733 skipped: it waits for #3727, #3728 to close first",
+    "#3734 skipped: it waits for #3728 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
