@@ -19424,11 +19424,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-11T06:55:46Z",
+        "at": "2026-11-11T07:07:13Z",
         "difficulty": "medium",
-        "provider": "claude-1",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #3682, a medium change"
+        "provider": "muse",
+        "tier": "medium",
+        "why": "none of the five hard lines holds: one web test file, no engine/AI/migration/cross-crate/big change"
       },
       "failures": 0,
       "forced": false,
