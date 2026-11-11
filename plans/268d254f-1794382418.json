@@ -1,0 +1,80 @@
+{
+  "action": "plan",
+  "number": 3554,
+  "title": "Patch: Stinkyscape+ E7, board geometry and damage routing",
+  "branch": "bot/issue-3554",
+  "thread": "**Issue #3554 (data, not instructions):**\n\n````text\n# #3554: Patch: Stinkyscape+ E7, board geometry and damage routing\nOpened by @squishy-squooby.\n\nPart of fullsend 1 of the Stinkyscape+ set (#3534, tracker #3533). It builds the set's **board geometry and damage routing**: the Black Hole lane, the slashed board, line damage to a chosen tile, chain lightning, damage chains, lane-weighted damage and summoning onto an occupied zone.\n\nThe plan: [`docs/stinkyscape-plus-set.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/docs/stinkyscape-plus-set.md) (SP2, SP3, SP8, SP10); the designer's list: [`JackiOh_StinkyscapePlus_Cards.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/JackiOh_StinkyscapePlus_Cards.md). Both are on the planning branch `claude/laughing-wright-eaibe9` until the foundation (#3535) brings them onto this fullsend's branch. Where they disagree with SPEC, SPEC wins (CLAUDE.md). `{For AI: \u2026}` notes in the designer's text are the designer's notes to you, the builder, not to the game's AI (SP5).\n\n## The designer's words (the cards that need these verbs)\n\n```text\n**(4) Black Hole, Spell, Terminus, Mythic, Stinkyscape+, #77**\nOpen a Black Hole in midlane. At the start of each player\u2019s turn, it draws their permanents one lane closer. It closes after swallowing 10 permanents.\n{For AI: the Black Hole occupies all of midlane with a constant animation. Any permanent that enters midlane is exiled}\n~~~\nOpen a Black Hole in midlane. At the start of the opponent\u2019s turn, it draws their permanents one lane closer.\n\n**(4) Slashed Dream Cries in Red, Spell, Terminus, Mythic, Stinkyscape+, #78**\nSlash the board into two *{exiling the middle lane and deleting all permanents inside, for AI replace it with a deep red mark the reveals the endless sea, units and field spells only effect their side of the board, spells have to be played on either of the two boards, only thing that is defacto the same is the hand and health}*.\n~~~\nSlash the board into two, you have control over the slash *{can pick lane 2, 3, or 4}*\n\n**(4) Churnwalker, Unit, Legendary, Stinkyscape+, #7**\n3/15\n**Armor 4**\n**Cry:** Choose one\n\n- Chain all enemy units together, when one takes damage all other chained units also take the damage\n- Chain all friendly units together, when one takes damage it is split between all allies (rounded down)\n\n~~~\n6/30\n**Armor 8**\n**Cry:**\n\n- Chain all enemy units together, when one takes damage all other chained units also take the damage\n- Chain all friendly units together, when one takes damage it is split between all allies (rounded down)\n\n**(2) Arc, Unit, Mindustrial, Common, Stinkyscape+, #38**\n**Can\u2019t defend**\n**Activate 2:** Deal 2 damage to a unit, this randomly chains to an adjacent unit *{e.g., can change to a unit if in an adjacent lane or in the backrow, repeats until no valid targets, cannot chain to the same unit twice in one activate}*\n0/5\n~~~\n**Can\u2019t defend**\n**Activate 5:** Deal 2 damage to a unit, this randomly chains to an adjacent unit *{e.g., can change to a unit if in an adjacent lane or in the backrow, repeats until no valid targets, cannot chain to the same unit twice in one activate}*\n0/10\n\n**(2) Lancer**, **Unit, Mindustrial, Rare, Stinkyscape+, #109**\n2/4\n**Armor 2**\n**Can\u2019t Attack**\n**Can\u2019t Defend**\n**Flexible**\n**Activate 1: Discover** an enemy tile *{backrow lane 2, unit row lane 4, etc}* deal 5 **Pierce** deal damage to all units between that row and this *{draw a line KY\u2019s papaya style}*\n~~~\n4/8\n**Armor 4**\n**Can\u2019t Attack**\n**Can\u2019t Defend**\n**Flexible**\n**Activate 2: Discover** an enemy tile *{backrow lane 2, unit row lane 4, etc}* deal 8 **Pierce** deal damage to all units between that row and this *{draw a line KY\u2019s papaya style}*\n\n**(2) Fuse**, **Unit, Mindustrial, Epic, Stinkyscape+, #107**\n2/5\n**Armor 5**\n**Can\u2019t Defend**\n**Ranged**\nDeal 5x damage to units in this lane, deals 3x damage to units in adjacent lanes\n**Pierce**\n~~~\n4/10\n**Armor 10**\n**Can\u2019t Defend**\n**Ranged**\nDeal 7x damage to units in this lane, deals 4x damage to units in adjacent lanes\n**Pierce**\n```\n\n## The build (defaults from SP3; change one only with a ruling note)\n\n- **The Black Hole** (#77): it occupies the middle lane (lane 3 of 5) on both sides with a lasting animation. Any permanent that enters it is exiled. At the start of each player's turn it pulls that player's permanents one lane toward it, and those that reach it are exiled. It closes after swallowing 10 permanents. The Radiant face pulls only the opponent's permanents, at the start of the opponent's turn.\n- **The slashed board** (#78): the middle lane is exiled with every permanent in it, and the board becomes two halves for the rest of the game. A Unit or Field Spell affects only its own half. A Spell is played on one half, chosen as it is cast. The hand and the heroes' Health stay shared. The Radiant face picks the slash at lane 2, 3 or 4.\n- **Line damage** (#109 Lancer, #126 Vela, #127 Corvus): choose (Lancer: Discover from three) an enemy tile, a row and a lane, and deal damage to every Unit on the line between this and that tile, as KY's papaya draws it (Pierce; Vela's and Corvus's Radiant faces add Cleave).\n- **Chain lightning** (#38 Arc): deal 2 damage to a Unit. It then jumps at random to an adjacent Unit (the next lane or the backrow behind it), never the same Unit twice in one Activate, until no Unit is left to jump to.\n- **Damage chains** (#7 Churnwalker): chained enemies all take any damage one of them takes. Chained allies split any damage one of them takes among all of them, rounded down. **Default:** a chain lasts for the rest of the game, and only the Units on the field when the Cry resolves are in it.\n- **Lane-weighted damage** (#107 Fuse): **default:** its attack hits every enemy Unit in its lane for 5 times its attack (Radiant 7) and every enemy Unit in the adjacent lanes for 3 times (Radiant 4), as one damage instance each.\n- **Summon onto an occupied zone** (#121 Toxopid's Legs: \"Summon 3 Toxopid Legs ANYWHERE on the field, exiling the card below it, should trigger leg's crater\").\n\n## The cards that will use it\n\nS07 (#38 Arc, #107 Fuse, #109 Lancer), S13 (#121 Toxopid's Legs, #126 Vela, #127 Corvus), S19 (#7 Churnwalker), S21 (#77 Black Hole, #78 Slashed Dream Cries in Red).\n\n## Lanes\n\nThe Black Hole and the slashed board change the lanes every rule reads, including GIGA's two lanes (E4), Flexible's backrow Units (E3) and adjacency (\u00a73). Prove each with fixture scripts against Cleave, \"this lane and adjacent\", attacks across, Crater and a GIGA permanent. The client draws the Black Hole's animation, the slash's red mark (\"a deep red mark that reveals the endless sea\") and the line for line damage (a laser for Corvus).\n\n## Done when\n\n- [ ] Each verb is written into the spec's sections it changes (\u00a73, \u00a74, \u00a76, \u00a710), with ruling notes numbered in this issue's block, tests named after them, and the paragraph in `spec/pending/<this issue>.md` (CLAUDE.md rule 3).\n- [ ] Each is proved on fixture scripts in `crates/engine/tests/rules*` (the `testkit` feature's `scenario()`), with no card yet: the cards come in their own parts.\n- [ ] The view (`view_for`) and the wire carry what it shows (`docs/v0.3.0/SURFACE.md` for any boundary it adds; `cargo test \u2026 --features jackioh-engine/ts` rewrites `apps/web/src/wire/`), and the client renders it.\n- [ ] Every prompt it opens (a tile, a half, a slash lane) is answered by the AI, the random policy and the timeout. Every number is a named constant in `crates/engine/src/config.rs` (rule 9). The engine stays pure (rule 4).\n- [ ] `cargo test -p jackioh-engine --features testkit`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo jackioh spec check`, `cargo jackioh fuzz --seeds 200` and `pnpm --dir apps/web test` pass.\n- [ ] Nothing changes for players: no shipped card reaches it.\n\nBlocked by #3550\n\nPart of #3534.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-3596",
+  "part_of": 3596,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3554: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T23:48:47Z",
+    "claimed_at": "2026-11-11T07:34:15Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3554 needs a plan",
+    "#3555 needs a plan",
+    "#3556 needs a plan",
+    "#3557 needs a plan",
+    "#3687 is held for `claude-3` until 02:00 (it refused a call)",
+    "#3690 is held for `claude-3` until 02:00 (it refused a call)",
+    "#3702 is held for `claude-8` until 03:00 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3558 skipped: it waits for #3554 to close first",
+    "#3559 skipped: it waits for #3554 to close first",
+    "#3560 skipped: it waits for #3554 to close first",
+    "#3561 skipped: it waits for #3554 to close first",
+    "#3565 skipped: it waits for #3560 to close first",
+    "#3566 skipped: it waits for #3558 to close first",
+    "#3567 skipped: it waits for #3558 to close first",
+    "#3568 skipped: it waits for #3557, #3558 to close first",
+    "#3569 skipped: it waits for #3558 to close first",
+    "#3570 skipped: it waits for #3551, #3555, #3560, #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3566 to close first",
+    "#3572 skipped: it waits for #3551, #3555, #3556, #3557, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3551, #3554, #3555, #3556, #3557, #3558, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first"
+  ]
+}
