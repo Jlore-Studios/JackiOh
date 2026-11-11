@@ -289,11 +289,6 @@ export function starshipUnitOf(view: PlayerView, id: string): { unit: StarshipUn
   return null;
 }
 
-/** R3334002: whether `view` shows `id` as a launched Starship. */
-export function isLaunchedStarship(view: PlayerView, id: string): boolean {
-  return starshipUnitOf(view, id)?.unit.starship.launched !== undefined;
-}
-
 /** R2801000: `side`'s Dormant Starship as the board draws it (a unit, else a backrow Unit), or null. */
 export function dormantStarshipOf(view: PlayerView, side: Side): string | null {
   const sv = view[side];

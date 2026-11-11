@@ -1,4 +1,4 @@
-// #936 S7/S8: `net/social.ts`, one fetch wrapper per social route: what each sends, and the parsed
+// #936 S7/S8: `net/social.ts`, one fetch wrapper per social route the client calls: what each sends, and the parsed
 // answer or the `ApiRequestError` carrying the refusal's status and code (B43, B45, B46, B48, B52, B53).
 // The wrappers take no token (SPEC S8), so each test first puts a session where `net/session.ts` keeps it.
 
@@ -14,12 +14,10 @@ import {
   createChallenge,
   declineChallenge,
   declineFriendRequest,
-  getChallenges,
   getChat,
   getFriends,
   getSharedReplays,
   getSocial,
-  getUnread,
   heartbeat,
   removeFriend,
   reportMessage,
@@ -272,14 +270,6 @@ describe("B48 B49 challenges", () => {
     expect(error.code).toBe(code);
   });
 
-  it("B49 getChallenges reads GET /api/challenges and resolves with incoming and outgoing", async () => {
-    const answer = { incoming: [CHALLENGE], outgoing: [] };
-    const { call, result } = await sent(() => getChallenges(), { status: 200, body: answer });
-    expect(call.method).toBe("GET");
-    expect(call.path).toBe("/api/challenges");
-    expect(result).toEqual(answer);
-  });
-
   it("B49 declineChallenge posts to /api/challenges/:id/decline", async () => {
     const { call, result } = await sent(() => declineChallenge("ch-1"), NO_CONTENT);
     expect(call.method).toBe("POST");
@@ -303,12 +293,6 @@ describe("B48 B49 challenges", () => {
     const error = await refused(() => cancelChallenge("ch-gone"), refusal(404, "not_found", "No such challenge."));
     expect(error.status).toBe(404);
     expect(error.code).toBe("not_found");
-  });
-
-  it("B49 a refused read of the challenges rejects rather than resolving empty", async () => {
-    const error = await refused(() => getChallenges(), refusal(401, "unauthorized", "Sign in first."));
-    expect(error.status).toBe(401);
-    expect(error.code).toBe("unauthorized");
   });
 });
 
@@ -354,13 +338,6 @@ describe("B53 chat", () => {
     expect(error.status).toBe(429);
   });
 
-  it("B53 getUnread reads GET /api/chat/unread", async () => {
-    const { call, result } = await sent(() => getUnread(), { status: 200, body: { unread: { "f-ann": 3 } } });
-    expect(call.method).toBe("GET");
-    expect(call.path).toBe("/api/chat/unread");
-    expect(result).toEqual({ unread: { "f-ann": 3 } });
-  });
-
   it("B53 reportMessage posts {reason} to /api/chat/messages/:id/report", async () => {
     const { call, result } = await sent(() => reportMessage("msg-1", "spam"), NO_CONTENT);
     expect(call.method).toBe("POST");
@@ -373,11 +350,6 @@ describe("B53 chat", () => {
     const error = await refused(() => getChat("p-stranger"), refusal(404, "not_found", "Not a friend."));
     expect(error.status).toBe(404);
     expect(error.code).toBe("not_found");
-  });
-
-  it("B53 a refused unread read rejects rather than resolving to no unread", async () => {
-    const error = await refused(() => getUnread(), refusal(401, "unauthorized", "Sign in first."));
-    expect(error.status).toBe(401);
   });
 
   it("B53 reporting a message that is not in the reporter's conversations rejects with the server's status", async () => {

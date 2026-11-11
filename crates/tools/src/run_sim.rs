@@ -46,13 +46,13 @@ use jackioh_engine::{
     registered_catalog, validate_setup,
 };
 use jackioh_run::config::{
-    RUN_ACTS, RUN_ELITE_TIERS, RUN_SCORE_CARD_DRAWN, RUN_SCORE_DAMAGE, RUN_SCORE_FIGHT, RUN_SCORE_HEALING,
-    RUN_SCORE_ROW, RUN_SLOT_LADDER, RUN_STARTER_CARDS, RUN_STARTER_SIZE, RUN_TIERS,
+    RUN_ACTS, RUN_ELITE_TIERS, RUN_SLOT_LADDER, RUN_STARTER_CARDS, RUN_STARTER_SIZE, RUN_TIERS,
 };
 use jackioh_run::{
-    RunAction, RunContent, RunFightSetup, RunFile, RunNodeKind, RunPassiveKind, RunPhase, RunSetup, RunState,
-    RunUnlocks, run_catalog_content, run_check_setup, run_create, run_embers, run_enemy, run_fight_report,
-    run_fight_setup, run_fold, run_next_cols, run_node, run_reduce, run_score, run_seed,
+    RunAction, RunContent, RunFightSetup, RunFile, RunNodeKind, RunPassiveKind, RunPhase, RunScoreTerms,
+    RunSetup, RunState, RunUnlocks, run_catalog_content, run_check_setup, run_create, run_embers, run_enemy,
+    run_fight_report, run_fight_setup, run_fold, run_next_cols, run_node, run_reduce, run_score,
+    run_score_terms, run_seed,
 };
 use rayon::prelude::*;
 
@@ -644,19 +644,15 @@ impl ScoreParts {
 /// `end`'s score by term. The five sums are `run_score`'s own; the percents' shares are what `run_score`
 /// adds to them, uncursed first and then cursed, so its percent rules are not repeated here.
 fn score_parts(end: &RunState, content: &RunContent) -> ScoreParts {
-    let s = &end.stats;
-    let won = |kind: RunNodeKind, n: i32| i64::from(RUN_SCORE_FIGHT.of(kind)) * i64::from(n);
-    let normal = s.fights_won - s.elites_won - s.ghosts_won - s.mini_bosses_won - s.bosses_won;
-    let rows = RUN_SCORE_ROW * i64::try_from(end.row.map_or(0, |r| r + 1)).unwrap_or(0);
-    let wins = won(RunNodeKind::Fight, normal)
-        + won(RunNodeKind::Elite, s.elites_won)
-        + won(RunNodeKind::Ghost, s.ghosts_won)
-        + won(RunNodeKind::MiniBoss, s.mini_bosses_won)
-        + won(RunNodeKind::Boss, s.bosses_won);
-    let damage = RUN_SCORE_DAMAGE * i64::from(s.damage_dealt);
-    let healing = RUN_SCORE_HEALING * i64::from(s.healing_done);
-    let drawn = RUN_SCORE_CARD_DRAWN * i64::from(s.cards_drawn);
-    let base = rows + wins + damage + healing + drawn;
+    let terms = run_score_terms(end);
+    let RunScoreTerms {
+        rows,
+        wins,
+        damage,
+        healing,
+        drawn,
+    } = terms;
+    let base = terms.sum();
     let uncursed = run_score(
         &RunState {
             curses: Vec::new(),

@@ -4640,18 +4640,6 @@ pub fn challenges_accept_room(
     Ok(accepted)
 }
 
-pub fn challenges_expire(f: &mut FakeTx<'_>, now: i64) -> Result<Vec<ChallengeRow>, StoreError> {
-    call(f, "challenges.expire")?;
-    let mut expired = Vec::new();
-    for row in f.tables().social.challenges.iter_mut() {
-        if row.state == ChallengeState::Open && row.expires_at <= now {
-            row.state = ChallengeState::Expired;
-            expired.push(row.clone());
-        }
-    }
-    Ok(expired)
-}
-
 pub fn challenges_purge(f: &mut FakeTx<'_>, now: i64) -> Result<i64, StoreError> {
     call(f, "challenges.purge")?;
     let gone = keep_only(&mut f.tables().social.challenges, |row| row.expires_at > now);

@@ -197,4 +197,3 @@ export function TileAura({
     </div>
   );
 }
-export default TileAura;

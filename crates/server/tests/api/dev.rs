@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use indexmap::IndexMap;
 use serde_json::{Value, json};
 
 use jackioh_engine::config::MAX_COPIES;
@@ -25,36 +24,13 @@ use jackioh_server::economy::store::{
 use jackioh_server::env::{SERVER_ONLY_ENV_VARS, load_env, parse_dev_profile_ids};
 use jackioh_shared::economy::math::total_xp_for_level;
 
-use crate::support::deps::{TestAppOptions, add_user, call, test_app_with};
+use crate::support::deps::{TestAppOptions, add_user, call, env_with, test_app_with};
 use crate::support::store::fake;
 
 /// The dev account `DEV_PROFILE_IDS` lists.
 const DEV: &str = "d0000000-0000-4000-8000-000000001300";
 /// An active account it does not.
 const OTHER: &str = "d0000000-0000-4000-8000-000000001301";
-
-/// A server environment that `load_env` takes, with `extra` on top (`env_github_issues.rs`'s).
-fn env_with(extra: &[(&str, &str)]) -> IndexMap<String, String> {
-    [
-        ("SUPABASE_URL", "https://project.supabase.test"),
-        (
-            "SUPABASE_SECRET_KEY",
-            "sb_secret_0123456789abcdefghijklmnopqrstuv",
-        ),
-        (
-            "DATABASE_URL",
-            "postgres://postgres:postgres@localhost:5432/jackioh",
-        ),
-        ("CODE_PEPPER", "a-pepper-of-at-least-thirty-two-characters"),
-        ("CATALOG_VERSION", jackioh_cards::catalog_version()),
-        ("PUBLIC_ORIGINS", "https://play.jackioh.test"),
-        ("NODE_ENV", "test"),
-    ]
-    .into_iter()
-    .chain(extra.iter().copied())
-    .map(|(name, value)| (name.to_string(), value.to_string()))
-    .collect()
-}
 
 /// The app with `DEV` listed (in upper case, which the list reads as the same id) and both accounts
 /// seeded active; their tokens, dev's first.

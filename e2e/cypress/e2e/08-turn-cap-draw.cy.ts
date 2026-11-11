@@ -3,6 +3,7 @@
 // #100 Ceaseless Void and the other cards cost more than max mana (§2.3); R82 auto-ends no-action turns.
 
 import { constants, seedFor } from "../../support/config.ts";
+import { ensureSeat } from "../../support/hotseat.ts";
 import { END_TURN, ts } from "../../support/testids.ts";
 import type { GameStateLike, PlayerId } from "../../support/types.ts";
 
@@ -30,14 +31,6 @@ function peek(state: GameStateLike, player: PlayerId): SidePeek {
 
 function holdsReserves(state: GameStateLike, player: PlayerId): boolean {
   return (peek(state, player).hand ?? []).some((card) => card.defId === INFINITE_RESERVES);
-}
-
-/** BUILD M5-T3: move the hotseat device to the acting player. */
-function ensureSeat(player: PlayerId): void {
-  cy.jackioh().then((handle) => {
-    expect(handle.seat, "window.__jackioh.seat names the seat holding the device").to.not.eq(undefined);
-    if (handle.seat !== player) cy.handOver();
-  });
 }
 
 describe("BUILD M8 08 — two decks that never fatigue run out the turn cap as a draw", () => {

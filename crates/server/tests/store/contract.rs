@@ -8351,17 +8351,6 @@ mod social {
             state_of(q!(harness, t => t.challenges_get(&next.id))),
             ChallengeState::Canceled
         );
-        let late = challenge(&b.id, &c.id, "FGH789", now, now + 1_000);
-        assert!(q!(harness, t => t.challenges_create(&late, now)));
-        assert!(q!(harness, t => t.challenges_expire(now)).is_empty());
-        assert_eq!(
-            ids_of(&q!(harness, t => t.challenges_expire(now + 1_000))),
-            vec![late.id.clone()]
-        );
-        assert_eq!(
-            state_of(q!(harness, t => t.challenges_get(&late.id))),
-            ChallengeState::Expired
-        );
     }
 
     /// B49: a declined, canceled or blocked challenge frees its room: an unjoined room goes, a

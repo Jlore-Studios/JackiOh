@@ -33,6 +33,7 @@ use tracing::field::{Field, Visit};
 use tracing_subscriber::layer::Context;
 
 use crate::api::http::now_ms;
+use crate::bug_reports::github_answer;
 use crate::config::{
     ALERT_EMAIL_API_URL, ALERT_EMAIL_DAY_MS, ALERT_EMAIL_FROM, ALERT_EMAILS_PER_DAY, ALERT_ISSUE_LABELS,
     ALERT_QUEUE, ALERT_TIMEOUT_MS, ALERT_WINDOW_MS, ALERTS_FILED_ELSEWHERE, BUG_REPORT_API_URL,
@@ -301,7 +302,7 @@ impl Notifier {
             &[("q", query.as_str()), ("per_page", "10")],
         )
         .map_err(|error| error.to_string())?;
-        let found = answer(crate::bug_reports::github(self.http.get(search), &github.token)).await?;
+        let found = github_answer(crate::bug_reports::github(self.http.get(search), &github.token)).await?;
         // The search matches words, so only an issue with exactly this title is the event's.
         let open = found["items"]
             .as_array()
@@ -311,7 +312,7 @@ impl Notifier {
                 .as_u64()
                 .ok_or_else(|| "GitHub answered an issue with no number".to_string())?;
             let url = open["html_url"].as_str().unwrap_or_default().to_string();
-            answer(github_post(
+            github_answer(github_post(
                 &self.http,
                 github,
                 &format!("issues/{number}/comments"),
@@ -320,7 +321,7 @@ impl Notifier {
             .await?;
             return Ok(Issue::Commented(url));
         }
-        let created = answer(github_post(
+        let created = github_answer(github_post(
             &self.http,
             github,
             "issues",
@@ -369,18 +370,6 @@ fn github_post(http: &reqwest::Client, github: &GitHub, path: &str, body: Value)
         &github.token,
     )
     .json(&body)
-}
-
-/// A request's JSON answer, or why there is none.
-async fn answer(request: reqwest::RequestBuilder) -> Result<Value, String> {
-    request
-        .send()
-        .await
-        .and_then(reqwest::Response::error_for_status)
-        .map_err(|error| error.to_string())?
-        .json()
-        .await
-        .map_err(|error| error.to_string())
 }
 
 /// The email's `Idempotency-Key`, which Resend keeps a day and sends once: one email per new issue,

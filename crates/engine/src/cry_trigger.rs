@@ -29,7 +29,7 @@ use crate::state::{
 use crate::state_check::state_check;
 use crate::stays::{exit_mark, left_field_after};
 use crate::wire::{CardType, PlayerId, PromptKind, Row, Selection, TargetAim, Zone};
-use crate::work::{RUN_MARKS_KEY, begin_work_cascade, drain_work, paused, push_work};
+use crate::work::{RUN_MARKS_KEY, begin_work_cascade, drain_work, engine_resume, paused, push_work};
 
 /// `resume.hook` of a prompt this sequence opened for itself: no card script holds the name.
 pub const TRIGGER_CRY_HOOK: &str = "@triggerCry";
@@ -222,14 +222,7 @@ fn resume_for(run: &CryRun) -> Resume {
         RUN_KEY.to_string(),
         serde_json::to_value(run).unwrap_or(Value::Null),
     );
-    Resume {
-        def_id: String::new(),
-        hook: TRIGGER_CRY_HOOK.to_string(),
-        step: "choose".to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    }
+    engine_resume(TRIGGER_CRY_HOOK, "choose", data)
 }
 
 fn label_of(state: &GameState, selection: &Selection, chooser: PlayerId) -> String {
@@ -488,14 +481,7 @@ fn owe_extra_cries(sink: &mut EngineSink, run: &CryRun, left: u32, exits_from: u
     data.insert(EXTRA_EXITS_KEY.to_string(), json!(exits_from));
     push_work(
         sink,
-        Resume {
-            def_id: String::new(),
-            hook: EXTRA_CRY_HOOK.to_string(),
-            step: "run".to_string(),
-            radiant: false,
-            instance_id: None,
-            data,
-        },
+        engine_resume(EXTRA_CRY_HOOK, "run", data),
         Some(run.controller),
     );
 }
@@ -567,14 +553,7 @@ fn run_cry_once(sink: &mut EngineSink, run: &CryRun, card: &CardInstance, exits_
                     RUN_KEY.to_string(),
                     serde_json::to_value(&next).unwrap_or(Value::Null),
                 );
-                let resume = Resume {
-                    def_id: String::new(),
-                    hook: SET_REPEAT_HOOK.to_string(),
-                    step: "repeat".to_string(),
-                    radiant: false,
-                    instance_id: None,
-                    data: repeat_data,
-                };
+                let resume = engine_resume(SET_REPEAT_HOOK, "repeat", repeat_data);
                 crate::work::owe(sink, resume);
             } else {
                 continue_run(sink, next);

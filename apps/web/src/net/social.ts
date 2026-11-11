@@ -1,4 +1,4 @@
-// Play together's REST surface (#936, SPEC S7), one wrapper per route.
+// Play together's REST surface (#936, SPEC S7), one wrapper per route the client calls.
 //
 // CLAUDE.md rule 7: who may befriend, challenge, chat with or watch whom is the server's (B43–B53); a
 // refusal is an `ApiRequestError` whose sentence a screen shows as it is. Every route is
@@ -139,7 +139,7 @@ export async function heartbeat(): Promise<void> {
 
 // The social poll (R3210000)
 
-/** What `getChallenges` and `getUnread` answer, in one read. */
+/** What GET /api/challenges and GET /api/chat/unread answer, in one read. */
 export type SocialRead = { incoming: Challenge[]; outgoing: Challenge[]; unread: Record<string, number> };
 
 /** The social poll's one read: the caller's open, unexpired challenges, both ways, and its unread counts. */
@@ -154,11 +154,6 @@ export function createChallenge(
   body: Record<string, unknown> & { friendId: string },
 ): Promise<{ challengeId: string; roomCode: string }> {
   return social<{ challengeId: string; roomCode: string }>("/api/challenges", { method: "POST", body });
-}
-
-/** The caller's open, unexpired challenges, both ways. */
-export function getChallenges(): Promise<{ incoming: Challenge[]; outgoing: Challenge[] }> {
-  return social<{ incoming: Challenge[]; outgoing: Challenge[] }>("/api/challenges");
 }
 
 export async function declineChallenge(challengeId: string): Promise<void> {
@@ -180,11 +175,6 @@ export function getChat(friendId: string, cursor?: string): Promise<ChatPage> {
 
 export function sendChat(friendId: string, body: string): Promise<{ message: ChatMessage }> {
   return social<{ message: ChatMessage }>(`/api/chat/${part(friendId)}`, { method: "POST", body: { body } });
-}
-
-/** Unread messages by the friend who sent them. */
-export function getUnread(): Promise<{ unread: Record<string, number> }> {
-  return social<{ unread: Record<string, number> }>("/api/chat/unread");
 }
 
 export async function reportMessage(messageId: string, reason: string): Promise<void> {

@@ -43,8 +43,6 @@ export const STINKYSCAPE_TWO_SIGNATURES = [
   "stinkyscape-t-red-narcor",
 ] as const;
 
-export type StinkyscapeTwoSignature = (typeof STINKYSCAPE_TWO_SIGNATURES)[number];
-
 /** Every particle count the shared beats throw at scale 1 (rule 9). */
 const TUNING = {
   ballot: { count: 12, power: 0.8 },

@@ -957,6 +957,46 @@ fn the_score_counts_every_row_win_and_report_point_at_its_own_weight() {
     assert_eq!(run_score(&state, &content), expected);
 }
 
+/// DR9: the score's terms are its five weighted sums before the percents, each on its own, and with no
+/// boss beaten and no curse taken they add up to the score.
+#[test]
+fn the_score_terms_are_its_weighted_sums_before_the_percents() {
+    let content = content();
+    let mut state = start(&content);
+    let rows = 5;
+    let (normal, elites, ghosts) = (4, 2, 3);
+    let (dealt, healed, drawn) = (7, 11, 13);
+    state.row = Some(rows - 1);
+    state.stats = RunStats {
+        fights_won: normal + elites + ghosts,
+        elites_won: elites,
+        ghosts_won: ghosts,
+        damage_dealt: dealt,
+        healing_done: healed,
+        cards_drawn: drawn,
+        ..RunStats::default()
+    };
+    let win = |kind: RunNodeKind, n: i32| i64::from(RUN_SCORE_FIGHT.of(kind)) * i64::from(n);
+    let terms = run_score_terms(&state);
+    assert_eq!(
+        terms,
+        RunScoreTerms {
+            rows: RUN_SCORE_ROW * i64::try_from(rows).unwrap(),
+            wins: win(RunNodeKind::Fight, normal)
+                + win(RunNodeKind::Elite, elites)
+                + win(RunNodeKind::Ghost, ghosts),
+            damage: RUN_SCORE_DAMAGE * i64::from(dealt),
+            healing: RUN_SCORE_HEALING * i64::from(healed),
+            drawn: RUN_SCORE_CARD_DRAWN * i64::from(drawn),
+        }
+    );
+    assert_eq!(
+        terms.sum(),
+        terms.rows + terms.wins + terms.damage + terms.healing + terms.drawn
+    );
+    assert_eq!(terms.sum(), run_score(&state, &content));
+}
+
 /// §15.10: beating the final boss counts its win, then multiplies the score by
 /// `RUN_SCORE_FINAL_BOSS_PERCENT`.
 #[test]

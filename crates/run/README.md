@@ -22,7 +22,7 @@ constant in `src/config.rs` (rule 9), named by the plan's section.
 | `run_node`, `run_enemy` | the node stood on, and the enemy of the fight being played (what a fight's setup needs) |
 | `run_next_cols(&RunState)` | the next row's nodes `Go` may step onto, by index: every node of the first row before the first step, then those the node stood on leads to (its `next`, R3583000) |
 | `run_max_hp`, `run_curse_points`, `run_artifact_points` | the run's max HP (`RUN_MAX_HP` plus the wins', campfires' and events' bonus and the passives'), its curse points, an artifact's points |
-| `run_score`, `run_embers` | the score so far, and the Embers a score pays (DR9) |
+| `run_score`, `run_score_terms`, `run_embers` | the score so far, its five sums before the percents (`RunScoreTerms`), and the Embers a score pays (DR9) |
 | `run_placeholder_content()` | pseudo cards and temporary bosses, artifacts, blessings, events and curses (`src/placeholder.json`) until the designer's lists land |
 | `run_catalog_content(&CardDefs)` | the content a run on the cards that ship deals from: every card a deck may hold (`deckable`), the starting cards `RUN_STARTER_CARDS`, and the placeholder's enemies (their pseudo boss cards dropped), passives, events and curses (DR14) |
 | `run_fight_setup(&RunState, &RunContent) -> Option<RunFightSetup>` | in `RunPhase::Fight`, the game to start: its seed (`"{run seed}-{row}-{col}"`), both decks, the human's marks (Radiant and buffed cards) and both handicaps, the human's with the run's HP and each Combat artifact held, once per level, the enemy's its tier's row (`RUN_ELITE_TIERS`' for an elite, else `RUN_TIERS`', its health among it, R3586001) and each curse taken (DR5, R2922001); `None` in any other phase or at a tier no table holds |

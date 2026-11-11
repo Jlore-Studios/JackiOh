@@ -24,7 +24,7 @@ use crate::state::{
     find_instance, find_instance_mut,
 };
 use crate::wire::{GameEvent, Keyword, KeywordKind, PLAYER_IDS, PlayerId, has_keyword, opponent_of};
-use crate::work::{PausedStep, WorkPlan, owe, paused as is_paused, paused_of};
+use crate::work::{PausedStep, WorkPlan, engine_resume, owe, paused as is_paused, paused_of};
 use crate::zones::live_or;
 
 /// What an attack can be declared on (§4.2 step 2), the damage pipeline's own target type.
@@ -118,17 +118,6 @@ fn note_first_strike_kill(sink: &mut EngineSink<'_>, id: &str) {
     let dies = find_instance(sink.state, id).is_some_and(|card| card.marked_exiled != Some(true));
     if dies {
         crate::damage::note_death_via(sink, id, KeywordKind::FirstStrike);
-    }
-}
-
-fn engine_resume(hook: &str, step: &str, data: IndexMap<String, Value>) -> Resume {
-    Resume {
-        def_id: String::new(),
-        hook: hook.to_string(),
-        step: step.to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
     }
 }
 

@@ -1017,10 +1017,6 @@ impl DuosActor {
         );
     }
 
-    pub fn match_id(&self) -> &str {
-        &self.shared.row.id
-    }
-
     /// The match's row as the actor was built with it.
     pub fn row(&self) -> &DuosMatch {
         &self.shared.row

@@ -1603,10 +1603,6 @@ impl MatchActor {
 
     // The actor's surface
 
-    pub fn match_id(&self) -> &str {
-        &self.shared.match_row.id
-    }
-
     /// The seats as the match began: `.0` is the account that started in p1.
     pub fn seats(&self) -> &(MatchSeat, MatchSeat) {
         &self.shared.seats
