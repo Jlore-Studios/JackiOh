@@ -14997,13 +14997,13 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "pr": 3691,
-      "provider": "claude-7",
+      "provider": "claude-8",
       "question": "",
       "queued_at": "2026-11-11T17:18:42Z",
       "requested_by": "an assignment",
-      "run_id": "42955801175",
+      "run_id": "pending:a62c043e-1794417827",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-11T03:54:41Z",
+      "started_at": "2026-11-11T17:24:17Z",
       "stop_requested": false,
       "strike_log": [],
       "strikes": 0,
@@ -16297,9 +16297,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T17:23:33Z",
+    "at": "2026-11-11T17:24:17Z",
     "url": "",
-    "what": "review #3717 on claude-4"
+    "what": "build #3674 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-11T17:03:12Z",
