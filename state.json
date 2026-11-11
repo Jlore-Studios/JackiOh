@@ -16531,6 +16531,13 @@
     "3736": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-11T21:27:17Z",
+        "difficulty": "medium",
+        "provider": "claude-2",
+        "tier": "medium",
+        "why": "No line of the rule holds: the fix is a measured refresh of one test-support table (apps/web/src/test/shardWeights.ts), with no engine, AI, cross-crate, migration or 40-file change."
+      },
       "kind": "build",
       "live": "planning",
       "owner": "claude-2",
