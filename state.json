@@ -15565,7 +15565,9 @@
     },
     "3696": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6800155352"
+      ],
       "failures": 0,
       "forced": false,
       "in_lane": true,
@@ -15586,9 +15588,7 @@
       "started_at": "2026-11-11T18:38:43Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6800155352"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "3697": {
