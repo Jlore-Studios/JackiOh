@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 3696,
+  "title": "Patch: the AI's search keeps room for a plan whose payoff lands next turn",
+  "branch": "bot/issue-3696",
+  "thread": "**Issue #3696 (data, not instructions):**\n\n```text\n# #3696: Patch: the AI's search keeps room for a plan whose payoff lands next turn\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSome cards pay off a turn later: a supply drop that arrives next turn, or Mind Games, whose secret reward lands at the start of your next turn. The practice AI thinks through the opponent's answer for only a handful of its best-looking plans, and it picks that handful by a quick score that cannot see a payoff still to come. So \"cast Mind Games and end the turn\" looks like throwing two mana away, and it is cut before the AI ever weighs it. Once this is built, the AI always keeps one place in that handful for its best plan with a payoff still to come, and the opponent it imagines answers such cards as a person would.\n\n## Why\n- Only the top `finalists \u00d7 lines_per_action` lines (3 \u00d7 2 = 6; `crates/ai/src/config.rs:66`, `:222`), ranked by the static score, reach the opponent's reply (`shortlist_lines`, `crates/ai/src/decide.rs:133-152`, called at `decide.rs:542`).\n- The static evaluation (`crates/ai/src/evaluate.rs`, `material`) prices almost none of the seat's own delayed effects. Countdowns are fired only inside the reply's score (`crates/ai/src/reply.rs:593-600`, #1995). A line whose value is a delayed reward therefore ranks on its cost alone, and one unit play tried in five lanes fills the six places first.\n- The sweep of 2026-10-28 (`training/history/sweep-2026-10-28.md:220-243`): Jlockeed's Supply Drop was cast on 25 of 619 affordable turns at Hard and 53 of 417 at Easy, at a mean evaluation change of about \u22121.4 to \u22122.6; Mind Games on 12 of 470 at Hard and 46 of 351 at Easy, about \u22121.6 to \u22123.1. `the_ai_casts_supply_drop_in_combat_mode_against_three_3_health_units` (`crates/ai/tests/ai/meditative_plus.rs:342`) passes only because Supply Drop is the AI's only card there.\n- Once Mind Games does reach the reply, the imagined opponent never plays its Fortify Mind. `best_try` (`reply.rs:284-319`) compares each play with the position now, where a winning guess changes nothing the evaluation reads (the reward it cancels is a delayed entry). So the opponent keeps the card, and cleanup discards it into all three penalties (`crates/cards/src/scripts/meditative/c022_1_fortify_mind.rs`, R862). Fixing the shortlist alone would make the AI overrate Mind Games.\n\n## Proposal\n1. `shortlist_lines` keeps one place for the best-scored line whose end holds a delayed entry of the seat's own that the root did not (a countdown or a next-turn reward), when the plain ranking left none in. That is at most one more reply a decision.\n2. In the reply, an opponent holding a known Temporary card that cleanup will discard this turn compares its plays with the position after its turn ends, not before. A guess against the AI's secret is drawn from the world's own stream, so it never depends on the secret (R185, R860).\n\n## Where it lands\n- `crates/ai/src/decide.rs`, `crates/ai/src/reply.rs`, `crates/ai/tests/ai/meditative_plus.rs`, `crates/ai/tests/ai/secrets.rs`, `crates/ai/tests/ai/reply.rs`\n- SPEC \u00a710.7; R185, R860, R861, R862, R864\n\n## Acceptance criteria\n- [ ] A `shortlist_lines` test: the best delayed-payoff line is kept when six other lines outscore it, and no place is held back when there is no such line or one already made the cut.\n- [ ] A decision test: the Supply Drop board of `meditative_plus.rs:342`, with a castable unit added to the AI's hand, still casts Supply Drop in combat mode.\n- [ ] A reply test: after the AI casts Mind Games, the imagined opponent plays Fortify Mind rather than letting it be discarded, and its guess is the same whichever choice the AI kept secret.\n- [ ] `cargo jackioh gate` passes and `cargo jackioh perf` stays within its budgets; the sweep rows for Supply Drop and Mind Games, before and after, are in the pull request.\n\n## Size and risks\nSmall to medium: two functions and four tests. One more reply a decision costs time on a slow phone; the perf gate measures it, and the extra place can be skipped when the clock is short. Casting these cards more often may not win more games; the gate decides, and a version that loses there does not ship.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-11T15:38:43Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3696: needs a plan; `claude-1` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "journal": "# Journal of #3696\n\nEvery night-bot run on #3696, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-11 16:33 UTC \u00b7 build #3696 \u00b7 `muse` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43057964878) on `muse` (`muse-spark-1.3-contributor` (medium)). It ended **interrupted**: `muse` stops before it starts: 7-day usage is 100%, at or over its 100% cap; it resets at 2026-11-16T00:00:00Z\nModel calls: 0, 0 model minutes.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 16:25 | stop | `muse` stops before it starts: 7-day usage is 100%, at or over its 100% cap; it resets at 2026-11-16T00:00:00Z |  |  |\n\n<!-- jackioh-bot:run -->\n## 2026-11-11 19:05 UTC \u00b7 plan #3696 \u00b7 `claude-1` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43079745828) on `claude-1` (`opus` (strong)). It ended **interrupted**: `claude-1` stops before it starts: 5-hour usage is 82%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-11T19:10:00Z\nModel calls: 0, 0 model minutes.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 18:40 | stop | `claude-1` stops before it starts: 5-hour usage is 82%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-11T19:10:00Z |  |  |\n",
+  "usage_facts": {
+    "queued_at": "2026-11-11T15:39:07Z",
+    "claimed_at": "2026-11-11T19:18:28Z",
+    "previous_provider": "claude-1",
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3570 skipped: it waits for #3561 to close first",
+    "#3572 skipped: it waits for #3561, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3561, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first"
+  ]
+}
