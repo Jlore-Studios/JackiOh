@@ -32630,12 +32630,8 @@
         "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled",
         "streak": 1
       },
-      "refused_until": "2026-11-09T00:00:00Z",
+      "refused_until": "2026-11-16T00:00:00Z",
       "spent": [
-        {
-          "at": "2026-11-03T13:10:53Z",
-          "minutes": 65.9
-        },
         {
           "at": "2026-11-03T13:42:21Z",
           "minutes": 115.2
@@ -33431,6 +33427,10 @@
         {
           "at": "2026-11-11T15:16:01Z",
           "minutes": 1.5
+        },
+        {
+          "at": "2026-11-11T16:35:02Z",
+          "minutes": 0.1
         }
       ],
       "usage": {
@@ -33438,7 +33438,7 @@
           "resets_at": "2026-11-11T18:03:00Z",
           "utilization": 0.11
         },
-        "observed_at": "2026-11-11T16:34:21Z",
+        "observed_at": "2026-11-11T16:35:02Z",
         "seven_day": {
           "resets_at": "2026-11-16T00:00:00Z",
           "utilization": 1.0
@@ -35381,7 +35381,9 @@
     "readings": [
       "2026-11-11T16:25:09Z,muse,usage-command,before,43057964878,11,2026-11-11T18:03:00Z,100,2026-11-16T00:00:00Z,allowed,100,100,",
       "2026-11-11T16:26:49Z,muse,usage-command,before,43057794788,11,2026-11-11T18:03:00Z,100,2026-11-16T00:00:00Z,allowed,100,100,",
-      "2026-11-11T16:22:19Z,muse,usage-command,before,43057604516,11,2026-11-11T18:03:00Z,100,2026-11-16T00:00:00Z,allowed,100,100,"
+      "2026-11-11T16:22:19Z,muse,usage-command,before,43057604516,11,2026-11-11T18:03:00Z,100,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-11T16:21:46Z,muse,usage-command,before,43057426029,11,2026-11-11T18:03:00Z,99,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-11T16:22:13Z,muse,refusal,call,43057426029,11,2026-11-11T18:03:00Z,100,2026-11-16T00:00:00Z,allowed,100,100,2026-11-16T00:00:00Z"
     ],
     "runs": [
       "2026-11-11T16:25:09Z,43057964878,muse,muse-spark-1.3-contributor,build,3696,medium,interrupted,weekly cap,0,0,0,0,,11,11,100,100,45,,none,,0",
