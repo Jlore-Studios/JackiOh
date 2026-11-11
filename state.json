@@ -12707,6 +12707,32 @@
     "3566": {
       "action": "build",
       "asks": [],
+      "decision": {
+        "asked_at": "2026-11-11T15:16:18Z",
+        "assigned": [
+          "jgoetzmann",
+          "MaxGoetzmann"
+        ],
+        "default": 1,
+        "ends": "2026-11-12T15:16:18Z",
+        "hours": 24,
+        "kind": "build",
+        "model": "muse-spark-1.3-contributor",
+        "options": [
+          {
+            "change": "Wait for #3558 to land on this tree, then build #3566 on top of it with no plan changes",
+            "tradeoff": "Costs one scheduling round-trip; the build then uses E8's landed names directly"
+          },
+          {
+            "change": "Build #3566 against E8's branch names now and reconcile when #3558 lands",
+            "tradeoff": "Risks merge conflicts and building against names that may still change before E8 lands"
+          }
+        ],
+        "problem": "This issue builds on E8 (#3558): the Smoothies, Dingleberry Droat, Fine Fermented Grape and Sweet Essence all need E8's engine verbs (fuse-until-a-cost, unfused-only picks, name-filtered pools, hand auras). The plan's precondition grep for until_cost, unfused_only, name_contains and hand_aura_hook in crates/engine/src comes back empty on this branch, so the verbs are not here to build on. I verified they exist only on the unmerged branch origin/bot/issue-3558 (commit 0a8f553f50). Building the cards without them would mean re-implementing E8, which the plan forbids, and the cards' tests could not pass. No file was changed.",
+        "provider": "muse",
+        "question": "How should #3566 proceed while #3558's engine verbs are not on this branch?",
+        "why": "the plan names E8 as a precondition and forbids re-implementing it, so waiting keeps the build exactly on-plan with zero rework"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -12733,6 +12759,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "muse",
+      "question": "How should #3566 proceed while #3558's engine verbs are not on this branch?",
       "queued_at": "2026-11-09T23:49:48Z",
       "requested_by": "squishy-squooby",
       "run_id": "43045112981",
