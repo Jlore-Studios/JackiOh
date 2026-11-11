@@ -272,7 +272,8 @@ struct Placeholder<'t> {
     words: Option<(&'t str, &'t str)>,
 }
 
-/// Every placeholder of `text`, left to right and never overlapping (B3.4 rule 5, R482).
+/// Every placeholder of `text`, left to right and never overlapping (B3.4 rule 5, R482). The search goes on from
+/// just after each brace: no `{` stands inside a placeholder, so the next one found starts past its end.
 fn placeholders(text: &str) -> Vec<Placeholder<'_>> {
     let bytes = text.as_bytes();
     let mut found = Vec::new();
@@ -296,7 +297,6 @@ fn placeholders(text: &str) -> Vec<Placeholder<'_>> {
                     key,
                     words: None,
                 });
-                at = to + 1;
             }
             Some(b'|') => {
                 let word = |from: usize| {
@@ -320,7 +320,6 @@ fn placeholders(text: &str) -> Vec<Placeholder<'_>> {
                     key,
                     words: Some((&text[to + 1..one_end], &text[one_end + 1..many_end])),
                 });
-                at = many_end + 1;
             }
             _ => {}
         }
@@ -480,5 +479,72 @@ mod tests {
             got.change_words,
             vec!["Damage 2 → 1".replace("Damage", &words.say("Damage"))]
         );
+    }
+
+    /// R1320: each verdict's glyph, so a mark never rests on color alone.
+    #[test]
+    fn r1320_each_verdict_has_its_glyph() {
+        let glyphs = [TuneVerdict::Upgraded, TuneVerdict::Degraded, TuneVerdict::Tuned].map(verdict_glyph);
+        assert_eq!(glyphs, ["▲", "▼", "◆"]);
+    }
+
+    /// B3.4: a declared number's key in words, a space before each capital that follows a small letter or a digit.
+    #[test]
+    fn a_keys_words_space_each_capital_after_a_small_letter_or_a_digit() {
+        let en = Words::new(Locale::En);
+        assert_eq!(key_words(en, "drawLimit"), "Draw limit");
+        assert_eq!(key_words(en, "maxHP"), "Max hp");
+        assert_eq!(key_words(en, "x2Damage"), "X2 damage");
+        assert_eq!(key_words(en, "HP"), "Hp");
+    }
+
+    /// R386: a Buff on attack moves the attack pip alone; a number set outright that the card declares is no set
+    /// change, one it does not declare is; a number printed 0 that the view moved up is better.
+    #[test]
+    fn r386_the_pips_the_sets_and_a_number_printed_zero() {
+        let en = Words::new(Locale::En);
+        let tuning =
+            |value: serde_json::Value| -> Tuning { serde_json::from_value(value).expect("a tuning") };
+        let attack = face_tuning(
+            en,
+            None,
+            false,
+            Some(&tuning(serde_json::json!({ "attack": 1 }))),
+            None,
+        )
+        .expect("a tuning");
+        assert_eq!((attack.attack, attack.health), (Some(Way::Better), None));
+        let card = def("Deal {damage} damage.");
+        let declared = tuning(serde_json::json!({ "set": { "damage": 3 } }));
+        assert!(face_tuning(en, Some(&card), false, Some(&declared), None).is_none());
+        let undeclared = tuning(serde_json::json!({ "set": { "other": 3 } }));
+        let set = face_tuning(en, Some(&card), false, Some(&undeclared), None).expect("a tuning");
+        assert!(matches!(&set.changes[..], [TuneChange::Set { key, value: 3 }] if key == "other"));
+        let mut zero = def("Deal {damage} damage.");
+        zero.params.as_mut().expect("its numbers")[0].base = 0;
+        let moved =
+            face_tuning(en, Some(&zero), false, None, Some(&values(&[("damage", 2)]))).expect("a tuning");
+        assert!(matches!(
+            &moved.changes[..],
+            [TuneChange::Number { way: Way::Better, .. }]
+        ));
+    }
+
+    /// R386, R432: a moved number's title says which way it moved and the printed number.
+    #[test]
+    fn r386_a_moved_numbers_title_says_which_way() {
+        let en = Words::new(Locale::En);
+        assert_eq!(tuned_title(en, Way::Better, 2), "Better than printed: 2");
+        assert_eq!(tuned_title(en, Way::Worse, 2), "Worse than printed: 2");
+    }
+
+    /// B3.4 rule 5: a brace with no key after it is no placeholder, and the one after it still is.
+    #[test]
+    fn a_brace_with_no_key_is_no_placeholder() {
+        let found: Vec<(usize, usize, &str)> = placeholders("{1} {a}")
+            .iter()
+            .map(|one| (one.start, one.end, one.key))
+            .collect();
+        assert_eq!(found, vec![(4, 7, "a")]);
     }
 }

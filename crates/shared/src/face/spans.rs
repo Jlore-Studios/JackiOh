@@ -191,7 +191,7 @@ impl Builder<'_> {
         let mut points = vec![from, to];
         for range in self.tuned {
             for point in [range.start, range.end] {
-                if point > from && point < to {
+                if (from..=to).contains(&point) {
                     points.push(point);
                 }
             }
@@ -226,14 +226,14 @@ impl Builder<'_> {
         if !in_ref {
             for term in &self.terms {
                 for point in [term.start, term.end] {
-                    if point > start && point < end {
+                    if (start..=end).contains(&point) {
                         points.push(point);
                     }
                 }
             }
         }
         for insert in &self.inserts {
-            if insert.at > start && insert.at < end {
+            if (start..=end).contains(&insert.at) {
                 points.push(insert.at);
             }
         }
@@ -596,5 +596,48 @@ mod tests {
         assert_eq!(cut((5, 9), (2, 5)), vec![(5, 9)]);
         assert_eq!(cut((2, 5), (5, 9)), vec![(2, 5)]);
         assert!(cut((4, 4), (1, 9)).is_empty());
+    }
+
+    /// R279: a reference inside a mark is still a reference, so the text has an unlinked reading.
+    #[test]
+    fn r279_a_reference_inside_a_mark_names_a_card() {
+        let card = Span::Card {
+            def_id: "core-t-rush".to_string(),
+            radiant: false,
+            children: Vec::new(),
+        };
+        assert!(names_a_card(&[Span::Mark { children: vec![card] }]));
+        assert!(!names_a_card(&[Span::Mark { children: Vec::new() }]));
+    }
+
+    /// R280: a value owed at a mark's end prints after the mark, not inside it.
+    #[test]
+    fn r280_a_value_at_a_marks_end_prints_after_the_mark() {
+        let mut text = Text::plain("Deal 9 damage.");
+        text.marks = vec![TextRange { start: 5, end: 13 }];
+        let values = [PreviewValue {
+            label: "damage".to_string(),
+            value: 3,
+            display: None,
+            ids: None,
+        }];
+        let dressing = Dressing {
+            values: &values,
+            ..Dressing::default()
+        };
+        let spans = spans_of(&text, &dressing, true, en());
+        let at = spans
+            .iter()
+            .position(|span| matches!(span, Span::Mark { .. }))
+            .expect("a mark");
+        let Span::Mark { children } = &spans[at] else {
+            unreachable!()
+        };
+        assert!(!children.iter().any(|span| matches!(span, Span::Value { .. })));
+        assert!(
+            spans[at + 1..]
+                .iter()
+                .any(|span| matches!(span, Span::Value { .. }))
+        );
     }
 }
