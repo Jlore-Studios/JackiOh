@@ -18549,14 +18549,6 @@
         "reason": "`claude-8` stops mid-call: 5-hour usage is 85%, at or over its 85% cap; it resets at 2026-11-11T05:00:00Z",
         "trail": "rue}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3672; grep -n \\\"off()\\\" crates/server/src/api/ci_runs.rs crates/server/src/auth.rs; grep -n \\\"Fails\\\" crates/server/src/auth.rs; grep -n \\\"mod tests\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3672; sed -n 88,112p crates/engine/src/stays.rs; sed -n 1,55p crates/engine/tests/rules/stays.rs; grep -n \\\"destroyed(\\\\|damage(\\\\|summoned(\\\" crates\u2026\n- Bash: {\"command\": \"for n in grant_keywords_random_unit swap_health steal_all shuffle_copies_of_self lock_own_zone; do echo \\\"== $n\\\"; git grep -n -w $n -- crates | grep -v \\\"^crates/engine/src/effects/\\\" |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3672; sed -n 318,335p crates/server/src/api/ci_runs.rs\", \"description\": \"Read ci_runs unit test using off\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3672; sed -n 112,120p crates/engine/src/stays.rs; sed -n 1,20p crates/engine/src/stays.rs; grep -n \\\"left_field_since\\\\|GameEvent\\\" crates/engine/src\u2026\n- Bash: {\"command\": \"sleep 590\", \"description\": \"Wait for agents to finish\", \"timeout\": 600000, \"run_in_background\": true}\n- ListAgents: {}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3672; grep -n \\\"\\\\.match_id\\\\b\\\" crates/server/src/api/queue.rs | head; grep -n \\\"failure\\\\.\\\\|failed\\\\.\\\\(first\\\\|last\\\\|get\\\\)\\\" crates/server/src/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3672; git grep -n -B3 \\\"\\\\.match_id\\\\b\\\" -- crates/server/tests | grep -i \\\"fail\\\" | head\", \"description\": \"Check tests for FailedStart.match_id read\u2026\n- Bash: {\"command\": \"sed -n 60,110p crates/server/src/api/queue.rs | grep -n \\\"fn \\\\|^//\\\" ; grep -n \\\"^use crate::api::crypto\\\\|^use crate::\\\" crates/server/src/api/queue.rs | head\", \"description\": \"Inspect\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3672; awk 'NR>=216 && NR<=229 {print NR\\\": \\\"$0}' crates/engine/src/effects/locks.rs; awk 'NR>=290 && NR<=337 {print NR\\\": \\\"$0}' crates/engine/tests\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3672; grep -n \\\"slot_of\\\\|lock_one\\\\|live_self\\\" crates/engine/src/effects/locks.rs | head; grep -n \\\"consume_modifier\\\\|remove_modifier\\\" crates/eng\u2026\n- said: Now let me set up the scratch copy and apply the candidate deletions to verify them by compiling.\n- Bash: {\"command\": \"mkdir -p /tmp/audit-cls1/src && git archive HEAD | tar -x -C /tmp/audit-cls1/src && ls /tmp/audit-cls1/src | head -5 && du -sh /tmp/audit-cls1/src\", \"description\": \"Export HEAD into scra\u2026\n- Bash: {\"command\": \"grep -n \\\"mod crypto\\\\|mod catalog\\\" crates/server/src/api/mod.rs; sed -n 1,30p crates/server/src/api/catalog.rs | grep -n \\\"^use\\\"; grep -n \\\"R1976000\\\\|batch_of\\\" crates/server/src/cli\u2026\n- Bash: {\"command\": \"cd /tmp/audit-cls1/src; awk 'NR>=482 && NR<=491 {print NR\\\": \\\"$0}' crates/engine/src/mana.rs; awk 'NR>=198 && NR<=212 {print NR\\\": \\\"$0}' crates/engine/tests/rules/mana.rs; awk 'NR>=258\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn owe\\\\|pub(crate) fn owe\\\\|pub fn park\\\\|^pub fn\\\\|^pub(crate) fn\\\" crates/engine/src/work.rs | head -20; grep -n \\\"use crate::work\\\\|work::{\\\" crates/engine/src/combat.r\u2026\n- Bash: {\"command\": \"cd /tmp/audit-cls1/src; awk 'NR>=62 && NR<=80 {print NR\\\": \\\"$0}' crates/engine/tests/rules/stays.rs; awk 'NR>=518 && NR<=528 {print NR\\\": \\\"$0}' crates/engine/src/work.rs; awk 'NR>=58 &\u2026\n- Bash: {\"command\": \"sed -n 7,45p e2e/support/commands.ts | grep -n \\\"from\\\"; grep -n \\\"ux.ts\\\" e2e/support/practice.ts e2e/support/tutorial.ts e2e/support/commands.ts; sed -n 268,275p e2e/support/commands.t\u2026\n- Bash: {\"command\": \"cd /tmp/audit-cls1/src; awk 'NR>=74 && NR<=90 {print NR\\\": \\\"$0}' crates/shared/build.rs; awk 'NR>=1 && NR<=12 {print NR\\\": \\\"$0}' crates/shared/tests/bots_persona.rs; awk 'NR>=284 && NR\u2026\n- Bash: {\"command\": \"sed -n 55,70p apps/web/src/dungeon/start/DeckBuilder.tsx; sed -n 760,785p crates/run/src/lib.rs\", \"description\": \"Compare TS slotOf with Rust slot_needed\"}\n- Bash: {\"command\": \"cd /tmp/audit-cls1/src; grep -n \\\"AI_PERSONAS\\\\|PRACTICE_EMOTE_DELAY\\\" crates/shared/src/bots/persona.rs | head; awk 'NR>=105 && NR<=200 {print NR\\\": \\\"$0}' crates/ai/tests/ai/surface.rs\u2026\n- Bash: {\"command\": \"sleep 300\", \"description\": \"Wait for classification agents\", \"timeout\": 400000}\n- tool error: <tool_use_error>Blocked: standalone sleep 300. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a command you started, use run_in_backgrou\u2026\n- Bash: {\"command\": \"cd /tmp/audit-cls1/src; awk 'NR>=160 && NR<=200 {print NR\\\": \\\"$0}' crates/ai/tests/ai/surface.rs; awk 'NR>=66 && NR<=82 {print NR\\\": \\\"$0}' crates/ai/tests/ai/surface.rs; grep -n \\\"pass\u2026\n- said: I went through every item on the server list, including the two \"multiple methods\" warnings, which list nine `MatchActor` and eight `DuosActor` methods (I read their full names from `/tmp/audit/A10.json`). Only five items are clearly dead and two more are dead apart from their own test lines. Every\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/audit/v && cd /home/runner/work/_temp/work/item-3672 && git archive HEAD crates Cargo.toml Cargo.lock rust-toolchain.toml rustfmt.toml clippy.toml 2>/dev/null | tar -x -C /\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3672; sed -n 1600,1610p crates/server/src/actor/match_actor.rs; sed -n 1016,1024p crates/server/src/duos/actor.rs; git grep -n \\\"\\\\.match_id()\\\" -- c\u2026\n- Bash: {\"command\": \"git grep -n \\\"::match_id\\\\b\\\" -- crates | head -5; git grep -n -E \\\"(failed|fail|start|f)\\\\.match_id\\\\b\\\" -- crates | head; sed -n 820,835p crates/server/src/api/queue.rs; git grep -n \\\"\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/audit-cls1/scripts && cat > /tmp/audit-cls1/scripts/apply.py <<'EOF'\\nimport sys, pathlib\\nroot = pathlib.Path(sys.argv[1])\\n\\ndef lines(p):\\n return (root / p).read_text()\u2026\n- Bash: {\"command\": \"for l in 855 922 960 978; do sed -n \\\"${l},$((l+14))p\\\" crates/server/src/api/queue.rs; echo -----; done\", \"description\": \"Read the other FailedStart push sites\"}"
       },
-      "hold": {
-        "ends": "2026-11-11T05:42:34Z",
-        "lifted": "2026-11-11T04:01:49Z",
-        "owner": "claude-8",
-        "since": "2026-11-11T03:42:34Z",
-        "until": "2026-11-11T04:00:00Z",
-        "why": "5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
@@ -18565,7 +18557,7 @@
       "owner_why": "it plans it",
       "pending_request": false,
       "provider": "claude-8",
-      "run_id": "42949924668",
+      "run_id": "pending:890493f9-1794369740",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -18584,7 +18576,7 @@
         "provider": "claude-8",
         "run": "42949924668"
       },
-      "started_at": "2026-11-11T03:01:17Z",
+      "started_at": "2026-11-11T04:02:46Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6786357282
@@ -18663,9 +18655,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T03:54:41Z",
+    "at": "2026-11-11T04:02:46Z",
     "url": "",
-    "what": "build #3674 on claude-7"
+    "what": "plan #3672 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-11T03:53:00Z",
