@@ -16103,7 +16103,7 @@
       "failures": 0,
       "feedback_since": "2026-11-11T17:25:03Z",
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "issue": 3608,
       "kind": "revise",
       "last_findings": [],
