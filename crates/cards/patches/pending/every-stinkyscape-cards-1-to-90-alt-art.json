@@ -1,0 +1,17 @@
+{
+  "title": "Patch: every Stinkyscape (cards 1 to 90) Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
+  "sources": "#3394",
+  "notes": "Stinkyscape's early cards' Alt art pass (#3330, on #3391's scenes and #3333's and #3338's pictures, after #3406's pass over the later cards). Every card of #3394's table, the 47 Stinkyscape cards from #1 to #90 offered Alt art and the Dormant Starship, now draws an alt scene recipe of its own from a brief per card (R3394000): its subject restaged in another place, time or moment, under a sky sharing no colour with its normal picture's and a new camera, where Alt art had redrawn the normal picture from another seed. A figure keeps the normal picture's person. Olivian Expanse, the twelve early Starship Pieces and the Dormant Starship keep their own painter's normal face and stand their piece in the alt scene as a part of the scene kit. Every Alt art level draws the one alt picture, base and Radiant; each clears its rarity's detail floor and the byte ceiling, and in a real browser changes at least 60% of the normal window's sampled points (ALT_PICTURE_CHANGE_MIN). Repaints keep the normal picture. The scene kit gains a chrome face mask, a bare chassis frame, a beam emitter, a repeater gun, an orca-shaped mining hull, a pair of solar panels and a dormant hull. How cards look only: nothing plays differently.",
+  "player": {
+    "title": "Every early Stinkyscape Alt art restaged",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Stinkyscape's early cards, Olivian Expanse and the Starship Pieces among them, and the Dormant Starship now show their subject somewhere else in their Alt art: a new place, time or moment."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}
