@@ -16883,11 +16883,12 @@
       "queued_at": "2026-11-11T21:18:42Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "43103493656",
+      "run_id": "pending:dcd51489-1794441105",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 215,
-      "started_at": "2026-11-11T21:29:27Z",
+      "started_at": "2026-11-11T23:52:06Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17142,9 +17143,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T23:37:06Z",
+    "at": "2026-11-11T23:52:06Z",
     "url": "",
-    "what": "review #3743 on claude-5"
+    "what": "spot-check #3738 on claude-5"
   },
   "last_sweep": {
     "at": "2026-11-11T23:43:36Z",
@@ -36116,7 +36117,15 @@
         "n": 215,
         "pr": 3738,
         "queued_at": "2026-11-11T23:05:15Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-5",
+          "tier": "strong"
+        },
+        "run_id": "pending:dcd51489-1794441105",
         "sha": "a488aab6e05e58316fd5f8f024db8c0ddcf2aed9",
+        "started_at": "2026-11-11T23:52:06Z",
         "status": "queued",
         "title": "Patch: the effects tests share one cue-end helper and one planning setup in place of 59 local copies",
         "tries": 0
