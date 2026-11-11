@@ -15496,11 +15496,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-11T18:16:39Z",
+        "at": "2026-11-11T19:05:56Z",
         "difficulty": "hard",
         "provider": "claude-8",
-        "tier": "medium",
-        "why": "Rule 3: the server and the web client must agree on a new final WebSocket close code (as R679's 4410 did), across crates/server and apps/web, which is more than a call site or a test."
+        "tier": "strong",
+        "why": "Rule 3, design across crates: a new close code from crates/server's reapers, exported to and honoured by apps/web's match, co-op and rematch clients, which must agree on it."
       },
       "failures": 0,
       "forced": false,
