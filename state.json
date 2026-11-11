@@ -13729,9 +13729,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "muse",
-      "owner_since": "2026-11-11T17:03:52Z",
-      "owner_why": "its turn came (#3691, which it waited behind, closed), and the lane that approved it resolves it",
+      "owner": "claude-3",
+      "owner_since": "2026-11-11T17:25:03Z",
+      "owner_why": "handed off from `muse`: `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z",
       "pending_request": false,
       "planned_at": "2026-11-11T07:55:32Z",
       "planned_by": "`claude-7` (claude, `sonnet`, medium)",
@@ -15908,7 +15908,7 @@
       "stop_requested": false
     },
     "3706": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -15939,30 +15939,23 @@
       "issue": 3608,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "muse",
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-11-11T17:03:52Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "43037225978",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:d0d2be52-1794417871",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-11-11T14:18:30Z",
+      "started_at": "2026-11-11T17:25:03Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-11T17:03:52Z",
-        "until": "2026-11-11T17:33:52Z",
-        "why": "#3691, which it waited behind, closed"
-      },
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
@@ -16297,9 +16290,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T17:24:17Z",
+    "at": "2026-11-11T17:25:03Z",
     "url": "",
-    "what": "build #3674 on claude-8"
+    "what": "revise #3706 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-11T17:03:12Z",
