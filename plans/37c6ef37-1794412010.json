@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 3697,
+  "title": "Patch: a co-op game won on one board says which board and how",
+  "branch": "bot/issue-3697",
+  "thread": "**Issue #3697 (data, not instructions):**\n\n```text\n# #3697: Patch: a co-op game won on one board says which board and how\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nIn co-op, two players fight an AI team on two boards side by side. When the game ends because of something on one board (a card's own win condition, a player voted out, a hero escaping the universe), the result panel says only \"One of the duels decided the game.\" Neither player learns which board it was or what happened, though the one-on-one result screen already has words for every one of those endings. Once this is built, the panel says, for example, \"On your teammate's board: their opponent was voted out of the game.\"\n\n## Why\n- `apps/web/src/duos/DuosBoard.tsx:155-156` maps every `duelResult` to `t(\"One of the duels decided the game.\")`.\n- The engine gives `duelResult` to every duel ending but the turn cap, the time ceiling and a Glitch (`crates/engine/src/duos/reduce.rs:446-455`): a held alternative win and a win by effect (R850), voted out and both voted out (R1843000, R1843001), fled and fled-decisive (R1843002), the endings the Stinkyscape set's cards bring. SPEC \u00a713.4's table lists it as \"A seat holding a win at its duel's game-end point\".\n- The co-op view already holds both duels' views, `own` and `teammate`, each a `PlayerView` with its own `result` (`apps/web/src/wire/generated/DuosView.ts`), and `resultReason` (`apps/web/src/game/Result.tsx:44-88`) already words each of these reasons for one seat.\n- The co-op turn-cap line, \"The game reached its turn limit.\" (`DuosBoard.tsx:153-154`), differs from the 1v1 and practice line \"The turn limit was reached.\" (`Result.tsx:55-56`, `apps/web/src/practice/PracticeResult.tsx:45-46`).\n\n## Proposal\nFor `duelResult`, find the duel whose `result` is set, your own first, and name the board and the reason: \"On your board: \u2026\" in `resultReason`'s words from your seat, \"On your teammate's board: \u2026\" in words written for the teammate's side (new strings, since \"you\" there is the teammate). Keep today's line as the fallback when neither duel's result is set, and use the 1v1 turn-cap words. Every new string gets its zh-CN entry (R711000). This is presentation only (CLAUDE.md rule 7).\n\n## Where it lands\n- `apps/web/src/duos/DuosBoard.tsx`, `apps/web/src/duos/DuosBoard.test.tsx`, `apps/web/src/i18n/zh-CN.json`\n- SPEC \u00a713.4; R850, R1843000, R1843001, R1843002, R711000\n\n## Acceptance criteria\n- [ ] With `result.reason` `duelResult` and your own duel's result an alt-win, the reason names your board and your winning condition.\n- [ ] With the teammate's duel's result voted-out, it names the teammate's board and who was voted out, from the teammate's side.\n- [ ] With neither duel's result set, the old line shows.\n- [ ] The co-op turn-cap line reads as the 1v1 one does.\n- [ ] Every new `t()` key has its zh-CN entry, and `pnpm --dir apps/web test src/duos/DuosBoard.test.tsx src/i18n/i18n.test.ts` passes.\n\n## Size and risks\nSmall: one function, a handful of strings and their tests. The teammate's-board wording must not reuse the one-seat sentences as they stand, or \"You were voted out\" would describe the teammate.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-11T15:39:32Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3697: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-11T15:44:19Z",
+    "claimed_at": "2026-11-11T15:47:31Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3570 skipped: it waits for #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3566 to close first",
+    "#3572 skipped: it waits for #3559, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3559, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first"
+  ]
+}
