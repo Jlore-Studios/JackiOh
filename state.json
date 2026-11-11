@@ -15624,6 +15624,11 @@
     "3706": {
       "action": "review",
       "asks": [],
+      "ci_early": false,
+      "ci_fixes": 1,
+      "ci_on_head": true,
+      "ci_run_id": 43009953708,
+      "ci_sha": "8e10ea9d462aa7e75eb7937eaa196924af882b19",
       "cleared": {
         "approver": {
           "family": "muse",
@@ -15644,12 +15649,13 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3608,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
-      "queued_at": "2026-11-11T11:12:11Z",
+      "queued_at": "2026-11-11T12:13:02Z",
+      "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "run_id": "43010292548",
@@ -15672,6 +15678,7 @@
         "provider": "claude-7",
         "run": "42996691133"
       },
+      "source": "ci",
       "started_at": "2026-11-11T11:14:22Z",
       "stop_requested": false,
       "taken_asks": [],
