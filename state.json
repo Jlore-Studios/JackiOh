@@ -16629,6 +16629,8 @@
       "pending_request": false,
       "provider": "claude-5",
       "queued_at": "2026-11-11T21:18:42Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "43103493656",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
