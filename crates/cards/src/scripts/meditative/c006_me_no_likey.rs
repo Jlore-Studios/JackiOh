@@ -78,10 +78,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const LIKELY: &str = "meditative-006";
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const FODDER: &str = "core-015"; // (1) 1/1 Unit.
-    const BILLY: &str = "classicplus-069"; // (X) Unit 2X/3X.
-    const FILLER: &str = "core-005"; // (1) Spell.
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const FODDER: &str = "core-015"; // Me and Mr Token
+    const BILLY: &str = "classicplus-069"; // Buff Billy
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
 
     use crate::js;
 

@@ -696,10 +696,23 @@ it too), and `catalog::registered_catalog()`/`scripts::script_of()` consult it f
 `#[cfg(feature = "testkit")]` only. That one `thread_local!` is the only allowed exception to §3's
 `RefCell` ban (`#[allow(clippy::disallowed_types)]` on that item alone).
 
+**Stand-in cards** (#3486, `testkit/stand_in.rs`). A test that needs only a card's numbers names a
+card whose id spells them out, `"stand-in (3) 9/9"`, `"stand-in (1) 4/4 R12/12"`, `"stand-in (4) 7/7 Armor 7"`
+or `"stand-in (0) Spell"` (`STAND_IN_GRAMMAR` gives the grammar; a Unit with no Radiant face written takes
+R349's fallback), rather than borrowing a real card a balance patch may change. Under `testkit`,
+`catalog::find_def` builds the card on a miss and caches it in a thread-local beside the overrides, each
+card leaked as `register_catalog` leaks; a malformed id panics with the grammar. The cache stays out of
+`registered()`, so no `query`, random pool, `def_by_index` or deck validation reaches a stand-in and no
+seeded draw moves; production builds compile none of it. A stand-in is a Common Core card with no tags,
+no script and no text but its keywords, named by its id.
+
 A card reference resolves by catalog id, §5 index or name, as in TS. `s.unit_at(p, lane)` is `s.unit(p, lane)`
 that panics on an empty lane, and `testkit::pick` holds the one-instance selection builders (`id`, `instance`,
 `card`, `unit_at`); tests take these rather than a copy (#1826). `testkit::must(value, what)` is an
-`Option`'s value or a panic `expected {what}`, and tests take it too (#2023). `testkit::invariants::InvariantMonitor`
+`Option`'s value or a panic `expected {what}`, and tests take it too (#2023). `s.count(kind)` and
+`s.events_of(kind)` read the log by event type (a `GameEventType` or its string; a string naming none panics),
+`s.last_count(kind)` and `s.last_events_of(kind)` the last step's, and `s.offered(p)` is `legal_actions` for that
+seat now (#3504). `testkit::invariants::InvariantMonitor`
 is `_invariants.ts`'s I1–I4 monitor (used by `cargo jackioh fuzz`). `testkit::glow` is `_glow.ts`.
 
 ## 9. The AI crate
@@ -714,7 +727,10 @@ pub struct AiOptions<'a> {
     pub rng: Rng,                                   // the caller reads rng.cursor() back afterwards
     pub budget: SearchBudget,                       // default AI_BUDGET
     pub should_stop: Option<&'a dyn Fn() -> bool>,  // TS shouldStop; the browser's clock, never read by this crate
+    pub wrap_up: Option<&'a dyn Fn() -> bool>,      // R3498000: the beam's earlier stop, a host's clock at AI_WRAP_UP_SHARE of its limit (wrap_up_after_ms)
 }
+pub fn wrap_up_after_ms(limit_ms: i64) -> i64;      // R3498000: the ms into a host's limit at which it fires wrap_up
+    // SearchStats gains replied and worldsScored, and Decision::fell_short() a finalist left unscored on a sampled world (R3498000)
 pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<String>;
     // AiDeckOptions { banned, include, theme, mana_cap, boost, lean_set: Option<SetName> } (serde camelCase;
     // `leanSet`, R1370: at least ceil(size × AI_DECK.lean_min_share) of the deck from that set; absent, the
@@ -755,7 +771,8 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn ai_to_act(state_json: &str, seat: &str) -> bool;
 #[wasm_bindgen] pub fn ai_decide(state_json: &str, seat: &str, options_json: &str, deadline_ms: f64) -> String;
     // options: { rngSeed, rngCursor, budget? }; answers { decision: Decision | null, rngCursor };
-    // should_stop = js_sys::Date::now() >= deadline_ms (deadline_ms <= 0: no clock)
+    // should_stop = js_sys::Date::now() >= deadline_ms (deadline_ms <= 0: no clock), and wrap_up the same at
+    // AI_WRAP_UP_SHARE of the time from the call to deadline_ms (R3498000)
 #[wasm_bindgen] pub fn lethal_hint(state_json: &str, seat: &str, deadline_ms: f64) -> bool;  // R2102000: jackioh_ai::lethal_hint, the practice AI's lethal hint; deadline_ms as ai_decide's
 #[wasm_bindgen] pub fn build_ai_deck(options_json: &str) -> String;
     // options: { rngSeed, rngCursor, size, banned?, manaCap?, theme?, include?, boost?, leanSet? }; answers { deck, rngCursor }
@@ -793,7 +810,7 @@ keeps behind its opaque `EngineState` brand.
     // a BotAnswer out ({ answer: "chosen", bot } | { change } | { ids } | { bot } | { decks } | { trio } | { due } | { row } | { refused } | { holdings } | { draw } | …); the host reads its store into plain records and writes what comes out
 #[wasm_bindgen] pub fn bot_decide(call_json: &str, deadline_ms: f64) -> String;
     // #3103: the move a ladder bot owes (SPEC §9.12, R1452, R639000, R747000). A DecideCall in ({ host: DuelHost, request: DecideRequest }), the BotChoice out ({ body, aiCursor, legalCount, lethal, aim }), which the host feeds the machine back as { event: "decided", home, version, turn, choice };
-    // once Date.now() passes deadline_ms the search answers with its best line (<= 0: no clock)
+    // once Date.now() passes deadline_ms the search answers with its best line (<= 0: no clock), its beam wrapped up as ai_decide's (R3498000)
 #[wasm_bindgen] pub fn log(call_json: &str) -> String;
     // #3108: jackioh-shared's game log (SPEC §10.10, R97, R745). A LogCall in ({ call: "view", view, locale } | { call: "gap", locale }), a LogAnswer out ({ answer: "lines", lines: (LogLine | null)[] } | { answer: "line", line }):
     // a line for each event of the view's window, final text as spans in the reader's words, naming no card the viewer may not read; the catalog is the one init registered (crates/shared/README.md, src/log/)

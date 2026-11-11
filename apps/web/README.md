@@ -138,10 +138,10 @@ stays inside. `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`,
 
 Since #3221 (R3221000) the menus' dialogs draw through it too: `SettingsPanel`, the friends panel
 (`FriendsButton`), `ChatPanel`, `ChallengeDialog`, `TokenOffer`'s and the shop's chase question, the
-account's delete question, `/stats`'s card breakdown, `DungeonStats`'s run details, `FieldGuide`,
-`PatchNotes`'s card, `ItemPreview`, `CardCosmeticsView`, `LooksScreen`, `DevButton`'s panel,
-`CommandMenu` and `TutorialResult`. A caller may also give it an `id`, its own `closeTestid` and
-`closeLabel` for the ✕, a `scrimTestid`, `focus` (what takes the focus on open, else the first answer,
+account's delete question, `/stats`'s card breakdown, `DungeonStats`'s run details, the dungeon's Your run
+panel (`RunPanel`), `FieldGuide`, `PatchNotes`'s card, `ItemPreview`, `CardCosmeticsView`, `LooksScreen`,
+`DevButton`'s panel, `CommandMenu` and `TutorialResult`. A caller may also give it an `id`, its own
+`closeTestid` and `closeLabel` for the ✕, a `scrimTestid`, `focus` (what takes the focus on open, else the first answer,
 else the ✕), `panelRef`, a `title` with markup of its own, and answers that are `disabled` or `busy`
 (`aria-busy`), the `cancel` disabled too while a request is out. `sheet` makes it a sheet: centred on a
 wide screen, at the foot of an upright phone and down the right edge of a phone on its side (Settings,
@@ -301,6 +301,20 @@ sheet's own swipe does not start on it); the card views also tilt with the phone
 on (`deviceTilt`, a device-only card setting; iOS asks leave once, inside the switch's tap). One face tilts at a time and
 none while the animation queue drains (`useTiltHold`, `game/Game.tsx`). The face's rotation is the one 3D thing: `.cf` is
 an isolated group, which draws what it holds flat, so the planes move by `translate`. Presentation only (rule 7).
+
+**Dioramas** (R3350000): a Mythic's normal picture, and a token printed Mythic's, draws a diorama of its own in place of the
+planes, one file per card in `cards/art/dioramas/<set>/` (`DIORAMA`: five to eight slices, back to front, each a pick of
+the painter's still picture's pieces, `dioramas/pieces.ts`, at a depth and in a plane, some bent, two or more on a loop
+written for the card). Each slice is a picture of its own (`dioramaSliceUri`, from the card's id and face alone); the face
+draws the farthest in its window and the rest as `.cf-plane[data-slice]`s over it (`data-diorama`), their loops running
+only in a motion slot (`data-diorama-motion`); at an animated level, and on the board, each slice also moves its pieces as
+the card's moving picture does (its roles' layers, the particles in the nearest), so the level keeps its motion. It turns up to `DIORAMA_TURN_MAX_DEG` in inspect, the hover preview and the
+Collection (`CardFace`'s `turn`), `CARD_TILT_MAX_DEG` in hand, and never breaks the frame; a board Mythic stacks every slice
+in its window while it moves (`CardArt`'s `diorama` "all"), in place of the live layers, its window swelling on a hover and
+its slices over the farthest swinging on an attack (`artLive.css`); the full-screen view draws the slices, scaled as it turns
+as little as keeps the screen covered (`fullscreenCoverScale`), and the takeover flies through them (`fx/takeover.ts`,
+`fx-takeover-fly`). Alt art, a restyle and every flat face draw none. `dioramas.test.ts` lists any
+Mythic without one (`PENDING`, empty) and holds every slice to its picture's colours, no text and `ART_DETAIL_MAX_BYTES`.
 
 ## Three flows at the table
 
@@ -510,6 +524,11 @@ pnpm --dir apps/web test           # vitest (jsdom)
 scripts), which needs the Rust toolchain `rust-toolchain.toml` pins; `typecheck` reads the module's
 generated `.d.ts`, so run one of them (or the script) once first.
 
+`src/perf/` owns the busy-board frame probe's numbers and statistics (issue #3605):
+`frameBudgets.ts` names every budget and duration (CLAUDE.md rule 9), `frameStats.ts` the pure
+summarize-and-judge the e2e spec shares. The probe itself runs as e2e spec 50
+(`pnpm --dir e2e probe:frames`).
+
 Both deployed builds are `production` mode, so neither serves the dev-only routes; `build:staging`
 puts `.env.staging` in the build's environment (`node --env-file`), where Vite never overwrites a
 variable. Cloudflare serves `dist/` (wrangler.jsonc): `public/_redirects` routes the screens,
@@ -533,7 +552,9 @@ defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (
 
 `scripts/github-releases.ts` prints every shipped version's GitHub release as JSON (`src/patches/github.ts`:
 the Patch notes page as Markdown, a pre-release while only staging has the version), which
-`.github/workflows/releases.yml` publishes. It needs no WebAssembly; to read the newest one's notes:
+`.github/workflows/releases.yml` publishes. It loads the WebAssembly module from `src/wasm/pkg` (a card's
+words are diffed by the face model, #3161), so run `sh scripts/build-wasm.sh` first, as the workflow does
+(#3601); `src/patches/github.test.ts` runs it in a process of its own. To read the newest one's notes:
 `pnpm --dir apps/web exec tsx scripts/github-releases.ts | jq -r '.releases[-1].body'`.
 
 The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `reduce` in the
@@ -863,7 +884,8 @@ together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unr
                          the button and /together share, and the badge's count (paused while the tab is
                          hidden unless a challenge of the player's is open, R3205000); it holds the tab's
                          social socket and sends no read while it is live, and hands its chat and
-                         friends pushes to onChatPush and onFriendsPush (R3214000)
+                         friends pushes to onChatPush and onFriendsPush (R3214000); a tab hidden for
+                         HIDDEN_QUIET_MS lets the socket go and opens it again when it shows (R3576000)
 together/socialSocket.ts  the tab's one /ws/social socket (R3214000): the token as a subprotocol
                          (R1379000), the server's social read and chat and friends nudges pushed over it,
                          the match socket's backoff and wake probe (R1441), a 4401 reopened with a renewed
@@ -872,14 +894,16 @@ together/socialSocket.ts  the tab's one /ws/social socket (R3214000): the token 
                          unless a test installs a factory (test/fakeSocket.ts)
 together/config.ts       the social reads' pace: the friends list every FRIENDS_POLL_MS (a heartbeat,
                          PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS;
-                         both paused while the tab is hidden
+                         both paused while the tab is hidden; HIDDEN_QUIET_MS, how long a hidden tab
+                         waits before it goes quiet (R3576000)
 together/ChallengeToast.tsx  mounted once in the shell; reads the challenges (socialPoll.ts's GET /api/social) while signed in and
                          toasts an incoming challenge anywhere with a deck picker (the last deck used for
                          its mode): Accept joins the room with it and goes to the game (R1831000), a
                          refused join offers Open in lobby, /play with the room code filled in (R767);
                          Decline declines
 together/presence.ts     usePresenceHeartbeat: POST /api/presence once PRESENCE_HEARTBEAT_MS passes with
-                         no signed-in request (onSignedInRequest, R3210000)
+                         no signed-in request (onSignedInRequest, R3210000), none while the tab has
+                         been hidden for HIDDEN_QUIET_MS (R3576000)
 duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one), show its code,
                          offer its link, invite a friend by sending the link in chat, join by code or by
                          a co-op link that fills the join form and focuses Join (R2094000); both players

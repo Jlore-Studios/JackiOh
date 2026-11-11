@@ -8,11 +8,18 @@ import { baseView, emptySide, faceUpBackrow, unit } from "../../../apps/web/src/
 
 const noop = (): void => undefined;
 
+/**
+ * Four Legendary and Mythic permanents that wear the default tile aura: a card's own aura replaces it (R3342000),
+ * a `{ bespoke }` entry's too (R3400000), and every signature permanent now wears its own (Core's, R3402000;
+ * Classic+'s, R3399001; Stinkyscape's, R3395001), so the board takes the ones that wear none: Felinor Fiender
+ * and two Ceaseless Voids in the unit rows, and the Dormant Starship, a Legendary Flying Unit standing in the
+ * backrow (R1081000).
+ */
 function fourTileBoard() {
   return baseView({
     you: emptySide("p1", {
       units: [
-        unit("p1", { defId: "core-052", instanceId: "u-leg-1" }),
+        unit("p1", { defId: "core-092", instanceId: "u-leg-1" }),
         unit("p1", { defId: "core-100", instanceId: "u-myth-1" }),
         null,
         null,
@@ -21,17 +28,15 @@ function fourTileBoard() {
       backrow: [null, null, null, null, null],
     }),
     opponent: emptySide("p2", {
-      units: [null, null, null, null, null],
-      // Core #93 and #98 wear auras of their own now (R3400000), which replace the tile aura: a Legendary Field Spell
-      // and a Mythic Flying Unit standing in the backrow (R1081000) wear it instead.
+      units: [null, unit("p2", { defId: "core-100", instanceId: "u-myth-2" }), null, null, null],
       backrow: [
-        faceUpBackrow("p2", { defId: "classicplus-012-8", instanceId: "b-leg-2", type: "Field Spell" }),
         faceUpBackrow("p2", {
-          defId: "stinkyscape-074",
-          instanceId: "b-myth-2",
+          defId: "stinkyscape-t-dormant-starship",
+          instanceId: "b-leg-2",
           type: "Unit",
-          unit: unit("p2", { defId: "stinkyscape-074", instanceId: "b-myth-2" }),
+          unit: unit("p2", { defId: "stinkyscape-t-dormant-starship", instanceId: "b-leg-2" }),
         }),
+        null,
         null,
         null,
         null,

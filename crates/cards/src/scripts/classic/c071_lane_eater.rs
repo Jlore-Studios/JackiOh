@@ -80,16 +80,16 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const LANE_EATER: &str = "classic-071";
-    const VANILLA: &str = "core-008"; // 4/4
-    const TIMMY: &str = "core-011"; // 3/3
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
     const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
     const DEFENDER: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
-    const THE_ROCK: &str = "core-066"; // Tribute 1, Indestructible
+    const THE_ROCK: &str = "core-066"; // The Rock: Tribute 1, Indestructible
     const HIT_JOB: &str = "core-016";
-    const MANA_WELL: &str = "core-006"; // Field Spell
-    const GOING_LONG: &str = "core-084"; // Field Spell
-    const SHEEPISH: &str = "core-041"; // Trap
-    const GIFTED: &str = "core-064"; // Field Spell
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const GOING_LONG: &str = "core-084"; // Going Long: a Field Spell
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const GIFTED: &str = "core-064"; // Gifted Program: a Field Spell
     const TOKEN_MAKER: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
     const STOCKPILE: &str = "core-005";
 

@@ -1,12 +1,13 @@
-// R3351000: the living game's shared shed level (issue #3351, part of #3330). On a phone the
-// moving faces, tile auras, backdrops, particles and tilt draw from per-layer budgets that scale
-// with the phone caps — the faces from the motion slots (COSMETIC_FOIL_ANIMATED_MAX, 6, on every
-// viewport), tile and aura motes from auraBudget and tileMoteBudget against the phone particle cap
-// (capacityFor), tilt holding one claim — and past the phone budget (PHONE_MOTION_BUDGET, 6) the
-// director sheds in the ruled order — motes first, then far auras, then the moving faces furthest
-// from the pointer — and never a set piece's main beats. The director publishes its stage here;
-// the aura layers and the motion slots read it. Presentation only (CLAUDE.md rule 7): frame
-// times and the pointer, never game state.
+// R3351000: the living game's shared shed level (issue #3351, part of #3330), shed on every
+// viewport (R3606000). The moving faces, tile auras, backdrops, particles and tilt draw from
+// per-layer budgets that scale with the particle caps — the faces from the motion slots
+// (COSMETIC_FOIL_ANIMATED_MAX, 6, on every viewport), tile and aura motes from auraBudget and
+// tileMoteBudget against the particle cap (capacityFor), tilt holding one claim — and past the
+// budget (PHONE_MOTION_BUDGET, 6, on a phone) the director sheds in the ruled order — motes
+// first, then far auras, then the moving faces furthest from the pointer — and never a set
+// piece's main beats. The director publishes its stage here; the aura layers and the motion
+// slots read it. Presentation only (CLAUDE.md rule 7): frame times and the pointer, never
+// game state.
 
 /** The shed stages: full, motes, far auras, faces. */
 export const SHED_FULL = 0;

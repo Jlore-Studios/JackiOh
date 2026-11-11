@@ -45,7 +45,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const HALLUCINATION: &str = "classicplus-t-ai-03";
-    const UNIT: &str = "core-008"; // Mr. Vanilla 4/4, (1).
+    const UNIT: &str = "stand-in (1) 4/4 R12/12";
     const OTHERS: [&str; 5] = ["core-001", "core-002", "core-011", "core-019", "core-043"];
     const FILLER: &str = "core-005";
 

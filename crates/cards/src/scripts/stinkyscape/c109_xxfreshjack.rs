@@ -67,7 +67,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const FILLER: &str = "core-005"; // (1) Spell.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
 
     fn board(radiant: bool, seed: &str) -> Scenario {
         let mut s = scenario(json!({

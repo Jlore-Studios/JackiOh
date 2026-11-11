@@ -29,9 +29,10 @@ func OpenSuggestionCount(ctx *hctx.Context) int {
 }
 
 // SuggestionsDue is how many suggestions a survey may open now: 0 when none is due or the cap
-// is full. One is due when asked for, or once a free lane has had nothing to start for
+// is full. One is due when asked for, or while the excess compute stands at
+// `suggestions.spare_lanes` or more (`spare`, `SpareTotal`, #3659) and has for
 // `suggestions.idle_minutes` (#797: `suggest.idle_since`, kept by `note_idle`).
-func SuggestionsDue(ctx *hctx.Context, state *pyjson.Object, force bool /* = False */) int {
+func SuggestionsDue(ctx *hctx.Context, state *pyjson.Object, force bool /* = False */, spare int) int {
 	cfg := ctx.Cfg
 	if !cfg.SuggestionsEnabled {
 		return 0
@@ -42,17 +43,19 @@ func SuggestionsDue(ctx *hctx.Context, state *pyjson.Object, force bool /* = Fal
 	}
 	idle := clock.ParseISOValue(suggest.Get("idle_since"))
 	due := force || suggest.Truthy("requested") ||
-		(!idle.IsZero() && ctx.Now().Sub(idle) >= time.Duration(cfg.SuggestionsIdleMinutes)*time.Minute)
+		(spare >= cfg.SuggestionsSpareLanes && !idle.IsZero() &&
+			ctx.Now().Sub(idle) >= time.Duration(cfg.SuggestionsIdleMinutes)*time.Minute)
 	if !due {
 		return 0
 	}
 	return max(0, cfg.SuggestionsMaxOpen-OpenSuggestionCount(ctx))
 }
 
-// NoteIdle keeps the clock a survey waits on (#797): `suggest.idle_since` is when a lane last
-// became free with nothing in the queue it could start (`Peek.idle`), and goes when there is
-// work for it again. The sweep calls this every tick, writing only when it changes; a survey
-// claimed restarts it (`suggestion_plan`). Bookkeeping, so it reports nothing.
+// NoteIdle keeps the clock a survey waits on (#797): `suggest.idle_since` is when the excess
+// compute last reached `suggestions.spare_lanes`, the queue holding nothing a free lane could start
+// (`Peek.idle`, #3659), and goes when it drops under that again. The sweep calls this every tick,
+// writing only when it changes; a survey claimed restarts it (`suggestion_plan`). Bookkeeping, so
+// it reports nothing.
 func NoteIdle(ctx *hctx.Context, idle bool) {
 	if !ctx.Cfg.SuggestionsEnabled {
 		return
@@ -75,7 +78,7 @@ func NoteIdle(ctx *hctx.Context, idle bool) {
 func SuggestionPlan(ctx *hctx.Context, lanes *Lanes, force bool, quietOK string /* = "" */) *pyjson.Object {
 	cfg := ctx.Cfg
 	state := ctx.Store.Load()
-	count := SuggestionsDue(ctx, state, force)
+	count := SuggestionsDue(ctx, state, force, SpareTotal(Spare(ctx, state, lanes, force)))
 	if count <= 0 {
 		return nil
 	}

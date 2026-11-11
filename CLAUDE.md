@@ -105,6 +105,8 @@ cargo jackioh gate                 # the AI's quality gates at smoke size; --ful
 cargo jackioh perf                 # the engine's and the replay fold's speed on a frozen corpus, each median held to its budget (#3429); --smoke once, --json
 cargo jackioh patches "<title>" [--plays <ids>] [--rule]   # a branch's card change as a pending fragment, no version (R388, R646, R1366000); `patches ship` names the version by tier after merge
 cargo jackioh classify --base origin/main [--parent-bin <path>] [--claims]   # what the change does: its kind, tier and the cards that play differently (R1365000); --claims holds the fragments to it, as CI's `rust (classify)` does (R1370000)
+sh scripts/mutants.sh --in-diff    # cargo-mutants on the lines the branch changed since origin/main: does a test fail when each is wrong (#3490); fails on a survivor
+sh scripts/mutants.sh <area> [k]   # one area's shard k of mutation testing (cargo-mutants; Stryker for web-* and edge); `areas` lists them, mutants.yml runs each weekly
 sh scripts/build-wasm.sh           # the engine as WebAssembly into apps/web/src/wasm/pkg (the web's dev, build, build:e2e and test run it first)
 JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh   # the C module (crates/wasm/c, the one a Roblox port translates) alone; fails on any import; CI's `web (wasm c module)`
 pnpm --dir apps/web dev            # http://localhost:5173: hotseat at /dev/hotseat, the AI at /practice
@@ -144,6 +146,7 @@ cargo build --release -p jackioh-tools         # target/release/jackioh: the spe
 cd e2e && pnpm exec cypress run --spec cypress/e2e/01-hotseat-full-game.cy.ts
 pnpm --dir e2e test:component                  # component/pixel specs, no server needed
 pnpm --dir apps/web build:e2e && pnpm --dir apps/web exec vite preview --port 5173 --strictPort   # a built client, as CI serves it
+pnpm --dir e2e probe:frames                                                             # the busy-board frame probe (spec 50, issue #3605): build:e2e + preview on :4173 + the spec; -- --json for the JSON report
 ```
 
 `vite dev` reloads the page whenever `apps/web/src` changes, restarting a hotseat game at turn 0, so serve a

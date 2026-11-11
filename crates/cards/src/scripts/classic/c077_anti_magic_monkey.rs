@@ -50,18 +50,18 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MONKEY: &str = "classic-077";
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const ECLIPSE: &str = "core-035"; // (1) Spell: Deal 3 damage to a target …
-    const DIVIDEND: &str = "core-024"; // (X) Spell, Choose one
-    const ARMOR: &str = "core-073"; // (2) Field Spell
-    const HONEYPOT: &str = "core-060"; // (1) Trap
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const FIENDER: &str = "core-092"; // (2) Stack Unit
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
-    const SUPER_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
-    const RISKY_DIE: &str = "classic-079"; // (1) Spell: Draw 3; they cost (1) less; …
-    const FILLER: &str = "core-010"; // (0) Spell
-    const SECOND_WIND: &str = "classic-028"; // Radiant Aura: you may play cards from your graveyard that cost (1) or more.
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const ECLIPSE: &str = "core-035"; // Lunar Eclipse: Deal 3 damage to a target …
+    const DIVIDEND: &str = "core-024"; // Efficiency Dividend: Choose one
+    const ARMOR: &str = "core-073"; // Anti-oneshot Armor: a Field Spell
+    const HONEYPOT: &str = "core-060"; // Bear Honeypot: a Trap
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const SUPER_VIRUS: &str = "core-090-1"; // Super-Virus: Cast on draw
+    const RISKY_DIE: &str = "classic-079"; // Risky Die: Draw 3; they cost less; …
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const SECOND_WIND: &str = "classic-028"; // Second Wind: Radiant Aura: you may play cards from your graveyard that cost at least 1
 
     use crate::scenario;
 

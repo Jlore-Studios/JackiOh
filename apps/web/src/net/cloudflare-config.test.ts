@@ -14,6 +14,7 @@ import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 
 import { GIS_SCRIPT_URL } from "../auth/googleIdentity.ts";
+import { ROBLOX_AVATAR_IMAGE_HOST } from "./auth.ts";
 import { CONNECT_SRC_PLACEHOLDER, GOOGLE_IDENTITY_SOURCE, connectSources } from "../../static-pages.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -94,11 +95,12 @@ const IMMUTABLE: Header[] = [{ key: "Cache-Control", value: "public, max-age=315
 /**
  * The CSP, exactly. WebAssembly compilation needs `wasm-unsafe-eval` (docs/v0.3.0/SURFACE.md §10.3);
  * Google's own sign-in button (R2983000) needs its script and, under its path, its styles, frames and
- * requests (connect-src's, filled in by the build); `frame-src` keeps the 'self' it had from default-src.
+ * requests (connect-src's, filled in by the build); `frame-src` keeps the 'self' it had from default-src;
+ * the linked Roblox account's headshot (R3507000) needs Roblox's one image host in `img-src`.
  */
 const CSP =
   "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client; worker-src 'self'; " +
-  "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/; img-src 'self' data: blob:; media-src 'self' blob:; " +
+  "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/; img-src 'self' data: blob: https://tr.rbxcdn.com; media-src 'self' blob:; " +
   "font-src 'self'; frame-src 'self' https://accounts.google.com/gsi/; connect-src %CONNECT_SRC%; object-src 'none'; " +
   "base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
 
@@ -146,12 +148,12 @@ describe("public/_headers", () => {
     expect(connectSources("https://staging.jackioh.com", "")).toBe("'self' wss://staging.jackioh.com");
   });
 
-  it("R2983000 widens the CSP by Google Identity Services' sources alone", () => {
+  it("R2983000 widens the CSP by Google Identity Services' sources alone, and R3507000 by Roblox's one image host", () => {
     const sources = csp()
       .split(";")
       .flatMap((directive) => directive.trim().split(/\s+/u).slice(1))
       .filter((source) => source.startsWith("https:"));
-    expect(sources).toEqual([GIS_SCRIPT_URL, GOOGLE_IDENTITY_SOURCE, GOOGLE_IDENTITY_SOURCE]);
+    expect(sources).toEqual([GIS_SCRIPT_URL, GOOGLE_IDENTITY_SOURCE, `https://${ROBLOX_AVATAR_IMAGE_HOST}`, GOOGLE_IDENTITY_SOURCE]);
     const directive = (name: string): string[] =>
       csp()
         .split("; ")
@@ -160,6 +162,8 @@ describe("public/_headers", () => {
         .slice(1) ?? [];
     expect(directive("script-src")).toEqual(["'self'", "'wasm-unsafe-eval'", GIS_SCRIPT_URL]);
     expect(directive("style-src")).toEqual(["'self'", "'unsafe-inline'", GOOGLE_IDENTITY_SOURCE]);
+    // R3507000: exactly the one host, never a wildcard or `https:` as a whole.
+    expect(directive("img-src")).toEqual(["'self'", "data:", "blob:", "https://tr.rbxcdn.com"]);
     expect(directive("frame-src")).toEqual(["'self'", GOOGLE_IDENTITY_SOURCE]);
     // Google's requests are let in by the build, beside the Supabase host it signs in through.
     const connect = connectSources("https://jackioh.com", "https://fuzpvmjdejvbjcarypyi.supabase.co").split(" ");

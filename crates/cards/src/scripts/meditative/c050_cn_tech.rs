@@ -53,7 +53,7 @@ mod tests {
     use crate::scenario;
 
     const TECH: &str = "meditative-050";
-    const LEADER: &str = "core-001"; // Big D-fender, a deckable non-token card.
+    const LEADER: &str = "core-001"; // Big D-fender: a deckable non-token card
     const FILLER: &str = "core-005";
 
     fn table(cards: Vec<(&str, i32, i32)>) -> WinRateTable {

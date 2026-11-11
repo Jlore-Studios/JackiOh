@@ -1,6 +1,7 @@
 // The effects layer's contract (docs/polish/1-animations.md, Surface S1).
 
 import type { CardType, GameEvent, KeywordKind, PlayerId, PlayerView, Rarity, Row, Tag } from "@jackioh/shared";
+import type { ArtPlane } from "../cards/art/pictures.ts";
 import type { SignatureFace } from "../cards/signatureFaces.ts";
 import type { Side } from "../game/contract.ts";
 import type { FxFigure } from "./figures.ts";
@@ -167,12 +168,16 @@ export type FxFogCue = {
  * Mythics' twelve, from "ascent" to "fortress", each with art of its own. R3399002: Classic+'s four Mythics'
  * looks, "zealot", "portal", "stair" and "vineyard", each draw a picture of their own (takeoverArt.ts).
  * R3395001: Stinkyscape's "vault", "rod", "wire", "whiteDwarf" and "forge" have art of their own too.
+ * R3402000: Core's Heroic Power's "rotunda" and Craft a Card's "crystalForge" join them, and My Pawn's
+ * "pawn" and Zephrys's "genie" draw a drawing of their own too.
  */
 export type TakeoverLook =
   | "prismatic"
   | "void"
   | "pawn"
   | "genie"
+  | "rotunda"
+  | "crystalForge"
   | "ai" | "abyss" | "freshJack" | "ikwzki" | "shockwave" | "alteran" | "edge" | "redNarcor" | "summit"
   | "canvas"
   | "napkin"
@@ -200,9 +205,15 @@ export type TakeoverLook =
 /**
  * R3345000: what a takeover's set piece shows of the card: its own picture, one CSS `background-image` per depth plane
  * (`ART_PLANES` order, far to nearest), its name and the hand it signs in (R2715002). It is the picture and the
- * name, never the definition, so the cue names no card (R202; a takeover plans only for a readable play).
+ * name, never the definition, so the cue names no card (R202; a takeover plans only for a readable play). R3350000: a
+ * Mythic with a diorama shows its slices instead (`slices`, far to near), its planes none.
  */
-export type FxTakeoverStage = { planes: readonly string[]; name: string; face: SignatureFace };
+export type FxTakeoverStage = { planes: readonly string[]; name: string; face: SignatureFace; slices?: readonly FxTakeoverSlice[] };
+/**
+ * R3350000: one slice of a Mythic's diorama on a takeover's stage: its picture (a CSS `background-image`), the plane it
+ * stands in and its depth, 0 the farthest to 1 the nearest, which the camera flies toward and the nearest past (fx.css).
+ */
+export type FxTakeoverSlice = { image: string; plane: ArtPlane; depth: number };
 /**
  * R3407000: `art`, a look of its own that draws its card's picture over the dark (`TAKEOVER_ART_LOOKS`), the
  * picture's URI: only ever a card the seat's own event names (R202).

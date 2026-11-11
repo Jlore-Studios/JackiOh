@@ -4,7 +4,7 @@
 // and the campfire's count come from the real module (`runShopPrices`, `runConstants`), and the fake
 // store's `act` records every `RunAction` the screens send and answers the configured refusal.
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act as flush, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
@@ -18,7 +18,11 @@ import type {
   RunStats,
 } from "@jackioh/run";
 
+import { resetFxSettingsForTests, setFxSettings } from "../../fx/settings.ts";
+import { PACK_TEAR_MS } from "../../packs/packs.ts";
 import { navTestid } from "../../routes/nav.tsx";
+import { __resetSettingsForTests, writeSettings } from "../../settings/store.ts";
+import { readSheet } from "../../test/setup.ts";
 import { at } from "../../test/stubServer.ts";
 import { runConstants, runShopPrices } from "../../wasm/index.ts";
 import { fightTestid } from "../fight/testids.ts";
@@ -111,12 +115,19 @@ const CONTENT: RunContent = {
       id: "test-event",
       text: "A stranger offers a deal.",
       options: [
-        { text: "Pay 5 Coins", hp: 0, coins: -5, tickets: 0, card: false, artifact: false },
-        { text: "Walk away", hp: 0, coins: 0, tickets: 0, card: false, artifact: false },
+        { text: "Lose 5 max HP for 5 Coins", maxHp: -5, coins: 5, tickets: 0, card: false, artifact: false },
+        { text: "Walk away", maxHp: 0, coins: 0, tickets: 0, card: false, artifact: false },
       ],
     },
   ],
-  curses: [],
+  curses: [
+    {
+      id: "test-curse-heavy",
+      name: "Heavy Hands",
+      text: "Enemies start each fight with 5 more health.",
+      points: 2,
+    },
+  ],
 };
 
 const STAT_KEYS = Object.keys(RUN_STAT_LABELS) as (keyof RunStats)[];
@@ -129,7 +140,7 @@ function statsWith(values: Partial<RunStats> = {}): RunStats {
 }
 
 function node(kind: RunNode["kind"], extra: Partial<RunNode> = {}): RunNode {
-  return { kind, enemy: null, event: null, artifact: null, ...extra };
+  return { kind, enemy: null, event: null, artifact: null, column: 0, next: [], ...extra };
 }
 
 /** The node's drawn icon (#3229): an SVG tagged with its kind, in place of a system emoji. */
@@ -141,15 +152,31 @@ function enemy(name: string): RunNode["enemy"] {
   return { id: `enemy-${name}`, name, heroHealth: 20, deck: ["core-001"], artifacts: [] };
 }
 
-/** The map's two acts: rows 0–3 end at the mini-boss, rows 4–6 at the final boss. */
+/**
+ * The map's two acts: rows 0–3 end at the mini-boss, rows 4–6 at the final boss. Each node leads to
+ * the next row's nodes its `next` names (R3583000): row 0's fight to row 1's first three, its elite to
+ * the three after the first, and the mini-boss to both of row 4's.
+ */
 const MAP: RunState["map"] = [
-  [node("fight", { enemy: enemy("Cave Troll") }), node("elite", { enemy: enemy("Elite Guard") })],
-  [node("shop"), node("campfire"), node("event", { event: "test-event" }), node("shrine"), node("chest")],
-  [node("campfire")],
-  [node("miniBoss", { enemy: enemy("Mini Boss"), artifact: "test-relic-might" })],
-  [node("fight", { enemy: enemy("Road Thug") }), node("ghost", { enemy: enemy("Ghost") })],
-  [node("campfire")],
-  [node("boss", { enemy: enemy("Final Boss"), artifact: "test-boss-crown" })],
+  [
+    node("fight", { enemy: enemy("Cave Troll"), column: 2, next: [0, 1, 2] }),
+    node("elite", { enemy: enemy("Elite Guard"), column: 3, next: [1, 2, 3] }),
+  ],
+  [
+    node("shop", { column: 1, next: [0] }),
+    node("campfire", { column: 2, next: [0] }),
+    node("event", { event: "test-event", column: 3, next: [0] }),
+    node("shrine", { column: 4, next: [0] }),
+    node("chest", { column: 5, next: [0] }),
+  ],
+  [node("campfire", { column: 3, next: [0] })],
+  [node("miniBoss", { enemy: enemy("Mini Boss"), artifact: "test-relic-might", column: 3, next: [0, 1] })],
+  [
+    node("fight", { enemy: enemy("Road Thug"), column: 2, next: [0] }),
+    node("ghost", { enemy: enemy("Ghost"), column: 3, next: [0] }),
+  ],
+  [node("campfire", { column: 3, next: [0] })],
+  [node("boss", { enemy: enemy("Final Boss"), artifact: "test-boss-crown", column: 3 })],
 ];
 
 const DECK: RunState["deck"] = [
@@ -166,6 +193,7 @@ function runWith(phase: RunPhase, extra: Partial<RunState> = {}): RunState {
     row: 0,
     col: 0,
     hp: 7,
+    maxHpBonus: 0,
     deck: DECK,
     artifacts: [{ id: "test-relic-might", level: 2 }],
     blessings: [],
@@ -191,7 +219,8 @@ function fakeDungeon(
     content: CONTENT,
     progress: { unlocks: { level: 1, cards: [], artifacts: [], owned: null }, embers: 0 },
     run,
-    startedAt: 1_000,
+    elapsedMs: 0,
+    resumedAt: 1_000,
     timeMs,
     start: vi.fn(() => null),
     act,
@@ -205,16 +234,21 @@ beforeEach(() => {
   plan.maxHp = 20;
   plan.score = 130;
   plan.embers = 13;
+  __resetSettingsForTests();
+  resetFxSettingsForTests();
 });
 
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
+  __resetSettingsForTests();
+  resetFxSettingsForTests();
+  vi.useRealTimers();
 });
 
-/** B30: HP, Coins, Tickets, the deck, the relic held and the score, on every screen. */
+/** B30: HP (the run's max), Coins, Tickets, the deck, the relic held and the score, on every screen. */
 function expectHud(coins = "11", tickets = "3"): void {
-  expect(screen.getByTestId(dungeonMapTestid.hp)).toHaveTextContent("7 / 20");
+  expect(screen.getByTestId(dungeonMapTestid.hp)).toHaveTextContent("HP: 20");
   expect(screen.getByTestId(dungeonMapTestid.coins)).toHaveTextContent(coins);
   expect(screen.getByTestId(dungeonMapTestid.tickets)).toHaveTextContent(tickets);
   expect(screen.getByTestId(dungeonMapTestid.deckSize)).toHaveTextContent("3");
@@ -265,15 +299,16 @@ describe("R2972000 the run map links back to the Play menu", () => {
   });
 });
 
-describe("B27 the map shows the current act and only the next row goes", () => {
-  // B27
-  it("B27 shows the current act and only sends go for the next row", () => {
+describe("B27 the map shows the whole map and only the nodes the one stood on leads to go", () => {
+  // B27, R3583000
+  it("B27 R3583000 shows the whole map and only sends go for a node the one stood on leads to", () => {
     const { dungeon, act } = fakeDungeon(runWith({ phase: "map" }));
     render(<RunScreen dungeon={dungeon} />);
 
-    // The whole first act: rows 0–3, each node's kind with its icon and label.
-    for (const row of [0, 1, 2, 3]) expect(screen.getByTestId(dungeonMapTestid.mapRow(row))).toBeInTheDocument();
-    expect(screen.queryByTestId(dungeonMapTestid.mapRow(4))).not.toBeInTheDocument();
+    // The whole map: both acts, each node's kind with its icon and label.
+    for (const row of [0, 1, 2, 3, 4, 5, 6]) {
+      expect(screen.getByTestId(dungeonMapTestid.mapRow(row))).toBeInTheDocument();
+    }
     const kinds: [number, number, string, RunNodeKind][] = [
       [0, 0, "Fight", "fight"],
       [0, 1, "Elite", "elite"],
@@ -284,25 +319,28 @@ describe("B27 the map shows the current act and only the next row goes", () => {
       [1, 4, "Chest", "chest"],
       [2, 0, "Campfire", "campfire"],
       [3, 0, "Mini-boss", "miniBoss"],
+      [4, 0, "Fight", "fight"],
+      [6, 0, "Final boss", "boss"],
     ];
     for (const [row, col, label, kind] of kinds) {
       const held = within(screen.getByTestId(dungeonMapTestid.mapNode(row, col)));
       expect(held.getByText(label)).toBeInTheDocument();
       expectIcon(screen.getByTestId(dungeonMapTestid.mapNode(row, col)), kind);
     }
-    // The fight's name, the boss's preseeded relic, and where the player stands.
+    // The fight's name, the bosses' preseeded relics, and where the player stands.
     expect(screen.getByTestId(dungeonMapTestid.mapNode(0, 0))).toHaveTextContent("Cave Troll");
     expect(screen.getByTestId(dungeonMapTestid.mapArtifact(3, 0))).toHaveTextContent("Might Relic");
+    expect(screen.getByTestId(dungeonMapTestid.mapArtifact(6, 0))).toHaveTextContent("Boss Crown");
     expect(screen.queryByTestId(dungeonMapTestid.mapArtifact(0, 0))).not.toBeInTheDocument();
     expect(
       within(screen.getByTestId(dungeonMapTestid.mapNode(0, 0))).getByTestId(dungeonMapTestid.mapCurrent),
     ).toBeInTheDocument();
 
-    // Only the next row's nodes can be chosen.
-    for (const col of [0, 1, 2, 3, 4]) {
+    // Only the nodes the fight stood on leads to can be chosen: the next row's first three.
+    for (const col of [0, 1, 2]) {
       expect(screen.getByTestId(dungeonMapTestid.mapNode(1, col))).toBeEnabled();
     }
-    for (const [row, col] of [[0, 0], [0, 1], [2, 0], [3, 0]] as const) {
+    for (const [row, col] of [[0, 0], [0, 1], [1, 3], [1, 4], [2, 0], [3, 0], [4, 0], [6, 0]] as const) {
       expect(screen.getByTestId(dungeonMapTestid.mapNode(row, col))).toBeDisabled();
     }
     fireEvent.click(screen.getByTestId(dungeonMapTestid.mapNode(1, 2)));
@@ -311,23 +349,38 @@ describe("B27 the map shows the current act and only the next row goes", () => {
     expectHud();
   });
 
-  // B27
-  it("B27 past a beaten boss the next act shows, with no marker on the old one", () => {
+  // B27, R3583000
+  it("B27 R3583000 before the first step any node of the first row can be chosen", () => {
+    const { dungeon, act } = fakeDungeon(runWith({ phase: "map" }, { row: null, col: 0 }));
+    render(<RunScreen dungeon={dungeon} />);
+
+    expect(screen.queryByTestId(dungeonMapTestid.mapCurrent)).not.toBeInTheDocument();
+    for (const col of [0, 1]) expect(screen.getByTestId(dungeonMapTestid.mapNode(0, col))).toBeEnabled();
+    for (const col of [0, 1, 2, 3, 4]) {
+      expect(screen.getByTestId(dungeonMapTestid.mapNode(1, col))).toBeDisabled();
+    }
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.mapNode(0, 1)));
+    expect(act).toHaveBeenCalledWith({ type: "go", col: 1 });
+  });
+
+  // B27, R3583000
+  it("B27 R3583000 past a beaten boss the whole map stays, and the boss leads to every node of the next act", () => {
     const { dungeon, act } = fakeDungeon(runWith({ phase: "map" }, { row: 3, col: 0 }));
     render(<RunScreen dungeon={dungeon} />);
 
-    expect(screen.queryByTestId(dungeonMapTestid.mapRow(0))).not.toBeInTheDocument();
-    for (const row of [4, 5, 6]) expect(screen.getByTestId(dungeonMapTestid.mapRow(row))).toBeInTheDocument();
-    expect(screen.queryByTestId(dungeonMapTestid.mapCurrent)).not.toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.mapRow(0))).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId(dungeonMapTestid.mapNode(3, 0))).getByTestId(dungeonMapTestid.mapCurrent),
+    ).toBeInTheDocument();
     const ghost = screen.getByTestId(dungeonMapTestid.mapNode(4, 1));
     expect(ghost).toHaveTextContent("Ghost");
     expectIcon(ghost, "ghost");
     expect(ghost).toBeEnabled();
+    expect(screen.getByTestId(dungeonMapTestid.mapNode(4, 0))).toBeEnabled();
     const boss = screen.getByTestId(dungeonMapTestid.mapNode(6, 0));
     expect(boss).toHaveTextContent("Final boss");
     expectIcon(boss, "boss");
     expect(boss).toBeDisabled();
-    expect(screen.getByTestId(dungeonMapTestid.mapArtifact(6, 0))).toHaveTextContent("Boss Crown");
     expect(screen.getByTestId(dungeonMapTestid.mapNode(5, 0))).toBeDisabled();
     fireEvent.click(screen.getByTestId(dungeonMapTestid.mapNode(4, 0)));
     expect(act).toHaveBeenCalledWith({ type: "go", col: 0 });
@@ -370,6 +423,12 @@ describe("B28 the relic comes before the packs, and the pack keeps its count", (
     expect(screen.getByTestId(dungeonMapTestid.pack(1))).toHaveTextContent("Random");
     expect(screen.getByTestId(dungeonMapTestid.pack(2))).toHaveTextContent("Set: Core");
     expect(screen.getByTestId(dungeonMapTestid.pack(3))).toHaveTextContent("Type: Unit");
+    // #3588: each pack draws its kind's look, and the enemy's deck carries the beaten enemy's name.
+    expect(screen.getByTestId(dungeonMapTestid.packObject(0))).toHaveAttribute("data-pack", "dungeon-enemy");
+    expect(screen.getByTestId(dungeonMapTestid.packObject(1))).toHaveAttribute("data-pack", "dungeon-random");
+    expect(screen.getByTestId(dungeonMapTestid.packObject(2))).toHaveAttribute("data-pack", "Core");
+    expect(screen.getByTestId(dungeonMapTestid.packObject(3))).toHaveAttribute("data-pack", "dungeon-filter");
+    expect(screen.getByTestId(dungeonMapTestid.pack(0))).toHaveTextContent("Cave Troll");
     fireEvent.click(screen.getByTestId(dungeonMapTestid.pack(2)));
     expect(act).toHaveBeenCalledWith({ type: "openPack", index: 2 });
     expectHud();
@@ -388,25 +447,45 @@ describe("B28 the relic comes before the packs, and the pack keeps its count", (
     render(<RunScreen dungeon={tagged.dungeon} />);
     expect(screen.getByTestId(dungeonMapTestid.pack(0))).toHaveTextContent("Tag: Pack tag");
     expect(screen.getByTestId(dungeonMapTestid.pack(1))).toHaveTextContent("Rarity: Rare");
+    expect(screen.getByTestId(dungeonMapTestid.packObject(0))).toHaveAttribute("data-pack", "dungeon-filter");
+    expect(screen.getByTestId(dungeonMapTestid.packObject(1))).toHaveAttribute("data-pack", "dungeon-filter");
     fireEvent.click(screen.getByTestId(dungeonMapTestid.pack(1)));
     expect(tagged.act).toHaveBeenCalledWith({ type: "openPack", index: 1 });
   });
 
+  // #3588
+  it("#3588 on a boss node the enemy's deck wears the boss look with its name", () => {
+    const { dungeon, act } = fakeDungeon(runWith(packs(DEFAULT_PACKS), { row: 3, col: 0 }));
+    render(<RunScreen dungeon={dungeon} />);
+    expect(screen.getByTestId(dungeonMapTestid.packObject(0))).toHaveAttribute("data-pack", "dungeon-boss");
+    const first = within(screen.getByTestId(dungeonMapTestid.pack(0)));
+    expect(first.getByText("Mini Boss")).toBeInTheDocument();
+    expect(first.getByText("Boss")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.pack(0)));
+    expect(act).toHaveBeenCalledWith({ type: "openPack", index: 0 });
+  });
+
   // B28
   it("B28 the pack keeps exactly keep cards, and no Skip without the passive", () => {
+    // #3588: reduced motion shows the cards at once, past the sealed pack.
+    writeSettings({ reduceMotion: true });
     const { dungeon, act } = fakeDungeon(
       runWith({ phase: "pack", cards: ["core-001", "core-002", "core-003", "core-004"], keep: 2 }),
     );
     render(<RunScreen dungeon={dungeon} />);
     const keep = screen.getByTestId(dungeonMapTestid.packKeep);
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("0 of 2 kept");
     expect(keep).toBeDisabled();
     fireEvent.click(screen.getByTestId(dungeonMapTestid.packCard("core-001")));
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("1 of 2 kept");
     expect(keep).toBeDisabled();
     fireEvent.click(screen.getByTestId(dungeonMapTestid.packCard("core-003")));
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("2 of 2 kept");
     expect(keep).toBeEnabled();
     // Past keep, a third card does not join the keep.
     fireEvent.click(screen.getByTestId(dungeonMapTestid.packCard("core-002")));
     expect(screen.getByTestId(dungeonMapTestid.packCard("core-002"))).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("2 of 2 kept");
     fireEvent.click(keep);
     expect(act).toHaveBeenCalledWith({ type: "keep", cards: ["core-001", "core-003"] });
     expect(screen.queryByTestId(dungeonMapTestid.packSkip)).not.toBeInTheDocument();
@@ -414,6 +493,8 @@ describe("B28 the relic comes before the packs, and the pack keeps its count", (
 
   // B28
   it("B28 with a Skip passive the pack may be kept empty", () => {
+    // #3588: reduced motion shows the cards at once, past the sealed pack.
+    writeSettings({ reduceMotion: true });
     const { dungeon, act } = fakeDungeon(
       runWith(
         { phase: "pack", cards: ["core-001", "core-002", "core-003", "core-004"], keep: 2 },
@@ -423,6 +504,78 @@ describe("B28 the relic comes before the packs, and the pack keeps its count", (
     render(<RunScreen dungeon={dungeon} />);
     fireEvent.click(screen.getByTestId(dungeonMapTestid.packSkip));
     expect(act).toHaveBeenCalledWith({ type: "keep", cards: [] });
+  });
+
+  // #3588
+  it("#3588 the sealed pack tears open before its keep", () => {
+    vi.useFakeTimers();
+    const { dungeon } = fakeDungeon(
+      runWith({ phase: "pack", cards: ["core-001", "core-002", "core-003", "core-004"], keep: 2 }),
+    );
+    render(<RunScreen dungeon={dungeon} />);
+    expect(screen.getByTestId(dungeonMapTestid.packTear)).toHaveTextContent("Tap to open");
+    // No choice was made in this session (a refresh lands straight here): the neutral look.
+    expect(screen.getByTestId(dungeonMapTestid.packTearObject)).toHaveAttribute("data-pack", "dungeon-filter");
+    expect(screen.queryByTestId(dungeonMapTestid.packCard("core-001"))).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.packTear));
+    // Tearing: the pack is open neither sealed nor showing its cards yet.
+    expect(screen.getByTestId(dungeonMapTestid.packTear)).toBeInTheDocument();
+    expect(screen.queryByTestId(dungeonMapTestid.packCard("core-001"))).not.toBeInTheDocument();
+    flush(() => {
+      vi.advanceTimersByTime(PACK_TEAR_MS);
+    });
+    expect(screen.queryByTestId(dungeonMapTestid.packTear)).not.toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.packCard("core-001"))).toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("0 of 2 kept");
+  });
+
+  // #3588
+  it("#3588 the tear wears the chosen pack's look, then keeps exactly keep cards", () => {
+    vi.useFakeTimers();
+    const reward = fakeDungeon(runWith(packs(DEFAULT_PACKS), { row: 3, col: 0 }));
+    const { rerender } = render(<RunScreen dungeon={reward.dungeon} />);
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.pack(0)));
+    expect(reward.act).toHaveBeenCalledWith({ type: "openPack", index: 0 });
+
+    // The run answers with its pack phase: the sealed tear wears the boss pack's look and name.
+    const opened = fakeDungeon(
+      runWith({ phase: "pack", cards: ["core-001", "core-002", "core-003", "core-004"], keep: 2 }, { row: 3, col: 0 }),
+    );
+    rerender(<RunScreen dungeon={opened.dungeon} />);
+    const tear = screen.getByTestId(dungeonMapTestid.packTear);
+    expect(screen.getByTestId(dungeonMapTestid.packTearObject)).toHaveAttribute("data-pack", "dungeon-boss");
+    expect(tear).toHaveTextContent("Mini Boss");
+    expect(within(tear).getByText("Boss")).toBeInTheDocument();
+    expect(screen.queryByTestId(dungeonMapTestid.packCard("core-001"))).not.toBeInTheDocument();
+
+    // Tearing reveals the cards; the keep then works exactly as today.
+    fireEvent.click(tear);
+    flush(() => {
+      vi.advanceTimersByTime(PACK_TEAR_MS);
+    });
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("0 of 2 kept");
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.packCard("core-001")));
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.packCard("core-003")));
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("2 of 2 kept");
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.packKeep));
+    expect(opened.act).toHaveBeenCalledWith({ type: "keep", cards: ["core-001", "core-003"] });
+  });
+
+  // #3588
+  it("#3588 reduced motion and fx intensity off show the cards at once", () => {
+    const pack = (): RunPhase => ({ phase: "pack", cards: ["core-001", "core-002"], keep: 1 });
+    writeSettings({ reduceMotion: true });
+    render(<RunScreen dungeon={fakeDungeon(runWith(pack())).dungeon} />);
+    expect(screen.queryByTestId(dungeonMapTestid.packTear)).not.toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.packCard("core-001"))).toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.packCounter)).toHaveTextContent("0 of 1 kept");
+    cleanup();
+
+    __resetSettingsForTests();
+    setFxSettings({ intensity: "off" });
+    render(<RunScreen dungeon={fakeDungeon(runWith(pack())).dungeon} />);
+    expect(screen.queryByTestId(dungeonMapTestid.packTear)).not.toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.packCard("core-002"))).toBeInTheDocument();
   });
 });
 
@@ -572,11 +725,12 @@ describe("B30 the tiles send their actions under the always-on HUD", () => {
   });
 
   // B30
-  it("B30 the campfire heals, Radiants, buffs and removes the toggled cards", () => {
+  it("B30 the campfire offers max HP, Radiants, buffs and removes the toggled cards", () => {
     const { dungeon, act } = fakeDungeon(runWith({ phase: "campfire" }));
     render(<RunScreen dungeon={dungeon} />);
-    fireEvent.click(screen.getByTestId(dungeonMapTestid.campfireHeal));
-    expect(act).toHaveBeenCalledWith({ type: "heal" });
+    expect(screen.getByTestId(dungeonMapTestid.campfireMaxHp)).toHaveTextContent("Gain 5 max HP");
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.campfireMaxHp));
+    expect(act).toHaveBeenCalledWith({ type: "gainMaxHp" });
     fireEvent.click(screen.getByTestId(dungeonMapTestid.campfireRadiant(1)));
     expect(act).toHaveBeenCalledWith({ type: "makeRadiant", index: 1 });
     fireEvent.click(screen.getByTestId(dungeonMapTestid.campfireBuff(0)));
@@ -640,9 +794,9 @@ describe("B30 the tiles send their actions under the always-on HUD", () => {
     const { dungeon, act } = fakeDungeon(runWith({ phase: "event", id: "test-event" }));
     render(<RunScreen dungeon={dungeon} />);
     expect(screen.getByTestId(dungeonMapTestid.event)).toHaveTextContent("A stranger offers a deal.");
-    expect(screen.getByTestId(dungeonMapTestid.eventOption(0))).toHaveTextContent("Pay 5 Coins");
-    fireEvent.click(screen.getByTestId(dungeonMapTestid.eventOption(1)));
-    expect(act).toHaveBeenCalledWith({ type: "choose", index: 1 });
+    expect(screen.getByTestId(dungeonMapTestid.eventOption(0))).toHaveTextContent("Lose 5 max HP for 5 Coins");
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.eventOption(0)));
+    expect(act).toHaveBeenCalledWith({ type: "choose", index: 0 });
     expectHud();
   });
 
@@ -724,5 +878,149 @@ describe("B31 the run-over screen settles the run", () => {
     expect(screen.getByTestId(dungeonMapTestid.runOver)).toHaveTextContent("Defeat");
     expect(screen.getByTestId(dungeonMapTestid.extractedCards)).toHaveTextContent("No cards extracted.");
     expect(screen.getByTestId(dungeonMapTestid.extractedArtifacts)).toHaveTextContent("No relics extracted.");
+  });
+});
+
+describe("#3501 the run's panel", () => {
+  const FULL = {
+    artifacts: [
+      { id: "test-relic-might", level: 2 },
+      { id: "test-relic-skip", level: 1 },
+    ],
+    blessings: ["test-blessing-dawn"],
+    curses: ["test-curse-heavy"],
+  };
+
+  /** Renders the run on its map and opens the panel; returns it, scoped to its dialog. */
+  function openPanel(extra: Partial<RunState> = FULL, phase: RunPhase = { phase: "map" }): ReturnType<typeof within> {
+    render(<RunScreen dungeon={fakeDungeon(runWith(phase, extra)).dungeon} />);
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.yourRun));
+    return within(screen.getByRole("dialog", { name: "Your run" }));
+  }
+
+  /** Replaces the clipboard, which jsdom lacks, for the call. */
+  async function withClipboard(writeText: (text: string) => Promise<void>, body: () => Promise<void>): Promise<void> {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    try {
+      await body();
+    } finally {
+      Reflect.deleteProperty(navigator, "clipboard");
+    }
+  }
+
+  it("#3501 Your run lists every deck card with its marks, each relic, blessing and curse with its text, and the seed", () => {
+    const panel = openPanel();
+    DECK.forEach((card, index) => {
+      const face = panel.getByTestId(dungeonMapTestid.panelCard(index));
+      expect(face).toHaveAttribute("data-card", card.id);
+      // Only the Radiant card is dealt on the Radiant face.
+      expect(face.querySelector('[data-radiant-face="true"]') !== null).toBe(card.radiant);
+    });
+    expect(panel.getByTestId(dungeonMapTestid.panelCard(1))).toHaveTextContent("Buffs: 2");
+    expect(panel.getByTestId(dungeonMapTestid.panelCard(0))).not.toHaveTextContent("Buffs");
+    expect(panel.getByTestId(dungeonMapTestid.panelCard(2))).not.toHaveTextContent("Buffs");
+    expect(panel.getByRole("heading", { name: "Deck: 3" })).toBeInTheDocument();
+
+    const might = panel.getByTestId(dungeonMapTestid.panelArtifact(0));
+    expect(might).toHaveTextContent("Might Relic");
+    expect(might).toHaveTextContent("Level 2");
+    expect(might).toHaveTextContent("Gain 1 more Coin after each fight.");
+    const skip = panel.getByTestId(dungeonMapTestid.panelArtifact(1));
+    expect(skip).toHaveTextContent("Skip Relic");
+    expect(skip).toHaveTextContent("Level 1");
+    expect(skip).toHaveTextContent("A pack may be kept empty, for Coins.");
+    const blessing = panel.getByTestId(dungeonMapTestid.panelBlessing(0));
+    expect(blessing).toHaveTextContent("Blessing of Dawn");
+    expect(blessing).toHaveTextContent("Heal 3 after each fight.");
+    const curse = panel.getByTestId(dungeonMapTestid.panelCurse(0));
+    expect(curse).toHaveTextContent("Heavy Hands");
+    expect(curse).toHaveTextContent("Enemies start each fight with 5 more health.");
+    expect(curse).toHaveTextContent("Points: 2");
+    expect(panel.getByTestId(dungeonMapTestid.panelSeed)).toHaveTextContent("ABCDEF");
+  });
+
+  it("#3501 a run holding none says so, and a curse the content lacks shows its id", () => {
+    const empty = openPanel({ artifacts: [], blessings: [], curses: [] });
+    expect(empty.getByTestId(dungeonMapTestid.panelArtifacts)).toHaveTextContent("No relics");
+    expect(empty.getByTestId(dungeonMapTestid.panelBlessings)).toHaveTextContent("No blessings");
+    expect(empty.getByTestId(dungeonMapTestid.panelCurses)).toHaveTextContent("No curses");
+    cleanup();
+
+    const gone = openPanel({ curses: ["gone-curse"] });
+    expect(gone.getByTestId(dungeonMapTestid.panelCurses)).toHaveTextContent("gone-curse");
+  });
+
+  it("#3501 an empty deck says so instead of drawing an empty grid", () => {
+    const panel = openPanel({ deck: [] });
+    expect(panel.getByText("No cards yet.")).toBeInTheDocument();
+    expect(panel.queryByTestId(dungeonMapTestid.panelDeck)).not.toBeInTheDocument();
+    expect(panel.getByRole("heading", { name: "Deck: 0" })).toBeInTheDocument();
+  });
+
+  it("#3501 the panel takes focus on its ✕, Escape closes it and the focus returns to Your run", () => {
+    openPanel();
+    expect(screen.getByTestId(dungeonMapTestid.panelClose)).toHaveFocus();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.yourRun)).toHaveFocus();
+
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.yourRun));
+    expect(screen.getByRole("dialog", { name: "Your run" })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.panelClose));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("#3501 Copy seed writes the seed to the clipboard and says Copied", async () => {
+    const writeText = vi.fn(async (_text: string): Promise<void> => {});
+    await withClipboard(writeText, async () => {
+      const panel = openPanel();
+      const copy = panel.getByTestId(dungeonMapTestid.panelSeedCopy);
+      expect(copy).toHaveTextContent("Copy seed");
+      await flush(async () => {
+        fireEvent.click(copy);
+        await Promise.resolve();
+      });
+      await waitFor(() => {
+        expect(copy).toHaveTextContent("Copied");
+      });
+      expect(writeText).toHaveBeenCalledWith("ABCDEF");
+    });
+  });
+
+  it("#3501 a refused clipboard leaves the button as Copy seed", async () => {
+    const writeText = vi.fn(async (_text: string): Promise<void> => {
+      throw new Error("refused");
+    });
+    await withClipboard(writeText, async () => {
+      const panel = openPanel();
+      const copy = panel.getByTestId(dungeonMapTestid.panelSeedCopy);
+      await flush(async () => {
+        fireEvent.click(copy);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      expect(writeText).toHaveBeenCalledWith("ABCDEF");
+      expect(copy).toHaveTextContent("Copy seed");
+    });
+  });
+
+  it("#3501 the panel is on the run-over screen too", () => {
+    render(<RunScreen dungeon={fakeDungeon(runWith({ phase: "won" })).dungeon} />);
+    expect(screen.getByTestId(dungeonMapTestid.yourRun)).toBeInTheDocument();
+  });
+
+  it("#3501 the run-over screen shows the run's seed", () => {
+    render(<RunScreen dungeon={fakeDungeon(runWith({ phase: "dead" }, { seed: "QWERTY" })).dungeon} />);
+    expect(screen.getByTestId(dungeonMapTestid.endSeed)).toHaveTextContent("Seed: QWERTY");
+  });
+
+  it("#3501 at phone width the panel scrolls and nothing overflows sideways", () => {
+    // jsdom lays nothing out, so the sheet's rules are the proof: the panel never outgrows its screen, hides
+    // what runs past its side, and has no height of its own, so the scrim scrolls it; the deck's columns
+    // shrink to three at a phone's width.
+    const sheet = readSheet("src/dungeon/map/run-panel.css");
+    expect(sheet).toContain("width: min(720px, 100%)");
+    expect(sheet).toContain("overflow-x: hidden");
+    expect(sheet).toContain("repeat(auto-fill, minmax(96px, 1fr))");
+    expect(sheet).not.toContain("max-height");
   });
 });

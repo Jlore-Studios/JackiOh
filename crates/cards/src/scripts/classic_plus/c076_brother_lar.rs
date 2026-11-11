@@ -45,11 +45,11 @@ mod tests {
     const LAR: &str = "classicplus-076";
     const PING: &str = "classicplus-076-1";
     const FILLER: &str = "core-005";
-    const MENACE: &str = "core-019"; // 9/9 Taunt
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
     const TIMMY: &str = "core-011";
-    const HIT_JOB: &str = "core-016"; // (3) "Destroy target Unit."
-    const COLLATERAL: &str = "core-034"; // (4) "Exile target permanent and a random card from your opponent's deck."
-    const FLOOD: &str = "core-017"; // (4) "Bounce all Units."
+    const HIT_JOB: &str = "core-016"; // Hit Job: "Destroy target Unit."
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: "Exile target permanent and a random card from your opponent's deck."
+    const FLOOD: &str = "core-017"; // Flood: "Bounce all Units."
 
     const P1: PlayerId = PlayerId::P1;
 

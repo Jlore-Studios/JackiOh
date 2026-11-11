@@ -82,7 +82,7 @@ mod tests {
     const PRIME: &str = "meditative-045-1";
     const CNKY: &str = "meditative-038";
     const VANILLA: &str = "core-008";
-    const HIT_JOB: &str = "core-016"; // Destroy a Unit.
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
 
     /// The cards a Nerf changed. A card of a hidden pile the scope's filters left out is cued with
     /// no change (R440), so a cue is not a Nerf.

@@ -7,7 +7,9 @@
 // It opens with its date, then a bar chart of how far the owner's PC's two local jobs have played (the
 // learn lane's export of `LEARN_GAMES` with its shard, and gather's games of its patch, from the PC's
 // heartbeat: `progress`), then a headline (what runs, what waits and on what, which subscriptions can
-// start work), then draws the same facts as `/harness status` (`status.py`) for a glance: what each
+// start work), then the excess compute (`ExcessSection`, #3659: the lanes spare, so whether people
+// should open more issues, and of which difficulty), then draws the same facts as `/harness status`
+// (`status.py`) for a glance: what each
 // lane is doing and a timeline of the runs going now, the PC's jobs among them; every subscription
 // as a box with what it is doing or why it
 // is not, and its usage, always; every subscription's lanes, held and open, Squishy's too, with the

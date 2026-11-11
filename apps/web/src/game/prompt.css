@@ -886,7 +886,9 @@
      and a sheet of options covered the card that had just been tapped up to be read, and the rest
      of the hand. With drag to play off the full picker is the way to choose, so it stays. An
      engine prompt (`data-prompt-source="engine"`) keeps its sheet either way. */
-  .game:has(> .board[data-drag="on"]) .prompt[data-prompt-source="play"]:is(
+  /* #3633: Game's `data-drag` on its root, where this read `.game:has(> .board[data-drag="on"])`; the doubled
+     attribute keeps that specificity. */
+  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:is(
       [data-prompt-kind="zone"],
       [data-prompt-kind="target"],
       [data-prompt-kind="tribute"]
@@ -905,7 +907,7 @@
   /* With no options in the bar, a new player did not know to tap the board: a small line under the
      title says where the answers are. Title and hint share the height of the buttons beside them,
      so the bar is no taller for it. */
-  .game:has(> .board[data-drag="on"]) .prompt[data-prompt-source="play"]:is(
+  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:is(
       [data-prompt-kind="zone"],
       [data-prompt-kind="target"],
       [data-prompt-kind="tribute"]
@@ -924,7 +926,7 @@
     white-space: nowrap;
   }
 
-  .game:has(> .board[data-drag="on"]) .prompt[data-prompt-source="play"]:is(
+  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:is(
       [data-prompt-kind="zone"],
       [data-prompt-kind="target"],
       [data-prompt-kind="tribute"]
@@ -933,7 +935,7 @@
     display: none;
   }
 
-  .game:has(> .board[data-drag="on"]) .prompt[data-prompt-source="play"]:is(
+  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:is(
       [data-prompt-kind="zone"],
       [data-prompt-kind="target"],
       [data-prompt-kind="tribute"]
@@ -947,7 +949,7 @@
     white-space: nowrap;
   }
 
-  .game:has(> .board[data-drag="on"]) .prompt[data-prompt-source="play"]:is(
+  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:is(
       [data-prompt-kind="zone"],
       [data-prompt-kind="target"],
       [data-prompt-kind="tribute"]
@@ -961,7 +963,7 @@
     border-top: 0;
   }
 
-  .game:has(> .board[data-drag="on"]) .prompt[data-prompt-source="play"]:is(
+  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:is(
       [data-prompt-kind="zone"],
       [data-prompt-kind="target"],
       [data-prompt-kind="tribute"]
@@ -1076,7 +1078,8 @@
 /* R514: while a cell prompt is open (C+ #62), the zones it offers glow green as a zone pick's do
    (`highlightFor` lights every open prompt's options) and wear a crosshair over it, so they read as
    points to pick rather than places to play. Static: nothing moves, under reduced motion or not. */
-.game:has([data-prompt-kind="cell"]) .zone[data-glow="ready"]::after {
+/* #3633: an open cell pick marks the game (Prompt.tsx, `PROMPT_CELL_MARK`), which a `.game:has()` read. */
+.game[data-prompt-cell] .zone[data-glow="ready"]::after {
   content: "";
   position: absolute;
   inset: 0;

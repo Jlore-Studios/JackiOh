@@ -98,8 +98,13 @@ pub struct DecideJob {
 impl DecideJob {
     /// The decision (`bots::decide`), under the catalog the caller runs it in (R388, R767000).
     /// `should_stop` is the host's wall-clock cap, built from `deadline_ms` and its clock; with none the
-    /// search ends at the strength's budget.
-    pub fn run(&self, should_stop: Option<&dyn Fn() -> bool>) -> BotChoice {
+    /// search ends at the strength's budget. `wrap_up` is its earlier stop for the beam alone, at
+    /// `wrap_up_after_ms` of `deadline_ms` (R3498000); none with no clock.
+    pub fn run(
+        &self,
+        should_stop: Option<&dyn Fn() -> bool>,
+        wrap_up: Option<&dyn Fn() -> bool>,
+    ) -> BotChoice {
         decide(
             &BotAsk {
                 state: &self.game,
@@ -112,6 +117,7 @@ impl DecideJob {
                 ai_cursor: self.ai_cursor,
             },
             should_stop,
+            wrap_up,
         )
     }
 }

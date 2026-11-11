@@ -109,13 +109,13 @@ mod tests {
 
     const AUCTION: &str = "classic-038";
     const COUNTER: &str = "classic-017"; // Counterspell: counters the opponent's Spell.
-    const FILLER: &str = "core-039"; // (0) Spell Recycling Initiative: exiles itself; its effect waits for the turn's end.
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2, heal 2.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const TIMMY: &str = "core-011"; // (1) 3/3.
-    const MENACE: &str = "core-019"; // 9/9.
-    const HINDER: &str = "core-021"; // (0) cast on draw.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
+    const FILLER: &str = "core-039"; // Recycling Initiative: exiles itself; its effect waits for the turn's end
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2, heal 2
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const TIMMY: &str = "core-011"; // Tempo Timmy
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const HINDER: &str = "core-021"; // Hinder: cast on draw
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -154,10 +154,6 @@ mod tests {
         }
     }
 
-    fn count(events: &[GameEvent], type_: &str) -> usize {
-        events.iter().map(js).filter(|event| event["type"] == type_).count()
-    }
-
     fn draws_by(events: &[GameEvent], player: &str) -> usize {
         events
             .iter()
@@ -190,7 +186,7 @@ mod tests {
                     assert_eq!(seen(&s), vec![("in a turn".to_string(), 1, None)], "radiant {radiant}");
                     assert!(crate::preview_seen(&s, P2, &auction).is_empty(), "radiant {radiant}");
                     play_fillers(&mut s, if radiant { 1 } else { 2 }, P1);
-                    assert_eq!(count(s.events(), "trapFired"), 1, "radiant {radiant}");
+                    assert_eq!(s.count("trapFired"), 1, "radiant {radiant}");
                     assert!(seen(&s).is_empty(), "radiant {radiant}: spent once active");
                 }
             }
@@ -202,7 +198,7 @@ mod tests {
 
                 play_fillers(&mut s, 2, P1);
 
-                assert_eq!(count(s.events(), "trapFired"), 0);
+                assert_eq!(s.count("trapFired"), 0);
                 assert_eq!(s.card(AUCTION).face_up, Some(false));
                 assert_eq!(draws_by(s.events(), "p1"), 0);
             }
@@ -262,7 +258,7 @@ mod tests {
 
                 play_fillers(&mut s, 4, P2);
 
-                assert_eq!(count(s.events(), "trapFired"), 0);
+                assert_eq!(s.count("trapFired"), 0);
                 assert_eq!(s.card(AUCTION).face_up, Some(false));
                 assert_eq!(draws_by(s.events(), "p1"), 0);
 
@@ -291,13 +287,13 @@ mod tests {
                 // Stockpile is the 2nd play; its first draw casts Hinder, which is no play (through
                 // v0.5.2 it was, R70, and the 3rd).
                 s.play(STOCKPILE, json!({}));
-                assert_eq!(count(s.events(), "trapFired"), 0);
+                assert_eq!(s.count("trapFired"), 0);
                 assert_eq!(s.card(AUCTION).face_up, Some(false));
                 assert_eq!(s.state().players[P1].turn_log.cards_played, 2);
 
                 let vanilla = s.hand(P1).into_iter().find(|card| card.def_id == VANILLA).map(|card| card.id).expect("a Vanilla");
                 s.play(&vanilla, json!({ "zone": 1 }));
-                assert_eq!(count(s.events(), "trapFired"), 1);
+                assert_eq!(s.count("trapFired"), 1);
                 assert!(matches_object(&zone_of(&s, AUCTION), &json!({ "row": "units" })));
             }
 
@@ -336,7 +332,7 @@ mod tests {
                 play_fillers(&mut s, 2, P1);
                 s.play(STOCKPILE, json!({}));
 
-                assert_eq!(count(s.events(), "countered"), 1);
+                assert_eq!(s.count("countered"), 1);
                 assert_eq!(s.card(AUCTION).face_up, Some(false));
             }
 
@@ -350,7 +346,7 @@ mod tests {
                 s.end_turn();
                 play_fillers(&mut s, 1, P1);
 
-                assert_eq!(count(s.events(), "trapFired"), 0);
+                assert_eq!(s.count("trapFired"), 0);
             }
 
             #[test]
@@ -401,7 +397,7 @@ mod tests {
                 play_fillers(&mut s, 1, P1);
 
                 assert!(matches_object(&zone_of(&s, AUCTION), &json!({ "z": "field", "row": "units", "lane": 2 })));
-                assert_eq!(count(s.events(), "animated"), 1);
+                assert_eq!(s.count("animated"), 1);
             }
 
             #[test]

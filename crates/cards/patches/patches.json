@@ -23108,7 +23108,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.13",
+    "version": "v0.5.12aa",
     "date": "2026-11-09",
     "title": "Patch: every Meditative+ and Training Grounds Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
     "source": "#3397",
@@ -23132,7 +23132,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.13b",
+    "version": "v0.5.12ab",
     "date": "2026-11-09",
     "title": "Patch: every Stinkyscape (cards 91 to 178 and its tokens) card drawn as what it is: a scene of its own for each, richer the rarer",
     "source": "#3403",
@@ -23156,7 +23156,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.13c",
+    "version": "v0.5.12ac",
     "date": "2026-11-09",
     "title": "Patch: every Meditative Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
     "source": "#3404",
@@ -23180,7 +23180,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.13d",
+    "version": "v0.5.12ad",
     "date": "2026-11-09",
     "title": "Patch: every Core Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
     "source": "#3398",
@@ -23204,7 +23204,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.13e",
+    "version": "v0.5.12ae",
     "date": "2026-11-09",
     "title": "Patch: audit the codebase for dead code, duplicates and zombie routes, 2026-11-08",
     "source": "#3423",
@@ -23228,7 +23228,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.13f",
+    "version": "v0.5.12af",
     "date": "2026-11-09",
     "title": "Patch: every Stinkyscape (cards 91 to 178 and its tokens) Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
     "source": "#3406",
@@ -23245,6 +23245,134 @@
     },
     "commits": [
       "a56de72f3768ef49d53234a09b0a35b1e63104b0"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12ag",
+    "date": "2026-11-09",
+    "title": "Patch: every Stinkyscape (cards 1 to 90) card drawn as what it is: a scene of its own for each, richer the rarer",
+    "source": "#3391",
+    "notes": "Part of #3330, on #3331's art bible, scene kits and detail floor. Each of the 64 Stinkyscape cards in #3391's table (cards 1 to 90 but the Starship Pieces, which #3333 draws, and Olivian Expanse, #3338's) draws a scene recipe of its own from its brief, base and Radiant, in the set's deep space (stinkyscapeRecipes.ts, R3391000): Arg Arg Defender's proof redrawn to its brief and 63 new. The scene kit gains a seventh kind, craft (ships, drones and vehicles), and the parts the briefs name in every kind; the figure kit gains a pose, heads, headgear, outfits and held items for the set's people; a placement may turn a pointing part (a beam, a meteor), opt-in, so every other recipe draws byte for byte as before; where Core's pass (R3392000) had already drawn a part a brief names, the card wears Core's. A Unit draws its character, a person from the figure kit or its ship, and its crew or squad stand as R3390000's further figures. Each card clears its rarity's floor and leaves the detail floor's short list (R3331001), the median element count rising from Common to Mythic, and each Mythic places a part no other card does. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Stinkyscape's cards drawn as scenes",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Stinkyscape card from Freeze Ray to Spice now shows a scene of its own: its people or ships, its station or planet and its moment, more detailed the rarer the card.",
+        "The Starship Pieces and Olivian Expanse keep their pictures for now; their own patches redraw them."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "739619602a615e944acaa658d9b9c31a4526b77d"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12ah",
+    "date": "2026-11-10",
+    "title": "Patch: every Classic card drawn as what it is: a scene of its own for each, richer the rarer",
+    "source": "#3352",
+    "notes": "Classic's picture pass (#3330, #3331's foundation). Every Classic entry but Corpse Plantation, #3331's proof, the Glitch included, draws from a scene recipe of its own, from a brief per card, in Classic's temple-stone look, base and Radiant (R3352000): a Common one clear subject in a simple setting, a Rare its props, an Epic a scene with a foreground, a middle and a background, a Legendary or Mythic every layer. Each person Unit is a figure dressed as who it is, six Units that are no person are drawn as a creature of the scene kit (the tortoise, the slime, the shrimp, the crawler, the warboar, the worm-maw), a scene stands its other people as extra figures, In Too Deep marks the placements its props beat moves, and the figure kit and the scene kit grow by the parts the briefs name. All 89 measured entries clear their rarity's detail floor and leave the short list, whose cap falls from 157 to 68 (R3331001). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every Classic card redrawn as a scene",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Classic card now shows a picture of its own, composed as a whole scene and more detailed the rarer the card: its Units as the characters they are, its Spells as real places and moments."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "efe8cdab2ebe80c92b15d04a80678eb5a60d6c53"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12ai",
+    "date": "2026-11-10",
+    "title": "Patch: every Classic Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
+    "source": "#3388",
+    "notes": "Classic's Alt art pass (#3330, on #3352's scenes and #3331's Corpse Plantation proof). Every Classic card offered Alt art, 50 of them, now draws an alt scene recipe of its own from a brief per card (R3388000): its subject restaged in another place, time or moment, under a sky sharing no colour with its normal picture's and a new camera (a close-up, a wide or distant view, or one from above), where Alt art had redrawn the normal scene from another seed and changed as little as 13% of it. A figure keeps the normal picture's person, Felinor Feelings, Ancient Acquisition, Nature Titan, Common Resources and Pile On their people; Corpse Plantation's Alt art is the plantation at harvest noon, its normal proof scene unchanged. Every Alt art level draws the one alt picture, base and Radiant; each clears its rarity's detail floor and the byte ceiling, and in a real browser changes at least 60% of the normal window's sampled points (ALT_PICTURE_CHANGE_MIN). Repaints keep the normal recipe. The scene kit gains a frog and a shark. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every Classic Alt art restaged",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Classic card's Alt art now shows its subject somewhere else, a new place, time or moment, clearly apart from its normal art."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "e8580b25bda38b9729a6acb6d85f788edaef2c5b"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12aj",
+    "date": "2026-11-10",
+    "title": "Patch: follow-up to #3464 from the after-merge spot-check",
+    "source": "#3613",
+    "notes": "The after-merge spot-check of #3464 (#3613). ART_DETAIL_SHORT_MAX, the cap on the detail floor's short list (R3331001), falls from 40 to 10, the list's length, and artRichness.test.ts now holds the list to exactly the cap: #3391 had left the list at 99 under a cap of 129, and #3464 took Classic's 89 off and wrote 40, 129 less 89. The shipped v0.5.13h note's cap, 157 to 68, should read 129 to 10. Under apps/web/src/cards/ (R2529000) only that test constant changes: how cards look and play is unchanged.",
+    "player": {
+      "title": "Card art check corrected",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A check that holds card art to its level of detail was corrected. Nothing about how cards look or play changes."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "92c0696b2174bd6fb03998af5d9b3390eefbabe5"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12ak",
+    "date": "2026-11-10",
+    "title": "Patch: quasi-3D models for the Mythics: each Mythic a diorama of its own, turned by a drag in inspect, with an idle loop of its own and its takeover flown through it",
+    "source": "#3350",
+    "notes": "How cards look only: nothing plays differently. Every Mythic card and every token printed Mythic (50 cards) draws a diorama of its own where a face draws depth planes (R3344000): its still picture cut, by a file written for that card, into five to eight depth slices (DIORAMA_SLICES_MIN, DIORAMA_SLICES_MAX), some bent about one axis to read as a curved surface (DIORAMA_BEND_MAX_DEG), two or more on an idle loop written for the card in transform and opacity alone (Zephrys's gusts circling, Dice of Doom's die turning, Alteran Reach's lights coming on along its path, Ceaseless Void's sparks falling at every depth). A slice draws only the picture's own pieces, so no colour, text or byte the picture lacks (R2725004, ART_DETAIL_MAX_BYTES). In inspect, the hover preview, the Collection and the full-screen view a diorama turns up to DIORAMA_TURN_MAX_DEG, in hand CARD_TILT_MAX_DEG; its loops run inside the motion slots (R3340000), in hand, inspect and on the board, where a moving Mythic Unit draws every slice in its window; the full-screen view draws the slices, and a Mythic's takeover flies through them (R3345000). Alt art and the restyles draw no diorama, and reduced motion, the system's setting and the fx intensity off draw the flat picture, still. R3350000.",
+    "player": {
+      "title": "Mythic dioramas",
+      "new": [
+        "Every Mythic card, and every token printed Mythic, is now a small 3D model of its picture: a diorama of five to eight layers made for that card, some of them curved.",
+        "Drag a Mythic in inspect, or move the pointer over it in the preview or the Collection, and it turns up to 25 degrees each way, its layers sliding past each other.",
+        "On a phone, drag it in inspect, or tilt the phone once Tilt with my phone is on.",
+        "Each diorama has an animation of its own: Zephrys's wind circling, Dice of Doom's die turning, Alteran Reach's lights coming on along its path, Ceaseless Void's falling sparks.",
+        "The animation plays in your hand, in inspect and on the board.",
+        "A Mythic's full-screen view shows its diorama, and its takeover flies the camera through it."
+      ],
+      "balance": [],
+      "changes": [
+        "Alt art keeps its own picture, and Reduce motion, your system's reduced-motion setting and effects intensity Off show the flat picture, standing still."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "48f21c55aa77b723f0805ce5210399fea40e926c"
     ],
     "reconstructed": false,
     "tier": "micro",

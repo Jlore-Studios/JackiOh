@@ -48,6 +48,9 @@ const UNION_ORDER: SfxId[] = [
   "starshipFlak", "starshipLauncher", "starshipRam", "starshipWreck",
   // R3400001: the signatures of Meditative+'s and Training Grounds' Legendaries and Mythics.
   "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
+  // R3402001: the ten Core signatures.
+  "silasScratch", "crucibleChoir", "hatchWeld", "pocketZip", "stadiumCheer", "jackpotReels", "pawnWaltz",
+  "wishWind", "heroicFanfare", "forgeAnvil",
   // R3407001: the signatures of Stinkyscape's signature cards.
   "ballotBeep", "lullabySigh", "compactTut", "glitchDrop", "harpGliss", "markerThunder", "stampTrill", "tillRattle",
   "gavelSlam", "dockingChime", "keyboardPing", "synthSnap", "blobDrum", "warpSparkle", "tearChoir", "cackleThunder",
@@ -189,6 +192,17 @@ const DURATION_MS: Record<SfxId, number> = {
   diceGong: 1600,
   timberLash: 1200,
   pencilArpeggio: 1400,
+  // R3402001.
+  silasScratch: 1250,
+  crucibleChoir: 1170,
+  hatchWeld: 1550,
+  pocketZip: 1170,
+  stadiumCheer: 1550,
+  jackpotReels: 1190,
+  pawnWaltz: 2500,
+  wishWind: 1900,
+  heroicFanfare: 2500,
+  forgeAnvil: 1900,
   // R3407001: each a fixed length, its real upper bound.
   ballotBeep: 1300,
   lullabySigh: 1500,

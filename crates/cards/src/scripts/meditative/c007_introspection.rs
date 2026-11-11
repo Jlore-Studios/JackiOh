@@ -99,11 +99,11 @@ mod tests {
     // A plain 14/14 with no text: Midrange Menace heals itself to full at the same end of turn, which
     // would hide the heal.
     const GENN: &str = "classic-086";
-    const FODDER: &str = "core-015"; // (1) 1/1 Unit.
-    const FILLER: &str = "core-005"; // (1) Spell.
-    const VANILLA: &str = "core-008"; // (1) Unit.
-    const CHEAP: &str = "core-010"; // (0) Spell.
-    const DIVIDEND: &str = "core-024"; // (X) Spell.
+    const FODDER: &str = "core-015"; // Me and Mr Token
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const CHEAP: &str = "core-010"; // Rapid Replenish: a Spell
+    const DIVIDEND: &str = "core-024"; // Efficiency Dividend: a Spell
 
     /// The `costMod`s of p1's hand, in hand order.
     fn mods(s: &Scenario) -> Vec<i32> {

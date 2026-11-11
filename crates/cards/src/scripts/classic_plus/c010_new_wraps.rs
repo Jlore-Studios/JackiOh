@@ -47,13 +47,13 @@ mod tests {
     use crate::scenario;
 
     const WRAPS: &str = "classicplus-010";
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const DEFENDER: &str = "core-003"; // (1) 1/1 Taunt, Divine Shield, Reborn.
-    const MR_TOKEN: &str = "core-015"; // (1) 1/1, Cry: summon a Rush Token.
-    const HIT_JOB: &str = "core-016"; // (3) Destroy target Unit.
-    const FLOOD: &str = "core-017"; // (4) Bounce all Units.
-    const SILENCE: &str = "classicplus-009"; // (0) Vanilla a Unit.
-    const SURGERY: &str = "core-063"; // (1) +3/+3 and 1 random keyword.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const DEFENDER: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const FLOOD: &str = "core-017"; // Flood: Bounce all Units.
+    const SILENCE: &str = "classicplus-009"; // Silence: Vanilla a Unit.
+    const SURGERY: &str = "core-063"; // Plastic Surgery: +attack/+health and 1 random keyword
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
 
@@ -68,10 +68,6 @@ mod tests {
 
     fn reborn_count(s: &Scenario, id: &str) -> usize {
         s.stats(id).keywords.iter().filter(|k| k.kind() == KeywordKind::Reborn).count()
-    }
-
-    fn count(s: &Scenario, type_: &str) -> usize {
-        s.events().iter().filter(|event| event.event_type().as_str() == type_).count()
     }
 
     #[test]
@@ -225,7 +221,7 @@ mod tests {
             s.expect_stats(&unit, json!({ "attack": 2 + 3, "maxHealth": 2 + 3 }));
             assert_eq!(reborn_count(&s, &unit.id), 1);
             s.expect_events(json!(["keywordGranted", "radiantSet"]));
-            assert_eq!(count(&s, "summoned"), 0);
+            assert_eq!(s.count("summoned"), 0);
         }
 
         #[test]

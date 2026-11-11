@@ -57,14 +57,14 @@ mod tests {
 
     const STORM: &str = "classicplus-032-3";
     const WHIRLWIND: &str = "classicplus-021";
-    const MENACE: &str = "core-019"; // 9/9 Taunt
-    const TIMMY: &str = "core-011"; // 3/3
-    const JILLIAX: &str = "core-056"; // 3/2, Divine Shield
-    const DEFENDER: &str = "core-003"; // 1/1, Divine Shield, Reborn
-    const SEVEN: &str = "core-025"; // 7/7, Armor 7
-    const UNBREAKABLE: &str = "classic-041"; // 3/3, Indestructible
-    const SOLARIUS: &str = "classicplus-038"; // 3/2, Spell Damage +2
-    const HOGAR: &str = "classicplus-028"; // 3/4 Taunt, Reborn; Death: heal your hero 3
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const TIMMY: &str = "core-011"; // Tempo Timmy
+    const JILLIAX: &str = "core-056"; // Jilliax: Divine Shield
+    const DEFENDER: &str = "core-003"; // Right-house defender: Divine Shield, Reborn
+    const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const UNBREAKABLE: &str = "classic-041"; // State of the Game: Indestructible
+    const SOLARIUS: &str = "classicplus-038"; // Solarius: Spell Damage +2
+    const HOGAR: &str = "classicplus-028"; // Nuestro hogar, nuestras tumbas: Taunt, Reborn; Death: heal your hero 3
     const FILLER: &str = "core-005";
 
     /// A 3/50 Tempo Timmy: it outlives any storm, so its hits count the rounds.

@@ -115,17 +115,17 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const EXILE: &str = "classic-010";
-    const TIMMY: &str = "core-011"; // (1) Unit 3/3.
-    const TOKEN_MAN: &str = "core-015"; // (1) Unit, "Cry: Summon a Rush Token."
-    const POINTMASTER: &str = "core-020"; // (2) Unit 7/1.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const STOCKPILE: &str = "core-005"; // (1) Spell.
-    const BEAR: &str = "core-060"; // (1) Trap.
-    const HINDER: &str = "core-021"; // (0) Spell, cast on draw.
-    const SLIME: &str = "classic-027"; // (0) Unit 1/1.
-    const CHALICE: &str = "classic-087"; // (X) Field Spell, Plague Chalice.
-    const ROCK: &str = "core-066"; // (4) Unit 10/10, Tribute 1, Indestructible.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const TOKEN_MAN: &str = "core-015"; // Me and Mr Token: "Cry: Summon a Rush Token."
+    const POINTMASTER: &str = "stand-in (2) 6/1 Rush, First Strike R12/2 Rush, First Strike, Divine Shield";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell
+    const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
+    const HINDER: &str = "core-021"; // Hinder: a Spell, cast on draw
+    const SLIME: &str = "classic-027"; // Pestilent Slime
+    const CHALICE: &str = "classic-087"; // Plague Chalice: a Field Spell, Plague Chalice
+    const ROCK: &str = "core-066"; // The Rock: Tribute 1, Indestructible
 
     fn armed(radiant_face: bool, lane: i32) -> Value {
         json!({ "def": EXILE, "radiant": radiant_face, "faceUp": false, "lane": lane })
@@ -139,10 +139,6 @@ mod tests {
             "p1": merged(json!({ "hand": [VANILLA], "backrow": [armed(radiant_face, 2)], "library": [VANILLA, VANILLA] }), p1),
             "p2": merged(json!({ "hand": [TIMMY, POINTMASTER, STOCKPILE], "library": [VANILLA, VANILLA, VANILLA] }), p2),
         }))
-    }
-
-    fn count(events: &[GameEvent], kind: GameEventType) -> usize {
-        events.iter().filter(|event| event.event_type() == kind).count()
     }
 
     use crate::js;
@@ -183,8 +179,8 @@ mod tests {
 
             s.expect_in_zone(&timmy, "exile");
             assert!(s.unit(P2, 1).is_none());
-            assert_eq!(count(s.last_events(), GameEventType::CardPlayed), 0);
-            assert_eq!(count(s.last_events(), GameEventType::Summoned), 0);
+            assert_eq!(s.last_count(GameEventType::CardPlayed), 0);
+            assert_eq!(s.last_count(GameEventType::Summoned), 0);
             s.expect_events(json!(["cardAnnounced", "trapFired", "countered", "exiled"]));
             assert!(!s.pile(P2, "graveyard").iter().any(|card| card.id == timmy.id));
         }
@@ -198,7 +194,7 @@ mod tests {
             s.play(TOKEN_MAN, json!({ "zone": 1 }));
 
             assert!(s.unit(P2, 2).is_none());
-            assert_eq!(count(s.last_events(), GameEventType::Summoned), 0);
+            assert_eq!(s.last_count(GameEventType::Summoned), 0);
             assert_eq!(s.state().players.p2.turn_log.cards_played, played);
             assert_eq!(s.state().counters.played, game);
             s.expect_mana(P2, 3);
@@ -212,7 +208,7 @@ mod tests {
             s.play(&spell, json!({}));
 
             s.expect_in_zone(&spell, "exile");
-            assert_eq!(count(s.last_events(), GameEventType::Drawn), 0);
+            assert_eq!(s.last_count(GameEventType::Drawn), 0);
         }
 
         #[test]
@@ -246,7 +242,7 @@ mod tests {
             s.play(MENACE, json!({ "zone": 1 }));
 
             s.expect_in_zone(MENACE, "field");
-            assert_eq!(count(s.events(), GameEventType::Countered), 0);
+            assert_eq!(s.count(GameEventType::Countered), 0);
             assert_eq!(s.backrow(P1, 2).and_then(|card| card.face_up), Some(false));
         }
 
@@ -318,7 +314,7 @@ mod tests {
 
             s.play("core-043", json!({ "zone": 1 }));
 
-            assert_eq!(count(s.events(), GameEventType::Countered), 0);
+            assert_eq!(s.count(GameEventType::Countered), 0);
         }
 
         #[test]
@@ -465,7 +461,7 @@ mod tests {
             step_param(s.card_mut(EXILE), "threshold", -1);
 
             s.play(MENACE, json!({ "zone": 2 }));
-            assert_eq!(count(s.events(), GameEventType::Countered), 0);
+            assert_eq!(s.count(GameEventType::Countered), 0);
             s.play(TIMMY, json!({ "zone": 3 }));
 
             s.expect_in_zone(TIMMY, "exile");

@@ -40,8 +40,8 @@ mod tests {
 
     const MAYOR: &str = "meditative-086";
     const FILLER: &str = "core-005";
-    const BURN: &str = "classic-036"; // (0) Spell: deal 2 damage to any unit or hero.
-    const GRUNT: &str = "core-011"; // A plain Unit for the board.
+    const BURN: &str = "classic-036"; // Burn: deal 2 damage to any unit or hero
+    const GRUNT: &str = "core-011"; // Tempo Timmy: A plain Unit for the board.
 
     mod m86_mayor_medinamogger {
         use super::*;

@@ -19,7 +19,8 @@
 // and a Mythic's takeover keeps only its own look, centred on the screen and ending
 // FX_SIGNATURE_TAKEOVER_TAIL_MS after its entry, with no shared rings or shake, so the whole cast fits the
 // Mythic Spell's ceiling (R3332000). R3389000: In Too Deep's takeover is its own, "abyss": a spiral shaft
-// plunging into violet dark.
+// plunging into violet dark. R3402000: "rotunda" and "crystalForge" join the own looks, "pawn" turns indigo, and
+// the art each own look draws is takeoverArt.ts's.
 // R3407000: a look of `TAKEOVER_ART_LOOKS` also draws its card's own picture filling the screen behind the
 // sweep (`takeoverArtOf`, the cue's `art`), the picture the card's face shows; every other look draws none.
 
@@ -27,6 +28,7 @@ import { isStinkyscapeArt } from "../cards/art/stinkyscape.ts";
 import { stinkyscapeArtUri } from "../cards/art/svg.ts";
 import { HIDDEN_ID, leadMs, type AnimationEntry } from "../game/animations.ts";
 import { ART_PLANES, artPlaneBackground } from "../cards/art/pictures.ts";
+import { dioramaOf, dioramaSliceBackground } from "../cards/art/dioramas/index.ts";
 import { signatureFaceOf } from "../cards/signatureFaces.ts";
 import { sideOf, testid } from "../game/contract.ts";
 import { CATALOG } from "../wire/cards.ts";
@@ -35,11 +37,27 @@ import { entranceKeyOf } from "./cardFx.ts";
 import { FX_CARD_TABLE, isSignature, type FxCardEntry } from "./cards/tables.ts";
 import { FX_CENTER, FX_LEGENDARY_TRAUMA, FX_SIGNATURE_TAKEOVER_TAIL_MS, FX_SLAM_AT, FX_TAKEOVER_TAIL_MS, FX_TAKEOVER_TRAUMA } from "./constants.ts";
 import { entranceEvent } from "./entrances.ts";
-import type { FxAnchor, FxCue, FxPlanEnv, FxTakeoverCue, FxTint, TakeoverLook } from "./types.ts";
+import type { FxAnchor, FxCue, FxPlanEnv, FxTakeoverCue, FxTakeoverStage, FxTint, TakeoverLook } from "./types.ts";
+
+/**
+ * R3345000: the card's picture on a takeover's stage: its depth planes, its name and its hand. R3350000: a Mythic with a
+ * diorama flies through its slices instead, each still (the takeover is the motion), its planes none.
+ */
+function takeoverStageOf(defId: string, radiant: boolean, name: string): FxTakeoverStage {
+  const diorama = dioramaOf(defId);
+  if (diorama === null) return { planes: ART_PLANES.map((plane) => artPlaneBackground(defId, plane, radiant)), name, face: signatureFaceOf(defId) };
+  return {
+    planes: [],
+    name,
+    face: signatureFaceOf(defId),
+    slices: diorama.slices.map((slice, index) => ({ image: dioramaSliceBackground(defId, radiant, index), plane: slice.plane, depth: slice.depth })),
+  };
+}
 
 /**
  * R670, R2722001, R3332000: a Mythic's takeover look: its table entry's `takeover` (#100 Ceaseless Void's
- * "void", #96 My Pawn's "pawn", #97 Zephrys's "genie", Meditative #49 YileGPT's "ai"; R3400000 Meditative+
+ * "void", #96 My Pawn's "pawn", #97 Zephrys's "genie", Meditative #49 YileGPT's "ai"; R3402000 #98 Heroic
+ * Power's "rotunda", #99 Craft a Card's "crystalForge"; R3400000 Meditative+
  * #1 Bob's Plan's "summit", #26 Scratch Pad's "canvas", Training Grounds #40 Goetzmann Game Design's
  * "napkin"; R3389000 Classic #90 In Too Deep's "abyss"; R3405000 Meditative's other Mythics' twelve, from
  * #8 Reach the Summit's "ascent" to #97.9 Jlockeed's Headquarters' "fortress"; R3399002 Classic+'s four
@@ -56,9 +74,12 @@ export function takeoverLookOf(defId: string, table: ReadonlyMap<string, FxCardE
 export const TAKEOVER_TINTS: Readonly<Record<TakeoverLook, FxTint>> = {
   prismatic: { rim: "#f0abfc", core: "#fef9c3", glow: "#a5f3fc" },
   void: { rim: "#7c3aed", core: "#1e1b4b", glow: "#c4b5fd" },
-  pawn: { rim: "#e5e7eb", core: "#fde68a", glow: "#f87171" },
+  pawn: { rim: "#e5e7eb", core: "#c7d2fe", glow: "#6366f1" },
   genie: { rim: "#fbbf24", core: "#fff7d6", glow: "#38bdf8" },
   ai: { rim: "#22c55e", core: "#dcfce7", glow: "#4ade80" },
+  // R3402000: Heroic Power's marble rotunda in holy gold, Craft a Card's crystal forge in blue.
+  rotunda: { rim: "#f8fafc", core: "#fef3c7", glow: "#fde68a" },
+  crystalForge: { rim: "#60a5fa", core: "#e0f2fe", glow: "#93c5fd" },
   // R3400000: Bob's red brushstroke over an ink-wash range, Scratch Pad's cyan cursor on paper, the napkin's lamplight in pixel colors.
   summit: { rim: "#dc2626", core: "#f5f5f4", glow: "#57534e" },
   canvas: { rim: "#22d3ee", core: "#fafaf9", glow: "#a8a29e" },
@@ -206,7 +227,7 @@ export function entranceCues(entry: AnimationEntry, env: Pick<FxPlanEnv, "intens
   const art = takeoverArtOf(entrance.defId, table);
   const takeover: FxTakeoverCue = {
     kind: "takeover",
-    stage: entry.setPiece === undefined ? null : { planes: ART_PLANES.map((plane) => artPlaneBackground(defId, plane, radiant)), name, face: signatureFaceOf(defId) },
+    stage: entry.setPiece === undefined ? null : takeoverStageOf(defId, radiant, name),
     look,
     tint: TAKEOVER_TINTS[look],
     at: own ? CENTER : (field ?? at),

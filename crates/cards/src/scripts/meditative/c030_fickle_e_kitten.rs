@@ -100,11 +100,11 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const KITTEN: &str = "meditative-030";
-    const MENACE: &str = "core-019"; // (3) Unit 9/9.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const SEVEN_SEVEN: &str = "core-025"; // (4) Unit 7/7.
-    const MOON: &str = "classicplus-022"; // (1) Trap, set face-down.
-    const CHALICE: &str = "classic-087"; // (X) Field Spell.
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const SEVEN_SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const MOON: &str = "classicplus-022"; // Blood Moon: a Trap, set face-down
+    const CHALICE: &str = "classic-087"; // Plague Chalice: a Field Spell
     const FILLER: &str = "core-005";
 
     /// p1 holds the Kitten (base unless `radiant_face`); `p1_field`, `p2_field` and `p2_backrow`

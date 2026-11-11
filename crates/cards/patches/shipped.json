@@ -886,38 +886,68 @@
     "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
   },
   {
-    "version": "v0.5.13",
+    "version": "v0.5.12aa",
     "commit": "cb657107f573b0aa966bbf875e74457a380c1bac",
     "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
     "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
   },
   {
-    "version": "v0.5.13b",
+    "version": "v0.5.12ab",
     "commit": "cf108f4ccd99f3f122675a2f8cc8a1ccd2d34a28",
     "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
     "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
   },
   {
-    "version": "v0.5.13c",
+    "version": "v0.5.12ac",
     "commit": "648bc1df4ef740b4e75c807dabc010e4955bfadb",
     "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
     "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
   },
   {
-    "version": "v0.5.13d",
+    "version": "v0.5.12ad",
     "commit": "7dd7704cd32c56df2e4c6016ac6d061fec7d0eb6",
     "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
     "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
   },
   {
-    "version": "v0.5.13e",
+    "version": "v0.5.12ae",
     "commit": "71ef2a3bd05ce845d7ab98f1734ee9a5894391d3",
     "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
     "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
   },
   {
-    "version": "v0.5.13f",
+    "version": "v0.5.12af",
     "commit": "a56de72f3768ef49d53234a09b0a35b1e63104b0",
+    "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
+    "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
+  },
+  {
+    "version": "v0.5.12ag",
+    "commit": "739619602a615e944acaa658d9b9c31a4526b77d",
+    "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
+    "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
+  },
+  {
+    "version": "v0.5.12ah",
+    "commit": "efe8cdab2ebe80c92b15d04a80678eb5a60d6c53",
+    "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
+    "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
+  },
+  {
+    "version": "v0.5.12ai",
+    "commit": "e8580b25bda38b9729a6acb6d85f788edaef2c5b",
+    "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
+    "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
+  },
+  {
+    "version": "v0.5.12aj",
+    "commit": "92c0696b2174bd6fb03998af5d9b3390eefbabe5",
+    "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
+    "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
+  },
+  {
+    "version": "v0.5.12ak",
+    "commit": "48f21c55aa77b723f0805ce5210399fea40e926c",
     "blob": "c349255e12232760fa4f7a2b69046cde80bb82ab",
     "cardMetricsBlob": "cd15a4ed6495c8d366f5641bddefbe7ab02fef22"
   }

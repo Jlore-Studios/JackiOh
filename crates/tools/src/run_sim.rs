@@ -9,11 +9,12 @@
 //! with the AI in both seats: the player's at R747000's skill (each `--skill`, full by default), the
 //! enemy's at full skill, both at the budget. Its record must end clean (no throw, refusal, fallback or
 //! caught search panic, and a result) and fold to its hash, and its report goes back through
-//! `run_fight_report`. Every other choice (a column, the artifact, a pack and what to
+//! `run_fight_report`. Every other choice (a node it may step onto, the artifact, a pack and what to
 //! keep, a shop's buys and upgrades, a campfire, an event, a blessing) follows a seeded policy.
 //!
 //! For each skill it prints, by kind of fight and again by act, how many were played and won, the HP they
-//! cost and their turns, then the HP entering each boss, the rows reached, the runs won, the score by term
+//! cost and their turns, then the max HP entering each boss, the rows reached, the fights on each run's
+//! route (R3583001: 12 to 16 on any route to the final boss), the runs won, the score by term
 //! (rows, wins, damage, healing, cards drawn, and what the boss percents and the curse percent add, each
 //! mean and max: only a breakdown shows whether stalling pays), the score and the Embers. The AI plays
 //! the player's seat better or worse than a person would, so the table is a guide to tuning the strawmen
@@ -45,13 +46,13 @@ use jackioh_engine::{
     registered_catalog, validate_setup,
 };
 use jackioh_run::config::{
-    RUN_ACT_FIGHTS, RUN_SCORE_CARD_DRAWN, RUN_SCORE_DAMAGE, RUN_SCORE_FIGHT, RUN_SCORE_HEALING,
-    RUN_SCORE_ROW, RUN_SLOT_LADDER, RUN_STARTER_CARDS, RUN_STARTER_SIZE,
+    RUN_ACTS, RUN_SCORE_CARD_DRAWN, RUN_SCORE_DAMAGE, RUN_SCORE_FIGHT, RUN_SCORE_HEALING, RUN_SCORE_ROW,
+    RUN_SLOT_LADDER, RUN_STARTER_CARDS, RUN_STARTER_SIZE,
 };
 use jackioh_run::{
     RunAction, RunContent, RunFightSetup, RunFile, RunNodeKind, RunPassiveKind, RunPhase, RunSetup, RunState,
     RunUnlocks, run_catalog_content, run_check_setup, run_create, run_embers, run_fight_report,
-    run_fight_setup, run_fold, run_max_hp, run_node, run_reduce, run_score, run_seed,
+    run_fight_setup, run_fold, run_next_cols, run_node, run_reduce, run_score, run_seed,
 };
 use rayon::prelude::*;
 
@@ -60,10 +61,6 @@ use crate::arena::TEST_BUDGET;
 /// The steps one run may take before it is a fault: a whole run with every fight won takes about a
 /// hundred, so this fires only on a policy that never moves on.
 const MAX_STEPS: usize = 2000;
-
-/// A campfire heals first when the run's HP is below this percent of its max; otherwise it upgrades a
-/// card.
-const HEAL_BELOW_PERCENT: i32 = 60;
 
 /// The kinds of fight the table breaks down, each with its row's name (the kind's serialized name).
 const KINDS: [(RunNodeKind, &str); 5] = [
@@ -75,10 +72,10 @@ const KINDS: [(RunNodeKind, &str); 5] = [
 ];
 
 /// A run's bosses: one at the end of each act (§15.5), the last the final boss.
-const BOSSES: usize = RUN_ACT_FIGHTS.len();
+const BOSSES: usize = RUN_ACTS;
 
 /// A run's acts (§15.5): one table row each.
-const ACTS: usize = RUN_ACT_FIGHTS.len();
+const ACTS: usize = RUN_ACTS;
 
 #[derive(clap::Args, Debug)]
 pub struct Args {
@@ -285,23 +282,24 @@ fn phase_name(phase: &RunPhase) -> &'static str {
     }
 }
 
-/// The policy's choices at a phase other than a fight, most wanted first: a random column, then the
-/// first; the artifact; a random pack, then the first; a random `keep` of the pack, then its first; no
+/// The policy's choices at a phase other than a fight, most wanted first: a random node of those it may
+/// step onto (R3583000: every node leads on, so this is never a dead end), then the first; the artifact; a random pack, then the first; a random `keep` of the pack, then its first; no
 /// extraction; at a shop each unsold good in a random order, a random card made Radiant, a random card
-/// Buffed, then leaving (each but leaving spends, so the shop ends); at a campfire a heal when HP is
-/// below `HEAL_BELOW_PERCENT`, else a random card made Radiant, else one Buffed; a random event option,
-/// then the last that costs nothing; a random blessing, then none.
+/// Buffed, then leaving (each but leaving spends, so the shop ends); at a campfire more max HP, then
+/// a random card made Radiant, then one Buffed; a random event option, then the last that costs
+/// nothing; a random blessing, then none.
 fn candidates(state: &RunState, content: &RunContent, rng: &mut Rng) -> Result<Vec<RunAction>, String> {
     let deck = state.deck.len();
     Ok(match &state.phase {
         RunPhase::Map => {
-            let row = state.row.map_or(0, |r| r + 1);
-            let width = state.map.get(row).map_or(0, Vec::len);
+            let cols = run_next_cols(state);
             vec![
                 RunAction::Go {
-                    col: index(rng, width),
+                    col: cols.get(index(rng, cols.len())).copied().unwrap_or(0),
                 },
-                RunAction::Go { col: 0 },
+                RunAction::Go {
+                    col: cols.first().copied().unwrap_or(0),
+                },
             ]
         }
         RunPhase::Reward {
@@ -347,15 +345,13 @@ fn candidates(state: &RunState, content: &RunContent, rng: &mut Rng) -> Result<V
             out
         }
         RunPhase::Campfire => {
-            let low = state.hp * PERCENT < run_max_hp(state, content) * HEAL_BELOW_PERCENT;
-            let mut out: Vec<RunAction> = low.then_some(RunAction::Heal).into_iter().collect();
+            let mut out = vec![RunAction::GainMaxHp];
             out.push(RunAction::MakeRadiant {
                 index: index(rng, deck),
             });
             out.push(RunAction::Buff {
                 index: index(rng, deck),
             });
-            out.push(RunAction::Heal);
             out
         }
         RunPhase::Event { id } => {
@@ -371,7 +367,7 @@ fn candidates(state: &RunState, content: &RunContent, rng: &mut Rng) -> Result<V
             out.extend(
                 options
                     .iter()
-                    .rposition(|option| option.hp >= 0 && option.coins >= 0 && option.tickets >= 0)
+                    .rposition(|option| option.max_hp >= 0 && option.coins >= 0 && option.tickets >= 0)
                     .map(|index| RunAction::Choose { index }),
             );
             out
@@ -407,7 +403,8 @@ fn choose(state: &RunState, content: &RunContent, rng: &mut Rng) -> Result<(RunA
     ))
 }
 
-/// One fight of a run: its kind, the HP entering and leaving it (0 for a lost fight), and its turns.
+/// One fight of a run: its kind, the HP entering it, the HP leaving it (the refilled max for a
+/// won fight, 0 for a lost one), the report's final HP, whether it was won, and its turns.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct FightRow {
     kind: RunNodeKind,
@@ -415,6 +412,7 @@ struct FightRow {
     act: usize,
     hp_before: i32,
     hp_after: i32,
+    final_hp: i32,
     won: bool,
     turns: i32,
 }
@@ -534,16 +532,18 @@ fn play_run(
         let stepped = if matches!(state.phase, RunPhase::Fight) {
             fight(&state).and_then(|action| {
                 let next = run_reduce(&state, content, &action)?;
+                let (final_hp, turns) = match &action {
+                    RunAction::FightOver { hp, turns, .. } => (*hp, *turns),
+                    _ => (next.hp, 0),
+                };
                 fights.push(FightRow {
                     kind: run_node(&state).ok_or("the fight stands on no node")?.kind,
                     act: act_of(&state),
                     hp_before: state.hp,
                     hp_after: next.hp,
+                    final_hp,
                     won: !matches!(next.phase, RunPhase::Dead),
-                    turns: match &action {
-                        RunAction::FightOver { turns, .. } => *turns,
-                        _ => 0,
-                    },
+                    turns,
                 });
                 Ok((action, next))
             })
@@ -596,7 +596,13 @@ impl KindTally {
     fn add(&mut self, fight: &FightRow) {
         self.fights += 1;
         self.won += usize::from(fight.won);
-        self.hp_lost += i64::from(fight.hp_before - fight.hp_after);
+        // A won fight refills to a higher max, so the HP leaving it is no loss: what the fight
+        // cost is the HP entering it minus the report's final HP. A lost fight loses all of it.
+        self.hp_lost += if fight.won {
+            i64::from(fight.hp_before - fight.final_hp)
+        } else {
+            i64::from(fight.hp_before - fight.hp_after)
+        };
         self.turns += i64::from(fight.turns);
     }
 }
@@ -674,10 +680,12 @@ struct Tally {
     kinds: [KindTally; KINDS.len()],
     /// By act, from the first.
     acts: [KindTally; ACTS],
-    /// The HP entering each boss, summed, and how many runs reached it.
+    /// The max HP entering each boss, summed, and how many runs reached it.
     boss_hp: [(i64, usize); BOSSES],
     /// Each run's rows reached.
     rows: Vec<usize>,
+    /// Each run's fights played on its route (R3583001).
+    route_fights: Vec<usize>,
     /// The most rows a run's map holds.
     map_rows: usize,
     /// Each run's score at its end.
@@ -710,6 +718,7 @@ fn tally(outcomes: &[RunOutcome], content: &RunContent) -> Tally {
         }
         out.runs_won += usize::from(matches!(outcome.end.phase, RunPhase::Won));
         out.rows.push(outcome.end.row.map_or(0, |r| r + 1));
+        out.route_fights.push(outcome.fights.len());
         out.map_rows = out.map_rows.max(outcome.end.map.len());
         out.scores.push(run_score(&outcome.end, content));
         out.parts.push(score_parts(&outcome.end, content));
@@ -768,10 +777,10 @@ impl Tally {
         for (at, sums) in self.acts.iter().enumerate() {
             out.push_str(&table_line(&(at + 1).to_string(), sums));
         }
-        out.push_str("(HP lost is the HP entering a fight minus the HP leaving it, so a lost fight loses all of it.)\n");
+        out.push_str("(HP lost is the HP entering a fight minus the fight's final HP, so a won fight's refill is no loss and a lost fight loses all of it.)\n");
         for (at, (hp, reached)) in self.boss_hp.iter().enumerate() {
             out.push_str(&format!(
-                "HP entering boss {}: mean {} (n {reached})\n",
+                "max HP entering boss {}: mean {} (n {reached})\n",
                 at + 1,
                 mean(*hp, *reached)
             ));
@@ -782,6 +791,8 @@ impl Tally {
             mean_and_max(&rows),
             self.map_rows
         ));
+        let route: Vec<i64> = self.route_fights.iter().map(|&fights| fights as i64).collect();
+        out.push_str(&format!("fights on the route: {}\n", mean_and_max(&route)));
         out.push_str(&format!("runs won: {} of {}\n", self.runs_won, self.runs));
         for (at, (label, _)) in ScoreParts::default().terms().iter().enumerate() {
             let values: Vec<i64> = self.parts.iter().map(|parts| parts.terms()[at].1).collect();
@@ -862,7 +873,10 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::DeckMark;
-    use jackioh_run::config::{RUN_STARTER_ARTIFACT_POINTS, RUN_STARTER_ARTIFACTS_MAX};
+    use jackioh_run::config::{
+        RUN_ACT_ROWS, RUN_ROUTE_FIGHTS_MAX, RUN_ROUTE_FIGHTS_MIN, RUN_STARTER_ARTIFACT_POINTS,
+        RUN_STARTER_ARTIFACTS_MAX,
+    };
     use jackioh_run::{RunStats, run_artifact_points, run_curse_points};
 
     use super::*;
@@ -952,10 +966,10 @@ mod tests {
             let outcome = play_run(n, &content, &Start::default(), &won, None).expect("the run is created");
             assert!(outcome.faults.is_empty(), "run {n}: {:#?}", outcome.faults);
             assert_eq!(outcome.end.phase, RunPhase::Won, "run {n}");
-            assert_eq!(
-                outcome.fights.len(),
-                RUN_ACT_FIGHTS.iter().sum::<usize>() + BOSSES,
-                "run {n}"
+            assert!(
+                route_holds_its_bounds(outcome.fights.len()),
+                "run {n}: {} fights on the route",
+                outcome.fights.len()
             );
             assert_eq!(
                 run_fold(&outcome.file, &content),
@@ -963,6 +977,12 @@ mod tests {
                 "run {n}"
             );
         }
+    }
+
+    /// R3583001: whether a won run's fights, the bosses counted, are within the bounds of every route.
+    fn route_holds_its_bounds(fights: usize) -> bool {
+        i32::try_from(fights)
+            .is_ok_and(|fights| (RUN_ROUTE_FIGHTS_MIN..=RUN_ROUTE_FIGHTS_MAX).contains(&fights))
     }
 
     /// A won fight for every fight a stub run is asked to play.
@@ -1005,8 +1025,8 @@ mod tests {
         let content = content();
         let (setup, unlocks) = run_setup(0, &Start::default());
         let start = run_create(&setup, &unlocks, &content).expect("run 0 is created");
-        // §15.5: an act is its fight rows, a tile row between each two, a campfire and its boss.
-        let spans: Vec<usize> = RUN_ACT_FIGHTS.iter().map(|fights| 2 * fights + 1).collect();
+        // §15.5: an act is its rows of nodes, then its boss's row.
+        let spans: Vec<usize> = vec![RUN_ACT_ROWS + 1; ACTS];
         assert_eq!(start.map.len(), spans.iter().sum::<usize>());
         let mut ends = Vec::new();
         let mut end = 0;
@@ -1055,10 +1075,18 @@ mod tests {
                 end.artifacts.iter().any(|a| a.id == start.artifacts[0]),
                 "run {n}"
             );
-            for (act, fights) in RUN_ACT_FIGHTS.iter().enumerate() {
-                let played = outcome.fights.iter().filter(|fight| fight.act == act).count();
-                assert_eq!(played, fights + 1, "run {n} act {act}");
+            for act in 0..ACTS {
+                let played: Vec<&FightRow> = outcome.fights.iter().filter(|fight| fight.act == act).collect();
+                assert!(
+                    played.last().is_some_and(|fight| fight.kind.is_boss()),
+                    "run {n} act {act} ends at its boss"
+                );
             }
+            assert!(
+                route_holds_its_bounds(outcome.fights.len()),
+                "run {n}: {} fights on the route",
+                outcome.fights.len()
+            );
             assert!(outcome.fights.iter().all(|fight| fight.act < ACTS), "run {n}");
         }
     }
@@ -1151,12 +1179,22 @@ mod tests {
         assert_eq!(start.flags(), " --level 2 --curses a,b --artifacts x");
     }
 
-    fn row(kind: RunNodeKind, hp_before: i32, hp_after: i32, won: bool, turns: i32) -> FightRow {
+    /// A fight entered at `hp_before`, leaving at `hp_after` (the refilled max for a won fight,
+    /// 0 for a lost one), whose report ended at `final_hp`.
+    fn row(
+        kind: RunNodeKind,
+        hp_before: i32,
+        hp_after: i32,
+        final_hp: i32,
+        won: bool,
+        turns: i32,
+    ) -> FightRow {
         FightRow {
             kind,
             act: 0,
             hp_before,
             hp_after,
+            final_hp,
             won,
             turns,
         }
@@ -1188,8 +1226,8 @@ mod tests {
                 file: file.clone(),
                 end: lost.clone(),
                 fights: vec![
-                    row(RunNodeKind::Fight, 30, 25, true, 10),
-                    row(RunNodeKind::Elite, 25, 0, false, 14),
+                    row(RunNodeKind::Fight, 30, 35, 25, true, 10),
+                    row(RunNodeKind::Elite, 25, 0, 0, false, 14),
                 ],
                 faults: Vec::new(),
             },
@@ -1197,8 +1235,8 @@ mod tests {
                 file,
                 end: won.clone(),
                 fights: vec![
-                    row(RunNodeKind::Fight, 30, 30, true, 8),
-                    row(RunNodeKind::MiniBoss, 22, 12, true, 20),
+                    row(RunNodeKind::Fight, 30, 35, 30, true, 8),
+                    row(RunNodeKind::MiniBoss, 22, 27, 12, true, 20),
                 ],
                 faults: Vec::new(),
             },
@@ -1239,6 +1277,7 @@ mod tests {
         assert_eq!(sums.runs, 2);
         assert_eq!(sums.runs_won, 1);
         assert_eq!(sums.rows, [3, 5]);
+        assert_eq!(sums.route_fights, [2, 2]);
         assert_eq!(sums.map_rows, start.map.len());
         assert_eq!(
             sums.scores,
@@ -1257,8 +1296,9 @@ mod tests {
             line("fight").split_whitespace().collect::<Vec<_>>(),
             ["fight", "2", "2", "100.0", "2.5", "9.0"]
         );
-        assert!(text.contains("HP entering boss 1: mean 22.0 (n 1)"), "{text}");
-        assert!(text.contains("HP entering boss 2: mean - (n 0)"), "{text}");
+        assert!(text.contains("max HP entering boss 1: mean 22.0 (n 1)"), "{text}");
+        assert!(text.contains("max HP entering boss 2: mean - (n 0)"), "{text}");
+        assert!(text.contains("fights on the route: mean 2.0, max 2\n"), "{text}");
         assert!(text.contains("runs won: 1 of 2"), "{text}");
     }
 
@@ -1278,11 +1318,11 @@ mod tests {
                 ..start
             },
             fights: vec![
-                row(RunNodeKind::Fight, 30, 28, true, 8),
-                row(RunNodeKind::MiniBoss, 28, 20, true, 18),
-                row(RunNodeKind::Elite, 20, 16, true, 12),
-                row(RunNodeKind::MiniBoss, 16, 12, true, 16),
-                row(RunNodeKind::Boss, 12, 5, true, 22),
+                row(RunNodeKind::Fight, 30, 35, 28, true, 8),
+                row(RunNodeKind::MiniBoss, 28, 33, 20, true, 18),
+                row(RunNodeKind::Elite, 20, 25, 16, true, 12),
+                row(RunNodeKind::MiniBoss, 16, 21, 12, true, 16),
+                row(RunNodeKind::Boss, 12, 17, 5, true, 22),
             ],
             faults: Vec::new(),
         }];
@@ -1340,10 +1380,10 @@ mod tests {
                 file: file.clone(),
                 end: plain.clone(),
                 fights: vec![
-                    in_act(0, row(RunNodeKind::Fight, 30, 25, true, 10)),
-                    in_act(0, row(RunNodeKind::Elite, 25, 0, false, 14)),
-                    in_act(0, row(RunNodeKind::Fight, 30, 30, true, 8)),
-                    in_act(0, row(RunNodeKind::MiniBoss, 30, 20, true, 20)),
+                    in_act(0, row(RunNodeKind::Fight, 30, 35, 25, true, 10)),
+                    in_act(0, row(RunNodeKind::Elite, 25, 0, 0, false, 14)),
+                    in_act(0, row(RunNodeKind::Fight, 30, 35, 30, true, 8)),
+                    in_act(0, row(RunNodeKind::MiniBoss, 30, 35, 20, true, 20)),
                 ],
                 faults: Vec::new(),
             },
@@ -1351,9 +1391,9 @@ mod tests {
                 file,
                 end: cursed.clone(),
                 fights: vec![
-                    in_act(1, row(RunNodeKind::Fight, 20, 18, true, 6)),
-                    in_act(1, row(RunNodeKind::Ghost, 18, 18, true, 10)),
-                    in_act(1, row(RunNodeKind::MiniBoss, 18, 10, true, 16)),
+                    in_act(1, row(RunNodeKind::Fight, 20, 25, 18, true, 6)),
+                    in_act(1, row(RunNodeKind::Ghost, 18, 23, 18, true, 10)),
+                    in_act(1, row(RunNodeKind::MiniBoss, 18, 23, 10, true, 16)),
                 ],
                 faults: Vec::new(),
             },

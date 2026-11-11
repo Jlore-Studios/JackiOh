@@ -33,7 +33,7 @@ Every issue carries at least one type label:
 | `architecture` | The repository, tooling, CI, deploys and agent setup |
 | `night bot` | The night bot and Squishy themselves: `bot/`, `.harness/`, `.squishy/` and their workflows |
 | `tracking` | A tracker, the production issue (beside `production merge`) and the status issues (the night bot's status issue, #148, and its usage issue, #2749): the bots may comment on one and rewrite their own, but never queue, plan, build or split it, nor adopt it as a fullsend tree, whatever else it is labelled. The night bot puts it on its status issue and on the open production issue itself (#2748) |
-| `production merge` | The production issue `promote-production.yml` keeps open (`Production: …`, with the queue of what is not live yet; a fresh one takes over each week, and the closed ones are its history) and the pull requests that promote main into production, which the super run tests. The workflow retitles the issue and comments on it, opens and merges the pull requests, and finds the open issue by this label, so leave it on, and leave its titles to the workflow. It also labels them `human` and assigns both people. Production moves once a day by itself, from the daily super run on the `staging` branch, and sooner on a comment: `/promote [sha]`, `/skip-super <reason>` (the emergency way, past the super run) and `/cancel` (`docs/deploy-cloudflare.md`, section 2.1); `staging` moves by itself every two hours to main's newest green commit (`promote-staging.yml`, #3275) |
+| `production merge` | The production issue `promote-production.yml` keeps open (`Production: …`, with the queue of what is not live yet; a fresh one takes over each week, and the closed ones are its history) and the pull requests that promote main into production, which the super run tests. The workflow retitles the issue and comments on it, opens and merges the pull requests, and finds the open issue by this label, so leave it on, and leave its titles to the workflow. It also labels them `human` and assigns both people. Production moves once a day by itself, from the daily super run on the `staging` branch, and sooner on a comment: `/promote [sha]`, `/skip-super <reason>` (the emergency way, past the super run) and `/cancel` (`docs/deploy-cloudflare.md`, section 2.1); `staging` moves by itself every two hours to main's newest green commit (`promote-staging.yml`, #3275), and holds still while the super run on it is red, until the night bot's fix closes its issue |
 
 A pull request also gets its **kind** and, for a card change, its **tier** from the classifier
 (`cargo jackioh classify`, R1365000), which CI's `rust (classify)` puts on and keeps up to date with
@@ -150,7 +150,10 @@ does to the cards through the classifier and names it:
   games (`RULE_MIN_GAMES`), or a base build that refuses the head's decks. A patch restarts every
   card's statistics (R1367000), so it waits for a change broad enough to move them (#2455,
   R2455000); the bar was 10 families, and any one divergence without a card, until then.
-- **Micro, the newest version with the next letter** (after v0.3.18, v0.3.18b, then v0.3.18c):
+- **Micro, the newest version with the next letters** (after v0.3.18, v0.3.18b, then v0.3.18c;
+  after v0.3.18z, v0.3.18aa, then v0.3.18ab … v0.3.18zz and v0.3.18aaa, so a line never runs out,
+  R3631000; the micros R3471000 had named v0.5.13 to v0.5.13h are v0.5.12aa to v0.5.12ah since
+  [the v0.5.13 retcon](#the-v0513-retcon)):
   anything smaller, any change to wording alone however many cards it touches, and any change to how
   cards look (the client's `apps/web/src/cards/`: faces, art, frames, foils, marks), which plays no
   card (R2529000).
@@ -270,6 +273,27 @@ v0.5 line the old way too, and its readers map it through `aliases.json`'s `mark
 | v0.5.10c | v0.5.6e | micro | 43 |
 | v0.5.10d | v0.5.6f | micro | 0 |
 | v0.5.11 | v0.5.7 | patch | 69 |
+
+## The v0.5.13 retcon
+
+#3631 (R3631001) renamed the eight micros R3471000 had put on a new line after v0.5.12z by
+R3631000's letters, so they stay on v0.5.12 and only a patch moves its number. `cargo jackioh patches
+retcon --from v0.5.13` computes the map: every version before v0.5.13 kept its name, and the eight
+are micros, as they were. Docs, commit messages, comments and the older titles keep the names they
+were written with; translate one in a text from before 2026-11-10 with this table. The next patch is
+v0.5.13 again, so a file marked `versions: 3` names this line the old way, and its readers map it
+through `aliases.json`'s `marked`; `versions: 4` is today's.
+
+| Old | New | Tier | Families |
+|---|---|---|---:|
+| v0.5.13 | v0.5.12aa | micro | 0 |
+| v0.5.13b | v0.5.12ab | micro | 0 |
+| v0.5.13c | v0.5.12ac | micro | 0 |
+| v0.5.13d | v0.5.12ad | micro | 0 |
+| v0.5.13e | v0.5.12ae | micro | 0 |
+| v0.5.13f | v0.5.12af | micro | 0 |
+| v0.5.13g | v0.5.12ag | micro | 0 |
+| v0.5.13h | v0.5.12ah | micro | 0 |
 
 ## A patch that takes several pull requests
 

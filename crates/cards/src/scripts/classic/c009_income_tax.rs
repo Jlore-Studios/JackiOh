@@ -204,14 +204,14 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TAX: &str = "classic-009";
-    const PALANTIR: &str = "classic-004"; // (2) Field Spell: "Aura: Your opponent can't draw more than 1 card each turn."
-    const STOCKPILE: &str = "core-005"; // (1) Spell: "Draw 2. Heal your hero 2."
-    const JELLY_BEAN: &str = "core-027"; // (1) Spell: "Cast on draw: Make a random card in your hand Radiant. Lose 7 health."
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const MENACE: &str = "core-019"; // (3) Unit 9/9
-    const SEVEN: &str = "core-025"; // (4) Unit 7/7
-    const FELINORS: &str = "core-012"; // (2) Unit 3/4
-    const TIMMY: &str = "core-011"; // (1) Unit 3/3
+    const PALANTIR: &str = "classic-004"; // Palantir: "Aura: Your opponent can't draw more than 1 card each turn."
+    const STOCKPILE: &str = "core-005"; // Stockpile: "Draw 2. Heal your hero 2."
+    const JELLY_BEAN: &str = "core-027"; // Blood Ridden Glowy Jelly Bean: "Cast on draw: Make a random card in your hand Radiant. Lose 7 health."
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const FELINORS: &str = "core-012"; // Duplicating Felinors
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
 
     fn open(s: &Scenario) -> PendingChoice {
         must(s.state().pending.clone(), "open prompt")
@@ -238,6 +238,7 @@ mod tests {
         }))
     }
 
+    // Differs from Scenario::count: whether any trap fired (a bool), not how many.
     fn fired(s: &Scenario) -> bool {
         s.events().iter().any(|event| event.event_type() == GameEventType::TrapFired)
     }
@@ -247,10 +248,6 @@ mod tests {
             .iter()
             .filter(|event| matches!(event, GameEvent::Drawn { player, .. } if *player == who))
             .count()
-    }
-
-    fn count(events: &[GameEvent], kind: GameEventType) -> usize {
-        events.iter().filter(|event| event.event_type() == kind).count()
     }
 
     fn backrow_def(s: &Scenario, player: PlayerId, lane: i32) -> Option<String> {
@@ -483,7 +480,7 @@ mod tests {
             s.play(STOCKPILE, json!({})); // both draws stopped
             assert!(!fired(&s));
             assert_eq!(backrow_def(&s, P2, 1), Some(TAX.to_string()));
-            assert_eq!(count(s.events(), GameEventType::DrawLimited), 2);
+            assert_eq!(s.count(GameEventType::DrawLimited), 2);
         }
 
         #[test]
@@ -535,7 +532,7 @@ mod tests {
             hand.extend(vec![MENACE; 8]);
             let mut s = tax_board(json!({ "p1Hand": hand, "p1Library": [FELINORS, SEVEN] }));
             s.play(STOCKPILE, json!({}));
-            assert_eq!(count(s.events(), GameEventType::Burned), 1);
+            assert_eq!(s.count(GameEventType::Burned), 1);
             assert!(fired(&s));
             assert_eq!(open(&s).player_id, P1);
         }
@@ -558,7 +555,7 @@ mod tests {
                 "p2": { "hand": [VANILLA], "backrow": [{ "def": TAX, "faceUp": false }], "library": [VANILLA, VANILLA] },
             }));
             s.start_turn();
-            assert_eq!(count(s.events(), GameEventType::Fatigue), 1);
+            assert_eq!(s.count(GameEventType::Fatigue), 1);
             assert!(!fired(&s));
             s.play(VANILLA, json!({}));
             assert_eq!(s.pile(P1, "library").len(), 3);
@@ -580,7 +577,7 @@ mod tests {
         fn r521_a_draw_from_an_empty_deck_draws_no_card_and_fires_nothing() {
             let mut s = tax_board(json!({ "p1Library": [] }));
             s.play(STOCKPILE, json!({}));
-            assert_eq!(count(s.events(), GameEventType::Fatigue), 2);
+            assert_eq!(s.count(GameEventType::Fatigue), 2);
             assert!(!fired(&s));
             assert_eq!(backrow_def(&s, P2, 1), Some(TAX.to_string()));
         }

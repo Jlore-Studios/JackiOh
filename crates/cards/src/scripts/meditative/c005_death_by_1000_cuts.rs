@@ -78,12 +78,12 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const CUTS: &str = "meditative-005";
-    const ECHO: &str = "classic-057"; // (1) Spell: has the text of the last Spell either player played.
-    const MENACE: &str = "core-019"; // 9/9 Taunt.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const FODDER: &str = "core-015"; // 1/1 Unit.
-    const FILLER: &str = "core-005"; // (1) Spell.
-    const TWINSPELL: &str = "core-079"; // (2) Field Spell, Activate: the next Spell gains Echo +1.
+    const ECHO: &str = "classic-057"; // Echo: has the text of the last Spell either player played.
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FODDER: &str = "core-015"; // Me and Mr Token
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const TWINSPELL: &str = "core-079"; // Twinspell: a Field Spell, Activate: the next Spell gains Echo +1.
 
     /// The ids of p2's units, lane by lane.
     fn p2_units(s: &Scenario) -> Vec<String> {

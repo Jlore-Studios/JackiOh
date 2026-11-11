@@ -86,9 +86,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const VIRUS: &str = "meditative-049-2";
-    const TAMED: &str = "meditative-049"; // "Cry: Summon a Yile's Virus for your opponent across from this."
-    const GIRLFRIEND: &str = "meditative-049-3"; // every enemy Unit attacks it at its start of turn.
-    const NEIGHBOUR: &str = "core-012"; // 3/4, standing beside the Virus.
+    const TAMED: &str = "meditative-049"; // YileGPT: "Cry: Summon a Yile's Virus for your opponent across from this."
+    const GIRLFRIEND: &str = "meditative-049-3"; // AI Girlfriend: every enemy Unit attacks it at its start of turn.
+    const NEIGHBOUR: &str = "core-012"; // Duplicating Felinors: standing beside the Virus
     const FILLER: &str = "core-005";
 
     /// p1's Virus in lane 2 with non-Virus neighbours in lanes 1 and 3, p1 to move.

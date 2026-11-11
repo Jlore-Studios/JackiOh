@@ -91,8 +91,8 @@ mod tests {
     use crate::scenario;
     use crate::def_ids;
 
-    const ECHOES: &str = "core-040"; // Field Spell, 2
-    const MENACE: &str = "core-019"; // library filler — not cast-on-draw, so a draw is just a draw
+    const ECHOES: &str = "core-040"; // Echoes of the Forgotten: a Field Spell
+    const MENACE: &str = "core-019"; // Midrange Menace: library filler — not cast-on-draw, so a draw is just a draw
     const TIMMY: &str = "core-011";
     const POSTDOC: &str = "core-061";
     const BIG_D: &str = "core-001";

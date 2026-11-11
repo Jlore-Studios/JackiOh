@@ -855,20 +855,56 @@ func TestWorkflows_OnlyAPatchOrSetStopsARunAndOnlyBeforeHalfItsShards(t *testing
 }
 
 // gather.yml plays a new patch or set and never a micro: a push plays only when one shipped since
-// the last push run that succeeded, and plays the commit it pushed, so the next run reads exactly
-// what it played.
+// the last push run that succeeded, and every run plays the commit that started it, so the next
+// run reads exactly what it played and a rerun plays the same games.
 func TestWorkflows_GatherPlaysEachNewPatchAndNoMicro(t *testing.T) {
 	text := workflowsRead(t, "gather.yml")
 	job := workflowsJob(t, text, "gather")
-	assertIn(t, "ref: ${{ github.event_name == 'push' && github.sha || 'main' }}", job)
+	assertIn(t, "ref: ${{ github.sha }}", job)
 	due := workflowsScript(t, job, "due (a new patch or set, not a micro)")
 	assertIn(t, "runs?event=push&status=success&per_page=1", due)
 	assertIn(t, `select(.tier != "micro")`, due)
 	for _, step := range []string{"uses: ./.github/actions/setup", "name: build",
-		"name: play (cargo jackioh stats --series gather)"} {
+		"name: " + workflowsGatherPlay} {
 		assertIn(t, "if: ${{ steps.due.outputs.play == 'true' }}", workflowsStep(t, job, step))
 	}
 	assertTrue(t, workflowsLinted(t, "gather.yml"))
+}
+
+// workflowsGatherPlay is the name of gather.yml's step that plays and files the games.
+const workflowsGatherPlay = "play and file, a batch at a time (cargo jackioh stats --series gather, stats-import --totals-only)"
+
+// gather.yml and the learn lane's shards file their games into the card statistics about an hour
+// at a time as they play them, each piece one file a database claims once, through
+// training/file-records.sh, so a rerun or learn.yml's import folds no game twice; a shard files a
+// piece only when selfplay finished it, and a dispatched export files nothing.
+func TestWorkflows_GatherAndTheLearnShardsFileTheirGamesAsTheyPlay(t *testing.T) {
+	assertTrue(t, isFile(filepath.Join(config.RepoRoot, "training", "file-records.sh")))
+	gather := workflowsRead(t, "gather.yml")
+	assertTrue(t, regexp.MustCompile(`(?m)^  GATHER_FILE_GAMES: "\d+"$`).MatchString(gather), "GATHER_FILE_GAMES")
+	play := workflowsScript(t, workflowsJob(t, gather, "gather"), workflowsGatherPlay)
+	assertIn(t, `--from "$start" --games "$n"`, play)
+	assertIn(t, `sh training/file-records.sh target/release/jackioh-server "$file"`, play)
+	assertNotIn(t, "stats-import", play)
+
+	shard := workflowsScript(t, workflowsJob(t, workflowsRead(t, "selfplay-shards.yml"), "shard"), "play")
+	assertIn(t, `every=${FILE_EVERY:-$GAMES}`, shard)
+	assertIn(t, `played=${PIPESTATUS[0]}`, shard)
+	assertIn(t, `[ -n "$FILE_EVERY" ] && [ "$played" != 0 ]`, shard)
+	assertIn(t, `"$RUNNER_TEMP/training/file-records.sh" "$bin/jackioh-server" "$records"`, shard)
+
+	selfplay := workflowsRead(t, "selfplay.yml")
+	assertEqual(t, strings.Count(selfplay, "      file_every: ${{ inputs.file_every }}\n"), 5)
+	assertEqual(t, strings.Count(selfplay, "      PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}\n"), 5)
+	assertIn(t, "training/file-records.sh", workflowsJob(t, selfplay, "build"))
+
+	learn := workflowsRead(t, "learn.yml")
+	export := workflowsJob(t, learn, "export")
+	assertTrue(t, regexp.MustCompile(`(?m)^      file_every: "\d+"$`).MatchString(export), "file_every")
+	assertIn(t, "STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}", export)
+	imported := workflowsJob(t, learn, "import")
+	assertIn(t, `records-${name#selfplay-}`, workflowsScript(t, imported, "file the games (cargo jackioh stats from-selfplay)"))
+	assertIn(t, `sh training/file-records.sh target/release/jackioh-server "${files[@]}"`, imported)
 }
 
 func TestWorkflows_ALearnRunPlansAndBuildsMainAsItIsWhenItStarts(t *testing.T) {

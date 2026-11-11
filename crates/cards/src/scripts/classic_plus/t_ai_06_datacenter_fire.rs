@@ -91,14 +91,14 @@ mod tests {
     use crate::scenario;
 
     const FIRE: &str = "classicplus-t-ai-06";
-    const DATACENTER: &str = "classicplus-078"; // (2) Field Spell
-    const TWINSPELL: &str = "core-079"; // (2) Field Spell
-    const FARM: &str = "core-058"; // Rush Token Farm, Field Spell
-    const HEROIC_POWER: &str = "core-098"; // Field Spell, Indestructible
-    const BEAR: &str = "core-060"; // (1) Trap
-    const BREAD: &str = "core-018"; // Field Trap
-    const SOLARIUS: &str = "classicplus-038"; // Unit printing Spell Damage +2
-    const BAUBLE: &str = "classicplus-061"; // (1) Field Spell: "Death: Add 2 Stockpiles to your hand. Each costs (0)."
+    const DATACENTER: &str = "classicplus-078"; // Claude's Datacenter: a Field Spell
+    const TWINSPELL: &str = "core-079"; // Twinspell: a Field Spell
+    const FARM: &str = "core-058"; // Rush Token Farm: a Field Spell
+    const HEROIC_POWER: &str = "core-098"; // Heroic Power: a Field Spell, Indestructible
+    const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
+    const BREAD: &str = "core-018"; // Bread and Butter: a Field Trap
+    const SOLARIUS: &str = "classicplus-038"; // Solarius: Unit printing Spell Damage +2
+    const BAUBLE: &str = "classicplus-061"; // Bauble Bubble: "Death: Add 2 Stockpiles to your hand. Each costs 0."
     const STOCKPILE: &str = "core-005";
     const VANILLA: &str = "core-008";
 
@@ -125,10 +125,6 @@ mod tests {
                 _ => None,
             })
             .collect()
-    }
-
-    fn count(events: &[GameEvent], kind: &str) -> usize {
-        events.iter().filter(|event| js(*event)["type"] == kind).count()
     }
 
     fn up(def_id: &str, lane: i32) -> Value {
@@ -167,7 +163,7 @@ mod tests {
                 s.expect_in_zone(DATACENTER, "graveyard")
                     .expect_in_zone(TWINSPELL, "graveyard")
                     .expect_in_zone(FARM, "graveyard");
-                assert_eq!(count(s.last_events(), "destroyed"), 3);
+                assert_eq!(s.last_count("destroyed"), 3);
             }
 
             #[test]
@@ -216,8 +212,8 @@ mod tests {
             #[test]
             fn r129_none_destroyed_no_damage() {
                 let mut s = fire(json!({ "backrow": [up(HEROIC_POWER, 1), down(BEAR, 2)] }), json!({}), false);
-                assert_eq!(count(s.last_events(), "damage"), 0);
-                assert_eq!(count(s.last_events(), "destroyed"), 0);
+                assert_eq!(s.last_count("damage"), 0);
+                assert_eq!(s.last_count("destroyed"), 0);
                 s.expect_health(P1, 30).expect_health(P2, 30);
             }
 
@@ -284,7 +280,7 @@ mod tests {
             fn r46_r129_an_enemy_heroic_power_stays_none_destroyed_no_damage() {
                 let mut s = fire(json!({}), json!({ "backrow": [up(HEROIC_POWER, 1), down(BEAR, 2)] }), true);
                 s.expect_in_zone(HEROIC_POWER, "field");
-                assert_eq!(count(s.last_events(), "damage"), 0);
+                assert_eq!(s.last_count("damage"), 0);
             }
         }
     }

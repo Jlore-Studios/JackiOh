@@ -1,7 +1,10 @@
 //! DR14 part B on the real catalog: the run's content, a fight's setup and a fight's report.
 
 use super::*;
-use crate::config::{RUN_DECK_MAX, RUN_LOOMING_PRESENCE, RUN_OVERWHELMING_PRESENCE, RUN_STARTER_CARDS};
+use crate::config::{
+    RUN_CAMPFIRE_MAX_HP, RUN_DECK_MAX, RUN_LOOMING_PRESENCE, RUN_OVERWHELMING_PRESENCE, RUN_STARTER_CARDS,
+    RUN_WIN_MAX_HP,
+};
 use jackioh_engine::catalog::{deckable, registered_catalog};
 use jackioh_engine::config::{AI_DIFFICULTY, HUMAN_HANDICAP, Handicap, LIBRARY_CAP};
 use jackioh_engine::reduce::{begin_game, legal_actions, reduce, seat_to_act};
@@ -378,7 +381,9 @@ fn b11_a_level_costs_its_embers_until_the_ladders_top_and_the_constants_are_the_
             starter_artifacts_max: RUN_STARTER_ARTIFACTS_MAX,
             starter_artifact_points: RUN_STARTER_ARTIFACT_POINTS,
             tier_points: RUN_TIER_POINTS.to_vec(),
+            campfire_max_hp: RUN_CAMPFIRE_MAX_HP,
             campfire_remove: RUN_CAMPFIRE_REMOVE,
+            presets: run_preset_decks(),
         }
     );
     let json = serde_json::to_value(&constants).unwrap();
@@ -388,10 +393,72 @@ fn b11_a_level_costs_its_embers_until_the_ladders_top_and_the_constants_are_the_
         "starterArtifactsMax",
         "starterArtifactPoints",
         "tierPoints",
+        "campfireMaxHp",
         "campfireRemove",
+        "presets",
     ] {
         assert!(json.get(key).is_some(), "{key}");
     }
+}
+
+#[test]
+fn r3584000_a_fights_setup_carries_the_runs_max_hp_past_hero_health() {
+    // R3584000: every fight's setup gives the human's hero health equal to the run's max HP, even
+    // past `HERO_HEALTH`, and the engine takes it (in-fight healing is uncapped for heroes).
+    use jackioh_engine::config::HERO_HEALTH;
+    let content = catalog_content();
+    let mut state = fight_at(&content, 0);
+    state.max_hp_bonus = RUN_WIN_MAX_HP;
+    state.hp = run_max_hp(&state, &content);
+    assert!(state.hp > HERO_HEALTH);
+    let setup = run_fight_setup(&state, &content).unwrap();
+    assert_eq!(setup.human_handicap.hero_health, Some(state.hp));
+    assert_eq!(engine_takes(&setup), Ok(()));
+}
+
+#[test]
+fn b12_preset_decks_are_ten_unlocked_starters_that_fit_level_one() {
+    // B12: each of `RUN_PRESET_DECKS` holds 10 distinct cards of `RUN_STARTER_CARDS`, passes
+    // `run_check_setup` at level 1 with no extractions, and `run_constants()` returns them all.
+    use crate::config::RUN_PRESET_DECKS;
+    let content = catalog_content();
+    let expected: Vec<RunPresetDeck> = run_preset_decks();
+    assert_eq!(RUN_PRESET_DECKS.len(), expected.len());
+    for (entry, preset) in RUN_PRESET_DECKS.iter().zip(expected.iter()) {
+        let (id, name, theme, cards) = entry;
+        assert_eq!(&preset.id, id, "preset id");
+        assert_eq!(&preset.name, name, "preset name");
+        assert_eq!(&preset.theme, theme, "preset theme");
+        assert_eq!(preset.cards.len(), RUN_STARTER_SIZE, "preset {id}");
+        let held: Vec<String> = cards.iter().map(|card| (*card).to_string()).collect();
+        assert_eq!(preset.cards, held, "preset {id}");
+        let mut distinct = preset.cards.clone();
+        distinct.sort();
+        distinct.dedup();
+        assert_eq!(
+            distinct.len(),
+            RUN_STARTER_SIZE,
+            "preset {id} holds distinct cards"
+        );
+        for card in &preset.cards {
+            assert!(
+                RUN_STARTER_CARDS.contains(&card.as_str()),
+                "preset {id}: {card} is no starting card"
+            );
+        }
+        let setup = RunSetup {
+            seed: run_daily_seed("2026-11-01", 1),
+            starter: preset.cards.clone(),
+            artifacts: Vec::new(),
+            curses: Vec::new(),
+        };
+        assert_eq!(
+            run_check_setup(&setup, &RunUnlocks::default(), &content),
+            Ok(()),
+            "preset {id}"
+        );
+    }
+    assert_eq!(run_constants().presets, expected);
 }
 
 /// A fight's setup as the `createGame` options the caller builds from it.
@@ -775,4 +842,45 @@ fn r2922001_thick_skins_armor_reaches_the_fights_hero_and_every_cursed_setup_sta
         .collect();
     let all = cursed(&holding(&fight_at(&content, 0), &combat), &every);
     assert_eq!(engine_takes(&run_fight_setup(&all, &content).unwrap()), Ok(()));
+}
+
+#[test]
+fn r3496000_removed_cards_leave_the_fight_deck_but_stay_in_the_run() {
+    // R3496000: a card the run holds that the current catalog no longer knows is left out of the
+    // fight's deck, human and enemy alike, and stays in the run.
+    let content = catalog_content();
+    let mut state = fight_at(&content, 0);
+    state.deck.insert(
+        0,
+        RunCard {
+            id: "removed-card-xyz".to_string(),
+            radiant: false,
+            buffs: 0,
+        },
+    );
+    state.deck[2].radiant = true;
+    let (row, col) = (state.row.unwrap(), state.col);
+    state.map[row][col]
+        .enemy
+        .as_mut()
+        .expect("a fight node has an enemy")
+        .deck
+        .push("removed-enemy-card-xyz".to_string());
+
+    let setup = run_fight_setup(&state, &content).unwrap();
+    assert!(!setup.human_deck.contains(&"removed-card-xyz".to_string()));
+    assert_eq!(setup.human_deck.len(), state.deck.len() - 1);
+    assert!(!setup.enemy_deck.contains(&"removed-enemy-card-xyz".to_string()));
+    assert_eq!(setup.enemy_deck.len(), RUN_ENEMY_DECK_SIZE);
+    // The marks index the fight's deck, not the run's.
+    assert_eq!(
+        setup.human_marks,
+        vec![DeckMark {
+            index: 1,
+            radiant: true,
+            upgrades: 0
+        }]
+    );
+    assert!(state.deck.iter().any(|card| card.id == "removed-card-xyz"));
+    assert_eq!(engine_takes(&setup), Ok(()));
 }

@@ -509,8 +509,15 @@ func sumLanes(owners []*providers.Provider) int {
 // takes gpt's lane on the night box only while gpt is capped, off, outside its hours or backing
 // off.
 func FillInFree(ctx *hctx.Context, state *pyjson.Object, provider *providers.Provider, lanes *Lanes) bool {
+	return fillInOpen(ctx, state, provider, lanes) > 0
+}
+
+// fillInOpen is how many of the lanes `provider` fills (`Provider.fill_in`) it may start a run in
+// now: those free, less the ones kept for a subscription it fills in for that may start work
+// itself (`FillInFree`, `Spare`). 0 for a subscription that fills no lane.
+func fillInOpen(ctx *hctx.Context, state *pyjson.Object, provider *providers.Provider, lanes *Lanes) int {
 	if provider.FillIn == nil {
-		return false
+		return 0
 	}
 	cfg := ctx.Cfg
 	owners, held := shared(cfg.Pool, provider, lanes)
@@ -520,7 +527,7 @@ func FillInFree(ctx *hctx.Context, state *pyjson.Object, provider *providers.Pro
 			kept += max(0, lanes.LanesOf(p)-lanes.AllBy(p.ID))
 		}
 	}
-	return sumLanes(owners)-held > kept
+	return max(0, sumLanes(owners)-held-kept)
 }
 
 // FillInFull is: `provider`'s lanes are shared with a subscription that fills them

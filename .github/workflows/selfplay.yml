@@ -8,6 +8,7 @@
 #   plan      splits the games into `shards` ranges of game numbers (`--from`, `--games`), and the
 #             ranges into rounds: one on GitHub's runners, five on the local runner
 #   build     one release `jackioh`, as super.yml's `rust-build` builds it, passed on as an artifact
+#             (with `jackioh-server` and training/file-records.sh when the shards file, `file_every`)
 #   round1-5  selfplay-shards.yml, a round each, one after another: one job per range on `runner`,
 #             `jackioh selfplay --from <k> --games <n> --seed <base>`, its log file uploaded as
 #             `selfplay-<base>-<k>` (kept `retention` days, 90 at most)
@@ -27,8 +28,10 @@
 # slow on purpose, and ci-duration.yml does not watch it.
 #
 # The learn lane (learn.yml, #1012) calls it as a reusable workflow (`workflow_call`, the same inputs,
-# `count` off: its retrain folds the positions itself; `ref`, the commit of main its plan read) on the
-# local runner, and its artifacts are that run's.
+# `count` off: its retrain folds the positions itself; `ref`, the commit of main its plan read;
+# `file_every` and the two statistics databases' addresses, so each shard files its games into the
+# card statistics about an hour at a time as it plays them, selfplay-shards.yml) on the local runner,
+# and its artifacts are that run's. A dispatched export files nothing.
 name: selfplay
 
 on:
@@ -62,6 +65,17 @@ on:
         type: string
         required: false
         default: ""
+      # Games each shard plays, then files into the card statistics, at a time (the learn lane's;
+      # selfplay-shards.yml). Empty, as on a dispatch, files nothing.
+      file_every:
+        type: string
+        required: false
+        default: ""
+    secrets:
+      STATS_IMPORT_DATABASE_URL:
+        required: false
+      PRODUCTION_STATS_IMPORT_DATABASE_URL:
+        required: false
   workflow_dispatch:
     inputs:
       games:
@@ -154,9 +168,19 @@ jobs:
           node: "false"
       - name: jackioh
         run: cargo build --release -p jackioh-tools
+      # The shards that file their games (`file_every`) need the server's `stats-import` and the
+      # filing script, of the same commit as the build that played them.
+      - name: jackioh-server
+        if: ${{ inputs.file_every != '' }}
+        run: cargo build --release -p jackioh-server
       # A tarball keeps the executable bit an artifact would drop.
       - name: pack it
-        run: tar -czf "$RUNNER_TEMP/jackioh.tgz" target/release/jackioh
+        env:
+          FILE_EVERY: ${{ inputs.file_every }}
+        run: |
+          files=(target/release/jackioh)
+          [ -z "$FILE_EVERY" ] || files+=(target/release/jackioh-server training/file-records.sh)
+          tar -czf "$RUNNER_TEMP/jackioh.tgz" "${files[@]}"
       - uses: actions/upload-artifact@v4
         with:
           name: selfplay-jackioh
@@ -176,6 +200,10 @@ jobs:
       seed: ${{ inputs.seed }}
       runner: ${{ inputs.runner }}
       retention: ${{ inputs.retention }}
+      file_every: ${{ inputs.file_every }}
+    secrets:
+      STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+      PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}
 
   round2:
     name: round 2
@@ -187,6 +215,10 @@ jobs:
       seed: ${{ inputs.seed }}
       runner: ${{ inputs.runner }}
       retention: ${{ inputs.retention }}
+      file_every: ${{ inputs.file_every }}
+    secrets:
+      STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+      PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}
 
   round3:
     name: round 3
@@ -198,6 +230,10 @@ jobs:
       seed: ${{ inputs.seed }}
       runner: ${{ inputs.runner }}
       retention: ${{ inputs.retention }}
+      file_every: ${{ inputs.file_every }}
+    secrets:
+      STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+      PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}
 
   round4:
     name: round 4
@@ -209,6 +245,10 @@ jobs:
       seed: ${{ inputs.seed }}
       runner: ${{ inputs.runner }}
       retention: ${{ inputs.retention }}
+      file_every: ${{ inputs.file_every }}
+    secrets:
+      STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+      PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}
 
   round5:
     name: round 5
@@ -220,6 +260,10 @@ jobs:
       seed: ${{ inputs.seed }}
       runner: ${{ inputs.runner }}
       retention: ${{ inputs.retention }}
+      file_every: ${{ inputs.file_every }}
+    secrets:
+      STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+      PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}
 
   count:
     name: count the export

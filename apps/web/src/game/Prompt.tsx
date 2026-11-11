@@ -25,6 +25,7 @@ import {
   useContext,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -1200,6 +1201,9 @@ function CardChoice(props: {
   );
 }
 
+/** #3633: the attribute an open cell pick sets on its game (prompt.css). */
+export const PROMPT_CELL_MARK = "data-prompt-cell";
+
 function PromptModal(props: {
   picker: Picker;
   /** Which route opened it: an engine prompt (`view.pending`) or a play still being built (R81). */
@@ -1232,6 +1236,15 @@ function PromptModal(props: {
   const fits = (keys: readonly string[]): boolean => picker.budget === undefined || spent(keys) <= picker.budget.limit;
   const inRange = selected.length >= picker.min && selected.length <= picker.max && fits(selected);
   const panel = useRef<HTMLDivElement>(null);
+  // #3633: an open cell pick marks its game, where prompt.css crosses the zones it offers. It read
+  // `.game:has([data-prompt-kind="cell"])`, and a `:has()` on the game made every change under it
+  // restyle the board.
+  useLayoutEffect(() => {
+    const game = picker.chrome === "cell" ? (panel.current?.closest(".game") ?? null) : null;
+    if (game === null) return undefined;
+    game.setAttribute(PROMPT_CELL_MARK, "true");
+    return () => game.removeAttribute(PROMPT_CELL_MARK);
+  }, [picker.chrome]);
   /**
    * #1204: the card picker folded to a bar so the board shows. Never sent; `selected` outlasts it.
    * R2211000: a read-only one opens folded.

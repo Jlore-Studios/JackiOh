@@ -56,7 +56,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const PROGRAM: &str = "stinkyscape-130";
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
     const FILLER: &str = "core-005";
 
     fn holding(radiant: bool, seed: &str, fillers: usize) -> Scenario {

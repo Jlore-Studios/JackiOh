@@ -58,8 +58,8 @@ mod tests {
 
     // R28's number lives in `config.rs` (`CALL_TO_CHAOS_CHAIN_CAP`) and is used by name below.
 
-    const CHAOS: &str = "core-095"; // Spell, 4, Legendary, tag "Call to Chaos"
-    const GOLEM: &str = "core-095-1"; // #95.1, Unit token, 10/10 → 20/20
+    const CHAOS: &str = "core-095"; // Call to Chaos (Core Edition): a Spell, Legendary, tag "Call to Chaos"
+    const GOLEM: &str = "core-095-1"; // Chaos Golem: #95.1, Unit token
     const RUSH_TOKEN: &str = "core-t-rush";
 
     /// Fillers with known data: #19 is a 3-cost 9/9 Taunt Unit, #36 a 1-cost Spell, #53 a 3-cost Unit.
@@ -272,6 +272,7 @@ mod tests {
         chaos(None, ChaosOpts { cursor: Some(recast_of_core_cursor(opts.chain)), ..opts })
     }
 
+    // Differs from Scenario::events_of: the events as JSON (`Vec<Value>`), not typed `GameEvent`s.
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
         events_json(s).into_iter().filter(|event| event["type"] == kind).collect()
     }

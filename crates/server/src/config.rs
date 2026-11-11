@@ -488,6 +488,20 @@ pub const REPLAY_CACHE_TTL_SECONDS: i64 = 600;
 /// Requests per minute per account to the two replay routes together, on top of R109's
 /// API-wide allowance: opening a replay folds a whole game.
 pub const REPLAY_REQUESTS_PER_MINUTE: usize = 60;
+/// SPEC §9.8, R3500000: how many replay folds run at once, 1v1 and co-op together: an opening that
+/// is not kept in memory folds its whole game off the runtime (R768), and the server is a quarter of a
+/// processor (`wrangler.jsonc`), where a 256-action game folds in about 200 ms of a full core
+/// (`jackioh perf`). One keeps the blocking pool free for the live matches' folds, as
+/// `PRACTICE_VERIFY_CONCURRENCY` does for practice's.
+pub const REPLAY_FOLDS_RUNNING_MAX: usize = 1;
+/// SPEC §9.8, R3500000: how long an opening that is not kept in memory waits, in milliseconds, for
+/// the fold of the same match that is running and for its turn among `REPLAY_FOLDS_RUNNING_MAX`,
+/// before it is refused with 429 (`REPLAY_FOLD_RETRY_AFTER_MS`). Well under
+/// `API_REQUEST_TIMEOUT_SECONDS`; the fold itself is not timed.
+pub const REPLAY_FOLD_WAIT_MS: u64 = 5_000;
+/// SPEC §9.8, R3500000: the wait the refusal of an opening past `REPLAY_FOLD_WAIT_MS` states
+/// (`retryAfterMs`, R192): a fold of a long game takes that long to leave room.
+pub const REPLAY_FOLD_RETRY_AFTER_MS: i64 = 2_000;
 
 // ---------------------------------------------------------------------------------------------
 // Constant-time failure (§9.4, BUILD M6-T1).
@@ -820,6 +834,36 @@ pub const BUG_REPORT_LISTED_ACTIONS: usize = 10;
 /// How many matches one signature's issue lists. Each one edits the issue's body, so this bounds the
 /// edits as `BUG_REPORTS_PER_WINDOW` bounds the issues; a later match is only logged (`bug.found`).
 pub const BUG_REPORT_LISTED_MATCHES: usize = 20;
+
+// ---------------------------------------------------------------------------------------------
+// Alerts (`alerts.rs`, #3595): an alert told to people, as a GitHub issue and an email. Not in
+// SPEC, and no R-row: operational, as the bug reports are.
+// ---------------------------------------------------------------------------------------------
+
+/// An event makes at most one notice in this long per process: an hour. The rest are counted, and
+/// the next notice says how many.
+pub const ALERT_WINDOW_MS: i64 = 60 * 60 * 1000;
+/// How many alerts wait for the notifier's task before a new one is dropped (its log line stays).
+pub const ALERT_QUEUE: usize = 64;
+/// The labels an alert's issue carries: the repository's type and people's (`human`, which triage
+/// assigns to both of them and which keeps the bots off it).
+pub const ALERT_ISSUE_LABELS: &[&str] = &["architecture", "human"];
+/// Events whose own issue is filed elsewhere, which an alert's issue would only repeat: `bug.found`
+/// (`bug_reports.rs`). They are still emailed.
+pub const ALERTS_FILED_ELSEWHERE: &[&str] = &["bug.found"];
+/// Resend's API, which an alert's email is sent through.
+pub const ALERT_EMAIL_API_URL: &str = "https://api.resend.com/emails";
+/// Who an alert's email is from: an address on the domain Resend sends jackioh.com's mail for
+/// (infra/cloudflare.tf), as the sign-in mail is (docs/deploy-cloudflare.md section 8).
+pub const ALERT_EMAIL_FROM: &str = "JackiOh alerts <no-reply@jackioh.com>";
+/// How many alert emails one process sends in `ALERT_EMAIL_DAY_MS`. Resend's free plan sends 100 a
+/// day, the sign-in mail's included, so alerts keep well under it.
+pub const ALERT_EMAILS_PER_DAY: usize = 10;
+/// The day `ALERT_EMAILS_PER_DAY` counts in.
+pub const ALERT_EMAIL_DAY_MS: i64 = 24 * 60 * 60 * 1000;
+/// How long the request to Resend may take before the email is given up (logged). GitHub's take
+/// `BUG_REPORT_TIMEOUT_MS`, through the bug reports' own request builder.
+pub const ALERT_TIMEOUT_MS: u64 = 10_000;
 
 // ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).
@@ -1365,9 +1409,11 @@ pub const ECONOMY_SPENDS_WAITING_MAX: usize = 4;
 /// SPEC §14.11, R2378000: the wait the refusal of a spend sent past `ECONOMY_SPENDS_WAITING_MAX`
 /// states (`retryAfterMs`, R192).
 pub const SPEND_BUSY_RETRY_AFTER_MS: i64 = 1_000;
-/// SPEC §14.8, R1483000: how many unclaimed, unexpired practice seeds an account holds at once; a
-/// request past it is refused and issues nothing. Bounds one account's place in the claim queue
-/// (`PRACTICE_VERIFY_CONCURRENCY`). The approved proposal's number (#1483).
+/// SPEC §14.8, R1483000, R3500001: how many practice seeds an account holds at once, each one
+/// unclaimed or claimed and not yet settled (paid or refused), issued within
+/// `PRACTICE_SEED_TTL_SECONDS`; a request past it is refused and issues nothing. Bounds one account's
+/// place in the claim queue (`PRACTICE_VERIFY_CONCURRENCY`): a claim waiting for its check keeps its
+/// place. The approved proposal's number (#1483).
 pub const PRACTICE_SEEDS_OPEN_MAX: i64 = 3;
 /// SPEC §14.8, #1303: how many practice claims the server verifies at once, each a fold of the
 /// game's log off the runtime (`economy::practice`, R2560000). A claim past it
@@ -1385,8 +1431,9 @@ pub const PRACTICE_PAY_BACKOFF_MS: i64 = 250;
 /// SPEC §14.8, R2422000: how long a practice claim may stay unsettled (neither paid nor refused)
 /// after it burned its seed before the retention loop settles it: a claim whose pay every try
 /// failed, or whose server stopped or crashed under it. Well past what a live settle takes (a wait
-/// for a verification permit, the check and the pay's tries), so the sweep never takes a claim a
-/// live settle is still working on; ten minutes, as `GAME_RECORD_REFILE_GRACE_SECONDS` waits.
+/// for a verification permit, the check and the pay's tries), so the sweep seldom meets a claim a
+/// live settle is still working on, and it skips one it does (R3500001); ten minutes, as
+/// `GAME_RECORD_REFILE_GRACE_SECONDS` waits.
 pub const PRACTICE_SETTLE_GRACE_SECONDS: i64 = 10 * 60;
 
 // ---- Economy (SPEC §14, #1299) ----

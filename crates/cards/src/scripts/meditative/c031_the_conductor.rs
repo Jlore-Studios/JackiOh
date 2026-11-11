@@ -68,10 +68,10 @@ mod tests {
 
     const CONDUCTOR: &str = "meditative-031";
     const CURSE: &str = "meditative-028-1"; // Ancient Curse: cast on draw, take 7.
-    const VANILLA: &str = "core-008"; // (1) 4/4 Human.
-    const HIT_JOB: &str = "core-016"; // Destroy target unit.
-    const RECYCLE: &str = "classic-030"; // Shuffle your graveyard into your deck, then draw 1.
-    const PALANTIR: &str = "classic-004"; // Aura: your opponent can't draw more than 1 each turn.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: Human
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target unit.
+    const RECYCLE: &str = "classic-030"; // Recycle: Shuffle your graveyard into your deck, then draw 1.
+    const PALANTIR: &str = "classic-004"; // Palantir: Aura: your opponent can't draw more than 1 each turn
     const FILLER: &str = "core-005";
 
     fn library() -> Value {

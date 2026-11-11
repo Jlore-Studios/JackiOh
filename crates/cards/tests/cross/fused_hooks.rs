@@ -194,7 +194,7 @@ const HIT_JOB: &str = "core-016";
 const CEASELESS_VOID: &str = "core-100";
 const KPOP: &str = "core-050";
 const JILLIAX: &str = "core-056";
-const RIGHT_HOUSE: &str = "core-003"; // Unit, 1 — 1/1 Taunt, Divine Shield, Reborn
+const RIGHT_HOUSE: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
 const EXPERIMENTATION: &str = "core-085";
 const KEYWORD_LIBRARY: [&str; 6] = [MR_VANILLA; 6];
 
@@ -376,7 +376,7 @@ mod r77_5_2_a_keyword_a_fuse_newly_prints_applies_at_once {
 
 const MANA_WELL: &str = "core-006";
 const POINTMASTER: &str = "core-020";
-const SEVEN_SEVEN: &str = "core-025"; // Unit, 4 — 7/7, Armor 7
+const SEVEN_SEVEN: &str = "core-025"; // 4-mana 7/7: Armor 7
 /// #45 Deft Duelist on its Radiant face: 8/6, Charge, Armor 1 — the other printed Armor in Core.
 fn radiant_duelist() -> Value {
     json!({ "def": "core-045", "radiant": true })
@@ -671,11 +671,11 @@ mod r43_r151_r77_a_heroic_powers_text_fused_onto_another_permanent_has_a_power {
     }
 }
 
-const SUPPRESSIVE_AURA: &str = "core-046"; // Field Spell, 2 embiggen 4
-const GOING_LONG: &str = "core-084"; // Field Spell, 2 embiggen 4, Quickdraw — hero Armor 2 (paid 4: 5)
-const BIG_FELINOR: &str = "core-043"; // Unit, 3 — 3/10
-const PILLOW: &str = "core-065-1"; // Unit token — 0/2 → 0/4, the −2 attack aura
-const WEAPONS: &str = "core-014"; // Field Spell, 4 — your units +3 attack, Rush, First Strike
+const SUPPRESSIVE_AURA: &str = "core-046"; // Suppressive Aura: embiggen 4
+const GOING_LONG: &str = "core-084"; // Going Long: embiggen 4, Quickdraw — hero Armor 2 (paid 4: 5)
+const BIG_FELINOR: &str = "core-043"; // Big Felinor
+const PILLOW: &str = "core-065-1"; // Spikey Pillow: Unit token, the −2 attack aura
+const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: a Field Spell, your units +3 attack, Rush, First Strike
 const LAYER_LIBRARY: [&str; 6] = [MR_VANILLA; 6];
 
 fn backrow_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
@@ -941,8 +941,8 @@ mod r1850000_a_fused_copier_s_targeting_cost_is_its_copy_s {
     }
 }
 
-const WORMHOLE: &str = "stinkyscape-139"; // Trap, 2 — counters an opponent's Spell aimed at their own side
-const BOOK_OF_STATS: &str = "classicplus-057"; // Spell, 1 — "Give a Unit +5/+5."
+const WORMHOLE: &str = "stinkyscape-139"; // Wormhole: a Trap, counters an opponent's Spell aimed at their own side
+const BOOK_OF_STATS: &str = "classicplus-057"; // Book of Stats: gives a Unit +attack/+health
 
 mod r2226000_a_traps_text_fused_into_a_unit_never_fires_from_its_unit_zone {
     use super::*;

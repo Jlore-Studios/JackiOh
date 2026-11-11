@@ -12,6 +12,7 @@
 // its sting (`entranceSting`), so the shared entrance sting rings only for one with no intro. R3336000:
 // the Drone Battleship's layers and drones add their own sounds after the row's (`battleshipCues`, unpanned).
 // R3400001, R3405001: so do Meditative+'s, Training Grounds' and Meditative's signature cards (`signatureCues`, unpanned).
+// R3402001: so do Core's ten Legendaries and Mythics, a Trap's at its firing.
 // R3334002, R3334003: a launched Starship's attack and a Starship's death leave their row's sound to the
 // Starship's own (starshipSounds.ts), but only when the director has sent it (`starshipSounded`): one
 // voiced with no entry started (Reduce Motion) swings and dies with the row's sound.

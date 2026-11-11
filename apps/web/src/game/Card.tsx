@@ -12,7 +12,7 @@
 // `activations` are Activate controls beside the face. R2321000: `tallies` pills (cards/Tallies.tsx). R3338002: a
 // Ceaseless Void in the viewer's own hand drains its gem as its cost falls (cards/gemDrain.ts); no other card's does.
 
-import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
+import { isValidElement, memo, useMemo, type DragEvent, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
 
 import type { CardMark, CardType, CardView, PlayerId, RevealAt, UnitView } from "@jackioh/shared";
 
@@ -51,7 +51,7 @@ import { BRITTLE_LAST_COUNT, TEMPORARY_LAST_COUNT } from "../cards/keywordVisual
 import { TheirCopy } from "../cards/loadouts.ts";
 import { BRITTLE_LAST_COLOR, TEMPORARY_LAST_COLOR, marksOf } from "../cards/marks.ts";
 import ActivateControls from "./ActivateControl.tsx";
-import AttackOutcome from "./AttackOutcome.tsx";
+import { AttackTakenPreview, AttackTargetPreview } from "./AttackOutcome.tsx";
 import { outcomeFor } from "./attackOutcome.ts";
 import FieldBadges from "./FieldBadges.tsx";
 import { usePhonePortrait } from "./phoneBar.ts";
@@ -234,7 +234,7 @@ function cardTitle(name: string, unit: UnitView | null | undefined, card: CardVi
   return reason === undefined ? name : t("{name}: {reason}", { name, reason: t(reason) });
 }
 
-export default function Card(props: CardProps): ReactElement {
+function Card(props: CardProps): ReactElement {
   const { card, unit, target, testId } = props;
   const info = useCardInfo(card?.defId ?? "", card?.radiant ?? false);
   const fieldPower = useFieldPower(card?.instanceId);
@@ -268,7 +268,8 @@ export default function Card(props: CardProps): ReactElement {
   });
   // A face-up backrow card is drawn as the type its `BackrowView` names: the view is what the
   // client renders (CLAUDE.md rule 7), and the catalog only fills in what the view leaves out.
-  const face: FaceModel = props.type === undefined ? model : { ...model, type: props.type };
+  // #3633: one object while its parts are, so the face (memoized, CardFace.tsx) is not drawn again.
+  const face: FaceModel = useMemo(() => (props.type === undefined ? model : { ...model, type: props.type }), [model, props.type]);
 
   // Hooks run on every render, backs included. A back in the backrow (R370) opens what the view
   // says of it; any other back opens nothing. A full face sits in a row, so its preview rises over
@@ -300,9 +301,11 @@ export default function Card(props: CardProps): ReactElement {
         : null;
   // R3345000: Mythic / full-art view trigger. On the board, only own cards and not while the queue drains: `draining`
   // is subscribed, so the hold follows the queue, and the callback asks again as the hold fires.
-  const draining = useIsHeld();
   const inHand = props.inOwnHand === true;
   const opensFullScreen = useCanOpenFullScreen(card === null ? null : face, card?.defId ?? "", worn);
+  // #3633: only a worn unit of the viewer's that could open full screen reads the hold, so the queue
+  // starting or stopping draws no other card again.
+  const draining = useIsHeld(card !== null && opensFullScreen && !inHand && unit !== undefined && unit !== null && worn);
   const canFullScreen =
     card !== null &&
     opensFullScreen &&
@@ -331,8 +334,14 @@ export default function Card(props: CardProps): ReactElement {
   const selected = isSelected(props.highlight, testId);
   const clickable = target !== null && target !== undefined;
   const animatingEvent = testId === undefined ? undefined : props.animating?.get(testId);
-  // R3477000: the engine's forecast of the aimed attack on this card, while it is a target of one.
-  const outcome = outcomeFor(props.highlight, testId);
+  // R3615000: the hovered attack's markers. The card wears the blow it takes when it is the hovered
+  // target, and what it takes back when it is the hovering attacker (a strike back of 0 shows none).
+  const hovered = props.highlight?.hoveredAttack;
+  const targetOutcome = hovered?.target === testId ? outcomeFor(props.highlight, testId) : undefined;
+  const takenOutcome =
+    hovered !== undefined && hovered.attacker === testId && hovered.strikesBack
+      ? outcomeFor(props.highlight, hovered.target)
+      : undefined;
   // #1598: a `keywordGranted` that takes the keyword away plays as the icon going (keywordLoss.ts).
   const keywordLost = useKeywordLost(testId);
   // #2435: an `awakened` in flight breaks the card's Dormant seal until the board catches up
@@ -596,7 +605,12 @@ export default function Card(props: CardProps): ReactElement {
       {offFace ? null : <ActivateControls card={unit ?? card} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />}
 
       <PopLayer pops={props.pops} />
-      {outcome !== undefined && testId !== undefined && <AttackOutcome outcome={outcome} target={testId} strikesBack />}
+      {targetOutcome !== undefined && testId !== undefined && (
+        <AttackTargetPreview outcome={targetOutcome} target={testId} />
+      )}
+      {takenOutcome !== undefined && takenOutcome.taken > 0 && testId !== undefined && (
+        <AttackTakenPreview outcome={takenOutcome} attacker={testId} />
+      )}
     </div>
   );
 
@@ -626,6 +640,72 @@ export default function Card(props: CardProps): ReactElement {
     </TheirCopy>
   );
 }
+
+/**
+ * #3633: the keys of the board's `animating` map a card's tree reads: its own testid, its unit's `card-`
+ * one (its Activate controls flash on it) and its switch's. A queue step hands every card a new map; a
+ * card whose keys all name what they named draws nothing new.
+ */
+export function cardAnimatingKeys(props: Pick<CardProps, "testId" | "card" | "unit">): string[] {
+  const keys = props.testId === undefined ? [] : [props.testId];
+  const instanceId = (props.unit ?? props.card)?.instanceId;
+  if (instanceId !== undefined) keys.push(testid.card(instanceId), testid.switchPosition(instanceId));
+  return keys;
+}
+
+/** Equal plain data: what a parent builds inline for a card on each render (its target, pops, back and counters). */
+function sameData(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null || Array.isArray(a) !== Array.isArray(b)) return false;
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every((key) => Object.hasOwn(right, key) && sameData(left[key], right[key]));
+}
+
+/** The same element with the same props: a hand card's hint row, built inline on each render. */
+function sameElement(a: ReactNode, b: ReactNode): boolean {
+  if (Object.is(a, b)) return true;
+  if (!isValidElement(a) || !isValidElement(b) || a.type !== b.type || a.key !== b.key) return false;
+  const left = a.props as Record<string, unknown>;
+  const right = b.props as Record<string, unknown>;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every((key) => Object.hasOwn(right, key) && Object.is(left[key], right[key]));
+}
+
+/**
+ * #3633: whether a card would draw what it drew. Every prop is the same object as before, but for the
+ * `animating` map, of which only `cardAnimatingKeys` count, and the inline data and hint row a parent
+ * builds anew on every render, which count by what they hold. Without it every queue step drew every
+ * card on the board again, the slowest work of a throttled phone's frame (R3351000).
+ */
+export function sameCardProps(prev: Readonly<CardProps>, next: Readonly<CardProps>): boolean {
+  const keys = new Set([...Object.keys(prev), ...Object.keys(next)] as (keyof CardProps)[]);
+  for (const key of keys) {
+    const a = prev[key];
+    const b = next[key];
+    if (Object.is(a, b)) continue;
+    switch (key) {
+      case "animating":
+        if (cardAnimatingKeys(next).some((id) => prev.animating?.get(id) !== next.animating?.get(id))) return false;
+        continue;
+      case "hintRow":
+        if (!sameElement(prev.hintRow, next.hintRow)) return false;
+        continue;
+      case "target":
+      case "pops":
+      case "faceDown":
+      case "counters":
+        if (!sameData(a, b)) return false;
+        continue;
+      default:
+        return false;
+    }
+  }
+  return true;
+}
+
+export default memo(Card, sameCardProps);
 
 function SwitchButton({
   instanceId,

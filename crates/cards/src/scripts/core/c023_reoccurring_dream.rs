@@ -127,7 +127,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const DREAM: &str = "core-023"; // cost 1.
+    const DREAM: &str = "core-023"; // Reoccurring Dream
     const OTHERS: [&str; 4] = ["core-002", "core-003", "core-004", "core-011"];
 
     /// Ten other cards: playing the Dream leaves the hand exactly at HAND_CAP.

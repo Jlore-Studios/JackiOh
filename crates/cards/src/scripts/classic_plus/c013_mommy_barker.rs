@@ -35,9 +35,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MOMMY: &str = "classicplus-013";
-    const MENACE: &str = "core-019"; // 9/9: Mommy dies attacking it.
-    const FLOOD: &str = "core-017"; // (4) Spell: bounce all Units.
-    const COLLATERAL: &str = "core-034"; // (4) Spell: exile target permanent and a random card of the opponent's deck.
+    const MENACE: &str = "core-019"; // Midrange Menace: Mommy dies attacking it.
+    const FLOOD: &str = "core-017"; // Flood: bounce all Units
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: exile target permanent and a random card of the opponent's deck
     const FILLER: &str = "core-005";
 
     use crate::scenario;

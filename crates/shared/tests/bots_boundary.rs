@@ -2,6 +2,8 @@
 //! call answers what the function it names answers, over the plain records a host without row types hands
 //! over, and the bot seat's decision runs from the machine as JSON.
 
+use std::collections::BTreeSet;
+
 use indexmap::IndexSet;
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::validator::CatalogSnapshot;
@@ -9,17 +11,19 @@ use jackioh_engine::{PerPlayer, Rng, WinRateRow, WinRateSource, WinRateTable, de
 use jackioh_shared::bots::boundary::{BotAnswer, BotCall, GameFacts, TicketFacts, apply};
 use jackioh_shared::bots::cosmetics::{CosmeticOwners, Holding, eligible, redraw};
 use jackioh_shared::bots::fallback::{
-    BotMode, bot_match_gap_passed, bot_matches, choose_bot, fallback_due_keyed, hour_of,
+    BotMode, bot_match_gap_passed, bot_matches, choose_bot, fallback_due_keyed, fallback_seconds_keyed,
+    holds_deck_size, holds_decks, holds_trio, hour_of, on_schedule,
 };
 use jackioh_shared::bots::pool::{
     BotDeck, BotFacts, BotLadder, draw_decks, draw_new_bot, draw_trio, plan_grind, plan_pool, pool_target,
 };
 use jackioh_shared::config::{
     BOT_ACTIVE_HOURS_MIN, BOT_COSMETIC_FITS, BOT_COSMETIC_MIN_AGE_DAYS, BOT_COSMETIC_MIN_OWNERS,
-    BOT_FALLBACK_MAX_SECONDS, BOT_POOL_MIN, BOT_VS_BOT_MIN_GAP_SECONDS, MS_PER_DAY, MS_PER_SECOND,
-    PersonaName,
+    BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_HOURS_PER_DAY, BOT_POOL_MIN,
+    BOT_VS_BOT_MIN_GAP_SECONDS, MAX_FAIR_GAP, MS_PER_DAY, MS_PER_SECOND, PersonaName,
 };
 use jackioh_shared::cosmetics::registry;
+use jackioh_shared::deck::FrozenTrio;
 use jackioh_shared::host::bot::BotSeat;
 use jackioh_shared::host::boundary::{DecideCall, decide};
 use jackioh_shared::host::clock::initial_clocks;
@@ -302,6 +306,254 @@ fn the_kickoff_calls_count_the_matches_between_bots_and_the_gap_since_the_last()
     assert!(bot_match_gap_passed(&games, NOW + gap));
 }
 
+/// R1453: a hidden bot pairs with a ticket once that ticket has waited its own fallback time, drawn
+/// from its id, and not a millisecond before.
+#[test]
+fn r1453_a_tickets_fallback_time_is_its_own_drawn_from_its_id() {
+    let ids = ["ticket-1", "ticket-2", "ticket-3", "ticket-4", "ticket-5"];
+    let waits: IndexSet<i64> = ids.iter().map(|id| fallback_seconds_keyed("key", id)).collect();
+    assert!(
+        waits.len() > 1,
+        "PREMISE: the tickets wait different times, {waits:?}"
+    );
+    for id in ids {
+        let waiting = ticket(id, BotMode::Bo1, 1500.0);
+        let due_at = waiting.enqueued_at + fallback_seconds_keyed("key", id) * MS_PER_SECOND;
+        let due = |now: i64| {
+            apply(over_json(&BotCall::FallbackDue {
+                key: "key".to_string(),
+                ticket: waiting.clone(),
+                now,
+                hidden: true,
+            }))
+        };
+        assert_eq!(due(due_at - 1), BotAnswer::Due { due: false }, "{id}");
+        assert_eq!(due(due_at), BotAnswer::Due { due: true }, "{id}");
+    }
+}
+
+/// R1453, R1555000: a bot the host holds busy is never chosen, however close its rating; and only a
+/// game between two bots holds the gap before the next, never one with a person.
+#[test]
+fn r1555000_a_busy_bot_is_not_chosen_and_only_a_game_between_bots_holds_the_gap() {
+    // A bot rated at the ticket, in a match: so the ticket is not above every bot (R1555000's grinder
+    // rule), and no free bot is closer than "near".
+    let mut bots = vec![bot("far", 900.0), bot("near", 1480.0), bot("playing", 1500.0)];
+    bots[2].in_match_id = Some("m".to_string());
+    let choose = |busy: Vec<String>| {
+        apply(over_json(&BotCall::ChooseBot {
+            ticket: ticket("t", BotMode::Random, 1500.0),
+            bots: bots.clone(),
+            recent: Vec::new(),
+            busy,
+            hour: hour_of(NOW),
+            catalog_version: "v".to_string(),
+        }))
+    };
+    assert_eq!(
+        choose(Vec::new()),
+        BotAnswer::Chosen {
+            bot: Some("near".to_string())
+        }
+    );
+    let held = choose(vec!["near".to_string()]);
+    assert_ne!(
+        held,
+        BotAnswer::Chosen {
+            bot: Some("near".to_string())
+        }
+    );
+    let busy: IndexSet<String> = ["near".to_string()].into_iter().collect();
+    assert_eq!(
+        held,
+        BotAnswer::Chosen {
+            bot: choose_bot(
+                &ticket("t", BotMode::Random, 1500.0),
+                &bots,
+                &[],
+                &busy,
+                hour_of(NOW),
+                "v"
+            )
+            .map(|chosen| chosen.profile_id.clone())
+        }
+    );
+
+    let with_a_person = vec![GameFacts {
+        between_bots: false,
+        ended_at: NOW,
+    }];
+    assert_eq!(
+        apply(over_json(&BotCall::BotMatchGapPassed {
+            games: with_a_person,
+            now: NOW + 1,
+        })),
+        BotAnswer::Passed { passed: true }
+    );
+}
+
+/// Unit conversion, not configuration: an hour in milliseconds.
+const HOUR: i64 = 3_600_000;
+
+/// `n` distinct card ids: the checks below read a deck's size, not its cards.
+fn cards(n: usize) -> Vec<String> {
+    (0..n).map(|k| format!("card-{k}")).collect()
+}
+
+/// R1453: a ticket's fallback time is a whole number of seconds from BOT_FALLBACK_MIN_SECONDS to
+/// BOT_FALLBACK_MAX_SECONDS: each of them is drawn for some ticket, and none outside.
+#[test]
+fn r1453_a_fallback_time_is_drawn_from_the_min_to_the_max_seconds_both_included() {
+    let drawn: BTreeSet<i64> = (0..2_000)
+        .map(|k| fallback_seconds_keyed("key", &format!("ticket-{k}")))
+        .collect();
+    let every: BTreeSet<i64> = (BOT_FALLBACK_MIN_SECONDS..=BOT_FALLBACK_MAX_SECONDS).collect();
+    assert_eq!(drawn, every);
+}
+
+/// R1454: a bot's schedule reads the hour of the day in UTC: each hour by its number, the next day's
+/// as this one's, and the last millisecond before the epoch as the day's last hour.
+#[test]
+fn r1454_hour_of_is_the_utc_hour_of_the_day() {
+    for hour in 0..BOT_HOURS_PER_DAY {
+        let at = i64::from(hour) * HOUR + HOUR - 1;
+        assert_eq!(hour_of(at), hour, "{at}");
+        assert_eq!(hour_of(at + MS_PER_DAY), hour, "{at}");
+    }
+    assert_eq!(hour_of(-1), BOT_HOURS_PER_DAY - 1);
+}
+
+/// R1454: a bot is on for its `active_hours` from its `active_from_hour`, its day running on past
+/// midnight, and off for the rest.
+#[test]
+fn r1454_a_bot_is_on_schedule_for_its_hours_from_its_first_on_past_midnight() {
+    let night = BotFacts {
+        active_from_hour: 22,
+        active_hours: 4,
+        ..bot("night", 1500.0)
+    };
+    for hour in [22, 23, 0, 1] {
+        assert!(on_schedule(&night, hour), "{hour}");
+    }
+    for hour in [2, 12, 21] {
+        assert!(!on_schedule(&night, hour), "{hour}");
+    }
+}
+
+/// R1705001, R1454, R641000: a bot holds its decks for a catalog when it has Best-of-1 decks, each of
+/// DECK_SIZE cards, dealt for that catalog; and its Conquest trio the same way.
+#[test]
+fn r1705001_a_bot_holds_decks_and_a_trio_only_of_deck_size_cards_for_the_catalog() {
+    let size = usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size");
+    assert!(holds_deck_size(&cards(size)));
+    assert!(!holds_deck_size(&cards(size - 1)));
+    assert!(!holds_deck_size(&cards(size + 1)));
+
+    let deck = |n: usize| BotDeck {
+        cards: cards(n),
+        portrait: "portrait".to_string(),
+        slots: None,
+    };
+    let dealt = |decks: Vec<BotDeck>, version: Option<&str>| BotFacts {
+        decks,
+        decks_catalog_version: version.map(str::to_string),
+        ..bot("dealt", 1500.0)
+    };
+    assert!(holds_decks(&dealt(vec![deck(size), deck(size)], Some("v")), "v"));
+    assert!(!holds_decks(&dealt(Vec::new(), Some("v")), "v"));
+    assert!(!holds_decks(&dealt(vec![deck(size)], Some("w")), "v"));
+    assert!(!holds_decks(&dealt(vec![deck(size)], None), "v"));
+    assert!(!holds_decks(
+        &dealt(vec![deck(size), deck(size - 1)], Some("v")),
+        "v"
+    ));
+
+    let trio = |last: usize| -> FrozenTrio {
+        serde_json::from_value(serde_json::json!({
+            "name": "trio",
+            "decks": [
+                { "name": "a", "cards": cards(size) },
+                { "name": "b", "cards": cards(size) },
+                { "name": "c", "cards": cards(last) },
+            ],
+        }))
+        .expect("a trio reads")
+    };
+    let holding = |trio: Option<FrozenTrio>, version: Option<&str>| BotFacts {
+        trio,
+        trio_catalog_version: version.map(str::to_string),
+        ..bot("holding", 1500.0)
+    };
+    assert!(holds_trio(&holding(Some(trio(size)), Some("v")), "v"));
+    assert!(!holds_trio(&holding(Some(trio(size)), Some("w")), "v"));
+    assert!(!holds_trio(&holding(Some(trio(size - 1)), Some("v")), "v"));
+    assert!(!holds_trio(&holding(None, Some("v")), "v"));
+}
+
+/// R1555000: a ticket rated above every bot pairs only with a grinder within MAX_FAIR_GAP of it:
+/// never a closer bot that is not grinding, and no grinder further off.
+#[test]
+fn r1555000_above_every_bot_only_a_grinder_within_the_fair_gap_pairs() {
+    let rating = 2000.0;
+    let gap = MAX_FAIR_GAP as f64;
+    let grinder = |at: f64| BotFacts {
+        grinding: true,
+        ..bot("grinder", at)
+    };
+    let choose = |bots: &[BotFacts]| {
+        choose_bot(
+            &ticket("t", BotMode::Random, rating),
+            bots,
+            &[],
+            &IndexSet::new(),
+            hour_of(NOW),
+            "v",
+        )
+        .map(|chosen| chosen.profile_id.clone())
+    };
+    let closer = bot("closer", rating - 10.0);
+    assert_eq!(
+        choose(&[closer.clone(), grinder(rating - gap)]),
+        Some("grinder".to_string())
+    );
+    assert_eq!(choose(&[closer.clone(), grinder(rating - gap - 50.0)]), None);
+    assert_eq!(choose(&[closer]), None);
+}
+
+/// R1453: of the bots that may pair, the ticket takes the one closest in rating, above it or below, in
+/// whatever order the bots come; a recent opponent is passed over for the next closest.
+#[test]
+fn r1453_the_closest_rated_bot_pairs_and_a_recent_opponent_is_passed_over() {
+    let above = bot("above", 1550.0);
+    let below = bot("below", 1400.0);
+    let choose = |bots: &[BotFacts], recent: &[String]| {
+        choose_bot(
+            &ticket("t", BotMode::Random, 1500.0),
+            bots,
+            recent,
+            &IndexSet::new(),
+            hour_of(NOW),
+            "v",
+        )
+        .map(|chosen| chosen.profile_id.clone())
+    };
+    let both = [above.clone(), below.clone()];
+    assert_eq!(choose(&both, &[]), Some("above".to_string()));
+    assert_eq!(choose(&[below, above], &[]), Some("above".to_string()));
+    assert_eq!(choose(&both, &["above".to_string()]), Some("below".to_string()));
+}
+
+/// R1555000: the matches between two bots are those two or more bots are in, each once, in the
+/// order first seen; a match one bot is in alone is not one.
+#[test]
+fn r1555000_a_match_two_bots_are_in_is_between_bots_and_one_with_a_single_bot_is_not() {
+    assert_eq!(
+        bot_matches([Some("m1"), Some("m2"), None, Some("m1"), Some("m3"), Some("m3")]),
+        ["m1", "m3"]
+    );
+    assert_eq!(bot_matches([Some("m2"), None]), Vec::<String>::new());
+}
+
 #[test]
 fn the_bot_seats_decision_runs_from_the_machine_as_json() {
     jackioh_cards::register_all();
@@ -362,9 +614,9 @@ fn the_bot_seats_decision_runs_from_the_machine_as_json() {
     // The call is JSON for a host with no Rust types; the answer is the choice the machine is fed back.
     let json = serde_json::to_string(&call).expect("a decide call serializes");
     let read: DecideCall = serde_json::from_str(&json).expect("a decide call reads back");
-    let choice = decide(&read, None).expect("a bot plays at p2");
+    let choice = decide(&read, None, None).expect("a bot plays at p2");
     assert!(choice.body.is_some(), "{choice:?}");
-    assert_eq!(decide(&call, None), Some(choice));
+    assert_eq!(decide(&call, None, None), Some(choice));
     // Nobody to decide for at p1.
     let nobody = DecideCall {
         request: DecideRequest {
@@ -373,7 +625,7 @@ fn the_bot_seats_decision_runs_from_the_machine_as_json() {
         },
         ..call
     };
-    assert!(decide(&nobody, None).is_none());
+    assert!(decide(&nobody, None, None).is_none());
 }
 
 #[test]

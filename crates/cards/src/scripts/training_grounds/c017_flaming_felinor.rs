@@ -39,9 +39,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FELINOR: &str = super::ID;
-    const BODY: &str = "core-008"; // Mr. Vanilla 4/4
-    const BIG: &str = "traininggrounds-008"; // Clobberer 14/7
-    const FRAIL: &str = "traininggrounds-001"; // Spikey Steven 5/2
+    const BODY: &str = "core-008"; // Mr. Vanilla
+    const BIG: &str = "traininggrounds-008"; // Clobberer
+    const FRAIL: &str = "stand-in (1) 5/2 R15/6";
     const FILLER: &str = "core-005";
 
     /// p1: a Mr. Vanilla in lane 1 and a Clobberer in lane 2; p2: a Clobberer in lane 1 and two Spikey

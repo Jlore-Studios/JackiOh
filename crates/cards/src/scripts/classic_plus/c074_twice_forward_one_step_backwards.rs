@@ -68,19 +68,19 @@ mod tests {
 
     const FORWARD: &str = "classicplus-074";
     const REFUSAL: &str = "classicplus-t-ai-09";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt; End of turn: heal this to full
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const RAPID: &str = "core-010"; // (0) Spell
-    const TRUE_STRIKE: &str = "core-044"; // (1) Spell: Pierce. Deal 4 damage. Exile this.
-    const BEAR: &str = "core-060"; // (1) Trap
-    const SHREDDER: &str = "core-013"; // (3) Unit: End of turn: deal 2 damage to each enemy.
-    const FELINORS: &str = "core-012"; // (2) Unit: Cry: Summon a copy of this.
-    const TIGER_DOJO: &str = "core-014"; // (4) Field Spell: Aura: your Units have +2 attack, Rush and First Strike.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
-    const HINDER: &str = "core-021"; // (0) Spell, cast on draw
-    const TIMMY: &str = "core-011"; // (1) Unit
-    const GUY_ATT: &str = "classicplus-005"; // (2) Unit: Cry: Destroy every backrow card you control.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt; End of turn: heal this to full
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const RAPID: &str = "core-010"; // Rapid Replenish: a Spell
+    const TRUE_STRIKE: &str = "core-044"; // True Strike: Pierce. Deal 4 damage. Exile this.
+    const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
+    const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: End of turn: deal 2 damage to each enemy.
+    const FELINORS: &str = "core-012"; // Duplicating Felinors: Cry: Summon a copy of this.
+    const TIGER_DOJO: &str = "core-014"; // Jlockeed's Weapons: Aura: your Units have +2 attack, Rush and First Strike.
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const HINDER: &str = "core-021"; // Hinder: a Spell, cast on draw
+    const TIMMY: &str = "core-011"; // Tempo Timmy
+    const GUY_ATT: &str = "classicplus-005"; // Guy Att: Cry: Destroy every backrow card you control.
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;

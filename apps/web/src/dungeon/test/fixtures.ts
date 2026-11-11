@@ -16,7 +16,21 @@ import type {
   RunUnlocks,
 } from "@jackioh/run";
 
-/** DR3's ladder, its 10 cards and its 3 artifacts worth 8 points, the five tiers' points and a campfire's two cards. */
+/** Ten starting cards of the catalog's Training Grounds, so their faces draw as the deck builder draws them. */
+export const STARTERS = [
+  "traininggrounds-001",
+  "traininggrounds-002",
+  "traininggrounds-004",
+  "traininggrounds-006",
+  "traininggrounds-007",
+  "traininggrounds-008",
+  "traininggrounds-011",
+  "traininggrounds-017",
+  "traininggrounds-020",
+  "traininggrounds-023",
+];
+
+/** DR3's ladder, its 10 cards and its 3 artifacts worth 8 points, the five tiers' points, a campfire's max HP and its two cards. */
 export const CONSTANTS: RunConstants = {
   slotLadder: [
     [5, 4, 0, 0, 0, 1],
@@ -36,26 +50,35 @@ export const CONSTANTS: RunConstants = {
     ["platinum", 4],
     ["diamond", 5],
   ],
-  // A campfire removes two cards.
+  // A campfire adds 5 max HP and removes two cards.
+  campfireMaxHp: 5,
   campfireRemove: 2,
+  // The three named starting decks, rotations of the ten starters.
+  presets: [
+    {
+      id: "first-charge",
+      name: "First Charge",
+      theme: "Cheap units that hit fast and hit hard.",
+      cards: [...STARTERS],
+    },
+    {
+      id: "spell-tricks",
+      name: "Spell tricks",
+      theme: "Spells and helpers that out-trick the enemy.",
+      cards: [...STARTERS.slice(2), ...STARTERS.slice(0, 2)],
+    },
+    {
+      id: "hold-the-line",
+      name: "Hold the line",
+      theme: "Tough bodies that hold the line, then win late.",
+      cards: [...STARTERS].reverse(),
+    },
+  ],
 };
 
 /** The Embers each level costs from the one before it: `LEVEL_EMBERS[0]` buys level 2. */
 export const LEVEL_EMBERS = [10, 25, 45, 70, 100];
 
-/** Ten starting cards of the catalog's Training Grounds, so their faces draw as the deck builder draws them. */
-export const STARTERS = [
-  "traininggrounds-001",
-  "traininggrounds-002",
-  "traininggrounds-004",
-  "traininggrounds-006",
-  "traininggrounds-007",
-  "traininggrounds-008",
-  "traininggrounds-011",
-  "traininggrounds-017",
-  "traininggrounds-020",
-  "traininggrounds-023",
-];
 /** A card in the pool a mini-boss extraction unlocks, and one that stays locked. */
 export const EXTRACTABLE = "traininggrounds-003";
 export const LOCKED = "traininggrounds-005";
@@ -140,6 +163,7 @@ export function runState(over: Partial<RunState> = {}): RunState {
     row: null,
     col: 0,
     hp: 30,
+    maxHpBonus: 0,
     deck: [],
     artifacts: [],
     blessings: [],
@@ -210,8 +234,13 @@ function foldStandIn(file: RunFile): { state: RunState } | { error: string } {
  * what it needs on each (`wasmBindings.runCheckSetup.mockReturnValue("…")`); `resetBindings` puts every
  * default back.
  */
+/** The same shape as `CONTENT`, its pool dealt in another order: a build whose patch reshuffled the deal. */
+export const CONTENT_B: RunContent = { ...CONTENT, pool: [...CONTENT.pool].reverse() };
+
 export const wasmBindings = {
   runContent: vi.fn((): RunContent => CONTENT),
+  catalogVersion: vi.fn((): string => "test-catalog"),
+  runContentAt: vi.fn((_version: string): RunContent | null => null),
   runCheckSetup: vi.fn((_setup: RunSetup, _unlocks: RunUnlocks, _content: RunContent): string | null => null),
   runCreate: vi.fn((setup: RunSetup, _unlocks: RunUnlocks, _content: RunContent): { state: RunState } | { error: string } =>
     createStandIn(setup),
@@ -231,6 +260,8 @@ export const wasmBindings = {
 /** Every binding back to its default answer, and every call forgotten. */
 export function resetBindings(): void {
   wasmBindings.runContent.mockReset().mockImplementation(() => CONTENT);
+  wasmBindings.catalogVersion.mockReset().mockImplementation(() => "test-catalog");
+  wasmBindings.runContentAt.mockReset().mockImplementation(() => null);
   wasmBindings.runCheckSetup.mockReset().mockImplementation(() => null);
   wasmBindings.runCreate.mockReset().mockImplementation((setup) => createStandIn(setup));
   wasmBindings.runReduce.mockReset().mockImplementation((state, _content, action) => reduceStandIn(state, action));

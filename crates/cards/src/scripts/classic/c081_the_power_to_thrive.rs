@@ -81,9 +81,9 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const THRIVE: &str = "classic-081";
-    const FILLER: &str = "core-005"; // (1) Spell (§2.5).
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
-    const X: &str = "core-020"; // library filler.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell (§2.5).
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: a Spell (§2.5).
+    const X: &str = "core-020"; // Pointmaster: library filler
 
     use crate::scenario;
 

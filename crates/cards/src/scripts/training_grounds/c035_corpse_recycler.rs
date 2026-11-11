@@ -53,11 +53,11 @@ mod tests {
 
     const RECYCLER: &str = super::ID;
     const RUSH: &str = "core-t-rush";
-    const VANILLA: &str = "core-008"; // (1) 4/4
-    const SPECIESIST: &str = "core-002"; // (2) 4/1
-    const TIMMY: &str = "core-011"; // (1) 3/3 Rush, First Strike
-    const BIG_FELINOR: &str = "core-043"; // (4) 3/10, Cry: destroy all non-Felinor Units.
-    const COLLATERAL: &str = "core-034"; // exiles a permanent
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const SPECIESIST: &str = "core-002"; // Speciesist
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const BIG_FELINOR: &str = "core-043"; // Big Felinor: Cry: destroy all non-Felinor Units
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: exiles a permanent
     const HIT_JOB: &str = "core-016";
 
     fn board(radiant: bool, p1: Value, p2: Value) -> Scenario {

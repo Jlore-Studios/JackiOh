@@ -13,11 +13,12 @@ import { resultRevealMs } from "../game/Result.tsx";
 import { baseView, dormantStarship, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import { FX_CALLOUT_MS, FX_STACK_LAND, FX_STARSHIP_STILL_MS, FX_TEXT } from "./constants.ts";
-import FxLayer, { type FxSeams } from "./FxLayer.tsx";
+import FxLayer, { FX_BANNER_MARK, FX_HOLD_MARK, FX_LAYER_MARK, type FxSeams } from "./FxLayer.tsx";
 import { resetFxSettingsForTests, setFxSettings } from "./settings.ts";
 import { starshipClaim } from "./starship.ts";
 import type { FxSurface } from "./surface.ts";
 import type { FxAnchor, FxBox, FxFrameSource, FxShakeSink, FxVisibility } from "./types.ts";
+import { readRootVar } from "../game/rootVars.ts";
 
 beforeEach(() => {
   localStorage.clear();
@@ -210,7 +211,7 @@ function mountLayer(queue: AnimationQueue, view: PlayerView, fx: Fx) {
       utils.rerender(tree(next));
     },
     count: (kind: string): number => game.querySelectorAll(`[data-fx="${kind}"]`).length,
-    squeeze: (): string => game.style.getPropertyValue("--anim-squeeze").trim(),
+    squeeze: (): string => readRootVar(game, "--anim-squeeze").trim(),
   };
 }
 
@@ -233,6 +234,36 @@ function p2View(over: Partial<PlayerView> = {}): PlayerView {
  * trap b20 in backrow lane 5. u2 carries every keyword; u10 is a 10/10. */
 const HIT: GameEvent = { type: "damage", sourceId: "u1", targetId: "u10", amount: 4, combat: true };
 
+describe("#3633 the layer's marks on its game", () => {
+  it("#3633 the layer marks its game while its effects are on, a banner is up and a stand-in is held", async () => {
+    const queue = queueWith(fakeSchedule());
+    const m = mountLayer(queue, fullBoardView(), fakeSeams());
+    expect(m.game).toHaveAttribute(FX_LAYER_MARK, "on");
+    expect(m.game).not.toHaveAttribute(FX_BANNER_MARK);
+    expect(m.game).not.toHaveAttribute(FX_HOLD_MARK);
+    // The director mounts both into the layer's DOM root; the marks follow what it holds.
+    const banner = document.createElement("div");
+    banner.setAttribute("data-fx", "banner");
+    const hold = document.createElement("div");
+    hold.className = "fx-hold";
+    await act(async () => {
+      m.fxDom()?.append(banner, hold);
+      await Promise.resolve();
+    });
+    expect(m.game).toHaveAttribute(FX_BANNER_MARK);
+    expect(m.game).toHaveAttribute(FX_HOLD_MARK);
+    await act(async () => {
+      banner.remove();
+      await Promise.resolve();
+    });
+    expect(m.game).not.toHaveAttribute(FX_BANNER_MARK);
+    expect(m.game).toHaveAttribute(FX_HOLD_MARK);
+    cleanup();
+    expect(m.game).not.toHaveAttribute(FX_LAYER_MARK);
+    expect(m.game).not.toHaveAttribute(FX_HOLD_MARK);
+  });
+});
+
 describe("B36 — FxLayer follows the runner without pacing it", () => {
   it("R200 each start writes --anim-squeeze on the layer's parent and idle removes it", () => {
     const sched = fakeSchedule();
@@ -248,6 +279,8 @@ describe("B36 — FxLayer follows the runner without pacing it", () => {
     if (entry === null) return;
     expect(m.squeeze()).toBe((entry.durationMs / ANIMATIONS[entry.type].durationMs).toFixed(3));
     expect(m.squeeze()).toBe("1.000");
+    // #3633: written onto the elements that read it, never onto the parent's own style.
+    expect(m.game.style.getPropertyValue("--anim-squeeze")).toBe("");
 
     act(() => sched.flush());
     expect(queue.idle()).toBe(true);

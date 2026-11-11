@@ -42,8 +42,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TRAINER: &str = super::ID;
-    const HUMAN: &str = "traininggrounds-001"; // Spikey Steven 5/2, Human
-    const BEAST: &str = "core-012"; // Duplicating Felinors 3/4, Felinor: no Human
+    const HUMAN: &str = "traininggrounds-001"; // Spikey Steven: Human
+    const BEAST: &str = "core-012"; // Duplicating Felinors: Felinor: no Human
     const FILLER: &str = "core-005";
 
     /// p1 holds the Trainer, a Human in lane 1 and a Felinor in lane 2; p2 a Human in lane 1.
@@ -55,6 +55,7 @@ mod tests {
     }
 
     /// The instance ids `legalActions` offers the Trainer as targets.
+    // Differs from Scenario::offered: one card's play targets as unique ids, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<String> {
         let trainer = s.card(TRAINER).id.clone();
         legal_actions(s.state(), P1)

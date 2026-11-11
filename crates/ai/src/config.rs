@@ -70,6 +70,13 @@ pub const AI_BUDGET: SearchBudget = SearchBudget {
 /// (docs/polish/3-ai.md B28–B31) and the sweep (R186) measure the AI that ships.
 pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 
+/// R3498000: the share of a host's time limit, counted from the host's start, after which the beam
+/// explores no further (`AiOptions.wrap_up`, `wrap_up_after_ms`). The rest of the time pays for the open
+/// lines' endTurns, the finalists' replies and their scores on the other sampled worlds, which a clock
+/// that fired mid-beam would refuse. A judgement that no clocked strength screen has tested; a plain
+/// const, not an `AiSearch` field, since that struct derives `Eq`.
+pub const AI_WRAP_UP_SHARE: f64 = 0.6;
+
 /// R2102000: the stream the practice AI's lethal hint (`lethal::lethal_hint`, SPEC §9.9) draws
 /// its worlds from, its own: never the match's, nor the AI's, so asking it moves no other stream.
 pub const LETHAL_HINT_SEED: &str = "ai:lethal-hint";
@@ -1004,3 +1011,36 @@ pub const AI_WIN_RATE: AiWinRate = AiWinRate {
 
 // R645: the AI's emote personas live in the web client (`apps/web/src/practice/personas.ts`): they
 // are cosmetic only, and none of them reaches the engine, the action log or a game record.
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `KeywordWeights::of` answers each kind the entry its wire name (`KeywordKind::as_str`) names
+    /// in the table's serde form, and `None` for a kind with no entry. The values are made up, each
+    /// its own, so a dropped or swapped arm shows; the weights stay the training lanes'.
+    #[test]
+    fn keyword_weights_of_answers_each_kind_its_own_entry() {
+        let serde_json::Value::Object(names) =
+            serde_json::to_value(AI_EVAL.keyword).expect("the table serializes")
+        else {
+            panic!("the table serializes as an object");
+        };
+        let made_up: serde_json::Map<String, serde_json::Value> = names
+            .keys()
+            .enumerate()
+            .map(|(i, name)| (name.clone(), serde_json::json!(i as f64 + 2.0)))
+            .collect();
+        let weights: KeywordWeights =
+            serde_json::from_value(serde_json::Value::Object(made_up.clone())).expect("it reads back");
+        for kind in KeywordKind::ALL {
+            let entry = made_up.get(kind.as_str()).and_then(serde_json::Value::as_f64);
+            assert_eq!(weights.of(*kind), entry, "{kind:?}");
+        }
+        let named = KeywordKind::ALL
+            .iter()
+            .filter(|kind| weights.of(**kind).is_some())
+            .count();
+        assert_eq!(named, made_up.len(), "every entry is some kind's");
+    }
+}

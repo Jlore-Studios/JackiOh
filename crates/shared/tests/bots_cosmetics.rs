@@ -8,21 +8,22 @@ use std::collections::{BTreeMap, BTreeSet};
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_shared::bots::cosmetics::CosmeticOwners;
 use jackioh_shared::bots::cosmetics::{
-    Holding, draw_account, draw_card_picks, draw_slots, draw_wardrobe, eligible, fit_for, redraw,
+    BotCosmetics, Holding, draw_account, draw_card_picks, draw_slots, draw_wardrobe, eligible, fit_for,
+    redraw,
 };
 use jackioh_shared::bots::pool::{BotDeck, BotFacts};
 use jackioh_shared::config::{
     BOT_COSMETIC_FIT_MIN_SAMPLES, BOT_COSMETIC_FITS, BOT_COSMETIC_MIN_AGE_DAYS, BOT_COSMETIC_MIN_OWNERS,
     BOT_COSMETIC_PRIOR, BOT_COSMETIC_PRIOR_CARDS_PER_DECK, BOT_COSMETIC_PRIOR_DEFAULT_SHARE,
-    BOT_COSMETIC_PRIOR_FULL_ART_WEAR, BOT_COSMETIC_PRIOR_OWNERSHIP, BOT_COSMETIC_REDRAW_DAYS, CosmeticFit,
-    CosmeticOwnership, CosmeticWear, FLEET_TRACK_LEVELS,
+    BOT_COSMETIC_PRIOR_FULL_ART_WEAR, BOT_COSMETIC_PRIOR_OWNERSHIP, BOT_COSMETIC_REDRAW_DAYS,
+    BOT_COSMETIC_SLOT_CHANGE_SHARE, CosmeticFit, CosmeticOwnership, CosmeticWear, FLEET_TRACK_LEVELS,
 };
 use jackioh_shared::cosmetics::{
     CardCosmetic, Cosmetic, CosmeticKind, CosmeticRarity, JLORIOUS_CARD_BACK, JLORIOUS_STARSHIP,
     OwnedCosmetics, owns, registry,
 };
 use jackioh_shared::deck::{DeckSlots, FrozenDeck, FrozenTrio};
-use jackioh_shared::loadout::{AccountPicks, CARD_SLOT_KINDS, CardPicks, DECK_SLOT_KINDS};
+use jackioh_shared::loadout::{AccountPicks, CARD_SLOT_KINDS, CardPicks, DECK_SLOT_KINDS, setting_key};
 
 /// Unit conversion, not configuration: a day in milliseconds.
 const DAY: i64 = 86_400_000;
@@ -172,6 +173,24 @@ fn close(actual: f64, expected: f64, what: &str) {
 }
 
 // One seed, one wardrobe and one loadout
+
+/// R1834005: what a bot held stays in its wardrobe while it is still eligible, even on a seed whose
+/// fresh draw would not deal it.
+#[test]
+fn r1834005_a_held_holding_still_eligible_stays_where_a_fresh_draw_would_not_deal_it() {
+    let held = holding("table-velvet", None);
+    let eligible = vec![held.clone()];
+    let none = OwnedCosmetics::default();
+    let seed = (0..1_000)
+        .map(|n| format!("kept:{n}"))
+        .find(|seed| holdings(&draw_wardrobe(seed, &BOT_COSMETIC_PRIOR, &eligible, &none)).is_empty())
+        .expect("a seed whose fresh draw deals nothing");
+    let owned = wardrobe(&[], &["table-velvet"]);
+    assert_eq!(
+        holdings(&draw_wardrobe(&seed, &BOT_COSMETIC_PRIOR, &eligible, &owned)),
+        BTreeSet::from([held])
+    );
+}
 
 #[test]
 fn r1834005_deterministic_from_the_seed() {
@@ -1087,4 +1106,324 @@ fn r1834005_redealt_decks_draw_again() {
 
 fn trio_of(bot: &BotFacts) -> FrozenTrio {
     bot.trio.clone().expect("the bot's trio")
+}
+
+// A refresh's draws, path by path (#3513: each held on its own)
+
+/// The aging refresh of a bot first drawn at NOW, born 40 days before: `held` changes what the first
+/// draw gave it (its wardrobe, picks and slots) before it ages BOT_COSMETIC_REDRAW_DAYS later.
+fn aged_from(
+    seed: &str,
+    held: impl FnOnce(&mut BotFacts),
+) -> (BotFacts, jackioh_shared::bots::cosmetics::BotDraw) {
+    let registry = registry();
+    let mut aging = bot(&format!("bot-{seed}"), NOW - 40 * DAY, vec![dealt(&deck_of(1))]);
+    let first = redraw(seed, &aging, BOT_COSMETIC_FITS, registry, &[], NOW).expect("a first draw");
+    aging.decks = first.decks.expect("its deck, given slots");
+    aging.cosmetics = Some(first.cosmetics);
+    held(&mut aging);
+    let aged = redraw(
+        seed,
+        &aging,
+        BOT_COSMETIC_FITS,
+        registry,
+        &[],
+        NOW + BOT_COSMETIC_REDRAW_DAYS * DAY,
+    )
+    .expect("a bot past BOT_COSMETIC_REDRAW_DAYS ages");
+    (aging, aged)
+}
+
+/// R1834005: each deck dealt without slots draws them from a stream of its own, `{seed}:deck:{n}` for
+/// the bot's n-th deck, so its decks do not all wear one draw.
+#[test]
+fn r1834005_each_dealt_deck_draws_its_slots_from_its_own_stream() {
+    let registry = registry();
+    let (a, b) = (deck_of(1), deck_of(26));
+    let fresh = bot("bot-decks", NOW - 40 * DAY, vec![dealt(&a), dealt(&b)]);
+    let fit = fit_for(BOT_COSMETIC_FITS, 40);
+    let (seed, drawn) = (0..SEEDS)
+        .map(|n| format!("decks:{n}"))
+        .find_map(|seed| {
+            let drawn = redraw(&seed, &fresh, BOT_COSMETIC_FITS, registry, &[], NOW).expect("a first draw");
+            let first = draw_slots(
+                &format!("{seed}:deck:0"),
+                registry,
+                fit,
+                &drawn.cosmetics.wardrobe,
+            );
+            let second = draw_slots(
+                &format!("{seed}:deck:1"),
+                registry,
+                fit,
+                &drawn.cosmetics.wardrobe,
+            );
+            (first != second).then_some((seed, drawn))
+        })
+        .expect("a seed whose two decks draw different slots");
+    let decks = drawn.decks.expect("both decks, given slots");
+    for (n, deck) in decks.iter().enumerate() {
+        let own = draw_slots(
+            &format!("{seed}:deck:{n}"),
+            registry,
+            fit,
+            &drawn.cosmetics.wardrobe,
+        );
+        assert_eq!(deck.slots, Some(own), "deck {n}");
+    }
+}
+
+/// R1834005: a bot dealt a deck again before it ages keeps what it held that is still eligible and
+/// gains nothing, where a fresh draw would deal it something.
+#[test]
+fn r1834005_a_redeal_before_the_bot_ages_keeps_its_wardrobe_and_gains_nothing() {
+    let registry = registry();
+    let dfender = holding("full-art-big-d-fender", Some("core-001"));
+    let eligible = vec![dfender.clone()];
+    let born = NOW - 20 * DAY;
+    // REDRAW_FITS's month-old fit owns Big D-fender's full art at a share of one.
+    let fresh = bot("bot-fresh", born, vec![dealt(&deck_of(1))]);
+    let first = redraw("kept", &fresh, &REDRAW_FITS, registry, &eligible, NOW).expect("a first draw");
+    assert!(
+        holdings(&first.cosmetics.wardrobe).contains(&dfender),
+        "PREMISE: a fresh draw deals it"
+    );
+    let mut held = bot("bot-kept", born, vec![dealt(&deck_of(1))]);
+    held.cosmetics = Some(BotCosmetics {
+        wardrobe: OwnedCosmetics::default(),
+        account: AccountPicks::default(),
+        cards: Vec::new(),
+        drawn_at: NOW,
+        seed: "kept".to_string(),
+    });
+    let again = redraw("kept", &held, &REDRAW_FITS, registry, &eligible, NOW + DAY)
+        .expect("a redealt deck draws again");
+    assert!(
+        holdings(&again.cosmetics.wardrobe).is_empty(),
+        "{:?}",
+        again.cosmetics.wardrobe
+    );
+    assert_eq!(
+        again.cosmetics.drawn_at, NOW,
+        "not aging, it keeps its draw's date"
+    );
+}
+
+/// R1834005: an aging bot draws again every account pick and deck slot it does not own (here a table
+/// it never owned), so whatever it wears it owns.
+#[test]
+fn r1834005_an_aging_bot_draws_again_every_pick_and_slot_it_does_not_own() {
+    let none = OwnedCosmetics::default();
+    let unowned = registry()
+        .iter()
+        .find(|cosmetic| cosmetic.kind == CosmeticKind::Table && !owns(cosmetic, None, &none))
+        .expect("a table a new bot does not own");
+    for n in 0..20 {
+        let (aging, aged) = aged_from(&format!("aging-unowned:{n}"), |bot| {
+            for deck in &mut bot.decks {
+                if let Some(slots) = deck.slots.as_mut() {
+                    slots.table = Some(unowned.id.clone());
+                }
+            }
+            if let Some(cosmetics) = bot.cosmetics.as_mut() {
+                cosmetics
+                    .account
+                    .picks
+                    .insert(setting_key(CosmeticKind::Table).to_string(), unowned.id.clone());
+            }
+        });
+        let decks = aged.decks.unwrap_or(aging.decks);
+        let slots: Vec<&DeckSlots> = decks.iter().filter_map(|deck| deck.slots.as_ref()).collect();
+        assert_eq!(slots.len(), 1, "{n}");
+        assert_owned(&aged.cosmetics.account, &slots, &aged.cosmetics.wardrobe);
+    }
+}
+
+/// R1834005: an aging bot changes a slot it still owns only at BOT_COSMETIC_SLOT_CHANGE_SHARE, so it
+/// keeps most of them (a starter table here, which a draw under the prior deals far less often).
+#[test]
+fn r1834005_an_aging_bot_keeps_most_slots_it_still_owns() {
+    let none = OwnedCosmetics::default();
+    let worn = registry()
+        .iter()
+        .find(|cosmetic| {
+            cosmetic.kind == CosmeticKind::Table && !cosmetic.default && owns(cosmetic, None, &none)
+        })
+        .expect("a starter table a new bot owns");
+    let kept = (0..SEEDS)
+        .filter(|n| {
+            let (_, aged) = aged_from(&format!("aging-owned:{n}"), |bot| {
+                if let Some(cosmetics) = bot.cosmetics.as_mut() {
+                    cosmetics
+                        .account
+                        .picks
+                        .insert(setting_key(CosmeticKind::Table).to_string(), worn.id.clone());
+                }
+            });
+            aged.cosmetics.account.get(CosmeticKind::Table) == Some(worn.id.as_str())
+        })
+        .count();
+    let share = kept as f64 / SEEDS as f64;
+    assert!(
+        share >= 1.0 - BOT_COSMETIC_SLOT_CHANGE_SHARE - 2.0 * TOLERANCE,
+        "kept {worn:?} at {share}",
+        worn = worn.id
+    );
+}
+
+/// R1834005: an aging bot keeps a card's own pick only while it owns it on that card: a pick naming a
+/// foil it never owned is dropped.
+#[test]
+fn r1834005_an_aging_bot_drops_a_cards_pick_it_does_not_own() {
+    let none = OwnedCosmetics::default();
+    let unowned = registry()
+        .iter()
+        .find(|cosmetic| cosmetic.kind == CosmeticKind::Foil && !owns(cosmetic, Some("core-001"), &none))
+        .expect("a foil a new bot does not own");
+    let (_, aged) = aged_from("aging-card-pick", |bot| {
+        if let Some(cosmetics) = bot.cosmetics.as_mut() {
+            cosmetics.cards = vec![CardPicks {
+                card_id: "core-001".to_string(),
+                foil: Some(unowned.id.clone()),
+                ..CardPicks::default()
+            }];
+        }
+    });
+    assert!(
+        aged.cosmetics
+            .cards
+            .iter()
+            .all(|picks| picks.get(CosmeticKind::Foil) != Some(unowned.id.as_str())),
+        "{:?}",
+        aged.cosmetics.cards
+    );
+}
+
+/// A fit of people's earned wear alone: two earned foils on core-001, each worn by everyone who owns
+/// it, and no card picks.
+static EARNED_TWO: CosmeticFit = CosmeticFit {
+    max_age_days: None,
+    samples: BOT_COSMETIC_FIT_MIN_SAMPLES,
+    slots: &[],
+    per_card_share: 0.0,
+    cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+    card_picks: &[],
+    earned_wear: &[
+        CosmeticWear {
+            cosmetic: "foil-glitter",
+            card: "core-001",
+            share: 1.0,
+        },
+        CosmeticWear {
+            cosmetic: "foil-sunburst",
+            card: "core-001",
+            share: 1.0,
+        },
+    ],
+    full_art_wear: &[],
+    ownership: &[],
+};
+
+/// R1834005: a fit holding only people's earned wear on cards, and no card picks, still has a bot wear
+/// what it earned; and a card takes the first of its earned foils that rolls, never a later one.
+#[test]
+fn r1834005_a_card_wears_the_first_earned_foil_that_rolls_under_a_fit_of_earned_wear_alone() {
+    let registry = registry();
+    let owned = wardrobe(
+        &[("foil-glitter", "core-001"), ("foil-sunburst", "core-001")],
+        &[],
+    );
+    let first = registry
+        .iter()
+        .find(|cosmetic| cosmetic.id == "foil-glitter" || cosmetic.id == "foil-sunburst")
+        .expect("both foils are in the registry");
+    let deck = vec!["core-001".to_string()];
+    let cards = draw_card_picks(
+        "earned-two",
+        registry,
+        &EARNED_TWO,
+        &owned,
+        &AccountPicks::default(),
+        &[deck.as_slice()],
+    );
+    let [card] = cards.as_slice() else {
+        panic!("one card of its own, not {cards:?}");
+    };
+    assert_eq!(card.card_id, "core-001");
+    assert_eq!(card.foil.as_deref(), Some(first.id.as_str()));
+}
+
+/// Two non-starter tables, each worn by 40% of seats and owned by every bot.
+static TWO_TABLES: CosmeticFit = CosmeticFit {
+    max_age_days: None,
+    samples: BOT_COSMETIC_FIT_MIN_SAMPLES,
+    slots: &[("table-marble", 0.4), ("table-chessboard", 0.4)],
+    per_card_share: 0.0,
+    cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+    card_picks: &[],
+    earned_wear: &[],
+    full_art_wear: &[],
+    ownership: &[
+        CosmeticOwnership {
+            cosmetic: "table-marble",
+            card: None,
+            share: 1.0,
+        },
+        CosmeticOwnership {
+            cosmetic: "table-chessboard",
+            card: None,
+            share: 1.0,
+        },
+    ],
+};
+
+/// R1834005: two fitted non-starters of one kind are each worn at their share of seats, the second as
+/// often as the first: its chance is taken over the seats the first left undrawn.
+#[test]
+fn r1834005_each_fitted_non_starter_of_a_kind_is_worn_at_its_share_the_second_as_the_first() {
+    let registry = registry();
+    let owned = wardrobe(&[], &["table-marble", "table-chessboard"]);
+    let mut worn: BTreeMap<String, usize> = BTreeMap::new();
+    for n in 0..POOL {
+        let picks = draw_account(&format!("two-tables:{n}"), registry, &TWO_TABLES, &owned);
+        let table = picks.get(CosmeticKind::Table).unwrap_or_default().to_string();
+        *worn.entry(table).or_default() += 1;
+    }
+    for id in ["table-marble", "table-chessboard"] {
+        close(worn.get(id).copied().unwrap_or(0) as f64 / POOL as f64, 0.4, id);
+    }
+}
+
+/// A fit that lists a table and nothing of any other kind.
+static TABLE_ONLY: CosmeticFit = CosmeticFit {
+    max_age_days: None,
+    samples: BOT_COSMETIC_FIT_MIN_SAMPLES,
+    slots: &[("table-felt", 1.0)],
+    per_card_share: 0.0,
+    cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+    card_picks: &[],
+    earned_wear: &[],
+    full_art_wear: &[],
+    ownership: &[],
+};
+
+/// R1834005: a kind the fit lists nothing of takes the prior's split among what the bot owns, whatever
+/// the fit lists of other kinds: a new bot under a fit of tables alone still wears a starter foil at
+/// the prior's share, not only the default.
+#[test]
+fn r1834005_a_kind_the_fit_lists_nothing_of_takes_the_priors_split() {
+    let registry = registry();
+    let none = OwnedCosmetics::default();
+    let starters = (0..POOL)
+        .filter(|n| {
+            let picks = draw_account(&format!("table-only:{n}"), registry, &TABLE_ONLY, &none);
+            assert_eq!(picks.get(CosmeticKind::Table), Some("table-felt"), "{n}");
+            picks.get(CosmeticKind::Foil) != Some("foil-none")
+        })
+        .count();
+    close(
+        starters as f64 / POOL as f64,
+        1.0 - BOT_COSMETIC_PRIOR_DEFAULT_SHARE,
+        "a starter foil under the prior",
+    );
 }

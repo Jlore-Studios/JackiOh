@@ -51,12 +51,12 @@ mod tests {
     use crate::scenario;
 
     const DOOM: &str = "classicplus-001";
-    const TIMMY: &str = "core-011"; // (1) 3/3 Rush, First Strike.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const FIENDER: &str = "core-092"; // (2) 5/7 Stack.
-    const DEFENDER: &str = "core-003"; // (1) Taunt, Divine Shield, Reborn; Radiant: Death summons a base one.
-    const TOKEN: &str = "core-t-rush"; // a unit token
-    const SHEEPISH: &str = "core-041"; // (1) Trap
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
+    const DEFENDER: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn; Radiant: Death summons a base one.
+    const TOKEN: &str = "core-t-rush"; // Rush Token: a unit token
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
 
@@ -75,10 +75,6 @@ mod tests {
             ),
             "p2": merged(json!({ "hand": [FILLER], "library": [STOCKPILE, STOCKPILE], "field": [TIMMY] }), p2),
         }))
-    }
-
-    fn count(s: &Scenario, type_: &str) -> usize {
-        s.events().iter().filter(|event| event.event_type().as_str() == type_).count()
     }
 
     #[test]
@@ -111,14 +107,14 @@ mod tests {
             s.attack(&attacker, "hero");
 
             s.expect_events(json!(["attackDeclared", "trapFired", "exiled"]));
-            assert_eq!(count(&s, "exiled"), 4);
+            assert_eq!(s.count("exiled"), 4);
             for lane in [1, 2] {
                 assert!(s.unit(P1, lane).is_none());
                 assert!(s.unit(P2, lane).is_none());
             }
             s.expect_in_zone(&attacker, "exile");
             s.expect_health(P1, 30);
-            assert_eq!(count(&s, "damage"), 0);
+            assert_eq!(s.count("damage"), 0);
             s.expect_in_zone(&doom, "graveyard");
         }
 
@@ -132,8 +128,8 @@ mod tests {
             let target = s.unit(P1, 1).unwrap();
             s.attack(&attacker, &target);
 
-            assert_eq!(count(&s, "trapFired"), 0);
-            assert!(count(&s, "damage") > 0);
+            assert_eq!(s.count("trapFired"), 0);
+            assert!(s.count("damage") > 0);
             assert!(matches!(s.card(&doom).zone, Zone::Field { row: Row::Backrow, lane: 2, .. }));
             assert_eq!(s.card(&doom).face_up, Some(false));
         }
@@ -148,7 +144,7 @@ mod tests {
             let attacker = s.unit(P1, 1).unwrap();
             s.attack(&attacker, "hero");
 
-            assert_eq!(count(&s, "trapFired"), 0);
+            assert_eq!(s.count("trapFired"), 0);
             s.expect_health(P2, 27);
             assert!(matches!(s.card(DOOM).zone, Zone::Field { row: Row::Backrow, .. }));
         }
@@ -185,8 +181,8 @@ mod tests {
 
             s.expect_in_zone(&defender, "exile");
             s.expect_in_zone(&token, "gone");
-            assert_eq!(count(&s, "summoned"), 0);
-            assert_eq!(count(&s, "destroyed"), 0);
+            assert_eq!(s.count("summoned"), 0);
+            assert_eq!(s.count("destroyed"), 0);
             assert!(s.unit(P1, 1).is_none());
             assert!(s.unit(P2, 2).is_none());
         }
@@ -244,7 +240,7 @@ mod tests {
                 vec![ZoneName::Field, ZoneName::Field]
             );
             s.expect_health(P1, 30);
-            assert_eq!(count(&s, "damage"), 0);
+            assert_eq!(s.count("damage"), 0);
             // R783011: its Crater Locked the zone as it was revealed, before the Exile, and the Lock
             // outlasts it.
             s.expect_events(json!(["trapFired", "locked", "exiled"]));

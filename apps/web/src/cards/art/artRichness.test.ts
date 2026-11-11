@@ -69,11 +69,11 @@ describe("R3331001 the detail floor", () => {
     expect(missing, `under their floor and not in fixtures/art-detail-short.json: ${JSON.stringify(missing)}`).toEqual([]);
   });
 
-  it("R3331001 ART_DETAIL_SHORT names only catalog cards still under their floor, sorted, at most ART_DETAIL_SHORT_MAX", () => {
+  it("R3331001 ART_DETAIL_SHORT names only catalog cards still under their floor, sorted, exactly ART_DETAIL_SHORT_MAX of them", () => {
     const listed: readonly string[] = SHORT;
     expect(listed, "sorted").toEqual([...listed].sort());
     expect(ART_DETAIL_SHORT.size, "each once").toBe(listed.length);
-    expect(listed.length).toBeLessThanOrEqual(ART_DETAIL_SHORT_MAX);
+    expect(listed.length, "ART_DETAIL_SHORT_MAX is the list's length: lower it with the cards a pass takes off").toBe(ART_DETAIL_SHORT_MAX);
     const cleared = listed.filter((id) => {
       const card = CATALOG[id];
       return card === undefined || card.id === GLITCH_DEF_ID || clears(card, measured(card));

@@ -48,14 +48,14 @@ mod tests {
     use super::ID;
     use crate::{filler, scenario};
 
-    const VANILLA: &str = "core-008"; // (1) 4/4, a Human: a tribute.
-    const TIMMY: &str = "core-011"; // (1) 3/3.
-    const POINTMASTER: &str = "core-020"; // (2) 7/1.
-    const MENACE: &str = "core-019"; // (3) 9/9.
-    const ARMOR: &str = "core-073"; // (2) Field Spell, face-up.
-    const SHEEPISH: &str = "core-041"; // (1) Trap, face-down.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: a Human: a tribute
+    const TIMMY: &str = "core-011"; // Tempo Timmy
+    const POINTMASTER: &str = "core-020"; // Pointmaster
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const ARMOR: &str = "core-073"; // Anti-oneshot Armor: a Field Spell, face-up
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap, face-down
     const FILLER: &str = "core-005";
-    const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."
+    const HIT_JOB: &str = "core-016"; // Hit Job: "Destroy a Unit."
 
     fn board(radiant: bool) -> Scenario {
         scenario(json!({

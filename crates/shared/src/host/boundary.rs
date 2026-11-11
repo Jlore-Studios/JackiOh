@@ -367,8 +367,15 @@ pub struct DecideCall {
 }
 
 /// Runs the decision of `call` under the catalog the caller registered; `should_stop` is the host's
-/// wall-clock cap from `request.deadline_ms` (none: the search ends at the strength's budget). `None` when
-/// no bot plays at the request's home.
-pub fn decide(call: &DecideCall, should_stop: Option<&dyn Fn() -> bool>) -> Option<BotChoice> {
-    call.host.job(&call.request).map(|job| job.run(should_stop))
+/// wall-clock cap from `request.deadline_ms` (none: the search ends at the strength's budget) and
+/// `wrap_up` its earlier stop for the search's beam (R3498000, `DecideJob::run`). `None` when no bot plays
+/// at the request's home.
+pub fn decide(
+    call: &DecideCall,
+    should_stop: Option<&dyn Fn() -> bool>,
+    wrap_up: Option<&dyn Fn() -> bool>,
+) -> Option<BotChoice> {
+    call.host
+        .job(&call.request)
+        .map(|job| job.run(should_stop, wrap_up))
 }

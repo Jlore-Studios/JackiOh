@@ -80,14 +80,14 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    const VANILLA: &str = "core-008"; // (1) Mr. Vanilla, 4/4.
-    const MOTHS: &str = "core-009"; // (2) 1/14.
-    const MR_TOKEN: &str = "core-015"; // (1) 1/1, Cry: Summon a Rush Token.
-    const CALL_TO_ARMS: &str = "core-069"; // (2) Spell: Recruit 3 Units of (1) Cost or less.
-    const DEFENDER: &str = "core-003"; // (1) Right-house defender, 1/1 Taunt, Divine Shield, Reborn.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
-    const ZAO_GAO: &str = "core-080"; // (2) Spell: discard 2 random cards, summon 2 Rush Tokens.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const MOTHS: &str = "core-009"; // Moths to the Flame
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: Cry: Summon a Rush Token.
+    const CALL_TO_ARMS: &str = "core-069"; // Call to Arms: Recruit 3 Units costing 1 or less.
+    const DEFENDER: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself.
+    const ZAO_GAO: &str = "core-080"; // Zao Gao: discard 2 random cards, summon 2 Rush Tokens
     const RUSH_TOKEN: &str = "core-t-rush";
 
     /// p1, active with 10 mana, has a Knife Juggler (`radiant` its face) in lane 5 and `hand`; p2 has a

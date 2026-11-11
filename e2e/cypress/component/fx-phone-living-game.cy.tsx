@@ -41,6 +41,8 @@ const LAYER = '[data-testid="fx-layer"]';
 const CANVAS = '[data-testid="fx-canvas"]';
 const FX_DOM = '[data-testid="fx-dom"]';
 const GAME = '[data-testid="game"]';
+/** A Unit's tile aura, the default (R3342000) or its own on its tile in the aura layer (R3400000). */
+const TILE_AURAS = '.tile-aura, .aura[data-aura-scope="tile"]';
 /** Long enough to cross a set piece's hold, short enough to stay mid-flight. */
 const SAMPLE_MS = 2_000;
 /** How many fresh plays of a moment may be sampled before its budget is called broken (see `holdsLivingBudget`). */
@@ -76,13 +78,15 @@ function mean(values: readonly number[]): number {
   return values.reduce((a, b) => a + b, 0) / Math.max(1, values.length);
 }
 
-/** A sample's mean frame time (its first delta, which runs from the sample's start, left out) and the line the log carries. */
-function summary(label: string, deltas: readonly number[]): { meanMs: number; worstMs: number; line: string } {
+/** A sample of this many frames or fewer is a starved window, too few to read a mean from. */
+const MIN_FRAMES = 10;
+
+/** A sample's mean frame time (its first delta, which runs from the sample's start, left out), its frame count and the line the log carries. */
+function summary(label: string, deltas: readonly number[]): { meanMs: number; worstMs: number; frames: number; line: string } {
   const frames = deltas.slice(1);
-  expect(frames.length, `${label}: frames sampled`).to.be.greaterThan(10);
   const sorted = [...frames].sort((a, b) => a - b);
   const dist = `min=${sorted[0]?.toFixed(0)} p50=${sorted[Math.floor(sorted.length / 2)]?.toFixed(0)} p90=${sorted[Math.floor(sorted.length * 0.9)]?.toFixed(0)} max=${sorted[sorted.length - 1]?.toFixed(0)}`;
-  return { meanMs: mean(frames), worstMs: sorted[sorted.length - 1] ?? 0, line: `${label}: mean frame ${mean(frames).toFixed(1)}ms over ${String(frames.length)} frames [${dist}]` };
+  return { meanMs: mean(frames), worstMs: sorted[sorted.length - 1] ?? 0, frames: frames.length, line: `${label}: mean frame ${mean(frames).toFixed(1)}ms over ${String(frames.length)} frames [${dist}]` };
 }
 
 /**
@@ -92,22 +96,31 @@ function summary(label: string, deltas: readonly number[]): { meanMs: number; wo
  * rerenders the plain board, since the runner only plays events it has not seen. A frame time is a
  * measurement a loaded runner inflates and noise only ever adds time, so the lowest of a few
  * windows is the moment's own cost; a moment that really breaks the budget breaks it in every
- * window. Each sample is logged, as the report cites them.
+ * window. A starved window, MIN_FRAMES or fewer (a moment's first play pays its one-time costs, an
+ * image's decode among them), is one more such window: it is played again, and the last play must
+ * hold every bound. Each sample is logged, as the report cites them.
  */
 function holdsLivingBudget(label: string, scene: (attempt: number) => Cypress.Chainable<number[]>, attempt = 1): void {
   scene(attempt).then((deltas) => {
-    const { meanMs, worstMs, line } = summary(label, deltas);
+    const { meanMs, worstMs, frames, line } = summary(label, deltas);
     const full = `${line} worst ${worstMs.toFixed(0)}ms`;
     cy.log(`${full} (attempt ${String(attempt)})`);
     cy.then(() => {
       Cypress.log({ name: "frame times", message: `${full} (attempt ${String(attempt)})` });
     });
-    if ((meanMs <= FX_PHONE_FRAME_BUDGET_MS && worstMs <= FX_PHONE_FRAME_WORST_MS) || attempt >= FRAME_ATTEMPTS) {
-      expect(meanMs, line).to.be.lessThanOrEqual(FX_PHONE_FRAME_BUDGET_MS);
-      expect(worstMs, `${label}: worst single frame`).to.be.lessThanOrEqual(FX_PHONE_FRAME_WORST_MS);
-      return;
-    }
-    holdsLivingBudget(label, scene, attempt + 1);
+    // The run's output carries every sample too (cy.log prints nothing in run mode), so a CI log reads them.
+    cy.task("layout:report", { spec: "fx-phone-living-game", sample: full, attempt }, { log: false });
+    // Judged after the task has run, so the last play's row is in the log even when it fails (#3633).
+    cy.then(() => {
+      const holds = frames > MIN_FRAMES && meanMs <= FX_PHONE_FRAME_BUDGET_MS && worstMs <= FX_PHONE_FRAME_WORST_MS;
+      if (holds || attempt >= FRAME_ATTEMPTS) {
+        expect(frames, `${label}: frames sampled`).to.be.greaterThan(MIN_FRAMES);
+        expect(meanMs, line).to.be.lessThanOrEqual(FX_PHONE_FRAME_BUDGET_MS);
+        expect(worstMs, `${label}: worst single frame`).to.be.lessThanOrEqual(FX_PHONE_FRAME_WORST_MS);
+        return;
+      }
+      holdsLivingBudget(label, scene, attempt + 1);
+    });
   });
 }
 
@@ -122,8 +135,8 @@ const ROCK = "stinkyscape-169";
 const TILTED = "hand-card-fx-tilt";
 
 /**
- * Two Legendary and three Mythic Units, none wearing an aura of its own, so each wears its tile
- * aura (R3342000): Silly Silas, Felinor Fiender, Tylannt, Paragon-X and Prototype-X2.
+ * Two Legendary and three Mythic Units, each wearing a tile aura: Silly Silas and Felinor Fiender
+ * the default (R3342000), Tylannt, Paragon-X and Prototype-X2 their own on their tiles (R3395001).
  */
 const LIVING_UNITS = ["core-052", "core-092", "stinkyscape-006", "stinkyscape-074", "stinkyscape-086"] as const;
 
@@ -282,12 +295,13 @@ describe("R3351000 the living game holds the phone budget", () => {
       );
       const dormant = livingBoard(0);
       const launched = livingBoard(1);
-      // The five Units wear tile auras and the backrow wears field auras.
-      expect(planTileAuras(dormant).length).to.be.greaterThan(4);
-      expect(planAuras(dormant, new Map()).length).to.be.greaterThan(0);
+      // The five Units wear tile auras, the default or their own, and the backrow wears field auras.
+      const auras = planAuras(dormant, new Map());
+      expect(planTileAuras(dormant).length + auras.filter((aura) => aura.scope === "tile").length).to.be.greaterThan(4);
+      expect(auras.filter((aura) => aura.scope !== "tile").length).to.be.greaterThan(0);
       const { play, rerender } = mountLiving(dormant);
       const tilt = startTilt();
-      cy.get(".tile-aura", { timeout: 4_000 }).should("have.length.greaterThan", 4);
+      cy.get(TILE_AURAS, { timeout: 4_000 }).should("have.length.greaterThan", 4);
       cy.get(CANVAS).should("exist");
       // The scenario starts from a settled board: the mount's opening deal, if any, is over.
       cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
@@ -295,15 +309,16 @@ describe("R3351000 the living game holds the phone budget", () => {
       /**
        * Plays the moment's events over `shown` and samples its flight. A retry resets the board
        * first, since the runner only plays events it has not seen: replaying the same events over
-       * the same board would sample an idle board and pass for nothing.
+       * the same board would sample an idle board and pass for nothing. `events` may name each
+       * attempt's own (the takeover's, below).
        */
-      const moment = (label: string, shown: PlayerView, events: GameEvent[], flight: () => void): void => {
+      const moment = (label: string, shown: PlayerView, events: GameEvent[] | ((attempt: number) => GameEvent[]), flight: () => void): void => {
         holdsLivingBudget(label, (attempt) => {
           if (attempt > 1) {
             rerender(shown);
             cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
           }
-          play(shown, events);
+          play(shown, typeof events === "function" ? events(attempt) : events);
           flight();
           return sampleFrames();
         });
@@ -333,10 +348,16 @@ describe("R3351000 the living game holds the phone budget", () => {
         cy.get(`${FX_DOM} [data-fx="rift"]`).should("exist");
       });
 
-      moment("Mythic takeover", dormant, [
-        { type: "cardPlayed", player: dormant.viewer, instanceId: "fx-yile", defId: "meditative-049", costPaid: 2 },
-        { type: "summoned", player: dormant.viewer, instanceId: "fx-yile", defId: "meditative-049", row: "units", lane: 3 },
-      ], () => {
+      // #3633: each attempt plays a Mythic of its own, as the forced shed's second takeover below does:
+      // the same card's takeover replayed over the plain board played no set piece (at 844x390 its
+      // second attempt never saw `data-takeover`).
+      moment("Mythic takeover", dormant, (attempt) => {
+        const instanceId = attempt === 1 ? "fx-yile" : `fx-yile-${String(attempt)}`;
+        return [
+          { type: "cardPlayed", player: dormant.viewer, instanceId, defId: "meditative-049", costPaid: 2 },
+          { type: "summoned", player: dormant.viewer, instanceId, defId: "meditative-049", row: "units", lane: 3 },
+        ];
+      }, () => {
         cy.get(GAME).should("have.attr", "data-takeover", "mythic");
         cy.get(`${FX_DOM} [data-fx="takeover"]`).should("have.attr", "data-look", "ai");
         cy.get(`${FX_DOM} [data-fx="takeover"] .fx-takeover-planes`).should("exist");
@@ -418,7 +439,7 @@ describe("R3351000 the living game holds the phone budget", () => {
     cy.viewport(390, 844);
     const living = livingBoard(1);
     const { play } = mountLiving(living);
-    cy.get(".tile-aura", { timeout: 4_000 }).should("have.length.greaterThan", 4);
+    cy.get(TILE_AURAS, { timeout: 4_000 }).should("have.length.greaterThan", 4);
     // A Mythic takeover plays its beats through the stages below.
     const takeover = (instanceId: string, lane: number): GameEvent[] => [
       { type: "cardPlayed", player: living.viewer, instanceId, defId: "meditative-049", costPaid: 2 },

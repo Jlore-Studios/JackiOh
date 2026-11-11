@@ -343,9 +343,16 @@ pub const NONCE_HISTORY: usize = 64;
 
 /// §2.4: the draws each start of turn makes before any handicap (R183).
 pub const DRAWS_PER_TURN: i32 = 1;
+/// R3582000: the fewest cards a seat's opening draw deals when its handicap's `fewerOpeningCards`
+/// takes cards off it, so the seat always has a hand to mulligan (§2.1 step 3).
+pub const MIN_OPENING_HAND: i32 = 1;
+/// R3582000: a handicap's `drawEvery` when it sets none, and the least it may set: the seat takes
+/// its start-of-turn draws on every one of its turns.
+pub const DRAW_EVERY_TURN: i32 = 1;
 
-/// §9.9, R180: the resources one seat plays with. Every field is a non-negative integer. The type
-/// lives here because `config.ts` imports nothing; `state.rs` stores it on a `PlayerState`.
+/// §9.9, R180: the resources one seat plays with. Every field is a non-negative integer (`drawEvery`
+/// a positive one). The type lives here because `config.ts` imports nothing; `state.rs` stores it on a
+/// `PlayerState`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "ts",
@@ -402,6 +409,19 @@ pub struct Handicap {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub hero_armor: Option<i32>,
+    /// R3582000: cards taken off this seat's opening draw (§2.1's entry plus `extraOpeningCards`),
+    /// never below MIN_OPENING_HAND. Absent or 0 means none, so every other game hashes as before the
+    /// field existed. No tier or lesson sets it; the dungeon run's early enemies will (#3581).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub fewer_opening_cards: Option<i32>,
+    /// R3582000: this seat takes its start-of-turn draws (R183) only on its own turns whose count
+    /// (`turnsStarted`) is a multiple of this: with 2, its 2nd, 4th and 6th turns. Absent or
+    /// DRAW_EVERY_TURN means every turn, so every other game hashes as before the field existed. No
+    /// tier or lesson sets it; the dungeon run's early enemies will (#3581).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub draw_every: Option<i32>,
 }
 
 /// R180: this spec's own resources. A seat with no handicap plays with these.
@@ -417,6 +437,8 @@ pub const HUMAN_HANDICAP: Handicap = Handicap {
     tutorial_cards_only: None,
     deck_copies: None,
     hero_armor: None,
+    fewer_opening_cards: None,
+    draw_every: None,
 };
 
 string_union! {
@@ -468,6 +490,8 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
         tutorial_cards_only: None,
         deck_copies: None,
         hero_armor: None,
+        fewer_opening_cards: None,
+        draw_every: None,
     },
     hard: Handicap {
         deck_size: DECK_SIZE + HARD_EXTRA_DECK_CARDS,
@@ -481,6 +505,8 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
         tutorial_cards_only: None,
         deck_copies: None,
         hero_armor: None,
+        fewer_opening_cards: None,
+        draw_every: None,
     },
 };
 
@@ -507,6 +533,8 @@ pub const AI_TUTORIAL: Handicap = Handicap {
     // R2533001: lesson 1's opponent holds copies of the set's vanilla units, as its human does.
     deck_copies: Some(TUTORIAL_DECK_COPIES),
     hero_armor: None,
+    fewer_opening_cards: None,
+    draw_every: None,
 };
 
 /// §9.10, R1705005: the human seat's handicap in a lesson, whose fixed deal (R291) holds
@@ -1596,8 +1624,9 @@ pub const REPLAY_PAGE_STEPS: usize = 16;
 /// game-record or self-play file that carries no marker names them as they were before the version
 /// retcon (#1371), and its reader maps each through `patches/aliases.json`. R2532000: 3 since the
 /// v0.5 retcon (#2532); a file marked 2 names the v0.5 line as it was before it, and its reader maps
-/// those names through the same file's `marked`.
-pub const VERSIONS_SCHEME: u32 = 3;
+/// those names through the same file's `marked`. R3631001: 4 since the v0.5.13 retcon (#3631); a file
+/// marked 3 names the micros after v0.5.12z as v0.5.13 to v0.5.13h, which are v0.5.12aa to v0.5.12ah now.
+pub const VERSIONS_SCHEME: u32 = 4;
 
 // ---------------------------------------------------------------------------------------------
 // The testkit's seed search (issue #848).

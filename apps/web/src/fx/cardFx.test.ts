@@ -325,11 +325,15 @@ describe("R502 the per-card table", () => {
   });
 
   it("R3332000 a Field Spell's own entrance plays as it lands face up and the shared Legendary entrance yields", () => {
-    // #93 Combo-Index, a Legendary Field Spell, given an entrance of its own beside its hooks and aura.
-    const FIELD = "core-093";
+    // Classic+ #78 Claude's Datacenter, a Legendary Field Spell, given an entrance of its own beside its hooks
+    // and aura. The shipped table gives it one now (`obeliskRise`), as it does every other Legendary, so the
+    // shared Legendary entrance is checked against a copy of the table without it.
+    const FIELD = "classicplus-078";
     const table = parseFxCardTable("test.json5", `{ "${FIELD}": { cast: { motif: "conjure" }, aura: { look: "storm", scope: "zone" }, entrance: "titanBloom" } }`);
     expect(entranceKeyOf(FIELD, table)).toBe("titanBloom");
-    expect(entranceKeyOf(FIELD)).toBeUndefined();
+    const bare = new Map(FX_CARD_TABLE);
+    bare.delete(FIELD);
+    expect(entranceKeyOf(FIELD, bare)).toBeUndefined();
     const resolve: EntranceResolver = (defId) => {
       const def = CATALOG[defId];
       return def === undefined ? null : { type: def.type, rarity: def.printedRarity ?? def.rarity };
@@ -348,7 +352,7 @@ describe("R502 the per-card table", () => {
     expect(own).toEqual({ cues: ENTRANCES.titanBloom({ D, tgt, intensity: env.intensity }), row: "replace" });
     // The shared rays, gold burst, rings and shake yield to it; with no entrance of its own they play.
     expect(entranceCues(entry, env, D, table)).toEqual([]);
-    expect(entranceCues(entry, env, D).map((cue) => cue.kind).sort()).toEqual(["burst", "rays", "ring", "ring", "shake"]);
+    expect(entranceCues(entry, env, D, bare).map((cue) => cue.kind).sort()).toEqual(["burst", "rays", "ring", "ring", "shake"]);
     // Set face down (its fresh id's `formerId`, R227), it lands with no entrance, and the shared one stays.
     const set: GameEvent = { ...landing, instanceId: "f2", formerId: "f1" };
     expect(planCardFx(set, { entry: { ...entry, events: [set] }, view, env, D }, table)).toBeNull();

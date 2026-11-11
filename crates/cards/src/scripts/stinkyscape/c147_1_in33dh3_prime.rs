@@ -41,7 +41,7 @@ mod tests {
 
     const PRIME: &str = "stinkyscape-147-1";
     const BLOB: &str = "stinkyscape-147-2";
-    const RESERVES: &str = "core-075"; // (0) Field Spell.
+    const RESERVES: &str = "core-075"; // Infinite Reserves: a Field Spell
     const FILLER: &str = "core-005";
 
     fn played(radiant: bool, backrow: Value) -> Scenario {

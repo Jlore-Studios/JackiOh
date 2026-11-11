@@ -589,7 +589,7 @@ body_for() {
 
 ### How the sites move
 
-- **Staging** moves by itself every two hours: the `staging` branch takes `main`'s newest commit whose checks (`ci.yml`) passed, and the site deploys it. It never waits for the full test run. *promote staging* in the Actions tab moves it now.
+- **Staging** moves by itself every two hours: the `staging` branch takes `main`'s newest commit whose checks (`ci.yml`) passed, and the site deploys it. While the full test run on `staging` is red it holds still, until the night bot's fix closes "CI: daily super run failed"; then it takes `main`'s first green commit after that, and the full test run starts on it at once. *promote staging* in the Actions tab moves it now.
 - **Production** moves once a day by itself: the full test run (`super.yml`) runs on `staging` every day, and when it passes every job, the commit it tested goes live. `/promote` goes sooner, once the same test run passes on staging's commit.
 
 ### Commands

@@ -211,10 +211,12 @@ func TestOneLane_APlannedItemsBuildStartsInThePlannersLaneAtOnceOnItsModelFresh(
 	w.build("claude-3", "sonnet", w.sessions("claude-3"))
 }
 
-// Run 2 follows on the same model, fresh: the own review run reviews on the model that built the
-// change and fixes what it finds on it, and none of its calls resumes a session, though the build's
-// is kept on the pull request (for a CI fix after the merge queue, which may resume it).
-func TestOneLane_ItsOwnReviewRunFollowsOnTheSameModelFresh(t *testing.T) {
+// Run 2 follows on the same lane, every call a fresh agent: the own review run reviews on the
+// account's strongest seat (Opus) and fixes what it finds on the model that built the change
+// (Sonnet), and none of its calls resumes a session, so changing model between a review and a fix
+// rereads nothing, though the build's session is kept on the pull request (for a CI fix after the
+// merge queue, which may resume it).
+func TestOneLane_ItsOwnReviewRunFollowsOnTheSameLaneFresh(t *testing.T) {
 	w := oneLaneClaude3(t)
 	w.plan("claude-3", "sonnet", "medium", w.sessions("claude-3"), "difficulty:medium")
 	pr := w.build("claude-3", "sonnet", w.sessions("claude-3"))
@@ -227,7 +229,7 @@ func TestOneLane_ItsOwnReviewRunFollowsOnTheSameModelFresh(t *testing.T) {
 	reviewed, result := w.night(r, s)
 	assertEqual(t, []any{reviewed.Get("action"), reviewed.Get("number"), reviewed.Get("provider"),
 		reviewed.Get("own_review"), reviewed.Has("session")}, []any{"review", pr, "claude-3", true, false})
-	assertEqual(t, oneLaneCalls(r), [][3]string{{"review", "sonnet", ""}, {"fix", "sonnet", ""}, {"review", "sonnet", ""}})
+	assertEqual(t, oneLaneCalls(r), [][3]string{{"review", "opus", ""}, {"fix", "sonnet", ""}, {"review", "opus", ""}})
 	assertEqual(t, result.Get("status"), "approved")
 	assertFalse(t, pyjson.Truthy(dig(t, result, "session", "resumed")))
 	// Its own fix pass's session is what the pull request keeps now, for a CI fix.
@@ -235,24 +237,24 @@ func TestOneLane_ItsOwnReviewRunFollowsOnTheSameModelFresh(t *testing.T) {
 	assertIn(t, fmt.Sprintf("PR_%d", pr), w.h.gh.AutoMerge)
 }
 
-// A medium item Sonnet planned on a Claude account is built by Sonnet and reviewed by Sonnet, whose
-// approval ships it (a medium approval of a medium item): Opus, the account's strongest seat, never
-// takes part.
-func TestOneLane_AMediumItemSonnetPlannedIsBuiltAndReviewedBySonnet(t *testing.T) {
+// A medium item Sonnet planned on a Claude account is built by Sonnet and approved by Opus, the
+// account's strongest seat, whose approval ships it (a strong approval of a medium item), in the
+// build's own lane: Sonnet fixes what Opus finds, each call a fresh session.
+func TestOneLane_AMediumItemSonnetPlannedIsBuiltBySonnetAndApprovedByOpus(t *testing.T) {
 	w := oneLaneClaude3(t)
 	w.plan("claude-3", "sonnet", "medium", nil, "difficulty:medium")
 	pr := w.build("claude-3", "sonnet", nil)
 	r := workFake(map[string]runner.Handler{"review": workReviewer(workApprove)})
 	reviewed, result := w.night(r, nil)
 	assertEqual(t, []any{dig(t, reviewed, "seats", "review", "model"), dig(t, reviewed, "seats", "build", "model"),
-		result.Get("status")}, []any{"sonnet", "sonnet", "approved"})
-	assertEqual(t, oneLaneCalls(r), [][3]string{{"review", "sonnet", ""}})
-	assertIn(t, "its own review run: `claude-3`, whose run built it, reviews it and fixes what it finds on "+
-		"`claude-3` (claude, `sonnet`, medium), the model that built it",
+		result.Get("status")}, []any{"opus", "sonnet", "approved"})
+	assertEqual(t, oneLaneCalls(r), [][3]string{{"review", "opus", ""}})
+	assertIn(t, "its own review run: `claude-3`, whose run built it, reviews it on `claude-3` (claude, `opus`, "+
+		"strong) and fixes what it finds on `claude-3` (claude, `sonnet`, medium), the model that built it",
 		strings.Join(stringsOf(reviewed.List("routing")), "\n"))
 	cleared := crossObj(t, w.record(pr), "cleared")
 	assertEqual(t, []any{dig(t, cleared, "approver", "provider"), dig(t, cleared, "approver", "tier")},
-		[]any{"claude-3", "medium"})
+		[]any{"claude-3", "strong"})
 	assertIn(t, fmt.Sprintf("PR_%d", pr), w.h.gh.AutoMerge)
 }
 

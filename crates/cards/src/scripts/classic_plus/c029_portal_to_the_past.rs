@@ -66,9 +66,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const PORTAL: &str = "classicplus-029";
-    const FILLER: &str = "core-005"; // keeps a hand from auto-ending the turn (§2.5)
+    const FILLER: &str = "core-005"; // Stockpile: keeps a hand from auto-ending the turn (§2.5)
     const MENACE: &str = "core-019";
-    const TOKEN: &str = "core-t-rush"; // a unit token (R11)
+    const TOKEN: &str = "core-t-rush"; // Rush Token: a unit token (R11)
     const FUSED: &str = "t-1:core-012+core-025"; // R179
     type Entry = (&'static str, bool);
     const BOARD: [Entry; 5] = [
@@ -96,6 +96,7 @@ mod tests {
         }))
     }
 
+    // Differs from Scenario::offered: a state's open prompt's modes, not the seat's legal actions.
     fn offered(state: &GameState) -> Vec<String> {
         state
             .pending

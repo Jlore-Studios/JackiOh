@@ -42,7 +42,7 @@ mod tests {
 
     const POUCH: &str = "meditativeplus-014";
     const POTIONS: [&str; 3] = ["meditativeplus-011", "meditativeplus-012", "meditativeplus-013"];
-    const FILLER: &str = "core-005"; // (1) Spell
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
 
     use crate::scenario;
 

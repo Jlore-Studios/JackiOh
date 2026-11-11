@@ -19,28 +19,41 @@ import { MapScreen } from "./MapScreen.tsx";
 import {
   ExtractArtifactScreen,
   ExtractCardScreen,
+  openedPackLook,
   PackScreen,
   RewardScreen,
+  type OpenedPackLook,
 } from "./RewardScreens.tsx";
 import { dungeonMapTestid } from "./testids.ts";
 import { CampfireScreen, EventScreen, ShopScreen, ShrineScreen } from "./TileScreens.tsx";
 import { RunOverScreen } from "./RunOverScreen.tsx";
+import { RunPanel } from "./RunPanel.tsx";
 import { passiveName, type SendRunAction } from "./RunDisplay.tsx";
 import "../../auth/tavern.css";
 import "./run.css";
 
 /**
- * The HUD, on every screen: HP, Coins, Tickets, the deck's size, the relics held and the score, and
- * the run's time until the run is over (B24), whose record then holds it.
+ * The HUD, on every screen: HP, Coins, Tickets, the deck's size, the relics held, the score and the
+ * Your run button (#3501), and the run's time until the run is over (B24), whose record then holds it.
  */
-function RunHud({ run, content, startedAt }: { run: RunState; content: RunContent; startedAt: number | null }): ReactElement {
+function RunHud({
+  run,
+  content,
+  elapsedMs,
+  resumedAt,
+}: {
+  run: RunState;
+  content: RunContent;
+  elapsedMs: number | null;
+  resumedAt: number | null;
+}): ReactElement {
   const max = runMaxHp(run, content);
   const score = runScore(run, content);
   return (
     <header className="dungeon-run-hud" data-testid={dungeonMapTestid.hud}>
-      {runFinished(run) ? null : <RunTimer startedAt={startedAt} />}
+      {runFinished(run) ? null : <RunTimer elapsedMs={elapsedMs} resumedAt={resumedAt} />}
       <span className="dungeon-run-hud__stat" data-testid={dungeonMapTestid.hp}>
-        {t("HP")}: {run.hp} / {max}
+        {t("HP")}: {max}
       </span>
       <span className="dungeon-run-hud__stat" data-testid={dungeonMapTestid.coins}>
         {t("Coins")}: {run.coins}
@@ -71,6 +84,7 @@ function RunHud({ run, content, startedAt }: { run: RunState; content: RunConten
       <span className="dungeon-run-hud__stat" data-testid={dungeonMapTestid.score}>
         {t("Score")}: {score}
       </span>
+      <RunPanel run={run} content={content} />
     </header>
   );
 }
@@ -80,6 +94,9 @@ export function RunScreen({ dungeon }: { dungeon: Dungeon }): ReactElement {
   // Re-render on a live language change, so every `t()` and card face follows it.
   useLocale();
   const [refusal, setRefusal] = useState<string | null>(null);
+  // The chosen pack's look (#3588): the pack phase carries no kind, so the choice is remembered
+  // here when `openPack` is sent and the sealed tear wears it. Null on a refresh.
+  const [opened, setOpened] = useState<OpenedPackLook | null>(null);
   const run = dungeon.run;
   const content = dungeon.content;
   // Impossible while part D's page stands guard (it renders the start screen with no run), but a
@@ -94,20 +111,24 @@ export function RunScreen({ dungeon }: { dungeon: Dungeon }): ReactElement {
     );
   }
   const send = (action: RunAction): void => {
+    // Remember the chosen pack before the run answers with its kind-less pack phase (#3588).
+    if (action.type === "openPack") {
+      setOpened(openedPackLook(run, action.index));
+    }
     setRefusal(dungeon.act(action));
   };
   return (
     <div className="app-shell tavern dungeon-run-screen" data-testid={dungeonMapTestid.screen}>
       {/* R2972000: back to the Play menu; the run stays saved, and the start screen offers Continue. */}
       <BackLink to={paths.play} title={t("Dungeon run")} />
-      <RunHud run={run} content={content} startedAt={dungeon.startedAt} />
+      <RunHud run={run} content={content} elapsedMs={dungeon.elapsedMs} resumedAt={dungeon.resumedAt} />
       {refusal === null ? null : (
         <p className="notice" role="alert" data-testid={dungeonMapTestid.refusal}>
           {t(refusal)}
         </p>
       )}
       <div className="dungeon-run-body" data-testid={dungeonMapTestid.body}>
-        <PhaseBody dungeon={dungeon} run={run} content={content} send={send} />
+        <PhaseBody dungeon={dungeon} run={run} content={content} send={send} opened={opened} />
       </div>
     </div>
   );
@@ -118,10 +139,12 @@ type PhaseBodyProps = {
   run: RunState;
   content: RunContent;
   send: SendRunAction;
+  /** The chosen pack's look, remembered when it was opened (#3588). */
+  opened: OpenedPackLook | null;
 };
 
 /** The phase's screen. Every `RunPhase` has its case; the switch below is total. */
-function PhaseBody({ dungeon, run, content, send }: PhaseBodyProps): ReactElement {
+function PhaseBody({ dungeon, run, content, send, opened }: PhaseBodyProps): ReactElement {
   const phase = run.phase;
   switch (phase.phase) {
     case "map":
@@ -132,7 +155,7 @@ function PhaseBody({ dungeon, run, content, send }: PhaseBodyProps): ReactElemen
     case "reward":
       return <RewardScreen run={run} content={content} phase={phase} send={send} />;
     case "pack":
-      return <PackScreen run={run} content={content} phase={phase} send={send} />;
+      return <PackScreen run={run} content={content} phase={phase} send={send} opened={opened} />;
     case "extractCard":
       return <ExtractCardScreen run={run} content={content} send={send} />;
     case "extractArtifact":

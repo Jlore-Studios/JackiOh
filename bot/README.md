@@ -82,7 +82,7 @@ flowchart TD
     X -- "blocking findings" --> XF["a revision on the subscription that owns it:<br/>the auditor's own fix, or the merge owner's CI fix;<br/>a new head"]
     XF -- "a new head: its own review run approves the fix" --> CI
     X -- "approved: the last approver owns the merge" --> CI
-    PL -- "a lane idle 30 minutes" --> S["suggestion survey<br/>up to 10 open bot:suggestion issues;<br/>a person's approve comment or bot:build approves one,<br/>reject closes it"]
+    PL -- "3 or more lanes spare" --> S["suggestion survey<br/>up to 10 open bot:suggestion issues;<br/>a person's approve comment or bot:build approves one,<br/>reject closes it"]
   end
   D -- "approved: its own lane owns the merge" --> CI["CI on the PR: rust (fmt, clippy, tests, checks, fuzz),<br/>web, e2e smoke, db, bot selftest"]
   CI -- "green" --> M["squash-merged into main;<br/>the issue closes"]
@@ -346,8 +346,9 @@ touching different files. Squishy has the same mode, `squishy:fullsend` ([Squish
    for the parts before the other items ([Who takes what](#subscriptions)). Once its plan is on
    record, the subscriptions whose strongest seat is weakest take it first, and one with no seat
    of its difficulty's tier may build it on a medium seat (`config.PartFloor`): Muse builds a
-   hard part from Opus's plan, while a Claude account still builds a hard one on Opus, never on
-   Sonnet. The parts build side by side with the parts that do not wait for them. Its run starts from the integration branch, not `main`, and measures every diff against
+   hard part from Opus's plan, and so does a Claude account's Sonnet seat since 2026-11-09 (it built
+   a hard one on Opus, never on Sonnet, before), the tree's reconcile, on Opus, checking it either
+   way. The parts build side by side with the parts that do not wait for them. Its run starts from the integration branch, not `main`, and measures every diff against
    it (`work.Worker.Part`): one builder pass and the path guard, and no checks, self check,
    catch-up with `main` or review. Deliver lands the change on the integration branch
    (`deliver.Deliverer.LandPart`): a fast-forward when nothing landed since the part started,
@@ -514,7 +515,7 @@ code blocks are ignored, so quoting the bot back at it runs nothing.
 | `rebuild` | close this bot pull request (or the issue's), keep its branch as `bot/old/issue-<n>-<date>`, and build the issue again from `main` | issue or PR | 2 |
 | `stop` | take it out of the queue; a running job gives up at its next checkpoint | issue or PR | 2 |
 | `handoff [medium\|hard\|human]` | release this item from the subscription that owns it, and from any hold for it (`bot:waiting`): the next subscription that may build it takes it and owns it; with `medium` or `hard`, at that difficulty, as your label, which the bot never changes; with `human`, to people (`human` on, the bot's labels off, the bot unassigned), as a person's `human` label does. On a bot pull request it is its issue's item. A run working on it keeps it, and the handoff follows its delivery ([Ownership and the hold](#ownership-and-the-hold)) | issue or PR | 2 |
-| `suggest` | ask for a suggestion survey the next time a lane is free (without waiting out the 30 idle minutes) | anywhere | 2 |
+| `suggest` | ask for a suggestion survey the next time a lane is free (without waiting for three lanes spare) | anywhere | 2 |
 | `approve`, `reject` | alone on a line, no prefix needed, on one of the bot's open suggestions: `approve` queues it to build, `reject` closes it unbuilt (#760) | suggestion | 2 |
 | `status` | halt state; which subscriptions are running what, for how long, with each run's link; each subscription's hours and usage; the queue | anywhere | 1 |
 | `help [verb]` | the commands, or one of them in detail with an example | anywhere | 1 |
@@ -657,13 +658,13 @@ The bot spends whichever of your subscriptions is free. They are listed in
 
 | Provider | CLI and model | Login | Hours | Limits |
 |---|---|---|---|---|
-| `claude-1` | Claude Code, `opus` at `xhigh` (fix passes at `high`), and `sonnet` at `xhigh` (medium) | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00, and outside it while under 40% of 5 hours (`off_hours`) | all of 5 hours (100%) in its hours, no weekly cap |
-| `claude-2` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
-| `claude-3` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
-| `claude-4` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
+| `claude-1` | Claude Code, `opus` at `xhigh` (fix passes at `high`), and `sonnet` at `high` (medium; [the Sonnet effort test](#the-sonnet-effort-test)) | the secret `CLAUDE_CODE_OAUTH_TOKEN` (the one the bot always had) | 21:00–07:00, and outside it while under 40% of 5 hours (`off_hours`) | all of 5 hours (100%) in its hours, no weekly cap |
+| `claude-2` | the same as claude-1, with `sonnet` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
+| `claude-3` | the same as claude-1, with `sonnet` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
+| `claude-4` | the same as claude-1, with `sonnet` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-5` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week; from Sunday 17:00 until its week resets on Monday at 09:00 UTC, 80% of 5 hours, 90% of the week and its sessions' last hours up to 90% (`late_week`); never past 90% of either (`hard_cap`) |
 | `claude-6` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
-| `claude-7` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time: 01:00–10:00 up to its cap, and outside it (10:00–01:00) while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
+| `claude-7` | the same as claude-1, with `sonnet` at `xhigh` | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time: 01:00–10:00 up to its cap, and outside it (10:00–01:00) while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-8` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_8` | any time | 85% of 5 hours, no weekly cap |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-sol` at `xhigh` (`gpt-5.6-terra` until 2026-10-20); medium, and weak only from 2026-10-11 to 2026-10-20, on Terra | on the machine, as `agent-gpt` | any time | all of 5 hours (100%), all of the week (Codex reports both; #798) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high`, medium in every role (plans, builds, reviews); Gemini 4 Argon was tried in #2748 and is not on the owner's Google account (checked on the box on 2026-11-02, agy CLI 1.4.12): a newer model is set only once `agy models` lists it and a headless `agy -p` call answers on it | on the machine, as `agent-agy` | any time | all of 5 hours (100%), all of the week (its own `agy -p /usage`, the Gemini pool's row; #798) |
@@ -701,7 +702,8 @@ once its secret is in `providers.SecretNames` and the workflow's `HARNESS_SECRET
 - `tier`: `weak`, `medium` or `strong`, the tier of `model` ([below](#difficulty-and-tiers)). A
   weak seat takes no work since #2748: no difficulty is built at weak.
 - `extra_models`: other models the subscription runs for a role, each with its `model`, `effort`
-  and `tier`. Every Claude account runs Sonnet at `xhigh` (medium, #317) beside Opus, and
+  and `tier`. Every Claude account runs Sonnet (medium, #317) beside Opus, at `xhigh` or `high` by
+  account ([the Sonnet effort test](#the-sonnet-effort-test)), and
   switches between them as the work needs ([below](#switching-between-opus-and-sonnet)). (The
   stand-ins, `takes_over`, and `easy_first` built only easy items and went with them in #2748.)
 - `fix_effort`: the effort a fix pass runs at (`high` on the Claude accounts), which answers named
@@ -855,7 +857,7 @@ nothing):
 | Tier | Models |
 |---|---|
 | strong | Claude Opus, on every Claude account |
-| medium | Muse, Gemini 3.8 Flash through agy (#2748 tried Gemini 4 Argon, which is not on the owner's Google account), Codex (`gpt`, on GPT-5.6 Sol; weak from 2026-10-11 to 2026-10-20, on Terra), Claude Sonnet at `xhigh` (on every Claude account, beside its Opus) |
+| medium | Muse, Gemini 3.8 Flash through agy (#2748 tried Gemini 4 Argon, which is not on the owner's Google account), Codex (`gpt`, on GPT-5.6 Sol; weak from 2026-10-11 to 2026-10-20, on Terra), Claude Sonnet at `xhigh` or `high` (on every Claude account, beside its Opus) |
 | weak | none since #2129, and since #2748 a weak seat takes no work: nothing is built at weak |
 
 Every item has a difficulty, from its labels: `difficulty:medium` or `difficulty:hard`
@@ -1011,9 +1013,10 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   own tier or above, as any owner's work does.
 - **The own review run** ([below](#the-own-review-run)). Every change is reviewed in a fresh
   adversarial session of its lane's reviewer, never an approval from its builder's context: the
-  model that built it, on the same subscription, reads the change cold in a new instance (#2903,
-  not the subscription's strongest seat: Sonnet what Sonnet built; on a Claude account, Opus for a
-  hard item). On the night bot that review is a run of its own, the
+  subscription's strongest seat at or above the item's tier, on the same subscription, reads the
+  change cold in a new instance (2026-11-09: Opus on a Claude account, for a medium item Sonnet
+  built as for a hard one; #2903 had the model that built it review its own work, and that model
+  still fixes what the review finds). On the night bot that review is a run of its own, the
   second of the two runs every code change takes, on the same subscription and lane; on Squishy
   it is in the build's own run, as it was before (`own_review_run`). Its findings count, its
   builder fixes them, and its approval at the item's tier ships the change (the owner's decision
@@ -1083,11 +1086,14 @@ and reviews it: plan, run 1 and run 2, one lane and one model, each a fresh sess
    takes it in between; the own review run itself takes it (`Lanes.Without`), as its subscription's
    own work, first (`plan.Pairs`). Its handoff, and its Claude session, go on on the pull request
    (for the item's later runs there; run 2 resumes neither).
-2. **Run 2, its own review** (`bot:reviewing`), on the same subscription and the same model
-   (`plan.ownReviewer`, #2903: the model that built the head, its reservation's `model`, reviews
-   and fixes, Sonnet what Sonnet built, Opus a hard item; a reservation from before names no model,
-   and its weakest seat at the item's tier does both, as builds go). Every review and every fix is
-   a new instance: run 2 resumes no kept session (`work.Worker`'s `resumes`), and its plan carries
+2. **Run 2, its own review** (`bot:reviewing`), on the same subscription and lane
+   (`plan.ownReviewer`): the model that built the head (its reservation's `model`, #2903) fixes,
+   Sonnet what Sonnet built, Opus a hard item, and the subscription's strongest seat at or above
+   the item's tier reviews (`plan.RunReviewer`, 2026-11-09), Opus on a Claude account, so a medium
+   item Sonnet built is approved by Opus; a reservation from before names no model, and its
+   weakest seat at the item's tier fixes, as builds go. A subscription with one seat (Muse, agy,
+   Codex) reviews on it. Every review and every fix is a new instance, so a different model
+   reviewing than fixing rereads nothing: run 2 resumes no kept session (`work.Worker`'s `resumes`), and its plan carries
    none. Its first round builds nothing
    (`work.Worker.OwnReview`): a fresh adversarial session reviews the head run 1 pushed, with the
    checks run 1 ran on it and the pull request's CI on that head, which the job reads with its own
@@ -1237,7 +1243,8 @@ twenty minutes on and mostly spent waiting for runners. The harness does not wai
   (Squishy's skips it, as it skips the gate) reads CI's newest runs (`EvacRuns`, 100) and the jobs
   of the queue's builds still going, by conditional requests that cost no rate limit while a
   build's jobs are unchanged. Only when a required job (as [Stopping red CI
-  early](#stopping-red-ci-early) counts them) has failed in one does it read the queue's order.
+  early](#stopping-red-ci-early) counts them) has failed in one, or a build ended without passing
+  between a minute and the queue's check timeout ago (below), does it read the queue's order.
 - **The current build.** The queue builds each pull request on top of every one ahead of it, on
   `gh-readonly-queue/main/pr-<n>-<sha>`, where `<sha>` is the commit the build stands on: the head
   of the build ahead of it, or `main`'s for the first (a group that lands fast-forwards `main` to
@@ -1251,8 +1258,20 @@ twenty minutes on and mostly spent waiting for runners. The harness does not wai
   ahead of it has already passed that same job (or skipped it, or passed whole). The look goes down
   the queue from the first pull request and stops at the first build with a required job red: that
   pull request goes out when the failure is its own, and otherwise it waits, a tick at a time, for
-  the builds ahead to pass the job (or fail, and go out themselves). A build that ended is left to
-  the queue, which has its checks.
+  the builds ahead to pass the job (or fail, and go out themselves).
+- **A build that ended.** One that ended without passing is left to the queue, which takes its pull
+  request out within seconds of a required check reporting red, for a minute (`EvacEndedAfter`).
+  One still in the queue after that is waiting on a required check that never reported: GitHub
+  dropped the jobs it gathers, or the check itself, and the queue would hold it, and every pull
+  request behind it, for its whole check timeout (`check_response_timeout_minutes`, 240 minutes,
+  `EvacEndedWithin`). On 2026-11-09 #3505's build ended at 18:15 with `rust`, `web` and `e2e
+  smoke` never reported, and nothing landed until the queue gave up at 22:01. The look takes it
+  out (`events.unstick`). With a required job of its own red, it goes out as a red build's does,
+  below, with nothing left to cancel. With none, nothing says it failed, so it goes straight back
+  in at the back of the queue, whoever's it is, which builds it again: once for each commit `main`
+  is at, by the item's `requeued` record, which `queue.RequeueCleared` keeps too. One that sticks
+  again stays out: the night bot's own goes back from the housekeeping pass once `main` moves, and
+  a person's or Squishy's gets a comment saying why.
 - **Taking it out.** It dequeues the pull request with the bot's token (the Actions token may not),
   and goes on only once GitHub says it is out of the queue: a build cancelled while its pull request
   is still queued leaves its summary checks skipped, which count as passing, which is why
@@ -1396,7 +1415,8 @@ subscription built.
 
 ### Switching between Opus and Sonnet
 
-Every Claude account runs two models, Opus (strong) and Sonnet at `xhigh` (medium). The router
+Every Claude account runs two models, Opus (strong) and Sonnet (medium; `xhigh` or `high` by
+account, [the Sonnet effort test](#the-sonnet-effort-test)). The router
 starts a run on the weaker one that meets the item's difficulty, and the run moves its builder
 between them as the work needs (`work.Worker.Switch`), never below the item's difficulty: a hard
 item stays on Opus.
@@ -1418,6 +1438,60 @@ record names the model that built it, the result lists every switch (`switches`)
 the run leaves says when and why it switched. A lane with one model (Muse, agy, Codex) never
 switches.
 
+### Every model change is a new agent
+
+The harness never changes a model inside a session, since that would reread the whole transcript
+(the prompt cache is per model) and spend the context window again. Every change of model is a new
+`claude` call, in the same job, on the same subscription and lane, started from its prompt and the
+item's handoff:
+
+- **A builder's switch** between Opus and Sonnet (above) takes effect on the run's next pass, a
+  fresh call. A kept session is resumed only by the model that wrote it: `work.Worker.resumeFrom`
+  compares `sessions.Family` of the kept session's model and the call's, and a mismatch starts a
+  fresh session with the first prompt and the handoff, as any other fallback does.
+- **The own review run** reviews on Opus and fixes on the model that built the change
+  ([the own review run](#the-own-review-run)): two kinds of call, each a new instance that resumes
+  nothing, in one run on the lane its build reserved. The reviews were always fresh sessions by
+  design, so Opus reading the head cold costs what a Sonnet review of it did, at Opus's price.
+- **A hard part** a Claude account builds on Sonnet is one builder pass, with no switch inside it
+  (`next_model` is read only between the rounds of a build or a revision). The tree's reconcile
+  (Opus) is the first to check it, and a part it sends back goes to its builder's subscription on
+  Opus, not the Sonnet that was sent back (`plan.SentBackSeat`): a new call on the same lane.
+
+Claude Code's advisor tool (`--advisor`) is not used: it is a consult inside one session, which
+sends the executor's whole transcript to the advisor model at each call, and the harness runs every
+Claude call with `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` set (`runner.QuietEnv`); the advisor's
+docs say it stays off when a variable that turns flag fetching off is set, naming `DISABLE_TELEMETRY`,
+and whether this one counts has not been tried. Anything an advisor would do for a plan is a separate call in
+the lane, a plan-check by Opus, which does not exist yet.
+
+### The Sonnet effort test
+
+Every Sonnet seat ran at `xhigh` until 2026-11-09. The docs call `medium` the default effort of
+Sonnet 5.5 and Opus 5.5 and `high` the one for work where verification matters, and describe
+`xhigh` only as deeper reasoning at a higher token spend, never as a default, so since 2026-11-09 four accounts run Sonnet at `high` and four stay at `xhigh`,
+in `.harness/providers.json`'s `extra_models`:
+
+| Sonnet at `high` | Sonnet at `xhigh` |
+|---|---|
+| `claude-1`, `claude-5`, `claude-6`, `claude-8` | `claude-2`, `claude-3`, `claude-4`, `claude-7` |
+
+The split is by account because the load balancer spreads the same kind of items over the accounts
+(about 103 and 114 Sonnet runs on each side, 11-03 to 11-09), and the same day's change to the own
+review's reviewer (Opus for every Claude lane) applies to both sides, so it cannot tell them apart.
+Only the Sonnet seat differs: Opus runs at `xhigh` everywhere, and fix passes at `high`.
+
+Compare the medium items each side built and approved (`bot-usage`'s `runs-*.csv`: `subscription`,
+`models`, `kind`, `item`, `outcome`, `model_minutes`, `usd_reported`; the journal's steps):
+revisions per item and the share with none, runs per item, model minutes and cost, the time to the
+first approval, and the share of runs a cap cut off. The baseline, all at `xhigh` (255 items to
+11-09): 0.24 revisions an item, 82% with none, 2.7 runs, a median of 40 model minutes and $5.0
+(`usd_reported`, an API-price figure), 1.8 hours to the first approval
+([`reviews/2026-11-09-model-setup.md`](../reviews/2026-11-09-model-setup.md)). With about 100 items
+a side, set both sides to the winner by editing `extra_models`; a tie goes to `high`, which costs
+less. Squishy has no Sonnet seat (its one Opus account does everything), so the test does not
+reach it.
+
 ### How hard it is
 
 The difficulties are medium and hard (#2748 retired `difficulty:easy`, once the only difficulty a
@@ -1433,8 +1507,9 @@ An item is **hard** if any of these holds, and **medium** otherwise:
 4. **A migration:** a database migration, or moving data or state between shapes.
 5. **Big:** about 40 files or more changed in all, the tests included.
 
-Torn between the two, take the harder. A medium item is planned, built and approved by a medium
-model (Muse, Gemini, GPT or Sonnet; the approval may be its own lane's, 2026-11-02); a hard one by
+Torn between the two, take the harder. A medium item is planned and built by a medium
+model (Muse, Gemini, GPT or Sonnet) and approved by a medium or strong one (on a Claude account,
+its Opus since 2026-11-09; the approval may be its own lane's, 2026-11-02); a hard one by
 Opus alone. The harness still reads the plan's **Files to touch** table
 (`issueplan.FilesToTouch`): a plan that lists only paths the bot may not change goes to the people
 ([`human required`](#priority-and-human)).
@@ -1559,7 +1634,8 @@ independent measure of this self-review.
 An item ships on one approval at its tier, with no audit by another model first (#2748, section 5),
 and since the owner's decision of 2026-11-02 that approval is most often its own lane's: the
 adversarial reviewer of its [own review run](#the-own-review-run), on the subscription that built
-it, a medium model's for a medium item, Opus on the same account for a hard one. What that self-review misses is measured after the fact, by a model of
+it, a medium model's for a medium item on Muse, agy or Codex, Opus on the same account for a
+Claude lane's medium or hard item (2026-11-09). What that self-review misses is measured after the fact, by a model of
 another subscription ([`go/internal/spotcheck/`](go/internal/spotcheck/)): this check is the
 independent measure of medium and hard self-approval. Before the change, Opus asked for changes on
 25% of the commits a medium model had approved.
@@ -1848,12 +1924,16 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
    build reserved, an item held for it), and an item's owner first, and starts
    another run if another lane and more work are free. (One run at a time: the plan job's
    concurrency group keeps one running and one waiting, so runs started together would be
-   cancelled; each claim starts the next, and six lanes fill in a few minutes.) Once a lane has
-   been free for 30 minutes with nothing in the queue it can start (`suggestions.idle_minutes`;
-   work held back behind a dependency or waiting for another subscription does not count), it
-   runs a suggestion survey, while fewer than ten are open (#797). The sweep keeps that clock
-   (`suggest.idle_since`), and each survey starts it again. Every survey also reads the log of
-   suggestions that came to nothing (`suggest.declined`:
+   cancelled; each claim starts the next, and six lanes fill in a few minutes.) Once three or
+   more lanes are spare (`suggestions.spare_lanes`, #3659: the excess compute, `plan.Spare`, free
+   on subscriptions that may start a build or a plan now, which leaves out one inside its
+   `start_headroom` of a cap, 5%, with a runner free where it runs and nothing in the queue they can
+   start; work held back behind a dependency or waiting for another subscription does not count),
+   it runs a suggestion survey, and another after it while they stay spare, until ten are open
+   (`suggestions.max_open`, #797). The sweep keeps the clock (`suggest.idle_since`: when a tick
+   first saw them spare, cleared when they are not), and each survey starts it again; a survey is
+   due once it has run `suggestions.idle_minutes` (0, so at the tick after the one that saw
+   them). Every survey also reads the log of suggestions that came to nothing (`suggest.declined`:
    rejected by a vote, closed unbuilt, or approved and then handed to people or failed for good,
    [`go/internal/declined/`](go/internal/declined/)) and never offers one again; one it offers anyway,
    by the same title, is not opened. The survey files each suggestion under one class
@@ -2079,7 +2159,7 @@ days.
 
 | I want to | Do this |
 |---|---|
-| see what it is doing | the pinned issue **Night bot status** (#148, labelled `night bot` and `tracking`, which the dashboard puts back on when one is missing), which `bot-status.yml` rewrites every five minutes (one job loops for five and a half hours, then starts the next loop; an hourly schedule restarts it if it stops, since GitHub fires schedules here only every few hours; each tick also runs the sweep, so a broken chain of night runs restarts within five minutes; each tick also reads `.harness/providers.json` from `main` again and takes which secrets are set from the newest plan job's record, `secrets` in the state file, since GitHub fixes a run's secrets when the run is created, hours before a queued loop starts, so a subscription added or changed shows within five minutes; one the loop's checkout is too old to read, such as a new account's secret, ends the loop, and the next loop shows it on `main`'s code). It opens with its date and a bar chart of how far the owner's PC's two local jobs have played, in percent (the learn lane's export, as the game it is at of 100,000, its shard's games, and gather's games, over grey bars to 100, with the shard's range, gather's patch and when the PC was heard under it, from the PC's heartbeat; `dashboard.Progress`, redrawn every two minutes with the runners), then a headline (how many runs go, what the queue waits on, which subscriptions can start work now), then what each lane is doing and when it started (a clock time linking to its run; hover it for how long it had run) and a timeline of the runs going now (the owner's PC's jobs among them, each bar's name in colours that read in GitHub's light and dark themes, `dashboard.TimelineStyle`); then the lanes (`dashboard.LanesTable`): each subscription, the Claude accounts first by number, then agy, gpt and Muse, then Squishy's (from a comment its section carries, `dashboard.LanesMark_`), with how many lanes it has now (the lanes in force for a run that starts now: a Claude account's by its 5-hour cap, `lanes_by_cap`), how many its runs hold and how many are open, the totals for the Claude accounts and for all of them, and the limits on the lanes (`dashboard.LaneLimits`: the rule for the Claude accounts' lanes, and any other account's `lanes`, which the code sets no top on; the Claude secrets the workflows hand over, one an account, and which are free; the runs GitHub's runners, the planning lane and the AWS boxes take at once; usage and hours; and how many more Claude runs there is room for now); every runner and what it is doing, low in the issue below the statistics and Squishy's section: as boxes, the way the subscriptions are drawn (GitHub's runners; each AWS box as its slots, `dashboard.BoxSlots`: the night box's gpt's, agy's and one of Muse's lanes, with a Muse fill-in in a free one of the first two, and the Muse box's three of Muse's; the owner's PC with whether it is working, its CPU and memory in use as percentages and gather's job from the PC's heartbeat, `bot/machine/README.md`, The local runner, and the jobs queued for a runner, by label), and as a table (each job a runner holds, with the step it is on, what it is for and how long it has run, linked to the job), each folding away, with a link to the issue's one comment on what each runner and each workflow is for, which the bot rewrites only when that changes, `dashboard.Explain`; every section of the issue folds away under its heading, `dashboard.Fold`; redrawn alone every two minutes between the rewrites (`dashboard.RefreshRunners`, from the runs going and queued and their jobs, by conditional requests that cost no rate limit while a job is unchanged); every subscription as a box, the Claude accounts and the night box's, then the training box, which shows `gather` alone since #1677 stopped its two LLM lanes (a lane named in `dashboard.TrainingLanes` shows its pull request again, #1272), each saying what it does or why not (working, takes queued work at the next run, idle with nothing queued for it, capped and when it can start again, outside its hours, backing off, off, or no lane free where it runs) and its usage, always; the queue in the planner's order, each item with what the next run does to it (plan, build, revise, review run), its difficulty and the tier that needs (a hard item or a revision that answers a strong audit needs a strong model; a build needs a medium or strong planner first), and either who takes it at the next run or what it waits for and which subscription frees up first, with the items held back (a `human` label, an earlier part or a blocker still open) and why ([`go/internal/waiting/`](go/internal/waiting/) works it out with the planner's own rules on the lanes held now, so a subscription is never called free when the planner would give it nothing); each subscription's usage as bars and charts against its cap now (and the one in or outside its hours), the line a build or a plan must start under, when the window resets, a window that reset since its reading said as such, and how old the reading is, with one line linking the usage issue, which holds it over time (its number from the state file's `usage_issue`; [The usage issue](#the-usage-issue)); the last runs; the learn lane, which runs on the owner's PC with no model and no harness (the generation on `main`, the lane's pull request, its next scheduled run, the owner's PC from its heartbeat: whether it is working and on which job, and its CPU and memory in use as percentages, with and without its runners, and how each of its last runs ended, read from GitHub alone: `dashboard.LearnLane`, [`training/learn.md`](../training/learn.md)); the statistics (below); and the full status folded. Or `/harness status` anywhere, or `harness status` in `bot/`: its "Running now" lists each subscription at work, on what, for how long, and its run |
+| see what it is doing | the pinned issue **Night bot status** (#148, labelled `night bot` and `tracking`, which the dashboard puts back on when one is missing), which `bot-status.yml` rewrites every five minutes (one job loops for five and a half hours, then starts the next loop; an hourly schedule restarts it if it stops, since GitHub fires schedules here only every few hours; each tick also runs the sweep, so a broken chain of night runs restarts within five minutes; each tick also reads `.harness/providers.json` from `main` again and takes which secrets are set from the newest plan job's record, `secrets` in the state file, since GitHub fixes a run's secrets when the run is created, hours before a queued loop starts, so a subscription added or changed shows within five minutes; one the loop's checkout is too old to read, such as a new account's secret, ends the loop, and the next loop shows it on `main`'s code). It opens with its date and a bar chart of how far the owner's PC's two local jobs have played, in percent (the learn lane's export, as the game it is at of 100,000, its shard's games, and gather's games, over grey bars to 100, with the shard's range, gather's patch and when the PC was heard under it, from the PC's heartbeat; `dashboard.Progress`, redrawn every two minutes with the runners), then a headline (how many runs go, what the queue waits on, which subscriptions can start work now), then the excess compute (`dashboard.ExcessSection`, #3659: how many lanes are spare, free on subscriptions that may start a build or a plan now, none inside its `start_headroom` of a cap, with a runner free where they run and nothing queued for them once the planner has handed out all it can start, `plan.Spare`; and how many more issues would fill them, hard or medium on a subscription with a strong seat and medium only on one without, with a table by subscription, so a person sees whether to open more issues; at three or more a suggestion survey runs), then what each lane is doing and when it started (a clock time linking to its run; hover it for how long it had run) and a timeline of the runs going now (the owner's PC's jobs among them, each bar's name in colours that read in GitHub's light and dark themes, `dashboard.TimelineStyle`); then the lanes (`dashboard.LanesTable`): each subscription, the Claude accounts first by number, then agy, gpt and Muse, then Squishy's (from a comment its section carries, `dashboard.LanesMark_`), with how many lanes it has now (the lanes in force for a run that starts now: a Claude account's by its 5-hour cap, `lanes_by_cap`), how many its runs hold and how many are open, the totals for the Claude accounts and for all of them, and the limits on the lanes (`dashboard.LaneLimits`: the rule for the Claude accounts' lanes, and any other account's `lanes`, which the code sets no top on; the Claude secrets the workflows hand over, one an account, and which are free; the runs GitHub's runners, the planning lane and the AWS boxes take at once; usage and hours; and how many more Claude runs there is room for now); every runner and what it is doing, low in the issue below the statistics and Squishy's section: as boxes, the way the subscriptions are drawn (GitHub's runners; each AWS box as its slots, `dashboard.BoxSlots`: the night box's gpt's, agy's and one of Muse's lanes, with a Muse fill-in in a free one of the first two, and the Muse box's three of Muse's; the owner's PC with whether it is working, its CPU and memory in use as percentages and gather's job from the PC's heartbeat, `bot/machine/README.md`, The local runner, and the jobs queued for a runner, by label), and as a table (each job a runner holds, with the step it is on, what it is for and how long it has run, linked to the job), each folding away, with a link to the issue's one comment on what each runner and each workflow is for, which the bot rewrites only when that changes, `dashboard.Explain`; every section of the issue folds away under its heading, `dashboard.Fold`; redrawn alone every two minutes between the rewrites (`dashboard.RefreshRunners`, from the runs going and queued and their jobs, by conditional requests that cost no rate limit while a job is unchanged); every subscription as a box, the Claude accounts and the night box's, then the training box, which shows `gather` alone since #1677 stopped its two LLM lanes (a lane named in `dashboard.TrainingLanes` shows its pull request again, #1272), each saying what it does or why not (working, takes queued work at the next run, idle with nothing queued for it, capped and when it can start again, outside its hours, backing off, off, or no lane free where it runs) and its usage, always; the queue in the planner's order, each item with what the next run does to it (plan, build, revise, review run), its difficulty and the tier that needs (a hard item or a revision that answers a strong audit needs a strong model; a build needs a medium or strong planner first), and either who takes it at the next run or what it waits for and which subscription frees up first, with the items held back (a `human` label, an earlier part or a blocker still open) and why ([`go/internal/waiting/`](go/internal/waiting/) works it out with the planner's own rules on the lanes held now, so a subscription is never called free when the planner would give it nothing); each subscription's usage as bars and charts against its cap now (and the one in or outside its hours), the line a build or a plan must start under, when the window resets, a window that reset since its reading said as such, and how old the reading is, with one line linking the usage issue, which holds it over time (its number from the state file's `usage_issue`; [The usage issue](#the-usage-issue)); the last runs; the learn lane, which runs on the owner's PC with no model and no harness (the generation on `main`, the lane's pull request, its next scheduled run, the owner's PC from its heartbeat: whether it is working and on which job, and its CPU and memory in use as percentages, with and without its runners, and how each of its last runs ended, read from GitHub alone: `dashboard.LearnLane`, [`training/learn.md`](../training/learn.md)); the statistics (below); and the full status folded. Or `/harness status` anywhere, or `harness status` in `bot/`: its "Running now" lists each subscription at work, on what, for how long, and its run |
 | see what it has done | the same issue's statistics (`bot/go/internal/stats/`; they had an issue of their own, #190, until they were folded in), counted afresh every 30 minutes by the same loop (`dashboard --stats`) and kept in the issue between counts, since a count reads every bot comment and pull request; `harness stats --force` in `bot/` rewrites the issue with them counted now. One table sets the last 6 hours, the last 24 hours, the last 7 days and all time side by side: runs by kind, outcomes, pull requests opened and merged, issues closed, lines added and removed, files, commits, time to merge, model hours, tokens and cost; then the last two weeks day by day. Each window then has a folded section of its own: per subscription and model, its runs by kind, outcomes, pull requests opened and merged, lines merged, pauses, failures and model time; model tokens (in, out and cached) and USD cost per subscription (#695); bar charts of runs and lines by subscription (all time adds model hours and outcomes). Between the last two weeks and the windows sits which set's cards win most ([`go/internal/cardsets/`](go/internal/cardsets/)): the last three patches with 1,000 games or more (each a patch with its micros, read at its newest version; its live games once it has 1,000 of them, else its live and AI games), each set's cards, card-games, pooled win rate with its standard error, mean and median, its pooled rate per patch, which set is highest by each, and the cards 3 or more standard errors from 50% (the 20 furthest listed, `cardsets.OutliersShown`), read from production's public `/api/stats/cards` once a day at a count (an hour after a failed read, which keeps the last figures and says it failed). Then every pull request merged, newest first, folded, with when it merged and who planned, built, revised and approved it (when the issue would pass GitHub's limit on an issue's body, the full status folded at its foot is left out first, since it is the sections' facts again and `/harness status` gives it, then fewer are listed, or none, then fewer busy runners, and the statistics last of all; a rewrite without `--stats`, bot-commands.yml's after a sweep, keeps the block the issue holds). Charts are bars and lines, never pies. Runs and builders come from the bot's own comments; a pull request from before its comments named a builder takes the last build started on its issue before it was opened, and shows as "not recorded" when there was none |
 | stop everything now | `/harness halt`; for a lock nobody can lift by comment, commit `.harness/HALT` |
 | start again | `/harness start` (and delete `.harness/HALT` if you committed it) |
@@ -2500,7 +2580,7 @@ started as Squishy (`go/tests/squishy_cases_test.go`, from `go/tests/squishy_tes
 | `go/internal/memory/` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |
 | `go/internal/threads/`, `go/internal/prompts/`, `go/internal/verdicts/` | what the model is told, and reading what it answers |
 | `go/internal/controller/` | the status loop as the planner (#1455): it plans, writes each plan to the state branch and starts each night run with its plan; `plan-fetch` reads and checks such a plan in the run; and it delivers each such run once it ends (#1537), with the model job's upload and a fresh clone of the default branch |
-| `go/internal/dashboard/` | the pinned status issue (#148): opened and pinned once, rewritten every five minutes by `bot-status.yml` (`harness dashboard --sweep --stats --companions --controller --every 300 --runners-every 120 --for 19800`, which sweeps first each time), its runners section redrawn alone every two, with the statistics counted every 30 minutes and kept between |
+| `go/internal/dashboard/` | the pinned status issue (#148): opened and pinned once, rewritten every five minutes by `bot-status.yml` (`harness dashboard --sweep --stats --companions --controller --every 300 --runners-every 120 --for 19800`, which sweeps first each time), its runners section redrawn alone every two, with the statistics counted every 30 minutes and kept between; `excess.go` is its first section, the excess compute (#3659), from `plan/spare.go` |
 | `go/internal/waiting/` | what the status issue says each queued item waits for (the tier its difficulty needs, and which subscription frees up first) and what each subscription can do now, from the planner's own rules (`plan.Pairs`) on the lanes held now |
 | `go/internal/stats/` | the status issue's statistics: the last 6 hours, day, week and all time, from the bot's comments, pull requests and state file, counted every 30 minutes and kept in the issue between counts |
 | `go/internal/cardsets/` | which set's cards win most, in the status issue's statistics: each set's pooled, mean and median card win rate over the last three patches with 1,000 games or more, read once a day from production's public `/api/stats/cards` and kept in the issue between reads |

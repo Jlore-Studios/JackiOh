@@ -106,131 +106,38 @@ pub fn script_v0_5_11() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{hits, js, next_turn_of, weapon_board};
-    use jackioh_engine::testkit::*;
+    use crate::stinkyscape_family as fam;
 
-    const P1: PlayerId = PlayerId::P1;
-    const P2: PlayerId = PlayerId::P2;
-
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-
+    /// The printed `damage`, and the Radiant face's.
     const DAMAGE: i32 = 1;
     const RADIANT_DAMAGE: i32 = 2;
-    const RADIANT_HEALTH: i32 = 4;
-
-    fn at(target: &str) -> Value {
-        json!({ "ability": "repeater", "targets": pick::id(target) })
-    }
-
-    fn at_hero() -> Value {
-        json!({ "ability": "repeater", "targets": [{ "pick": "hero", "player": "p2" }] })
-    }
-
-    fn repeater_on(radiant: bool, p2: Value) -> Scenario {
-        weapon_board(
-            "s051",
-            json!({ "field": [{ "def": ID, "radiant": radiant }] }),
-            p2,
-        )
-    }
-
-    /// The targets `legal_actions` offers p1 for the Repeater's Activate, one per action.
-    fn offered(s: &Scenario) -> Vec<Value> {
-        let repeater = s.card(ID).id.clone();
-        legal_actions(s.state(), P1)
-            .iter()
-            .map(js)
-            .filter(|action| action["type"] == "activate" && action["instanceId"] == repeater.as_str())
-            .map(|action| action["targets"].clone())
-            .collect()
-    }
-
-    /// One hit on an Armored Menace between two others, whole, and none beside it.
-    fn pierces(radiant: bool, amount: i32) {
-        let mut s = repeater_on(radiant, json!({ "field": [MENACE, MENACE, MENACE] }));
-        let target = s.unit_at(P2, 2).id;
-        s.card_mut(target.as_str())
-            .granted_keywords
-            .push(Keyword::Armor { n: 3 });
-        s.activate(ID, at(&target));
-        assert_eq!(hits(s.last_events()), vec![(target, amount)], "radiant {radiant}");
-        s.expect_health(P2, HERO_HEALTH);
-    }
-
-    /// "an enemy Unit": the enemy Unit is the one target offered, the enemy hero never is, and aiming
-    /// at the hero is refused, leaving it untouched.
-    fn never_the_hero(radiant: bool) {
-        let mut s = repeater_on(radiant, json!({ "field": [VANILLA] }));
-        let unit = s.unit_at(P2, 1).id;
-        assert_eq!(offered(&s), vec![pick::id(&unit)], "radiant {radiant}");
-        s.expect_refused(|s| s.activate(ID, at_hero()));
-        s.expect_health(P2, HERO_HEALTH);
-    }
-
-    /// R1857003: USES uses a turn, one per Vanilla in lanes 1 to USES, the last of them landing;
-    /// the next, at the Vanilla in lane USES + 1, is refused; the turn after, it is back (no cooldown).
-    fn uses_a_turn(radiant: bool, amount: i32) {
-        let row = json!({ "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] });
-        let mut s = repeater_on(radiant, row);
-        for lane in 1..USES {
-            let target = s.unit_at(P2, lane).id;
-            s.activate(ID, at(&target));
-        }
-        let last = s.unit_at(P2, USES).id;
-        s.activate(ID, at(&last));
-        assert_eq!(hits(s.last_events()), vec![(last, amount)], "use {USES} lands");
-        let next = s.unit_at(P2, USES + 1).id;
-        s.expect_refused_with(
-            |s| s.activate(ID, at(&next)),
-            &format!("that ability has been used {USES} times this turn"),
-        );
-        next_turn_of(&mut s, P1);
-        s.activate(ID, at(&next));
-        assert_eq!(hits(s.last_events()), vec![(next, amount)], "radiant {radiant}");
-    }
 
     mod base {
         use super::*;
 
         #[test]
         fn r1862000_hits_the_chosen_enemy_unit_through_armor() {
-            pierces(false, DAMAGE);
+            fam::rep_pierces(ID, "s051", false, DAMAGE);
         }
 
         #[test]
         fn r1862000_the_enemy_hero_is_never_offered_and_is_refused() {
-            never_the_hero(false);
+            fam::rep_never_hero(ID, "s051", false);
         }
 
         #[test]
         fn r1857003_n_uses_a_turn_the_last_lands_and_the_next_is_refused() {
-            uses_a_turn(false, DAMAGE);
+            fam::rep_uses_a_turn(ID, "s051", false, USES, DAMAGE);
         }
 
         #[test]
         fn r1086_r1852001_an_equipped_host_takes_the_activate_and_is_no_starship_piece() {
-            let mut s = weapon_board(
-                "s051-equip",
-                json!({ "hand": [ID], "field": [VANILLA] }),
-                json!({ "field": [VANILLA] }),
-            );
-            let host = s.unit_at(P1, 1).id;
-            let target = s.unit_at(P2, 1).id;
-            s.play(ID, json!({ "zone": 1, "equip": true }));
-            let fused = s.card(host.as_str()).clone();
-            assert!(!unit_has(s.state(), &fused, KeywordKind::StarshipPiece));
-            s.activate(host.as_str(), at(&target));
-            assert_eq!(hits(s.last_events()), vec![(target, DAMAGE)]);
+            fam::rep_equip_takes_activate(ID, "s051", DAMAGE);
         }
 
         #[test]
         fn damage_reads_through_param() {
-            let mut s = repeater_on(false, json!({ "field": [VANILLA] }));
-            let amount = crate::upgrade_number(&mut s, ID, "damage");
-            let target = s.unit_at(P2, 1).id;
-            s.activate(ID, at(&target));
-            assert_eq!(hits(s.last_events()), vec![(target, amount)]);
+            fam::rep_param_reads(ID, "s051");
         }
     }
 
@@ -242,38 +149,22 @@ mod tests {
         /// refused.
         #[test]
         fn r767000_the_script_kept_for_v0_5_11_hits_the_enemy_hero_for_half_its_old_uses_a_turn() {
-            crate::under_kept(ID, script_v0_5_11(), || {
-                let halved = RADIANT_DAMAGE / HALF_DAMAGE_TO_HEROES_DIVISOR;
-                let mut s = repeater_on(true, json!({ "field": [VANILLA] }));
-                for _ in 0..USES_V0_5_11 {
-                    s.activate(ID, at_hero());
-                    assert_eq!(hits(s.last_events()), vec![("hero-p2".to_string(), halved)]);
-                }
-                s.expect_health(P2, HERO_HEALTH - USES_V0_5_11 * halved);
-                s.expect_refused(|s| s.activate(ID, at_hero()));
-            });
+            fam::rep_kept_halves_hero(ID, "s051", RADIANT_DAMAGE, USES_V0_5_11, script_v0_5_11);
         }
 
         #[test]
         fn r1862000_hits_the_chosen_enemy_unit_through_armor_twice_as_hard() {
-            pierces(true, RADIANT_DAMAGE);
+            fam::rep_pierces(ID, "s051", true, RADIANT_DAMAGE);
         }
 
         #[test]
         fn r1862000_the_enemy_hero_is_never_offered_and_is_refused() {
-            never_the_hero(true);
+            fam::rep_never_hero(ID, "s051", true);
         }
 
         #[test]
         fn r1857003_n_uses_a_turn_the_last_lands_and_the_next_is_refused() {
-            uses_a_turn(true, RADIANT_DAMAGE);
-        }
-
-        #[test]
-        fn its_health_is_doubled() {
-            let s = repeater_on(true, json!({}));
-            let view = s.stats(ID);
-            assert_eq!((view.attack, view.health), (0, RADIANT_HEALTH));
+            fam::rep_uses_a_turn(ID, "s051", true, USES, RADIANT_DAMAGE);
         }
     }
 }

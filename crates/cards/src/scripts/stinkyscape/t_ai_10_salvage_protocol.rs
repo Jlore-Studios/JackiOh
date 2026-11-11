@@ -46,7 +46,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const SALVAGE: &str = "stinkyscape-t-ai-10";
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy a Unit
     const FILLER: &str = "core-005";
 
     fn killed(radiant: bool, seed: &str) -> Scenario {

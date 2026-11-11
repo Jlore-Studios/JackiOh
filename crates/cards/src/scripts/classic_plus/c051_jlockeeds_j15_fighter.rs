@@ -40,10 +40,10 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const J15: &str = "classicplus-051";
-    const VANILLA: &str = "core-008"; // Mr. Vanilla 4/4
-    const HIT_JOB: &str = "core-016"; // (3) Spell: destroy target Unit
-    const NETHER: &str = "core-088"; // (4) Spell: destroy all permanents
-    const HONEYPOT: &str = "core-060"; // Trap: Radiant fires on any card the opponent plays; Rush Tokens attack a Unit
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const HIT_JOB: &str = "core-016"; // Hit Job: destroy target Unit
+    const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
+    const HONEYPOT: &str = "core-060"; // Bear Honeypot: Radiant fires on any card the opponent plays; Rush Tokens attack a Unit
     const FILLER: &str = "core-005";
 
     use crate::scenario;

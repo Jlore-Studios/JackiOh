@@ -789,7 +789,7 @@ describe("R3351000 the living game's shared shed order", () => {
   const TINT = { rim: "#ffffff", core: "#000000", glow: "#ff0000" };
 
   it("R3351000 a forced slow frame sheds motes first while the beats still play", () => {
-    const h = harness({ phone: true });
+    const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     expect(h.director.shedLevel()).toBe(1);
@@ -803,7 +803,7 @@ describe("R3351000 the living game's shared shed order", () => {
   });
 
   it("R3351000 further slow windows shed far auras, then faces, and healthy windows recover one stage at a time", () => {
-    const h = harness({ phone: true });
+    const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     expect(h.director.shedLevel()).toBe(1);
@@ -828,7 +828,7 @@ describe("R3351000 the living game's shared shed order", () => {
   });
 
   it("R3351000 a set piece's main beats never shed, at any stage", () => {
-    const h = harness({ phone: true });
+    const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
@@ -850,7 +850,7 @@ describe("R3351000 the living game's shared shed order", () => {
   });
 
   it("R3351000 disposing a director resets the shared shed level to full", () => {
-    const h = harness({ phone: true });
+    const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
@@ -859,11 +859,11 @@ describe("R3351000 the living game's shared shed order", () => {
     h.director.dispose();
     expect(h.director.shedLevel()).toBe(0);
     // A director mounted after it starts full too: no cross-route leak.
-    expect(harness({ phone: true }).director.shedLevel()).toBe(0);
+    expect(harness().director.shedLevel()).toBe(0);
   });
 
   it("R3351000 an idle shed board recovers to full on healthy frames with no effect work", () => {
-    const h = harness({ phone: true });
+    const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
@@ -882,14 +882,56 @@ describe("R3351000 the living game's shared shed order", () => {
     expect(h.frames.pending()).toBe(0);
   });
 
-  it("R3351000 a desktop director halves its cap on slow windows but never sheds", () => {
+  it("R3606000 a desktop director sheds motes, then far auras, then faces, and recovers one stage per healthy run", () => {
+    const h = harness();
+    settled(h);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(1);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(2);
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(3);
+    // Past the last stage nothing more sheds.
+    h.frameEvery(40, trip);
+    expect(h.director.shedLevel()).toBe(3);
+
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(2);
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(1);
+    h.frameEvery(16, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(0);
+    expect(h.director.capacity()).toBe(FX_PARTICLE_CAP);
+  });
+
+  it("R3606000 healthy desktop frames at the display's refresh never leave full", () => {
+    const h = harness();
+    settled(h);
+    h.frameEvery(16, FX_ADAPT_WINDOW * 5);
+    expect(h.director.shedLevel()).toBe(0);
+    expect(h.director.capacity()).toBe(FX_PARTICLE_CAP);
+  });
+
+  it("R3606000 a desktop shed still plays a set piece's main beats", () => {
     const h = harness();
     settled(h);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
     h.frameEvery(40, trip);
-    expect(h.director.shedLevel()).toBe(0);
-    expect(h.director.capacity()).toBeLessThan(FX_PARTICLE_CAP);
+    expect(h.director.shedLevel()).toBe(3);
+    // Every set piece's beats: a takeover, a fold, a launch, a rift and a title card. They are DOM
+    // cues with no particle counts, so emission scaling cannot touch them.
+    h.director.play([
+      { kind: "takeover", stage: null, look: "prismatic", tint: TINT, at: at("card-a"), landMs: 100, delayMs: 0, durationMs: 1000 },
+      { kind: "setPiece", shape: "fold", tint: TINT, spin: 1, side: null, at: at("card-a"), holdMs: 200, delayMs: 0, durationMs: 1000 },
+      { kind: "launch", at: at("card-a"), tint: TINT, size: "large", countsMs: [0, 600, 1200], igniteMs: 100, delayMs: 0, durationMs: 1000 },
+      { kind: "rift", at: at("card-a"), side: "you", tint: TINT, tearMs: 50, flareMs: 150, delayMs: 0, durationMs: 1000 },
+      { kind: "anomalyTitle", at: at("card-a"), text: "Found", picture: "<svg></svg>", tint: TINT, delayMs: 0, durationMs: 1000 },
+    ]);
+    h.frame(h.clock.now() + STEP);
+    for (const kind of ["takeover", "setPiece", "launch", "rift", "anomalyTitle"]) {
+      expect(h.root.querySelectorAll(`[data-fx="${kind}"]`)).toHaveLength(1);
+    }
   });
 });
 
@@ -1024,5 +1066,74 @@ describe("B41 — bursts of a flash preset bloom at their origin", () => {
     h.frame(T0 + STEP);
     expect(h.surface.calls).toContain("createRadialGradient");
     expect(h.surface.calls).toContain("set globalCompositeOperation");
+  });
+});
+
+describe("#3633 a frame reads every box before it writes", () => {
+  /** A harness whose reads (`measure`) log `r` and whose mounts (`appendChild` on the root) log `w`. */
+  function logged(over: Partial<FxDirectorOptions> = {}) {
+    const log: string[] = [];
+    const h = harness({
+      measure: (anchor) => {
+        log.push("r");
+        return anchor.kind === "testid" && anchor.testid === "hero-opponent" ? HERO : CARD;
+      },
+      ...over,
+    });
+    const append = h.root.appendChild.bind(h.root);
+    h.root.appendChild = <T extends Node>(node: T): T => {
+      log.push("w");
+      return append(node);
+    };
+    return { h, log };
+  }
+
+  it("#3633 a frame measures every due cue before it mounts any", () => {
+    const { h, log } = logged();
+    h.director.play([
+      { kind: "rays", tone: "legendary", at: at("card-a"), delayMs: 100, durationMs: D },
+      { kind: "sheen", at: at("card-a"), delayMs: 100, durationMs: D },
+      { kind: "splat", tone: "damage", amount: 8, at: at("card-a"), delayMs: 100, durationMs: D },
+      { kind: "burst", preset: "spark", at: at("hero-opponent"), delayMs: 100, count: 24, spread: "point", power: 1 },
+    ]);
+    h.frame(T0 + 50);
+    expect(log).toEqual([]);
+    h.frame(T0 + 100);
+    expect(log.join("")).toMatch(/^r+w+$/);
+    expect(log.join("")).toBe("rrrrwww");
+    expect(h.root.childElementCount).toBe(3);
+    expect(h.director.particles()).toBeGreaterThan(0);
+  });
+
+  it("#3633 a stage cue keeps its place: the cues before it mount first and the cues after it read the board it moved", () => {
+    const card = document.createElement("div");
+    const { h, log } = logged({ element: (testid) => (testid === "card-b" ? card : null) });
+    const set = card.setAttribute.bind(card);
+    card.setAttribute = (name: string, value: string): void => {
+      if (name === "data-fx-pulled") log.push("s");
+      set(name, value);
+    };
+    h.director.play([
+      { kind: "splat", tone: "damage", amount: 8, at: at("card-a"), delayMs: 100, durationMs: D },
+      { kind: "pull", testid: "card-b", to: at("card-a"), delayMs: 100, durationMs: D },
+      { kind: "sheen", at: at("card-a"), delayMs: 100, durationMs: D },
+    ]);
+    h.frame(T0 + 100);
+    // The splat reads and mounts, the pull reads its centre and moves its card, then the sheen reads and mounts.
+    expect(log.join("")).toBe("rwrsrw");
+    expect(card.getAttribute("data-fx-pulled")).toBe("true");
+  });
+
+  it("#3633 a cue whose life ran out in a stalled tab is neither measured nor mounted, and the cues beside it still are", () => {
+    const { h, log } = logged();
+    h.director.play([
+      { kind: "sheen", at: at("card-a"), delayMs: 0, durationMs: 50 },
+      { kind: "splat", tone: "damage", amount: 8, at: at("card-a"), delayMs: 0, durationMs: D },
+    ]);
+    // The first frame comes after the sheen's life is over.
+    h.frame(T0 + 60);
+    expect(log.join("")).toBe("rw");
+    expect(h.root.querySelectorAll('[data-fx="sheen"]')).toHaveLength(0);
+    expect(h.root.querySelectorAll('[data-fx="splat"]')).toHaveLength(1);
   });
 });

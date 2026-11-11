@@ -48,12 +48,12 @@ mod tests {
 
     const GRAPE: &str = "classicplus-065-3";
     const FILLER: &str = "core-005";
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
-    const HINDER: &str = "core-021"; // Cast on draw; base face makes its caster discard 1 at random (R682)
-    const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2
-    const DECK_A: &str = "core-043"; // (4) Unit, Big Felinor
-    const DECK_B: &str = "core-025"; // (4) Unit
-    const BILLY: &str = "classicplus-069"; // Buff Billy, an (X) Unit
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const HINDER: &str = "core-021"; // Hinder: Cast on draw; base face makes its caster discard 1 at random (R682)
+    const SOLARIUS: &str = "classicplus-038"; // Solarius: Spell Damage +2
+    const DECK_A: &str = "core-043"; // Big Felinor
+    const DECK_B: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const BILLY: &str = "classicplus-069"; // Buff Billy
 
     use crate::js;
 

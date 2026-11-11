@@ -49,8 +49,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SUPPORT: &str = "classicplus-019-4";
-    const BODY: &str = "core-019"; // 9/9 Taunt; end of turn: heal this to full — kept off the board here
-    const VANILLA: &str = "core-008"; // 4/4
+    const BODY: &str = "core-019"; // Midrange Menace: Taunt; end of turn: heal this to full — kept off the board here
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const MOON: &str = "classicplus-022";
     const HIT_JOB: &str = "core-016";
     const FILLER: &str = "core-005";

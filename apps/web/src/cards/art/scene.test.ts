@@ -4,6 +4,7 @@
 // clear their floors, and every card with no recipe draws the spec it drew before. The pixels are
 // e2e/cypress/component/scene-proofs.cy.tsx's. R3393000: the recipes are the proofs' and every Meditative+
 // and Training Grounds entry's (setScenes.test.ts holds those), and none of them paints in the gold window.
+// R3352000: and every Classic entry's (classicScenes.test.ts).
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -56,6 +57,11 @@ const PROOFS = ["classic-074", "core-002", "core-098", "core-100", "stinkyscape-
 const SCENERY: readonly KitCategory[] = ["terrain", "architecture", "plants", "creatures", "objects", "weather", "craft"];
 /** The seeds every part is drawn from, enough to reach each branch its stream picks. */
 const SEEDS = 40;
+/**
+ * The two sweeps that draw every part of both kits from each of the SEEDS: heavy by design, 1.6 and 2.0 s on an idle
+ * 4-core machine and 5,027 ms on CI's loaded unit shard (#3564), past vitest's default 5 s, and they grow with the kits.
+ */
+const SWEEP_TIMEOUT_MS = 30_000;
 const PATH = /^M[-\d. MLQCAZ]+$/;
 /** The rarer than Rare: a scene with a foreground, a middle and a background. */
 const DEEP: readonly Rarity[] = ["Epic", "Legendary", "Mythic"];
@@ -148,7 +154,7 @@ describe("R3331000 the scene kits", () => {
     expect(Object.keys(SCENE_KIT).filter((id) => Object.hasOwn(FIGURE_KIT, id))).toEqual([]);
   });
 
-  it("R3331000 every part draws clean shapes from any seed", () => {
+  it("R3331000 every part draws clean shapes from any seed", { timeout: SWEEP_TIMEOUT_MS }, () => {
     // Each shape's checks are plain tests, gathered per part into one expect that names every fault by its seed
     // and shape: a vitest expect per check cost ten times the drawing and held this test at its timeout once the
     // kits passed 230 parts (#3396).
@@ -169,7 +175,7 @@ describe("R3331000 the scene kits", () => {
     }
   });
 
-  it("R3331000 SCENE_PALETTE is palette.css's, and no base-face scene colour is in Radiant's gold window", () => {
+  it("R3331000 SCENE_PALETTE is palette.css's, and no base-face scene colour is in Radiant's gold window", { timeout: SWEEP_TIMEOUT_MS }, () => {
     const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../palette.css"), "utf8");
     const declared = Object.fromEntries([...css.matchAll(/^\s*--pal-([a-z0-9-]+):\s*(#[0-9a-f]{6});$/gm)].map((match) => [match[1] ?? "", match[2] ?? ""]));
     expect(Object.keys(declared).length).toBeGreaterThan(0);
@@ -240,11 +246,11 @@ describe("R3331000 the five proof cards", () => {
     expect(SCENE_BOX).toBe(ART_BOX);
     // R3392000: the proofs and every Core entry draw from a recipe, and every Classic+ entry (R3390000, which
     // classicPlusScenes.test.ts checks); R3393000: so does every Meditative+ and Training Grounds entry
-    // (setScenes.test.ts); R3401000: and every Meditative entry (meditativeScenes.test.ts); R3403000: and #3403's
-    // Stinkyscape entries (stinkyscape91Scenes.test.ts); R3391000: and Stinkyscape's cards 1 to 90 of its pass, which
-    // hold Arg Arg Defender's (stinkyscapeScenes.test.ts).
+    // (setScenes.test.ts); R3401000: so does every Meditative entry (meditativeScenes.test.ts); R3403000: so do #3403's
+    // Stinkyscape entries (stinkyscape91Scenes.test.ts); R3391000: so do Stinkyscape's cards 1 to 90 of its pass, which
+    // hold Arg Arg Defender's (stinkyscapeScenes.test.ts); R3352000: and every Classic entry (classicScenes.test.ts).
     const core = Object.values(CATALOG).filter((card) => card.set === "Core").map((card) => card.id);
-    const passes = Object.values(CATALOG).filter((card) => card.set === "Meditative+" || card.set === "Training Grounds").map((card) => card.id);
+    const passes = Object.values(CATALOG).filter((card) => card.set === "Meditative+" || card.set === "Training Grounds" || card.set === "Classic").map((card) => card.id);
     const checkedElsewhere = (id: string): boolean => id.startsWith("classicplus-") || id.startsWith("meditative-");
     expect(Object.keys(SCENE_RECIPES).filter((id) => !checkedElsewhere(id) && !Object.hasOwn(STINKYSCAPE_91_RECIPES, id)).sort()).toEqual(
       [...new Set<string>([...PROOFS, ...core, ...passes, ...Object.keys(STINKYSCAPE_RECIPES)])].sort(),
@@ -318,7 +324,7 @@ describe("R3331000 the five proof cards", () => {
       for (const picture of ["alt", "night"] as const) {
         const seed = artSeedOf(id, picture);
         expect(seed, id).not.toBe(id);
-        // R3398000: Heroic Power and Ceaseless Void, offered Alt art, draw an alt recipe of their own under its seed (coreAltScenes.test.tsx).
+        // R3398000: Heroic Power and Ceaseless Void, offered Alt art, draw an alt recipe of their own under its seed (coreAltScenes.test.tsx); R3388000: and Corpse Plantation (classicAltScenes.test.tsx).
         if (picture === "alt" && Object.hasOwn(ALT_SCENE_RECIPES, id)) {
           expect(sceneRecipeOf(seed), id).toBe(ALT_SCENE_RECIPES[id]);
           continue;

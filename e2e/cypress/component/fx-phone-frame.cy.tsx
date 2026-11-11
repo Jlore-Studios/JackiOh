@@ -6,10 +6,14 @@
 // softer shake, and takeover rays trimmed to the same visible disc), a board with 4 auras, and R3337003's
 // Anomaly cast (its rift, flare, title card and landing). R3332001: Felinor Fiender's signature, the first,
 // over the gallery's board with its three Felinors. R3389001: Classic's two heaviest signatures, In Too Deep's
-// (its own abyss takeover) and BOOM! Big Max's. R3338000: Ceaseless Void's fold and Dice of Doom's 67.
+// (its own abyss takeover) and BOOM! Big Max's. R3402001: the heaviest of Core's other signatures, each a
+// Mythic takeover with its own art (R3402000): My Pawn's and Craft a Card's, which plan the most particles of
+// the ten (its strings and its forge), and Heroic Power's, whose rotunda draws the most shapes. R3338000:
+// Ceaseless Void's fold and Dice of Doom's 67.
 // R3340000: a board of six moving faces (every Mythic's art moves on the board, in the six motion slots).
 // R3344001: a hand with one face tilted under a pointer that keeps moving over it, its planes parallaxing
-// under its glare. R3334002: a launched Starship's broadside of eight guns, at the slowest effects speed.
+// under its glare; R3350000: the face a Mythic's, its diorama's slices parallaxing and looping, and a Mythic takeover
+// flying through its diorama's slices. R3334002: a launched Starship's broadside of eight guns, at the slowest effects speed.
 // R3400001: Goetzmann Game Design's and Bob's Plan's signatures, the two heaviest of Meditative+'s and Training
 // Grounds', their takeovers drawing full-screen art. R3395000: Imitated Instrumentality's and Flak v5's, the two
 // heaviest of Stinkyscape 001 to 090's, the MAGI landing with their own entrances under the boots (R3407000)
@@ -22,6 +26,7 @@
 
 import { CATALOG } from "@jackioh/cards";
 
+import { dioramaOf } from "../../../apps/web/src/cards/art/dioramas/index.ts";
 import { planAuras } from "../../../apps/web/src/fx/aura/plan.ts";
 import { planTileAuras } from "../../../apps/web/src/fx/aura/tile.ts";
 import { FX_CARD_TABLE } from "../../../apps/web/src/fx/cards/tables.ts";
@@ -33,6 +38,7 @@ import {
   galleryBoardOf,
   galleryCardEvents,
   galleryFieldView,
+  galleryHandOf,
   galleryPlayOf,
 } from "../../../apps/web/src/fx/motifs/gallery.ts";
 import { DEFAULT_FX_SETTINGS, setFxSettings } from "../../../apps/web/src/fx/settings.ts";
@@ -280,7 +286,7 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
     cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
   });
 
-  it("R3345000 a Mythic takeover with its own art holds the phone frame budget mid-flight", () => {
+  it("R3345000 R3350000 a Mythic takeover with its own art holds the phone frame budget mid-flight, flying through its diorama", () => {
     cy.viewport(PHONE.width, PHONE.height);
     const view = fullBoardView();
     holdsBudget("Mythic takeover own art", () => {
@@ -290,6 +296,8 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
       ]);
       cy.get(GAME).should("have.attr", "data-takeover", "mythic");
       cy.get(`${FX_DOM} [data-fx="takeover"] .fx-takeover-planes`).should("exist");
+      // R3350000: the camera flies through Ceaseless Void's diorama, one plane a slice.
+      cy.get(`${FX_DOM} [data-fx="takeover"] .fx-takeover-plane[data-slice]`).should("have.length", dioramaOf("core-100")?.slices.length ?? 0);
       cy.get(`${FX_DOM} [data-fx="takeover"] .fx-takeover-signature`).should("exist");
       cy.get(CANVAS).should("exist");
       return sampleFrames();
@@ -445,6 +453,31 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
     });
   }
 
+  // R3402001: Core's two heaviest by particles, and Heroic Power's rotunda, the most shapes of its art.
+  for (const [defId, name] of [
+    ["core-096", "My Pawn"],
+    ["core-099", "Craft a Card"],
+    ["core-098", "Heroic Power"],
+  ] as const) {
+    it(`R3402001 ${name}'s signature holds the phone frame budget mid-flight`, () => {
+      cy.viewport(PHONE.width, PHONE.height);
+      const entry = FX_CARD_TABLE.get(defId);
+      const play = entry === undefined ? null : galleryPlayOf(defId, entry);
+      if (play === null) throw new Error(`${name} has no gallery play`);
+      const board = galleryBoardOf(defId, fullBoardView());
+      holdsBudget(`${name}'s signature`, () => {
+        // Over the board with the card still in the hand, as /dev/fx plays it, where a Spell's takeover lands.
+        mountScene(galleryHandOf(defId, board, 1), galleryFieldView(defId, board), galleryCardEvents(defId, play, board, 1));
+        cy.get(GAME).should("have.attr", "data-takeover", "mythic");
+        // R3402000: its own scene, a drawing in its takeover's art layer (R3399002).
+        cy.get(`${FX_DOM} [data-fx="takeover"] .takeover-art .takeover-art-drawing`).should("exist");
+        cy.get(CANVAS).should("exist");
+        return sampleFrames();
+      });
+      cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
+    });
+  }
+
   // R3407000: Stinkyscape part two's two heaviest: a Mythic Unit's and a Mythic Field Spell's, each its takeover
   // over its card's own picture, its own entrance and its text's beat.
   for (const [defId, name, look] of [
@@ -522,11 +555,12 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
     });
   });
 
-  it("R3344001 a hand with one tilted face holds the phone frame budget", () => {
+  it("R3344001 R3350000 a hand with one turning diorama holds the phone frame budget", () => {
     cy.viewport(PHONE.width, PHONE.height);
     // A Mythic leads the hand, so its face has depth; the pointer circles over it for the whole sample, so the face
-    // tilts, its four planes shift and its glare moves on every frame. R3343001: a Mythic's Default is its Full art, which
-    // has depth; a Legendary's is Extended art, which keeps to one picture (R3344000), and this scene wears no picks.
+    // tilts, its diorama's slices shift (R3350000: in place of the four planes, their loops running in its slot) and its
+    // glare moves on every frame. R3343001: a Mythic's Default is its Full art, which has depth; a Legendary's is Extended
+    // art, which keeps to one picture (R3344000), and this scene wears no picks.
     const TILTED = "hand-card-fx-tilt";
     const view = fullBoardView();
     const hand = [
@@ -538,7 +572,7 @@ describe("R2803000 the phone scenes hold the frame budget", () => {
     const shown: PlayerView = { ...view, you: { ...view.you, hand } };
     holdsBudget("A hand with one tilted face", () => {
       mountScene(shown, shown, []);
-      cy.get(`[data-testid="${TILTED}"] .cf[data-depth="true"] .cf-plane`).should("have.length", 3);
+      cy.get(`[data-testid="${TILTED}"] .cf[data-diorama="true"] .cf-plane[data-slice]`).should("have.length", (dioramaOf("core-100")?.slices.length ?? 1) - 1);
       let stop = (): void => undefined;
       cy.get(`[data-testid="${TILTED}"]`).then(($card) => {
         const element = $card[0] as HTMLElement;

@@ -26,13 +26,13 @@ import CardMarks from "../cards/CardMarks.tsx";
 import { CardFace, faceModel } from "../cards/index.ts";
 import { markEventOf } from "../cards/marks.ts";
 import { resolveAnchor } from "../fx/anchors.ts";
-import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE, FX_MOBILE_WIDTH } from "../fx/constants.ts";
+import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../fx/director.ts";
 import { defaultFrames, defaultNow, defaultVisibility } from "../fx/FxLayer.tsx";
 import { createFxMemory } from "../fx/memory.ts";
 import { useFxSettings } from "../fx/settings.ts";
 import { createSurface } from "../fx/surface.ts";
-import type { FxShakeSink } from "../fx/types.ts";
+import type { FxAnchor, FxBox, FxShakeSink } from "../fx/types.ts";
 import { testid } from "../game/contract.ts";
 import { useLocale } from "../i18n/i18n.ts";
 import type { RandomSource } from "../routes/landingFan.ts";
@@ -44,6 +44,16 @@ import "../fx/fx.css";
 
 /** The showcase shakes nothing: the landing is not the board. */
 const NO_SHAKE: FxShakeSink = { apply: () => undefined, clear: () => undefined };
+
+/**
+ * R1584000: the section's clip makes the section the fixed `.fx-layer`'s containing block,
+ * so the layer fills the section, not the viewport. Translate a viewport-measured box into the
+ * layer's box by the layer's own origin (fresh each cue, so scrolling stays exact). Widths and
+ * heights pass through untouched, so pixel sizes never change.
+ */
+export function toLayerBox(box: FxBox, origin: { x: number; y: number }): FxBox {
+  return { x: box.x - origin.x, y: box.y - origin.y, width: box.width, height: box.height };
+}
 
 /** Where a stat's card is in its time on screen: coming in, on beat `n` of its animation, or at rest. */
 type Step = "enter" | number | "rest";
@@ -177,11 +187,17 @@ function StatStage({ stat, still, fxOn, intensity }: StatStageProps): ReactEleme
       now: defaultNow,
       frames: defaultFrames(),
       visibility: defaultVisibility(),
-      measure: resolveAnchor,
+      // R1584000: the clipped section contains the fixed layer, so measure in the
+      // layer's box: viewport boxes translated by the layer's own fresh origin.
+      measure: (anchor: FxAnchor): FxBox | null => {
+        const box = resolveAnchor(anchor);
+        if (box === null || domRef.current === null) return box;
+        const layer = domRef.current.getBoundingClientRect();
+        return toLayerBox(box, { x: layer.left, y: layer.top });
+      },
       shakeSink: NO_SHAKE,
       seed: FX_DEFAULT_SEED,
       capacity: capacityFor(window.innerWidth),
-      phone: window.innerWidth < FX_MOBILE_WIDTH,
     });
     director.current = created;
     return () => {

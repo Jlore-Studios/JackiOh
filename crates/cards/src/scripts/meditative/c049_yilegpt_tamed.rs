@@ -88,8 +88,8 @@ mod tests {
     const TAMED: &str = "meditative-049";
     const VIRUS: &str = "meditative-049-2";
     const PRIME: &str = "meditative-049-1";
-    const SPECIESIST: &str = "core-002"; // 6/1, the killer.
-    const OCCUPIER: &str = "core-012"; // 3/4, holding the zone across.
+    const SPECIESIST: &str = "core-002"; // Speciesist: the killer
+    const OCCUPIER: &str = "core-012"; // Duplicating Felinors: holding the zone across
     const FILLER: &str = "core-005";
 
     /// p1 plays Tamed into `lane`; p2 holds lane 1, so lane 2 across is open unless stated.

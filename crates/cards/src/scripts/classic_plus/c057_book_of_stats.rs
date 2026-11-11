@@ -37,8 +37,8 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const BOOK: &str = "classicplus-057";
-    const VANILLA: &str = "core-008"; // Mr. Vanilla 4/4
-    const FLOOD: &str = "core-017"; // (4) Spell: bounce all Units
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FLOOD: &str = "core-017"; // Flood: bounce all Units
     const FILLER: &str = "core-005";
 
     use crate::scenario;
@@ -56,6 +56,7 @@ mod tests {
     }
 
     /// The instance ids `legalActions` offers Book of Stats as targets.
+    // Differs from Scenario::offered: one card's play targets as ids, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<String> {
         let book = s.card(BOOK).id.clone();
         legal_actions(s.state(), PlayerId::P1)

@@ -54,9 +54,9 @@ mod tests {
     use super::ID;
     use crate::{filler, scenario};
 
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const TIMMY: &str = "core-011"; // (1) 3/3, Rush and First Strike.
-    const MENACE: &str = "core-019"; // (3) 9/9, Taunt.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const TIMMY: &str = "core-011"; // Tempo Timmy: Rush and First Strike.
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
     const FILLER: &str = "core-005";
 
     fn exiles(radiant: bool, mine: Value, theirs: Value) -> Scenario {

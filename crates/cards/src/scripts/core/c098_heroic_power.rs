@@ -71,7 +71,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const HEROIC: &str = "core-098"; // Field Spell, cost (0), Mythic, tag Quickdraw, Indestructible
+    const HEROIC: &str = "core-098"; // Heroic Power: a Field Spell, Mythic, tag Quickdraw, Indestructible
     const RUSH_TOKEN: &str = "core-t-rush";
     const FELINOR_TOKEN: &str = "core-t-felinor";
     const GHOUL_TOKEN: &str = "core-t-ghoul";
@@ -145,6 +145,7 @@ mod tests {
         keys
     }
 
+    // Differs from Scenario::last_events_of: the last step's events as JSON (`Vec<Value>`).
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
         s.last_events()
             .iter()

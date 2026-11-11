@@ -58,10 +58,10 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const SURGERY: &str = "core-063"; // Spell, 1
-    const FELINOR: &str = "core-t-felinor"; // 1/1 with no keywords at all: a clean slate for the grant
-    const TIMMY: &str = "core-011"; // 3/3 with Rush and First Strike, both in the pool
-    const MENACE: &str = "core-019"; // 9/9 with Taunt, in the pool
+    const SURGERY: &str = "core-063"; // Plastic Surgery: a Spell
+    const FELINOR: &str = "core-t-felinor"; // Felinor Token: with no keywords at all: a clean slate for the grant
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike"; // both in the pool
+    const MENACE: &str = "core-019"; // Midrange Menace: with Taunt, in the pool
 
     /// R21's pool as keyword KINDS. Read from the engine's pool, so this test never restates the
     /// keywords (SPEC §6.1, R781005, R1025000).
@@ -81,6 +81,7 @@ mod tests {
     }
 
     /// The target lists of every `play` `legal_actions` offers p1 for this card (R81).
+    // Differs from Scenario::offered: that card's targets as ids, per play, not the seat's whole legal list.
     fn offered(state: &GameState, card: &CardInstance) -> Vec<Vec<String>> {
         legal_actions(state, P1)
             .into_iter()

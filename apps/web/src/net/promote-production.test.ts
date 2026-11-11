@@ -383,7 +383,7 @@ describe("the production issue", () => {
     expect(only?.body).toContain("**Next for production:** the next daily full test run (super) on `staging` that passes every job puts the commit it tested live.");
     expect(only?.body).toContain("### How the sites move");
     expect(only?.body).toContain(
-      "- **Staging** moves by itself every two hours: the `staging` branch takes `main`'s newest commit whose checks (`ci.yml`) passed, and the site deploys it. It never waits for the full test run.",
+      "- **Staging** moves by itself every two hours: the `staging` branch takes `main`'s newest commit whose checks (`ci.yml`) passed, and the site deploys it. While the full test run on `staging` is red it holds still, until the night bot's fix closes \"CI: daily super run failed\"; then it takes `main`'s first green commit after that, and the full test run starts on it at once.",
     );
     expect(gh(w).labels).toEqual([LABEL]);
     expect(gh(w).prs).toEqual([]);
@@ -1236,7 +1236,7 @@ describe("the super run as production's gate", () => {
   });
 
   it("hands staging's red run to the night bot as high priority, since production waits for a run on staging that passes", () => {
-    expect(SUPER).toContain('--add-assignee "$BOT_LOGIN" --add-label "bot:build" \\\n              --add-label "priority:high" \\\n');
+    expect(SUPER).toContain('--add-assignee "$BOT_LOGIN" --add-label "bot:build" \\\n              --add-label "priority:high" --add-label "difficulty:hard" \\\n              && echo "handed #$1 to @$BOT_LOGIN, high priority"');
     expect(SUPER).toContain("STAGING_BRANCH: staging");
     expect(SUPER).toContain('if [ "$candidate" = false ] && { [ "$REF" = "$STAGING_BRANCH" ] || [ "$REF" = "$DEFAULT_BRANCH" ]; }; then\n            gate=true');
     expect(SUPER).toContain('            if [ "$gate" = false ]; then\n              echo "a run on $REF: #$1 is not handed to @$BOT_LOGIN"');
@@ -1245,6 +1245,9 @@ describe("the super run as production's gate", () => {
   it("runs the daily run on staging: its schedule starts it there, and every other job skips on the schedule (#3275)", () => {
     expect(SUPER).toMatch(/^ {2}daily:\n {4}name: start the daily run on staging\n {4}if: github\.event_name == 'schedule'\n/mu);
     expect(SUPER).toContain("          gh workflow run super.yml --ref staging\n");
+    // A commit a finished run tested is not run again: the freeze starts the run on staging's next one.
+    expect(SUPER).toContain('--commit "$sha" --status completed');
+    expect(SUPER).toContain('select(.conclusion != "cancelled" and .conclusion != "skipped")] | length\')\n          if [ "$tested" != 0 ]; then');
     expect(SUPER).toMatch(/^ {4}permissions:\n {6}actions: write\n/mu);
     const jobs = SUPER.slice(SUPER.indexOf("\njobs:\n"));
     const blocks = jobs.split(/^ {2}(?=[a-z0-9-]+:$)/mu).slice(1);

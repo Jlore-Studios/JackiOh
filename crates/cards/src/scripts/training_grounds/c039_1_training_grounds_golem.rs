@@ -25,7 +25,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FILLER: &str = "core-005";
-    const BODY: &str = "core-008"; // Mr. Vanilla 4/4
+    const BODY: &str = "stand-in (1) 4/4 R12/12";
 
     /// The face's keywords, sorted, as the view prints them.
     fn keywords_of(s: &Scenario) -> Vec<String> {

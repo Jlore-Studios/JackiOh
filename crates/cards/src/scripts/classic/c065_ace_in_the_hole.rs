@@ -178,14 +178,6 @@ mod tests {
             .collect()
     }
 
-    fn fired(s: &Scenario) -> usize {
-        s.events()
-            .iter()
-            .map(js)
-            .filter(|event| event["type"] == "trapFired")
-            .count()
-    }
-
     fn units(s: &Scenario) -> Vec<Option<String>> {
         (1..=5)
             .map(|lane| s.unit(P1, lane).map(|unit| unit.def_id.clone()))
@@ -251,7 +243,7 @@ mod tests {
                     let cursor = s.state().rng_cursor;
                     s.end_turn();
                     assert!(s.state().rng_cursor >= cursor + 2);
-                    assert_eq!(fired(&s), 1);
+                    assert_eq!(s.count(GameEventType::TrapFired), 1);
                     assert_eq!(units(&s), lanes([Some(VANILLA), None, None, None, None]));
                     s.expect_in_zone(&ace, "graveyard");
                     return;
@@ -278,7 +270,7 @@ mod tests {
                         crate::give_lucky(&mut s, ACE, 1);
                     }
                     s.end_turn();
-                    fired(&s) == 1
+                    s.count(GameEventType::TrapFired) == 1
                 };
                 let plain: Vec<usize> = (0..100).filter(|seed| fires(*seed, false)).collect();
                 let lucky: Vec<usize> = (0..100).filter(|seed| fires(*seed, true)).collect();
@@ -294,7 +286,7 @@ mod tests {
                 let mut s = with_coin(Coin::Tails, json!({}));
                 let ace = s.card(ACE).clone();
                 s.end_turn();
-                assert_eq!(fired(&s), 0);
+                assert_eq!(s.count(GameEventType::TrapFired), 0);
                 assert!(!s.events().iter().map(js).any(|event| event["type"] == "summoned"));
                 s.expect_in_zone(&ace, "field");
                 assert_ne!(s.card(&ace).face_up, Some(true));
@@ -449,7 +441,7 @@ mod tests {
                 s.end_turn(); // p2's end: no coin.
                 let second = next_coin(s.state());
                 s.end_turn(); // p1's end again: a fresh coin.
-                assert_eq!(fired(&s), if second == Coin::Heads { 1 } else { 0 });
+                assert_eq!(s.count(GameEventType::TrapFired), if second == Coin::Heads { 1 } else { 0 });
                 s.expect_in_zone(
                     ACE,
                     if second == Coin::Heads {
@@ -467,7 +459,7 @@ mod tests {
                 let cursor = s.state().rng_cursor;
                 s.end_turn();
                 assert_eq!(s.state().rng_cursor, cursor);
-                assert_eq!(fired(&s), 0);
+                assert_eq!(s.count(GameEventType::TrapFired), 0);
                 s.expect_in_zone(ACE, "field");
             }
 
@@ -476,7 +468,7 @@ mod tests {
                 crate::register_all();
                 let mut s = with_coin(Coin::Heads, json!({ "p1": { "library": [LUNAR, FILLER] } }));
                 s.end_turn();
-                assert_eq!(fired(&s), 1);
+                assert_eq!(s.count(GameEventType::TrapFired), 1);
                 assert!(!s.events().iter().map(js).any(|event| event["type"] == "summoned"));
                 s.expect_in_zone(ACE, "graveyard");
             }
@@ -489,7 +481,7 @@ mod tests {
                     json!({ "p1": { "field": [GARY, GARY, GARY, GARY, GARY], "library": [VANILLA, LUNAR] } }),
                 );
                 s.end_turn();
-                assert_eq!(fired(&s), 1);
+                assert_eq!(s.count(GameEventType::TrapFired), 1);
                 assert!(!s.events().iter().map(js).any(|event| event["type"] == "summoned"));
                 assert_eq!(
                     s.pile(P1, "library").first().map(|card| card.def_id.clone()),
@@ -547,7 +539,7 @@ mod tests {
                 crate::register_all();
                 let mut s = with_coin(Coin::Heads, json!({ "radiant": true }));
                 s.end_turn();
-                assert_eq!(fired(&s), 1);
+                assert_eq!(s.count(GameEventType::TrapFired), 1);
                 assert_eq!(
                     units(&s),
                     lanes([Some(VANILLA), Some(GARY), Some(VANILLA), None, None])
@@ -561,7 +553,7 @@ mod tests {
                 let mut s = with_coin(Coin::Tails, json!({ "radiant": true }));
                 let ace = s.card(ACE).clone();
                 s.end_turn();
-                assert_eq!(fired(&s), 0);
+                assert_eq!(s.count(GameEventType::TrapFired), 0);
                 assert_eq!(units(&s), lanes([Some(VANILLA), None, None, None, None]));
                 s.expect_in_zone(&ace, "field");
                 assert_ne!(s.card(&ace).face_up, Some(true));
@@ -587,7 +579,7 @@ mod tests {
                 s.end_turn(); // p2's end: no coin.
                 let second = next_coin(s.state());
                 s.end_turn(); // p1's end again: a fresh coin — heads recruits 3, tails 1.
-                assert_eq!(fired(&s), if second == Coin::Heads { 1 } else { 0 });
+                assert_eq!(s.count(GameEventType::TrapFired), if second == Coin::Heads { 1 } else { 0 });
                 assert_eq!(
                     units(&s).iter().filter(|unit| unit.is_some()).count(),
                     if second == Coin::Heads { 3 } else { 1 },
@@ -640,7 +632,7 @@ mod tests {
                 crate::register_all();
                 let mut s = with_coin(Coin::Tails, json!({ "radiant": true }));
                 s.end_turn();
-                assert_eq!(fired(&s), 0);
+                assert_eq!(s.count(GameEventType::TrapFired), 0);
                 let raw = rolled(s.events());
                 assert_eq!(raw.len(), 1);
                 assert!(matches!(&raw[0], GameEvent::Rolled { face_down: None, .. }));
@@ -673,7 +665,7 @@ mod tests {
                 assert_eq!(rolls.len(), 1);
                 assert_eq!(rolls[0].faces, faces);
                 assert_eq!(rolls[0].heads(), faces.contains(&ROLL_HEADS));
-                assert_eq!(fired(&s), usize::from(rolls[0].heads()));
+                assert_eq!(s.count(GameEventType::TrapFired), usize::from(rolls[0].heads()));
             }
 
             #[test]
@@ -684,7 +676,7 @@ mod tests {
                     json!({ "radiant": true, "p1": { "library": [LUNAR] } }),
                 );
                 s.end_turn();
-                assert_eq!(fired(&s), 0);
+                assert_eq!(s.count(GameEventType::TrapFired), 0);
                 assert!(!s.events().iter().map(js).any(|event| event["type"] == "summoned"));
                 s.expect_in_zone(ACE, "field");
             }

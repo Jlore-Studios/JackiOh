@@ -25,7 +25,7 @@ import type { PlayTier, PlayType } from "../../game/damageFeel.ts";
 import { PLAY_TIERS_ASCENDING } from "../../game/damageFeel.ts";
 import { boardShakeSink, resolveAnchor } from "../../fx/anchors.ts";
 import { FX_CARD_FILES, FX_CARD_TABLE, isSignature } from "../../fx/cards/tables.ts";
-import { FX_DEFAULT_SEED, FX_GALLERY_SCALES, FX_INTENSITY_SCALE, FX_MOBILE_WIDTH } from "../../fx/constants.ts";
+import { FX_DEFAULT_SEED, FX_GALLERY_SCALES, FX_INTENSITY_SCALE } from "../../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../../fx/director.ts";
 import { FX_PALETTES, isPalette, type FxPalette } from "../../fx/flavors.ts";
 import { defaultFrames, defaultNow, defaultVisibility } from "../../fx/FxLayer.tsx";
@@ -180,7 +180,6 @@ export default function FxGallery(): ReactElement {
       shakeSink: boardShakeSink(document),
       seed: FX_DEFAULT_SEED,
       capacity: capacityFor(window.innerWidth),
-      phone: window.innerWidth < FX_MOBILE_WIDTH,
     });
     director.current = created;
     return () => {
@@ -202,7 +201,8 @@ export default function FxGallery(): ReactElement {
     setSetPieceId(asSetPiece ? galleryPlayId(plays.current) : null);
     // R3332001: a board of the entrance's own goes up first, with no new events, so the board plans the
     // play against it (Game plans against the view it still shows).
-    // R3399000: and the card in the viewer's hand, where its play starts (a cast's and a takeover's anchor).
+    // R3399000: and the card in the viewer's hand, where its play starts (a cast's and a takeover's anchor;
+    // R3402001 a Spell's entrance and a Mythic Spell's takeover among them).
     const board = galleryBoardOf(card.defId, base);
     flushSync(() => setShown(galleryHandOf(card.defId, board, plays.current)));
     setShown(withEvents(galleryFieldView(card.defId, board), galleryCardEvents(card.defId, card.play, board, plays.current)));

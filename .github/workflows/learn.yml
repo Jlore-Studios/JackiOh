@@ -29,12 +29,15 @@
 #             every lane. When main kept moving through every try, the run starts another on the same
 #             export (at most LEARN_CHAIN_MAX in a row). Each stage's report is kept as the run's
 #             `learn-<run>` artifact and in its summary, whether or not it passed.
-#   import    once the retrain has ended, however it ended: the export's games filed as development
-#             records (`cargo jackioh stats from-selfplay`, R1676000, folded by the export's own build
-#             as the retrain's positions are) and imported into both projects' card statistics
-#             (R1933001) as totals only (`jackioh-server stats-import --totals-only`, R1976000), over
-#             STATS_IMPORT_DATABASE_URL (staging's) and PRODUCTION_STATS_IMPORT_DATABASE_URL; each
-#             only where its secret is set
+#   import    the export's games filed as development records (`cargo jackioh stats from-selfplay`,
+#             R1676000, folded by the export's own build as the retrain's positions are) and imported
+#             into both projects' card statistics (R1933001) as totals only (`jackioh-server
+#             stats-import --totals-only`, R1976000), over STATS_IMPORT_DATABASE_URL (staging's) and
+#             PRODUCTION_STATS_IMPORT_DATABASE_URL, each only where its secret is set. Each shard files
+#             its own games as it plays them, 1,250 at a time (`file_every`, selfplay-shards.yml), so
+#             they reach the statistics about an hour after they are played, a stopped run's too; this
+#             job, once the retrain has ended however it ended, files every shard's records files
+#             again (a database folds a file it holds no second time) and the logs a shard made none for
 #   next      the next run, started as this one ends, unless another is already on its way (a chain
 #             on this export, or the schedule's) or this one took under LEARN_NEXT_MIN_MINUTES (it
 #             broke early: the schedule tries again within 12 hours), so the PC is always
@@ -188,6 +191,13 @@ jobs:
       runner: jackioh-selfplay-local
       retention: "30"
       count: false
+      # Each shard files its games into the card statistics this many at a time as it plays them
+      # (selfplay-shards.yml): about an hour of one half of the PC (one six-CPU runner played about
+      # 2,500 games an hour, selfplay.yml), and a quarter of a 100,000-game export's 5,000-game shard.
+      file_every: "1250"
+    secrets:
+      STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+      PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}
 
   retrain:
     name: retrain, screen, gate
@@ -467,21 +477,38 @@ jobs:
             echo "filed=0" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          bin="$RUNNER_TEMP/exporter/target/release/jackioh"
-          if ! tar -xzf "$RUNNER_TEMP/exporter/jackioh.tgz" -C "$RUNNER_TEMP/exporter" 2> /dev/null \
-            || ! "$bin" stats from-selfplay --help > /dev/null 2>&1; then
-            cargo build --release -q -p jackioh-tools
-            bin=target/release/jackioh
+          # Each shard made records-<base>-<first>-<last>.jsonl beside each piece's log it filed
+          # (selfplay-shards.yml): those are filed again byte for byte, so a database folds each once,
+          # whichever of the shard and this job reached it first. Only a log with none is made
+          # records here, as every log was before the shards filed.
+          mapfile -t files < <(find "$RUNNER_TEMP/export" -name 'records-*.jsonl' | sort -V)
+          left=()
+          for log in "${logs[@]}"; do
+            name=$(basename "$log")
+            [ -f "$(dirname "$log")/records-${name#selfplay-}" ] || left+=("$log")
+          done
+          made=${#files[@]}
+          if [ "${#left[@]}" -gt 0 ]; then
+            bin="$RUNNER_TEMP/exporter/target/release/jackioh"
+            if ! tar -xzf "$RUNNER_TEMP/exporter/jackioh.tgz" -C "$RUNNER_TEMP/exporter" 2> /dev/null \
+              || ! "$bin" stats from-selfplay --help > /dev/null 2>&1; then
+              cargo build --release -q -p jackioh-tools
+              bin=target/release/jackioh
+            fi
+            "$bin" stats from-selfplay "${left[@]}" --out "$RUNNER_TEMP/records.jsonl" > "$RUNNER_TEMP/filed.txt"
+            cat "$RUNNER_TEMP/filed.txt"
+            files+=("$RUNNER_TEMP/records.jsonl")
           fi
-          "$bin" stats from-selfplay "${logs[@]}" --out "$RUNNER_TEMP/records.jsonl" > "$RUNNER_TEMP/filed.txt"
-          cat "$RUNNER_TEMP/filed.txt"
           {
-            echo "## The export's games, filed (${#logs[@]} shards)"
-            echo '```'
-            tail -n 20 "$RUNNER_TEMP/filed.txt"
-            echo '```'
+            echo "## The export's games, filed (${#logs[@]} logs: $made made records by their shards, ${#left[@]} here)"
+            if [ -f "$RUNNER_TEMP/filed.txt" ]; then
+              echo '```'
+              tail -n 20 "$RUNNER_TEMP/filed.txt"
+              echo '```'
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
-          echo "filed=$(grep -c . "$RUNNER_TEMP/records.jsonl" || true)" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "${files[@]}" > "$RUNNER_TEMP/record-files.txt"
+          echo "filed=$(cat "${files[@]}" | grep -c . || true)" >> "$GITHUB_OUTPUT"
       - name: import them (jackioh-server stats-import --totals-only), into staging's and production's
         if: ${{ steps.db.outputs.set == 'true' && steps.file.outputs.filed != '0' }}
         env:
@@ -490,20 +517,13 @@ jobs:
         run: |
           set -euo pipefail
           cargo build --release -q -p jackioh-server
-          # R1933001: staging's first, then production's. Each database claims the file by its SHA-256,
-          # so after a failure the rerun files only where it is missing.
-          for where in staging production; do
-            case "$where" in
-              staging) url=$STATS_IMPORT_DATABASE_URL secret=STATS_IMPORT_DATABASE_URL ;;
-              production) url=$PRODUCTION_STATS_IMPORT_DATABASE_URL secret=PRODUCTION_STATS_IMPORT_DATABASE_URL ;;
-            esac
-            if [ -z "$url" ]; then
-              echo "::notice::$secret is not set, so $where's statistics get none of the export's games"
-              continue
-            fi
-            echo "### Filed into $where's" >> "$GITHUB_STEP_SUMMARY"
-            DATABASE_URL=$url target/release/jackioh-server stats-import --totals-only "$RUNNER_TEMP/records.jsonl" | tee -a "$GITHUB_STEP_SUMMARY"
-          done
+          [ -n "$STATS_IMPORT_DATABASE_URL" ] || echo "::notice::STATS_IMPORT_DATABASE_URL is not set, so staging's statistics get none of the export's games"
+          [ -n "$PRODUCTION_STATS_IMPORT_DATABASE_URL" ] || echo "::notice::PRODUCTION_STATS_IMPORT_DATABASE_URL is not set, so production's statistics get none of the export's games"
+          # R1933001: staging's first, then production's. Each database claims a file by its SHA-256,
+          # so the shards' files it holds already, and after a failure the rerun, file only what is missing.
+          mapfile -t files < "$RUNNER_TEMP/record-files.txt"
+          echo "### Filed" >> "$GITHUB_STEP_SUMMARY"
+          sh training/file-records.sh target/release/jackioh-server "${files[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
 
   next:
     name: start the next run

@@ -10,18 +10,25 @@ use crate::{RunByFight, RunNodeKind, RunTier};
 /// DR2: the letters of a seed.
 pub const RUN_SEED_LENGTH: usize = 6;
 
-/// DR4: the fights before each act's boss. With the 2 mini-bosses and the final boss, 16 fights.
-pub const RUN_ACT_FIGHTS: [usize; 3] = [5, 4, 4];
-/// DR4: the fewest nodes a row of the map offers.
-pub const RUN_ROW_WIDTH_MIN: i32 = 2;
-/// DR4: the most nodes a row of the map offers.
-pub const RUN_ROW_WIDTH_MAX: i32 = 3;
+/// DR4: the map's acts, each ending at its boss's row: a mini-boss's, then the final boss's for the last.
+pub const RUN_ACTS: usize = 3;
+/// DR4, a strawman: the rows of nodes in each act before its boss's row.
+pub const RUN_ACT_ROWS: usize = 7;
+/// DR4, a strawman: the columns of the grid the map's rows lie on.
+pub const RUN_MAP_COLUMNS: usize = 7;
+/// DR4, a strawman: the seeded walks up each act, each from its own column of the act's first row.
+pub const RUN_MAP_PATHS: usize = 6;
+/// DR4: the fewest fights on any route from a start to the final boss, the bosses counted.
+pub const RUN_ROUTE_FIGHTS_MIN: i32 = 12;
+/// DR4: the most fights on any route from a start to the final boss, the bosses counted.
+pub const RUN_ROUTE_FIGHTS_MAX: i32 = 16;
+/// DR4: the fewest tiles on any route from a start to the final boss.
+pub const RUN_ROUTE_TILES_MIN: i32 = 8;
 /// DR4: the chance, in percent, that a fight node of the map is an elite.
 pub const RUN_ELITE_PERCENT: i32 = 30;
 /// DR5: the chance, in percent, that a fight node that is no elite is a ghost.
 pub const RUN_GHOST_PERCENT: i32 = 10;
-/// DR4, DR7: the weights of the tiles a row between two fight rows deals. A campfire also always stands
-/// on the row before each boss.
+/// DR4, DR7: the weights of a tile node's kind.
 pub const RUN_TILE_WEIGHTS: [(RunNodeKind, i32); 5] = [
     (RunNodeKind::Shop, 2),
     (RunNodeKind::Campfire, 2),
@@ -68,6 +75,63 @@ pub const RUN_STARTER_CARDS: [&str; 20] = [
     "traininggrounds-058",
     "traininggrounds-059",
 ];
+/// DR3: the named starting decks the start screen offers, as `(id, name, theme, cards)`.
+/// Placeholders until the designer's lists (as `RUN_STARTER_CARDS` is): each holds
+/// `RUN_STARTER_SIZE` distinct cards of `RUN_STARTER_CARDS` fitting level 1's slots, so any player
+/// may pick any of them from their first run, then tweak the picks in the builder.
+pub const RUN_PRESET_DECKS: [(&str, &str, &str, [&str; RUN_STARTER_SIZE]); 3] = [
+    (
+        "first-charge",
+        "First Charge",
+        "Cheap units that hit fast and hit hard.",
+        [
+            "traininggrounds-001",
+            "traininggrounds-002",
+            "traininggrounds-004",
+            "traininggrounds-006",
+            "traininggrounds-007",
+            "traininggrounds-008",
+            "traininggrounds-043",
+            "traininggrounds-017",
+            "traininggrounds-023",
+            "traininggrounds-044",
+        ],
+    ),
+    (
+        "spell-tricks",
+        "Spell tricks",
+        "Spells and helpers that out-trick the enemy.",
+        [
+            "traininggrounds-011",
+            "traininggrounds-042",
+            "traininggrounds-058",
+            "traininggrounds-059",
+            "traininggrounds-002",
+            "traininggrounds-006",
+            "traininggrounds-020",
+            "traininggrounds-050",
+            "traininggrounds-017",
+            "traininggrounds-023",
+        ],
+    ),
+    (
+        "hold-the-line",
+        "Hold the line",
+        "Tough bodies that hold the line, then win late.",
+        [
+            "traininggrounds-002",
+            "traininggrounds-004",
+            "traininggrounds-008",
+            "traininggrounds-043",
+            "traininggrounds-047",
+            "traininggrounds-048",
+            "traininggrounds-054",
+            "traininggrounds-023",
+            "traininggrounds-044",
+            "traininggrounds-051",
+        ],
+    ),
+];
 /// DR3, DR9, a strawman: the Embers each level of the starting deck costs from the one before it, so
 /// `RUN_LEVEL_EMBERS[0]` buys level 2. One per step of `RUN_SLOT_LADDER`.
 pub const RUN_LEVEL_EMBERS: [i64; RUN_SLOT_LADDER.len() - 1] = [10, 25, 45, 70, 100];
@@ -84,7 +148,7 @@ pub const RUN_TIER_POINTS: [(RunTier, i32); 5] = [
     (RunTier::Diamond, 5),
 ];
 
-/// DR5: the health a run starts with and the most it heals to, before passives raise it.
+/// DR5: the health a run starts with, before wins, campfires, events and passives raise it.
 pub const RUN_MAX_HP: i32 = HERO_HEALTH;
 /// DR5, a strawman: each enemy's hero health by its kind of fight.
 pub const RUN_ENEMY_HEALTH: RunByFight = RunByFight {
@@ -139,8 +203,10 @@ pub const RUN_KEEP_MAX: usize = 5;
 /// is one the engine starts. A card a full deck would gain is not gained.
 pub const RUN_DECK_MAX: usize = LIBRARY_CAP as usize;
 
-/// DR7: a campfire's heal, in percent of the run's max HP.
-pub const RUN_CAMPFIRE_HEAL_PERCENT: i32 = 30;
+/// DR5/DR6: the max HP every won fight adds for the rest of the run, before refilling to the new max.
+pub const RUN_WIN_MAX_HP: i32 = 5;
+/// DR7: the max HP a campfire's rest adds for the rest of the run.
+pub const RUN_CAMPFIRE_MAX_HP: i32 = 5;
 /// DR7: the cards a campfire removes.
 pub const RUN_CAMPFIRE_REMOVE: usize = 2;
 /// DR7: the cards a shop sells.
@@ -224,7 +290,7 @@ pub const WALK_WAY_ON_PERCENT: i32 = 10;
 /// Tests only: the percent of a walk's fights lost, so losses and dead runs stay covered.
 #[cfg(test)]
 pub const WALK_LOSS_PERCENT: i32 = 10;
-/// Tests only: the steps before a walk is a loop: the map is 29 rows, and every shop stay spends
+/// Tests only: the steps before a walk is a loop: the map is 24 rows, and every shop stay spends
 /// stock or funds, so only a real loop reaches it.
 #[cfg(test)]
 pub const WALK_MAX_STEPS: usize = 5000;
@@ -240,3 +306,6 @@ pub const WALK_DRAWN_MAX: i32 = 15;
 /// Tests only: the most turns a walk's random fight report lasts.
 #[cfg(test)]
 pub const WALK_TURNS_MAX: i32 = 12;
+/// Tests only: the seeds `map_tests` deals a map from on each content (R3583000, R3583001).
+#[cfg(test)]
+pub const MAP_SEEDS: usize = 200;

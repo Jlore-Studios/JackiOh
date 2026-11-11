@@ -130,6 +130,7 @@ mod r1843003_the_ai_answers_the_fleers_choice {
                 rng: create_rng("r1843003-ai", 0),
                 budget: AI_BUDGET,
                 should_stop: None,
+                wrap_up: None,
             },
         )
         .expect("a decision");
@@ -242,6 +243,7 @@ mod r1843003_the_ai_answers_edge_of_the_universe {
                 rng: create_rng("r1843003-ai-edge", 0),
                 budget: AI_BUDGET,
                 should_stop: None,
+                wrap_up: None,
             },
         )
         .expect("a decision");

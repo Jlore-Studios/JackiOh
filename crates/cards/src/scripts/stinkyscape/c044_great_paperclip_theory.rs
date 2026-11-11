@@ -91,7 +91,7 @@ mod tests {
     const THEORY: &str = "stinkyscape-044";
     const CORE_II: &str = "stinkyscape-028";
     const CORE_III: &str = "stinkyscape-029";
-    const COUNTERSPELL: &str = "classic-017"; // (2) Trap: counter the opponent's Spell.
+    const COUNTERSPELL: &str = "classic-017"; // Counterspell: counter the opponent's Spell
     const FILLER: &str = "core-005";
 
     fn setup(hand: Value, p2: Value) -> Scenario {

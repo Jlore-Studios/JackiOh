@@ -17,6 +17,12 @@
 # changes .github/workflows, and a push the Actions token makes starts no workflow, so staging would
 # move without deploying. A promotion that fails opens "CI: staging promotion failed" for Squishy
 # (`report`), as promote-production.yml's does; the next run that moves staging closes it.
+#
+# The freeze (the owners' call of 2026-11-10; the script's header has it all): while the newest
+# finished super run on staging failed, staging holds still until the night bot's fix closes its
+# issue ("CI: daily super run failed"), then takes main's first green commit after that and starts
+# the super run on it at once, which is why the job may start a workflow (`actions: write`) and open
+# the issue a red run's report never opened (`issues: write`). A manual run moves it as ever.
 name: promote staging
 
 on:
@@ -50,6 +56,11 @@ jobs:
       cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # The freeze starts the super run on staging and opens a red run's missing issue.
+    permissions:
+      contents: read
+      actions: write
+      issues: write
     outputs:
       moved: ${{ steps.promote.outputs.moved }}
     steps:

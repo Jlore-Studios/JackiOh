@@ -63,10 +63,10 @@ mod tests {
     const GAOKAO: &str = "meditative-034";
     const RCTA: &str = "meditative-035";
     const FILLER: &str = "core-005";
-    const VANILLA: &str = "core-008"; // Human: neither CN nor KY.
-    const BROTHER: &str = "classicplus-076"; // CN Unit.
-    const WALL: &str = "classic-041"; // Untagged Indestructible: survives, unbuffed.
-    const HONEYPOT: &str = "core-060"; // Untagged Trap, set face-down.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla: Human: neither CN nor KY
+    const BROTHER: &str = "classicplus-076"; // Brother Lar: CN Unit
+    const WALL: &str = "classic-041"; // State of the Game: Untagged Indestructible: survives, unbuffed
+    const HONEYPOT: &str = "core-060"; // Bear Honeypot: Untagged Trap, set face-down
 
     /// Both sides hold a Vanilla and a Brother Lar; p1 also holds the Wall and a face-down
     /// Honeypot. p1 holds Gaokao (base unless `radiant_face`); both sides keep cards in hand so no
@@ -210,7 +210,7 @@ mod tests {
 
             #[test]
             fn indestructible_spell_immune_and_m25_survive() {
-                const FELINOR: &str = "meditative-025"; // Immune to tribal tag based hate.
+                const FELINOR: &str = "meditative-025"; // Blue-Eyes White Felinor: Immune to tribal tag based hate.
                 let mut s = scenario(json!({
                     "seed": "gaokao-survivors",
                     "p1": {

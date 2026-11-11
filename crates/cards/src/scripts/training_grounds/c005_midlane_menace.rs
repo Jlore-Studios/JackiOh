@@ -46,7 +46,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MENACE: &str = super::ID;
-    const BODY: &str = "core-008"; // Mr. Vanilla 4/4
+    const BODY: &str = "core-008"; // Mr. Vanilla
     const FILLER: &str = "core-005";
 
     fn menace(radiant: bool) -> Scenario {
@@ -66,10 +66,6 @@ mod tests {
         s.stats(MENACE).keywords.iter().any(|keyword| matches!(keyword, Keyword::Rush))
     }
 
-    fn count(s: &Scenario, kind: GameEventType) -> usize {
-        s.events().iter().filter(|event| event.event_type() == kind).count()
-    }
-
     mod base {
         use super::*;
 
@@ -78,8 +74,8 @@ mod tests {
             let mut s = played_into(false, 3);
             s.expect_stats(MENACE, json!({ "attack": 8, "health": 8, "maxHealth": 8 }));
             assert!(has_rush(&s));
-            assert_eq!(count(&s, GameEventType::Buffed), 1);
-            assert_eq!(count(&s, GameEventType::KeywordGranted), 1);
+            assert_eq!(s.count(GameEventType::Buffed), 1);
+            assert_eq!(s.count(GameEventType::KeywordGranted), 1);
         }
 
         #[test]
