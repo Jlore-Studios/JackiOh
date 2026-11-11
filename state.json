@@ -359,48 +359,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:6683783985": {
-      "at": "2026-11-06T11:31:19Z",
-      "lines": [
-        "/harness revise option 1"
-      ]
-    },
-    "c:6687573571": {
-      "at": "2026-11-06T14:46:57Z",
-      "lines": [
-        "Reject"
-      ]
-    },
-    "c:6687581868": {
-      "at": "2026-11-06T14:47:19Z",
-      "lines": [
-        "Reject"
-      ]
-    },
-    "c:6687604603": {
-      "at": "2026-11-06T14:50:38Z",
-      "lines": [
-        "Reject"
-      ]
-    },
-    "c:6687616330": {
-      "at": "2026-11-06T14:51:01Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6687642824": {
-      "at": "2026-11-06T14:52:56Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6687645635": {
-      "at": "2026-11-06T14:54:41Z",
-      "lines": [
-        "Approve"
-      ]
-    },
     "c:6712090776": {
       "at": "2026-11-07T19:38:54Z",
       "lines": [
@@ -555,6 +513,12 @@
       "at": "2026-11-11T10:38:08Z",
       "lines": [
         "/harness revise The person's part is done. This PR's description now opens `Part of #3674`, not `Closes #3674`. Nothing else in it changed, and I took `human required` off."
+      ]
+    },
+    "c:6800135416": {
+      "at": "2026-11-11T15:38:08Z",
+      "lines": [
+        "Approve"
       ]
     }
   },
