@@ -22,15 +22,14 @@ import { ALLURE_MARK, ALLURE_MARK_COLOR } from "../../../cards/marks.ts";
 import { ANIMATIONS, animTestid, entranceEntries, planEntries, type EntranceResolver } from "../../../game/animations.ts";
 import { testid } from "../../../game/contract.ts";
 import { faceUpBackrow, fullBoardView, withEvents } from "../../../test/fixtures.ts";
-import { asTheirsAll, CARD_ID, cuesOfRun, planWithOffsets } from "../../../test/signaturePass.ts";
+import { asTheirsAll, CARD_ID, cuesOfRun, endOf, envOf, planWithOffsets } from "../../../test/signaturePass.ts";
 import { CATALOG } from "../../../wire/cards.ts";
 import { isSignatureAuraLook } from "../../aura/looks.ts";
 import { auraZones, planAuras } from "../../aura/plan.ts";
 import { planCardFx } from "../../cardFx.ts";
-import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_SLAM_AT, SIGNATURE_LEGENDARY_MAX_MS, SIGNATURE_SPELL_SHARE } from "../../constants.ts";
+import { FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_SLAM_AT, SIGNATURE_LEGENDARY_MAX_MS, SIGNATURE_SPELL_SHARE } from "../../constants.ts";
 import { planFx } from "../../cues.ts";
 import { ENTRANCES } from "../../entrances.ts";
-import { createFxMemory } from "../../memory.ts";
 import { galleryBoardOf, galleryCardEvents, galleryEntry, galleryFieldView, galleryPlayOf } from "../../motifs/gallery.ts";
 import { hasSetPiece } from "../../setPieces.ts";
 import { planSystemMoment } from "../../systemMoments.ts";
@@ -79,24 +78,6 @@ const resolve: EntranceResolver = (defId) => {
   return def === undefined ? null : { type: def.type, rarity: def.printedRarity ?? def.rarity };
 };
 
-function envOf(intensity: number = FX_INTENSITY_SCALE.normal): FxPlanEnv {
-  return { intensity, card: () => undefined, memory: createFxMemory() };
-}
-
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-    case "shot":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
-
 /** Every entry of `defId`'s gallery play over its gallery board, with its cues as the layer plans them (entrance, then the plan). */
 function galleryPlan(defId: string, intensity: number = FX_INTENSITY_SCALE.normal): { D: number; cues: FxCue[] }[] {
   const entry = FX_CARD_TABLE.get(defId);
@@ -104,7 +85,7 @@ function galleryPlan(defId: string, intensity: number = FX_INTENSITY_SCALE.norma
   if (play === null) throw new Error(`${defId} has no gallery play`);
   const board = galleryBoardOf(defId, fullBoardView());
   const events = galleryCardEvents(defId, play, board, 1);
-  const env = envOf(intensity);
+  const env = envOf({ intensity });
   return entranceEntries(planEntries(events, withEvents(galleryFieldView(defId, board), events), false, undefined, hasSetPiece), resolve, { seen: new Set() }).map((planned) => {
     env.memory.remember(planned.events);
     return { D: planned.durationMs, cues: [...entranceCues(planned, env, planned.durationMs), ...planFx(planned, planned.view, env)] };

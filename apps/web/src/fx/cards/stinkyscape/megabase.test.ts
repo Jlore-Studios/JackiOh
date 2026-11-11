@@ -93,7 +93,7 @@ describe("R3407000 Megabase's signature", () => {
       expectCuesR200(shop, D, "giftShop");
       expectNoCard(shop, MEGABASE);
     }
-    expect(cuesOfRun(planWithOffsets([...giftShopFixture(view, id, "p1"), death("p1", id), credits("p1")], view, envOf(FX_INTENSITY_SCALE.off)))).toEqual([]);
+    expect(cuesOfRun(planWithOffsets([...giftShopFixture(view, id, "p1"), death("p1", id), credits("p1")], view, envOf({ intensity: FX_INTENSITY_SCALE.off })))).toEqual([]);
   });
 
   it("R3407000 its gallery play and its Death from its marker end within a Legendary's ceiling", () => {

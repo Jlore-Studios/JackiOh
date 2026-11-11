@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { ANIMATIONS, animTestid, planEntries, type AnimationEntry } from "../game/animations.ts";
 import { testid, type Side } from "../game/contract.ts";
 import { faceUpBackrow, fullBoardView, unit, withEvents } from "../test/fixtures.ts";
+import { endOf, envOf } from "../test/signatures.ts";
 import { flavorOfId } from "../cards/flavor.ts";
 import { must } from "../test/stubServer.ts";
 import {
@@ -15,7 +16,6 @@ import {
   FX_DEATH_EMBER_AT,
   FX_DEATH_SMOKE_AT,
   FX_INTENSITY_SCALE,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   FX_MOTIF_PHASES,
   FX_RING_MS,
@@ -23,7 +23,6 @@ import {
 import { planFx } from "./cues.ts";
 import { FLAVOR_EXITS, type FlavorExitPlan } from "./exits.ts";
 import { chaosFlavor, FLAVOR_LOOKS } from "./flavors.ts";
-import { createFxMemory } from "./memory.ts";
 import type { FxCue, FxPlanEnv, FxPoint } from "./types.ts";
 
 type Loose = Record<string, unknown>;
@@ -80,7 +79,6 @@ function entryFor(events: readonly GameEvent[], view: PlayerView, D: number, red
   return { ...must(entries[0], "an entry"), durationMs: D };
 }
 
-const envOf = (over: Partial<FxPlanEnv> = {}): FxPlanEnv => ({ intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over });
 function plan(events: readonly GameEvent[], D: number, options: { view?: PlayerView; env?: FxPlanEnv; reduced?: boolean } = {}): FxCue[] {
   const view = withEvents(options.view ?? fullBoardView(), [...events]);
   const env = options.env ?? envOf();
@@ -107,17 +105,6 @@ function withTrap(over: Partial<Extract<BackrowView, { faceDown: false }>>): Pla
   const backrow = [...view.you.backrow];
   backrow[2] = faceUpBackrow("p1", { instanceId: "t1", defId: "core-084", type: "Trap", ...over });
   return { ...view, you: { ...view.you, backrow } };
-}
-
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-      return cue.delayMs + cue.flightMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
 }
 
 const BOARD = fullBoardView();

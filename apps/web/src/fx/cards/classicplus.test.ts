@@ -13,14 +13,13 @@ import { describe, expect, it } from "vitest";
 import { CARD_AUDIO } from "../../audio/voiceData.ts";
 import { HIDDEN_ID, planEntries } from "../../game/animations.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
+import { envOf } from "../../test/signatures.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { planCardFx, planCardMotif } from "../cardFx.ts";
-import { FX_INTENSITY_SCALE, FX_SET_PASS_FLOOR } from "../constants.ts";
-import { createFxMemory } from "../memory.ts";
+import { FX_SET_PASS_FLOOR } from "../constants.ts";
 import { motifScale } from "../motifs/build.ts";
 import { galleryCardEvents, galleryPlayOf } from "../motifs/gallery.ts";
 import { FX_CARD_HOOKS, isDrawnMotif } from "../motifs/names.ts";
-import type { FxPlanEnv } from "../types.ts";
 import { CARD_RECIPES, isCardRecipeKey } from "./bespoke.ts";
 import rawTable from "./classicplus.md?raw";
 import { entryAura, FX_CARD_FILES, parseFxCardTable, type FxAuraSpec, type FxCardEntry } from "./tables.ts";
@@ -114,10 +113,6 @@ function describeEntry(entry: FxCardEntry): string {
   if (aura !== undefined) parts.push(describeAura(aura));
   if (entry.takeover !== undefined) parts.push(`takeover ${entry.takeover}`);
   return parts.join("; ");
-}
-
-function envOf(): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
 }
 
 /** Whether any entry of `events` keys the card: its motif (planCardMotif) or its recipe (planCardFx), planned as FxLayer plans them. */

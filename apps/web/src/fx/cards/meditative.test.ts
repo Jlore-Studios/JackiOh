@@ -8,11 +8,11 @@ import { describe, expect, it } from "vitest";
 
 import { planEntries } from "../../game/animations.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
+import { envOf } from "../../test/signatures.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { planCardFx, planCardMotif } from "../cardFx.ts";
-import { FX_INTENSITY_SCALE, FX_SET_PASS_FLOOR } from "../constants.ts";
+import { FX_SET_PASS_FLOOR } from "../constants.ts";
 import { planFx } from "../cues.ts";
-import { createFxMemory } from "../memory.ts";
 import { motifScale } from "../motifs/build.ts";
 import { galleryPlayOf, motifFixture, RECIPE_FIXTURES, type GalleryCardPlay } from "../motifs/gallery.ts";
 import { FX_CARD_HOOKS } from "../motifs/names.ts";
@@ -33,10 +33,6 @@ const ENTRIES: readonly (readonly [string, FxCardEntry])[] = TABLES.flatMap(([, 
 
 const isToken = (id: string): boolean => CATALOG[id]?.token === true;
 const typeOf = (id: string): string => CATALOG[id]?.type ?? "";
-
-function envOf(): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
-}
 
 /** Plans each entry of `events` in order, as FxLayer does on every `start`: remember, then plan. */
 function planEach(events: readonly GameEvent[], view: PlayerView, plan: (entry: ReturnType<typeof planEntries>[number], env: FxPlanEnv) => void): void {

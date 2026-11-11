@@ -89,7 +89,7 @@ describe("R3407000 the Narcors' signatures", () => {
         expectCuesR200(cues, D, defId, SIGNATURE_SPELL_MAX_TRAUMA);
       }
     }
-    for (const defId of [NARCOR, RED]) expect(cuesOfRun(planWithOffsets(playOf(defId, "p1"), view, envOf(FX_INTENSITY_SCALE.off))), defId).toEqual([]);
+    for (const defId of [NARCOR, RED]) expect(cuesOfRun(planWithOffsets(playOf(defId, "p1"), view, envOf({ intensity: FX_INTENSITY_SCALE.off }))), defId).toEqual([]);
   });
 
   it("R3407000 each gallery play, and Red Narcor's draw after its mana, end within its ceiling", () => {
