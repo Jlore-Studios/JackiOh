@@ -29424,7 +29424,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 15,
     "base": {
       "attack": 1,
       "health": 1,
@@ -29518,7 +29518,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 2,
       "health": 2,
@@ -29560,7 +29560,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 0,
       "health": 2,
@@ -29609,7 +29609,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "attack": 0,
       "health": 4,
@@ -29750,7 +29750,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 31,
     "base": {
       "attack": 0,
       "health": 2,
@@ -36298,7 +36298,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "attack": 3,
       "health": 6,
@@ -36361,7 +36361,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "attack": 3,
       "health": 6,
