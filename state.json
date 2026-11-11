@@ -11382,7 +11382,7 @@
       "planned_tier": "medium",
       "provider": "claude-8",
       "question": "Every change this issue needs is under `.github/`: the new floor file beside `.github/coverage-floor.txt`, and an edit to `.github/workflows/mutants.yml`. The bot may not change either, and `.github/CODEOWNERS` asks a person to review them. The floor values also have to come from the settled weekly scores on the repository's Actions page (`mutants` workflow runs, \"Mutation scores\" summary), which the bot cannot read. A person makes the change below. #3511 and a few weeks of scores must come first.",
-      "run_id": "pending:925129b0-1794430067",
+      "run_id": "43098200869",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-11T20:48:24Z",
       "taken_asks": []
