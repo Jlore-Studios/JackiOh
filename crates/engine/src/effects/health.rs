@@ -168,3 +168,36 @@ pub fn set_stats(args: SetStatsArgs) -> Effect {
         set_one(ctx, &unit, stats);
     })
 }
+
+/// `giveStatLine`'s argument: one card and the Attack and Health its new stat line holds.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct GiveStatLineArgs {
+    pub target: TargetSpec,
+    pub attack: i32,
+    pub health: i32,
+}
+
+/// R3566004 (Stinkyscape+ #6.2 Stinky Cheese): gives a card that has no stat line one, `attack`/`health`,
+/// wherever it sits (a Field Spell in the graveyard), so a later buff counts (R2280000: buffs never make
+/// a line) and its Animated play makes a Unit. A card that has a line keeps its own, and an Immune
+/// card is passed by. Not a set (R1185002): nothing is healed, tuned or announced.
+pub fn give_stat_line(args: GiveStatLineArgs) -> Effect {
+    Effect::new("giveStatLine", move |ctx| {
+        let Some(DamageTarget::Unit { instance }) = resolve_target(ctx, &args.target) else {
+            return;
+        };
+        if crate::layers::has_stat_line(ctx.state, &instance)
+            || unit_has(ctx.state, &instance, KeywordKind::Immutable)
+        {
+            return;
+        }
+        if let Some(live) = find_instance_mut(ctx.state, &instance.id) {
+            live.stats_override = Some(AttackHealth {
+                attack: args.attack,
+                health: args.health,
+            });
+        }
+    })
+}

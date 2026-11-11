@@ -526,6 +526,10 @@ pub struct CatalogQueryArgs {
     /// Start of turn or an End of turn effect". Read off the registered script, as `tribute` is.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub turn_hook: Option<TurnHookFilter>,
+    /// R3566007: `true` asks for cards whose base face casts on draw (`StaticFlags.cast_on_draw`), `false`
+    /// forbids them; read off the registered script, as `tribute` is (Stinkyscape+ #70 Spaceberry).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cast_on_draw: Option<bool>,
 }
 
 /// R3134001: which turn hook `CatalogQueryArgs.turn_hook` asks a card for.
@@ -570,6 +574,18 @@ fn has_tribute_cost(def: &CardDef) -> bool {
         .unwrap_or(false)
 }
 
+/// R3566007: whether this definition's base face casts on draw — the `cast_on_draw` static flag of
+/// its registered script, read without state like `has_tribute_cost`.
+fn has_cast_on_draw(def: &CardDef) -> bool {
+    crate::scripts::registered_entry(&def.id).is_some_and(|entry| {
+        entry
+            .base
+            .static_flags
+            .as_ref()
+            .is_some_and(|flags| flags.cast_on_draw == Some(true))
+    })
+}
+
 impl From<CatalogQuery> for CatalogQueryArgs {
     fn from(query: CatalogQuery) -> CatalogQueryArgs {
         CatalogQueryArgs {
@@ -595,6 +611,7 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             deals_damage: None,
             keywords: None,
             turn_hook: None,
+            cast_on_draw: None,
         }
     }
 }
@@ -743,6 +760,11 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     }
     if let Some(wanted) = args.tribute
         && has_tribute_cost(def) != wanted
+    {
+        return false;
+    }
+    if let Some(wanted) = args.cast_on_draw
+        && has_cast_on_draw(def) != wanted
     {
         return false;
     }
