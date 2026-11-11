@@ -4,7 +4,7 @@
 //! whole graph rather than by sampling routes. Each check has a hand-built map that fails it.
 
 use super::*;
-use crate::config::{MAP_SEEDS, RUN_ELITE_TIERS, RUN_TIERS};
+use crate::config::{MAP_PIN_SEEDS, MAP_SEEDS, RUN_ELITE_TIERS, RUN_TIERS};
 use crate::fight_tests::catalog_content;
 
 /// A run on `content` from seed `n` of the sweep, its starting deck the content's first starting cards.
@@ -439,4 +439,34 @@ fn map_too_many_or_too_few_fights_fail() {
     // Every node past the first row but the bosses a shop: a route holds the first row's and the bosses'.
     let err = check_map(&with(RunNodeKind::Shop, 1, |kind| !kind.is_boss())).unwrap_err();
     assert!(err.contains("fights"), "{err}");
+}
+
+/// FNV-1a over `text`, folded into `hash`: a fixed, hash-order-free checksum (CLAUDE.md rule 4).
+fn fold(mut hash: u64, text: &str) -> u64 {
+    for byte in text.bytes() {
+        hash = (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    hash
+}
+
+/// R3583000, R3583001: the map's deal is a function of the seed alone, which the saved runs and their
+/// replays depend on: the same seeds deal the same grid columns, edges and fight-or-tile layout. Every
+/// choice of `act_spots` (which walk steps are open) and of `place_fights` (the chance, the bounds, which
+/// row to flip) moves some seed's map without breaking a bound, so the bounds checks above cannot see
+/// it; this checksum over every seed of the sweep can. A deliberate change to the deal re-records it:
+/// run this test, read the value it prints and paste it, noting the change in R3583000.
+#[test]
+fn the_maps_dealt_by_the_sweep_of_seeds_are_pinned() {
+    let mut hash = 0xcbf2_9ce4_8422_2325_u64;
+    // The placeholder content, which only this crate changes: the catalog's cards change with every patch.
+    let content = run_placeholder_content();
+    for n in 0..MAP_PIN_SEEDS {
+        for (r, row) in deal(&content, n).map.iter().enumerate() {
+            for node in row {
+                let fight = if node.kind.is_fight() { 'F' } else { 'T' };
+                hash = fold(hash, &format!("{r}:{}{fight}>{:?};", node.column, node.next));
+            }
+        }
+    }
+    assert_eq!(hash, 0xdee3_52a2_5ea4_c224, "re-record: {hash:#x}");
 }
