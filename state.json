@@ -14839,8 +14839,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-8",
-      "owner_since": "2026-11-11T10:44:22Z",
-      "owner_why": "it took it up",
+      "owner_since": "2026-11-11T14:23:31Z",
+      "owner_why": "its turn came (it waited 120 minutes for #3706, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
       "planned_at": "2026-11-11T03:53:46Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
@@ -15218,14 +15218,14 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3674,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "live": "reviewing",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
-      "queued_at": "2026-11-11T12:01:14Z",
+      "queued_at": "2026-11-11T14:23:31Z",
       "requested_by": "jgoetzmann",
       "review_floor": "",
       "review_notes": "",
@@ -15250,10 +15250,17 @@
         "provider": "claude-8",
         "run": "43006130199"
       },
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-11-11T12:05:58Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-11T14:23:31Z",
+        "until": "2026-11-11T14:53:31Z",
+        "why": "it waited 120 minutes for #3706, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
+      },
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
@@ -15274,17 +15281,6 @@
         "tiers": {
           "claude": "strong"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          3706
-        ],
-        "ends": "2026-11-11T14:22:52Z",
-        "from_run": "43017417454",
-        "head": "0780e375906f2818e45264af49c3acef3a5800c9",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-11T12:22:52Z"
       }
     },
     "3692": {
