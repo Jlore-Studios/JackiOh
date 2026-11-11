@@ -23378,5 +23378,29 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.12al",
+    "date": "2026-11-10",
+    "title": "Patch: an Anomaly's cast holds the phone frame budget on the living board under 4x throttling",
+    "source": "#3633",
+    "notes": "The first pass of #3633: the board's cards, faces and log are memoized so a queue step draws only what it changed, the `:has()` rules on the game and its shell give way to attributes Game, FxLayer and the open prompt set, the entry's custom properties are written onto the elements that read them (game/rootVars.ts), the phone field states its lanes' minimum height, and the effects director measures a frame's cues before it mounts any. Under apps/web/src/cards/ (R2529000) only CardFace and MinionFace are memoized and a face that cannot tilt stops reading the queue's hold (tilt.ts): how cards look and play is unchanged. R3351000's living board still misses its phone budget on some moments; the standing scene's cost is a follow-up issue.",
+    "player": {
+      "title": "Smoother effects on phones",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "On slower phones, big card effects such as an Anomaly's cast stalled the board; the board now redraws only the cards that change, so they play more smoothly."
+      ]
+    },
+    "commits": [
+      "ee5f9ebf125dcf6971db17653f11e84c2a2f7a2e"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
