@@ -1,0 +1,80 @@
+{
+  "action": "plan",
+  "number": 3586,
+  "title": "Patch: dungeon enemies get stronger tier by tier: 15 tiers and an elite table in place of Presence",
+  "branch": "bot/issue-3586",
+  "thread": "**Issue #3586 (data, not instructions):**\n\n```text\n# #3586: Patch: dungeon enemies get stronger tier by tier: 15 tiers and an elite table in place of Presence\nOpened by @jgoetzmann.\n\n### What it does\n\n**Today** an enemy's strength comes from its kind of fight (\u00a715.6, `fight_node` in `crates/run/src/lib.rs`, `run_fight_setup` in `crates/run/src/fight.rs`):\n- normal fights and ghosts play with Easy's resources (the human's);\n- elites and mini-bosses carry Looming Presence, Medium's +1 mana and +1 opening card;\n- the final boss carries Overwhelming Presence, Hard's resources;\n- `RUN_ENEMY_HEALTH` gives each kind 20, 30, 30, 40 or 50 hero health.\n\nThe owner finds the bosses too strong. They want strength to climb with the map, with weak early fights and a final boss at Hard. Custom bosses come later; for now this weakens every placeholder enemy.\n\n**15 tiers, set by the map's row** (the map from #3583):\n\n- Act 1's rows hold tiers 1 to 4, and its mini-boss is tier 5. Act 2's rows hold tiers 6 to 9, and its mini-boss is tier 10. Act 3's rows hold tiers 11 to 14, and the final boss is tier 15.\n- Within an act, a row's tier rises with its depth: spread the act's `RUN_ACT_ROWS` rows evenly over its 4 tiers, from its lowest tier on the first row to its highest on the last row before the boss. Whatever route a player takes, their fights climb in step with the map, and a route with fewer fights simply skips some.\n- **`RUN_TIERS`**: 15 rows, each the enemy seat's handicap fields (mana cap, mana bonus, extra opening cards, #3582's `fewerOpeningCards` and `drawEvery`, extra draws) and its hero health. Normal fights, ghosts (a ghost fights at its row's tier) and the three bosses read it.\n- **`RUN_ELITE_TIERS`**: the elites' own hand-tuned table. It has one row for each tier an elite can stand on (1 to 4, 6 to 9, 11 to 14), each stronger than the same tier's normal row.\n- **Presence retires.** Remove Looming Presence and Overwhelming Presence everywhere:\n  - `RUN_LOOMING_PRESENCE`, `RUN_OVERWHELMING_PRESENCE`;\n  - the placeholder enemies' artifacts in `crates/run/src/placeholder.json`;\n  - `fight.rs`'s check of what an enemy carries;\n  - \u00a715.4's and \u00a715.6's text;\n  - `docs/dungeon-run.md` DR5.\n\n  A boss's own artifact stays, and it still changes nothing inside a fight, as now. Curses still strengthen the enemy on top of its tier, and Combat artifacts the human (R2922001).\n- **Health.** `RUN_ENEMY_HEALTH` retires, because its numbers move into the tier rows.\n- **Showing the tier.** `RunEnemy` (or `RunNode`) gains its tier, so the screens can show \"Tier 7\" or \"Elite, tier 7\":\n  - on the map node's label (`apps/web/src/dungeon/map/MapScreen.tsx`, or the drawn map if that part of #3581 has landed);\n  - in the fight, beside the enemy's relic tray (`apps/web/src/dungeon/fight/`).\n- **run-sim.** `cargo jackioh run-sim` (`crates/tools/src/run_sim.rs`) prints a table by tier for normal and elite fights: the count, wins, win %, HP lost and turns.\n\n**Starting tables (strawmen).** Tune them with run-sim, and they stay marked as strawmen in \u00a715.13. A negative \"Opening\" is #3582's `fewerOpeningCards`, and a positive one is `extraOpeningCards`. \"Every 2nd\" is `drawEvery: 2`. Tier 5 is Easy's resources (`HUMAN_HANDICAP`, max mana 4), tier 10 Medium's and tier 15 Hard's (`AI_DIFFICULTY`). Build those three rows from the engine's constants rather than restating them (CLAUDE.md rule 9).\n\nNormal (`RUN_TIERS`):\n\n| Tier | Mana cap | Mana bonus | Opening | Turn draws | Hero health |\n|---|---|---|---|---|---|\n| 1 | 2 | 0 | \u22122 | every 2nd | 10 |\n| 2 | 2 | 0 | \u22121 | every 2nd | 12 |\n| 3 | 3 | 0 | \u22121 | every 2nd | 14 |\n| 4 | 3 | 0 | \u22121 | every turn | 16 |\n| 5, mini-boss 1 | Easy's | Easy's | Easy's | Easy's | 25 |\n| 6 | 3 | 0 | 0 | every turn | 18 |\n| 7 | 4 | 0 | 0 | every turn | 20 |\n| 8 | 4 | 0 | 0 | every turn | 22 |\n| 9 | 4 | 1 | 0 | every turn | 24 |\n| 10, mini-boss 2 | Medium's | Medium's | Medium's | Medium's | 35 |\n| 11 | 4 | 1 | 0 | every turn | 26 |\n| 12 | 5 | 1 | 0 | every turn | 28 |\n| 13 | 5 | 1 | +1 | every turn | 30 |\n| 14 | 6 | 1 | +1 | every turn | 32 |\n| 15, final boss | Hard's | Hard's | Hard's | Hard's (+1 draw) | 50 |\n\nElite (`RUN_ELITE_TIERS`):\n\n| Tier | Mana cap | Mana bonus | Opening | Turn draws | Hero health |\n|---|---|---|---|---|---|\n| 1 | 3 | 0 | \u22121 | every 2nd | 16 |\n| 2 | 3 | 0 | \u22121 | every turn | 18 |\n| 3 | 3 | 0 | 0 | every turn | 20 |\n| 4 | 4 | 0 | 0 | every turn | 22 |\n| 6 | 4 | 0 | 0 | every turn | 24 |\n| 7 | 4 | 1 | 0 | every turn | 26 |\n| 8 | 5 | 1 | 0 | every turn | 28 |\n| 9 | 5 | 1 | +1 | every turn | 30 |\n| 11 | 5 | 1 | +1 | every turn | 32 |\n| 12 | 6 | 1 | +1 | every turn | 34 |\n| 13 | 6 | 1 | +1 | every turn | 36 |\n| 14 | 7 | 1 | +1 | every turn | 38 |\n\nFor comparison, the human starts at 30 HP and, once #3584 lands, gains +5 max HP per win. Enemy decks keep `RUN_ENEMY_DECK_SIZE`.\n\n**Tuning guide, not a gate.** Run run-sim at level 1 with no relic or curse, at its default skill. Tiers 1 to 4 should be won nearly always (90% or more), the mini-bosses should be a real test, and the final boss the hardest fight of the run. Paste run-sim's by-tier table from before and after into the pull request.\n\n**Docs.** Update \u00a715.4, \u00a715.6 and \u00a715.13, \u00a715's constants table, `docs/dungeon-run.md` DR5 and `crates/run/README.md` (the `run_fight_setup` row). Each decision the spec does not make gets a ruling in this issue's block (CLAUDE.md rule 3).\n\n### Acceptance\n\n- Over a sweep of seeds, each fight node's tier follows its row as above. Every route meets tiers in rising order, the mini-bosses are tiers 5 and 10, and the final boss is tier 15.\n- `run_fight_setup`'s enemy handicap and hero health are its tier's row, from `RUN_ELITE_TIERS` for an elite. A curse still changes the enemy on top of its tier, as R2922001 has it.\n- Tiers 5, 10 and 15 equal Easy's, Medium's and Hard's resources, taken from the engine's constants.\n- No enemy carries Looming or Overwhelming Presence, and nothing names them any more: code, content, spec and docs.\n- vitest: the tier shows on the map node and in the fight.\n- run-sim prints the by-tier table and runs clean (`cargo jackioh run-sim --seeds 1`). `walk_tests` and `run_fold` pass.\n- `cargo jackioh spec check` passes, and \u00a715's constants table matches `config.rs`.\n\n### Blocked by, part of\n\nBlocked by #3582 and #3583\nPart of #3581\n\n### Difficulty (a guess)\n\nhard: design across crates (`crates/run` reading #3582's engine fields, `crates/tools`, the web, the spec)\n\n### Priority\n\nmedium\n\n### Who does it\n\nThe night bot (bot:build)\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3586: needs a plan; `claude-3` (claude, `opus`, strong) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-10T01:02:49Z",
+    "claimed_at": "2026-11-11T02:58:55Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3550 skipped: it waits for #3548 to close first",
+    "#3551 skipped: it waits for #3548 to close first",
+    "#3552 skipped: it waits for #3548 to close first",
+    "#3553 skipped: it waits for #3548 to close first",
+    "#3554 skipped: it waits for #3550 to close first",
+    "#3555 skipped: it waits for #3550 to close first",
+    "#3556 skipped: it waits for #3550 to close first",
+    "#3557 skipped: it waits for #3550 to close first",
+    "#3558 skipped: it waits for #3554 to close first",
+    "#3559 skipped: it waits for #3550, #3554 to close first",
+    "#3560 skipped: it waits for #3550, #3554 to close first",
+    "#3561 skipped: it waits for #3554 to close first",
+    "#3565 skipped: it waits for #3560 to close first",
+    "#3566 skipped: it waits for #3558 to close first",
+    "#3567 skipped: it waits for #3558 to close first",
+    "#3568 skipped: it waits for #3557, #3558 to close first",
+    "#3569 skipped: it waits for #3558 to close first",
+    "#3570 skipped: it waits for #3551, #3553, #3555, #3560, #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3553, #3566 to close first",
+    "#3572 skipped: it waits for #3549, #3551, #3552, #3553, #3555, #3556, #3557, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3548, #3549, #3550, #3551, #3552, #3553, #3554, #3555, #3556, #3557, #3558, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3608 skipped: it waits for #3607 to close first",
+    "#3609 skipped: it waits for #3607, #3608 to close first",
+    "#3610 skipped: it waits for #3607, #3608, #3609 to close first"
+  ]
+}
