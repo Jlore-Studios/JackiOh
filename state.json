@@ -14919,9 +14919,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-8",
-      "owner_since": "2026-11-11T21:02:39Z",
-      "owner_why": "its approval shipped `1a2a1c3a5f43`, and the last approver owns the merge, so it fixes what CI found",
+      "owner": "claude-5",
+      "owner_since": "2026-11-11T21:08:31Z",
+      "owner_why": "handed off from `claude-8`: `claude-8` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-11T21:57:27Z",
       "pending_request": false,
       "planned_at": "2026-11-11T03:53:46Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -16424,7 +16424,7 @@
       }
     },
     "3725": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": false,
       "ci_fixes": 1,
@@ -16451,13 +16451,13 @@
       "interruptions": 0,
       "issue": 3674,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "claude-8",
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-5",
       "queued_at": "2026-11-11T21:02:37Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "43088096683",
+      "run_id": "pending:c3d8cca5-1794431281",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16478,7 +16478,7 @@
         "run": "43067847851"
       },
       "source": "ci",
-      "started_at": "2026-11-11T19:32:04Z",
+      "started_at": "2026-11-11T21:08:31Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16528,9 +16528,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T20:48:24Z",
+    "at": "2026-11-11T21:08:31Z",
     "url": "",
-    "what": "plan #3519 on claude-8"
+    "what": "revise #3725 on claude-5"
   },
   "last_sweep": {
     "at": "2026-11-11T20:57:09Z",
