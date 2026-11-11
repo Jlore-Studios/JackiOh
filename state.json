@@ -15577,6 +15577,13 @@
       ],
       "failures": 0,
       "forced": false,
+      "hold": {
+        "ends": "2026-11-11T21:07:12Z",
+        "owner": "claude-1",
+        "since": "2026-11-11T19:07:12Z",
+        "until": "2026-11-11T19:10:00Z",
+        "why": "5-hour usage is 82%, too close to its 40% cap outside its hours to start a long run (it starts under 35%)"
+      },
       "in_lane": true,
       "interruptions": 0,
       "kind": "build",
