@@ -1,0 +1,76 @@
+{
+  "action": "plan",
+  "number": 3557,
+  "title": "Patch: Stinkyscape+ S18, spells on existing primitives",
+  "branch": "bot/issue-3557",
+  "thread": "**Issue #3557 (data, not instructions):**\n\n````text\n# #3557: Patch: Stinkyscape+ S18, spells on existing primitives\nOpened by @squishy-squooby.\n\nPart of fullsend 1 of the Stinkyscape+ set (#3534, tracker #3533). It builds the set's spells that need little that is new, and the Ayys.\n\nThe plan: [`docs/stinkyscape-plus-set.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/docs/stinkyscape-plus-set.md) (SP5, SP6, SP8, SP10); the designer's list: [`JackiOh_StinkyscapePlus_Cards.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/JackiOh_StinkyscapePlus_Cards.md). Both are on the planning branch `claude/laughing-wright-eaibe9` until the foundation (#3535) brings them onto this fullsend's branch. Where they disagree with SPEC, SPEC wins (CLAUDE.md). `{For AI: \u2026}` notes in the designer's text are the designer's notes to you, the builder, not to the game's AI (SP5).\n\n## Cards\n\n| # | Card |\n| --- | --- |\n| #20 | B-Patch |\n| #24 | Forced Propagation |\n| #32 | Z-Patch |\n| #51 | Chains Bind Me |\n| #68 | Shadiris Visions |\n| #76 | Ayys LMAO |\n| #76.1 | Ayy |\n| #85 | Body Snatch |\n| #94 | PIP |\n| #103 | Transcend |\n| #104 | Tireless Cultivation |\n| #105 | Spacersi |\n| #158 | Quick Chaos |\n\n## What it builds on\n\n- The foundation (#3535): every card's catalog entry, both faces and a stub script.\n- E6 (#3550): the kill deadline (PIP).\n- Buff and Nerf, Transform, Dormant, Cast on draw (\u00a76.3).\n\n## Readings (defaults; change one only with a ruling note)\n\n- #20 B-Patch: one 50/50 roll for the whole effect, not one per card. A card that can't be Buffed or Nerfed is skipped.\n- #24 Forced Propagation: (1), and (3) when embiggened, which shuffles 40 copies instead of 10. The copies are fresh (no cost changes or buffs), and the Radiant face Buffs each once.\n- #32 Z-Patch: Tradable. It Buffs every permanent 5 times, then Nerfs every permanent (Radiant: every enemy permanent) 5 times. Its flavor text is \"Watchu know about the Z patch?\"\n- #76 Ayys LMAO: \"Small Asteroids\" are Stinkyscape's Tiny Asteroid. Each of the three is an Ayy or a Tiny Asteroid at random, Cloaked. Ayys go to the backrow when a backrow zone is free (the designer's note), where they are Units for every rule (E3's Flexible placement).\n- #85 Body Snatch: the Ayy is #76.1. The base face puts it in Defense Position.\n- #94 PIP: E6's kill deadline. The Radiant face adds 3 The Coin when it fails.\n- #103, #104, #105: \"Transform into ones that cost (1) more\" picks a random permanent of the same type costing exactly one more, or the closest higher cost when none exists. #104 is a Spell (the list gives no type).\n- #158 Quick Chaos: \"cast a random spell\" draws from the collectible Spells of the shipped sets, with random targets.\n\n## The designer's text, verbatim\n\n```text\n**(1) B-Patch, Spell, Epic, Stinkyscape+, #20**\n**Cast on draw:** Randomly either **buff** or **nerf** *{50/50}*, every card on the field and in both hands\n~~~\n**Cast on draw:** Randomly either **buff** or **nerf** *{50/50}*, every card on the field and in both hands, **Lucky 1**\n\n**(1 embiggen 3) Forced Propagation, Spell, Epic, Stinkyscape+, #24**\nChoose a non-**fused** card in your hand or field, shuffle 10 embiggen 40 copies of a card into your deck *{does no preserve cost changes or buffs on them}*\n~~~\nChoose a non-**fused** card in your hand or field, shuffle 10 embiggen 40 copies of a card into your deck, then **buff** them *{does no preserve cost changes or buffs on them}*\n\n**(3) Z-Patch, Spell, Epic, Stinkyscape+, #32**\n**Tradable**\nBuff every permanent 5 times. Then Nerf every permanent 5 times.\n~~~\n**Tradable**\nBuff every permanent 5 times. Then Nerf every enemy permanent 5 times.\n{Flavor text: \u201cWatchu know about the Z patch?\u201d}\n\n**(2) Chains Bind Me, Spell, Common, Stinkyscape+, #51**\n**Dormant** a permanent for 2 turns. When it awakens, Buff it 2 times if it\u2019s yours or Nerf it 2 times if it\u2019s an enemy\u2019s.\n~~~\n**Dormant** a permanent for 2 turns. When it awakens, Buff it 5 times if it\u2019s yours or Nerf it 5 times if it\u2019s an enemy\u2019s.\n\n**(1) Shadiris Visions, Spell, Rare, Stinkyscape+, #68**\n**Discover** a **Spell** in your deck; add a copy of it to your hand\n~~~\n**Discover** a **Spell** in your deck; add a **Radiant** copy of it to your hand, it costs (1) less\n\n**(2) Ayys LMAO, Spell, Common, Stinkyscape+, #76**\nSummon a mix of 3 **Cloaked** **Ayy** tokens or **Cloaked** **Small Asteroids**. {For AI: The Ayys spawn in the backrow if possible.}\n~~~\nSummon a mix of 3 Radiant **Cloaked Ayy** tokens or **Cloaked** **Small Asteroids**.\n\n**(1) Ayy, Unit, Token, Common, Stinkyscape+, #76.1**\n2/2\n**Cloaked**\n~~~\n4/4\n**Cloaked**\n**Poisonous**\n\n**(2) Body Snatch, Spell, Rare, Stinkyscape+, #85**\nTransform a Unit into an **Ayy** in defense position.\n~~~\nTransform a Unit into an **Ayy**.\n\n**(1) PIP, Spell, Rare, Stinkyscape+, #94**\nPut a Unit on a performance enhancement plan, they have 1 turn to get a kill otherwise they are destroyed.\n~~~\nPut a Unit on a performance enhancement plan, they have 1 turn to get a kill otherwise they are destroyed. If they fail, add 3 **The Coins** to your hand.\n\n**(1) Transcend, Spell, Common, Stinkyscape+, #103**\nTransform your permanents into ones that cost (1) more.\n~~~\nTransform your permanents into ones that cost (2) more.\n\n**(1) Tireless Cultivation, Rare, Stinkyscape+, #104**\n**Temporary 1**\nTransform a permanent into one that costs (1) more.\n**End of Turn**: Return this to your hand.\n~~~\n**Temporary 2**\nTransform a permanent into one that costs (2) more.\n**End of Turn**: Return this to your hand.\n\n**(3) Spacersi, Unit, Common, Stinkyscape+, #105**\n5/8\n**Cry**: Transform your other Units into ones that cost (1) more.\n~~~\n10/16\n**Cry**: Transform your other Units into ones that cost (2) more.\n\n**(1) Quick Chaos, Spell, Rare, Stinkyscape+, #158**\n**Cast on draw:** cast a random spell *{targets chosen randomly}*\n~~~\n**Cast on draw:** cast a random **Radiant** spell *{targets chosen randomly}*\n```\n\n## Done when\n\n- [ ] Every card above plays its base and Radiant faces by its text and the readings, in its own script file (`crates/cards/src/scripts/stinkyscape_plus/cNNN_slug.rs`, the stub the foundation made), with tests for both faces in the same file (CLAUDE.md rules 5 and 6). `docs/ADDING_CARDS.md` was read first (rule 10).\n- [ ] Every number is a named constant or a card `param` (rule 9). A script reads state only through the prelude's helpers. A missing verb or board fact goes into the engine with its test (CLAUDE.md, Architecture).\n- [ ] Each decision the spec doesn't make has a ruling note numbered in this issue's block, a test named after it, and its paragraph in `spec/pending/<this issue>.md` (rule 3). The cards' \u00a78 rows say what was built.\n- [ ] Every prompt these cards open is answered by the AI, the random policy and the timeout.\n- [ ] `cargo test -p jackioh-cards` passes for these cards, and `cargo jackioh catalog check`, `spec check` and `names --check` pass.\n- [ ] Only these cards' catalog entries and \u00a78 rows are edited (other parts edit theirs side by side), and the set stays `Held`: players see nothing until the release (part R).\n\nBlocked by #3550\n\nPart of #3534.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-3596",
+  "part_of": 3596,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3557: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T23:49:09Z",
+    "claimed_at": "2026-11-11T07:36:21Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3687 is held for `claude-3` until 02:00 (it refused a call)",
+    "#3690 is held for `claude-3` until 02:00 (it refused a call)",
+    "#3702 is held for `claude-8` until 03:00 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3558 skipped: it waits for #3554 to close first",
+    "#3559 skipped: it waits for #3554 to close first",
+    "#3560 skipped: it waits for #3554 to close first",
+    "#3561 skipped: it waits for #3554 to close first",
+    "#3565 skipped: it waits for #3560 to close first",
+    "#3566 skipped: it waits for #3558 to close first",
+    "#3567 skipped: it waits for #3558 to close first",
+    "#3568 skipped: it waits for #3557, #3558 to close first",
+    "#3569 skipped: it waits for #3558 to close first",
+    "#3570 skipped: it waits for #3551, #3555, #3560, #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3566 to close first",
+    "#3572 skipped: it waits for #3551, #3555, #3556, #3557, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3551, #3554, #3555, #3556, #3557, #3558, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first"
+  ]
+}
