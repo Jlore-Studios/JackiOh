@@ -18847,6 +18847,8 @@
       }
     },
     "3686": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-11T03:31:43Z",
@@ -18860,8 +18862,11 @@
         "trail": "- Tests are running in the background (WASM build first, then vitest). Meanwhile I fixed two things the run would have caught:\n- - Text queries match `aria-hidden` tip content too, so `getByText(label)` is now scoped to `.dungeon-run-map__label`, and the icon query targets the new `.dungeon-run-map__badge`.\n- - jest-dom v7's `toBeDisabled` ignores `aria-disabled` (verified in the bundled matcher source), so the live/non-live assertions read the attribute directly instead.\n- Waiting on the `RunScreen.test.tsx` result; then typecheck, eslint, the remaining test files, and screenshots.\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the dungeon map drawn as a climbing path map\"} -->\n- ## What changed\n- The dungeon map is now one tall climbing-path graph read bottom to top, in the owner's reference spirit with our own icons and palette (no art copied from anywhere):\n- - **New** `apps/web/src/dungeon/map/MapGraph.tsx`: layout consts (`MAP_COL_W` 46, `MAP_ROW_H` 140, badges 44 / 64 boss, jitter \u00b15, walked width 3); `mapJitter` (integer hash of row/column, no `Math.random`), `mapBadge`, `mapCenter` (row 0 at bottom), `mapEdges`; one SVG `<line>` per edge of the run\u2026\n- - `MapScreen.tsx`: scroll shell + `MapGraph` + legend (all ten kinds, `role=list`), new required `trail` prop. `NODE_LABELS`/`nextCols` stay and are now shared with the graph.\n- - `run.css`: graph/lines/badges/tips/legend styles; pulse is `transform: scale` only, defined and applied solely inside `@media (prefers-reduced-motion: no-preference)`; graph is 322 px wide, tap targets \u2265 44 px.\n- - `store.ts`: `Dungeon.trail` (columns stepped onto, from the kept `go` log) wired through `useDungeon`; `RunScreen` passes it to the map. The run still refuses illegal steps; the client judges nothing (rule 7).\n- - `testids.ts`: `mapGraph`, `mapEdge(row, col, to)`, `mapTip(row, col)`, `mapLegend`, `mapLegendItem(kind)`. `zh-CN.json`: `Legend`, `Visited`, `{node} {col}: {enemy}`.\n- ## How tested\n- - `pnpm --dir apps/web test` on `map/RunScreen.test.tsx` (46 pass, incl. 10 new `#3587`: line-per-edge count, live-set/`go` sends vs. silent taps, walked marks, live/dim attrs, boss relic + 64 px badge, legend, tip open/close, scroll-into-view, jitter/placement math, motion-gate + 44 px CSS asserts\u2026\n- - `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/edge apps/web e2e`, `cargo fmt --check`, `cargo jackioh spec check` (1900 rulings ok) \u2014 all clean. No Rust/spec changes. One flake: the i18n scan timed out once when run alongside other files under load; it passes alone (the scan takes ~4.9 \u2026\n- - Screenshots (kept out of the repo, in `.cache/browse/` for the PR): `3587-fresh-{desktop,phone}.png`, `3587-mid-{desktop,phone}.png` (row 3 of the seed's 24-row map; mini-bosses sit at rows 7/15), `3587-post-{desktop,phone}.png` (row 8, just past the first mini-boss). Verified by eye: opens at th\u2026\n- ## Decisions (rejected alternatives)\n- - Tests assert `aria-disabled` directly: jest-dom v7's `toBeDisabled` ignores `aria-disabled`, contrary to the plan \u2014 adjusted, not hidden.\n- - Absolute inverted-y layout with DOM row 0 first instead of the plan's CSS `column-reverse` (meaningless with a single absolutely-positioned child); same visual and keyboard order.\n- - Fresh run scrolls the scroll shell to the bottom (no current node exists to scroll to).\n- - Captions capped at 76/60 px without `overflow-wrap: anywhere` (it broke \"Campfire\" into \"Camp/fire\"); graph `padding-bottom: 96px` so row-0 captions clear the legend; SVG pinned `top/left: 0` so border-box padding can't distort line geometry.\n- ## Look twice\n- - Dense rows still let neighbor captions touch (46 px columns, 6 adjacent starts) \u2014 each stays legible, but judge the fresh shots yourself.\n- - The `MapScreen` \u2194 `MapGraph` import cycle (`NODE_LABELS`/`nextCols`): safe (used only at render), but flag if you'd rather move them.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-3587 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-3587/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3587,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-11T04:48:05Z",
         "from_run": "42953353183",
         "gates": [
           {
@@ -18920,8 +18925,15 @@
         "source": "build",
         "until": "2026-11-11T05:17:08Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-11T04:47:08Z",
+      "run_id": "pending:2b5166ab-1794372460",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-11T04:48:05Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -18935,9 +18947,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T04:38:48Z",
+    "at": "2026-11-11T04:48:05Z",
     "url": "",
-    "what": "build #3552 on claude-1"
+    "what": "review #3686 on muse"
   },
   "last_sweep": {
     "at": "2026-11-11T04:34:30Z",
