@@ -122,7 +122,9 @@
     "3670": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-squishy",
       "owner_since": "2026-11-11T03:22:56Z",
@@ -132,12 +134,16 @@
       "planned_by": "`claude-squishy` (claude, `opus`, strong)",
       "planned_by_id": "claude-squishy",
       "planned_tier": "strong",
+      "pr": 3684,
       "provider": "claude-squishy",
+      "question": "",
+      "round_tier": "strong",
       "run_id": "42951887540",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-11T03:22:56Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 1
     },
     "3684": {
       "cleared": {
