@@ -15789,6 +15789,7 @@
         "question": "E7 (#3554) has not landed, so #3559 cannot be built whole. Wait for E7, or build part of it now?",
         "why": "the plan gates all work on E7's landing and flags its API as liable to rename in reconcile, so building now risks targeting dead names or duplicating #3554's engine work"
       },
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
