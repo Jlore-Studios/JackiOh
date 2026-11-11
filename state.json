@@ -15421,17 +15421,8 @@
       }
     },
     "3693": {
-      "action": "plan",
-      "asks": [
-        "c:6800145555"
-      ],
-      "build_next": {
-        "from_run": "43074819973",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-11T19:16:34Z",
-        "until": "2026-11-11T19:46:34Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-11T19:16:20Z",
         "difficulty": "medium",
@@ -15450,11 +15441,10 @@
         "reason": "planned on sonnet",
         "trail": "nd\": \"cd /home/runner/work/_temp/work/item-3693; for r in R0178 R2179001 R0429 R0385 R0410 R0923 R1845000 R3039000 R0215 R0243 R0742 R1848003 R0311 R1300 R0243; do [ -f spec/rulings/$r.md ] &&\u2026\n- Bash: {\"command\": \"cd /tmp/i16-scratch && python3 -I - <<'EOF'\\np='crates/engine/src/testkit/invariants.rs'\\ns=open(p).read()\\nstart=s.index(\\\"/// Where a pile or a field slot says a card is\\\")\\nend_=s.ind\u2026\n- Bash: {\"command\": \"cd /tmp/i16-scratch && python3 -I - <<'EOF'\\np='crates/engine/src/testkit/invariants.rs'\\ns=open(p).read()\\nold=\\\" Action, ActionBody, ActivationView, BackrowView, CardType, CardView, DU\u2026\n- Bash: {\"command\": \"cd /tmp/i16-scratch && sed -i 's/ Action, ActionBody, ActivationView, BackrowView, CardType, CardView, Counters, DUOS_DUELS, DUOS_SEATS,/ Action, ActionBody, ActivationView, AttackHealth\u2026\n- Bash: {\"command\": \"cd /tmp/i16-scratch && CARGO_TARGET_DIR=/tmp/i16-target-dbg cargo test -p jackioh-engine --features testkit --test rules i16 2>&1 | tail -14 | cut -c1-200; CARGO_TARGET_DIR=/tmp/i16-targ\u2026\n- Bash: {\"command\": \"cat > /tmp/i16-final.sh <<'EOF'\\n#!/bin/sh\\ncd /tmp/i16-scratch\\nexport CARGO_TARGET_DIR=/tmp/i16-target\\ncargo build --release -p jackioh-tools > /tmp/i16-build2.log 2>&1\\n/tmp/i16-targ\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3693; grep -n \\\"I9\\u2013I12\\\\|I10, I11 and I12\\\\|The fifteen checks\\\\|a carried Unit is not asked\\\" crates/engine/src/testkit/invariants.rs; grep -n \u2026\n- Bash: {\"command\": \"sleep 1; ls /tmp/i16-final.* 2>/dev/null; tail -2 /tmp/i16-build2.log | cut -c1-150; for f in /tmp/i16-f2-1000.log /tmp/i16-f2-hc.log /tmp/i16-f2-duos.log; do [ -f $f ] && (echo == $f; g\u2026\n- tool error: Exit code 1 /tmp/i16-final.sh \u001b[1m\u001b[92m Compiling\u001b[0m jackioh-run v0.5.0 (/tmp/i16-scratch/crates/run) \u001b[1m\u001b[92m Compiling\u001b[0m jackioh-ai v0.5.0 (/tmp/i16-scratch/crates/ai)\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3693/.bot-plan.md\", \"content\": \"# Draft plan #3693 (I16: card record vs pile) \\u2014 state at 17:xx UTC\\n\\n## Verified in a scratch copy (/tmp/i16-scr\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until [ -f /tmp/i16-final.waves ]; do sleep 5; done'; for f in /tmp/i16-f2-1000.log /tmp/i16-f2-hc.log /tmp/i16-f2-duos.log; do echo == $f; grep -n \\\"passed\\\\|seed(s\u2026\n- Bash: {\"command\": \"timeout 595 bash -c 'until [ -f /tmp/i16-final.done ] || grep -q \\\"test result: FAILED\\\\|error\\\\[\\\" /tmp/i16-t-engine.log 2>/dev/null; do sleep 10; done'; grep -h \\\"test result\\\\|FAILED\\\u2026\n- Bash: {\"command\": \"timeout 595 bash -c 'until [ -f /tmp/i16-final.done ]; do sleep 10; done'; for f in /tmp/i16-t-cards.log /tmp/i16-t-tools.log; do echo == $f; grep -h \\\"test result\\\\|FAILED\\\\|panicked\\\\|\u2026\n- Bash: {\"command\": \"grep -n \\\"ci_scope_runs_a_crates_groups\\\" -A12 /tmp/i16-t-tools.log | head -40 | cut -c1-300\", \"description\": \"Read the failing tools test message\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3693; ls e2e/artifacts 2>&1 | head -3; ls /tmp/i16-scratch/e2e/artifacts 2>&1 | head -3; grep -n \\\"artifacts\\\" .gitattributes | head\", \"description\":\u2026\n- Bash: {\"command\": \"cd /tmp/i16-scratch; s=$(grep -n \\\"^/// A card in a pile or a field slot (I16)\\\" crates/engine/src/testkit/invariants.rs | cut -d: -f1); e=$(grep -n \\\"^/// The events that take a card ou\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3693; for r in R0943 R783013 R0747 R0012 R0073; do [ -f spec/rulings/$r.md ] && echo \\\"ok $r\\\" || echo \\\"MISSING $r\\\"; done; ls spec/rulings | grep -\u2026\n- Bash: {\"command\": \"cd /tmp/i16-scratch; s=$(grep -n \\\"^// I16:\\\" crates/engine/tests/rules/invariants.rs | cut -d: -f1); sed -n \\\"${s},\\\\$p\\\" crates/engine/tests/rules/invariants.rs; echo ===========; s=$(\u2026\n- Write: {\"file_path\": \"/tmp/plan-body.md\", \"content\": \"## Goal\\n\\nAdd check **I16** to the fuzz monitor (`InvariantMonitor::after`, so the 1v1, `--handicap` and `--duos` waves all run it): after every action\u2026\n- Bash: {\"command\": \"wc -w /tmp/plan-body.md; wc -c /tmp/plan-body.md\", \"description\": \"Count plan words and characters\"}\n- Bash: {\"command\": \"cd /tmp/i16-scratch && python3 -I - <<'EOF'\\nimport re\\nplan=open('/tmp/plan-body.md').read()\\nblocks=re.findall(r\\\"```rust\\\\n(.*?)```\\\", plan, re.S)\\nprint(len(blocks), [len(b.splitline\u2026\n- Bash: {\"command\": \"cd /tmp/i16-scratch && CARGO_TARGET_DIR=/tmp/i16-target-dbg cargo clippy -p jackioh-cards --all-targets -- -D warnings 2>&1 | tail -8 | cut -c1-200; CARGO_TARGET_DIR=/tmp/i16-target-dbg \u2026\n- Bash: {\"command\": \"cd /tmp && python3 -I - <<'EOF'\\np='/tmp/plan-body.md'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert old in s, old[:50]\\n s=s.replace(old,new,1)\\nrep(\\\"\\\"\\\"Add check **I16** t\u2026\n- Bash: {\"command\": \"cd /tmp && python3 -I - <<'EOF'\\np='/tmp/plan-body.md'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert old in s, old[:60]\\n s=s.replace(old,new,1)\\nrep(\\\"\\\"\\\"- `crates/tools/tes\u2026\n- Bash: {\"command\": \"cd /tmp && python3 -I - <<'EOF'\\np='/tmp/plan-body.md'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert old in s, old[:60]\\n s=s.replace(old,new,1)\\nrep(\\\" **No drift exists: no \u2026\n- Bash: {\"command\": \"cd /tmp && python3 -I - <<'EOF'\\np='/tmp/plan-body.md'\\ns=open(p).read()\\nold=\\\"7. Engine tests, then cards test (below); then `cargo fmt`, and the commands under Done when.\\\\n\\\"\\nassert\u2026\n- Bash: {\"command\": \"cd /tmp && python3 -I - <<'EOF'\\np='/tmp/plan-body.md'\\ns=open(p).read()\\nold=\\\"and the engine, cards and tools tests passed. **No drift exists\\\"\\nassert old in s\\ns=s.replace(old,\\\"and \u2026\n- Bash: {\"command\": \"rm -rf /tmp/i16-target /tmp/i16-target-dbg /tmp/i16-scratch /tmp/i16-*.log /tmp/i16-*.sh /tmp/i16-final.* /tmp/i16-waves.done; cd /home/runner/work/_temp/work/item-3693 && git status --s\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Rule 1 is the only line that could apply: the change is a monitor check in the engine's testkit, not a rule or the resolution loop, and the scratch run found no drift to fix, so it stays medium.\"} --> ## Goal Add check **I16** to the fuzz monitor (`Invaria\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-11T18:07:56Z",
       "owner_why": "handed off from `muse`: `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z",
@@ -15468,12 +15458,14 @@
       "queued_at": "2026-11-11T15:38:44Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
-      "run_id": "43074819973",
+      "run_id": "pending:490b6249-1794424634",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-11T18:07:56Z",
+      "started_at": "2026-11-11T19:17:46Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6800145555"
+      ],
       "verdict_rounds": 0
     },
     "3694": {
@@ -16285,9 +16277,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T19:08:28Z",
+    "at": "2026-11-11T19:17:46Z",
     "url": "",
-    "what": "plan #3701 on claude-4"
+    "what": "build #3693 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-11T19:03:48Z",
