@@ -16665,6 +16665,13 @@
     },
     "3737": {
       "action": "plan",
+      "archived": {
+        "at": "2026-11-11T22:25:07Z",
+        "branch": "",
+        "head": "",
+        "pr": null,
+        "why": "edit `.github/workflows/ci.yml`, in the `wasm` job (`web (wasm module)`, about lines 879\u2013899), to the exact YAML under Steps. The night bot may not change `.github/`, and no change outside `.github/` fixes this job. The change adds no file for the bot to build. The other parts of the issue's \"split the job\" advice do not apply, for the reasons in Goal."
+      },
       "asks": [],
       "difficulty_by": {
         "at": "2026-11-11T22:24:54Z",
@@ -16673,21 +16680,17 @@
         "tier": "medium",
         "why": "No line of the rule holds: no engine, AI, migration, cross-crate design or 40 files; the one change is a CI workflow edit that only a person can make."
       },
-      "kind": "build",
       "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-11T22:07:11Z",
-      "owner_why": "it plans it",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-11T22:24:57Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-3",
       "planned_tier": "medium",
       "provider": "claude-3",
+      "question": "edit `.github/workflows/ci.yml`, in the `wasm` job (`web (wasm module)`, about lines 879\u2013899), to the exact YAML under Steps. The night bot may not change `.github/`, and no change outside `.github/` fixes this job. The change adds no file for the bot to build. The other parts of the issue's \"split the job\" advice do not apply, for the reasons in Goal.",
       "run_id": "43109027991",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-11T22:07:11Z",
-      "stop_requested": false,
       "taken_asks": []
     },
     "3738": {
