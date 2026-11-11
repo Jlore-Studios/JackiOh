@@ -19137,15 +19137,11 @@
     "what": "review #3688 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-11T05:19:20Z",
+    "at": "2026-11-11T05:30:03Z",
     "notes": [
-      "delivered review #3686 on muse (run 42961581099): approved",
-      "delivered build #3552 on claude-1 (run 42960591292): part",
-      "delivered build #3678 on claude-1 (run 42954555532): built",
-      "started review #3688 on claude-1 (run 42965380380)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days",
-      "runner gate: started 0 of 4 waiting run(s); 4 wait for room"
+      "#3682: green and waiting for a person to merge it, so `muse` gives up its claim on it",
+      "delivered review #3687 on claude-3 (run 42964097886): approved",
+      "runner gate: started 0 of 5 waiting run(s); 5 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19851,7 +19847,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T05:19:20Z",
+  "loop_tick": "2026-11-11T05:30:03Z",
   "machine_disk": {
     "issue": null,
     "reading": {
