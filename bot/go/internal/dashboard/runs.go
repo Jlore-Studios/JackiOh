@@ -210,7 +210,7 @@ func LearnOutcome(run *pyjson.Object, jobs []*pyjson.Object) string {
 		if planJob != nil && pyjson.Equal(conclusion(planJob), "failure") {
 			return "❌ the plan failed"
 		}
-		// Stopped in its export, by a person or by a new set (learn-set.yml): its shards were
+		// Stopped in its export, by a person or by a new patch or set (learn-set.yml): its shards were
 		// cancelled, not lost.
 		if pyjson.Equal(run.Get("conclusion"), "cancelled") {
 			return "⏹️ cancelled"

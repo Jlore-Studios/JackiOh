@@ -8,7 +8,14 @@
 // R202's rarity entrance rings beside the light rays. R655 makes card moments hooks in `card-audio.json5`
 // (the `attack` hook is the board's, `usePickupSound`). MN05: Armor and the niche moments, R1363 to R1366.
 // R2722002: a hidden card makes its rarity's entrance as it reveals, at the first firing the seat reads,
-// never as it is set (`revealSting`, game/entrance.ts).
+// never as it is set (`revealSting`, game/entrance.ts). R3332002: a Legendary's or Mythic's own intro is
+// its sting (`entranceSting`), so the shared entrance sting rings only for one with no intro. R3336000:
+// the Drone Battleship's layers and drones add their own sounds after the row's (`battleshipCues`, unpanned).
+// R3400001, R3405001: so do Meditative+'s, Training Grounds' and Meditative's signature cards (`signatureCues`, unpanned).
+// R3402001: so do Core's ten Legendaries and Mythics, a Trap's at its firing.
+// R3334002, R3334003: a launched Starship's attack and a Starship's death leave their row's sound to the
+// Starship's own (starshipSounds.ts), but only when the director has sent it (`starshipSounded`): one
+// voiced with no entry started (Reduce Motion) swings and dies with the row's sound.
 
 import type {
   CardType,
@@ -22,9 +29,10 @@ import type {
   UnitView,
 } from "@jackioh/shared";
 
+import { isAnomalyCode } from "../cards/anomalies.ts";
 import { themeFor } from "../cards/art/themes.ts";
 import { seatOutcome } from "../game/outcome.ts";
-import { armorTookHalf, damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
+import { armorTookHalf, damageTier, playTier, UNIT_SLAM, type PlayTier, type PlayType } from "../game/damageFeel.ts";
 import { slamStatsOf, slamTier } from "../game/unitSlam.ts";
 import {
   BLEAT_DELAY_MS,
@@ -39,11 +47,14 @@ import {
   NEXT_REFRESH_MODIFIER_ID,
   OVERKILL_DELAY_MS,
   OVERKILL_MIN_EXCESS,
+  PLAY_IMPACT_DELAY_MS,
+  PLAY_IMPACT_OPPONENT_GAIN,
   SHEEP_DEF_IDS,
   STING_DELAY_MS,
   VOICE_DELAY_MS,
   VOICE_PRIORITY,
 } from "./constants.ts";
+import { MUSIC_CARDS } from "./musicData.ts";
 import type {
   CardAudioTable,
   CardHook,
@@ -56,6 +67,8 @@ import type {
   VoicePriority,
 } from "./types.ts";
 import { entryFor, hookFor } from "./voiceData.ts";
+import { battleshipCues } from "./battleshipCues.ts";
+import { signatureCues } from "./signatureCues.ts";
 
 /** R1088: the defId the view reads on `instanceId`, or undefined when it shows the card nowhere. */
 function defIdOfInstance(view: PlayerView, instanceId: string): string | undefined {
@@ -120,6 +133,12 @@ export type CueContext = {
    * randomness is never spent on a sound.
    */
   random?: () => number;
+  /**
+   * R3334002, R3334003: true when the director has sent the Starship's own sound for this very event (a
+   * broadside's or a ram's `attackDeclared`, a wreck's `destroyed`; starshipSounds.ts), in place of its
+   * row's. Absent: never, so every row keeps its sound.
+   */
+  starshipSounded?: (event: GameEvent) => boolean;
 };
 
 export type CueRow<K extends GameEventType> = {
@@ -208,9 +227,9 @@ export function hookCues(
 }
 
 /**
- * A unit arriving: a thud sized by the unit with its family's accent, a Legendary or Mythic sting, a
- * golden glint when Radiant, and, when no play of it has sounded (a token, a Recruit, a Reborn, a copy),
- * its play line at the lowest priority. Only a unit colors its thud: the backrow holds face-down Traps,
+ * A unit arriving: a thud sized by the unit with its family's accent, a Legendary or Mythic sting (one
+ * with no intro of its own, R3332002), a golden glint when Radiant, and, when no play of it has sounded
+ * (a token, a Recruit, a Reborn, a copy), its play line at the lowest priority. Only a unit colors its thud: the backrow holds face-down Traps,
  * whose arrival must sound alike (R203).
  */
 function summonCues(event: Extract<GameEvent, { type: "summoned" }>, ctx: CueContext): readonly SoundCue[] {
@@ -222,9 +241,7 @@ function summonCues(event: Extract<GameEvent, { type: "summoned" }>, ctx: CueCon
   if (timbre !== undefined) params.timbre = timbre;
   const cues: SoundCue[] = [...slamSound(unit, card, params)];
   // B2.5: a token's printed rarity is the one it enters with; its `rarity` stays "Token".
-  const rarity = card?.printedRarity ?? card?.rarity;
-  if (rarity === "Legendary") cues.push(sfx("entrance"));
-  else if (rarity === "Mythic") cues.push(sfx("entrance", { mythic: true }));
+  if (card !== undefined) cues.push(...entranceSting(event.defId, card.printedRarity ?? card.rarity, 0));
   if (unit?.radiant === true) cues.push(sfx("radiant", undefined, RADIANT_GLINT_DELAY_MS));
   const played = ctx.wasPlayed?.(event.instanceId) ?? false;
   // R1088: a summon its source card caused speaks one of the source's trigger lines instead of its own.
@@ -267,7 +284,8 @@ function inPlayOf(ctx: CueContext, defId: string): boolean {
 
 /**
  * R669 (#259): the sting of a readable card as it is played, by its rarity, or none: a Trap's play is its
- * set (R203) and a card cast as it is drawn has its own sting. A Legendary or Mythic Unit's is its entrance.
+ * set (R203) and a card cast as it is drawn has its own sting. A Legendary or Mythic Unit's is its entrance
+ * (`summonCues`); a Legendary or Mythic Spell's is `entranceSting`'s.
  */
 function playSting(event: Extract<GameEvent, { type: "cardPlayed" }>, ctx: CueContext): readonly SoundCue[] {
   const card = readable(ctx, event.defId);
@@ -277,22 +295,55 @@ function playSting(event: Extract<GameEvent, { type: "cardPlayed" }>, ctx: CueCo
   const tier = STING_TIERS[rarity ?? "Token"];
   if (tier !== undefined) return [sfx("sting", tier === "common" ? undefined : { tier }, STING_DELAY_MS)];
   if (card.type === "Unit") return NONE;
-  if (rarity === "Legendary") return [sfx("entrance", undefined, STING_DELAY_MS)];
-  if (rarity === "Mythic") return [sfx("entrance", { mythic: true }, STING_DELAY_MS)];
-  return NONE;
+  return entranceSting(event.defId, rarity, STING_DELAY_MS);
+}
+
+/**
+ * R3346000: a play's impact under its whoosh, sized by the mana it cost and coloured by the card's type.
+ * The other seat's play is heard a step quieter (PLAY_IMPACT_OPPONENT_GAIN).
+ */
+export function playImpactCue(tier: PlayTier, type: PlayType, mine: boolean): Extract<SoundCue, { kind: "sfx" }> {
+  const params: SfxParams = { playTier: tier, playType: type };
+  if (!mine) params.gain = PLAY_IMPACT_OPPONENT_GAIN;
+  return { kind: "sfx", id: "playImpact", params, delayMs: PLAY_IMPACT_DELAY_MS };
+}
+
+/**
+ * R3346000 (#3346): the cost impact of a readable Unit, Spell or Field Spell as it is played, or none. A
+ * hidden card is the sentinel, which names no type (R203); a Trap's play is its set click, and a card cast
+ * as it is drawn has its own sting. `costPaid` is public on the wire.
+ */
+function playImpact(event: Extract<GameEvent, { type: "cardPlayed" }>, ctx: CueContext): readonly SoundCue[] {
+  const card = readable(ctx, event.defId);
+  if (card === undefined || card.type === "Trap" || card.type === "Field Trap") return NONE;
+  if (ctx.castOnDraw?.(event.instanceId) === true) return NONE;
+  const type: PlayType = card.type === "Field Spell" ? "field" : card.type === "Unit" ? "unit" : "spell";
+  return [playImpactCue(playTier(event.costPaid), type, event.player === ctx.view.viewer)];
+}
+
+/**
+ * R3332002: a readable Legendary's or Mythic's shared entrance sting, or none. A card with an intro of
+ * its own (music-cards.json) takes none: its intro is its sting, played whole or cut to its opening by
+ * the music director (musicDirector.ts), so the shared one would double it. Only a Legendary or Mythic
+ * with no intro keeps the shared brass, or a Mythic's prismatic, sting.
+ */
+function entranceSting(defId: string, rarity: Rarity | PrintedRarity | undefined, delayMs: number): readonly SoundCue[] {
+  if (rarity !== "Legendary" && rarity !== "Mythic") return NONE;
+  if (MUSIC_CARDS[defId]?.intro !== undefined) return NONE;
+  return [sfx("entrance", rarity === "Mythic" ? { mythic: true } : undefined, delayMs)];
 }
 
 /**
  * R2722002: a hidden card's sting as it reveals, on a seat that can read the card: a Legendary's or a
- * Mythic's the entrance its normal play gets, and a Cloaked card of a lower rarity (one that is no
- * Trap) its rarity's play sting. A lower-rarity Trap keeps the trap sting every Trap shares (R203).
+ * Mythic's the entrance its normal play gets (R3332002: none when its own intro is its sting), and a
+ * Cloaked card of a lower rarity (one that is no Trap) its rarity's play sting. A lower-rarity Trap
+ * keeps the trap sting every Trap shares (R203).
  */
 function revealSting(defId: string, ctx: CueContext): readonly SoundCue[] {
   const card = readable(ctx, defId);
   if (card === undefined) return NONE;
   const rarity = card.printedRarity ?? card.rarity;
-  if (rarity === "Legendary") return [sfx("entrance", undefined, STING_DELAY_MS)];
-  if (rarity === "Mythic") return [sfx("entrance", { mythic: true }, STING_DELAY_MS)];
+  if (rarity === "Legendary" || rarity === "Mythic") return entranceSting(defId, rarity, STING_DELAY_MS);
   if (card.type === "Trap" || card.type === "Field Trap") return NONE;
   const tier = STING_TIERS[rarity ?? "Token"];
   return tier === undefined ? NONE : [sfx("sting", tier === "common" ? undefined : { tier }, STING_DELAY_MS)];
@@ -404,13 +455,19 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
       if (kind === "trap" || event.formerId !== undefined) return [sfx("trapSet")];
       const arrive = arrival(event, ctx);
       if (kind === "unit") {
-        return [arrive, ...playSting(event, ctx), ...hookCues(ctx, event.defId, "play", VOICE_DELAY_MS, VOICE_PRIORITY.play)];
+        return [
+          arrive,
+          ...playImpact(event, ctx),
+          ...playSting(event, ctx),
+          ...hookCues(ctx, event.defId, "play", VOICE_DELAY_MS, VOICE_PRIORITY.play),
+        ];
       }
       if (kind === "spell") {
         const card = readable(ctx, event.defId);
         const timbre = card === undefined ? undefined : timbreFor(card);
         return [
           arrive,
+          ...playImpact(event, ctx),
           ...playSting(event, ctx),
           sfx("spell", timbre === undefined ? undefined : { timbre }, SPELL_SHIMMER_DELAY_MS),
           ...hookCues(ctx, event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.play),
@@ -433,13 +490,16 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   },
   divineShieldLost: { sfx: "shieldShatter", cues: () => [sfx("shieldShatter")] },
   // R204: a death line on `destroyed` (R89 carries the defId), tokens included; never on a bounce,
-  // an exile or a transform.
+  // an exile or a transform. R3334003: a Starship's wreck groans as its hull breaks (starshipSounds.ts),
+  // in its death sting's place once the director has sent the groan; its line and effect stay.
   destroyed: {
     sfx: "death",
-    cues: (event, ctx) =>
-      entryFor(ctx.lines, event.defId)?.kind === "unit"
-        ? [sfx("death"), ...hookCues(ctx, event.defId, "death", DEATH_VOICE_DELAY_MS, VOICE_PRIORITY.react)]
-        : [sfx("death")],
+    cues: (event, ctx) => {
+      const sting = ctx.starshipSounded?.(event) === true ? NONE : [sfx("death")];
+      return entryFor(ctx.lines, event.defId)?.kind === "unit"
+        ? [...sting, ...hookCues(ctx, event.defId, "death", DEATH_VOICE_DELAY_MS, VOICE_PRIORITY.react)]
+        : sting;
+    },
   },
   enteredGraveyard: silent("the destroy, discard or resolve that sent it there already sounded"),
   exiled: { sfx: "poof", cues: () => [sfx("poof")] },
@@ -499,9 +559,16 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
     cues: (event, ctx) =>
       event.again === true
         ? [sfx("spell")]
-        : [sfx("trapSting"), ...revealSting(event.defId, ctx), ...hookCues(ctx, event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.react)],
+        : [
+            sfx("trapSnap", event.controller === ctx.view.viewer ? undefined : { gain: PLAY_IMPACT_OPPONENT_GAIN }),
+            sfx("trapSting"),
+            ...revealSting(event.defId, ctx),
+            ...hookCues(ctx, event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.react),
+          ],
   },
-  attackDeclared: { sfx: "attack", cues: () => [sfx("attack")] },
+  // R3334002: a launched Starship's broadside sounds its weapons, or its ram (starshipSounds.ts), in the
+  // swing's place once the director has sent them.
+  attackDeclared: { sfx: "attack", cues: (event, ctx) => (ctx.starshipSounded?.(event) === true ? NONE : [sfx("attack")]) },
   attackCancelled: { sfx: "cancel", cues: () => [sfx("cancel")] },
   manaChanged: {
     sfx: "mana",
@@ -647,7 +714,12 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
 
   // Issue #1855: Anomalies, the board swap (R1855000)
   // The old board whooshes away; the `exiled` and `summoned` behind it sound the cards going and coming.
-  boardReplaced: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+  // R3337003: a Stinkyscape Anomaly's lay (R3337000's `anomaly`, public as the board is) sounds its own
+  // sting instead; any other replacement, or a code this build does not know, keeps the whoosh.
+  boardReplaced: {
+    sfx: "whoosh",
+    cues: (event) => (isAnomalyCode(event.anomaly) ? [sfx("anomaly", { anomaly: event.anomaly })] : [sfx("whoosh")]),
+  },
 
   // ---- Issue #2652: coin flips and die rolls (R2652001) ----
   // The batch spins as the slot machine's reel does, before the outcome sounds its own result.
@@ -741,5 +813,5 @@ function panned(event: GameEvent, ctx: CueContext, cues: readonly SoundCue[]): r
 export function cuesFor(event: GameEvent, ctx: CueContext): readonly SoundCue[] {
   const row = soundRow(event.type);
   if (row === undefined) return NONE;
-  return panned(event, ctx, row.cues(event, ctx));
+  return [...panned(event, ctx, row.cues(event, ctx)), ...battleshipCues(event, ctx), ...signatureCues(event)];
 }

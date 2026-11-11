@@ -22,11 +22,12 @@ Every value is a constant of `crates/run/src/config.rs`. One the plan marks a st
 | `RUN_STARTER_SIZE` | The cards of a starting deck, at every level | [[§15.3]] |
 | `RUN_SLOT_LADDER` | The starting deck's slots at each level, from level 1, as counts of Common, Rare, Epic, Legendary, Mythic and Anything slots, each row holding `RUN_STARTER_SIZE`; a strawman | [[§15.3]] |
 | `RUN_STARTER_CARDS` | The cards any starting deck may hold before anything is extracted; placeholders until the designer's list, the Training Grounds Commons and Rares with the fewest script lines, in catalog order, the first `RUN_STARTER_SIZE` fitting level 1's slots | [[§15.3]] |
+| `RUN_PRESET_DECKS` | The named starting decks the start screen offers; placeholders | [[§15.3]] |
 | `RUN_LEVEL_EMBERS` | The Embers each step of `RUN_SLOT_LADDER` costs from the level before it; a strawman | [[§15.3]], [[§15.10]] |
 | `RUN_STARTER_ARTIFACTS_MAX` | The most artifacts a run starts with | [[§15.3]], [[§15.4]] |
 | `RUN_STARTER_ARTIFACT_POINTS` | The most points of artifacts a run starts with | [[§15.3]], [[§15.4]] |
 | `RUN_TIER_POINTS` | An artifact's points by its tier | [[§15.3]], [[§15.4]] |
-| `RUN_MAX_HP` | The health a run starts with and the most it heals to, before passives raise it | [[§15.4]] |
+| `RUN_MAX_HP` | The health a run starts with, before wins, campfires, events and passives raise it | [[§15.4]] |
 | `RUN_ENEMY_HEALTH` | Each enemy's hero health by its kind of fight; a strawman | [[§15.6]] |
 | `RUN_LOOMING_PRESENCE` | The enemy artifact that gives its carrier the Medium AI's resources in a fight | [[§15.6]] |
 | `RUN_OVERWHELMING_PRESENCE` | The enemy artifact that gives its carrier the Hard AI's resources in a fight, outranking Looming Presence when an enemy carries both | [[§15.6]] |
@@ -39,7 +40,8 @@ Every value is a constant of `crates/run/src/config.rs`. One the plan marks a st
 | `RUN_KEEP` | The cards of an opened pack the player keeps, before passives add more | [[§15.7]] |
 | `RUN_KEEP_MAX` | The most cards of a pack anyone keeps | [[§15.7]] |
 | `RUN_DECK_MAX` | The most cards a run deck holds, the engine's `LIBRARY_CAP` ([[R2701000]]) | [[§15.7]] |
-| `RUN_CAMPFIRE_HEAL_PERCENT` | A campfire's heal, in percent of the run's max HP | [[§15.8]] |
+| `RUN_WIN_MAX_HP` | The max HP every won fight adds for the rest of the run, before refilling to the new max | [[§15.6]] |
+| `RUN_CAMPFIRE_MAX_HP` | The max HP a campfire's rest adds for the rest of the run | [[§15.8]] |
 | `RUN_CAMPFIRE_REMOVE` | The cards a campfire removes | [[§15.8]] |
 | `RUN_SHOP_CARDS` | The cards a shop sells | [[§15.8]] |
 | `RUN_SHOP_ARTIFACTS` | The artifacts a shop sells | [[§15.8]] |
@@ -90,6 +92,8 @@ Daily run: `run_daily_seed(date, n)`, so everyone's nth run of a day shares a se
 
 `RunFile` is the setup, the starting unlocks and the action log. `run_fold` replays it and names the first refused step.
 
+A run folds under the catalog version it started on: the device keeps the version with the run file, and the rest of the run plays on the content it was dealt from ([[R3496000]]). A run kept before versions were kept folds as today's ([[R3496000]]).
+
 `run_reduce` rebuilds the `Rng` from the seed and cursor, as the engine's reduce does. A refused action changes nothing.
 
 ### 15.3 The starting deck
@@ -105,6 +109,8 @@ Embers buy the next level at `RUN_LEVEL_EMBERS`, up to the ladder's top.
 Artifacts: at most `RUN_STARTER_ARTIFACTS_MAX`, distinct, worth at most `RUN_STARTER_ARTIFACT_POINTS` by `RUN_TIER_POINTS`. Each is Combat or Economic, not Unobtainable, and a starter or extracted ([[§15.4]]).
 
 Curses: any of the content's ([[§15.9]]).
+
+The start screen offers the named starting decks of `RUN_PRESET_DECKS` (placeholders until the designer's lists): each holds `RUN_STARTER_SIZE` distinct cards of `RUN_STARTER_CARDS` fitting level 1's slots, so any player may pick any of them from their first run, then tweak the picks in the builder.
 
 `run_check_setup` gives the reason for a refusal. `run_create` also refuses content that lacks a normal, elite, mini-boss or final-boss enemy, or an event.
 
@@ -134,11 +140,11 @@ Artifacts start at level 1, and a shop raises them, at `RUN_LEVEL_TICKETS` times
 - Coins or Tickets per won fight;
 - more max HP.
 
-Max HP is `RUN_MAX_HP` plus the max-HP effects. A rise heals by the rise, and HP never stays above the max.
+Max HP is `RUN_MAX_HP`, plus the run's own permanent changes (each won fight's `RUN_WIN_MAX_HP` ([[§15.6]], [[R3584000]]), each campfire's `RUN_CAMPFIRE_MAX_HP` ([[§15.8]]) and each event option's `max_hp` ([[§15.8]], [[R3584001]])), plus the max-HP effects. A rise heals by the rise, and HP never stays above the max.
 
 **Fight effects** (a Combat artifact's): more cards in the opening hand, or Armor the hero starts each fight with ([[R2922000]]).
 
-No run holds an artifact twice. Every roll (reward, chest, event, shop) deals a Combat or Economic artifact that is neither Unobtainable nor held, and a boss drop already held is not offered.
+No run holds an artifact twice. Every roll (reward, chest, event, shop) deals a Combat or Economic artifact that is neither Unobtainable nor held, and a boss drop already held is replaced by another ([[§15.7]], [[R3286000]]).
 
 Unobtainable: a final boss's own artifact. Nothing else deals it, and it can neither start a run nor be extracted.
 
@@ -158,13 +164,15 @@ The whole map (enemies, decks, bosses' drops, events) is dealt at the start, and
 
 The player steps onto any node of the next row.
 
+Between fights the top bar shows HP, Coins, Tickets, the deck's size, the relics held and the score, and a Your run panel lists the deck (Radiant and buffed cards marked), the relics and blessings held with their text, the curses taken with their names and text, and the seed, which can be copied.
+
 ### 15.6 The fights
 
-**The human:** the run deck in order, with `HUMAN_HANDICAP`, its deck size the deck's length and its hero health the run's HP ([[R180]], [[R290]]). At setup, before the opening draw, each Radiant card is dealt Radiant ([[§5.2]]) and each buff is applied as one Buff ([[§6.3]]).
+**The human:** the run deck in order, with `HUMAN_HANDICAP`, its deck size the deck's length and its hero health the run's HP, always the max ([[R180]], [[R290]], [[R3584000]]). At setup, before the opening draw, each Radiant card is dealt Radiant ([[§5.2]]) and each buff is applied as one Buff ([[§6.3]]). A fight's game is built under the current catalog, as a fight started today is: a card the run holds that the catalog no longer knows is left out of the fight's deck, and stays in the run ([[R3496000]]).
 
 **The enemy:** its deck, with Easy's handicap (`AI_DIFFICULTY`), Medium's when it carries Looming Presence and Hard's with Overwhelming Presence; elites and bosses carry them. Its deck size is its deck's length and its hero health is `RUN_ENEMY_HEALTH` by kind.
 
-The game seed is the run's seed, row and column. Leaving a fight unfinished asks first: it is dealt again from its seed ([[R2706000]], [[R2972000]]).
+The game seed is the run's seed, row and column. A fight left unfinished waits where it stood: when the run, still on its fight, starts it again, the kept fight is resumed on its turn ([[R3476000]]). Leaving still asks first ([[R2706000]], [[R2972000]]).
 
 Enemy decks are random for now: the enemy's own cards, then the open pool up to `RUN_ENEMY_DECK_SIZE`.
 
@@ -176,7 +184,7 @@ A mini-boss always drops its content's artifact, or else one of `RUN_MINI_BOSS_D
 
 **The report:** won or not, the human's final health, damage dealt to the enemy's hero and units, healing on the human's side, cards drawn, turns.
 
-A win sets HP to the final health, kept between 1 and the max. Any other end drops HP to zero and ends the run.
+A win of any kind adds `RUN_WIN_MAX_HP` to the max for the rest of the run, then refills HP to the new max, whatever the hero's final health was ([[R3584000]]). Any other end drops HP to zero and ends the run.
 
 **Curses and Combat artifacts** change the two handicaps after Presence ([[R2922001]]). Each curse taken changes the enemy's once: more hero health, more opening cards, or more crystals every turn, bonus and cap together ([[R181]]). Each Combat artifact held changes the human's once per level: more opening cards ([[R182]]) or starting Armor ([[R2922000]]). A negative amount counts as none, and an enemy's own artifacts other than Presence change nothing. The placeholders' numbers are strawmen ([[§15.13]]).
 
@@ -184,11 +192,13 @@ A win sets HP to the final health, kept between 1 and the max. Any other end dro
 
 A won fight pays in this order.
 
-**First, currencies:** `RUN_COINS` and `RUN_TICKETS` by kind, plus the passives'.
+**First, health:** `RUN_WIN_MAX_HP` more max HP for the rest of the run, then HP refilled to the new max ([[R3584000]]).
 
-**Second, an artifact:** a boss's drop unless already held, otherwise one at `RUN_ARTIFACT_PERCENT`. It is taken or left before any pack.
+**Second, currencies:** `RUN_COINS` and `RUN_TICKETS` by kind, plus the passives'.
 
-**Third, four packs:** the beaten enemy's deck with its boss cards, a random one, a set's, and one of a card type, tag or rarity (a random pack when the pool lacks one).
+**Third, an artifact:** a boss's drop; a drop already held, or none, is replaced by a roll at `RUN_ARTIFACT_PERCENT`, a mini-boss's replacement of `RUN_MINI_BOSS_DROP_TIER` or better ([[R3286000]]). There is none when no artifact is left to roll. It is taken or left before any pack.
+
+**Fourth, four packs:** the beaten enemy's deck with its boss cards, a random one, a set's, and one of a card type, tag or rarity (a random pack when the pool lacks one).
 
 - The player opens one. It shows up to `RUN_PACK_SIZE` cards plus the passives', never a card the deck holds.
 - The player keeps exactly `RUN_KEEP` plus the passives', at most `RUN_KEEP_MAX`, at most what it shows and at most the room left in the deck. With a Skip passive they may keep none, for its Coins.
@@ -196,7 +206,7 @@ A won fight pays in this order.
 
 **Last, extraction:** after a mini-boss, one card of the deck or none, never the last card. After the final boss, one held artifact or none, never an Unobtainable one, and the run is won.
 
-What is extracted leaves the run at once and is unlocked for future starting decks.
+What is extracted leaves the run at once and is unlocked for future starting decks. A run that cannot be folded at all ends lost and still banks what it had extracted of the cards and artifacts the current content knows ([[R3496000]]).
 
 ### 15.8 The tiles
 
@@ -212,18 +222,18 @@ Discounts cut Coin prices only, and a price the run cannot pay is refused.
 
 **Campfire:** one free choice:
 
-- heal `RUN_CAMPFIRE_HEAL_PERCENT` of max HP, capped at the max;
+- rest: `RUN_CAMPFIRE_MAX_HP` more max HP for the rest of the run;
 - make a card that is not Radiant Radiant;
 - buff a card;
 - or remove `RUN_CAMPFIRE_REMOVE` different cards, leaving at least one.
 
-**Event** (placeholder stories): an option may change HP, Coins and Tickets, add a random open-pool card the deck lacks (none to a full deck, [[R2701000]]), or give an artifact. It is refused if HP would fall below 1 or it costs more than the run holds. Healing stops at the max.
+**Event** (placeholder stories): an option may change max HP ([[R3584001]]), Coins and Tickets, add a random open-pool card the deck lacks (none to a full deck, [[R2701000]]), or give an artifact. It is refused if max HP would fall below 1 or it costs more than the run holds. HP follows the max.
 
 **Chest,** on entry: `RUN_CHEST_COINS`, `RUN_CHEST_TICKETS`, and an artifact at `RUN_CHEST_ARTIFACT_PERCENT`.
 
 **Shrine** (a monastery or a statue): up to `RUN_SHRINE_OFFERS` blessings not held; the player takes one or none, for the rest of the run.
 
-Abandoning at any time ends a run, lost. The start screen asks first, and the map links back to the Play menu ([[R2972000]]). An ended run refuses every action.
+Abandoning at any time ends a run, lost, still scored and paid Embers under [[§15.10]]. A run whose version this build no longer carries, or whose log folds under no carried version, ends lost with no row, no score and no Embers because there is nothing to fold to score it ([[R3496000]]). The start screen asks first, and the map links back to the Play menu ([[R2972000]]). An ended run refuses every action.
 
 ### 15.9 Curses
 
@@ -244,11 +254,13 @@ Each also makes every fight's enemy stronger ([[§15.6]], [[R2922001]]).
 - `RUN_SCORE_DAMAGE`, `RUN_SCORE_HEALING` and `RUN_SCORE_CARD_DRAWN` per point of every fight's report, a lost fight's included;
 - then `RUN_SCORE_MINI_BOSS_PERCENT` percent per mini-boss beaten, then `RUN_SCORE_FINAL_BOSS_PERCENT` percent for the final boss, then the curse points' percent (`RUN_SCORE_CURSE_POINT_PERCENT`).
 
-Time and turns are shown beside the score, not in it.
+Time and turns are shown beside the score, not in it. A run's time is the time it was played: it counts only while the run is open and shown, so a run left and picked up later is not timed by the calendar ([[R3502000]]).
 
 **Embers** are earned only by playing: `run_embers`, the score divided by `RUN_SCORE_PER_EMBER`, paid when a run ends. They buy levels ([[§15.3]]) at `RUN_LEVEL_EMBERS`. Spending them on upgrading artifacts or buying buffs is not built.
 
 **Leaderboards:** deepest row, most curse points, top score and fastest win, with an on-screen timer. The Sandbox's stay on the device; the Campaign's hold checked runs.
+
+The run-over screen shows the run's seed, and a past run's details name its curses from the run's content; an id the content no longer holds shows as itself.
 
 **Stats:** `RunStats`'s fields, in words: nodes visited; fights, elites, ghosts, mini-bosses and bosses won; damage dealt, healing done, cards drawn and turns; damage taken and healing taken; Coins and Tickets earned and spent; cards kept, bought, removed, made Radiant and buffed; packs skipped; artifacts taken and leveled; blessings taken; events seen; chests opened.
 
@@ -274,7 +286,7 @@ Today, beating the final boss ends the run, won.
 
 The designer's content replaces the placeholders.
 
-**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill and prints each kind of fight's win rate and HP cost, the HP at each boss, the rows reached, the score and the Embers (#3065): a guide to tuning the strawmen, not a target.
+**Measuring it:** `cargo jackioh run-sim` plays seeded whole runs with the AI in the player's seat at [[R747000]]'s skill, from level 1 with no artifact or curse unless `--level`, `--artifacts` and `--curses` set them (each refused when the content lacks it), and prints each kind of fight's and each act's win rate, HP cost and turns, the max HP at each boss, the rows reached, the score by term (rows, wins, damage, healing, cards drawn, and what the boss percents and the curse percent add) and the Embers (#3065, #3481): a guide to tuning the strawmen, not a target.
 
 ### 15.13 Open questions
 

@@ -11,14 +11,28 @@
 // PLAYS IN PROGRESS (R506): a cue reads the innermost open play (`playing`), as #21 Hinder's rider and
 // #27's Radiant cards do. A sentinel play opens a frame no moment matches, and a sentinel draw marks nothing.
 // SET PIECES (R2800000): a board clear's held entry sends its bed as it starts (setPieceBeds.ts), and its
-// wipe's removals sound once, condensed, after the hold.
+// wipe's removals sound once, condensed, after the hold. THE STARSHIP (R3334000–R3334003): an entry of
+// its fuse run, broadside or wreck sends its own sounds as it starts, read off the view the entry shows
+// (starshipSounds.ts), and only the events they were sent for leave their row's swing or sting out
+// (`starshipSounded`): what is flushed unstarted (Reduce Motion) keeps it.
+// SIGNATURES (R3389000): the entry a signature's card makes its entrance in sends its bed as it starts
+// (signatureBeds.ts), beside its intro sting and its events' own sounds.
 
 import type { GameEvent, PlayerId, PlayerView, UnitView } from "@jackioh/shared";
 
-import { newEventsSince, type AnimationEntry } from "../game/animations.ts";
-import { FLUSH_GAP_MS, FLUSH_MAX_SFX, HIDDEN_DEF_ID, PAIR_OFFSET_MS, PLAY_STACK_MAX } from "./constants.ts";
+import { lastShuffleOf, newEventsSince, type AnimationEntry } from "../game/animations.ts";
+import {
+  FLUSH_GAP_MS,
+  FLUSH_MAX_SFX,
+  HIDDEN_DEF_ID,
+  PAIR_OFFSET_MS,
+  PLAY_STACK_MAX,
+  RIFFLE_SOUND_DELAY_MS,
+} from "./constants.ts";
 import { cuesFor, type CueCard, type CueContext, type PlayFrame } from "./cues.ts";
 import { setPieceBed } from "./setPieceBeds.ts";
+import { signatureBed } from "./signatureBeds.ts";
+import { starshipSounds } from "./starshipSounds.ts";
 import type { CardAudioTable, SoundCue, SoundSink } from "./types.ts";
 import { CARD_AUDIO } from "./voiceData.ts";
 
@@ -81,6 +95,8 @@ export function createSoundDirector(
   const voiced = new WeakSet<GameEvent>();
   /** Every event object of every view fed in: one the director did not owe is old news. */
   const known = new WeakSet<GameEvent>();
+  /** #3347: the last shuffle of each action's events, after which the decks riffle: one riffle per action. */
+  const riffleAfter = new WeakSet<GameEvent>();
   const lastMana = new Map<PlayerId, number>();
   /** Instances whose `cardPlayed` has sounded, so their `summoned` does not speak again (R204). */
   const played = new Set<string>();
@@ -91,6 +107,8 @@ export function createSoundDirector(
    * too: only its own public cast names it (fx/castOnDraw.ts), and its sting names nothing.
    */
   let drawnLast: { instanceId: string; player: PlayerId } | null = null;
+  /** R3334002, R3334003: the events whose Starship sound has been sent in place of their row's. */
+  const starshipSent = new WeakSet<GameEvent>();
 
   function ctx(view: PlayerView, castOnDraw: string | null): CueContext {
     return {
@@ -103,6 +121,7 @@ export function createSoundDirector(
       playing: () => plays[plays.length - 1] ?? null,
       castOnDraw: (instanceId) => castOnDraw !== null && instanceId === castOnDraw,
       random: rng,
+      starshipSounded: (event) => starshipSent.has(event),
       ...(card === undefined ? {} : { card }),
     };
   }
@@ -151,6 +170,7 @@ export function createSoundDirector(
     if (event.type === "cardPlayed" && event.instanceId !== HIDDEN_DEF_ID) played.add(event.instanceId);
     follow(event, cast !== null);
     observe?.(event, view);
+    if (riffleAfter.has(event)) return [...cues, { kind: "sfx", id: "riffle", delayMs: RIFFLE_SOUND_DELAY_MS }];
     return cues;
   }
 
@@ -168,6 +188,8 @@ export function createSoundDirector(
   function flush(items: readonly Owed[], offsetMs = 0): void {
     const effects: SoundCue[] = [];
     let endCue: SoundCue | null = null;
+    // R3497000: the viewer's own turn-start cue, kept like the game-over sting.
+    let turnCue: Extract<SoundCue, { kind: "sfx" }> | null = null;
     let line: Extract<SoundCue, { kind: "voice" }> | null = null;
     let cardEffect: Extract<SoundCue, { kind: "effect" }> | null = null;
 
@@ -182,6 +204,14 @@ export function createSoundDirector(
           if (cardEffect === null || cue.priority > cardEffect.priority) cardEffect = cue;
         } else if (item.event.type === "gameOver") {
           if (endCue === null) endCue = cue;
+        } else if (
+          cue.kind === "sfx" &&
+          cue.id === "turnStart" &&
+          item.event.type === "turnStarted" &&
+          item.event.player === item.view.viewer
+        ) {
+          // The last viewer-own turn start wins: the cue that matters when your clock runs.
+          turnCue = cue;
         } else {
           effects.push(cue);
         }
@@ -189,9 +219,10 @@ export function createSoundDirector(
     }
 
     // First cue of each SfxId, in stream order. The game-over stinger is held back for the end, so
-    // a same-id cue earlier in the burst gives way to it.
+    // a same-id cue earlier in the burst gives way to it; the turn-start cue is reserved the same way.
     const ids = new Set<string>();
     if (endCue !== null && endCue.kind === "sfx") ids.add(endCue.id);
+    if (turnCue !== null) ids.add(turnCue.id);
     const unique: SoundCue[] = [];
     for (const cue of effects) {
       if (cue.kind !== "sfx" || ids.has(cue.id)) continue;
@@ -199,6 +230,7 @@ export function createSoundDirector(
       unique.push(cue);
     }
     const kept = unique.slice(0, endCue === null ? FLUSH_MAX_SFX : FLUSH_MAX_SFX - 1);
+    if (turnCue !== null && !kept.includes(turnCue)) kept.push(turnCue);
     if (endCue !== null) kept.push(endCue);
     kept.forEach((cue, j) => {
       send(cue, offsetMs + j * FLUSH_GAP_MS);
@@ -222,7 +254,10 @@ export function createSoundDirector(
         return;
       }
       const planned = seen;
-      for (const event of newEventsSince(planned.events, view.events)) {
+      const batch = newEventsSince(planned.events, view.events);
+      const shuffle = lastShuffleOf(batch);
+      if (shuffle !== null) riffleAfter.add(shuffle);
+      for (const event of batch) {
         if (voiced.has(event) || isOwed(event)) continue;
         owed.push({ event, view: planned });
       }
@@ -237,12 +272,26 @@ export function createSoundDirector(
       if (at > 0) flush(owed.splice(0, at));
       // R2800000: a set piece's bed, laid across its hold.
       for (const cue of setPieceBed(entry)) send(cue, cue.delayMs);
+      // R3389000: a signature's bed, laid across the entry its card makes its entrance in.
+      for (const cue of signatureBed(entry)) send(cue, cue.delayMs);
+      // R3334000–R3334003: the Starship's own sounds, each at its beat of what the board draws.
+      const ship = starshipSounds(entry, entry.view);
+      for (const cue of ship.cues) send(cue, cue.delayMs);
+      for (const event of ship.standsFor) starshipSent.add(event);
 
       // Issue #124: a sweep or a whole-pile impact stands for many events, so voicing each would
       // stack a sound per card; condense the entry to one of each sfx and its most important line.
       // R2800000: so is a wipe, voiced once its set piece's hold is over; R2801000: a Starship's fuse run
-      // sounds once, and its launch roars as its hold ends, when it lifts off.
-      if (entry.sweep !== undefined || entry.zone !== undefined || entry.wipe !== undefined || entry.fuse !== undefined || entry.launch !== undefined) {
+      // sounds once, and its launch roars as its hold ends, when it lifts off; R3338000: a Terminus card's
+      // signature run is voiced once, condensed, after its hold.
+      if (
+        entry.sweep !== undefined ||
+        entry.zone !== undefined ||
+        entry.wipe !== undefined ||
+        entry.fuse !== undefined ||
+        entry.launch !== undefined ||
+        entry.signature !== undefined
+      ) {
         const items: Owed[] = [];
         for (const event of entry.events) {
           const index = owed.findIndex((item) => item.event === event);

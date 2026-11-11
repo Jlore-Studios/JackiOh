@@ -1,24 +1,31 @@
 // #936 review (finding 8): how often the social screens ask the server again. The friends list is the
 // social layer's dearest read, so off its screen it is read only while the friends panel is open
-// (#1831); an open conversation keeps CHAT_POLL_MS (`ChatPanel.test.tsx`).
-// The server is a stubbed `fetch` (`test/stubServer.ts`) and time is vitest's fake clock.
+// (#1831); an open conversation keeps CHAT_POLL_MS (`ChatPanel.test.tsx`). R3214000: while the tab's
+// social socket is live the poll sends nothing, and a push stands in for it. R3576000: a tab hidden for
+// HIDDEN_QUIET_MS lets its socket go, so the server can sleep.
+// The server is a stubbed `fetch` (`test/stubServer.ts`), the social socket a fake one
+// (`test/fakeSocket.ts`), and time is vitest's fake clock.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CHAT_POLL_MS, PRESENCE_HEARTBEAT_MS } from "@jackioh/server-config";
 
+import { RECONNECT_DELAYS_MS, RECONNECT_JITTER } from "../game/net.ts";
 import { rememberRead } from "../net/readCache.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { FRIENDS_PATH, type Challenge, type Friend } from "../net/social.ts";
+import { tokenFromProtocols } from "../net/socketProtocols.ts";
+import { fakeSockets, type FakeSocket } from "../test/fakeSocket.ts";
 import { settle } from "../test/settle.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
-import { stubServer, type StubServer } from "../test/stubServer.ts";
+import { must, stubServer, type StubServer } from "../test/stubServer.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
-import { FRIENDS_POLL_MS, SOCIAL_POLL_MS } from "./config.ts";
+import { FRIENDS_POLL_MS, HIDDEN_QUIET_MS, SOCIAL_POLL_MS } from "./config.ts";
 import { FriendsButton } from "./FriendsButton.tsx";
+import { setSocialSocketFactory } from "./socialSocket.ts";
 import { TogetherRoute } from "./TogetherRoute.tsx";
-import { friendsTestid, togetherTestid } from "./testids.ts";
+import { challengeToastTestid, friendsTestid, togetherTestid } from "./testids.ts";
 
 const ANN: Friend = {
   profileId: "f-ann",
@@ -35,6 +42,16 @@ const OUTGOING: Challenge = {
   from: { profileId: "profile-1", username: "Me#1" },
   to: { profileId: "f-bob", username: "Bob#3" },
   roomCode: "MNP567",
+  mode: "bo1",
+  expiresAt: "2099-01-01T00:00:00.000Z",
+};
+
+/** R3214000: a challenge a friend sent, pushed over the social socket. */
+const INCOMING: Challenge = {
+  challengeId: "ch-1",
+  from: { profileId: "f-ann", username: "Ann#2" },
+  to: { profileId: "profile-1", username: "Me#1" },
+  roomCode: "HJK234",
   mode: "bo1",
   expiresAt: "2099-01-01T00:00:00.000Z",
 };
@@ -299,5 +316,189 @@ describe("R3205000 a hidden tab's social reads", () => {
 
     await settle({ advance: 3 * SOCIAL_POLL_MS });
     expect(reads(server).social, "no challenge left open: the poll paused").toBe(first + 3);
+  });
+});
+
+describe("R3214000 the social socket stands in for the polls", () => {
+  let sockets: FakeSocket[] = [];
+  const socket = (): FakeSocket => must(sockets.at(-1), "the tab's social socket");
+  /** The socket opens and the server sends its first read: it is live. */
+  const goLive = async (challenges: Challenges = { incoming: [], outgoing: [] }): Promise<void> => {
+    socket().open();
+    socket().deliver({ type: "social", ...challenges, unread: {} });
+    await settle({ advance: 0 });
+  };
+
+  /** The backoff's first step (R1441): it reopens no sooner than the step, and no later than its jitter allows. */
+  const firstStepMs = RECONNECT_DELAYS_MS[0] ?? 0;
+  const firstStepLatestMs = Math.floor(firstStepMs * (1 + RECONNECT_JITTER));
+
+  beforeEach(() => {
+    const fake = fakeSockets();
+    sockets = fake.sockets;
+    setSocialSocketFactory(fake.factory);
+  });
+
+  afterEach(() => {
+    setSocialSocketFactory(null);
+  });
+
+  it("R3214000 while the connection is up no social poll is sent, and a pushed challenge shows", async () => {
+    const server = serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    expect(sockets).toHaveLength(1);
+    expect(new URL(socket().url).pathname).toBe("/ws/social");
+    expect(tokenFromProtocols(socket().protocols)).toBe("tok-polling");
+    const before = reads(server).social;
+    expect(screen.queryByTestId(challengeToastTestid.toast)).toBeNull();
+
+    await goLive({ incoming: [INCOMING], outgoing: [] });
+    expect(screen.getByTestId(challengeToastTestid.toast)).toHaveAttribute("data-challenge-id", INCOMING.challengeId);
+
+    await settle({ advance: 5 * SOCIAL_POLL_MS });
+    expect(reads(server).social).toBe(before);
+    expect(server.to("GET", "/api/challenges")).toHaveLength(0);
+    expect(server.to("GET", "/api/chat/unread")).toHaveLength(0);
+
+    socket().deliver({ type: "social", incoming: [], outgoing: [], unread: {} });
+    await settle({ advance: 0 });
+    expect(screen.queryByTestId(challengeToastTestid.toast), "the pushed read took it away").toBeNull();
+  });
+
+  it("R3214000 after the connection drops the social poll reads at once and resumes its pace", async () => {
+    const server = serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive();
+    await settle({ advance: 2 * SOCIAL_POLL_MS });
+    const before = reads(server).social;
+
+    socket().drop(1006);
+    await settle({ advance: 0 });
+    expect(reads(server).social, "the drop reads at once").toBe(before + 1);
+    expect(sockets, "the drop's poll opens no socket before the backoff's first step (R1441)").toHaveLength(1);
+    await settle({ advance: firstStepMs - 1 });
+    expect(sockets).toHaveLength(1);
+    await settle({ advance: firstStepLatestMs - firstStepMs + 1 });
+    expect(sockets, "the socket reopened on its backoff").toHaveLength(2);
+    await settle({ advance: SOCIAL_POLL_MS - firstStepLatestMs });
+    expect(reads(server).social, "then at its pace").toBe(before + 2);
+
+    await goLive();
+    await settle({ advance: 3 * SOCIAL_POLL_MS });
+    expect(reads(server).social, "live again: no poll").toBe(before + 2);
+  });
+
+  it("R3214000 a drop while the tab is hidden reads nothing until it shows (R3205000)", async () => {
+    const server = serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive();
+    const before = reads(server).social;
+
+    setVisibility("hidden");
+    socket().drop(1006);
+    await settle({ advance: 2 * SOCIAL_POLL_MS });
+    expect(reads(server).social, "hidden: no read on the drop, nor at the poll's pace").toBe(before);
+
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(reads(server).social, "shown: one read").toBe(before + 1);
+  });
+
+  it("R3214000 a friends push reads the open friends list again", async () => {
+    const server = serve();
+    render(<TogetherRoute />);
+    await settle({ advance: 0 });
+    await goLive();
+    const before = reads(server).friends;
+    expect(before).toBe(1);
+
+    socket().deliver({ type: "friends" });
+    await settle({ advance: 0 });
+    expect(reads(server).friends).toBe(before + 1);
+  });
+
+  it("R3214000 a friends push reads the open friends panel's list again, and a closed panel reads none", async () => {
+    const server = serve();
+    render(
+      <>
+        <ChallengeToast />
+        <FriendsButton placement="game" />
+      </>,
+    );
+    await settle({ advance: 0 });
+    await goLive();
+    socket().deliver({ type: "friends" });
+    await settle({ advance: 0 });
+    expect(reads(server).friends, "closed, the panel reads nothing").toBe(0);
+
+    fireEvent.click(screen.getByTestId(friendsTestid.button));
+    await settle({ advance: 0 });
+    expect(reads(server).friends).toBe(1);
+    socket().deliver({ type: "friends" });
+    await settle({ advance: 0 });
+    expect(reads(server).friends).toBe(2);
+  });
+
+  it("R3576000 a tab hidden for HIDDEN_QUIET_MS lets its socket go and reads nothing, and opens one again when it shows", async () => {
+    const server = serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive();
+    const before = reads(server).social;
+
+    setVisibility("hidden");
+    await settle({ advance: HIDDEN_QUIET_MS - 1 });
+    expect(socket().closedWith, "hidden for less, the socket stays").toBeNull();
+    await settle({ advance: 1 });
+    expect(socket().closedWith, "quiet: the socket is let go").not.toBeNull();
+
+    await settle({ advance: 5 * SOCIAL_POLL_MS });
+    expect(reads(server).social, "quiet: the paused poll reads nothing (R3205000)").toBe(before);
+    expect(sockets, "and no socket opens while it stays hidden").toHaveLength(1);
+
+    setVisibility("visible");
+    await settle({ advance: 0 });
+    expect(sockets, "shown: a socket opens again").toHaveLength(2);
+    expect(reads(server).social, "shown: one read").toBe(before + 1);
+    await goLive();
+    await settle({ advance: 3 * SOCIAL_POLL_MS });
+    expect(reads(server).social, "live again: no poll").toBe(before + 1);
+  });
+
+  it("R3576000 a tab that shows again before HIDDEN_QUIET_MS keeps its socket, and the count starts over", async () => {
+    serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive();
+
+    for (let glance = 0; glance < 3; glance += 1) {
+      setVisibility("hidden");
+      await settle({ advance: HIDDEN_QUIET_MS - 1 });
+      setVisibility("visible");
+      // Answers the woken page's probe (R1441), as the server would.
+      socket().deliver({ type: "social", incoming: [], outgoing: [], unread: {} });
+      await settle({ advance: 0 });
+    }
+    expect(sockets).toHaveLength(1);
+    expect(socket().closedWith).toBeNull();
+  });
+
+  it("R3576000 a quiet tab with a challenge of its own open goes on polling for it (R3205000)", async () => {
+    const server = serve(() => ({ incoming: [], outgoing: [OUTGOING] }));
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive({ incoming: [], outgoing: [OUTGOING] });
+    const before = reads(server).social;
+
+    setVisibility("hidden");
+    await settle({ advance: HIDDEN_QUIET_MS });
+    const atQuiet = reads(server).social;
+    expect(socket().closedWith, "quiet: the socket is let go").not.toBeNull();
+    expect(atQuiet, "the drop reads at once, since the challenge keeps the poll running").toBeGreaterThan(before);
+    await settle({ advance: 2 * SOCIAL_POLL_MS });
+    expect(reads(server).social, "and at its pace").toBe(atQuiet + 2);
   });
 });

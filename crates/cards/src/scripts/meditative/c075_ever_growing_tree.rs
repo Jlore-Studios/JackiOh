@@ -104,7 +104,7 @@ mod tests {
         }
     }
 
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const MANA_WELL: &str = "core-006";
     const WEAPONS: &str = "core-014";
     const ANTI_ONESHOT: &str = "core-073";
@@ -153,6 +153,7 @@ mod tests {
     }
 
     /// The def ids the open Discover offers.
+    // Differs from Scenario::offered: the open choice's modes, not the seat's legal actions.
     fn offered(s: &Scenario) -> Vec<String> {
         s.state()
             .pending

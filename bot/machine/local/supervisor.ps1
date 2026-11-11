@@ -10,22 +10,26 @@
 
   Each entry of config.json's `serve` is one runner label. A runner here is one ephemeral
   container: it registers with that one label (a single-use JIT config), takes one job and is
-  gone. While it is quiet and fewer than maxJobs jobs run here:
+  gone. The PC is cut into maxJobs slots (two halves of WSL's eight processors, containerCpus
+  each). While it is quiet and a slot is free:
   - a label with a job queued for it (in one of the entry's `workflows`) gets a runner;
   - a `standby` label (jackioh-selfplay-local) keeps one idle runner registered, so it shows Idle
     under Settings -> Actions -> Runners and a dispatch starts at once;
   - a label with a `home` (a night box subscription's, its login's volume) is served only once
     login.ps1 has made that volume.
-  An `ownSlot` label (jackioh-selfplay-local-gather, gather.yml) is outside maxJobs: it gets one
-  runner of its own while a job is queued for it, whatever the other labels' runners hold, and
-  keeps no standby. An entry's own `containerCpus` and `containerMemory` size its containers in
-  place of the global ones. A `priority` entry's runner (gather's, #2134) comes before the others'
-  in the Docker VM: it takes the CPU ahead of them while both want it, and under the VM's memory
-  pressure the kernel kills their job processes first (Start-Runner). The throttle below still
-  holds every runner alike, so each gives way to the owner's own programs.
+  An `ownSlot` label (jackioh-selfplay-local-gather, gather.yml) has a slot to itself while it has a
+  job: it gets a runner as soon as one is queued, whatever the other labels' runners hold, and
+  keeps no standby. While it has no job the other labels use its slot too, so the learn lane
+  trains on both halves once gather has played its patch. Every slot weighs the same: a runner
+  in a job gets containerCpus, except that the shared labels' runners split the slots the ownSlot
+  labels leave them (Target-Cpus). A gather job that lands while two shards hold both halves
+  takes its half at once, and the two play on a quarter each until one ends and is not replaced.
+  An entry's own `containerCpus` and `containerMemory` size its containers in place of the
+  global ones.
   An idle runner no label wants any more is retired after a minute. When it is not calm, every
   idle runner is retired at once, and a runner in the middle of a job is throttled to
-  throttledCpus (the job keeps going, slowly, and nothing is lost) until it is calm again.
+  throttledCpus (the job keeps going, slowly, and nothing is lost) until it is calm again, so
+  every runner gives way to the owner's own programs alike.
 
   Every heartbeatSeconds it writes a heartbeat (Send-Heartbeat): this PC's load, with and without
   its runners, the size of its memory, whether it is calm, and each runner container with the
@@ -55,6 +59,7 @@ $windowSize = [math]::Ceiling($cfg.calmSeconds / $cfg.sampleSeconds)
 $startCpuBelow = if ($null -ne $cfg.startCpuPercentBelow) { $cfg.startCpuPercentBelow } else { $cfg.cpuPercentBelow }
 $samples = New-Object System.Collections.Generic.Queue[object]
 $throttled = @{}      # container id -> $true while throttled
+$cpusSet = @{}        # container id -> the CPUs `docker update` last gave it
 $unwanted = @{}       # container id -> when it was first idle with no label wanting it
 $lastQueueCheck = [datetime]::MinValue
 $lastSweep = [datetime]::MinValue
@@ -222,7 +227,9 @@ function Get-QueuedLabels([string[]]$servable) {
   $seen = @{}
   $workflows = @($cfg.serve | Where-Object { $_.label -in $servable } | ForEach-Object { $_.workflows } | Select-Object -Unique)
   foreach ($wf in $workflows) {
-    foreach ($status in 'queued', 'in_progress') {
+    # GitHub can list a run as `pending` while its job is `queued` for a runner (a gather run behind
+    # its concurrency group did, 2026-11-09), so `pending` runs are read too.
+    foreach ($status in 'queued', 'pending', 'in_progress') {
       try {
         $runs = (GhJson @('api', "repos/$repo/actions/workflows/$wf/runs?status=$status&per_page=30")).workflow_runs
       } catch { continue }
@@ -269,23 +276,22 @@ function Start-Runner([string]$label, [string]$why) {
   # Codex sandboxes its commands with bubblewrap, which needs the user namespaces Docker's default
   # seccomp profile refuses.
   if ($entry.seccompUnconfined) { $argv += @('--security-opt', 'seccomp=unconfined') }
-  # A priority runner's cgroup weighs about five times another's (Docker 29 makes --cpu-shares 8192
-  # cpu.weight 532, against the default 100), so while both want the VM's 8 CPUs it gets its own 6
-  # first and the other the rest; alone, either has all of its --cpus. The runner
-  # writes PIPELINE_JOB_OOMSCOREADJ into every step's oom_score_adj (500 when it is unset,
+  # Every runner's cgroup weighs the same (no --cpu-shares), so the halves split the VM evenly. The
+  # runner writes PIPELINE_JOB_OOMSCOREADJ into every step's oom_score_adj (500 when it is unset,
   # actions/runner's ProcessInvoker). The kernel kills the process with the highest score, its share
-  # of the VM's memory in thousandths plus that value: 1000 for the rest puts any training step
-  # above a priority step's 200 (at most 200 plus its own 6 GB's share), so when the VM runs out of
-  # memory a training step goes first; the owner's own containers (0) score below either at the
-  # same size. Gather takes the global size: its build of jackioh-server outgrew 3 GB (#2134).
-  if ($entry.priority) { $argv += @('--cpu-shares', '8192', '-e', 'PIPELINE_JOB_OOMSCOREADJ=200') }
-  else { $argv += @('-e', 'PIPELINE_JOB_OOMSCOREADJ=1000') }
+  # of the VM's memory in thousandths plus that value, so at 1000 a runner's step goes before any of
+  # the owner's own containers (0) when the VM runs out of memory. Gather takes the global memory:
+  # its build of jackioh-server outgrew 3 GB (#2134).
+  $argv += @('-e', 'PIPELINE_JOB_OOMSCOREADJ=1000')
   $r = Run 'docker' ($argv + @($cfg.image))
   Remove-Item -Force $envFile -ErrorAction SilentlyContinue
   if ($r.Code -ne 0) {
     Log "could not start $name : $($r.Out)"
     Run 'gh' @('api', '-X', 'DELETE', "repos/$repo/actions/runners/$($jit.runner.id)") | Out-Null
   } else {
+    # `docker run -d` prints the full id first; `docker ps` names a container by its first 12.
+    $id = (@($r.Out -split "`n")[0]).Trim()
+    if ($id.Length -ge 12) { $cpusSet[$id.Substring(0, 12)] = [double]$containerCpus }
     Log "started $name ($why)"
   }
 }
@@ -300,13 +306,29 @@ function Stop-IdleRunner($runner, [string]$why) {
   Log "retired idle $($runner.Name) ($why)"
 }
 
-function Set-Throttle($runner, [bool]$on) {
-  if ([bool]$throttled[$runner.Id] -eq $on) { return }
-  $cpus = if ($on) { $cfg.throttledCpus } else { Cpus-Of $runner.Label }
-  if ((Run 'docker' @('update', '--cpus', "$cpus", $runner.Id)).Code -eq 0) {
-    $throttled[$runner.Id] = $on
-    Log ("{0} {1} to {2} CPUs" -f ($(if ($on) { 'throttled' } else { 'restored' })), $runner.Name, $cpus)
-  }
+# The CPUs a runner in a job gets now. While the PC is not calm, throttledCpus. Otherwise an ownSlot
+# label's runner gets its full size, and the shared labels' runners split evenly the slots the
+# ownSlot labels' runners leave them, each at most its full size: with gather in a job beside two
+# shards, gather gets its half and the shards a quarter each.
+function Target-Cpus($runner, $busy, [bool]$calm) {
+  if (-not $calm) { return [double]$cfg.throttledCpus }
+  $full = [double](Cpus-Of $runner.Label)
+  if (Own $runner.Label) { return $full }
+  $slots = [int]$cfg.maxJobs - @($busy | Where-Object { Own $_.Label }).Count
+  $sharers = [math]::Max(1, @($busy | Where-Object { -not (Own $_.Label) }).Count)
+  $share = [math]::Round([double]$cfg.containerCpus * [math]::Max(0, $slots) / $sharers, 2)
+  [math]::Max([double]$cfg.throttledCpus, [math]::Min($full, $share))
+}
+
+# Gives a runner in a job $cpus with `docker update`, once each time its share changes. A container
+# the supervisor has not set yet (one a supervisor before this one throttled) is set anyway.
+function Set-Cpus($runner, [double]$cpus, [bool]$calm) {
+  if ($cpusSet.ContainsKey($runner.Id) -and $cpusSet[$runner.Id] -eq $cpus) { return }
+  if ((Run 'docker' @('update', '--cpus', "$cpus", $runner.Id)).Code -ne 0) { return }
+  $cpusSet[$runner.Id] = $cpus
+  $throttled[$runner.Id] = -not $calm
+  $what = if (-not $calm) { 'throttled' } elseif ($cpus -lt (Cpus-Of $runner.Label)) { 'shared out' } else { 'restored' }
+  Log "$what $($runner.Name) to $cpus CPUs"
 }
 
 # GitHub keeps a JIT runner that never ran (its container died first) as offline; drop those.
@@ -412,9 +434,9 @@ function Wanted([string[]]$queuedLabels, [string[]]$servable, [int]$room) {
 }
 
 $ownLabels = @($cfg.serve | Where-Object { $_.ownSlot } | ForEach-Object { $_.label })
-$ownWords = if ($ownLabels.Count) { ", and one more each for $($ownLabels -join ', ')" } else { '' }
-Log ("supervisor up on $repo, serving {0}; calm = CPU < {1}% and memory < {2} GB for {3}s, and a runner starts only at CPU < {5}%; at most {4} job(s){6}; no GPU" -f `
-  (@($cfg.serve | ForEach-Object { $_.label }) -join ', '), $cfg.cpuPercentBelow, $cfg.memoryGBBelow, $cfg.calmSeconds, $cfg.maxJobs, $startCpuBelow, $ownWords)
+$ownWords = if ($ownLabels.Count) { ", one each to itself for $($ownLabels -join ', ') while it has a job" } else { '' }
+Log ("supervisor up on $repo, serving {0}; calm = CPU < {1}% and memory < {2} GB for {3}s, and a runner starts only at CPU < {5}%; {4} slot(s) of {7} CPUs{6}; no GPU" -f `
+  (@($cfg.serve | ForEach-Object { $_.label }) -join ', '), $cfg.cpuPercentBelow, $cfg.memoryGBBelow, $cfg.calmSeconds, $cfg.maxJobs, $startCpuBelow, $ownWords, $cfg.containerCpus)
 $wasState = $null
 while ($true) {
   $d = Run 'docker' @('info', '--format', '{{.ServerVersion}}') 30
@@ -444,7 +466,7 @@ while ($true) {
 
   $busy = @($runners | Where-Object Busy)
   $idle = @($runners | Where-Object { -not $_.Busy })
-  foreach ($r in $busy) { Set-Throttle $r (-not $calm); $unwanted.Remove($r.Id) }
+  foreach ($r in $busy) { Set-Cpus $r (Target-Cpus $r $busy $calm) $calm; $unwanted.Remove($r.Id) }
 
   if ($heartbeatSeconds -gt 0 -and ((Get-Date) - $lastHeartbeat).TotalSeconds -ge $heartbeatSeconds) {
     $lastHeartbeat = Get-Date
@@ -455,9 +477,14 @@ while ($true) {
     foreach ($r in $idle) { Stop-IdleRunner $r 'the PC is busy' }
     continue
   }
-  # maxJobs holds the shared labels' runners alone; an ownSlot label's is outside it.
+  # The slots the shared labels may fill: maxJobs, less one for each ownSlot label that has a runner
+  # here or had a job queued at the last queue check, so gather's half is kept for it from the
+  # moment its job queues.
+  $held = @($runners | ForEach-Object { $_.Label })
+  $ownHeld = @($ownLabels | Where-Object { $_ -in $held -or $_ -in $queued })
+  $cap = [math]::Max(0, [int]$cfg.maxJobs - $ownHeld.Count)
   $shared = @($runners | Where-Object { -not (Own $_.Label) })
-  $room = [int]$cfg.maxJobs - @($shared | Where-Object Busy).Count
+  $room = $cap - @($shared | Where-Object Busy).Count
   if ($room -le 0) {
     foreach ($r in @($idle | Where-Object { -not (Own $_.Label) })) { Stop-IdleRunner $r 'no room for another job' }
     $idle = @($idle | Where-Object { Own $_.Label })
@@ -465,7 +492,7 @@ while ($true) {
   }
 
   # With no room, only the ownSlot labels' workflows are read, and once a minute, not every 20 s: the
-  # learn lane holds the shared slot nearly all day, and each read costs `gh` calls on the owner's
+  # learn lane holds the shared slots nearly all day, and each read costs `gh` calls on the owner's
   # rate limit.
   $servable = @(Servable)
   $asked = if ($room -gt 0) { $servable } else { @($servable | Where-Object { Own $_ }) }
@@ -488,11 +515,10 @@ while ($true) {
     if (-not $unwanted[$r.Id]) { $unwanted[$r.Id] = Get-Date }
     elseif (((Get-Date) - $unwanted[$r.Id]).TotalMinutes -ge $retireGraceMinutes) { Stop-IdleRunner $r 'nothing wants it' }
   }
-  # Idle runners count against maxJobs too, so two jobs landing at once never run past it; an
-  # ownSlot label gets a runner only while it has none, busy or idle.
-  $held = @($runners | ForEach-Object { $_.Label })
-  $startable = @($missing | Where-Object {
-      if (Own $_) { $_ -notin $held } else { $shared.Count -lt [int]$cfg.maxJobs } })
+  # Idle runners count against the slots too, so two jobs landing at once never run past them; an
+  # ownSlot label gets a runner only while it has none, busy or idle, and before any shared one.
+  $startable = @($missing | Where-Object { Own $_ } | Where-Object { $_ -notin $held }) +
+    @($missing | Where-Object { -not (Own $_) } | Where-Object { $shared.Count -lt $cap })
   if ($quiet -and $startable.Count -and (Get-Date) -ge $nextStart) {
     $label = $startable[0]
     $why = if ($label -in $queued) { "a queued $label job" } else { "standby for $label" }

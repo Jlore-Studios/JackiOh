@@ -1,6 +1,7 @@
 // The GitHub releases (github.ts): one per shipped version, read as the Patch notes page reads it, a
 // pre-release while only staging has it, each tagged at the commit that brought it to main.
 
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,12 +10,15 @@ import { describe, expect, it } from "vitest";
 
 import { GITHUB_RELEASE_BODY_LIMIT } from "./constants.ts";
 import { FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, M1, M2, TIERED_PATCHES, TIERED_SNAPSHOTS, V1, V2, V3 } from "./fixtures.ts";
-import { githubReleases, markdownText, type GithubRelease, type ShippedRecord } from "./github.ts";
+import { githubReleases, markdownText, type GithubRelease, type GithubReleases, type ShippedRecord } from "./github.ts";
 import { releaseArtPath } from "./releaseArt.ts";
 import type { Release } from "./releases.ts";
 import type { Patch, Snapshot, TechnicalEntry } from "./source.ts";
 
 const SITES = { production: "https://prod.example", staging: "https://staging.example", patchNotes: "/patch-notes" };
+// #3601: the script's run over the whole history, in a process of its own, and what it may print.
+const SCRIPT_MS = 120_000;
+const SCRIPT_OUTPUT_BYTES = 256 * 1024 * 1024;
 const SHIPPED: readonly ShippedRecord[] = [
   { version: V1, commit: "c1" },
   { version: V2, commit: "c2" },
@@ -237,5 +241,46 @@ describe("GitHub releases of the real history", () => {
     const opened = releases.filter((entry) => entry.body.includes("\n## ")).map((entry) => entry.tag);
     expect(opened[0]).toBe("v0.1.0");
     expect(opened).toEqual(patches.filter((patch) => patch.tier === "major").map((patch) => patch.version));
+  });
+
+  // #3601: releases.yml runs the script in a process of its own, which must load the WebAssembly module
+  // itself (#3161's face model diffs a card's words); every case above shares the one test/setup.ts
+  // loaded, so none saw the script fail on every run for four days. The hosts are the script's own, so
+  // the bodies differ from these and are only held to be there.
+  it(
+    "are what scripts/github-releases.ts prints when run as releases.yml runs it (#3601)",
+    () => {
+      const web = join(dirname(fileURLToPath(import.meta.url)), "../..");
+      const run = spawnSync(process.execPath, ["--import", "tsx", "scripts/github-releases.ts"], {
+        cwd: web,
+        encoding: "utf8",
+        maxBuffer: SCRIPT_OUTPUT_BYTES,
+      });
+      expect(run.status, run.stderr).toBe(0);
+      const printed = JSON.parse(run.stdout) as GithubReleases;
+      const heads = (list: readonly GithubRelease[]) => list.map(({ tag, target, name, prerelease }) => ({ tag, target, name, prerelease }));
+      expect(printed.latest).toBe(latest);
+      expect(heads(printed.releases)).toEqual(heads(releases));
+      for (const entry of printed.releases) expect(entry.body, entry.tag).not.toBe("");
+    },
+    SCRIPT_MS,
+  );
+});
+
+// The workflow runs only on main, production and by hand, so a pull request holds its text here.
+describe("the workflow that publishes them (.github/workflows/releases.yml)", () => {
+  const workflow = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../../../.github/workflows/releases.yml"), "utf8");
+
+  it("builds the WebAssembly module before the script loads it (#3601)", () => {
+    const build = workflow.indexOf("run: sh scripts/build-wasm.sh");
+    expect(build).toBeGreaterThan(-1);
+    expect(build).toBeLessThan(workflow.indexOf("exec tsx scripts/github-releases.ts"));
+    expect(workflow).not.toContain('rust: "false"');
+  });
+
+  it("hands a failed run to Squishy, and closes it when a run publishes (#3632)", () => {
+    expect(workflow).toContain('TITLE: "CI: GitHub releases failed"');
+    expect(workflow).toContain('--add-assignee "$SQUISHY_LOGIN" --add-label "$SQUISHY_QUEUE"');
+    expect(workflow).toContain("needs.publish.result == 'failure' || needs.publish.result == 'success'");
   });
 });

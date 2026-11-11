@@ -6,10 +6,12 @@
 //   E2E_COMPONENT_PORT=5282 pnpm --dir e2e exec cypress run --component --browser chrome \
 //     --spec cypress/component/audio-recipes.cy.tsx
 
+import { PLAY_TIERS_ASCENDING } from "../../../apps/web/src/game/damageFeel.ts";
 import { buildMix } from "../../../apps/web/src/audio/mix.ts";
 import { DEFAULT_AUDIO_SETTINGS } from "../../../apps/web/src/audio/settings.ts";
 import { SFX, SFX_IDS, SFX_TIMBRES, type SfxRecipe } from "../../../apps/web/src/audio/sfx.ts";
 import { CARD_AUDIO, lineFor } from "../../../apps/web/src/audio/voiceData.ts";
+import { ANOMALY_CODES } from "../../../apps/web/src/cards/anomalies.ts";
 
 type SfxId = (typeof SFX_IDS)[number];
 type SfxParams = Parameters<SfxRecipe>[3];
@@ -38,6 +40,34 @@ const EXPECTED_IDS = [
   "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
+  // #3347: cards that move like cards.
+  "pickUp", "dragOver", "drop", "returnToHand", "deal", "riffle",
+  "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
+  "organ",
+  "anomaly",
+  "playImpact", "trapSnap",
+  // R3342000: the tile aura bell.
+  "auraTouch",
+  "starshipDock", "starshipIgnite", "starshipRoar", "starshipBeam", "starshipRepeater", "starshipCannon",
+  "starshipFlak", "starshipLauncher", "starshipRam", "starshipWreck",
+  // R3400001: Meditative+'s and Training Grounds' signatures.
+  "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
+  // R3402001: the ten Core signatures.
+  "silasScratch", "crucibleChoir", "hatchWeld", "pocketZip", "stadiumCheer", "jackpotReels", "pawnWaltz",
+  "wishWind", "heroicFanfare", "forgeAnvil",
+  // R3407001: Stinkyscape's signatures.
+  "ballotBeep", "lullabySigh", "compactTut", "glitchDrop", "harpGliss", "markerThunder", "stampTrill", "tillRattle",
+  "gavelSlam", "dockingChime", "keyboardPing", "synthSnap", "blobDrum", "warpSparkle", "tearChoir", "cackleThunder",
+  "kazooRatchet", "thrusterSniff", "marbleGong", "sanctumBell", "cashWhistle", "whisperClink", "crystalRise",
+  // R3405001: Meditative's signatures.
+  "bowlBreath", "peakFlute", "ticketHorn", "forgeQuench", "brushGuzheng", "wellGush", "minePick", "jadeZither",
+  "windChime", "marketGong", "chalkHush", "porcelainRoar", "bronzeGulp", "modemGuqin", "serverChoir", "dialupStutter",
+  "holoBow", "synthPops", "skullMutter", "keyJangle", "caneCrack", "caneThunder", "rootCreak", "chalkGasp",
+  "frostPages", "coinCheer", "totemDrums", "templeDie", "golemStomp", "klaxonSlam", "cellSlam", "hangarRev",
+  // R3395000: Stinkyscape 001 to 090's signatures.
+  "vaultHiss", "safeChirp", "stoneChime", "magiChord", "lectureRumble", "pressStamp", "corvetteRoar", "popGasp",
+  "geigerHum", "wireRatchet", "beamWhine", "rattleSteam", "breechBoom", "flakWind", "crunchJackpot", "choirHulls",
+  "hornEcho", "jetSnap", "whiteRing", "hullDrills", "klaxonSputter", "moltenSnarl", "shutterPurr", "venomDrip",
 ] as const;
 
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
@@ -124,6 +154,141 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   tapNeon: 150,
   tapParchment: 160,
   tapAstral: 240,
+  // #3347: cards that move like cards.
+  pickUp: 90,
+  dragOver: 60,
+  drop: 140,
+  returnToHand: 200,
+  deal: 80,
+  riffle: 500,
+  // R3336000: the Drone Battleship.
+  horn: 950,
+  domeFlare: 800,
+  bayDoor: 650,
+  reactorPulse: 650,
+  deckShear: 550,
+  // R3338000: the Terminus set pieces' organ.
+  organ: 2000,
+  // R3337003: an Anomaly's sting, one voice per board.
+  anomaly: 1200,
+  // R3346000: a play's cost impact and a firing trap's snap.
+  playImpact: 500,
+  trapSnap: 200,
+  // R3342000: the tile aura bell.
+  auraTouch: 200,
+  // R3334000–R3334003: the Starship's moments.
+  starshipDock: 450,
+  starshipIgnite: 700,
+  starshipRoar: 1200,
+  starshipBeam: 400,
+  starshipRepeater: 350,
+  starshipCannon: 600,
+  starshipFlak: 500,
+  starshipLauncher: 450,
+  starshipRam: 500,
+  starshipWreck: 1100,
+  // R3400001.
+  inkSummit: 1100,
+  plowHeave: 1300,
+  cursorTear: 1400,
+  seanceChant: 1500,
+  slateRap: 1300,
+  diceGong: 1600,
+  timberLash: 1200,
+  pencilArpeggio: 1400,
+  // R3402001: the ten Core signatures.
+  silasScratch: 1250,
+  crucibleChoir: 1170,
+  hatchWeld: 1550,
+  pocketZip: 1170,
+  stadiumCheer: 1550,
+  jackpotReels: 1190,
+  pawnWaltz: 2500,
+  wishWind: 1900,
+  heroicFanfare: 2500,
+  forgeAnvil: 1900,
+  // R3407001: Stinkyscape's signatures.
+  ballotBeep: 1300,
+  lullabySigh: 1500,
+  compactTut: 1300,
+  glitchDrop: 1500,
+  harpGliss: 1500,
+  markerThunder: 1500,
+  stampTrill: 1400,
+  tillRattle: 1600,
+  gavelSlam: 1400,
+  dockingChime: 1600,
+  keyboardPing: 1200,
+  synthSnap: 1400,
+  blobDrum: 1500,
+  warpSparkle: 1600,
+  tearChoir: 1500,
+  cackleThunder: 1600,
+  kazooRatchet: 1600,
+  thrusterSniff: 1600,
+  marbleGong: 1600,
+  sanctumBell: 1600,
+  cashWhistle: 1600,
+  whisperClink: 1200,
+  crystalRise: 1600,
+  // R3405001.
+  bowlBreath: 1500,
+  peakFlute: 1500,
+  ticketHorn: 1300,
+  forgeQuench: 1500,
+  brushGuzheng: 1500,
+  wellGush: 1400,
+  minePick: 1500,
+  jadeZither: 1500,
+  windChime: 1600,
+  marketGong: 1500,
+  chalkHush: 1500,
+  porcelainRoar: 1600,
+  bronzeGulp: 1500,
+  modemGuqin: 1400,
+  serverChoir: 1600,
+  dialupStutter: 1200,
+  holoBow: 1300,
+  synthPops: 1200,
+  skullMutter: 1400,
+  keyJangle: 1400,
+  caneCrack: 1100,
+  caneThunder: 1600,
+  rootCreak: 1500,
+  chalkGasp: 1300,
+  frostPages: 1500,
+  coinCheer: 1400,
+  totemDrums: 1400,
+  templeDie: 1400,
+  golemStomp: 1500,
+  klaxonSlam: 1600,
+  cellSlam: 1500,
+  hangarRev: 1600,
+  // R3395000.
+  vaultHiss: 1400,
+  safeChirp: 1200,
+  stoneChime: 1600,
+  magiChord: 1500,
+  lectureRumble: 1600,
+  pressStamp: 1300,
+  corvetteRoar: 1450,
+  popGasp: 1200,
+  geigerHum: 1400,
+  wireRatchet: 1600,
+  beamWhine: 1450,
+  rattleSteam: 1350,
+  breechBoom: 1500,
+  flakWind: 1600,
+  crunchJackpot: 1500,
+  choirHulls: 1600,
+  hornEcho: 1500,
+  jetSnap: 1300,
+  whiteRing: 1600,
+  hullDrills: 1500,
+  klaxonSputter: 1600,
+  moltenSnarl: 1500,
+  shutterPurr: 1400,
+  venomDrip: 1400,
 };
 
 /** B14 parameter sets used here too. */
@@ -210,10 +375,16 @@ describe("polish 2 — SFX recipes rendered by a real browser", () => {
         { id: "spell", params: { timbre } },
       ]),
       { id: "entrance", params: { mythic: true } },
+      // R3346000: a play's impact at every cost tier, in each type's colour.
+      ...PLAY_TIERS_ASCENDING.flatMap((playTier): { id: SfxId; params: SfxParams }[] =>
+        (["unit", "spell", "field"] as const).map((playType) => ({ id: "playImpact", params: { playTier, playType } })),
+      ),
       // R506 variants outside PARAM_SETS.
       { id: "chaosRoll", params: { amount: 3 } },
       { id: "brand", params: { release: true } },
       { id: "clockTick", params: { amount: 10 } },
+      // R3337003: each Anomaly's own sting.
+      ...ANOMALY_CODES.map((anomaly): { id: SfxId; params: SfxParams } => ({ id: "anomaly", params: { anomaly } })),
     ];
     const renders = Promise.all(cases.map(async ({ id, params }) => ({ id, params, samples: await render(id, params) })));
     cy.wrap(renders, { timeout: RENDER_TIMEOUT_MS, log: false }).then((results) => {
@@ -353,6 +524,37 @@ const ROUTINE: readonly Cue[] = [
   ...(["armorClank", "armorRing", "overkill", "crumble", "unlock", "steal", "give", "counterspell", "bleat", "fuse", "degrade", "upgrade"] as const).map(
     (id): Cue => ({ id, params: {} }),
   ),
+  // R3400001: the signatures, each a card's own moment at a routine level.
+  ...(["inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio"] as const).map((id): Cue => ({ id, params: {} })),
+  // R3402001: the ten Core signatures.
+  ...(["silasScratch", "crucibleChoir", "hatchWeld", "pocketZip", "stadiumCheer", "jackpotReels", "pawnWaltz", "wishWind", "heroicFanfare", "forgeAnvil"] as const).map(
+    (id): Cue => ({ id, params: {} }),
+  ),
+  // R3407001: Stinkyscape's signatures, at the same routine level.
+  ...(
+    [
+      "ballotBeep", "lullabySigh", "compactTut", "glitchDrop", "harpGliss", "markerThunder", "stampTrill", "tillRattle",
+      "gavelSlam", "dockingChime", "keyboardPing", "synthSnap", "blobDrum", "warpSparkle", "tearChoir", "cackleThunder",
+      "kazooRatchet", "thrusterSniff", "marbleGong", "sanctumBell", "cashWhistle", "whisperClink", "crystalRise",
+    ] as const
+  ).map((id): Cue => ({ id, params: {} })),
+  // R3405001: Meditative's signatures, at the same level.
+  ...(
+    [
+      "bowlBreath", "peakFlute", "ticketHorn", "forgeQuench", "brushGuzheng", "wellGush", "minePick", "jadeZither",
+      "windChime", "marketGong", "chalkHush", "porcelainRoar", "bronzeGulp", "modemGuqin", "serverChoir", "dialupStutter",
+      "holoBow", "synthPops", "skullMutter", "keyJangle", "caneCrack", "caneThunder", "rootCreak", "chalkGasp",
+      "frostPages", "coinCheer", "totemDrums", "templeDie", "golemStomp", "klaxonSlam", "cellSlam", "hangarRev",
+    ] as const
+  ).map((id): Cue => ({ id, params: {} })),
+  // R3395000: Stinkyscape 001 to 090's signatures, at the same level.
+  ...(
+    [
+      "vaultHiss", "safeChirp", "stoneChime", "magiChord", "lectureRumble", "pressStamp", "corvetteRoar", "popGasp",
+      "geigerHum", "wireRatchet", "beamWhine", "rattleSteam", "breechBoom", "flakWind", "crunchJackpot", "choirHulls",
+      "hornEcho", "jetSnap", "whiteRing", "hullDrills", "klaxonSputter", "moltenSnarl", "shutterPurr", "venomDrip",
+    ] as const
+  ).map((id): Cue => ({ id, params: {} })),
 ];
 const ROUTINE_BAND = [-12, -4] as const;
 const UI_BANDS: Readonly<Record<"uiClick" | "uiHover", readonly [number, number]>> = { uiClick: [-15, -9], uiHover: [-22, -15] };

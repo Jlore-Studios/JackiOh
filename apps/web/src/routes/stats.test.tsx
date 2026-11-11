@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { CATALOG_VERSION } from "@jackioh/cards";
 import { SHIPPED_SETS } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -23,6 +24,7 @@ import { expectEmptyState } from "../test/empty.ts";
 import { pressBack } from "../test/history.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { at } from "../test/stubServer.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
 import StatsRoute from "./stats.tsx";
 
@@ -328,6 +330,13 @@ describe("R654 public statistics route", () => {
     expect(document.body.textContent).not.toContain("AI games + live games (provisional)");
   });
 
+  it("R3223000 the screen has one visible h1, the PageTitle", async () => {
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.summaryTiles, undefined, SLOW)).toBeInTheDocument();
+    expectOnePageTitle("Statistics");
+  });
+
   it("R1646000 the fixed top keeps one summary tile, the patch's games, and no top or lowest card", async () => {
     render(<StatsRoute />);
 
@@ -581,7 +590,7 @@ describe("R654 public statistics route", () => {
     render(<SiteFooter />);
     const footerLink = screen.getByTestId(siteFooterTestid.stats);
     expect(footerLink).toHaveAttribute("href", "/stats");
-    expect(footerLink).toHaveTextContent("Stats");
+    expect(footerLink).toHaveTextContent("Statistics");
   });
 
   it("R2325000 R661 shows no banner, no reading notes, no source and no live-game count", async () => {
@@ -706,7 +715,7 @@ describe("R654 public statistics route", () => {
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
     expect(screen.queryByTestId(statsTestid.cardsGrid)).not.toBeInTheDocument();
 
-    expect(screen.getByText("Columns:")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Columns" })).toBeInTheDocument();
 
     const viewGridBtn = screen.getByTestId(statsTestid.viewGrid);
     const viewTableBtn = screen.getByTestId(statsTestid.viewTable);
@@ -721,7 +730,7 @@ describe("R654 public statistics route", () => {
     expect(screen.getByTestId(statsTestid.cardsGrid)).toBeInTheDocument();
     expect(screen.queryByTestId(statsTestid.cardsTable)).not.toBeInTheDocument();
 
-    expect(screen.queryByText("Columns:")).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Columns" })).not.toBeInTheDocument();
 
     const gridItems = screen.getByTestId(statsTestid.cardsGrid).querySelectorAll("li.stats-grid-item");
     expect(gridItems).toHaveLength(3);
@@ -729,17 +738,49 @@ describe("R654 public statistics route", () => {
     await user.click(viewTableBtn);
     expect(screen.getByTestId(statsTestid.cardsTable)).toBeInTheDocument();
     expect(screen.queryByTestId(statsTestid.cardsGrid)).not.toBeInTheDocument();
-    expect(screen.getByText("Columns:")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Columns" })).toBeInTheDocument();
   });
 
-  it("shows every column by default", async () => {
+  it("R3324003 shows every column by default, and each Columns toggle is a pressed button that hides its column", async () => {
+    const user = userEvent.setup();
     render(<StatsRoute />);
 
-    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const games = screen.getByTestId(statsTestid.columnGames);
+    const playRate = screen.getByTestId(statsTestid.columnPlayRate);
+    expect(within(screen.getByRole("group", { name: "Columns" })).getAllByRole("button")).toEqual([games, playRate]);
+    expect(games).toHaveAttribute("aria-pressed", "true");
+    expect(playRate).toHaveAttribute("aria-pressed", "true");
+    expect(within(table).getByRole("columnheader", { name: /Play rate/i })).toBeInTheDocument();
 
-    expect(screen.getByLabelText("Games")).toBeChecked();
-    expect(screen.getByLabelText("Play rate")).toBeChecked();
-    expect(screen.getByRole("columnheader", { name: /Play rate/i })).toBeInTheDocument();
+    await user.click(playRate);
+    expect(playRate).toHaveAttribute("aria-pressed", "false");
+    expect(within(screen.getByTestId(statsTestid.cardsTable)).queryByRole("columnheader", { name: /Play rate/i })).toBeNull();
+    await user.click(playRate);
+    expect(within(screen.getByTestId(statsTestid.cardsTable)).getByRole("columnheader", { name: /Play rate/i })).toBeInTheDocument();
+  });
+
+  it("R3324003 every on/off control of the Cards tab is a pressed button in the Segmented's look, in one row of labelled groups, and none is a checkbox", async () => {
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    const options = document.querySelector(".stats-options");
+    expect(options).not.toBeNull();
+    const row = options as HTMLElement;
+    for (const name of ["View", "Columns"]) expect(row).toContainElement(screen.getByRole("group", { name }));
+    expect(row).toContainElement(screen.getByTestId(statsTestid.sortSelect));
+    for (const id of [statsTestid.viewTable, statsTestid.viewGrid, statsTestid.rangesToggle, statsTestid.columnGames, statsTestid.columnPlayRate]) {
+      const control = screen.getByTestId(id);
+      expect(row).toContainElement(control);
+      expect(control.tagName).toBe("BUTTON");
+      expect(control).toHaveClass("stats-view-btn");
+      // The shared look (#3222, tabs.css): a pressed one wears the Segmented's selected skin.
+      expect(control).toHaveClass("segmented__item");
+      expect(control.classList.contains("segmented__item--selected")).toBe(control.getAttribute("aria-pressed") === "true");
+    }
+    // The sort direction is a plain button with the secondary role (buttons.css), not a link.
+    expect(screen.getByTestId(statsTestid.sortDir)).not.toHaveClass("link-button");
   });
 });
 
@@ -761,7 +802,7 @@ describe("R377 public statistics match type", () => {
     expect([...select.options].map((option) => option.textContent)).toEqual([
       "All modes",
       "Constructed",
-      "All Random",
+      "All random",
       "Best of 1",
       "Conquest",
     ]);
@@ -1232,7 +1273,7 @@ describe("the card drill-down dialog", () => {
     fireEvent.keyDown(row, { key: "Enter" });
     fireEvent.click(screen.getByRole("dialog"));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    const scrim = container.querySelector(".stats-modal-scrim");
+    const scrim = container.querySelector(".dialog-scrim");
     if (scrim === null) throw new Error("no scrim");
     fireEvent.click(scrim);
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -1277,13 +1318,14 @@ describe("the card drill-down dialog", () => {
       expect(previous).toHaveFocus();
     }
 
+    // R3221000: from the page behind, Tab comes back in on the first stop and Shift+Tab on the last, the ✕.
     const behind = screen.getByTestId(statsTestid.searchInput);
     behind.focus();
     press("Tab");
-    expect(close).toHaveFocus();
+    expect(radiant).toHaveFocus();
     behind.focus();
     press("Tab", { shiftKey: true });
-    expect(retry).toHaveFocus();
+    expect(close).toHaveFocus();
   });
 
   it("R2127000 Back closes the breakdown, gives the focus back to its row and keeps /stats with its tab and filters, a filter changed while it was open among them; with none open Back leaves", async () => {
@@ -1599,6 +1641,37 @@ describe("R1966000 the Sets tab", () => {
     expect(asked.every((url) => !url.searchParams.has("rarity") && !url.searchParams.has("cost"))).toBe(true);
   });
 
+  it("#3222 stats tabs answer arrow keys, moving between Cards, Sets, and Players", async () => {
+    serveSets();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+
+    const tablist = screen.getByRole("tablist", { name: "Statistics views" });
+    const cardsTab = screen.getByTestId(statsTestid.tabCards);
+    const setsTab = screen.getByTestId(statsTestid.tabSets);
+    const playersTab = screen.getByTestId(statsTestid.tabPlayers);
+
+    expect(cardsTab).toHaveAttribute("aria-selected", "true");
+    expect(cardsTab).toHaveAttribute("tabindex", "0");
+    expect(setsTab).toHaveAttribute("tabindex", "-1");
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(setsTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(setsTab);
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(playersTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(playersTab);
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(cardsTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(cardsTab);
+
+    fireEvent.keyDown(tablist, { key: "ArrowLeft" });
+    expect(playersTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(playersTab);
+  });
+
   it("R1966000 a read that fails shows Retry, which asks again", async () => {
     let up = false;
     serveSets(() =>
@@ -1634,7 +1707,7 @@ describe("R1966000 the Sets tab", () => {
   });
 });
 
-describe("R1973002 the patch bar", () => {
+describe("R1973002 R3324000 the patch tabs", () => {
   /** Newest first: 0.7.0 (newest, short of games), then the older patches with their games. */
   const PATCHES = [
     { versions: ["0.7.0", "0.7.0b"], games: 300, liveGames: 0 },
@@ -1647,66 +1720,233 @@ describe("R1973002 the patch bar", () => {
     { versions: ["0.0.9"], games: 3000, liveGames: 0 },
   ];
 
-  /** Answers the card statistics at the version asked for (the newest, 0.7.0b, when none is), with the patch list. */
-  function servePatches(): void {
+  /** Answers the card statistics at the version asked for (the newest, 0.7.0b, when none is), with `patches`. */
+  function servePatches(patches: readonly unknown[] = PATCHES): void {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL) => {
         const url = new URL(String(input), window.location.origin);
         if (url.pathname !== "/api/stats/cards") return Promise.resolve(new Response("{}", { status: 200 }));
         const patch = url.searchParams.get("patch") ?? "0.7.0b";
-        const body = { ...MOCK_CARD_STATS_PROVISIONAL, patch, previousPatch: null, patches: PATCHES };
+        const body = { ...MOCK_CARD_STATS_PROVISIONAL, patch, previousPatch: null, patches };
         return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
       }),
     );
   }
 
-  it("R1973002 offers the newest five patches with 1,000 games and the one shown, and steps to the patch before and after", async () => {
+  /** A patch tab's name, the version that opened its patch. */
+  const nameOf = (tab: HTMLElement): string | null => tab.querySelector(".stats-patch-tab-name")?.textContent ?? null;
+
+  /** The patch tabs as their names, the names of those pressed, and each tab's words. */
+  function tabs(): { names: (string | null)[]; pressed: (string | null)[]; texts: string[] } {
+    const all = screen.getAllByTestId(statsTestid.patchTab);
+    return {
+      names: all.map(nameOf),
+      pressed: all.filter((tab) => tab.getAttribute("aria-pressed") === "true").map(nameOf),
+      texts: all.map((tab) => tab.textContent ?? ""),
+    };
+  }
+
+  it("R1973002 R3324000 a tab for the newest patch, the newest five with 1,000 games and the one shown, and steps to the patch before and after", async () => {
     servePatches();
     const user = userEvent.setup();
     render(<StatsRoute />);
-    const select = await screen.findByTestId(statsTestid.patchSelect, undefined, SLOW);
-    // The newest, shown, is short of games but offered first; 0.5.0 (999) and the sixth, 0.0.9, are not.
-    expect(within(select).getAllByRole("option").map((option) => option.textContent)).toEqual([
-      "0.7.0 · 300 games",
-      "0.6.0 · 1,500 games",
-      "0.4.0 · 2,000 games",
-      "0.3.0 · 1,000 games",
-      "0.2.0 · 5,000 games",
-      "0.1.0 · 4,000 games",
-    ]);
-    expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.7.0");
+    await screen.findAllByTestId(statsTestid.patchTab, undefined, SLOW);
+    // The newest, shown, is short of games but has a tab, first; 0.5.0 (999) and the sixth, 0.0.9, have none.
+    expect(tabs()).toEqual({
+      names: ["0.7.0", "0.6.0", "0.4.0", "0.3.0", "0.2.0", "0.1.0"],
+      pressed: ["0.7.0"],
+      texts: [
+        "0.7.0Collecting data",
+        "0.6.01,500 games",
+        "0.4.02,000 games",
+        "0.3.01,000 games",
+        "0.2.05,000 games",
+        "0.1.04,000 games",
+      ],
+    });
+    // The tabs are a Segmented (#3222): pressed-state buttons in one group, as the page's other one-of-a-few choices are (R3324003).
+    expect(screen.getByRole("group", { name: "Patch" })).toContainElement(screen.getAllByTestId(statsTestid.patchTab)[0]!);
+    for (const tab of screen.getAllByTestId(statsTestid.patchTab)) {
+      expect(tab.tagName).toBe("BUTTON");
+      expect(tab).toHaveClass("segmented__item");
+    }
     expect(screen.getByTestId(statsTestid.patchNext)).toBeDisabled();
 
     // Back one patch: 0.6.0, asked for at its version.
     const previous = screen.getByTestId(statsTestid.patchPrevious);
-    expect(previous).toHaveTextContent("← Previous patch (0.6.0)");
+    expect(previous).toHaveAccessibleName("Previous patch (0.6.0)");
     await user.click(previous);
     await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
     expect(requested("/api/stats/cards").at(-1)?.searchParams.get("patch")).toBe("0.6.0");
-    // Back again, to 0.5.0: not offered for its 999 games, but shown, so the picker holds it.
+    await waitFor(() => expect(tabs().pressed).toEqual(["0.6.0"]), SLOW);
+    expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.6.0");
+    // Back again, to 0.5.0: no tab for its 999 games until it is shown, and then its figures, since it is not the newest.
     await user.click(screen.getByTestId(statsTestid.patchPrevious));
     await waitFor(() => expect(window.location.search).toBe("?patch=0.5.0"), SLOW);
-    await waitFor(() => expect(screen.getByTestId(statsTestid.patchSelect)).toHaveValue("0.5.0"), SLOW);
+    await waitFor(() => expect(tabs().pressed).toEqual(["0.5.0"]), SLOW);
+    expect(tabs().names).toEqual(["0.7.0", "0.6.0", "0.5.0", "0.4.0", "0.3.0", "0.2.0", "0.1.0"]);
+    expect(screen.getByTestId(statsTestid.cardsTable)).toBeInTheDocument();
+    expect(screen.queryByTestId(statsTestid.patchCollecting)).toBeNull();
 
     // Forward: the next patch, then the newest, which is the plain address.
     const next = screen.getByTestId(statsTestid.patchNext);
-    expect(next).toHaveTextContent("Next patch (0.6.0) →");
+    expect(next).toHaveAccessibleName("Next patch (0.6.0)");
     await user.click(next);
     await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
     await user.click(screen.getByTestId(statsTestid.patchNext));
     await waitFor(() => expect(window.location.search).toBe(""), SLOW);
 
-    // The picker asks for a patch at its newest version.
-    await user.selectOptions(screen.getByTestId(statsTestid.patchSelect), "0.4.0b");
+    // A tab asks for its patch at its newest version.
+    await user.click(screen.getAllByTestId(statsTestid.patchTab).find((tab) => nameOf(tab) === "0.4.0")!);
     await waitFor(() => expect(window.location.search).toBe("?patch=0.4.0b"), SLOW);
-    expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.4.0");
+    await waitFor(() => expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.4.0"), SLOW);
   });
 
-  it("R1973002 a server with no patch list shows no patch bar", async () => {
+  it("R3324000 the newest patch short of games says its data is still being collected, on the Cards and Sets tabs, with no figures and no count", async () => {
+    servePatches();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+
+    const note = await screen.findByTestId(statsTestid.patchCollecting, undefined, SLOW);
+    expect(note).toHaveTextContent("Data for patch 0.7.0 is still being collected at this time.");
+    expect(screen.getByRole("tabpanel")).toContainElement(note);
+    // No figures, no games tile and no count (R661): not the patch's 300 games, nor the response's 1,200.
+    expect(screen.queryByTestId(statsTestid.cardsTable)).toBeNull();
+    expect(screen.queryByTestId(statsTestid.searchInput)).toBeNull();
+    expect(screen.queryByTestId(statsTestid.gamesPanel)).toBeNull();
+    expect(screen.queryByTestId(statsTestid.summaryTiles)).toBeNull();
+    expect(document.body.textContent).not.toContain("300");
+    expect(document.body.textContent).not.toContain("1,200");
+
+    // The Sets tab says the same and reads no sets.
+    const asked = requested("/api/stats/cards").length;
+    await user.click(screen.getByTestId(statsTestid.tabSets));
+    expect(screen.getByTestId(statsTestid.patchCollecting)).toHaveTextContent("Data for patch 0.7.0 is still being collected at this time.");
+    expect(screen.queryByTestId(statsTestid.setsTable)).toBeNull();
+    expect(requested("/api/stats/cards")).toHaveLength(asked);
+    // The Players tab is no patch's.
+    await user.click(screen.getByTestId(statsTestid.tabPlayers));
+    expect(screen.queryByTestId(statsTestid.patchCollecting)).toBeNull();
+
+    // Its way back is the patch before, which shows its figures.
+    await user.click(screen.getByTestId(statsTestid.tabCards));
+    const back = screen.getByTestId(statsTestid.patchCollectingBack);
+    expect(back).toHaveTextContent("See patch 0.6.0");
+    await user.click(back);
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId(statsTestid.patchCollecting)).toBeNull();
+    // The newest patch's tab still says it is collecting.
+    expect(tabs().texts[0]).toBe("0.7.0Collecting data");
+  });
+
+  it("R3324000 the newest patch with 1,000 games is collecting no more, and a micro opens no tab of its own", async () => {
+    // A micro, 0.6.0b, is a version of 0.6.0's window (R1973001), never a patch of its own.
+    servePatches([
+      { versions: ["0.6.0", "0.6.0b"], games: 1000, liveGames: 0 },
+      { versions: ["0.5.0"], games: 4000, liveGames: 0 },
+    ]);
+    render(<StatsRoute />);
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByTestId(statsTestid.patchTab)).toHaveLength(2), SLOW);
+    expect(tabs().texts).toEqual(["0.6.01,000 games", "0.5.04,000 games"]);
+    expect(screen.queryByTestId(statsTestid.patchCollecting)).toBeNull();
+    expect(screen.queryByText("Collecting data")).toBeNull();
+  });
+
+  it("R1973002 a server with no patch list shows no patch bar and nothing collecting", async () => {
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
     expect(screen.queryByTestId(statsTestid.patchBar)).toBeNull();
+    expect(screen.queryByTestId(statsTestid.patchCollecting)).toBeNull();
+  });
+});
+
+describe("R3324001 the current patch", () => {
+  it("R3324001 the header names the newest version the server lists, whichever patch is shown", async () => {
+    at("/stats?patch=0.5.0");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        if (url.pathname !== "/api/stats/cards") return Promise.resolve(new Response("{}", { status: 200 }));
+        const patches = [
+          { versions: ["0.6.0", "0.6.0b"], games: 1500, liveGames: 0 },
+          { versions: ["0.5.0"], games: 4000, liveGames: 0 },
+        ];
+        return Promise.resolve(new Response(JSON.stringify({ ...MOCK_CARD_STATS_PROVISIONAL, patch: "0.5.0", patches }), { status: 200 }));
+      }),
+    );
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const current = screen.getByTestId(statsTestid.currentPatch);
+    await waitFor(() => expect(current).toHaveTextContent("Current patch 0.6.0b"), SLOW);
+    // It stands in the header, beside the page's one title, outside the title itself.
+    expect(screen.getByRole("banner")).toContainElement(current);
+    expectOnePageTitle("Statistics");
+  });
+
+  it("R3324001 a server with no patch list leaves the client's own catalog version", async () => {
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.currentPatch)).toHaveTextContent(`Current patch ${CATALOG_VERSION}`);
+  });
+});
+
+describe("R3447000 the games tile names the patch its games were collected on", () => {
+  /** Newest first: 0.7.0, past the tabs' floor and so not collecting, then 0.6.0. */
+  const PATCHES = [
+    { versions: ["0.7.0", "0.7.0b"], games: 1500, liveGames: 300 },
+    { versions: ["0.6.0"], games: 4000, liveGames: 2000 },
+  ];
+
+  /** Answers the newest patch's card statistics, counted from `source`'s window, with `patches` when given. */
+  function serveSource(source: "previous" | "live", patches?: readonly unknown[]): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        if (url.pathname !== "/api/stats/cards") return Promise.resolve(new Response("{}", { status: 200 }));
+        const body = {
+          ...MOCK_CARD_STATS_PROVISIONAL,
+          patch: "0.7.0b",
+          previousPatch: "0.6.0",
+          source,
+          sourceLabel: source === "previous" ? "Live games (previous patch)" : "Live games",
+          patches,
+        };
+        return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+      }),
+    );
+  }
+
+  it("R3447000 while the shown patch's figures are the previous window's, the tile names the patch before, and no source", async () => {
+    serveSource("previous", PATCHES);
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    await waitFor(() => expect(screen.getAllByTestId(statsTestid.patchTab)).toHaveLength(2), SLOW);
+    expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.6.0");
+    // The patch shown is still 0.7.0's tab, and nothing says where the figures come from (R661).
+    const pressed = screen.getAllByTestId(statsTestid.patchTab).filter((tab) => tab.getAttribute("aria-pressed") === "true");
+    expect(pressed.map((tab) => tab.querySelector(".stats-patch-tab-name")?.textContent)).toEqual(["0.7.0"]);
+    expect(document.body.textContent).not.toContain("Live games (previous patch)");
+  });
+
+  it("R3447000 the shown patch's own figures name the patch shown", async () => {
+    serveSource("live", PATCHES);
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    await waitFor(() => expect(screen.getAllByTestId(statsTestid.patchTab)).toHaveLength(2), SLOW);
+    expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.7.0");
+  });
+
+  it("R3447000 a server with no patch list names the version before while the figures are the previous window's", async () => {
+    serveSource("previous");
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.patchBar)).toBeNull();
+    expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.6.0");
   });
 });
 
@@ -1798,101 +2038,7 @@ describe("R2446000 the Cards table's columns", () => {
   });
 });
 
-describe("R2089000 the Created cards", () => {
-  /**
-   * Rush Token, made during 55 seats' games: 30 used a copy (60%, 8 of them Radiant at its first use, too
-   * few for a rate) and 25 used none (52%), 8 points under.
-   */
-  const RUSH = {
-    id: "core-t-rush",
-    name: "Rush Token",
-    cost: 1,
-    rarity: "Token",
-    set: "Core",
-    games: 55,
-    createdPlayedGames: 30,
-    createdPlayedWinRate: 0.6,
-    createdNotPlayedGames: 25,
-    createdNotPlayedWinRate: 0.52,
-    createdPlayedRadiantGames: 8,
-    createdPlayedRadiantWinRate: 0.75,
-    createdPlayedNormalGames: 22,
-    createdPlayedNormalWinRate: 12 / 22,
-    createdPlayedDelta: 0.08,
-    hasEnoughGames: true,
-    window: { from: "0.2.0", liveGames: 412, source: "provisional", counted: ["0.2.0"] },
-  };
-
-  /** Answers the card statistics with `body`, and anything else with nothing. */
-  function serveCards(body: unknown): void {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((input: RequestInfo | URL) => {
-        const url = new URL(String(input), window.location.origin);
-        const answer = url.pathname === "/api/stats/cards" ? body : {};
-        return Promise.resolve(new Response(JSON.stringify(answer), { status: 200 }));
-      }),
-    );
-  }
-
-  it("R2089000 the Cards tab lists Created cards apart from the deck table", async () => {
-    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH] });
-    render(<StatsRoute />);
-
-    const panel = await screen.findByTestId(statsTestid.createdPanel, undefined, SLOW);
-    expect(screen.getByRole("tabpanel")).toContainElement(panel);
-    expect(within(panel).getByRole("heading", { name: "Created cards" })).toBeInTheDocument();
-    expect(panel).toHaveTextContent("each needs 20 games");
-    const table = within(panel).getByTestId(statsTestid.createdTable);
-    expect(within(table).getAllByRole("columnheader").map((th) => th.textContent)).toEqual([
-      "Card",
-      "Games",
-      "Used",
-      "Not used",
-      "Used Radiant",
-      "Used normal",
-      "Used vs not used",
-    ]);
-    const row = within(table).getByText("Rush Token").closest("tr")!;
-    expect(row).toHaveAttribute("data-card-id", "core-t-rush");
-    expect([...row.querySelectorAll("td")].map((td) => td.textContent)).toEqual(["55", "60%", "52%", "—", "55%", "+8%"]);
-    // The 8 Radiant seats are below R654's floor: no 75%.
-    expect(within(row).queryByText("75%")).toBeNull();
-
-    const deck = screen.getByTestId(statsTestid.cardsTable);
-    expect(within(deck).queryByText("Rush Token")).toBeNull();
-    expect(deck.querySelector('[data-card-id="core-t-rush"]')).toBeNull();
-
-    // The search box asks of the Created cards what it asks of the deck's.
-    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "rush" } });
-    expect(screen.getByText("No cards match the selected filters.")).toBeInTheDocument();
-    expect(within(screen.getByTestId(statsTestid.createdPanel)).getByText("Rush Token")).toBeInTheDocument();
-    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "spark" } });
-    expect(screen.getByText("Spark Pup")).toBeInTheDocument();
-    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
-
-    // The Sets tab counts the deck cards alone and shows no Created section.
-    fireEvent.click(screen.getByTestId(statsTestid.tabSets));
-    const sets = await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
-    expect(sets).not.toHaveTextContent("Rush Token");
-    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
-  });
-
-  it("R2089000 shows no Created section when the response has none", async () => {
-    render(<StatsRoute />);
-    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
-    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
-    cleanup();
-
-    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [] });
-    render(<StatsRoute />);
-    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
-    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
-    expect(screen.queryByText("Created cards")).toBeNull();
-  });
-});
-
-describe("R2370000 the Tokens toggle", () => {
+describe("R2089000 R3324002 the Created cards and the Tokens", () => {
   /** A Created card's figures: `played` seats used one at `playedRate`, `notPlayed` made one and used none. */
   function created(id: string, name: string, played: number, playedRate: number | null, notPlayed: number, notPlayedRate: number | null) {
     return {
@@ -1916,15 +2062,27 @@ describe("R2370000 the Tokens toggle", () => {
     };
   }
 
-  /** 55 seats: 18 of 30 that used one won and 13 of 25 that used none, 31 of 55 in all (56%). */
-  const RUSH = created("core-t-rush", "Rush Token", 30, 0.6, 25, 0.52);
+  /**
+   * Rush Token, made during 55 seats' games: 30 used a copy (60%, 8 of them Radiant at its first use, too few
+   * for a rate) and 25 used none (52%), 8 points under: 31 of 55 won (56%).
+   */
+  const RUSH = {
+    ...created("core-t-rush", "Rush Token", 30, 0.6, 25, 0.52),
+    createdPlayedRadiantGames: 8,
+    createdPlayedRadiantWinRate: 0.75,
+    createdPlayedNormalGames: 22,
+    createdPlayedNormalWinRate: 12 / 22,
+  };
   /** 40 seats, each used one, 28 won (70%). */
   const SHEEP = created("core-t-sheep", "Sheep Token", 40, 0.7, 0, null);
   /** 12 seats, too few for a rate however many won. */
   const GHOUL = created("core-t-ghoul", "Ghoul Token", 12, 0.9, 0, null);
-  /** A Created copy of a deck card: no token. */
+  /** The Coin, which the catalog holds as no card: 40 seats, 30 used it (50%) and 10 did not (30%), 18 won (45%). */
+  const COIN = created("coin", "The Coin", 30, 0.5, 10, 0.3);
+  /** A Created copy of a deck card: no token. 30 seats, each used it, 15 won. */
   const COPY = created("core-001", "Spark Pup", 30, 0.5, 0, null);
 
+  /** Answers the card statistics with `body`, and anything else with nothing. */
   function serveCards(body: unknown): void {
     vi.stubGlobal(
       "fetch",
@@ -1945,69 +2103,103 @@ describe("R2370000 the Tokens toggle", () => {
     };
   }
 
-  it("R2370000 starts off, and on lists the tokens alone, best first, each with its win rate", async () => {
-    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, SHEEP, COPY, GHOUL] });
+  const COLUMNS = ["Games", "Win rate ↓", "Used", "Not used", "Used Radiant", "Used normal", "Used vs not used"];
+
+  it("R2089000 R2370000 R3324002 the Cards tab lists the tokens and the other Created cards apart from the deck table, no card in both, each with its win rate", async () => {
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN, SHEEP, COPY, GHOUL] });
     render(<StatsRoute />);
 
-    await screen.findByTestId(statsTestid.createdPanel, undefined, SLOW);
-    const toggle = screen.getByTestId(statsTestid.tokensToggle);
-    expect(toggle).not.toBeChecked();
-    expect(screen.getByLabelText("Show tokens")).toBe(toggle);
-    expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
-    expect(window.location.search).not.toContain("tokens=");
-    const createdBefore = rowsOf(screen.getByTestId(statsTestid.createdTable));
+    const tokens = await screen.findByTestId(statsTestid.tokensPanel, undefined, SLOW);
+    const others = screen.getByTestId(statsTestid.createdPanel);
+    expect(screen.getByRole("tabpanel")).toContainElement(tokens);
+    expect(screen.getByRole("tabpanel")).toContainElement(others);
+    expect(within(tokens).getByRole("heading", { name: "Tokens" })).toBeInTheDocument();
+    expect(within(others).getByRole("heading", { name: "Other created cards" })).toBeInTheDocument();
+    expect(tokens).toHaveTextContent("Each needs 20 games");
+    expect(others).toHaveTextContent("generated and Discovered cards, copies and The Coin");
+    // The tokens come first.
+    expect(tokens.compareDocumentPosition(others) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-    fireEvent.click(toggle);
-    const panel = screen.getByTestId(statsTestid.tokensPanel);
-    expect(screen.getByRole("tabpanel")).toContainElement(panel);
-    expect(within(panel).getByRole("heading", { name: "Tokens" })).toBeInTheDocument();
-    expect(panel).toHaveTextContent("Each needs 20 games");
-    const table = within(panel).getByTestId(statsTestid.tokensTable);
-    expect(within(table).getAllByRole("columnheader").map((th) => th.textContent)).toEqual([
-      "Token",
-      "Games",
-      "Win rate",
-      "Used",
-      "Not used",
-      "Used vs not used",
-    ]);
-    // Sheep (70%) over Rush (31 of 55, 56%); Ghoul's 12 seats are under the floor, so it shows no rate
-    // and comes last; Spark Pup's copy is no token.
-    expect(rowsOf(table)).toEqual({
+    // One table, the same columns, opened on Win rate, best first, a row under the floor last.
+    const tokenTable = within(tokens).getByTestId(statsTestid.tokensTable);
+    const otherTable = within(others).getByTestId(statsTestid.createdTable);
+    expect(within(tokenTable).getAllByRole("columnheader").map((th) => th.textContent)).toEqual(["Token", ...COLUMNS]);
+    expect(within(otherTable).getAllByRole("columnheader").map((th) => th.textContent)).toEqual(["Card", ...COLUMNS]);
+    expect(rowsOf(tokenTable)).toEqual({
       ids: ["core-t-sheep", "core-t-rush", "core-t-ghoul"],
       cells: [
-        ["40", "70%", "70%", "—", "—"],
-        ["55", "56%", "60%", "52%", "+8%"],
-        ["12", "—", "—", "—", "—"],
+        ["40", "70%", "70%", "—", "—", "70%", "—"],
+        // The 8 Radiant seats are below R654's floor: no 75%.
+        ["55", "56%", "60%", "52%", "—", "55%", "+8%"],
+        ["12", "—", "—", "—", "—", "—", "—"],
       ],
     });
-    expect(window.location.search).toContain("tokens=1");
+    expect(rowsOf(otherTable)).toEqual({
+      ids: ["core-001", "coin"],
+      cells: [
+        ["30", "50%", "50%", "—", "—", "50%", "—"],
+        ["40", "45%", "50%", "—", "—", "50%", "—"],
+      ],
+    });
 
-    // The Created cards are as they were, the tokens among them.
-    expect(rowsOf(screen.getByTestId(statsTestid.createdTable))).toEqual(createdBefore);
-    expect(createdBefore.ids).toEqual(["core-t-rush", "core-t-sheep", "core-001", "core-t-ghoul"]);
+    // A header sorts its own table alone.
+    fireEvent.click(within(tokenTable).getByRole("columnheader", { name: "Games" }));
+    expect(rowsOf(tokenTable).ids).toEqual(["core-t-rush", "core-t-sheep", "core-t-ghoul"]);
+    expect(rowsOf(otherTable).ids).toEqual(["core-001", "coin"]);
 
-    // The search box asks of the tokens what it asks of the other cards.
+    // No token is a row of the deck table.
+    const deck = screen.getByTestId(statsTestid.cardsTable);
+    expect(deck.querySelector('[data-card-id="core-t-rush"]')).toBeNull();
+
+    // The search box asks of both what it asks of the deck's.
     fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "rush" } });
-    expect(rowsOf(within(screen.getByTestId(statsTestid.tokensPanel)).getByTestId(statsTestid.tokensTable)).ids).toEqual([
-      "core-t-rush",
-    ]);
-
-    fireEvent.click(screen.getByTestId(statsTestid.tokensToggle));
+    expect(screen.getByText("No cards match the selected filters.")).toBeInTheDocument();
+    expect(rowsOf(screen.getByTestId(statsTestid.tokensTable)).ids).toEqual(["core-t-rush"]);
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "coin" } });
     expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
-    expect(window.location.search).not.toContain("tokens=");
+    expect(rowsOf(screen.getByTestId(statsTestid.createdTable)).ids).toEqual(["coin"]);
+
+    // The Sets tab counts the deck cards alone and shows neither section.
+    fireEvent.click(screen.getByTestId(statsTestid.tabSets));
+    const sets = await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
+    expect(sets).not.toHaveTextContent("Rush Token");
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+    expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
   });
 
-  it("R2370000 the address turns it on, and with no token to show it says so", async () => {
+  it("R3324002 no Show tokens control, and an old address's tokens=1 opens the page as any other", async () => {
     at("/stats?tokens=1");
-    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [COPY] });
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [RUSH, COIN] });
     render(<StatsRoute />);
 
-    const panel = await screen.findByTestId(statsTestid.tokensPanel, undefined, SLOW);
-    expect(screen.getByTestId(statsTestid.tokensToggle)).toBeChecked();
-    expect(panel).toHaveTextContent("No tokens match the selected filters.");
-    expect(within(panel).queryByRole("table")).toBeNull();
-    expect(window.location.search).toContain("tokens=1");
+    await screen.findByTestId(statsTestid.tokensPanel, undefined, SLOW);
+    expect(screen.queryByText("Show tokens")).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    await waitFor(() => expect(window.location.search).not.toContain("tokens="), SLOW);
+    expect(screen.getByTestId(statsTestid.createdPanel)).toBeInTheDocument();
+  });
+
+  it("R2089000 R3324002 shows neither section when the response has no Created card, and only the one with rows", async () => {
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+    expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
+    cleanup();
+
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [] });
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.createdPanel)).toBeNull();
+    expect(screen.queryByText("Other created cards")).toBeNull();
+    expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
+    cleanup();
+    clearReadCache();
+
+    serveCards({ ...MOCK_CARD_STATS_PROVISIONAL, created: [COIN] });
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.createdPanel, undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.tokensPanel)).toBeNull();
   });
 });
 

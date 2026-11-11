@@ -9,19 +9,15 @@ import { t } from "../i18n/i18n.ts";
 import { PatchNotes } from "../patches/PatchNotes.tsx";
 import { patchTestid } from "../patches/testids.ts";
 import { BackLink } from "./nav.tsx";
+import { PAGE_TITLE_ID } from "./PageTitle.tsx";
 
 import "../auth/tavern.css";
 
 export default function PatchNotesRoute(): ReactElement {
   return (
     <div className="app-shell tavern patch-notes-screen one-screen" data-testid={patchTestid.screen}>
-      <BackLink />
-      <main className="patch-notes one-screen__body" aria-labelledby="patch-notes-title">
-        <header className="patch-notes__head">
-          <h1 id="patch-notes-title" className="patch-notes__title">
-            {t("Patch notes")}
-          </h1>
-        </header>
+      <BackLink title={t("Patch notes")} />
+      <main className="patch-notes one-screen__body" aria-labelledby={PAGE_TITLE_ID}>
         <PatchNotes />
       </main>
     </div>

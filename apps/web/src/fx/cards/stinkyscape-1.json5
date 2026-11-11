@@ -3,29 +3,34 @@
 // (tables.test.ts holds the file to the catalog). An entry is one of:
 //   "none: <reason>"                        the card's event rows alone ("none: pending" until its set's pass);
 //   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
-//   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
+//   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000),
+//                                           or a Terminus card's signature (fx/terminus/, R3338000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
-//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
+//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000),
+//                                           or beside a bespoke; a Unit's on its own `tile` (R3400000).
+//   + entrance: "<key>"                     beside any entry but "none", or alone: a Unit's or a Field Spell's entrance (fx/entrances.ts, R3332000);
+//   + takeover: "<look>", signature: true   a Mythic's own takeover look (fx/takeover.ts); a Legendary's or Mythic's signature (R3332000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` (a
 // start- or end-of-turn hook or a Whenever) and `activate` play from the hook's `hookResolving` marker, a
 // Trap's `cast` from its `trapFired` (R2797000). `palette` is a flavor's look (the card's own flavor by
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
-// recipe) or "keep" (it plays over that recipe). R2797000 is this half's pass (issue #2797).
+// recipe) or "keep" (it plays over that recipe). R2797000 is this half's pass (issue #2797); R3395000 its
+// Legendaries' and Mythics' signatures (issue #3395), each recipe in fx/cards/stinkyscape/.
 // stinkyscape-1.test.ts holds it to the measure.
 {
   "stinkyscape-001": { cast: { motif: "hex" } }, // Freeze Ray
   "stinkyscape-002": { cast: { motif: "hex", palette: "Spirit" } }, // Absolute Zero
   "stinkyscape-003": { cast: { motif: "nova" } }, // Meteor
-  "stinkyscape-004": { bespoke: "terminusRift" }, // Olivian Expanse
-  "stinkyscape-004-1": { setPiece: "vortex" }, // Farewell
-  "stinkyscape-004-2": { cast: { motif: "bolt", palette: "Nerd/chalk" } }, // KY's Last Exam
-  "stinkyscape-004-3": "none: its extra turn moves nothing on the board; no motif reads modifierChanged", // Event Horizon
-  "stinkyscape-004-4": { cast: { motif: "snap" } }, // Last Word
-  "stinkyscape-004-5": { cast: { motif: "bind" } }, // 1v1 Final Destination
-  "stinkyscape-004-6": "none: its effects resolve under each Call to Chaos it casts, whose own entry plays", // The Big Crunch
+  "stinkyscape-004": { setPiece: "terminusRift" }, // Olivian Expanse
+  "stinkyscape-004-1": { setPiece: "farewell" }, // Farewell
+  "stinkyscape-004-2": { setPiece: "lastExam" }, // KY's Last Exam
+  "stinkyscape-004-3": { setPiece: "eventHorizon" }, // Event Horizon
+  "stinkyscape-004-4": { setPiece: "lastWord" }, // Last Word
+  "stinkyscape-004-5": { setPiece: "finalDestination" }, // 1v1 Final Destination
+  "stinkyscape-004-6": { setPiece: "bigCrunch" }, // The Big Crunch
   "stinkyscape-005": { cast: { motif: "snap" }, aura: { look: "ember", scope: "zone" } }, // Masochism Unmasked
-  "stinkyscape-006": "none: its Cry completes Quest stages (questCompleted), which no motif reads", // Tylannt
-  "stinkyscape-007": { cast: { motif: "send", palette: "Hustle/cash" }, aura: { look: "arcane", palette: "Hustle/cash", scope: "zone" } }, // The Greatest Heist
+  "stinkyscape-006": { bespoke: "vaultHeist", entrance: "vaultStride", takeover: "vault", aura: { look: "arcane", palette: "Physical/steel", scope: "tile" }, signature: true }, // Tylannt
+  "stinkyscape-007": { bespoke: "heistLocks", entrance: "heistDrop", aura: { look: "laserGrid", palette: "Hustle/cash", scope: "zone" }, signature: true }, // The Greatest Heist
   "stinkyscape-008": { cast: { motif: "send" } }, // Conjure Rosemary Triscuit
   "stinkyscape-008-1": { cast: { motif: "mana" } }, // Rosemary Triscuit
   "stinkyscape-009": { cast: { motif: "tether" }, aura: { look: "void", scope: "zone" } }, // Ticketed
@@ -44,12 +49,12 @@
   "stinkyscape-013": { cast: { motif: "nova" } }, // Asphyxiants Cloud
   "stinkyscape-014": "none: its trigger (a Taunt Unit of yours attacked) is an ally hook, which no hookResolving marks", // Arm of the Jempire
   "stinkyscape-015": { cry: { motif: "bless", palette: "Physical/steel" } }, // Arg Arg Defender
-  "stinkyscape-016": { cast: { motif: "conjure" }, trigger: { motif: "bless", palette: "Physical/blade" }, aura: { look: "holy", scope: "zone" } }, // Rod of Ages
+  "stinkyscape-016": { bespoke: "rodBands", entrance: "rodRise", takeover: "rod", aura: { look: "silverRise", palette: "Physical/blade", scope: "zone" }, signature: true }, // Rod of Ages
   "stinkyscape-017": { trigger: { motif: "conjure", palette: "Physical/steel" } }, // Imprisoned Ship Smith
-  "stinkyscape-018": { bespoke: "magiBoot" }, // Imitated Instrumentality
-  "stinkyscape-018-1": { activate: { motif: "bless", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "zone" } }, // MELCHIOR
-  "stinkyscape-018-2": { activate: { motif: "send", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "zone" } }, // BALTHASAR
-  "stinkyscape-018-3": { activate: { motif: "hex", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "zone" } }, // CASPER
+  "stinkyscape-018": { bespoke: "magiBoot", signature: true }, // Imitated Instrumentality
+  "stinkyscape-018-1": { bespoke: "melchiorTally", entrance: "melchiorBoot", aura: { look: "scanline", palette: "Tech/hologram", scope: "zone" }, signature: true }, // MELCHIOR
+  "stinkyscape-018-2": { bespoke: "balthasarCradle", entrance: "balthasarLamp", aura: { look: "heartbeat", palette: "Clout", scope: "zone" }, signature: true }, // BALTHASAR
+  "stinkyscape-018-3": { bespoke: "casperKiss", entrance: "casperMirror", aura: { look: "glint", palette: "Dark", scope: "zone" }, signature: true }, // CASPER
   "stinkyscape-019": { trigger: { motif: "barrage", palette: "Tech/starfield" } }, // Imprisoned Cosmality
   "stinkyscape-020": "none: its Cry copies a card's text, which moves nothing on the board", // Tnack Trav
   "stinkyscape-021": { cast: { motif: "send" } }, // Moonberry
@@ -57,7 +62,7 @@
   "stinkyscape-023": { cast: { motif: "shift", palette: "Tech/starfield" }, aura: { look: "storm", palette: "Tech/starfield", scope: "board" } }, // Warp Disruptor
   "stinkyscape-024": { cast: { motif: "shift", palette: "Tech/starfield" }, aura: { look: "storm", palette: "Tech/starfield", scope: "board" } }, // Warp Disruptor II
   "stinkyscape-025": { cast: { motif: "conjure", palette: "Tech/hologram" } }, // KY's Tricknology
-  "stinkyscape-026": { cry: { motif: "conjure" }, activate: { motif: "conjure", palette: "Tech/rocket" } }, // ZolarKeth
+  "stinkyscape-026": { bespoke: "campusLaunch", entrance: "lecternRise", aura: { look: "drift", palette: "Tech/starfield", scope: "tile" }, signature: true }, // ZolarKeth
   "stinkyscape-027": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Drone Core I
   "stinkyscape-028": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Drone Core II
   "stinkyscape-029": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Drone Core III
@@ -65,17 +70,17 @@
   "stinkyscape-031": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Drone Core V
   "stinkyscape-032": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Drone Core VI
   "stinkyscape-033": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Drone Core VII
-  "stinkyscape-034": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Drone Core VIII
-  "stinkyscape-035": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Drone Core IX
+  "stinkyscape-034": { bespoke: "droneConveyor", signature: true }, // Drone Core VIII
+  "stinkyscape-035": { bespoke: "seedPod", signature: true }, // Drone Core IX
   "stinkyscape-036": { bespoke: "battleshipWarp" }, // Drone Core X
-  "stinkyscape-037": { death: { motif: "hex" }, trigger: { motif: "hex" } }, // Kwzka
+  "stinkyscape-037": { bespoke: "allureRibbon", entrance: "spotlightKiss", aura: { look: "flurry", palette: "Clout", scope: "tile" }, signature: true }, // Kwzka
   "stinkyscape-038": "none: its trigger (it survives an attack) runs on afterAttack, which no hookResolving marks", // Shield Amplifier
-  "stinkyscape-039": { cast: { motif: "conjure" }, trigger: { motif: "send", palette: "Hustle/ore" }, aura: { look: "toxic", scope: "zone" } }, // The Narcor Project
+  "stinkyscape-039": { bespoke: "narcorCases", entrance: "labVault", aura: { look: "labHaze", palette: "Dark/curse", scope: "zone" }, signature: true }, // The Narcor Project
   "stinkyscape-040": { cry: { motif: "tally" }, trigger: { motif: "nova" } }, // Poison Capsule
   "stinkyscape-041": { cast: { motif: "send", palette: "Tech/rocket" } }, // Drone Sympathizer
   "stinkyscape-042": { cry: { motif: "send" } }, // Core Researcher
   "stinkyscape-043": { trigger: { motif: "mend" } }, // Healing Capsule
-  "stinkyscape-044": { cast: { motif: "send" } }, // Great Paperclip Theory
+  "stinkyscape-044": { bespoke: "paperclipLink", takeover: "wire", signature: true }, // Great Paperclip Theory
   "stinkyscape-045": { cry: { motif: "send" } }, // Drone Commander
   "stinkyscape-046": { cast: { motif: "conjure" }, trigger: { motif: "conjure", palette: "Tech/rocket" }, aura: { look: "storm", scope: "lane" } }, // Circadian Halfcycler
   "stinkyscape-047": { cast: { motif: "conjure" }, trigger: { motif: "conjure", palette: "Tech/rocket" }, aura: { look: "storm", scope: "side" } }, // Circadian Fullcycler
@@ -89,38 +94,38 @@
   "stinkyscape-055": { activate: { motif: "bolt", palette: "Tech/laser" } }, // Repeater v4
   "stinkyscape-056": { activate: { motif: "bolt", palette: "Tech/rocket" } }, // Cannon v4
   "stinkyscape-057": { activate: { motif: "barrage", palette: "Tech/rocket" } }, // Flak v4
-  "stinkyscape-058": { activate: { motif: "lance", palette: "Tech/laser" } }, // Beam v5
-  "stinkyscape-059": { activate: { motif: "bolt", palette: "Tech/laser" } }, // Repeater v5
-  "stinkyscape-060": { activate: { motif: "bolt", palette: "Tech/rocket" } }, // Cannon v5
-  "stinkyscape-061": { activate: { motif: "barrage", palette: "Tech/rocket" } }, // Flak v5
+  "stinkyscape-058": { bespoke: "beamCharge", entrance: "emitterBloom", aura: { look: "ember", palette: "Tech/laser", scope: "tile" }, signature: true }, // Beam v5
+  "stinkyscape-059": { bespoke: "repeaterBurst", entrance: "barrelSpin", aura: { look: "ember", palette: "Tech/rocket", scope: "tile" }, signature: true }, // Repeater v5
+  "stinkyscape-060": { bespoke: "cannonShell", entrance: "breechLock", aura: { look: "chalk", palette: "Tech/rocket", scope: "tile" }, signature: true }, // Cannon v5
+  "stinkyscape-061": { bespoke: "flakWaves", entrance: "turretScan", aura: { look: "drift", palette: "Physical/wind", scope: "tile" }, signature: true }, // Flak v5
   "stinkyscape-062": { activate: { motif: "send", palette: "Hustle/ore" } }, // Miner v1
   "stinkyscape-063": { activate: { motif: "send", palette: "Hustle/ore" } }, // Miner v2
   "stinkyscape-064": { activate: { motif: "send", palette: "Hustle/ore" } }, // Miner v3
   "stinkyscape-065": { activate: { motif: "send", palette: "Hustle/ore" } }, // Miner v4
-  "stinkyscape-066": { activate: { motif: "send", palette: "Hustle/ore" } }, // Miner v5
+  "stinkyscape-066": { bespoke: "asteroidCrunch", entrance: "intakeMaw", aura: { look: "timber", palette: "Hustle/ore", scope: "tile" }, signature: true }, // Miner v5
   "stinkyscape-067": { trigger: { motif: "send", palette: "Hustle/ore" } }, // Tractor Beam
   "stinkyscape-068": "none: vanilla", // Stratos
   "stinkyscape-069": "none: vanilla", // Falcon
-  "stinkyscape-070": { cry: { motif: "rise" } }, // Z'Zoth
-  "stinkyscape-071": { cry: { motif: "rise" } }, // A'Zoth
+  "stinkyscape-070": { bespoke: "ghostHulls", entrance: "wraithGather", aura: { look: "void", palette: "Dark/shadow", scope: "tile" }, signature: true }, // Z'Zoth
+  "stinkyscape-071": { bespoke: "echoRings", entrance: "heraldHorn", aura: { look: "storm", palette: "Dark/blood", scope: "tile" }, signature: true }, // A'Zoth
   "stinkyscape-072": "none: vanilla", // Paragon Mk1
-  "stinkyscape-073": "none: vanilla", // Paragon Mk2
-  "stinkyscape-074": { cry: { motif: "offering" } }, // Paragon-X
+  "stinkyscape-073": { entrance: "paragonStreak", aura: { look: "frost", palette: "Tech/hologram", scope: "tile" }, signature: true }, // Paragon Mk2
+  "stinkyscape-074": { entrance: "paragonDive", takeover: "whiteDwarf", aura: { look: "holy", palette: "Spirit", scope: "tile" }, signature: true }, // Paragon-X
   "stinkyscape-075": "none: its trigger (When this attacks) is a whenAttacks hook, which no hookResolving marks", // Badger
   "stinkyscape-076": "none: its trigger (When this attacks) is a whenAttacks hook, which no hookResolving marks", // Honey Badger
   "stinkyscape-077": "none: its Cry schedules a trade offer (a modifier), which no motif reads", // Yuma
   "stinkyscape-078": { cry: { motif: "transmute", palette: "Tech/rocket" } }, // Ozark
   "stinkyscape-079": { cry: { motif: "transmute", palette: "Tech/rocket" } }, // Orca
-  "stinkyscape-080": { cry: { motif: "transmute", palette: "Tech/rocket" } }, // Galaxy
+  "stinkyscape-080": { bespoke: "bellyBay", entrance: "flagshipDescent", aura: { look: "flurry", palette: "Tech/rocket", scope: "tile" }, signature: true }, // Galaxy
   "stinkyscape-081": { cry: { motif: "transmute", palette: "Tech/laser" } }, // Radix
   "stinkyscape-082": { cry: { motif: "transmute", palette: "Tech/laser" } }, // Phalanx
   "stinkyscape-083": { cry: { motif: "transmute", palette: "Tech/laser" } }, // Halo
   "stinkyscape-084": { cast: { motif: "send" } }, // Power Cell
   "stinkyscape-084-1": { cast: { motif: "send", palette: "Hustle/ore" } }, // Metal Scraps
-  "stinkyscape-085": { cry: { motif: "transmute", palette: "Tech/hologram" } }, // Prototype-X1
-  "stinkyscape-086": { cry: { motif: "transmute", palette: "Tech/hologram" } }, // Prototype-X2
-  "stinkyscape-087": { cry: { motif: "hex", palette: "Beast/felinor" } }, // Siva 1
-  "stinkyscape-088": "none: an Aura with no hook", // Siva 2
+  "stinkyscape-085": { bespoke: "wingMount", entrance: "testLurch", aura: { look: "arcane", palette: "Tech/hologram", scope: "tile" }, signature: true }, // Prototype-X1
+  "stinkyscape-086": { bespoke: "spineWeld", entrance: "forgeBurst", takeover: "forge", aura: { look: "ember", palette: "Dark/blood", scope: "tile" }, signature: true }, // Prototype-X2
+  "stinkyscape-087": { bespoke: "glowLeash", entrance: "redCarpet", aura: { look: "arcane", palette: "Beast/felinor", scope: "tile" }, signature: true }, // Siva 1
+  "stinkyscape-088": { bespoke: "venomHand", entrance: "venomStep", aura: { look: "toxic", palette: "Dark/curse", scope: "tile" }, signature: true }, // Siva 2
   "stinkyscape-089": { cast: { motif: "send", palette: "Hustle/ore" } }, // Spice
   "stinkyscape-090": "none: its one hook, When launched, is the Starship's own moment (#2782's Starship part)", // After Burner
 }

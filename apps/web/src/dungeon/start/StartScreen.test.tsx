@@ -1,4 +1,4 @@
-// B14–B19 (DR14 part D, #2705): the Dungeon Run's start screen. The run's rules are `crates/run`'s, so
+// B14–B19 (DR14 part D, #2705): the Dungeon run's start screen. The run's rules are `crates/run`'s, so
 // `../wasm/index.ts`'s run bindings are the fixtures' scripted ones and the `Dungeon` is a plain object
 // whose verbs record what the screen sends them; the store's own behavior is `../store.test.ts`'s.
 // Time is frozen at a known UTC day so the daily seed is the one the fixtures' `runDailySeed` makes.
@@ -7,6 +7,15 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DUNGEON_PROGRESS_KEY } from "../config.ts";
+import {
+  CARD_POOL,
+  DB_EMPTY,
+  DB_FILTER_CLEAR,
+  DB_RESULT_COUNT,
+  DB_SEARCH,
+  filterTypeId,
+  poolCardId,
+} from "../../game/deckbuilder/testids.ts";
 import { __resetDungeonForTests, type Dungeon } from "../store.ts";
 import { dungeonTestid } from "../testids.ts";
 import {
@@ -20,6 +29,7 @@ import {
   unlocks,
   wasmBindings,
 } from "../test/fixtures.ts";
+import { expectOnePageTitle } from "../../test/pageTitle.ts";
 import { StartScreen } from "./StartScreen.tsx";
 
 vi.mock("../../wasm/index.ts", async (importOriginal) => ({
@@ -34,7 +44,10 @@ function dungeonOf(over: Partial<Dungeon> = {}): Dungeon {
     content: CONTENT,
     progress: { unlocks: unlocks(), embers: 0 },
     run: null,
-    startedAt: null,
+    elapsedMs: null,
+    resumedAt: null,
+    timeMs: null,
+    notice: null,
     start: vi.fn(() => null),
     act: vi.fn(() => null),
     abandon: vi.fn(),
@@ -50,9 +63,9 @@ function show(dungeon: Dungeon = dungeonOf(), onEnter: () => void = vi.fn()): { 
 
 const byId = (id: string): HTMLElement => screen.getByTestId(id);
 
-/** Press these cards, in this order. */
-function pick(ids: readonly string[]): void {
-  for (const id of ids) fireEvent.click(byId(dungeonTestid.card(id)));
+/** Pick the first preset deck. */
+function pick(): void {
+  fireEvent.click(screen.getByTestId(dungeonTestid.preset("first-charge")));
 }
 
 beforeEach(() => {
@@ -82,6 +95,14 @@ describe("B14 the modes", () => {
   });
 });
 
+describe("R3223000 the start screen's title", () => {
+  it("R3223000 the screen has one visible h1, the PageTitle", () => {
+    show();
+    expectOnePageTitle("Dungeon run");
+    expect(screen.queryByRole("heading", { name: "JackiOh" })).toBeNull();
+  });
+});
+
 describe("B15 the seed", () => {
   it("B15 daily random and typed seeds", () => {
     show();
@@ -105,7 +126,7 @@ describe("B15 the seed", () => {
     expect(byId(dungeonTestid.seedValue).textContent).not.toBe(first);
 
     // A typed seed is six capital letters: anything else is refused, and the run cannot start on it.
-    pick(STARTERS);
+    pick();
     fireEvent.click(byId(dungeonTestid.seedTyped));
     const input = byId(dungeonTestid.seedInput);
     for (const wrong of ["ABC", "abcdef", "ABCDEFG", "AB1DEF", "AB DEF"]) {
@@ -121,7 +142,7 @@ describe("B15 the seed", () => {
 
   it("B15 the run starts on the seed chosen", () => {
     const { dungeon } = show();
-    pick(STARTERS);
+    pick();
 
     fireEvent.click(byId(dungeonTestid.startRun));
     expect(dungeon.start).toHaveBeenLastCalledWith({
@@ -150,12 +171,12 @@ describe("B15 the seed", () => {
 });
 
 describe("B16 the starting deck", () => {
-  it("B16 slots unlocked card faces setup refusal and relic limits", () => {
+  it("B16 slots, preset decks and an empty deck", () => {
     // The run refuses a deck of the wrong size, as `run_check_setup` does.
     wasmBindings.runCheckSetup.mockImplementation(
       (setup) => `a starting deck holds 10 cards, not ${String(setup.starter.length)}`,
     );
-    const view = show();
+    show();
 
     // The level's slots, from the ladder the run states: level 1 has no Epic, Legendary or Mythic slot.
     expect(byId(dungeonTestid.slot("Common"))).toHaveTextContent("Common × 5");
@@ -164,25 +185,107 @@ describe("B16 the starting deck", () => {
     expect(screen.queryByTestId(dungeonTestid.slot("Epic"))).toBeNull();
     expect(wasmBindings.runConstants).toHaveBeenCalled();
 
-    // Only the unlocked cards are offered, each drawn as a card face of the catalog.
-    const cards = byId(dungeonTestid.cards);
-    for (const id of STARTERS) expect(within(cards).getByTestId(dungeonTestid.card(id))).toBeInTheDocument();
-    expect(screen.queryByTestId(dungeonTestid.card(EXTRACTABLE))).toBeNull();
-    expect(screen.queryByTestId(dungeonTestid.card(LOCKED))).toBeNull();
-    expect(within(byId(dungeonTestid.card(STARTERS[0] ?? ""))).getByText("Spikey Steven")).toBeInTheDocument();
+    // The three named preset decks, each with its theme line, none picked yet.
+    const presets = byId(dungeonTestid.presets);
+    for (const [id, name, theme] of [
+      ["first-charge", "First Charge", "Cheap units that hit fast and hit hard."],
+      ["spell-tricks", "Spell tricks", "Spells and helpers that out-trick the enemy."],
+      ["hold-the-line", "Hold the line", "Tough bodies that hold the line, then win late."],
+    ] as Array<[string, string, string]>) {
+      const tile = within(presets).getByTestId(dungeonTestid.preset(id));
+      expect(tile).toHaveTextContent(name);
+      expect(tile).toHaveTextContent(theme);
+      expect(tile).toHaveAttribute("aria-pressed", "false");
+    }
 
-    // The deck's count is out of the size the run states.
+    // The deck is empty and out of the size the run states; the run cannot start on it.
     expect(byId(dungeonTestid.chosenCount)).toHaveTextContent("Cards: 0 of 10");
+    expect(byId(dungeonTestid.slotsMeter)).toHaveTextContent("Common 0 of 5");
     expect(byId(dungeonTestid.startRun)).toBeDisabled();
-    pick(STARTERS.slice(0, 3));
-    expect(byId(dungeonTestid.chosenCount)).toHaveTextContent("Cards: 3 of 10");
-    expect(byId(dungeonTestid.card(STARTERS[0] ?? ""))).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("presets: picking a preset fills the deck, and starting then starts a run with that deck", () => {
+    wasmBindings.runCheckSetup.mockImplementation((setup) =>
+      setup.starter.length === 10 ? null : `a starting deck holds 10 cards, not ${String(setup.starter.length)}`,
+    );
+    const { dungeon } = show();
+    const tile = byId(dungeonTestid.preset("first-charge"));
+    fireEvent.click(tile);
+
+    // The deck holds the preset's ten, and the tile reads picked; the run no longer refuses it.
+    expect(byId(dungeonTestid.chosenCount)).toHaveTextContent("Cards: 10 of 10");
+    expect(tile).toHaveAttribute("aria-pressed", "true");
+    for (const id of STARTERS) expect(byId(dungeonTestid.card(id))).toBeInTheDocument();
+    expect(screen.queryByTestId(dungeonTestid.setupRefusal)).toBeNull();
+
+    // The deck stays tweakable: one card put back through the deck list...
+    fireEvent.click(byId(dungeonTestid.card(STARTERS[1] ?? "")));
+    expect(byId(dungeonTestid.chosenCount)).toHaveTextContent("Cards: 9 of 10");
+    expect(tile).toHaveAttribute("aria-pressed", "false");
+
+    // ...and taken again through the browser's detail view.
+    fireEvent.click(screen.getByTestId(poolCardId(STARTERS[1] ?? "")));
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(byId(dungeonTestid.chosenCount)).toHaveTextContent("Cards: 10 of 10");
+
+    fireEvent.click(byId(dungeonTestid.startRun));
+    // The re-added card is last: the deck holds the preset's ten in the order they were taken.
+    expect(dungeon.start).toHaveBeenLastCalledWith({
+      seed: seedFrom(`daily:${TODAY}:1`),
+      starter: [...STARTERS.filter((id) => id !== STARTERS[1]), STARTERS[1]],
+      artifacts: [],
+      curses: [],
+    });
+  });
+
+  it("builder: the browser offers only unlocked cards, and search and filters narrow the pool", () => {
+    show();
+
+    // Only the unlocked cards are offered, in the pool's own grid.
+    const pool = byId(CARD_POOL);
+    for (const id of STARTERS) expect(within(pool).getByTestId(poolCardId(id))).toBeInTheDocument();
+    expect(screen.queryByTestId(poolCardId(EXTRACTABLE))).toBeNull();
+    expect(screen.queryByTestId(poolCardId(LOCKED))).toBeNull();
+    expect(screen.getByTestId(DB_RESULT_COUNT)).toHaveAttribute("data-count", "10");
+
+    // A search narrows the pool to what it matches.
+    fireEvent.change(screen.getByTestId(DB_SEARCH), { target: { value: "felinor" } });
+    expect(screen.getByTestId(DB_RESULT_COUNT)).toHaveAttribute("data-count", "2");
+    expect(screen.getByTestId(poolCardId("traininggrounds-017"))).toBeInTheDocument();
+    expect(screen.getByTestId(poolCardId("traininggrounds-023"))).toBeInTheDocument();
+    expect(screen.queryByTestId(poolCardId("traininggrounds-001"))).toBeNull();
+
+    // So does a type chip; clearing brings every unlocked card back.
+    fireEvent.change(screen.getByTestId(DB_SEARCH), { target: { value: "" } });
+    fireEvent.click(screen.getByTestId(filterTypeId("Spell")));
+    expect(screen.getByTestId(DB_RESULT_COUNT)).toHaveAttribute("data-count", "1");
+    expect(screen.getByTestId(poolCardId("traininggrounds-011"))).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(DB_FILTER_CLEAR));
+    expect(screen.getByTestId(DB_RESULT_COUNT)).toHaveAttribute("data-count", "10");
+
+    // Nothing matching is an empty pool, said as the browser says it.
+    fireEvent.change(screen.getByTestId(DB_SEARCH), { target: { value: "xyznothing" } });
+    expect(screen.getByTestId(DB_EMPTY)).toHaveTextContent("No card matches these filters.");
+  });
+
+  it("slots meter counts the picks, and a refused deck shows runCheckSetup's reason", () => {
+    wasmBindings.runCheckSetup.mockImplementation((setup) =>
+      setup.starter.length === 10 ? null : `a starting deck holds 10 cards, not ${String(setup.starter.length)}`,
+    );
+    show();
+    pick();
+
+    // The meter counts each rarity's picks against the level's slots: seven Commons, three Rares.
+    expect(byId(dungeonTestid.slotsMeter)).toHaveTextContent("Common 7 of 5");
+    expect(byId(dungeonTestid.slotsMeter)).toHaveTextContent("Rare 3 of 4");
+    expect(byId(dungeonTestid.slotsMeter)).toHaveTextContent("Anything 0 of 1");
 
     // What the run refuses is shown as the run says it, and the run does not start on it.
-    pick(STARTERS.slice(3, 4));
-    expect(byId(dungeonTestid.setupRefusal)).toHaveTextContent("a starting deck holds 10 cards, not 4");
+    fireEvent.click(byId(dungeonTestid.card(STARTERS[0] ?? "")));
+    expect(byId(dungeonTestid.chosenCount)).toHaveTextContent("Cards: 9 of 10");
+    expect(byId(dungeonTestid.slotsMeter)).toHaveTextContent("Common 6 of 5");
+    expect(byId(dungeonTestid.setupRefusal)).toHaveTextContent("a starting deck holds 10 cards, not 9");
     expect(byId(dungeonTestid.startRun)).toBeDisabled();
-    expect(view.dungeon.start).not.toHaveBeenCalled();
   });
 
   it("B16 a deck that stands starts the run, and one the run then refuses says why", () => {
@@ -192,7 +295,7 @@ describe("B16 the starting deck", () => {
     const start = vi.fn<Dungeon["start"]>(() => "Finish or abandon the run in progress first.");
     const onEnter = vi.fn();
     show(dungeonOf({ start }), onEnter);
-    pick(STARTERS);
+    pick();
     expect(screen.queryByTestId(dungeonTestid.setupRefusal)).toBeNull();
     expect(byId(dungeonTestid.chosenCount)).toHaveTextContent("Cards: 10 of 10");
 
@@ -207,19 +310,29 @@ describe("B16 the starting deck", () => {
     expect(screen.queryByTestId(dungeonTestid.setupRefusal)).toBeNull();
   });
 
-  it("B16 an extracted card joins the cards offered, and no more than the deck's size can be taken", () => {
+  it("B16 an extracted card joins the cards offered, and the run refuses more than the deck's size", () => {
+    wasmBindings.runCheckSetup.mockImplementation((setup) =>
+      setup.starter.length === 10 ? null : `a starting deck holds 10 cards, not ${String(setup.starter.length)}`,
+    );
     show(dungeonOf({ progress: { unlocks: unlocks({ cards: [EXTRACTABLE, STARTERS[0] ?? ""] }), embers: 0 } }));
 
-    expect(byId(dungeonTestid.card(EXTRACTABLE))).toBeInTheDocument();
-    expect(screen.queryByTestId(dungeonTestid.card(LOCKED))).toBeNull();
-    // A card both a starting card and extracted is offered once.
-    expect(screen.getAllByTestId(dungeonTestid.card(STARTERS[0] ?? ""))).toHaveLength(1);
-    pick(STARTERS);
-    expect(byId(dungeonTestid.card(EXTRACTABLE))).toBeDisabled();
-    // A card taken can be put back.
-    fireEvent.click(byId(dungeonTestid.card(STARTERS[1] ?? "")));
-    expect(byId(dungeonTestid.chosenCount)).toHaveTextContent("Cards: 9 of 10");
-    expect(byId(dungeonTestid.card(EXTRACTABLE))).toBeEnabled();
+    // An extracted card is offered beside the starters, and a card that is both is offered once.
+    expect(screen.getByTestId(poolCardId(EXTRACTABLE))).toBeInTheDocument();
+    expect(screen.queryByTestId(poolCardId(LOCKED))).toBeNull();
+    expect(screen.getAllByTestId(poolCardId(STARTERS[0] ?? ""))).toHaveLength(1);
+    pick();
+    expect(byId(dungeonTestid.chosenCount)).toHaveTextContent("Cards: 10 of 10");
+
+    // An eleventh card is taken through the browser, and the run refuses the deck word for word.
+    fireEvent.click(screen.getByTestId(poolCardId(EXTRACTABLE)));
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(byId(dungeonTestid.chosenCount)).toHaveTextContent("Cards: 11 of 10");
+    expect(byId(dungeonTestid.setupRefusal)).toHaveTextContent("a starting deck holds 10 cards, not 11");
+    expect(byId(dungeonTestid.startRun)).toBeDisabled();
+    // A card taken can be put back through the deck list.
+    fireEvent.click(byId(dungeonTestid.card(EXTRACTABLE)));
+    expect(byId(dungeonTestid.chosenCount)).toHaveTextContent("Cards: 10 of 10");
+    expect(screen.queryByTestId(dungeonTestid.setupRefusal)).toBeNull();
   });
 
   it("B16 relics are shown with their points out of the most, at most three, and offer only those unlocked", () => {
@@ -253,7 +366,7 @@ describe("B16 the starting deck", () => {
   it("B16 an extracted relic is offered, and the relics taken go to the run", () => {
     wasmBindings.runCheckSetup.mockReturnValue(null);
     const { dungeon } = show(dungeonOf({ progress: { unlocks: unlocks({ artifacts: ["locked-sigil"] }), embers: 0 } }));
-    pick(STARTERS);
+    pick();
 
     fireEvent.click(byId(dungeonTestid.relic("locked-sigil")));
     fireEvent.click(byId(dungeonTestid.relic("lucky-coin")));
@@ -267,7 +380,7 @@ describe("B17 the curses", () => {
   it("B17 curse tiers stack", () => {
     wasmBindings.runCheckSetup.mockReturnValue(null);
     const { dungeon } = show();
-    pick(STARTERS);
+    pick();
 
     expect(byId(dungeonTestid.cursePoints)).toHaveTextContent("Curse points: 0");
     expect(byId(dungeonTestid.curse("heavy-hands"))).toHaveTextContent("Points: 2");
@@ -353,6 +466,12 @@ describe("B19 a run in progress", () => {
     expect(abandon).not.toHaveBeenCalled();
     expect(byId(dungeonTestid.abandonAsk)).toHaveAttribute("role", "alertdialog");
     expect(byId(dungeonTestid.abandonCancel)).toHaveFocus();
+    // R3221000: the safe choice comes first, the act last.
+    const answers = within(byId(dungeonTestid.abandonAsk)).getAllByRole("button");
+    expect(answers.map((answer) => answer.getAttribute("data-testid"))).toEqual([
+      dungeonTestid.abandonCancel,
+      dungeonTestid.abandonConfirm,
+    ]);
 
     fireEvent.click(byId(dungeonTestid.abandonCancel));
     expect(abandon).not.toHaveBeenCalled();
@@ -372,5 +491,21 @@ describe("B19 a run in progress", () => {
 
     expect(screen.queryByTestId(dungeonTestid.saved)).toBeNull();
     expect(byId(dungeonTestid.startRun)).toBeInTheDocument();
+  });
+});
+
+describe("R3496000 the patch notice", () => {
+  it("R3496000 a run the patch ended is said in one line", () => {
+    show(dungeonOf({ notice: "The patch ended your last run as lost. What you had extracted is kept." }));
+
+    const notice = byId(dungeonTestid.notice);
+    expect(notice).toHaveTextContent("The patch ended your last run as lost. What you had extracted is kept.");
+    expect(notice).toHaveAttribute("role", "status");
+  });
+
+  it("R3496000 no notice ends no notice", () => {
+    show();
+
+    expect(screen.queryByTestId(dungeonTestid.notice)).toBeNull();
   });
 });

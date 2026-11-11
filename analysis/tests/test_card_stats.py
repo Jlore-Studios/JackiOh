@@ -300,11 +300,6 @@ def sweep_line(card, tier, **fields):
     return line
 
 
-def write_lines(path, lines):
-    path.write_text("".join(json.dumps(line) + "\n" for line in lines), encoding="utf-8")
-    return path
-
-
 def test_load_sweep_reads_the_fixtures_lines_one_row_per_card_and_tier():
     sweep = load_sweep(FIXTURES / "sweep-small.jsonl")
     lines = [json.loads(line) for line in (FIXTURES / "sweep-small.jsonl").read_text(encoding="utf-8").splitlines()]
@@ -326,7 +321,7 @@ def test_load_sweep_reads_the_fixtures_lines_one_row_per_card_and_tier():
 
 
 def test_load_sweep_keeps_the_flags_as_a_list_and_no_plays_as_no_mean(tmp_path):
-    path = write_lines(
+    path = write_records(
         tmp_path / "flags.jsonl",
         [
             sweep_line("a", "easy", flags=["error", "selfHarm"], errors=2, evalDeltaSum=-200.0),
@@ -345,9 +340,9 @@ def test_load_sweep_keeps_the_flags_as_a_list_and_no_plays_as_no_mean(tmp_path):
 
 
 def test_load_sweep_reads_several_files_skips_pass_2_lines_and_ignores_fields_it_does_not_know(tmp_path):
-    first = write_lines(tmp_path / "a.jsonl", [sweep_line("a", "easy")])
+    first = write_records(tmp_path / "a.jsonl", [sweep_line("a", "easy")])
     pass_2 = {"forced": "a", "tier": "easy", "games": 24, "cards": [], "suspects": []}
-    second = write_lines(tmp_path / "b.jsonl", [sweep_line("b", "hard", somethingNew=[1]), pass_2])
+    second = write_records(tmp_path / "b.jsonl", [sweep_line("b", "hard", somethingNew=[1]), pass_2])
     sweep = load_sweep([second, str(first)])
     assert [(row.card, row.tier) for row in sweep.itertuples()] == [("b", "hard"), ("a", "easy")]
     assert list(load_sweep(first)["card"]) == ["a"]
@@ -368,7 +363,7 @@ def test_load_sweep_names_the_file_and_line_it_cannot_read_and_a_card_and_tier_i
     with pytest.raises(ValueError, match=r"partial\.jsonl: line 2: not a sweep result"):
         load_sweep(partial)
     # A slice cut short and run again writes its finished cards twice; the table would count them twice.
-    again = write_lines(
+    again = write_records(
         tmp_path / "again.jsonl", [sweep_line("a", "easy"), sweep_line("a", "hard"), sweep_line("a", "easy")]
     )
     with pytest.raises(ValueError, match=r"again\.jsonl: line 3: a at easy is also at .*again\.jsonl: line 1"):
@@ -420,8 +415,8 @@ def test_load_generations_reads_generation_zero_off_generation_json_when_no_hist
         "parentShadowBan": 11,
     }
     (tmp_path / "crates" / "ai" / "generation.json").write_text(json.dumps(promotion), encoding="utf-8")
-    write_lines(history / "improve.jsonl", [promotion])
-    write_lines(history / "unban.jsonl", [])
+    write_records(history / "improve.jsonl", [promotion])
+    write_records(history / "unban.jsonl", [])
     assert list(load_generations(tmp_path)["generation"]) == [1]
 
 
@@ -434,10 +429,10 @@ def test_load_generations_names_the_file_and_line_it_cannot_read(tmp_path):
     generation_json.write_text(json.dumps(zero), encoding="utf-8")
     one = {**zero, "generation": 1, "lane": "improve", "parent": "abc", "vsParent": "87/100"}
 
-    write_lines(history / "improve.jsonl", [one, {**one, "lane": "unban"}])
+    write_records(history / "improve.jsonl", [one, {**one, "lane": "unban"}])
     with pytest.raises(ValueError, match=r"improve\.jsonl: line 2: generation 1 is also at .*improve\.jsonl: line 1"):
         load_generations(tmp_path)
-    write_lines(history / "improve.jsonl", [one, {**one, "generation": 2, "vsRandom": "lots"}])
+    write_records(history / "improve.jsonl", [one, {**one, "generation": 2, "vsRandom": "lots"}])
     with pytest.raises(ValueError, match=r"improve\.jsonl: line 2: not a generation"):
         load_generations(tmp_path)
     (history / "improve.jsonl").write_text("[]\n", encoding="utf-8")

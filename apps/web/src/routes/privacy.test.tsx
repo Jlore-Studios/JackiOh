@@ -43,7 +43,8 @@ const AGREED_TEXT: Readonly<Record<string, string>> = {
   "2026-10-15b/2026-10-21": "df87894475e985f8f9915b94e155f6245a841e53969765cd96dbd6d2f90f2be4",
   "2026-10-31/2026-10-31": "5ac8a025c4405ca53208415c1aa5af89e7c6dceae143d442c3e36d5d5b3fc0a3",
   "2026-10-31/2026-11-01": "b21cb121e8ed21750bf3a141392ed8f0238f8cb657b05833d802e55094387dd2",
-  "2026-11-05/2026-11-05": "85285ca4c01ff4e3e39548d8795ffe6709cc7b58ea2538b557fca1b4dd7cfabb",
+  // Re-hashed for #3230 (R3230000): BackLink uses ArrowIcon instead of a literal arrow; the legal words are unchanged.
+  "2026-11-05/2026-11-05": "daf8cb7f19204c9efe9cff990b48b1eced1d26f81f577ca80fac279de82c4745",
 };
 
 /** Both pages' English text, the Terms then the Privacy Policy, as rendered. */
@@ -65,7 +66,7 @@ function canonical(): string | null {
 const region = (name: string): HTMLElement => screen.getByRole("region", { name });
 
 /** The headings of the rendered page's sections, in order. */
-const headings = (): string[] => [...document.querySelectorAll("h3")].map((heading) => heading.textContent ?? "");
+const headings = (): string[] => [...document.querySelectorAll("h2")].map((heading) => heading.textContent ?? "");
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -325,13 +326,13 @@ describe("under Create account", () => {
     expect(screen.queryByTestId(signUpPrivacyTestid)).toBeNull();
     await userEvent.click(screen.getByTestId("login-mode"));
     const line = screen.getByTestId(signUpPrivacyTestid);
-    const box = within(line).getByRole("checkbox", { name: "I agree to the Terms and the Privacy Policy." });
+    const box = within(line).getByRole("checkbox", { name: "I agree to the Terms of service and the Privacy policy." });
     expect(box).toBe(screen.getByTestId(consentTestid.agree));
     expect(box).not.toBeChecked();
     // Each link opens its page in a new tab, so reading it loses nothing typed.
     for (const [name, href] of [
-      ["Terms", paths.terms],
-      ["Privacy Policy", paths.privacy],
+      ["Terms of service", paths.terms],
+      ["Privacy policy", paths.privacy],
     ] as const) {
       const link = within(line).getByRole("link", { name });
       expect(link).toHaveAttribute("href", href);
@@ -347,11 +348,11 @@ describe("the tab title and the canonical link", () => {
     expect(documentTitleFor(paths.login)).toBe("Sign in · JackiOh");
     expect(documentTitleFor(paths.practice)).toBe("Practice · JackiOh");
     expect(documentTitleFor(paths.decks)).toBe("Decks · JackiOh");
-    expect(documentTitleFor(paths.play)).toBe("Play online · JackiOh");
+    expect(documentTitleFor(paths.play)).toBe("Play · JackiOh");
     expect(documentTitleFor(paths.account)).toBe("Account · JackiOh");
     expect(documentTitleFor(paths.invite)).toBe("Invite code · JackiOh");
-    expect(documentTitleFor(paths.privacy)).toBe("Privacy · JackiOh");
-    expect(documentTitleFor(paths.terms)).toBe("Terms · JackiOh");
+    expect(documentTitleFor(paths.privacy)).toBe("Privacy policy · JackiOh");
+    expect(documentTitleFor(paths.terms)).toBe("Terms of service · JackiOh");
     expect(documentTitleFor(paths.accessibility)).toBe("Accessibility · JackiOh");
     expect(documentTitleFor(paths.copyright)).toBe("Copyright · JackiOh");
     expect(documentTitleFor(paths.match("m-1"))).toBe("Match · JackiOh");
@@ -369,7 +370,7 @@ describe("the tab title and the canonical link", () => {
     at(paths.privacy);
     render(<App />);
     await waitFor(() => {
-      expect(document.title).toBe("Privacy · JackiOh");
+      expect(document.title).toBe("Privacy policy · JackiOh");
     });
     expect(canonical()).toBe(`${SITE_ORIGIN}/privacy`);
     expect(document.head.querySelectorAll('link[rel="canonical"]')).toHaveLength(1);

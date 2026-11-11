@@ -2,6 +2,7 @@
 // card's face, drawn unworn (`SampleFace`); a playmat or backdrop as the mini board; a card back as a
 // game's; a portrait as its art. A full art, or a per-card one with no card, has none (`hasLook`).
 // R1953001: a Legendary or Mythic one moves wherever it is drawn. Presentation only (CLAUDE.md rule 7).
+// R3335000: a Starship cosmetic as a launched Starship wearing it over the standard look (`StarshipPreview`).
 
 import { useLayoutEffect, useRef, type ReactElement } from "react";
 
@@ -11,19 +12,23 @@ import { CardBack, CardFace, faceModel, useCardSettings } from "../cards/index.t
 import {
   DEFAULT_CARD_COSMETICS,
   MOVING_FINISHES_AND_BORDERS,
+  STARSHIP_SLOT_KINDS,
   isChaseCosmetic,
   normalizeCosmetics,
   wornCosmetics,
   type CardSlotKind,
   type Cosmetic,
   type CosmeticId,
+  type StarshipSlotKind,
 } from "../cards/cosmetics.ts";
+import { STARSHIP_LOOK_STANDARD } from "../cards/art/starshipLooks.ts";
 import type { FaceModel } from "../cards/model.ts";
 import { portraitOfCosmetic } from "../emotes/ownedPortraits.ts";
 import { PortraitArt } from "../emotes/PortraitArt.tsx";
 import Backdrop from "../game/Backdrop.tsx";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { useEngineReady } from "../wasm/useEngineReady.ts";
+import StarshipPreview from "./StarshipPreview.tsx";
 
 import "../game/table.css";
 import "./collection.css";
@@ -33,7 +38,7 @@ import "./cosmeticLook.css";
 export const COSMETIC_ATTRIBUTES = ["data-cosmetic-foil", "data-cosmetic-motion", "data-finish", "data-frame"] as const;
 
 /**
- * What `useCosmeticAttributes` gives a face wearing `wears`: nothing for a default; a foil, moving
+ * What `useCosmeticAppearance` gives a face wearing `wears`: nothing for a default; a foil, moving
  * finish or border moves where `moving` says. R1953001: a sample takes none of the
  * COSMETIC_FOIL_ANIMATED_MAX slots of a game's faces, since the samples a screen draws are bounded.
  */
@@ -110,12 +115,19 @@ function isCardSlot(kind: string | undefined): kind is CardSlotKind {
   return kind === "foil" || kind === "finish" || kind === "border";
 }
 
-/** Whether `id` has a look to draw: a foil, finish or border on a card the catalog has (`cardId`), and every playmat, backdrop, card back and portrait. */
+function isStarshipSlot(kind: string | undefined): kind is StarshipSlotKind {
+  return STARSHIP_SLOT_KINDS.some((slot) => slot === kind);
+}
+
+/**
+ * Whether `id` has a look to draw: a foil, finish or border on a card the catalog has (`cardId`), and every playmat,
+ * backdrop, card back, portrait and (R3335000) Starship cosmetic.
+ */
 export function hasLook(id: string, cardId: string | null): boolean {
   const kind = entryOf(id)?.kind;
   if (isCardSlot(kind)) return cardId !== null && CATALOG[cardId] !== undefined;
   if (kind === "portrait") return portraitOfCosmetic(id) !== null;
-  return kind === "table" || kind === "field" || kind === "cardBack";
+  return kind === "table" || kind === "field" || kind === "cardBack" || isStarshipSlot(kind);
 }
 
 /** `id`'s look (`cardId` the card a per-card one is on), or nothing where `hasLook` says it has none. */
@@ -149,6 +161,8 @@ export function CosmeticLook({ id, cardId }: { id: string; cardId: string | null
         <CardBack back={id} />
       </span>
     );
+  } else if (isStarshipSlot(kind)) {
+    look = <StarshipPreview look={{ ...STARSHIP_LOOK_STANDARD, [kind]: id }} />;
   }
   return (
     <span className="cosmetic-look" data-testid={`cosmetic-look-${id}`} data-kind={kind}>

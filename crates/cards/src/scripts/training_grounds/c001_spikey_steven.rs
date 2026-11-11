@@ -20,7 +20,7 @@ mod tests {
     use crate::scenario;
 
     const FILLER: &str = "core-005";
-    const BODY: &str = "core-008"; // Mr. Vanilla 4/4, an enemy Unit to swing at.
+    const BODY: &str = "core-008"; // Mr. Vanilla: an enemy Unit to swing at.
 
     fn played(radiant: bool) -> Scenario {
         let mut s = scenario(json!({

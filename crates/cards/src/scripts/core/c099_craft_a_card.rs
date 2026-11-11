@@ -110,7 +110,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const CRAFT: &str = "core-099"; // Spell, 3, Mythic
+    const CRAFT: &str = "core-099"; // Craft a Card: a Spell, Mythic
     /// #53 Reno, a 3-cost Unit: the spare card that keeps §2.5's auto-end off the assertions.
     const SPARE: &str = "core-053";
     /// #19 Midrange Menace: base 9/9 Taunt, radiant 18/18 Taunt + Immutable — R23's target.
@@ -122,6 +122,7 @@ mod tests {
 
     use crate::js;
 
+    // Differs from Scenario::events_of: the events as JSON (`Vec<Value>`), not typed `GameEvent`s.
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
         s.events()
             .iter()

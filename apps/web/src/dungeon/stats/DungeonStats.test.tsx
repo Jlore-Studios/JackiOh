@@ -1,6 +1,6 @@
 // B32 (DR14 part G, #2708): the device leaderboards rank the deepest row, the most curse
 // points, the top score and the fastest win, and each entry opens that run's stats. Only
-// `../store.ts`'s `readRunHistory` is stubbed; part D owns that module, so its types are
+// `../store.ts`'s `readRunHistory` and `contentOf` are stubbed; part D owns that module, so its types are
 // imported, never copied.
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
@@ -12,16 +12,25 @@ import { emptyStateTestid } from "../../empty/EmptyState.tsx";
 import { formatDateTime, formatNumber } from "../../i18n/i18n.ts";
 import { navTestid } from "../../routes/nav.tsx";
 import type { RunRecord } from "../store.ts";
+import { expectOnePageTitle } from "../../test/pageTitle.ts";
 import { DungeonStats } from "./DungeonStats.tsx";
 import { dungeonStatsTestid, type DungeonLeaderboard } from "./testids.ts";
 
 const historyPlan = vi.hoisted<{ records: unknown[]; calls: number }>(() => ({ records: [], calls: 0 }));
+
+/** #3501: the run content a record's curse ids are named from; only its curses are read. */
+const content = vi.hoisted(() => ({
+  curses: [
+    { id: "heavy-hands", name: "Heavy Hands", text: "Enemies start each fight with 5 more health.", points: 2 },
+  ],
+}));
 
 vi.mock("../store.ts", () => ({
   readRunHistory: () => {
     historyPlan.calls += 1;
     return historyPlan.records;
   },
+  contentOf: () => ({ pool: [], starterAccess: [], enemies: [], passives: [], events: [], curses: content.curses }),
 }));
 
 /** Every `RunStats` field's player label, as the details table shows it. */
@@ -130,6 +139,10 @@ function endedOn(record: RunRecord): string {
 function expectRunDetails(record: RunRecord, time: string): void {
   const dialog = screen.getByRole("dialog", { name: `Run ${record.seed}` });
   expect(dialog).toHaveAttribute("aria-modal", "true");
+  // R3221000: it closes by the dialog's ✕, which holds the focus from the start.
+  const close = within(dialog).getByTestId(dungeonStatsTestid.dialogClose);
+  expect(close).toHaveAccessibleName("Close");
+  expect(close).toHaveFocus();
   const meta = within(dialog).getByTestId(dungeonStatsTestid.detailMeta);
   for (const text of [
     record.seed,
@@ -212,6 +225,15 @@ describe("B32 the device leaderboards and each run's stats", () => {
       endedAt: "2026-10-06T21:45:00.000Z",
     });
 
+  it("R3223000 the screen has one visible h1, the PageTitle, named as its tab is, with and without runs", () => {
+    render(<DungeonStats />);
+    expectOnePageTitle("Dungeon run stats");
+    cleanup();
+    historyPlan.records = [runA()];
+    render(<DungeonStats />);
+    expectOnePageTitle("Dungeon run stats");
+  });
+
   it("B32 ranks the four device leaderboards and every entry opens the run's complete stats", () => {
     const [a, b, c] = [runA(), runB(), runC()];
     historyPlan.records = [a, b, c];
@@ -264,6 +286,17 @@ describe("B32 the device leaderboards and each run's stats", () => {
     expect(opener).toHaveFocus();
   });
 
+  it("#3501 a record's curses show by name from the content, and an id the content lacks shows as the id", () => {
+    historyPlan.records = [recordFixture({ seed: "EEEEEE", curses: ["heavy-hands", "gone-curse"] })];
+    render(<DungeonStats />);
+
+    fireEvent.click(entryAt("deepest", 0));
+    const curses = within(screen.getByTestId(dungeonStatsTestid.detailCurses));
+    expect(curses.getByText("Heavy Hands")).toBeInTheDocument();
+    expect(curses.getByText("gone-curse")).toBeInTheDocument();
+    expect(curses.queryByText("heavy-hands")).not.toBeInTheDocument();
+  });
+
   it("B32 a fastest board with matching runs but no wins says so", () => {
     historyPlan.records = [recordFixture({ seed: "DDDDDD", won: false, rowReached: 6, timeMs: 60_000 })];
     render(<DungeonStats />);
@@ -313,7 +346,7 @@ describe("the mode and daily filters", () => {
 });
 
 describe("a device with no runs yet", () => {
-  it("shows a device-empty state with ways back to Dungeon Run", () => {
+  it("shows a device-empty state with ways back to Dungeon run", () => {
     historyPlan.records = [];
     render(<DungeonStats />);
 

@@ -76,13 +76,13 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TOMMY: &str = "classicplus-026";
-    const STOCKPILE: &str = "core-005"; // Draw 2. Heal your hero 2.
-    const MENACE: &str = "core-019"; // 9/9 Taunt; end of turn: heal this to full.
-    const FILLER: &str = "core-008"; // Mr. Vanilla, a (1) 4/4: a plain card to play or hold
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt; end of turn: heal this to full
+    const FILLER: &str = "core-008"; // Mr. Vanilla: a plain card to play or hold
     const PANTHER: &str = "core-032"; // Prem Panther: whenever this attacks, draw 2 for each Unit it destroyed
     const MOTHS: &str = "core-009"; // Moths to the Flame: start of turn, every enemy Unit attacks this
     const NOSE: &str = "classic-015"; // Nose Hunter: "Activate: Discard a random card. …"
-    const FREE: &str = "core-010"; // Rapid Replenish, a (0) Spell: an action Tommy's Cry leaves the mana for
+    const FREE: &str = "core-010"; // Rapid Replenish: an action Tommy's Cry leaves the mana for
     const THRIVE: &str = "classic-081"; // The Power to Thrive: "Activate: … or reduce the Cost of a card in
                                         // your hand", which asks for the card (a prompt)
     const DECK: [&str; 6] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];

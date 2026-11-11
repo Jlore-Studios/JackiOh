@@ -99,18 +99,18 @@ mod tests {
     use crate::scenario;
 
     const REFUSAL: &str = "classicplus-t-ai-09";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
-    const TRUE_STRIKE: &str = "core-044"; // (1) Spell: Pierce. Deal 4 damage. Exile this.
-    const MAGIC_JAMMED: &str = "core-036"; // (1) Spell: Destroy target backrow card. Lock its zone.
-    const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const TWINSPELL: &str = "core-079"; // (2) Field Spell: Activate: your next Spell this turn gains Echo +1.
-    const BEAR: &str = "core-060"; // (1) Trap
-    const COUNTERSPELL_TEST_FILLER: &str = "core-011"; // (1) Unit
-    const SCEPTER: &str = "classic-007"; // (1) Field Spell: Cry: exile a (1) Cost or less Spell from your hand. Activate: cast a copy of it.
-    const FLAME: &str = "classic-016"; // (1) Spell, Book: Deal 4 damage.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const TRUE_STRIKE: &str = "core-044"; // True Strike: Pierce. Deal 4 damage. Exile this.
+    const MAGIC_JAMMED: &str = "core-036"; // Magic Jammed: Destroy target backrow card. Lock its zone.
+    const FLOOD: &str = "core-017"; // Flood: Bounce all Units.
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const TWINSPELL: &str = "core-079"; // Twinspell: Activate: your next Spell this turn gains Echo +1.
+    const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
+    const COUNTERSPELL_TEST_FILLER: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const SCEPTER: &str = "classic-007"; // InfiniScepter: Cry: exile a cheap Spell from your hand. Activate: cast a copy of it.
+    const FLAME: &str = "classic-016"; // Book of Flame: a Spell, Book: Deal 4 damage
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -147,10 +147,6 @@ mod tests {
 
     fn p1_hero() -> Value {
         json!([{ "pick": "hero", "player": "p1" }])
-    }
-
-    fn count(events: &[GameEvent], kind: &str) -> usize {
-        events.iter().filter(|event| js(*event)["type"] == kind).count()
     }
 
     fn view_text(s: &Scenario, player: PlayerId) -> String {
@@ -190,8 +186,8 @@ mod tests {
                 s.expect_in_zone(menace.as_str(), "field");
                 s.expect_in_zone(REFUSAL, "graveyard");
                 s.expect_events(json!(["cardAnnounced", "trapFired", "countered"]));
-                assert_eq!(count(s.last_events(), "cardPlayed"), 0);
-                assert_eq!(count(s.last_events(), "cardResolved"), 0);
+                assert_eq!(s.last_count("cardPlayed"), 0);
+                assert_eq!(s.last_count("cardResolved"), 0);
             }
 
             #[test]
@@ -212,8 +208,8 @@ mod tests {
                 s.activate(TWINSPELL, json!({}));
                 let targets = pick::unit_at(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
-                assert_eq!(count(s.last_events(), "cardResolved"), 0);
-                assert_eq!(count(s.last_events(), "destroyed"), 0);
+                assert_eq!(s.last_count("cardResolved"), 0);
+                assert_eq!(s.last_count("destroyed"), 0);
             }
 
             #[test]
@@ -245,7 +241,7 @@ mod tests {
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert!(s.unit(P2, 1).is_none());
                 assert_eq!(s.card(REFUSAL).face_up, Some(false));
-                assert_eq!(count(s.events(), "countered"), 0);
+                assert_eq!(s.count("countered"), 0);
             }
 
             #[test]
@@ -256,7 +252,7 @@ mod tests {
                 // Flood bounced every Unit, p1's included: it named none of them.
                 assert!(s.unit(P1, 1).is_none());
                 assert_eq!(s.card(REFUSAL).face_up, Some(false));
-                assert_eq!(count(s.events(), "countered"), 0);
+                assert_eq!(s.count("countered"), 0);
             }
 
             #[test]
@@ -265,7 +261,7 @@ mod tests {
                 s.play(TWINSPELL, json!({ "zone": 1 }))
                     .play(BEAR, json!({ "zone": 2 }))
                     .play(COUNTERSPELL_TEST_FILLER, json!({ "zone": 2 }));
-                assert_eq!(count(s.events(), "countered"), 0);
+                assert_eq!(s.count("countered"), 0);
                 assert_eq!(s.card(REFUSAL).face_up, Some(false));
             }
 
@@ -278,7 +274,7 @@ mod tests {
                 let targets = pick::unit_at(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert!(s.unit(P1, 1).is_none());
-                assert_eq!(count(s.events(), "countered"), 0);
+                assert_eq!(s.count("countered"), 0);
             }
 
             #[test]
@@ -289,7 +285,7 @@ mod tests {
                 s.activate(SCEPTER, json!({}));
                 let targets = pick::unit_at(&s, P1, 1);
                 s.answer(targets);
-                assert_eq!(count(s.events(), "countered"), 1);
+                assert_eq!(s.count("countered"), 1);
                 s.expect_in_zone(REFUSAL, "graveyard");
                 let unit = s.unit(P1, 1).map(|unit| unit.id).unwrap_or_default();
                 s.expect_stats(unit.as_str(), json!({ "health": 9 }));
@@ -304,7 +300,7 @@ mod tests {
                 assert_eq!(s.state().pending.as_ref().map(|pending| pending.player_id), Some(P2));
                 let targets = pick::unit_at(&s, P1, 1);
                 s.answer(targets);
-                assert_eq!(count(s.events(), "countered"), 0);
+                assert_eq!(s.count("countered"), 0);
                 assert_eq!(s.card(REFUSAL).face_up, Some(false));
                 s.expect_health(P1, 26);
                 assert_eq!(s.unit(P1, 1).map(|unit| unit.damage), Some(4));
@@ -315,8 +311,8 @@ mod tests {
                 let mut s = setup(json!({ "backrow": [refusal(false, 2), refusal(false, 3)] }), json!({}), false);
                 let targets = pick::unit_at(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
-                assert_eq!(count(s.events(), "countered"), 1);
-                assert_eq!(count(s.events(), "trapFired"), 1);
+                assert_eq!(s.count("countered"), 1);
+                assert_eq!(s.count("trapFired"), 1);
                 assert!(s.backrow(P1, 2).is_none());
                 assert_eq!(s.backrow(P1, 3).and_then(|card| card.face_up), Some(false));
             }
@@ -330,7 +326,7 @@ mod tests {
                 );
                 let jammed = s.backrow(P1, 3).map(|card| card.id).unwrap_or_default();
                 s.play(MAGIC_JAMMED, json!({ "targets": [{ "pick": "instance", "instanceId": jammed }] }));
-                assert_eq!(count(s.events(), "countered"), 0);
+                assert_eq!(s.count("countered"), 0);
                 s.expect_in_zone(jammed.as_str(), "graveyard");
             }
         }
@@ -360,7 +356,7 @@ mod tests {
                 let jammed = s.backrow(P1, 3).map(|card| card.id);
                 let target = jammed.clone().unwrap_or_default();
                 s.play(MAGIC_JAMMED, json!({ "targets": [{ "pick": "instance", "instanceId": target }] }));
-                assert_eq!(count(s.events(), "countered"), 1);
+                assert_eq!(s.count("countered"), 1);
                 assert_eq!(s.backrow(P1, 3).map(|card| card.id), jammed);
             }
 
@@ -370,7 +366,7 @@ mod tests {
                 let targets = pick::unit_at(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(MENACE.to_string()));
-                assert_eq!(count(s.events(), "countered"), 1);
+                assert_eq!(s.count("countered"), 1);
             }
 
             #[test]
@@ -379,7 +375,7 @@ mod tests {
                 let hand = s.hand(P1).len();
                 let targets = pick::unit_at(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
-                assert_eq!(count(s.events(), "countered"), 0);
+                assert_eq!(s.count("countered"), 0);
                 assert_eq!(s.hand(P1).len(), hand);
                 assert_eq!(s.card(REFUSAL).face_up, Some(false));
             }

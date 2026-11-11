@@ -41,6 +41,7 @@ import { navigate, SITE_ORIGIN, paths } from "../net/navigate.ts";
 import { NEW_RIBBON_SET } from "../patches/ribbon.ts";
 import { collectionOwning } from "../collection/fixtures.ts";
 import { at, meBody, signIn, stubServer } from "../test/stubServer.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import AlmanacRoute, { ALMANAC_CATALOG, almanacMeta, almanacTestid } from "./almanac.tsx";
 import { useAlmanacOwnCopies } from "./almanacOwnership.ts";
 import LandingRoute from "./landing.tsx";
@@ -117,7 +118,7 @@ describe("R630 the /almanac route", SLOW_GRID, () => {
     const footer = screen.getByTestId(siteFooterTestid.root);
     const link = within(footer).getByTestId(siteFooterTestid.almanac);
     expect(link).toHaveAttribute("href", paths.almanac);
-    expect(link).toHaveTextContent("Card almanac");
+    expect(link).toHaveTextContent("Almanac");
     expect(link.previousElementSibling).toBe(within(footer).getByTestId(siteFooterTestid.patchNotes));
     cleanup();
 
@@ -152,11 +153,17 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
     expect(almanacPool(ALMANAC_CATALOG, DEFAULT_FILTER, DEFAULT_SORT)).not.toContain(GLITCH_DEF_ID);
   });
 
+  it("R3223000 the screen has one visible h1, the PageTitle, which names its main region", () => {
+    render(<AlmanacRoute />);
+    const title = expectOnePageTitle("Almanac");
+    expect(screen.getByRole("main")).toHaveAttribute("aria-labelledby", title.id);
+  });
+
   it("R630 renders the deck builder's own filter bar, pool and look", () => {
     render(<AlmanacRoute />);
     const root = screen.getByTestId(almanacTestid.screen);
     expect(root).toHaveClass("app-shell", "app-shell--wide", "tavern", "deckbuilder", "almanac");
-    expect(root.querySelector(".db-header .db-title")).toHaveTextContent("Almanac");
+    expect(within(root).getByTestId("page-title")).toHaveTextContent("Almanac");
     const browse = root.querySelector("section.db-browse");
     expect(browse).not.toBeNull();
     expect(within(browse as HTMLElement).getByTestId(DB_FILTERS)).toBeInTheDocument();

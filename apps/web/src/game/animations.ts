@@ -12,6 +12,7 @@ import type { FxDescriptor } from "../fx/types.ts";
 import { getFxSettings, normalizeSpeed, type FxBigMoments, type FxSettings } from "../fx/settings.ts";
 import { readSettings as readPanelSettings } from "../settings/store.ts";
 import { type AnimatingMap, type Side, sideOf, testid } from "./contract";
+import { RIFFLE_MS } from "./config.ts";
 import { SLAM_BURST, UNIT_SLAM, type SlamTier } from "./damageFeel.ts";
 import { firstReveal, isFaceDownSet } from "./entrance.ts";
 import {
@@ -20,9 +21,13 @@ import {
   launchAt,
   pileOf,
   pileRunAt,
+  riftAt,
   sweepAt,
   volleyAt,
   wipeAt,
+  type AnomalyRift,
+  signatureRunAt,
+  type Signature,
   type Pile,
   type PlayTracker,
   type StarshipFuse,
@@ -943,6 +948,8 @@ export const ZONE_IMPACT_MS = 700;
 export const SWEEP_MS = 600;
 /** R2800000: a set-piece card's run of removals, played as one entry its set piece draws (after its hold). */
 export const WIPE_MS = 600;
+/** R3338000: a Terminus card's signature run, played as one entry its set piece draws (after its hold). */
+export const SIGNATURE_RUN_MS = 1_200;
 /** R2801000: one piece's bolt-on into its Dormant Starship, the `starshipFused` row's time. */
 export const STARSHIP_FUSE_MS = ANIMATIONS.starshipFused.durationMs;
 /** R2801000: a fuse run staggers this many pieces at most; any more land with the last of them. */
@@ -986,13 +993,77 @@ export type AnimationEntry = {
   fuse?: StarshipFuse;
   /** R2801000: a Starship launched, which the Starship's set piece claims (`starshipClaim`). */
   launch?: StarshipLaunch;
+  /** R3337003: an Anomaly laid, its side's cards going and its board's coming, which its set piece claims (`anomalyClaim`). */
+  rift?: AnomalyRift;
   /** #185: a Unit the viewer can see lands in this entry, this hard (`slamEntries`). */
   slam?: EntrySlam;
   /** R2722001: a Legendary or Mythic card the viewer can read makes its entrance in this entry (`entranceEntries`). */
   entrance?: EntryEntrance;
   /** R2785000: this entry is its action's set piece and holds the game for one capped beat (`setPieceEntries`). */
   setPiece?: EntrySetPiece;
+  /** #3347: the decks riffle once this entry's own motion is over (`riffleEntries`). */
+  riffle?: EntryRiffle;
+  /** R3338000: a Terminus card's signature moment, one run of its hook's events (or its first cast), which its set piece claims. */
+  signature?: EntrySignature;
 };
+
+/**
+ * #3347: one riffle of the shuffled decks, after the last shuffle of an action. `sides` are the decks
+ * that riffle ("you" first), `delayMs` is how long into the entry it starts (the entry's own motion
+ * before it), and `ms` how long it takes: 0 under reduced motion or with the effects off, where the riffle snaps to its end.
+ */
+export type EntryRiffle = { sides: Side[]; delayMs: number; ms: number };
+
+/** #3347: a `shuffledIn` or a `traded`, the events that shuffle a library. */
+export function isShuffle(event: GameEvent): boolean {
+  return event.type === "shuffledIn" || event.type === "traded";
+}
+
+/** #3347: the last shuffle of one action's events, the one its riffle follows; null when it shuffles nothing. */
+export function lastShuffleOf(events: readonly GameEvent[]): GameEvent | null {
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    const event = events[i];
+    if (event !== undefined && isShuffle(event)) return event;
+  }
+  return null;
+}
+
+/**
+ * #3347: marks the entry holding the last shuffle of an action so its deck riffles once (one riffle per
+ * action, however many cards went in), after the entry's own motion, and lengthens the entry by it.
+ * `sides` are every deck the action shuffled. The riffle's time is the table's `RIFFLE_MS` at the
+ * viewer's speed (R201); `reduced` marks it 0 and keeps the entry as it is. Needs only public events
+ * (CLAUDE.md rule 7), and the entries without a shuffle come back untouched.
+ */
+export function riffleEntries(
+  entries: readonly AnimationEntry[],
+  options: { reduced: boolean; speed: number },
+): AnimationEntry[] {
+  let last = -1;
+  entries.forEach((entry, i) => {
+    if (entry.events.some(isShuffle)) last = i;
+  });
+  const marked = entries[last];
+  if (marked === undefined) return [...entries];
+  const sides: Side[] = [];
+  for (const entry of entries) {
+    for (const event of entry.events) {
+      if (event.type !== "shuffledIn" && event.type !== "traded") continue;
+      const side = sideOf(entry.view, event.player);
+      if (!sides.includes(side)) sides.push(side);
+    }
+  }
+  sides.sort((a, b) => (a === b ? 0 : a === "you" ? -1 : 1));
+  const ms = options.reduced ? 0 : Math.round(RIFFLE_MS / normalizeSpeed(options.speed));
+  const riffle: EntryRiffle = { sides, delayMs: marked.durationMs, ms };
+  return entries.map((entry, i) => (i === last ? { ...entry, riffle, durationMs: entry.durationMs + ms } : entry));
+}
+
+/**
+ * R3338000: the card whose signature an entry is: its readable definition, its instance and its
+ * controller, as the seat's own stream named them (R202).
+ */
+export type EntrySignature = Signature;
 
 /**
  * #185: one landing's share of its action's slam (SLAM_BURST): the tier sets the look and the sound,
@@ -1031,6 +1102,8 @@ export function landingOf(event: GameEvent): LandingEvent | null {
 export function slamEntries(entries: readonly AnimationEntry[], slamOf: SlamResolver, reducedMotion: boolean): AnimationEntry[] {
   const left: { hitStopMs: number; shakePx: number; anticipationMs: number } = { ...SLAM_BURST };
   return entries.map((entry) => {
+    // R3337003: an Anomaly's cards land out of its rift, the set piece's own landing, not a slam.
+    if (entry.rift !== undefined) return entry;
     for (const event of entry.events) {
       const landing = landingOf(event);
       const tier = landing === null ? null : slamOf(landing);
@@ -1083,6 +1156,11 @@ export const TAKEOVER_SET_PIECE = "takeover";
 /** R2801000: the key of a Starship's launch, and the beat it asks for at speed 1 (the cap still bounds it). */
 export const STARSHIP_SET_PIECE = "starship";
 export const STARSHIP_LAUNCH_HOLD_MS = 2_400;
+/** R3337003: the key of an Anomaly's rift, and the beat it asks for at speed 1: the tear, the pull, the flare and the title card (under the cap). */
+export const ANOMALY_SET_PIECE = "anomaly";
+export const ANOMALY_RIFT_HOLD_MS = 2_800;
+/** R3337003: a rift entry's own motion after its hold: the new board's cards falling out of the rift onto their zones. */
+export const ANOMALY_LAND_MS = 900;
 
 /**
  * R2785000: an entry's set piece. `holdMs` is its beat as held, inside the entry's `durationMs` and
@@ -1091,7 +1169,7 @@ export const STARSHIP_LAUNCH_HOLD_MS = 2_400;
 export type EntrySetPiece = { key: string; holdMs: number };
 
 /** R2785000: what claims an entry as a set piece: its key and the beat it asks for at speed 1. */
-export type SetPieceClaim = { key: string; holdMs: number };
+export type SetPieceClaim = { key: string; holdMs: number; shortHoldMs?: number };
 
 /** R2785000: the set piece an entry is, or null. It reads only the entry, whose events are the seat's own (R202). */
 export type SetPieceClaimer = (entry: AnimationEntry) => SetPieceClaim | null;
@@ -1111,32 +1189,34 @@ export type EntryEntrance = {
   anchor: string | null;
   /**
    * R2800000: this Mythic's own wipe in the same action is the action's set piece, so its takeover
-   * yields to it: the entrance claims no hold and draws no takeover.
+   * yields to it: the entrance claims no hold and draws no takeover. R3337003: so is the rift its play lays.
    */
   yielded?: true;
 };
 
 /** R2722001: the public catalog's type and rarity (a token's printed one) of a readable card, or null. */
-export type EntranceResolver = (defId: string) => { type: CardType; rarity: string | undefined } | null;
+export type EntranceResolver = (defId: string) => { type: CardType; rarity: string | undefined; printedRarity?: string | undefined } | null;
 
 /** The wait inside an entry before its motion starts: a slam's anticipation and a set piece's hold (R2785000). */
 export function leadMs(entry: Pick<AnimationEntry, "slam" | "setPiece">): number {
   return (entry.slam?.anticipationMs ?? 0) + (entry.setPiece?.holdMs ?? 0);
 }
 
-/** R2722001, R2785000: a readable Mythic's entrance claims its entry as the takeover set piece. */
+/** R2722001, R2785000: a readable Mythic's entrance claims its entry as the takeover set piece (R3338000: unless it yielded). R3345000: short hold is 500ms. */
 export function takeoverClaim(entry: AnimationEntry): SetPieceClaim | null {
-  return entry.entrance?.tier === "mythic" ? { key: TAKEOVER_SET_PIECE, holdMs: TAKEOVER_HOLD_MS } : null;
+  return entry.entrance?.tier === "mythic" && entry.entrance.yielded !== true && entry.entrance.defId !== HIDDEN_ID
+    ? { key: TAKEOVER_SET_PIECE, holdMs: TAKEOVER_HOLD_MS, shortHoldMs: TAKEOVER_HOLD_MS / 2 }
+    : null;
 }
 
 /**
  * R2785000: how long a set piece that asks `askedMs` at speed 1 holds the game. Big moments' "off" holds
- * nothing and "short" at most `SET_PIECE_SHORT_HOLD_MS`; the effects speed scales it (R201), never below
+ * nothing and "short" at most `SET_PIECE_SHORT_HOLD_MS` (or `shortHoldMs` if specified, R3345000); the effects speed scales it (R201), never below
  * `MIN_ENTRY_MS` and never past `SET_PIECE_HOLD_CAP_MS`.
  */
-export function setPieceHoldMs(askedMs: number, bigMoments: FxBigMoments, speed: number): number {
+export function setPieceHoldMs(askedMs: number, bigMoments: FxBigMoments, speed: number, shortHoldMs?: number): number {
   if (askedMs <= 0 || bigMoments === "off") return 0;
-  const beat = bigMoments === "short" ? Math.min(askedMs, SET_PIECE_SHORT_HOLD_MS) : askedMs;
+  const beat = bigMoments === "short" ? Math.min(askedMs, shortHoldMs ?? SET_PIECE_SHORT_HOLD_MS) : askedMs;
   return Math.max(MIN_ENTRY_MS, Math.min(SET_PIECE_HOLD_CAP_MS, scaleForSpeed(beat, speed)));
 }
 
@@ -1145,7 +1225,10 @@ export function setPieceHoldMs(askedMs: number, bigMoments: FxBigMoments, speed:
  * `SET_PIECES_PER_ACTION`, their `setPiece`, adding its hold to the entry's `durationMs` ahead of its
  * motion; the queue pins it against the burst budget. A later claim in the same action, an entry that
  * plays no time, Reduce motion, the effects off and Big moments' "off" hold nothing. R2800000: a
- * Mythic's entrance whose own wipe in the action is claimed yields to it, claiming nothing.
+ * Mythic's entrance whose own wipe in the action is claimed yields to it, claiming nothing. R3338000: so
+ * does one whose own signature is, and an entry whose entrance yielded may still be claimed for another
+ * set piece (a Terminus Trap's firing is its own signature's entry). R3405000: a Mythic takes over once an
+ * action, so a later copy's entrance of one that took over yields too.
  */
 export function setPieceEntries(
   entries: readonly AnimationEntry[],
@@ -1153,14 +1236,24 @@ export function setPieceEntries(
   opts: { reduced: boolean; bigMoments: FxBigMoments; speed: number },
 ): AnimationEntry[] {
   let held = 0;
-  // R2800000: a Mythic whose own wipe in this action is a set piece yields its takeover to it.
-  const own = new Set(entries.flatMap((entry) => (entry.wipe !== undefined && claimOf(entry) !== null ? [entry.wipe.sourceId] : [])));
-  return entries.map((entry) => {
-    const entrance = entry.entrance;
-    if (entrance?.tier === "mythic" && own.has(entrance.instanceId)) return { ...entry, entrance: { ...entrance, yielded: true } };
+  // R2800000, R3338000: a Mythic whose own wipe or signature in this action is a set piece yields its takeover to it;
+  // R3337003: and so does one whose play lays an Anomaly, to its rift (Anomaly Found! prints Mythic).
+  const own = new Set(
+    entries.flatMap((entry) => {
+      const sourceId = entry.wipe?.sourceId ?? entry.signature?.sourceId ?? entry.rift?.sourceId ?? null;
+      return sourceId !== null && claimOf(entry) !== null ? [sourceId] : [];
+    }),
+  );
+  // R3405000: one card takes over once an action: a second copy's entrance (a flood of Yile's Viruses) yields.
+  const tookOver = new Set<string>();
+  return entries.map((given) => {
+    const entrance = given.entrance;
+    const yields = entrance?.tier === "mythic" && entrance.yielded !== true && (own.has(entrance.instanceId) || tookOver.has(entrance.defId));
+    if (entrance?.tier === "mythic" && !yields && entrance.yielded !== true) tookOver.add(entrance.defId);
+    const entry = yields ? { ...given, entrance: { ...entrance, yielded: true as const } } : given;
     if (opts.reduced || held >= SET_PIECES_PER_ACTION || entry.durationMs <= 0) return entry;
     const claim = claimOf(entry);
-    const holdMs = claim === null ? 0 : setPieceHoldMs(claim.holdMs, opts.bigMoments, opts.speed);
+    const holdMs = claim === null ? 0 : setPieceHoldMs(claim.holdMs, opts.bigMoments, opts.speed, claim.shortHoldMs);
     if (claim === null || holdMs <= 0) return entry;
     held += 1;
     return { ...entry, setPiece: { key: claim.key, holdMs }, durationMs: entry.durationMs + holdMs };
@@ -1172,8 +1265,8 @@ const isTrapType = (type: CardType): boolean => type === "Trap" || type === "Fie
 /**
  * R2722002: the card `event` makes its entrance for on the seat it was planned for, or null: a
  * face-up play of a Unit or Spell (never a set, never a Trap's), a Unit put onto the field without a
- * play, or a hidden card's first firing the seat reads. Every one names its card in the seat's own
- * event (R202).
+ * play (R3405000: or a Mythic Field Spell put there face up), or a hidden card's first firing the seat
+ * reads. Every one names its card in the seat's own event (R202).
  */
 function entranceAt(event: GameEvent, resolve: EntranceResolver): { instanceId: string; defId: string; player: PlayerId; reveal: boolean } | null {
   switch (event.type) {
@@ -1182,8 +1275,17 @@ function entranceAt(event: GameEvent, resolve: EntranceResolver): { instanceId: 
       const info = resolve(event.defId);
       return info === null || isTrapType(info.type) ? null : { instanceId: event.instanceId, defId: event.defId, player: event.player, reveal: false };
     }
-    case "summoned":
-      return event.row === "units" && event.defId !== HIDDEN_ID ? { instanceId: event.instanceId, defId: event.defId, player: event.player, reveal: false } : null;
+    case "summoned": {
+      if (event.defId === HIDDEN_ID) return null;
+      const card = { instanceId: event.instanceId, defId: event.defId, player: event.player, reveal: false };
+      if (event.row === "units") return card;
+      // R3405000: a Mythic Field Spell put onto the field face up without a play (The Cane, by Pareto
+      // Optimality) enters as it lands; one set face down (its fresh id's `formerId`, R227) never does, and a
+      // played one entered on its `cardPlayed` already (`seen`).
+      if (event.row !== "backrow" || event.formerId !== undefined) return null;
+      const info = resolve(event.defId);
+      return info?.type === "Field Spell" && info.rarity === "Mythic" ? card : null;
+    }
     case "trapFired":
       return firstReveal(event) ? { instanceId: event.instanceId, defId: event.defId, player: event.controller, reveal: true } : null;
     default:
@@ -1208,12 +1310,17 @@ export function entranceEntries(
       // A face-up play is always a fresh entrance, as its intro is (R1350): a card bounced and played
       // again keeps its id but enters again. Its own `summoned`, a reveal or a firing enter once.
       if (card === null || (event.type !== "cardPlayed" && opts.seen.has(card.instanceId))) continue;
-      const rarity = resolve(card.defId)?.rarity;
+      const info = resolve(card.defId);
+      const rarity = info?.printedRarity ?? info?.rarity;
       if (rarity !== "Legendary" && rarity !== "Mythic") continue;
       opts.seen.add(card.instanceId);
       const tier = rarity === "Mythic" ? "mythic" : "legendary";
       // A played Unit lands in the zone its own summoned names in the same entry: the entrance centres there.
-      const landing = entry.events.find((e) => e.type === "summoned" && e.row === "units" && e.instanceId === card.instanceId);
+      // R3389000: so does a Field Spell landing face up in its backrow zone (R3332000), never one set face down.
+      const field = resolve(card.defId)?.type === "Field Spell";
+      const landing = entry.events.find(
+        (e) => e.type === "summoned" && e.instanceId === card.instanceId && (e.row === "units" || (field && e.row === "backrow" && e.formerId === undefined)),
+      );
       const anchor = targetFor(landing ?? event, entry.view);
       return { ...entry, entrance: { tier, ...card, anchor } };
     }
@@ -1232,7 +1339,17 @@ export function pileTestid(pile: Pile): string {
  */
 function pinned(entry: AnimationEntry): boolean {
   // R2785000 (from R2722001's takeover): a set piece's hold is the action's one capped beat, never squeezed.
-  return entry.cast !== undefined || entry.zone !== undefined || entry.sweep !== undefined || entry.wipe !== undefined || entry.type === "rolled" || entry.setPiece !== undefined;
+  // R3338000: so is a Terminus card's signature run, one entry for many events.
+  return (
+    entry.cast !== undefined ||
+    entry.zone !== undefined ||
+    entry.sweep !== undefined ||
+    entry.wipe !== undefined ||
+    entry.rift !== undefined ||
+    entry.type === "rolled" ||
+    entry.setPiece !== undefined ||
+    entry.signature !== undefined
+  );
 }
 
 function frameMap(entries: readonly (readonly [string | null, GameEventType])[]): Map<string, GameEventType> {
@@ -1252,7 +1369,8 @@ function isSummonOfPlay(played: GameEvent, next: GameEvent | undefined): boolean
   );
 }
 
-function sameCard(a: string, b: string): boolean {
+/** R97: whether two ids may name the same card, the sentinel matching either. */
+export function sameCard(a: string, b: string): boolean {
   return a === b || a === HIDDEN_ID || b === HIDDEN_ID;
 }
 
@@ -1277,7 +1395,9 @@ function castFrame(event: GameEvent, view: PlayerView): string | null {
  * Turns an event stream into entries, collapsing each `cardPlayed` + `summoned` pair; `reducedMotion` zeroes
  * every duration. `plays` remembers the plays still resolving from one batch to the next; a caller without
  * one gets a fresh tracker, which reads casts inside this batch alone. `wipeOf` names the cards with a set
- * piece, whose hook's run of removals plays as one wipe (R2800000); by default none does.
+ * piece, whose hook's run of removals plays as one wipe (R2800000); by default none does. R3338000:
+ * `signatureOf` names a Terminus card's signature moment, its hook's run of those event types (one entry)
+ * or its first cast (`"cast"`); by default none has one.
  */
 export function planEntries(
   events: readonly GameEvent[],
@@ -1285,6 +1405,7 @@ export function planEntries(
   reducedMotion: boolean,
   plays: PlayTracker = createPlayTracker(),
   wipeOf: (defId: string) => boolean = () => false,
+  signatureOf: (defId: string) => readonly GameEventType[] | "cast" | null = () => null,
 ): AnimationEntry[] {
   const out: AnimationEntry[] = [];
   const timed = (ms: number): number => (reducedMotion ? 0 : ms);
@@ -1333,6 +1454,23 @@ export function planEntries(
       continue;
     }
 
+    // R3338000: a Terminus card's signature, one run of its hook's events, plays as one pinned entry.
+    const signed = signatureRunAt(events, i, plays.hook(), signatureOf);
+    if (signed !== null) {
+      const run = take(i, signed.length);
+      plays.closeHook();
+      out.push({
+        events: run,
+        type: event.type,
+        durationMs: timed(SIGNATURE_RUN_MS),
+        frames: frameMap(run.map((e) => [frameFor(e, view, plays), e.type] as const)),
+        view,
+        signature: signed.signature,
+      });
+      i += signed.length;
+      continue;
+    }
+
     // R2801000: pieces fusing one after another into one Starship play as one fuse run.
     const fusing = fuseRunAt(events, i, view);
     if (fusing !== null) {
@@ -1362,6 +1500,23 @@ export function planEntries(
         launch,
       });
       i += 1;
+      continue;
+    }
+
+    // R3337003: an Anomaly's lay, its side's cards going and its board's coming, plays as one pinned
+    // entry its set piece claims. The board's own swap motion yields to it (no frame for the board).
+    const rifted = riftAt(events, i, view, plays.current());
+    if (rifted !== null) {
+      const run = take(i, rifted.length);
+      out.push({
+        events: run,
+        type: event.type,
+        durationMs: timed(ANOMALY_LAND_MS),
+        frames: frameMap(run.slice(1).map((e) => [frameFor(e, view, plays), e.type] as const)),
+        view,
+        rift: rifted.rift,
+      });
+      i += rifted.length;
       continue;
     }
 
@@ -1411,9 +1566,15 @@ export function planEntries(
       const length = at - i + 1 + (isSummonOfPlay(played, landed) ? 1 : 0);
       const run = events.slice(i, i + length);
       let cast: { by: string; ordinal: number } | null = null;
+      let signature: EntrySignature | undefined;
       for (const seen of run) {
         const made = plays.see(seen);
-        if (made !== null) cast = { by: made.by.defId, ordinal: made.ordinal };
+        if (made === null) continue;
+        cast = { by: made.by.defId, ordinal: made.ordinal };
+        // R3338000: a card whose signature is its casts (The Big Crunch) signs its first.
+        if (made.ordinal === 1 && signatureOf(made.by.defId) === "cast") {
+          signature = { by: made.by.defId, sourceId: made.by.instanceId, player: made.by.player };
+        }
       }
       out.push({
         events: run,
@@ -1422,6 +1583,7 @@ export function planEntries(
         frames: frameMap(run.map((e) => [castFrame(e, view), e.type] as const)),
         view,
         cast: cast ?? { by: HIDDEN_ID, ordinal: 1 },
+        ...(signature === undefined ? {} : { signature }),
       });
       i += length;
       continue;
@@ -1511,6 +1673,12 @@ export type RunnerSignal =
    */
   | { kind: "still"; entry: AnimationEntry }
   /**
+   * R3407002: an entry whose row has no duration either (a hook's `hookResolving` marker, an emote, the
+   * game's end). It draws nothing, but the effects layer remembers its events, so the hook entry a marker
+   * opens (R2797000) is open for the events after it, as it is for every entry that plays.
+   */
+  | { kind: "pass"; entry: AnimationEntry }
+  /**
    * drain() ran. `entries` are the ones it cut short, in order: the entry in flight, then every one
    * still waiting. A drained game over never plays its killing blow, so the effects layer replays it.
    */
@@ -1544,6 +1712,8 @@ export type AnimationQueueOptions = {
   setPieces?: boolean;
   /** R2800000: the cards with a set piece, whose hook's removals play as one wipe (`planEntries`). Absent: none. */
   wipeOf?: (defId: string) => boolean;
+  /** R3338000: a Terminus card's signature moment (`planEntries`). Absent: none has one. */
+  signatureOf?: (defId: string) => readonly GameEventType[] | "cast" | null;
 };
 
 const EMPTY_ANIMATING: AnimatingMap = new Map<string, GameEventType>();
@@ -1736,7 +1906,7 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
         return;
       }
       if (next.durationMs <= 0) {
-        if ((animationRow(next.type)?.durationMs ?? 0) > 0) signal({ kind: "still", entry: next });
+        signal({ kind: (animationRow(next.type)?.durationMs ?? 0) > 0 ? "still" : "pass", entry: next });
         continue;
       }
       current = next;
@@ -1759,13 +1929,15 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
       // Read live, so a change in the settings panel applies from the next action on (R201).
       const settings = readSettings();
       const reduced = reducedMotion || settings.motion === "reduce" || readPanelSettings().reduceMotion;
-      const planned = planEntries(events, view, reduced, plays, options.wipeOf);
+      const planned = planEntries(events, view, reduced, plays, options.wipeOf, options.signatureOf);
       const slammed = options.slamOf === undefined ? planned : slamEntries(planned, options.slamOf, reduced);
       const scaled = slammed.map((entry) => {
         const durationMs = scaleForSpeed(entry.durationMs, settings.speed);
         return durationMs === entry.durationMs ? entry : { ...entry, durationMs };
       });
-      const entranced = options.entranceOf === undefined ? scaled : entranceEntries(scaled, options.entranceOf, { seen: entered });
+      // #3347: with the effects off there are no leaves to wait for, so the riffle takes no time (its sound stays).
+      const riffled = riffleEntries(scaled, { reduced: reduced || settings.intensity === "off", speed: settings.speed });
+      const entranced = options.entranceOf === undefined ? riffled : entranceEntries(riffled, options.entranceOf, { seen: entered });
       // R2785000: the action's set piece, if any entry is one; none on a silent board, reduced or with the effects off.
       const claimOf: SetPieceClaimer = (entry) => options.setPieceOf?.(entry) ?? takeoverClaim(entry);
       const entries =

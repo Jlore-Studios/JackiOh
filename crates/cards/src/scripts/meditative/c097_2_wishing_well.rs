@@ -98,8 +98,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-010"; // (0) Spell.
-    const SPARE: &str = "core-005"; // (1) Spell: library spare.
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const SPARE: &str = "core-005"; // Stockpile: library spare
 
     /// Seeds per sweep.
     const SEEDS: usize = 200;
@@ -300,7 +300,7 @@ mod tests {
     mod luck {
         use super::*;
 
-        const FENG_SHUI: &str = "meditative-040"; // (3) Field Spell, no longer "Aura: You have Luck 1" (R3140000).
+        const FENG_SHUI: &str = "meditative-040"; // Feng Shui: a Field Spell, no longer "Aura: You have Luck 1" (R3140000).
 
         /// Seeds per count: at chance 1 most of them miss.
         const LUCK_SEEDS: usize = 20;

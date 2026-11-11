@@ -7,7 +7,7 @@ import { createRng } from "@jackioh/engine";
 import type { ActionBody, CardDef, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { newEventsSince } from "../game/animations.ts";
-import { createPracticeCore, type PracticeCore } from "../practice/core.ts";
+import { createPracticeDriver, type PracticeDriver } from "../practice/driver.ts";
 import type { PracticeDebug, PracticeRequestBody, PracticeResponse, PracticeSnapshot } from "../practice/protocol.ts";
 import {
   activeStep,
@@ -77,7 +77,7 @@ type Options = {
   budget?: SearchBudget;
   /** A fixture script in place of the lesson's own (the coach framework's tests). */
   script?: LessonScript;
-  /** What the player's Field Guide holds as the lesson starts (R2205002). */
+  /** What the player's Field guide holds as the lesson starts (R2205002). */
   known?: readonly string[];
 };
 
@@ -177,9 +177,9 @@ function randomPolicy(ctx: CoachCtx, pick: (n: number) => number): ActionBody | 
   return choices[pick(choices.length)] ?? null;
 }
 
-function send(core: PracticeCore, counter: { n: number }, body: PracticeRequestBody): PracticeResponse {
+function send(core: PracticeDriver, counter: { n: number }, body: PracticeRequestBody): PracticeResponse {
   counter.n += 1;
-  return core.handle({ ...body, id: counter.n } as Parameters<PracticeCore["handle"]>[0]);
+  return core.handle({ ...body, id: counter.n } as Parameters<PracticeDriver["handle"]>[0]);
 }
 
 function snapshotOf(response: PracticeResponse): PracticeSnapshot {
@@ -195,7 +195,7 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
   const rng = createRng(options.policySeed ?? `${lessonId}:policy`);
 
   const budget = options.budget ?? (policy === "random" ? RANDOM_POLICY_AI_BUDGET : AI_GATE_BUDGET);
-  const core = createPracticeCore({ now: () => 0, dev: true, budget });
+  const core = createPracticeDriver({ now: () => 0, dev: true, budget });
   const counter = { n: 0 };
   const startedResponse = send(core, counter, {
       type: "start",

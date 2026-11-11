@@ -38,7 +38,7 @@ mod tests {
 
     const TUNING: &str = "classicplus-t-ai-10";
     const UNIT: &str = "core-008";
-    const MENACE: &str = "core-019"; // Radiant: Immutable.
+    const MENACE: &str = "core-019"; // Midrange Menace: Radiant: Immutable
     const FILLER: &str = "core-005";
 
     const P1: PlayerId = PlayerId::P1;

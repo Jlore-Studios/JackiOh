@@ -559,10 +559,12 @@ func CILogs(ctx *hctx.Context, runID any) string {
 	return ciLogs(ctx, runID, false)
 }
 
-// CIEarlyNote is what a CI fix of a run the status loop stopped early is told of it (#2948).
-var CIEarlyNote = "The harness stopped this CI run early, once a required job had failed on the head " +
-	"(#2948): the rest of its jobs were cancelled, not failed, so only the failed ones are below, " +
-	"and the required checks that did not run yet run in full on whatever you push."
+// CIEarlyNote is what a CI fix of a run the status loop stopped early is told of it (#2948): on the
+// pull request's head (`events.StopRedCI`) or on the merge queue's build (`events.EvacQueue`).
+var CIEarlyNote = "The harness stopped this CI run early, once a required job had failed (#2948; on " +
+	"the merge queue's build, once the queue no longer held it): the rest of its jobs were cancelled, " +
+	"not failed, so only the failed ones are below, and the required checks that did not run yet run " +
+	"in full on whatever you push."
 
 // ciLogs is CILogs; `early` is a run the status loop stopped once a required job had failed
 // (`events.StopRedCI`): its cancelled jobs say nothing, so only the failed ones are given.

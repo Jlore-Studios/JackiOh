@@ -53,6 +53,7 @@ type Client interface {
 	InMergeQueue(nodeID string) bool
 	QueueRemoval(nodeID string) map[string]string
 	Dequeue(nodeID string)
+	QueueOrder(branch string) []int
 	PinIssue(nodeID string)
 	MarkReady(nodeID string)
 	MarkDraft(nodeID string)
@@ -75,6 +76,8 @@ type Client interface {
 	RerunFailedJobs(runID any)
 	CancelRun(runID any)
 	RerunRun(runID any)
+	PendingDeployments(runID any) []*pyjson.Object
+	ApproveDeployments(runID any, environmentIDs []any, comment string)
 	ListJobs(runID any, cached bool) []*pyjson.Object
 	JobLog(jobID any, tailChars int) string
 	ListArtifacts(runID any) []*pyjson.Object

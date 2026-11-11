@@ -469,13 +469,13 @@ mod r610_bots {
 
 mod r2755000_the_jlorious_card_back {
     use super::*;
-    use jackioh_server::cosmetics::JLORIOUS_CARD_BACK;
+    use jackioh_server::cosmetics::{JLORIOUS_CARD_BACK, JLORIOUS_STARSHIP};
     use jackioh_server::economy::store::EconomyReason;
 
     use super::r640000_bots_on_the_ladder::seed_placed_bot;
 
     /// The Jlorious card back's ledger rows of `profile_id`: each one's reason and reference.
-    async fn backs(app: &App, profile_id: &str) -> Vec<(EconomyReason, Option<String>)> {
+    pub(super) async fn backs(app: &App, profile_id: &str) -> Vec<(EconomyReason, Option<String>)> {
         let mut tx = app.db.begin(Some(profile_id)).await.expect("begin");
         let ledger = tx.economy_ledger_get(profile_id).await.expect("the ledger");
         tx.commit().await.expect("commit");
@@ -541,6 +541,47 @@ mod r2755000_the_jlorious_card_back {
             json!(2)
         );
         assert!(backs(&off, A).await.is_empty());
+    }
+
+    /// R3335003: the Jlorious Starship's ledger rows of `profile_id`, as `backs` reads the card back's.
+    async fn starships(app: &App, profile_id: &str) -> Vec<(EconomyReason, Option<String>)> {
+        let mut tx = app.db.begin(Some(profile_id)).await.expect("begin");
+        let ledger = tx.economy_ledger_get(profile_id).await.expect("the ledger");
+        let owned = tx.economy_cosmetics_get(profile_id).await.expect("the cosmetics");
+        tx.commit().await.expect("commit");
+        let rows: Vec<(EconomyReason, Option<String>)> = ledger
+            .cosmetics
+            .into_iter()
+            .filter(|row| row.cosmetic_id == JLORIOUS_STARSHIP)
+            .map(|row| (row.reason, row.reference))
+            .collect();
+        assert_eq!(
+            owned.account.iter().any(|id| id == JLORIOUS_STARSHIP),
+            !rows.is_empty()
+        );
+        rows
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3335003_the_game_that_leaves_people_jlorious_grants_the_jlorious_starship_too() {
+        let app = test_app().await;
+        r608_season(&app).await;
+        rate(&app, game("j-1", [player(A), player(B)], Some(0), 1)).await;
+        // Beside the card back, by the same game, with the same reason, to each person it leaves Jlorious.
+        let granted = vec![(EconomyReason::Jlorious, Some("j-1".to_string()))];
+        for jlorious in [A, "m-high", "m-low"] {
+            assert_eq!(starships(&app, jlorious).await, granted, "{jlorious}");
+            assert_eq!(backs(&app, jlorious).await, granted, "{jlorious}");
+        }
+        assert!(starships(&app, B).await.is_empty());
+        assert!(starships(&app, "golden").await.is_empty());
+        // Once: the next game that leaves A Jlorious writes nothing more.
+        rate(&app, game("j-2", [player(A), player(B)], Some(0), 2)).await;
+        assert_eq!(starships(&app, A).await, granted);
+        // A ladder bot never owns it (R640000).
+        seed_placed_bot(&app, "bot-mythic", 3000.0, tier_bottom(4) + 3).await;
+        rate(&app, game("j-3", [bot("bot-mythic"), player(B)], Some(0), 3)).await;
+        assert!(starships(&app, "bot-mythic").await.is_empty());
     }
 }
 
@@ -1770,5 +1811,141 @@ mod r2778000_two_ladders {
             &raisin(0),
             "A's Constructed placements",
         );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// R3290000 a banned account leaves the board
+// ---------------------------------------------------------------------------
+
+mod r3290000_a_banned_account_leaves_the_board {
+    use super::*;
+    use jackioh_server::cli::moderate::{ban_profile, unban_profile};
+    use jackioh_server::economy::store::EconomyReason;
+
+    use super::r2755000_the_jlorious_card_back::backs;
+
+    /// `JLORIOUS_SIZE + 1` Mythic Grape people, `m-000` rated highest, one rating step apart: the 101st is the
+    /// first one left out of Jlorious.
+    async fn mythic_people(app: &App) {
+        for index in 0..=JLORIOUS_SIZE {
+            seed_placed(
+                app,
+                &format!("m-{index:03}"),
+                2000.0 - index as f64,
+                tier_bottom(4),
+                json!({}),
+            )
+            .await;
+        }
+    }
+
+    fn strings(rows: &Value, key: &str) -> Vec<String> {
+        rows.as_array()
+            .expect("a list")
+            .iter()
+            .map(|row| row[key].as_str().expect("a string").to_owned())
+            .collect()
+    }
+
+    /// The leaderboard's Jlorious ids, then every tier's player ids.
+    fn ids(listed: &Value) -> (Vec<String>, Vec<String>) {
+        let tiers = listed["tiers"]
+            .as_array()
+            .expect("tiers")
+            .iter()
+            .flat_map(|tier| strings(&tier["players"], "profileId"))
+            .collect();
+        (strings(&listed["jlorious"], "profileId"), tiers)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3290000_a_ban_takes_an_account_off_the_leaderboard_and_an_unban_brings_it_back() {
+        let app = test_app().await;
+        mythic_people(&app).await;
+        seed_placed(&app, "g-a", 1500.0, tier_bottom(3) + 4, json!({})).await;
+        seed_profile(&app, json!({ "id": "raisin", "username": "raisin" })).await;
+        put_rank(&app, json!(fresh_rank(&season(), "raisin", 0))).await;
+
+        let before = board(&app, "m-001").await;
+        let (jlorious, tiers) = ids(&before);
+        let hundred = |from: usize| -> Vec<String> {
+            (from..from + JLORIOUS_SIZE)
+                .map(|index| format!("m-{index:03}"))
+                .collect()
+        };
+        assert_eq!(jlorious, hundred(0));
+        assert!(tiers.contains(&"m-100".to_string()) && tiers.contains(&"g-a".to_string()));
+        assert_eq!(before["raisins"], json!(1));
+
+        for id in ["m-000", "g-a", "raisin"] {
+            ban_profile(&app.db, id).await.expect("the ban lands");
+        }
+        let after = board(&app, "m-001").await;
+        let (jlorious, tiers) = ids(&after);
+        // The next account takes the banned one's place, and everyone moves up one.
+        assert_eq!(jlorious, hundred(1));
+        let positions: Vec<i64> = after["jlorious"]
+            .as_array()
+            .expect("a list")
+            .iter()
+            .map(|row| row["position"].as_i64().expect("a position"))
+            .collect();
+        assert_eq!(positions, (1..=JLORIOUS_SIZE as i64).collect::<Vec<i64>>());
+        assert_eq!(after["jlorious"][0]["you"], json!(true));
+        assert!(
+            tiers.is_empty(),
+            "the 101st took the place, the golden left: {tiers:?}"
+        );
+        for id in ["m-000", "g-a", "raisin"] {
+            assert!(
+                !jlorious.iter().chain(&tiers).any(|listed| listed == id),
+                "{id} is still on the board"
+            );
+        }
+        assert_eq!(after["raisins"], json!(0));
+        assert_eq!(
+            own(&app, "m-100").await["rank"],
+            json!({ "tier": "jlorious", "position": JLORIOUS_SIZE })
+        );
+        assert!(
+            !after.to_string().contains("banned"),
+            "the mark is the server's: no client read carries it"
+        );
+
+        for id in ["m-000", "g-a", "raisin"] {
+            unban_profile(&app.db, id).await.expect("the unban lands");
+        }
+        assert_eq!(
+            board(&app, "m-001").await,
+            before,
+            "an unban restores the board exactly"
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3290000_the_account_that_takes_a_banned_places_jlorious_gets_its_peak_and_card_back_at_the_next_rated_game()
+     {
+        let app = test_app().await;
+        mythic_people(&app).await;
+        seed_placed(&app, "x", 1000.0, tier_bottom(1), json!({})).await;
+        seed_placed(&app, "y", 1000.0, tier_bottom(1), json!({})).await;
+        ban_profile(&app.db, "m-000").await.expect("the ban lands");
+
+        let peak = async |profile_id: &str| {
+            to_json(&q!(app, ranked_rank(&season(), profile_id, Ladder::Constructed)))["peakJlorious"].clone()
+        };
+        // The board shows the 101st in Jlorious at once; what a game writes waits for the next rated game.
+        assert!(backs(&app, "m-100").await.is_empty());
+        assert!(peak("m-100").await.is_null());
+
+        rate(&app, game("g-1", [player("x"), player("y")], Some(0), 1)).await;
+        assert_eq!(
+            backs(&app, "m-100").await,
+            vec![(EconomyReason::Jlorious, Some("g-1".to_string()))]
+        );
+        assert_eq!(peak("m-100").await, json!(JLORIOUS_SIZE));
+        assert!(backs(&app, "m-000").await.is_empty());
+        assert!(peak("m-000").await.is_null());
     }
 }

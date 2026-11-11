@@ -7,14 +7,23 @@
 // resolving when it was added (`attributeModifiers`), since its view names no source (R169). An aura
 // begins as it appears and ends as it leaves, and at most AURA_MAX_PER_ZONE cover a zone, nearest scope
 // first and then newest.
+// R3400000: a face-up Unit whose table entry (a hooks or a bespoke one) has a `tile` aura wears it over its
+// own unit zone; a face-down or hidden Unit wears none, and a modifier its play added wears no tile aura.
+//
+// R3337003: while an Anomaly's board stands, its caster's side wears its backdrop (`ANOMALY_FX`), a side
+// aura keyed `anomaly-<player>` (testid `aura-anomaly-p1`) after that seat's Field cards and modifiers.
+// Which board stands is the layer's memory of the public `boardReplaced` events (`noteAnomalies`): until
+// that side is replaced again or the game ends.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
+import { isAnomalyCode, type AnomalyCode } from "../../cards/anomalies.ts";
 import { FLAVOR_FALLBACK } from "../../cards/flavor.ts";
 import { laneZoneTestids } from "../../game/actions.ts";
 import { LANES, sideView, testid, type Side } from "../../game/contract.ts";
 import { CATALOG } from "../../wire/cards.ts";
-import { FX_CARD_TABLE, type FxAuraSpec, type FxCardEntry } from "../cards/tables.ts";
+import { ANOMALY_FX } from "../anomaly.ts";
+import { FX_CARD_TABLE, entryAura, type FxAuraSpec, type FxCardEntry } from "../cards/tables.ts";
 import { AURA_FADE_IN_MS, AURA_FADE_OUT_MS, AURA_MAX_PER_ZONE, AURA_MOTES_PER_AURA, AURA_PARTICLE_SHARE, AURA_SOURCES_LIMIT } from "../constants.ts";
 import { FLAVOR_LOOKS, paletteLook, type FlavorColors } from "../flavors.ts";
 import { flavorLookOf } from "../flavorSource.ts";
@@ -26,16 +35,18 @@ const SIDES: readonly Side[] = ["you", "opponent"];
 
 /** One aura as planned: what it covers and how it looks. `defId` is the planner's; it never reaches the page (R202). */
 export type AuraSpec = {
-  /** `field-<instanceId>` for a Field card, `mod-<player>-<modifierId>` for a modifier. */
+  /** `field-<instanceId>` for a Field card, `unit-<instanceId>` for a Unit's tile (R3400000), `mod-<player>-<modifierId>` for a modifier, `anomaly-<player>` for an Anomaly's backdrop. */
   key: string;
   defId: string;
   instanceId: string;
   side: Side;
-  /** The Field card's backrow lane; null for a modifier, whose `zone` or `lane` scope is its side. */
+  /** The Field card's backrow lane, or a tile's Unit's lane; null for a modifier, whose `zone` or `lane` scope is its side. */
   lane: number | null;
   scope: AuraScope;
   look: AuraLook;
   colors: FlavorColors;
+  /** R3337003: the Anomaly whose backdrop this is; client memory, read off public events (`noteAnomalies`). */
+  anomaly?: AnomalyCode;
 };
 
 /** The card a modifier's aura is drawn from. */
@@ -59,13 +70,28 @@ function specOf(key: string, defId: string, instanceId: string, side: Side, lane
   return { key, defId, instanceId, side, lane, scope, look: aura.look, colors };
 }
 
+/** R3400000: the aura of a hooks entry or a bespoke one (R3402000 `entryAura`). */
 function auraOf(table: ReadonlyMap<string, FxCardEntry>, defId: string): FxAuraSpec | undefined {
-  const entry = table.get(defId);
-  return entry?.kind === "hooks" ? entry.aura : undefined;
+  return entryAura(table.get(defId));
 }
 
-/** Every aura the view shows, your side first: its standing Field cards, then its attributed modifiers. */
-export function planAuras(view: PlayerView, sources: ReadonlyMap<string, AuraSource>, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): AuraSpec[] {
+/** R3337003: `code`'s backdrop over `side`, in its set piece's palette. */
+function anomalySpec(player: PlayerId, side: Side, code: AnomalyCode): AuraSpec {
+  const fx = ANOMALY_FX[code];
+  const colors = (paletteLook(fx.palette) ?? FLAVOR_LOOKS[FLAVOR_FALLBACK]).colors;
+  return { key: `anomaly-${player}`, defId: "", instanceId: "", side, lane: null, scope: "side", look: fx.backdrop, colors, anomaly: code };
+}
+
+/**
+ * Every aura the view shows, your side first: its standing Field cards, its Units' tiles (R3400000), then
+ * its attributed modifiers, then (R3337003) its standing Anomaly's backdrop, none once the game is over.
+ */
+export function planAuras(
+  view: PlayerView,
+  sources: ReadonlyMap<string, AuraSource>,
+  table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE,
+  anomalies: ReadonlyMap<PlayerId, AnomalyCode> = new Map(),
+): AuraSpec[] {
   const out: AuraSpec[] = [];
   for (const side of SIDES) {
     const seat = sideView(view, side);
@@ -75,6 +101,11 @@ export function planAuras(view: PlayerView, sources: ReadonlyMap<string, AuraSou
       const aura = auraOf(table, slot.defId);
       if (aura !== undefined) out.push(specOf(`field-${slot.instanceId}`, slot.defId, slot.instanceId, side, index + 1, aura, view));
     });
+    seat.units.forEach((unit, index) => {
+      if (unit === null || unit.defId === HIDDEN_ID) return;
+      const aura = auraOf(table, unit.defId);
+      if (aura?.scope === "tile") out.push(specOf(`unit-${unit.instanceId}`, unit.defId, unit.instanceId, side, index + 1, aura, view));
+    });
     for (const modifier of seat.modifiers) {
       const source = sources.get(sourceKey(seat.player, modifier.id));
       if (source === undefined) continue;
@@ -82,10 +113,27 @@ export function planAuras(view: PlayerView, sources: ReadonlyMap<string, AuraSou
       const type = (CATALOG[source.defId] ?? view.defs?.[source.defId])?.type;
       if (type !== undefined && isAuraFieldType(type)) continue;
       const aura = auraOf(table, source.defId);
-      if (aura !== undefined) out.push(specOf(`mod-${seat.player}-${modifier.id}`, source.defId, source.instanceId, side, null, aura, view));
+      // R3400000: a tile aura stands with its Unit, not with what its play installs.
+      if (aura !== undefined && aura.scope !== "tile") out.push(specOf(`mod-${seat.player}-${modifier.id}`, source.defId, source.instanceId, side, null, aura, view));
     }
+    const code = view.result === null ? anomalies.get(seat.player) : undefined;
+    if (code !== undefined) out.push(anomalySpec(seat.player, side, code));
   }
   return out;
+}
+
+/**
+ * R3337003: reads `events` in order into `boards`, the Anomaly each player's side stands as: a
+ * `boardReplaced` naming one lays it, any other replacement of that side ends it, and the game's end
+ * ends them all. Only public events reach it (R202): which board a side was replaced with is public.
+ */
+export function noteAnomalies(events: readonly GameEvent[], boards: Map<PlayerId, AnomalyCode>): void {
+  for (const event of events) {
+    if (event.type === "gameOver") boards.clear();
+    if (event.type !== "boardReplaced") continue;
+    if (isAnomalyCode(event.anomaly)) boards.set(event.player, event.anomaly);
+    else boards.delete(event.player);
+  }
 }
 
 /**
@@ -121,6 +169,7 @@ function sideZones(side: Side): string[] {
 export function auraZones(spec: Pick<AuraSpec, "scope" | "side" | "lane">): string[] {
   if (spec.scope === "board") return [...sideZones("you"), ...sideZones("opponent")];
   if (spec.scope === "side" || spec.lane === null) return sideZones(spec.side);
+  if (spec.scope === "tile") return [testid.zone(spec.side, "units", spec.lane)];
   if (spec.scope === "lane") return laneZoneTestids(spec.lane);
   return [testid.zone(spec.side, "backrow", spec.lane)];
 }
@@ -185,7 +234,7 @@ export function settleAuras(track: AuraTrack, now: number): AuraTrack {
 
 /**
  * R2787000: the auras that show, most important first: those still holding before those fading out,
- * then the nearest scope (zone, lane, side, board), then the newest. Each is kept only while every
+ * then the nearest scope (tile, zone, lane, side, board), then the newest. Each is kept only while every
  * zone it covers holds fewer than `max` kept already.
  */
 export function stackAuras(auras: readonly TrackedAura[], max: number = AURA_MAX_PER_ZONE): TrackedAura[] {

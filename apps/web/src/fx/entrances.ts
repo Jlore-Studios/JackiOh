@@ -1,9 +1,22 @@
 // R670: the bespoke entrances of a handful of marquee Legendary and Mythic Units (#100 Ceaseless Void
 // "voidCollapse", #80 BOOM! Big Max "bigBoom", #45 Nature Titan "titanBloom", #56 Spell Tyrant "tyrantSigil"),
-// in place of its rarity's (cues.ts `summon`) for a card whose entry in its set's effects table is
-// `{ bespoke: "<key>" }` (R2784000, fx/cards/tables.ts); each recipe is its card's own file in fx/cards/<set>/.
-// It keys off the `summoned` event's own `defId`, which a hidden summon never has (R202), and decorates the
-// entry the runner already timed, so it paces nothing (R200, R201).
+// in place of its rarity's (cues.ts `summon`) for a card whose entry in its set's effects table names it
+// as its `entrance` (R2784000, R3332000, fx/cards/tables.ts); each recipe is its card's own file in
+// fx/cards/<set>/. R3332001: #92 Felinor Fiender "felinorAssembly", the first signature's. R3334004: the
+// Dormant Starship's "shipyardRollout" and #137 Starfleet Commander's "fleetCommand". R3402001: #52 Silly
+// Silas "silasSpotlight", #93 Combo-Index "comboStadium" and #98 Heroic Power "heroicPedestal". R3332000: a
+// Field Spell's own entrance plays as it lands face up in the backrow. R3400001: Meditative+ #24 Bob's
+// "snowplowHeave", Training Grounds #38 Tutorial Master's "chalkboardLesson" and #39.1 the Training-Grounds
+// Golem's "golemLashing". R3389001: Classic's signatures' six (#4 Palantir "seeingOrb", #7 InfiniScepter
+// "sceptrePlant", #28 Second Wind "galeBurst", #33 Joro "silkDrop", #85 King Wagtoggle "royalCloak", #90 In
+// Too Deep "abyssSurface"). R3407000: Stinkyscape part two's (fx/cards/stinkyscape/). R3405001: Meditative's
+// twenty-five, from #7 Introspection's "poolBreath" to #97.9 Jlockeed's Headquarters' "fortressRise", each
+// starting after its entry's lead (`leadMs`, R3405000). R3399000: Classic+'s signatures' seventeen, from #12
+// The Mother Pancake's "pancakeStack" to #78 Claude's Datacenter's "obeliskRise". R3395000: Stinkyscape 001 to
+// 090's signature Units and Field Spells, from #6 Tylannt's "vaultStride" to #88 Siva 2's "venomStep"
+// (fx/cards/stinkyscape/), each starting after its entry's lead too. It keys off the `summoned` event's
+// own `defId`, which a hidden summon never has (R202), and decorates the entry the runner already timed,
+// so it paces nothing (R200, R201).
 //
 // #1445: the per-flavor entrances `summon` appends for every other face-up Unit, additive over the motion
 // underneath, their delays 0 or the landing beat and their tails existing tail constants.
@@ -12,10 +25,97 @@ import type { Flavor, GameEvent, PlayerView } from "@jackioh/shared";
 
 import { raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
 import { bigBoom } from "./cards/classic/bigMax.ts";
+import { sceptrePlant } from "./cards/classic/infiniScepter.ts";
+import { abyssSurface } from "./cards/classic/inTooDeep.ts";
+import { silkDrop } from "./cards/classic/joro.ts";
+import { royalCloak } from "./cards/classic/kingWagtoggle.ts";
 import { titanBloom } from "./cards/classic/natureTitan.ts";
+import { seeingOrb } from "./cards/classic/palantir.ts";
+import { galeBurst } from "./cards/classic/secondWind.ts";
 import { tyrantSigil } from "./cards/classic/spellTyrant.ts";
 import { voidCollapse } from "./cards/core/ceaselessVoid.ts";
+import { comboStadium } from "./cards/core/comboIndex.ts";
+import { felinorAssembly } from "./cards/core/felinorFiender.ts";
+import { heroicPedestal } from "./cards/core/heroicPower.ts";
+import { silasSpotlight } from "./cards/core/sillySilas.ts";
+import { flexBurst } from "./cards/classicplus/botLoser.ts";
+import { templeStack } from "./cards/classicplus/classicGolem.ts";
+import { obeliskRise } from "./cards/classicplus/datacenter.ts";
+import { bannerPlant } from "./cards/classicplus/flagbearer.ts";
+import { greatBanner } from "./cards/classicplus/flagbearerPrime.ts";
+import { griddleFreeze } from "./cards/classicplus/frostspatula.ts";
+import { vineSwing } from "./cards/classicplus/jlease.ts";
+import { vineNap } from "./cards/classicplus/jungleLoser.ts";
+import { giftDesk } from "./cards/classicplus/kysGift.ts";
+import { briefcaseStride } from "./cards/classicplus/lobbyist.ts";
+import { spotlightPose } from "./cards/classicplus/midLoser.ts";
+import { kitchenDoor } from "./cards/classicplus/mommyBarker.ts";
+import { pancakeStack } from "./cards/classicplus/motherPancake.ts";
+import { staffShuffle } from "./cards/classicplus/supportLoser.ts";
+import { shieldPlant } from "./cards/classicplus/topLoser.ts";
+import { waffleIron } from "./cards/classicplus/waffleShell.ts";
+import { drumLeap } from "./cards/classicplus/wardrum.ts";
+import { dojoBoot } from "./cards/meditative/aiGirlfriend.ts";
+import { crackedEarth } from "./cards/meditative/alternateFate.ts";
+import { lanternLight } from "./cards/meditative/aluneth.ts";
+import { golemLock } from "./cards/meditative/cnGolem.ts";
+import { cushionDrop } from "./cards/meditative/devinBot.ts";
+import { floodlights } from "./cards/meditative/doubleHeader.ts";
+import { treeSprout } from "./cards/meditative/everGrowingTree.ts";
+import { fiveCompass } from "./cards/meditative/fengShui.ts";
+import { poolBreath } from "./cards/meditative/introspection.ts";
+import { jadeBoulder } from "./cards/meditative/jadeBeauty.ts";
+import { fortressRise } from "./cards/meditative/jlockeedHq.ts";
+import { keyRing } from "./cards/meditative/keymasterKeenus.ts";
+import { chalkMask } from "./cards/meditative/knowledgeBreaker.ts";
+import { maskSplit } from "./cards/meditative/knowledgeBreakerPrime.ts";
+import { coinFlip } from "./cards/meditative/mayorMedinamogger.ts";
+import { studyCurve } from "./cards/meditative/paretoOptimality.ts";
+import { prisonBars } from "./cards/meditative/prison.ts";
+import { skullThud } from "./cards/meditative/skullOfJnari.ts";
+import { bronzeCauldron } from "./cards/meditative/taotie.ts";
+import { totemStack } from "./cards/meditative/tatchesTheTotem.ts";
+import { caneRise } from "./cards/meditative/theCane.ts";
+import { chalkHand } from "./cards/meditative/touchedByKy.ts";
+import { scrollScholar } from "./cards/meditative/yileGpt.ts";
+import { pavilionUnfurl } from "./cards/meditative/yileGptPrime.ts";
+import { virusBoot } from "./cards/meditative/yilesVirus.ts";
+import { snowplowHeave } from "./cards/meditativeplus/bobSoldier.ts";
+import { golemLashing } from "./cards/traininggrounds/trainingGolem.ts";
+import { chalkboardLesson } from "./cards/traininggrounds/tutorialMaster.ts";
+import { vaultStride } from "./cards/stinkyscape/tylannt.ts";
+import { heistDrop } from "./cards/stinkyscape/greatestHeist.ts";
+import { rodRise } from "./cards/stinkyscape/rodOfAges.ts";
+import { lecternRise } from "./cards/stinkyscape/zolarKeth.ts";
+import { spotlightKiss } from "./cards/stinkyscape/kwzka.ts";
+import { labVault } from "./cards/stinkyscape/narcorProject.ts";
+import { emitterBloom } from "./cards/stinkyscape/beamV5.ts";
+import { barrelSpin } from "./cards/stinkyscape/repeaterV5.ts";
+import { breechLock } from "./cards/stinkyscape/cannonV5.ts";
+import { turretScan } from "./cards/stinkyscape/flakV5.ts";
+import { intakeMaw } from "./cards/stinkyscape/minerV5.ts";
+import { wraithGather } from "./cards/stinkyscape/zZoth.ts";
+import { heraldHorn } from "./cards/stinkyscape/aZoth.ts";
+import { paragonStreak } from "./cards/stinkyscape/paragonMk2.ts";
+import { paragonDive } from "./cards/stinkyscape/paragonX.ts";
+import { flagshipDescent } from "./cards/stinkyscape/galaxy.ts";
+import { testLurch } from "./cards/stinkyscape/prototypeX1.ts";
+import { forgeBurst } from "./cards/stinkyscape/prototypeX2.ts";
+import { redCarpet } from "./cards/stinkyscape/siva1.ts";
+import { venomStep } from "./cards/stinkyscape/siva2.ts";
+import { alteranDive } from "./cards/stinkyscape/alteranReach.ts";
+import { golemCrash } from "./cards/stinkyscape/chaosCalls.ts";
+import { freshJackVault } from "./cards/stinkyscape/freshJack.ts";
+import { ikwzkiDawn } from "./cards/stinkyscape/ikwzki.ts";
+import { blobPlop, in33dh3Drop, primeCrown } from "./cards/stinkyscape/in33dh3.ts";
+import { resumeTube } from "./cards/stinkyscape/jobApplication.ts";
+import { balthasarLamp, casperMirror, melchiorBoot } from "./cards/stinkyscape/magi.ts";
+import { megabaseDock } from "./cards/stinkyscape/megabase.ts";
+import { sanctumRise } from "./cards/stinkyscape/sanctum.ts";
+import { scornGate } from "./cards/stinkyscape/scornboi.ts";
+import { shockwaveRing } from "./cards/stinkyscape/shockwave447.ts";
 import { FOOT, type Entrance, type EntranceKey } from "./cards/recipe.ts";
+import { fleetCommand, shipyardRollout } from "./cards/stinkyscape/starshipSignatures.ts";
 import { FX_CRACK_TAIL_MS, FX_FLAVOR_LIVE, FX_SUMMON_BRUTE_TRAUMA, FX_SUMMON_FLAVOR_TUNING } from "./constants.ts";
 import { chaosFlavor, FLAVOR_LOOKS } from "./flavors.ts";
 import { flavorLookOf } from "./flavorSource.ts";
@@ -24,7 +124,107 @@ import type { FxCue } from "./types.ts";
 export { ENTRANCE_FUSE_AT, ENTRANCE_TRAUMA, type EntranceKey, type EntrancePlan } from "./cards/recipe.ts";
 export { isEntranceKey } from "./cards/bespoke.ts";
 
-export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = { voidCollapse, bigBoom, titanBloom, tyrantSigil };
+export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = {
+  voidCollapse,
+  bigBoom,
+  titanBloom,
+  tyrantSigil,
+  felinorAssembly,
+  shipyardRollout,
+  fleetCommand,
+  silasSpotlight,
+  comboStadium,
+  heroicPedestal,
+  snowplowHeave,
+  chalkboardLesson,
+  golemLashing,
+  vaultStride,
+  heistDrop,
+  rodRise,
+  lecternRise,
+  spotlightKiss,
+  labVault,
+  emitterBloom,
+  barrelSpin,
+  breechLock,
+  turretScan,
+  intakeMaw,
+  wraithGather,
+  heraldHorn,
+  paragonStreak,
+  paragonDive,
+  flagshipDescent,
+  testLurch,
+  forgeBurst,
+  redCarpet,
+  venomStep,
+  seeingOrb,
+  sceptrePlant,
+  galeBurst,
+  silkDrop,
+  royalCloak,
+  abyssSurface,
+  // R3399000: Classic+'s signatures.
+  pancakeStack,
+  waffleIron,
+  griddleFreeze,
+  kitchenDoor,
+  shieldPlant,
+  vineNap,
+  spotlightPose,
+  staffShuffle,
+  flexBurst,
+  drumLeap,
+  giftDesk,
+  bannerPlant,
+  greatBanner,
+  briefcaseStride,
+  templeStack,
+  vineSwing,
+  obeliskRise,
+  // R3407000: Stinkyscape part two's signatures (fx/cards/stinkyscape/).
+  melchiorBoot,
+  balthasarLamp,
+  casperMirror,
+  freshJackVault,
+  ikwzkiDawn,
+  shockwaveRing,
+  resumeTube,
+  scornGate,
+  megabaseDock,
+  in33dh3Drop,
+  primeCrown,
+  blobPlop,
+  alteranDive,
+  golemCrash,
+  sanctumRise,
+  // R3405001: Meditative's signature Units' and Field Spells'.
+  poolBreath,
+  floodlights,
+  crackedEarth,
+  jadeBoulder,
+  fiveCompass,
+  chalkMask,
+  maskSplit,
+  bronzeCauldron,
+  scrollScholar,
+  pavilionUnfurl,
+  virusBoot,
+  dojoBoot,
+  cushionDrop,
+  skullThud,
+  keyRing,
+  studyCurve,
+  caneRise,
+  treeSprout,
+  chalkHand,
+  lanternLight,
+  coinFlip,
+  totemStack,
+  golemLock,
+  prisonBars,
+  fortressRise,
+};
 
 /* #1445: one summon entrance per flavor */
 
@@ -193,8 +393,13 @@ export function flavorEntranceCues(opts: {
   return FLAVOR_ENTRANCES[flavor]({ D: opts.D, tgt: opts.tgt, intensity: opts.intensity, landAt: opts.landAt, instanceId: opts.instanceId });
 }
 
-/** The `summoned` an entrance may claim: into a unit zone, with a definition the viewer can read. */
-export function entranceEvent(event: GameEvent, hiddenId: string): Extract<GameEvent, { type: "summoned" }> | null {
-  if (event.type !== "summoned" || event.row !== "units" || event.defId === hiddenId) return null;
-  return event;
+/**
+ * The `summoned` an entrance may claim, with a definition the viewer can read: into a unit zone, or
+ * R3332000 for a Field Spell (`type`, its catalog type) into a backrow zone face up, never as it is set
+ * face down (its fresh id's `formerId`, R227, R2722002).
+ */
+export function entranceEvent(event: GameEvent, hiddenId: string, type: string | undefined): Extract<GameEvent, { type: "summoned" }> | null {
+  if (event.type !== "summoned" || event.defId === hiddenId) return null;
+  if (type === "Field Spell") return event.row === "backrow" && event.formerId === undefined ? event : null;
+  return event.row === "units" ? event : null;
 }

@@ -7,9 +7,25 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { EMPTY_PATCH_SOURCE, fileStem, loadersByStem, realPatchSource, sourceFromLoaders, type Loader } from "./source.ts";
+import { daily } from "../test/daily.ts";
+import { EMPTY_PATCH_SOURCE, fileStem, loadersByStem, realPatchSource, sourceFromLoaders, type Loader, type Patch, type Snapshot } from "./source.ts";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
+
+/** The history's first six versions, as the brief checked them. */
+const BRIEF_VERSIONS = ["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"];
+/** How many of the newest snapshots each pull request loads through the real source (#3418). */
+const NEWEST_SNAPSHOTS = 3;
+/** The time a walk over every shipped snapshot gets, as diff.test.ts's and placeholders.test.tsx's have. */
+const EVERY_SNAPSHOT_MS = 180_000;
+
+/** A patch's snapshot loads, and each card the patch added or changed has the name the patch records. */
+function expectHoldsItsChanges(patch: Patch, snapshot: Snapshot | null): void {
+  expect(snapshot, patch.version).not.toBeNull();
+  for (const change of patch.changes.filter((entry) => entry.kind !== "removed")) {
+    expect(snapshot?.[change.id]?.name, `${patch.version} ${change.id}`).toBe(change.name);
+  }
+}
 
 function spyLoaders(files: Record<string, unknown>): { loaders: Record<string, Loader>; calls: string[] } {
   const calls: string[] = [];
@@ -74,31 +90,41 @@ describe("R388 the patch source", () => {
     expect(await EMPTY_PATCH_SOURCE.patches()).toEqual([]);
   });
 
-  it("R388 the real source reads crates/cards/patches/: the file's order, the index and every snapshot", async () => {
+  it("R388 the real source reads crates/cards/patches/: the file's order, the index and the snapshots of the first six, v0.2.0b and the newest", async () => {
     const patches = await realPatchSource.patches();
     const shipped = JSON.parse(
       readFileSync(resolve(REPO, "crates/cards/patches/patches.json"), "utf8"),
     ) as { version: string }[];
     expect(patches.map((patch) => patch.version)).toEqual(shipped.map((patch) => patch.version));
     // Promotions only append (R646): the brief's six versions stay the prefix.
-    expect(patches.map((patch) => patch.version).slice(0, 6)).toEqual(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"]);
+    expect(patches.map((patch) => patch.version).slice(0, 6)).toEqual(BRIEF_VERSIONS);
     expect(shipped.map((patch) => patch.version)).toEqual(
-      expect.arrayContaining(["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.0b", "v0.2.1", "v0.2.2"]),
+      expect.arrayContaining([...BRIEF_VERSIONS, "v0.2.0b", "v0.2.1", "v0.2.2"]),
     );
     const index = await realPatchSource.index();
     // A promotion touching the card appends to its line, so the shipped part is the prefix.
     expect(index["core-065"]?.slice(0, 5)).toEqual(["v0.1.0", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.2"]);
-    for (const patch of patches) {
-      const snapshot = await realPatchSource.snapshot(patch.version);
-      expect(snapshot, patch.version).not.toBeNull();
-      for (const change of patch.changes.filter((entry) => entry.kind !== "removed")) {
-        expect(snapshot?.[change.id]?.name, `${patch.version} ${change.id}`).toBe(change.name);
-      }
-    }
+    // A bounded set of snapshots, so the case does not slow as the history grows (#3418): its start and its
+    // newest end, where a promotion appends. The daily case below loads every one.
+    const read = patches.filter((patch, at) => at < BRIEF_VERSIONS.length || patch.version === "v0.2.0b" || at >= patches.length - NEWEST_SNAPSHOTS);
+    expect(read.length).toBe(BRIEF_VERSIONS.length + 1 + NEWEST_SNAPSHOTS);
+    for (const patch of read) expectHoldsItsChanges(patch, await realPatchSource.snapshot(patch.version));
     expect(Object.keys((await realPatchSource.snapshot("v0.2.0b")) ?? {})).toHaveLength(317);
   }, 30_000);
 
-  it("R388 the index lists, for every card, exactly the versions whose snapshot differs from the one before", async () => {
+  // daily: it loads every shipped snapshot, 134 files and 64 MB on 2026-11-08, so it slows with each
+  // `patches ship` and ran past its 30 s on #3443's `web (unit 4/8)` (#3418). Per pull request the case
+  // above holds the seam on the history's start and newest end, and crates/tools' patches.rs test
+  // `r388_derives_each_patchs_card_by_card_changes_and_the_per_card_index_from_the_snapshots_alone`
+  // reads every snapshot and holds each patch's changes and the index to them.
+  daily("R388 the real source reads every shipped snapshot, each holding the names its patch records", async () => {
+    const patches = await realPatchSource.patches();
+    for (const patch of patches) expectHoldsItsChanges(patch, await realPatchSource.snapshot(patch.version));
+  }, EVERY_SNAPSHOT_MS);
+
+  // daily: it loads every shipped snapshot, as the case above does; per pull request crates/tools' same
+  // patches.rs test holds index.json to the changes the snapshots derive.
+  daily("R388 the index lists, for every card, exactly the versions whose snapshot differs from the one before", async () => {
     const patches = await realPatchSource.patches();
     const index = await realPatchSource.index();
     const computed: Record<string, string[]> = {};
@@ -111,5 +137,5 @@ describe("R388 the patch source", () => {
       previous = snapshot;
     }
     expect(index).toEqual(computed);
-  });
+  }, EVERY_SNAPSHOT_MS);
 });

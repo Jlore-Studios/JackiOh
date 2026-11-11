@@ -10,13 +10,6 @@
   color: var(--text, #e8eaf2);
 }
 
-.stats-title {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
 /* Summary tiles */
 .stats-summary-tiles {
   display: grid;
@@ -98,35 +91,6 @@
   cursor: inherit;
 }
 
-/* Tabs */
-.stats-tabs {
-  display: flex;
-  gap: 8px;
-  border-bottom: 1px solid var(--line, #2c3245);
-  padding-bottom: 2px;
-}
-
-.stats-tab {
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-dim, #9aa1b8);
-  font-size: 15px;
-  font-weight: 600;
-  padding: 8px 16px;
-  cursor: var(--cursor-glove-point, pointer);
-  transition: all 120ms ease;
-}
-
-.stats-tab:hover {
-  color: var(--text, #fff);
-}
-
-.stats-tab--active {
-  color: var(--accent, #60a5fa);
-  border-bottom-color: var(--accent, #60a5fa);
-}
-
 /* Filter bar */
 .stats-filter-bar {
   display: flex;
@@ -136,6 +100,7 @@
 }
 
 .stats-search-input {
+  min-height: var(--hit-min);
   padding: 8px 14px;
   border-radius: 8px;
   border: 1px solid var(--line-bright, #454d66);
@@ -152,33 +117,13 @@
   gap: 10px;
 }
 
-.stats-select {
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--line-bright, #454d66);
-  background: rgba(18, 22, 34, 0.8);
-  color: var(--text, #fff);
-  font-size: 13px;
-}
-
-.stats-col-toggles {
+/* R3324003: how the cards show, sort, view, ranges and columns, in one wrapping row of labelled groups; the
+   on/off controls are the Segmented's buttons (tabs.css, #3222), pressed in its selected look. */
+.stats-options {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  font-size: 12.5px;
-  color: var(--text-dim, #9aa1b8);
-}
-
-.stats-col-toggles-label {
-  font-weight: 600;
-}
-
-.stats-col-toggle {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: var(--cursor-glove-point, pointer);
+  gap: var(--space-6) var(--space-8);
 }
 
 .stats-sort,
@@ -193,22 +138,6 @@
   color: var(--text-dim, #9aa1b8);
   font-weight: 600;
   font-size: 12.5px;
-}
-
-.app-shell.stats-page .stats-sort-dir,
-.app-shell.stats-page .stats-view-btn {
-  padding: 5px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--line-bright, #454d66);
-  background: rgba(18, 22, 34, 0.8);
-  color: var(--text, #fff);
-  font-size: 13px;
-  cursor: var(--cursor-glove-point, pointer);
-}
-
-.app-shell.stats-page .stats-view-btn[aria-pressed="true"],
-.app-shell.stats-page .stats-view-btn.stats-view-btn--active {
-  border-color: var(--tavern-gold, #f5a623);
 }
 
 .stats-grid {
@@ -518,57 +447,24 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Modal drill-down */
-.stats-modal-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  background: rgba(0, 0, 0, 0.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.stats-drilldown-modal {
-  position: relative;
+/* Modal drill-down: a Dialog (Dialog.tsx, R3221000), its scrim, border, shadow and ✕ the dialog's; the
+   title runs over the body, clear of the ✕, and the body scrolls under it. */
+.dialog.stats-drilldown-modal {
+  align-items: stretch;
+  gap: 0;
   background: #11141e;
-  border: 1px solid var(--line-bright, #454d66);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   max-width: 760px;
   width: 100%;
   max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  padding: 0;
   overflow: hidden;
+  text-align: start;
 }
 
-.stats-drilldown-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 20px;
+.dialog.stats-drilldown-modal .dialog__title {
+  padding: var(--space-7) calc(var(--space-11) + var(--space-6)) var(--space-7) var(--space-8);
   border-bottom: 1px solid var(--line, #2c3245);
-}
-
-.stats-drilldown-title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.stats-drilldown-close {
-  background: none;
-  border: none;
-  color: var(--text-dim, #9aa1b8);
-  font-size: 18px;
-  cursor: var(--cursor-glove-point, pointer);
-  padding: 4px 8px;
-}
-
-.stats-drilldown-close:hover {
-  color: #fff;
 }
 
 /* The row keeps its items at their own height: stretched to the details column, the preview gave
@@ -632,8 +528,8 @@
   color: var(--text-dim, #9aa1b8);
 }
 
-/* Show Radiant is the tavern's wood button and View in Almanac its wood link (tavern.css,
-   `a.button-secondary`): one above the other under one face, side by side under two. */
+/* Show Radiant is a button with no role and View in Almanac a `button-secondary` link, both the
+   secondary (buttons.css): one above the other under one face, side by side under two. */
 .stats-drilldown-actions {
   display: flex;
   flex-wrap: wrap;
@@ -644,7 +540,7 @@
   flex: 1 1 auto;
 }
 
-/* Pressed, it wears the Radiant gold. As long as the tavern's wood button rule, and later, so it wins. */
+/* Pressed, it wears the Radiant gold. As long as the tavern's bare-button size rule, and later, so it wins. */
 .tavern.app-shell.stats-page .stats-drilldown-actions button.stats-drilldown-action[aria-pressed="true"] {
   border-color: var(--radiant, #ffd24a);
   color: var(--radiant, #ffd24a);
@@ -791,29 +687,52 @@
   margin-top: 16px;
 }
 
-/* R1973002: the patch bar: the patch before, the picker and the patch after. */
+/* R1973002, R3324000: the patch bar: the patch before, the patch tabs (a Segmented, #3222, each its patch's name
+   over its games) and the patch after. The tabs scroll sideways on a narrow screen rather than wrap. */
 .stats-patch-bar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-4);
 }
 
-.stats-patch-bar .stats-select {
-  flex: 1 1 180px;
-  max-width: 320px;
+.stats-patch-bar .stats-patch-tabs {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: var(--space-1) 0;
+  overflow-x: auto;
 }
 
-/* R2122000 on a phone or under a finger: a select or a field draws no ::before, so the filters,
-   the search and the column checkboxes' labels are --hit-min tall themselves; a sortable header's
-   band stops at the first row, its neighbour 0 px below. */
+.stats-patch-tabs .stats-patch-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.stats-patch-tab-name {
+  font-weight: 700;
+}
+
+.stats-patch-tab-games {
+  font-size: var(--type-xs);
+  color: var(--text-dim);
+}
+
+/* R3324001: the current patch, beside the page's title. */
+.stats-current-patch {
+  padding: var(--space-1) var(--space-5);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-pill);
+  font-size: var(--type-sm);
+  font-weight: 600;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* R2122000 on a phone or under a finger: a sortable header's band stops at the first row, its neighbour
+   0 px below. A select or a field draws no ::before, so the filters (tabs.css's shared select) and the
+   search are --hit-min tall themselves everywhere, as tall as the page's buttons (R3324003). */
 @media (pointer: coarse), (max-width: 600px) {
-  .stats-select,
-  .stats-search-input,
-  .stats-col-toggle {
-    min-height: var(--hit-min);
-  }
-
   .stats-th--sortable::before {
     bottom: 0;
   }

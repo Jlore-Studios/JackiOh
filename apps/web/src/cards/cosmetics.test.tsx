@@ -12,7 +12,7 @@ import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import { PROFICIENCY_LEVELS } from "@jackioh/server-config";
+import { FLEET_TRACK_LEVELS, PROFICIENCY_LEVELS } from "@jackioh/server-config";
 
 import AccountCosmeticTiles from "../collection/AccountCosmeticTiles.tsx";
 import { CosmeticLook } from "../collection/CosmeticLook.tsx";
@@ -37,9 +37,11 @@ import {
   DECK_SLOT_KINDS,
   DEFAULT_CARD_COSMETICS,
   MOVING_FINISHES_AND_BORDERS,
+  STARSHIP_SLOT_KINDS,
   cosmeticsOf,
   deckCosmeticPatch,
   deckCosmeticsOf,
+  earnedOnly,
   isChaseCosmetic,
   normalizeCosmetics,
   pickedDeckCosmetics,
@@ -343,13 +345,13 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
     expect(mythicOn?.getAttribute("data-cosmetic-foil")).toBeNull();
   });
 
-  it("R1295000 at most COSMETIC_FOIL_ANIMATED_MAX faces move their foil, and a freed slot passes on", () => {
+  it("R1295000 R3340000 at most COSMETIC_FOIL_ANIMATED_MAX faces move their foil, the newest first, and a freed slot passes on", () => {
     wearOn("core-004", { foil: PICKS.foil });
     const count = COSMETIC_FOIL_ANIMATED_MAX + 2;
-    const hand = (from: number) => (
+    const hand = (to: number) => (
       <>
-        {Array.from({ length: count - from }, (_unused, index) => (
-          <span key={from + index} data-n={from + index}>
+        {Array.from({ length: to }, (_unused, index) => (
+          <span key={index} data-n={index}>
             <CardFace face={face("core-004")} worn />
           </span>
         ))}
@@ -358,16 +360,18 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
     const motions = (container: HTMLElement): string[] =>
       [...container.querySelectorAll<HTMLElement>("[data-n] > .cf")].map((element) => element.getAttribute("data-cosmetic-motion") ?? "");
 
-    const { container, rerender } = render(hand(0));
+    const { container, rerender } = render(hand(count));
+    // R3340000: the slots go to the newest faces of a rank, so the oldest two hold still.
     expect(motions(container)).toEqual([
+      "static",
+      "static",
       ...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"),
-      "static",
-      "static",
     ]);
     expect(container.querySelectorAll(`[data-cosmetic-foil="${PICKS.foil}"]`)).toHaveLength(count);
 
-    rerender(hand(1));
-    expect(motions(container)).toEqual([...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"), "static"]);
+    // The newest leaves: its slot passes on at once, to the newest face without one.
+    rerender(hand(count - 1));
+    expect(motions(container)).toEqual(["static", ...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated")]);
   });
 
   it("R1295000 with Animated foil off a worn foil holds still", () => {
@@ -481,8 +485,10 @@ describe("R1297000 the deck slots", () => {
 
   it("R1297000 the store keeps the deck slots beside the card slots", () => {
     expect([...CARD_SLOT_KINDS, ...DECK_SLOT_KINDS]).toEqual(["foil", "finish", "border", "table", "field", "cardBack"]);
+    // R3335000: and the four Starship slots after them.
+    expect(STARSHIP_SLOT_KINDS).toEqual(["starshipHull", "starshipLivery", "starshipTrail", "starshipPieceSkin"]);
     expect(readCosmetics()).toEqual(DEFAULT_CARD_COSMETICS);
-    expect(Object.keys(DEFAULT_CARD_COSMETICS)).toHaveLength(6);
+    expect(Object.keys(DEFAULT_CARD_COSMETICS)).toEqual([...CARD_SLOT_KINDS, ...DECK_SLOT_KINDS, ...STARSHIP_SLOT_KINDS]);
 
     writeCosmetics({ table: TABLE, cardBack: BACK, border: PICKS.border });
     expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, table: TABLE, cardBack: BACK, border: PICKS.border });
@@ -993,14 +999,25 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
     return out;
   }
 
-  /** The non-default entries of the kinds a player picks, as `[id, kind]`; a card's own version and augments (R2725000) are none. */
+  /**
+   * The non-default entries of the kinds a player picks, as `[id, kind]`; a card's own version and augments (R2725000)
+   * are none, nor a Starship's (R3335000), which the painter draws (cards/starship.test.tsx).
+   */
   const PICKED = COSMETICS.filter(
-    (cosmetic) => !cosmetic.default && !(["fullArt", "portrait", "version", "augment"] as readonly string[]).includes(cosmetic.kind),
+    (cosmetic) =>
+      !cosmetic.default &&
+      !(["fullArt", "portrait", "version", "augment", ...STARSHIP_SLOT_KINDS] as readonly string[]).includes(cosmetic.kind),
   );
 
   it("R1833000 R2755000 every non-default foil, finish, border, table, field and card back has a rule that styles it", () => {
-    // Nine of each kind, and the Jlorious card back (R2755000).
-    expect(PICKED.length).toBe(6 * 9 + 1);
+    // Nine of each kind; and earned only, the Jlorious card back (R2755000) and R3335002's three Fleet track rewards.
+    expect(PICKED.filter((cosmetic) => !earnedOnly(cosmetic)).length).toBe(6 * 9);
+    expect(PICKED.filter((cosmetic) => earnedOnly(cosmetic)).map((cosmetic) => cosmetic.id)).toEqual([
+      "card-back-jlorious",
+      "card-back-stinkyscape",
+      "table-stinkyscape",
+      "field-stinkyscape",
+    ]);
     for (const { id, kind } of PICKED) {
       switch (kind) {
         case "foil":
@@ -1080,7 +1097,7 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
     );
   });
 
-  it("R1833000 a face wearing a moving finish or border claims a motion slot, and a still one claims none", () => {
+  it("R1833000 R3340000 a face wearing a moving finish or border claims a motion slot, and a still one claims none", () => {
     wearOn("core-004", { finish: "finish-starlit" });
     const once = (): HTMLElement => root(render(<CardFace face={face("core-004")} worn />).container);
     let cf = once();
@@ -1098,7 +1115,7 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
     expect(cf.getAttribute("data-cosmetic-motion")).toBeNull();
     cleanup();
 
-    // The cap is the foils': past COSMETIC_FOIL_ANIMATED_MAX faces a moving border holds still.
+    // The cap is the foils': past COSMETIC_FOIL_ANIMATED_MAX faces a moving border holds still, R3340000: the oldest one's.
     wearOn("core-004", { border: "border-filigree" });
     const { container } = render(
       <>
@@ -1108,7 +1125,7 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
       </>,
     );
     const motions = [...container.querySelectorAll<HTMLElement>(".cf")].map((element) => element.getAttribute("data-cosmetic-motion"));
-    expect(motions).toEqual([...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"), "static"]);
+    expect(motions).toEqual(["static", ...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated")]);
     cleanup();
 
     writeCardSettings({ animatedFoil: false });
@@ -1236,7 +1253,7 @@ describe("R2720000 every finish on a full-art face", () => {
     }
   });
 
-  it("R2720000 a full-art face wearing Gilded edge, Obsidian or Starlit moves it in a motion slot, and holds it still past the cap and with Animated foil off", () => {
+  it("R2720000 R3340000 a full-art face wearing Gilded edge, Obsidian or Starlit moves it in a motion slot, and holds it still past the cap and with Animated foil off", () => {
     for (const id of ANIMATED) {
       expect(MOVING_FINISHES_AND_BORDERS.has(id), `${id} takes a motion slot`).toBe(true);
       const moving = gatedRules(cosmeticsCss).find(
@@ -1263,8 +1280,8 @@ describe("R2720000 every finish on a full-art face", () => {
     expect(faces).toHaveLength(COSMETIC_FOIL_ANIMATED_MAX + 1);
     for (const element of faces) expect(element.getAttribute("data-full-art"), "a full face is full art").toBe("true");
     expect(faces.map((element) => element.getAttribute("data-cosmetic-motion"))).toEqual([
-      ...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"),
       "static",
+      ...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"),
     ]);
     cleanup();
 
@@ -1283,9 +1300,9 @@ describe("R2720000 every finish on a full-art face", () => {
 
 describe("R1953001 the chases move everywhere, and a card wears its own picks or the defaults", () => {
   /** Every Legendary and Mythic entry of the registry, the starters among them, so a new one is walked too. */
-  /** Legendary and Mythic, but the Jlorious card back, which nothing drops (R2755000). */
+  /** Legendary and Mythic, but the Jlorious ones (R2755000) and the Fleet track's (R3335002), which nothing drops. */
   const CHASES = COSMETICS.filter(
-    (cosmetic) => (cosmetic.rarity === "Legendary" || cosmetic.rarity === "Mythic") && !("jlorious" in cosmetic),
+    (cosmetic) => (cosmetic.rarity === "Legendary" || cosmetic.rarity === "Mythic") && !("jlorious" in cosmetic) && !("track" in cosmetic),
   );
   /** A Common card the catalog has, which wears every cosmetic foil (no rarity foil of its own). */
   const CARD = "core-004";
@@ -1401,6 +1418,43 @@ describe("R1953001 the chases move everywhere, and a card wears its own picks or
     const flat = cosmeticsCss.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\s+/g, " ");
     expect(flat).toContain('.cf-back[data-card-back="card-back-jlorious"] .cf-back-emblem { height: 86%; aspect-ratio: 82 / 112; opacity: 1; background: url("/brand/jackioh-card-back.svg")');
     expect(flat).toContain('.pile[data-card-back="card-back-jlorious"] { --card-back-look: url("/brand/jackioh-card-back.svg")');
+  });
+
+  it("R3335002 thirty Fleet rewards, earned only, no chase", () => {
+    const levelOf = (cosmetic: { readonly id: string; readonly trackLevel?: number | null }): number | null => cosmetic.trackLevel ?? null;
+    const fleet = COSMETICS.filter((cosmetic) => "track" in cosmetic);
+    expect(fleet).toHaveLength(FLEET_TRACK_LEVELS);
+    // One a level, from the first to the last, each on the Fleet track alone.
+    expect(fleet.map(levelOf)).toEqual(Array.from({ length: FLEET_TRACK_LEVELS }, (_, at) => at + 1));
+    for (const cosmetic of fleet) {
+      expect(cosmetic, cosmetic.id).toMatchObject({ track: "fleet", default: false, starter: false, chase: false });
+      expect("card" in cosmetic, cosmetic.id).toBe(false);
+      expect(earnedOnly(cosmetic), cosmetic.id).toBe(true);
+      expect(isChaseCosmetic(cosmetic.id), cosmetic.id).toBe(false);
+    }
+    // Starship looks but for a card back, a playmat and a backdrop; the last level's the Stinkyscape hull.
+    const starship: readonly string[] = STARSHIP_SLOT_KINDS;
+    expect(fleet.filter((cosmetic) => !starship.includes(cosmetic.kind)).map((cosmetic) => cosmetic.id)).toEqual([
+      "card-back-stinkyscape",
+      "table-stinkyscape",
+      "field-stinkyscape",
+    ]);
+    expect(fleet.at(-1)).toMatchObject({ id: "starship-hull-stinkyscape", kind: "starshipHull" });
+    // The Jlorious Starship (R3335003) is earned only as the Jlorious card back is, and no chase.
+    const jlorious = COSMETICS.find((cosmetic) => cosmetic.id === "starship-hull-jlorious");
+    expect(jlorious).toMatchObject({ kind: "starshipHull", rarity: "Mythic", default: false, starter: false, chase: false, jlorious: true });
+    expect(jlorious === undefined ? false : earnedOnly(jlorious)).toBe(true);
+    expect(COSMETICS.filter((cosmetic) => earnedOnly(cosmetic)).map((cosmetic) => cosmetic.id)).toEqual([
+      "card-back-jlorious",
+      "starship-hull-jlorious",
+      ...fleet.map((cosmetic) => cosmetic.id),
+    ]);
+    // Every Starship kind's default is the standard every account owns, and nothing else of those kinds is bought.
+    for (const kind of STARSHIP_SLOT_KINDS) {
+      const [standard, ...rest] = cosmeticsOf(kind);
+      expect(standard, kind).toMatchObject({ id: DEFAULT_CARD_COSMETICS[kind], default: true, starter: true });
+      for (const cosmetic of rest) expect(earnedOnly(cosmetic), cosmetic.id).toBe(true);
+    }
   });
 
   it("R1953001 a card with no pick of its own draws its kind's default though the synced settings hold another foil, finish and border", () => {
@@ -1619,5 +1673,88 @@ describe("R2725004 no version or augment wears Radiant's gold", () => {
     // The sheen there and back: a palindrome of the spectrum.
     expect([...pictures.PRISMATIC_SHEEN].reverse()).toEqual([...pictures.PRISMATIC_SHEEN]);
     expect(pictures.PRISMATIC_SHEEN.slice(0, pictures.PRISMATIC_SPECTRUM.length)).toEqual([...pictures.PRISMATIC_SPECTRUM]);
+  });
+
+  it("R3344000 depth's colours keep out of the Radiant gold window", () => {
+    // depth.css, comments stripped: the planes' ground, the glare's two gradients and the frame-break draw no colour but white.
+    const depthCss = sheet("depth.css");
+    const drawn = rules(depthCss).filter((rule) => /cf-glare|cf-plane|cf-planes|data-depth|data-frame-break/.test(rule.selector));
+    expect(drawn.length).toBeGreaterThan(8);
+    expect(/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/.test(depthCss), "a raw colour").toBe(false);
+    let named = 0;
+    for (const rule of drawn) {
+      const colors = colorsOf(rule.body);
+      named += colors.length;
+      for (const color of colors) expect(inRadiantGold(color), `${rule.selector}: #${color}`).toBe(false);
+    }
+    // The glare's two gradients, each of white alone, mixed with clear, which takes no hue.
+    expect(named).toBe(2);
+    for (const selector of [".cf-glare--art", ".cf-glare--frame"]) {
+      const body = ruleBody(depthCss, new RegExp(`^${selector.replace(".", "\\.")}\\s*\\{`, "m"));
+      expect(body, selector).toMatch(/color-mix\(in srgb, var\(--pal-white\) calc\(var\(--cf-glare-(art|frame), 0\) \* 100%\), transparent\)/);
+    }
+    // It opens no rule on a foil, a Radiant face's shimmer or the foil's pseudo-elements: those are cards.css's and cosmetics.css's.
+    for (const rule of rules(depthCss)) {
+      expect(rule.selector, "a foil's rule").not.toMatch(/data-foil|data-cosmetic-foil|data-radiant-face/);
+      if (/::after|::before/.test(rule.selector)) expect(rule.body.trim(), `${rule.selector} only turns the planes' own off`).toBe("content: none;");
+    }
+  });
+
+  it("R3017002 part 6's colours keep out of the Radiant gold window", () => {
+    const hex = (level: number): string => Math.round(Math.min(1, Math.max(0, level)) * 255).toString(16).padStart(2, "0");
+    const rgb = (color: string): [number, number, number] => [1, 3, 5].map((at) => parseInt(color.slice(at, at + 2), 16) / 255) as [number, number, number];
+    const of = (channels: readonly number[]): string => `#${channels.map(hex).join("")}`;
+    /** The colour `level` of the way from `from` to `to`, as a tone map, a gradient or a layer at that opacity draws it. */
+    const along = (from: string, to: string, level: number): string => {
+      const [a, b] = [rgb(from), rgb(to)];
+      return of(a.map((channel, at) => (1 - level) * channel + level * (b[at] ?? 0)));
+    };
+    const steps = Array.from({ length: 11 }, (_, at) => at / 10);
+    const greys = steps.map((level) => of([level, level, level]));
+    const prefixes = ["NIGHT_", "WATERCOLOR_", "STAINED_GLASS_", "TAROT_", "WOODCUT_", "NEON_"];
+    // Every part 6 colour constant, its lists' among them.
+    const constants = Object.entries(pictures)
+      .filter(([name]) => prefixes.some((prefix) => name.startsWith(prefix)))
+      .flatMap(([name, value]) => (Array.isArray(value) ? value : [value]).filter((each): each is string => typeof each === "string" && each.startsWith("#")).map((each) => [name, each] as const));
+    expect(constants.length).toBeGreaterThanOrEqual(15);
+    for (const [name, value] of constants) expect(inRadiantGold(value.slice(1)), `${name}: ${value}`).toBe(false);
+    // The filters' and their markup's own colours, on both faces (Woodcut's tone map names none as a `#…`: its numbers
+    // are those of the colours checked below).
+    const draws = [pictures.nightSvg, pictures.watercolorSvg, pictures.stainedGlassSvg, pictures.tarotSvg, pictures.woodcutSvg, pictures.neonSvg];
+    let named = 0;
+    for (const radiant of [false, true]) {
+      for (const draw of draws) {
+        const colors = hexes(draw("<svg></svg>", radiant));
+        named += colors.length;
+        for (const color of colors) expect(inRadiantGold(color), `${draw.name}: #${color}`).toBe(false);
+      }
+    }
+    expect(named).toBeGreaterThan(draws.length);
+    // Night: a grey picture dimmed and mixed toward the sky, and the moon's glow over that at any strength.
+    const night = greys.map((grey) => along(along("#000000", grey, pictures.NIGHT_DIM), pictures.NIGHT_SKY, pictures.NIGHT_SKY_MIX));
+    const glowing = night.flatMap((tone) => steps.map((level) => along(tone, pictures.NIGHT_MOON, level * pictures.NIGHT_GLOW_OPACITY)));
+    // Tarot card: its duotone all along it; Woodcut: its print at each tone, the gouges' ink over its middle one.
+    const duotone = steps.map((level) => along(pictures.TAROT_DARK, pictures.TAROT_LIGHT, level));
+    const printed = pictures.WOODCUT_LEVELS.map((level) => along(pictures.WOODCUT_INK, pictures.WOODCUT_PAPER, level));
+    const middle = along(pictures.WOODCUT_INK, pictures.WOODCUT_PAPER, pictures.WOODCUT_LEVELS[1] ?? 0);
+    const gouged = steps.map((level) => along(middle, pictures.WOODCUT_INK, level));
+    // Stained-glass window: its 27 colours, lit by the light behind them (a screen of it at its opacity) and under the
+    // lead at any opacity, as a blurred came's edge lies.
+    const levels = pictures.STAINED_GLASS_LEVELS;
+    const panes = levels.flatMap((r) => levels.flatMap((g) => levels.map((b) => [r, g, b] as const)));
+    expect(panes).toHaveLength(27);
+    const light = rgb(pictures.STAINED_GLASS_LIGHT).map((channel) => channel * pictures.STAINED_GLASS_GLOW_OPACITY);
+    const lit = panes.map((pane) => of(pane.map((channel, at) => channel + (light[at] ?? 0) * (1 - channel))));
+    const leaded = lit.flatMap((pane) => steps.map((level) => along(pane, pictures.STAINED_GLASS_LEAD, level)));
+    // Neon sign: its tubes all along their range, and their glow over the wall at any strength.
+    const tubes = steps.map((level) => along(pictures.NEON_TUBE_DARK, pictures.NEON_TUBE_LIGHT, level));
+    const glow = tubes.flatMap((tube) => steps.map((level) => along(pictures.NEON_WALL, tube, level)));
+    // The wall showing a picture at its share: never lighter than the window's floor, whatever the picture.
+    const wall = [...greys, ...panes.map((pane) => of(pane))].map((color) => along(pictures.NEON_WALL, color, pictures.NEON_PICTURE_SHOW));
+    for (const color of [...night, ...glowing, ...duotone, ...printed, ...gouged, ...lit, ...leaded, ...tubes, ...glow, ...wall]) {
+      expect(inRadiantGold(color.slice(1)), color).toBe(false);
+    }
+    // The window does hold the Radiant face's own golds, so the test can fail.
+    expect(inRadiantGold("ffd24a")).toBe(true);
   });
 });

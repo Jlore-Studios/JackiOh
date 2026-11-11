@@ -1,5 +1,5 @@
-// The bottom sheet a touch long-press opens (B24, B25) over a scrim: focus moves to Close on open and
-// back on close; Escape, the scrim, Close and a swipe down (#2121, R2121000) all close it. Here a
+// The bottom sheet a touch long-press opens (B24, B25) over a scrim: focus moves to its ✕ (R3221000) on
+// open and back on close; Escape, the scrim, the ✕ and a swipe down (#2121, R2121000) all close it. Here a
 // reference in the text is a control (R279). Beside the face: its states in words (StateNotes.tsx:
 // tuned R386, Brittle R385, enchantments E39, a Unit R383; SPEC §10.8), its printed text where it
 // differs (§10.10), the glossary, flavour (R660) and lines of code (E36). #1017: a face that prints
@@ -8,7 +8,8 @@
 import { useRef } from "react";
 import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
-import { t, useLocale } from "../../i18n/i18n.ts";
+import { useLocale } from "../../i18n/i18n.ts";
+import { DialogClose } from "../../game/Dialog.tsx";
 import { CardFace } from "../CardFace.tsx";
 import { useOwnCopy } from "../fullArt.ts";
 import type { FaceModel } from "../model.ts";
@@ -19,7 +20,9 @@ import { InspectNote } from "./InspectNote.tsx";
 import { Printed } from "./Printed.tsx";
 import { LocLine, StateNotes } from "./StateNotes.tsx";
 import { RefsInteractive } from "../refContext.tsx";
-import { OVERLAY_ROOT_PROPS, useModalOverlay } from "./store.ts";
+import { FullScreenButton } from "../FullScreenArt.tsx";
+import { useFullScreenTrigger } from "../fullscreen.ts";
+import { useModalOverlay } from "./store.ts";
 import { SheetGrip, useSheetSwipe } from "./useSheetSwipe.tsx";
 import { INSPECT_CLOSE, INSPECT_FACE, INSPECT_SCRIM, INSPECT_SHEET } from "./testids.ts";
 import "./inspect.css";
@@ -34,9 +37,10 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
   const ascentLevel = face.ascent;
   // R1655000: the viewer's own card's sheet wears its cosmetics, as it prints its full art.
   const own = useOwnCopy();
+  const fs = useFullScreenTrigger(face, { worn: own });
 
   return createPortal(
-    <div className="inspect-layer inspect-layer--sheet" {...OVERLAY_ROOT_PROPS}>
+    <div className="inspect-layer inspect-layer--sheet" {...modal.layerProps}>
       <div className="inspect-scrim" ref={swipe.scrimRef} data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
       <div
         className="inspect-sheet"
@@ -50,10 +54,11 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
         <SheetGrip />
         <div className="inspect-sheet-body">
           <RefsInteractive>
-            <div className="inspect-face inspect-face--sheet" data-testid={INSPECT_FACE}>
-              <CardFace face={face} layout="full" ascentLevel={ascentLevel} worn={own} />
+            <div className="inspect-face inspect-face--sheet" data-testid={INSPECT_FACE} {...fs.handlers}>
+              <CardFace face={face} layout="full" ascentLevel={ascentLevel} worn={own} tilt="drag" />
               <InspectNote note={note} />
             </div>
+            <FullScreenButton card={face} worn={own} />
             <Extended face={face} ascentLevel={ascentLevel} />
             <StateNotes face={face} />
             <Printed face={face} />
@@ -62,15 +67,8 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
           {face.known ? <Flavour defId={face.defId} easter={face.flagged === true} /> : null}
           <LocLine face={face} />
         </div>
-        <button
-          ref={closeButton}
-          type="button"
-          className="inspect-close"
-          data-testid={INSPECT_CLOSE}
-          {...modal.dismissProps}
-        >
-          {t("Close")}
-        </button>
+        {/* R3221000: the one ✕ every dialog closes by, at the top right. */}
+        <DialogClose buttonRef={closeButton} testid={INSPECT_CLOSE} {...modal.dismissProps} />
       </div>
     </div>,
     document.body,

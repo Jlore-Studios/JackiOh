@@ -15,11 +15,12 @@ use jackioh_server::config::{
     ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, PACK_PRICE_JLORE, SPEND_BUSY_RETRY_AFTER_MS,
 };
 use jackioh_server::cosmetics::{
-    AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, Cosmetic, CosmeticKind, CosmeticRarity, OfferClause,
-    VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_ANIMATED_ID, VERSION_COMIC_ID,
-    VERSION_EXTENDED_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_ID, VERSION_FULL_ART_SIGNED_ID,
-    VERSION_IMMERSIVE_ID, VERSION_OUT_OF_FRAME_ID, VERSION_PIXEL_ID, VERSION_PRISMATIC_ID,
-    VERSION_SET_SHOWCASE_ID, VERSION_SKETCH_ID,
+    AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID, Cosmetic, CosmeticKind, CosmeticRarity, FLEET_CAPSTONE,
+    JLORIOUS_STARSHIP, OfferClause, VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_ANIMATED_ID,
+    VERSION_COMIC_ID, VERSION_EXTENDED_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_ID,
+    VERSION_FULL_ART_SIGNED_ID, VERSION_IMMERSIVE_ID, VERSION_NIGHT_ID, VERSION_OUT_OF_FRAME_ID,
+    VERSION_PIXEL_ID, VERSION_PRISMATIC_ID, VERSION_SET_SHOWCASE_ID, VERSION_SKETCH_ID,
+    VERSION_STAINED_GLASS_ID, VERSION_TAROT_ID,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::idempotency::{RequestKey, Spent};
@@ -232,6 +233,8 @@ fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         card: None,
         offer: Vec::new(),
         level: None,
+        track: None,
+        track_level: None,
     }
 }
 
@@ -1330,6 +1333,43 @@ async fn r2655000_r2725001_a_token_refuses_an_unoffered_card_and_a_retired_full_
 }
 
 #[tokio::test]
+async fn r3335002_no_token_buys_a_fleet_reward() {
+    let (app, token) = setup().await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Rare", 1).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Epic", 1).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Legendary", 1).await;
+    let before = everything(&app).await;
+    // Fleet rewards an Epic or a Legendary token would reach by tier (a livery, the Stinkyscape card back and
+    // table, a Legendary trail), the capstone and the Jlorious Starship: each a 400 that spends nothing, whatever
+    // the token.
+    for cosmetic in [
+        "starship-livery-hazard",
+        "card-back-stinkyscape",
+        "table-stinkyscape",
+        "starship-trail-stardust",
+        FLEET_CAPSTONE,
+        JLORIOUS_STARSHIP,
+    ] {
+        for tier in ["Rare", "Epic", "Legendary"] {
+            let (status, _, answer) = call(
+                &app,
+                "POST",
+                "/api/tokens/redeem-cosmetic",
+                Some(&token),
+                json!({ "token": tier, "cosmeticId": cosmetic }),
+            )
+            .await;
+            assert_eq!(
+                (status, answer["error"]["message"].clone()),
+                (400, json!("that cosmetic is earned only, never bought")),
+                "{cosmetic} for {tier}: {answer}"
+            );
+        }
+    }
+    assert_eq!(everything(&app).await, before);
+}
+
+#[tokio::test]
 async fn r2715000_r2725002_an_epic_token_buys_the_default_animated_level_unless_a_retired_animated_art_owns_it()
  {
     let (app, token) = setup().await;
@@ -1449,8 +1489,9 @@ async fn r2940000_a_token_refuses_a_version_not_offered() {
 #[tokio::test]
 async fn r2942000_an_epic_token_refuses_a_version_not_offered() {
     let (app, token) = setup().await;
-    // Spell Tyrant, a Legendary Unit, is offered all three of #2942's versions; Speciesist, a Common Unit, none.
-    let card = "classic-056".to_string();
+    // Scratch Pad, a Mythic Spell, is offered all three of #2942's versions (R3343000: a Legendary's Default draws
+    // Extended art, offered it nowhere); Speciesist, a Common Unit, none.
+    let card = "meditativeplus-026".to_string();
     let bare = "core-002".to_string();
     own(&app, &[card.clone(), bare.clone()]).await;
     grant_item(&app, InventoryItem::CosmeticToken, "Epic", 3).await;
@@ -1598,6 +1639,65 @@ async fn r2944000_no_token_buys_a_mythic_version_and_none_where_not_offered() {
 }
 
 #[tokio::test]
+async fn r3017000_a_token_buys_a_part_six_level_only_where_offered() {
+    let (app, token) = setup().await;
+    // Scratch Pad, a Mythic Spell, is offered Night, Stained-glass window and Tarot card; Speciesist, a Common Unit,
+    // their partners alone (R3017001).
+    let card = "meditativeplus-026".to_string();
+    let bare = "core-002".to_string();
+    own(&app, &[card.clone(), bare.clone()]).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Rare", 1).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Epic", 1).await;
+    let redeem = |body: Value| {
+        let (app, token) = (app.clone(), token.clone());
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/tokens/redeem-cosmetic", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    let night_animated = "version-night-animated";
+    // Each on the card it is not offered, with a token of its tier: a 400, and nothing written or spent.
+    let before = everything(&app).await;
+    for (cosmetic, tier) in [
+        (VERSION_NIGHT_ID, "Rare"),
+        (night_animated, "Epic"),
+        (VERSION_STAINED_GLASS_ID, "Epic"),
+        (VERSION_TAROT_ID, "Epic"),
+    ] {
+        let (status, answer) = redeem(json!({ "token": tier, "cosmeticId": cosmetic, "cardId": bare })).await;
+        assert_eq!(
+            (status, answer["error"]["message"].clone()),
+            (400, json!("that cosmetic is not offered on that card")),
+            "{cosmetic}: {answer}"
+        );
+    }
+    assert_eq!(everything(&app).await, before);
+    // On the card it is offered, a Rare token buys Night, and an Epic token then its animated level (R3015004).
+    for (cosmetic, tier) in [(VERSION_NIGHT_ID, "Rare"), (night_animated, "Epic")] {
+        let (status, answer) = redeem(json!({ "token": tier, "cosmeticId": cosmetic, "cardId": card })).await;
+        assert_eq!(status, 200, "{cosmetic}: {answer}");
+        assert!(
+            ledger(&app)
+                .await
+                .cosmetics
+                .iter()
+                .any(|row| row.card_id.as_deref() == Some(card.as_str()) && row.cosmetic_id == cosmetic),
+            "{cosmetic}"
+        );
+    }
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Rare").await, 0);
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Epic").await, 0);
+    assert!(
+        !ledger(&app)
+            .await
+            .cosmetics
+            .iter()
+            .any(|row| row.card_id.as_deref() == Some(bare.as_str()))
+    );
+}
+
+#[tokio::test]
 async fn r3015004_a_token_buys_only_the_next_level() {
     let (app, token) = setup().await;
     // Transmogulate, a Legendary Spell, is offered the Sketch's ladder: Rare, Epic, Legendary, Mythic.
@@ -1650,4 +1750,48 @@ async fn r3015004_a_token_buys_only_the_next_level() {
     // Its signed level is a Mythic, the next level now, which no token buys (R2728000): a 409.
     let (status, answer) = redeem("Legendary", "version-sketch-full-art-signed").await;
     assert_eq!(status, 409, "{answer}");
+}
+
+#[tokio::test]
+async fn r3343000_a_token_refuses_a_default_look_and_buys_the_level_above_it_with_nothing_owned() {
+    let (app, token) = setup().await;
+    // R3343000: Silly Silas, a Legendary Unit, is offered Extended art's ladder, but its Default draws the first level:
+    // offered it nowhere, and owned there by every account with no row, so its animated level is the next one.
+    let card = "core-052".to_string();
+    let animated = "version-extended-art-animated";
+    own(&app, std::slice::from_ref(&card)).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Epic", 1).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Legendary", 1).await;
+    let redeem = |tier: &str, id: &str| {
+        let (app, token) = (app.clone(), token.clone());
+        let body = json!({ "token": tier, "cosmeticId": id, "cardId": card });
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/tokens/redeem-cosmetic", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    // The default look, with an Epic token, its tier: a 400, and nothing written or spent.
+    let before = everything(&app).await;
+    let (status, answer) = redeem("Epic", VERSION_EXTENDED_ART_ID).await;
+    assert_eq!(
+        (status, answer["error"]["message"].clone()),
+        (400, json!("that cosmetic is not offered on that card")),
+        "{answer}"
+    );
+    assert_eq!(everything(&app).await, before);
+    assert!(ledger(&app).await.cosmetics.is_empty());
+    // With nothing owned on the card, a Legendary token buys the level above it, a Legendary chase (R2728000), and
+    // writes that row alone: no row of the default look.
+    let (status, answer) = redeem("Legendary", animated).await;
+    assert_eq!(status, 200, "{answer}");
+    let rows: Vec<(Option<String>, String)> = ledger(&app)
+        .await
+        .cosmetics
+        .iter()
+        .map(|row| (row.card_id.clone(), row.cosmetic_id.clone()))
+        .collect();
+    assert_eq!(rows, vec![(Some(card.clone()), animated.to_string())]);
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Legendary").await, 0);
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Epic").await, 1);
 }

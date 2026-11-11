@@ -13,7 +13,7 @@ AI-against-AI figures for every card beside its live games, whether or not anyon
 Since #1676 they come from the learn lane's exports, which `cargo jackioh stats from-selfplay` files as
 development records (R1676000; `training/README.md`, The gather lane), and since #1976 `learn.yml` files
 every export's games itself and imports them as totals only (R1976000). On the owner's PC,
-`.github/workflows/gather.yml` plays each newly shipped patch's games the way this lane did, `stats
+`.github/workflows/gather.yml` plays 5,000 games of each new patch or set as it ships (never a micro) the way this lane did, `stats
 --series gather`, game `n` of run `r` being `gather:<(r - 1) × 100,000 + n>`, once the repository variable
 `GATHER_ON_PATCH` is `true`. No box runs this lane since 2026-11-04: the training box (the Muse box
 now, `bot/machine/README.md`) ran it until then, filing staging's database alone where gather.yml files

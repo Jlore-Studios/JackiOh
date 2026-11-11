@@ -1,5 +1,5 @@
 // R1655000: a card's own pick of a foil, finish or border is worn only where the viewer owns it on
-// that card (cosmetics.ts `useCosmeticAttributes`), else the kind's default (R1953001). Every shipped
+// that card (cosmetics.ts `useCosmeticAppearance`), else the kind's default (R1953001). Every shipped
 // one is a starter, which every account owns, so the registry here gains one border that is not.
 
 import { CATALOG } from "@jackioh/cards";

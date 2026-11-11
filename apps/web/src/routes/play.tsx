@@ -1,5 +1,5 @@
 // Play lobby (SPEC §9.5; R104, R253, R257, R258, R259, R264, R330, R505, R612, R661, R765, R767,
-// R1372, R640002). Verdicts are UX only (CLAUDE.md rule 7); the server owns validation and matchmaking.
+// R1372, R640002, R3207000, R3207003). Verdicts are UX only (CLAUDE.md rule 7); the server owns validation and matchmaking.
 // Room links only prefill, and rank never exposes its hidden rating.
 // R1075000: the host cancels a room nobody has joined. R1578000: /play is the hub every play mode
 // starts from, online first.
@@ -16,7 +16,12 @@ import {
   type LoadoutResult,
 } from "@jackioh/validator";
 
-import { MATCH_FOUND_NAV_DELAY_MS, QUEUE_ENDED_AFTER_READS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
+import {
+  MATCH_FOUND_NAV_DELAY_MS,
+  QUEUE_ENDED_AFTER_READS,
+  QUEUE_POPULATION_POLL_SECONDS,
+  SERIES_POLL_SECONDS,
+} from "@jackioh/server-config";
 import type { LeanPick } from "@jackioh/shared";
 import {
   ApiRequestError,
@@ -32,6 +37,7 @@ import {
   ladderOfMode,
   ladderPath,
   type Ladder,
+  type MeResponse,
   getPopulation,
   isQueueMode,
   joinRoom,
@@ -48,11 +54,14 @@ import { currentCatalog } from "../game/currentCatalog.ts";
 import { pageWake } from "../game/net.ts";
 import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
 import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued, useQueued } from "../net/liveGame.ts";
+import { isFreshAccount } from "../net/gate.ts";
 import { navigate, paths, useSearch } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/roomLink.ts";
 import { rankCaption } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { ArrowIcon } from "./ArrowIcon.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { attempt, messageOf } from "../net/errors.ts";
@@ -77,7 +86,7 @@ export const playTestid = {
   status: "play-status",
   error: "play-error",
   practice: "play-practice",
-  /** #2705: the Dungeon Run beside the other ways to play. */
+  /** #2705: the Dungeon run beside the other ways to play. */
   dungeon: "play-dungeon",
   screen: "play-screen",
   online: "play-online",
@@ -141,7 +150,7 @@ export function recentGamesWords(games: number): string {
 export const MODE_LABEL: Readonly<Record<QueueMode, string>> = {
   bo1: "Best of 1",
   bo3: "Conquest",
-  random: "All Random",
+  random: "All random",
 };
 
 export const PLAY_CHOICE_KEY = "jackioh.play.choice";
@@ -376,22 +385,24 @@ export { MATCH_FOUND_STATUS };
 
 /**
  * Polls while waiting and reports a pairing once before navigating. R897000: a queue ticket the
- * server calls gone `QUEUE_ENDED_AFTER_READS` reads in a row ends the wait once instead.
+ * server calls gone `QUEUE_ENDED_AFTER_READS` reads in a row ends the wait once instead. R3207003:
+ * `known` is the account the gate read for this screen, which the first run takes as its mount read
+ * when it is fresh and names no game.
  */
 function useLobbyWatch(
   token: string,
   waiting: boolean,
-  onTick: () => void,
   onPair: (target: string) => void,
   onQueueEnded: () => void,
   queueWait: boolean,
+  known: MeResponse | undefined,
 ): void {
   // Prevents a slow response from navigating twice after a re-render.
   const navigated = useRef(false);
   // R897000: like `navigated`, but for the queue ending under the wait.
   const ended = useRef(false);
-  const tick = useRef(onTick);
-  tick.current = onTick;
+  /** R3207003: spent by the first run, so a later run (the wait starting or ending) reads for itself. */
+  const gateMe = useRef(known);
   const paired = useRef(onPair);
   paired.current = onPair;
   const queueEnded = useRef(onQueueEnded);
@@ -443,16 +454,19 @@ function useLobbyWatch(
     // R3205000: this wait keeps reading in a hidden tab, unlike the polls on `pollWhileVisible`: a queue
     // wait's reads keep its ticket alive (R897000), and a room wait's host holds a room that expires.
     // Check every mount so a reload after pairing cannot strand the player.
-    check();
+    // R3207003: the first run starts from the account the gate read for this screen, when that answer is
+    // fresh (inside READ_CACHE_FRESH_MS) and names no game. A kept answer the gate opened on may be of any
+    // age, and one that names a game may have ended since (it must not send the player back into it): both
+    // are read again.
+    const handed = gateMe.current;
+    gateMe.current = undefined;
+    if (handed === undefined || pairTargetOf(handed) !== null || !isFreshAccount(handed)) check();
     if (!waiting) {
       return () => {
         canceled = true;
       };
     }
-    const handle = setInterval(() => {
-      check();
-      tick.current();
-    }, SERIES_POLL_SECONDS * MS_PER_SECOND);
+    const handle = setInterval(check, SERIES_POLL_SECONDS * MS_PER_SECOND);
     // A throttled tab's interval stalls; waking it reads the wait again at once.
     const stopWake = pageWake(check);
     return () => {
@@ -626,12 +640,13 @@ function RankPanel({ rank, ladder }: { rank: OwnRankResponse | null; ladder: Lad
       </h2>
       {rank === null ? null : (
         <p data-testid={playTestid.rank} data-ladder={ladder}>
-          {t(ladder === "random" ? "All Random" : "Constructed")} · <RankCrest rank={rank.rank} size="large" />{" "}
+          {t(ladder === "random" ? "All random" : "Constructed")} · <RankCrest rank={rank.rank} size="large" />{" "}
           {t("{rank} · Season {season}", { rank: rankCaption(rank.rank), season: rank.season })}
         </p>
       )}
       <a href={board} data-testid={playTestid.leaderboard} onClick={followInApp(board)}>
-        {t("Leaderboard →")}
+        {t("Leaderboard")}
+        <ArrowIcon direction="forward" />
       </a>
     </section>
   );
@@ -649,7 +664,7 @@ function waysToPlay(): readonly Way[] {
     {
       href: paths.dungeon,
       testid: playTestid.dungeon,
-      name: t("Dungeon Run"),
+      name: t("Dungeon run"),
     },
     {
       href: paths.together,
@@ -679,10 +694,7 @@ function WaysNav(): ReactElement {
 function PlayHero(): ReactElement {
   return (
     <header className="play-hero">
-      <div className="brand">
-        <h1>JackiOh</h1>
-      </div>
-      <p className="play-hero__title">{t("Play")}</p>
+      <Wordmark />
     </header>
   );
 }
@@ -690,7 +702,11 @@ function PlayHero(): ReactElement {
 // Route
 
 /** R1578000: `null` is a visitor with no account, who reads nothing and is offered sign-in. */
-export type PlayRouteProps = { token: string | null };
+export type PlayRouteProps = {
+  token: string | null;
+  /** R3207003: the account the gate read for this screen, so the lobby opens without reading it again. */
+  me?: MeResponse;
+};
 
 type Room = { code: string; mode: QueueMode };
 
@@ -727,7 +743,7 @@ function SignedOutPlay(): ReactElement {
   useLocale();
   return (
     <div className="app-shell tavern lobby play-screen play-hub" data-testid={playTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Play")} />
       <PlayHero />
       <div className="play-layout">
         <section
@@ -756,11 +772,11 @@ function SignedOutPlay(): ReactElement {
   );
 }
 
-export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
-  return token === null ? <SignedOutPlay /> : <OnlinePlay token={token} />;
+export default function PlayRoute({ token, me }: PlayRouteProps): ReactElement {
+  return token === null ? <SignedOutPlay /> : <OnlinePlay token={token} me={me} />;
 }
 
-function OnlinePlay({ token }: { token: string }): ReactElement {
+function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }): ReactElement {
   useLocale();
   /** R765 resumes a queue left from another screen. */
   const [rejoined] = useState(readQueued);
@@ -825,10 +841,19 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
     setWaiting(false);
     setStatus({ kind: "queueEnded" });
   }, []);
-  useLobbyWatch(token, waiting, refreshPopulation, goFound, onQueueEnded, queueWait);
+  useLobbyWatch(token, waiting, goFound, onQueueEnded, queueWait, me);
   useEffect(() => {
     refreshPopulation();
   }, [refreshPopulation]);
+  // R3207000: while waiting, the readout is read again at its own pace; the read above is the mount's.
+  // The wait's account read keeps SERIES_POLL_SECONDS (R897000), and this one holds no ticket.
+  useEffect(() => {
+    if (!waiting) return;
+    const handle = setInterval(refreshPopulation, QUEUE_POPULATION_POLL_SECONDS * MS_PER_SECOND);
+    return () => {
+      clearInterval(handle);
+    };
+  }, [refreshPopulation, waiting]);
 
   // R2778000: the rank of the mode's ladder, read again when a pick moves to the other ladder.
   const ladder = ladderOfMode(mode);
@@ -1019,7 +1044,7 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
       data-testid={playTestid.screen}
       data-waiting={locked ? "true" : "false"}
     >
-      <BackLink />
+      <BackLink title={t("Play")} />
       <PlayHero />
 
       {status !== null ? (
@@ -1048,7 +1073,8 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
               data-testid={playTestid.seriesLink}
               onClick={followInApp(paths.series(error.seriesId))}
             >
-              {t("Go to your series →")}
+              {t("Go to your series")}
+              <ArrowIcon direction="forward" />
             </a>
           )}
           {error.duosMatchId === null ? null : (
@@ -1057,7 +1083,8 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
               data-testid={playTestid.duosLink}
               onClick={followInApp(paths.duos(error.duosMatchId))}
             >
-              {t("Go to your co-op game →")}
+              {t("Go to your co-op game")}
+              <ArrowIcon direction="forward" />
             </a>
           )}
         </div>
@@ -1289,6 +1316,7 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
                 />
                 <button
                   type="submit"
+                  className="button-secondary"
                   ref={joinSubmit}
                   data-testid={playTestid.joinSubmit}
                   disabled={busy || noChoice || locked}

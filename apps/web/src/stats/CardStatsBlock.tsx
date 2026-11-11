@@ -1,6 +1,7 @@
 // Compact card statistics block for CardDetail view (SPEC §9.11, R654). It names no data source (R661). It shows
 // the four figures that read a card, Tier, Adjusted win rate, Win rate and Play rate, with Games as their sample,
-// as /stats prints them, and nothing else of the server's (R3185000).
+// as /stats prints them, and nothing else of the server's (R3185000) but the patch they were collected on, the
+// patch before while a newer one gathers its games (R3447000).
 
 import { useEffect, useState, type ReactElement } from "react";
 import { INSPECT_STATS } from "../cards/inspect/testids.ts";
@@ -9,9 +10,11 @@ import { getCardStats, type PublicCardStat } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { followInApp } from "../routes/nav.tsx";
+import { ArrowIcon } from "../routes/ArrowIcon.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { CARD_STATS_MIN_SAMPLE } from "./config.ts";
 import { winPercent } from "./model.ts";
+import { collectedOn } from "./patches.ts";
 import { usePlayerStats } from "./store.ts";
 import { statsTestid } from "./testids.ts";
 import { TierChip, adjustedText } from "./TierChip.tsx";
@@ -23,6 +26,8 @@ export type CardStatsBlockProps = {
 export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
   const [loading, setLoading] = useState(true);
   const [stat, setStat] = useState<PublicCardStat | null>(null);
+  /** R3447000: the patch the card's figures were collected on, or null when the server names no window. */
+  const [collected, setCollected] = useState<string | null>(null);
   const [minSample, setMinSample] = useState<number>(CARD_STATS_MIN_SAMPLE);
   const [error, setError] = useState(false);
   /** Bumped by Try again, which loads the card's statistics again. */
@@ -44,6 +49,7 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
         setMinSample(res.minSample);
         const match = res.cards.find((c) => c.id === cardId) ?? null;
         setStat(match);
+        setCollected(collectedOn(res.patches ?? [], match?.window?.counted));
         setLoading(false);
       })
       .catch(() => {
@@ -95,6 +101,12 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
     <div className="inspect-stats" data-testid={INSPECT_STATS}>
       <div className="inspect-stats-header">
         <span className="inspect-stats-title">{t("Statistics")}</span>
+        {/* R3447000: the patch the figures were collected on, the patch before while a newer one gathers its games */}
+        {collected !== null && (
+          <span className="inspect-stats-sample-hint" data-testid={statsTestid.cardStatsPatch}>
+            {t("Collected on patch {patch}", { patch: collected })}
+          </span>
+        )}
       </div>
 
       <div className="inspect-stats-grid">
@@ -149,7 +161,8 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
           className="inspect-stats-link"
           onClick={followInApp(paths.statsCard(cardId))}
         >
-          {t("View full stats →")}
+          {t("View full stats")}
+          <ArrowIcon direction="forward" />
         </a>
       </div>
     </div>

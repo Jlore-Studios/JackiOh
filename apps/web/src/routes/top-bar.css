@@ -8,8 +8,9 @@
    Deliberately not under `.tavern`: the replays and the deck screens are `.app-shell` pages with no
    `.tavern` root, and their bar is the same one (the nav carries the brass colors itself,
    auth/tavern.css). `:is(bar) .top-bar-button` weighs 0,2,0, above `.app-shell button` and every
-   control's own base rule. The tavern's wood-button and text-link rules (auth/tavern.css) would
-   outweigh it, so they skip `.top-bar-button` through a `:where(:not(...))` that adds no weight. */
+   control's own base rule. The tavern's bare-button size and text-link rules (auth/tavern.css) would
+   outweigh it, so they skip `.top-bar-button` through a `:where(:not(...))` that adds no weight, as
+   buttons.css's `link-button` skin does. */
 
 :is(.screen-nav, .landing-corner) .top-bar-button {
   min-height: var(--hit-min);
@@ -104,6 +105,23 @@
   .screen-nav__line {
     order: 1;
     flex: 1 1 100%;
+  }
+
+  /* #3223: a board's rail (the replay player's) carries the screen's title too, and its height budget
+     (game/board.css: --board-rail-phone-h, and the top strip's one row) is one row of buttons, so
+     there the line stays beside Back and the title is a step smaller, on one line, ellipsized rather
+     than wrapped. It is still the screen's `h1`, never hidden. */
+  .board-rail .screen-nav__line {
+    order: 0;
+    flex: 1 1 0;
+    flex-wrap: nowrap;
+  }
+
+  .board-rail .screen-nav .page-title {
+    overflow: hidden;
+    font-size: var(--type-xl);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .screen-nav:has(.friends-button),

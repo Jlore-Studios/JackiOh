@@ -6,6 +6,10 @@
 //   §10.10  faces in play (the live card, `faceModel` with `inPlay`), and #82's Discover of numbers (R247).
 //   B21  `Game` rendering `fullBoardView()` with the real catalog in `CatalogContext`; board-layout.cy.tsx
 //        measures the same board with no catalog, where every name is a short def id.
+// R3343001: a Mythic's Default prints Full art while the Full-art cards setting is on, as a hero portrait's card does,
+// so B15 and R1017002 hold it to a full-art face's boxes then, and measure its normal face, words and all, with the
+// setting off; a Legendary's Extended art keeps its words whatever the setting and is measured as any face. The faces
+// in play are measured with it off, since a Heroic Power's rolled power is a Mythic's rules text.
 // Every measurement sits inside `.should()`, so it retries while `useFitText` settles, and carries a control, because
 // "fits" is satisfied by a box that collapsed to nothing. The catalog comes from `@jackioh/cards`, which the client's
 // aliases resolve to its wire layer's reader of crates/cards/catalog.json (e2e/cypress.config.ts). Client code comes
@@ -22,7 +26,9 @@ import {
   type FaceModel,
 } from "../../../apps/web/src/cards/index.ts";
 import { FIT_FLOOR_PX } from "../../../apps/web/src/cards/constants.ts";
-import { FullArtAllowed, showsFullArt } from "../../../apps/web/src/cards/fullArt.ts";
+import { FullArtAllowed, fullArtSource, showsFullArt } from "../../../apps/web/src/cards/fullArt.ts";
+import { CARD_SETTINGS_DEFAULTS, readCardSettings, writeCardSettings } from "../../../apps/web/src/cards/settings.ts";
+import { defaultLookOf, isFullBleed } from "../../../apps/web/src/cards/versions.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { FAN_CARD_MAX_PX, rotationPool } from "../../../apps/web/src/routes/landingFan.ts";
@@ -34,6 +40,32 @@ const DEFS: readonly CardDef[] = Object.values(CATALOG);
 
 /** Retries cover `useFitText`'s binary search and the ResizeObserver passes behind it. */
 const SETTLE_TIMEOUT_MS = 15_000;
+
+/**
+ * R3343001: whether `def`'s Default prints Full art, a Mythic's (a token's by its printed rarity, a listed token's its
+ * parent's, R2655002), which the Full-art cards setting decides on it.
+ */
+function defaultsToFullArt(def: CardDef): boolean {
+  return isFullBleed(defaultLookOf(fullArtSource(def.id)));
+}
+
+/**
+ * The Full-art cards setting a catalog check runs under (R3343001): on, the default, over every face it measures; off,
+ * over the faces whose look it changes, every Mythic's, which then prints its normal face with its words.
+ */
+const FULL_ART_SETTINGS = [
+  { fullArt: true, label: "", measures: (_def: CardDef): boolean => true },
+  { fullArt: false, label: " with Full-art cards off, every Mythic's normal face", measures: defaultsToFullArt },
+] as const;
+
+// Each check starts at the default settings; one that needs Full-art cards off says so.
+beforeEach(() => {
+  writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
+});
+
+after(() => {
+  writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
+});
 
 /* B15 */
 
@@ -67,11 +99,11 @@ function printedLength(def: CardDef, radiant: boolean): number {
   return faceModel({ defId: def.id, def, radiant }).text.full.length;
 }
 
-function FaceGrid({ width, radiant }: { width: number; radiant: boolean }) {
+function FaceGrid({ defs, width, radiant }: { defs: readonly CardDef[]; width: number; radiant: boolean }) {
   const height = heightFor(width);
   return (
     <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 8, padding: 8 }}>
-      {DEFS.map((def) => (
+      {defs.map((def) => (
         <div key={def.id} data-fit-box={def.id} style={{ width, height, flex: "none" }}>
           <CardFace face={faceModel({ defId: def.id, def, radiant })} layout="full" />
         </div>
@@ -96,8 +128,9 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
   }
 
   // R1017001: a hero portrait's card prints its art across the face and no words, so its name is
-  // all it has to fit, and it has no rules box at all.
-  const fullArt = showsFullArt(faceModel({ defId: def.id, def, radiant }));
+  // all it has to fit, and it has no rules box at all. R3343001: so does every Mythic, whose Default
+  // prints Full art, while the Full-art cards setting is on.
+  const fullArt = showsFullArt(faceModel({ defId: def.id, def, radiant })) || (readCardSettings().fullArt && defaultsToFullArt(def));
   if ((cf.getAttribute("data-full-art") === "true") !== fullArt) {
     problems.push(`${where}: data-full-art is ${cf.getAttribute("data-full-art") ?? "unset"}, expected ${fullArt ? "true" : "unset"}`);
   }
@@ -158,18 +191,24 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
 describe("B15: every catalog face fits its name and rules text at 270 px and 170 px", () => {
   // The premise this run assumes — every face over 260 printed characters prints a short form —
   // is pinned per pull request in apps/web/src/cards/textLimit.test.ts against LONG_FACES.
-  for (const box of FIT_BOXES) {
-    for (const face of FACES) {
-      const rule = box.clampAllowed ? "only a face that prints less may clamp" : "nothing clamps";
-      it(`B15 every ${face.label} face at ${box.width}px wide: name and text within their boxes, ${rule}`, () => {
-        cy.mount(<FaceGrid width={box.width} radiant={face.radiant} />);
-        cy.get("[data-fit-box] > .cf").should("have.length", DEFS.length);
+  for (const setting of FULL_ART_SETTINGS) {
+    for (const box of FIT_BOXES) {
+      for (const face of FACES) {
+        const rule = box.clampAllowed ? "only a face that prints less may clamp" : "nothing clamps";
+        it(`B15 every ${face.label} face at ${box.width}px wide${setting.label}: name and text within their boxes, ${rule}`, () => {
+          writeCardSettings({ ...CARD_SETTINGS_DEFAULTS, fullArt: setting.fullArt });
+          const defs = DEFS.filter(setting.measures);
+          // Control: an empty catalog fits trivially.
+          expect(defs.length, "faces to measure").to.be.greaterThan(0);
+          cy.mount(<FaceGrid defs={defs} width={box.width} radiant={face.radiant} />);
+          cy.get("[data-fit-box] > .cf").should("have.length", defs.length);
 
-        cy.document({ log: false, timeout: SETTLE_TIMEOUT_MS }).should((doc) => {
-          const problems = DEFS.flatMap((def) => fitProblems(doc, def, box, face.radiant));
-          expect(problems, `B15 ${face.label} faces at ${box.width}px`).to.deep.equal([]);
+          cy.document({ log: false, timeout: SETTLE_TIMEOUT_MS }).should((doc) => {
+            const problems = defs.flatMap((def) => fitProblems(doc, def, box, face.radiant));
+            expect(problems, `B15 ${face.label} faces at ${box.width}px${setting.label}`).to.deep.equal([]);
+          });
         });
-      });
+      }
     }
   }
 });
@@ -177,27 +216,38 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
 /* R1017002 */
 
 describe("R1017002: every card the homescreen's hand can deal prints whole on a fan card", () => {
-  const FAN_DEFS = rotationPool(true);
+  // Worked out through the face model, so only once the module is loaded (support/component.tsx): the widest pool, and
+  // the one the fan deals from with Full-art cards off (landing.tsx's `rotationPool(fullArt)`).
+  let FAN_DEFS: { readonly on: ReturnType<typeof rotationPool>; readonly off: ReturnType<typeof rotationPool> } = { on: [], off: [] };
+  before(() => {
+    FAN_DEFS = { on: rotationPool(true), off: rotationPool(false) };
+  });
   const fanBox: FitBox = { width: FAN_CARD_MAX_PX, clampAllowed: false };
 
-  for (const face of FACES) {
-    it(`R1017002 every ${face.label} face the fan can deal, at ${FAN_CARD_MAX_PX}px wide, keeps its art's room and its whole text`, () => {
-      const height = heightFor(FAN_CARD_MAX_PX);
-      cy.mount(
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 8, padding: 8 }}>
-          {FAN_DEFS.map((def) => (
-            <div key={def.id} data-fit-box={def.id} style={{ width: FAN_CARD_MAX_PX, height, flex: "none" }}>
-              <CardFace face={faceModel({ defId: def.id, def, radiant: face.radiant })} layout="full" />
-            </div>
-          ))}
-        </div>,
-      );
-      cy.get("[data-fit-box] > .cf").should("have.length", FAN_DEFS.length);
-      cy.document({ log: false, timeout: SETTLE_TIMEOUT_MS }).should((doc) => {
-        const problems = FAN_DEFS.flatMap((def) => fitProblems(doc, def, fanBox, face.radiant));
-        expect(problems, `R1017002 ${face.label} fan faces at ${String(FAN_CARD_MAX_PX)}px`).to.deep.equal([]);
+  for (const setting of FULL_ART_SETTINGS) {
+    for (const face of FACES) {
+      it(`R1017002 every ${face.label} face the fan can deal, at ${FAN_CARD_MAX_PX}px wide${setting.label}, keeps its art's room and its whole text`, () => {
+        writeCardSettings({ ...CARD_SETTINGS_DEFAULTS, fullArt: setting.fullArt });
+        const defs = FAN_DEFS[setting.fullArt ? "on" : "off"].filter(setting.measures);
+        // Control: an empty pool fits trivially.
+        expect(defs.length, "faces to measure").to.be.greaterThan(0);
+        const height = heightFor(FAN_CARD_MAX_PX);
+        cy.mount(
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 8, padding: 8 }}>
+            {defs.map((def) => (
+              <div key={def.id} data-fit-box={def.id} style={{ width: FAN_CARD_MAX_PX, height, flex: "none" }}>
+                <CardFace face={faceModel({ defId: def.id, def, radiant: face.radiant })} layout="full" />
+              </div>
+            ))}
+          </div>,
+        );
+        cy.get("[data-fit-box] > .cf").should("have.length", defs.length);
+        cy.document({ log: false, timeout: SETTLE_TIMEOUT_MS }).should((doc) => {
+          const problems = defs.flatMap((def) => fitProblems(doc, def, fanBox, face.radiant));
+          expect(problems, `R1017002 ${face.label} fan faces at ${String(FAN_CARD_MAX_PX)}px${setting.label}`).to.deep.equal([]);
+        });
       });
-    });
+    }
   }
 });
 
@@ -471,15 +521,15 @@ describe("B21: the full board with the real catalog fits 1280x720 and 390x844", 
             if (gem !== undefined && overlap(box, gem) > 1) problems.push(`${label} covers the cost gem`);
           }
         }
-        // #2932: a phone's Activate controls and keyword marks hang off a card's corner, over the zone beside
-        // it (game/FieldBadges.tsx), which holds its own switch at that corner: no mark covers any switch's
-        // glyph, whichever zone it is in.
+        // #2932, #3257: a phone's Activate controls and keyword marks stand in their own zone's top-left
+        // corner (game/FieldBadges.tsx), the switch's zone being its own too, at the top-right: no mark covers
+        // any switch's glyph, whichever zone it is in.
         const glyphs = [...doc.querySelectorAll<HTMLElement>(`${BOARD} .field .zone > .switch-button > .switch-glyph`)];
         for (const mark of doc.querySelectorAll<HTMLElement>(`${BOARD} .field .field-badges :is(.activate-control, .keyword, .cf-kw-more)`)) {
           const box = mark.getBoundingClientRect();
           if (box.width === 0 || box.height === 0) continue;
           for (const glyph of glyphs) {
-            if (overlap(box, glyph.getBoundingClientRect()) > 1) problems.push(`a hung ${mark.className} covers a switch glyph`);
+            if (overlap(box, glyph.getBoundingClientRect()) > 1) problems.push(`a ${mark.className} covers a switch glyph`);
           }
         }
         expect(problems, `badges over a name or a cost gem at ${where}`).to.deep.equal([]);
@@ -581,28 +631,32 @@ describe("faces in play fit their boxes (SPEC §10.10)", () => {
   const fusedPair = fusedDef([catalogDef("core-011"), catalogDef("core-020")], 1);
   const crafted = fusedDef([catalogDef("core-002"), catalogDef("core-012"), catalogDef("core-053")], 2);
   const heroic = catalogDef("core-098");
-  const ENTRIES: readonly Entry[] = [
-    { key: "fused-base", face: faceModel({ defId: fusedPair.id, def: fusedPair, radiant: false, inPlay: {} }) },
-    { key: "fused-radiant", face: faceModel({ defId: fusedPair.id, def: fusedPair, radiant: true, inPlay: {} }) },
-    { key: "crafted", face: faceModel({ defId: crafted.id, def: crafted, radiant: false, liveCost: 0, inPlay: {} }) },
-    ...Object.keys(POWER_WORDS).flatMap((name) =>
-      [false, true].map((radiant) => ({
-        key: `power-${name}-${String(radiant)}`,
-        face: faceModel({ defId: heroic.id, def: heroic, radiant, liveCost: 0, inPlay: { power: { name } } }),
-      })),
-    ),
-    { key: "chaos", face: faceModel({ defId: "core-095", def: catalogDef("core-095"), radiant: true, inPlay: {} }) },
-    {
-      key: "vanilla",
-      face: faceModel({
-        defId: "core-056",
-        def: catalogDef("core-056"),
-        radiant: false,
-        live: { attack: 3, health: 2, maxHealth: 2, keywords: [{ kind: "Poisonous" }, { kind: "Taunt" }, { kind: "Armor", n: 1 }] },
-        inPlay: { vanilla: true },
-      }),
-    },
-  ];
+  // Worked out through the face model, so only once the module is loaded (support/component.tsx).
+  let ENTRIES: readonly Entry[] = [];
+  before(() => {
+    ENTRIES = [
+      { key: "fused-base", face: faceModel({ defId: fusedPair.id, def: fusedPair, radiant: false, inPlay: {} }) },
+      { key: "fused-radiant", face: faceModel({ defId: fusedPair.id, def: fusedPair, radiant: true, inPlay: {} }) },
+      { key: "crafted", face: faceModel({ defId: crafted.id, def: crafted, radiant: false, liveCost: 0, inPlay: {} }) },
+      ...Object.keys(POWER_WORDS).flatMap((name) =>
+        [false, true].map((radiant) => ({
+          key: `power-${name}-${String(radiant)}`,
+          face: faceModel({ defId: heroic.id, def: heroic, radiant, liveCost: 0, inPlay: { power: { name } } }),
+        })),
+      ),
+      { key: "chaos", face: faceModel({ defId: "core-095", def: catalogDef("core-095"), radiant: true, inPlay: {} }) },
+      {
+        key: "vanilla",
+        face: faceModel({
+          defId: "core-056",
+          def: catalogDef("core-056"),
+          radiant: false,
+          live: { attack: 3, health: 2, maxHealth: 2, keywords: [{ kind: "Poisonous" }, { kind: "Taunt" }, { kind: "Armor", n: 1 }] },
+          inPlay: { vanilla: true },
+        }),
+      },
+    ];
+  });
 
   function InPlayGrid({ width }: { width: number }) {
     return (
@@ -618,6 +672,9 @@ describe("faces in play fit their boxes (SPEC §10.10)", () => {
 
   for (const box of FIT_BOXES) {
     it(`every face in play keeps its name and text inside their boxes at ${box.width}px`, () => {
+      // R3343001: Heroic Power is a Mythic, whose Default prints Full art, no words, while the Full-art cards setting
+      // is on; its rolled power's text is what is measured, so with the setting off. The other faces print the same either way.
+      writeCardSettings({ ...CARD_SETTINGS_DEFAULTS, fullArt: false });
       cy.mount(<InPlayGrid width={box.width} />);
       cy.get("[data-fit-box] > .cf").should("have.length", ENTRIES.length);
       cy.document({ log: false, timeout: SETTLE_TIMEOUT_MS }).should((doc) => {

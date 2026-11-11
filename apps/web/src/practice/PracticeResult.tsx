@@ -1,13 +1,15 @@
 // The end of a practice game: Victory, Defeat or Draw, why, and what to do next (SPEC §9.9). It reads
 // only the human's `PlayerView` result (CLAUDE.md rule 7); `Game.tsx`'s `result-overlay` still renders
-// underneath, unchanged, for every other consumer of the board.
+// underneath, unchanged, for every other consumer of the board. It draws through `Dialog.tsx`
+// (R3220000), its crest above the title and practice.css's `practice-result` its look.
 
-import { useEffect, useId, useRef, type CSSProperties, type ReactElement } from "react";
+import type { CSSProperties, ReactElement } from "react";
 
 import type { Difficulty } from "@jackioh/engine/config";
 import type { GameOverReason, PlayerId, PlayerView } from "@jackioh/shared";
 
 import XpReveal from "../economy/XpReveal.tsx";
+import { Dialog } from "../game/Dialog.tsx";
 import { seatOutcome } from "../game/outcome.ts";
 import { t } from "../i18n/i18n.ts";
 import { PRACTICE_RESULT_PARTICLES } from "./config.ts";
@@ -103,33 +105,18 @@ export function PracticeResult({
   earning,
 }: PracticeResultProps): ReactElement {
   const outcome = outcomeOf(result, viewer);
-  const titleId = useId();
-  const playAgain = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    playAgain.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    function onKey(event: KeyboardEvent): void {
-      if (event.key === "Escape") onViewBoard();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onViewBoard]);
-
+  // R3220000: a layer of its own, where the ✕, Escape, Back and a click outside view the board.
   return (
-    <div className="practice-result-scrim" data-outcome={outcome}>
-      <section
-        className="practice-result"
-        data-testid={practiceTestid.result}
-        data-outcome={outcome}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-      >
+    <Dialog
+      role="dialog"
+      testid={practiceTestid.result}
+      className="practice-result"
+      data={{ "data-outcome": outcome }}
+      title={t(OUTCOME_TITLE[outcome])}
+      description={t(reasonText(outcome, result.reason, result.winner))}
+      onClose={onViewBoard}
+      header={
         <div className="practice-result__emblem" aria-hidden="true">
           <span className="practice-result__rays" />
           {/* Sparks burst from the crest on a Victory; embers drift off it on a Defeat. Each particle
@@ -143,62 +130,48 @@ export function PracticeResult({
           )}
           <TierCrest tier={difficulty} size="lg" />
         </div>
-        <h2 className="practice-result__title" id={titleId}>
-          {t(OUTCOME_TITLE[outcome])}
-        </h2>
-        <p className="practice-result__reason">{t(reasonText(outcome, result.reason, result.winner))}</p>
-        <p className="practice-result__meta">{t("Practice")} · {t(DIFFICULTY_LABEL[difficulty])}</p>
-        {earning === undefined ? null : (
-          <p
-            className="practice-result__meta"
-            data-testid={practiceTestid.resultEarning}
-            data-earning={earning.kind}
-            {...(earning.kind === "refused" ? { "data-reason": earning.reason } : {})}
-            role="status"
-          >
-            {earningText(earning)}
-          </p>
-        )}
-        {earning?.kind === "paid" ? (
-          <XpReveal economy={{ tracks: earning.tracks ?? [], quests: earning.quests ?? [] }} />
-        ) : null}
-        <div className="practice-result__actions">
-          <button
-            ref={playAgain}
-            type="button"
-            className="practice-play"
-            data-testid={practiceTestid.playAgain}
-            onClick={onPlayAgain}
-          >
-            {t("Play again")}
+      }
+      actions={[
+        { label: t("Play again"), kind: "primary", onClick: onPlayAgain, testid: practiceTestid.playAgain },
+        { label: t("Change setup"), kind: "secondary", onClick: onChangeSetup, testid: practiceTestid.changeSetup },
+      ]}
+      footer={
+        <>
+          {onWatchReplay === undefined && onShareLastTurn === undefined ? null : (
+            <div className="practice-result__replay">
+              {onWatchReplay === undefined ? null : (
+                <button type="button" className="practice-result__secondary button-secondary" data-testid={practiceTestid.watchReplay} onClick={onWatchReplay}>
+                  {t("Watch the replay")}
+                </button>
+              )}
+              {onShareLastTurn === undefined ? null : (
+                <button type="button" className="practice-result__secondary button-secondary" data-testid={practiceTestid.shareLastTurn} onClick={onShareLastTurn}>
+                  {t("Share the last turn")}
+                </button>
+              )}
+            </div>
+          )}
+          <button type="button" className="link-button practice-result__view" data-testid={practiceTestid.viewBoard} onClick={onViewBoard}>
+            {t("View the board")}
           </button>
-          <button
-            type="button"
-            className="practice-result__secondary"
-            data-testid={practiceTestid.changeSetup}
-            onClick={onChangeSetup}
-          >
-            {t("Change setup")}
-          </button>
-        </div>
-        {onWatchReplay === undefined && onShareLastTurn === undefined ? null : (
-          <div className="practice-result__replay">
-            {onWatchReplay === undefined ? null : (
-              <button type="button" className="practice-result__secondary" data-testid={practiceTestid.watchReplay} onClick={onWatchReplay}>
-                {t("Watch the replay")}
-              </button>
-            )}
-            {onShareLastTurn === undefined ? null : (
-              <button type="button" className="practice-result__secondary" data-testid={practiceTestid.shareLastTurn} onClick={onShareLastTurn}>
-                {t("Share the last turn")}
-              </button>
-            )}
-          </div>
-        )}
-        <button type="button" className="link-button practice-result__view" data-testid={practiceTestid.viewBoard} onClick={onViewBoard}>
-          {t("View the board")}
-        </button>
-      </section>
-    </div>
+        </>
+      }
+    >
+      <p className="practice-result__meta">{t("Practice")} · {t(DIFFICULTY_LABEL[difficulty])}</p>
+      {earning === undefined ? null : (
+        <p
+          className="practice-result__meta"
+          data-testid={practiceTestid.resultEarning}
+          data-earning={earning.kind}
+          {...(earning.kind === "refused" ? { "data-reason": earning.reason } : {})}
+          role="status"
+        >
+          {earningText(earning)}
+        </p>
+      )}
+      {earning?.kind === "paid" ? (
+        <XpReveal economy={{ tracks: earning.tracks ?? [], quests: earning.quests ?? [] }} />
+      ) : null}
+    </Dialog>
   );
 }

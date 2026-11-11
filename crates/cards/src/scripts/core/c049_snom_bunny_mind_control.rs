@@ -90,7 +90,7 @@ mod tests {
     const TOKEN_MAKER: &str = "core-015";
     const SHEEPISH: &str = "core-041";
     const WEAPONS: &str = "core-014";
-    const FILLER: &str = "core-005"; // (1) Spell: a card kept in hand, so a Float has mana to leave.
+    const FILLER: &str = "core-005"; // Stockpile: a card kept in hand, so a Float has mana to leave.
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -98,6 +98,7 @@ mod tests {
     const COST: i32 = 5;
 
     /// The target lists of every `play` `legal_actions` offers p1 for this card (R81).
+    // Differs from Scenario::offered: that card's targets as ids, per play, not the seat's whole legal list.
     fn offered(state: &GameState, card: &CardInstance) -> Vec<Vec<String>> {
         legal_actions(state, P1)
             .into_iter()

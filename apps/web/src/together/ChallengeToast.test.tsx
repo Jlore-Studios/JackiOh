@@ -1,7 +1,7 @@
 // #936 S8 B57: `ChallengeToast`, mounted once in the shell. An incoming challenge's Accept joins the
 // room with the deck picked in the toast and goes to the game (R1831000), with the lobby's room link
 // (R767) when the join is refused. SPEC S8 names no test id for the toast, so its buttons are found by
-// their role and name, or by the ids #1831 gave them. R2031000: an All Random toast offers "More cards
+// their role and name, or by the ids #1831 gave them. R2031000: an All random toast offers "More cards
 // from" on the device's online pick.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -246,7 +246,7 @@ describe("B57 the challenge toast", () => {
   );
 
   it(
-    "R1831000 All Random joins with the mode alone",
+    "R1831000 All random joins with the mode alone",
     async () => {
       signIn("tok-toast");
       const server = serve({ incoming: [{ ...INCOMING, mode: "random" }], outgoing: [] });
@@ -473,7 +473,7 @@ describe("B57 the challenge toast", () => {
   );
 });
 
-describe("R2031000 an All Random challenge's more cards from", () => {
+describe("R2031000 an All random challenge's more cards from", () => {
   it(
     "R2031000 the toast starts on the device's online pick, and Accept joins with the pick as leanSet",
     async () => {

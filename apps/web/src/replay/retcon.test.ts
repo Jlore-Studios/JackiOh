@@ -2,15 +2,17 @@
 // catalog: format version 1 the old way, read through `aliases.json`, and version 2 the new way. This
 // file spells old names on purpose, so the retcon's rewrite leaves it alone (`crates/tools/src/retcon.rs`, `SKIP_FILES`).
 
-import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
+import { CATALOG_VERSION, currentVersionName, versionNameFrom } from "@jackioh/cards";
 import { describe, expect, it, vi } from "vitest";
 
 import { DUOS_REPLAY_JSON_UNMARKED_VERSION, duosReplayJson, parseDuosReplayJson } from "../duos/download.ts";
-import { catalogOf } from "../practice/core.ts";
 import { duosView } from "../test/fixtures.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
 import { REPLAY_JSON_FORMAT, REPLAY_JSON_UNMARKED_VERSION, REPLAY_JSON_VERSION, replayStepsOf } from "./download.ts";
 import { ReplayFailure } from "./source.ts";
+
+/** R1371000, R2532000: the catalog a kept game or save was played on, as it is named now. */
+const catalogOf = (kept: { catalog: string; versions?: number }): string => versionNameFrom(kept.versions ?? 1, kept.catalog);
 
 // The build as the retcon left it, its catalog the old v0.3.17b's under its new name. A file of an old
 // name opens only while the version it maps to is live, and every ship moves the live one on (R646),

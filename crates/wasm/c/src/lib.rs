@@ -169,6 +169,18 @@ pub extern "C" fn run_content() -> i32 {
     boundary(wasm_core::run_content)
 }
 
+/// R3496000: `RunContent` for a catalog version: the build's own, a carried version's, or `null`.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_content_at(version_json_ptr: *const u8, version_json_len: usize) -> i32 {
+    boundary(|| {
+        wasm_core::run_content_at(arg(
+            "runContentAt: the version",
+            version_json_ptr,
+            version_json_len,
+        )?)
+    })
+}
+
 /// `null` when the setup may start a run, else the reason.
 #[unsafe(no_mangle)]
 pub extern "C" fn run_check_setup(
@@ -301,6 +313,22 @@ pub extern "C" fn run_max_hp(
         let state = arg("runMaxHp: the state", state_json_ptr, state_json_len)?;
         let content = arg("runMaxHp: the content", content_json_ptr, content_json_len)?;
         wasm_core::run_max_hp(state, content)
+    })
+}
+
+/// What a shop's services cost this run: the Coin prices after the discount, the Ticket prices and
+/// each relic's next level.
+#[unsafe(no_mangle)]
+pub extern "C" fn run_shop_prices(
+    state_json_ptr: *const u8,
+    state_json_len: usize,
+    content_json_ptr: *const u8,
+    content_json_len: usize,
+) -> i32 {
+    boundary(|| {
+        let state = arg("runShopPrices: the state", state_json_ptr, state_json_len)?;
+        let content = arg("runShopPrices: the content", content_json_ptr, content_json_len)?;
+        wasm_core::run_shop_prices(state, content)
     })
 }
 

@@ -5,6 +5,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { BackLink, navTestid } from "./nav.tsx";
 
 beforeEach(() => {
@@ -21,7 +22,7 @@ afterEach(() => {
 describe("R3218000 BackLink's slots", () => {
   it("R3218000 the nav holds Back, then the line (the title, then the extras), then the end group with the gear last", () => {
     render(
-      <BackLink showWallet={false} title={<h1>Screen</h1>}>
+      <BackLink showWallet={false} title="Screen">
         <button type="button">Extra</button>
       </BackLink>,
     );
@@ -42,6 +43,13 @@ describe("R3218000 BackLink's slots", () => {
     const end = Array.from((slots[2] as HTMLElement).querySelectorAll("[data-testid]"));
     expect(end.at(-1)).toBe(screen.getByTestId("settings-open-nav"));
     expect(end.map((node) => node.getAttribute("data-testid"))).toEqual(["language-nav", "settings-open-nav"]);
+  });
+
+  it("R3223000 the bar's title is the PageTitle, the only h1, first in the line", () => {
+    render(<BackLink showWallet={false} title="Screen" />);
+
+    const line = screen.getByRole("navigation").querySelector(".screen-nav__line");
+    expect(line?.firstElementChild).toBe(expectOnePageTitle("Screen"));
   });
 
   it("R3218000 a bar with no title and no extras has no line, and the end group follows Back", () => {
@@ -70,5 +78,18 @@ describe("R3218000 BackLink's slots", () => {
     expect(back.closest("nav")).toHaveClass("screen-nav");
     fireEvent.click(back);
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it("R3230000 Back is an arrow icon and the word Back", () => {
+    const { unmount } = render(<BackLink showSettings={false} />);
+    const back = screen.getByTestId(navTestid.back);
+    expect(back.textContent).toBe("Back");
+    expect(back.querySelector("svg.arrow-icon--back[aria-hidden='true']")).not.toBeNull();
+
+    unmount();
+    render(<BackLink showSettings={false} label="Back to Play together" />);
+    const custom = screen.getByTestId(navTestid.back);
+    expect(custom.textContent).toBe("Back to Play together");
+    expect(custom.querySelector("svg.arrow-icon--back[aria-hidden='true']")).not.toBeNull();
   });
 });

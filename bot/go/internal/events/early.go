@@ -204,32 +204,8 @@ func StopRedCI(ctx *hctx.Context, run *pyjson.Object, jobs []*pyjson.Object) str
 // request or one is queued for it.
 func stopRun(ctx *hctx.Context, number int, pull *pyjson.Object, names map[string]bool,
 	record *pyjson.Object, run *pyjson.Object, red []string) string {
-	now := ctx.Now()
 	sha := py.Str(run.Get("head_sha"))
-	key := runKey(run)
-	already := false // another process stopped it meanwhile (the state file is compare-and-set)
-	ctx.Store.Update(func(s *pyjson.Object) any {
-		if already = Stopped(s, run); already {
-			return nil
-		}
-		kept := []any{}
-		for _, entry := range pyjson.Objs(s.Get(CIStoppedKey)) {
-			if at := clock.ParseISOValue(entry.Get("at")); !at.IsZero() && now.Sub(at) < keepFor() {
-				kept = append(kept, entry)
-			}
-		}
-		kept = append(kept, pyjson.New("id", run.Get("id"), "attempt", attemptOf(run), "sha", sha,
-			"pr", number, "at", clock.ISO(now)))
-		if len(kept) > CIStoppedKeep {
-			kept = kept[len(kept)-CIStoppedKeep:]
-		}
-		s.Set(CIStoppedKey, kept)
-		seen := pruned(s, CIRedSeenKey, now)
-		seen.Pop(key)
-		s.Set(CIRedSeenKey, seen)
-		return nil
-	}, fmt.Sprintf("ci stopped #%d", number))
-	if already {
+	if !markStopped(ctx, run, number) {
 		return ""
 	}
 	if pull.Truthy("auto_merge") {
@@ -249,6 +225,36 @@ func stopRun(ctx *hctx.Context, number int, pull *pyjson.Object, names map[strin
 	return fmt.Sprintf("#%d: %s red in CI run %s; %s; %s", number, ticks(red), runID, did,
 		strings.TrimPrefix(fixCI(ctx, number, pull, names, record, run, sha, failed, true, true),
 			fmt.Sprintf("#%d: ", number)))
+}
+
+// markStopped records CI run `run` (this attempt of it), of pull request `number`, in the state
+// file's `ci_stopped` before the bot cancels it, so `OnCI` ignores its completed event: false when
+// another process stopped it meanwhile (the state file is compare-and-set).
+func markStopped(ctx *hctx.Context, run *pyjson.Object, number int) bool {
+	now := ctx.Now()
+	already := false
+	ctx.Store.Update(func(s *pyjson.Object) any {
+		if already = Stopped(s, run); already {
+			return nil
+		}
+		kept := []any{}
+		for _, entry := range pyjson.Objs(s.Get(CIStoppedKey)) {
+			if at := clock.ParseISOValue(entry.Get("at")); !at.IsZero() && now.Sub(at) < keepFor() {
+				kept = append(kept, entry)
+			}
+		}
+		kept = append(kept, pyjson.New("id", run.Get("id"), "attempt", attemptOf(run),
+			"sha", py.Str(run.Get("head_sha")), "pr", number, "at", clock.ISO(now)))
+		if len(kept) > CIStoppedKeep {
+			kept = kept[len(kept)-CIStoppedKeep:]
+		}
+		s.Set(CIStoppedKey, kept)
+		seen := pruned(s, CIRedSeenKey, now)
+		seen.Pop(runKey(run))
+		s.Set(CIRedSeenKey, seen)
+		return nil
+	}, fmt.Sprintf("ci stopped #%d", number))
+	return !already
 }
 
 // pruned is the state file's object at `key` without the entries older than `CIStoppedDays`: a copy,

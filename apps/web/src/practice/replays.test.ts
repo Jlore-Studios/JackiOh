@@ -8,11 +8,11 @@ import patchesJson from "../../../../crates/cards/patches/patches.json";
 import { REPLAY_PAGE_STEPS, carriedVersions, createRng, fold, hashState, subsystems, viewFor } from "@jackioh/engine";
 import type { GameState, ReplayStep } from "@jackioh/engine";
 import { AI_GATE_BUDGET } from "@jackioh/ai";
-import type { Action, PlayerId } from "@jackioh/shared";
+import type { PlayerId } from "@jackioh/shared";
 
-import { replaySeatRun } from "./core.ts";
-import type { PracticeCoreEnv } from "./core.ts";
-import { PRACTICE_REPLAYS_CACHED, PRACTICE_REPLAYS_KEPT } from "./config.ts";
+import type { PracticeDriverEnv } from "./driver.ts";
+import { PRACTICE_REPLAYS_CACHED } from "./config.ts";
+import { practiceConstants } from "../wasm/index.ts";
 import { createPracticeHost } from "./host.ts";
 import type { PracticeHost } from "./host.ts";
 import type {
@@ -27,7 +27,7 @@ import { memorySaveStore, type PracticeReplay, type PracticeSaveStore } from "./
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
 import { snapshotOf } from "../test/fixtures.ts";
 
-const ENV: PracticeCoreEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
+const ENV: PracticeDriverEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
 const HUMAN: PlayerId = "p2";
 const AI: PlayerId = "p1";
 
@@ -37,7 +37,7 @@ afterEach(() => {
   for (const host of hosts.splice(0)) host.dispose();
 });
 
-function hostOn(saves: PracticeSaveStore, env: Partial<PracticeCoreEnv> = {}): PracticeHost {
+function hostOn(saves: PracticeSaveStore, env: Partial<PracticeDriverEnv> = {}): PracticeHost {
   const host = createPracticeHost({ forceInThread: true, env: { ...ENV, ...env, saves } });
   hosts.push(host);
   return host;
@@ -198,9 +198,9 @@ describe("R768 practice replays", () => {
     async () => {
       const saves = memorySaveStore();
       const host = hostOn(saves, { now: () => 5_000 });
-      for (let n = 1; n <= PRACTICE_REPLAYS_KEPT + 1; n += 1) await concededGame(host, `r768-keep-${String(n)}`);
+      for (let n = 1; n <= practiceConstants().PRACTICE_REPLAYS_KEPT + 1; n += 1) await concededGame(host, `r768-keep-${String(n)}`);
 
-      const expected = Array.from({ length: PRACTICE_REPLAYS_KEPT }, (_, k) => PRACTICE_REPLAYS_KEPT + 1 - k);
+      const expected = Array.from({ length: practiceConstants().PRACTICE_REPLAYS_KEPT }, (_, k) => practiceConstants().PRACTICE_REPLAYS_KEPT + 1 - k);
       const replays = await listed(host);
       expect(replays.map((replay) => replay.game)).toEqual(expected);
       for (const replay of replays) {
@@ -340,16 +340,5 @@ describe("R768 practice replays", () => {
     const lessonDone = snapshotOf(await host.request({ type: "act", action: { type: "concede" } }));
     expect(lessonDone.view.result).not.toBeNull();
     expect(lessonDone.replay).toBeUndefined();
-  });
-
-  it("R768 a page follows the seat the human played at each step and stops at a Glitch swap (R677)", () => {
-    const endTurn = (playerId: PlayerId, nonce: string): Action => ({ type: "endTurn", playerId, nonce }) as Action;
-    // The AI (a…) acts from p1 and the human (h…) from p2; then a swap puts the human in p1.
-    const log = [endTurn("p1", "a0"), endTurn("p2", "h0"), endTurn("p1", "h1"), endTurn("p2", "a1")];
-    expect(replaySeatRun(log, "p1", 0, 16)).toEqual({ seat: "p2", count: 2 });
-    expect(replaySeatRun(log, "p1", 1, 1)).toEqual({ seat: "p2", count: 1 });
-    expect(replaySeatRun(log, "p1", 2, 16)).toEqual({ seat: "p1", count: 3 });
-    expect(replaySeatRun(log, "p1", 4, 16)).toEqual({ seat: "p1", count: 1 });
-    expect(replaySeatRun(log.slice(0, 2), "p2", 0, 16)).toEqual({ seat: "p2", count: 3 });
   });
 });

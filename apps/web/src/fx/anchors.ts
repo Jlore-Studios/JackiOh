@@ -7,7 +7,7 @@
 // A hand anchor is the box of the cards it holds plus the slot the next card takes, clipped to the
 // strip (the strip's center is empty table); an empty hand is the strip itself.
 
-import type { FxAnchor, FxBox, FxPoint, FxShakeOffset, FxShakeSink, FxVec } from "./types.ts";
+import type { FxAnchor, FxArtBox, FxBox, FxPoint, FxShakeOffset, FxShakeSink, FxVec } from "./types.ts";
 
 const CENTER: FxPoint = { x: 0.5, y: 0.5 };
 
@@ -55,7 +55,19 @@ function handBox(hand: Element): FxBox | null {
 }
 
 /**
- * testid → the element's rect (a hand: see the header); crystal → the index-th `.mana-crystal` in
+ * R3334000: the box of `element`'s art: its `.cf-art` (the element itself when it holds none), or,
+ * `picture`, the square the art's cover-fit picture fills (side the longer of its two, centred on it), so
+ * a share of it is a point of the picture whatever the window crops. Null while it is not laid out.
+ */
+export function artBoxOf(element: Element, art: FxArtBox): FxBox | null {
+  const frame = boxOf(element.querySelector(".cf-art")) ?? boxOf(element);
+  if (frame === null || art === "frame") return frame;
+  const side = Math.max(frame.width, frame.height);
+  return { x: frame.x + (frame.width - side) / 2, y: frame.y + (frame.height - side) / 2, width: side, height: side };
+}
+
+/**
+ * testid → the element's rect (a hand: see the header; R3334000: its art's, `art` set); crystal → the index-th `.mana-crystal` in
  * `mana-<side>` (else the tray); handCard → the `pick`-th card of `hand-<side>` modulo its cards
  * (else the hand); viewport → a zero-size box at (innerWidth·at.x, innerHeight·at.y).
  */
@@ -70,6 +82,7 @@ export function resolveAnchor(anchor: FxAnchor, doc?: Document, win?: Window): F
   if (anchor.kind === "testid") {
     const element = page.querySelector(`[data-testid="${attrValue(anchor.testid)}"]`);
     if (element !== null && HAND_TESTIDS.has(anchor.testid)) return handBox(element);
+    if (element !== null && anchor.art !== undefined) return artBoxOf(element, anchor.art);
     return boxOf(element);
   }
 
@@ -91,6 +104,11 @@ export function resolveAnchor(anchor: FxAnchor, doc?: Document, win?: Window): F
 export function pointIn(box: FxBox, at?: FxPoint): FxVec {
   const p = at ?? CENTER;
   return { x: box.x + box.width * p.x, y: box.y + box.height * p.y };
+}
+
+/** The point a test-id anchor names inside its box; any other anchor names none. */
+export function atOf(anchor: FxAnchor): FxPoint | undefined {
+  return anchor.kind === "testid" ? anchor.at : undefined;
 }
 
 type SavedInline = { translate: string; rotate: string; translatePriority: string; rotatePriority: string };

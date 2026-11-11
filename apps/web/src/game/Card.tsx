@@ -9,7 +9,8 @@
 // `BRITTLE_LAST_COUNT` (R385, R638) wears Allure's aura (R963, R1045000) in gray, a mark of its own outranks it;
 // #2437 Temporary `TEMPORARY_LAST_COUNT` (R637, R2179001) fuchsia. R1295000: a stolen unit keeps its owner's
 // look, the resolving strip wears defaults. R1655000: the viewer's own card wears its own picks. R384, R510:
-// `activations` are Activate controls beside the face. R2321000: `tallies` pills (cards/Tallies.tsx).
+// `activations` are Activate controls beside the face. R2321000: `tallies` pills (cards/Tallies.tsx). R3338002: a
+// Ceaseless Void in the viewer's own hand drains its gem as its cost falls (cards/gemDrain.ts); no other card's does.
 
 import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
 
@@ -29,16 +30,20 @@ import {
   REVEAL_AT_NOTE,
   TermTips,
   UNREVEALED_NOTE,
+  useCanOpenFullScreen,
   faceDownLabel,
-  faceModel,
+  isHeld,
   isInspectKey,
+  openFullScreenArt,
   useCardSettings,
   useInspectTrigger,
+  useIsHeld,
   type FaceModel,
   type InspectRenderSubject,
   type InspectSubject,
 } from "../cards/index.ts";
 import { cx } from "../cards/CardFace.tsx";
+import { gemDrainOf } from "../cards/gemDrain.ts";
 import CardMarks from "../cards/CardMarks.tsx";
 import Tallies from "../cards/Tallies.tsx";
 import { OwnCopy } from "../cards/fullArt.ts";
@@ -46,10 +51,13 @@ import { BRITTLE_LAST_COUNT, TEMPORARY_LAST_COUNT } from "../cards/keywordVisual
 import { TheirCopy } from "../cards/loadouts.ts";
 import { BRITTLE_LAST_COLOR, TEMPORARY_LAST_COLOR, marksOf } from "../cards/marks.ts";
 import ActivateControls from "./ActivateControl.tsx";
+import { AttackTakenPreview, AttackTargetPreview } from "./AttackOutcome.tsx";
+import { outcomeFor } from "./attackOutcome.ts";
 import FieldBadges from "./FieldBadges.tsx";
 import { usePhonePortrait } from "./phoneBar.ts";
 import { useCardInfo, useCopiedDef, useFieldPower, useTallies } from "./catalog.ts";
-import { liveFace } from "./faces.ts";
+import { useLiveFace } from "./faces.ts";
+import { printedCost } from "./decks.ts";
 import { isSpent, useActingSeat } from "./spent.ts";
 import { useKeywordLost } from "./keywordLoss.ts";
 import { useAwakening } from "./awakening.ts";
@@ -196,8 +204,8 @@ export type CardProps = {
   switchTarget?: boolean;
   /**
    * #2932: a face-up card standing in a field zone (a unit in the units row, a unit or a card in the
-   * backrow). On the phone portrait layout its Activate control and keyword marks hang off its top-left
-   * corner (`FieldBadges.tsx`); anywhere else, and in a hand or an inspect view, they sit on the face.
+   * backrow). On the phone portrait layout its Activate control and keyword marks stand in its zone's
+   * top-left corner (`FieldBadges.tsx`); anywhere else, and in a hand or an inspect view, they sit on the face.
    */
   onField?: boolean;
   draggable?: boolean;
@@ -250,16 +258,14 @@ export default function Card(props: CardProps): ReactElement {
 
   // The card in play: the unit's view when it is one, else the card's own. A back has no face at all.
   const shown = unit ?? card;
-  const model: FaceModel =
-    shown === null
-      ? faceModel({ defId: "", radiant: false })
-      : liveFace(info, shown, {
-          ...(props.type === undefined ? {} : { type: props.type }),
-          ...(fieldPower === undefined ? {} : { fieldPower }),
-          ...(copied === undefined ? {} : { copied }),
-          ...(tallies.length === 0 ? {} : { tallies }),
-          ...(props.inHandOf === undefined ? {} : { inHand: true }),
-        });
+  // #3478: the face memoized on the view object, the definition, the live facts and the language.
+  const model: FaceModel = useLiveFace(info, shown, {
+    ...(props.type === undefined ? {} : { type: props.type }),
+    ...(fieldPower === undefined ? {} : { fieldPower }),
+    ...(copied === undefined ? {} : { copied }),
+    ...(tallies.length === 0 ? {} : { tallies }),
+    ...(props.inHandOf === undefined ? {} : { inHand: true }),
+  });
   // A face-up backrow card is drawn as the type its `BackrowView` names: the view is what the
   // client renders (CLAUDE.md rule 7), and the catalog only fills in what the view leaves out.
   const face: FaceModel = props.type === undefined ? model : { ...model, type: props.type };
@@ -292,17 +298,47 @@ export default function Card(props: CardProps): ReactElement {
               ),
           }
         : null;
+  // R3345000: Mythic / full-art view trigger. On the board, only own cards and not while the queue drains: `draining`
+  // is subscribed, so the hold follows the queue, and the callback asks again as the hold fires.
+  const draining = useIsHeld();
+  const inHand = props.inOwnHand === true;
+  const opensFullScreen = useCanOpenFullScreen(card === null ? null : face, card?.defId ?? "", worn);
+  const canFullScreen =
+    card !== null &&
+    opensFullScreen &&
+    (inHand || (unit !== undefined && unit !== null && worn && !draining));
+
   // Lines of code is a hidden stat in matches.
   const inspect = useInspectTrigger(subject, {
     prefer: form === "full" ? "above" : "beside",
     showLoc: false,
     keyHint: SHORTCUTS.inspect,
+    holdAnyPointer: canFullScreen ? true : undefined,
+    onLongPress: canFullScreen
+      ? (pointerId) => {
+          if (!inHand && isHeld()) return;
+          openFullScreenArt({
+            defId: card.defId,
+            radiant: card.radiant,
+            name: face.name,
+            heldPointerId: pointerId,
+          });
+        }
+      : undefined,
   });
 
   const legal = isLegal(props.highlight, testId);
   const selected = isSelected(props.highlight, testId);
   const clickable = target !== null && target !== undefined;
   const animatingEvent = testId === undefined ? undefined : props.animating?.get(testId);
+  // R3615000: the hovered attack's markers. The card wears the blow it takes when it is the hovered
+  // target, and what it takes back when it is the hovering attacker (a strike back of 0 shows none).
+  const hovered = props.highlight?.hoveredAttack;
+  const targetOutcome = hovered?.target === testId ? outcomeFor(props.highlight, testId) : undefined;
+  const takenOutcome =
+    hovered !== undefined && hovered.attacker === testId && hovered.strikesBack
+      ? outcomeFor(props.highlight, hovered.target)
+      : undefined;
   // #1598: a `keywordGranted` that takes the keyword away plays as the icon going (keywordLoss.ts).
   const keywordLost = useKeywordLost(testId);
   // #2435: an `awakened` in flight breaks the card's Dormant seal until the board catches up
@@ -420,6 +456,9 @@ export default function Card(props: CardProps): ReactElement {
   const buried = unit?.buried ?? 0;
   const cardType = face.type;
   const spent = unit !== undefined && unit !== null && isSpent(unit, acting);
+  // R3338002: the card's own cost against its printed one, in its owner's own hand only (R202).
+  const printed = info.def === undefined ? undefined : printedCost(info.def.cost);
+  const gemDrain = props.inOwnHand === true ? gemDrainOf(card.defId, card.cost, printed) : null;
 
   const root = (
     <div
@@ -465,7 +504,7 @@ export default function Card(props: CardProps): ReactElement {
       title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit, card)}
     >
       {unit !== undefined && unit !== null ? (
-        <MinionFace face={face} unit={unit} worn={worn} keywordsOffFace={offFace} />
+        <MinionFace face={face} unit={unit} worn={worn} keywordsOffFace={offFace} attacking={animatingEvent === "attackDeclared"} />
       ) : (
         // Issue #814: a Summit in play shortens to its header and next Ascent line; the overlays keep it all.
         // R2098000: its terms show their rule on hover and on a long press (cards/TermTip.tsx); a tap on one still reaches this root.
@@ -477,6 +516,9 @@ export default function Card(props: CardProps): ReactElement {
             ascentLevel={face.ascent}
             worn={worn}
             ownHand={worn && props.inOwnHand === true}
+            onBoard={form === "compact"}
+            gemDrain={gemDrain}
+            tilt="host"
           />
         </TermTips>
       )}
@@ -556,10 +598,16 @@ export default function Card(props: CardProps): ReactElement {
 
       {/* R384, R510: the card's Activate abilities, which the view lists on its controller's own
           view of a card acting on the field (ActivateControl.tsx). Nothing when it lists none.
-          #2932: on a phone's field they hang off the card's corner instead (FieldBadges, below). */}
+          #2932: on a phone's field they stand in the zone's corner instead (FieldBadges, below). */}
       {offFace ? null : <ActivateControls card={unit ?? card} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />}
 
       <PopLayer pops={props.pops} />
+      {targetOutcome !== undefined && testId !== undefined && (
+        <AttackTargetPreview outcome={targetOutcome} target={testId} />
+      )}
+      {takenOutcome !== undefined && takenOutcome.taken > 0 && testId !== undefined && (
+        <AttackTakenPreview outcome={takenOutcome} attacker={testId} />
+      )}
     </div>
   );
 

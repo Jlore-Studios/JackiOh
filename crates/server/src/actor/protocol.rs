@@ -14,8 +14,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use jackioh_engine::{
-    ActionBody, ActionType, Aim, EmoteId, PlagueSpend, PlayerId, PlayerView, PortraitId, PromptKind,
-    RevealAt, Row, Selection, ZoneChoice, is_emote_id, parse_aim,
+    ActionBody, ActionType, Aim, CombatForecast, EmoteId, PlagueSpend, PlayerId, PlayerView, PortraitId,
+    PromptKind, RevealAt, Row, Selection, ZoneChoice, is_emote_id, parse_aim,
 };
 
 use crate::db::store::MatchClocks;
@@ -141,10 +141,13 @@ pub enum ServerMessage {
     /// §10.8 `PlayerView`, plus the viewer's own `legalActions` (BUILD M5-T2, §10.2), here so they
     /// never disagree and BUILD §1 needs no seventh name; never the opponent's, which would name its
     /// hand (§9.1). `jlore_capped` (R1483000) and `economy`, the result's pay (#1657), are only the
-    /// receiving seat's, never a watcher's or a bot's, and are left off until set.
+    /// receiving seat's, never a watcher's or a bot's, and are left off until set. R3477000: `forecast`,
+    /// the engine's forecast of the receiving seat's attacks, likewise; a watcher's view has none.
     View {
         view: Box<PlayerView>,
         legal: Vec<ActionBody>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        forecast: Option<CombatForecast>,
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         jlore_capped: bool,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -195,8 +198,12 @@ pub enum ServerMessage {
     ChoiceHover { from: PlayerId, index: Option<i32> },
     /// R1834002, R1834003: both seats' loadouts as the match froze them, naming no card (R1953001
     /// defaults); sent on join and reconnect before the view, and to watchers. Never in `PlayerView`
-    /// (CLAUDE.md rule 7).
-    Loadouts { p1: SeatLoadout, p2: SeatLoadout },
+    /// (CLAUDE.md rule 7). Each half boxed since #3335's Starship picks grew it (R3335000), so this frame does
+    /// not size every other; the wire shape is the same.
+    Loadouts {
+        p1: Box<SeatLoadout>,
+        p2: Box<SeatLoadout>,
+    },
     /// R1834003: card picks for `seat`'s deck, each sent after the first view showing it, not again
     /// until a hello or attach (`loadout::cards_due`); an unshown card never travels (§10.8).
     /// R3013002: with the stamps of those cards that wear one, left out when none does.
@@ -217,17 +224,20 @@ pub enum ServerMessage {
 // Builders
 
 /// `legal` must be `legal_actions(state, view.viewer)`; the actor is the only caller (`push_view`).
-/// `jlore_capped` is the viewer's own account's flag, false for a watcher (R1483000), and
+/// `forecast` is `combat_forecast(state, view.viewer)`, `None` for a watcher (R3477000),
+/// `jlore_capped` the viewer's own account's flag, false for a watcher (R1483000), and
 /// `economy` what the result paid the viewer's own account, `None` for a watcher (#1657).
 pub fn view_message(
     view: PlayerView,
     legal: &[ActionBody],
+    forecast: Option<CombatForecast>,
     jlore_capped: bool,
     economy: Option<GameEconomy>,
 ) -> ServerMessage {
     ServerMessage::View {
         view: Box::new(view),
         legal: legal.to_vec(),
+        forecast,
         jlore_capped,
         economy,
     }
@@ -264,8 +274,8 @@ pub fn portraits_message(p1: PortraitId, p2: PortraitId, emotes: &[EmoteId]) -> 
 /// R1834002: the seat-level loadouts frame, the same for every receiver.
 pub fn loadouts_message(loadouts: &(Loadout, Loadout)) -> ServerMessage {
     ServerMessage::Loadouts {
-        p1: loadouts.0.seat.clone(),
-        p2: loadouts.1.seat.clone(),
+        p1: Box::new(loadouts.0.seat.clone()),
+        p2: Box::new(loadouts.1.seat.clone()),
     }
 }
 
@@ -849,4 +859,478 @@ pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessag
 /// carries nothing about the game, and no other frame changes for it.
 pub fn watchers_frame(count: usize) -> String {
     format!(r#"{{"type":"watchers","count":{count}}}"#)
+}
+
+/// The parser's own checks (#3490's malformed intents, #3516): each shape SURFACE §11.3 lets a
+/// client send is read as sent, and anything else is refused with its reason.
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    /// An `action` frame around `body`, its nonce "n".
+    fn action(mut body: Value) -> Result<ClientMessage, MalformedMessage> {
+        body["nonce"] = json!("n");
+        parse_client_message(&json!({ "type": "action", "action": body }).to_string())
+    }
+
+    /// The body `action(body)` parses to.
+    fn body_of(body: Value) -> ActionBody {
+        match action(body) {
+            Ok(ClientMessage::Action(message)) => message.body,
+            other => panic!("not an action: {other:?}"),
+        }
+    }
+
+    fn ids(ids: &[&str]) -> Vec<String> {
+        ids.iter().map(|id| id.to_string()).collect()
+    }
+
+    #[test]
+    fn a_frame_that_is_no_client_message_is_malformed_with_its_reason() {
+        for (frame, reason) in [
+            ("not json", "every frame must be JSON"),
+            ("[]", "every frame must be a JSON object"),
+            ("{}", r#""type" must be a string"#),
+            (r#"{"type":7}"#, r#""type" must be a string"#),
+            (r#"{"type":"nope"}"#, r#""nope" is not a client message"#),
+            (
+                r#"{"type":"joinRoom"}"#,
+                "join a room with POST /api/rooms/:code/join, not over the socket",
+            ),
+            (r#"{"type":"action","action":7}"#, r#""action" must be an object"#),
+            (
+                r#"{"type":"aim"}"#,
+                r#""aim" must be null or { source, target } of public handles"#,
+            ),
+        ] {
+            assert_eq!(parse_client_message(frame), Err(malformed(reason)), "{frame}");
+        }
+        assert_eq!(
+            parse_client_message(r#"{"type":"aim","aim":null}"#),
+            Ok(ClientMessage::Aim(AimMessage { aim: None }))
+        );
+    }
+
+    #[test]
+    fn a_frame_of_65_536_utf_16_units_is_read_and_one_more_is_too_large() {
+        // SURFACE §11.3: "A frame over 65,536 bytes closes with 1009".
+        assert_eq!(MAX_FRAME_BYTES, 65_536);
+        let hello = r#"{"type":"hello"}"#;
+        let at_the_bound = format!("{hello}{}", " ".repeat(MAX_FRAME_BYTES - hello.len()));
+        assert_eq!(
+            parse_client_message(&at_the_bound),
+            Ok(ClientMessage::Hello(HelloMessage::default()))
+        );
+        assert_eq!(
+            parse_client_message(&format!("{at_the_bound} ")),
+            Err(malformed("that frame is too large"))
+        );
+    }
+
+    #[test]
+    fn a_nonce_is_a_non_empty_string_of_at_most_max_nonce_length_outside_the_servers_namespace() {
+        let missing = malformed("every action carries a client nonce (SPEC §9.3)");
+        assert_eq!(client_nonce(None), Err(missing.clone()));
+        assert_eq!(client_nonce(Some(&json!(""))), Err(missing.clone()));
+        assert_eq!(client_nonce(Some(&json!(7))), Err(missing.clone()));
+
+        let too_long = malformed("that nonce is too long");
+        let longest = "n".repeat(MAX_NONCE_LENGTH);
+        assert_eq!(client_nonce(Some(&json!(longest))), Ok(longest.as_str()));
+        assert_eq!(
+            client_nonce(Some(&json!(format!("{longest}n")))),
+            Err(too_long.clone())
+        );
+        // The count is in UTF-16 units, as the client's `nonce.length` counts it: two to an emoji.
+        let longest = "😀".repeat(MAX_NONCE_LENGTH / 2);
+        assert_eq!(client_nonce(Some(&json!(longest))), Ok(longest.as_str()));
+        assert_eq!(client_nonce(Some(&json!(format!("{longest}😀")))), Err(too_long));
+
+        assert_eq!(
+            client_nonce(Some(&json!(format!("{SERVER_NONCE_PREFIX}x")))),
+            Err(malformed(format!(
+                r#"a nonce starting "{SERVER_NONCE_PREFIX}" is the server's own (R270)"#
+            )))
+        );
+        assert_eq!(
+            parse_client_message(r#"{"type":"action","action":{"type":"endTurn"}}"#),
+            Err(missing)
+        );
+    }
+
+    #[test]
+    fn whole_numbers_are_read_as_javascript_reads_them() {
+        assert_eq!(is_int(Some(&json!(3))), Some(3.0));
+        assert_eq!(is_int(Some(&json!(3.0))), Some(3.0));
+        assert_eq!(is_int(Some(&json!(1.5))), None);
+        assert_eq!(is_int(Some(&json!("3"))), None);
+        assert_eq!(is_int(None), None);
+
+        assert_eq!(non_negative_int(Some(&json!(0))), Some(0));
+        assert_eq!(non_negative_int(Some(&json!(5))), Some(5));
+        assert_eq!(non_negative_int(Some(&json!(-1))), None);
+        assert_eq!(non_negative_int(Some(&json!(2.5))), None);
+    }
+
+    #[test]
+    fn each_selection_kind_parses_to_its_own_selection() {
+        let instance = json!({ "pick": "instance", "instanceId": "c1" });
+        for (value, selection) in [
+            (
+                instance.clone(),
+                Selection::Instance {
+                    instance_id: "c1".into(),
+                },
+            ),
+            (
+                json!({ "pick": "hero", "player": "p1" }),
+                Selection::Hero { player: PlayerId::P1 },
+            ),
+            (
+                json!({ "pick": "hero", "player": "p2" }),
+                Selection::Hero { player: PlayerId::P2 },
+            ),
+            (
+                json!({ "pick": "zone", "player": "p2", "row": "backrow", "lane": 2 }),
+                Selection::Zone {
+                    player: PlayerId::P2,
+                    row: Row::Backrow,
+                    lane: 2,
+                },
+            ),
+            (
+                json!({ "pick": "zone", "player": "p1", "row": "units", "lane": 0 }),
+                Selection::Zone {
+                    player: PlayerId::P1,
+                    row: Row::Units,
+                    lane: 0,
+                },
+            ),
+            (
+                json!({ "pick": "mode", "option": "a" }),
+                Selection::Mode { option: "a".into() },
+            ),
+            (json!({ "pick": "none" }), Selection::None),
+        ] {
+            assert_eq!(parse_selection(&value), Some(selection), "{value}");
+        }
+        for value in [
+            json!({ "pick": "nope" }),
+            json!({ "pick": "zone", "player": "p1", "row": "middle", "lane": 0 }),
+            json!({ "pick": "hero", "player": "p3" }),
+        ] {
+            assert_eq!(parse_selection(&value), None, "{value}");
+        }
+
+        let none = json!({ "pick": "none" });
+        assert_eq!(
+            parse_selections(&json!([instance, none])),
+            Some(vec![
+                Selection::Instance {
+                    instance_id: "c1".into()
+                },
+                Selection::None
+            ])
+        );
+        assert_eq!(parse_selections(&json!([instance, { "pick": "nope" }])), None);
+        assert_eq!(parse_selections(&json!({})), None);
+    }
+
+    #[test]
+    fn a_play_keeps_every_field_it_was_sent() {
+        let play = json!({
+            "type": "play",
+            "instanceId": "c1",
+            "zone": { "row": "units", "lane": 1 },
+            "x": 2,
+            "embiggen": false,
+            "equip": true,
+            "tributes": ["c2", "c3"],
+            "targets": [{ "pick": "none" }],
+            "modes": ["a", "b"],
+            "plague": { "from": "c4", "tokens": 3 },
+            "faceDown": "cloaked",
+        });
+        assert_eq!(
+            body_of(play),
+            ActionBody::Play {
+                instance_id: "c1".into(),
+                zone: Some(ZoneChoice {
+                    row: Row::Units,
+                    lane: 1
+                }),
+                x: Some(2),
+                embiggen: Some(false),
+                equip: Some(true),
+                tributes: Some(ids(&["c2", "c3"])),
+                targets: Some(vec![Selection::None]),
+                modes: Some(ids(&["a", "b"])),
+                plague: Some(PlagueSpend {
+                    from: "c4".into(),
+                    tokens: 3
+                }),
+                face_down: Some(RevealAt::Cloaked),
+            }
+        );
+
+        let only = ActionBody::Play {
+            instance_id: "c1".into(),
+            zone: None,
+            x: None,
+            embiggen: None,
+            equip: None,
+            tributes: None,
+            targets: None,
+            modes: None,
+            plague: None,
+            face_down: None,
+        };
+        assert_eq!(body_of(json!({ "type": "play", "instanceId": "c1" })), only);
+        let ActionBody::Play { embiggen, .. } =
+            body_of(json!({ "type": "play", "instanceId": "c1", "embiggen": true }))
+        else {
+            panic!("not a play");
+        };
+        assert_eq!(embiggen, Some(true));
+        // R781000: the old name of `equip` is read the same.
+        let ActionBody::Play { equip, .. } =
+            body_of(json!({ "type": "play", "instanceId": "c1", "magnetic": false }))
+        else {
+            panic!("not a play");
+        };
+        assert_eq!(equip, Some(false));
+
+        for (play, reason) in [
+            (
+                json!({ "type": "play", "instanceId": "c1", "x": 1.5 }),
+                r#""play.x" must be a non-negative integer"#,
+            ),
+            (
+                json!({ "type": "play", "instanceId": "c1", "x": -1 }),
+                r#""play.x" must be a non-negative integer"#,
+            ),
+            (
+                json!({ "type": "play", "instanceId": "c1", "embiggen": "yes" }),
+                r#""play.embiggen" must be a boolean"#,
+            ),
+            (
+                json!({ "type": "play", "instanceId": "c1", "zone": { "row": "units", "lane": -1 } }),
+                r#""play.zone" must be { row, lane }"#,
+            ),
+            (
+                json!({ "type": "play", "instanceId": "c1", "tributes": ["c2", 7] }),
+                r#""play.tributes" must be an array of ids"#,
+            ),
+            (json!({ "type": "play" }), r#""play.instanceId" must be a string"#),
+        ] {
+            assert_eq!(action(play.clone()), Err(malformed(reason)), "{play}");
+        }
+    }
+
+    #[test]
+    fn each_other_action_type_parses_to_its_own_body() {
+        for (body, parsed) in [
+            (
+                json!({ "type": "mulligan", "keep": ["c1"] }),
+                ActionBody::Mulligan { keep: ids(&["c1"]) },
+            ),
+            (
+                json!({ "type": "attack", "attackerId": "c1", "targetId": "c2" }),
+                ActionBody::Attack {
+                    attacker_id: "c1".into(),
+                    target_id: "c2".into(),
+                },
+            ),
+            (
+                json!({ "type": "switchPosition", "instanceId": "c1" }),
+                ActionBody::SwitchPosition {
+                    instance_id: "c1".into(),
+                },
+            ),
+            (
+                json!({
+                    "type": "activate",
+                    "instanceId": "c1",
+                    "ability": "a",
+                    "targets": [{ "pick": "none" }],
+                    "modes": ["m"],
+                    "tributes": ["c2"],
+                }),
+                ActionBody::Activate {
+                    instance_id: "c1".into(),
+                    ability: Some("a".into()),
+                    targets: Some(vec![Selection::None]),
+                    modes: Some(ids(&["m"])),
+                    tributes: Some(ids(&["c2"])),
+                },
+            ),
+            (
+                json!({ "type": "activate", "instanceId": "c1" }),
+                ActionBody::Activate {
+                    instance_id: "c1".into(),
+                    ability: None,
+                    targets: None,
+                    modes: None,
+                    tributes: None,
+                },
+            ),
+            (
+                json!({
+                    "type": "activatePower",
+                    "instanceId": "c1",
+                    "targets": [{ "pick": "hero", "player": "p2" }],
+                }),
+                ActionBody::ActivatePower {
+                    instance_id: "c1".into(),
+                    targets: Some(vec![Selection::Hero { player: PlayerId::P2 }]),
+                },
+            ),
+            (
+                json!({ "type": "answer", "choiceId": "q1", "selection": [{ "pick": "none" }] }),
+                ActionBody::Answer {
+                    choice_id: "q1".into(),
+                    selection: vec![Selection::None],
+                },
+            ),
+            (
+                json!({ "type": "answerDraw", "accept": true }),
+                ActionBody::AnswerDraw { accept: true },
+            ),
+            (
+                json!({ "type": "answerDraw", "accept": false }),
+                ActionBody::AnswerDraw { accept: false },
+            ),
+            (json!({ "type": "offerDraw" }), ActionBody::OfferDraw),
+            (json!({ "type": "concede" }), ActionBody::Concede),
+            (json!({ "type": "endTurn" }), ActionBody::EndTurn),
+            (
+                json!({ "type": "trade", "instanceId": "c1" }),
+                ActionBody::Trade {
+                    instance_id: "c1".into(),
+                },
+            ),
+            (
+                json!({ "type": "marketBuy", "offer": 0 }),
+                ActionBody::MarketBuy { offer: 0 },
+            ),
+            (
+                json!({ "type": "marketSell", "instanceId": "c1" }),
+                ActionBody::MarketSell {
+                    instance_id: "c1".into(),
+                },
+            ),
+            (
+                json!({ "type": "setAutoEndTurn", "enabled": true }),
+                ActionBody::SetAutoEndTurn { enabled: true },
+            ),
+            (
+                json!({ "type": "setAutoEndTurn", "enabled": false }),
+                ActionBody::SetAutoEndTurn { enabled: false },
+            ),
+        ] {
+            assert_eq!(body_of(body.clone()), parsed, "{body}");
+        }
+    }
+
+    #[test]
+    fn a_client_never_sends_a_server_only_a_practice_or_an_emote_action() {
+        for (body, reason) in [
+            (
+                json!({ "type": "timeout" }),
+                r#""timeout" is a server-only action (R79)"#,
+            ),
+            (
+                json!({ "type": "disconnectExpired", "player": "p2" }),
+                r#""disconnectExpired" is a server-only action (R79)"#,
+            ),
+            (
+                json!({ "type": "ceilingReached" }),
+                r#""ceilingReached" is a server-only action (R79)"#,
+            ),
+            (
+                json!({ "type": "sandbox" }),
+                r#""sandbox" is a practice tool, never an action of a match (R923000)"#,
+            ),
+            (
+                json!({ "type": "emote", "emote": "laugh" }),
+                r#""emote" is an emote message, never an action (R1127)"#,
+            ),
+            (json!({ "type": "nope" }), r#""nope" is not an action type"#),
+            (json!({ "type": 7 }), r#""action.type" must be a string"#),
+        ] {
+            assert_eq!(action(body.clone()), Err(malformed(reason)), "{body}");
+        }
+    }
+
+    #[test]
+    fn hello_emote_and_choice_hover_frames_parse_their_fields() {
+        assert_eq!(
+            parse_client_message(r#"{"type":"hello","token":"t","matchId":"m","roomCode":"r"}"#),
+            Ok(ClientMessage::Hello(HelloMessage {
+                token: Some("t".into()),
+                match_id: Some("m".into()),
+                room_code: Some("r".into()),
+            }))
+        );
+        for (frame, reason) in [
+            (
+                r#"{"type":"hello","token":7}"#,
+                r#""hello.token" must be a string"#,
+            ),
+            (
+                r#"{"type":"hello","matchId":7}"#,
+                r#""hello.matchId" must be a string"#,
+            ),
+            (
+                r#"{"type":"hello","roomCode":7}"#,
+                r#""hello.roomCode" must be a string"#,
+            ),
+        ] {
+            assert_eq!(parse_client_message(frame), Err(malformed(reason)), "{frame}");
+        }
+
+        assert_eq!(
+            parse_client_message(r#"{"type":"choiceHover","index":null}"#),
+            Ok(ClientMessage::ChoiceHover(ChoiceHoverMessage { index: None }))
+        );
+        assert_eq!(
+            parse_client_message(r#"{"type":"choiceHover","index":2}"#),
+            Ok(ClientMessage::ChoiceHover(ChoiceHoverMessage { index: Some(2) }))
+        );
+        for frame in [
+            r#"{"type":"choiceHover","index":-1}"#,
+            r#"{"type":"choiceHover"}"#,
+        ] {
+            assert_eq!(
+                parse_client_message(frame),
+                Err(malformed(
+                    r#""index" must be null or a whole number of at least 0"#
+                )),
+                "{frame}"
+            );
+        }
+
+        assert_eq!(
+            parse_client_message(r#"{"type":"emote","emote":"laugh"}"#),
+            Ok(ClientMessage::Emote(EmoteMessage {
+                emote: EmoteId::Laugh
+            }))
+        );
+        assert_eq!(
+            parse_client_message(r#"{"type":"emote","emote":"nope"}"#),
+            Err(malformed(r#""emote" must be a known emote id"#))
+        );
+    }
+
+    #[test]
+    fn the_watchers_frame_and_encode_write_their_json() {
+        assert_eq!(watchers_frame(3), r#"{"type":"watchers","count":3}"#);
+        assert_eq!(encode(&json!({ "a": 1 })), r#"{"a":1}"#);
+        assert_eq!(
+            encode(&ack_message("n", 4)),
+            r#"{"type":"ack","nonce":"n","seq":4}"#
+        );
+    }
 }

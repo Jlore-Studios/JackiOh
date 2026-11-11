@@ -18,14 +18,14 @@ use jackioh_server::actor::protocol::SERVER_NONCE_PREFIX;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::bots::cosmetics::BotCosmetics;
 use jackioh_server::config::{
-    AI_PERSONAS, BOT_DRAW_ANSWER_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_STRENGTHS, BOT_THINK_MAX_MS,
-    BOT_THINK_MIN_MS, BOT_TIMEOUT_FIT, EmoteTrigger, MULLIGAN_CLOCK_MS, PLAYER_SETTINGS_BYTES_MAX,
-    PLAYER_SETTINGS_GROUPS_MAX, PersonaName, TURN_CLOCK_MS,
+    AI_PERSONAS, BOT_DRAW_ANSWER_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_REMATCH_FIT, BOT_STRENGTHS,
+    BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_TIMEOUT_FIT, EmoteTrigger, MULLIGAN_CLOCK_MS,
+    PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, PersonaName, TURN_CLOCK_MS,
 };
 use jackioh_server::db::store::{NewBot, PlayerSettingsLimits, PlayerSettingsMergeInput, StoreError};
 use jackioh_server::economy::store::CardPicks;
 use jackioh_server::ranked::ladder::Ladder;
-use jackioh_shared::bots::signals::{accepts_draw, idles_turn, standing};
+use jackioh_shared::bots::signals::{RematchPlan, accepts_draw, idles_turn, rematch_plan, standing};
 use jackioh_shared::bots::think::{THINK_MODEL, ThinkFor, think_ms};
 
 use crate::support::deps::{TestAppOptions, test_app_with};
@@ -557,7 +557,7 @@ async fn r1452_bot_match_replays_from_seed_and_log() {
     );
     let folded = fold(
         Pinned::default(),
-        &fold_args(&m.seed, &row.decks, log, None, None, None),
+        &fold_args(&m.seed, &row.decks, log, None, None, None, row.win_rates.clone()),
     );
     assert!(folded.errors.is_empty(), "{:?}", folded.errors);
     assert_eq!(hash_state(&folded.state), hash_state(&m.actor.engine_state()));
@@ -647,7 +647,15 @@ async fn r1452_a_restart_mid_game_resumes_the_bot_on_its_next_turn() {
         .collect();
     let folded = fold(
         Pinned::default(),
-        &fold_args(&m.seed, &row.decks, actions, None, None, None),
+        &fold_args(
+            &m.seed,
+            &row.decks,
+            actions,
+            None,
+            None,
+            None,
+            row.win_rates.clone(),
+        ),
     );
     assert!(folded.errors.is_empty(), "{:?}", folded.errors);
     assert_eq!(hash_state(&folded.state), hash_state(&revived.engine_state()));
@@ -1295,6 +1303,11 @@ async fn r1834005_a_bot_seats_frames_look_like_a_persons() {
             "foil": "foil-none",
             "finish": "finish-plain",
             "border": "border-standard",
+            // R3335000: the four Starship kinds, each its default.
+            "starshipHull": "starship-hull-standard",
+            "starshipLivery": "starship-livery-standard",
+            "starshipTrail": "starship-trail-standard",
+            "starshipPieceSkin": "starship-piece-skin-standard",
         })
     };
     let frame = json!({
@@ -1361,7 +1374,7 @@ async fn r1834005_a_bot_seats_frames_look_like_a_persons() {
     // frozen, once; the bot's frames are shaped as the person's.
     let opening = create_game(
         Pinned::default(),
-        &create_game_args(&m.seed, &both, None, None, None),
+        &create_game_args(&m.seed, &both, None, None, None, None),
     );
     let dealt = dealt_cards(&begin_game(Pinned::default(), &opening).state);
     let mut view: Option<Value> = None;
@@ -1435,4 +1448,35 @@ async fn r1834005_a_bot_seats_frames_look_like_a_persons() {
         .find(|(seat, _)| seat == "p2")
         .map(|(_, keys)| keys.clone());
     assert_eq!(person_shape, bot_shape);
+}
+
+/// R639000: a seed whose bot, at p2, plans a rematch `wanted` says it does.
+fn rematch_seed_where(wanted: impl Fn(&RematchPlan) -> bool) -> String {
+    (0..10_000)
+        .map(|k| format!("seed-rematch-{k}"))
+        .find(|seed| wanted(&rematch_plan(seed, PlayerId::P2, &BOT_REMATCH_FIT)))
+        .expect("a seed whose bot plans so")
+}
+
+#[tokio::test(start_paused = true)]
+async fn r3213000_a_bots_linger_ending_pushes_the_person_its_absence() {
+    // A bot that neither offers nor meets an offer stays a person's linger after a ranked game, then
+    // goes, as a person who wants no other game does (R1452): the person's open socket is told so.
+    let seed = rematch_seed_where(|plan| !plan.offers && !plan.accepts);
+    let m = bot_match(&seed, PlayerId::P1, PersonaName::Silent, true).await;
+    to_the_persons_turn(&m).await;
+    concede(&m).await;
+    let bot = m.bot();
+    assert!(m.actor.presence()[bot], "the bot lingers");
+    m.socket.clear();
+
+    wait_until(&m.actor, "the bot's absence to be told", |_| {
+        !m.socket.of_type("rematch").is_empty()
+    })
+    .await;
+    assert!(!m.actor.presence()[bot]);
+    let frames = m.socket.of_type("rematch");
+    assert_eq!(frames.len(), 1, "{frames:?}");
+    assert_eq!(frames[0]["opponentHere"], json!(false), "{frames:?}");
+    assert_eq!(frames[0]["v"], json!(1), "{frames:?}");
 }

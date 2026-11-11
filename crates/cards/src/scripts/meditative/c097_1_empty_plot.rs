@@ -46,11 +46,11 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-010"; // (0) Spell.
-    const SPARE: &str = "core-005"; // (1) Spell: library spare.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const FELINORS: &str = "core-012"; // (2) Unit: Cry summons a copy.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const SPARE: &str = "core-005"; // Stockpile: library spare
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FELINORS: &str = "core-012"; // Duplicating Felinors: Cry summons a copy.
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
 
     fn slot(player: PlayerId, lane: i32) -> ZoneSlot {
         ZoneSlot {

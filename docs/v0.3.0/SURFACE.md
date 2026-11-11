@@ -176,7 +176,7 @@ Crate edges (path dependencies; every crate also takes the third-party crates it
 | `jackioh-engine` | — (features: `testkit`, `ts` = `dep:ts-rs`) | `jackioh-cards` (golden traces, hotseat fixture) |
 | `jackioh-cards` | `jackioh-engine` | `jackioh-engine` with `features = ["testkit"]` |
 | `jackioh-ai` | `jackioh-engine` | `jackioh-cards`, `jackioh-engine` with `testkit` |
-| `jackioh-wasm` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | — |
+| `jackioh-wasm` | `jackioh-cards`, `jackioh-wasm-core` | — |
 | `jackioh-server` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai`, `jackioh-shared` | `jackioh-engine` with `testkit` |
 | `jackioh-tools` | `jackioh-engine` with `testkit` (fuzz's invariant monitor), `jackioh-cards`, `jackioh-ai` | — |
 | `jackioh-shared` | `jackioh-engine`, `jackioh-ai` (features: `ts` = `dep:ts-rs`, #3098); the server and `jackioh-wasm-core` depend on it, no pure crate does | `jackioh-cards` (#3101: the host machine's tests play on the real catalog), `serde_json` |
@@ -366,7 +366,7 @@ for state, views and events; the server's tests prove it for REST and WebSocket 
 ### 5.2 The state hash
 
 `hash_state(state)` reproduces TS's `hashState` (`packages/engine/src/replay.ts:12-37`) **exactly**,
-because practice saves on players' devices store it (`apps/web/src/practice/core.ts:279` refuses a
+because practice saves on players' devices store it (the practice session, `crates/shared`'s `host/practice`, refuses a
 save that does not fold to its hash), `packages/cards/test/fixtures/01-hotseat-full-game.json` pins
 `"a798906b"`, and e2e specs 01, 13 and 22 compare browser and Node hashes:
 
@@ -392,7 +392,7 @@ use the same two functions.
 wire types, `effects` and `subsystems` as modules, and these entry points every other crate uses:
 
 ```rust
-pub fn create_game(args: &CreateGameArgs) -> GameState;            // TS createGame({seed, decks, catalog?, handicaps?, lastBoards?, glitchBoards?, dealt?, sandbox?})
+pub fn create_game(args: &CreateGameArgs) -> GameState;            // TS createGame({seed, decks, catalog?, handicaps?, lastBoards?, glitchBoards?, dealt?, sandbox?, winRates?})  // winRates: R3049000
 pub fn begin_game(state: &GameState) -> ReduceResult;
 pub fn reduce(state: &GameState, action: &Action) -> ReduceResult;
 pub fn reduce_unpiloted(state: &GameState, action: &Action) -> ReduceResult; // the AI's simulated steps: an autopilot's turn left owed (#1337)
@@ -696,10 +696,23 @@ it too), and `catalog::registered_catalog()`/`scripts::script_of()` consult it f
 `#[cfg(feature = "testkit")]` only. That one `thread_local!` is the only allowed exception to §3's
 `RefCell` ban (`#[allow(clippy::disallowed_types)]` on that item alone).
 
+**Stand-in cards** (#3486, `testkit/stand_in.rs`). A test that needs only a card's numbers names a
+card whose id spells them out, `"stand-in (3) 9/9"`, `"stand-in (1) 4/4 R12/12"`, `"stand-in (4) 7/7 Armor 7"`
+or `"stand-in (0) Spell"` (`STAND_IN_GRAMMAR` gives the grammar; a Unit with no Radiant face written takes
+R349's fallback), rather than borrowing a real card a balance patch may change. Under `testkit`,
+`catalog::find_def` builds the card on a miss and caches it in a thread-local beside the overrides, each
+card leaked as `register_catalog` leaks; a malformed id panics with the grammar. The cache stays out of
+`registered()`, so no `query`, random pool, `def_by_index` or deck validation reaches a stand-in and no
+seeded draw moves; production builds compile none of it. A stand-in is a Common Core card with no tags,
+no script and no text but its keywords, named by its id.
+
 A card reference resolves by catalog id, §5 index or name, as in TS. `s.unit_at(p, lane)` is `s.unit(p, lane)`
 that panics on an empty lane, and `testkit::pick` holds the one-instance selection builders (`id`, `instance`,
 `card`, `unit_at`); tests take these rather than a copy (#1826). `testkit::must(value, what)` is an
-`Option`'s value or a panic `expected {what}`, and tests take it too (#2023). `testkit::invariants::InvariantMonitor`
+`Option`'s value or a panic `expected {what}`, and tests take it too (#2023). `s.count(kind)` and
+`s.events_of(kind)` read the log by event type (a `GameEventType` or its string; a string naming none panics),
+`s.last_count(kind)` and `s.last_events_of(kind)` the last step's, and `s.offered(p)` is `legal_actions` for that
+seat now (#3504). `testkit::invariants::InvariantMonitor`
 is `_invariants.ts`'s I1–I4 monitor (used by `cargo jackioh fuzz`). `testkit::glow` is `_glow.ts`.
 
 ## 9. The AI crate
@@ -714,7 +727,10 @@ pub struct AiOptions<'a> {
     pub rng: Rng,                                   // the caller reads rng.cursor() back afterwards
     pub budget: SearchBudget,                       // default AI_BUDGET
     pub should_stop: Option<&'a dyn Fn() -> bool>,  // TS shouldStop; the browser's clock, never read by this crate
+    pub wrap_up: Option<&'a dyn Fn() -> bool>,      // R3498000: the beam's earlier stop, a host's clock at AI_WRAP_UP_SHARE of its limit (wrap_up_after_ms)
 }
+pub fn wrap_up_after_ms(limit_ms: i64) -> i64;      // R3498000: the ms into a host's limit at which it fires wrap_up
+    // SearchStats gains replied and worldsScored, and Decision::fell_short() a finalist left unscored on a sampled world (R3498000)
 pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<String>;
     // AiDeckOptions { banned, include, theme, mana_cap, boost, lean_set: Option<SetName> } (serde camelCase;
     // `leanSet`, R1370: at least ceil(size × AI_DECK.lean_min_share) of the deck from that set; absent, the
@@ -755,7 +771,8 @@ keeps behind its opaque `EngineState` brand.
 #[wasm_bindgen] pub fn ai_to_act(state_json: &str, seat: &str) -> bool;
 #[wasm_bindgen] pub fn ai_decide(state_json: &str, seat: &str, options_json: &str, deadline_ms: f64) -> String;
     // options: { rngSeed, rngCursor, budget? }; answers { decision: Decision | null, rngCursor };
-    // should_stop = js_sys::Date::now() >= deadline_ms (deadline_ms <= 0: no clock)
+    // should_stop = js_sys::Date::now() >= deadline_ms (deadline_ms <= 0: no clock), and wrap_up the same at
+    // AI_WRAP_UP_SHARE of the time from the call to deadline_ms (R3498000)
 #[wasm_bindgen] pub fn lethal_hint(state_json: &str, seat: &str, deadline_ms: f64) -> bool;  // R2102000: jackioh_ai::lethal_hint, the practice AI's lethal hint; deadline_ms as ai_decide's
 #[wasm_bindgen] pub fn build_ai_deck(options_json: &str) -> String;
     // options: { rngSeed, rngCursor, size, banned?, manaCap?, theme?, include?, boost?, leanSet? }; answers { deck, rngCursor }
@@ -793,7 +810,7 @@ keeps behind its opaque `EngineState` brand.
     // a BotAnswer out ({ answer: "chosen", bot } | { change } | { ids } | { bot } | { decks } | { trio } | { due } | { row } | { refused } | { holdings } | { draw } | …); the host reads its store into plain records and writes what comes out
 #[wasm_bindgen] pub fn bot_decide(call_json: &str, deadline_ms: f64) -> String;
     // #3103: the move a ladder bot owes (SPEC §9.12, R1452, R639000, R747000). A DecideCall in ({ host: DuelHost, request: DecideRequest }), the BotChoice out ({ body, aiCursor, legalCount, lethal, aim }), which the host feeds the machine back as { event: "decided", home, version, turn, choice };
-    // once Date.now() passes deadline_ms the search answers with its best line (<= 0: no clock)
+    // once Date.now() passes deadline_ms the search answers with its best line (<= 0: no clock), its beam wrapped up as ai_decide's (R3498000)
 #[wasm_bindgen] pub fn log(call_json: &str) -> String;
     // #3108: jackioh-shared's game log (SPEC §10.10, R97, R745). A LogCall in ({ call: "view", view, locale } | { call: "gap", locale }), a LogAnswer out ({ answer: "lines", lines: (LogLine | null)[] } | { answer: "line", line }):
     // a line for each event of the view's window, final text as spans in the reader's words, naming no card the viewer may not read; the catalog is the one init registered (crates/shared/README.md, src/log/)
@@ -1042,7 +1059,9 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   both seats through the `deal_emote_hand` binding.
 - **Loadouts** (#1834, R1834000–R1834005): two frames ride beside `portraits`, never in `PlayerView`.
   `{ "type": "loadouts", "p1", "p2" }` (`ServerMessage::Loadouts { p1, p2 }`), each a `SeatLoadout`
-  `{ table, field, cardBack, foil, finish, border }` of registry ids, goes on `hello` and attach
+  `{ table, field, cardBack, foil, finish, border, starshipHull, starshipLivery, starshipTrail,
+  starshipPieceSkin }` of registry ids (the four Starship picks since #3335, R3335000, each its kind's
+  default when a stored frame lacks it), goes on `hello` and attach
   before the view and to a watcher as it attaches; `{ "type": "cardLoadouts", "seat", "cards" }`
   (`ServerMessage::CardLoadouts { seat, cards }`), `cards` a list of `{ cardId, foil?, finish?,
   border?, fullArt? }` (`fullArt` `true` for the card's still Epic full art, or a Legendary's, a
@@ -1062,6 +1081,16 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   (`api/card_picks.rs`, over `public.card_cosmetic_picks`). The client reads the frames in
   `apps/web/src/game/net.ts` and `src/cards/loadouts.ts`; without them every seat but the viewer's
   draws the defaults.
+- **Post-game frames** (#3213, R3213000): two frames ride beside `portraits` on `/ws/match`, never in
+  `PlayerView`, each built for its seat alone (`jackioh_shared::host::post_game::PostGameFrame`, generated
+  to `apps/web/src/wire/generated/PostGameFrame.ts`). A match in no series sends `{ "type": "rematch",
+  "v", "youOffered", "opponentOffer", "opponentHere", "matchId", "mode" }` (`mode` `"bo1"` or `"random"`,
+  `RematchMode`), the seat's `GET /api/matches/:matchId/rematch` answer; a Conquest game sends
+  `{ "type": "series", "v", "series" }`, the seat's `SeriesView` as `GET /api/matches/:matchId/series`
+  answers it. Each goes after the portraits of every `hello` and attach, and again when the rematch book,
+  a seat's presence or the series changes; `v` is the server's `POST_GAME_FRAME_VERSION` (exported to
+  `serverConfig.ts`), and the client reads only a frame of the version it knows, keeps the newest in its
+  match snapshot and polls neither GET while its open socket has sent one.
 - **Kept on purpose**: E2E mode (fixture tokens and codes are a contract with `e2e/support/config.ts`),
   rematch offers held in memory, finished actors kept in memory through their rematch window (`Registry::reap_finished`), the `vanilla` portrait default for
   old rows, `matches.mode` fallbacks for old rows, the retired `loadouts` tables.
@@ -1088,7 +1117,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
 | `catalog check` | `catalog.rs` | 22 | `validate-catalog.ts`, the catalog/registry/references/params/radiant-standard tests | data checks |
 | `catalog loc <path>` | `catalog.rs` | 22 | `gen-loc.ts` | §7.5 |
 | `catalog-version` | `catalog.rs` | 22 | `scripts/catalog-version.mjs` | prints the newest version in `patches.json` |
-| `patches <version> <date> "<title>"`, `patches check`, `patches ship` | `patches.rs` | 22 | `packages/cards/scripts/{patches,patch,patches-io,versions,naming}.ts` | same files, same formats; since R1329000 a fragment may claim the win-rate table (`winRates`), `ship` writes each version's table to `patches/win_rates/<version>.json` and `shipped.json` records its blob (`winRatesBlob`); since R1366000 a fragment is `pending/<slug>.json` with no version, `plays` and `rule`, and `ship` names each version from its tier and records `tier` and `plays` |
+| `patches <version> <date> "<title>"`, `patches check`, `patches ship` | `patches.rs` | 22 | `packages/cards/scripts/{patches,patch,patches-io,versions,naming}.ts` | same files, same formats; from R1329000 to R3049000 a fragment could claim the win-rate table (`winRates`) and `ship` wrote each version's table to `patches/win_rates/<version>.json` with its blob in `shipped.json` (`winRatesBlob`); since R3049000 none is claimed or written, and those files stay the frozen tables of the versions before it; since R1366000 a fragment is `pending/<slug>.json` with no version, `plays` and `rule`, and `ship` names each version from its tier and records `tier` and `plays` |
 | `gate [--full] [--shard k/K] [--out dir]`, `gate merge <dir>` | `gate.rs` | 22 | `pnpm ai:gate`, `gate-*.test.ts`, `gate-merge.ts` | the three matchups against `gateNeeded`, plus the perf gate |
 | `sweep [ids…] [--pass2 …] [--report …]` | `sweep.rs` | 22 | `pnpm ai:sweep` | R186's two-pass sweep; prints `SHADOW_BAN` rows |
 | `stats [--games N] [--patch v] [--out file]` | `stats.rs` | 22 | `pnpm ai:stats` | R378's development run |

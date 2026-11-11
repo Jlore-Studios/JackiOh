@@ -19,7 +19,8 @@ use jackioh_engine::wire::{
 use jackioh_engine::{Action, DECK_SIZE, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::config::PersonaName;
 use jackioh_server::config::{
-    DECK_VERSION_DEBOUNCE_MS, DECK_VERSIONS_KEPT, JLORIOUS_SIZE, STARTER_CARDS, USERNAME_CHANGE_COOLDOWN_MS,
+    DECK_VERSION_DEBOUNCE_MS, DECK_VERSIONS_KEPT, JLORIOUS_SIZE, PRACTICE_SEEDS_OPEN_MAX, STARTER_CARDS,
+    USERNAME_CHANGE_COOLDOWN_MS,
 };
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
@@ -3021,6 +3022,47 @@ mod last_boards {
         r678_samples_other_profiles_non_empty_server_boards_never_an_excluded_one,
         r678_a_match_row_keeps_the_glitch_boards_it_started_with,
     );
+}
+
+mod win_rate_snapshot {
+    use super::*;
+
+    async fn r3049000_a_match_row_keeps_its_win_rate_snapshot(harness: &StoreHarness) {
+        let p1 = active_profile(harness, None).await;
+        let p2 = active_profile(harness, None).await;
+        let snapshot = json!({
+            "patch": "v-r3049000",
+            "source": "live",
+            "cards": [
+                { "id": "core-001", "wins": 25, "games": 32 },
+                { "id": "core-008", "wins": 300, "games": 450 },
+            ],
+        });
+        let row: MatchRow = from(spread(
+            j(&match_row(&id(), &p1.id, &p2.id, harness, harness.now())),
+            json!({ "winRates": snapshot }),
+        ));
+        q!(harness, t => t.matches_create(&row));
+        assert_eq!(q!(harness, t => t.matches_get(&row.id)), Some(row.clone()));
+        let live = q!(harness, t => t.matches_live());
+        let found = must(
+            live.iter().find(|candidate| candidate.id == row.id),
+            "the live match",
+        );
+        assert_eq!(j(found)["winRates"], snapshot);
+        // A match handed none, as every match from before migration 0085, keeps none.
+        let plain = match_row(&id(), &p1.id, &p2.id, harness, harness.now());
+        q!(harness, t => t.matches_create(&plain));
+        assert!(absent(
+            &j(&must(
+                q!(harness, t => t.matches_get(&plain.id)),
+                "the plain match"
+            )),
+            "winRates"
+        ));
+    }
+
+    both_stores!(r3049000_a_match_row_keeps_its_win_rate_snapshot);
 }
 
 mod player_stats {
@@ -9311,12 +9353,13 @@ mod duos {
 
 mod economy {
     use super::*;
-    use jackioh_server::config::{PROFICIENCY_LEVELS, SET_TRACK_FIRST_LEVEL};
+    use jackioh_server::config::{FLEET_TRACK_LEVELS, PROFICIENCY_LEVELS, SET_TRACK_FIRST_LEVEL};
+    use jackioh_server::cosmetics::JLORIOUS_STARSHIP;
     use jackioh_server::economy::practice::{ClaimBucket, ClaimRefusal, ClaimedResult};
     use jackioh_server::economy::store::{
-        CardProficiency, CosmeticGrant, CounterGrant, EconomyLedger, GameJloreTotals, IdempotencyRow,
-        InventoryGrant, JloreGrant, PracticeClaim, PracticeClaimCount, PracticeOutcome, PracticeSeed,
-        PracticeSettled, QuestGrant, TrackGrant,
+        CardProficiency, CosmeticGrant, CounterGrant, EconomyLedger, EconomyReason, FleetGrant, FleetTrack,
+        GameJloreTotals, IdempotencyRow, InventoryGrant, JloreGrant, PracticeClaim, PracticeClaimCount,
+        PracticeOutcome, PracticeSeed, PracticeSettled, QuestGrant, TrackGrant,
     };
 
     /// A practice claim as the burn keeps it (R2422000): a loss on a log of no actions.
@@ -9384,6 +9427,8 @@ mod economy {
             "tracks": j(&q!(harness, t => t.economy_tracks_get(profile_id))),
             "quests": j(&q!(harness, t => t.economy_quests_get(profile_id))),
             "cosmetics": j(&q!(harness, t => t.economy_cosmetics_get(profile_id))),
+            // R3335001: the Fleet track's XP and level, read over an empty day so its XP today is 0.
+            "fleet": j(&q!(harness, t => t.economy_fleet_get(profile_id, 0, 0))),
             "ledger": j(&q!(harness, t => t.economy_ledger_get(profile_id))),
         })
     }
@@ -9397,7 +9442,8 @@ mod economy {
             "tracks": [],
             "quests": { "held": [], "nextDueAt": null },
             "cosmetics": { "cards": [], "account": [] },
-            "ledger": { "jlore": [], "inventory": [], "counters": [], "tracks": [], "quests": [], "cosmetics": [] },
+            "fleet": { "xp": 0, "level": 0, "xpToday": 0 },
+            "ledger": { "jlore": [], "inventory": [], "counters": [], "tracks": [], "quests": [], "cosmetics": [], "fleet": [] },
         })
     }
 
@@ -9432,6 +9478,10 @@ mod economy {
             .await
             .map_err(shown)?;
         t.economy_cosmetics_grant(&cosmetic(profile_id, None, BOARD_COSMETIC, 1, at))
+            .await
+            .map_err(shown)?;
+        // R3335001: the Fleet track's row and its ledger row.
+        t.economy_fleet_grant(&fleet(profile_id, [10, 0], "game", at))
             .await
             .map_err(shown)?;
         Ok(())
@@ -10005,8 +10055,9 @@ mod economy {
     }
 
     /// R1483000: a profile's open seeds are the ones unclaimed and issued at or after the time given,
-    /// its own alone: a claimed seed and a lapsed one do not count, nor another profile's.
-    async fn r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts(
+    /// its own alone: a settled seed and a lapsed one do not count, nor another profile's (R3500001:
+    /// a claim not yet settled counts, `r3500001_a_claimed_unsettled_practice_seed_counts_until_it_settles_or_lapses`).
+    async fn r1483000_open_practice_seed_count_excludes_settled_expired_and_other_accounts(
         harness: &StoreHarness,
     ) {
         let owner = pending_profile(harness, None).await;
@@ -10032,6 +10083,9 @@ mod economy {
         }
         let claim = practice_claim();
         assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-claimed", now + 1, &claim)));
+        assert!(
+            q!(harness, t => t.economy_practice_seed_settle(&owner.id, "seed-claimed", PracticeOutcome::Paid, now + 2))
+        );
         let open = |profile_id: &str, since: i64| {
             let profile_id = profile_id.to_string();
             async move { q!(harness, t => t.economy_practice_seeds_open(&profile_id, since)) }
@@ -10045,6 +10099,84 @@ mod economy {
         assert_eq!(open(&owner.id, now).await, 1);
         assert_eq!(open(&owner.id, now + 1).await, 0);
         assert_eq!(open(&other.id, now - 100).await, 1);
+    }
+
+    /// R3500001: a seed claimed and not yet settled counts toward the open seeds, so a claim waiting
+    /// for its check keeps its place (`PRACTICE_SEEDS_OPEN_MAX` of them refuse another seed); a settle,
+    /// paid or refused, frees it, and a claim whose settle never came stops counting when its seed
+    /// lapses. Another profile's claims never count.
+    async fn r3500001_a_claimed_unsettled_practice_seed_counts_until_it_settles_or_lapses(
+        harness: &StoreHarness,
+    ) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        let seed = |name: &str, profile_id: &str, issued_at: i64| -> PracticeSeed {
+            from(json!({
+                "seed": name, "profileId": profile_id, "issuedAt": issued_at, "claimedAt": null,
+                "setup": {
+                    "difficulty": "easy", "humanSeat": "p1", "deck": { "kind": "random", "lean": null },
+                    "lastBoard": [], "catalogVersion": "v-contract",
+                },
+            }))
+        };
+        for held in [
+            seed("seed-a", &owner.id, now),
+            seed("seed-b", &owner.id, now),
+            seed("seed-c", &owner.id, now),
+            seed("seed-lapsed", &owner.id, now - 1000),
+            seed("seed-theirs", &other.id, now),
+        ] {
+            q!(harness, t => t.economy_practice_seed_insert(&held));
+        }
+        let claim = practice_claim();
+        for (profile_id, name) in [
+            (&owner.id, "seed-a"),
+            (&owner.id, "seed-b"),
+            (&owner.id, "seed-c"),
+            (&owner.id, "seed-lapsed"),
+            (&other.id, "seed-theirs"),
+        ] {
+            assert!(q!(harness, t => t.economy_practice_seed_claim(profile_id, name, now + 1, &claim)));
+        }
+        let open = |profile_id: &str, since: i64| {
+            let profile_id = profile_id.to_string();
+            async move { q!(harness, t => t.economy_practice_seeds_open(&profile_id, since)) }
+        };
+        let settle = |profile_id: &str, name: &str, outcome: PracticeOutcome| {
+            let (profile_id, name) = (profile_id.to_string(), name.to_string());
+            async move {
+                assert!(
+                    q!(harness, t => t.economy_practice_seed_settle(&profile_id, &name, outcome, now + 2)),
+                    "{name} settles"
+                );
+            }
+        };
+
+        // Three claims not yet settled hold three places: a fourth seed is refused.
+        assert_eq!(open(&owner.id, now - 100).await, 3);
+        assert!(open(&owner.id, now - 100).await >= PRACTICE_SEEDS_OPEN_MAX);
+        // The lapsed one counts only while its seed is within the lifetime the caller gives.
+        assert_eq!(open(&owner.id, now - 2000).await, 4);
+        assert_eq!(open(&other.id, now - 100).await, 1);
+
+        // A settle frees its place, paid or refused; one of a lapsed seed changes nothing.
+        settle(&owner.id, "seed-a", PracticeOutcome::Paid).await;
+        assert_eq!(open(&owner.id, now - 100).await, 2);
+        settle(&owner.id, "seed-b", PracticeOutcome::Refused).await;
+        assert_eq!(open(&owner.id, now - 100).await, 1);
+        settle(&owner.id, "seed-lapsed", PracticeOutcome::Paid).await;
+        assert_eq!(open(&owner.id, now - 100).await, 1);
+        assert_eq!(open(&owner.id, now - 2000).await, 1);
+
+        // An unclaimed seed counts as it did.
+        q!(harness, t => t.economy_practice_seed_insert(&seed("seed-d", &owner.id, now)));
+        assert_eq!(open(&owner.id, now - 100).await, 2);
+        assert_eq!(
+            open(&other.id, now - 100).await,
+            1,
+            "another profile's unsettled claim stays its own"
+        );
     }
 
     /// R2379000: a release deletes the owner's unclaimed seed alone: another profile's release
@@ -10552,6 +10684,303 @@ mod economy {
         assert_eq!(q!(harness, t => t.economy_jlore_get(&other.id)), 0);
     }
 
+    /// R3212000: Open all's batch writes, spends among them, leave what the same writes one at a time
+    /// would: each count moves by the sum of its grants and each grant writes its ledger row, in order;
+    /// a batch that would take a count below 0 where its grant falls (a spend before the grant that
+    /// would cover it too) or own a cosmetic owned already answers false and writes nothing; a
+    /// cosmetic listed twice, a clear, a grant of 0 and a second account are refused, writing nothing;
+    /// and an empty batch writes nothing.
+    async fn r3212000_batch_writes_with_spends_write_what_one_at_a_time_would(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        let card = must(harness.playable_ids.first().cloned(), "a card");
+        let second = must(harness.playable_ids.get(1).cloned(), "a second card");
+        let tagged = |name: &str, key: &str, delta: i64, reference: &str| InventoryGrant {
+            reference: Some(reference.to_string()),
+            ..item(&owner.id, name, key, delta, now)
+        };
+
+        q!(harness, t => t.economy_inventory_grant(&tagged("set_pack", "Core", 3, "bought")));
+        assert!(q!(harness, t => t.economy_inventory_write_all(&[
+            tagged("set_pack", "Core", -1, "a"),
+            tagged("card_token", "", 2, "b"),
+            tagged("set_pack", "Core", -1, "c"),
+            tagged("global_pack", "", 1, "d"),
+        ])));
+        assert_eq!(
+            j(&q!(harness, t => t.economy_inventory_get(&owner.id))),
+            json!([
+                { "item": "card_token", "key": "", "count": 2 },
+                { "item": "global_pack", "key": "", "count": 1 },
+                { "item": "set_pack", "key": "Core", "count": 1 },
+            ])
+        );
+        q!(harness, t => t.economy_counters_grant(&counter(&owner.id, "pity_epic", "", 2, now)));
+        assert!(q!(harness, t => t.economy_counters_write_all(&[
+            counter(&owner.id, "pity_epic", "", -2, now),
+            counter(&owner.id, "card_token_bar", "", 5, now),
+            counter(&owner.id, "pity_epic", "", 1, now),
+        ])));
+        assert_eq!(
+            j(&q!(harness, t => t.economy_counters_get(&owner.id))),
+            json!([
+                { "counter": "card_token_bar", "pack": "", "value": 5 },
+                { "counter": "pity_epic", "pack": "", "value": 1 },
+            ])
+        );
+        assert!(q!(harness, t => t.economy_cosmetics_grant_all(&[
+            cosmetic(&owner.id, Some(&card), FOIL_COSMETIC, 1, now),
+            cosmetic(&owner.id, None, BOARD_COSMETIC, 1, now),
+        ])));
+        assert_eq!(
+            j(&q!(harness, t => t.economy_cosmetics_get(&owner.id))),
+            json!({ "cards": [{ "cardId": card, "cosmeticId": FOIL_COSMETIC }], "account": [BOARD_COSMETIC] })
+        );
+        for empty in [
+            q!(harness, t => t.economy_inventory_write_all(&[])),
+            q!(harness, t => t.economy_counters_write_all(&[])),
+            q!(harness, t => t.economy_cosmetics_grant_all(&[])),
+        ] {
+            assert!(empty, "{}: an empty batch fits", harness.name);
+        }
+        let ledger = q!(harness, t => t.economy_ledger_get(&owner.id));
+        assert_eq!(
+            ledger
+                .inventory
+                .iter()
+                .map(|row| (row.reference.clone(), row.delta))
+                .collect::<Vec<_>>(),
+            [("bought", 3), ("a", -1), ("b", 2), ("c", -1), ("d", 1)]
+                .map(|(reference, delta)| (Some(reference.to_string()), delta))
+        );
+        assert_eq!(
+            ledger.counters.iter().map(|row| row.delta).collect::<Vec<_>>(),
+            [2, -2, 5, 1]
+        );
+        assert_eq!(ledger.cosmetics.len(), 2);
+
+        let before = economy_of(harness, &owner.id).await;
+        // One at a time would refuse each of these, so the batch writes none of it.
+        for (what, fits) in [
+            (
+                "two spends of one pack held",
+                q!(harness, t => t.economy_inventory_write_all(&[
+                    tagged("card_token", "", 1, "e"),
+                    tagged("set_pack", "Core", -1, "f"),
+                    tagged("set_pack", "Core", -1, "g"),
+                ])),
+            ),
+            (
+                "a spend before the grant that covers it",
+                q!(harness, t => t.economy_inventory_write_all(&[
+                    tagged("global_pack", "", -2, "h"),
+                    tagged("global_pack", "", 5, "i"),
+                ])),
+            ),
+            (
+                "a counter below 0",
+                q!(harness, t => t.economy_counters_write_all(&[
+                    counter(&owner.id, "pity_mythic", "", 1, now),
+                    counter(&owner.id, "card_token_bar", "", -6, now),
+                ])),
+            ),
+            (
+                "a cosmetic owned already",
+                q!(harness, t => t.economy_cosmetics_grant_all(&[
+                    cosmetic(&owner.id, Some(&second), FOIL_COSMETIC, 1, now),
+                    cosmetic(&owner.id, Some(&card), FOIL_COSMETIC, 1, now),
+                ])),
+            ),
+        ] {
+            assert!(!fits, "{}: {what}", harness.name);
+            assert_eq!(
+                economy_of(harness, &owner.id).await,
+                before,
+                "{}: {what}",
+                harness.name
+            );
+        }
+        let theirs = InventoryGrant {
+            profile_id: other.id.clone(),
+            ..tagged("card_token", "", 1, "j")
+        };
+        for (what, refused) in [
+            (
+                "two accounts' inventory",
+                call!(harness, t => t.economy_inventory_write_all(&[tagged("card_token", "", 1, "k"), theirs.clone()]))
+                    .is_err(),
+            ),
+            (
+                "a grant of 0",
+                call!(harness, t => t.economy_inventory_write_all(&[tagged("card_token", "", 0, "l")])).is_err(),
+            ),
+            (
+                "two accounts' counters",
+                call!(harness, t => t.economy_counters_write_all(&[
+                    counter(&owner.id, "pity_mythic", "", 1, now),
+                    counter(&other.id, "pity_mythic", "", 1, now),
+                ]))
+                .is_err(),
+            ),
+            (
+                "a cosmetic listed twice",
+                call!(harness, t => t.economy_cosmetics_grant_all(&[
+                    cosmetic(&owner.id, Some(&second), FOIL_COSMETIC, 1, now),
+                    cosmetic(&owner.id, Some(&second), FOIL_COSMETIC, 1, now),
+                ]))
+                .is_err(),
+            ),
+            (
+                "a clear",
+                call!(harness, t => t.economy_cosmetics_grant_all(&[
+                    cosmetic(&owner.id, Some(&card), FOIL_COSMETIC, -1, now),
+                ]))
+                .is_err(),
+            ),
+            (
+                "two accounts' cosmetics",
+                call!(harness, t => t.economy_cosmetics_grant_all(&[
+                    cosmetic(&owner.id, Some(&second), FOIL_COSMETIC, 1, now),
+                    cosmetic(&other.id, Some(&second), FOIL_COSMETIC, 1, now),
+                ]))
+                .is_err(),
+            ),
+        ] {
+            assert!(refused, "{}: {what}", harness.name);
+        }
+        assert_eq!(
+            economy_of(harness, &owner.id).await,
+            before,
+            "a refused batch writes nothing"
+        );
+        assert_eq!(economy_of(harness, &other.id).await, no_economy());
+    }
+
+    /// `profile_id`'s economy and collection, its id written as `ID`, so two accounts' compare.
+    async fn holdings_of(harness: &StoreHarness, profile_id: &str) -> String {
+        json!({
+            "economy": economy_of(harness, profile_id).await,
+            "collection": j(&q!(harness, t => t.collection_get(profile_id))),
+        })
+        .to_string()
+        .replace(profile_id, "ID")
+    }
+
+    /// R3212000: an Open all of N packs (`open_packs_in`, one batch of writes) leaves every holding
+    /// and every ledger row, in order, that N openings one at a time (`open_pack_in`) leave from the
+    /// same seeds and the same records: the cards, the cosmetics on a card and on the account, the
+    /// pity counters, both bars and what they pay. More seeds than packs held is refused, writing
+    /// nothing.
+    async fn r3212000_open_all_of_n_writes_what_n_openings_one_at_a_time_write(harness: &StoreHarness) {
+        use jackioh_engine::SetName;
+        use jackioh_engine::wire::PrintedRarity;
+        use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity};
+        use jackioh_server::economy::packs::{open_pack_in, open_packs_in};
+        use jackioh_shared::economy::open::PackInputs;
+        use jackioh_shared::economy::roll::{PackKind, PoolCard, SlotGrant};
+
+        let fixture = |id: &str, kind: CosmeticKind, rarity: CosmeticRarity| Cosmetic {
+            id: id.to_string(),
+            kind,
+            name: id.to_string(),
+            rarity,
+            default: false,
+            starter: false,
+            chase: rarity.is_chase(),
+            jlorious: false,
+            card: None,
+            offer: Vec::new(),
+            level: None,
+            track: None,
+            track_level: None,
+        };
+        let rarities = [
+            PrintedRarity::Common,
+            PrintedRarity::Common,
+            PrintedRarity::Rare,
+            PrintedRarity::Rare,
+            PrintedRarity::Epic,
+            PrintedRarity::Legendary,
+        ];
+        let inputs = PackInputs {
+            pack: PackKind::Set(SetName::Core),
+            pool: harness
+                .playable_ids
+                .iter()
+                .zip(rarities)
+                .map(|(id, rarity)| PoolCard {
+                    id: id.clone(),
+                    rarity,
+                })
+                .collect(),
+            registry: vec![
+                fixture(FOIL_COSMETIC, CosmeticKind::Foil, CosmeticRarity::Rare),
+                fixture(BOARD_COSMETIC, CosmeticKind::Table, CosmeticRarity::Epic),
+            ],
+            catalog: CATALOG_VERSION.to_string(),
+        };
+        let packs = 6;
+        let one = pending_profile(harness, None).await;
+        let all = pending_profile(harness, None).await;
+        let short = pending_profile(harness, None).await;
+        let at = harness.now();
+        for profile in [&one, &all, &short] {
+            q!(harness, t => t.economy_inventory_grant(&InventoryGrant {
+                reason: from(json!("pack_purchase")),
+                reference: None,
+                ..item(&profile.id, "set_pack", "Core", packs, at)
+            }));
+        }
+        let seeds: Vec<String> = (0..packs).map(|n| format!("r3212000-{n}")).collect();
+
+        let mut opened = Vec::new();
+        for seed in &seeds {
+            opened.push(q!(harness, t => async {
+                t.economy_lock_account(&one.id).await?;
+                open_pack_in(&mut t, &one.id, &inputs, seed, at).await
+            }));
+        }
+        let batch = q!(harness, t => async {
+            t.economy_lock_account(&all.id).await?;
+            open_packs_in(&mut t, &all.id, &inputs, &seeds, at).await
+        });
+        assert_eq!(batch, opened, "{}", harness.name);
+        // Six cards in thirty slots: cards unlocked, then duplicates that drop cosmetics or fill the bars.
+        let slots: Vec<_> = opened.iter().flat_map(|opened| &opened.slots).collect();
+        assert!(slots.iter().any(|slot| slot.grant == SlotGrant::Card));
+        assert!(
+            slots
+                .iter()
+                .any(|slot| matches!(slot.grant, SlotGrant::Cosmetic { .. }))
+        );
+        assert!(
+            slots
+                .iter()
+                .any(|slot| matches!(slot.grant, SlotGrant::Bars { .. }))
+        );
+        assert_eq!(opened.last().map(|opened| opened.unopened), Some(0));
+        assert_eq!(
+            holdings_of(harness, &all.id).await,
+            holdings_of(harness, &one.id).await,
+            "{}",
+            harness.name
+        );
+
+        let before = holdings_of(harness, &short.id).await;
+        let more: Vec<String> = (0..=packs).map(|n| format!("r3212000-{n}")).collect();
+        assert!(
+            call!(harness, t => async {
+                t.economy_lock_account(&short.id).await?;
+                open_packs_in(&mut t, &short.id, &inputs, &more, at).await
+            })
+            .is_err(),
+            "{}",
+            harness.name
+        );
+        assert_eq!(holdings_of(harness, &short.id).await, before, "{}", harness.name);
+    }
+
     /// #2884, migration 0078: a claim's count adds one to its bucket on the UTC day of its time,
     /// every bucket taken (on Postgres, by the outcome check too), a day's last millisecond on that
     /// day; a count whose transaction rolls back adds nothing; the list is oldest day first, its
@@ -10680,6 +11109,119 @@ mod economy {
         );
     }
 
+    fn fleet(profile_id: &str, change: [i64; 2], reason: &str, at: i64) -> FleetGrant {
+        let [xp, levels] = change;
+        from(json!({
+            "profileId": profile_id, "xp": xp, "levels": levels, "reason": reason, "reference": "m-3335",
+            "dev": reason == "dev", "at": at,
+        }))
+    }
+
+    /// R3335001: a Fleet track starts at level 0 with no XP; a grant moves its row and writes its ledger row; the
+    /// day's XP is the account's own `game` rows in the window, not a dev grant's nor another day's; a grant of
+    /// nothing or of a reason migration 0086 refuses is refused, and one that would leave no track (XP below zero,
+    /// a level below 0 or past `FLEET_TRACK_LEVELS`) answers false, writing nothing; a deleted account takes its
+    /// rows with it.
+    async fn r3335001_a_fleet_grant_moves_the_row_and_sums_by_day(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        let (from_ms, until_ms) = (now - 1000, now + 1000);
+        let track = |xp: i64, level: i64, xp_today: i64| FleetTrack { xp, level, xp_today };
+        assert_eq!(
+            q!(harness, t => t.economy_fleet_get(&owner.id, from_ms, until_ms)),
+            FleetTrack::default()
+        );
+        assert!(q!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, [100, 0], "game", now))));
+        assert!(q!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, [50, 0], "dev", now))));
+        assert!(q!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, [30, 0], "game", now - 5000))));
+        assert!(q!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, [0, 1], "game", now))));
+        assert!(q!(harness, t => t.economy_fleet_grant(&fleet(&other.id, [70, 0], "game", now))));
+        assert_eq!(
+            q!(harness, t => t.economy_fleet_get(&owner.id, from_ms, until_ms)),
+            track(180, 1, 100)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_fleet_get(&other.id, from_ms, until_ms)),
+            track(70, 0, 70)
+        );
+        let top = i64::from(FLEET_TRACK_LEVELS);
+        for change in [[-181, 0], [0, -2], [0, top]] {
+            assert!(
+                !q!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, change, "game", now))),
+                "{}: {change:?}",
+                harness.name
+            );
+        }
+        assert!(call!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, [0, 0], "game", now))).is_err());
+        assert!(
+            call!(harness, t => t.economy_fleet_grant(&fleet(&owner.id, [10, 0], "track", now))).is_err()
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_fleet_get(&owner.id, from_ms, until_ms)),
+            track(180, 1, 100)
+        );
+        let ledger = q!(harness, t => t.economy_ledger_get(&owner.id));
+        let rows: Vec<(i64, i64, EconomyReason, bool)> = ledger
+            .fleet
+            .iter()
+            .map(|row| (row.xp, row.levels, row.reason, row.dev))
+            .collect();
+        assert_eq!(
+            rows,
+            vec![
+                (100, 0, EconomyReason::Game, false),
+                (50, 0, EconomyReason::Dev, true),
+                (30, 0, EconomyReason::Game, false),
+                (0, 1, EconomyReason::Game, false),
+            ]
+        );
+        assert!(
+            ledger
+                .fleet
+                .iter()
+                .all(|row| row.reference.as_deref() == Some("m-3335"))
+        );
+
+        assert!(q!(harness, t => t.profiles_remove(&other.id)));
+        assert_eq!(
+            q!(harness, t => t.economy_fleet_get(&other.id, from_ms, until_ms)),
+            FleetTrack::default()
+        );
+        assert_eq!(q!(harness, t => t.economy_ledger_get(&owner.id)).fleet.len(), 4);
+    }
+
+    /// R3335003: the Jlorious Starship is a registry row both stores take (migration 0086), owned once on the
+    /// account, a second grant of it writing nothing, with its ledger row of the reason `jlorious`.
+    async fn r3335003_the_jlorious_starship_is_owned_once(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let now = harness.now();
+        let grant: CosmeticGrant = from(json!({
+            "profileId": profile.id, "cardId": null, "cosmeticId": JLORIOUS_STARSHIP, "delta": 1,
+            "reason": "jlorious", "reference": "j-1", "dev": false, "at": now,
+        }));
+        assert!(q!(harness, t => t.economy_cosmetics_grant(&grant)));
+        assert!(!q!(harness, t => t.economy_cosmetics_grant(&grant)));
+        assert_eq!(
+            q!(harness, t => t.economy_cosmetics_get(&profile.id)).account,
+            vec![JLORIOUS_STARSHIP.to_string()]
+        );
+        let rows: Vec<(String, EconomyReason, Option<String>)> =
+            q!(harness, t => t.economy_ledger_get(&profile.id))
+                .cosmetics
+                .into_iter()
+                .map(|row| (row.cosmetic_id, row.reason, row.reference))
+                .collect();
+        assert_eq!(
+            rows,
+            vec![(
+                JLORIOUS_STARSHIP.to_string(),
+                EconomyReason::Jlorious,
+                Some("j-1".to_string())
+            )]
+        );
+    }
+
     /// R3013001: a stamp is kept on a card's row only at or below the row's level, and cleared with
     /// `None`: one above it, or for a card with no row, answers false and writes nothing; one outside
     /// `1..=PROFICIENCY_LEVELS` is refused; a put of plays and level keeps the stamp, and one that
@@ -10744,16 +11286,21 @@ mod economy {
         practice_seeds_issue_claim_once_and_prune,
         r1483000_game_jlore_totals_use_one_window_reason_and_reference,
         r2210000_removed_quest_count_uses_one_window_change_and_reason,
-        r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts,
+        r1483000_open_practice_seed_count_excludes_settled_expired_and_other_accounts,
+        r3500001_a_claimed_unsettled_practice_seed_counts_until_it_settles_or_lapses,
         r2379000_a_practice_seed_release_deletes_only_the_owners_unclaimed_seed,
         r2422000_a_practice_claim_is_kept_until_it_settles_once,
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
         r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
         r2875000_a_news_claim_is_kept_once_per_account_and_entry,
         r3191000_batch_news_claims_and_payouts_write_what_one_at_a_time_would,
+        r3212000_batch_writes_with_spends_write_what_one_at_a_time_would,
+        r3212000_open_all_of_n_writes_what_n_openings_one_at_a_time_write,
         practice_claims_count_once_per_bucket_and_utc_day,
         r3013000_proficiency_rows_are_the_accounts_own_and_go_with_it,
         r3013001_a_stamp_is_kept_only_at_or_below_its_level,
+        r3335001_a_fleet_grant_moves_the_row_and_sums_by_day,
+        r3335003_the_jlorious_starship_is_owned_once,
     );
 }
 
@@ -11030,7 +11577,8 @@ mod cosmetic_loadouts {
             .filter(|cosmetic| cosmetic.level.is_some())
             .map(|cosmetic| cosmetic.id.as_str())
             .collect();
-        assert_eq!(levels.len(), 26);
+        // #3015's 26 and #3017's twelve (R3017000).
+        assert_eq!(levels.len(), 38);
         let mut last = Value::Null;
         for id in levels {
             at += 1;
@@ -11788,4 +12336,57 @@ mod dev_dashboard {
         r3074001_standings_mark_a_hand_set_ladder,
         r3074003_posts_are_kept_listed_and_taken_down_once,
     );
+}
+
+mod r3290000_banned_standings {
+    use super::*;
+
+    /// R3290000: a season row reads `banned` from its player's `profiles.status`, on every ladder and in both
+    /// standings reads, and reads `false` again once the ban is lifted.
+    async fn r3290000_standings_mark_a_banned_account(harness: &StoreHarness) {
+        let banned = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        let season: Season = from(json!({ "id": "v9.8", "patchVersion": "v9.8.1", "startedAt": now }));
+        q!(harness, t => t.ranked_create_season(&season));
+        for ladder in Ladder::ALL {
+            for profile in [&banned, &other] {
+                let row = SeasonRank {
+                    format: ladder,
+                    ..fresh_rank(&season.id, &profile.id, now)
+                };
+                q!(harness, t => t.ranked_put_rank(&row));
+            }
+        }
+        let marked = |standings: Vec<SeasonStanding>| -> Vec<(String, bool)> {
+            standings
+                .into_iter()
+                .map(|standing| (standing.rank.profile_id, standing.banned))
+                .collect()
+        };
+        // Active, banned, active again: the mark follows the account's status, read live.
+        for (account, is_banned) in [("active", false), ("banned", true), ("active", false)] {
+            q!(harness, t => t.profiles_set_status(&banned.id, status(account)));
+            let mut whole = vec![(banned.id.clone(), is_banned), (other.id.clone(), false)];
+            whole.sort();
+            for ladder in Ladder::ALL {
+                assert_eq!(
+                    marked(q!(harness, t => t.ranked_standings(&season.id, ladder))),
+                    whole,
+                    "{}: {account}, {ladder:?}",
+                    harness.name
+                );
+                assert_eq!(
+                    marked(
+                        q!(harness, t => t.ranked_standings_subset(&season.id, ladder, std::slice::from_ref(&banned.id), i32::MAX))
+                    ),
+                    vec![(banned.id.clone(), is_banned)],
+                    "{}: {account}, {ladder:?}, the subset",
+                    harness.name
+                );
+            }
+        }
+    }
+
+    both_stores!(r3290000_standings_mark_a_banned_account);
 }

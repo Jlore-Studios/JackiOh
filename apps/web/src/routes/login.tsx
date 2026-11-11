@@ -81,6 +81,7 @@ import {
 } from "../net/session.ts";
 import { signOut, signOutLabel, useSigningOut } from "./account.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 import { SiteFooter } from "./SiteFooter.tsx";
 
 import "../auth/auth.css";
@@ -998,7 +999,7 @@ export default function LoginRoute(): ReactElement {
     else if (pressType === "magiclink") title = t("Sign in");
     else if (pressType === "email_change") title = t("Confirm your new email");
     else title = t("Confirm your email");
-  } else if (signingUp) title = t("Create an account");
+  } else if (signingUp) title = t("Create account");
   else if (forgot || claiming) title = t("Reset your password");
   else if (emailCode) title = t("Sign in with an email code");
   else if (secondFactor) title = t("Two-step sign-in");
@@ -1069,15 +1070,12 @@ export default function LoginRoute(): ReactElement {
 
   return (
     <div className="app-shell auth-screen tavern one-screen">
-      <BackLink showWallet={false} />
+      <BackLink showWallet={false} title={title} />
       {/* Two parts, so a phone held sideways can set them side by side (auth/tavern.css): what is
-          going on (the title and every notice) beside the form. Elsewhere they are one column. */}
+          going on (the wordmark and every notice) beside the form. Elsewhere they are one column. */}
       <section className="panel panel--auth panel--split one-screen__body">
         <div className="auth-board__head">
-          <div className="brand">
-            <h1>JackiOh</h1>
-          </div>
-          <h2>{title}</h2>
+          <Wordmark />
 
           {secondFactor ? (
             <p className="notice" data-testid={loginTestid.notice} role="status">
@@ -1375,7 +1373,7 @@ export default function LoginRoute(): ReactElement {
                     />
                     <button
                       type="button"
-                      className="affix-button"
+                      className="affix-button button-secondary"
                       data-testid={loginTestid.togglePassword}
                       // Announced, not just drawn: the icon alone tells a screen reader nothing.
                       aria-label={showPassword ? t("Hide password") : t("Show password")}
@@ -1427,6 +1425,7 @@ export default function LoginRoute(): ReactElement {
 
               <button
                 type="submit"
+                className="button-primary"
                 data-testid={loginTestid.submit}
                 disabled={busy || (forgot && resetWait > 0) || (emailCode && !codeAsked && codeWait > 0)}
               >

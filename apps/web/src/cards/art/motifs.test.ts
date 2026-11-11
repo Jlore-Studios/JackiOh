@@ -11,6 +11,7 @@ import { hashId } from "./hash.ts";
 import { MOTIF_GLYPHS } from "./motifGlyphs.ts";
 import { MOTIF_WORDS, MOTIFS, THEME_OWN_MOTIFS, motifFor, nameWords, type MotifId } from "./motifs.ts";
 import { artSpec, MOTIF_EMBLEM_SCALE, varietySalt, type ArtSpec } from "./procedural.ts";
+import { sceneRecipeOf } from "./scene.ts";
 import { artDataUri } from "./svg.ts";
 import {
   EMBLEM_POOLS,
@@ -19,6 +20,7 @@ import {
   THEME_MOTES,
   THEME_PALETTES,
   compositionFor,
+  compositionOf,
   themeFor,
   type ArtThemeId,
 } from "./themes.ts";
@@ -40,11 +42,18 @@ function def(id: string): CardDef {
   return found;
 }
 
-/** One face's picture as CardFace draws it, from the face's own type (B2.7). */
+/** One face's picture as CardFace draws it, from the face's own type (B2.7) and the card's own composition (R3338001). */
 function faceSpec(card: CardDef, radiant: boolean): ArtSpec {
   const type: CardType = (radiant ? card.radiant.type : card.base.type) ?? card.type;
   const theme = themeFor(card.tags, type);
-  return artSpec(card.id, theme, compositionFor(type), radiant, motifFor(card.name, theme));
+  return artSpec(card.id, theme, compositionOf(card.id, type), radiant, motifFor(card.name, theme));
+}
+
+/** The procedural painter's own picture of a face, which every card with no scene recipe draws (R3390000: Classic+ draws scenes). */
+function paintedSpec(card: CardDef, radiant: boolean): ArtSpec {
+  const type: CardType = (radiant ? card.radiant.type : card.base.type) ?? card.type;
+  const theme = themeFor(card.tags, type);
+  return artSpec(card.id, theme, compositionOf(card.id, type), radiant, motifFor(card.name, theme), null);
 }
 
 function svgOf(spec: ArtSpec): string {
@@ -102,20 +111,20 @@ describe("R503 the Book, Pancake and AI families", () => {
   });
 
   it("R503 each family's twist: a Book card's pages and ink drops, a Pancake card's syrup, an AI card's traces and pixels", () => {
-    const book = faceSpec(def("classicplus-054"), false);
+    const book = paintedSpec(def("classicplus-054"), false);
     expect(book.moteShape).toBe("drop");
     expect(svgOf(book)).toMatch(/<path d="M[\d.]+ [\d.]+L[\d.]+ [\d.]+A[\d.]+ [\d.]+ 0 1 1/);
 
-    const pancake = faceSpec(def("classicplus-012-1"), false);
+    const pancake = paintedSpec(def("classicplus-012-1"), false);
     // Syrup along the top edge: a layer that starts with a band across the whole top of the box.
     expect(pancake.ridges.some((ridge) => ridge.d.startsWith("M0 0L100 0"))).toBe(true);
 
-    const ai = faceSpec(def("classicplus-t-ai-08"), false);
+    const ai = paintedSpec(def("classicplus-t-ai-08"), false);
     expect(ai.moteShape).toBe("pixel");
     const svg = svgOf(ai);
     expect(svg).toContain("<rect x=");
     // A plain Trap of the same composition draws fewer layers: the traces, glitch and scanlines are the family's.
-    const plain = artSpec("classicplus-t-ai-08", "trap", "sigil", false, null);
+    const plain = artSpec("classicplus-t-ai-08", "trap", "sigil", false, null, null);
     expect(ai.ridges.length).toBe(plain.ridges.length + 3);
   });
 
@@ -308,7 +317,7 @@ describe("R503 how a motif is drawn", () => {
   });
 
   it("R503 a tribe keeps its emblem and carries a hero motif in a top corner, where the accent would go", () => {
-    const flagbearer = faceSpec(def("classicplus-046"), false);
+    const flagbearer = paintedSpec(def("classicplus-046"), false);
     expect(flagbearer.theme).toBe("felinor");
     expect(EMBLEM_POOLS.felinor).toContain(flagbearer.emblem.glyph);
     expect(flagbearer.accent).toBeNull();
@@ -338,9 +347,10 @@ describe("R503 how a motif is drawn", () => {
   });
 
   it("R503 a figure wears a crown, cat ears or horns when its motif says so", () => {
-    // Felinor Feeler is Human, and no Human wears ears of its own: the ears are its motif's.
-    const feeler = faceSpec(def("classic-067"), false);
-    const human = artSpec("classic-067", "human", "figure", false, null);
+    // Felinor Feeler is Human, and no Human wears ears of its own: the ears are its motif's. R3352000: a Classic card
+    // draws its scene; the motif's headgear is the painter's, drawn for a card with no recipe.
+    const feeler = paintedSpec(def("classic-067"), false);
+    const human = artSpec("classic-067", "human", "figure", false, null, null);
     expect(feeler.motif).toBe("cat");
     expect(feeler.ridges.map((ridge) => ridge.d)).not.toEqual(human.ridges.map((ridge) => ridge.d));
     expect(MOTIFS.cat.headgear).toBe("ears");
@@ -349,11 +359,12 @@ describe("R503 how a motif is drawn", () => {
   });
 
   it("R503 the circuits and waves motifs draw a pattern as well", () => {
-    const datacenter = faceSpec(def("classicplus-078"), false);
-    const bare = artSpec("classicplus-078", "field-spell", "landscape", false, null);
+    const datacenter = paintedSpec(def("classicplus-078"), false);
+    const bare = artSpec("classicplus-078", "field-spell", "landscape", false, null, null);
     expect(datacenter.ridges.length).toBe(bare.ridges.length + 1);
-    const deep = faceSpec(def("classic-090"), false);
-    const shallow = artSpec("classic-090", "quickdraw", "landscape", false, null);
+    // R3352000: In Too Deep draws its scene; the pattern is the painter's, drawn for a card with no recipe.
+    const deep = paintedSpec(def("classic-090"), false);
+    const shallow = artSpec("classic-090", "quickdraw", "landscape", false, null, null);
     expect(deep.motif).toBe("waves");
     expect(deep.ridges.length).toBe(shallow.ridges.length + 1);
   });
@@ -394,7 +405,13 @@ describe("R503 one distinct picture per catalog entry", () => {
   });
 });
 
-describe("R503 Core keeps the pictures v0.1 gave it", () => {
+describe("R503 R3331002 Core's v0.1 pictures, a record", () => {
+  // R3331002: the owner's decision of 2026-11-06 redraws every card's picture richer, Core's included,
+  // so this fixture is a record of v0.1's pictures, not a pin: a Core card with no scene recipe still
+  // draws its v0.1 picture byte for byte, and one its set's pass gives a recipe draws its scene.
+  // #3338 recorded #100 Ceaseless Void again: it draws a composition of its own, a hole in the shape of a
+  // giant (`CARD_COMPOSITIONS`), so its layout is a pose of that and its hashes the picture it draws now
+  // (R3338001).
   type Recorded = readonly [ArtThemeId, string, number, number];
   const recorded = CORE_V01 as unknown as Readonly<Record<string, Recorded>>;
   /**
@@ -431,15 +448,27 @@ describe("R503 Core keeps the pictures v0.1 gave it", () => {
     }
   });
 
-  it("R503 a Core card whose name calls up no motif draws exactly the picture it drew in v0.1, on both faces", () => {
+  it("R503 R3331002 a Core card with no scene recipe and no motif draws exactly v0.1's picture, on both faces", () => {
     let unchanged = 0;
     for (const [id, [, , base, radiant]] of kept) {
       const card = def(id);
-      if (faceSpec(card, false).motif !== null) continue;
+      if (faceSpec(card, false).motif !== null || sceneRecipeOf(id) !== null) continue;
       expect(hashId(artDataUri(faceSpec(card, false))), id).toBe(base);
       expect(hashId(artDataUri(faceSpec(card, true))), id).toBe(radiant);
       unchanged += 1;
     }
-    expect(unchanged).toBeGreaterThan(0);
+    // R3392000 gave every Core entry a scene, so the v0.1 record holds none of them byte for byte now.
+    expect(unchanged).toBe(0);
+  });
+
+  it("R3331002 a Core card with a scene recipe draws a picture v0.1 did not, on both faces", () => {
+    const scenes = Object.keys(recorded).filter((id) => sceneRecipeOf(id) !== null).sort();
+    // R3392000: every Core entry.
+    expect(scenes).toEqual(Object.keys(recorded).sort());
+    for (const id of scenes) {
+      const [, , base, radiant] = recorded[id] ?? [];
+      expect(hashId(artDataUri(faceSpec(def(id), false))), id).not.toBe(base);
+      expect(hashId(artDataUri(faceSpec(def(id), true))), id).not.toBe(radiant);
+    }
   });
 });

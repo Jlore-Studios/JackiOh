@@ -3,7 +3,12 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
-import { MATCH_FOUND_NAV_DELAY_MS, QUEUE_ENDED_AFTER_READS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
+import {
+  LIVE_GAME_POLL_SECONDS,
+  MATCH_FOUND_NAV_DELAY_MS,
+  QUEUE_ENDED_AFTER_READS,
+  SERIES_POLL_SECONDS,
+} from "@jackioh/server-config";
 import { getMe, isQueueMode, type MeResponse, type QueueMode } from "./api.ts";
 import { pageWake, pollWhileVisible } from "../game/net.ts";
 import { callWithRenewal, type Account } from "./gate.ts";
@@ -49,7 +54,7 @@ export function bannerGameOf(me: {
   return null;
 }
 
-/** R765: the live game `account` names (a co-op one included), read again every `SERIES_POLL_SECONDS` while there is one. */
+/** R765, R3207001: the live game `account` names (a co-op one included), read again every `LIVE_GAME_POLL_SECONDS` while there is one. */
 export function useLiveGame(account: Account, read: (token: string) => Promise<MeResponse> = getMe): LiveGame | null {
   const token = account.kind === "ready" ? account.token : null;
   const me = account.kind === "ready" ? account.me : null;
@@ -82,7 +87,7 @@ export function useLiveGame(account: Account, read: (token: string) => Promise<M
     };
     // R3205000: the banner holds no place the server expires, so a hidden tab reads nothing; a throttled
     // tab's interval stalls, and showing the tab (or the network coming back) reads the account again at once.
-    const stopPolling = pollWhileVisible(check, SERIES_POLL_SECONDS * MS_PER_SECOND);
+    const stopPolling = pollWhileVisible(check, LIVE_GAME_POLL_SECONDS * MS_PER_SECOND);
     return () => {
       canceled = true;
       stopPolling();

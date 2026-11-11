@@ -24,7 +24,7 @@ import {
   type ReactElement,
 } from "react";
 
-import type { ActionBody, PlayerView } from "@jackioh/shared";
+import type { ActionBody, CombatForecast, PlayerView } from "@jackioh/shared";
 import { PING_SHOW_MS } from "@jackioh/server-config";
 
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
@@ -65,8 +65,18 @@ export type DuosBoardProps = {
   jloreCapped: boolean;
   /** #1664: what the result paid this seat's person, from the server's last view; none when it paid nothing. */
   economy?: GameEconomy | null;
+  /**
+   * R3477000: the engine's forecast of the attacks the seat is offered, from the server's last view; drawn
+   * on the own board while it aims one, never on the teammate's or a replay's. Absent or null, none.
+   */
+  forecast?: CombatForecast | null;
   /** #965: a finished game's step to look at (`DuosReplay.tsx`): nothing is offered, and nothing is sent. */
   replay?: boolean;
+  /**
+   * R3497000: a live co-op board drains its animation queue while the page is hidden, as the 1v1
+   * board does. The teammate's `silent` board and replay boards never drain.
+   */
+  drainWhenHidden?: boolean;
   /** R2990004: the watchers' emotes, drawn on one board: the own one, or the teammate's while the portal shows it alone. */
   sideline?: GameSideline;
 };
@@ -188,7 +198,7 @@ function ConcedeControl({ view, live, onConcede }: { view: DuosView; live: boole
       ) : null}
       <button
         type="button"
-        className="duos-concede__button"
+        className="duos-concede__button button-danger"
         data-testid={duosTestid.concede}
         data-armed={armed ? "true" : undefined}
         disabled={!live}
@@ -290,8 +300,10 @@ export function DuosBoard({
   error,
   jloreCapped,
   economy = null,
+  forecast = null,
   replay = false,
   sideline,
+  drainWhenHidden,
 }: DuosBoardProps): ReactElement {
   useLocale();
   // #1664: the result paid this seat's person, so the pill reads the wallet again, once however many views say so.
@@ -332,6 +344,8 @@ export function DuosBoard({
     [legal],
   );
   const concedeLegal = legal.some((body) => body.kind === "concede");
+  // R3477000: the own duel's forecast; a replay's board, which is offered nothing, shows none.
+  const ownForecast = replay || forecast === null ? undefined : forecast;
 
   const sendDuel = useCallback(
     (body: ActionBody) => {
@@ -472,7 +486,9 @@ export function DuosBoard({
               view={view.own}
               legal={replay ? NOTHING : duelLegal}
               onAction={replay ? ignore : sendDuel}
+              forecast={ownForecast}
               replay={replay}
+              drainWhenHidden={drainWhenHidden ?? !replay}
               wearCosmetics
               error={error ?? null}
               autoEndTurn={false}
@@ -530,7 +546,9 @@ export function DuosBoard({
           view={view.own}
           legal={replay ? NOTHING : duelLegal}
           onAction={replay ? ignore : sendDuel}
+          forecast={ownForecast}
           replay={replay}
+          drainWhenHidden={drainWhenHidden ?? !replay}
           wearCosmetics
           error={error ?? null}
           autoEndTurn={false}

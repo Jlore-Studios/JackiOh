@@ -4,30 +4,40 @@
 // R2784000: a card's entry in its set's effects table (fx/cards/tables.ts) names its bespoke recipe
 // (fx/cards/<set>/) or a shared motif per hook (fx/motifs/); `cast` and `cry` play by the readable
 // play resolving now, and R2797000: `death`, `trigger` and `activate` by the hook entry its
-// `hookResolving` opened, a Trap's `cast` by the one its `trapFired` opened (memory.ts). A set
-// piece (R2800000, setPieces.ts) keeps its card's bespoke entrance (`entranceKeyOf`).
-// R200: every delay lands inside the entry and trails off within FX_MAX_TAIL_MS.
+// `hookResolving` opened, a Trap's `cast` by the one its `trapFired` opened (memory.ts). R3332000: the
+// entrance a card lands with is its entry's `entrance`, whatever the entry's kind (`entranceKeyOf`): a
+// set piece's (R2800000, setPieces.ts) and a Field Spell's landing face up in the backrow among them.
+// R200: every delay lands inside the entry and trails off within FX_MAX_TAIL_MS. R3405000: an entrance is
+// passed its entry's lead (`leadMs`), so one that reads it starts after a Mythic's takeover hold, and a
+// signature's recipe draws its play's or hook's events in a sweep, out of its fog (`planSignatureSweep`).
+// R3389000: a signature's `{ bespoke }` recipe also claims what its card does outside its own play's
+// window, when the play resolving draws nothing of it: first a cast its play makes (Spell Tyrant's, the
+// innermost readable play around the one resolving), then an event that names its card as the source
+// (a redirect's or a counter's card, an Activate's, a quest's: `sourceIdOf`), found face up on the board
+// or in a readable event remembered (`signaturePlayOf`). Neither reads a hidden card (R202). It draws
+// beside a whole pile's one wave too (`planSignatureZone`).
+// R3407000: an entrance and the readable play's own recipe both draw on the `summoned` they both claim (a
+// MAGI's own entrance inside Imitated Instrumentality's boots); the fallback above never joins an entrance.
 
-import type { GameEvent, PlayerView } from "@jackioh/shared";
+import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { FLAVOR_FALLBACK } from "../cards/flavor.ts";
-import { HIDDEN_ID, animTestid, targetFor, type AnimationEntry } from "../game/animations.ts";
+import { HIDDEN_ID, animTestid, leadMs, targetFor, type AnimationEntry } from "../game/animations.ts";
 import { sideOf } from "../game/contract.ts";
 import { CATALOG } from "../wire/cards.ts";
-import { raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
-import { CARD_RECIPES, isCardRecipeKey, isEntranceKey, type BespokeKey } from "./cards/bespoke.ts";
+import { frac, raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
+import { CARD_RECIPES, type CardRecipeKey } from "./cards/bespoke.ts";
 import type { EntranceKey } from "./cards/recipe.ts";
 import type { CardFxPlan, CardFxResult } from "./cards/recipe.ts";
-import { FX_CARD_TABLE, type FxCardEntry } from "./cards/tables.ts";
-import { FX_CAST_ON_DRAW_TRAUMA } from "./constants.ts";
+import { FX_CARD_TABLE, isSignature, type FxCardEntry } from "./cards/tables.ts";
+import { FX_CAST_ON_DRAW_TRAUMA, FX_SLAM_AT } from "./constants.ts";
 import { ENTRANCES, entranceEvent } from "./entrances.ts";
 import { FLAVOR_LOOKS, paletteLook } from "./flavors.ts";
 import { flavorLookOf } from "./flavorSource.ts";
 import { motifScale, type MotifSpec } from "./motifs/build.ts";
 import { motifReplaces, planMotif } from "./motifs/index.ts";
 import { isDrawnMotif } from "./motifs/names.ts";
-import { SET_PIECES } from "./setPieces.ts";
-import type { FxCue, FxPlanEnv } from "./types.ts";
+import type { FxCue, FxMemory, FxPlanEnv, FxPlay } from "./types.ts";
 
 export type { CardFxPlan, CardFxResult } from "./cards/recipe.ts";
 
@@ -52,40 +62,148 @@ export function castOnDrawCues(event: GameEvent, p: CardFxPlan): FxCue[] {
 }
 
 /** The bespoke recipe a card's table entry names, if any. */
-function bespokeOf(defId: string): BespokeKey | undefined {
-  const entry = FX_CARD_TABLE.get(defId);
+function bespokeOf(defId: string, table: ReadonlyMap<string, FxCardEntry>): CardRecipeKey | undefined {
+  const entry = table.get(defId);
   return entry?.kind === "bespoke" ? entry.key : undefined;
 }
 
 /**
- * R670, R2800000: the bespoke entrance a card lands with: its table entry's, or that of the set piece it
- * names (Ceaseless Void lands with its collapse, and its fold follows). R2794000: a hooks entry's
- * `entrance`, beside its hooks (Nature Titan's beside its Cry).
+ * R670, R3332000: the bespoke entrance a card lands with: its table entry's `entrance`, whatever the
+ * entry's kind (Ceaseless Void's beside its set piece, so it lands with its collapse and its fold
+ * follows, R2800000; Nature Titan's beside its Cry, R2794000).
  */
-export function entranceKeyOf(defId: string): EntranceKey | undefined {
-  const entry = FX_CARD_TABLE.get(defId);
-  if (entry?.kind === "setPiece") return SET_PIECES[entry.key].entrance;
-  if (entry?.kind === "hooks") return entry.entrance;
-  return entry?.kind === "bespoke" && isEntranceKey(entry.key) ? entry.key : undefined;
+export function entranceKeyOf(defId: string, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): EntranceKey | undefined {
+  const entry = table.get(defId);
+  return entry === undefined || entry.kind === "none" ? undefined : entry.entrance;
 }
 
-function planEntrance(event: GameEvent, p: CardFxPlan): CardFxResult | null {
-  const summoned = entranceEvent(event, HIDDEN_ID);
-  if (summoned === null) return null;
-  const key = entranceKeyOf(summoned.defId);
+function planEntrance(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string, FxCardEntry>): CardFxResult | null {
+  if (event.type !== "summoned" || event.defId === HIDDEN_ID) return null;
+  const type = (CATALOG[event.defId] ?? p.view.defs?.[event.defId])?.type;
+  const landing = entranceEvent(event, HIDDEN_ID, type);
+  if (landing === null) return null;
+  const key = entranceKeyOf(landing.defId, table);
   if (key === undefined) return null;
-  const tgt = targetFor(summoned, p.view);
+  const tgt = targetFor(landing, p.view);
   if (tgt === null) return null;
-  return { cues: ENTRANCES[key]({ D: p.D, tgt, intensity: p.env.intensity }), row: "replace" };
+  const lead = leadMs(p.entry);
+  return { cues: ENTRANCES[key]({ D: p.D, tgt, intensity: p.env.intensity, view: p.view, landing, leadMs: lead, landMs: lead + frac(FX_SLAM_AT, p.D - lead) }), row: "replace" };
 }
 
-export function planCardFx(event: GameEvent, p: CardFxPlan): CardFxResult | null {
-  const entrance = planEntrance(event, p);
-  if (entrance !== null) return entrance;
+/** R3389000: the recipe of `defId`'s signature, a `{ bespoke }` entry with `signature: true`, if any. */
+function signatureRecipeOf(defId: string, table: ReadonlyMap<string, FxCardEntry>): CardRecipeKey | undefined {
+  if (defId === HIDDEN_ID) return undefined;
+  const entry = table.get(defId);
+  return isSignature(entry) && entry?.kind === "bespoke" ? entry.key : undefined;
+}
+
+/** R3389000: the card an event names as its source: a redirect's or a counter's, an Activate's, a quest's own card. */
+export function sourceIdOf(event: GameEvent): string | null {
+  switch (event.type) {
+    case "redirected":
+    case "countered":
+      return event.byInstanceId;
+    case "activated":
+    case "questProgressed":
+    case "questCompleted":
+      return event.instanceId;
+    default:
+      return null;
+  }
+}
+
+/**
+ * R3389000, R202: the card `id` names, as a play of its own (a `trigger` entry: no play of it is open):
+ * a unit or a backrow card the view shows face up with a definition it reads, else the newest readable
+ * `summoned`, `cardPlayed`, `hookResolving` or `trapFired` of it the memory still holds; else undefined.
+ */
+export function signaturePlayOf(id: string, view: PlayerView, memory: FxMemory): FxPlay | undefined {
+  if (id === HIDDEN_ID) return undefined;
+  const play = (player: PlayerId, defId: string): FxPlay | undefined =>
+    defId === HIDDEN_ID ? undefined : { player, instanceId: id, defId, castOnDraw: false, step: 0, seen: {}, hook: "trigger" };
+  for (const seat of [view.you, view.opponent]) {
+    const unit = seat.units.find((candidate) => candidate !== null && candidate.instanceId === id);
+    if (unit !== undefined && unit !== null) return play(unit.controller, unit.defId);
+    for (const card of seat.backrow) {
+      if (card !== null && !card.faceDown && card.instanceId === id) return play(card.controller, card.defId);
+    }
+  }
+  const recent = memory.recent();
+  for (let k = recent.length - 1; k >= 0; k -= 1) {
+    const event = recent[k];
+    if (event === undefined) continue;
+    if ((event.type === "summoned" || event.type === "cardPlayed") && event.instanceId === id) return play(event.player, event.defId);
+    if (event.type === "hookResolving" && event.sourceId === id) return play(event.controller, event.defId);
+    if (event.type === "trapFired" && event.instanceId === id) return play(event.controller, event.defId);
+  }
+  return undefined;
+}
+
+/**
+ * R3389000: a signature recipe's claim on `event` outside its own play's window: the innermost readable
+ * play still open around the one resolving whose card has a signature recipe (a cast it makes), else the
+ * card `sourceIdOf(event)` names. A hook entry and a hidden card claim nothing here (R202).
+ */
+function signatureFallback(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string, FxCardEntry>): CardFxResult | null {
+  const plays = p.env.memory.plays();
+  for (let k = plays.length - 2; k >= 0; k -= 1) {
+    const play = plays[k];
+    if (play === undefined || play.hook !== undefined || play.instanceId === HIDDEN_ID) continue;
+    const key = signatureRecipeOf(play.defId, table);
+    const result = key === undefined ? null : CARD_RECIPES[key](event, p, play);
+    if (result !== null) return result;
+  }
+  const source = sourceIdOf(event);
+  const play = source === null ? undefined : signaturePlayOf(source, p.view, p.env.memory);
+  const key = play === undefined ? undefined : signatureRecipeOf(play.defId, table);
+  return play === undefined || key === undefined ? null : CARD_RECIPES[key](event, p, play);
+}
+
+/**
+ * R3389000: a signature's recipe over a whole pile's one entry (a zone entry, which plays its one wave
+ * and no event's row): the readable play resolving now, if its card's signature is a `{ bespoke }`, is
+ * asked about the run's first event, and its cues play beside the wave (Second Wind's deck blown away).
+ */
+export function planSignatureZone(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): FxCue[] {
+  const play = env.memory.resolving();
+  const first = entry.events[0];
+  if (entry.zone === undefined || play === undefined || play.instanceId === HIDDEN_ID || first === undefined) return [];
+  const key = signatureRecipeOf(play.defId, table);
+  return key === undefined ? [] : (CARD_RECIPES[key](first, { entry, view, env, D: entry.durationMs }, play)?.cues ?? []);
+}
+
+/**
+ * R3405000: a signature's recipe over a sweep's one entry (a run of hits or heals reaching every Unit on a
+ * side, which plays the board's fog and no event's row): the readable play or hook resolving now, if its
+ * card's signature is a `{ bespoke }`, is asked about each of the run's events, as its motif would be, and
+ * those it replaces leave the fog (Introspection's mends and thought-darts at its start of turn).
+ */
+export function planSignatureSweep(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): MotifResult {
+  const play = env.memory.resolving();
+  const key = entry.sweep === undefined || play === undefined || play.instanceId === HIDDEN_ID ? undefined : signatureRecipeOf(play.defId, table);
+  const cues: FxCue[] = [];
+  const replaces = new Set<GameEvent>();
+  if (play === undefined || key === undefined) return { cues, replaces };
+  for (const event of entry.events) {
+    const result = CARD_RECIPES[key](event, { entry, view, env, D: entry.durationMs }, play);
+    if (result === null) continue;
+    cues.push(...result.cues);
+    if (result.row === "replace") replaces.add(event);
+  }
+  return { cues, replaces };
+}
+
+export function planCardFx(event: GameEvent, p: CardFxPlan, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): CardFxResult | null {
+  const entrance = planEntrance(event, p, table);
   const play = p.env.memory.resolving();
-  if (play === undefined || play.defId === HIDDEN_ID) return null;
-  const key = bespokeOf(play.defId);
-  return key === undefined || !isCardRecipeKey(key) ? null : CARD_RECIPES[key](event, p, play);
+  const key = play === undefined || play.defId === HIDDEN_ID ? undefined : bespokeOf(play.defId, table);
+  const own = play === undefined || key === undefined ? null : CARD_RECIPES[key](event, p, play);
+  if (entrance === null) return own ?? signatureFallback(event, p, table);
+  if (own === null) return entrance;
+  // R3407000: an entrance inside a recipe that claims the same summon draws both (a MAGI's own entrance
+  // under Imitated Instrumentality's boots, Sanctum's echoes as it rises). The fallback (R3389000) never
+  // joins an entrance: a summon with one draws it, as before.
+  return { cues: [...entrance.cues, ...own.cues], row: "replace" };
 }
 
 /** A motif's cues for one entry, and the entry's events it drew in place of their own row recipe. */
@@ -96,10 +214,11 @@ export type MotifResult = { cues: FxCue[]; replaces: ReadonlySet<GameEvent> };
  * card); R2797000: of the readable hook running now, on the hook its entry is (`FxPlay.hook`: a
  * `death`, a `trigger`, an `activate`, or a Trap's firing's `cast`). A hidden play or hook, a card with
  * no hooks, a motif not drawn yet and a run over a whole pile plan nothing here, so the event rows
- * play alone.
+ * play alone; nor does an Anomaly's rift, which its set piece draws (R3337003).
  */
 export function planCardMotif(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): MotifResult | null {
-  if (entry.zone !== undefined) return null;
+  // R3337003: an Anomaly's rift is its own set piece (anomaly.ts), whichever card laid it (#151's entry too).
+  if (entry.zone !== undefined || entry.rift !== undefined) return null;
   const play = env.memory.resolving();
   if (play === undefined || play.defId === HIDDEN_ID) return null; // R202
   const card = table.get(play.defId);

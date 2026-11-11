@@ -73,7 +73,8 @@
 # checks, fuzz 200 and the classifier run on `full`, whatever changed. A summary accepts a skip only
 # where the skipped piece's own line is exactly `false`, and the lines are held by
 # apps/web/src/net/ci-scope.test.ts and crates/tools/tests/acceptance.rs. A scoping mistake
-# still meets the push to main, which runs everything, and the next morning's super run.
+# still meets the push to main, which runs every piece the merge-queue build of the same commit
+# skipped, and the next morning's super run.
 #
 # `workflow_dispatch` lets a person run all of it on any branch (`gh workflow run ci.yml --ref
 # staging`); the v0.3.0 rewrite's first full run is its cutover pull request (part 38). Its `e2e`
@@ -88,9 +89,17 @@
 # pass on that commit too, so two pull requests each green alone but red together (four of the five
 # red runs on main of 2026-10-29) never both land: the queue takes the second one out. Its
 # `changes` job scopes the group's diff against the queue's base as it scopes a pull request's, and
-# the push to main still runs everything after it. A run here gets the smoke list, as a pull request,
-# stops once one of the five has failed (`queue-cancel-*`, at the end), and cancels its own pull
-# request's older builds, which the queue rebuilt and GitHub leaves running (`queue-supersede`).
+# keeps that scope as the `ci-scope` artifact. The queue lands a pull request by moving main to the
+# commit it built, so the push to main that follows is the same tree, sha for sha: its run reads the
+# artifact and runs only what the build skipped, never a piece the build just passed (#3564;
+# .github/ci/main_scope.py, which runs everything when it cannot tell, or when a file that keys the
+# caches main alone saves changed). Either way the push run is the green push-to-main run the
+# promotions wait for (promote-staging.yml, promote-production.yml). A run here gets the smoke
+# list, as a pull request, stops once one of the five has failed (`queue-cancel-*`, at the end),
+# and cancels its own pull request's older builds, which the queue rebuilt and GitHub leaves running
+# (`queue-supersede`). The night bot's status loop goes sooner: once a job of a build fails for its
+# own pull request, it takes that pull request out of the queue and only then cancels the run
+# (bot/go/internal/events `EvacQueue`, bot/README.md "Evacuating the merge queue").
 name: CI
 
 on:
@@ -131,8 +140,10 @@ jobs:
   # skip list. Every other line is one job's or one matrix entry's (the script's header names each),
   # `true` only when something that job reads changed: `clippy`, each `rust_<scope>` of
   # `rust-test`, `web`, `e2e`, `db` with its three suites, and `infra`, the terraform steps of
-  # `rust-checks`. A push to main and a dispatch run the script with no arguments, which prints
-  # every line `true`. A failed `changes` job leaves every line empty and skips every job below it,
+  # `rust-checks`. A dispatch runs the script with no arguments, which prints every line `true`. A
+  # push to main starts from those lines and turns off each piece the merge-queue build of the same
+  # commit ran and passed (.github/ci/main_scope.py, #3564), which is why this job reads runs
+  # (`actions: read`). A failed `changes` job leaves every line empty and skips every job below it,
   # which fails each summary job (it accepts a skip only where the skipped piece's own line is
   # exactly `false`).
   #
@@ -143,10 +154,26 @@ jobs:
   # docs/issues-and-patches.md, and the toolchain and .cargo/ (the night bot's checks pin both). It
   # is set here, not in ci-scope.sh, because a bot-only diff is exactly the one ci-scope.sh answers
   # `full=false` for, and because .github/ is a path the bots may not change. Any doubt says `true`.
+  #
+  # The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): a pull request into
+  # `main` and a merge-queue build wait here, holding no runner, in the environment the repository
+  # variable CI_GATE_ENVIRONMENT names (`ci-runners`, infra/github.tf), until its one required
+  # reviewer, the night bot's account, approves them: the status loop does once GitHub's runners
+  # have room, merge-queue builds first. Every other job of the run needs this one, so the whole run
+  # waits. A push to `main`, a promotion's pull request (into `production`) and a dispatch never
+  # wait, and with the variable unset nothing does: the name is empty, so the job has no
+  # environment. `queue-supersede` needs nothing, so a merge-queue build cancels its pull
+  # request's older builds while it waits.
   changes:
     name: what the change touches
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # The token's default (`read`, infra/github.tf) leaves out `actions`, and a push to main lists
+    # runs and downloads the queue's `ci-scope` artifact.
+    permissions:
+      contents: read
+      actions: read
+    environment: ${{ ((github.event_name == 'pull_request' && github.base_ref == 'main') || github.event_name == 'merge_group') && vars.CI_GATE_ENVIRONMENT || '' }}
     outputs:
       full: ${{ steps.scope.outputs.full }}
       db: ${{ steps.scope.outputs.db }}
@@ -190,11 +217,22 @@ jobs:
       # the script itself changes, and a line only the pull request's copy declares (the scope of a job
       # it adds, read from its `LINES=` and never run) is emitted `true`, so that job runs on the pull
       # request that adds it. A base without the script runs every line that copy declares, each `true`.
+      #
+      # A push to main (#3564): the queue moved main to the commit its build tested, so this is that
+      # tree, and the build's scope (its `ci-scope` artifact, below) says which pieces already passed
+      # on it. .github/ci/main_scope.py turns those off and leaves on every piece the build skipped;
+      # it runs everything when there is no such build or anything cannot be read, and when a file
+      # changed since main's last run that keys the caches only main saves. The build may still be
+      # finishing as main moves, so its run is waited for, up to two minutes. Everything else here
+      # reads main's own files: no pull request's code runs on a push to main.
       - id: scope
         env:
           EVENT: ${{ github.event_name }}
           BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           HEAD: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ "$EVENT" = pull_request ] || [ "$EVENT" = merge_group ]; then
             # No name may expand as a glob in the loops below.
@@ -227,10 +265,53 @@ jobs:
               esac
             done
             echo "bot=$bot" | tee -a "$GITHUB_OUTPUT"
+          elif [ "$EVENT" = push ]; then
+            every="$RUNNER_TEMP/every.lines"
+            queue="$RUNNER_TEMP/queue"
+            changed="$RUNNER_TEMP/changed.txt"
+            sh scripts/ci-scope.sh > "$every"
+            mkdir -p "$queue"
+            run=
+            for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+              state=$(gh run list --repo "$REPO" --workflow ci.yml --event merge_group --commit "$SHA" \
+                --limit 1 --json databaseId,status,conclusion \
+                --jq '.[0] | select(.) | "\(.databaseId) \(.status) \(.conclusion)"' 2>/dev/null) || state=
+              case "$state" in
+                *" completed success") run=${state%% *}; break ;;
+                "" | *" completed "*) break ;;
+              esac
+              sleep 10
+            done
+            if [ -n "$run" ]; then
+              gh run download "$run" --repo "$REPO" --name ci-scope --dir "$queue" 2>/dev/null \
+                || echo "ci-scope: the queue's run $run kept no scope" >&2
+            else
+              echo "ci-scope: no merge-queue build of $SHA passed (${state:-none found})" >&2
+            fi
+            # The newest commit of main whose push run ran: one cancelled while it waited never did.
+            last=$(gh run list --repo "$REPO" --workflow ci.yml --branch main --event push --status completed \
+              --limit 30 --json headSha,conclusion \
+              --jq 'map(select(.conclusion == "success" or .conclusion == "failure")) | .[0].headSha // empty' \
+              2>/dev/null) || last=
+            if [ -z "$last" ] || ! git diff --no-renames --name-only "$last" "$SHA" > "$changed" 2>/dev/null; then
+              rm -f "$changed"
+            fi
+            python3 .github/ci/main_scope.py "$every" "$queue/scope.lines" "$changed" | tee -a "$GITHUB_OUTPUT"
           else
             sh scripts/ci-scope.sh | tee -a "$GITHUB_OUTPUT"
             echo "bot=true" | tee -a "$GITHUB_OUTPUT"
           fi
+          # What the step wrote, for the artifact below.
+          cp "$GITHUB_OUTPUT" "$RUNNER_TEMP/scope.lines"
+      # The scope main's run of this commit reads, once the queue lands it (the step above, #3564).
+      - name: keep the scope for main's run of this commit
+        if: ${{ github.event_name == 'merge_group' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-scope
+          path: ${{ runner.temp }}/scope.lines
+          if-no-files-found: error
+          retention-days: 7
 
   # ------------------------------------------------------------------------------------------------
   # rust
@@ -489,11 +570,12 @@ jobs:
   # touches what stage 2 checks needs it: a card script, the engine, the cards crate's shared code or
   # data, or the AI. The paths here are a superset of the classifier's own (`classify::area`), so a
   # pull request stage 1 sends to stage 2 always has the base's build. The base is the merge
-  # commit's first parent, as rust-classify's is (#3071).
+  # commit's first parent, as rust-classify's is (#3071). Not on a promotion into production, which
+  # rust-classify skips.
   rust-base-build:
     name: rust (base build)
     needs: changes
-    if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' }}
+    if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' && github.base_ref != 'production' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -558,12 +640,15 @@ jobs:
   # build the one rust-build made of it, and the base its first parent: main as GitHub merged the pull
   # request onto it, so the diff is what lands. `pull_request.base.sha` can be commits behind, and a
   # diff from it holds main's own changes too, whose fragments may have shipped since (#3071).
-  # `pull-requests: write` and `issues: write` for its labels alone; the job runs no code but this
-  # repository's own build.
+  # Never on a promotion into production (docs/deploy-cloudflare.md §2.1): its diff is every commit
+  # of main since the last promotion, each classified and held to its fragments on its own pull request,
+  # and a `patches ship` among them has taken those fragments out of pending/, so every card they
+  # changed read as unclaimed (#3317, 109 of them). `pull-requests: write` and `issues: write` for
+  # its labels alone; the job runs no code but this repository's own build.
   rust-classify:
     name: rust (classify)
     needs: [changes, rust-build, rust-base-build]
-    if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' }}
+    if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' && github.base_ref != 'production' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -615,8 +700,10 @@ jobs:
             tar -xzf "$RUNNER_TEMP/rust-base.tgz" -C "$RUNNER_TEMP/base-jackioh"
             parent_bin=(--parent-bin "$RUNNER_TEMP/base-jackioh/jackioh")
           fi
-          target/release/jackioh classify --base "$BASE" "${parent_bin[@]}" --claims --json > "$RUNNER_TEMP/classify.json"
-          status=$?
+          # `|| status=$?`, as the runner's `bash -e` would stop at a failure before the problems below
+          # are printed and annotated.
+          status=0
+          target/release/jackioh classify --base "$BASE" "${parent_bin[@]}" --claims --json > "$RUNNER_TEMP/classify.json" || status=$?
           cat "$RUNNER_TEMP/classify.json"
           echo "labels=$(jq -c '.labels // []' "$RUNNER_TEMP/classify.json" 2>/dev/null || echo '[]')" >> "$GITHUB_OUTPUT"
           jq -r '.problems // [] | .[] | "::error title=classify::" + .' "$RUNNER_TEMP/classify.json" 2>/dev/null || true
@@ -754,7 +841,7 @@ jobs:
           BUILD: ${{ needs.rust-build.result }}
           CHECKS: ${{ needs.rust-checks.result }}
           CLASSIFY: ${{ needs.rust-classify.result }}
-          PULL: ${{ github.event_name == 'pull_request' }}
+          PULL: ${{ github.event_name == 'pull_request' && github.base_ref != 'production' }}
           TRAINING: ${{ needs.training-gate.result }}
           AI_BRANCH: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'ai/') }}
         run: |
@@ -1155,13 +1242,13 @@ jobs:
   # Only on a dispatch with `e2e: all`, as super.yml's `component` job runs it: the 10-unit/10-backrow
   # fixture board mounted in a real browser (BUILD M5-T1's layout at 1280x720 and 390x844). No client
   # build and no server: the component dev server compiles apps/web/src itself and only needs the
-  # WASM module.
+  # WASM module. The same time as super.yml's (#3439).
   e2e-component:
     name: e2e component (chrome)
     needs: [changes, web-build]
     if: ${{ needs.changes.outputs.full == 'true' && inputs.e2e == 'all' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -1428,7 +1515,10 @@ jobs:
   # and the bot that owns the pull request answers the cancelled run with a CI fix
   # (bot/go/internal/events `OnQueueCI`). Never sooner, at a failed piece: a run cancelled before a
   # summary job runs leaves that required check skipped, and a skipped required check counts as
-  # passing, which here would let the queue land the pull request.
+  # passing, which here would let the queue land the pull request. The night bot's status loop goes
+  # sooner only by taking the pull request out of the queue first, at a failed piece, and cancelling
+  # the run once GitHub says it is out (bot/go/internal/events `EvacQueue`); these jobs stop the
+  # builds it did not, and every one while the loop is down.
   queue-cancel-rust:
     name: cancel the queue build (rust)
     needs: rust

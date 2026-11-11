@@ -39,10 +39,10 @@ mod tests {
 
     use super::ID;
 
-    const FILLER: &str = "core-005"; // (1) Spell: a card in hand, so no turn ends by itself.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const SHREDDER: &str = "core-013"; // (3) 6/8.
-    const ECLIPSE: &str = "core-035"; // (1) Spell: Deal 3 damage.
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10
+    const ECLIPSE: &str = "core-035"; // Lunar Eclipse: Deal 3 damage
 
     fn attacked_by(radiant: bool, attacker: &str) -> (Scenario, CardInstance, CardInstance) {
         let s = crate::scenario(json!({

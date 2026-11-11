@@ -1,19 +1,21 @@
-# A new set for the learn lane (training/learn.md, A new patch ships): when a push to main ships a
-# set (a `major` patch, docs/issues-and-patches.md, Version numbers), a learn run still early in an
-# export on the set before it stops, so the lane's next export plays the new set.
+# A new patch or set for the learn lane (training/learn.md, A new patch ships): when a push to main
+# ships a patch or a set (a `patch` or `major` tier, v0.Z.X; docs/issues-and-patches.md, Version
+# numbers), a learn run still early in an export on the version before it stops, so the lane's next
+# export plays the new one, as gather.yml plays each new patch and no micro.
 #
-# Every learn run plays the newest patch as it starts (learn.yml, plan: main as it is then), so a
-# patch or a micro reaches the next run, at most one run (about two days) on, and stops nothing.
-# Patches ship two or three times a day and an export takes about 40 hours of the PC, so a lane that
-# started again on each would never finish one. A set ships about once a week and brings a set's
-# cards (v0.5.0: 231 changes), none of which an export on the set before plays. So a run that has
-# played fewer than LEARN_SET_KEEP_SHARDS of its export's shards is cancelled (the shards that
-# finished stay its artifacts for 30 days), and when no other learn run is on its way, one starts.
-# A run further on finishes, since playing its export again would cost the lane more than finishing
-# it: its screen and gate play on main as it is by then, with the new set, and the run after it
-# exports the new set. So does a run past its export (retraining, screening or gating), one on an
-# earlier run's export (`export_run`) and one that planned after the set shipped. A run waiting to
-# start plans on the new set when it does.
+# Every learn run plays the newest version as it starts (learn.yml, plan: main as it is then), so a
+# micro reaches the next run, at most one run (about two days) on, and stops nothing. Micros ship
+# several times a day and an export takes about 40 hours of the PC, so a lane that started again on
+# each would never finish one. A patch reprints 15 card families or more, or plays 50 cards
+# differently (R2499000), and a set brings a set's cards (v0.5.0: 231 changes): enough that an
+# export on the version before learns stale worths. So a run that has played fewer than
+# LEARN_SET_KEEP_SHARDS of its export's shards is cancelled (the shards that finished stay its
+# artifacts for 30 days), and when no other learn run is on its way, one starts. A run further on
+# finishes, since playing its export again would cost the lane more than finishing it: its screen and
+# gate play on main as it is by then, with the new patch, and the run after it exports the new patch.
+# So does a run past its export (retraining, screening or gating), one on an earlier run's export
+# (`export_run`) and one that planned after the patch shipped. A run waiting to start plans on the
+# new patch when it does.
 #
 # A few API calls, on GitHub's runner: the PC's runner is busy with the export this may stop.
 name: learn set
@@ -37,7 +39,7 @@ concurrency:
 
 jobs:
   stop:
-    name: a new set stops an export on the set before
+    name: a new patch or set stops an export on the version before
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -58,10 +60,10 @@ jobs:
             gh api -H "Accept: application/vnd.github.raw+json" \
               "repos/$REPO/contents/crates/cards/patches/patches.json?ref=$1" --jq "$2"
           }
-          sets='[.[] | select(.tier == "major")] | length'
+          lines='[.[] | select(.tier == "major" or .tier == "patch")] | length'
           newest=$(patches "$AFTER" '.[-1].version')
-          if [ "$(patches "$BEFORE" "$sets")" = "$(patches "$AFTER" "$sets")" ]; then
-            echo "$newest is no new set: the next learn run plays it, planning on main as it is when it starts" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$(patches "$BEFORE" "$lines")" = "$(patches "$AFTER" "$lines")" ]; then
+            echo "$newest is no new patch or set: the next learn run plays it, planning on main as it is when it starts" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           shipped=$(date -u -d "$SHIPPED_AT" +%s)
@@ -87,14 +89,14 @@ jobs:
             else
               gh run cancel "$id" -R "$REPO"
               stopped+=("$id")
-              echo "stopped learn run $number: $finished of its shards were played, on the set before $newest" >> "$GITHUB_STEP_SUMMARY"
+              echo "stopped learn run $number: $finished of its shards were played, on the version before $newest" >> "$GITHUB_STEP_SUMMARY"
               continue
             fi
             echo "left learn run $number: $why" >> "$GITHUB_STEP_SUMMARY"
           done < <(gh api "repos/$REPO/actions/workflows/learn.yml/runs?per_page=30" --jq "$lane"'
             | select([.status] | inside(["queued", "waiting", "requested", "in_progress"]))
             | "\(.id) \(.run_number)"')
-          # A run waiting behind a stopped one starts once it has ended, and plans on the new set.
+          # A run waiting behind a stopped one starts once it has ended, and plans on the new patch.
           others=0
           for id in $(gh api "repos/$REPO/actions/workflows/learn.yml/runs?per_page=30" --jq "$lane"'
               | select([.status] | inside(["queued", "pending", "waiting", "requested", "in_progress"])) | .id'); do

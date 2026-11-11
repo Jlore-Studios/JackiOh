@@ -146,10 +146,11 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `learned_parity(fixture)` | string | the learned evaluation's answers for a fixture, to hold a port to |
 | `preview_sets(sets)` | string | nothing (an empty result); a module built with `preview` previews the sets |
 | `run_content()`, `run_constants()` | | the dungeon run's content and numbers |
+| `run_content_at(version)` | string | R3496000: the dungeon run's content for a catalog version: the build's own, a carried version's, or `null` when this build carries it no longer |
 | `run_check_setup(setup, unlocks, content)`, `run_create(setup, unlocks, content)` | strings | whether the setup may start a run, a run started |
 | `run_reduce(state, content, action)`, `run_fold(file, content)` | strings | a run after one action, a run file folded |
 | `run_fight_setup(state, content)`, `run_fight_report(game, human)` | strings | the fight being played, the `FightOver` it sends |
-| `run_score(state, content)`, `run_embers(score)`, `run_max_hp(state, content)`, `run_level_cost(level)` | strings | the score, the Embers it pays, the max HP, a level's cost |
+| `run_score(state, content)`, `run_embers(score)`, `run_max_hp(state, content)`, `run_shop_prices(state, content)`, `run_level_cost(level)` | strings | the score, the Embers it pays, the max HP, a shop's prices, a level's cost |
 | `run_seed(source)`, `run_daily_seed(date, n)` | strings | a seed, the daily run's seed |
 | `duos_create(options)`, `duos_begin(state)`, `duos_reduce(state, action)`, `duos_legal_actions(state, seat)`, `duos_view_for(state, seat)` | strings | #936's co-op wrapper; built without the `duos` feature each is status `1` with the reason |
 

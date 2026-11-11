@@ -21,6 +21,7 @@ use jackioh_shared::series::NewSeriesInput;
 use serde_json::{Value, json};
 
 use crate::support::deps::{call, test_app};
+use crate::support::socket::{FakeSocket, create_fake_socket};
 use crate::support::store::{advance, assert_match, fake_read, fake_ref, store, to_json};
 
 const ALICE: &str = "profile-alice";
@@ -1230,6 +1231,11 @@ mod r1834002_a_conquest_game_wears_the_picked_deck {
                 "foil": "foil-none",
                 "finish": "finish-plain",
                 "border": "border-standard",
+                // R3335000: the four Starship kinds, each its default.
+                "starshipHull": "starship-hull-standard",
+                "starshipLivery": "starship-livery-standard",
+                "starshipTrail": "starship-trail-standard",
+                "starshipPieceSkin": "starship-piece-skin-standard",
             })
         );
         assert_eq!(
@@ -1241,6 +1247,11 @@ mod r1834002_a_conquest_game_wears_the_picked_deck {
                 "foil": "foil-none",
                 "finish": "finish-plain",
                 "border": "border-standard",
+                // R3335000: the four Starship kinds, each its default.
+                "starshipHull": "starship-hull-standard",
+                "starshipLivery": "starship-livery-standard",
+                "starshipTrail": "starship-trail-standard",
+                "starshipPieceSkin": "starship-piece-skin-standard",
             })
         );
     }
@@ -1284,5 +1295,105 @@ mod a_failed_seat_flag_write {
         assert!(h.app.matches.has(FIRST_MATCH));
         assert_eq!(started(&h).await.len(), 1);
         assert_eq!(in_match(&h).await, json!([FIRST_MATCH, FIRST_MATCH]));
+    }
+}
+
+// R3213000 — a series game's open sockets are told the series as it moves on
+
+mod r3213000_series_frames {
+    use super::*;
+
+    /// Game 1 under way, Alice's and Bob's sockets open on it, each greeting's series frame read and
+    /// forgotten.
+    async fn game_one_held(h: &Harness) -> (FakeSocket, FakeSocket) {
+        pick_both(h, [0, 0]).await;
+        let (alice, bob) = (create_fake_socket(), create_fake_socket());
+        h.app
+            .matches
+            .attach(&h.app, FIRST_MATCH, ALICE, alice.socket())
+            .await
+            .expect("Alice attaches");
+        h.app
+            .matches
+            .attach(&h.app, FIRST_MATCH, BOB, bob.socket())
+            .await
+            .expect("Bob attaches");
+        flush().await;
+        for socket in [&alice, &bob] {
+            let greeted = socket.of_type("series");
+            assert_eq!(greeted.len(), 1, "{greeted:?}");
+            assert_match(
+                &greeted[0],
+                &json!({ "v": 1, "series": { "id": SERIES_ID, "status": "playing", "gameNo": 1 } }),
+            );
+            socket.clear();
+        }
+        (alice, bob)
+    }
+
+    /// What `GET /api/matches/:matchId/series` answers `token` for game 1, less the clock it was read at.
+    async fn read_without_now(h: &Harness, token: &str) -> Value {
+        let (status, mut answer) = request(
+            h,
+            "GET",
+            &format!("/api/matches/{FIRST_MATCH}/series"),
+            token,
+            None,
+        )
+        .await;
+        assert_eq!(status, 200);
+        answer["series"].as_object_mut().expect("a series").remove("now");
+        answer["series"].clone()
+    }
+
+    fn without_now(frame: &Value) -> Value {
+        let mut series = frame["series"].clone();
+        series.as_object_mut().expect("a series").remove("now");
+        series
+    }
+
+    #[tokio::test]
+    async fn r3213000_a_games_result_pushes_each_seat_its_view_of_the_next_pick() {
+        let h = harness_at_1000().await;
+        let (alice, bob) = game_one_held(&h).await;
+
+        finish_game(&h, BOB, None).await;
+        flush().await;
+        let (to_alice, to_bob) = (alice.of_type("series"), bob.of_type("series"));
+        assert_eq!((to_alice.len(), to_bob.len()), (1, 1), "{to_alice:?} {to_bob:?}");
+        assert_match(
+            &to_alice[0],
+            &json!({ "v": 1, "series": { "id": SERIES_ID, "status": "picking", "gameNo": 2 } }),
+        );
+        // Each is what that seat's own read answers, and nothing more.
+        assert_eq!(
+            without_now(&to_alice[0]),
+            read_without_now(&h, h.tokens.alice).await
+        );
+        assert_eq!(without_now(&to_bob[0]), read_without_now(&h, h.tokens.bob).await);
+        assert_hides_alice(&to_bob[0]);
+        // A series game has no rematch to tell of.
+        assert!(alice.of_type("rematch").is_empty());
+        assert!(bob.of_type("rematch").is_empty());
+    }
+
+    #[tokio::test]
+    async fn r3213000_a_pick_pushes_one_frame_to_each_seat_and_hides_it_from_the_other() {
+        let h = harness_at_1000().await;
+        let (alice, bob) = game_one_held(&h).await;
+        finish_game(&h, BOB, None).await;
+        flush().await;
+        alice.clear();
+        bob.clear();
+
+        assert_eq!(pick(&h, h.tokens.alice, json!(1)).await.0, 200);
+        flush().await;
+        let (to_alice, to_bob) = (alice.of_type("series"), bob.of_type("series"));
+        assert_eq!((to_alice.len(), to_bob.len()), (1, 1), "{to_alice:?} {to_bob:?}");
+        assert_eq!(to_alice[0]["series"]["you"]["pick"], json!(1));
+        assert_eq!(to_bob[0]["series"]["opponent"]["picked"], json!(true));
+        assert_eq!(to_bob[0]["series"]["you"]["pick"], json!(null));
+        assert_hides_alice(&to_bob[0]);
+        assert!(!to_bob[0].to_string().contains("\"pick\":1"), "{}", to_bob[0]);
     }
 }

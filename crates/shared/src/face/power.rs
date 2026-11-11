@@ -51,15 +51,6 @@ fn power_of(power: &RolledPower) -> Option<&'static PowerRow> {
     POWERS.iter().find(|row| row.name == power.name)
 }
 
-/// The power's name on a face (R752): what the hero panel and the card in play call it.
-pub fn power_title(power: &RolledPower, radiant: bool) -> String {
-    match power_of(power) {
-        None => power.name.clone(),
-        Some(row) if radiant => row.radiant_title.to_string(),
-        Some(row) => row.title.to_string(),
-    }
-}
-
 /// A Heroic Power's text in play (R752, R366's layout): its keyword line, the rolled power's name, then on
 /// its own line its Activate, X and words, `{…}` numbers filled from `values`. `None` for a name this table
 /// does not know, which leaves the printed text in place. `translate` (R711000): name and words in the
@@ -159,7 +150,6 @@ mod tests {
             power_text(&power("armor"), true, "", &armor, None).as_deref(),
             Some("Tank Up\nActivate: Spend (1): Your hero gains 4 Armor, then this power refreshes.")
         );
-        assert_eq!(power_title(&power("armor"), false), "Armor Up");
         assert_eq!(power_text(&power("not-a-power"), false, "", &none, None), None);
     }
 

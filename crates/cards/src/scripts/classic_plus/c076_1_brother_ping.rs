@@ -66,10 +66,10 @@ mod tests {
     const PING: &str = "classicplus-076-1";
     const LAR: &str = "classicplus-076";
     const FILLER: &str = "core-005";
-    const MENACE: &str = "core-019"; // 9/9 Taunt
-    const ARMORED: &str = "core-025"; // 7/7, Armor 7
-    const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2
-    const CEASELESS_VOID: &str = "core-100"; // costs (1) less for each card played this game, R55's pattern
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
+    const SOLARIUS: &str = "classicplus-038"; // Solarius: Spell Damage +2
+    const CEASELESS_VOID: &str = "core-100"; // Ceaseless Void: costs 1 less for each card played this game, R55's pattern
     const HIT_JOB: &str = "core-016";
 
     const P1: PlayerId = PlayerId::P1;

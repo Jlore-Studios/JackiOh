@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { AI_BUDGET, AI_GATE_BUDGET } from "@jackioh/ai";
 
-import { PRACTICE_AI_CLOCK_MS } from "./config.ts";
+import { practiceConstants } from "../wasm/index.ts";
 
 describe("R2575000 the practice AI's doubled budget", () => {
   it("R2575000 the browser's AI_BUDGET is 1200 nodes and 300 lethal nodes in the shape of before", () => {
@@ -24,6 +24,6 @@ describe("R2575000 the practice AI's doubled budget", () => {
   });
 
   it("R2575000 caps one decision at 3 s", () => {
-    expect(PRACTICE_AI_CLOCK_MS).toBe(3000);
+    expect(practiceConstants().PRACTICE_AI_CLOCK_MS).toBe(3000);
   });
 });

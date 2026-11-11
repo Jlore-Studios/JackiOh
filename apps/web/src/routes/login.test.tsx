@@ -6,6 +6,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import LoginRoute from "./login.tsx";
 
 afterEach(cleanup);
@@ -49,5 +50,13 @@ describe("the password reveal", () => {
 
     expect(screen.getByTestId("login-password")).toHaveAttribute("autocomplete", "new-password");
     expect(screen.getByTestId("login-toggle-password")).toBeInTheDocument();
+  });
+});
+
+describe("R3223000 the sign-in screen's title", () => {
+  it("R3223000 sign-in has one visible h1, the PageTitle, and the wordmark is no heading", () => {
+    render(<LoginRoute />);
+    expectOnePageTitle("Sign in");
+    expect(screen.queryByRole("heading", { name: "JackiOh" })).toBeNull();
   });
 });

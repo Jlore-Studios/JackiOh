@@ -89,7 +89,7 @@ mod tests {
                 s.end_turn();
 
                 s.expect_in_zone(&pointmaster, "graveyard"); // 6/1 took 2
-                s.expect_stats("core-008", json!({ "health": 2, "maxHealth": 4 })); // 4/4 took 2
+                s.expect_stats("core-008", json!({ "health": 2, "maxHealth": 4 })); // Mr. Vanilla took 2
                 s.expect_health(PlayerId::P2, 28);
                 s.expect_health(PlayerId::P1, 30); // "each ENEMY unit and the enemy hero": nothing of its own
             }

@@ -215,7 +215,8 @@ describe("#2798 Stinkyscape's bespoke flourishes, part two", () => {
   it("R502 stinkyscape-110, stinkyscape-146 and stinkyscape-158 key their recipes", () => {
     const view = fullBoardView();
     for (const [defId, key] of FLOURISHES) {
-      expect(FX_CARD_TABLE.get(defId), defId).toEqual({ kind: "bespoke", key });
+      // R3407000: iKwzki's entry is her signature too (its frame is ikwzki.test.ts's).
+      expect(FX_CARD_TABLE.get(defId), defId).toMatchObject({ kind: "bespoke", key });
       expect(run(defId, RECIPE_FIXTURES[key](view, "ex", "p1"), 400).flat(), defId).toEqual(fixtureCues(defId, key).flat());
     }
   });

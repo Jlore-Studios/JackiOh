@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH } from "@jackioh/server-config";
 import { holdRecoverySession, recoverySession, releaseRecoverySession } from "../auth/redirect.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { navTestid } from "./nav.tsx";
 import { resetTestid } from "../auth/testids.ts";
 import { confirmProblem, newPasswordProblem } from "../auth/validation.ts";
@@ -99,6 +100,15 @@ describe("B31 without a recovery session", () => {
     expect(screen.getByTestId(resetTestid.noLink)).toBeInTheDocument();
     expect(screen.queryByTestId(resetTestid.form)).toBeNull();
     expect(screen.queryByTestId(resetTestid.password)).toBeNull();
+  });
+
+  it("R3223000 the screen has one visible h1, the PageTitle, with no link and with one", () => {
+    render(<ResetPasswordRoute />);
+    expectOnePageTitle("Reset your password");
+    cleanup();
+    holdRecoverySession(RECOVERY, EMAIL);
+    render(<ResetPasswordRoute />);
+    expectOnePageTitle("Choose a new password");
   });
 
   it("B31 reset-request-new opens the forgot form at /login?mode=forgot", () => {

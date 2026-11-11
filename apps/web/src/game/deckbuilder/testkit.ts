@@ -12,6 +12,7 @@ import {
   ApiUnreachableError,
   type DeckInput,
   type DecksResponse,
+  type DeckSyncInput,
   type DeckVersion,
   type SavedDeck,
   type SavedTrio,
@@ -20,7 +21,7 @@ import {
   type TrioInput,
   type TrioSlots,
 } from "../../net/api.ts";
-import type { DeckSyncApi, StorageLike, SyncClock } from "./sync.ts";
+import type { DeckSyncApi, DeckSyncOutcome, DeckSyncOutcomes, StorageLike, SyncClock } from "./sync.ts";
 
 export const TEST_PROFILE = "profile-test";
 
@@ -121,6 +122,55 @@ function sentWith(options: SendOptions | undefined): { keepalive?: true } {
   return options?.keepalive === true ? { keepalive: true } : {};
 }
 
+/** The first status of a server error: the server fails the whole sync on one, never one item. */
+const FIRST_SERVER_ERROR_STATUS = 500;
+
+/** One item's route, as a fake server answers it; a throw is its failure. */
+export type SyncHandlers = {
+  putDeck(id: string, input: DeckInput, options?: SendOptions): unknown;
+  putTrio(id: string, input: TrioInput, options?: SendOptions): unknown;
+  deleteTrio(id: string, options?: SendOptions): unknown;
+  deleteDeck(id: string, options?: SendOptions): unknown;
+};
+
+/**
+ * R3212001: `POST /api/decks/sync` over a fake's per-item routes, in the server's order: the deck saves,
+ * the trio saves, the trio deletions, then the deck deletions. A refusal under 500 is its item's outcome
+ * and the rest still run; anything else fails the whole request, as a server error does. A landed item
+ * answers its id (a fake need not echo the deck).
+ */
+export async function syncByItem(handlers: SyncHandlers, input: DeckSyncInput, options?: SendOptions): Promise<DeckSyncOutcomes> {
+  async function each<T>(items: readonly T[], idOf: (item: T) => string, run: (item: T) => unknown): Promise<DeckSyncOutcome[]> {
+    const outcomes: DeckSyncOutcome[] = [];
+    for (const item of items) {
+      const id = idOf(item);
+      try {
+        await run(item);
+        outcomes.push({ id });
+      } catch (cause: unknown) {
+        if (!(cause instanceof ApiRequestError) || cause.status >= FIRST_SERVER_ERROR_STATUS) throw cause;
+        outcomes.push({ id, status: cause.status, error: { code: cause.code, message: cause.message, details: cause.details } });
+      }
+    }
+    return outcomes;
+  }
+  const decks = await each(input.decks, (deck) => deck.id, ({ id, ...deck }) => handlers.putDeck(id, deck, options));
+  const trios = await each(input.trios, (trio) => trio.id, ({ id, ...trio }) => handlers.putTrio(id, trio, options));
+  const deletedTrios = await each(input.deletedTrios, (id) => id, (id) => handlers.deleteTrio(id, options));
+  const deletedDecks = await each(input.deletedDecks, (id) => id, (id) => handlers.deleteDeck(id, options));
+  return { decks, trios, deletedTrios, deletedDecks };
+}
+
+/** R3212001: every item of a sync landed. */
+function allLanded(input: DeckSyncInput): DeckSyncOutcomes {
+  return {
+    decks: input.decks.map(({ id }) => ({ id })),
+    trios: input.trios.map(({ id }) => ({ id })),
+    deletedTrios: input.deletedTrios.map((id) => ({ id })),
+    deletedDecks: input.deletedDecks.map((id) => ({ id })),
+  };
+}
+
 /** An in-memory `/api/decks` and `/api/trios`, with the refusals the store has to handle. */
 export function fakeDeckServer() {
   const decks = new Map<string, DeckInput>();
@@ -140,18 +190,18 @@ export function fakeDeckServer() {
     if (refusal !== undefined) throw refusal;
   }
 
-  const api: DeckSyncApi = {
-    async putDeck(id, input) {
-      gate({ op: "putDeck", id, body: input });
+  const routes: SyncHandlers = {
+    putDeck(id, input, options) {
+      gate({ op: "putDeck", id, body: input, ...sentWith(options) });
       decks.set(id, input);
       return { deck: { id } };
     },
-    async deleteDeck(id, options) {
+    deleteDeck(id, options) {
       gate({ op: "deleteDeck", id, ...sentWith(options) });
       return { deleted: decks.delete(id) };
     },
-    async putTrio(id, input) {
-      gate({ op: "putTrio", id, body: input });
+    putTrio(id, input, options) {
+      gate({ op: "putTrio", id, body: input, ...sentWith(options) });
       if (input.deckIds.some((deckId) => deckId !== null && !decks.has(deckId))) {
         throw new ApiRequestError(409, {
           code: "conflict",
@@ -162,10 +212,14 @@ export function fakeDeckServer() {
       trios.set(id, input);
       return { trio: { id } };
     },
-    async deleteTrio(id, options) {
+    deleteTrio(id, options) {
       gate({ op: "deleteTrio", id, ...sentWith(options) });
       return { deleted: trios.delete(id) };
     },
+  };
+
+  const api: DeckSyncApi = {
+    syncDecks: (input, options) => syncByItem(routes, input, options),
     async importTrio(input) {
       gate({ op: "importTrio", id: input.trio.id, body: input });
       const catalogVersion = input.catalogVersion;
@@ -212,10 +266,7 @@ export function fakeDeckServer() {
 /** An api that accepts everything and remembers nothing. */
 export function quietDeckApi(): DeckSyncApi {
   return {
-    putDeck: async () => ({}),
-    deleteDeck: async () => ({}),
-    putTrio: async () => ({}),
-    deleteTrio: async () => ({}),
+    syncDecks: async (input) => allLanded(input),
     importTrio: async () => ({}),
     getDeckVersions: async () => ({ versions: [] }),
     restoreDeckVersion: async () => ({}),

@@ -5,7 +5,7 @@
 import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
 import { flavorOfId } from "../cards/flavor.ts";
-import { animTestid, locateInstance, targetFor, type AnimationEntry } from "../game/animations.ts";
+import { ANOMALY_SET_PIECE, animTestid, locateInstance, targetFor, type AnimationEntry } from "../game/animations.ts";
 import { sideOf, testid } from "../game/contract.ts";
 import {
   FX_CONCEAL_AT,
@@ -17,7 +17,9 @@ import {
   FX_SHOT_SHAKE_TRAUMA,
   FX_SLAM_AT,
 } from "./constants.ts";
+import { frac, tid } from "./build.ts";
 import { flavorLook, type FlavorLook } from "./flavors.ts";
+import { starshipBroadside } from "./starship.ts";
 import type { FxAnchor, FxCue, FxPlanEnv, FxShotCue } from "./types.ts";
 
 /** The contact spark's base count and power (rule 9). */
@@ -26,12 +28,6 @@ const STAGE_TUNING = {
 } as const;
 
 const HERO_TARGET = /^hero-(p1|p2)$/;
-
-function tid(id: string): FxAnchor {
-  return { kind: "testid", testid: id };
-}
-
-const frac = (fraction: number, D: number): number => Math.round(fraction * D);
 
 function attackTarget(targetId: string, view: PlayerView): string | null {
   const hero = HERO_TARGET.exec(targetId)?.[1];
@@ -122,7 +118,8 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
     }
     case "summoned": {
       const zone = targetFor(event, view);
-      if (zone === null) return [];
+      // R3337003: an Anomaly's held set piece lands its board's cards out of its rift itself (fx/anomaly.ts).
+      if (zone === null || (entry.rift !== undefined && entry.setPiece?.key === ANOMALY_SET_PIECE)) return [];
       // #2111, R2111000: whatever lands in a backrow zone is set, not slammed.
       const set = event.row === "backrow";
       const played = entry.events.find(
@@ -168,12 +165,24 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
       const attacker = targetFor(event, view);
       const target = attackTarget(event.targetId, view);
       if (attacker === null || target === null || attacker === target) return [];
-      const look = FX_FLAVOR_LIVE ? rangedLook(event.attackerId, view) : null;
+      // R3334002: a launched Starship fires its broadside where it stands (starship.ts draws the guns),
+      // or, with no weapons, rams prow first.
+      const broadside = starshipBroadside(view, event.attackerId);
+      if (broadside !== null && broadside.length > 0) return [{ kind: "lunge", attacker, target, delayMs: 0, durationMs: D, still: true }];
+      const look = broadside === null && FX_FLAVOR_LIVE ? rangedLook(event.attackerId, view) : null;
       if (look !== null) return shotCues(look, attacker, target, c);
       const tuning = STAGE_TUNING.contactSpark;
       return [
         // R2789000: a Flying attacker's lunge arcs over the lane.
-        { kind: "lunge", attacker, target, delayMs: 0, durationMs: D, ...(flies(event.attackerId, view) ? { arc: true as const } : {}) },
+        {
+          kind: "lunge",
+          attacker,
+          target,
+          delayMs: 0,
+          durationMs: D,
+          ...(flies(event.attackerId, view) ? { arc: true as const } : {}),
+          ...(broadside === null ? {} : { ram: true as const }),
+        },
         {
           kind: "burst",
           preset: "spark",

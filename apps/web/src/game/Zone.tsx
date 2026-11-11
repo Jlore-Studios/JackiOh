@@ -1,7 +1,7 @@
 // Field zone view (SPEC §3; BUILD M5-T1). Play legality comes from the engine's `legalActions`.
 // DragLayer hit-tests zones by testid; no drag handler belongs here.
 
-import { useContext, type ReactElement } from "react";
+import { useContext, useMemo, type ReactElement } from "react";
 
 import type { PlayerView, Row } from "@jackioh/shared";
 
@@ -16,6 +16,7 @@ import Backrow from "./Backrow.tsx";
 import Card, { cx, isLegal, isSelected, legalAttr, type Pops } from "./Card.tsx";
 import { CatalogContext, type CardLookup } from "./catalog.ts";
 import {
+  NO_HIGHLIGHT,
   laneIndex,
   sideView,
   testid,
@@ -25,8 +26,10 @@ import {
   type Side,
 } from "./contract.ts";
 import { listedFace } from "./faces.ts";
-import { glowAttr } from "./glow.ts";
+import { countedTestids, glowAttr } from "./glow.ts";
+import { useHoveredHandCard } from "./hoveredHandCard.tsx";
 import LockIcon from "./LockIcon.tsx";
+import { TileAura } from "../fx/aura/TileAura.tsx";
 import { t } from "../i18n/i18n.ts";
 
 export type ZoneProps = {
@@ -60,6 +63,15 @@ export default function Zone(props: ZoneProps): ReactElement {
   const lookup = useContext(CatalogContext);
   const { view, side, row, lane } = props;
   const seat = sideView(view, side);
+  // #3478, #991, R583: the hovered hand card's preview rings this zone's cards. The hover state
+  // lives in the board's context (hoveredHandCard.tsx), so a hover re-renders the zones and nothing
+  // else; the counted set is added here, where it is drawn, not in `Board.tsx`.
+  const hovered = useHoveredHandCard();
+  const zoneHighlight = useMemo(() => {
+    const base = props.highlight ?? NO_HIGHLIGHT;
+    const counted = countedTestids(view, base, hovered);
+    return counted.size === 0 ? props.highlight : { ...base, counted };
+  }, [view, props.highlight, hovered]);
   const locked = flagAt(seat.locks, row, lane);
   // R64: a zone held for a dying Reborn unit takes no summon either, so it is drawn as held —
   // but it is not Locked, and only a lock gets `data-locked` (BUILD M5-T4 `locked`).
@@ -105,17 +117,20 @@ export default function Zone(props: ZoneProps): ReactElement {
         props.onClick?.(target);
       }}
     >
+      <TileAura view={view} side={side} row={row} lane={lane} highlight={zoneHighlight} animating={props.animating} />
       {locked && <LockIcon />}
       {reserved && !locked && <span className="lock-icon reserved-icon" aria-label={t("Reserved zone")} title={heldFor(lookup, view, side, row, lane)} />}
+      {/* R3340000: a replacement in this lane is a new face with a new motion age, even when no empty view renders between them. */}
       {unit !== null && (
         <Card
+          key={unit.instanceId}
           testId={testid.card(unit.instanceId)}
           card={unit}
           unit={unit}
           switchTarget
           onField
           target={{ on: "unit", instanceId: unit.instanceId, side, lane }}
-          highlight={props.highlight}
+          highlight={zoneHighlight}
           animating={props.animating}
           onClick={props.onClick}
           pops={props.pops?.get(testid.card(unit.instanceId))}
@@ -127,7 +142,7 @@ export default function Zone(props: ZoneProps): ReactElement {
           side={side}
           seat={seat.player}
           lane={lane}
-          highlight={props.highlight}
+          highlight={zoneHighlight}
           animating={props.animating}
           onClick={props.onClick}
           pops={props.pops}

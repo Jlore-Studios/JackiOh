@@ -15,6 +15,7 @@ import { MIN_ACCOUNT_AGE_YEARS } from "@jackioh/server-config";
 import { DEFAULT_LOCALE, formatDay, t, useLocale } from "../i18n/i18n.ts";
 import { CONTACT_EMAIL, CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 
 import "../auth/tavern.css";
 import "./privacy.css";
@@ -31,13 +32,10 @@ export default function PrivacyRoute(): ReactElement {
   const locale = useLocale();
   return (
     <div className="app-shell tavern privacy-screen" data-testid={privacyTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Privacy policy")} />
 
       <article className="panel panel--auth privacy-policy">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Privacy policy")}</h2>
+        <Wordmark />
         {/* A translation says the English text governs; the English needs no such line. */}
         {locale === DEFAULT_LOCALE ? null : <p className="privacy-policy__governing">{t("The English text governs.")}</p>}
         <p className="privacy-policy__updated" data-testid={privacyTestid.updated}>
@@ -45,14 +43,14 @@ export default function PrivacyRoute(): ReactElement {
         </p>
 
         <section aria-labelledby="privacy-who">
-          <h3 id="privacy-who">Who we are</h3>
+          <h2 className="section-heading" id="privacy-who">Who we are</h2>
           <p>
             JackiOh is made by a small team of developers. Contact: <a href={CONTACT_URL}>{CONTACT_EMAIL}</a>.
           </p>
         </section>
 
         <section aria-labelledby="privacy-collect">
-          <h3 id="privacy-collect">What we collect</h3>
+          <h2 className="section-heading" id="privacy-collect">What we collect</h2>
           <p>
             Your email and username, confirmation that you&rsquo;re {MIN_ACCOUNT_AGE_YEARS} or older, your decks,
             cards, matches and how you play, your friends, chats and shared replays, and technical info like your
@@ -61,7 +59,7 @@ export default function PrivacyRoute(): ReactElement {
         </section>
 
         <section aria-labelledby="privacy-why">
-          <h3 id="privacy-why">Why</h3>
+          <h2 className="section-heading" id="privacy-why">Why</h2>
           <p>
             To run your account and online games, rank players, balance cards, improve our AI opponents and
             prevent abuse.
@@ -69,7 +67,7 @@ export default function PrivacyRoute(): ReactElement {
         </section>
 
         <section aria-labelledby="privacy-sees">
-          <h3 id="privacy-sees">Who sees it</h3>
+          <h2 className="section-heading" id="privacy-sees">Who sees it</h2>
           <p>
             Our hosting and sign-in providers process it for us. Other players see your username, rank and moves.
             Your friends, and your opponent&rsquo;s friends, can watch your online games, remove or block someone
@@ -82,12 +80,12 @@ export default function PrivacyRoute(): ReactElement {
         </section>
 
         <section aria-labelledby="privacy-browser">
-          <h3 id="privacy-browser">Your browser</h3>
+          <h2 className="section-heading" id="privacy-browser">Your browser</h2>
           <p>We store your settings and sign-in in your browser.</p>
         </section>
 
         <section aria-labelledby="privacy-keep">
-          <h3 id="privacy-keep">How long</h3>
+          <h2 className="section-heading" id="privacy-keep">How long</h2>
           <p>
             We keep your data while you have an account. Card statistics that don&rsquo;t identify you may be kept
             indefinitely.
@@ -95,12 +93,12 @@ export default function PrivacyRoute(): ReactElement {
         </section>
 
         <section aria-labelledby="privacy-choices">
-          <h3 id="privacy-choices">Your choices</h3>
+          <h2 className="section-heading" id="privacy-choices">Your choices</h2>
           <p>Delete your account at any time from the Account page. Email us for a copy of your data.</p>
         </section>
 
         <section aria-labelledby="privacy-children">
-          <h3 id="privacy-children">Children</h3>
+          <h2 className="section-heading" id="privacy-children">Children</h2>
           <p>
             You must be {MIN_ACCOUNT_AGE_YEARS} or older to have an account. We delete any account we learn belongs
             to someone younger.
@@ -108,7 +106,7 @@ export default function PrivacyRoute(): ReactElement {
         </section>
 
         <section aria-labelledby="privacy-changes">
-          <h3 id="privacy-changes">Changes</h3>
+          <h2 className="section-heading" id="privacy-changes">Changes</h2>
           <p>When this policy changes, we&rsquo;ll update the date and ask you to agree again.</p>
         </section>
       </article>

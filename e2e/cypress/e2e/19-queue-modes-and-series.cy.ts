@@ -1,4 +1,4 @@
-// BUILD M8 spec 19: Best-of-1, All Random, Conquest, and rooms (R257, R258, R264, R330, R338, R765).
+// BUILD M8 spec 19: Best-of-1, All random, Conquest, and rooms (R257, R258, R264, R330, R338, R765).
 // #21 Hinder is the selected deck's observable opening-hand card.
 // Browser p1 uses the UI; p2 seeds matches over HTTP/socket (R143). Opening hands prove selected decks (R245; §10.8).
 // Balance each fixture account's rated endings and clean both before every test; pairing allows §9.5's R108 window.
@@ -265,7 +265,7 @@ function installed(value: InstalledLoadout | null): InstalledLoadout {
   return value as InstalledLoadout;
 }
 
-describe("19 queue modes and series — Best of 1, All Random, Conquest and rooms", () => {
+describe("19 queue modes and series — Best of 1, All random, Conquest and rooms", () => {
   beforeEach(() => {
     cy.freeAccount(accounts.p1());
     cy.freeAccount(accounts.p2());
@@ -324,7 +324,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     me(seatTwo).its("currentMatchId").should("eq", null);
   });
 
-  it("All Random needs no saved deck: both players are dealt one (R258); the queue takes the player to it from the main menu, whose banner rejoins it while it is live (R765)", () => {
+  it("All random needs no saved deck: both players are dealt one (R258); the queue takes the player to it from the main menu, whose banner rejoins it while it is live (R765)", () => {
     const seed = seedFor("19-random");
     const seatOne = accounts.p1();
     const seatTwo = accounts.p2();
@@ -346,7 +346,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
 
     cy.then(() => {
       enqueue(seatTwo, { mode: "random", seed }).should((response) => {
-        expect(response.status, "R258: All Random is queued with no deck at all").to.eq(200);
+        expect(response.status, "R258: All random is queued with no deck at all").to.eq(200);
         expect(response.body.mode).to.eq("random");
       });
       pollWhileQueued(seatTwo);

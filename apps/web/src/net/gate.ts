@@ -161,6 +161,25 @@ function freshAccount(session: Session): MeResponse | undefined {
   return me !== undefined && opensAtOnce(me) ? me : undefined;
 }
 
+/**
+ * R3207003: the answer this tab last kept for its session, of any age (each `useAccount` keeps the one it
+ * settles on); undefined before the first read, after sign-out or after `announceAccountChange()`.
+ */
+export function keptAccount(): MeResponse | undefined {
+  const session = readSession();
+  return session === null ? undefined : cachedRead<MeResponse>(session.accessToken, ME_PATH);
+}
+
+/**
+ * R3207003: whether `me` is the answer this tab's session holds inside `READ_CACHE_FRESH_MS` (read, or kept
+ * by a gate that read it, in the last 45 s). A gate may open on an answer of any age (R2630000) and read
+ * again behind it, so the account it hands a screen is not always one that can stand in for a read.
+ */
+export function isFreshAccount(me: MeResponse): boolean {
+  const session = readSession();
+  return session !== null && freshRead<MeResponse>(session.accessToken, ME_PATH) === me;
+}
+
 function readyAccount(session: Session, me: MeResponse): Account {
   return {
     kind: "ready",

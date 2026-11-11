@@ -3,6 +3,11 @@
 // (cards/CardFace.test.tsx) and what the stylesheet declares (cards/foil.test.ts); what only a
 // style engine can say is measured here: no sheen layer, no rainbow edge and no Mythic ring at the
 // defaults, and with Rarity foil on, today's sheen, edge and ring on the Mythic.
+// R3343001: a Mythic's Default prints Full art while the Full-art cards setting is on, its normal face
+// while it is off; under either its board minion is art first (R3339000), its art edge to edge with no
+// oval, so its ring is the face's rim round the art, as a full face's rainbow edge is, and the portrait's
+// ring (#3341's `::after`) draws none. Each check runs under both. The Legendary's board face is art first
+// too and no full art (default-looks.cy.tsx).
 
 import { CATALOG } from "@jackioh/cards";
 import { CardFace, MinionFace, faceModel } from "../../../apps/web/src/cards/index.ts";
@@ -12,11 +17,20 @@ import { unit } from "../../../apps/web/src/test/fixtures.ts";
 const LEGENDARY = "core-052";
 const MYTHIC = "core-100";
 
+/** The Mythic ring's blue (#94d0ff, cards.css), on the oval's shadow or in the rim's rainbow. */
+const RING_BLUE = "148, 208, 255";
+
 /** A hand-sized full face, 5:7. */
 const FACE_BOX = { width: 150, height: 210 } as const;
 
 /** A board minion's box (card-cosmetics.cy.tsx's). */
 const MINION_BOX = { width: 81, height: 113 } as const;
+
+/** The Full-art cards setting each check runs under (R3343001): on, the default, and off. */
+const FULL_ART_CARDS = [
+  { fullArt: true, label: "" },
+  { fullArt: false, label: ", Full-art cards off," },
+] as const;
 
 function Faces() {
   return (
@@ -51,6 +65,20 @@ function faceOf(doc: Document, name: string): HTMLElement {
 
 const FACES = [`${LEGENDARY}-hand`, `${MYTHIC}-hand`, `${LEGENDARY}-board`, `${MYTHIC}-board`];
 
+/**
+ * The board Mythic's ring, as it draws: full art while Full-art cards is on (R3343001), and art first under either
+ * setting (R3339000), its art edge to edge with no oval, so its ring is the rim round the art (`.cf`'s edge, as a full
+ * face's), and the portrait's `::after`, where #3341 draws a ring, is what must show none.
+ */
+function mythicRing(doc: Document, fullArt: boolean): { rim: string; portrait: string } {
+  const board = faceOf(doc, `${MYTHIC}-board`);
+  expect(board.getAttribute("data-full-art"), "the board Mythic is full art while Full-art cards is on").to.eq(fullArt ? "true" : null);
+  expect(board.getAttribute("data-art-first"), "the board Mythic is art first").to.equal("true");
+  const portrait = getComputedStyle(board.querySelector(".cf-portrait") as Element, "::after").boxShadow;
+  const rim = getComputedStyle(board).backgroundImage;
+  return { rim, portrait };
+}
+
 describe("R2721000 the rarity marks on a face", () => {
   beforeEach(() => {
     writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
@@ -61,68 +89,76 @@ describe("R2721000 the rarity marks on a face", () => {
     writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
   });
 
-  it("R2721000 with the default settings a Legendary and a Mythic at hand and board sizes wear their crest and no rarity foil", () => {
-    cy.mount(<Faces />);
-    cy.document().should((doc) => {
-      for (const name of FACES) {
-        const cf = faceOf(doc, name);
-        const box = name.endsWith("hand") ? FACE_BOX : MINION_BOX;
-        expect(cf.getBoundingClientRect().width, `${name} fills its box`).to.be.greaterThan(box.width / 2);
-        expect(cf.getAttribute("data-foil"), `${name} wears no foil`).to.equal("none");
-        expect(getComputedStyle(cf, "::after").content, `${name} has no sheen layer`).to.equal("none");
-        expect(getComputedStyle(cf).backgroundImage, `${name} has no rainbow edge`).to.not.contain("conic-gradient");
-        const crest = cf.querySelector<HTMLElement>(".cf-crest");
-        expect(crest?.getBoundingClientRect().width, `${name} wears its crest`).to.be.greaterThan(0);
-      }
-      // The Mythic's crest is tinted; the Legendary's is not.
-      for (const size of ["hand", "board"]) {
-        expect(getComputedStyle(faceOf(doc, `${MYTHIC}-${size}`).querySelector(".cf-crest") as Element).filter, `the Mythic ${size} crest`).to.contain(
-          "hue-rotate",
-        );
+  for (const { fullArt, label } of FULL_ART_CARDS) {
+    it(`R2721000 with the default settings${label} a Legendary and a Mythic at hand and board sizes wear their crest and no rarity foil`, () => {
+      writeCardSettings({ fullArt });
+      cy.mount(<Faces />);
+      cy.document().should((doc) => {
+        for (const name of FACES) {
+          const cf = faceOf(doc, name);
+          const box = name.endsWith("hand") ? FACE_BOX : MINION_BOX;
+          expect(cf.getBoundingClientRect().width, `${name} fills its box`).to.be.greaterThan(box.width / 2);
+          expect(cf.getAttribute("data-foil"), `${name} wears no foil`).to.equal("none");
+          expect(getComputedStyle(cf, "::after").content, `${name} has no sheen layer`).to.equal("none");
+          expect(getComputedStyle(cf).backgroundImage, `${name} has no rainbow edge`).to.not.contain("conic-gradient");
+          const crest = cf.querySelector<HTMLElement>(".cf-crest");
+          expect(crest?.getBoundingClientRect().width, `${name} wears its crest`).to.be.greaterThan(0);
+        }
+        // The Mythic's crest is tinted; the Legendary's is not.
+        for (const size of ["hand", "board"]) {
+          expect(getComputedStyle(faceOf(doc, `${MYTHIC}-${size}`).querySelector(".cf-crest") as Element).filter, `the Mythic ${size} crest`).to.contain(
+            "hue-rotate",
+          );
+          expect(
+            getComputedStyle(faceOf(doc, `${LEGENDARY}-${size}`).querySelector(".cf-crest") as Element).filter,
+            `the Legendary ${size} crest`,
+          ).to.not.contain("hue-rotate");
+        }
+        // The gem keeps its rainbow; the board portrait's ring does not, nor its rim.
         expect(
-          getComputedStyle(faceOf(doc, `${LEGENDARY}-${size}`).querySelector(".cf-crest") as Element).filter,
-          `the Legendary ${size} crest`,
-        ).to.not.contain("hue-rotate");
-      }
-      // The gem keeps its rainbow; the board portrait's ring does not.
-      expect(
-        getComputedStyle(faceOf(doc, `${MYTHIC}-hand`).querySelector(".cf-gem") as Element).backgroundImage,
-        "the Mythic gem",
-      ).to.contain("conic-gradient");
-      expect(getComputedStyle(faceOf(doc, `${MYTHIC}-board`).querySelector(".cf-portrait") as Element).boxShadow, "the board Mythic ring").to.not.contain(
-        "148, 208, 255",
-      );
+          getComputedStyle(faceOf(doc, `${MYTHIC}-hand`).querySelector(".cf-gem") as Element).backgroundImage,
+          "the Mythic gem",
+        ).to.contain("conic-gradient");
+        // #3341: the ring is drawn over the art's rim, on the portrait's ::after.
+        const { rim, portrait } = mythicRing(doc, fullArt);
+        expect(portrait, "the board Mythic ring").to.not.contain(RING_BLUE);
+        expect(rim, "the board Mythic ring").to.not.contain(RING_BLUE);
+      });
     });
-  });
 
-  it("R2721000 with Rarity foil on the Mythic wears today's sheen, rainbow edge and ring; the Legendary is unchanged", () => {
-    writeCardSettings({ rarityFoil: true });
-    cy.mount(<Faces />);
-    cy.document().should((doc) => {
-      for (const name of FACES) {
-        const cf = faceOf(doc, name);
-        const box = name.endsWith("hand") ? FACE_BOX : MINION_BOX;
-        expect(cf.getBoundingClientRect().width, `${name} fills its box`).to.be.greaterThan(box.width / 2);
-      }
-      // The hand Mythic wears today's look: the animated sheen and the rainbow edge.
-      const hand = faceOf(doc, `${MYTHIC}-hand`);
-      expect(hand.getAttribute("data-foil")).to.equal("animated");
-      const sheen = getComputedStyle(hand, "::after");
-      expect(sheen.content, "the sheen layer").to.not.equal("none");
-      expect(sheen.backgroundImage, "the Mythic sheen").to.contain("255, 106, 213");
-      expect(getComputedStyle(hand).backgroundImage, "the rainbow edge").to.contain("conic-gradient");
-      // The board Mythic's ring is back.
-      expect(
-        getComputedStyle(faceOf(doc, `${MYTHIC}-board`).querySelector(".cf-portrait") as Element).boxShadow,
-        "the board Mythic ring",
-      ).to.contain("148, 208, 255");
-      // Both Legendary faces are as at the defaults.
-      for (const name of [`${LEGENDARY}-hand`, `${LEGENDARY}-board`]) {
-        const cf = faceOf(doc, name);
-        expect(cf.getAttribute("data-foil"), `${name} wears no foil`).to.equal("none");
-        expect(getComputedStyle(cf, "::after").content, `${name} has no sheen layer`).to.equal("none");
-        expect(getComputedStyle(cf).backgroundImage, `${name} has no rainbow edge`).to.not.contain("conic-gradient");
-      }
+    it(`R2721000 with Rarity foil on${label} the Mythic wears today's sheen, rainbow edge and ring; the Legendary is unchanged`, () => {
+      writeCardSettings({ rarityFoil: true, fullArt });
+      cy.mount(<Faces />);
+      cy.document().should((doc) => {
+        for (const name of FACES) {
+          const cf = faceOf(doc, name);
+          const box = name.endsWith("hand") ? FACE_BOX : MINION_BOX;
+          expect(cf.getBoundingClientRect().width, `${name} fills its box`).to.be.greaterThan(box.width / 2);
+        }
+        // The hand Mythic wears today's look: the animated sheen and the rainbow edge.
+        const hand = faceOf(doc, `${MYTHIC}-hand`);
+        expect(hand.getAttribute("data-foil")).to.equal("animated");
+        const sheen = getComputedStyle(hand, "::after");
+        expect(sheen.content, "the sheen layer").to.not.equal("none");
+        expect(sheen.backgroundImage, "the Mythic sheen").to.contain("255, 106, 213");
+        expect(getComputedStyle(hand).backgroundImage, "the rainbow edge").to.contain("conic-gradient");
+        // R3339000: a Mythic Unit on the board is art first: its art runs edge to edge, no oval to wear a ring, so the
+        // Mythic's rarity foil is the rainbow edge round the art, as a full-art Unit's rim is (R3046000).
+        const { rim, portrait } = mythicRing(doc, fullArt);
+        expect(faceOf(doc, `${MYTHIC}-board`).getAttribute("data-foil"), "the board Mythic wears its foil").to.equal("animated");
+        // The ring of #3341 is the portrait's `::after`: an art-first face takes it off (cards.css), so no foil ring shows.
+        expect(portrait, "no foil ring on edge-to-edge art").to.equal("none");
+        expect(portrait, "no Mythic ring colour").to.not.contain(RING_BLUE);
+        expect(rim, "the board Mythic's rainbow edge").to.contain("conic-gradient");
+        expect(rim, "the board Mythic ring").to.contain(RING_BLUE);
+        // Both Legendary faces are as at the defaults.
+        for (const name of [`${LEGENDARY}-hand`, `${LEGENDARY}-board`]) {
+          const cf = faceOf(doc, name);
+          expect(cf.getAttribute("data-foil"), `${name} wears no foil`).to.equal("none");
+          expect(getComputedStyle(cf, "::after").content, `${name} has no sheen layer`).to.equal("none");
+          expect(getComputedStyle(cf).backgroundImage, `${name} has no rainbow edge`).to.not.contain("conic-gradient");
+        }
+      });
     });
-  });
+  }
 });

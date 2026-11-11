@@ -9,7 +9,7 @@ import type { PlayerId } from "@jackioh/shared";
 
 import { DEFAULT_CARD_COSMETICS, cosmeticsOf, type CosmeticKind } from "../cards/cosmetics.ts";
 import { ApiRequestError, ApiUnreachableError, API_UNREACHABLE_MESSAGE, getReplaySteps } from "../net/api.ts";
-import type { PracticeCoreEnv } from "../practice/core.ts";
+import type { PracticeDriverEnv } from "../practice/driver.ts";
 import { createPracticeHost } from "../practice/host.ts";
 import type { PracticeHost } from "../practice/host.ts";
 import type { PracticeReplayListing, PracticeStartConfig } from "../practice/protocol.ts";
@@ -24,7 +24,7 @@ vi.mock("../net/api.ts", async (importOriginal) => {
   return { ...actual, getReplaySteps: vi.fn() };
 });
 
-const ENV: PracticeCoreEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
+const ENV: PracticeDriverEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
 const HUMAN: PlayerId = "p2";
 
 const hosts: PracticeHost[] = [];

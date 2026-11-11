@@ -18,7 +18,7 @@ import type { BackrowView, CardDef, CardView, PlayerView, UnitView } from "@jack
 import { ALL_TRIBES, CardFace, FACE_ASPECT, LONG_FACES, faceModel } from "../../../apps/web/src/cards/index.ts";
 import { FIT_FLOOR_PX } from "../../../apps/web/src/cards/constants.ts";
 import { FullArtAllowed } from "../../../apps/web/src/cards/fullArt.ts";
-import { PREVIEW_HEIGHT_PX } from "../../../apps/web/src/cards/inspect/constants.ts";
+import { PREVIEW_HEIGHT_PX, PREVIEW_SHEET_HEIGHT_PX, PREVIEW_SHEET_SHARE } from "../../../apps/web/src/cards/inspect/constants.ts";
 import { SET_MARK_MIN_FACE_PX } from "../../../apps/web/src/cards/setMark.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
@@ -32,9 +32,9 @@ const SETTLE_TIMEOUT_MS = 20_000;
 /** Subpixel slack for edges the browser rounds. */
 const SLACK_PX = 1;
 
-/** `.inspect-face--sheet`'s height, `min(380px, 56dvh)` (inspect.css), on the smallest phone screen. */
-const SHEET_SHARE = 0.56;
+/** `.inspect-face--sheet`'s height, `min(480px, 60dvh, (100vw - 48px) * 7 / 5)` (inspect.css, #3341), on the smallest phone screen. */
 const SMALLEST_PHONE = { width: 360, height: 640 } as const;
+const SHEET_SIDES_PX = 48;
 
 type Face = { label: string; radiant: boolean; chinese: boolean };
 
@@ -50,7 +50,13 @@ type InspectSize = { label: string; height: number; clampLong: boolean };
 /** The inspect view's two face sizes. */
 const INSPECT_SIZES: readonly InspectSize[] = [
   { label: "the hover preview", height: PREVIEW_HEIGHT_PX, clampLong: false },
-  { label: "the phone sheet", height: Math.round(Math.min(PREVIEW_HEIGHT_PX, SMALLEST_PHONE.height * SHEET_SHARE)), clampLong: true },
+  {
+    label: "the phone sheet",
+    height: Math.round(
+      Math.min(PREVIEW_SHEET_HEIGHT_PX, SMALLEST_PHONE.height * PREVIEW_SHEET_SHARE, ((SMALLEST_PHONE.width - SHEET_SIDES_PX) * 7) / 5),
+    ),
+    clampLong: true,
+  },
 ];
 
 function widthFor(height: number): number {

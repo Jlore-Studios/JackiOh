@@ -12,6 +12,7 @@ use std::time::Duration;
 
 use indexmap::IndexMap;
 use jackioh_engine::{ActionBody, GameOverReason, PerPlayer, PlayerId, Winner};
+use jackioh_shared::economy::fleet::fleet_play;
 
 use crate::actor::contracts::{RecordResultInput, TerminalOutcome, VoidMatchInput};
 use crate::actor::{engine, match_actor, registry};
@@ -174,6 +175,8 @@ async fn write_result(
                 }
                 if let Some(series) = &written.series {
                     crate::seats::free_series(app, series);
+                    // R3213000: the game's result moved the series on: its games' seats are told.
+                    crate::api::series::tell_series(app, series);
                 }
                 return Ok((written, finished));
             }
@@ -378,6 +381,8 @@ async fn write_once(
                         game.map(|game| &game.seats[seat.player]),
                         &app.catalog.defs,
                     ),
+                    // [[R3335001]]: what the seat did with Stinkyscape, which the Fleet track pays for.
+                    fleet: fleet_play(game.map(|game| &game.seats[seat.player]), &app.catalog.defs),
                 },
             )
             .await
@@ -714,6 +719,7 @@ async fn fold_terminal_input(app: &Arc<App>, match_row: &MatchRow, now: i64) -> 
         last_boards,
         glitch_boards,
         registry::dealt_for(mode),
+        match_row.win_rates.clone(),
     );
     // #1035: off the runtime, as a rebuild folds, under the catalog the match started on
     // (R388, R767000).

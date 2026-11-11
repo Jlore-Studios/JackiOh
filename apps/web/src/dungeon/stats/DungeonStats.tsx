@@ -4,21 +4,23 @@
 // Sandbox/Campaign and daily-only filter, and each entry opens that run's stats in a dialog.
 //
 // CLAUDE.md rule 7: this reads completed `RunRecord`s only, never a live run, the engine or
-// hidden game information.
+// hidden game information; the one other thing it reads is the compiled-in run content, public,
+// to name a record's curses (#3501).
 
-import { useEffect, useId, useRef, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 
 import type { RunStats } from "@jackioh/run";
 
 import "../../auth/tavern.css";
 import { EmptyState } from "../../empty/EmptyState.tsx";
+import { Dialog } from "../../game/Dialog.tsx";
 import { MS_PER_SECOND } from "../../game/clockConstants.ts";
 import { formatDateTime, formatNumber, t, useLocale } from "../../i18n/i18n.ts";
 import { paths } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
-import { useModalKeys } from "../../together/modalKeys.ts";
+import { curseName } from "../map/RunDisplay.tsx";
 import { RUN_STAT_LABELS } from "../map/RunOverScreen.tsx";
-import { readRunHistory, type DungeonMode, type RunRecord } from "../store.ts";
+import { contentOf, readRunHistory, type DungeonMode, type RunRecord } from "../store.ts";
 import { dungeonStatsTestid, type DungeonLeaderboard } from "./testids.ts";
 import "./dungeon-stats.css";
 
@@ -162,110 +164,87 @@ function Board({
   );
 }
 
-/** One run's complete stats, as a modal like the client's others: Escape, Back and Tab follow the app's modal contract. */
+/**
+ * One run's complete stats, as a modal like the client's others: drawn through Dialog.tsx (R3221000),
+ * whose ✕ takes the focus as on the statistics drill-down's, and whose keys are the app's modal contract.
+ */
 function RunDetails({ record, onClose }: { record: RunRecord; onClose: () => void }): ReactElement {
-  const titleId = useId();
-  const dialog = useRef<HTMLDivElement>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
-  useModalKeys(dialog, onClose);
-  // The focus starts on Close, as on the statistics drill-down's.
-  useEffect(() => {
-    closeButton.current?.focus({ preventScroll: true });
-  }, []);
+  // The record holds a curse's id; its name comes from the compiled-in content (#3501), the id standing in for one it dropped.
+  const content = contentOf();
   return (
-    <div
-      className="dungeon-stats__scrim"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <Dialog
+      role="dialog"
+      testid={dungeonStatsTestid.dialog}
+      closeTestid={dungeonStatsTestid.dialogClose}
+      className="dungeon-stats__dialog"
+      title={t("Run {seed}", { seed: record.seed })}
+      onClose={onClose}
+      actions={[]}
     >
-      <div
-        ref={dialog}
-        className="dungeon-stats__dialog"
-        data-testid={dungeonStatsTestid.dialog}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-      >
-        <h2 className="dungeon-stats__dialog-title" id={titleId}>
-          {t("Run {seed}", { seed: record.seed })}
-        </h2>
-        <dl className="dungeon-stats__meta" data-testid={dungeonStatsTestid.detailMeta}>
-          <div className="dungeon-stats__meta-row">
-            <dt>{t("Seed")}</dt>
-            <dd>{record.seed}</dd>
-          </div>
-          <div className="dungeon-stats__meta-row">
-            <dt>{t("Mode")}</dt>
-            <dd>{t(MODE_WORDS[record.mode])}</dd>
-          </div>
-          <div className="dungeon-stats__meta-row">
-            <dt>{t("Date")}</dt>
-            <dd>{formatDateTime(new Date(record.endedAt), { dateStyle: "medium" })}</dd>
-          </div>
-          <div className="dungeon-stats__meta-row">
-            <dt>{t("Outcome")}</dt>
-            <dd>{record.won ? t("Won") : t("Lost")}</dd>
-          </div>
-          <div className="dungeon-stats__meta-row">
-            <dt>{t("Daily")}</dt>
-            <dd>{record.daily ? t("Daily run") : t("Not a daily run")}</dd>
-          </div>
-          <div className="dungeon-stats__meta-row">
-            <dt>{t("Row reached")}</dt>
-            <dd>{formatNumber(record.rowReached)}</dd>
-          </div>
-          <div className="dungeon-stats__meta-row">
-            <dt>{t("Curse points")}</dt>
-            <dd>{formatNumber(record.cursePoints)}</dd>
-          </div>
-          <div className="dungeon-stats__meta-row">
-            <dt>{t("Score")}</dt>
-            <dd>{formatNumber(record.score)}</dd>
-          </div>
-          <div className="dungeon-stats__meta-row">
-            <dt>{t("Embers")}</dt>
-            <dd>{formatNumber(record.embers)}</dd>
-          </div>
-          <div className="dungeon-stats__meta-row">
-            <dt>{t("Time")}</dt>
-            <dd data-testid={dungeonStatsTestid.detailTime}>{formatElapsed(record.timeMs)}</dd>
-          </div>
-        </dl>
-        <h3 className="dungeon-stats__subhead">{t("Curses")}</h3>
-        <div data-testid={dungeonStatsTestid.detailCurses}>
-          {record.curses.length === 0 ? (
-            <p className="dungeon-stats__empty">{t("No curses")}</p>
-          ) : (
-            <ul className="dungeon-stats__curses">
-              {record.curses.map((curse: string) => (
-                <li key={curse}>{t(curse)}</li>
-              ))}
-            </ul>
-          )}
+      <dl className="dungeon-stats__meta" data-testid={dungeonStatsTestid.detailMeta}>
+        <div className="dungeon-stats__meta-row">
+          <dt>{t("Seed")}</dt>
+          <dd>{record.seed}</dd>
         </div>
-        <h3 className="dungeon-stats__subhead">{t("Run stats")}</h3>
-        <dl className="dungeon-stats__table">
-          {STAT_FIELDS.map((field) => (
-            <div className="dungeon-stats__stat" key={field}>
-              <dt>{t(RUN_STAT_LABELS[field])}</dt>
-              <dd data-testid={dungeonStatsTestid.stat(field)}>{formatNumber(record.stats[field])}</dd>
-            </div>
-          ))}
-        </dl>
-        <div className="dungeon-stats__dialog-actions">
-          <button
-            ref={closeButton}
-            type="button"
-            className="button-primary"
-            data-testid={dungeonStatsTestid.dialogClose}
-            onClick={onClose}
-          >
-            {t("Close")}
-          </button>
+        <div className="dungeon-stats__meta-row">
+          <dt>{t("Mode")}</dt>
+          <dd>{t(MODE_WORDS[record.mode])}</dd>
         </div>
+        <div className="dungeon-stats__meta-row">
+          <dt>{t("Date")}</dt>
+          <dd>{formatDateTime(new Date(record.endedAt), { dateStyle: "medium" })}</dd>
+        </div>
+        <div className="dungeon-stats__meta-row">
+          <dt>{t("Outcome")}</dt>
+          <dd>{record.won ? t("Won") : t("Lost")}</dd>
+        </div>
+        <div className="dungeon-stats__meta-row">
+          <dt>{t("Daily")}</dt>
+          <dd>{record.daily ? t("Daily run") : t("Not a daily run")}</dd>
+        </div>
+        <div className="dungeon-stats__meta-row">
+          <dt>{t("Row reached")}</dt>
+          <dd>{formatNumber(record.rowReached)}</dd>
+        </div>
+        <div className="dungeon-stats__meta-row">
+          <dt>{t("Curse points")}</dt>
+          <dd>{formatNumber(record.cursePoints)}</dd>
+        </div>
+        <div className="dungeon-stats__meta-row">
+          <dt>{t("Score")}</dt>
+          <dd>{formatNumber(record.score)}</dd>
+        </div>
+        <div className="dungeon-stats__meta-row">
+          <dt>{t("Embers")}</dt>
+          <dd>{formatNumber(record.embers)}</dd>
+        </div>
+        <div className="dungeon-stats__meta-row">
+          <dt>{t("Time")}</dt>
+          <dd data-testid={dungeonStatsTestid.detailTime}>{formatElapsed(record.timeMs)}</dd>
+        </div>
+      </dl>
+      <h3 className="dungeon-stats__subhead">{t("Curses")}</h3>
+      <div data-testid={dungeonStatsTestid.detailCurses}>
+        {record.curses.length === 0 ? (
+          <p className="dungeon-stats__empty">{t("No curses")}</p>
+        ) : (
+          <ul className="dungeon-stats__curses">
+            {record.curses.map((curse: string) => (
+              <li key={curse}>{curseName(content, curse)}</li>
+            ))}
+          </ul>
+        )}
       </div>
-    </div>
+      <h3 className="dungeon-stats__subhead">{t("Run stats")}</h3>
+      <dl className="dungeon-stats__table">
+        {STAT_FIELDS.map((field) => (
+          <div className="dungeon-stats__stat" key={field}>
+            <dt>{t(RUN_STAT_LABELS[field])}</dt>
+            <dd data-testid={dungeonStatsTestid.stat(field)}>{formatNumber(record.stats[field])}</dd>
+          </div>
+        ))}
+      </dl>
+    </Dialog>
   );
 }
 
@@ -301,10 +280,9 @@ export function DungeonStats(): ReactElement {
 
   return (
     <div className="app-shell tavern one-screen" data-testid={dungeonStatsTestid.root}>
-      <BackLink to={paths.dungeon} />
+      <BackLink to={paths.dungeon} title={t("Dungeon run stats")} />
       <main className="one-screen__body">
         <div className="dungeon-stats">
-          <h1 className="dungeon-stats__title">{t("Dungeon leaderboards")}</h1>
           {history.length === 0 ? (
             <EmptyState
               text={t("No finished runs on this device yet.")}

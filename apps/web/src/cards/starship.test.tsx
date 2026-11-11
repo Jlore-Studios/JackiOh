@@ -3,24 +3,63 @@
 // pieces fused into it, each a reference that opens the piece's card. R2801000: a Dormant one bolts on
 // a hull plate for each piece fused into it. R3038000: Starship is a tag, and the real engine's view
 // lists a Starship's Flying and Ranged, Dormant or launched, which the board draws as any Unit's.
+// R3333000: its picture is built from its pieces oldest first, each its module on its hardpoint, in the
+// hull design of the name it launched under, a Dormant one in a shipyard. R3333002: its hull plates and
+// its pieces list show each piece's module icon. R3335000: a launched one wears its seat's Starship
+// cosmetics, a hull design, a livery, an engine trail and a piece skin. R3334000: a Dormant one with pieces
+// idles in its shipyard, in one of the moving-art slots.
 
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import { STARSHIP_NAMES } from "@jackioh/engine/config";
 import type { Action, ActionBody, CardDef, PlayerId, PlayerView, UnitView } from "@jackioh/shared";
 
 import { devDeck, realPort } from "../audio/test/realGame.ts";
 import { CardArt } from "./art/CardArt.tsx";
-import { starshipSvg } from "./art/stinkyscape.ts";
-import { starshipArtUri } from "./art/svg.ts";
+import {
+  LAUNCHED_DESIGNS,
+  liveryPaint,
+  STARSHIP_CLASSES,
+  STARSHIP_DESIGN_NAMES,
+  STARSHIP_DESIGNS,
+  STARSHIP_MODULES_MAX,
+  starshipArtKey,
+  starshipArtOf,
+  starshipClassOf,
+  starshipDesignOf,
+  type StarshipArt,
+} from "./art/starshipHulls.ts";
+import { HULL_DESIGNS, LIVERIES, PIECE_SKINS, STARSHIP_LOOK_STANDARD, TRAILS, type StarshipLook } from "./art/starshipLooks.ts";
+import { fmt } from "./art/hash.ts";
+import { moduleMarkup, modulePaint, STARSHIP_MODULE_IDS, starshipModuleOf } from "./art/starshipModules.ts";
+import { shipyardIdleOf, STARSHIP_ART_MAX_BYTES, starshipSvg } from "./art/stinkyscape.ts";
+import { starshipArtUri, starshipModuleIconUri } from "./art/svg.ts";
 import { CardFace } from "./CardFace.tsx";
 import { faceModel } from "./model.ts";
 import { CardDefsProvider } from "./refContext.tsx";
+import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { STARSHIP_PIECES_TESTID } from "./StarshipPieces.tsx";
 import { STARSHIP_HULL_PLATES_MAX } from "./StarshipHull.tsx";
-import { renderBoard } from "../test/board.tsx";
+import { renderBoard, withCatalog } from "../test/board.tsx";
+import Board from "../game/Board.tsx";
+import { AccountCosmeticsOwned, DEFAULT_CARD_COSMETICS, cosmeticsOf, resetCosmeticsForTests, writeCosmetics } from "./cosmetics.ts";
+import type { SeatLoadouts } from "./loadouts.ts";
+import {
+  COSMETIC_FOIL_ANIMATED_MAX,
+  RADIANT_GOLD_HUE_MAX_DEG,
+  RADIANT_GOLD_HUE_MIN_DEG,
+  RADIANT_GOLD_LIGHTNESS_MAX,
+  RADIANT_GOLD_LIGHTNESS_MIN,
+  RADIANT_GOLD_SATURATION_MIN,
+  SHIPYARD_IDLE_SPARKS,
+  SHIPYARD_IDLE_SWEEP_MS,
+  SHIPYARD_IDLE_WELD_MS,
+} from "./constants.ts";
+import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, dormantStarship, emptySide, unit } from "../test/fixtures.ts";
+import { setReducedMotion } from "../test/setup.ts";
 
 afterEach(cleanup);
 
@@ -28,6 +67,8 @@ const HULL = "stinkyscape-t-dormant-starship";
 const SHIELD = "stinkyscape-038";
 const CAPSULE = "stinkyscape-043";
 const AP_ROUNDS = "stinkyscape-100";
+const BEAM = "stinkyscape-058";
+const DRILL = "stinkyscape-066";
 const NETHER = "core-088";
 
 function def(id: string): CardDef {
@@ -36,9 +77,18 @@ function def(id: string): CardDef {
   return found;
 }
 
-function art(defId: string, starship: { pieces: number; launched: boolean } | null): HTMLElement {
+type Piece = { defId: string; radiant: boolean };
+
+/** `ids` as a Starship's pieces, oldest first, on their base faces. */
+function pieces(ids: readonly string[]): Piece[] {
+  return ids.map((defId) => ({ defId, radiant: false }));
+}
+
+function art(defId: string, starship: { launched: boolean; list: readonly Piece[] } | null, name?: string): HTMLElement {
   const card = def(defId);
-  const { container } = render(<CardArt defId={defId} radiant={false} tags={card.tags} type={card.type} shape="oval" starship={starship} />);
+  const { container } = render(
+    <CardArt defId={defId} radiant={false} tags={card.tags} type={card.type} shape="oval" name={name} starship={starship} />,
+  );
   const found = container.querySelector<HTMLElement>(".cf-art");
   if (found === null) throw new Error("no art");
   return found;
@@ -46,23 +96,26 @@ function art(defId: string, starship: { pieces: number; launched: boolean } | nu
 
 describe("R2249000: a Starship's face", () => {
   it("R2249000 a Starship wears its own art, the same whatever definition its fusions gave it", () => {
-    const hull = art(HULL, { pieces: 3, launched: false });
+    const list = pieces([HULL, SHIELD, CAPSULE]);
+    const hull = art(HULL, { launched: false, list });
     expect(hull.getAttribute("data-art-family")).toBe("starship");
     const hullArt = hull.style.backgroundImage;
     cleanup();
     // Fused, its definition is not the hull's; its art stays the Starship's.
-    const fused = art("core-008", { pieces: 3, launched: false });
+    const fused = art("core-008", { launched: false, list }, def("core-008").name);
     expect(fused.getAttribute("data-art-family")).toBe("starship");
     expect(fused.style.backgroundImage).toBe(hullArt);
-    expect(hullArt).toContain(starshipArtUri(3, false, false));
+    expect(hullArt).toContain(starshipArtUri(starshipArtOf(list, false, undefined, false)));
   });
 
   it("R2249000 the art grows with its pieces and lights up once it launches", () => {
-    const dormant = starshipSvg(2, false, false);
-    expect(starshipSvg(5, false, false)).not.toBe(dormant);
-    expect(starshipSvg(2, true, false)).not.toBe(dormant);
-    expect(starshipSvg(2, false, true)).not.toBe(dormant);
-    expect(starshipSvg(2, false, false)).toBe(dormant);
+    const ship = (n: number, launched: boolean, radiant: boolean): string =>
+      starshipSvg(starshipArtOf(pieces([SHIELD, CAPSULE, AP_ROUNDS, BEAM, DRILL].slice(0, n)), launched, launched ? "Ember of Departure" : undefined, radiant));
+    const dormant = ship(2, false, false);
+    expect(ship(5, false, false)).not.toBe(dormant);
+    expect(ship(2, true, false)).not.toBe(dormant);
+    expect(ship(2, false, true)).not.toBe(dormant);
+    expect(ship(2, false, false)).toBe(dormant);
   });
 
   it("R2249000 a card that is no Starship keeps its own art", () => {
@@ -155,6 +208,556 @@ function marksOn(view: PlayerView, id: string): string[] {
   cleanup();
   return kinds;
 }
+
+/** Every piece definition's id, in the module table's order. */
+const PIECE_IDS = Object.keys(STARSHIP_MODULE_IDS);
+
+/** A Dormant or a launched Starship's picture for `list`, its name The Ninth Life once launched. */
+function shipSvg(list: readonly Piece[], launched: boolean, name = "The Ninth Life", radiant = false): string {
+  return starshipSvg(starshipArtOf(list, launched, launched ? name : undefined, radiant));
+}
+
+/** R2725004's gold window (cosmetics.test.tsx): whether `hex` is Radiant's gold. */
+function inRadiantGold(hex: string): boolean {
+  const digits = hex.length <= 4 ? [...hex].map((digit) => digit + digit).join("") : hex;
+  const [r, g, b] = [0, 2, 4].map((at) => parseInt(digits.slice(at, at + 2), 16) / 255) as [number, number, number];
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  if (d === 0) return false;
+  const sat = d / (1 - Math.abs(2 * l - 1));
+  const sector = max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  const h = sector * 60;
+  return (
+    h >= RADIANT_GOLD_HUE_MIN_DEG && h <= RADIANT_GOLD_HUE_MAX_DEG && sat >= RADIANT_GOLD_SATURATION_MIN && l >= RADIANT_GOLD_LIGHTNESS_MIN && l <= RADIANT_GOLD_LIGHTNESS_MAX
+  );
+}
+
+function golds(svg: string): string[] {
+  return [...svg.matchAll(/#([0-9a-fA-F]{3,8})\b/g)].map((match) => match[1] ?? "").filter(inRadiantGold);
+}
+
+describe("R3333000: a Starship's picture is built from what it holds", () => {
+  it("R3333000 the picture differs for any two different piece lists", () => {
+    const lists: Piece[][] = [[]];
+    for (const id of PIECE_IDS) lists.push(pieces([id]));
+    const ten = PIECE_IDS.filter((_, k) => k % 5 === 0);
+    for (const a of ten) for (const b of ten) lists.push(pieces([a, b]));
+    for (let n = 3; n <= STARSHIP_MODULES_MAX; n += 1) lists.push(pieces(PIECE_IDS.slice(0, n)));
+    // A Radiant piece is drawn gilded on a base hull.
+    lists.push([{ defId: BEAM, radiant: true }], [{ defId: SHIELD, radiant: false }, { defId: BEAM, radiant: true }]);
+    const keys = new Set(lists.map((list) => list.map((piece) => `${piece.defId}${piece.radiant ? "*" : ""}`).join(",")));
+    expect(keys.size).toBe(lists.length);
+    for (const launched of [false, true]) {
+      const drawn = new Set(lists.map((list) => shipSvg(list, launched)));
+      expect(drawn.size, launched ? "launched" : "Dormant").toBe(lists.length);
+    }
+    // The memo key holds what the picture is drawn from, so two lists never share a cached picture.
+    expect(new Set(lists.map((list) => starshipArtKey(starshipArtOf(list, false, undefined, false)))).size).toBe(lists.length);
+    // Each piece's module, in its own paint, is on the hull, oldest first.
+    const list = pieces([BEAM, DRILL, SHIELD, CAPSULE]);
+    const svg = shipSvg(list, true);
+    const at = list.map((piece) => {
+      const m = starshipModuleOf(piece.defId);
+      return svg.indexOf(moduleMarkup(m, modulePaint(m)));
+    });
+    for (const found of at) expect(found).toBeGreaterThan(0);
+    expect([...at].sort((x, y) => x - y)).toEqual(at);
+    // Past the most it mounts, the oldest pieces' modules are the ones drawn.
+    const many = pieces(PIECE_IDS.slice(0, STARSHIP_MODULES_MAX + 4));
+    const last = starshipModuleOf(PIECE_IDS[STARSHIP_MODULES_MAX + 3] ?? "");
+    expect(shipSvg(many, true)).not.toContain(moduleMarkup(last, modulePaint(last)));
+  });
+
+  it("R3333000 each of the seven names wears its own design, and the shipyard differs from every launched one", () => {
+    expect(Object.keys(STARSHIP_DESIGN_NAMES).sort()).toEqual(STARSHIP_NAMES.map(([name]) => name).sort());
+    expect(new Set(Object.values(STARSHIP_DESIGN_NAMES)).size).toBe(STARSHIP_NAMES.length);
+    const list = pieces([BEAM, DRILL, SHIELD, CAPSULE, AP_ROUNDS]);
+    const dormant = shipSvg(list, false);
+    const launched = STARSHIP_NAMES.map(([name]) => shipSvg(list, true, name));
+    expect(new Set([dormant, ...launched]).size).toBe(STARSHIP_NAMES.length + 1);
+    // Each design its own prow, windows, livery and emblem; the shipyard's hull is bare and bears none.
+    for (const field of ["prow", "windows", "emblem"] as const) {
+      expect(new Set(LAUNCHED_DESIGNS.map((id) => STARSHIP_DESIGNS[id][field])).size, field).toBe(LAUNCHED_DESIGNS.length);
+    }
+    expect(new Set(LAUNCHED_DESIGNS.map((id) => JSON.stringify(STARSHIP_DESIGNS[id].livery))).size).toBe(LAUNCHED_DESIGNS.length);
+    expect(STARSHIP_DESIGNS.shipyard.emblem).toBeNull();
+    for (const [name] of STARSHIP_NAMES) {
+      expect(starshipDesignOf(false, name), name).toBe("shipyard");
+      expect(starshipDesignOf(true, name), name).toBe(STARSHIP_DESIGN_NAMES[name]);
+    }
+    // A name no design has still wears one of the seven, the same each time.
+    const odd = starshipDesignOf(true, "The Unlisted Barge");
+    expect(LAUNCHED_DESIGNS).toContain(odd);
+    expect(starshipDesignOf(true, "The Unlisted Barge")).toBe(odd);
+    // The base face wears no gold; the Radiant face gilds it (R2725004).
+    for (const svg of [dormant, ...launched]) expect(golds(svg)).toEqual([]);
+    expect(golds(shipSvg(list, true, "The Lantern Ferry", true)).length).toBeGreaterThan(0);
+  });
+
+  it("R3333000 the silhouette grows with its count, from a frigate to a dreadnought", () => {
+    const counts = [1, 2, 3, 4, 5, 7, 8, 12];
+    expect(counts.map((n) => starshipClassOf(n).id)).toEqual(["frigate", "frigate", "destroyer", "destroyer", "cruiser", "cruiser", "dreadnought", "dreadnought"]);
+    for (let k = 1; k < STARSHIP_CLASSES.length; k += 1) {
+      const [smaller, bigger] = [STARSHIP_CLASSES[k - 1], STARSHIP_CLASSES[k]];
+      expect(bigger?.length).toBeGreaterThan(smaller?.length ?? 0);
+      expect(bigger?.height).toBeGreaterThan(smaller?.height ?? 0);
+      // Drawn in its window, each class still stands longer than the last.
+      expect((bigger?.length ?? 0) * (bigger?.zoom ?? 0)).toBeGreaterThan((smaller?.length ?? 0) * (smaller?.zoom ?? 0));
+    }
+    // The same eight pieces' first n, as each class: four hulls, each its own picture.
+    const shown = new Set(counts.map((n) => shipSvg(pieces(PIECE_IDS.slice(0, n)), true)));
+    expect(shown.size).toBe(counts.length);
+  });
+
+  it("R3333000 a design and a livery are the painter's inputs", () => {
+    const ship: StarshipArt = starshipArtOf(pieces([BEAM, SHIELD]), true, "The Silent Choir", false);
+    expect(ship).toMatchObject({ design: "silent-choir", livery: null, launched: true });
+    const base = starshipSvg(ship);
+    // Another design, however it is named (#3330's cosmetic track hands one over).
+    expect(starshipSvg({ ...ship, design: "jlockeed-skylark" })).toBe(shipSvg(ship.pieces, true, "The Jlockeed Skylark"));
+    // A livery of its own repaints it; the design's own livery is the picture's when none is given.
+    const livery = { hull: "#2a6a5a", trim: "#e0f0ea", stripe: "#d03a6a", window: "#bfe4ff", glow: "#6affd0" };
+    const repainted = starshipSvg({ ...ship, livery });
+    expect(repainted).not.toBe(base);
+    expect(repainted).toContain(livery.stripe);
+    expect(starshipSvg({ ...ship, livery: STARSHIP_DESIGNS["silent-choir"].livery })).toBe(base);
+    expect(starshipArtKey({ ...ship, livery })).not.toBe(starshipArtKey(ship));
+    expect(starshipArtUri({ ...ship, livery })).not.toBe(starshipArtUri(ship));
+  });
+
+  it("R3333000 the biggest picture stays under STARSHIP_ART_MAX_BYTES", () => {
+    const biggest = [...PIECE_IDS]
+      .sort((a, b) => moduleMarkup(starshipModuleOf(b), modulePaint(starshipModuleOf(b))).length - moduleMarkup(starshipModuleOf(a), modulePaint(starshipModuleOf(a))).length)
+      .slice(0, STARSHIP_MODULES_MAX)
+      .map((defId) => ({ defId, radiant: true }));
+    for (const launched of [false, true]) {
+      for (const name of STARSHIP_NAMES.map(([each]) => each)) {
+        for (const radiant of [false, true]) {
+          const svg = shipSvg(biggest, launched, name, radiant);
+          expect(svg.length, `${name} ${String(launched)} ${String(radiant)}`).toBeLessThanOrEqual(STARSHIP_ART_MAX_BYTES);
+        }
+      }
+    }
+  });
+
+  it("R3333000 CardArt draws a launched Starship in its name's design and a Dormant one in the shipyard", () => {
+    const list = pieces([BEAM, SHIELD, CAPSULE]);
+    const launched = art(HULL, { launched: true, list }, "The Lantern Ferry");
+    expect(launched.getAttribute("data-art-design")).toBe("lantern-ferry");
+    expect(launched.style.backgroundImage).toContain(starshipArtUri(starshipArtOf(list, true, "The Lantern Ferry", false)));
+    cleanup();
+    expect(art(HULL, { launched: false, list }).getAttribute("data-art-design")).toBe("shipyard");
+    cleanup();
+    expect(art(SHIELD, null).getAttribute("data-art-design")).toBeNull();
+    cleanup();
+    // On the board, the face's name is the one it launched under, and its art wears that name's design.
+    const board = (ship: UnitView): HTMLElement | null =>
+      renderBoard(baseView({ you: emptySide("p1", { units: [null, ship, null, null, null] }) })).querySelector<HTMLElement>('[data-testid="card-ship"] .cf-art');
+    const flown = board(unit("p1", { instanceId: "ship", defId: HULL, starship: { pieces: [{ defId: BEAM }, { defId: DRILL }], name: "Frontier's Promise", launched: 1 } }));
+    expect(flown?.getAttribute("data-art-design")).toBe("frontiers-promise");
+    cleanup();
+    const docked = board(dormantStarship("p1", [BEAM, DRILL], { instanceId: "ship" }));
+    expect(docked?.getAttribute("data-art-design")).toBe("shipyard");
+  });
+});
+
+/** The four kinds of Starship cosmetic, each its record of looks by id. */
+const STARSHIP_LOOK_RECORDS = { starshipHull: HULL_DESIGNS, starshipLivery: LIVERIES, starshipTrail: TRAILS, starshipPieceSkin: PIECE_SKINS } as const;
+/** Each kind's ids' prefix. */
+const STARSHIP_LOOK_PREFIXES: Readonly<Record<keyof StarshipLook, string>> = {
+  starshipHull: "starship-hull-",
+  starshipLivery: "starship-livery-",
+  starshipTrail: "starship-trail-",
+  starshipPieceSkin: "starship-piece-skin-",
+};
+const LOOK_KINDS = Object.keys(STARSHIP_LOOK_RECORDS) as (keyof StarshipLook)[];
+
+/** Looks that between them pick every cosmetic of every kind, the k-th each kind's k-th id (wrapping). */
+function everyLook(): StarshipLook[] {
+  const ids = LOOK_KINDS.map((kind) => Object.keys(STARSHIP_LOOK_RECORDS[kind]));
+  const most = Math.max(...ids.map((list) => list.length));
+  return Array.from({ length: most }, (_, k) => {
+    const pick = (at: number): string => ids[at]?.[k % (ids[at]?.length ?? 1)] ?? "";
+    return { starshipHull: pick(0), starshipLivery: pick(1), starshipTrail: pick(2), starshipPieceSkin: pick(3) };
+  });
+}
+
+/** The 16 pieces whose modules draw the most, all Radiant: R3333000's biggest picture. */
+function biggestPieces(): Piece[] {
+  const weight = (defId: string): number => moduleMarkup(starshipModuleOf(defId), modulePaint(starshipModuleOf(defId))).length;
+  return [...PIECE_IDS]
+    .sort((a, b) => weight(b) - weight(a))
+    .slice(0, STARSHIP_MODULES_MAX)
+    .map((defId) => ({ defId, radiant: true }));
+}
+
+describe("R3335000: a launched Starship wears its seat's Starship cosmetics", () => {
+  const list = pieces([BEAM, DRILL, SHIELD, CAPSULE, AP_ROUNDS]);
+  const named = "The Ninth Life";
+
+  it("R3335000 a launched Starship wears its seat's hull, livery, trail and piece skin", () => {
+    const look: StarshipLook = {
+      starshipHull: "starship-hull-corsair",
+      starshipLivery: "starship-livery-arctic",
+      starshipTrail: "starship-trail-ion",
+      starshipPieceSkin: "starship-piece-skin-verdigris",
+    };
+    const found = <T,>(value: T | null | undefined): T => {
+      if (value === null || value === undefined) throw new Error("no such cosmetic");
+      return value;
+    };
+    const livery = found(LIVERIES[look.starshipLivery]);
+    const trail = found(TRAILS[look.starshipTrail]);
+    const skin = found(PIECE_SKINS[look.starshipPieceSkin]);
+    const ship = starshipArtOf(list, true, named, false, look);
+    // The hull pick's design in place of its name's, and its livery, trail and skin.
+    expect(ship).toEqual({ pieces: list, launched: true, design: "corsair", livery, trail, skin, radiant: false });
+    // The standard picks keep what it draws without a look: its name's design in its own livery, no trail, no skin.
+    const standard = starshipArtOf(list, true, named, false, STARSHIP_LOOK_STANDARD);
+    expect(standard).toMatchObject({ design: "ninth-life", livery: null, trail: null, skin: null });
+    expect(starshipSvg(standard)).toBe(shipSvg(list, true, named));
+    expect(starshipArtKey(standard)).toBe(starshipArtKey(starshipArtOf(list, true, named, false)));
+    // An id no cosmetic has reads as its kind's standard.
+    const unknown = { starshipHull: "starship-hull-gone", starshipLivery: "constructor", starshipTrail: "", starshipPieceSkin: "toString" };
+    expect(starshipSvg(starshipArtOf(list, true, named, false, unknown))).toBe(starshipSvg(standard));
+    // The look is drawn, and each pick alone changes the picture and its memo key.
+    const svg = starshipSvg(ship);
+    expect(svg).not.toBe(starshipSvg(standard));
+    expect(starshipSvg({ ...ship, trail: null, skin: null })).toBe(starshipSvg({ ...standard, design: "corsair", livery }));
+    for (const kind of LOOK_KINDS) {
+      const one = starshipArtOf(list, true, named, false, { ...STARSHIP_LOOK_STANDARD, [kind]: look[kind] });
+      expect(starshipSvg(one), kind).not.toBe(starshipSvg(standard));
+      expect(starshipArtKey(one), kind).not.toBe(starshipArtKey(standard));
+      expect(starshipArtUri(one), kind).not.toBe(starshipArtUri(standard));
+    }
+    expect(svg).toContain(livery.stripe);
+    for (const color of [trail.burn, trail.core, trail.streak]) expect(svg).toContain(color);
+    // Each piece's module in its skin's tones over its own paint.
+    for (const piece of list) {
+      const m = starshipModuleOf(piece.defId);
+      expect(svg, piece.defId).toContain(moduleMarkup(m, { ...modulePaint(m), ...skin }));
+      expect(svg, piece.defId).not.toContain(moduleMarkup(m, modulePaint(m)));
+    }
+    // Every hull pick's design is the one drawn.
+    for (const [id, design] of Object.entries(HULL_DESIGNS)) {
+      if (design === null) continue;
+      const worn = starshipArtOf(list, true, named, false, { ...STARSHIP_LOOK_STANDARD, starshipHull: id });
+      expect(worn.design, id).toBe(design);
+      expect(starshipSvg(worn), id).toBe(starshipSvg({ ...starshipArtOf(list, true, named, false), design }));
+    }
+  });
+
+  it("R3335000 on the board a launched Starship wears its seat's picks, the viewer's own the account's it owns", () => {
+    const look: StarshipLook = {
+      starshipHull: "starship-hull-corsair",
+      starshipLivery: "starship-livery-arctic",
+      starshipTrail: "starship-trail-ion",
+      starshipPieceSkin: "starship-piece-skin-verdigris",
+    };
+    const hold = [{ defId: BEAM }, { defId: DRILL }];
+    const ships = (theirs: UnitView, mine: UnitView): PlayerView =>
+      baseView({
+        you: emptySide("p1", { units: [null, mine, null, null, null] }),
+        opponent: emptySide("p2", { hand: { count: 4 }, units: [null, null, theirs, null, null] }),
+      });
+    const view = ships(
+      unit("p2", { instanceId: "theirs", defId: HULL, starship: { pieces: hold, name: "The Lantern Ferry", launched: 1 } }),
+      unit("p1", { instanceId: "mine", defId: HULL, starship: { pieces: hold, name: "Frontier's Promise", launched: 1 } }),
+    );
+    const loadouts: SeatLoadouts = {
+      p1: { seat: { ...DEFAULT_CARD_COSMETICS }, cards: {} },
+      p2: { seat: { ...DEFAULT_CARD_COSMETICS, ...look }, cards: {} },
+    };
+    const artOf = (root: HTMLElement, id: string): HTMLElement | null => root.querySelector<HTMLElement>(`[data-testid="card-${id}"] .cf-art`);
+    const flown = hold.map((piece) => ({ ...piece, radiant: false }));
+    try {
+      // The opponent's wears its seat's frozen look; the viewer's own, with no picks, its name's design.
+      writeCosmetics({ starshipHull: "starship-hull-scout" });
+      let board = renderBoard(view, { wearCosmetics: true, loadouts });
+      const theirs = artOf(board, "theirs");
+      expect(theirs?.getAttribute("data-art-design")).toBe("corsair");
+      expect(theirs?.style.backgroundImage).toContain(starshipArtUri(starshipArtOf(flown, true, "The Lantern Ferry", false, look)));
+      // The viewer's own wears the account's pick, every cosmetic owned with no ledger above it.
+      expect(artOf(board, "mine")?.getAttribute("data-art-design")).toBe("scout");
+      cleanup();
+      // A pick the account does not own is worn as its kind's standard; the seat's frozen one still stands.
+      board = render(
+        withCatalog(
+          <AccountCosmeticsOwned owned={new Set()}>
+            <Board view={view} wearCosmetics loadouts={loadouts} />
+          </AccountCosmeticsOwned>,
+        ),
+      ).container;
+      expect(artOf(board, "mine")?.getAttribute("data-art-design")).toBe("frontiers-promise");
+      expect(artOf(board, "theirs")?.getAttribute("data-art-design")).toBe("corsair");
+      cleanup();
+      // With no loadout (practice, hotseat) the opponent's draws the standard look.
+      board = renderBoard(view, { wearCosmetics: true });
+      expect(artOf(board, "theirs")?.getAttribute("data-art-design")).toBe("lantern-ferry");
+      // Out of a game (no wearer), every face draws the standard, whatever the account picked.
+      cleanup();
+      expect(artOf(renderBoard(view), "mine")?.getAttribute("data-art-design")).toBe("frontiers-promise");
+    } finally {
+      resetCosmeticsForTests();
+      localStorage.clear();
+    }
+  });
+
+  it("R3335000 a Dormant one keeps the shipyard", () => {
+    for (const radiant of [false, true]) {
+      const plain = starshipArtOf(list, false, undefined, radiant);
+      expect(plain).toEqual({ pieces: list, launched: false, design: "shipyard", livery: null, radiant });
+      for (const look of everyLook()) {
+        for (const name of [undefined, named]) {
+          const docked = starshipArtOf(list, false, name, radiant, look);
+          expect(docked, JSON.stringify(look)).toEqual(plain);
+          expect(starshipSvg(docked)).toBe(starshipSvg(plain));
+          expect(starshipArtKey(docked)).toBe(starshipArtKey(plain));
+        }
+      }
+    }
+  });
+
+  it("R3335000 every Starship cosmetic has a look", () => {
+    for (const kind of LOOK_KINDS) {
+      const record: Readonly<Record<string, unknown>> = STARSHIP_LOOK_RECORDS[kind];
+      const standard = STARSHIP_LOOK_STANDARD[kind];
+      expect(standard, kind).toBe(`${STARSHIP_LOOK_PREFIXES[kind]}standard`);
+      expect(record[standard], kind).toBeNull();
+      const ids = Object.keys(record);
+      expect(ids.length, kind).toBeGreaterThan(1);
+      for (const id of ids) {
+        expect(id.startsWith(STARSHIP_LOOK_PREFIXES[kind]), id).toBe(true);
+        if (id !== standard) expect(record[id], id).not.toBeNull();
+      }
+      // Each look its own.
+      const looks = Object.values(record).map((value) => JSON.stringify(value));
+      expect(new Set(looks).size, kind).toBe(looks.length);
+    }
+    const every = LOOK_KINDS.flatMap((kind) => Object.keys(STARSHIP_LOOK_RECORDS[kind]));
+    expect(new Set(every).size).toBe(every.length);
+    // Every registry entry of the four kinds has its look, and every look is a registry entry of its kind.
+    for (const kind of LOOK_KINDS) {
+      expect(cosmeticsOf(kind).map((cosmetic) => cosmetic.id).sort(), kind).toEqual(Object.keys(STARSHIP_LOOK_RECORDS[kind]).sort());
+      expect(DEFAULT_CARD_COSMETICS[kind], kind).toBe(STARSHIP_LOOK_STANDARD[kind]);
+    }
+    // Each hull pick a design of its own, none the shipyard's nor a name's, and every design a name's, the
+    // shipyard's or a pick's.
+    const picked = Object.values(HULL_DESIGNS).flatMap((design) => (design === null ? [] : [design]));
+    for (const design of picked) {
+      expect(STARSHIP_DESIGNS[design].id, design).toBe(design);
+      expect([...LAUNCHED_DESIGNS, "shipyard"], design).not.toContain(design);
+    }
+    expect(new Set(picked).size).toBe(picked.length);
+    expect(new Set([...LAUNCHED_DESIGNS, "shipyard", ...picked])).toEqual(new Set(Object.keys(STARSHIP_DESIGNS)));
+    // The names still wear the seven, so a name's design is the one it wore (R3333000).
+    expect(LAUNCHED_DESIGNS).toHaveLength(STARSHIP_NAMES.length);
+    // Each design its own pair of prow and windows and its own livery.
+    const designs = Object.values(STARSHIP_DESIGNS);
+    expect(new Set(designs.map((design) => `${design.prow}|${design.windows}`)).size).toBe(designs.length);
+    expect(new Set(designs.map((design) => JSON.stringify(design.livery))).size).toBe(designs.length);
+  });
+
+  it("R3335000 the Stinkyscape hull draws the largest picture, within STARSHIP_ART_MAX_BYTES", () => {
+    const biggest = biggestPieces();
+    // Its bow and galleries are its own.
+    const others = Object.values(STARSHIP_DESIGNS).filter((design) => design.id !== "stinkyscape");
+    expect(others.map((design) => design.prow)).not.toContain(STARSHIP_DESIGNS.stinkyscape.prow);
+    expect(others.map((design) => design.windows)).not.toContain(STARSHIP_DESIGNS.stinkyscape.windows);
+    for (const radiant of [false, true]) {
+      const flagship = (more: Partial<StarshipArt> = {}): string => starshipSvg({ ...starshipArtOf(biggest, true, named, radiant), design: "stinkyscape", ...more });
+      const largest = flagship().length;
+      for (const design of others) {
+        expect(starshipSvg({ ...starshipArtOf(biggest, true, named, radiant), design: design.id }).length, design.id).toBeLessThan(largest);
+      }
+      expect(shipSvg(biggest, false, named, radiant).length).toBeLessThan(largest);
+      // In every livery, trail and skin.
+      for (const livery of Object.values(LIVERIES)) {
+        for (const trail of Object.values(TRAILS)) {
+          for (const skin of Object.values(PIECE_SKINS)) {
+            const svg = flagship({ livery, trail, skin });
+            expect(svg.length, `${String(radiant)} ${JSON.stringify([livery, trail, skin])}`).toBeLessThanOrEqual(STARSHIP_ART_MAX_BYTES);
+          }
+        }
+      }
+    }
+  });
+
+  it("R3335000 no Starship cosmetic is in Radiant's gold, and a Radiant face gilds them", () => {
+    // Every color a cosmetic names, and the tones a livery's plating mixes from its hull (R2725004).
+    const liveries = [...Object.values(LIVERIES), ...Object.values(STARSHIP_DESIGNS).map((design) => design.livery)];
+    for (const livery of liveries) {
+      if (livery === null) continue;
+      const paint = liveryPaint(livery);
+      expect(golds([paint.light, paint.hull, paint.dark, paint.accent, paint.glow, paint.trim, paint.window].join(" ")), JSON.stringify(livery)).toEqual([]);
+    }
+    for (const trail of Object.values(TRAILS)) if (trail !== null) expect(golds(Object.values(trail).join(" ")), JSON.stringify(trail)).toEqual([]);
+    for (const skin of Object.values(PIECE_SKINS)) if (skin !== null) expect(golds(Object.values(skin).join(" ")), JSON.stringify(skin)).toEqual([]);
+    // Drawn on a base face, every design and every look wears none; on a Radiant face it is gilded.
+    for (const design of Object.keys(STARSHIP_DESIGNS) as StarshipArt["design"][]) {
+      expect(golds(starshipSvg({ ...starshipArtOf(list, true, named, false), design })), design).toEqual([]);
+    }
+    for (const look of everyLook()) {
+      expect(golds(starshipSvg(starshipArtOf(list, true, named, false, look))), JSON.stringify(look)).toEqual([]);
+      expect(golds(starshipSvg(starshipArtOf(list, true, named, true, look))).length, JSON.stringify(look)).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("R3333002: a Starship's pieces as their module icons", () => {
+  it("R3333002 a Dormant hull's plates are its pieces' module icons at 1, 4 and 8; a launched one wears none", () => {
+    const ids = [BEAM, DRILL, SHIELD, CAPSULE, AP_ROUNDS, "stinkyscape-090", "stinkyscape-140", "stinkyscape-134"];
+    for (const n of [1, 4, 8]) {
+      const list = ids.slice(0, n);
+      for (const launched of [false, true]) {
+        const ship = launched
+          ? unit("p1", { instanceId: "ship", defId: HULL, starship: { pieces: list.map((defId, k) => (k === 0 ? { defId, radiant: true } : { defId })), name: "The Silent Choir", launched: 1 } })
+          : dormantStarship("p1", list, { instanceId: "ship", starship: { pieces: list.map((defId, k) => (k === 0 ? { defId, radiant: true } : { defId })) } });
+        const container = renderBoard(baseView({ you: emptySide("p1", { units: [null, null, ship, null, null] }) }));
+        // In the order they fused (`data-plate`), port and starboard in turn.
+        const plates = [...container.querySelectorAll<HTMLElement>('[data-testid="card-ship"] .cf-starship-plate')].sort(
+          (a, b) => Number(a.getAttribute("data-plate")) - Number(b.getAttribute("data-plate")),
+        );
+        if (launched) {
+          expect(plates, `launched ${String(n)}`).toHaveLength(0);
+        } else {
+          expect(plates.map((plate) => plate.getAttribute("data-module"))).toEqual(list.map((defId) => starshipModuleOf(defId).kind));
+          plates.forEach((plate, k) => {
+            expect(plate.style.backgroundImage, `${String(n)} ${String(k)}`).toContain(starshipModuleIconUri(list[k] ?? "", k === 0));
+          });
+        }
+        cleanup();
+      }
+    }
+    // Each piece's icon is its own, and a Radiant piece's is gilded.
+    const icons = PIECE_IDS.map((id) => starshipModuleIconUri(id, false));
+    expect(new Set(icons).size).toBe(PIECE_IDS.length);
+    expect(starshipModuleIconUri(BEAM, true)).not.toBe(starshipModuleIconUri(BEAM, false));
+  });
+
+  it("R3333002 the pieces list shows each piece's icon beside its name at 1, 4 and 8, Dormant and launched", () => {
+    const ids = [BEAM, DRILL, SHIELD, CAPSULE, AP_ROUNDS, "stinkyscape-090", "stinkyscape-140", "stinkyscape-134"];
+    for (const n of [1, 4, 8]) {
+      for (const launched of [false, true]) {
+        const list = ids.slice(0, n).map((defId, k) => ({ defId, radiant: k === 1 }));
+        const face = faceModel({
+          defId: HULL,
+          def: def(HULL),
+          radiant: false,
+          inPlay: { starship: { pieces: list.length, name: launched ? "The Ninth Life" : null, list } },
+        });
+        render(
+          <CardDefsProvider defs={CATALOG}>
+            <CardFace face={face} layout="full" />
+          </CardDefsProvider>,
+        );
+        const shown = screen.getByTestId(STARSHIP_PIECES_TESTID);
+        const rows = [...shown.querySelectorAll<HTMLElement>("[data-piece]")];
+        expect(rows.map((row) => row.getAttribute("data-piece"))).toEqual(list.map((piece) => piece.defId));
+        rows.forEach((row, k) => {
+          const piece = list[k];
+          const icon = row.querySelector<HTMLElement>(".cf-starship-icon");
+          expect(icon?.getAttribute("data-module")).toBe(starshipModuleOf(piece?.defId ?? "").kind);
+          expect(icon?.getAttribute("aria-hidden")).toBe("true");
+          expect(icon?.style.backgroundImage).toContain(starshipModuleIconUri(piece?.defId ?? "", piece?.radiant ?? false));
+          // Beside its name, which it comes before.
+          expect(row.textContent).toBe(def(piece?.defId ?? "").name);
+        });
+        cleanup();
+      }
+    }
+  });
+});
+
+describe("R3334000: a Dormant Starship's shipyard idles", () => {
+  beforeEach(() => {
+    resetCosmeticsForTests();
+  });
+
+  afterEach(() => {
+    cleanup();
+    resetCosmeticsForTests();
+    localStorage.clear();
+    writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
+    __resetSettingsForTests();
+    setReducedMotion(false);
+  });
+
+  /** A side's unit zones, as the fixtures lay them out. */
+  const LANES = emptySide("p1").units.length;
+
+  /** The board's shipyard idles, with p1's units and p2's. */
+  function idlesOn(mine: readonly (UnitView | null)[], theirs: readonly (UnitView | null)[] = []): SVGSVGElement[] {
+    const lane = (units: readonly (UnitView | null)[]): (UnitView | null)[] => Array.from({ length: LANES }, (_, k) => units[k] ?? null);
+    const container = renderBoard(baseView({ you: emptySide("p1", { units: lane(mine) }), opponent: emptySide("p2", { units: lane(theirs) }) }));
+    return [...container.querySelectorAll<SVGSVGElement>(".cf-shipyard-idle")];
+  }
+
+  it("R3334000 a Dormant ship with pieces idles; not with 0 pieces, launched or reduced", () => {
+    const list = [BEAM, DRILL, "stinkyscape-090"];
+    const docked = (): UnitView => dormantStarship("p1", list, { instanceId: "ship" });
+    const [idle, ...more] = idlesOn([null, null, docked()]);
+    expect(more).toHaveLength(0);
+    if (idle === undefined) throw new Error("the Dormant Starship does not idle");
+    // Over its picture, in its portrait, framed as the picture is.
+    expect(idle.closest('[data-testid="card-ship"] .cf-portrait')).not.toBeNull();
+    expect(idle.previousElementSibling?.classList.contains("cf-art")).toBe(true);
+    expect(idle.getAttribute("data-shipyard-motion")).toBe("animated");
+    expect(idle.getAttribute("viewBox")).toBe("0 0 100 100");
+    expect(idle.getAttribute("preserveAspectRatio")).toBe("xMidYMid slice");
+    expect(idle.getAttribute("aria-hidden")).toBe("true");
+    expect(idle.style.getPropertyValue("--cf-sweep-ms")).toBe(`${String(SHIPYARD_IDLE_SWEEP_MS)}ms`);
+    expect(idle.style.getPropertyValue("--cf-weld-ms")).toBe(`${String(SHIPYARD_IDLE_WELD_MS)}ms`);
+    // The light's cone swings about the lamp, and the sparks fly where the newest piece is welded in.
+    const yard = shipyardIdleOf(starshipArtOf(pieces(list), false, undefined, false));
+    const sweep = idle.querySelector<SVGPolygonElement>("polygon.cf-shipyard-sweep");
+    expect(sweep?.getAttribute("points")).toBe(yard.cone.map((point) => `${fmt(point.x)},${fmt(point.y)}`).join(" "));
+    expect(sweep?.style.transformOrigin).toBe(`${fmt(yard.lamp.x)}px ${fmt(yard.lamp.y)}px`);
+    const sparks = idle.querySelector<SVGGElement>("g.cf-shipyard-sparks");
+    expect(yard.newest).not.toBeNull();
+    expect(sparks?.getAttribute("transform")).toBe(`translate(${fmt(yard.newest?.x ?? NaN)} ${fmt(yard.newest?.y ?? NaN)})`);
+    const thrown = [...(sparks?.querySelectorAll<SVGCircleElement>("circle") ?? [])];
+    expect(thrown.map((spark) => spark.style.getPropertyValue("--cf-spark"))).toEqual(Array.from({ length: SHIPYARD_IDLE_SPARKS }, (_, k) => String(k)));
+    cleanup();
+    // No pieces yet, or launched: no idle.
+    expect(idlesOn([dormantStarship("p1", [], { instanceId: "ship" })])).toHaveLength(0);
+    cleanup();
+    expect(idlesOn([unit("p1", { instanceId: "ship", defId: HULL, starship: { pieces: list.map((defId) => ({ defId })), name: "The Ninth Life", launched: 1 } })])).toHaveLength(0);
+    cleanup();
+    // The Reduce motion setting, the system's reduced motion and Animated foil off each hold it still: none drawn.
+    const stills: [string, () => void][] = [
+      ["the Reduce motion setting", () => writeSettings({ reduceMotion: true })],
+      ["the system's reduced motion", () => setReducedMotion(true)],
+      ["Animated foil off", () => writeCardSettings({ animatedFoil: false })],
+    ];
+    for (const [why, still] of stills) {
+      still();
+      expect(idlesOn([docked()]), why).toHaveLength(0);
+      cleanup();
+      localStorage.clear();
+      __resetSettingsForTests();
+      setReducedMotion(false);
+      writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
+    }
+    // Back on, it idles again.
+    expect(idlesOn([docked()])).toHaveLength(1);
+  });
+
+  it("R3334000 the idle shares COSMETIC_FOIL_ANIMATED_MAX", () => {
+    const ships = (owner: "p1" | "p2"): UnitView[] =>
+      Array.from({ length: LANES }, (_, k) => dormantStarship(owner, [BEAM, SHIELD], { instanceId: `${owner}-ship-${String(k)}` }));
+    // A Dormant Starship in every unit zone of both seats, more than the cap: only the cap's worth idle.
+    const mine = ships("p1");
+    const theirs = ships("p2");
+    expect(mine.length + theirs.length).toBeGreaterThan(COSMETIC_FOIL_ANIMATED_MAX);
+    expect(idlesOn(mine, theirs)).toHaveLength(COSMETIC_FOIL_ANIMATED_MAX);
+    cleanup();
+    // Their slots freed, one ship idles again.
+    expect(idlesOn([dormantStarship("p1", [BEAM], { instanceId: "ship" })])).toHaveLength(1);
+  });
+});
 
 describe("R3038000: a Starship's Flying and Ranged on the board", () => {
   it("R3038000 the real engine's view lists Flying and Ranged on a Dormant and a launched Starship, and the board draws both", () => {

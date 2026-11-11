@@ -6,9 +6,9 @@
 //! (R1303000–R1303003, whose proving tests live here). A paid game moves the account's quests by
 //! what it did, as a ladder game does (R1304001).
 //!
-//! The games are played for real, on the shipped catalog (no `install_test_cards`), through
-//! `economy::practice`'s own `opening` and this file's `ai_move`, the worker's AI; the fixture test
-//! plays one the browser's worker recorded instead. Every amount is read through its constant and
+//! The games are played for real, on the shipped catalog (no `install_test_cards`), on the practice
+//! session's machine (`jackioh_shared::host::practice`) with the AI deciding at `AI_BUDGET`, as the
+//! worker runs it; the fixture test plays one the browser's worker recorded instead. Every amount is read through its constant and
 //! the hook's own math, so the tests hold whatever #1333 sets.
 
 use std::collections::BTreeMap;
@@ -19,9 +19,9 @@ use std::time::{Duration, Instant};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use jackioh_ai::{AiOptions, ai_to_act, decide};
+use jackioh_ai::AI_BUDGET;
 use jackioh_engine::wire::newest_shipped_set;
-use jackioh_engine::{Action, ActionBody, Difficulty, GameState, LastBoardEntry, PlayerId, Rng, SandboxOp};
+use jackioh_engine::{Action, ActionBody, Difficulty, GameState, LastBoardEntry, PlayerId, SandboxOp};
 use jackioh_server::actor::engine::{self, Pinned};
 use jackioh_server::api::practice::{Swept, sweep_unsettled};
 use jackioh_server::app::{App, now_ms, serve_until};
@@ -42,7 +42,7 @@ use jackioh_server::economy::store::{
 };
 use jackioh_shared::economy::math::{level_span_xp, xp_to_next_level};
 use jackioh_shared::economy::track_rewards::reward_for_level;
-use jackioh_shared::host::bot::r188_forbidden;
+use jackioh_shared::host::practice::{AiAsk, PracticeEvent, PracticeHost, PracticeOutput, ai_never_takes};
 
 use crate::support::deps::{RecordingLogger, add_user, call, record_logs, test_app as built_app};
 use crate::support::store::{fake_ref, store};
@@ -196,98 +196,98 @@ enum Human {
     Ai,
 }
 
-/// The action the practice AI takes in `state` from `seat` under `nonce`, as the worker's `aiStep`
-/// takes it: `decide`'s choice, unless R188 forbids it or the engine refuses it, else the first
-/// legal action the engine accepts, `endTurn` first; `None` when the AI owes nothing. `rng` is the
-/// AI's stream, left where the decision left it. The server does not run this on a claim
-/// (R2560000): it plays the games these tests claim.
-fn ai_move(
-    pinned: Pinned,
-    state: &GameState,
-    seat: PlayerId,
-    nonce: &str,
-    rng: &mut Rng,
-) -> Option<ActionBody> {
-    let accepted = |body: &ActionBody| {
-        !r188_forbidden(body)
-            && !matches!(body, ActionBody::Sandbox { .. })
-            && engine::reduce(pinned, state, &Action::new(body.clone(), seat, nonce))
-                .error
-                .is_none()
-    };
-    let chosen = pinned.run(|| {
-        if !ai_to_act(state, seat) {
-            return None;
+/// A practice game played out from `setup` on `seed` as the worker plays it, on the practice session's
+/// own machine (`jackioh_shared::host::practice`, the one `economy::practice::verify` steps over a
+/// claim): the AI moves whenever it owes one, decided as the worker decides it, and the human otherwise,
+/// each under its own nonces from the seat it plays then (R677). The log, the human's result and the
+/// final state. `abandoned` is asked before each action: a game it gives up on is `None`.
+fn play_unless(
+    seed: &str,
+    setup: &PracticeSetup,
+    human: Human,
+    abandoned: &dyn Fn() -> bool,
+) -> Option<(Vec<Action>, ClaimedResult, GameState)> {
+    let config = practice::config_of(seed, setup);
+    engine::run_pinned(pinned(), || {
+        let (mut host, _) =
+            PracticeHost::start(&config, catalog_version(), None, 0).expect("the setup begins a game");
+        let mut human_cursor = 0;
+        while !host.is_over() {
+            if abandoned() {
+                return None;
+            }
+            assert!(
+                host.log().len() < MOVE_CAP,
+                "the game on {seed} ends within {MOVE_CAP} actions"
+            );
+            let asked = host.step(PracticeEvent::AiTurn, 0);
+            if let Some(ask) = asked.iter().find_map(|output| match output {
+                PracticeOutput::Decide { ask } => Some(ask.clone()),
+                _ => None,
+            }) {
+                let moved = host.decide(&ask, AI_BUDGET);
+                host.step(PracticeEvent::Decided { moved }, 0);
+                continue;
+            }
+            let seat = host.human_seat();
+            let mut candidates = match human {
+                Human::Concede => vec![ActionBody::Concede],
+                Human::Ai => {
+                    // Plays as the practice AI does, on its own stream `"{seed}:human"`.
+                    let ask = AiAsk {
+                        seat,
+                        rng_seed: format!("{seed}:human"),
+                        rng_cursor: human_cursor,
+                        clock_ms: 0,
+                    };
+                    let moved = host.decide(&ask, AI_BUDGET);
+                    human_cursor = moved.rng_cursor;
+                    moved
+                        .body
+                        .into_iter()
+                        .filter(|body| !ai_never_takes(body))
+                        .collect::<Vec<_>>()
+                }
+            };
+            // Else the first legal action the engine accepts, `endTurn` first.
+            let (end_turn, rest): (Vec<ActionBody>, Vec<ActionBody>) =
+                engine::legal_actions(pinned(), host.game(), seat)
+                    .into_iter()
+                    .filter(|body| !ai_never_takes(body))
+                    .partition(|body| matches!(body, ActionBody::EndTurn));
+            candidates.extend(end_turn.into_iter().chain(rest));
+            let accepted = candidates.into_iter().any(|body| {
+                let outputs = host.step(PracticeEvent::Act { body }, 0);
+                outputs.iter().any(|output| match output {
+                    PracticeOutput::Snapshot { snapshot } => snapshot.error.is_none(),
+                    _ => false,
+                })
+            });
+            assert!(accepted, "the human owes an action whenever the AI owes none");
         }
-        let mut options = AiOptions::new(rng.clone());
-        let decision = decide(state, seat, &mut options);
-        *rng = options.rng;
-        Some(decision.map(|decision| decision.action))
-    })?;
-    if let Some(body) = chosen.filter(|body| accepted(body)) {
-        return Some(body);
-    }
-    let legal = engine::legal_actions(pinned, state, seat);
-    let (end_turn, rest): (Vec<ActionBody>, Vec<ActionBody>) = legal
-        .into_iter()
-        .partition(|body| matches!(body, ActionBody::EndTurn));
-    end_turn.into_iter().chain(rest).find(|body| accepted(body))
+        let result = host.game().result.as_ref().expect("the game ended");
+        let human_now = host.human_seat();
+        let claimed = match result.winner {
+            jackioh_engine::Winner::Draw => ClaimedResult::Draw,
+            winner if winner == jackioh_engine::Winner::from(human_now) => ClaimedResult::Win,
+            _ => ClaimedResult::Loss,
+        };
+        Some((host.log().to_vec(), claimed, host.game().clone()))
+    })
 }
 
-/// A practice game played out from `setup` on `seed` as the worker plays it: the AI moves whenever
-/// it owes one, through `ai_move`, and the human otherwise, each under its own nonces
-/// from the seat it plays then (R677). The log, the human's result and the final state.
+/// `play_unless` for a game nobody gives up on.
 fn play(seed: &str, setup: &PracticeSetup, human: Human) -> (Vec<Action>, ClaimedResult, GameState) {
-    let pinned = pinned();
-    let mut state = practice::opening(pinned, seed, setup).expect("the setup begins a game");
-    let (human_home, ai_home) = (setup.human_seat, setup.human_seat.opponent());
-    let mut ai_rng = Rng::new(&format!("{seed}:ai"), 0);
-    let mut human_rng = Rng::new(&format!("{seed}:human"), 0);
-    let (mut humans, mut ais) = (0, 0);
-    let mut log = Vec::new();
-    while state.result.is_none() {
-        assert!(
-            log.len() < MOVE_CAP,
-            "the game on {seed} ends within {MOVE_CAP} actions"
-        );
-        let ai_seat = engine::seat_played_by(&state, ai_home);
-        let ai_nonce = format!("a{ais}");
-        let action = match ai_move(pinned, &state, ai_seat, &ai_nonce, &mut ai_rng) {
-            Some(body) => {
-                ais += 1;
-                Action::new(body, ai_seat, ai_nonce)
-            }
-            None => {
-                let seat = engine::seat_played_by(&state, human_home);
-                let nonce = format!("h{humans}");
-                let body = match human {
-                    Human::Concede => ActionBody::Concede,
-                    Human::Ai => ai_move(pinned, &state, seat, &nonce, &mut human_rng)
-                        .expect("the human owes an action whenever the AI owes none"),
-                };
-                humans += 1;
-                Action::new(body, seat, nonce)
-            }
-        };
-        let next = engine::reduce(pinned, &state, &action);
-        assert!(next.error.is_none(), "{action:?} is refused: {:?}", next.error);
-        state = next.state;
-        log.push(action);
-    }
-    let result = state.result.as_ref().expect("the game ended");
-    let human_now = engine::seat_played_by(&state, human_home);
-    let claimed = match result.winner {
-        jackioh_engine::Winner::Draw => ClaimedResult::Draw,
-        winner if winner == jackioh_engine::Winner::from(human_now) => ClaimedResult::Win,
-        _ => ClaimedResult::Loss,
-    };
-    (log, claimed, state)
+    play_unless(seed, setup, human, &|| false).expect("a game nobody abandons ends")
 }
 
 /// A won game: its seed, setup, log and final state.
 type Won = (String, PracticeSetup, Vec<Action>, GameState);
 
-/// First won Easy game played across cores in parallel to avoid test timeouts (#2223).
+/// First won Easy game: the lowest seed whose game the human wins, played across cores in
+/// parallel to avoid test timeouts (#2223). A game stops as soon as a lower seed of its batch has
+/// won, since it can no longer be the first: a batch used to wait for its slowest game (about
+/// 150 s) after the first seed had won in 3 s (#3305).
 fn honest_win() -> &'static Won {
     static WON: OnceLock<Won> = OnceLock::new();
     WON.get_or_init(|| {
@@ -295,10 +295,23 @@ fn honest_win() -> &'static Won {
         let seeds: Vec<String> = (0..WIN_SEEDS).map(|n| format!("practice-win-{n}")).collect();
         let cores = std::thread::available_parallelism().map_or(1, |cores| cores.get());
         for batch in seeds.chunks(cores) {
+            // The place in this batch of the lowest seed that has won so far.
+            let lowest_win = AtomicUsize::new(usize::MAX);
             let played: Vec<_> = std::thread::scope(|scope| {
                 let games: Vec<_> = batch
                     .iter()
-                    .map(|seed| scope.spawn(|| play(seed, &setup, Human::Ai)))
+                    .enumerate()
+                    .map(|(place, seed)| {
+                        let (setup, lowest_win) = (&setup, &lowest_win);
+                        scope.spawn(move || {
+                            let beaten = || lowest_win.load(Ordering::Relaxed) < place;
+                            let game = play_unless(seed, setup, Human::Ai, &beaten);
+                            if matches!(game, Some((_, ClaimedResult::Win, _))) {
+                                lowest_win.fetch_min(place, Ordering::Relaxed);
+                            }
+                            game
+                        })
+                    })
                     .collect();
                 games
                     .into_iter()
@@ -308,11 +321,11 @@ fn honest_win() -> &'static Won {
                     })
                     .collect()
             });
-            let won = batch
-                .iter()
-                .zip(played)
-                .find(|(_, (_, result, _))| *result == ClaimedResult::Win);
-            if let Some((seed, (log, _, state))) = won {
+            let won = batch.iter().zip(played).find_map(|(seed, game)| match game {
+                Some((log, ClaimedResult::Win, state)) => Some((seed, log, state)),
+                _ => None,
+            });
+            if let Some((seed, log, state)) = won {
                 return (seed.clone(), setup, log, state);
             }
         }
@@ -424,6 +437,23 @@ async fn an_honest_win_pays_practice_rates() {
         first_paid(JLORE_PRACTICE_WIN, xp, false)
     );
     assert_paid(&app, seed, JLORE_PRACTICE_WIN, xp).await;
+}
+
+#[test]
+fn a_game_the_search_gives_up_on_stops_before_its_next_action() {
+    jackioh_cards::register_all();
+    let setup = setup(Difficulty::Easy, Vec::new());
+    let asked = std::cell::Cell::new(0);
+    let abandoned = || {
+        asked.set(asked.get() + 1);
+        asked.get() > 3
+    };
+    assert!(play_unless("practice-abandoned", &setup, Human::Ai, &abandoned).is_none());
+    assert_eq!(
+        asked.get(),
+        4,
+        "asked before each action, and not again once it said yes"
+    );
 }
 
 #[tokio::test]
@@ -1178,7 +1208,7 @@ async fn r1483000_the_open_seed_limit_refuses_without_insert_and_claim_or_expiry
         "nothing was issued"
     );
 
-    // A claim, paid or refused, burns its seed and frees its place.
+    // A claim settled, paid or refused, frees its place (R3500001).
     let setup = kept_setup(&app, &seeds[0]).await;
     let (log, _, _) = play(&seeds[0], &setup, Human::Concede);
     assert_eq!(
@@ -1251,6 +1281,91 @@ async fn r1483000_concurrent_seed_requests_never_exceed_the_open_limit() {
         fake_ref(&app).lock().await.tables.economy.practice_seeds.len(),
         PRACTICE_SEEDS_OPEN_MAX as usize
     );
+}
+
+#[tokio::test]
+async fn r3500001_a_claim_still_being_checked_keeps_its_place_among_the_open_seeds() {
+    let (app, token) = authed().await;
+    let mut claims = Vec::new();
+    for _ in 0..PRACTICE_SEEDS_OPEN_MAX {
+        let (seed, _) = issue(&app, &token).await;
+        let (log, _, _) = play(&seed, &kept_setup(&app, &seed).await, Human::Concede);
+        claims.push((seed, log));
+    }
+    let seeds_held =
+        |app: Arc<App>| async move { fake_ref(&app).lock().await.tables.economy.practice_seeds.len() };
+
+    // Every claim burns its seed and waits for a verification permit: none settles.
+    let held = app
+        .practice_verifications
+        .acquire_many(PRACTICE_VERIFY_CONCURRENCY as u32)
+        .await
+        .expect("the permits are open");
+    let waiting: Vec<_> = claims
+        .into_iter()
+        .map(|(seed, log)| {
+            let (app, token) = (app.clone(), token.clone());
+            tokio::spawn(async move { claim(&app, &token, &seed, "loss", &log).await })
+        })
+        .collect();
+    while *app.practice_settles.borrow() < PRACTICE_SEEDS_OPEN_MAX as usize {
+        tokio::task::yield_now().await;
+    }
+    // Burned, none is open to claim, yet each keeps its place: a burst of claims takes no new seed.
+    let (status, body) = request_seed(&app, &token).await;
+    assert_eq!(status, 409, "{body}");
+    assert_eq!(seeds_held(app.clone()).await, PRACTICE_SEEDS_OPEN_MAX as usize);
+    assert_unpaid(&app).await;
+
+    drop(held);
+    for waiting in waiting {
+        let answer = waiting.await.expect("the claim answers");
+        assert_eq!(answer["paid"], json!(true), "{answer}");
+    }
+    // Settled, they free their places.
+    let (status, body) = request_seed(&app, &token).await;
+    assert_eq!(status, 201, "{body}");
+}
+
+#[tokio::test]
+async fn r3500001_the_sweep_skips_a_claim_whose_settle_is_still_running() {
+    let logs = record_logs();
+    let (app, token) = authed().await;
+    let (seed, _) = issue(&app, &token).await;
+    let (log, _, _) = play(&seed, &kept_setup(&app, &seed).await, Human::Concede);
+    let xp = game_xp(GameMode::Practice, human_actions(&log), false);
+    let held = app
+        .practice_verifications
+        .acquire_many(PRACTICE_VERIFY_CONCURRENCY as u32)
+        .await
+        .expect("the permits are open");
+    let waiting = {
+        let (app, token, seed) = (app.clone(), token.clone(), seed.clone());
+        tokio::spawn(async move { claim(&app, &token, &seed, "loss", &log).await })
+    };
+    while *app.practice_settles.borrow() < 1 {
+        tokio::task::yield_now().await;
+    }
+
+    // Past its grace and still waiting for a permit, the claim is no lapsed one: the sweep takes
+    // none of it, where a second settle would wait for a permit as long as the first.
+    age_claim(&app, &seed).await;
+    let swept = tokio::time::timeout(Duration::from_secs(10), sweep(&app))
+        .await
+        .expect("the sweep skips the claim, so it waits for no permit");
+    assert_eq!(swept, Swept::default());
+    assert_unpaid(&app).await;
+
+    drop(held);
+    let answer = waiting.await.expect("the claim answers");
+    assert_eq!(answer["paid"], json!(true), "{answer}");
+    assert_paid(&app, &seed, JLORE_PRACTICE_LOSS, xp).await;
+    assert_eq!(
+        logs.named("practice.claim.verified").len(),
+        1,
+        "the claim's own check ran, and no sweep checked it again"
+    );
+    assert_eq!(sweep(&app).await, Swept::default());
 }
 
 // A seed given back (R2379000).

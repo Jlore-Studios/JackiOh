@@ -1,0 +1,165 @@
+/*
+ * R3340000: art that lives in play. A face in play carries `data-art-hover`, "true" or "false". A board face whose art moves draws its picture in layers (CardArt `live`): the
+ * backdrop on `.cf-art` itself, the subject (`.cf-art-subject`) and the motes (`.cf-art-motes`) over it, each an image
+ * of the one picture, so the subject can lean, flinch and swing and the motes scatter without the picture's own loops
+ * (inside the images, motion.ts) stopping. The reactions answer what the face says of its pointer (`data-art-hover`,
+ * `data-art-press`, `--art-aim-x` and `--art-aim-y`, artLive.ts) and of the game (`data-art-attacking`, MinionFace), only
+ * while the face's motion settings permit a response (`data-art-response`, useArtMotion); they
+ * move transform properties (`rotate`, `translate`, `scale`) and opacity alone, every one inside the reduced-motion gate
+ * and under `:root:not([data-reduce-motion="true"])`, as cards.css gates its own, and take their times and curves from
+ * motion.css. The marks of state (cracks, glow, frost: ArtWear.tsx) are still drawings outside the gate, so a face under
+ * reduced motion shows them all the same; only the glow's fade is gated.
+ *
+ * R3350000 (#3350): a board Mythic whose art moves draws its diorama's slices in place of the live layers; its window swells
+ * and presses in as one image's does, and its slices over the farthest swing on an attack as a subject does.
+ */
+
+.cf-art-layer {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  pointer-events: none;
+}
+
+.cf-art-wear {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Damage: cracks grown from the art's edge, white with a dark underline so they read on any picture; one more for each
+   step of the health the unit is missing (wear.ts). */
+.cf-art-cracks {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 0.08em var(--pal-black));
+}
+
+.cf-art-cracks path {
+  stroke: var(--pal-white);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.85;
+}
+
+/* Buffed: a glow in the card's own colours (`--art-glow`, CardArt: its theme's glow). */
+.cf-art-glow {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: radial-gradient(ellipse at 50% 60%, color-mix(in srgb, var(--art-glow, var(--pal-gold-300)) 55%, transparent), transparent 72%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* Frozen: frost over the picture, thickest at its rim. */
+.cf-art-frost {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-blue-200) 45%, transparent), color-mix(in srgb, var(--pal-sky-300) 28%, transparent));
+  box-shadow: inset 0 0 1.4em color-mix(in srgb, var(--pal-white) 75%, transparent);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"] .cf-art-subject {
+    transform-origin: 50% 85%;
+    transition:
+      rotate var(--motion-fast) var(--ease-out),
+      translate var(--motion-fast) var(--ease-out),
+      scale var(--motion-base) var(--ease-overshoot);
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf-art-glow {
+    transition: opacity var(--motion-base) var(--ease-standard);
+  }
+
+  /* Hover or focus: the subject turns and leans toward the pointer; the motes scatter and settle. */
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-hover="true"] .cf-art-subject {
+    rotate: calc(var(--art-aim-x, 0) * 4deg);
+    translate: calc(var(--art-aim-x, 0) * 3%) calc(var(--art-aim-y, 0) * 2%);
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-hover="true"] .cf-art-motes {
+    animation: cf-art-scatter var(--motion-slow) var(--ease-out) 1;
+  }
+
+  /* Press: the subject flinches inward; the overshoot curve springs it back. */
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-press="true"] .cf-art-subject {
+    scale: 0.92;
+  }
+
+  /* Attacking (`attackDeclared` in flight): the subject swings toward its target on the lunge's own aim, the motes fire. */
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-attacking="true"] .cf-art-subject {
+    animation: cf-art-swing var(--motion-base) var(--ease-out) 1;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-attacking="true"] .cf-art-motes {
+    animation: cf-art-fire var(--motion-base) var(--ease-out) 1;
+  }
+
+  /* R3350000: a board Mythic's diorama (CardArt's `diorama` "all") draws no live layers: the slices over its farthest
+     (`.cf-art-slice`) are its subject, so they swing as one toward the target, the farthest staying behind as a backdrop. */
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-attacking="true"] .cf-art-slice {
+    animation: cf-art-swing var(--motion-base) var(--ease-out) 1;
+  }
+
+  /* Art that is one image (a delivered file, a restyle, a Starship's, a Legacy card's, a face holding no slot) answers a
+     hover and a press as a whole. */
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-hover] .cf-art:not([data-art-live]) {
+    transition: scale var(--motion-fast) var(--ease-out);
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-hover="true"] .cf-art:not([data-art-live]) {
+    scale: 1.03;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-press="true"] .cf-art:not([data-art-live]) {
+    scale: 0.97;
+  }
+
+  @keyframes cf-art-scatter {
+    0%,
+    100% {
+      scale: 1;
+      opacity: 1;
+    }
+    40% {
+      scale: 1.25;
+      opacity: 0.55;
+    }
+  }
+
+  @keyframes cf-art-swing {
+    0%,
+    100% {
+      translate: 0 0;
+      scale: 1;
+    }
+    45% {
+      translate: calc(var(--fx-lunge-x, 0%) * 0.2) calc(var(--fx-lunge-y, calc(var(--lunge-distance) * var(--lunge-dir, -1))) * 0.2);
+      scale: 1.12;
+    }
+  }
+
+  @keyframes cf-art-fire {
+    0%,
+    100% {
+      scale: 1;
+      opacity: 1;
+    }
+    40% {
+      scale: 1.5;
+      opacity: 0.4;
+    }
+  }
+}

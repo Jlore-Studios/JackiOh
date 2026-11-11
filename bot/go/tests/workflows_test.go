@@ -712,7 +712,8 @@ func TestWorkflows_OneJobRewritesItEveryFiveMinutes(t *testing.T) {
 	// The workflow changed (#467): `python -m harness dashboard` is `harness dashboard`.
 	assertIn(t, "harness dashboard --sweep --stats --companions --controller \\\n"+
 		`            --every "${EVERY_SECONDS}" --runners-every `+
-		`"${RUNNERS_EVERY_SECONDS}" \`+"\n"+`            --for "${LOOP_SECONDS}"`, refresh)
+		`"${RUNNERS_EVERY_SECONDS}" \`+"\n"+`            --gate-every "${GATE_EVERY_SECONDS}" --for "${LOOP_SECONDS}"`,
+		refresh)
 	// Its runners section is redrawn alone between the rewrites, as often as the issue says.
 	assertIn(t, `RUNNERS_EVERY_SECONDS: "120"`, text)
 	assertEqual(t, dashboard.RunnersMinutes*60, 120)
@@ -825,8 +826,8 @@ func TestWorkflows_ItIsLinted(t *testing.T) {
 
 // ---------------------------------------------------------------------------- LearnSetWorkflowTests
 //
-// A new set stops a learn export still early on the set before (learn-set.yml); every learn run
-// plays the newest patch, reading main as it is when it starts (learn.yml, plan).
+// A new patch or set stops a learn export still early on the version before (learn-set.yml); every
+// learn run plays the newest version, reading main as it is when it starts (learn.yml, plan).
 
 func TestWorkflows_AShippedPatchOnMainStartsItOnGithubsRunner(t *testing.T) {
 	text := workflowsRead(t, "learn-set.yml")
@@ -839,16 +840,35 @@ func TestWorkflows_AShippedPatchOnMainStartsItOnGithubsRunner(t *testing.T) {
 	assertTrue(t, workflowsLinted(t, "learn-set.yml"))
 }
 
-func TestWorkflows_OnlyASetStopsARunAndOnlyBeforeHalfItsShards(t *testing.T) {
+func TestWorkflows_OnlyAPatchOrSetStopsARunAndOnlyBeforeHalfItsShards(t *testing.T) {
 	text := workflowsRead(t, "learn-set.yml")
 	learn := workflowsRead(t, "learn.yml")
-	assertIn(t, `select(.tier == "major")`, text)
+	// A micro (v0.Z.Xb) stops nothing: its tier is the one left out.
+	assertIn(t, `select(.tier == "major" or .tier == "patch")`, text)
+	assertNotIn(t, `"micro"`, text)
 	keep := regexp.MustCompile(`LEARN_SET_KEEP_SHARDS: "(\d+)"`).FindStringSubmatch(text)
 	shards := regexp.MustCompile(`shards: \$\{\{ inputs\.shards \|\| '(\d+)' \}\}`).FindStringSubmatch(learn)
 	assertTrue(t, keep != nil, "unexpectedly None")
 	assertTrue(t, shards != nil, "unexpectedly None")
 	assertEqual(t, workflowsInt(t, keep[1])*2, workflowsInt(t, shards[1]))
 	assertIn(t, `[ "$finished" -ge "$LEARN_SET_KEEP_SHARDS" ]`, text)
+}
+
+// gather.yml plays a new patch or set and never a micro: a push plays only when one shipped since
+// the last push run that succeeded, and plays the commit it pushed, so the next run reads exactly
+// what it played.
+func TestWorkflows_GatherPlaysEachNewPatchAndNoMicro(t *testing.T) {
+	text := workflowsRead(t, "gather.yml")
+	job := workflowsJob(t, text, "gather")
+	assertIn(t, "ref: ${{ github.event_name == 'push' && github.sha || 'main' }}", job)
+	due := workflowsScript(t, job, "due (a new patch or set, not a micro)")
+	assertIn(t, "runs?event=push&status=success&per_page=1", due)
+	assertIn(t, `select(.tier != "micro")`, due)
+	for _, step := range []string{"uses: ./.github/actions/setup", "name: build",
+		"name: play (cargo jackioh stats --series gather)"} {
+		assertIn(t, "if: ${{ steps.due.outputs.play == 'true' }}", workflowsStep(t, job, step))
+	}
+	assertTrue(t, workflowsLinted(t, "gather.yml"))
 }
 
 func TestWorkflows_ALearnRunPlansAndBuildsMainAsItIsWhenItStarts(t *testing.T) {

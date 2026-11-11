@@ -88,7 +88,7 @@ function Chip({ testId, pressed, label, title, className, onToggle, rarity }: Ch
   return (
     <button
       type="button"
-      className={`db-chip ${className}`}
+      className={`db-chip button-secondary ${className}`}
       data-testid={testId}
       aria-pressed={pressed}
       title={title}

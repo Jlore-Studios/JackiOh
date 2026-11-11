@@ -112,6 +112,10 @@ describe("#1308 the pack-opening scene", () => {
     cy.get(ts(packTestid.slots)).should("not.exist");
 
     cy.tick(PACK_TEAR_MS);
+    // R3349000: the fixture's Mythic pull tears into its takeover first; a tap moves on to the grid.
+    cy.get(ts(packTestid.takeover)).should("have.attr", "data-card", "core-096");
+    // The takeover has no box of its own: its full-screen view is fixed, so the tap lands there and bubbles up.
+    cy.get(`${ts(packTestid.takeover)} [data-testid="fullscreen-art"]`).click();
     cy.get(ts(packTestid.pack)).should("not.exist");
     cy.get(".pack-slot").should("have.length", 5);
     cy.get(ts(packTestid.slot(0))).should("have.attr", "data-rarity", "Mythic");
@@ -138,7 +142,7 @@ describe("#1308 the pack-opening scene", () => {
           }
         }
       });
-      cy.get(ts(packTestid.close)).should("have.text", "Done");
+      cy.get(ts(packTestid.close)).should("have.attr", "aria-label", "Close");
     });
   }
 
@@ -190,6 +194,8 @@ describe("#1999 the pack-opening scene on a phone", () => {
       // The tear's timer starts once the answered scene is drawn, so the clock moves only after it.
       cy.get(ts(packTestid.pack)).should("have.attr", "data-state", "tearing");
       cy.tick(PACK_TEAR_MS);
+      // R3349000: the fixture's Mythic pull tears into its takeover first; a tap moves on to the grid.
+      cy.get(`${ts(packTestid.takeover)} [data-testid="fullscreen-art"]`).click();
       // The Common and the Rare turn on a tap; the Mythic and the Epic wait for a hold.
       cy.get(ts(packTestid.flip(4))).click({ scrollBehavior: false });
       cy.get(ts(packTestid.flip(3))).click({ scrollBehavior: false });
@@ -208,15 +214,20 @@ describe("#1999 the pack-opening scene on a phone", () => {
       expectNoSidewaysScroll();
     });
 
-    it(`all revealed, the HUD is clear of every card and Done is in reach at ${size}`, () => {
+    it(`all revealed, the HUD is clear of every card and of the ✕, which is in reach at ${size}`, () => {
       cy.viewport(width, height);
       mountScene();
       cy.get(ts(packTestid.skipAll)).click({ scrollBehavior: false });
       cy.get(".pack-slot .cf").should("have.length", 5);
       expectNoSidewaysScroll();
       expectHudClearOfSlots();
-      cy.get(ts(packTestid.close)).should("have.text", "Done");
+      cy.get(ts(packTestid.close)).should("have.attr", "aria-label", "Close");
       expectInReach(ts(packTestid.close));
+      // R3221000: the ✕ steps down under the HUD, which spans a phone's width (packs.css).
+      cy.get(ts(packTestid.close)).should(($close) => {
+        const hud = $close[0]!.ownerDocument.querySelector(ts(packTestid.bars))!.getBoundingClientRect();
+        expect(overlaps(hud, $close[0]!.getBoundingClientRect()), "the HUD covers the ✕").to.equal(false);
+      });
     });
   }
 });

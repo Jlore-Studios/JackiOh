@@ -24,6 +24,9 @@ export const WORKSHOP_EMPTY = "workshop-empty";
 
 export const DECK_LIST = "deck-list";
 export const DECK_CAP = "deck-cap";
+/** R3228000: the rail's empty state when no deck is kept, and its New deck action. */
+export const DECK_LIST_EMPTY = "deck-list-empty";
+export const DECK_LIST_EMPTY_NEW = "deck-list-empty-new";
 
 /**
  * One saved deck in the list: `data-count` (its cards), `data-status` (`ready`, `complete`,

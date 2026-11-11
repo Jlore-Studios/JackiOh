@@ -49,6 +49,7 @@ import { useLiveGame } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { GameBanner, LiveGameBanner, gameBannerTestid } from "./GameBanner.tsx";
 import { BackLink } from "./nav.tsx";
+import { PageTitle } from "./PageTitle.tsx";
 import {
   PRACTICE_DEFAULT_DIFFICULTY,
   PRACTICE_PACING,
@@ -437,7 +438,7 @@ function LoadingScreen({ onBack }: { onBack: () => void }): ReactElement {
     <Shell variant="lobby">
       {/* A worker that never answers must not trap the page: back to the setup, which has its own
           way out (integration: every screen has a way back). */}
-      <BackLink onPress={onBack} />
+      <BackLink onPress={onBack} title={t("Practice")} />
       <div className="practice-stage">
         <div className="practice-shuffle" aria-hidden="true">
           <span />
@@ -963,11 +964,8 @@ function PracticeScreen({
   if (game === null) {
     return (
       <Shell variant="lobby">
-        <BackLink to={paths.play} />
+        <BackLink to={paths.play} title={t("Practice")} />
         <div className="one-screen__body one-screen__stack">
-          {/* The page's one H1, first in the outline and read, not drawn: Back and the path say where
-              the player is. */}
-          <h1 className="tutorial-sr-only">{t("Practice")}</h1>
           {savedGame === null && liveGame === null && !resumeLost ? null : (
             <div className="practice-banners">
               {savedGame === null ? null : (
@@ -992,7 +990,7 @@ function PracticeScreen({
           )}
           <TutorialPath onStart={onStartLesson} />
           <header className="practice-lobby__header" ref={practiceHeader}>
-            <h2 className="practice-lobby__title">{t("Practice against the AI")}</h2>
+            <h2 className="section-heading">{t("Practice against the AI")}</h2>
           </header>
           <PracticeSetup
             saved={saved}
@@ -1011,7 +1009,7 @@ function PracticeScreen({
     return (
       <Shell variant="lobby">
         <div className="practice-stage">
-          <h1 className="practice-stage__title">{t("The practice game stopped")}</h1>
+          <PageTitle>{t("The practice game stopped")}</PageTitle>
           <p className="notice" data-testid={practiceTestid.error} role="alert">
             {t(state.failure ?? "Something went wrong while the game was running.")}
           </p>
@@ -1101,6 +1099,9 @@ function PracticeScreen({
         legal={snapshot.legal}
         onAction={onAction}
         error={snapshot.error}
+        // R3477000: a lesson draws no attack outcome, so its trades stay the player's to find; its coach
+        // reads the snapshot's forecast itself.
+        forecast={config.lesson === undefined ? snapshot.forecast : undefined}
         resultForm="chip"
         emotes={emotes}
         // R639: a practice game is logged; a lesson is not, nor (R923000) a sandbox game, nor

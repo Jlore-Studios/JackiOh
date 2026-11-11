@@ -143,16 +143,6 @@
   padding-top: 6px;
 }
 
-.tavern.play-screen .play-hero__title {
-  margin: 0;
-  font-family: var(--tavern-serif);
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--tavern-gold-pale);
-}
-
 .tavern.play-screen .play-hero__lead {
   margin: 0;
   max-width: 46ch;
@@ -640,25 +630,15 @@
   letter-spacing: 0.12em;
 }
 
-/* Join is secondary to Find a match: the wood button, not the gold. */
+/* Join is secondary to Find a match: a `button-secondary` (buttons.css), not the gold. */
 .tavern.app-shell.play-screen .play-join button[type="submit"] {
   flex: 0 0 auto;
   min-height: 46px;
   padding: 8px 20px;
-  border: 1px solid var(--tavern-brass);
   border-radius: 10px;
-  background: linear-gradient(180deg, var(--tavern-wood-light), var(--tavern-wood) 55%, var(--tavern-wood-deep));
-  color: var(--tavern-parchment);
   font-family: var(--tavern-serif);
   font-size: 16px;
   font-weight: 700;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.8);
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.3), 0 3px 0 #1f1008;
-}
-
-.tavern.app-shell.play-screen .play-join button[type="submit"]:hover:not(:disabled) {
-  border-color: var(--tavern-gold);
-  color: var(--tavern-gold-pale);
 }
 
 .tavern.app-shell.play-screen .play-join button[type="submit"]:disabled {
@@ -717,7 +697,7 @@
   gap: 0;
 }
 
-.tavern.play-screen.play-hub .play-hero .brand h1 {
+.tavern.play-screen.play-hub .play-hero .brand__word {
   font-size: 28px;
 }
 
@@ -856,14 +836,15 @@
 
 /* A phone (390x844 and up): everything fits whole, with no scroll inside the hub. The brand and the
    panels' step headings go to screen readers only, the three modes stand side by side, the four ways
-   are one row and the room's explanation goes. A screen shorter than that scrolls `.play-layout`,
-   the one scroller, never the setup panel inside it. */
+   are one row and the room's explanation goes. The hero holds the brand alone, so it leaves the flow
+   with it: an empty box would still spend the board's gap twice (#3381). A screen shorter than that
+   scrolls `.play-layout`, the one scroller, never the setup panel inside it. */
 @media (max-width: 600px) {
   .tavern.play-screen.play-hub {
     padding-bottom: 10px;
   }
 
-  .tavern.play-screen.play-hub .play-hero .brand,
+  .tavern.play-screen.play-hub .play-hero,
   .tavern.play-screen.play-hub .play-panel--queue .play-panel__heading,
   .tavern.play-screen.play-hub .play-panel--room .play-panel__heading,
   .tavern.play-screen.play-hub .play-panel__heading--sub,

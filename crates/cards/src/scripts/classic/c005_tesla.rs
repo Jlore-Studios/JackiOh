@@ -112,14 +112,14 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TESLA: &str = "classic-005";
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const TIMMY: &str = "core-011"; // (1) 3/3.
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
-    const TOKEN_MAN: &str = "core-015"; // (1) 1/1, Cry: Summon a Rush Token (3/3).
-    const CALL: &str = "core-069"; // (2) Spell: Recruit 3 Units of (1) Cost or less.
-    const DEFENDER: &str = "core-003"; // (1) 1/1 Taunt, Divine Shield, Reborn.
-    const HIT_JOB: &str = "core-016"; // (3) Destroy target Unit.
-    const FEELINGS: &str = "classic-032"; // (1) Steal an enemy permanent in a lane where you control a (1) Cost Unit.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const TOKEN_MAN: &str = "core-015"; // Me and Mr Token: Cry: Summon a Rush Token.
+    const CALL: &str = "core-069"; // Call to Arms: Recruit 3 Units
+    const DEFENDER: &str = "core-003"; // Right-house defender: Taunt, Divine Shield, Reborn
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const FEELINGS: &str = "classic-032"; // Felinor Feelings: Steal an enemy permanent in a lane where you control a Unit
     const FILLER: &str = "core-010";
 
     use crate::js;
@@ -141,10 +141,6 @@ mod tests {
             ),
             "p2": merged(json!({ "hand": [FILLER], "library": [VANILLA, VANILLA] }), p2),
         }))
-    }
-
-    fn count(events: &[GameEvent], event_type: &str) -> usize {
-        events.iter().filter(|event| event.event_type().as_str() == event_type).count()
     }
 
     mod c_n5_tesla {
@@ -193,8 +189,8 @@ mod tests {
                 // but its hit passes the Radiant Menace by, so its Lifesteal heals nothing.
                 let tesla = s.card(TESLA).clone();
                 assert!(matches_object(&js(&tesla.zone), &json!({ "z": "field", "row": "units", "lane": 3 })));
-                assert_eq!(count(s.events(), "trapFired"), 1);
-                assert_eq!(count(s.events(), "damage"), 0);
+                assert_eq!(s.count("trapFired"), 1);
+                assert_eq!(s.count("damage"), 0);
                 s.expect_stats(&menace, json!({ "health": 18 }));
                 s.expect_health(P1, 20);
             }
@@ -217,7 +213,7 @@ mod tests {
 
                 s.play(&man, json!({ "zone": 1 }));
 
-                assert_eq!(count(s.events(), "trapFired"), 1);
+                assert_eq!(s.count("trapFired"), 1);
                 let token = s.events().iter().find_map(|event| match event {
                     GameEvent::Summoned { def_id, instance_id, .. } if def_id == "core-t-rush" => Some(instance_id.clone()),
                     _ => None,
@@ -245,7 +241,7 @@ mod tests {
 
                 s.play(CALL, json!({}));
 
-                assert_eq!(count(s.events(), "trapFired"), 1);
+                assert_eq!(s.count("trapFired"), 1);
                 let graveyard = s.pile(P2, "graveyard");
                 assert_eq!(graveyard.iter().filter(|card| card.def_id == TIMMY).count(), 1);
                 assert_eq!(graveyard.iter().filter(|card| card.def_id == VANILLA).count(), 0);
@@ -262,8 +258,8 @@ mod tests {
                 s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": defender.id }] }));
 
                 s.expect_in_zone(&defender, "field");
-                assert_eq!(count(s.events(), "trapFired"), 1);
-                assert_eq!(count(s.events(), "animated"), 1);
+                assert_eq!(s.count("trapFired"), 1);
+                assert_eq!(s.count("animated"), 1);
                 s.expect_events(json!(["destroyed", "summoned", "trapFired", "divineShieldLost"]));
             }
 
@@ -280,7 +276,7 @@ mod tests {
                 s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": defender }] }));
 
                 assert!(stands_in_backrow(s.state(), s.card(defender.as_str())));
-                assert_eq!(count(s.events(), "trapFired"), 1);
+                assert_eq!(s.count("trapFired"), 1);
                 s.expect_events(json!(["destroyed", "summoned", "trapFired", "divineShieldLost"]));
             }
 
@@ -305,7 +301,7 @@ mod tests {
 
                 s.play(VANILLA, json!({ "zone": 1 }));
 
-                assert_eq!(count(s.events(), "trapFired"), 0);
+                assert_eq!(s.count("trapFired"), 0);
                 assert_eq!(s.card(TESLA).face_up, Some(false));
             }
 
@@ -322,7 +318,7 @@ mod tests {
                 s.play(FEELINGS, json!({ "targets": [{ "pick": "instance", "instanceId": menace.id }] }));
 
                 assert_eq!(s.card(&menace).controller, P2);
-                assert_eq!(count(s.events(), "trapFired"), 0);
+                assert_eq!(s.count("trapFired"), 0);
             }
 
             #[test]
@@ -341,8 +337,8 @@ mod tests {
                     &js(&s.card(&theirs).zone),
                     &json!({ "z": "field", "row": "units", "player": "p2" })
                 ));
-                assert_eq!(count(s.events(), "animated"), 1);
-                assert_eq!(count(s.events(), "trapFired"), 1);
+                assert_eq!(s.count("animated"), 1);
+                assert_eq!(s.count("trapFired"), 1);
                 assert_eq!(s.card(&mine).face_up, Some(false));
                 assert!(matches_object(&js(&s.card(&mine).zone), &json!({ "row": "backrow", "lane": 3 })));
             }
@@ -366,7 +362,7 @@ mod tests {
                 };
                 s.play(&second, json!({ "zone": 2 }));
 
-                assert_eq!(count(s.events(), "trapFired"), 1);
+                assert_eq!(s.count("trapFired"), 1);
                 s.expect_in_zone(&second, "field");
             }
 
@@ -398,8 +394,8 @@ mod tests {
                 let tesla = s.card(TESLA).clone();
                 assert!(matches_object(&js(&tesla.zone), &json!({ "z": "field", "row": "units", "lane": 3 })));
                 assert_eq!(s.stats(&tesla).position, Position::Def);
-                assert_eq!(count(s.events(), "trapFired"), 1);
-                assert_eq!(count(s.events(), "animated"), 1);
+                assert_eq!(s.count("trapFired"), 1);
+                assert_eq!(s.count("animated"), 1);
                 s.expect_in_zone(VANILLA, "graveyard");
                 s.expect_in_zone(TIMMY, "field");
                 s.end_turn();
@@ -409,7 +405,7 @@ mod tests {
                 };
                 s.play(&later, json!({ "zone": 4 }));
                 s.expect_in_zone(&later, "field");
-                assert_eq!(count(s.events(), "trapFired"), 1);
+                assert_eq!(s.count("trapFired"), 1);
             }
 
             #[test]

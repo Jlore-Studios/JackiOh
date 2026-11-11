@@ -28,6 +28,7 @@ import { useAccount } from "../net/gate.ts";
 import { navigate, paths, useSearch } from "../net/navigate.ts";
 import { useAlmanacOwnCopies } from "./almanacOwnership.ts";
 import { BackLink } from "./nav.tsx";
+import { PAGE_TITLE_ID } from "./PageTitle.tsx";
 
 import "../auth/tavern.css";
 import "../game/deckbuilder/deckbuilder.css";
@@ -90,15 +91,9 @@ export default function AlmanacRoute(): ReactElement {
     <CardDefsProvider defs={ALMANAC_CATALOG.cards}>
       <div className="app-shell app-shell--wide tavern deckbuilder almanac" data-testid={almanacTestid.screen}>
         <header className="db-header">
-          <BackLink
-            title={
-              <h1 className="db-title" id="almanac-title">
-                {t("Almanac")}
-              </h1>
-            }
-          />
+          <BackLink title={t("Almanac")} />
         </header>
-        <main className="almanac-main" aria-labelledby="almanac-title">
+        <main className="almanac-main" aria-labelledby={PAGE_TITLE_ID}>
           <CardBrowser
             catalog={ALMANAC_CATALOG}
             pool={pool}

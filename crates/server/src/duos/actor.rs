@@ -78,17 +78,26 @@ struct AiJob {
 
 impl AiJob {
     /// B26–B29: `duos_decide` on `{seed}:duos-ai:{seat}` (never the match rng) within
-    /// `BOT_DECISION_DEADLINE_MS`.
+    /// `BOT_DECISION_DEADLINE_MS`, its beam wrapped up at `wrap_up_after_ms` of it (R3498000).
     fn ask(&self) -> (Option<DuosActionBody>, u32) {
         jackioh_cards::register_all();
+        let started = std::time::Instant::now();
         let wait = Duration::from_millis(u64::try_from(BOT_DECISION_DEADLINE_MS).unwrap_or(0));
-        let deadline = std::time::Instant::now() + wait;
+        let deadline = started + wait;
+        // R3498000: past the wrap-up the beam explores no further; the reply and the other worlds run on
+        // to the deadline.
+        let wrap_up_at = started
+            + Duration::from_millis(
+                u64::try_from(jackioh_ai::wrap_up_after_ms(BOT_DECISION_DEADLINE_MS)).unwrap_or(0),
+            );
         let should_stop = move || std::time::Instant::now() >= deadline;
+        let wrap_up = move || std::time::Instant::now() >= wrap_up_at;
         // R2575000: the practice AI's budget before #2575 doubled it, cut short by the deadline.
         let mut options = AiOptions {
             rng: Rng::new(&format!("{}:duos-ai:{}", self.seed, self.seat), self.cursor),
             budget: DUOS_AI_BUDGET,
             should_stop: Some(&should_stop),
+            wrap_up: Some(&wrap_up),
         };
         let body = self
             .pinned
@@ -656,11 +665,16 @@ impl DuosActor {
     /// A message of the machine's, framed for the person's socket.
     fn send_seat(&self, core: &mut Core, seat: DuosSeat, message: DuosSeatMessage) {
         let frame = match message {
-            DuosSeatMessage::View { view, legal } => {
+            DuosSeatMessage::View {
+                view,
+                legal,
+                forecast,
+            } => {
                 let index = human(seat);
                 DuosServerMessage::View {
                     view,
                     legal,
+                    forecast,
                     jlore_capped: index.map(|index| core.jlore_capped[index]).unwrap_or(false),
                     economy: index.and_then(|index| core.economy[index].clone()),
                 }
@@ -689,14 +703,25 @@ impl DuosActor {
         self.send(core, seat, &frame);
     }
 
-    /// B35: view and legal actions, sent anew.
+    /// B35: view, legal actions and their forecast (R3477000), sent anew; read under the match's catalog
+    /// (R767000).
     fn push_view(&self, core: &mut Core, seat: DuosSeat) {
         if self.socket_for(core, seat).is_none() {
             return;
         }
         let view = Box::new(self.seat_view(core, seat));
-        let legal = crate::actor::engine::run_pinned(self.shared.pinned, || core.host.legal(seat));
-        self.send_seat(core, seat, DuosSeatMessage::View { view, legal });
+        let (legal, forecast) = crate::actor::engine::run_pinned(self.shared.pinned, || {
+            (core.host.legal(seat), core.host.forecast(seat))
+        });
+        self.send_seat(
+            core,
+            seat,
+            DuosSeatMessage::View {
+                view,
+                legal,
+                forecast: Some(forecast),
+            },
+        );
     }
 
     // The end of the match (B40)
@@ -1547,6 +1572,8 @@ impl DuosActor {
             let frame = encode(&DuosServerMessage::View {
                 view: Box::new(self.seat_view(core, seat)),
                 legal: Vec::new(),
+                // R3477000: a watcher is shown no forecast, as it is shown no legal action.
+                forecast: None,
                 jlore_capped: false,
                 economy: None,
             });

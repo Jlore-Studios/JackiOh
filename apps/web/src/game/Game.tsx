@@ -25,10 +25,12 @@ import {
   type ReactNode,
 } from "react";
 
-import type { ActionBody, Aim, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
+import type { ActionBody, Aim, CombatForecast, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
 
 import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import type { SeatLoadouts } from "../cards/loadouts.ts";
+import { useTiltHold } from "../cards/tilt.ts";
+import { FullScreenArtHost } from "../cards/index.ts";
 import type { EmoteShow } from "../emotes/session.ts";
 import type { HeroEmotes } from "./Hero.tsx";
 import type { ChoiceHover } from "./choiceHover.ts";
@@ -44,7 +46,9 @@ import OpponentAim from "./aim/OpponentAim.tsx";
 import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
 import { IDLE, answerPlaguePlacement, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
+import { attackOutcomes, hoveredAttack, withOutcomes } from "./attackOutcome.ts";
 import {
+  HIDDEN_ID,
   SET_PIECE_SKIP_HINT_MS,
   TAKEOVER_SET_PIECE,
   animTestid,
@@ -60,6 +64,8 @@ import {
 } from "./animations.ts";
 import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type ClickTarget, type HeroAside } from "./contract.ts";
 import { CatalogContext } from "./catalog.ts";
+import { cardMotionLevel } from "./cardMotion.ts";
+import { aimDeal, clearDeal, planOpening, type OpeningPlan } from "./opening.ts";
 import { damageFeel, damageTier, SLAM_LAND_AT, UNIT_SLAM, type DamageTier } from "./damageFeel.ts";
 import { slamSand } from "./SandSurface.tsx";
 import { createEntranceResolver, createSlamResolver } from "./slamResolver.ts";
@@ -68,9 +74,13 @@ import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import { usePhonePortrait } from "./phoneBar.ts";
 import FxLayer from "../fx/FxLayer.tsx";
+import type { FxVisibility } from "../fx/types.ts";
+import { getFxSettings, useFxSettings } from "../fx/settings.ts";
+import { getAudioEngine } from "../audio/engine.ts";
 import AuraLayer from "../fx/aura/AuraLayer.tsx";
-import { hasSetPiece, setPieceShapeOf, wipeClaim } from "../fx/setPieces.ts";
+import { hasSetPiece, setPieceShapeOf, signatureClaim, signatureRunOf, wipeClaim } from "../fx/setPieces.ts";
 import { questClaim } from "../fx/systemMoments.ts";
+import { anomalyClaim } from "../fx/anomaly.ts";
 import { starshipClaim } from "../fx/starship.ts";
 import CardShowcase from "./showcase/CardShowcase.tsx";
 import { WearerProvider } from "./wearer.ts";
@@ -79,6 +89,7 @@ import { SHORTCUTS } from "../shortcuts/shortcuts.ts";
 import { isTyping } from "../replay/ReplayToolbar.tsx";
 import "./animations.css";
 import { useGameAudio, usePickupSound, useVoiceSpeaking } from "../audio/index.ts";
+import { defaultVisibility } from "./visibility.ts";
 import { useGameStats } from "../stats/useGameStats.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { SidelineStrip } from "../sideline/SidelineStrip.tsx";
@@ -113,6 +124,12 @@ export type GameProps = {
   onAction: (body: ActionBody) => void;
   /** The engine's refusal for the last action, if any. `PlayerView` has no error channel. */
   error?: string | null;
+  /**
+   * R3477000, R3615000: the engine's forecast of this seat's attacks, sent with `view` (a seat's frame,
+   * a practice snapshot). While an attacker is picked, the hovered legal target shows its entry.
+   * Absent, none does.
+   */
+  forecast?: CombatForecast;
   /** The route's ways on from a finished game, drawn in the result panel (Result.tsx). */
   resultActions?: ReactNode;
   /** `chip` when the route draws its own result dialog (practice); `panel` otherwise. */
@@ -185,10 +202,23 @@ export type GameProps = {
    */
   silent?: boolean;
   /**
+   * R3497000: an online board drains its animation queue while the page is hidden (and when it turns
+   * visible with steps still queued), so coming back shows the live board at once. Practice, dungeon
+   * and opened-replay boards leave it off.
+   */
+  drainWhenHidden?: boolean;
+  /** R3497000: the page-visibility source, injectable in tests; the page's own when absent. */
+  visibility?: FxVisibility;
+  /**
    * R2785000: claims an entry as a set piece, asked before the takeover; read at each enqueue. The
    * /dev/fx gallery's fixture set piece is its one caller until issue #2782's set pieces.
    */
   setPieceOf?: SetPieceClaimer;
+  /**
+   * R2972000: what the "Concede this game?" dialog says in place of its usual body, already translated.
+   * A dungeon fight passes one saying the whole run ends with it; every other route keeps the usual.
+   */
+  concedeBody?: string;
 };
 
 /** What Game needs of a route that shows aims both ways (R738). */
@@ -221,6 +251,7 @@ export default function Game({
   legal: offered,
   onAction,
   error,
+  forecast,
   resultActions,
   resultForm = "panel",
   enemyLabel,
@@ -249,7 +280,10 @@ export default function Game({
   tradeBar = true,
   showOfferDraw = true,
   silent = false,
+  drainWhenHidden = false,
+  visibility,
   setPieceOf,
+  concedeBody,
 }: GameProps): ReactElement {
   useLocale();
   // R2118000: no command menu over a board.
@@ -295,6 +329,8 @@ export default function Game({
    * the view does not render (a destroyed card), and "no element is animating" is not "caught up".
    */
   const [inFlight, setInFlight] = useState<AnimationEntry | null>(null);
+  // R3344001: no card tilts while the queue is draining an entry.
+  useTiltHold(inFlight !== null);
   const inFlightDamage = inFlight?.events.find(
     (event): event is Extract<GameEvent, { type: "damage" }> => event.type === "damage",
   );
@@ -316,6 +352,33 @@ export default function Game({
   const portrait = usePhonePortrait();
   const railTop = phoneRailTop && portrait && boardRail !== undefined && boardRail !== null;
   const reducedMotion = useSetting("reduceMotion") || osReducesMotion;
+  // #3347: how much of the card-motion flourishes the settings allow (game/cardMotion.ts): board.css reads it as `data-card-motion`.
+  const [fx] = useFxSettings();
+  const motion = cardMotionLevel(reducedMotion || fx.motion === "reduce", fx.intensity);
+  // #3347: the opening deal, while it runs (game/opening.ts). Its effect below sounds the riffle and each card
+  // dealt on timers that end with it, and takes the deal's aim off the hands once it is over.
+  const [opening, setOpening] = useState<OpeningPlan | null>(null);
+  const openingRuns = useRef(false);
+  const endOpening = useCallback((): void => setOpening(null), []);
+  useEffect(() => {
+    openingRuns.current = opening !== null;
+    if (opening === null) return undefined;
+    const play = (id: "riffle" | "deal"): void => {
+      try {
+        getAudioEngine().playSfx(id);
+      } catch {
+        // Sound is never a rule: no engine (jsdom) or a refused sound drops the cue.
+      }
+    };
+    play("riffle");
+    const timers = opening.deals.map((deal) => window.setTimeout(() => play("deal"), deal.atMs));
+    timers.push(window.setTimeout(endOpening, opening.totalMs));
+    return () => {
+      for (const timer of timers) window.clearTimeout(timer);
+      openingRuns.current = false;
+      if (root.current !== null) clearDeal(root.current);
+    };
+  }, [opening, endOpening]);
   const hitStopTimer = useRef<number | null>(null);
   const triggerHitStopMs = useCallback((durationMs: number): void => {
     if (durationMs <= 0) return;
@@ -410,13 +473,18 @@ export default function Game({
       // R2785000: a quest's climax claims its entry after a wipe does (SET_PIECES_PER_ACTION stays 1).
       // R2801000: and a Starship's launch after both.
       wipeOf: hasSetPiece,
-      setPieceOf: (entry) => setPieceOfRef.current?.(entry) ?? wipeClaim(entry) ?? questClaim(entry) ?? starshipClaim(entry),
+      // R3338000: a Terminus card's signature run is one entry its set piece claims.
+      signatureOf: signatureRunOf,
+      setPieceOf: (entry) =>  setPieceOfRef.current?.(entry) ?? wipeClaim(entry) ?? signatureClaim(entry) ?? questClaim(entry) ?? starshipClaim(entry) ?? anomalyClaim(entry),
       onSettled: () => {
         setShown(latest.current);
       },
     });
   }
   const runner = queue.current;
+  // R3497000: the page-visibility source; the page's own unless a test injects one.
+  const fallbackVisibility = useMemo(() => defaultVisibility(), []);
+  const source = visibility ?? fallbackVisibility;
   useGameStats(view, trackStats);
   useGameAudio(runner, view, silent); // before the layout effects below: it must see each view before the runner is fed (audio/useGameAudio.ts)
   // A voice line holding the channel marks the board `data-speaking`, the one attribute practice's
@@ -463,6 +531,35 @@ export default function Game({
     };
   }, [runner]);
 
+  // #3347: the riffle's and the deal's times, on the root where board.css reads them. Written here and not
+  // in the root's `style` (a conditional object below), so a render never drops them mid-motion.
+  useLayoutEffect(() => {
+    const element = root.current;
+    if (element === null) return undefined;
+    const riffle = inFlight?.riffle;
+    const props: [string, string][] =
+      opening !== null
+        ? [
+            ["--riffle-ms", `${String(opening.riffleMs)}ms`],
+            ["--riffle-delay", "0ms"],
+            ["--deal-ms", `${String(opening.flightMs)}ms`],
+          ]
+        : riffle === undefined
+          ? []
+          : [
+              ["--riffle-ms", `${String(riffle.ms)}ms`],
+              ["--riffle-delay", `${String(riffle.delayMs)}ms`],
+            ];
+    for (const [name, value] of props) element.style.setProperty(name, value);
+    return () => {
+      for (const [name] of props) element.style.removeProperty(name);
+    };
+  }, [inFlight, opening]);
+  // The deal's aim is read from the hands as they are laid out, so after the render that shows `data-dealing`.
+  useLayoutEffect(() => {
+    if (opening !== null && root.current !== null) aimDeal(root.current, opening);
+  }, [opening]);
+
   // R2785000: a tap or a click on the board, or Space, ends a set piece's hold at once and does
   // nothing else: the click reaches no control, and the Space that skipped presses no focused button
   // (its keyup, which would, is swallowed too). A key in a text field is the field's. Listening for
@@ -472,6 +569,9 @@ export default function Game({
     if (element === null) return undefined;
     let swallowUp = false;
     const onClick = (event: MouseEvent): void => {
+      // #3347: a tap ends the opening deal at once, and goes on to whatever it was on (the mulligan's Keep
+      // among them): a deal is no hold, and swallowing the tap would cost the player one press.
+      if (openingRuns.current) endOpening();
       if (!runner.skip()) return;
       event.stopPropagation();
       event.preventDefault();
@@ -498,7 +598,7 @@ export default function Game({
       document.removeEventListener("keydown", onKeyDown, true);
       document.removeEventListener("keyup", onKeyUp, true);
     };
-  }, [runner]);
+  }, [runner, endOpening]);
 
   // A LAYOUT effect: `data-animating` has to be on the DOM by the time the click that caused the
   // action has returned, or `cy.settled()` reads a stale view as up to date.
@@ -516,6 +616,12 @@ export default function Game({
         ? []
         : newEventsSince(previous.events, view.events);
 
+    // #3347: the first view of a game in the mulligan phase is its opening deal, which has no event to animate.
+    if (previous === null && !silent && !replay) {
+      const plan = planOpening(view, getFxSettings().speed);
+      if (plan !== null && motion !== "still") setOpening(plan);
+    }
+
     if (previous !== null && previous.viewer !== view.viewer) runner.drain();
     // Planned against the view the board is STILL SHOWING, the only board that still has the card
     // an event destroys.
@@ -528,21 +634,35 @@ export default function Game({
         // #185: and the heaviest landing's, from the same capped share the queue would give it.
         const slams = slamEntries(planEntries(fresh, previous, true), slamResolver, true);
         triggerHitStopMs(slams.reduce((ms, entry) => Math.max(ms, entry.slam?.hitStopMs ?? 0), 0));
-        // R2722001: a Mythic's entrance is a still card instead of a takeover: the viewer's own (the
-        // other seat's is up in the showcase already), once per card.
+        // R2722001, R3345000: a public Mythic's entrance under reduced motion shows TakeoverStill with
+        // the card's own picture for both seats (hidden play shows nothing, R202). R3337003: a play that
+        // lays an Anomaly yields it to the Anomaly's still title card, as its takeover yields to the rift.
+        const rifted = new Set(slams.flatMap((entry) => entry.rift?.sourceId ?? []));
         const mythic = entranceEntries(slams, entranceResolver, { seen: stillSeen.current }).find(
-          (entry) => entry.entrance?.tier === "mythic" && entry.entrance.player === previous.viewer,
+          (entry) => entry.entrance?.tier === "mythic" && entry.entrance.defId !== HIDDEN_ID && !rifted.has(entry.entrance.instanceId),
         )?.entrance;
         if (mythic !== undefined) setStill({ defId: mythic.defId, instanceId: mythic.instanceId, view: previous });
       }
       runner.enqueue(fresh, previous);
+      // R3497000: a hidden tab drains each new view instead of replaying the backlog on throttled
+      // timers. Enqueue-then-drain, never skip-enqueue, so the drain signal still reaches `FxLayer`,
+      // the director still owes then flushes on idle, and `onSettled` sets `shown`.
+      if (drainWhenHidden && !silent && source.hidden()) runner.drain();
     }
     if (previous !== null && previous.viewer !== view.viewer) {
       stillSeen.current.clear();
       setStill(null);
     }
     if (runner.idle()) setShown(view);
-  }, [view, runner, reducedMotion, triggerHitStop, triggerHitStopMs, slamResolver, entranceResolver]);
+  }, [view, runner, reducedMotion, triggerHitStop, triggerHitStopMs, slamResolver, entranceResolver, silent, replay, motion, drainWhenHidden, source]);
+
+  // R3497000: a tab that turns visible with steps still queued shows the newest view at once.
+  useEffect(() => {
+    if (!drainWhenHidden || silent) return undefined;
+    return source.subscribe(() => {
+      if (!source.hidden() && !runner.idle()) runner.drain();
+    });
+  }, [drainWhenHidden, silent, source, runner]);
 
   // The moves `offered` are the newest view's; they apply once the board shows it (see the header).
   const legal = shown === view ? offered : NOTHING_LEGAL;
@@ -664,13 +784,31 @@ export default function Game({
     dispatch({ type: "concede" });
   }, [dispatch, refocusConcede]);
 
+  // R738: what this seat aims at goes to the opponent; theirs is drawn below until the game ends.
+  // R3615000: the same hovered-target reader feeds the attack preview, so a click-selected or dragged
+  // attack previews exactly the target under the pointer.
+  const hoveredTarget = useAimEmitter(shown, legal, interaction, aim?.emit);
+  // R3477000: the aimed attack's outcomes, the forecast sent with the newest view; a board held back on an
+  // older view shows none, as it offers no moves (`legal` above), and a replay none at all.
+  const showOutcomes = useSetting("attackOutcomes");
+  const outcomes = useMemo(
+    () => (replay || !showOutcomes || shown !== view ? undefined : attackOutcomes(shown, interaction, forecast)),
+    [replay, showOutcomes, shown, view, interaction, forecast],
+  );
+  // R3615000: the one hovered attack whose markers show, under the same gate as `outcomes`: a lesson's
+  // board passes no forecast and a replay none at all, so both still render none.
+  const hovered = useMemo(
+    () =>
+      replay || !showOutcomes || shown !== view
+        ? undefined
+        : hoveredAttack(shown, interaction, outcomes, hoveredTarget?.testid ?? null),
+    [replay, showOutcomes, shown, view, interaction, outcomes, hoveredTarget],
+  );
   // A replay lights nothing: not even the cells an open prompt in the view names (`pendingHighlight`).
   const highlight = useMemo(
-    () => (replay ? NO_HIGHLIGHT : highlightFor(shown, legal, interaction)),
-    [replay, shown, legal, interaction],
+    () => withOutcomes(replay ? NO_HIGHLIGHT : highlightFor(shown, legal, interaction), outcomes, hovered),
+    [replay, shown, legal, interaction, outcomes, hovered],
   );
-  // R738: what this seat aims at goes to the opponent; theirs is drawn below until the game ends.
-  useAimEmitter(shown, legal, interaction, aim?.emit);
   const animated = useMemo(
     () => [...burst, ...lingering].map((entry) => ({ frames: entry.frames, events: entry.events })),
     [burst, lingering],
@@ -739,6 +877,9 @@ export default function Game({
       data-slam-side={inFlightSlam?.side}
       data-hit-stop={hitStop ? "true" : undefined}
       data-reduced-motion={reducedMotion ? "true" : undefined}
+      data-card-motion={motion}
+      data-dealing={opening !== null && motion === "full" ? "true" : undefined}
+      data-riffle={opening !== null ? "you opponent" : inFlight?.riffle?.sides.join(" ")}
       data-takeover={takeoverHold > 0 ? "mythic" : undefined}
       data-set-piece={setPiece?.key}
       data-set-piece-shape={setPieceShape}
@@ -822,6 +963,7 @@ export default function Game({
           </>
         }
         sandDisabled={interaction.stage !== "idle"}
+        draining={inFlight !== null}
         onClick={handleClick}
         onControl={handleControl}
         emotes={heroEmotes}
@@ -893,7 +1035,8 @@ export default function Game({
         </WearerProvider>
       ) : null}
 
-      {concedeOpen ? <ConfirmConcede onConfirm={confirmConcede} onCancel={cancelConcede} /> : null}
+      {concedeOpen ? <ConfirmConcede body={concedeBody} onConfirm={confirmConcede} onCancel={cancelConcede} /> : null}
+      <FullScreenArtHost />
     </div>
   );
 }

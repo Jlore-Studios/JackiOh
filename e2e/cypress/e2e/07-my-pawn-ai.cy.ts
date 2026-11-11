@@ -31,7 +31,7 @@ const GRINDER_LANE: Lane = 1;
 /** SPEC §8 printed attacks; no #14 aura or buff means §10.4 layer 1 is sufficient. */
 const GRINDERS: readonly { defId: string; name: string; attack: number; cost: number }[] = [
   { defId: catalogId(19), name: nameOf(19), attack: 9, cost: 3 },
-  { defId: catalogId(20), name: nameOf(20), attack: 7, cost: 2 },
+  { defId: catalogId(20), name: nameOf(20), attack: 6, cost: 2 },
   { defId: catalogId(25), name: nameOf(25), attack: 7, cost: 4 },
 ];
 

@@ -7,13 +7,14 @@
 // are ⋯'s menu rows (`MatchMenu.tsx`). A hovered or selected hand card rings the cards its preview names (#991, SPEC §10.10).
 // R1297000: the viewer's half wears the wearer's playmat and backdrop. R1834004: an online board's other half wears its seat's frozen loadout (`loadouts`, game/wearer.ts).
 
-import { useCallback, useContext, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
+import { useCallback, useContext, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
 
 import type { CardView, CreditView, GameEvent, GameEventType, LibraryView, PlayerId, PlayerView, Row } from "@jackioh/shared";
 
 import { animTestid } from "./animations.ts";
 import Card, { cx, isLegal, isSelected, legalAttr, type Pops } from "./Card.tsx";
 import { CatalogContext, MatchCardsProvider, type CardLookup } from "./catalog.ts";
+import { RIFFLE_LEAVES } from "./config.ts";
 import {
   LANES,
   NO_HIGHLIGHT,
@@ -35,12 +36,14 @@ import Marketplace from "./Marketplace.tsx";
 import MatchMenu from "./MatchMenu.tsx";
 import { usePhoneBar } from "./phoneBar.ts";
 import { offerDrawControlText } from "./DrawOffer.tsx";
+import CornerProps from "./arena/CornerProps.tsx";
 import SandSurface from "./SandSurface.tsx";
 import StarscapeMap from "./StarscapeMap.tsx";
 import { BurnNotice, PileNotice, noticesFrom, noticeTestid, type OverflowNotices } from "./OverflowNotices.tsx";
 import Zone from "./Zone.tsx";
 import { listedFace, namedFace } from "./faces.ts";
-import { countedTestids, glowAttr, hasMovesLeft } from "./glow.ts";
+import { glowAttr, hasMovesLeft } from "./glow.ts";
+import { HoveredHandCardProvider } from "./hoveredHandCard.tsx";
 import { revealedOpponentHand } from "./reveal.ts";
 import { CardListPreview, CardListSheet, useInspectTrigger, type CardListEntry, type InspectOverlayState } from "../cards/index.ts";
 import { SettingsButton, useSetting } from "../settings/index.ts";
@@ -63,6 +66,7 @@ import "./board.css";
 import "./table.css";
 import "./highlights.css";
 import "./inspectable.css";
+import "./arena/arena.css";
 
 /** Top to bottom in every lane column (BUILD M5-T1). */
 const FIELD_ROWS: readonly { side: Side; row: Row }[] = [
@@ -296,6 +300,7 @@ function Pile({
   plays,
   back,
   children,
+  riffle = false,
 }: {
   label: string;
   regionId: string;
@@ -310,6 +315,8 @@ function Pile({
   back?: string;
   /** R318: the pile's overflow notice (OverflowNotices.tsx), drawn inside it. */
   children?: ReactNode;
+  /** #3347: a Deck pile draws the leaves its riffle plays with; board.css shows them only while the game marks it. */
+  riffle?: boolean;
 }): ReactElement {
   const lookup = useContext(CatalogContext);
   const hoverPreviews = useSetting("hoverPreviews");
@@ -372,6 +379,13 @@ function Pile({
         <span className="pile-n" data-testid={testId}>
           {count}
         </span>
+        {riffle ? (
+          <span className="pile-riffle" aria-hidden="true">
+            {Array.from({ length: RIFFLE_LEAVES }, (_unused, k) => (
+              <i key={k} className="pile-riffle-leaf" style={{ "--k": k } as CSSProperties} />
+            ))}
+          </span>
+        ) : null}
         {children}
       </span>
       {inspect.overlay}
@@ -449,6 +463,7 @@ function Seat({
             ? { browse: { kind: "library" as const, title: t("Your deck"), library: seat.ownLibrary, view, ...(back === undefined ? {} : { back }) } }
             : {})}
           back={back}
+          riffle
         >
           <PileNotice key={notices.pile.get(side)?.entry} notice={notices.pile.get(side)} side={side} view={view} />
           {restingCount !== null && (
@@ -527,7 +542,7 @@ function ControlButton({
   return (
     <button
       type="button"
-      className={cx("control", `control-${control}`)}
+      className={cx("control", `control-${control}`, control === "end-turn" && "button-primary")}
       data-testid={testId}
       title={title}
       data-legal={legalAttr(legal)}
@@ -566,6 +581,7 @@ export default function Board({
   market,
   showOfferDraw = true,
   sandDisabled = false,
+  draining = false,
   onClick,
   onControl,
   emotes,
@@ -595,10 +611,6 @@ export default function Board({
   const [armedFor, setArmedFor] = useState<PlayerView | null>(null);
   const [pressedFor, setPressedFor] = useState<PlayerView | null>(null);
   const [logOpen, setLogOpen] = useState(false);
-  // #991, R583: the hand card under the pointer, whose preview's ids the field rings.
-  const [hovered, setHovered] = useState<string | null>(null);
-  const counted = countedTestids(view, highlight, hovered);
-  const fieldHighlight: Highlight = counted.size === 0 ? highlight : { ...highlight, counted };
   const actionsRemain = hasMovesLeft(highlight);
   const needsConfirm = confirmEndTurn && actionsRemain;
   const armed = needsConfirm && armedFor === view;
@@ -714,30 +726,39 @@ export default function Board({
         {/* R434: at the game's end the view shows the opponent's hand, and the row turns it face up. */}
         <Hand side="opponent" seat={view.opponent.player} hand={revealedOpponentHand(view) ?? view.opponent.hand} cap={view.opponent.handCap} marked={view.opponent.handMarked} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
 
-        <div className="field" aria-label={t("Field")} data-table={table} data-their-table={theirTable} ref={field}>
-          {theirTable === undefined ? null : <span className="field-their-mat" aria-hidden="true" />}
-          <SandSurface field={field} disabled={sandDisabled} table={table} theirTable={theirTable} />
-          {LANES.map((lane) => (
-            <div className="lane" key={lane} data-lane={lane}>
-              {FIELD_ROWS.map((slot) => (
-                <Zone
-                  key={`${slot.side}-${slot.row}`}
-                  view={view}
-                  side={slot.side}
-                  row={slot.row}
-                  lane={lane}
-                  highlight={fieldHighlight}
-                  animating={animating}
-                  onClick={onClick}
-                  pops={pops}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+        {/* #3478: the hovered hand card's state lives in this provider, so a hover re-renders the
+            field's zones and nothing else. The viewer's `Seat` sits between the field and the hand in
+            `board.css`'s grid order, so it stands inside the provider too; it consumes no hover state
+            and keeps today's rendering, exactly as if it stood outside. */}
+        <HoveredHandCardProvider>
+          <div className="field" aria-label={t("Field")} data-table={table} data-their-table={theirTable} ref={field}>
+            {theirTable === undefined ? null : <span className="field-their-mat" aria-hidden="true" />}
+            <SandSurface field={field} disabled={sandDisabled} table={table} theirTable={theirTable} />
+            {/* R3348001: each half's playmat props, from its seat's raw slot (the default mat has props too). The viewer's own answer taps, quietly while the queue drains; the opponent's are still. */}
+            <CornerProps mat={slots.table} half="yours" draining={draining} />
+            <CornerProps mat={theirSlots.table} half="theirs" />
+            {LANES.map((lane) => (
+              <div className="lane" key={lane} data-lane={lane}>
+                {FIELD_ROWS.map((slot) => (
+                  <Zone
+                    key={`${slot.side}-${slot.row}`}
+                    view={view}
+                    side={slot.side}
+                    row={slot.row}
+                    lane={lane}
+                    highlight={highlight}
+                    animating={animating}
+                    onClick={onClick}
+                    pops={pops}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
 
-        <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} aside={heroAside?.own} />
-        <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} view={view} highlight={highlight} animating={animating} onClick={onClick} onHover={setHovered} notice={burnNotice("you")} />
+          <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} aside={heroAside?.own} />
+          <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} view={view} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("you")} />
+        </HoveredHandCardProvider>
 
         <div className="control-bar" aria-label={t("Controls")}>
           {boardRail === undefined ? null : <div className="board-rail">{boardRail}</div>}

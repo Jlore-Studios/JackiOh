@@ -6,9 +6,10 @@
    SCOPED ON PURPOSE. Every token and rule is under `.tavern` (but for the top bar's three colors,
    below); nothing is added to :root or index.css, whose rules the board's pixel-measured layout
    depends on (index.css's header). The screens still render index.css's `.app-shell`, `.panel`,
-   `.notice`, `.form-card`, `.link-button` and `.affix-button`; the rules below re-skin them only
-   inside `.tavern`, with one more class of specificity than the rule they replace. No image and no
-   web font: gradients, shadows and the system's serif. */
+   `.notice` and `.form-card`, and the rules below re-skin them only inside `.tavern`, with one more
+   class of specificity than the rule they replace. A button's skin is its role's, the same here as
+   on every screen (buttons.css, #3219): this sheet gives the tavern's buttons their size alone. No
+   image and no web font: gradients, shadows and the system's serif. */
 
 /* The top bar's three colors (routes/top-bar.css, #3189). BackLink's nav also sits on screens that are not
    `.tavern` (the replays, the deck screens), where they would be undefined, so the nav carries them. */
@@ -178,7 +179,7 @@
   justify-content: center;
 }
 
-.tavern.app-shell .brand h1 {
+.tavern.app-shell .brand__word {
   font-family: var(--tavern-serif);
   font-size: 44px;
   font-weight: 700;
@@ -200,38 +201,6 @@
   -webkit-text-fill-color: transparent;
   -webkit-text-stroke: 1px #3a1f0c;
   filter: drop-shadow(0 0 10px rgba(255, 170, 60, 0.35)) drop-shadow(0 2px 0 #3a1f0c);
-}
-
-/* The screen's title, set between two brass rules. */
-.tavern.app-shell .panel--auth > h2,
-.tavern.app-shell .panel--auth > .auth-board__head > h2 {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: -4px;
-  font-family: var(--tavern-serif);
-  font-size: 21px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--tavern-gold-pale);
-  text-align: center;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
-}
-
-.tavern.app-shell .panel--auth > h2::before,
-.tavern.app-shell .panel--auth > h2::after,
-.tavern.app-shell .panel--auth > .auth-board__head > h2::before,
-.tavern.app-shell .panel--auth > .auth-board__head > h2::after {
-  content: "";
-  flex: 1 1 24px;
-  min-width: 16px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--tavern-brass));
-}
-
-.tavern.app-shell .panel--auth > h2::after,
-.tavern.app-shell .panel--auth > .auth-board__head > h2::after {
-  background: linear-gradient(270deg, transparent, var(--tavern-brass));
 }
 
 /* ---- notices: gold for a message, ember for a problem -------------------------------------- */
@@ -335,51 +304,32 @@
   color: var(--tavern-text-dim);
 }
 
-/* Show / Hide: a small wood key set into the field's edge. The same width either way, so the field
-   does not jump when it is pressed. */
+/* Show / Hide: a small key set into the field's edge (a `button-secondary`). The same width either
+   way, so the field does not jump when it is pressed. */
 .tavern.app-shell .affix-button {
   min-width: 68px;
-  border: 1px solid rgba(201, 149, 63, 0.5);
   border-radius: 10px;
-  background: linear-gradient(180deg, #3b2213, #24140a);
-  color: var(--tavern-gold-pale);
   font-weight: 600;
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.15);
-}
-
-.tavern.app-shell .affix-button:hover {
-  border-color: var(--tavern-gold);
-  background: linear-gradient(180deg, #4a2c18, #2b180c);
-  color: var(--tavern-gold-pale);
 }
 
 /* ---- buttons ------------------------------------------------------------------------------- */
 
-/* The screen's one call to action, as the landing's: gold, lit, pressed down on click. */
-.tavern.app-shell .form-card button[type="submit"],
-.tavern.app-shell button.button-primary,
-.tavern.app-shell a.button-primary {
+/* The screen's one call to action, as the landing's: large, in the serif, pressed down on click.
+   Its gold is `button-primary`'s (buttons.css). Not in the deck builder, which sizes its own. */
+.tavern.app-shell:where(:not(.deckbuilder)) .form-card button[type="submit"],
+.tavern.app-shell:where(:not(.deckbuilder)) button.button-primary,
+.tavern.app-shell:where(:not(.deckbuilder)) a.button-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 50px;
   padding: 10px 20px;
-  border: 2px solid #6b4212;
+  border-width: 2px;
   border-radius: 12px;
-  background: linear-gradient(180deg, #fff0bf 0%, var(--tavern-gold) 42%, #dc9b33 58%, #a86a1f 100%);
-  color: var(--tavern-ink);
   font-family: var(--tavern-serif);
   font-size: 19px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  text-decoration: none;
-  text-shadow: 0 1px 0 rgba(255, 246, 214, 0.6);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.2),
-    0 4px 0 #4a2a0e,
-    0 10px 20px rgba(0, 0, 0, 0.5),
-    0 0 22px rgba(243, 201, 105, 0.25);
   transition: transform 90ms ease-out, box-shadow 140ms ease-out, filter 140ms ease-out;
 }
 
@@ -387,123 +337,48 @@
   margin-top: 16px;
 }
 
-.tavern.app-shell .form-card button[type="submit"]:hover:not(:disabled),
-.tavern.app-shell button.button-primary:hover:not(:disabled),
-.tavern.app-shell a.button-primary:hover {
-  border-color: #6b4212;
-  background: linear-gradient(180deg, #fff0bf 0%, var(--tavern-gold) 42%, #dc9b33 58%, #a86a1f 100%);
-  color: var(--tavern-ink);
-  filter: brightness(1.07);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.2),
-    0 4px 0 #4a2a0e,
-    0 10px 20px rgba(0, 0, 0, 0.5),
-    0 0 32px rgba(255, 179, 71, 0.5);
-}
-
-.tavern.app-shell .form-card button[type="submit"]:active:not(:disabled),
-.tavern.app-shell button.button-primary:active:not(:disabled),
-.tavern.app-shell a.button-primary:active {
+.tavern.app-shell:where(:not(.deckbuilder)) .form-card button[type="submit"]:active:not(:disabled),
+.tavern.app-shell:where(:not(.deckbuilder)) button.button-primary:active:not(:disabled),
+.tavern.app-shell:where(:not(.deckbuilder)) a.button-primary:active {
   transform: translateY(3px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
-    0 1px 0 #4a2a0e,
-    0 4px 10px rgba(0, 0, 0, 0.5);
 }
 
-/* Not ready yet: the same button, unlit. Still legible, so its label says what it is waiting for. */
-.tavern.app-shell .form-card button[type="submit"]:disabled,
-.tavern.app-shell button.button-primary:disabled {
-  opacity: 1;
-  border-color: #3a2410;
-  background: linear-gradient(180deg, #5d4a33, #3f2f1f);
-  color: color-mix(in srgb, var(--tavern-parchment) 55%, transparent);
-  text-shadow: none;
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.12), 0 2px 0 #1f1008;
-  cursor: not-allowed;
-}
-
-/* Any other button (Try again, Check again): a wood one, secondary to the gold. Not in the deck
-   builder (/decks), whose chips, tiles and card buttons are drawn to its pixel budget by
-   deckbuilder.css, and not the top bar's buttons, which draw themselves (routes/top-bar.css);
+/* Any other button (Try again, Check again): the tavern's size, secondary to the gold. Its skin is
+   its role's, or `button-secondary`'s where it names none (buttons.css): this rule only sets the
+   tavern's size. Not in the deck builder (/decks), whose chips, tiles and card buttons are sized to
+   its pixel budget by deckbuilder.css, and not the top bar's buttons, which draw themselves
+   (routes/top-bar.css), nor a dialog's ✕, which keeps its own round size (game/dialog.css, R3221000);
    `:where()` leaves the rule's weight as it was, so the sheets that outrank it still do. */
-.tavern.app-shell:where(:not(.deckbuilder)) button:where(:not(.top-bar-button)):not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]) {
+.tavern.app-shell:where(:not(.deckbuilder)) button:where(:not(.top-bar-button)):not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):where(:not(.dialog__close)) {
   min-height: 44px;
   padding: 8px 18px;
-  border: 1px solid var(--tavern-brass);
   border-radius: 10px;
-  background: linear-gradient(180deg, var(--tavern-wood-light), var(--tavern-wood) 55%, var(--tavern-wood-deep));
-  color: var(--tavern-parchment);
   font-family: var(--tavern-serif);
   font-size: 16px;
   font-weight: 700;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.8);
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.3), 0 3px 0 #1f1008, 0 6px 12px rgba(0, 0, 0, 0.45);
 }
 
-.tavern.app-shell:where(:not(.deckbuilder)) button:where(:not(.top-bar-button)):not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):hover:not(:disabled) {
-  border-color: var(--tavern-gold);
-  color: var(--tavern-gold-pale);
-}
-
-/* A link that reads as a button (the shell panels' "Home"): the same wood. */
-.tavern.app-shell a.button-secondary {
+/* A link that reads as a button (the shell panels' "Home"): the same size. */
+.tavern.app-shell:where(:not(.deckbuilder)) a.button-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 44px;
   padding: 8px 18px;
-  border: 1px solid var(--tavern-brass);
   border-radius: 10px;
-  background: linear-gradient(180deg, var(--tavern-wood-light), var(--tavern-wood) 55%, var(--tavern-wood-deep));
-  color: var(--tavern-parchment);
   font-family: var(--tavern-serif);
   font-size: 16px;
   font-weight: 700;
-  text-decoration: none;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.8);
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.3), 0 3px 0 #1f1008, 0 6px 12px rgba(0, 0, 0, 0.45);
 }
 
-.tavern.app-shell a.button-secondary:hover {
-  border-color: var(--tavern-gold);
-  background: linear-gradient(180deg, var(--tavern-wood-light), var(--tavern-wood) 55%, var(--tavern-wood-deep));
-  color: var(--tavern-gold-pale);
-}
-
-/* The text-like ways on and out (forgot, the mode toggle, back to sign in, sign out). No padding
-   of their own, so they line up with the form's left edge, and one underline, never two. The top
-   bar's Back and Sign out are pills instead (routes/top-bar.css); `:where()` adds no weight. */
-.tavern.app-shell .link-button:where(:not(.top-bar-button)),
-.tavern.app-shell a.link-button {
+/* The text-like ways on and out (forgot, the mode toggle, back to sign in, sign out), drawn by
+   `link-button` (buttons.css). No padding of their own, so they line up with the form's left edge.
+   The top bar's Back and Sign out are pills instead (routes/top-bar.css); `:where()` adds no weight. */
+.tavern.app-shell .link-button:where(:not(.top-bar-button)) {
   padding: 0;
-  border: none;
   border-radius: 0;
-  background: none;
-  color: var(--tavern-gold);
   font-weight: 600;
   text-align: left;
-  text-decoration: underline;
-  text-decoration-color: rgba(201, 149, 63, 0.55);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 4px;
-  box-shadow: none;
-}
-
-.tavern.app-shell .link-button:where(:not(.top-bar-button)):hover:not(:disabled),
-.tavern.app-shell a.link-button:hover {
-  border: none;
-  background: none;
-  color: var(--tavern-gold-pale);
-  text-decoration-color: var(--tavern-gold-pale);
-}
-
-.tavern.app-shell .link-button:disabled {
-  color: color-mix(in srgb, var(--tavern-parchment) 45%, transparent);
-  text-decoration: none;
-  opacity: 1;
 }
 
 /* Touch targets (task 7's 44 px floor). The text-like ways on and out measured 17 to 22 px tall at
@@ -543,12 +418,12 @@
 }
 
 /* An anchor in prose ("play vs AI"). */
-.tavern.app-shell a:not(.link-button):not(.button-primary):not(.button-secondary) {
+.tavern.app-shell a:not(.link-button):not(.button-primary):not(.button-secondary):where(:not(.button-danger)) {
   color: var(--tavern-gold);
   border-bottom: 1px solid rgba(201, 149, 63, 0.55);
 }
 
-.tavern.app-shell a:not(.link-button):not(.button-primary):not(.button-secondary):hover {
+.tavern.app-shell a:not(.link-button):not(.button-primary):not(.button-secondary):where(:not(.button-danger)):hover {
   color: var(--tavern-gold-pale);
   border-bottom-color: var(--tavern-gold-pale);
 }
@@ -750,7 +625,7 @@
 }
 
 /* The account card's actions, each the card's full width like the auth forms' own buttons: the gold
-   one for the way on (Redeem an invite code), the wood one for Sign out (integration QA: they were
+   one for the way on (Redeem an invite code), the secondary for Sign out (integration QA: they were
    shrink-wrapped, a second button style in the same card). */
 .tavern.app-shell .account-actions {
   display: flex;
@@ -793,7 +668,7 @@
     padding: 24px 20px 28px;
   }
 
-  .tavern.app-shell .brand h1 {
+  .tavern.app-shell .brand__word {
     font-size: 38px;
   }
 }
@@ -805,7 +680,7 @@
     padding-top: 20px;
   }
 
-  .tavern.app-shell .brand h1 {
+  .tavern.app-shell .brand__word {
     font-size: 34px;
   }
 }
@@ -818,9 +693,9 @@
 @media (orientation: landscape) and (max-height: 500px) and (min-width: 601px) {
   .tavern.app-shell.auth-screen,
   .tavern.app-shell.invite-screen {
-    padding-top: 8px;
+    padding-top: 4px;
     padding-bottom: 20px;
-    gap: 8px;
+    gap: 4px;
   }
 
   .tavern.app-shell.auth-screen {
@@ -843,9 +718,16 @@
 
   .tavern.app-shell.auth-screen > .panel--auth {
     grid-column: 2;
-    grid-row: 1;
+    grid-row: 2;
     position: relative;
     z-index: 1;
+  }
+
+  /* The footer takes a row of its own under the board: auto-placed beside it, its longest line (#3380's labels)
+     widened that margin and narrowed the board, wrapping the create-account terms onto a third line. */
+  .tavern.app-shell.auth-screen > .site-footer {
+    grid-column: 1 / -1;
+    grid-row: 3;
   }
 
   /* Both parts start at the top: a refusal appearing under the button lengthens the form's part
@@ -858,7 +740,7 @@
     max-width: 640px;
     width: 100%;
     margin: 0 auto;
-    padding: 18px 24px 20px;
+    padding: 10px 24px 20px;
   }
 
   .tavern.app-shell .panel--split > .auth-board__head,
@@ -879,32 +761,18 @@
     padding-top: 4px;
   }
 
-  .tavern.app-shell .panel--split .brand h1 {
+  .tavern.app-shell .panel--split .brand__word {
     font-size: 36px;
   }
 
-  /* The title in a narrow column may take two lines, so its brass rules go under it, as one short
-     rule, rather than squeezing to nothing on either side. */
-  .tavern.app-shell .panel--split > .auth-board__head > h2 {
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 0;
-    font-size: 19px;
-    text-wrap: balance;
-  }
-
-  .tavern.app-shell .panel--split > .auth-board__head > h2::before {
-    display: none;
-  }
-
-  .tavern.app-shell .panel--split > .auth-board__head > h2::after {
-    flex: none;
-    width: 72px;
-    background: linear-gradient(90deg, transparent, var(--tavern-brass), transparent);
+  /* The title is in the top bar now (R3223000), a row above the board, so the create-account form, the tallest,
+     spends its rows tighter to keep its button on the first screen (spec: landing-and-code-field). */
+  .tavern.app-shell .panel--split .form-card {
+    gap: var(--space-2);
   }
 
   .tavern.app-shell .panel--split .form-card label {
-    margin-top: 4px;
+    margin-top: 2px;
   }
 
   .tavern.app-shell .panel--split .form-card input:not(.code-field__input) {
@@ -912,7 +780,7 @@
   }
 
   .tavern.app-shell .panel--split .form-card button[type="submit"] {
-    margin-top: 10px;
+    margin-top: 6px;
     min-height: 46px;
   }
 

@@ -34,6 +34,8 @@ import {
   FX_MIND_CONTROL_FLIGHT_FRACTION,
   FX_MOTIF_PHASES,
   FX_OVERFLOW_FIZZLE_AT,
+  FX_PLAY_HEAVY_TRAUMA,
+  FX_PLAY_MASSIVE_TRAUMA,
   FX_PROJECTILE_FLIGHT_FRACTION,
   FX_RADIANT_BURST_AT,
   FX_RAYS_TAIL_MS,
@@ -46,7 +48,7 @@ import {
   FX_TRAP_BURST_AT,
 } from "./constants.ts";
 import { FLAVOR_LOOKS, chaosFlavor, type FlavorLook } from "./flavors.ts";
-import { delayCues, planFx, planHandover, planLethal, planResult, sourceAnchor, traumaForShakePx } from "./cues.ts";
+import { delayCues, planFx, planHandover, planLethal, planResult, playTrauma, sourceAnchor, traumaForShakePx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
 import { entranceEchoMs } from "./takeover.ts";
 import type { FxAnchor, FxCardFacts, FxCue, FxPlanEnv, FxPoint } from "./types.ts";
@@ -1742,11 +1744,19 @@ describe("B20 turn banners", () => {
 
 /* B21: R202, the redacted stream only */
 
-/** Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`, and a callout's or a launch's `still` (R2789000, R2801000). */
+/**
+ * Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`, a callout's, a launch's or an Anomaly's
+ * title card's `still` (R2789000, R2801000, R3337003), a ghost's `spin` (R3337003), and a figure's `side` and `size`
+ * (R3400001).
+ */
 const CUE_OPTIONAL_KEYS: Partial<Record<FxCue["kind"], readonly string[]>> = {
   burst: ["scale", "colors"],
   callout: ["still"],
   launch: ["still"],
+  cinematic: ["still"],
+  figure: ["side", "size"],
+  anomalyTitle: ["still"],
+  ghost: ["spin"],
 };
 
 const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
@@ -1775,14 +1785,29 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   roll: ["kind", "title", "die", "items", "delayMs", "durationMs"],
   fog: ["kind", "tone", "from", "to", "tint", "icon", "delayMs", "durationMs"],
   zone: ["kind", "at", "tint", "text", "direction", "delayMs", "durationMs"],
-  takeover: ["kind", "look", "tint", "at", "landMs", "delayMs", "durationMs"],
+  takeover: ["kind", "stage", "look", "tint", "at", "landMs", "delayMs", "durationMs"],
   setPiece: ["kind", "shape", "tint", "spin", "side", "at", "holdMs", "delayMs", "durationMs"],
   launch: ["kind", "at", "tint", "size", "countsMs", "igniteMs", "delayMs", "durationMs"],
+  ship: ["kind", "move", "at", "tint", "count", "lit", "delayMs", "durationMs"],
+  figure: ["kind", "figure", "at", "tint", "delayMs", "durationMs"],
   pull: ["kind", "testid", "to", "delayMs", "durationMs"],
+  rift: ["kind", "at", "side", "tint", "tearMs", "flareMs", "delayMs", "durationMs"],
+  anomalyTitle: ["kind", "at", "text", "picture", "tint", "delayMs", "durationMs"],
+  radar: ["kind", "at", "side", "tint", "delayMs", "durationMs"],
+  // R3334000–R3334003: the Starship's moments.
+  module: ["kind", "uri", "motion", "from", "to", "share", "landMs", "spin", "delayMs", "durationMs"],
+  weld: ["kind", "at", "hum", "delayMs", "durationMs"],
+  cinematic: [
+    "kind", "art", "name", "lettering", "letters", "size", "tint", "at", "cameraFrom", "cameraTo", "panAtMs", "panEndMs", "zoom",
+    "stops", "engines", "sparks", "stampMs", "climbMs", "delayMs", "durationMs",
+  ],
+  doctrine: ["kind", "doctrine", "text", "tint", "at", "delayMs", "durationMs"],
+  wreck: ["kind", "art", "at", "breakMs", "turn", "delayMs", "durationMs"],
+  scorch: ["kind", "at", "delayMs", "durationMs"],
 };
 
 const ANCHOR_KEYS: Record<FxAnchor["kind"], { required: readonly string[]; optional: readonly string[] }> = {
-  testid: { required: ["kind", "testid"], optional: ["at"] },
+  testid: { required: ["kind", "testid"], optional: ["at", "art"] },
   crystal: { required: ["kind", "side", "index"], optional: [] },
   handCard: { required: ["kind", "side", "pick"], optional: [] },
   viewport: { required: ["kind", "at"], optional: [] },
@@ -2157,5 +2182,88 @@ describe("B9 projectiles carry the intensity as their density", () => {
     expect(at(FX_INTENSITY_SCALE.low)).toMatchObject({ density: FX_INTENSITY_SCALE.low });
     expect(at(FX_INTENSITY_SCALE.normal)).toMatchObject({ density: 1 });
     expect(at(FX_INTENSITY_SCALE.high)).toMatchObject({ density: FX_INTENSITY_SCALE.high });
+  });
+});
+
+/* R3346000 (#3346): the board answers a heavy play */
+
+describe("R3346000 a heavy play shakes the board by the mana it cost, a massive one hard", () => {
+  const D = ANIMATIONS.cardPlayed.durationMs;
+  const COMMON: Record<string, FxCardFacts> = { "core-002": { rarity: "Common", attack: 1, health: 2, type: "Unit" } };
+  const playedAt = (costPaid: number, extra: Partial<Extract<GameEvent, { type: "cardPlayed" }>> = {}): GameEvent => ({ ...played("p1", HAND), costPaid, ...extra }) as GameEvent;
+  const shakes = (event: GameEvent, intensity: number = FX_INTENSITY_SCALE.normal, facts: Record<string, FxCardFacts> = COMMON, prime?: readonly GameEvent[]): number[] =>
+    shakesOf(plan([event], D, { env: envOf({ intensity, card: catalog(facts) }), ...(prime === undefined ? {} : { prime }) }));
+
+  it("R3346000 a play of cost 0 to 5 shakes nothing, 6 to 8 shakes FX_PLAY_HEAVY_TRAUMA and 9 or more FX_PLAY_MASSIVE_TRAUMA", () => {
+    for (const cost of [0, 2, 3, 5]) expect(shakes(playedAt(cost)), `cost ${String(cost)}`).toEqual([]);
+    for (const cost of [6, 7, 8]) expect(shakes(playedAt(cost)), `cost ${String(cost)}`).toEqual([FX_PLAY_HEAVY_TRAUMA]);
+    for (const cost of [9, 10, 14]) expect(shakes(playedAt(cost)), `cost ${String(cost)}`).toEqual([FX_PLAY_MASSIVE_TRAUMA]);
+    expect(FX_PLAY_MASSIVE_TRAUMA).toBeGreaterThan(FX_PLAY_HEAVY_TRAUMA);
+    expect(FX_PLAY_HEAVY_TRAUMA).toBeGreaterThan(0);
+    expect(FX_PLAY_MASSIVE_TRAUMA).toBeLessThanOrEqual(1);
+  });
+
+  it("R3346000 playTrauma is the trauma of each tier before the setting: none under heavy", () => {
+    expect([playTrauma("light"), playTrauma("medium"), playTrauma("heavy"), playTrauma("massive")]).toEqual([0, 0, FX_PLAY_HEAVY_TRAUMA, FX_PLAY_MASSIVE_TRAUMA]);
+  });
+
+  it("R3346000 the intensity setting scales the shake, capped at 1, and off gives none", () => {
+    const { low, normal, high, off } = FX_INTENSITY_SCALE;
+    expect(shakes(playedAt(7), low)).toEqual([Math.min(1, FX_PLAY_HEAVY_TRAUMA * low)]);
+    expect(shakes(playedAt(7), normal)).toEqual([FX_PLAY_HEAVY_TRAUMA]);
+    expect(shakes(playedAt(7), high)).toEqual([Math.min(1, FX_PLAY_HEAVY_TRAUMA * high)]);
+    expect(shakes(playedAt(10), low)).toEqual([Math.min(1, FX_PLAY_MASSIVE_TRAUMA * low)]);
+    expect(shakes(playedAt(10), high)).toEqual([Math.min(1, FX_PLAY_MASSIVE_TRAUMA * high)]);
+    expect(shakes(playedAt(7), off)).toEqual([]);
+    expect(shakes(playedAt(10), off)).toEqual([]);
+    for (const level of [low, normal, high]) expect(shakes(playedAt(10), level)[0] ?? 0).toBeLessThanOrEqual(1);
+  });
+
+  it("R3346000 a Spell and a Field Spell shake as a Unit does, by the same tiers", () => {
+    for (const type of ["Spell", "Field Spell"] as const) {
+      const facts = { "core-002": { rarity: "Common", type } } satisfies Record<string, FxCardFacts>;
+      expect(shakes(playedAt(5), FX_INTENSITY_SCALE.normal, facts), type).toEqual([]);
+      expect(shakes(playedAt(6), FX_INTENSITY_SCALE.normal, facts), type).toEqual([FX_PLAY_HEAVY_TRAUMA]);
+      expect(shakes(playedAt(9), FX_INTENSITY_SCALE.normal, facts), type).toEqual([FX_PLAY_MASSIVE_TRAUMA]);
+    }
+  });
+
+  it("R3346000 a Trap, a Field Trap, a card set face-down, the sentinel, a cast on draw and an unnamed card shake nothing, at any cost", () => {
+    for (const type of ["Trap", "Field Trap"] as const) {
+      expect(shakes(playedAt(10), FX_INTENSITY_SCALE.normal, { "core-002": { rarity: "Common", type } }), type).toEqual([]);
+    }
+    expect(shakes(playedAt(10, { formerId: "h1" })), "a set face-down").toEqual([]);
+    expect(shakes(playedAt(10, { defId: "hidden", instanceId: "hidden", player: "p2" }), FX_INTENSITY_SCALE.normal, { hidden: { rarity: "Common", type: "Unit" } }), "the sentinel").toEqual([]);
+    expect(shakes(playedAt(10), FX_INTENSITY_SCALE.normal, {}), "a card with no catalog row").toEqual([]);
+    expect(shakes(playedAt(10, { type: "cardPlayed" }), FX_INTENSITY_SCALE.normal, { "core-002": { rarity: "Common" } }), "a card with no type").toEqual([]);
+    const drawn: GameEvent = { type: "drawn", player: "p1", instanceId: HAND, defId: "core-002" };
+    // A cast on draw keeps its own shake (cardFx.ts castOnDrawCues): its cost adds none to it.
+    expect(shakes(playedAt(10), FX_INTENSITY_SCALE.normal, COMMON, [drawn]), "a cast on draw").toEqual(shakes(playedAt(0), FX_INTENSITY_SCALE.normal, COMMON, [drawn]));
+    expect(shakes(playedAt(10), FX_INTENSITY_SCALE.normal, COMMON, [drawn])).not.toContain(FX_PLAY_MASSIVE_TRAUMA);
+  });
+
+  it("R3346000 the other seat's heavy play shakes the board too", () => {
+    expect(shakes(playedAt(7, { player: "p2" }))).toEqual([FX_PLAY_HEAVY_TRAUMA]);
+    expect(shakes(playedAt(9, { player: "p2" }))).toEqual([FX_PLAY_MASSIVE_TRAUMA]);
+  });
+});
+
+describe("#3347 a mulligan's returned cards fly into the deck from their hand", () => {
+  const returned: GameEvent = { type: "shuffledIn", player: "p1", instanceId: "cW", defId: "core-070", position: 3 };
+
+  it("#3347 planned against a mulligan view, a shuffledIn's ghost starts at the hand of its seat", () => {
+    const cues = plan([returned], 300, { view: { ...fullBoardView(), phase: "mulligan" } });
+    expect(cues).toContainEqual(ghost(tid("hand-you"), tid("library-you"), 300));
+  });
+
+  it("#3347 the opponent's returned cards fly from their hand, a back", () => {
+    const theirs: GameEvent = { type: "shuffledIn", player: "p2", instanceId: "hidden", defId: "hidden", position: 0 };
+    const cues = plan([theirs], 300, { view: { ...fullBoardView(), phase: "mulligan" } });
+    expect(cues).toContainEqual(ghost(tid("hand-opponent"), tid("library-opponent"), 300));
+  });
+
+  it("#3347 outside the mulligan a shuffledIn still comes from the middle of the screen", () => {
+    const cues = plan([returned], 300, { view: { ...fullBoardView(), phase: "main" } });
+    expect(cues).toContainEqual(ghost(CENTER, tid("library-you"), 300));
   });
 });

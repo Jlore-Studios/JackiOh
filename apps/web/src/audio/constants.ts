@@ -57,7 +57,12 @@ export const GAIN_SMOOTHING_S = 0.015;   // setTargetAtTime time constant for bu
 export const VOICE_DELAY_MS = 150;       // play/cast line after the card whoosh
 export const DEATH_VOICE_DELAY_MS = 120;
 export const PAIR_OFFSET_MS = 220;       // cues of the 2nd event of a collapsed cardPlayed+summoned entry
-export const FLUSH_MAX_SFX = 4;
+/**
+ * The idle flush's cap on distinct sfx ids (reduced motion plays no animation, so a burst is voiced
+ * condensed). R3346000 raised it from 4 to 5 for the cost impact: a Mythic Unit's whoosh, impact,
+ * entrance sting, thud and slam impact would otherwise lose its entrance to the cap.
+ */
+export const FLUSH_MAX_SFX = 5;
 export const FLUSH_GAP_MS = 90;
 export const UI_HOVER_THROTTLE_MS = 80;
 /** R501: §10.11's cap on the pre-rendered voice set (R1448, R1884000). */
@@ -147,6 +152,19 @@ export const MUSIC_DUCK_RELEASE_TC_S = 0.25;
 export const MUSIC_DUCK_SFX: readonly SfxId[] = ["trapSting", "victory", "defeat"];
 /** The field's taps (game/SandSurface.tsx TAP_SFX, #1954): every press sounds, past SFX_RETRIGGER_MS and SFX_MAX_VOICES. */
 export const RAPID_SFX: ReadonlySet<SfxId> = new Set<SfxId>(["sand", "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral"]);
+/**
+ * R3334000: the sounds a run sends at once, each delayed to its own beat (a fuse run's docks,
+ * starshipSounds.ts): their retrigger guard reads when each sounds, not when it was sent, so two
+ * docks a beat apart both sound and two at one beat do not.
+ */
+export const SCHEDULED_SFX: ReadonlySet<SfxId> = new Set<SfxId>(["starshipDock"]);
+/**
+ * #3347: a deck's riffle sounds this long after the shuffle it follows begins, the length of the pile's
+ * `shuffledIn` or `traded` motion (game/animations.ts), so the sound lands with the leaves.
+ */
+export const RIFFLE_SOUND_DELAY_MS = 300;
+/** R3348001: how much of its gain a quiet cue (`SfxParams.quiet`) keeps. */
+export const QUIET_SFX_GAIN = 0.35;
 /** Focus: how fast the music fades out when the page is hidden or blurred, and back. */
 export const MUSIC_FOCUS_TC_S = 0.15;
 /** Low health: the viewer's hero at or under this fraction of HERO_HEALTH plays the urgency track. */
@@ -168,6 +186,13 @@ export const MUSIC_BUDGET_BYTES = 49 * 1024 * 1024;
 // ---- Patch v0.2.X sound polish (#259, R669): stings, the mix's panning, ducking and reverb ----
 /** A played card's rarity sting starts this long after the card whoosh, so the two read as one. */
 export const STING_DELAY_MS = 40;
+/**
+ * R3346000 (#3346): a play's cost impact starts with the card whoosh. The rarity sting follows at
+ * STING_DELAY_MS and the voice line at VOICE_DELAY_MS, so the three are heard as three starts.
+ */
+export const PLAY_IMPACT_DELAY_MS = 0;
+/** R3346000: the other seat's play impact (and a trap's snap) plays at this share of the viewer's own. */
+export const PLAY_IMPACT_OPPONENT_GAIN = 0.6;
 /** The pan of a sound about a unit in the outermost lane; the middle lane is centered. */
 export const LANE_PAN_MAX = 0.6;
 /** The effects' gain under a voice line, and how fast they dip and recover. */
@@ -219,6 +244,16 @@ export const MUSIC_INTRO_DECODED_MAX = 4;
  */
 export const MUSIC_INTRO_MIN_S = 3;
 export const MUSIC_INTRO_MAX_S = 12;
+/**
+ * R3332002: a Legendary's or a Mythic's play sting is the opening of its own intro, cut to this span
+ * (the shared `entrance` sting's) when the intro itself will not play: dynamic music off, or the music
+ * at zero. It plays on the effects bus, ducking nothing.
+ */
+export const MUSIC_STING_S = 1.4;
+/** R3332002: the sting's last this-many seconds fade it out, so the cut never clicks. */
+export const MUSIC_STING_FADE_S = 0.3;
+/** R3332002: the sting's gain on the effects bus, level with the effects around it (an intro sits above them). */
+export const MUSIC_STING_GAIN = 0.6;
 /**
  * R2722000: a Legendary's whole file runs at most this, and every Mythic's longer (tracks.mjs
  * INTRO_LEGENDARY_MAX_S), so a Mythic's entrance always outlasts a Legendary's.

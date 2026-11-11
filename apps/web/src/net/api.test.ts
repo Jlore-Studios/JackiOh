@@ -1,11 +1,12 @@
 // R2124000: `net/api.ts`'s spends go with an `Idempotency-Key`: a press mints one, its retries send it
 // again, and any server answer but a 429 (which ran nothing) ends the press; reads send none. Each spend
 // is out from its press until it settles (R2378000). The keys live in the module for the page's life,
-// so each test presses with a body of its own.
+// so each test presses with a body of its own. Open all is one spend (R3212000); the deck workshop's
+// sync is none (R3212001).
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
+import { API_REQUEST_TIMEOUT_SECONDS, GLOBAL_PACK_NAME } from "@jackioh/server-config";
 
 import {
   ApiRequestError,
@@ -17,14 +18,25 @@ import {
   getNews,
   getPacks,
   isQueueMode,
+  keptPaths,
+  openAllPacks,
   openCosmeticPack,
   openPack,
   redeemCardToken,
   redeemCode,
   redeemCosmeticToken,
   roomModeOf,
+  syncDecks,
+  type DeckSyncInput,
+  type DecksResponse,
+  type PacksResponse,
+  type SavedDeck,
+  type SavedTrio,
+  type TrioSlots,
 } from "./api.ts";
+import { cachedRead, rememberRead } from "./readCache.ts";
 import { spendOutNow } from "./spending.ts";
+import { openedPack, packsInfo } from "../packs/fixtures.ts";
 import { jsonResponse } from "../test/stubServer.ts";
 
 const TOKEN = "tok-r2124000";
@@ -33,9 +45,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{1
 
 type Reply = { status: number; body?: unknown } | "hang" | "fail";
 
-type Sent = { path: string; key: string | undefined };
+type Sent = { path: string; key: string | undefined; method: string | undefined; body: unknown; keepalive: boolean };
 
-/** One reply per call, in order; records each call's path and key. */
+/** One reply per call, in order; records each call's path, key, method, parsed body and `keepalive`. */
 function stubFetch(replies: Reply[]): Sent[] {
   const sent: Sent[] = [];
   const queue = [...replies];
@@ -43,7 +55,13 @@ function stubFetch(replies: Reply[]): Sent[] {
     "fetch",
     vi.fn<(input: string, init?: RequestInit) => Promise<Response>>((input, init) => {
       const headers = init?.headers as Record<string, string> | undefined;
-      sent.push({ path: new URL(input).pathname, key: headers?.["idempotency-key"] });
+      sent.push({
+        path: new URL(input).pathname,
+        key: headers?.["idempotency-key"],
+        method: init?.method,
+        body: typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined,
+        keepalive: init?.keepalive === true,
+      });
       const reply = queue.shift() ?? { status: 200, body: {} };
       if (reply === "hang") return new Promise<Response>(() => undefined);
       if (reply === "fail") return Promise.reject(new TypeError("Failed to fetch"));
@@ -203,6 +221,69 @@ describe("R2124000 a spend runs once", () => {
     expect(sent[0]?.key).toMatch(UUID);
     expect(sent[1]?.key).toMatch(UUID);
     expect(sent[1]?.key).not.toBe(sent[0]?.key);
+  });
+
+  it("R3212000 openAllPacks is one spend with an Idempotency-Key of its own each press", async () => {
+    rememberRead(TOKEN, keptPaths.packs, packsInfo());
+    const last = { ...openedPack(), unopened: 0, pity: { epic: 1, legendary: 2, mythic: 3 } };
+    const answer = { status: 200, body: { openings: [{ ...openedPack(), unopened: 1 }, last] } };
+    const sent = stubFetch([answer, answer]);
+
+    const opening = openAllPacks(TOKEN, "Core", 2);
+    expect(spendOutNow(), "out from the press").toBe(true);
+    await expect(opening).resolves.toEqual(answer.body);
+    const kept = cachedRead<PacksResponse>(TOKEN, keptPaths.packs);
+    expect(kept?.unopened, "the last opening's count, a kind with none left dropped").toEqual([{ pack: GLOBAL_PACK_NAME, count: 1 }]);
+    expect(kept?.pity).toEqual(last.pity);
+    await openAllPacks(TOKEN, "Core", 2);
+
+    expect(sent.map((call) => `${String(call.method)} ${call.path}`)).toEqual(["POST /api/packs/open-all", "POST /api/packs/open-all"]);
+    expect(sent[0]?.body).toEqual({ pack: "Core", count: 2 });
+    expect(sent[0]?.key).toMatch(UUID);
+    expect(sent[1]?.key).toMatch(UUID);
+    expect(sent[1]?.key).not.toBe(sent[0]?.key);
+  });
+});
+
+describe("R3212001 the deck workshop's sync", () => {
+  it("R3212001 syncDecks is one POST that folds every item into the kept decks", async () => {
+    const deck = (id: string, name: string): SavedDeck => ({ id, name, cards: [], catalogVersion: "v", portrait: null, createdAt: 1, updatedAt: 1 });
+    const trio = (id: string, deckIds: TrioSlots): SavedTrio => ({ id, name: id, deckIds, createdAt: 1, updatedAt: 1 });
+    rememberRead(TOKEN, keptPaths.decks, {
+      catalogVersion: "v",
+      decks: [deck("d-1", "One"), deck("d-2", "Two"), deck("d-3", "Three")],
+      trios: [trio("t-1", ["d-1", "d-2", null]), trio("t-2", [null, null, null])],
+      limits: { decks: 10, trios: 5, nameLength: 20 },
+    } satisfies DecksResponse);
+    const input: DeckSyncInput = {
+      decks: [
+        { id: "d-1", name: "Renamed", cards: [], catalogVersion: "v" },
+        { id: "d-4", name: "Four", cards: [], catalogVersion: "v" },
+      ],
+      trios: [{ id: "t-3", name: "t-3", deckIds: ["d-1", null, null] }],
+      deletedTrios: ["t-2"],
+      deletedDecks: ["d-2"],
+    };
+    const answer = {
+      decks: [
+        { id: "d-1", deck: deck("d-1", "Renamed") },
+        { id: "d-4", status: 409, error: { code: "conflict", message: "You already have 10 decks.", details: { limit: 10 } } },
+      ],
+      trios: [{ id: "t-3", trio: trio("t-3", ["d-1", null, null]) }],
+      deletedTrios: [{ id: "t-2", deleted: true }],
+      deletedDecks: [{ id: "d-2", deleted: true }],
+    };
+    const sent = stubFetch([{ status: 200, body: answer }]);
+
+    const syncing = syncDecks(TOKEN, input, { keepalive: true });
+    expect(spendOutNow(), "not a spend").toBe(false);
+    await expect(syncing).resolves.toEqual(answer);
+
+    expect(sent).toEqual([{ path: "/api/decks/sync", key: undefined, method: "POST", body: input, keepalive: true }]);
+    const kept = cachedRead<DecksResponse>(TOKEN, keptPaths.decks);
+    expect(kept?.decks.map((entry) => `${entry.id}:${entry.name}`), "a refused deck is not kept").toEqual(["d-1:Renamed", "d-3:Three"]);
+    expect(kept?.trios.map((entry) => entry.id)).toEqual(["t-1", "t-3"]);
+    expect(kept?.trios[0]?.deckIds, "the deleted deck's slot empties (R252)").toEqual(["d-1", null, null]);
   });
 });
 

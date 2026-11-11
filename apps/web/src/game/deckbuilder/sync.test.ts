@@ -8,6 +8,7 @@ import {
   DECK_AUTOSAVE_DEBOUNCE_MS,
   DECK_AUTOSAVE_RETRY_SECONDS,
   DECK_NAME_MAX_LENGTH,
+  DECK_SYNC_ITEMS_MAX,
   MAX_SAVED_DECKS,
   MAX_SAVED_TRIOS,
 } from "@jackioh/server-config";
@@ -16,6 +17,7 @@ import {
   ApiUnreachableError,
   type DeckInput,
   type DecksResponse,
+  type DeckSyncInput,
   type DeckVersion,
   type SavedDeck,
   type SavedTrio,
@@ -26,6 +28,7 @@ import {
 } from "../../net/api.ts";
 import { settle } from "../../test/settle.ts";
 import { fixtureCardId } from "./fixtures.ts";
+import { syncByItem, type SyncHandlers } from "./testkit.ts";
 import {
   HISTORY_OFFLINE_MESSAGE,
   IMPORT_OFFLINE_MESSAGE,
@@ -136,6 +139,8 @@ function fakeServer() {
   /** R2100000: each deck's kept versions, newest first, as a test seeds them (a save keeps none here). */
   const versions = new Map<string, DeckVersion[]>();
   const calls: Call[] = [];
+  /** R3212001: each sync's body, as sent. */
+  const batches: DeckSyncInput[] = [];
   const state = {
     offline: false,
     refusals: new Map<string, ApiRequestError>(),
@@ -150,9 +155,9 @@ function fakeServer() {
     if (refusal !== undefined) throw refusal;
   }
 
-  const api = {
-    async putDeck(id: string, input: DeckInput) {
-      await gate({ op: "putDeck", id, body: input });
+  const routes: SyncHandlers = {
+    async putDeck(id: string, input: DeckInput, options?: SendOptions) {
+      await gate({ op: "putDeck", id, body: input, ...sentWith(options) });
       decks.set(id, input);
       return { deck: { id } };
     },
@@ -164,8 +169,8 @@ function fakeServer() {
       }
       return { deleted };
     },
-    async putTrio(id: string, input: TrioInput) {
-      await gate({ op: "putTrio", id, body: input });
+    async putTrio(id: string, input: TrioInput, options?: SendOptions) {
+      await gate({ op: "putTrio", id, body: input, ...sentWith(options) });
       if (input.deckIds.some((deckId) => deckId !== null && !decks.has(deckId))) {
         throw new ApiRequestError(409, {
           code: "conflict",
@@ -179,6 +184,14 @@ function fakeServer() {
     async deleteTrio(id: string, options?: SendOptions) {
       await gate({ op: "deleteTrio", id, ...sentWith(options) });
       return { deleted: trios.delete(id) };
+    },
+  };
+
+  const api = {
+    /** R3212001: one request, each item as its own route would answer it. */
+    syncDecks(input: DeckSyncInput, options?: SendOptions) {
+      batches.push(input);
+      return syncByItem(routes, input, options);
     },
     /** R341: import is all-or-nothing under the server caps. */
     async importTrio(input: TrioImportInput) {
@@ -231,7 +244,7 @@ function fakeServer() {
     };
   }
 
-  return { api, calls, decks, trios, versions, state, holdRequests };
+  return { api, calls, batches, decks, trios, versions, state, holdRequests };
 }
 
 function savedDeck(id: string, name: string, cards: string[], createdAt: number): SavedDeck {
@@ -795,6 +808,95 @@ describe("refusals", () => {
     server.state.refusals.delete(id);
     await clock.advance(RETRY_MS);
     expect(server.decks.has(id)).toBe(true);
+    expect(store.getSnapshot().status.state).toBe("saved");
+  });
+});
+
+describe("one request a pass (R3212001)", () => {
+  function seeded(decks: SavedDeck[], trios: SavedTrio[] = [], limits?: Partial<DecksResponse["limits"]>) {
+    const server = fakeServer();
+    for (const deck of decks) server.decks.set(deck.id, { name: deck.name, cards: deck.cards, catalogVersion: CATALOG_VERSION });
+    for (const trio of trios) server.trios.set(trio.id, { name: trio.name, deckIds: trio.deckIds });
+    const clock = manualClock();
+    const initial = response(decks, trios);
+    const store = open({ api: server.api, clock, server: { ...initial, limits: { ...initial.limits, ...limits } } });
+    return { server, clock, store };
+  }
+
+  it("R3212001 one pass sends every dirty deck, trio and deletion in one request, in the server's order", async () => {
+    const { server, clock, store } = seeded(
+      [savedDeck("d1", "Aggro", [], 1), savedDeck("d2", "Control", [], 2)],
+      [savedTrio("t1", "Ladder", ["d1", "d2", null], 3), savedTrio("t2", "Casual", [null, null, null], 4)],
+    );
+    store.updateDeck("d2", { name: "Control 2" });
+    const fresh = store.createDeck({ name: "Fresh" }) ?? "";
+    const trio = store.createTrio({ name: "New", deckIds: [fresh, null, null] }) ?? "";
+    store.deleteTrio("t2");
+    // Empties t1's slot, so t1 is saved too.
+    store.deleteDeck("d1");
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+
+    expect(server.batches).toHaveLength(1);
+    const [batch] = server.batches;
+    expect(batch?.decks.map((deck) => deck.id)).toEqual(["d2", fresh]);
+    expect(batch?.trios.map((entry) => entry.id)).toEqual(["t1", trio]);
+    expect(batch?.deletedTrios).toEqual(["t2"]);
+    expect(batch?.deletedDecks).toEqual(["d1"]);
+    expect(batch?.decks[0]).toEqual({ id: "d2", name: "Control 2", cards: [], catalogVersion: CATALOG_VERSION, portrait: null });
+    expect(server.calls.map((call) => `${call.op} ${call.id}`), "the server's order: decks, trios, then the deletions").toEqual([
+      "putDeck d2",
+      `putDeck ${fresh}`,
+      "putTrio t1",
+      `putTrio ${trio}`,
+      "deleteTrio t2",
+      "deleteDeck d1",
+    ]);
+    expect(server.trios.get(trio)?.deckIds, "a trio naming a deck of its own request lands").toEqual([fresh, null, null]);
+    expect(server.decks.has("d1")).toBe(false);
+    expect(store.getSnapshot().unsynced.size).toBe(0);
+    expect(store.getSnapshot().status.state).toBe("saved");
+  });
+
+  it("R3212001 a refused item is marked in the server's words and the rest of its request are saved", async () => {
+    const { server, clock, store } = seeded([savedDeck("d1", "Aggro", [], 1)], [savedTrio("t1", "Ladder", [null, null, null], 2)]);
+    const refused = store.createDeck({ name: "Over the cap" }) ?? "";
+    const kept = store.createDeck({ name: "Fits" }) ?? "";
+    const trio = store.createTrio({ name: "New", deckIds: [kept, null, null] }) ?? "";
+    store.deleteTrio("t1");
+    store.deleteDeck("d1");
+    const message = "You already have 10 decks. Delete one first.";
+    server.state.refusals.set(refused, new ApiRequestError(409, { code: "conflict", message, details: { limit: MAX_SAVED_DECKS } }));
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+
+    expect(server.batches).toHaveLength(1);
+    const snapshot = store.getSnapshot();
+    expect(snapshot.refused.get(refused)).toBe(message);
+    expect([...snapshot.unsynced]).toEqual([refused]);
+    expect(snapshot.status).toEqual({ state: "error", message });
+    expect(server.decks.has(kept)).toBe(true);
+    expect(server.trios.get(trio)?.deckIds).toEqual([kept, null, null]);
+    expect(server.trios.has("t1")).toBe(false);
+    expect(server.decks.has("d1")).toBe(false);
+    expect(snapshot.decks.map((deck) => deck.id)).toEqual([refused, kept]);
+
+    await clock.advance(RETRY_MS * 2);
+    expect(server.batches, "a refused body is not sent again unchanged").toHaveLength(1);
+  });
+
+  it("R3212001 more than DECK_SYNC_ITEMS_MAX items go in requests of at most that many", async () => {
+    const { server, clock, store } = seeded([], [], { decks: DECK_SYNC_ITEMS_MAX + 2 });
+    const ids = Array.from({ length: DECK_SYNC_ITEMS_MAX + 2 }, (_unused, at) => store.createDeck({ name: `Deck ${String(at)}` }) ?? "");
+    const trio = store.createTrio({ name: "Last", deckIds: [ids.at(-1) ?? null, null, null] }) ?? "";
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+
+    const sizes = server.batches.map((batch) => batch.decks.length + batch.trios.length + batch.deletedTrios.length + batch.deletedDecks.length);
+    expect(sizes).toEqual([DECK_SYNC_ITEMS_MAX, 3]);
+    expect(server.batches[0]?.trios, "the decks go first").toEqual([]);
+    expect(server.batches[1]?.decks.map((deck) => deck.id)).toEqual(ids.slice(DECK_SYNC_ITEMS_MAX));
+    expect(server.batches[1]?.trios.map((entry) => entry.id)).toEqual([trio]);
+    expect(server.decks.size).toBe(DECK_SYNC_ITEMS_MAX + 2);
+    expect(server.trios.has(trio)).toBe(true);
+    expect(store.getSnapshot().unsynced.size).toBe(0);
     expect(store.getSnapshot().status.state).toBe("saved");
   });
 });

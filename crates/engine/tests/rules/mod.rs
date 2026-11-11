@@ -21,6 +21,7 @@ pub mod animated;
 pub mod announce;
 pub mod anomalies;
 pub mod armor_absorbed;
+pub mod attack_hook_asks_last;
 pub mod attack_mods;
 pub mod audit;
 pub mod aura_table;

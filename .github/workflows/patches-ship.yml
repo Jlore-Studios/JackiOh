@@ -37,8 +37,12 @@
 # pending/ does not ship, so once that issue is closed the watch runs this workflow again from the
 # newer main, superseding the stuck promotion with one that carries the fix. Nothing supersedes a
 # log, which alone holds its commits, so its fix lands its entries on main and the watch then closes
-# it. GitHub does not start this repository's scheduled runs reliably (promote-production.yml), so
-# every completed CI run checks too; the check is a few API calls.
+# it. A log whose issue closed with its entries still off main is escalated again, in an issue of its
+# own, until LOG_ESCALATIONS issues have named it: #2395 joined #2402 after #2402's plan was written,
+# #2402's fix landed only #2391's entries, and #2395 sat unseen for eight days behind a warning in
+# the run's log. Closing a log's pull request drops its entries instead. GitHub does not start this
+# repository's scheduled runs reliably (promote-production.yml), so every completed CI run checks
+# too; the check is a few API calls.
 name: patches ship
 
 on:
@@ -181,7 +185,8 @@ jobs:
   # on it, each pull request once, which its `stuck #N` marker records. A log whose commits are all on
   # main's technical log already is closed instead. Once no such issue is open, a promotion it named
   # that is still stuck is shipped again from the newer main, unless main has not moved or a ship from
-  # it is on its way or already ran; a log it named is left to a person. A pull request still running
+  # it is on its way or already ran; a log it named is escalated again in an issue of its own, and left
+  # to a person once LOG_ESCALATIONS issues have named it. A pull request still running
   # its checks, or green and only waiting to merge, is left alone.
   watch:
     name: escalate a stuck promotion or log
@@ -202,6 +207,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           STUCK_AFTER_SECONDS: "7200"
+          # How many issues may name one stuck log before it is left to a person: each closed with its
+          # entries still off main opens the next.
+          LOG_ESCALATIONS: "3"
           NIGHT_BOT: jgoetzmann-bot
           # bot/go/internal/titles' LeftAlone holds it, so no retitle hides the issue from this.
           TITLE: "CI: a patches promotion or log is stuck"
@@ -269,7 +277,13 @@ jobs:
               open=$(jq -r '[.[] | select(.state == "OPEN")][0].number // empty' <<<"$issues")
               named=$(jq -r --arg marker "$marker" '[.[] | select(((.body // "") | contains($marker)) or ([.comments[].body // ""] | any(contains($marker))))] | length' <<<"$issues")
 
-              if [ "$named" -eq 0 ]; then
+              # A log every issue naming it closed with its commits still off main (its entries were left
+              # out of that fix, as #2395's were of #2402's) is escalated again in an issue of its own.
+              again=""
+              if [ "$kind" = log ] && [ "$named" -gt 0 ] && [ -z "$open" ] && [ "$named" -lt "$LOG_ESCALATIONS" ]; then
+                again="An earlier issue named this pull request and closed with these commits still off main, so this is escalation $((named + 1)) of $LOG_ESCALATIONS. Land this pull request's own entries, not only another log's."
+              fi
+              if [ "$named" -eq 0 ] || [ -n "$again" ]; then
                 if [ "$kind" = log ]; then
                   note=$(printf '%s\n' \
                     "$marker" \
@@ -279,7 +293,8 @@ jobs:
                     "" \
                     "Until its entries are on main, the $(wc -l <<<"$missing") commit(s) it logs are missing from the technical log, and nothing logs them again: a later log holds only what went live after it." \
                     "" \
-                    "Fix it on a branch from main: add the entries this pull request adds to \`$TECHNICAL\` as they are, each after the entry it follows here, and keep main's, each commit once (\`cargo jackioh patches check\` holds the file's shape). Keep their \`version\`, the patch that was live when they went live (R1369000): \`cargo jackioh patches log\` run again would log them on today's. Fix too any check red here that is red on main. Close this issue with that pull request; the watch in \`.github/workflows/patches-ship.yml\` then closes this one." \
+                    ${again:+"$again" ""} \
+                    "Fix it on a branch from main: add the entries this pull request adds to \`$TECHNICAL\` as they are, each after the entry it follows here, and keep main's, each commit once (\`cargo jackioh patches check\` holds the file's shape). Keep their \`version\`, the patch that was live when they went live (R1369000), under the name \`crates/cards/patches/aliases.json\` gives it today if versions were renamed since: \`cargo jackioh patches log\` run again would log them on today's. Fix too any check red here that is red on main. Close this issue with that pull request; the watch in \`.github/workflows/patches-ship.yml\` then closes this one. To drop these entries instead, a person closes $url." \
                     "" \
                     "If they are red for a reason outside the repository (CI out of minutes, a spending limit, billing, an account, a runner that never started), no change here fixes it: open the plan with a \`**Human required:**\` line saying what a person must do, and build nothing.")
                 else
@@ -310,14 +325,15 @@ jobs:
                 continue
               fi
 
-              # Named in an issue already: wait while one is open. A log whose issue closed with its
-              # commits still off main is a person's to look at; a promotion ships again from a newer main.
+              # Named in an issue already: wait while one is open. A log LOG_ESCALATIONS issues named, each
+              # closed with its commits still off main, is a person's to look at; a promotion ships again
+              # from a newer main.
               if [ -n "$open" ]; then
                 echo "#$number: stuck; #$open is open"
                 continue
               fi
               if [ "$kind" = log ]; then
-                echo "::warning::#$number: stuck, its issue closed, and it still logs $(wc -l <<<"$missing") commit(s) main's technical log does not"
+                echo "::warning::#$number: stuck, $named issue(s) named it and closed, and it still logs $(wc -l <<<"$missing") commit(s) main's technical log does not; land its entries or close it"
                 continue
               fi
               if [ "$base" = "$main" ]; then

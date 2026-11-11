@@ -26,6 +26,7 @@ import {
   SETTINGS_SYNC_STORAGE_KEY,
   __resetSettingsSyncForTests,
   readSettingsSyncState,
+  requestQueue,
   startSettingsAccountSync,
   useSettingsAccountSync,
   type SettingsAccountApi,
@@ -278,9 +279,9 @@ describe("R634 after the load, each change is sent as it happens", () => {
     expect(api.save).toHaveBeenCalledTimes(1);
     const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
     expect(Object.keys(sent)).toEqual(["cards"]);
-    expect(sent["cards"]?.values).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true });
+    expect(sent["cards"]?.values).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true, boardNames: "artFirst" });
     expect(sent["cards"]?.values).not.toHaveProperty("setWatermarks");
-    expect(DEVICE_CARD_SETTINGS).toEqual(["setWatermarks", "rarityFoil"]);
+    expect(DEVICE_CARD_SETTINGS).toEqual(["setWatermarks", "rarityFoil", "deviceTilt"]);
   });
 
   it("R2721000 Rarity foil stays on the device: the account's copy never turns it on, turning it on sends nothing, and the cards group never carries it", async () => {
@@ -304,9 +305,31 @@ describe("R634 after the load, each change is sent as it happens", () => {
     expect(api.save).toHaveBeenCalledTimes(1);
     const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
     expect(Object.keys(sent)).toEqual(["cards"]);
-    expect(sent["cards"]?.values).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true });
+    expect(sent["cards"]?.values).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true, boardNames: "artFirst" });
     expect(sent["cards"]?.values).not.toHaveProperty("rarityFoil");
     expect(readCardSettings().rarityFoil).toBe(true);
+  });
+
+  it("R3344001 Tilt with my phone stays on the device: the account's copy never turns it on, turning it on sends nothing, and the cards group never carries it", async () => {
+    const api = fakeApi({ cards: { at: T0 - 2_000, values: { animatedFoil: false, deviceTilt: true } } });
+    start(api);
+    await settleSyncs();
+    expect(readCardSettings().animatedFoil).toBe(false);
+    expect(readCardSettings().deviceTilt).toBe(false);
+    expect(api.save).not.toHaveBeenCalled();
+
+    await pass(1_000);
+    writeCardSettings({ deviceTilt: true });
+    await pass(SETTINGS_SYNC_DEBOUNCE_MS * 3);
+    expect(readCardSettings().deviceTilt).toBe(true);
+    expect(api.save).not.toHaveBeenCalled();
+
+    writeCardSettings({ hoverPreviews: false });
+    await pass(SETTINGS_SYNC_DEBOUNCE_MS);
+    expect(api.save).toHaveBeenCalledTimes(1);
+    const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
+    expect(sent["cards"]?.values).not.toHaveProperty("deviceTilt");
+    expect(readCardSettings().deviceTilt).toBe(true);
   });
 
   it("R1295000 the card cosmetics go up as their own group and come back on a new device", async () => {
@@ -647,5 +670,24 @@ describe("R634 the hook: one sync for the page, only for an active account", () 
     }
     expect(vi.getTimerCount(), "the release came due").toBe(0);
     expect(readSettingsSyncState().phase, "and stopped nothing on a page that is gone").toBe("saved");
+  });
+});
+
+describe("requestQueue", () => {
+  it("runs requests in order, a failure skipped, and settles after the last", async () => {
+    const { enqueue, settled } = requestQueue();
+    const seen: string[] = [];
+    enqueue(async () => {
+      // Slower than the last: run side by side, "c" would land first.
+      await Promise.resolve();
+      await Promise.resolve();
+      seen.push("a");
+    });
+    enqueue(() => Promise.reject(new Error("refused")));
+    enqueue(async () => {
+      seen.push("c");
+    });
+    await settled();
+    expect(seen).toEqual(["a", "c"]);
   });
 });

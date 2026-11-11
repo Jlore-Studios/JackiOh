@@ -1,4 +1,4 @@
-// B19 (DR14 part D, #2705): the Dungeon Run page switches between the run's screens. The store is the
+// B19 (DR14 part D, #2705): the Dungeon run page switches between the run's screens. The store is the
 // real one over the fixtures' scripted run bindings; the fight (part E) and the map (part F) screens are
 // stand-ins that show which one the page drew and hand the page's `Dungeon` to the test.
 
@@ -10,7 +10,7 @@ import { DUNGEON_RUN_KEY } from "./config.ts";
 import DungeonPage from "./DungeonPage.tsx";
 import { __resetDungeonForTests, type Dungeon } from "./store.ts";
 import { dungeonTestid } from "./testids.ts";
-import { STARTERS, resetBindings, setupOf, unlocks } from "./test/fixtures.ts";
+import { resetBindings, setupOf, unlocks } from "./test/fixtures.ts";
 
 vi.mock("../wasm/index.ts", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -125,7 +125,7 @@ describe("B19 the page's screens", () => {
     expect(byId(dungeonTestid.start)).toBeInTheDocument();
     expect(screen.queryByTestId(dungeonTestid.saved)).toBeNull();
 
-    for (const id of STARTERS) fireEvent.click(byId(dungeonTestid.card(id)));
+    fireEvent.click(byId(dungeonTestid.preset("first-charge")));
     fireEvent.click(byId(dungeonTestid.startRun));
 
     expect(screen.queryByTestId(dungeonTestid.start)).toBeNull();

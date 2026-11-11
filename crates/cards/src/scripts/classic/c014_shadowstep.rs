@@ -145,19 +145,19 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SHADOWSTEP: &str = "classic-014";
-    const BIG_FELINOR: &str = "core-043"; // (4) Unit 3/10: "Cry: Destroy all non-Felinor Units."
-    const MIND_CONTROL: &str = "core-049"; // (5) Spell: "Float reduces cost. Steal an enemy card."
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const MENACE: &str = "core-019"; // (3) Unit 9/9
-    const TIMMY: &str = "core-011"; // (1) Unit 3/3
-    const DEFENDER: &str = "core-003"; // (1) Unit 1/1 Taunt, Divine Shield, Reborn
-    const STATE_OF_GAME: &str = "classic-041"; // (1) Unit 3/3 Indestructible
-    const SAINTESS: &str = "core-081"; // (1) Unit 2/2: "Death: Make your other Units Radiant."
-    const MR_TOKEN: &str = "core-015"; // (1) Unit 1/1: "Cry: Summon a Rush Token."
-    const RUSH_TOKEN: &str = "core-t-rush"; // (1) Unit token 3/3
-    const FELINORS: &str = "core-012"; // (2) Unit 3/4, a Felinor Big Felinor spares
-    const STOCKPILE: &str = "core-005"; // (1) Spell, a spare card (§2.5)
-    const SUPPRESSIVE_AURA: &str = "core-046"; // (2) Field Spell: "Aura: All Units have −1/−1."
+    const BIG_FELINOR: &str = "core-043"; // Big Felinor: "Cry: Destroy all non-Felinor Units."
+    const MIND_CONTROL: &str = "core-049"; // Snom Bunny Mind Control: "Float reduces cost. Steal an enemy card."
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const DEFENDER: &str = "core-003"; // Right-house defender: Unit Taunt, Divine Shield, Reborn
+    const STATE_OF_GAME: &str = "classic-041"; // State of the Game: Unit Indestructible
+    const SAINTESS: &str = "core-081"; // Radiant Saintess: "Death: Make your other Units Radiant."
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: "Cry: Summon a Rush Token."
+    const RUSH_TOKEN: &str = "core-t-rush"; // Rush Token: Unit token
+    const FELINORS: &str = "core-012"; // Duplicating Felinors: a Felinor Big Felinor spares
+    const STOCKPILE: &str = "core-005"; // Stockpile: a Spell, a spare card (§2.5)
+    const SUPPRESSIVE_AURA: &str = "core-046"; // Suppressive Aura: "Aura: All Units get a stat penalty."
 
     fn wipe(radiant_face: bool, mine: Value, opts: Value) -> Scenario {
         scenario(json!({
@@ -174,10 +174,6 @@ mod tests {
                 "library": [STOCKPILE],
             },
         }))
-    }
-
-    fn fired(s: &Scenario) -> usize {
-        s.events().iter().filter(|event| event.event_type() == GameEventType::TrapFired).count()
     }
 
     fn mine_on_field(s: &Scenario) -> Vec<Option<String>> {
@@ -239,7 +235,7 @@ mod tests {
             let mut s = wipe(false, json!([VANILLA, MENACE, TIMMY]), json!({}));
             let cards = [s.card(VANILLA).clone(), s.card(MENACE).clone(), s.card(TIMMY).clone()];
             s.play(BIG_FELINOR, json!({}));
-            assert_eq!(fired(&s), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
             for card in &cards {
                 s.expect_in_zone(card, "hand");
             }
@@ -260,7 +256,7 @@ mod tests {
         fn enemy_deaths_don_t_fire_it() {
             let mut s = wipe(false, json!([FELINORS]), json!({ "theirs": [VANILLA, MENACE] }));
             s.play(BIG_FELINOR, json!({}));
-            assert_eq!(fired(&s), 0);
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
             assert_eq!(backrow_def(&s, P1, 1), Some(SHADOWSTEP.to_string()));
             s.expect_in_zone(FELINORS, "field");
         }
@@ -297,7 +293,7 @@ mod tests {
             let mut s = wipe(false, json!([STATE_OF_GAME]), json!({}));
             s.play(BIG_FELINOR, json!({}));
             s.expect_in_zone(STATE_OF_GAME, "field");
-            assert_eq!(fired(&s), 0);
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
         }
 
         #[test]
@@ -313,7 +309,7 @@ mod tests {
             }));
             let state = s.card(STATE_OF_GAME).clone();
             s.play(SUPPRESSIVE_AURA, json!({ "zone": 1 }));
-            assert_eq!(fired(&s), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
             s.expect_in_zone(&state, "hand");
             assert_eq!(s.card(&state).cost_override, Some(0));
             s.expect_in_zone(VANILLA, "field");
@@ -338,7 +334,7 @@ mod tests {
             assert_eq!(s.card(&menace).controller, P2);
             s.end_turn();
             s.play(BIG_FELINOR, json!({}));
-            assert_eq!(fired(&s), 0);
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
             s.expect_in_zone(&menace, "graveyard");
             assert_eq!(backrow_def(&s, P1, 1), Some(SHADOWSTEP.to_string()));
         }
@@ -386,7 +382,7 @@ mod tests {
             assert_eq!(s.card(&menace).controller, P1);
             s.end_turn();
             s.play(BIG_FELINOR, json!({}));
-            assert_eq!(fired(&s), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
             s.expect_in_zone(&menace, "hand");
             assert!(s.hand(P1).iter().any(|card| card.id == menace.id));
             assert!(!s.hand(P2).iter().any(|card| card.id == menace.id));
@@ -415,7 +411,7 @@ mod tests {
             let vanilla = s.card(VANILLA).clone();
             let menace = s.card(MENACE).clone();
             s.play(BIG_FELINOR, json!({}));
-            assert_eq!(fired(&s), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
             assert_eq!(s.unit(P1, 1).map(|card| card.id), Some(vanilla.id.clone()));
             assert_eq!(s.unit(P1, 2).map(|card| card.id), Some(menace.id.clone()));
             assert!(!s
@@ -514,7 +510,7 @@ mod tests {
             let mut s = wipe(true, json!([FELINORS]), json!({ "theirs": [VANILLA] }));
             s.play(BIG_FELINOR, json!({}));
             s.expect_in_zone(VANILLA, "graveyard");
-            assert_eq!(fired(&s), 0);
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
             assert_eq!(backrow_def(&s, P1, 1), Some(SHADOWSTEP.to_string()));
         }
 
@@ -559,7 +555,7 @@ mod tests {
         let vanilla = s.card(VANILLA).id.clone();
         crate::stand_in_backrow(&mut s, &vanilla, 2);
         s.play(BIG_FELINOR, json!({}));
-        assert_eq!(fired(&s), 1);
+        assert_eq!(s.count(GameEventType::TrapFired), 1);
         assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(vanilla.clone()));
         assert!(stands_in_backrow(s.state(), s.card(vanilla.as_str())));
     }

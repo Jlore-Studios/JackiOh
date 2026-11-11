@@ -7,7 +7,7 @@ import type { ReactElement } from "react";
 import Username from "../../../apps/web/src/auth/Username.tsx";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import RankCrest from "../../../apps/web/src/rank/RankCrest.tsx";
-import { fullBoardView, heroPower } from "../../../apps/web/src/test/fixtures.ts";
+import { baseView, emptySide, faceDownBackrow, fullBoardView, heroPower, unit } from "../../../apps/web/src/test/fixtures.ts";
 
 /** BUILD M5-T1's viewports plus B28's landscape phone and portrait tablet. */
 const VIEWPORTS = [
@@ -473,7 +473,7 @@ describe("#2330 equal board rows, and DEF cards only as small as their zone need
 // #2932: on a phone held upright a field card keeps a card shape (its width over its height between
 // 0.72, the phone's card, and 0.86, the shape the desktop draws units at) and grows by height; the four
 // rows share the field's height; the seats are thinner and give theirs to the field; the match bar
-// rides the top strip; and a unit's Activate control and keyword marks hang off its corner. #2876's
+// rides the top strip; and a unit's Activate control and keyword marks stand in its zone's corner. #2876's
 // other claims hold as they were: no mat above or below the lanes, and the hand, `--card-h` and the
 // screen budget unchanged.
 describe("#2876, #2932 phone portrait cards keep a card shape and the field keeps the height", () => {
@@ -490,6 +490,14 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
   const FIELD_RATIO_MIN = 0.72;
   const FIELD_RATIO_MAX = 0.86;
   const RATIO_SLACK = 0.02;
+  /** What a card-shaped placeholder's ratio may stray from the card's, for the 2px inset it keeps off each side (#3257). */
+  const INSET_RATIO_SLACK = 0.03;
+  /** How far the badge stack's first mark may stand from its zone's inner top-left corner: its 2px inset and a little more (#3257). */
+  const CORNER_PX = 4;
+  /** The lanes that carry a badged unit in the specs of #3257: the first, a middle one and the last. */
+  const BADGED_LANES = [1, 3, 5] as const;
+  /** A badge stack's items: the Activate control, the keyword marks and the "+n" (`FieldBadges.tsx`). */
+  const MARKS = ".activate-control, .keyword-icon, .cf-kw-more";
   /** B29's touch floor. */
   const TOUCH_PX = 44;
   /** How much of current `main`'s seat a plate may still be: #2932 asks for at least 20% off. */
@@ -589,6 +597,29 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
 
   function overlaps(a: DOMRect, b: DOMRect): boolean {
     return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  }
+
+  /** Your units row's zone in `lane`, from 1. */
+  function unitZone(doc: Document, lane: number): HTMLElement {
+    const zone = doc.querySelector<HTMLElement>(`${BOARD} .zone[data-side="you"][data-row="units"][data-lane="${lane}"]`);
+    expect(zone, `your lane ${lane} unit zone is mounted`).to.not.eq(null);
+    return zone as HTMLElement;
+  }
+
+  const PING = { ability: "ping", label: "Deal 1 damage.", usesLeft: 1, usable: true } as const;
+
+  /**
+   * The full board with an Activate ability and two keywords on your units in lanes 1, 3 and 5, all in
+   * `position`: lane 2's unit already carries every keyword, lane 4's only a Stack (no mark).
+   */
+  function badged(position: "ATK" | "DEF"): ReturnType<typeof fullBoardView> {
+    const base = fullBoardView();
+    const units = base.you.units.map((each, index) =>
+      each === null || !BADGED_LANES.some((lane) => lane - 1 === index)
+        ? each
+        : { ...each, position, keywords: [{ kind: "Rush" as const }, { kind: "Can't Defend" as const }], activations: [PING] },
+    );
+    return { ...base, you: { ...base.you, units } };
   }
 
   for (const size of SIZES) {
@@ -785,181 +816,199 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
       });
     });
 
-    it(`#2932 a unit's Activate control and keyword marks hang outside its card's top-left, on and off DEF, at ${where}`, () => {
+    it(`#3257 every empty zone keeps a card-shaped placeholder inside it, in all four rows and all five lanes, at ${where}`, () => {
       cy.viewport(size.width, size.height);
-      const badged = (position: "ATK" | "DEF"): ReturnType<typeof fullBoardView> => {
-        const base = fullBoardView();
-        const first = base.you.units[0];
-        if (first === null || first === undefined) throw new Error("fullBoardView has a unit in lane 1");
-        const unit = {
-          ...first,
-          position,
-          keywords: [{ kind: "Rush" as const }, { kind: "Can't Defend" as const }],
-          activations: [{ ability: "ping", label: "Deal 1 damage.", usesLeft: 1, usable: true }],
-        };
-        return { ...base, you: { ...base.you, units: base.you.units.map((each, index) => (index === 0 ? unit : each)) } };
-      };
-      const seen: { atk?: DOMRect[] } = {};
-
-      const stackOf = (doc: Document): { card: HTMLElement; marks: HTMLElement[] } => {
-        const card = doc.querySelector<HTMLElement>(`${BOARD} .zone[data-side="you"][data-row="units"][data-lane="1"] > .card`);
-        const stack = card?.parentElement?.querySelector<HTMLElement>(":scope > .field-badges") ?? null;
-        expect(card, "the badged unit is mounted").to.not.eq(null);
-        expect(stack, "its zone holds the badge stack").to.not.eq(null);
-        const marks = stack === null ? [] : [...stack.querySelectorAll<HTMLElement>(".activate-control, .keyword-icon:not([data-chip=\"hidden\"])")];
-        return { card: card as HTMLElement, marks };
-      };
-
-      cy.mount(
-        <div className="app-shell app-shell--wide">
-          <Game view={badged("ATK")} legal={[]} onAction={() => undefined} />
-        </div>,
-      );
-      cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
-      cy.document({ log: false }).should((doc) => {
-        const { card, marks } = stackOf(doc);
-        expect(marks.length, "the Activate control and both keyword marks").to.be.at.least(3);
-        const cardBox = card.getBoundingClientRect();
-        const name = card.querySelector<HTMLElement>(".card-name")?.getBoundingClientRect();
-        const stats = [...card.querySelectorAll<HTMLElement>(".stat")].map((stat) => stat.getBoundingClientRect());
-        expect(name, "the card has its name").to.not.eq(undefined);
-        expect(stats.length, "the card has its stat badges").to.be.at.least(2);
-        const boxes = marks.map((mark) => mark.getBoundingClientRect());
-        for (const box of boxes) {
-          expect(box.right, `a mark is outside the card's left edge at ${where}`).to.be.at.most(cardBox.left + 3);
-          expect(box.top, `a mark hangs from the card's top at ${where}`).to.be.at.least(cardBox.top - SLACK_PX);
-          if (name !== undefined) expect(overlaps(box, name), `a mark overlaps the name at ${where}`).to.eq(false);
-          for (const stat of stats) expect(overlaps(box, stat), `a mark overlaps a stat at ${where}`).to.eq(false);
-        }
-        expect(card.querySelectorAll(".activate-control, .keyword-icon").length, `no mark stays on the face at ${where}`).to.eq(0);
-        seen.atk = boxes;
+      const view = baseView({
+        you: emptySide("p1", {
+          units: [null, null, unit("p1", { instanceId: "yu3" }), null, null],
+          backrow: [null, null, null, null, faceDownBackrow],
+        }),
+        opponent: emptySide("p2", { hand: { count: 0 }, units: [null, unit("p2", { instanceId: "ou2" }), null, null, null] }),
       });
-
       cy.mount(
         <div className="app-shell app-shell--wide">
-          <Game view={badged("DEF")} legal={[]} onAction={() => undefined} />
+          <Game view={view} legal={[]} onAction={() => undefined} />
         </div>,
       );
-      cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+      cy.get(FIELD_CARDS).should("have.length", 3);
       cy.document({ log: false }).should((doc) => {
-        const { card, marks } = stackOf(doc);
-        expect(card.dataset.position, "the unit is in DEF").to.eq("DEF");
-        const before = seen.atk ?? [];
-        expect(marks.length, "the same marks in DEF").to.eq(before.length);
-        marks.forEach((mark, index) => {
-          const box = mark.getBoundingClientRect();
-          const was = before[index];
-          expect(was, "a mark was measured in ATK").to.not.eq(undefined);
-          if (was === undefined) return;
-          // DEF rotates neither the control nor the marks, and moves neither.
-          for (const side of ["left", "top", "right", "bottom"] as const) {
-            expect(box[side], `a mark's ${side} is the same in DEF at ${where}`).to.be.closeTo(was[side], 0.5);
+        const zones = [...doc.querySelectorAll<HTMLElement>(`${BOARD} .field .zone`)];
+        expect(zones.length, `four rows of five zones at ${where}`).to.eq(20);
+        const rows = new Set<string>();
+        const lanes = new Set<string>();
+        let empty = 0;
+        for (const zone of zones) {
+          const at = `${zone.dataset.side} ${zone.dataset.row} lane ${zone.dataset.lane} at ${where}`;
+          const placeholder = getComputedStyle(zone, "::before");
+          if (zone.querySelector(":scope > .card") !== null) {
+            expect(placeholder.display, `an occupied zone shows no placeholder: ${at}`).to.eq("none");
+            continue;
+          }
+          empty += 1;
+          rows.add(`${zone.dataset.side}-${zone.dataset.row}`);
+          lanes.add(zone.dataset.lane ?? "");
+          expect(placeholder.display, `an empty zone shows its placeholder: ${at}`).to.not.eq("none");
+          expect(placeholder.pointerEvents, `the placeholder takes no hit: ${at}`).to.eq("none");
+          const width = parseFloat(placeholder.width);
+          const height = parseFloat(placeholder.height);
+          expect(width, `the placeholder has a width: ${at}`).to.be.greaterThan(0);
+          expect(height, `the placeholder has a height: ${at}`).to.be.greaterThan(0);
+          // A card's shape, less what the inset takes off each side.
+          expect(width / height, `the placeholder is no thinner than a card: ${at}`).to.be.at.least(FIELD_RATIO_MIN - INSET_RATIO_SLACK);
+          expect(width / height, `the placeholder is no wider than a card: ${at}`).to.be.at.most(FIELD_RATIO_MAX + INSET_RATIO_SLACK);
+          const inside = insideOf(zone);
+          expect(width, `the placeholder is no wider than its zone: ${at}`).to.be.at.most(inside.width + SLACK_PX);
+          expect(height, `the placeholder is no taller than its zone: ${at}`).to.be.at.most(inside.height + SLACK_PX);
+        }
+        expect(rows.size, `empty zones in all four rows at ${where}`).to.eq(4);
+        expect(lanes.size, `empty zones in all five lanes at ${where}`).to.eq(5);
+        expect(empty, `the empty zones are all but three at ${where}`).to.eq(17);
+      });
+    });
+
+    it(`#3257 a unit's Activate control and keyword marks stand inside its own zone's top-left corner, on and off DEF, at ${where}`, () => {
+      cy.viewport(size.width, size.height);
+      const seen: { atk?: Record<number, DOMRect[]> } = {};
+      const mountBadged = (position: "ATK" | "DEF"): void => {
+        const view = badged(position);
+        // Every unit's switch is live, so each zone holds its ⟳ at the top-right.
+        const switches = view.you.units.flatMap((each) => (each === null ? [] : [{ type: "switchPosition" as const, instanceId: each.instanceId }]));
+        cy.mount(
+          <div className="app-shell app-shell--wide">
+            <Game view={view} legal={switches} onAction={() => undefined} />
+          </div>,
+        );
+        cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+      };
+
+      const check = (position: "ATK" | "DEF"): void => {
+        mountBadged(position);
+        cy.document({ log: false }).should((doc) => {
+          const zones = [...doc.querySelectorAll<HTMLElement>(`${BOARD} .field .zone`)];
+          for (const lane of BADGED_LANES) {
+            const at = `${position} lane ${lane} at ${where}`;
+            const zone = unitZone(doc, lane);
+            const stack = zone.querySelector<HTMLElement>(":scope > .field-badges");
+            const card = zone.querySelector<HTMLElement>(":scope > .card");
+            const control = stack?.querySelector<HTMLElement>(".activate-control") ?? null;
+            const flip = zone.querySelector<HTMLElement>(":scope > .switch-button");
+            expect(stack, `the zone holds its badge stack: ${at}`).to.not.eq(null);
+            expect(card, `the zone holds its card: ${at}`).to.not.eq(null);
+            expect(control, `the stack holds the Activate control: ${at}`).to.not.eq(null);
+            expect(flip, `the zone holds its switch: ${at}`).to.not.eq(null);
+            if (stack === null || card === null || control === null || flip === null) return;
+            expect(card.dataset.position, `the unit is in ${position}: ${at}`).to.eq(position);
+            const marks = [...stack.querySelectorAll<HTMLElement>(MARKS)];
+            // Lanes 1, 3 and 5 hold an ability and keywords: in DEF too the stack keeps the control and a mark or the +n (#3315).
+            expect(marks.length, `the control and at least one mark or the +n: ${at}`).to.be.at.least(2);
+            expect(card.querySelectorAll(".activate-control, .keyword-icon").length, `no mark stays on the face: ${at}`).to.eq(0);
+            const zoneBox = zone.getBoundingClientRect();
+            const flipBox = flip.getBoundingClientRect();
+            const boxes = marks.map((mark) => mark.getBoundingClientRect());
+            for (const box of boxes) {
+              // Wholly inside its own zone.
+              expect(box.left, `a mark is inside its zone's left: ${at}`).to.be.at.least(zoneBox.left - SLACK_PX);
+              expect(box.top, `a mark is inside its zone's top: ${at}`).to.be.at.least(zoneBox.top - SLACK_PX);
+              expect(box.right, `a mark is inside its zone's right: ${at}`).to.be.at.most(zoneBox.right + SLACK_PX);
+              expect(box.bottom, `a mark is inside its zone's bottom: ${at}`).to.be.at.most(zoneBox.bottom + SLACK_PX);
+              // Over no other zone, and not over this zone's own ⟳.
+              expect(overlaps(box, flipBox), `a mark overlaps its zone's switch: ${at}`).to.eq(false);
+              for (const other of zones) {
+                if (other !== zone) expect(overlaps(box, other.getBoundingClientRect()), `a mark overlaps another zone: ${at}`).to.eq(false);
+              }
+            }
+            // The first mark starts at the zone's inner top-left corner.
+            const style = getComputedStyle(zone);
+            const first = boxes[0];
+            expect(first, `a first mark: ${at}`).to.not.eq(undefined);
+            if (first === undefined) return;
+            expect(first.left - (zoneBox.left + parseFloat(style.borderLeftWidth)), `the stack is at the zone's inner left: ${at}`).to.be.within(-SLACK_PX, CORNER_PX);
+            expect(first.top - (zoneBox.top + parseFloat(style.borderTopWidth)), `the stack is at the zone's inner top: ${at}`).to.be.within(-SLACK_PX, CORNER_PX);
+
+            // The Activate control's press band (its ::before) is inside the zone too, and no taller than a touch target.
+            const controlBox = control.getBoundingClientRect();
+            const controlStyle = getComputedStyle(control);
+            const band = getComputedStyle(control, "::before");
+            // The band is positioned from the control's padding box: past its border.
+            const bandTop = controlBox.top + parseFloat(controlStyle.borderTopWidth) + parseFloat(band.top);
+            const bandLeft = controlBox.left + parseFloat(controlStyle.borderLeftWidth) + parseFloat(band.left);
+            const bandRight = controlBox.right - parseFloat(controlStyle.borderRightWidth) - parseFloat(band.right);
+            const bandBottom = bandTop + parseFloat(band.height);
+            expect(bandTop, `the band starts inside its zone's top: ${at}`).to.be.at.least(zoneBox.top - SLACK_PX);
+            expect(bandLeft, `the band starts inside its zone's left: ${at}`).to.be.at.least(zoneBox.left - SLACK_PX);
+            expect(bandRight, `the band ends inside its zone's right: ${at}`).to.be.at.most(zoneBox.right + SLACK_PX);
+            expect(bandBottom, `the band ends inside its zone's bottom: ${at}`).to.be.at.most(zoneBox.bottom + SLACK_PX);
+            expect(bandBottom - bandTop, `the band is no taller than a touch target: ${at}`).to.be.at.most(TOUCH_PX + SLACK_PX / 2);
+            expect(bandBottom - bandTop, `the band is at least as tall as the control: ${at}`).to.be.at.least(controlBox.height - SLACK_PX / 2);
+            expect(
+              doc.elementFromPoint(controlBox.left + controlBox.width / 2, controlBox.top + controlBox.height / 2)?.closest(".activate-control") ?? null,
+              `the Activate control takes a press on its own box: ${at}`,
+            ).to.eq(control);
+
+            const name = card.querySelector<HTMLElement>(".card-name")?.getBoundingClientRect();
+            const stats = [...card.querySelectorAll<HTMLElement>(".stat")].map((stat) => stat.getBoundingClientRect());
+            expect(name, `the card has its name: ${at}`).to.not.eq(undefined);
+            expect(stats.length, `the card has its stat badges: ${at}`).to.be.at.least(2);
+            // A DEF card is turned, so its name, attack and health stand in a strip down its left, under the stack's corner:
+            // the stack stops above the turned card's box (board.css), whose top is where the room above the plate ends in ATK.
+            const cardBox = card.getBoundingClientRect();
+            const limit = position === "ATK" ? (name?.top ?? 0) : cardBox.top;
+            // The Activate control is never dropped: on the shortest phone the band above a turned card is shorter than
+            // the control, which then overlaps the attack gem's top (the owner's call on #3268, option 1) and only there.
+            const controlFits = controlBox.bottom <= limit + SLACK_PX / 2;
+            expect(controlFits || (position === "DEF" && size.height === 664), `the control stops above the name plate or the turned card, but on the shortest phone's DEF card: ${at}`).to.eq(true);
+            // FieldBadges.tsx never drops the control, nor the +n while the unit has a mark to draw, so over a DEF card whose band
+            // is shorter than they are they hang over the turned card (#3315); a named mark is only drawn where it fits.
+            const mayHang = (mark: HTMLElement, box: DOMRect): boolean =>
+              position === "DEF" && (mark === control || mark.matches(".cf-kw-more")) && box.bottom > limit + SLACK_PX / 2;
+            marks.forEach((mark, index) => {
+              const box = boxes[index];
+              if (box === undefined) return;
+              if (mayHang(mark, box)) return;
+              if (name !== undefined) expect(overlaps(box, name), `a mark overlaps the name: ${at}`).to.eq(false);
+              for (const stat of stats) expect(overlaps(box, stat), `a mark overlaps a stat: ${at}`).to.eq(false);
+              expect(box.bottom, `a mark is above the name plate or the turned card: ${at}`).to.be.at.most(limit + SLACK_PX / 2);
+            });
+            if (position === "ATK") {
+              (seen.atk ??= {})[lane] = boxes;
+            } else {
+              // DEF rotates neither the control nor the marks, and moves neither: the stack starts where it did, and is cut
+              // shorter, so the marks that no longer fit are the "+n" (which may be as wide as it likes).
+              const before = seen.atk?.[lane] ?? [];
+              expect(boxes.length, `no more marks in DEF than in ATK: ${at}`).to.be.at.most(before.length);
+              const was = before[0];
+              expect(was, `the control was measured in ATK: ${at}`).to.not.eq(undefined);
+              const now = boxes[0];
+              if (was === undefined || now === undefined) return;
+              for (const side of ["left", "top", "right", "bottom"] as const) {
+                expect(now[side], `the control's ${side} is the same in DEF: ${at}`).to.be.closeTo(was[side], 0.5);
+              }
+              boxes.forEach((box, index) => {
+                const earlier = before[index];
+                if (earlier === undefined) return;
+                expect(box.left, `a mark's left is the same in DEF: ${at}`).to.be.closeTo(earlier.left, 0.5);
+                expect(box.top, `a mark's top is the same in DEF: ${at}`).to.be.closeTo(earlier.top, 0.5);
+              });
+            }
           }
         });
-      });
-    });
-
-    it(`#2932 a unit's badges clear the switch of the zone beside it: its press never lands on the neighbour's ⟳, and the stack stays in its zone, at ${where}`, () => {
-      cy.viewport(size.width, size.height);
-      const base = fullBoardView();
-      // Lane 2 carries the Activate control and two marks; lane 1, its left neighbour, keeps its live switch.
-      const second = base.you.units[1];
-      if (second === null || second === undefined) throw new Error("fullBoardView has a unit in lane 2");
-      const badged = {
-        ...second,
-        keywords: [{ kind: "Rush" as const }, { kind: "Can't Defend" as const }],
-        activations: [{ ability: "ping", label: "Deal 1 damage.", usesLeft: 1, usable: true }],
       };
-      const view = { ...base, you: { ...base.you, units: base.you.units.map((each, index) => (index === 1 ? badged : each)) } };
-      const switches = view.you.units.flatMap((each) => (each === null ? [] : [{ type: "switchPosition" as const, instanceId: each.instanceId }]));
 
-      cy.mount(
-        <div className="app-shell app-shell--wide">
-          <Game view={view} legal={switches} onAction={() => undefined} />
-        </div>,
-      );
-      cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
-      cy.document({ log: false }).should((doc) => {
-        const zoneOf = (lane: number): HTMLElement => {
-          const zone = doc.querySelector<HTMLElement>(`${BOARD} .zone[data-side="you"][data-row="units"][data-lane="${lane}"]`);
-          expect(zone, `your lane ${lane} unit zone is mounted`).to.not.eq(null);
-          return zone as HTMLElement;
-        };
-        const zone = zoneOf(2);
-        const stack = zone.querySelector<HTMLElement>(":scope > .field-badges");
-        const control = stack?.querySelector<HTMLElement>(".activate-control") ?? null;
-        const neighbour = zoneOf(1).querySelector<HTMLButtonElement>(":scope > .switch-button");
-        expect(stack, "lane 2 holds its badge stack").to.not.eq(null);
-        expect(control, "the stack holds the Activate control").to.not.eq(null);
-        expect(neighbour, "lane 1 holds its switch").to.not.eq(null);
-        expect(neighbour?.disabled, "lane 1's switch is live").to.eq(false);
-        if (stack === null || control === null || neighbour === null) return;
-        const zoneBox = zone.getBoundingClientRect();
-        const stackBoxes = [...stack.querySelectorAll<HTMLElement>(".activate-control, .keyword-icon:not([data-chip=\"hidden\"]), .cf-kw-more")].map((each) =>
-          each.getBoundingClientRect(),
-        );
-        const targetBox = neighbour.getBoundingClientRect();
-        const glyphBox = (neighbour.querySelector(".switch-glyph") ?? neighbour).getBoundingClientRect();
-        expect(stackBoxes.length, "the control and the marks are drawn").to.be.at.least(3);
-
-        // The stack starts below the neighbour's whole switch target, so nothing it draws covers the ⟳.
-        for (const box of stackBoxes) {
-          expect(box.top, `a badge starts at or under the neighbour's switch target at ${where}`).to.be.at.least(targetBox.bottom - SLACK_PX / 2);
-          expect(overlaps(box, targetBox), `a badge overlaps the neighbour's switch target at ${where}`).to.eq(false);
-          // ... and stays in its own zone, never over the row above or below.
-          expect(box.top, `a badge is under the zone's top at ${where}`).to.be.at.least(zoneBox.top - SLACK_PX / 2);
-          expect(box.bottom, `a badge is above the zone's bottom at ${where}`).to.be.at.most(zoneBox.bottom + SLACK_PX / 2);
-        }
-
-        // The marks in the control's column sit flush with its right edge, against the card.
-        const controlBox = control.getBoundingClientRect();
-        for (const box of stackBoxes) {
-          if (box.left < controlBox.right && box.right > controlBox.left) {
-            expect(box.right, `a mark in the control's column is flush with it at ${where}`).to.be.closeTo(controlBox.right, 0.5);
-          }
-        }
-
-        // The Activate control's press band (its ::before) reaches down from it, never up, and no further than the zone.
-        const band = getComputedStyle(control, "::before");
-        // The band is positioned from the control's padding box: past its border.
-        const bandTop = controlBox.top + parseFloat(getComputedStyle(control).borderTopWidth) + parseFloat(band.top);
-        const bandBottom = bandTop + parseFloat(band.height);
-        expect(bandTop, `the band starts at the control, not above it, at ${where}`).to.be.at.least(controlBox.top - SLACK_PX / 2);
-        expect(bandTop, `the band is clear of the neighbour's switch target at ${where}`).to.be.at.least(targetBox.bottom - SLACK_PX / 2);
-        expect(bandBottom, `the band stays in its zone at ${where}`).to.be.at.most(zoneBox.bottom + SLACK_PX / 2);
-        expect(bandBottom - bandTop, `the band is no taller than a touch target at ${where}`).to.be.at.most(TOUCH_PX + SLACK_PX / 2);
-        expect(bandBottom - bandTop, `the band is at least as tall as the control at ${where}`).to.be.at.least(controlBox.height - SLACK_PX / 2);
-
-        // The point a finger lands on: every point of the neighbour's switch target, its glyph's middle included, is the switch.
-        const owner = (x: number, y: number): Element | null => doc.elementFromPoint(x, y)?.closest(".switch-button, .activate-control") ?? null;
-        expect(owner(glyphBox.left + glyphBox.width / 2, glyphBox.top + glyphBox.height / 2), `the neighbour's ⟳ takes a press on its glyph at ${where}`).to.eq(neighbour);
-        for (const fx of [0.1, 0.5, 0.9]) {
-          for (const fy of [0.1, 0.5, 0.9]) {
-            const x = targetBox.left + targetBox.width * fx;
-            const y = targetBox.top + targetBox.height * fy;
-            expect(owner(x, y), `the neighbour's switch target takes a press at ${fx},${fy} at ${where}`).to.eq(neighbour);
-          }
-        }
-        // And the control still takes a press on itself.
-        expect(
-          owner(controlBox.left + controlBox.width / 2, controlBox.top + controlBox.height / 2),
-          `the Activate control takes a press on its own box at ${where}`,
-        ).to.eq(control);
-      });
+      check("ATK");
+      check("DEF");
     });
 
-    it(`#2932 lane 1's badge stack stays on the screen, in one column in its zone, at ${where}`, () => {
+    it(`#3257 marks that do not fit above the name plate fold into the +n, and the stack stays inside its zone, at ${where}`, () => {
       cy.viewport(size.width, size.height);
       const base = fullBoardView();
       const first = base.you.units[0];
       if (first === null || first === undefined) throw new Error("fullBoardView has a unit in lane 1");
-      const badged = {
+      const crowded = {
         ...first,
-        keywords: [{ kind: "Rush" as const }, { kind: "Can't Defend" as const }],
-        activations: [{ ability: "ping", label: "Deal 1 damage.", usesLeft: 1, usable: true }],
+        keywords: (["Rush", "Can't Defend", "Charge", "First Strike", "Poisonous", "Lifesteal"] as const).map((kind) => ({ kind })),
+        activations: [PING],
       };
-      const view = { ...base, you: { ...base.you, units: base.you.units.map((each, index) => (index === 0 ? badged : each)) } };
-
+      const view = { ...base, you: { ...base.you, units: base.you.units.map((each, index) => (index === 0 ? crowded : each)) } };
       cy.mount(
         <div className="app-shell app-shell--wide">
           <Game view={view} legal={[]} onAction={() => undefined} />
@@ -967,23 +1016,100 @@ describe("#2876, #2932 phone portrait cards keep a card shape and the field keep
       );
       cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
       cy.document({ log: false }).should((doc) => {
-        const zone = doc.querySelector<HTMLElement>(`${BOARD} .zone[data-side="you"][data-row="units"][data-lane="1"]`);
-        const stack = zone?.querySelector<HTMLElement>(":scope > .field-badges") ?? null;
-        expect(stack, "lane 1 holds its badge stack").to.not.eq(null);
-        if (zone === null || stack === null) return;
+        const zone = unitZone(doc, 1);
+        const stack = zone.querySelector<HTMLElement>(":scope > .field-badges");
+        const card = zone.querySelector<HTMLElement>(":scope > .card");
+        expect(stack, `lane 1 holds its badge stack at ${where}`).to.not.eq(null);
+        expect(card, `lane 1 holds its card at ${where}`).to.not.eq(null);
+        if (stack === null || card === null) return;
+        const more = stack.querySelector<HTMLElement>(".cf-kw-more");
+        expect(more, `the marks that do not fit fold into a +n at ${where}`).to.not.eq(null);
+        const folded = /^\+(\d+)$/.exec(more?.textContent ?? "");
+        expect(folded, `the +n reads as a count at ${where}`).to.not.eq(null);
+        // Six marks, of which the face's own cap draws at most two: four or more fold.
+        expect(Number(folded?.[1] ?? 0), `at least four marks folded at ${where}`).to.be.at.least(4);
         const zoneBox = zone.getBoundingClientRect();
-        const boxes = [...stack.querySelectorAll<HTMLElement>(".activate-control, .keyword-icon:not([data-chip=\"hidden\"]), .cf-kw-more")].map((each) =>
-          each.getBoundingClientRect(),
-        );
-        expect(boxes.length, "the control and the marks are drawn").to.be.at.least(3);
+        const boxes = [...stack.querySelectorAll<HTMLElement>(MARKS)].map((each) => each.getBoundingClientRect());
         for (const box of boxes) {
-          // Every item is on the screen (the lane has no zone to its left to hold a second column) ...
-          expect(box.left, `a badge is on the screen at ${where}`).to.be.at.least(0);
-          // ... in one column against the card, inside its zone's height.
-          expect(box.right, `a badge is flush with the first column at ${where}`).to.be.closeTo(boxes[0]?.right ?? 0, 0.5);
-          expect(box.top, `a badge is under the zone's top at ${where}`).to.be.at.least(zoneBox.top - SLACK_PX / 2);
-          expect(box.bottom, `a badge is above the zone's bottom at ${where}`).to.be.at.most(zoneBox.bottom + SLACK_PX / 2);
+          expect(box.left, `a mark is inside its zone's left at ${where}`).to.be.at.least(zoneBox.left - SLACK_PX);
+          expect(box.top, `a mark is inside its zone's top at ${where}`).to.be.at.least(zoneBox.top - SLACK_PX);
+          expect(box.right, `a mark is inside its zone's right at ${where}`).to.be.at.most(zoneBox.right + SLACK_PX);
+          expect(box.bottom, `a mark is inside its zone's bottom at ${where}`).to.be.at.most(zoneBox.bottom + SLACK_PX);
         }
+        const name = card.querySelector<HTMLElement>(".card-name")?.getBoundingClientRect();
+        expect(name, `the card has its name at ${where}`).to.not.eq(undefined);
+        if (name !== undefined) {
+          expect(Math.max(...boxes.map((box) => box.bottom)), `the lowest mark is above the name at ${where}`).to.be.at.most(name.top + SLACK_PX / 2);
+        }
+      });
+    });
+
+    it(`#3315 a DEF unit's keyword marks never vanish: the stack keeps a mark or the +n, with and without Activate, at ${where}`, () => {
+      cy.viewport(size.width, size.height);
+      const base = fullBoardView();
+      const first = base.you.units[0];
+      if (first === null || first === undefined) throw new Error("fullBoardView has a unit in lane 1");
+      const check = (withActivate: boolean): void => {
+        const turned = {
+          ...first,
+          position: "DEF" as const,
+          keywords: [{ kind: "Rush" as const }, { kind: "Can't Defend" as const }],
+          activations: withActivate ? [PING] : [],
+        };
+        const view = { ...base, you: { ...base.you, units: base.you.units.map((each, index) => (index === 0 ? turned : each)) } };
+        cy.mount(
+          <div className="app-shell app-shell--wide">
+            <Game view={view} legal={[]} onAction={() => undefined} />
+          </div>,
+        );
+        cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+        cy.document({ log: false }).should((doc) => {
+          const at = `${withActivate ? "with" : "without"} Activate at ${where}`;
+          const zone = unitZone(doc, 1);
+          const stack = zone.querySelector<HTMLElement>(":scope > .field-badges");
+          const card = zone.querySelector<HTMLElement>(":scope > .card");
+          expect(stack, `lane 1 holds its badge stack ${at}`).to.not.eq(null);
+          expect(card?.dataset.position, `lane 1's unit is in DEF ${at}`).to.eq("DEF");
+          if (stack === null) return;
+          expect(stack.querySelector(".activate-control") !== null, `the control is there if and only if the unit has an ability ${at}`).to.eq(withActivate);
+          const more = stack.querySelector<HTMLElement>(".cf-kw-more");
+          const folded = more === null ? 0 : Number(/^\+(\d+)$/.exec(more.textContent ?? "")?.[1] ?? 0);
+          expect(stack.querySelectorAll(".keyword-icon").length + folded, `both marks are named or counted in the +n ${at}`).to.eq(2);
+          // The band above a turned card is about 4px at 390x664: no named mark fits there, so the +n must stand for them.
+          if (size.height === 664) expect(more, `the +n stands for the marks that do not fit ${at}`).to.not.eq(null);
+          const zoneBox = zone.getBoundingClientRect();
+          for (const mark of stack.querySelectorAll<HTMLElement>(MARKS)) {
+            const box = mark.getBoundingClientRect();
+            expect(box.left, `a mark is inside its zone's left ${at}`).to.be.at.least(zoneBox.left - SLACK_PX);
+            expect(box.top, `a mark is inside its zone's top ${at}`).to.be.at.least(zoneBox.top - SLACK_PX);
+            expect(box.right, `a mark is inside its zone's right ${at}`).to.be.at.most(zoneBox.right + SLACK_PX);
+            expect(box.bottom, `a mark is inside its zone's bottom ${at}`).to.be.at.most(zoneBox.bottom + SLACK_PX);
+          }
+        });
+      };
+      check(true);
+      check(false);
+    });
+
+    it(`#3257 the cost steps aside under the marks, and stays where there are none, at ${where}`, () => {
+      cy.viewport(size.width, size.height);
+      cy.mount(
+        <div className="app-shell app-shell--wide">
+          <Game view={badged("ATK")} legal={[]} onAction={() => undefined} />
+        </div>,
+      );
+      cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+      cy.document({ log: false }).should((doc) => {
+        const costOf = (lane: number): HTMLElement => {
+          const cost = unitZone(doc, lane).querySelector<HTMLElement>(":scope > .card .cost-gem");
+          expect(cost, `lane ${lane}'s unit has a cost gem at ${where}`).to.not.eq(null);
+          return cost as HTMLElement;
+        };
+        expect(unitZone(doc, 3).querySelector(":scope > .field-badges"), `lane 3 holds marks at ${where}`).to.not.eq(null);
+        expect(getComputedStyle(costOf(3)).visibility, `the cost under the marks is hidden at ${where}`).to.eq("hidden");
+        // Lane 4's unit has only a Stack, which is no mark: no stack, and its cost stays.
+        expect(unitZone(doc, 4).querySelector(":scope > .field-badges"), `lane 4 holds no marks at ${where}`).to.eq(null);
+        expect(getComputedStyle(costOf(4)).visibility, `a cost with no marks over it stays at ${where}`).to.eq("visible");
       });
     });
   }

@@ -139,7 +139,7 @@ describe("R2118000 the command menu", () => {
         "action-new-deck",
         "action-practice",
         "action-play",
-        // B13: the command menu links the Dungeon Run.
+        // B13: the command menu links the Dungeon run.
         "action-dungeon",
         "page-home",
         "page-decks",
@@ -322,6 +322,9 @@ describe("R2118000 the command menu", () => {
     render(<CommandMenu path="/" />);
     const input = openMenu();
     expect(input).toHaveFocus();
+    // R3221000: a Dialog named by its title, whose ✕ is the Close beside the field.
+    expect(screen.getByRole("dialog", { name: "Command menu" })).toBe(screen.getByTestId(commandMenuTestid.dialog));
+    expect(screen.getByTestId(commandMenuTestid.close)).toHaveAccessibleName("Close");
     fireEvent.keyDown(document.activeElement ?? document.body, { key: "Tab" });
     expect(screen.getByTestId(commandMenuTestid.close)).toHaveFocus();
     fireEvent.keyDown(document.activeElement ?? document.body, { key: "Tab" });

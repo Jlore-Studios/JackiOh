@@ -24,6 +24,7 @@
 //! instance of that def, the active player's first: hand, unit zones (lane by lane, a pile's top first),
 //! backrow, graveyard, exile, library, resolving. `play` searches hands only, `attack`/`switch_position` the
 //! field only. No match panics listing what was there; for one of several copies pass the `CardInstance`.
+//! A stand-in id (`stand_in.rs`, #3486) names the card it builds.
 //!
 //! INSTANCES ARE SNAPSHOTS: a `CardInstance` captured before a step is stale after it. Every method
 //! re-resolves one by `id`, but read state back with `s.card(inst)`, `s.unit(p, lane)` or
@@ -56,8 +57,9 @@ use crate::state::{
     find_instance, find_instance_mut, new_instance,
 };
 use crate::wire::{
-    Action, ActionBody, AttackHealth, CardDef, CardDefs, CardType, Counters, GameEvent, PLAYER_IDS, Phase,
-    PlayerId, PlayerView, Position, RevealAt, Row, Selection, Zone, ZoneChoice, opponent_of,
+    Action, ActionBody, AttackHealth, CardDef, CardDefs, CardType, Counters, GameEvent, GameEventType,
+    PLAYER_IDS, Phase, PlayerId, PlayerView, Position, RevealAt, Row, Selection, Zone, ZoneChoice,
+    opponent_of,
 };
 use crate::zones::{
     LibraryPosition, MoveResult, MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions, ZoneSlot, row_size,
@@ -118,7 +120,8 @@ pub fn scripts_override() -> Option<&'static IndexMap<String, CardScripts>> {
     SCRIPTS_OVERRIDE.with(Cell::get)
 }
 
-/// ME-STATS: the win-rate table `catalog::registered_win_rates()` answers first on this thread.
+/// ME-STATS, R3049000: the win-rate table a state handed no snapshot reads on this thread
+/// (`catalog::registered_win_rates()`, after a shipped catalog a fold runs under).
 pub fn register_win_rates(table: crate::win_rates::WinRateTable) {
     let table: &'static crate::win_rates::WinRateTable = Box::leak(Box::new(table));
     WIN_RATES_OVERRIDE.with(|cell| cell.set(Some(table)));
@@ -522,6 +525,10 @@ pub struct ScenarioOptions {
     /// R678: the two other games' boards a Glitch may lay down, the `create_game` input (seat order).
     #[serde(default)]
     pub glitch_boards: Option<LastBoardInput>,
+    /// R3049000: the win-rate snapshot the game is handed, the `create_game` input M #50 CN Tech and
+    /// M+ #2 NA Tech read before any other table.
+    #[serde(default)]
+    pub win_rates: Option<crate::win_rates::WinRateTable>,
 }
 
 // Card references
@@ -551,6 +558,7 @@ fn describe_instance(state: &GameState, card: &CardInstance) -> String {
                 .get(&card.def_id)
                 .map(|def| def.name.as_str())
         })
+        .or_else(|| crate::testkit::stand_in::stand_in_def(&card.def_id).map(|def| def.name.as_str()))
         .unwrap_or("?");
     format!(
         "{} {} \"{}\"{}",
@@ -571,6 +579,11 @@ fn visible_defs(state: &GameState) -> Vec<&CardDef> {
 
 /// Steps 2-4 of the header's resolution order: every defId that matched at the first step to match.
 fn def_ids_for(state: &GameState, text: &str) -> Vec<String> {
+    if crate::testkit::stand_in::is_stand_in(text) {
+        return crate::catalog::find_def(Some(state), text)
+            .map(|def| vec![def.id.clone()])
+            .unwrap_or_default();
+    }
     let defs = visible_defs(state);
     let lower = text.to_lowercase();
     let steps: [&dyn Fn(&CardDef) -> bool; 4] = [
@@ -1087,6 +1100,7 @@ fn build_state(opts: &ScenarioOptions) -> Result<GameState, String> {
         decks: (deck.clone(), deck),
         last_boards: opts.last_boards.clone(),
         glitch_boards: opts.glitch_boards.clone(),
+        win_rates: opts.win_rates.clone(),
         ..CreateGameOptions::default()
     });
 
@@ -1206,6 +1220,13 @@ fn or_fail<T>(result: Result<T, String>) -> T {
     }
 }
 
+/// `events` of `kind`, a `GameEventType` or its string. A string naming no type panics: a mistyped one
+/// would count 0, and every `== 0` assert on it would pass (#3504).
+fn of_kind(events: &[GameEvent], kind: impl ToString) -> Vec<&GameEvent> {
+    let kind: GameEventType = or_fail(kind.to_string().parse());
+    events.iter().filter(|event| event.event_type() == kind).collect()
+}
+
 /// An options literal (`json!({ … })`, or `Value::Null` for none) as the step's typed options.
 fn options_of<T: DeserializeOwned + Default>(opts: Value, what: &str) -> T {
     if opts.is_null() {
@@ -1264,6 +1285,31 @@ impl Scenario {
     /// The events of the most recent step only.
     pub fn last_events(&self) -> &[GameEvent] {
         &self.last
+    }
+
+    /// The events of `kind` since setup finished, oldest first (`of_kind` says what `kind` takes).
+    pub fn events_of(&self, kind: impl ToString) -> Vec<GameEvent> {
+        of_kind(&self.log, kind).into_iter().cloned().collect()
+    }
+
+    /// The events of `kind` in the most recent step only.
+    pub fn last_events_of(&self, kind: impl ToString) -> Vec<GameEvent> {
+        of_kind(&self.last, kind).into_iter().cloned().collect()
+    }
+
+    /// How many events of `kind` fired since setup finished.
+    pub fn count(&self, kind: impl ToString) -> usize {
+        of_kind(&self.log, kind).len()
+    }
+
+    /// How many events of `kind` the most recent step fired.
+    pub fn last_count(&self, kind: impl ToString) -> usize {
+        of_kind(&self.last, kind).len()
+    }
+
+    /// The seat's legal actions in the live state (`reduce::legal_actions`, §10.2); `()` is the active seat.
+    pub fn offered(&self, player: impl SeatRef) -> Vec<ActionBody> {
+        crate::reduce::legal_actions(&self.current, player.seat_or(self.current.active))
     }
 
     // Refs
@@ -1992,7 +2038,8 @@ fn match_option(state: &GameState, text: &str, pending: &PendingChoice) -> Resul
 }
 
 /// Build a scenario from its options literal (`json!({ "p1": {…}, "p2": {…}, "seed"?, "turn"?,
-/// "active"?, "lastBoards"?, "glitchBoards"? })`, or `json!({})`); the file header has the defaults.
+/// "active"?, "lastBoards"?, "glitchBoards"?, "winRates"? })`, or `json!({})`); the file header has the
+/// defaults.
 pub fn scenario(opts: Value) -> Scenario {
     let opts: ScenarioOptions = options_of(opts, "scenario");
     Scenario::new(&opts)
@@ -3081,6 +3128,126 @@ mod tests {
             assert_eq!(pick::instance(&unit), one);
             assert_eq!(pick::card(&s, "core-043"), one);
             assert_eq!(pick::unit_at(&s, "p1", 1), one);
+        }
+    }
+
+    /// The event and action queries card tests take rather than a copy (#3504).
+    mod event_and_action_queries {
+        use super::*;
+
+        /// p1 plays a unit, then the free spell; each side keeps a unit, so no turn auto-ends.
+        fn after_two_plays() -> Scenario {
+            let mut s = scenario(json!({
+                "p1": { "hand": ["core-025", "core-010"], "field": [anchor()] },
+                "p2": { "hand": [HAND_ANCHOR], "field": [anchor()] },
+            }));
+            s.play("core-025", json!({}));
+            s.play("core-010", json!({}));
+            s
+        }
+
+        fn by_hand(events: &[GameEvent], kind: GameEventType) -> Vec<GameEvent> {
+            events
+                .iter()
+                .filter(|event| event.event_type() == kind)
+                .cloned()
+                .collect()
+        }
+
+        #[test]
+        fn count_and_events_of_read_every_event_since_setup_by_type_or_its_string() {
+            let s = after_two_plays();
+            assert_eq!(s.count(GameEventType::CardPlayed), 2);
+            assert_eq!(s.count("cardPlayed"), 2);
+            assert_eq!(s.count(GameEventType::Summoned), 1);
+            assert_eq!(s.count(GameEventType::Destroyed), 0);
+            let played = by_hand(s.events(), GameEventType::CardPlayed);
+            assert_eq!(s.events_of(GameEventType::CardPlayed), played);
+            assert_eq!(s.events_of("cardPlayed"), played);
+            assert!(s.events_of(GameEventType::Destroyed).is_empty());
+        }
+
+        #[test]
+        fn last_count_and_last_events_of_read_the_latest_step_only() {
+            let mut s = after_two_plays();
+            assert_eq!(s.last_count(GameEventType::CardPlayed), 1);
+            assert_eq!(s.last_count("summoned"), 0);
+            assert_eq!(s.last_count(GameEventType::EnteredGraveyard), 1);
+            assert_eq!(
+                s.last_events_of("cardPlayed"),
+                by_hand(s.last_events(), GameEventType::CardPlayed)
+            );
+
+            s.end_turn();
+            assert_eq!(s.last_count(GameEventType::CardPlayed), 0);
+            assert_eq!(s.last_count(GameEventType::TurnEnded), 1);
+            assert_eq!(s.count(GameEventType::CardPlayed), 2);
+
+            let fresh = scenario(json!({ "p1": { "field": [anchor()] } }));
+            assert_eq!(fresh.count("cardPlayed"), 0);
+            assert_eq!(fresh.last_count("cardPlayed"), 0);
+            assert!(fresh.events_of("cardPlayed").is_empty());
+            assert!(fresh.last_events_of("cardPlayed").is_empty());
+        }
+
+        #[test]
+        fn a_string_naming_no_event_type_fails_loudly() {
+            let s = after_two_plays();
+            expect_throw_with(
+                || {
+                    s.count("notAnEvent");
+                },
+                "not a GameEventType",
+            );
+            expect_throw_with(
+                || {
+                    s.last_count("notAnEvent");
+                },
+                "not a GameEventType",
+            );
+            expect_throw_with(
+                || {
+                    s.events_of("notAnEvent");
+                },
+                "not a GameEventType",
+            );
+            expect_throw_with(
+                || {
+                    s.last_events_of("notAnEvent");
+                },
+                "not a GameEventType",
+            );
+        }
+
+        #[test]
+        fn offered_is_the_seats_legal_actions_in_the_live_state() {
+            let mut s = scenario(json!({
+                "p1": { "hand": ["core-025"], "field": [anchor()] },
+                "p2": { "field": [anchor()] },
+            }));
+            let unit = s.card("core-025").id.clone();
+            let mine = s.offered(PlayerId::P1);
+            assert_eq!(mine, crate::reduce::legal_actions(s.state(), PlayerId::P1));
+            assert!(mine.iter().any(
+                |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == unit)
+            ));
+            assert!(mine.contains(&ActionBody::EndTurn));
+            assert_eq!(s.offered("p1"), mine);
+            assert_eq!(s.offered(()), mine);
+
+            let theirs = s.offered("p2");
+            assert!(theirs.contains(&ActionBody::Concede));
+            assert!(!theirs.contains(&ActionBody::EndTurn));
+            assert!(
+                !theirs
+                    .iter()
+                    .any(|action| matches!(action, ActionBody::Play { .. }))
+            );
+
+            s.play("core-025", json!({}));
+            assert!(!s.offered("p1").iter().any(
+                |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == unit)
+            ));
         }
     }
 }

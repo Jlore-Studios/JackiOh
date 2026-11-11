@@ -18,6 +18,7 @@ import { shopTestid } from "../shop/shop.ts";
 import { t } from "../i18n/i18n.ts";
 import { paths } from "../net/navigate.ts";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 
 import "../auth/tavern.css";
 import "./account.css";
@@ -67,12 +68,9 @@ export default function ShopRoute({ token }: { token: string }): ReactElement {
   };
   return (
     <div className="app-shell tavern shop-screen" data-testid={shopTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Shop")} />
       <section className="panel panel--auth">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Shop")}</h2>
+        <Wordmark />
         <div className="shop-body" data-testid={shopTestid.body}>
           <Shop token={token} opened={opened} onChanged={setBought} />
           <PackOpening token={token} bought={bought} onChanged={onOpened} onClosed={onSceneClosed} />

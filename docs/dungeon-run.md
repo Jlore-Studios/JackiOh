@@ -33,7 +33,7 @@ A single-player run in the style of Slay the Spire, played against the AI.
 1. You pick a starting deck of 10 cards and up to 8 points of artifacts.
 2. You climb a seeded map of three acts, about 16 fights: normal enemies, elites, ghosts, two mini-bosses
    and the final boss, with shops, campfires, events, chests and shrines between them.
-3. Your HP carries from fight to fight, and one lost fight ends the run.
+3. Every fight starts at full health: each win adds 5 max HP and refills it, and one lost fight ends the run.
 4. After every fight you open one of four packs and keep 3 of its cards, so the deck grows. Shops,
    events, campfires and artifacts thin it.
 5. Beating a mini-boss lets you extract a card, and beating the final boss lets you extract an artifact.
@@ -145,9 +145,9 @@ Strawman enemy hero health: normal 20, elite 30, mini-boss 40, final boss 50.
 ## DR7. The tiles
 
 - **Shop:** cards and artifacts for Coins; upgrades for Tickets; removing a card.
-- **Campfire:** one of: heal, make a card Radiant, remove 2 cards, or buff a card (the Buff keyword; a
+- **Campfire:** one of: +5 max HP, make a card Radiant, remove 2 cards, or buff a card (the Buff keyword; a
   shop buffs one for Tickets too).
-- **Event:** a short story with choices. Placeholders for now.
+- **Event:** a short story with choices that trade max HP, Coins and Tickets. Placeholders for now.
 - **Chest:** Coins, Tickets, sometimes an artifact.
 - **Shrine** (a monastery or a statue): a god offers a blessing for the rest of the run.
 
@@ -280,8 +280,16 @@ pub fn run_level_cost(level: usize) -> Option<i64>; // the Embers from `level` t
 pub struct RunConstants {           // the numbers the screens show, so the client states none (rule 9)
     pub slot_ladder: Vec<[usize; 6]>, pub starter_size: usize, pub starter_artifacts_max: usize,
     pub starter_artifact_points: i32, pub tier_points: Vec<(RunTier, i32)>,
+    pub campfire_remove: usize,     // the cards a campfire removes
 }
 pub fn run_constants() -> RunConstants;
+pub struct RunShopPrices {          // what a shop's services cost, the ones `apply` spends
+    pub remove_coins: i32,          // after the shop discount
+    pub radiant_tickets: i32, pub buff_tickets: i32,
+    pub level_tickets: Vec<Option<i32>>, // per relic held; None at RUN_ARTIFACT_LEVEL_MAX
+    pub stock_coins: Vec<i32>,      // per stock item, after the discount; empty outside a shop
+}
+pub fn run_shop_prices(state: &RunState, content: &RunContent) -> RunShopPrices;
 // config.rs: RUN_STARTER_CARDS: [&str; 20], RUN_LEVEL_EMBERS
 ```
 
@@ -302,6 +310,7 @@ export function runEmbers(score: number): number;
 export function runMaxHp(state: RunState, content: RunContent): number;
 export function runLevelCost(level: number): number | null;
 export function runConstants(): RunConstants;
+export function runShopPrices(state: RunState, content: RunContent): RunShopPrices;
 export function runSeed(source: string): string;
 export function runDailySeed(date: string, n: number): string;
 ```
@@ -320,7 +329,9 @@ export type Dungeon = {
   content: RunContent;
   progress: DungeonProgress;
   run: RunState | null;
-  startedAt: number | null;               // Date.now() when the run started, for the timer
+  elapsedMs: number | null;               // the run's time played as of resumedAt, for the timer (R3502000)
+  resumedAt: number | null;               // Date.now() when the session now running began; null while paused
+  timeMs: number | null;                  // the finished run's time, as its record holds it; null on the way
   start(setup: RunSetup): string | null;  // the refusal, or null
   act(action: RunAction): string | null;  // the refusal, or null
   abandon(): void;
@@ -393,7 +404,7 @@ Each is proved by a test that names it in a comment (`// B7`).
 - **B22** A Fight node starts a practice game from `runFightSetup`, the AI playing the enemy, its name
   shown.
 - **B23** Both sides' artifacts show in a tray beside their hero; a button opens each one's name and text.
-- **B24** A timer shows the run's time on screen.
+- **B24** A timer shows the run's time played on screen (R3502000).
 - **B25** When the game ends, the page asks the worker for `runReport` and sends its `FightOver` to the run.
 - **B26** A lost fight ends the run, and the run-over screen follows.
 - **B27** The map shows the whole current act, each node's kind, each boss's preseeded artifact and where

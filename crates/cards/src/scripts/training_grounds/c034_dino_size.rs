@@ -44,9 +44,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const DINO: &str = "traininggrounds-034";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const WEAPONS: &str = "core-014"; // Field Spell: your Units have +2 Attack.
-    const PARAGON: &str = "stinkyscape-074"; // Paragon-X 10/1, Immutable.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your Units have +2 Attack.
+    const PARAGON: &str = "stinkyscape-074"; // Paragon-X: Immutable
 
     fn board(radiant: bool, mine: Value, my_backrow: Value, theirs: Value) -> Scenario {
         scenario(json!({
@@ -65,6 +65,7 @@ mod tests {
         json!({ "targets": [{ "pick": "instance", "instanceId": card.id }] })
     }
 
+    // Differs from Scenario::offered: one card's play targets, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<Selection> {
         let dino = s.card(DINO).id.clone();
         legal_actions(s.state(), P1)

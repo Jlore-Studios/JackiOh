@@ -14,7 +14,7 @@ import { ReplayFailure, replayFailureOf } from "./source.ts";
 import type { ReplaySource } from "./source.ts";
 
 /**
- * A practice worker's refusal as a failure. The worker's messages (`replayAnswer` in `practice/core.ts`):
+ * A practice worker's refusal as a failure. The worker's messages (`replayAnswer` in `practice/driver.ts`):
  * "… cannot be replayed: <part 1's reason>" for a game that is unavailable and "no finished practice
  * game N is kept on this device" for one it dropped (expired). Any other message is an `error`.
  */

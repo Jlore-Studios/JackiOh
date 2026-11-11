@@ -23,14 +23,17 @@ import {
 } from "../game/animations.ts";
 import { CatalogContext, type CardLookup } from "../game/catalog.ts";
 import { boardShakeSink, resolveAnchor } from "./anchors.ts";
-import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE, FX_NEXT_REFRESH_MODIFIER_ID } from "./constants.ts";
+import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE, FX_MOBILE_WIDTH, FX_NEXT_REFRESH_MODIFIER_ID } from "./constants.ts";
 import { delayCues, planFx, planHandover, planLethal, planResult } from "./cues.ts";
 import { planStillCallouts } from "./motifs/beats.ts";
+import { planAnomalyStill } from "./anomaly.ts";
 import { planStarshipStill } from "./starship.ts";
+import { planTerminusStill } from "./terminus/index.ts";
 import { planStage } from "./stage.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "./director.ts";
 import { createFxMemory } from "./memory.ts";
 import { useFxSettings } from "./settings.ts";
+import { setShedPointer } from "./shed.ts";
 import { useSetting } from "../settings/store.ts";
 import { createSurface, type FxSurface } from "./surface.ts";
 import { applyManaMarks, manaMarks } from "./manaMarks.ts";
@@ -144,8 +147,9 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
 
   // What the runner's listener reads: a ref, so the subscription is made once per queue and never
   // torn down between two entries of one burst.
-  const live = useRef({ enabled, still, intensity, lookup, seams, view, latest: latest ?? view });
-  live.current = { enabled, still, intensity, lookup, seams, view, latest: latest ?? view };
+  const bigMoments = settings.bigMoments;
+  const live = useRef({ enabled, still, intensity, lookup, seams, view, latest: latest ?? view, bigMoments });
+  live.current = { enabled, still, intensity, lookup, seams, view, latest: latest ?? view, bigMoments };
 
   const planEnv = (): FxPlanEnv => {
     const current = live.current;
@@ -155,6 +159,9 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
       card: override ?? ((defId: string) => catalogFacts(live.current.lookup, defId)),
       memory: memory.current!,
       next: current.latest,
+      // R3334001: the Starship's cinematic plays at Big moments "full" only, and a phone's throws fewer particles.
+      bigMoments: current.bigMoments,
+      compact: (current.seams?.viewportWidth?.() ?? window.innerWidth) < FX_MOBILE_WIDTH,
     };
   };
 
@@ -184,6 +191,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
       shakeSink: s.shakeSink ?? boardShakeSink(document),
       seed: s.seed ?? FX_DEFAULT_SEED,
       capacity: capacityFor(s.viewportWidth?.() ?? window.innerWidth),
+      phone: (s.viewportWidth?.() ?? window.innerWidth) < FX_MOBILE_WIDTH,
       element: s.element,
     });
     director.current = created;
@@ -246,14 +254,25 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
         }
         case "still": {
           // R2789000: an entry of no duration (reduced motion): its keyword callouts, held still;
-          // R2801000: and a Starship's launch, one still frame of it.
+          // R2801000: and a Starship's launch, one still frame of it; R3338000: and a Terminus set piece's;
+          // R3337003: and an Anomaly's still title card.
           const target = director.current;
           if (!live.current.still || target === null) return;
           const env = planEnv();
           env.memory.remember(signal.entry.events);
-          target.play([...planStillCallouts(signal.entry, signal.entry.view, env), ...planStarshipStill(signal.entry, signal.entry.view, env)]);
+          target.play([
+            ...planStillCallouts(signal.entry, signal.entry.view, env),
+            ...planStarshipStill(signal.entry, signal.entry.view, env),
+            ...planTerminusStill(signal.entry, signal.entry.view, env),
+            ...planAnomalyStill(signal.entry, signal.entry.view, env),
+          ]);
           return;
         }
+        case "pass":
+          // R3407002: a hook's marker plays nothing, but its entry opens for the events after it (R2797000).
+          if ((!live.current.enabled && !live.current.still) || director.current === null) return;
+          planEnv().memory.remember(signal.entry.events);
+          return;
         case "idle":
           removeSqueeze(root);
           played.current = [];
@@ -323,6 +342,19 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     document.addEventListener("pointerdown", onDown, true);
     return () => {
       document.removeEventListener("pointerdown", onDown, true);
+    };
+  }, []);
+  // R3351000: the pointer the shed order measures far auras by (shed.ts). One passive listener for
+  // the whole layer; the aura layer reads the same store. There was no layer-wide pointer position
+  // before: tilt tracks each face on its own (cards/tilt.ts, R3344001).
+  useEffect(() => {
+    const onMove = (event: PointerEvent): void => {
+      setShedPointer({ x: event.clientX, y: event.clientY });
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      setShedPointer(null);
     };
   }, []);
   const promptForViewer = view.pending !== null && view.pending.forYou;

@@ -10,6 +10,10 @@
 //!    a seat the host plays.
 //!  - [`rematch`] is the rematch book and [`again`] the co-op Play again's, which a host holds beside the
 //!    machine because an offer outlives the host that played the match.
+//!  - [`post_game`] is what a seat's open socket is told of its rematch or its series after the result
+//!    (R3213000).
+//!  - [`practice`] is the practice session: a game against the AI seat, with practice's own setup and rules
+//!    (#3099).
 //!  - [`boundary`] is the one JSON call the browser and Roblox make.
 
 pub mod again;
@@ -18,6 +22,8 @@ pub mod boundary;
 pub mod clock;
 pub mod duel;
 pub mod duos;
+pub mod post_game;
+pub mod practice;
 pub mod relay;
 pub mod rematch;
 pub mod snapshot;

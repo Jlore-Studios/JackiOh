@@ -64,11 +64,11 @@ mod tests {
     const BIG_MAX: &str = "classic-080";
     /// S #114 Arctic Citadel, Epic.
     const CITADEL: &str = "stinkyscape-114";
-    const VANILLA: &str = "core-008"; // (1) 4/4, Common.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12"; // Common.
     const FILLER: &str = "core-005";
     /// C+ #73.1 Classic Golem, a unit token printed Legendary: its rarity is Token.
     const GOLEM: &str = "classicplus-073-1";
-    const CORE_SYSTEM: &str = "stinkyscape-117"; // (3) Spell: "Bounce all permanents. …"
+    const CORE_SYSTEM: &str = "stinkyscape-117"; // Core System: "Bounce all permanents. …"
 
     fn board(radiant: bool, p2_field: Value) -> Scenario {
         scenario(json!({
@@ -86,6 +86,7 @@ mod tests {
         json!({ "targets": [{ "pick": "instance", "instanceId": card.id }], "zone": 1 })
     }
 
+    // Differs from Scenario::offered: one card's play targets, per play, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<Vec<Selection>> {
         let trav = s.hand(P1).into_iter().find(|card| card.def_id == ID).expect("Tnack Trav in hand");
         legal_actions(s.state(), P1)

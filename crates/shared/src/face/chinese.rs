@@ -11,11 +11,11 @@
 //! and in the collection alike.
 
 use jackioh_engine::config::GLITCH_DEF_ID;
-use jackioh_engine::wire::{CardDef, CardType, Keyword, KeywordKind, Rarity, Tag};
+use jackioh_engine::wire::{CardDef, CardType, Keyword, KeywordKind, Tag};
 
 use super::data::{
     CHINESE_ALL_TRIBES, CHINESE_CARDS, CHINESE_CREATED, CHINESE_GLOSSARY, CHINESE_KEYWORDS, CHINESE_RADIANT,
-    CHINESE_RARITIES, CHINESE_TAGS, CHINESE_TYPES, ChineseRow, find,
+    CHINESE_TAGS, CHINESE_TYPES, ChineseRow, find,
 };
 use super::fused::{DORMANT_STARSHIP_ID, holds_dormant_starship};
 use super::tuning::fill_params_text;
@@ -48,13 +48,6 @@ pub fn type_word(type_: CardType) -> &'static str {
 /// The frame's Chinese word for a tag (R1303).
 pub fn tag_word(tag: Tag) -> &'static str {
     find(CHINESE_TAGS, tag.as_str()).copied().unwrap_or(tag.as_str())
-}
-
-/// The frame's Chinese word for a rarity (R1303).
-pub fn rarity_word(rarity: Rarity) -> &'static str {
-    find(CHINESE_RARITIES, rarity.as_str())
-        .copied()
-        .unwrap_or(rarity.as_str())
 }
 
 /// The frame's Chinese word for a keyword kind (R1303).
@@ -224,15 +217,6 @@ pub fn chinese_name(def_id: &str, english: &str, def: Option<&CardDef>) -> Strin
             chinese_def(def).name
         }
         _ => english.to_string(),
-    }
-}
-
-/// R711000: a catalog card's name as the reader reads it: its entry's in Chinese, else the catalog's.
-pub fn reader_name(words: Words, def: &CardDef) -> String {
-    if words.drawn_in_chinese(false) {
-        chinese_name(&def.id, &def.name, Some(def))
-    } else {
-        def.name.clone()
     }
 }
 

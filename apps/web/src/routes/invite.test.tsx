@@ -15,6 +15,7 @@ import { INVITE_CODE_PLACEHOLDER } from "../auth/codeInput.ts";
 import { codeFieldTestid, inviteTestid } from "../auth/testids.ts";
 import { ApiRequestError, getCodeStatus, getMe, redeemCode } from "../net/api.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import InviteRoute, {
   INVITE_CODE_INPUT,
   INVITE_ERROR,
@@ -141,6 +142,12 @@ describe("a pending account", () => {
     expect(window.location.pathname).toBe("/invite");
   });
 
+  it("R3223000 the code screen has one visible h1, the PageTitle", async () => {
+    await mount();
+    expectOnePageTitle("Enter your invite code");
+    expect(screen.queryByRole("heading", { name: "JackiOh" })).toBeNull();
+  });
+
   it("formats what is typed, and submits exactly what the box shows", async () => {
     vi.mocked(redeemCode).mockResolvedValue({ status: "active", needsInviteCode: false });
     await mount();
@@ -167,7 +174,7 @@ describe("a pending account", () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(done);
     });
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("You're in");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("You're in");
     expect(window.location.pathname).toBe("/invite");
     expect(screen.queryByTestId(INVITE_SUBMIT)).toBeNull();
     expect(screen.queryByTestId(inviteTestid.whereFrom)).toBeNull();

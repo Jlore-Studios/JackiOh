@@ -1,13 +1,18 @@
 // A cosmetic, input-transparent fidget layer for the playmat. It reads neither rules nor hidden
 // state: the board owns the cards above it, and this layer only records pointer marks where a
 // press landed on neither a card nor a board control. #1954: one press is one tap, in the look and
-// sound of the playmat's family; holding or dragging adds nothing.
+// sound of the playmat's family; holding or dragging adds nothing. R3348000 (#3348): every tile
+// answers a press too, legal or not, with a ripple in its half's playmat family, that family's
+// sound and, on touch, a short haptic: it never stops or changes what the press does in the game.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type RefObject } from "react";
 
 import type { SfxId } from "../audio/types.ts";
 import { getAudioEngine } from "../audio/engine.ts";
 import type { Cosmetic } from "../cards/cosmetics.ts";
+import { tapHaptic } from "../haptics/haptics.ts";
+import { TILE_FEEL } from "./arena/config.ts";
+import { arenaPlay } from "./arena/play.ts";
 
 /** Tunables kept together so the surface can be retuned without changing input code. */
 export const SAND_FEEL = {
@@ -39,6 +44,8 @@ export const TAP_FAMILY: Readonly<Record<TableId, TapFamily>> = {
   "table-neon-grid": "neon",
   "table-ancient-map": "parchment",
   "table-astral": "astral",
+  // R3335001: the Fleet track's playmat, the neon grid recolored, taps as the grid does.
+  "table-stinkyscape": "neon",
 };
 
 /** The family of `table` (Board's data-table); absent or unknown is the default, which taps as sand. */
@@ -82,6 +89,26 @@ export type SandMark = {
   slam?: "cracks" | "crater";
   /** The zone's width, in % of the field, for a slam mark. */
   size?: number;
+};
+
+/** R3348000: one tile's answer to a press: a ripple around the pressed point, or round the card an occupied tile holds. Lengths are px in the field. */
+export type TileAnswer = {
+  id: number;
+  /** The box that answers: the card's, or the empty tile's. */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** The ripple's center: the press on an empty tile, the card's center on an occupied one. */
+  cx: number;
+  cy: number;
+  family: TapFamily;
+  /** A legal tile answers harder. */
+  strong: boolean;
+  occupied: boolean;
+  /** "still" under reduced motion or effects off: the same change with no motion. */
+  play: "move" | "still";
+  tint?: string;
 };
 
 /** #185: what a landing leaves in the sand. Cracks are never drawn under Reduce motion. */
@@ -163,12 +190,22 @@ export function tapMarks(family: TapFamily, x: number, y: number, firstId: numbe
   return [first];
 }
 
+/** The `.zone` a press landed in, inside `field`: its own element or anything it holds. */
+function zoneOf(target: EventTarget | null, field: HTMLElement): HTMLElement | null {
+  if (!(target instanceof Element)) return null;
+  const zone = target.closest<HTMLElement>('.zone[data-testid^="zone-"]');
+  return zone !== null && field.contains(zone) ? zone : null;
+}
+
 export default function SandSurface({ field, disabled, table, theirTable }: SandSurfaceProps): ReactElement {
   const [marks, setMarks] = useState<readonly SandMark[]>([]);
+  const [tiles, setTiles] = useState<readonly TileAnswer[]>([]);
   const disabledRef = useRef(disabled);
   const tableRef = useRef(table);
   const theirTableRef = useRef(theirTable);
   const markId = useRef(0);
+  const tileId = useRef(0);
+  const tileTimers = useRef(new Set<number>());
   const lastTap = useRef<number | null>(null);
   const build = useRef(0);
   disabledRef.current = disabled;
@@ -176,14 +213,20 @@ export default function SandSurface({ field, disabled, table, theirTable }: Sand
   theirTableRef.current = theirTable;
 
   useEffect(() => {
+    const timers = tileTimers.current;
+    return () => {
+      for (const timer of timers) window.clearTimeout(timer);
+      timers.clear();
+    };
+  }, []);
+
+  useEffect(() => {
     const element = field.current;
     if (element === null) return undefined;
 
-    const down = (event: PointerEvent): void => {
-      if (disabledRef.current || !isEmptySurfaceTarget(event.target)) return;
-      if (document.documentElement.hasAttribute("data-dragging")) return;
-      const bounds = element.getBoundingClientRect();
-      if (bounds.width === 0 || bounds.height === 0) return;
+    /** The mat's tap (#1954) at `event`; true when it drew its marks and sounded. */
+    const tapMat = (event: PointerEvent, bounds: DOMRect): boolean => {
+      if (disabledRef.current || !isEmptySurfaceTarget(event.target)) return false;
       const x = ((event.clientX - bounds.left) / bounds.width) * 100;
       const y = ((event.clientY - bounds.top) / bounds.height) * 100;
       const now = performance.now();
@@ -208,6 +251,71 @@ export default function SandSurface({ field, disabled, table, theirTable }: Sand
       } catch {
         // Web Audio can be unavailable before a gesture unlock; the cosmetic mark still appears.
       }
+      return true;
+    };
+
+    /**
+     * R3348000: the tile `zone` answers a press: a ripple in its half's playmat family, its sound
+     * unless the mat's tap just made one, and on touch a haptic. It reads only what the zone already
+     * draws (a legal flag, a card) and never stops the press, so a legal tile still plays and an
+     * illegal one still does nothing in the game.
+     */
+    const answerTile = (event: PointerEvent, zone: HTMLElement, bounds: DOMRect, sounded: boolean): void => {
+      const legal = zone.dataset.legal === "true";
+      const card = zone.querySelector<HTMLElement>(".card");
+      const box = (card ?? zone).getBoundingClientRect();
+      const family = tapFamilyOf(zone.dataset.side === "opponent" ? theirTableRef.current : tableRef.current);
+      // The answers' layer fills the field's padding box, which starts inside the field's border.
+      const originX = bounds.left + element.clientLeft;
+      const originY = bounds.top + element.clientTop;
+      const x = box.left - originX;
+      const y = box.top - originY;
+      const cx = card === null ? event.clientX - originX : x + box.width / 2;
+      const cy = card === null ? event.clientY - originY : y + box.height / 2;
+      tileId.current += 1;
+      const id = tileId.current;
+      const variation = variationFor(cx, cy, id);
+      const answer: TileAnswer = {
+        id,
+        x,
+        y,
+        w: box.width,
+        h: box.height,
+        cx,
+        cy,
+        family,
+        strong: legal,
+        occupied: card !== null,
+        play: arenaPlay() === "move" ? "move" : "still",
+        ...(family === "neon" ? { tint: pick(TAP_FEEL.neonColors, variation) } : {}),
+      };
+      setTiles((previous) => [...previous, answer].slice(-TILE_FEEL.maximum));
+      const timer = window.setTimeout(() => {
+        tileTimers.current.delete(timer);
+        setTiles((previous) => previous.filter((tile) => tile.id !== id));
+      }, TILE_FEEL.rippleMs);
+      tileTimers.current.add(timer);
+      if (!sounded) {
+        try {
+          getAudioEngine().playSfx(TAP_SFX[family], {
+            variation,
+            sandVariant: Math.floor(variation * SAND_FEEL.crunchVariants),
+            sandBuild: legal ? TILE_FEEL.legalBuild : TILE_FEEL.baseBuild,
+          });
+        } catch {
+          // Web Audio can be unavailable before a gesture unlock; the ripple still shows.
+        }
+      }
+      if (event.pointerType === "touch") tapHaptic(legal ? "tileLegal" : "tile");
+    };
+
+    const down = (event: PointerEvent): void => {
+      if (document.documentElement.hasAttribute("data-dragging")) return;
+      const bounds = element.getBoundingClientRect();
+      if (bounds.width === 0 || bounds.height === 0) return;
+      const sounded = tapMat(event, bounds);
+      const zone = zoneOf(event.target, element);
+      if (zone !== null) answerTile(event, zone, bounds, sounded);
     };
 
     // #185: a slam's cracks and crater, centered on its zone and as wide as it, under the cards.
@@ -236,32 +344,57 @@ export default function SandSurface({ field, disabled, table, theirTable }: Sand
   }, [field]);
 
   return (
-    <span className="sand-surface" aria-hidden="true">
-      {marks.map((mark) => (
-        <span
-          className={
-            mark.slam !== undefined
-              ? `sand-mark sand-mark--${mark.slam}`
-              : mark.family === "sand"
-                ? mark.grain
-                  ? "sand-mark sand-mark--grain"
-                  : "sand-mark"
-                : `tap-mark tap-mark--${mark.family}`
-          }
-          key={mark.id}
-          style={{
-            "--sand-x": `${String(mark.x)}%`,
-            "--sand-y": `${String(mark.y)}%`,
-            "--sand-build": String(mark.build),
-            "--sand-variation": String(mark.variation),
-            "--sand-fade": `${String(SAND_FEEL.fadeMs)}ms`,
-            ...(mark.size === undefined ? {} : { "--sand-zone": `${String(mark.size)}%` }),
-            ...(mark.tint === undefined ? {} : { "--tap-tint": mark.tint }),
-            ...(mark.dx === undefined ? {} : { "--tap-dx": `${String(mark.dx)}px` }),
-            ...(mark.dy === undefined ? {} : { "--tap-dy": `${String(mark.dy)}px` }),
-          } as CSSProperties}
-        />
-      ))}
-    </span>
+    <>
+      <span className="sand-surface" aria-hidden="true">
+        {marks.map((mark) => (
+          <span
+            className={
+              mark.slam !== undefined
+                ? `sand-mark sand-mark--${mark.slam}`
+                : mark.family === "sand"
+                  ? mark.grain
+                    ? "sand-mark sand-mark--grain"
+                    : "sand-mark"
+                  : `tap-mark tap-mark--${mark.family}`
+            }
+            key={mark.id}
+            style={{
+              "--sand-x": `${String(mark.x)}%`,
+              "--sand-y": `${String(mark.y)}%`,
+              "--sand-build": String(mark.build),
+              "--sand-variation": String(mark.variation),
+              "--sand-fade": `${String(SAND_FEEL.fadeMs)}ms`,
+              ...(mark.size === undefined ? {} : { "--sand-zone": `${String(mark.size)}%` }),
+              ...(mark.tint === undefined ? {} : { "--tap-tint": mark.tint }),
+              ...(mark.dx === undefined ? {} : { "--tap-dx": `${String(mark.dx)}px` }),
+              ...(mark.dy === undefined ? {} : { "--tap-dy": `${String(mark.dy)}px` }),
+            } as CSSProperties}
+          />
+        ))}
+      </span>
+      {tiles.length > 0 && (
+        <span className="tile-answers" aria-hidden="true">
+          {tiles.map((tile) => (
+            <span
+              className="tile-answer"
+              key={tile.id}
+              data-family={tile.family}
+              data-strength={tile.strong ? "strong" : "base"}
+              data-occupied={tile.occupied ? "true" : undefined}
+              data-play={tile.play}
+              style={{
+                "--tile-x": `${String(tile.x)}px`,
+                "--tile-y": `${String(tile.y)}px`,
+                "--tile-w": `${String(tile.w)}px`,
+                "--tile-h": `${String(tile.h)}px`,
+                "--tile-cx": `${String(tile.cx)}px`,
+                "--tile-cy": `${String(tile.cy)}px`,
+                ...(tile.tint === undefined ? {} : { "--tap-tint": tile.tint }),
+              } as CSSProperties}
+            />
+          ))}
+        </span>
+      )}
+    </>
   );
 }

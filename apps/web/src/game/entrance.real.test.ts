@@ -3,7 +3,11 @@
 // is set, on both seats, and no cue keys on a card a seat's view hides at that moment. Every seat is
 // fed the way Game feeds it: the new part of its view's window (`newEventsSince`), planned against the
 // view before (`planEntries`, `entranceEntries`, `planFx`), the sound director over the entries, and
-// the music director over the events the sound director resolves.
+// the music director over the events the sound director resolves. R3332002: a Legendary's or a
+// Mythic's sting is its own intro, whole on p1's board (dynamic music on) and cut to its opening on p2's
+// (dynamic music off), so neither takes the shared entrance sting, and a sting keys on a hidden card no
+// more than an intro does. R3400000: a signature whose first beat is its own firing (Unlicensed
+// Experimentation's hatch, R3402001) draws that in place of the shared rays, and sounds its own sound.
 
 import type { Action, ActionBody, CardType, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -15,6 +19,7 @@ import { devDeck, realPort } from "../audio/test/realGame.ts";
 import type { SfxId, SfxParams, SoundSink } from "../audio/types.ts";
 import { cueCard } from "../audio/useGameAudio.ts";
 import { catalogFacts } from "../fx/FxLayer.tsx";
+import { FX_REELS_MS } from "../fx/constants.ts";
 import { planFx } from "../fx/cues.ts";
 import { createFxMemory } from "../fx/memory.ts";
 import type { FxCue, FxRaysCue, FxTakeoverCue } from "../fx/types.ts";
@@ -39,10 +44,14 @@ const SUMMIT = "meditative-008";
 const TOE_CRACKER = "classic-006";
 /** Core #85 Unlicensed Experimentation: a Legendary Trap that fires on a permanent of a type its controller has. */
 const EXPERIMENT = "core-085";
+/** Core #95 Call to Chaos (Core Edition): a Legendary Spell whose signature slams its reels to the roll. */
+const CHAOS = "core-095";
 
 type Heard = {
   sfx: { id: SfxId; params?: SfxParams }[];
   intros: string[];
+  /** R3332002: the intros the music director cut to their opening, each its card's sting. */
+  stings: string[];
   entries: AnimationEntry[];
   fx: FxCue[];
   fresh: GameEvent[];
@@ -61,9 +70,13 @@ const resolve: EntranceResolver = (defId) => {
 /** The entries of a play itself, for "a set sounds and looks the same whatever card it hides". */
 const PLAY_TYPES = new Set<string>(["cardAnnounced", "cardPlayed", "summoned"]);
 
-/** One seat's board: its directors, the cards its queue has entered, and what each new view made it play. */
-function seat(first: PlayerView): Seat {
+/**
+ * One seat's board: its directors, the cards its queue has entered, and what each new view made it play.
+ * `dynamicMusic` off, a card's intro plays as its sting (R3332002).
+ */
+function seat(first: PlayerView, dynamicMusic: boolean): Seat {
   const intros: string[] = [];
+  const stings: string[] = [];
   const sfx: Heard["sfx"] = [];
   const sink: SoundSink = {
     playSfx: (id, params) => {
@@ -74,8 +87,16 @@ function seat(first: PlayerView): Seat {
     playEffect: () => true,
   };
   const music = createMusicDirector({
-    sink: { request: () => {}, resetResume: () => {}, preload: () => {}, playIntro: (id) => intros.push(id), stopIntro: () => {}, preloadIntros: () => {} },
-    settings: () => ({ ...DEFAULT_AUDIO_SETTINGS, dynamicMusic: true }),
+    sink: {
+      request: () => {},
+      resetResume: () => {},
+      preload: () => {},
+      playIntro: (id) => intros.push(id),
+      playSting: (id) => stings.push(id),
+      stopIntro: () => {},
+      preloadIntros: () => {},
+    },
+    settings: () => ({ ...DEFAULT_AUDIO_SETTINGS, dynamicMusic }),
     subscribeSettings: () => () => {},
     rotation: () => 0,
   });
@@ -87,6 +108,7 @@ function seat(first: PlayerView): Seat {
     hear(next) {
       sfx.length = 0;
       intros.length = 0;
+      stings.length = 0;
       const fresh = newEventsSince(s.view.events, next.events);
       const entrances = entranceEntries(planEntries(fresh, s.view, false), resolve, { seen: entered });
       const entries = setPieceEntries(entrances, takeoverClaim, { reduced: false, bigMoments: "full", speed: 1 });
@@ -104,7 +126,7 @@ function seat(first: PlayerView): Seat {
       });
       sound.onIdle();
       s.view = next;
-      return { sfx: [...sfx], intros: [...intros], entries, fx, fresh, play: play.sort() };
+      return { sfx: [...sfx], intros: [...intros], stings: [...stings], entries, fx, fresh, play: play.sort() };
     },
   };
   sound.onView(first);
@@ -135,7 +157,8 @@ function sandboxGame(seed: string) {
     if (legal.some((a) => a.type === "mulligan")) raw(who, { type: "mulligan", keep: Array.isArray(hand) ? hand.map((c) => c.instanceId) : [] });
     else raw(who, legal.find((a) => a.type === "answer") ?? { type: "endTurn" });
   }
-  const seats = { p1: seat(port.viewFor(state, "p1")), p2: seat(port.viewFor(state, "p2")) };
+  // R3332002: p1's board plays a card's intro whole, p2's cuts it to its opening as the card's sting.
+  const seats = { p1: seat(port.viewFor(state, "p1"), true), p2: seat(port.viewFor(state, "p2"), false) };
   return {
     legal: (player: PlayerId) => port.legalActions(state, player),
     view: (player: PlayerId) => port.viewFor(state, player),
@@ -182,10 +205,11 @@ function namedGrand(fresh: readonly GameEvent[]): string[] {
 const isEntranceFx = (cue: FxCue): cue is FxRaysCue | FxTakeoverCue =>
   cue.kind === "takeover" || (cue.kind === "rays" && (cue.tone === "legendary" || cue.tone === "mythic"));
 
-/** Every cue an entrance or a rarity makes: the intros, the entrance and rarity stings, the entrances, the rays and the takeover. */
+/** Every cue an entrance or a rarity makes: the intros and the stings cut from them, the entrance and rarity stings, the entrances, the rays and the takeover. */
 function grandCues(heard: Heard): string[] {
   return [
     ...heard.intros.map((id) => `intro:${id}`),
+    ...heard.stings.map((id) => `sting:${id}`),
     ...heard.sfx.filter((s) => s.id === "entrance" || s.id === "sting").map((s) => `sfx:${s.id}${s.params?.mythic === true ? ":mythic" : ""}${s.params?.tier === undefined ? "" : `:${s.params.tier}`}`),
     ...heard.entries.flatMap((entry) => (entry.entrance === undefined ? [] : [`entrance:${entry.entrance.tier}:${String((entry.setPiece?.holdMs ?? 0) > 0)}`])),
     ...heard.fx.filter(isEntranceFx).map((cue) => (cue.kind === "rays" ? `rays:${cue.tone}` : `takeover:${cue.look}`)),
@@ -225,6 +249,25 @@ function cloakedGame() {
   return { sets, destroyed, reveals: { breaker: reveal(breaker.id), summit: reveal(summit.id), cracker: reveal(cracker.id) } };
 }
 
+/**
+ * R3402001: Paranoia lends #95 Call to Chaos (Core Edition) Cloaked; p1 sets it and reveals it. The engine
+ * runs the reveal's cast as its Cry (`reveal_set_spell`), marked `hookResolving` cry after the `trapFired`.
+ */
+function revealedChaosGame(): Record<PlayerId, Heard> {
+  const game = sandboxGame("r3402001-chaos");
+  game.sandbox("p1", { kind: "setMana", player: "p1", current: 10, max: 10 });
+  game.sandbox("p1", { kind: "spawn", player: "p1", defId: PARANOIA, to: { zone: "field", row: "backrow", lane: 1 } });
+  game.sandbox("p1", { kind: "spawn", player: "p1", defId: CHAOS, to: { zone: "hand" } });
+  const card = game.hand("p1").find((c) => c.defId === CHAOS);
+  const play = game.legal("p1").find((a) => a.type === "play" && a.instanceId === card?.instanceId && a.faceDown === "cloaked");
+  if (play === undefined) throw new Error("no face-down play of Call to Chaos");
+  const set = game.act("p1", play).p1.fresh.find((e) => e.type === "cardPlayed" && e.formerId === card?.instanceId);
+  if (set === undefined || set.type !== "cardPlayed") throw new Error("no set of Call to Chaos");
+  const reveal = game.legal("p1").find((a) => a.type === "activate" && a.instanceId === set.instanceId && a.ability === "reveal");
+  if (reveal === undefined) throw new Error("no reveal of Call to Chaos");
+  return game.act("p1", reveal);
+}
+
 /** The Trap game: p1 sets a Legendary Trap and p2's play of a Unit fires it. */
 function trapGame() {
   const game = sandboxGame("r2722002-trap");
@@ -242,7 +285,10 @@ function trapGame() {
   const unitPlay = game.legal("p2").find((a) => a.type === "play" && a.instanceId === unitCard?.instanceId && a.faceDown === undefined);
   if (unitPlay === undefined) throw new Error("no play of p2's unit");
   const fire = game.act("p2", unitPlay);
-  return { set, fire };
+  // The lane p2's Unit was summoned to, as the batch that fired the Trap reports it.
+  const landed = fire.p1.fresh.find((e) => e.type === "summoned" && e.instanceId === unitCard?.instanceId);
+  const seizedLane = landed?.type === "summoned" ? landed.lane : undefined;
+  return { set, fire, seizedLane };
 }
 
 describe("R2722002 against the real engine: a hidden card's entrance is at its reveal", () => {
@@ -264,8 +310,8 @@ describe("R2722002 against the real engine: a hidden card's entrance is at its r
         const seen = heard[viewer];
         const named = namedGrand(seen.fresh);
         const where = `${label} on ${viewer}`;
-        // Every intro, entrance sting, entrance, ray and takeover is a card this seat's own events name.
-        for (const id of seen.intros) expect(named.map((d) => `intro-${d}`), where).toContain(id);
+        // Every intro, sting cut from one (R3332002), entrance sting, entrance, ray and takeover is a card this seat's own events name.
+        for (const id of [...seen.intros, ...seen.stings]) expect(named.map((d) => `intro-${d}`), where).toContain(id);
         for (const entry of seen.entries) if (entry.entrance !== undefined) expect(named, where).toContain(entry.entrance.defId);
         if (named.length === 0) {
           expect(seen.sfx.filter((s) => s.id === "entrance"), where).toEqual([]);
@@ -284,21 +330,56 @@ describe("R2722002 against the real engine: a hidden card's entrance is at its r
     expect(must(summit).heard.p2.play).toEqual(must(cracker).heard.p2.play);
   });
 
-  it("R2722002 the reveal plays the full entrance on both seats", () => {
+  it("R2722002 R3332002 R3402001 R3405001 the reveal plays the full entrance on both seats, its own intro its sting", () => {
+    // p1's board plays the intro whole, p2's its opening as the sting; neither the shared entrance sting.
+    const opening = (viewer: PlayerId, id: string): string => (viewer === "p1" ? `intro:${id}` : `sting:${id}`);
     for (const viewer of SEATS) {
       expect(grandCues(cloaked.reveals.breaker[viewer]), `Knowledge Breaker on ${viewer}`).toEqual(
-        ["intro:intro-meditative-045", "sfx:entrance", "entrance:legendary:false", "rays:legendary"].sort(),
+        [opening(viewer, "intro-meditative-045"), "entrance:legendary:false", "rays:legendary"].sort(),
       );
+      // R3405001: Reach the Summit's signature is a cast of its own, so its reveal draws its own takeover, not the shared rays (R3400000).
       const summit = grandCues(cloaked.reveals.summit[viewer]);
-      expect(summit, `Reach the Summit on ${viewer}`).toEqual(
-        ["intro:intro-meditative-008", "sfx:entrance:mythic", "entrance:mythic:true", "rays:mythic", "takeover:prismatic"].sort(),
-      );
+      expect(summit, `Reach the Summit on ${viewer}`).toEqual([opening(viewer, "intro-meditative-008"), "entrance:mythic:true", "takeover:ascent"].sort());
       expect(grandCues(cloaked.reveals.cracker[viewer]), `Toe Cracker on ${viewer}`).toEqual(["sfx:sting"]);
     }
-    // The Legendary Trap's first firing, which names it to both seats (R2734000): its intro, its
-    // entrance and its rays. (Its sting is the Common Unit's play that fires it.)
+    // The Legendary Trap's first firing, which names it to both seats (R2734000): its intro and its
+    // entrance. (The rarity sting is the Common Unit's play that fires it.) R3402001: its signature's own
+    // firing, the hatch bursting open, stands in for the shared rays (R3400000 `ownCast`), and its own sound
+    // plays once; its face-down set sounded and drew none of it.
     for (const viewer of SEATS) {
-      expect(grandCues(trap.fire[viewer]), `the Trap on ${viewer}`).toEqual(["intro:intro-core-085", "sfx:entrance", "entrance:legendary:false", "rays:legendary", "sfx:sting"].sort());
+      const fire = trap.fire[viewer];
+      expect(grandCues(fire), `the Trap on ${viewer}`).toEqual([opening(viewer, "intro-core-085"), "entrance:legendary:false", "sfx:sting"].sort());
+      expect(fire.fx.some((cue) => cue.kind === "fracture"), `the hatch on ${viewer}`).toBe(true);
+      // R3402001: the weld's poison ring lands on the Unit whose play fired the Trap, in the zone it was just
+      // summoned to (the board still shows the view before the batch), on both seats: never on a hand card.
+      const seizedRings = fire.fx.filter((cue) => cue.kind === "ring" && cue.preset === "poison");
+      expect(seizedRings, `the seized Unit's ring on ${viewer}`).toHaveLength(1);
+      expect(seizedRings.map((cue) => (cue.kind === "ring" && cue.at.kind === "testid" ? cue.at.testid : null)), `where it rings on ${viewer}`).toEqual([
+        `zone-${viewer === "p2" ? "you" : "opponent"}-units-${String(must(trap.seizedLane))}`,
+      ]);
+      expect(fire.sfx.filter((s) => s.id === "hatchWeld"), `its sound on ${viewer}`).toHaveLength(1);
+      expect(trap.set[viewer].sfx.some((s) => s.id === "hatchWeld"), `its set on ${viewer}`).toBe(false);
+      expect(trap.set[viewer].fx.some((cue) => cue.kind === "fracture"), `its set on ${viewer}`).toBe(false);
+    }
+  });
+});
+
+describe("R3402001 R2722002 against the real engine: a revealed Cloaked signature Spell plays its text's beats", () => {
+  it("R3402001 R2722002 Call to Chaos revealed slams its reels to the roll on both seats", () => {
+    const heard = revealedChaosGame();
+    for (const viewer of SEATS) {
+      const seen = heard[viewer];
+      // The engine's order: the firing, then the Cry's marker of the same card, then the roll.
+      const types = seen.fresh.map((e) => e.type);
+      const fired = types.indexOf("trapFired");
+      const cry = seen.fresh.findIndex((e) => e.type === "hookResolving" && e.hook === "cry");
+      expect(fired, `firing on ${viewer}`).toBeGreaterThanOrEqual(0);
+      expect(cry, `its Cry's marker on ${viewer}`).toBeGreaterThan(fired);
+      expect(types.indexOf("chaosRolled"), `the roll on ${viewer}`).toBeGreaterThan(cry);
+      // chaosReels's own reveal of the roll, not the row's: FX_REELS_MS, a gold ring and its shake.
+      expect(seen.fx.find((cue) => cue.kind === "chaos"), `the reels on ${viewer}`).toMatchObject({ durationMs: FX_REELS_MS });
+      expect(seen.fx.some((cue) => cue.kind === "ring" && cue.preset === "gold"), `the jackpot ring on ${viewer}`).toBe(true);
+      expect(seen.fx.filter((cue) => cue.kind === "burst" && cue.preset === "spark").length, `the reels' sparks on ${viewer}`).toBeGreaterThanOrEqual(3);
     }
   });
 });

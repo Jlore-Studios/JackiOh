@@ -9,6 +9,7 @@ import type { DuosHostOutput } from "./DuosHostOutput";
 import type { DuosView } from "./DuosView";
 import type { OfferOutcome } from "./OfferOutcome";
 import type { PlayerView } from "./PlayerView";
+import type { PracticeAnswer } from "./PracticeAnswer";
 import type { RematchBook } from "./RematchBook";
 import type { RematchRefusal } from "./RematchRefusal";
 import type { RematchSeen } from "./RematchSeen";
@@ -16,4 +17,4 @@ import type { RematchSeen } from "./RematchSeen";
 /**
  * What a [`HostCall`] answers.
  */
-export type HostAnswer = { "answer": "stepped", host: DuelHost, outputs: Array<DuelOutput>, } | { "answer": "steppedDuos", host: DuosHost, outputs: Array<DuosHostOutput>, } | { "answer": "view", view: PlayerView, } | { "answer": "duosView", view: DuosView, } | { "answer": "presence", presence: { p1: boolean, p2: boolean }, } | { "answer": "checked", refusal: RematchRefusal | null, } | { "answer": "againClaimed", book: AgainBook, claim: AgainClaim, } | { "answer": "againSeen", book: AgainBook, seen: AgainSeen, } | { "answer": "window", open: boolean, } | { "answer": "offered", book: RematchBook, outcome: OfferOutcome, } | { "answer": "seen", book: RematchBook, seen: RematchSeen, } | { "answer": "book", book: RematchBook, } | { "answer": "againBook", book: AgainBook, } | { "answer": "swept", book: RematchBook, removed: number, };
+export type HostAnswer = { "answer": "stepped", host: DuelHost, outputs: Array<DuelOutput>, } | { "answer": "steppedDuos", host: DuosHost, outputs: Array<DuosHostOutput>, } | { "answer": "view", view: PlayerView, } | { "answer": "duosView", view: DuosView, } | { "answer": "presence", presence: { p1: boolean, p2: boolean }, } | { "answer": "checked", refusal: RematchRefusal | null, } | { "answer": "againClaimed", book: AgainBook, claim: AgainClaim, } | { "answer": "againSeen", book: AgainBook, seen: AgainSeen, } | { "answer": "window", open: boolean, } | { "answer": "offered", book: RematchBook, outcome: OfferOutcome, } | { "answer": "seen", book: RematchBook, seen: RematchSeen, } | { "answer": "book", book: RematchBook, } | { "answer": "againBook", book: AgainBook, } | { "answer": "swept", book: RematchBook, removed: number, } | { "answer": "practice" } & PracticeAnswer;

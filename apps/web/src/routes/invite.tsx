@@ -35,6 +35,7 @@ import { loginPath, navigate, paths } from "../net/navigate.ts";
 import { pendingEmailEntry } from "../net/session.ts";
 import { signOut, signOutLabel, useSigningOut } from "./account.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 import ChangeEmail from "../settings/ChangeEmail.tsx";
 import { messageOf } from "../net/errors.ts";
 
@@ -400,10 +401,12 @@ function InviteScreen({ account }: { account: Account }) {
     "No code yet? Online play is invite-only for now, and the JackiOh team hands out the codes. In the meantime, {play}, which needs no code.",
   ).split("{play}");
 
+  const title = redeemed ? t("You're in") : active ? t("You're all set") : t("Enter your invite code");
+
   return (
     <div className="app-shell invite-screen tavern">
       <div className="invite-screen__top">
-        <BackLink>
+        <BackLink title={title}>
           <div className="invite-screen__account">
             {account.kind === "ready" ? (
               <span className="invite-screen__who">
@@ -429,14 +432,11 @@ function InviteScreen({ account }: { account: Account }) {
         </BackLink>
       </div>
 
-      {/* Two parts, so a phone held sideways can set them side by side (auth/tavern.css): the title
+      {/* Two parts, so a phone held sideways can set them side by side (auth/tavern.css): the wordmark
           and what stands in the way beside the code field. Elsewhere they are one column. */}
       <section className="panel panel--auth panel--split">
         <div className="auth-board__head">
-          <div className="brand">
-            <h1>JackiOh</h1>
-          </div>
-          <h2>{redeemed ? t("You're in") : active ? t("You're all set") : t("Enter your invite code")}</h2>
+          <Wordmark />
 
           {redeemed ? (
             <div className="notice" data-testid={inviteTestid.redeemed} role="status" tabIndex={-1} ref={redeemedRef}>
@@ -610,6 +610,7 @@ function InviteScreen({ account }: { account: Account }) {
 
               <button
                 type="submit"
+                className="button-primary"
                 data-testid={INVITE_SUBMIT}
                 disabled={!canSubmit}
                 aria-busy={submitting}

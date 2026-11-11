@@ -57,6 +57,8 @@ same server with no restart. CI (`.github/actions/e2e-shard`) boots one release 
 `vite preview` of the `build:e2e` client per shard, waits for `/api/catalog` and the client to answer,
 then runs its shard's specs on Chrome: the smoke list (01, 06, 10, 13, 19, 46, 47,
 `scripts/shard-specs.mjs`'s `SMOKE`) on every pull request, every spec in the daily super run.
+`node scripts/shard-specs.mjs --component <k> <K>` splits the component specs the same way, by measured
+time, for the super run's component jobs.
 Electron is no longer run.
 
 Chrome 155 kills its own network service now and then under Cypress 16, whose Chrome runs pause
@@ -174,6 +176,7 @@ waiting helpers (`settled`, `expectAnimating`, `waitForPrompt`, `noPrompt`):
 | `answerPrompt(kind, { first, embiggen })` | `first: 1` takes the first option offered, which is the only way to answer a Discover (its options are rng-drawn). `embiggen: true` is R81's price as the boolean it is, not the picker's `"true"` key. |
 | `keepMulligans()` | Both opening mulligans are open at once (R265). On `/dev/hotseat` the device follows the seat that still owes one, so this answers both; networked it answers this client's own, after which the picker gives way to `mulligan-waiting`. |
 | `concede()` | The `concede` control only asks ("Concede this game?"); this confirms in the dialog it opens. A spec that clicks `concede` alone has conceded nothing. |
+| `visitStatsFigures(whileCollecting)` (`support/stats.ts`) | R3324000: `/stats` on a patch that shows its figures. The E2E server's newest patch has too few games, so its Cards tab says its data is still being collected; specs 46 and 47 step to the patch before, after `whileCollecting` checks the collecting page. |
 | `expectNoBlockingViolations(route)` (`support/a11y.ts`) | Spec 38's check (#757): axe-core injected from this package's `node_modules`, WCAG 2.0–2.2 A and AA rules, failing on any serious or critical violation `support/axe-exceptions.ts` does not list for `route` (by rule and a selector each flagged element matches, with its reason), and on a listed one that no longer fires. Spec 38 checks every route at 1280x720 and again at 390x844, whose labels end in ` (phone)` (#1561). |
 | `wsPlayer` `awaitView` `where: { mulliganOpponentReady, drawOfferBy }` | R266's "the other seat is ready" and R269's standing offer, read off seat 2's own view (`view.mulligan.opponentReady`, `view.drawOffer.by`). |
 | `wsPlayer` `sendFrame` `{ type: "aim" \| "emote" }` | R738, R643: a cosmetic frame the server never answers, sent as it is (no nonce, no ack awaited); spec 42 aims and emotes from seat two with it. |
@@ -191,3 +194,32 @@ pnpm --dir apps/web build:e2e
 pnpm --dir apps/web exec vite preview --port 5173 --strictPort
 E2E_BASE_URL=http://localhost:5173 pnpm --dir e2e exec cypress run --spec cypress/e2e/14-landing-and-sign-in.cy.ts
 ```
+
+## The frame probe (spec 50, issue #3605)
+
+Spec `50-busy-board-frames.cy.ts` measures how smoothly the worst-case board draws: both sides
+at the lane cap with looping keyword treatments, Mythic and Legendary animated faces, face-down
+traps and a full playable hand (`support/busyBoard.ts`, quoted by #3604's later parts). It
+samples requestAnimationFrame deltas over an idle window and over a scripted combat turn, and
+reports per phase the median and p95 frame time, the dropped-frame share (frames over one
+expected frame times `FRAME_DROPPED_FACTOR`), the `longtask` count and the idle board's running
+`document.getAnimations()` count. A phase over its p95 or long-task budget fails the run, naming
+the constant. The budgets live in `apps/web/src/perf/frameBudgets.ts` (CLAUDE.md rule 9) with 5×
+headroom for CI's shared runners; judged are only the p95 and the long tasks, so the spec stays
+out of the PR smoke list and runs in the daily super run.
+
+```
+pnpm --dir e2e probe:frames            # build the e2e client, serve it on :4173, run spec 50
+pnpm --dir e2e probe:frames -- --json  # the same report as one JSON object per phase
+```
+
+Baseline (main at `c704b537`, bot's shared machine, 2026-11-10; headless Chromium 156,
+software rendering): three `probe:frames` runs (run 3 with `-- --json`), worst attempt each —
+idle median 266.7 ms, p95 350.0 ms, dropped 100.0%, 1 long task, 54 running animations;
+combat median 466.7 ms, p95 566.7 ms, dropped 100.0%, 39 long tasks. Budgets are 5× those
+worst p95/task counts rounded up to two significant figures (idle p95 1800 ms, combat p95
+2900 ms; idle tasks 5, combat tasks 200). Per-run numbers live in the budget comments in
+`apps/web/src/perf/frameBudgets.ts`; the dropped share stays 100% because every frame
+exceeds the 25 ms threshold under software rendering, so only p95 and long tasks gate.
+Re-measure on a CI runner before trusting the budgets: the 5× headroom is designed to
+survive it, but the numbers above are one machine's.

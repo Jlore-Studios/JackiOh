@@ -7,8 +7,9 @@
 // lazy face. R2725004 holds under each: a Radiant face keeps every Radiant mark, a base face shows none. R3015000
 // (#3015): each is a ladder of two levels, its art then animated, never a full art nor signed; R3015002: both draw its
 // one picture, the animated one moving it in the slot Immersive's depth holds; R3015005: an older pick of one with
-// Animated wears its animated level. The pictures themselves are art/pictures.test.ts's; the pixels are e2e's
-// cypress/component/card-versions.cy.tsx.
+// Animated wears its animated level. R3343001 (#3343): Prismatic is a full art at both levels, keeping the cost gem and
+// the name and leaving the type line and the rules box to the hover preview. The pictures themselves are
+// art/pictures.test.ts's; the pixels are e2e's cypress/component/card-versions.cy.tsx.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -228,9 +229,17 @@ describe("R2944001 every card offered a part 5 version draws it", () => {
           expect(drawn, at).not.toBe("");
           for (const banned of ["NaN", "undefined", "<text", "<title", "href"]) expect(drawn, `${at} ${banned}`).not.toContain(banned);
           if ((PART_FIVE as readonly string[]).includes(version)) {
-            // Every part of the normal face is kept: the cost gem, the name, the type line and the rules box.
-            for (const part of [".cost-gem", ".card-name", ".card-type", ".card-text"]) expect(cf.querySelector(part), `${at} ${part}`).not.toBeNull();
-            expect(cf.getAttribute("data-full-art"), at).toBeNull();
+            // Immersive keeps every part of the normal face: the cost gem, the name, the type line and the rules box.
+            // R3343001: Prismatic is a full art, keeping the cost gem and the name and leaving the type line and the
+            // rules box to the hover preview.
+            const full = version === VERSION_PRISMATIC_ID;
+            expect(isFullBleed(version), at).toBe(full);
+            for (const part of [".cost-gem", ".card-name"]) expect(cf.querySelector(part), `${at} ${part}`).not.toBeNull();
+            for (const part of [".card-type", ".card-text"]) {
+              if (full) expect(cf.querySelector(part), `${at} ${part}`).toBeNull();
+              else expect(cf.querySelector(part), `${at} ${part}`).not.toBeNull();
+            }
+            expect(cf.getAttribute("data-full-art"), at).toBe(full ? "true" : null);
           }
           if (version === VERSION_IMMERSIVE_ID) {
             // The window draws the backdrop hazed, and the near layer the subject over it, in the window's own shape.
@@ -277,7 +286,7 @@ describe("R2944001 every card offered a part 5 version draws it", () => {
 });
 
 describe("R2944002 Immersive's depth", () => {
-  it("R2944002 R3015000 Immersive's depth takes a motion slot and holds still with Animated foil off, under Reduce motion and on a lazy face", () => {
+  it("R2944002 R3015000 R3340000 Immersive's depth takes a motion slot and holds still with Animated foil off, under Reduce motion and on a lazy face", () => {
     const IMMERSIVE_ANIMATED = `${VERSION_IMMERSIVE_ID}-animated`;
     expect(offeredOn(VERSION_IMMERSIVE_ID, BOTH) && offeredOn(IMMERSIVE_ANIMATED, BOTH)).toBe(true);
     const def = CATALOG[BOTH];
@@ -293,7 +302,8 @@ describe("R2944002 Immersive's depth", () => {
       );
       return [...container.querySelectorAll<HTMLElement>(".cf")];
     };
-    const split = [...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"), "static"];
+    // R3340000: the slots go to the newest faces, so the oldest holds still.
+    const split = ["static", ...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated")];
     // Past the slots the rest hold still, Immersive's first level or its animated one, one slot a face: its depth and its
     // art's own motion move together.
     writeCardLevel(BOTH, VERSION_IMMERSIVE_ID);
@@ -411,8 +421,11 @@ describe("R2944002 R3015000 the levels of part 5's variants", () => {
           const animated = level !== version;
           expect(cf.getAttribute("data-version"), where).toBe(version);
           expect(cf.getAttribute("data-level"), where).toBe(level);
-          expect(cf.getAttribute("data-full-art"), where).toBeNull();
-          expect(cf.querySelector(".card-text"), where).not.toBeNull();
+          // R3343001: Prismatic is a full art at both levels, its rules box left to the hover preview; Immersive keeps it.
+          const full = version === VERSION_PRISMATIC_ID;
+          expect(cf.getAttribute("data-full-art"), where).toBe(full ? "true" : null);
+          if (full) expect(cf.querySelector(".card-text"), where).toBeNull();
+          else expect(cf.querySelector(".card-text"), where).not.toBeNull();
           expect(cf.querySelector(".card-name"), where).not.toBeNull();
           // The animated level moves the variant's own picture, taking a slot: on Immersive the hazed backdrop and the
           // near subject both, in the one slot its depth holds.
@@ -422,7 +435,8 @@ describe("R2944002 R3015000 the levels of part 5's variants", () => {
           expect(near !== null, where).toBe(version === VERSION_IMMERSIVE_ID);
           expect(cf.getAttribute("data-immersive-motion"), where).toBe(version === VERSION_IMMERSIVE_ID ? "animated" : null);
           if (near !== null && animated) expect(drawnBy(near), where).toContain("art-m-subject");
-          expect(cf.classList.contains("cf-full-art--animated"), where).toBe(false);
+          // R3343001: as a full art, Prismatic's animated level lays the animated full art's band over it (R2725003).
+          expect(cf.classList.contains("cf-full-art--animated"), where).toBe(full && animated);
           expect(cf.querySelector(".cf-signature"), where).toBeNull();
           expect(cf.classList.contains("cf-full-art--signed"), where).toBe(false);
           expect(cf.getAttribute("data-frame"), where).toBe("border-runes");
@@ -501,9 +515,10 @@ describe("R2944001 Radiant under part 5's looks", () => {
             const drawn = pictureOf(cf);
             expect(drawn.includes('result="dp-wash"'), where).toBe(radiant && version === VERSION_IMMERSIVE_ID);
             expect(drawn.includes('result="pr-wash"'), where).toBe(radiant && version === VERSION_PRISMATIC_ID);
-            // R277's marks wherever the words show: never on a base face, on a Radiant face that differs.
+            // R277's marks wherever the words show: never on a base face or full bleed (Prismatic, R3343001), on a
+            // Radiant face that differs.
             const marks = cf.querySelectorAll('.cf-mark[data-mark="radiant"]').length;
-            if (!radiant) expect(marks, where).toBe(0);
+            if (!radiant || isFullBleed(version)) expect(marks, where).toBe(0);
             else expect(marks > 0, where).toBe(marked);
             // A Unit's gold stats: what its Radiant face raises.
             if (def.type === "Unit") {

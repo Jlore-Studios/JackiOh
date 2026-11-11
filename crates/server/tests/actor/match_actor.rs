@@ -1000,7 +1000,15 @@ mod m6_t4_the_match_actor {
         let (last_boards, glitch_boards) = last_boards_of(&row);
         let folded = fold(
             Pinned::default(),
-            &fold_args(&row.seed, &row.decks, log, last_boards, glitch_boards, None),
+            &fold_args(
+                &row.seed,
+                &row.decks,
+                log,
+                last_boards,
+                glitch_boards,
+                None,
+                row.win_rates.clone(),
+            ),
         );
         assert!(folded.errors.is_empty(), "{:?}", folded.errors);
         assert!(folded.state.result.is_some());
@@ -1173,11 +1181,11 @@ mod m6_t4_the_match_actor {
         // And no game the server makes or folds is a sandbox, which the engine would refuse it in too.
         let decks = (vec![], vec![]);
         assert_eq!(
-            jackioh_server::actor::engine::create_game_args("s", &decks, None, None, None).sandbox,
+            jackioh_server::actor::engine::create_game_args("s", &decks, None, None, None, None).sandbox,
             None
         );
         assert_eq!(
-            jackioh_server::actor::engine::fold_args("s", &decks, vec![], None, None, None).sandbox,
+            jackioh_server::actor::engine::fold_args("s", &decks, vec![], None, None, None, None).sandbox,
             None
         );
     }
@@ -2081,6 +2089,70 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
         let card =
             jackioh_engine::find_instance(&state, &plantation).expect("the Plantation is on the field");
         assert_eq!(card.counters.plague, Some(1));
+    }
+
+    /// The (attacker, target) ids of `actions`' attacks, or of `forecast.attacks`, in their order.
+    fn attack_ids(actions: &[Value]) -> Vec<(Value, Value)> {
+        actions
+            .iter()
+            .filter(|action| action.get("type").is_none_or(|kind| kind == "attack"))
+            .map(|action| (action["attackerId"].clone(), action["targetId"].clone()))
+            .collect()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3477000_each_seats_view_frame_carries_the_forecast_of_its_listed_attacks() {
+        let h = harness(Options {
+            decks: Decks::Scripted {
+                p1: vec![VANILLA],
+                p2: vec![VANILLA],
+            },
+            ..Options::default()
+        })
+        .await;
+        let mine = in_hand(&h.p1, VANILLA);
+        let theirs = in_hand(&h.p2, VANILLA);
+        send(&h, &h.p1, "p1-vanilla", listed_on(&h.p1, "play", &mine)).await;
+        send(&h, &h.p1, "p1-end", json!({ "type": "endTurn" })).await;
+        send(&h, &h.p2, "p2-vanilla", listed_on(&h.p2, "play", &theirs)).await;
+        send(&h, &h.p2, "p2-end", json!({ "type": "endTurn" })).await;
+        assert_eq!(errors(&h.p1), Vec::<Value>::new());
+        assert_eq!(errors(&h.p2), Vec::<Value>::new());
+
+        for socket in [&h.p1, &h.p2] {
+            let frames = socket.of_type("view");
+            assert!(!frames.is_empty());
+            for frame in frames {
+                assert!(
+                    frame["forecast"]["attacks"].is_array(),
+                    "R3477000: a seat's view frame carries its forecast: {}",
+                    frame["forecast"]
+                );
+            }
+        }
+        // p1's turn 2: its Vanilla may hit p2's or p2's hero, and the forecast names exactly those.
+        let frame = h.p1.of_type("view").last().cloned().expect("a view frame");
+        let legal = frame["legal"].as_array().cloned().expect("the legal array");
+        let forecast = frame["forecast"]["attacks"]
+            .as_array()
+            .cloned()
+            .expect("the forecast's attacks");
+        assert!(attack_ids(&legal).len() >= 2, "the premise: {legal:?}");
+        assert_eq!(attack_ids(&forecast), attack_ids(&legal));
+        let trade = forecast
+            .iter()
+            .find(|entry| entry["attackerId"] == mine.as_str() && entry["targetId"] == theirs.as_str())
+            .expect("the Vanilla-on-Vanilla attack is forecast");
+        // Two 4/4s trade: each deals the other 4 and both are destroyed.
+        assert_eq!(
+            (
+                &trade["dealt"],
+                &trade["taken"],
+                &trade["kills"],
+                &trade["survives"]
+            ),
+            (&json!(4), &json!(4), &json!(true), &json!(false))
+        );
     }
 }
 
@@ -4893,6 +4965,11 @@ mod r1834003_the_loadouts_frames {
             "foil": "foil-none",
             "finish": "finish-plain",
             "border": "border-standard",
+            // R3335000: the four Starship kinds, each its default.
+            "starshipHull": "starship-hull-standard",
+            "starshipLivery": "starship-livery-standard",
+            "starshipTrail": "starship-trail-standard",
+            "starshipPieceSkin": "starship-piece-skin-standard",
         })
     }
 
@@ -5128,7 +5205,7 @@ mod r1834003_the_loadouts_frames {
             Pinned::default(),
             &create_game(
                 Pinned::default(),
-                &create_game_args(SEED, &decks, None, None, None),
+                &create_game_args(SEED, &decks, None, None, None, None),
             ),
         )
         .state;
@@ -5318,5 +5395,169 @@ mod r3013002_card_proficiency_through_the_actor {
             "{:?}",
             h.p2.of_type("cardLoadouts")
         );
+    }
+}
+
+// #3490's server cases (#3516): an intent out of order, a nonce the parser refuses, a duplicate
+// request and a reconnect in the middle of a prompt, each through the actor's own sockets.
+
+mod the_server_cases_of_the_mutation_audit {
+    use super::*;
+
+    use jackioh_server::actor::protocol::MAX_NONCE_LENGTH;
+
+    /// p1 plays `test-prompt-self`, which opens a prompt for p1.
+    async fn play_the_prompt(h: &Harness, nonce: &str) {
+        send(
+            h,
+            &h.p1,
+            nonce,
+            json!({ "type": "play", "instanceId": in_hand(&h.p1, "test-prompt-self") }),
+        )
+        .await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn an_answer_to_a_prompt_already_answered_is_illegal_and_applies_nothing() {
+        let h = harness(Options::default()).await;
+        play_the_prompt(&h, "play").await;
+        let answer = answer_of(&h.p1);
+        send(&h, &h.p1, "answer", answer.clone()).await;
+        assert_eq!(last_view(&h.p1)["pending"], Value::Null);
+
+        // §9.3: the same answer under a new nonce is the reducer's to judge, and the prompt is gone.
+        send(&h, &h.p1, "late", answer).await;
+        assert_match(
+            errors(&h.p1).last().expect("an error"),
+            &json!({ "code": "illegal_action", "nonce": "late" }),
+        );
+        assert_eq!(h.rows().await.len(), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn an_answer_from_the_seat_that_does_not_hold_the_prompt_is_illegal_and_the_prompt_stays_open() {
+        let h = harness(Options::default()).await;
+        play_the_prompt(&h, "play").await;
+        let choice = open_choice(&h.p1);
+
+        // The actor stamps p2's seat on p2's frame, so its answer to p1's prompt is p2's own.
+        send(&h, &h.p2, "not-mine", answer_of(&h.p1)).await;
+        assert_match(
+            errors(&h.p2).last().expect("an error"),
+            &json!({ "code": "illegal_action", "nonce": "not-mine" }),
+        );
+        assert_eq!(open_choice(&h.p1), choice);
+        assert_eq!(h.rows().await.len(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_nonce_missing_empty_or_too_long_is_malformed_and_one_at_the_limit_is_applied() {
+        let h = harness(Options::default()).await;
+        h.p1.clear();
+        let end_turn = json!({ "type": "endTurn" });
+        let with_nonce = |nonce: &str| {
+            let mut action = end_turn.clone();
+            action["nonce"] = json!(nonce);
+            json!({ "type": "action", "action": action })
+        };
+        h.p1.receive_json(json!({ "type": "action", "action": end_turn.clone() }));
+        h.p1.receive_json(with_nonce(""));
+        h.p1.receive_json(with_nonce(&"n".repeat(MAX_NONCE_LENGTH + 1)));
+        h.idle().await;
+
+        let missing = "every action carries a client nonce (SPEC §9.3)";
+        let reasons: Vec<(Value, Value)> = errors(&h.p1)
+            .iter()
+            .map(|error| (error["code"].clone(), error["message"].clone()))
+            .collect();
+        assert_eq!(
+            reasons,
+            vec![
+                (json!("malformed"), json!(missing)),
+                (json!("malformed"), json!(missing)),
+                (json!("malformed"), json!("that nonce is too long")),
+            ]
+        );
+        assert_eq!(h.rows().await.len(), 0);
+
+        let longest = "n".repeat(MAX_NONCE_LENGTH);
+        h.p1.receive_json(with_nonce(&longest));
+        h.idle().await;
+        assert_match(acks(&h.p1).last().expect("an ack"), &json!({ "nonce": longest }));
+        assert_eq!(errors(&h.p1).len(), 3);
+        assert_eq!(h.rows().await.len(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_reused_nonce_with_another_body_replays_the_first_ack_and_applies_nothing() {
+        let h = harness(Options::default()).await;
+        let play = json!({ "type": "play", "instanceId": in_hand(&h.p1, "test-prompt-self") });
+        h.p1.clear();
+        send(&h, &h.p1, "same", play).await;
+        let first_ack = acks(&h.p1).last().cloned().expect("an ack");
+        let choice = open_choice(&h.p1);
+
+        // §9.3: the nonce is the request's identity, so a resend with another body is the same
+        // request: the first ack comes back, and the answer is never applied.
+        send(&h, &h.p1, "same", answer_of(&h.p1)).await;
+        assert_eq!(acks(&h.p1), vec![first_ack.clone(), first_ack]);
+        assert_eq!(errors(&h.p1), Vec::<Value>::new());
+        assert_eq!(h.rows().await.len(), 1);
+        assert_eq!(open_choice(&h.p1), choice);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_seat_that_reconnects_mid_prompt_gets_the_same_prompt_and_answers_it() {
+        let h = harness(Options::default()).await;
+        play_the_prompt(&h, "play").await;
+        let choice = open_choice(&h.p1);
+        let answer = answer_of(&h.p1);
+
+        h.p1.drop_transport();
+        h.idle().await;
+        let revived = Client::new();
+        h.actor.attach(P1, revived.socket());
+        h.idle().await;
+
+        // §9.5: the fresh full view holds the prompt still open, and the same answer to it.
+        assert_eq!(views(&revived).len(), 1);
+        assert_eq!(open_choice(&revived), choice);
+        assert_eq!(answer_of(&revived), answer);
+
+        send(&h, &revived, "answer", answer).await;
+        assert_match(
+            acks(&revived).last().expect("an ack"),
+            &json!({ "nonce": "answer" }),
+        );
+        assert_eq!(errors(&revived), Vec::<Value>::new());
+        assert_eq!(last_view(&revived)["pending"], Value::Null);
+        assert_eq!(h.rows().await.len(), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn the_seat_without_the_prompt_reconnects_to_see_only_that_it_is_open() {
+        let h = harness(Options::default()).await;
+        play_the_prompt(&h, "play").await;
+        let choice = open_choice(&h.p1);
+
+        h.p2.drop_transport();
+        h.idle().await;
+        let revived = Client::new();
+        h.actor.attach(P2, revived.socket());
+        h.idle().await;
+
+        // §10.6, §10.8: the opponent learns only that p1 has a prompt open.
+        assert_match(
+            &last_view(&revived)["pending"],
+            &json!({ "forYou": false, "pendingFor": "p1" }),
+        );
+        assert_eq!(legal_of(&revived), vec![json!({ "type": "concede" })]);
+        // CLAUDE.md rule 7: no frame the revived socket got names the choice. A choice id is a short
+        // `q<n>`, so the scan compares whole strings rather than looking for a substring.
+        assert_eq!(scan(&revived.sent(), &[choice]).0, Vec::<String>::new());
+
+        send(&h, &h.p1, "answer", answer_of(&h.p1)).await;
+        assert_match(acks(&h.p1).last().expect("an ack"), &json!({ "nonce": "answer" }));
+        assert_eq!(last_view(&revived)["pending"], Value::Null);
     }
 }

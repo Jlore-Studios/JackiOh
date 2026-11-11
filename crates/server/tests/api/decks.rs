@@ -1,5 +1,5 @@
 //! Saved decks and trios (`crates/server/src/api/decks.rs`, SPEC §9.4, R250–R256, R253, R257, R264).
-//! Rulings: R250, R252, R256, R341, R340, R165, R1827000, R2100000.
+//! Rulings: R250, R252, R256, R341, R340, R165, R1827000, R2100000, R3212001.
 //! Surface contract: SURFACE §11.3.
 
 use std::sync::Arc;
@@ -18,8 +18,8 @@ use jackioh_server::api::decks::{assert_free_to_play, freeze_choice, read_mode_c
 use jackioh_server::api::http::{ApiError, ApiErrorCode, AuthLevel};
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{
-    DECK_NAME_MAX_LENGTH, DECK_VERSION_DEBOUNCE_MS, DECK_VERSIONS_KEPT, DRAFT_ISSUES_REPORTED_MAX,
-    MAX_SAVED_DECKS, MAX_SAVED_TRIOS,
+    DECK_NAME_MAX_LENGTH, DECK_SYNC_ITEMS_MAX, DECK_VERSION_DEBOUNCE_MS, DECK_VERSIONS_KEPT,
+    DRAFT_ISSUES_REPORTED_MAX, MAX_SAVED_DECKS, MAX_SAVED_TRIOS,
 };
 use jackioh_server::cosmetics::portrait_cosmetic_id;
 use jackioh_server::db::store::{CollectionEntry, DeckVersion, SavedDeck, SavedTrio, SeriesRow, StoreError};
@@ -190,6 +190,11 @@ impl Ctx {
 
     async fn delete(&self, path: &str, bearer: &str) -> (u16, Value) {
         self.request("DELETE", path, None, bearer).await
+    }
+
+    /// R3212001: `POST /api/decks/sync`.
+    async fn sync(&self, body: Value, bearer: &str) -> (u16, Value) {
+        self.request("POST", "/api/decks/sync", Some(body), bearer).await
     }
 
     async fn get_decks(&self, bearer: &str) -> Value {
@@ -1858,6 +1863,7 @@ mod the_routes_9_4_a_pending_account_sees_no_decks {
                 "GET /api/decks",
                 "PUT /api/decks/:id",
                 "DELETE /api/decks/:id",
+                "POST /api/decks/sync",
                 "GET /api/decks/:id/versions",
                 "POST /api/decks/:id/versions/:versionId/restore",
                 "PUT /api/trios/:id",
@@ -1897,6 +1903,11 @@ mod the_routes_9_4_a_pending_account_sees_no_decks {
             .await,
             ctx.delete(&format!("/api/trios/{}", uuid(101)), &pending).await,
             ctx.post_import(import_body(500, json!({})), &pending).await,
+            ctx.sync(
+                json!({ "decks": [merged(deck_body(json!({})), json!({ "id": uuid(1) }))] }),
+                &pending,
+            )
+            .await,
         ];
         for (status, body) in &responses {
             assert_eq!(*status, 403);
@@ -1905,6 +1916,255 @@ mod the_routes_9_4_a_pending_account_sees_no_decks {
         assert!(ctx.decks_table().await.is_empty());
         assert!(ctx.trios_table().await.is_empty());
         assert!(ctx.versions_table().await.is_empty());
+    }
+}
+
+/// R3212001: one request saves every dirty deck and trio and applies every deletion, each item as its
+/// own route would.
+mod r3212001_a_sync_runs_each_item_as_its_own_route_would {
+    use super::*;
+
+    /// A deck of `deck_body` with its `id`, as a sync carries it.
+    fn deck_item(id: &str, overrides: Value) -> Value {
+        merged(deck_body(overrides), json!({ "id": id }))
+    }
+
+    /// The `{ status, error }` an item's own route answered, as a sync's refusal carries it.
+    fn refusal(status: u16, body: &Value) -> Value {
+        json!({ "status": status, "error": body["error"] })
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3212001_sync_saves_decks_and_trios_and_applies_deletions_in_one_request() {
+        let ctx = setup().await;
+        ctx.put_deck(deck_body(json!({ "name": "Kept" })), &uuid(1), &ctx.token)
+            .await;
+        ctx.put_deck(deck_body(json!({ "name": "Going" })), &uuid(9), &ctx.token)
+            .await;
+        ctx.put_trio(
+            json!({ "name": "Old", "deckIds": [uuid(9), null, null] }),
+            &uuid(109),
+            &ctx.token,
+        )
+        .await;
+        tokio::time::advance(past_the_debounce()).await;
+
+        let (status, body) = ctx
+            .sync(
+                json!({
+                    "decks": [
+                        deck_item(&uuid(1), json!({ "name": "Kept, renamed" })),
+                        deck_item(&uuid(2), json!({ "name": "New", "cards": cards(3, 10) })),
+                    ],
+                    // A trio may name a deck saved earlier in the same request.
+                    "trios": [{ "id": uuid(101), "name": "Main", "deckIds": [uuid(2), uuid(1), null] }],
+                    "deletedTrios": [uuid(109)],
+                    "deletedDecks": [uuid(9), uuid(77)],
+                }),
+                &ctx.token,
+            )
+            .await;
+        assert_eq!(status, 200, "{body}");
+
+        let listed = ctx.get_decks(&ctx.token).await;
+        assert_eq!(
+            names(&listed, "decks", "name"),
+            vec![json!("Kept, renamed"), json!("New")]
+        );
+        assert_eq!(names(&listed, "trios", "name"), vec![json!("Main")]);
+        // Each item answers what its own route answers, beside its id, in the request's order.
+        assert_eq!(
+            body,
+            json!({
+                "decks": [
+                    { "id": uuid(1), "deck": listed["decks"][0] },
+                    { "id": uuid(2), "deck": listed["decks"][1] },
+                ],
+                "trios": [{ "id": uuid(101), "trio": listed["trios"][0] }],
+                "deletedTrios": [{ "id": uuid(109), "deleted": true }],
+                // Another id nobody holds is nothing to delete, as `DELETE` says.
+                "deletedDecks": [{ "id": uuid(9), "deleted": true }, { "id": uuid(77), "deleted": false }],
+            })
+        );
+        // R2100000: each deck saved keeps a version, as its `PUT` does.
+        assert_eq!(ctx.versions(&uuid(2), &ctx.token).await.len(), 1);
+        assert_eq!(ctx.versions(&uuid(1), &ctx.token).await.len(), 2);
+        // An empty sync saves nothing and answers four empty lists.
+        let (status, body) = ctx.sync(json!({}), &ctx.token).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(
+            body,
+            json!({ "decks": [], "trios": [], "deletedTrios": [], "deletedDecks": [] })
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3212001_a_refused_item_answers_as_its_own_route_and_the_rest_still_save() {
+        let ctx = setup().await;
+        for n in 1..MAX_SAVED_DECKS {
+            ctx.put_deck(
+                deck_body(json!({ "name": format!("Deck {n}") })),
+                &uuid(n),
+                &ctx.token,
+            )
+            .await;
+        }
+        let too_big = cards(DECK_SIZE as usize + 1, 0);
+        let drafted = deck_body(json!({ "cards": too_big }));
+        let stale = deck_body(json!({ "catalogVersion": "stale-0" }));
+        let unknown = json!({ "name": "Waiting", "deckIds": [uuid(500), null, null] });
+        let (status, body) = ctx
+            .sync(
+                json!({
+                    "decks": [
+                        merged(drafted.clone(), json!({ "id": uuid(50) })),
+                        deck_item(&uuid(51), json!({ "name": "The last room" })),
+                        deck_item(&uuid(52), json!({ "name": "One too many" })),
+                        merged(stale.clone(), json!({ "id": uuid(53) })),
+                        deck_item("not-a-uuid", json!({})),
+                    ],
+                    "trios": [merged(unknown.clone(), json!({ "id": uuid(101) }))],
+                    "deletedDecks": ["not-a-uuid", uuid(1)],
+                }),
+                &ctx.token,
+            )
+            .await;
+        assert_eq!(status, 200, "{body}");
+
+        // The rest saved: the last room is taken and the first deck is gone.
+        assert_eq!(body["decks"][1]["deck"]["name"], json!("The last room"));
+        assert_eq!(body["deletedDecks"][1], json!({ "id": uuid(1), "deleted": true }));
+        assert_eq!(ctx.decks_table().await.len(), MAX_SAVED_DECKS - 1);
+
+        // Each refused item answers what its own route answers now, in the same state.
+        let (cap_status, cap) = ctx
+            .put_deck(deck_body(json!({ "name": "Cap" })), &uuid(52), &ctx.token)
+            .await;
+        // The deletion after it made room again: fill it so the cap refuses as it did.
+        assert_eq!(cap_status, 200, "{cap}");
+        let (cap_status, cap) = ctx
+            .put_deck(deck_body(json!({ "name": "Cap" })), &uuid(54), &ctx.token)
+            .await;
+        assert_eq!(cap["error"]["details"], json!({ "limit": MAX_SAVED_DECKS }));
+        assert_eq!(
+            body["decks"][2],
+            merged(json!({ "id": uuid(52) }), refusal(cap_status, &cap))
+        );
+        let (drafted_status, drafted) = ctx.put_deck(drafted, &uuid(50), &ctx.token).await;
+        assert_eq!(drafted_status, 400, "{drafted}");
+        assert_eq!(
+            drafted["error"]["details"],
+            draft_issues("Aggro", &cards(DECK_SIZE as usize + 1, 0))
+        );
+        assert_eq!(
+            body["decks"][0],
+            merged(json!({ "id": uuid(50) }), refusal(drafted_status, &drafted))
+        );
+        let (stale_status, stale) = ctx.put_deck(stale, &uuid(53), &ctx.token).await;
+        assert_eq!(*error_code(&stale), json!("update_required"));
+        assert_eq!(
+            body["decks"][3],
+            merged(json!({ "id": uuid(53) }), refusal(stale_status, &stale))
+        );
+        let (bad_status, bad) = ctx.put_deck(deck_body(json!({})), "not-a-uuid", &ctx.token).await;
+        assert_eq!(bad_status, 400);
+        assert_eq!(
+            body["decks"][4],
+            merged(json!({ "id": "not-a-uuid" }), refusal(bad_status, &bad))
+        );
+        let (unknown_status, unknown) = ctx.put_trio(unknown, &uuid(101), &ctx.token).await;
+        assert_eq!(unknown["error"]["details"], json!({ "unknownDeck": true }));
+        assert_eq!(
+            body["trios"][0],
+            merged(json!({ "id": uuid(101) }), refusal(unknown_status, &unknown))
+        );
+        let (bad_status, bad) = ctx.delete("/api/decks/not-a-uuid", &ctx.token).await;
+        assert_eq!(bad_status, 400);
+        assert_eq!(
+            body["deletedDecks"][0],
+            merged(json!({ "id": "not-a-uuid" }), refusal(bad_status, &bad))
+        );
+        assert!(ctx.trios_table().await.is_empty());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3212001_sync_twice_is_idempotent() {
+        let ctx = setup().await;
+        ctx.put_deck(deck_body(json!({ "name": "Going" })), &uuid(9), &ctx.token)
+            .await;
+        let request = json!({
+            "decks": [deck_item(&uuid(1), json!({}))],
+            "trios": [{ "id": uuid(101), "name": "Main", "deckIds": [uuid(1), null, null] }],
+            "deletedDecks": [uuid(9)],
+        });
+        let (status, once) = ctx.sync(request.clone(), &ctx.token).await;
+        assert_eq!(status, 200, "{once}");
+        let (decks, trios) = (ctx.decks_table().await, ctx.trios_table().await);
+
+        // A retry after a dropped connection: the same items, one deck and one trio, none twice.
+        let (status, again) = ctx.sync(request, &ctx.token).await;
+        assert_eq!(status, 200, "{again}");
+        assert_eq!(again["decks"], once["decks"]);
+        assert_eq!(again["trios"], once["trios"]);
+        assert_eq!(
+            again["deletedDecks"],
+            json!([{ "id": uuid(9), "deleted": false }])
+        );
+        assert_eq!(ctx.decks_table().await, decks);
+        assert_eq!(ctx.trios_table().await, trios);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3212001_a_malformed_or_oversized_sync_is_refused_and_writes_nothing() {
+        let ctx = setup().await;
+        ctx.put_deck(deck_body(json!({})), &uuid(1), &ctx.token).await;
+        let (decks, versions) = (ctx.decks_table().await, ctx.versions_table().await);
+        let deletions: Vec<String> = (0..=DECK_SYNC_ITEMS_MAX).map(|_| uuid(1)).collect();
+        for body in [
+            json!({ "decks": "all of them" }),
+            json!({ "trios": {} }),
+            json!({ "deletedDecks": uuid(1) }),
+            // One more than a sync carries: none of it runs, the deletion of `uuid(1)` included.
+            json!({ "deletedDecks": deletions }),
+            json!({
+                "decks": [deck_item(&uuid(2), json!({}))],
+                "deletedDecks": (0..DECK_SYNC_ITEMS_MAX).map(|_| uuid(1)).collect::<Vec<_>>(),
+            }),
+        ] {
+            let (status, answer) = ctx.sync(body.clone(), &ctx.token).await;
+            assert_eq!(
+                (status, error_code(&answer).clone()),
+                (400, json!("bad_request")),
+                "{body}: {answer}"
+            );
+        }
+        assert_eq!(ctx.decks_table().await, decks);
+        assert_eq!(ctx.versions_table().await, versions);
+        // A signed-out caller is refused.
+        let (status, _, _) = call(&ctx.app, "POST", "/api/decks/sync", None, json!({})).await;
+        assert_eq!(status, 401);
+
+        // A fault of the server's fails the whole request; a deck saved before it stays saved, and
+        // the retry saves it again as the same deck.
+        fake_lock(&ctx.app).await.on_call = Some(Arc::new(|method: &str| -> Result<(), StoreError> {
+            if method == "trios.upsert" {
+                return Err(StoreError::Other("injected fault".to_string()));
+            }
+            Ok(())
+        }));
+        let request = json!({
+            "decks": [deck_item(&uuid(2), json!({ "name": "Before the fault" }))],
+            "trios": [{ "id": uuid(101), "name": "Main", "deckIds": [uuid(2), null, null] }],
+        });
+        let (status, answer) = ctx.sync(request.clone(), &ctx.token).await;
+        assert_eq!(status, 500, "{answer}");
+        fake_lock(&ctx.app).await.on_call = None;
+        assert_eq!(ctx.decks_table().await.len(), 2);
+        assert!(ctx.trios_table().await.is_empty());
+        let (status, answer) = ctx.sync(request, &ctx.token).await;
+        assert_eq!(status, 200, "{answer}");
+        assert_eq!(ctx.decks_table().await.len(), 2);
+        assert_eq!(ctx.trios_table().await.len(), 1);
     }
 }
 

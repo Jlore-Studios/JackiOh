@@ -9,7 +9,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import ts from "typescript";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 
@@ -30,35 +30,95 @@ function sources(dir: string): string[] {
   });
 }
 
-function wordsIn(path: string): { at: string; text: string }[] {
+/** Each file's source and its strings, read and parsed once for every guard below: the guards each read the whole client. */
+const TEXTS = new Map<string, string>();
+const WORDS = new Map<string, { at: string; text: string }[]>();
+
+function textOf(path: string): string {
+  const known = TEXTS.get(path);
+  if (known !== undefined) return known;
   const text = readFileSync(path, "utf8");
-  const file = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  TEXTS.set(path, text);
+  return text;
+}
+
+// The walk's calls, read off `ts` once: each of its exports is a getter, and under vitest the walk's
+// millions of reads took most of the first guard's time (3.3 s of its 5 s alone, over it in CI, #3461).
+const {
+  forEachChild,
+  isExportDeclaration,
+  isImportDeclaration,
+  isJsxText,
+  isNoSubstitutionTemplateLiteral,
+  isStringLiteral,
+  isTemplateHead,
+  isTemplateMiddle,
+  isTemplateTail,
+} = ts;
+
+/**
+ * The whole client's parse, which the `beforeAll` below pays once and every scan reads from `WORDS`: 2.6 to 5.7 s on
+ * CI's loaded unit shards (#3449), past vitest's default 5 s for a test, and it grows with the client toward the
+ * default 10 s for a hook (#3564). The hook and each scan take it.
+ */
+const SCAN_TIMEOUT_MS = 30_000;
+
+function wordsIn(path: string): { at: string; text: string }[] {
+  const known = WORDS.get(path);
+  if (known) return known;
+  const text = textOf(path);
+  // Neither doc comments (no guard reads a comment) nor parent pointers (the walk goes down only, and
+  // `getStart` is handed the file): the same strings, parsed in less time.
+  const options = { languageVersion: ts.ScriptTarget.Latest, jsDocParsingMode: ts.JSDocParsingMode.ParseNone };
+  const file = ts.createSourceFile(path, text, options, false, path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  const name = relative(SRC, path);
   const out: { at: string; text: string }[] = [];
   const visit = (node: ts.Node): void => {
-    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) return;
+    if (isImportDeclaration(node) || isExportDeclaration(node)) return;
     if (
-      ts.isStringLiteral(node) ||
-      ts.isNoSubstitutionTemplateLiteral(node) ||
-      ts.isTemplateHead(node) ||
-      ts.isTemplateMiddle(node) ||
-      ts.isTemplateTail(node) ||
-      ts.isJsxText(node)
+      isStringLiteral(node) ||
+      isNoSubstitutionTemplateLiteral(node) ||
+      isTemplateHead(node) ||
+      isTemplateMiddle(node) ||
+      isTemplateTail(node) ||
+      isJsxText(node)
     ) {
       const line = file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1;
-      out.push({ at: `${relative(SRC, path)}:${String(line)}`, text: node.text });
+      out.push({ at: `${name}:${String(line)}`, text: node.text });
     }
-    ts.forEachChild(node, visit);
+    forEachChild(node, visit);
   };
   visit(file);
+  WORDS.set(path, out);
   return out;
 }
 
+// The one pass over every source is setup, not an assertion, as in writing.test.ts: it runs here, once, so a loaded
+// runner does not spend the first guard's own budget on it (#3439: R373's, the first, overran its 5 s in CI).
+beforeAll(() => {
+  for (const path of sources(SRC)) wordsIn(path);
+}, SCAN_TIMEOUT_MS);
+
+/**
+ * The strings of `files` a guard can flag, `piece` a part of every string it flags. A string's text is its
+ * source but for escapes, each of which starts with `\`, and a template's line breaks, which no piece holds, so
+ * a file holding neither `\` nor `piece` has no such string and is not parsed: most of the card art's data,
+ * whose parse alone outgrew a test's time (#3403).
+ */
+function wordsWith(files: readonly string[], piece: RegExp): { at: string; text: string }[] {
+  return files
+    .filter((path) => {
+      const text = textOf(path);
+      return text.includes("\\") || piece.test(text);
+    })
+    .flatMap(wordsIn);
+}
+
 describe("R373 players read Deck and Tribute", () => {
-  it("R373 no text a player can read in the client says library or sacrifice", () => {
+  it("R373 no text a player can read in the client says library or sacrifice", { timeout: SCAN_TIMEOUT_MS }, () => {
     const files = sources(SRC).filter((path) => !CONVERTED.has(relative(SRC, path)));
     expect(files.length).toBeGreaterThan(100);
-    const found = files
-      .flatMap(wordsIn)
+    const found = wordsWith(files, /librar|sacrific/i)
       .filter(({ text }) => OLD_WORDS.test(text) && /\s/.test(text.trim()))
       .map(({ at, text }) => `${at}: ${JSON.stringify(text)}`);
     expect(found).toEqual([]);
@@ -85,11 +145,10 @@ function oldCostWords(text: string): boolean {
 }
 
 describe("R432 a cost is \"(N) Cost\" as a noun and \"costs (N)\" as a verb", () => {
-  it("R432 no text a player can read in the client writes a cost the old way", () => {
+  it("R432 no text a player can read in the client writes a cost the old way", { timeout: SCAN_TIMEOUT_MS }, () => {
     const files = sources(SRC);
     expect(files.length).toBeGreaterThan(100);
-    const found = files
-      .flatMap(wordsIn)
+    const found = wordsWith(files, /cost/i)
       .filter(({ text }) => oldCostWords(text))
       .map(({ at, text }) => `${at}: ${JSON.stringify(text)}`);
     expect(found).toEqual([]);
@@ -187,11 +246,10 @@ function voiceLineTexts(): string[] {
 }
 
 describe("R1320 players read Nerf and Buff", () => {
-  it("R1320 no text a player can read in the client says Degrade or Upgrade", () => {
+  it("R1320 no text a player can read in the client says Degrade or Upgrade", { timeout: SCAN_TIMEOUT_MS }, () => {
     const files = sources(SRC);
     expect(files.length).toBeGreaterThan(100);
-    const found = files
-      .flatMap(wordsIn)
+    const found = wordsWith(files, /degrad|upgrad/i)
       .filter(({ text }) => saysOldTuningWord(text))
       .map(({ at, text }) => `${at}: ${JSON.stringify(text)}`);
     expect(found).toEqual([]);
@@ -293,11 +351,10 @@ function namesTheRename(text: string): boolean {
 }
 
 describe("R781000 players read Equip, the keyword Magnetic became", () => {
-  it("R781000 no text in the client, no card, flavour or voice line and no Chinese string says Magnetic", () => {
+  it("R781000 no text in the client, no card, flavour or voice line and no Chinese string says Magnetic", { timeout: SCAN_TIMEOUT_MS }, () => {
     const files = sources(SRC);
     expect(files.length).toBeGreaterThan(100);
-    const client = files
-      .flatMap(wordsIn)
+    const client = wordsWith(files, /magnetic/i)
       .filter(({ text }) => OLD_EQUIP_WORD.test(text))
       .map(({ at, text }) => `${at}: ${JSON.stringify(text)}`);
     expect(client).toEqual([]);
@@ -331,11 +388,10 @@ describe("R781000 players read Equip, the keyword Magnetic became", () => {
 const OLD_JLOCK = /jlockh/i;
 
 describe("R278 the faction is Jlockeed", () => {
-  it("R278 no client text, card, flavour, voice line or Chinese string spells it with an h", () => {
+  it("R278 no client text, card, flavour, voice line or Chinese string spells it with an h", { timeout: SCAN_TIMEOUT_MS }, () => {
     const files = sources(SRC);
     expect(files.length).toBeGreaterThan(100);
-    const client = files
-      .flatMap(wordsIn)
+    const client = wordsWith(files, OLD_JLOCK)
       .filter(({ text }) => OLD_JLOCK.test(text))
       .map(({ at, text }) => `${at}: ${JSON.stringify(text)}`);
     expect(client).toEqual([]);

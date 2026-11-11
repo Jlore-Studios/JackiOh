@@ -16,6 +16,7 @@ import {
 import { announceAccountChange } from "../net/gate.ts";
 import { readSession, writeSession, type Session } from "../net/session.ts";
 import { t } from "../i18n/i18n.ts";
+import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { requiredProblem } from "./validation.ts";
 
 import "./two-step.css";
@@ -157,8 +158,8 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
 
   return (
     <div className="account-two-step" data-testid={twoStepTestid.section}>
-      <h3 className="account-heading">{t("Two-step sign-in")}</h3>
-      {phase.kind === "loading" ? <p className="auth-hint">{t("Checking…")}</p> : null}
+      <h2 className="account-heading">{t("Two-step sign-in")}</h2>
+      {phase.kind === "loading" ? <Skeleton variant="panel" label={t("Checking…")} /> : null}
       {phase.kind === "unknown" ? (
         <>
           <p className="auth-hint" data-testid={twoStepTestid.state} data-state="unknown">
@@ -220,7 +221,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
             }}
           />
           <div className="account-actions">
-            <button type="submit" data-testid={twoStepTestid.confirm} disabled={busy} aria-busy={busy}>
+            <button type="submit" className="button-primary" data-testid={twoStepTestid.confirm} disabled={busy} aria-busy={busy}>
               {busy ? t("Checking…") : t("Turn it on")}
             </button>
             <button

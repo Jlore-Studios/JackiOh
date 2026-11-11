@@ -56,32 +56,14 @@ pub fn script_v0_5_9f() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    use crate::{filler, scenario};
-
-    const P1: PlayerId = PlayerId::P1;
+    use crate::stinkyscape_family as fam;
 
     const CORE: &str = "stinkyscape-035";
     const CORVETTE: &str = "stinkyscape-t-drone-corvette";
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
-    fn price_of(s: &Scenario, id: &str) -> i32 {
-        effective_cost(s.state(), s.card(id), CostOptions::default())
-    }
-
-    fn floating(mana: i32, radiant: bool) -> (Scenario, String, String) {
-        let s = scenario(json!({
-            "p1": {
-                "hand": [{ "def": CORE, "radiant": radiant }, FILLER],
-                "library": [{ "def": CORE, "radiant": radiant }, FILLER, FILLER],
-                "mana": mana,
-            },
-            "p2": { "hand": [FILLER], "library": filler(2) },
-        }));
-        let hand = s.hand(P1).into_iter().find(|card| card.def_id == CORE).map(|card| card.id).unwrap_or_default();
-        let deck = s.pile(P1, "library").into_iter().find(|card| card.def_id == CORE).map(|card| card.id).unwrap_or_default();
-        (s, hand, deck)
-    }
+    use crate::{filler, scenario};
 
     fn setup(radiant: bool, field: Value) -> Scenario {
         scenario(json!({
@@ -90,54 +72,41 @@ mod tests {
         }))
     }
 
-    fn row(s: &Scenario) -> Vec<Option<(String, bool)>> {
-        (1..=5)
-            .map(|lane| s.unit(P1, lane).map(|unit| (unit.def_id, unit.radiant)))
-            .collect()
-    }
-
-    fn backrow(s: &Scenario) -> Vec<Option<(String, bool)>> {
-        (1..=5)
-            .map(|lane| s.backrow(P1, lane).map(|card| (card.def_id, card.radiant)))
-            .collect()
-    }
-
     fn corvette(radiant: bool) -> Option<(String, bool)> {
-        Some((CORVETTE.to_string(), radiant))
+        fam::drone_cell(CORVETTE, radiant)
     }
 
     #[test]
     fn r1563000_r2657002_a_float_of_2_makes_it_cost_two_less_in_hand_never_in_the_deck() {
-        for radiant in [false, true] {
-            let (mut s, hand, deck) = floating(2, radiant);
-            s.end_turn();
-            assert_eq!(s.card(hand.as_str()).cost_mod, -2, "radiant {radiant}");
-            assert_eq!(s.card(deck.as_str()).cost_mod, 0, "radiant {radiant}");
-            assert_eq!(price_of(&s, &hand), 4, "radiant {radiant}");
-        }
+        fam::drone_float_two_less(CORE, 6);
     }
 
     #[test]
     fn r1563000_the_opponents_float_lowers_nothing() {
-        let (mut s, hand, _) = floating(0, false);
-        s.end_turn();
-        s.state_mut().players.p2.mana.current = 4;
-        s.end_turn();
-        assert_eq!(s.card(hand.as_str()).cost_mod, 0);
-        assert_eq!(price_of(&s, &hand), 6);
+        fam::drone_float_opponent(CORE, 6);
     }
 
     #[test]
     fn r64_r2248000_summons_three_corvettes_the_unit_row_first_then_the_backrow() {
         let mut s = setup(false, json!([]));
         s.play(CORE, json!({}));
-        assert_eq!(row(&s), vec![corvette(false), corvette(false), corvette(false), None, None]);
-        assert_eq!(backrow(&s), vec![None; 5]);
+        assert_eq!(
+            fam::drone_unit_row(&s),
+            vec![corvette(false), corvette(false), corvette(false), None, None]
+        );
+        assert_eq!(fam::drone_backrow_row(&s), vec![None; 5]);
 
         let mut s = setup(false, json!(vec![VANILLA; 4]));
         s.play(CORE, json!({}));
-        assert_eq!(row(&s)[4], corvette(false), "one zone, one Corvette");
-        assert_eq!(backrow(&s), vec![corvette(false), corvette(false), None, None, None]);
+        assert_eq!(
+            fam::drone_unit_row(&s)[4],
+            corvette(false),
+            "one zone, one Corvette"
+        );
+        assert_eq!(
+            fam::drone_backrow_row(&s),
+            vec![corvette(false), corvette(false), None, None, None]
+        );
     }
 
     #[test]
@@ -145,13 +114,25 @@ mod tests {
         let mut s = setup(false, json!([]));
         set_param(s.card_mut(CORE), "corvettes", 4);
         s.play(CORE, json!({}));
-        assert_eq!(row(&s), vec![corvette(false), corvette(false), corvette(false), corvette(false), None]);
+        assert_eq!(
+            fam::drone_unit_row(&s),
+            vec![
+                corvette(false),
+                corvette(false),
+                corvette(false),
+                corvette(false),
+                None
+            ]
+        );
     }
 
     #[test]
     fn radiant_summons_three_radiant_ones() {
         let mut s = setup(true, json!([]));
         s.play(CORE, json!({}));
-        assert_eq!(row(&s), vec![corvette(true), corvette(true), corvette(true), None, None]);
+        assert_eq!(
+            fam::drone_unit_row(&s),
+            vec![corvette(true), corvette(true), corvette(true), None, None]
+        );
     }
 }

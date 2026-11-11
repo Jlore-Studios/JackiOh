@@ -71,6 +71,7 @@ SPEC §9.1, restated as channels rather than domains:
 | Browser → server WebSocket | the user's JWT, offered as the `jackioh.bearer.` subprotocol (R1379000) | intent: one `Action` at a time; receives `viewFor` and nothing else |
 | Browser → server WebSocket `/ws/duos` | the user's JWT, as `/ws/match` | intent: one `DuosActionBody` at a time, and team pings; receives its seat's Duos view with its legal actions, and its teammate's pings (SPEC §13.6, §13.10) |
 | Browser → server WebSocket `/ws/watch` | the user's JWT, as `/ws/match` | a `hello` naming a friend's match or co-op game; receives the friend's seat's `viewFor` (a co-op seat's Duos view, R2881000), `SPECTATE_DELAY_MS` late, and nothing it sends after `hello` is read (SPEC §9.5) |
+| Browser → server WebSocket `/ws/social` | the user's JWT, as `/ws/match`, checked again every `SOCIAL_SESSION_CHECK_SECONDS` | `hello` only; receives its own account's `social` read (what `GET /api/social` answers it) and `chat {friendId}` and `friends` nudges, never a message's body or another account's state (SPEC §9.4, §9.5, R3214000) |
 
 One rule, from SPEC §9.1: **the client sends intent, never state.** "Play instance 7 in zone 3 with
 target 12", never "my deck contains these 25 cards", never "I own a Mythic".
@@ -401,7 +402,7 @@ and still be the only writers.
 A co-op match (SPEC §13) has an actor of its own, `crates/server/src/duos/`, built as the match actor
 is. It holds a `DuosState` in memory: two plain 1v1 `GameState`s, the duels, and the team life and the
 round between them. It calls the engine only through its Duos functions (`duos_create`, `duos_begin`,
-`duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`, `duos_fold`) and the AI
+`duos_reduce`, `duos_legal_actions`, `duos_view_for`, `duos_fold`) and the AI
 through `jackioh_ai::duos_decide`. Its loop is §5.1's with four seats:
 
 - the seat comes from the verified token: the host is A1 and the guest A2, and B1 and B2, the AI

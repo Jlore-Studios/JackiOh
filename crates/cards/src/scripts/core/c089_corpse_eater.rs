@@ -115,18 +115,18 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const EATER: &str = "core-089"; // 2/2 → 4/4 (6/6 before patch v0.3.10), cost 4
+    const EATER: &str = "core-089"; // Corpse Eater: changed in patch v0.3.10
 
-    const FENDER: &str = "core-001"; // 0/7: a Unit to attack that hits back for nothing.
-    const MENACE: &str = "core-019"; // 9/9: a Unit that kills the Eater.
+    const FENDER: &str = "core-001"; // Big D-fender: a Unit to attack that hits back for nothing.
+    const MENACE: &str = "core-019"; // Midrange Menace: a Unit that kills the Eater.
 
     // Inert fixtures: each unit's only text is a Cry, which `field` never fires.
-    const GARY: &str = "core-004"; // 1/1
-    const FELINORS: &str = "core-012"; // 3/4
-    const RENO: &str = "core-053"; // 4/6
-    const STRAAZA: &str = "core-054"; // 8/8
-    const FELINOR_TOKEN: &str = "core-t-felinor"; // 1/1 unit token (§7)
-    const SUPPRESSIVE_AURA: &str = "core-046"; // −2/−2 to enemy units
+    const GARY: &str = "core-004"; // Gary the Gambler
+    const FELINORS: &str = "core-012"; // Duplicating Felinors
+    const RENO: &str = "core-053"; // Reno
+    const STRAAZA: &str = "core-054"; // Straaza
+    const FELINOR_TOKEN: &str = "core-t-felinor"; // Felinor Token: unit token (§7)
+    const SUPPRESSIVE_AURA: &str = "core-046"; // Suppressive Aura: shrinks enemy units
 
     // §2.5: one always-playable card per hand keeps a scenario on the turn it started on.
     const FILLER: &str = "core-005";

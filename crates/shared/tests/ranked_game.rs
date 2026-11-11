@@ -1,5 +1,5 @@
 //! One rated game decided (`src/ranked/game.rs`, SPEC §9.12, R603–R611, R640000, R672, R1560000, R1843004,
-//! R3074001; #3105), and the JSON boundary a host makes the same calls through (`RankedCall`, `RankedAnswer`).
+//! R3074001, R3290000; #3105), and the JSON boundary a host makes the same calls through (`RankedCall`, `RankedAnswer`).
 //! The rating maths itself is held to Glickman's worked example in `tests/glicko2.rs`; these tests hold
 //! `decide` to the functions it is made of, to the bit.
 
@@ -59,6 +59,7 @@ fn standing(id: &str, ladder: Option<i32>, rating: f64) -> SeasonStanding {
         rating,
         bot: false,
         hand_set: false,
+        banned: false,
     }
 }
 
@@ -228,6 +229,51 @@ fn r640000_a_bot_with_a_profile_holds_a_row_and_never_a_jlorious_place_and_a_bar
     assert_eq!((bare.sides.1.rank_before, bare.sides.1.rank_after), (None, None));
     // Its rating is still rated: a bare rating moves like any other.
     assert_ne!(bare.sides.1.after, bare.sides.1.before);
+}
+
+/// R3290000: a ban that lands while a game is running leaves the game rated, and its banned side's row moves
+/// like any other's, but the banned side takes no Jlorious place and its record is off the board.
+#[test]
+fn r3290000_a_banned_accounts_running_game_is_rated_but_takes_no_jlorious_place() {
+    let mut standings = vec![
+        standing("banned", Some(tier_bottom(4) + 8), 2500.0),
+        standing("a", Some(tier_bottom(4) + 1), 1500.0),
+    ];
+    standings[0].banned = true;
+    let decision = decide(&game(
+        standings,
+        (
+            player("a", glicko(1500.0, 50.0)),
+            player("banned", glicko(2500.0, 50.0)),
+        ),
+        Some(0),
+    ));
+    assert_eq!(decision.ranks.len(), 2);
+    let banned = decision
+        .ranks
+        .iter()
+        .find(|rank| rank.profile_id == "banned")
+        .expect("the banned side's row is written");
+    assert!(
+        banned.ladder.is_some_and(|ladder| ladder >= tier_bottom(4)),
+        "the row stays in Mythic Grape, so only the ban keeps it out of Jlorious"
+    );
+    assert_eq!(banned.peak_jlorious, None);
+    assert_eq!(decision.jlorious, ["a"]);
+    assert!(decision.peaks.is_empty());
+    // The banned side is rated as ever, and never reads a Jlorious place.
+    assert_ne!(decision.sides.1.after, decision.sides.1.before);
+    assert!(!matches!(
+        decision.sides.1.rank_after,
+        Some(VisibleRank::Jlorious { .. })
+    ));
+    let record = decision
+        .records
+        .iter()
+        .find(|record| record.standing.rank.profile_id == "banned")
+        .expect("the banned side's record is written");
+    assert!(record.standing.banned);
+    assert_eq!(record.sort_key, 0);
 }
 
 /// 100 Jlorious places held by people at 2000 and over; a 101st Mythic player at 1500 beats one of them and

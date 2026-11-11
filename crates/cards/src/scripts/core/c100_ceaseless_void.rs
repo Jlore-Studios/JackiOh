@@ -75,14 +75,14 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const VOID: &str = "core-100"; // Unit, 100, Mythic, 10/10 → 20/20 plus Charge
+    const VOID: &str = "core-100"; // Ceaseless Void: Mythic, plus Charge
     const PRINTED: i32 = 100;
 
     /// #11 Tempo Timmy, a 1-cost 3/3 Unit. #58 Rush Token Farm, a 2-cost Field Spell with no triggers
     /// on a play. A radiant #25 is an Indestructible 7/7, and #98 an Indestructible Field Spell.
     const TIMMY: &str = "core-011";
     const FARM: &str = "core-058";
-    const ROCKY: &str = "core-066"; // #66 The Rock: Indestructible on both faces
+    const ROCKY: &str = "core-066"; // The Rock: Indestructible on both faces
     const HEROIC: &str = "core-098";
     const RUSH_TOKEN: &str = "core-t-rush";
     /// #53 Reno, a 3-cost Unit: the spare card that keeps §2.5's auto-end off the assertions.
@@ -95,14 +95,6 @@ mod tests {
 
     /// R55's four game counters.
     type Counters = GameCounters;
-
-    fn events_of(s: &Scenario, event_type: GameEventType) -> Vec<GameEvent> {
-        s.events()
-            .iter()
-            .filter(|event| event.event_type() == event_type)
-            .cloned()
-            .collect()
-    }
 
     fn units_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
         [1, 2, 3, 4, 5].into_iter().filter_map(|lane| s.unit(player, lane)).collect()
@@ -161,7 +153,7 @@ mod tests {
 
     /// The first `cardPlayed` event's `costPaid`.
     fn first_cost_paid(s: &Scenario) -> Option<i32> {
-        events_of(s, GameEventType::CardPlayed).first().and_then(|event| match event {
+        s.events_of(GameEventType::CardPlayed).first().and_then(|event| match event {
             GameEvent::CardPlayed { cost_paid, .. } => Some(*cost_paid),
             _ => None,
         })
@@ -455,7 +447,7 @@ mod tests {
             assert!(backrow_of(&s, P1).is_empty());
             assert!(units_of(&s, P2).is_empty());
             assert!(backrow_of(&s, P2).is_empty());
-            assert_eq!(events_of(&s, GameEventType::Exiled).len(), 5);
+            assert_eq!(s.events_of(GameEventType::Exiled).len(), 5);
         }
 
         #[test]
@@ -477,8 +469,8 @@ mod tests {
             let before = s.state().counters.destroyed;
 
             s.play(VOID, json!({}));
-            assert!(events_of(&s, GameEventType::Destroyed).is_empty());
-            assert!(events_of(&s, GameEventType::EnteredGraveyard).is_empty());
+            assert!(s.events_of(GameEventType::Destroyed).is_empty());
+            assert!(s.events_of(GameEventType::EnteredGraveyard).is_empty());
             assert_eq!(s.state().counters.destroyed, before);
             assert!(s.pile(P1, "graveyard").is_empty());
             assert!(s.pile(P2, "graveyard").is_empty());
@@ -525,7 +517,7 @@ mod tests {
             s.play(VOID, json!({}));
             assert_eq!(def_ids(&units_of(&s, P1)), vec![VOID.to_string()]);
             assert!(units_of(&s, P2).is_empty());
-            assert_eq!(events_of(&s, GameEventType::Exiled).len(), 5);
+            assert_eq!(s.events_of(GameEventType::Exiled).len(), 5);
         }
     }
 

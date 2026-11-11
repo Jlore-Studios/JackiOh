@@ -1,10 +1,12 @@
 // R3025000: `/account`'s other ways to sign in, against a stubbed `fetch`.
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AUTH_MESSAGES, startIdentityLink } from "../net/auth.ts";
+import { skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { settle } from "../test/settle.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import LinkedAccounts, { linkedTestid } from "./LinkedAccounts.tsx";
 import { holdLinkResult } from "./redirect.ts";
 import { linkAfterSignIn, rememberLinkAfterSignIn } from "../net/session.ts";
@@ -18,7 +20,7 @@ const TOKEN = "access-token";
 
 type Call = { url: URL; method: string };
 
-function serve(identities: { identity_id: string; provider: string }[], deleteStatus = 200): Call[] {
+function serve(identities: { identity_id: string; provider: string; identity_data?: Record<string, unknown> }[], deleteStatus = 200): Call[] {
   const calls: Call[] = [];
   vi.stubGlobal(
     "fetch",
@@ -73,6 +75,16 @@ describe("R3025000 linking on the account screen", () => {
     expect(row("google")).toHaveAttribute("data-linked", "false");
     fireEvent.click(screen.getByTestId(linkedTestid.link));
     expect(startIdentityLink).toHaveBeenCalledWith("google", TOKEN);
+  });
+
+  it("R3228000 the list waits as a skeleton of rows whose sentence stays a status line, and the rows replace it", async () => {
+    serve([{ identity_id: "id-email", provider: "email" }]);
+    render(<LinkedAccounts token={TOKEN} />);
+    expectSkeleton(screen.getByText("Loading…"), "rows");
+    await settle();
+    expect(screen.queryByText("Loading…")).toBeNull();
+    expect(screen.queryByTestId(skeletonTestid.root)).toBeNull();
+    expect(row("google")).toHaveAttribute("data-linked", "false");
   });
 
   it("R3025000 a linked provider offers Unlink, which removes it and reads the list again", async () => {
@@ -142,6 +154,91 @@ describe("R3147000 Roblox among the ways to sign in", () => {
     expect(link).toHaveTextContent("Link Roblox");
     fireEvent.click(link as HTMLElement);
     expect(startIdentityLink).toHaveBeenCalledWith("custom:roblox", TOKEN);
+  });
+});
+
+describe("R3507000 the linked Roblox account's username and headshot", () => {
+  const PICTURE = "https://tr.rbxcdn.com/30DAY-AvatarHeadshot-ABC-Png/150/150/AvatarHeadshot/Png/noFilter";
+  const EMAIL = { identity_id: "id-email", provider: "email" };
+
+  /** The Roblox row of a list holding the email identity and a Roblox one with `identity_data` `data`. */
+  async function robloxRow(data: Record<string, unknown> | undefined): Promise<HTMLElement> {
+    serve([EMAIL, { identity_id: "id-roblox", provider: "custom:roblox", identity_data: data }]);
+    render(<LinkedAccounts token={TOKEN} />);
+    await settle();
+    return row("custom:roblox");
+  }
+
+  beforeEach(() => {
+    vi.stubEnv("VITE_AUTH_OAUTH_PROVIDERS", "google,custom:roblox");
+  });
+
+  it("R3507000 shows the username and a lazy headshot with no alt text, at the one fixed size, beside the unchanged linked sentence", async () => {
+    const roblox = await robloxRow({ preferred_username: "Builderman", name: "Builderman", picture: PICTURE });
+    expect(roblox).toHaveTextContent("Roblox: linked. You can sign in with it.");
+    expect(within(roblox).getByTestId(linkedTestid.identity)).toHaveTextContent(/^@Builderman$/u);
+    const image = within(roblox).getByTestId(linkedTestid.avatar);
+    expect(image.tagName).toBe("IMG");
+    expect(image).toHaveAttribute("src", PICTURE);
+    expect(image).toHaveAttribute("alt", "");
+    expect(image).toHaveAttribute("loading", "lazy");
+    expect(image).toHaveAttribute("width", "32");
+    expect(image).toHaveAttribute("height", "32");
+    // Google's row, unlinked, shows neither.
+    expect(within(row("google")).queryByTestId(linkedTestid.identity)).toBeNull();
+    expect(within(row("google")).queryByTestId(linkedTestid.avatar)).toBeNull();
+  });
+
+  it("R3507000 names the display name beside the username only when it differs", async () => {
+    const roblox = await robloxRow({ preferred_username: "Builderman", name: "Builder Man", picture: PICTURE });
+    expect(within(roblox).getByTestId(linkedTestid.identity)).toHaveTextContent(/^Builder Man \(@Builderman\)$/u);
+  });
+
+  it("R3507000 shows the username and no image when Roblox gave no usable headshot", async () => {
+    for (const picture of [undefined, null, "", "https://example.com/headshot.png", "http://tr.rbxcdn.com/headshot.png"]) {
+      const roblox = await robloxRow({ preferred_username: "Builderman", picture });
+      expect(within(roblox).getByTestId(linkedTestid.identity), String(picture)).toHaveTextContent("@Builderman");
+      expect(within(roblox).queryByTestId(linkedTestid.avatar), String(picture)).toBeNull();
+      expect(roblox.querySelector("img"), String(picture)).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("R3507000 keeps today's row for a Roblox identity with no username, a headshot alone included", async () => {
+    for (const data of [undefined, {}, { name: "Builder Man" }, { picture: PICTURE }, { preferred_username: " " }]) {
+      const roblox = await robloxRow(data);
+      expect(roblox, JSON.stringify(data)).toHaveTextContent(/^Roblox: linked\. You can sign in with it\.Unlink Roblox$/u);
+      expect(within(roblox).queryByTestId(linkedTestid.identity), JSON.stringify(data)).toBeNull();
+      expect(roblox.querySelector("img"), JSON.stringify(data)).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("R3507000 shows neither on a Roblox row that is not linked", async () => {
+    serve([EMAIL]);
+    render(<LinkedAccounts token={TOKEN} />);
+    await settle();
+    expect(row("custom:roblox")).toHaveAttribute("data-linked", "false");
+    expect(row("custom:roblox")).toHaveTextContent("Roblox: not linked.");
+    expect(within(row("custom:roblox")).queryByTestId(linkedTestid.identity)).toBeNull();
+    expect(within(row("custom:roblox")).queryByTestId(linkedTestid.avatar)).toBeNull();
+  });
+
+  it("R3507000 shows a linked Google identity as before: no username or image from its identity_data", async () => {
+    serve([EMAIL, { identity_id: "id-google", provider: "google", identity_data: { preferred_username: "player", picture: PICTURE } }]);
+    render(<LinkedAccounts token={TOKEN} />);
+    await settle();
+    expect(row("google")).toHaveAttribute("data-linked", "true");
+    expect(within(row("google")).queryByTestId(linkedTestid.identity)).toBeNull();
+    expect(row("google").querySelector("img")).toBeNull();
+  });
+
+  it("R3507000 removes a headshot that fails to load and keeps the username, leaving no broken image", async () => {
+    const roblox = await robloxRow({ preferred_username: "Builderman", picture: PICTURE });
+    fireEvent.error(within(roblox).getByTestId(linkedTestid.avatar));
+    expect(within(roblox).queryByTestId(linkedTestid.avatar)).toBeNull();
+    expect(roblox.querySelector("img")).toBeNull();
+    expect(within(roblox).getByTestId(linkedTestid.identity)).toHaveTextContent(/^@Builderman$/u);
   });
 });
 

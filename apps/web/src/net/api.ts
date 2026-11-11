@@ -13,6 +13,7 @@ import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
 import type { CardTier } from "../wire/generated/CardTier.ts";
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
+import type { FleetTrackView } from "../wire/generated/FleetTrackView.ts";
 import {
   forgetRead,
   freshRead,
@@ -787,6 +788,28 @@ export async function openPack(token: string, pack: string): Promise<OpenedPackR
   return answer;
 }
 
+/** `POST /api/packs/open-all` (R3212000): each opening as `POST /api/packs/open` answers it, in order. */
+export type OpenedPacksResponse = { openings: OpenedPackResponse[] };
+
+/**
+ * R3212000: `count` packs of one kind (at most `PACKS_OPEN_ALL_MAX`) in one spend, all or nothing. Each
+ * opening's `unopened` is what it left, so the last one's counters are the account's.
+ */
+export async function openAllPacks(token: string, pack: string, count: number): Promise<OpenedPacksResponse> {
+  const answer = await spendRequest<OpenedPacksResponse>("/api/packs/open-all", token, { pack, count });
+  const last = answer.openings.at(-1);
+  if (last !== undefined) {
+    updateCachedRead<PacksResponse>(token, keptPaths.packs, (before) => ({
+      ...before,
+      pity: last.pity,
+      unopened: withUnopened(before.unopened, last.pack, last.unopened),
+    }));
+  }
+  // R3206000: as `openPack`'s.
+  forgetReads(token, [keptPaths.collection, keptPaths.cosmetics, keptPaths.tokens, keptPaths.cosmeticPacks]);
+  return answer;
+}
+
 // The Jlore shop and the token picker (SPEC §14.1, §14.5, §14.6; #1309). Every number shown comes from
 // these answers, never a client constant (CLAUDE.md rule 7). A refusal changes nothing.
 
@@ -811,8 +834,11 @@ export type TrackView = {
   unlocked: boolean;
 };
 
-/** `GET /api/tracks`: one track per shipped set, in catalog order (R1302003 unlocks them). */
-export type TracksResponse = { tracks: TrackView[] };
+/**
+ * `GET /api/tracks`: one track per shipped set, in catalog order (R1302003 unlocks them). R3335001: and the Fleet
+ * track's, which a server from before #3335 leaves out.
+ */
+export type TracksResponse = { tracks: TrackView[]; fleet?: FleetTrackView };
 
 export function getTracks(token: string): Promise<TracksResponse> {
   return keptGet<TracksResponse>(keptPaths.tracks, token);
@@ -1028,7 +1054,8 @@ export async function claimAllNews(token: string): Promise<NewsResponse> {
 }
 
 // Saved decks and trios (SPEC §9.4, R250–R256). Ids are minted by the client, so every save is an
-// idempotent `PUT` that a retry after a dropped connection cannot turn into a second deck (R256).
+// idempotent upsert that a retry after a dropped connection cannot turn into a second deck (R256): a
+// `PUT`, or one item of `POST /api/decks/sync`, the autosave's (R3212001).
 
 export type SavedDeck = {
   id: string;
@@ -1096,15 +1123,9 @@ export async function putDeck(token: string, id: string, input: DeckInput): Prom
   return answer;
 }
 
-/** `DELETE /api/decks/:id`: idempotent; `deleted: false` when there was nothing to delete. */
-export async function deleteDeck(token: string, id: string, options: SendOptions = {}): Promise<{ deleted: boolean }> {
-  const answer = await apiRequest<{ deleted: boolean }>(`/api/decks/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-    token,
-    ...options,
-  });
-  // A trio slot naming the deck empties (R252).
-  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => ({
+/** The kept decks without deck `id`: a trio slot naming it empties (R252). */
+function withoutDeck(before: DecksResponse, id: string): DecksResponse {
+  return {
     ...before,
     decks: before.decks.filter((deck) => deck.id !== id),
     trios: before.trios.map((trio) =>
@@ -1112,7 +1133,17 @@ export async function deleteDeck(token: string, id: string, options: SendOptions
         ? { ...trio, deckIds: trio.deckIds.map((slot) => (slot === id ? null : slot)) as TrioSlots }
         : trio,
     ),
-  }));
+  };
+}
+
+/** `DELETE /api/decks/:id`: idempotent; `deleted: false` when there was nothing to delete. */
+export async function deleteDeck(token: string, id: string, options: SendOptions = {}): Promise<{ deleted: boolean }> {
+  const answer = await apiRequest<{ deleted: boolean }>(`/api/decks/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    token,
+    ...options,
+  });
+  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => withoutDeck(before, id));
   return answer;
 }
 
@@ -1148,23 +1179,6 @@ export async function restoreDeckVersion(
 
 export type TrioInput = { name: string; deckIds: TrioSlots };
 
-/**
- * `PUT /api/trios/:id`: as `putDeck`. A slot naming a deck the server does not have yet is a 409
- * `conflict` with `details.unknownDeck`: save the deck first.
- */
-export async function putTrio(token: string, id: string, input: TrioInput): Promise<{ trio: SavedTrio }> {
-  const answer = await apiRequest<{ trio: SavedTrio }>(`/api/trios/${encodeURIComponent(id)}`, {
-    method: "PUT",
-    token,
-    body: input,
-  });
-  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => ({
-    ...before,
-    trios: withItem(before.trios, answer.trio),
-  }));
-  return answer;
-}
-
 /** One deck of an imported trio; its id is minted here (R256). */
 export type ImportedDeckInput = { id: string; name: string; cards: readonly string[] };
 
@@ -1197,16 +1211,54 @@ export async function importTrio(
   return answer;
 }
 
-export async function deleteTrio(token: string, id: string, options: SendOptions = {}): Promise<{ deleted: boolean }> {
-  const answer = await apiRequest<{ deleted: boolean }>(`/api/trios/${encodeURIComponent(id)}`, {
-    method: "DELETE",
+/**
+ * `POST /api/decks/sync`'s body (R3212001): each item as its own `PUT` or `DELETE` takes it, with its id.
+ * At most `DECK_SYNC_ITEMS_MAX` items in all.
+ */
+export type DeckSyncInput = {
+  decks: (DeckInput & { id: string })[];
+  trios: (TrioInput & { id: string })[];
+  deletedTrios: string[];
+  deletedDecks: string[];
+};
+
+/** R3212001: an item the server refused, alone: its own route's status and error body, verbatim. */
+export type DeckSyncRefusal = { id: string; status: number; error: ApiErrorBody };
+
+/** R3212001: one outcome per item, each list in its request list's order; a success is its own route's answer and the id. */
+export type DeckSyncResponse = {
+  decks: ({ id: string; deck: SavedDeck } | DeckSyncRefusal)[];
+  trios: ({ id: string; trio: SavedTrio } | DeckSyncRefusal)[];
+  deletedTrios: ({ id: string; deleted: boolean } | DeckSyncRefusal)[];
+  deletedDecks: ({ id: string; deleted: boolean } | DeckSyncRefusal)[];
+};
+
+function landed<T extends { id: string }>(outcome: T | DeckSyncRefusal): outcome is T {
+  return !("error" in outcome);
+}
+
+/**
+ * `POST /api/decks/sync` (R3212001): the autosave's one request a pass. The server saves the decks, then
+ * the trios, then deletes the trios, then the decks, each as its own route would; a refusal refuses its
+ * item alone. Not a spend. Each item that landed folds into the kept decks as its own route's answer does.
+ */
+export async function syncDecks(token: string, input: DeckSyncInput, options: SendOptions = {}): Promise<DeckSyncResponse> {
+  const answer = await apiRequest<DeckSyncResponse>("/api/decks/sync", {
+    method: "POST",
     token,
+    body: input,
     ...options,
   });
-  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => ({
-    ...before,
-    trios: before.trios.filter((trio) => trio.id !== id),
-  }));
+  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => {
+    let after = before;
+    for (const outcome of answer.decks.filter(landed)) after = { ...after, decks: withItem(after.decks, outcome.deck) };
+    for (const outcome of answer.trios.filter(landed)) after = { ...after, trios: withItem(after.trios, outcome.trio) };
+    for (const outcome of answer.deletedTrios.filter(landed)) {
+      after = { ...after, trios: after.trios.filter((trio) => trio.id !== outcome.id) };
+    }
+    for (const outcome of answer.deletedDecks.filter(landed)) after = withoutDeck(after, outcome.id);
+    return after;
+  });
   return answer;
 }
 
@@ -1294,7 +1346,7 @@ export type ModeChoice =
   | { mode: "bo3"; trioId: string }
   | { mode: "random"; leanSet?: LeanPick };
 
-/** `POST /api/queue`. `matchId` for a paired Best-of-1 or All Random game, `seriesId` for Conquest. */
+/** `POST /api/queue`. `matchId` for a paired Best-of-1 or All random game, `seriesId` for Conquest. */
 export type EnqueueResponse = {
   ticketId: string;
   status: "open" | "matched" | "cancelled";
@@ -1442,7 +1494,7 @@ export function getSeriesForMatch(token: string, matchId: string): Promise<{ ser
 export type GrapeTier = "rotten" | "normal" | "large" | "golden" | "mythic";
 
 /**
- * R2778000: the two ranked ladders: Constructed (the Best of 1 and Conquest queues) and All Random, each
+ * R2778000: the two ranked ladders: Constructed (the Best of 1 and Conquest queues) and All random, each
  * with its own rank, record, badges and leaderboard. A read that names none is Constructed's.
  */
 export type Ladder = "constructed" | "random";
@@ -1590,7 +1642,7 @@ export type RematchStatusResponse = {
   mode?: QueueMode;
 };
 
-/** `lean`: as `ModeChoice`'s `leanSet`, for an All Random rematch; a Best-of-1 one replays its decks. */
+/** `lean`: as `ModeChoice`'s `leanSet`, for an All random rematch; a Best-of-1 one replays its decks. */
 export function rematchOffer(
   token: string,
   matchId: string,

@@ -1,6 +1,6 @@
 //! Exports `crates/server/src/config.rs` constants to `apps/web/src/wire/serverConfig.ts` (SURFACE §5.1, §10.4).
 //! Ensures client reads server constants (CLAUDE.md rule 9).
-//! Tracks: R767, R1432, R1435, R1441, R1442, R757000, R757001, R768, R2101000, R2990001, R2990002.
+//! Tracks: R767, R1432, R1435, R1441, R1442, R757000, R757001, R768, R2101000, R2990001, R2990002, R3207000, R3207001, R3213000.
 
 use serde_json::{Value, json};
 
@@ -83,6 +83,14 @@ fn constants() -> Vec<(&'static str, Value)> {
         // SPEC §11 R897000: the client counts reads, never compares times, so only the read count
         // ships; QUEUE_TICKET_STALE_MS stays server-only.
         ("QUEUE_ENDED_AFTER_READS", json!(c::QUEUE_ENDED_AFTER_READS)),
+        // SPEC §11 R3207000, R3207001: the two polls that left SERIES_POLL_SECONDS's pace.
+        (
+            "QUEUE_POPULATION_POLL_SECONDS",
+            json!(c::QUEUE_POPULATION_POLL_SECONDS),
+        ),
+        ("LIVE_GAME_POLL_SECONDS", json!(c::LIVE_GAME_POLL_SECONDS)),
+        // SPEC §11 R3213000: the post-game frames' version, which the client holds a frame to.
+        ("POST_GAME_FRAME_VERSION", json!(c::POST_GAME_FRAME_VERSION)),
         ("DECK_AUTOSAVE_DEBOUNCE_MS", json!(c::DECK_AUTOSAVE_DEBOUNCE_MS)),
         (
             "DECK_AUTOSAVE_RETRY_SECONDS",
@@ -95,6 +103,7 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("DECK_CODE_MAX_INPUT_LENGTH", json!(c::DECK_CODE_MAX_INPUT_LENGTH)),
         ("DECK_CODE_VERSION", json!(c::DECK_CODE_VERSION)),
         ("DECK_NAME_MAX_LENGTH", json!(c::DECK_NAME_MAX_LENGTH)),
+        ("DECK_SYNC_ITEMS_MAX", json!(c::DECK_SYNC_ITEMS_MAX)),
         ("DISCONNECT_GRACE_MS", json!(c::DISCONNECT_GRACE_MS)),
         ("DISCONNECT_GRACE_SECONDS", json!(c::DISCONNECT_GRACE_SECONDS)),
         ("GATE_SLOW_NOTICE_SECONDS", json!(c::GATE_SLOW_NOTICE_SECONDS)),
@@ -216,6 +225,7 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("PING_SHOW_MS", json!(c::PING_SHOW_MS)),
         // Economy constants (SPEC §14, #946, #1294, #1298, CLAUDE.md rule 9, R1313000).
         ("PACK_PRICE_JLORE", json!(c::PACK_PRICE_JLORE)),
+        ("PACKS_OPEN_ALL_MAX", json!(c::PACKS_OPEN_ALL_MAX)),
         ("PACK_SLOTS", json!(c::PACK_SLOTS)),
         (
             "PACK_UNOWNED_WEIGHTS",
@@ -279,6 +289,9 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("SET_TRACK_LEVELS", json!(c::SET_TRACK_LEVELS)),
         ("SET_TRACK_XP_PER_LEVEL", json!(c::SET_TRACK_XP_PER_LEVEL)),
         ("SET_TRACK_UNLOCK_LEVEL", json!(c::SET_TRACK_UNLOCK_LEVEL)),
+        // #3335's Fleet track (§14.15, R3335001): its levels and its daily cap, which its panel shows.
+        ("FLEET_TRACK_LEVELS", json!(c::FLEET_TRACK_LEVELS)),
+        ("FLEET_TRACK_XP_DAILY_MAX", json!(c::FLEET_TRACK_XP_DAILY_MAX)),
         // #3013's card proficiency (§14.14, R3013000): each level's plays and the level count.
         ("PROFICIENCY_LEVEL_PLAYS", json!(c::PROFICIENCY_LEVEL_PLAYS)),
         ("PROFICIENCY_LEVELS", json!(c::PROFICIENCY_LEVELS)),
@@ -398,8 +411,12 @@ fn every_name_is_listed_once() {
         // COSMETIC_TOKEN_BAR_TARGET_PACKS (R2728000). #2875: NEWS_TTL_DAYS and five news rewards.
         // #3074: the dev dashboard's seven (R3074000, R3074001, R3074003).
         // #3013: PROFICIENCY_LEVEL_PLAYS and PROFICIENCY_LEVELS (R3013000).
+        // #3207: QUEUE_POPULATION_POLL_SECONDS and LIVE_GAME_POLL_SECONDS (R3207000, R3207001).
+        // #3212: PACKS_OPEN_ALL_MAX and DECK_SYNC_ITEMS_MAX (R3212000, R3212001).
+        // #3213: POST_GAME_FRAME_VERSION (R3213000).
+        // #3335: FLEET_TRACK_LEVELS and FLEET_TRACK_XP_DAILY_MAX (R3335001).
         listed,
-        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2,
+        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2 + 2 + 2 + 1 + 2,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -421,7 +438,10 @@ fn every_name_is_listed_once() {
          SPECTATOR_EMOTE_* numbers (R2990001, R2990002), and #3074's DEV_JLORE_PER_REQUEST_MAX, \
          DEV_XP_PER_REQUEST_MAX, DEV_RATING_MIN, DEV_RATING_MAX, NEWS_POST_TITLE_MAX_CHARS, \
          NEWS_POST_SUMMARY_MAX_CHARS and NEWS_SUMMARY_MAX_SENTENCES (R3074000, R3074001, R3074003), \
-         and #3013's PROFICIENCY_LEVEL_PLAYS and PROFICIENCY_LEVELS (R3013000)"
+         and #3013's PROFICIENCY_LEVEL_PLAYS and PROFICIENCY_LEVELS (R3013000), and #3207's \
+         QUEUE_POPULATION_POLL_SECONDS and LIVE_GAME_POLL_SECONDS (R3207000, R3207001), and #3212's \
+         PACKS_OPEN_ALL_MAX and DECK_SYNC_ITEMS_MAX (R3212000, R3212001), and #3213's \
+         POST_GAME_FRAME_VERSION (R3213000)"
     );
 }
 
@@ -465,4 +485,37 @@ fn r3114000_each_shipped_set_s_offset_is_its_catalog_place_in_thousands() {
     for set in [SetName::Boss, SetName::BossX] {
         assert_eq!(c::catalog_number_set_offset(set), None, "{set:?}");
     }
+}
+
+/// The exported value of one name.
+fn exported(name: &str) -> Value {
+    constants()
+        .into_iter()
+        .find(|(listed, _)| *listed == name)
+        .unwrap_or_else(|| panic!("{name} is not exported"))
+        .1
+}
+
+// R3207000: the lobby's wait reads the queue readout every QUEUE_POPULATION_POLL_SECONDS, so each
+// read counts anew (past the readout's kept answer), and the client reads the number from here.
+#[test]
+fn r3207000_the_population_poll_is_exported_and_outlasts_the_kept_readout() {
+    const _: () = assert!(c::QUEUE_POPULATION_POLL_SECONDS >= 30 && c::QUEUE_POPULATION_POLL_SECONDS <= 60);
+    const _: () = assert!(c::QUEUE_POPULATION_POLL_SECONDS > c::QUEUE_READOUT_CACHE_TTL_SECONDS);
+    assert_eq!(
+        exported("QUEUE_POPULATION_POLL_SECONDS"),
+        json!(c::QUEUE_POPULATION_POLL_SECONDS)
+    );
+}
+
+// R3207001: the live-game banner re-reads the account every LIVE_GAME_POLL_SECONDS, slower than the
+// queue follow's SERIES_POLL_SECONDS, and the client reads the number from here.
+#[test]
+fn r3207001_the_live_game_poll_is_exported_and_slower_than_the_queues() {
+    const _: () = assert!(c::LIVE_GAME_POLL_SECONDS >= 10 && c::LIVE_GAME_POLL_SECONDS <= 15);
+    const _: () = assert!(c::LIVE_GAME_POLL_SECONDS > c::SERIES_POLL_SECONDS);
+    assert_eq!(
+        exported("LIVE_GAME_POLL_SECONDS"),
+        json!(c::LIVE_GAME_POLL_SECONDS)
+    );
 }

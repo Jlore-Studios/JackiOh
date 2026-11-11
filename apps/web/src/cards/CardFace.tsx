@@ -72,6 +72,10 @@
 // R3046000: a compact face (a face-up backrow card) prints full art too: the art across the face, still, and its name in
 // a band below the art, with the cost gem, the rarity gem and set mark, the crest and the states over it and no type line
 // (`data-full-art` on a compact face, cards.css; fullArt.ts `boardLookOf`). A compact face that is not full art keeps its window.
+// R3340000: a compact face in play (`onBoard`) moves its art when its card wears an animated or signed level or is a Mythic, as
+// a full face does, drawing no signature, sweep or drift, taking a motion slot ranked by the pointer, focus and rarity
+// (`useArtMotion`, motionSlots.ts), and answers the pointer and a press (artLive.ts, `data-art-hover`): a hovered one claims a
+// slot to answer in. Its art is in layers while it moves (CardArt `live`).
 //
 // R2723000: a full-art face in the viewer's own hand (`ownHand`, which Card.tsx sets) is its art alone
 // (`data-full-art-hand`), with its cost gem, a Unit's stats, its states, its motion and its cosmetics:
@@ -86,24 +90,60 @@
 // R3013002: the face wears its card's proficiency stamp (stamps.ts): the account's pick on the viewer's own copy
 // (`worn`), the seat's frozen one below a `TheirCopy`; ProficiencyStamp.tsx draws it in stamps.css's slot, clear
 // of every part, base and Radiant alike.
+//
+// R3335000: a launched Starship's art wears its Starship look (cosmetics.ts `useStarshipLook`): the account's picks on
+// the viewer's own copy (`worn`), the seat's frozen ones below a `TheirCopy`, else the standard.
+//
+// R3338002: given `gemDrain` (Card.tsx, a Ceaseless Void in its owner's own hand), the cost gem's level falls as its
+// cost does (`data-gem-drain`, `--cost-drain`, cards.css); every other face's gem is drawn whole.
+//
+// R3344000: a face that is Epic or rarer, or prints full art, draws its picture as depth planes by the painter's roles
+// (`data-depth`, depth.ts `hasDepth`, CardArt's `part` a plane): the base window's picture is the far plane and
+// `.cf-planes` stacks the middle, near and nearest over it, with a glare layer over the art and one over the frame
+// (`.cf-glare`, depth.css). A delivered file, a Starship in play, a Legacy card, a restyled picture, Immersive, Out of
+// frame, Extended art and Glitch draw none; nor does any face under reduced motion, the system's setting or the fx
+// intensity off (`useDepthMotion`), which also hold such a face's foil still. A Legendary or Mythic face in the viewer's
+// own hand or in inspect lets its subject break the window's top edge (`data-frame-break`). R3344001: given `tilt`, the face
+// tilts with the pointer, the device or a drag (tilt.ts `useCardTilt`), one face at a time.
+// R3350000: a face with depth whose normal picture has a Mythic's diorama (art/dioramas/) draws its slices in place of the
+// planes (`data-diorama`): the farthest in the base window and each other over it as a plane of its own, shifted by its
+// depth and bent as it says, each moving by its own loop while the face holds a motion slot (`data-diorama-motion`, the
+// slot Animated's motion shares), and at an animated level by the art's own layers too (R2715001). Where the player turns it to look at it (inspect's drag, the hover preview, and the
+// Collection's grid, `turn`) it turns up to DIORAMA_TURN_MAX_DEG, its parallax scaled with it; in hand CARD_TILT_MAX_DEG.
+// It never breaks the frame: its subject stands in slices of more than one plane.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
 import { keywordKey, type CardType, type Rarity } from "@jackioh/shared";
 
 import { CardArt, type ArtShape } from "./art/index.ts";
-import { hasArtParts } from "./art/CardArt.tsx";
-import { showcaseFamilyOf } from "./art/pictures.ts";
+import { hasArtParts, hasArtPlanes } from "./art/CardArt.tsx";
+import { dioramaOf } from "./art/dioramas/index.ts";
+import { ART_PLANES, showcaseFamilyOf } from "./art/pictures.ts";
 import { CardStates } from "./CardStates.tsx";
+import { useArtLive } from "./artLive.ts";
 import { useImmersiveShift } from "./immersive.ts";
+import { slotRarityOf } from "./motionSlots.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { useArtMotion, useCosmeticAttributes } from "./cosmetics.ts";
-import { FIT_FLOOR_PX, PREVIEW_TEXT_LIMIT, TIER_SCALE } from "./constants.ts";
+import { cosmeticAttributes, useArtMotion, useCosmeticAppearance, useStarshipLook } from "./cosmetics.ts";
+import {
+  CARD_DEPTH_STEP_CQW,
+  CARD_FRAME_BREAK_PX,
+  CARD_FRAME_BREAK_SCALE,
+  CARD_GLARE_SIZE_PCT,
+  CARD_TILT_MAX_DEG,
+  DIORAMA_DEPTH_STEPS,
+  DIORAMA_TURN_MAX_DEG,
+  FIT_FLOOR_PX,
+  PREVIEW_TEXT_LIMIT,
+  TIER_SCALE,
+} from "./constants.ts";
+import { breaksFrame, glareFor, hasDepth, useDepthMotion } from "./depth.ts";
 import { nameTier, overLimit, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
-import { artMotionOf, boardLookOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
+import { artMotionOf, boardLookOf, boardNameOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
 import { FullArtSignature } from "./FullArtSignature.tsx";
 import { foilFor, frameRarity } from "./frame.ts";
 import type { FaceModel, RichText } from "./model.ts";
@@ -112,6 +152,7 @@ import { StarshipPieces } from "./StarshipPieces.tsx";
 import { setMarkOf, watermarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
 import { pixelNameUri } from "./pixelName.ts";
+import { useCardTilt, type TiltBox, type TiltMode } from "./tilt.ts";
 import {
   NORMAL_LOOK,
   VERSION_EXTENDED_ART_ID,
@@ -128,6 +169,7 @@ import { useCardStamp } from "./stamps.ts";
 import "./cards.css";
 import "./setmark.css";
 import "./cosmetics.css";
+import "./depth.css";
 
 export type CardFaceProps = {
   face: FaceModel;
@@ -146,6 +188,33 @@ export type CardFaceProps = {
   worn?: boolean;
   /** R2723000: a card in the viewer's own hand on a board they play (Card.tsx): a full-art face there draws its art alone. */
   ownHand?: boolean;
+  /**
+   * R3339000: a compact face that is a card in play on the board (Card.tsx's backrow, the Collection's board view): its name
+   * and type line follow "Names on the board" and an art-first card drops them. Any other compact face (a picker's tile,
+   * a notice, a cosmetic's sample) prints its name as it always has.
+   */
+  onBoard?: boolean;
+  /**
+   * R3338002: how far the cost gem has drained, 0 to 1 (gemDrain.ts `gemDrainOf`), which Card.tsx gives only a card
+   * in its owner's own hand whose gem drains; absent or null, the gem is drawn whole.
+   */
+  gemDrain?: number | null;
+  /**
+   * R3344001: where this face listens for what tilts it, when it has depth (R3344000): its parent ("host": a card in hand,
+   * on the board or in the Collection), the window ("window": the hover preview) or a drag on it ("drag": inspect);
+   * "off" by default, so a face in a list or a picker never tilts.
+   */
+  tilt?: TiltMode;
+  /**
+   * R3344001: with `tilt="window"`, the box of the card the face is anchored to (the hover preview's anchor): the
+   * pointer is on it, never over the face, so the pose is read against it. Without it a window face reads its host's box.
+   */
+  tiltAnchor?: TiltBox;
+  /**
+   * R3350000: the face is one the player turns to look at outside inspect and the hover preview (the Collection's grid): a
+   * diorama on it turns up to DIORAMA_TURN_MAX_DEG, as it does in those.
+   */
+  turn?: boolean;
 };
 
 /** The art window's shape follows the card type, as Hearthstone's minion oval and spell frame do. */
@@ -156,6 +225,15 @@ const ART_SHAPE: Readonly<Record<CardType, ArtShape>> = {
   Trap: "notched",
   "Field Trap": "notched",
 };
+
+/** R3344000: the planes `.cf-planes` stacks over the base window's far one, nearest last. */
+const OVER_PLANES = ART_PLANES.slice(1);
+
+/** The digits `--cf-depth-step` is written with, in cqw. */
+const DEPTH_STEP_DIGITS = 2;
+
+/** R3350000: the digits a diorama slice's `--cf-plane` (its depth in parallax steps) is written with. */
+const SLICE_PLANE_DIGITS = 2;
 
 /** A class list from the parts that are non-empty strings, in order. */
 export function cx(...parts: (string | false | null | undefined)[]): string {
@@ -275,7 +353,15 @@ export function hasCrest(face: FaceModel): boolean {
   return crested(frameRarity(face));
 }
 
-export function CardFace({ face, layout = "full", className, lazyArt = false, ascentLevel, worn = false, ownHand = false }: CardFaceProps): ReactElement {
+export function CardFace({
+  face,
+  layout = "full",
+  className,
+  lazyArt = false,
+  ascentLevel,
+  worn = false,
+  ownHand = false, onBoard = false, gemDrain = null,
+  tilt = "off", tiltAnchor, turn = false }: CardFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides;
@@ -295,6 +381,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // R2723000: in the viewer's own hand a full-art face is its art alone: no name banner, signature,
   // rarity gem, set mark or crest. Its cost gem, a Unit's stats, its states and its motion stay.
   const bare = fullArt && ownHand;
+  // R3339000: a card in play in the backrow draws its name as "Names on the board" says; an art-first one drops it and its type line.
+  const { artFirst, staticName: showStaticName } =
+    !full && onBoard ? boardNameOf(face, cardLook, settings.boardNames) : { artFirst: false, staticName: true };
   // Issues #814, #1017: the face model gives the box's words whole, as a short form, or as a Quest's stage
   // (R2450000), each with its own spans; the box's size is the layout's.
   const { shown, short, less } = faceText(face, ascentLevel, fullArtOn);
@@ -304,17 +393,17 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const printed = printedText(face, shown.full);
   const names = nameTier(face.name);
   const texts = textTier(printed);
-  useFitText(nameRef, bare ? "" : face.name);
+  useFitText(nameRef, bare ? "" : showStaticName ? face.name : `hover ${face.name}`);
   // The rules box only exists on a full face; keying on the layout refits it when one appears. A face
   // that prints less than its text clamps at once, its art whole (#1017; fit.ts).
   useFitText(textRef, full ? printed : "", { floorPx: FIT_FLOOR_PX, long: !less });
 
   const scales = { "--cf-name-scale": String(TIER_SCALE[names]), "--cf-text-scale": String(TIER_SCALE[texts]) } as CSSProperties;
   const rarity = frameRarity(face);
-  // R1295000: what the face wears, judged by the rarity its frame shows as its rarity foil is.
-  // R1956000: a grid's faces hold theirs still, so the slots stay with the card a player opens.
-  const cosmetics = useCosmeticAttributes({ ...face, rarity }, worn, settings.animatedFoil && !lazyArt);
+  const cosmeticAppearance = useCosmeticAppearance({ ...face, rarity }, worn);
   const stamp = useCardStamp(face, worn);
+  // R3335000: the Starship look a launched Starship wears: the viewer's own picks, or its seat's below a `TheirCopy`.
+  const starshipLook = useStarshipLook(worn);
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
   const glitch = isGlitch(face.defId);
@@ -326,17 +415,42 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const tier = full ? tierOfLook(look) : null;
   // R2725003: an animated full art lays the band over it and drifts it. R3015002: a signed level signs the name
   // across its full art, but in the viewer's own hand.
-  const moving = fullArt && look.animated;
-  const signed = fullArt && look.signed && !bare;
-  // R2943001: a Starship in play's and a Legacy card's pictures have no parts.
+  // R3340000: a compact face's look carries the flags, its art moving by them (`artMoves`); only a full face sweeps and signs.
+  const moving = full && fullArt && look.animated;
+  const signed = full && fullArt && look.signed && !bare;
+  // R2943001: a Starship in play's and a Legacy card's pictures have no parts; nor (R3337001) an Anomaly Found! in play
+  // holding a board, which wears that board's picture.
   const starship = face.inPlay ? face.starship : null;
+  const anomaly = face.inPlay ? (face.anomaly ?? null) : null;
   // R2944001: Immersive lays its subject on a near layer over its hazed backdrop where the picture has parts.
-  const immersive = look.version === VERSION_IMMERSIVE_ID && !fullArt && !glitch && hasArtParts(face.defId, starship);
+  const immersive = look.version === VERSION_IMMERSIVE_ID && !fullArt && !glitch && hasArtParts(face.defId, starship, anomaly);
   // R2715001: an Animated look moves its art's own layers while a slot is theirs. R2944002: Immersive's depth moves in
-  // the same slot, one per face, Animated or not.
-  const artMoves = look.animated;
-  const artMotion = useArtMotion((artMoves || immersive) && settings.animatedFoil && !lazyArt);
-  useImmersiveShift(faceRef, immersive && artMotion);
+  // the same slot, one per face, Animated or not. R3340000: a card in play moves its art for an animated or signed level and
+  // for a Mythic; a hovered or focused one claims a slot to answer in, ranked first (motionSlots.ts).
+  const board = !full && onBoard;
+  const artMoves = full ? look.animated : board && (cardLook.animated || rarity === "Mythic");
+  // R3015002: one picture per variant at every level, and its own motion at every animated one.
+  const picture = artPictureOf(look.version, face.set);
+  // R3344000: an Epic or rarer face, or a full-art one, draws its picture as depth planes unless the viewer's motion
+  // settings ask for the flat picture, which also holds its foil still under the fx intensity off.
+  const { flat, fxOff } = useDepthMotion();
+  const wantsDepth = hasDepth({ rarity, fullArt, version: look.version, glitch, planed: hasArtPlanes(face.defId, starship, picture, face.radiant) });
+  const depth = wantsDepth && !flat;
+  // R3350000: where it has depth, a Mythic's normal picture draws its diorama in place of the planes.
+  const diorama = depth && picture === "normal" && starship === null && anomaly === null ? dioramaOf(face.defId) : null;
+  // R2715001, R3340000: a full art's drift, band sweep and signature move in the same one ranked slot as its art's layers.
+  // R3350000: and a diorama's loops.
+  const live = useArtLive(faceRef, artMoves || moving || signed || board || immersive || cosmeticAppearance.animates || diorama !== null);
+  const engaged = board && live.hovered;
+  const faceMotion = useArtMotion(
+    (artMoves || moving || signed || immersive || engaged || cosmeticAppearance.animates || diorama !== null) &&
+      settings.animatedFoil &&
+      !lazyArt &&
+      live.onScreen,
+    { hovered: live.hovered, rarity: slotRarityOf(rarity) },
+  );
+  const dioramaMoving = diorama !== null && faceMotion.moving;
+  useImmersiveShift(faceRef, immersive && faceMotion.moving);
   // R2942001: Extended art's picture runs past its window across the face; Pixel sets the name in its pixel face, when
   // the face has every character of it and it is short enough to read (`PIXEL_NAME_MAX_GLYPHS`; a small face prints
   // it in the normal face, cards.css).
@@ -345,10 +459,31 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // R2943001: Set showcase wears its set's look; Out of frame cuts its subject out over the frame where the picture has
   // parts (a Starship in play's and a Legacy card's have none).
   const showcase = look.version === VERSION_SET_SHOWCASE_ID ? showcaseFamilyOf(face.set) : null;
-  const outOfFrame = look.version === VERSION_OUT_OF_FRAME_ID && !fullArt && !glitch && hasArtParts(face.defId, starship);
-  // R3015002: one picture per variant at every level, and its own motion at every animated one.
-  const picture = artPictureOf(look.version, face.set);
-  const motion = artMotion && artMoves ? artMotionOf(face.defId) : null;
+  const outOfFrame = look.version === VERSION_OUT_OF_FRAME_ID && !fullArt && !glitch && hasArtParts(face.defId, starship, anomaly);
+  const motion = faceMotion.moving && (artMoves || engaged) ? artMotionOf(face.defId) : null;
+  const shape: ArtShape = fullArt || extended || artFirst ? "full" : ART_SHAPE[face.type];
+  // R3350000: a diorama never breaks the frame: its subject is a stack across slices of every plane, so lifting and growing
+  // the near plane alone would pull one part of the model away from the rest.
+  const breaks = depth && diorama === null && breaksFrame(rarity, ownHand, tilt);
+  // R3350000: a diorama turns further where the player turns it to look at it, its parallax with it.
+  const turnMax = diorama !== null && (tilt === "drag" || tilt === "window" || turn) ? DIORAMA_TURN_MAX_DEG : CARD_TILT_MAX_DEG;
+  useCardTilt(faceRef, depth ? tilt : "off", !flat, tiltAnchor, turnMax);
+  // R1295000: what the face wears, judged by the rarity its frame shows as its rarity foil is.
+  // R1956000: a grid's faces hold theirs still, so the slots stay with the card a player opens. R3340000: every moving
+  // cosmetic uses the same ranked, visible face-level decision as the art above.
+  const foilMoves = settings.animatedFoil && !(fxOff && wantsDepth);
+  const cosmetics = cosmeticAttributes(cosmeticAppearance, faceMotion.moving && foilMoves && !lazyArt);
+  const glare = glareFor(cosmetics["data-cosmetic-foil"], face.radiant);
+  const style = depth
+    ? ({
+        ...scales,
+        "--cf-depth-step": `${Number(((CARD_DEPTH_STEP_CQW * turnMax) / CARD_TILT_MAX_DEG).toFixed(DEPTH_STEP_DIGITS))}cqw`,
+        "--cf-glare-art": String(glare.art),
+        "--cf-glare-frame": String(glare.frame),
+        "--cf-glare-size": `${CARD_GLARE_SIZE_PCT}%`,
+        ...(breaks ? { "--cf-frame-break": `${CARD_FRAME_BREAK_PX}px`, "--cf-frame-break-scale": String(CARD_FRAME_BREAK_SCALE) } : {}),
+      } as CSSProperties)
+    : scales;
 
   return (
     <span
@@ -360,26 +495,43 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       data-printed-rarity={face.printedRarity ?? undefined}
       data-name-tier={names}
       data-text-tier={texts}
-      data-foil={foilFor({ ...face, rarity }, settings.animatedFoil, settings.rarityFoil)}
+      data-foil={foilFor({ ...face, rarity }, foilMoves, settings.rarityFoil)}
       data-radiant-face={face.radiant ? "true" : undefined}
       data-in-play={face.inPlay ? "true" : undefined}
       data-vanilla={face.vanilla ? "true" : undefined}
       data-tuned={face.tuning?.verdict}
       data-glitch={glitch ? "true" : undefined}
       data-full-art={fullArt ? "true" : undefined}
+      data-art-first={artFirst ? "true" : undefined}
       data-full-art-hand={bare ? "true" : undefined}
       data-full-art-tier={tier ?? undefined}
       data-version={look.version ?? undefined}
       data-level={look.level ?? undefined}
       data-showcase={showcase ?? undefined}
-      data-full-art-motion={moving || signed ? (settings.animatedFoil ? "animated" : "static") : undefined}
-      data-art-motion={artMoves ? (artMotion ? "animated" : "static") : undefined}
-      data-immersive-motion={immersive ? (artMotion ? "animated" : "static") : undefined}
+      data-full-art-motion={moving || signed ? (faceMotion.moving ? "animated" : "static") : undefined}
+      data-art-motion={artMoves || engaged ? (faceMotion.moving ? "animated" : "static") : undefined}
+      data-art-hover={board ? (live.hovered ? "true" : "false") : undefined}
+      data-art-response={board && faceMotion.enabled ? "true" : undefined}
+      data-immersive-motion={immersive ? (faceMotion.moving ? "animated" : "static") : undefined}
+      data-depth={depth ? "true" : undefined}
+      data-diorama={diorama !== null ? "true" : undefined}
+      data-diorama-motion={diorama !== null ? (dioramaMoving ? "animated" : "static") : undefined}
+      data-frame-break={breaks ? "true" : undefined}
       {...cosmetics}
-      style={scales}
+      style={style}
     >
       <span className="cf-scale">
-        <span className="cost-gem" data-cost={face.cost.value} data-tone={face.cost.tone} data-digits={costDigits(face.cost.text)}>
+        {depth && <span className="cf-glare cf-glare--frame" aria-hidden="true" />}
+        <span
+          className="cost-gem"
+          data-cost={face.cost.value}
+          data-tone={face.cost.tone}
+          data-digits={costDigits(face.cost.text)}
+          data-gem-drain={gemDrain === null ? undefined : "true"}
+          style={gemDrain === null ? undefined : ({ "--cost-drain": String(gemDrain) } as CSSProperties)}
+        >
+          {/* R3338002: the gem's level, falling as the Void's cost does (cards.css). */}
+          {gemDrain !== null && <span className="cf-cost-drain" aria-hidden="true" />}
           {face.cost.text}
           {face.cost.alt !== null && <EmbiggenedCost cost={face.cost.alt} />}
         </span>
@@ -406,12 +558,16 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
               tags={face.tags}
               type={face.type}
               name={face.englishName ?? face.name}
-              shape={fullArt || extended ? "full" : ART_SHAPE[face.type]}
+              shape={shape}
               lazy={lazyArt}
               starship={starship}
+              look={starshipLook}
+              anomaly={anomaly}
               picture={picture}
               motion={motion}
-              part={outOfFrame || immersive ? "backdrop" : "whole"}
+              part={depth ? "far" : outOfFrame || immersive ? "backdrop" : "whole"}
+              live={board && motion !== null}
+              diorama={diorama !== null ? { slice: 0, moving: dioramaMoving } : null}
             />
           )}
           {outOfFrame && (
@@ -425,6 +581,8 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
               className="cf-art--cutout"
               lazy={lazyArt}
               starship={starship}
+              look={starshipLook}
+              anomaly={anomaly}
               picture={picture}
               motion={motion}
               part="subject"
@@ -442,24 +600,86 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
                 className="cf-art--near"
                 lazy={lazyArt}
                 starship={starship}
+                look={starshipLook}
+                anomaly={anomaly}
                 picture="normal"
                 motion={motion}
                 part="subject"
               />
             </span>
           )}
+          {depth && (
+            <>
+              <span className="cf-planes" aria-hidden="true">
+                {/* R3350000: a diorama's slices over its farthest, each at its depth in parallax steps, bent as it says. */}
+                {diorama?.slices.slice(1).map((slice, k) => (
+                  <span
+                    key={slice.name}
+                    className={`cf-plane cf-art--${shape}`}
+                    data-plane={slice.plane}
+                    data-slice={k + 1}
+                    data-bend={slice.bend?.axis}
+                    style={
+                      {
+                        "--cf-plane": String(Number((slice.depth * DIORAMA_DEPTH_STEPS).toFixed(SLICE_PLANE_DIGITS))),
+                        ...(slice.bend === undefined ? {} : { "--cf-slice-bend": `${slice.bend.deg}deg` }),
+                      } as CSSProperties
+                    }
+                  >
+                    <CardArt
+                      defId={face.defId}
+                      radiant={face.radiant}
+                      tags={face.tags}
+                      type={face.type}
+                      name={face.englishName ?? face.name}
+                      shape="plane"
+                      lazy={lazyArt}
+                      starship={starship}
+                      picture={picture}
+                      motion={motion}
+                      part={slice.plane}
+                      diorama={{ slice: k + 1, moving: dioramaMoving }}
+                    />
+                  </span>
+                ))}
+                {diorama === null && OVER_PLANES.map((plane, index) => (
+                  <span key={plane} className={`cf-plane cf-art--${shape}`} data-plane={plane} style={{ "--cf-plane": String(index + 1) } as CSSProperties}>
+                    <CardArt
+                      defId={face.defId}
+                      radiant={face.radiant}
+                      tags={face.tags}
+                      type={face.type}
+                      name={face.englishName ?? face.name}
+                      shape="plane"
+                      lazy={lazyArt}
+                      starship={starship}
+                      picture={picture}
+                      motion={motion}
+                      part={plane}
+                    />
+                  </span>
+                ))}
+              </span>
+              <span className={`cf-glare cf-glare--art cf-art--${shape}`} aria-hidden="true" />
+            </>
+          )}
           {moving && <span className="cf-full-art-sweep" aria-hidden="true" />}
         </span>
 
         {bare ? (
           <span className="cf-hand-name">{face.name}</span>
-        ) : (
+        ) : showStaticName ? (
           <span
             className="card-name"
             ref={nameRef}
             data-pixel-name={pixelName !== null ? "true" : undefined}
             style={pixelName !== null ? ({ "--cf-pixel-name": `url("${pixelName}")` } as CSSProperties) : undefined}
           >
+            {face.name}
+          </span>
+        ) : (
+          // R3339000: transparent until hover or focus, and in the accessibility tree all the while: the name is read as it was.
+          <span className="card-name card-name-hover" ref={nameRef}>
             {face.name}
           </span>
         )}
@@ -478,7 +698,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
 
         {stamp !== null && <ProficiencyStamp level={stamp} />}
 
-        {!fullArt && <span className="card-type">{face.typeLine}</span>}
+        {!fullArt && !artFirst && <span className="card-type">{face.typeLine}</span>}
 
         {full && !fullArt && (
           <span

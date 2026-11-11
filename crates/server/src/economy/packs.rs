@@ -6,9 +6,11 @@ use std::sync::Arc;
 
 use jackioh_engine::wire::SHIPPED_SETS;
 use jackioh_shared::economy::bars::BarsSettled;
-use jackioh_shared::economy::ledger::LedgerGrant;
+use jackioh_shared::economy::ledger::{Counter, LedgerGrant};
 use jackioh_shared::economy::math::PityCounters;
-use jackioh_shared::economy::open::{EconomyRefusal, PackInputs, PackRecords, RefusalReason, open_card_pack};
+use jackioh_shared::economy::open::{
+    EconomyRefusal, PackInputs, PackOpening, PackRecords, RefusalReason, open_card_pack,
+};
 use jackioh_shared::economy::roll::{PackKind, Slot, SlotGrant, pack_pool};
 use jackioh_shared::economy::tiers::{card_odds, cosmetic_odds};
 use serde::{Deserialize, Serialize};
@@ -20,13 +22,17 @@ use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok, 
 use crate::app::App;
 use crate::config::{
     GLOBAL_COSMETIC_FLOOR_RARITY, GLOBAL_COSMETIC_ROLL_WEIGHT, PACK_FLOOR_RARITY, PACK_PRICE_JLORE,
-    PACK_SLOTS, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, TIER_WEIGHT_TOTAL,
+    PACK_SLOTS, PACKS_OPEN_ALL_MAX, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS,
+    TIER_WEIGHT_TOTAL,
 };
 use crate::cosmetics::Cosmetic;
+use crate::db::store::Tx;
 use crate::economy::cosmetic_packs::level_skip_chance;
-use crate::economy::grants::{Writing, counters_of, internal_refusal, write_grants};
+use crate::economy::grants::{Writing, counters_of, internal_refusal, write_grants, write_grants_all};
 use crate::economy::idempotency::{RequestKey, Spent, keep, replayed};
-use crate::economy::store::{EconomyReason, InventoryEntry, InventoryGrant, JloreGrant, JloreReason};
+use crate::economy::store::{
+    CardCosmetic, EconomyReason, InventoryEntry, InventoryGrant, JloreGrant, JloreReason,
+};
 
 /// What buying a pack answers: the pack, the wallet after it and the packs of its kind held.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -47,6 +53,14 @@ pub struct OpenedPack {
     pub pity: PityCounters,
     pub unopened: i64,
     pub bars: BarsSettled,
+}
+
+/// What Open all answers (R3212000): every pack's opening in order, each as one open answers it, so
+/// the last one's pity, packs held and bars are the account's after them all.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenedPacks {
+    pub openings: Vec<OpenedPack>,
 }
 
 /// The unopened card packs the account holds (§14.3), for the pack screen's batch opening: one
@@ -70,8 +84,128 @@ fn pack_of(body: &Value) -> Result<PackKind, ApiError> {
     PackKind::parse(&name).ok_or_else(|| bad_request(format!("no card pack is named \"{name}\"")))
 }
 
+/// R3212000: how many packs an Open all opens: a whole number from 1 to `PACKS_OPEN_ALL_MAX`.
+fn count_of(body: &Value) -> Result<usize, ApiError> {
+    body.get("count")
+        .and_then(Value::as_u64)
+        .and_then(|count| usize::try_from(count).ok())
+        .filter(|count| (1..=PACKS_OPEN_ALL_MAX).contains(count))
+        .ok_or_else(|| {
+            bad_request(format!(
+                "\"count\" must be a whole number from 1 to {PACKS_OPEN_ALL_MAX}"
+            ))
+        })
+}
+
 fn no_pack_held() -> ApiError {
     ApiError::new(ApiErrorCode::Conflict, "no unopened pack of that kind")
+}
+
+/// The error a pack's grant the store could not take answers: its pack spent from too few held is
+/// a conflict; any other is the server's fault.
+fn grant_refused(grant: &LedgerGrant) -> ApiError {
+    match grant {
+        LedgerGrant::Inventory { delta, .. } if *delta < 0 => no_pack_held(),
+        other => internal_refusal(other),
+    }
+}
+
+/// What an opening reads, under the account's lock: the packs of `pack`'s kind held, the copies of
+/// each card, the cosmetics and the counters.
+async fn records_of(tx: &mut Tx<'_>, profile_id: &str, pack: PackKind) -> Result<PackRecords, ApiError> {
+    let (item, key) = pack.inventory();
+    let held = tx
+        .economy_inventory_get(profile_id)
+        .await?
+        .into_iter()
+        .find(|entry| entry.item == item && entry.key == key)
+        .map_or(0, |entry| entry.count);
+    Ok(PackRecords {
+        held,
+        owned: owned_in(tx, profile_id).await?,
+        cosmetics: tx.economy_cosmetics_get(profile_id).await?,
+        counters: counters_of(&tx.economy_counters_get(profile_id).await?),
+    })
+}
+
+/// What `pack`'s roll draws from beyond the seed: its pool in this catalog, the registry and the
+/// catalog's version.
+pub fn inputs_of(app: &App, pack: PackKind, registry: &[Cosmetic]) -> PackInputs {
+    PackInputs {
+        pack,
+        pool: pack_pool(&app.catalog.defs, pack),
+        registry: registry.to_vec(),
+        catalog: app.catalog.version.clone(),
+    }
+}
+
+/// An opening's answer, with the packs of its kind it left.
+fn opened_of(opening: PackOpening, unopened: i64) -> OpenedPack {
+    OpenedPack {
+        pack: opening.pack,
+        slots: opening.slots,
+        pity: opening.pity,
+        unopened,
+        bars: opening.bars,
+    }
+}
+
+/// What an opening's log line counts: the distinct cards it unlocked, and the slots that spent a
+/// duplicate on the bars.
+fn opened_counts(opened: &OpenedPack) -> (usize, usize) {
+    let cards = opened
+        .slots
+        .iter()
+        .filter(|slot| slot.grant == SlotGrant::Card)
+        .map(|slot| slot.card_id.as_str())
+        .collect::<std::collections::BTreeSet<_>>()
+        .len();
+    let spent = opened
+        .slots
+        .iter()
+        .filter(|slot| matches!(slot.grant, SlotGrant::Bars { .. }))
+        .count();
+    (cards, spent)
+}
+
+/// R3212000: `records` as `opening` left them, as the store would read them back once its grants
+/// are written: the packs held, each card's copies, the cosmetics owned and the counters. The roll
+/// only looks these up, so where a new entry falls in its list does not matter.
+fn records_after(records: &mut PackRecords, pack: PackKind, opening: &PackOpening) {
+    let (pack_item, pack_key) = pack.inventory();
+    for grant in &opening.grants {
+        match grant {
+            LedgerGrant::Inventory { item, key, delta, .. } if *item == pack_item && *key == pack_key => {
+                records.held += delta;
+            }
+            LedgerGrant::Cards { cards } => {
+                for card in cards {
+                    records.owned.insert(card.card_id.clone(), card.quantity);
+                }
+            }
+            LedgerGrant::Cosmetic { card_id, cosmetic_id } => match card_id {
+                Some(card_id) => records.cosmetics.cards.push(CardCosmetic {
+                    card_id: card_id.clone(),
+                    cosmetic_id: cosmetic_id.clone(),
+                }),
+                None => records.cosmetics.account.push(cosmetic_id.clone()),
+            },
+            LedgerGrant::Counter { counter, delta, .. } => {
+                let counters = &mut records.counters;
+                match counter {
+                    // The pity counters are the opening's own, set below.
+                    Counter::PityEpic | Counter::PityLegendary | Counter::PityMythic => {}
+                    Counter::CardTokenBar => counters.card_bar += delta,
+                    Counter::CosmeticTokenBar => counters.cosmetic_bar += delta,
+                    Counter::CosmeticTokenCycle => counters.cosmetic_cycle += delta,
+                    Counter::ChaseShardBar => counters.chase_shard += delta,
+                }
+            }
+            // A card pack's opening writes nothing else; a token the bars pay is no pack.
+            _ => {}
+        }
+    }
+    records.counters.pity = opening.pity;
 }
 
 /// §14.3: buys a pack for `PACK_PRICE_JLORE`, in one transaction; a wallet that cannot cover it is 409 and
@@ -156,73 +290,17 @@ pub async fn open_pack_once(
     seed: &str,
     request: Option<&RequestKey>,
 ) -> Result<Spent<OpenedPack>, ApiError> {
-    let (item, key) = pack.inventory();
     let mut tx = app.db.begin(Some(profile_id)).await?;
     tx.economy_lock_account(profile_id).await?;
     if let Some(before) = replayed(&mut tx, profile_id, request).await? {
         return Ok(before);
     }
-    let held = tx
-        .economy_inventory_get(profile_id)
-        .await?
-        .into_iter()
-        .find(|entry| entry.item == item && entry.key == key)
-        .map_or(0, |entry| entry.count);
-    let records = PackRecords {
-        held,
-        owned: owned_in(&mut tx, profile_id).await?,
-        cosmetics: tx.economy_cosmetics_get(profile_id).await?,
-        counters: counters_of(&tx.economy_counters_get(profile_id).await?),
-    };
-    let inputs = PackInputs {
-        pack,
-        pool: pack_pool(&app.catalog.defs, pack),
-        registry: registry.to_vec(),
-        catalog: app.catalog.version.clone(),
-    };
-    let at = crate::app::now_ms();
-    let opening = open_card_pack(&records, &inputs, seed, at).map_err(refused)?;
-    let reference = Some(serde_json::to_string(&opening.log)?);
-
-    let unopened = write_grants(
-        &mut tx,
-        &Writing {
-            profile_id,
-            reference: &reference,
-            dev: false,
-            at: opening.at,
-        },
-        &opening.grants,
-        |grant| match grant {
-            LedgerGrant::Inventory { delta, .. } if *delta < 0 => no_pack_held(),
-            other => internal_refusal(other),
-        },
-    )
-    .await?
-    .ok_or_else(|| ApiError::internal("an opening spends its pack first"))?;
-
-    let spent = opening
-        .slots
-        .iter()
-        .filter(|slot| matches!(slot.grant, SlotGrant::Bars { .. }))
-        .count();
-    let cards = opening
-        .slots
-        .iter()
-        .filter(|slot| slot.grant == SlotGrant::Card)
-        .map(|slot| slot.card_id.as_str())
-        .collect::<std::collections::BTreeSet<_>>()
-        .len();
-    let opened = OpenedPack {
-        pack: opening.pack,
-        slots: opening.slots,
-        pity: opening.pity,
-        unopened,
-        bars: opening.bars,
-    };
+    let inputs = inputs_of(app, pack, registry);
+    let opened = open_pack_in(&mut tx, profile_id, &inputs, seed, crate::app::now_ms()).await?;
     keep(&mut tx, profile_id, request, &opened).await?;
 
     tx.commit().await?;
+    let (cards, spent) = opened_counts(&opened);
     tracing::info!(
         event = "packs.opened",
         "profileId" = %profile_id,
@@ -231,6 +309,131 @@ pub async fn open_pack_once(
         spent,
     );
     Ok(Spent::Now(opened))
+}
+
+/// One opening in the caller's transaction, which holds the account's lock (R1301003): reads the
+/// records, rolls the opening from `seed` (`jackioh_shared::economy::open::open_card_pack`) and
+/// writes every grant, each economy row's `ref` the opening's log and every row stamped `at`. No
+/// pack held is 409, writing nothing.
+pub async fn open_pack_in(
+    tx: &mut Tx<'_>,
+    profile_id: &str,
+    inputs: &PackInputs,
+    seed: &str,
+    at: i64,
+) -> Result<OpenedPack, ApiError> {
+    let records = records_of(tx, profile_id, inputs.pack).await?;
+    let opening = open_card_pack(&records, inputs, seed, at).map_err(refused)?;
+    let reference = Some(serde_json::to_string(&opening.log)?);
+    let unopened = write_grants(
+        tx,
+        &Writing {
+            profile_id,
+            reference: &reference,
+            dev: false,
+            at: opening.at,
+        },
+        &opening.grants,
+        grant_refused,
+    )
+    .await?
+    .ok_or_else(|| ApiError::internal("an opening spends its pack first"))?;
+    Ok(opened_of(opening, unopened))
+}
+
+/// R3212000: one opening per seed, in order, in the caller's transaction, which holds the account's
+/// lock: the records are read once and each pack rolls on what the one before it left
+/// ([`records_after`]), so the openings are the ones [`open_pack_in`] would roll from the same seeds
+/// one after another. Every grant is then written at once ([`write_grants_all`]), in a fixed number
+/// of statements whatever the count. Fewer packs held than seeds is 409, writing nothing.
+pub async fn open_packs_in(
+    tx: &mut Tx<'_>,
+    profile_id: &str,
+    inputs: &PackInputs,
+    seeds: &[String],
+    at: i64,
+) -> Result<Vec<OpenedPack>, ApiError> {
+    let mut records = records_of(tx, profile_id, inputs.pack).await?;
+    let mut written = Vec::with_capacity(seeds.len());
+    let mut opened = Vec::with_capacity(seeds.len());
+    for seed in seeds {
+        let opening = open_card_pack(&records, inputs, seed, at).map_err(refused)?;
+        records_after(&mut records, inputs.pack, &opening);
+        written.push((
+            Some(serde_json::to_string(&opening.log)?),
+            opening.grants.clone(),
+            opening.at,
+        ));
+        opened.push(opened_of(opening, records.held));
+    }
+    let outcomes: Vec<(Writing<'_>, &[LedgerGrant])> = written
+        .iter()
+        .map(|(reference, grants, at)| {
+            (
+                Writing {
+                    profile_id,
+                    reference,
+                    dev: false,
+                    at: *at,
+                },
+                grants.as_slice(),
+            )
+        })
+        .collect();
+    write_grants_all(tx, &outcomes, grant_refused).await?;
+    Ok(opened)
+}
+
+/// R3212000: Open all, one pack of `pack`'s kind per seed in one spend: under the account's lock and
+/// an `Idempotency-Key` as [`open_pack_once`], then [`open_packs_in`] at one stamp, its answer kept
+/// in its own transaction.
+pub async fn open_packs_once(
+    app: &App,
+    profile_id: &str,
+    pack: PackKind,
+    registry: &[Cosmetic],
+    seeds: &[String],
+    request: Option<&RequestKey>,
+) -> Result<Spent<OpenedPacks>, ApiError> {
+    let mut tx = app.db.begin(Some(profile_id)).await?;
+    tx.economy_lock_account(profile_id).await?;
+    if let Some(before) = replayed(&mut tx, profile_id, request).await? {
+        return Ok(before);
+    }
+    let inputs = inputs_of(app, pack, registry);
+    let openings = open_packs_in(&mut tx, profile_id, &inputs, seeds, crate::app::now_ms()).await?;
+    let opened = OpenedPacks { openings };
+    keep(&mut tx, profile_id, request, &opened).await?;
+    tx.commit().await?;
+    let (cards, spent) = opened
+        .openings
+        .iter()
+        .map(opened_counts)
+        .fold((0, 0), |(cards, spent), (more, also)| {
+            (cards + more, spent + also)
+        });
+    tracing::info!(
+        event = "packs.opened_all",
+        "profileId" = %profile_id,
+        pack = pack.name(),
+        count = opened.openings.len(),
+        cards,
+        spent,
+    );
+    Ok(Spent::Now(opened))
+}
+
+/// [`open_packs_once`] with no key.
+pub async fn open_packs(
+    app: &App,
+    profile_id: &str,
+    pack: PackKind,
+    registry: &[Cosmetic],
+    seeds: &[String],
+) -> Result<OpenedPacks, ApiError> {
+    open_packs_once(app, profile_id, pack, registry, seeds, None)
+        .await?
+        .now()
 }
 
 /// The error a decision's refusal answers: no pack held is a conflict, writing nothing; a pool with no card
@@ -310,4 +513,30 @@ pub async fn post_open(app: &Arc<App>, req: Req) -> ApiResult {
     )
     .await?
     .answer()
+}
+
+/// `POST /api/packs/open-all` (`AuthLevel::Active`): `{ pack, count }`, `count` packs of one kind
+/// (1 to `PACKS_OPEN_ALL_MAX`) in one spend (R3212000): [`open_packs_once`] over the shipped
+/// registry, each pack from a fresh seed of its own as `POST /api/packs/open`'s, with an optional
+/// `Idempotency-Key` of its own route (R2124000), in the account's spend turn (R2378000). The count
+/// only bounds the batch: every roll is the server's. 409 while the economy is off, and when fewer
+/// are held than asked, writing nothing.
+pub async fn post_open_all(app: &Arc<App>, req: Req) -> ApiResult {
+    let profile = caller_profile(&req)?;
+    if !app.economy_live {
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            "Packs can't be opened all at once yet.",
+        ));
+    }
+    let pack = pack_of(&req.body)?;
+    let count = count_of(&req.body)?;
+    let request = RequestKey::of(app, &req, "/api/packs/open-all")?;
+    let registry = crate::cosmetics::shipped()
+        .map_err(|error| ApiError::internal(format!("cosmetics.json: {error}")))?;
+    let _turn = app.spends.claim(&profile.id).await?;
+    let seeds: Vec<String> = (0..count).map(|_| SystemIds.seed()).collect();
+    open_packs_once(app, &profile.id, pack, &registry, &seeds, request.as_ref())
+        .await?
+        .answer()
 }

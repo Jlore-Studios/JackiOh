@@ -135,7 +135,7 @@ describe("R2801000 a Starship's launch on the board", () => {
     expect(scaleForSpeed(STARSHIP_LAUNCH_HOLD_MS, 2)).toBe(STARSHIP_LAUNCH_HOLD_MS / 2);
   });
 
-  it("R2801000 reduce motion: no hold, a still [data-fx=launch][data-still]", () => {
+  it("R2801000 R3334001 reduce motion: no hold, the still title card [data-fx=cinematic][data-still]", () => {
     // jsdom lays nothing out: give every element a box, so the still frame has somewhere to stand.
     vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({
       x: 300, y: 200, left: 300, top: 200, width: 90, height: 126, right: 390, bottom: 326, toJSON: () => ({}),
@@ -150,11 +150,13 @@ describe("R2801000 a Starship's launch on the board", () => {
     act(() => {
       vi.advanceTimersByTime(50);
     });
-    const still = document.querySelector<HTMLElement>('[data-fx="launch"]');
+    const still = document.querySelector<HTMLElement>('[data-fx="cinematic"]');
     expect(still).not.toBeNull();
     expect(still).toHaveAttribute("data-still", "true");
-    expect(still?.querySelectorAll(".fx-launch-count")).toHaveLength(0);
-    // Nothing else is drawn: no canvas, and the still frame is the one effect.
+    // R3334001: the ship's picture and its public name, nothing moving.
+    expect(still?.querySelector<HTMLImageElement>(".fx-cinematic-camera > .fx-cinematic-art")?.getAttribute("src")).toMatch(/^data:image\/svg\+xml/);
+    expect(still?.querySelector(".fx-cinematic-name")?.getAttribute("data-text")).toBe("Ember of Departure");
+    // Nothing else is drawn: no canvas, and the title card is the one effect.
     expect(document.querySelectorAll('[data-fx]:not([data-testid="fx-layer"])')).toHaveLength(1);
   });
 });

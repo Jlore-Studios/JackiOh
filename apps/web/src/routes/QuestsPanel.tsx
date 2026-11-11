@@ -96,7 +96,7 @@ export function QuestsList({
   };
   return (
     <div className="account-quests" data-testid={questsTestid.panel}>
-      <h3 className="account-heading">{t("Quests")}</h3>
+      <h2 className="account-heading">{t("Quests")}</h2>
       {quests.quests.length === 0 ? (
         <EmptyState text={t("No quests yet.")} />
       ) : (
@@ -130,16 +130,7 @@ export function QuestsList({
                     confirming === quest.questId ? (
                       <div className="row entry-card__confirm" role="alertdialog" aria-label={t("Replace this quest?")}>
                         <p>{t("You lose its progress and get a different quest.")}</p>
-                        <button
-                          type="button"
-                          data-testid={questsTestid.replaceConfirm}
-                          disabled={busy}
-                          onClick={() => {
-                            void confirmReplace(quest.questId);
-                          }}
-                        >
-                          {t("Replace it")}
-                        </button>
+                        {/* R3221000: the safe choice first, the act last. */}
                         <button
                           type="button"
                           className="link-button"
@@ -149,6 +140,16 @@ export function QuestsList({
                           }}
                         >
                           {t("Keep it")}
+                        </button>
+                        <button
+                          type="button"
+                          data-testid={questsTestid.replaceConfirm}
+                          disabled={busy}
+                          onClick={() => {
+                            void confirmReplace(quest.questId);
+                          }}
+                        >
+                          {t("Replace it")}
                         </button>
                       </div>
                     ) : (
@@ -262,7 +263,7 @@ export function QuestsView({
   if (error !== null) {
     return (
       <div className="account-quests" data-testid={questsTestid.panel}>
-        <h3 className="account-heading">{t("Quests")}</h3>
+        <h2 className="account-heading">{t("Quests")}</h2>
         <p className="notice" role="alert" data-testid={questsTestid.error}>
           {t(error)}
         </p>
@@ -278,7 +279,7 @@ export function QuestsView({
     // Not the panel's testid: that stands for quests read, or a read that failed.
     return (
       <div className="account-quests">
-        <h3 className="account-heading">{t("Quests")}</h3>
+        <h2 className="account-heading">{t("Quests")}</h2>
         <Skeleton variant="rows" label={t("Loading your quests…")} testId={questsTestid.loading} />
       </div>
     );

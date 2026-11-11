@@ -88,6 +88,9 @@ pub struct App {
     /// SPEC §11 R2422000: how many practice claims are settling now (`api::practice`), so the
     /// shutdown drain waits for every one before it closes the store.
     pub practice_settles: tokio::sync::watch::Sender<usize>,
+    /// SPEC §11 R3500001: the seeds whose settle runs now in this process (`api::practice`), so the
+    /// retention sweep never folds a claim a live settle still works on.
+    pub practice_settling: Mutex<std::collections::BTreeSet<String>>,
     /// SPEC §11 R2378000: each account's spends, one running and the rest waiting their turn
     /// (`economy::spend_slots`).
     pub spends: crate::economy::spend_slots::SpendSlots,
@@ -298,6 +301,13 @@ pub static ROUTES: &[Route] = &[
         "/api/packs/open",
         AuthLevel::Active,
         h!(crate::economy::packs::post_open),
+    ),
+    // R3212000: Open all, one spend for several packs of a kind.
+    (
+        "POST",
+        "/api/packs/open-all",
+        AuthLevel::Active,
+        h!(crate::economy::packs::post_open_all),
     ),
     // economy/tokens.rs (SPEC §14.5; #1305)
     (
@@ -511,6 +521,13 @@ pub static ROUTES: &[Route] = &[
         "/api/decks/:id",
         AuthLevel::Active,
         h!(api::decks::delete_deck),
+    ),
+    // R3212001: every dirty deck and trio, and every deletion, in one request.
+    (
+        "POST",
+        "/api/decks/sync",
+        AuthLevel::Active,
+        h!(api::decks::sync_decks),
     ),
     // R2100000: a deck's earlier versions, and the restore of one.
     (
@@ -1048,6 +1065,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         economy_live: crate::config::ECONOMY_LIVE,
         practice_verifications: tokio::sync::Semaphore::new(crate::config::PRACTICE_VERIFY_CONCURRENCY),
         practice_settles: tokio::sync::watch::Sender::new(0),
+        practice_settling: Mutex::new(std::collections::BTreeSet::new()),
         spends: crate::economy::spend_slots::SpendSlots::default(),
         news,
     });
@@ -1131,6 +1149,21 @@ pub fn router(app: Arc<App>) -> Router {
         }
     };
     // end Social: watching and shared replays
+    // R3214000: `/ws/social`, a tab's challenges, unread counts and chat and friends nudges pushed
+    // (`social::live`); as on `/ws/match`, anything but an upgrade on its path is the API's.
+    let social_app = app.clone();
+    let social_cors = cors.clone();
+    let social_socket = move |request: Request| {
+        let app = social_app.clone();
+        let cors = social_cors.clone();
+        async move {
+            if is_websocket_upgrade(&request) {
+                actor::ws_server::handle_social(app, request).await
+            } else {
+                serve_api(app, cors, request).await
+            }
+        }
+    };
     // api/replays.rs
 
     // end Social
@@ -1163,23 +1196,31 @@ pub fn router(app: Arc<App>) -> Router {
         .route(actor::ws_server::WS_PATH, axum::routing::any(socket))
         // Social (#939): S7's watch socket.
         .route(actor::ws_server::WATCH_PATH, axum::routing::any(watch))
+        // R3214000: the social socket.
+        .route(actor::ws_server::SOCIAL_PATH, axum::routing::any(social_socket))
         // Duos co-op (#946)
         .route(actor::ws_server::WS_DUOS_PATH, axum::routing::any(duos_socket))
         .fallback(fallback)
 }
 
 /// One line of JSON per event on stdout: enough for a hosted log drain, nothing to configure.
-/// `RUST_LOG` narrows it; the default is `info`.
-fn init_logging() {
+/// `RUST_LOG` narrows it; the default is `info`. `alerts`, when the deployment can tell anyone,
+/// hands every alert line to people as well (`alerts.rs`, #3595).
+fn init_logging(alerts: Option<crate::alerts::AlertLayer>) {
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
-    let _ = tracing_subscriber::fmt()
+    let json = tracing_subscriber::fmt::layer()
         .json()
         .flatten_event(true)
         .with_current_span(false)
         .with_target(false)
-        .with_env_filter(filter)
-        .with_writer(std::io::stdout)
+        .with_writer(std::io::stdout);
+    let _ = tracing_subscriber::registry()
+        .with(filter)
+        .with(json)
+        .with(alerts)
         .try_init();
 }
 
@@ -1352,7 +1393,14 @@ async fn bind_listener(port: u16) -> std::io::Result<tokio::net::TcpListener> {
 /// Build, open the season, listen on `$PORT`, spawn the background loops, serve until SIGTERM or
 /// Ctrl-C, drain.
 pub async fn serve(env: Env) -> anyhow::Result<()> {
-    init_logging();
+    // #3595: an alert reaches people through a GitHub issue and an email, when either is set.
+    let alerts = crate::alerts::Notifier::from_env(&env);
+    let ready = alerts.as_ref().map(crate::alerts::Notifier::ready);
+    init_logging(alerts.map(crate::alerts::Notifier::start));
+    match ready {
+        Some(ready) => tracing::info!(event = "alerts.ready", data = %ready),
+        None => tracing::info!(event = "alerts.off"),
+    }
     let app = build(env).await?;
     // R1523000: the seat epoch moves on, then the ledger is filled from the database, before the
     // port opens (so before `/readyz` can pass) and before any loop starts. Fatal, as a failed

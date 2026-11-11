@@ -79,11 +79,11 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const SLIME: &str = "classic-027";
-    const OUTBREAK: &str = "classic-039"; // (1) Spell: place {tokens} on a permanent; own → draw per token.
-    const BOOK_OF_PLAGUE: &str = "classic-070"; // (1) Spell: Choose one: place 5 Plague Counters (5 placements), or add 3 Plague cards.
-    const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
+    const OUTBREAK: &str = "classic-039"; // Outbreak: place {tokens} on a permanent; own → draw per token
+    const BOOK_OF_PLAGUE: &str = "classic-070"; // Book of Plague: Choose one: place 5 Plague Counters (5 placements), or add 3 Plague cards.
+    const FLOOD: &str = "core-017"; // Flood: Bounce all Units.
     const VANILLA: &str = "core-008";
-    const POSTDOC: &str = "core-061"; // Radiant: Cry: choose any Unit on the field, summon a Vanilla copy of it.
+    const POSTDOC: &str = "core-061"; // Prejudiced Postdoc: Radiant: Cry: choose any Unit on the field, summon a Vanilla copy of it.
     const ANCHOR: &str = "core-010";
     const X: &str = "core-020";
 
@@ -122,8 +122,8 @@ mod tests {
         s.card(card).counters.plague
     }
 
-    const LUNAR_ECLIPSE: &str = "core-035"; // (1) Spell: deal {damage} damage, enough for either face.
-    const SHEEPISH: &str = "core-041"; // (1) Trap, set face-down.
+    const LUNAR_ECLIPSE: &str = "core-035"; // Lunar Eclipse: deal {damage} damage, enough for either face
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap, set face-down
 
     /// p1's Slime (Radiant when `radiant`) holding `held` Plague Counters in lane 1, `field` beside it
     /// from lane 2 and `backrow` behind; p2's Vanilla and Sheepish, which no placement may reach.

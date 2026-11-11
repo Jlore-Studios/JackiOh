@@ -90,6 +90,7 @@ mod tests {
     }
 
     /// The def ids a Discover put on offer, in the order they were offered.
+    // Differs from Scenario::offered: the open Discover's def ids, not the seat's legal actions.
     fn offered(s: &Scenario) -> Vec<String> {
         discover(s)
             .options

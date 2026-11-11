@@ -52,9 +52,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const GRIFTER: &str = "meditativeplus-010";
-    const MENACE: &str = "core-019"; // (3) Unit
-    const VANILLA: &str = "core-008"; // (1) Unit
-    const FILLER: &str = "core-005"; // (1) Spell
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
 
     use crate::scenario;
 

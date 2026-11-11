@@ -1,30 +1,14 @@
-// R1563006: Meditative+ #20 KY's Competition's sequence clock, as the client keeps it. A sequence has
-// `KY_COMPETITION_SECONDS` from its first question; then its host answers Stop. The server's match
-// clock is the authority online (`crates/shared/src/host/clock.rs`, run by the server's actor); the practice host is this
-// client, so its controller answers Stop itself (practice/controller.ts). The prompt shows the seconds
-// left either way, counted from the moment this client first saw the sequence's first question.
+// R1563006: Meditative+ #20 KY's Competition's sequence clock, as the prompt shows it. A sequence has
+// `KY_COMPETITION_SECONDS` from its first question; then its host answers Stop. The host decides that:
+// the server's match clock online and the practice session's machine in practice, both from
+// `crates/shared/src/host/clock.rs`; nothing here answers. The prompt only shows the seconds left, counted
+// from the moment this client first saw the sequence's first question.
 
 import { useEffect, useState } from "react";
-
-import type { ActionBody, PlayerView } from "@jackioh/shared";
 
 import { KY_COMPETITION_SECONDS } from "@jackioh/engine/config";
 
 export const SEQUENCE_WINDOW_MS = KY_COMPETITION_SECONDS * 1000;
-
-export function sequenceQuestionOf(view: PlayerView): { choiceId: string; streak: number } | null {
-  const pending = view.pending;
-  if (pending === null || !pending.forYou || pending.kind !== "answer" || pending.streak === undefined) return null;
-  return { choiceId: pending.choiceId, streak: pending.streak };
-}
-
-/** R1184001: the answer that stops the open sequence (its Stop option, key `none`), or null. */
-export function stopAnswerOf(view: PlayerView): ActionBody | null {
-  const pending = view.pending;
-  if (sequenceQuestionOf(view) === null || pending === null || !pending.forYou) return null;
-  if (!pending.options.some((option) => option.key === "none")) return null;
-  return { type: "answer", choiceId: pending.choiceId, selection: [{ pick: "none" }] };
-}
 
 /** The sequence this client has seen begin: its first question's id and when it was first seen. */
 let open: { first: string; at: number } | null = null;

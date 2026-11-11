@@ -100,6 +100,8 @@ struct Table {
     let_go: Vec<LetGo>,
     ceiling_draws: usize,
     voids: usize,
+    /// R3213000: how many times who is here changed with no socket arriving or leaving.
+    presence_changes: usize,
     /// How many of the next appends the log refuses.
     failing_appends: usize,
 }
@@ -131,6 +133,7 @@ impl Table {
             let_go: Vec::new(),
             ceiling_draws: 0,
             voids: 0,
+            presence_changes: 0,
             failing_appends: 0,
         }
     }
@@ -180,6 +183,7 @@ impl Table {
                 DuelOutput::Voided { .. } => self.voids += 1,
                 DuelOutput::CeilingDraw { .. } => self.ceiling_draws += 1,
                 DuelOutput::OfferRematch { home, stakes, reply } => self.offers.push((home, stakes, reply)),
+                DuelOutput::PresenceChanged => self.presence_changes += 1,
                 DuelOutput::LetGo { reason } => self.let_go.push(reason),
                 DuelOutput::Note { note } => self.notes.push(note),
                 DuelOutput::Panicked { .. }
@@ -1204,6 +1208,59 @@ mod bots {
         assert!(!table.host.presence(table.now).p2);
     }
 
+    /// A ranked match on `seed` whose person at p1 has conceded to the bot at p2 that passes for one.
+    fn conceded_to_the_bot(seed: &str) -> Table {
+        let mut table = match_on(seed, true, true);
+        let keep = table.keep_hand(P1);
+        table.act(P1, "p1", keep);
+        let request = table.decides[0].clone();
+        let keep = table.keep_hand(P2);
+        decided(&mut table, &request, chose(Some(keep)));
+        let at = table
+            .timer(TimerKey::BotMove { player: P2 })
+            .expect("a think time");
+        table.sleep(at - table.now);
+        table.act(P1, "gg", ActionBody::Concede);
+        assert_eq!(table.records.len(), 1);
+        table
+    }
+
+    #[test]
+    fn r3213000_a_bots_linger_ending_is_a_presence_change_unless_its_reply_is_on_its_way() {
+        // A bot that meets the person's offer: its linger's end is armed with the game's end, and passes
+        // with no change while its reply is on its way; the reply landing is the change.
+        let seed = seed_where(|plan| plan.accepts);
+        let plan = rematch_plan(&seed, P2, &BOT_REMATCH_FIT);
+        let mut table = conceded_to_the_bot(&seed);
+        let end = table.now;
+        assert_eq!(
+            table.timer(TimerKey::BotLeaves { player: P2 }),
+            Some(end + plan.linger_ms)
+        );
+        table.feed(DuelEvent::RematchOffered {
+            from: P1,
+            stakes: STAKE_NORMAL,
+        });
+        table.sleep(plan.linger_ms.max(plan.reply_ms));
+        assert_eq!(table.offers.last(), Some(&(P2, STAKE_NORMAL, true)));
+        assert!(table.host.presence(table.now).p2);
+        assert_eq!(table.presence_changes, 0);
+        table.feed(DuelEvent::RematchSent { home: P2 });
+        assert_eq!(table.presence_changes, 1);
+        assert!(!table.host.presence(table.now).p2);
+
+        // A bot that meets no offer is gone as its linger ends, and that is the change.
+        let seed = seed_where(|plan| !plan.accepts);
+        let plan = rematch_plan(&seed, P2, &BOT_REMATCH_FIT);
+        let mut table = conceded_to_the_bot(&seed);
+        table.sleep(plan.linger_ms - 1);
+        assert_eq!(table.presence_changes, 0);
+        assert!(table.host.presence(table.now).p2);
+        table.sleep(1);
+        assert_eq!(table.presence_changes, 1);
+        assert!(!table.host.presence(table.now).p2);
+    }
+
     #[test]
     fn r3103000_r639000_a_bot_that_does_not_pass_for_a_person_stays_for_no_rematch() {
         let seed = seed_where(|plan| plan.offers && plan.accepts);
@@ -1384,6 +1441,147 @@ mod the_checkpoint {
         assert_eq!(
             serde_json::from_str::<ClockExpiry>(&serde_json::to_string(&expiry).unwrap()).unwrap(),
             expiry
+        );
+    }
+}
+
+mod the_forecast {
+    use super::*;
+    use jackioh_engine::testkit::{Value, json, scenario};
+    use jackioh_engine::{CombatForecast, PLAYER_IDS};
+
+    /// What a view from the machine to p1 holds.
+    struct Sent {
+        state: GameState,
+        /// p2's unit in lane 1.
+        target: String,
+        legal: Vec<ActionBody>,
+        forecast: Option<CombatForecast>,
+    }
+
+    /// The legal actions and forecast in the last view the machine sent p1, once it is here.
+    fn sent_to_p1(options: Value) -> Sent {
+        jackioh_cards::register_all();
+        let built = scenario(options);
+        let target = built.unit(P2, 1).expect("p2's unit").id;
+        let state = built.state().clone();
+        let mut table = Table::new(setup(state.clone()));
+        table.feed(DuelEvent::Arm);
+        table.connect(P1);
+        let (legal, forecast) = table
+            .sent
+            .p1
+            .iter()
+            .rev()
+            .find_map(|message| match message {
+                SeatMessage::View { legal, forecast, .. } => Some((legal.clone(), forecast.clone())),
+                _ => None,
+            })
+            .expect("p1 is sent a view");
+        Sent {
+            state,
+            target,
+            legal,
+            forecast,
+        }
+    }
+
+    #[test]
+    fn r3477000_a_seats_view_carries_the_forecast_and_reads_no_hidden_card() {
+        let side = |hand: &str, backrow: &str, library: [&str; 2]| json!({ "field": ["core-008"], "hand": [hand], "backrow": [backrow], "library": library });
+        let plain = json!({
+            "seed": "r3477000",
+            "active": "p1",
+            "p1": { "field": ["core-011"], "library": ["core-008", "core-011"] },
+            "p2": side("core-008", "core-041", ["core-041", "core-008"]),
+        });
+        // The same board, every card it hides from p1 another: p2's hand and face-down trap, both libraries.
+        let hidden = json!({
+            "seed": "r3477000",
+            "active": "p1",
+            "p1": { "field": ["core-011"], "library": ["core-011", "core-008"] },
+            "p2": side("core-041", "core-060", ["core-008", "core-041"]),
+        });
+        let plain = sent_to_p1(plain);
+        let hidden = sent_to_p1(hidden);
+        assert_ne!(
+            serde_json::to_value(&plain.state).unwrap(),
+            serde_json::to_value(&hidden.state).unwrap(),
+            "the premise: the two states differ"
+        );
+        assert_eq!(
+            jackioh_engine::view_for(&plain.state, P1),
+            jackioh_engine::view_for(&hidden.state, P1),
+            "the premise: p1 is shown the same board"
+        );
+        let forecast = plain
+            .forecast
+            .expect("R3477000: a seat's view carries its forecast");
+        assert_eq!(Some(&forecast), hidden.forecast.as_ref());
+        assert_eq!(forecast, jackioh_engine::combat_forecast(&plain.state, P1));
+        let attacks: Vec<(String, String)> = plain
+            .legal
+            .iter()
+            .filter_map(|body| match body {
+                ActionBody::Attack {
+                    attacker_id,
+                    target_id,
+                } => Some((attacker_id.clone(), target_id.clone())),
+                _ => None,
+            })
+            .collect();
+        let forecast_ids: Vec<(String, String)> = forecast
+            .attacks
+            .iter()
+            .map(|entry| (entry.attacker_id.clone(), entry.target_id.clone()))
+            .collect();
+        assert_eq!(forecast_ids, attacks);
+        // Tempo Timmy (3/3, First Strike) into Mr. Vanilla (4/4): its blow lands first and leaves 1, and
+        // the answer destroys it.
+        let trade = forecast
+            .attacks
+            .iter()
+            .find(|entry| entry.target_id == plain.target)
+            .expect("Tempo Timmy may attack Mr. Vanilla");
+        assert_eq!((trade.dealt, trade.taken), (3, 4));
+        assert!(!trade.kills && !trade.survives);
+    }
+
+    #[test]
+    fn r3477000_a_view_the_machine_pushes_mid_game_carries_the_forecast_of_its_seat() {
+        let mut table = Table::new(setup(opening("r3477000-opening")));
+        table.feed(DuelEvent::Arm);
+        table.connect(P1);
+        table.connect(P2);
+        table.through_the_mulligans();
+        for home in PLAYER_IDS {
+            let views: Vec<&SeatMessage> = table.sent[home]
+                .iter()
+                .filter(|message| matches!(message, SeatMessage::View { .. }))
+                .collect();
+            assert!(!views.is_empty());
+            for message in views {
+                let SeatMessage::View { view, forecast, .. } = message else {
+                    unreachable!()
+                };
+                assert_eq!(view.viewer, home);
+                assert!(
+                    forecast.is_some(),
+                    "R3477000: every seat's view carries a forecast"
+                );
+            }
+        }
+        let active = table.active();
+        let Some(SeatMessage::View { forecast, .. }) = table.sent[active]
+            .iter()
+            .rev()
+            .find(|message| matches!(message, SeatMessage::View { .. }))
+        else {
+            unreachable!()
+        };
+        assert_eq!(
+            forecast.as_ref(),
+            Some(&jackioh_engine::combat_forecast(table.host.game(), active))
         );
     }
 }

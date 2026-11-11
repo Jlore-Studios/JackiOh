@@ -24,6 +24,32 @@ export const dungeonMapTestid = {
   hudArtifact: (index: number): string => `dungeon-run-artifact-${String(index)}`,
   /** The score so far. */
   score: "dungeon-run-score",
+  /** #3501: the HUD's Your run button, which opens the panel. */
+  yourRun: "dungeon-run-your-run",
+  /** #3501: the Your run panel. */
+  panel: "dungeon-run-panel",
+  /** #3501: the panel's ✕. */
+  panelClose: "dungeon-run-panel-close",
+  /** #3501: the run's seed, in the panel. */
+  panelSeed: "dungeon-run-panel-seed",
+  /** #3501: the panel's button that copies the seed. */
+  panelSeedCopy: "dungeon-run-panel-seed-copy",
+  /** #3501: the panel's deck grid. */
+  panelDeck: "dungeon-run-panel-deck",
+  /** #3501: one deck card in the panel, by its place in the deck. */
+  panelCard: (index: number): string => `dungeon-run-panel-card-${String(index)}`,
+  /** #3501: the relics the panel lists. */
+  panelArtifacts: "dungeon-run-panel-artifacts",
+  /** #3501: one relic in the panel, by its place in the run's list. */
+  panelArtifact: (index: number): string => `dungeon-run-panel-artifact-${String(index)}`,
+  /** #3501: the blessings the panel lists. */
+  panelBlessings: "dungeon-run-panel-blessings",
+  /** #3501: one blessing in the panel, by its place in the run's list. */
+  panelBlessing: (index: number): string => `dungeon-run-panel-blessing-${String(index)}`,
+  /** #3501: the curses the panel lists. */
+  panelCurses: "dungeon-run-panel-curses",
+  /** #3501: one curse in the panel, by its place in the run's list. */
+  panelCurse: (index: number): string => `dungeon-run-panel-curse-${String(index)}`,
   /** The run's refusal of the last action; role="alert". */
   refusal: "dungeon-run-refusal",
   /** B27: the current act's map. */
@@ -48,6 +74,14 @@ export const dungeonMapTestid = {
   packs: "dungeon-run-packs",
   /** B28: one pack, by its place in the reward's list. */
   pack: (index: number): string => `dungeon-run-pack-${String(index)}`,
+  /** #3588: the pack object drawn on one pack's button, by its place in the reward's list. */
+  packObject: (index: number): string => `dungeon-run-pack-object-${String(index)}`,
+  /** #3588: the sealed pack tearing open before its keep. */
+  packTear: "dungeon-run-pack-tear",
+  /** #3588: the pack object the sealed tear wears: the chosen pack's look. */
+  packTearObject: "dungeon-run-pack-tear-object",
+  /** #3588: the kept count, like "2 of 3 kept". */
+  packCounter: "dungeon-run-pack-counter",
   /** B28: the opened pack's cards. */
   packScreen: "dungeon-run-pack",
   /** B28: one of the pack's cards, by its catalog id. */
@@ -80,12 +114,14 @@ export const dungeonMapTestid = {
   shopBuff: (index: number): string => `dungeon-run-shop-buff-${String(index)}`,
   /** B30: level one relic held, by its place in the run's list. */
   shopLevel: (index: number): string => `dungeon-run-shop-level-${String(index)}`,
+  /** B30: the note a relic at its highest level shows where its Level up button would be. */
+  shopLevelMax: (index: number): string => `dungeon-run-shop-level-max-${String(index)}`,
   /** B30: leave the shop. */
   shopLeave: "dungeon-run-shop-leave",
   /** B30: the campfire. */
   campfire: "dungeon-run-campfire",
-  /** B30: heal at the campfire. */
-  campfireHeal: "dungeon-run-campfire-heal",
+  /** B30: gain max HP at the campfire. */
+  campfireMaxHp: "dungeon-run-campfire-max-hp",
   /** B30: make one of the deck's cards Radiant, by its place in the deck. */
   campfireRadiant: (index: number): string => `dungeon-run-campfire-radiant-${String(index)}`,
   /** B30: buff one of the deck's cards, by its place in the deck. */
@@ -108,8 +144,14 @@ export const dungeonMapTestid = {
   runOver: "dungeon-run-over",
   /** B31: the run's score. */
   endScore: "dungeon-run-end-score",
+  /** B31: the run's time, beside the score. */
+  endTime: "dungeon-run-end-time",
+  /** B31: the turns the run's fights took, beside the score. */
+  endTurns: "dungeon-run-end-turns",
   /** B31: the Embers the score pays. */
   endEmbers: "dungeon-run-end-embers",
+  /** #3501: the run's seed, on the run-over screen. */
+  endSeed: "dungeon-run-end-seed",
   /** B31: the cards the run extracted. */
   extractedCards: "dungeon-run-extracted-cards",
   /** B31: the relics the run extracted. */

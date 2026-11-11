@@ -1,7 +1,8 @@
 //! Buying and opening card packs (`src/economy/packs.rs`, SPEC §14.1, §14.3, #1301).
-//! Rulings: R1301002 (cosmetics drop), R1313000 (full art), R1827000 (portraits), R2378000 (spend serialization).
+//! Rulings: R1301002 (cosmetics drop), R1313000 (full art), R1827000 (portraits), R2378000 (spend serialization),
+//! R3212000 (Open all).
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use indexmap::IndexMap;
 use serde_json::{Value, json};
@@ -17,15 +18,15 @@ use jackioh_server::config::{
     COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, COSMETIC_TOKEN_BAR_SIZE_RARE, CosmeticTokenStep,
     ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, GLOBAL_COSMETIC_FLOOR_RARITY,
     GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_PACK_NAME, LEVEL_SKIP_WEIGHT, PACK_FLOOR_RARITY, PACK_PRICE_JLORE,
-    PACK_SLOTS, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, SPEND_BUSY_RETRY_AFTER_MS,
-    TIER_WEIGHT_TOTAL,
+    PACK_SLOTS, PACKS_OPEN_ALL_MAX, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS,
+    SPEND_BUSY_RETRY_AFTER_MS, TIER_WEIGHT_TOTAL,
 };
 use jackioh_server::cosmetics::{
     Cosmetic, CosmeticKind, CosmeticRarity, global_cosmetics, pack_cosmetics, portrait_of, shipped,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::grants::PACK_GRANT_REASON;
-use jackioh_server::economy::packs::{OpenedPack, open_pack};
+use jackioh_server::economy::packs::{OpenedPack, OpenedPacks, open_pack, open_packs};
 use jackioh_server::economy::spend_slots::SPEND_BUSY_MESSAGE;
 use jackioh_server::economy::store::{
     Counter, CounterGrant, EconomyReason, InventoryItem, JloreGrant, JloreReason,
@@ -43,11 +44,12 @@ use crate::support::store::{fail_on, fake, stop_failing, uuid};
 const PROFILE: &str = "p1";
 const USER: &str = "u1";
 
-/// The three routes, as `(method, path)`.
-const ROUTES: [(&str, &str); 3] = [
+/// The four routes, as `(method, path)`.
+const ROUTES: [(&str, &str); 4] = [
     ("GET", "/api/packs"),
     ("POST", "/api/packs/buy"),
     ("POST", "/api/packs/open"),
+    ("POST", "/api/packs/open-all"),
 ];
 
 /// An empty app with the active `p1` and its bearer token.
@@ -215,6 +217,8 @@ fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         card: None,
         offer: Vec::new(),
         level: None,
+        track: None,
+        track_level: None,
     }
 }
 
@@ -1150,7 +1154,7 @@ async fn the_routes_refuse_a_signed_out_caller() {
     }
     assert_eq!(everything(&app).await, before);
 
-    // A pending account is refused too (§9.4): all three are active routes.
+    // A pending account is refused too (§9.4): all four are active routes.
     fake(&app)
         .lock()
         .await
@@ -1939,4 +1943,317 @@ async fn r2378000_another_account_spends_while_one_account_s_turns_are_full() {
     .await;
     assert_busy(status, &body);
     drop(release);
+}
+
+// R3212000: Open all opens several packs of one kind in one spend
+
+/// `value` without any key named `at`, at any depth: the stamps one Open all shares where one open
+/// at a time takes a new one each.
+fn without_at(value: Value) -> Value {
+    match value {
+        Value::Object(fields) => Value::Object(
+            fields
+                .into_iter()
+                .filter(|(key, _)| key != "at")
+                .map(|(key, field)| (key, without_at(field)))
+                .collect(),
+        ),
+        Value::Array(items) => Value::Array(items.into_iter().map(without_at).collect()),
+        other => other,
+    }
+}
+
+/// `POST /api/packs/open-all` of `count` Core packs, with `key` when given.
+async fn open_all(app: &Arc<App>, token: &str, body: Value, key: Option<&str>) -> (u16, Value) {
+    let (status, _, answer) = match key {
+        Some(key) => call_with_key(app, "POST", "/api/packs/open-all", Some(token), body, key).await,
+        None => call(app, "POST", "/api/packs/open-all", Some(token), body).await,
+    };
+    (status, answer)
+}
+
+/// An app whose `p1` holds `packs` Core packs, every Core Common of the pool once (so a Common slot
+/// is a duplicate and drops a cosmetic or bar points, while a better one unlocks a card), the card
+/// bar one point short and the Epic pity one pack short, so a batch crosses both.
+async fn open_all_state(packs: usize) -> (Arc<App>, String) {
+    let (app, token) = setup().await;
+    let commons = pack_pool(defs(&app), PackKind::Set(SetName::Core))
+        .into_iter()
+        .filter(|card| card.rarity == PrintedRarity::Common)
+        .map(|card| CollectionEntry {
+            card_id: card.id,
+            quantity: 1,
+        })
+        .collect();
+    grant_cards(
+        &app,
+        GrantInput {
+            profile_id: PROFILE.to_string(),
+            entries: commons,
+            reason: "admin".to_string(),
+        },
+    )
+    .await
+    .expect("a grant");
+    for _ in 0..packs {
+        buy(&app, &token, "Core").await;
+    }
+    set_counter(&app, Counter::CardTokenBar, CARD_TOKEN_BAR_SIZE - 1).await;
+    set_counter(
+        &app,
+        Counter::PityEpic,
+        i64::try_from(PITY_EPIC_PACKS).expect("a pity size") - 1,
+    )
+    .await;
+    (app, token)
+}
+
+#[tokio::test]
+async fn r3212000_open_all_of_n_equals_n_opens_for_the_same_seeds_and_state() {
+    let registry = vec![
+        foil("foil-fixture-common", CosmeticRarity::Common),
+        foil("foil-fixture-rare", CosmeticRarity::Rare),
+        foil("foil-fixture-epic", CosmeticRarity::Epic),
+        foil("foil-fixture-legendary", CosmeticRarity::Legendary),
+    ];
+    let seeds: Vec<String> = (0..5).map(|n| format!("r3212000-{n}")).collect();
+    let (one_at_a_time, _) = open_all_state(6).await;
+    let (all_at_once, _) = open_all_state(6).await;
+    assert_eq!(
+        without_at(everything(&one_at_a_time).await),
+        without_at(everything(&all_at_once).await),
+        "the same state to start from"
+    );
+
+    let mut opened = Vec::new();
+    for seed in &seeds {
+        opened.push(
+            open_pack(
+                &one_at_a_time,
+                PROFILE,
+                PackKind::Set(SetName::Core),
+                &registry,
+                seed,
+            )
+            .await
+            .expect("an opening"),
+        );
+    }
+    let batch = open_packs(
+        &all_at_once,
+        PROFILE,
+        PackKind::Set(SetName::Core),
+        &registry,
+        &seeds,
+    )
+    .await
+    .expect("the openings");
+    assert_eq!(
+        batch,
+        OpenedPacks {
+            openings: opened.clone()
+        }
+    );
+    assert_eq!(
+        opened.iter().map(|opened| opened.unopened).collect::<Vec<_>>(),
+        [5, 4, 3, 2, 1]
+    );
+    // The batch crossed what one open at a time crossed: a card, a duplicate, the bar's pay, the pity.
+    let slots: Vec<&Slot> = opened.iter().flat_map(|opened| &opened.slots).collect();
+    assert!(slots.iter().any(|slot| slot.grant == SlotGrant::Card));
+    assert!(slots.iter().any(|slot| slot.grant != SlotGrant::Card));
+    assert!(opened.iter().any(|opened| opened.bars.card.pays > 0));
+    assert!(opened.iter().any(|opened| opened.pity.epic == 0));
+    // Every holding and every ledger row, in order, the opening logs as their refs.
+    assert_eq!(
+        without_at(everything(&one_at_a_time).await),
+        without_at(everything(&all_at_once).await)
+    );
+}
+
+/// The store calls of `run`'s request on the collection and the economy, by name, in order.
+async fn store_calls<F: std::future::Future<Output = (u16, Value)>>(
+    app: &App,
+    run: impl FnOnce() -> F,
+) -> (u16, Value, Vec<String>) {
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let seen = Arc::clone(&calls);
+    fake(app).lock().await.on_call = Some(Arc::new(move |method: &str| {
+        if method.starts_with("economy.") || method.starts_with("collection.") {
+            seen.lock().expect("the calls").push(method.to_string());
+        }
+        Ok(())
+    }));
+    let (status, body) = run().await;
+    fake(app).lock().await.on_call = None;
+    let calls = calls.lock().expect("the calls").clone();
+    (status, body, calls)
+}
+
+#[tokio::test]
+async fn r3212000_open_all_costs_the_same_store_calls_for_two_packs_as_for_ten() {
+    let (app, token) = setup().await;
+    grant_entire_catalog(&app, PROFILE, None)
+        .await
+        .expect("R111's grant");
+    for _ in 0..12 {
+        buy(&app, &token, "Core").await;
+    }
+    let (two_status, two, two_calls) = store_calls(&app, || {
+        open_all(&app, &token, json!({ "pack": "Core", "count": 2 }), None)
+    })
+    .await;
+    assert_eq!(two_status, 200, "{two}");
+    let (ten_status, ten, ten_calls) = store_calls(&app, || {
+        open_all(&app, &token, json!({ "pack": "Core", "count": 10 }), None)
+    })
+    .await;
+    assert_eq!(ten_status, 200, "{ten}");
+    assert_eq!(two["openings"].as_array().map(Vec::len), Some(2));
+    assert_eq!(ten["openings"].as_array().map(Vec::len), Some(10));
+    assert_eq!(ten["openings"][9]["unopened"], json!(0));
+
+    assert_eq!(two_calls, ten_calls, "the calls do not grow with the count");
+    for batch in ["economy.inventory.writeAll", "economy.counters.writeAll"] {
+        assert_eq!(
+            ten_calls.iter().filter(|call| *call == batch).count(),
+            1,
+            "{batch}: {ten_calls:?}"
+        );
+    }
+    for single in [
+        "economy.inventory.grant",
+        "economy.counters.grant",
+        "economy.cosmetics.grant",
+    ] {
+        assert!(
+            !ten_calls.iter().any(|call| call == single),
+            "{single}: {ten_calls:?}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn r3212000_open_all_with_its_key_replays_and_the_key_is_its_own_route() {
+    let (app, token) = setup().await;
+    for _ in 0..4 {
+        buy(&app, &token, "Core").await;
+    }
+    let key = uuid(3212000);
+    let body = json!({ "pack": "Core", "count": 2 });
+    let (first_status, first) = open_all(&app, &token, body.clone(), Some(&key)).await;
+    assert_eq!(first_status, 200, "{first}");
+    assert_eq!(first["openings"][1]["unopened"], json!(2));
+    let after_first = everything(&app).await;
+
+    let (again_status, again) = open_all(&app, &token, body, Some(&key)).await;
+    assert_eq!(again_status, 200, "{again}");
+    assert_eq!(again, first, "the retry answers the first try's openings");
+    assert_eq!(
+        everything(&app).await,
+        after_first,
+        "the retry rolls and grants nothing"
+    );
+
+    // The same key with another count, or on the single open, is another request.
+    for (path, body) in [
+        ("/api/packs/open-all", json!({ "pack": "Core", "count": 1 })),
+        ("/api/packs/open", json!({ "pack": "Core" })),
+    ] {
+        let (status, _, answer) = call_with_key(&app, "POST", path, Some(&token), body.clone(), &key).await;
+        assert_eq!(
+            (status, answer["error"]["code"].clone()),
+            (422, json!("idempotency_key_reused")),
+            "{path} {body}: {answer}"
+        );
+    }
+    assert_eq!(everything(&app).await, after_first);
+    assert_eq!(held(&app, InventoryItem::SetPack, "Core").await, 2);
+}
+
+#[tokio::test]
+async fn r3212000_open_all_is_refused_off_short_or_miscounted_and_writes_nothing() {
+    // While the economy is off, writing nothing.
+    let (mut off, off_token) = setup().await;
+    Arc::get_mut(&mut off)
+        .expect("the test app has no second handle yet")
+        .economy_live = false;
+    let before = everything(&off).await;
+    let (status, body) = open_all(&off, &off_token, json!({ "pack": "Core", "count": 1 }), None).await;
+    assert_eq!(
+        (status, body["error"]["code"].clone()),
+        (409, json!("conflict")),
+        "{body}"
+    );
+    assert_eq!(everything(&off).await, before);
+
+    let (app, token) = setup().await;
+    buy(&app, &token, "Core").await;
+    buy(&app, &token, "Core").await;
+    let before = everything(&app).await;
+    // A count that is no whole number from 1 to the cap, or an unknown pack.
+    let cap = u64::try_from(PACKS_OPEN_ALL_MAX).expect("the cap");
+    for body in [
+        json!({ "pack": "Core", "count": 0 }),
+        json!({ "pack": "Core", "count": cap + 1 }),
+        json!({ "pack": "Core", "count": "2" }),
+        json!({ "pack": "Core", "count": 1.5 }),
+        json!({ "pack": "Core", "count": -1 }),
+        json!({ "pack": "Core" }),
+        json!({ "pack": "Boss", "count": 1 }),
+    ] {
+        let (status, answer) = open_all(&app, &token, body.clone(), None).await;
+        assert_eq!(
+            (status, answer["error"]["code"].clone()),
+            (400, json!("bad_request")),
+            "{body}: {answer}"
+        );
+    }
+    // More than are held: all or nothing.
+    let (status, answer) = open_all(&app, &token, json!({ "pack": "Core", "count": 3 }), None).await;
+    assert_eq!(
+        (
+            status,
+            answer["error"]["code"].clone(),
+            answer["error"]["message"].clone()
+        ),
+        (409, json!("conflict"), json!("no unopened pack of that kind")),
+        "{answer}"
+    );
+    assert_eq!(everything(&app).await, before);
+    assert_eq!(app.spends.claims(PROFILE), 0, "a refusal gives its turn back");
+    // Both held open.
+    let (status, answer) = open_all(&app, &token, json!({ "pack": "Core", "count": 2 }), None).await;
+    assert_eq!(status, 200, "{answer}");
+    assert_eq!(held(&app, InventoryItem::SetPack, "Core").await, 0);
+}
+
+#[tokio::test]
+async fn r3212000_open_all_waits_its_turn_and_is_refused_past_the_waiting_ones() {
+    let (app, token) = setup().await;
+    buy(&app, &token, "Core").await;
+    buy(&app, &token, "Core").await;
+    let before = everything(&app).await;
+    let body = json!({ "pack": "Core", "count": 2 });
+
+    let release = hold_turns(&app, PROFILE, full()).await;
+    let (status, answer) = open_all(&app, &token, body.clone(), None).await;
+    assert_busy(status, &answer);
+    assert_eq!(everything(&app).await, before, "a refused spend writes nothing");
+    assert_eq!(app.spends.claims(PROFILE), full(), "and takes no place");
+    drop(release);
+    until_claims(&app, PROFILE, 0).await;
+
+    let release = hold_turns(&app, PROFILE, ECONOMY_SPENDS_RUNNING_MAX).await;
+    let waiting = {
+        let (app, token) = (Arc::clone(&app), token.clone());
+        tokio::spawn(async move { open_all(&app, &token, body, None).await })
+    };
+    until_claims(&app, PROFILE, ECONOMY_SPENDS_RUNNING_MAX + 1).await;
+    assert!(!waiting.is_finished(), "it waits its turn");
+    assert_eq!(everything(&app).await, before, "and has not run");
+    drop(release);
+    let (status, answer) = waiting.await.expect("the request's task");
+    assert_eq!(status, 200, "{answer}");
+    assert_eq!(held(&app, InventoryItem::SetPack, "Core").await, 0);
 }

@@ -99,17 +99,17 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    const VANILLA: &str = "core-008"; // (1) Mr. Vanilla, 4/4.
-    const MR_TOKEN: &str = "core-015"; // (1) 1/1, Cry: Summon a Rush Token.
-    const DUPLICATING: &str = "core-012"; // (2) 3/4, Cry: Summon a copy of this.
-    const CALL_TO_ARMS: &str = "core-069"; // (2) Spell: Recruit 3 Units of (1) Cost or less.
-    const FARM: &str = "core-058"; // (2) Field Spell Rush Token Farm.
-    const HONEYPOT: &str = "core-060"; // (1) Trap Bear Honeypot.
-    const STATE_OF_THE_GAME: &str = "classic-041"; // (1) 3/3 Indestructible.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
-    const COLLATERAL: &str = "core-034"; // (4) Spell: Exile a permanent and a random card from the enemy deck.
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile: a card in hand, so no turn ends by itself.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: Cry: Summon a Rush Token.
+    const DUPLICATING: &str = "core-012"; // Duplicating Felinors: Cry: Summon a copy of this.
+    const CALL_TO_ARMS: &str = "core-069"; // Call to Arms: Recruit 3 Units costing 1 or less.
+    const FARM: &str = "core-058"; // Rush Token Farm: a Field Spell
+    const HONEYPOT: &str = "core-060"; // Bear Honeypot: a Trap
+    const STATE_OF_THE_GAME: &str = "classic-041"; // State of the Game: Indestructible
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const FLOOD: &str = "core-017"; // Flood: Bounce all Units.
+    const COLLATERAL: &str = "core-034"; // Collateral Damage: Exile a permanent and a random card from the enemy deck.
+    const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself.
 
     /// Floodgates stands in p1's lane 5; p2 holds a Mr. Vanilla to play on its turn.
     fn board(radiant: bool, mine: Value, hand: Value, theirs: Value) -> Scenario {

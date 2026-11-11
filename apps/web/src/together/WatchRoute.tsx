@@ -384,8 +384,8 @@ export function WatchRoute({
     screen = (
       <div className="app-shell app-shell--wide watch-screen">
         <CatalogContext.Provider value={lookup}>
-          <DuosChromeContext.Provider value={{ back: <BackLink to={paths.together} label="← Play together" showSettings={false} />, status, clock: turnClock }}>
-            <DuosBoard view={coopView} legal={NO_COOP_ACTIONS} onAction={IGNORE} pings={NO_PINGS} onPing={IGNORE} jloreCapped={false} replay sideline={sideline} />
+          <DuosChromeContext.Provider value={{ back: <BackLink to={paths.together} label="Back to Play together" showSettings={false} />, status, clock: turnClock }}>
+            <DuosBoard view={coopView} legal={NO_COOP_ACTIONS} onAction={IGNORE} pings={NO_PINGS} onPing={IGNORE} jloreCapped={false} replay drainWhenHidden sideline={sideline} />
           </DuosChromeContext.Provider>
         </CatalogContext.Provider>
       </div>
@@ -399,6 +399,7 @@ export function WatchRoute({
             legal={NOTHING_LEGAL}
             onAction={IGNORE}
             replay
+            drainWhenHidden
             resultForm="chip"
             loadouts={loadouts}
             sideline={sideline}
@@ -407,7 +408,7 @@ export function WatchRoute({
             turnClock={turnClock}
             boardRail={
               <>
-                <BackLink to={paths.together} label="← Play together" showSettings={false} />
+                <BackLink to={paths.together} label="Back to Play together" showSettings={false} />
                 {/* R169: the friend's seat's live modifiers in full, one tap away, from the newest view. */}
                 <ModifierList view={view} opponentLabel={t("Opponent")} />
               </>

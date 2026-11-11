@@ -31,13 +31,13 @@ mod tests {
     use crate::scenario;
 
     const SILENCE: &str = "classicplus-009";
-    const MENACE: &str = "core-019"; // (3) 9/9 Taunt. End of turn: heal to full. Radiant: Immutable.
-    const SURGERY: &str = "core-063"; // (1) Give target Unit +3/+3 and 1 random keyword.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const WEAPONS: &str = "core-014"; // Field Spell: your Units have +2 attack, Rush and First Strike.
-    const SHEEPISH: &str = "core-041"; // (1) Trap: transforms the opponent's played Unit.
-    const TESLA: &str = "classic-005"; // Animated Field Trap: fires when the opponent summons a Unit.
-    const FROSTSPATULA: &str = "classicplus-012-8"; // Field Spell token: Animated on your turn, Rush.
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt. End of turn: heal to full. Radiant: Immutable.
+    const SURGERY: &str = "core-063"; // Plastic Surgery: Give target Unit +attack/+health and 1 random keyword.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your Units have +2 attack, Rush and First Strike.
+    const SHEEPISH: &str = "core-041"; // Sheepish: transforms the opponent's played Unit
+    const TESLA: &str = "classic-005"; // Tesla: Animated Field Trap: fires when the opponent summons a Unit
+    const FROSTSPATULA: &str = "classicplus-012-8"; // Frostspatula: Field Spell token: Animated on your turn, Rush.
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
 
@@ -59,10 +59,6 @@ mod tests {
 
     fn kinds(s: &Scenario, id: &str) -> Vec<KeywordKind> {
         s.stats(id).keywords.iter().map(|k| k.kind()).collect()
-    }
-
-    fn count(s: &Scenario, type_: &str) -> usize {
-        s.events().iter().filter(|event| event.event_type().as_str() == type_).count()
     }
 
     mod base {
@@ -185,7 +181,7 @@ mod tests {
 
             s.expect_in_zone(SILENCE, "graveyard");
             assert!(!s.card(WEAPONS).vanilla);
-            assert_eq!(count(&s, "transformed"), 0);
+            assert_eq!(s.count("transformed"), 0);
         }
     }
 
@@ -219,7 +215,7 @@ mod tests {
             s.play(SILENCE, json!({ "targets": pick::id(&trap.id) }));
             s.play(VANILLA, json!({ "zone": 1 }));
 
-            assert_eq!(count(&s, "trapFired"), 0);
+            assert_eq!(s.count("trapFired"), 0);
             assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(VANILLA.to_string()));
             assert!(matches!(s.card(&trap).zone, Zone::Field { row: Row::Backrow, lane: 2, .. }));
             assert_eq!(s.card(&trap).face_up, Some(false));
@@ -259,7 +255,7 @@ mod tests {
             s.play(SILENCE, json!({ "targets": pick::id(&tesla.id) }));
             s.play(VANILLA, json!({ "zone": 1 }));
 
-            assert_eq!(count(&s, "trapFired") + count(&s, "animated"), 0);
+            assert_eq!(s.count("trapFired") + s.count("animated"), 0);
             s.expect_stats(VANILLA, json!({ "health": 4 }));
             assert!(matches!(s.card(&tesla).zone, Zone::Field { row: Row::Backrow, lane: 3, .. }));
         }
@@ -276,7 +272,7 @@ mod tests {
 
             assert_eq!(s.state().active, P1);
             assert!(matches!(s.card(&spatula).zone, Zone::Field { row: Row::Backrow, lane: 2, .. }));
-            assert_eq!(count(&s, "animated"), 0);
+            assert_eq!(s.count("animated"), 0);
         }
 
         #[test]
@@ -291,7 +287,7 @@ mod tests {
             s.end_turn();
 
             assert!(matches!(s.card(&spatula).zone, Zone::Field { row: Row::Units, lane: 2, .. }));
-            assert_eq!(count(&s, "deanimated"), 0);
+            assert_eq!(s.count("deanimated"), 0);
         }
     }
 }

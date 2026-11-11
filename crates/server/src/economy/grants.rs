@@ -3,14 +3,15 @@
 //! holding's new value beside its ledger row, in the caller's transaction, and decides nothing. It also reads
 //! the account's counter rows into the plain [`AccountCounters`] a decision takes.
 
+use indexmap::IndexMap;
 use jackioh_shared::economy::ledger::{AccountCounters, Cause, Counter, LedgerGrant, QuestChange};
 use jackioh_shared::economy::math::PityCounters;
 
 use crate::api::http::ApiError;
 use crate::db::store::{CollectionEntry, CollectionGrant, StoreError, Tx};
 use crate::economy::store::{
-    CosmeticGrant, CounterEntry, CounterGrant, EconomyReason, InventoryGrant, JloreGrant, JloreReason,
-    QuestGrant, TrackGrant,
+    CosmeticGrant, CounterEntry, CounterGrant, EconomyReason, FleetGrant, InventoryGrant, JloreGrant,
+    JloreReason, QuestGrant, TrackGrant,
 };
 
 /// The collection ledger's reason for a card a pack unlocks: migration 0002's `pack`, one of its
@@ -94,6 +95,12 @@ fn refusal_text(grant: &LedgerGrant) -> String {
         LedgerGrant::Counter { counter, delta, .. } => format!("the counter {counter:?} refused {delta}"),
         LedgerGrant::Jlore { delta, cause, .. } => format!("the wallet refused {delta} Jlore for {cause:?}"),
         LedgerGrant::Track { set_id, .. } => format!("the {set_id} track refused a grant"),
+        LedgerGrant::Fleet { xp, levels, .. } => {
+            format!("the Fleet track refused {xp} XP and {levels} levels")
+        }
+        LedgerGrant::FleetReward { cosmetic_id, .. } => {
+            format!("the Fleet track's reward {cosmetic_id} was refused")
+        }
         LedgerGrant::Quest { quest_id, change, .. } => format!("the quest {quest_id} refused {change:?}"),
         LedgerGrant::QuestDue { .. } => "the quest schedule refused a date".to_string(),
     }
@@ -101,10 +108,11 @@ fn refusal_text(grant: &LedgerGrant) -> String {
 
 /// Writes `grants` in order in the caller's transaction: an inventory grant to the inventory, cards to the
 /// collection (absolute quantities, then their ledger's deltas), a cosmetic to the cosmetics, a counter to its
-/// counter, Jlore to the wallet, XP and levels to a set track, a quest's change to the quests and the date of
-/// the next one to its schedule. A grant carries its own `ref` or takes the outcome's, and its own date or the
+/// counter, Jlore to the wallet, XP and levels to a set track or the Fleet track and a Fleet level's reward to the
+/// cosmetics (R3335001), a quest's change to the quests and the date of the next one to its schedule. A grant carries its own `ref` or takes the outcome's, and its own date or the
 /// outcome's. A holding that cannot take a grant is `refused`'s error, writing nothing more; a wallet or a track
-/// that takes none, and a quest that arrives held already, are no refusals, as before. Answers the count the
+/// that takes none, a quest that arrives held already and a Fleet reward the account owns already (a dev account's
+/// fill, R3335002) are no refusals. Answers the count the
 /// first inventory grant left, which an opening reads as the packs still held.
 pub async fn write_grants<E: From<StoreError>>(
     tx: &mut Tx<'_>,
@@ -233,6 +241,44 @@ pub async fn write_grants<E: From<StoreError>>(
                 })
                 .await?;
             }
+            LedgerGrant::Fleet {
+                xp,
+                levels,
+                cause,
+                reference,
+            } => {
+                let written = tx
+                    .economy_fleet_grant(&FleetGrant {
+                        profile_id: profile_id.clone(),
+                        xp: *xp,
+                        levels: *levels,
+                        reason: reason_of(*cause),
+                        reference: reference.clone().or_else(|| writing.reference.clone()),
+                        dev: writing.dev,
+                        at: writing.at,
+                    })
+                    .await?;
+                if !written {
+                    return Err(refused(grant));
+                }
+            }
+            LedgerGrant::FleetReward {
+                cosmetic_id,
+                reference,
+            } => {
+                // R3335002: earned only by the track, its reason `track`; one owned already stays owned.
+                tx.economy_cosmetics_grant(&CosmeticGrant {
+                    profile_id: profile_id.clone(),
+                    card_id: None,
+                    cosmetic_id: cosmetic_id.clone(),
+                    delta: 1,
+                    reason: EconomyReason::Track,
+                    reference: reference.clone().or_else(|| writing.reference.clone()),
+                    dev: writing.dev,
+                    at: writing.at,
+                })
+                .await?;
+            }
             LedgerGrant::Quest {
                 quest_id,
                 change,
@@ -265,6 +311,142 @@ pub async fn write_grants<E: From<StoreError>>(
         }
     }
     Ok(first_count)
+}
+
+/// R3212000: [`write_grants`] for several outcomes of one account at once (an Open all's openings, in
+/// order), in a fixed number of statements whatever their number: every inventory grant in one, the
+/// cards' quantities (each card's last) and their ledger rows in two, the cosmetics in one and the
+/// counters in one. Every row is the one `write_grants` writes for its outcome, in the same order in
+/// its ledger. Only a card pack's kinds are batched: any other grant is `refused`'s error, writing
+/// nothing. A holding that cannot take its grants writes none of them, and is `refused`'s error for its
+/// first grant that takes something away (else its first), as one at a time would refuse it first.
+pub async fn write_grants_all<E: From<StoreError>>(
+    tx: &mut Tx<'_>,
+    outcomes: &[(Writing<'_>, &[LedgerGrant])],
+    refused: impl Fn(&LedgerGrant) -> E,
+) -> Result<(), E> {
+    let mut inventory = Vec::new();
+    let mut inventory_grants = Vec::new();
+    let mut quantities: IndexMap<String, i64> = IndexMap::new();
+    let mut ledger = Vec::new();
+    let mut cosmetics = Vec::new();
+    let mut cosmetic_grants = Vec::new();
+    let mut counters = Vec::new();
+    let mut counter_grants = Vec::new();
+    let Some((first, _)) = outcomes.first() else {
+        return Ok(());
+    };
+    let profile_id = first.profile_id;
+    for (writing, grants) in outcomes {
+        if writing.profile_id != profile_id {
+            return Err(StoreError::Other("economy: a batch grant pays one account".to_string()).into());
+        }
+        for grant in *grants {
+            match grant {
+                LedgerGrant::Inventory {
+                    item,
+                    key,
+                    delta,
+                    cause,
+                    reference,
+                } => {
+                    inventory.push(InventoryGrant {
+                        profile_id: profile_id.to_string(),
+                        item: *item,
+                        key: key.clone(),
+                        delta: *delta,
+                        reason: reason_of(*cause),
+                        reference: reference.clone().or_else(|| writing.reference.clone()),
+                        dev: writing.dev,
+                        at: writing.at,
+                    });
+                    inventory_grants.push(grant);
+                }
+                LedgerGrant::Cards { cards } => {
+                    for card in cards {
+                        quantities.insert(card.card_id.clone(), card.quantity);
+                        ledger.push(CollectionGrant {
+                            profile_id: profile_id.to_string(),
+                            card_id: card.card_id.clone(),
+                            delta: card.delta,
+                            reason: PACK_GRANT_REASON.to_string(),
+                            dev: writing.dev,
+                            at: writing.at,
+                        });
+                    }
+                }
+                LedgerGrant::Cosmetic { card_id, cosmetic_id } => {
+                    cosmetics.push(CosmeticGrant {
+                        profile_id: profile_id.to_string(),
+                        card_id: card_id.clone(),
+                        cosmetic_id: cosmetic_id.clone(),
+                        delta: 1,
+                        reason: EconomyReason::PackOpen,
+                        reference: writing.reference.clone(),
+                        dev: writing.dev,
+                        at: writing.at,
+                    });
+                    cosmetic_grants.push(grant);
+                }
+                LedgerGrant::Counter {
+                    counter,
+                    delta,
+                    cause,
+                } => {
+                    counters.push(CounterGrant {
+                        profile_id: profile_id.to_string(),
+                        counter: *counter,
+                        pack: String::new(),
+                        delta: *delta,
+                        reason: reason_of(*cause),
+                        reference: writing.reference.clone(),
+                        dev: writing.dev,
+                        at: writing.at,
+                    });
+                    counter_grants.push(grant);
+                }
+                LedgerGrant::Jlore { .. }
+                | LedgerGrant::Track { .. }
+                | LedgerGrant::Fleet { .. }
+                | LedgerGrant::FleetReward { .. }
+                | LedgerGrant::Quest { .. }
+                | LedgerGrant::QuestDue { .. } => return Err(refused(grant)),
+            }
+        }
+    }
+    // The error a refused holding answers: its first grant's that takes something away, else its
+    // first grant's (a holding never refuses an empty batch).
+    let refusal = |grants: &[&LedgerGrant]| -> E {
+        grants
+            .iter()
+            .find(|grant| match grant {
+                LedgerGrant::Inventory { delta, .. } | LedgerGrant::Counter { delta, .. } => *delta < 0,
+                _ => false,
+            })
+            .or_else(|| grants.first())
+            .map_or_else(
+                || StoreError::Other("economy: a batch refused no grant".to_string()).into(),
+                |grant| refused(grant),
+            )
+    };
+    if !tx.economy_inventory_write_all(&inventory).await? {
+        return Err(refusal(&inventory_grants));
+    }
+    if !quantities.is_empty() {
+        let quantities: Vec<CollectionEntry> = quantities
+            .into_iter()
+            .map(|(card_id, quantity)| CollectionEntry { card_id, quantity })
+            .collect();
+        tx.collection_upsert_quantities(profile_id, &quantities).await?;
+        tx.collection_append_grants(&ledger).await?;
+    }
+    if !tx.economy_cosmetics_grant_all(&cosmetics).await? {
+        return Err(refusal(&cosmetic_grants));
+    }
+    if !tx.economy_counters_write_all(&counters).await? {
+        return Err(refusal(&counter_grants));
+    }
+    Ok(())
 }
 
 /// Adds `delta` to one of the account's counters for a spend the server decides (a Chase Shard bar bought

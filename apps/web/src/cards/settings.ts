@@ -7,9 +7,21 @@
 // R2721000: `rarityFoil`, off by default, gives a Mythic face its rarity foil (model.ts foilFor).
 // R2718000, R2721000: `setWatermarks` (setMark.ts) and `rarityFoil` stay on the device
 // (`DEVICE_CARD_SETTINGS`), never the account.
+// R3344001: `deviceTilt`, off by default, lets a card in the card views tilt with the phone's orientation (tilt.ts); the
+// switch asks the phone's leave once where it asks (settings/controls.tsx), and it stays on the device too.
 
 import { useSyncExternalStore } from "react";
 import { setStored } from "../net/storage.ts";
+
+export type BoardNamesOption = "artFirst" | "always" | "never";
+
+export const BOARD_NAMES_DEFAULT: BoardNamesOption = "artFirst";
+export const BOARD_NAMES_VALUES: readonly BoardNamesOption[] = ["artFirst", "always", "never"] as const;
+
+/** R3339000: whether a stored or chosen value is one of the board-names options. */
+export function isBoardNamesOption(value: unknown): value is BoardNamesOption {
+  return BOARD_NAMES_VALUES.some((option) => option === value);
+}
 
 export type CardSettings = {
   hoverPreviews: boolean;
@@ -18,6 +30,8 @@ export type CardSettings = {
   opponentCosmetics: boolean;
   setWatermarks: boolean;
   rarityFoil: boolean;
+  deviceTilt: boolean;
+  boardNames: BoardNamesOption;
 };
 
 export const CARD_SETTINGS_KEY = "jackioh.cards.settings.v1";
@@ -29,6 +43,8 @@ export const CARD_SETTINGS_DEFAULTS: Readonly<CardSettings> = Object.freeze({
   opponentCosmetics: true,
   setWatermarks: true,
   rarityFoil: false,
+  deviceTilt: false,
+  boardNames: BOARD_NAMES_DEFAULT,
 });
 
 type CardSettingsField = {
@@ -61,7 +77,8 @@ export const CARD_SETTINGS_FIELDS: readonly CardSettingsField[] = [
     key: "fullArt",
     section: "visuals",
     label: "Full-art cards",
-    description: "The heroes' cards show only their art and name; hover or click one to read it. Off shows their text like any card.",
+    // R3343001: every Mythic's Default prints full art while it is on.
+    description: "The heroes' cards and every Mythic show only their art and name; hover or click one to read it. Off shows their text like any card.",
   },
   {
     key: "setWatermarks",
@@ -75,12 +92,33 @@ export const CARD_SETTINGS_FIELDS: readonly CardSettingsField[] = [
     label: "Show opponents' cosmetics",
     description: "Your opponents' cards and side wear what they equipped. Off shows them plain.",
   },
+  {
+    key: "boardNames",
+    section: "visuals",
+    label: "Names on the board",
+    description: "Full-art and Legendary/Mythic cards hide their name and words in play; hover or press to read. Always shows every name; Never hides all names.",
+  },
+  {
+    key: "deviceTilt",
+    section: "visuals",
+    label: "Tilt with my phone",
+    description: "Cards tilt as you tilt your phone, in the card view. Your phone asks once to allow it. Off: drag the card instead.",
+  },
 ];
 
 /** R2718000, R2721000: card settings that stay on the device; the account's settings (R633, settings/groups.ts) never carry them. */
-export const DEVICE_CARD_SETTINGS: readonly (keyof CardSettings)[] = ["setWatermarks", "rarityFoil"];
+export const DEVICE_CARD_SETTINGS: readonly (keyof CardSettings)[] = ["setWatermarks", "rarityFoil", "deviceTilt"];
 
-const SETTING_KEYS: readonly (keyof CardSettings)[] = ["hoverPreviews", "animatedFoil", "fullArt", "opponentCosmetics", "setWatermarks", "rarityFoil"];
+const SETTING_KEYS: readonly (keyof CardSettings)[] = [
+  "hoverPreviews",
+  "animatedFoil",
+  "fullArt",
+  "opponentCosmetics",
+  "setWatermarks",
+  "rarityFoil",
+  "boardNames",
+  "deviceTilt",
+];
 
 /**
  * The value of a write that storage refused, and what storage held at that moment (`undefined`
@@ -112,7 +150,10 @@ function parse(raw: string): CardSettings {
   const settings: CardSettings = { ...CARD_SETTINGS_DEFAULTS };
   for (const key of SETTING_KEYS) {
     const value = record[key];
-    if (typeof value === "boolean") settings[key] = value;
+    if (typeof value === "boolean") (settings as Record<string, unknown>)[key] = value;
+  }
+  if (isBoardNamesOption(record.boardNames)) {
+    settings.boardNames = record.boardNames;
   }
   return settings;
 }
@@ -131,7 +172,10 @@ export function writeCardSettings(patch: Partial<CardSettings>): CardSettings {
   const next: CardSettings = { ...readCardSettings() };
   for (const key of SETTING_KEYS) {
     const value = patch[key];
-    if (typeof value === "boolean") next[key] = value;
+    if (typeof value === "boolean") (next as Record<string, unknown>)[key] = value;
+  }
+  if (isBoardNamesOption(patch.boardNames)) {
+    next.boardNames = patch.boardNames;
   }
   fallback = setStored(CARD_SETTINGS_KEY, JSON.stringify(next)) ? null : { value: next, raw: readRaw() };
   for (const listener of [...listeners]) listener();

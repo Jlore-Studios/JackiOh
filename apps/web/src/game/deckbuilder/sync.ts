@@ -1,13 +1,16 @@
 // The deck workshop's store: saved decks and trios as this device holds them, and the autosave
 // that keeps the server in step (SPEC §9.4, R250, R252, R256).
 //
-// The client mints each id, so every save is `PUT /api/decks/:id`, an idempotent upsert: a save
-// that timed out may be sent again and never makes a second deck. Every edit goes to a
-// `localStorage` mirror first; the next visit merges it over the server's copy (R256).
-// `localStorage` is untrusted and may throw or be missing, so every access sits in try/catch.
+// The client mints each id, so every save is an idempotent upsert and every deletion idempotent: a
+// save that timed out may be sent again and never makes a second deck. A pass sends what is unsaved
+// in one `POST /api/decks/sync` of at most `DECK_SYNC_ITEMS_MAX` items (R3212001), in the server's
+// order: decks, then trios, then trio deletions, then deck deletions; what does not fit goes in the
+// next pass. Every edit goes to a `localStorage` mirror first; the next visit merges it over the
+// server's copy (R256). `localStorage` is untrusted and may throw or be missing, so every access sits
+// in try/catch.
 //
-// The server is law (rule 7): the caps, D1–D4 and T1–T3 are its to enforce. This store checks the
-// caps only so the UI can say so early. Order of a save: decks, then trios, then deletions.
+// The server is law (rule 7): the caps, D1–D4 and T1–T3 are its to enforce, item by item. This store
+// checks the caps only so the UI can say so early.
 //
 // R2119000: a deletion is held behind the workshop's undo toast; when the hold ends, the workshop
 // calls `deleteDeck` or `deleteTrio` and then `flush`, with `keepalive` when the page is going away.
@@ -18,6 +21,7 @@ import {
   DECK_AUTOSAVE_DEBOUNCE_MS,
   DECK_AUTOSAVE_RETRY_SECONDS,
   DECK_NAME_MAX_LENGTH,
+  DECK_SYNC_ITEMS_MAX,
   MAX_SAVED_DECKS,
   MAX_SAVED_TRIOS,
 } from "@jackioh/server-config";
@@ -26,6 +30,8 @@ import {
   ApiUnreachableError,
   type DeckInput,
   type DecksResponse,
+  type DeckSyncInput,
+  type DeckSyncRefusal,
   type DeckVersion,
   type SendOptions,
   type TrioImportInput,
@@ -36,6 +42,7 @@ import { isRecord } from "../../wire/json.ts";
 import { pickedDeckCosmetics, type DeckCosmeticFields } from "../../cards/cosmetics.ts";
 import { deckVersionsFrom } from "./deckHistory.ts";
 import { messageOf } from "../../net/errors.ts";
+import { localStorageOrNull } from "../../net/storage.ts";
 
 // The shapes
 
@@ -64,12 +71,21 @@ export type WorkshopSnapshot = {
 /** R2119000: a deck or trio a held deletion has taken off the screen. */
 export type HeldItem = { kind: "deck" | "trio"; id: string };
 
+/** R3212001: one item's outcome in a sync's answer: its id when it landed, else its refusal. */
+export type DeckSyncOutcome = { id: string } | DeckSyncRefusal;
+
+/** R3212001: a sync's answer, each list in its request list's order. */
+export type DeckSyncOutcomes = {
+  decks: readonly DeckSyncOutcome[];
+  trios: readonly DeckSyncOutcome[];
+  deletedTrios: readonly DeckSyncOutcome[];
+  deletedDecks: readonly DeckSyncOutcome[];
+};
+
 /** The writes, bound to the session's token by the route (`routes/decks.tsx`). */
 export type DeckSyncApi = {
-  putDeck(id: string, input: DeckInput): Promise<unknown>;
-  deleteDeck(id: string, options?: SendOptions): Promise<unknown>;
-  putTrio(id: string, input: TrioInput): Promise<unknown>;
-  deleteTrio(id: string, options?: SendOptions): Promise<unknown>;
+  /** R3212001: a pass's saves and deletions in one request (`POST /api/decks/sync`). */
+  syncDecks(input: DeckSyncInput, options?: SendOptions): Promise<DeckSyncOutcomes>;
   importTrio(input: TrioImportInput): Promise<unknown>;
   getDeckVersions(id: string): Promise<unknown>;
   /** R2100000: a kept version saved as the deck's current one; answers the deck and the versions. */
@@ -197,13 +213,9 @@ export function mirrorKey(profileId: string): string {
   return `${DECK_MIRROR_PREFIX}${profileId}`;
 }
 
+/** The browser's localStorage, or null where reading it throws (#2160's one reader). */
 export function browserStorage(): StorageLike | null {
-  try {
-    if (typeof window === "undefined") return null;
-    return window.localStorage ?? null;
-  } catch {
-    return null;
-  }
+  return localStorageOrNull();
 }
 
 /** The mirror's format version, so a later shape can tell an old value apart and drop it. */
@@ -368,6 +380,15 @@ function failureOf(cause: unknown): Failure {
     return { kind: "refused", message: cause.message, unknownDeck };
   }
   return { kind: "transient", message: messageOf(cause) };
+}
+
+/**
+ * R3212001: what an item's outcome in a sync says, as its own request's failure would have; null when it
+ * landed. An answer silent on an item settled nothing: it goes again, as after a lost connection.
+ */
+function failureIn(outcome: DeckSyncOutcome | undefined): Failure | null {
+  if (outcome === undefined) return { kind: "offline" };
+  return "error" in outcome ? failureOf(new ApiRequestError(outcome.status, outcome.error)) : null;
 }
 
 // The store
@@ -602,38 +623,61 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
 
   /** One pass, and whether any deck landed (for blocked trios). */
   async function pass(): Promise<{ end: PassEnd; deckLanded: boolean }> {
-    let deckLanded = false;
+    // R3212001: one request, in the server's order and at most DECK_SYNC_ITEMS_MAX items; the rest go
+    // in the next pass, which this one asks for.
+    let room = DECK_SYNC_ITEMS_MAX;
+    const upTo = <T>(items: readonly T[]): T[] => {
+      const taken = items.slice(0, room);
+      room -= taken.length;
+      if (taken.length < items.length) rerun = true;
+      return taken;
+    };
+    const savingDecks = upTo(decks.filter(sendable)).map((entry) => ({ entry, rev: entry.rev }));
+    const savingTrios = upTo(trios.filter(sendable)).map((entry) => ({ entry, rev: entry.rev }));
+    const trioDeletions = upTo([...deletingTrios]);
+    const deckDeletions = upTo([...deletingDecks]);
+    if (savingDecks.length + savingTrios.length + trioDeletions.length + deckDeletions.length === 0) {
+      return { end: "done", deckLanded: false };
+    }
+    const input: DeckSyncInput = {
+      decks: savingDecks.map(({ entry }) => ({ id: entry.item.id, ...deckInput(entry.item) })),
+      trios: savingTrios.map(({ entry }) => ({ id: entry.item.id, ...trioInput(entry.item) })),
+      deletedTrios: trioDeletions,
+      deletedDecks: deckDeletions,
+    };
 
-    for (const entry of decks.filter(sendable)) {
-      const { id } = entry.item;
-      const rev = entry.rev;
-      try {
-        await api.putDeck(id, deckInput(entry.item));
-      } catch (cause: unknown) {
-        const failure = failureOf(cause);
-        if (failure.kind !== "refused") return { end: halt(failure), deckLanded };
-        const current = decks.find((candidate) => candidate.item.id === id);
-        if (current !== undefined && current.rev === rev) current.refused = failure.message;
-        changed();
-        continue;
-      }
-      offline = false;
-      transient = null;
-      deckLanded = true;
-      const current = decks.find((candidate) => candidate.item.id === id);
-      if (current !== undefined && current.rev === rev) current.dirty = false;
-      changed();
+    let outcomes: DeckSyncOutcomes;
+    try {
+      outcomes = await api.syncDecks(input, keepalive ? { keepalive: true } : undefined);
+    } catch (cause: unknown) {
+      const failure = failureOf(cause);
+      // A refusal of the whole request judged no item (an older server's 404): it goes again later.
+      return { end: halt(failure.kind === "refused" ? { kind: "transient", message: failure.message } : failure), deckLanded: false };
     }
 
-    for (const entry of trios.filter(sendable)) {
-      const { id } = entry.item;
-      const rev = entry.rev;
-      try {
-        await api.putTrio(id, trioInput(entry.item));
-      } catch (cause: unknown) {
-        const failure = failureOf(cause);
-        if (failure.kind !== "refused") return { end: halt(failure), deckLanded };
-        const current = trios.find((candidate) => candidate.item.id === id);
+    // Each item as its own request's answer would have left it; a failure worth retrying stops the pass after.
+    let deckLanded = false;
+    let stop: Failure | null = null;
+
+    for (const [index, { entry, rev }] of savingDecks.entries()) {
+      const failure = failureIn(outcomes.decks[index]);
+      const current = decks.find((candidate) => candidate.item.id === entry.item.id);
+      if (failure === null) {
+        deckLanded = true;
+        if (current !== undefined && current.rev === rev) current.dirty = false;
+      } else if (failure.kind === "refused") {
+        if (current !== undefined && current.rev === rev) current.refused = failure.message;
+      } else {
+        stop ??= failure;
+      }
+    }
+
+    for (const [index, { entry, rev }] of savingTrios.entries()) {
+      const failure = failureIn(outcomes.trios[index]);
+      const current = trios.find((candidate) => candidate.item.id === entry.item.id);
+      if (failure === null) {
+        if (current !== undefined && current.rev === rev) current.dirty = false;
+      } else if (failure.kind === "refused") {
         if (current !== undefined && current.rev === rev) {
           const waiting =
             failure.unknownDeck &&
@@ -641,40 +685,31 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
           if (waiting) current.blocked = true;
           else current.refused = failure.message;
         }
-        changed();
-        continue;
+      } else {
+        stop ??= failure;
       }
-      offline = false;
-      transient = null;
-      const current = trios.find((candidate) => candidate.item.id === id);
-      if (current !== undefined && current.rev === rev) current.dirty = false;
-      changed();
     }
 
-    for (const [pending, remove] of [
-      [deletingTrios, api.deleteTrio],
-      [deletingDecks, api.deleteDeck],
+    for (const [pending, ids, answered] of [
+      [deletingTrios, trioDeletions, outcomes.deletedTrios],
+      [deletingDecks, deckDeletions, outcomes.deletedDecks],
     ] as const) {
-      for (const id of [...pending]) {
-        try {
-          if (keepalive) await remove.call(api, id, { keepalive: true });
-          else await remove.call(api, id);
-        } catch (cause: unknown) {
-          const failure = failureOf(cause);
-          if (failure.kind !== "refused") return { end: halt(failure), deckLanded };
-          // A refused deletion has nothing to try again. One made on this visit comes back in the
-          // server's words (R2119000); one only the mirror knew about is forgotten.
-          putBack(id, failure.message);
+      for (const [index, id] of ids.entries()) {
+        const failure = failureIn(answered[index]);
+        if (failure !== null && failure.kind !== "refused") {
+          stop ??= failure;
+          continue;
         }
+        // A refused deletion has nothing to try again. One made on this visit comes back in the
+        // server's words (R2119000); one only the mirror knew about is forgotten.
+        if (failure !== null) putBack(id, failure.message);
         removed.delete(id);
-        offline = false;
-        transient = null;
         pending.delete(id);
-        changed();
       }
     }
 
-    return { end: "done", deckLanded };
+    changed();
+    return { end: stop === null ? "done" : halt(stop), deckLanded };
   }
 
   async function run(): Promise<void> {

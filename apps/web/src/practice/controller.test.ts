@@ -745,6 +745,35 @@ describe("R2706000 a dungeon run's fight through the controller", () => {
     expect(readLastBoard()).toEqual(board);
   });
 
+  it("R3476000 a run fight's missed resume and start leave practice's memory alone", async () => {
+    const board = [{ defId: "core-008", radiant: false }];
+    writeLastBoard(board);
+    writePracticeResume(CONFIG);
+    const fake = fakeHost();
+    const controller = controllerFor(fake);
+    // The free game the page remembers is named, and the fight asks for its own kept game.
+    const resumed = controller.resume(FIGHT);
+    await flush();
+    expect(fake.requests.at(-1)?.body).toEqual({ type: "resume", config: FIGHT });
+    fake.respond({ type: "failed", message: "no practice game is saved on this device" });
+    await resumed;
+    await flush();
+    expect(controller.getState().phase).toBe("failed");
+    // The miss clears nothing: the free game is still there to resume, board and all.
+    expect(readPracticeResume(), "the free game is still remembered").toEqual(CONFIG);
+    expect(readLastBoard(), "its last board is untouched").toEqual(board);
+
+    // And dealing the fight remembers nothing new either.
+    const started = controller.start(FIGHT);
+    await flush();
+    expect(fake.requests.at(-1)?.body).toEqual({ type: "start", config: FIGHT });
+    fake.respond({ type: "started", snapshot: humanTurn(1), defs: {}, aiSeat: "p2" });
+    await started;
+    await flush();
+    expect(readPracticeResume(), "starting the fight remembers nothing new").toEqual(CONFIG);
+    expect(readLastBoard(), "its last board is untouched").toEqual(board);
+  });
+
   it("B25 runReport resolves the action and rejects an error or a failure", async () => {
     const fake = fakeHost();
     const controller = controllerFor(fake);
@@ -772,14 +801,15 @@ describe("R2706000 a dungeon run's fight through the controller", () => {
   });
 });
 
-// R1563006: KY's Competition's question sequence clock, which the practice host keeps itself.
+// R1563006: KY's Competition's question sequence clock. The practice machine (`crates/shared`, tested
+// natively in tests/practice.rs) states the window as a timer and answers Stop when it lapses; the controller
+// only keeps the timer it is told of and fires it back, and decides nothing.
 
-describe("R1563006 the practice host's question sequence clock", () => {
+describe("R1563006 the controller keeps the practice machine's sequence timer and decides nothing", () => {
+  const SEQUENCE = { kind: "sequence" } as const;
+  const WINDOW_MS = 60_000;
   const ANSWERS = [
     { key: "mode:A", label: "10" },
-    { key: "mode:B", label: "11" },
-    { key: "mode:C", label: "12" },
-    { key: "mode:D", label: "13" },
     { key: "none", label: "Stop" },
   ];
 
@@ -790,39 +820,68 @@ describe("R1563006 the practice host's question sequence clock", () => {
     );
   }
 
-  it("R1563006 a sequence open for 60 s from its first question is answered Stop for the human, whatever was answered since", async () => {
+  it("R1563006 a timer the machine sets is fired back once it is due, and the controller sends no answer of its own", async () => {
     const fake = fakeHost();
     const controller = controllerFor(fake);
-    await startWith(fake, controller, question("q1", 0));
-
+    const started = controller.start(CONFIG);
+    await flush();
+    fake.respond({
+      type: "started",
+      snapshot: question("q1", 0),
+      defs: {},
+      aiSeat: "p2",
+      timers: [{ command: "set", key: SEQUENCE, timer: 4, inMs: WINDOW_MS }],
+    });
+    await started;
     await vi.advanceTimersByTimeAsync(30_000);
-    // A right answer asks the next question: the same window goes on.
+    // A right answer asks the next question; the machine keeps the window and sets nothing more.
     controller.act({ type: "answer", choiceId: "q1", selection: [{ pick: "mode", option: "A" }] });
     await flush();
     fake.respond({ type: "snapshot", snapshot: question("q2", 1) });
     await flush();
     const before = fake.requests.length;
 
-    await vi.advanceTimersByTimeAsync(30_000 - 1);
+    await vi.advanceTimersByTimeAsync(WINDOW_MS - 30_000 - 1);
     expect(fake.requests.length).toBe(before);
     await vi.advanceTimersByTimeAsync(1);
-    expect(fake.requests.at(-1)?.body).toEqual({
-      type: "act",
-      action: { type: "answer", choiceId: "q2", selection: [{ pick: "none" }] },
-    });
+    expect(fake.requests.at(-1)?.body).toEqual({ type: "timerFired", key: SEQUENCE, timer: 4 });
+    expect(bodies(fake).some((body) => body.type === "act" && body.action.type === "answer" && JSON.stringify(body.action.selection).includes("none"))).toBe(false);
+    controller.dispose();
   });
 
-  it("R1563006 a sequence that ended sends nothing, and a new one starts a fresh window", async () => {
+  it("R1563006 a timer the machine takes back is never fired, and a new game drops the old game's timers", async () => {
     const fake = fakeHost();
     const controller = controllerFor(fake);
-    await startWith(fake, controller, question("q1", 0));
+    const started = controller.start(CONFIG);
+    await flush();
+    fake.respond({
+      type: "started",
+      snapshot: question("q1", 0),
+      defs: {},
+      aiSeat: "p2",
+      timers: [{ command: "set", key: SEQUENCE, timer: 4, inMs: WINDOW_MS }],
+    });
+    await started;
     controller.act({ type: "answer", choiceId: "q1", selection: [{ pick: "none" }] });
     await flush();
-    fake.respond({ type: "snapshot", snapshot: humanTurn(3) });
+    fake.respond({ type: "snapshot", snapshot: humanTurn(3), timers: [{ command: "cancel", key: SEQUENCE, timer: 4 }] });
     await flush();
     const before = fake.requests.length;
     await vi.advanceTimersByTimeAsync(120_000);
     expect(fake.requests.length).toBe(before);
+
+    // A second sequence sets its own; a new game drops it before it is due.
+    controller.act({ type: "endTurn" });
+    await flush();
+    fake.respond({ type: "snapshot", snapshot: question("q9", 0), timers: [{ command: "set", key: SEQUENCE, timer: 7, inMs: WINDOW_MS }] });
+    await flush();
+    const restarted = controller.start(CONFIG);
+    await flush();
+    const afterStart = fake.requests.length;
+    fake.respond({ type: "started", snapshot: humanTurn(1), defs: {}, aiSeat: "p2" });
+    await restarted;
+    await vi.advanceTimersByTimeAsync(WINDOW_MS * 2);
+    expect(fake.requests.length).toBe(afterStart);
     controller.dispose();
   });
 });

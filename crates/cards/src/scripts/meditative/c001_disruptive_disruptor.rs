@@ -54,13 +54,13 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const DISRUPTOR: &str = "meditative-001";
-    const BOOK_OF_PAIN: &str = "classicplus-056"; // (2) Spell: your opponent discards 2 at random.
-    const DEVILS_PACT: &str = "classic-023"; // (5) Spell: Cry discards your own cards at random.
+    const BOOK_OF_PAIN: &str = "classicplus-056"; // Book of Pain: your opponent discards 2 at random
+    const DEVILS_PACT: &str = "classic-023"; // Devil's Pact: Cry discards your own cards at random.
     const VANILLA: &str = "core-008";
-    const FILLER: &str = "core-005"; // (1) Spell.
-    const FORTIFY_MIND: &str = "meditative-022-1"; // (0) Temporary Spell.
-    const PICKLE: &str = "classic-008"; // (1) Spell: three deferred questions, "they discard" among them (R1279000).
-    const JAMMED: &str = "core-036"; // (1) Spell: destroy a backrow card.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const FORTIFY_MIND: &str = "meditative-022-1"; // Fortify Mind: Temporary Spell
+    const PICKLE: &str = "classic-008"; // Pickle: three deferred questions, "they discard" among them (R1279000)
+    const JAMMED: &str = "core-036"; // Magic Jammed: destroy a backrow card
     const P2: PlayerId = PlayerId::P2;
 
     use crate::js;
@@ -72,6 +72,7 @@ mod tests {
         json!({ "def": def, "radiant": radiant, "faceUp": true, "lane": 1 })
     }
 
+    // Differs from Scenario::count: it counts any event list, and one call passes a list no scenario holds.
     fn count(events: &[GameEvent], event_type: &str) -> usize {
         events.iter().filter(|event| event.event_type().as_str() == event_type).count()
     }

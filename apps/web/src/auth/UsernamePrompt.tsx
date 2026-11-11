@@ -9,6 +9,8 @@ import { t } from "../i18n/i18n.ts";
 import { skipUsernamePrompt } from "../net/api.ts";
 import { announceAccountChange } from "../net/gate.ts";
 import { signOut, signOutLabel, useSigningOut } from "../routes/account.tsx";
+import { PageTitle } from "../routes/PageTitle.tsx";
+import { Wordmark } from "../routes/Wordmark.tsx";
 import { tokenMetadata } from "./claims.ts";
 import Username from "./Username.tsx";
 import UsernameField from "./UsernameField.tsx";
@@ -73,10 +75,8 @@ export default function UsernamePrompt({ token, name, onAnswered }: UsernameProm
   return (
     <div className="app-shell tavern shell-panel" data-testid={usernameTestid.prompt}>
       <section className="panel panel--auth">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Choose your username")}</h2>
+        <Wordmark />
+        <PageTitle>{t("Choose your username")}</PageTitle>
         <p>
           {heldBefore}
           <Username name={name} />

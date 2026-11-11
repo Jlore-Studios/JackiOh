@@ -32,6 +32,7 @@ function recordingPlayer(): MusicPlayer & { requests: MusicRequest[]; intros: st
     stopIntro: () => {
       rec.stops += 1;
     },
+    playSting: () => undefined,
     preloadIntros: () => undefined,
     intro: () => intros.at(-1) ?? null,
     resetResume: () => undefined,
@@ -81,7 +82,7 @@ describe("R631 the audio panel's music controls", () => {
       ["tavern", "Tavern"],
       ["edm", "EDM"],
       ["lofi", "Lo-fi"],
-      ["epic", "Epic Orchestral"],
+      ["epic", "Epic orchestral"],
     ]);
     expect(station.value).toBe("tavern");
     for (const id of ["audio-dynamic-music", "audio-duck-music", "audio-music-background"]) expect(input(id).checked, id).toBe(id !== "audio-music-background");

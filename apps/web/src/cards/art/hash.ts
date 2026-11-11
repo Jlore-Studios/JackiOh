@@ -44,7 +44,27 @@ export function round2(value: number): number {
   return rounded === 0 ? 0 : rounded;
 }
 
-/** A number as it is written into SVG: rounded, with no exponent and no `-0`. */
+/** Below this many hundredths a rounded value's digits are an exact integer, so `fmt` writes them itself. */
+const FMT_EXACT_LIMIT = 1e15;
+const DECIMAL_BASE = 10;
+
+/**
+ * A number as it is written into SVG: rounded, with no exponent and no `-0`. The same string as
+ * `String(round2(value))`, written from the whole count of hundredths, which is several times faster than
+ * printing a float (every picture's every coordinate passes here); a value too large for that prints as before.
+ */
 export function fmt(value: number): string {
-  return String(round2(value));
+  const units = Math.round(value * ROUNDING);
+  if (units === 0) return "0";
+  const size = units < 0 ? -units : units;
+  if (!(size < FMT_EXACT_LIMIT)) return String(round2(value));
+  let fraction = size % ROUNDING;
+  const whole = `${units < 0 ? "-" : ""}${(size - fraction) / ROUNDING}`;
+  if (fraction === 0) return whole;
+  let places = ART_DECIMALS;
+  while (fraction % DECIMAL_BASE === 0) {
+    fraction /= DECIMAL_BASE;
+    places -= 1;
+  }
+  return `${whole}.${String(fraction).padStart(places, "0")}`;
 }

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AUTH_MESSAGES, AUTH_NOTICES } from "../net/auth.ts";
 import { readSession, writeSession } from "../net/session.ts";
+import { expectSkeleton } from "../test/skeleton.ts";
 import TwoStepSettings, { twoStepTestid } from "./TwoStepSettings.tsx";
 
 const URL_ = "https://project.supabase.co";
@@ -155,6 +156,16 @@ describe("R665 turning two-step sign-in on and off", () => {
     expect((await screen.findByTestId(twoStepTestid.notice)).textContent).toBe(AUTH_NOTICES.mfaRemoved);
     expect(screen.getByTestId(twoStepTestid.state).getAttribute("data-state")).toBe("off");
     expect(calls.find((call) => call.method === "DELETE")?.auth).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it("R3228000 the check waits as a skeleton panel whose sentence stays a status line, and the state replaces it", async () => {
+    serve({ "GET /auth/v1/user": factors([]) });
+    render(<TwoStepSettings token={TOKEN} />);
+    expectSkeleton(screen.getByText("Checking…"), "panel");
+    await waitFor(() => {
+      expect(screen.getByTestId(twoStepTestid.state)).toHaveAttribute("data-state", "off");
+    });
+    expect(screen.queryByText("Checking…")).toBeNull();
   });
 
   it("R665 factors that cannot be read offer nothing rather than the wrong thing", async () => {

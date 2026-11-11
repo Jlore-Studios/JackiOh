@@ -77,9 +77,9 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    const FILLER: &str = "core-010"; // (0) Spell.
-    const SPARE: &str = "core-005"; // (1) Spell: library spare.
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const SPARE: &str = "core-005"; // Stockpile: library spare
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     /// Every non-token Jlockeed Unit of the sets that ship, in catalog order (R380, R1420): Core #13, C+ #48
     /// and #51, M #87 (every tribe), Stinkyscape's #127, #128 and #129 (#1884) and Training Grounds' #48,
     /// Core #13's snapshot (#2204).
@@ -122,13 +122,6 @@ mod tests {
                 _ => None,
             })
             .collect()
-    }
-
-    fn count(s: &Scenario, kind: GameEventType) -> usize {
-        s.last_events()
-            .iter()
-            .filter(|event| event.event_type() == kind)
-            .count()
     }
 
     #[test]
@@ -224,7 +217,7 @@ mod tests {
                 assert_eq!(unit.controller, P1);
             }
             assert_eq!(s.unit(P1, 3).map(|unit| unit.def_id), Some(VANILLA.to_string()));
-            assert_eq!(count(&s, GameEventType::CardPlayed), 0);
+            assert_eq!(s.last_count(GameEventType::CardPlayed), 0);
             assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(ID.to_string()));
         }
 

@@ -32,15 +32,15 @@ mod tests {
     use crate::scenario;
 
     const GUY: &str = "classicplus-005";
-    const SHEEPISH: &str = "core-041"; // (1) Trap.
-    const MY_PAWN: &str = "core-096"; // (1) Trap: fires only on a lethal attack, so a play never sets it off.
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell.
-    const HEROIC_POWER: &str = "core-098"; // Indestructible Field Spell.
-    const FROSTSPATULA: &str = "classicplus-012-8"; // Field Spell token: Animated on your turn, Rush.
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
+    const MY_PAWN: &str = "core-096"; // My Pawn: fires only on a lethal attack, so a play never sets it off
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const HEROIC_POWER: &str = "core-098"; // Heroic Power: Indestructible Field Spell
+    const FROSTSPATULA: &str = "classicplus-012-8"; // Frostspatula: Field Spell token: Animated on your turn, Rush.
     const TOWER: &str = "classicplus-033"; // Ivory Tower: the first Unit stacked onto it is fused into it.
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const COOKIE_GUILD: &str = "classic-031"; // (2) Cry: Recruit 1 Unit of (2) Cost or less.
-    const MR_TOKEN: &str = "core-015"; // (1) 1/1, Cry: summon a Rush Token.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const COOKIE_GUILD: &str = "classic-031"; // Cookie Guild: Cry: Recruit 1 cheap Unit.
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
 
@@ -68,10 +68,6 @@ mod tests {
         json!([{ "def": MY_PAWN, "faceUp": false, "lane": 1 }, { "def": MANA_WELL, "lane": 3 }])
     }
 
-    fn count(s: &Scenario, type_: &str) -> usize {
-        s.events().iter().filter(|event| event.event_type().as_str() == type_).count()
-    }
-
     mod base {
         use super::*;
 
@@ -90,7 +86,7 @@ mod tests {
             for card in &theirs {
                 assert_eq!(s.card(card).zone.z(), ZoneName::Field);
             }
-            assert_eq!(count(&s, "destroyed"), 2);
+            assert_eq!(s.count("destroyed"), 2);
         }
 
         /// R1081000: a Unit standing in a backrow zone is no backrow card (§6.1 Animated): it stays.
@@ -191,7 +187,7 @@ mod tests {
             assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(GUY.to_string()));
             assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some(SHEEPISH.to_string()));
             assert_eq!(s.backrow(P1, 2).map(|card| card.def_id), Some(MANA_WELL.to_string()));
-            assert_eq!(count(&s, "destroyed"), 0);
+            assert_eq!(s.count("destroyed"), 0);
         }
 
         #[test]
@@ -201,7 +197,7 @@ mod tests {
 
             s.play(GUY, json!({ "zone": 1 }));
 
-            assert_eq!(count(&s, "destroyed"), 0);
+            assert_eq!(s.count("destroyed"), 0);
         }
     }
 
@@ -235,7 +231,7 @@ mod tests {
 
             s.play(GUY, json!({ "zone": 1 }));
 
-            assert_eq!(count(&s, "trapFired"), 0);
+            assert_eq!(s.count("trapFired"), 0);
             assert!(s.view(P1).opponent.graveyard.iter().any(|card| card.def_id == MY_PAWN));
             assert!(s.view(P2).you.graveyard.iter().any(|card| card.def_id == MY_PAWN));
         }

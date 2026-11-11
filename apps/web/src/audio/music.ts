@@ -3,6 +3,8 @@
 // a mix, not a track; focus, mute or zero volume prevent new playback.
 // Card intros (R1350, R1351) play above and duck the bed, take precedence over every track, and use their
 // own cache. Nothing fetches or decodes during animation (B58); failures retry on a later request.
+// R3332002: a card's sting is its intro's opening, cut to MUSIC_STING_S, on the effects bus beside the
+// music, never ducking it; it shares the intros' cache, and a newer sting cuts the last.
 
 import {
   MUSIC_BAR_WAIT_MAX_S,
@@ -23,6 +25,9 @@ import {
   MUSIC_OPEN_LOWPASS_HZ,
   MUSIC_OPPONENT_GAIN,
   MUSIC_OPPONENT_LOWPASS_HZ,
+  MUSIC_STING_FADE_S,
+  MUSIC_STING_GAIN,
+  MUSIC_STING_S,
   MUSIC_TURN_TC_S,
 } from "./constants.ts";
 import { fetchAudioBytes, getAudioEngine } from "./engine.ts";
@@ -38,7 +43,8 @@ export type MusicRequest = {
   opponentTurn?: boolean;
 };
 
-export type MusicLogEntry = { kind: "start" | "stop"; track: string; at: number };
+/** "sting": a card's intro cut to its opening (R3332002), started at `at`. */
+export type MusicLogEntry = { kind: "start" | "stop" | "sting"; track: string; at: number };
 
 export type MusicPlayer = {
   request(request: MusicRequest): void;
@@ -49,6 +55,11 @@ export type MusicPlayer = {
   playIntro(id: string): void;
   /** R1351: cuts the intro playing (or about to) short with MUSIC_INTRO_CUT_FADE_S, and lets the bed back up. */
   stopIntro(): void;
+  /**
+   * R3332002: plays a card's intro cut to its first MUSIC_STING_S, the card's sting, on the effects bus;
+   * a second one cuts the first. Ignored muted, with the effects at zero, or while the context is not running.
+   */
+  playSting(id: string): void;
   preloadIntros(ids: readonly string[]): void;
   intro(): string | null;
   /** Forgets where each station track left off (a new match). */
@@ -112,6 +123,9 @@ type Voice = {
 /** R1350: a card's intro, from its start until its source ends or it is cut. `end` is its music's end. */
 type Clip = { id: string; source: AudioBufferSourceNode; gain: GainNode; startAt: number; end: number; stopping: boolean };
 
+/** R3332002: a card's sting, from its start until its source ends or a newer one cuts it. `fade` is its fade-out. */
+type Sting = { id: string; source: AudioBufferSourceNode; gain: GainNode; startAt: number; fade: Fade; stopping: boolean };
+
 type Graph = { ctx: AudioContext; bed: GainNode; filter: BiquadFilterNode; turn: GainNode; focus: GainNode };
 
 function barLength(track: MusicTrack): number {
@@ -163,6 +177,9 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
   const introBytes = new Map<string, Promise<ArrayBuffer | null>>();
   const introDecoded = new Map<string, AudioBuffer>();
   let heldIntroPreload: string[] = [];
+  /** R3332002: the sting playing, and the one being loaded (with the context time it was asked for). */
+  let sting: Sting | null = null;
+  let pendingSting: { id: string; asked: number } | null = null;
   let watched: AudioEngine | null = null;
   let unwatch: (() => void) | null = null;
   const unsubscribeSettings = subscribeSettings(() => {
@@ -199,6 +216,12 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     return !s.muted && s.music > 0;
   }
 
+  /** R3332002: a sting plays on the effects bus, so it follows the effects' volume, not the music's. */
+  function stingAudible(): boolean {
+    const s = settings();
+    return !s.muted && s.sfx > 0;
+  }
+
   /* graph */
 
   function ensureGraph(): Graph | null {
@@ -211,6 +234,8 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     voices = [];
     clip = null;
     pendingIntro = null;
+    sting = null;
+    pendingSting = null;
     introDecoded.clear();
     decoded.clear();
     const ctx = out.context;
@@ -486,10 +511,14 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
   }
 
   function pumpPreload(): void {
-    if (busy || disposed || !audible()) return;
-    const ids = heldPreload;
-    heldPreload = [];
-    for (const id of ids) if (manifest.files[id] !== undefined) void fetchCached(id);
+    if (busy || disposed) return;
+    if (audible()) {
+      const ids = heldPreload;
+      heldPreload = [];
+      for (const id of ids) if (manifest.files[id] !== undefined) void fetchCached(id);
+    }
+    // R3332002: an intro is its card's sting too, so it is fetched ahead while either can be heard.
+    if (!audible() && !stingAudible()) return;
     const intros = heldIntroPreload;
     heldIntroPreload = [];
     for (const id of intros) if (manifest.files[id] !== undefined) void fetchIntro(id);
@@ -592,6 +621,52 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     duckBed(at, mine.end);
   }
 
+  /* a card's sting (R3332002) */
+
+  /** A newer sting cuts the last with an intro's cut fade, unless its own fade-out ends it sooner. */
+  function cutSting(s: Sting, at: number): void {
+    if (s.stopping) return;
+    s.stopping = true;
+    if (sting === s) sting = null;
+    const from = Math.max(at, s.startAt);
+    if (from + MUSIC_INTRO_CUT_FADE_S >= s.fade.t1) return;
+    const param = s.gain.gain;
+    param.cancelScheduledValues(from);
+    param.setValueAtTime(gainAt(s.fade, from), from);
+    param.linearRampToValueAtTime(0, from + MUSIC_INTRO_CUT_FADE_S);
+    s.source.stop(from + MUSIC_INTRO_CUT_FADE_S + STOP_GRACE_S);
+  }
+
+  /**
+   * The intro's first MUSIC_STING_S on the effects bus: held at MUSIC_STING_GAIN, faded out over the
+   * last MUSIC_STING_FADE_S and stopped. Unlike an intro it ducks nothing: it is an effect among effects.
+   */
+  function startSting(id: string, buffer: AudioBuffer): void {
+    const g = graph;
+    const out = engine().sfxOutput();
+    if (g === null || out === null || out.context !== g.ctx) return;
+    const at = g.ctx.currentTime + MUSIC_LEAD_S;
+    if (sting !== null) cutSting(sting, at);
+    const source = g.ctx.createBufferSource();
+    source.buffer = buffer;
+    const gain = g.ctx.createGain();
+    const fade: Fade = { t0: at + MUSIC_STING_S - MUSIC_STING_FADE_S, v0: MUSIC_STING_GAIN, t1: at + MUSIC_STING_S, v1: 0 };
+    gain.gain.value = MUSIC_STING_GAIN;
+    gain.gain.setValueAtTime(MUSIC_STING_GAIN, fade.t0);
+    gain.gain.linearRampToValueAtTime(0, fade.t1);
+    source.connect(gain);
+    gain.connect(out.input);
+    const mine: Sting = { id, source, gain, startAt: at, fade, stopping: false };
+    source.onended = () => {
+      if (sting === mine) sting = null;
+      quietly(() => gain.disconnect());
+    };
+    source.start(at);
+    source.stop(fade.t1 + STOP_GRACE_S);
+    sting = mine;
+    push({ kind: "sting", track: id, at });
+  }
+
   return {
     request(request) {
       if (disposed) return;
@@ -660,6 +735,37 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
         param.setTargetAtTime(1, now, MUSIC_INTRO_DUCK_RELEASE_TC_S);
       });
     },
+    playSting(id) {
+      if (disposed) return;
+      quietly(() => {
+        if (!isClip(id) || !stingAudible() || pendingSting?.id === id) return;
+        // Nothing waits for a resume, as no intro does: a sting asked for on a stopped context is dropped.
+        if (ensureGraph() === null || !running() || graph === null) return;
+        const c = graph.ctx;
+        // As R1351 keeps an intro: a sting still sounding is not restarted by its own card again.
+        if (sting !== null && !sting.stopping && sting.id === id && c.currentTime < sting.fade.t1) return;
+        const ready = introDecoded.get(id);
+        if (ready !== undefined) {
+          pendingSting = null;
+          introDecoded.delete(id);
+          introDecoded.set(id, ready);
+          startSting(id, ready);
+          return;
+        }
+        const ask = { id, asked: c.currentTime };
+        pendingSting = ask;
+        void decodeIntro(id, c).then((buffer) => {
+          // A newer sting, or a new context since: this one is no longer wanted.
+          if (pendingSting !== ask || disposed) return;
+          pendingSting = null;
+          quietly(() => {
+            if (buffer === null || graph === null || graph.ctx !== c || !running() || !stingAudible()) return;
+            if (c.currentTime - ask.asked > MUSIC_INTRO_LATE_S) return;
+            startSting(id, buffer);
+          });
+        });
+      });
+    },
     preloadIntros(ids) {
       heldIntroPreload = [...new Set([...heldIntroPreload, ...ids.filter((id) => !introBytes.has(id))])];
       pumpPreload();
@@ -695,8 +801,15 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
         quietly(() => c.source.stop());
         quietly(() => c.gain.disconnect());
       }
+      const s = sting;
+      if (s !== null) {
+        quietly(() => s.source.stop());
+        quietly(() => s.gain.disconnect());
+      }
       clip = null;
       pendingIntro = null;
+      sting = null;
+      pendingSting = null;
       voices = [];
       entries = [];
     },

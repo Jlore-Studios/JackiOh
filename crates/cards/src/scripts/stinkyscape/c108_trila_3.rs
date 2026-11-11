@@ -25,8 +25,8 @@ mod tests {
     use crate::filler;
 
     const TRILA: &str = "stinkyscape-108";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: Spell (§2.5).
 
     #[test]
     fn windfury_attacks_twice_a_turn() {

@@ -14,7 +14,7 @@ import { CATALOG } from "@jackioh/cards";
 import type { CardDef, SetName } from "@jackioh/shared";
 
 import { readerName } from "../cards/chinese.ts";
-import { CardDefsProvider, CardFace, closeInspect, faceModel, INSPECT_KEY_SHORTCUT } from "../cards/index.ts";
+import { useCanOpenFullScreen, CardDefsProvider, CardFace, closeInspect, faceModel, INSPECT_KEY_SHORTCUT, openFullScreenArt } from "../cards/index.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { getCollection, type CollectionResponse } from "../net/api.ts";
 import { quantitiesOf } from "../shop/shop.ts";
@@ -23,6 +23,7 @@ import { COLLECTED_DEFS, collectionTestid, setCompletions } from "./collection.t
 import ItemPreview, { usePreviewHold } from "./ItemPreview.tsx";
 import { LookHoverPanel, useLookHover, type LookHoverTrigger } from "./LookHover.tsx";
 import LookViews, { LooksButton, RadiantToggle } from "./LookViews.tsx";
+import { clearSeenForCard, hasUnseen, unseenForCard, useNewLevels } from "./newLevels.ts";
 import LooksScreen from "./LooksScreen.tsx";
 import TokenOffer, { useHeldTokens, type HeldTokens } from "./TokenOffer.tsx";
 
@@ -35,17 +36,33 @@ type Inspected = { def: CardDef; owned: boolean };
 function CollectionCardTile({
   def,
   owned,
+  isNew,
   hover,
   onOpen,
   onPreview,
 }: {
   def: CardDef;
   owned: boolean;
+  /** R3349000: the card earned a level the account has not viewed yet. */
+  isNew: boolean;
   hover: LookHoverTrigger;
   onOpen: () => void;
   onPreview: () => void;
 }): ReactElement {
-  const hold = usePreviewHold(`card-${def.id}`, onPreview);
+  const isFs = useCanOpenFullScreen(def, def.id, owned);
+  const hold = usePreviewHold(`card-${def.id}`, (pointerId) => {
+    // The inspect key (no pointer) keeps the preview, with its equip and buy buttons; only a hold opens the art.
+    if (isFs && pointerId !== undefined) {
+      openFullScreenArt({
+        defId: def.id,
+        name: readerName(def),
+        radiant: false,
+        heldPointerId: pointerId,
+      });
+      return;
+    }
+    onPreview();
+  });
   return (
     <button
       type="button"
@@ -54,6 +71,7 @@ function CollectionCardTile({
       data-owned={String(owned)}
       aria-label={owned ? readerName(def) : t("{name}, not owned yet", { name: readerName(def) })}
       aria-keyshortcuts={INSPECT_KEY_SHORTCUT}
+      data-new={isNew ? "true" : undefined}
       {...hold}
       {...hover}
       onPointerDown={(event) => {
@@ -66,8 +84,14 @@ function CollectionCardTile({
       }}
     >
       <span className="collection-card__face">
-        <CardFace face={faceModel({ defId: def.id, def, radiant: false })} layout="full" lazyArt worn={owned} />
+        {/* R3350000: the player turns a card here to look at it, so a Mythic's diorama turns as far as it does in inspect. */}
+        <CardFace face={faceModel({ defId: def.id, def, radiant: false })} layout="full" lazyArt worn={owned} tilt="host" turn />
       </span>
+      {isNew ? (
+        <span className="collection-card__new" data-testid={collectionTestid.newMark(def.id)}>
+          {t("New")}
+        </span>
+      ) : null}
       {owned ? null : (
         <span className="collection-card__lock" aria-hidden="true">
           {t("Locked")}
@@ -106,6 +130,13 @@ export default function OwnedCards({
   const hoveredId = hover.hovered?.id;
   const hovered = shownCards.find((card) => card.def.id === hoveredId) ?? null;
   const looked = shownCards.find((card) => card.def.id === looking) ?? null;
+  // R3349000: marks written at a grant's success move the grid with it; viewing a card clears its own.
+  useNewLevels();
+  const clearNew = (cardId: string): void => {
+    if (token !== null) clearSeenForCard(token, cardId);
+  };
+  // The hover preview plays the newest unseen level moving (R3016000), if the card earned one.
+  const hoveredNew = token !== null && hovered !== null ? unseenForCard(token, hovered.def.id).at(-1) : undefined;
 
   const redeemed = (answer: HeldTokens): void => {
     setTokens(answer);
@@ -149,13 +180,16 @@ export default function OwnedCards({
                     <CollectionCardTile
                       def={def}
                       owned={held}
+                      isNew={token !== null && hasUnseen(token, def.id)}
                       hover={hover.trigger(def.id)}
                       onOpen={() => {
                         hover.close();
+                        clearNew(def.id);
                         setInspected({ def, owned: held });
                       }}
                       onPreview={() => {
                         hover.close();
+                        clearNew(def.id);
                         setPreviewRadiant(false);
                         setPreviewing(def.id);
                       }}
@@ -174,8 +208,10 @@ export default function OwnedCards({
           owned={hovered.owned}
           anchor={hover.hovered.anchor}
           hover={hover}
+          level={hoveredNew}
           onLooks={() => {
             hover.close();
+            clearNew(hovered.def.id);
             setLooking(hovered.def.id);
           }}
         />
@@ -209,6 +245,7 @@ export default function OwnedCards({
               />
               <LooksButton
                 onLooks={() => {
+                  clearNew(previewed.def.id);
                   setLooking(previewed.def.id);
                 }}
               />

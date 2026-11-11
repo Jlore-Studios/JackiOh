@@ -21,6 +21,7 @@ import {
   runReduce,
   runScore,
   runSeed,
+  runShopPrices,
   type ReplayInput,
 } from "./index.ts";
 
@@ -52,8 +53,8 @@ describe("B12 the run bindings", () => {
     if ("error" in created) throw new Error(created.error);
     expect(runCheckSetup({ ...setup, seed: "bad" }, unlocks, content)).not.toBeNull();
 
-    const illegal = runReduce(created.state, content, { type: "heal" });
-    if (!("error" in illegal)) throw new Error("a heal on the map is refused");
+    const illegal = runReduce(created.state, content, { type: "gainMaxHp" });
+    if (!("error" in illegal)) throw new Error("a campfire rest on the map is refused");
     expect(illegal.error.length).toBeGreaterThan(0);
 
     const go: RunAction = { type: "go", col: 0 };
@@ -87,6 +88,11 @@ describe("B12 the run bindings", () => {
     expect(runMaxHp(moved.state, content)).toBeGreaterThan(0);
     expect(runLevelCost(1)).not.toBeNull();
     expect(runLevelCost(constants.slotLadder.length)).toBeNull();
+    const prices = runShopPrices(moved.state, content);
+    expect(prices.removeCoins).toBeGreaterThan(0);
+    expect(prices.levelTickets).toHaveLength(moved.state.artifacts.length);
+    expect(prices.stockCoins).toEqual([]);
+    expect(constants.campfireRemove).toBeGreaterThan(0);
     expect(runSeed("anything")).toMatch(/^[A-Z]{6}$/);
     expect(runDailySeed("2026-11-01", 2)).toMatch(/^[A-Z]{6}$/);
   });

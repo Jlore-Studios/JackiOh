@@ -326,16 +326,16 @@ mod tests {
     const ANCHOR: &str = "core-010";
 
     // Library fixture matching each type option (R65).
-    const SPELL_0A: &str = "core-039"; // Recycling Initiative — Spell, 0
-    const SPELL_0B: &str = "core-048"; // 5pek Controller      — Spell, 0
-    const SPELL_1A: &str = "core-005"; // Stockpile            — Spell, 1
-    const SPELL_1B: &str = "core-035"; // Lunar Eclipse        — Spell, 1
-    const SPELL_2: &str = "core-069"; //  Call to Arms         — Spell, 2 (Hit Job costs 3 since patch v0.2.0)
-    const UNIT_1: &str = "core-008"; //   Mr. Vanilla          — Unit, 1
-    const UNIT_4: &str = "core-025"; //   4-mana 7/7           — Unit, 4
-    const FIELD_3: &str = "core-006"; //  Mana Well            — Field Spell, 3
-    const FIELD_TRAP_1: &str = "core-018"; // Bread and Butter — Field Trap, 1
-    const TRAP_1: &str = "core-041"; //   Sheepish             — Trap, 1
+    const SPELL_0A: &str = "core-039"; // Recycling Initiative: a Spell
+    const SPELL_0B: &str = "core-048"; // 5pek Controller: a Spell
+    const SPELL_1A: &str = "core-005"; // Stockpile: a Spell
+    const SPELL_1B: &str = "core-035"; // Lunar Eclipse: a Spell
+    const SPELL_2: &str = "core-069"; // Call to Arms: a Spell (Hit Job costs 3 since patch v0.2.0)
+    const UNIT_1: &str = "core-008"; // Mr. Vanilla: a Unit
+    const UNIT_4: &str = "core-025"; // 4-mana 7/7: a Unit
+    const FIELD_3: &str = "core-006"; // Mana Well: a Field Spell
+    const FIELD_TRAP_1: &str = "core-018"; // Bread and Butter: a Field Trap
+    const TRAP_1: &str = "core-041"; // Sheepish: a Trap
 
     const LIBRARY: [&str; 10] = [
         SPELL_0A,

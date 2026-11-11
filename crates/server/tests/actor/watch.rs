@@ -302,6 +302,38 @@ mod b50_watching_a_friend {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn r3477000_a_watchers_view_frames_never_carry_a_forecast_and_the_seats_do() {
+        let w = world(false).await;
+        let watcher = w.watch(&w.watcher).await;
+        assert!(watcher.of_type("error").is_empty(), "{:?}", watcher.frames());
+        tokio::time::sleep(BEFORE_THE_PLAYERS_ACT).await;
+        w.keep_both().await;
+        watcher
+            .wait_for(0, ms(SPECTATE_DELAY_MS) + DELAY_SLACK, |frame| {
+                frame["type"] == "view" && frame["view"]["phase"] == "main"
+            })
+            .await
+            .unwrap_or_else(|| panic!("the watcher never saw the turn begin: {:?}", watcher.frames()));
+
+        let shown = watcher.of_type("view");
+        assert!(!shown.is_empty());
+        for frame in shown {
+            assert!(
+                frame.get("forecast").is_none(),
+                "R3477000: a watcher's forecast: {frame}"
+            );
+        }
+        let seats = w.p1.of_type("view");
+        assert!(!seats.is_empty());
+        for frame in seats {
+            assert!(
+                frame["forecast"].is_object(),
+                "R3477000: the seat's forecast: {frame}"
+            );
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn b50_a_ranked_match_is_watchable_like_an_unranked_one() {
         let w = world(true).await;
         let watcher = w.watch(&w.watcher).await;
@@ -1119,6 +1151,11 @@ mod r1834003_a_watcher_wears_the_seats_loadouts {
             "foil": "foil-none",
             "finish": "finish-plain",
             "border": "border-standard",
+            // R3335000: the four Starship kinds, each its default.
+            "starshipHull": "starship-hull-standard",
+            "starshipLivery": "starship-livery-standard",
+            "starshipTrail": "starship-trail-standard",
+            "starshipPieceSkin": "starship-piece-skin-standard",
         });
         let mut friend = defaults.clone();
         friend["table"] = json!("table-felt");

@@ -44,11 +44,11 @@ mod tests {
     const SOLARIUS: &str = "classicplus-038";
     const PRIME: &str = "classicplus-038-1";
     const BONE_STORM: &str = "classicplus-036-1";
-    const LUNAR_ECLIPSE: &str = "core-035"; // (1) Spell: deal 3 damage to a target.
-    const ECHOES: &str = "core-040"; // Field Spell: start of turn, damage to the enemy hero = your exile count.
-    const SORCERER: &str = "core-068"; // Unit, Cry: deal 4 damage to a target.
-    const HEROIC: &str = "core-098"; // Field Spell, its "burn" power: 2 damage to each opposing hero.
-    const MENACE: &str = "core-019"; // 9/9 Taunt.
+    const LUNAR_ECLIPSE: &str = "core-035"; // Lunar Eclipse: deal 3 damage to a target
+    const ECHOES: &str = "core-040"; // Echoes of the Forgotten: start of turn, damage to the enemy hero = your exile count
+    const SORCERER: &str = "core-068"; // Twisted Sorcerer: Cry: deal 4 damage to a target
+    const HEROIC: &str = "core-098"; // Heroic Power: a Field Spell, its "burn" power: 2 damage to each opposing hero
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
     const FILLER: &str = "core-005";
 
     fn at_hero() -> Value {

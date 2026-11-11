@@ -10,6 +10,7 @@ import type { ReactElement } from "react";
 import { DEFAULT_LOCALE, formatDay, t, useLocale } from "../i18n/i18n.ts";
 import { CONTACT_EMAIL, CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 
 import "../auth/tavern.css";
 import "./privacy.css";
@@ -26,13 +27,10 @@ export default function CopyrightRoute(): ReactElement {
   const locale = useLocale();
   return (
     <div className="app-shell tavern privacy-screen" data-testid={copyrightTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Copyright")} />
 
       <article className="panel panel--auth privacy-policy">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Copyright")}</h2>
+        <Wordmark />
         {/* A translation says the English text governs; the English needs no such line. */}
         {locale === DEFAULT_LOCALE ? null : <p className="privacy-policy__governing">{t("The English text governs.")}</p>}
         <p className="privacy-policy__updated" data-testid={copyrightTestid.updated}>
@@ -40,7 +38,7 @@ export default function CopyrightRoute(): ReactElement {
         </p>
 
         <section aria-labelledby="copyright-report">
-          <h3 id="copyright-report">Reporting content that infringes your copyright</h3>
+          <h2 className="section-heading" id="copyright-report">Reporting content that infringes your copyright</h2>
           <p>
             If you believe something on JackiOh infringes a copyright you own or act for, such as a username,
             send a written notice to our designated agent below. Under the Digital Millennium Copyright Act
@@ -67,7 +65,7 @@ export default function CopyrightRoute(): ReactElement {
         </section>
 
         <section aria-labelledby="copyright-agent">
-          <h3 id="copyright-agent">Our designated agent</h3>
+          <h2 className="section-heading" id="copyright-agent">Our designated agent</h2>
           <p>
             Email notices to <a href={CONTACT_URL}>{CONTACT_EMAIL}</a>.
           </p>
@@ -80,7 +78,7 @@ export default function CopyrightRoute(): ReactElement {
         </section>
 
         <section aria-labelledby="copyright-counter">
-          <h3 id="copyright-counter">If your content was removed</h3>
+          <h2 className="section-heading" id="copyright-counter">If your content was removed</h2>
           <p>
             If you believe material of yours was removed by mistake or misidentification, you can send our
             agent a counter-notice (17 U.S.C. &sect; 512(g)(3)) with your signature, the material and where it
@@ -94,12 +92,12 @@ export default function CopyrightRoute(): ReactElement {
         </section>
 
         <section aria-labelledby="copyright-repeat">
-          <h3 id="copyright-repeat">Repeat infringers</h3>
+          <h2 className="section-heading" id="copyright-repeat">Repeat infringers</h2>
           <p>We close the accounts of players who repeatedly infringe others&rsquo; copyrights.</p>
         </section>
 
         <section aria-labelledby="copyright-contact">
-          <h3 id="copyright-contact">Contact</h3>
+          <h2 className="section-heading" id="copyright-contact">Contact</h2>
           <p>
             A notice goes to the designated agent above. Other questions: email <a href={CONTACT_URL}>{CONTACT_EMAIL}</a>.
           </p>

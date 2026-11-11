@@ -11,9 +11,10 @@
 // before #3015 becomes the level it names on its first edit, and only the next level of a ladder, every level below it
 // owned, is offered a held token (R3015004). R3013001: an owned card also shows its proficiency and its stamps
 // (ProficiencyPanel.tsx). R3016001: hovering a rung also opens that level's hover preview, the card, in hand and on
-// the board (LookHover.tsx), beside the rung.
+// the board (LookHover.tsx), beside the rung. R3221000: the view is a `dialog` drawn through `Dialog.tsx`, whose keys,
+// scrim and ✕ it takes; the card's text and the fullscreen preview open over it as layers of their own.
 
-import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { useContext, useMemo, useState, type ReactElement } from "react";
 
 import { MAX_COPIES } from "@jackioh/engine/config";
 import type { CardDef } from "@jackioh/shared";
@@ -35,8 +36,8 @@ import {
 } from "../cards/cosmetics.ts";
 import { FullArtShown, OwnCopy, useOwnCopy } from "../cards/fullArt.ts";
 import type { FaceModel } from "../cards/model.ts";
+import { Dialog } from "../game/Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { useBackLayer } from "../net/backLayers.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { SampleFace } from "./CosmeticLook.tsx";
 import {
@@ -51,7 +52,8 @@ import {
   type StripItem,
   type StripKind,
 } from "./collection.ts";
-import ItemPreview, { trapTab, usePreviewHold } from "./ItemPreview.tsx";
+import GrantReveal, { type GrantItem } from "../economy/GrantReveal.tsx";
+import ItemPreview, { usePreviewHold } from "./ItemPreview.tsx";
 import { LookHoverPanel, useLookHover } from "./LookHover.tsx";
 import ProficiencyPanel from "./ProficiencyPanel.tsx";
 import TokenOffer, { offerTier, useHeldTokens } from "./TokenOffer.tsx";
@@ -256,8 +258,9 @@ export default function CardCosmeticsView({
   const picks = useCardPicks(def.id);
   const [preview, setPreview] = useState<Shown | null>(null);
   const [previewing, setPreviewing] = useState<string | null>(null);
+  // R3349000: a bought level reveals the card wearing it before the preview closes.
+  const [grant, setGrant] = useState<GrantItem | null>(null);
   const [textOpen, setTextOpen] = useState(false);
-  const closeButton = useRef<HTMLButtonElement>(null);
   // R3016001: the hovered rung's preview in the three views.
   const hover = useLookHover();
   // A face is worded in the reader's language, so a switch of language makes it again.
@@ -272,28 +275,6 @@ export default function CardCosmeticsView({
   const [tokens, setTokens] = useHeldTokens(offering ? token : null);
   const shown: Shown[] = [...strip.flatMap((group) => group.items), ...rungs];
   const previewed = shown.find((item) => item.id === previewing) ?? null;
-
-  // Focus moves in and goes back to the card that opened the view; Escape closes it, unless the card's text is over it.
-  useLayoutEffect(() => {
-    const opener = document.activeElement;
-    closeButton.current?.focus({ preventScroll: true });
-    return () => {
-      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
-    };
-  }, []);
-  useEffect(() => {
-    if (textOpen || previewing !== null) return undefined;
-    const onKeyDown = (event: globalThis.KeyboardEvent): void => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [textOpen, previewing, onClose]);
-  // R2127000: Back closes the view as Close does, and the focus goes back as above. The card's text,
-  // opened over it, is a layer of its own on top, so Back closes that first.
-  useBackLayer(onClose);
 
   const equip = (item: StripItem): void => {
     if (item.owned) writeCardPick(def.id, item.kind, resolveCosmetic(item.kind, item.id));
@@ -318,24 +299,29 @@ export default function CardCosmeticsView({
         held={tokens}
         name={item.name}
         onRedeemed={setTokens}
+        onReveal={setGrant}
       />
     );
   };
 
+  // R3221000: the ✕ takes the focus as the view opens, and the focus goes back to the card that opened it as it
+  // closes. Escape and Back (R2127000) close it as the ✕ does, but the card's text and the preview, opened over
+  // it, are layers of their own on top, so they close first.
   return (
     <OwnCopy own>
-      <div className="collection-cardview" data-testid={T.cardView} data-card={def.id} role="dialog" aria-modal="true" aria-label={readerName(def)} onKeyDown={trapTab}>
-        <div
-          className="collection-cardview__scrim"
-          aria-hidden="true"
-          onClick={() => {
-            onClose();
-          }}
-        />
-        <div className="collection-cardview__panel">
+      <Dialog
+        role="dialog"
+        testid={T.cardView}
+        data={{ "data-card": def.id }}
+        closeTestid={T.cardViewClose}
+        className="collection-cardview__panel"
+        title={readerName(def)}
+        onClose={onClose}
+        actions={[]}
+      >
+        <div className="collection-cardview__body">
           <LargeFace face={face} preview={preview} />
           <div className="collection-cardview__side">
-            <h3 className="collection-cardview__title">{readerName(def)}</h3>
             <p className="collection-cardview__status">{owned ? t("Owned") : t("Not owned yet")}</p>
             <p className="collection-cardview__hint">
               {t("Hover or focus a cosmetic to see it on the card. Choose one to wear it on this card only.")}
@@ -390,9 +376,6 @@ export default function CardCosmeticsView({
               >
                 {t("Card text")}
               </button>
-              <button type="button" ref={closeButton} className="collection-cardview__close" data-testid={T.cardViewClose} onClick={onClose}>
-                {t("Close")}
-              </button>
             </div>
           </div>
         </div>
@@ -408,7 +391,7 @@ export default function CardCosmeticsView({
             meta={<span>{owned ? t("Owned") : t("Not owned yet")}</span>}
           />
         ) : null}
-      </div>
+      </Dialog>
       {previewed === null ? null : (
         <ItemPreview
           id={previewed.id}
@@ -424,6 +407,15 @@ export default function CardCosmeticsView({
           }
           offer={previewed.owned ? null : offer(previewed)}
           onClose={() => {
+            setPreviewing(null);
+          }}
+        />
+      )}
+      {grant === null ? null : (
+        <GrantReveal
+          items={[grant]}
+          onDone={() => {
+            setGrant(null);
             setPreviewing(null);
           }}
         />

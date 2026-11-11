@@ -20,6 +20,7 @@ import {
 } from "../../practice/config.ts";
 import type { PracticeHost } from "../../practice/host.ts";
 import type { PracticeRequestBody, PracticeResponse, PracticeSnapshot, PracticeStartConfig } from "../../practice/protocol.ts";
+import { CONCEDE_BODY } from "../../game/ConfirmConcede.tsx";
 import { baseView, emptySide } from "../../test/fixtures.ts";
 import { stubPhoneBar } from "../../test/phoneBar.ts";
 import { settle } from "../../test/settle.ts";
@@ -95,6 +96,7 @@ type FightHost = {
   factory: Mock<() => PracticeHost>;
   requests: PracticeRequestBody[];
   starts(): PracticeStartConfig[];
+  resumes(): PracticeStartConfig[];
   reports(): number;
   aiSteps(): number;
 };
@@ -102,17 +104,32 @@ type FightHost = {
 /**
  * The worker, scripted: a conceded game is lost; `runReport` answers each of `reports` in turn, then the
  * action. With `aiToAct` the game starts on the AI's turn, and an `aiStep` is answered with the AI done.
+ * `resume` answers `started` only when asked, else `failed`; the first `startFails` starts fail.
  */
-function fightHost(reports: ("action" | "error")[] = [], aiToAct = false): FightHost {
+function fightHost(reports: ("action" | "error")[] = [], aiToAct = false, resume: "started" | "failed" = "failed", startFails = 0): FightHost {
   const requests: PracticeRequestBody[] = [];
   let id = 0;
+  let failures = startFails;
   const host: PracticeHost = {
     request(body) {
       requests.push(body);
       id += 1;
       const mine = id;
       let response: PracticeResponse = { id: mine, type: "snapshot", snapshot: snapshotFor() };
-      if (body.type === "start") response = { id: mine, type: "started", snapshot: snapshotFor(null, aiToAct), defs: {}, aiSeat: "p2" };
+      if (body.type === "resume") {
+        response =
+          resume === "started"
+            ? { id: mine, type: "started", snapshot: snapshotFor(null, aiToAct), defs: {}, aiSeat: "p2" }
+            : { id: mine, type: "failed", message: "no practice game is saved on this device" };
+      }
+      if (body.type === "start") {
+        if (failures > 0) {
+          failures -= 1;
+          response = { id: mine, type: "failed", message: "the fight could not be dealt" };
+        } else {
+          response = { id: mine, type: "started", snapshot: snapshotFor(null, aiToAct), defs: {}, aiSeat: "p2" };
+        }
+      }
       if (body.type === "act" && body.action.type === "concede") {
         response = { id: mine, type: "snapshot", snapshot: snapshotFor({ winner: "p2", reason: "concede" }) };
       }
@@ -130,6 +147,7 @@ function fightHost(reports: ("action" | "error")[] = [], aiToAct = false): Fight
     factory: vi.fn(() => host),
     requests,
     starts: () => requests.flatMap((body) => (body.type === "start" ? [body.config] : [])),
+    resumes: () => requests.flatMap((body) => (body.type === "resume" ? [body.config] : [])),
     reports: () => requests.filter((body) => body.type === "runReport").length,
     aiSteps: () => requests.filter((body) => body.type === "aiStep").length,
   };
@@ -137,13 +155,14 @@ function fightHost(reports: ("action" | "error")[] = [], aiToAct = false): Fight
 
 function fakeDungeon(
   act: Mock<(action: RunAction) => string | null>,
-  startedAt: number | null = Date.now() - 65_000,
+  elapsedMs: number | null = 65_000,
 ): Dungeon {
   return {
     content: CONTENT,
     progress: { unlocks: {}, embers: 0 },
     run: RUN,
-    startedAt,
+    elapsedMs,
+    resumedAt: null,
     start: vi.fn(() => null),
     act,
     abandon: vi.fn(),
@@ -310,18 +329,18 @@ describe("B25, B26 the fight's end goes to the run", () => {
 });
 
 describe("R2972000 leaving a fight in progress asks first", () => {
-  it("R2972000 leaving a fight in progress is held and says the fight starts over", async () => {
+  it("R2972000 leaving a fight in progress is held and says the fight waits", async () => {
     at(paths.dungeon);
     const host = fightHost();
     renderFight(host, fakeDungeon(vi.fn(() => null)));
     await screen.findByTestId(fightTestid.screen);
 
-    // An in-app move off the fight is held, and the question says the fight starts over.
+    // An in-app move off the fight is held, and the question says the fight waits where it stood.
     expect(navigate(paths.play)).toBe(false);
     expect(window.location.pathname).toBe(paths.dungeon);
     const dialog = await screen.findByTestId(fightTestid.leaveDialog);
     expect(dialog).toHaveAttribute("role", "alertdialog");
-    expect(dialog).toHaveTextContent("It ends here and the fight starts over from its first turn.");
+    expect(dialog).toHaveTextContent("It waits here and picks up where you left it.");
     expect(screen.getByTestId(fightTestid.leaveStay)).toHaveFocus();
 
     // Stay keeps the fight: still no report asked for, and the same game carries on.
@@ -340,11 +359,60 @@ describe("R2972000 leaving a fight in progress asks first", () => {
     await screen.findByTestId(fightTestid.screen);
 
     expect(navigate(paths.play)).toBe(false);
-    fireEvent.click(await screen.findByTestId(fightTestid.leaveConfirm));
+    const leave = await screen.findByTestId(fightTestid.leaveConfirm);
+    // #3219: Leave fight is the danger role.
+    expect(leave).toHaveClass("button-danger");
+    fireEvent.click(leave);
     expect(window.location.pathname).toBe(paths.play);
     expect(screen.getByTestId(fightTestid.screen)).toBeInTheDocument();
     expect(host.starts()).toHaveLength(1);
     at("/");
+  });
+
+  it("R2972000 a fight's Concede says the run ends", async () => {
+    const host = fightHost();
+    renderFight(host, fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    // Asking sends nothing; the question says what a lost fight costs, not the usual game-only body.
+    fireEvent.click(screen.getByTestId("concede"));
+    const dialog = screen.getByTestId("concede-dialog");
+    expect(dialog).toHaveAccessibleDescription("Your opponent wins, and the whole run ends here for good.");
+    expect(dialog).not.toHaveTextContent(CONCEDE_BODY);
+    expect(host.reports()).toBe(0);
+  });
+
+  it("R3476000 a kept fight is picked up where it stood, and no fresh game is dealt", async () => {
+    const host = fightHost([], false, "started");
+    renderFight(host, fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    expect(host.resumes()).toEqual([expect.objectContaining({ seed: SETUP.seed, humanSeat: "p1", run: SETUP })]);
+    expect(host.starts(), "the kept fight is picked up, not dealt fresh").toHaveLength(0);
+  });
+
+  it("R3476000 a fight no save folds for is dealt fresh from its seed", async () => {
+    const host = fightHost([], false, "failed");
+    renderFight(host, fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    expect(host.resumes()).toHaveLength(1);
+    expect(host.starts()).toEqual([expect.objectContaining({ seed: SETUP.seed, humanSeat: "p1", run: SETUP })]);
+  });
+
+  it("R2972000 Try again deals the fight fresh, never resuming", async () => {
+    const host = fightHost([], false, "failed", 1);
+    renderFight(host, fakeDungeon(vi.fn(() => null)));
+
+    // The kept fight misses and the first deal fails: the stopped screen, with no game running.
+    expect(await screen.findByTestId(fightTestid.failed)).toBeInTheDocument();
+    expect(host.resumes()).toHaveLength(1);
+    expect(host.starts()).toHaveLength(1);
+
+    fireEvent.click(screen.getByTestId(fightTestid.retry));
+    await screen.findByTestId(fightTestid.screen);
+    expect(host.starts(), "Try again deals the same fight fresh").toHaveLength(2);
+    expect(host.resumes(), "Try again never resumes").toHaveLength(1);
   });
 
   it("R2972000 once the fight has its result nothing is held", async () => {

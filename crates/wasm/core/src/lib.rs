@@ -188,6 +188,20 @@ pub fn run_content() -> Result<String, String> {
     to_json(&jackioh_run::run_catalog_content(engine::registered_catalog()))
 }
 
+/// R3496000: `RunContent` for a catalog version: the build's own answers `run_content()`; a
+/// carried version answers `run_catalog_content` over its carried shipped catalog; any other
+/// version answers `null`, which the store settles as lost.
+pub fn run_content_at(version_json: &str) -> Result<String, String> {
+    let version: String = parse("runContentAt: the version", version_json)?;
+    if version == jackioh_cards::catalog_version() {
+        return run_content();
+    }
+    match jackioh_cards::shipped_catalog(&version) {
+        Some(shipped) => to_json(&jackioh_run::run_catalog_content(shipped.defs())),
+        None => Ok("null".to_owned()),
+    }
+}
+
 /// `null` when the setup may start a run, else the reason.
 pub fn run_check_setup(setup_json: &str, unlocks_json: &str, content_json: &str) -> Result<String, String> {
     let setup: RunSetup = parse("runCheckSetup: the setup", setup_json)?;
@@ -263,6 +277,14 @@ pub fn run_max_hp(state_json: &str, content_json: &str) -> Result<String, String
     let state: RunState = parse("runMaxHp: the state", state_json)?;
     let content: RunContent = parse("runMaxHp: the content", content_json)?;
     to_json(&jackioh_run::run_max_hp(&state, &content))
+}
+
+/// What a shop's services cost this run: the Coin prices after the discount, the Ticket prices and
+/// each relic's next level.
+pub fn run_shop_prices(state_json: &str, content_json: &str) -> Result<String, String> {
+    let state: RunState = parse("runShopPrices: the state", state_json)?;
+    let content: RunContent = parse("runShopPrices: the content", content_json)?;
+    to_json(&jackioh_run::run_shop_prices(&state, &content))
 }
 
 /// The Embers that raise the starting deck from `level` to the next, or `null` at the ladder's top.
@@ -435,6 +457,55 @@ pub fn ai_to_act(state_json: &str, seat: &str) -> Result<bool, String> {
     Ok(jackioh_ai::ai_to_act(&state, player(seat)?))
 }
 
+/// R3498000: a host's clock for one search, the deadline and the wrap-up `AI_WRAP_UP_SHARE` of the way
+/// there from the call's start (`jackioh_ai::wrap_up_after_ms`). None for `deadline_ms <= 0`: then no
+/// clock is read at all (the C module's `no_clock`).
+struct SearchClock {
+    deadline_ms: f64,
+    wrap_up_ms: f64,
+    now_ms: fn() -> f64,
+}
+
+impl SearchClock {
+    fn begin(deadline_ms: f64, now_ms: fn() -> f64) -> Option<SearchClock> {
+        if deadline_ms <= 0.0 {
+            return None;
+        }
+        let began = now_ms();
+        let left_ms = (deadline_ms - began).max(0.0) as i64;
+        Some(SearchClock {
+            deadline_ms,
+            wrap_up_ms: began + jackioh_ai::wrap_up_after_ms(left_ms) as f64,
+            now_ms,
+        })
+    }
+
+    /// The hard stop: the deadline has passed.
+    fn should_stop(&self) -> bool {
+        (self.now_ms)() >= self.deadline_ms
+    }
+
+    /// The beam's stop (`AiOptions.wrap_up`): the wrap-up has passed.
+    fn wrap_up(&self) -> bool {
+        (self.now_ms)() >= self.wrap_up_ms
+    }
+}
+
+/// One of `decide`'s clock callbacks, `AiOptions.should_stop` or `wrap_up`.
+type ClockPoll<'a> = Option<&'a dyn Fn() -> bool>;
+
+/// `decide`'s two callbacks, `stop` and `wrap`: none without a clock.
+fn clocked<'a>(
+    clock: Option<&SearchClock>,
+    stop: &'a dyn Fn() -> bool,
+    wrap: &'a dyn Fn() -> bool,
+) -> (ClockPoll<'a>, ClockPoll<'a>) {
+    match clock {
+        Some(_) => (Some(stop), Some(wrap)),
+        None => (None, None),
+    }
+}
+
 /// `ai_decide`'s options: the AI's own stream, where it stands, and the budget (default `AI_BUDGET`).
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -447,8 +518,10 @@ struct DecideOptions {
 
 /// `{ decision: Decision | null, rngCursor }`. The AI draws only from its own stream, rebuilt here from
 /// `(rngSeed, rngCursor)`; the cursor it stopped at comes back so the caller resumes it there. Once
-/// `now_ms()` passes `deadline_ms` the search answers with its best so far; `deadline_ms <= 0` means no
-/// clock, so the decision depends only on `(state, seed, cursor, budget)`.
+/// `now_ms()` passes `deadline_ms` the search answers with its best so far, and past its wrap-up, the
+/// share `AI_WRAP_UP_SHARE` of the time left at the call, its beam explores no further so that the reply
+/// and the other worlds still run (R3498000, `SearchClock`); `deadline_ms <= 0` means no clock, so the
+/// decision depends only on `(state, seed, cursor, budget)`.
 pub fn ai_decide(
     state_json: &str,
     seat: &str,
@@ -456,19 +529,19 @@ pub fn ai_decide(
     deadline_ms: f64,
     now_ms: fn() -> f64,
 ) -> Result<String, String> {
+    // The clock starts before the parse, which the time limit covers.
+    let clock = SearchClock::begin(deadline_ms, now_ms);
     let state = state_of("decide", state_json)?;
     let seat = player(seat)?;
     let request: DecideOptions = parse("decide: the options", options_json)?;
-    let clock = move || now_ms() >= deadline_ms;
-    let should_stop = if deadline_ms > 0.0 {
-        Some(&clock as &dyn Fn() -> bool)
-    } else {
-        None
-    };
+    let stop = || clock.as_ref().is_some_and(SearchClock::should_stop);
+    let wrap = || clock.as_ref().is_some_and(SearchClock::wrap_up);
+    let (should_stop, wrap_up) = clocked(clock.as_ref(), &stop, &wrap);
     let mut options = jackioh_ai::AiOptions {
         rng: Rng::new(&request.rng_seed, request.rng_cursor),
         budget: request.budget.unwrap_or(jackioh_ai::AI_BUDGET),
         should_stop,
+        wrap_up,
     };
     let decision = jackioh_ai::decide(&state, seat, &mut options);
     to_json(&json!({ "decision": decision, "rngCursor": options.rng.cursor() }))
@@ -819,18 +892,18 @@ pub fn bots(call_json: &str) -> Result<String, String> {
 
 /// The move a ladder bot owes: the input is a `DecideCall` (`{ "host": <the DuelHost>, "request": <the
 /// DecideRequest the machine made> }`), the output the `BotChoice` to feed the machine back as
-/// `{ "event": "decided", … }`. Once `now_ms()` passes `deadline_ms` the search answers with its best so far;
-/// `deadline_ms <= 0` means no clock, so the decision depends only on its inputs and the strength's budget.
+/// `{ "event": "decided", … }`. Once `now_ms()` passes `deadline_ms` the search answers with its best so far,
+/// its beam wrapped up as `ai_decide`'s is (R3498000); `deadline_ms <= 0` means no clock, so the decision
+/// depends only on its inputs and the strength's budget.
 pub fn bot_decide(call_json: &str, deadline_ms: f64, now_ms: fn() -> f64) -> Result<String, String> {
+    // The clock starts before the parse, which the time limit covers.
+    let clock = SearchClock::begin(deadline_ms, now_ms);
     let call: jackioh_shared::host::boundary::DecideCall = parse("botDecide: the call", call_json)?;
     jackioh_cards::register_all();
-    let clock = move || now_ms() >= deadline_ms;
-    let should_stop = if deadline_ms > 0.0 {
-        Some(&clock as &dyn Fn() -> bool)
-    } else {
-        None
-    };
-    match jackioh_shared::host::boundary::decide(&call, should_stop) {
+    let stop = || clock.as_ref().is_some_and(SearchClock::should_stop);
+    let wrap = || clock.as_ref().is_some_and(SearchClock::wrap_up);
+    let (should_stop, wrap_up) = clocked(clock.as_ref(), &stop, &wrap);
+    match jackioh_shared::host::boundary::decide(&call, should_stop, wrap_up) {
         Some(choice) => to_json(&choice),
         None => Err(format!(
             "botDecide: no bot plays at {} in this host",
@@ -1106,7 +1179,7 @@ mod run_body_tests {
         );
     }
 
-    // B12: a `go` from the initial Map answers `{ state }`, a `heal` answers `{ error }`.
+    // B12: a `go` from the initial Map answers `{ state }`, a `gainMaxHp` answers `{ error }`.
     #[test]
     fn run_reduce_body_serializes_state_and_refusal() {
         let content = content();
@@ -1119,16 +1192,21 @@ mod run_body_tests {
             jackioh_run::run_reduce(&state, &content, &go).unwrap()
         );
         assert!(answer.error.is_none());
-        let text = run_reduce(&json_of(&state), &json_of(&content), &json_of(&RunAction::Heal)).unwrap();
+        let text = run_reduce(
+            &json_of(&state),
+            &json_of(&content),
+            &json_of(&RunAction::GainMaxHp),
+        )
+        .unwrap();
         let answer: StateAnswer = serde_json::from_str(&text).unwrap();
         assert!(answer.state.is_none());
         assert_eq!(
             answer.error.unwrap(),
-            jackioh_run::run_reduce(&state, &content, &RunAction::Heal).unwrap_err()
+            jackioh_run::run_reduce(&state, &content, &RunAction::GainMaxHp).unwrap_err()
         );
     }
 
-    // B12: folding one `go` answers `{ state }`, folding a `heal` names the refused step.
+    // B12: folding one `go` answers `{ state }`, folding a `gainMaxHp` names the refused step.
     #[test]
     fn run_fold_body_serializes_state_and_refusal() {
         let content = content();
@@ -1149,7 +1227,7 @@ mod run_body_tests {
         let bad = jackioh_run::RunFile {
             setup,
             unlocks,
-            log: vec![RunAction::Heal],
+            log: vec![RunAction::GainMaxHp],
         };
         let text = run_fold(&json_of(&bad), &json_of(&content)).unwrap();
         let answer: StateAnswer = serde_json::from_str(&text).unwrap();
@@ -1227,6 +1305,18 @@ mod run_body_tests {
         assert_eq!(
             serde_json::from_str::<i32>(&text).unwrap(),
             jackioh_run::run_max_hp(&state, &content)
+        );
+    }
+
+    // B12: the shop-prices body serializes `run_shop_prices`.
+    #[test]
+    fn run_shop_prices_body_serializes_prices() {
+        let content = content();
+        let state = state(&content);
+        let text = run_shop_prices(&json_of(&state), &json_of(&content)).unwrap();
+        assert_eq!(
+            serde_json::from_str::<jackioh_run::RunShopPrices>(&text).unwrap(),
+            jackioh_run::run_shop_prices(&state, &content)
         );
     }
 
@@ -1586,5 +1676,57 @@ mod economy_body_tests {
             let error = economy(call).unwrap_err();
             assert!(error.starts_with("economy: the call"), "{call:?}: {error}");
         }
+    }
+}
+
+#[cfg(test)]
+mod search_clock_tests {
+    use std::cell::Cell;
+
+    use super::*;
+
+    thread_local! {
+        /// The fake clock's time, in ms.
+        static NOW: Cell<f64> = const { Cell::new(0.0) };
+    }
+
+    fn fake_now() -> f64 {
+        NOW.with(Cell::get)
+    }
+
+    fn at(ms: f64) {
+        NOW.with(|now| now.set(ms));
+    }
+
+    /// A clock a body must never read.
+    fn never_read() -> f64 {
+        unreachable!("no deadline, no clock")
+    }
+
+    /// R3498000: the wrap-up falls `AI_WRAP_UP_SHARE` of the way from the call's start to its deadline;
+    /// only it fires between the two, and both past the deadline. No deadline reads no clock.
+    #[test]
+    fn r3498000_a_search_clock_wraps_up_at_its_share_of_the_time_left_and_stops_at_the_deadline() {
+        at(1000.0);
+        let clock = SearchClock::begin(4000.0, fake_now).expect("a deadline is a clock");
+        let wrap_at = 1000.0 + jackioh_ai::wrap_up_after_ms(3000) as f64;
+        assert!(wrap_at > 1000.0 && wrap_at < 4000.0, "{wrap_at}");
+
+        at(wrap_at - 1.0);
+        assert!(!clock.wrap_up() && !clock.should_stop());
+        at(wrap_at);
+        assert!(clock.wrap_up() && !clock.should_stop());
+        at(4000.0);
+        assert!(clock.wrap_up() && clock.should_stop());
+
+        let stop = || clock.should_stop();
+        let wrap = || clock.wrap_up();
+        let (should_stop, wrap_up) = clocked(Some(&clock), &stop, &wrap);
+        assert!(should_stop.is_some() && wrap_up.is_some());
+        let (should_stop, wrap_up) = clocked(None, &stop, &wrap);
+        assert!(should_stop.is_none() && wrap_up.is_none());
+
+        assert!(SearchClock::begin(0.0, never_read).is_none());
+        assert!(SearchClock::begin(-1.0, never_read).is_none());
     }
 }

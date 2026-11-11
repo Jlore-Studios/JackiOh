@@ -843,3 +843,82 @@ mod stop {
         assert!(table.host.is_stopped());
     }
 }
+
+mod the_forecast {
+    use super::*;
+
+    /// The ids of the attacks among `legal`, in its order.
+    fn attacks(legal: &[DuosActionBody]) -> Vec<(String, String)> {
+        legal
+            .iter()
+            .filter_map(|body| match body {
+                DuosActionBody::Duel {
+                    body:
+                        ActionBody::Attack {
+                            attacker_id,
+                            target_id,
+                        },
+                } => Some((attacker_id.clone(), target_id.clone())),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn forecasts_an_attack(sent: &[DuosSeatMessage]) -> bool {
+        sent.iter().any(|message| {
+            matches!(message, DuosSeatMessage::View { forecast: Some(forecast), .. } if !forecast.attacks.is_empty())
+        })
+    }
+
+    #[test]
+    fn r3477000_a_duos_seats_view_holds_the_forecast_of_the_attacks_it_is_offered() {
+        let mut table = Table::new(setup(opening("r3477000-duos")));
+        table.connect(A1);
+        table.connect(A2);
+        table.feed(DuosHostEvent::Arm);
+        table.through_the_mulligans();
+        for step in 0..400 {
+            if table.host.is_finished() || table.sent.iter().any(|sent| forecasts_an_attack(sent)) {
+                break;
+            }
+            for seat in [A1, A2] {
+                let legal = table.host.legal(seat);
+                let duel = |wanted: fn(&ActionBody) -> bool| {
+                    legal
+                        .iter()
+                        .find(|body| matches!(body, DuosActionBody::Duel { body } if wanted(body)))
+                        .cloned()
+                };
+                let Some(body) = duel(|body| matches!(body, ActionBody::Play { .. }))
+                    .or_else(|| duel(|body| matches!(body, ActionBody::Answer { .. })))
+                    .or_else(|| duel(|body| matches!(body, ActionBody::EndTurn)))
+                else {
+                    continue;
+                };
+                table.act(seat, &format!("r3477000-{step}-{seat}"), body);
+            }
+            table.sleep(DUOS_AI_STEP_DELAY_MS);
+            table.answer_searches();
+        }
+        assert!(
+            table.sent.iter().any(|sent| forecasts_an_attack(sent)),
+            "the premise: some seat is offered an attack"
+        );
+        for sent in &table.sent {
+            for message in sent {
+                let DuosSeatMessage::View { legal, forecast, .. } = message else {
+                    continue;
+                };
+                let forecast = forecast
+                    .as_ref()
+                    .expect("R3477000: every seat's view holds a forecast");
+                let forecast_ids: Vec<(String, String)> = forecast
+                    .attacks
+                    .iter()
+                    .map(|entry| (entry.attacker_id.clone(), entry.target_id.clone()))
+                    .collect();
+                assert_eq!(forecast_ids, attacks(legal));
+            }
+        }
+    }
+}

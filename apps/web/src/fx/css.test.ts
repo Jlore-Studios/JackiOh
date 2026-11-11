@@ -5,6 +5,8 @@
 
 import { describe, expect, it } from "vitest";
 import { readSheet } from "../test/setup.ts";
+import { FX_FIGURES } from "./figures.ts";
+import { TAKEOVER_ART_PARTS } from "./takeoverArt.ts";
 
 /* Reading and parsing */
 
@@ -141,6 +143,7 @@ const isZero = (value: string | undefined): boolean => value !== undefined && /^
 const fx = parseSheet(readSheet("src/fx/fx.css"));
 const anim = parseSheet(readSheet("src/game/animations.css"));
 const surfaces = parseSheet(readSheet("src/surfaces.css"));
+const tile = parseSheet(readSheet("src/fx/aura/tile.css"));
 
 /** A `z-index` as its number: a layer token (`var(--z-…)`, #2109) reads through surfaces.css. */
 function layerOf(value: string | undefined): string | undefined {
@@ -185,6 +188,17 @@ const DOM_KINDS = {
   takeover: "fx-takeover-in",
   setPiece: "fx-set-piece-in",
   launch: "fx-launch-in",
+  module: "fx-module-in",
+  weld: "fx-weld-in",
+  cinematic: "fx-cinematic-in",
+  doctrine: "fx-doctrine-in",
+  wreck: "fx-wreck-in",
+  scorch: "fx-scorch-in",
+  rift: "fx-rift-in",
+  anomalyTitle: "fx-anomaly-title-in",
+  radar: "fx-radar-in",
+  ship: "fx-ship-in",
+  figure: "fx-figure-in",
 } as const;
 
 const POP_GATE = normSelector('.game:has(> .fx-layer[data-fx="on"])');
@@ -316,6 +330,27 @@ describe("B40 — fx.css", () => {
         `.fx-${kind} runs for var(--fx-ms)`,
       ).toBe(true);
     }
+  });
+
+  it("R3400001 every figure and art part has a rule", () => {
+    // Each figure is drawn by its own ::before (and maybe ::after), animated by keyframes fx.css defines.
+    for (const figure of FX_FIGURES) {
+      const before = declsFor(fx, `.fx-figure[data-figure="${figure}"]::before`);
+      expect(before.size, `${figure}'s ::before`).toBeGreaterThan(0);
+      for (const [, value] of before) expect(value, figure).not.toMatch(/url\(/);
+    }
+    // R3400000: each takeover look's art parts, at rest under `.takeover-art-<part>` and the motion only under `.fx-takeover`.
+    const parts = Object.values(TAKEOVER_ART_PARTS).flat();
+    expect(parts.length).toBeGreaterThan(0);
+    for (const part of parts) expect(declsFor(fx, `.takeover-art-${part}`).size, part).toBeGreaterThan(0);
+    const still = fx.rules.filter((rule) => !isReduced(rule) && rule.selectors.some((s) => /^\.takeover-art-[\w-]+$/.test(normSelector(s))));
+    for (const rule of still) expect(rule.decls.has("animation"), rule.selectors.join(", ")).toBe(false);
+    for (const look of Object.keys(TAKEOVER_ART_PARTS)) {
+      expect(declsFor(fx, `.fx-takeover[data-look="${look}"] .fx-takeover-sweep`).get("display"), look).toBe("none");
+    }
+    // Under the mirror and the second card's size the figure scales, flipped for the other seat.
+    expect(declsFor(fx, '.fx-figure[data-side="opponent"]').get("scale")).toBe("1 -1");
+    expect(declsFor(fx, '.fx-figure[data-size="small"]').get("scale")).toBe("0.6");
   });
 
   it("B40 the splat is a clip-path starburst and the rays a repeating conic gradient", () => {
@@ -574,5 +609,33 @@ describe("Every motion runs on the compositor (review: lunge, splat, dissolve, h
     expect(compositorOnly({ name: "mask-position", value: "0 100%" })).toBe(false);
     expect(compositorOnly({ name: "box-shadow", value: "0 0 4px red" })).toBe(false);
     expect(compositorOnly({ name: "filter", value: "brightness(1.2) sepia(40%)" })).toBe(true);
+  });
+});
+
+describe("R3342000 tile.css", () => {
+  it("R3342000 tile.css keyframes pass compositorOnly", () => {
+    const bodies = keyframeBodies(tile);
+    expect(bodies.size).toBeGreaterThan(0);
+    const offenders: string[] = [];
+    for (const [name, body] of bodies) {
+      for (const decl of animatedDecls(body)) {
+        if (!compositorOnly(decl)) offenders.push(`${name}: ${decl.name}: ${decl.value}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("R3342000 both reduced-motion blocks set animation: none", () => {
+    const mediaReduced = tile.rules.filter((rule) => rule.media !== null && REDUCED.test(rule.media));
+    expect(mediaReduced.length).toBeGreaterThan(0);
+    for (const rule of mediaReduced) {
+      expect(rule.decls.get("animation")).toMatch(/^none/);
+    }
+
+    const rootReduced = tile.rules.filter((rule) => rule.selectors.some((s) => s.includes(':root[data-reduce-motion="true"]')));
+    expect(rootReduced.length).toBeGreaterThan(0);
+    for (const rule of rootReduced) {
+      expect(rule.decls.get("animation")).toMatch(/^none/);
+    }
   });
 });

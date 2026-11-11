@@ -57,11 +57,11 @@ mod tests {
     use crate::scenario;
 
     const DEVOUR: &str = "classicplus-012-1";
-    const MENACE: &str = "core-019"; // 9/9
-    const ROCK: &str = "core-066"; // 10/10 Indestructible
-    const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2
-    const ANIME_ARMOR: &str = "classicplus-011"; // Aura: your hero takes at most 1 damage at a time
-    const BLOOD_MOON: &str = "classicplus-022"; // Trap: enemy heals become Pierce damage
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const ROCK: &str = "core-066"; // The Rock: Indestructible
+    const SOLARIUS: &str = "classicplus-038"; // Solarius: Spell Damage +2
+    const ANIME_ARMOR: &str = "classicplus-011"; // Anime Armor: Aura: your hero takes at most 1 damage at a time
+    const BLOOD_MOON: &str = "classicplus-022"; // Blood Moon: enemy heals become Pierce damage
     const FILLER: &str = "core-005";
 
     use crate::merged;

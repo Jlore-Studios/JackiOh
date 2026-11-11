@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  MODULE_CACHE_CONTROL,
   MODULE_ROUTES,
   SERVER_PORT,
   SERVER_ROUTES,
@@ -81,6 +82,12 @@ describe("containerEnv", () => {
     });
   });
 
+  it("#3595 hands the container the alert email's key and addresses", () => {
+    const vars = containerEnv({ ALERT_RESEND_API_KEY: "re_key", ALERT_EMAILS: "a@example.com,b@example.com" });
+    expect(vars.ALERT_RESEND_API_KEY).toBe("re_key");
+    expect(vars.ALERT_EMAILS).toBe("a@example.com,b@example.com");
+  });
+
   it("leaves out an optional secret that is unset or empty, and anything that is not a server setting", () => {
     const settings = { CREATE_ISSUES_TOKEN: "", SERVER: "a binding" } as Parameters<typeof containerEnv>[0];
     expect(Object.keys(containerEnv(settings)).sort()).toEqual(["NODE_ENV", "PORT"]);
@@ -120,5 +127,23 @@ describe("#3183 the engine's brotli-compressed module", () => {
       const stored = new Response(null, { status });
       expect(precompressedModule(stored)).toBe(stored);
     }
+  });
+
+  it("adds the year-long Cache-Control when the stored answer lacks one", () => {
+    const stored = new Response(new Uint8Array([0x1b]), {
+      headers: { "Content-Type": "application/octet-stream", ETag: '"v1"' },
+    });
+    const served = precompressedModule(stored);
+    expect(served.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
+    expect(MODULE_CACHE_CONTROL).toBe("public, max-age=31536000, immutable");
+    expect(served.headers.get("Content-Type")).toBe("application/wasm");
+    expect(served.headers.get("Content-Encoding")).toBe("br");
+  });
+
+  it("keeps a stored Cache-Control it did not write", () => {
+    const stored = new Response(new Uint8Array([0x1b]), {
+      headers: { "Content-Type": "application/octet-stream", "Cache-Control": "public, max-age=60" },
+    });
+    expect(precompressedModule(stored).headers.get("Cache-Control")).toBe("public, max-age=60");
   });
 });

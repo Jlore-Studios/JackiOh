@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 
 import type {
   ActionBody,
+  AttackForecast,
   EmoteGate,
   EmoteId,
   GameEvent,
@@ -23,6 +24,7 @@ import { PROMPT_CARD_OPTION_LIMIT } from "@jackioh/engine/config";
 import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import type { SeatLoadouts } from "../cards/loadouts.ts";
 import type { EmoteShow } from "../emotes/session.ts";
+import type { HoveredAttack } from "./attackOutcome.ts";
 
 /** Viewer-relative sides. `viewFor` already orients the view, so the DOM says "you"/"opponent". */
 export type Side = "you" | "opponent";
@@ -141,6 +143,16 @@ export const testid = {
   marketBuy: (offer: number): string => `market-buy-${offer}`,
   /** R1853003: the sale of a Resource in the viewer's own tray, at the Marketplace's quote. */
   marketSell: (instanceId: string): string => `market-sell-${instanceId}`,
+  /**
+   * R3477000: the attack outcome on a legal target of the aimed attack (AttackOutcome.tsx), `target` its
+   * `card-…` or `hero-…` testid. No drag target reads it (drag/targets.ts), so a press walks up to the target.
+   */
+  attackOutcome: (target: string): string => `outcome-${target}`,
+  /**
+   * R3615000: the hovering attacker's own marker, wearing what the hovered target strikes back
+   * (`taken` on the forecast entry; AttackOutcome.tsx). `attacker` is its `card-…` testid.
+   */
+  attackOutcomeTaken: (attacker: string): string => `outcome-taken-${attacker}`,
 } as const;
 
 /** The CSS selector for the element whose testid is `id`, its quotes and backslashes escaped. */
@@ -223,11 +235,22 @@ export type Highlight = {
   condition?: ReadonlySet<string>;
   /**
    * #991, R583: the cards the hovered or selected hand card's preview counts, as `card-<id>` testids:
-   * its values' `ids` off the view (R1447 keeps them to cards the viewer reads), which Board.tsx adds
-   * for the field alone (`countedTestids`, glow.ts). Never from `legalActions`; no click reads it.
-   * Absent means nothing is ringed.
+   * its values' `ids` off the view (R1447 keeps them to cards the viewer reads), which Zone.tsx adds
+   * from the hover context for the field alone (`countedTestids`, glow.ts). Never from `legalActions`;
+   * no click reads it. Absent means nothing is ringed.
    */
   counted?: ReadonlySet<string>;
+  /**
+   * R3477000: the forecast of each legal target of the selected or dragged attacker, keyed by the
+   * target's testid (attackOutcome.ts): the engine's entries, picked by their ids and never computed
+   * here (CLAUDE.md rule 7). No click reads it. Absent means no target shows an outcome.
+   */
+  outcomes?: ReadonlyMap<string, AttackForecast>;
+  /**
+   * R3615000: the one hovered attack whose markers show (attackOutcome.ts): the target wears `dealt`,
+   * the attacker wears `taken`. No click reads it. Absent means nothing hovered shows a marker.
+   */
+  hoveredAttack?: HoveredAttack;
 };
 
 export const NO_HIGHLIGHT: Highlight = { legal: new Set(), selected: new Set() };
@@ -303,6 +326,8 @@ export type BoardProps = {
   showOfferDraw?: boolean;
   /** Cosmetic-only input guard for the sand playmat while the action builder owns a card gesture. */
   sandDisabled?: boolean;
+  /** R3348001: the animation queue is draining, so the playmat's corner props answer quietly. Absent, false. */
+  draining?: boolean;
   onClick?: (target: ClickTarget) => void;
   onControl?: (control: BoardControl) => void;
   /** One hero's emote surface per side, or undefined where a route does not run emotes. */

@@ -56,9 +56,9 @@ function series(overrides: Partial<SeriesView> = {}): SeriesView {
   };
 }
 
-/** The banner and the result panel's way on, as match.tsx mounts them. */
-function Harness({ gameOver }: { gameOver: boolean }) {
-  const found = useMatchSeries(TOKEN, MATCH_ID, gameOver);
+/** The banner and the result panel's way on, as match.tsx mounts them; `pushed` is the socket's last `series` frame. */
+function Harness({ gameOver, pushed = null }: { gameOver: boolean; pushed?: SeriesView | null }) {
+  const found = useMatchSeries(TOKEN, MATCH_ID, gameOver, pushed);
   return (
     <>
       <SeriesBanner series={found} matchId={MATCH_ID} gameOver={gameOver} />
@@ -185,5 +185,49 @@ describe("R3205000 the series banner in a hidden tab", () => {
 
     await settle({ advance: PERIOD });
     expect(reads()).toBe(first + 2);
+  });
+});
+
+describe("R3213000 the series the match socket pushes", () => {
+  const PERIOD = SERIES_POLL_SECONDS * 1000;
+  const reads = (): number => vi.mocked(getSeriesForMatch).mock.calls.length;
+
+  it("R3213000 a view pushed before the result is drawn, and nothing but the mount's read goes out through the result", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    vi.mocked(getSeriesForMatch).mockResolvedValue({ series: series() });
+    const { rerender } = render(<Harness gameOver={false} />);
+    await settle({ advance: 0 });
+    expect(reads()).toBe(1);
+
+    // The socket's greeting pushes the series, then the game ends and the series moves on to game 2's picks.
+    rerender(<Harness gameOver={false} pushed={series()} />);
+    await settle({ advance: 0 });
+    const next = series({ status: "picking", gameNo: 2, currentMatchId: null, you: { ...series().you, wins: 1 } });
+    rerender(<Harness gameOver pushed={next} />);
+    await settle({ advance: 3 * PERIOD });
+    expect(reads()).toBe(1);
+    expect(screen.getByTestId(seriesBannerTestid.continue)).toHaveTextContent("Continue to game 2");
+    expect(screen.getByTestId(seriesBannerTestid.banner)).toHaveTextContent("You 1 – 0 Opponent");
+    expect(screen.getByTestId(seriesBannerTestid.panelContinue)).toHaveAttribute("href", "/series/series-1");
+  });
+
+  it("R3213000 once the pushed view goes back to null, the banner keeps it and the poll starts again", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    vi.mocked(getSeriesForMatch).mockResolvedValue({ series: series() });
+    const { rerender } = render(<Harness gameOver={false} />);
+    await settle({ advance: 0 });
+    rerender(<Harness gameOver pushed={series()} />);
+    await settle({ advance: 3 * PERIOD });
+    expect(reads()).toBe(1);
+
+    // The socket dropped: one read at once, then one per period while the series goes on.
+    rerender(<Harness gameOver pushed={null} />);
+    await settle({ advance: 0 });
+    expect(screen.getByTestId(seriesBannerTestid.banner)).toBeInTheDocument();
+    expect(reads()).toBe(2);
+    await settle({ advance: PERIOD });
+    expect(reads()).toBe(3);
+    await settle({ advance: PERIOD });
+    expect(reads()).toBe(4);
   });
 });

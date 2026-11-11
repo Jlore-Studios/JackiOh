@@ -28,6 +28,7 @@ use crate::app::{App, now_ms};
 use crate::config::{MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use crate::db::store::{MatchSeat, QueueMode, Room, SeriesRow, StartMatchInput};
 use crate::seats::Seat;
+use crate::social::live::push_social;
 
 /// SPEC §11 R149: bounded retries against the codes in use; eight is far more than a 30-bit space
 /// (R104) needs against the codes R110 has not released. Config's, like R79's clocks.
@@ -437,9 +438,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     tx.seats_fence(app.seats.epoch()).await?;
     let claimed = tx.rooms_claim(&room.code, &profile_id, &match_id, now).await?;
     // B49: accept challenge in same transaction.
-    if claimed.is_some() {
-        tx.challenges_accept_room(&room.code, &profile_id, now).await?;
-    }
+    let accepted = claimed.is_some() && tx.challenges_accept_room(&room.code, &profile_id, now).await?;
     tx.commit().await?;
     let Some(claimed) = claimed else {
         return Err(ApiError::new(
@@ -537,6 +536,10 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             firstMatchId = %match_id,
             guestProfileId = %profile_id,
         );
+        if accepted {
+            // R3214000: the challenge is gone from both, once the series the challenger follows exists.
+            push_social(app, &[&claimed.host_profile_id, &profile_id]).await;
+        }
         return Ok(json_response(
             200,
             json!({
@@ -599,6 +602,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
                 seats,
                 mode: None,
                 stake: None,
+                win_rates: None,
             },
         )
         .await
@@ -638,6 +642,10 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         matchId = %match_id,
         guestProfileId = %profile_id,
     );
+    if accepted {
+        // R3214000: the challenge is gone from both, once the game the challenger follows has started.
+        push_social(app, &[&claimed.host_profile_id, &profile_id]).await;
+    }
     Ok(json_response(
         200,
         json!({

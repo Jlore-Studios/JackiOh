@@ -5,17 +5,24 @@
 // so nothing begins at mount. Reduced motion leaves the tint and the edge still, with no canvas and no
 // loop; the effects intensity `off` draws nothing. Components take the view and nothing else (CLAUDE.md
 // rule 7): no definition reaches the page (R202).
+//
+// R3337003: an Anomaly's backdrop is a side aura that also carries its board's code (`data-anomaly`) and
+// its faint picture, the card art's own (cards/art `CardArt`, never an image of this layer's, B27), both
+// public (R202); reduced motion plans none.
 
-import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
+import { useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactElement } from "react";
 
-import type { PlayerView } from "@jackioh/shared";
+import type { PlayerId, PlayerView, Tag } from "@jackioh/shared";
 
+import { ANOMALIES, ANOMALY_FOUND_ID, type AnomalyCode } from "../../cards/anomalies.ts";
+import { CardArt } from "../../cards/art/CardArt.tsx";
 import { newEventsSince, reducedMotionNow } from "../../game/animations.ts";
 import { byTestid } from "../../game/contract.ts";
 import { useSetting } from "../../settings/store.ts";
 import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
 import { AURA_FADE_IN_MS, AURA_FADE_OUT_MS, FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../constants.ts";
 import { capacityFor } from "../director.ts";
+import { shedAuraScale, shedLevel, shedPointer, subscribeShed } from "../shed.ts";
 import { defaultFrames, defaultNow, defaultVisibility } from "../FxLayer.tsx";
 import { createFrameLoop } from "../loop.ts";
 import { createFxMemory } from "../memory.ts";
@@ -24,13 +31,14 @@ import { useFxSettings } from "../settings.ts";
 import { createSurface, type FxSurface } from "../surface.ts";
 import type { FxBox, FxFrameSource, FxMemory, FxVisibility } from "../types.ts";
 import { createAuraDrift, type AuraDrift } from "./drift.ts";
-import { AURA_LOOKS } from "./looks.ts";
+import { auraLookSpec } from "./looks.ts";
 import {
   attributeModifiers,
   auraBudget,
   auraTestid,
   auraZones,
   NO_AURAS,
+  noteAnomalies,
   planAuras,
   reconcileAuras,
   settleAuras,
@@ -64,6 +72,13 @@ export type AuraLayerProps = {
 
 export const AURA_LAYER_TESTID = "aura-layer";
 export const AURA_CANVAS_TESTID = "aura-canvas";
+/** R3337003: an Anomaly's backdrop draws its board, which no tag details. */
+const NO_TAGS: readonly Tag[] = [];
+
+/** R3351000: whether the pointer sits over the aura's box: the aura nearest the pointer. */
+function holdsPointer(box: FxBox, pointer: { x: number; y: number }): boolean {
+  return pointer.x >= box.x && pointer.x <= box.x + box.width && pointer.y >= box.y && pointer.y <= box.y + box.height;
+}
 
 /** The union of the zones' boxes, or null while one of them is not on the page or it is empty. */
 export function measureZones(testids: readonly string[]): FxBox | null {
@@ -111,6 +126,11 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
   const off = settings.intensity === "off";
   const still = panelReduces || reducedMotionNow(settings);
   const intensity: number = FX_INTENSITY_SCALE[settings.intensity];
+  // R3351000: the shed stage and the pointer it measures far auras by (shed.ts). Below stage 2
+  // the snapshot is always null, so pointer-move notifications change nothing and React bails out:
+  // no re-render, no measureAll forced layout, no drift re-sync.
+  const shed = useSyncExternalStore(subscribeShed, shedLevel, () => 0);
+  const pointer = useSyncExternalStore(subscribeShed, () => (shedAuraScale(shedLevel()) === 1 ? null : shedPointer()), () => null);
 
   // What the effects read: a ref, so a seam object made each render restarts nothing.
   const live = useRef(seams ?? {});
@@ -118,11 +138,13 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
   const now = (): number => (live.current.now ?? defaultNow)();
   const measure = (testids: readonly string[]): FxBox | null => (live.current.measure ?? measureZones)(testids);
 
-  // Which play added each modifier, read off the newest view's events as they arrive. A viewer change
-  // starts over from the new viewer's window, as the board's runner does (Game.tsx).
+  // Which play added each modifier, and (R3337003) which Anomaly each side stands as, read off the newest
+  // view's events as they arrive. A viewer change starts over from the new viewer's window, as the
+  // board's runner does (Game.tsx).
   const memory = useRef<FxMemory | null>(null);
   if (memory.current === null) memory.current = createFxMemory();
   const sources = useRef<AuraSources>(new Map());
+  const anomalies = useRef(new Map<PlayerId, AnomalyCode>());
   const seenLatest = useRef<PlayerView | null>(null);
   const newest = latest ?? view;
   useLayoutEffect(() => {
@@ -133,9 +155,13 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
     if (previous === null || previous.viewer !== newest.viewer) {
       remembered.clear();
       sources.current.clear();
+      anomalies.current.clear();
       attributeModifiers(newest.events, remembered, sources.current);
+      noteAnomalies(newest.events, anomalies.current);
     } else {
-      attributeModifiers(newEventsSince(previous.events, newest.events), remembered, sources.current);
+      const events = newEventsSince(previous.events, newest.events);
+      attributeModifiers(events, remembered, sources.current);
+      noteAnomalies(events, anomalies.current);
     }
   }, [newest]);
 
@@ -149,14 +175,15 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
       setTrack(NO_AURAS);
       return;
     }
-    const planned = planAuras(view, sources.current, live.current.table ?? FX_CARD_TABLE);
+    // R3337003: an Anomaly's backdrop is off under reduced motion.
+    const planned = planAuras(view, sources.current, live.current.table ?? FX_CARD_TABLE, still ? new Map() : anomalies.current);
     const t = now();
     setTrack((prev) => reconcileAuras(settleAuras(prev, t), planned, t, !still));
     // `now` reads a ref only, so the plan depends on the view and the two switches alone.
   }, [view, still, off]);
 
   const shown = off ? [] : stackAuras(track.auras);
-  const budget = auraBudget(shown.length, intensity, capacityFor((live.current.viewportWidth ?? (() => window.innerWidth))()));
+  const whole = auraBudget(shown.length, intensity, capacityFor((live.current.viewportWidth ?? (() => window.innerWidth))()));
 
   // The board can move under the auras without this layer rendering (a resize, an orientation change, a
   // scroll), so the boxes are measured after every render and on those events, and set only when one moved.
@@ -230,6 +257,19 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
     };
   }, [moving]);
 
+  // R3351000: each aura's mote budget. At shed stage 2 the auras far from the pointer halve
+  // theirs; the one under it keeps its whole budget, and with no pointer known every aura counts
+  // as far. A box not measured yet keeps its whole budget until the measure lands.
+  const budgetFor = (key: string): number => {
+    if (shedAuraScale(shed) === 1) return whole;
+    if (pointer !== null) {
+      const box = boxes.get(key);
+      if (box === undefined || holdsPointer(box, pointer)) return whole;
+    }
+    return Math.floor(whole * shedAuraScale(shed));
+  };
+  const motes = shown.reduce((sum, aura) => sum + budgetFor(aura.spec.key), 0);
+
   // What the motes cover follows every render: the auras that show, their boxes, budget and phase.
   useLayoutEffect(() => {
     const current = engine.current;
@@ -237,7 +277,7 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
     current.drift.sync(
       shown.flatMap((aura) => {
         const box = boxes.get(aura.spec.key);
-        return box === undefined ? [] : [{ key: aura.spec.key, box, look: aura.spec.look, colors: aura.spec.colors, budget, phase: aura.phase }];
+        return box === undefined ? [] : [{ key: aura.spec.key, box, look: aura.spec.look, colors: aura.spec.colors, budget: budgetFor(aura.spec.key), phase: aura.phase }];
       }),
     );
     current.wake();
@@ -245,13 +285,14 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
 
   if (off || shown.length === 0) return null;
   return (
-    <div className="aura-layer" data-testid={AURA_LAYER_TESTID} data-aura={still ? "still" : "on"} data-aura-motes={still ? 0 : budget * shown.length} aria-hidden="true">
+    <div className="aura-layer" data-testid={AURA_LAYER_TESTID} data-aura={still ? "still" : "on"} data-aura-motes={still ? 0 : motes} aria-hidden="true">
       {still ? null : <canvas ref={canvasRef} className="aura-canvas" data-testid={AURA_CANVAS_TESTID} />}
       {[...shown].reverse().map((aura) => {
         const box = boxes.get(aura.spec.key);
         if (box === undefined) return null;
-        const look = AURA_LOOKS[aura.spec.look];
+        const look = auraLookSpec(aura.spec.look);
         const [, body, glow] = aura.spec.colors;
+        const { anomaly } = aura.spec;
         const style = {
           left: box.x,
           top: box.y,
@@ -273,8 +314,13 @@ export function AuraLayer({ view, latest, seams }: AuraLayerProps): ReactElement
             data-aura-look={aura.spec.look}
             data-aura-scope={aura.spec.scope}
             data-aura-phase={aura.phase}
+            data-anomaly={anomaly}
             style={style}
-          />
+          >
+            {anomaly === undefined ? null : (
+              <CardArt className="aura-picture" defId={ANOMALY_FOUND_ID} anomaly={anomaly} radiant={ANOMALIES[anomaly].rich} tags={NO_TAGS} type="Spell" shape="full" />
+            )}
+          </div>
         );
       })}
     </div>

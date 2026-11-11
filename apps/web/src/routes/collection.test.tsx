@@ -38,6 +38,7 @@ import { SETTINGS_GROUPS } from "../settings/groups.ts";
 import { cosmeticPacksInfo, ownedCosmeticsOf, tokenBars, walletInfo } from "../shop/fixtures.ts";
 import { pressBack } from "../test/history.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { navTestid } from "./nav.tsx";
 import CollectionRoute from "./collection.tsx";
 import { questsTestid } from "./QuestsPanel.tsx";
@@ -161,7 +162,7 @@ describe("#1307 the collection route", () => {
       expect(await screen.findByTestId(T.error(part))).toHaveTextContent("the server refused");
     }
     expect(await screen.findByTestId(questsTestid.error)).toHaveTextContent("the server refused");
-    expect(screen.getByRole("heading", { name: "Cards", level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Cards", level: 1 })).toBeInTheDocument();
   });
 
   it("#1691 a panel whose read failed offers Try again, which reads it again", async () => {
@@ -343,6 +344,24 @@ describe("R1579000 the Collection hub", () => {
     expect(screen.getByTestId(T.door("decks"))).toBeInTheDocument();
     for (const read of READS) expect(read).not.toHaveBeenCalled();
   });
+
+  it("R3223000 the hub and each section have one visible h1, the PageTitle, and the wordmark is no heading", async () => {
+    answerAll();
+    render(<CollectionRoute token={TOKEN} />);
+    expectOnePageTitle("Your collection");
+    expect(screen.queryByRole("heading", { name: "JackiOh" })).toBeNull();
+
+    cleanup();
+    window.history.replaceState(null, "", paths.collectionSection("cards"));
+    render(<CollectionRoute token={TOKEN} />);
+    await screen.findByTestId(T.body);
+    expectOnePageTitle("Cards");
+
+    cleanup();
+    window.history.replaceState(null, "", paths.collectionSection("cosmetics"));
+    render(<CollectionRoute token={TOKEN} />);
+    expectOnePageTitle("Cosmetics");
+  });
 });
 
 describe("R1655000 the Collection's card view", () => {
@@ -507,5 +526,55 @@ describe("R2125000 the Cards section opens on what the last visit kept", () => {
 
     expect(screen.queryByTestId(T.jlore)).toBeNull();
     expect(screen.getByTestId(T.error("wallet"))).toBeInTheDocument();
+  });
+});
+
+describe("R3335001 R3335000 the Fleet track and the Starship tab", () => {
+  afterEach(() => {
+    localStorage.clear();
+    resetCosmeticsForTests();
+  });
+
+  it("R3335001 the Cards section shows the Fleet track right after the set tracks, only when the tracks answer has it", async () => {
+    answerAll();
+    const fleet = { level: 3, xp: 1300, levelXp: 600, xpToNext: 200, xpToday: 150, nextRewards: ["starship-piece-skin-gunmetal"] };
+    vi.mocked(getTracks).mockResolvedValue({ ...tracksOf(), fleet });
+    render(<CollectionRoute token={TOKEN} />);
+    fireEvent.click(screen.getByTestId(T.door("cards")));
+
+    const panel = await screen.findByTestId(T.fleet);
+    expect(within(panel).getByTestId(T.fleetLevel)).toHaveTextContent("Level 3 of");
+    expect(within(panel).getByTestId(T.fleetReward("starship-piece-skin-gunmetal"))).toHaveTextContent("Gunmetal modules");
+    const headings = screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
+    expect(headings.indexOf("Fleet track")).toBe(headings.indexOf("Set tracks") + 1);
+    cleanup();
+
+    // A server from before #3335 answers no Fleet track: no panel, no heading, nothing loading.
+    vi.mocked(getTracks).mockResolvedValue(tracksOf());
+    render(<CollectionRoute token={TOKEN} />);
+    expect(await screen.findByTestId(T.track(newestShippedSet()))).toBeInTheDocument();
+    expect(screen.queryByTestId(T.fleet)).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Fleet track" })).toBeNull();
+    expect(screen.queryByTestId(T.loading("fleet"))).toBeNull();
+  });
+
+  it("R3335000 the Cosmetics section's Starship tab equips a Starship look through the same store, with no request", async () => {
+    answerAll();
+    render(<CollectionRoute token={TOKEN} />);
+    fireEvent.click(screen.getByTestId(T.door("cosmetics")));
+    expect(await screen.findByTestId(T.tiles("table"))).toBeInTheDocument();
+
+    // The Board tab is open first; the Starship tab holds the Starship looks alone.
+    expect(screen.getByTestId(T.cosmeticsTab("board"))).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByTestId(T.starshipLooks)).toBeNull();
+    fireEvent.click(screen.getByTestId(T.cosmeticsTab("starship")));
+    expect(screen.getByTestId(T.cosmeticsTab("starship"))).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId(T.starshipLooks)).toBeInTheDocument();
+    expect(screen.queryByTestId(T.tiles("table"))).toBeNull();
+
+    fireEvent.click(within(screen.getByTestId(T.tile("starship-trail-ion"))).getByRole("button"));
+    expect(readCosmetics().starshipTrail).toBe("starship-trail-ion");
+    expect(SETTINGS_GROUPS.find((candidate) => candidate.id === "cosmetics")?.read()["starshipTrail"]).toBe("starship-trail-ion");
+    for (const read of [getCollection, getWallet, getPacks, getCosmeticPacks, getTracks, getQuests, getOwnedCosmetics]) expect(read).not.toHaveBeenCalled();
   });
 });

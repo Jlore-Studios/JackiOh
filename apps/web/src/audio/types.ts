@@ -3,6 +3,9 @@
 
 import type { VoiceEmoteId } from "@jackioh/shared";
 
+import type { AnomalyCode } from "../cards/anomalies.ts";
+import type { PlayTier, PlayType } from "../game/damageFeel.ts";
+
 import type { CARD_HOOKS } from "./constants.ts";
 
 export type SfxId =
@@ -23,7 +26,41 @@ export type SfxId =
   | "emoteWave" | "emoteClap" | "emoteThumbsUp" | "emoteFacepalm" | "emoteShrug" | "emoteThinking" | "emoteHeart"
   | "emoteFire" | "emoteSkull" | "emoteSweat" | "emoteCool" | "emoteGasp" | "emoteSalute" | "emoteParty"
   // #1954: the field's taps on every playmat but sand's (game/SandSurface.tsx TAP_SFX).
-  | "tapWood" | "tapFelt" | "tapStone" | "tapNeon" | "tapParchment" | "tapAstral";
+  | "tapWood" | "tapFelt" | "tapStone" | "tapNeon" | "tapParchment" | "tapAstral"
+  // #3347: cards that move like cards (game/drag/cues.ts, game/Game.tsx's opening, audio/director.ts's riffle).
+  | "pickUp" | "dragOver" | "drop" | "returnToHand" | "deal" | "riffle"
+  // R3336000: the Drone Battleship's horn, dome flare, bay door, reactor pulse and deck shear.
+  | "horn" | "domeFlare" | "bayDoor" | "reactorPulse" | "deckShear"
+  // R3338000: the organ each Terminus set piece's bed opens with (R1883000's Terminus family).
+  | "organ"
+  // R3337003: a Stinkyscape Anomaly laid, one sting per board (`SfxParams.anomaly`).
+  | "anomaly"
+  // R3346000: a play's impact by the mana it cost, and a firing trap's snap.
+  | "playImpact" | "trapSnap"
+  // R3342000: the tile aura touch bell.
+  | "auraTouch"
+  // R3334000–R3334003: the Starship's moments: a module docking, the launch's ignition and roar, a
+  // broadside's weapons by kind, an unarmed ship's ram and its wreck.
+  | "starshipDock" | "starshipIgnite" | "starshipRoar" | "starshipBeam" | "starshipRepeater" | "starshipCannon"
+  | "starshipFlak" | "starshipLauncher" | "starshipRam" | "starshipWreck"
+  // R3400001: Meditative+'s and Training Grounds' signature Legendaries and Mythics, one each (signatureCues.ts).
+  | "inkSummit" | "plowHeave" | "cursorTear" | "seanceChant" | "slateRap" | "diceGong" | "timberLash" | "pencilArpeggio"
+  // R3402001: ten Core Legendaries' and Mythics' signatures, one each (signatureCues.ts).
+  | "silasScratch" | "crucibleChoir" | "hatchWeld" | "pocketZip" | "stadiumCheer" | "jackpotReels" | "pawnWaltz"
+  | "wishWind" | "heroicFanfare" | "forgeAnvil"
+  // R3407001: Stinkyscape's signature cards, one each (signatureCues.ts).
+  | "ballotBeep" | "lullabySigh" | "compactTut" | "glitchDrop" | "harpGliss" | "markerThunder" | "stampTrill" | "tillRattle"
+  | "gavelSlam" | "dockingChime" | "keyboardPing" | "synthSnap" | "blobDrum" | "warpSparkle" | "tearChoir" | "cackleThunder"
+  | "kazooRatchet" | "thrusterSniff" | "marbleGong" | "sanctumBell" | "cashWhistle" | "whisperClink" | "crystalRise"
+  // R3405001: Meditative's signature Legendaries and Mythics, one each (signatureCues.ts).
+  | "bowlBreath" | "peakFlute" | "ticketHorn" | "forgeQuench" | "brushGuzheng" | "wellGush" | "minePick" | "jadeZither"
+  | "windChime" | "marketGong" | "chalkHush" | "porcelainRoar" | "bronzeGulp" | "modemGuqin" | "serverChoir" | "dialupStutter"
+  | "holoBow" | "synthPops" | "skullMutter" | "keyJangle" | "caneCrack" | "caneThunder" | "rootCreak" | "chalkGasp"
+  | "frostPages" | "coinCheer" | "totemDrums" | "templeDie" | "golemStomp" | "klaxonSlam" | "cellSlam" | "hangarRev"
+  // R3395000: Stinkyscape 001 to 090's signature Legendaries and Mythics, one each (signatureCues.ts).
+  | "vaultHiss" | "safeChirp" | "stoneChime" | "magiChord" | "lectureRumble" | "pressStamp" | "corvetteRoar" | "popGasp"
+  | "geigerHum" | "wireRatchet" | "beamWhine" | "rattleSteam" | "breechBoom" | "flakWind" | "crunchJackpot" | "choirHulls"
+  | "hornEcho" | "jetSnap" | "whiteRing" | "hullDrills" | "klaxonSputter" | "moltenSnarl" | "shutterPurr" | "venomDrip";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains
@@ -39,6 +76,9 @@ export type SfxParams = {
    * damage / heal / health-loss amount, or the mana gained; recipes clamp to [1, IMPACT_AMOUNT_CAP].
    * clockTick: how far into the last ten seconds (1 at ten left, 10 at one left). chaosRoll: how
    * many effects the roll names, one ding each, clamped to [0, CHAOS_REVEAL_MAX] (default 1).
+   * reactorPulse: how close the Battleship's Meltdown layer is to its blast, 1 (a tick) to 10 (the blast).
+   * organ (R3338000): which Terminus set piece's root, 1 to 9, clamped (default 1). starshipDock (R3334000):
+   * the ship's pieces once the module has docked, its hum a step higher for each, clamped (default 1).
    */
   amount?: number;
   /** true when the event is the viewer's own (turnStart, mana): a brighter variant. */
@@ -67,6 +107,21 @@ export type SfxParams = {
   /** A field tap's rolling four-way texture (sand's grain, every playmat's voice) and the amount built up by sustained tapping. */
   sandVariant?: number;
   sandBuild?: number;
+  /**
+   * R3337003: anomaly: the code of the Anomaly laid (`boardReplaced.anomaly`), which picks its sting.
+   * Absent, or a code this build does not know: the plain whoosh.
+   */
+  anomaly?: AnomalyCode;
+  /** auraTouch: the aura's hue, 0-360. */
+  hue?: number;
+  /** A cue turned down to QUIET_SFX_GAIN: the arena's corner props answer this softly while the animation queue drains (R3348001). The engine scales; no recipe reads it. */
+  quiet?: boolean;
+  /** playImpact (R3346000): how heavy the play was, by the mana it cost (game/damageFeel.ts `playTier`). Absent: light. */
+  playTier?: PlayTier;
+  /** playImpact (R3346000): the played card's colour, a Unit's body, a Spell's charge or a Field Spell's ground. Absent: unit. */
+  playType?: PlayType;
+  /** A cue's own trim, 0..1 (R3346000: the other seat's play impact and snap). The engine scales; no recipe reads it. */
+  gain?: number;
 };
 
 /** R669: the play sting's sizes, by the card's rarity (Common, Rare, Epic). */
@@ -309,6 +364,8 @@ export type AudioEngine = SoundSink & {
   subscribeSpeaking(listener: () => void): () => void;
   /** R631: the context and the music bus the music plays into, once the first unlock made them; else null. */
   musicOutput(): { context: AudioContext; input: AudioNode } | null;
+  /** R3332002: the context and the effects bus a card's sting plays into, once the first unlock made them; else null. */
+  sfxOutput(): { context: AudioContext; input: AudioNode } | null;
   /** Called when the context is made and each time a resume settles. Returns the unsubscribe. */
   subscribeState(listener: () => void): () => void;
   dispose(): void;

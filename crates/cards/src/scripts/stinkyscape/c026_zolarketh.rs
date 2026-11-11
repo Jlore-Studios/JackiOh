@@ -256,7 +256,7 @@ mod tests {
     };
     use crate::{filler, scenario};
 
-    const VANILLA: &str = "core-008"; // (1) 4/4.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
     const FILLER: &str = "core-005";
     /// A base University's Buffs on each of its other permanents (M #97.6's `times`).
     const BASE_TIMES: usize = 2;

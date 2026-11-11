@@ -63,6 +63,10 @@ pub struct PresetCard {
 #[serde(rename_all = "camelCase")]
 pub struct ReplaceBoardArgs {
     pub board: Vec<PresetCard>,
+    /// R3337000: the code of the Anomaly the preset is, which `boardReplaced` names; none for a
+    /// replacement that lays no Anomaly.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub anomaly: Option<String>,
 }
 
 /// R1855001: the mark on a laid Unit whose Cry is owed, its entry's place in the preset, taken off as
@@ -94,8 +98,12 @@ pub fn replace_board(args: ReplaceBoardArgs) -> Effect {
     lazy_part("replaceBoard", move |ctx, _memo| {
         let player = ctx.controller;
         let source_id = ctx.self_.as_ref().map(|me| me.id.clone());
+        let anomaly = args.anomaly.clone();
         let mut effects = vec![Effect::new("replaceBoardExile", move |at| {
-            at.events.push(GameEvent::BoardReplaced { player });
+            at.events.push(GameEvent::BoardReplaced {
+                player,
+                anomaly: anomaly.clone(),
+            });
             clear_owed_cries(at.state);
             // R1855000: Dormant cards (R1839000) and ones immune to the card (E35) stay. A card beneath
             // a Stack is reached on a later pass; `seen` ends the walk on a card that does not leave.

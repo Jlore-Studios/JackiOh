@@ -95,7 +95,7 @@ function toggle(testId: string): HTMLInputElement {
 const MYTHIC = Object.values(CATALOG).find((def) => def.rarity === "Mythic");
 
 describe("SETTINGS_SLOTS mounts every task's controls in its own section", () => {
-  it("lists the vibration under gameplay (R669), task 1's effects, the Rarity foil switch (R2721000), task 6's foil, the full-art switch (R1017001), the set-watermarks switch (R2718000) and Show opponents' cosmetics under visuals, and task 2's audio under audio, each with a reset", () => {
+  it("lists the vibration under gameplay (R669), task 1's effects, the Rarity foil switch (R2721000), task 6's foil, the full-art switch (R1017001), the set-watermarks switch (R2718000), Show opponents' cosmetics and Tilt with my phone (R3344001) under visuals, and task 2's audio under audio, each with a reset", () => {
     expect(SETTINGS_SLOTS.map((slot) => [slot.section, slot.id])).toEqual([
       ["gameplay", "haptics"],
       ["visuals", "fx"],
@@ -104,12 +104,26 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
       ["visuals", "card-full-art"],
       ["visuals", "card-set-watermarks"],
       ["visuals", "card-opponent-cosmetics"],
+      ["visuals", "card-board-names"],
+      ["visuals", "card-device-tilt"],
       ["audio", "audio"],
       ["gameplay", "language"],
     ]);
     for (const slot of SETTINGS_SLOTS) {
       expect(typeof slot.reset, slot.id).toBe("function");
     }
+  });
+
+  it("R3339000 BoardNamesSelect changes boardNames and resets with slot reset", () => {
+    render(<SettingsPanel onClose={noop} />);
+    const selectEl = select("setting-boardNames");
+    expect(selectEl.value).toBe("artFirst");
+    fireEvent.change(selectEl, { target: { value: "always" } });
+    expect(readCardSettings().boardNames).toBe("always");
+
+    const slot = SETTINGS_SLOTS.find((s) => s.id === "card-board-names");
+    slot?.reset?.();
+    expect(readCardSettings().boardNames).toBe("artFirst");
   });
 
   it("R1579000 the settings offer no cosmetic selection on any tab", () => {

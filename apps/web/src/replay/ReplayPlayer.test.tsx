@@ -22,6 +22,7 @@ import { opponentModifiers, pendingFor, waitingPending, yourModifiers } from "..
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
 import type { FakeReplaySource } from "../test/replay.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { REPLAY_PLAY_GAP_MS } from "./config.ts";
 import ReplayPlayer, { replayTestid } from "./ReplayPlayer.tsx";
 import { REPLAY_FAILURE_TEXT, ReplayFailure } from "./source.ts";
@@ -119,6 +120,11 @@ describe("the replay player", () => {
     const labels = [...toolbar.querySelectorAll("button")].map((control) => control.getAttribute("aria-label"));
     expect(labels).toEqual(["To the start", "Back a turn", "Back a step", "Play", "Forward a step", "Forward a turn", "To the end"]);
     expect(TURN_STARTS.length, "the folded game spans enough turns").toBeGreaterThanOrEqual(3);
+  });
+
+  it("R3223000 the player has one visible h1, the PageTitle, in its Back bar", async () => {
+    await open();
+    expectOnePageTitle("Replays");
   });
 
   it("each control reaches the expected step", async () => {

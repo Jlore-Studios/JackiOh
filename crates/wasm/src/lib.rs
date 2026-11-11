@@ -63,6 +63,12 @@ pub fn run_content() -> Result<String, JsError> {
     js(wasm_core::run_content())
 }
 
+/// R3496000: `RunContent` for a catalog version: the build's own, a carried version's, or `null`.
+#[wasm_bindgen]
+pub fn run_content_at(version_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_content_at(version_json))
+}
+
 /// `null` when the setup may start a run, else the reason.
 #[wasm_bindgen]
 pub fn run_check_setup(setup_json: &str, unlocks_json: &str, content_json: &str) -> Result<String, JsError> {
@@ -115,6 +121,13 @@ pub fn run_embers(score_json: &str) -> Result<String, JsError> {
 #[wasm_bindgen]
 pub fn run_max_hp(state_json: &str, content_json: &str) -> Result<String, JsError> {
     js(wasm_core::run_max_hp(state_json, content_json))
+}
+
+/// What a shop's services cost this run: the Coin prices after the discount, the Ticket prices and
+/// each relic's next level.
+#[wasm_bindgen]
+pub fn run_shop_prices(state_json: &str, content_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_shop_prices(state_json, content_json))
 }
 
 /// The Embers that raise the starting deck from `level` to the next, or `null` at the ladder's top.

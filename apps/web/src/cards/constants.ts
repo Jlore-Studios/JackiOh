@@ -35,8 +35,9 @@ export const FIT_FLOOR_PX = 9;
 export const FACE_TEXT_LIMIT = { charsPerLine: 28, lines: 6 } as const;
 
 /**
- * The same for the hover preview's face (271 px wide, PREVIEW_HEIGHT_PX tall). A face in play prints
- * only there, so a Summit's next Ascent line and a fused or Buffed card are held to it.
+ * The same for the hover preview's face (271 px wide, 380 px tall, as it was measured: #3341 draws it larger, which
+ * only gives its lines room). A face in play prints only there, so a Summit's next Ascent line and a fused or Buffed
+ * card are held to it.
  */
 export const PREVIEW_TEXT_LIMIT = { charsPerLine: 45, lines: 10 } as const;
 
@@ -141,6 +142,107 @@ export const IMMERSIVE_TILT_RANGE_DEG = 30;
 export const IMMERSIVE_TILT_REST_DEG = 45;
 
 /**
+ * R3344001: how far a face with depth tilts toward the pointer, the device or a drag at its far edge, in degrees, each
+ * way. tilt.ts writes the angle (`--cf-tilt-rx`, `--cf-tilt-ry`), which depth.css reads as it is.
+ */
+export const CARD_TILT_MAX_DEG = 12;
+
+/**
+ * R3344001: how far each depth plane (`--cf-plane`, 1 for the middle, 3 for the nearest) shifts against the face per
+ * tilt step, in px, at full tilt on a face CARD_DEPTH_FACE_PX wide: the planes parallax by their depth. CardFace writes
+ * it as `--cf-depth-step`, in cqw so a smaller face shifts less.
+ */
+export const CARD_DEPTH_STEP_PX = 3;
+
+/** R3344001: the face width, in px, that CARD_DEPTH_STEP_PX is measured at (a hand card on a phone). */
+export const CARD_DEPTH_FACE_PX = 170;
+
+/** R3344001: CARD_DEPTH_STEP_PX as a share of the face's width, in percent: what `--cf-depth-step` is written in, as cqw. */
+export const CARD_DEPTH_STEP_CQW = (CARD_DEPTH_STEP_PX / CARD_DEPTH_FACE_PX) * 100;
+
+/**
+ * R3344000: how far a Legendary or Mythic face's near plane (its subject) may rise over the face's top edge, in px,
+ * clipped by the face's own edge as Out of frame's subject is. CardFace writes it as `--cf-frame-break`.
+ */
+export const CARD_FRAME_BREAK_PX = 8;
+
+/** R3344000: how far that near plane is scaled up from its foot, so its subject stands taller than its window. */
+export const CARD_FRAME_BREAK_SCALE = 1.12;
+
+/**
+ * R3344001: the perspective the face's parent gives a tilting face, in px. Mirrored in depth.css's `perspective`
+ * (depth.test.tsx holds the two equal).
+ */
+export const CARD_PERSPECTIVE_PX = 900;
+
+/**
+ * R3344000: how far a glare travels from the middle of its layer at full tilt, in percent of the layer, each way; it
+ * moves opposite the tilt (tilt.ts `glareOf`).
+ */
+export const CARD_GLARE_TRAVEL_PCT = 60;
+
+/** R3344000: how far a glare's gradient reaches before it is clear, in percent of its layer. CardFace writes it as `--cf-glare-size`. */
+export const CARD_GLARE_SIZE_PCT = 55;
+
+/**
+ * R3350000: how far a Mythic's diorama turns toward the pointer, the device or a drag at its far edge, in degrees, each way,
+ * where the player turns it to look at it (inspect, the hover preview, the Collection and the full-screen view); a diorama in
+ * hand keeps CARD_TILT_MAX_DEG.
+ */
+export const DIORAMA_TURN_MAX_DEG = 25;
+
+/** R3350000: the fewest depth slices a diorama is cut in. */
+export const DIORAMA_SLICES_MIN = 5;
+
+/** R3350000: the most depth slices a diorama is cut in. */
+export const DIORAMA_SLICES_MAX = 8;
+
+/** R3350000: the fewest of a diorama's slices that run an idle loop of their own. */
+export const DIORAMA_LOOP_SLICES_MIN = 2;
+
+/** R3350000: how many parallax steps (`--cf-plane`, CARD_DEPTH_STEP_PX each) a diorama's slice at depth 1, its nearest, shifts. */
+export const DIORAMA_DEPTH_STEPS = 4;
+
+/** R3350000: the most a diorama's slice is bent about one axis to read as a curved surface, in degrees, either way. */
+export const DIORAMA_BEND_MAX_DEG = 20;
+
+/**
+ * R3350000: the perspective a bent slice turns under, in px. Mirrored in depth.css's and fullscreen.css's `perspective` on a
+ * bent slice (diorama.test.tsx holds them equal).
+ */
+export const DIORAMA_BEND_PERSPECTIVE_PX = 400;
+
+/** R3350000: how far the full-screen view shifts a diorama's farthest slice (depth 0) at full tilt, in px: against the turn. */
+export const FULLSCREEN_SLICE_SHIFT_FAR_PX = -12;
+
+/** R3350000: how far the full-screen view shifts a diorama's nearest slice (depth 1) at full tilt, in px: with the turn. */
+export const FULLSCREEN_SLICE_SHIFT_NEAR_PX = 20;
+
+/**
+ * R3345000: how far the full-screen view's planes run past the viewport on each side, in percent of its width and height.
+ * Mirrored in fullscreen.css's `inset` on `.fullscreen-art-planes` (fullscreen.test.tsx holds them equal).
+ */
+export const FULLSCREEN_BLEED_PCT = 8;
+
+/**
+ * R3350000: the full-screen view's perspective while it turns a diorama, in multiples of the viewport's longer side (vmax),
+ * so its geometry is the same on every screen and no turn up to DIORAMA_TURN_MAX_DEG brings a corner near the eye.
+ */
+export const FULLSCREEN_DIORAMA_PERSPECTIVE_VMAX = 2;
+
+/**
+ * R3350000: the most the full-screen view scales a turning diorama up to keep the viewport covered (`fullscreenCoverScale`):
+ * the corner pose, DIORAMA_TURN_MAX_DEG about both axes, needs about 1.8 on the widest screens it is held to.
+ */
+export const FULLSCREEN_COVER_SCALE_MAX = 2;
+
+/** R3350000: how many halvings `fullscreenCoverScale` searches its scale in, from 1 to FULLSCREEN_COVER_SCALE_MAX. */
+export const FULLSCREEN_COVER_STEPS = 20;
+
+/** R3350000: the digits the full-screen view's cover scale (`--fs-cover`) is written with, rounded up. */
+export const FULLSCREEN_COVER_DIGITS = 3;
+
+/**
  * R1295000: the Radiant gold, as a window in HSL that holds every color cards.css's Radiant face
  * declares. No border's colors may fall inside it (cosmetics.test.tsx), so no border passes for
  * a Radiant trim.
@@ -167,3 +269,50 @@ export const DORMANT_PULSE_MS = 3200;
 
 /** R2801000: the most hull plates a Dormant Starship's face bolts on, one a piece (StarshipHull.tsx). */
 export const STARSHIP_HULL_PLATES_MAX = 8;
+
+/** R3334000: one swing of a Dormant Starship's shipyard light across its hull and back (ShipyardIdle.tsx, dormant.css). */
+export const SHIPYARD_IDLE_SWEEP_MS = 4200;
+
+/** R3334000: one flicker of the shipyard's welding sparks where its newest piece went in (ShipyardIdle.tsx, dormant.css). */
+export const SHIPYARD_IDLE_WELD_MS = 900;
+
+/** R3334000: how many welding sparks the shipyard's idle throws, each a share of a flicker behind the last (ShipyardIdle.tsx). */
+export const SHIPYARD_IDLE_SPARKS = 5;
+
+/**
+ * #3341: how much a small face's art (below FACE_TEXT_MIN_HEIGHT_PX, a card as small as the board draws it) is lifted
+ * so a picture holds its colour at that size: `filter: saturate() contrast()`, a factor each, 1 being none. Never on a
+ * Radiant face's gold window (R2725004). Mirrored in cards.css's @container rule.
+ */
+export const ART_SMALL_FACE_LIFT = { saturate: 1.15, contrast: 1.06 } as const;
+
+/**
+ * #3341: how far a normal board unit's art runs down its face, as a share of one gem's height (`--mf-stat`) kept
+ * clear of the foot: the art stops half a gem above the face's bottom edge, so the attack and health gems straddle its
+ * edge and the name plate lies on it. Mirrored in cards.css (`--mf-art-foot`).
+ */
+export const MINION_ART_FOOT_SHARE = 0.5;
+
+/**
+ * #3341: how far a small hand face's art window grows downward (in cqh, percent of the face's height), the name
+ * band and the rest following it down by as much (below FACE_TEXT_MIN_HEIGHT_PX the rules box is hidden, so the
+ * band gives up the room). Mirrored in cards.css's @container rule.
+ */
+export const HAND_ART_GROW_CQH = 4;
+
+/**
+ * #3341: the least a hand face's rules box shrinks to, in cqh (percent of the face's height), however short its text
+ * (fit.ts measures the text and cards.css gives the room it does not need to the art above). Two lines at the
+ * reading floor fit it.
+ */
+export const HAND_TEXT_BOX_MIN_CQH = 12;
+
+/**
+ * R3340000: how many steps a unit's missing health is cut into on its art (wear.ts `damageLevel`): each step shows one more
+ * crack, from the first (some health gone) to the last (a quarter of it left or less).
+ */
+export const ART_WEAR_LEVELS = 4;
+/** R3345000: how long a press or click is held to open the full-screen art view anywhere. */
+export const FULLSCREEN_HOLD_MS = 450;
+/** R3345000: slop in px before movement is considered a drag instead of a hold. */
+export const FULLSCREEN_SLOP_PX = 10;

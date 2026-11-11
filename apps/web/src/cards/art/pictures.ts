@@ -14,10 +14,22 @@
 // two parts (`ArtPart`): its backdrop in the window and its subject cut out over the frame (CardFace).
 // R2944001 (#2944): the Immersive version draws its backdrop hazed as far off (`depthSvg`) under a near layer of its
 // subject (CardFace), and the Prismatic version its picture in mirror chrome under an iridescent sheen (`prismaticSvg`).
+// R3017002 (#3017): four of part 6's variants are repaints (`ArtRepaint`): a new picture of the card's subject, seeded
+// apart as Alt art's is (`artSeedOf`), under a treatment of its own: Night's night sky (`nightSvg`), Watercolor's washes
+// on paper (`watercolorSvg`), Stained-glass window's leaded panes (`stainedGlassSvg`) and Tarot card's arched card
+// (`tarotSvg`). The other two restyle the card's own picture: Woodcut's three-tone print (`woodcutSvg`) and Neon sign's
+// glowing tubes (`neonSvg`). None draws a colour of its own in Radiant's gold window (R2725004).
 // Presentation only: nothing here reaches the engine, an action, `PlayerView` or the log (CLAUDE.md rule 7).
 
+import { CATALOG } from "../../wire/cards.ts";
 import { fmt, hashId } from "./hash.ts";
+import { motifFor } from "./motifs.ts";
+import type { ArtMotion, ArtRole } from "./motion.ts";
 import { ART_BOX } from "./procedural.ts";
+import { isStinkyscapeArt } from "./stinkyscape.ts";
+import { proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
+import { compositionOf, themeFor } from "./themes.ts";
+import { isTrainingGroundsArt } from "./traininggrounds.ts";
 
 /**
  * R2943001: the look a Set showcase face draws its set in: Classic+ and Meditative+ share their parents' (`SHOWCASE_FAMILIES`).
@@ -41,11 +53,25 @@ export function showcaseFamilyOf(set: string | null): ShowcaseFamily | null {
 }
 
 /**
+ * R3017002: a repaint, a treatment over a new picture of the card's subject, seeded apart from its normal one: Night's,
+ * Watercolor's, Stained-glass window's or Tarot card's.
+ */
+export type ArtRepaint = "night" | "watercolor" | "stained-glass" | "tarot";
+
+/** R3017002: every repaint. */
+const REPAINTS: ReadonlySet<string> = new Set<ArtRepaint>(["night", "watercolor", "stained-glass", "tarot"]);
+
+/** R3017002: whether `picture` is a repaint, a treatment over a picture of its own rather than the normal one. */
+export function isRepaint(picture: string): picture is ArtRepaint {
+  return REPAINTS.has(picture);
+}
+
+/**
  * R2942001: a restyle of the card's normal picture, a filter over it: the Sketch's pencil (R2940001), Pixel's cells
  * or Comic's pop art; R2943001: or a set's own Set showcase treatment; R2944001: or Immersive's hazed depth or
- * Prismatic's chrome.
+ * Prismatic's chrome; R3017002: or Woodcut's print or Neon sign's tubes, or a repaint's treatment, over its own picture.
  */
-export type ArtRestyle = "sketch" | "pixel" | "comic" | `showcase-${ShowcaseFamily}` | "depth" | "prismatic";
+export type ArtRestyle = "sketch" | "pixel" | "comic" | `showcase-${ShowcaseFamily}` | "depth" | "prismatic" | "woodcut" | "neon" | ArtRepaint;
 
 /** R2943001: what a Set showcase restyle's name starts with, its family after it. */
 const SHOWCASE_PREFIX = "showcase-";
@@ -54,23 +80,102 @@ const SHOWCASE_PREFIX = "showcase-";
 const SHOWCASE_RESTYLES: ReadonlySet<string> = new Set(Object.values(SHOWCASE_FAMILIES).map((family) => `${SHOWCASE_PREFIX}${family}`));
 
 /**
- * R2943001: which part of a painter's picture a face draws: all of it, its backdrop alone (the subject left out) or
- * its subject alone (on nothing), which Out of frame lays over its frame.
+ * R3344000: the depth planes a face with depth stacks a painter's picture in, far to nearest: the background, the
+ * props, the subject, and what lies over it (its over layers, its light and its motes, and its particles).
  */
-export type ArtPart = "whole" | "backdrop" | "subject";
+export type ArtPlane = "far" | "middle" | "near" | "nearest";
+
+/** R3344000: every plane, far to nearest, the order a face stacks them in. */
+export const ART_PLANES: readonly ArtPlane[] = ["far", "middle", "near", "nearest"];
+
+/**
+ * R2943001: which part of a painter's picture a face draws: all of it, its backdrop alone (the subject left out) or
+ * its subject alone (on nothing), which Out of frame lays over its frame. R3344000: or one depth plane of it.
+ */
+export type ArtPart = "whole" | "backdrop" | "subject" | ArtPlane;
+
+/** R3344000: the plane each of a painter's layer roles (motion.ts, R2715001) is drawn in. */
+export const PLANE_OF_ROLE: Readonly<Record<ArtRole, ArtPlane>> = {
+  back: "far",
+  props: "middle",
+  subject: "near",
+  over: "nearest",
+  light: "nearest",
+  motes: "nearest",
+};
+
+/**
+ * R3345000: returns a data URI for one depth plane of `defId`'s picture. R3350000: or for its whole picture (`plane`
+ * "whole"), which a Mythic's diorama cuts its slices from (dioramas/pieces.ts), moving as `motion` says (still with none).
+ */
+export function artPlaneUri(defId: string, plane: ArtPlane | "whole", radiant: boolean = false, motion: ArtMotion | null = null): string {
+  const def = CATALOG[defId];
+  if (!def) return "";
+  const { name, type, tags } = def;
+  const theme = themeFor(tags, type);
+  if (isStinkyscapeArt(defId)) {
+    return stinkyscapeArtUri(defId, name, tags, type, radiant, motion, defId, null, plane);
+  }
+  if (isTrainingGroundsArt(defId)) {
+    return trainingGroundsArtUri(defId, name, tags, type, radiant, motion, defId, null, plane);
+  }
+  return proceduralArtUri(defId, theme, compositionOf(defId, type), radiant, motifFor(name, theme), motion, null, plane);
+}
+
+/** R3345000: `artPlaneUri` as a CSS `background-image` value (the effects layer holds no `url(` of its own: B27). */
+export function artPlaneBackground(defId: string, plane: ArtPlane, radiant: boolean = false): string {
+  return `url("${artPlaneUri(defId, plane, radiant)}")`;
+}
+
+/**
+ * R2943001, R3344000: whether `part` draws a layer of `role`: the whole picture every layer, its backdrop every layer
+ * but the subject's, its subject the subject's alone, and a plane the layers of its roles (`PLANE_OF_ROLE`).
+ */
+export function partDraws(part: ArtPart, role: ArtRole): boolean {
+  switch (part) {
+    case "whole":
+      return true;
+    case "backdrop":
+      return role !== "subject";
+    case "subject":
+      return role === "subject";
+    default:
+      return PLANE_OF_ROLE[role] === part;
+  }
+}
+
+/**
+ * R2943001, R3344000: whether `part` draws what a painter holds in no role, which belongs to `plane`: its sky and rays
+ * and vignette to the far plane, its particles to the nearest. The whole picture draws all of it, its backdrop all but
+ * what the subject's plane holds, its subject only that, and a plane its own.
+ */
+export function partHolds(part: ArtPart, plane: ArtPlane): boolean {
+  switch (part) {
+    case "whole":
+      return true;
+    case "backdrop":
+      return plane !== "near";
+    case "subject":
+      return plane === "near";
+    default:
+      return part === plane;
+  }
+}
 
 /**
  * R2940001: which of a card's pictures a face draws: its normal one, Alt art's own, or the normal one sketched;
  * R2942001: or pixelled, or drawn as a comic; R2943001: or in its set's Set showcase treatment; R2944001: or hazed as
- * far off, or in chrome. R3015002: no other (R2949000's Signature picture is gone).
+ * far off, or in chrome; R3017002: or cut as a woodcut, or in neon, or a repaint. R3015002: no other (R2949000's
+ * Signature picture is gone).
  */
 export type ArtPicture = "normal" | "alt" | ArtRestyle;
 
-/** R2942001: the restyle `picture` is, or null for a picture of its own (normal, Alt art's). */
+/** R2942001, R3017002: the restyles with no family, each its own name. */
+const PLAIN_RESTYLES: ReadonlySet<string> = new Set(["sketch", "pixel", "comic", "depth", "prismatic", "woodcut", "neon", ...REPAINTS]);
+
+/** R2942001: the restyle `picture` is, or null for a picture of its own with no treatment (normal, Alt art's). */
 export function restyleOf(picture: ArtPicture): ArtRestyle | null {
-  return picture === "sketch" || picture === "pixel" || picture === "comic" || picture === "depth" || picture === "prismatic" || SHOWCASE_RESTYLES.has(picture)
-    ? (picture as ArtRestyle)
-    : null;
+  return PLAIN_RESTYLES.has(picture) || SHOWCASE_RESTYLES.has(picture) ? (picture as ArtRestyle) : null;
 }
 
 /** What joins a card's id to a picture's name in its seed: no catalog id holds it. */
@@ -79,10 +184,10 @@ const PICTURE_SEED_SEPARATOR = "#";
 /**
  * R2940001: the id a card's painter seeds `picture` by: the card's own id for its normal picture and for its Sketch,
  * which pencils the normal picture (R2942001: for any restyle of it), and one of its id and the picture's name for
- * Alt art's.
+ * Alt art's (R3017002: and for a repaint's, a picture of its own under its treatment).
  */
 export function artSeedOf(defId: string, picture: ArtPicture): string {
-  return picture === "normal" || restyleOf(picture) !== null ? defId : `${defId}${PICTURE_SEED_SEPARATOR}${picture}`;
+  return picture === "normal" || (restyleOf(picture) !== null && !isRepaint(picture)) ? defId : `${defId}${PICTURE_SEED_SEPARATOR}${picture}`;
 }
 
 /** R2940001: the paper a Sketch is drawn on, palette.css's `--pal-slate-100`. */
@@ -585,10 +690,354 @@ export function prismaticSvg(picture: string, radiant: boolean): string {
   return restyledRoot("pr-chrome", filter, picture, over);
 }
 
+/** R3017002: a Radiant face's painted picture washed back over `under` at `share`, named `result`, so its Radiant paint shows. */
+function radiantWash(share: number, under: string, result: string): string {
+  return `<feComposite in="SourceGraphic" in2="${under}" operator="arithmetic" k1="0" k2="${fmt(share)}" k3="${fmt(1 - share)}" k4="0" result="${result}"/>`;
+}
+
+/** R3017002: `top` laid over `under` at `share` of `top`, the rest `under`, named `result`. */
+function mixOf(top: string, under: string, share: number, result: string): string {
+  return `<feComposite in="${top}" in2="${under}" operator="arithmetic" k1="0" k2="${fmt(share)}" k3="${fmt(1 - share)}" k4="0" result="${result}"/>`;
+}
+
+/** R3017002: every channel of `input` multiplied by `slope`, named `result`. */
+function scaled(slope: number, result: string, input: string): string {
+  const func = (name: string): string => `<feFunc${name} type="linear" slope="${fmt(slope)}"/>`;
+  return `<feComponentTransfer in="${input}" result="${result}">${func("R")}${func("G")}${func("B")}</feComponentTransfer>`;
+}
+
+/**
+ * R3017002: where `input`'s grey steps, an outline of alpha 1 widened `width` each way, named `result`: Comic's kernel
+ * (R2942001) over the grey, gained by `gain` and cut.
+ */
+function edgesOf(prefix: string, input: string, gain: number, width: number, result: string): string {
+  return (
+    `<feColorMatrix in="${input}" type="saturate" values="0" result="${prefix}-edge-grey"/>` +
+    `<feConvolveMatrix in="${prefix}-edge-grey" order="3" kernelMatrix="0 -1 0 -1 4 -1 0 -1 0" preserveAlpha="true" result="${prefix}-edges"/>` +
+    `<feColorMatrix in="${prefix}-edges" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ${fmt(gain)} 0 0 0 0" result="${prefix}-edge"/>` +
+    `<feComponentTransfer in="${prefix}-edge" result="${prefix}-line"><feFuncA type="discrete" tableValues="0 1"/></feComponentTransfer>` +
+    `<feMorphology in="${prefix}-line" operator="dilate" radius="${fmt(width)}" result="${result}"/>`
+  );
+}
+
+/** R3017002: `color` wherever `shape` is drawn, named `result`. */
+function paintedIn(prefix: string, color: string, shape: string, result: string): string {
+  return `<feFlood flood-color="${color}" result="${prefix}-fill"/><feComposite in="${prefix}-fill" in2="${shape}" operator="in" result="${result}"/>`;
+}
+
+/** R3017002: how much of its colour Night's picture keeps, below 1, as colour fades in the dark. */
+export const NIGHT_SATURATE = 0.5;
+/** R3017002: how far Night dims the picture, each channel multiplied. */
+export const NIGHT_DIM = 0.5;
+/** R3017002: Night's sky, palette.css's `--pal-blue-900`, mixed into the dimmed picture so its dark reads blue. */
+export const NIGHT_SKY = "#1e3a8a";
+/** R3017002: the share of the sky in Night's picture, the rest the dimmed one. */
+export const NIGHT_SKY_MIX = 0.35;
+/** R3017002: Night's moon and its glow, palette.css's `--pal-slate-100`. */
+export const NIGHT_MOON = "#e8eaf2";
+/** R3017002: where the moon sits, in the picture's 100 units: high on the right, inside every window's crop. */
+export const NIGHT_MOON_X = 76;
+export const NIGHT_MOON_Y = 28;
+/** R3017002: the moon's radius, and its glow's, in the picture's 100 units. */
+export const NIGHT_MOON_R = 6;
+export const NIGHT_GLOW_R = 18;
+/** R3017002: how bright the moon's glow is at its middle, from 0 to 1. */
+export const NIGHT_GLOW_OPACITY = 0.5;
+/** R3017002: Night's stars, palette.css's `--pal-white`. */
+export const NIGHT_STAR = "#ffffff";
+/** R3017002: how bright a star is, from 0 to 1. */
+export const NIGHT_STAR_OPACITY = 0.85;
+/** R3017002: each star's place and radius, in the picture's 100 units, fixed and high in the sky, so every card's sky holds the same. */
+export const NIGHT_STARS: readonly (readonly [number, number, number])[] = [
+  [14, 24, 0.9],
+  [27, 31, 0.6],
+  [38, 22, 0.8],
+  [53, 27, 0.6],
+  [62, 20, 0.9],
+  [90, 36, 0.6],
+  [8, 38, 0.6],
+];
+/** R3017002: the share of a Radiant face's painted picture washed back over its Night, so its Radiant paint shows. */
+export const NIGHT_RADIANT_WASH = 0.45;
+
+/**
+ * R3017002: `picture` (a painter's whole SVG document, 100 units square) at night: its colour dulled (`NIGHT_SATURATE`)
+ * and dimmed (`NIGHT_DIM`), mixed toward `NIGHT_SKY` at `NIGHT_SKY_MIX`, under a `NIGHT_MOON` moon in its glow and
+ * `NIGHT_STARS` up high. On a Radiant face (`radiant`) the painted picture is washed back over it at `NIGHT_RADIANT_WASH`,
+ * so its Radiant paint shows. One `<svg>`, as `pixelSvg`.
+ */
+export function nightSvg(picture: string, radiant: boolean): string {
+  const filter =
+    `<feColorMatrix in="SourceGraphic" type="saturate" values="${fmt(NIGHT_SATURATE)}" result="nt-dull"/>` +
+    scaled(NIGHT_DIM, "nt-dim", "nt-dull") +
+    `<feFlood flood-color="${NIGHT_SKY}" result="nt-sky"/>` +
+    mixOf("nt-sky", "nt-dim", NIGHT_SKY_MIX, "nt-dark") +
+    (radiant ? radiantWash(NIGHT_RADIANT_WASH, "nt-dark", "nt-wash") : "");
+  const stars = NIGHT_STARS.map(([x, y, r]) => `<circle cx="${fmt(x)}" cy="${fmt(y)}" r="${fmt(r)}"/>`).join("");
+  const over =
+    `<radialGradient id="nt-glow"><stop offset="0" stop-color="${NIGHT_MOON}" stop-opacity="${fmt(NIGHT_GLOW_OPACITY)}"/>` +
+    `<stop offset="1" stop-color="${NIGHT_MOON}" stop-opacity="0"/></radialGradient>` +
+    `<g fill="${NIGHT_STAR}" opacity="${fmt(NIGHT_STAR_OPACITY)}">${stars}</g>` +
+    `<circle cx="${fmt(NIGHT_MOON_X)}" cy="${fmt(NIGHT_MOON_Y)}" r="${fmt(NIGHT_GLOW_R)}" fill="url(#nt-glow)"/>` +
+    `<circle cx="${fmt(NIGHT_MOON_X)}" cy="${fmt(NIGHT_MOON_Y)}" r="${fmt(NIGHT_MOON_R)}" fill="${NIGHT_MOON}"/>`;
+  return restyledRoot("nt-night", filter, picture, over);
+}
+
+/** R3017002: the paper Watercolor is painted on, palette.css's `--pal-slate-100`. */
+export const WATERCOLOR_PAPER = "#e8eaf2";
+/** R3017002: the frequency of the noise that runs Watercolor's edges, as wet paint runs. */
+export const WATERCOLOR_FLOW_FREQUENCY = 0.06;
+/** R3017002: how far Watercolor's edges run, in the picture's 100 units. */
+export const WATERCOLOR_FLOW_SCALE = 4;
+/** R3017002: how far Watercolor softens its run paint. */
+export const WATERCOLOR_SOFT = 0.9;
+/** R3017002: the share of the paint in Watercolor's picture, the rest the paper showing through its thin washes. */
+export const WATERCOLOR_PIGMENT = 0.7;
+/** R3017002: the paper grain's frequency, and how dark it lies over the paint, from 0 to 1. */
+export const WATERCOLOR_GRAIN_FREQUENCY = 0.8;
+export const WATERCOLOR_GRAIN_OPACITY = 0.12;
+/** R3017002: the noise seed of the run and the grain: every Watercolor runs alike. */
+export const WATERCOLOR_SEED = 5;
+/** R3017002: the share of a Radiant face's painted picture washed back over its Watercolor, so its Radiant paint shows. */
+export const WATERCOLOR_RADIANT_WASH = 0.45;
+
+/**
+ * R3017002: `picture` (a painter's whole SVG document, 100 units square) in watercolor: its edges run by noise
+ * (`WATERCOLOR_FLOW_SCALE`) and softened (`WATERCOLOR_SOFT`), laid on `WATERCOLOR_PAPER` and thinned toward it
+ * (`WATERCOLOR_PIGMENT`), grained. On a Radiant face (`radiant`) the painted picture is washed back over it at
+ * `WATERCOLOR_RADIANT_WASH`, so its Radiant paint shows. One `<svg>`, as `pixelSvg`.
+ */
+export function watercolorSvg(picture: string, radiant: boolean): string {
+  const filter =
+    `<feTurbulence type="fractalNoise" baseFrequency="${fmt(WATERCOLOR_FLOW_FREQUENCY)}" numOctaves="2" seed="${WATERCOLOR_SEED}" result="wc-flow"/>` +
+    `<feDisplacementMap in="SourceGraphic" in2="wc-flow" scale="${fmt(WATERCOLOR_FLOW_SCALE)}" xChannelSelector="R" yChannelSelector="G" result="wc-run"/>` +
+    `<feGaussianBlur in="wc-run" stdDeviation="${fmt(WATERCOLOR_SOFT)}" result="wc-soft"/>` +
+    `<feFlood flood-color="${WATERCOLOR_PAPER}" result="wc-paper"/>` +
+    `<feMerge result="wc-laid"><feMergeNode in="wc-paper"/><feMergeNode in="wc-soft"/></feMerge>` +
+    mixOf("wc-laid", "wc-paper", WATERCOLOR_PIGMENT, "wc-thin") +
+    `<feTurbulence type="fractalNoise" baseFrequency="${fmt(WATERCOLOR_GRAIN_FREQUENCY)}" numOctaves="2" seed="${WATERCOLOR_SEED}" result="wc-noise"/>` +
+    `<feColorMatrix in="wc-noise" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ${fmt(WATERCOLOR_GRAIN_OPACITY)} 0 0 0 0" result="wc-grain"/>` +
+    `<feBlend in="wc-grain" in2="wc-thin" mode="multiply" result="wc-painted"/>` +
+    (radiant ? radiantWash(WATERCOLOR_RADIANT_WASH, "wc-painted", "wc-wash") : "");
+  return restyledRoot("wc-paint", filter, picture);
+}
+
+/** R3017002: how far Stained-glass window pushes the picture's colour before it cuts it into panes. */
+export const STAINED_GLASS_SATURATE = 1.6;
+/** R3017002: how far Stained-glass window smooths the picture before it cuts it, so its panes are broad. */
+export const STAINED_GLASS_SMOOTH = 1;
+/** R3017002: how far Stained-glass window brightens the picture before it cuts it, each channel multiplied: glass lit from behind. */
+export const STAINED_GLASS_LIFT = 1.6;
+/** R3017002: the levels each colour channel of a pane is cut to, each to its nearest: Pixel's 27 colours (R2942001), none gold. */
+export const STAINED_GLASS_LEVELS: readonly number[] = [0, 0.5, 1];
+/** R3017002: the light behind the glass, palette.css's `--pal-slate-100`, and how strongly it shines through, from 0 to 1. */
+export const STAINED_GLASS_LIGHT = "#e8eaf2";
+export const STAINED_GLASS_GLOW_OPACITY = 0.2;
+/** R3017002: the lead between the panes, palette.css's `--pal-slate-900`. */
+export const STAINED_GLASS_LEAD = "#141a2e";
+/** R3017002: how strongly an edge between two panes turns to lead, and how far the lead is widened each way. */
+export const STAINED_GLASS_LEAD_GAIN = 6;
+export const STAINED_GLASS_LEAD_WIDTH = 0.6;
+/** R3017002: the noise whose contour cuts the panes apart where the picture has no edge: its frequency and seed. */
+export const STAINED_GLASS_PANE_FREQUENCY = 0.04;
+export const STAINED_GLASS_PANE_SEED = 11;
+/** R3017002: the levels the pane noise's one channel is cut to, so it steps once along a contour, where lead runs. */
+export const STAINED_GLASS_PANE_LEVELS: readonly number[] = [0, 1];
+/** R3017002: the share of a Radiant face's painted picture washed back over its window, so its Radiant paint shows. */
+export const STAINED_GLASS_RADIANT_WASH = 0.45;
+
+/**
+ * R3017002: `picture` (a painter's whole SVG document, 100 units square) as a stained-glass window: its colour pushed
+ * (`STAINED_GLASS_SATURATE`), smoothed, brightened (`STAINED_GLASS_LIFT`) and cut to `STAINED_GLASS_LEVELS`, lit from
+ * behind by `STAINED_GLASS_LIGHT`, and leaded in `STAINED_GLASS_LEAD` along every edge between its panes and along the
+ * contour of one channel of noise, cut to `STAINED_GLASS_PANE_LEVELS`, that parts the broad ones. On a Radiant face (`radiant`) the painted picture is washed back over it at `STAINED_GLASS_RADIANT_WASH`, so
+ * its Radiant paint shows. One `<svg>`, as `pixelSvg`.
+ */
+export function stainedGlassSvg(picture: string, radiant: boolean): string {
+  const filter =
+    `<feColorMatrix in="SourceGraphic" type="saturate" values="${fmt(STAINED_GLASS_SATURATE)}" result="sg-vivid"/>` +
+    `<feGaussianBlur in="sg-vivid" stdDeviation="${fmt(STAINED_GLASS_SMOOTH)}" result="sg-smooth"/>` +
+    scaled(STAINED_GLASS_LIFT, "sg-bright", "sg-smooth") +
+    cutTo(STAINED_GLASS_LEVELS, "sg-flat", "sg-bright") +
+    `<feFlood flood-color="${STAINED_GLASS_LIGHT}" flood-opacity="${fmt(STAINED_GLASS_GLOW_OPACITY)}" result="sg-light"/>` +
+    `<feBlend in="sg-light" in2="sg-flat" mode="screen" result="sg-lit"/>` +
+    edgesOf("sg", "sg-flat", STAINED_GLASS_LEAD_GAIN, STAINED_GLASS_LEAD_WIDTH, "sg-seams") +
+    `<feTurbulence type="fractalNoise" baseFrequency="${fmt(STAINED_GLASS_PANE_FREQUENCY)}" numOctaves="1" seed="${STAINED_GLASS_PANE_SEED}" result="sg-noise"/>` +
+    `<feColorMatrix in="sg-noise" type="matrix" values="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 1" result="sg-solid"/>` +
+    cutTo(STAINED_GLASS_PANE_LEVELS, "sg-cells", "sg-solid") +
+    edgesOf("sg-pane", "sg-cells", STAINED_GLASS_LEAD_GAIN, STAINED_GLASS_LEAD_WIDTH, "sg-panes") +
+    `<feMerge result="sg-cames"><feMergeNode in="sg-seams"/><feMergeNode in="sg-panes"/></feMerge>` +
+    paintedIn("sg-lead", STAINED_GLASS_LEAD, "sg-cames", "sg-leaded") +
+    `<feMerge result="sg-window"><feMergeNode in="sg-lit"/><feMergeNode in="sg-leaded"/></feMerge>` +
+    (radiant ? radiantWash(STAINED_GLASS_RADIANT_WASH, "sg-window", "sg-wash") : "");
+  return restyledRoot("sg-glass", filter, picture);
+}
+
+/** R3017002: Tarot card's duotone, from its dark to its light, palette.css's `--pal-blue-900` and `--pal-slate-100`. */
+export const TAROT_DARK = "#1e3a8a";
+export const TAROT_LIGHT = "#e8eaf2";
+/** R3017002: how much of its colour Tarot card's picture keeps under its duotone, below 1, as an old print's fades. */
+export const TAROT_SATURATE = 0.6;
+/** R3017002: the share of the duotone in Tarot card's picture, the rest its muted colour. */
+export const TAROT_DUOTONE_MIX = 0.55;
+/** R3017002: the card's arched border, palette.css's `--pal-violet-700`, and the line inside it, `--pal-slate-100`. */
+export const TAROT_BORDER = "#6d28d9";
+export const TAROT_LINE = "#e8eaf2";
+/** R3017002: the line's width, in the picture's 100 units. */
+export const TAROT_LINE_WIDTH = 0.8;
+/** R3017002: the arch's pillars, from each side, and its base bar, from the bottom, in the picture's 100 units. */
+export const TAROT_PILLAR = 7;
+export const TAROT_BASE = 78;
+/** R3017002: where the arch springs from its pillars, in the picture's 100 units; its crown is half the window's width above. */
+export const TAROT_SPRING = 62;
+/** R3017002: the sun in the arch's left spandrel and the crescent in its right, their places and radii, in the picture's 100 units. */
+export const TAROT_SUN_X = 13;
+export const TAROT_MOON_X = 87;
+export const TAROT_EMBLEM_Y = 30;
+export const TAROT_EMBLEM_R = 3;
+/** R3017002: how far the sun's rays reach past it, in its radii, and how many it has. */
+export const TAROT_RAY_REACH = 1.8;
+export const TAROT_RAYS = 8;
+/** R3017002: the stars in the spandrels and on the pillars, their places and sizes, in the picture's 100 units. */
+export const TAROT_STARS: readonly (readonly [number, number, number])[] = [
+  [24, 21, 1.4],
+  [76, 21, 1.4],
+  [3.5, 70, 1.1],
+  [96.5, 70, 1.1],
+];
+/** R3017002: the share of a Radiant face's painted picture washed back over its Tarot card, so its Radiant paint shows. */
+export const TAROT_RADIANT_WASH = 0.45;
+
+/** R3017002: a four-pointed star at (`x`, `y`), `size` from its middle to each point. */
+function starPath(x: number, y: number, size: number): string {
+  const waist = size / 4;
+  return (
+    `M${fmt(x)} ${fmt(y - size)}L${fmt(x + waist)} ${fmt(y - waist)}L${fmt(x + size)} ${fmt(y)}L${fmt(x + waist)} ${fmt(y + waist)}` +
+    `L${fmt(x)} ${fmt(y + size)}L${fmt(x - waist)} ${fmt(y + waist)}L${fmt(x - size)} ${fmt(y)}L${fmt(x - waist)} ${fmt(y - waist)}Z`
+  );
+}
+
+/**
+ * R3017002: `picture` (a painter's whole SVG document, 100 units square) as a fortune card's: its colour muted
+ * (`TAROT_SATURATE`) and mixed with a `TAROT_DARK` to `TAROT_LIGHT` duotone at `TAROT_DUOTONE_MIX`, framed by a
+ * `TAROT_BORDER` arch on two pillars and a base, a `TAROT_LINE` inside it, a sun and a crescent in its spandrels and
+ * stars about it: no words. On a Radiant face (`radiant`) the painted picture is washed back over it at
+ * `TAROT_RADIANT_WASH`, so its Radiant paint shows. One `<svg>`, as `pixelSvg`.
+ */
+export function tarotSvg(picture: string, radiant: boolean): string {
+  const filter =
+    `<feColorMatrix in="SourceGraphic" type="saturate" values="0" result="tr-grey"/>` +
+    mapOnto(TAROT_DARK, TAROT_LIGHT, "tr-duotone", "tr-grey") +
+    `<feColorMatrix in="SourceGraphic" type="saturate" values="${fmt(TAROT_SATURATE)}" result="tr-muted"/>` +
+    mixOf("tr-duotone", "tr-muted", TAROT_DUOTONE_MIX, "tr-card") +
+    (radiant ? radiantWash(TAROT_RADIANT_WASH, "tr-card", "tr-wash") : "");
+  const [left, right] = [TAROT_PILLAR, ART_BOX - TAROT_PILLAR];
+  const radius = (right - left) / 2;
+  const opening = `M${fmt(left)} ${fmt(TAROT_BASE)}V${fmt(TAROT_SPRING)}A${fmt(radius)} ${fmt(radius)} 0 0 1 ${fmt(right)} ${fmt(TAROT_SPRING)}V${fmt(TAROT_BASE)}Z`;
+  const rays = Array.from({ length: TAROT_RAYS }, (_, at) => {
+    const turn = (2 * Math.PI * at) / TAROT_RAYS;
+    const reach = TAROT_EMBLEM_R * TAROT_RAY_REACH;
+    return `M${fmt(TAROT_SUN_X)} ${fmt(TAROT_EMBLEM_Y)}L${fmt(TAROT_SUN_X + reach * Math.cos(turn))} ${fmt(TAROT_EMBLEM_Y + reach * Math.sin(turn))}`;
+  }).join("");
+  const stars = TAROT_STARS.map(([x, y, size]) => starPath(x, y, size)).join("");
+  const over =
+    `<path d="M0 0H${ART_BOX}V${ART_BOX}H0Z${opening}" fill="${TAROT_BORDER}" fill-rule="evenodd"/>` +
+    `<path d="${opening}" fill="none" stroke="${TAROT_LINE}" stroke-width="${fmt(TAROT_LINE_WIDTH)}"/>` +
+    `<path d="${rays}" stroke="${TAROT_LINE}" stroke-width="${fmt(TAROT_LINE_WIDTH)}"/>` +
+    `<circle cx="${fmt(TAROT_SUN_X)}" cy="${fmt(TAROT_EMBLEM_Y)}" r="${fmt(TAROT_EMBLEM_R)}" fill="${TAROT_LINE}"/>` +
+    `<circle cx="${fmt(TAROT_MOON_X)}" cy="${fmt(TAROT_EMBLEM_Y)}" r="${fmt(TAROT_EMBLEM_R)}" fill="${TAROT_LINE}"/>` +
+    `<circle cx="${fmt(TAROT_MOON_X + TAROT_EMBLEM_R / 2)}" cy="${fmt(TAROT_EMBLEM_Y - TAROT_EMBLEM_R / 3)}" r="${fmt(TAROT_EMBLEM_R)}" fill="${TAROT_BORDER}"/>` +
+    `<path d="${stars}" fill="${TAROT_LINE}"/>`;
+  return restyledRoot("tr-tarot", filter, picture, over);
+}
+
+/** R3017002: Woodcut's ink and paper, palette.css's `--pal-slate-900` and `--pal-slate-100`. */
+export const WOODCUT_INK = "#141a2e";
+export const WOODCUT_PAPER = "#e8eaf2";
+/** R3017002: the tones a woodcut's grey is cut to, each to its nearest, from the ink to the paper. */
+export const WOODCUT_LEVELS: readonly number[] = [0, 0.5, 1];
+/** R3017002: the alpha of the gouges over each of the cut's tones: over its middle tone alone, as a cutter's hatching. */
+export const WOODCUT_GOUGE_TONES: readonly number[] = [0, 1, 0];
+/** R3017002: the gouge noise's frequency along its strokes and across them: long strokes, close together. */
+export const WOODCUT_GOUGE_FREQUENCY_X = 0.015;
+export const WOODCUT_GOUGE_FREQUENCY_Y = 0.45;
+/** R3017002: how fast a gouge's opacity falls as its noise rises, and its opacity where the noise is nil: thin, firm strokes. */
+export const WOODCUT_GOUGE_SLOPE = -6;
+export const WOODCUT_GOUGE_OFFSET = 1.4;
+/** R3017002: the gouges' noise seed: every Woodcut is cut alike. */
+export const WOODCUT_GOUGE_SEED = 13;
+/** R3017002: the share of a Radiant face's painted picture washed back over its Woodcut, so its Radiant paint shows. */
+export const WOODCUT_RADIANT_WASH = 0.45;
+
+/**
+ * R3017002: `picture` (a painter's whole SVG document, 100 units square) as a woodcut print: greyed, cut to
+ * `WOODCUT_LEVELS` and printed from `WOODCUT_INK` to `WOODCUT_PAPER`, its middle tone gouged by long strokes of ink. On
+ * a Radiant face (`radiant`) the painted picture is washed back over it at `WOODCUT_RADIANT_WASH`, so its Radiant paint
+ * shows. One `<svg>`, as `pixelSvg`.
+ */
+export function woodcutSvg(picture: string, radiant: boolean): string {
+  const [r, g, b] = channels(WOODCUT_INK);
+  const tones = WOODCUT_GOUGE_TONES.map(fmt).join(" ");
+  const filter =
+    `<feColorMatrix in="SourceGraphic" type="saturate" values="0" result="wd-grey"/>` +
+    cutTo(WOODCUT_LEVELS, "wd-tones", "wd-grey") +
+    mapOnto(WOODCUT_INK, WOODCUT_PAPER, "wd-printed", "wd-tones") +
+    `<feColorMatrix in="wd-tones" type="luminanceToAlpha" result="wd-light"/>` +
+    `<feComponentTransfer in="wd-light" result="wd-middle"><feFuncA type="discrete" tableValues="${tones}"/></feComponentTransfer>` +
+    `<feTurbulence type="turbulence" baseFrequency="${fmt(WOODCUT_GOUGE_FREQUENCY_X)} ${fmt(WOODCUT_GOUGE_FREQUENCY_Y)}" numOctaves="1" seed="${WOODCUT_GOUGE_SEED}" result="wd-noise"/>` +
+    `<feColorMatrix in="wd-noise" type="matrix" values="0 0 0 0 ${fmt(r)} 0 0 0 0 ${fmt(g)} 0 0 0 0 ${fmt(b)} ` +
+    `${fmt(WOODCUT_GOUGE_SLOPE)} 0 0 0 ${fmt(WOODCUT_GOUGE_OFFSET)}" result="wd-strokes"/>` +
+    `<feComposite in="wd-strokes" in2="wd-middle" operator="in" result="wd-gouges"/>` +
+    `<feMerge result="wd-cut"><feMergeNode in="wd-printed"/><feMergeNode in="wd-gouges"/></feMerge>` +
+    (radiant ? radiantWash(WOODCUT_RADIANT_WASH, "wd-cut", "wd-wash") : "");
+  return restyledRoot("wd-print", filter, picture);
+}
+
+/** R3017002: the wall Neon sign hangs on, palette.css's `--pal-slate-900`, and how much of the picture shows on it, from 0 to 1. */
+export const NEON_WALL = "#141a2e";
+export const NEON_PICTURE_SHOW = 0.2;
+/** R3017002: how far Neon sign smooths the picture's grey before it cuts it, and the tones it cuts it to: its tubes run between them. */
+export const NEON_SMOOTH = 0.8;
+export const NEON_LEVELS: readonly number[] = [0, 0.33, 0.67, 1];
+/** R3017002: how strongly a step between two tones becomes a tube, and how far a tube is widened each way. */
+export const NEON_TUBE_GAIN = 6;
+export const NEON_TUBE_WIDTH = 0.5;
+/** R3017002: a tube's colour where the picture is dark and where it is light, palette.css's `--pal-purple-400` and `--pal-cyan-400`. */
+export const NEON_TUBE_DARK = "#c084fc";
+export const NEON_TUBE_LIGHT = "#22d3ee";
+/** R3017002: how far a tube's glow spreads, in the picture's 100 units. */
+export const NEON_GLOW_BLUR = 1.6;
+/** R3017002: the share of a Radiant face's painted picture washed back over its Neon sign, so its Radiant paint shows. */
+export const NEON_RADIANT_WASH = 0.45;
+
+/**
+ * R3017002: `picture` (a painter's whole SVG document, 100 units square) as a neon sign: its grey smoothed and cut to
+ * `NEON_LEVELS`, a tube along every step between them, coloured from `NEON_TUBE_DARK` where the picture is dark to
+ * `NEON_TUBE_LIGHT` where it is light, glowing (`NEON_GLOW_BLUR`) on a `NEON_WALL` wall that shows the picture at
+ * `NEON_PICTURE_SHOW`. On a Radiant face (`radiant`) the painted picture is washed back over it at `NEON_RADIANT_WASH`,
+ * so its Radiant paint shows. One `<svg>`, as `pixelSvg`.
+ */
+export function neonSvg(picture: string, radiant: boolean): string {
+  const filter =
+    `<feColorMatrix in="SourceGraphic" type="saturate" values="0" result="ne-grey"/>` +
+    `<feGaussianBlur in="ne-grey" stdDeviation="${fmt(NEON_SMOOTH)}" result="ne-soft"/>` +
+    cutTo(NEON_LEVELS, "ne-steps", "ne-soft") +
+    edgesOf("ne", "ne-steps", NEON_TUBE_GAIN, NEON_TUBE_WIDTH, "ne-bends") +
+    mapOnto(NEON_TUBE_DARK, NEON_TUBE_LIGHT, "ne-hue", "ne-soft") +
+    `<feComposite in="ne-hue" in2="ne-bends" operator="in" result="ne-tubes"/>` +
+    `<feGaussianBlur in="ne-tubes" stdDeviation="${fmt(NEON_GLOW_BLUR)}" result="ne-glow"/>` +
+    `<feFlood flood-color="${NEON_WALL}" result="ne-wall"/>` +
+    mixOf("SourceGraphic", "ne-wall", NEON_PICTURE_SHOW, "ne-dim") +
+    `<feMerge result="ne-sign"><feMergeNode in="ne-dim"/><feMergeNode in="ne-glow"/><feMergeNode in="ne-glow"/><feMergeNode in="ne-tubes"/></feMerge>` +
+    (radiant ? radiantWash(NEON_RADIANT_WASH, "ne-sign", "ne-wash") : "");
+  return restyledRoot("ne-neon", filter, picture);
+}
+
 /**
  * R2942001: `picture` as the restyle `restyle` draws it: the Sketch's pencil (seeded by `seedId`, R2940001), Pixel's
  * cells or Comic's pop art, base or Radiant (`radiant`); R2943001: or its set's Set showcase treatment; R2944001: or
- * Immersive's depth or Prismatic's chrome.
+ * Immersive's depth or Prismatic's chrome; R3017002: or Night's, Watercolor's, Stained-glass window's, Tarot card's,
+ * Woodcut's or Neon sign's.
  */
 export function restyledSvg(picture: string, restyle: ArtRestyle, radiant: boolean, seedId: string): string {
   if (restyle === "sketch") return sketchSvg(picture, radiant, seedId);
@@ -596,5 +1045,11 @@ export function restyledSvg(picture: string, restyle: ArtRestyle, radiant: boole
   if (restyle === "comic") return comicSvg(picture, radiant);
   if (restyle === "depth") return depthSvg(picture, radiant);
   if (restyle === "prismatic") return prismaticSvg(picture, radiant);
+  if (restyle === "night") return nightSvg(picture, radiant);
+  if (restyle === "watercolor") return watercolorSvg(picture, radiant);
+  if (restyle === "stained-glass") return stainedGlassSvg(picture, radiant);
+  if (restyle === "tarot") return tarotSvg(picture, radiant);
+  if (restyle === "woodcut") return woodcutSvg(picture, radiant);
+  if (restyle === "neon") return neonSvg(picture, radiant);
   return showcaseSvg(picture, restyle.slice(SHOWCASE_PREFIX.length) as ShowcaseFamily, radiant);
 }

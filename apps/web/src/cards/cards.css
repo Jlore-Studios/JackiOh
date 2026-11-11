@@ -337,6 +337,7 @@
   border: 0;
   border-radius: 0;
   background: none;
+  box-shadow: none;
   color: #fff;
   font-size: 11.5cqw;
   font-weight: 900;
@@ -374,6 +375,39 @@
 
 .cf .cost-gem[data-tone="up"] {
   color: #ff7a7a;
+}
+
+/* R3338002: Ceaseless Void's gem in its owner's own hand (CardFace's `data-gem-drain`, gemDrain.ts) drains as
+   its cost falls: a dark fill comes down from the crystal's top to `--cost-drain` of its height (0 full, 1
+   empty), a pale surface riding its edge, so the gem's liquid level falls. The layer sits over the crystal
+   and under the number, clipped to the same hexagon, and moves by transform alone; the level eases from one
+   cost to the next only with motion allowed (the motion gate below), and under reduced motion it steps. */
+.cf .cost-gem .cf-cost-drain {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-below);
+  overflow: hidden;
+  clip-path: polygon(50% 0, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%);
+  pointer-events: none;
+}
+
+.cf .cost-gem .cf-cost-drain::before,
+.cf .cost-gem .cf-cost-drain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.cf .cost-gem .cf-cost-drain::before {
+  background: color-mix(in srgb, var(--pal-slate-900) 86%, transparent);
+  transform: scaleY(var(--cost-drain, 0));
+  transform-origin: 50% 0;
+}
+
+/* The surface: a thin line on the layer's top edge, moved down to the level (a percentage of its own height). */
+.cf .cost-gem .cf-cost-drain::after {
+  border-top: 0.5cqw solid color-mix(in srgb, var(--pal-sky-300) 75%, transparent);
+  transform: translateY(calc(var(--cost-drain, 0) * 100%));
 }
 
 .cf .cf-cost-alt {
@@ -643,6 +677,16 @@
   gap: 0.2em 0.45em;
 }
 
+/* R3333002: a piece's module icon beside its name, the one its hull plate draws (StarshipPieces.tsx sets the image). */
+.cf .cf-starship-icon {
+  display: inline-block;
+  width: 1.5em;
+  height: 1em;
+  margin-right: 0.25em;
+  vertical-align: -0.15em;
+  background: center / contain no-repeat;
+}
+
 .cf .cf-starship-piece + .cf-starship-piece::before {
   content: "·";
   margin-right: 0.45em;
@@ -749,7 +793,7 @@
   background: rgb(255 210 74 / 0.35);
 }
 
-/* Above every inspect layer (inspect.css: --z-inspect-hover 60, --z-inspect-modal 70), since a
+/* Above every inspect layer (inspect.css: --z-inspect-hover 60, the modal ones at --z-dialog 72), since a
    reference is a control inside the detail view and the sheet. */
 .cf-ref-tooltip {
   z-index: 80;
@@ -832,6 +876,54 @@
   max-height: var(--cf-text-h);
   padding-bottom: 0;
   border-bottom: 1.6cqh solid transparent;
+}
+
+/* #3341: a hand card's rules box is as tall as its text, and the art above it takes the rest. fit.ts measures the
+   text after it has fitted it (the box at its full height first) and sets `--cf-text-need`, the box's height in cqh,
+   never under HAND_TEXT_BOX_MIN_CQH; `--cf-grow` is how much of the box's 31.5cqh the text does not need, which the art
+   window gains and the name ribbon, the rarity gem and the box lose in step. A face with no measure (a box that
+   clamps, the long layouts below, a full art or Extended art face, whose art already runs across it) keeps the box
+   and the art as they were; so does any face outside a hand, and a face under 150px, which has no box (below). The
+   box's foot, at 87cqh, stays where it was. */
+.card-hand .cf:not([data-long]) {
+  --cf-grow: max(0cqh, calc(31.5cqh - var(--cf-text-need, 31.5) * 1cqh));
+}
+
+@container cardface (not (max-height: 149px)) {
+  .card-hand .cf:not([data-long], [data-full-art="true"], [data-version="version-extended-art"]) .cf-art-frame {
+    height: calc(37cqh + var(--cf-grow));
+  }
+
+  .card-hand .cf:not([data-long], [data-full-art="true"], [data-version="version-extended-art"])[data-card-type="Unit"] .cf-art-frame {
+    height: calc(40cqh + var(--cf-grow));
+  }
+
+  .card-hand .cf:not([data-long], [data-full-art="true"], [data-version="version-extended-art"]) .card-name {
+    top: calc(42cqh + var(--cf-grow));
+  }
+
+  .card-hand .cf:not([data-long], [data-full-art="true"], [data-version="version-extended-art"]) .cf-gem {
+    top: calc(50.2cqh + var(--cf-grow));
+  }
+
+  .card-hand .cf:not([data-long], [data-full-art="true"], [data-version="version-extended-art"]) .card-text:not([data-clamped="true"]) {
+    top: calc(55.5cqh + var(--cf-grow));
+    height: calc(var(--cf-text-h) - var(--cf-grow));
+  }
+}
+
+/* R3345000: a Mythic's frame in hand carries a quiet mark that it can be held: a slow edge shimmer in its own
+   colours (the rarity's violet, sky and mint), not Radiant's gold. It runs in the motion gate below, still under Reduce motion. */
+@keyframes cf-mythic-hand-shimmer {
+  0% {
+    box-shadow: 0 0 4px 1px color-mix(in srgb, var(--pal-violet-300) 35%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 6px 2px color-mix(in srgb, var(--pal-sky-300) 35%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 4px 1px color-mix(in srgb, var(--pal-green-200) 35%, transparent);
+  }
 }
 
 /* The long layout (fit.ts sets `data-long` on a face whose rules would otherwise print under
@@ -1572,6 +1664,24 @@
     height: 50cqh;
   }
 
+  /* #3341: a hand card's art window grows 4cqh (HAND_ART_GROW_CQH) down the room the name band gave up: the band
+     starts 4cqh lower and, with no Unit's numbers under it, is that much shorter. The Unit's band keeps its height
+     (its numbers hold the foot), so its two lines take the corners' top. Ahead of the full art and Extended art rules
+     below, which keep the art across the whole face. */
+  .card-hand .cf:not([data-layout="minion"]) .cf-art-frame {
+    height: calc(43cqh + 4cqh);
+  }
+
+  .card-hand .cf:not([data-layout="minion"]):not([data-card-type="Unit"]) .cf-art-frame {
+    height: calc(50cqh + 4cqh);
+  }
+
+  /* #3341: a small picture holds its colour (ART_SMALL_FACE_LIFT): more saturation and contrast, no tint, and none
+     on a Radiant face's gold window (R2725004), whose paint the Radiant face keeps as it is. */
+  .cf:not([data-radiant-face="true"]) .cf-art:not([data-art-variant="radiant"]) {
+    filter: saturate(1.15) contrast(1.06);
+  }
+
   /* R1017001: a full-art face keeps its art across the whole face at hand size too. R3046000: a compact face keeps
      its name in a band below the art (compact full art, below). */
   .cf[data-full-art="true"]:not([data-layout="minion"]):not([data-layout="compact"])[data-card-type] .cf-art-frame {
@@ -1606,6 +1716,16 @@
   .cf:not([data-layout="minion"]):not([data-card-type="Unit"]) .card-name {
     top: 59cqh;
     height: 31cqh;
+  }
+
+  /* #3341: a hand card's name band follows its art down 4cqh (HAND_ART_GROW_CQH); a Unit's keeps its height. */
+  .card-hand .cf:not([data-layout="minion"]) .card-name {
+    top: 56cqh;
+  }
+
+  .card-hand .cf:not([data-layout="minion"]):not([data-card-type="Unit"]) .card-name {
+    top: 63cqh;
+    height: 27cqh;
   }
 
   /* Two lines, then an ellipsis, if even FIT_MIN will not fit. */
@@ -1749,16 +1869,35 @@
   gap: 1cqw;
 }
 
+/* R3339000: an art-first compact face (a backrow card drawn with its name hidden, CardFace's `data-art-first`) has
+   edge-to-edge art and no name band: its name is the hover plate below. Under "Always" the face is not drawn art first,
+   so R3046000's band above is the face's. */
+.cf[data-layout="compact"][data-art-first="true"] {
+  --cf-band: 0cqh;
+}
+
+.cf[data-layout="compact"][data-art-first="true"][data-card-type] .cf-art-frame {
+  inset: 0;
+  height: auto;
+}
+
+.cf[data-layout="compact"][data-art-first="true"] .cf-art-frame::after {
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.4), transparent 24%, transparent 80%, rgb(0 0 0 / 0.3));
+}
+
 /* ------------------------------------------------------------------------------- minion ----- */
 
 /* The board minion, bottom up: the attack and health gems on the bottom corners, the name plate
-   directly above them, and the oval portrait over the rest, its lower rim tucked under the plate.
+   directly above them, and the portrait over the rest, its lower edge tucked under the plate (#3341:
+   a picture up to the frame, below; a worn rim or a full-art unit's own box, further down).
    Every vertical offset derives from one gem size, `--mf-stat`, so the plate can never slide under
    the gems whatever the zone's aspect ratio (a 48x66 phone zone or a 120x150 preview). */
 .cf[data-layout="minion"] {
   --mf-stat: min(30cqmin, 26cqh);
   /* Never shorter than the name's 7.5px floor needs (below): on a 58x80 zone 11cqh is 9px. */
   --mf-plate: max(11cqh, 10px);
+  /* #3341: where the art ends above the face's foot, half a gem (MINION_ART_FOOT_SHARE), so the gems straddle its edge. */
+  --mf-art-foot: calc(var(--mf-stat) * 0.5);
 
   width: 100%;
   height: 100%;
@@ -1781,41 +1920,12 @@
 .cf .cf-portrait {
   position: absolute;
   z-index: 1;
-  top: 3cqh;
-  left: 9cqw;
-  right: 9cqw;
-  bottom: calc(var(--mf-stat) + var(--mf-plate) * 0.5);
+  top: 0;
+  right: 0;
+  bottom: var(--mf-art-foot);
+  left: 0;
   display: block;
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 1.4cqmin var(--cf-rarity),
-    0 0 0 2.2cqmin rgb(0 0 0 / 0.55),
-    0 0.6cqmin 1.6cqmin rgb(0 0 0 / 0.75);
   isolation: isolate;
-}
-
-.cf[data-radiant-face="true"] .cf-portrait {
-  box-shadow:
-    0 0 0 1.6cqmin var(--foil-gold),
-    0 0 3.5cqmin color-mix(in srgb, var(--foil-gold) 75%, transparent);
-}
-
-.cf[data-rarity="Mythic"]:where([data-foil="static"], [data-foil="animated"]) .cf-portrait {
-  box-shadow:
-    0 0 0 1.4cqmin #ff6ad5,
-    0 0 0 2.6cqmin #94d0ff,
-    0 0 3cqmin rgb(255 106 213 / 0.6);
-}
-
-/* Taunt: Hearthstone's big shield-shaped border. A steel shield stands behind the portrait and
-   shows past it on every side, and the portrait's ring turns steel too, so a Taunt reads at a
-   glance even on a 48px phone zone. The shield is the Taunt treatment of the keyword visuals
-   (keywords.css, `[data-keyword-fx="Taunt"]`, R438); the ring stays keyed on `data-taunt`. */
-.cf[data-taunt="true"] .cf-portrait {
-  box-shadow:
-    0 0 0 1.6cqmin #c3cad8,
-    0 0 0 2.6cqmin #2b303b,
-    0 0.6cqmin 1.6cqmin rgb(0 0 0 / 0.75);
 }
 
 .cf[data-layout="minion"] .cf-crest {
@@ -1903,6 +2013,171 @@
 
 .cf[data-layout="minion"][data-full-art="true"] .stats {
   bottom: var(--mf-plate);
+}
+
+/* R3339000: Art-first cards in play drop name bands and text to let art stand edge-to-edge. */
+.cf[data-layout="minion"][data-art-first="true"] .cf-scale {
+  inset: 1.2% 1.7%;
+  border-radius: 10.7% / 8%;
+}
+
+.cf[data-layout="minion"][data-art-first="true"] .cf-portrait {
+  z-index: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.cf[data-layout="minion"][data-art-first="true"] .cf-portrait::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.4), transparent 22%, transparent 62%, rgb(0 0 0 / 0.5));
+  pointer-events: none;
+}
+
+/* #3341: a unit that is not full art draws its art up to the frame too, not an oval in a box: the picture runs
+   from the panel's top and sides down to half a gem above its foot (`--mf-art-foot`, MINION_ART_FOOT_SHARE; `.cf
+   .cf-portrait`, above), so the attack and health gems straddle its lower edge and the name plate lies on it, the way
+   a full-art unit's gems and band do. The panel's rounded corners clip the picture. Nothing is drawn over it but a
+   rarity ring at its rim, which keeps the rings of the oval it replaces (a Radiant's gold, a Mythic's foil, a Taunt's
+   steel: Hearthstone's shield-shaped border, now a ring since the picture covers the shield that stood behind it, the
+   keyword visuals' `[data-keyword-fx="Taunt"]`, R438, keywords.css), and a scrim at its foot behind the gems, so the
+   colours of the art itself are never washed by a tint. */
+.cf[data-layout="minion"]:not([data-full-art="true"]) .cf-portrait::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 1.4cqmin var(--cf-rarity);
+  background: linear-gradient(180deg, transparent 62%, rgb(0 0 0 / 0.35));
+  pointer-events: none;
+}
+
+.cf[data-layout="minion"][data-radiant-face="true"]:not([data-full-art="true"]) .cf-portrait::after {
+  box-shadow: inset 0 0 0 1.6cqmin var(--foil-gold);
+}
+
+.cf[data-layout="minion"][data-rarity="Mythic"]:where([data-foil="static"], [data-foil="animated"]):not([data-full-art="true"]) .cf-portrait::after {
+  box-shadow:
+    inset 0 0 0 1.4cqmin #ff6ad5,
+    inset 0 0 0 2.6cqmin #94d0ff;
+}
+
+.cf[data-layout="minion"][data-taunt="true"]:not([data-full-art="true"]) .cf-portrait::after {
+  box-shadow:
+    inset 0 0 0 1cqmin #2b303b,
+    inset 0 0 0 4.4cqmin #c3cad8,
+    inset 0 0 0 5.4cqmin #2b303b;
+}
+
+/* R3339000: an art-first face that is not full art has no rim to ring: the art runs edge to edge under the panel's own
+   rarity edge, as a full-art unit's does, so it takes that unit's scrim (above) in place of the ring and scrim just
+   above, and only a Taunt's steel ring, drawn over the art since its shield is hidden, as a full-art unit's is. These come
+   after the rules they override and carry the `:not` they carry, so they outrank them whatever the layout's ring. */
+.cf[data-layout="minion"][data-art-first="true"]:not([data-full-art="true"]) .cf-portrait::after {
+  box-shadow: none;
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.4), transparent 22%, transparent 62%, rgb(0 0 0 / 0.5));
+}
+
+.cf[data-layout="minion"][data-art-first="true"][data-taunt="true"]:not([data-full-art="true"]) .cf-portrait::after {
+  box-shadow:
+    inset 0 0 0 1cqmin #2b303b,
+    inset 0 0 0 4.4cqmin #c3cad8,
+    inset 0 0 0 5.4cqmin #2b303b;
+}
+
+.cf[data-layout="minion"][data-art-first="true"] .stats {
+  bottom: 0.5cqh;
+}
+
+.cf[data-layout="minion"][data-art-first="true"] .shield-icon {
+  bottom: 0;
+}
+
+/* R3339000: a normal Common-to-Epic Unit keeps its name plate, smaller and translucent: its art already runs up to the frame
+   (#3341), under the plate, so the window grows as the plate shrinks. */
+.cf[data-layout="minion"] .card-name.card-name-compact-translucent {
+  height: calc(var(--mf-plate) * 0.82);
+  line-height: calc(var(--mf-plate) * 0.82);
+  background: rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(4px);
+  box-shadow:
+    0 0.4cqh 0.8cqh rgb(0 0 0 / 0.35),
+    inset 0 0.3cqh 0 rgb(255 255 255 / 0.15);
+}
+
+/* R3339000: the hover plate, the name of a board face that draws none (an art-first face, or any face under "Never"). It
+   is always in the DOM and the accessibility tree, so the name is read as before, and transparent until the card is
+   hovered or holds focus, when it fades in within --motion-fast, a slim plate over the bottom of the art (a Unit's tucked
+   above its gems, as its name plate is). It takes no pointer. The selectors outrank every `.card-name` rule above, the
+   compact face's band and the small face's rules among them, so the plate has its own height and place on each; the
+   rule that shows it outranks the one that hides it. */
+.cf[data-layout][data-card-type] .card-name.card-name-hover {
+  position: absolute;
+  z-index: 5;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: block;
+  height: max(11cqh, 10px);
+  padding: 0 4cqw;
+  border-radius: 0;
+  background: rgb(0 0 0 / 0.75);
+  backdrop-filter: blur(4px);
+  box-shadow: inset 0 0.3cqh 0 rgb(255 255 255 / 0.18);
+  clip-path: none;
+  color: #f0f3fa;
+  font-size: max(7.5px, calc(7.4cqh * var(--cf-fit, 1)));
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: max(11cqh, 10px);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--ease-standard);
+}
+
+/* A backrow card's plate takes two lines, as its band did, and its name shrinks as the band's did (`--cf-fit`, no pixel
+   floor) before it is clamped: its face is small and a name such as "Pareto Optimality" does not fit one line. */
+.cf[data-layout="compact"][data-card-type] .card-name.card-name-hover {
+  display: flex;
+  align-items: safe center;
+  justify-content: center;
+  height: max(22cqh, 18px);
+  padding: 0 3cqw;
+  font-size: calc(9cqh * var(--cf-fit, 1));
+  line-height: 1.04;
+  white-space: normal;
+}
+
+/* Two lines, then an ellipsis, if even the floor will not fit. */
+.cf[data-layout="compact"][data-card-type] .card-name.card-name-hover[data-clamped="true"] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.cf[data-layout="minion"][data-card-type] .card-name.card-name-hover {
+  bottom: calc(var(--mf-stat) - 0.5cqh);
+  left: 3cqw;
+  right: 3cqw;
+  height: var(--mf-plate);
+  border-radius: 1.2cqh;
+  line-height: var(--mf-plate);
+}
+
+.cf[data-layout][data-card-type]:hover .card-name.card-name-hover,
+.cf[data-layout][data-card-type]:focus-within .card-name.card-name-hover,
+.card:hover .cf[data-layout][data-card-type] .card-name.card-name-hover,
+.card:focus-within .cf[data-layout][data-card-type] .card-name.card-name-hover {
+  opacity: 1;
 }
 
 /* R243's Vanilla marker: a plain paper stamp at the portrait's top right, clear of the cost gem and
@@ -2340,6 +2615,17 @@
     translate: calc(var(--cf-immersive-x, 0) * 6%) calc(var(--cf-immersive-y, 0) * 6%);
     transition: translate 160ms ease-out;
     animation: cf-immersive-breathe 7s ease-in-out infinite alternate;
+  }
+
+  /* R3338002: the Void's gem level eases down as its cost falls, by transform alone; under reduced motion it steps. */
+  :root:not([data-reduce-motion="true"]) .cf .cost-gem .cf-cost-drain::before,
+  :root:not([data-reduce-motion="true"]) .cf .cost-gem .cf-cost-drain::after {
+    transition: transform var(--motion-slow) var(--ease-out);
+  }
+
+  /* R3345000: a Mythic in hand carries its slow edge shimmer (the mark that it can be held). */
+  :root:not([data-reduce-motion="true"]) .card-hand .cf[data-rarity="Mythic"] {
+    animation: cf-mythic-hand-shimmer var(--motion-slow) var(--ease-in-out) infinite alternate;
   }
 }
 

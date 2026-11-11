@@ -54,7 +54,7 @@ var RunnerRuns = 40
 var RunnerRows = 25
 
 // LocalLabel and GatherLabel are LOCAL_LABEL and GATHER_LABEL: the owner's PC's own label, and its
-// gather slot's, outside the PC's one job at a time (bot/machine/README.md, The local runner;
+// gather half's, which it holds while it has a job (bot/machine/README.md, The local runner;
 // #2134).
 var (
 	LocalLabel  = "jackioh-selfplay-local"
@@ -82,9 +82,10 @@ var Workflows = map[string]string{
 	"gather.yml":             "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
 	"hygiene-delete.yml":     "deletes the branches a person ticked in the hygiene issue",
 	"hygiene.yml":            "weekly: the hygiene issues for Squishy",
-	"learn-set.yml":          "a new set stops a learn export still early on the set before",
+	"learn-set.yml":          "a new patch or set stops a learn export still early on the version before",
 	"learn.yml":              "the learn lane: self-play, retrain and gate of the learned evaluation, back to back",
 	"lock-conversations.yml": "locks every conversation to collaborators",
+	"mutants.yml":            "weekly: a shard of every area's mutation testing, each area's score in its summary",
 	"patches-ship.yml":       "ships the pending card-patch fragments after a merge",
 	"pr-title.yml":           "holds a pull request's title to the convention",
 	"promote-production.yml": "production daily, from a passing super run on staging; /promote sooner",

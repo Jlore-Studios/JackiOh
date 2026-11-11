@@ -5,11 +5,7 @@
 
 import type { GameEvent } from "@jackioh/shared";
 
-import { HIDDEN_ID } from "../game/animations.ts";
-
-function sameCard(a: string, b: string): boolean {
-  return a === b || a === HIDDEN_ID || b === HIDDEN_ID;
-}
+import { sameCard } from "../game/animations.ts";
 
 /** Whether `events[at]` is a `cardPlayed` whose card was cast as it was drawn. */
 export function castOnDrawAt(events: readonly GameEvent[], at: number): boolean {

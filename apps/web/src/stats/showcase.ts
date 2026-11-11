@@ -231,7 +231,7 @@ export function pocketStat(stats: PlayerStats, pocket: PocketPick | null): Showc
     {
       key: "pocketPick",
       cardId: pocket.id,
-      title: () => t("Pocket Pick"),
+      title: () => t("Pocket pick"),
       line: () => pocketLine(pocket),
       animation: "trap",
       side: "you",
@@ -261,28 +261,28 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
   const brick = ranked(column(stats, (c) => (c.drawn >= SHOWCASE_MIN_PLAYS ? c.drawn - c.played : 0)))[0];
   const bricked = countsOf(stats, brick?.id ?? "");
   const out: ShowcaseStat[] = [
-    ...counted(stats, "defeated", { key: "toppled", title: () => t("Most Toppled"), animation: "death", side: "opponent" }, (n) =>
+    ...counted(stats, "defeated", { key: "toppled", title: () => t("Most toppled"), animation: "death", side: "opponent" }, (n) =>
       t("taken down {n}×", { n }),
     ),
-    ...counted(stats, "allured", { key: "coveted", title: () => t("Most Coveted"), animation: "allure", side: "you" }, (n) =>
+    ...counted(stats, "allured", { key: "coveted", title: () => t("Most coveted"), animation: "allure", side: "you" }, (n) =>
       t("stolen {n}×", { n }),
     ),
     ...pocketStat(stats, pocket),
-    ...counted(stats, "played", { key: "faithful", title: () => t("Old Faithful"), animation: "entrance", side: "you" }, (n) =>
+    ...counted(stats, "played", { key: "faithful", title: () => t("Old faithful"), animation: "entrance", side: "you" }, (n) =>
       t("played {n}×", { n }),
     ),
     ...counted(stats, "playedAgainst", { key: "nemesis", title: () => t("Arch-Nemesis"), animation: "lunge", side: "opponent" }, (n) =>
       t("played against you {n}×", { n }),
     ),
-    ...counted(stats, "destroyed", { key: "fallen", title: () => t("Fallen Hero"), animation: "death", side: "you" }, (n) =>
+    ...counted(stats, "destroyed", { key: "fallen", title: () => t("Fallen hero"), animation: "death", side: "you" }, (n) =>
       t("lost {n}×", { n }),
     ),
     ...about(
       ranked(column(stats, (c) => c.playedInWin + c.playedInLoss))[0]?.id,
-      { key: "record", title: () => t("The Record"), animation: "radiant", side: "you" },
+      { key: "record", title: () => t("The record"), animation: "radiant", side: "you" },
       () => recordLine(stats),
     ),
-    ...counted(stats, "lethal", { key: "lastLaugh", title: () => t("Last Laugh"), animation: "lunge", side: "you" }, (n) =>
+    ...counted(stats, "lethal", { key: "lastLaugh", title: () => t("Last laugh"), animation: "lunge", side: "you" }, (n) =>
       t("dealt the winning blow {n}×", { n }),
     ),
     ...counted(stats, "sprung", { key: "springloaded", title: () => t("Springloaded"), animation: "trap", side: "you" }, (n) =>
@@ -294,7 +294,7 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
     // R1743000: from the counters the device already kept.
     ...shared(
       topShare(stats, (c, id) => (isUnit(id) ? c.destroyed : 0), (c) => c.played),
-      { key: "glassCannon", title: () => t("Glass Cannon"), animation: "death", side: "you" },
+      { key: "glassCannon", title: () => t("Glass cannon"), animation: "death", side: "you" },
       (n, m) => t("destroyed {n} of the {m} times you played it", { n, m }),
     ),
     ...tallied(
@@ -306,22 +306,22 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
       { key: "unbreakable", title: () => t("Unbreakable"), animation: "shield", side: "you" },
       (n) => t("played {n}×, never destroyed", { n }),
     ),
-    ...about(grudge?.id, { key: "grudgeMatch", title: () => t("Grudge Match"), animation: "lunge", side: "you" }, () =>
+    ...about(grudge?.id, { key: "grudgeMatch", title: () => t("Grudge match"), animation: "lunge", side: "you" }, () =>
       t("you {n}×, them {m}×", { n: faced.played, m: faced.playedAgainst }),
     ),
     ...tallied(
       ranked(column(stats, (c) => (c.played === 0 ? c.playedAgainst : 0)))[0],
-      { key: "neverTried", title: () => t("Never Tried It"), animation: "lunge", side: "opponent" },
+      { key: "neverTried", title: () => t("Never tried it"), animation: "lunge", side: "opponent" },
       (n) => t("faced {n}×, never played it yourself", { n }),
     ),
     ...shared(
       topShare(stats, (c) => c.defeated, (c) => c.playedAgainst),
-      { key: "easyTarget", title: () => t("Easy Target"), animation: "death", side: "opponent" },
+      { key: "easyTarget", title: () => t("Easy target"), animation: "death", side: "opponent" },
       (n, m) => t("taken down {n} of the {m} times you faced it", { n, m }),
     ),
     ...shared(
       topShare(stats, (c) => c.lethal, (c) => c.played),
-      { key: "closer", title: () => t("The Closer"), animation: "lunge", side: "you" },
+      { key: "closer", title: () => t("The closer"), animation: "lunge", side: "you" },
       (n, m) => t("the winning blow in {n} of {m} plays", { n, m }),
     ),
     ...shared(
@@ -331,21 +331,21 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
     ),
     ...shared(
       topShare(stats, (c) => c.survived, (c) => c.playedInWin),
-      { key: "rideOrDie", title: () => t("Ride or Die"), animation: "shield", side: "you" },
+      { key: "rideOrDie", title: () => t("Ride or die"), animation: "shield", side: "you" },
       (n, m) => t("still standing at the end of {n} of the {m} wins you played it in", { n, m }),
     ),
-    ...tallied(seen, { key: "familiarFace", title: () => t("Familiar Face"), animation: "radiant", side: "you" }, (n) =>
+    ...tallied(seen, { key: "familiarFace", title: () => t("Familiar face"), animation: "radiant", side: "you" }, (n) =>
       stats.games === 1 ? t("in {n} of your {m} game", { n, m: stats.games }) : t("in {n} of your {m} games", { n, m: stats.games }),
     ),
     ...about(
       drawOne(ids((c) => c.played === 1), random),
-      { key: "oneHitWonder", title: () => t("One-Hit Wonder"), animation: "entrance", side: "you" },
+      { key: "oneHitWonder", title: () => t("One-hit wonder"), animation: "entrance", side: "you" },
       () => t("played once. Just once."),
     ),
-    ...tallied(played[1], { key: "secondFiddle", title: () => t("Second Fiddle"), animation: "entrance", side: "you" }, (n) =>
+    ...tallied(played[1], { key: "secondFiddle", title: () => t("Second fiddle"), animation: "entrance", side: "you" }, (n) =>
       t("your #2, played {n}×", { n }),
     ),
-    ...tallied(played[2], { key: "bronzeMedal", title: () => t("Bronze Medal"), animation: "entrance", side: "you" }, (n) =>
+    ...tallied(played[2], { key: "bronzeMedal", title: () => t("Bronze medal"), animation: "entrance", side: "you" }, (n) =>
       t("your #3, played {n}×", { n }),
     ),
     ...about(drawOne(explored, random), { key: "explorer", title: () => t("Explorer"), animation: "entrance", side: "you" }, () =>
@@ -362,7 +362,7 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
       { key: "workhorse", title: () => t("Workhorse"), animation: "lunge", side: "you" },
       (n) => t("dealt {n} damage", { n }),
     ),
-    ...counted(stats, "biggestHit", { key: "heavyHitter", title: () => t("Heavy Hitter"), animation: "lunge", side: "you" }, (n) =>
+    ...counted(stats, "biggestHit", { key: "heavyHitter", title: () => t("Heavy hitter"), animation: "lunge", side: "you" }, (n) =>
       t("hit for {n} once", { n }),
     ),
     ...counted(stats, "overkill", { key: "overkill", title: () => t("Overkill"), animation: "lunge", side: "you" }, (n) =>
@@ -374,15 +374,15 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
     ...counted(stats, "healing", { key: "medic", title: () => t("Medic"), animation: "shield", side: "you" }, (n) =>
       t("healed {n}", { n }),
     ),
-    ...counted(stats, "drawn", { key: "cardShark", title: () => t("Card Shark"), animation: "entrance", side: "you" }, (n) =>
+    ...counted(stats, "drawn", { key: "cardShark", title: () => t("Card shark"), animation: "entrance", side: "you" }, (n) =>
       t("drawn {n}×", { n }),
     ),
-    ...counted(stats, "radiant", { key: "shineOn", title: () => t("Shine On"), animation: "radiant", side: "you" }, (n) =>
+    ...counted(stats, "radiant", { key: "shineOn", title: () => t("Shine on"), animation: "radiant", side: "you" }, (n) =>
       t("made Radiant {n}×", { n }),
     ),
     ...shared(
       topShare(stats, (c) => c.playedInWin, (c) => c.playedInWin + c.playedInLoss),
-      { key: "luckyCharm", title: () => t("Lucky Charm"), animation: "radiant", side: "you" },
+      { key: "luckyCharm", title: () => t("Lucky charm"), animation: "radiant", side: "you" },
       (n, m) => t("won {n} of the {m} games you played it in", { n, m }),
     ),
     ...shared(
@@ -393,7 +393,7 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
     // R1743000: from the game-level totals.
     ...about(
       stats.bestStreak > 0 ? topCard(stats, "playedInWin")?.id : undefined,
-      { key: "hotStreak", title: () => t("Hot Streak"), animation: "radiant", side: "you" },
+      { key: "hotStreak", title: () => t("Hot streak"), animation: "radiant", side: "you" },
       () =>
         stats.bestStreak === 1
           ? t("best streak: {n} win", { n: stats.bestStreak })
@@ -408,15 +408,15 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
           : t("longest game: {n} turns", { n: stats.longestGame }),
     ),
     // R2649000: the game's own mechanics.
-    ...counted(stats, "tempExpired", { key: "useItOrLoseIt", title: () => t("Use It or Lose It"), animation: "expire", side: "you" }, (n) =>
+    ...counted(stats, "tempExpired", { key: "useItOrLoseIt", title: () => t("Use it or lose it"), animation: "expire", side: "you" }, (n) =>
       t("slipped away unplayed {n}×", { n }),
     ),
     ...shared(
       topShare(stats, (c) => c.tempPlayed, (c) => c.tempPlayed + c.tempExpired),
-      { key: "justInTime", title: () => t("Just in Time"), animation: "inTime", side: "you" },
+      { key: "justInTime", title: () => t("Just in time"), animation: "inTime", side: "you" },
       (n, m) => t("played {n} of the {m} times it was Temporary", { n, m }),
     ),
-    ...counted(stats, "crumbled", { key: "sandCastle", title: () => t("Sand Castle"), animation: "crumble", side: "you" }, (n) =>
+    ...counted(stats, "crumbled", { key: "sandCastle", title: () => t("Sand castle"), animation: "crumble", side: "you" }, (n) =>
       t("crumbled {n}×", { n }),
     ),
     ...counted(stats, "crumbledAgainst", { key: "outlasted", title: () => t("Outlasted"), animation: "crumble", side: "opponent" }, (n) =>
@@ -428,34 +428,34 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
     ...counted(stats, "fengShuiBad", { key: "badFengShui", title: () => t("Bad Feng Shui"), animation: "hit", side: "you" }, (n) =>
       t("cursed by Feng Shui {n}×", { n }),
     ),
-    ...counted(stats, "traded", { key: "hotPotato", title: () => t("Hot Potato"), animation: "bounce", side: "you" }, (n) =>
+    ...counted(stats, "traded", { key: "hotPotato", title: () => t("Hot potato"), animation: "bounce", side: "you" }, (n) =>
       t("traded away {n}×", { n }),
     ),
-    ...counted(stats, "tradeDrawn", { key: "tradeInValue", title: () => t("Trade-In Value"), animation: "entrance", side: "you" }, (n) =>
+    ...counted(stats, "tradeDrawn", { key: "tradeInValue", title: () => t("Trade-in value"), animation: "entrance", side: "you" }, (n) =>
       t("pulled from a trade {n}×", { n }),
     ),
-    ...counted(stats, "created", { key: "massProduced", title: () => t("Mass Produced"), animation: "stamp", side: "you" }, (n) =>
+    ...counted(stats, "created", { key: "massProduced", title: () => t("Mass produced"), animation: "stamp", side: "you" }, (n) =>
       t("created {n}×", { n }),
     ),
     ...counted(stats, "kills", { key: "executioner", title: () => t("Executioner"), animation: "lunge", side: "you" }, (n) =>
       n === 1 ? t("took down {n} enemy", { n }) : t("took down {n} enemies", { n }),
     ),
-    ...counted(stats, "biggestKill", { key: "giantSlayer", title: () => t("Giant Slayer"), animation: "lunge", side: "you" }, (n) =>
+    ...counted(stats, "biggestKill", { key: "giantSlayer", title: () => t("Giant slayer"), animation: "lunge", side: "you" }, (n) =>
       t("felled a {n}-health giant", { n }),
     ),
     ...counted(stats, "reborn", { key: "secondWind", title: () => t("Second Wind"), animation: "reborn", side: "you" }, (n) =>
       t("rose again {n}×", { n }),
     ),
-    ...counted(stats, "shieldsLost", { key: "bubbleWrap", title: () => t("Bubble Wrap"), animation: "shield", side: "you" }, (n) =>
+    ...counted(stats, "shieldsLost", { key: "bubbleWrap", title: () => t("Bubble wrap"), animation: "shield", side: "you" }, (n) =>
       t("shield popped {n}×", { n }),
     ),
-    ...counted(stats, "armorAbsorbed", { key: "ironWall", title: () => t("Iron Wall"), animation: "armor", side: "you" }, (n) =>
+    ...counted(stats, "armorAbsorbed", { key: "ironWall", title: () => t("Iron wall"), animation: "armor", side: "you" }, (n) =>
       t("shrugged off {n} damage", { n }),
     ),
-    ...counted(stats, "damageTaken", { key: "punchingBag", title: () => t("Punching Bag"), animation: "hit", side: "you" }, (n) =>
+    ...counted(stats, "damageTaken", { key: "punchingBag", title: () => t("Punching bag"), animation: "hit", side: "you" }, (n) =>
       t("took {n} damage", { n }),
     ),
-    ...counted(stats, "doubleAttacks", { key: "doubleTap", title: () => t("Double Tap"), animation: "windfury", side: "you" }, (n) =>
+    ...counted(stats, "doubleAttacks", { key: "doubleTap", title: () => t("Double tap"), animation: "windfury", side: "you" }, (n) =>
       t("attacked twice in a turn {n}×", { n }),
     ),
     ...counted(stats, "lifesteal", { key: "vampire", title: () => t("Vampire"), animation: "heal", side: "you" }, (n) =>
@@ -464,13 +464,13 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
     ...counted(stats, "sacrificed", { key: "martyr", title: () => t("Martyr"), animation: "doom", side: "you" }, (n) =>
       t("gave itself up {n}×", { n }),
     ),
-    ...counted(stats, "froze", { key: "coldSnap", title: () => t("Cold Snap"), animation: "lunge", side: "you" }, (n) =>
+    ...counted(stats, "froze", { key: "coldSnap", title: () => t("Cold snap"), animation: "lunge", side: "you" }, (n) =>
       n === 1 ? t("froze {n} enemy", { n }) : t("froze {n} enemies", { n }),
     ),
     ...counted(stats, "frozen", { key: "brainFreeze", title: () => t("Brain Freeze"), animation: "freeze", side: "you" }, (n) =>
       t("frozen {n}×", { n }),
     ),
-    ...counted(stats, "thawed", { key: "springThaw", title: () => t("Spring Thaw"), animation: "thaw", side: "you" }, (n) =>
+    ...counted(stats, "thawed", { key: "springThaw", title: () => t("Spring thaw"), animation: "thaw", side: "you" }, (n) =>
       t("thawed out {n}×", { n }),
     ),
     ...counted(stats, "shattered", { key: "shatter", title: () => t("Shatter"), animation: "lunge", side: "you" }, (n) =>
@@ -479,7 +479,7 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
     ...counted(stats, "flashback", { key: "encore", title: () => t("Encore"), animation: "reborn", side: "you" }, (n) =>
       t("played from the graveyard {n}×", { n }),
     ),
-    ...counted(stats, "manaSaved", { key: "bargainHunter", title: () => t("Bargain Hunter"), animation: "radiant", side: "you" }, (n) =>
+    ...counted(stats, "manaSaved", { key: "bargainHunter", title: () => t("Bargain hunter"), animation: "radiant", side: "you" }, (n) =>
       t("saved {n} mana", { n }),
     ),
     ...counted(stats, "countered", { key: "denied", title: () => t("Denied"), animation: "exile", side: "you" }, (n) =>
@@ -491,10 +491,10 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
       { key: "nope", title: () => t("Nope"), animation: nope !== undefined && isSpell(nope.id) ? "cast" : "trap", side: "you" },
       (n) => (n === 1 ? t("stopped {n} play cold", { n }) : t("stopped {n} plays cold", { n })),
     ),
-    ...counted(stats, "burned", { key: "burntToast", title: () => t("Burnt Toast"), animation: "death", side: "you" }, (n) =>
+    ...counted(stats, "burned", { key: "burntToast", title: () => t("Burnt toast"), animation: "death", side: "you" }, (n) =>
       t("burned from a full hand {n}×", { n }),
     ),
-    ...counted(stats, "bounced", { key: "frequentFlyer", title: () => t("Frequent Flyer"), animation: "bounce", side: "you" }, (n) =>
+    ...counted(stats, "bounced", { key: "frequentFlyer", title: () => t("Frequent flyer"), animation: "bounce", side: "you" }, (n) =>
       t("bounced back to hand {n}×", { n }),
     ),
     ...counted(stats, "launched", { key: "liftoff", title: () => t("Liftoff"), animation: "launch", side: "you" }, (n) =>

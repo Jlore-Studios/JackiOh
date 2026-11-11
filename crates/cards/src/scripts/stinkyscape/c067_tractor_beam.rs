@@ -46,8 +46,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005";
-    const BODY: &str = "core-019"; // 9/9
-    const NETHER: &str = "core-088"; // (4) Spell: destroy all permanents
+    const BODY: &str = "core-019"; // Midrange Menace
+    const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
 
     fn beam(seed: &str, radiant: bool) -> Scenario {
         scenario(json!({

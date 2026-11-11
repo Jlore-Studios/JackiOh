@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { getLeaderboard, keptPaths, type LeaderboardResponse } from "../net/api.ts";
 import { rememberRead } from "../net/readCache.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import LeaderboardRoute, { leaderboardTestid } from "./leaderboard.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -48,7 +49,7 @@ afterEach(() => {
 });
 
 describe("the leaderboard screen", () => {
-  it("R2778000 opens on Constructed, switches to All Random and back, each ladder read and named in the address", async () => {
+  it("R2778000 opens on Constructed, switches to All random and back, each ladder read and named in the address", async () => {
     window.history.replaceState(null, "", "/leaderboard");
     vi.mocked(getLeaderboard).mockImplementation(async (_token, ladder = "constructed") =>
       ladder === "random"
@@ -59,7 +60,7 @@ describe("the leaderboard screen", () => {
 
     const group = await screen.findByTestId(leaderboardTestid.ladder);
     const constructed = within(group).getByRole("button", { name: "Constructed" });
-    const random = within(group).getByRole("button", { name: "All Random" });
+    const random = within(group).getByRole("button", { name: "All random" });
     expect(constructed).toHaveAttribute("aria-pressed", "true");
     expect(random).toHaveAttribute("aria-pressed", "false");
     expect(await screen.findByTestId("leaderboard-jlorious")).toHaveTextContent("Max");
@@ -77,16 +78,25 @@ describe("the leaderboard screen", () => {
     expect(window.location.search).toBe("");
   });
 
-  it("R2778000 an address with ?ladder=random opens on All Random", async () => {
+  it("R2778000 an address with ?ladder=random opens on All random", async () => {
     window.history.replaceState(null, "", "/leaderboard?ladder=random");
     vi.mocked(getLeaderboard).mockResolvedValue(board({ ladder: "random" }));
     render(<LeaderboardRoute token={TOKEN} />);
 
     const group = await screen.findByTestId(leaderboardTestid.ladder);
-    expect(within(group).getByRole("button", { name: "All Random" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(group).getByRole("button", { name: "All random" })).toHaveAttribute("aria-pressed", "true");
     await screen.findByTestId("leaderboard-season");
     expect(vi.mocked(getLeaderboard)).toHaveBeenCalledWith(TOKEN, "random");
     window.history.replaceState(null, "", "/leaderboard");
+  });
+
+  it("R3223000 the screen has one visible h1, the PageTitle", async () => {
+    vi.mocked(getLeaderboard).mockResolvedValue(board());
+    render(<LeaderboardRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId("leaderboard-jlorious")).toHaveTextContent("Max");
+    expectOnePageTitle("Leaderboard");
+    expect(screen.getAllByRole("heading", { level: 2 }).length).toBeGreaterThan(0);
   });
 
   it("lists Jlorious by position, the tiers with their counts, and the Raisins", async () => {

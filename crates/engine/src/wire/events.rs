@@ -1189,6 +1189,12 @@ pub enum GameEvent {
     /// player alone.
     BoardReplaced {
         player: PlayerId,
+        /// R3337000: the code of the Stinkyscape Anomaly laid (`"WH"`, `"BF"`, …), set by Anomaly
+        /// Found! and Call to Chaos (Scape Edition); absent for any other replacement and in older
+        /// logs. Public, as the laid board is.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        anomaly: Option<String>,
     },
     // -------------------------------------------------------------------------------------------
     // Issue #2652: coin flips and die rolls (R2652000, R2652001)

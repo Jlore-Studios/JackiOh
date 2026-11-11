@@ -107,9 +107,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FAUCI: &str = "core-091";
-    const POSTDOC: &str = "core-061"; // 2/4
-    const SOURCERER: &str = "core-068"; // 5/5
-    const GARY: &str = "core-004"; // 1/1
+    const POSTDOC: &str = "core-061"; // Prejudiced Postdoc
+    const SOURCERER: &str = "core-068"; // Twisted Sorcerer
+    const GARY: &str = "core-004"; // Gary the Gambler
 
     /// The token count the `plague` effect keeps on the instance (§10.1).
     fn plague_on(s: &Scenario, card: &CardInstance) -> i32 {

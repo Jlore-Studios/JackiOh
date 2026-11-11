@@ -1,5 +1,6 @@
 # GitHub: `main`'s branch protection with its five required checks, `main`'s merge queue, the
-# `production` and `staging` rulesets, and the repository's Actions policy and workflow-token settings.
+# `production` and `staging` rulesets, the runner gate's environment and variable, and the
+# repository's Actions policy and workflow-token settings.
 # Not the labels: bot/go/internal/config `Labels` owns them, and the sweep restores them. Not the
 # Actions secrets: state would hold them.
 #
@@ -39,10 +40,14 @@ import {
 # was, so two pull requests each green alone landed red together (four of the five red runs on main
 # of 2026-10-29), and `strict` on instead would send every open pull request back to update and
 # re-run whenever one merged, several times an hour. The queue lands pull requests in the order they
-# became ready to merge. It builds `main` with every one ahead and the next on top, in parallel
-# (`max_entries_to_build`), runs ci.yml's `merge_group` there, waits for the same five checks the
-# protection above requires, and takes out any whose own build fails, rebuilding those behind it
-# without it. `ALLGREEN`: every commit it lands passed CI as it lands, which promote-production.yml
+# became ready to merge. It builds `main` with every one ahead and the next on top, three at a time
+# (`max_entries_to_build`). It built five until #3292's follow-up: each build asks for about 40 of
+# the 12 hosted runners CI keeps, and when the first failed, the four behind it, which hold its
+# change, failed with it and were built again (51 of 125 builds on 2026-11-05 and 06 were thrown
+# away). Three at a time land about 12 an hour at a 15-minute build, where the bots merge 3 an hour
+# on average and 11 in their busiest hours. It runs ci.yml's `merge_group` there, waits for the same
+# five checks the protection above requires, and takes out any whose own build fails, rebuilding
+# those behind it without it. `ALLGREEN`: every commit it lands passed CI as it lands, which promote-production.yml
 # relies on when it picks a commit of `main`. The timeout is past CI's worst wait for runners
 # (90 minutes on 2026-10-29, nearly all of it queued): at the default 60 the queue would take a
 # green pull request out for the runners' slowness. Squash, as every bot and lane merges. The
@@ -64,7 +69,7 @@ resource "github_repository_ruleset" "main_merge_queue" {
     merge_queue {
       merge_method                      = "SQUASH"
       grouping_strategy                 = "ALLGREEN"
-      max_entries_to_build              = 5
+      max_entries_to_build              = 3
       min_entries_to_merge              = 1
       max_entries_to_merge              = 5
       min_entries_to_merge_wait_minutes = 5
@@ -160,4 +165,34 @@ resource "github_workflow_repository_permissions" "jackioh" {
 import {
   to = github_workflow_repository_permissions.jackioh
   id = "JackiOh"
+}
+
+# The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): GitHub's free plan
+# runs 20 hosted jobs at once for the organization, so a pull request's CI and a merge-queue build
+# wait in this environment, holding no runner, until the night bot's account, its one required
+# reviewer, approves them, which the status loop does once there is room (merge-queue builds first,
+# each run the oldest first). ci.yml's `changes` job names it through the variable below; with the
+# variable gone, nothing waits. `main`'s CI and a promotion's never name it.
+#
+# The bot approves runs it started itself, so self-review stays allowed. An admin may bypass the
+# rule, approving a waiting run by hand, and deleting `ci_gate_environment` turns the gate off for
+# every run that starts after: the way out if the status loop and the sweep both stop. The
+# repository had neither, so the first apply creates them: no import blocks. Apply only once the
+# status loop runs a `main` with cigate (its log says "runner gate:" when runs wait).
+resource "github_repository_environment" "ci_runners" {
+  repository          = "JackiOh"
+  environment         = "ci-runners"
+  can_admins_bypass   = true
+  prevent_self_review = false
+
+  reviewers {
+    # jgoetzmann-bot, the night bot's account (`gh api users/jgoetzmann-bot --jq .id`).
+    users = [324324626]
+  }
+}
+
+resource "github_actions_variable" "ci_gate_environment" {
+  repository    = "JackiOh"
+  variable_name = "CI_GATE_ENVIRONMENT"
+  value         = github_repository_environment.ci_runners.environment
 }

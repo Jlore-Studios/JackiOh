@@ -202,7 +202,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   });
   const ranks = useMatchRanks(token, matchId, match.view?.result != null);
   // R336: a Conquest game shows its series' score and won decks, and once it is over the way to the next game.
-  const series = useMatchSeries(token, matchId, match.view?.result != null);
+  const series = useMatchSeries(token, matchId, match.view?.result != null, match.series);
   const lookup = currentCatalogLookup();
   /** R768000: the finished match's replay (`share` opens it at the last turn's GIF); null shows the board. */
   const [watching, setWatching] = useState<{ share: boolean } | null>(null);
@@ -419,7 +419,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           that offered and opened the replay would never be taken to the game the offers created.
           Same series gate: series games offer no rematch.
         */}
-        {series === null ? <RematchWatcher token={token} matchId={matchId} /> : null}
+        {series === null ? <RematchWatcher token={token} matchId={matchId} pushed={match.rematch} /> : null}
       </CatalogContext.Provider>
     );
   }
@@ -459,6 +459,9 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       view={view}
       legal={match.legal}
       onAction={match.send}
+      drainWhenHidden
+      // R3477000: the forecast the seat's own view frame carried; a watcher's carries none.
+      forecast={match.forecast ?? undefined}
       emotes={emotes}
       sideline={sideline}
       aim={aim}
@@ -483,6 +486,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
               matchId={matchId}
               connection={match.connection}
               ranked={ranks?.ranked ?? false}
+              pushed={match.rematch}
             />
           ) : null}
           <SeriesContinue series={series} matchId={matchId} />
@@ -497,7 +501,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
             </>
           )}
           <button type="button" data-testid="result-back" data-route={paths.play} onClick={() => navigate(paths.play)}>
-            {t("Back to lobby")}
+            {t("Back to the lobby")}
           </button>
           {/* R1483000: the server said the day's Jlore cap held this account's Jlore for the match back. */}
           {view.result !== null && match.jloreCapped ? (
@@ -556,7 +560,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
             folded the panel would never be taken to the game the offers created (Rematch.tsx).
             Same series gate as the buttons: series games offer no rematch.
           */}
-          {view.result !== null && series === null ? <RematchWatcher token={token} matchId={matchId} /> : null}
+          {view.result !== null && series === null ? <RematchWatcher token={token} matchId={matchId} pushed={match.rematch} /> : null}
           {ranks !== null ? (
             <p className="match-ranks" data-testid={matchTestid.ranks}>
               <span className="match-ranks__full">

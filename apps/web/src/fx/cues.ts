@@ -14,10 +14,10 @@ import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { animationRow, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry, type EntrySlam } from "../game/animations.ts";
 import { sideOf, testid, type Side } from "../game/contract.ts";
-import { armorTookHalf, damageFeel, damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
+import { armorTookHalf, damageFeel, damageTier, playTier, UNIT_SLAM, type PlayTier } from "../game/damageFeel.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { brandCues } from "./brand.ts";
-import { castOnDrawCues, planCardFx, planCardMotif } from "./cardFx.ts";
+import { castOnDrawCues, planCardFx, planCardMotif, planSignatureSweep, planSignatureZone } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
 import { rollCues } from "./rolls.ts";
 import { planSystemMoment, transmuteCues } from "./systemMoments.ts";
@@ -25,25 +25,27 @@ import { flavorEntranceCues } from "./entrances.ts";
 import { flavorExitCues } from "./exits.ts";
 import { attackerOf, flavorLookOf, flavorSourceOf } from "./flavorSource.ts";
 import { FLAVOR_LOOKS, flavorLook } from "./flavors.ts";
-import { ringCue, tunedBurst } from "./build.ts";
+import { bannerCue as banner, frac, ghostCue as ghost, raysCue as rays, ringCue as ring, tid as anchor, tunedBurst, viewportCenter } from "./build.ts";
 import { MOTIF_TUNING } from "./motifs/build.ts";
 import { lookOf, TONE_LOOKS, ZONE_DEFAULT, ZONE_LOOKS, type ZoneLook } from "./looks.ts";
 import type { MotifSpec } from "./motifs/build.ts";
 import { planMotif } from "./motifs/index.ts";
 import { shieldCues } from "./shield.ts";
 import { planBeats } from "./motifs/beats.ts";
+import { planAnomaly } from "./anomaly.ts";
 import { planSetPiece } from "./setPieces.ts";
+import { planBattleship } from "./battleship.ts";
+import { planTerminus, planTerminusFollow } from "./terminus/index.ts";
+import { shiftCues } from "./terminus/build.ts";
 import { planStarship } from "./starship.ts";
 import { shotCue } from "./stage.ts";
 import { entranceCues, entranceEchoMs, entranceLandMs } from "./takeover.ts";
 import {
   FX_ARMOR_TRAUMA,
-  FX_BANNER_TAIL_MS,
   FX_BURN_AT,
   FX_CAST_SCALE_MAX,
   FX_CAST_SCALE_STEP,
   FX_CAST_TRAUMA,
-  FX_CENTER,
   FX_COUNTER_TRAUMA,
   FX_CRACK_TAIL_MS,
   FX_DEATH_EMBER_AT,
@@ -60,18 +62,17 @@ import {
   FX_HEAL_SPLAT_AT,
   FX_LEGENDARY_TRAUMA,
   FX_LETHAL_LEAD_MAX_MS,
-  FX_MAX_TAIL_MS,
   FX_MIND_CONTROL_FLIGHT_FRACTION,
   FX_MOTIF_PHASES,
   FX_OVERFLOW_FIZZLE_AT,
+  FX_PLAY_HEAVY_TRAUMA,
+  FX_PLAY_MASSIVE_TRAUMA,
   FX_PROJECTILE_FLIGHT_FRACTION,
   FX_RADIANT_BURST_AT,
-  FX_RAYS_TAIL_MS,
   FX_REDIRECT_FLIGHT_FRACTION,
   FX_RESULT_MS,
   FX_RESULT_TRAUMA,
   FX_REWIND_TRAUMA,
-  FX_RING_MS,
   FX_SHAKE_MAX_PX,
   FX_SHOT_LAUNCH_AT,
   FX_SLAM_MAX_TRAUMA,
@@ -84,22 +85,18 @@ import {
 } from "./constants.ts";
 import type {
   FxAnchor,
-  FxBannerTone,
   FxBurstCue,
   FxCardFacts,
   FxCrackCue,
   FxCue,
-  FxGhostCue,
   FxMemory,
   FxOutcome,
   FxPlanEnv,
   FxPoint,
   FxPreset,
   FxProjectileCue,
-  FxRayTone,
   FxRaysCue,
   FxRecipe,
-  FxRingCue,
   FxShakeCue,
   FxSplatCue,
   FxSplatTone,
@@ -197,21 +194,9 @@ const SIDES: readonly Side[] = ["you", "opponent"];
 
 /* Anchors */
 
-function anchor(id: string, at?: FxPoint): FxAnchor {
-  return at === undefined ? { kind: "testid", testid: id } : { kind: "testid", testid: id, at: { x: at.x, y: at.y } };
-}
-
-function viewportCenter(): FxAnchor {
-  return { kind: "viewport", at: { x: FX_CENTER.x, y: FX_CENTER.y } };
-}
-
 const isCard = (tgt: string): boolean => tgt.startsWith("card-");
 const isHandCard = (tgt: string): boolean => tgt.startsWith("hand-card-");
 /* Cue builders */
-
-function frac(fraction: number, durationMs: number): number {
-  return Math.round(fraction * durationMs);
-}
 
 function burst(
   intensity: number,
@@ -241,28 +226,12 @@ function projectile(intensity: number, preset: FxPreset, from: FxAnchor, to: FxA
   return { kind: "projectile", preset, from, to, delayMs: 0, flightMs, density: intensity };
 }
 
-function ring(D: number, preset: FxPreset, at: FxAnchor, delayMs: number): FxRingCue {
-  return { kind: "ring", preset, at, delayMs, durationMs: Math.min(FX_RING_MS, D - delayMs + FX_MAX_TAIL_MS) };
-}
-
-function rays(D: number, tone: FxRayTone, at: FxAnchor, delayMs: number): FxRaysCue {
-  return { kind: "rays", tone, at, delayMs, durationMs: D - delayMs + FX_RAYS_TAIL_MS };
-}
-
 function splat(D: number, tone: FxSplatTone, amount: number, at: FxAnchor, delayMs: number): FxSplatCue {
   return { kind: "splat", tone, amount, at, delayMs, durationMs: D - delayMs + FX_SPLAT_HOLD_MS };
 }
 
 function crack(D: number, at: FxAnchor, delayMs: number): FxCrackCue {
   return { kind: "crack", at, delayMs, durationMs: D - delayMs + FX_CRACK_TAIL_MS };
-}
-
-function ghost(D: number, from: FxAnchor, to: FxAnchor): FxGhostCue {
-  return { kind: "ghost", from, to, delayMs: 0, durationMs: D };
-}
-
-function banner(D: number, text: string, tone: FxBannerTone): FxCue {
-  return { kind: "banner", text, tone, delayMs: 0, durationMs: D + FX_BANNER_TAIL_MS };
 }
 
 /** The trauma for a peak shake of `px`: offset is FX_SHAKE_MAX_PX × trauma² (shake.ts) (#57, #185). */
@@ -582,7 +551,7 @@ const shieldBreak: Recipe = (event, p) => {
   const at = anchor(p.tgt);
   const land = frac(FX_MOTIF_PHASES.land, p.D);
   const cues: FxCue[] = [
-    ringCue(p.D, "gold", at, 0),
+    ring(p.D, "gold", at, 0),
     { ...tunedBurst(p.env.intensity, "shard", at, "ring", land, MOTIF_TUNING.small), colors: FLAVOR_LOOKS.Holy.colors },
   ];
   pushShake(cues, p.env.intensity, FX_ARMOR_TRAUMA, land);
@@ -690,9 +659,12 @@ const shuffle: Recipe = (event, p) => {
     ];
   }
   if (event.type !== "shuffledIn") return [];
-  const library = animTestid.library(sideOf(p.view, event.player));
+  const side = sideOf(p.view, event.player);
+  const library = animTestid.library(side);
+  // #3347: a mulligan's returned cards fly into the deck from their hand (a back, whichever seat watches).
+  const from = p.view.phase === "mulligan" ? anchor(animTestid.hand(side)) : viewportCenter();
   return [
-    ghost(p.D, viewportCenter(), anchor(library)),
+    ghost(p.D, from, anchor(library)),
     burst(p.env.intensity, "arcane", anchor(library), "point", p.D, "shuffleArcane"),
   ];
 };
@@ -1196,26 +1168,55 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   const motif = planCardMotif(entry, view, env);
   // R2800000: a board clear's set piece draws its wipe's removals in place of their own rows.
   const setPiece = planSetPiece(entry, view, env);
+  // R3338000: a Terminus card's signature draws its run in place of their own rows, as its planner says.
+  const terminus = planTerminus(entry, view, env);
   // R2801000: so does the Starship, its fuse run's fusions and its launch.
   const starship = planStarship(entry, view, env);
+  // R3336000: and the Drone Battleship's layers, the Shield's redirect and absorbed hits.
+  const battleship = planBattleship(entry, view, env);
+  // R3337003: and an Anomaly's rift, its side's cards going and its board's coming.
+  const anomaly = planAnomaly(entry, view, env);
   const replaced = (event: GameEvent): boolean =>
-    motif?.replaces.has(event) === true || setPiece?.replaces.has(event) === true || starship?.replaces.has(event) === true;
-  const cues: FxCue[] = [...(motif?.cues ?? []), ...(setPiece?.cues ?? []), ...(starship?.cues ?? [])];
+    
+    motif?.replaces.has(event) === true ||
+    setPiece?.replaces.has(event) === true ||
+    terminus?.replaces.has(event) === true ||
+    starship?.replaces.has(event) === true ||
+    battleship?.replaces.has(event) === true ||
+    anomaly?.replaces.has(event) === true;
+  const cues: FxCue[] = [...(motif?.cues ?? []), ...(setPiece?.cues ?? []), ...(terminus?.cues ?? []), ...(starship?.cues ?? []), ...(battleship?.cues ?? []), ...(anomaly?.cues ?? [])];
   if (entry.sweep !== undefined) {
-    cues.push(...sweepCues(motif === null ? entry : { ...entry, events: entry.events.filter((event) => !replaced(event)) }, view, env));
+    // R3405000: a signature's recipe draws its own play's or hook's events in the sweep, out of the fog.
+    const own = planSignatureSweep(entry, view, env);
+    cues.push(...own.cues);
+    const kept = (event: GameEvent): boolean => !(motif !== null && replaced(event)) && !own.replaces.has(event);
+    cues.push(...sweepCues(motif === null && own.replaces.size === 0 ? entry : { ...entry, events: entry.events.filter(kept) }, view, env));
     return cues;
   }
-  if (entry.zone !== undefined) return zoneCues(entry, view, env);
-  if (entry.cast !== undefined) cues.push(...castCues(entry, view, env));
+  // R3389000: a signature's recipe draws beside a whole pile's one wave (Second Wind's deck blown away).
+  if (entry.zone !== undefined) return [...zoneCues(entry, view, env), ...planSignatureZone(entry, view, env)];
+  if (entry.cast !== undefined) {
+    // R3338000: a cast a Terminus card's signature holds (The Big Crunch's first) flares once the hold is over.
+    const wait = entry.signature === undefined ? 0 : (entry.setPiece?.holdMs ?? 0);
+    cues.push(...shiftCues(castCues({ ...entry, durationMs: entry.durationMs - wait }, view, env), wait));
+  }
   // R2789000: a combat keyword's beat decorates its entry, and draws a hit's row in its place where it says so.
   const beats = planBeats(entry, view, env);
   cues.push(...beats.cues);
   // R2784000: each set's mechanics as a Signature in the motif language (systemMoments.ts), over the
   // entry minus what a card motif, a set piece or a beat already draws, holding nothing.
+  // R3395001: a card's own beat (cardFx.ts) that says `moment: "replace"` draws its event in place of the
+  // event's system moment too (Tylannt's dial for the quest's); every other beat draws beside the moment.
+  const signatures = new Map(entry.events.map((event) => [event, planCardFx(event, { entry, view, env, D: entry.durationMs })] as const));
+  const ownMoments = [...signatures].flatMap(([event, result]) => (result?.moment === "replace" ? [event] : []));
   const systemSkip = new Set<GameEvent>([
+    ...ownMoments,
     ...(motif?.replaces ?? []),
     ...(setPiece?.replaces ?? []),
+    ...(terminus?.replaces ?? []),
     ...(starship?.replaces ?? []),
+    ...(battleship?.replaces ?? []),
+    ...(anomaly?.replaces ?? []),
     ...beats.replaces,
   ]);
   const system = planSystemMoment(entry, view, env, systemSkip);
@@ -1223,7 +1224,7 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   const systemReplaced = (event: GameEvent): boolean =>
     replaced(event) || beats.replaces.has(event) || system.replaces.has(event);
   for (const event of entry.events) {
-    const signature = planCardFx(event, { entry, view, env, D: entry.durationMs });
+    const signature = signatures.get(event) ?? null;
     if (signature !== null) {
       cues.push(...signature.cues);
       if (signature.row === "replace") continue;
@@ -1235,8 +1236,35 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
     if (tgt === null) continue;
     cues.push(...RECIPES[recipe](event, { entry, view, env, D: entry.durationMs, tgt }));
   }
+  // R3338000: the turn a Terminus card owed opening, and The Big Crunch's point over its play.
+  cues.push(...planTerminusFollow(entry, view, env));
+  // R3346000: a heavy or massive play shakes the board by the mana it cost.
+  cues.push(...playWeightCues(entry, env));
   // R2722001: a Legendary's or a Mythic's entrance, and a Mythic's takeover of the board (takeover.ts).
   cues.push(...entranceCues(entry, env, entry.durationMs));
+  return cues;
+}
+
+/** R3346000: the shake under a play of this tier, before the intensity scales it: only a heavy or massive play shakes. */
+export function playTrauma(tier: PlayTier): number {
+  if (tier === "massive") return FX_PLAY_MASSIVE_TRAUMA;
+  return tier === "heavy" ? FX_PLAY_HEAVY_TRAUMA : 0;
+}
+
+/**
+ * R3346000 (#3346): the board answers a heavy play with a brief shake and a massive one with a hard one, by
+ * the mana it cost. Only a play the viewer can read as a Unit, Spell or Field Spell shakes it: a hidden
+ * card, a Trap's set and a card cast as it is drawn do not (R203, R502), and `costPaid` is public.
+ */
+function playWeightCues(entry: AnimationEntry, env: FxPlanEnv): FxCue[] {
+  const cues: FxCue[] = [];
+  for (const event of entry.events) {
+    if (event.type !== "cardPlayed" || event.formerId !== undefined || event.defId === HIDDEN_ID) continue;
+    const type = env.card(event.defId)?.type;
+    if (type === undefined || type === "Trap" || type === "Field Trap") continue;
+    if (env.memory.castOnDraw(event)) continue;
+    pushShake(cues, env.intensity, playTrauma(playTier(event.costPaid)), 0);
+  }
   return cues;
 }
 

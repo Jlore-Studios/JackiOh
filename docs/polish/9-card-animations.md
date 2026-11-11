@@ -16,7 +16,8 @@ pasted in by a person, and each name then joins `FX_MOTIF_NAMES` (see "Open" at 
 | none | `"none: <reason>"` | the card's event rows alone (`ANIMATIONS`' `fx` recipes, the flavor's cast, impact, entrance and exit) | nothing to draw |
 | motif | `{ <hook>: { motif, palette?, row? } }` | a shared motif from `fx/motifs/`, on top of or in place of the event rows | the motif's planner, shared by every card that names it |
 | bespoke | `{ bespoke: "<recipe>" }` | a recipe of the card's own, in `fx/cards/<set>/` | the card's own file |
-| set piece | `{ setPiece: "<key>" }` | a board clear's set piece: its hook's removals as one wipe the queue holds for one capped, skippable beat (R2785000, R2800000) | `fx/setPieces.ts`, its board motion `game/board.css` and its sound bed `audio/setPieceBeds.ts` |
+| set piece | `{ setPiece: "<key>" }` | a board clear's set piece: its hook's removals as one wipe the queue holds for one capped, skippable beat (R2785000, R2800000); or a Terminus card's, its signature run (R3338000) | `fx/setPieces.ts` (a Terminus card's planner in `fx/terminus/`), its board motion `game/board.css` and its sound bed `audio/setPieceBeds.ts` |
+| signature | `signature: true` beside any of the last three, on a Legendary's or a Mythic's (R3332000) | the card's own animation, as in Hearthstone: its entrance (a Unit's, a Field Spell's) or a cast of its own (any other card's `bespoke` or `setPiece`), then the beat its text plays, and optionally an aura of its own, within its rarity's and type's budget ([Signatures](#signatures)) | the card's own files in `fx/cards/<set>/` |
 
 Every catalog card starts as `"none: pending"` and moves up a tier in its set's pass. A bespoke
 recipe is kept for the few cards no motif can say (the seven of the former `CARD_FX` table: #21
@@ -48,12 +49,12 @@ number chalked onto the card the seat reads) and #56 Book of Pain (`inkTear`: ea
 out in ink, the first with a ring and a shake). A Flourish is built from the motif primitives (the
 phases, the look, the card's scale), keys on its readable play alone and keeps its events' rows.
 
-Stinkyscape's first pass (#2797, R2797000) adds three more, in `fx/cards/stinkyscape/`, the same way:
+Stinkyscape's first pass (#2797, R2797000) adds two more, in `fx/cards/stinkyscape/`, the same way
+(its third, Olivian Expanse's `terminusRift`, became its set piece, R3338000):
 
 | Card | Recipe | Why bespoke |
 |---|---|---|
-| #4 Olivian Expanse | `terminusRift` | a Mythic whose whole play is one Discover: a void rift tears open over the board's centre at its first card added, and the card flies out of it into the caster's hand |
-| #18 Imitated Instrumentality | `magiBoot` | its three Field Spells come online one after another: a hologram beam from the caster's hero into each zone, booting with a ring and a burst, `FX_MAGI_STAGGER` of the entry apart within one |
+| #18 Imitated Instrumentality | `magiBoot` | its signature since R3395000: three core silhouettes behind the caster's hero as it is cast, then each of its three Field Spells booting in its zone in its own hue, a brand, a sheen and a ring, the first shaking |
 | #36 Drone Core X | `battleshipWarp` | the Mythic top of the Drone Core line: stars gather where the Drone Battleship will stand and it streaks in from the board's top edge (`FX_WARP_FROM`), landing in exhaust |
 
 Stinkyscape's pass, part two (#2798), adds three more, in `fx/cards/stinkyscape/` on the same shared
@@ -216,20 +217,39 @@ The new canvas presets (#2792, drawn in code in `fx/presets.ts` and `fx/sprites.
 
 `aura` (#2787, R2787000) is the one persistent motif: while a card's effect holds, the zone, lane, side
 or board it covers wears a quiet looping look in the card's palette, a tint, a slow drift of motes and
-an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, palette?, scope } }`.
+an edge glow. An entry names it beside its hooks or alone: `{ aura: { look, palette?, scope } }`;
+R3400000: beside a `{ bespoke }` recipe too (`entryAura` reads either).
 
 - **Looks** (`fx/aura/looks.ts`, `AURA_LOOKS`): `ember`, `frost`, `bloom`, `void`, `storm`, `holy`,
-  `toxic` and `arcane`, each a mote velocity, size and life range, a mote, tint and edge opacity, a
-  glow spread and a blend. `palette` is a flavor's look or a sub-look (`"Tech/rocket"`), the card's
-  own by default, as a motif's.
-- **Scopes**, nearest first: `zone` (the card's own backrow zone), `lane` (the lane's four zones,
-  both seats), `side` (its seat's ten zones) and `board` (all twenty). Only a Field Spell or a Field
-  Trap stands in a zone, so only it may name `zone` or `lane`; the loader fails any other card's.
+  `toxic`, `arcane`, (R3337003) `drift` (an asteroid field's), (R3400000) `flurry` (snow), `chalk`
+  (chalk dust) and `timber` (sawdust), and (R3405000) `ripple` (a still pool's), `orbit` (a ring circling
+  its card), `steam`, `incense` (rising hologram lines) and `glitch` (pixel spots); the seventeen each a
+  mote velocity, size and life range, a mote, tint and edge opacity, a glow spread and a blend, as each
+  signature look below is too. `palette` is a flavor's look or a sub-look
+  (`"Tech/rocket"`), the card's own by default, as a motif's.
+- **Scopes**, nearest first: `tile` (R3400000: a Unit's own unit zone), `zone` (the card's own backrow
+  zone), `lane` (the lane's four zones, both seats), `side` (its seat's ten zones) and `board` (all
+  twenty). Only a Field Spell or a Field Trap stands in a zone, so only it may name `zone` or `lane`, and
+  only a Unit may name `tile`; the loader fails any other card's.
+- **Signature looks** (R3389000, `AURA_SIGNATURE_LOOKS`): `seeingIris`, `sceptreLoop`, `graveBreeze`,
+  `silkWeb`, `mossCreep`, `crownSigil`, `craterSmoke`, `cloakShimmer` and `abyssWhirl`, each one
+  Classic signature's own, (R3402000) Core's `mirrorball` (quick small glints sweeping across),
+  `stadium` (large slow motes rising like lit rings) and `pedestal` (a few slow glints), and (R3407000)
+  fifteen more, each one Stinkyscape part two card's own: `scanline`, `heartbeat`, `glint`, `pixelcrawl`,
+  `duohalo`, `arcflick`, `steplights`, `searchlight`, `stationrings`, `aiwisp`, `crownpulse`, `drumbeat`,
+  `starpath`, `stinkvapour` and `pages`, and (R3399001) eighteen more, each one Classic+ signature
+  permanent's own: `syrup`, `waffleDome`, `frostMist`, `ovenSteam`, `laneWall`, `snoreLeaves`, `coinGlint`,
+  `staffBreath`, `bowNotch`, `warHeartbeat`, `appleRibbon`, `bannerBreeze`, `greatBannerShade`, `laserDot`,
+  `stoneFaces`, `stairCracks`, `jungleLeaves` and `serverLights`, its Units' on their tiles, and (R3395001)
+  `laserGrid`, `silverRise` and `labHaze`, Stinkyscape's part one's three signature Field Spells'; all
+  within `AURA_SIGNATURE_MAX_INTENSITY`. The loader fails one on any entry that is no signature, and
+  `auraLookSpec` reads either kind.
 - **What wears one** (`fx/aura/plan.ts`, read off the shown view alone): every face-up Field Spell or
-  Field Trap whose entry has an aura, and every modifier the view lists that a readable play added
+  Field Trap whose entry has an aura, every face-up Unit whose entry has a `tile` aura (R3400000), and every modifier the view lists that a readable play added
   (the play resolving when its `modifierChanged` came, with no trap fired inside it), on its seat's
-  side. A face-down card, the viewer's own unrevealed Field Trap and a Unit in a backrow zone wear
-  none (R202). The view's modifiers carry no source (R169), so a modifier whose play left the event
+  side, but a Unit's tile aura, which stands with the Unit. A face-down card, the viewer's own
+  unrevealed Field Trap, a hidden Unit, a Field card standing in a unit zone and a Unit in a backrow
+  zone wear none (R202). The view's modifiers carry no source (R169), so a modifier whose play left the event
   window before the layer saw it (a reload, a hand-over) wears none.
 - **Begin and end:** an aura the board starts to show fades in over `AURA_FADE_IN_MS` with a burst
   of motes from its box's centre; one it stops showing fades out over `AURA_FADE_OUT_MS`. Both follow
@@ -253,13 +273,40 @@ Ten Field Spells wear one as the pattern for the set passes:
 | Classic #42 Transmutable Toxins | `toxic`, board |
 | Classic #75 Argusland | `holy`, side |
 | Classic+ #34 Memory Leak | `frost`, lane, palette Tech |
-| Meditative #40 Feng Shui | `bloom`, board |
+| Meditative #40 Feng Shui | `orbit`, zone (R3405001; `bloom`, board before its signature) |
 | Meditative+ #9 Magic Amplifier | `arcane`, board |
 | Stinkyscape #46 Circadian Halfcycler | `storm`, lane |
 | Stinkyscape #155 Comet Crash | `ember`, zone |
 | Training Grounds #19 Extra Rations | `bloom`, zone |
 
-No modifier example is wired yet, and a bespoke entry (Hinder's rider) cannot take an aura.
+No modifier example is wired yet. A bespoke entry may wear an aura beside its recipe (R3400000), as
+Bob's and Tutorial Master's signatures do on their tiles, Meditative's signature Field Spells on
+their zones and lanes (R3405001), Classic's nine permanents' signatures each wear their own look
+(R3389000), and Core's three theirs (R3402000: #52 Silly Silas `mirrorball` on his tile, #93 Combo-Index
+`stadium` and #98 Heroic Power `pedestal` on their zones, [Signatures](#signatures)); a modifier a Unit's
+play installs wears no tile aura, which stands with the Unit.
+
+### Tile auras
+
+Tile auras (#3342, R3342000) mark the tile of every face-up Legendary and Mythic permanent on
+the board (Units and backrow alike). A tile aura is a DOM element inside `.zone` that paints
+under the card (`fx/aura/TileAura.tsx`, `tile.css`).
+
+- **Colors:** derived from the card's picture (its painter palette), shifted within
+  `±TILE_HUE_SPREAD_DEG` by its id hash so distinct Legendaries differ.
+- **Tiers:** Legendary gets a soft edge glow (`TILE_GLOW_PX.Legendary`) and motes
+  (`TILE_MOTES_LEGENDARY`). Mythic gets a richer pattern chosen by its set's look (circuitry for
+  Core, runes for Classic, ink for Meditative, starfield for Stinkyscape, roots for Training Grounds),
+  a wider edge glow and motes (`TILE_MOTES_MYTHIC`).
+- **Signature replacement:** a card whose entry carries an `aura` (such as Feng Shui, or R3400000 a
+  bespoke entry's, Bob's, Tutorial Master's, Classic's, R3399001 Classic+'s and R3402000 Core's
+  signatures') uses that standing aura in `AuraLayer` instead.
+- **Interactions:** hover, press or tap sends a ripple, plays a bell in its hue (`auraTouch`) and
+  buzzes on a phone (`Haptics.touch()`). Being picked as a target brightens the glow; damage or
+  divine shield loss flickers it; Dormant, Frozen or Silenced dims it; destroyed or exiled fades
+  it out over `TILE_FADE_OUT_MS`.
+- **Budgets:** motes are capped at `TILE_PARTICLE_SHARE` of `FX_PARTICLE_CAP_MOBILE`. Under
+  reduced motion, animations stop and motes/ripples omit; at intensity `off`, tile auras do not render.
 
 ## The tables
 
@@ -287,9 +334,19 @@ Stinkyscape is split so its two set passes merge without conflicts.
   start-of-turn or end-of-turn hook or a Whenever trigger) and `activate` play from the hook's own
   `hookResolving` marker (R2783000), and a Trap's `cast` from its `trapFired` (R2797000, Dispatch).
   A hook no marker reports (an attack's own, a Starship's launch) plays nothing.
-- **entrance** (R2794000): a marquee Unit's entrance (`fx/entrances.ts`, R670) beside its hooks,
-  `{ entrance: "titanBloom", cry: { motif: "flight" } }` (Classic #45 Nature Titan). Only a Unit may
-  name one, and an entrance alone stays `{ bespoke: "<key>" }`.
+- **The frame** (R3332000): any entry but a `none` may carry three fields beside its kind.
+  - **entrance:** the entrance its card lands with in place of its rarity's (`fx/entrances.ts`'s
+    `ENTRANCES`, R670, R2794000), beside any entry of a Unit or a Field Spell, or alone:
+    `{ entrance: "titanBloom", cry: { motif: "flight" } }` (Classic #45 Nature Titan),
+    `{ entrance: "bigBoom" }` (Classic #80), `{ setPiece: "voidFold", entrance: "voidCollapse", takeover: "void" }`
+    (#100). A Field Spell's plays as it lands face up in the backrow, in place of the shared Legendary
+    or Mythic rays. Any other card fails the loader: a Trap's entrance is its firing, its `cast`.
+  - **takeover:** a Mythic's own takeover look (`void`, `pawn`, `genie`, `ai`; R3400000 `summit`, `canvas`,
+    `napkin`; R3389000 `abyss`; R3395001 `vault`, `rod`, `wire`, `whiteDwarf`, `forge`; R3402000 `rotunda`,
+    `crystalForge`: `takeoverLookOf`, `fx/takeover.ts`); every other Mythic takes the shared `prismatic`.
+  - **signature:** `true` on a Legendary's or a Mythic's entry (a token's by the rarity it prints) that
+    is its signature, which must name its first beat: a Unit's `entrance`, a Field Spell's `entrance`
+    or its own cast, any other card's own cast (`bespoke` or `setPiece`).
 - **row:** `"replace"` (the default) draws the numbers (the damage splat, an Armor flash) in place of
   the events the motif replaces; `"keep"` plays over the event's own recipe, as a bespoke recipe's
   `keep` does.
@@ -318,7 +375,8 @@ and `stinkyscape-2.md` (#2798), over `stinkyscape-091` to the end with the set's
 Starship's own moments (the fuse, the launch, Launch Sequencer, #130 Jlockeed's Starship Retrofitting
 Program and the Launchers #140 to #143) are #2782's Starship part: a card whose only hook is one of
 them is `"none: Starship part"`, the one `none` a Spell of the pass may wear, and a Starship Piece's
-other hooks take their entries in the pass. Part two adds no motif: every event it shows on three or
+other hooks take their entries in the pass. The Dormant Starship, #137 Starfleet Commander and #176
+Preemptive Strike wear signatures of their own (R3334004). Part two adds no motif: every event it shows on three or
 more of its cards is read already (`send`, `mend`), and the two cards whose `marked` is the moment
 take recipes.
 
@@ -342,6 +400,15 @@ card's `death`, `trigger`, `activate` or `cast` names the motif. A Cry's marker 
 play already keys it. The hook's entry ends at the next marker or firing, a `cardResolved` or
 `countered`, an attack, a turn's end or start and the game's end; a hidden marker keys nothing
 (R202), and a modifier a hook adds wears no aura (R2787000).
+
+A signature's `{ bespoke }` recipe (R3389000) claims more than its window: when the play resolving
+draws nothing of an event, the innermost readable play open around it whose card has a signature
+recipe is asked (a cast its play makes: Spell Tyrant's), then the card the event names as its source
+(`sourceIdOf`: a `redirected`'s or `countered`'s `byInstanceId`, an `activated`'s or a quest event's
+`instanceId`), found face up on the board or in a readable landing the memory holds
+(`signaturePlayOf`); and a whole pile's one entry asks the resolving play's signature recipe too
+(`planSignatureZone`), beside its wave. An entrance is told when its card lands after any hold
+(`landMs`); a Spell's or a Trap's own cast stands in for the shared Legendary rays (`ownCast`, R3400000).
 
 ## Constraints
 
@@ -415,16 +482,176 @@ not `none` (`galleryPlayOf`, `fx/motifs/gallery.ts`), as that card's play, in on
 |---|---|---|
 | board | a drawn motif on `cast` or `cry` | the card resolves over the motif's fixture through the real board's effects layer |
 | hook | a drawn motif on `death`, `trigger` or `activate` only | the hook's marker under the card's play, then the motif's fixture, through the real board's effects layer (R2797000) |
-| recipe | a card recipe (`bespoke`) | the card resolves over the recipe's fixture (`RECIPE_FIXTURES`; Classic's Flourishes' fixtures sit beside their recipes in `fx/cards/classic/`) |
-| entrance | a marquee entrance (`bespoke`, R2794000) | the card lands in the viewer's unit row as it plays, so its entrance plays |
-| set piece | `setPiece` | the card's hook marker, then wipe's fixture, which its set piece holds |
+| recipe | a card recipe (`bespoke`) | the card resolves over the recipe's fixture (`RECIPE_FIXTURES`; Classic's Flourishes' and signatures' fixtures sit beside their recipes in `fx/cards/classic/`), landing first when it names an entrance, over the board its recipe reads (`galleryBoardOf`: Back from the GY's first zone open) |
+| entrance | an `entrance` alone (R2794000, R3332000) | the card lands in the viewer's unit row as it plays (a Field Spell face up in the first backrow zone), so its entrance plays, over the board its entrance reads (`galleryBoardOf`: Felinor Fiender's three Felinors) |
+| set piece | `setPiece` | the card's hook marker, then wipe's fixture, which its set piece holds; a Terminus card's own run (`SET_PIECE_FIXTURES`, R3338000) |
 | aura | an `aura` alone | the card's play alone, the card standing face up in the viewer's first backrow zone, where its aura shows |
 
 A Field Spell or Field Trap of any play stands in that zone as it plays (`galleryFieldView`), so its
-aura shows too. A marquee Unit whose entrance stands beside its hooks (`entrance`, R2794000) lands the
+aura shows too, and a Unit whose aura is `tile` stands in the unit zone its entrance lands in (R3400000). A marquee Unit whose entrance stands beside its hooks (`entrance`, R2794000) lands the
 same way before its play's motif, so Nature Titan's entrance plays before its Cry. "Play as a
 set piece" plays the same card as the fixture set piece (R2785000): its play's entry holds the board for
 `SET_PIECE_HOLD_MS`, scaled and capped as every set piece, until a tap, a click or Space skips it.
+"Signature" lists every card whose entry is its signature, grouped by set in the tables' order
+(`gallerySignatures`, R3332000), so a person can review each one; "Play signature" plays it as "Play
+card" does.
+
+## Signatures
+
+Issue #3330 asks for an animation of its own for every Legendary and Mythic, in place of the shared
+motifs most of them played; #3332 laid the frame (R3332000) and each set's pass writes its cards'.
+
+- **Budgets** (`fx/constants.ts`, `tiers.test.ts`): over its gallery play, held as the queue holds it
+  at speed 1 with Big moments full, each of a signature's own cues (its entrance or takeover, its motif
+  or recipes, its set piece; not the rows every card's events share) ends within its budget of the start
+  of the entry it plays in (R3399005): a Legendary's within `SIGNATURE_LEGENDARY_MAX_MS` (1.6 s), a
+  Mythic's within `SIGNATURE_MYTHIC_MAX_MS` (2.6 s), and a Spell's, seen only briefly, within
+  `SIGNATURE_SPELL_SHARE` of its rarity's, but a Mythic's takeover, its hold included, within the
+  Mythic's whole. A Spell's shakes may reach `SIGNATURE_SPELL_MAX_TRAUMA` (1),
+  a permanent's `SIGNATURE_PERMANENT_MAX_TRAUMA` (0.8), and a signature aura's alpha, tint and edge
+  stay within `AURA_SIGNATURE_MAX_INTENSITY`. All of it sits inside R200's tail, one set piece per
+  action and `SET_PIECE_HOLD_CAP_MS`, and a tap, the speed, the intensity, Big moments and Reduce
+  Motion act on it as on every cue.
+- **The ratchet** (`fx/cards/signature.test.ts`): `SIGNATURE_PENDING` lists every Legendary and Mythic,
+  tokens by their printed rarity, whose entry is no signature, in catalog order. The test fails on one
+  missing from it and on a listed card that has its signature; a pass takes its cards off, the list
+  only shrinks, and the last pass empties it.
+- **Felinor Fiender** (#92, R3332001), the first: `{ signature: true, entrance: "felinorAssembly" }`.
+  It has the stats of every Felinor its controller has, so it assembles from them: each Felinor its
+  side shows face up streaks cat light into its zone (`FX_FELINOR_STREAK_AT`, `FX_FELINOR_STREAK_STEP`,
+  at most `FX_FELINOR_STREAKS_MAX`), all landing at the slam in a ring, a gathering burst and a gold
+  crown. A Felinor buried under a Stack is face down and sends nothing (R202).
+- **Meditative+ and Training Grounds** (#3400, R3400000, R3400001): every Legendary and Mythic of both,
+  each built from its concept, drawn with figures (`fx/figures.ts`: shapes in a tint over their
+  anchor's box, never a card face) and sounding its own effect (`audio/signatureCues.ts`):
+  - **M+ #1 Bob's Plan** (`bobsPlan`, takeover `summit`): Bob's ink-wash range, a red brushstroke climbing
+    to the summit flag; ink at the hold's end; a scroll and a card back for each card it adds, the
+    plan's smaller. Sound `inkSummit`.
+  - **M+ #24 Bob, Wisconsin's Strongest Soldier** (entrance `snowplowHeave`, `bobSoldier`, `flurry` on his
+    tile): a snowplow heaved and slammed, frost into the enemy's zone of his lane; frost over every enemy
+    Unit at the first freeze, a mitten for a stolen Unit, Coins from his hero, a Discovered card's sheen
+    for its owner alone, a copied card's backs fanning in. Sound `plowHeave`.
+  - **M+ #26 Scratch Pad** (`scratchPad`, takeover `canvas`): blank paper, faint peaks, a cyan cursor and
+    ink rows; pixels at the hold's end; the scaffold folding into a card back; the paper tearing as it
+    exiles itself. Sound `cursorTear`.
+  - **TG #37 Seance** (`seance`): candles ring the announced tile (the centre for a face-down card) as the
+    board dims to plum, a spirit rises; its copy drifts from there as a card back. Sound `seanceChant`.
+  - **TG #38 Tutorial Master** (entrance `chalkboardLesson`, `tutorialMaster`, `chalk` on his tile): a
+    chalkboard swings down, two raps, a chalk outline; each card his Cry or Death adds slides in as a
+    card back, the first along a chalk arrow, his outline erasing first at his Death. Sound `slateRap`.
+  - **TG #39 Call to Chaos (Training-Grounds Edition)** (`chaosDice`): two dice tumble in and stop in
+    sparks; at its roll a face lights while R436's panel names the clause, capped at
+    `FX_CHAOS_DICE_PANEL_MS`; a Call it casts rolls smaller dice. Sound `diceGong`.
+  - **TG #39.1 Training-Grounds Golem** (entrance `golemLashing`, `timber` on its tile): posts fly in from
+    the yard's four edges and lash together at the slam, then its keywords lock on (plank, shield,
+    palisade, Rush, splinter). Sound `timberLash`.
+  - **TG #40 Goetzmann Game Design** (`gameDesign`, takeover `napkin`): a napkin under lamplight, a pencil
+    sketching, card silhouettes spiralling up; pixels at the hold's end; the sketch dealt as a card back
+    in place of the hand's row. Sound `pencilArpeggio`.
+- **Stinkyscape part two** (#3407, R3407000, R3407001): its 23 Legendaries and Mythics, tokens by their
+  printed rarity (the three MAGI, #109 to #116, IN33DH3 and his two tokens, Alteran Reach and Edge of the
+  Universe, Wildar, both Calls to Chaos and their Golem, Sanctum, Stimmycheck and the two Narcors), one
+  module a card or a line of cards in `fx/cards/stinkyscape/`, each with its test; `stinkyscape-2.md`'s
+  Signatures table says what each plays and what moved. Its six Mythics (`freshJack`, `ikwzki`,
+  `shockwave`, `alteran`, `edge`, `redNarcor`) take takeover looks of `TAKEOVER_ART_LOOKS`, which draw the
+  card's own picture filling the screen (`takeoverArtOf`, an `<img>` under the sweep) and stand still
+  behind Reduce Motion's card; fifteen aura looks join, each one card's own; a summon both a card's own
+  entrance and the readable play's recipe claim draws both (the MAGI under Imitated Instrumentality); a
+  Mythic Field Spell's own takeover sweeps into the zone it lands in; and a Field Spell's sound plays as it
+  lands face up in the backrow. Beats a gallery play cannot hold within
+  its ceiling (a Call's outcome, Edge of the Universe's fleeing, Paycheck's mana and Credits) are proven
+  within it from their own entries.
+- **The frame they need** (R3400000): a bespoke entry may wear an aura; a Unit's may stand on its `tile`;
+  `summit`, `canvas` and `napkin` are takeover looks with art (`fx/takeoverArt.ts`), the same parts
+  standing still behind Reduce Motion's card; and a signature Spell's own cast (`ownCast`) draws no
+  shared rays, burst, rings or shake, its Mythic takeover ending `FX_SIGNATURE_TAKEOVER_TAIL_MS` after its
+  entry.
+- **Budget rules the recipes keep:** a Mythic Spell bursts only in its cast's entry, at most at its hold's
+  end (its 1000 ms hold, then its 400 ms cast: a burst there ends at 1900 ms, inside 1950); a Legendary
+  Spell bursts only in its cast's entry, at most 300 ms in; a Unit bursts in its entrance and at the start
+  of its first text beat; every later entry draws only figures, card backs and sheens, each ending with
+  its entry; every beat replaces its event's row; a Spell shakes at most 1, a Unit at most 0.8.
+- **Sound** (R3332002): a Legendary's or Mythic's play sting is its own intro, played whole with
+  dynamic music on, its opening cut to `MUSIC_STING_S` on the effects bus otherwise; the shared
+  `entrance` sting plays only for one with no intro. R3389000: a Classic signature lays a bed of its own
+  (`audio/signatureBeds.ts`, at most `SIGNATURE_BED_MAX_STEPS` existing effects) over the entry its card
+  makes its entrance in.
+- **Classic** (#3389, R3389000, R3389001): every Classic Legendary and Mythic is a signature, each a
+  `{ bespoke }` recipe in `fx/cards/classic/` after its concept: a Unit's entrance of its own (six new
+  entrances, the three marquees' grown), then its text's beat; a Spell's or a Trap's cast of its own,
+  in place of the shared rays; a permanent's standing look of its own on its zone, a Unit's on its
+  tile; In Too Deep's own takeover, `abyss`, and its still. `fx/cards/classic.md` ("Signatures") lists
+  each card's beats, what moved and its verdict; `classic/signatures.test.ts` plays them, from both seats.
+- **Classic+** (#3399, R3399000): all 35 of its Legendaries and Mythics, tokens by printed rarity, are
+  signatures, each recipe in `fx/cards/classicplus/` and each card's beats, moves and verdict in
+  `fx/cards/classicplus.md`'s Signatures table. A Unit or a Field Spell lands with its own `entrance` and
+  plays its text's beat in its `bespoke` recipe (on its Cry, trigger, Death or Activate, keyed by the
+  hook its marker opens), wearing a look of its own beside it (R3399001: eighteen new signature looks, a
+  Unit's on its `tile`); a Spell's recipe claims its own `cardPlayed` for its cast, then the events its text
+  emits. Its four Mythics take looks of their own (`zealot`, `portal`, `stair`, `vineyard`) whose takeover
+  draws a picture filling the screen, an SVG drawing (`fx/takeoverArt.ts`, `TAKEOVER_ART_DRAWINGS`) in the
+  art layer R3400000's parts stand in, still under Reduce Motion (R3399002); a beat only the owner may
+  see (a Discover's or a test's options) plays on the owner's seat alone, and from the other seat every
+  card in a hand or deck flies as a back (R3399003); each card's play or cast names a sound effect of its
+  own (R3399004). `classicplus/signatures.test.ts`
+  holds each signature's own cues to its ceiling of the entry it plays in, the per-beat measure a person
+  chose for every set's signatures, which `tiers.test.ts` applies since (R3399005).
+- **Gallery timing** (R3402000): each later action of a gallery play (a Trap's firing, a trigger, an
+  Activate) is timed against the budget from its own start, as a game deals it; R3399005's per-beat
+  measure in `tiers.test.ts`, each own cue from the start of its own entry, holds it so.
+- **Takeover art** (R3402000, `fx/takeoverArt.ts`): beside R3399002's drawings of coloured paths, a
+  Mythic's own look may draw a scene of SVG shapes (`TAKEOVER_ART_DRAWINGS`, a drawing's `shapes`) in the
+  same art layer over the board's dark, shapes on a 100 × 100 view sliced to cover the screen, at most
+  `TAKEOVER_ART_MAX_SHAPES`, each classed by its part (`takeover-drawing-<part>`) and painted and moved by
+  part in `fx.css` (transform and opacity alone) from the look's tint. Under Reduce Motion `TakeoverStill`
+  draws the same scene at rest in that layer, its tint on the layer. A scene is shapes only, no text and no
+  card's face or name (R202): `pawn` (a hooded hand over a glass chessboard, strings snapping taut), `genie`
+  (a wind spirit in a cyclone of silk, card backs orbiting), `rotunda` (a marble hall of thirteen glowing
+  doors) and `crystalForge` (two rails converging on an anvil under a hammer, gears overhead).
+- **Core** (#3402, R3402001): every Core Legendary and Mythic has its signature; Ceaseless Void (#100)
+  is the set's last on the ratchet, owned by #3338. Each recipe is its card's file in `fx/cards/core/`:
+
+  | Card | Entry | First beat | What its text does |
+  |---|---|---|---|
+  | #52 Silly Silas | entrance `silasSpotlight`, bespoke `mirrorballShuffle`, aura `mirrorball` tile | a pirouette down a spotlight, a crater and a hat-tip glint | on `rotated` a mirrorball ring and confetti, a sheen on each occupied unit zone; a brand in the new owner's colour on `controlChanged` |
+  | #83 Transmogulate | bespoke `legendaryTide` | a crucible over the caster's hero: a poison gather, rays, a ring, prismatic vials | its first `transformed` washes the Deck and hand piles; a readable hand card takes a sheen, an Embiggened Unit a ripple |
+  | #85 Unlicensed Experimentation | bespoke `clampWeld` | at its `trapFired`, a hatch fracturing open in green arc light and smoke | on `fused` a ring at the seized card, a seam, a sheen and a flash at the result |
+  | #87 Pocket Chaos | bespoke `pocketSwap` | a pocket at the board's centre, both heroes' light tugged in, a dice cloud | on `swapped` the pair trades places (heroes, the middle unit zones or the Deck piles); a card back to the other hand pile |
+  | #93 Combo-Index | entrance `comboStadium`, bespoke `gradeRings`, aura `stadium` zone | three rings rising, radiant rays, confetti | each trigger's grade rise (`counterChanged` of its grade) lights a ring; its grade's events show (a card back to hand, gold tags, a burn, a spark, a beam) |
+  | #95 Call to Chaos | bespoke `chaosReels` | a slot-wheel's rays and ring, three reels blurring in sparks | on `chaosRolled` the roll's reveal stands `FX_REELS_MS` with a gold ring and its jackpot shake |
+  | #96 My Pawn | bespoke `pawnStrings`, takeover `pawn` | its takeover at its `trapFired`; strings from the top of the screen to every enemy Unit and hero | on `attackCancelled` the attack shatters into shards at the attacker |
+  | #97 Zephrys | bespoke `perfectWish`, takeover `genie` | its takeover; silk gathering at the centre | on `addedToHand` a card back gusts from the far hero into the caster's hand pile |
+  | #98 Heroic Power | entrance `heroicPedestal`, bespoke `heroicDoors`, takeover `rotunda`, aura `pedestal` zone | its takeover; a crystal pedestal landing in holy light, a diamond glint | each Activate's `activated` flares the pedestal (keyed on the card's own `activated`, which the engine sends before the Activate's `hookResolving` marker); inside the hook its power flies to where it went |
+  | #99 Craft a Card | bespoke `fusionForge`, takeover `crystalForge` | its takeover; two card backs riding in from the board's edges | the hand pile rings as the card is added; on `fused` it flies from the forge into the hand pile |
+
+  Each sounds its own sound once, on its first beat (`audio/signatureCues.ts`: a Trap's firing, Silly
+  Silas's landing, every other card's play), never for a card the seat cannot read (R203). Each Spell's
+  and Trap's own cast draws no shared rays, burst or ring, a Mythic's takeover keeping only its own look
+  (R3400000 `ownCast`).
+- **Meditative** (#3405, R3405000, R3405001): every Meditative Legendary and Mythic, its tokens by their
+  printed rarity among them, is a signature after its concept, in `fx/cards/meditative/`: a Unit's
+  entrance of its own, then its text's beat and a standing look on its tile; a Spell's cast of its own; a
+  Field Spell's entrance as it lands face up, its text's beat and a look on its zone or lane. Each of its
+  thirteen Mythics takes over in a look of its own with art (twelve new looks, and YileGPT's `ai` draws
+  art now), the same parts standing still under Reduce Motion; a Mythic's entrance starts after its
+  takeover's hold (`leadMs`); a Mythic takes over once an action, so a flood of Yile's Viruses takes over
+  once; and The Cane, which Pareto Optimality puts onto the field face up, enters as it lands. Five shared
+  aura looks join (`ripple`, `orbit`, `steam`, `incense`, `glitch`). Each sounds its own effect
+  (`audio/signatureCues.ts`), The Cane as it lands face up in the backrow. `fx/cards/meditative.md` gives each card's
+  beats; `meditative/signatures*.test.ts` plays them, from both seats.
+- **Stinkyscape 001 to 090** (#3395, R3395000, R3395001): its 24 Legendaries and Mythics but Olivian
+  Expanse (#3338's) and Drone Core X (#3336's), each built from its concept, its recipes in
+  `fx/cards/stinkyscape/` (one file a card, `signatureKit.ts` shared, the gallery's fixtures and boards in
+  `signatureFixtures.ts`): a Unit's entrance of its own (a figure of its concept, `fx/figures.ts`), its
+  text's beat and a `tile` aura in its palette; a Field Spell's (The Greatest Heist, Rod of Ages, The
+  Narcor Project) entrance, beat and signature look; a Spell's cast of its own (Imitated Instrumentality's
+  `magiBoot` grown, Drone Core VIII's conveyor, Drone Core IX's seed pod, Great Paperclip Theory's link);
+  five Mythics' own takeovers with art and a still (`vault`, `rod`, `wire`, `whiteDwarf`, `forge`), each
+  Mythic's entrance starting after its takeover's hold (`leadMs`, R3405000); and a sound of its own
+  (`audio/signatureCues.ts`). A beat that opts in (`moment: "replace"`) replaces its event's system moment
+  too (R3395001: Tylannt's dial and the Heist's lock rings in place of the shared quest moment); every
+  other beat draws beside its event's system moment. `fx/cards/stinkyscape-1.md`'s Why column holds each card's
+  concept and verdict; `stinkyscape/signatures.test.ts` plays them, from both seats.
 
 ## Set pieces
 
@@ -444,48 +671,136 @@ the removals sound once, condensed, as it ends.
 | Key | Shape | Beat | Palette | Cards |
 |---|---|---|---|---|
 | `nether` | vortex, the board swallowed into the Nether | `SET_PIECE_HOLD_MS` | Dark | Core #88 Twisting Nether (Radiant's "enemy permanents" over that side alone) |
-| `voidFold` | fold: the edges close in to black, the cards sink, the light comes back at the Void | `VOID_FOLD_HOLD_MS` | Dark | Core #100 Ceaseless Void, which lands with its `voidCollapse` entrance first and whose takeover yields to the fold |
-| `vortex` | vortex, turning the other way | `SET_PIECE_HOLD_MS` | the card's own | Core #17 Flood, Classic #43 Plague Nuke, Classic+ #1 Doom Shroom (at its zone), Classic+ #12.6 Frozen Wastes, Stinkyscape #4.1 Farewell, Stinkyscape #117 Core System |
+| `voidFold` | fold: the edges close in to black, each card is drawn into the Void's chest in turn, and its 10/10 burns in the dark (R3338000) | `VOID_FOLD_HOLD_MS` | Dark | Core #100 Ceaseless Void, which lands with its `voidCollapse` entrance first and whose takeover yields to the fold |
+| `vortex` | vortex, turning the other way | `SET_PIECE_HOLD_MS` | the card's own | Core #17 Flood, Classic #43 Plague Nuke, Classic+ #1 Doom Shroom (at its zone), Classic+ #12.6 Frozen Wastes, Stinkyscape #117 Core System |
+| `farewell` | lamp: a lamp swings over the table, every card it exiles lifts into its light and fades in turn, then a slow exhale and no shake (R3338000) | 2.8 s | Dark | Stinkyscape #4.1 Farewell |
 
 The clears of one side, or too small to hold the game, take `wipe` on their hook: Classic+ #32.2
-Brawl (it spares a Unit), both Calls to Chaos (Classic+ #73, Stinkyscape #151: one random effect of
-theirs clears one side), the Anomaly Found! token (its caster's side) and Training Grounds #30
+Brawl (it spares a Unit), Classic+ #73 Call to Chaos (one random effect of it clears one side; Stinkyscape
+#151's took `wipe` too until its signature, R3407000), the Anomaly Found! token (its caster's side) and Training Grounds #30
 Floodgates (`death: wipe`, its own side, from its Death's marker). Stinkyscape
 #12.3 Psychic Scream takes `wipe` too and draws nothing yet: its cards leave by `shuffledIn`, whose
 ids R97 hides on both seats.
 
+### The Terminus cards (R3338000)
+
+The end-of-the-world cards (#3338) each have a set piece of their own, its planner in `fx/terminus/`.
+Besides Ceaseless Void's fold and Farewell's lamp, above, each is a **signature**: the runner plays its
+hook's run of the event types its set piece names (`moment`, `signatureRunOf`) as one pinned
+`SIGNATURE_RUN_MS` entry (`game/runs.ts` `signatureRunAt`; The Big Crunch's is its first cast), which
+the queue claims (`signatureClaim`) and holds as every set piece. A Mythic's takeover yields to its own
+signature. Under Reduce Motion each is one still frame (`planTerminusStill`). Each bed opens on its own
+`organ` chord and closes on the Mythic choir. No cue names a card: a card a seat cannot read is a card
+back flying to its hand (R202).
+
+| Key | Shape | Beat | Its run | What it draws |
+|---|---|---|---|---|
+| `terminusRift` | rift | 2.4 s | the Discover's `addedToHand` | Stinkyscape #4 Olivian Expanse: a violet rift, a star circling in it for each Terminus card, one falling into the hand |
+| `lastExam` | chalk | 2.4 s | the answer's `damage` | #4.2 KY's Last Exam: the problem chalked across the board, the chalk bolt into the enemy hero, a crack and its Echo stamped |
+| `eventHorizon` | bend | 2.4 s | the extra turn's `modifierChanged` | #4.3 Event Horizon: the board smears to its centre under a stretched clock, the turn banner twice; the extra turn opens snapping back |
+| `lastWord` | freeze | 2.2 s | its firing, its way to the graveyard, its modifiers | #4.4 Last Word: everything frozen in mid-strike, the hit on its hero shattering; the next turn opens with Charge on each Unit and a 3, 2, 1 |
+| `finalDestination` | abyss | 2.8 s | its firing, `locked`, `healthSet`, its discards | #4.5 1v1 Final Destination: every lane but one chained shut over the abyss, the heroes spun down to 1, the Spells burning off the hands |
+| `bigCrunch` | crunch | 2 s | its first cast | #4.6 The Big Crunch: the backdrop collapsing to a bright point, which holds over each entry of its play |
+| `diceOfDoom` | doom | 2.8 s (a miss 1.2 s) | `rolled`, its Lucky gain, the cards it adds or burns | Stinkyscape #154 Dice of Doom: a big d100 tumbling in onto its roll; on a 67 the board dark and the Terminus cards raining in, on a miss the die crumbling, a Lucky reroll's glint |
+
 ## The Starship
 
-Stinkyscape's signature system (R1852000, R1852003) has two moments of its own (R2801000), drawn by
-`fx/starship.ts` and keyed on nothing but the public Starship.
+Stinkyscape's signature system (R1852000, R1852003) has moments of its own (R2801000, R3334000 to
+R3334004), drawn by `fx/starship.ts` from the ship's own picture (`cards/art/stinkyscape.ts`,
+R3333000) and keyed on nothing but the public Starship: `starshipFused`, `starshipLaunched`,
+`attackDeclared`, `destroyed` and a readable War Doctrine's `cardPlayed`. A point on the picture is an
+anchor's `art: "picture"` (`fx/anchors.ts` `artBoxOf`), so a module, an engine or the prow is found on
+the card wherever the board draws it. A phone (narrower than `FX_MOBILE_WIDTH`) throws
+`STARSHIP_CINEMATIC.phoneShare` of every particle, with the same beats.
 
 - **The fuse (a Signature, no hold).** Pieces fusing one after another into one Starship, each
   `fused` with the `starshipFused` after it, are one entry (`game/runs.ts` `fuseRunAt`) of
   `starshipFuseMs(n)`: `STARSHIP_FUSE_MS` and `FX_STARSHIP_FUSE_STAGGER_MS` for each later piece, up
-  to `STARSHIP_FUSE_STAGGERED_MAX`. Each dead piece's card back flies from where it stood (else its
-  graveyard) to the Starship, a stagger apart, and bolts on with a spark, a clank ring and a short
-  shake. Unpinned, the burst budget may squeeze it; every beat keeps its share. A Dormant Starship's
-  face bolts on a hull plate a piece (`cards/StarshipHull.tsx`, up to `STARSHIP_HULL_PLATES_MAX`),
-  read from the view. R2791000's Equip beat stays off it: a piece's copy comes from the graveyard,
-  never the hand.
+  to `STARSHIP_FUSE_STAGGERED_MAX`. Each dead piece's module (R3333001) flies from where it stood
+  (else its graveyard) to its own hardpoint on the ship (`starshipMountPoints` of the list the ship
+  holds after the run), a stagger apart, and docks (R3334000): two clamps close on it, a weld flashes
+  and it hums higher for each piece the ship then holds (`STARSHIP_DOCK`), with a spark, a clank ring
+  and a short shake. Each docking sounds `starshipDock`, its pitch rising with the count
+  (`audio/starshipSounds.ts`; the engine's retrigger guard reads a dock when it sounds,
+  `SCHEDULED_SFX`). Unpinned, the burst budget may squeeze it; every beat keeps its share. A Dormant
+  Starship's face bolts on a hull plate a piece (`cards/StarshipHull.tsx`, up to
+  `STARSHIP_HULL_PLATES_MAX`), read from the view. R2791000's Equip beat stays off it: a piece's copy
+  comes from the graveyard, never the hand.
+- **The shipyard idle.** A Dormant Starship holding pieces idles on its tile (`cards/ShipyardIdle.tsx`,
+  R3334000): its dock light sweeps slowly across the hull and welding sparks flicker where its newest
+  piece went in (`SHIPYARD_IDLE_*` in `cards/constants.ts`). It takes one of the board's moving-art
+  slots (`useArtMotion`, `COSMETIC_FOIL_ANIMATED_MAX`) and holds still under Reduce Motion or with
+  Animated foil off.
 - **The launch (a set piece, held).** `starshipLaunched` is claimed as the `starship` set piece
   (`starshipClaim`, `STARSHIP_LAUNCH_HOLD_MS` at speed 1), held, capped, scaled, shortened and
-  skipped as R2785000 holds every set piece. Through the hold a 3-2-1 countdown pops over the ship
-  (`FX_STARSHIP_COUNT_AT`), the board shaking harder at each count, and its engines ignite in Tech's
-  rocket exhaust (`FX_STARSHIP_IGNITE_AT`); as the hold ends it lifts off (`jk-starship-launch`) with
-  a contrail, its Dormant badge burning away, and lands as its launched self. Its exhaust, contrail
-  and shake are `STARSHIP_TUNING`'s step for its pieces (small from 0, medium from 3, large from 6).
-  Its bed (`STARSHIP_LAUNCH_BED`) beeps each count, higher each time, burns at the ignition and
-  thuds at the landing; its own row's roar sounds at the lift-off. Under Big moments' "off" it plays
-  unheld, with no countdown; under Reduce Motion it is one still frame of the launch, which holds
-  nothing, as a Mythic's still card does.
+  skipped as R2785000 holds every set piece. At Big moments "full" the hold is a cinematic
+  (R3334001, `STARSHIP_CINEMATIC`): the board dims and the ship's picture fills the screen, the camera
+  moves along the hull from stern to bow past a stop at each module, the engines light one after
+  another, the name it launched under stamps across the hull in its design's lettering
+  (`STARSHIP_LETTERING`), and it climbs out of frame. As the hold ends it lifts off its tile
+  (`jk-starship-launch`) with a contrail, its Dormant badge burning away, and lands as its launched
+  self. Its zoom, sparks, exhaust, contrail and shake are `STARSHIP_TUNING`'s step for its pieces
+  (small from 0, medium from 3, large from 6). Its bed (`STARSHIP_LAUNCH_BED`) ignites as the engines
+  light, roars as it climbs and thuds at the landing; its own row's sting sounds at the lift-off.
+  Big moments "short" and "off", an unheld launch and Reduce Motion show a still title card instead,
+  the ship's picture and its name; under Reduce Motion it holds nothing, as a Mythic's still card
+  does.
+- **The War Doctrines.** A War Doctrine cast (Stinkyscape #137.1 to #137.4, which #137 Starfleet
+  Commander and #176 Preemptive Strike cast after their launch) is announced over its caster's
+  launched Starship, else the board's middle, in its own look for Land, Sea, Air or Space
+  (`WAR_DOCTRINE_LOOKS`), with a burst, a ring and a shake (R3334001).
+- **The broadside.** A launched Starship's attack fires its mounted weapons where the picture mounts
+  them, one after another inside the attack's row, every shot landing as it ends (R3334002,
+  `STARSHIP_BROADSIDE`, `BROADSIDE_WEAPONS`): beams sweep, repeaters stutter, cannons kick back, flak
+  bursts in clouds, launchers lob what they carry (a token, fruit, jade, a book; the Missile Pod
+  arrows). A ship with no weapons rams prow first, its lunge turned `FX_STARSHIP_RAM_TURN_DEG`
+  toward its target (`stage.ts`). Each kind it fires sounds once, as its first gun fires; a ram sounds
+  at the contact; the swing's own sound is dropped for them, so under Reduce Motion, which plays no
+  broadside, it swings with the swing's sound.
+- **The wreck.** A Starship's `destroyed`, outside a wipe (R3334003, `STARSHIP_WRECK`): its newest
+  modules blow off one by one, the hull breaks in two as its card is hidden, debris drifts across its
+  backrow and a scorch settles on its tile. It groans as its hull breaks, in the death sting's place;
+  under Reduce Motion or inside a wipe, where no groan plays, the sting stays.
 
 | Card | Entry | Ties to the ship |
 |---|---|---|
 | Stinkyscape #130 Jlockeed's Starship Retrofitting Program | `cast: send`, Tech/rocket | the Jlockeed card it adds, a Starship Piece from then on, flies to the hand in the rocket's exhaust |
+| Stinkyscape #137 Starfleet Commander | signature, entrance `fleetCommand` | it lands and orders the Dormant Starship up: a rocket bolt to the ship, a ring, a crown of gold and a shake (R3334004) |
 | Stinkyscape #140 to #143, the Launchers | `cry: conjure`, Tech/rocket | each lands in a ring of exhaust, the Activate a launched Starship takes from it |
+| Stinkyscape #176 Preemptive Strike | signature, bespoke `preemptiveStrike` | an alarm of fire rings on its hero and a red strike; the Dormant Starship it wakes branded red (R3334004) |
 | Stinkyscape T-AI-5 Launch Sequencer | `cast: tithe`, Tech/rocket | "Your Starship launch costs (1)": a glint on the badge and on the Dormant Starship whose launch it prices |
-| the Dormant Starship | `none` | its fuse and launch are the Starship's own |
+| the Dormant Starship | signature, entrance `shipyardRollout` | it rolls out of its shipyard: weld sparks over its hull, then a ring, dust and a slam (R3334004) |
+
+## The Drone Battleship
+
+Stinkyscape #36 Drone Core X summons the Drone Battleship as three tokens in one zone, bottom first (R1842000),
+and R3336000 makes them one great ship in three decks: the reactor keel (Meltdown), the hangar decks
+(Propagation) and the command superstructure (Shield). Its art is `cards/art/stinkyscape.ts`'s (a layer on the
+board draws its own deck and every deck beneath it, so the top card shows the ship as far as it stands); its
+arrival is Drone Core X's `battleshipWarp`, one beat per layer summoned; every other beat is
+`fx/battleship.ts`'s (`planBattleship`), keyed on public events and the layers the view draws (R202), and each has
+its sound in `audio/battleshipCues.ts`. The three layers' table entries are `none: Battleship planner`, since the
+Shield's guard, a break and the blast belong to no hook; signature entries wait for #3332.
+
+| Beat | Event | What it draws | Sound |
+|---|---|---|---|
+| Arrival, the keel | Drone Core X's 1st `summoned` | the warp's starlight streak from the board's top edge, exhaust, rings, a shake | `horn` |
+| Arrival, the hangar | its 2nd | two bolts from above the zone's corners lock onto it, a ring, sparks, a shake | `lock` |
+| Arrival, the superstructure | its 3rd | a bolt from above and the dome's full shield, a shake | `armorRing` |
+| The shield takes the hit | `redirected` onto the Shield | a bolt from the protected target to the dome, which flares and ripples; a shake | `domeFlare` |
+| The plates | the `damageAbsorbed` or `damage` the redirect sent | the dome flares again; `ship` cue `plates`: one per point of Armor (at most `FX_SHIP_PLATES_MAX`), as many lit as Armor took | `domeFlare` |
+| An ordinary hit | any other `damage` or `damageAbsorbed` on the Shield | a sheen, a small shield on the dome, a light shake | `armorClank` |
+| A bay opens | `activated` on the Propagation layer | `ship` cue `bay`: two doors slide apart and a light stays on for each bay with a use left | `bayDoor` |
+| A drone launches | a drone `summoned` inside that Activate | an Interceptor shot fast from the bay to its tile; a Corvette rolled out slow in exhaust, landing with a shake | `whoosh`, `summon` large |
+| The core pulses | the Meltdown's `damage` to itself | a fire ring and an ember burst, a shake: all grow with the share of its health gone | `reactorPulse` 1 to 10 |
+| The reactor fires | the Meltdown's `attackDeclared` | a beam from the core to the target | `burn` |
+| The blast | the Meltdown's `destroyed` | two rings, fire, embers, shards, rays and the hardest shake | `reactorPulse` 10 |
+| A layer breaks | a Shield's or Propagation layer's `destroyed` with `buried` above 0 | a crack and a burst of plates, a shake, then a sheen and a ring over the zone as the next deck's lights come up | `deckShear` |
+
+The arrival is three entries of the runner's summon time (about 1.65 s with their tails), tested to end inside
+`SET_PIECE_HOLD_CAP_MS`, and not one held set piece. A Battleship that Call to Chaos (Scape Edition) or Anomaly
+Found! summons gets the layer beats and no arrival. Under Reduce Motion the ship cue draws nothing. `e2e/cypress/component/battleship.cy.tsx` plays every
+beat at 1280x720 and at 390x844, and `fx-phone-frame.cy.tsx` holds the arrival to `FX_PHONE_FRAME_BUDGET_MS`.
 
 ## Examples
 
@@ -521,14 +836,14 @@ names.
 
 Issue #2803's audit (R2803000) closes the work above and holds it:
 
-- **Coverage:** 551 of the catalog's 634 non-token cards wear an entry other than `none`, past the
+- **Coverage:** 554 of the catalog's 634 non-token cards wear an entry other than `none`, past the
   audit's floor of half (`FX_COVERAGE_FLOOR`, `fx/cards/coverage.test.ts`). By set: Core 87/100,
-  Classic 79/90, Classic+ 74/78, Meditative 94/102, Meditative+ 24/26, Stinkyscape 142/178,
-  Training Grounds 51/60. By type: Unit 195/277, Spell 235/236, Field Spell 87/87, Trap 24/24,
-  Field Trap 10/10. By rarity: Common 138/181, Rare 181/198, Epic 132/144, Legendary 72/81,
-  Mythic 28/30. Every Spell, Field Spell, Trap and Field Trap wears a `cast`, a recipe, a set piece
-  or the one `none` a Starship part may wear (Stinkyscape #176 Preemptive Strike, "Starship part"),
-  and every Field Spell an `aura`.
+  Classic 79/90, Classic+ 74/78, Meditative 94/102, Meditative+ 24/26, Stinkyscape 145/178,
+  Training Grounds 51/60. By type: Unit 197/277, Spell 236/236, Field Spell 87/87, Trap 24/24,
+  Field Trap 10/10. By rarity: Common 138/181, Rare 181/198, Epic 132/144, Legendary 75/81,
+  Mythic 28/30. Every Spell, Field Spell, Trap and Field Trap wears a `cast`, a recipe or a set
+  piece; the one `none` a Starship part may wear is worn by no Spell since #176 Preemptive Strike
+  took its signature (R3334004). Every Field Spell wears an `aura`.
 - **Tiers:** every table entry's gallery play is planned through the board's effects layer, and every
   cue it plans ends within its entry plus `FX_MAX_TAIL_MS` (`fx/cards/tiers.test.ts`); every set
   piece's hold stays within `SET_PIECE_HOLD_CAP_MS`, one hold per action.

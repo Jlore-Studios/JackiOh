@@ -1,7 +1,7 @@
 // Which music the page plays (SPEC §10.11 "Music", R631): the menu theme on every screen without a
 // board (`appAudio.ts` holds it), and the newest mounted board's music (`useGameAudio`) otherwise. A
 // card's intro (R1350) is the newest board's alone too: an older board asks for none, and a board that
-// leaves cuts the one it started (R1351).
+// leaves cuts the one it started (R1351). So is a card's sting cut from it (R3332002).
 
 import { getMusicPlayer, type MusicRequest } from "./music.ts";
 import type { MusicSink } from "./musicDirector.ts";
@@ -54,6 +54,10 @@ export function enterGameMusic(): MusicSink & { leave(): void } {
       if (!holds()) return;
       claim.intro = true;
       getMusicPlayer().playIntro(id);
+    },
+    playSting(id) {
+      // R3332002: an older board stings no more than it plays intros.
+      if (holds()) getMusicPlayer().playSting(id);
     },
     stopIntro() {
       if (!holds() || !claim.intro) return;

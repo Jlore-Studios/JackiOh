@@ -5,7 +5,10 @@
 //   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
 //   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
 //   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
-//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000).
+//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000),
+//                                           or beside a bespoke; a Unit's on its own `tile` (R3400000).
+//   + entrance: "<key>"                     beside any entry but "none", or alone: a Unit's or a Field Spell's entrance (fx/entrances.ts, R3332000);
+//   + takeover: "<look>", signature: true   a Mythic's own takeover look (fx/takeover.ts); a Legendary's or Mythic's signature (R3332000).
 // Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
 // `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
 // default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
@@ -29,15 +32,15 @@
   "stinkyscape-106": "none: Starship part", // Warpfield Amplifier
   "stinkyscape-107": { trigger: { motif: "bless", palette: "Tech/laser" } }, // RR-5000
   "stinkyscape-108": "none: vanilla", // Trila 3
-  "stinkyscape-109": "none: the card it casts plays its own entry", // xxFreshJack
-  "stinkyscape-110": { bespoke: "duoBond" }, // iKwzki
-  "stinkyscape-111": { cry: { motif: "send" } }, // Shockwave447
-  "stinkyscape-112": { cast: { motif: "conjure", palette: "Hustle/cash" }, trigger: { motif: "bless", palette: "Hustle/cash" }, activate: { motif: "tether", palette: "Hustle/cash" }, aura: { look: "holy", palette: "Hustle/cash", scope: "zone" } }, // Job Application
-  "stinkyscape-112-1": { cast: { motif: "mana", palette: "Hustle/cash" } }, // Paycheck
+  "stinkyscape-109": { bespoke: "freshJackComet", entrance: "freshJackVault", aura: { look: "pixelcrawl", palette: "Tech/glitch", scope: "tile" }, takeover: "freshJack", signature: true }, // xxFreshJack
+  "stinkyscape-110": { bespoke: "duoBond", entrance: "ikwzkiDawn", aura: { look: "duohalo", palette: "Spirit", scope: "tile" }, takeover: "ikwzki", signature: true }, // iKwzki
+  "stinkyscape-111": { bespoke: "shockwaveLecture", entrance: "shockwaveRing", aura: { look: "arcflick", palette: "Tech", scope: "tile" }, takeover: "shockwave", signature: true }, // Shockwave447
+  "stinkyscape-112": { bespoke: "jobInterview", entrance: "resumeTube", aura: { look: "steplights", palette: "Hustle/cash", scope: "zone" }, signature: true }, // Job Application
+  "stinkyscape-112-1": { bespoke: "payday", signature: true }, // Paycheck
   "stinkyscape-113": { cry: { motif: "wipe" } }, // A Very Dandy Lad
   "stinkyscape-114": "none: no motif reads fused", // Arctic Citadel
-  "stinkyscape-115": { cry: { motif: "wipe" } }, // Scornboi
-  "stinkyscape-116": "none: no motif reads marketCreditsChanged", // Megabase
+  "stinkyscape-115": { bespoke: "scornSweep", entrance: "scornGate", aura: { look: "searchlight", palette: "Dark/blood", scope: "tile" }, signature: true }, // Scornboi
+  "stinkyscape-116": { bespoke: "giftShop", entrance: "megabaseDock", aura: { look: "stationrings", palette: "Tech/starfield", scope: "tile" }, signature: true }, // Megabase
   "stinkyscape-117": { setPiece: "vortex" }, // Core System
   "stinkyscape-118": { cast: { motif: "curse", palette: "Tech/hologram" } }, // Secure System
   "stinkyscape-119": { cast: { motif: "bless", palette: "Tech/glitch" } }, // Unsecure System
@@ -59,7 +62,7 @@
   "stinkyscape-135": { cast: { motif: "tether" } }, // Sacked
   "stinkyscape-135-1": "none: token", // Sack
   "stinkyscape-136": "none: Starship part", // Magic Module
-  "stinkyscape-137": "none: Starship part", // Starfleet Commander
+  "stinkyscape-137": { signature: true, entrance: "fleetCommand" }, // Starfleet Commander
   "stinkyscape-137-1": { cast: { motif: "nova", palette: "Tech/rocket" } }, // Land Doctrine
   "stinkyscape-137-2": { cast: { motif: "mend", palette: "Tech/rocket" } }, // Sea Doctrine
   "stinkyscape-137-3": { cast: { motif: "barrage", palette: "Tech/rocket" } }, // Air Doctrine
@@ -73,18 +76,18 @@
   "stinkyscape-144": { cast: { motif: "snap" } }, // Prepare For Liftoff
   "stinkyscape-145": { cast: { motif: "bless" } }, // Fortify Flesh
   "stinkyscape-146": { bespoke: "flashFreeze" }, // Flash Freeze
-  "stinkyscape-147": { death: { motif: "send" } }, // IN33DH3
-  "stinkyscape-147-1": { cry: { motif: "conjure", palette: "Tech/hologram" } }, // IN33DH3 Prime
-  "stinkyscape-147-2": { trigger: { motif: "conjure", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "zone" } }, // Wardrum Blob
-  "stinkyscape-148": { cast: { motif: "conjure", palette: "Tech/starfield" }, activate: { motif: "bolt", palette: "Tech/starfield" }, aura: { look: "void", palette: "Tech/starfield", scope: "side" } }, // Alteran Reach
-  "stinkyscape-148-1": "none: token", // Edge of the Universe
-  "stinkyscape-149": { cast: { motif: "send" } }, // Wildar
-  "stinkyscape-150": { cast: { motif: "send" } }, // Call to Chaos (Stinky Edition)
-  "stinkyscape-150-1": "none: vanilla", // Stinkyscape Golem
-  "stinkyscape-151": { cast: { motif: "wipe" } }, // Call to Chaos (Scape Edition)
-  "stinkyscape-152": { cast: { motif: "conjure" }, aura: { look: "holy", scope: "side" } }, // Sanctum
-  "stinkyscape-153": { cast: { motif: "mana", palette: "Hustle/cash" } }, // Stimmycheck
-  "stinkyscape-154": { cast: { motif: "send" }, trigger: { motif: "send" } }, // Dice of Doom
+  "stinkyscape-147": { bespoke: "dataPacket", entrance: "in33dh3Drop", aura: { look: "aiwisp", palette: "Tech/hologram", scope: "tile" }, signature: true }, // IN33DH3
+  "stinkyscape-147-1": { bespoke: "primeConduct", entrance: "primeCrown", aura: { look: "crownpulse", palette: "Tech/hologram", scope: "tile" }, signature: true }, // IN33DH3 Prime
+  "stinkyscape-147-2": { bespoke: "blobDrum", entrance: "blobPlop", aura: { look: "drumbeat", palette: "Tech/hologram", scope: "zone" }, signature: true }, // Wardrum Blob
+  "stinkyscape-148": { bespoke: "starscapeJump", entrance: "alteranDive", aura: { look: "starpath", palette: "Tech/starfield", scope: "zone" }, takeover: "alteran", signature: true }, // Alteran Reach
+  "stinkyscape-148-1": { bespoke: "edgeFlee", takeover: "edge", signature: true }, // Edge of the Universe
+  "stinkyscape-149": { bespoke: "chaosOrb", signature: true }, // Wildar
+  "stinkyscape-150": { bespoke: "stinkCloud", signature: true }, // Call to Chaos (Stinky Edition)
+  "stinkyscape-150-1": { entrance: "golemCrash", aura: { look: "stinkvapour", palette: "Toxic", scope: "tile" }, signature: true }, // Stinkyscape Golem
+  "stinkyscape-151": { bespoke: "tabletopTilt", signature: true }, // Call to Chaos (Scape Edition)
+  "stinkyscape-152": { bespoke: "sanctumEcho", entrance: "sanctumRise", aura: { look: "pages", palette: "Holy", scope: "zone" }, signature: true }, // Sanctum
+  "stinkyscape-153": { bespoke: "stimmyDrop", signature: true }, // Stimmycheck
+  "stinkyscape-154": { setPiece: "diceOfDoom" }, // Dice of Doom
   "stinkyscape-155": { cast: { motif: "bind" }, death: { motif: "send", palette: "Hustle/ore" }, aura: { look: "ember", scope: "zone" } }, // Comet Crash
   "stinkyscape-156": { cast: { motif: "send" } }, // Catalyst Comet
   "stinkyscape-157": { cast: { motif: "conjure" }, aura: { look: "storm", scope: "board" } }, // The Gauntlet
@@ -96,8 +99,8 @@
   "stinkyscape-163": { cast: { motif: "vanish" } }, // Swear Loyalities
   "stinkyscape-164": { cast: { motif: "conjure", palette: "Hustle/cash" }, trigger: { motif: "vanish", palette: "Hustle/cash" }, aura: { look: "arcane", palette: "Hustle/cash", scope: "side" } }, // The Syndicate
   "stinkyscape-165": { cast: { motif: "conjure", palette: "Hustle/cash" }, aura: { look: "bloom", palette: "Hustle/cash", scope: "side" } }, // The Trade Union
-  "stinkyscape-166": { cast: { motif: "send", palette: "Tech/starfield" } }, // Scanning Probe Mk1
-  "stinkyscape-167": { cast: { motif: "send", palette: "Tech/starfield" } }, // Scanning Probe Mk2
+  "stinkyscape-166": { bespoke: "probeScan" }, // Scanning Probe Mk1
+  "stinkyscape-167": { bespoke: "probeScan" }, // Scanning Probe Mk2
   "stinkyscape-168": { cast: { motif: "conjure", palette: "Tech/rocket" }, trigger: { motif: "conjure", palette: "Tech/rocket" }, aura: { look: "storm", palette: "Tech/rocket", scope: "zone" } }, // Drone Hanger
   "stinkyscape-169": { death: { motif: "send", palette: "Hustle/ore" }, activate: { motif: "bolt", palette: "Hustle/ore" } }, // Tiny Asteroid
   "stinkyscape-170": { death: { motif: "send", palette: "Hustle/ore" }, activate: { motif: "bolt", palette: "Hustle/ore" } }, // Medium Asteroid
@@ -106,21 +109,21 @@
   "stinkyscape-173": { death: { motif: "send", palette: "Snack" }, activate: { motif: "bolt" } }, // Abandoned Spice Tower
   "stinkyscape-174": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Aerelret
   "stinkyscape-175": "none: no motif reads marked", // Frost Module
-  "stinkyscape-176": "none: Starship part", // Preemptive Strike
+  "stinkyscape-176": { bespoke: "preemptiveStrike", signature: true }, // Preemptive Strike
   "stinkyscape-177": "none: vanilla", // Cloaking Module
-  "stinkyscape-t-dormant-starship": "none: Starship part", // Dormant Starship
+  "stinkyscape-t-dormant-starship": { signature: true, entrance: "shipyardRollout" }, // Dormant Starship
   "stinkyscape-t-drone-interceptor": "none: token", // Drone Interceptor
   "stinkyscape-t-drone-corvette": "none: token", // Drone Corvette
-  "stinkyscape-t-shield-layer": "none: token", // Drone Battleship (Shield Layer)
-  "stinkyscape-t-propagation-layer": { activate: { motif: "conjure", palette: "Tech/rocket" } }, // Drone Battleship (Propagation Layer)
-  "stinkyscape-t-meltdown-layer": "none: token", // Drone Battleship (Meltdown Layer)
+  "stinkyscape-t-shield-layer": "none: Battleship planner", // Drone Battleship (Shield Layer)
+  "stinkyscape-t-propagation-layer": "none: Battleship planner", // Drone Battleship (Propagation Layer)
+  "stinkyscape-t-meltdown-layer": "none: Battleship planner", // Drone Battleship (Meltdown Layer)
   "stinkyscape-t-reknite": "none: token", // Reknite
   "stinkyscape-t-korrelite": { cast: { motif: "bolt", palette: "Hustle/ore" } }, // Korrelite
   "stinkyscape-t-gellium": { cast: { motif: "mend", palette: "Hustle/ore" } }, // Gellium
   "stinkyscape-t-axnit": { cast: { motif: "nova", palette: "Hustle/ore" } }, // Axnit
-  "stinkyscape-t-narcor": { cast: { motif: "send", palette: "Hustle/ore" } }, // Narcor
-  "stinkyscape-t-red-narcor": { cast: { motif: "mana", palette: "Hustle/ore" } }, // Red Narcor
-  "stinkyscape-t-anomaly-found": { cast: { motif: "wipe" } }, // Anomaly Found!
+  "stinkyscape-t-narcor": { bespoke: "narcorDust", signature: true }, // Narcor
+  "stinkyscape-t-red-narcor": { bespoke: "redNarcorHum", takeover: "redNarcor", signature: true }, // Red Narcor
+  "stinkyscape-t-anomaly-found": { bespoke: "anomalyCall" }, // Anomaly Found!
   "stinkyscape-t-ai-01": { cry: { motif: "conjure", palette: "Tech/hologram" } }, // Escort Protocol
   "stinkyscape-t-ai-02": { cast: { motif: "send", palette: "Hustle/ore" } }, // Mining Subroutine
   "stinkyscape-t-ai-03": { cast: { motif: "send", palette: "Tech/hologram" } }, // Route Optimizer

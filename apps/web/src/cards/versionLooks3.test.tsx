@@ -46,9 +46,11 @@ import {
   VERSION_PIXEL_ID,
   VERSION_SKETCH_ID,
   artPictureOf,
+  defaultLookOf,
   isFullBleed,
   offeredOn,
 } from "./versions.ts";
+import { facePicture } from "../test/artPicture.ts";
 import { legacyText } from "../test/faceData.ts";
 
 /** R2942000: #2942's three versions, in the registry's order. */
@@ -80,9 +82,9 @@ function faceIn(id: string, radiant: boolean): HTMLElement {
   return cf;
 }
 
-/** The art window's picture, decoded: what its CSS background draws. */
+/** The picture the face draws in its art window, decoded (R3344000: the planes' together, on a face with depth, test/artPicture.ts). */
 function pictureOf(cf: HTMLElement): string {
-  return decodeURIComponent(cf.querySelector<HTMLElement>(".cf-art")?.style.backgroundImage ?? "");
+  return facePicture(cf);
 }
 
 /** Every rule of cards.css whose selector names `version`: its selector and declarations. */
@@ -351,15 +353,16 @@ describe("R2942001 Pixel's name face stays readable", () => {
 
 describe("R2942002 R3015000 the levels of part 3's variants", () => {
   /**
-   * Cards offered every level of the three part 3 variants: Spell Tyrant (a Legendary Unit), CN Flea Market (a
-   * Legendary Spell) and Galaxy (a Legendary Unit of Stinkyscape's painter).
+   * Cards offered the levels of the three part 3 variants: Spell Tyrant (a Legendary Unit), Scratch Pad (a Mythic Spell,
+   * offered every level) and Galaxy (a Legendary Unit of Stinkyscape's painter). R3343000: a Legendary is offered every
+   * level but Extended art's first, its default look, which its Default draws.
    */
-  const CARDS = ["classic-056", "meditative-042", "stinkyscape-080"] as const;
+  const CARDS = ["classic-056", "meditativeplus-026", "stinkyscape-080"] as const;
 
   it("R2942002 R3015002 a foil, a finish and a border layer at both levels of Extended art, Pixel and Comic, the animated one moving its one picture, and none signs", () => {
     for (const id of CARDS) {
-      for (const [, level] of LEVELS) expect(offeredOn(level, id), `${level} on ${id}`).toBe(true);
-      for (const [version, level] of LEVELS) {
+      for (const [, level] of LEVELS) expect(offeredOn(level, id), `${level} on ${id}`).toBe(level !== defaultLookOf(id));
+      for (const [version, level] of LEVELS.filter(([, each]) => offeredOn(each, id))) {
         writeCardLevel(id, level);
         writeCardPick(id, "border", "border-runes");
         writeCardPick(id, "finish", "finish-stained-glass");
@@ -427,8 +430,11 @@ describe("R2942002 R3015000 the levels of part 3's variants", () => {
 });
 
 describe("R2942001 Radiant under part 3's looks", () => {
-  /** Two Units and a Spell, each offered both levels of all three part 3 variants. */
-  const CARDS = ["classic-056", "meditative-042", "stinkyscape-080"] as const;
+  /**
+   * Two Legendary Units and a Mythic Spell offered both levels of all three part 3 variants, but a Legendary's Extended
+   * art's first, its default look (R3343000): a pick of it wears the Default, which draws that look (R3343001).
+   */
+  const CARDS = ["classic-056", "meditativeplus-026", "stinkyscape-080"] as const;
 
   it('R2942001 R3015002 a Radiant face keeps data-radiant-face, data-art-variant="radiant", R277 marks and gold stats at every part 3 level; a base face has none', () => {
     for (const id of CARDS) {

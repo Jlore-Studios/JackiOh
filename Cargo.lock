@@ -1310,6 +1310,7 @@ dependencies = [
  "jackioh-ai",
  "jackioh-cards",
  "jackioh-engine",
+ "jackioh-run",
  "serde",
  "serde_json",
  "ts-rs",
@@ -1338,7 +1339,6 @@ version = "0.5.0"
 dependencies = [
  "console_error_panic_hook",
  "jackioh-cards",
- "jackioh-engine",
  "jackioh-wasm-core",
  "js-sys",
  "wasm-bindgen",

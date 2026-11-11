@@ -136,7 +136,7 @@ mod tests {
 
     const PRESTIGE: &str = "meditative-053";
     const FILLER: &str = "core-005";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4, no text.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
 
     /// p1 holds Prestige (base unless `radiant_face`) with a Radiant vanilla Unit on each side's
     /// field; both sides keep cards in hand so no turn auto-ends.
@@ -565,6 +565,7 @@ mod tests {
         }
 
         /// Whether `legal_actions` offers p1 a play of a Prestige in their hand.
+        // Differs from Scenario::offered: whether Prestige can be played, not the seat's whole legal list.
         fn offered(s: &Scenario) -> bool {
             let held: Vec<String> = s
                 .hand("p1")

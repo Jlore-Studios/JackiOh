@@ -1770,6 +1770,9 @@ pub const VERSION_OFFER_MIN_CARDS: usize = 20;
 /// SPEC §14.2, R2725001, R3015000: the fewest cards of each shipped set each level of each variant is offered on,
 /// so every set has some.
 pub const VERSION_OFFER_MIN_PER_SET: usize = 2;
+/// SPEC §14.2, R3017001: the fewest variants besides the Default every non-token card is offered, Legacy cards
+/// included: #3017's three pairs each offer every card one of their two, so this holds by construction.
+pub const VARIANT_MIN_PER_CARD: usize = 3;
 /// SPEC §14.2, R2949001: what an offer clause's sample's percent is out of: a card is in the sample when its
 /// seeded hash, modulo this, falls below the percent.
 pub const OFFER_SAMPLE_PERCENT_SCALE: u32 = 100;
@@ -1887,6 +1890,28 @@ pub const SET_TRACK_LEVELS: u32 = 100;
 pub const SET_TRACK_UNLOCK_LEVEL: u32 = 10;
 /// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
 pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
+/// SPEC §14.15, R3335001: the Fleet track's levels, each paying one Stinkyscape cosmetic, the last the Stinkyscape
+/// hull (#3335 proposed 30).
+pub const FLEET_TRACK_LEVELS: u32 = 30;
+/// SPEC §14.15, R3335001: the XP each Fleet track level costs, the same at every level.
+pub const FLEET_TRACK_XP_PER_LEVEL: i32 = 500;
+/// SPEC §14.15, R3335001: the Fleet XP a recorded game pays for each Stinkyscape card of the player's deck they
+/// played.
+pub const FLEET_TRACK_XP_PER_STINKYSCAPE_PLAY: i32 = 10;
+/// SPEC §14.15, R3335001: the Fleet XP a recorded game pays for each Starship Piece the player fused.
+pub const FLEET_TRACK_XP_PER_PIECE_FUSED: i32 = 15;
+/// SPEC §14.15, R3335001: the Fleet XP a recorded game pays for each Starship the player launched.
+pub const FLEET_TRACK_XP_PER_LAUNCH: i32 = 50;
+/// SPEC §14.15, R3335001: the Fleet XP a recorded game's win pays when the deck held `FLEET_TRACK_DECK_SHARE`
+/// Stinkyscape cards or more.
+pub const FLEET_TRACK_XP_STINKYSCAPE_WIN: i32 = 50;
+/// SPEC §14.15, R3335001: the share of a deck's cards that must be Stinkyscape cards for a win to pay
+/// `FLEET_TRACK_XP_STINKYSCAPE_WIN`.
+pub const FLEET_TRACK_DECK_SHARE: f64 = 0.5;
+/// SPEC §14.15, R3335001: the most Fleet XP the games of one UTC day pay, so the track is a track and not a grind.
+pub const FLEET_TRACK_XP_DAILY_MAX: i64 = 1500;
+/// SPEC §14.15, R3335001: how many of the Fleet track's next rewards `GET /api/tracks` names.
+pub const FLEET_TRACK_NEXT_REWARDS_SHOWN: usize = 3;
 /// SPEC §14.8: the Jlore a ladder game pays its winner (#1333's table: 20).
 pub const JLORE_LADDER_WIN: i32 = 20;
 /// SPEC §14.8: the Jlore a ladder game pays its loser (#1333's table: 10), so losing still moves
@@ -1952,3 +1977,20 @@ pub const QUEST_XP_PER_JLORE: i32 = 50;
 /// SPEC §14.9, R2210000: how many held quests an account may replace in one UTC day, each for a
 /// quest drawn as an arrival is (Hearthstone's daily reroll). Exported to serverConfig.ts.
 pub const QUEST_REPLACES_PER_DAY: i64 = 1;
+
+// ---------------------------------------------------------------------------------------------
+// The practice session's numbers (#3099): what its host bounds a move and a hint by, and how many
+// finished games it keeps. `crates/wasm/core`'s `constants` carries them, which the web's practice
+// worker and a Roblox server read, so none restates one.
+// ---------------------------------------------------------------------------------------------
+
+/// Wall-clock safety cap for one decision of the practice AI (`AiOptions.should_stop`): 3 s since the
+/// budget doubled (R2575000). The machine puts it in the `decide` ask (`AiAsk`), and a host
+/// with a clock holds the search to it: the node budget stays the real bound (R2560000).
+pub const PRACTICE_AI_CLOCK_MS: i64 = 3000;
+/// R2102000: wall-clock cap for the lethal hint's check, which every snapshot of the human's turn waits
+/// for: a check still running past it gives no hint, so a board whose lines are slow to play out never
+/// holds a click's answer back for long. Put in the `lethal` ask (`LethalAsk`).
+pub const PRACTICE_LETHAL_HINT_CLOCK_MS: i64 = 300;
+/// R768: the finished free games a device keeps for replay, the newest of them.
+pub const PRACTICE_REPLAYS_KEPT: u32 = 10;

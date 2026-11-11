@@ -1,0 +1,121 @@
+// R3342000: tile auras over a board in Cypress component testing (issue #3342).
+// Desktop (1280x720), mobile (390x844), and under reduced motion.
+// Run: E2E_COMPONENT_PORT=5283 pnpm --dir e2e test:component --spec cypress/component/tile-aura.cy.tsx
+
+import { writeSettings } from "../../../apps/web/src/settings/store.ts";
+import Game from "../../../apps/web/src/game/Game.tsx";
+import { baseView, emptySide, faceUpBackrow, unit } from "../../../apps/web/src/test/fixtures.ts";
+
+const noop = (): void => undefined;
+
+/**
+ * Four Legendary and Mythic permanents that wear the default tile aura: a card's own aura replaces it (R3342000),
+ * a `{ bespoke }` entry's too (R3400000), and every signature permanent now wears its own (Core's, R3402000;
+ * Classic+'s, R3399001; Stinkyscape's, R3395001), so the board takes the ones that wear none: Felinor Fiender
+ * and two Ceaseless Voids in the unit rows, and the Dormant Starship, a Legendary Flying Unit standing in the
+ * backrow (R1081000).
+ */
+function fourTileBoard() {
+  return baseView({
+    you: emptySide("p1", {
+      units: [
+        unit("p1", { defId: "core-092", instanceId: "u-leg-1" }),
+        unit("p1", { defId: "core-100", instanceId: "u-myth-1" }),
+        null,
+        null,
+        null,
+      ],
+      backrow: [null, null, null, null, null],
+    }),
+    opponent: emptySide("p2", {
+      units: [null, unit("p2", { defId: "core-100", instanceId: "u-myth-2" }), null, null, null],
+      backrow: [
+        faceUpBackrow("p2", {
+          defId: "stinkyscape-t-dormant-starship",
+          instanceId: "b-leg-2",
+          type: "Unit",
+          unit: unit("p2", { defId: "stinkyscape-t-dormant-starship", instanceId: "b-leg-2" }),
+        }),
+        null,
+        null,
+        null,
+        null,
+      ],
+    }),
+  });
+}
+
+describe("R3342000 tile auras over the board", () => {
+  it("R3342000 four tile auras render inside their zone boxes at desktop size without horizontal overflow", () => {
+    cy.viewport(1280, 720);
+    const view = fourTileBoard();
+    cy.mount(
+      <div className="app-shell app-shell--wide">
+        <Game view={view} legal={[]} onAction={noop} />
+      </div>,
+    );
+
+    cy.get(".tile-aura").should("have.length", 4).each(($aura) => {
+      const zone = $aura.parent()[0];
+      const aura = $aura[0];
+      expect(zone, "zone exists").to.not.equal(undefined);
+      expect(aura, "aura exists").to.not.equal(undefined);
+      if (!zone || !aura) return;
+      // The aura fills the zone inside its border (`inset: 0`): 1 px, and 2 px on a units row's side toward the middle.
+      const zoneRect = zone.getBoundingClientRect();
+      const auraRect = aura.getBoundingClientRect();
+      expect(auraRect.left).to.be.closeTo(zoneRect.left + zone.clientLeft, 2);
+      expect(auraRect.top).to.be.closeTo(zoneRect.top + zone.clientTop, 2);
+      expect(auraRect.width).to.be.closeTo(zone.clientWidth, 2);
+      expect(auraRect.height).to.be.closeTo(zone.clientHeight, 2);
+    });
+
+    cy.document().should((doc) => {
+      expect(doc.documentElement.scrollWidth, "no horizontal overflow").to.be.at.most(doc.defaultView?.innerWidth ?? 0);
+    });
+  });
+
+  it("R3342000 four tile auras render inside their zone boxes at phone size without horizontal overflow", () => {
+    cy.viewport(390, 844);
+    const view = fourTileBoard();
+    cy.mount(
+      <div className="app-shell">
+        <Game view={view} legal={[]} onAction={noop} />
+      </div>,
+    );
+
+    cy.get(".tile-aura").should("have.length", 4).each(($aura) => {
+      const zone = $aura.parent()[0];
+      const aura = $aura[0];
+      expect(zone, "zone exists").to.not.equal(undefined);
+      expect(aura, "aura exists").to.not.equal(undefined);
+      if (!zone || !aura) return;
+      // The aura fills the zone inside its border (`inset: 0`): 1 px, and 2 px on a units row's side toward the middle.
+      const zoneRect = zone.getBoundingClientRect();
+      const auraRect = aura.getBoundingClientRect();
+      expect(auraRect.left).to.be.closeTo(zoneRect.left + zone.clientLeft, 2);
+      expect(auraRect.top).to.be.closeTo(zoneRect.top + zone.clientTop, 2);
+      expect(auraRect.width).to.be.closeTo(zone.clientWidth, 2);
+      expect(auraRect.height).to.be.closeTo(zone.clientHeight, 2);
+    });
+
+    cy.document().should((doc) => {
+      expect(doc.documentElement.scrollWidth, "no horizontal overflow").to.be.at.most(doc.defaultView?.innerWidth ?? 0);
+    });
+  });
+
+  it("R3342000 under reduced motion tile auras are still with no motes", () => {
+    writeSettings({ reduceMotion: true });
+    cy.viewport(1280, 720);
+    const view = fourTileBoard();
+    cy.mount(
+      <div className="app-shell app-shell--wide">
+        <Game view={view} legal={[]} onAction={noop} />
+      </div>,
+    );
+
+    cy.get(".tile-aura").should("have.length", 4);
+    cy.get('.tile-aura[data-tile-motion="still"]').should("have.length", 4);
+    cy.get(".tile-aura-mote").should("not.exist");
+  });
+});

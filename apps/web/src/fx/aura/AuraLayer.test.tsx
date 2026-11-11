@@ -1,16 +1,19 @@
 // R2787000: the aura layer over the shown view. Every browser API comes in through `seams`: a fixed box
-// for every aura, a frame source the test runs by hand and a visibility it toggles.
+// for every aura, a frame source the test runs by hand and a visibility it toggles. R3337003: an
+// Anomaly's backdrop on the page.
 
 import type { BackrowView, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { anomalyArtUri } from "../../cards/art/svg.ts";
 import { baseView, emptySide, faceDownBackrow, faceUpBackrow, resetIds } from "../../test/fixtures.ts";
 import { setReducedMotion } from "../../test/setup.ts";
 import { __resetSettingsForTests, writeSettings } from "../../settings/store.ts";
 import { parseFxCardTable } from "../cards/tables.ts";
 import { AURA_FADE_IN_MS, AURA_FADE_OUT_MS, AURA_PARTICLE_SHARE, FX_PARTICLE_CAP_MOBILE } from "../constants.ts";
 import { resetFxSettingsForTests, setFxSettings } from "../settings.ts";
+import { resetShedForTests, setShedLevel, setShedPointer } from "../shed.ts";
 import type { FxSurface } from "../surface.ts";
 import type { FxBox, FxFrameSource, FxVisibility } from "../types.ts";
 import AuraLayer, { AURA_CANVAS_TESTID, AURA_LAYER_TESTID, type AuraSeams } from "./AuraLayer.tsx";
@@ -27,6 +30,7 @@ afterEach(() => {
   setReducedMotion(false);
   resetFxSettingsForTests();
   __resetSettingsForTests();
+  resetShedForTests();
   localStorage.clear();
 });
 
@@ -40,6 +44,7 @@ const TABLE = parseFxCardTable(
     "classic-075": { aura: { look: "holy", palette: "Fire", scope: "lane" } },
     "meditative-040": { aura: { look: "bloom", scope: "board" } },
     "meditativeplus-009": { aura: { look: "arcane", scope: "side" } },
+    "stinkyscape-155": { aura: { look: "drift", scope: "side" } },
     "core-018": { aura: { look: "frost", scope: "zone" } },
     "core-035": { aura: { look: "ember", scope: "side" } },
   }`,
@@ -367,5 +372,124 @@ describe("R2787000 the aura layer", () => {
     expect(m.aura("mod-p1-m5")).toHaveAttribute("data-aura-phase", "end");
     fx.pump(AURA_FADE_OUT_MS);
     expect(m.layer()).toBeNull();
+  });
+});
+
+describe("R3337003 an Anomaly's backdrop", () => {
+  const wormhole: GameEvent = { type: "boardReplaced", player: "p1", anomaly: "WH" };
+
+  it("R3337003 an Anomaly's backdrop stands over its caster's side with its code and picture until the side is replaced again, and none under reduced motion", () => {
+    resetIds();
+    const fx = fakeSeams();
+    const before = board([], []);
+    const laid = board([], [], "p1", { events: [wormhole] });
+    const m = mount(before, fx);
+    // The newest view has the lay; the board still shows the one before it.
+    m.show(before, laid);
+    expect(m.layer()).toBeNull();
+    m.show(laid, laid);
+    const backdrop = m.aura("anomaly-p1");
+    expect(backdrop).toHaveAttribute("data-anomaly", "WH");
+    expect(backdrop).toHaveAttribute("data-aura-look", "void");
+    expect(backdrop).toHaveAttribute("data-aura-scope", "side");
+    expect(backdrop).toHaveAttribute("data-aura-phase", "begin");
+    // Its picture is the card art's own, the board's (B27: the layer itself draws no image).
+    const picture = backdrop?.querySelector(".aura-picture");
+    expect(picture).toHaveAttribute("data-art-anomaly", "WH");
+    expect((picture as HTMLElement | null)?.style.backgroundImage).toContain(anomalyArtUri("WH", false));
+    // A Field Spell's aura carries neither.
+    const weapons = field("p2", "core-014");
+    const both = board([], [weapons], "p1", { events: [wormhole] });
+    m.show(both, both);
+    expect(m.aura(fieldKey(weapons))).not.toHaveAttribute("data-anomaly");
+    expect(m.aura(fieldKey(weapons))?.querySelector(".aura-picture")).toBeNull();
+    // Replaced again with no Anomaly, it ends.
+    const cleared = board([], [], "p1", { events: [wormhole, { type: "boardReplaced", player: "p1" }] });
+    m.show(cleared, cleared);
+    expect(m.aura("anomaly-p1")).toHaveAttribute("data-aura-phase", "end");
+    fx.pump(AURA_FADE_OUT_MS);
+    expect(m.layer()).toBeNull();
+  });
+
+  it("R3337003 reduced motion, the media query's or the panel's, lays no backdrop", () => {
+    resetIds();
+    setReducedMotion(true);
+    const laid = board([], [], "p1", { events: [wormhole] });
+    const still = mount(laid, fakeSeams());
+    expect(still.aura("anomaly-p1")).toBeNull();
+    expect(still.layer()).toBeNull();
+    cleanup();
+    setReducedMotion(false);
+    writeSettings({ reduceMotion: true });
+    const panel = mount(laid, fakeSeams());
+    expect(panel.aura("anomaly-p1")).toBeNull();
+    act(() => {
+      writeSettings({ reduceMotion: false });
+    });
+    expect(panel.aura("anomaly-p1")).toHaveAttribute("data-anomaly", "WH");
+  });
+});
+
+describe("R3351000 the living game's shared shed order", () => {
+  it("R3351000 at shed stage 2 the auras far from the pointer halve their motes and the one under it keeps them", () => {
+    resetIds();
+    resetShedForTests();
+    // Two auras in different boxes: the zone aura near, the side aura far.
+    const near: FxBox = { x: 0, y: 0, width: 100, height: 100 };
+    const far: FxBox = { x: 500, y: 500, width: 100, height: 100 };
+    const fx = fakeSeams();
+    fx.seams.measure = (testids) => (testids.length > 2 ? far : near);
+    const view = board([field("p1", "core-014")], [field("p2", "classic-042")]);
+    const m = mount(view, fx);
+    expect(m.auras()).toHaveLength(2);
+    // Each aura draws its whole budget of 24 motes (AURA_MOTES_PER_AURA at normal intensity).
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "48");
+    // Shed to stage 2 with the pointer over the zone aura: the side aura halves.
+    act(() => {
+      setShedLevel(2);
+      setShedPointer({ x: 50, y: 50 });
+    });
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "36");
+    // With no pointer known every aura counts as far.
+    act(() => {
+      setShedPointer(null);
+    });
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "24");
+    // Recovery draws whole again.
+    act(() => {
+      setShedLevel(0);
+    });
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "48");
+  });
+
+  it("R3351000 pointer moves below stage 2 re-render and re-measure nothing", () => {
+    resetIds();
+    resetShedForTests();
+    // Two auras in different boxes: the zone aura near, the side aura far.
+    const near: FxBox = { x: 0, y: 0, width: 100, height: 100 };
+    const far: FxBox = { x: 500, y: 500, width: 100, height: 100 };
+    const fx = fakeSeams();
+    let measures = 0;
+    fx.seams.measure = (testids) => {
+      measures += 1;
+      return testids.length > 2 ? far : near;
+    };
+    const view = board([field("p1", "core-014")], [field("p2", "classic-042")]);
+    const m = mount(view, fx);
+    expect(m.auras()).toHaveLength(2);
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "48");
+    const measured = measures;
+    // Pointer moves at stage 0 change no snapshot: no re-render, no new measure, no mote change.
+    act(() => {
+      setShedPointer({ x: 10, y: 10 });
+    });
+    act(() => {
+      setShedPointer({ x: 600, y: 600 });
+    });
+    act(() => {
+      setShedPointer({ x: 50, y: 50 });
+    });
+    expect(measures).toBe(measured);
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "48");
   });
 });

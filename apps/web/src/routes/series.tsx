@@ -12,6 +12,7 @@ import { forfeitSeries, getSeries, pickSeriesDeck, type SeriesView } from "../ne
 import { navigate, paths } from "../net/navigate.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 import ConquestExplainer, { conquestExplainerTestid } from "./ConquestExplainer.tsx";
 import { conquestText, isExplainerDismissed, setExplainerDismissed } from "./conquestCopy.ts";
 import { SERIES_OUTCOME_HEADLINE } from "./SeriesBanner.tsx";
@@ -113,10 +114,7 @@ export function localDeadline(received: Received): number | null {
 function SeriesHero(): ReactElement {
   return (
     <header className="play-hero">
-      <div className="brand">
-        <h1>JackiOh</h1>
-      </div>
-      <p className="play-hero__title">{t("Conquest")}</p>
+      <Wordmark />
       <p className="play-hero__lead">{t("Win a game with each of your three decks. A deck that wins is locked.")}</p>
     </header>
   );
@@ -238,7 +236,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
   if (view === null) {
     return (
       <div className="app-shell tavern lobby play-screen series one-screen" data-testid={seriesTestid.screen}>
-        <BackLink to={paths.play} />
+        <BackLink to={paths.play} title={t("Conquest")} />
         <SeriesHero />
         {loadError === null ? (
           <Skeleton variant="panel" label={t("Loading the series…")} testId={seriesTestid.loading} />
@@ -260,7 +258,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
 
   return (
     <div className="app-shell tavern lobby play-screen series one-screen" data-testid={seriesTestid.screen} data-status={view.status}>
-      <BackLink to={paths.play} />
+      <BackLink to={paths.play} title={t("Conquest")} />
       <SeriesHero />
       <div className="one-screen__body one-screen__stack">
         {showExplainer ? (
@@ -433,9 +431,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
                         ? t("Forfeit the series? Your opponent wins it, and your rating moves as for a loss.")
                         : t("Forfeit the series? Your opponent wins it.")}
                     </p>
-                    <button type="button" data-testid={seriesTestid.forfeitConfirm} disabled={busy} onClick={onForfeit}>
-                      {t("Forfeit")}
-                    </button>
+                    {/* R3221000: the safe choice first, the act last. */}
                     <button
                       type="button"
                       className="link-button"
@@ -444,7 +440,10 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
                         setConfirming(false);
                       }}
                     >
-                      {t("Keep playing")}
+                      {t("Stay")}
+                    </button>
+                    <button type="button" data-testid={seriesTestid.forfeitConfirm} disabled={busy} onClick={onForfeit}>
+                      {t("Forfeit")}
                     </button>
                   </div>
                 ) : (

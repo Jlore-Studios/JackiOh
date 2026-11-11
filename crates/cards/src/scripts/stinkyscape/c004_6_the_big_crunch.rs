@@ -68,7 +68,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const CRUNCH: &str = "stinkyscape-004-6";
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
     const ANSWER_BOUND: usize = 200;
 
     fn played(seed: &str, radiant: bool) -> Scenario {

@@ -11,13 +11,14 @@ rely on.
 Pure and seeded like the engine (CLAUDE.md rule 4): its `Cargo.toml` depends on the engine, `serde`,
 `serde_json` and `indexmap` only, and its `clippy.toml` is the engine's (no clock, no I/O, no
 environment, no threads, no `HashMap`, no `RefCell`). Every random draw comes from an `Rng` the
-caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`, `SweepOptions`'s
-`now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
+caller passes in. The clock arrives only as a callback (`AiOptions::should_stop` and `wrap_up`,
+`SweepOptions`'s `now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
 The Death, the turn-hook, the activation, the attack-hook and the awakening prices of a decision (R2424000,
 R2477000, R2564000, R2688000, R3064000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
-through the search to the scorers that read them, with the one fact about the root they ride with, whether it
-holds a Starship (`starship_root`, R3038003); a call outside a decision passes `Prices::NONE` (plain
+through the search to the scorers that read them, with the two facts about the root they ride with: whether it
+holds a Starship (`starship_root`, R3038003) and whether its view names mostly cards the network has no row
+for (`unknown_root`, R3479000); a call outside a decision passes `Prices::NONE` (plain
 `evaluate`, the probes, the baselines, the tools) and prices nothing. The crate holds no thread-local.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
@@ -37,7 +38,12 @@ and Duos's `duos_ai_team` in `crates/engine/src/config.rs`).
 pub fn decide(state: &GameState, seat: PlayerId, options: &mut AiOptions) -> Option<Decision>;
 pub fn decide_styled(state: &GameState, seat: PlayerId, options: &mut AiOptions, style: &AiStyle) -> Option<Decision>;
 pub struct AiStyle { pub temperature: f64, pub missed_lethal_chance: f64 }
-pub struct AiOptions<'a> { pub rng: Rng, pub budget: SearchBudget, pub should_stop: Option<&'a dyn Fn() -> bool> }
+pub struct AiOptions<'a> {
+    pub rng: Rng,
+    pub budget: SearchBudget,
+    pub should_stop: Option<&'a dyn Fn() -> bool>,
+    pub wrap_up: Option<&'a dyn Fn() -> bool>, // R3498000: the beam's earlier stop
+}
 ```
 
 `decide` is the one entry point. It reads the true `GameState` only through `ai_to_act` and `redact`
@@ -249,7 +255,12 @@ that hands a turn over is scored where that turn begins (#1337).
 `AI_BUDGET` is what the browser plays with; `AI_GATE_BUDGET`, the gates' and the sweep's, is the
 same budget, so both measure the AI that ships. The same state, seed and budget always give the
 same `Decision`. The browser's wall-clock cap arrives as `should_stop` (the WASM binding's deadline),
-which ends the search early with the best line found.
+which ends the search early with the best line found. R3498000: every host with a clock also passes
+`wrap_up`, fired at `AI_WRAP_UP_SHARE` of its limit (`wrap_up_after_ms`), which stops the beam's slice
+of the counter alone: the beam's open lines end their turn and the reply and the other determinizations
+run on until `should_stop`. `SearchStats.replied` and `worldsScored` say how far they got, and
+`Decision::fell_short` names a decision that left its finalists unscored on a sampled world. With no
+clock, or a wrap-up that never fires, a decision is node for node what it was.
 
 ## Decks and the shadow ban (R184, R186, R390, R1370, R1390, R817000, R976000)
 
@@ -418,6 +429,7 @@ pub const LEARNED: Network<'static>;              // compiled in from src/learne
 pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing, prices: &Prices) -> f64;
 impl Learned<'a> { pub fn known_card_ids(&self) -> Vec<&'a str>; }   // the ids its keys name, sorted
 pub fn unknown_cards(sparse: &[(String, i32)], known: &[&str]) -> UnknownCards;   // { named, unknown }
+pub fn unknown_root(view: &GameState, seat: PlayerId, network: &Learned<'_>) -> bool;   // R3479000
 ```
 
 - With `Hand` nothing changes. With `Learned`, `reply_score` scores a finalist after the opponent's
@@ -428,7 +440,9 @@ pub fn unknown_cards(sparse: &[(String, i32)], known: &[&str]) -> UnknownCards; 
   or launched Starship on either side, or a Starship Piece on either field or in the seat's own hand, read
   off the redacted view once and carried in `Prices.starship_root`), every line of it alike: the network
   was fitted before the set, and the hand eval holds what a Starship leaves behind (R2566000, R2380000,
-  R3064000).
+  R3064000). So does a decision whose redacted root view names mostly cards the network has no row for
+  (`unknown_root`, R3479000: more than `LEARNED_MAX_UNKNOWN_SHARE` of the copies `unknown_cards` counts,
+  carried in `Prices.unknown_root`), until a retrain gives them rows.
 - `src/learned/weights.json` is what `training/ml/jackioh_ml/export.py` writes from a fit: the feature
   version and dense names it was fitted on (a test fails on a mismatch), the standardizer, the sparse
   keys it has rows for (an unknown key is no input), the layers and the skip connection. `build.rs`

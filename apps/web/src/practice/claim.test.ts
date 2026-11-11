@@ -19,8 +19,8 @@ import { createRng, subsystems } from "@jackioh/engine";
 import type { GameState, Rng } from "@jackioh/engine";
 import { AI_BUDGET } from "@jackioh/ai";
 
-import { createPracticeCore } from "./core.ts";
-import type { PracticeCore, PracticeCoreEnv } from "./core.ts";
+import { createPracticeDriver } from "./driver.ts";
+import type { PracticeDriver, PracticeDriverEnv } from "./driver.ts";
 import { memorySaveStore } from "./saveStore.ts";
 import type {
   PracticeClaim,
@@ -35,7 +35,7 @@ import { snapshotOf } from "../test/fixtures.ts";
 
 // the driver (core.test.ts's, at the browser's budget)
 
-const ENV: PracticeCoreEnv = { now: () => 0, dev: true, budget: AI_BUDGET };
+const ENV: PracticeDriverEnv = { now: () => 0, dev: true, budget: AI_BUDGET };
 
 /** Most requests the fixture's game sends before it gives up on the game ending by itself. */
 const GAME_CAP = 2000;
@@ -44,10 +44,10 @@ const FIXTURE_PATH = join(dirname(fileURLToPath(import.meta.url)), "../../../../
 const RECORD = process.env.JACKIOH_RECORD_PRACTICE_CLAIM === "1";
 const RECORD_COMMAND = "JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts";
 
-type Driver = { core: PracticeCore; send(body: PracticeRequestBody): PracticeResponse };
+type Driver = { core: PracticeDriver; send(body: PracticeRequestBody): PracticeResponse };
 
-function driver(env: PracticeCoreEnv = ENV): Driver {
-  const core = createPracticeCore(env);
+function driver(env: PracticeDriverEnv = ENV): Driver {
+  const core = createPracticeDriver(env);
   let id = 0;
   return {
     core,

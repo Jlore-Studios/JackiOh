@@ -55,6 +55,7 @@ mod harness {
             glitch_boards: None,
             sandbox: None,
             deck_marks: None,
+            win_rates: None,
         }
     }
 
@@ -443,6 +444,15 @@ struct Job {
 
 /// What the host runs for a job: the decision, with no wall-clock cap.
 fn play(job: Job) -> BotChoice {
+    play_clocked(job, None, None)
+}
+
+/// `play` under a host's clock: its hard stop and its wrap-up (R3498000).
+fn play_clocked(
+    job: Job,
+    should_stop: Option<&dyn Fn() -> bool>,
+    wrap_up: Option<&dyn Fn() -> bool>,
+) -> BotChoice {
     jackioh_cards::register_all();
     decide(
         &BotAsk {
@@ -455,7 +465,8 @@ fn play(job: Job) -> BotChoice {
             own_turn_start: job.own_turn_start,
             ai_cursor: 0,
         },
-        None,
+        should_stop,
+        wrap_up,
     )
 }
 
@@ -811,6 +822,7 @@ fn ai_move(state: &GameState, seat: PlayerId, rng: Rng) -> (Option<ActionBody>, 
         rng,
         budget: strength.budget,
         should_stop: None,
+        wrap_up: None,
     };
     let style = AiStyle {
         temperature: strength.temperature,
@@ -1007,6 +1019,7 @@ fn r3103000_a_bot_that_does_not_pass_for_a_person_never_concedes_offers_or_answe
                 ai_cursor: 0,
             },
             None,
+            None,
         )
     };
     assert_eq!(ask(true).body, Some(ActionBody::Concede));
@@ -1018,4 +1031,31 @@ fn r3103000_a_bot_that_does_not_pass_for_a_person_never_concedes_offers_or_answe
     );
     // Nor does it offer a draw or answer one by a habit, on its own turn's start or any other.
     assert_ne!(plain.body, Some(ActionBody::OfferDraw));
+}
+
+/// R3498000: the host's wrap-up reaches the bot's search. One that never fires decides as no clock does;
+/// one that fires at its first poll still leaves the search a move to play.
+#[test]
+fn r3498000_a_bots_wrap_up_never_fired_decides_as_none_and_one_fired_at_once_still_plays() {
+    let state = opened_at("r3498000-bot", 3);
+    let bot = state.active;
+    let plain = play(job(&state, bot, "r3498000-bot", false));
+    assert!(plain.body.is_some(), "PREMISE: the search plays a move");
+
+    let never = || false;
+    let unfired = play_clocked(
+        job(&state, bot, "r3498000-bot", false),
+        Some(&never),
+        Some(&never),
+    );
+    assert_eq!(unfired, plain);
+
+    let polls = std::cell::Cell::new(0usize);
+    let at_once = || {
+        polls.set(polls.get() + 1);
+        true
+    };
+    let wrapped = play_clocked(job(&state, bot, "r3498000-bot", false), None, Some(&at_once));
+    assert!(polls.get() > 0, "the wrap-up reaches the search");
+    assert!(wrapped.body.is_some(), "{wrapped:?}");
 }

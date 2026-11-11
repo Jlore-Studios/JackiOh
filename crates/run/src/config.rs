@@ -68,6 +68,63 @@ pub const RUN_STARTER_CARDS: [&str; 20] = [
     "traininggrounds-058",
     "traininggrounds-059",
 ];
+/// DR3: the named starting decks the start screen offers, as `(id, name, theme, cards)`.
+/// Placeholders until the designer's lists (as `RUN_STARTER_CARDS` is): each holds
+/// `RUN_STARTER_SIZE` distinct cards of `RUN_STARTER_CARDS` fitting level 1's slots, so any player
+/// may pick any of them from their first run, then tweak the picks in the builder.
+pub const RUN_PRESET_DECKS: [(&str, &str, &str, [&str; RUN_STARTER_SIZE]); 3] = [
+    (
+        "first-charge",
+        "First Charge",
+        "Cheap units that hit fast and hit hard.",
+        [
+            "traininggrounds-001",
+            "traininggrounds-002",
+            "traininggrounds-004",
+            "traininggrounds-006",
+            "traininggrounds-007",
+            "traininggrounds-008",
+            "traininggrounds-043",
+            "traininggrounds-017",
+            "traininggrounds-023",
+            "traininggrounds-044",
+        ],
+    ),
+    (
+        "spell-tricks",
+        "Spell tricks",
+        "Spells and helpers that out-trick the enemy.",
+        [
+            "traininggrounds-011",
+            "traininggrounds-042",
+            "traininggrounds-058",
+            "traininggrounds-059",
+            "traininggrounds-002",
+            "traininggrounds-006",
+            "traininggrounds-020",
+            "traininggrounds-050",
+            "traininggrounds-017",
+            "traininggrounds-023",
+        ],
+    ),
+    (
+        "hold-the-line",
+        "Hold the line",
+        "Tough bodies that hold the line, then win late.",
+        [
+            "traininggrounds-002",
+            "traininggrounds-004",
+            "traininggrounds-008",
+            "traininggrounds-043",
+            "traininggrounds-047",
+            "traininggrounds-048",
+            "traininggrounds-054",
+            "traininggrounds-023",
+            "traininggrounds-044",
+            "traininggrounds-051",
+        ],
+    ),
+];
 /// DR3, DR9, a strawman: the Embers each level of the starting deck costs from the one before it, so
 /// `RUN_LEVEL_EMBERS[0]` buys level 2. One per step of `RUN_SLOT_LADDER`.
 pub const RUN_LEVEL_EMBERS: [i64; RUN_SLOT_LADDER.len() - 1] = [10, 25, 45, 70, 100];
@@ -84,7 +141,7 @@ pub const RUN_TIER_POINTS: [(RunTier, i32); 5] = [
     (RunTier::Diamond, 5),
 ];
 
-/// DR5: the health a run starts with and the most it heals to, before passives raise it.
+/// DR5: the health a run starts with, before wins, campfires, events and passives raise it.
 pub const RUN_MAX_HP: i32 = HERO_HEALTH;
 /// DR5, a strawman: each enemy's hero health by its kind of fight.
 pub const RUN_ENEMY_HEALTH: RunByFight = RunByFight {
@@ -139,8 +196,10 @@ pub const RUN_KEEP_MAX: usize = 5;
 /// is one the engine starts. A card a full deck would gain is not gained.
 pub const RUN_DECK_MAX: usize = LIBRARY_CAP as usize;
 
-/// DR7: a campfire's heal, in percent of the run's max HP.
-pub const RUN_CAMPFIRE_HEAL_PERCENT: i32 = 30;
+/// DR5/DR6: the max HP every won fight adds for the rest of the run, before refilling to the new max.
+pub const RUN_WIN_MAX_HP: i32 = 5;
+/// DR7: the max HP a campfire's rest adds for the rest of the run.
+pub const RUN_CAMPFIRE_MAX_HP: i32 = 5;
 /// DR7: the cards a campfire removes.
 pub const RUN_CAMPFIRE_REMOVE: usize = 2;
 /// DR7: the cards a shop sells.

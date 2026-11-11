@@ -107,57 +107,94 @@ describe("#2932 a phone held upright draws field cards in a card shape that grow
     expect(lane).toContain("grid-template-rows: repeat(4, minmax(var(--card-h), 1fr));");
   });
 
-  it("the badges hang off the card's corner, the match bar rides the top strip, and the seats are thinner", () => {
+  it("#3257 an empty zone's placeholder is sized to the box a field card takes there, less an inset", () => {
+    const placeholder = /\.zone::before\s*\{([\s\S]*?)\}/.exec(phoneBlock())?.[1];
+    expect(placeholder, "the phone block sizes `.zone::before`").toBeDefined();
+    if (placeholder === undefined) return;
+    // The card's own box (the `.zone > .card` rule's two lines), read off the zone as the card's are.
+    expect(placeholder).toContain("--field-card-w: min(100cqw, calc(100cqh * var(--field-ratio-max)));");
+    expect(placeholder).toContain("--field-card-h: min(100cqh, calc(100cqw / var(--field-ratio-min)));");
+    expect(placeholder).toContain("--zone-pad-inset: 2px;");
+    // A pseudo-element is content-box: the border is in the size.
+    expect(placeholder).toContain("box-sizing: border-box;");
+    expect(placeholder).toContain("width: calc(var(--field-card-w) - 2 * var(--zone-pad-inset));");
+    expect(placeholder).toContain("height: calc(var(--field-card-h) - 2 * var(--zone-pad-inset));");
+    // What the base keeps: hidden once a card stands in the zone, and no hit.
+    expect(board).toMatch(/\.zone:has\(>\s*\.card\)::before\s*\{[^}]*display:\s*none;/);
+    expect(board).toMatch(/\.zone::before\s*\{[^}]*pointer-events:\s*none;/);
+  });
+
+  it("#3257 the badges stand in their own zone's top-left inner corner, above the name plate", () => {
     const phone = phoneBlock();
     const badges = /\.board \.zone\s*>\s*\.field-badges\s*\{([\s\S]*?)\}/.exec(phone)?.[1];
     expect(badges, "the phone block places `.field-badges`").toBeDefined();
+    if (badges === undefined) return;
     expect(badges).toContain("position: absolute;");
-    // The stack's corner is the card's own top-left, worked out from the card's size (the zone
-    // centres the card): never the zone's bare corner, so it tracks the card on a tall phone too.
+    expect(badges).toContain("top: var(--badges-inset);");
+    expect(badges).toContain("left: var(--badges-inset);");
+    expect(badges).toContain("--badges-inset: 2px;");
+    // The card's own size, repeated so `cqw`/`cqh` read the stack's container, its zone.
     expect(badges).toContain("--field-card-w: min(100cqw, calc(100cqh * var(--field-ratio-max)));");
     expect(badges).toContain("--field-card-h: min(100cqh, calc(100cqw / var(--field-ratio-min)));");
-    expect(badges).toContain("right: calc(100% - ((100cqw - var(--field-card-w)) / 2) - 2px);");
-    expect(badges).not.toContain("top: 0;");
-    // It hangs over the zone beside it, whose switch sits at that corner: only the Activate control takes a press.
+    // It stops above the name plate, so FieldBadges.tsx folds what does not fit into the "+n".
+    expect(badges).toContain(
+      "max-height: calc((100cqh + var(--field-card-h)) / 2 - var(--badges-stat) - var(--badges-plate) - var(--badges-inset));",
+    );
+    // Only the Activate control takes a press (activate.css).
     expect(badges).toContain("pointer-events: none;");
+    // Nothing hangs out into the lane beside it, so nothing clears that lane's switch either.
+    expect(badges).not.toContain("right:");
+    expect(badges).not.toContain("wrap-reverse");
+    expect(badges).not.toContain("--badges-top");
+    expect(phone).not.toContain("--badges-top");
+    expect(phone).not.toContain("--switch-target");
+    expect(phone).not.toContain("--switch-clear");
+    expect(phone).not.toMatch(/\.board \.zone\[data-lane="1"\]\s*>\s*\.field-badges/);
+    // The marks are flex items that keep their size, and the cost steps aside under them.
+    const items = /\.board \.field-badges :is\(\.activate-control, \.keyword, \.cf-kw-more\)\s*\{([\s\S]*?)\}/.exec(phone)?.[1] ?? "";
+    expect(items).toContain("flex: none;");
+    const cost = /\.board \.zone:has\(>\s*\.field-badges :is\(\.activate-control, \.keyword, \.cf-kw-more\)\)\s*>\s*\.card \.cost-gem\s*\{([\s\S]*?)\}/.exec(phone)?.[1] ?? "";
+    expect(cost).toContain("visibility: hidden;");
   });
 
-  it("the badges start below the switch target of the zone beside them, wrap inside their own zone's height, and keep their press band under the control", () => {
+  it("#3257 over a DEF card the stack stops above the turned card, so it covers no turned name, attack or health", () => {
     const phone = phoneBlock();
-    const badges = /\.board \.zone\s*>\s*\.field-badges\s*\{([\s\S]*?)\}/.exec(phone)?.[1] ?? "";
-    // The stack's top is the card's top or the switch target's height, whichever is lower down: the
-    // zone left of this one holds its switch (⟳) at its top-right, where this stack hangs.
-    expect(badges).toContain(
-      "--badges-top: max(calc((100cqh - var(--field-card-h)) / 2), min(var(--switch-target), calc(50cqh - var(--switch-clear))));",
-    );
-    expect(badges).toContain("top: var(--badges-top);");
-    // ... and the target it clears is the switch's own: the same two numbers as the switch's rule.
-    const switchRule = /\.board \.zone\s*>\s*\.switch-button\s*\{([\s\S]*?)\}/.exec(board)?.[1] ?? "";
-    for (const name of ["--switch-target", "--switch-clear"]) {
-      const of = (rule: string): string | undefined => new RegExp(`${name}:\\s*([^;]+);`).exec(rule)?.[1];
-      expect(of(switchRule), `the switch declares ${name}`).toBeDefined();
-      expect(of(badges), `the stack's ${name} is the switch's`).toBe(of(switchRule));
-    }
-    expect(switchRule).toContain("width: min(var(--switch-target), calc(50% - var(--switch-clear)));");
-    expect(switchRule).toContain("height: min(var(--switch-target), calc(50% - var(--switch-clear)));");
-    // What does not fit under it wraps to a column on its left: it never reaches the row below.
-    expect(badges).toContain("flex-wrap: wrap-reverse;");
-    expect(badges, "wrap-reverse swaps the cross axis: flex-start is the card's edge").toContain("align-items: flex-start;");
-    expect(badges).toContain("max-height: calc(100cqh - var(--badges-top));");
-    // The Activate control's press band reaches down from the control, never up over the switch or
-    // the row above, and no further than its zone.
+    const def = /\.board \.zone:has\(>\s*\.card\[data-position="DEF"\]\)\s*>\s*\.field-badges\s*\{([\s\S]*?)\}/.exec(phone)?.[1];
+    expect(def, "the phone block caps the stack over a DEF card").toBeDefined();
+    if (def === undefined) return;
+    // The card's own `--def-scale` (the `.zone > .card` rule's), repeated: the stack is no child of the card.
+    const card = /\.zone\s*>\s*\.card\s*\{([\s\S]*?)\}/.exec(phone)?.[1] ?? "";
+    const scale = /--def-scale:\s*([^;]+);/.exec(card)?.[1];
+    expect(scale, "the phone's card has a `--def-scale`").toBeDefined();
+    expect(def).toContain(`--def-scale: ${scale};`);
+    // The turned card's box is as tall as the card is wide, scaled, and centred in the zone: the room is the band above it.
+    expect(def).toContain("max-height: calc((100cqh - var(--field-card-w) * var(--def-scale)) / 2 - var(--badges-inset));");
+    // Only the room changes: where the stack stands, and that it is never turned, stays the ATK rule's.
+    expect(def).not.toMatch(/top:|left:|right:|transform:|position:/);
+  });
+
+  it("#3257 the badges' plate numbers are the face's", () => {
+    // The stack is no child of the card, so it works the gem and the plate out from the card's size:
+    // the same numbers as cards.css's, which this test holds it to.
+    const cards = readSheet("src/cards/cards.css");
+    expect(cards).toContain("--mf-stat: min(30cqmin, 26cqh);");
+    expect(cards).toContain("--mf-plate: max(11cqh, 10px);");
+    const badges = /\.board \.zone\s*>\s*\.field-badges\s*\{([\s\S]*?)\}/.exec(phoneBlock())?.[1] ?? "";
+    const stat = /--badges-stat:\s*([^;]+);/.exec(badges)?.[1] ?? "";
+    const plate = /--badges-plate:\s*([^;]+);/.exec(badges)?.[1] ?? "";
+    expect(stat).toContain("* 0.3");
+    expect(stat).toContain("* 0.26");
+    expect(plate).toContain("* 0.11");
+    expect(plate).toContain("10px");
+  });
+
+  it("#3257 the Activate press band starts at the control and stops at the zone", () => {
     const activate = readSheet("src/game/activate.css");
     const band = /\.board \.field-badges \.activate-control::before\s*\{([\s\S]*?)\}/.exec(activate)?.[1] ?? "";
     expect(band).toContain("top: -1px;");
     expect(band).toContain("bottom: auto;");
-    expect(band).toContain("height: min(var(--hit-min), calc(100cqh - var(--badges-top)));");
-  });
-
-  it("lane 1's stack has no neighbour to clear and no column to wrap into, so it starts at the card's top and never wraps", () => {
-    const lane1 = /\.board \.zone\[data-lane="1"\]\s*>\s*\.field-badges\s*\{([\s\S]*?)\}/.exec(phoneBlock())?.[1] ?? "";
-    expect(lane1).toContain("--badges-top: calc((100cqh - var(--field-card-h)) / 2);");
-    expect(lane1).toContain("flex-wrap: nowrap;");
-    expect(lane1).toContain("align-items: flex-end;");
+    expect(band).toContain("height: min(var(--hit-min), calc(100cqh - var(--badges-inset)));");
+    expect(activate).not.toContain("--badges-top");
   });
 
   it("the match bar rides the top strip and the seats are thinner", () => {

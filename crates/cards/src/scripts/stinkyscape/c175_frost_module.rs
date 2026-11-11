@@ -57,8 +57,8 @@ mod tests {
     use crate::filler;
 
     const FROST: &str = "stinkyscape-175";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const FILLER: &str = "core-005"; // (1) Spell.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
 
     mod base {
         use super::*;

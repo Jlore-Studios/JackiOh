@@ -26,7 +26,7 @@ use jackioh_server::config::{
     API_REQUESTS_PER_MINUTE, WATCH_HELLO_INTERVAL_MS, WS_MAX_CONNECTIONS_PER_ADDRESS,
 };
 
-use crate::support::deps::{add_user, call, test_app};
+use crate::support::deps::{add_user, call, fake_auth, test_app};
 use crate::support::engine::playable;
 use crate::support::socket::read_frame_now;
 use crate::support::store::{fake, from, record_calls};
@@ -538,6 +538,24 @@ mod r1379000_the_credential_on_the_handshake {
         let mut client = open(listening.port, &address, &[]).await.open();
         assert_eq!(client.protocol, None);
         assert_eq!(client.first_view().await["viewer"], "p1");
+    }
+
+    /// #3490's expired session (#3516): a token that verified once and no longer does cannot open
+    /// the seat again, though its first socket is still attached to it.
+    #[tokio::test]
+    async fn an_ended_session_cannot_reopen_the_seat_it_held() {
+        let _serial = SERIAL.lock().await;
+        let (app, tokens) = seed_matches(1).await;
+        let listening = listen_on(&app).await;
+        // profile-1's token, for seat p1 of match-1.
+        let token = &tokens[0];
+        let mut first = open_as(listening.port, "match-1", token).await.open();
+        assert_eq!(first.first_view().await["viewer"], "p1");
+
+        // The provider ended the session (R194): the token stops verifying, as R3214000's does.
+        fake_auth(&app).revoke_token(token);
+        let mut again = open_as(listening.port, "match-1", token).await.open();
+        assert_refused_for_its_sign_in(&mut again, token).await;
     }
 }
 

@@ -15,7 +15,7 @@ use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
-use jackioh_engine::Winner;
+use jackioh_engine::{PLAYER_IDS, Winner};
 
 use crate::actor::contracts::{TerminalOutcome, one_tx};
 use crate::api::collection::caller_profile;
@@ -220,6 +220,7 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
                 seats: seats.clone(),
                 mode: None,
                 stake: None,
+                win_rates: None,
             },
         )
         .await;
@@ -305,6 +306,16 @@ pub async fn resume_series(app: &Arc<App>, series: Option<&SeriesRow>) {
             matchId = %series.next_match_id,
             message = %error,
         );
+    }
+}
+
+/// R3213000: the series moved on: the live actor of each of its games tells each of its open seats its
+/// own view of it.
+pub(crate) fn tell_series(app: &App, series: &SeriesRow) {
+    for game in &series.games {
+        if let Some(actor) = app.matches.get(&game.match_id) {
+            actor.push_series(series, &PLAYER_IDS);
+        }
     }
 }
 
@@ -455,6 +466,8 @@ async fn write_transition(
         if !matches!(written.before.status, SeriesStatus::Playing) {
             resume_series(app, Some(&written.after)).await;
         }
+        // R3213000: every game's open sockets are told the series as it now stands.
+        tell_series(app, &written.after);
         return Ok(written);
     }
     tracing::warn!(event = "series.write_contended", seriesId = %series_id, attempts = attempts);

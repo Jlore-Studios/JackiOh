@@ -54,11 +54,11 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const PATH: &str = "traininggrounds-026";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const ROCK: &str = "core-066"; // (4) Unit 10/10, Indestructible.
-    const TRAP: &str = "core-041"; // Sheepish, a Trap.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const ROCK: &str = "core-066"; // The Rock: Indestructible
+    const TRAP: &str = "core-041"; // Sheepish: a Trap
     const RUSH_TOKEN: &str = "core-t-rush";
-    const MEGABASE: &str = "stinkyscape-116"; // Unit, Immune to Spells.
+    const MEGABASE: &str = "stinkyscape-116"; // Megabase: Immune to Spells.
 
     fn board(radiant: bool, mine: Value, theirs: Value) -> Scenario {
         board_with(radiant, mine, theirs, json!([]))

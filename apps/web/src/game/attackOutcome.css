@@ -1,0 +1,88 @@
+/* R3615000: the hovered attack's preview, one tentative hit marker on each card that takes it
+   (AttackOutcome.tsx), amending R3477000's chip.
+
+   Each marker reuses the real damage hit's design through a `data-tentative` modifier on the same
+   classes, never a copy of their rules into this sheet: the `fx-splat` starburst when effects are on
+   (`fx/fx.css` "splat: the damage starburst") and `.damage-pop` when they are off
+   (`game/animations.css`, `game/board.css`). What makes it clearly a preview: lowered opacity plus a
+   ghosted fill, and no animation, so it holds still while hovered (Reduce motion changes nothing, since
+   nothing moves). The `fx-layer` hides `.damage-pop` while effects are on (fx.css "the classic numbers
+   while effects are on"), and the preview renders only the splat then, so exactly one style of marker
+   is ever visible. Its words carry the meaning, never color alone: the minus sign for the blow and a
+   skull for a kill. */
+
+.attack-outcome-target,
+.attack-outcome-taken {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: var(--z-overlay);
+  /* The marker takes no click: a press on it belongs to the card under it. Out of flow, so nothing moves. */
+  pointer-events: none;
+}
+
+/* The tentative starburst: the splat's own shape, size, font and placement, held still and ghosted.
+   Outside `.fx-dom` nothing gives the splat `position: absolute` (fx.css gives that to `.fx-dom > *`
+   alone), so the preview gives it its own positioned box: without one the starburst's `::before`
+   (absolute, `inset: 0`) would paint against the whole-card wrapper and the base
+   `translate: -50% -50%` would shove the centered grid item off-center. The wrapper's grid still
+   centers it; shape, size, font and placement still come from the splat's own rules. */
+.fx-splat[data-tentative="true"] {
+  position: relative;
+  left: auto;
+  top: auto;
+  translate: none;
+  margin: 0;
+  animation: none;
+  opacity: 0.55;
+  filter: saturate(0.35) brightness(1.3) drop-shadow(0 3px 2px color-mix(in srgb, var(--pal-black) 55%, transparent));
+}
+
+/* The tentative number: `.damage-pop`'s own placement and type, held still, paler and ghosted. */
+.damage-pop[data-tentative="true"] {
+  animation: none;
+  opacity: 0.55;
+  color: color-mix(in srgb, var(--pal-red-400) 60%, var(--pal-white));
+  filter: saturate(0.4);
+}
+
+/* The skull on the card the forecast says is destroyed: a badge on the starburst's lower spikes, above
+   its fill (the splat paints at `z-index: 3`). In the number variant it rides inline after the amount. */
+.attack-outcome-skull {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: calc(-50% + 26px) calc(-50% + 24px);
+  z-index: var(--z-hover);
+  font-size: var(--type-md);
+  line-height: 1;
+  color: var(--pal-white);
+  text-shadow:
+    0 0 1px var(--pal-black),
+    1px 1px 0 var(--pal-black),
+    -1px 1px 0 var(--pal-black),
+    1px -1px 0 var(--pal-black),
+    -1px -1px 0 var(--pal-black);
+}
+
+/* The struck-through Divine Shield mark when the blow pops one, on the starburst's upper spikes. */
+.attack-outcome-shield {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: calc(-50% + 24px) calc(-50% - 26px);
+  z-index: var(--z-hover);
+  font-size: var(--type-xs);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--pal-slate-100);
+  text-decoration: line-through;
+  text-shadow: 0 1px 2px var(--pal-black);
+}
+
+/* A DEF card is turned a quarter by its inline transform (Card.tsx); both markers turn back to read level. */
+.card[data-position="DEF"] > .attack-outcome-target,
+.card[data-position="DEF"] > .attack-outcome-taken {
+  rotate: -90deg;
+}

@@ -630,7 +630,7 @@ describe("an active account on the code screen", () => {
     expect(screen.queryByTestId(inviteTestid.attempts)).toBeNull();
     const onward = screen.getByTestId(inviteTestid.goToDecks);
     expect(onward).toHaveAttribute("href", paths.decks);
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("You're all set");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("You're all set");
     fireEvent.click(onward);
     expect(window.location.pathname).toBe(paths.decks);
   });

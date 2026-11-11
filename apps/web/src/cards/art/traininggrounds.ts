@@ -6,7 +6,9 @@
 // own (`SNAPSHOT_ART`, `legacySvg`, R2724000). Presentation only
 // (CLAUDE.md rule 7): a pure function of the card's id, name, tags and type, with geometry drawn from
 // streams the Radiant face shares, so the two faces differ only in their paint and the gold rays.
-// No other set reaches this file, so no shipped card's picture moves (R503).
+// No other set reaches this file, so no shipped card's picture moves (R503). R3393000, R3393001: since
+// every card of the set has a scene recipe, `svg.ts` draws each card's recipe first, and this painter
+// and `legacySvg` draw only a card that has none.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
@@ -14,7 +16,7 @@ import { EMBLEM_BOX, EMBLEMS, type EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, seededRandom } from "./hash.ts";
 import { CENTER_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion } from "./motion.ts";
 import { MOTIFS, motifFor } from "./motifs.ts";
-import type { ArtPart } from "./pictures.ts";
+import { partDraws, partHolds, type ArtPart } from "./pictures.ts";
 import { artSpec, type ArtSpec, type SkyScheme } from "./procedural.ts";
 import { compositionFor, mixHex, RADIANT_PALETTE, themeFor, turnHue } from "./themes.ts";
 
@@ -949,15 +951,17 @@ export function trainingGroundsSvg(
   const yard = backdrop(behind, p, FAMILY_PAINTS[subject.family].sky === NIGHT_SKY, defs);
   const drawn = subjectMarkup(ahead, p, subject, name);
   // R2943001: a part other than "whole" draws the backdrop with no subject (its shadow kept), or the subject on nothing.
-  const behindSubject = part !== "subject";
-  const figure = part !== "backdrop";
+  // R3344000: a depth plane draws its own: the yard, rays and shadow far, the subject near, the particles nearest, the vignette far.
+  const behindSubject = partHolds(part, "far");
+  const figure = partDraws(part, "subject");
   return (
     SVG_OPEN +
     `<defs>${defs.join("")}</defs>` +
     motionStyle(motion, CENTER_ORIGIN) +
     (behindSubject ? moving("back", yard, motion) + (radiant ? rays(seed) : "") + ellipse(SUBJECT_X, SUBJECT_Y + 40, 30, 4.5, "#000000", { opacity: 0.2 }) : "") +
     (figure ? moving("subject", group(at(SUBJECT_X, SUBJECT_Y, tilt, scale), drawn), motion) : "") +
-    (behindSubject ? particleMarkup(motion, seedId) + rect(0, 0, BOX, BOX, "url(#v)") : "") +
+    (partHolds(part, "nearest") ? particleMarkup(motion, seedId) : "") +
+    (behindSubject ? rect(0, 0, BOX, BOX, "url(#v)") : "") +
     "</svg>"
   );
 }
@@ -1075,7 +1079,8 @@ function placedGlyph(placed: ArtSpec["emblem"], opacity: number): string {
  */
 export function legacySvg(defId: string, coreId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean): string {
   const theme = themeFor(tags, type);
-  const core = artSpec(coreId, theme, compositionFor(type), radiant, motifFor(name, theme));
+  // R3331000: a Legacy card freezes its Core card's subject as it was, so it never takes the Core card's scene.
+  const core = artSpec(coreId, theme, compositionFor(type), radiant, motifFor(name, theme), null);
   const seed = hashId(defId);
   const based: Paint = { ...LEGACY_PAINT, sky: LEGACY_SKIES[core.skyScheme] };
   const p = radiant ? gild(based) : based;

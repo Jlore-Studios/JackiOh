@@ -37,8 +37,8 @@ mod tests {
     use crate::filler;
 
     const CRYSTAL: &str = "stinkyscape-132";
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
-    const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
+    const ANCHOR: &str = "core-010"; // Rapid Replenish: Spell (§2.5).
 
     fn armor_of(s: &Scenario, player: PlayerId) -> i32 {
         s.state().players[player].hero.armor

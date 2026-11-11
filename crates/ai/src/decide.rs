@@ -9,7 +9,8 @@
 //! 5. the exact lethal solver, verified on every determinization and trimmed (R1965000), unless a style
 //!    passes over it (R1452).
 //! 6. the beam on determinization 0, its best lines scored after the opponent's reply and its best first
-//!    actions re-scored on the other determinizations; the best mean wins.
+//!    actions re-scored on the other determinizations; the best mean wins. A host's wrap-up stops the
+//!    beam alone, so that a clock still leaves the reply and the other determinizations (R3498000).
 //! 7. a fallback when nothing could be scored.
 //!
 //! The chosen action is tried on the true state first (`submitted`, #1575). Only it is played, so the AI
@@ -28,20 +29,24 @@ use jackioh_engine::{
 use crate::candidates::candidate_actions;
 use crate::config::{
     AI_EVAL, AI_KY_COMPETITION_ACCURACY, AI_KY_COMPETITION_RADIANT_ACCURACY, AI_KY_TEST_ACCURACY,
-    AI_MULLIGAN, AI_MULLIGAN_CURVE, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT,
+    AI_MULLIGAN, AI_MULLIGAN_CURVE, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT, AI_WRAP_UP_SHARE,
 };
 use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::{
     Prices, activation_prices, attack_hook_prices, awaken_prices, death_prices, holds_starship,
     turn_hook_prices,
 };
+use crate::learned::{LEARNED, unknown_root};
 use crate::lethal::{find_lethal, trim_lethal};
 use crate::match_::replacements_for;
 use crate::mulligan::mulligan_keep_curved;
 use crate::observe::{HIDDEN_DEF_ID, ai_to_act, redact, unanswered_draw_offer};
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::search::{Line, beam_search, score_line};
-use crate::simulate::{CountingNodeCounter, create_node_counter, create_sub_counter, note_sim_panic};
+use crate::simulate::{
+    CountingNodeCounter, LineStatus, create_node_counter, create_sub_counter, create_wrap_up_counter,
+    note_sim_panic,
+};
 use crate::types::{
     AiOptions, AiStyle, Decision, DecisionReason, NodeCounter, SearchBudget, SearchStats, StoppedBy,
 };
@@ -54,8 +59,17 @@ fn quiet_stats() -> SearchStats {
         sim_errors: 0,
         sim_panics: 0,
         stopped_by: StoppedBy::Exhausted,
+        replied: 0,
+        worlds_scored: 0,
         score: 0.0,
     }
+}
+
+/// R3498000: the milliseconds into a host's `limit_ms` at which it fires the wrap-up
+/// (`AiOptions.wrap_up`), `AI_WRAP_UP_SHARE` of it, rounded; 0 for a limit of 0 or below. The one place
+/// the share is applied, so that every host wraps up alike.
+pub fn wrap_up_after_ms(limit_ms: i64) -> i64 {
+    (limit_ms.max(0) as f64 * AI_WRAP_UP_SHARE).round() as i64
 }
 
 fn immediate(action: ActionBody, reason: DecisionReason) -> Decision {
@@ -336,18 +350,25 @@ struct Scratch {
     candidates: Vec<ActionBody>,
     determinizations: usize,
     lines: usize,
+    /// R3498000: `SearchStats.replied`.
+    replied: usize,
+    /// R3498000: `SearchStats.worldsScored`.
+    worlds_scored: usize,
 }
 
 /// Steps 1–7 on the redacted copy; every number `stats` reads beside the counter goes in `scratch`.
+/// `options` gives the budget, the wrap-up and the stream; its `should_stop` is the counter's.
 fn plan(
     state: &GameState,
     seat: PlayerId,
-    budget: SearchBudget,
     style: &AiStyle,
-    rng: &mut Rng,
+    options: &mut AiOptions,
     counter: &dyn NodeCounter,
     scratch: &mut Scratch,
 ) -> Plan {
+    let budget = options.budget;
+    let wrap_up = options.wrap_up;
+    let rng = &mut options.rng;
     // 1. Everything below reads the redacted copy.
     let public = redact(state, seat);
 
@@ -417,6 +438,8 @@ fn plan(
         // R3038003: read off the redacted root, so no hidden card is in it, and carried with the prices
         // so that every line of the decision, on every determinization, is scored by the same eval.
         starship_root: holds_starship(&public, seat),
+        // R3479000: read off the redacted root too, against the network the search scores with.
+        unknown_root: unknown_root(&public, seat, &LEARNED),
     };
 
     // The determinizations' draws: with a style's own two (passing over lethal, picking a
@@ -478,9 +501,13 @@ fn plan(
         + (k - 1) * (budget.max_depth + 1 + AI_REPLY.reserve_steps as usize);
     let reserve = (remaining / 2).min(finalist_count * per_finalist);
     // The beam's own slice of the counter. Its stop reason is read as the beam ends: nothing takes a
-    // node through the slice afterwards.
+    // node through the slice afterwards. R3498000: the host's wrap-up stops this slice alone, so that the
+    // reply and the other determinizations below still run until the hard stop. It is first polled once
+    // the root has been expanded (root_branching and endTurn): a wrap-up that fired before the beam would
+    // otherwise leave it no line and the decision would fall back.
     let (found, beam_stopped_by) = {
-        let beam_counter = create_sub_counter(counter, remaining - reserve);
+        let beam_counter =
+            create_wrap_up_counter(counter, remaining - reserve, wrap_up, budget.root_branching + 1);
         let found = beam_search(det0, seat, &beam_counter, budget, &prices);
         (found, beam_counter.stopped_by())
     };
@@ -521,6 +548,11 @@ fn plan(
         };
         replied.push(Scored { line, score });
     }
+    // R3498000: only a passed or yielded line is replied to; `reply_score` scores any other statically.
+    scratch.replied = replied
+        .iter()
+        .filter(|entry| matches!(entry.line.status, LineStatus::Passed | LineStatus::Yielded))
+        .count();
     let unreplied: Vec<Scored<'_>> = found
         .iter()
         .map(|line| Scored {
@@ -563,6 +595,7 @@ fn plan(
         }
         scored_on += 1;
     }
+    scratch.worlds_scored = usize::try_from(scored_on).unwrap_or(0);
 
     let means: Vec<f64> = (0..finalists.len())
         .map(|index| totals.get(index).copied().unwrap_or(0.0) / f64::from(scored_on))
@@ -717,11 +750,12 @@ pub fn decide_styled(
         candidates: Vec::new(),
         determinizations: 0,
         lines: 0,
+        replied: 0,
+        worlds_scored: 0,
     };
-    let rng = &mut options.rng;
 
     let outcome = catch_unwind(AssertUnwindSafe(|| {
-        plan(state, seat, budget, style, rng, &counter, &mut scratch)
+        plan(state, seat, style, options, &counter, &mut scratch)
     }));
 
     let stats = |counter: &CountingNodeCounter, score: f64, stopped_by: Option<StoppedBy>| SearchStats {
@@ -731,6 +765,8 @@ pub fn decide_styled(
         sim_errors: counter.sim_errors(),
         sim_panics: counter.sim_panics(),
         stopped_by: stopped_by.unwrap_or_else(|| counter.stopped_by()),
+        replied: scratch.replied,
+        worlds_scored: scratch.worlds_scored,
         score,
     };
 
@@ -810,8 +846,10 @@ mod tests {
             candidates: Vec::new(),
             determinizations: 0,
             lines: 0,
+            replied: 0,
+            worlds_scored: 0,
         };
-        let mut rng = Rng::new("decide-1575", 0);
+        let mut options = AiOptions::with_budget(Rng::new("decide-1575", 0), AI_BUDGET);
         let Plan::Searched {
             action,
             reason,
@@ -819,15 +857,7 @@ mod tests {
             score,
             runners_up,
             ..
-        } = plan(
-            state,
-            AI,
-            AI_BUDGET,
-            &AI_STYLE_EXACT,
-            &mut rng,
-            &counter,
-            &mut scratch,
-        )
+        } = plan(state, AI, &AI_STYLE_EXACT, &mut options, &counter, &mut scratch)
         else {
             panic!("the search decides");
         };

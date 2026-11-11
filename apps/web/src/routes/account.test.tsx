@@ -25,6 +25,7 @@ import {
 import { announceAccountChange } from "../net/gate.ts";
 import { SESSION_STORAGE_KEY, readSession } from "../net/session.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import AccountRoute, { accountTestid, formatWinRate, resetSigningOutForTests, statusWords } from "./account.tsx";
 import { packTestid } from "../packs/packs.ts";
 import { shopTestid } from "../shop/shop.ts";
@@ -137,6 +138,15 @@ describe("the account screen", () => {
     expect(statusWords("banned")).toBe("Banned");
   });
 
+  it("R3223000 the screen has one visible h1, the PageTitle", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    render(<AccountRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId("account-email")).toHaveTextContent("player1@example.com");
+    expectOnePageTitle("Account");
+    expect(screen.getAllByRole("heading", { level: 2 }).length, "section headings are h2, under the h1").toBeGreaterThan(0);
+  });
+
   it("shows which account you are signed in as, and its record", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     render(<AccountRoute token={TOKEN} />);
@@ -167,7 +177,7 @@ describe("the account screen", () => {
     expect(screen.queryByTestId("account-rating")).toBeNull();
   });
 
-  it("R2778000 shows the Constructed ladder's rank and then the All Random one's, each read on its own", async () => {
+  it("R2778000 shows the Constructed ladder's rank and then the All random one's, each read on its own", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     vi.mocked(getOwnRank).mockImplementation(async (_token, ladder = "constructed") =>
       ladder === "random"
@@ -188,7 +198,7 @@ describe("the account screen", () => {
     expect(screen.getByTestId(accountTestid.randomBadges)).toHaveTextContent(/no season best yet/i);
     expect(screen.getByTestId(accountTestid.seasonRecord)).toHaveTextContent("7–2–1");
     expect(screen.getByRole("heading", { name: "Constructed" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "All Random" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "All random" })).toBeInTheDocument();
     expect(vi.mocked(getOwnRank)).toHaveBeenCalledWith(TOKEN, "random");
   });
 
@@ -630,7 +640,17 @@ describe("deleting the account", () => {
       await userEvent.click(screen.getByTestId("account-manage-toggle"));
       await userEvent.click(screen.getByTestId("account-delete"));
 
+      // R3221000: the question is an alertdialog, its Cancel first and holding the focus, the deletion last.
+      const dialog = screen.getByRole("alertdialog", { name: "Delete your account?" });
+      expect(dialog).toBe(screen.getByTestId(accountTestid.deleteDialog));
+      expect(dialog).toHaveAccessibleDescription(
+        "This deletes your account for good and signs this device out. You can't undo it.",
+      );
+      const cancel = screen.getByTestId("account-delete-cancel");
+      expect(cancel).toHaveFocus();
       const confirm = screen.getByTestId("account-delete-confirm");
+      expect(cancel.compareDocumentPosition(confirm) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(confirm, "#3219: deleting the account is the danger role").toHaveClass("button-danger");
       expect(confirm, "nothing typed yet").toBeDisabled();
       await userEvent.type(screen.getByTestId("account-delete-input"), "delet");
       expect(confirm).toBeDisabled();
@@ -693,6 +713,12 @@ describe("deleting the account", () => {
     await userEvent.click(screen.getByTestId("account-delete-cancel"));
     expect(screen.queryByTestId("account-delete-input")).toBeNull();
     expect(screen.getByTestId("account-delete")).toBeInTheDocument();
+
+    // R3221000: Escape answers Cancel too, and the focus goes back to the button that asked.
+    await userEvent.click(screen.getByTestId("account-delete"));
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByTestId(accountTestid.deleteDialog)).toBeNull();
+    expect(screen.getByTestId("account-delete")).toHaveFocus();
   });
 });
 

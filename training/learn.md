@@ -19,9 +19,11 @@ improves the AI the network corrects, and the next run retrains on it.
 `.github/workflows/learn.yml`, one run after another and by dispatch, on the owner's PC alone: every job of it runs
 on the local runner (`jackioh-selfplay-local`, `bot/machine/README.md`, The local runner), none on
 GitHub's runners, whose hosted jobs CI needs (an export there held 12 of the organization's 20 for
-hours, #1455). That runner takes one job at a time and only while the PC is otherwise idle, so the
-export's shards play one after another, at about 2,500 games an hour on its six CPUs: a run's 100,000
-games take about 40 hours of an idle PC, and the retrain and the screen about one more (run 21's
+hours, #1455). That runner takes two jobs at a time, one on each half of the PC (four CPUs each;
+gather's half goes to gather while it plays a new patch), and only while the PC is otherwise idle, so
+the export's shards play two at a time. One six-CPU runner played about 2,500 games an hour, so a
+run's 100,000 games took about 40 hours of an idle PC (both halves play them somewhat faster), and the
+retrain and the screen about one more (run 21's
 took 59 minutes there), the gate another. A run may take several days, and each starts the next as it
 ends (#1976), so the PC is always exporting, retraining or gating while it is idle; a schedule twice a
 day starts the lane again should that chain stop (one run at a time). Each run:
@@ -119,18 +121,20 @@ by their stats and by what they are (type, cost, tags, keywords, printed stats, 
 The run's `positions.json` gives `unknownShare`, the share of the export's cards that the network
 shipped before it has no row for (R3112002).
 
-Patches and micros (`docs/issues-and-patches.md`, Version numbers) ship two or three times a day,
-and a run takes about two days, about 40 hours of them its export. So a patch or a micro stops
-nothing: a lane that started again on each would never finish an export. The next run plays it,
-since each run plans on `main` as it is when it starts (step 2), so it waits at most one run.
+Micros (`docs/issues-and-patches.md`, Version numbers) ship several times a day, and a run takes
+about two days, about 40 hours of them its export. So a micro stops nothing: a lane that started
+again on each would never finish an export. The next run plays it, since each run plans on `main` as
+it is when it starts (step 2), so it waits at most one run.
 
-A set (a `major` patch, about once a week; v0.5.0 brought 231 card changes) is what an export on the
-set before cannot learn at all. `.github/workflows/learn-set.yml`, on the push that ships it, cancels
-a run still in its export with fewer than `LEARN_SET_KEEP_SHARDS` (10, half of the 20) of its shards
-played, and starts a run when no other is on its way (one waiting behind the stopped run starts by
-itself, on the new set). From half on, finishing the export costs the lane less than playing it
-again, so that run goes on, as does a run past its export, one on an earlier run's export and one
-that planned after the set shipped; the run after it exports the new set. A stopped run's finished
+A patch (v0.Z.X: 15 card families reprinted or more, or 50 cards that play differently, R2499000) or
+a set (a `major` patch; v0.5.0 brought 231 card changes) changes enough that an export on the version
+before learns stale worths, and the gather workflow plays it too (`gather.yml`, the same rule).
+`.github/workflows/learn-set.yml`, on the push that ships it, cancels a run still in its export with
+fewer than `LEARN_SET_KEEP_SHARDS` (10, half of the 20) of its shards played, and starts a run when
+no other is on its way (one waiting behind the stopped run starts by itself, on the new patch). From
+half on, finishing the export costs the lane less than playing it again, so that run goes on, as does
+a run past its export, one on an earlier run's export and one that planned after the patch shipped;
+the run after it exports the new patch. A stopped run's finished
 shards stay its artifacts for 30 days, and their games are not filed (step 7): a person can file
 them by hand (`training/README.md`, The gather lane).
 

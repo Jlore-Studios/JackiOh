@@ -25,6 +25,8 @@ import { EmoteMenu, EmoteShow as EmoteShowEl, MuteMenu } from "../emotes/ui.tsx"
 import { useSetting } from "../settings/store.ts";
 import { ACTIVATED_EVENT } from "./ActivateControl.tsx";
 import { cx, isLegal, isSelected, legalAttr, PopLayer, type Pops } from "./Card.tsx";
+import { AttackTargetPreview } from "./AttackOutcome.tsx";
+import { outcomeFor } from "./attackOutcome.ts";
 import HeroTray, { RIFT_SPENT_LABEL, RIFT_SPENT_NOTE } from "./HeroTray.tsx";
 import {
   sideView,
@@ -81,6 +83,10 @@ export default function Hero(props: HeroProps): ReactElement {
   const legal = isLegal(props.highlight, testId);
   const selected = isSelected(props.highlight, testId);
   const target: ClickTarget = { on: "hero", side };
+  // R3615000: the hovered attack's marker, while this hero is its target. A hero never strikes back
+  // (R3100000), so it wears no taken marker of its own.
+  const hovered = props.highlight?.hoveredAttack;
+  const targetOutcome = hovered?.target === testId ? outcomeFor(props.highlight, testId) : undefined;
 
   // R1331: the portrait reacts as its menu or its view opens, and not at all under either Reduce
   // Motion switch.
@@ -247,6 +253,7 @@ export default function Hero(props: HeroProps): ReactElement {
       <HeroTray side={side} seat={seat} animating={props.animating} />
 
       <PopLayer pops={props.pops} />
+      {targetOutcome !== undefined && <AttackTargetPreview outcome={targetOutcome} target={testId} />}
 
       {emotes !== undefined && menu !== null && inspect && (
         <HeroInspect
@@ -304,7 +311,7 @@ function PowerButton({
   return (
     <button
       type="button"
-      className={cx("power-button", extra && "power-extra")}
+      className={cx("power-button", "button-secondary", extra && "power-extra")}
       data-testid={testId}
       data-instance-id={power.instanceId}
       data-legal={legalAttr(live)}

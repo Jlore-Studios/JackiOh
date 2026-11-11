@@ -8,6 +8,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactElement } from "
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { DECK_CODE_VERSION } from "@jackioh/server-config";
+import { ArrowIcon } from "../../routes/ArrowIcon.tsx";
 import { t } from "../../i18n/i18n.ts";
 import { DECK_CODE_PREFIX, decodeDeckCode, type DroppedCards } from "./deckCode.ts";
 import { DECK_SIZE, MAX_COPIES } from "./deckSize.ts";
@@ -84,7 +85,8 @@ export default function ImportPanel(props: ImportPanelProps): ReactElement {
     <section className="ws-editor ws-import" data-testid={DECK_IMPORT} aria-labelledby={titleId}>
       <div className="ws-editor-head">
         <button type="button" className="ws-back" data-testid={WORKSHOP_BACK} onClick={onCancel}>
-          {t("← All decks")}
+          <ArrowIcon direction="back" />
+          {t("Back to decks")}
         </button>
         <h2 className="ws-import-title" id={titleId}>
           {t("Import a deck")}
@@ -160,7 +162,7 @@ export default function ImportPanel(props: ImportPanelProps): ReactElement {
       <div className="ws-actions">
         <button
           type="button"
-          className="ws-action ws-action--primary"
+          className="ws-action button-primary"
           data-testid={DECK_IMPORT_SUBMIT}
           disabled={decoded === null || !decoded.ok || atCap}
           aria-describedby={atCap ? reasonId : undefined}
@@ -171,7 +173,7 @@ export default function ImportPanel(props: ImportPanelProps): ReactElement {
         >
           {t("Import as new deck")}
         </button>
-        <button type="button" className="ws-action" data-testid={DECK_IMPORT_CANCEL} onClick={onCancel}>
+        <button type="button" className="ws-action button-secondary" data-testid={DECK_IMPORT_CANCEL} onClick={onCancel}>
           {t("Cancel")}
         </button>
       </div>

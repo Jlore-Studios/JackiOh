@@ -146,7 +146,7 @@ export default function DrawOfferNotice({ view, legal, animating, onAction }: Dr
               <div className="draw-offer__actions">
                 <button
                   type="button"
-                  className="draw-offer__accept"
+                  className="draw-offer__accept button-primary"
                   data-testid={testid.drawAccept}
                   disabled={accept === undefined}
                   onClick={() => {

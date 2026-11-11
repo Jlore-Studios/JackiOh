@@ -4,14 +4,15 @@
 
 use indexmap::IndexSet;
 use jackioh_engine::PlayerId::{P1, P2};
-use jackioh_engine::{PerPlayer, Rng};
+use jackioh_engine::validator::CatalogSnapshot;
+use jackioh_engine::{PerPlayer, Rng, WinRateRow, WinRateSource, WinRateTable, deckable};
 use jackioh_shared::bots::boundary::{BotAnswer, BotCall, GameFacts, TicketFacts, apply};
 use jackioh_shared::bots::cosmetics::{CosmeticOwners, Holding, eligible, redraw};
 use jackioh_shared::bots::fallback::{
     BotMode, bot_match_gap_passed, bot_matches, choose_bot, fallback_due_keyed, hour_of,
 };
 use jackioh_shared::bots::pool::{
-    BotDeck, BotFacts, BotLadder, draw_new_bot, plan_grind, plan_pool, pool_target,
+    BotDeck, BotFacts, BotLadder, draw_decks, draw_new_bot, draw_trio, plan_grind, plan_pool, pool_target,
 };
 use jackioh_shared::config::{
     BOT_ACTIVE_HOURS_MIN, BOT_COSMETIC_FITS, BOT_COSMETIC_MIN_AGE_DAYS, BOT_COSMETIC_MIN_OWNERS,
@@ -107,6 +108,90 @@ fn the_pool_calls_answer_what_the_functions_they_name_answer() {
     let (expected, _) = draw_new_bot("s", "p", NOW, &mut |_| None);
     assert_eq!(*drawn, expected);
     assert!(drawn.active_hours >= BOT_ACTIVE_HOURS_MIN);
+}
+
+/// R3049002: the deal calls lean on the win-rate table a host hands them (`winRates`), as the server's
+/// refresh hands its snapshot of the cached card stats, and on nothing when it hands none.
+#[test]
+fn r3049002_the_deal_calls_lean_on_the_win_rate_table_they_are_handed() {
+    jackioh_cards::register_all();
+    let catalog = CatalogSnapshot {
+        version: jackioh_cards::CATALOG_VERSION.to_string(),
+        cards: jackioh_cards::CATALOG.clone(),
+        banned: Some(Vec::new()),
+    };
+    // Every other deckable card wins nine games in ten, the rest one in ten, over many games.
+    let table = WinRateTable {
+        patch: "test".to_string(),
+        source: WinRateSource::Live,
+        cards: jackioh_cards::CATALOG
+            .iter()
+            .filter(|(_, def)| deckable(def))
+            .enumerate()
+            .map(|(at, (id, _))| WinRateRow {
+                id: id.clone(),
+                wins: if at % 2 == 0 { 900 } else { 100 },
+                games: 1_000,
+            })
+            .collect(),
+    };
+    let handed = BotCall::DrawDecks {
+        seed: "lean".to_string(),
+        lists: Vec::new(),
+        catalog: Box::new(catalog.clone()),
+        strength: 1.0,
+        win_rates: Some(table.clone()),
+    };
+    let leaned = draw_decks("lean", &[], &catalog, 1.0, Some(&table));
+    assert!(!leaned.is_empty());
+    assert_eq!(
+        apply(over_json(&handed)),
+        BotAnswer::Decks {
+            decks: leaned.clone()
+        }
+    );
+    // A host that hands none is not sent a key, and the deal leans on nothing.
+    let none = BotCall::DrawDecks {
+        seed: "lean".to_string(),
+        lists: Vec::new(),
+        catalog: Box::new(catalog.clone()),
+        strength: 1.0,
+        win_rates: None,
+    };
+    let json = serde_json::to_value(&none).expect("a call serializes");
+    assert!(json.get("winRates").is_none(), "{json}");
+    assert!(
+        serde_json::to_value(&handed)
+            .expect("a call serializes")
+            .get("winRates")
+            .is_some()
+    );
+    let BotAnswer::Decks { decks: unleaned } = apply(over_json(&none)) else {
+        panic!("decks")
+    };
+    assert_eq!(unleaned, draw_decks("lean", &[], &catalog, 1.0, None));
+    assert_eq!(unleaned, draw_decks("lean", &[], &catalog, 0.0, None));
+    assert_ne!(unleaned, leaned, "the table moved the deal");
+    // The trio's deals lean the same way.
+    let trio = BotCall::DrawTrio {
+        seed: "lean".to_string(),
+        own: Vec::new(),
+        catalog: Box::new(catalog.clone()),
+        strength: 1.0,
+        win_rates: Some(table.clone()),
+    };
+    let expected = draw_trio("lean", &[], &catalog, 1.0, Some(&table)).expect("a trio");
+    assert_eq!(
+        apply(over_json(&trio)),
+        BotAnswer::Trio {
+            trio: Some(Box::new(expected.clone()))
+        }
+    );
+    assert_ne!(
+        draw_trio("lean", &[], &catalog, 1.0, None),
+        Some(expected),
+        "the table moved the trio"
+    );
 }
 
 #[test]
@@ -277,9 +362,9 @@ fn the_bot_seats_decision_runs_from_the_machine_as_json() {
     // The call is JSON for a host with no Rust types; the answer is the choice the machine is fed back.
     let json = serde_json::to_string(&call).expect("a decide call serializes");
     let read: DecideCall = serde_json::from_str(&json).expect("a decide call reads back");
-    let choice = decide(&read, None).expect("a bot plays at p2");
+    let choice = decide(&read, None, None).expect("a bot plays at p2");
     assert!(choice.body.is_some(), "{choice:?}");
-    assert_eq!(decide(&call, None), Some(choice));
+    assert_eq!(decide(&call, None, None), Some(choice));
     // Nobody to decide for at p1.
     let nobody = DecideCall {
         request: DecideRequest {
@@ -288,7 +373,7 @@ fn the_bot_seats_decision_runs_from_the_machine_as_json() {
         },
         ..call
     };
-    assert!(decide(&nobody, None).is_none());
+    assert!(decide(&nobody, None, None).is_none());
 }
 
 #[test]

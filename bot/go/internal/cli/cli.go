@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/cardsets"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/cigate"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/controller"
@@ -120,6 +121,7 @@ type Args struct {
 
 	Every        int  // --every (dashboard)
 	RunnersEvery int  // --runners-every (dashboard)
+	GateEvery    int  // --gate-every (dashboard)
 	ForSeconds   int  // --for (dashboard)
 	Sweep        bool // --sweep (dashboard)
 	Stats        bool // --stats (dashboard)
@@ -148,7 +150,7 @@ func argsOf(ns map[string]any) *Args {
 		Plan: s("plan"), WorkDir: s("work_dir"), Ref: s("ref"), Check: b("check"),
 		Action: s("action"), Number: s("number"), Provider: s("provider"),
 		Name: s("name"), Payload: s("payload"),
-		Every: n("every"), RunnersEvery: n("runners_every"), ForSeconds: n("for_seconds"),
+		Every: n("every"), RunnersEvery: n("runners_every"), GateEvery: n("gate_every"), ForSeconds: n("for_seconds"),
 		Sweep: b("sweep"), Stats: b("stats"), Companions: b("companions"), Controller: b("controller"),
 		SectionOnly: b("section_only"), Offline: b("offline"), Work: b("work"),
 		RepoSettings: b("repo_settings"), UsageCommand: s("usage_command"), Since: s("since"),
@@ -909,7 +911,9 @@ func companions(cfg *config.Config, doSweep bool, argv []string /* = ("dashboard
 // process of its own (`_companions`), and its section goes into the issue apart from the night
 // bot's. `--section-only` is that process: it prints this bot's section and writes nothing. With
 // `--runners-every`, the issue's runners section is redrawn alone that often between the rewrites
-// (`dashboard.refresh_runners`), so it is never older than that.
+// (`dashboard.refresh_runners`), so it is never older than that. With `--gate-every`, the runner
+// gate ticks that often between them too (`cigate.Tick`), so a CI run waiting in `ci-runners`
+// starts within that long of there being room for it.
 func CmdDashboard(cfg *config.Config, args *Args) int {
 	if args.SectionOnly {
 		say(dashboard.Section(Ctx(cfg, false)))
@@ -917,6 +921,7 @@ func CmdDashboard(cfg *config.Config, args *Args) int {
 	}
 	every := max(0, args.Every)
 	runners := max(0, args.RunnersEvery)
+	gate := max(0, args.GateEvery)
 	deadline := Monotonic() + float64(max(0, args.ForSeconds))
 	since := runCreated(cfg)
 	if args.Controller && cfg.Controller {
@@ -979,15 +984,59 @@ func CmdDashboard(cfg *config.Config, args *Args) int {
 			return 0
 		}
 		due := Monotonic() + float64(every)
-		for runners != 0 && Monotonic()+float64(runners) < due {
-			Sleep(float64(runners))
+		redraw := func() {
 			if err := herr.Try(func() {
 				say(redact.Redact("runners: "+dashboard.RefreshRunners(Ctx(cfg, true)), nil))
 			}); err != nil {
 				say(redact.Redact("::warning::the runners were not redrawn: "+herr.Str(err), nil))
 			}
 		}
-		Sleep(max(0.0, due-Monotonic()))
+		if gate == 0 {
+			for runners != 0 && Monotonic()+float64(runners) < due {
+				Sleep(float64(runners))
+				redraw()
+			}
+			Sleep(max(0.0, due-Monotonic()))
+			continue
+		}
+		// The gate's ticks and the runners' redraws, each at its own pace, until the next rewrite.
+		nextRunners := Monotonic() + float64(runners)
+		for {
+			now := Monotonic()
+			wake := min(due, now+float64(gate))
+			if runners != 0 && nextRunners < due {
+				wake = min(wake, nextRunners)
+			}
+			Sleep(max(0.0, wake-now))
+			if Monotonic() >= due {
+				break
+			}
+			gateTick(cfg)
+			if runners != 0 && nextRunners < due && Monotonic() >= nextRunners {
+				redraw()
+				nextRunners += float64(runners)
+			}
+		}
+	}
+}
+
+// gateTick is a tick of the runner gate between the loop's rewrites (`cigate.Tick`), after the look
+// at the merge queue's builds (`events.EvacQueue`), whose cancelled build frees runners the gate
+// can give out; it says only what they did, and a failure is only a warning.
+func gateTick(cfg *config.Config) {
+	if err := herr.Try(func() {
+		for _, note := range events.EvacQueue(Ctx(cfg, true)) {
+			say(redact.Redact("merge queue: "+note, nil))
+		}
+	}); err != nil {
+		say(redact.Redact("::warning::the merge queue's builds were not looked at: "+herr.Str(err), nil))
+	}
+	if err := herr.Try(func() {
+		if note := cigate.Tick(Ctx(cfg, true)); note != "" {
+			say(redact.Redact("runner gate: "+note, nil))
+		}
+	}); err != nil {
+		say(redact.Redact("::warning::the runner gate did not tick: "+herr.Str(err), nil))
 	}
 }
 
@@ -1451,6 +1500,8 @@ func Parser() *ArgumentParser {
 	dash.option("--every", 0, "seconds between rewrites; 0 rewrites it once").isInt = true
 	dash.option("--runners-every", 0, "seconds between redraws of the runners section alone, between "+
 		"the rewrites; 0 draws it only with them").isInt = true
+	dash.option("--gate-every", 0, "seconds between ticks of the runner gate (cigate), between the "+
+		"rewrites; 0 ticks it only with the sweep").isInt = true
 	forSeconds := dash.option("--for", 0, "how long to keep rewriting it, in seconds")
 	forSeconds.isInt, forSeconds.dest = true, "for_seconds"
 	dash.flag("--sweep", "sweep before each rewrite, as the ten-minute sweep does")

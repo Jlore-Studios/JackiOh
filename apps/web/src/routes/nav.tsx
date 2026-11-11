@@ -8,6 +8,8 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { SettingsButton } from "../settings/index.ts";
 import { FriendsButton } from "../together/FriendsButton.tsx";
+import { ArrowIcon } from "./ArrowIcon.tsx";
+import { PageTitle } from "./PageTitle.tsx";
 import "./top-bar.css";
 
 export const navTestid = {
@@ -22,8 +24,8 @@ export type BackLinkProps = {
   onLeave?: () => void;
   /** Replaces release-and-navigate on a guarded exit; drops the Jlore pill, a way past the guard (R1651000). */
   onPress?: () => void;
-  /** The screen's title, drawn after Back; the bar adds none. */
-  title?: ReactNode;
+  /** The screen's name, drawn after Back as its one `h1` (PageTitle, #3223); the bar adds none. */
+  title?: string;
   /** The screen's own extras, drawn before the Jlore pill; settings remains the top-right control. */
   children?: ReactNode;
   /** Back's test id; the replay player has its own. */
@@ -67,11 +69,12 @@ export function BackLink({
           navigate(to);
         }}
       >
-        {label === undefined ? t("← Back") : t(label)}
+        <ArrowIcon direction="back" />
+        {label === undefined ? t("Back") : t(label)}
       </button>
       {title === undefined && children === undefined ? null : (
         <div className="screen-nav__line">
-          {title}
+          {title === undefined ? null : <PageTitle>{title}</PageTitle>}
           {children === undefined ? null : <div className="screen-nav__extra">{children}</div>}
         </div>
       )}

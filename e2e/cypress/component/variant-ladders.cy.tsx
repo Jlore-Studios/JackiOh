@@ -1,7 +1,8 @@
 // R3015007, R3015002 (#3015): one card's variants as ladders of levels, in a real browser. apps/web's vitest suite proves
 // the ladders' model and markup (collection/collection.test.tsx) and every level's attributes (cards/variantLevels.test.tsx,
 // cards/fullArtTiers.test.tsx); what only a layout and style engine can say is measured here, on The Mother Pancake, a
-// Legendary Unit offered five variants (the Default, Full art, Alt art, the Sketch and Pixel):
+// Legendary Unit offered eight variants (the Default, Full art, Alt art, the Sketch and Pixel, and R3017001 Night,
+// Stained-glass window and Tarot card, its side of each of part 6's pairs):
 //  - its faces at every level of every ladder, base and Radiant: a variant draws one picture at every level, a level
 //    adding only the full-art frame, its picture's motion and a signature (the signed level over its animated full
 //    art's own picture, R3015002), the variants' pictures apart; a foil layers on a level (Full art's signed one, worn by
@@ -9,6 +10,9 @@
 //  - its Collection view's ladders (R3015007): each variant's rungs in rank order, joined by a rule, the next one ringed
 //    in dashed teal with its picture half lit, a locked one past it dimmed, and the equipped one ringed as the strip's
 //    equipped item is.
+// R3343001: a Legendary's Default draws Extended art at both its levels, its picture past its window across the face, so
+// its two levels are held to one picture inside the face, and the Default's picture is held apart from each other
+// variant's, window to window, on Beam v4, an Epic Unit offered the same art levels, whose Default draws the normal face.
 //
 // Each face is the viewer's own copy (`worn`, below an `OwnCopy`) shown at a level by `FullArtShown`, as the Collection's
 // preview shows one, so the levels stand side by side with no pick written. No `FullArtOwned` is mounted over the faces,
@@ -31,12 +35,16 @@ import {
   VERSION_FULL_ART_ANIMATED_ID,
   VERSION_FULL_ART_ID,
   VERSION_FULL_ART_SIGNED_ID,
+  VERSION_NIGHT_ID,
   VERSION_PIXEL_ID,
   VERSION_SKETCH_FULL_ART_ANIMATED_ID,
   VERSION_SKETCH_FULL_ART_ID,
   VERSION_SKETCH_FULL_ART_SIGNED_ID,
   VERSION_SKETCH_ID,
+  VERSION_STAINED_GLASS_ID,
+  VERSION_TAROT_ID,
   artPictureOf,
+  defaultLookOf,
   isFullBleed,
   ladderOf,
   levelsOn,
@@ -51,11 +59,13 @@ type CardDef = (typeof CATALOG)[string];
 type Point = { x: number; y: number };
 type Shot = { width: number; height: number; data: Uint8ClampedArray; scale: number };
 
-/** The Mother Pancake: a Legendary Unit, one of the 21 full-art cards, offered five variants. */
+/** The Mother Pancake: a Legendary Unit, one of the 21 full-art cards, offered eight variants; R3343001: its Default draws Extended art. */
 const CARD = "classicplus-012";
+/** R3343001: Beam v4, an Epic Unit offered the same art levels, below Legendary so its Default draws the normal face. */
+const WINDOWED = "stinkyscape-054";
 /** The foil the other seat's copy wears on Full art's signed level. */
 const FOIL = "foil-rainbow";
-/** Small enough that every face lies inside the captured viewport: two rows of eleven. */
+/** Small enough that every face lies inside the captured viewport: three rows of eleven at most. */
 const FACE_WIDTH = 100;
 /** A Radiant face's gold bezel (cards.css), which no level wears on a base face (R2725004). */
 const RADIANT_BEZEL = "#f6d77a";
@@ -81,18 +91,34 @@ const SETTLE_TIMEOUT_MS = 8_000;
 /** How far apart two rungs' tops may lie and count as one row, in CSS pixels. */
 const SAME_ROW_PX = 1;
 
-/** One level of a variant `CARD` wears: the Default's first, the normal face, is null. */
-type Rung = { readonly variant: string; readonly level: string | null };
+/** One level of a variant a card wears: the Default's first, the normal face, is null. */
+type Rung = { readonly card: string; readonly variant: string; readonly level: string | null };
 
 /** R3015000: every level of every variant `id` is offered, lowest first, the Default's with the normal face. */
 function rungsOf(id: string): Rung[] {
   return variantsOn(id).flatMap((variant) => [
-    ...(variant === DEFAULT_VARIANT ? [{ variant, level: null }] : []),
-    ...levelsOn(id, variant).map((level) => ({ variant, level })),
+    ...(variant === DEFAULT_VARIANT ? [{ card: id, variant, level: null }] : []),
+    ...levelsOn(id, variant).map((level) => ({ card: id, variant, level })),
   ]);
 }
 
 const RUNGS = rungsOf(CARD);
+
+/** R3343001: the levels of `WINDOWED` its pairs sample: the Default's two and each other variant's art level. */
+const WINDOWED_LEVELS: readonly (string | null)[] = [
+  null,
+  VERSION_ANIMATED_ID,
+  VERSION_ALT_ART_ID,
+  VERSION_SKETCH_ID,
+  VERSION_PIXEL_ID,
+  VERSION_NIGHT_ID,
+  VERSION_STAINED_GLASS_ID,
+  VERSION_TAROT_ID,
+];
+const WINDOWED_RUNGS = rungsOf(WINDOWED).filter(({ level }) => WINDOWED_LEVELS.includes(level));
+
+/** Every face the ladders mount but the foiled one. */
+const ALL_RUNGS: readonly Rung[] = [...RUNGS, ...WINDOWED_RUNGS];
 
 /** The level whose picture every level of `variant` draws (R3015002): its first, the normal face for the Default. */
 function firstOf(variant: string): string | null {
@@ -101,6 +127,11 @@ function firstOf(variant: string): string | null {
 
 function keyOf(level: string | null): string {
   return level ?? "normal";
+}
+
+/** The `data-face` key of `card`'s face at `level`: `CARD`'s by its level alone, `WINDOWED`'s marked. */
+function faceKey(card: string, level: string | null): string {
+  return card === CARD ? keyOf(level) : `windowed-${keyOf(level)}`;
 }
 
 /** The other seat's copy: Full art's signed level with a foil over it, as the server froze its owner's loadout. */
@@ -112,10 +143,10 @@ function Ladders({ radiant }: { radiant: boolean }) {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8, background: "#1b1f2b" }}>
       <OwnCopy own>
-        {RUNGS.map(({ level }) => (
-          <div key={keyOf(level)} data-face={`${keyOf(level)}-${radiant ? "radiant" : "base"}`} style={size}>
-            <FullArtShown defId={CARD} pick={level ?? false}>
-              <CardFace face={faceModel({ defId: CARD, def, radiant })} layout="full" worn />
+        {ALL_RUNGS.map(({ card, level }) => (
+          <div key={faceKey(card, level)} data-face={`${faceKey(card, level)}-${radiant ? "radiant" : "base"}`} style={size}>
+            <FullArtShown defId={card} pick={level ?? false}>
+              <CardFace face={faceModel({ defId: card, def: CATALOG[card] as CardDef, radiant })} layout="full" worn />
             </FullArtShown>
           </div>
         ))}
@@ -215,21 +246,35 @@ function differingShare(shot: Shot, a: DOMRect, b: DOMRect, offsets: readonly Po
  * R3015002: the pairs of levels in one frame whose windows draw the same picture (above the signature where the second
  * signs), and the pairs of different variants' levels in one frame whose pictures lie apart.
  */
-const SAME: readonly (readonly [string | null, string, boolean])[] = [
-  [null, VERSION_ANIMATED_ID, false],
-  [VERSION_PIXEL_ID, `${VERSION_PIXEL_ID}-animated`, false],
-  [VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_SIGNED_ID, true],
-  [VERSION_ALT_FULL_ART_ANIMATED_ID, VERSION_ALT_FULL_ART_SIGNED_ID, true],
-  [VERSION_SKETCH_FULL_ART_ANIMATED_ID, VERSION_SKETCH_FULL_ART_SIGNED_ID, true],
+const SAME: readonly (readonly [string, string | null, string, boolean])[] = [
+  // R3343001: the Default's Extended art at both its levels, inside the face, and the normal face at both in its window.
+  [CARD, null, VERSION_ANIMATED_ID, false],
+  [WINDOWED, null, VERSION_ANIMATED_ID, false],
+  [CARD, VERSION_PIXEL_ID, `${VERSION_PIXEL_ID}-animated`, false],
+  [CARD, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_SIGNED_ID, true],
+  [CARD, VERSION_ALT_FULL_ART_ANIMATED_ID, VERSION_ALT_FULL_ART_SIGNED_ID, true],
+  [CARD, VERSION_SKETCH_FULL_ART_ANIMATED_ID, VERSION_SKETCH_FULL_ART_SIGNED_ID, true],
+  // R3017002: each of part 6's variants, its animated level over its art level's picture.
+  [CARD, VERSION_NIGHT_ID, `${VERSION_NIGHT_ID}-animated`, false],
+  [CARD, VERSION_STAINED_GLASS_ID, `${VERSION_STAINED_GLASS_ID}-animated`, false],
+  [CARD, VERSION_TAROT_ID, `${VERSION_TAROT_ID}-animated`, false],
 ];
-const APART: readonly (readonly [string | null, string])[] = [
-  [null, VERSION_ALT_ART_ID],
-  [null, VERSION_SKETCH_ID],
-  [null, VERSION_PIXEL_ID],
-  [VERSION_ALT_ART_ID, VERSION_SKETCH_ID],
-  [VERSION_FULL_ART_ID, VERSION_ALT_FULL_ART_ID],
-  [VERSION_FULL_ART_ID, VERSION_SKETCH_FULL_ART_ID],
-  [VERSION_ALT_FULL_ART_ID, VERSION_SKETCH_FULL_ART_ID],
+/** R3343001: a pair with the Default's normal face is sampled on `WINDOWED`, whose Default draws it in its window. */
+const APART: readonly (readonly [string, string | null, string])[] = [
+  [WINDOWED, null, VERSION_ALT_ART_ID],
+  [WINDOWED, null, VERSION_SKETCH_ID],
+  [WINDOWED, null, VERSION_PIXEL_ID],
+  [CARD, VERSION_ALT_ART_ID, VERSION_SKETCH_ID],
+  [CARD, VERSION_FULL_ART_ID, VERSION_ALT_FULL_ART_ID],
+  [CARD, VERSION_FULL_ART_ID, VERSION_SKETCH_FULL_ART_ID],
+  [CARD, VERSION_ALT_FULL_ART_ID, VERSION_SKETCH_FULL_ART_ID],
+  // R3017002: part 6's pictures, apart from the normal one and from one another.
+  [WINDOWED, null, VERSION_NIGHT_ID],
+  [WINDOWED, null, VERSION_STAINED_GLASS_ID],
+  [WINDOWED, null, VERSION_TAROT_ID],
+  [CARD, VERSION_NIGHT_ID, VERSION_STAINED_GLASS_ID],
+  [CARD, VERSION_NIGHT_ID, VERSION_TAROT_ID],
+  [CARD, VERSION_STAINED_GLASS_ID, VERSION_TAROT_ID],
 ];
 
 describe("R3015007 R3015002 a card's variants as ladders of levels", () => {
@@ -247,24 +292,27 @@ describe("R3015007 R3015002 a card's variants as ladders of levels", () => {
   });
 
   it("R3015007 R3015002 one card's ladders, base and Radiant, a foil on one level", () => {
-    expect(variantsOn(CARD), "the card's variants").to.deep.eq([DEFAULT_VARIANT, "full-art", "alt-art", "sketch", "pixel"]);
+    expect(variantsOn(CARD), "the card's variants").to.deep.eq([DEFAULT_VARIANT, "full-art", "alt-art", "sketch", "pixel", "night", "stained-glass", "tarot"]);
+    expect(WINDOWED_RUNGS.map(({ level }) => level), `${WINDOWED}'s levels`).to.have.members([...WINDOWED_LEVELS]);
     // Animated foil off holds every picture still, so one screenshot compares the pictures alone.
     writeCardSettings({ animatedFoil: false });
     for (const radiant of [false, true]) {
       const side = radiant ? "Radiant" : "base";
       cy.mount(<Ladders radiant={radiant} />);
-      cy.get("[data-face] > .cf", { timeout: SETTLE_TIMEOUT_MS }).should("have.length", RUNGS.length + (radiant ? 0 : 1));
+      cy.get("[data-face] > .cf", { timeout: SETTLE_TIMEOUT_MS }).should("have.length", ALL_RUNGS.length + (radiant ? 0 : 1));
       cy.get("[data-face] .cf-art[data-art-pending]").should("not.exist");
       cy.get('[data-art-moving="true"]').should("not.exist");
       cy.document().its("fonts.status").should("eq", "loaded");
       cy.document().should((doc) => {
-        for (const { variant, level } of RUNGS) {
-          const cf = faceIn(doc, keyOf(level), radiant);
-          const where = `${CARD} ${side} ${keyOf(level)}`;
+        for (const { card, variant, level } of ALL_RUNGS) {
+          const cf = faceIn(doc, faceKey(card, level), radiant);
+          const where = `${card} ${side} ${keyOf(level)}`;
           const look = lookOfLevel(level);
           const picture = artPictureOf(firstOf(variant));
           const art = cf.querySelector(".cf-art");
           expect(cf.getAttribute("data-level"), where).to.eq(level);
+          // R3343001: the Default's levels draw the card's default look, Extended art on `CARD`, the normal face on `WINDOWED`.
+          expect(cf.getAttribute("data-version"), `${where}: the look`).to.eq(variant === DEFAULT_VARIANT ? defaultLookOf(card) : look.version);
           // One picture per variant, at every level.
           expect(art?.getAttribute("data-art-picture") ?? "normal", `${where}: the variant's picture`).to.eq(picture);
           // What a level adds: the full-art frame, its picture's motion (held still here) and a signature.
@@ -291,47 +339,52 @@ describe("R3015007 R3015002 a card's variants as ladders of levels", () => {
       cy.document().then((doc) => {
         const windows = new Map<string, DOMRect>();
         const signatures = new Map<string, DOMRect>();
-        for (const { level } of RUNGS) {
-          const cf = faceIn(doc, keyOf(level), radiant);
-          const box = cf.querySelector(".cf-art")?.getBoundingClientRect();
-          if (box === undefined) throw new Error(`no art window for ${keyOf(level)}`);
-          windows.set(keyOf(level), box);
+        for (const { card, level } of ALL_RUNGS) {
+          const key = faceKey(card, level);
+          const cf = faceIn(doc, key, radiant);
+          const art = cf.querySelector(".cf-art")?.getBoundingClientRect();
+          if (art === undefined) throw new Error(`no art window for ${key}`);
+          // R3343001: what of the picture lies inside the face, since Extended art's runs past its window and the face's edge.
+          const face = cf.getBoundingClientRect();
+          const [left, top] = [Math.max(art.left, face.left), Math.max(art.top, face.top)];
+          windows.set(key, new DOMRect(left, top, Math.min(art.right, face.right) - left, Math.min(art.bottom, face.bottom) - top));
           const [signature] = boxes(cf, ".cf-signature");
-          if (signature !== undefined) signatures.set(keyOf(level), signature);
+          if (signature !== undefined) signatures.set(key, signature);
         }
         taken.windows = windows;
         taken.signatures = signatures;
       });
       screenshot(`variant-ladders-${side}`).then((shot) => {
         const windows = taken.windows ?? new Map<string, DOMRect>();
-        const windowOf = (level: string | null): DOMRect => {
-          const box = windows.get(keyOf(level));
-          if (box === undefined) throw new Error(`no window for ${keyOf(level)}`);
+        const windowOf = (card: string, level: string | null): DOMRect => {
+          const key = faceKey(card, level);
+          const box = windows.get(key);
+          if (box === undefined) throw new Error(`no window for ${key}`);
           // Every window sampled lies inside what the screenshot captured.
-          expect(Math.ceil(box.bottom * shot.scale), `${keyOf(level)}: inside the shot`).to.be.at.most(shot.height);
+          expect(Math.ceil(box.bottom * shot.scale), `${key}: inside the shot`).to.be.at.most(shot.height);
           return box;
         };
         const shares: Record<string, number> = {};
-        for (const [a, b, signs] of SAME) {
-          const [one, two] = [windowOf(a), windowOf(b)];
-          expect(Math.round(one.width), `${keyOf(a)} and ${b}: one frame`).to.eq(Math.round(two.width));
+        for (const [card, a, b, signs] of SAME) {
+          const [one, two] = [windowOf(card, a), windowOf(card, b)];
+          expect(Math.round(one.width), `${card} ${keyOf(a)} and ${b}: one frame`).to.eq(Math.round(two.width));
           // Where the second signs, only what lies above its signature, which it adds.
-          const signature = taken.signatures?.get(b);
-          expect(signature !== undefined, `${b}: its signature`).to.eq(signs);
+          const signature = taken.signatures?.get(faceKey(card, b));
+          expect(signature !== undefined, `${card} ${b}: its signature`).to.eq(signs);
           const offsets = windowOffsets(one, signature === undefined ? undefined : signature.top - two.top - SAMPLE_INSET_PX);
-          expect(offsets.length, `${keyOf(a)} and ${b}: sampled points`).to.be.greaterThan(20);
+          expect(offsets.length, `${card} ${keyOf(a)} and ${b}: sampled points`).to.be.greaterThan(20);
           const share = differingShare(shot, one, two, offsets, SAME_PIXEL_DELTA_MIN);
-          shares[`${side} ${keyOf(a)} = ${b}`] = share;
-          expect(share, `${side} ${keyOf(a)} and ${b}: one picture`).to.be.at.most(PICTURE_SAME_MAX);
+          shares[`${side} ${card} ${keyOf(a)} = ${b}`] = share;
+          expect(share, `${side} ${card} ${keyOf(a)} and ${b}: one picture`).to.be.at.most(PICTURE_SAME_MAX);
         }
-        for (const [a, b] of APART) {
-          const [one, two] = [windowOf(a), windowOf(b)];
-          expect(Math.round(one.width), `${keyOf(a)} and ${b}: one frame`).to.eq(Math.round(two.width));
+        for (const [card, a, b] of APART) {
+          const [one, two] = [windowOf(card, a), windowOf(card, b)];
+          expect(Math.round(one.width), `${card} ${keyOf(a)} and ${b}: one frame`).to.eq(Math.round(two.width));
           const offsets = windowOffsets(one);
-          expect(offsets.length, `${keyOf(a)} and ${b}: sampled points`).to.be.greaterThan(20);
+          expect(offsets.length, `${card} ${keyOf(a)} and ${b}: sampled points`).to.be.greaterThan(20);
           const share = differingShare(shot, one, two, offsets);
-          shares[`${side} ${keyOf(a)} / ${b}`] = share;
-          expect(share, `${side} ${keyOf(a)} and ${b}: two variants' pictures`).to.be.at.least(PICTURE_SHARE_MIN);
+          shares[`${side} ${card} ${keyOf(a)} / ${b}`] = share;
+          expect(share, `${side} ${card} ${keyOf(a)} and ${b}: two variants' pictures`).to.be.at.least(PICTURE_SHARE_MIN);
         }
         expect(Object.keys(shares).length, "every pair sampled").to.eq(SAME.length + APART.length);
         cy.task("layout:report", { spec: "variant-ladders", side, shares });

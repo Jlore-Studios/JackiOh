@@ -1,13 +1,13 @@
 // The pack-opening scene and the card packs panel (#1308, SPEC §14.3, §14.4), with its token bars
 // (#1663, R1953000, R1999000), the page's fresh read (#1309) and one spend at a time (R2378000).
-// Nothing here rolls a pack: the fixtures are what `GET /api/packs` and `POST /api/packs/open`
-// answer, and the audio engine is the recording fake the audio suite's own wiring test uses.
+// Nothing here rolls a pack: the fixtures are what `GET /api/packs` and `POST /api/packs/open` (one
+// opening of `POST /api/packs/open-all`'s, R3212000) answer, and the audio engine is the recording fake the audio suite's own wiring test uses.
 
 import { CATALOG } from "@jackioh/cards";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GLOBAL_PACK_NAME } from "@jackioh/server-config";
+import { GLOBAL_PACK_NAME, PACKS_OPEN_ALL_MAX } from "@jackioh/server-config";
 
 import { setAudioEngineForTests } from "../audio/engine.ts";
 import { fakeAudioEngine, type FakeAudioEngine } from "../audio/test/fakeAudio.ts";
@@ -20,8 +20,10 @@ import {
   writeCardPick,
   writeCosmetics,
 } from "../cards/cosmetics.ts";
+import { hasUnseen, unseenForCard } from "../collection/newLevels.ts";
 import { flightsMs } from "../economy/bars.ts";
-import { resetFxSettingsForTests } from "../fx/settings.ts";
+import { grantTestid } from "../economy/GrantReveal.tsx";
+import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { keptPaths, type OpenedPackResponse, type PacksResponse } from "../net/api.ts";
 import { expireRead } from "../net/readCache.ts";
@@ -33,6 +35,7 @@ import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
 import { openedPack, packsInfo } from "./fixtures.ts";
 import PackOpening, { PackScene, type PackSceneProps } from "./PackOpening.tsx";
 import {
+  GRANT_TAKEOVER_SHORT_MS,
   PACK_BURSTS,
   PACK_HOLD_MS,
   PACK_SWIPE_PX,
@@ -40,11 +43,14 @@ import {
   bestRarity,
   cosmeticName,
   holdsToFlip,
+  legendaryFlareCues,
+  orderGrantsRarestLast,
   packTestid as T,
   percent,
   playStinger,
   revealCues,
   slotOutcome,
+  treatmentOf,
   withOpening,
 } from "./packs.ts";
 
@@ -180,6 +186,44 @@ describe("#1308 the pack model", () => {
       ["entrance", { mythic: true }],
     ]);
   });
+
+  it("R3349000 grants reveal rarest last, ties keeping their order", () => {
+    const items = [
+      { cosmeticId: "table-wood", cardId: null as string | null, rarity: "Common" as const },
+      { cosmeticId: "version-alt-full-art", cardId: "core-004", rarity: "Legendary" as const },
+      { cosmeticId: "version-alt-art", cardId: "core-004", rarity: "Rare" as const },
+      { cosmeticId: "version-sketch", cardId: "core-004", rarity: "Rare" as const },
+    ];
+    expect(orderGrantsRarestLast(items).map((item) => item.cosmeticId)).toEqual([
+      "table-wood",
+      "version-alt-art",
+      "version-sketch",
+      "version-alt-full-art",
+    ]);
+    expect(
+      items.map((item) => item.cosmeticId),
+      "the order given is not changed",
+    ).toEqual(["table-wood", "version-alt-full-art", "version-alt-art", "version-sketch"]);
+  });
+
+  it("R3349000 each rarity takes its treatment, and a chase takes the screen from Legendary up", () => {
+    expect(treatmentOf("Common", false)).toBe("panel");
+    expect(treatmentOf("Rare", false)).toBe("panel");
+    expect(treatmentOf("Epic", false)).toBe("panel");
+    expect(treatmentOf("Legendary", false)).toBe("grow");
+    expect(treatmentOf("Mythic", false)).toBe("takeover");
+    expect(treatmentOf("Epic", true)).toBe("panel");
+    expect(treatmentOf("Legendary", true)).toBe("takeover");
+    expect(treatmentOf("Mythic", true)).toBe("takeover");
+  });
+
+  it("R3349000 a Legendary flare is its reveal's rays and rising burst", () => {
+    const at = { kind: "testid", testid: "pack-slot-0" };
+    const flare = legendaryFlareCues("pack-slot-0", 1);
+    expect(flare.map((cue) => cue.kind)).toEqual(["rays", "burst"]);
+    expect(flare[0]).toMatchObject({ kind: "rays", tone: "legendary", at });
+    expect(flare[1]).toMatchObject({ kind: "burst", preset: "gold" });
+  });
 });
 
 function props(over: Partial<PackSceneProps> = {}): PackSceneProps {
@@ -207,6 +251,9 @@ function torn(over: Partial<PackSceneProps> = {}): PackSceneProps {
   const given = props({ opened: openedPack(), ...over });
   render(<PackScene {...given} />);
   advance(PACK_TEAR_MS);
+  // A Mythic pull tears into its takeover first; a tap moves on to the slots grid.
+  const takeover = screen.queryByTestId(T.takeover);
+  if (takeover !== null) fireEvent.click(takeover);
   return given;
 }
 
@@ -254,12 +301,158 @@ describe("#1308 the pack-opening scene", () => {
     expect(screen.queryByTestId(T.slots)).toBeNull();
 
     advance(PACK_TEAR_MS);
+    // The fixture's Mythic pull tears into its takeover first; a tap moves on to the slots grid.
+    fireEvent.click(screen.getByTestId(T.takeover));
     expect(screen.queryByTestId(T.pack)).toBeNull();
     for (let index = 0; index < 5; index += 1) {
       expect(screen.getByTestId(T.slot(index))).toHaveAttribute("data-revealed", "false");
       expect(screen.getByTestId(T.flip(index))).toBeInTheDocument();
     }
     expect(screen.getByTestId(T.slot(0))).toHaveAttribute("data-rarity", "Mythic");
+  });
+
+  /** A hold's slot turns after its hold; any other turns on a click. */
+  function flipSlot(opened: OpenedPackResponse, index: number): void {
+    const back = screen.getByTestId(T.flip(index));
+    if (holdsToFlip(opened.slots[index]!.rarity)) {
+      fireEvent.pointerDown(back);
+      advance(PACK_HOLD_MS);
+    } else {
+      fireEvent.click(back);
+    }
+  }
+
+  it("R3349000 a Legendary pull flares before it flips", () => {
+    const fixture = openedPack();
+    const [first, second, third, fourth, fifth] = fixture.slots;
+    // Slot 1 is a Legendary card pulled; slot 2 a Common duplicate whose roll is a Legendary level.
+    const opened: OpenedPackResponse = {
+      ...fixture,
+      slots: [
+        { ...first!, rarity: "Epic" },
+        { ...second!, rarity: "Legendary" },
+        { ...third!, grant: { kind: "cosmetic", cosmeticId: "full-art-gary-the-gambler-animated", cosmeticRarity: "Legendary" } },
+        fourth!,
+        fifth!,
+      ],
+    };
+    torn({ opened });
+    const flared = screen.getByTestId(T.slot(1));
+    expect(flared).toHaveAttribute("data-flare", "true");
+    expect(flared, "the flaring tile stays sealed").toHaveAttribute("data-revealed", "false");
+    expect(screen.getByTestId(T.slot(0)), "an Epic pull does not flare").not.toHaveAttribute("data-flare");
+    expect(screen.getByTestId(T.slot(2)), "a Legendary roll on a Common card has its own reveal, not the card's flare").not.toHaveAttribute(
+      "data-flare",
+    );
+
+    flipSlot(opened, 1);
+    expect(screen.getByTestId(T.outcome(1))).toHaveTextContent("New card");
+    expect(screen.getByTestId(T.slot(1))).toHaveAttribute("data-revealed", "true");
+    expect(screen.getByTestId(T.slot(1))).not.toHaveAttribute("data-flare");
+  });
+
+  /** The fixture with its slot 2, a Common duplicate of core-004, rolling `cosmeticId` at `cosmeticRarity`. */
+  function rolling(cosmeticId: string, cosmeticRarity: "Rare" | "Epic" | "Legendary" | "Mythic"): OpenedPackResponse {
+    const fixture = openedPack();
+    return {
+      ...fixture,
+      slots: fixture.slots.map((slot, index) => (index === 2 ? { ...slot, grant: { kind: "cosmetic", cosmeticId, cosmeticRarity } } : slot)),
+    };
+  }
+
+  it("R3349000 a duplicate's roll reveals the card wearing its new level when its slot flips", () => {
+    const opened = rolling("full-art-gary-the-gambler", "Epic");
+    torn({ opened });
+    expect(screen.queryByTestId(grantTestid.scene), "nothing plays before the slot is opened").toBeNull();
+
+    flipSlot(opened, 2);
+    // Rare and Epic play on the panel: the card in its previous look first, the new level named beneath it.
+    const scene = screen.getByTestId(grantTestid.scene);
+    expect(scene).toHaveAttribute("data-treatment", "panel");
+    expect(screen.getByTestId(grantTestid.before(0))).toBeInTheDocument();
+    expect(screen.getByTestId(grantTestid.name(0))).toHaveTextContent(`${GARY} · Epic`);
+    fireEvent.click(scene);
+    expect(screen.getByTestId(grantTestid.after(0))).toBeInTheDocument();
+    expect(screen.getByTestId(grantTestid.name(0))).toHaveTextContent(`${GARY} · Epic`);
+
+    // A tap moves on, back to the slot, which says what it became.
+    fireEvent.click(scene);
+    expect(screen.queryByTestId(grantTestid.scene)).toBeNull();
+    expect(screen.getByTestId(T.outcome(2))).toHaveTextContent(`New cosmetic: ${GARY}`);
+    // The other slots stay sealed: one reveal per slot opened.
+    expect(screen.getByTestId(T.slot(1))).toHaveAttribute("data-revealed", "false");
+  });
+
+  it("R3349000 a roll takes its level's own rarity's treatment, not its card's", () => {
+    const treatments: [string, "Legendary" | "Mythic", string][] = [
+      ["full-art-gary-the-gambler-animated", "Legendary", "grow"],
+      ["full-art-gary-the-gambler-signed", "Mythic", "takeover"],
+    ];
+    for (const [cosmeticId, rarity, treatment] of treatments) {
+      const opened = rolling(cosmeticId, rarity);
+      torn({ opened });
+      flipSlot(opened, 2);
+      expect(screen.getByTestId(grantTestid.scene), cosmeticId).toHaveAttribute("data-treatment", treatment);
+      // The slot's card is Common, so neither is the card's treatment: a Mythic roll on it takes the screen.
+      expect(screen.getByTestId(T.slot(2))).toHaveAttribute("data-rarity", "Common");
+      if (treatment === "takeover") expect(screen.getByTestId(grantTestid.scene).querySelector('[data-testid="fullscreen-art"]')).not.toBeNull();
+      cleanup();
+    }
+  });
+
+  it("R3349000 a Mythic pull tears into its takeover", () => {
+    const given = props({ opened: openedPack() });
+    render(<PackScene {...given} />);
+    advance(PACK_TEAR_MS);
+
+    // Slot 0 is the fixture's Mythic pull: the pack tears open into its takeover, not the grid.
+    const takeover = screen.getByTestId(T.takeover);
+    expect(takeover).toHaveAttribute("data-card", "core-096");
+    expect(takeover.querySelector('[data-testid="fullscreen-art"]')).not.toBeNull();
+    expect(screen.queryByTestId(T.slots)).toBeNull();
+
+    // A tap moves on to the slots grid.
+    fireEvent.click(takeover);
+    expect(screen.queryByTestId(T.takeover)).toBeNull();
+    expect(screen.getByTestId(T.slots)).toBeInTheDocument();
+    expect(screen.getByTestId(T.slot(0))).toHaveAttribute("data-revealed", "false");
+  });
+
+  it("R3349000 bigMoments off stills the Mythic takeover to the grid", () => {
+    setFxSettings({ bigMoments: "off" });
+    const given = props({ opened: openedPack() });
+    render(<PackScene {...given} />);
+    advance(PACK_TEAR_MS);
+    expect(screen.queryByTestId(T.takeover)).toBeNull();
+    expect(screen.getByTestId(T.slots)).toBeInTheDocument();
+    expect(screen.getByTestId(T.slot(0))).toHaveAttribute("data-revealed", "false");
+  });
+
+  it("R3349000 bigMoments short holds the Mythic takeover briefly", () => {
+    setFxSettings({ bigMoments: "short" });
+    const given = props({ opened: openedPack() });
+    render(<PackScene {...given} />);
+    advance(PACK_TEAR_MS);
+    expect(screen.getByTestId(T.takeover)).toBeInTheDocument();
+    advance(GRANT_TAKEOVER_SHORT_MS);
+    expect(screen.queryByTestId(T.takeover)).toBeNull();
+    expect(screen.getByTestId(T.slots)).toBeInTheDocument();
+  });
+
+  it("R3349000 no slot shows before it is opened", () => {
+    const opened = openedPack();
+    torn({ opened });
+    for (let index = 0; index < 5; index += 1) {
+      expect(screen.getByTestId(T.slot(index))).toHaveAttribute("data-revealed", "false");
+    }
+    // The pack's order: each card turns alone, the others staying sealed.
+    for (let index = 0; index < 5; index += 1) {
+      flipSlot(opened, index);
+      expect(screen.getByTestId(T.slot(index))).toHaveAttribute("data-revealed", "true");
+      for (let other = index + 1; other < 5; other += 1) {
+        expect(screen.getByTestId(T.slot(other))).toHaveAttribute("data-revealed", "false");
+      }
+    }
   });
 
   it("cards are revealed one at a time, each saying what it became", () => {
@@ -280,7 +473,7 @@ describe("#1308 the pack-opening scene", () => {
     expect(screen.getByTestId(T.slot(2))).toHaveTextContent(CATALOG["core-004"]!.name);
     expect(screen.getByTestId(T.slot(2))).toHaveAttribute("data-grant", "cosmetic");
     expect(screen.queryByTestId(T.next), "cards are still face down").toBeNull();
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Close");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
   });
 
   it("R1827000 a slot that dropped a portrait shows its name and its art", () => {
@@ -378,13 +571,13 @@ describe("#1308 the pack-opening scene", () => {
   it("skip-all reveals all five at once", () => {
     const given = props({ opened: openedPack() });
     render(<PackScene {...given} />);
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Close");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
     fireEvent.click(screen.getByTestId(T.skipAll));
 
     for (let index = 0; index < 5; index += 1) expect(revealed(index), `slot ${String(index)}`).toBe(true);
     expect(screen.queryByTestId(T.pack)).toBeNull();
     expect(screen.queryByTestId(T.skipAll)).toBeNull();
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
     expect(engine.playSfx.mock.calls, "one sting for the best card").toEqual([["entrance", { mythic: true }]]);
     expect(given.onTear, "the pack was open already").not.toHaveBeenCalled();
 
@@ -402,7 +595,7 @@ describe("#1308 the pack-opening scene", () => {
     rerender(<PackScene {...given} busy />);
     rerender(<PackScene {...given} opened={openedPack()} />);
     for (let index = 0; index < 5; index += 1) expect(revealed(index)).toBe(true);
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
     expect(engine.playSfx.mock.calls).toEqual([["entrance", { mythic: true }]]);
   });
 
@@ -416,7 +609,7 @@ describe("#1308 the pack-opening scene", () => {
       expect(revealed(index)).toBe(true);
       expect(screen.queryByTestId(T.flip(index)), "no flip").toBeNull();
     }
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
     expect(engine.playSfx.mock.calls).toEqual([["entrance", { mythic: true }]]);
   });
 
@@ -429,7 +622,7 @@ describe("#1308 the pack-opening scene", () => {
     expect(revealed(3)).toBe(true);
   });
 
-  it("a pack with packs left offers the next, the last offers Done", () => {
+  it("a pack with packs left offers the next, the last only its ✕", () => {
     const more = props({ opened: openedPack(), left: 1 });
     const { unmount } = render(<PackScene {...more} />);
     expect(screen.queryByTestId(T.next), "not before every card shows").toBeNull();
@@ -438,7 +631,7 @@ describe("#1308 the pack-opening scene", () => {
     expect(next).toHaveTextContent("Next pack (1 left)");
     fireEvent.click(next);
     expect(more.onNext).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
     fireEvent.click(screen.getByTestId(T.close));
     expect(more.onClose).toHaveBeenCalledTimes(1);
     unmount();
@@ -446,7 +639,7 @@ describe("#1308 the pack-opening scene", () => {
     render(<PackScene {...props({ opened: openedPack(), left: 0 })} />);
     fireEvent.click(screen.getByTestId(T.skipAll));
     expect(screen.queryByTestId(T.next)).toBeNull();
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
   });
 
   it("a failed open shows the server's words and keeps the pack sealed", () => {
@@ -625,14 +818,28 @@ describe("#1308 the pack-opening scene", () => {
 
 type Answers = { info?: Reply; open?: (call: number) => Reply };
 
-/** The two routes, answered from the fixtures unless a test says otherwise. */
+/**
+ * The three routes, answered from the fixtures unless a test says otherwise. R3212000: an open-all is
+ * `open` once per pack, in order, all or nothing: one refused opening refuses the lot.
+ */
 function packsServer(answers: Answers = {}): ReturnType<typeof stubServer> {
   let opens = 0;
+  const open = (): Reply => {
+    opens += 1;
+    return answers.open?.(opens) ?? { status: 200, body: openedPack() };
+  };
   return stubServer((call) => {
     if (call.method === "GET" && call.path === "/api/packs") return answers.info ?? { status: 200, body: packsInfo() };
-    if (call.method === "POST" && call.path === "/api/packs/open") {
-      opens += 1;
-      return answers.open?.(opens) ?? { status: 200, body: openedPack() };
+    if (call.method === "POST" && call.path === "/api/packs/open") return open();
+    if (call.method === "POST" && call.path === "/api/packs/open-all") {
+      const { count } = call.body as { count: number };
+      const openings: unknown[] = [];
+      for (let pack = 0; pack < count; pack += 1) {
+        const reply = open();
+        if (reply.status !== 200) return reply;
+        openings.push(reply.body);
+      }
+      return { status: 200, body: { openings } };
     }
     return undefined;
   });
@@ -648,6 +855,26 @@ async function panel(): Promise<void> {
 const text = (id: string): string => screen.getByTestId(id).textContent ?? "";
 
 describe("#1308 the card packs panel", () => {
+  it("R3349000 an account cosmetic dropped in a pack reveals no card and marks none new", async () => {
+    // Slot 0's card earned a playmat, the account's; slot 2's card earned a level of its own.
+    const fixture = openedPack();
+    const opened: OpenedPackResponse = {
+      ...fixture,
+      slots: fixture.slots.map((slot, index) =>
+        index === 0 ? { ...slot, grant: { kind: "cosmetic", cosmeticId: "table-wood", cosmeticRarity: "Epic" } } : slot,
+      ),
+    };
+    packsServer({ open: () => ({ status: 200, body: opened }) });
+    await panel();
+    fireEvent.click(screen.getByTestId(T.open("Core")));
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    await screen.findByTestId(T.outcome(0));
+
+    expect(unseenForCard(TOKEN, "core-096"), "the playmat marks no card").toEqual([]);
+    expect(hasUnseen(TOKEN, "core-096")).toBe(false);
+    expect(unseenForCard(TOKEN, "core-004"), "the level marks the card wearing it").toEqual(["full-art-gary-the-gambler"]);
+  });
+
   it("the panel lists the packs held, before opening and after, and shows neither pity nor odds", async () => {
     const server = packsServer();
     await panel();
@@ -736,7 +963,7 @@ describe("#1308 the card packs panel", () => {
     expect(server.to("POST", "/api/packs/open")).toHaveLength(1);
   });
 
-  it("batch opening opens the packs in a row, with skip-all between them", async () => {
+  it("R3212000 Open all opens the packs in one request and shows them in a row, with skip-all between them", async () => {
     const server = packsServer({
       open: (call): Reply => ({ status: 200, body: { ...openedPack(), unopened: call === 1 ? 1 : 0 } satisfies OpenedPackResponse }),
     });
@@ -748,6 +975,10 @@ describe("#1308 the card packs panel", () => {
     await screen.findByTestId(T.outcome(0));
     const next = screen.getByTestId(T.next);
     expect(next).toHaveTextContent("Next pack (1 left)");
+    const sent = server.to("POST", "/api/packs/open-all");
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.body).toEqual({ pack: "Core", count: 2 });
+    expect(sent[0]?.headers["idempotency-key"], "a spend").toBeDefined();
 
     fireEvent.click(next);
     expect(screen.queryByTestId(T.outcome(0)), "a fresh pack, sealed").toBeNull();
@@ -755,12 +986,47 @@ describe("#1308 the card packs panel", () => {
     fireEvent.click(screen.getByTestId(T.skipAll));
     await screen.findByTestId(T.outcome(0));
     expect(screen.queryByTestId(T.next)).toBeNull();
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
-    expect(server.to("POST", "/api/packs/open")).toHaveLength(2);
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
+    expect(server.to("POST", "/api/packs/open-all"), "the second pack was in the first answer").toHaveLength(1);
+    expect(server.to("POST", "/api/packs/open")).toHaveLength(0);
 
     fireEvent.click(screen.getByTestId(T.close));
     expect(screen.queryByTestId(T.heldRow("Core"))).toBeNull();
     expect(screen.getByTestId(T.heldRow(GLOBAL_PACK_NAME))).toBeInTheDocument();
+  });
+
+  it("R3212000 Open all past PACKS_OPEN_ALL_MAX opens the cap", async () => {
+    const held = PACKS_OPEN_ALL_MAX + 5;
+    const server = packsServer({
+      info: { status: 200, body: { ...packsInfo(), unopened: [{ pack: "Core", count: held }] } satisfies PacksResponse },
+      open: (call): Reply => ({ status: 200, body: { ...openedPack(), unopened: held - call } satisfies OpenedPackResponse }),
+    });
+    await panel();
+    expect(screen.getByTestId(T.openAll("Core"))).toHaveTextContent(`Open all ${String(PACKS_OPEN_ALL_MAX)}`);
+
+    fireEvent.click(screen.getByTestId(T.openAll("Core")));
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    await screen.findByTestId(T.outcome(0));
+    expect(server.to("POST", "/api/packs/open-all").map((call) => call.body)).toEqual([{ pack: "Core", count: PACKS_OPEN_ALL_MAX }]);
+    expect(screen.getByTestId(T.next)).toHaveTextContent(`Next pack (${String(PACKS_OPEN_ALL_MAX - 1)} left)`);
+    expect(text(T.heldRow("Core")), "the last opening's count").toContain(`Core pack: ${String(held - PACKS_OPEN_ALL_MAX)} unopened`);
+  });
+
+  it("R3212000 a refused Open all shows the server's words and keeps the pack sealed", async () => {
+    const server = packsServer({ open: () => refusal(409, "conflict", NO_PACK) });
+    await panel();
+    fireEvent.click(screen.getByTestId(T.openAll("Core")));
+    fireEvent.click(screen.getByTestId(T.pack));
+
+    expect(await screen.findByTestId(T.error)).toHaveTextContent(NO_PACK);
+    expect(screen.getByTestId(T.pack)).toHaveAttribute("data-state", "sealed");
+    expect(screen.getByTestId(T.pack), "nothing is out, so it can be torn again").toBeEnabled();
+    expect(screen.queryByTestId(T.slots)).toBeNull();
+    expect(server.to("POST", "/api/packs/open-all")).toHaveLength(1);
+    expect(server.to("POST", "/api/packs/open")).toHaveLength(0);
+
+    fireEvent.click(screen.getByTestId(T.close));
+    expect(text(T.heldRow("Core")), "nothing was opened").toContain("Core pack: 2 unopened");
   });
 
   it("a batch stops when the server holds fewer packs than it was told", async () => {
@@ -1013,7 +1279,7 @@ describe("#1757 the pack-opening scene's focus and keys", () => {
     expect(scene).toHaveFocus();
   });
 
-  it("#1757 Escape closes the scene, but not while an open is out, when Close is disabled too", () => {
+  it("#1757 Escape closes the scene, but not while an open is out, when the ✕ is disabled too", () => {
     const given = props({ busy: true });
     const { rerender } = render(<PackScene {...given} />);
     const scene = screen.getByTestId(T.scene);
@@ -1041,7 +1307,7 @@ describe("#1757 the pack-opening scene's focus and keys", () => {
     expect(given.onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("#1757 focus goes back to the Open button that opened the scene, on Escape and on Done", async () => {
+  it("#1757 focus goes back to the Open button that opened the scene, on Escape and on the ✕", async () => {
     packsServer();
     await panel();
     const opener = screen.getByTestId(T.open("Core"));
@@ -1056,7 +1322,7 @@ describe("#1757 the pack-opening scene's focus and keys", () => {
     fireEvent.click(opener);
     fireEvent.click(screen.getByTestId(T.skipAll));
     await screen.findByTestId(T.outcome(0));
-    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
+    expect(screen.getByTestId(T.close)).toHaveAccessibleName("Close");
     fireEvent.click(screen.getByTestId(T.close));
     expect(screen.queryByTestId(T.scene)).toBeNull();
     expect(screen.getByTestId(T.open("Core")), "Core still holds a pack, so its row stays").toHaveFocus();
@@ -1272,24 +1538,23 @@ describe("R3211000 the panel folds the page's answers and tells it once when the
     expect(onChanged).not.toHaveBeenCalled();
     expect(onClosed).not.toHaveBeenCalled();
 
-    // A batch of two: each answer goes to the page as it comes, and the close once, after the last.
+    // A batch of two is one answer (R3212000): its last opening goes to the page once, and the close
+    // once, after the last pack.
     fireEvent.click(screen.getByTestId(T.openAll("Core")));
     fireEvent.click(screen.getByTestId(T.skipAll));
     await screen.findByTestId(T.outcome(0));
     expect(onChanged).toHaveBeenCalledTimes(1);
-    expect(onChanged).toHaveBeenLastCalledWith(expect.objectContaining({ pack: "Core", unopened: 1 }));
+    expect(onChanged).toHaveBeenLastCalledWith(expect.objectContaining({ pack: "Core", unopened: 0 }));
     fireEvent.click(screen.getByTestId(T.next));
     fireEvent.click(screen.getByTestId(T.skipAll));
-    await waitFor(() => {
-      expect(onChanged).toHaveBeenCalledTimes(2);
-    });
     await screen.findByTestId(T.outcome(0));
     expect(onClosed, "the scene is still open between the packs of a batch").not.toHaveBeenCalled();
-    expect(onChanged).toHaveBeenLastCalledWith(expect.objectContaining({ pack: "Core", unopened: 0 }));
+    expect(onChanged, "the second pack was in the first answer").toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByTestId(T.close));
     expect(onClosed).toHaveBeenCalledTimes(1);
-    expect(server.to("POST", "/api/packs/open")).toHaveLength(3);
+    expect(server.to("POST", "/api/packs/open")).toHaveLength(1);
+    expect(server.to("POST", "/api/packs/open-all")).toHaveLength(1);
 
     // The next scene starts again from nothing: closing one with no opening does not tell the page.
     fireEvent.click(screen.getByTestId(T.open(GLOBAL_PACK_NAME)));

@@ -178,7 +178,7 @@ describe("crates/server/tests/deploy/rehearse.sh", () => {
     expect(stdout).toContain("image stage is built");
   });
 
-  it("keeps the cook in a deps stage, the engine, cards, AI and shared crate in a game stage on it, the server's library in a crates stage on that, and the binary last", () => {
+  it("keeps the cook in a deps stage, the engine, cards, AI, run and shared crate in a game stage on it, the server's library in a crates stage on that, and the binary last", () => {
     const dockerfile = readFileSync(DOCKERFILE, "utf8");
     const at = [
       "\nFROM chef AS deps\n",
@@ -202,6 +202,7 @@ describe("crates/server/tests/deploy/rehearse.sh", () => {
       "COPY crates/engine ./crates/engine",
       "COPY crates/cards ./crates/cards",
       "COPY crates/ai ./crates/ai",
+      "COPY crates/run ./crates/run",
       "COPY crates/shared ./crates/shared",
     ]);
     expect(copied(crates)).toEqual(["COPY crates/server ./crates/server"]);

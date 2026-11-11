@@ -66,19 +66,6 @@
   background: linear-gradient(90deg, transparent, rgb(240 194 74 / 0.55) 18%, rgb(240 194 74 / 0.2) 70%, transparent);
 }
 
-/* Back is the tavern's brass pill (tavern.css). The title is set as the tavern's screen titles are
-   (the auth board's h2): solid pale gold in the serif, over a plain shadow. */
-.deckbuilder.app-shell .db-title {
-  margin: 0;
-  font-family: var(--tavern-serif);
-  font-size: 21px;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: 0;
-  color: var(--tavern-gold-pale);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
-}
-
 /* --- rarity color, per element that carries data-rarity --------------------------------------- */
 
 :where(.db-chip, .db-card, .db-tile, .db-tile-pip)[data-rarity="Common"] {
@@ -271,21 +258,14 @@
   color: var(--text-dim);
 }
 
+/* A `button-secondary` (buttons.css); this is its size, and its pressed state is the chips' own. */
 .deckbuilder.app-shell .db-chip {
   min-height: 28px;
   padding: 3px 10px;
   border-radius: 999px;
-  border-color: var(--line-bright);
-  background: var(--bg-sunken);
-  color: var(--text-dim);
   font-size: 12px;
   line-height: 1.2;
   white-space: nowrap;
-}
-
-.deckbuilder.app-shell .db-chip:hover {
-  color: var(--text);
-  border-color: var(--text-dim);
 }
 
 .deckbuilder.app-shell .db-chip[aria-pressed="true"] {
@@ -1200,6 +1180,7 @@
     grid-template-areas:
       "sidebar"
       "browse";
+    gap: var(--space-5);
   }
 
   .db-pool {

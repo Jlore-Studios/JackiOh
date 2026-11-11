@@ -3,7 +3,9 @@
 //
 // THE SERVER DECIDES (CLAUDE.md rule 7). `PackScene` never rolls: it draws the slots `POST
 // /api/packs/open` already settled, and nothing on screen changes before that answer; skip-all, the
-// holds and the flips only choose how fast it is shown, and reduced motion shows it at once. The pack
+// holds and the flips only choose how fast it is shown, and reduced motion shows it at once. Open all
+// is one `POST /api/packs/open-all` of up to `PACKS_OPEN_ALL_MAX` packs (R3212000), whose openings the
+// scene then shows one pack at a time, sending nothing more. The pack
 // is a `PackObject` (#1663); the token bars (`OpeningBars`, SPEC §14.5) play once every card shows
 // (R1953000, R1999000). A new cosmetic offers Equip (R1955000), a portrait's none. The scene is a
 // modal overlay (#1757).
@@ -23,8 +25,10 @@ import {
 import { createPortal } from "react-dom";
 
 import { CATALOG } from "@jackioh/cards";
+import { PACKS_OPEN_ALL_MAX } from "@jackioh/server-config";
 
-import { CardBack, CardFace, faceModel } from "../cards/index.ts";
+import { CardBack, CardFace, FullScreenArt, faceModel, useFullScreenTrigger } from "../cards/index.ts";
+import { readerName } from "../cards/chinese.ts";
 import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
 import { useModalOverlay } from "../cards/inspect/store.ts";
 import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
@@ -34,17 +38,19 @@ import OpeningBars from "../economy/OpeningBars.tsx";
 import "../economy/spend.css";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { resolveAnchor } from "../fx/anchors.ts";
-import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../fx/constants.ts";
+import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE, FX_MOBILE_WIDTH } from "../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../fx/director.ts";
 import { defaultFrames, defaultNow, defaultVisibility } from "../fx/FxLayer.tsx";
 import { useFxSettings } from "../fx/settings.ts";
 import { createSurface } from "../fx/surface.ts";
 import type { FxShakeSink } from "../fx/types.ts";
 import { reducedMotionNow } from "../game/animations.ts";
+import { DialogClose } from "../game/Dialog.tsx";
 import { t } from "../i18n/i18n.ts";
 import {
   getPacks,
   keptPaths,
+  openAllPacks,
   openPack,
   type BoughtPackResponse,
   type OpenedPackResponse,
@@ -52,17 +58,21 @@ import {
 } from "../net/api.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { spendOutNow, useSpendOut } from "../net/spending.ts";
+import { markNewLevels } from "../collection/newLevels.ts";
+import GrantReveal, { type GrantItem } from "../economy/GrantReveal.tsx";
 import { useSetting } from "../settings/store.ts";
-import { withBought } from "../shop/shop.ts";
+import { isPerCardKind, withBought } from "../shop/shop.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import {
+  GRANT_TAKEOVER_SHORT_MS,
   PACK_FLIP_MS,
   PACK_HOLD_MS,
   PACK_SWIPE_PX,
   PACK_TEAR_MS,
   bestRarity,
   holdsToFlip,
+  legendaryFlareCues,
   packName,
   packTestid,
   playStinger,
@@ -76,6 +86,51 @@ import "./packs.css";
 
 /** The scene shakes nothing: the pack is not the board. */
 const NO_SHAKE: FxShakeSink = { apply: () => undefined, clear: () => undefined };
+
+/**
+ * R3349000: a slot's cosmetic roll as a reveal item, the card wearing it where the cosmetic goes on a card
+ * (a level, foil, finish or border) and no card where it is the account's (a playmat, a portrait, a card
+ * back): the slot's card is then only the one pulled, and the reveal and the Collection's "new" mark must
+ * not name it. A cosmetic the registry does not know has no look to reveal.
+ */
+function revealOf(slot: OpenedPackResponse["slots"][number]): GrantItem | null {
+  const grant = slot.grant;
+  if (grant.kind !== "cosmetic") return null;
+  const kind = COSMETICS.find((entry) => entry.id === grant.cosmeticId)?.kind;
+  if (kind === undefined) return null;
+  return {
+    cosmeticId: grant.cosmeticId,
+    cardId: isPerCardKind(kind) ? slot.cardId : null,
+    rarity: grant.cosmeticRarity,
+    below: grant.below,
+  };
+}
+
+function PackSlotFace({ slot, look }: { slot: OpenedPackResponse["slots"][number]; look: string | null }): ReactElement {
+  const def = CATALOG[slot.cardId];
+  const fs = useFullScreenTrigger({
+    defId: slot.cardId,
+    rarity: slot.rarity,
+    printedRarity: def?.printedRarity,
+    // A dropped cosmetic's look that is a full-art level opens as a Mythic does.
+    level: look,
+    name: def ? readerName(def) : slot.cardId,
+  });
+  return (
+    <div className="pack-slot__face" {...fs.handlers}>
+      {/* The shop never waits for the module (#1577), and a face is worked out by it (#778). */}
+      <WhenEngineReady>
+        {() =>
+          look === null ? (
+            <CardFace face={faceModel({ defId: slot.cardId, def: CATALOG[slot.cardId], radiant: false })} />
+          ) : (
+            <CosmeticLook id={look} cardId={slot.cardId} />
+          )
+        }
+      </WhenEngineReady>
+    </div>
+  );
+}
 
 export type PackSceneProps = {
   /** The kind of pack being opened: a shipped set's name, or `global`. */
@@ -101,6 +156,10 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
   const intensity: number = FX_INTENSITY_SCALE[fx.intensity];
 
   const [torn, setTorn] = useState(false);
+  const [takeover, setTakeover] = useState(true);
+  // R3349000: the roll whose reveal plays over the scene, queued by its slot's flip; reduced motion and Reveal all
+  // deal every slot face-up at once, as they skip the Mythic takeover, so they flip nothing.
+  const [reveals, setReveals] = useState<GrantItem[]>([]);
   const [skipped, setSkipped] = useState(false);
   const [flipped, setFlipped] = useState<ReadonlySet<number>>(new Set());
   const [holding, setHolding] = useState<number | null>(null);
@@ -110,12 +169,13 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
   const holdTimer = useRef<number | null>(null);
   const swipeFrom = useRef<number | null>(null);
   const stung = useRef(false);
+  const flared = useRef(false);
   const director = useRef<FxDirector | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const domRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<HTMLDivElement | null>(null);
 
-  // Escape closes as Close does: not while busy.
+  // Escape closes as the ✕ does: not while busy.
   useModalOverlay(onClose, sceneRef, !busy);
 
   // The director lives exactly as long as the canvas and the DOM root it draws into (FxLayer's).
@@ -132,6 +192,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
       shakeSink: NO_SHAKE,
       seed: FX_DEFAULT_SEED,
       capacity: capacityFor(window.innerWidth),
+      phone: window.innerWidth < FX_MOBILE_WIDTH,
     });
     director.current = created;
     return () => {
@@ -174,13 +235,47 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
   const slots = opened?.slots ?? [];
   const shows = (index: number): boolean => reduced || skipped || flipped.has(index);
   const all = opened !== null && slots.every((_, index) => shows(index));
-  const showSlots = opened !== null && (reduced || skipped || torn);
+  // R3349000: a Mythic card pull tears the pack open into its takeover, with its own art, closing to
+  // the slots grid on tap; reduced motion keeps today's instant all-revealed path, and Reveal all skips it.
+  // R2785000: `bigMoments` off skips the takeover for the grid, short holds it briefly like GrantReveal's.
+  const bigMoments = fx.bigMoments;
+  const mythicFirst = opened === null ? -1 : opened.slots.findIndex((slot) => slot.rarity === "Mythic");
+  const mythicSlot = mythicFirst >= 0 ? opened?.slots[mythicFirst] : undefined;
+  const mythicDef = mythicSlot === undefined ? undefined : CATALOG[mythicSlot.cardId];
+  const showTakeover =
+    mythicSlot !== undefined && mythicDef !== undefined && torn && !reduced && !skipped && takeover && bigMoments !== "off";
+  const showSlots = opened !== null && (reduced || skipped || torn) && !showTakeover;
+
+  // R2785000: a short Big moment holds the Mythic takeover briefly, then moves on to the grid; a tap moves on at once.
+  useEffect(() => {
+    if (!showTakeover || bigMoments !== "short") return undefined;
+    const timer = window.setTimeout(() => {
+      setTakeover(false);
+    }, GRANT_TAKEOVER_SHORT_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [showTakeover, bigMoments]);
+
+  // R3349000: a Legendary card pulled flares on its sealed tile once its tile shows, before any flip.
+  useEffect(() => {
+    if (!showSlots || !torn || reduced || skipped || opened === null || flared.current) return;
+    flared.current = true;
+    director.current?.play(
+      opened.slots.flatMap((slot, slotIndex) =>
+        slot.rarity === "Legendary" ? legendaryFlareCues(packTestid.slot(slotIndex), intensity) : [],
+      ),
+    );
+  }, [showSlots, torn, reduced, skipped, opened, intensity]);
 
   const reveal = (index: number): void => {
     const slot = slots[index];
     if (slot === undefined) return;
     setFlipped((before) => new Set(before).add(index));
     playStinger(slot.rarity);
+    // R3349000: a duplicate's roll reveals the card wearing its new level, by the level's own rarity.
+    const item = revealOf(slot);
+    if (item !== null) setReveals([item]);
     director.current?.play(revealCues(slot.rarity, packTestid.slot(index), intensity));
   };
 
@@ -246,7 +341,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
     >
       <h2 className="pack-scene__title">{title}</h2>
 
-      {showSlots ? null : (
+      {showSlots || showTakeover ? null : (
         <button
           type="button"
           className="pack-hit"
@@ -270,6 +365,25 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
         </button>
       )}
 
+      {showTakeover && mythicSlot !== undefined ? (
+        <div
+          className="pack-takeover"
+          data-testid={packTestid.takeover}
+          data-card={mythicSlot.cardId}
+          onClick={() => {
+            setTakeover(false);
+          }}
+        >
+          <FullScreenArt
+            defId={mythicSlot.cardId}
+            name={mythicDef === undefined ? mythicSlot.cardId : readerName(mythicDef)}
+            onClose={() => {
+              setTakeover(false);
+            }}
+          />
+        </div>
+      ) : null}
+
       {showSlots && opened !== null ? (
         <div className="pack-slots" data-testid={packTestid.slots}>
           {opened.slots.map((slot, index) => {
@@ -289,21 +403,11 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
                 data-cosmetic-rarity={cosmetic?.cosmeticRarity}
                 data-revealed={shown ? "true" : "false"}
                 data-holding={holding === index ? "true" : undefined}
+                data-flare={slot.rarity === "Legendary" && torn && !shown ? "true" : undefined}
               >
                 {shown ? (
                   <>
-                    <div className="pack-slot__face">
-                      {/* The shop never waits for the module (#1577), and a face is worked out by it (#778). */}
-                      <WhenEngineReady>
-                        {() =>
-                          look === null ? (
-                            <CardFace face={faceModel({ defId: slot.cardId, def: CATALOG[slot.cardId], radiant: false })} />
-                          ) : (
-                            <CosmeticLook id={look} cardId={slot.cardId} />
-                          )
-                        }
-                      </WhenEngineReady>
-                    </div>
+                    <PackSlotFace slot={slot} look={look} />
                     <p className="pack-slot__outcome" data-testid={packTestid.outcome(index)}>
                       {slotOutcome(slot, opened.bars.slotPoints[index] ?? 0)}
                     </p>
@@ -375,9 +479,6 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
             {t("Next pack ({left} left)", { left })}
           </button>
         ) : null}
-        <button type="button" data-testid={packTestid.close} disabled={busy} onClick={onClose}>
-          {all ? t("Done") : t("Close")}
-        </button>
       </div>
 
       {fxOn ? (
@@ -386,12 +487,25 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
           <div ref={domRef} className="fx-dom" />
         </div>
       ) : null}
+
+      {/* R3221000: the scene keeps its own body and closes by the one ✕ every dialog shows, not while busy. */}
+      <DialogClose testid={packTestid.close} disabled={busy} onClick={onClose} />
+
+      {reveals.length === 0 ? null : (
+        <GrantReveal
+          items={reveals}
+          onDone={() => {
+            setReveals([]);
+          }}
+        />
+      )}
     </div>,
     document.body,
   );
 }
 
-type SceneState = { pack: string; left: number };
+/** `all`: the scene was begun by Open all, whose first tear opens every pack of it at once (R3212000). */
+type SceneState = { pack: string; left: number; all: boolean };
 
 /**
  * The panel. `revision` is how many times the page has asked it to read the packs again; `bought` is the
@@ -428,6 +542,8 @@ export default function PackOpening({
   const inFlight = useRef(false);
   // Whether the scene has opened a pack since it began, so closing it tells the page once (R3211000).
   const spent = useRef(false);
+  // R3212000: the openings an Open all answered that the scene has not shown yet, in order.
+  const queued = useRef<OpenedPackResponse[]>([]);
   const spendOut = useSpendOut();
 
   useEffect(() => {
@@ -473,22 +589,49 @@ export default function PackOpening({
   };
 
   const start = (pack: string, count: number): void => {
-    begin({ pack, left: count - 1 });
+    queued.current = [];
+    begin({ pack, left: count - 1, all: count > 1 });
     setRound((before) => before + 1);
   };
 
   const tear = (): void => {
-    if (scene === null || inFlight.current || opened !== null || spendOutNow()) return;
+    if (scene === null || inFlight.current || opened !== null) return;
+    // R3212000: a pack an Open all already opened shows with no request.
+    const shown = queued.current.shift();
+    if (shown !== undefined) {
+      setOpened(shown);
+      return;
+    }
+    if (spendOutNow()) return;
     inFlight.current = true;
     setBusy(true);
     setOpenError(null);
-    openPack(token, scene.pack)
+    const opening = scene.all
+      ? openAllPacks(token, scene.pack, scene.left + 1).then(({ openings }) => openings)
+      : openPack(token, scene.pack).then((one) => [one]);
+    opening
       .then(
-        (next) => {
-          setOpened(next);
-          setInfo((before) => (before === null ? before : withOpening(before, next)));
+        ([first, ...rest]) => {
+          const last = rest.at(-1) ?? first;
+          if (first === undefined || last === undefined) return;
+          queued.current = rest;
+          // R3349000: every granted level marks its card "new" until the Collection views it; an account
+          // cosmetic's slot card earned nothing, so its entry names no card.
+          markNewLevels(
+            token,
+            [first, ...rest].flatMap((opening) =>
+              opening.slots.flatMap((slot) => {
+                const item = revealOf(slot);
+                if (item === null) return [];
+                return [item.cosmeticId, ...(item.below ?? [])].map((id) => ({ id, cardId: item.cardId }));
+              }),
+            ),
+          );
+          setOpened(first);
+          // The last opening's counters are the account's; the panel and the page take them once.
+          setInfo((before) => (before === null ? before : withOpening(before, last)));
           spent.current = true;
-          onChanged?.(next);
+          onChanged?.(last);
         },
         (cause: unknown) => {
           setOpenError(messageOf(cause));
@@ -504,13 +647,14 @@ export default function PackOpening({
 
   const next = (): void => {
     if (scene === null || left < 1 || spendOutNow()) return;
-    begin({ pack: scene.pack, left: left - 1 });
+    begin({ ...scene, left: left - 1 });
     setRound((before) => before + 1);
   };
 
-  // Done, Close and Escape all end here; "Next pack" keeps the scene, so a batch settles once (R3211000).
+  // The ✕ and Escape both end here; "Next pack" keeps the scene, so a batch settles once (R3211000).
   const close = (): void => {
     if (busy) return;
+    queued.current = [];
     begin(null);
     if (spent.current) {
       spent.current = false;
@@ -520,7 +664,7 @@ export default function PackOpening({
 
   return (
     <div className="form-card packs-panel" data-testid={packTestid.panel}>
-      <h3 className="shop-heading">{t("Card packs")}</h3>
+      <h2 className="shop-heading">{t("Card packs")}</h2>
       {loadError === null ? null : (
         <>
           <p className="notice" role="alert" data-testid={packTestid.loadError}>
@@ -566,8 +710,8 @@ export default function PackOpening({
 }
 
 /**
- * The unopened packs the account holds, each opened alone or, from two, all in a row; `waiting` while
- * one of the tab's spends is out (R2378000).
+ * The unopened packs the account holds, each opened alone or, from two, all in a row (up to
+ * `PACKS_OPEN_ALL_MAX` at a press, R3212000); `waiting` while one of the tab's spends is out (R2378000).
  */
 function PacksHeld({
   info,
@@ -607,10 +751,10 @@ function PacksHeld({
                 disabled={waiting}
                 aria-busy={waiting}
                 onClick={() => {
-                  onOpen(pack, count);
+                  onOpen(pack, Math.min(count, PACKS_OPEN_ALL_MAX));
                 }}
               >
-                {t("Open all {count}", { count })}
+                {t("Open all {count}", { count: Math.min(count, PACKS_OPEN_ALL_MAX) })}
               </button>
             ) : null}
           </div>

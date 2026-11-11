@@ -13,7 +13,7 @@ import { raysCue, tid, tunedBurst, type BurstTuning } from "../fx/build.ts";
 import type { FxCue } from "../fx/types.ts";
 import { t } from "../i18n/i18n.ts";
 import type { OpenedPackResponse, PackSlot, PacksResponse } from "../net/api.ts";
-import { COSMETICS } from "../wire/generated/cosmetics.ts";
+import { COSMETICS, type CosmeticRarity } from "../wire/generated/cosmetics.ts";
 
 /** How long a torn pack takes to open before its cards show. */
 export const PACK_TEAR_MS = 900;
@@ -28,6 +28,12 @@ export const PACK_RAYS_MS = 1200;
 export const PACK_TILT_DEG = 8;
 /** The pack object's name for the cosmetic pack; a card pack is a shipped set's name or `GLOBAL_PACK_NAME`. */
 export const COSMETIC_PACK = "cosmetic";
+/** The dungeon run's reward packs (#3588): the beaten enemy's deck, with a boss look on a boss node. */
+export const DUNGEON_ENEMY_PACK = "dungeon-enemy";
+export const DUNGEON_BOSS_PACK = "dungeon-boss";
+/** The dungeon run's random pack and its type, tag or rarity pack. */
+export const DUNGEON_RANDOM_PACK = "dungeon-random";
+export const DUNGEON_FILTER_PACK = "dungeon-filter";
 export const PACK_ODDS_DECIMALS = 1;
 
 /** Rarities lowest first. */
@@ -74,6 +80,8 @@ export const packTestid = {
   open: (pack: string) => `packs-open-${pack}`,
   openAll: (pack: string) => `packs-open-all-${pack}`,
   scene: "pack-scene",
+  /** R3349000: the Mythic pull's takeover, the pack torn open into the full-screen view with its own art. */
+  takeover: "pack-takeover",
   error: "pack-error",
   slots: "pack-slots",
   skipAll: "pack-skip-all",
@@ -111,6 +119,10 @@ export function holdsToFlip(rarity: PrintedRarity): boolean {
 export function packName(pack: string): string {
   if (pack === GLOBAL_PACK_NAME) return t("Global pack");
   if (pack === COSMETIC_PACK) return t("Cosmetic pack");
+  if (pack === DUNGEON_ENEMY_PACK) return t("Enemy pack");
+  if (pack === DUNGEON_BOSS_PACK) return t("Boss pack");
+  if (pack === DUNGEON_RANDOM_PACK) return t("Random pack");
+  if (pack === DUNGEON_FILTER_PACK) return t("Card pack");
   return t("{set} pack", { set: t(pack) });
 }
 
@@ -165,6 +177,55 @@ export function playStinger(rarity: PrintedRarity): void {
       audio.playSfx("entrance", { mythic: true });
       return;
   }
+}
+
+/** How long a variant-level grant reveal holds the card's previous look before it wipes into the new level. */
+export const GRANT_BEFORE_MS = 700;
+/** How long a variant-level grant reveal's wipe into the new level takes; `grantReveal.css` reads it as `--grant-wipe`. */
+export const GRANT_WIPE_MS = 600;
+/** How long a full-screen grant moment holds under `bigMoments` "short": half the takeover's hold (R2785000). */
+export const GRANT_TAKEOVER_SHORT_MS = 500;
+
+/**
+ * How a variant-level grant is staged, by the level's own rarity (R3349000, R1333000): Rare and Epic
+ * play on the panel, Legendary dims it and grows the card in, Mythic takes the screen.
+ */
+export type GrantTreatment = "panel" | "grow" | "takeover";
+export const GRANT_TREATMENT: Readonly<Record<CosmeticRarity, GrantTreatment>> = {
+  Common: "panel",
+  Rare: "panel",
+  Epic: "panel",
+  Legendary: "grow",
+  Mythic: "takeover",
+};
+
+/**
+ * A chase buy takes the screen from Legendary up (R3349000): a Legendary or Mythic chase plays the
+ * takeover, any other grant its own rarity's treatment.
+ */
+export function treatmentOf(rarity: CosmeticRarity, chase: boolean): GrantTreatment {
+  if (rarity === "Mythic" || (chase && rarity === "Legendary")) return "takeover";
+  return GRANT_TREATMENT[rarity];
+}
+
+/**
+ * Grants rarest last, ties keeping their order, so several grants at once reveal in that order while a
+ * pack's own pulls keep the pack's (R3349000): only grant queues are sorted, never pack slots.
+ */
+export function orderGrantsRarestLast<T extends { rarity: CosmeticRarity }>(items: readonly T[]): T[] {
+  return items
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => RARITY_ORDER.indexOf(a.item.rarity) - RARITY_ORDER.indexOf(b.item.rarity) || a.index - b.index)
+    .map(({ item }) => item);
+}
+
+/**
+ * A Legendary pull's flare on its sealed tile: gold rays with a rising burst, mirroring `revealCues`'
+ * Legendary entry, played once the pack tears and before any flip (R3349000).
+ */
+export function legendaryFlareCues(testid: string, intensity: number): FxCue[] {
+  const at = tid(testid);
+  return [raysCue(PACK_RAYS_MS, "legendary", at, 0), tunedBurst(intensity, "gold", at, "area", 0, PACK_BURSTS.Legendary)];
 }
 
 export function revealCues(rarity: PrintedRarity, testid: string, intensity: number): FxCue[] {

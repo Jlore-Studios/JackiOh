@@ -781,11 +781,12 @@ async fn r2949000_r3015005_a_pick_listing_an_augment_is_400_and_writes_nothing()
     );
 }
 
-/// The checks every one of #2940's to #2944's parts runs on its versions (R3015005): each not offered on
-/// Speciesist though owned there; `unowned` offered on `card` and not owned; `owned` offered and owned there, and
-/// round-tripping, an augment beside it refused; `skipped`, a level of `owned`'s ladder above it, not owned; and an
-/// upload of `upload` on Speciesist left out.
+/// The checks every one of #2940's to #3017's parts runs on its versions (R3015005): each not offered on `bare`
+/// (Speciesist but for part 6's) though owned there; `unowned` offered on `card` and not owned; `owned` offered and
+/// owned there, and round-tripping, an augment beside it refused; `skipped`, a level of `owned`'s ladder above it,
+/// not owned; and an upload of `upload` on `bare` left out.
 async fn a_part_s_versions(
+    bare: &str,
     versions: &[&str],
     card: &str,
     unowned: &str,
@@ -797,7 +798,7 @@ async fn a_part_s_versions(
     let profile = profile_id_of(&app, USER).await;
     let nothing = json!({ "cards": [] });
     for id in versions {
-        own(&app, &profile, BARE, id).await;
+        own(&app, &profile, bare, id).await;
     }
     for id in owned.iter().chain(&["augment-animated", "augment-signature"]) {
         own(&app, &profile, card, id).await;
@@ -805,7 +806,7 @@ async fn a_part_s_versions(
     let calls = record_store_calls(&app).await;
     let refused = versions
         .iter()
-        .map(|id| (json!({ "cardId": BARE, "fullArt": id }), NOT_OFFERED))
+        .map(|id| (json!({ "cardId": bare, "fullArt": id }), NOT_OFFERED))
         .chain([
             (json!({ "cardId": card, "fullArt": unowned }), NOT_OWNED),
             (json!({ "cardId": card, "fullArt": skipped }), NOT_OWNED),
@@ -847,7 +848,7 @@ async fn a_part_s_versions(
         assert_eq!(get(&app, Some(TOKEN)).await, (200, worn.clone()), "{id}");
     }
     // An upload leaves an unoffered version out, and with it the entry that held only that.
-    let (status, body) = upload(&app, TOKEN, json!([{ "cardId": BARE, "fullArt": upload_id }])).await;
+    let (status, body) = upload(&app, TOKEN, json!([{ "cardId": bare, "fullArt": upload_id }])).await;
     assert_eq!((status, body), (200, worn));
 }
 
@@ -858,6 +859,7 @@ const ALL_SIX: &str = "core-083";
 async fn r2940000_a_version_not_offered_is_400_and_writes_nothing() {
     // R3015000: Alt full art is Alt art's second level, its signed level above its animated one.
     a_part_s_versions(
+        BARE,
         &["version-alt-art", "version-sketch", "version-alt-full-art"],
         ALL_SIX,
         "version-alt-art",
@@ -874,6 +876,7 @@ const ALL_THREE: &str = "meditativeplus-026";
 #[tokio::test]
 async fn r2942000_r2942002_a_version_not_offered_or_an_augment_beside_one_is_400_and_writes_nothing() {
     a_part_s_versions(
+        BARE,
         &["version-extended-art", "version-pixel", "version-comic"],
         ALL_THREE,
         "version-extended-art",
@@ -890,6 +893,7 @@ const PART_FOUR: &str = "classic-080";
 #[tokio::test]
 async fn r2943000_r2943002_a_version_not_offered_or_an_augment_beside_one_is_400_and_writes_nothing() {
     a_part_s_versions(
+        BARE,
         &["version-set-showcase", "version-out-of-frame"],
         PART_FOUR,
         "version-set-showcase",
@@ -906,12 +910,41 @@ const PART_FIVE: &str = "core-100";
 #[tokio::test]
 async fn r2944000_r2944002_a_version_not_offered_or_an_augment_beside_one_is_400_and_writes_nothing() {
     a_part_s_versions(
+        BARE,
         &["version-immersive", "version-prismatic"],
         PART_FIVE,
         "version-prismatic",
         &["version-immersive"],
         "version-immersive-animated",
         "version-prismatic",
+    )
+    .await;
+}
+
+/// R3017001: each of #3017's pairs splits every card between its two, so Speciesist and Scratch Pad between them
+/// are offered all six: Scratch Pad Night, Stained-glass window and Tarot card, Speciesist the other three.
+const PART_SIX: &str = "meditativeplus-026";
+
+#[tokio::test]
+async fn r3017000_a_part_six_level_not_offered_is_400_and_writes_nothing() {
+    a_part_s_versions(
+        BARE,
+        &["version-night", "version-stained-glass", "version-tarot"],
+        PART_SIX,
+        "version-tarot",
+        &["version-night", "version-stained-glass"],
+        "version-night-animated",
+        "version-night",
+    )
+    .await;
+    a_part_s_versions(
+        PART_SIX,
+        &["version-neon", "version-watercolor", "version-woodcut"],
+        BARE,
+        "version-woodcut",
+        &["version-neon", "version-watercolor"],
+        "version-neon-animated",
+        "version-neon",
     )
     .await;
 }
@@ -1033,4 +1066,64 @@ async fn r3015005_a_pick_names_one_owned_offered_level() {
     );
     assert!(loadout.card(OFFERED).is_some_and(|card| card.augments.is_empty()));
     assert_eq!(loadout.card(BARE), None);
+}
+
+/// R3343000: a card whose Default draws Full art's first level: Ceaseless Void, a Mythic Unit.
+const MYTHIC: &str = "core-100";
+/// R3343000: a card whose Default draws Extended art's first level: Silly Silas, a Legendary Unit.
+const LEGENDARY: &str = "core-052";
+/// R3343000: one of the 21 full-art cards that is a Mythic, whose `true` names Full art's first level (R2655000):
+/// Dice of Doom, a Mythic Spell.
+const MYTHIC_FULL_ART_CARD: &str = "stinkyscape-154";
+/// Its still Epic full art (`cosmetics.json`'s `full-art-dice-of-doom`).
+const FULL_ART_OF_DICE_OF_DOOM: &str = "full-art-dice-of-doom";
+
+#[tokio::test]
+async fn r3343000_a_default_look_is_no_pick_and_its_owners_keep_their_rows() {
+    let app = test_app().await;
+    let profile = profile_id_of(&app, USER).await;
+    let nothing = json!({ "cards": [] });
+    // Rows of each card's default look, as written before #3343, and Dice of Doom's still Epic full art, which owns
+    // Full art's first level there (R3015006).
+    own(&app, &profile, MYTHIC, "version-full-art").await;
+    own(&app, &profile, LEGENDARY, "version-extended-art").await;
+    own(&app, &profile, MYTHIC_FULL_ART_CARD, FULL_ART_OF_DICE_OF_DOOM).await;
+    // The Default already draws it there, so no pick names it, owned as it is: a 400, and nothing is written.
+    for body in [
+        json!({ "cardId": MYTHIC, "fullArt": "version-full-art" }),
+        json!({ "cardId": LEGENDARY, "fullArt": "version-extended-art" }),
+        json!({ "cardId": MYTHIC_FULL_ART_CARD, "fullArt": true }),
+    ] {
+        assert_eq!(
+            refusal(put(&app, TOKEN, body.clone()).await),
+            NOT_OFFERED,
+            "{body}"
+        );
+        assert_eq!(get(&app, Some(TOKEN)).await, (200, nothing.clone()), "{body}");
+    }
+    // Their rows stand, and the account reads them as it did (R1313000).
+    let (status, _, owned) = call(&app, "GET", "/api/cosmetics", Some(TOKEN), Value::Null).await;
+    assert_eq!(
+        (status, owned),
+        (
+            200,
+            json!({ "cards": [
+                { "cardId": LEGENDARY, "cosmeticId": "version-extended-art" },
+                { "cardId": MYTHIC, "cosmeticId": "version-full-art" },
+                { "cardId": MYTHIC_FULL_ART_CARD, "cosmeticId": FULL_ART_OF_DICE_OF_DOOM },
+            ], "account": [] })
+        )
+    );
+    // The level above the default look is a pick once it is owned, and not before.
+    let animated = json!({ "cardId": MYTHIC, "fullArt": "version-full-art-animated" });
+    assert_eq!(refusal(put(&app, TOKEN, animated.clone()).await), NOT_OWNED);
+    assert_eq!(get(&app, Some(TOKEN)).await, (200, nothing));
+    own(&app, &profile, MYTHIC, "version-full-art-animated").await;
+    let (status, body) = put(&app, TOKEN, animated).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(
+        body,
+        json!({ "cards": [{ "cardId": MYTHIC, "fullArt": "version-full-art-animated" }] })
+    );
+    assert_eq!(get(&app, Some(TOKEN)).await, (200, body));
 }

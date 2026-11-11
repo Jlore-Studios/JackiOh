@@ -17,7 +17,6 @@ import { EmptyState } from "../../empty/EmptyState.tsx";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import type { DecksResponse } from "../../net/api.ts";
 import { navigate, paths, practiceDeckPath, useSearch, wantsNewDeck } from "../../net/navigate.ts";
-import { BackLink } from "../../routes/nav.tsx";
 import { deckChanges, type NewestChanges } from "../../patches/deckChanges.ts";
 import { useShortcutHints } from "../../shortcuts/Kbd.tsx";
 import { ariaKeyshortcuts, SHORTCUTS, shortcutTitle } from "../../shortcuts/shortcuts.ts";
@@ -51,6 +50,8 @@ import {
   DECK_CAP_REASON,
   DECK_IMPORT_OPEN,
   DECK_LIST,
+  DECK_LIST_EMPTY,
+  DECK_LIST_EMPTY_NEW,
   DECK_NEW,
   DECK_REDO,
   DECK_UNDO,
@@ -68,6 +69,7 @@ import {
   trioRowId,
 } from "./testids.ts";
 import TrioEditor from "./TrioEditor.tsx";
+import { WorkshopFrame } from "./WorkshopFrame.tsx";
 import { copyName, deckLabel, deckStatus, deckVerdict, nextName, trioLabel, trioVerdict } from "./workshop.ts";
 
 /** Keep this layout breakpoint aligned with workshop.css's `@media (max-width: 1100px)`. */
@@ -171,7 +173,7 @@ function Rail(props: RailProps): ReactElement {
           <div className="ws-group-actions">
             <button
               type="button"
-              className="ws-action ws-action--primary"
+              className="ws-action button-primary"
               data-testid={DECK_NEW}
               disabled={decksAtCap}
               aria-describedby={decksAtCap ? deckReason : undefined}
@@ -181,7 +183,7 @@ function Rail(props: RailProps): ReactElement {
             </button>
             <button
               type="button"
-              className="ws-action"
+              className="ws-action button-secondary"
               data-testid={DECK_IMPORT_OPEN}
               aria-current={open?.kind === "import" ? "true" : undefined}
               onClick={() => {
@@ -219,7 +221,13 @@ function Rail(props: RailProps): ReactElement {
             />
           ))}
         </ul>
-        {decks.length === 0 ? <p className="ws-hint">{t("No decks yet. Make one, or import a code someone shared.")}</p> : null}
+        {decks.length === 0 ? (
+          <EmptyState
+            text={t("No decks yet. Make one, or import a code someone shared.")}
+            testId={DECK_LIST_EMPTY}
+            action={{ label: t("New deck"), onPress: onNewDeck, testId: DECK_LIST_EMPTY_NEW }}
+          />
+        ) : null}
       </section>
 
       <section className="ws-group" aria-labelledby={triosTitle}>
@@ -233,7 +241,7 @@ function Rail(props: RailProps): ReactElement {
           <div className="ws-group-actions">
             <button
               type="button"
-              className="ws-action"
+              className="ws-action button-secondary"
               data-testid={TRIO_NEW}
               disabled={triosAtCap}
               aria-describedby={triosAtCap ? trioReason : undefined}
@@ -244,7 +252,7 @@ function Rail(props: RailProps): ReactElement {
             {/* R340: never off at a cap — the panel says exactly how many slots an import needs. */}
             <button
               type="button"
-              className="ws-action"
+              className="ws-action button-secondary"
               data-testid={TRIO_IMPORT_OPEN}
               aria-current={open?.kind === "trio-import" ? "true" : undefined}
               onClick={() => {
@@ -754,14 +762,16 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   }
 
   return (
-    <div className="app-shell app-shell--wide tavern deckbuilder workshop" data-testid={WORKSHOP} data-view={view}>
-      <header className="db-header">
-        <BackLink to={paths.collection} title={<h1 className="db-title">{t("Decks")}</h1>}>
+    <WorkshopFrame
+      testId={WORKSHOP}
+      view={view}
+      bar={
+        <>
           {openDeck === null ? null : (
             <div className="ws-history">
               <button
                 type="button"
-                className="ws-history-button"
+                className="ws-history-button button-secondary"
                 data-testid={DECK_UNDO}
                 aria-label={t("Undo")}
                 title={shortcutTitle(t("Undo"), SHORTCUTS.undo, hints)}
@@ -777,7 +787,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
               </button>
               <button
                 type="button"
-                className="ws-history-button"
+                className="ws-history-button button-secondary"
                 data-testid={DECK_REDO}
                 aria-label={t("Redo")}
                 title={shortcutTitle(t("Redo"), SHORTCUTS.redo, hints)}
@@ -802,9 +812,9 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
             />
           )}
           <SyncStatusLine status={snapshot.status} />
-        </BackLink>
-      </header>
-
+        </>
+      }
+    >
       <div className="ws-layout">
         <Rail
           railRef={railRef}
@@ -823,6 +833,6 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         </main>
       </div>
       <UndoToast held={held} onUndo={undoDeletion} />
-    </div>
+    </WorkshopFrame>
   );
 }

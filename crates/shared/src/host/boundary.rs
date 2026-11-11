@@ -11,6 +11,7 @@ use jackioh_engine::{LeanPick, PlayerId, PlayerView};
 use super::again::{AgainBook, AgainClaim, AgainSeen, in_again_window};
 use super::duel::{DuelHost, DuelSetup};
 use super::duos::{DuosHost, DuosHostEvent, DuosHostOutput, DuosSetup, step_duos};
+use super::practice::boundary::{PracticeAnswer, PracticeCall};
 use super::rematch::{
     OfferFacts, OfferOutcome, RematchBook, RematchRefusal, RematchSeen, RematchStakes, check_offer,
     in_rematch_window,
@@ -157,6 +158,8 @@ pub enum HostCall {
         now: i64,
         live: Vec<String>,
     },
+    /// A call of the practice session (#3099), tagged `op` beside this one's `call`.
+    Practice(Box<PracticeCall>),
 }
 
 /// What a [`HostCall`] answers.
@@ -220,6 +223,8 @@ pub enum HostAnswer {
         book: RematchBook,
         removed: usize,
     },
+    /// The answer to a [`HostCall::Practice`], tagged `reply` beside this one's `answer`.
+    Practice(Box<PracticeAnswer>),
 }
 
 /// The one function behind the boundary.
@@ -342,6 +347,7 @@ pub fn apply(call: HostCall) -> HostAnswer {
             let removed = book.sweep(now, |id| live.iter().any(|live| live == id));
             HostAnswer::Swept { book, removed }
         }
+        HostCall::Practice(call) => HostAnswer::Practice(Box::new(super::practice::boundary::apply(*call))),
     }
 }
 
@@ -361,8 +367,15 @@ pub struct DecideCall {
 }
 
 /// Runs the decision of `call` under the catalog the caller registered; `should_stop` is the host's
-/// wall-clock cap from `request.deadline_ms` (none: the search ends at the strength's budget). `None` when
-/// no bot plays at the request's home.
-pub fn decide(call: &DecideCall, should_stop: Option<&dyn Fn() -> bool>) -> Option<BotChoice> {
-    call.host.job(&call.request).map(|job| job.run(should_stop))
+/// wall-clock cap from `request.deadline_ms` (none: the search ends at the strength's budget) and
+/// `wrap_up` its earlier stop for the search's beam (R3498000, `DecideJob::run`). `None` when no bot plays
+/// at the request's home.
+pub fn decide(
+    call: &DecideCall,
+    should_stop: Option<&dyn Fn() -> bool>,
+    wrap_up: Option<&dyn Fn() -> bool>,
+) -> Option<BotChoice> {
+    call.host
+        .job(&call.request)
+        .map(|job| job.run(should_stop, wrap_up))
 }

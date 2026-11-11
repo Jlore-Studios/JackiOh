@@ -73,7 +73,7 @@ describe("R3024000 a mailed link waits for a press", () => {
     ["email_change", "Confirm your new email", "Confirm my email"],
   ])("R3024000 a %s link says what it is for", (type, title, label) => {
     open(type);
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(title);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(title);
     expect(button()).toHaveTextContent(label);
   });
 

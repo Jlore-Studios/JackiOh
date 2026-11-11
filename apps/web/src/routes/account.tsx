@@ -4,7 +4,7 @@
 // pending account, which that route refuses (403 `account_pending`), is shown from the gate's
 // `/api/auth/me` read, with the way on: an invite code. The username is R1435's and R1436's; the
 // shop lives on `/shop` (#1580, R1580000); this screen links no other menu (R1646000).
-// R2778000: the rank, season record and badges show for Constructed, then All Random, each its own
+// R2778000: the rank, season record and badges show for Constructed, then All random, each its own
 // `GET /api/ranked` read.
 
 import {
@@ -44,12 +44,14 @@ import {
 import { hasLinkResult } from "../auth/redirect.ts";
 import ChangeEmail from "../settings/ChangeEmail.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 import TwoStepSettings from "../auth/TwoStepSettings.tsx";
 import LinkedAccounts from "../auth/LinkedAccounts.tsx";
 import { useSecondsUntil } from "../auth/cooldown.ts";
 import Username from "../auth/Username.tsx";
 import UsernameField, { nextChangeSentence } from "../auth/UsernameField.tsx";
 import { attempt, messageOf } from "../net/errors.ts";
+import { Dialog } from "../game/Dialog.tsx";
 
 import "../auth/tavern.css";
 import "./account.css";
@@ -65,7 +67,7 @@ export const accountTestid = {
   /** R2255000: this season's ranked win–loss–draw record, under the rank line; absent at 0 games. */
   seasonRecord: "account-season-record",
   badges: "account-badges",
-  /** R2778000: the All Random ladder's rank line, season record and badges, under the Constructed ones above. */
+  /** R2778000: the All random ladder's rank line, season record and badges, under the Constructed ones above. */
   randomRank: "account-random-rank",
   randomSeasonRecord: "account-random-season-record",
   randomBadges: "account-random-badges",
@@ -85,6 +87,8 @@ export const accountTestid = {
   deleteConfirm: "account-delete-confirm",
   deleteCancel: "account-delete-cancel",
   deleteError: "account-delete-error",
+  /** R3221000: the question "Delete my account" opens, an alertdialog on Dialog.tsx. */
+  deleteDialog: "account-delete-dialog",
   /** R1300000: the account secret ID, hidden until "Show account secret ID", and its copy button. */
   secretIdShow: "account-secret-id-show",
   secretId: "account-secret-id",
@@ -246,7 +250,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
   const leaving = useSigningOut();
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [rank, setRank] = useState<OwnRankResponse | null>(null);
-  // R2778000: the All Random ladder's, read beside it.
+  // R2778000: the All random ladder's, read beside it.
   const [randomRank, setRandomRank] = useState<OwnRankResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -285,13 +289,10 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
 
   return (
     <div className="app-shell tavern account-screen one-screen" data-testid={accountTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Account")} />
 
       <section className="panel panel--auth one-screen__frame">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Your account")}</h2>
+        <Wordmark />
         <div className="one-screen__body one-screen__stack">
           {error !== null ? (
             <>
@@ -339,17 +340,17 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
             <>
               <AccountIdentity email={profile.email} status={profile.status} />
 
-              <h3 className="account-heading">{t("Rank")}</h3>
+              <h2 className="account-heading">{t("Rank")}</h2>
               {rank !== null ? (
                 <>
-                  <h4 className="account-heading">{t("Constructed")}</h4>
+                  <h3 className="account-heading">{t("Constructed")}</h3>
                   <LadderRank
                     rank={rank}
                     testids={{ rank: accountTestid.rank, seasonRecord: accountTestid.seasonRecord, badges: accountTestid.badges }}
                   />
                   {randomRank !== null ? (
                     <>
-                      <h4 className="account-heading">{t("All Random")}</h4>
+                      <h3 className="account-heading">{t("All random")}</h3>
                       <LadderRank
                         rank={randomRank}
                         testids={{
@@ -373,7 +374,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
                 </>
               ) : null}
 
-              <h3 className="account-heading">{t("Record")}</h3>
+              <h2 className="account-heading">{t("Record")}</h2>
               <div className="stat-row">
                 <div className="stat">
                   <span className="stat-value" data-testid={accountTestid.winRate}>
@@ -543,8 +544,7 @@ function DeleteAccount({ token }: { token: string }): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const confirmed = typed.trim().toUpperCase() === DELETE_CONFIRM_WORD;
 
-  const onConfirm = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
+  const confirmDelete = (): void => {
     if (!confirmed || busy) return;
     setBusy(true);
     setError(null);
@@ -557,74 +557,77 @@ function DeleteAccount({ token }: { token: string }): ReactElement {
         setError(messageOf(cause));
       });
   };
+  const onConfirm = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    confirmDelete();
+  };
+  const cancel = (): void => {
+    setAsking(false);
+    setTyped("");
+    setError(null);
+  };
 
+  // R3221000: the question is an alertdialog on Dialog.tsx, its Cancel first and the deletion last; the
+  // start button stays under it, so the focus goes back to it on close.
   return (
     <div className="account-delete">
+      <div className="account-actions">
+        <button
+          type="button"
+          className="link-button account-delete__start"
+          data-testid={accountTestid.deleteStart}
+          onClick={() => {
+            setAsking(true);
+          }}
+        >
+          {t("Delete my account")}
+        </button>
+      </div>
       {asking ? (
-        <form className="form-card account-delete__form" onSubmit={onConfirm} noValidate>
-          <p>
-            {t("This deletes your account for good and signs this device out. You can't undo it.")}
-          </p>
-          <label htmlFor="account-delete-input">{t("Type {word} to confirm", { word: DELETE_CONFIRM_WORD })}</label>
-          <input
-            id="account-delete-input"
-            data-testid={accountTestid.deleteInput}
-            type="text"
-            autoComplete="off"
-            autoCapitalize="characters"
-            autoCorrect="off"
-            spellCheck={false}
-            autoFocus
-            value={typed}
-            disabled={busy}
-            onChange={(event) => {
-              setTyped(event.target.value);
-            }}
-          />
-          {error !== null ? (
-            <p className="notice" data-testid={accountTestid.deleteError} role="alert">
-              {t(error)}
-            </p>
-          ) : null}
-          <div className="account-actions">
-            <button
-              type="submit"
-              className="account-delete__confirm"
-              data-testid={accountTestid.deleteConfirm}
-              disabled={!confirmed || busy}
-              aria-busy={busy}
-            >
-              {busy ? t("Deleting…") : t("Delete my account for good")}
-            </button>
-            <button
-              type="button"
-              className="link-button"
-              data-testid={accountTestid.deleteCancel}
+        <Dialog
+          role="alertdialog"
+          testid={accountTestid.deleteDialog}
+          title={t("Delete your account?")}
+          description={t("This deletes your account for good and signs this device out. You can't undo it.")}
+          onClose={() => {
+            if (!busy) cancel();
+          }}
+          cancel={{ label: t("Cancel"), kind: "secondary", testid: accountTestid.deleteCancel, disabled: busy }}
+          actions={[
+            {
+              label: busy ? t("Deleting…") : t("Delete my account for good"),
+              kind: "danger",
+              onClick: confirmDelete,
+              testid: accountTestid.deleteConfirm,
+              disabled: !confirmed || busy,
+              busy,
+            },
+          ]}
+        >
+          <form className="form-card account-delete__form" onSubmit={onConfirm} noValidate>
+            <label htmlFor="account-delete-input">{t("Type {word} to confirm", { word: DELETE_CONFIRM_WORD })}</label>
+            <input
+              id="account-delete-input"
+              data-testid={accountTestid.deleteInput}
+              type="text"
+              autoComplete="off"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              value={typed}
               disabled={busy}
-              onClick={() => {
-                setAsking(false);
-                setTyped("");
-                setError(null);
+              onChange={(event) => {
+                setTyped(event.target.value);
               }}
-            >
-              {t("Cancel")}
-            </button>
-          </div>
-        </form>
-      ) : (
-        <div className="account-actions">
-          <button
-            type="button"
-            className="link-button account-delete__start"
-            data-testid={accountTestid.deleteStart}
-            onClick={() => {
-              setAsking(true);
-            }}
-          >
-            {t("Delete my account")}
-          </button>
-        </div>
-      )}
+            />
+            {error !== null ? (
+              <p className="notice" data-testid={accountTestid.deleteError} role="alert">
+                {t(error)}
+              </p>
+            ) : null}
+          </form>
+        </Dialog>
+      ) : null}
     </div>
   );
 }

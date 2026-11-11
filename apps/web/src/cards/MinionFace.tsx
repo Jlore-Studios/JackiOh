@@ -1,4 +1,4 @@
-// The board minion (docs/polish/6-cards.md, Surface B "MinionFace DOM"): oval portrait, cost, name plate,
+// The board minion (docs/polish/6-cards.md, Surface B "MinionFace DOM"): art up to the frame, cost, name plate,
 // attack, health, keyword chips, Divine Shield bubble, Taunt frame. The board's tests and e2e read
 // `.stats`, `.stat-attack[data-attack]`, `.stat-health[data-health][data-max-health]` (text "health/max",
 // BUILD M5-T1), `.stat-armor[data-armor]`, `.keywords .keyword[data-keyword][data-n][title]`, `.shield-icon`.
@@ -22,20 +22,35 @@
 // R3046000: a full-art unit (fullArt.ts `boardLookOf`: the card, its owner's pick and the setting say so, as they do for
 // a full face) lays its art across the face, `data-full-art`, still, with the name plate a band below the art, the
 // attack and health gems on the art's lower corners and the cost gem, chips, marks and states over it (cards.css).
-// A unit that is not full art keeps its oval window.
+// #3341: a unit that is not full art draws its art up to the frame as well (the panel's top and sides, down to half a gem
+// above its foot), the name plate and the gems laid over its edges, and a rarity ring at its rim, not an oval in a box.
 // R3013002: and its card's proficiency stamp, as CardFace does, at the minion's right edge over the name plate.
+// R3340000: its art moves while it holds a motion slot, when its card wears an animated or signed level and when it is a Mythic,
+// ranked by the pointer, focus and the attack in flight (`useArtMotion`, motionSlots.ts), and answers the pointer, a press and
+// `attackDeclared` (artLive.ts, `data-art-hover`, `data-art-attacking`); its art wears cracks for the health it is missing, a
+// glow in its card's colours when buffed and frost when frozen (`wear`, art/ArtWear.tsx), from the view's numbers and keywords alone.
+// R3335000: a launched Starship's art wears its seat's Starship look, as CardFace's does.
+// R3334000: a Dormant Starship with pieces idles in its shipyard over its picture (ShipyardIdle.tsx).
+// R3350000: while it moves, a Mythic's normal picture with a diorama (art/dioramas/) draws every slice of it, each on its
+// loop, stacked in its window (CardArt's `diorama` "all") in place of its live layers: the window answers a hover and a
+// press as one image does (R3340000), and on an attack its slices over the farthest swing as a subject does (artLive.css).
 
 import { useRef, type ReactElement } from "react";
 
 import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/shared";
 
 import { CardArt } from "./art/index.ts";
+import { dioramaOf } from "./art/dioramas/index.ts";
+import { damageLevel } from "./art/wear.ts";
+import { shipArtOf } from "./art/stinkyscape.ts";
 import { CardStates } from "./CardStates.tsx";
 import { costDigits, hasCrest } from "./CardFace.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { useCosmeticAttributes } from "./cosmetics.ts";
+import { useArtLive } from "./artLive.ts";
+import { cosmeticAttributes, useArtMotion, useCosmeticAppearance, useStarshipLook } from "./cosmetics.ts";
+import { slotRarityOf } from "./motionSlots.ts";
 import { useFitText } from "./fit.ts";
-import { boardLookOf, useCardLook } from "./fullArt.ts";
+import { artMotionOf, boardLookOf, boardNameOf, useCardLook } from "./fullArt.ts";
 import { KEYWORD_MARK } from "./keywordMarks.ts";
 import { Icon } from "./icons.tsx";
 import { DormantSeal, dormantAttr } from "./DormantSeal.tsx";
@@ -46,6 +61,7 @@ import { foilFor, frameRarity } from "./frame.ts";
 import type { FaceModel, StateBadgeKind } from "./model.ts";
 import { ProficiencyStamp } from "./ProficiencyStamp.tsx";
 import { useCardSettings } from "./settings.ts";
+import { ShipyardIdle } from "./ShipyardIdle.tsx";
 import { artPictureOf } from "./versions.ts";
 import { useCardStamp } from "./stamps.ts";
 
@@ -64,6 +80,8 @@ export type MinionFaceProps = {
    * card), so the face keeps its whole width for the name, art, cost, attack and health.
    */
   keywordsOffFace?: boolean;
+  /** R3340000: this unit's `attackDeclared` is playing (Card.tsx): its art swings toward its target and it ranks first for a motion slot. */
+  attacking?: boolean;
 };
 
 /** The states the minion's keyword treatments already draw (Brittle's cracks, the Animated cog). */
@@ -111,6 +129,8 @@ export function KeywordIcons({
         <span
           key={`${keywordKey(keyword)}-${index}`}
           className="keyword keyword-icon"
+          role="img"
+          aria-label={wordsOf(keyword)}
           data-keyword={keyword.kind}
           data-n={"n" in keyword ? keyword.n : undefined}
           data-chip={shown.includes(keyword) ? undefined : "hidden"}
@@ -121,7 +141,12 @@ export function KeywordIcons({
         </span>
       ))}
       {folded.length > 0 && (
-        <span className="cf-kw-more" title={folded.map(wordsOf).join(join)}>
+        <span
+          className="cf-kw-more"
+          role="img"
+          aria-label={folded.map(wordsOf).join(join)}
+          title={folded.map(wordsOf).join(join)}
+        >
           +{folded.length}
         </span>
       )}
@@ -135,24 +160,56 @@ function fxAttributesOf(plan: readonly KeywordFxPlan[], kind: Keyword["kind"]): 
   return entry === undefined ? {} : keywordFxAttributes(entry);
 }
 
-export function MinionFace({ face, unit, className, worn = false, keywordsOffFace = false }: MinionFaceProps): ReactElement {
+export function MinionFace({ face, unit, className, worn = false, keywordsOffFace = false, attacking = false }: MinionFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
-  const cosmetics = useCosmeticAttributes(face, worn, settings.animatedFoil);
   const stamp = useCardStamp(face, worn);
+  // R3335000: a launched Starship wears the viewer's own Starship picks, or its seat's below a `TheirCopy`.
+  const starshipLook = useStarshipLook(worn);
   const plan = keywordFxPlan(unit);
-  // R3046000: the look a full-art unit wears, still (null: the oval window).
+  // R3046000, R3339000: the look a full-art unit wears, still (null: the art up to the frame).
   const cardLook = useCardLook(face.defId, worn);
   const look = boardLookOf(face, cardLook);
+  const { artFirst, staticName } = boardNameOf(face, cardLook, settings.boardNames);
   const dormant = dormantAttr(face.dormant);
   const nameRef = useRef<HTMLSpanElement>(null);
-  useFitText(nameRef, face.name);
+  // The hover plate is fitted as the static plate is: the name it shows is whole, or ends in an ellipsis at the floor.
+  useFitText(nameRef, staticName ? face.name : `hover ${face.name}`);
 
   const attackTone = face.stats?.attackTone ?? "base";
   const healthTone = face.stats?.healthTone ?? "base";
 
+  // R3340000: its art moves for an animated or signed level and for a Mythic, in a slot ranked by the pointer, focus or an
+  // attack in flight first, then its rarity (motionSlots.ts); a hovered or attacking unit claims one to answer in.
+  const faceRef = useRef<HTMLSpanElement>(null);
+  const rarity = frameRarity(face);
+  const cosmeticAppearance = useCosmeticAppearance(face, worn);
+  const artMoves = cardLook.animated || rarity === "Mythic";
+  const live = useArtLive(faceRef, true);
+  const engaged = live.hovered || attacking;
+  // R3334000, R3340000: the shipyard idle is another use of this face's one ranked, visible motion decision, not a
+  // second unranked claim of its own. A populated Dormant Starship is Legendary, so it remains eligible at Fx Low.
+  const shipyardIdle = face.starship !== null && !face.starship.launched && face.starship.list.length > 0;
+  const faceMotion = useArtMotion(
+    (artMoves || engaged || shipyardIdle || cosmeticAppearance.animates) && settings.animatedFoil && live.onScreen,
+    { hovered: engaged, rarity: slotRarityOf(rarity) },
+  );
+  const motion = faceMotion.moving && (artMoves || engaged) ? artMotionOf(face.defId) : null;
+  const picture = look !== null ? artPictureOf(look.version, face.set) : artFirst ? artPictureOf(cardLook.version, face.set) : "normal";
+  const ship = shipArtOf(face.defId, unit);
+  // R3350000: a moving Mythic with a diorama draws its slices, each on its own loop (and its art's motion where it has one, a
+  // token printed Mythic having none), in place of its live layers.
+  const diorama = faceMotion.moving && (artMoves || engaged) && picture === "normal" && ship === null && dioramaOf(face.defId) !== null;
+  const cosmetics = cosmeticAttributes(cosmeticAppearance, faceMotion.moving);
+  // R3340000: what its art wears: cracks for the health it is missing, a glow when buffed, frost when frozen (the view's own).
+  const damage = damageLevel(unit.health, unit.maxHealth);
+  const buffed = attackTone === "buffed" || healthTone === "buffed";
+  const frozen = unit.frozen === true;
+  const wear = damage > 0 || buffed || frozen ? { damage, buffed, frozen } : null;
+
   return (
     <span
+      ref={faceRef}
       className={className === undefined ? "cf cf--minion" : `cf cf--minion ${className}`}
       data-layout="minion"
       data-card-type={face.type}
@@ -160,7 +217,12 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
       data-foil={foilFor(face, settings.animatedFoil, settings.rarityFoil)}
       data-radiant-face={face.radiant ? "true" : undefined}
       data-full-art={look === null ? undefined : "true"}
+      data-art-first={artFirst ? "true" : undefined}
       data-version={look?.version ?? undefined}
+      data-art-motion={artMoves || engaged ? (faceMotion.moving ? "animated" : "static") : undefined}
+      data-art-hover={live.hovered ? "true" : "false"}
+      data-art-response={faceMotion.enabled ? "true" : undefined}
+      data-art-attacking={attacking ? "true" : undefined}
       data-taunt={hasKeyword(unit.keywords, "Taunt") ? "true" : undefined}
       data-flying={hasKeyword(unit.keywords, "Flying") && unit.position !== "DEF" ? "true" : undefined}
       data-vanilla={unit.vanilla === true ? "true" : undefined}
@@ -176,10 +238,18 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             radiant={face.radiant}
             tags={face.tags}
             type={face.type}
-            shape={look === null ? "oval" : "full"}
+            shape={artFirst || look !== null ? "full" : "frame"}
             starship={face.starship}
-            picture={look === null ? "normal" : artPictureOf(look.version, face.set)}
+            look={starshipLook}
+            ship={ship}
+            picture={picture}
+            motion={motion}
+            live={motion !== null && !diorama}
+            diorama={diorama ? { slice: "all", moving: true } : null}
+            wear={wear}
           />
+          {/* R3334000, R3340000: the Dormant Starship's shipyard uses this face's one ranked, on-screen motion slot. */}
+          {face.starship != null && !face.starship.launched ? <ShipyardIdle list={face.starship.list} moving={faceMotion.moving} /> : null}
         </span>
 
         <KeywordFx plan={plan} />
@@ -200,9 +270,17 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
           </span>
         )}
 
-        <span className="card-name" ref={nameRef}>
-          {face.name}
-        </span>
+        {/* R3339000: the name is a plate that stays (smaller and translucent over an oval window's foot), or the hover plate:
+            transparent until hover or focus, in the accessibility tree all the while, so the name is read as it was. */}
+        {staticName ? (
+          <span className={look === null ? "card-name card-name-compact-translucent" : "card-name"} ref={nameRef}>
+            {face.name}
+          </span>
+        ) : (
+          <span className="card-name card-name-hover" ref={nameRef}>
+            {face.name}
+          </span>
+        )}
 
         {unit.vanilla === true && (
           <span className="cf-vanilla" title={t("Vanilla: its text is gone")}>
@@ -246,8 +324,8 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
         {/* #2435, R1839000: a Dormant card greyed and bound, under the state rail (DormantSeal.tsx). */}
         {dormant === undefined ? null : <DormantSeal />}
 
-        {/* R2801000: a Dormant Starship's hull, a plate bolted on for each piece fused into it. */}
-        {face.starship != null && !face.starship.launched ? <StarshipHull pieces={face.starship.pieces} /> : null}
+        {/* R2801000: a Dormant Starship's hull, a plate bolted on for each piece fused into it; R3333002: its module's icon. */}
+        {face.starship != null && !face.starship.launched ? <StarshipHull list={face.starship.list} /> : null}
 
         <CardStates face={face} omit={DRAWN_BY_TREATMENTS} />
 

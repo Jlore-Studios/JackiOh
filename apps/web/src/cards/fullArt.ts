@@ -12,7 +12,10 @@
 // maps it), worn where owned and offered, else the highest below it that is (`wornLevel`); R3015002: every full-art
 // level prints the full-art layout (`wearsFullArt`, `isFullBleed`).
 // R3046000: a board face prints full art too, a Unit's `MinionFace` and a face-up backrow card's compact `CardFace`: the
-// art across the face, still, with the name in a band below it (`boardLookOf`).
+// art across the face with the name in a band below it (`boardLookOf`). R3340000: it carries the look's animated and
+// signed flags, so the board face and the full face read one decision, and its art moves while it holds a motion slot.
+// R3343001: a Default level draws the card's default look (versions.ts `lookOn`): a Mythic's Full art while the setting
+// is on (so `wearsFullArt`), a Legendary's Extended art whatever it is.
 
 import { createContext, createElement, useContext, type ReactElement, type ReactNode } from "react";
 
@@ -31,17 +34,21 @@ import {
   type OwnedByCard,
 } from "./cosmetics.ts";
 import fullArtTokens from "./fullArtTokens.json";
+import { frameRarity } from "./frame.ts";
 import type { FaceModel } from "./model.ts";
-import { readCardSettings, useCardSettings } from "./settings.ts";
+import { CARD_SETTINGS_DEFAULTS, readCardSettings, useCardSettings, type BoardNamesOption } from "./settings.ts";
 import { isGlitch } from "./glitch.ts";
 import { getStored } from "../net/storage.ts";
 import {
+  DEFAULT_VARIANT,
   NORMAL_LOOK,
   VERSION_ANIMATED_ID,
   VERSION_FULL_ART_ID,
+  defaultLookOf,
   isFullBleed,
+  levelOf,
   levelOfPick,
-  lookOfLevel,
+  lookOn,
   offeredOn,
   wornLevel,
   type CardLook,
@@ -131,11 +138,14 @@ const FULL_ART_LEVELS: readonly string[] = Object.entries(COSMETIC_LEVELS)
 /**
  * R2725000: whether a copy of `defId` may wear full art at all: a full-art card, or one offered a level that adds the
  * full-art frame (R2940001: Alt full art; R3015002: the Sketch's full art), every level above it wearing it too;
- * never the Glitch.
+ * R3343001: or one whose default look is full bleed (a Mythic's Full art); never the Glitch.
  */
 export function wearsFullArt(defId: string): boolean {
   const source = fullArtSource(defId);
-  return isFullArtCard(defId) || (!isGlitch(defId) && FULL_ART_LEVELS.some((id) => offeredOn(id, source)));
+  return (
+    isFullArtCard(defId) ||
+    (!isGlitch(defId) && (isFullBleed(defaultLookOf(source)) || FULL_ART_LEVELS.some((id) => offeredOn(id, source))))
+  );
 }
 
 /**
@@ -252,7 +262,8 @@ export function FullArtShown({
  * setting is on, a full-art card's Full art), worn where offered and owned (R1313000, R2725001), else the highest below
  * it that is (`wornLevel`), as the server freezes it (R1834002). Any other copy wears the setting's, where every
  * cosmetic counts as owned. R1310004: with no ownership above it every level counts as owned on the cards it is
- * offered. R2655002: a listed token reads its parent's (`fullArtSource`).
+ * offered. R2655002: a listed token reads its parent's (`fullArtSource`). R3343001: a Default level draws the card's
+ * default look (`lookOn`), a full-bleed one only while the setting is on, every copy alike.
  */
 export function useCardLook(defId: string, worn: boolean = false): CardLook {
   const { fullArt } = useCardSettings();
@@ -266,37 +277,109 @@ export function useCardLook(defId: string, worn: boolean = false): CardLook {
   if (!allowed || isGlitch(defId)) return NORMAL_LOOK;
   const own = worn || ownCopy;
   if (!own && theirs !== null) {
-    if (!fullArt) return NORMAL_LOOK;
+    if (!fullArt) return lookOn(source, null, false);
     const entry = theirs.cards[source];
-    return lookOfLevel(wornLevel(levelOfPick(source, entry?.fullArt, entry?.augments), (id) => offeredOn(id, source)));
+    return lookOn(source, wornLevel(levelOfPick(source, entry?.fullArt, entry?.augments), (id) => offeredOn(id, source)), fullArt);
   }
   const showing = shown?.defId === source;
   const pick = own ? (showing ? shown.pick : stored.fullArt) : undefined;
   const augments = own ? ((showing ? shown.augments : stored.augments) ?? []) : [];
   const wears = (id: string): boolean => offeredOn(id, source) && (owned === "every" || (own && ownsCosmetic(owned, source, id)));
-  return lookOfLevel(wornLevel(levelOfPick(source, pick ?? fullArt, augments), wears));
+  return lookOn(source, wornLevel(levelOfPick(source, pick ?? fullArt, augments), wears), fullArt);
 }
 
 /**
  * R2725002: the tier a look printed as before #2725, the face's `data-full-art-tier`: the Full art version the Epic,
  * with Animated the Legendary and with both augments the Mythic; the normal face with Animated the Animated art; null
- * for the normal face otherwise.
+ * for the normal face otherwise. R3343001: a Default level drawing a default look reads as that look: a Mythic's Full
+ * art as Full art's, a Legendary's Extended art, moving, as the Animated art.
  */
 export function tierOfLook(look: CardLook): FullArtTier | null {
   if (look.version === VERSION_FULL_ART_ID) return look.animated ? (look.signed ? "Mythic" : "Legendary") : "Epic";
-  return look.version === null && look.animated ? "Animated" : null;
+  const defaultLevel = look.level === null || levelOf(look.level)?.variant === DEFAULT_VARIANT;
+  return defaultLevel && look.animated ? "Animated" : null;
 }
 
 /**
  * R3046000: the look a board face wears (a Unit's `MinionFace`, a face-up backrow card's compact `CardFace`) given the
  * `look` its full face would (`useCardLook`): where the full face prints full art (`showsFullArt`, any full-art level,
- * R3015002), that level's art, still: animation and a signature move and sign the art of a full face alone
- * (R2715000), so a board face lays the picture across itself and keeps its name in a band below it. Null where the
- * full face prints none, so a board face that is not full art keeps its window.
+ * R3015002), that level's art, laid across the face with its name in a band below it. R3340000: it carries the level's
+ * `animated` and `signed` flags, which the board face reads as the full face does to move its art while a slot is its (a
+ * board face draws no signature, sweep or drift: R2715000's tiers' marks stay the full face's). Null where the full face
+ * prints none, so a board face that is not full art keeps its window.
  */
 export function boardLookOf(face: FaceModel, look: CardLook): CardLook | null {
   if (!showsFullArt(face, isFullBleed(look.version))) return null;
-  return { level: look.version, version: look.version, animated: false, signed: false };
+  return { level: look.version, version: look.version, animated: look.animated, signed: look.signed };
+}
+
+/**
+ * R3339000: whether `versionId` is a full-art-shaped level:
+ * Full art, Alt full art (rank >= 2), Sketch full art (rank >= 2), Extended art,
+ * Out of frame, Immersive, Prismatic, Set showcase, or any animated or signed level of them.
+ */
+export function isFullArtShapedVersion(versionId: string | null | undefined): boolean {
+  if (versionId === null || versionId === undefined) return false;
+  const level = levelOf(versionId);
+  if (level === null) return false;
+  const { variant, rank } = level;
+  if (
+    variant === "full-art" ||
+    variant === "extended-art" ||
+    variant === "out-of-frame" ||
+    variant === "immersive" ||
+    variant === "prismatic" ||
+    variant === "set-showcase"
+  ) {
+    return true;
+  }
+  if ((variant === "alt-art" || variant === "sketch") && rank >= 2) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * R3339000: whether a card in play on the board is art-first:
+ * - it wears a full-art-shaped level (`look`, the look its full face would wear); or
+ * - it is Legendary or Mythic, in any look.
+ */
+export function isArtFirstBoardFace(face: Pick<FaceModel, "rarity" | "printedRarity">, look: CardLook): boolean {
+  const rarity = frameRarity(face);
+  if (rarity === "Legendary" || rarity === "Mythic") return true;
+  return isFullArtShapedVersion(look.version);
+}
+
+/**
+ * R3339000: whether a board card displays its name plate statically:
+ * - "always": all cards show their static name plate.
+ * - "never": no cards show their static name plate (shown on hover or focus).
+ * - "artFirst" (default): art-first cards hide their static name plate (shown on hover or focus);
+ *   normal Common to Epic cards keep their name plate.
+ */
+export function showsStaticBoardName(
+  artFirst: boolean,
+  setting: BoardNamesOption = CARD_SETTINGS_DEFAULTS.boardNames,
+): boolean {
+  if (setting === "always") return true;
+  if (setting === "never") return false;
+  return !artFirst;
+}
+
+/**
+ * R3339000: how a card in play on the board draws its name: `staticName`, a name plate that is always there, or else a
+ * hover plate; and `artFirst`, whether it is drawn art first (edge to edge, no static name, no type line). A card is
+ * drawn art first only where its name is hidden: under "Always" an art-first card keeps R3046000's band (a Unit its
+ * oval, if its look is no full art), the name beside the art it was promised with.
+ */
+export function boardNameOf(
+  face: Pick<FaceModel, "rarity" | "printedRarity">,
+  look: CardLook,
+  setting: BoardNamesOption,
+): { artFirst: boolean; staticName: boolean } {
+  const classified = isArtFirstBoardFace(face, look);
+  const staticName = showsStaticBoardName(classified, setting);
+  return { artFirst: classified && !staticName, staticName };
 }
 
 /**

@@ -76,8 +76,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FROSTBOLT: &str = "stinkyscape-011-1";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const MENACE: &str = "core-019"; // Midrange Menace
     const FILLER: &str = "core-005";
 
     fn frozen(s: &Scenario, card: &CardInstance) -> bool {

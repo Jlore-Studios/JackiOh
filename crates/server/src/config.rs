@@ -488,6 +488,20 @@ pub const REPLAY_CACHE_TTL_SECONDS: i64 = 600;
 /// Requests per minute per account to the two replay routes together, on top of R109's
 /// API-wide allowance: opening a replay folds a whole game.
 pub const REPLAY_REQUESTS_PER_MINUTE: usize = 60;
+/// SPEC §9.8, R3500000: how many replay folds run at once, 1v1 and co-op together: an opening that
+/// is not kept in memory folds its whole game off the runtime (R768), and the server is a quarter of a
+/// processor (`wrangler.jsonc`), where a 256-action game folds in about 200 ms of a full core
+/// (`jackioh perf`). One keeps the blocking pool free for the live matches' folds, as
+/// `PRACTICE_VERIFY_CONCURRENCY` does for practice's.
+pub const REPLAY_FOLDS_RUNNING_MAX: usize = 1;
+/// SPEC §9.8, R3500000: how long an opening that is not kept in memory waits, in milliseconds, for
+/// the fold of the same match that is running and for its turn among `REPLAY_FOLDS_RUNNING_MAX`,
+/// before it is refused with 429 (`REPLAY_FOLD_RETRY_AFTER_MS`). Well under
+/// `API_REQUEST_TIMEOUT_SECONDS`; the fold itself is not timed.
+pub const REPLAY_FOLD_WAIT_MS: u64 = 5_000;
+/// SPEC §9.8, R3500000: the wait the refusal of an opening past `REPLAY_FOLD_WAIT_MS` states
+/// (`retryAfterMs`, R192): a fold of a long game takes that long to leave room.
+pub const REPLAY_FOLD_RETRY_AFTER_MS: i64 = 2_000;
 
 // ---------------------------------------------------------------------------------------------
 // Constant-time failure (§9.4, BUILD M6-T1).
@@ -589,9 +603,15 @@ pub const QUEUE_WAIT_MIN_SAMPLES: usize = 5;
 /// R640002: the expected wait is rounded up to the next multiple of this many seconds.
 pub const QUEUE_WAIT_STEP_SECONDS: i64 = 10;
 /// SPEC §11 R1996000: how long the server keeps the queue readout it counted, in seconds, so the
-/// `SERIES_POLL_SECONDS` polls of every waiting client inside it share one count. Short beside the
+/// polls of every waiting client inside it share one count. Short beside the
 /// `QUEUE_READOUT_WINDOW_SECONDS` it counts over, so a kept answer is never visibly late.
 pub const QUEUE_READOUT_CACHE_TTL_SECONDS: i64 = 5;
+/// SPEC §11 R3207000: how often the lobby's wait re-reads the queue readout, in seconds, after the
+/// read it makes when it opens. Beyond `QUEUE_READOUT_CACHE_TTL_SECONDS`, so every read counts anew,
+/// and well inside the `QUEUE_READOUT_WINDOW_SECONDS` it counts over, so the readout is never visibly
+/// late. The wait's `GET /api/auth/me` read keeps `SERIES_POLL_SECONDS`: it keeps the ticket alive
+/// (R897000), and the readout does not.
+pub const QUEUE_POPULATION_POLL_SECONDS: i64 = 30;
 
 /// §9.5: the half-width of the acceptable rating gap for a ticket that has waited
 /// `waited_seconds`. Shared by the pairing query and its tests so both read one implementation.
@@ -721,11 +741,13 @@ pub const MALFORMED_FRAMES_PER_WINDOW: usize = 10;
 /// first hello of a new generation (a reattach) is always answered. A second: a page probes only once
 /// its socket has been quiet past `WS_PING_INTERVAL_SECONDS` and any answer ends the quiet (R1441),
 /// so a real page's probe never falls inside it, while a scripted flood costs one view a second.
+/// R3214000 holds a `/ws/social` socket's hellos to it too: one social read a second at most.
 pub const WATCH_HELLO_INTERVAL_MS: i64 = 1_000;
 /// Match sockets one client address may hold at once, counting handshakes still in progress. Not in
 /// SPEC, and no R-row. A player needs one socket per match, plus one more for a moment while it
 /// reconnects; ten leaves room for several players behind one home or campus address. Past it the
-/// upgrade is refused with 429 before the handshake is read.
+/// upgrade is refused with 429 before the handshake is read. `/ws/social`'s sockets are counted apart,
+/// against a cap of the same size, so idle tabs never take a match socket's room (R3214000).
 pub const WS_MAX_CONNECTIONS_PER_ADDRESS: usize = 10;
 /// SPEC §11 R1441: how often the server pings a match socket that is attached. Fifteen seconds is well
 /// under the 60-second idle limit common proxies hold a quiet connection to, so the ping also keeps
@@ -814,6 +836,36 @@ pub const BUG_REPORT_LISTED_ACTIONS: usize = 10;
 pub const BUG_REPORT_LISTED_MATCHES: usize = 20;
 
 // ---------------------------------------------------------------------------------------------
+// Alerts (`alerts.rs`, #3595): an alert told to people, as a GitHub issue and an email. Not in
+// SPEC, and no R-row: operational, as the bug reports are.
+// ---------------------------------------------------------------------------------------------
+
+/// An event makes at most one notice in this long per process: an hour. The rest are counted, and
+/// the next notice says how many.
+pub const ALERT_WINDOW_MS: i64 = 60 * 60 * 1000;
+/// How many alerts wait for the notifier's task before a new one is dropped (its log line stays).
+pub const ALERT_QUEUE: usize = 64;
+/// The labels an alert's issue carries: the repository's type and people's (`human`, which triage
+/// assigns to both of them and which keeps the bots off it).
+pub const ALERT_ISSUE_LABELS: &[&str] = &["architecture", "human"];
+/// Events whose own issue is filed elsewhere, which an alert's issue would only repeat: `bug.found`
+/// (`bug_reports.rs`). They are still emailed.
+pub const ALERTS_FILED_ELSEWHERE: &[&str] = &["bug.found"];
+/// Resend's API, which an alert's email is sent through.
+pub const ALERT_EMAIL_API_URL: &str = "https://api.resend.com/emails";
+/// Who an alert's email is from: an address on the domain Resend sends jackioh.com's mail for
+/// (infra/cloudflare.tf), as the sign-in mail is (docs/deploy-cloudflare.md section 8).
+pub const ALERT_EMAIL_FROM: &str = "JackiOh alerts <no-reply@jackioh.com>";
+/// How many alert emails one process sends in `ALERT_EMAIL_DAY_MS`. Resend's free plan sends 100 a
+/// day, the sign-in mail's included, so alerts keep well under it.
+pub const ALERT_EMAILS_PER_DAY: usize = 10;
+/// The day `ALERT_EMAILS_PER_DAY` counts in.
+pub const ALERT_EMAIL_DAY_MS: i64 = 24 * 60 * 60 * 1000;
+/// How long the request to Resend may take before the email is given up (logged). GitHub's take
+/// `BUG_REPORT_TIMEOUT_MS`, through the bug reports' own request builder.
+pub const ALERT_TIMEOUT_MS: u64 = 10_000;
+
+// ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).
 // ---------------------------------------------------------------------------------------------
 
@@ -838,6 +890,10 @@ pub const MAX_SAVED_TRIOS: usize = 5;
 /// "Midrange Humans (anti-aggro)", short enough for a tab, a list row and a sentence in a message.
 /// Mirrored in `app.settings` (0007).
 pub const DECK_NAME_MAX_LENGTH: usize = 40;
+/// SPEC §9.4, R3212001: the most items one `POST /api/decks/sync` carries, its saves and its
+/// deletions together: every deck and trio a profile can hold saved and deleted in one request, so
+/// one autosave pass always fits. A longer list is 400, running none of it.
+pub const DECK_SYNC_ITEMS_MAX: usize = 2 * (MAX_SAVED_DECKS + MAX_SAVED_TRIOS);
 /// SPEC §11 R250: the most draft issues one refused save lists in its `details`. A real deck of at
 /// most `DECK_SIZE` cards can break D1–D4 about fifty times; a request body of junk ids could break
 /// D3 thousands of times and turn a 64 KiB request into a far larger answer. The first issue is
@@ -924,8 +980,17 @@ pub const SERIES_START_GIVE_UP_SECONDS: i64 = 120;
 /// transition landed, and a series has at most a handful of writers, so three losses in a row is a
 /// storm, not a race worth waiting out.
 pub const SERIES_WRITE_ATTEMPTS: usize = 3;
-/// How often the series screen and the match screen's series banner re-read the series.
+/// How often the series screen and the match screen's series banner re-read the series, the banner
+/// (and the rematch buttons, R3207002) only while no open match socket pushes it (R3213000).
 pub const SERIES_POLL_SECONDS: i64 = 2;
+/// SPEC §11 R3213000: the version of the match socket's post-game frames (`jackioh_shared::host::post_game`);
+/// a client reads only the one it knows and polls otherwise, so a changed shape takes the next number.
+pub const POST_GAME_FRAME_VERSION: u32 = 1;
+/// SPEC §11 R3207001: how often the live-game banner (the landing page's and the practice page's) re-reads
+/// the account for the game it names, in seconds. A game outlasts it by minutes, and a missed tick only
+/// shows the banner a few seconds late; the queue follow keeps `SERIES_POLL_SECONDS` for the ticket's
+/// sake (R897000).
+pub const LIVE_GAME_POLL_SECONDS: i64 = 10;
 /// How long the lobby shows "Match found! Taking you to your game…" before navigating to the
 /// paired game, so the pairing reads as an arrival instead of a silent vanish. A `setStatus`
 /// followed by a synchronous `navigate` never paints: the lobby unmounts in the same render
@@ -1207,13 +1272,25 @@ pub const CHAT_PAGE: i64 = 50;
 /// B52 (#1825): the most shares one `GET /api/replays/shared` lists, newest first, so that list is
 /// bounded like the friends (`MAX_FRIENDS`) and a chat page (`CHAT_PAGE`); fifty is a chat page's.
 pub const SHARED_REPLAYS_LIST_MAX: i64 = 50;
-/// B58: how often an open chat panel reads its conversation again.
+/// B58: how often an open chat panel reads its conversation again, while the tab's `/ws/social` is
+/// down (R3214000).
 pub const CHAT_POLL_MS: i64 = 4_000;
 /// §9.4: how often a signed-in client reads its unread counts and its challenges again (the challenge
 /// toast, on every screen, and Play together). A challenge lives CHALLENGE_TTL_MS, so ten seconds
 /// shows one within a twelfth of its life; the friends list itself is read once a heartbeat
-/// (PRESENCE_HEARTBEAT_MS), the pace a status changes at.
+/// (PRESENCE_HEARTBEAT_MS), the pace a status changes at. It runs only while the tab's `/ws/social`
+/// is down (R3214000).
 pub const SOCIAL_POLL_MS: i64 = 10_000;
+/// R3214000: how often an open `/ws/social` checks its session again, as the upgrade checked it (the
+/// token, the profile, §9.4's gate), so a session the provider ended (R194) or an account banned
+/// while the socket stays open is cut off within one R194 window, as a polling tab is refused. No
+/// longer than `AUTH_SESSION_LIVE_CACHE_SECONDS`. Server-only.
+pub const SOCIAL_SESSION_CHECK_SECONDS: i64 = AUTH_SESSION_LIVE_CACHE_SECONDS;
+const _: () = assert!(SOCIAL_SESSION_CHECK_SECONDS <= AUTH_SESSION_LIVE_CACHE_SECONDS);
+/// R3214000: the `/ws/social` sockets one account may hold at once, one per signed-in tab; the next
+/// is refused with 4403 "too many open tabs". Five: a person seldom keeps more tabs of the site open,
+/// and a tab past it still reads by its polls. Server-only.
+pub const SOCIAL_SOCKETS_PER_ACCOUNT: usize = 5;
 /// §9.5, §9.8: challenges one account may send in an hour; the next is 429. Each opens a room and a
 /// toast on the friend's screen, so a create-and-cancel loop is bounded; thirty is one every two
 /// minutes, a challenge's whole life, kept up for an hour.
@@ -1289,15 +1366,22 @@ pub use jackioh_shared::config::{
 // quest rhythm and the day) are `jackioh_shared::config`'s since #3104: the pure economy decides with them, and
 // the server names them here as it always has.
 pub use jackioh_shared::config::{
-    JLORE_CONQUEST_LOSS, JLORE_CONQUEST_WIN, JLORE_COOP_LOSS, JLORE_COOP_WIN, JLORE_GAMES_DAILY_CAP,
-    JLORE_LADDER_LOSS, JLORE_LADDER_WIN, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, JLORE_UNRANKED_LOSS,
-    JLORE_UNRANKED_WIN, QUEST_INTERVAL_HOURS, QUEST_JLORE_MAX, QUEST_JLORE_MIN, QUEST_MAX_HELD,
-    QUEST_REPLACES_PER_DAY, QUEST_XP_PER_JLORE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS,
-    SET_TRACK_UNLOCK_LEVEL, XP_COOP_SCALE, XP_GAME_CAP, XP_LADDER_TARGET_MEAN, XP_PER_ACTION,
-    XP_PRACTICE_SCALE, XP_WIN_BONUS,
+    FLEET_TRACK_DECK_SHARE, FLEET_TRACK_LEVELS, FLEET_TRACK_NEXT_REWARDS_SHOWN, FLEET_TRACK_XP_DAILY_MAX,
+    FLEET_TRACK_XP_PER_LAUNCH, FLEET_TRACK_XP_PER_LEVEL, FLEET_TRACK_XP_PER_PIECE_FUSED,
+    FLEET_TRACK_XP_PER_STINKYSCAPE_PLAY, FLEET_TRACK_XP_STINKYSCAPE_WIN, JLORE_CONQUEST_LOSS,
+    JLORE_CONQUEST_WIN, JLORE_COOP_LOSS, JLORE_COOP_WIN, JLORE_GAMES_DAILY_CAP, JLORE_LADDER_LOSS,
+    JLORE_LADDER_WIN, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, JLORE_UNRANKED_LOSS, JLORE_UNRANKED_WIN,
+    QUEST_INTERVAL_HOURS, QUEST_JLORE_MAX, QUEST_JLORE_MIN, QUEST_MAX_HELD, QUEST_REPLACES_PER_DAY,
+    QUEST_XP_PER_JLORE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL, XP_COOP_SCALE,
+    XP_GAME_CAP, XP_LADDER_TARGET_MEAN, XP_PER_ACTION, XP_PRACTICE_SCALE, XP_WIN_BONUS,
 };
 /// SPEC §14.3: the Jlore a card pack costs (#1333's table: 100), five ladder wins.
 pub const PACK_PRICE_JLORE: i32 = 100;
+/// SPEC §14.3, R3212000: the most packs one Open all (`POST /api/packs/open-all`) opens. Each pack
+/// writes about seven ledger rows, each carrying its opening's log (tens of KB) as its `ref`, and
+/// the batch binds them all in one statement per ledger, so twenty keeps a statement to a few MB;
+/// a player holding more presses again.
+pub const PACKS_OPEN_ALL_MAX: usize = 20;
 /// SPEC §14.14, R3013000: the total plays of one card from hand, in games that pay rewards, that
 /// reach each of its proficiency levels, lowest first (#3013: the first comes in a game or two, the
 /// last after 200 plays, a season's commitment to one card). Level n unlocks stamp n (R3013001).
@@ -1325,9 +1409,11 @@ pub const ECONOMY_SPENDS_WAITING_MAX: usize = 4;
 /// SPEC §14.11, R2378000: the wait the refusal of a spend sent past `ECONOMY_SPENDS_WAITING_MAX`
 /// states (`retryAfterMs`, R192).
 pub const SPEND_BUSY_RETRY_AFTER_MS: i64 = 1_000;
-/// SPEC §14.8, R1483000: how many unclaimed, unexpired practice seeds an account holds at once; a
-/// request past it is refused and issues nothing. Bounds one account's place in the claim queue
-/// (`PRACTICE_VERIFY_CONCURRENCY`). The approved proposal's number (#1483).
+/// SPEC §14.8, R1483000, R3500001: how many practice seeds an account holds at once, each one
+/// unclaimed or claimed and not yet settled (paid or refused), issued within
+/// `PRACTICE_SEED_TTL_SECONDS`; a request past it is refused and issues nothing. Bounds one account's
+/// place in the claim queue (`PRACTICE_VERIFY_CONCURRENCY`): a claim waiting for its check keeps its
+/// place. The approved proposal's number (#1483).
 pub const PRACTICE_SEEDS_OPEN_MAX: i64 = 3;
 /// SPEC §14.8, #1303: how many practice claims the server verifies at once, each a fold of the
 /// game's log off the runtime (`economy::practice`, R2560000). A claim past it
@@ -1345,8 +1431,9 @@ pub const PRACTICE_PAY_BACKOFF_MS: i64 = 250;
 /// SPEC §14.8, R2422000: how long a practice claim may stay unsettled (neither paid nor refused)
 /// after it burned its seed before the retention loop settles it: a claim whose pay every try
 /// failed, or whose server stopped or crashed under it. Well past what a live settle takes (a wait
-/// for a verification permit, the check and the pay's tries), so the sweep never takes a claim a
-/// live settle is still working on; ten minutes, as `GAME_RECORD_REFILE_GRACE_SECONDS` waits.
+/// for a verification permit, the check and the pay's tries), so the sweep seldom meets a claim a
+/// live settle is still working on, and it skips one it does (R3500001); ten minutes, as
+/// `GAME_RECORD_REFILE_GRACE_SECONDS` waits.
 pub const PRACTICE_SETTLE_GRACE_SECONDS: i64 = 10 * 60;
 
 // ---- Economy (SPEC §14, #1299) ----
@@ -1426,3 +1513,30 @@ pub const NEWS_POSTS_PAGE: i64 = 100;
 pub const NEWS_POST_TITLE_MAX_CHARS: usize = 80;
 /// §14.13, R3074003: the most characters a post's summary holds. Exported to `serverConfig.ts`.
 pub const NEWS_POST_SUMMARY_MAX_CHARS: usize = 400;
+
+// ---- The match actor's speed (#3429) ----
+// `tests/actor/perf.rs`, daily: bot-against-bot matches played at once through the match actor on
+// the in-memory store. Not in SPEC, and no R-row. Never exported to `serverConfig.ts`.
+
+/// #3429: the matches the daily perf test plays at once.
+pub const SERVER_PERF_MATCHES: usize = 16;
+/// #3429: the matches the per-pull-request smoke test plays at once, so the harness keeps working.
+pub const SERVER_PERF_SMOKE_MATCHES: usize = 2;
+/// #3429: the worker threads of the runtime the perf tests play on: a GitHub `ubuntu-latest`
+/// runner's four vCPUs.
+pub const SERVER_PERF_WORKER_THREADS: usize = 4;
+/// #3429: the most actions a perf match takes before its test fails it as a stall (golden's
+/// `STEP_CAP`, §13.1).
+pub const SERVER_PERF_ACTION_CAP: usize = 3_000;
+/// #3429: the most the median action may take from `submit` to its answer, which comes only after
+/// the actor has pushed both seats' views, in milliseconds, at `cargo test`'s profile. Measured on
+/// 2026-11-09 on a 4-vCPU GitHub Actions ubuntu runner (AMD EPYC 7763), `SERVER_PERF_MATCHES` at once,
+/// in eleven runs: medians from 88.6 to 98.75 ms (91.77, 92.24 and 92.43 in three in a row). 5x the
+/// most, rounded up to two significant figures. The in-memory store's transactions take one lock and
+/// copy every table (`db/fake.rs`), so the matches queue on it: a run kept about 1.3 of the 4 cores
+/// busy (22.7 s of CPU in 17.8 s).
+pub const SERVER_PERF_BROADCAST_MS_BUDGET: f64 = 500.0;
+/// #3429: the fewest matches per second the actor must finish, `SERVER_PERF_MATCHES` at once, at
+/// `cargo test`'s profile. Measured in the same eleven runs: 16 matches of 1,887 actions in all, in
+/// 16.5 to 18.68 s, so 0.86 to 0.97 a second. The least divided by 5, rounded down.
+pub const SERVER_PERF_MATCHES_PER_SECOND_FLOOR: f64 = 0.17;

@@ -50,7 +50,7 @@ mod tests {
 
     const VXYL: &str = "stinkyscape-103";
     const NONO: &str = "stinkyscape-099";
-    const GENN: &str = "classic-086"; // (4) Unit 14/14.
+    const GENN: &str = "stand-in (4) 14/14 R42/42";
     const FILLER: &str = "core-005";
 
     fn nonos(s: &Scenario) -> Vec<CardInstance> {

@@ -1,6 +1,6 @@
 //! R1367000 (amends R654): a card's statistics window, and the one function every reader of public
-//! card figures calls (`windowed_card_stats`): `GET /api/stats/cards` (and so the stats page),
-//! `cargo jackioh stats report --window` and `cargo jackioh winrates`.
+//! card figures calls (`windowed_card_stats`): `GET /api/stats/cards` (and so the stats page and the
+//! win-rate snapshot a match starts with, R3049000) and `cargo jackioh stats report --window`.
 //!
 //! A card's window at a version runs from whichever came later: the start of its X (the newest major
 //! or patch), or the last micro whose plays hold the card's family. A major or a patch opens a new
@@ -13,7 +13,9 @@
 //! R1973001: a patch that a later version replaced before any game, live or development, was played on
 //! it is read as a micro over the families it plays (`collapse_gameless`): it opens no window for the
 //! cards it left alone, so a run of patches shipped back to back does not empty every card's figures.
-//! The newest version keeps its tier, since a patch just shipped has had no time for games.
+//! R3526000: a patch's games are its own and its micros' (a patch shipped with the micro after it has
+//! every game filed under the micro), and the newest patch keeps its tier, since a patch just shipped
+//! has had no time for games.
 //!
 //! The engine is pure (CLAUDE.md rule 4), so the patch history is an argument: each shipped version
 //! in `patches.json`'s order with its tier and play set (`PatchStep`). `jackioh_cards::patch_history`
@@ -211,14 +213,24 @@ pub fn card_window(
 
 /// R1973001: `history` with every patch that a later version replaced before a game was played on it
 /// read as a micro over the families it plays. `games` answers every record filed under a version,
-/// live and development alike. The newest version, and every major, keeps its tier.
+/// live and development alike. Every major keeps its tier.
+///
+/// R3526000 (amends R1973001): a patch's games are its run's, its own version's and those of the
+/// micros after it up to the next patch or major, since a patch shipped in one commit with the micro
+/// after it never had a build of its own to file a game under. The newest patch, whose run holds the
+/// newest version, keeps its tier, as the newest version did.
 pub fn collapse_gameless(history: &[PatchStep], games: impl Fn(&str) -> i64) -> Vec<PatchStep> {
-    let newest = history.len().saturating_sub(1);
     history
         .iter()
         .enumerate()
         .map(|(index, step)| {
-            if step.tier == PatchTier::Patch && index < newest && games(&step.version) == 0 {
+            let run = history[index + 1..]
+                .iter()
+                .take_while(|later| later.tier == PatchTier::Micro);
+            let replaced = index + 1 + run.clone().count() < history.len();
+            let gameless =
+                || games(&step.version) == 0 && run.clone().all(|later| games(&later.version) == 0);
+            if step.tier == PatchTier::Patch && replaced && gameless() {
                 PatchStep {
                     tier: PatchTier::Micro,
                     ..step.clone()
@@ -340,7 +352,8 @@ struct Part {
 /// R1367000 (amends R654): every card's figures, each over its own window at `query.at`: R377's
 /// breakdowns summed over the versions and sources its window counts (`card_window`), with the
 /// games and decks of those records. Every caller of public card figures reads them here:
-/// `GET /api/stats/cards`, `cargo jackioh stats report --window` and `cargo jackioh winrates`.
+/// `GET /api/stats/cards` (and the win-rate snapshot a match starts with, R3049000) and `cargo jackioh
+/// stats report --window`.
 pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> WindowedReport {
     let collapsed = collapse_gameless(query.history, |version| totals.games(version));
     let (history, at) = resolve(&collapsed, query.at);
@@ -959,6 +972,68 @@ mod tests {
             [(vec!["v3", "v3b"], 8, 1), (vec!["v1", "v1b", "v2"], 15, 0)]
         );
         assert!(patch_windows(&[], none, none).is_empty());
+    }
+
+    #[test]
+    fn r3526000_a_patch_counts_the_games_of_its_micros_and_the_newest_patch_keeps_its_tier() {
+        // As v0.5.11 and v0.5.12 shipped: each patch in one commit with the micro after it, so every
+        // build ran the micro and every game was filed under it, none under the patch.
+        let history = [
+            step("v1", PatchTier::Major, &[]),
+            step("v2", PatchTier::Patch, &[A]),
+            step("v2b", PatchTier::Micro, &[]),
+            step("v3", PatchTier::Patch, &[]),
+            step("v3b", PatchTier::Micro, &[]),
+            step("v4", PatchTier::Patch, &[B]),
+            step("v4b", PatchTier::Micro, &[]),
+            step("v4c", PatchTier::Micro, &[]),
+        ];
+        // v2's micro had games; v3 and its micro had none before v4 replaced them; v4, the newest
+        // patch, has none yet on any of its versions.
+        let games = |version: &str| match version {
+            "v1" => 4,
+            "v2b" => 3,
+            _ => 0,
+        };
+        let tiers: Vec<PatchTier> = collapse_gameless(&history, games)
+            .iter()
+            .map(|step| step.tier)
+            .collect();
+        assert_eq!(
+            tiers,
+            [
+                PatchTier::Major,
+                PatchTier::Patch,
+                PatchTier::Micro,
+                PatchTier::Micro,
+                PatchTier::Micro,
+                PatchTier::Patch,
+                PatchTier::Micro,
+                PatchTier::Micro
+            ]
+        );
+        let windows = patch_windows(&history, games, none);
+        let listed: Vec<(Vec<&str>, i64)> = windows
+            .iter()
+            .map(|window| (window.versions.iter().map(String::as_str).collect(), window.games))
+            .collect();
+        assert_eq!(
+            listed,
+            [
+                (vec!["v4", "v4b", "v4c"], 0),
+                (vec!["v2", "v2b", "v3", "v3b"], 3),
+                (vec!["v1"], 4)
+            ]
+        );
+
+        // Over the figures: at v2b every card's window opens at v2, so B no longer counts v1's game.
+        let mut totals = StatsTotals::default();
+        totals.fold(&game("m1", GameSource::Live, "v1", &[A, B]), false);
+        totals.fold(&game("m2", GameSource::Live, "v2b", &[A, B]), false);
+        let report = windowed_card_stats(&totals, &query(&history, "v2b"));
+        assert_eq!(versions(&report.patch), ["v2", "v2b"]);
+        let b = report.card(B).expect("B is held");
+        assert_eq!(versions(&b.window), ["v2", "v2b"]);
     }
 
     #[test]

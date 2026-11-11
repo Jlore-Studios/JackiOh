@@ -2,7 +2,7 @@
 // Grape tier. Read-only and decides nothing (CLAUDE.md rule 7): it renders `GET /api/leaderboard`
 // through `rank/RankCrest.tsx` (#1650), and the hidden rating never reaches it. A row is keyed by its
 // profile id and shows the player's username, never the id (R1436).
-// R2778000: a Constructed / All Random switch picks the season's ladder; the address carries All
+// R2778000: a Constructed / All random switch picks the season's ladder; the address carries All
 // Random as `?ladder=random`.
 
 import { useEffect, useState, type ReactElement } from "react";
@@ -15,7 +15,9 @@ import { divisionNumeral, rankCaption, tierName } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { BackLink } from "./nav.tsx";
+import { Wordmark } from "./Wordmark.tsx";
 import { messageOf } from "../net/errors.ts";
+import { Segmented } from "../tabs/index.ts";
 
 import "../auth/tavern.css";
 import "./leaderboard.css";
@@ -31,17 +33,17 @@ export const leaderboardTestid = {
   jlorious: "leaderboard-jlorious",
   tier: "leaderboard-tier",
   raisins: "leaderboard-raisins",
-  /** R2778000: the Constructed / All Random switch. */
+  /** R2778000: the Constructed / All random switch. */
   ladder: "leaderboard-ladder",
 } as const;
 
 /** R2778000: the switch's two ladders, Constructed first, each with its label in English for `t()`. */
 const LADDERS: readonly { ladder: Ladder; label: string }[] = [
   { ladder: "constructed", label: "Constructed" },
-  { ladder: "random", label: "All Random" },
+  { ladder: "random", label: "All random" },
 ];
 
-/** R2778000: the ladder the address asks for: All Random by `?ladder=random`, else Constructed. */
+/** R2778000: the ladder the address asks for: All random by `?ladder=random`, else Constructed. */
 function ladderOfAddress(): Ladder {
   return new URLSearchParams(window.location.search).get("ladder") === "random" ? "random" : "constructed";
 }
@@ -93,25 +95,20 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
 
   return (
     <div className="app-shell tavern leaderboard-screen one-screen" data-testid={leaderboardTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Leaderboard")} />
       <section className="panel panel--auth one-screen__frame">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Leaderboard")}</h2>
-        <div className="row" role="group" aria-label={t("Ladder")} data-testid={leaderboardTestid.ladder}>
-          {LADDERS.map((entry) => (
-            <button
-              key={entry.ladder}
-              type="button"
-              className={entry.ladder === ladder ? "button-primary" : undefined}
-              aria-pressed={entry.ladder === ladder}
-              onClick={() => pick(entry.ladder)}
-            >
-              {t(entry.label)}
-            </button>
-          ))}
-        </div>
+        <Wordmark />
+        <Segmented
+          label={t("Ladder")}
+          testId={leaderboardTestid.ladder}
+          className="row"
+          value={ladder}
+          onChange={pick}
+          options={LADDERS.map((entry) => ({
+            value: entry.ladder,
+            label: t(entry.label),
+          }))}
+        />
         <div className="one-screen__body one-screen__stack" tabIndex={0}>
           {error !== null ? (
             <>
@@ -148,7 +145,7 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
                   : t("You are {rank} — play rated games to climb", { rank: rankCaption(board.you) })}
               </p>
 
-              <h3 className="leaderboard-heading">{t("Jlorious")}</h3>
+              <h2 className="section-heading leaderboard-heading">{t("Jlorious")}</h2>
               {board.jlorious.length === 0 ? (
                 <p>{t("No Jlorious players yet this season.")}</p>
               ) : (
@@ -164,9 +161,9 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
 
               {board.tiers.map((tier) => (
                 <section key={tier.tier} data-testid={leaderboardTestid.tier} data-tier={tier.tier}>
-                  <h3 className="leaderboard-heading">
+                  <h2 className="section-heading leaderboard-heading">
                     <RankCrest tier={tier.tier} size="small" /> {tierName(tier.tier)} ({tier.count})
-                  </h3>
+                  </h2>
                   {tier.players.length === 0 ? (
                     <p>{t("Nobody here yet.")}</p>
                   ) : (

@@ -21,6 +21,7 @@ mod gate;
 mod golden;
 mod names;
 mod patches;
+mod perf;
 mod positions;
 mod promote;
 mod replay;
@@ -36,7 +37,6 @@ mod sweep;
 mod technical;
 mod think;
 mod trace;
-mod winrates;
 
 use std::process::ExitCode;
 
@@ -75,12 +75,12 @@ enum Command {
     Patches(patches::Args),
     /// The AI's quality gates and `gate merge <dir>` (part 22).
     Gate(gate::Args),
+    /// The engine's and the replay fold's speed on a frozen corpus, each median held to its budget (#3429).
+    Perf(perf::Args),
     /// R186's shadow-ban sweep (part 22).
     Sweep(sweep::Args),
     /// R378's development run for the card statistics (part 22).
     Stats(stats::Args),
-    /// The compiled card win-rate table for M #50 CN Tech (part 17, ME-STATS).
-    Winrates(winrates::Args),
     /// Golden traces: `golden check`, `golden record` (part 23; `bless` retired in #2578).
     Golden(golden::Args),
     /// The spec graph: `spec check`, `spec index` (part 28).
@@ -114,9 +114,9 @@ fn main() -> ExitCode {
         Command::CatalogVersion(args) => catalog::run_version(args),
         Command::Patches(args) => patches::run(args),
         Command::Gate(args) => gate::run(args),
+        Command::Perf(args) => perf::run(args),
         Command::Sweep(args) => sweep::run(args),
         Command::Stats(args) => stats::run(args),
-        Command::Winrates(args) => winrates::run(args),
         Command::Golden(args) => golden::run(args),
         Command::Spec(args) => spec::run(args),
         Command::Names(args) => names::run(args),

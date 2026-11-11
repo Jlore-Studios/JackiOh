@@ -10,6 +10,7 @@ import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { CardArt } from "../../cards/index.ts";
 import { readerName } from "../../cards/chinese.ts";
+import { ArrowIcon } from "../../routes/ArrowIcon.tsx";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { DECK_SIZE } from "./deckSize.ts";
 import { deckListOrder, tileCost } from "./filters.ts";
@@ -118,7 +119,8 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
       <div className="ws-trio">
         <div className="ws-editor-head">
           <button type="button" className="ws-back" data-testid={WORKSHOP_BACK} onClick={onBack}>
-            {t("← All decks")}
+            <ArrowIcon direction="back" />
+            {t("Back to decks")}
           </button>
           <label className="ws-name" htmlFor={nameId}>
             <span className="ws-field-label">{t("Trio name")}</span>
@@ -181,7 +183,7 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
                   {deck === null ? null : (
                     <button
                       type="button"
-                      className="ws-action"
+                      className="ws-action button-secondary"
                       data-testid={trioOpenDeckId(slot + 1)}
                       aria-label={t("Open {deck}", { deck: deckLabel(deck, limits.nameLength) })}
                       onClick={() => {
@@ -281,12 +283,12 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
         </div>
 
         <div className="ws-actions ws-actions--trio">
-          <button type="button" className="ws-action" data-testid={TRIO_COPY_CODE} onClick={copyCode}>
+          <button type="button" className="ws-action button-secondary" data-testid={TRIO_COPY_CODE} onClick={copyCode}>
             {t("Copy trio code")}
           </button>
           <button
             type="button"
-            className="ws-action ws-action--danger"
+            className="ws-action button-danger"
             data-testid={TRIO_DELETE}
             onClick={onDelete}
           >

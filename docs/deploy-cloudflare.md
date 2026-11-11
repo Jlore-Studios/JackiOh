@@ -49,7 +49,9 @@ the daily super run tests one commit, and the night bot fixes one commit, instea
 
 1. A pull request merges into `main` through the merge queue (branch protection requires the five
    CI checks).
-2. CI runs again on the push to main, unscoped. Every two hours `promote-staging.yml`
+2. CI runs again on the push to main, for every piece the queue's build of that same commit skipped:
+   a piece it already passed there is not run twice (#3564, `.github/ci/main_scope.py`), and
+   anything it cannot tell runs everything. Every two hours `promote-staging.yml`
    (`scripts/promote-staging.sh`) fast-forwards `staging` to main's newest commit whose push-to-main
    CI run passed; it never moves it backwards. GitHub fires this repository's schedules late, so each
    green push-to-main CI run wakes it as well, and it moves `staging` then once the last move is two
@@ -168,7 +170,8 @@ staging -> Run workflow moves it now (to its `sha`, or main's newest green commi
 | Where | What | Used by |
 | --- | --- | --- |
 | Cloudflare | the Workers Paid plan (Containers need it) | both Workers |
-| Cloudflare | each Worker's secrets: `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `CODE_PEPPER`, and optionally `CREATE_ISSUES_TOKEN`, `DEV_PROFILE_IDS` (`apps/edge/README.md`, Settings) | the servers |
+| Cloudflare | each Worker's secrets: `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `CODE_PEPPER`, and optionally `CREATE_ISSUES_TOKEN`, `DEV_PROFILE_IDS`, `ALERT_RESEND_API_KEY`, `ALERT_EMAILS` (`apps/edge/README.md`, Settings) | the servers |
+| Resend | a sending-only API key for jackioh.com, the Worker secret `ALERT_RESEND_API_KEY`, beside the sign-in mail's (section 8) | the server's alert emails (`crates/server/README.md`, Alerts) |
 | Cloudflare Zero Trust | the team's organisation, and a service token for staging's deploy check | Access |
 | GitHub secret | `CLOUDFLARE_API_TOKEN`: the Edit Cloudflare Workers template, plus Containers if wrangler asks for it | both deploy jobs |
 | GitHub secrets | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`: the service token's pair | staging's live check |
@@ -344,6 +347,9 @@ later, so Render would stop billing:
   ancestor of" means someone pushed to `staging` by hand: an admin resets it to a green commit of
   main with `git push --force origin <sha>:staging` (temporarily allowing force pushes in the
   `staging` ruleset; `terraform -chdir=infra apply` puts the rule back).
+- **GitHub releases stopped:** the issue "CI: GitHub releases failed" (`releases.yml`, #3632) names
+  the failed run. The next run that publishes writes every release the failed ones left out and
+  closes it; Actions -> releases -> Run workflow starts one by hand.
 - **A dev account (SPEC §14.10):** the `DEV_PROFILE_IDS` secret of that site's Worker, each
   developer's profile id comma-separated (from `/account`: "Manage sign-in & account", then "Show
   account secret ID"); then redeploy. A malformed id refuses the boot, and the Worker's logs name it.
@@ -352,6 +358,11 @@ later, so Render would stop billing:
   server did not report the commit in time: Workers & Pages -> the Worker -> Logs shows the server's
   boot, and a failed migration there). Fix it on `main`; for production, then run promote
   production with **redeploy**.
+- **An alert:** the server opens `Patch: alert <event> on <site>` (labelled `human`) and emails
+  `ALERT_EMAILS` the details (`crates/server/README.md`, Alerts). Read the event in the Worker's logs
+  (Workers & Pages -> the Worker -> Logs), and close the issue once it is handled, so the next one emails
+  again. To turn the emails on or change who gets them, `wrangler secret put ALERT_RESEND_API_KEY` and
+  `ALERT_EMAILS` on that Worker, then redeploy it.
 - **The server will not start:** its boot runs `release` (migrate, seed the catalog) and exits on
   any failure; with one container there is no older instance to keep serving. The Worker's logs
   show the error. CI's `db` job boots the image against Postgres before any merge that changes the
@@ -383,8 +394,10 @@ the first hours. Staging's container sleeps whenever the team is away. Supabase 
 a month for the organization (jlore-studios), whose compute credit covers one project's smallest
 instance; the second project's instance is billed on top, and each project's disk past 8 GB
 (`db-size.yml` warns before then). GitHub Actions (a public repository) costs nothing. The levers are `SLEEP_AFTER`
-(`apps/edge/src/index.ts`) and `instance_type` (`wrangler.jsonc`); a signed-in tab keeps its site's
-server awake through its presence beat.
+(`apps/edge/src/index.ts`, five minutes) and `instance_type` (`wrangler.jsonc`); a signed-in tab keeps its
+site's server awake through its presence beat and its social socket until it has been hidden for
+`HIDDEN_QUIET_MS` (two minutes, `apps/web/src/together/config.ts`, R3576000), so a tab left in the
+background lets the server sleep about seven minutes later.
 
 Cloudflare has no spend cap, so two things watch the usage bill (the plan's $5 aside). The account's
 budget alerts (Notifications -> Budget Alert: one at $1 and the auto-created one at $10) email the

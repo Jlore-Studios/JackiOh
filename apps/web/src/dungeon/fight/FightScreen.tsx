@@ -9,8 +9,9 @@
 // The board is the practice route's (`routes/practice.tsx`): the same controller, pacing
 // (`practice/aiTable.ts`: the AI waits on `data-animating`, `data-showcase` and `data-speaking`, #2925),
 // emotes and `Game`, with no Offer draw (R188). The worker holds the game; the page holds snapshots
-// (CLAUDE.md rule 7). A fight is never saved (R2706000): after a reload the run, still on its fight,
-// deals it again from its seed.
+// (CLAUDE.md rule 7). A fight left unfinished waits where it stood (R3476000): after a reload the
+// run, still on its fight, resumes the kept fight where it was left; Try again deals it fresh from
+// its seed instead (R2972000).
 
 import {
   useCallback,
@@ -35,10 +36,12 @@ import { useBoardBusy, useControllerState, useShowcaseHold, useVoiceHold } from 
 import { createPracticeController, type PracticeController } from "../../practice/controller.ts";
 import { usePracticeEmotes } from "../../practice/emotes.ts";
 import { createPracticeHost, type PracticeHost } from "../../practice/host.ts";
+import type { PracticeStartConfig } from "../../practice/protocol.ts";
 import { ThinkIndicator } from "../../practice/ThinkIndicator.tsx";
 import { guardLeaving } from "../../net/navigate.ts";
 import { messageOf } from "../../net/errors.ts";
 import "../../practice/practice.css";
+import { PageTitle } from "../../routes/PageTitle.tsx";
 import { useSetting } from "../../settings/store.ts";
 import { runFightSetup } from "../../wasm/index.ts";
 import type { Dungeon } from "../store.ts";
@@ -99,13 +102,22 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     const next = createPracticeController({ host: factory.current(), pacing: pace.current });
     setController(next);
     // B22: the AI plays the enemy at p2; `run` replaces the deck, the difficulty's handicap and the seed.
-    void next.start({
+    const config: PracticeStartConfig = {
       seed: fight.seed,
       difficulty: FIGHT_DIFFICULTY,
       humanSeat: "p1",
       deck: { kind: "random" },
       run: fight,
-    });
+    };
+    if (restart === 0) {
+      // R3476000: a kept fight is picked up where it stood; one that does not fold is dealt fresh.
+      void next.resume(config).then(() => {
+        if (next.getState().phase === "failed" && next.getState().snapshot === null) void next.start(config);
+      });
+    } else {
+      // R2972000: Try again deals the same fight fresh from its seed.
+      void next.start(config);
+    }
     return () => {
       next.dispose();
       setController((current) => (current === next ? null : current));
@@ -170,8 +182,8 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
   // R2972000: while the fight is live, every in-app move off it asks first (R1754000), as every
   // way off a live online match does (R2479000). These hooks sit before the screens below: a
   // live-to-failed transition re-renders this same screen, and hooks after a return would change
-  // the hook count. The stopped screen holds nothing: Try again deals the same fight again from
-  // its seed, so there is no live fight to keep. The cleanup releases the guard when the store
+  // the hook count. The stopped screen holds nothing: Try again deals the same fight fresh from
+  // its seed (R3476000), so there is no kept fight to pick up. The cleanup releases the guard when the store
   // moves screens on its own (Continue sends the report and unmounts this screen), and `!over`
   // releases it once the fight has its result.
   const [leaving, setLeaving] = useState<{ leave: () => void } | null>(null);
@@ -204,7 +216,7 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     return (
       <Shell variant="lobby">
         <div className="practice-stage">
-          <h1 className="practice-stage__title">{t("The fight stopped")}</h1>
+          <PageTitle>{t("The fight stopped")}</PageTitle>
           <p className="notice" data-testid={fightTestid.failed} role="alert">
             {t(state.failure ?? "Something went wrong while the game was running.")}
           </p>
@@ -278,6 +290,8 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
       legal={snapshot.legal}
       onAction={onAction}
       error={snapshot.error}
+      // R3477000: the practice snapshot's forecast of the human's attacks.
+      forecast={snapshot.forecast}
       emotes={emotes}
       // A fight counts in the run's own stats (DR9), not the device's (R639).
       trackStats={false}
@@ -291,7 +305,7 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
           <strong className="dungeon-fight__enemy" data-testid={fightTestid.enemy}>
             {enemy}
           </strong>
-          <RunTimer startedAt={dungeon.startedAt} />
+          <RunTimer elapsedMs={dungeon.elapsedMs} resumedAt={dungeon.resumedAt} />
           <ThinkIndicator thinking={state.thinking} />
         </span>
       }
@@ -300,6 +314,8 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
         enemy: <ArtifactTray side="enemy" items={enemyItems} passives={content.passives} />,
       }}
       resultActions={resultActions}
+      // R2972000: a lost fight ends the run for good (§15.6), so the Concede dialog says so.
+      concedeBody={t("Your opponent wins, and the whole run ends here for good.")}
     />
   );
 

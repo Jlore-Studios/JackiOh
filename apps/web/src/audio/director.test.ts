@@ -14,6 +14,7 @@ import {
   FLUSH_MAX_SFX,
   HIDDEN_DEF_ID,
   PAIR_OFFSET_MS,
+  RIFFLE_SOUND_DELAY_MS,
   VOICE_DELAY_MS,
   VOICE_PRIORITY,
 } from "./constants.ts";
@@ -342,6 +343,27 @@ describe("B25 events the runner never started are flushed once, condensed, by on
 
     director.onIdle();
     expect(sent(sink)).toEqual(["sfx:impact@0", "sfx:victory@0"]);
+  });
+
+  it("R3497000 a flushed burst ending with the seat's turn start still sends the turn-start cue", () => {
+    const { sink, director } = rig();
+    // More distinct sounds than FLUSH_MAX_SFX, then the viewer's turn begins: a hidden tab drains
+    // the whole burst and the runner goes idle with nothing started.
+    begin(director, [
+      damage(2),
+      healed(1),
+      drawn("c1"),
+      buffed("u1"),
+      locked(2),
+      burned("c9"),
+      { type: "turnStarted", player: "p1", turn: 4 },
+    ]);
+    director.onIdle();
+
+    const sfxIds = sfxSent(sink).map((s) => s.id);
+    expect(sfxIds).toEqual(["impact", "heal", "draw", "buff", "lock", "turnStart"]);
+    expect(sfxSent(sink).find((s) => s.id === "turnStart")?.params).toEqual({ mine: true });
+    expect(director.owedCount()).toBe(0);
   });
 
   it("B25 events skipped ahead of the entry the runner starts are flushed first, then that entry plays", () => {
@@ -951,5 +973,99 @@ describe("R655 a card's effect is sent on its hook's moment, through the directo
     for (const entry of entriesOf(view, view.events)) director.onEntryStart(entry);
 
     expect(sink.sent.filter((cue) => cue.kind !== "sfx")).toEqual([]);
+  });
+});
+
+// #3347: a deck riffles once per action, however many cards went in
+describe("#3347 one riffle sounds per action", () => {
+  const shuffled = (n: number, player: PlayerId = "p1"): GameEvent => ({
+    type: "shuffledIn",
+    player,
+    instanceId: `s${String(n)}`,
+    defId: "core-070",
+    position: n,
+  });
+  const riffles = (sink: Recorder) => sfxSent(sink).filter((cue) => cue.id === "riffle");
+
+  it("#3347 three shuffledIn in one action sound exactly one riffle, after the shuffle's own motion", () => {
+    const { sink, director } = rig();
+    const view = begin(director, [shuffled(1), shuffled(2), shuffled(3)]);
+    for (const entry of entriesOf(view, view.events)) director.onEntryStart(entry);
+
+    expect(riffles(sink)).toHaveLength(1);
+    expect(riffles(sink)[0]?.delayMs).toBe(RIFFLE_SOUND_DELAY_MS);
+  });
+
+  it("#3347 a Trade's traded, shuffledIn and drawn sound one riffle", () => {
+    const { sink, director } = rig();
+    const view = begin(director, [
+      { type: "traded", player: "p1" },
+      shuffled(1),
+      { type: "drawn", player: "p1", instanceId: "cY", defId: "core-055" },
+    ]);
+    for (const entry of entriesOf(view, view.events)) director.onEntryStart(entry);
+
+    expect(riffles(sink)).toHaveLength(1);
+  });
+
+  it("#3347 two actions sound a riffle each", () => {
+    const { sink, director } = rig();
+    const first = begin(director, [shuffled(1), shuffled(2)]);
+    for (const entry of entriesOf(first, first.events)) director.onEntryStart(entry);
+    const third = shuffled(3);
+    const second = withEvents(first, [...first.events, third]);
+    director.onView(second);
+    for (const entry of entriesOf(second, [third])) director.onEntryStart(entry);
+
+    expect(riffles(sink)).toHaveLength(2);
+  });
+
+  it("#3347 a burst the runner never starts (reduced motion) still sounds its one riffle, from the flush", () => {
+    const { sink, director } = rig();
+    begin(director, [shuffled(1), shuffled(2), shuffled(3)]);
+    director.onIdle();
+
+    expect(riffles(sink)).toHaveLength(1);
+  });
+
+  it("#3347 an action that shuffles nothing sounds no riffle", () => {
+    const { sink, director } = rig();
+    const view = begin(director, [damage(3), healed(2)]);
+    for (const entry of entriesOf(view, view.events)) director.onEntryStart(entry);
+
+    expect(riffles(sink)).toEqual([]);
+  });
+});
+
+describe("R3346000 a collapsed play and summon: the cost impact and the stats thud", () => {
+  /** The viewer's own Unit `c1` on the board, with `attack`/`health`, the catalog naming every card a Unit. */
+  function pair(costPaid: number, attack: number, health: number): Recorder {
+    const sink = recorder();
+    const director = createSoundDirector(sink, LINES, () => ({ type: "Unit", tags: [] }));
+    const landed = unit("p1", { instanceId: "c1", attack, health, maxHealth: health });
+    const board = firstView({ you: emptySide("p1", { units: [null, null, landed, null, null] }) });
+    const view = begin(director, [{ ...played("core-004", "c1"), costPaid } as GameEvent, summoned("core-004", "c1")], board);
+    const entries = entriesOf(view, view.events);
+    expect(entries, "planEntries collapses the pair into one entry").toHaveLength(1);
+    director.onEntryStart(must(entries[0], "the pair"));
+    return sink;
+  }
+  const cueOf = (sink: Recorder, id: SfxId) => sfxSent(sink).find((s) => s.id === id);
+
+  it("R3346000 a 1-mana 20/20 gets a light impact and a massive thud, the thud PAIR_OFFSET_MS after the impact", () => {
+    const sink = pair(1, 20, 20);
+    expect(cueOf(sink, "playImpact")).toMatchObject({ params: { playTier: "light", playType: "unit" }, delayMs: 0 });
+    expect(cueOf(sink, "summon")).toMatchObject({ params: { slamTier: "massive" }, delayMs: PAIR_OFFSET_MS });
+    expect(cueOf(sink, "impact")).toMatchObject({ params: { impactTier: "giga" }, delayMs: PAIR_OFFSET_MS });
+    const impact = cueOf(sink, "playImpact");
+    const thud = cueOf(sink, "summon");
+    expect((thud?.delayMs ?? 0) - (impact?.delayMs ?? 0)).toBe(PAIR_OFFSET_MS);
+  });
+
+  it("R3346000 a 10-mana 1/1 gets a massive impact and a tiny thud with no slam impact under it", () => {
+    const sink = pair(10, 1, 1);
+    expect(cueOf(sink, "playImpact")).toMatchObject({ params: { playTier: "massive", playType: "unit" }, delayMs: 0 });
+    expect(cueOf(sink, "summon")).toMatchObject({ params: { slamTier: "tiny" }, delayMs: PAIR_OFFSET_MS });
+    expect(cueOf(sink, "impact")).toBeUndefined();
   });
 });

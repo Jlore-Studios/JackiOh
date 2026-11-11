@@ -12,6 +12,8 @@ import { announceAccountChange, callWithRenewal } from "../net/gate.ts";
 import { loginPath, navigate } from "../net/navigate.ts";
 import { clearSession, forgetPendingAddresses } from "../net/session.ts";
 import { signOut, signOutLabel, useSigningOut } from "../routes/account.tsx";
+import { PageTitle } from "../routes/PageTitle.tsx";
+import { Wordmark } from "../routes/Wordmark.tsx";
 import MoveToExisting from "./MoveToExisting.tsx";
 import { forgetSignUpConsent, heldSignUpConsent, refuseSignUpHere, signUpRefusedHere } from "./consent.ts";
 import {
@@ -138,10 +140,8 @@ export default function ConsentPrompt({ token, me, onAnswered }: ConsentPromptPr
   return (
     <div className="app-shell tavern shell-panel" data-testid={consentTestid.prompt} data-outcome={outcome}>
       <section className="panel panel--auth">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <h2>{t("Before you go on")}</h2>
+        <Wordmark />
+        <PageTitle>{t("Before you go on")}</PageTitle>
         {outcome === "refused" ? (
           <SignUpRefused />
         ) : (
@@ -178,7 +178,7 @@ export default function ConsentPrompt({ token, me, onAnswered }: ConsentPromptPr
                 {t(error)}
               </p>
             ) : null}
-            <button type="submit" data-testid={consentTestid.submit} disabled={outcome === "posting"}>
+            <button type="submit" className="button-primary" data-testid={consentTestid.submit} disabled={outcome === "posting"}>
               {outcome === "posting" ? t("Saving…") : t("Continue")}
             </button>
           </form>

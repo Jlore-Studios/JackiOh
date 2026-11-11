@@ -67,15 +67,15 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TURTLE: &str = "classic-021";
-    const FILLER: &str = "core-005"; // (1) Spell, a card to keep a hand from auto-ending (§2.5).
-    const VANILLA: &str = "core-008"; // 4/4.
-    const TIMMY: &str = "core-011"; // 3/3.
-    const SEVEN_SEVEN: &str = "core-025"; // 4-mana 7/7 Armor 7: a plain 7-attack Unit (Pointmaster is a 6/1 since issue #3136).
-    const D_FENDER: &str = "core-001"; // 0/7.
-    const SAINTESS: &str = "core-081"; // 2/2, "Death: Make your other Units Radiant."
-    const WEAPONS: &str = "core-014"; // Field Spell, "Aura: Your Units have +2 Attack, Rush and First Strike."
-    const SHEEP: &str = "core-t-sheep"; // 1/1, worth 2 Tributes.
-    const ROCK: &str = "core-066"; // 10/10 Indestructible.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell, a card to keep a hand from auto-ending (§2.5).
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const SEVEN_SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // a plain hitter
+    const D_FENDER: &str = "core-001"; // Big D-fender
+    const SAINTESS: &str = "core-081"; // Radiant Saintess: "Death: Make your other Units Radiant."
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: a Field Spell, "Aura: Your Units have +2 Attack, Rush and First Strike."
+    const SHEEP: &str = "core-t-sheep"; // Sheep Token: worth 2 Tributes
+    const ROCK: &str = "core-066"; // The Rock: Indestructible
 
     fn enemy_hero() -> Value {
         json!([{ "pick": "hero", "player": "p2" }])

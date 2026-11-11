@@ -3,8 +3,9 @@
 // fake timers and a scripted host. It holds snapshots and never a state (CLAUDE.md rule 7).
 //
 // Nothing here waits on the human: during the mulligan (R265) both seats owe an answer, and neither
-// changes the other (R266). One clock acts for the human, the host's own (R1563006): when a question
-// sequence (Meditative+ #20 KY's Competition) runs out, the controller sends its Stop, as the server does.
+// changes the other (R266). One clock acts for the human, the practice machine's (R1563006): when a question
+// sequence (Meditative+ #20 KY's Competition) opens it states the window as a timer, which the controller
+// only keeps and fires back (`timers` in a response, `timerFired` in a request); the machine answers Stop.
 //
 // The gap starts when the board has caught up: the board holds each new view back while its events animate
 // (BUILD M5-T4), and a timer alone ran the AI's whole first turn while the board still drew the mulligan.
@@ -26,9 +27,9 @@ import type {
   PracticeResponse,
   PracticeSnapshot,
   PracticeStartConfig,
+  PracticeTimer,
 } from "./protocol.ts";
 import type { ReplaySource } from "../replay/source.ts";
-import { SEQUENCE_WINDOW_MS, sequenceQuestionOf, stopAnswerOf } from "../game/sequenceClock.ts";
 import { practiceReplaySource } from "../replay/sources.ts";
 import { messageOf } from "../net/errors.ts";
 
@@ -126,8 +127,8 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
   let lastStepTurn: number | null = null;
   /** What the page is still showing (the board animating, a voice line): no AI step until it is done. */
   const holds = new Set<string>();
-  /** R1563006: the human's question sequence clock — the first question it started on and its timer. */
-  let sequence: { first: string; handle: unknown } | null = null;
+  /** R1563006: the machine's timers as it set them, by key: this page's handle for each and the id it fires back. */
+  const machineTimers = new Map<string, { timer: number; handle: unknown }>();
 
   function set(patch: Partial<PracticeControllerState>): void {
     if (disposed) return;
@@ -179,44 +180,45 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
 
   // snapshots and the pacing loop
 
-  function clearSequence(): void {
-    if (sequence === null) return;
-    timers.clearTimeout(sequence.handle);
-    sequence = null;
+  function clearMachineTimers(): void {
+    for (const { handle } of machineTimers.values()) timers.clearTimeout(handle);
+    machineTimers.clear();
   }
 
   /**
-   * R1563006: a sequence's first question (streak 0, a choice this clock has not started on) starts the
-   * window; a later question keeps it; none open clears it.
+   * R1563006: the timers the machine set or took back with this answer. The page keeps each as a timeout and,
+   * when it comes due, sends it back (`timerFired`); the machine decides what that means, the Stop of a
+   * question sequence that ran out among it.
    */
-  function syncSequence(view: PlayerView): void {
-    const question = view.result === null ? sequenceQuestionOf(view) : null;
-    if (question === null) {
-      clearSequence();
-      return;
+  function applyTimers(commands: readonly PracticeTimer[] | undefined, gen: number): void {
+    for (const command of commands ?? []) {
+      const key = JSON.stringify(command.key);
+      const held = machineTimers.get(key);
+      if (command.command === "cancel") {
+        if (held?.timer !== command.timer) continue;
+        timers.clearTimeout(held.handle);
+        machineTimers.delete(key);
+        continue;
+      }
+      if (held !== undefined) timers.clearTimeout(held.handle);
+      machineTimers.set(key, {
+        timer: command.timer,
+        handle: timers.setTimeout(() => {
+          machineTimers.delete(key);
+          if (disposed || gen !== generation) return;
+          clearTimer();
+          send({ type: "timerFired", key: command.key, timer: command.timer }, (response) =>
+            onSnapshotResponse(gen, response),
+          );
+        }, command.inMs),
+      });
     }
-    if (sequence !== null && !(question.streak === 0 && question.choiceId !== sequence.first)) return;
-    clearSequence();
-    const gen = generation;
-    sequence = {
-      first: question.choiceId,
-      handle: timers.setTimeout(() => {
-        sequence = null;
-        if (disposed || gen !== generation) return;
-        const latest = state.snapshot;
-        const stop = latest === null ? null : stopAnswerOf(latest.view);
-        if (stop === null) return;
-        clearTimer();
-        send({ type: "act", action: stop }, (response) => onSnapshotResponse(gen, response));
-      }, SEQUENCE_WINDOW_MS),
-    };
   }
 
   function applySnapshot(snapshot: PracticeSnapshot, extra: Partial<PracticeControllerState> = {}): void {
-    syncSequence(snapshot.view);
     if (snapshot.view.result !== null) {
-      // R668: a finished game is not resumed. R2706000: a run fight was never remembered, and the
-      // free game the page remembers is still there to resume.
+      // R668: a finished game is not resumed. R2706000, R3476000: a run fight was never remembered,
+      // and the free game the page remembers is still there to resume.
       if (state.config?.run === undefined) clearPracticeResume();
       // R508: a finished free game's board becomes the human's last practice board.
       if (snapshot.lastBoard !== undefined) writeLastBoard(snapshot.lastBoard);
@@ -276,6 +278,7 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
   function onSnapshotResponse(gen: number, response: PracticeResponse): void {
     if (disposed || gen !== generation) return;
     if (response.type === "snapshot") {
+      applyTimers(response.timers, gen);
       applySnapshot(response.snapshot);
       return;
     }
@@ -288,6 +291,7 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
     generation += 1;
     const gen = generation;
     clearTimer();
+    clearMachineTimers();
     lastStepTurn = null;
     // Anything still queued belongs to the previous game.
     const dropped = jobs.splice(0);
@@ -299,12 +303,14 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
         if (!disposed && gen === generation) {
           if (response.type === "started") {
             // R668: a free game is remembered from its deal on; a lesson's start forgets any.
-            // R2706000: a run fight leaves the page's memory of the free game as it was.
+            // R2706000, R3476000: a run fight leaves the page's memory of the free game as it was.
             if (config.run === undefined) writePracticeResume(config);
+            applyTimers(response.timers, gen);
             applySnapshot(response.snapshot, { aiSeat: response.aiSeat, defs: response.defs, failure: null });
           } else {
             // A save that does not fold is no game to come back to.
-            if (body.type === "resume") clearPracticeResume();
+            // R3476000: a missed run resume never clears the free game's page marker.
+            if (body.type === "resume" && config.run === undefined) clearPracticeResume();
             set({ phase: "failed", thinking: false, failure: unexpected(response) });
           }
         }
@@ -414,7 +420,7 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
     dispose(): void {
       if (disposed) return;
       clearTimer();
-      clearSequence();
+      clearMachineTimers();
       disposed = true;
       const dropped = jobs.splice(0);
       for (const job of dropped) job.done({ id: -1, type: "failed", message: CLOSED_MESSAGE });

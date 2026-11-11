@@ -102,8 +102,11 @@ cargo jackioh names                # name comments beside each card's id, writte
 cargo jackioh fuzz --seeds 200     # CI's fuzz gate: random-policy games with replay hashing; --handicap for the handicapped wave, --duos for co-op games (§13)
 cargo jackioh golden check         # the hotseat fixture's fold (cargo test folds it too); `golden record` + `golden check --file` compare two builds
 cargo jackioh gate                 # the AI's quality gates at smoke size; --full at full size (the daily run's); --duos for the co-op AI team's (§13.7)
+cargo jackioh perf                 # the engine's and the replay fold's speed on a frozen corpus, each median held to its budget (#3429); --smoke once, --json
 cargo jackioh patches "<title>" [--plays <ids>] [--rule]   # a branch's card change as a pending fragment, no version (R388, R646, R1366000); `patches ship` names the version by tier after merge
 cargo jackioh classify --base origin/main [--parent-bin <path>] [--claims]   # what the change does: its kind, tier and the cards that play differently (R1365000); --claims holds the fragments to it, as CI's `rust (classify)` does (R1370000)
+sh scripts/mutants.sh --in-diff    # cargo-mutants on the lines the branch changed since origin/main: does a test fail when each is wrong (#3490); fails on a survivor
+sh scripts/mutants.sh <area> [k]   # one area's shard k of mutation testing (cargo-mutants; Stryker for web-* and edge); `areas` lists them, mutants.yml runs each weekly
 sh scripts/build-wasm.sh           # the engine as WebAssembly into apps/web/src/wasm/pkg (the web's dev, build, build:e2e and test run it first)
 JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh   # the C module (crates/wasm/c, the one a Roblox port translates) alone; fails on any import; CI's `web (wasm c module)`
 pnpm --dir apps/web dev            # http://localhost:5173: hotseat at /dev/hotseat, the AI at /practice
@@ -143,6 +146,7 @@ cargo build --release -p jackioh-tools         # target/release/jackioh: the spe
 cd e2e && pnpm exec cypress run --spec cypress/e2e/01-hotseat-full-game.cy.ts
 pnpm --dir e2e test:component                  # component/pixel specs, no server needed
 pnpm --dir apps/web build:e2e && pnpm --dir apps/web exec vite preview --port 5173 --strictPort   # a built client, as CI serves it
+pnpm --dir e2e probe:frames                                                             # the busy-board frame probe (spec 50, issue #3605): build:e2e + preview on :4173 + the spec; -- --json for the JSON report
 ```
 
 `vite dev` reloads the page whenever `apps/web/src` changes, restarting a hotseat game at turn 0, so serve a
@@ -158,7 +162,9 @@ out failed there, against the newer `main`, and its fix starts from merging `mai
 a pull request only to bring it up to date: one that merges cleanly needs no update, since the queue tests it on
 the newest `main`, and every push runs its CI again on the organization's shared runners. Merge `main` in when
 GitHub shows a conflict or the queue took it out, and turn auto-merge on once it is ready, so the queue takes it
-as soon as its checks pass. Run
+as soon as its checks pass. A pull request's CI and a merge-queue build may show "Waiting" before they start:
+the runner gate holds them, with no runner, until GitHub's 20 have room (bot/README.md "The runner gate"),
+while `main`'s and a promotion's never wait. Run
 `cargo jackioh classify --base origin/main --claims` before pushing: on a pull request `rust` runs it as
 `rust (classify)` (R1370000). A pull request runs only the jobs that read what it changes (`scripts/ci-scope.sh`,
 whose header says what turns each on; #751), so a file a test newly reads from outside its crate goes in the

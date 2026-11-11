@@ -128,11 +128,11 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const EXPEDITION: &str = "meditative-018";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4.
-    const TIMMY: &str = "core-011"; // (1) Unit 3/3.
-    const MENACE: &str = "core-019"; // (3) Unit 9/9.
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile.
-    const COIN: &str = "core-t-coin"; // (0) Spell: gain 1 mana.
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const MENACE: &str = "core-019"; // Midrange Menace
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const COIN: &str = "core-t-coin"; // The Coin: gain 1 mana
 
     /// A board where p1 can play the expedition and neither side auto-ends its turn, on p1's turn 9,
     /// so its next turn's max mana is 4.
@@ -154,6 +154,7 @@ mod tests {
     }
 
     /// The hand cards `legalActions` offers as the expedition's pick.
+    // Differs from Scenario::offered: one card's play targets as ids, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<String> {
         let expedition_id = s.card(EXPEDITION).id.clone();
         legal_actions(s.state(), P1)

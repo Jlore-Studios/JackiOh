@@ -37,6 +37,7 @@ import { onlineReplaySource, practiceReplaySource } from "../replay/sources.ts";
 import { ShareWithFriend } from "../together/ShareReplay.tsx";
 import { sharedWithMePath } from "../together/anchors.ts";
 import { BackLink, followInApp } from "./nav.tsx";
+import { ArrowIcon } from "./ArrowIcon.tsx";
 import { messageOf } from "../net/errors.ts";
 
 import "./replays.css";
@@ -91,7 +92,7 @@ const RESULT_WORDS: Readonly<Record<PracticeReplayListing["result"], string>> = 
 const MODE_WORDS: Readonly<Record<QueueMode, string>> = {
   bo1: "Best of 1",
   bo3: "Conquest",
-  random: "All Random",
+  random: "All random",
 };
 
 /** The worker's card data and the games it kept, asked in turn (its answers arrive in order). */
@@ -315,13 +316,12 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
 
   return (
     <div className="app-shell replays one-screen" data-testid={replaysTestid.root}>
-      <BackLink />
-      <h1>{t("Replays")}</h1>
+      <BackLink title={t("Replays")} />
       <div className="one-screen__body one-screen__stack">
         <OpenReplayJson ready={lookup !== null} onOpen={setOpen} />
 
         <section className="replays__section" aria-labelledby="replays-practice-heading">
-          <h2 id="replays-practice-heading">{t("Practice games on this device")}</h2>
+          <h2 id="replays-practice-heading" className="section-heading">{t("Practice games on this device")}</h2>
           {practice.kind === "loading" ? (
             <Skeleton variant="rows" label={t("Reading the games kept on this device…")} />
           ) : null}
@@ -378,7 +378,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
         </section>
 
         <section className="replays__section" aria-labelledby="replays-online-heading">
-          <h2 id="replays-online-heading">{t("Online games")}</h2>
+          <h2 id="replays-online-heading" className="section-heading">{t("Online games")}</h2>
           {account.kind === "loading" ? <Skeleton variant="panel" label={t("Checking your account…")} /> : null}
           {account.kind === "anonymous" ? (
             <p data-testid={replaysTestid.signIn}>
@@ -411,7 +411,8 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
             // #936 B59: the replays friends shared with this account are listed on Play together.
             <p>
               <a href={sharedWithMePath()} data-testid={replaysTestid.sharedWithMe} onClick={followInApp(sharedWithMePath())}>
-                {t("Shared with me →")}
+                {t("Shared with me")}
+                <ArrowIcon direction="forward" />
               </a>
             </p>
           )}

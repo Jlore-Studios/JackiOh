@@ -1,0 +1,202 @@
+/*
+ * R3344000, R3344001 (#3344): the depth of a face that has it (`data-depth`, CardFace, depth.ts). Its picture is stacked
+ * planes (`.cf-plane`, one per painter role group: the far one is the window's own picture, `.cf-art-frame > .cf-art`),
+ * its parent gives it perspective, and the pointer's, the device's or a drag's tilt (tilt.ts, `data-tilt="on"` and its
+ * custom properties) turns the face and shifts each plane by its depth, under a glare that lies opposite the tilt.
+ *
+ * Rotation, parallax and glare all sit in the one motion gate below, the sheet's convention: under reduced motion (the
+ * media query, or the Reduce motion switch on <html>) none of it applies, and CardFace draws such a face with no planes
+ * at all. Only the face turns in 3D: `.cf` is an isolated group (cards.css), which draws everything inside it flat, so
+ * the planes move by `translate`, not in depth. The face declares `preserve-3d` only while it tilts, so a face at rest
+ * is no layer of its own (a resting face's text and gems print as they did before it had depth).
+ *
+ * Nothing here styles a foil, Radiant's shimmer (`.cf[data-foil]::after`, cards.css) or a worn foil's (cosmetics.css's
+ * `.cf-art::after`): the planes take none (their pseudo-elements are off), the far plane keeps the window's, and the glare
+ * is white alone, so it never draws a colour in Radiant's gold window (R2725004; cosmetics.test.tsx).
+ *
+ * R3350000 (#3350): a Mythic's diorama (`data-diorama`) stacks its slices as the planes (`data-slice`, `--cf-plane` its
+ * depth in steps), some bent about one axis (`data-bend`).
+ */
+
+/* The perspective, on the face's parent: CARD_PERSPECTIVE_PX (constants.ts). Only a parent of a face with depth. */
+:has(> .cf[data-depth]) {
+  perspective: 900px;
+}
+
+/* The planes: each the window's own box and shape (`cf-art--<shape>`), clipping its picture, with no ground, ring or foil
+   of its own and no pointer. */
+.cf-planes {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+}
+
+.cf-plane {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cf[data-depth] .cf-plane > .cf-art {
+  position: absolute;
+  inset: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.cf[data-depth] .cf-plane > .cf-art[data-art-pending="true"] {
+  background-image: none;
+}
+
+.cf[data-depth] .cf-plane > .cf-art::before,
+.cf[data-depth] .cf-plane > .cf-art::after {
+  content: none;
+}
+
+/* The glare's layers: one over the art window, blended in the way of an art (`color-dodge`), and one under the face's
+   words, over its panel, blended as a frame's sheen is (`overlay`). Each draws in an isolated group, so it blends with
+   its own area and nothing else. Drawn only while the face tilts (the motion gate below): a blend mode makes the group
+   under it a render surface even at opacity 0 or hidden, which prints the face's text with another antialiasing, so a
+   face at rest carries no layer that blends at all. */
+.cf-glare {
+  position: absolute;
+  inset: 0;
+  display: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cf[data-depth] .cf-art-frame,
+.cf[data-depth] .cf-scale {
+  isolation: isolate;
+}
+
+.cf-glare--art {
+  z-index: var(--z-raised);
+  mix-blend-mode: color-dodge;
+  background: radial-gradient(
+    circle at var(--cf-glare-x, 50%) var(--cf-glare-y, 50%),
+    color-mix(in srgb, var(--pal-white) calc(var(--cf-glare-art, 0) * 100%), transparent),
+    transparent var(--cf-glare-size, 55%)
+  );
+}
+
+.cf-glare--frame {
+  z-index: var(--z-base);
+  mix-blend-mode: overlay;
+  background: radial-gradient(
+    circle at var(--cf-glare-x, 50%) var(--cf-glare-y, 50%),
+    color-mix(in srgb, var(--pal-white) calc(var(--cf-glare-frame, 0) * 100%), transparent),
+    transparent var(--cf-glare-size, 55%)
+  );
+}
+
+/* A Field Trap's window is a tall hexagon (cards.css, which styles only the window's own direct child), so its planes
+   take the hexagon too, not the Trap's chamfered box. */
+.cf[data-card-type="Field Trap"] .cf-plane.cf-art--notched {
+  clip-path: polygon(50% 0, 100% 14%, 100% 86%, 50% 100%, 0 86%, 0 14%);
+}
+
+/* A Legendary or Mythic face in hand and in inspect (`data-frame-break`, depth.ts `breaksFrame`): the near plane's
+   subject stands taller from its foot, and may rise over the window's top edge by CARD_FRAME_BREAK_PX (`--cf-frame-break`).
+   It keeps its window's shape (art.css's `cf-art--<shape>`): the plane's clip is that shape with its top raised by the
+   break, so the subject crosses the top edge where the shape is and never draws over a corner the shape cuts away, the
+   bezel or the ring. `.cf-scale`'s own clip still stops it at the face's edge. */
+.cf[data-frame-break="true"] .cf-plane[data-plane="near"] {
+  overflow: visible;
+  border-radius: 0;
+  clip-path: inset(calc(-1 * var(--cf-frame-break, 0px)) 0 0 0);
+}
+
+.cf[data-frame-break="true"] .cf-plane[data-plane="near"].cf-art--portrait {
+  clip-path: inset(calc(-1 * var(--cf-frame-break, 0px)) 0 0 0 round 48% 48% 40% 40% / 55% 55% 45% 45%);
+}
+
+.cf[data-frame-break="true"] .cf-plane[data-plane="near"].cf-art--window {
+  clip-path: inset(calc(-1 * var(--cf-frame-break, 0px)) 0 0 0 round 6% / 8%);
+}
+
+.cf[data-frame-break="true"] .cf-plane[data-plane="near"].cf-art--arch {
+  clip-path: inset(calc(-1 * var(--cf-frame-break, 0px)) 0 0 0 round 50% 50% 4% 4% / 40% 40% 4% 4%);
+}
+
+.cf[data-frame-break="true"] .cf-plane[data-plane="near"].cf-art--notched {
+  clip-path: polygon(
+    10% calc(-1 * var(--cf-frame-break, 0px)),
+    90% calc(-1 * var(--cf-frame-break, 0px)),
+    100% 13%,
+    100% 87%,
+    90% 100%,
+    10% 100%,
+    0 87%,
+    0 13%
+  );
+}
+
+.cf[data-frame-break="true"][data-card-type="Field Trap"] .cf-plane[data-plane="near"].cf-art--notched {
+  clip-path: polygon(
+    50% calc(-1 * var(--cf-frame-break, 0px)),
+    100% 14%,
+    100% 86%,
+    50% 100%,
+    0 86%,
+    0 14%
+  );
+}
+
+.cf[data-frame-break="true"] .cf-plane[data-plane="near"] > .cf-art {
+  transform-origin: 50% 100%;
+  scale: var(--cf-frame-break-scale, 1);
+}
+
+/* R3350000: a diorama's bent slice turns about one axis (`data-bend`) under its own perspective, DIORAMA_BEND_PERSPECTIVE_PX
+   (constants.ts), by its `--cf-slice-bend`, so it reads as a curved surface; it stays inside its plane's clip. */
+.cf[data-diorama] .cf-plane[data-bend] {
+  perspective: 400px;
+}
+
+.cf[data-diorama] .cf-plane[data-bend="y"] > .cf-art {
+  rotate: y var(--cf-slice-bend, 0deg);
+}
+
+.cf[data-diorama] .cf-plane[data-bend="x"] > .cf-art {
+  rotate: x var(--cf-slice-bend, 0deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The spring: the face springs back past level and settles when the pointer leaves (the rest state's transition), and
+     follows the pointer quickly while it tilts (the tilting state's, below). The planes' parallax has the same. */
+  :root:not([data-reduce-motion="true"]) .cf[data-depth] {
+    transition: transform var(--motion-base) var(--ease-overshoot);
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-depth] .cf-plane > .cf-art {
+    transition: translate var(--motion-base) var(--ease-overshoot);
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-depth][data-tilt="on"] {
+    transform-style: preserve-3d;
+    transform: rotateX(var(--cf-tilt-rx, 0deg)) rotateY(var(--cf-tilt-ry, 0deg));
+    transition-duration: var(--motion-fast);
+    transition-timing-function: var(--ease-out);
+    will-change: transform;
+  }
+
+  /* Each plane shifts with the pose by its depth (`--cf-plane`, 1 middle to 3 nearest; the far plane rests), one step
+     (`--cf-depth-step`) a plane at full tilt. */
+  :root:not([data-reduce-motion="true"]) .cf[data-depth][data-tilt="on"] .cf-plane > .cf-art {
+    translate:
+      calc(var(--cf-tilt-x, 0) * var(--cf-plane, 0) * var(--cf-depth-step, 0px))
+      calc(var(--cf-tilt-y, 0) * var(--cf-plane, 0) * var(--cf-depth-step, 0px));
+    transition-duration: var(--motion-fast);
+    transition-timing-function: var(--ease-out);
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-depth][data-tilt="on"] .cf-glare {
+    display: block;
+    opacity: 1;
+  }
+}

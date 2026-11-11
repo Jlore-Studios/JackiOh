@@ -14,9 +14,17 @@
 // the normal face; the Animated and Signature augments are retired. R3015002: every level of a variant draws its first
 // level's picture. R3015005: a card's pick names one level (`levelOfPick`, the server's `level_of_pick`), an older
 // pick's shape mapped as the server maps it, and wears the highest owned and offered at or below it (`wornLevel`).
+// R3017000 (#3017): #3017 adds six two-level variants, Night, Neon sign, Watercolor, Stained-glass window, Woodcut and
+// Tarot card; R3017002: each draws its own look (`artPictureOf`), four a new picture of the card's subject under a
+// treatment and Woodcut and Neon sign the normal one restyled.
+// R3343000 (#3343): a first level may be a rarity's default look (`COSMETIC_DEFAULT_LOOKS`, the server's
+// `default_look`): Full art's the Mythics', Extended art's the Legendaries', a token by its printed rarity. It is
+// offered nowhere there and owned there by everyone, so its variant starts at the level above it (`isNextLevel`).
+// R3343001: the Default variant draws it (`lookOn`), the Full-art cards setting keeping a Mythic's normal face when off;
+// Prismatic's first level adds the full-art frame, so both its levels are full bleed.
 // Presentation only: nothing here reaches the engine, an action, `PlayerView` or the log (CLAUDE.md rule 7).
 
-import { COSMETICS, COSMETIC_LEVELS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
+import { COSMETICS, COSMETIC_DEFAULT_LOOKS, COSMETIC_LEVELS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
 import { showcaseFamilyOf, type ArtPart, type ArtPicture } from "./art/pictures.ts";
 
 /** R2715000: what an Animated art's registry id starts with, a `fullArt` entry too (migration 0075). */
@@ -79,6 +87,24 @@ export const VERSION_IMMERSIVE_ID = "version-immersive";
 /** R2944000: the Prismatic version, Mythic: mirror chrome, rainbow-edged and iridescent, the top chase; never gold. */
 export const VERSION_PRISMATIC_ID = "version-prismatic";
 
+/** R3017000: the Night variant's first level, Rare: a new picture of the card's subject under a night sky, a moon and stars. */
+export const VERSION_NIGHT_ID = "version-night";
+
+/** R3017000: the Neon sign variant's first level, Epic: the card's own picture as glowing tubes on a dark wall. */
+export const VERSION_NEON_ID = "version-neon";
+
+/** R3017000: the Watercolor variant's first level, Rare: a new picture of the card's subject in washes on paper. */
+export const VERSION_WATERCOLOR_ID = "version-watercolor";
+
+/** R3017000: the Stained-glass window variant's first level, Epic: a new picture of the card's subject in leaded panes. */
+export const VERSION_STAINED_GLASS_ID = "version-stained-glass";
+
+/** R3017000: the Woodcut variant's first level, Rare: the card's own picture cut as a three-tone print. */
+export const VERSION_WOODCUT_ID = "version-woodcut";
+
+/** R3017000: the Tarot card variant's first level, Epic: a new picture of the card's subject as a fortune card's, under an arch. */
+export const VERSION_TAROT_ID = "version-tarot";
+
 /** R3015000: the Default variant's second level, Epic: the normal face, its picture moving (R2715001). */
 export const VERSION_ANIMATED_ID = "version-animated";
 
@@ -120,6 +146,14 @@ export function levelOf(id: string): VariantLevel | null {
   return Object.hasOwn(COSMETIC_LEVELS, id) ? (COSMETIC_LEVELS[id] ?? null) : null;
 }
 
+/**
+ * R3343000: the level whose look `defId`'s Default variant draws (the server's `default_look`, by the rarity its face
+ * prints): null for a card whose Default is the normal face.
+ */
+export function defaultLookOf(defId: string): string | null {
+  return Object.hasOwn(COSMETIC_DEFAULT_LOOKS, defId) ? (COSMETIC_DEFAULT_LOOKS[defId] ?? null) : null;
+}
+
 /** R3015000: each variant's levels, lowest first, the variants in the registry's order of their first levels. */
 const LADDERS: ReadonlyMap<string, readonly string[]> = (() => {
   const out = new Map<string, string[]>();
@@ -154,15 +188,12 @@ export function levelsBelow(id: string): readonly string[] {
 }
 
 /**
- * R3015000: the variants a card `defId` has: the Default always (its first level the normal face), then each whose
- * first level it is offered, in `VARIANTS`' order.
+ * R3015000: the variants a card `defId` has: the Default always (its first level the normal face), then each with a
+ * level it is offered, in `VARIANTS`' order. R3343002: so a variant whose first level is the card's default look,
+ * offered nowhere there (R3343000), is listed from the level above it.
  */
 export function variantsOn(defId: string): readonly string[] {
-  return VARIANTS.filter((variant) => {
-    if (variant === DEFAULT_VARIANT) return true;
-    const first = ladderOf(variant)[0];
-    return first !== undefined && offeredOn(first, defId);
-  });
+  return VARIANTS.filter((variant) => variant === DEFAULT_VARIANT || ladderOf(variant).some((id) => offeredOn(id, defId)));
 }
 
 /** R3015000: the levels of `variant` offered on `defId`, lowest first (a Legacy card's stop before animated, R2724000). */
@@ -172,10 +203,12 @@ export function levelsOn(defId: string, variant: string): readonly string[] {
 
 /**
  * R3015003, R3015004: whether `id` is a next level on `defId` where `owns` says what the viewer owns there: every level
- * below it is (the server's `is_next`). Anything but a level always is.
+ * below it is (the server's `is_next`). Anything but a level always is. R3343000: the card's default look is owned
+ * there by everyone, as the server's `owns` holds it.
  */
 export function isNextLevel(id: string, defId: string, owns: (defId: string, id: string) => boolean): boolean {
-  return levelsBelow(id).every((below) => owns(defId, below));
+  const shown = defaultLookOf(defId);
+  return levelsBelow(id).every((below) => below === shown || owns(defId, below));
 }
 
 /**
@@ -198,15 +231,29 @@ function firstLevelOf(id: string | null): string | null {
   return ladderOf(at.variant)[0] ?? null;
 }
 
+/** R3017002: the picture each of part 6's variants draws, by its first level. */
+const PART_SIX_PICTURES: ReadonlyMap<string, ArtPicture> = new Map<string, ArtPicture>([
+  [VERSION_NIGHT_ID, "night"],
+  [VERSION_NEON_ID, "neon"],
+  [VERSION_WATERCOLOR_ID, "watercolor"],
+  [VERSION_STAINED_GLASS_ID, "stained-glass"],
+  [VERSION_WOODCUT_ID, "woodcut"],
+  [VERSION_TAROT_ID, "tarot"],
+]);
+
 /**
  * R2940001: the picture a face wearing `id` draws (pictures.ts): Alt art's for Alt art and Alt full art, the Sketch for
  * Sketch. R2942001: Pixel's and Comic's for those; Extended art draws the normal one. R2943001: Set showcase its set's
  * own treatment, a card of `set` (the normal picture for a set with none); Out of frame the normal one. R2944001:
  * Immersive its hazed depth (its window's backdrop, CardFace) and Prismatic its chrome. R3015002: every level of a
  * variant its first level's (the Sketch's full art the sketch, Alt art's full arts Alt art's, Full art's the normal).
+ * R3017002: each of part 6's its own: Night's, Neon sign's, Watercolor's, Stained-glass window's, Woodcut's and Tarot
+ * card's.
  */
 export function artPictureOf(id: string | null, set: string | null = null): ArtPicture {
   const version = firstLevelOf(id);
+  const partSix = version === null ? undefined : PART_SIX_PICTURES.get(version);
+  if (partSix !== undefined) return partSix;
   if (version === VERSION_ALT_ART_ID) return "alt";
   if (version === VERSION_SKETCH_ID) return "sketch";
   if (version === VERSION_PIXEL_ID) return "pixel";
@@ -256,6 +303,19 @@ const LOOKS: ReadonlyMap<string, CardLook> = new Map(
 /** R3015000: the look the level `id` wears: the normal face for null or an id that is no level. */
 export function lookOfLevel(id: string | null): CardLook {
   return (id === null ? undefined : LOOKS.get(id)) ?? NORMAL_LOOK;
+}
+
+/**
+ * R3343001: the look the level `id` wears on `defId`: `lookOfLevel`, but a Default level (none, or the Default's
+ * animated level) draws the card's default look (`defaultLookOf`), still or moving as the level is, its `level` left
+ * the Default's. A full-bleed default look (a Mythic's Full art) only while the Full-art cards setting is on
+ * (`fullArtCards`): off, the face keeps its text, as the setting promises.
+ */
+export function lookOn(defId: string, id: string | null, fullArtCards: boolean): CardLook {
+  const look = lookOfLevel(id);
+  const shown = defaultLookOf(defId);
+  if (look.version !== null || shown === null || (!fullArtCards && isFullBleed(shown))) return look;
+  return { ...look, version: shown };
 }
 
 const OFFERS: ReadonlyMap<string, ReadonlySet<string>> = new Map(

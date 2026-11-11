@@ -26,6 +26,7 @@ import { skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { expectEmptyState } from "../test/empty.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
+import { grantTestid as G } from "../economy/GrantReveal.tsx";
 import CosmeticPacks from "./CosmeticPacks.tsx";
 import Shop from "./Shop.tsx";
 import {
@@ -157,6 +158,25 @@ describe("#1309 the shop model", () => {
     expect(shipped).not.toContain("card-back-jlorious");
     // The shipped Mythic card back that drops is still offered beside it.
     expect(shipped).toContain("card-back-nebula");
+  });
+
+  it("R3335002 the Chase Shard offers no Fleet reward or the Jlorious Starship", () => {
+    const quantities = quantitiesOf(collectionOf());
+    const nothing = ownedCosmeticsOf({ cards: [], account: [] });
+    const shipped = chaseCandidates(nothing, quantities).map((entry) => entry.id);
+    // Not one of the thirty Fleet rewards, the Legendary and Mythic ones among them, nor the Jlorious hull.
+    const earned = REGISTRY.filter((entry) => entry.track !== undefined || entry.jlorious === true);
+    expect(earned.filter((entry) => entry.rarity === "Legendary" || entry.rarity === "Mythic").length).toBeGreaterThan(0);
+    expect(earned.map((entry) => entry.id)).toContain("starship-hull-jlorious");
+    for (const entry of earned) expect(shipped, entry.id).not.toContain(entry.id);
+    expect(shipped.filter((id) => id.startsWith("starship-"))).toEqual([]);
+    // A registry's Legendary Fleet reward is no chase however it is marked, and a Legendary one beside it still is.
+    const registry: RegistryCosmetic[] = [
+      { id: "fleet-trail", kind: "starshipTrail", name: "Fleet trail", rarity: "Legendary", default: false, starter: false, chase: true, track: "fleet", trackLevel: 14 },
+      { id: "jlorious-hull", kind: "starshipHull", name: "Jlorious hull", rarity: "Mythic", default: false, starter: false, chase: true, jlorious: true },
+      { id: "legendary-table", kind: "table", name: "Legendary table", rarity: "Legendary", default: false, starter: false, chase: true },
+    ];
+    expect(chaseCandidates(nothing, quantities, registry).map((entry) => entry.id)).toEqual(["legendary-table"]);
   });
 });
 
@@ -599,6 +619,7 @@ describe("#1309 the cosmetic packs", () => {
     expect(await screen.findByTestId(T.shardBar)).toHaveTextContent("20 / 20");
     expect(screen.queryByTestId(T.shardChoice)).toBeNull();
     expect(screen.getByTestId(T.shardEmpty)).toHaveTextContent("Nothing to buy yet");
+    expectEmptyState(screen.getByTestId(T.shardEmpty));
   });
 
   it("the panel shows no odds: they are on the Purchases screen", async () => {
@@ -812,6 +833,64 @@ describe("#1309 the cosmetic packs", () => {
     expect(screen.getByTestId(T.chasePreview("card-back-nebula")).querySelector(".cf-back")).toHaveAttribute("data-card-back", "card-back-nebula");
     // A starter chase is owned by every account already: not offered.
     expect(screen.queryByTestId(T.chasePick("foil-cracked-ice"))).toBeNull();
+  });
+
+  it("R3349000 a cosmetic pack grant shows the card in its new level, rarest last", async () => {
+    const opened = openedCosmeticPack();
+    cosmeticServer({
+      open: {
+        status: 200,
+        body: {
+          ...opened,
+          slots: [
+            {
+              rarity: "Rare",
+              grant: { kind: "cosmetic", cosmeticId: "version-sketch", cosmeticRarity: "Rare", cardId: "core-001", cardGranted: false },
+            },
+            {
+              rarity: "Legendary",
+              grant: {
+                kind: "cosmetic",
+                cosmeticId: "version-full-art",
+                cosmeticRarity: "Legendary",
+                cardId: "core-001",
+                cardGranted: false,
+              },
+            },
+            { rarity: "Common", grant: { kind: "bars" } },
+          ],
+        } satisfies OpenedCosmeticPackResponse,
+      },
+    });
+    render(<CosmeticPacks token={TOKEN} />);
+    await screen.findByTestId(T.unopened);
+    fireEvent.click(screen.getByTestId(T.open));
+    await screen.findByTestId(T.reveal);
+
+    // The Rare sketch first, the Legendary full art last: rarest last, on the card wearing it.
+    const scene = await screen.findByTestId(G.scene);
+    expect(scene).toHaveAttribute("data-treatment", "panel");
+    expect(scene).toHaveAttribute("data-stage", "before");
+    expect(screen.getByTestId(G.name(0))).toHaveTextContent("Sketch · Rare");
+
+    fireEvent.click(scene);
+    expect(scene).toHaveAttribute("data-stage", "after");
+    expect(screen.getByTestId(G.after(0)).querySelector(".cf")).not.toBeNull();
+
+    fireEvent.click(scene);
+    expect(scene).toHaveAttribute("data-treatment", "grow");
+    expect(scene).toHaveAttribute("data-stage", "before");
+    expect(screen.getByTestId(G.name(1))).toHaveTextContent("Full art · Legendary");
+
+    fireEvent.click(scene);
+    expect(scene).toHaveAttribute("data-stage", "after");
+    fireEvent.click(scene);
+    await waitFor(() => {
+      expect(screen.queryByTestId(G.scene)).toBeNull();
+    });
+    // The reveal list stands as the server answered it.
+    expect(screen.getByTestId(T.reveal)).toBeInTheDocument();
+    expect(screen.getByTestId(T.slot(0))).toHaveTextContent("New cosmetic: Sketch");
   });
 
   it("R1579000 an opened cosmetic pack links to the Collection's cosmetics", async () => {
@@ -1085,11 +1164,46 @@ describe("#1667 the Chase Shard bar", () => {
 
     expect(server.to("POST", "/api/cosmetic-packs/chase")).toHaveLength(1);
     expect(server.to("POST", "/api/cosmetic-packs/chase")[0]?.body).toEqual({ cosmeticId: AURORA.id });
+
+    // The account chase reveals on the panel: a playmat sits on no card, so it grows in instead.
+    const reveal = screen.getByTestId(G.scene);
+    expect(reveal).toHaveAttribute("data-treatment", "grow");
+    expect(screen.getByTestId(G.name(0))).toHaveTextContent("Aurora table · Legendary · Chase");
     expect(shardBar()).toHaveTextContent("0 / 20");
     expect(shardBar()).toHaveAttribute("data-state", "resting");
     expect(shardFill()).toBe("scaleX(0)");
     expect(screen.queryByTestId(T.shardChoice)).toBeNull();
     expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("R3349000 a chase buy takes the screen", async () => {
+    const MOLTEN: RegistryCosmetic = {
+      id: "foil-molten-gold",
+      kind: "foil",
+      name: "Molten gold",
+      rarity: "Legendary",
+      default: false,
+      starter: false,
+      chase: true,
+    };
+    const server = chaseServer();
+    render(<CosmeticPacks token={TOKEN} registry={[MOLTEN]} />);
+    await flush();
+
+    fireEvent.click(screen.getByTestId(T.chasePick(MOLTEN.id)));
+    await flush();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    await flush();
+
+    // A Legendary chase on a card takes the screen in the full-screen view; a tap moves on.
+    const scene = screen.getByTestId(G.scene);
+    expect(scene).toHaveAttribute("data-treatment", "takeover");
+    expect(scene.querySelector('[data-testid="fullscreen-art"]')).not.toBeNull();
+    expect(screen.getByTestId(G.name(0))).toHaveTextContent("Molten gold · Legendary · Chase");
+    fireEvent.click(screen.getByTestId("fullscreen-art"));
+    expect(screen.queryByTestId(G.scene)).toBeNull();
+    expect(server.to("POST", "/api/cosmetic-packs/chase")).toHaveLength(1);
+    expect(screen.queryByTestId(T.shardChoice)).toBeNull();
   });
 
   it("R2683000 the first Buy asks in the row, in the reader's language, with Cancel focused, and sends nothing", async () => {
@@ -1101,6 +1215,12 @@ describe("#1667 the Chase Shard bar", () => {
     fireEvent.click(screen.getByTestId(T.chasePick(AURORA.id)));
 
     const dialog = screen.getByRole("alertdialog", { name: "购买碎冰？这将消耗整个追猎碎片进度条。" });
+    expect(screen.getByTestId(T.chaseAsk(AURORA.id))).toBe(dialog);
+    // R3221000: Cancel first and the close (no ✕), Confirm last.
+    expect(within(dialog).getAllByRole("button").map((button) => button.dataset.testid)).toEqual([
+      T.chaseCancel(AURORA.id),
+      T.chaseConfirm(AURORA.id),
+    ]);
     expect(screen.queryByTestId(T.chasePick(AURORA.id)), "the question takes the Buy's place").toBeNull();
     expect(screen.getByTestId(T.shardChoice)).toContainElement(dialog);
     expect(screen.getByRole("button", { name: "取消" })).toHaveFocus();

@@ -58,9 +58,9 @@ mod tests {
     const WELL: &str = "core-006";
     const COIN: &str = "core-t-coin";
     const FILLER: &str = "core-005";
-    const HINDER: &str = "core-021"; // (0) Spell: your opponent has less mana next turn.
-    const JAMMED: &str = "core-036"; // (1) Spell: destroy a backrow card.
-    const SHEEPISH: &str = "core-041"; // Sheepish, a Trap to fill a backrow zone.
+    const HINDER: &str = "core-021"; // Hinder: your opponent has less mana next turn
+    const JAMMED: &str = "core-036"; // Magic Jammed: destroy a backrow card
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap to fill a backrow zone.
 
     fn library() -> Value {
         json!([FILLER, FILLER, FILLER, FILLER, FILLER, FILLER])

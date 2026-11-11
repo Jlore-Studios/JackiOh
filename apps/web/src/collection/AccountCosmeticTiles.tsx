@@ -17,8 +17,9 @@ import {
   type CosmeticId,
   type DeckSlotKind,
 } from "../cards/cosmetics.ts";
+import GrantReveal, { type GrantItem } from "../economy/GrantReveal.tsx";
 import { t } from "../i18n/i18n.ts";
-import { accountTiles, collectionTestid as T, cosmeticKindWords, type AccountTile } from "./collection.ts";
+import { accountTiles, collectionTestid as T, cosmeticKindWords, earnWords, type AccountTile } from "./collection.ts";
 import { MiniBoard } from "./CosmeticLook.tsx";
 import ItemPreview, { usePreviewHold } from "./ItemPreview.tsx";
 import TokenOffer, { offerTier, useHeldTokens } from "./TokenOffer.tsx";
@@ -72,7 +73,8 @@ function Tile({
       <TilePicture kind={kind} id={cosmetic.id} equipped={equipped} />
       <span className="collection-tile__name">{t(cosmetic.name)}</span>
       <span className="collection-tile__rarity">{t(cosmetic.rarity)}</span>
-      {owned ? null : <span className="collection-tile__lock">{t("Locked")}</span>}
+      {/* R3335002: an earned-only one says how it is earned (its Fleet track level), and no token covers it. */}
+      {owned ? null : <span className="collection-tile__lock">{earnWords(cosmetic) ?? t("Locked")}</span>}
       <button
         type="button"
         className="collection-tile__button"
@@ -104,7 +106,7 @@ function TileRow({
 }): ReactElement {
   return (
     <section className="collection-tiles" data-testid={T.tiles(kind)} aria-label={cosmeticKindWords(kind)}>
-      <h4 className="collection-tiles__title">{cosmeticKindWords(kind)}</h4>
+      <h3 className="collection-tiles__title">{cosmeticKindWords(kind)}</h3>
       <p className="settings-hint">{t(hint)}</p>
       <ul className="collection-tiles__list">
         {tiles.map((tile) => (
@@ -126,6 +128,8 @@ export default function AccountCosmeticTiles({ token = null }: { token?: string 
   // The held tokens are read only while a tile is locked, the only place they are offered.
   const [held, setHeld] = useHeldTokens(rows.some(({ tiles }) => tiles.some(({ owned }) => !owned)) ? token : null);
   const [previewing, setPreviewing] = useState<CosmeticId | null>(null);
+  // R3349000: a bought tile reveals its new look before the preview closes.
+  const [grant, setGrant] = useState<GrantItem | null>(null);
   const wornOf = (kind: DeckSlotKind): CosmeticId => {
     const id = resolveCosmetic(kind, picks[kind]);
     return owns(id) ? id : DEFAULT_CARD_COSMETICS[kind];
@@ -155,10 +159,20 @@ export default function AccountCosmeticTiles({ token = null }: { token?: string 
                 held={held}
                 name={t(shown.cosmetic.name)}
                 onRedeemed={setHeld}
+                onReveal={setGrant}
               />
             )
           }
           onClose={() => {
+            setPreviewing(null);
+          }}
+        />
+      )}
+      {grant === null ? null : (
+        <GrantReveal
+          items={[grant]}
+          onDone={() => {
+            setGrant(null);
             setPreviewing(null);
           }}
         />

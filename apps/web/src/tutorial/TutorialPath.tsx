@@ -1,6 +1,6 @@
 // Tutorial path for `/practice` (SPEC §9.10, R294); locked lessons remain focusable.
 // R322 (with account copy, R321): the player may persistently hide the path, with focus returned to Show or Hide.
-// R2205002: a lesson's chips are the Field Guide entries it sets up, each marked once found.
+// R2205002: a lesson's chips are the Field guide entries it sets up, each marked once found.
 
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 
@@ -217,7 +217,7 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
     >
       <div className="tutorial-path__head">
         <div className="tutorial-path__heading">
-          <h2 className="tutorial-path__title" id={headingId}>
+          <h2 className="section-heading" id={headingId}>
             {t("Learn to play")}
           </h2>
         </div>

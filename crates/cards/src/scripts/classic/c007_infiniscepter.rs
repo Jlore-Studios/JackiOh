@@ -133,18 +133,18 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const SCEPTER: &str = "classic-007";
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const CALL: &str = "core-069"; // (2) Spell: Recruit 3 Units of (1) Cost or less.
-    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
-    const FLAME: &str = "classic-016"; // (1) Spell, Book: Deal 4 damage (8 Radiant).
-    const DIVIDEND: &str = "core-024"; // (X) Spell: modes damage / heal / mana.
-    const JAMMED: &str = "core-036"; // (1) Spell: Destroy target backrow card; Lock its zone.
-    const TIMMY: &str = "core-011"; // (1) Unit.
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const CALL: &str = "core-069"; // Call to Arms: Recruit 3 Units
+    const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
+    const FLAME: &str = "classic-016"; // Book of Flame: a Book Spell, Deal 4 damage (8 Radiant)
+    const DIVIDEND: &str = "core-024"; // Efficiency Dividend: modes damage / heal / mana
+    const JAMMED: &str = "core-036"; // Magic Jammed: Destroy target backrow card; Lock its zone.
+    const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
     const VANILLA: &str = "core-008";
-    const FILLER: &str = "core-010"; // (0) Spell Rapid Replenish.
-    const TUTOR: &str = "core-051"; // (1) Spell: opens a type prompt as it resolves.
-    const EXPERIMENT: &str = "core-085"; // (2) Trap: fuses the opponent's played permanent onto one of yours of its type.
-    const MANA_WELL: &str = "core-006"; // (3) Field Spell.
+    const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
+    const TUTOR: &str = "core-051"; // KY's Private Tutor: opens a type prompt as it resolves
+    const EXPERIMENT: &str = "core-085"; // Unlicensed Experimentation: fuses the opponent's played permanent onto one of yours of its type
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
 
     use crate::js;
 
@@ -173,10 +173,6 @@ mod tests {
             .map(js)
             .filter(|action| action["type"] == "activate" && action["instanceId"] == card.as_str())
             .collect()
-    }
-
-    fn count(events: &[GameEvent], event_type: &str) -> usize {
-        events.iter().filter(|event| event.event_type().as_str() == event_type).count()
     }
 
     fn remembered(s: &Scenario, card: &str) -> Option<Value> {
@@ -305,7 +301,7 @@ mod tests {
 
                 s.activate(SCEPTER, json!({}));
 
-                assert_eq!(count(s.last_events(), "drawn"), 2);
+                assert_eq!(s.last_count("drawn"), 2);
                 s.expect_health(P1, 22);
                 s.expect_mana(P1, 3);
                 assert_eq!(s.state().players.p1.turn_log.cards_played, played + 1);
@@ -462,7 +458,7 @@ mod tests {
                 s.expect_in_zone(CALL, "exile");
                 s.activate(SCEPTER, json!({}));
 
-                assert!(count(s.last_events(), "summoned") > 0);
+                assert!(s.last_count("summoned") > 0);
             }
 
             #[test]
@@ -542,7 +538,7 @@ mod tests {
 
                 s.activate(&scepter, json!({}));
 
-                assert_eq!(count(s.last_events(), "drawn"), 2);
+                assert_eq!(s.last_count("drawn"), 2);
                 s.expect_health(P1, 22);
                 assert_eq!(
                     s.pile(P1, "graveyard").iter().filter(|card| card.def_id == STOCKPILE).count(),

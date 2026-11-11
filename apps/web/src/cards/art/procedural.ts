@@ -1,9 +1,13 @@
 // Fixed seeds keep artSpec pure and base/radiant geometry identical (Surface A, B1, B2).
 // R503 adds per-card motif, family twist and per-set variety streams without changing Core cards.
+// R3331000: a card with a scene recipe (sceneRecipes.ts) draws its picture as that scene instead
+// (scene.ts `withScene`), keeping its theme, layout, backdrop, sky scheme, emblem glyph and rays; a
+// card with none draws the spec it always drew, byte for byte.
 
 import type { EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, round2, seededRandom } from "./hash.ts";
 import { MOTIFS, type Motif, type MotifHeadgear, type MotifId } from "./motifs.ts";
+import { sceneRecipeOf, withScene, type SceneRecipe } from "./scene.ts";
 import {
   driftPalette,
   EMBLEM_POOLS,
@@ -28,6 +32,8 @@ export const LAYOUTS: Readonly<Record<Composition, readonly string[]>> = {
   burst: ["star", "spiral", "orbit", "shatter"],
   landscape: ["range", "sea", "towers", "dunes"],
   sigil: ["ring", "diamond", "eye", "wheel"],
+  // R3338001: the giant's poses, which `voidGiant` draws.
+  void: ["loom", "reach", "stride", "rise"],
 };
 
 export const BACKDROPS: readonly Backdrop[] = [
@@ -60,7 +66,7 @@ export type ArtSpec = {
   sky: { from: string; to: string; angle: number };
   glow: { cx: number; cy: number; r: number; color: string; opacity: number };
   /** R2715001: each with the part of the picture it is, which a moving picture moves on its own beat. */
-  ridges: readonly { d: string; fill: string; opacity: number; role: RidgeRole }[];
+  ridges: readonly { d: string; fill: string; opacity: number; role: RidgeRole; stroke?: string; strokeWidth?: number }[];
   emblem: Glyph;
   /** A second, smaller glyph in the corner furthest from the emblem, or null. */
   accent: Glyph | null;
@@ -84,9 +90,11 @@ export const ART_BOX = 100;
 /**
  * R2715001: what part of the picture a ridge is: behind the subject (the backdrop, a family twist's
  * under layer, a circuits pattern, a figure's hills), the subject itself (the rest of the composition),
- * or over it (a waves pattern, a twist's over layer).
+ * or over it (a waves pattern, a twist's over layer). R3331000: a scene's light and particles are
+ * ridges too, each moving on its own beat (scene.ts `SCENE_LAYER_ROLES`); R3390000: so are a scene's props, its
+ * placements marked to move on the props beat as a painter's glyphs do.
  */
-export type RidgeRole = "back" | "subject" | "over";
+export type RidgeRole = "back" | "subject" | "over" | "light" | "props" | "motes";
 const RAY_COUNT_MIN = 7;
 const RAY_COUNT_MAX = 11;
 const RADIANT_SALT = 0x9e3779b9;
@@ -1073,11 +1081,188 @@ function backdropLayers(rng: Rng, backdrop: Backdrop): Layer[] {
   }
 }
 
+// R3338001: a void given form (Ceaseless Void, `CARD_COMPOSITIONS`): a hole in the shape of a giant, rimmed in
+// the glow behind it, a few stars showing through it and others falling into its outline.
+
+/** One arm's pose: its upper arm's and its forearm's angle, in degrees clockwise from straight out. */
+type ArmPose = { upper: number; fore: number };
+type VoidPose = { right: ArmPose; left: ArmPose; scale: number; drop: number };
+
+/** Each layout's pose: arms hanging, both raised, one raised and one hanging, or spread on a giant seen close. */
+const VOID_POSES: Readonly<Record<string, VoidPose>> = {
+  loom: { right: { upper: 62, fore: 80 }, left: { upper: 62, fore: 80 }, scale: 1, drop: 0 },
+  reach: { right: { upper: -38, fore: -62 }, left: { upper: -38, fore: -62 }, scale: 0.9, drop: 6 },
+  stride: { right: { upper: -32, fore: -68 }, left: { upper: 64, fore: 82 }, scale: 0.95, drop: 3 },
+  rise: { right: { upper: 22, fore: 38 }, left: { upper: 22, fore: 38 }, scale: 1.25, drop: 10 },
+};
+const VOID_DEFAULT_POSE: VoidPose = { right: { upper: 62, fore: 80 }, left: { upper: 62, fore: 80 }, scale: 1, drop: 0 };
+/** How far each angle of a pose may lean, so no two giants stand alike. */
+const VOID_POSE_JITTER = 6;
+/** The glowing rim stands this far outside the hole. */
+const VOID_RIM = 1.6;
+/** The outline runs past the box's foot, so the legs reach the window's edge. */
+const VOID_FOOT = ART_BOX + 4;
+/** The falling stars come in over the giant's head, from this angle round to that one (degrees, clockwise). */
+const VOID_FALL_FROM = -165;
+const VOID_FALL_TO = -15;
+/** No falling star stands above this, where every window crops the square. */
+const VOID_SKY_TOP = 14;
+
+type Giant = {
+  cx: number;
+  headCy: number;
+  headR: number;
+  neck: number;
+  shoulderY: number;
+  shoulderW: number;
+  armW: number;
+  upperLen: number;
+  foreLen: number;
+  waistW: number;
+  hipW: number;
+  hipY: number;
+  legGap: number;
+  legSpread: number;
+  crotchY: number;
+  right: ArmPose;
+  left: ArmPose;
+};
+
+type Vec = readonly [number, number];
+/** A point of the outline, reached in a line or, given `via`, a quadratic curve. */
+type OutlinePoint = { to: Vec; via?: Vec };
+
+function plus(a: Vec, b: Vec, k = 1): Vec {
+  return [a[0] + b[0] * k, a[1] + b[1] * k];
+}
+
+/** One side's half of the giant's outline, from its neck down its arm, its flank and its leg to the crotch. */
+function giantHalf(g: Giant, side: 1 | -1, grow: number): OutlinePoint[] {
+  const x = (dx: number): number => g.cx + side * dx;
+  const arm = side === 1 ? g.right : g.left;
+  const dir = (degrees: number): Vec => [side * Math.cos(degrees * DEGREES), Math.sin(degrees * DEGREES)];
+  // The arm's outer side: right of its direction on the right arm, mirrored on the left.
+  const outer = (d: Vec): Vec => [side * d[1], -side * d[0]];
+  const neck = g.neck + grow;
+  const head = g.headR + grow;
+  const neckY = g.headCy + Math.sqrt(Math.max(0, head * head - neck * neck));
+  const upper = dir(arm.upper);
+  const fore = dir(arm.fore);
+  const shoulder: Vec = [x(g.shoulderW - g.armW / 2), g.shoulderY + g.armW / 2];
+  const elbow = plus(shoulder, upper, g.upperLen);
+  const hand = plus(elbow, fore, g.foreLen);
+  const half = g.armW / 2 + grow;
+  const a1 = outer(upper);
+  const a2 = outer(fore);
+  const bend = Math.hypot(a1[0] + a2[0], a1[1] + a2[1]) || 1;
+  const ae: Vec = [(a1[0] + a2[0]) / bend, (a1[1] + a2[1]) / bend];
+  const top = g.shoulderY - 2 - grow;
+  return [
+    { to: [x(neck), neckY] },
+    { to: [x(g.shoulderW * 0.55), top], via: [x(neck), top] },
+    { to: plus(shoulder, a1, half) },
+    { to: plus(elbow, ae, half) },
+    { to: plus(hand, a2, half) },
+    { to: plus(hand, a2, -half), via: plus(hand, fore, half * 1.6) },
+    { to: plus(elbow, ae, -half) },
+    { to: [x(g.shoulderW - g.armW * 1.1), g.shoulderY + g.armW * 1.1] },
+    { to: [x(g.waistW + grow), g.shoulderY + (g.hipY - g.shoulderY) * 0.55], via: [x(g.waistW + grow + 1), g.shoulderY + g.armW * 2] },
+    { to: [x(g.hipW + grow), g.hipY] },
+    { to: [x(g.hipW + g.legSpread + grow), VOID_FOOT] },
+    { to: [x(g.legGap + g.legSpread * 0.4 - grow), VOID_FOOT] },
+    { to: [x(g.legGap - grow), g.crotchY + 3] },
+  ];
+}
+
+/** The giant's whole outline, `grow` outside its edge: over the head, down the right side, up the left. */
+function giantOutline(g: Giant, grow: number): string {
+  const right = giantHalf(g, 1, grow);
+  const left = giantHalf(g, -1, grow);
+  const r = fmt(g.headR + grow);
+  const step = (point: OutlinePoint, to: Vec): string =>
+    point.via === undefined ? `L${pt(to[0], to[1])}` : `Q${pt(point.via[0], point.via[1])} ${pt(to[0], to[1])}`;
+  const [start] = left;
+  const [neck] = right;
+  if (start === undefined || neck === undefined) return "";
+  let d = `M${pt(start.to[0], start.to[1])}A${r} ${r} 0 1 1 ${pt(neck.to[0], neck.to[1])}`;
+  right.slice(1).forEach((point) => {
+    d += step(point, point.to);
+  });
+  const back = [...left].reverse();
+  const [crotch] = back;
+  if (crotch !== undefined) d += `Q${pt(g.cx, g.crotchY - grow)} ${pt(crotch.to[0], crotch.to[1])}`;
+  back.slice(1).forEach((next, index) => {
+    const point = back[index];
+    if (point !== undefined) d += step(point, next.to);
+  });
+  return `${d}Z`;
+}
+
+function voidGiant(rng: Rng, _theme: ArtThemeId, layout: string): Geometry {
+  const pose = VOID_POSES[layout] ?? VOID_DEFAULT_POSE;
+  const s = pose.scale;
+  const lean = (arm: ArmPose): ArmPose => ({
+    upper: arm.upper + between(rng, -VOID_POSE_JITTER, VOID_POSE_JITTER),
+    fore: arm.fore + between(rng, -VOID_POSE_JITTER, VOID_POSE_JITTER),
+  });
+  const cx = between(rng, 44, 56);
+  const headR = between(rng, 6.5, 8) * s;
+  const headCy = between(rng, 24, 28) + pose.drop;
+  const neck = headR * 0.55;
+  const shoulderY = headCy + Math.sqrt(headR * headR - neck * neck) + between(rng, 4, 6) * s;
+  const shoulderW = between(rng, 22, 26) * s;
+  const armW = between(rng, 7.5, 9) * s;
+  const upperLen = between(rng, 15, 18) * s;
+  const foreLen = between(rng, 14, 17) * s;
+  const waistW = between(rng, 10, 12) * s;
+  const hipW = waistW + between(rng, 1, 2.5) * s;
+  const hipY = shoulderY + between(rng, 28, 32) * s;
+  const legGap = between(rng, 2.5, 4) * s;
+  const legSpread = between(rng, 3, 7) * s;
+  const crotchY = Math.min(VOID_FOOT - 6, hipY + between(rng, 6, 9) * s);
+  const right = lean(pose.right);
+  const left = lean(pose.left);
+  const giant: Giant = { cx, headCy, headR, neck, shoulderY, shoulderW, armW, upperLen, foreLen, waistW, hipW, hipY, legGap, legSpread, crotchY, right, left };
+
+  // The void shows through: faint stars inside its chest.
+  let inside = "";
+  const insideCount = whole(rng, 5, 8);
+  for (let k = 0; k < insideCount; k += 1) {
+    inside += circlePath(cx + between(rng, -waistW * 0.7, waistW * 0.7), between(rng, shoulderY + 4, hipY - 2), between(rng, 0.35, 0.8));
+  }
+  // Stars falling in over its head, each in its own slot of the arc, its trail behind it.
+  let trails = "";
+  let heads = "";
+  const falling = whole(rng, 6, 9);
+  for (let k = 0; k < falling; k += 1) {
+    const angle = VOID_FALL_FROM + ((VOID_FALL_TO - VOID_FALL_FROM) * (k + 0.5)) / falling + between(rng, -6, 6);
+    const rise = Math.max(0.2, -Math.sin(angle * DEGREES));
+    const reach = Math.min(between(rng, 30, 44), (shoulderY - VOID_SKY_TOP) / rise);
+    const hx = cx + reach * Math.cos(angle * DEGREES);
+    const hy = shoulderY + reach * Math.sin(angle * DEGREES);
+    trails += shardPath(hx, hy, angle, 1.4, between(rng, 6, 12), between(rng, 0.5, 0.9));
+    heads += starPath(rng, hx, hy, 4, between(rng, 1.6, 2.6), 0.6, angle, 0.3);
+  }
+  return {
+    layers: [
+      { d: giantOutline(giant, VOID_RIM), fill: "glow", opacity: 0.6 },
+      { d: giantOutline(giant, 0), fill: "near", opacity: 1 },
+      { d: inside, fill: "glow", opacity: 0.55 },
+      { d: trails, fill: "glow", opacity: 0.4 },
+      { d: heads, fill: "accent", opacity: 0.95 },
+    ],
+    glow: { cx, cy: (headCy + hipY) / 2 - 4, r: between(rng, 30, 38), opacity: between(rng, 0.75, 0.95) },
+    emblem: { x: cx, y: shoulderY + between(rng, 9, 12) * s, size: between(rng, 11, 14), rotate: between(rng, -8, 8) },
+    motes: { top: 4, bottom: 60 },
+  };
+}
+
 const COMPOSERS: Readonly<Record<Composition, (rng: Rng, theme: ArtThemeId, layout: string, wears?: MotifHeadgear) => Geometry>> = {
   figure,
   burst,
   landscape,
   sigil,
+  void: voidGiant,
 };
 
 // R503: twists and motifs
@@ -1440,6 +1625,7 @@ export function artSpec(
   composition: Composition,
   radiant: boolean,
   motif: MotifId | null = null,
+  scene: SceneRecipe | null = sceneRecipeOf(defId),
 ): ArtSpec {
   const seed = hashId(defId);
   const rng = seededRandom(seed);
@@ -1512,7 +1698,7 @@ export function artSpec(
           stroke: radiant ? mixHex(drawn.stroke, RADIANT_PALETTE.emblem.stroke, RADIANT_MOTIF_MIX) : drawn.stroke,
           opacity: round2(placed.opacity),
         }));
-  return {
+  const spec: ArtSpec = {
     theme,
     composition,
     variant: radiant ? "radiant" : "base",
@@ -1556,4 +1742,5 @@ export function artSpec(
     motifGlyphs,
     subjectRidges: [Math.min(subjectFrom + ground, subjectTo), subjectTo],
   };
+  return scene === null ? spec : withScene(spec, scene, defId, radiant);
 }

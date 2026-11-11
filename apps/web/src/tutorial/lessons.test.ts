@@ -11,7 +11,7 @@ import { SHADOW_BAN_IDS } from "@jackioh/ai";
 import { opponentOf, type CardDef, type PlayerId } from "@jackioh/shared";
 
 import { PRACTICE_SEED_MAX_LENGTH } from "../practice/config.ts";
-import { createPracticeCore } from "../practice/core.ts";
+import { createPracticeDriver } from "../practice/driver.ts";
 import type { PracticeResponse } from "../practice/protocol.ts";
 import zhCN from "../i18n/zh-CN.json";
 import { FIELD_GUIDE } from "./discoveries.ts";
@@ -237,7 +237,7 @@ describe("R291 the tutorial's lessons", () => {
 
   it("R291 start through the practice core with the lesson's decks and the tutorial handicap, showing the page only the human's side", () => {
     for (const lesson of TUTORIAL_LESSONS) {
-      const core = createPracticeCore({ now: () => 0, dev: true });
+      const core = createPracticeDriver({ now: () => 0, dev: true });
       const started: PracticeResponse = core.handle({ id: 1, type: "start", config: lessonStartConfig(lesson) });
       expect(started.type, lesson.id).toBe("started");
       if (started.type !== "started") continue;
@@ -265,7 +265,7 @@ describe("R291 the tutorial's lessons", () => {
   });
 
   it("R291 refuse an unknown lesson rather than play some other game", () => {
-    const core = createPracticeCore({ now: () => 0, dev: true });
+    const core = createPracticeDriver({ now: () => 0, dev: true });
     const [lesson] = TUTORIAL_LESSONS;
     if (lesson === undefined) throw new Error("no lessons");
     const response = core.handle({ id: 1, type: "start", config: { ...lessonStartConfig(lesson), lesson: "no-such-lesson" } });

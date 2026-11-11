@@ -17,13 +17,13 @@ use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, log_alert, log_info, now_ms, ok_of};
 use crate::app::App;
 use crate::config::{BOT_GRIND_STEP_GAMES, BOT_STRENGTHS};
-use crate::cosmetics::JLORIOUS_CARD_BACK;
+use crate::cosmetics::JLORIOUS_COSMETICS;
 use crate::db::store::{
     BotRating, MatchRow, Pilot, Profile, ProfileKind, RatedGameKind, RatedGameRow, RatedReason, RatedSide,
     Season, SeasonStanding, SeriesStatus, StoreError, Tx, ladder_of_mode,
 };
 use crate::economy::store::{CosmeticGrant, EconomyReason};
-use crate::ranked::board::standings_of;
+use crate::ranked::board::{listed, standings_of};
 use crate::ranked::game::{RateGameInput, RateSide, decide, position_in};
 use crate::ranked::glicko2::{Glicko, START_GLICKO};
 use crate::ranked::ladder::{
@@ -461,19 +461,22 @@ pub async fn commit_ranked_game(t: &mut Tx<'_>, plan: &RankedPlan, at: i64) -> R
         )
         .await?;
     }
-    // R2755000: a grant to someone who owns it already writes nothing.
+    // R2755000: a grant to someone who owns it already writes nothing. R3335003: the Jlorious Starship beside the
+    // card back, the same way.
     for profile_id in &writes.jlorious {
-        t.economy_cosmetics_grant(&CosmeticGrant {
-            profile_id: profile_id.clone(),
-            card_id: None,
-            cosmetic_id: JLORIOUS_CARD_BACK.to_string(),
-            delta: 1,
-            reason: EconomyReason::Jlorious,
-            reference: Some(plan.row.id.clone()),
-            dev: false,
-            at,
-        })
-        .await?;
+        for cosmetic_id in JLORIOUS_COSMETICS {
+            t.economy_cosmetics_grant(&CosmeticGrant {
+                profile_id: profile_id.clone(),
+                card_id: None,
+                cosmetic_id: cosmetic_id.to_string(),
+                delta: 1,
+                reason: EconomyReason::Jlorious,
+                reference: Some(plan.row.id.clone()),
+                dev: false,
+                at,
+            })
+            .await?;
+        }
     }
     t.ranked_record_game(&plan.row).await?;
     Ok(())
@@ -669,8 +672,9 @@ pub async fn leaderboard(app: &App, viewer_id: &str, ladder: Ladder) -> Result<L
     let mut groups: Vec<Vec<TierEntry>> = vec![Vec::new(); tier_count];
     let mut raisins = 0;
     for standing in &standings {
-        // R3074001: a strict server leaves a hand-set rating off the public ladder, placed or not.
-        if app.env.dev_strict && standing.hand_set {
+        // R3074001, R3290000: a banned account, and on a strict server a hand-set rating, is off the
+        // public ladder, placed or not.
+        if !listed(standing, app.env.dev_strict) {
             continue;
         }
         let Some(ladder) = standing.rank.ladder else {

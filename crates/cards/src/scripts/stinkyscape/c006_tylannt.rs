@@ -61,11 +61,11 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const VANILLA: &str = "core-008"; // (1) 4/4.
-    const MANA_WELL: &str = "core-006"; // (1) Field Spell.
-    const CALL_TO_ARMS: &str = "core-069"; // (2) Spell: Recruit Units of (1) Cost or less; Radiant (2).
-    const IN_TOO_DEEP: &str = "classic-090"; // (1) Field Spell, a Quest: quest 1 "Draw 2 cards" opens as it enters.
-    const JOB_APPLICATION: &str = "stinkyscape-112"; // A staged Quest whose Stage 1 reward hears back.
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const CALL_TO_ARMS: &str = "core-069"; // Call to Arms: Recruit cheap Units; Radiant raises the cap.
+    const IN_TOO_DEEP: &str = "classic-090"; // In Too Deep: a Field Spell, a Quest: quest 1 "Draw 2 cards" opens as it enters
+    const JOB_APPLICATION: &str = "stinkyscape-112"; // Job Application: A staged Quest whose Stage 1 reward hears back.
     const SEND: &str = "send-resume";
     const FIRST_QUEST: &str = "1";
 

@@ -37,19 +37,19 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const ARGUSLAND: &str = "classic-075";
-    const GAMBIT: &str = "classic-052"; // C #52 Final Gambit: cancels a lethal hit on your hero.
-    const GARY: &str = "core-004"; // 1/1
-    const VANILLA: &str = "core-008"; // 4/4
-    const PANTHER: &str = "core-032"; // 5/4 Rush
-    const SEVEN_SEVEN: &str = "core-025"; // 4-mana 7/7 Armor 7: a plain 7-attack hitter (Pointmaster is a 6/1 since issue #3136)
-    const MENACE: &str = "core-019"; // 9/9 Taunt
-    const LUNAR: &str = "core-035"; // (1) Spell: deal 3 damage to a target.
-    const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const BLOOD_BEAN: &str = "core-027"; // Cast on draw: make a random hand card Radiant. Lose 7 health.
-    const GOING_LONG: &str = "core-084"; // Field Spell: your hero has Armor 2.
-    const ANTI_ONESHOT: &str = "core-073"; // Field Spell: your hero can't take more than 5 damage at a time.
-    const MAGIC_JAMMED: &str = "core-036"; // (1) Spell: destroy target backrow card; lock its zone.
-    const MY_PAWN: &str = "core-096"; // Trap: cancels a declared attack that would be lethal to your hero (R44).
+    const GAMBIT: &str = "classic-052"; // Final Gambit: cancels a lethal hit on your hero
+    const GARY: &str = "core-004"; // Gary the Gambler
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const PANTHER: &str = "core-032"; // Prem Panther: Rush
+    const SEVEN_SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // a plain hitter
+    const MENACE: &str = "core-019"; // Midrange Menace: Taunt
+    const LUNAR: &str = "core-035"; // Lunar Eclipse: deal 3 damage to a target
+    const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    const BLOOD_BEAN: &str = "core-027"; // Blood Ridden Glowy Jelly Bean: Cast on draw: make a random hand card Radiant. Lose 7 health.
+    const GOING_LONG: &str = "core-084"; // Going Long: your hero has Armor 2
+    const ANTI_ONESHOT: &str = "core-073"; // Anti-oneshot Armor: your hero can't take more than 5 damage at a time
+    const MAGIC_JAMMED: &str = "core-036"; // Magic Jammed: destroy target backrow card; lock its zone
+    const MY_PAWN: &str = "core-096"; // My Pawn: cancels a declared attack that would be lethal to your hero (R44)
     const FILLER: &str = "core-005";
 
     use crate::scenario;

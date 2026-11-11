@@ -176,6 +176,7 @@ pub(crate) fn decide_full(
         rng,
         budget,
         should_stop: None,
+        wrap_up: None,
     };
     let decision = decide(state, seat, &mut options);
     (decision, options.rng)

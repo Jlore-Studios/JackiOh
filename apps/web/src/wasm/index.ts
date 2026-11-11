@@ -22,6 +22,7 @@ import type { CraftPreview } from "../wire/generated/CraftPreview.ts";
 import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
 import type { PendingPromptView } from "../wire/generated/PendingPromptView.ts";
 import type { DeckMark } from "../wire/generated/DeckMark.ts";
+import type { WinRateTable } from "../wire/generated/WinRateTable.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
 import type { CombatForecast } from "../wire/generated/CombatForecast.ts";
 import type {
@@ -31,6 +32,7 @@ import type {
   RunFightSetup,
   RunFile,
   RunSetup,
+  RunShopPrices,
   RunState,
   RunUnlocks,
 } from "@jackioh/run";
@@ -41,6 +43,8 @@ import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import type { DuosTeamRules } from "../wire/generated/DuosTeamRules.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
 import type { GameState } from "../wire/generated/GameState.ts";
+import type { PracticeAnswer } from "../wire/generated/PracticeAnswer.ts";
+import type { PracticeCall } from "../wire/generated/PracticeCall.ts";
 import type { ReplayCheckpoints } from "../wire/generated/ReplayCheckpoints.ts";
 import type { ReplayOpen } from "../wire/generated/ReplayOpen.ts";
 import type { ReplayPage } from "../wire/generated/ReplayPage.ts";
@@ -188,6 +192,8 @@ export type CreateGameArgs = {
   sandbox?: boolean;
   /** R2702000: each seat's deck marks, cards of its list dealt Radiant or Buffed at setup. Omitted, nothing is marked or stored. */
   deckMarks?: Partial<Record<PlayerId, readonly DeckMark[]>>;
+  /** R3049000: the win-rate snapshot CN Tech and NA Tech read (the public `/api/stats/cards` figures); omitted, the game reads none and the cards fall back. */
+  winRates?: WinRateTable;
 };
 
 /** `error` is the engine's refusal, and then `state` is the input. */
@@ -348,6 +354,11 @@ export function runContent(): RunContent {
   return call("runContent", () => parsed<RunContent>(normal.run_content()));
 }
 
+/** R3496000: `RunContent` for a catalog version: the build's own, a carried version's, or null. */
+export function runContentAt(version: string): RunContent | null {
+  return call("runContentAt", () => parsed<RunContent | null>(normal.run_content_at(json(version))));
+}
+
 /** Whether the setup may start a run: null, or the reason. */
 export function runCheckSetup(setup: RunSetup, unlocks: RunUnlocks, content: RunContent): string | null {
   return call("runCheckSetup", () =>
@@ -401,6 +412,15 @@ export function runEmbers(score: number): number {
 /** The run's max HP, before no fight and after every artifact and blessing. */
 export function runMaxHp(state: RunState, content: RunContent): number {
   return call("runMaxHp", () => parsed<number>(normal.run_max_hp(json(state), json(content))));
+}
+
+/**
+ * What a shop's services cost this run, as the run spends them: the remove price after the shop
+ * discount, the Radiant and buff Tickets, each held relic's next level (null at its top) and each
+ * stock item's Coins after the discount.
+ */
+export function runShopPrices(state: RunState, content: RunContent): RunShopPrices {
+  return call("runShopPrices", () => parsed<RunShopPrices>(normal.run_shop_prices(json(state), json(content))));
 }
 
 /** The Embers that raise the starting deck from `level` to the next, or null at the ladder's top. */
@@ -484,6 +504,34 @@ export function duosLegalActions(state: DuosState, seat: DuosSeat): DuosActionBo
 /** The seat's `DuosView`: its own duel, its teammate's from the teammate's seat, both teams' life (B23). */
 export function duosViewFor(state: DuosState, seat: DuosSeat): DuosView {
   return call("duosViewFor", () => parsed<DuosView>(normal.duos_view_for(duosStateJson(state), seat)));
+}
+
+// the practice session (#3099)
+
+/**
+ * One call of the practice session, `jackioh-shared`'s machine behind `host(call)` (the host contract,
+ * `crates/shared/README.md`): a game against the AI seat as a `PracticeHost` the caller holds as JSON and
+ * hands back on every call, and the outputs to carry out. A refusal of a start or a resume is the
+ * returned `refused`, never thrown; only a call that does not parse is.
+ */
+export function practiceCall(practice: PracticeCall): PracticeAnswer {
+  return call("host", () => parsed<PracticeAnswer>(normal.host(json({ call: "practice", ...practice }))));
+}
+
+/** The practice session's numbers (`crates/shared/src/config.rs`, #3099): the caps its asks carry and the games it keeps. */
+export type PracticeConstants = {
+  PRACTICE_AI_CLOCK_MS: number;
+  PRACTICE_LETHAL_HINT_CLOCK_MS: number;
+  PRACTICE_REPLAYS_KEPT: number;
+};
+
+let practiceConstantsCache: PracticeConstants | null = null;
+
+export function practiceConstants(): PracticeConstants {
+  return call("constants", () => {
+    practiceConstantsCache ??= parsed<PracticeConstants>(normal.constants());
+    return practiceConstantsCache;
+  });
 }
 
 // the AI (SURFACE §9)

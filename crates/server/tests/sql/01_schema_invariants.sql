@@ -57,7 +57,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 74 tables of migrations 0001-0084 ==='
+\echo '=== CHECK 2: the 76 tables of migrations 0001-0086 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -87,11 +87,12 @@ declare
   -- R2100000), a spend's idempotency_keys (0067, R2124000), a news entry's claims, news_claims
   -- (0077, R2875000), the practice claims' practice_claim_counts (0078, #2884), the dev
   -- dashboard's admin_actions, hand_set_ratings, rating_grants and news_posts (0080, R3074000),
-  -- and each card's plays, level and stamp, card_proficiency (0081, R3013000).
+  -- and each card's plays, level and stamp, card_proficiency (0081, R3013000), and the Fleet track's
+  -- fleet_tracks and fleet_track_grants (0086, R3335001).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
   -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069, 0070, 0071, 0072, 0073, 0074, 0075,
-  -- 0076 and 0079 add no table, 0082 drops custom_cards, which 0037 had added, and 0083 and 0084 add none.
+  -- 0076 and 0079 add no table, 0082 drops custom_cards, which 0037 had added, and 0083, 0084 and 0085 add none.
   -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
   -- here.
   expected constant text[] := array[
@@ -101,7 +102,7 @@ declare
     'cosmetics',
     'deck_versions', 'decklist_totals', 'decks', 'duos_match_actions', 'duos_matches', 'duos_rooms', 'economy_counter_grants',
     'economy_counters', 'emote_events',
-    'friend_requests', 'friendships', 'game_record_batches', 'game_records', 'game_totals', 'hand_set_ratings', 'held_quests',
+    'fleet_track_grants', 'fleet_tracks', 'friend_requests', 'friendships', 'game_record_batches', 'game_records', 'game_totals', 'hand_set_ratings', 'held_quests',
     'idempotency_keys', 'inventory',
     'inventory_grants',
     'invite_codes', 'jlore_grants', 'last_boards', 'loadout_deck_cards',
@@ -311,10 +312,11 @@ declare
   -- that only fires on INSERT, so the flags are asserted, not printed.
   -- SPEC §14.11 (0045) holds the economy's six ledgers to the same rule, and 0077 the news claims
   -- (R2875000), which go only with their account as a ledger's rows do; 0080 the dev dashboard's
-  -- audit and rating ledger (R3074000, R3074001).
+  -- audit and rating ledger (R3074000, R3074001); 0086 the Fleet track's ledger (R3335001).
   ledgers constant text[] := array['collection_grants', 'match_actions', 'jlore_grants', 'inventory_grants',
                                    'economy_counter_grants', 'set_track_grants', 'quest_grants',
-                                   'cosmetic_grants', 'news_claims', 'admin_actions', 'rating_grants'];
+                                   'cosmetic_grants', 'news_claims', 'admin_actions', 'rating_grants',
+                                   'fleet_track_grants'];
   tbl     text;
   r       record;
 begin

@@ -129,7 +129,7 @@
    "dashboard",
    "--help"
   ],
-  "stdout": "usage: harness dashboard [-h] [--every EVERY] [--runners-every RUNNERS_EVERY]\n                         [--for FOR_SECONDS] [--sweep] [--stats]\n                         [--companions] [--controller] [--section-only]\n\noptions:\n  -h, --help            show this help message and exit\n  --every EVERY         seconds between rewrites; 0 rewrites it once\n  --runners-every RUNNERS_EVERY\n                        seconds between redraws of the runners section alone,\n                        between the rewrites; 0 draws it only with them\n  --for FOR_SECONDS     how long to keep rewriting it, in seconds\n  --sweep               sweep before each rewrite, as the ten-minute sweep\n                        does\n  --stats               carry the statistics in it, counted afresh every 30\n                        minutes\n  --companions          also sweep and draw each other bot (Squishy) in a\n                        process of its own, and put its section in the issue\n  --controller          with the config's `controller` on, plan the work and\n                        start each night run with its plan in the sweep\n                        (#1455)\n  --section-only        print this bot's section of the status issue and write\n                        nothing (the night bot's loop runs this as Squishy)\n",
+  "stdout": "usage: harness dashboard [-h] [--every EVERY] [--runners-every RUNNERS_EVERY]\n                         [--gate-every GATE_EVERY] [--for FOR_SECONDS]\n                         [--sweep] [--stats] [--companions] [--controller]\n                         [--section-only]\n\noptions:\n  -h, --help            show this help message and exit\n  --every EVERY         seconds between rewrites; 0 rewrites it once\n  --runners-every RUNNERS_EVERY\n                        seconds between redraws of the runners section alone,\n                        between the rewrites; 0 draws it only with them\n  --gate-every GATE_EVERY\n                        seconds between ticks of the runner gate (cigate),\n                        between the rewrites; 0 ticks it only with the sweep\n  --for FOR_SECONDS     how long to keep rewriting it, in seconds\n  --sweep               sweep before each rewrite, as the ten-minute sweep\n                        does\n  --stats               carry the statistics in it, counted afresh every 30\n                        minutes\n  --companions          also sweep and draw each other bot (Squishy) in a\n                        process of its own, and put its section in the issue\n  --controller          with the config's `controller` on, plan the work and\n                        start each night run with its plan in the sweep\n                        (#1455)\n  --section-only        print this bot's section of the status issue and write\n                        nothing (the night bot's loop runs this as Squishy)\n",
   "stderr": "",
   "exit": 0,
   "ns": null
@@ -328,7 +328,7 @@
    "x"
   ],
   "stdout": "",
-  "stderr": "usage: harness dashboard [-h] [--every EVERY] [--runners-every RUNNERS_EVERY]\n                         [--for FOR_SECONDS] [--sweep] [--stats]\n                         [--companions] [--controller] [--section-only]\nharness dashboard: error: argument --every: invalid int value: 'x'\n",
+  "stderr": "usage: harness dashboard [-h] [--every EVERY] [--runners-every RUNNERS_EVERY]\n                         [--gate-every GATE_EVERY] [--for FOR_SECONDS]\n                         [--sweep] [--stats] [--companions] [--controller]\n                         [--section-only]\nharness dashboard: error: argument --every: invalid int value: 'x'\n",
   "exit": 2,
   "ns": null
  },
@@ -338,7 +338,7 @@
    "--s"
   ],
   "stdout": "",
-  "stderr": "usage: harness dashboard [-h] [--every EVERY] [--runners-every RUNNERS_EVERY]\n                         [--for FOR_SECONDS] [--sweep] [--stats]\n                         [--companions] [--controller] [--section-only]\nharness dashboard: error: ambiguous option: --s could match --sweep, --stats, --section-only\n",
+  "stderr": "usage: harness dashboard [-h] [--every EVERY] [--runners-every RUNNERS_EVERY]\n                         [--gate-every GATE_EVERY] [--for FOR_SECONDS]\n                         [--sweep] [--stats] [--companions] [--controller]\n                         [--section-only]\nharness dashboard: error: ambiguous option: --s could match --sweep, --stats, --section-only\n",
   "exit": 2,
   "ns": null
  },
@@ -532,6 +532,7 @@
    "command": "dashboard",
    "every": 0,
    "runners_every": 0,
+   "gate_every": 0,
    "for_seconds": -5,
    "sweep": false,
    "stats": false,
@@ -611,7 +612,7 @@
    "1e3"
   ],
   "stdout": "",
-  "stderr": "usage: harness dashboard [-h] [--every EVERY] [--runners-every RUNNERS_EVERY]\n                         [--for FOR_SECONDS] [--sweep] [--stats]\n                         [--companions] [--controller] [--section-only]\nharness dashboard: error: argument --for: invalid int value: '1e3'\n",
+  "stderr": "usage: harness dashboard [-h] [--every EVERY] [--runners-every RUNNERS_EVERY]\n                         [--gate-every GATE_EVERY] [--for FOR_SECONDS]\n                         [--sweep] [--stats] [--companions] [--controller]\n                         [--section-only]\nharness dashboard: error: argument --for: invalid int value: '1e3'\n",
   "exit": 2,
   "ns": null
  },
@@ -743,6 +744,7 @@
    "command": "dashboard",
    "every": 7,
    "runners_every": 3,
+   "gate_every": 0,
    "for_seconds": 10,
    "sweep": false,
    "stats": false,
@@ -849,6 +851,7 @@
    "command": "dashboard",
    "every": 2,
    "runners_every": 0,
+   "gate_every": 0,
    "for_seconds": 0,
    "sweep": false,
    "stats": false,
@@ -998,6 +1001,7 @@
    "command": "dashboard",
    "every": 0,
    "runners_every": 0,
+   "gate_every": 0,
    "for_seconds": 0,
    "sweep": false,
    "stats": false,
@@ -1012,7 +1016,7 @@
    "--c"
   ],
   "stdout": "",
-  "stderr": "usage: harness dashboard [-h] [--every EVERY] [--runners-every RUNNERS_EVERY]\n                         [--for FOR_SECONDS] [--sweep] [--stats]\n                         [--companions] [--controller] [--section-only]\nharness dashboard: error: ambiguous option: --c could match --companions, --controller\n",
+  "stderr": "usage: harness dashboard [-h] [--every EVERY] [--runners-every RUNNERS_EVERY]\n                         [--gate-every GATE_EVERY] [--for FOR_SECONDS]\n                         [--sweep] [--stats] [--companions] [--controller]\n                         [--section-only]\nharness dashboard: error: ambiguous option: --c could match --companions, --controller\n",
   "exit": 2,
   "ns": null
  }

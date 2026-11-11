@@ -73,8 +73,8 @@ mod tests {
     const RUSH_TOKEN: &str = "core-t-rush";
     const DESIGN: &str = "traininggrounds-040";
     const GOLEM: &str = "traininggrounds-039-1";
-    const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const BEAR: &str = "core-060"; // (1) Trap
+    const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const BEAR: &str = "core-060"; // Bear Honeypot: a Trap
 
     /// What every Call to Chaos prints (R3135000): entry 9's adds cost it, no override.
     const CALL_PRICE: i32 = 4;
@@ -136,6 +136,7 @@ mod tests {
         chaos_in(seed, cursor_in(seed, entry), side(false, json!([])), json!({ "hand": [VANILLA] }))
     }
 
+    // Differs from Scenario::events_of: the events as JSON (`Vec<Value>`), not typed `GameEvent`s.
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
         s.events()
             .iter()

@@ -10,19 +10,23 @@
 // apart; R2942001: given "pixel" or "comic", as Pixel's or Comic's (`restyledSvg`), cached apart too; R2943001: given
 // a Set showcase restyle, in its set's treatment. R2943001: given a `part` other than "whole" (Out of frame's), the
 // procedural, Stinkyscape and Training Grounds painters draw the picture's backdrop with no subject, or its subject on
-// nothing, cached apart; "whole" is the picture, byte for byte.
+// nothing, cached apart; "whole" is the picture, byte for byte. R3331000: a card with a scene recipe draws its scene,
+// whichever painter its set has, its inked shapes outlined.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
+import type { AnomalyCode } from "../anomalies.ts";
 import { EMBLEM_BOX, EMBLEMS } from "./emblems.ts";
 import { fmt } from "./hash.ts";
-import { CENTER_ORIGIN, FIGURE_SUBJECT_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion, type ArtRole } from "./motion.ts";
-import type { MotifId } from "./motifs.ts";
-import { restyledSvg, type ArtPart, type ArtRestyle } from "./pictures.ts";
+import { CENTER_ORIGIN, FIGURE_SUBJECT_ORIGIN, motionStyle, moving, particleMarkup, particleStyle, type ArtMotion, type ArtRole } from "./motion.ts";
+import { motifFor, type MotifId } from "./motifs.ts";
+import { partDraws, partHolds, restyledSvg, type ArtPart, type ArtRestyle } from "./pictures.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
-import { starshipSvg, stinkyscapeSvg } from "./stinkyscape.ts";
+import { sceneRecipeOf } from "./scene.ts";
+import { starshipArtKey, type StarshipArt } from "./starshipHulls.ts";
+import { ANOMALY_SEED_PREFIX, anomalySvg, starshipModuleIconSvg, starshipModuleSvg, starshipSvg, stinkyscapeSvg, type ShipArt } from "./stinkyscape.ts";
 import { legacySvg, trainingGroundsSvg } from "./traininggrounds.ts";
-import { RADIANT_PALETTE, type ArtThemeId, type Composition } from "./themes.ts";
+import { compositionFor, RADIANT_PALETTE, themeFor, type ArtThemeId, type Composition } from "./themes.ts";
 
 const DATA_PREFIX = "data:image/svg+xml,";
 /** Rays reach past every corner of the box from anywhere inside it. */
@@ -81,7 +85,8 @@ function rayPath(cx: number, cy: number, angle: number, width: number): string {
 
 /**
  * The SVG document, unencoded; R2715001: moving as `motion` says, its particles placed by `defId`. R2943001: `part`
- * "backdrop" leaves out the subject (its subject ridges and emblem), and "subject" draws those alone.
+ * "backdrop" leaves out the subject (its subject ridges and emblem), and "subject" draws those alone. R3344000: a depth
+ * plane draws the layers of its roles (pictures.ts `partDraws`) and what is held in no role (`partHolds`).
  */
 function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string, part: ArtPart = "whole"): string {
   const { sky, glow, emblem } = spec;
@@ -114,13 +119,10 @@ function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string, part: Ar
   );
   parts.push("</defs>");
   parts.push(motionStyle(motion, spec.composition === "figure" ? FIGURE_SUBJECT_ORIGIN : CENTER_ORIGIN));
-  const subject = part !== "backdrop";
-  const backdrop = part !== "subject";
+  if (partHolds(part, "far")) parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#s)"/>`);
+  if (partDraws(part, "light")) parts.push(moving("light", `<circle cx="${fmt(glow.cx)}" cy="${fmt(glow.cy)}" r="${fmt(glow.r)}" fill="url(#g)"/>`, motion));
 
-  if (backdrop) parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#s)"/>`);
-  if (backdrop) parts.push(moving("light", `<circle cx="${fmt(glow.cx)}" cy="${fmt(glow.cy)}" r="${fmt(glow.r)}" fill="url(#g)"/>`, motion));
-
-  if (backdrop && spec.rays.length > 0) {
+  if (partHolds(part, "far") && spec.rays.length > 0) {
     parts.push(`<g fill="${RADIANT_PALETTE.ray}">`);
     for (const ray of spec.rays) {
       parts.push(`<path d="${rayPath(glow.cx, glow.cy, ray.angle, ray.width)}" opacity="${fmt(ray.opacity)}"/>`);
@@ -128,30 +130,34 @@ function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string, part: Ar
     parts.push("</g>");
   }
 
-  // R2715001: each run of ridges of one role moves as one layer. R2943001: a part draws the runs that are its own.
-  const drawn = (role: ArtRole): boolean => (role === "subject" ? subject : backdrop);
+  // R2715001: each run of ridges of one role moves as one layer. R2943001, R3344000: a part draws the runs that are its own.
   let run: string[] = [];
   let runRole: ArtRole | null = null;
   for (const ridge of spec.ridges) {
     if (ridge.role !== runRole && runRole !== null) {
-      if (drawn(runRole)) parts.push(moving(runRole, run.join(""), motion));
+      if (partDraws(part, runRole)) parts.push(moving(runRole, run.join(""), motion));
       run = [];
     }
     runRole = ridge.role;
-    run.push(`<path d="${ridge.d}" fill="${ridge.fill}" opacity="${fmt(ridge.opacity)}" fill-rule="evenodd"/>`);
+    // R3331000: a scene's inked shape takes its family's outline; every other ridge prints as it always did.
+    const ink =
+      ridge.stroke === undefined
+        ? ""
+        : ` stroke="${ridge.stroke}" stroke-width="${fmt(ridge.strokeWidth ?? 0)}" stroke-linejoin="round"`;
+    run.push(`<path d="${ridge.d}" fill="${ridge.fill}" opacity="${fmt(ridge.opacity)}" fill-rule="evenodd"${ink}/>`);
   }
-  if (runRole !== null && drawn(runRole)) parts.push(moving(runRole, run.join(""), motion));
+  if (runRole !== null && partDraws(part, runRole)) parts.push(moving(runRole, run.join(""), motion));
 
   // R503: the motif's glyphs sit over the composition and under the emblem.
-  if (backdrop) spec.motifGlyphs.forEach((placed, index) => parts.push(moving("props", glyphMarkup(placed, placed.opacity), motion, index)));
+  if (partDraws(part, "props")) spec.motifGlyphs.forEach((placed, index) => parts.push(moving("props", glyphMarkup(placed, placed.opacity), motion, index)));
 
-  if (subject) parts.push(moving("subject", glyphMarkup(emblem, 1), motion));
-  if (backdrop && spec.accent !== null) parts.push(moving("props", glyphMarkup(spec.accent, ACCENT_OPACITY), motion, spec.motifGlyphs.length));
+  if (partDraws(part, "subject")) parts.push(moving("subject", glyphMarkup(emblem, 1), motion));
+  if (partDraws(part, "props") && spec.accent !== null) parts.push(moving("props", glyphMarkup(spec.accent, ACCENT_OPACITY), motion, spec.motifGlyphs.length));
 
-  if (backdrop) spec.motes.forEach((mote, index) => parts.push(moving("motes", moteMarkup(mote, spec.moteShape), motion, index)));
+  if (partDraws(part, "motes")) spec.motes.forEach((mote, index) => parts.push(moving("motes", moteMarkup(mote, spec.moteShape), motion, index)));
 
-  if (backdrop) parts.push(particleMarkup(motion, defId));
-  if (backdrop) parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#v)"/>`);
+  if (partHolds(part, "nearest")) parts.push(particleMarkup(motion, defId));
+  if (partHolds(part, "far")) parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#v)"/>`);
   parts.push("</svg>");
   return parts.join("");
 }
@@ -159,6 +165,11 @@ function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string, part: Ar
 /** encodeURIComponent, plus the five characters it leaves alone that CSS or jsdom may choke on. */
 function encodeSvg(svg: string): string {
   return encodeURIComponent(svg).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
+/** R3350000: an SVG document as the data URI a face's window draws it from (a diorama's slice, dioramas/index.ts). */
+export function svgDataUri(svg: string): string {
+  return `${DATA_PREFIX}${encodeSvg(svg)}`;
 }
 
 /** R2715001: moving as `motion` says, its particles placed by `defId`; the still picture with none. */
@@ -173,9 +184,9 @@ export function artDataUri(spec: ArtSpec, motion: ArtMotion | null = null, defId
 // never served for the card's normal one.
 const proceduralCache = new Map<string, string>();
 
-/** R2715001: what a moving picture's memo key ends with. */
+/** R2715001: what a moving picture's memo key ends with. R3340000: a detached one (no particles in it) keeps its own. */
 function movingKey(motion: ArtMotion | null): string {
-  return motion === null ? "" : "|moving";
+  return motion === null ? "" : motion.detached === true ? "|moving-detached" : "|moving";
 }
 
 /** R2940001, R2942001: what a restyled picture's memo key ends with, so the plain one and the Sketch keep theirs. */
@@ -186,6 +197,11 @@ function restyleKey(restyle: ArtRestyle | null): string {
 /** R2943001: what a part's memo key ends with: nothing for the whole picture, so it keeps its key. */
 function partKey(part: ArtPart): string {
   return part === "whole" ? "" : `|${part}`;
+}
+
+/** R3336000: what a Battleship layer's memo key ends with: nothing for a printed card, so it keeps its key. */
+function shipKey(ship: ShipArt | null): string {
+  return ship === null ? "" : `|ship${ship.buried}.${ship.heat ?? 0}.${ship.brittle ?? ""}.${ship.bays ?? ""}`;
 }
 
 /** R2940001: the Starships' one seed for a Sketch's strokes: their picture is drawn from no card's id. */
@@ -216,20 +232,110 @@ export function proceduralArtUri(
   return uri;
 }
 
-/** R2249000: a Starship's art as a data URI, cached on what it draws from: its pieces, launch and face. */
-export function starshipArtUri(pieces: number, launched: boolean, radiant: boolean, restyle: ArtRestyle | null = null): string {
-  const key = `starship|${pieces}|${launched}|${radiant}${restyleKey(restyle)}`;
+/**
+ * R3340000: a moving face's particles as a picture of their own: the same document box as the art's, `PARTICLE_COUNT` of the
+ * motion's kind placed by `seedId` as `particleMarkup` places them, moving by their own rule inside the reduced-motion
+ * gate, and nothing else, so a live face lays it over its subject and the motes answer the pointer apart from the art.
+ * Cached on the seed, the kind and its beat.
+ */
+export function particleLayerUri(motion: ArtMotion, seedId: string): string {
+  const { kind, beat } = motion.particles;
+  const key = `${seedId}|particles|${kind}|${beat.move}|${beat.seconds}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = `${DATA_PREFIX}${encodeSvg(restyled(starshipSvg(pieces, launched, radiant), restyle, radiant, STARSHIP_SKETCH_SEED))}`;
+  const svg =
+    `<svg viewBox="0 0 ${ART_BOX} ${ART_BOX}" width="${ART_BOX}" height="${ART_BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">` +
+    `${particleStyle(motion)}${particleMarkup({ particles: motion.particles }, seedId)}</svg>`;
+  const uri = `${DATA_PREFIX}${encodeSvg(svg)}`;
   proceduralCache.set(key, uri);
   return uri;
 }
 
 /**
+ * R2249000, R3333000: a Starship's art as a data URI, cached on what it draws from (`starshipArtKey`): its pieces by
+ * id and face oldest first, its launch, its design, its livery and its face.
+ */
+export function starshipArtUri(ship: StarshipArt, restyle: ArtRestyle | null = null): string {
+  const key = `${starshipArtKey(ship)}${restyleKey(restyle)}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const uri = `${DATA_PREFIX}${encodeSvg(restyled(starshipSvg(ship), restyle, ship.radiant, STARSHIP_SKETCH_SEED))}`;
+  proceduralCache.set(key, uri);
+  return uri;
+}
+
+/** R3333002: a piece's module icon (stinkyscape.ts `starshipModuleIconSvg`) as a data URI, cached by the piece and its face. */
+export function starshipModuleIconUri(defId: string, radiant: boolean): string {
+  const key = `starship-module|${defId}|${radiant}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const uri = `${DATA_PREFIX}${encodeSvg(starshipModuleIconSvg(defId, radiant))}`;
+  proceduralCache.set(key, uri);
+  return uri;
+}
+
+/** R3334000: a piece's module alone (stinkyscape.ts `starshipModuleSvg`), the docking sprite, as a data URI, cached by the piece and its face. */
+export function starshipModuleUri(defId: string, radiant: boolean): string {
+  const key = `starship-sprite|${defId}|${radiant}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const uri = `${DATA_PREFIX}${encodeSvg(starshipModuleSvg(defId, radiant))}`;
+  proceduralCache.set(key, uri);
+  return uri;
+}
+
+/**
+ * R3337001: an Anomaly Found!'s art for the board its code names (stinkyscape.ts `anomalySvg`), cached on its code and
+ * face; a restyle's strokes grow from the board's own seed.
+ */
+export function anomalyArtUri(code: AnomalyCode, radiant: boolean, restyle: ArtRestyle | null = null): string {
+  const key = `anomaly|${code}|${radiant}${restyleKey(restyle)}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const uri = `${DATA_PREFIX}${encodeSvg(restyled(anomalySvg(code, radiant), restyle, radiant, `${ANOMALY_SEED_PREFIX}${code}`))}`;
+  proceduralCache.set(key, uri);
+  return uri;
+}
+
+/** R3337003: where an inlined picture names an id: its `id` attributes and the `url(#…)` paints that point at them. */
+const INLINE_ID = /(?<=\s)id="|url\(#/g;
+
+/**
+ * R3337003: the same picture as SVG markup the effects layer draws in place (the title card's, fx/dom.ts), no image
+ * (B27); its ids are scoped to its board and face so they meet no other drawing's in the page. Cached apart.
+ */
+export function anomalyMarkup(code: AnomalyCode, radiant: boolean): string {
+  const key = `anomaly-markup|${code}|${radiant}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const scope = `${ANOMALY_SEED_PREFIX}${code}-${radiant ? "radiant" : "base"}-`;
+  const markup = anomalySvg(code, radiant).replace(INLINE_ID, (head) => `${head}${scope}`);
+  proceduralCache.set(key, markup);
+  return markup;
+}
+
+/**
+ * R3331000: the picture of a card with a scene recipe, drawn by the procedural painter from its scene whichever
+ * set's painter would draw it, so the Stinkyscape and Training Grounds painters hand their recipe cards here;
+ * null for a card with none, which its own painter draws as before. R3406000: a Starship Piece's, a Jlockeed weapon's
+ * and Dice of Doom's Alt art seed finds its alt recipe here, while every other seed of theirs falls to the painter.
+ */
+function sceneArtSvg(seedId: string, tags: readonly Tag[], type: CardType, radiant: boolean, motion: ArtMotion | null, part: ArtPart): string | null {
+  const scene = sceneRecipeOf(seedId);
+  if (scene === null) return null;
+  return artSvg(artSpec(seedId, themeFor(tags, type), compositionFor(type), radiant, null, scene), motion, seedId, part);
+}
+
+/**
  * R2170000: a Stinkyscape face's picture (stinkyscape.ts); its key adds the name, which picks its detail. R2949000:
- * grown from `seedId` (the card's id unless a look has a picture of its own), and keyed by it.
+ * grown from `seedId` (the card's id unless a look has a picture of its own), and keyed by it. R3331000: a card
+ * with a scene recipe draws its scene.
  */
 export function stinkyscapeArtUri(
   defId: string,
@@ -241,18 +347,22 @@ export function stinkyscapeArtUri(
   seedId = defId,
   restyle: ArtRestyle | null = null,
   part: ArtPart = "whole",
+  ship: ShipArt | null = null,
 ): string {
-  const key = `${seedId}|${radiant}|stinkyscape|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}${restyleKey(restyle)}${partKey(part)}`;
+  const key = `${seedId}|${radiant}|stinkyscape|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}${restyleKey(restyle)}${partKey(part)}${shipKey(ship)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const svg = stinkyscapeSvg(defId, name, tags, type, radiant, motion, seedId, part);
+  const svg = sceneArtSvg(seedId, tags, type, radiant, motion, part) ?? stinkyscapeSvg(defId, name, tags, type, radiant, motion, seedId, part, ship);
   const uri = `${DATA_PREFIX}${encodeSvg(restyled(svg, restyle, radiant, seedId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
 
-/** R2202000: a Training Grounds face's picture (traininggrounds.ts), memoised and seeded as Stinkyscape's is. */
+/**
+ * R2202000: a Training Grounds face's picture (traininggrounds.ts), memoised and seeded as Stinkyscape's is.
+ * R3331000: a card with a scene recipe draws its scene.
+ */
 export function trainingGroundsArtUri(
   defId: string,
   name: string | undefined,
@@ -268,19 +378,34 @@ export function trainingGroundsArtUri(
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const svg = trainingGroundsSvg(defId, name, tags, type, radiant, motion, seedId, part);
+  const svg = sceneArtSvg(seedId, tags, type, radiant, motion, part) ?? trainingGroundsSvg(defId, name, tags, type, radiant, motion, seedId, part);
   const uri = `${DATA_PREFIX}${encodeSvg(restyled(svg, restyle, radiant, seedId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
 
-/** R2724000: a Legacy face's picture (traininggrounds.ts), memoised as the set's own are. */
+/**
+ * R3393001: a Legacy card's own scene, wearing its Core card's frozen emblem: the Core card's spec is built as
+ * `legacySvg` builds it (its scene never read, R3331000), so its emblem is the one it wore before any recipe.
+ * A Legacy card stays one picture: no motion, no parts and no seed of its own. Null for a card with no recipe.
+ */
+function legacySceneSvg(defId: string, coreId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean): string | null {
+  const scene = sceneRecipeOf(defId);
+  if (scene === null) return null;
+  const theme = themeFor(tags, type);
+  const core = artSpec(coreId, theme, compositionFor(type), radiant, motifFor(name, theme), null);
+  const own = artSpec(defId, theme, compositionFor(type), radiant, null, scene);
+  const { glyph, fill, stroke } = core.emblem;
+  return artSvg({ ...own, emblem: { ...own.emblem, glyph, fill, stroke } }, null, defId);
+}
+
+/** R2724000: a Legacy face's picture (traininggrounds.ts), memoised as the set's own are. R3393001: its own scene first. */
 export function legacyArtUri(defId: string, coreId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean, restyle: ArtRestyle | null = null): string {
   const key = `${defId}|${radiant}|legacy|${coreId}|${name ?? ""}|${tags.join(",")}|${type}${restyleKey(restyle)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = `${DATA_PREFIX}${encodeSvg(restyled(legacySvg(defId, coreId, name, tags, type, radiant), restyle, radiant, defId))}`;
+  const uri = `${DATA_PREFIX}${encodeSvg(restyled(legacySceneSvg(defId, coreId, name, tags, type, radiant) ?? legacySvg(defId, coreId, name, tags, type, radiant), restyle, radiant, defId))}`;
   proceduralCache.set(key, uri);
   return uri;
 }

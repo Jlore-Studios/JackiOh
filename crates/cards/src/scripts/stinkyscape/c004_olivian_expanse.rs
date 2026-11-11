@@ -85,7 +85,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
     const PLAYABLE: [&str; 5] = [
         "stinkyscape-004-3",
         "stinkyscape-004-1",
@@ -107,6 +107,7 @@ mod tests {
         s
     }
 
+    // Differs from Scenario::offered: the open Discover's options, not the seat's legal actions.
     fn offered(s: &Scenario) -> Vec<String> {
         let pending = s.state().pending.clone().expect("a Discover is open");
         assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));

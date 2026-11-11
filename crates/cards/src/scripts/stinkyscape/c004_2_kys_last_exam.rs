@@ -91,8 +91,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-005"; // (1) Spell Stockpile.
-    const SOLARIUS: &str = "classicplus-038"; // a Unit with Spell Damage +2.
+    const FILLER: &str = "core-005"; // Stockpile: a Spell
+    const SOLARIUS: &str = "classicplus-038"; // Solarius: a Unit with Spell Damage +2.
     const SOLARIUS_SPELL_DAMAGE: i32 = 2;
     const DAMAGE: i32 = 30;
 

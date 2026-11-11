@@ -3,7 +3,8 @@
 //!
 //! - **An issue** keeps the seed with the profile, the game's setup and the human's last board
 //!   ([[R1303003]]), prunes seeds older than `PRACTICE_SEED_TTL_SECONDS` ([[R1303001]]) and refuses
-//!   past `PRACTICE_SEEDS_OPEN_MAX` unclaimed, counted under the account's economy lock ([[R1483000]]).
+//!   past `PRACTICE_SEEDS_OPEN_MAX` seeds unclaimed or claimed and not yet settled, counted under
+//!   the account's economy lock ([[R1483000]], [[R3500001]]).
 //! - **A release** gives an unclaimed seed's place back ([[R2379000]]).
 //! - **A claim** burns its seed first, in its own transaction, so it pays once whatever the check
 //!   answers ([[R1303001]]); `economy::practice::verify` folds the log off the runtime, re-running no
@@ -12,7 +13,8 @@
 //!   ([[R1688000]]). No transaction stays open across a check.
 //! - **A settle, once** ([[R2422000]]): the pay marks the seed `paid` only where unmarked, a refusal
 //!   `refused`. The shutdown drain waits for running settles, and the retention loop settles a claim
-//!   left past `PRACTICE_SETTLE_GRACE_SECONDS` (`sweep_unsettled`).
+//!   left past `PRACTICE_SETTLE_GRACE_SECONDS` (`sweep_unsettled`), skipping one this process still
+//!   settles ([[R3500001]]).
 //! - **A count** (#2884): each claim's outcome adds one to its day's `ClaimBucket` (migration
 //!   0078), as the last statement of the transaction that decided it: the settle that marked the
 //!   seed paid or refused, or a refusal before the burn, which counts best effort. Each refusal also
@@ -30,11 +32,12 @@ use serde_json::{Value, json};
 use tokio::task::JoinHandle;
 
 use jackioh_engine::{Action, Difficulty, LastBoardEntry, PlayerId};
+use jackioh_shared::economy::fleet::FleetPlay;
 
 use crate::actor::engine::{self, Pinned};
 use crate::api::collection::caller_profile;
 use crate::api::http::{
-    ApiError, ApiErrorCode, ApiResult, Req, bad_request, json as json_response, log_info, log_warn,
+    ApiError, ApiErrorCode, ApiResult, Req, bad_request, json as json_response, lock, log_info, log_warn,
 };
 use crate::app::{App, now_ms};
 use crate::config::{
@@ -112,8 +115,8 @@ async fn refuse_unburned(tx: StoreResult<Tx<'_>>, seed: &str, reason: ClaimRefus
 
 /// `POST /api/practice/seeds` with `{ difficulty, humanSeat, deck, catalog }` (`AuthLevel::Active`).
 /// 201 `{ seed, lastBoard, expiresAt }`; a 409 while the economy is off, for a catalog version
-/// this build cannot fold (R767000), or while the account holds `PRACTICE_SEEDS_OPEN_MAX` unclaimed
-/// seeds (R1483000). It runs in the account's economy turn; past the requests waiting theirs it
+/// this build cannot fold (R767000), or while the account holds `PRACTICE_SEEDS_OPEN_MAX` seeds
+/// unclaimed or claimed and not yet settled (R1483000, R3500001). It runs in the account's economy turn; past the requests waiting theirs it
 /// is 429 `rate_limited` (R2378000).
 pub async fn post_seed(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
@@ -239,9 +242,15 @@ pub async fn post_claim(app: &Arc<App>, req: Req) -> ApiResult {
     }
     tx.commit().await?;
 
+    // [[R3500001]]: counted settling before the sweep can see the claim. The seed was unclaimed a
+    // moment ago, so no settle holds it; one that did would be the sweep's, which settles it.
+    let Some(settling) = Settling::enter(app, &held.seed) else {
+        log_refused(&claim.seed, ClaimRefusal::AlreadyClaimed);
+        return refused(ClaimRefusal::AlreadyClaimed);
+    };
     // The check and the pay run as a task of their own, so a caller that stops waiting (a request
     // timeout, a closed tab) leaves its burned seed checked and paid all the same.
-    let settled = spawn_settle(app, held, claimed, now, true)
+    let settled = spawn_settle(app, settling, held, claimed, now, true)
         .await
         .map_err(|error| ApiError::internal(format!("the practice claim's check failed: {error}")))??;
     match settled {
@@ -266,18 +275,24 @@ pub async fn post_claim(app: &Arc<App>, req: Req) -> ApiResult {
 }
 
 /// [[R2422000]]: one settle running, counted on `App::practice_settles` from before its task is
-/// spawned until the task ends, so the shutdown drain waits for it ([`all_settled`]).
-struct Settling(Arc<App>);
+/// spawned until the task ends, so the shutdown drain waits for it ([`all_settled`]). [[R3500001]]:
+/// its seed is in `App::practice_settling` for as long, so the sweep skips it.
+struct Settling(Arc<App>, String);
 
 impl Settling {
-    fn enter(app: &Arc<App>) -> Settling {
+    /// `None`, counting nothing, when a settle of `seed` runs already in this process.
+    fn enter(app: &Arc<App>, seed: &str) -> Option<Settling> {
+        if !lock(&app.practice_settling).insert(seed.to_string()) {
+            return None;
+        }
         app.practice_settles.send_modify(|running| *running += 1);
-        Settling(Arc::clone(app))
+        Some(Settling(Arc::clone(app), seed.to_string()))
     }
 }
 
 impl Drop for Settling {
     fn drop(&mut self) {
+        lock(&self.0.practice_settling).remove(&self.1);
         self.0
             .practice_settles
             .send_modify(|running| *running = running.saturating_sub(1));
@@ -301,16 +316,16 @@ enum Settlement {
     Already,
 }
 
-/// [`settle`] as a task of its own, counted ([`Settling`]) from before it is spawned: a caller that
-/// stops waiting leaves it to finish, and a shutdown waits for it.
+/// [`settle`] as a task of its own, counted (`settling`, [`Settling::enter`]) from before it is
+/// spawned: a caller that stops waiting leaves it to finish, and a shutdown waits for it.
 fn spawn_settle(
     app: &Arc<App>,
+    settling: Settling,
     held: PracticeSeed,
     claim: PracticeClaim,
     at: i64,
     live: bool,
 ) -> JoinHandle<Result<Settlement, ApiError>> {
-    let settling = Settling::enter(app);
     let app = Arc::clone(app);
     tokio::spawn(async move {
         let _settling = settling;
@@ -350,6 +365,8 @@ async fn settle(
         tally: tally_seat(verified.seat.as_ref(), verified.attacks, &app.catalog.defs),
         // R3013000: a game against the AI counts no proficiency.
         proficiency: Vec::new(),
+        // R3335001: nor any Fleet XP: the browser ran it.
+        fleet: FleetPlay::default(),
     };
     let board = live.then_some(verified.last_board.as_slice());
     Ok(match pay_with_retries(app, &seed, &summary, board).await? {
@@ -452,9 +469,11 @@ pub struct Swept {
 }
 
 /// [[R2422000]]: settles every claim unsettled `PRACTICE_SETTLE_GRACE_SECONDS` after its burn, oldest
-/// first, each as a counted task: checked again, then paid with no board or marked refused. Nothing
-/// while the economy is off ([[R1302006]]); a failed settle waits for the next sweep. Run by the
-/// retention loop (`api::retention::run_purge`).
+/// first, each as a counted task: checked again, then paid with no board or marked refused. A claim
+/// a settle of this process still runs is skipped, not folded a second time ([[R3500001]]): one
+/// still waiting for a verification permit is no lapsed claim. Nothing while the economy is off
+/// ([[R1302006]]); a failed settle, or a skipped one, waits for the next sweep. Run by the retention
+/// loop (`api::retention::run_purge`).
 pub async fn sweep_unsettled(app: &Arc<App>) -> StoreResult<Swept> {
     let mut swept = Swept::default();
     if !app.economy_live {
@@ -470,7 +489,10 @@ pub async fn sweep_unsettled(app: &Arc<App>) -> StoreResult<Swept> {
             continue;
         };
         let seed = held.seed.clone();
-        let message = match spawn_settle(app, held, claim, now_ms(), false).await {
+        let Some(settling) = Settling::enter(app, &seed) else {
+            continue;
+        };
+        let message = match spawn_settle(app, settling, held, claim, now_ms(), false).await {
             Ok(Ok(Settlement::Paid(_))) => {
                 swept.paid += 1;
                 continue;

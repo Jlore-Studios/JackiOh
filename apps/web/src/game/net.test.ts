@@ -3,8 +3,8 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ActionBody, PlayerView } from "@jackioh/shared";
-import { SPECTATOR_EMOTE_HAND_SIZE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
+import type { ActionBody, CombatForecast, PlayerView } from "@jackioh/shared";
+import { POST_GAME_FRAME_VERSION, SPECTATOR_EMOTE_HAND_SIZE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import { DEFAULT_CARD_COSMETICS, cosmeticsOf, type CardCosmetics, type CosmeticKind } from "../cards/cosmetics.ts";
 import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
@@ -291,6 +291,29 @@ describe("server frames", () => {
       type: "view",
       economy: ECONOMY,
     });
+  });
+
+  it("R3477000 a view frame's forecast is kept with its view and one without clears it", () => {
+    const forecast: CombatForecast = {
+      attacks: [
+        { attackerId: "u1", targetId: "e1", dealt: 2, taken: 3, kills: true, survives: false, pops: false, attackerSize: 5, targetSize: 4 },
+      ],
+      lethal: false,
+    };
+    const h = connected();
+    expect(h.client.snapshot().forecast).toBeNull();
+    h.socket().deliver({ type: "view", view: baseView({ turn: 2 }), legal: [], forecast });
+    expect(h.client.snapshot().forecast).toEqual(forecast);
+    // A watcher's frame, or one from a server without it, carries none: the seat shows none.
+    h.socket().deliver({ type: "view", view: baseView({ turn: 3 }), legal: [] });
+    expect(h.client.snapshot().view?.turn).toBe(3);
+    expect(h.client.snapshot().forecast).toBeNull();
+    // A forecast that is no forecast is dropped, never the view.
+    h.socket().deliver({ type: "view", view: baseView({ turn: 4 }), forecast: { attacks: "no" } });
+    expect(h.client.snapshot().view?.turn).toBe(4);
+    expect(h.client.snapshot().forecast).toBeNull();
+    expect(parseServerFrame(JSON.stringify({ type: "view", view: baseView() }))).not.toHaveProperty("forecast");
+    expect(parseServerFrame(JSON.stringify({ type: "view", view: baseView(), forecast }))).toMatchObject({ type: "view", forecast });
   });
 
   it("#1664 an economy that is not whole is no economy, and never costs the board its view", () => {
@@ -702,6 +725,98 @@ describe("loadouts", () => {
       h.socket().deliver(frame);
     }
     expect(h.client.snapshot().loadouts).toEqual(merged);
+  });
+});
+
+// The post-game frames (R3213000)
+describe("R3213000 post-game frames", () => {
+  /** This seat's rematch status, as `GET /api/matches/:id/rematch` answers it. */
+  const REMATCH = { youOffered: 1, opponentOffer: null, opponentHere: true, matchId: null, mode: "bo1" } as const;
+  /** Enough of a series view for the client, which checks its id alone. */
+  const SERIES = { id: "series-1", status: "picking", gameNo: 2 };
+  const rematchFrame = (fields: Record<string, unknown> = {}): Record<string, unknown> => ({
+    type: "rematch",
+    v: POST_GAME_FRAME_VERSION,
+    ...REMATCH,
+    ...fields,
+  });
+  const seriesFrame = (fields: Record<string, unknown> = {}): Record<string, unknown> => ({
+    type: "series",
+    v: POST_GAME_FRAME_VERSION,
+    series: SERIES,
+    ...fields,
+  });
+
+  it("R3213000 a `rematch` and a `series` frame are kept in the snapshot until the socket drops", () => {
+    const h = connected();
+    expect(h.client.snapshot().rematch).toBeNull();
+    expect(h.client.snapshot().series).toBeNull();
+
+    h.socket().deliver(rematchFrame());
+    h.socket().deliver(seriesFrame());
+    expect(h.client.snapshot().rematch).toEqual(REMATCH);
+    expect(h.client.snapshot().series).toEqual(SERIES);
+    // A later frame stands in for the one before it, and the other frames leave both be.
+    h.socket().deliver(rematchFrame({ opponentOffer: 2, opponentHere: false, mode: "random" }));
+    h.socket().deliver({ type: "view", view: baseView() });
+    expect(h.client.snapshot().rematch).toEqual({ ...REMATCH, opponentOffer: 2, opponentHere: false, mode: "random" });
+    expect(h.client.snapshot().series).toEqual(SERIES);
+
+    // A drop forgets both, and the next socket holds none until it sends its own.
+    h.socket().drop();
+    expect(h.client.snapshot().rematch).toBeNull();
+    expect(h.client.snapshot().series).toBeNull();
+    h.runTimers();
+    h.socket().open();
+    expect(h.client.snapshot().rematch).toBeNull();
+    expect(h.client.snapshot().series).toBeNull();
+
+    // So does a silent socket the woken page replaces (R1441)...
+    h.socket().deliver(rematchFrame());
+    h.socket().deliver(seriesFrame());
+    h.now(SILENCE_MS + 1);
+    h.wake();
+    h.runTimers();
+    expect(h.sockets).toHaveLength(3);
+    expect(h.client.snapshot().rematch).toBeNull();
+    expect(h.client.snapshot().series).toBeNull();
+
+    // ...and `close()`.
+    h.socket().open();
+    h.socket().deliver(rematchFrame());
+    h.socket().deliver(seriesFrame());
+    expect(h.client.snapshot().rematch).toEqual(REMATCH);
+    h.client.close();
+    expect(h.client.snapshot().rematch).toBeNull();
+    expect(h.client.snapshot().series).toBeNull();
+  });
+
+  it("R3213000 a frame of another `v`, or with a field this client does not know, is no frame", () => {
+    expect(parseServerFrame(JSON.stringify(rematchFrame()))).toEqual(rematchFrame());
+    expect(parseServerFrame(JSON.stringify(seriesFrame()))).toEqual(seriesFrame());
+
+    const h = connected();
+    for (const frame of [
+      rematchFrame({ v: POST_GAME_FRAME_VERSION + 1 }),
+      rematchFrame({ v: undefined }),
+      rematchFrame({ youOffered: 3 }),
+      rematchFrame({ youOffered: undefined }),
+      rematchFrame({ opponentOffer: "2" }),
+      rematchFrame({ opponentHere: "yes" }),
+      rematchFrame({ matchId: 7 }),
+      rematchFrame({ mode: "bo3" }),
+      rematchFrame({ mode: undefined }),
+      seriesFrame({ v: POST_GAME_FRAME_VERSION + 1 }),
+      seriesFrame({ v: undefined }),
+      seriesFrame({ series: null }),
+      seriesFrame({ series: "series-1" }),
+      seriesFrame({ series: { status: "picking" } }),
+    ]) {
+      expect(parseServerFrame(JSON.stringify(frame)), JSON.stringify(frame)).toBeNull();
+      h.socket().deliver(frame);
+    }
+    expect(h.client.snapshot().rematch).toBeNull();
+    expect(h.client.snapshot().series).toBeNull();
   });
 });
 

@@ -47,6 +47,7 @@ fn begun() -> (GameState, (Vec<String>, Vec<String>)) {
         glitch_boards: None,
         sandbox: None,
         deck_marks: None,
+        win_rates: None,
     });
     (begin_game(&state).state, decks)
 }
@@ -72,6 +73,10 @@ fn loadout(cards: Vec<CardPicks>, stamps: Vec<CardStamp>) -> Loadout {
             foil: "foil-default".to_owned(),
             finish: "finish-default".to_owned(),
             border: "border-default".to_owned(),
+            starship_hull: "starship-hull-default".to_owned(),
+            starship_livery: "starship-livery-default".to_owned(),
+            starship_trail: "starship-trail-default".to_owned(),
+            starship_piece_skin: "starship-piece-skin-default".to_owned(),
         },
         cards,
         stamps,

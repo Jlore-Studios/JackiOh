@@ -43,13 +43,13 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const KING: &str = "classic-085";
-    const VANILLA: &str = "core-008"; // 4/4
+    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const TIMMY: &str = "core-011";
     const MENACE: &str = "core-019";
     const STOCKPILE: &str = "core-005";
-    const CURSE: &str = "classic-001"; // Spell 1: no hit against an empty enemy exile (R63), then draw 1
-    const MANA_WELL: &str = "core-006"; // Field Spell
-    const SHEEPISH: &str = "core-041"; // Trap
+    const CURSE: &str = "classic-001"; // Curse of the Forgotten Classic: no hit against an empty enemy exile (R63), then draw 1
+    const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
+    const SHEEPISH: &str = "core-041"; // Sheepish: a Trap
 
     use crate::scenario;
 

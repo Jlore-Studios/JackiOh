@@ -22484,5 +22484,899 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.12d",
+    "date": "2026-11-06",
+    "title": "Patch: a named set of width and height breakpoints for every stylesheet",
+    "source": "#3227",
+    "notes": "The web client's screen-size breakpoints are one named set, apps/web/src/breakpoints.ts (phone 600, narrow 760, medium 899, tablet 1024 wide, short 500 tall), and every stylesheet's @media and every script's query sits on it or on a kept value listed with its reason. The card inspect sheet's queries move with them (R2529000 counts apps/web/src/cards/ as how cards look): the rules at reading size show up to 600 px wide, not 560, and the side-by-side sheet on a phone on its side starts at 601 px wide and up to 500 px tall. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "One set of screen sizes",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A card's rules at reading size show on every phone-sized screen, up to 600 px wide."
+      ]
+    },
+    "commits": [
+      "33b2c4941a8a0835e031c74e0b2cf6d80d0ce4ac"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12e",
+    "date": "2026-11-06",
+    "title": "Patch: many more card art variants, so every card has several",
+    "source": "#3017",
+    "notes": "Part 6 of the card variants: six two-level variants on #3015's ladders, each its art in the normal frame then animated, per card and granted to no account (R3017000): Night, Watercolor and Woodcut, Rare then Epic, and Neon sign, Stained-glass window and Tarot card, Epic then a Legendary chase. An offer's sample may start at a from (R3017001), so the six make three pairs, each splitting every non-token card between its two by one seed, the types weighted 60 or 40 in 100 toward the style that suits them: every card, Legacy ones included, is offered at least VARIANT_MIN_PER_CARD (three) variants besides the Default, each reaches every set that ships, and no two variants share their cards. Night, Watercolor, Stained-glass window and Tarot card repaint a new picture of the card's subject under a treatment of their own; Woodcut and Neon sign restyle its own picture (R3017002). A foil, a finish and a border layer on each, an animated level moves its picture and holds still under reduced motion, a Radiant face keeps every Radiant mark, and no new colour is gold (R2725004). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Six new card variants",
+      "new": [
+        "Night: a new picture of the card under a night sky, with a moon and stars.",
+        "Watercolor: a new picture of the card in soft washes of paint on paper.",
+        "Stained-glass window: a new picture of the card in bright panes of glass, lit from behind and leaded.",
+        "Tarot card: a new picture of the card as a fortune card, under an arch with a sun, a crescent and stars.",
+        "Woodcut: the card's own picture as a three-tone print, its middle tone cut in long strokes.",
+        "Neon sign: the card's own picture as glowing tubes on a dark wall."
+      ],
+      "balance": [],
+      "changes": [
+        "Every card, Legacy cards too, can wear three more: Night or Neon sign, Watercolor or Stained-glass window, and Woodcut or Tarot card. Cards differ in which they get.",
+        "Each new variant has an animated level. Night, Watercolor and Woodcut are Rare, then Epic animated; the other three are Epic, then a Legendary chase animated.",
+        "Foils, finishes and borders work on every new level, and a Radiant card keeps its gold frame and marks. None of the new looks uses Radiant's gold."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "4d9000f9a5838e4668e5fa5483307797c148b8fd"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12f",
+    "date": "2026-11-07",
+    "title": "Patch: Starships built from what they hold: every Starship Piece drawn on the hull as itself, hull designs of their own, and a dormant ship in a shipyard",
+    "source": "#3333",
+    "notes": "Part of #3330's Stinkyscape art. Every Starship Piece, the 47 cards that print it and Stinkyscape #127 to #129 when Embiggened, has a module of its own, a part drawn where it mounts on a hull: the Beams, Repeaters, Cannons, Flak and Mining Drills bigger and busier each tier, the defenses, engines, launchers (each loaded with what it fires), pods (the Felinor Containment Chamber a cat at its porthole) and the odd ones each their own (R3333001). A piece's own card draws its module large on a cutaway of a hull in a bay by its family, and its fifty pictures are recorded again (R503). A Starship in play is the ship its pieces build, oldest first: each module on its hardpoint (the bow for weapons, the spine for defenses, the flanks for launchers and pods, the stern for engines, the keel for miners), a running light along the keel for each, its hull growing from a frigate to a dreadnought with its count; launched, it wears the hull design of the name it took, each of the seven its own prow, windows, livery and emblem; Dormant, it sits in a shipyard, welding sparks where its newest piece went in and a dock lamp brightening as it fills. A design and a livery are the painter's inputs, for #3330's cosmetic track (R3333000). A Dormant hull's plates and the pieces list show each piece's module icon (R3333002). No base face wears Radiant's gold (R2725004). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Starships built from what they hold",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Starship is now drawn from the pieces fused into it: weapons on its bow, engines at its stern, drills under its keel, pods and launchers along its sides.",
+        "The more pieces a Starship holds, the bigger its hull, from a frigate to a dreadnought.",
+        "Each of the seven names a Starship can launch under has its own hull: The Ninth Life has whiskers and portholes, The Lantern Ferry a lantern on its bow, The Silent Choir organ pipes, and so on.",
+        "A Dormant Starship is drawn in a shipyard, sparks flying where its newest piece went in.",
+        "Every Starship Piece's card shows its part large, in a bay of its own, and a Cannon v5 or a Mining Drill v5 is clearly bigger than the tiers below it.",
+        "A Dormant Starship's hull plates and its list of pieces show a small picture of each piece's part."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "f15ce12a7d705fd0ef814cc0f910534dfe4df519"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12g",
+    "date": "2026-11-07",
+    "title": "Patch: Terminus cards end the world: a set piece and a picture of its own for each Terminus card, Olivian Expanse and Ceaseless Void, and Dice of Doom's d100 rolled on screen",
+    "source": "#3338",
+    "notes": "Part of #3330: the Terminus cards, the game's end-of-the-world cards, each get a set piece and a picture of their own (R3338000, R3338001). Olivian Expanse (S #4), its six Terminus cards (S #4.1 to #4.6), Ceaseless Void (#100) and Dice of Doom (S #154) each name a set piece in their set's effects table: Farewell's and the Void's play over their board clears as wipes do (R2800000), every other over a signature, the run of its hook's events of the types it names (The Big Crunch's first cast), held one capped beat as R2785000 holds every set piece, a Mythic's takeover yielding to it, short under Big moments' short, unheld under off, and one still frame under Reduce Motion. Dice of Doom's d100 lands on its public roll, its jackpot read off what the run did; a hidden card only ever shows as a card back (R202). Each set piece's bed opens on an organ chord of its own under the Mythic choir (R1883000). Eight Stinkyscape painters and the Void's giant-shaped hole draw the nine pictures, base and Radiant, and R503's fixtures are recorded again for them; the Void's cost gem drains as its cost falls in its owner's own hand (R3338002). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "The Terminus cards end the world",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Olivian Expanse, its six Terminus cards, Ceaseless Void and Dice of Doom each have an animation of their own, with a sound built on an organ and the Mythic choir.",
+        "Tap to skip one. Big moments and Reduce motion shorten it or show it as a still.",
+        "Dice of Doom's hundred-sided die now rolls across the board and lands on its roll. On a 67 the Terminus cards rain into the hand; on a miss the die crumbles.",
+        "Each of the nine has a picture of its own, on its base and its Radiant face.",
+        "Ceaseless Void's cost gem drains in your hand as its cost falls."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "6aea0f59f47c69618e7f0079127748bca02428e9"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12h",
+    "date": "2026-11-07",
+    "title": "Patch: bigger, more vivid cards: larger faces on the board, in hand and in inspect, an art window up to the frame",
+    "source": "#3341",
+    "notes": "How cards look only: nothing plays differently. The board's card height budget (BOARD_CARD_BUDGET, game/config.ts) gives more of its height to cards: tighter gaps (the lanes' and your fan's, the room over your fan, and on a phone the rows', the mat's and the sides') raise the card at 1280x720, 1920x1080, 390x844, 360x780 and a phone on its side, each measured in a browser; a card is never smaller at any of them. A hovered or tapped hand card lifts larger (HAND_LIFT_SCALE). A unit that prints no full art draws its art up to the frame, the name plate and the gems over its edges, with a rarity ring at its rim in place of the oval; a hand card's art window grows where its name band and rules box give room, the box taking only the height its text needs (fit.ts measures it). The hover preview (and the phone sheet) is larger, and a taller screen draws it taller still, so its art stays over twice as wide as a board unit's. A small face's art is lifted in saturation and contrast (ART_SMALL_FACE_LIFT), never on a Radiant face's gold (R2725004).",
+    "player": {
+      "title": "Bigger, more vivid cards",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Cards on the board and in your hand are larger, on a desktop and on a phone.",
+        "A hand card you hover or tap lifts higher and grows bigger; on a phone it rises clear of your thumb.",
+        "A unit's art fills its card up to the frame, with its name and numbers over the edges; a hand card's art grows as its rules box shrinks to its text.",
+        "The card preview and the phone card sheet are larger, so the art can be studied.",
+        "Art keeps its colours, with more punch on small cards; Radiant's gold is unchanged."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "9ce6dbcafa26c2d126b8dc520601727cfb830cf4"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12i",
+    "date": "2026-11-07",
+    "title": "Patch: the Drone Battleship as one great ship in three decks",
+    "source": "#3336",
+    "notes": "How cards look and how the Battleship moves; nothing plays differently.",
+    "player": {
+      "title": "The Drone Battleship",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "The Drone Battleship's three layers draw as the decks of one ship, with the stack showing as many decks as still stand.",
+        "The arrival drops each deck in turn, a hit redirected onto the Shield beams to its dome, drones launch from its bays, the Meltdown core pulses to a blast, and a broken layer shears its deck off."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "dd0f41602606ec3b1c82bac610a6a8040a5dd774"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12j",
+    "date": "2026-11-07",
+    "title": "Patch: move the menus' remaining dialogs and sheets onto the shared Dialog",
+    "source": "#3221",
+    "notes": "The menus' dialogs and sheets draw through the one Dialog (R3221000): settings, friends and chat are its sheet, every other dialog closes by the ✕ at its top right, a question with a Cancel puts Cancel first, and Escape and Tab go to the top dialog alone. The inspect overlay's card detail (R2529000 counts apps/web/src/cards/ as how cards look) takes the same ✕ in place of its text Close, the dialogs' layer and their scrim's colour. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "One kind of dialog on every screen",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every menu's dialog closes the same way: by the ✕ at its top right, or by Cancel, now first, where it asks a question.",
+        "On a phone, Settings, Friends and a chat rise from the foot of the screen.",
+        "Escape and Back close the dialog on top alone, so a question asked over another dialog closes first."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "765489f9534d437ca5867d2e3a82e527e23ee6d8"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12k",
+    "date": "2026-11-07",
+    "title": "Patch: art-first cards in play",
+    "source": "#3339",
+    "notes": "Full-art looks and Legendary/Mythic cards drop names and text on the board to prioritize art; keyword marks and boardNames setting added.",
+    "player": {
+      "title": "Art-first cards in play",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Cards in play wearing full-art looks and every Legendary and Mythic card drop their name and text to let art stand edge-to-edge, showing their name on hover or a long press.",
+        "Card settings add Names on the board to choose between Art first, Always, or Never."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "9bc6d50206e7021506d2ce07298784581c09164f"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12l",
+    "date": "2026-11-07",
+    "title": "Patch: the card, pile, stack and hero sheets close by the same ✕ as every dialog",
+    "source": "#3377",
+    "notes": "Follow-up to #3367's after-merge spot-check: the inspect overlay's other modal sheets (a card's touch sheet, a pile's list, a face-down card, the Stack's wheel and hero inspect) take DialogClose, the ✕ every dialog closes by, in place of their text Close, and R3221000 drops their exception. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "The same close on every sheet",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A card's sheet, a pile's list, a face-down card, the stack and a hero's view close by the same ✕ at the top right as every other dialog."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "e744b19539b0ee38b242061af76b83c9baf1ff76"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12m",
+    "date": "2026-11-07",
+    "title": "Patch: an art bible and scene kits: each set's look written down, pictures composed as scenes, and more detail the rarer the card",
+    "source": "#3331",
+    "notes": "The foundation of #3330's per-set picture passes. ART.md gains an art bible: each set family's home, palette in palette.css names, light, line, camera and what each rarity adds. A card's picture can now be composed as a scene from a recipe of seven layers of kit parts (sceneRecipes.ts, sceneKit.ts, figureKit.ts: 86 parts, a figure kit of poses, heads, headgear, outfits by tag and held items), seeded by its id, the Radiant face repainting the same shapes (R3331000). Five proof cards draw from recipes: Corpse Plantation (Classic #74), Speciesist (Core #2), Heroic Power (Core #98), Ceaseless Void (Core #100) and Arg Arg Defender (Stinkyscape #15); every other card's picture is byte for byte unchanged. A detail floor per rarity (Common 30 drawn elements up to Mythic 140) starts as a ratchet of the 561 cards under it today, under a 48 KiB ceiling per picture (R3331001). R503's pin on Core's v0.1 pictures is lifted by the owner's decision of 2026-11-06: the three golden fixtures are records, holding every card with no recipe (R3331002). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Richer card pictures, starting with five",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Five cards now show a picture composed as a whole scene, more detailed the rarer the card: Corpse Plantation, Speciesist, Heroic Power, Ceaseless Void and Arg Arg Defender.",
+        "Every other card keeps its picture for now. Each set's pictures, Core's included, are redrawn as scenes in the patches to come."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "14687f5f0d97a0b9de2e5da15240cfed7894dc24"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12n",
+    "date": "2026-11-07",
+    "title": "Patch: quasi-3D cards: a picture's layers stand at depths and tilt with the pointer and the phone, under a glare that follows the light, for every Epic and up",
+    "source": "#3344",
+    "notes": "How cards look only: nothing plays differently. A face that is Epic or rarer, or prints full art at any level, draws its picture as four planes by its painter's roles (the background far, the props in the middle, the subject near, what lies over it, its light and its motes nearest); a delivered art file, a Starship in play, a Legacy card, a restyled picture, Immersive, Out of frame and Extended art stay as they were. Such a face tilts toward the pointer up to CARD_TILT_MAX_DEG, its planes shifting by their depth (CARD_DEPTH_STEP_PX), under a white glare that lies opposite the tilt and is blended by area (color-dodge over the art, overlay over the frame), each foil catching it by area and a Radiant frame none (R2725004). It runs in hand and on the board under the card's own pointer or touch, in the hover preview under the window's pointer, in inspect under that and a touch drag, and in the Collection; it follows the phone's orientation once the new device-only setting Tilt with my phone is on; one face tilts at a time and none while the animation queue drains. A Legendary or Mythic face in hand and in inspect lets its subject break the window's top edge (CARD_FRAME_BREAK_PX). Reduced motion, the system's setting and the fx intensity off draw the flat picture with the foil still. R3344000, R3344001.",
+    "player": {
+      "title": "Quasi-3D cards",
+      "new": [
+        "Epic, Legendary and Mythic cards, and every full-art card, now have depth: the picture is built from layers, with the background far back and the subject and what floats in front of it nearer.",
+        "Move the pointer over one of these cards, in your hand, in the preview, in the Collection or in inspect, and it tilts toward you, its layers sliding past each other.",
+        "A glare moves across the card as it tilts, and each foil catches the light in its own way, on the art and on the frame; a Radiant frame keeps its gold.",
+        "On a phone, press or drag a card in inspect to tilt it; turn on Tilt with my phone in the settings and the cards tilt as you tilt the phone.",
+        "A Legendary or Mythic card's subject may step over the top edge of its picture in your hand and in inspect."
+      ],
+      "balance": [],
+      "changes": [
+        "Reduce motion, your system's reduced-motion setting and effects intensity Off show the flat picture with the foil standing still.",
+        "A new switch, Tilt with my phone, in the visuals settings; your phone asks once to allow it."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "01c93697dafcb1fc844ce336569801d193f53798"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12o",
+    "date": "2026-11-07",
+    "title": "Patch: CN Tech and NA Tech read live win rates from the server's cached card stats, and the compiled table retires",
+    "source": "#3049",
+    "notes": "M #50 CN Tech and M+ #2 NA Tech read the win rates /stats shows instead of a table compiled into the build: the server takes a snapshot of its cached card stats as a match starts and hands it to the game, which keeps the rows each end can name, and the match row keeps the same, so every fold picks the same cards (R3049000). The leader is the card with the highest lower 95% Wilson bound and the trailer the lowest upper bound, in integers, so a few lucky games no longer lead (R3049001). A game handed none (practice, the hotseat, the Sandbox, the run, Duos) reads its version's frozen table, else none, and the cards fall back to Lunar Eclipse and Infinite Reserves; older games fold against the table their version shipped with, ranked by its exact rate as before, so they pick the cards they picked. The ladder bots' decks lean on the same snapshot (R3049002). The compiled table, cargo jackioh winrates and the fragment's table claim retire. Plays: CN Tech and NA Tech, and C+ #38 Solarius, whose Solarius Prime's random casts can cast either, as classify finds them (R1370000).",
+    "player": {
+      "title": "CN Tech and NA Tech read live win rates",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "CN Tech and NA Tech now read the win rates the Statistics page shows, taken as each online match starts, not a fixed table that never changed.",
+        "The highest win rate card is the one whose rate is surest to be high, so a card that won a few lucky games no longer leads; the lowest is read the same way.",
+        "Offline games (practice, hotseat, the Sandbox and the dungeon run) have no live figures, so CN Tech adds Lunar Eclipse and NA Tech fuses Infinite Reserves and Lunar Eclipse there."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "a3bc9af756384ae358c03eb4cbf365c8983ff1b4"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classicplus-038",
+      "meditative-050",
+      "meditativeplus-002"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12p",
+    "date": "2026-11-07",
+    "title": "Patch: Mythics arrive in full art, Prismatic is full art, and Legendaries default to Extended art",
+    "source": "#3343",
+    "notes": "Default looks by rarity (R3343000): the registry marks a variant's first level as a card rarity's default look (defaultOn), which the Default variant draws, a token by its printed rarity: Full art's first level on every Mythic and Extended art's on every Legendary. Every account owns it there with no ledger row, it is offered there nowhere (a pick, a token or the Chase Shard bar naming it is a 400, and no roll, pack or dev fill places it), and its variant's ladder starts at the level above it, next with nothing owned; rows held before stay and still count. A Mythic's Default prints full art while the Full-art cards setting is on and its normal face otherwise; a Legendary's prints Extended art, its words kept, and keeps its window on the board (R3343001). Prismatic's first level adds the full-art frame, so both its levels print full art, chrome across the face and never gold, and a Radiant face keeps every mark (R2725004). The Collection names and pictures a Mythic's and a Legendary's Default by that look and lists the ladders from the level above it (R3343002). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Mythics arrive in full art",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Mythic card now shows in full art by default, its picture across the whole card. Turn off Full-art cards in the settings to see its text instead.",
+        "Every Legendary card now shows in Extended art by default, its picture running past its window behind the card's text.",
+        "Prismatic is now a full art at both its levels: the chrome picture covers the whole card.",
+        "On a Mythic, Full art now starts at its animated level, and on a Legendary, Extended art at its animated level: you can earn those next with nothing else owned.",
+        "If you already owned Full art on a Mythic or Extended art on a Legendary, you keep it. Radiant cards keep their gold frame and marks under every look."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "310f4412060f6d35c981d165267417e220a20e99"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12q",
+    "date": "2026-11-08",
+    "title": "Patch: discovering an Anomaly is an event: the scan finds it, space tears open, your side falls into the rift and the Anomaly's own board arrives under a title card of its own",
+    "source": "#3337",
+    "notes": "boardReplaced names the Anomaly laid (R3337000); each Anomaly Found! draws its own board's picture; the probes' scan, the cast's rift set piece, a standing backdrop and a sting per Anomaly (R3337001-R3337003).",
+    "player": {
+      "title": "Discovering an Anomaly",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "An Anomaly Found! in your hand now shows a picture of the board it holds: each of the ten Anomalies has its own.",
+        "When a Scanning Probe finds an Anomaly, a radar sweep crosses the board, pings, and the card flies into your hand, with a flash for a Radiant one. Your opponent sees only the sweep.",
+        "Casting an Anomaly tears a rift down your side: your cards fall in, it flares, its title card stamps across the screen and its board falls out onto your zones.",
+        "Big moments Short and Off, and Reduce Motion, play the Anomaly's moment in shorter forms.",
+        "While an Anomaly's board stands, your half of the field wears a faint backdrop of it, and each Anomaly has a sound of its own."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "e9b9946ddc6be54b208701cda84b0a745884f853"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-151",
+      "stinkyscape-t-anomaly-found"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12r",
+    "date": "2026-11-08",
+    "title": "Patch: Starship moments that feel epic: pieces docking as they fuse, a full-screen launch, broadsides from its own guns, and a wreck when it falls",
+    "source": "#3334",
+    "notes": "Part of #3330. The Starship's moments, drawn from its own picture (#3333) and keyed only on public events. A fused piece's module flies from where the piece died to its own hardpoint, clamps on and welds, its hum rising with the ship's count, several in one action docking in order (R3334000). A Dormant Starship with pieces idles in its shipyard, a dock light sweeping and welding sparks, in one of the board's moving-art slots (R3334000). A held launch at Big moments full is a cinematic: the board dims, the ship's picture fills the screen, the camera passes each module, its engines light in turn, its name stamps across the hull in its design's lettering and it climbs out of frame; Big moments short and off, and Reduce Motion, show a still title card of its picture and name; the 3-2-1 countdown is gone; a War Doctrine cast is announced over the launched ship in its own look (R3334001). A launched Starship's attack is a broadside, each mounted weapon firing by its kind (beams sweep, repeaters stutter, cannons recoil, flak bursts, launchers lob what they carry), and one with no weapons rams prow first (R3334002). A destroyed Starship's newest modules blow off, its hull breaks in two, debris drifts over its backrow and a scorch settles on its tile (R3334003). Ten sounds made in code go with them. The Dormant Starship, Starfleet Commander and Preemptive Strike wear signatures of their own (R3334004). How cards look and sound only: nothing plays differently.",
+    "player": {
+      "title": "Starship moments that feel epic",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "When a Starship Piece fuses, its part flies to its own spot on the ship and is welded on, the hum rising as the ship fills up.",
+        "A Dormant Starship with pieces shows its shipyard at work: a sweeping dock light and welding sparks.",
+        "A Starship's launch is now a full-screen moment: the camera sweeps along the hull past each part, the engines light one by one, the ship's name is stamped across it and it climbs out of view.",
+        "With Big moments set to short or off, or Reduce Motion on, the launch shows a title card with the ship and its name instead.",
+        "A War Doctrine cast after a launch is announced over the Starship, with its own look for Land, Sea, Air and Space.",
+        "A launched Starship attacks with its own guns: beams sweep, repeaters stutter, cannons kick back, flak bursts in clouds and launchers lob what they carry.",
+        "A Starship with no weapons rams its target prow first.",
+        "A destroyed Starship is wrecked: its parts blow off one by one, the hull breaks in two and a scorch is left on its tile.",
+        "Each of these moments has its own sound.",
+        "The Dormant Starship, Starfleet Commander and Preemptive Strike have signature animations of their own."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "add37b58df54093e9d91e5ac157bb8595fd0c787"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12s",
+    "date": "2026-11-08",
+    "title": "Patch: every Classic+ card drawn as what it is: a scene of its own for each, richer the rarer",
+    "source": "#3390",
+    "notes": "Classic+'s picture pass (#3330, #3331's foundation). Every Classic+ entry, its 38 tokens included, draws from a scene recipe of its own, from a brief per card, in Classic's temple-stone look, base and Radiant (R3390000): a Common one clear subject in a simple setting, a Rare its props, an Epic a scene with a foreground, a middle and a background, a Legendary or Mythic every layer. Each humanoid Unit is a figure dressed as who it is, four Units are drawn as a creature or a machine (the Snake, the Book Worm, the J15 Fighter, the Mulch Muncher), a scene may stand crowds and companions as figures and mark props that move on a full-art card's props beat, and the figure kit and the scene kit grow by the parts the briefs name. All 116 entries clear their rarity's detail floor and leave the short list, whose cap falls to 445 (R3331001). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every Classic+ card drawn as a scene",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Classic+ card and token now shows a scene of its own, more detailed the rarer it is: its Units as the characters they are, its Spells as real places and moments."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "b01bbd555cba846961161b376ac5bbe08c769e58"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12t",
+    "date": "2026-11-08",
+    "title": "Patch: every Classic+ Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
+    "source": "#3396",
+    "notes": "Classic+'s Alt art pass (#3330, on #3390's scenes). Every Classic+ card offered Alt art, 40 of them, now draws an alt scene recipe of its own from a brief per card (R3396000): its subject restaged in another place, time or moment, under a sky sharing no colour with its normal picture's and a new camera (a close-up, a wide or distant view, or one from above), where Alt art had redrawn the normal scene from another seed. A figure keeps the normal picture's person, League of Losers its five, the J15 Fighter its jet. Every Alt art level draws the one alt picture, base and Radiant; each clears its rarity's detail floor and the byte ceiling, and in a real browser changes at least 60% of the normal window's sampled points (ALT_PICTURE_CHANGE_MIN). Repaints keep the normal recipe. The scene kit gains a boat, a tent, a waterfall, bamboo, a cactus and a fox. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every Classic+ Alt art restaged",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Classic+ card's Alt art now shows its subject somewhere else, a new place, time or moment, clearly apart from its normal art."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "7336cf5731447720c4f8400e1490c69909f70eb6"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12u",
+    "date": "2026-11-08",
+    "title": "Patch: every Core card drawn as what it is: a scene of its own for each, richer the rarer",
+    "source": "#3392",
+    "notes": "Core's picture pass under #3330, on #3331's art bible and scene kits. Every Core entry but Ceaseless Void (core-100, whose picture #3338 owns), 99 cards and 11 tokens, now draws a scene recipe of its own, written from its brief in the issue's table (sceneRecipesCore1.ts to sceneRecipesCore3.ts), on the base and the Radiant face, at or above its rarity's detail floor: every one is off the short list, whose cap drops from 445 to 337. A Unit's character is a figure from the figure kit or a creature part, never the painter's silhouette; the kits gained the parts the briefs named, and a scene's other people are extra figures (R3390000's extras). Speciesist and Heroic Power are redrawn from their new briefs, and the seven full-art Core cards whose motion moves their props mark the scene placements that move on that beat (R3390000's props placements; R3392000). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every Core card drawn as a scene of its own",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Core card now shows a scene of its own, drawn from what the card is: simpler on a Common, richer the rarer the card, up to a set piece on each Mythic.",
+        "Ceaseless Void keeps its picture. Nothing plays differently."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "afe5882e14bb6079f74f3aa9f707e59ace4d421d"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12v",
+    "date": "2026-11-08",
+    "title": "Patch: every Meditative+ and Training Grounds card drawn as what it is: a scene of its own for each, richer the rarer",
+    "source": "#3393",
+    "notes": "Part of #3330's per-set picture passes. Every Meditative+ entry (#1–#26 and its seven tokens) and every Training Grounds entry (#1–#60 and the Golem token) draws a scene recipe of its own from its brief in the issue's table, base and Radiant, in its family's look: Meditative+ in ink wash, layered peaks in mist under one red seal, Training Grounds in the carved-wood yard. Each clears its rarity's detail floor and leaves ART_DETAIL_SHORT. Every Unit is a figure-kit character, never the generic traveller, the kits growing by the parts the briefs name; a brief's other characters stand as extra figures, and a placement or a figure may fade for a ghost or a copy, a recipe with no fade drawing as before (R3393000). The yard painter draws only a card with no recipe. A Legacy card draws a scene of its own with its yard touch, wearing its Core card's frozen emblem, still one picture, never its Core card's scene (R3393001). No other set's picture moves. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Meditative+ and Training Grounds drawn as scenes",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Meditative+ and Training Grounds card now shows a whole scene of its own, more detailed the rarer the card: Meditative+ in ink wash among misty peaks, Training Grounds in the yard.",
+        "Each Legacy card now has a scene of its own in the yard, and still wears its Core card's emblem."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "3ea20043dddfe1aae9f1ead4b497b690512d4b3e"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12w",
+    "date": "2026-11-08",
+    "title": "Patch: every Meditative card drawn as what it is: a scene of its own for each, richer the rarer",
+    "source": "#3401",
+    "notes": "Meditative's picture pass (#3330, #3331's foundation). Every Meditative entry, its 30 tokens included, draws from a scene recipe of its own, from a brief per card, in Meditative's ink-wash look, base and Radiant (R3401000): a Common one clear subject in the mist, a Rare its props, an Epic a scene with a foreground, a middle and a background, a Legendary or Mythic every layer, and every picture one red seal. Each person Unit is a figure dressed as who it is, 21 Units that are no person are drawn as a beast, a plant, a machine, a sprite, a totem or a building of the scene kit, the two full-art cards whose motions move props mark the placements that move, and the figure kit and the scene kit grow by the parts the briefs name. All 132 entries clear their rarity's detail floor and leave the short list, whose cap falls from 289 to 157 (R3331001). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every Meditative card drawn as a scene",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Meditative card and token now shows an ink-wash scene of its own, more detailed the rarer it is: its Units as the characters they are, its Spells as real places and moments."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "c7e599e43bd117d1bdf4ea9dfe12c73504d47e00"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12x",
+    "date": "2026-11-08",
+    "title": "Patch: the Fleet track, a Stinkyscape cosmetic track: Starship hull designs, liveries and launch trails earned by playing the set, with a Jlorious Starship gated like the Jlorious card back",
+    "source": "#3335",
+    "notes": "How Starships and the board look, and a cosmetic track of their own; nothing plays differently.",
+    "player": {
+      "title": "The Fleet track",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "The Fleet track: 30 levels earned in ladder, unranked and Conquest games for each Stinkyscape card you play, Starship Piece you fuse and Starship you launch, up to a daily limit.",
+        "A win with a deck at least half Stinkyscape earns more.",
+        "Every level pays a Stinkyscape cosmetic earned only there: hull designs, liveries, engine trails, module skins, a card back, a playmat and a backdrop.",
+        "Level 30 pays the Stinkyscape hull, a flagship.",
+        "A new Starship tab in the Collection picks the hull, livery, trail and module skin every Starship you launch wears, and your opponent sees them.",
+        "Reaching Jlorious now also earns the Jlorious Starship, and everyone who has already reached Jlorious has it."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "f9c2965453bcca9534aee8f2ef26689a9d1e518e"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12y",
+    "date": "2026-11-09",
+    "title": "Patch: art that lives in play",
+    "source": "#3340",
+    "notes": "A board face's art moves for an animated or signed level and for every Mythic, in the motion slots the hand shares (ranked by the pointer or focus first, then Mythics, Legendaries and the rest newest first). A moving face's art answers the pointer, a press and an attack, and a unit's art wears cracks for the health it is missing, a glow when buffed and frost when frozen. Every Legendary and Mythic has its own motion recipe. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Art that lives in play",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "On the board, the art of every animated or signed card, and of every Mythic, keeps moving, a few cards at a time: the one under your pointer first, then Mythics, Legendaries and the rest.",
+        "A card's art answers you: its subject leans toward your pointer and the sparks scatter and settle, it flinches when you press it, and it swings toward its target when it attacks.",
+        "A damaged unit's art shows cracks that grow as its health falls, a buffed unit glows in its card's colours and a frozen one frosts over, even with reduced motion on.",
+        "Every Legendary and Mythic has a moving picture of its own."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "43c6712bc16acdb9e8604d5918ef5d0bef4538ea"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12z",
+    "date": "2026-11-09",
+    "title": "Patch: daily super run failed: a crafted trap that reveals on an attack ignores a forced one",
+    "source": "#3439",
+    "notes": "The daily super run on staging (run 42488997384). Fuzz 3/4: a crafted Trap whose reveal hat is 'when your opponent attacks' armed on forced attacks too, which R121 forbids (a forced attack is declared by the effect, not the opponent); in the handicapped game of seed 6091 it summoned a Sheep, Warp Disruptor II forced another attack on it, and the resolution loop never settled. Its trigger (craft.rs reveal_trigger) now refuses a forced AttackDeclared, as Core #96 My Pawn's does. useFitText (fit.ts) refits a box its ResizeObserver reports resized in the next frame, not inside the observer's callback, so an Extended-art rules box that grows with its text no longer raises 'ResizeObserver loop completed with undelivered notifications'. The rest is tests and layout: e2e spec 38 waits for the opening deal before axe, the auth screen's landscape footer takes its own row, the deck builder's 'Back to decks' keeps to one line on a phone, seven component specs follow the cards and looks that moved under them, and shard-specs.mjs splits the component specs (--component) for the super run's component jobs.",
+    "player": {
+      "title": "A crafted trap ignores forced attacks",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A crafted Trap that reveals when your opponent attacks no longer reveals on an attack another card forces."
+      ]
+    },
+    "commits": [
+      "1aa185cc3b5834992c2e01f5effd9b7a2a5e5146"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12aa",
+    "date": "2026-11-09",
+    "title": "Patch: every Meditative+ and Training Grounds Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
+    "source": "#3397",
+    "notes": "Meditative+'s and Training Grounds' Alt art pass (#3330, on #3393's scenes, after #3396's Classic+ pass). Every Meditative+ and Training Grounds card offered Alt art, 36 of them, now draws an alt scene recipe of its own from a brief per card (R3397000): its subject restaged in another place, time or moment, under a sky sharing no colour with its normal picture's and a new camera (a close-up, a wide or distant view, or one from above), where Alt art had redrawn the normal scene from another seed. A figure keeps the normal picture's person, and a person the brief keeps beside it stays the normal one's; Meditative+ keeps its one red seal, Training Grounds none. Every Alt art level draws the one alt picture, base and Radiant; each clears its rarity's detail floor and the byte ceiling, and in a real browser changes at least 60% of the normal window's sampled points (ALT_PICTURE_CHANGE_MIN). Repaints keep the normal recipe. The scene kit gains a goat, a deer, a duck, walnuts, a crater, a sandcastle, a snowman, a water wheel, a rowboat, a cork board, a washing line, a picnic blanket and a hanging rope. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every Meditative+ and Training Grounds Alt art restaged",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Meditative+ and Training Grounds card's Alt art now shows its subject somewhere else, a new place, time or moment, clearly apart from its normal art."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "cb657107f573b0aa966bbf875e74457a380c1bac"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12ab",
+    "date": "2026-11-09",
+    "title": "Patch: every Stinkyscape (cards 91 to 178 and its tokens) card drawn as what it is: a scene of its own for each, richer the rarer",
+    "source": "#3403",
+    "notes": "The picture pass over Stinkyscape's later cards (#3330, on #3331's foundation). Each of the 103 entries of #3403's table, Stinkyscape #91 to #176 and their tokens with the tokens of the early cards it names, draws from a scene recipe of its own, from a brief per card, in Stinkyscape's deep-space look, base and Radiant (R3403000): a Common one clear subject in a simple setting, a Rare its props, an Epic a scene with a foreground, a middle and a background, a Legendary or Mythic every layer. Each humanoid Unit is a figure dressed as who it is, fourteen Units are drawn as a creature or a machine (the Wasp and the Hornet, Megabase, the Sack, the Golem, the four Asteroids, the Spice Tower, the two drones, Escort Protocol and Combat Subroutine), crews and rivals stand as figures, and the figure kit and four new scene-kit modules of space grow by the parts the briefs name. The Starship Pieces, the Drone Battleship's layers, Anomaly Found!, the Terminus tokens and Dice of Doom keep their pictures for the issues that draw them. All 103 entries clear their rarity's detail floor and leave the short list, whose cap falls to 129 (R3331001). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Stinkyscape's later cards drawn as scenes",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Stinkyscape's later cards and their tokens now each show a scene of their own, more detailed the rarer they are: Units as the characters and machines they are, Spells as real places and moments."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "cf108f4ccd99f3f122675a2f8cc8a1ccd2d34a28"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12ac",
+    "date": "2026-11-09",
+    "title": "Patch: every Meditative Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
+    "source": "#3404",
+    "notes": "Meditative's Alt art pass (#3330, on #3401's scenes). Every Meditative card offered Alt art, 54 of them, now draws an alt scene recipe of its own from a brief per card (R3404000): its subject restaged in another place, time or moment, under a sky sharing no colour with its normal picture's and a new camera (a close-up, a wide or distant view, or one from above or below), where Alt art had redrawn the normal ink-wash scene from another seed. A figure keeps the normal picture's person, and every picture keeps Meditative's one red seal. Every Alt art level draws the one alt picture, base and Radiant; each clears its rarity's detail floor and the byte ceiling, and in a real browser changes at least 60% of the normal window's sampled points (ALT_PICTURE_CHANGE_MIN). Repaints keep the normal recipe. The scene kit gains an oar, a sofa and a tower crane. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every Meditative Alt art restaged",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Meditative card's Alt art now shows its subject somewhere else, a new place, time or moment, clearly apart from its normal art."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "648bc1df4ef740b4e75c807dabc010e4955bfadb"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12ad",
+    "date": "2026-11-09",
+    "title": "Patch: every Core Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
+    "source": "#3398",
+    "notes": "Core's Alt art pass (#3330, on #3392's scenes). Every Core card offered Alt art, 61 of them, now draws an alt scene recipe of its own from a brief per card (R3398000): its subject restaged in another place, time or moment, under a sky sharing no colour with its normal picture's and a new camera (a close-up, a wide or distant view, or one from above or below), where Alt art had redrawn the normal scene from another seed. A figure keeps the normal picture's person, Duplicating Felinors, Carnivorous Cube and True Strike their people; Ceaseless Void's Alt art is the void before it wakes, a black pearl in a tide pool, without its giant. Every Alt art level draws the one alt picture, base and Radiant; each clears its rarity's detail floor and the byte ceiling, and in a real browser changes at least 60% of the normal window's sampled points (ALT_PICTURE_CHANGE_MIN). Repaints keep the normal recipe. The scene kit gains a palm, a camel, a crater, a van, a hay bale, a picnic blanket, a rug, a hammock, a sleeping bag and a teapot. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every Core Alt art restaged",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Core card's Alt art now shows its subject somewhere else, a new place, time or moment, clearly apart from its normal art."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "7dd7704cd32c56df2e4c6016ac6d061fec7d0eb6"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12ae",
+    "date": "2026-11-09",
+    "title": "Patch: audit the codebase for dead code, duplicates and zombie routes, 2026-11-08",
+    "source": "#3423",
+    "notes": "The code audit of 2026-11-08 (#3423, after #2658): dead code removed and duplicated helpers merged. Under apps/web/src/cards/ (R2529000) an unused type goes and the settings, the art kit and two syncs reuse one helper each: how cards look and play is unchanged.",
+    "player": {
+      "title": "Unused code tidied away",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Unused code was removed and repeated helpers were merged. Nothing about how cards look or play changes."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "71ef2a3bd05ce845d7ab98f1734ee9a5894391d3"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12af",
+    "date": "2026-11-09",
+    "title": "Patch: every Stinkyscape (cards 91 to 178 and its tokens) Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
+    "source": "#3406",
+    "notes": "Stinkyscape's later cards' Alt art pass (#3330, on #3403's scenes, after #3396's Classic+ and #3397's Meditative+ and Training Grounds passes). Every card of #3406's table, the 54 Stinkyscape cards from #91 on and tokens offered Alt art but the Dormant Starship, now draws an alt scene recipe of its own from a brief per card (R3406000): its subject restaged in another place, time or moment, under a sky sharing no colour with its normal picture's and a new camera, where Alt art had redrawn the normal picture from another seed. A figure keeps the normal picture's person, and a person the brief keeps beside it stays the normal one's. The Starship Pieces, Jlockeed's three weapons and Dice of Doom keep their own painter's normal face and stand their piece in the alt scene as a new part of the scene kit. Every Alt art level draws the one alt picture, base and Radiant; each clears its rarity's detail floor and the byte ceiling, and in a real browser changes at least 60% of the normal window's sampled points (ALT_PICTURE_CHANGE_MIN). Repaints keep the normal picture. The scene kit gains a nanobot swarm, a hull plate, a cartridge, an overdrive engine, a warp ring, a rail gun, a great cannon, a missile pod, a capacitor cell, a flank pod, a launcher tube, a hundred-sided die, a pineapple, an escalator and a seashell. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every later Stinkyscape Alt art restaged",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Stinkyscape's later cards, the Starship Pieces among them, now show their subject somewhere else in their Alt art: a new place, time or moment, clearly apart from their normal art."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "a56de72f3768ef49d53234a09b0a35b1e63104b0"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12ag",
+    "date": "2026-11-09",
+    "title": "Patch: every Stinkyscape (cards 1 to 90) card drawn as what it is: a scene of its own for each, richer the rarer",
+    "source": "#3391",
+    "notes": "Part of #3330, on #3331's art bible, scene kits and detail floor. Each of the 64 Stinkyscape cards in #3391's table (cards 1 to 90 but the Starship Pieces, which #3333 draws, and Olivian Expanse, #3338's) draws a scene recipe of its own from its brief, base and Radiant, in the set's deep space (stinkyscapeRecipes.ts, R3391000): Arg Arg Defender's proof redrawn to its brief and 63 new. The scene kit gains a seventh kind, craft (ships, drones and vehicles), and the parts the briefs name in every kind; the figure kit gains a pose, heads, headgear, outfits and held items for the set's people; a placement may turn a pointing part (a beam, a meteor), opt-in, so every other recipe draws byte for byte as before; where Core's pass (R3392000) had already drawn a part a brief names, the card wears Core's. A Unit draws its character, a person from the figure kit or its ship, and its crew or squad stand as R3390000's further figures. Each card clears its rarity's floor and leaves the detail floor's short list (R3331001), the median element count rising from Common to Mythic, and each Mythic places a part no other card does. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Stinkyscape's cards drawn as scenes",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Stinkyscape card from Freeze Ray to Spice now shows a scene of its own: its people or ships, its station or planet and its moment, more detailed the rarer the card.",
+        "The Starship Pieces and Olivian Expanse keep their pictures for now; their own patches redraw them."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "739619602a615e944acaa658d9b9c31a4526b77d"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12ah",
+    "date": "2026-11-10",
+    "title": "Patch: every Classic card drawn as what it is: a scene of its own for each, richer the rarer",
+    "source": "#3352",
+    "notes": "Classic's picture pass (#3330, #3331's foundation). Every Classic entry but Corpse Plantation, #3331's proof, the Glitch included, draws from a scene recipe of its own, from a brief per card, in Classic's temple-stone look, base and Radiant (R3352000): a Common one clear subject in a simple setting, a Rare its props, an Epic a scene with a foreground, a middle and a background, a Legendary or Mythic every layer. Each person Unit is a figure dressed as who it is, six Units that are no person are drawn as a creature of the scene kit (the tortoise, the slime, the shrimp, the crawler, the warboar, the worm-maw), a scene stands its other people as extra figures, In Too Deep marks the placements its props beat moves, and the figure kit and the scene kit grow by the parts the briefs name. All 89 measured entries clear their rarity's detail floor and leave the short list, whose cap falls from 157 to 68 (R3331001). How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every Classic card redrawn as a scene",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Classic card now shows a picture of its own, composed as a whole scene and more detailed the rarer the card: its Units as the characters they are, its Spells as real places and moments."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "efe8cdab2ebe80c92b15d04a80678eb5a60d6c53"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12ai",
+    "date": "2026-11-10",
+    "title": "Patch: every Classic Alt art somewhere else: the same subject in a new place, time or moment, one brief per card",
+    "source": "#3388",
+    "notes": "Classic's Alt art pass (#3330, on #3352's scenes and #3331's Corpse Plantation proof). Every Classic card offered Alt art, 50 of them, now draws an alt scene recipe of its own from a brief per card (R3388000): its subject restaged in another place, time or moment, under a sky sharing no colour with its normal picture's and a new camera (a close-up, a wide or distant view, or one from above), where Alt art had redrawn the normal scene from another seed and changed as little as 13% of it. A figure keeps the normal picture's person, Felinor Feelings, Ancient Acquisition, Nature Titan, Common Resources and Pile On their people; Corpse Plantation's Alt art is the plantation at harvest noon, its normal proof scene unchanged. Every Alt art level draws the one alt picture, base and Radiant; each clears its rarity's detail floor and the byte ceiling, and in a real browser changes at least 60% of the normal window's sampled points (ALT_PICTURE_CHANGE_MIN). Repaints keep the normal recipe. The scene kit gains a frog and a shark. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Every Classic Alt art restaged",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Every Classic card's Alt art now shows its subject somewhere else, a new place, time or moment, clearly apart from its normal art."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "e8580b25bda38b9729a6acb6d85f788edaef2c5b"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12aj",
+    "date": "2026-11-10",
+    "title": "Patch: follow-up to #3464 from the after-merge spot-check",
+    "source": "#3613",
+    "notes": "The after-merge spot-check of #3464 (#3613). ART_DETAIL_SHORT_MAX, the cap on the detail floor's short list (R3331001), falls from 40 to 10, the list's length, and artRichness.test.ts now holds the list to exactly the cap: #3391 had left the list at 99 under a cap of 129, and #3464 took Classic's 89 off and wrote 40, 129 less 89. The shipped v0.5.13h note's cap, 157 to 68, should read 129 to 10. Under apps/web/src/cards/ (R2529000) only that test constant changes: how cards look and play is unchanged.",
+    "player": {
+      "title": "Card art check corrected",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A check that holds card art to its level of detail was corrected. Nothing about how cards look or play changes."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "92c0696b2174bd6fb03998af5d9b3390eefbabe5"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.12ak",
+    "date": "2026-11-10",
+    "title": "Patch: quasi-3D models for the Mythics: each Mythic a diorama of its own, turned by a drag in inspect, with an idle loop of its own and its takeover flown through it",
+    "source": "#3350",
+    "notes": "How cards look only: nothing plays differently. Every Mythic card and every token printed Mythic (50 cards) draws a diorama of its own where a face draws depth planes (R3344000): its still picture cut, by a file written for that card, into five to eight depth slices (DIORAMA_SLICES_MIN, DIORAMA_SLICES_MAX), some bent about one axis to read as a curved surface (DIORAMA_BEND_MAX_DEG), two or more on an idle loop written for the card in transform and opacity alone (Zephrys's gusts circling, Dice of Doom's die turning, Alteran Reach's lights coming on along its path, Ceaseless Void's sparks falling at every depth). A slice draws only the picture's own pieces, so no colour, text or byte the picture lacks (R2725004, ART_DETAIL_MAX_BYTES). In inspect, the hover preview, the Collection and the full-screen view a diorama turns up to DIORAMA_TURN_MAX_DEG, in hand CARD_TILT_MAX_DEG; its loops run inside the motion slots (R3340000), in hand, inspect and on the board, where a moving Mythic Unit draws every slice in its window; the full-screen view draws the slices, and a Mythic's takeover flies through them (R3345000). Alt art and the restyles draw no diorama, and reduced motion, the system's setting and the fx intensity off draw the flat picture, still. R3350000.",
+    "player": {
+      "title": "Mythic dioramas",
+      "new": [
+        "Every Mythic card, and every token printed Mythic, is now a small 3D model of its picture: a diorama of five to eight layers made for that card, some of them curved.",
+        "Drag a Mythic in inspect, or move the pointer over it in the preview or the Collection, and it turns up to 25 degrees each way, its layers sliding past each other.",
+        "On a phone, drag it in inspect, or tilt the phone once Tilt with my phone is on.",
+        "Each diorama has an animation of its own: Zephrys's wind circling, Dice of Doom's die turning, Alteran Reach's lights coming on along its path, Ceaseless Void's falling sparks.",
+        "The animation plays in your hand, in inspect and on the board.",
+        "A Mythic's full-screen view shows its diorama, and its takeover flies the camera through it."
+      ],
+      "balance": [],
+      "changes": [
+        "Alt art keeps its own picture, and Reduce motion, your system's reduced-motion setting and effects intensity Off show the flat picture, standing still."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "48f21c55aa77b723f0805ce5210399fea40e926c"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

@@ -32,15 +32,9 @@ export const PRACTICE_PACING_REDUCED: PracticePacing = { firstActionMs: 150, act
 /** E2E-only fast pacing, guarded outside production. */
 export const PRACTICE_PACING_FAST: PracticePacing = { firstActionMs: 0, actionGapMs: 30, promptAnswerMs: 0 };
 
-/** Wall-clock safety cap for one worker decision (`AiOptions.shouldStop`): 3 s since the budget doubled (R2575000). */
-export const PRACTICE_AI_CLOCK_MS = 3000;
-
-/**
- * R2102000: wall-clock cap for the lethal hint's check, which every snapshot of the human's turn
- * waits for: a check still running past it gives no hint, so a board whose lines are slow to play
- * out never holds a click's answer back for long.
- */
-export const PRACTICE_LETHAL_HINT_CLOCK_MS = 300;
+// The wall-clock caps of the AI's decision (PRACTICE_AI_CLOCK_MS, R2575000) and of the lethal hint's check
+// (PRACTICE_LETHAL_HINT_CLOCK_MS, R2102000) are the practice session's, in `crates/shared/src/config.rs`: the
+// machine puts them in its asks, and `wasm/index.ts`'s `practiceConstants()` states them for the tests.
 
 /** localStorage key, read and written inside try/catch. */
 export const PRACTICE_SETUP_KEY = "jackioh.practice.setup";
@@ -65,9 +59,6 @@ export const DAILY_DEAL_SEED_PREFIX = "daily-";
 export const DAILY_DEAL_DAY_MS = 86_400_000;
 
 export const PRACTICE_RESULT_PARTICLES = 18;
-
-/** R768: retained free-game replays. */
-export const PRACTICE_REPLAYS_KEPT = 10;
 
 /** R768: how many kept games opened last the worker holds folded, so going back to one folds it no second time. */
 export const PRACTICE_REPLAYS_CACHED = 5;

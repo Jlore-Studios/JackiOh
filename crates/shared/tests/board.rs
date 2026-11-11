@@ -1,4 +1,4 @@
-//! The leaderboard's sort key (`src/ranked/board.rs`, SPEC §9.12, R608, R612, R1436, R3074001; #3105): the
+//! The leaderboard's sort key (`src/ranked/board.rs`, SPEC §9.12, R608, R612, R1436, R3074001, R3290000; #3105): the
 //! integer on each rating record orders a ladder as the public leaderboard lists it, so a store that sorts
 //! integers lists the same players in the same order. The oracle below is the listing the server's
 //! `leaderboard` makes (`crates/server/src/api/ranked.rs`), written out: Jlorious first by hidden rating,
@@ -8,7 +8,7 @@
 use jackioh_shared::config::{
     JLORIOUS_SIZE, SORT_KEY_GRAPE_BASE, SORT_KEY_JLORIOUS_BASE, SORT_KEY_RATING_BITS,
 };
-use jackioh_shared::ranked::board::{SeasonStanding, counts, record_of, sort_key, standings_of};
+use jackioh_shared::ranked::board::{SeasonStanding, counts, listed, record_of, sort_key, standings_of};
 use jackioh_shared::ranked::ladder::{
     GRAPE_TIERS, LADDER_TOP, PIPS_PER_TIER, fresh_rank, jlorious_order, tier_bottom, tier_index_of,
 };
@@ -22,7 +22,14 @@ fn standing(id: &str, ladder: Option<i32>, rating: f64, bot: bool, hand_set: boo
         rating,
         bot,
         hand_set,
+        banned: false,
     }
+}
+
+/// `standing`, banned (R3290000).
+fn banned(mut standing: SeasonStanding) -> SeasonStanding {
+    standing.banned = true;
+    standing
 }
 
 /// A small deterministic generator: the tests draw ladders and ratings from it.
@@ -43,14 +50,15 @@ impl Draw {
 
 /// The ids the public leaderboard lists, in the order it lists them (R612): Jlorious #1 first, then each Grape
 /// tier from Mythic down, a tier's players by ladder position and a tie by profile id (R1436). A player still
-/// in their placements is counted, not listed, and on a strict server so is a hand-set rating (R3074001).
+/// in their placements is counted, not listed, and on a strict server so is a hand-set rating (R3074001);
+/// a banned account is neither counted nor listed (R3290000).
 fn board_order(standings: &[SeasonStanding], strict: bool) -> Vec<String> {
     let jlorious = jlorious_order(&standings_of(standings, strict));
     let mut order: Vec<String> = jlorious.clone();
     for tier in (0..GRAPE_TIERS.len()).rev() {
         let mut rows: Vec<(i32, &str)> = standings
             .iter()
-            .filter(|standing| !(strict && standing.hand_set))
+            .filter(|standing| !standing.banned && !(strict && standing.hand_set))
             .filter(|standing| !jlorious.contains(&standing.rank.profile_id))
             .filter_map(|standing| {
                 let ladder = standing.rank.ladder?;
@@ -180,6 +188,109 @@ fn r3074001_a_hand_set_rating_is_off_a_strict_servers_board_and_on_a_lax_ones() 
 }
 
 #[test]
+fn r3290000_a_banned_standing_neither_counts_nor_lists_and_bots_and_hand_set_ratings_behave_as_before() {
+    for strict in [false, true] {
+        let gone = banned(standing("b", Some(tier_bottom(4) + 3), 2500.0, false, false));
+        assert!(
+            !counts(&gone, strict) && !listed(&gone, strict),
+            "strict {strict}"
+        );
+        assert_eq!(sort_key(&gone, true, strict), 0, "strict {strict}");
+        assert_eq!(sort_key(&gone, false, strict), 0, "strict {strict}");
+        assert!(standings_of(&[gone], strict).is_empty(), "strict {strict}");
+
+        // A bot counts toward nothing but is listed, as before.
+        let bot = standing("bot", Some(tier_bottom(2)), 2500.0, true, false);
+        assert!(!counts(&bot, strict) && listed(&bot, strict), "strict {strict}");
+        // A hand-set rating is off a strict server's board and on a lax one's, as before.
+        let hand_set = standing("h", Some(tier_bottom(2)), 2500.0, false, true);
+        assert_eq!(counts(&hand_set, strict), !strict);
+        assert_eq!(listed(&hand_set, strict), !strict);
+        // A plain person counts and is listed.
+        let person = standing("p", Some(tier_bottom(2)), 2500.0, false, false);
+        assert!(
+            counts(&person, strict) && listed(&person, strict),
+            "strict {strict}"
+        );
+        // A banned hand-set rating or bot is off the board on a lax server too.
+        let both = banned(standing("both", Some(tier_bottom(2)), 2500.0, false, true));
+        assert!(
+            !counts(&both, strict) && !listed(&both, strict),
+            "strict {strict}"
+        );
+        let banned_bot = banned(standing("bb", Some(tier_bottom(2)), 2500.0, true, false));
+        assert!(
+            !counts(&banned_bot, strict) && !listed(&banned_bot, strict),
+            "strict {strict}"
+        );
+    }
+    // The mark is server-side: it is read back when present, and never written when false.
+    let gone = banned(standing("b", Some(7), 1234.5, false, false));
+    let json = serde_json::to_value(&gone).expect("a standing serializes");
+    assert_eq!(json["banned"], true);
+    let back: SeasonStanding = serde_json::from_value(json).expect("a standing reads");
+    assert_eq!(back, gone);
+}
+
+#[test]
+fn r3290000_the_next_account_takes_a_banned_accounts_jlorious_place() {
+    let mut standings: Vec<SeasonStanding> = (0..=JLORIOUS_SIZE)
+        .map(|index| {
+            standing(
+                &format!("m{index:03}"),
+                Some(tier_bottom(4)),
+                2000.0 - index as f64,
+                false,
+                false,
+            )
+        })
+        .collect();
+    let order = |standings: &[SeasonStanding]| jlorious_order(&standings_of(standings, false));
+    assert_eq!(order(&standings).len(), JLORIOUS_SIZE);
+    assert!(!order(&standings).contains(&format!("m{JLORIOUS_SIZE:03}")));
+
+    standings[0].banned = true;
+    let without = order(&standings);
+    assert_eq!(without.len(), JLORIOUS_SIZE);
+    assert!(!without.contains(&String::from("m000")));
+    assert_eq!(without.last(), Some(&format!("m{JLORIOUS_SIZE:03}")));
+    assert_eq!(without.first().map(String::as_str), Some("m001"));
+
+    standings[0].banned = false;
+    let with = order(&standings);
+    assert_eq!(with.first().map(String::as_str), Some("m000"));
+    assert!(!with.contains(&format!("m{JLORIOUS_SIZE:03}")));
+}
+
+#[test]
+fn r3290000_the_sort_keys_order_is_the_leaderboards_with_banned_accounts_off_it() {
+    for seed in 1..=12_u64 {
+        for strict in [false, true] {
+            let standings: Vec<SeasonStanding> = ladder_of(seed * 7_919, 400)
+                .into_iter()
+                .enumerate()
+                .map(|(index, standing)| {
+                    if index % 7 == 3 {
+                        banned(standing)
+                    } else {
+                        standing
+                    }
+                })
+                .collect();
+            let board = board_order(&standings, strict);
+            let keyed = key_order(&standings, strict);
+            assert_eq!(keyed, board, "seed {seed}, strict {strict}");
+            for standing in standings.iter().filter(|standing| standing.banned) {
+                assert!(
+                    !board.contains(&standing.rank.profile_id),
+                    "seed {seed}, strict {strict}: a banned account is on the board"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn r608_a_key_fits_53_bits_rises_with_the_rating_and_the_ladder_and_clamps_the_extremes() {
     // The key is exact in a Luau number: under 2^53.
     let top = standing("t", Some(tier_bottom(4)), f64::MAX, false, false);
@@ -215,6 +326,7 @@ fn r608_a_record_serializes_as_its_standing_with_the_key_beside_it() {
     assert_eq!(json["rating"], 1234.5);
     assert_eq!(json["sortKey"], SORT_KEY_GRAPE_BASE + 7);
     assert!(json.get("bot").is_none() && json.get("handSet").is_none());
+    assert!(json.get("banned").is_none());
     let back: jackioh_shared::ranked::board::RatingRecord =
         serde_json::from_value(json).expect("a record reads");
     assert_eq!(back, record);

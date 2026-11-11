@@ -1,9 +1,10 @@
-// CLAUDE.md rule 7: the runner derives casts (§6.3, R70), pile impacts, sweeps, wipes and the Starship's fuse runs and
-// launches (R2801000) from redacted events and PlayerView.
+// CLAUDE.md rule 7: the runner derives casts (§6.3, R70), pile impacts, sweeps, wipes, the Starship's fuse runs and
+// launches (R2801000) and an Anomaly's rift (R3337003) from redacted events and PlayerView.
 // R97, R202, R242, and R440 forbid hidden-card inference; `HIDDEN_PILE_OF` uses only public card text.
 
 import type { GameEvent, PlayerId, PlayerView, Row } from "@jackioh/shared";
 
+import { isAnomalyCode, type AnomalyCode } from "../cards/anomalies.ts";
 import { flavorSourceOf } from "../fx/flavorSource.ts";
 import { sideOf, testid, type Side } from "./contract";
 
@@ -419,6 +420,45 @@ export function wipeAt(
   return { wipe: { by: hook.defId, sourceId: hook.sourceId, sides, anchor }, length };
 }
 
+// Signatures
+
+/**
+ * R3338000: a Terminus card's signature moment as the runner plays it, one entry its set piece claims:
+ * the readable card it is, its instance and its controller.
+ */
+export type Signature = { by: string; sourceId: string; player: PlayerId };
+
+/**
+ * R3338000: the signature at `at`, or null: the run of consecutive events from `at` whose types `runOf`
+ * names for the hook resolving (a Trap's own `trapFired` at `at` is its own), when the seat reads that
+ * hook's card (R202). A run opens only on the first type `runOf` names, so another hook of the same card
+ * (Dice of Doom's end-of-turn return, its `addedToHand` or `burned`, opening on no `rolled`) plays its
+ * own rows. The caller closes the hook after it, so a hook makes one signature.
+ */
+export function signatureRunAt(
+  events: readonly GameEvent[],
+  at: number,
+  hook: OpenHook | undefined,
+  runOf: (defId: string) => readonly GameEvent["type"][] | "cast" | null,
+): { signature: Signature; length: number } | null {
+  const first = events[at];
+  if (first === undefined) return null;
+  const owner: OpenHook | undefined =
+    first.type === "trapFired"
+      ? { defId: first.defId, sourceId: first.instanceId, controller: first.controller, trap: { row: first.row, lane: first.lane } }
+      : hook;
+  if (owner === undefined || owner.defId === HIDDEN) return null;
+  const types = runOf(owner.defId);
+  if (types === null || types === "cast" || types[0] !== first.type) return null;
+  let i = at;
+  for (let event = events[i]; event !== undefined && types.includes(event.type); event = events[i]) {
+    // A Trap's own run starts at its firing, and another firing starts another run.
+    if (i > at && event.type === "trapFired") break;
+    i += 1;
+  }
+  return { signature: { by: owner.defId, sourceId: owner.sourceId, player: owner.controller }, length: i - at };
+}
+
 // The Starship
 
 /**
@@ -497,4 +537,41 @@ export function launchAt(events: readonly GameEvent[], at: number, view: PlayerV
     pieces: event.pieces.length,
     name: event.name,
   };
+}
+
+// An Anomaly
+
+/**
+ * R3337003: an Anomaly laid on `player`'s side, as the runner plays it: its code (R3337000), the side it
+ * lands on, each card the board's `summoned` lays, in order, as the zone it lands in and its row, and
+ * `sourceId`, the play open as it lands (Anomaly Found!'s own, or #151's), or null for none.
+ */
+export type AnomalyRift = {
+  player: PlayerId;
+  code: AnomalyCode;
+  side: Side;
+  landings: readonly { zone: string; row: Row }[];
+  sourceId: string | null;
+};
+
+/** R3337003: what ends a rift: the next hook (a laid Cry firing, R1855001), a question, a Trap, the play's end, another replacement, the game's or the turn's end. */
+const RIFT_ENDS = new Set<GameEvent["type"]>(["hookResolving", "promptOpened", "trapFired", "cardResolved", "boardReplaced", "gameOver", "turnEnded"]);
+
+/**
+ * R3337003: the rift at `at`, or null: a `boardReplaced` naming an Anomaly (R3337000), with every event
+ * after it up to the first of `RIFT_ENDS`: the old side's `exiled` and the board's `summoned` among
+ * them. A replacement naming none plays as its own row. The code and the zones are public (R202): the
+ * laid board is, and a face-down card's landing names only its zone.
+ */
+export function riftAt(events: readonly GameEvent[], at: number, view: PlayerView, play?: OpenPlay): { rift: AnomalyRift; length: number } | null {
+  const head = events[at];
+  if (head?.type !== "boardReplaced" || !isAnomalyCode(head.anomaly)) return null;
+  const side = sideOf(view, head.player);
+  const landings: { zone: string; row: Row }[] = [];
+  let i = at + 1;
+  for (let event = events[i]; event !== undefined && !RIFT_ENDS.has(event.type); event = events[i]) {
+    if (event.type === "summoned" && event.player === head.player) landings.push({ zone: testid.zone(side, event.row, event.lane), row: event.row });
+    i += 1;
+  }
+  return { rift: { player: head.player, code: head.anomaly, side, landings, sourceId: play?.instanceId ?? null }, length: i - at };
 }

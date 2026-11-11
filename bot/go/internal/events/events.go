@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/asks"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
@@ -24,6 +23,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/declined"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/identity"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -107,12 +107,14 @@ func Handle(ctx *hctx.Context, name string, payload *pyjson.Object) []string {
 // stops the sub-issues of a tree it split that are queued for the night bot.
 var OtherBotVerbs = []string{"stop"}
 
-// FromOtherBot is from_other_bot: the comment's author is another bot in the repository
-// (`config.OTHERS`).
-func FromOtherBot(user *pyjson.Object) bool {
-	login := strings.ToLower(py.OrStr(user.Get("login"), ""))
+// FromOtherBot is from_other_bot: another bot in the repository (`config.Others`) wrote this
+// comment or review `body` of `user`'s: its account, with its marker when it has one. A person can
+// work as Squishy's account (a Claude session among them), and what they type carries no marker,
+// so it is theirs and answered as anyone's, a vote included (#961, #3508).
+func FromOtherBot(user *pyjson.Object, body string) bool {
+	login := py.OrStr(user.Get("login"), "")
 	for _, other := range config.Others {
-		if strings.ToLower(other.Login) == login {
+		if other.Wrote(login, body) {
 			return true
 		}
 	}
@@ -121,15 +123,7 @@ func FromOtherBot(user *pyjson.Object) bool {
 
 // IsOwn is _is_own: true for a comment the bot wrote (a person quoting it keeps the marker
 // behind `>`).
-func IsOwn(body string) bool {
-	mark := config.Marker
-	for _, line := range py.Splitlines(body) {
-		if strings.Contains(line, mark) && !strings.HasPrefix(strings.TrimLeftFunc(line, unicode.IsSpace), ">") {
-			return true
-		}
-	}
-	return false
-}
+func IsOwn(body string) bool { return identity.Carries(body, config.Marker) }
 
 func level(ctx *hctx.Context, user *pyjson.Object, association any) int {
 	return trustLevel(ctx.Trust, py.Str(user.GetOr("login", "")), user.Get("id"), association)
@@ -247,7 +241,7 @@ func OnComment(ctx *hctx.Context, payload *pyjson.Object, reviewComment bool /* 
 	if !reviewComment {
 		voted, voteLine = commands.Vote(body, ctx.Cfg.BotLogin)
 	}
-	if FromOtherBot(comment.Obj("user")) {
+	if FromOtherBot(comment.Obj("user"), body) {
 		// The bots name each other in their replies (#60): only a bare `stop`, which Squishy
 		// sends to stop a tree it split, is acted on, and nothing is answered with a hint, so
 		// two bots never talk to each other for ever.
@@ -742,10 +736,10 @@ func OnReview(ctx *hctx.Context, payload *pyjson.Object) []string {
 	if lvl <= 0 {
 		return []string{fmt.Sprintf("ignored: @%s is not on the trust list", py.Str(user.Get("login")))}
 	}
-	if FromOtherBot(user) {
+	body := py.OrStr(review.Get("body"), "")
+	if FromOtherBot(user, body) {
 		return []string{"ignored: another bot's review"}
 	}
-	body := py.OrStr(review.Get("body"), "")
 	found := commands.Parse(body, ctx.Cfg.BotLogin)
 	changes := queue.LabelNames(pull)[config.LabelPR] && lvl >= 2 &&
 		strings.ToLower(py.Str(review.GetOr("state", ""))) == "changes_requested"
@@ -1139,17 +1133,26 @@ func OnQueueCI(ctx *hctx.Context, run *pyjson.Object) []string {
 	if queued {
 		return []string{fmt.Sprintf("#%d: still in the merge queue, built again without what failed ahead of it", number)}
 	}
+	return []string{queueFix(ctx, number, pull, run,
+		"The merge queue took this out: CI failed on `main` with it on top", false)}
+}
+
+// queueFix is what a bot pull request out of the merge queue gets for its failed build `run`: a CI
+// fix with that build's logs (`fixCI`, opening its comment with `failed`), unless it is held (a
+// revision, a stop, `queue.hold_merge`, people's) or the reviews never cleared its head. `early`
+// marks a build the status loop stopped once a required job had failed (`EvacQueue`). The note of
+// what it did.
+func queueFix(ctx *hctx.Context, number int, pull *pyjson.Object, run *pyjson.Object, failed string, early bool) string {
 	names := queue.LabelNames(pull)
 	record := ctx.Store.Load().Obj("items").Obj(strconv.Itoa(number))
 	if intersects(names, config.LabelBlocked, config.LabelRevise, config.LabelReady, config.LabelPersonMerges) ||
 		config.IsLive(names) || queue.IsHuman(names) || record.Truthy("stop_requested") ||
 		queue.ArchivedOf(record) != nil {
-		return []string{fmt.Sprintf("#%d: out of the merge queue, and held, so left alone", number)}
+		return fmt.Sprintf("#%d: out of the merge queue, and held, so left alone", number)
 	}
 	sha := py.OrStr(pull.Obj("head").Get("sha"), "")
 	if !pyjson.Equal(queue.Cleared(record).Get("sha"), sha) {
-		return []string{fmt.Sprintf("#%d: out of the merge queue, and its head is not the cleared one", number)}
+		return fmt.Sprintf("#%d: out of the merge queue, and its head is not the cleared one", number)
 	}
-	return []string{fixCI(ctx, number, pull, names, record, run, sha,
-		"The merge queue took this out: CI failed on `main` with it on top", false, false)}
+	return fixCI(ctx, number, pull, names, record, run, sha, failed, early, false)
 }

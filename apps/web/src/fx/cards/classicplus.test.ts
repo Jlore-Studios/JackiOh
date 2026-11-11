@@ -3,10 +3,14 @@
 // set piece or a bespoke recipe, every Field Spell given an entry wearing an aura), its 3 to 6 Flourishes,
 // the tokens it gave entries, and R202: a hidden play keys none of it, as every readable play keys its own.
 // classicplus.md, the pass's per-card table, holds one row per Classic+ card that matches the table.
+// R3399000: every Legendary and Mythic is its signature now (#3399), Rollback's Flourish among them, so the
+// Flourishes count the bespoke entries that are no signature, and classicplus.md's Signatures table holds one
+// row per signature, its first beat, text's beat, tile, sound and verdict matching the tables.
 
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
+import { CARD_AUDIO } from "../../audio/voiceData.ts";
 import { HIDDEN_ID, planEntries } from "../../game/animations.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
 import { CATALOG } from "../../wire/cards.ts";
@@ -19,13 +23,13 @@ import { FX_CARD_HOOKS, isDrawnMotif } from "../motifs/names.ts";
 import type { FxPlanEnv } from "../types.ts";
 import { CARD_RECIPES, isCardRecipeKey } from "./bespoke.ts";
 import rawTable from "./classicplus.md?raw";
-import { FX_CARD_FILES, parseFxCardTable, type FxCardEntry } from "./tables.ts";
+import { entryAura, FX_CARD_FILES, parseFxCardTable, type FxAuraSpec, type FxCardEntry } from "./tables.ts";
 
 /** How many bespoke Flourishes the set may hold (#2795). */
 const BESPOKE_MIN = 3;
 const BESPOKE_MAX = 6;
 
-/** The tokens the pass gave an entry, each where it earns one (the PR's table says why). */
+/** The tokens the pass gave an entry, each where it earns one (the PR's table says why); R3399000 every Legendary and Mythic one among them. */
 const TOKENS_WITH_ENTRIES = [
   "classicplus-012-1",
   "classicplus-012-2",
@@ -33,16 +37,24 @@ const TOKENS_WITH_ENTRIES = [
   "classicplus-012-4",
   "classicplus-012-5",
   "classicplus-012-6",
+  "classicplus-012-7",
+  "classicplus-012-8",
+  "classicplus-019-1",
+  "classicplus-019-2",
   "classicplus-019-3",
   "classicplus-019-4",
+  "classicplus-019-5",
   "classicplus-032-1",
   "classicplus-032-2",
   "classicplus-036-1",
+  "classicplus-042-1",
   "classicplus-046-1",
   "classicplus-065-1",
   "classicplus-065-2",
   "classicplus-065-3",
   "classicplus-065-4",
+  "classicplus-065-5",
+  "classicplus-073-1",
   "classicplus-075-1",
   "classicplus-076-1",
   "classicplus-t-ai-06",
@@ -50,6 +62,11 @@ const TOKENS_WITH_ENTRIES = [
   "classicplus-t-ai-09",
   "classicplus-t-ai-10",
 ];
+
+/** classicplus.md's per-card table, and (R3399000) its Signatures table after it. */
+const SIGNATURES_HEADING = "\n## Signatures (#3399)";
+const PASS_TABLE = rawTable.slice(0, Math.max(0, rawTable.indexOf(SIGNATURES_HEADING)));
+const SIGNATURE_TABLE = rawTable.slice(Math.max(0, rawTable.indexOf(SIGNATURES_HEADING)));
 
 const FILE = FX_CARD_FILES.find((file) => file.file === "classicplus.json5");
 if (FILE === undefined) throw new Error("fx/cards/classicplus.json5 is not a table file");
@@ -67,26 +84,36 @@ function namesItsCast(entry: FxCardEntry | undefined): boolean {
   return entry.kind === "hooks" && entry.hooks.cast !== undefined && isDrawnMotif(entry.hooks.cast.motif);
 }
 
-/** An entry as classicplus.md's Entry column writes it (core.test.ts's form). */
+/** An aura as an Entry or Tile cell writes it. */
+function describeAura(aura: FxAuraSpec): string {
+  return ["aura", aura.look, aura.scope, aura.palette].filter((part) => part !== undefined).join(" ");
+}
+
+/** An entry as classicplus.md's Entry column writes it (core.test.ts's form; R3399000 a signature's frame around it). */
 function describeEntry(entry: FxCardEntry): string {
+  if (entry.kind === "none") return `none: ${entry.reason}`;
+  const parts: string[] = [];
+  if (entry.signature === true) parts.push("signature");
+  if (entry.entrance !== undefined) parts.push(`entrance ${entry.entrance}`);
   switch (entry.kind) {
-    case "none":
-      return `none: ${entry.reason}`;
     case "bespoke":
-      return `bespoke ${entry.key}`;
+      parts.push(`bespoke ${entry.key}`);
+      break;
     case "setPiece":
-      return `setPiece ${entry.key}`;
-    case "hooks": {
-      const parts: string[] = [];
+      parts.push(`setPiece ${entry.key}`);
+      break;
+    case "hooks":
       for (const hook of FX_CARD_HOOKS) {
         const spec = entry.hooks[hook];
         if (spec === undefined) continue;
         parts.push([hook, spec.motif, spec.palette, spec.row === "keep" ? "keep" : undefined].filter((part) => part !== undefined).join(" "));
       }
-      if (entry.aura !== undefined) parts.push(["aura", entry.aura.look, entry.aura.scope, entry.aura.palette].filter((part) => part !== undefined).join(" "));
-      return parts.join("; ");
-    }
+      break;
   }
+  const aura = entryAura(entry);
+  if (aura !== undefined) parts.push(describeAura(aura));
+  if (entry.takeover !== undefined) parts.push(`takeover ${entry.takeover}`);
+  return parts.join("; ");
 }
 
 function envOf(): FxPlanEnv {
@@ -101,19 +128,28 @@ function keysAny(events: readonly GameEvent[]): boolean {
   for (const entry of planEntries(events, withEvents(view, [...events]), false)) {
     env.memory.remember(entry.events);
     if (planCardMotif(entry, entry.view, env) !== null) keyed = true;
-    for (const event of entry.events) if (planCardFx(event, { entry, view: entry.view, env, D: entry.durationMs }) !== null) keyed = true;
+    for (const event of entry.events) {
+      // R3399000: a public card the play summons lands with its own entrance (League of Losers' Losers), not the play's.
+      if (event.type === "summoned" && !events.some((other) => other.type === "cardPlayed" && other.instanceId === event.instanceId)) continue;
+      if (planCardFx(event, { entry, view: entry.view, env, D: entry.durationMs }) !== null) keyed = true;
+    }
   }
   return keyed;
 }
 
 /**
  * The same play as another seat sees it when R97 hides it: its `cardPlayed` and `cardResolved` name the
- * sentinel, and so does a Trap's `trapFired` (R2734000), from which its cast plays (R2797000).
+ * sentinel, and so does a Trap's `trapFired` (R2734000), from which its cast plays (R2797000). R3399000: so do
+ * the card's own landing (its `summoned`) and its hooks' markers (`hookResolving`), which key its signature.
  */
 function hidden(events: readonly GameEvent[]): GameEvent[] {
-  return events.map((event) =>
-    event.type === "cardPlayed" || event.type === "cardResolved" || event.type === "trapFired" ? { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID } : event,
-  );
+  const played = new Set(events.flatMap((event) => (event.type === "cardPlayed" ? [event.instanceId] : [])));
+  return events.map((event) => {
+    if (event.type === "cardPlayed" || event.type === "cardResolved" || event.type === "trapFired") return { ...event, instanceId: HIDDEN_ID, defId: HIDDEN_ID };
+    if (event.type === "summoned" && played.has(event.instanceId)) return { ...event, defId: HIDDEN_ID };
+    if (event.type === "hookResolving") return { ...event, sourceId: HIDDEN_ID, defId: HIDDEN_ID };
+    return event;
+  });
 }
 
 describe("R2795000 Classic+'s card animation table", () => {
@@ -137,12 +173,14 @@ describe("R2795000 Classic+'s card animation table", () => {
     expect(fields.filter(([defId]) => !isToken(defId))).toHaveLength(10);
     for (const [defId, entry] of fields) {
       if (isToken(defId) && entry.kind === "none") continue;
-      expect(entry.kind === "hooks" ? entry.aura : undefined, defId).toBeDefined();
+      // R3400000, R3399001: beside hooks or a bespoke recipe.
+      expect(entryAura(entry), defId).toBeDefined();
     }
   });
 
   it("R2795000 Classic+ has 3 to 6 bespoke Flourishes, Crushing Walls kept, each a card recipe", () => {
-    const keys = ENTRIES.flatMap(([, entry]) => (entry.kind === "bespoke" ? [entry.key] : []));
+    // R3399000: a signature's bespoke recipe is no Flourish (Rollback's became its signature).
+    const keys = ENTRIES.flatMap(([, entry]) => (entry.kind === "bespoke" && entry.signature !== true ? [entry.key] : []));
     expect(keys.length).toBeGreaterThanOrEqual(BESPOKE_MIN);
     expect(keys.length).toBeLessThanOrEqual(BESPOKE_MAX);
     expect(TABLE.get("classicplus-024")).toEqual({ kind: "bespoke", key: "crushingWalls" });
@@ -167,7 +205,7 @@ describe("R2795000 Classic+'s card animation table", () => {
   });
 
   it("R2795000 classicplus.md has one row per Classic+ card, in order, with its name, type, entry, scale, census and why", () => {
-    const rows = rawTable
+    const rows = PASS_TABLE
       .split("\n")
       .filter((line) => line.startsWith("| `classicplus-"))
       .map((line) => line.slice(1, -1).split(" | ").map((cell) => cell.trim()));
@@ -187,7 +225,30 @@ describe("R2795000 Classic+'s card animation table", () => {
     }
   });
 
-  it("R2795000 the tokens given entries are the twenty-two the pass lists", () => {
+  it("R3399000 classicplus.md's Signatures table has one row per Classic+ signature in table order, matching its first beat, text beat, tile and sound", () => {
+    const rows = SIGNATURE_TABLE.split("\n")
+      .filter((line) => line.startsWith("| `classicplus-"))
+      .map((line) => line.slice(1, -1).split(" | ").map((cell) => cell.trim()));
+    const signatures = ENTRIES.filter(([, entry]) => entry.kind !== "none" && entry.signature === true);
+    expect(signatures).toHaveLength(35);
+    expect(rows.map((row) => row[0])).toEqual(signatures.map(([defId]) => `\`${defId}\``));
+    for (const [cell, name, type, first, text, tile, sound, verdict] of rows) {
+      const defId = (cell ?? "").replace(/`/g, "");
+      const def = CATALOG[defId];
+      const own = TABLE.get(defId);
+      if (own === undefined || own.kind === "none") throw new Error(`${defId} has no signature`);
+      expect(name, defId).toBe(def?.name.replace(/\s+/g, " ").trim());
+      expect(type, defId).toBe(def?.type);
+      expect(first, defId).toBe(own.entrance !== undefined ? `entrance ${own.entrance}` : own.kind === "bespoke" ? `cast ${own.key}` : "");
+      expect(text, defId).toBe(own.kind === "bespoke" ? own.key : "—");
+      const aura = entryAura(own);
+      expect(tile, defId).toBe(aura === undefined ? "—" : `aura ${aura.look}`);
+      expect(sound, defId).toBe(CARD_AUDIO.cards[defId]?.[def?.type === "Unit" ? "play" : "cast"]?.effect);
+      expect(verdict, defId).toMatch(/^(as concept|moved: \S.*)$/);
+    }
+  });
+
+  it("R2795000 R3399000 the tokens given entries are the thirty the passes list", () => {
     const tokens = ENTRIES.filter(([defId, entry]) => isToken(defId) && entry.kind !== "none").map(([defId]) => defId);
     expect(tokens).toEqual(TOKENS_WITH_ENTRIES);
     expect(ENTRIES.filter(([defId]) => isToken(defId))).toHaveLength(38);

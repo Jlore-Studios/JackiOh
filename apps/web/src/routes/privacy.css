@@ -25,13 +25,9 @@
   gap: 8px;
 }
 
-.tavern.app-shell .privacy-policy h3 {
-  margin: 8px 0 0;
-  font-family: var(--tavern-serif);
-  font-size: 19px;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--tavern-gold-pale);
+/* A section's heading is the shared `.section-heading` (routes/page-title.css, #3223); this keeps its gap. */
+.tavern.app-shell .privacy-policy .section-heading {
+  margin-top: 8px;
 }
 
 .tavern.app-shell .privacy-policy p,

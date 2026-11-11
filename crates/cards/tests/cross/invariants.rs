@@ -1079,11 +1079,11 @@ mod i8_an_attack_or_a_switch_reduce_accepts_that_the_list_leaves_out {
 mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
     use super::*;
 
-    const CRATER: &str = "classicplus-034"; // C+ #34 Memory Leak: Field Spell with Crater, Locks its zone
-    const CARRIER: &str = "classicplus-033"; // C+ #33 Ivory Tower: a Unit may stack onto its zone
-    const FLYING: &str = "classicplus-051"; // C+ #51 Jlockeed's J15 Fighter: Flying
-    const TRIBUTE: &str = "core-066"; // #66 The Rock: Tribute 1
-    const FIENDER: &str = "core-092"; // (2) 5/7 Stack
+    const CRATER: &str = "classicplus-034"; // Memory Leak: Field Spell with Crater, Locks its zone
+    const CARRIER: &str = "classicplus-033"; // Ivory Tower: a Unit may stack onto its zone
+    const FLYING: &str = "classicplus-051"; // Jlockeed's J15 Fighter: Flying
+    const TRIBUTE: &str = "core-066"; // The Rock: Tribute 1
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
 
     fn board() -> Scenario {
         scenario(json!({
@@ -1247,9 +1247,9 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
 mod i8_an_activation_reduce_accepts_that_the_list_leaves_out {
     use super::*;
 
-    const PING: &str = "classicplus-076-1"; // C+ #76.1 Brother Ping: Activate (once a turn), deal 1 to any target
-    const SCARAB: &str = "core-007"; // #7 Jewelosco Scarab: Cry: Discover, a prompt of one pick
-    const DIVIDEND: &str = "core-024"; // #24 Efficiency Dividend: an X-cost Spell of three modes
+    const PING: &str = "classicplus-076-1"; // Brother Ping: Activate (once a turn), deal 1 to any target
+    const SCARAB: &str = "core-007"; // Jewelosco Scarab: Cry: Discover, a prompt of one pick
+    const DIVIDEND: &str = "core-024"; // Efficiency Dividend: a Spell of three modes
 
     fn board() -> (Scenario, CardInstance) {
         let g = scenario(json!({
@@ -1679,8 +1679,8 @@ mod r1122_r2285002_a_redirected_classic_golem_that_kills_its_new_defender {
 mod r1200_i8_an_activation_left_with_no_pick_while_a_mayor_acts {
     use super::*;
 
-    const FUSION_LAB: &str = "classicplus-031"; // C+ #31 Fusion Lab: Activate, choose a card in your hand
-    const MAYOR: &str = "meditative-086"; // M #86 Mayor Medinamogger: all targets are chosen at random
+    const FUSION_LAB: &str = "classicplus-031"; // Fusion Lab: Activate, choose a card in your hand
+    const MAYOR: &str = "meditative-086"; // Mayor Medinamogger: all targets are chosen at random
 
     /// Fuzz seed 2870's board (#1728): p1's Fusion Lab with nothing in p1's hand while p2's Mayor acts.
     fn board() -> (Scenario, CardInstance) {
@@ -1740,7 +1740,7 @@ mod r1200_i8_an_activation_left_with_no_pick_while_a_mayor_acts {
 mod r1829000_a_card_uncovered_beneath_a_stack {
     use super::*;
 
-    const FIENDER: &str = "core-092"; // (2) 5/7 Stack.
+    const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
 
     fn covered_on_an_earlier_turn() -> (Scenario, InvariantMonitor, CardInstance, CardInstance, i32) {
         let mut g = scenario(json!({
@@ -1956,7 +1956,7 @@ mod r1869002_i2_a_kill_credit {
     #[test]
     fn r3139004_a_corpse_eater_attacks_the_units_it_survives_again_with_no_violation() {
         const EATER: &str = "core-089";
-        const FENDER: &str = "core-001"; // 0/7: it hits back for nothing and does not die to the 2 attack.
+        const FENDER: &str = "core-001"; // Big D-fender: it hits back for nothing and does not die to the 2 attack
         let mut g = scenario(json!({
             "p1": { "field": [{ "def": EATER, "lane": 1 }], "hand": [VANILLA] },
             "p2": { "field": [{ "def": FENDER, "lane": 1 }, { "def": FENDER, "lane": 2 }], "hand": [VANILLA] },
@@ -2108,6 +2108,112 @@ mod r1869002_i2_a_kill_credit {
             monitor.after(&[summoned, declared(), declared()], g.state()),
             no_violations()
         );
+    }
+
+    /// R636, R781004, R78: a token whose text draws its keywords as it arrives (the Stinkyscape Drone
+    /// Corvette) and that is summoned again later in the same action, back through Reborn, holds the
+    /// later arrival's draw in the state the action leaves; two attacks it declared before it died are
+    /// one legal Windfury turn, while its new stint, whose draw holds no Windfury, still declares one
+    /// (handicapped fuzz seed 7089: summoned at an end of turn, then the autopilot's whole turn).
+    #[test]
+    fn r636_a_keyword_drawing_token_reborn_inside_the_action_may_have_attacked_twice_before_it_died() {
+        const DRONE_CORVETTE: &str = "stinkyscape-t-drone-corvette";
+        let mut g = scenario(json!({ "p1": { "field": [{ "def": DRONE_CORVETTE, "lane": 1 }] } }));
+        let corvette = g.unit_at(PlayerId::P1, 1).id;
+        let turn = g.state().turn;
+        let card = find_instance_mut(g.state_mut(), &corvette).expect("the Corvette");
+        card.summoned_turn = Some(turn);
+        let reborn = find_instance(g.state(), &corvette).expect("the Corvette");
+        assert!(
+            !keywords_of(g.state(), reborn)
+                .iter()
+                .any(|k| k.kind() == KeywordKind::Windfury),
+            "setup: the reborn Corvette's draw holds no Windfury"
+        );
+        let mut monitor = create_invariant_monitor(g.state());
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": corvette, "targetId": "hero-p2", "forced": false }),
+            )
+        };
+        let summoned = |via: Option<&str>| {
+            let mut body = json!({
+                "type": "summoned", "player": "p1", "instanceId": corvette, "defId": DRONE_CORVETTE, "row": "units", "lane": 1,
+            });
+            if let Some(via) = via {
+                body["via"] = json!(via);
+            }
+            event(body)
+        };
+        let destroyed = event(json!({
+            "type": "destroyed", "instanceId": corvette, "defId": DRONE_CORVETTE, "owner": "p1", "controller": "p1",
+            "attack": 8, "maxHealth": 8,
+        }));
+        assert_eq!(
+            monitor.after(
+                &[
+                    summoned(None),
+                    declared(),
+                    declared(),
+                    destroyed,
+                    summoned(Some("Reborn"))
+                ],
+                g.state()
+            ),
+            no_violations()
+        );
+        let found = monitor.after(&[declared(), declared()], g.state());
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].contains("I2 extra attack: ") && found[0].contains("attack number 2"),
+            "{}",
+            found[0]
+        );
+    }
+
+    /// R636: the Drone Corvette's two attacks, its death and Reborn's return inside one autopilot action
+    /// (Stinkyscape #47, handicapped fuzz seed 7089): `p1`'s field holds `def` in lane 1 as the
+    /// returned body, and the events are its summon, two attacks at the hero and its summon again.
+    fn reborn_after_two_attacks(def: &str) -> Vec<String> {
+        let mut g = scenario(json!({ "p1": { "field": [{ "def": def, "lane": 1 }] } }));
+        let back = g.unit_at(PlayerId::P1, 1).id;
+        let turn = g.state().turn;
+        find_instance_mut(g.state_mut(), &back)
+            .expect("the returned body")
+            .summoned_turn = Some(turn);
+        let mut monitor = create_invariant_monitor(g.state());
+        let summoned = |via: Option<&str>| {
+            event(json!({
+                "type": "summoned", "player": "p1", "instanceId": back, "defId": def, "row": "units", "lane": 1,
+                "via": via,
+            }))
+        };
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": back, "targetId": "hero-p2", "forced": false }),
+            )
+        };
+        monitor.after(
+            &[summoned(None), declared(), declared(), summoned(Some("Reborn"))],
+            g.state(),
+        )
+    }
+
+    /// R636: a token whose text draws its keywords as it arrives and that is back on the field by the
+    /// action's end (Reborn) holds a new draw, which says nothing of the stint that attacked twice.
+    #[test]
+    fn r636_a_keyword_drawing_token_back_by_reborn_inside_the_action_may_have_attacked_twice() {
+        const DRONE_CORVETTE: &str = "stinkyscape-t-drone-corvette";
+        assert_eq!(reborn_after_two_attacks(DRONE_CORVETTE), no_violations());
+    }
+
+    /// R636, R171: a unit that draws no keywords gains nothing from coming back: its first stint's
+    /// second attack is still an extra one.
+    #[test]
+    fn r636_a_unit_with_no_drawn_keywords_back_by_reborn_inside_the_action_still_attacked_twice_too_many() {
+        let found = reborn_after_two_attacks(VANILLA);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
     }
 
     /// R12, R636: a steal keeps a card on the field with the keywords it drew, so a Drone Corvette

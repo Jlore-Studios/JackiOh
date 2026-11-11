@@ -15,9 +15,12 @@ import {
   MAX_SAVED_DECKS,
   MAX_SAVED_TRIOS,
   QUEUE_ENDED_AFTER_READS,
+  QUEUE_POPULATION_POLL_SECONDS,
   SERIES_POLL_SECONDS,
 } from "@jackioh/server-config";
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
+import { expireRead, keepRead } from "../net/readCache.ts";
+import { clearSession, writeSession } from "../net/session.ts";
 import {
   ApiRequestError,
   cancelRoom,
@@ -57,6 +60,7 @@ import PlayRoute, {
   roomLinkStatus,
 } from "./play.tsx";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -329,11 +333,21 @@ describe("R1578000 the Play hub", () => {
 
   const WAYS: readonly (readonly [string, string])[] = [
     [playTestid.practice, paths.practice],
-    // B13: the Play hub links the Dungeon Run.
+    // B13: the Play hub links the Dungeon run.
     [playTestid.dungeon, paths.dungeon],
     [playTestid.together, paths.together],
     [playTestid.replays, paths.replays],
   ];
+
+  it("R3223000 the hub has one visible h1, the PageTitle, signed in and signed out", async () => {
+    await renderLobby();
+    expectOnePageTitle("Play");
+    expect(screen.queryByRole("heading", { name: "JackiOh" })).toBeNull();
+
+    cleanup();
+    render(<PlayRoute token={null} />);
+    expectOnePageTitle("Play");
+  });
 
   it("R1578000 the hub puts online first with every mode reachable", async () => {
     await renderLobby();
@@ -428,7 +442,7 @@ describe("R661 the lobby's rank", () => {
 
     pickMode("random");
     await waitFor(() => expect(screen.getByTestId(playTestid.rank)).toHaveAttribute("data-ladder", "random"));
-    expect(screen.getByTestId(playTestid.rank)).toHaveTextContent("All Random · Golden Grape II");
+    expect(screen.getByTestId(playTestid.rank)).toHaveTextContent("All random · Golden Grape II");
     expect(vi.mocked(getOwnRank)).toHaveBeenLastCalledWith(TOKEN, "random");
     expect(screen.getByTestId(playTestid.leaderboard)).toHaveAttribute("href", `${paths.leaderboard}?ladder=random`);
 
@@ -471,7 +485,7 @@ describe("R661 the lobby's rank", () => {
 // modes and choices (R257)
 
 describe("the lobby's modes", () => {
-  it("R257 the mode picker offers Best of 1, Conquest and All Random, each with its own choice", async () => {
+  it("R257 the mode picker offers Best of 1, Conquest and All random, each with its own choice", async () => {
     await renderLobby();
 
     for (const mode of ["bo1", "bo3", "random"] as const) {
@@ -534,7 +548,7 @@ describe("the lobby's modes", () => {
     await waitFor(() => {
       expect(vi.mocked(enqueue)).toHaveBeenLastCalledWith(TOKEN, { mode: "random" });
     });
-    await screen.findByText(/In the All Random queue/);
+    await screen.findByText(/In the All random queue/);
   });
 
   it("remembers the last mode, deck and trio on this device", async () => {
@@ -602,7 +616,7 @@ describe("the lobby's modes", () => {
     expect(link).toHaveTextContent("Build one in Decks");
     expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
 
-    // All Random needs no deck at all.
+    // All random needs no deck at all.
     pickMode("random");
     expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
   });
@@ -641,7 +655,7 @@ describe("the lobby's modes", () => {
     expect(screen.queryByTestId(playTestid.recentGames)).toBeNull();
   });
 
-  it("R433 All Random names no card of the deck it will deal: that deck is dealt when the game starts", async () => {
+  it("R433 All random names no card of the deck it will deal: that deck is dealt when the game starts", async () => {
     await renderLobby();
     pickMode("random");
     const setup = screen.getByRole("region", { name: "How do you want to play?" });
@@ -759,7 +773,7 @@ describe("the lobby's answers", () => {
     expect(error).toHaveTextContent("Finish your co-op match first.");
     const link = within(error).getByTestId(playTestid.duosLink);
     expect(link).toHaveAttribute("href", "/duos/duos-4");
-    expect(link).toHaveTextContent("Go to your co-op game →");
+    expect(link).toHaveTextContent("Go to your co-op game");
     expect(within(error).queryByTestId(playTestid.seriesLink)).toBeNull();
     fireEvent.click(link);
     expect(vi.mocked(navigate)).toHaveBeenCalledWith("/duos/duos-4");
@@ -844,7 +858,7 @@ describe("the lobby's answers", () => {
     expect(vi.mocked(createRoom)).toHaveBeenCalledWith(TOKEN, { mode: "random" });
     const roomMode = screen.getByTestId(playTestid.roomMode);
     expect(roomMode).toHaveAttribute("data-mode", "random");
-    expect(roomMode).toHaveTextContent("All Random");
+    expect(roomMode).toHaveTextContent("All random");
   });
 });
 
@@ -945,9 +959,9 @@ describe("R1075000 a room's host cancels it, and a reload finds it again", () =>
   });
 });
 
-// R1372, R924000: All Random's "More cards from"
-describe("R1372 R924000 All Random's more cards from", () => {
-  it("R1372 R924000 the picker is All Random's alone, names the newest set and starts at none", async () => {
+// R1372, R924000: All random's "More cards from"
+describe("R1372 R924000 All random's more cards from", () => {
+  it("R1372 R924000 the picker is All random's alone, names the newest set and starts at none", async () => {
     await renderLobby();
     expect(screen.queryByTestId(playTestid.leanNewest)).toBeNull();
     pickMode("random");
@@ -959,7 +973,7 @@ describe("R1372 R924000 All Random's more cards from", () => {
     expect(screen.queryByTestId(playTestid.leanNewest)).toBeNull();
   });
 
-  /** The lobby in All Random, whichever mode this device remembered, once the picker is on screen. */
+  /** The lobby in All random, whichever mode this device remembered, once the picker is on screen. */
   async function renderRandomLobby(): Promise<HTMLSelectElement> {
     render(<PlayRoute token={TOKEN} />);
     await waitFor(() => {
@@ -1275,7 +1289,7 @@ describe("R767 a room shared as a link", () => {
     expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).toBeNull();
   });
 
-  it("R767 a Conquest link focuses the trio and an All Random one focuses Join", async () => {
+  it("R767 a Conquest link focuses the trio and an All random one focuses Join", async () => {
     openLink("?room=abc234&mode=bo3");
     const trioSelect = await screen.findByTestId(playTestid.trioSelect);
     expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
@@ -1289,7 +1303,7 @@ describe("R767 a room shared as a link", () => {
     openLink("?room=wxyz23&mode=random");
     expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("WXYZ23");
     expect(screen.getByTestId(playModeTestid("random"))).toBeChecked();
-    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("No deck needed for All Random: press Join.");
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("No deck needed for All random: press Join.");
     await waitFor(() => {
       expect(screen.getByTestId(playTestid.joinSubmit)).toHaveFocus();
     });
@@ -1456,5 +1470,140 @@ describe("R767 a room shared as a link", () => {
     expect(screen.getByTestId(playTestid.copyRoomLink)).toHaveTextContent("Copy invite link");
     expect(writeText).not.toHaveBeenCalled();
     expect(screen.queryByTestId(playTestid.error)).toBeNull();
+  });
+});
+
+describe("R3207000 the queue readout's pace", () => {
+  const POPULATION_MS = QUEUE_POPULATION_POLL_SECONDS * 1000;
+  const ACCOUNT_MS = SERIES_POLL_SECONDS * 1000;
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("R3207000 the queue wait reads the population on mount, then every QUEUE_POPULATION_POLL_SECONDS, while its account read keeps SERIES_POLL_SECONDS", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    rememberQueued("bo1");
+    render(<PlayRoute token={TOKEN} />);
+    await settle({ advance: 0 });
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(1);
+
+    // The ticket's read has its own pace: one every SERIES_POLL_SECONDS, and none of them reads the readout.
+    await settle({ advance: ACCOUNT_MS });
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(1);
+
+    await settle({ advance: POPULATION_MS - ACCOUNT_MS - 1 });
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(1);
+    await settle({ advance: 1 });
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(getMe).mock.calls.length).toBe(1 + POPULATION_MS / ACCOUNT_MS);
+
+    await settle({ advance: POPULATION_MS });
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(3);
+  });
+
+  it("R3207000 an idle lobby reads the population once", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    render(<PlayRoute token={TOKEN} />);
+    await settle({ advance: 0 });
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(1);
+
+    await settle({ advance: 3 * POPULATION_MS });
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(1);
+  });
+
+  it("R3207000 leaving the wait ends the population poll", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    rememberQueued("bo1");
+    vi.mocked(dequeue).mockResolvedValue({ cancelled: true, ticketId: "tk-1" });
+    render(<PlayRoute token={TOKEN} />);
+    await settle({ advance: 0 });
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
+    await settle({ advance: 0 });
+    await settle({ advance: 3 * POPULATION_MS });
+    expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(1);
+  });
+});
+
+/** The account a gate that read `body` just now hands the lobby: signed in, and kept fresh as `useAccount` keeps it. */
+function handedFresh(body: ReturnType<typeof me>): ReturnType<typeof me> {
+  writeSession({ accessToken: TOKEN });
+  keepRead(TOKEN, "/api/auth/me", body);
+  return body;
+}
+
+describe("R3207003 the lobby takes the gate's account", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    clearSession();
+  });
+
+  it("R3207003 a lobby handed an account that names no game reads none at mount", async () => {
+    render(<PlayRoute token={TOKEN} me={handedFresh(me(null))} />);
+    await waitFor(() => {
+      expect(vi.mocked(getDecks)).toHaveBeenCalled();
+    });
+    await settle({ macrotasks: 3 });
+
+    expect(vi.mocked(getMe)).not.toHaveBeenCalled();
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+  });
+
+  it("R3207003 a queue wait handed an account that names no game starts its reads at its first tick", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    rememberQueued("bo1");
+    render(<PlayRoute token={TOKEN} me={handedFresh(me(null))} />);
+    await settle({ advance: 0 });
+    expect(vi.mocked(getMe)).not.toHaveBeenCalled();
+
+    await settle({ advance: SERIES_POLL_SECONDS * 1000 });
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
+  });
+
+  it("R3207003 an account the gate opened on from an old kept answer is read again at mount, and a game that started since takes the player there", async () => {
+    // The gate opens on a kept answer of any age (R2630000) and reads again behind it: this one is old, so it
+    // is no stand-in for the mount read, and the game it does not know of is found.
+    const stale = handedFresh(me(null));
+    expireRead(TOKEN, "/api/auth/me");
+    vi.mocked(getMe).mockResolvedValue(me("match-42"));
+    render(<PlayRoute token={TOKEN} me={stale} />);
+
+    await waitFor(
+      () => {
+        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-42");
+      },
+      { timeout: 5000 },
+    );
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
+  });
+
+  it("R3207003 an account that names a match is read again, and a match that ended keeps the player in the lobby", async () => {
+    // The gate's answer may be 45 s old (R3206000): it says a match, the server now says none.
+    vi.mocked(getMe).mockResolvedValue(me(null));
+    render(<PlayRoute token={TOKEN} me={handedFresh(me("match-42"))} />);
+    await waitFor(() => {
+      expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
+    });
+    await settle({ macrotasks: 3 });
+
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+    expect(screen.queryByTestId(playTestid.status)).toBeNull();
+  });
+
+  it("R3207003 an account that names a match, read again, still takes the player there while the match is on", async () => {
+    vi.mocked(getMe).mockResolvedValue(me("match-42"));
+    render(<PlayRoute token={TOKEN} me={handedFresh(me("match-42"))} />);
+
+    await waitFor(
+      () => {
+        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-42");
+      },
+      { timeout: 5000 },
+    );
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
   });
 });

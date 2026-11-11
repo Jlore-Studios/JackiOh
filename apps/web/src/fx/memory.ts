@@ -6,14 +6,20 @@
 // a card's hook is an entry too, innermost while it runs: a Death, a turn hook or a Whenever (`trigger`)
 // and an Activate open one at their `hookResolving` marker (R2783000; a Cry's opens none, its play is the
 // entry), a Trap's `cast` at its `trapFired`; the next marker or firing, a `cardResolved` or `countered`,
-// an attack, a turn's end or start and the game's end close it. R202: only ids the viewer may read are
-// kept, so every hidden card looks the same to the planner.
+// an attack, a turn's end or start and the game's end close it (but a revealed Cloaked Spell's own Cry
+// marker, which runs inside its firing's `cast`, R3402001). R202: only ids the viewer may read are
+// kept, so every hidden card looks the same to the planner. R3338000: a Terminus card that owes its
+// controller a turn (Event Horizon, Last Word: a `modifierChanged` added as it resolves) is owed its
+// follow-up, which the next turn that player starts opens (`opening`), and `openPlay` finds the outermost
+// play of a card still resolving (The Big Crunch's, around its casts). R3389000: `plays` lists every
+// open entry, outermost first, so a signature's recipe can claim the casts it makes (Spell Tyrant's).
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 
 import { castOnDrawAt } from "./castOnDraw.ts";
 import { FX_MEMORY_HITS, FX_MEMORY_LIMIT, FX_MEMORY_RECENT, FX_MEMORY_RESOLVING } from "./constants.ts";
 import type { FxCardHook } from "./motifs/names.ts";
+import { TURN_FOLLOWS } from "./terminus/ids.ts";
 import type { FxMemory, FxPlay, FxTrapZone } from "./types.ts";
 
 const HIDDEN_ID = "hidden";
@@ -63,6 +69,9 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
   let recent: GameEvent[] = [];
   let resolving: (FxPlay & { seen: Partial<Record<GameEvent["type"], number>> })[] = [];
   let castOnDraw = new WeakSet<GameEvent>();
+  // R3338000: the Terminus card each player is owed a turn by, and the one whose turn the last `remember` opened.
+  const owed = new Map<PlayerId, string>();
+  let opening: { defId: string; player: PlayerId } | undefined;
 
   /** R2797000: ends every hook entry; plays stay open. */
   const dropHooks = (): void => {
@@ -89,8 +98,14 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
 
   return {
     remember(events: readonly GameEvent[]): void {
+      opening = undefined;
       for (const event of events) {
         const hit = hitIdOf(event);
+        if (event.type === "modifierChanged" && event.added) {
+          // The innermost card resolving owes its controller the turn (the modifier may be the other player's: Last Word ends theirs).
+          const owner = resolving[resolving.length - 1];
+          if (owner !== undefined && TURN_FOLLOWS.has(owner.defId)) owed.set(owner.player, owner.defId);
+        }
         for (const play of resolving) {
           play.step += 1;
           play.seen[event.type] = (play.seen[event.type] ?? 0) + 1;
@@ -108,6 +123,10 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
           dropHooks();
           close(event.player, event.instanceId);
         } else if (event.type === "hookResolving") {
+          // R2722002, R3402001: a revealed Cloaked Spell's Cry runs inside the firing that cast it, so the
+          // `cast` its `trapFired` opened stays open across that Cry's own marker and keeps its text's events.
+          const innermost = resolving[resolving.length - 1];
+          if (event.hook === "cry" && innermost?.hook === "cast" && innermost.instanceId === event.sourceId) continue;
           dropHooks();
           // A hidden card's marker opens its entry all the same, so its events go to no play around it (R202).
           const hook = HOOK_OF[event.hook];
@@ -124,6 +143,11 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
             if (event.attackerId !== HIDDEN_ID) put(attacks, event.attackerId, [...(attacks.get(event.attackerId) ?? []), event.targetId], limit);
           } else if (event.type === "turnStarted") {
             attacks.clear();
+            const follow = owed.get(event.player);
+            if (follow !== undefined) {
+              owed.delete(event.player);
+              opening = { defId: follow, player: event.player };
+            }
           }
         }
       }
@@ -140,6 +164,9 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
       if (play === undefined) return undefined;
       return { ...play, seen: { ...play.seen }, ...(play.hits === undefined ? {} : { hits: [...play.hits] }) };
     },
+    plays(): readonly FxPlay[] {
+      return resolving.map((play) => ({ ...play, seen: { ...play.seen }, ...(play.hits === undefined ? {} : { hits: [...play.hits] }) }));
+    },
     castOnDraw(event: GameEvent): boolean {
       return castOnDraw.has(event);
     },
@@ -149,10 +176,20 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
     attacksThisTurn(attackerId: string): readonly string[] {
       return [...(attacks.get(attackerId) ?? [])];
     },
+    opening() {
+      return opening === undefined ? undefined : { ...opening };
+    },
+    openPlay(defId: string): FxPlay | undefined {
+      const play = resolving.find((open) => open.hook === undefined && open.defId === defId);
+      if (play === undefined) return undefined;
+      return { ...play, seen: { ...play.seen }, ...(play.hits === undefined ? {} : { hits: [...play.hits] }) };
+    },
     clear(): void {
       casters.clear();
       traps.clear();
       attacks.clear();
+      owed.clear();
+      opening = undefined;
       recent = [];
       resolving = [];
       castOnDraw = new WeakSet<GameEvent>();

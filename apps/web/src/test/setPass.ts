@@ -7,7 +7,7 @@ import type { GameEvent, PlayerId } from "@jackioh/shared";
 import { expect } from "vitest";
 
 import { planCardMotif, type MotifResult } from "../fx/cardFx.ts";
-import { FX_CARD_TABLE, type FxCardEntry } from "../fx/cards/tables.ts";
+import { FX_CARD_TABLE, type FxAuraSpec, type FxCardEntry } from "../fx/cards/tables.ts";
 import { FX_INTENSITY_SCALE } from "../fx/constants.ts";
 import { createFxMemory } from "../fx/memory.ts";
 import { motifScale } from "../fx/motifs/build.ts";
@@ -29,22 +29,30 @@ export function entryOf(id: string): FxCardEntry {
 }
 
 /** An entry as a pass's Entry column writes it. */
+function auraOf(aura: FxAuraSpec): string {
+  return ["aura", aura.look, aura.scope, aura.palette].filter((part) => part !== undefined).join(" ");
+}
+
 export function describeEntry(entry: FxCardEntry): string {
   switch (entry.kind) {
     case "none":
       return `none: ${entry.reason}`;
     case "bespoke":
-      return `bespoke ${entry.key}`;
+      // R3400000: a bespoke entry may wear an aura too.
+      return entry.aura === undefined ? `bespoke ${entry.key}` : [`bespoke ${entry.key}`, auraOf(entry.aura)].join("; ");
     case "setPiece":
       return `setPiece ${entry.key}`;
     case "hooks": {
       const parts: string[] = [];
+      // R3332000: a signature first, then its entrance, then the hooks.
+      if (entry.signature === true) parts.push("signature");
+      if (entry.entrance !== undefined) parts.push(`entrance ${entry.entrance}`);
       for (const hook of FX_CARD_HOOKS) {
         const spec = entry.hooks[hook];
         if (spec === undefined) continue;
         parts.push([hook, spec.motif, spec.palette, spec.row === "keep" ? "keep" : undefined].filter((part) => part !== undefined).join(" "));
       }
-      if (entry.aura !== undefined) parts.push(["aura", entry.aura.look, entry.aura.scope, entry.aura.palette].filter((part) => part !== undefined).join(" "));
+      if (entry.aura !== undefined) parts.push(auraOf(entry.aura));
       return parts.join("; ");
     }
   }

@@ -12,6 +12,7 @@ import { RELEASES, nestMicros, releaseGroups, tiers } from "../patches/releases.
 import { realPatchSource, type Patch } from "../patches/source.ts";
 import { patchTestid } from "../patches/testids.ts";
 import { at } from "../test/stubServer.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import LandingRoute from "./landing.tsx";
 import LoginRoute from "./login.tsx";
 import PatchNotesRoute from "./patch-notes.tsx";
@@ -80,6 +81,16 @@ describe("R388 the /patch-notes route", () => {
     );
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Patch notes");
     expect(screen.getByTestId("nav-back")).toBeInTheDocument();
+  });
+
+  it("R3223000 the page has one visible h1, the PageTitle, which names its main region", () => {
+    render(
+      <PatchSourceProvider source={fixtureSource()}>
+        <PatchNotesRoute />
+      </PatchSourceProvider>,
+    );
+    const title = expectOnePageTitle("Patch notes");
+    expect(screen.getByRole("main")).toHaveAttribute("aria-labelledby", title.id);
   });
 
   it("R388 the site footer links it on the landing page and the sign-in screen, and opens it in place", async () => {

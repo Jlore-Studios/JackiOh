@@ -38,11 +38,12 @@ const DEFAULTS: Settings = {
   autoEndTurn: true,
   hoverPreviews: true,
   lethalHint: true,
+  attackOutcomes: true,
   reduceMotion: false,
   muteOpponentEmotes: false,
   muteSpectatorEmotes: false,
 };
-const KEYS = ["autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "lethalHint", "muteOpponentEmotes", "muteSpectatorEmotes", "reduceMotion"];
+const KEYS = ["attackOutcomes", "autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "lethalHint", "muteOpponentEmotes", "muteSpectatorEmotes", "reduceMotion"];
 
 afterEach(() => {
   cleanup();
@@ -482,7 +483,7 @@ describe("B23 the settings gears open and close the dialog", () => {
     const dialog = panel();
     expect(dialog).toHaveAttribute("role", "dialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
-    expect(dialog).toHaveAttribute("aria-label", "Settings");
+    expect(dialog).toHaveAccessibleName("Settings");
     expect(screen.getByRole("dialog", { name: "Settings" })).toBe(dialog);
     expect(gear).toHaveAttribute("aria-expanded", "true");
     await waitFor(() => expect(document.activeElement).toBe(switchFor("dragToPlay")));
@@ -605,6 +606,7 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     ["autoEndTurn", "End turn automatically"],
     ["hoverPreviews", "Hover previews"],
     ["lethalHint", "Lethal hint"],
+    ["attackOutcomes", "Show attack outcomes"],
     ["reduceMotion", "Reduce motion"],
     ["muteOpponentEmotes", "Mute opponent emotes"],
     ["muteSpectatorEmotes", "Mute spectator emotes"],
@@ -627,7 +629,7 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
       expect(section.tagName).toBe("SECTION");
       expect(within(section).getByRole("heading", { level: 2, hidden: true })).toBeInTheDocument();
     }
-    for (const key of ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews", "lethalHint"] as const) {
+    for (const key of ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews", "lethalHint", "attackOutcomes"] as const) {
       expect(gameplay.contains(switchFor(key)), key).toBe(true);
     }
     expect(visuals.contains(switchFor("reduceMotion"))).toBe(true);
@@ -763,6 +765,25 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
 
     __resetSettingsForTests();
     expect(readSettings().lethalHint).toBe(false);
+  });
+
+  it("R3477000 the Show attack outcomes switch sits in Gameplay, is on by default, and turning it off is kept", () => {
+    render(<SettingsPanel onClose={noop} />);
+
+    const toggleEl = switchFor("attackOutcomes");
+    expect(toggleEl).toHaveAttribute("role", "switch");
+    expect(screen.getByRole("switch", { name: "Show attack outcomes" })).toBe(toggleEl);
+    expect(screen.getByTestId("settings-section-gameplay").contains(toggleEl)).toBe(true);
+    expect(toggleEl.checked).toBe(true);
+
+    fireEvent.click(toggleEl);
+
+    expect(readSettings().attackOutcomes).toBe(false);
+    expect(toggleEl.checked).toBe(false);
+    expect(persisted()).toMatchObject({ attackOutcomes: false });
+
+    __resetSettingsForTests();
+    expect(readSettings().attackOutcomes).toBe(false);
   });
 
   it("B24 an audio slot makes the audio section appear with the slot inside it", () => {

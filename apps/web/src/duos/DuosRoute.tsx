@@ -247,7 +247,7 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
 
   const chrome: DuosChrome = useMemo(
     () => ({
-      back: <BackLink to={paths.together} label="← Play together" showSettings={false} />,
+      back: <BackLink to={paths.together} label="Back to Play together" showSettings={false} />,
       status: (
         <>
           {t("Co-op match")} ·{" "}
@@ -348,6 +348,7 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
             onPing={match.sendPing}
             jloreCapped={match.jloreCapped}
             economy={match.economy}
+            forecast={match.forecast}
             sideline={sideline}
             error={
               refusedWith === null

@@ -220,7 +220,9 @@
    the damage entry shakes the defender. The effects layer aims it: it writes `--fx-lunge-x/y` on the
    attacker, most of the way to whatever it attacks (fx/stage.ts). Without the layer the lunge falls
    back to BUILD's straight `--lunge-distance` along `--lunge-dir`. R2789000: a Flying attacker's lunge arcs
-   over the lane: the layer sets `--fx-lunge-lift` (fx/director.ts), which lifts it toward the viewer. */
+   over the lane: the layer sets `--fx-lunge-lift` (fx/director.ts), which lifts it toward the viewer.
+   R3334002: an unarmed Starship rams prow first: the layer sets `--fx-lunge-turn`, which turns it toward
+   its target (0deg for every other attacker). */
 @keyframes jk-lunge {
   0% {
     transform: translate(0, 0) scale(1);
@@ -233,14 +235,16 @@
         calc(var(--fx-lunge-x, 0px) * -0.08),
         calc(var(--fx-lunge-y, calc(var(--lunge-distance) * var(--lunge-dir))) * -0.08)
       )
-      scale(calc(1.14 + var(--fx-lunge-lift, 0)));
+      scale(calc(1.14 + var(--fx-lunge-lift, 0)))
+      rotate(var(--fx-lunge-turn, 0deg));
     filter: brightness(1.12);
     animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.7);
   }
   70% {
     transform:
       translate(var(--fx-lunge-x, 0px), var(--fx-lunge-y, calc(var(--lunge-distance) * var(--lunge-dir))))
-      scale(calc(1.08 + var(--fx-lunge-lift, 0) * 0.5), 0.97);
+      scale(calc(1.08 + var(--fx-lunge-lift, 0) * 0.5), 0.97)
+      rotate(var(--fx-lunge-turn, 0deg));
     filter: brightness(1.45);
     animation-timing-function: linear;
   }
@@ -251,7 +255,8 @@
         calc(var(--fx-lunge-x, 0px) * 0.96),
         calc(var(--fx-lunge-y, calc(var(--lunge-distance) * var(--lunge-dir))) * 0.96)
       )
-      scale(1.03);
+      scale(1.03)
+      rotate(var(--fx-lunge-turn, 0deg));
     filter: brightness(1.2);
     animation-timing-function: cubic-bezier(0.3, 0.7, 0.4, 1);
   }
@@ -1766,22 +1771,7 @@
   font-weight: 700;
 }
 
-/* The route's first way on is the primary action, in the one primary color (index.css). When that
-   is the rematch block, the block is no button: its first button, Rematch, is the primary (#477:
-   the rule used to paint the whole block gold and hand its ink to Double or nothing). */
-.result-overlay__actions > :first-child:not(.result-overlay__view, .rematch),
-.result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child {
-  border-color: var(--primary-edge);
-  background: var(--primary-face);
-  color: var(--primary-ink);
-  text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-white) 35%, transparent);
-  box-shadow: var(--primary-shadow, none);
-}
-
-.result-overlay__actions > :first-child:not(.result-overlay__view, .rematch):hover,
-.result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child:hover:not(:disabled) {
-  background: var(--primary-face-hover);
-}
+/* The route's first way on is the primary action, drawn by its place (buttons.css). */
 
 /* The chip: one line in-flow under the board, in the control bar's place once End turn does
    nothing, so it overlaps no `.control-bar` control at any viewport. `.game` is a flex column, so

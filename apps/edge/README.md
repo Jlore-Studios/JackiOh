@@ -27,7 +27,7 @@ custom domains and Access are `infra/cloudflare.tf`'s.
 - **One instance.** The server holds every live match, queue and series in memory, so every request
   reaches the same container (`INSTANCE`, `max_instances: 1`). It is placed in eastern North
   America (`constraints.regions`, `locationHint`), beside Supabase's us-east-2.
-- **It sleeps.** After `SLEEP_AFTER` (10 minutes) with no request, the container is stopped (SIGTERM,
+- **It sleeps.** After `SLEEP_AFTER` (5 minutes) with no request, the container is stopped (SIGTERM,
   so the server drains), and the next request starts it again; that request waits for the boot, up
   to `START_WAIT_MS` (60 seconds, where the library's own wait is 20 and a slower boot's first caller
   got a 500). An open WebSocket counts as a request in flight, so a live match, a watcher or a co-op room keeps it
@@ -58,7 +58,10 @@ pnpm exec wrangler secret put DATABASE_URL --config ../../wrangler.jsonc --env="
 pnpm exec wrangler secret put CODE_PEPPER --config ../../wrangler.jsonc --env=""
 ```
 
-and the same three with `--env staging`. `CREATE_ISSUES_TOKEN` and `DEV_PROFILE_IDS` are optional.
+and the same three with `--env staging`. `CREATE_ISSUES_TOKEN`, `DEV_PROFILE_IDS`, `ALERT_RESEND_API_KEY`
+and `ALERT_EMAILS` are optional. The last two email the server's alerts (#3595, `crates/server/README.md`,
+Alerts): a Resend API key with Sending access for jackioh.com, and the addresses, comma-separated, kept a
+secret since the repository is public.
 `DATABASE_URL` is Supabase's pooler URI (Connect -> Session pooler), which works over IPv4; the
 direct database host is IPv6 only. A container reads its settings when it starts, so after changing
 one, deploy again (or wait for the next sleep).

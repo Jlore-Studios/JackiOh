@@ -216,6 +216,7 @@ async fn start_live(app: &Arc<App>, match_id: &str, a: &str, b: &str) {
                 ),
                 mode: None,
                 stake: None,
+                win_rates: None,
             },
         )
         .await
@@ -1494,6 +1495,11 @@ mod r1834002_a_rematch_keeps_the_slots {
             "foil": foil,
             "finish": "finish-plain",
             "border": "border-standard",
+            // R3335000: the four Starship kinds, each its default.
+            "starshipHull": "starship-hull-standard",
+            "starshipLivery": "starship-livery-standard",
+            "starshipTrail": "starship-trail-standard",
+            "starshipPieceSkin": "starship-piece-skin-standard",
         })
     }
 
@@ -1637,5 +1643,252 @@ mod r1989000_the_rematch_swaps_the_seats {
         assert_eq!(rematch["ranked"], true);
         assert_eq!(rematch["stake"], json!(STAKE_DOUBLE));
         assert_eq!(rematch["mode"], "bo1");
+    }
+}
+
+// R3213000 — the open match socket pushes each seat its rematch status
+
+mod r3213000_rematch_frames {
+    use super::*;
+    use crate::support::socket::{FakeSocket, create_fake_socket};
+
+    /// A live match on the real registry, A as p1 and B as p2, both seats' sockets open, whose row is then
+    /// over; every frame sent so far is forgotten.
+    async fn held_match(
+        app: &Arc<App>,
+        match_id: &str,
+        a: &str,
+        b: &str,
+        ranked: bool,
+    ) -> (FakeSocket, FakeSocket) {
+        let (one, two) = real_decks();
+        app.matches
+            .start(
+                app,
+                StartMatchInput {
+                    match_id: match_id.to_string(),
+                    seed: format!("seed-{match_id}"),
+                    catalog_version: app.catalog.version.clone(),
+                    ranked,
+                    seats: (
+                        MatchSeat {
+                            profile_id: a.to_string(),
+                            player: PlayerId::P1,
+                            deck: one,
+                            portrait: None,
+                            deck_slots: None,
+                        },
+                        MatchSeat {
+                            profile_id: b.to_string(),
+                            player: PlayerId::P2,
+                            deck: two,
+                            portrait: None,
+                            deck_slots: None,
+                        },
+                    ),
+                    mode: None,
+                    stake: None,
+                    win_rates: None,
+                },
+            )
+            .await
+            .expect("the match starts");
+        let (p1, p2) = (create_fake_socket(), create_fake_socket());
+        app.matches
+            .attach(app, match_id, a, p1.socket())
+            .await
+            .expect("A attaches");
+        app.matches
+            .attach(app, match_id, b, p2.socket())
+            .await
+            .expect("B attaches");
+        settle().await;
+        q!(app, matches_finish(match_id, now_ms()));
+        settle().await;
+        p1.clear();
+        p2.clear();
+        (p1, p2)
+    }
+
+    /// The `rematch` frames a seat was sent.
+    fn frames(socket: &FakeSocket) -> Vec<Value> {
+        socket.of_type("rematch")
+    }
+
+    fn frame(you_offered: Value, opponent_offer: Value, opponent_here: bool, match_id: Value) -> Value {
+        json!({
+            "type": "rematch",
+            "v": 1,
+            "youOffered": you_offered,
+            "opponentOffer": opponent_offer,
+            "opponentHere": opponent_here,
+            "matchId": match_id,
+            "mode": "bo1",
+        })
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3213000_a_greeting_tells_the_seat_its_status_and_an_arrival_tells_the_seat_already_there() {
+        let app = test_app().await;
+        let (a, b, match_id) = names("frames-greeting");
+        active_profile(&app, &a, 1000.0).await;
+        active_profile(&app, &b, 1000.0).await;
+        start_live(&app, &match_id, &a, &b).await;
+
+        // A arrives alone: its greeting holds its status, B not here.
+        let p1 = create_fake_socket();
+        app.matches
+            .attach(&app, &match_id, &a, p1.socket())
+            .await
+            .expect("A attaches");
+        settle().await;
+        assert_eq!(
+            frames(&p1),
+            vec![frame(json!(null), json!(null), false, json!(null))]
+        );
+        // It rides after the portraits, the greeting's own frames.
+        let types: Vec<Value> = p1
+            .messages()
+            .iter()
+            .map(|message| message["type"].clone())
+            .collect();
+        let portraits = types
+            .iter()
+            .position(|kind| kind == "portraits")
+            .expect("portraits");
+        let rematch = types.iter().position(|kind| kind == "rematch").expect("rematch");
+        assert!(portraits < rematch, "{types:?}");
+        p1.clear();
+
+        // B arrives: its greeting tells it A is here, and A is told B arrived, once each.
+        let p2 = create_fake_socket();
+        app.matches
+            .attach(&app, &match_id, &b, p2.socket())
+            .await
+            .expect("B attaches");
+        settle().await;
+        assert_eq!(
+            frames(&p2),
+            vec![frame(json!(null), json!(null), true, json!(null))]
+        );
+        assert_eq!(
+            frames(&p1),
+            vec![frame(json!(null), json!(null), true, json!(null))]
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3213000_an_offer_pushes_one_frame_to_each_seat_holding_only_its_own_view() {
+        let app = test_app().await;
+        let (a, b, match_id) = names("frames-offer");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        active_profile(&app, &b, 1000.0).await;
+        let (p1, p2) = held_match(&app, &match_id, &a, &b, false).await;
+
+        // A's offer leans on the newest set; the frames carry stakes, presence and ids alone.
+        let (code, _) = lean_offer(&app, &token_a, &match_id, true).await;
+        assert_eq!(code, 200);
+        settle().await;
+        assert_eq!(
+            frames(&p1),
+            vec![frame(json!(STAKE_NORMAL), json!(null), true, json!(null))]
+        );
+        assert_eq!(
+            frames(&p2),
+            vec![frame(json!(null), json!(STAKE_NORMAL), true, json!(null))]
+        );
+        for pushed in [&frames(&p1)[0], &frames(&p2)[0]] {
+            let mut keys: Vec<&String> = pushed.as_object().expect("an object").keys().collect();
+            keys.sort();
+            assert_eq!(
+                keys,
+                [
+                    "matchId",
+                    "mode",
+                    "opponentHere",
+                    "opponentOffer",
+                    "type",
+                    "v",
+                    "youOffered"
+                ]
+            );
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3213000_an_accept_pushes_one_frame_to_each_seat_naming_the_rematch() {
+        let app = test_app().await;
+        let (a, b, match_id) = names("frames-accept");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        let (p1, p2) = held_match(&app, &match_id, &a, &b, false).await;
+
+        assert_eq!(offer(&app, &token_a, &match_id, STAKE_NORMAL).await.0, 200);
+        settle().await;
+        p1.clear();
+        p2.clear();
+        let (code, made) = offer(&app, &token_b, &match_id, STAKE_NORMAL).await;
+        assert_eq!(code, 200);
+        let rematch = made["matchId"].clone();
+        assert!(rematch.is_string(), "{made}");
+        settle().await;
+        assert_eq!(
+            frames(&p1),
+            vec![frame(
+                json!(STAKE_NORMAL),
+                json!(STAKE_NORMAL),
+                true,
+                rematch.clone()
+            )]
+        );
+        assert_eq!(
+            frames(&p2),
+            vec![frame(json!(STAKE_NORMAL), json!(STAKE_NORMAL), true, rematch)]
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3213000_a_decline_at_the_other_stakes_pushes_one_frame_to_each_seat() {
+        let app = test_app().await;
+        let (a, b, match_id) = names("frames-decline");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        let (p1, p2) = held_match(&app, &match_id, &a, &b, true).await;
+
+        // A asks for a double-or-nothing; B answers with a plain rematch, which makes no game.
+        assert_eq!(offer(&app, &token_a, &match_id, STAKE_DOUBLE).await.0, 200);
+        settle().await;
+        p1.clear();
+        p2.clear();
+        let (code, made) = offer(&app, &token_b, &match_id, STAKE_NORMAL).await;
+        assert_eq!((code, made["matchId"].clone()), (200, json!(null)));
+        settle().await;
+        assert_eq!(
+            frames(&p1),
+            vec![frame(json!(STAKE_DOUBLE), json!(STAKE_NORMAL), true, json!(null))]
+        );
+        assert_eq!(
+            frames(&p2),
+            vec![frame(json!(STAKE_NORMAL), json!(STAKE_DOUBLE), true, json!(null))]
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3213000_a_seat_that_leaves_is_pushed_gone_to_the_seat_still_there() {
+        let app = test_app().await;
+        let (a, b, match_id) = names("frames-leave");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        active_profile(&app, &b, 1000.0).await;
+        let (p1, p2) = held_match(&app, &match_id, &a, &b, false).await;
+        assert_eq!(offer(&app, &token_a, &match_id, STAKE_NORMAL).await.0, 200);
+        settle().await;
+        p1.clear();
+
+        p2.drop();
+        settle().await;
+        assert_eq!(
+            frames(&p1),
+            vec![frame(json!(STAKE_NORMAL), json!(null), false, json!(null))]
+        );
     }
 }

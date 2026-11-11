@@ -7,8 +7,8 @@
 # The two projects are production's, JackiOh-Production, and staging's, JackiOh-Staging
 # (docs/deploy-cloudflare.md section 8), both in the organization's Pro plan, whose disk includes
 # 8 GB a project; past that Supabase grows the disk and bills it. Staging is the one that grows:
-# the gather lane (gather.yml, while GATHER_ON_PATCH is `true`) adds about 3 MB for each patch
-# shipped, 2 to 7 a day, and the learn lane's imports (learn.yml) add their own. Production holds
+# the gather lane (gather.yml, while GATHER_ON_PATCH is `true`) adds about 3 MB for each new patch
+# or set it gathers (never a micro), and the learn lane's imports (learn.yml) add their own. Production holds
 # the live games alone.
 #
 # The size is Supabase's own measure: pg_database_size over every database, those the connection

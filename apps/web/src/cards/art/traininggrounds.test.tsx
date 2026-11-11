@@ -1,7 +1,8 @@
 // R2202000: the Training Grounds set's own art (issue #2202, traininggrounds.ts). Each family draws
 // one look, both faces share their geometry, the Legacy cards draw their Core card's subject in the
 // yard with a touch of their own (R2724000), and no other set's card reaches any of it, so every
-// picture R503 pinned stays as it was.
+// picture R503 pinned stays as it was. R3393000, R3393001: every card of the set now draws its scene
+// recipe first, so the yard painter and `legacySvg` tested here draw only a card with none.
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -15,8 +16,9 @@ import ART_BEFORE_2724 from "./fixtures/art-before-2724.json";
 import { hashId } from "./hash.ts";
 import { motifFor } from "./motifs.ts";
 import { artSpec } from "./procedural.ts";
+import { sceneRecipeOf } from "./scene.ts";
 import { legacyArtUri, proceduralArtUri, trainingGroundsArtUri } from "./svg.ts";
-import { compositionFor, themeFor } from "./themes.ts";
+import { compositionFor, compositionOf, themeFor } from "./themes.ts";
 import {
   isTrainingGroundsArt,
   LEGACY_PAINT,
@@ -211,7 +213,8 @@ function legacyOf(card: CardDef, radiant: boolean): { svg: string; spec: ReturnT
   const motif = motifFor(name, theme);
   return {
     svg: legacySvg(card.id, coreId, name, card.tags, card.type, radiant),
-    spec: artSpec(coreId, theme, compositionFor(card.type), radiant, motif),
+    // R3331000: the Core card's subject as the Legacy card froze it, before any scene of its own.
+    spec: artSpec(coreId, theme, compositionFor(card.type), radiant, motif, null),
     uri: legacyArtUri(card.id, coreId, name, card.tags, card.type, radiant),
     coreUri: proceduralArtUri(coreId, theme, compositionFor(card.type), radiant, motif),
   };
@@ -285,23 +288,45 @@ describe("R2724000: each Legacy card redraws its Core card's subject in the yard
 });
 
 describe("R2724000: no other card's picture moves", () => {
+  // R3331002: a record of the pictures before #2724, which pins every card with no scene recipe; a card
+  // a set's picture pass gives a recipe draws its scene instead.
+  // Each picture as CardArt draws it, its card's own composition included: #3338 recorded Core #100 Ceaseless
+  // Void again, now a hole in the shape of a giant (R3338001).
   const recorded = ART_BEFORE_2724 as unknown as Readonly<Record<string, readonly [number, number]>>;
   const KEPT = Object.values(CATALOG).filter((card) => (card.set === "Core" || card.set === "Training Grounds") && snapshotArtOf(card.id) === null);
+  const SCENES = KEPT.filter((card) => sceneRecipeOf(card.id) !== null);
   function pictureOf(card: CardDef, radiant: boolean): string {
     if (isTrainingGroundsArt(card.id)) return trainingGroundsArtUri(card.id, card.name, card.tags, card.type, radiant);
     const theme = themeFor(card.tags, card.type);
-    return proceduralArtUri(card.id, theme, compositionFor(card.type), radiant, motifFor(card.name, theme));
+    return proceduralArtUri(card.id, theme, compositionOf(card.id, card.type), radiant, motifFor(card.name, theme));
   }
 
   it("R2724000 the fixture covers every Core card and every Training Grounds card but the Legacy ones", () => {
     expect(Object.keys(recorded).sort()).toEqual(KEPT.map((card) => card.id).sort());
   });
 
-  it("R2724000 each of them draws exactly the picture it drew before, on both faces", () => {
+  it("R2724000 R3331002 each of them with no scene recipe draws exactly the picture it drew before, on both faces", () => {
+    let unchanged = 0;
     for (const card of KEPT) {
+      if (sceneRecipeOf(card.id) !== null) continue;
       const pair = recorded[card.id] ?? (() => { throw new Error(`no fixture for ${card.id}`); })();
       expect(hashId(pictureOf(card, false)), card.id).toBe(pair[0]);
       expect(hashId(pictureOf(card, true)), card.id).toBe(pair[1]);
+      unchanged += 1;
+    }
+    expect(unchanged).toBe(KEPT.length - SCENES.length);
+  });
+
+  it("R3331002 R3393000 the cards with a scene recipe no longer draw the picture art-before-2724 records", () => {
+    // R3392000: every Core card the record keeps draws a scene; R3393000: so does every Training Grounds card of
+    // the set's own, the Golem token's included.
+    const own = Object.values(CATALOG).filter((card) => isTrainingGroundsArt(card.id)).map((card) => card.id);
+    expect(own).toHaveLength(41);
+    expect(SCENES.map((card) => card.id).sort()).toEqual([...KEPT.filter((card) => card.set === "Core").map((card) => card.id), ...own].sort());
+    for (const card of SCENES) {
+      const pair = recorded[card.id] ?? (() => { throw new Error(`no fixture for ${card.id}`); })();
+      expect(hashId(pictureOf(card, false)), card.id).not.toBe(pair[0]);
+      expect(hashId(pictureOf(card, true)), card.id).not.toBe(pair[1]);
     }
   });
 });

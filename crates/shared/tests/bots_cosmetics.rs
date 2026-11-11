@@ -15,10 +15,11 @@ use jackioh_shared::config::{
     BOT_COSMETIC_FIT_MIN_SAMPLES, BOT_COSMETIC_FITS, BOT_COSMETIC_MIN_AGE_DAYS, BOT_COSMETIC_MIN_OWNERS,
     BOT_COSMETIC_PRIOR, BOT_COSMETIC_PRIOR_CARDS_PER_DECK, BOT_COSMETIC_PRIOR_DEFAULT_SHARE,
     BOT_COSMETIC_PRIOR_FULL_ART_WEAR, BOT_COSMETIC_PRIOR_OWNERSHIP, BOT_COSMETIC_REDRAW_DAYS, CosmeticFit,
-    CosmeticOwnership, CosmeticWear,
+    CosmeticOwnership, CosmeticWear, FLEET_TRACK_LEVELS,
 };
 use jackioh_shared::cosmetics::{
-    CardCosmetic, Cosmetic, CosmeticKind, CosmeticRarity, JLORIOUS_CARD_BACK, OwnedCosmetics, owns, registry,
+    CardCosmetic, Cosmetic, CosmeticKind, CosmeticRarity, JLORIOUS_CARD_BACK, JLORIOUS_STARSHIP,
+    OwnedCosmetics, owns, registry,
 };
 use jackioh_shared::deck::{DeckSlots, FrozenDeck, FrozenTrio};
 use jackioh_shared::loadout::{AccountPicks, CARD_SLOT_KINDS, CardPicks, DECK_SLOT_KINDS};
@@ -84,6 +85,8 @@ fn test_registry() -> Vec<Cosmetic> {
         starter: false,
         chase: false,
         jlorious: false,
+        track: None,
+        track_level: None,
         card: None,
         offer: Vec::new(),
         level: None,
@@ -290,6 +293,32 @@ fn r2755000_no_bot_wears_the_jlorious_card_back_however_widely_owned() {
     // A bot is never Jlorious (R640000), so it could not have earned it; the Mythic back that drops
     // stays eligible beside it.
     let owners = vec![widely(JLORIOUS_CARD_BACK), widely("card-back-nebula")];
+    assert_eq!(
+        eligible(registry(), &owners, NOW),
+        vec![holding("card-back-nebula", None)]
+    );
+}
+
+#[test]
+fn r3335002_no_bot_wears_a_fleet_reward_or_the_jlorious_starship() {
+    let long_ago = NOW - BOT_COSMETIC_MIN_AGE_DAYS * DAY - 30 * DAY;
+    let widely = |cosmetic: &str| CosmeticOwners {
+        cosmetic_id: cosmetic.to_string(),
+        card_id: None,
+        owners: BOT_COSMETIC_MIN_OWNERS * 100,
+        first_granted_at: Some(long_ago),
+    };
+    // A bot plays no recorded game, so it earns no Fleet level, and is never Jlorious (R640000); however many
+    // people own the thirty rewards and the Jlorious Starship, its wardrobe draws none, and the Mythic back that
+    // drops stays eligible beside them.
+    let mut owners: Vec<CosmeticOwners> = registry()
+        .iter()
+        .filter(|cosmetic| cosmetic.track.is_some())
+        .map(|cosmetic| widely(&cosmetic.id))
+        .collect();
+    assert_eq!(owners.len(), FLEET_TRACK_LEVELS as usize);
+    owners.push(widely(JLORIOUS_STARSHIP));
+    owners.push(widely("card-back-nebula"));
     assert_eq!(
         eligible(registry(), &owners, NOW),
         vec![holding("card-back-nebula", None)]

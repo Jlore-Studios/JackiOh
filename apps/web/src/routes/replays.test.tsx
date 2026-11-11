@@ -24,7 +24,7 @@ import type { OnlineReplayListing } from "../net/api.ts";
 import { documentTitleFor, screenNameFor } from "../net/head.ts";
 import { paths } from "../net/navigate.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
-import type { PracticeCoreEnv } from "../practice/core.ts";
+import type { PracticeDriverEnv } from "../practice/driver.ts";
 import { createPracticeHost } from "../practice/host.ts";
 import type { PracticeHost } from "../practice/host.ts";
 import { memorySaveStore } from "../practice/saveStore.ts";
@@ -37,6 +37,7 @@ import { expectEmptyState } from "../test/empty.ts";
 import { duosView } from "../test/fixtures.ts";
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
+import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { ReplaysRoute, replaysTestid } from "./replays.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -45,7 +46,7 @@ vi.mock("../net/api.ts", async (importOriginal) => {
 });
 
 const TOKEN = "e2e-token-p1";
-const ENV: PracticeCoreEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
+const ENV: PracticeDriverEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
 const HUMAN: PlayerId = "p2";
 const steps = foldedReplaySteps();
 
@@ -135,6 +136,17 @@ describe("R768000 /replays", () => {
     fireEvent.click(screen.getByTestId(replayTestid.back));
     expect(await screen.findByTestId(replaysTestid.practice(1))).toBeInTheDocument();
     expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+  });
+
+  it("R3223000 the list and an opened replay each have one visible h1, the PageTitle, and the lists are h2 section headings", async () => {
+    renderRoute(await storeWithGame());
+    const row = await screen.findByTestId(replaysTestid.practice(1));
+    expectOnePageTitle("Replays");
+    for (const section of screen.getAllByRole("heading", { level: 2 })) expect(section).toHaveClass("section-heading");
+
+    fireEvent.click(within(row).getByRole("button", { name: "Watch" }));
+    await screen.findByTestId(replayTestid.player);
+    expectOnePageTitle("Replays");
   });
 
   it("R768000 says so when the device keeps no game", async () => {

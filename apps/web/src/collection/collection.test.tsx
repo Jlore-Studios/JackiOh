@@ -45,6 +45,8 @@ import {
   VERSION_FULL_ART_ID,
   VERSION_FULL_ART_SIGNED_ID,
   VERSION_IMMERSIVE_ID,
+  VERSION_NEON_ID,
+  VERSION_NIGHT_ID,
   VERSION_OUT_OF_FRAME_ID,
   VERSION_PIXEL_ID,
   VERSION_PRISMATIC_ID,
@@ -53,6 +55,10 @@ import {
   VERSION_SKETCH_FULL_ART_ID,
   VERSION_SKETCH_FULL_ART_SIGNED_ID,
   VERSION_SKETCH_ID,
+  VERSION_STAINED_GLASS_ID,
+  VERSION_TAROT_ID,
+  VERSION_WATERCOLOR_ID,
+  VERSION_WOODCUT_ID,
   ladderOf,
   offeredOn,
 } from "../cards/versions.ts";
@@ -72,10 +78,14 @@ import { collectionOf, cosmeticPacksInfo, tokenBars, walletInfo } from "../shop/
 import { expectEmptyState } from "../test/empty.ts";
 import { settle } from "../test/settle.ts";
 import { stubServer } from "../test/stubServer.ts";
+import { grantTestid as G } from "../economy/GrantReveal.tsx";
 import AccountCosmeticTiles from "./AccountCosmeticTiles.tsx";
+import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
 import OwnedCards from "./OwnedCards.tsx";
 import TracksPanel from "./TracksPanel.tsx";
+import VariantLadders from "./VariantLadders.tsx";
 import WalletPanel from "./WalletPanel.tsx";
+import { clearSeenForCard, markNewLevels } from "./newLevels.ts";
 import {
   COLLECTED_DEFS,
   NO_FULL_ART_ID,
@@ -223,7 +233,7 @@ describe("#2053 card names in the reader's language", () => {
     const locked = screen.getByTestId(T.card("core-002")).getAttribute("aria-label");
     fireEvent.click(screen.getByTestId(T.card("core-002")));
     const view = screen.getByTestId(T.cardView);
-    const title = view.querySelector(".collection-cardview__title")?.textContent ?? "";
+    const title = view.querySelector(".dialog__title")?.textContent ?? "";
     fireEvent.click(screen.getByTestId(T.cardViewText));
     return { tile, locked, view, title, detail: screen.getByTestId(INSPECT_DETAIL).getAttribute("aria-label") };
   }
@@ -243,7 +253,7 @@ describe("#2053 card names in the reader's language", () => {
 
     expect(opened.tile).toBe(defOf("core-001").name);
     expect(opened.locked).toBe(`${defOf("core-002").name}, not owned yet`);
-    expect(opened.view).toHaveAttribute("aria-label", defOf("core-002").name);
+    expect(opened.view).toHaveAccessibleName(defOf("core-002").name);
     expect(opened.title).toBe(defOf("core-002").name);
     expect(opened.detail).toBe(defOf("core-002").name);
   });
@@ -254,7 +264,7 @@ describe("#2053 card names in the reader's language", () => {
 
     expect(opened.tile).toBe(CHINESE["core-001"]!.name);
     expect(opened.locked).toBe(`${CHINESE["core-002"]!.name}，尚未拥有`);
-    expect(opened.view).toHaveAttribute("aria-label", CHINESE["core-002"]!.name);
+    expect(opened.view).toHaveAccessibleName(CHINESE["core-002"]!.name);
     expect(opened.title).toBe(CHINESE["core-002"]!.name);
     expect(opened.detail).toBe(CHINESE["core-002"]!.name);
   });
@@ -424,8 +434,8 @@ describe("R1655000 a card in context", () => {
       }
     }
     // R3015007: the Default first, the normal face then its animated level, then Full art and the Sketch, which Big
-    // D-fender is offered; no strip of versions or augments.
-    expect(ladderIds()).toEqual(["default", "full-art", "sketch"]);
+    // D-fender is offered, and R3017001 its side of each part 6 pair; no strip of versions or augments.
+    expect(ladderIds()).toEqual(["default", "full-art", "sketch", "night", "stained-glass", "woodcut"]);
     expect(within(screen.getByTestId(T.ladder("full-art"))).getByTestId(T.rung(VERSION_FULL_ART_ID))).toHaveTextContent("Legendary");
     expect(within(screen.getByTestId(T.ladder("default"))).getByTestId(T.rung(NO_FULL_ART_ID))).toHaveTextContent("Normal");
     expect(within(screen.getByTestId(T.ladder("full-art"))).getByTestId(T.rung(VERSION_FULL_ART_SIGNED_ID))).toHaveTextContent("Mythic");
@@ -433,9 +443,9 @@ describe("R1655000 a card in context", () => {
     expect(screen.queryByTestId(T.strip("augment"))).toBeNull();
     expect(screen.getAllByRole("button", { name: /^Use default/u })).toHaveLength(3);
 
-    // Speciesist is offered no variant but its Default.
+    // Speciesist is offered no variant but its Default and, R3017001, its side of each part 6 pair.
     fireEvent.click(screen.getByTestId(T.card(PLAIN)));
-    expect(ladderIds()).toEqual(["default"]);
+    expect(ladderIds()).toEqual(["default", "neon", "watercolor", "woodcut"]);
     expect(screen.queryByTestId(T.ladder("full-art"))).toBeNull();
     expect(screen.getAllByRole("button", { name: /^Use default/u })).toHaveLength(3);
   });
@@ -733,18 +743,25 @@ describe("R1655000 a card in context", () => {
 
   it("R2725001 R3015007 a card's ladders list only its offered levels", () => {
     // Carnivorous Cube, offered Full art's ladder with no full art of its own, and R2940000 Alt art's; Speciesist, its
-    // Default alone; a Legacy card's ladders stop before animated (R2724000).
+    // Default; a Legacy card's ladders stop before animated (R2724000). R3017001: and each its side of the part 6 pairs.
     const ladders = (defId: string) => cardLadders(defId, () => true).map((ladder) => [ladder.variant, ladder.rungs.map((each) => each.id)]);
+    const partSix = (variant: string, moves = true): [string, string[]] => [variant, [`version-${variant}`, ...(moves ? [`version-${variant}-animated`] : [])]];
     expect(ladders(CUBE)).toEqual([
       ["default", [NO_FULL_ART_ID, VERSION_ANIMATED_ID]],
       ["full-art", [VERSION_FULL_ART_ID, VERSION_FULL_ART_ANIMATED_ID, VERSION_FULL_ART_SIGNED_ID]],
       ["alt-art", [VERSION_ALT_ART_ID, VERSION_ALT_FULL_ART_ID, VERSION_ALT_FULL_ART_ANIMATED_ID, VERSION_ALT_FULL_ART_SIGNED_ID]],
+      partSix("night"),
+      partSix("watercolor"),
+      partSix("tarot"),
     ]);
-    expect(ladders(PLAIN)).toEqual([["default", [NO_FULL_ART_ID, VERSION_ANIMATED_ID]]]);
+    expect(ladders(PLAIN)).toEqual([["default", [NO_FULL_ART_ID, VERSION_ANIMATED_ID]], partSix("neon"), partSix("watercolor"), partSix("woodcut")]);
     expect(ladders("traininggrounds-044")).toEqual([
       ["default", [NO_FULL_ART_ID]],
       ["full-art", [VERSION_FULL_ART_ID]],
       ["sketch", [VERSION_SKETCH_ID, VERSION_SKETCH_FULL_ART_ID]],
+      partSix("night", false),
+      partSix("watercolor", false),
+      partSix("tarot", false),
     ]);
     expect(cardStrip(CUBE, () => true).map((group) => group.kind)).toEqual(["foil", "finish", "border"]);
     // Owned on Speciesist by a grant no shop makes, Full art is listed nowhere, and a face there wears none.
@@ -841,12 +858,16 @@ describe("R1655000 a card in context", () => {
     expect(strip.flatMap((group) => group.items).filter((entry) => !entry.owned).map((entry) => entry.id)).toEqual(["foil-cracked-ice"]);
     expect(strip[0]?.items[0]).toMatchObject({ id: "foil-none", name: "No foil", rarity: "Common", owned: true });
     // R3015007: the Default (the normal face, then its animated level), then Full art and R2940000 the Sketch, which Big
-    // D-fender is offered, each level a rung, the retired full arts and augments nowhere; Full art owned nowhere.
+    // D-fender is offered, and R3017001 its side of each part 6 pair, each level a rung, the retired full arts and
+    // augments nowhere; Full art owned nowhere.
     const ladders = cardLadders(BIG_D, (_defId, id) => !ladderOf("full-art").includes(id));
     expect(ladders.map((ladder) => [ladder.variant, ladder.name])).toEqual([
       ["default", "Default"],
       ["full-art", "Full art"],
       ["sketch", "Sketch"],
+      ["night", "Night"],
+      ["stained-glass", "Stained-glass window"],
+      ["woodcut", "Woodcut"],
     ]);
     expect(ladders.map((ladder) => ladder.rungs.map((each) => [each.id, each.rarity]))).toEqual([
       [
@@ -864,6 +885,18 @@ describe("R1655000 a card in context", () => {
         [VERSION_SKETCH_FULL_ART_ANIMATED_ID, "Legendary"],
         [VERSION_SKETCH_FULL_ART_SIGNED_ID, "Mythic"],
       ],
+      [
+        [VERSION_NIGHT_ID, "Rare"],
+        [`${VERSION_NIGHT_ID}-animated`, "Epic"],
+      ],
+      [
+        [VERSION_STAINED_GLASS_ID, "Epic"],
+        [`${VERSION_STAINED_GLASS_ID}-animated`, "Legendary"],
+      ],
+      [
+        [VERSION_WOODCUT_ID, "Rare"],
+        [`${VERSION_WOODCUT_ID}-animated`, "Epic"],
+      ],
     ]);
     // The first unowned level is next; each past it needs the highest level below it that is not owned.
     expect(ladders[1]?.rungs.map(({ owned, next, needs }) => ({ owned, next, needs }))).toEqual([
@@ -873,14 +906,15 @@ describe("R1655000 a card in context", () => {
     ]);
     expect(ladders[0]?.rungs[0]).toMatchObject({ id: NO_FULL_ART_ID, name: "Normal", owned: true, next: false, needs: null });
     expect(cardStrip(PLAIN, () => true).map((group) => group.kind)).toEqual(["foil", "finish", "border"]);
-    expect(cardLadders(PLAIN, () => true).map((ladder) => ladder.variant)).toEqual(["default"]);
+    expect(cardLadders(PLAIN, () => true).map((ladder) => ladder.variant)).toEqual(["default", "neon", "watercolor", "woodcut"]);
   });
 
   it("R2940000 R3015007 the ladders list each new variant only where it is offered, each rung drawing its variant's picture", () => {
     // Transmogulate is offered Full art, Alt art and the Sketch (and R2942000 Comic, R2943000 Set showcase, R2944000
     // Immersive); Carnivorous Cube Alt art alone of the two new ones, Big D-fender the Sketch alone; Call to Chaos (Classic+
     // Edition) both and not Full art (and R2942000 Pixel and Comic, R2943000 Set showcase, R2944000 Immersive); Speciesist
-    // neither. R3015000: Alt full art is Alt art's second level, no variant of its own.
+    // neither. R3015000: Alt full art is Alt art's second level, no variant of its own. R3017001: each card its side of
+    // each part 6 pair, last.
     const ALL = "core-083";
     const NOT_FULL = "classicplus-073";
     expect(firstLevels(ALL)).toEqual([
@@ -891,11 +925,25 @@ describe("R1655000 a card in context", () => {
       ["comic", VERSION_COMIC_ID, "Epic"],
       ["set-showcase", VERSION_SET_SHOWCASE_ID, "Legendary"],
       ["immersive", VERSION_IMMERSIVE_ID, "Mythic"],
+      ["neon", VERSION_NEON_ID, "Epic"],
+      ["stained-glass", VERSION_STAINED_GLASS_ID, "Epic"],
+      ["woodcut", VERSION_WOODCUT_ID, "Rare"],
     ]);
-    expect(firstLevels(CUBE).map(([variant]) => variant)).toEqual(["default", "full-art", "alt-art"]);
-    expect(firstLevels(BIG_D).map(([variant]) => variant)).toEqual(["default", "full-art", "sketch"]);
-    expect(firstLevels(NOT_FULL).map(([variant]) => variant)).toEqual(["default", "alt-art", "sketch", "pixel", "comic", "set-showcase", "immersive"]);
-    expect(firstLevels(PLAIN).map(([variant]) => variant)).toEqual(["default"]);
+    expect(firstLevels(CUBE).map(([variant]) => variant)).toEqual(["default", "full-art", "alt-art", "night", "watercolor", "tarot"]);
+    expect(firstLevels(BIG_D).map(([variant]) => variant)).toEqual(["default", "full-art", "sketch", "night", "stained-glass", "woodcut"]);
+    expect(firstLevels(NOT_FULL).map(([variant]) => variant)).toEqual([
+      "default",
+      "alt-art",
+      "sketch",
+      "pixel",
+      "comic",
+      "set-showcase",
+      "immersive",
+      "neon",
+      "stained-glass",
+      "tarot",
+    ]);
+    expect(firstLevels(PLAIN).map(([variant]) => variant)).toEqual(["default", "neon", "watercolor", "woodcut"]);
     // Whatever the ladders list is offered there, and nothing offered is left out.
     for (const defId of [ALL, CUBE, BIG_D, NOT_FULL, PLAIN]) {
       for (const id of [...ladderOf("alt-art"), ...ladderOf("sketch")]) {
@@ -931,19 +979,36 @@ describe("R1655000 a card in context", () => {
   it("R2942000 R3015007 the ladders list each part 3 variant only where it is offered, each rung drawing its own look", () => {
     // Spell Tyrant, a Legendary Unit, is offered the Sketch and all three, not Full art (and R2944000 Prismatic); Scratch
     // Pad, a Mythic Spell, Full art, Alt art (R3015000: which took Alt full art's cards) and all three (and R2944000
-    // Immersive and Prismatic); Carnivorous Cube and Big D-fender none of the three; Speciesist nothing.
+    // Immersive and Prismatic); Carnivorous Cube and Big D-fender none of the three; Speciesist nothing but, R3017001, its
+    // side of each part 6 pair, as each card has. R3343002: Spell Tyrant's Default draws Extended art, so its Extended art
+    // ladder starts at its animated level.
     const TYRANT = "classic-056";
     const PAD = "meditativeplus-026";
     expect(firstLevels(TYRANT)).toEqual([
       ["default", NO_FULL_ART_ID, "Common"],
       ["sketch", VERSION_SKETCH_ID, "Rare"],
-      ["extended-art", VERSION_EXTENDED_ART_ID, "Epic"],
+      ["extended-art", `${VERSION_EXTENDED_ART_ID}-animated`, "Legendary"],
       ["pixel", VERSION_PIXEL_ID, "Epic"],
       ["comic", VERSION_COMIC_ID, "Epic"],
       ["prismatic", VERSION_PRISMATIC_ID, "Mythic"],
+      ["neon", VERSION_NEON_ID, "Epic"],
+      ["watercolor", VERSION_WATERCOLOR_ID, "Rare"],
+      ["tarot", VERSION_TAROT_ID, "Epic"],
     ]);
-    expect(firstLevels(PAD).map(([variant]) => variant)).toEqual(["default", "full-art", "alt-art", "extended-art", "pixel", "comic", "immersive", "prismatic"]);
-    expect(firstLevels(PLAIN).map(([variant]) => variant)).toEqual(["default"]);
+    expect(firstLevels(PAD).map(([variant]) => variant)).toEqual([
+      "default",
+      "full-art",
+      "alt-art",
+      "extended-art",
+      "pixel",
+      "comic",
+      "immersive",
+      "prismatic",
+      "night",
+      "stained-glass",
+      "tarot",
+    ]);
+    expect(firstLevels(PLAIN).map(([variant]) => variant)).toEqual(["default", "neon", "watercolor", "woodcut"]);
     // Whatever the ladders list is offered there, and nothing offered is left out; each a ladder of two, art then animated.
     for (const defId of [TYRANT, PAD, CUBE, BIG_D, "core-083", "classicplus-073", PLAIN]) {
       for (const first of [VERSION_EXTENDED_ART_ID, VERSION_PIXEL_ID, VERSION_COMIC_ID]) {
@@ -983,6 +1048,7 @@ describe("R1655000 a card in context", () => {
   it("R2943000 R3015007 the ladders list each part 4 variant only where it is offered, each rung drawing its own look", () => {
     // BOOM! Big Max, a Legendary Unit, is offered both, beside Full art, Alt art and Pixel (and R2944000 Immersive);
     // Transmogulate, a Legendary Spell, Set showcase alone of the two; Carnivorous Cube, Big D-fender and Speciesist neither.
+    // R3017001: each card its side of each part 6 pair, last.
     const MAX = "classic-080";
     expect(firstLevels(MAX)).toEqual([
       ["default", NO_FULL_ART_ID, "Common"],
@@ -992,8 +1058,11 @@ describe("R1655000 a card in context", () => {
       ["set-showcase", VERSION_SET_SHOWCASE_ID, "Legendary"],
       ["out-of-frame", VERSION_OUT_OF_FRAME_ID, "Legendary"],
       ["immersive", VERSION_IMMERSIVE_ID, "Mythic"],
+      ["night", VERSION_NIGHT_ID, "Rare"],
+      ["watercolor", VERSION_WATERCOLOR_ID, "Rare"],
+      ["tarot", VERSION_TAROT_ID, "Epic"],
     ]);
-    expect(firstLevels(PLAIN).map(([variant]) => variant)).toEqual(["default"]);
+    expect(firstLevels(PLAIN).map(([variant]) => variant)).toEqual(["default", "neon", "watercolor", "woodcut"]);
     // Whatever the ladders list is offered there, and nothing offered is left out.
     for (const defId of [MAX, "core-083", "classicplus-073", "classic-056", CUBE, BIG_D, PLAIN]) {
       for (const first of [VERSION_SET_SHOWCASE_ID, VERSION_OUT_OF_FRAME_ID]) {
@@ -1040,11 +1109,13 @@ describe("R1655000 a card in context", () => {
   it("R2944000 R3015007 the ladders list each part 5 variant only where it is offered, each rung drawing its own look", () => {
     // Ceaseless Void, a Mythic Unit, is offered both, last, beside Full art, Alt art (R3015000: which took Alt full art's
     // cards), the Sketch, Extended art, Set showcase and Out of frame; Spell Tyrant, a Legendary Unit, Prismatic alone of
-    // the two, and BOOM! Big Max Immersive alone; Carnivorous Cube, Big D-fender and Speciesist neither.
+    // the two, and BOOM! Big Max Immersive alone; Carnivorous Cube, Big D-fender and Speciesist neither. R3017001: each card
+    // its side of each part 6 pair, last. R3343002: Ceaseless Void's Default draws Full art, so its Full art ladder starts
+    // at its animated level.
     const VOID = "core-100";
     expect(firstLevels(VOID)).toEqual([
       ["default", NO_FULL_ART_ID, "Common"],
-      ["full-art", VERSION_FULL_ART_ID, "Legendary"],
+      ["full-art", VERSION_FULL_ART_ANIMATED_ID, "Mythic"],
       ["alt-art", VERSION_ALT_ART_ID, "Rare"],
       ["sketch", VERSION_SKETCH_ID, "Rare"],
       ["extended-art", VERSION_EXTENDED_ART_ID, "Epic"],
@@ -1052,8 +1123,11 @@ describe("R1655000 a card in context", () => {
       ["out-of-frame", VERSION_OUT_OF_FRAME_ID, "Legendary"],
       ["immersive", VERSION_IMMERSIVE_ID, "Mythic"],
       ["prismatic", VERSION_PRISMATIC_ID, "Mythic"],
+      ["night", VERSION_NIGHT_ID, "Rare"],
+      ["stained-glass", VERSION_STAINED_GLASS_ID, "Epic"],
+      ["woodcut", VERSION_WOODCUT_ID, "Rare"],
     ]);
-    expect(firstLevels(PLAIN).map(([variant]) => variant)).toEqual(["default"]);
+    expect(firstLevels(PLAIN).map(([variant]) => variant)).toEqual(["default", "neon", "watercolor", "woodcut"]);
     // Whatever the ladders list is offered there, and nothing offered is left out.
     for (const defId of [VOID, "classic-056", "classic-080", "core-083", "classicplus-073", "meditativeplus-026", CUBE, BIG_D, PLAIN]) {
       for (const first of [VERSION_IMMERSIVE_ID, VERSION_PRISMATIC_ID]) {
@@ -1080,11 +1154,13 @@ describe("R1655000 a card in context", () => {
     expect(large().querySelector(".card-text")).not.toBeNull();
     expect(large().querySelector(".cf-art-frame > .cf-art")?.getAttribute("data-art-part")).toBe("backdrop");
     expect(large().querySelector(".cf-art-frame > .cf-immersive > .cf-art--near")?.getAttribute("data-art-part")).toBe("subject");
-    // Choosing Prismatic draws it in chrome, its words kept.
+    // Choosing Prismatic draws it in chrome, (R3343001) a full art, across the whole face with no words.
     fireEvent.click(rung(VERSION_PRISMATIC_ID));
     expect(readCardPicks(VOID)).toEqual({ fullArt: VERSION_PRISMATIC_ID });
     expect(large().getAttribute("data-version")).toBe(VERSION_PRISMATIC_ID);
-    expect(large().querySelector(".card-text")).not.toBeNull();
+    expect(large().getAttribute("data-full-art")).toBe("true");
+    expect(large().querySelector(".card-text")).toBeNull();
+    expect(large().querySelector(".cf-art")?.classList.contains("cf-art--full")).toBe(true);
     expect(large().querySelector(".cf-art")?.getAttribute("data-art-picture")).toBe("prismatic");
     expect(large().querySelector(".cf-immersive")).toBeNull();
     // R2944002, R3015000: its animated level moves the chrome, and no rung signs it.
@@ -1093,6 +1169,80 @@ describe("R1655000 a card in context", () => {
     expect(large().getAttribute("data-version")).toBe(VERSION_PRISMATIC_ID);
     expect(large().getAttribute("data-art-motion")).not.toBeNull();
     expect(large().querySelector(".cf-signature")).toBeNull();
+  });
+
+  it("R3343002 a Mythic's and a Legendary's Default rung is named and pictured by its default look, and its ladder starts above it", () => {
+    // Ceaseless Void, a Mythic Unit, and Silly Silas, a Legendary Unit, owning nothing.
+    const VOID = "core-100";
+    const SILAS = "core-052";
+    const ladderOn = (defId: string, variant: string) => cardLadders(defId, () => false).find((ladder) => ladder.variant === variant);
+    const rungs = (defId: string, variant: string) => ladderOn(defId, variant)?.rungs.map((each) => [each.id, each.owned, each.next, each.needs]);
+    // Full art on the Mythic starts at its animated level, next with nothing owned; its signed level needs that.
+    expect(ladderOn(VOID, "full-art")?.name).toBe("Full art");
+    expect(rungs(VOID, "full-art")).toEqual([
+      [VERSION_FULL_ART_ANIMATED_ID, false, true, null],
+      [VERSION_FULL_ART_SIGNED_ID, false, false, "Full art, animated"],
+    ]);
+    expect(ladderOn(VOID, "default")?.rungs[0]).toMatchObject({ id: NO_FULL_ART_ID, name: "Full art", owned: true, next: false });
+    // Extended art on the Legendary is its animated level alone, next with nothing owned.
+    expect(ladderOn(SILAS, "extended-art")?.name).toBe("Extended art");
+    expect(rungs(SILAS, "extended-art")).toEqual([[`${VERSION_EXTENDED_ART_ID}-animated`, false, true, null]]);
+    expect(ladderOn(SILAS, "default")?.rungs[0]).toMatchObject({ id: NO_FULL_ART_ID, name: "Extended art", owned: true });
+    // Below Legendary the Default's first rung is the normal face, and Full art starts at its first level.
+    expect(ladderOn(BIG_D, "default")?.rungs[0]?.name).toBe("Normal");
+    expect(ladderOn(BIG_D, "full-art")?.rungs[0]?.id).toBe(VERSION_FULL_ART_ID);
+
+    // The view, owning no cosmetic: the large face wears Full art, and the Default's rungs picture it across the whole face.
+    render(
+      <FullArtOwned owned={new Map()}>
+        <OwnedCards collection={collectionOwning([VOID])} defs={[defOf(VOID)]} />
+      </FullArtOwned>,
+    );
+    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
+    fireEvent.click(screen.getByTestId(T.card(VOID)));
+    expect(large().getAttribute("data-full-art")).toBe("true");
+    expect(large().getAttribute("data-version")).toBe(VERSION_FULL_ART_ID);
+    for (const id of [NO_FULL_ART_ID, VERSION_ANIMATED_ID]) expect(rung(id).querySelector(".collection-strip__picture--full-art"), id).not.toBeNull();
+    expect(screen.queryByTestId(T.rung(VERSION_FULL_ART_ID))).toBeNull();
+    expect(rung(VERSION_FULL_ART_ANIMATED_ID).dataset.next).toBe("true");
+  });
+
+  it("R3017000 the Collection lists only the part 6 variants a card is offered", () => {
+    // R3017001: Speciesist, a Common Unit, is offered Neon sign, Watercolor and Woodcut, and Scratch Pad, a Mythic Spell,
+    // their partners, Night, Stained-glass window and Tarot card; each its two levels, art then animated.
+    const PAD = "meditativeplus-026";
+    const PART_SIX = [VERSION_NIGHT_ID, VERSION_NEON_ID, VERSION_WATERCOLOR_ID, VERSION_STAINED_GLASS_ID, VERSION_WOODCUT_ID, VERSION_TAROT_ID];
+    const sides: readonly (readonly [string, readonly string[]])[] = [
+      [PLAIN, [VERSION_NEON_ID, VERSION_WATERCOLOR_ID, VERSION_WOODCUT_ID]],
+      [PAD, [VERSION_NIGHT_ID, VERSION_STAINED_GLASS_ID, VERSION_TAROT_ID]],
+    ];
+    for (const [defId, mine] of sides) {
+      expect(firstLevels(defId).filter(([, id]) => PART_SIX.includes(id ?? "")).map(([, id]) => id), defId).toEqual(mine);
+      for (const first of PART_SIX) {
+        for (const id of [first, `${first}-animated`]) expect(listed(defId).includes(id), `${id} on ${defId}`).toBe(mine.includes(first));
+      }
+    }
+    // The open view shows those ladders and no other part 6 one, each rung drawing its variant's picture.
+    const pictures: Readonly<Record<string, string>> = {
+      [VERSION_NEON_ID]: "neon",
+      [VERSION_WATERCOLOR_ID]: "watercolor",
+      [VERSION_WOODCUT_ID]: "woodcut",
+    };
+    open(PLAIN);
+    for (const first of PART_SIX) {
+      const variant = first.slice("version-".length);
+      const shown = Object.hasOwn(pictures, first);
+      expect(screen.queryByTestId(T.ladder(variant)) !== null, variant).toBe(shown);
+      if (!shown) continue;
+      for (const id of [first, `${first}-animated`]) expect(rung(id).querySelector(".cf-art")?.getAttribute("data-art-picture"), id).toBe(pictures[first]);
+    }
+    // Choosing one wears it in the normal frame, its words kept.
+    fireEvent.click(rung(VERSION_WOODCUT_ID));
+    expect(readCardPicks(PLAIN)).toEqual({ fullArt: VERSION_WOODCUT_ID });
+    expect(large().getAttribute("data-version")).toBe(VERSION_WOODCUT_ID);
+    expect(large().getAttribute("data-full-art")).toBeNull();
+    expect(large().querySelector(".card-text")).not.toBeNull();
+    expect(large().querySelector(".cf-art")?.getAttribute("data-art-picture")).toBe("woodcut");
   });
 
   it("R3015007 each variant is a ladder: owned, next and locked", () => {
@@ -1104,6 +1254,9 @@ describe("R1655000 a card in context", () => {
       ["default", "Default"],
       ["full-art", "Full art"],
       ["sketch", "Sketch"],
+      ["night", "Night"],
+      ["stained-glass", "Stained-glass window"],
+      ["woodcut", "Woodcut"],
     ]);
     // Each an ordered list of its levels, lowest first, each rung its level's state: owned, next or locked.
     const state = (variant: string): (string | undefined)[][] =>
@@ -1215,13 +1368,94 @@ describe("R3015007 a held token on a ladder", () => {
     await waitFor(() => {
       expect(screen.getByTestId(T.rung(VERSION_SKETCH_ID))).toHaveAttribute("data-owned", "true");
     });
+    // R3349000: the bought level reveals the card wearing it; taps move through it, closing the preview.
+    const reveal = await screen.findByTestId(G.scene);
+    fireEvent.click(reveal);
+    const again = screen.queryByTestId(G.scene);
+    if (again !== null) fireEvent.click(again);
+    expect(screen.queryByTestId(G.scene)).toBeNull();
     expect(server.to("POST", "/api/tokens/redeem-cosmetic")).toHaveLength(1);
     expect(server.to("POST", "/api/tokens/redeem-cosmetic")[0]?.body).toEqual({ token: "Rare", cosmeticId: VERSION_SKETCH_ID, cardId: BIG_D });
-    closePreview();
+    expect(screen.queryByTestId(T.preview)).toBeNull();
     expect(screen.getByTestId(T.rung(VERSION_SKETCH_FULL_ART_ID))).toHaveAttribute("data-next", "true");
     expect(await within(previewOf(VERSION_SKETCH_FULL_ART_ID)).findByTestId(T.tokenOffer(VERSION_SKETCH_FULL_ART_ID))).toHaveTextContent(
       "Unlock with an Epic token (9 held)",
     );
+  });
+});
+
+describe("R3349000 new levels and ladder looks", () => {
+  const TOKEN = "token-1";
+  const CARD = "core-001";
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("R3349000 a new level marks the card until it is viewed", () => {
+    markNewLevels(TOKEN, [{ id: VERSION_SKETCH_ID, cardId: CARD }]);
+    render(<OwnedCards collection={collectionOwning([CARD])} defs={[defOf(CARD)]} token={TOKEN} />);
+    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
+
+    expect(screen.getByTestId(T.card(CARD))).toHaveAttribute("data-new", "true");
+    expect(screen.getByTestId(T.newMark(CARD))).toHaveTextContent("New");
+
+    fireEvent.click(screen.getByTestId(T.card(CARD)));
+    expect(screen.getByTestId(T.cardView)).toBeInTheDocument();
+    expect(screen.getByTestId(T.card(CARD))).not.toHaveAttribute("data-new");
+    expect(screen.queryByTestId(T.newMark(CARD))).toBeNull();
+  });
+
+  it("R3349000 a hover previews the newest unseen level", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    markNewLevels(TOKEN, [
+      { id: VERSION_SKETCH_ID, cardId: CARD },
+      { id: VERSION_ANIMATED_ID, cardId: CARD },
+    ]);
+    render(<OwnedCards collection={collectionOwning([CARD])} defs={[defOf(CARD)]} token={TOKEN} />);
+    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
+
+    fireEvent.pointerEnter(screen.getByTestId(T.card(CARD)), { pointerType: "mouse" });
+    act(() => {
+      vi.advanceTimersByTime(HOVER_DELAY_MS);
+    });
+    // The newest unseen level, the Default's Animated, plays in the hover preview.
+    expect(screen.getByTestId(T.lookHover)).toHaveAttribute("data-level", VERSION_ANIMATED_ID);
+    clearSeenForCard(TOKEN, CARD);
+  });
+
+  it("R3349000 each ladder rung shows its level's look", () => {
+    const def = defOf(CARD);
+    render(
+      <VariantLadders
+        def={def}
+        face={faceModel({ defId: def.id, def, radiant: false })}
+        ladders={cardLadders(def.id, () => true)}
+        equipped={null}
+        show={vi.fn()}
+        hide={vi.fn()}
+        equip={vi.fn()}
+        onPreview={vi.fn()}
+      />,
+    );
+
+    // An animated rung moves its picture's own layers (CardArt's `motion`), as the face of that level does.
+    const animated = screen.getByTestId(T.rung(VERSION_FULL_ART_ANIMATED_ID));
+    expect(animated.querySelector(".collection-strip__picture")).toHaveAttribute("data-art-motion", "animated");
+    expect(animated.querySelector("[data-art-moving]")).toHaveAttribute("data-art-moving", "true");
+    expect(animated.querySelector(".cf-signature")).toBeNull();
+
+    // A signed rung is an animated one with its signature written over it.
+    const signed = screen.getByTestId(T.rung(VERSION_FULL_ART_SIGNED_ID));
+    expect(signed.querySelector(".collection-strip__picture")).toHaveAttribute("data-art-motion", "animated");
+    expect(signed.querySelector("[data-art-moving]")).toHaveAttribute("data-art-moving", "true");
+    expect(signed.querySelector(".cf-signature")).not.toBeNull();
+
+    // The first full-art level adds the frame alone: it neither moves nor signs.
+    const still = screen.getByTestId(T.rung(VERSION_FULL_ART_ID));
+    expect(still.querySelector(".collection-strip__picture")).not.toHaveAttribute("data-art-motion");
+    expect(still.querySelector("[data-art-moving]")).toBeNull();
+    expect(still.querySelector(".cf-signature")).toBeNull();
   });
 });
 
@@ -1309,8 +1543,9 @@ describe("R1655000 the account's cosmetics as tiles", () => {
       ["table-obsidian-slab", false],
       ["table-ancient-map", false],
       ["table-astral", false],
+      ["table-stinkyscape", false],
     ]);
-    expect(accountTiles("table", (id) => ownsAccountCosmetic(new Set(["table-astral"]), id)).at(-1)?.owned).toBe(true);
+    expect(accountTiles("table", (id) => ownsAccountCosmetic(new Set(["table-astral"]), id)).find((tile) => tile.cosmetic.id === "table-astral")?.owned).toBe(true);
     expect(accountTiles("table", (id) => ownsAccountCosmetic("every", id)).every((tile) => tile.owned)).toBe(true);
     expect(accountTiles("cardBack", () => false).map((tile) => tile.cosmetic.id)).toEqual(cosmeticsOf("cardBack").map((cosmetic) => cosmetic.id));
   });

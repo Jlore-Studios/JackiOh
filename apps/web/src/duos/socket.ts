@@ -10,10 +10,11 @@
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 
-import type { EmojiEmoteId } from "@jackioh/shared";
+import type { CombatForecast, EmojiEmoteId } from "@jackioh/shared";
 import { PING_RATE_LIMIT, PING_RATE_WINDOW_MS, PING_SHOW_MS } from "@jackioh/server-config";
 
 import { economyField, type GameEconomy } from "../economy/xp.ts";
+import { forecastField } from "../game/attackOutcome.ts";
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
@@ -26,6 +27,7 @@ import {
   createWakeProbe,
   defaultMonotonic,
   defaultTimers,
+  isNumberOrNull,
   letGo,
   nextNonce,
   pageWake,
@@ -67,13 +69,17 @@ export type DuosClockFrame = {
 export type DuosClockReading = DuosClockFrame & { receivedAt: number };
 
 export type DuosServerFrame =
-  /** `jloreCapped` and `economy` as `DuosSnapshot` reads them; the server leaves either off when it has none. */
+  /**
+   * `jloreCapped`, `economy` and (R3477000) `forecast` as `DuosSnapshot` reads them; the server leaves each
+   * off when it has none, and a watcher's frame never carries a forecast.
+   */
   | {
       type: "view";
       view: DuosView;
       legal: readonly DuosActionBody[];
       jloreCapped: boolean;
       economy?: GameEconomy;
+      forecast?: CombatForecast;
     }
   | { type: "ack"; nonce: string; seq: number }
   | { type: "error"; code: string; message: string; nonce?: string }
@@ -86,8 +92,6 @@ export type DuosServerFrame =
   | { type: "spectatorHand"; emotes: readonly EmojiEmoteId[] }
   /** R2990000: a watcher's emote, relayed live to both people's seats and to the game's other watchers. */
   | { type: "spectatorEmote"; watcher: string; emote: EmojiEmoteId };
-
-const isTimeOrNull = (value: unknown): value is number | null => value === null || typeof value === "number";
 
 function parseLegal(value: unknown): readonly DuosActionBody[] {
   if (!Array.isArray(value)) return [];
@@ -114,6 +118,7 @@ export function parseDuosFrame(text: string): DuosServerFrame | null {
         legal: parseLegal(parsed.legal),
         jloreCapped: parsed.jloreCapped === true,
         ...economyField(parsed.economy),
+        ...forecastField(parsed.forecast),
       };
     case "ack":
       if (typeof parsed.nonce !== "string" || typeof parsed.seq !== "number") return null;
@@ -128,8 +133,8 @@ export function parseDuosFrame(text: string): DuosServerFrame | null {
       };
     case "clock": {
       const grace = parsed.graceDeadlines;
-      if (typeof parsed.now !== "number" || !isTimeOrNull(parsed.roundDeadline) || !isRecord(grace)) return null;
-      if (!isTimeOrNull(grace.a1) || !isTimeOrNull(grace.a2)) return null;
+      if (typeof parsed.now !== "number" || !isNumberOrNull(parsed.roundDeadline) || !isRecord(grace)) return null;
+      if (!isNumberOrNull(grace.a1) || !isNumberOrNull(grace.a2)) return null;
       return {
         type: "clock",
         now: parsed.now,
@@ -174,6 +179,11 @@ export type DuosSnapshot = {
   jloreCapped: boolean;
   /** #1664: what the finished match paid this seat's person (`economy/xp.ts`); null if the last view lacks it. */
   economy: GameEconomy | null;
+  /**
+   * R3477000: the engine's forecast of the attacks the seat is offered, from the last view; null if it lacks
+   * one. Never computed here (rule 7).
+   */
+  forecast: CombatForecast | null;
   /** The last `error` frame's message, relayed verbatim, or null. */
   error: string | null;
   errorCode: string | null;
@@ -228,6 +238,7 @@ const INITIAL: DuosSnapshot = {
   legal: [],
   jloreCapped: false,
   economy: null,
+  forecast: null,
   error: null,
   errorCode: null,
   clock: null,
@@ -306,6 +317,7 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
           legal: frame.legal,
           jloreCapped: frame.jloreCapped,
           economy: frame.economy ?? null,
+          forecast: frame.forecast ?? null,
           ...(fresh ? { error: null, errorCode: null } : {}),
         });
         return;

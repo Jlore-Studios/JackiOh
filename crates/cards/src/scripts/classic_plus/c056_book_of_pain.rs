@@ -32,7 +32,7 @@ mod tests {
     const A: &str = "core-008"; // Mr. Vanilla
     const B: &str = "core-011"; // Tempo Timmy
     const C: &str = "core-020"; // Pointmaster
-    const RUSH: &str = "core-t-rush"; // a unit-token card (R11)
+    const RUSH: &str = "core-t-rush"; // Rush Token: a unit-token card (R11)
 
     use crate::scenario;
 

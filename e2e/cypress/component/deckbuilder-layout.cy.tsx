@@ -4,13 +4,15 @@
 import { DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import DeckWorkshop, { type WorkshopOpen } from "../../../apps/web/src/game/deckbuilder/DeckWorkshop.tsx";
-import type { DecksResponse } from "../../../apps/web/src/net/api.ts";
+import type { DeckSyncInput, DecksResponse } from "../../../apps/web/src/net/api.ts";
 import { CATALOG, CATALOG_VERSION } from "@jackioh/cards";
 import { loadWasm } from "../../../apps/web/src/wasm/index.ts";
 import { FIT_FLOOR_PX } from "../../../apps/web/src/cards/constants.ts";
 import { faceText } from "../../../apps/web/src/cards/CardFace.tsx";
 import { faceModel } from "../../../apps/web/src/cards/model.ts";
 import { showsFullArt } from "../../../apps/web/src/cards/fullArt.ts";
+import { readCardSettings } from "../../../apps/web/src/cards/settings.ts";
+import { isFullBleed, lookOn } from "../../../apps/web/src/cards/versions.ts";
 import { setShips } from "../../../apps/web/src/wire/catalog.ts";
 import { DECK_HISTORY_BUTTON, DECK_HISTORY_PANEL } from "../../../apps/web/src/game/deckbuilder/testids.ts";
 import {
@@ -79,10 +81,15 @@ const FULL_DECKS: string[][] = [0, 1, 2].map((deck) =>
 function mountWorkshop(decks: readonly (readonly string[])[]): void {
   const open: WorkshopOpen = { kind: "deck", id: DECK_IDS[0] };
   const api = {
-    putDeck: cy.stub().resolves({}),
-    deleteDeck: cy.stub().resolves({}),
-    putTrio: cy.stub().resolves({}),
-    deleteTrio: cy.stub().resolves({}),
+    // R3212001: every item of a sync lands.
+    syncDecks: cy.stub().callsFake((input: DeckSyncInput) =>
+      Promise.resolve({
+        decks: input.decks.map(({ id }) => ({ id })),
+        trios: input.trios.map(({ id }) => ({ id })),
+        deletedTrios: input.deletedTrios.map((id) => ({ id })),
+        deletedDecks: input.deletedDecks.map((id) => ({ id })),
+      }),
+    ),
     importTrio: cy.stub().resolves({}),
     getDeckVersions: cy.stub().resolves({ versions: [] }),
     restoreDeckVersion: cy.stub().resolves({}),
@@ -313,9 +320,11 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     cy.document().should((doc) => {
       const missing: string[] = [];
       const faint: string[] = [];
+      const fullArt = readCardSettings().fullArt;
       for (const def of DECKABLE) {
-        // R1017001: a hero portrait's card prints full art and no rules box (card-faces.cy.tsx B15).
-        if (showsFullArt(faceModel({ defId: def.id, def, radiant: false }))) continue;
+        // R1017001: a hero portrait's card prints full art and no rules box (card-faces.cy.tsx B15); R3343001: so does a
+        // Mythic, whose Default draws Full art while the Full-art cards setting is on.
+        if (showsFullArt(faceModel({ defId: def.id, def, radiant: false })) || isFullBleed(lookOn(def.id, null, fullArt).version)) continue;
         const item = doc.querySelector(`${POOL_ITEMS}[data-card="${def.id}"]`);
         const terms = [...(item?.querySelectorAll<HTMLElement>(".card-text strong.cf-term") ?? [])];
         const drawn = new Set(terms.map((term) => term.dataset.term));

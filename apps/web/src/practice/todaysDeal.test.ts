@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { AI_GATE_BUDGET } from "@jackioh/ai";
 import type { ActionBody } from "@jackioh/shared";
 
-import { createPracticeCore } from "./core.ts";
+import { createPracticeDriver } from "./driver.ts";
 import type { PracticeDebug, PracticeResponse, PracticeSnapshot, PracticeStartConfig } from "./protocol.ts";
 import { dailyDealConfig, dailyDealOf } from "./todaysDeal.ts";
 import { snapshotOf } from "../test/fixtures.ts";
@@ -27,7 +27,7 @@ function humanMove(snapshot: PracticeSnapshot): ActionBody | undefined {
 
 /** A fresh core on the gates' budget and a frozen clock, as core.test.ts's: start `config`, play `requests`, answer `debug`. */
 function playOn(config: PracticeStartConfig, requests: number): PracticeDebug {
-  const core = createPracticeCore({ now: () => 0, dev: true, budget: AI_GATE_BUDGET });
+  const core = createPracticeDriver({ now: () => 0, dev: true, budget: AI_GATE_BUDGET });
   let id = 0;
   const send = (body: Record<string, unknown>): PracticeResponse => {
     id += 1;

@@ -43,6 +43,9 @@ struct Reading {
     traps_fired: PerPlayer<i32>,
     position_switches: PerPlayer<i32>,
     radiant_upgrades: PerPlayer<i32>,
+    /// R3335001: the Starship Pieces that fused into each seat's Starship, and the Starships it launched.
+    starship_pieces_fused: PerPlayer<i32>,
+    starships_launched: PerPlayer<i32>,
     /// R1256000: every instance id whose `radiantSet` already counted an upgrade.
     radiant_seen: IndexSet<String>,
     current_turn: i32,
@@ -386,6 +389,13 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
             | GameEvent::EnteredGraveyard { instance_id, .. } => {
                 leave(&mut reading.hands, instance_id);
             }
+            // R3335001: each fusion into a seat's Starship (§6.1) and each launch (§6.3), once.
+            GameEvent::StarshipFused { player, .. } => {
+                reading.starship_pieces_fused[*player] += 1;
+            }
+            GameEvent::StarshipLaunched { player, .. } => {
+                reading.starships_launched[*player] += 1;
+            }
             _ => {}
         }
     }
@@ -432,6 +442,9 @@ fn seat_summary(reading: &Reading, deck: Vec<String>, player: PlayerId) -> SeatS
         created_used: listed(&reading.created_used[player]),
         created_unused: listed(&unused),
         created_played: listed(&reading.created_played[player]),
+        // R3335001: absent when none, so a game without a Starship keeps its record's shape.
+        starship_pieces_fused: Some(reading.starship_pieces_fused[player]).filter(|n| *n > 0),
+        starships_launched: Some(reading.starships_launched[player]).filter(|n| *n > 0),
     }
 }
 
@@ -465,6 +478,8 @@ impl SummaryReader {
                 traps_fired: zero(),
                 position_switches: zero(),
                 radiant_upgrades: zero(),
+                starship_pieces_fused: zero(),
+                starships_launched: zero(),
                 radiant_seen: IndexSet::new(),
                 current_turn: start.turn.max(1),
                 made: IndexMap::new(),
@@ -506,6 +521,8 @@ pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
         glitch_boards: input.glitch_boards.clone(),
         // R2702000: the marks too, or the fold deals other cards.
         deck_marks: input.deck_marks.clone(),
+        // R3049000: and the win-rate snapshot, or CN Tech and NA Tech pick other cards.
+        win_rates: input.win_rates.clone(),
         ..Default::default()
     });
     let mut reader = SummaryReader::new(&start);
@@ -560,6 +577,8 @@ mod tests {
             traps_fired: zero(),
             position_switches: zero(),
             radiant_upgrades: zero(),
+            starship_pieces_fused: zero(),
+            starships_launched: zero(),
             radiant_seen: IndexSet::new(),
             current_turn: 1,
             made: IndexMap::new(),
@@ -613,5 +632,55 @@ mod tests {
         read(&mut reading, &events, &before, &after);
         read(&mut reading, &events, &before, &after);
         assert_eq!(reading.radiant_upgrades.p1, 1);
+    }
+
+    #[test]
+    fn r3335001_the_summary_counts_each_starship_fused_and_launched_event() {
+        let state = hand_card(false);
+        let fused = |player: PlayerId, pieces: u32| GameEvent::StarshipFused {
+            player,
+            instance_id: "ship".to_owned(),
+            piece_id: format!("piece-{pieces}"),
+            def_id: "stinkyscape-001".to_owned(),
+            pieces,
+        };
+        let launched = |player: PlayerId| GameEvent::StarshipLaunched {
+            player,
+            instance_id: "ship".to_owned(),
+            def_id: "stinkyscape-t-dormant-starship".to_owned(),
+            name: "The Ninth Life".to_owned(),
+            pieces: Vec::new(),
+        };
+        let mut reading = reading();
+        read(
+            &mut reading,
+            &[
+                fused(PlayerId::P1, 1),
+                fused(PlayerId::P1, 2),
+                fused(PlayerId::P2, 1),
+            ],
+            &state,
+            &state,
+        );
+        read(&mut reading, &[launched(PlayerId::P1)], &state, &state);
+        assert_eq!(
+            (reading.starship_pieces_fused.p1, reading.starship_pieces_fused.p2),
+            (2, 1)
+        );
+        assert_eq!(
+            (reading.starships_launched.p1, reading.starships_launched.p2),
+            (1, 0)
+        );
+        let p1 = seat_summary(&reading, Vec::new(), PlayerId::P1);
+        let p2 = seat_summary(&reading, Vec::new(), PlayerId::P2);
+        assert_eq!(
+            (p1.starship_pieces_fused, p1.starships_launched),
+            (Some(2), Some(1))
+        );
+        // None launched is absent from the record, as it is from one written before the count.
+        assert_eq!((p2.starship_pieces_fused, p2.starships_launched), (Some(1), None));
+        let json = serde_json::to_value(&p2).unwrap_or_default();
+        assert!(json.get("starshipsLaunched").is_none(), "{json}");
+        assert_eq!(json.get("starshipPiecesFused"), Some(&json!(1)));
     }
 }

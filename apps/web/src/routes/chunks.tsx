@@ -5,6 +5,7 @@
 import { lazy, useState, type ComponentType, type ReactElement } from "react";
 
 import { duosIdOf, matchIdOf, paths, seriesIdOf, watchIdOf } from "../net/navigate.ts";
+import type { DecksRouteProps } from "./decks.tsx";
 import type { InviteRouteProps } from "./invite.tsx";
 import { loadWasm } from "../wasm/index.ts";
 
@@ -59,13 +60,13 @@ export const routeChunks = {
   resetPassword: routeChunk(() => import("./reset-password.tsx")),
   // The defaulted props infer no `P`, so it is named (its `account` is optional).
   invite: routeChunk<InviteRouteProps>(() => import("./invite.tsx")),
-  // Same: `portraitsGated` is optional.
-  decks: routeChunk<{ portraitsGated?: boolean }>(() => import("./decks.tsx")),
+  // Same: `account` and `portraitsGated` are optional.
+  decks: routeChunk<DecksRouteProps>(() => import("./decks.tsx")),
   play: routeChunk(() => import("./play.tsx")),
   match: routeChunk(() => import("./match.tsx")),
   series: routeChunk(() => import("./series.tsx")),
   practice: routeChunk(() => import("./practice.tsx")),
-  // #2705: the Dungeon Run and its stats, played offline on the engine in the browser.
+  // #2705: the Dungeon run and its stats, played offline on the engine in the browser.
   dungeon: routeChunk(() => import("../dungeon/DungeonPage.tsx")),
   dungeonStats: routeChunk(() => import("../dungeon/DungeonStatsPage.tsx")),
   privacy: routeChunk(() => import("./privacy.tsx")),

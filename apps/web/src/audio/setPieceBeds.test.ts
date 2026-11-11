@@ -1,15 +1,17 @@
 // R2800000: a board clear's set piece sounds a bed of `sfx.ts` recipes across its hold (setPieceBeds.ts,
 // #2785's sound hook), sent as its held entry starts, and its wipe's removals sound once, condensed, as
 // the hold ends. Twisting Nether's cast keeps its own "alien" voice and "rumble" (card-audio.json5).
+// R3338000: each Terminus card's bed opens with an organ chord of its own and ends in a Mythic's choir,
+// and its signature run sounds once, condensed, after the hold.
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView, UnitView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
-import { SET_PIECE_KEYS, hasSetPiece, wipeClaim } from "../fx/setPieces.ts";
+import { SET_PIECE_KEYS, hasSetPiece, wipeClaim, type SetPieceKey } from "../fx/setPieces.ts";
 import type { FxBigMoments } from "../fx/settings.ts";
-import { FX_STARSHIP_COUNT_AT, FX_STARSHIP_IGNITE_AT, FX_STARSHIP_LAND_AT } from "../fx/constants.ts";
-import { starshipClaim } from "../fx/starship.ts";
+import { FX_STARSHIP_LAND_AT } from "../fx/constants.ts";
+import { STARSHIP_CINEMATIC, starshipClaim, starshipFuseLandMs } from "../fx/starship.ts";
 import {
   ANIMATIONS,
   STARSHIP_LAUNCH_HOLD_MS,
@@ -22,9 +24,9 @@ import {
 } from "../game/animations.ts";
 import { lookupFromDefs } from "../game/catalog.ts";
 import { createPlayTracker } from "../game/runs.ts";
-import { baseView, dormantStarship, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
+import { baseView, dormantStarship, emptySide, fullBoardView, unit, withEvents } from "../test/fixtures.ts";
 import { createSoundDirector } from "./director.ts";
-import { SET_PIECE_BEDS, STARSHIP_BEEP_AMOUNT, STARSHIP_LAUNCH_BED, setPieceBed } from "./setPieceBeds.ts";
+import { SET_PIECE_BEDS, STARSHIP_LAUNCH_BED, setPieceBed } from "./setPieceBeds.ts";
 import { SFX_IDS } from "./sfx.ts";
 import type { CardHook, PlayableLineKind, SfxId, SoundSink } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
@@ -177,20 +179,23 @@ describe("R2801000 a Starship launch's sound bed", () => {
 
   const LAUNCH: GameEvent[] = [{ type: "starshipLaunched", player: "p1", instanceId: "ship", defId: HULL, name: "Ember of Departure", pieces: PIECES }];
 
-  it("R2801000 the launch's bed: three ticks, burn, landing after the hold; its own entrance at the hold's end", () => {
+  it("R3334001 bed: ignition, roar, landing", () => {
     const holdMs = STARSHIP_LAUNCH_HOLD_MS;
     const motionMs = ANIMATIONS.starshipLaunched.durationMs;
     const bed = setPieceBed({ setPiece: { key: STARSHIP_SET_PIECE, holdMs }, durationMs: holdMs + motionMs });
+    // The engines ignite as the cinematic lights them, the roar as the ship climbs out, and, after the
+    // hold, the landing's heavy thud.
     expect(bed).toEqual([
-      ...FX_STARSHIP_COUNT_AT.map((at, k) => ({ kind: "sfx", id: "clockTick", params: { amount: STARSHIP_BEEP_AMOUNT + k }, delayMs: Math.round(at * holdMs) })),
-      { kind: "sfx", id: "burn", delayMs: Math.round(FX_STARSHIP_IGNITE_AT * holdMs) },
+      { kind: "sfx", id: "starshipIgnite", delayMs: Math.round(STARSHIP_CINEMATIC.enginesFrom * holdMs) },
+      { kind: "sfx", id: "starshipRoar", delayMs: Math.round(STARSHIP_CINEMATIC.climbAt * holdMs) },
       { kind: "sfx", id: "summon", params: { slamTier: "huge" }, delayMs: Math.round(holdMs + FX_STARSHIP_LAND_AT * motionMs) },
     ]);
     for (const step of STARSHIP_LAUNCH_BED) expect(SFX_IDS).toContain(step.id);
-    // Each beep is higher than the one before.
-    const beeps = STARSHIP_LAUNCH_BED.flatMap((step) => (step.id === "clockTick" ? [step.params?.amount ?? 0] : []));
-    expect(beeps).toEqual([...beeps].sort((a, b) => a - b));
-    expect(new Set(beeps).size).toBe(FX_STARSHIP_COUNT_AT.length);
+    // The countdown is gone, and with it its ticks; the ignition and the roar sound inside the hold.
+    expect(STARSHIP_LAUNCH_BED.map((step) => step.id)).not.toContain("clockTick");
+    const held = STARSHIP_LAUNCH_BED.filter((step) => step.after !== true).map((step) => step.at);
+    expect(held).toEqual([...held].sort((a, b) => a - b));
+    for (const at of held) expect(at).toBeLessThanOrEqual(1);
 
     // On the board: the bed as the held launch starts, then its own roar (`entrance`) as the hold ends.
     const { entry, sent } = voiceStarship(LAUNCH);
@@ -205,15 +210,112 @@ describe("R2801000 a Starship launch's sound bed", () => {
     expect(off.sent).toEqual([{ kind: "sfx", id: "entrance", delayMs: 0 }]);
   });
 
-  it("R2801000 a fuse run sounds once", () => {
+  it("R2801000 R3334000 a fuse run sounds its rows once and docks each piece", () => {
     const fusion = (piece: string, pieces: number): GameEvent[] => [
       { type: "fused", instanceIds: ["ship", `${piece}-copy`], resultInstanceId: "ship", defId: HULL },
       { type: "starshipFused", player: "p1", instanceId: "ship", pieceId: piece, defId: PIECES[0] ?? HULL, pieces },
     ];
     const { entry, sent } = voiceStarship([...fusion("a", 3), ...fusion("b", 4), ...fusion("c", 5)]);
     expect(entry.fuse?.pieces).toHaveLength(3);
-    const sfx = sent.flatMap((s) => (s.kind === "sfx" ? [s.id] : []));
+    // Each piece docks with a clank of its own as it lands (starshipSounds.ts) ...
+    const docks = sent.filter((s) => s.kind === "sfx" && s.id === "starshipDock");
+    expect(docks.map((s) => s.delayMs)).toEqual([0, 1, 2].map((k) => starshipFuseLandMs(k, 3, entry.durationMs)));
+    // ... and the run's rows sound once, condensed: one of each, the starshipFused row's buff among them.
+    const sfx = sent.flatMap((s) => (s.kind === "sfx" && s.id !== "starshipDock" ? [s.id] : []));
     expect(sfx.length).toBeGreaterThan(0);
     expect(new Set(sfx).size).toBe(sfx.length);
+    expect(sfx).toContain("buff");
+  });
+});
+
+describe("R3338000 a Terminus set piece's sting", () => {
+  /** Ceaseless Void's fold, then the Terminus set pieces in SET_PIECE_KEYS order. */
+  const TERMINUS: readonly SetPieceKey[] = [
+    "voidFold",
+    "terminusRift",
+    "farewell",
+    "lastExam",
+    "eventHorizon",
+    "lastWord",
+    "finalDestination",
+    "bigCrunch",
+    "diceOfDoom",
+  ];
+  const MYTHIC_CHOIR = { id: "entrance", at: 1, params: { mythic: true } };
+
+  it("R3338000 each Terminus bed opens with its own organ", () => {
+    expect(TERMINUS).toEqual(SET_PIECE_KEYS.filter((key) => key !== "nether" && key !== "vortex"));
+    const amounts = TERMINUS.map((key) => {
+      const first = SET_PIECE_BEDS[key][0];
+      expect(first?.id, key).toBe("organ");
+      expect(first?.at, key).toBe(0);
+      return first?.params?.amount;
+    });
+    // 1 to 9, one key each: the fold's 1, then each in SET_PIECE_KEYS order.
+    expect(amounts).toEqual(TERMINUS.map((_, i) => i + 1));
+    expect(new Set(amounts).size).toBe(TERMINUS.length);
+    for (const key of TERMINUS) {
+      const bed = SET_PIECE_BEDS[key];
+      // Each ends in the Mythic's choir (the fold's last step, as ever).
+      expect(bed.at(-1), key).toEqual(MYTHIC_CHOIR);
+      // Two or three recipes of its moment between, every step inside the hold and in order.
+      const between = new Set(bed.slice(1, -1).map((step) => step.id));
+      expect(between.size, key).toBeGreaterThanOrEqual(2);
+      expect(between.size, key).toBeLessThanOrEqual(3);
+      expect([...between], key).not.toContain("organ");
+      const ats = bed.map((step) => step.at);
+      expect(ats, key).toEqual([...ats].sort((a, b) => a - b));
+      for (const step of bed) expect(step.after, key).toBeUndefined();
+    }
+    // No other bed plays the organ.
+    for (const key of SET_PIECE_KEYS.filter((k) => !TERMINUS.includes(k))) expect(SET_PIECE_BEDS[key].map((step) => step.id), key).not.toContain("organ");
+    expect(STARSHIP_LAUNCH_BED.map((step) => step.id)).not.toContain("organ");
+
+    // As sent for a held entry: its organ at once, the choir as the hold ends.
+    const holdMs = 2_400;
+    TERMINUS.forEach((key, i) => {
+      const bed = setPieceBed({ setPiece: { key, holdMs } });
+      expect(bed[0], key).toEqual({ kind: "sfx", id: "organ", params: { amount: i + 1 }, delayMs: 0 });
+      expect(bed.at(-1), key).toEqual({ kind: "sfx", id: "entrance", params: { mythic: true }, delayMs: holdMs });
+    });
+  });
+
+  it("R3338000 a signature run sends its organ at once and is voiced once, condensed, after its hold", () => {
+    // KY's Last Exam's run: its damage to both of the other side's Units, held as its set piece.
+    const view = baseView({
+      you: emptySide("p1"),
+      opponent: emptySide("p2", { units: [unit("p2", { instanceId: "e1" }), unit("p2", { instanceId: "e2" }), null, null, null] }),
+    });
+    const events: GameEvent[] = [
+      { type: "damage", sourceId: null, targetId: "e1", amount: 2, combat: false },
+      { type: "damage", sourceId: null, targetId: "e2", amount: 2, combat: false },
+    ];
+    const before = withEvents(view, START);
+    const sink = recorder();
+    const director = createSoundDirector(sink, undefined, (defId) => cueCard(lookup, defId), undefined, () => 0);
+    director.onView(before);
+    director.onView(withEvents(view, [...START, ...events]));
+    const holdMs = 2_400;
+    const entry: AnimationEntry = {
+      events,
+      type: "damage",
+      durationMs: holdMs + 1_200,
+      frames: new Map(),
+      view: before,
+      setPiece: { key: "lastExam", holdMs },
+      signature: { by: "stinkyscape-004-2", sourceId: "exam", player: "p1" },
+    };
+    director.onEntryStart(entry);
+
+    expect(sink.sent[0]).toEqual({ kind: "sfx", id: "organ", delayMs: 0 });
+    const bed = setPieceBed(entry).map((cue) => ({ kind: "sfx", id: cue.kind === "sfx" ? cue.id : "", delayMs: cue.delayMs }));
+    expect(sink.sent.slice(0, bed.length)).toEqual(bed);
+    // The run's own sounds: one of each, not one a hit, all as the hold ends.
+    const run = sink.sent.slice(bed.length);
+    const sfx = run.flatMap((s) => (s.kind === "sfx" ? [s.id] : []));
+    expect(sfx.length).toBeGreaterThan(0);
+    expect(new Set(sfx).size).toBe(sfx.length);
+    for (const s of run) expect(s.delayMs, `${s.kind}`).toBeGreaterThanOrEqual(holdMs);
+    expect(director.owedCount()).toBe(0);
   });
 });

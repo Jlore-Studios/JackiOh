@@ -368,7 +368,7 @@ describe("the static pages", () => {
     for (const [Route, path] of cases) {
       const { unmount } = render(createElement(Route));
       const said = new Set(
-        [...document.querySelectorAll("section h3, section p, section li")].map((el) => norm(el.textContent)),
+        [...document.querySelectorAll("section h2, section h3, section p, section li")].map((el) => norm(el.textContent)),
       );
       unmount();
       const { doc } = page(path);

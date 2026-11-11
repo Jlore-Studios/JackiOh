@@ -5,11 +5,13 @@
 
 import { describe, expect, it } from "vitest";
 
+import { PLAY_TIERS_ASCENDING, type PlayType } from "../game/damageFeel.ts";
 import { CHAOS_REVEAL_MAX, EFFECT_PITCH_JITTER, IMPACT_AMOUNT_CAP } from "./constants.ts";
 import { SFX, SFX_IDS, SFX_TIMBRES, noiseBuffer, renderSfx, type SfxRecipe, type SfxSpec } from "./sfx.ts";
 import { FakeAudio, FakeNode, type FakeParam, type ParamEvent } from "./test/fakeAudio.ts";
 import type { SfxId, SfxParams } from "./types.ts";
 import { CARD_AUDIO } from "./voiceData.ts";
+import { ANOMALY_CODES, type AnomalyCode } from "../cards/anomalies.ts";
 
 /** The SfxId union, in its declared order. */
 const UNION_ORDER: SfxId[] = [
@@ -30,6 +32,38 @@ const UNION_ORDER: SfxId[] = [
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
   // #1954: the playmat taps.
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
+  // #3347: cards that move like cards.
+  "pickUp", "dragOver", "drop", "returnToHand", "deal", "riffle",
+  // R3336000: the Drone Battleship.
+  "horn", "domeFlare", "bayDoor", "reactorPulse", "deckShear",
+  // R3338000: the Terminus set pieces' organ.
+  "organ",
+  // R3337003: an Anomaly's sting.
+  "anomaly",
+  "playImpact", "trapSnap",
+  // R3342000: the tile aura bell.
+  "auraTouch",
+  // R3334000–R3334003: the Starship's moments.
+  "starshipDock", "starshipIgnite", "starshipRoar", "starshipBeam", "starshipRepeater", "starshipCannon",
+  "starshipFlak", "starshipLauncher", "starshipRam", "starshipWreck",
+  // R3400001: the signatures of Meditative+'s and Training Grounds' Legendaries and Mythics.
+  "inkSummit", "plowHeave", "cursorTear", "seanceChant", "slateRap", "diceGong", "timberLash", "pencilArpeggio",
+  // R3402001: the ten Core signatures.
+  "silasScratch", "crucibleChoir", "hatchWeld", "pocketZip", "stadiumCheer", "jackpotReels", "pawnWaltz",
+  "wishWind", "heroicFanfare", "forgeAnvil",
+  // R3407001: the signatures of Stinkyscape's signature cards.
+  "ballotBeep", "lullabySigh", "compactTut", "glitchDrop", "harpGliss", "markerThunder", "stampTrill", "tillRattle",
+  "gavelSlam", "dockingChime", "keyboardPing", "synthSnap", "blobDrum", "warpSparkle", "tearChoir", "cackleThunder",
+  "kazooRatchet", "thrusterSniff", "marbleGong", "sanctumBell", "cashWhistle", "whisperClink", "crystalRise",
+  // R3405001: the signatures of Meditative's Legendaries and Mythics.
+  "bowlBreath", "peakFlute", "ticketHorn", "forgeQuench", "brushGuzheng", "wellGush", "minePick", "jadeZither",
+  "windChime", "marketGong", "chalkHush", "porcelainRoar", "bronzeGulp", "modemGuqin", "serverChoir", "dialupStutter",
+  "holoBow", "synthPops", "skullMutter", "keyJangle", "caneCrack", "caneThunder", "rootCreak", "chalkGasp",
+  "frostPages", "coinCheer", "totemDrums", "templeDie", "golemStomp", "klaxonSlam", "cellSlam", "hangarRev",
+  // R3395000: the signatures of Stinkyscape 001 to 090's Legendaries and Mythics.
+  "vaultHiss", "safeChirp", "stoneChime", "magiChord", "lectureRumble", "pressStamp", "corvetteRoar", "popGasp",
+  "geigerHum", "wireRatchet", "beamWhine", "rattleSteam", "breechBoom", "flakWind", "crunchJackpot", "choirHulls",
+  "hornEcho", "jetSnap", "whiteRing", "hullDrills", "klaxonSputter", "moltenSnarl", "shutterPurr", "venomDrip",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -116,6 +150,141 @@ const DURATION_MS: Record<SfxId, number> = {
   tapNeon: 150,
   tapParchment: 160,
   tapAstral: 240,
+  // #3347: cards that move like cards.
+  pickUp: 90,
+  dragOver: 60,
+  drop: 140,
+  returnToHand: 200,
+  deal: 80,
+  riffle: 500,
+  // R3336000: the Drone Battleship.
+  horn: 950,
+  domeFlare: 800,
+  bayDoor: 650,
+  reactorPulse: 650,
+  deckShear: 550,
+  // R3338000.
+  organ: 2000,
+  // R3337003.
+  anomaly: 1200,
+  // R3346000.
+  playImpact: 500,
+  trapSnap: 200,
+  // R3342000.
+  auraTouch: 200,
+  // R3334000–R3334003.
+  starshipDock: 450,
+  starshipIgnite: 700,
+  starshipRoar: 1200,
+  starshipBeam: 400,
+  starshipRepeater: 350,
+  starshipCannon: 600,
+  starshipFlak: 500,
+  starshipLauncher: 450,
+  starshipRam: 500,
+  starshipWreck: 1100,
+  // R3400001.
+  inkSummit: 1100,
+  plowHeave: 1300,
+  cursorTear: 1400,
+  seanceChant: 1500,
+  slateRap: 1300,
+  diceGong: 1600,
+  timberLash: 1200,
+  pencilArpeggio: 1400,
+  // R3402001.
+  silasScratch: 1250,
+  crucibleChoir: 1170,
+  hatchWeld: 1550,
+  pocketZip: 1170,
+  stadiumCheer: 1550,
+  jackpotReels: 1190,
+  pawnWaltz: 2500,
+  wishWind: 1900,
+  heroicFanfare: 2500,
+  forgeAnvil: 1900,
+  // R3407001: each a fixed length, its real upper bound.
+  ballotBeep: 1300,
+  lullabySigh: 1500,
+  compactTut: 1300,
+  glitchDrop: 1500,
+  harpGliss: 1500,
+  markerThunder: 1500,
+  stampTrill: 1400,
+  tillRattle: 1600,
+  gavelSlam: 1400,
+  dockingChime: 1600,
+  keyboardPing: 1200,
+  synthSnap: 1400,
+  blobDrum: 1500,
+  warpSparkle: 1600,
+  tearChoir: 1500,
+  cackleThunder: 1600,
+  kazooRatchet: 1600,
+  thrusterSniff: 1600,
+  marbleGong: 1600,
+  sanctumBell: 1600,
+  cashWhistle: 1600,
+  whisperClink: 1200,
+  crystalRise: 1600,
+  // R3405001.
+  bowlBreath: 1500,
+  peakFlute: 1500,
+  ticketHorn: 1300,
+  forgeQuench: 1500,
+  brushGuzheng: 1500,
+  wellGush: 1400,
+  minePick: 1500,
+  jadeZither: 1500,
+  windChime: 1600,
+  marketGong: 1500,
+  chalkHush: 1500,
+  porcelainRoar: 1600,
+  bronzeGulp: 1500,
+  modemGuqin: 1400,
+  serverChoir: 1600,
+  dialupStutter: 1200,
+  holoBow: 1300,
+  synthPops: 1200,
+  skullMutter: 1400,
+  keyJangle: 1400,
+  caneCrack: 1100,
+  caneThunder: 1600,
+  rootCreak: 1500,
+  chalkGasp: 1300,
+  frostPages: 1500,
+  coinCheer: 1400,
+  totemDrums: 1400,
+  templeDie: 1400,
+  golemStomp: 1500,
+  klaxonSlam: 1600,
+  cellSlam: 1500,
+  hangarRev: 1600,
+  // R3395000.
+  vaultHiss: 1400,
+  safeChirp: 1200,
+  stoneChime: 1600,
+  magiChord: 1500,
+  lectureRumble: 1600,
+  pressStamp: 1300,
+  corvetteRoar: 1450,
+  popGasp: 1200,
+  geigerHum: 1400,
+  wireRatchet: 1600,
+  beamWhine: 1450,
+  rattleSteam: 1350,
+  breechBoom: 1500,
+  flakWind: 1600,
+  crunchJackpot: 1500,
+  choirHulls: 1600,
+  hornEcho: 1500,
+  jetSnap: 1300,
+  whiteRing: 1600,
+  hullDrills: 1500,
+  klaxonSputter: 1600,
+  moltenSnarl: 1500,
+  shutterPurr: 1400,
+  venomDrip: 1400,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];
@@ -606,6 +775,73 @@ describe("R669 the play sting", () => {
   });
 });
 
+describe("R3346000 the play impact and the trap snap", () => {
+  const TYPES: readonly PlayType[] = ["unit", "spell", "field"];
+  const impactRun = (playTier: (typeof PLAY_TIERS_ASCENDING)[number], playType: PlayType): Run =>
+    runRecipe(`playImpact ${playTier} ${playType}`, SFX.playImpact.recipe, SFX.playImpact.durationMs, { playTier, playType });
+  const runs = [
+    ...TYPES.flatMap((type) => PLAY_TIERS_ASCENDING.map((tier) => impactRun(tier, type))),
+    runRecipe("playImpact {}", SFX.playImpact.recipe, SFX.playImpact.durationMs, {}),
+    runRecipe("trapSnap", SFX.trapSnap.recipe, SFX.trapSnap.durationMs, {}),
+  ];
+
+  it("R3346000 every tier of every type, and the trap snap, keep every clause of the recipe contract", () => {
+    expect([
+      ...runs.flatMap(subsetProblems),
+      ...runs.flatMap(lengthProblems),
+      ...runs.flatMap(scheduleProblems),
+      ...runs.flatMap(stopProblems),
+      ...runs.flatMap(wiringProblems),
+      ...runs.flatMap(rampProblems),
+    ]).toEqual([]);
+  });
+
+  it("R3346000 each type grows with the tier: a longer sound, and from medium up no fewer voices, a boom or sub at the top", () => {
+    for (const type of TYPES) {
+      const tiers = PLAY_TIERS_ASCENDING.map((tier) => impactRun(tier, type));
+      const lengths = tiers.map(returnedSeconds);
+      for (let i = 1; i < lengths.length; i += 1) {
+        expect(lengths[i], `${type}: ${PLAY_TIERS_ASCENDING[i] ?? ""} outlasts the tier below`).toBeGreaterThan(lengths[i - 1] ?? Infinity);
+      }
+      // A Spell's light flick has its bell (two voices), which its medium play drops for a longer charge.
+      const voices = tiers.map((run) => run.made.filter((n) => n.started).length);
+      for (let i = 2; i < voices.length; i += 1) {
+        expect(voices[i], `${type}: ${PLAY_TIERS_ASCENDING[i] ?? ""} has no fewer voices`).toBeGreaterThanOrEqual(voices[i - 1] ?? Infinity);
+      }
+      // A heavy Unit's or Spell's boom and a massive Field Spell's sub are voices the medium play has not got.
+      expect(voices[3], `${type}: a massive play has more voices than a medium one`).toBeGreaterThan(voices[1] ?? Infinity);
+    }
+  });
+
+  it("R3346000 the three types are three different sounds at the same tier", () => {
+    for (const tier of PLAY_TIERS_ASCENDING) {
+      const shapes = TYPES.map((type) => {
+        const run = impactRun(tier, type);
+        return JSON.stringify({ kinds: run.made.map((n) => n.kind), length: returnedSeconds(run) });
+      });
+      expect(new Set(shapes).size, `${tier}: no two types build the same graph`).toBe(TYPES.length);
+    }
+  });
+
+  it("R3346000 a missing tier or type is a light Unit", () => {
+    const plain = runRecipe("playImpact {}", SFX.playImpact.recipe, SFX.playImpact.durationMs, {});
+    const light = impactRun("light", "unit");
+    expect(plain.made.map((n) => n.kind)).toEqual(light.made.map((n) => n.kind));
+    expect(returnedSeconds(plain)).toBe(returnedSeconds(light));
+  });
+
+  it("R3346000 gain and pan change nothing in the recipe: the engine trims and pans", () => {
+    const plain = impactRun("heavy", "spell");
+    const trimmed = runRecipe("trimmed", SFX.playImpact.recipe, SFX.playImpact.durationMs, { playTier: "heavy", playType: "spell", gain: 0.6, pan: 0.5 });
+    expect(trimmed.made.map((n) => n.kind)).toEqual(plain.made.map((n) => n.kind));
+    expect(returnedSeconds(trimmed)).toBe(returnedSeconds(plain));
+  });
+
+  it("R3346000 every tier of every type fits the 500 ms row", () => {
+    for (const run of runs) expect(returnedSeconds(run), run.label).toBeLessThanOrEqual(SFX.playImpact.durationMs / 1000);
+  });
+});
+
 describe("R1345 MN03's fourteen emoji sounds", () => {
   const NEW_EMOJI: readonly SfxId[] = [
     "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
@@ -702,5 +938,197 @@ describe("#1954 the playmat taps", () => {
     expect(shapeOf({ ...base, variation: 0.9 })).not.toBe(shapeOf({ ...base, variation: 0.1 }));
     expect(shapeOf({ ...base, sandVariant: 3 })).not.toBe(shapeOf({ ...base, sandVariant: 0 }));
     expect(shapeOf({ ...base, sandBuild: 6 })).not.toBe(shapeOf({ ...base, sandBuild: 1 }));
+  });
+});
+
+describe("R3338000 the Terminus organ", () => {
+  const organRun = (params: SfxParams): Run => runRecipe(`organ ${JSON.stringify(params)}`, SFX.organ.recipe, SFX.organ.durationMs, params);
+  /** Every pipe's pitch, lowest first. */
+  const pitches = (run: Run): number[] =>
+    run.made
+      .filter((n) => n.kind === "oscillator")
+      .map((n) => n.param("frequency").settled())
+      .sort((a, b) => a - b);
+  const ROOTS = 9;
+
+  it("R3338000 every root, and an amount out of range, keeps every clause of the recipe contract", () => {
+    const runs = [
+      ...Array.from({ length: ROOTS }, (_, i) => organRun({ amount: i + 1 })),
+      ...[0, -4, 2.4, ROOTS + 1, Number.NaN].map((amount) => organRun({ amount })),
+    ];
+    expect([
+      ...runs.flatMap(subsetProblems),
+      ...runs.flatMap(lengthProblems),
+      ...runs.flatMap(scheduleProblems),
+      ...runs.flatMap(stopProblems),
+      ...runs.flatMap(wiringProblems),
+      ...runs.flatMap(rampProblems),
+    ]).toEqual([]);
+  });
+
+  it("R3338000 each amount from 1 to 9 is a minor triad on a root of its own, each tone sine pipes at 1 to 4 times its pitch", () => {
+    const roots: number[] = [];
+    for (let amount = 1; amount <= ROOTS; amount += 1) {
+      const run = organRun({ amount });
+      const pipes = run.made.filter((n) => n.kind === "oscillator");
+      expect(pipes, `amount ${String(amount)}`).toHaveLength(12);
+      expect(new Set(pipes.map((n) => n.type)), `amount ${String(amount)}`).toEqual(new Set(["sine"]));
+      const heard = pitches(run);
+      const root = heard[0] ?? 0;
+      // The root, its minor third and its fifth (0, 3 and 7 semitones up), each at harmonics 1 to 4.
+      const triad = [0, 3, 7].flatMap((semitones) => [1, 2, 3, 4].map((harmonic) => root * 2 ** (semitones / 12) * harmonic)).sort((a, b) => a - b);
+      heard.forEach((hz, i) => expect(hz, `amount ${String(amount)} pipe ${String(i)}`).toBeCloseTo(triad[i] ?? 0, 1));
+      roots.push(root);
+    }
+    expect(new Set(roots).size).toBe(ROOTS);
+  });
+
+  it("R3338000 an amount outside 1 to 9 clamps to the nearest root, and no amount plays the first", () => {
+    const first = pitches(organRun({ amount: 1 }));
+    const last = pitches(organRun({ amount: ROOTS }));
+    for (const amount of [undefined, 0, -4, Number.NaN]) expect(pitches(organRun(amount === undefined ? {} : { amount })), String(amount)).toEqual(first);
+    for (const amount of [ROOTS + 1, 25, Number.POSITIVE_INFINITY]) expect(pitches(organRun({ amount })), String(amount)).toEqual(last);
+  });
+
+  it("R3338000 the organ swells in over 0.25 s, holds 1.6 s and is let go within its durationMs", () => {
+    const run = organRun({ amount: 5 });
+    // The one envelope every pipe feeds, the gain wired into out.
+    const wind = run.made.filter((n) => n.kind === "gain" && n.connections.includes(run.out));
+    expect(wind).toHaveLength(1);
+    const events = wind[0]?.param("gain").events ?? [];
+    expect(events.map((e) => e.method)).toEqual(["setValueAtTime", "linearRampToValueAtTime", "linearRampToValueAtTime", "exponentialRampToValueAtTime"]);
+    const [silent, swelled, held, released] = events.flatMap((e) => ("time" in e && "value" in e ? [e] : []));
+    expect(silent?.value).toBe(0);
+    expect(silent?.time).toBeCloseTo(AT, 9);
+    expect(swelled?.time).toBeCloseTo(AT + 0.25, 9);
+    expect(held?.time).toBeCloseTo(AT + 0.25 + 1.6, 9);
+    expect(held?.value, "a level hold").toBe(swelled?.value);
+    expect(released?.time ?? Infinity).toBeLessThanOrEqual(AT + SFX.organ.durationMs / 1000 + EPS);
+    expect(returnedSeconds(run)).toBeLessThanOrEqual(SFX.organ.durationMs / 1000);
+  });
+});
+
+describe("R3334000 the Starship's moments", () => {
+  /** The design's gain column for the ten, in the SfxId union's order (their durationMs is DURATION_MS's). */
+  const STARSHIP_GAIN = {
+    starshipDock: 0.8,
+    starshipIgnite: 0.8,
+    starshipRoar: 0.9,
+    starshipBeam: 0.6,
+    starshipRepeater: 0.6,
+    starshipCannon: 0.85,
+    starshipFlak: 0.7,
+    starshipLauncher: 0.6,
+    starshipRam: 0.85,
+    starshipWreck: 0.85,
+  } as const satisfies Partial<Record<SfxId, number>>;
+  const IDS = Object.keys(STARSHIP_GAIN) as (keyof typeof STARSHIP_GAIN)[];
+  const SHIP_SIZE_MAX = 8;
+  const starshipRun = (id: SfxId, params: SfxParams): Run => runRecipe(`${id} ${JSON.stringify(params)}`, SFX[id].recipe, SFX[id].durationMs, params);
+  /** The dock's hum: its one triangle, the pitch it holds. */
+  const hum = (amount: number): number =>
+    starshipRun("starshipDock", { amount }).made.find((n) => n.kind === "oscillator" && n.type === "triangle")?.param("frequency").settled() ?? 0;
+
+  it("R3334000 ten sounds keep the contract and differ", () => {
+    expect(IDS).toHaveLength(10);
+    // Registered as one run in the union's order, wherever later sounds join it.
+    const first = UNION_ORDER.indexOf(IDS[0] ?? "starshipDock");
+    expect(UNION_ORDER.slice(first, first + IDS.length)).toEqual(IDS);
+    const runs: Run[] = [];
+    for (const id of IDS) {
+      expect(SFX[id].durationMs, id).toBe(DURATION_MS[id]);
+      expect(SFX[id].gain, id).toBe(STARSHIP_GAIN[id]);
+      for (const params of [...PARAM_SETS, { amount: SHIP_SIZE_MAX }, { amount: Number.NaN }, { pan: -0.6 }]) runs.push(starshipRun(id, params));
+    }
+    // Every count of pieces a dock may name, and past it.
+    for (let amount = 0; amount <= SHIP_SIZE_MAX + 1; amount += 1) runs.push(starshipRun("starshipDock", { amount }));
+    expect([
+      ...runs.flatMap(subsetProblems),
+      ...runs.flatMap(lengthProblems),
+      ...runs.flatMap(scheduleProblems),
+      ...runs.flatMap(stopProblems),
+      ...runs.flatMap(wiringProblems),
+      ...runs.flatMap(rampProblems),
+    ]).toEqual([]);
+
+    // Each is a sound of its own: no two build the same graph.
+    const shapes = IDS.map((id) => {
+      const run = starshipRun(id, {});
+      return JSON.stringify([run.made.map((node) => node.kind), run.paramEvents.map(({ event }) => [event.method, "value" in event ? event.value : null])]);
+    });
+    expect(new Set(shapes).size).toBe(IDS.length);
+
+    // The dock's hum rises with the ship's pieces, a step for each, held past the largest.
+    expect(hum(SHIP_SIZE_MAX)).toBeGreaterThan(hum(1));
+    const hums = Array.from({ length: SHIP_SIZE_MAX }, (_, i) => hum(i + 1));
+    for (let i = 1; i < SHIP_SIZE_MAX; i += 1) expect(hums[i] ?? 0, `${String(i + 1)} pieces hum higher`).toBeGreaterThan(hums[i - 1] ?? Infinity);
+    expect(hum(SHIP_SIZE_MAX + 4)).toBe(hum(SHIP_SIZE_MAX));
+    expect(hum(0)).toBe(hum(1));
+    expect(hum(Number.NaN)).toBe(hum(1));
+  });
+});
+
+describe("R3337003 each Anomaly's sting", () => {
+  /** `code`'s sting through `renderSfx` at `pitch`, as the engine plays it. */
+  const stingOf = (code: AnomalyCode, pitch = 1): Run =>
+    runRecipe(
+      `anomaly ${code} at pitch ${String(pitch)}`,
+      (c, out, at, p) => renderSfx("anomaly", c, out, at, p, pitch),
+      SFX.anomaly.durationMs,
+      { anomaly: code },
+    );
+  const problems = (runs: readonly Run[]): string[] => [
+    ...runs.flatMap(subsetProblems),
+    ...runs.flatMap(lengthProblems),
+    ...runs.flatMap(scheduleProblems),
+    ...runs.flatMap(stopProblems),
+    ...runs.flatMap(wiringProblems),
+    ...runs.flatMap(rampProblems),
+  ];
+  const shapeOf = (run: Run): string =>
+    JSON.stringify([
+      run.made.map((node) => [node.kind, node.type]),
+      run.paramEvents.map(({ event }) => [event.method, "value" in event ? event.value : null]),
+    ]);
+  const plainWhoosh = (): string => shapeOf(runRecipe("whoosh", SFX.whoosh.recipe, SFX.whoosh.durationMs, {}));
+  /** Every frequency the run's oscillators are set to or glide to. */
+  const pitchesOf = (run: Run): number[] =>
+    run.made
+      .filter((node) => node.kind === "oscillator")
+      .flatMap((node) =>
+        node.param("frequency").events.flatMap((e) => (e.method === "setValueAtTime" || e.method === "exponentialRampToValueAtTime" ? [e.value] : [])),
+      );
+
+  it("R3337003 every code keeps every clause of the recipe contract, as written and at the bank's lowest and highest pitch", () => {
+    expect(problems(ANOMALY_CODES.flatMap((code) => [stingOf(code), stingOf(code, 0.25), stingOf(code, 4)]))).toEqual([]);
+  });
+
+  it("R3337003 no two codes build the same graph, and none is the plain whoosh", () => {
+    const shapes = ANOMALY_CODES.map((code) => shapeOf(stingOf(code)));
+    expect(new Set(shapes).size).toBe(ANOMALY_CODES.length);
+    expect(shapes).not.toContain(plainWhoosh());
+  });
+
+  it("R3337003 with no code, or one this build does not know, it plays the plain whoosh and never throws", () => {
+    for (const params of [{}, { anomaly: "ZZ" }, { anomaly: "wh" }] as unknown as SfxParams[]) {
+      const run = runRecipe(`anomaly ${JSON.stringify(params)}`, SFX.anomaly.recipe, SFX.anomaly.durationMs, params);
+      expect(run.threw, JSON.stringify(params)).toBeNull();
+      expect(shapeOf(run), JSON.stringify(params)).toBe(plainWhoosh());
+    }
+  });
+
+  it("R3337003 each sounds what its board is: the Wormhole's sweep, the rocks' rumble, the bell, the buzz and the chimes", () => {
+    const pitches = (code: AnomalyCode): number[] => pitchesOf(stingOf(code));
+    expect(pitches("WH")).toEqual(expect.arrayContaining([55, 110]));
+    expect(pitches("MT")).toContain(98);
+    expect(pitches("FO")).toEqual(expect.arrayContaining([523, 784]));
+    expect(pitches("AN")).toContain(880);
+    expect(pitches("AA")).toContain(660);
+    for (const code of ["AL", "AT", "AN", "AA"] as const) {
+      const run = stingOf(code);
+      expect(run.made.some((node) => node.kind === "bufferSource"), `${code} rumbles on noise`).toBe(true);
+      expect(run.made.some((node) => node.kind === "biquad" && node.type === "lowpass"), `${code} low-passes it`).toBe(true);
+    }
+    expect(stingOf("DH").made.some((node) => node.kind === "oscillator" && node.type === "sawtooth"), "the drones buzz").toBe(true);
   });
 });
