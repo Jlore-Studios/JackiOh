@@ -18884,8 +18884,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-1",
-      "owner_since": "2026-11-11T03:01:54Z",
-      "owner_why": "it plans it",
+      "owner_since": "2026-11-11T08:34:38Z",
+      "owner_why": "its turn came (it waited 120 minutes for #3687, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-11T03:27:08Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -19197,7 +19197,7 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3678,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner_gave_up": {
         "at": "2026-11-11T07:45:06Z",
@@ -19206,7 +19206,7 @@
       },
       "pending_request": false,
       "provider": "claude-1",
-      "queued_at": "2026-11-11T05:21:47Z",
+      "queued_at": "2026-11-11T08:34:38Z",
       "run_id": "42965380380",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -19227,9 +19227,17 @@
         "provider": "claude-1",
         "run": "42965380380"
       },
+      "source": "conflict",
       "started_at": "2026-11-11T05:22:46Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-1",
+        "since": "2026-11-11T08:34:38Z",
+        "until": "2026-11-11T09:04:38Z",
+        "why": "it waited 120 minutes for #3687, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
+      },
       "votes": {
         "approvals": [
           "claude"
@@ -19249,17 +19257,6 @@
         "tiers": {
           "claude": "strong"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          3687
-        ],
-        "ends": "2026-11-11T08:31:40Z",
-        "from_run": "42965380380",
-        "head": "4ea095c9a1bc4dbff98d671d6be34d63644b769a",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-11T06:31:40Z"
       }
     },
     "3690": {
