@@ -15827,10 +15827,12 @@
     "what": "build #3565 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-11T15:14:38Z",
+    "at": "2026-11-11T15:23:16Z",
     "notes": [
-      "delivered build #3566 on muse (run 43045112981): blocked",
-      "runner gate: started 1 of 1 waiting run(s) (queue build 43046780872)"
+      "delivered build #3565 on muse (run 43044944531): infra (its model job left no upload)",
+      "started build #3565 on claude-7 (run 43048353797)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16536,7 +16538,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T15:14:38Z",
+  "loop_tick": "2026-11-11T15:23:16Z",
   "machine_disk": {
     "issue": null,
     "reading": {
