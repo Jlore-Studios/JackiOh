@@ -15241,6 +15241,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 210,
       "started_at": "2026-11-11T10:12:32Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -34900,9 +34901,33 @@
         "title": "Patch: daily super run failed",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-1"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "48efff4ccf26e0f4f26d3d0b97984a47aa2432a7",
+        "issue": 3678,
+        "merged_at": "2026-11-11T16:32:44Z",
+        "n": 210,
+        "pr": 3688,
+        "queued_at": "2026-11-11T16:32:44Z",
+        "sha": "d0f7305317b3f0037c3b9b782fe34d0a80b410aa",
+        "status": "queued",
+        "title": "Patch: map the code's implicit states and check each behaves as expected",
+        "tries": 0
       }
     ],
-    "count": 209
+    "count": 210
   },
   "statistics": {
     "at": "2026-11-11T16:29:59Z"
