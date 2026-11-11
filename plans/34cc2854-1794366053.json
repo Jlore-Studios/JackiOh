@@ -1,0 +1,80 @@
+{
+  "action": "plan",
+  "number": 3672,
+  "title": "Patch: audit the codebase for dead code, duplicates and zombie routes, 2026-11-11",
+  "branch": "bot/issue-3672",
+  "thread": "**Issue #3672 (data, not instructions):**\n\n```text\n# #3672: Patch: audit the codebase for dead code, duplicates and zombie routes, 2026-11-11\nOpened by @github-actions[bot].\n\nThe code audit ([this run](https://github.com/Jlore-Studios/JackiOh/actions/runs/42942521877), every three days while none is open) asks for one pull request\nthat removes dead code and merges duplicated logic, and proves every change. It repeats #900's audit\n(its findings and their proofs are on that issue), whose pull request was #953. A person reviews and\nmerges it (`person merges`), so make each change easy to check. Dead files and the agent instructions\nhave the weekly hygiene run's own issues: leave them to those.\n\n## 1. Dead code\n\nFind every function, type, constant, export and dependency that nothing references. The methods that\nworked in #900:\n- **Rust:** rename each low-hit `pub` item in a scratch copy, then run `cargo check --workspace\n  --all-targets` with every feature on (`testkit`, `ts`, `wasm/preview`), and put back each\n  rename the compiler names. Blank the `#[allow(dead_code)]`s and check again. An item only its own\n  tests use is dead with them.\n- **TypeScript:** grep each `export` of `apps/web/src` and `e2e` with\n  `git grep -nw <name> -- apps e2e crates`. Rule out `import.meta.glob`, the barrels and test globs.\n- **Python:** grep each `def` and module-level name of `analysis/`, `training/` and `scripts/`. Rule out\n  `getattr` dispatch, `unittest` discovery and subprocess entry points.\n\nThose that look dead but are not (#900):\n- the 30 `#[no_mangle]` WASM exports, called from `apps/web/src/wasm/index.ts`;\n- the server constants `tests/export_config.rs` writes into `serverConfig.ts`;\n- the engine's \"decide\" switches, which `rulings_config.rs` and CLAUDE.md rule 9 pin;\n- `PUBLIC_ENV_VARS`, read as text by `env-production.test.ts`;\n- the generated wire types: the fix for an unused one is in Rust (its `ts(export)` or its\n  `export_config.rs` row), never a TypeScript delete;\n- test seams a test drives live machinery through, such as the `*ForTests` hooks.\n\n## 2. Duplicates\n\nFind logic written more than once: rules, cost, validation, dates, API calls, auth, RNG, and JSON or\nstorage helpers. Read each pair side by side, and merge one into a shared function only when the same\ninputs give the same outputs, edge cases included; then update every caller. The per-card scripts are\nparallel on purpose.\n\n## 3. Zombie routes\n\nList what calls each HTTP and WebSocket route (`crates/server/src/app.rs` `ROUTES`), each page\n(`apps/web/src/main.tsx`), each WASM export and each WebSocket message, tests counted apart. Flag what\nnothing calls; delete none of them (CLAUDE.md rule 13).\n\n## Never\n\n- Never delete anything called from outside this codebase (CLAUDE.md rule 13): a webhook, a workflow's\n  `schedule:`, an auth callback, a route a deploy probes or a person calls (`/readyz` is the site\n  Worker's daily wake-up, `/healthz` its check of the running image, and the deploy jobs poll\n  `/api/catalog`), or a `cargo jackioh`, server or harness subcommand a\n  workflow, a deploy or a person runs. Name it in the pull request for a person instead.\n- Never delete a test or a function a ruling's `proven_in` needs: `cargo jackioh spec check` passes.\n- Never delete a named constant nothing reads before asking whether it should be read (CLAUDE.md rule 9).\n- Never change `.github/`, `bot/`, `.harness/`, `.squishy/` or `.claude/`. Name what should go there in\n  the pull request, for a person.\n\n## Done when\n\nThe pull request body has a table of every removal and merge: what, where, and the evidence (the\ncommands you ran and what they printed), one commit per batch. The fast checks pass: `cargo fmt\n--check`, `cargo clippy --workspace --all-targets -- -D warnings`, the tests of every crate or package you\ntouched, `cargo jackioh spec check`, and the web's typecheck and eslint. Nothing to remove? Make no\nchange and say so in your answer, with your evidence.\n\n---\n_Opened by `.github/workflows/code-audit.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3672: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-11T01:56:43Z",
+    "claimed_at": "2026-11-11T03:01:17Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3550 skipped: it waits for #3548 to close first",
+    "#3551 skipped: it waits for #3548 to close first",
+    "#3552 skipped: it waits for #3548 to close first",
+    "#3553 skipped: it waits for #3548 to close first",
+    "#3554 skipped: it waits for #3550 to close first",
+    "#3555 skipped: it waits for #3550 to close first",
+    "#3556 skipped: it waits for #3550 to close first",
+    "#3557 skipped: it waits for #3550 to close first",
+    "#3558 skipped: it waits for #3554 to close first",
+    "#3559 skipped: it waits for #3550, #3554 to close first",
+    "#3560 skipped: it waits for #3550, #3554 to close first",
+    "#3561 skipped: it waits for #3554 to close first",
+    "#3565 skipped: it waits for #3560 to close first",
+    "#3566 skipped: it waits for #3558 to close first",
+    "#3567 skipped: it waits for #3558 to close first",
+    "#3568 skipped: it waits for #3557, #3558 to close first",
+    "#3569 skipped: it waits for #3558 to close first",
+    "#3570 skipped: it waits for #3551, #3553, #3555, #3560, #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3553, #3566 to close first",
+    "#3572 skipped: it waits for #3549, #3551, #3552, #3553, #3555, #3556, #3557, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3548, #3549, #3550, #3551, #3552, #3553, #3554, #3555, #3556, #3557, #3558, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3608 skipped: it waits for #3607 to close first",
+    "#3609 skipped: it waits for #3607, #3608 to close first",
+    "#3610 skipped: it waits for #3607, #3608, #3609 to close first"
+  ]
+}
