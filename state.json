@@ -16639,6 +16639,23 @@
       "round_tier": "strong",
       "run_id": "43113293137",
       "runs_on": "ubuntu-latest",
+      "session": {
+        "action": "build",
+        "artifact": 13898586705,
+        "artifact_bytes": 423168,
+        "artifact_name": "work",
+        "at": "2026-11-11T23:03:35Z",
+        "bytes": 517828,
+        "cwd": "/home/runner/work/_temp/work/item-3727",
+        "ended": "interrupted: `claude-8` stops mid-call: 5-hour usage is 86%, at or over its 85% cap; it resets at 2026-11-12T01:10:00Z",
+        "head": "392805bd1e95d285e6e68a7efcbf9edd7bc75e3e",
+        "id": "5eb0ad1b-d48b-46f7-b424-cbf787537cea",
+        "kind": "build",
+        "model": "opus",
+        "project": "-home-runner-work--temp-work-item-3727",
+        "provider": "claude-8",
+        "run": "43113293137"
+      },
       "started_at": "2026-11-11T22:37:12Z",
       "stop_requested": false,
       "strike_log": [
