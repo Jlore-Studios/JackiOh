@@ -4,7 +4,7 @@
 //! whole graph rather than by sampling routes. Each check has a hand-built map that fails it.
 
 use super::*;
-use crate::config::MAP_SEEDS;
+use crate::config::{MAP_SEEDS, RUN_ELITE_TIERS, RUN_TIERS};
 use crate::fight_tests::catalog_content;
 
 /// A run on `content` from seed `n` of the sweep, its starting deck the content's first starting cards.
@@ -226,6 +226,125 @@ fn r3583000_r3583001_every_seeds_map_meets_at_the_bosses_and_every_route_holds_i
     }
     assert!(spread, "no map offers a fast way and a slow one");
     assert!(mixed, "no row mixes fights and tiles");
+}
+
+#[test]
+fn r3586000_an_acts_rows_spread_evenly_over_its_tiers_and_its_boss_stands_one_higher() {
+    // R3586000: an act's rows climb its `RUN_ACT_TIERS` tiers a step of 0 or 1 at a time, from its
+    // lowest on its first row to its highest on its last before the boss, each tier on as many rows as
+    // another or one more (the lower tiers taking the extra rows), and its boss one tier higher.
+    for act in 0..RUN_ACTS {
+        let first_row = act * (RUN_ACT_ROWS + 1);
+        let lowest = act * (RUN_ACT_TIERS + 1) + 1;
+        let tiers: Vec<usize> = (first_row..first_row + RUN_ACT_ROWS).map(row_tier).collect();
+        assert_eq!(tiers[0], lowest, "act {act}'s first row: {tiers:?}");
+        assert_eq!(
+            tiers[RUN_ACT_ROWS - 1],
+            lowest + RUN_ACT_TIERS - 1,
+            "act {act}'s last row before its boss: {tiers:?}"
+        );
+        assert!(
+            tiers.windows(2).all(|w| w[1] == w[0] || w[1] == w[0] + 1),
+            "act {act} climbs a tier at a time: {tiers:?}"
+        );
+        let counts: Vec<usize> = (lowest..lowest + RUN_ACT_TIERS)
+            .map(|tier| tiers.iter().filter(|at| **at == tier).count())
+            .collect();
+        assert!(counts.iter().all(|count| *count > 0), "act {act}: {counts:?}");
+        assert!(
+            counts.windows(2).all(|w| w[0] == w[1] || w[0] == w[1] + 1),
+            "act {act} spreads its rows evenly, the lower tiers first: {counts:?}"
+        );
+        assert_eq!(
+            row_tier(first_row + RUN_ACT_ROWS),
+            lowest + RUN_ACT_TIERS,
+            "act {act}'s boss"
+        );
+    }
+    let bosses: Vec<usize> = (0..RUN_ACTS * (RUN_ACT_ROWS + 1))
+        .filter(|row| boss_row(*row))
+        .map(row_tier)
+        .collect();
+    assert_eq!(bosses, [5, 10, 15]);
+    assert_eq!(row_tier(RUN_ACTS * (RUN_ACT_ROWS + 1) - 1), RUN_TIERS.len());
+}
+
+#[test]
+fn r3586000_each_fight_nodes_tier_follows_its_row_and_climbs_along_every_route() {
+    // R3586000: every fight node the map deals holds its row's tier, an elite one its table holds, and
+    // every route meets the tiers in rising order: by dynamic programming, the highest tier met on any
+    // route into a fight node is at most its own, and a fight straight after another is at most one
+    // tier above it. The bosses are tiers 5, 10 and 15.
+    let elite_tiers: Vec<usize> = RUN_ELITE_TIERS.iter().map(|(tier, _)| *tier).collect();
+    for (tag, content) in [
+        ("placeholder", run_placeholder_content()),
+        ("catalog", catalog_content()),
+    ] {
+        for n in 0..MAP_SEEDS {
+            let map = deal(&content, n).map;
+            let mut met: Vec<Vec<usize>> = Vec::new();
+            let mut bosses = Vec::new();
+            for (r, row) in map.iter().enumerate() {
+                let mut here = Vec::new();
+                for (c, node) in row.iter().enumerate() {
+                    let before = r
+                        .checked_sub(1)
+                        .map(|below| {
+                            map[below]
+                                .iter()
+                                .zip(&met[below])
+                                .filter(|(from, _)| from.next.contains(&c))
+                                .map(|(_, tier)| *tier)
+                                .max()
+                                .unwrap_or(0)
+                        })
+                        .unwrap_or(0);
+                    let tier = match &node.enemy {
+                        Some(enemy) => enemy.tier,
+                        None => {
+                            assert!(
+                                !node.kind.is_fight(),
+                                "{tag} seed {n}: fight {r}/{c} has no enemy"
+                            );
+                            here.push(before);
+                            continue;
+                        }
+                    };
+                    assert_eq!(tier, row_tier(r), "{tag} seed {n}: node {r}/{c}");
+                    assert!(
+                        (1..=RUN_TIERS.len()).contains(&tier),
+                        "{tag} seed {n}: node {r}/{c}"
+                    );
+                    assert!(
+                        tier >= before,
+                        "{tag} seed {n}: node {r}/{c} at tier {tier} after tier {before}"
+                    );
+                    // A fight straight after a fight is at its tier or the next.
+                    for j in &node.next {
+                        if let Some(next) = &map[r + 1][*j].enemy {
+                            assert!(
+                                next.tier == tier || next.tier == tier + 1,
+                                "{tag} seed {n}: {r}/{c} at tier {tier} leads to tier {}",
+                                next.tier
+                            );
+                        }
+                    }
+                    if node.kind == RunNodeKind::Elite {
+                        assert!(
+                            elite_tiers.contains(&tier),
+                            "{tag} seed {n}: elite {r}/{c} at {tier}"
+                        );
+                    }
+                    if node.kind.is_boss() {
+                        bosses.push(tier);
+                    }
+                    here.push(tier);
+                }
+                met.push(here);
+            }
+            assert_eq!(bosses, [5, 10, 15], "{tag} seed {n}");
+        }
+    }
 }
 
 #[test]

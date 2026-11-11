@@ -120,4 +120,23 @@ exclude_re = [
   # times the weights' total down by each card's weight, as `pick_by` does: `< 0.0` and `<= 0.0` part only
   # on a roll exactly at a running sum, one draw in 2^32 at a given bound.
   'cosmetic_pack\.rs:.*replace < with <= in pick_card',
+  # crates/shared (#3513): level_for_xp's closed-form guess only saves steps. The two loops after it walk
+  # any guess to the highest level whose total is at most the XP, so a mutant of the guess's arithmetic
+  # answers the same level, slower. So do the loop bounds that only add a step: the down loop's
+  # `level > 1` as `>= 1` and its total's `>` as `>=` (one step down, one back up), its `&&` as `||`
+  # (down to level 1, then all the way up), and the up loop's `< u32::MAX` as `<=` (at the top, the next
+  # level's total is past any XP). The up loop's own mutants are not equivalent; economy/math.rs's
+  # tests reach them with guesses one short.
+  'economy/math\.rs:.*replace (/|\+|\*) with (%|\*|-|\+|/) in level_for_xp',
+  'economy/math\.rs:.*replace (&& with \|\||> with >=|< with <=) in level_for_xp',
+  # crates/shared (#3513): a card pack's card pick (`draw_card`) walks a roll times the weights' total
+  # down by each card's weight, as `pick_card` above does.
+  'economy/roll\.rs:.*replace < with <= in draw_card',
+  # crates/shared (#3513): reward_for_level's arm for level 10 pays what its arm for every tenth level
+  # does, so without it level 10 is paid the same.
+  'delete match arm 10 in reward_for_level',
+  # crates/shared (#3513): reader_keyword keeps the longest term a text names. Two terms of one length a
+  # text both names would be one id (each is the text or its start before a space), and no id is a
+  # candidate twice (the glossary's are only those the keywords lack), so `>` and `>=` keep the same one.
+  'face/chinese\.rs:.*replace > with >= in reader_keyword',
 ]
