@@ -1092,6 +1092,8 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             if hero_check(sink) || crate::win_conditions::win_check(sink) {
                 return;
             }
+            // R3569000: with Tears of the Kwzki Tree in force, every card turns Radiant on the settled board.
+            crate::effects::radiant::radiate_world(sink);
             // R3536001, R3536002: the settled board: standing "Evolves when" conditions and cards
             // marked to enter evolved evolve now, queuing their Evolve texts behind the check.
             crate::evolution::evolve_standing(sink);

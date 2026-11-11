@@ -237,6 +237,11 @@ slashedLane?: number,
  */
 chainsMade?: number, 
 /**
+ * R3569000: Tears of the Kwzki Tree resolved: every card is Radiant for the rest of the game, a
+ * card made later at the next settled check. Absent until then (D14).
+ */
+radiantWorld?: boolean, 
+/**
  * R1956001: each Created card's generator by instance id: the catalog id of the card whose
  * script minted it, or that card's own generator when it was Created too
  * (`generators::record_generator`). Presentation only (CLAUDE.md rule 7): no rule reads it,

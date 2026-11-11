@@ -1824,6 +1824,11 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub chains_made: Option<u32>,
+    /// R3569000: Tears of the Kwzki Tree resolved: every card is Radiant for the rest of the game, a
+    /// card made later at the next settled check. Absent until then (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub radiant_world: Option<bool>,
     /// R1956001: each Created card's generator by instance id: the catalog id of the card whose
     /// script minted it, or that card's own generator when it was Created too
     /// (`generators::record_generator`). Presentation only (CLAUDE.md rule 7): no rule reads it,
@@ -2825,6 +2830,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         black_hole: None,
         slashed_lane: None,
         chains_made: None,
+        radiant_world: None,
         generators: IndexMap::new(),
         win_rates: None,
         fused_scripts: crate::scripts::FusedScripts::default(),
@@ -3012,7 +3018,7 @@ pub fn active_first(state: &GameState) -> [PlayerId; 2] {
 }
 
 /// Every place a card can be, in `find_instance`'s order, for one side.
-fn side_cards(side: &PlayerState) -> impl Iterator<Item = &CardInstance> {
+pub(crate) fn side_cards(side: &PlayerState) -> impl Iterator<Item = &CardInstance> {
     side.hand
         .iter()
         .chain(side.library.iter())

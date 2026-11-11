@@ -146,6 +146,11 @@ builds reads its own game's hold without the state (R2201001).
   R3554006) and `chain_units` (`chainUnits`, R3554007); the sweep (R3554008) is
   `StaticFlags.sweep_lane`/`sweep_adjacent` with `combat::sweep_weight` and `combat::sweep`, and the
   occupied summon (R3554009) is `SummonPlacement.exile_below`.
+- S+ S22 (issue #3569, R3569000–R3569008) adds `GameState.radiant_world` (set by `effects/radiant.rs`'s
+  `make_all_radiant`, kept true of every card by `radiate_world` at the settled state check, R3569000),
+  the card scope's `CardZone::Graveyard` and `CardZone::Exile` (R3569001), the verb `fuse_board_into`
+  (`effects/fuse.rs`, R3569002) and `lose_max_mana` (`effects/mana.rs`, R3569008). Every new field is
+  absent until set, so old games hash the same.
 - `countering.rs` is counters (§4.2, §6.3, R3550005): `counter_declared_attack` and
   `counter_activation`, read by `combat::declare_instead` and `activate::{activate_ability,
   run_owed_activation}`; `effects/combat.rs` is the forced attack `forced_attack` (`forcedAttack`,

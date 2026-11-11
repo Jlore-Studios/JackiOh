@@ -21,8 +21,10 @@ use crate::layers::unit_has;
 use crate::script::{Effect, EffectContext, Hook, hook};
 use crate::state::{CardInstance, GameState, find_instance, new_instance};
 use crate::subsystems::fuse::{FuseArgs, HandPrice, fuse};
-use crate::wire::{CardDef, KeywordKind, PlayerId, Zone, ZoneName};
-use crate::zones::is_buried;
+use crate::wire::{CardDef, CardType, KeywordKind, PlayerId, Row, Zone, ZoneName, opponent_of};
+use crate::zones::{
+    StandingAt, ZoneSlot, acting_on, beneath_at, cease_to_exist, first_entry_zone, is_buried,
+};
 
 /// R77 and R86: an ingredient that is only a definition, made in `{ z: "gone" }` (where the subsystem
 /// moves a consumed one): in no pile, so no zone event fires and nothing can target or return it.
@@ -706,5 +708,87 @@ pub fn fuse_generated(args: FuseGeneratedArgs) -> Effect {
         {
             card.cost_override = Some(cost);
         }
+    })
+}
+
+/// `fuseBoardInto`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct FuseBoardIntoArgs {
+    /// The fresh card every Unit fuses into: it is the kept card, so its name leads the fusion's.
+    pub def_id: String,
+    /// The fresh card is summoned on its Radiant face (S+ Supernova's Radiant face).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
+}
+
+/// R3569002 (S+ Supernova): "Fuse all Units in the board into an Alnilam". Every Unit on the board,
+/// both sides, that the effect reaches is taken out, as an ingredient of a fusion ceases to exist
+/// (R77, R86: no Death, nothing destroyed), a fresh `defId` is summoned on the caster's side, and it
+/// is the card the ingredients fuse into. A Dormant Unit, an Immutable one, and one the casting Spell
+/// may not affect (Immune to Spells) stay on the board (R1839000, R781001, E35). With no Unit to fuse the
+/// card is summoned alone, and with no room for it, once the Units that stood on the caster's side
+/// are out, nothing changes at all. The subsystem's `fuse` makes the fusion (R77), so the kept card is
+/// kept whatever it is immune to.
+pub fn fuse_board_into(args: FuseBoardIntoArgs) -> Effect {
+    Effect::new("fuseBoardInto", move |ctx| {
+        let caster = ctx.controller;
+        let mut ingredients: Vec<CardInstance> = Vec::new();
+        for player in [caster, opponent_of(caster)] {
+            let units: Vec<CardInstance> = acting_on(ctx.state, player, StandingAt::ItsLane)
+                .into_iter()
+                .filter(|card| crate::faces::card_type_of(ctx.state, card) == CardType::Unit)
+                .filter(|card| {
+                    !crate::restrictions::unaffected_by(ctx, card)
+                        && !crate::restrictions::immutable_in_play(ctx.state, card)
+                })
+                .cloned()
+                .collect();
+            ingredients.extend(units);
+        }
+        // Room: a unit zone for the new card, free now or freed by a Unit of the caster's that goes.
+        let frees_a_zone = ingredients.iter().any(|card| match card.zone {
+            Zone::Field {
+                player,
+                row: Row::Units,
+                lane,
+            } if player == caster => beneath_at(
+                ctx.state,
+                ZoneSlot {
+                    player,
+                    row: Row::Units,
+                    lane,
+                },
+            )
+            .is_empty(),
+            _ => false,
+        });
+        if !frees_a_zone && first_entry_zone(ctx.state, caster, Row::Units).is_none() {
+            return;
+        }
+        for card in &ingredients {
+            cease_to_exist(ctx.state, &mut card.clone());
+        }
+        let at = super::summon::SummonPlacement {
+            radiant: args.radiant,
+            ..Default::default()
+        };
+        let Some(kept) = super::summon::summon_fresh(ctx, &args.def_id, caster, &at) else {
+            return;
+        };
+        if ingredients.is_empty() {
+            return;
+        }
+        let mut fused = vec![kept.clone()];
+        fused.extend(ingredients);
+        fuse(
+            ctx,
+            FuseArgs {
+                ingredients: fused,
+                target: Some(kept),
+                ..FuseArgs::default()
+            },
+        );
     })
 }
