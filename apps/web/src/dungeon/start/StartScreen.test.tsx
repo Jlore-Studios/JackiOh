@@ -47,6 +47,7 @@ function dungeonOf(over: Partial<Dungeon> = {}): Dungeon {
     elapsedMs: null,
     resumedAt: null,
     timeMs: null,
+    trail: [],
     notice: null,
     start: vi.fn(() => null),
     act: vi.fn(() => null),

@@ -78,6 +78,13 @@ export type Dungeon = {
   content: RunContent;
   progress: DungeonProgress;
   run: RunState | null;
+  /**
+   * #3587: the columns stepped onto, one per `go` kept in the run's log, in order. The map reads it
+   * to mark the path walked; it is the player's own steps, so the client still judges no rule
+   * (CLAUDE.md rule 7). A folded log's `go` count may trail the rows; the map then simply marks
+   * what lines up and never guesses.
+   */
+  trail: readonly number[];
   /** R3502000: the run's time played in ms as of `resumedAt`, for the timer; null with no run. */
   elapsedMs: number | null;
   /** R3502000: `Date.now()` when the session now running began, or null while the run is paused; null with no run. */
@@ -721,6 +728,14 @@ function snapshot(): Core {
 }
 
 /**
+ * #3587: the columns stepped onto, one per `go` in the kept log, in order. Only `go` moves the
+ * player along the map; every other action leaves no mark on the path.
+ */
+function trailOf(file: RunFile): number[] {
+  return file.log.filter((action) => action.type === "go").map((action) => action.col);
+}
+
+/**
  * The Dungeon run's state and verbs. Each verb answers the run's own refusal, word for word, or null.
  */
 export function useDungeon(): Dungeon {
@@ -734,6 +749,7 @@ export function useDungeon(): Dungeon {
       elapsedMs: live === null ? null : live.elapsedMs,
       resumedAt: live === null ? null : live.resumedAt,
       timeMs: live === null ? null : live.timeMs,
+      trail: live === null ? [] : trailOf(live.file),
       notice,
       start: startRun,
       act: actOn,

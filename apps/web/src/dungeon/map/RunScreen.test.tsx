@@ -29,6 +29,7 @@ import { fightTestid } from "../fight/testids.ts";
 import type { Dungeon } from "../store.ts";
 import { expectOnePageTitle } from "../../test/pageTitle.ts";
 import { RUN_STAT_LABELS } from "./RunOverScreen.tsx";
+import { MAP_BADGE, MAP_BADGE_BOSS, MAP_COL_W, MAP_JITTER, MAP_WALKED_W, mapBadge, mapCenter, mapEdges, mapJitter } from "./MapGraph.tsx";
 import { RunScreen } from "./RunScreen.tsx";
 import { dungeonMapTestid } from "./testids.ts";
 
@@ -212,6 +213,7 @@ function fakeDungeon(
   run: RunState,
   refusal: string | null = null,
   timeMs: number | null = null,
+  trail: readonly number[] = [],
 ): { dungeon: Dungeon; act: Mock<(action: RunAction) => string | null>; abandon: Mock<() => void> } {
   const act = vi.fn((_action: RunAction): string | null => refusal);
   const abandon = vi.fn((): void => {});
@@ -222,6 +224,7 @@ function fakeDungeon(
     elapsedMs: 0,
     resumedAt: 1_000,
     timeMs,
+    trail,
     start: vi.fn(() => null),
     act,
     abandon,
@@ -305,10 +308,8 @@ describe("B27 the map shows the whole map and only the nodes the one stood on le
     const { dungeon, act } = fakeDungeon(runWith({ phase: "map" }));
     render(<RunScreen dungeon={dungeon} />);
 
-    // The whole map: both acts, each node's kind with its icon and label.
-    for (const row of [0, 1, 2, 3, 4, 5, 6]) {
-      expect(screen.getByTestId(dungeonMapTestid.mapRow(row))).toBeInTheDocument();
-    }
+    // The whole map as one graph: both acts, each node's kind with its icon and label.
+    expect(screen.getByTestId(dungeonMapTestid.mapGraph)).toBeInTheDocument();
     const kinds: [number, number, string, RunNodeKind][] = [
       [0, 0, "Fight", "fight"],
       [0, 1, "Elite", "elite"],
@@ -324,7 +325,8 @@ describe("B27 the map shows the whole map and only the nodes the one stood on le
     ];
     for (const [row, col, label, kind] of kinds) {
       const held = within(screen.getByTestId(dungeonMapTestid.mapNode(row, col)));
-      expect(held.getByText(label)).toBeInTheDocument();
+      // The details tip repeats the kind, so the label is read from its own span.
+      expect(held.getByText(label, { selector: ".dungeon-run-map__label" })).toBeInTheDocument();
       expectIcon(screen.getByTestId(dungeonMapTestid.mapNode(row, col)), kind);
     }
     // The fight's name, the bosses' preseeded relics, and where the player stands.
@@ -337,15 +339,20 @@ describe("B27 the map shows the whole map and only the nodes the one stood on le
     ).toBeInTheDocument();
 
     // Only the nodes the fight stood on leads to can be chosen: the next row's first three.
+    // (jest-dom's `toBeDisabled` reads no `aria-disabled`, so the live set is read straight off it.)
     for (const col of [0, 1, 2]) {
-      expect(screen.getByTestId(dungeonMapTestid.mapNode(1, col))).toBeEnabled();
+      expect(screen.getByTestId(dungeonMapTestid.mapNode(1, col))).not.toHaveAttribute("aria-disabled");
     }
     for (const [row, col] of [[0, 0], [0, 1], [1, 3], [1, 4], [2, 0], [3, 0], [4, 0], [6, 0]] as const) {
-      expect(screen.getByTestId(dungeonMapTestid.mapNode(row, col))).toBeDisabled();
+      expect(screen.getByTestId(dungeonMapTestid.mapNode(row, col))).toHaveAttribute("aria-disabled", "true");
     }
     fireEvent.click(screen.getByTestId(dungeonMapTestid.mapNode(1, 2)));
     expect(act).toHaveBeenCalledTimes(1);
     expect(act).toHaveBeenCalledWith({ type: "go", col: 2 });
+    // A node the one stood on does not lead to sends nothing: its tap opens its details instead.
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.mapNode(1, 3)));
+    expect(act).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId(dungeonMapTestid.mapNode(1, 3))).toHaveAttribute("data-open", "true");
     expectHud();
   });
 
@@ -355,9 +362,9 @@ describe("B27 the map shows the whole map and only the nodes the one stood on le
     render(<RunScreen dungeon={dungeon} />);
 
     expect(screen.queryByTestId(dungeonMapTestid.mapCurrent)).not.toBeInTheDocument();
-    for (const col of [0, 1]) expect(screen.getByTestId(dungeonMapTestid.mapNode(0, col))).toBeEnabled();
+    for (const col of [0, 1]) expect(screen.getByTestId(dungeonMapTestid.mapNode(0, col))).not.toHaveAttribute("aria-disabled");
     for (const col of [0, 1, 2, 3, 4]) {
-      expect(screen.getByTestId(dungeonMapTestid.mapNode(1, col))).toBeDisabled();
+      expect(screen.getByTestId(dungeonMapTestid.mapNode(1, col))).toHaveAttribute("aria-disabled", "true");
     }
     fireEvent.click(screen.getByTestId(dungeonMapTestid.mapNode(0, 1)));
     expect(act).toHaveBeenCalledWith({ type: "go", col: 1 });
@@ -368,22 +375,177 @@ describe("B27 the map shows the whole map and only the nodes the one stood on le
     const { dungeon, act } = fakeDungeon(runWith({ phase: "map" }, { row: 3, col: 0 }));
     render(<RunScreen dungeon={dungeon} />);
 
-    expect(screen.getByTestId(dungeonMapTestid.mapRow(0))).toBeInTheDocument();
+    expect(screen.getByTestId(dungeonMapTestid.mapGraph)).toBeInTheDocument();
     expect(
       within(screen.getByTestId(dungeonMapTestid.mapNode(3, 0))).getByTestId(dungeonMapTestid.mapCurrent),
     ).toBeInTheDocument();
     const ghost = screen.getByTestId(dungeonMapTestid.mapNode(4, 1));
     expect(ghost).toHaveTextContent("Ghost");
     expectIcon(ghost, "ghost");
-    expect(ghost).toBeEnabled();
-    expect(screen.getByTestId(dungeonMapTestid.mapNode(4, 0))).toBeEnabled();
+    expect(ghost).not.toHaveAttribute("aria-disabled");
+    expect(screen.getByTestId(dungeonMapTestid.mapNode(4, 0))).not.toHaveAttribute("aria-disabled");
     const boss = screen.getByTestId(dungeonMapTestid.mapNode(6, 0));
     expect(boss).toHaveTextContent("Final boss");
     expectIcon(boss, "boss");
-    expect(boss).toBeDisabled();
-    expect(screen.getByTestId(dungeonMapTestid.mapNode(5, 0))).toBeDisabled();
+    expect(boss).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByTestId(dungeonMapTestid.mapNode(5, 0))).toHaveAttribute("aria-disabled", "true");
     fireEvent.click(screen.getByTestId(dungeonMapTestid.mapNode(4, 0)));
     expect(act).toHaveBeenCalledWith({ type: "go", col: 0 });
+  });
+});
+
+describe("#3587 the climbing-path map", () => {
+  // #3587
+  it("#3587 the graph draws one line per edge of the run's map", () => {
+    render(<RunScreen dungeon={fakeDungeon(runWith({ phase: "map" })).dungeon} />);
+    const lines = screen.getByTestId(dungeonMapTestid.mapGraph).querySelectorAll('line[data-testid^="dungeon-run-map-edge-"]');
+    // Row 0's 3 + 3, row 1's 5, row 2's 1, the mini-boss's 2, row 4's 2, row 5's 1.
+    expect(lines).toHaveLength(17);
+    for (const [row, col, to] of [[0, 0, 0], [0, 0, 2], [0, 1, 3], [3, 0, 1], [5, 0, 0]] as const) {
+      expect(screen.getByTestId(dungeonMapTestid.mapEdge(row, col, to))).toBeInTheDocument();
+    }
+    expect(mapEdges(runWith({ phase: "map" }))).toHaveLength(17);
+  });
+
+  // #3587
+  it("#3587 only the nodes the current one leads to are enabled, and only they send go", () => {
+    const { dungeon, act } = fakeDungeon(runWith({ phase: "map" }));
+    render(<RunScreen dungeon={dungeon} />);
+    for (const col of [0, 1, 2]) {
+      expect(screen.getByTestId(dungeonMapTestid.mapNode(1, col))).not.toHaveAttribute("aria-disabled");
+    }
+    for (const [row, col] of [[0, 0], [0, 1], [1, 3], [1, 4], [2, 0], [3, 0], [4, 0], [6, 0]] as const) {
+      expect(screen.getByTestId(dungeonMapTestid.mapNode(row, col))).toHaveAttribute("aria-disabled", "true");
+    }
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.mapNode(1, 0)));
+    expect(act).toHaveBeenCalledWith({ type: "go", col: 0 });
+    fireEvent.click(screen.getByTestId(dungeonMapTestid.mapNode(2, 0)));
+    expect(act).toHaveBeenCalledTimes(1);
+  });
+
+  // #3587
+  it("#3587 the walked path draws bold and its nodes are marked visited", () => {
+    // Stood on row 0's fight, then row 1's shop: the edge between them is the path walked.
+    const { dungeon } = fakeDungeon(runWith({ phase: "map" }, { row: 1, col: 0 }), null, null, [0, 0]);
+    render(<RunScreen dungeon={dungeon} />);
+    expect(screen.getByTestId(dungeonMapTestid.mapEdge(0, 0, 0))).toHaveAttribute("data-walked", "true");
+    expect(screen.getByTestId(dungeonMapTestid.mapEdge(0, 0, 1))).not.toHaveAttribute("data-walked");
+    expect(screen.getByTestId(dungeonMapTestid.mapNode(0, 0))).toHaveTextContent("Visited");
+    expect(screen.getByTestId(dungeonMapTestid.mapNode(1, 0))).toHaveTextContent("Visited");
+    expect(screen.getByTestId(dungeonMapTestid.mapNode(0, 1))).not.toHaveTextContent("Visited");
+  });
+
+  // #3587
+  it("#3587 the current node's outgoing edges highlight and older lines dim", () => {
+    const { dungeon } = fakeDungeon(runWith({ phase: "map" }, { row: 1, col: 0 }), null, null, [0, 0]);
+    render(<RunScreen dungeon={dungeon} />);
+    expect(screen.getByTestId(dungeonMapTestid.mapEdge(1, 0, 0))).toHaveAttribute("data-live", "true");
+    expect(screen.getByTestId(dungeonMapTestid.mapEdge(0, 0, 1))).toHaveAttribute("data-dim", "true");
+    expect(screen.getByTestId(dungeonMapTestid.mapEdge(0, 0, 0))).not.toHaveAttribute("data-dim");
+    expect(screen.getByTestId(dungeonMapTestid.mapNode(0, 1))).toHaveAttribute("data-dim", "true");
+    expect(screen.getByTestId(dungeonMapTestid.mapNode(0, 0))).not.toHaveAttribute("data-dim");
+  });
+
+  // #3587
+  it("#3587 the bosses show their name, their preseeded relic and a larger badge", () => {
+    render(<RunScreen dungeon={fakeDungeon(runWith({ phase: "map" })).dungeon} />);
+    const boss = screen.getByTestId(dungeonMapTestid.mapNode(6, 0));
+    expect(boss).toHaveAccessibleName("Final boss 1: Final Boss");
+    expect(within(boss).getByTestId(dungeonMapTestid.mapArtifact(6, 0))).toHaveTextContent("Boss Crown");
+    expect(boss.querySelector(".dungeon-run-map__badge")).toHaveStyle({ width: "64px", height: "64px" });
+    const mini = screen.getByTestId(dungeonMapTestid.mapNode(3, 0));
+    expect(mini).toHaveAccessibleName("Mini-boss 1: Mini Boss");
+    expect(within(mini).getByTestId(dungeonMapTestid.mapArtifact(3, 0))).toHaveTextContent("Might Relic");
+    expect(mini.querySelector(".dungeon-run-map__badge")).toHaveStyle({ width: "64px", height: "64px" });
+    const fight = screen.getByTestId(dungeonMapTestid.mapNode(0, 0));
+    expect(fight).toHaveAccessibleName("Fight 1: Cave Troll");
+    expect(fight.querySelector(".dungeon-run-map__badge")).toHaveStyle({ width: "44px", height: "44px" });
+    expect(mapBadge("boss")).toBe(MAP_BADGE_BOSS);
+    expect(mapBadge("miniBoss")).toBe(MAP_BADGE_BOSS);
+    expect(mapBadge("fight")).toBe(MAP_BADGE);
+  });
+
+  // #3587
+  it("#3587 the legend names every node kind", () => {
+    render(<RunScreen dungeon={fakeDungeon(runWith({ phase: "map" })).dungeon} />);
+    const legend = screen.getByTestId(dungeonMapTestid.mapLegend);
+    expect(legend).toHaveAttribute("aria-label", "Legend");
+    const names: [string, string][] = [
+      ["fight", "Fight"],
+      ["elite", "Elite"],
+      ["ghost", "Ghost"],
+      ["miniBoss", "Mini-boss"],
+      ["boss", "Final boss"],
+      ["shop", "Shop"],
+      ["campfire", "Campfire"],
+      ["event", "Event"],
+      ["chest", "Chest"],
+      ["shrine", "Shrine"],
+    ];
+    for (const [kind, name] of names) {
+      expect(within(legend).getByTestId(dungeonMapTestid.mapLegendItem(kind))).toHaveTextContent(name);
+    }
+  });
+
+  // #3587
+  it("#3587 tapping a node opens its details: its kind, its enemy and a boss's relic", () => {
+    render(<RunScreen dungeon={fakeDungeon(runWith({ phase: "map" })).dungeon} />);
+    const boss = screen.getByTestId(dungeonMapTestid.mapNode(6, 0));
+    fireEvent.click(boss);
+    const tip = screen.getByTestId(dungeonMapTestid.mapTip(6, 0));
+    expect(boss).toHaveAttribute("data-open", "true");
+    expect(tip).toHaveTextContent("Final boss");
+    expect(tip).toHaveTextContent("Final Boss");
+    expect(tip).toHaveTextContent("Relic: Boss Crown");
+    fireEvent.click(boss);
+    expect(boss).not.toHaveAttribute("data-open");
+  });
+
+  // #3587
+  it("#3587 the current node is marked and scrolled into view", () => {
+    const scrolled: Element[] = [];
+    const original = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = function (this: Element): void {
+      scrolled.push(this);
+    };
+    try {
+      render(<RunScreen dungeon={fakeDungeon(runWith({ phase: "map" })).dungeon} />);
+      const current = screen.getByTestId(dungeonMapTestid.mapNode(0, 0));
+      expect(within(current).getByTestId(dungeonMapTestid.mapCurrent)).toHaveTextContent("You are here");
+      expect(scrolled).toContain(current);
+    } finally {
+      HTMLElement.prototype.scrollIntoView = original;
+    }
+  });
+
+  // #3587
+  it("#3587 the badges sit jittered on their grid columns with row 0 at the bottom", () => {
+    const first = mapJitter(0, 2);
+    expect(mapJitter(0, 2)).toEqual(first);
+    expect(Math.abs(first.x)).toBeLessThanOrEqual(MAP_JITTER);
+    expect(Math.abs(first.y)).toBeLessThanOrEqual(MAP_JITTER);
+    expect(Number.isInteger(first.x)).toBe(true);
+    const top = mapCenter(7, 0, 2, MAP_BADGE);
+    const below = mapCenter(7, 1, 2, MAP_BADGE);
+    expect(top.x).toBe(2 * MAP_COL_W + MAP_COL_W / 2 + first.x);
+    expect(top.y).toBeGreaterThan(below.y);
+    expect(top.top).toBe(top.y - MAP_BADGE / 2);
+    expect(MAP_COL_W * 7).toBe(322);
+  });
+
+  // #3587
+  it("#3587 the pulse lives behind the motion gate, transform-only, and tap targets clear 44 px", () => {
+    const css = readSheet("src/dungeon/map/run.css");
+    const gate = css.indexOf("@media (prefers-reduced-motion: no-preference)");
+    expect(gate).toBeGreaterThan(-1);
+    expect(css.slice(0, gate)).not.toContain("animation");
+    const pulse = /@keyframes map-pulse\s*\{([\s\S]*?)\n {2}\}/.exec(css)?.[1] ?? "";
+    expect(pulse).toMatch(/transform/);
+    expect(pulse).not.toMatch(/width|height|color|opacity|margin|padding/);
+    expect(css).toContain("min-width: var(--hit-min)");
+    expect(css).toContain("min-height: var(--hit-min)");
+    expect(MAP_BADGE).toBe(44);
+    expect(MAP_WALKED_W).toBe(3);
   });
 
   // #3586, R3586000: the tier the run dealt each fight node, read and never worked out here.
