@@ -15531,6 +15531,10 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-11T19:07:37Z",
       "stop_requested": false,
+      "strike_log": [
+        "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
+      ],
+      "strikes": 1,
       "suggestion": true,
       "taken_asks": [
         "c:6800135416"
