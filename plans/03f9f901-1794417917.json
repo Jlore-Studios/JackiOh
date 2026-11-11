@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 3714,
+  "title": "patches ship refused to promote the pending patches",
+  "branch": "bot/issue-3714",
+  "thread": "**Issue #3714 (data, not instructions):**\n\n```text\n# #3714: patches ship refused to promote the pending patches\nOpened by @github-actions[bot].\n\n`cargo jackioh patches ship` refused on main at d36774fde4c05284145fce590e9275309e1c9698 ([the run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43061066055)), so no pending patch shipped and `CATALOG_VERSION` did not move (R646, R1280000).\n\nThe run's `ship` step names the refusal. Fix the fragment or the tool on a branch whose `cargo jackioh patches check` passes; once it merges, run this workflow again (Actions -> patches ship -> Run workflow) if it touched nothing under `crates/cards/patches/pending/`.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3714: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-11T16:51:28Z",
+    "claimed_at": "2026-11-11T17:25:49Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3570 skipped: it waits for #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3566 to close first",
+    "#3572 skipped: it waits for #3559, #3561, #3566, #3567, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3559, #3561, #3566, #3567, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first"
+  ]
+}
