@@ -18895,7 +18895,7 @@
       }
     },
     "3686": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_early": true,
@@ -18932,11 +18932,13 @@
       },
       "interruptions": 0,
       "issue": 3587,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "fixing-ci",
+      "live": "reviewing",
       "merge_owner": "muse",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-11T07:10:11Z",
         "from_run": "42969600113",
         "gates": [
           {
@@ -19001,11 +19003,11 @@
       "queued_at": "2026-11-11T07:08:33Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "42969600113",
+      "run_id": "pending:e3faacde-1794380981",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-11T06:01:58Z",
+      "started_at": "2026-11-11T07:10:11Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -19547,9 +19549,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T06:58:53Z",
+    "at": "2026-11-11T07:10:11Z",
     "url": "",
-    "what": "plan #3699 on muse"
+    "what": "review #3686 on muse"
   },
   "last_sweep": {
     "at": "2026-11-11T06:54:50Z",
