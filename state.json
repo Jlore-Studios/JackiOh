@@ -18790,6 +18790,7 @@
       "run_id": "42957679571",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "spot_check_n": 205,
       "started_at": "2026-11-11T04:12:08Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -38134,9 +38135,33 @@
         "title": "Patch: dungeon HP refills after every fight, and each win adds 5 max HP",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "muse",
+          "model": "muse-spark-1.3-contributor",
+          "provider": "muse",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "3076d75ff7cb0a068cfb394b871d4b6ae1326e78",
+        "issue": 3667,
+        "merged_at": "2026-11-11T06:28:20Z",
+        "n": 205,
+        "pr": 3682,
+        "queued_at": "2026-11-11T06:28:20Z",
+        "sha": "3a3de664a2af7671dffa0eea43e6384963564a3c",
+        "status": "queued",
+        "title": "Patch: daily super run failed",
+        "tries": 0
       }
     ],
-    "count": 204
+    "count": 205
   },
   "statistics": {
     "at": "2026-11-11T06:16:14Z"
