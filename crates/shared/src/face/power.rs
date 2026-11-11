@@ -195,4 +195,15 @@ mod tests {
         assert_eq!(concealed_text("classicplus-073", true), "!!!");
         assert_eq!(concealed_text("meditative-095", true), "!!!");
     }
+
+    /// B3.4 rule 5: a definition's declared numbers as each face prints them, by key.
+    #[test]
+    fn a_definitions_numbers_are_each_faces_printed_ones() {
+        jackioh_cards::register_all();
+        let def = jackioh_cards::CATALOG.get("core-005").expect("core-005");
+        let base: Vec<(String, i32)> = printed_values(def, false).into_iter().collect();
+        let radiant: Vec<(String, i32)> = printed_values(def, true).into_iter().collect();
+        assert_eq!(base, vec![("draw".to_string(), 2), ("heal".to_string(), 2)]);
+        assert_eq!(radiant, vec![("draw".to_string(), 4), ("heal".to_string(), 4)]);
+    }
 }

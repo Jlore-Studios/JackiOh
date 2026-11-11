@@ -117,19 +117,15 @@ fn contains(outer: (usize, usize), inner: (usize, usize)) -> bool {
 }
 
 /// The marks, each cut at the edge of a reference that it crosses — one it neither holds whole nor lies
-/// inside — so that marks and references always nest.
+/// inside — so that marks and references always nest. A reference that crosses a mark has an edge inside it, and
+/// one apart from it has none, so the edges inside each mark are its cuts; an empty mark marks nothing.
 fn nested_marks(marks: &[TextRange], refs: &[(usize, usize)]) -> Vec<TextRange> {
     let mut out = Vec::new();
-    for mark in marks {
+    for mark in marks.iter().filter(|mark| mark.end > mark.start) {
         let this = (mark.start, mark.end);
         let mut cuts: Vec<usize> = refs
             .iter()
-            .filter(|reference| {
-                reference.0 < mark.end
-                    && mark.start < reference.1
-                    && !contains(this, **reference)
-                    && !contains(**reference, this)
-            })
+            .filter(|reference| !contains(this, **reference) && !contains(**reference, this))
             .flat_map(|reference| [reference.0, reference.1])
             .filter(|point| *point > mark.start && *point < mark.end)
             .collect();
@@ -148,7 +144,6 @@ fn nested_marks(marks: &[TextRange], refs: &[(usize, usize)]) -> Vec<TextRange> 
             end: mark.end,
         });
     }
-    out.retain(|range| range.end > range.start);
     out
 }
 
@@ -542,5 +537,64 @@ mod tests {
         );
         let flat: String = spans.iter().map(text).collect();
         assert_eq!(flat, "Deal damage {4} twice {C}");
+    }
+
+    /// R280, R372: a value prints the word the view names it by, and its number where that word is empty or absent.
+    #[test]
+    fn r280_a_value_prints_its_word_and_its_number_where_the_word_is_empty() {
+        let value = |display: Option<&str>| PreviewValue {
+            label: "grade".to_string(),
+            value: 3,
+            display: display.map(str::to_string),
+            ids: None,
+        };
+        assert_eq!(printed_value(&value(Some("C"))), "C");
+        assert_eq!(printed_value(&value(Some(""))), "3");
+        assert_eq!(printed_value(&value(None)), "3");
+    }
+
+    /// R280: the nth value of a label prints after the label's nth occurrence, so three values of one label sit one
+    /// after each of its three occurrences.
+    #[test]
+    fn r280_each_value_follows_its_labels_own_occurrence() {
+        let text: Vec<char> = "damage, damage, damage.".chars().collect();
+        let values: Vec<PreviewValue> = (1..=3)
+            .map(|value| PreviewValue {
+                label: "damage".to_string(),
+                value,
+                display: None,
+                ids: None,
+            })
+            .collect();
+        let at: Vec<usize> = inserts_of(&text, &values)
+            .iter()
+            .map(|insert| insert.at)
+            .collect();
+        assert_eq!(at, vec![6, 14, 22]);
+    }
+
+    /// R279: a mark is cut at the edge of a reference it crosses, on either side, and kept whole where it holds a
+    /// reference, lies inside one or only touches one; an empty mark marks nothing.
+    #[test]
+    fn r279_a_mark_is_cut_only_where_a_reference_crosses_it() {
+        let cut = |mark: (usize, usize), reference: (usize, usize)| -> Vec<(usize, usize)> {
+            nested_marks(
+                &[TextRange {
+                    start: mark.0,
+                    end: mark.1,
+                }],
+                &[reference],
+            )
+            .iter()
+            .map(|range| (range.start, range.end))
+            .collect()
+        };
+        assert_eq!(cut((2, 8), (5, 12)), vec![(2, 5), (5, 8)]);
+        assert_eq!(cut((5, 12), (2, 8)), vec![(5, 8), (8, 12)]);
+        assert_eq!(cut((2, 12), (5, 8)), vec![(2, 12)]);
+        assert_eq!(cut((5, 8), (2, 12)), vec![(5, 8)]);
+        assert_eq!(cut((5, 9), (2, 5)), vec![(5, 9)]);
+        assert_eq!(cut((2, 5), (5, 9)), vec![(2, 5)]);
+        assert!(cut((4, 4), (1, 9)).is_empty());
     }
 }
