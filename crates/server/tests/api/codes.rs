@@ -7,7 +7,6 @@ use axum::body::Body;
 use axum::http::{Request, Response};
 use indexmap::IndexMap;
 use serde::Serialize;
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use tokio::sync::Mutex;
 use tower::ServiceExt;
@@ -23,8 +22,8 @@ use jackioh_server::config::{
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, StoreError, TermsSource};
 
-use crate::support::deps;
-use crate::support::store::hmac_sha256_hex;
+use crate::support::deps::{self, from_json};
+use crate::support::store::{fake, hmac_sha256_hex};
 
 /// A well-formed code (16 symbols, all inside the alphabet) that was never minted.
 const UNMINTED_CODE: &str = "ABCD-EFGH-JKLM-NPQR";
@@ -119,7 +118,7 @@ impl Server {
 async fn code_server() -> Server {
     let env = app::load_server_env(&test_env()).expect("the test environment loads");
     let app = app::build(env).await.expect("the test app builds");
-    store_of(&app).lock().await.reset();
+    fake(&app).lock().await.reset();
     Server {
         router: app::router(app.clone()),
         app,
@@ -142,17 +141,6 @@ async fn server_sharing(store: Arc<Mutex<FakeData>>) -> Server {
     }
 }
 
-fn store_of(app: &App) -> Arc<Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => data.clone(),
-        Db::Pg(_) => panic!("E2E=1 builds the in-memory store"),
-    }
-}
-
-fn from_json<T: DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value).expect("the literal has the port's JSON shape")
-}
-
 fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
     rows.iter()
         .map(|row| serde_json::to_value(row).expect("a row serializes"))
@@ -160,15 +148,15 @@ fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
 }
 
 async fn attempts(server: &Server) -> Vec<Value> {
-    json_rows(&store_of(&server.app).lock().await.tables.attempts)
+    json_rows(&fake(&server.app).lock().await.tables.attempts)
 }
 
 async fn codes(server: &Server) -> Vec<Value> {
-    json_rows(&store_of(&server.app).lock().await.tables.codes)
+    json_rows(&fake(&server.app).lock().await.tables.codes)
 }
 
 async fn profiles(server: &Server) -> Vec<Value> {
-    json_rows(&store_of(&server.app).lock().await.tables.profiles)
+    json_rows(&fake(&server.app).lock().await.tables.profiles)
 }
 
 async fn status_of(server: &Server, id: &str) -> Value {
@@ -242,7 +230,7 @@ async fn seed_caller(server: &Server, id: &str, status: &str, email_verified: bo
         email_verified,
     );
     // `resolve_caller` finds a profile by auth user id, so the seeded row must carry the same one.
-    let _ = store_of(&server.app)
+    let _ = fake(&server.app)
         .lock()
         .await
         .seed_profile(json!({ "id": id, "userId": user_id, "status": status }));
@@ -435,7 +423,7 @@ mod r145_section_9_4_step_1_pending_account_with_a_verified_email {
     async fn r757001_redeem_refuses_consent_owed_without_an_attempt() {
         let server = code_server().await;
         let token = deps::add_user(&server.app, "user-owes", "owes@example.test", true);
-        let _ = store_of(&server.app).lock().await.seed_profile(json!({
+        let _ = fake(&server.app).lock().await.seed_profile(json!({
             "id": "owes", "userId": "user-owes", "status": "pending", "consent": false,
         }));
         let minted = mint(&server, None, None).await;
@@ -474,7 +462,7 @@ mod r145_section_9_4_step_1_pending_account_with_a_verified_email {
         let server = code_server().await;
         let caller = pending_caller(&server, "vanishes").await;
         let minted = mint(&server, None, None).await;
-        let store = store_of(&server.app);
+        let store = fake(&server.app);
 
         let held = store.lock().await;
         let in_flight = tokio::spawn(server.router.clone().oneshot(redeem_request(
@@ -705,7 +693,7 @@ mod section_9_4_step_5_the_lookup {
         let caller = pending_caller(&server, "revoked").await;
         let minted = mint(&server, None, None).await;
         {
-            let store = store_of(&server.app);
+            let store = fake(&server.app);
             let mut data = store.lock().await;
             let stored = data
                 .tables
@@ -909,11 +897,10 @@ async fn timing_server() -> Timed {
     let server = code_server().await;
     let calls = Arc::new(AtomicU64::new(0));
     let counter = calls.clone();
-    store_of(&server.app).lock().await.on_call =
-        Some(Arc::new(move |_method: &str| -> Result<(), StoreError> {
-            counter.fetch_add(1, Ordering::SeqCst);
-            Ok(())
-        }));
+    fake(&server.app).lock().await.on_call = Some(Arc::new(move |_method: &str| -> Result<(), StoreError> {
+        counter.fetch_add(1, Ordering::SeqCst);
+        Ok(())
+    }));
     Timed { server, calls }
 }
 
@@ -981,7 +968,7 @@ mod r107_the_constant_time_failure_floor_build_m6_t1 {
                 // The production threshold stays, so each failure leaves the breaker's window as soon
                 // as it is measured; otherwise §9.4's breaker would trip part-way through and turn the
                 // remaining samples into 503s, a different branch than the three under test.
-                store_of(&server.app).lock().await.tables.attempts.clear();
+                fake(&server.app).lock().await.tables.attempts.clear();
             }
         }
 
@@ -1117,7 +1104,7 @@ mod section_9_4_the_global_circuit_breaker {
             503
         );
 
-        let second = server_sharing(store_of(&first.app)).await;
+        let second = server_sharing(fake(&first.app)).await;
         let token = deps::add_user(
             &second.app,
             "user-second-router",
@@ -1265,7 +1252,7 @@ mod r2124000_idempotency_key {
         assert_eq!(codes(&server).await[0]["uses"], json!(1));
         assert_eq!(attempts(&server).await.len(), 1);
         assert_eq!(
-            store_of(&server.app)
+            fake(&server.app)
                 .lock()
                 .await
                 .tables
@@ -1304,7 +1291,7 @@ mod r2124000_idempotency_key {
         let caller = pending_caller(&server, "refused-first").await;
         let minted = mint(&server, None, None).await;
         let set_revoked = |revoked: bool| {
-            let store = store_of(&server.app);
+            let store = fake(&server.app);
             let id = minted.id.clone();
             async move {
                 let mut data = store.lock().await;
@@ -1323,7 +1310,7 @@ mod r2124000_idempotency_key {
         assert_eq!(refused.status, 400, "{}", refused.text);
         assert_eq!(refused.error_message(), REDEMPTION_IDENTICAL_ERROR);
         assert!(
-            store_of(&server.app)
+            fake(&server.app)
                 .lock()
                 .await
                 .tables

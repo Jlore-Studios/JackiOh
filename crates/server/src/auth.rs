@@ -1310,8 +1310,6 @@ pub enum E2eDeletion {
     Unsupported,
     /// The test double's: the user and every token of theirs stop verifying.
     Deletes,
-    /// The provider answers this `unavailable` message (a test of the retry path).
-    Fails(String),
 }
 
 #[derive(Clone, Debug)]
@@ -1487,7 +1485,6 @@ impl E2eAuth {
             E2eDeletion::Unsupported => Err(AuthError::Unavailable(
                 ACCOUNT_DELETION_UNAVAILABLE_MESSAGE.to_string(),
             )),
-            E2eDeletion::Fails(message) => Err(AuthError::Unavailable(message)),
             E2eDeletion::Deletes => {
                 state.users.shift_remove(user_id);
                 state.tokens.retain(|_, owner| owner != user_id);

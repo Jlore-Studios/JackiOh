@@ -7,25 +7,18 @@ use serde_json::{Value, json};
 use jackioh_server::api::consent::utc_year_month;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{BIRTH_YEAR_EARLIEST, MIN_ACCOUNT_AGE_YEARS, TERMS_VERSION};
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{ConsentRow, Db, TermsSource};
+use jackioh_server::db::store::{ConsentRow, TermsSource};
 
 use crate::support::deps::{add_user, call, test_app};
+use crate::support::store::fake;
 
 const CONSENT: &str = "/api/account/consent";
-
-fn store_of(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => data.clone(),
-        Db::Pg(_) => panic!("the test app runs on the in-memory store"),
-    }
-}
 
 /// A verified user with a profile of `status` that has recorded no consent, and its token.
 async fn owing(app: &Arc<App>, id: &str, status: &str) -> String {
     let user_id = format!("user-{id}");
     let token = add_user(app, &user_id, &format!("{id}@example.test"), true);
-    let _ = store_of(app).lock().await.seed_profile(json!({
+    let _ = fake(app).lock().await.seed_profile(json!({
         "id": id, "userId": user_id, "status": status, "consent": false,
     }));
     token

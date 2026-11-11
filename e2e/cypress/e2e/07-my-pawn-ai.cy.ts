@@ -5,6 +5,7 @@
 
 import { CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import { seedFor, timeouts } from "../../support/config.ts";
+import { ensureSeat } from "../../support/hotseat.ts";
 import {
   ANIMATING,
   END_TURN,
@@ -69,14 +70,6 @@ function handOf(state: GameStateLike, player: PlayerId): { id: string; defId: st
 /** §3.2: only a unit pile's top card is active, so it is the one this spec clicks. */
 function unitAt(state: GameStateLike, player: PlayerId, lane: Lane) {
   return (peek(state, player).units ?? [])[lane - 1]?.[0];
-}
-
-/** BUILD M5-T3: hand the hotseat device to the seat that has to act. */
-function ensureSeat(player: PlayerId): void {
-  cy.jackioh().then((handle) => {
-    expect(handle.seat, "window.__jackioh.seat names the seat holding the device").to.not.eq(undefined);
-    if (handle.seat !== player) cy.handOver();
-  });
 }
 
 /** R82 guarantees active players can end turn; a disabled control is a real failure. */

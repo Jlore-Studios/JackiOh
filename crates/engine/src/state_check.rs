@@ -26,7 +26,7 @@ use crate::wire::{
     AttackHealth, GameEvent, GameOverReason, HookKind, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Position,
     Row, Winner, Zone, ZoneName, ZoneRef, has_keyword,
 };
-use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, paused_of};
+use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, engine_resume, paused_of};
 use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot, live_or};
 
 /// Every unit on the field: the top of each unit zone's pile in lane order, then the Units the carriers hold
@@ -341,17 +341,7 @@ pub fn owed_deaths_of(resume: &Resume) -> Option<DeathPass> {
 fn plan_for(pass: &DeathPass, owner: PlayerId) -> ResumePlan {
     let mut data: IndexMap<String, Value> = IndexMap::new();
     data.insert(PASS_KEY.to_string(), pass_json(pass));
-    WorkPlan::new(
-        Resume {
-            def_id: String::new(),
-            hook: DEATHS_WORK.to_string(),
-            step: DEATHS_STEP.to_string(),
-            radiant: false,
-            instance_id: None,
-            data,
-        },
-        owner,
-    )
+    WorkPlan::new(engine_resume(DEATHS_WORK, DEATHS_STEP, data), owner)
 }
 
 /// Park the rest of the pass (R113) with the default owner (the active player): the item lands at the
@@ -366,14 +356,7 @@ fn owe_deaths(sink: &mut EngineSink<'_>, pass: &DeathPass, step: Option<&PausedS
             serde_json::to_value(step).expect("a paused step is plain JSON (§9.3)"),
         );
     }
-    let resume = Resume {
-        def_id: String::new(),
-        hook: DEATHS_WORK.to_string(),
-        step: DEATHS_STEP.to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    };
+    let resume = engine_resume(DEATHS_WORK, DEATHS_STEP, data);
     crate::work::push_work(sink, resume, None);
 }
 

@@ -7,9 +7,7 @@ use axum::body::Body;
 use axum::http::Request;
 use indexmap::IndexMap;
 use serde::Serialize;
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
-use tokio::sync::Mutex;
 use tower::ServiceExt;
 
 use jackioh_server::api::catalog::Catalog;
@@ -18,11 +16,10 @@ use jackioh_server::api::collection::{
 };
 use jackioh_server::api::http::{ApiError, ApiErrorCode, AuthLevel};
 use jackioh_server::app::{self, App};
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, StoreError};
+use jackioh_server::db::store::StoreError;
 
-use crate::support::deps;
-use crate::support::store::fail_on;
+use crate::support::deps::{self, from_json};
+use crate::support::store::{fail_on, fake};
 
 const PROFILE: &str = "p1";
 const USER: &str = "u1";
@@ -70,7 +67,7 @@ async fn built_app() -> App {
 /// active fixtures would otherwise fill both ledger tables).
 async fn serve(app: App) -> Server {
     let app = Arc::new(app);
-    store_of(&app).lock().await.reset();
+    fake(&app).lock().await.reset();
     Server {
         router: app::router(app.clone()),
         app,
@@ -118,17 +115,6 @@ fn json_request(method: &str, path: &str, body: Option<Value>, token: Option<&st
     builder.body(body).expect("a well-formed request")
 }
 
-fn store_of(app: &App) -> Arc<Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => data.clone(),
-        Db::Pg(_) => panic!("E2E=1 builds the in-memory store"),
-    }
-}
-
-fn from_json<T: DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value).expect("the literal has the port's JSON shape")
-}
-
 fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
     rows.iter()
         .map(|row| serde_json::to_value(row).expect("a row serializes"))
@@ -137,12 +123,12 @@ fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
 
 /// The collection table's rows.
 async fn collection_rows(server: &Server) -> Vec<Value> {
-    json_rows(&store_of(&server.app).lock().await.tables.collection)
+    json_rows(&fake(&server.app).lock().await.tables.collection)
 }
 
 /// The grants table's rows.
 async fn grant_rows(server: &Server) -> Vec<Value> {
-    json_rows(&store_of(&server.app).lock().await.tables.grants)
+    json_rows(&fake(&server.app).lock().await.tables.grants)
 }
 
 /// The server's clock (`app::now_ms`): what it stamps rows with and counts its windows on. Not the
@@ -153,7 +139,7 @@ fn now_ms() -> i64 {
 
 /// An active profile row and an auth user who verifies as it; answers the bearer token.
 async fn active_profile(server: &Server, id: &str, user_id: &str) -> String {
-    let _ = store_of(&server.app)
+    let _ = fake(&server.app)
         .lock()
         .await
         .seed_profile(json!({ "id": id, "userId": user_id, "status": "active" }));
@@ -387,7 +373,7 @@ mod grant_cards_section_9_4_one_transaction_both_tables {
         let (server, _token) = setup().await;
         let calls = Arc::new(AtomicUsize::new(0));
         let counter = calls.clone();
-        store_of(&server.app).lock().await.on_call =
+        fake(&server.app).lock().await.on_call =
             Some(Arc::new(move |_method: &str| -> Result<(), StoreError> {
                 counter.fetch_add(1, Ordering::SeqCst);
                 Ok(())
@@ -524,7 +510,7 @@ mod owned_map_section_9_4_l5_s_input {
     #[tokio::test]
     async fn does_not_leak_another_profile_s_entitlements() {
         let (server, _token) = setup().await;
-        let _ = store_of(&server.app)
+        let _ = fake(&server.app)
             .lock()
             .await
             .seed_profile(json!({ "id": "p2", "userId": "u2", "status": "active" }));
@@ -617,7 +603,7 @@ mod the_routes_section_9_4_no_client_path_writes_the_collection {
     #[tokio::test]
     async fn a_pending_account_gets_403_section_9_4_no_collection_before_an_invite_code_is_redeemed() {
         let local = fresh_server().await;
-        let _ = store_of(&local.app)
+        let _ = fake(&local.app)
             .lock()
             .await
             .seed_profile(json!({ "id": PROFILE, "userId": USER, "status": "pending" }));

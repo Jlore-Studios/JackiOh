@@ -17,13 +17,13 @@ use crate::prompts::run_start_of_game;
 use crate::script::EngineSink;
 use crate::scripts::flags_of;
 use crate::state::{
-    CardInstance, EngineError, GameState, MulliganSeat, PendingChoice, PromptOption, Resume, WorkItem,
-    find_instance, find_instance_mut, handicap_of, new_instance,
+    CardInstance, EngineError, GameState, MulliganSeat, PendingChoice, PromptOption, WorkItem, find_instance,
+    find_instance_mut, handicap_of, new_instance,
 };
 use crate::state_check::state_check;
 use crate::turn::{clear_return_flags, start_turn};
 use crate::wire::{GameEvent, PLAYER_IDS, PerPlayer, Phase, PlayerId, PromptKind, Selection, Zone};
-use crate::work::{owe, paused};
+use crate::work::{engine_resume, owe, paused};
 use crate::zones::{LibraryPosition, MoveToZoneOptions, OffFieldZone, move_to_zone};
 
 fn seat_of(player: PlayerId) -> usize {
@@ -76,14 +76,7 @@ fn mulligan_prompt(sink: &EngineSink, player: PlayerId) -> PendingChoice {
         craft_mode: None,
         craft_offer: None,
         streak: None,
-        resume: Resume {
-            def_id: String::new(),
-            hook: "mulligan".to_string(),
-            step: "mulligan".to_string(),
-            radiant: false,
-            instance_id: None,
-            data,
-        },
+        resume: engine_resume("mulligan", "mulligan", data),
     }
 }
 
@@ -521,17 +514,7 @@ fn owe_setup(sink: &mut EngineSink, owed: Value) {
         .to_string();
     let mut data = indexmap::IndexMap::new();
     data.insert("owed".to_string(), owed);
-    owe(
-        sink,
-        Resume {
-            def_id: String::new(),
-            hook: SETUP_WORK.to_string(),
-            step,
-            radiant: false,
-            instance_id: None,
-            data,
-        },
-    );
+    owe(sink, engine_resume(SETUP_WORK, &step, data));
 }
 
 /// `work.rs`'s handler for `SETUP_WORK`: setup, continued where a question stopped it (R113, R122).

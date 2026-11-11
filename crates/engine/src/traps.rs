@@ -22,6 +22,7 @@ use crate::state::{
 };
 use crate::stays::LaterMoves;
 use crate::wire::{GameEvent, GameEventType, PlayerId, Row, ZoneName};
+use crate::work::engine_resume;
 
 /// A trap trigger. R99: a trap fires when its trigger's `on` matches the event **and** its `when` admits
 /// it. R61 makes `run` returning `[]` mean "fired, consumed, did nothing", so a condition that must leave
@@ -498,14 +499,7 @@ fn owe_firing(sink: &mut EngineSink<'_>, firing: TrapFiring) {
         "firing".to_string(),
         serde_json::to_value(&firing).expect("a trap firing is plain JSON (§10.1)"),
     );
-    let resume = Resume {
-        def_id: String::new(),
-        hook: TRAP_FIRING_WORK.to_string(),
-        step: "firing".to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    };
+    let resume = engine_resume(TRAP_FIRING_WORK, "firing", data);
     crate::work::owe(sink, resume);
 }
 
@@ -908,14 +902,7 @@ fn owe_window(
         Value::Object(kept.into_iter().collect()),
     );
     data.insert("mark".to_string(), Value::from(mark));
-    let resume = Resume {
-        def_id: String::new(),
-        hook: TRAP_WINDOW_WORK.to_string(),
-        step: TRAP_WINDOW_STEP.to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    };
+    let resume = engine_resume(TRAP_WINDOW_WORK, TRAP_WINDOW_STEP, data);
     // R177: the remainder exists only when a trap still owed the event watches it, and whether a
     // face-down one does is its controller's to know (R33), so it takes no number (`owe_unnumbered`).
     crate::work::owe_unnumbered(sink, resume, None);

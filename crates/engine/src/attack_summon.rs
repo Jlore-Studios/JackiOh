@@ -17,8 +17,9 @@ use serde_json::Value;
 
 use crate::combat::AttackTarget;
 use crate::script::EngineSink;
-use crate::state::{CardInstance, DeclaredAttack, GameState, Resume, find_instance};
+use crate::state::{CardInstance, DeclaredAttack, GameState, find_instance};
 use crate::wire::{CardType, PlayerId};
+use crate::work::engine_resume;
 
 /// R113: the `resume.hook` of a Prime's combat or a substitute's bounce a question stopped.
 pub const ATTACK_SUMMON_HOOK: &str = "@attackSummon";
@@ -115,17 +116,7 @@ fn owe_record(sink: &mut EngineSink<'_>, step: &str, owed: &OwedAttackSummon) {
         serde_json::to_value(owed).expect("an owed attack summon is plain JSON (§10.1)"),
     );
     // R113: owed as an engine sequence at the moment it pauses, never in advance (R117).
-    crate::work::owe(
-        sink,
-        Resume {
-            def_id: String::new(),
-            hook: ATTACK_SUMMON_HOOK.to_string(),
-            step: step.to_string(),
-            radiant: false,
-            instance_id: None,
-            data,
-        },
-    );
+    crate::work::owe(sink, engine_resume(ATTACK_SUMMON_HOOK, step, data));
 }
 
 // The replacement (R1202)

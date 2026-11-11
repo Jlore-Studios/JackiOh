@@ -54,6 +54,7 @@ import type {
   Side,
   ZoneRef,
 } from "./types.ts";
+import { isPicked } from "./ux.ts";
 
 /** ASSUMPTION A1: where `seedGame` parks the fixture decks so a reload keeps them. */
 export const DECKS_STORAGE_KEY = "jackioh.e2e.decks";
@@ -267,16 +268,6 @@ function clickPick(...selectors: string[]): void {
 
 /** Any `prompt-option-<key>`, so a picker can be answered without naming a key. */
 const ANY_PROMPT_OPTION = `[data-testid^="${promptOptionId("")}"]`;
-
-/**
- * Whether a toggle is already chosen. A4: the client marks a picked option with `aria-pressed` (`Prompt.tsx`), the
- * board with `data-selected`; either counts, and it may sit on the clickable ancestor of an inner-label testid.
- */
-function isPicked($option: JQuery<HTMLElement>): boolean {
-  const marked = $option.closest('[aria-pressed], [data-selected]');
-  const element = marked.length > 0 ? marked : $option;
-  return element.attr("aria-pressed") === "true" || element.attr("data-selected") === "true";
-}
 
 /** BUILD M5-T4: assert the animation this command just caused, and run `during`, before the drain. */
 function captureAnimating(options: ActOptions): void {
