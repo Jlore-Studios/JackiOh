@@ -1558,20 +1558,34 @@ pub(crate) fn verify_round_trip<S>(
 }
 
 /// What one game's checkpoint crossed and what it cost: whether it restarted from paused work and
-/// the cost in milliseconds.
+/// its round trip's cost in milliseconds.
 struct CheckpointReport {
     paused: bool,
     ms: u128,
 }
 
 /// Assertion 4 (#1387): state survives serialized restart at checkpoint step.
-/// Fails in "checkpoint" stage or past `CHECKPOINT_TIME_BOUND_MS` (#1803).
+/// Fails in "checkpoint" stage, or when its round trip takes longer than `CHECKPOINT_TIME_BOUND_MS`
+/// (#1803, #3712).
 fn check_serial_restart(
     setup: &GameSetup,
     decks: &(Vec<String>, Vec<String>),
     log: &[Action],
     live: &GameState,
     paused: &[usize],
+) -> Result<CheckpointReport, FuzzFailure> {
+    check_serial_restart_with(setup, decks, log, live, paused, reduce)
+}
+
+/// `check_serial_restart`, the rest of the log applied to the restored state through `continue_with`
+/// (`reduce`; a test plants a slow one, #3712).
+fn check_serial_restart_with(
+    setup: &GameSetup,
+    decks: &(Vec<String>, Vec<String>),
+    log: &[Action],
+    live: &GameState,
+    paused: &[usize],
+    continue_with: Reducer,
 ) -> Result<CheckpointReport, FuzzFailure> {
     let at = At {
         turn: live.turn,
@@ -1595,8 +1609,11 @@ fn check_serial_restart(
     let started_at = Instant::now();
     let mut state = verify_round_trip(&prefix.state, hash_state, round_trip)
         .map_err(|message| FuzzFailure::new(FailureStage::Checkpoint, message, at))?;
+    // #3712: the restart's cost ends here. The continuation below is the game's own `reduce`, checked
+    // for the live hash and ending but not timed: its cost grows with the game, as the prefix fold's does.
+    let ms = started_at.elapsed().as_millis();
     for action in &log[step..] {
-        let result = reduce(&state, action);
+        let result = continue_with(&state, action);
         if let Some(error) = &result.error {
             return Err(FuzzFailure::new(
                 FailureStage::Checkpoint,
@@ -1631,11 +1648,12 @@ fn check_serial_restart(
             at,
         ));
     }
-    let ms = started_at.elapsed().as_millis();
     if ms > CHECKPOINT_TIME_BOUND_MS {
         return Err(FuzzFailure::new(
             FailureStage::Checkpoint,
-            format!("checkpoint took {ms}ms, past CHECKPOINT_TIME_BOUND_MS ({CHECKPOINT_TIME_BOUND_MS}ms)"),
+            format!(
+                "the checkpoint's round trip took {ms}ms, past CHECKPOINT_TIME_BOUND_MS ({CHECKPOINT_TIME_BOUND_MS}ms)"
+            ),
             at,
         ));
     }
@@ -1648,9 +1666,11 @@ fn check_serial_restart(
 // Growth inside one action (#1254)
 
 /// The most wall-clock time one game's serialized restart may take (#1387): the state's round trip
-/// through JSON, its hashes, and the continuation from the restored state. It does not time the prefix
-/// fold that rebuilds the checkpoint state from turn 0: that setup cost grows with the checkpoint's
-/// position and a loaded runner stretched it past the bound (#1803: seed 1557 handicapped).
+/// through JSON and its two hashes. It times neither the prefix fold that rebuilds the checkpoint state
+/// from turn 0 nor the continuation from the restored state: both are the game's own `fold` and
+/// `reduce`, which grow with its length and board, and a loaded runner stretched each past the bound
+/// (#1803: seed 1557 handicapped, the fold; #3712: seed 247, a Zephrys dry run on a 300-instance
+/// board, the continuation). The continuation is still held to the live hash and ending.
 pub const CHECKPOINT_TIME_BOUND_MS: u128 = 5_000;
 
 /// The most events one action may emit. Bounds runaway growth before settle cap (§10.3),
@@ -2039,7 +2059,8 @@ pub fn probe_stride() -> usize {
     }
 }
 
-/// What a probe's forged action goes through: `reduce`, or in a test a broken one it must catch.
+/// What a probe's forged action, or a checkpoint's continuation (#3712), goes through: `reduce`, or in
+/// a test a broken or slow one it must catch.
 type Reducer = fn(&GameState, &Action) -> ReduceResult;
 
 /// What a probe's `result` did wrong (§9.3, §10.2): with `owed` `None` it owed a refusal with no
@@ -3706,6 +3727,8 @@ pub(crate) mod tests {
     }
 
     mod fuzz_serial_restart {
+        use std::cell::Cell;
+
         use super::*;
 
         #[test]
@@ -3802,6 +3825,57 @@ pub(crate) mod tests {
                 failure.message.contains("the game is over"),
                 "{}",
                 failure.message
+            );
+        }
+
+        /// How long the planted continuation sleeps before its first action: far over seed 1's round
+        /// trip, so a clock that still counted the continuation would report at least this much.
+        const PLANTED_CONTINUATION_MS: u64 = 300;
+
+        thread_local! {
+            /// Whether the planted continuation has slept yet on this thread.
+            static PLANTED_SLEPT: Cell<bool> = const { Cell::new(false) };
+        }
+
+        /// `reduce`, after sleeping `PLANTED_CONTINUATION_MS` before the first action on this thread.
+        fn slow_continuation(state: &GameState, action: &Action) -> ReduceResult {
+            if !PLANTED_SLEPT.with(|slept| slept.replace(true)) {
+                std::thread::sleep(std::time::Duration::from_millis(PLANTED_CONTINUATION_MS));
+            }
+            reduce(state, action)
+        }
+
+        /// #3712: the bound times the restart, the round trip and its hashes, never the continuation's
+        /// own `reduce`: one planted slow still passes, and the report carries the round trip's cost.
+        #[test]
+        fn the_checkpoint_clock_times_the_round_trip_and_not_the_continuation() {
+            let _preview = preview_every_set();
+            let run = seed_one();
+            let setup = GameSetup::gate(1);
+            let (step, _) = checkpoint_step(&setup.stream("checkpoint-"), &run.paused, run.log.len());
+            assert!(
+                step < run.log.len(),
+                "seed 1's checkpoint at {step} of {} leaves nothing to continue",
+                run.log.len()
+            );
+            PLANTED_SLEPT.with(|slept| slept.set(false));
+            let report = check_serial_restart_with(
+                &setup,
+                &run.decks,
+                &run.log,
+                &run.state,
+                &run.paused,
+                slow_continuation,
+            )
+            .unwrap_or_else(|failure| panic!("{}", failure.message));
+            assert!(
+                PLANTED_SLEPT.with(Cell::get),
+                "the continuation went through the planted reducer"
+            );
+            assert!(
+                report.ms < u128::from(PLANTED_CONTINUATION_MS),
+                "the checkpoint's clock counted the continuation: {}ms",
+                report.ms
             );
         }
 
