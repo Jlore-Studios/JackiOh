@@ -19139,6 +19139,8 @@
       }
     },
     "3690": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-11T03:32:25Z",
@@ -19152,8 +19154,11 @@
         "trail": "b147c/tasks/bxnhkf0fk.output; do sleep 20; done; cat /tmp/claude-1001/-home-\u2026\n- said: Still running the \"before\" shards (each is a full Vitest run over a share of the web, Worker and admin tests). I'll pick the results up when the wait task reports back.\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3666/5e4230f8-5fec-4515-9dbd-47bfb95b147c/tasks/bxnhkf0fk.output; ls -la /tmp/before-*.json; cat > /tmp/summary.py <<'EOF'\\nimport \u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport glob, json, os\\nroot = os.getcwd() + \\\"/\\\"\\nrows = {}\\nfor path in sorted(glob.glob(\\\"/tmp/before-*.json\\\")):\\n d = json.load(open(path))\\n print(path, \\\"fai\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport glob, json, os\\nroot = os.getcwd() + \\\"/\\\"\\nfor path in sorted(glob.glob(\\\"/tmp/before-*.json\\\")):\\n d = json.load(open(path))\\n rs = sorted(((round((r[\\\"end\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- Step 2 done (before tables in /tmp/before-k.json): files/wall s per shard 73/131, 73/128, 73/143, 73/154, 73/127, 72/173, 72/165, 72/213 (mean 154, max 21\u2026\n- Bash: {\"command\": \"for f in apps/web/src/routes/almanac.test.tsx apps/web/src/cards/fullArtTiers.test.tsx; do pnpm exec vitest run --project web \\\"$f\\\" --reporter=json --outputFile=/tmp/alone-$(basename $f\u2026\n- Bash: {\"command\": \"cd node_modules/vitest/dist/chunks && grep -n \\\"moduleId\\\" plugin.d.CN87HSxv.d.ts | head -5; grep -n \\\"shard?:\\\" plugin.d.CN87HSxv.d.ts | head; grep -n \\\"interface TestSequencer\\\" -A 14 \u2026\n- Bash: {\"command\": \"sed -n 4374,4384p node_modules/vitest/dist/chunks/plugin.d.CN87HSxv.d.ts; grep -n \\\"weights\\\\|vitest.config\\\\|shard\\\" apps/web/src/net/ci-scope.test.ts | head -20\", \"description\": \"Check\u2026\n- said: Now the files. First `shardWeights.ts`, with the table taken from the measured \"before\" run.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3666/apps/web/src/test/shardWeights.ts\", \"content\": \"// How `web (unit k/8)` (.github/workflows/ci.yml's `web-unit`, #3666) deals the web's, the Worke\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3666/apps/web/src/test/shardWeights.ts\", \"old_string\": \" * a run of the eight shards of main at 13bd66f on a 4-core machine (#36\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3666/apps/web/src/test/shardSequencer.ts\", \"content\": \"// The Vitest sequencer of the root vitest.config.ts (#3666): `--shard=k/K` runs the k-th of th\u2026\n- said: Now the root config and the toml comment.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3666/vitest.config.ts\", \"content\": \"import { defineConfig } from \\\"vitest/config\\\";\\n\\nimport WeightedShardSequencer from \\\"./apps/web/src/test/shardS\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3666/scripts/ci-shards.toml\", \"old_string\": \"# 4 shards ran one past seven minutes (web (unit 1/4), 8m 52s, #3258); 8 is the mos\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3666/apps/web/src/test/shardSequencer.test.ts\", \"content\": \"// @vitest-environment node\\n// The weighted shards of `web (unit k/8)` (#3666): shardWeig\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- Files written: apps/web/src/test/shardWeights.ts (table from before run), shardSequencer.ts, shardSequencer.test.ts, vitest.config.ts (sequence.sequencer)\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web typecheck 2>&1 | tail -8; echo ---; pnpm exec tsc -p tsconfig.json --noEmit 2>&1 | tail -8; echo ---; pnpm exec eslint vitest.config.ts apps/web/src/test 2>&1 | tail \u2026\n- said: All clean. Now step 8: the same eight shards with the new sequencer, in the background.\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- unit test 6/6, apps/web typecheck, root tsc, eslint, ci-scope.test all pass. Started the after loop (/tmp/after-k.json, ~25 min). Don't edit apps/ until i\u2026\n- said: The \"after\" loop is running (about 25 minutes). I'll wait for its completion notice and won't edit anything under `apps/` meanwhile.\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3666/5e4230f8-5fec-4515-9dbd-47bfb95b147c/tasks/b0xxn0mxe.output; python3 -I /tmp/summary.py after; python3 -I - <<'EOF'\\nimport gl\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport glob, json\\ndef names(prefix):\\n s=set()\\n for p in glob.glob(f\\\"/tmp/{prefix}-*.json\\\"):\\n s |= {r[\\\"name\\\"] for r in json.load(open(p))[\\\"testResults\\\"]}\\n\u2026\n- Bash: {\"command\": \"git status --short; pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' 2>&1 | t\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- Step 8 done: after wall s per shard 170/145/142/150/150/145/151/147 (files 69,70,72,74,73,74,75,75; mean 150, max 170, ratio 1.13; before max 213, ratio 1\u2026\n- Bash: {\"command\": \"pkill -f \\\"vitest run --project web --changed\\\" ; tail -c 1500 /tmp/claude-1001/-home-runner-work--temp-work-item-3666/5e4230f8-5fec-4515-9dbd-47bfb95b147c/tasks/bzu5i96y3.output | sed '\u2026\n- tool error: Exit code 144\n- TaskStop: {\"task_id\": \"bkrckt32m\"}\n- Bash: {\"command\": \"git status --short; pgrep -fl vitest | head -3; tail -4 .bot-notes.md | cut -c1-200\", \"description\": \"Check git state, leftover processes, notes tail\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport re\\nt = open(\\\".bot-notes.md\\\").read()\\ni = t.index(\\\"\\\\n## State\\\")\\nhead = t[:i]\\nstate = \\\"\\\"\\\"\\n## State\\n\\nBuild pass 1 (sonnet) finished the work; only\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n\\n## Log\\n\\n- Built wasm (3m45s); ran the eight before shards (~25 min); wrote the files; ran the eight after shards (~25 min); compared them: ratio 1.38 ->\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: web (unit k/8) deals its test files by measured time, not by count\"} --> `web (unit k/8)` now deals its test files across the eight shards by measured time instead of by count. On my 4-core machine the slowest shard dropped from 213 s to 170 s, but I could\u2026"
       },
       "issue": 3666,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-11T05:52:17Z",
         "from_run": "42953430620",
         "gates": [
           {
@@ -19245,7 +19250,11 @@
         "source": "build",
         "until": "2026-11-11T06:21:14Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-11T05:51:14Z",
+      "run_id": "pending:05dcdde9-1794376310",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -19264,6 +19273,9 @@
         "provider": "claude-3",
         "run": "42953430620"
       },
+      "started_at": "2026-11-11T05:52:17Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -19277,9 +19289,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T05:42:54Z",
+    "at": "2026-11-11T05:52:17Z",
     "url": "",
-    "what": "suggestions on claude-3"
+    "what": "review #3690 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-11T05:41:33Z",
