@@ -24,8 +24,13 @@ const SOURCE = join(SRC, "patches/source.ts");
  * The number was chosen as 120 × 8192 (983,040), about 23 KB (2.4%) over the 960,130 bytes the
  * merge queue measured on `main` at f811a74 with this branch merged in. A change that crosses it
  * raises it on purpose, with its measurement in the commit or the pull request.
+ *
+ * #3394 crossed it: its 48 Stinkyscape alt scene recipes are data in the preloaded art chunk, which
+ * a card's picture reads at once. `vite build --mode development`, as CI builds it, measured 980,369
+ * bytes on `main` at 62b8ed2e3d and 987,635 with #3394 merged in (7,266 more). The budget is now
+ * 123 × 8192 (1,007,616), about 20 KB (2.0%) over that: putting `patches.json` back would still cross it.
  */
-export const FIRST_LOAD_GZIP_BUDGET_BYTES = 983_040;
+export const FIRST_LOAD_GZIP_BUDGET_BYTES = 1_007_616;
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -83,13 +88,19 @@ describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
     }
   });
 
-  it("#3499 no built script, a worker's included, holds patch-meta.ts's disk reader", () => {
-    // A bundle that lacks `patchMeta()` (a worker's has its own plugin list) takes the real file,
-    // whose `node:fs` is an empty stub in a browser: the practice worker would die on load.
+  it("#3499 no built script, a worker's included, holds patch-meta.ts's disk reader or patch-meta.browser.ts's bundle", () => {
+    // A bundle that lacks `patchMeta()` (a worker's has its own plugin list) takes `patch-meta.ts`
+    // (whose code carries `holds an entry with no version`) or, under the `browser` condition from
+    // `package.json`'s `imports`, `patch-meta.browser.ts` (whose code carries `holds a patch with no
+    // version string` and statically imports the 650 KB history): either way the worker would carry
+    // the patch history.
     const assets = join(BUILT, "assets");
     const scripts = readdirSync(assets).filter((name) => name.endsWith(".js"));
     expect(scripts.length).toBeGreaterThan(0);
-    const readers = scripts.filter((name) => readFileSync(join(assets, name), "utf8").includes("holds an entry with no version"));
+    const readers = scripts.filter((name) => {
+      const text = readFileSync(join(assets, name), "utf8");
+      return text.includes("holds an entry with no version") || text.includes("holds a patch with no version string");
+    });
     expect(readers).toEqual([]);
   });
 

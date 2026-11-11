@@ -1641,8 +1641,8 @@ fn a_pack_shows_its_size_plus_the_relics_and_only_cards_of_its_kind() {
     );
 }
 
-/// DR3: an artifact's points are its tier's in `RUN_TIER_POINTS`; an id that is no artifact (a blessing, a
-/// presence, an unknown one) is worth nothing.
+/// DR3: an artifact's points are its tier's in `RUN_TIER_POINTS`; an id that is no artifact (a retired
+/// Presence, an unknown one) is worth nothing.
 #[test]
 fn an_artifacts_points_follow_its_tier() {
     let content = content();
@@ -1663,10 +1663,7 @@ fn an_artifacts_points_follow_its_tier() {
     // Hand-checked against DR3's table: bronze 1 up to diamond 5.
     assert_eq!(run_artifact_points(&content, "temp-picky"), 1);
     assert_eq!(run_artifact_points(&content, "temp-crown"), 5);
-    assert_eq!(
-        run_artifact_points(&content, crate::config::RUN_LOOMING_PRESENCE),
-        0
-    );
+    assert_eq!(run_artifact_points(&content, "looming-presence"), 0);
     assert_eq!(run_artifact_points(&content, "no-such-artifact"), 0);
 }
 
@@ -1806,5 +1803,33 @@ fn a_starting_deck_one_card_past_the_size_is_refused() {
             RUN_STARTER_SIZE + 1
         )),
         "{refused}"
+    );
+}
+
+#[test]
+fn r3586001_no_placeholder_enemy_carries_a_presence_and_a_boss_only_its_own() {
+    // R3586001: the Presence artifacts retired with the tiers, and a boss carries only the artifact it
+    // drops, which changes nothing in its fight.
+    assert!(
+        !include_str!("placeholder.json")
+            .to_lowercase()
+            .contains("presence"),
+        "placeholder.json names a Presence"
+    );
+    let content = content();
+    for enemy in &content.enemies {
+        assert!(
+            enemy.artifacts.iter().all(|id| enemy.drop.as_ref() == Some(id)),
+            "{} carries {:?}",
+            enemy.id,
+            enemy.artifacts
+        );
+    }
+    assert!(
+        content
+            .enemies
+            .iter()
+            .any(|enemy| enemy.tier == RunNodeKind::Boss && !enemy.artifacts.is_empty()),
+        "the final boss still carries its own"
     );
 }

@@ -159,4 +159,29 @@ mod tests {
             }
         );
     }
+
+    /// SPEC §14.7: the first ten levels pay as the table says, level by level.
+    #[test]
+    fn the_first_ten_levels_pay_as_the_table_says() {
+        let pays = |jlore, set_packs, card_tokens| LevelReward {
+            jlore,
+            set_packs,
+            card_tokens,
+        };
+        let table = [
+            pays(100, 0, 0),
+            pays(0, 1, 0),
+            pays(50, 0, 0),
+            pays(0, 1, 0),
+            pays(50, 1, 0),
+            pays(50, 0, 0),
+            pays(0, 1, 0),
+            pays(50, 0, 0),
+            pays(0, 1, 0),
+            pays(100, 1, 1),
+        ];
+        for (level, reward) in (1..).zip(table) {
+            assert_eq!(reward_for_level(level), reward, "level {level}");
+        }
+    }
 }

@@ -213,6 +213,18 @@ describe("B19 a run in progress survives a reload", () => {
     expect((stored(DUNGEON_RUN_KEY) as { file: RunFile }).file.log).toHaveLength(2);
   });
 
+  it("#3587 the store keeps the columns stepped onto as the map's walked trail", () => {
+    const dungeon = mount();
+    expect(dungeon.current.trail).toEqual([]);
+    press(() => dungeon.current.start(setupOf()));
+    expect(dungeon.current.trail).toEqual([]);
+    expect(press(() => dungeon.current.act({ type: "go", col: 1 }))).toBeNull();
+    expect(dungeon.current.trail).toEqual([1]);
+    // A reload folds the same log, so the trail survives it.
+    window.dispatchEvent(new Event("pagehide"));
+    expect(reload().current.trail).toEqual([1]);
+  });
+
   it("R3496000 a kept run that will not fold settles once as lost and banks its extractions", () => {
     window.localStorage.setItem(DUNGEON_PROGRESS_KEY, JSON.stringify({ v: 1, unlocks: unlocks({ level: 3 }), embers: 7, daily: null }));
     const file: RunFile = {

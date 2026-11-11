@@ -25,8 +25,8 @@
 # only here again.
 #
 # Those 22 runs failed unseen, so a run whose `publish` fails now opens "CI: GitHub releases failed"
-# for Squishy (`report`, #3632), as promote-staging.yml's does, and the next run that publishes
-# closes it.
+# for the night bot (`report`, #3632, #3676), as promote-staging.yml's does, and the next run that
+# publishes closes it.
 #
 # Three ways in:
 #   push to main        patches.json (a ship or a retcon), technical.json (the technical log, whose
@@ -144,7 +144,7 @@ jobs:
           fi
           echo "### releases: $created created, $edited edited, Latest ${latest:-none}" >> "$GITHUB_STEP_SUMMARY"
 
-  # A run that failed wrote no release, and nothing else says so: it goes to Squishy, as
+  # A run that failed wrote no release, and nothing else says so: it goes to the night bot, as
   # promote-staging.yml's report does, at `priority:medium` since nothing waits on a release. A later
   # failure comments on the open issue, and a run that published closes it. It never checks out or
   # runs code.
@@ -164,9 +164,9 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           PUBLISH: ${{ needs.publish.result }}
           TITLE: "CI: GitHub releases failed"
-          # Who fixes it: Squishy (.squishy/config.json's bot_login) and its queue label.
-          SQUISHY_LOGIN: squishy-squooby
-          SQUISHY_QUEUE: "squishy:build"
+          # Who fixes it: the night bot (.harness/config.json's bot_login) and its queue label.
+          BOT_LOGIN: jgoetzmann-bot
+          BOT_QUEUE: "bot:build"
         run: |
           set -euo pipefail
           open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$TITLE\"" \
@@ -181,7 +181,7 @@ jobs:
           body=$(printf '%s\n' \
             "[releases run]($RUN_URL) failed, so the GitHub releases were not written: a version shipped since has no release, and a release whose title, notes or pre-release flag moved kept the old ones (the failed step's log says why)." \
             "" \
-            "Squishy: this is yours (\`priority:medium\`: nothing waits on a release, but none is written until it is fixed). Read the failed job's log, find the cause and fix it in a pull request on \`main\`. A failure outside your reach (\`.github/\`, a secret such as BOT_GITHUB_TOKEN, GitHub's settings) is a person's: say exactly what they must do. The next run that publishes closes this and writes whatever the failed runs left out." \
+            "Night bot: this is yours (\`priority:medium\`: nothing waits on a release, but none is written until it is fixed). Read the failed job's log, find the cause and fix it in a pull request on \`main\`. A failure outside your reach (\`.github/\`, a secret such as BOT_GITHUB_TOKEN, GitHub's settings) is a person's: say exactly what they must do. The next run that publishes closes this and writes whatever the failed runs left out." \
             "" \
             "---" \
             "_Posted by \`.github/workflows/releases.yml\`._")
@@ -195,7 +195,7 @@ jobs:
             echo "opened $url"
             number=${url##*/}
           fi
-          gh issue edit "$number" --repo "$REPO" --add-assignee "$SQUISHY_LOGIN" --add-label "$SQUISHY_QUEUE" \
+          gh issue edit "$number" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "$BOT_QUEUE" \
             --add-label "priority:medium" \
-            && echo "handed #$number to @$SQUISHY_LOGIN, medium priority" \
-            || echo "::warning::could not hand #$number to @$SQUISHY_LOGIN"
+            && echo "handed #$number to @$BOT_LOGIN, medium priority" \
+            || echo "::warning::could not hand #$number to @$BOT_LOGIN"

@@ -1,7 +1,7 @@
 // #3229: the dungeon map draws each node kind as an SVG in `currentColor`, not as a system emoji,
 // and each node's button keeps the accessible name that says its kind and its testid.
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { RunNode, RunNodeKind } from "@jackioh/run";
@@ -62,7 +62,7 @@ describe("#3229 the node icons are drawn", () => {
       ],
       row: null,
     });
-    render(<MapScreen run={run} content={CONTENT} send={vi.fn()} />);
+    render(<MapScreen run={run} content={CONTENT} trail={[]} send={vi.fn()} />);
 
     const nodes: [number, number, RunNodeKind, string][] = [
       [0, 0, "fight", "Fight"],
@@ -79,9 +79,11 @@ describe("#3229 the node icons are drawn", () => {
     expect(new Set(nodes.map(([, , kind]) => kind))).toEqual(new Set(KINDS));
     for (const [row, col, kind, name] of nodes) {
       const button = screen.getByTestId(dungeonMapTestid.mapNode(row, col));
+      // The details tip repeats the kind, so the label is read from its own span.
+      expect(within(button).getByText(name, { selector: ".dungeon-run-map__label" })).toBeInTheDocument();
       expect(button).toHaveAccessibleName(`${name} ${String(col + 1)}`);
       expect(button.getAttribute("data-kind")).toBe(kind);
-      const icons = button.querySelectorAll(`.dungeon-run-map__icon[aria-hidden="true"] svg[data-icon="${kind}"]`);
+      const icons = button.querySelectorAll(`.dungeon-run-map__badge[aria-hidden="true"] svg[data-icon="${kind}"]`);
       expect(icons, kind).toHaveLength(1);
       expect(button.querySelectorAll("svg"), kind).toHaveLength(1);
       // The old emoji were text: the label, relic and enemy lines are plain ASCII.

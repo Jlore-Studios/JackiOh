@@ -397,3 +397,43 @@ func TestTheOpenersExceptions(t *testing.T) {
 		t.Fatalf("a 404: %v", err)
 	}
 }
+
+// #3675: each answer's X-RateLimit headers are kept for its token, a refusal's too, so the status
+// loop can say how many calls are left without a call of its own.
+func TestEachAnswerKeepsItsTokensCallsLeft(t *testing.T) {
+	Rate.Clear()
+	defer Rate.Clear()
+	left := "4321"
+	o := &opener{answer: func(req *Request) (*Response, error) {
+		header := http.Header{}
+		header.Set("X-RateLimit-Remaining", left)
+		header.Set("X-RateLimit-Limit", "5000")
+		header.Set("X-RateLimit-Reset", "1790000000")
+		if left == "0" {
+			return nil, &HTTPError{URL: req.URL, Code: 404, Msg: "Not Found", Header: header, Body: []byte("{}")}
+		}
+		answer := jsonAnswer(pyjson.New("ok", true))
+		answer.Header = header
+		return answer, nil
+	}}
+	if _, ok := Rate.Left("tok"); ok {
+		t.Fatal("nothing is known before an answer")
+	}
+	client := NewGitHub("o/r", "tok", false, o.open, nil, "")
+	client.Request("GET", "/x", nil, "", false, false)
+	got, ok := Rate.Left("tok")
+	if !ok || got != (RateLeft{Remaining: 4321, Limit: 5000, Reset: time.Unix(1790000000, 0).UTC()}) {
+		t.Fatalf("left %+v %v", got, ok)
+	}
+	left = "0"
+	func() {
+		defer func() { _ = recover() }()
+		client.Request("GET", "/y", nil, "", false, false)
+	}()
+	if got, _ := Rate.Left("tok"); got.Remaining != 0 {
+		t.Fatalf("a refusal's headers: %+v", got)
+	}
+	if _, ok := Rate.Left("other"); ok {
+		t.Fatal("kept by token")
+	}
+}
