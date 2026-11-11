@@ -15493,17 +15493,8 @@
       "verdict_rounds": 0
     },
     "3694": {
-      "action": "plan",
-      "asks": [
-        "c:6800135416"
-      ],
-      "build_next": {
-        "from_run": "43076434484",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-11T19:06:08Z",
-        "until": "2026-11-11T19:36:08Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-11T19:05:56Z",
         "difficulty": "hard",
@@ -15522,10 +15513,9 @@
         "reason": "planned on opus",
         "trail": " -A 6 apps/web/README.md | head -40\", \"description\": \"Find README rows for touched web files\"}\n- Bash: {\"command\": \"grep -n \\\"Rematch.tsx\\\\|routes/match.tsx \\\\|game/net.ts \\\\|duos/socket.ts \\\" apps/web/README.md | head\", \"description\": \"Search README for touched file entries\"}\n- Bash: {\"command\": \"grep -n \\\"Rematch\\\\|net\\\\.ts\\\\|socket\\\\.ts\\\\|match\\\\.tsx\\\" apps/web/README.md | head -20\", \"description\": \"Search README for rematch and net mentions\"}\n- Bash: {\"command\": \"grep -n \\\"Patch:\\\\|--rule\\\\|fragment\\\" docs/issues-and-patches.md | head -30\", \"description\": \"Check patch fragment rules for this kind of change\"}\n- Bash: {\"command\": \"sed -n 118,130p docs/issues-and-patches.md; sed -n 168,180p docs/issues-and-patches.md; sed -n 314,324p docs/issues-and-patches.md\", \"description\": \"Read when a fragment is needed\"}\n- Bash: {\"command\": \"sed -n 1,8p crates/server/tests/export_config.rs | head -4; grep -n \\\"fn now()\\\\|const MATCH_ID\\\\|struct Harness\\\" -A 3 crates/server/tests/actor/match_actor.rs | head -20\", \"description\u2026\n- said: Now I have everything verified. Writing the full draft.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Rule 3, design across crates: the server's reaper and a new close code\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count words in the draft plan\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Rule 3, design across crates: a new close code from crates/server's re\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"old_string\": \"- **A last-second rematch.** The reaper's and an offer's clock reads differ, so an offer clai\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"old_string\": \"- [ ] The 1v1 and co-op pairs pass: 4411 on the sockets, the actor gone past the window, both\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"old_string\": \" - DuosRoute needs nothing: with a view it shows no gone notice and errors only on a refusal,\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"old_string\": \" ```\\n 4411 is used nowhere else (checked).\\n\\n2.\", \"new_string\": \" ```\\n\\n2.\"}\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"old_string\": \" - `crates/server/tests/actor/match_actor.rs`, `drops_a_finished_actor_and_its_queue_task_onc\u2026\n- tool error: <tool_use_error>String to replace not found in file. String: - `crates/server/tests/actor/match_actor.rs`, `drops_a_finished_actor_and_its_queue_task_once_its_window_passed_and_no_socket_is_open`: de\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"old_string\": \"- **No gone notice for a finished, non-voided match.** Rejected: an alert beside a readable r\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; grep -n \\\"tests/actor/match_actor.rs\\\\`, \\\\`drops\\\" .bot-plan.md\", \"description\": \"Recount and check edit landed\"}\n- Bash: {\"command\": \"sed -n 128,140p .bot-plan.md\", \"description\": \"Show step 10 lines for exact edit\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"old_string\": \"10. **Old server tests** assert what R3694000 replaces. Rework them; delete no test.\\n - `tes\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"old_string\": \"Governing: SPEC \\u00a79.5, \\u00a713.9; R672, R679, R1107000, R1115000, R1285000, R1398000, R3\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"old_string\": \"- **An attach racing the eviction** gets 4411, or #3678's 1001 then the refusal, as today.\\n-\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"old_string\": \" - After `settle({ advance: 3 * PERIOD })`, `reads.rematch()` is still 1.\\n - The #1899 tests\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"old_string\": \"- **A rebuilt actor's window opens at its rebuild.** Rejected: the row's `finished_at`.\", \"ne\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\nThis revises the earlier (sonnet) plan in four places:\\n- It keeps the `now - finished_at > TTL` test, since `in_rematch_window` would leave `REMATCH_OFFER\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"old_string\": \"The match and co-op clients never reconnect on 4411. `/match/<id>` keeps the result panel wit\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"old_string\": \" - `apps/web/src/game/net.ts`: import `MATCH_OVER_CLOSE_CODE` from `@jackioh/server-config` (\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"offset\": 1, \"limit\": 10}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3694/.bot-plan.md\", \"offset\": 200, \"limit\": 40}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule 3, design across crates: a new close code from crates/server's reapers, exported to and honoured by apps/web's match, co-op and rematch clients, which must agree on it.\"} --> ## Goal On each reaper tick, a finished 1v1 match whose rematch window is over\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-11T18:07:01Z",
       "owner_why": "handed off from `muse`: `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z",
@@ -15538,12 +15528,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-11T15:38:20Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43076434484",
+      "run_id": "pending:fd5b65fb-1794424012",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-11T18:17:54Z",
+      "started_at": "2026-11-11T19:07:37Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6800135416"
+      ]
     },
     "3695": {
       "action": "plan",
@@ -16296,9 +16288,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T18:39:29Z",
+    "at": "2026-11-11T19:07:37Z",
     "url": "",
-    "what": "plan #3695 on claude-1"
+    "what": "build #3694 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-11T18:35:21Z",
