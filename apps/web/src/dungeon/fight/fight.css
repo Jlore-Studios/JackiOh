@@ -54,7 +54,7 @@
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-3);
 }
 
 .dungeon-fight__tier {
