@@ -400,6 +400,9 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   }
 
   if (watching !== null && view.result !== null) {
+    // #3698: the replay names the other side as the ranks read does, when it has come and holds a name.
+    const opponentSeat = ranks === null ? undefined : [ranks.seats.p1, ranks.seats.p2].find((seat) => !seat.you);
+    const opponentName = opponentSeat === undefined || opponentSeat.username === "" ? undefined : opponentSeat.username;
     return (
       <CatalogContext.Provider value={lookup}>
         <OpenedReplay
@@ -407,6 +410,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           load={() => openOnlineMatchReplay(token, matchId)}
           start={watching.share ? "last" : "first"}
           shareOnOpen={watching.share}
+          {...(opponentName === undefined ? {} : { opponentLabel: opponentName })}
           // #936 B59: the finished match's replay, shared with a friend.
           actions={<ShareWithFriend matchId={matchId} />}
           onLeave={() => {

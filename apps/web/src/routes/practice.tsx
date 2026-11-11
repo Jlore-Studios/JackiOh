@@ -1032,6 +1032,13 @@ function PracticeScreen({
     return <LoadingScreen onBack={onBackFromLoading} />;
   }
 
+  // The enemy hero's seat names the AI and the difficulty, composed from translated words
+  // alone so no new dictionary entry is needed (R711000: every t() key needs a zh-CN entry).
+  const enemyLabel =
+    config.sandbox === true
+      ? `${t("AI")} · ${t("Sandbox")}`
+      : `${t("AI")} · ${t(DIFFICULTY_LABEL[config.difficulty])}`;
+
   if (watching !== null && watching.game === game && replaySource !== null) {
     const player = (
       <ReplayPlayer
@@ -1040,6 +1047,8 @@ function PracticeScreen({
         start={watching.share ? "last" : "first"}
         shareOnOpen={watching.share}
         onLeave={onLeaveReplay}
+        // #3698: the live board's label, none for a lesson, which draws none live.
+        {...(config.lesson === undefined ? { opponentLabel: enemyLabel } : {})}
       />
     );
     return (
@@ -1076,12 +1085,6 @@ function PracticeScreen({
       </button>
     </>
   );
-  // The enemy hero's seat names the AI and the difficulty, composed from translated words
-  // alone so no new dictionary entry is needed (R711000: every t() key needs a zh-CN entry).
-  const enemyLabel =
-    config.sandbox === true
-      ? `${t("AI")} · ${t("Sandbox")}`
-      : `${t("AI")} · ${t(DIFFICULTY_LABEL[config.difficulty])}`;
   const modifierCount = (snapshot.view.you.modifiers?.length ?? 0) + (snapshot.view.opponent.modifiers?.length ?? 0);
   const showStatus = state.thinking || modifierCount > 0;
   const unearned =

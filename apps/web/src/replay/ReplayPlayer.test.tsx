@@ -63,10 +63,14 @@ async function advance(ms: number): Promise<void> {
   });
 }
 
-async function open(source: FakeReplaySource = fakeReplaySource(steps), onLeave: () => void = vi.fn()): Promise<FakeReplaySource> {
+async function open(
+  source: FakeReplaySource = fakeReplaySource(steps),
+  onLeave: () => void = vi.fn(),
+  opponentLabel?: string,
+): Promise<FakeReplaySource> {
   render(
     <CatalogContext.Provider value={lookup}>
-      <ReplayPlayer source={source} onLeave={onLeave} />
+      <ReplayPlayer source={source} onLeave={onLeave} {...(opponentLabel === undefined ? {} : { opponentLabel })} />
     </CatalogContext.Provider>,
   );
   await flush();
@@ -589,6 +593,29 @@ describe("R169 the modifier list in the replay", () => {
     expect(shownStep()).toBe(0);
     expect(screen.queryByTestId(modifierListTestid.chip)).toBeNull();
     expect(screen.queryByTestId(modifierListTestid.panel)).toBeNull();
+  });
+});
+
+describe("#3698 the replay names the opponent it is given", () => {
+  const seat = (side: "you" | "opponent"): string | null => screen.getByTestId(testid.hero(side)).querySelector(".hero-seat")?.textContent ?? null;
+
+  async function openModifiers(opponentLabel?: string): Promise<string | null> {
+    await open(fakeReplaySource(withModifiersAt(1)), vi.fn(), opponentLabel);
+    await press(replayTestid.forwardStep);
+    fireEvent.click(screen.getByTestId(modifierListTestid.chip));
+    return Array.from(screen.getByTestId(modifierListTestid.panel).querySelectorAll(".modifier-list__who"), (who) => who.textContent).join("|");
+  }
+
+  it("#3698 opponentLabel names the opponent hero's seat and the modifier list", async () => {
+    expect(await openModifiers("Bob#12")).toBe("You|Bob#12");
+    expect(seat("opponent")).toBe("Bob#12");
+    expect(seat("you")).toBe("You");
+  });
+
+  it("#3698 without opponentLabel the seat and the modifier list say Opponent", async () => {
+    expect(await openModifiers()).toBe("You|Opponent");
+    expect(seat("opponent")).toBe("Opponent");
+    expect(seat("you")).toBe("You");
   });
 });
 
