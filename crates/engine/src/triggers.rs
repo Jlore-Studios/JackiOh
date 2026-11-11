@@ -102,6 +102,9 @@ pub const PLAY_WATCH: &str = "@playWatch";
 /// R1882004: the `hook` of a death watcher's queue entry (Stinkyscape #150 Call to Chaos, entry 8).
 pub const DEATH_WATCH: &str = "@deathWatch";
 
+/// R3570004: the `hook` of a launch watcher's queue entry (Stinkyscape+ #142 Call to Chaos, entry 8).
+pub const LAUNCH_WATCH: &str = "@launchWatch";
+
 /// R3536000, R3536003: the `hook` of an Evolve text's queued run (`evolution::begin`): one entry per
 /// run past the inline one, so a prompt in the text pauses the queue rather than dropping the rest.
 /// No card's trigger id starts with `@`.
@@ -931,6 +934,8 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
     queued.extend(offer_to_play_watches(sink, event));
     // R1882004: and Call to Chaos (Stinky Edition)'s, a death of a card printing their tag.
     queued.extend(offer_to_death_watches(sink, event));
+    // R3570004: and Call to Chaos (Mindustrial-Swarm Edition)'s, its holder's own Starship launch.
+    queued.extend(offer_to_launch_watches(sink, event));
     // R212: the removal this event reports, if any, has been answered (`stays::note_reported`).
     crate::stays::note_reported(sink.state, event);
     queued
@@ -1116,6 +1121,42 @@ fn offer_to_death_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<Q
     queued
 }
 
+/// R3570004: offer one event to the launch watchers (`ModifierKind::LaunchWatch`) of the player whose
+/// Starship it reports. A watch matches its holder's own `starshipLaunched` (the opponent's launch is not
+/// its holder's, as a play watch answers only its owner's plays): one `LAUNCH_WATCH` entry each, its data
+/// holding `watcher` and `instanceId` (the ship), in the order the watches were made.
+fn offer_to_launch_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<QueuedTrigger> {
+    let GameEvent::StarshipLaunched {
+        player, instance_id, ..
+    } = event
+    else {
+        return Vec::new();
+    };
+    let mut answers: Vec<(String, Resume)> = Vec::new();
+    for modifier in &sink.state.players[*player].mods {
+        if let crate::state::ModifierKind::LaunchWatch { resume, .. } = &modifier.kind {
+            answers.push((modifier.id.clone(), resume.clone()));
+        }
+    }
+    let mut queued: Vec<QueuedTrigger> = Vec::new();
+    for (id, resume) in answers {
+        let (entry_id, seq) = next_entry_id(sink.state, false, "w");
+        let mut data = resume.data.clone();
+        data.insert("instanceId".to_string(), Value::String(instance_id.clone()));
+        data.insert("watcher".to_string(), Value::String(player.as_str().to_string()));
+        let entry = QueuedTrigger {
+            id: entry_id,
+            seq,
+            instance_id: id,
+            hook: LAUNCH_WATCH.to_string(),
+            resume: Resume { data, ..resume },
+        };
+        sink.state.trigger_queue.push(entry.clone());
+        queued.push(entry);
+    }
+    queued
+}
+
 /// R2396000: whether this card answers "Whenever this destroys a Unit" even once it is gone: one of its
 /// field triggers on a `destroyed` is `even_if_gone` (Meditative #95.1 CN Golem).
 pub fn answers_kills_when_gone(state: &GameState, card: &CardInstance) -> bool {
@@ -1196,8 +1237,13 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
         return;
     }
     // MD-B22, R946: a lane watcher's answer — the stored resume runs as its owner; R1863000: a play
-    // watcher's the same, and R1882004: a death watcher's, as the dead card's controller.
-    if entry.hook == LANE_WATCH || entry.hook == PLAY_WATCH || entry.hook == DEATH_WATCH {
+    // watcher's the same, and R1882004: a death watcher's, as the dead card's controller; R3570004: a
+    // launch watcher's, as the launching player.
+    if entry.hook == LANE_WATCH
+        || entry.hook == PLAY_WATCH
+        || entry.hook == DEATH_WATCH
+        || entry.hook == LAUNCH_WATCH
+    {
         let watcher = entry.resume.data.get("watcher").and_then(Value::as_str);
         let owner = PLAYER_IDS
             .into_iter()

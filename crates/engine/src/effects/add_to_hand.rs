@@ -48,6 +48,8 @@ struct HandRiders {
     keywords: Option<Vec<Keyword>>,
     /// R3565000: the Tribute X the card has while it is in a hand or a deck (0: none).
     tribute: Option<i32>,
+    /// R3570001: the card is marked to enter the field evolved (R3536002), when its text prints an Evolve hook.
+    enters_evolved: Option<bool>,
 }
 
 /// `costMod` adds (R65 sums it); `costOverride` and `radiant` replace. The Radiant flag goes on first,
@@ -162,7 +164,12 @@ fn put_in_hand_with(ctx: &mut EffectContext<'_>, mut card: CardInstance, riders:
 /// `defId` with these riders, into that player's hand through §2.4's pipeline.
 fn create_in_hand(ctx: &mut EffectContext<'_>, def_id: &str, riders: &HandRiders) {
     let player = player_of(ctx, riders.player.unwrap_or(PlayerSpec::SelfSide));
-    let card = new_instance(&mut *ctx.state, def_id, player, Zone::Hand { player });
+    let mut card = new_instance(&mut *ctx.state, def_id, player, Zone::Hand { player });
+    // R3570001: R3536002's mark, which rides the card from the hand to the field; a card whose text
+    // prints no Evolve hook is given none.
+    if riders.enters_evolved == Some(true) && crate::evolution::can_evolve(&*ctx.state, &card) {
+        card.enters_evolved = Some(true);
+    }
     crate::generators::record_generator(ctx, &card);
     let id = card.id.clone();
     put_in_hand_with(ctx, card, riders);
@@ -273,6 +280,7 @@ impl AddToHandArgs {
             fixed_x: self.fixed_x,
             keywords: None,
             tribute: None,
+            enters_evolved: None,
         }
     }
 }
@@ -372,6 +380,10 @@ pub struct AddRandomFromCatalogArgs {
     /// Tribute X each card added has while in a hand or a deck, in place of its printed one (0: none).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tribute: Option<i32>,
+    /// R3570001 (Stinkyscape+ #142's "random Evolved Swarm cards"): each card added is marked to enter the
+    /// field evolved (R3536002), when its text prints an Evolve hook; a card with none is added plain.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enters_evolved: Option<bool>,
 }
 
 impl AddRandomFromCatalogArgs {
@@ -393,6 +405,7 @@ impl AddRandomFromCatalogArgs {
             fixed_x: None,
             keywords: self.keywords.clone(),
             tribute: self.tribute,
+            enters_evolved: self.enters_evolved,
         }
     }
 }

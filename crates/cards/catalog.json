@@ -35581,14 +35581,14 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
-      "text": "One of the following random effects:\nAdd {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana.\nAdd {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0).\nSummon two random Radiant Units, make them GIGA.\nSummon or cast {card3|random Jlockeed card|random Jlockeed cards}.\nAdd {card4|Terminus card|Terminus cards} to your hand, replenish 4 mana.\nAdd the Toxopid to your hand, it costs (0).\nToxic {toxic} and Burn {burn} all enemies.\nFor the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon.\nSummon an Mindustrial Golem and a Swarm Golem.\nCast a random Call to Chaos."
+      "text": "One of the following random effects: add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish 4 mana; add the Toxopid to your hand, it costs (0); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "*(three effects)*."
+      "text": "Three different random effects, resolved in the order listed: add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish 4 mana; add the Toxopid to your hand, it costs (0); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
     },
     "params": [
       {
@@ -35597,8 +35597,7 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       },
       {
         "key": "card2",
@@ -35606,8 +35605,7 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       },
       {
         "key": "card3",
@@ -35615,8 +35613,7 @@
         "radiant": 5,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       },
       {
         "key": "card4",
@@ -35624,8 +35621,7 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       },
       {
         "key": "toxic",
@@ -35633,8 +35629,7 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       },
       {
         "key": "burn",
@@ -35642,8 +35637,7 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       }
     ],
     "refs": [
@@ -35674,7 +35668,7 @@
     "token": true,
     "cost": 4,
     "printedRarity": "Legendary",
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 5,
       "health": 5,
@@ -35717,7 +35711,7 @@
     "token": true,
     "cost": 4,
     "printedRarity": "Legendary",
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 5,
       "health": 5,

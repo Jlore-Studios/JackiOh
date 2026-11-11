@@ -100,6 +100,14 @@ pub struct SummonPlacement {
     /// Crater on the arrival as ever.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exile_below: Option<bool>,
+    /// R3570002 (S+ #142 entry 3, "make them GIGA"): the fresh card enters GIGA whatever it prints, taking
+    /// the leftmost four-zone fit (R3546000), else nothing lands. Fresh summons only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub giga: Option<bool>,
+    /// R3570001 (S+ #142.2 Swarm Golem, "a Swarm card that is Evolved"): the fresh card is marked to
+    /// enter evolved (R3536002), when its text prints an Evolve hook. Fresh summons only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enters_evolved: Option<bool>,
 }
 
 /// `summon`'s arguments, the placement's keys beside the rest.
@@ -179,6 +187,8 @@ impl SummonArgs {
             memory: self.memory.clone(),
             backrow_first: self.backrow_first,
             exile_below: self.exile_below,
+            giga: None,
+            enters_evolved: None,
         }
     }
 }
@@ -416,8 +426,9 @@ pub(crate) fn summon_fresh(
     // R3554009: exile the pile below before the zone is read, so the fresh card lands on it.
     exile_below(ctx, player, row, at);
     let flies = summon_flies(ctx.state, &probe);
-    // R3546000: a fresh card printing GIGA takes the leftmost fit, else nothing lands.
-    let giga = crate::giga::enters_giga(ctx.state, &probe);
+    // R3546000: a fresh card printing GIGA takes the leftmost fit, else nothing lands; R3570002: so does
+    // one the summon makes GIGA.
+    let giga = at.giga == Some(true) || crate::giga::enters_giga(ctx.state, &probe);
     let (slot, stands) = zone_and_stance_for(ctx, player, row, at, flies, giga)?;
     summon_fresh_into(ctx, def_id, player, &slot, at, stands)
 }
@@ -469,6 +480,15 @@ fn summon_fresh_into(
     }
     if let Some(memory) = &at.memory {
         card.memory.extend(memory.clone());
+    }
+    // R3570002: made GIGA by a granted keyword, so `place_on_field` stamps the size as it stamps a
+    // printed one (R3546002).
+    if at.giga == Some(true) {
+        card.granted_keywords.push(Keyword::Giga);
+    }
+    // R3570001: marked only when its text prints an Evolve hook (R3536002), a card with none staying as it is.
+    if at.enters_evolved == Some(true) && crate::evolution::can_evolve(&*ctx.state, &card) {
+        card.enters_evolved = Some(true);
     }
     crate::generators::record_generator(ctx, &card);
     if summon_onto(ctx, &mut card, slot, at, None, stands) {
@@ -841,12 +861,45 @@ impl SummonRandomArgs {
     }
 }
 
+/// `summonRandom`'s arguments with the riders a card drawn lands with: `SummonRandomArgs`' keys beside
+/// `keywords`, `giga` and `entersEvolved`. A struct of its own, so the shipped cards that spell
+/// `SummonRandomArgs` out field by field keep compiling (CLAUDE.md rule 6: each card's file is its own).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct SummonRandomWithArgs {
+    #[serde(flatten)]
+    pub random: SummonRandomArgs,
+    /// R3570006 (S+ #142.1 Mindustrial Golem, "a random Mindustrial card that can't attack"): keywords the
+    /// card drawn gains as it lands (`SummonArgs.keywords`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keywords: Option<Vec<Keyword>>,
+    /// R3570002 (S+ #142 entry 3, "make them GIGA"): the card drawn enters GIGA (`SummonPlacement.giga`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub giga: Option<bool>,
+    /// R3570001 (S+ #142.2 Swarm Golem, "a Swarm card that is Evolved"): the card drawn is marked to enter
+    /// evolved where its text prints an Evolve hook (`SummonPlacement.enters_evolved`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enters_evolved: Option<bool>,
+}
+
 /// §6.3 Summon from a random pool (#67 Zoomerbin Oomen, #95 Call to Chaos): one `rng.pick` over
 /// `query({ …, excludeDefId })` (§10.7, §5.1, R387), drawn inside `apply`, never as the effect is built,
 /// which would desync every later replay (§9.3, R60), and before placement, as the def drawn picks the
 /// row (R64, R47, §3.2/R33). R129: it draws only when some card of the pool has a zone to go to.
 /// R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
 pub fn summon_random(args: SummonRandomArgs) -> Effect {
+    summon_random_with(SummonRandomWithArgs {
+        random: args,
+        ..SummonRandomWithArgs::default()
+    })
+}
+
+/// `summon_random` with riders on the card it draws (R3570001, R3570002, R3570006): GIGA, marked to
+/// evolve, and keywords granted as it lands. The draw is still one pick over the pool, made only when
+/// a zone fits the card (R129), a GIGA's four-zone fit included (R3570002).
+pub fn summon_random_with(with: SummonRandomWithArgs) -> Effect {
+    let args = with.random.clone();
     Effect::new("summonRandom", move |ctx| {
         // §5.1: a random pool never offers the card that generated it.
         let own = ctx
@@ -857,12 +910,19 @@ pub fn summon_random(args: SummonRandomArgs) -> Effect {
         let asked: CatalogQueryArgs = args.query.clone().unwrap_or_default();
         let pool = query(&excluding_def_id(Some(&*ctx.state), &asked, own.as_deref()));
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        let at = args.placement();
+        let at = SummonPlacement {
+            giga: with.giga,
+            enters_evolved: with.enters_evolved,
+            ..args.placement()
+        };
         let rows: IndexSet<Row> = pool.iter().filter_map(|def| row_of(def.type_)).collect();
         // R2248000: a Flexible Unit of the pool (Flying has it innately, R3543000) may stand in
         // the backrow when the unit row is full.
+        let giga = at.giga == Some(true);
         let a_flier_lands = || {
-            at.lane.is_none()
+            // R3570002: a GIGA never stands in the backrow, so a flier saves no draw for one.
+            !giga
+                && at.lane.is_none()
                 && pool.iter().any(|def| {
                     def.type_ == CardType::Unit
                         && def
@@ -873,7 +933,12 @@ pub fn summon_random(args: SummonRandomArgs) -> Effect {
                 })
                 && first_entry_zone(ctx.state, player, Row::Backrow).is_some()
         };
-        if !rows.iter().any(|row| zone_for(ctx, player, *row, &at).is_some()) && !a_flier_lands() {
+        // R3570002: a GIGA draw needs the four-zone fit its card will ask for (R129).
+        if !rows
+            .iter()
+            .any(|row| zone_and_stance_for(ctx, player, *row, &at, false, giga).is_some())
+            && !a_flier_lands()
+        {
             return;
         }
 
@@ -882,7 +947,10 @@ pub fn summon_random(args: SummonRandomArgs) -> Effect {
         else {
             return;
         };
-        summon_fresh(ctx, &def_id, player, &at);
+        // R3570006: the keywords go on once it has landed, as `summon`'s `keywords` rider does.
+        if let Some(made) = summon_fresh(ctx, &def_id, player, &at) {
+            grant_summon_keywords(ctx, &made, with.keywords.clone().unwrap_or_default());
+        }
     })
 }
 

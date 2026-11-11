@@ -1157,6 +1157,25 @@ pub const CHAOS_TG_EVERY: i32 = 1;
 /// the cap resolves into nothing.
 pub const CHAOS_TG_ALTERNATE_CAP: i32 = 3;
 
+// §8.12 row 142 S+ #142 Call to Chaos (Mindustrial-Swarm Edition), R3570000–R3570005.
+/// §8.12 row 142 entries 1, 2 and 6, R3570000: the price the cards the edition adds cost, `costOverride` (R65).
+pub const CHAOS_MS_CARD_COST: i32 = 0;
+/// §8.12 row 142 entry 1: "Refresh 2 mana" after the Paperclip cards (§6.3 Refresh, R364).
+pub const CHAOS_MS_PAPERCLIP_REPLENISH: i32 = 2;
+/// §8.12 row 142 entry 3: "Summon two random Radiant units, make them GIGA".
+pub const CHAOS_MS_GIGA_UNITS: i32 = 2;
+/// §8.12 row 142 entry 5: "Refresh 4 mana" after the Terminus cards (§6.3 Refresh, R364).
+pub const CHAOS_MS_TERMINUS_REPLENISH: i32 = 4;
+/// §8.12 row 142 entry 8: the cost of the Weapon the launch watch summons, "a random (2) cost Weapon".
+pub const CHAOS_MS_WEAPON_COST: i32 = 2;
+/// §8.12 row 142 entry 8, R3570004: the most rest-of-game launch watches one player holds, bounded as
+/// S #150's death watch is (`CHAOS_STINKY_DEATH_WATCH_CAP`, R1882004); a roll of it at the cap resolves into nothing.
+pub const CHAOS_MS_LAUNCH_WATCH_CAP: i32 = 3;
+/// §8.12 row 142 entry 8, R3570004: the most answers the launch watch gives one player in one turn, its
+/// terminator (REVIEW A3.6, R2176001's shape): the Scape entries cast Starships that launch, and a launch
+/// the watch answers starts another, so a launch past this many in a turn answers nothing.
+pub const CHAOS_MS_LAUNCH_WATCH_ANSWERS_PER_TURN: i32 = 5;
+
 // T-AI-4 Chain of Thought (SPEC §8.7, BUILD §2).
 /// T-AI-4: the repeats after the first draw, a termination bound: five draws at most.
 pub const CHAIN_OF_THOUGHT_REPEATS: i32 = 4;

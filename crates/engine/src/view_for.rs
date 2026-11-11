@@ -1212,6 +1212,8 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         ModifierKind::PlayWatch { label, .. } => label.clone(),
         // R1882004: Stinkyscape #150's death watcher, in the card's own words.
         ModifierKind::DeathWatch { label, .. } => label.clone(),
+        // R3570004: Stinkyscape+ #142's launch watcher, in the card's own words.
+        ModifierKind::LaunchWatch { label, .. } => label.clone(),
         // R1180001: Meditative+ #11 Living Mana Potion's "Spell Damage +N this turn".
         ModifierKind::SpellDamage { amount } => format!("You have Spell Damage +{amount} this turn"),
         // R1180004: Meditative+ #6 Bloodbloom's health price, and the Echo the Radiant one adds.

@@ -756,6 +756,15 @@ pub enum ModifierKind {
         resume: Resume,
         label: String,
     },
+    // ---- Stinkyscape+'s Calls to Chaos (issue #3570) ----
+    /// R3570004 (Stinkyscape+ #142 Call to Chaos (Mindustrial-Swarm Edition), entry 8): "for the rest of
+    /// the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) cost
+    /// Weapon": after each `starshipLaunched` of its holder, `resume` re-enters its step as the holder.
+    /// Expiry `never`; several stack, each its own record. `label` is its badge (R169).
+    LaunchWatch {
+        resume: Resume,
+        label: String,
+    },
     // ---- Stinkyscape's War Doctrines (issue #1859) ----
     /// R1859007: "For the rest of the game, your Units have Trample": every Unit this player controls
     /// on the field has `keyword` (§10.4, beside the auras' grants), those that arrive later too, but
@@ -1448,6 +1457,13 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub death_watch_casts: Option<DrawCount>,
+    /// R3570004: how many launches S+ #142's launch watch (entry 8) has answered for this player on turn
+    /// `turn`, kept as `death_watch_casts` is: a count kept for an earlier turn reads as 0
+    /// (`call_to_chaos_mindustrial_swarm::launch_watch_answers_this_turn`). Absent until the watch first
+    /// answers, so a game without one hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub launch_watch_casts: Option<DrawCount>,
     // ---- Meditative player fields (docs/meditative-set.md M5, ME-HANDCAP) ----
     /// R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
     /// #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
@@ -2217,6 +2233,7 @@ pub fn create_player_state() -> PlayerState {
         trades: None,
         trades_per_turn: None,
         death_watch_casts: None,
+        launch_watch_casts: None,
         market_credits: None,
         votes: None,
         fled: None,

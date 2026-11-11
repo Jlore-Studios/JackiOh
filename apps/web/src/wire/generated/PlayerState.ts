@@ -94,6 +94,13 @@ tradesPerTurn?: number,
  */
 deathWatchCasts?: DrawCount, 
 /**
+ * R3570004: how many launches S+ #142's launch watch (entry 8) has answered for this player on turn
+ * `turn`, kept as `death_watch_casts` is: a count kept for an earlier turn reads as 0
+ * (`call_to_chaos_mindustrial_swarm::launch_watch_answers_this_turn`). Absent until the watch first
+ * answers, so a game without one hashes as it did before this field existed (D14).
+ */
+launchWatchCasts?: DrawCount, 
+/**
  * R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
  * #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
  * (`query::hand_cap_of`). Absent means `HAND_CAP`, so a game that never sets one hashes as it did
