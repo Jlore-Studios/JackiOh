@@ -15800,10 +15800,11 @@
     "what": "build #3569 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-11T15:23:16Z",
+    "at": "2026-11-11T15:33:27Z",
     "notes": [
-      "delivered build #3565 on muse (run 43044944531): infra (its model job left no upload)",
-      "started build #3565 on claude-7 (run 43048353797)",
+      "delivered plan #3569 on claude-3 (run 43044763867): planned",
+      "delivered revise #3691 on claude-8 (run 43038145746): approved",
+      "started build #3569 on claude-7 (run 43050226764)",
       "nothing more to start: nothing is queued",
       "pruned 1 plan file(s) older than 7 days"
     ],
@@ -16511,7 +16512,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T15:23:16Z",
+  "loop_tick": "2026-11-11T15:33:27Z",
   "machine_disk": {
     "issue": null,
     "reading": {
