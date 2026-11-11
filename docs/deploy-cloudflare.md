@@ -55,7 +55,8 @@ The two, like the bots' state branches (`_bot-state`, `_bot-journal`, `_bot-usag
    CI checks).
 2. CI runs again on the push to main, for every piece the queue's build of that same commit skipped:
    a piece it already passed there is not run twice (#3564, `.github/ci/main_scope.py`), and
-   anything it cannot tell runs everything. Every two hours `promote-staging.yml`
+   anything it cannot tell runs everything. The deploy rehearsal always runs again, since the
+   `deploy-image` artifact a deploy loads comes from this run alone. Every two hours `promote-staging.yml`
    (`scripts/promote-staging.sh`) fast-forwards `_staging` to main's newest commit whose push-to-main
    CI run passed; it never moves it backwards. GitHub fires this repository's schedules late, so each
    green push-to-main CI run wakes it as well, and it moves `_staging` then once the last move is two
