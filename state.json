@@ -18965,13 +18965,14 @@
     "what": "build #3672 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-11T04:46:04Z",
+    "at": "2026-11-11T04:55:07Z",
     "notes": [
-      "delivered build #3587 on muse (run 42953353183): built",
-      "started review #3686 on muse (run 42961581099)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is idle, but nothing queued is for it; `claude-8` 5-hour usage is 89%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-11T05:00:00Z; it can start a build or a plan again in 11m; `claude-1` is busy; `claude-4` is idle, but nothing queued is for it; `claude-6` is busy; `claude-5` is idle, but nothing queued is for it; `muse` is idle, but nothing queued is for it; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it",
-      "pruned 3 plan file(s) older than 7 days",
-      "runner gate: started 0 of 4 waiting run(s); 4 wait for room"
+      "delivered plan #3550 on claude-4 (run 42958845386): planned",
+      "started build #3550 on muse (run 42962503901)",
+      "started build #3672 on claude-7 (run 42962564149)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days",
+      "runner gate: started 0 of 3 waiting run(s); 3 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19677,7 +19678,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T04:46:04Z",
+  "loop_tick": "2026-11-11T04:55:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
