@@ -19235,7 +19235,7 @@
       "waiting_comment": 6789039329
     },
     "3688": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -19254,18 +19254,10 @@
       "failures": 0,
       "feedback_since": "2026-11-11T03:42:52Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-11T10:36:13Z",
-        "lifted": "2026-11-11T08:42:58Z",
-        "owner": "claude-1",
-        "since": "2026-11-11T08:36:13Z",
-        "until": "2026-11-11T08:40:00Z",
-        "why": "5-hour usage is 95%, too close to its 100% cap to start a long run (it starts under 95%)"
-      },
       "interruptions": 0,
       "issue": 3678,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner_gave_up": {
         "at": "2026-11-11T07:45:06Z",
         "provider": "claude-1",
@@ -19274,7 +19266,7 @@
       "pending_request": false,
       "provider": "claude-1",
       "queued_at": "2026-11-11T08:34:38Z",
-      "run_id": "42965380380",
+      "run_id": "pending:b38b9134-1794387907",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -19295,16 +19287,9 @@
         "run": "42965380380"
       },
       "source": "conflict",
-      "started_at": "2026-11-11T05:22:46Z",
+      "started_at": "2026-11-11T09:05:45Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-11T08:34:38Z",
-        "until": "2026-11-11T09:04:38Z",
-        "why": "it waited 120 minutes for #3687, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -19853,9 +19838,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T09:04:52Z",
+    "at": "2026-11-11T09:05:45Z",
     "url": "",
-    "what": "review #3702 on claude-8"
+    "what": "revise #3688 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-11T08:34:08Z",
