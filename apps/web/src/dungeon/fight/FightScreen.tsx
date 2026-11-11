@@ -252,6 +252,10 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     ...(run?.blessings ?? []).map((id) => ({ id, level: null })),
   ];
   const enemyItems: TrayItem[] = setup.enemy.artifacts.map((id) => ({ id, level: null }));
+  // R3586001: the enemy's tier beside its relics, an elite's named so (its own table, §15.6).
+  const node = run === null || run.row === null ? undefined : run.map[run.row]?.[run.col];
+  const tier = String(setup.enemy.tier);
+  const tierLabel = node?.kind === "elite" ? t("Elite, tier {tier}", { tier }) : t("Tier {tier}", { tier });
 
   const resultActions = (
     <>
@@ -311,7 +315,14 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
       }
       heroAside={{
         own: <ArtifactTray side="own" items={ownItems} passives={content.passives} />,
-        enemy: <ArtifactTray side="enemy" items={enemyItems} passives={content.passives} />,
+        enemy: (
+          <div className="dungeon-fight__enemy-aside">
+            <span className="dungeon-fight__tier" data-testid={fightTestid.tier}>
+              {tierLabel}
+            </span>
+            <ArtifactTray side="enemy" items={enemyItems} passives={content.passives} />
+          </div>
+        ),
       }}
       resultActions={resultActions}
       // R2972000: a lost fight ends the run for good (§15.6), so the Concede dialog says so.

@@ -2,7 +2,9 @@
 //! `docs/dungeon-run.md` that sets it. The mode has no spec section yet: a number here is the plan's,
 //! and one the plan marks a strawman is to be tuned.
 
-use jackioh_engine::config::{DECK_SIZE, HERO_HEALTH, LIBRARY_CAP};
+use jackioh_engine::config::{
+    AI_DIFFICULTY, DECK_SIZE, DRAW_EVERY_TURN, HERO_HEALTH, HUMAN_HANDICAP, Handicap, LIBRARY_CAP,
+};
 use jackioh_engine::wire::PrintedRarity;
 
 use crate::{RunByFight, RunNodeKind, RunTier};
@@ -150,20 +152,82 @@ pub const RUN_TIER_POINTS: [(RunTier, i32); 5] = [
 
 /// DR5: the health a run starts with, before wins, campfires, events and passives raise it.
 pub const RUN_MAX_HP: i32 = HERO_HEALTH;
-/// DR5, a strawman: each enemy's hero health by its kind of fight.
-pub const RUN_ENEMY_HEALTH: RunByFight = RunByFight {
-    fight: 20,
-    elite: 30,
-    ghost: HERO_HEALTH,
-    mini_boss: 40,
-    boss: 50,
-};
-/// DR5: the enemy artifact that gives its carrier the Medium AI's resources (`AI_DIFFICULTY.medium`,
-/// R180) in a fight.
-pub const RUN_LOOMING_PRESENCE: &str = "looming-presence";
-/// DR5: the enemy artifact that gives its carrier the Hard AI's resources (`AI_DIFFICULTY.hard`, R180)
-/// in a fight. It outranks Looming Presence when an enemy carries both.
-pub const RUN_OVERWHELMING_PRESENCE: &str = "overwhelming-presence";
+/// DR5, R3586000: the enemy tiers each act's `RUN_ACT_ROWS` rows spread over, its first row at the
+/// lowest and its last before the boss at the highest; its boss stands one tier higher.
+pub const RUN_ACT_TIERS: usize = 4;
+// R3586000: an act's last row before its boss reaches its highest tier.
+const _: () = assert!(RUN_ACT_ROWS >= RUN_ACT_TIERS);
+
+/// R3586001: `HUMAN_HANDICAP` at this mana cap and bonus (R181), `opening` more opening cards (R182)
+/// or, below 0, that many fewer (R3582000), turn draws every `draw_every`th turn (R3582000) and a hero
+/// at `hero_health` (R290).
+const fn tier_row(
+    mana_cap: i32,
+    mana_bonus: i32,
+    opening: i32,
+    draw_every: i32,
+    hero_health: i32,
+) -> Handicap {
+    Handicap {
+        mana_cap,
+        mana_bonus,
+        extra_opening_cards: if opening > 0 { opening } else { 0 },
+        fewer_opening_cards: if opening < 0 { Some(-opening) } else { None },
+        draw_every: if draw_every > DRAW_EVERY_TURN {
+            Some(draw_every)
+        } else {
+            None
+        },
+        hero_health: Some(hero_health),
+        ..HUMAN_HANDICAP
+    }
+}
+
+/// R3586001: a boss's row: a practice tier's resources (`AI_DIFFICULTY`, R180), its hero at
+/// `hero_health`.
+const fn with_health(base: Handicap, hero_health: i32) -> Handicap {
+    Handicap {
+        hero_health: Some(hero_health),
+        ..base
+    }
+}
+
+/// DR5, R3586001, a strawman: each tier's enemy from tier 1, its handicap and hero health; every fight
+/// but an elite reads it, ghosts and bosses included; tiers 5, 10 and 15 are Easy's, Medium's and
+/// Hard's resources with their own health; a row's `deck_size` is not read.
+pub const RUN_TIERS: [Handicap; RUN_ACTS * (RUN_ACT_TIERS + 1)] = [
+    tier_row(2, 0, -2, 2, 10),               // 1
+    tier_row(2, 0, -1, 2, 12),               // 2
+    tier_row(3, 0, -1, 2, 14),               // 3
+    tier_row(3, 0, -1, DRAW_EVERY_TURN, 16), // 4
+    with_health(AI_DIFFICULTY.easy, 25),     // 5, the first mini-boss
+    tier_row(3, 0, 0, DRAW_EVERY_TURN, 18),  // 6
+    tier_row(4, 0, 0, DRAW_EVERY_TURN, 20),  // 7
+    tier_row(4, 0, 0, DRAW_EVERY_TURN, 22),  // 8
+    tier_row(4, 1, 0, DRAW_EVERY_TURN, 24),  // 9
+    with_health(AI_DIFFICULTY.medium, 35),   // 10, the second mini-boss
+    tier_row(4, 1, 0, DRAW_EVERY_TURN, 26),  // 11
+    tier_row(5, 1, 0, DRAW_EVERY_TURN, 28),  // 12
+    tier_row(5, 1, 1, DRAW_EVERY_TURN, 30),  // 13
+    tier_row(6, 1, 1, DRAW_EVERY_TURN, 32),  // 14
+    with_health(AI_DIFFICULTY.hard, 50),     // 15, the final boss
+];
+/// DR5, R3586001, a strawman: an elite's own rows, `(tier, row)`, one for each tier an elite stands
+/// on, rising, each stronger than that tier's `RUN_TIERS` row.
+pub const RUN_ELITE_TIERS: [(usize, Handicap); RUN_ACTS * RUN_ACT_TIERS] = [
+    (1, tier_row(3, 0, -1, 2, 16)),
+    (2, tier_row(3, 0, -1, DRAW_EVERY_TURN, 18)),
+    (3, tier_row(3, 0, 0, DRAW_EVERY_TURN, 20)),
+    (4, tier_row(4, 0, 0, DRAW_EVERY_TURN, 22)),
+    (6, tier_row(4, 0, 0, DRAW_EVERY_TURN, 24)),
+    (7, tier_row(4, 1, 0, DRAW_EVERY_TURN, 26)),
+    (8, tier_row(5, 1, 0, DRAW_EVERY_TURN, 28)),
+    (9, tier_row(5, 1, 1, DRAW_EVERY_TURN, 30)),
+    (11, tier_row(5, 1, 1, DRAW_EVERY_TURN, 32)),
+    (12, tier_row(6, 1, 1, DRAW_EVERY_TURN, 34)),
+    (13, tier_row(6, 1, 1, DRAW_EVERY_TURN, 36)),
+    (14, tier_row(7, 1, 1, DRAW_EVERY_TURN, 38)),
+];
 /// DR5: an enemy's deck, its own cards first and the rest dealt from the pool.
 pub const RUN_ENEMY_DECK_SIZE: usize = DECK_SIZE as usize;
 /// DR5: the lowest tier of a mini-boss's drop when its content names none.

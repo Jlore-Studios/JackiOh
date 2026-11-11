@@ -1710,3 +1710,31 @@ fn a_fight_over_kept_before_its_report_and_a_state_before_its_max_hp_bonus_still
     assert_eq!(read.max_hp_bonus, 0);
     assert_eq!(read, fresh);
 }
+
+#[test]
+fn r3586001_no_placeholder_enemy_carries_a_presence_and_a_boss_only_its_own() {
+    // R3586001: the Presence artifacts retired with the tiers, and a boss carries only the artifact it
+    // drops, which changes nothing in its fight.
+    assert!(
+        !include_str!("placeholder.json")
+            .to_lowercase()
+            .contains("presence"),
+        "placeholder.json names a Presence"
+    );
+    let content = content();
+    for enemy in &content.enemies {
+        assert!(
+            enemy.artifacts.iter().all(|id| enemy.drop.as_ref() == Some(id)),
+            "{} carries {:?}",
+            enemy.id,
+            enemy.artifacts
+        );
+    }
+    assert!(
+        content
+            .enemies
+            .iter()
+            .any(|enemy| enemy.tier == RunNodeKind::Boss && !enemy.artifacts.is_empty()),
+        "the final boss still carries its own"
+    );
+}

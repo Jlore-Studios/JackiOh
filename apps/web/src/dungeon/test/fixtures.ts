@@ -111,7 +111,7 @@ export const CONTENT: RunContent = {
     { id: "sun-idol", name: "Sun Idol", kind: "economic", text: "Heal 5 after each fight.", tier: "diamond", effect: null, starter: true, unobtainable: false, god: null },
     { id: "moon-idol", name: "Moon Idol", kind: "combat", text: "Draw 1 more card.", tier: "platinum", effect: null, starter: true, unobtainable: false, god: null },
     { id: "locked-sigil", name: "Locked Sigil", kind: "combat", text: "Opens with a final boss.", tier: "silver", effect: null, starter: false, unobtainable: false, god: null },
-    { id: "looming-presence", name: "Looming Presence", kind: "enemy", text: "Starts with 1 more mana.", tier: null, effect: null, starter: false, unobtainable: true, god: null },
+    { id: "war-banner", name: "War Banner", kind: "enemy", text: "The enemy's own banner.", tier: null, effect: null, starter: false, unobtainable: true, god: null },
     { id: "blessing-of-dawn", name: "Blessing of Dawn", kind: "blessing", text: "Heal 3 after each fight.", tier: null, effect: null, starter: false, unobtainable: true, god: "dawn" },
   ],
   events: [],
