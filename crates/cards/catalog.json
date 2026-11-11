@@ -29914,7 +29914,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Make a permanent in your hand GIGA and Indestructible."
@@ -31522,7 +31522,7 @@
       "base": 1,
       "embiggen": 4
     },
-    "loc": 6,
+    "loc": 24,
     "base": {
       "attack": 0,
       "health": 6,
@@ -31534,7 +31534,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Can't attack, Can't Defend\nEnd of turn: Deal 1 embiggen 2 damage to all enemies.\nEmbiggened (4): Deal {damage} damage to all enemies instead. GIGA, 0/24."
+      "text": "Can't attack, Can't Defend\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/24."
     },
     "radiant": {
       "attack": 0,
@@ -31554,11 +31554,19 @@
           "n": 2
         }
       ],
-      "text": "Can't attack, Can't Defend, Pierce, Armor 2\nEnd of turn: Deal 2 embiggen 4 damage to all enemies.\nEmbiggened (4): Deal {damage} damage to all enemies instead. GIGA, 0/48."
+      "text": "Can't attack, Can't Defend, Pierce, Armor 2\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/48."
     },
     "params": [
       {
         "key": "damage",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "embiggenedDamage",
         "base": 2,
         "radiant": 4,
         "better": "up",
@@ -31583,7 +31591,7 @@
       "base": 1,
       "embiggen": 4
     },
-    "loc": 6,
+    "loc": 29,
     "base": {
       "attack": 0,
       "health": 8,
@@ -31631,7 +31639,7 @@
       "base": 1,
       "embiggen": 4
     },
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 0,
       "health": 4,
@@ -31872,7 +31880,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "attack": 20,
       "health": 20,
@@ -31950,7 +31958,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 4,
       "health": 16,
@@ -33006,7 +33014,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 60,
     "base": {
       "keywords": [],
       "text": "Draw the {draw} most expensive permanents and make them GIGA."
@@ -33037,7 +33045,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Give a Unit in your hand +{buff}/+{buff} and make it GIGA."

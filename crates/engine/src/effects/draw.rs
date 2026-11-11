@@ -39,6 +39,10 @@ pub struct DrawFromLibraryArgs {
     /// R1061: once the drawn card is in its holder's hand it is made Radiant; one the hand cap burned or cast on draw stays as it was.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radiant: Option<bool>,
+    /// R3555002: once the drawn card is in its holder's hand it is given these keywords, as R1878003's
+    /// rider gives them, and keeps them onto the field; one the hand cap burned or cast on draw gets none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keywords: Option<Vec<crate::wire::Keyword>>,
 }
 
 /// §6.3 Draw of a card a script has NAMED rather than the top of the library. Not `addToHand`, which
@@ -71,11 +75,21 @@ pub fn draw_from_library(args: DrawFromLibraryArgs) -> Effect {
         // Out of the pile first, so a cast-on-draw card resolves against a library without it.
         let card = ctx.sink.state.players[player].library.remove(at);
         let drawn_id = card.id.clone();
-        if complete_draw(ctx, player, card, None) == DrawOutcome::Drawn
-            && args.radiant == Some(true)
+        let outcome = complete_draw(ctx, player, card, None);
+        if outcome != DrawOutcome::Drawn {
+            return;
+        }
+        if args.radiant == Some(true)
             && let Some(drawn) = crate::state::find_instance(ctx.state, &drawn_id).cloned()
         {
             crate::effects::radiant::make_radiant(ctx, &drawn);
+        }
+        // R3555002: given in the hand as R1878003 gives them (a burned card gets none) and with no
+        // event, as R1438 and R1878003 do it.
+        if let Some(keywords) = args.keywords.clone()
+            && let Some(live) = crate::state::find_instance_mut(ctx.state, &drawn_id)
+        {
+            live.granted_keywords.extend(keywords);
         }
     })
 }

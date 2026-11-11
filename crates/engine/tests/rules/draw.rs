@@ -358,6 +358,65 @@ mod r1061_named_draw_radiant_rider {
     }
 }
 
+/// R3555002: a named draw's keywords rider gives the card its keywords in the hand, not one the hand
+/// cap burns.
+mod r3555002_named_draw_keywords_rider {
+    use super::*;
+
+    #[test]
+    fn r3555002_a_named_draw_s_keywords_rider_gives_the_card_its_keywords_in_the_hand_and_not_a_card_the_hand_cap_burns()
+     {
+        let mut state = new_game("r3555002-keywords", None);
+        // A hand one short of the cap: the first named draw fits, the second burns.
+        state.players.p1.hand.clear();
+        for _ in 0..HAND_CAP - 1 {
+            in_hand_draw_filler(&mut state);
+        }
+        let library = set_library(&mut state, PlayerId::P1, &strings(&["fx-1", "fx-2"]));
+        let (first, second) = (library[0].id.clone(), library[1].id.clone());
+        let mut bench = Bench::new(&state);
+        {
+            let mut sink = bench.sink(&mut state);
+            let mut ctx = make_context(
+                &mut sink,
+                None,
+                HookOptions {
+                    controller: Some(PlayerId::P1),
+                    ..Default::default()
+                },
+            );
+            (draw_effect::draw_from_library(json_as(
+                json!({ "instanceId": first, "keywords": [{ "kind": "GIGA" }] }),
+            ))
+            .apply)(&mut ctx);
+            (draw_effect::draw_from_library(json_as(
+                json!({ "instanceId": second, "keywords": [{ "kind": "GIGA" }] }),
+            ))
+            .apply)(&mut ctx);
+        }
+        let drawn = find_instance(&state, &first).expect("the drawn card");
+        assert_eq!(drawn.zone.z(), ZoneName::Hand);
+        assert!(
+            drawn
+                .granted_keywords
+                .iter()
+                .any(|keyword| *keyword == Keyword::Giga),
+            "the drawn card is given GIGA in the hand"
+        );
+        let burned = find_instance(&state, &second).expect("the burned card");
+        assert_eq!(burned.zone.z(), ZoneName::Graveyard);
+        assert!(
+            burned.granted_keywords.is_empty(),
+            "a burned card gets no keywords"
+        );
+    }
+
+    fn in_hand_draw_filler(state: &mut GameState) {
+        let card = new_instance(state, "fx-1", PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        state.players.p1.hand.push(card);
+    }
+}
+
 mod r3553002_warhero_draws_m1_t7 {
     use super::*;
     use crate::rules::fixtures::scripts::{warhero_draws, warhero_token};
