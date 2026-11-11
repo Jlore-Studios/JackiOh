@@ -88,13 +88,19 @@ describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
     }
   });
 
-  it("#3499 no built script, a worker's included, holds patch-meta.ts's disk reader", () => {
-    // A bundle that lacks `patchMeta()` (a worker's has its own plugin list) takes the real file,
-    // whose `node:fs` is an empty stub in a browser: the practice worker would die on load.
+  it("#3499 no built script, a worker's included, holds patch-meta.ts's disk reader or patch-meta.browser.ts's bundle", () => {
+    // A bundle that lacks `patchMeta()` (a worker's has its own plugin list) takes `patch-meta.ts`
+    // (whose code carries `holds an entry with no version`) or, under the `browser` condition from
+    // `package.json`'s `imports`, `patch-meta.browser.ts` (whose code carries `holds a patch with no
+    // version string` and statically imports the 650 KB history): either way the worker would carry
+    // the patch history.
     const assets = join(BUILT, "assets");
     const scripts = readdirSync(assets).filter((name) => name.endsWith(".js"));
     expect(scripts.length).toBeGreaterThan(0);
-    const readers = scripts.filter((name) => readFileSync(join(assets, name), "utf8").includes("holds an entry with no version"));
+    const readers = scripts.filter((name) => {
+      const text = readFileSync(join(assets, name), "utf8");
+      return text.includes("holds an entry with no version") || text.includes("holds a patch with no version string");
+    });
     expect(readers).toEqual([]);
   });
 

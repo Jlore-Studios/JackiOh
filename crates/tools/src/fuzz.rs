@@ -165,7 +165,7 @@ use jackioh_engine::{
     legal_actions, made_by_a_rule, mulligan_owed, opponent_of, reduce, seat_to_act, subsystems,
     validate_deck,
 };
-use jackioh_run::config::{RUN_ARTIFACT_LEVEL_MAX, RUN_DECK_MAX, RUN_ENEMY_HEALTH, RUN_STARTER_SIZE};
+use jackioh_run::config::{RUN_ARTIFACT_LEVEL_MAX, RUN_DECK_MAX, RUN_STARTER_SIZE, RUN_TIERS};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -728,10 +728,12 @@ const RUN_START_DECK_MIN: i32 = RUN_STARTER_SIZE as i32;
 /// (R184), the most a handicap's `deckSize` may be.
 const RUN_START_DECK_MAX: i32 = RUN_DECK_MAX as i32;
 
-/// The most health a run-start hero begins with: the final boss's (`RUN_ENEMY_HEALTH`, DR5), the
-/// highest a dungeon fight starts a hero at. The least is 1 (R290), a hero a run brought down to its
-/// last point. A relic that raises the run's health only moves this up.
-const RUN_START_HERO_HEALTH_MAX: i32 = RUN_ENEMY_HEALTH.boss;
+/// The most health a run-start hero begins with: the final boss's (its row of `RUN_TIERS`, R3586001),
+/// the highest a dungeon fight starts a hero at. The least is 1 (R290), a hero a run brought down to
+/// its last point. A relic that raises the run's health only moves this up.
+const RUN_START_HERO_HEALTH_MAX: i32 = RUN_TIERS[RUN_TIERS.len() - 1]
+    .hero_health
+    .expect("the final boss's row sets its health");
 
 /// The largest amount a placeholder Combat artifact's fight effect carries per level
 /// (`RunFightEffect`'s `n`, R2922001: `Temp Crown`'s Armor, `Temp Final Relic`'s opening cards).

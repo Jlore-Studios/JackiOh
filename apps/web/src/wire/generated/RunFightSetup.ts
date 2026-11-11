@@ -25,8 +25,7 @@ humanHandicap: Handicap,
  */
 humanMarks: Array<DeckMark>, enemyDeck: Array<string>, 
 /**
- * Easy's handicap, Medium's with Looming Presence, Hard's with Overwhelming Presence (DR5, R180),
- * its `deck_size` the enemy deck's length and its `hero_health` the enemy's, then each curse taken
- * (R2922001).
+ * R3586001: its tier's row of `RUN_TIERS`, an elite's of `RUN_ELITE_TIERS`, hero health included,
+ * its `deck_size` the enemy deck's length, then each curse taken (R2922001).
  */
 enemyHandicap: Handicap, enemy: RunEnemy, };

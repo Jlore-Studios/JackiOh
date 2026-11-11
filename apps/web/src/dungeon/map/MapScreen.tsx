@@ -77,7 +77,12 @@ export function MapScreen({ run, content, send }: MapScreenProps): ReactElement 
                 </span>
                 <span className="dungeon-run-map__label">{name}</span>
                 {node.enemy === null ? null : (
-                  <span className="dungeon-run-map__enemy">{t(node.enemy.name)}</span>
+                  <>
+                    <span className="dungeon-run-map__enemy">{t(node.enemy.name)}</span>
+                    <span className="dungeon-run-map__tier" data-testid={dungeonMapTestid.mapTier(row, col)}>
+                      {t("Tier {tier}", { tier: String(node.enemy.tier) })}
+                    </span>
+                  </>
                 )}
                 {node.artifact === null ? null : (
                   <span

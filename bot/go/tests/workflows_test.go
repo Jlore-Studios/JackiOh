@@ -703,20 +703,23 @@ func workflowsStatus(t *testing.T) string {
 	return workflowsRead(t, "bot-status.yml")
 }
 
-func TestWorkflows_OneJobRewritesItEveryFiveMinutes(t *testing.T) {
+// One job loops (#3675): its sweep every five minutes, on a goroutine of its own, and the issue
+// rewritten every two, as often as the issue says.
+func TestWorkflows_OneJobRewritesItEveryTwoMinutes(t *testing.T) {
 	text := workflowsStatus(t)
 	refresh := workflowsJob(t, text, "refresh")
 	assertIn(t, "runs-on: ubuntu-latest", refresh)
-	assertIn(t, `EVERY_SECONDS: "300"`, text)
-	assertEqual(t, dashboard.EveryMinutes*60, 300) // what the issue says it does
+	assertIn(t, "\n  EVERY_SECONDS: \"300\"\n", text)
+	assertIn(t, `REWRITE_EVERY_SECONDS: "120"`, text)
+	assertEqual(t, dashboard.EveryMinutes*60, 120) // what the issue says it does
 	// The workflow changed (#467): `python -m harness dashboard` is `harness dashboard`.
 	assertIn(t, "harness dashboard --sweep --stats --companions --controller \\\n"+
-		`            --every "${EVERY_SECONDS}" --runners-every `+
-		`"${RUNNERS_EVERY_SECONDS}" \`+"\n"+`            --gate-every "${GATE_EVERY_SECONDS}" --for "${LOOP_SECONDS}"`,
-		refresh)
+		`            --every "${EVERY_SECONDS}" --rewrite-every "${REWRITE_EVERY_SECONDS}" \`+"\n"+
+		`            --runners-every "${RUNNERS_EVERY_SECONDS}" \`+"\n"+
+		`            --gate-every "${GATE_EVERY_SECONDS}" --for "${LOOP_SECONDS}"`, refresh)
 	// Its runners section is redrawn alone between the rewrites, as often as the issue says.
-	assertIn(t, `RUNNERS_EVERY_SECONDS: "120"`, text)
-	assertEqual(t, dashboard.RunnersMinutes*60, 120)
+	assertIn(t, `RUNNERS_EVERY_SECONDS: "60"`, text)
+	assertEqual(t, dashboard.RunnersMinutes*60, 60)
 	// The loop ends inside GitHub's six-hour cap, ahead of its own timeout.
 	loop := workflowsInt(t, workflowsSearch(t, `LOOP_SECONDS: "(\d+)"`, text, 1))
 	timeout := workflowsInt(t, workflowsSearch(t, `timeout-minutes: (\d+)`, refresh, 1))

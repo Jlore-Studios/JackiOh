@@ -17,6 +17,8 @@ export const fightTestid = {
   noSetup: "dungeon-fight-no-setup",
   /** B22: the enemy's name, on the board's rail. */
   enemy: "dungeon-fight-enemy",
+  /** #3586: the enemy's tier, "Tier N" or "Elite, tier N", beside its relic tray. */
+  tier: "dungeon-fight-tier",
   /** B24: the run's time, on the board's rail. */
   timer: "dungeon-fight-timer",
   /** B25: in the result panel, sends the fight's `FightOver` to the run once the worker reported it. */

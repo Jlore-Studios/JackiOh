@@ -122,9 +122,10 @@ A few artifacts start unlocked. Final bosses unlock the rest, one extraction at 
 ## DR5. The fights
 
 - Each fight is a practice game against the AI. Your HP carries in, and one lost fight ends the run.
-- **An enemy's strength is an artifact it carries.** _Looming Presence_ gives the Medium AI's resources
-  (+1 mana, +1 opening card) and _Overwhelming Presence_ the Hard AI's (+1 mana up to 7, 2 draws a turn),
-  both through the handicaps practice already uses (R180). Elites and bosses carry them.
+- **An enemy's strength is its tier**, 1 to 15, set by its row (R3586000): each act climbs four tiers
+  and its boss stands one higher (5, 10, 15). Each tier is a row of the handicaps practice already uses
+  (R180), hero health included; elites read a stronger table of their own; tiers 5, 10 and 15 are the
+  Easy, Medium and Hard AI's resources; curses add to it (R2922001). The map and the fight show the tier.
 - **Enemy decks** are random for now.
 - **Ghosts** are the decks of real players who died around the same point of a run, plausibly what a
   player would bring and never boss cards. They come from friends' runs, and a seed can pre-seed some.
@@ -134,7 +135,8 @@ A few artifacts start unlocked. Final bosses unlock the rest, one extraction at 
 - **The final boss** drops its own preseeded artifact, Unobtainable: nothing else gives it, and it cannot
   be extracted.
 
-Strawman enemy hero health: normal 20, elite 30, mini-boss 40, final boss 50.
+The tiers' numbers are strawmen in `crates/run/src/config.rs` (`RUN_TIERS`, `RUN_ELITE_TIERS`), tuned
+with run-sim's table by tier (R3586001).
 
 ## DR6. After a fight
 
@@ -218,7 +220,7 @@ Each line is one issue; the first playable run is M1 to M3, in the Sandbox.
 | # | Issue | After |
 | --- | --- | --- |
 | M1 | The run's core, offline: seeds, the map, the states, the packs, extraction, the slots, artifact points, curse tiers, the score and the stats, on placeholder content. **Built:** `crates/run` | — |
-| M2 | Run fights: the carried HP, Looming and Overwhelming Presence, Radiant and buffed run cards in a game's setup | M1 |
+| M2 | Run fights: the carried HP, the enemy's strength, Radiant and buffed run cards in a game's setup | M1 |
 | M3 | The Sandbox screen: the map, the tiles, the packs, the artifact tray, the timer, local leaderboards | M1, M2 |
 | M4 | Artifacts in fights (Combat) and on the map (Economic). **Built:** Combat artifacts and curses in `run_fight_setup` (#2922) | M2, M3 |
 | M5 | The tiles in full: shop, campfire, events, chests, shrines | M3 |
@@ -274,8 +276,8 @@ pub struct RunFightSetup {
     pub human_handicap: Handicap,   // HUMAN_HANDICAP, deck_size = the deck's length, hero_health = the run's HP
     pub human_marks: Vec<DeckMark>, // each Radiant run card, and each card's buffs as upgrades
     pub enemy_deck: Vec<String>,
-    pub enemy_handicap: Handicap,   // Easy's; Medium's with Looming Presence; Hard's with Overwhelming Presence;
-                                    // deck_size = the deck's length, hero_health = the enemy's
+    pub enemy_handicap: Handicap,   // its tier's row: RUN_ELITE_TIERS' for an elite, else RUN_TIERS' (R3586001);
+                                    // deck_size = the deck's length
     pub enemy: RunEnemy,
 }
 pub fn run_fight_setup(state: &RunState, content: &RunContent) -> Option<RunFightSetup>; // None outside RunPhase::Fight
@@ -382,8 +384,8 @@ Each is proved by a test that names it in a comment (`// B7`).
 - **B6** `RUN_STARTER_CARDS` holds 20 Training Grounds Commons and Rares, each in the catalog.
 - **B7** `run_fight_setup` answers only in a fight; the human's handicap holds the run's HP and the deck's
   length; the marks hold each Radiant card and each card's buffs.
-- **B8** The enemy's handicap is Easy's, Medium's with Looming Presence or Hard's with Overwhelming
-  Presence, with its deck's length and its hero health.
+- **B8** The enemy's handicap and hero health are its tier's row (`RUN_ELITE_TIERS` for an elite,
+  `RUN_TIERS` otherwise), with its deck's length.
 - **B9** A fight's seed is the run's seed, row and column, so one run meets one deal.
 - **B10** `run_fight_report` folds the finished game and answers `FightOver`: the winner, the human's final
   health, the damage dealt to the enemy's hero and units (`damage` events), the healing done on the
