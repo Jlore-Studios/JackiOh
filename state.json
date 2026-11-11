@@ -18590,6 +18590,13 @@
     "3674": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42949710050",
+        "model": "opus",
+        "provider": "claude-7",
+        "since": "2026-11-11T03:53:52Z",
+        "until": "2026-11-11T04:23:52Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
