@@ -354,30 +354,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:6678293586": {
-      "at": "2026-11-06T06:17:43Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6678298595": {
-      "at": "2026-11-06T06:20:01Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6678783026": {
-      "at": "2026-11-06T06:34:52Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:6678796752": {
-      "at": "2026-11-06T06:35:13Z",
-      "lines": [
-        "approve"
-      ]
-    },
     "c:6683783985": {
       "at": "2026-11-06T11:31:19Z",
       "lines": [
@@ -568,6 +544,12 @@
       "at": "2026-11-10T09:27:48Z",
       "lines": [
         "/harness revise The person's part is done. #3625 landed on `main` as 636fc88: `bot/tests/test_ci_matrix.py` now lists `server api 1/4` to `4/4`, and its count test matches the sharded jobs, so `main`'s `bot selftest` is green again. The `human required` label is off."
+      ]
+    },
+    "c:6793581842": {
+      "at": "2026-11-11T10:38:08Z",
+      "lines": [
+        "/harness revise The person's part is done. This PR's description now opens `Part of #3674`, not `Closes #3674`. Nothing else in it changed, and I took `human required` off."
       ]
     }
   },
