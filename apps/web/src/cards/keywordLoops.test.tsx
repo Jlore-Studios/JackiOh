@@ -18,7 +18,7 @@ import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { resetVisibility, setReducedMotion, setVisibility } from "../test/setup.ts";
 import { unit } from "../test/fixtures.ts";
 import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
-import { resetCosmeticsForTests } from "./cosmetics.ts";
+import { resetCosmeticsForTests, writeCardPick } from "./cosmetics.ts";
 import { FullArtOwned } from "./fullArt.ts";
 import { MinionFace } from "./MinionFace.tsx";
 import { faceModel } from "./model.ts";
@@ -28,6 +28,10 @@ import { keywordFxPlan, planWantsMotion } from "./keywordVisuals.ts";
 const MAX = COSMETIC_FOIL_ANIMATED_MAX;
 /** A Common Unit with no animated look, so nothing but its keywords wants a slot. */
 const COMMON = "core-002";
+/** A Mythic, whose art always wants a slot; a Dormant Starship and one of its pieces, whose shipyard idles in one. */
+const MYTHIC = "meditative-049";
+const DORMANT_STARSHIP = "stinkyscape-t-dormant-starship";
+const STARSHIP_PIECE = "stinkyscape-058";
 
 /** Three looping keywords on different layers, all drawn on one unit. */
 const LOOPERS: Keyword[] = [{ kind: "Poisonous" }, { kind: "Lifesteal" }, { kind: "Windfury" }];
@@ -39,16 +43,20 @@ function defOf(id: string) {
 }
 
 /** One unit on the board, in a `.card.cf-host` as Card.tsx sets it. */
-type Spec = { id: string; over?: Partial<UnitView> };
+type Spec = { id: string; over?: Partial<UnitView>; starship?: readonly string[] };
 
-function Minion({ id, over = {} }: Spec): ReactElement {
+function Minion({ id, over = {}, starship }: Spec): ReactElement {
   const printed = defOf(id).base;
   const health = printed.health ?? 4;
+  const list = starship?.map((defId) => ({ defId, radiant: false }));
   const u = unit("p1", {
     defId: id,
     attack: printed.attack ?? 0,
     health,
     maxHealth: health,
+    ...(list === undefined
+      ? {}
+      : { starship: { pieces: list.map(({ defId }) => ({ defId })) }, slumber: {}, canAct: false }),
     ...over,
   });
   const face = faceModel({
@@ -56,6 +64,7 @@ function Minion({ id, over = {} }: Spec): ReactElement {
     def: defOf(id),
     radiant: false,
     live: { attack: u.attack, health: u.health, maxHealth: u.maxHealth, keywords: u.keywords },
+    ...(list === undefined ? {} : { inPlay: { starship: { pieces: list.length, name: null, list } } }),
   });
   return (
     <div className="card cf-host">
@@ -239,6 +248,40 @@ describe("R3607000 a minion's keyword loops move only while its face holds a mot
       resetFxSettingsForTests();
       writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
     }
+  });
+
+  it("R3607000 Animated foil off stills a keyword face's art outputs but not its loops", () => {
+    writeCardPick(COMMON, "foil", "foil-holo-sweep");
+    const specs: readonly Spec[] = [
+      { id: MYTHIC, over: { keywords: LOOPERS } },
+      { id: COMMON, over: { keywords: LOOPERS } },
+      { id: DORMANT_STARSHIP, over: { keywords: LOOPERS }, starship: [STARSHIP_PIECE] },
+    ];
+    const { container } = render(<Board specs={specs} />);
+    const [mythic, common, yard] = minions(container) as [HTMLElement, HTMLElement, HTMLElement];
+    expect(mythic.getAttribute("data-art-motion"), "the Mythic's art moves").toBe("animated");
+    expect(mythic.hasAttribute("data-art-response"), "the pointer answer is armed").toBe(true);
+    expect(common.getAttribute("data-cosmetic-motion"), "the worn foil moves").toBe("animated");
+    expect(yard.querySelector(".cf-shipyard-idle"), "the shipyard idles").not.toBeNull();
+    const moving = loopsOn(container).length;
+    expect(moving).toBeGreaterThan(0);
+    cleanup();
+
+    // With Animated foil off every face still holds its slot for its loops, but no art output moves.
+    writeCardSettings({ animatedFoil: false });
+    const still = render(<Board specs={specs} />);
+    const [stillMythic, stillCommon, stillYard] = minions(still.container) as [HTMLElement, HTMLElement, HTMLElement];
+    expect(loopsOn(still.container), "the loops keep their slots").toHaveLength(moving);
+    expect(stillMythic.getAttribute("data-art-motion"), "the Mythic's art holds still").toBe("static");
+    expect(stillMythic.hasAttribute("data-art-response"), "the pointer answer holds still").toBe(false);
+    expect(stillCommon.getAttribute("data-cosmetic-motion"), "the foil holds still").toBe("static");
+    expect(stillYard.querySelector(".cf-shipyard-idle"), "the shipyard holds still").toBeNull();
+
+    // Hovering ranks the face first for its loops, not for its art.
+    fire(host(stillMythic), "pointerenter");
+    expect(stillMythic.querySelector('[data-kw-motion="on"]'), "the hovered face loops").not.toBeNull();
+    expect(stillMythic.getAttribute("data-art-motion"), "its art still holds").toBe("static");
+    expect(stillMythic.hasAttribute("data-art-response"), "its pointer answer still holds").toBe(false);
   });
 
   it("R3607000 Charge and Rush loop only while the unit can act and its face holds a slot", () => {

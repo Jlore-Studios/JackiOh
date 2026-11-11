@@ -200,13 +200,18 @@ function MinionFace({ face, unit, className, worn = false, keywordsOffFace = fal
   const plan = faceMotion.moving
     ? rawPlan
     : rawPlan.map((entry) => (entry.motion === "on" ? { ...entry, motion: "off" as const } : entry));
-  const motion = faceMotion.moving && (artMoves || engaged) ? artMotionOf(face.defId) : null;
+  // R3607000: the slot is shared, the outputs are not: art, foil, the diorama, the pointer response and the
+  // shipyard idle still move only when the face wanted them for art (`artWanted`, which carries the
+  // `animatedFoil` gate), while the keyword plan above moves on the shared `faceMotion.moving` alone.
+  const artActive = faceMotion.moving && artWanted;
+  const artEnabled = faceMotion.enabled && artWanted;
+  const motion = artActive && (artMoves || engaged) ? artMotionOf(face.defId) : null;
   const picture = look !== null ? artPictureOf(look.version, face.set) : artFirst ? artPictureOf(cardLook.version, face.set) : "normal";
   const ship = shipArtOf(face.defId, unit);
   // R3350000: a moving Mythic with a diorama draws its slices, each on its own loop (and its art's motion where it has one, a
   // token printed Mythic having none), in place of its live layers.
-  const diorama = faceMotion.moving && (artMoves || engaged) && picture === "normal" && ship === null && dioramaOf(face.defId) !== null;
-  const cosmetics = cosmeticAttributes(cosmeticAppearance, faceMotion.moving);
+  const diorama = artActive && (artMoves || engaged) && picture === "normal" && ship === null && dioramaOf(face.defId) !== null;
+  const cosmetics = cosmeticAttributes(cosmeticAppearance, artActive);
   // R3340000: what its art wears: cracks for the health it is missing, a glow when buffed, frost when frozen (the view's own).
   const damage = damageLevel(unit.health, unit.maxHealth);
   const buffed = attackTone === "buffed" || healthTone === "buffed";
@@ -225,9 +230,9 @@ function MinionFace({ face, unit, className, worn = false, keywordsOffFace = fal
       data-full-art={look === null ? undefined : "true"}
       data-art-first={artFirst ? "true" : undefined}
       data-version={look?.version ?? undefined}
-      data-art-motion={artMoves || engaged ? (faceMotion.moving ? "animated" : "static") : undefined}
+      data-art-motion={artMoves || engaged ? (artActive ? "animated" : "static") : undefined}
       data-art-hover={live.hovered ? "true" : "false"}
-      data-art-response={faceMotion.enabled ? "true" : undefined}
+      data-art-response={artEnabled ? "true" : undefined}
       data-art-attacking={attacking ? "true" : undefined}
       data-taunt={hasKeyword(unit.keywords, "Taunt") ? "true" : undefined}
       data-flying={hasKeyword(unit.keywords, "Flying") && unit.position !== "DEF" ? "true" : undefined}
@@ -255,7 +260,7 @@ function MinionFace({ face, unit, className, worn = false, keywordsOffFace = fal
             wear={wear}
           />
           {/* R3334000, R3340000: the Dormant Starship's shipyard uses this face's one ranked, on-screen motion slot. */}
-          {face.starship != null && !face.starship.launched ? <ShipyardIdle list={face.starship.list} moving={faceMotion.moving} /> : null}
+          {face.starship != null && !face.starship.launched ? <ShipyardIdle list={face.starship.list} moving={artActive} /> : null}
         </span>
 
         <KeywordFx plan={plan} />
