@@ -255,6 +255,7 @@
 
 .dungeon-run-map__label,
 .dungeon-run-map__enemy,
+.dungeon-run-map__tier,
 .dungeon-run-map__relic,
 .dungeon-run-map__visited,
 .dungeon-run-map__current {
@@ -269,6 +270,7 @@
 }
 
 .dungeon-run-map__enemy,
+.dungeon-run-map__tier,
 .dungeon-run-map__relic,
 .dungeon-run-map__visited {
   color: var(--text-dim);

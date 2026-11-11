@@ -72,6 +72,8 @@ export const dungeonMapTestid = {
   mapLegendItem: (kind: string): string => `dungeon-run-map-legend-${kind}`,
   /** B27: a boss's preseeded relic, by its node's absolute row and column. */
   mapArtifact: (row: number, col: number): string => `dungeon-run-map-artifact-${String(row)}-${String(col)}`,
+  /** #3586: a fight node's enemy tier, by its node's absolute row and column. */
+  mapTier: (row: number, col: number): string => `dungeon-run-map-tier-${String(row)}-${String(col)}`,
   /** B28: the reward screen. */
   reward: "dungeon-run-reward",
   /** B28: the artifact the fight dropped. */

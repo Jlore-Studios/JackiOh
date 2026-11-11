@@ -193,7 +193,15 @@ export function MapGraph({ run, content, trail, send }: MapGraphProps): ReactEle
               </span>
               <span className="dungeon-run-map__label">{name}</span>
               {node.enemy === null ? null : (
-                <span className="dungeon-run-map__enemy">{t(node.enemy.name)}</span>
+                <>
+                  <span className="dungeon-run-map__enemy">{t(node.enemy.name)}</span>
+                  <span
+                    className="dungeon-run-map__tier"
+                    data-testid={dungeonMapTestid.mapTier(row, col)}
+                  >
+                    {t("Tier {tier}", { tier: String(node.enemy.tier) })}
+                  </span>
+                </>
               )}
               {relic === null ? null : (
                 <span

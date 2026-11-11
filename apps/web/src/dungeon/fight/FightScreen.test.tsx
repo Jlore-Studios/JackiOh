@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import type { Mock } from "vitest";
 
 import { AI_DIFFICULTY, HUMAN_HANDICAP } from "@jackioh/engine/config";
-import type { RunAction, RunContent, RunFightSetup, RunState } from "@jackioh/run";
+import type { RunAction, RunContent, RunFightSetup, RunNode, RunState } from "@jackioh/run";
 
 import { navigate, paths } from "../../net/navigate.ts";
 import { at } from "../../test/stubServer.ts";
@@ -48,8 +48,11 @@ const SETUP: RunFightSetup = {
   humanMarks: [{ index: 1, radiant: true, upgrades: 0 }],
   enemyDeck: ["core-003"],
   enemyHandicap: { ...AI_DIFFICULTY.medium, deckSize: 1, heroHealth: 30 },
-  enemy: { id: "cave-troll", name: "Cave Troll", heroHealth: 30, deck: ["core-003"], artifacts: ["looming-presence"] },
+  enemy: { id: "cave-troll", name: "Cave Troll", tier: 7, deck: ["core-003"], artifacts: ["war-banner"] },
 };
+
+/** #3586: the node the run stands on, a plain fight. */
+const FIGHT_NODE: RunNode = { kind: "fight", enemy: SETUP.enemy, event: null, artifact: null, column: 0, next: [] };
 
 const RUN = {
   seed: "RUNSED",
@@ -58,7 +61,13 @@ const RUN = {
   artifacts: [{ id: "lucky-coin", level: 2 }],
   blessings: ["blessing-of-dawn"],
   phase: { phase: "fight" },
+  row: 0,
+  col: 0,
+  map: [[FIGHT_NODE]],
 } as unknown as RunState;
+
+/** #3586: the same run, its node an elite. */
+const ELITE_RUN = { ...RUN, map: [[{ ...FIGHT_NODE, kind: "elite" }]] } as RunState;
 
 const CONTENT = {
   pool: [],
@@ -67,7 +76,7 @@ const CONTENT = {
   passives: [
     { id: "lucky-coin", name: "Lucky Coin", kind: "economic", text: "Gain 5 more Coins after each fight.", tier: "bronze" },
     { id: "blessing-of-dawn", name: "Blessing of Dawn", kind: "blessing", text: "Heal 3 after each fight.", tier: null },
-    { id: "looming-presence", name: "Looming Presence", kind: "enemy", text: "Starts with 1 more mana and 1 more card.", tier: null },
+    { id: "war-banner", name: "War Banner", kind: "enemy", text: "The enemy's own banner.", tier: null },
   ],
   events: [],
   curses: [],
@@ -238,7 +247,34 @@ describe("B23 both sides' relics beside their heroes", () => {
     expect(coin).toHaveTextContent("Gain 5 more Coins after each fight.");
 
     fireEvent.click(screen.getByRole("button", { name: "The enemy's relics: 1" }));
-    expect(screen.getByTestId(fightTestid.trayItem("enemy", "looming-presence"))).toHaveTextContent("Looming Presence");
+    expect(screen.getByTestId(fightTestid.trayItem("enemy", "war-banner"))).toHaveTextContent("War Banner");
+  });
+});
+
+describe("#3586 the enemy's tier beside its relics", () => {
+  it("#3586 the enemy's tier shows beside its relic tray", async () => {
+    renderFight(fightHost(), fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    const tier = screen.getByTestId(fightTestid.tier);
+    expect(tier).toHaveTextContent(/^Tier 7$/);
+    const aside = tier.closest(".hero-aside");
+    expect(aside?.parentElement).toHaveClass("seat-opponent");
+    expect(aside).toContainElement(screen.getByTestId(fightTestid.tray("enemy")));
+  });
+
+  it("#3586 an elite's tier says Elite", async () => {
+    renderFight(fightHost(), { ...fakeDungeon(vi.fn(() => null)), run: ELITE_RUN } as Dungeon);
+    await screen.findByTestId(fightTestid.screen);
+    expect(screen.getByTestId(fightTestid.tier)).toHaveTextContent(/^Elite, tier 7$/);
+  });
+
+  it("#3586 an enemy with no relic still shows its tier", async () => {
+    plan.setup = { ...SETUP, enemy: { ...SETUP.enemy, artifacts: [] } };
+    renderFight(fightHost(), fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+    expect(screen.getByTestId(fightTestid.tier)).toHaveTextContent(/^Tier 7$/);
+    expect(screen.queryByTestId(fightTestid.tray("enemy"))).toBeNull();
   });
 });
 

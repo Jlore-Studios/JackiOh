@@ -1054,4 +1054,36 @@ mod tests {
         assert_eq!(progress_of(&QuestGoal::RadiantUpgrades, Some(true), &unread), 0);
         assert_eq!(progress_of(&QuestGoal::PositionSwitches, Some(true), &unread), 0);
     }
+
+    /// SPEC §14.9: a quest's XP is QUEST_XP_PER_JLORE for each Jlore it pays.
+    #[test]
+    fn a_quests_xp_is_quest_xp_per_jlore_for_each_jlore_it_pays() {
+        assert!(!pool().is_empty());
+        for def in pool() {
+            assert_eq!(
+                quest_xp(def),
+                i64::from(def.jlore) * i64::from(QUEST_XP_PER_JLORE),
+                "{}",
+                def.id
+            );
+        }
+    }
+
+    /// R2210000: each refusal of a replace says why, in the sentence the player reads.
+    #[test]
+    fn r2210000_each_refusal_says_why_in_the_players_words() {
+        assert_eq!(
+            QuestRefusal::Spent.message(),
+            "You've already replaced a quest today. You can replace another tomorrow."
+        );
+        assert_eq!(QuestRefusal::NotHeld.message(), "That quest is not held.");
+        assert_eq!(
+            QuestRefusal::NoneLeft.message(),
+            "There's no other quest to swap in."
+        );
+        assert_eq!(
+            QuestRefusal::Full.message(),
+            "This account already holds the most quests it may."
+        );
+    }
 }

@@ -344,7 +344,7 @@ describe("B16 the starting deck", () => {
     for (const id of ["lucky-coin", "steel-tooth", "sun-idol", "moon-idol"]) {
       expect(byId(dungeonTestid.relic(id))).toBeInTheDocument();
     }
-    for (const id of ["locked-sigil", "looming-presence", "blessing-of-dawn"]) {
+    for (const id of ["locked-sigil", "war-banner", "blessing-of-dawn"]) {
       expect(screen.queryByTestId(dungeonTestid.relic(id))).toBeNull();
     }
     expect(byId(dungeonTestid.relic("sun-idol"))).toHaveTextContent("Points: 5");

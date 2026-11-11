@@ -149,8 +149,8 @@ function expectIcon(button: HTMLElement, kind: RunNodeKind): void {
   expect(button.querySelector(`svg[data-icon="${kind}"]`)).toBeInTheDocument();
 }
 
-function enemy(name: string): RunNode["enemy"] {
-  return { id: `enemy-${name}`, name, heroHealth: 20, deck: ["core-001"], artifacts: [] };
+function enemy(name: string, tier = 1): RunNode["enemy"] {
+  return { id: `enemy-${name}`, name, tier, deck: ["core-001"], artifacts: [] };
 }
 
 /**
@@ -171,13 +171,13 @@ const MAP: RunState["map"] = [
     node("chest", { column: 5, next: [0] }),
   ],
   [node("campfire", { column: 3, next: [0] })],
-  [node("miniBoss", { enemy: enemy("Mini Boss"), artifact: "test-relic-might", column: 3, next: [0, 1] })],
+  [node("miniBoss", { enemy: enemy("Mini Boss", 5), artifact: "test-relic-might", column: 3, next: [0, 1] })],
   [
-    node("fight", { enemy: enemy("Road Thug"), column: 2, next: [0] }),
-    node("ghost", { enemy: enemy("Ghost"), column: 3, next: [0] }),
+    node("fight", { enemy: enemy("Road Thug", 6), column: 2, next: [0] }),
+    node("ghost", { enemy: enemy("Ghost", 6), column: 3, next: [0] }),
   ],
   [node("campfire", { column: 3, next: [0] })],
-  [node("boss", { enemy: enemy("Final Boss"), artifact: "test-boss-crown", column: 3 })],
+  [node("boss", { enemy: enemy("Final Boss", 15), artifact: "test-boss-crown", column: 3 })],
 ];
 
 const DECK: RunState["deck"] = [
@@ -546,6 +546,18 @@ describe("#3587 the climbing-path map", () => {
     expect(css).toContain("min-height: var(--hit-min)");
     expect(MAP_BADGE).toBe(44);
     expect(MAP_WALKED_W).toBe(3);
+  });
+
+  // #3586, R3586000: the tier the run dealt each fight node, read and never worked out here.
+  it("#3586 each fight node shows its tier and a tile none", () => {
+    const { dungeon } = fakeDungeon(runWith({ phase: "map" }));
+    render(<RunScreen dungeon={dungeon} />);
+
+    expect(screen.getByTestId(dungeonMapTestid.mapTier(0, 0))).toHaveTextContent(/^Tier 1$/);
+    expect(screen.getByTestId(dungeonMapTestid.mapTier(3, 0))).toHaveTextContent(/^Tier 5$/);
+    expect(screen.getByTestId(dungeonMapTestid.mapTier(6, 0))).toHaveTextContent(/^Tier 15$/);
+    expect(within(screen.getByTestId(dungeonMapTestid.mapNode(0, 0))).getByTestId(dungeonMapTestid.mapTier(0, 0))).toBeInTheDocument();
+    expect(screen.queryByTestId(dungeonMapTestid.mapTier(1, 0))).not.toBeInTheDocument();
   });
 });
 
