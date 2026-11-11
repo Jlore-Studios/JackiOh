@@ -19523,10 +19523,10 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "built_by": "claude-5",
+        "built_by": "claude-8",
         "rejections": [],
         "reviews": [],
-        "sha": "dc6293644cc095638f588f4ffe15899342bb8f15",
+        "sha": "0780e375906f2818e45264af49c3acef3a5800c9",
         "tiers": {}
       }
     },
