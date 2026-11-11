@@ -213,6 +213,8 @@ into readable lines, so a client draws what this returns and writes no line. The
 may not read is never named. `drawn`, `addedToHand` and `shuffledIn` carry a `defId` for the animation layer
 and read "drew a card"; the sentinel `hidden` is "a card" or "a hidden card" and opens nothing; an id is never
 printed; `cardResolved`, `cardAnnounced`, `manaSpent`, `translated` and `hookResolving` have no line.
+A `damage`, `damageAbsorbed`, `healed`, `destroyed` or `summoned` line ends with its event's `via` keyword, the glossary's term
+with its tooltip (R2783001); a `summoned` by Reborn reads "came back"; the view drops `via` with a hidden card (R97).
 
 | Call | Takes | Answers |
 | --- | --- | --- |
