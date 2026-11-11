@@ -16901,15 +16901,8 @@
       "verdict_rounds": 2
     },
     "3608": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42980804822",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-11T07:55:41Z",
-        "until": "2026-11-11T08:25:41Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16921,10 +16914,9 @@
         "reason": "planned on sonnet",
         "trail": "uced motion block\"}\n- Bash: {\"command\": \"sed -n 2385,2460p game/board.css; sed -n 110,160p game/clock.css\", \"description\": \"end-turn pulse and clock pill pulse\"}\n- Bash: {\"command\": \"grep -n \\\"::before\\\\|::after\\\\|overflow\\\\|primary-shadow:\\\" buttons.css | head -20; grep -n \\\"control-end-turn\\\" -r --include=*.css . | grep -v \\\"^./game/board.css:24\\\" | head -20\", \"des\u2026\n- Bash: {\"command\": \"grep -n \\\"clock-pill-pulse\\\" -B2 -A12 game/clock.css | sed -n 1,80p; grep -n \\\"^\\\\.clock-line {\\\" -A25 game/clock.css\", \"description\": \"clock pill pulse keyframes and clock-line\"}\n- Bash: {\"command\": \"grep -n \\\"data-urgency\\\" game/clock.css | head -20; sed -n 1,80p game/lanePick.css\", \"description\": \"clock urgency rules and lanePick.css\"}\n- Bash: {\"command\": \"sed -n 235,300p duos/duos.css; sed -n 455,520p tutorial/tutorial.css\", \"description\": \"duos portal flash and coach pulse\"}\n- Bash: {\"command\": \"sed -n 85,170p skeleton/skeleton.css; sed -n 300,430p game/drag/drag.css\", \"description\": \"skeleton and drag arrow css\"}\n- Bash: {\"command\": \"cat game/aim/opponentAim.css; grep -rn \\\"drag-arrow-pulse\\\\|opponent-aim\\\" --include=*.tsx --include=*.ts . | grep -v \\\"\\\\.css\\\" | head -20\", \"description\": \"Opponent aim css and its tsx\u2026\n- Bash: {\"command\": \"grep -n \\\"reduce\\\" game/drag/drag.css | head; sed -n 760,790p game/drag/DragLayer.tsx; sed -n 95,115p game/aim/OpponentAim.tsx; grep -rn \\\"drag-arrow-pulse\\\\|opponent-aim-pulse\\\\|drag-ar\u2026\n- Bash: {\"command\": \"sed -n 200,250p motion.test.ts\", \"description\": \"Rest of motion test\"}\n- Bash: {\"command\": \"sed -n 1,84p skeleton/skeleton.css\", \"description\": \"Skeleton base css\"}\n- Bash: {\"command\": \"grep -rn \\\"^\\\\.cf\\\\(\\\\[[^]]*\\\\]\\\\)*\\\\(:[a-z-]*([^)]*)\\\\)*::\\\\(before\\\\|after\\\\)\\\\|^\\\\.cf::\\\" --include=*.css . | head -20; grep -rn \\\"^\\\\s*\\\\.cf\\\\(\\\\[[^]]*\\\\]\\\\|:[a-z-]*([^)]*)\\\\)*::befo\u2026\n- Bash: {\"command\": \"sed -n 60,108p game/clock.css; grep -n \\\"clock-line[^{]*::\\\" game/clock.css; grep -n \\\"duos-portal\\\" duos/duos.css | head; grep -rn \\\"\\\\.control[^{]*::\\\\(before\\\\|after\\\\)\\\" --include=*.\u2026\n- Bash: {\"command\": \"sed -n 905,1000p cards/cosmetics.css\", \"description\": \"cosmetics will-change block\"}\n- Bash: {\"command\": \"node -e '\\nconst css=require(\\\"fs\\\").readFileSync(\\\"cards/cosmetics.css\\\",\\\"utf8\\\").replace(/\\\\/\\\\*[\\\\s\\\\S]*?\\\\*\\\\//g,\\\"\\\");\\nlet n=0,bad=0;for(const m of css.matchAll(/([^{}]+)\\\\{([^{}]\u2026\n- Bash: {\"command\": \"node -e '\\nconst css=require(\\\"fs\\\").readFileSync(\\\"game/animations.css\\\",\\\"utf8\\\").replace(/\\\\/\\\\*[\\\\s\\\\S]*?\\\\*\\\\//g,\\\"\\\");\\nconst re=/@keyframes\\\\s+([\\\\w-]+)\\\\s*\\\\{/g;let m;\\nfunction \u2026\n- Bash: {\"command\": \"sed -n 335,372p game/animations.css; sed -n 520,560p game/animations.css; grep -n \\\"filter\\\" game/animations.css | sed -n 1,60p\", \"description\": \"Damage shake and dissolve keyframes\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3608 && grep -rln \\\"animationName\\\\|animation-name\\\\|getComputedStyle\\\" apps/web/src e2e --include=*.ts --include=*.tsx 2>/dev/null | grep -v node_mo\u2026\n- Bash: {\"command\": \"grep -n \\\"glow\\\\|highlights\\\" apps/web/src/fx/css.test.ts | head -20; grep -n \\\"glow\\\\|breathe\\\\|highlights.css\\\" apps/web/src/highlight.test.ts apps/web/src/buttons.test.ts | head -20; \u2026\n- Bash: {\"command\": \"cd apps/web/src && sed -n 584,641p fx/css.test.ts; sed -n 500,560p game/Clock.test.tsx\", \"description\": \"Compositor test and Clock css test\"}\n- Bash: {\"command\": \"grep -n \\\"shimmer\\\\|background\\\\|css\\\" skeleton/Skeleton.test.tsx | head -20; grep -n \\\"background-position\\\" fx/css.test.ts | head; grep -rn \\\"coach-ring\\\\|lane-pick-oblong\\\\|duos-porta\u2026\n- Bash: {\"command\": \"sed -n 92,120p skeleton/Skeleton.test.tsx; sed -n 1,40p test/setup.ts | head -5; grep -n \\\"export function readSheet\\\" -A8 test/setup.ts\", \"description\": \"Skeleton css test detail\"}\n- Bash: {\"command\": \"sed -n 1,40p game/aim/OpponentAim.tsx; ls game/aim game/drag; grep -n \\\"ARROW_GLOW_BLUR_PX\\\\|HEAD_PX\\\" -r game --include=*.ts --include=*.tsx | head\", \"description\": \"OpponentAim imports\u2026\n- Bash: {\"command\": \"grep -rn \\\"querySelectorAll(\\\\\\\"path\\\\|querySelector(\\\\\\\"path\\\\|querySelectorAll('path\\\\|drag-arrow-shaft\\\\|opponent-aim-shaft\\\" --include=*.test.* . | head; grep -n \\\"^import\\\\|CSSPrope\u2026\n- Bash: {\"command\": \"grep -rn \\\"cocoon\\\" --include=*.css . | head -5; grep -rn \\\"::after\\\" game/board.css | grep -i \\\"card\\\\b\\\\|card-\\\" | head\", \"description\": \"Divine shield cocoon pseudo\"}\n- Bash: {\"command\": \"sed -n 1058,1130p fx/fx.css | grep -n \\\"{\\\" | head -12\", \"description\": \"Cocoon selectors\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3608 && git show --stat HEAD | head -30\", \"description\": \"Check what the previous part commit touched\"}\n- Bash: {\"command\": \"cat spec/rulings/R3607000.md spec/pending/3607.md; ls spec/pending | tail -5; ls spec/rulings | grep -E \\\"R360[0-9]\\\" ; grep -rn \\\"3604\\\" spec/pending spec/*.md 2>/dev/null | head -5\", \"\u2026\n- Bash: {\"command\": \"cat spec/rulings/R3606000.md | head -12; cat spec/pending/3606.md | head -3; grep -n \\\"R200\\\\b\\\" spec/rulings/R0200.md | head -2; head -8 spec/rulings/R0200.md\", \"description\": \"Sibling \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3608/apps/web/src && grep -n \\\"cards.css\\\\|mythic\\\\|Mythic\\\\|infinite\\\\|animation\\\" cards/foil.test.ts | head -30; grep -rln \\\"cards.css\\\" --include=\u2026\n- Bash: {\"command\": \"sed -n 125,160p cards/foil.test.ts; grep -rn \\\"mythic-hand\\\\|R3345000\\\" --include=*.test.* --include=*.cy.* . ../../../e2e 2>/dev/null | grep -v node_modules | head\", \"description\": \"foi\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3608 && cat >> .bot-plan.md <<'EOF'\\n\\n## Decisions reached (for the next planner)\\n- Technique per loop: halo/glow/tint drawn once on a pseudo-eleme\u2026\n- said: **Heads-up:** nothing here needs a person except attaching the screenshots (see Open questions). ## Goal Every `infinite` animation in `apps/web/src` moves only `transform` and `opacity`, starting with the 14 listed (`glow-breathe-ready`/`-condition`, `jk-facedown-breathe`, `jk-veil-drift`, `cf-myt\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-11T07:37:03Z",
       "owner_why": "it plans it",
@@ -16937,9 +16929,9 @@
       "provider": "claude-7",
       "queued_at": "2026-11-10T03:19:42Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "42980804822",
+      "run_id": "pending:00a68d2a-1794383898",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-11T07:37:03Z",
+      "started_at": "2026-11-11T07:58:49Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -19836,9 +19828,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T07:47:11Z",
+    "at": "2026-11-11T07:58:49Z",
     "url": "",
-    "what": "build #3557 on claude-6"
+    "what": "build #3608 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-11T07:44:25Z",
