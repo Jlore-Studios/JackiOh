@@ -3,10 +3,12 @@
 // (`PATCH_LOG`) read. The client imports the `#jackioh-patch-meta` specifier. In every Vite
 // pipeline — `vite build`, `vite dev`, vitest, the component tests' server — the `patchMeta()`
 // plugin below resolves it to a virtual module holding just these values, so the 650 KB history
-// and `node:fs` never reach a browser. Where no plugin runs — loading `vite.config.ts`, whose graph
-// reaches `wire/cards.ts` through `static-pages.ts`, bundled by Node's loader that rejects a
-// `virtual:` scheme — package.json's `imports` maps the specifier to this file, whose exports
-// come from disk (`PATCH_VERSION`, `PATCH_ADDED`); a browser never loads it. Lives here, not
+// and `node:fs` never reach a browser. Where no plugin runs, package.json's `imports` maps the
+// specifier to this file by default — loading `vite.config.ts`, whose graph reaches
+// `wire/cards.ts` through `static-pages.ts`, bundled by Node's loader that rejects a `virtual:`
+// scheme — whose exports come from disk (`PATCH_VERSION`, `PATCH_ADDED`); under the `browser`
+// condition it maps to `patch-meta.browser.ts` instead (Cypress's e2e webpack preprocessor,
+// which has no plugin). A browser never loads this file. Lives here, not
 // under `src/wire/`, because cargo tests rewrite `src/wire/generated/*`, `engineConfig.ts` and
 // `serverConfig.ts`.
 
