@@ -1741,3 +1741,7 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-11T14:13:21Z,43018692438,muse,muse-spark-1.3-contributor,revise,3706,medium,built,,109,0,0,0,,18,0,95,96,1.9,muse,none,,1
 2026-11-11T14:09:46Z,43013707479,muse,muse-spark-1.3-contributor,build,3560,hard,part,,150,0,0,0,,17,0,95,96,2149.7,claude-4,none,other,1
 2026-11-11T14:08:26Z,43013505546,muse,muse-spark-1.3-contributor,build,3558,hard,part,,150.1,0,0,0,,17,0,95,96,2148.3,claude-1,none,other,1
+2026-11-11T14:31:44Z,43032648691,claude-8,sonnet+opus,revise,3702,medium,built,,7,30,9069,1844009,1.6227,12,13,,,0.4,claude-8,resumed,,1
+2026-11-11T14:38:24Z,43037962973,muse,muse-spark-1.3-contributor,plan,3568,medium,planned,,14.6,0,0,0,,0,1,96,96,2313.2,,none,,1
+2026-11-11T14:39:55Z,43037649605,claude-4,opus,plan,3567,hard,failed,,16.8,286,81985,31175678,10.3655,0,19,,,2311.3,,fresh,,1
+2026-11-11T14:35:54Z,43037225978,muse,muse-spark-1.3-contributor,review,3706,medium,approved,,16.7,0,0,0,,0,1,96,96,2.9,muse,none,,1
