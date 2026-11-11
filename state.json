@@ -15566,6 +15566,13 @@
     "3697": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-11T16:04:46Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "Client-only change in one web component, its test file, zh-CN.json and two doc lines; it touches no engine rules, AI, migration or other crate, and far fewer than 40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
