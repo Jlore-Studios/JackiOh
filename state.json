@@ -32287,10 +32287,6 @@
       "refused_until": "2026-11-09T00:00:00Z",
       "spent": [
         {
-          "at": "2026-11-03T11:13:30Z",
-          "minutes": 35.1
-        },
-        {
           "at": "2026-11-03T11:47:27Z",
           "minutes": 3.8
         },
@@ -33085,14 +33081,18 @@
         {
           "at": "2026-11-11T14:17:00Z",
           "minutes": 150.1
+        },
+        {
+          "at": "2026-11-11T14:41:17Z",
+          "minutes": 14.6
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-11T18:03:00Z",
-          "utilization": 0.0
+          "utilization": 0.01
         },
-        "observed_at": "2026-11-11T14:17:00Z",
+        "observed_at": "2026-11-11T14:41:17Z",
         "seven_day": {
           "resets_at": "2026-11-16T00:00:00Z",
           "utilization": 0.96
@@ -35010,7 +35010,9 @@
   "usage_spool": {
     "readings": [
       "2026-11-11T13:51:38Z,claude-8,ping,before,43032648691,12,2026-11-11T15:00:00Z,,,allowed,85,,",
-      "2026-11-11T13:58:11Z,claude-8,stream,call,43032648691,13,2026-11-11T15:00:00Z,,,allowed,85,,"
+      "2026-11-11T13:58:11Z,claude-8,stream,call,43032648691,13,2026-11-11T15:00:00Z,,,allowed,85,,",
+      "2026-11-11T14:23:39Z,muse,usage-command,before,43037962973,0,2026-11-11T18:03:00Z,96,2026-11-16T00:00:00Z,allowed,100,100,",
+      "2026-11-11T14:38:24Z,muse,usage-command,after,43037962973,1,2026-11-11T18:03:00Z,96,2026-11-16T00:00:00Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-11T14:31:44Z,43032648691,claude-8,sonnet+opus,revise,3702,medium,built,,7,30,9069,1844009,1.6227,12,13,,,0.4,claude-8,resumed,,1"
