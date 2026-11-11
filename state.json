@@ -15564,17 +15564,8 @@
       "suggestion": true
     },
     "3697": {
-      "action": "plan",
-      "asks": [
-        "c:6800173873"
-      ],
-      "build_next": {
-        "from_run": "43051880484",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-11T16:05:01Z",
-        "until": "2026-11-11T16:35:01Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-11T16:04:46Z",
         "difficulty": "medium",
@@ -15593,10 +15584,9 @@
         "reason": "planned on sonnet",
         "trail": " {\"command\": \"sed -n 400,500p crates/engine/src/duos/reduce.rs; grep -rn \\\"duelResult\\\\|DUOS_REASON\\\" crates/engine/src/config.rs crates/engine/src/duos/*.rs | head -30\"}\n- Bash: {\"command\": \"grep -n \\\"duelResult\\\\|One of the duels\\\\|turn limit\\\\|turn limit\\\" -r spec/*.md | head -20; ls spec | head -50\"}\n- Bash: {\"command\": \"cat apps/web/src/wire/generated/PlayerView.ts | head -60; grep -rn \\\"GameOverReason\\\" apps/web/src/wire/generated/*.ts | head -5\"}\n- Bash: {\"command\": \"cd apps/web/src/i18n; ls; sed -n 1,120p i18n.test.ts; wc -l zh-CN.json i18n.ts\"}\n- Bash: {\"command\": \"cd apps/web/src/i18n; grep -n \\\"voted out\\\\|escaped the universe\\\\|winning condition\\\\|won the game\\\\|turn limit\\\\|One of the duels\\\\|A Glitch voided\\\\|The game ran out\\\\|pool ran out\\\\|\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3697 && sed -n 120,330p apps/web/src/i18n/i18n.test.ts\"}\n- Bash: {\"command\": \"sed -n 1,110p apps/web/src/practice/PracticeResult.tsx; sed -n 1,40p apps/web/src/i18n/zh-CN.json; sed -n 1265,1282p apps/web/src/i18n/zh-CN.json; sed -n 3310,3335p apps/web/src/i18n/zh-\u2026\n- Bash: {\"command\": \"sed -n 1,200p apps/web/src/i18n/i18n.ts\"}\n- Bash: {\"command\": \"grep -rn \\\"resultReason\\\\|resultWords\\\" apps/web/src e2e --include=*.ts --include=*.tsx -l; grep -rn \\\"resultReason\\\" apps/web/src --include=*.ts --include=*.tsx | grep -v \\\"^apps/web/sr\u2026\n- Bash: {\"command\": \"grep -n \\\"fled\\\\|R1843\\\\|voted\\\\|R850\\\\|alt-win\\\\|hero-death\\\\|duelResult\\\" spec/13-duos.md | head -30; ls spec/rulings | grep -E \\\"R18430|R0850|R7110\\\" ; grep -rn \\\"LOSER_DRAWS\\\" crates\u2026\n- Bash: {\"command\": \"grep -n \\\"hero.*dies\\\\|spent\\\\|hero-death\\\\|HeroDeath\\\" crates/engine/src/duos/*.rs | head -20\"}\n- Bash: {\"command\": \"cat spec/rulings/R1843004.md spec/rulings/R1843002.md; sed -n 55,80p spec/13-duos.md; grep -n \\\"result panel\\\\|Result panel\\\\|result words\\\\|panel\\\" spec/13-duos.md | head\"}\n- Bash: {\"command\": \"cat spec/rulings/R711000.md | head -30; git log --oneline -5 -- apps/web/src/duos/DuosBoard.tsx; grep -n \\\"t-turn\\\\|turn limit\\\" e2e -r | head\"}\n- Bash: {\"command\": \"grep -n \\\"Concede\\\\|DrawOffer\\\\|Disconnect\\\\|Draw\\\" crates/engine/src/duos/reduce.rs | head -20; grep -rn \\\"GameOverReason::Disconnect\\\\|GameOverReason::DrawAccepted\\\" crates --include=*\u2026\n- Bash: {\"command\": \"cat spec/rulings/R0850.md | head -12; grep -n \\\"hero-death\\\\|hero death\\\" spec/13-duos.md | head\"}\n- Bash: {\"command\": \"grep -rn \\\"reached its turn limit\\\\|One of the duels decided\\\\|decided the game\\\" --include=*.ts --include=*.tsx --include=*.md --include=*.json --include=*.rs . 2>/dev/null | grep -v no\u2026\n- Bash: {\"command\": \"sed -n 240,300p apps/web/src/game/Game.test.tsx; grep -n \\\"lowerFirst\\\\|toLowerCase()\\\" apps/web/src -r --include=*.ts --include=*.tsx | grep -v test | head\"}\n- Bash: {\"command\": \"sed -n 1,80p crates/tools/src/spec/check.rs 2>/dev/null | head -100; ls crates/tools/src | head -30\"}\n- Bash: {\"command\": \"grep -n \\\"cited\\\\|cite\\\\|proven_in\\\\|fn check\\\\|apps/web\\\" crates/tools/src/spec.rs | head -50\"}\n- Bash: {\"command\": \"git show --stat --format=%s 8c3b4ccc28 | head -30; ls patches 2>/dev/null | head; grep -n \\\"Patch:\\\" docs/issues-and-patches.md | head -10\"}\n- Bash: {\"command\": \"grep -n -i \\\"result\\\" apps/web/README.md | head -20; grep -rn -i \\\"result panel\\\\|duos-result\\\\|turn limit\\\" docs/v0.3.0/SURFACE.md apps/web/src/duos/*.md 2>/dev/null | head; ls apps/web\u2026\n- tool error: Exit code 2 113:(the one way on, `--primary-face`'s gold; the result panel's first action takes it by its place), 136:`ConfirmLeaveFight` and `PracticeResult` draw through it; `PracticeResult` keeps \u2026\n- Bash: {\"command\": \"grep -n \\\"duos-result\\\\b\\\\|duosTestid.result\\\\b\\\\|result:\\\" apps/web/src/duos/testids.ts; grep -n \\\"baseView\\\\|export function emptySide\\\" apps/web/src/test/fixtures.ts | head -5; cat ap\u2026\n- Bash: {\"command\": \"sed -n 923,960p apps/web/README.md | cut -c1-600; cat apps/web/src/wire/generated/Winner.ts\"}\n- Bash: {\"command\": \"grep -n \\\"Your team won\\\\|result panel\\\\|panel\\\\|heading\\\\|names which\\\" spec/13-duos.md | head; grep -n \\\"^##\\\" spec/13-duos.md | head -40\"}\n- Bash: {\"command\": \"sed -n 90,105p spec/13-duos.md | cut -c1-700; sed -n 1,40p spec/README.md | cut -c1-300\"}\n- Bash: {\"command\": \"ls apps/web/src/wasm/pkg 2>/dev/null | head -3; cat apps/web/package.json | grep -n '\\\"test\\\"\\\\|\\\"pretest\\\"\\\\|\\\"typecheck\\\"'; (time timeout 280 pnpm exec vitest run --project web apps/we\u2026\n- Bash: {\"command\": \"grep -n \\\"export function useBoardBusy\\\" -A 30 apps/web/src/replay/ReplayPlayer.tsx | head -50; sed -n 160,175p apps/web/src/test/fixtures.ts\"}\n- Bash: {\"command\": \"ls eslint.config.* 2>/dev/null; grep -n \\\"switch-exhaustiveness\\\\|default-case\\\\|no-unnecessary-condition\\\\|strict-boolean\\\\|prefer-nullish\\\\|consistent-type\\\" eslint.config.* | head\"}\n- Bash: {\"command\": \"sed -n 1,80p eslint.config.js | cut -c1-200; (time timeout 200 pnpm exec eslint apps/web/src/duos/DuosBoard.tsx 2>&1 | tail -5)\", \"timeout\": 220000}\n- bash_placeholder: {}\n- tool error: <tool_use_error>Error: No such tool available: bash_placeholder</tool_use_error>\n- Bash: {\"command\": \"grep -rln \\\"setLocale(\\\\\\\"zh-CN\\\\\\\")\\\" apps/web/src --include=*.test.tsx | head -8; grep -n \\\"useFakeTimers\\\" $(grep -rln \\\"setLocale(\\\\\\\"zh-CN\\\\\\\")\\\" apps/web/src --include=*.test.tsx |\u2026\n- Bash: {\"command\": \"grep -n \\\"setLocale\\\\|resetLocaleForTests\\\" apps/web/src/duos/CoopPanel.test.tsx | head; sed -n 295,335p apps/web/src/duos/CoopPanel.test.tsx; grep -n \\\"setLocale\\\" -B3 -A6 apps/web/src/\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3697/.bot-plan.md\", \"content\": \"# Draft plan for #3697 (planner's notes; the final message is the plan)\\n\\nRead: DuosBoard.tsx (resultWords at ~136, R\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Client-only change in one web component, its test file, zh-CN.json and two doc lines; it touches no engine rules, AI, migration or other crate, and far fewer than 40 files.\"} --> ## Goal When a co-op game ends with the team reason `duelResult`, the result \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-11T15:47:31Z",
       "owner_why": "it plans it",
@@ -15609,12 +15599,14 @@
       "provider": "claude-4",
       "queued_at": "2026-11-11T15:44:19Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43051880484",
+      "run_id": "pending:4aa2ffa9-1794413263",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-11T15:47:31Z",
+      "started_at": "2026-11-11T16:08:18Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6800173873"
+      ]
     },
     "3698": {
       "action": "build",
@@ -16053,9 +16045,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T16:07:28Z",
+    "at": "2026-11-11T16:08:18Z",
     "url": "",
-    "what": "build #3698 on claude-8"
+    "what": "build #3697 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-11T15:44:17Z",
