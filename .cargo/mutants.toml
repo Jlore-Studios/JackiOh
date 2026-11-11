@@ -144,7 +144,7 @@ exclude_re = [
   # crates/run (#3513): `place_fights`' `most_allowed` is `RUN_ROUTE_FIGHTS_MAX.min(rows - RUN_ROUTE_TILES_MIN)`.
   # A map always holds `RUN_ACTS` acts of `RUN_ACT_ROWS` rows and a boss (24 rows), so `rows - 8` is 16, the
   # fights' max, and `rows + 8` is 32: the minimum is 16 either way, and no map of another length is dealt.
-  # The name has no way to tell this `-` from the function's others, so the entry holds its line: re-anchor
-  # it when `place_fights` moves (the weekly run lists the mutant again).
-  'lib\.rs:1212:\d+: replace - with \+ in place_fights',
+  # The name has no way to tell this `-` from the function's others, so the entry holds its column (53),
+  # which no other `-` of `place_fights` has, and not its line, which moves with the code above it.
+  'lib\.rs:\d+:53: replace - with \+ in place_fights',
 ]
