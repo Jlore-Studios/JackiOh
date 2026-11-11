@@ -80,7 +80,7 @@ fn tokens_of(text: &[char], offset: usize) -> Vec<Token> {
                 at += 1;
             }
         }
-        let word = !is_separator(c) || at - start > 1;
+        let word = !is_separator(c);
         tokens.push(Token {
             text: text[start..at].iter().collect(),
             start: offset + start,

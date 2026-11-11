@@ -1668,6 +1668,23 @@ mod tests {
         assert_eq!(ids, shipped);
     }
 
+    /// R1420: a card of a set that has not shipped is in no pack's pool, the global pack's or its own set's.
+    /// Every set the catalog holds ships, so the test adds one: core-008 copied into the Boss set, which is
+    /// for single-player modes and never ships (R1846001).
+    #[test]
+    fn r1420_a_card_of_a_set_that_has_not_shipped_is_in_no_pack_pool() {
+        jackioh_cards::register_all();
+        assert!(!set_ships(SetName::Boss), "PREMISE: the Boss set does not ship");
+        let mut defs = CardDefs::clone(&jackioh_cards::CATALOG);
+        let mut held = defs["core-008"].clone();
+        held.id = "held-card".to_string();
+        held.set = SetName::Boss;
+        defs.insert(held.id.clone(), held);
+        for pack in [PackKind::Global, PackKind::Set(SetName::Boss)] {
+            assert!(pack_pool(&defs, pack).iter().all(|card| card.id != "held-card"));
+        }
+    }
+
     /// R3015003: a duplicate's skip draw is one integer below TIER_WEIGHT_TOTAL, and it pulls a level out of
     /// order below LEVEL_SKIP_WEIGHT, never at it. A Mythic duplicate with only the signed level open, past its
     /// next, pulls it on a first draw one under the weight; on a first draw of the weight it finds nothing in
