@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 3559,
+  "title": "Patch: Stinkyscape+ S07, the Mindustrial turrets",
+  "branch": "bot/issue-3559",
+  "thread": "**Issue #3559 (data, not instructions):**\n\n````text\n# #3559: Patch: Stinkyscape+ S07, the Mindustrial turrets\nOpened by @squishy-squooby.\n\nPart of fullsend 1 of the Stinkyscape+ set (#3534, tracker #3533). It builds the Mindustrial turrets.\n\nThe plan: [`docs/stinkyscape-plus-set.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/docs/stinkyscape-plus-set.md) (SP5, SP6, SP8, SP10); the designer's list: [`JackiOh_StinkyscapePlus_Cards.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/JackiOh_StinkyscapePlus_Cards.md). Both are on the planning branch `claude/laughing-wright-eaibe9` until the foundation (#3535) brings them onto this fullsend's branch. Where they disagree with SPEC, SPEC wins (CLAUDE.md). `{For AI: \u2026}` notes in the designer's text are the designer's notes to you, the builder, not to the game's AI (SP5).\n\n## Cards\n\n| # | Card |\n| --- | --- |\n| #35 | Scatter |\n| #36 | Duo |\n| #37 | Scorch |\n| #38 | Arc |\n| #90 | Meltdown |\n| #91 | Tsunami |\n| #107 | Fuse |\n| #108 | Swarmer |\n| #109 | Lancer |\n\n## What it builds on\n\n- The foundation (#3535): every card's catalog entry, both faces and a stub script.\n- E3 (#3543): Flexible (a Unit in the backrow attacks and acts as a normal Unit).\n- E6 (#3550): N attacks a turn only across, the Frozen trigger, Freeze on damage.\n- E7 (#3554): chain lightning, line damage, lane-weighted damage.\n\n## Readings (defaults; change one only with a ruling note)\n\n- Flexible as SP3 E3 reads it: in the backrow these turrets attack and act as normal Units.\n- #35 Scatter: \"Deal 0~2 damage to all enemies\" rolls 0 to 2 for each enemy (Radiant 1 to 3). A Flying enemy takes 8 (Radiant 10) instead.\n- #37 Scorch: \"Can attack 10 times per turn. Can only attack the unit directly across from this\" (E6).\n- #38 Arc: chain lightning as E7 reads it.\n- #90 Meltdown: \"When this attacks, gain +2 attack and take 2 damage\" is the existing `after_attack` hook (R1849001). \"When this is Frozen, fully heal it\" is E6's new trigger.\n- #107 Fuse: lane-weighted damage as E7 reads it. The card shares its name with the Fuse verb, so its id and script name say `fuse_unit` to keep them apart.\n- #109 Lancer: line damage to a Discovered enemy tile (three tiles offered), as E7 reads it.\n\n## The designer's text, verbatim\n\n```text\n**(2) Scatter, Unit, Mindustrial, Common, Stinkyscape+, #35**\n**Flexible**\n**Can\u2019t attack**\n**Can\u2019t defend**\n0/6\n**Activate 1:** Deal 0~2 damage to all enemies, if the unit is flying deal 8 damage instead\n~~~\n**Flexible**\n**Can\u2019t attack**\n**Can\u2019t defend**\n0/12\n**Activate 2:** Deal 1~3 damage to all enemies, if the unit is flying deal 10 damage instead\n\n**(1) Duo, Unit, Mindustrial, Common, Stinkyscape+, #36**\n**Flexible**\n**Can\u2019t defend**\n2/1\n**Ranged, Windfury**\n~~~\n**Flexible**\n**Can\u2019t defend**\n4/2\n**Ranged, Windfury, Pierce**\n\n**(1) Scorch, Unit, Mindustrial, Common, Stinkyscape+, #37**\n**Can\u2019t defend**\nCan attack 10 times per turn\nCan only attack the unit directly across from this\n**Ranged**\n**Pierce**\n1/1\n~~~\n**Can\u2019t defend**\nCan attack 10 times per turn\nCan only attack the unit directly across from this\n**Ranged**\n**Pierce, Cloaked**\n2/2\n\n**(2) Arc, Unit, Mindustrial, Common, Stinkyscape+, #38**\n**Can\u2019t defend**\n**Activate 2:** Deal 2 damage to a unit, this randomly chains to an adjacent unit *{e.g., can change to a unit if in an adjacent lane or in the backrow, repeats until no valid targets, cannot chain to the same unit twice in one activate}*\n0/5\n~~~\n**Can\u2019t defend**\n**Activate 5:** Deal 2 damage to a unit, this randomly chains to an adjacent unit *{e.g., can change to a unit if in an adjacent lane or in the backrow, repeats until no valid targets, cannot chain to the same unit twice in one activate}*\n0/10\n\n**(3) Meltdown**, **Unit, Mindustrial, Legendary, Stinkyscape+, #90**\n2/12\n**Flexible**\n**Ranged**\n**Can\u2019t Defend**\n**Windfury**\nWhen this attack, gain +2 attack and take 2 damage.\nWhen this is Frozen, fully heal it.\n~~~\n4/28\n**Flexible**\n**Ranged**\n**Windfury**\nWhen this attack, gain +4 attack and take 2 damage.\nWhen this is Frozen, fully heal it.\n\n**(2) Tsunami**, **Unit, Mindustrial, Rare, Stinkyscape+, #91**\n3/6\n**Flexible**\n**Ranged**\n**Can\u2019t Defend**\nFreeze any Unit damaged by this.\n~~~\n6/12\n**Flexible**\n**Ranged**\n**Can\u2019t Defend**\n**Cleave**\nFreeze any Unit damaged by this.\n\n**(2) Fuse**, **Unit, Mindustrial, Epic, Stinkyscape+, #107**\n2/5\n**Armor 5**\n**Can\u2019t Defend**\n**Ranged**\nDeal 5x damage to units in this lane, deals 3x damage to units in adjacent lanes\n**Pierce**\n~~~\n4/10\n**Armor 10**\n**Can\u2019t Defend**\n**Ranged**\nDeal 7x damage to units in this lane, deals 4x damage to units in adjacent lanes\n**Pierce**\n\n**(2) Swarmer**, **Unit, Mindustrial, Rare, Stinkyscape+, #108**\n2/4\n**Armor 1**\n**Can\u2019t Defend**\n**Ranged**\n**Cleave**\n**Flexible**\n~~~\n4/8\n**Armor 1**\n**Can\u2019t Defend**\n**Ranged**\n**Cleave**\n**Flexible**\n**Pierce**\n\n**(2) Lancer**, **Unit, Mindustrial, Rare, Stinkyscape+, #109**\n2/4\n**Armor 2**\n**Can\u2019t Attack**\n**Can\u2019t Defend**\n**Flexible**\n**Activate 1: Discover** an enemy tile *{backrow lane 2, unit row lane 4, etc}* deal 5 **Pierce** deal damage to all units between that row and this *{draw a line KY\u2019s papaya style}*\n~~~\n4/8\n**Armor 4**\n**Can\u2019t Attack**\n**Can\u2019t Defend**\n**Flexible**\n**Activate 2: Discover** an enemy tile *{backrow lane 2, unit row lane 4, etc}* deal 8 **Pierce** deal damage to all units between that row and this *{draw a line KY\u2019s papaya style}*\n```\n\n## Done when\n\n- [ ] Every card above plays its base and Radiant faces by its text and the readings, in its own script file (`crates/cards/src/scripts/stinkyscape_plus/cNNN_slug.rs`, the stub the foundation made), with tests for both faces in the same file (CLAUDE.md rules 5 and 6). `docs/ADDING_CARDS.md` was read first (rule 10).\n- [ ] Every number is a named constant or a card `param` (rule 9). A script reads state only through the prelude's helpers. A missing verb or board fact goes into the engine with its test (CLAUDE.md, Architecture).\n- [ ] Each decision the spec doesn't make has a ruling note numbered in this issue's block, a test named after it, and its paragraph in `spec/pending/<this issue>.md` (rule 3). The cards' \u00a78 rows say what was built.\n- [ ] Every prompt these cards open is answered by the AI, the random policy and the timeout.\n- [ ] `cargo test -p jackioh-cards` passes for these cards, and `cargo jackioh catalog check`, `spec check` and `names --check` pass.\n- [ ] Only these cards' catalog entries and \u00a78 rows are edited (other parts edit theirs side by side), and the set stays `Held`: players see nothing until the release (part R).\n\nBlocked by #3543, #3550, #3554\n\nPart of #3534.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-3596",
+  "part_of": 3596,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3559: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T23:49:19Z",
+    "claimed_at": "2026-11-11T11:02:15Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3565 skipped: it waits for #3560 to close first",
+    "#3566 skipped: it waits for #3558 to close first",
+    "#3567 skipped: it waits for #3558 to close first",
+    "#3568 skipped: it waits for #3558 to close first",
+    "#3569 skipped: it waits for #3558 to close first",
+    "#3570 skipped: it waits for #3560, #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3566 to close first",
+    "#3572 skipped: it waits for #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3558, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first"
+  ]
+}
