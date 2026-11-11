@@ -15504,6 +15504,13 @@
     "3694": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-11T18:16:39Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Rule 3: the server and the web client must agree on a new final WebSocket close code (as R679's 4410 did), across crates/server and apps/web, which is more than a call site or a test."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
