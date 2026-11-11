@@ -7,7 +7,7 @@
 // CI_GATE_ENVIRONMENT, which infra/github.tf sets). A job waiting for a reviewer holds no runner.
 // This package is that reviewer: it approves a waiting run once GitHub's runners have room for it.
 //
-// `main`'s own CI, a promotion's (a pull request into `production`) and a dispatch never wait:
+// `main`'s own CI, a promotion's (a pull request into `_production`) and a dispatch never wait:
 // ci.yml names the environment only for a pull request into `main` and a merge-queue build.
 //
 // The order: merge-queue builds first, the oldest first (the queue lands them in that order, and

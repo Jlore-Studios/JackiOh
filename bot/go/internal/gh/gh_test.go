@@ -242,14 +242,14 @@ func TestAFileOver1MBIsReadFromItsBlob(t *testing.T) {
 		}
 		return jsonAnswer(pyjson.New("sha", "abc123", "content", base64.StdEncoding.EncodeToString([]byte(big)))), nil
 	}}
-	text, sha := NewGitHub("o/r", "token", false, o.open, nil, "").GetFile("state.json", "bot-state")
+	text, sha := NewGitHub("o/r", "token", false, o.open, nil, "").GetFile("state.json", "_bot-state")
 	if text != big || sha != "abc123" {
 		t.Fatalf("got %d chars, sha %q", len(text), sha)
 	}
 	if !strings.HasSuffix(o.asked[len(o.asked)-1].URL, "/repos/o/r/git/blobs/abc123") {
 		t.Fatal(o.asked[len(o.asked)-1].URL)
 	}
-	if !strings.HasSuffix(o.asked[0].URL, "/repos/o/r/contents/state.json?ref=bot-state") {
+	if !strings.HasSuffix(o.asked[0].URL, "/repos/o/r/contents/state.json?ref=_bot-state") {
 		t.Fatal(o.asked[0].URL)
 	}
 }

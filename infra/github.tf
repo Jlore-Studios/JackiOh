@@ -78,10 +78,14 @@ resource "github_repository_ruleset" "main_merge_queue" {
   }
 }
 
-# docs/deploy-cloudflare.md §2.2: Restrict deletions and Block force pushes on `production`,
+# docs/deploy-cloudflare.md §2.2: Restrict deletions and Block force pushes on `_production`,
 # and nothing that would hold back the promotion's pull requests, which no check runs on, or the
 # push that creates the branch. The repository had no ruleset at the first import (2026-10-25), so
-# this one is created rather than imported: it only adds protection.
+# this one is created rather than imported: it only adds protection. The branch was `production`
+# until #3652 gave the long-lived branches their leading `_` (so GitHub lists them first); the two
+# rulesets kept their names. Apply that change before renaming the branches, so each renamed branch
+# is protected from its first moment and no deletion rule left on an old name can stand in the way
+# of its rename (#3652's pull request has the order).
 resource "github_repository_ruleset" "production" {
   name        = "production"
   repository  = "JackiOh"
@@ -90,7 +94,7 @@ resource "github_repository_ruleset" "production" {
 
   conditions {
     ref_name {
-      include = ["refs/heads/production"]
+      include = ["refs/heads/_production"]
       exclude = []
     }
   }
@@ -101,9 +105,9 @@ resource "github_repository_ruleset" "production" {
   }
 }
 
-# docs/deploy-cloudflare.md §2.2 (#3275): `staging`, which promote-staging.yml fast-forwards to a
+# docs/deploy-cloudflare.md §2.2 (#3275): `_staging`, which promote-staging.yml fast-forwards to a
 # green commit of main every two hours (with BOT_GITHUB_TOKEN) and deploy-staging.yml deploys on each
-# push. Restrict deletions and Block force pushes, as on `production`, so it only ever moves forward
+# push. Restrict deletions and Block force pushes, as on `_production`, so it only ever moves forward
 # along main, and nothing that would hold back that push. Made with the API on 2026-11-06, with the
 # branch itself (at 334d721581, the commit staging served), so the import adopts it.
 resource "github_repository_ruleset" "staging" {
@@ -114,7 +118,7 @@ resource "github_repository_ruleset" "staging" {
 
   conditions {
     ref_name {
-      include = ["refs/heads/staging"]
+      include = ["refs/heads/_staging"]
       exclude = []
     }
   }
@@ -138,7 +142,7 @@ import {
 # changed, and every workflow failed at startup.
 #
 # `can_approve_pull_request_reviews` stays on. promote-production.yml's daily path opens its pull
-# request into `production` with the workflow's own token and merges it with PROMOTE_TOKEN, which
+# request into `_production` with the workflow's own token and merges it with PROMOTE_TOKEN, which
 # GitHub allows only with this on. It was off until 2026-11-04, and every daily promotion before
 # #3054 failed on it (#3029).
 #

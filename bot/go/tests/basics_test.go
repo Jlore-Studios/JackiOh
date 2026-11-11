@@ -507,7 +507,7 @@ func TestBasics_UpdateCreatesTheBranchAndRetriesOnConflict(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	store := basicsStore(gh)
 	store.Update(func(s *pyjson.Object) any { s.Set("halted", true); return nil }, "halt")
-	assertIn(t, "bot-state", gh.Branches)
+	assertIn(t, "_bot-state", gh.Branches)
 	assertTrue(t, pyjson.Truthy(store.Load().Get("halted")))
 	gh.ConflictsToInject = 2
 	store.Update(func(s *pyjson.Object) any { state.Item(s, 5).Set("failures", 1); return nil }, "fail")
@@ -533,12 +533,12 @@ func TestBasics_AStateThatIsNotJSONIsNeverWrittenOver(t *testing.T) {
 	store := basicsStore(gh)
 	store.Update(func(s *pyjson.Object) any { s.Set("halted", true); return nil }, "x")
 	for _, text := range []string{"", `{"items": {"5": `} {
-		gh.Files[[2]string{"bot-state", "state.json"}] = [2]string{text, "sha-kept"}
+		gh.Files[[2]string{"_bot-state", "state.json"}] = [2]string{text, "sha-kept"}
 		assertRaises[*herr.StateUnreadable](t, func() { store.Load() })
 		assertRaises[*herr.StateUnreadable](t, func() {
 			store.Update(func(s *pyjson.Object) any { s.Set("halted", false); return nil }, "y")
 		})
-		assertEqual(t, gh.Files[[2]string{"bot-state", "state.json"}], [2]string{text, "sha-kept"})
+		assertEqual(t, gh.Files[[2]string{"_bot-state", "state.json"}], [2]string{text, "sha-kept"})
 	}
 }
 
@@ -559,7 +559,7 @@ func TestBasics_AFileOver1MbIsReadFromItsBlob(t *testing.T) {
 		}
 		return &ghpkg.Response{Body: []byte(pyjson.Dumps(body))}, nil
 	}
-	text, sha := ghpkg.NewGitHub("o/r", "token", false, opener, basicsSleep, "").GetFile("state.json", "bot-state")
+	text, sha := ghpkg.NewGitHub("o/r", "token", false, opener, basicsSleep, "").GetFile("state.json", "_bot-state")
 	assertEqual(t, [2]string{text, sha}, [2]string{big, "abc123"})
 	assertTrue(t, strings.HasSuffix(asked[len(asked)-1], "/repos/o/r/git/blobs/abc123"), asked)
 }

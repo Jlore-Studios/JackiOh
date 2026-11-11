@@ -6,7 +6,7 @@ One Cloudflare Worker per environment serves the whole site at one origin (`wran
 | --- | --- | --- |
 | Worker | `jackioh` (the config's top level) | `jackioh-staging` (`env.staging`) |
 | Address | https://jackioh.com, and `jackioh.<account>.workers.dev` | https://staging.jackioh.com, behind Cloudflare Access; no workers.dev or preview address |
-| Deployed by | `promote-production.yml`, from `production` | `deploy-staging.yml`, from `main` once its CI passes |
+| Deployed by | `promote-production.yml`, from `_production` | `deploy-staging.yml`, from `main` once its CI passes |
 | Container | `jackioh-server` | `jackioh-staging-server` |
 
 Every path but `/api/*`, `/ws/*` and the engine's module is a static file from `apps/web/dist`, served by

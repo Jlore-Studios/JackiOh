@@ -6,7 +6,7 @@
 // so the `auth.json` pasted into a secret stops working after one run unless the refreshed file is
 // kept. Runners are thrown away, and the state branch is public, so the refreshed files are
 // encrypted before they leave the model job, and `deliver` (which holds the bot's token but no key)
-// stores the ciphertext on `bot-state` as `vault/<provider>.enc`. The next run's `plan` passes it
+// stores the ciphertext on `_bot-state` as `vault/<provider>.enc`. The next run's `plan` passes it
 // back, and the model job decrypts it with a key derived from that provider's own secret. A run
 // can therefore open only its own provider's vault, never another's, and a new secret (a fresh
 // login pasted in) makes the old vault unreadable, so the fresh login wins.

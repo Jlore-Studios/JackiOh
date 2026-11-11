@@ -333,10 +333,10 @@ func TestReviewFixes_AVaultWriteThatRacesAnotherWriterIsTriedAgain(t *testing.T)
 		t.Fatal(err)
 	}
 	writeText(t, filepath.Join(out, "vault.enc"), sealed)
-	h.gh.Branches["bot-state"] = true
+	h.gh.Branches["_bot-state"] = true
 	h.gh.ConflictsToInject = 1
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
-	text, _ := h.gh.GetFile("vault/muse.enc", "bot-state")
+	text, _ := h.gh.GetFile("vault/muse.enc", "_bot-state")
 	assertEqual(t, strings.TrimSpace(text), sealed)
 }
 

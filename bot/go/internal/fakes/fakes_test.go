@@ -79,7 +79,7 @@ func TestScenario(t *testing.T) {
 	out.Set("put", put)
 	gh.PutFile("a/b.txt", "x", "main", "", "m")
 	gh.PutFile("a/c/d.txt", "x", "main", "", "m")
-	gh.CreateOrphanBranch("bot-state", "state.json", "{}", "m", map[string]string{"a": "1", "b": "2"})
+	gh.CreateOrphanBranch("_bot-state", "state.json", "{}", "m", map[string]string{"a": "1", "b": "2"})
 	out.Set("no_branch", ghErr(func() { gh.PutFile("x", "x", "nope", "", "m") }))
 	gh.Runs.Set("2", pyjson.New("id", 2, "status", "queued", "head_sha", "s1"))
 	gh.Runs.Set("1", pyjson.New("id", 1, "status", "queued", "workflow", "x.yml", "head_sha", "s1"))
@@ -201,7 +201,7 @@ func TestScenario(t *testing.T) {
 		"labels", objs(gh.ListLabels()),
 		"issue_types", objs(gh.ListIssueTypes()),
 		"list_dir", gh.ListDir("a", "main"),
-		"list_dir_root", gh.ListDir("", "bot-state"),
+		"list_dir_root", gh.ListDir("", "_bot-state"),
 		"get_file", []any{file, sha},
 		"files", files,
 		"runs_for_sha", objs(gh.RunsForSHA("s1", 30)),

@@ -161,7 +161,7 @@ jobs:
   # variable CI_GATE_ENVIRONMENT names (`ci-runners`, infra/github.tf), until its one required
   # reviewer, the night bot's account, approves them: the status loop does once GitHub's runners
   # have room, merge-queue builds first. Every other job of the run needs this one, so the whole run
-  # waits. A push to `main`, a promotion's pull request (into `production`) and a dispatch never
+  # waits. A push to `main`, a promotion's pull request (into `_production`) and a dispatch never
   # wait, and with the variable unset nothing does: the name is empty, so the job has no
   # environment. `queue-supersede` needs nothing, so a merge-queue build cancels its pull
   # request's older builds while it waits.
@@ -576,7 +576,7 @@ jobs:
   rust-base-build:
     name: rust (base build)
     needs: changes
-    if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' && github.base_ref != 'production' }}
+    if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' && github.base_ref != '_production' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -649,7 +649,7 @@ jobs:
   rust-classify:
     name: rust (classify)
     needs: [changes, rust-build, rust-base-build]
-    if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' && github.base_ref != 'production' }}
+    if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' && github.base_ref != '_production' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -842,7 +842,7 @@ jobs:
           BUILD: ${{ needs.rust-build.result }}
           CHECKS: ${{ needs.rust-checks.result }}
           CLASSIFY: ${{ needs.rust-classify.result }}
-          PULL: ${{ github.event_name == 'pull_request' && github.base_ref != 'production' }}
+          PULL: ${{ github.event_name == 'pull_request' && github.base_ref != '_production' }}
           TRAINING: ${{ needs.training-gate.result }}
           AI_BRANCH: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'ai/') }}
         run: |
@@ -1439,7 +1439,7 @@ jobs:
           REHEARSAL_STAGE: image
           REHEARSAL_SAVE_IMAGE: ${{ runner.temp }}/deploy-image.tar
           REHEARSAL_CACHE_FROM: type=gha,scope=deploy-rehearsal
-          REHEARSAL_CACHE_TO: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging') && 'type=gha,mode=max,scope=deploy-rehearsal' || '' }}
+          REHEARSAL_CACHE_TO: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/_staging') && 'type=gha,mode=max,scope=deploy-rehearsal' || '' }}
         run: sh crates/server/tests/deploy/rehearse.sh
       - uses: actions/upload-artifact@v4
         with:
