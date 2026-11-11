@@ -73,7 +73,7 @@ describe("R3407000 Scornboi's signature", () => {
       expectCuesR200(sweep, D, "scornSweep");
       expectNoCard(sweep, SCORNBOI);
     }
-    expect(cuesOfRun(planWithOffsets([played("p1"), landing("p1"), ...scornSweepFixture(view, "scorn", "p1")], view, envOf(FX_INTENSITY_SCALE.off)))).toEqual([]);
+    expect(cuesOfRun(planWithOffsets([played("p1"), landing("p1"), ...scornSweepFixture(view, "scorn", "p1")], view, envOf({ intensity: FX_INTENSITY_SCALE.off })))).toEqual([]);
   });
 
   it("R3407000 his gallery play ends within a Legendary's ceiling", () => {

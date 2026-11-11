@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import { animTestid } from "../../../game/animations.ts";
 import { testid } from "../../../game/contract.ts";
 import { fullBoardView } from "../../../test/fixtures.ts";
+import { endOf, envOf } from "../../../test/signatures.ts";
 import { frac } from "../../build.ts";
 import { planCardFx } from "../../cardFx.ts";
 import {
@@ -19,14 +20,12 @@ import {
   FX_CHAOS_DICE_REEL_MS,
   FX_INTENSITY_SCALE,
   FX_LEGENDARY_TRAUMA,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   FX_SLAM_AT,
 } from "../../constants.ts";
 import { planFx } from "../../cues.ts";
 import { ENTRANCES } from "../../entrances.ts";
 import { FLAVOR_LOOKS, paletteLook } from "../../flavors.ts";
-import { createFxMemory } from "../../memory.ts";
 import { galleryEntry, RECIPE_FIXTURES } from "../../motifs/gallery.ts";
 import type { FxCue, FxMemory, FxPlanEnv } from "../../types.ts";
 import type { CardRecipeKey } from "../bespoke.ts";
@@ -38,25 +37,6 @@ const TUTOR = "traininggrounds-038";
 const CHAOS = "traininggrounds-039";
 const GOLEM = "traininggrounds-039-1";
 const DESIGN = "traininggrounds-040";
-
-function envOf(intensity: number = FX_INTENSITY_SCALE.normal): FxPlanEnv {
-  return { intensity, card: () => undefined, memory: createFxMemory() };
-}
-
-/** Where a cue ends, in ms after its entry starts (R200's bound is D + FX_MAX_TAIL_MS). */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-    case "shot":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
 
 const beats = (cues: readonly FxCue[]): string[] => cues.map((cue) => `${cue.kind}@${String(cue.delayMs)}`);
 const tid = (value: string, at?: { x: number; y: number }) => (at === undefined ? { kind: "testid", testid: value } : { kind: "testid", testid: value, at });
@@ -296,7 +276,7 @@ describe("R3400001 Training Grounds' signatures", () => {
     }
     // The whole effects layer off draws nothing.
     for (const [defId, key] of keys) {
-      const env = envOf(FX_INTENSITY_SCALE.off);
+      const env = envOf({ intensity: FX_INTENSITY_SCALE.off });
       const events: GameEvent[] = [played("p1", "ex", defId), ...RECIPE_FIXTURES[key](view, "ex", "p1")];
       const cues = events.flatMap((event) => {
         env.memory.remember([event]);
