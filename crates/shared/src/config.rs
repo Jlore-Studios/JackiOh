@@ -1994,3 +1994,32 @@ pub const PRACTICE_AI_CLOCK_MS: i64 = 3000;
 pub const PRACTICE_LETHAL_HINT_CLOCK_MS: i64 = 300;
 /// R768: the finished free games a device keeps for replay, the newest of them.
 pub const PRACTICE_REPLAYS_KEPT: u32 = 10;
+
+// ---------------------------------------------------------------------------------------------
+// Daily games (#3727, SPEC §9.13): a move every 1, 3, 7 or 14 days, the daily clock's and the
+// notification decision's numbers. `crates/wasm/core`'s `constants` carries them, which the web's
+// Daily screen reads, and the server re-exports the ones its code names.
+// ---------------------------------------------------------------------------------------------
+
+/// Unit conversion: the milliseconds of an hour, which the reminder, the email gap and the urgent
+/// colour are counted in.
+pub const MS_PER_HOUR: i64 = 3_600_000;
+/// §9.13: the times per move a daily game may be played at, in days (1 day, 3 days, 1 week,
+/// 2 weeks), shortest first. The clock is per move: each time the move passes to a player, they get
+/// the whole time again (R3727001).
+pub const DAILY_TIME_PER_MOVE_DAYS: [i32; 4] = [1, 3, 7, 14];
+/// §9.13: how long a daily challenge waits for its friend to accept or decline, in days.
+pub const DAILY_CHALLENGE_TTL_DAYS: i64 = 7;
+/// §9.13: how long a seek in the daily queue waits for an opponent, in days.
+pub const DAILY_SEEK_TTL_DAYS: i64 = 7;
+/// §9.13, R3727004: the most daily games, open seeks and sent challenges an account holds together.
+pub const DAILY_MAX_ACTIVE_GAMES: i32 = 20;
+/// §9.13: how long before a move's deadline the reminder goes out, in hours, if the move is still owed.
+pub const DAILY_REMINDER_HOURS: i64 = 12;
+/// §9.13, §9.8: the least time between two emails to one account, in hours. Each lists every game
+/// waiting, so a gap loses no game.
+pub const DAILY_EMAIL_MIN_GAP_HOURS: i64 = 6;
+/// §9.13: under this many hours left, the Daily screen shows a move's time in the urgent colour.
+pub const DAILY_URGENT_HOURS: i64 = 12;
+/// §9.13: how many finished daily games the Daily screen lists, the newest of them.
+pub const DAILY_RECENT_FINISHED: i32 = 10;
