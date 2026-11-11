@@ -15591,7 +15591,9 @@
     },
     "3696": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6800155352"
+      ],
       "difficulty_by": {
         "at": "2026-11-11T19:40:53Z",
         "difficulty": "hard",
@@ -15654,9 +15656,7 @@
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [
-        "c:6800155352"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "waiting_comment": 6804830604
     },
