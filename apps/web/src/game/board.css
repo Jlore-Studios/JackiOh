@@ -180,6 +180,12 @@
   font-size: var(--type-2xs-em);
   font-weight: 650;
   letter-spacing: 0.08em;
+  /* A long name is cut with an ellipsis, so it cannot push the hero's width (#3698). */
+  min-width: 0;
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .hero-health,
