@@ -1074,11 +1074,11 @@ mod tests {
         };
         let printed = Text::plain("printed");
         assert_eq!(
-            text_in_play(zh, None, false, &printed, &vanilla, false).full,
+            text_in_play(zh, None, false, &printed, &vanilla, false).string(),
             VANILLA_TEXT
         );
         assert_eq!(
-            text_in_play(zh, None, false, &printed, &vanilla, true).full,
+            text_in_play(zh, None, false, &printed, &vanilla, true).string(),
             zh.say(VANILLA_TEXT)
         );
         assert_ne!(
