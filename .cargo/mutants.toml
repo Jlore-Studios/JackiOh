@@ -141,6 +141,10 @@ exclude_re = [
   # '\0', neither parenthesis, so a test of `at < chars.len()` before either and one of `at <= chars.len()`
   # take the same branch.
   'face/fused\.rs:.*replace < with <= in spelled_ingredients',
+  # crates/shared (#3513): named_face gives its FaceSource the name and the face's type of the definition it also
+  # gives it, and face_in reads a card's name off its definition before the source's, and its type off the face,
+  # then the definition, as named_face worked it out: either field left out draws the same face.
+  'delete field (name|type_) from struct FaceSource expression in named_face',
   # crates/shared (#3513): reader_keyword keeps the longest term a text names. Two terms of one length a
   # text both names would be one id (each is the text or its start before a space), and no id is a
   # candidate twice (the glossary's are only those the keywords lack), so `>` and `>=` keep the same one.
