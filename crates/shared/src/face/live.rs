@@ -594,3 +594,62 @@ pub fn named_face(words: Words, view: &PlayerView, named: &NamedCard) -> Option<
     };
     Some(face_model(words, &source, &Lookup { defs: &defs }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// R243: a card the view lists as a `CardView` stands as the view gave it, every field it carries reaching
+    /// the face as it came.
+    #[test]
+    fn r243_a_card_view_reaches_its_face_as_the_view_gave_it() {
+        let mut card: CardView = serde_json::from_value(serde_json::json!({
+            "instanceId": "c1",
+            "defId": "core-008",
+            "radiant": true,
+            "chinese": true,
+            "created": true,
+            "createdBy": "core-020",
+            "cost": 4,
+            "embiggenCost": 6,
+            "fixedX": 2,
+            "attack": 3,
+            "health": 5,
+            "power": "Fireblast",
+            "label": "FO",
+            "preview": [{ "label": "damage", "value": 7 }],
+            "type": "Unit",
+            "tags": ["Human"],
+            "brittle": 2,
+        }))
+        .expect("a card view");
+        card.keywords = Some(vec![Keyword::Taunt]);
+        let live = LiveCard::from(&card);
+        assert_eq!(
+            (live.instance_id.as_str(), live.def_id.as_str(), live.radiant),
+            ("c1", "core-008", true)
+        );
+        assert_eq!(
+            (live.chinese, live.created, live.created_by.as_deref()),
+            (Some(true), Some(true), Some("core-020"))
+        );
+        assert_eq!(
+            (live.cost, live.embiggen_cost, live.fixed_x),
+            (Some(4), Some(6), Some(2))
+        );
+        assert_eq!(
+            (live.attack, live.health, live.brittle),
+            (Some(3), Some(5), Some(2))
+        );
+        assert_eq!(
+            (live.power.as_deref(), live.label.as_deref()),
+            (Some("Fireblast"), Some("FO"))
+        );
+        assert_eq!(live.keywords, Some(vec![Keyword::Taunt]));
+        assert_eq!(live.preview, card.preview);
+        assert_eq!(
+            (live.type_, live.tags),
+            (Some(CardType::Unit), Some(vec![Tag::Human]))
+        );
+    }
+}

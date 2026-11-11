@@ -301,9 +301,74 @@ mod tests {
         );
     }
 
+    /// R384: a term's number is X too, and Activate's "any number of times" is ♾ with or without its emoji
+    /// selector, at the end of the text as anywhere.
+    #[test]
+    fn r384_a_term_takes_an_x_or_a_bare_infinity_sign() {
+        assert_eq!(tokens("Armor X"), vec![term("Armor X", "Armor")]);
+        assert_eq!(
+            tokens("Activate \u{267E}: x"),
+            vec![term("Activate \u{267E}:", "Activate"), Token::Text(" x".into())]
+        );
+        assert_eq!(
+            tokens("Activate \u{267E}"),
+            vec![term("Activate \u{267E}", "Activate")]
+        );
+    }
+
     #[test]
     fn a_term_inside_a_word_stays_plain() {
         assert_eq!(tokens("Locking taunt"), vec![Token::Text("Locking taunt".into())]);
+        assert_eq!(tokens("AntiTaunt"), vec![Token::Text("AntiTaunt".into())]);
+    }
+
+    /// ME-CN, R1301, R1303: a term's entry in Chinese takes its label and its rule from the terms table.
+    #[test]
+    fn r1303_a_chinese_entry_takes_the_tables_label_and_rule() {
+        let taunt = chinese_entry(entry("Taunt").expect("Taunt"));
+        assert_eq!(
+            (taunt.label.as_str(), taunt.rule.as_str(), taunt.section.as_str()),
+            ("嘲讽", "敌人必须先攻击具有嘲讽的单位", "§6.1")
+        );
+    }
+
+    /// A tuning of `changes` alone, its words blank: only its changes reach the badges' terms.
+    fn tuning(changes: Vec<TuneChange>) -> FaceTuning {
+        FaceTuning {
+            verdict: crate::face::types::TuneVerdict::Tuned,
+            glyph: String::new(),
+            word: String::new(),
+            changes,
+            change_words: Vec::new(),
+            summary: String::new(),
+            attack: None,
+            health: None,
+            added: Vec::new(),
+            removed: Vec::new(),
+        }
+    }
+
+    /// R386, R1320: a face in play explains a Buff where a change made it better and a Nerf where one made it
+    /// worse, both where it has both, and neither for a number set outright.
+    #[test]
+    fn r386_a_better_change_names_buff_a_worse_one_nerf_and_a_set_number_neither() {
+        let stat = |way| TuneChange::Stat {
+            stat: "attack".into(),
+            delta: 1,
+            way,
+        };
+        let set = TuneChange::Set {
+            key: "x".into(),
+            value: 3,
+        };
+        let badges = |changes: Vec<TuneChange>| state_terms(None, Some(&tuning(changes)), &[], None);
+        assert_eq!(badges(vec![stat(Way::Better)]), vec!["Buff"]);
+        assert_eq!(badges(vec![stat(Way::Worse)]), vec!["Nerf"]);
+        assert_eq!(
+            badges(vec![stat(Way::Better), stat(Way::Worse)]),
+            vec!["Buff", "Nerf"]
+        );
+        assert!(badges(vec![set]).is_empty());
     }
 
     #[test]

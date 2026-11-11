@@ -118,7 +118,8 @@ fn common_tokens(before: &[Token], after: &[Token]) -> (Vec<bool>, Vec<bool>) {
             kept_after[j] = true;
             i += 1;
             j += 1;
-        } else if lcs[(i + 1) * cols + j] >= lcs[i * cols + j + 1] {
+        } else if lcs[(i + 1) * cols + j] == lcs[i * cols + j] {
+            // Passing over a[i] loses none of the subsequence.
             i += 1;
         } else {
             j += 1;
@@ -170,12 +171,12 @@ fn lines(text: &[char]) -> Vec<&[char]> {
 }
 
 /// A word-level diff of two texts, by R277's rules, each side's stretches in order and never overlapping.
-/// When both texts have the same number of lines, and more than one, each line is diffed against the line
-/// of the same place (a fused text's ingredients, R102).
+/// When both texts have the same number of lines, each line is diffed against the line of the same place (a
+/// fused text's ingredients, R102); one line each is the whole text either way.
 pub fn word_diff(before: &[char], after: &[char]) -> WordDiff {
     let before_lines = lines(before);
     let after_lines = lines(after);
-    if after_lines.len() > 1 && after_lines.len() == before_lines.len() {
+    if after_lines.len() == before_lines.len() {
         let mut diff = WordDiff::default();
         let (mut before_offset, mut after_offset) = (0, 0);
         for (before_line, after_line) in before_lines.iter().zip(&after_lines) {
@@ -241,5 +242,57 @@ mod tests {
         let diff = word_diff(&chars("Deal 3 damage."), &chars("Deal 4 damage."));
         assert_eq!(diff.removed, vec![TextRange { start: 5, end: 6 }]);
         assert_eq!(diff.added, vec![TextRange { start: 5, end: 6 }]);
+    }
+
+    /// The stretches of `before` that `after` does not keep, as text.
+    fn struck(before: &str, after: &str) -> Vec<String> {
+        let before = chars(before);
+        word_diff(&before, &chars(after))
+            .removed
+            .iter()
+            .map(|range| before[range.start..range.end].iter().collect())
+            .collect()
+    }
+
+    /// R277, R388: both sides keep one longest common subsequence of the words, so the newer text marks the rest
+    /// of its words and the older one strikes the rest of its own, when words trade places too.
+    #[test]
+    fn r277_r388_both_sides_keep_one_longest_common_subsequence() {
+        let (before, after) = (
+            "Summon a 1/1, then draw a card.",
+            "Draw a card, then summon a 2/2.",
+        );
+        assert_eq!(marked(before, after), vec!["Draw", "card", "summon", "2/2"]);
+        assert_eq!(struck(before, after), vec!["Summon", "1/1", "draw", "card"]);
+        let (before, after) = ("Give a unit +1/+1 and Taunt.", "Give a unit Taunt and +2/+2.");
+        assert_eq!(marked(before, after), vec!["and +2/+2"]);
+        assert_eq!(struck(before, after), vec!["+1/+1 and"]);
+        assert_eq!(marked("one one two two", "one two one one two"), vec!["one one"]);
+        assert_eq!(struck("one one two two", "one two one one two"), vec!["one"]);
+    }
+
+    /// R277, R388: a phrase said once more is marked once, where it is new, and one said once less is struck once.
+    #[test]
+    fn r277_r388_a_phrase_said_once_more_or_once_less_is_marked_or_struck_once() {
+        assert_eq!(
+            marked("Draw a card.", "Draw a card. Draw a card."),
+            vec!["Draw a card"]
+        );
+        assert_eq!(
+            struck("Draw a card. Draw a card.", "Draw a card."),
+            vec!["Draw a card"]
+        );
+    }
+
+    /// R102: two fused texts of as many lines compare each line with the line in its place, so ingredients that
+    /// trade places mark and strike both, each by its own text's offsets; texts whose lines do not pair up compare
+    /// whole.
+    #[test]
+    fn r102_fused_lines_pair_up_by_place_and_unpaired_lines_compare_whole() {
+        let swapped = word_diff(&chars("Taunt\nRush"), &chars("Rush\nTaunt"));
+        let range = |start, end| TextRange { start, end };
+        assert_eq!(swapped.added, vec![range(0, 4), range(5, 10)]);
+        assert_eq!(swapped.removed, vec![range(0, 5), range(6, 10)]);
+        assert_eq!(marked("Rush", "Rush\nTaunt"), vec!["Taunt"]);
     }
 }
