@@ -15704,18 +15704,15 @@
     "what": "review #3691 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-11T11:32:28Z",
+    "at": "2026-11-11T11:57:46Z",
     "notes": [
-      "delivered plan #3558 on claude-1 (run 43011856391): planned",
-      "delivered plan #3561 on claude-7 (run 43010154435): planned",
-      "delivered plan #3560 on claude-4 (run 43008699237): planned",
-      "delivered plan #3559 on claude-3 (run 43008598142): planned",
-      "started build #3558 on muse (run 43013505546)",
-      "started build #3559 on muse (run 43013609117)",
-      "started build #3560 on muse (run 43013707479)",
-      "started build #3561 on muse (run 43013805776)",
+      "#3688: green and waiting for a person to merge it, so `claude-1` gives up its claim on it",
+      "delivered build #3561 on muse (run 43013805776): blocked",
+      "delivered build #3559 on muse (run 43013609117): blocked",
+      "delivered revise #3691 on claude-8 (run 43006130199): built",
+      "started review #3691 on claude-8 (run 43017417454)",
       "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16421,7 +16418,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T11:32:28Z",
+  "loop_tick": "2026-11-11T11:57:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
