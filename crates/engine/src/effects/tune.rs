@@ -39,7 +39,9 @@ use crate::config::{
     TUNE_NERF_HAND_KEYWORDS, TUNE_PLAGUE_STEP, TUNE_STAT_TOTAL, TUNE_X_STEP,
 };
 use crate::faces::card_type_of;
-use crate::layers::{card_keywords, printed_keywords_of, stats_with_buffs, unclamped_attack, unit_view};
+use crate::layers::{
+    card_keywords, printed_keywords_of, stats_with_buffs, unclamped_attack, unit_has, unit_view,
+};
 use crate::mana::is_x_cost;
 use crate::numbers::{
     NumberRef, NumberedKey, current_stats, number_key, number_on, number_ref_id, numbered_keywords_on,
@@ -56,7 +58,7 @@ use crate::wire::{
 
 use super::buff::candidates_beside;
 use super::card_scope::{CardScope, CardScopeOptions, cards_in_card_scope, unreadable_by};
-use super::targets::{TargetSpec, instance_on_its_stay, resolve_target};
+use super::targets::{TargetSpec, instance_of, instance_on_its_stay, resolve_target};
 use crate::damage::DamageTarget;
 
 /// Which way a change goes.
@@ -403,6 +405,30 @@ fn remove_kind(state: &mut GameState, card_id: &str, kind: KeywordKind) {
     tuning.add_keywords = Some(added);
     card.granted_keywords.retain(|keyword| keyword.kind() != kind);
     tidy_tuning(card);
+}
+
+/// `loseKeyword`'s arguments.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct LoseKeywordArgs {
+    pub target: TargetSpec,
+    pub kind: KeywordKind,
+}
+
+/// R3567004 (S+ #4 Profe Yates's Wolf's Maw): the target loses one keyword — a printed one
+/// through a `remove_keywords` tuning, which every zone keeps (R78), a granted or added one
+/// outright — as a Nerf's removal. An Immutable card keeps it (R23).
+pub fn lose_keyword(args: LoseKeywordArgs) -> Effect {
+    Effect::new("loseKeyword", move |ctx| {
+        let Some(card) = instance_of(ctx, &args.target) else {
+            return;
+        };
+        if unit_has(ctx.state, &card, KeywordKind::Immutable) {
+            return;
+        }
+        remove_kind(ctx.state, &card.id, args.kind);
+    })
 }
 
 /// One number the X row may move: its key, its value now and after one step, and the write.
