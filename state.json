@@ -15490,9 +15490,7 @@
     },
     "3694": {
       "action": "build",
-      "asks": [
-        "c:6800135416"
-      ],
+      "asks": [],
       "died": 1,
       "difficulty_by": {
         "at": "2026-11-11T19:05:56Z",
@@ -15527,16 +15525,18 @@
       "provider": "claude-8",
       "queued_at": "2026-11-11T21:07:26Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43084262830",
+      "run_id": "pending:2ad72a26-1794434730",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-11T19:07:37Z",
+      "started_at": "2026-11-11T22:05:54Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6800135416"
+      ]
     },
     "3695": {
       "action": "plan",
@@ -16714,9 +16714,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T22:05:16Z",
+    "at": "2026-11-11T22:05:54Z",
     "url": "",
-    "what": "plan #3727 on claude-8"
+    "what": "build #3694 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-11T21:44:25Z",
