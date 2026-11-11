@@ -16126,15 +16126,8 @@
       "taken_asks": []
     },
     "3587": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42949774185",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-11T03:27:57Z",
-        "until": "2026-11-11T03:57:57Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16146,10 +16139,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "col)`, `mapLegend`, `mapLegendItem(kind)` |\n- | `apps/web/src/dungeon/map/RunScreen.tsx` | change | Map phase passes `trail={dungeon.trail}` to `MapScreen` |\n- | `apps/web/src/dungeon/store.ts` | change | `Dungeon.trail: readonly number[]`, `trailOf(file)` from the kept log's `go` cols, wired into `useDungeon` |\n- | `apps/web/src/dungeon/map/RunScreen.test.tsx` | change | Update B27 blocks; new `#3587` describes |\n- | `apps/web/src/dungeon/map/NodeIcon.test.tsx` | change | Pass `trail={[]}` to the directly rendered `MapScreen` |\n- | `apps/web/src/i18n/zh-CN.json` | change | Add `Legend`, `Visited`, `{node} {col}: {enemy}` |\n- Do not touch: `crates/*`, `apps/edge`, `e2e`, `spec/` (no new ruling; presentation only, keep the existing R3583000 comment), `apps/web/src/wire/generated` (never hand-edited), `.github/`, `.harness/`, `.squishy/`, `bot/`. Spec sections governing: `spec/15-dungeon-run.md` \u00a715.5, `spec/pending/3583.\u2026\n- ## Steps\n- 1. `store.ts`: add `trail: readonly number[]` to the `Dungeon` type. Add `function trailOf(file: RunFile): number[] { return file.file.log.filter((a) => a.type === \"go\").map((a) => a.col); }` beside `snapshot()`. In `useDungeon`'s memo return `trail: live === null ? [] : trailOf(live.file)`. (`RunF\u2026\n- 2. `testids.ts`: add `mapGraph: \"dungeon-run-map-graph\"`; `mapEdge: (row, col, to) => \\`dungeon-run-map-edge-${row}-${col}-${to}\\`` (`to` is the next-row index); `mapTip: (row, col) => ...`; `mapLegend: \"dungeon-run-map-legend\"`; `mapLegendItem: (kind: string) => \\`dungeon-run-map-legend-${kind}\\``.\n- 3. `MapGraph.tsx` (new): named consts `MAP_COL_W = 46`, `MAP_ROW_H = 140`, `MAP_BADGE = 44`, `MAP_BADGE_BOSS = 64`, `MAP_JITTER = 5`, `MAP_WALKED_W = 3`. Helpers `mapJitter(row, column)` (integer-hash \u00b1`MAP_JITTER`, no `Math.random`), `mapBadge(kind)` (boss/miniBoss get `MAP_BADGE_BOSS`), `mapCente\u2026\n- 4. `MapScreen.tsx`: keep `NODE_LABELS`, `nextCols`, section with `map` test id and `aria-label={t(\"Map\")}`. Render rows in DOM order row 0 first inside `div.dungeon-run-map__scroll` (CSS `column-reverse` puts row 0 at the bottom; keyboard thus climbs), then `MapGraph`, then legend `div` (`mapLegend\u2026\n- 5. `run.css`: replace `__row` flex rules with `__scroll` (vertical scroll, `overflow-x: hidden`), `__graph` (relative), `__lines line` (thin, `var(--text-dim)`; walked `stroke-width: MAP_WALKED_W` in `var(--text)`; live edges gold; dimmed opacity), `__node` (absolute, column flex; badge round `bord\u2026\n- 6. `RunScreen.tsx`: map phase becomes `<MapScreen run={run} content={content} send={send} trail={dungeon.trail} />`.\n- 7. `zh-CN.json`: add `\"Legend\": \"\u56fe\u4f8b\"`, `\"Visited\": \"\u5df2\u5230\u8bbf\"`, `\"{node} {col}: {enemy}\": \"{node} {col}\uff1a{enemy}\"`. Every new `t()` literal must be an exact static string (the `i18n.test.ts` extractor only reads literals and conditionals).\n- 8. Tests: update `RunScreen.test.tsx` B27 blocks (live nodes `toBeEnabled`, others `toBeDisabled` via `aria-disabled`, clicking non-live sends nothing, `go` still carries the row index) and `NodeIcon.test.tsx` (`trail={[]}`); add `#3587` describes (see Tests). Run the commands there, then `pnpm --d\u2026\n- 9. Screenshots (read `.claude/skills/ui-walkthrough/SKILL.md` first): serve dev, then seed states via a temporary `apps/web/src/dungeon/map/seedShots.test.ts` (real wasm bindings, no mocks) that starts a run from `runConstants().presets[0].cards` with `runSeed(\"\u2026\")`, then loops: map\u2192`go` first live\u2026\n- ## Tests\n- In `apps/web/src/dungeon/map/RunScreen.test.tsx`, new `describe(\"#3587 the climbing-path map\")`: one `it` per claim, reusing the file's `MAP`/`runWith`/`fakeDungeon` (extend the `node()` helper with `column`/`next` as needed, pass explicit `trail` arrays since fakes bypass the store): line count eq\u2026\n- ## Done when\n- - [ ] Tall bottom-to-top map with one line per edge, jittered badges, walked/highlighted/dimmed states as specified; only current-led nodes live and pulse (no pulse under reduced motion); tap targets \u2265 44px at 360px width\n- - [ ] Visited/current marks, boss name + relic, legend, per-node details on hover/focus/tap, accessible name + ordered keyboard + visible focus, all words via `t()` with `zh-CN.json` entries, test ids in `testids.ts`\n- - [ ] Clicking a live node sends `go` with its column; the run still refuses illegal steps (no client rule judgments)\n- - [ ] `pnpm --dir apps/web test` for the four files above, `typecheck`, full `eslint` per acceptance pass; screenshots captured at both widths for all three states and kept out of the repo; temp seed file deleted\n- ## Risks\n- - `RunState` carries no path history, so the walked path must come from `Dungeon.trail` (kept `go` log); if a folded log's `go` count ever mismatches rows, `trail[r]` is `undefined` and that row simply shows no walked mark \u2014 never crash, never guess.\n- - `column-reverse` + scroll-programming quirks: the explicit `scrollIntoView` on `[row, col]` change is the behavior, not initial scroll position; jsdom needs the `?.()` guard.\n- - Rule 7: enabled set must stay exactly `run_next_cols`; dimming/visited styling never gates clicks \u2014 the `onClick` guard mirrors the enabled set, and the run refuses the rest.\n- - `aria-disabled` keeps eleven-plus tab stops on a full map; acceptable (every node is focusable by design), DOM order row 0 \u2192 boss keeps it sensible.\n- ## Open questions\n- - Enemy tiers (#3586) have not landed (`RunEnemy` has no tier field), so nodes show the enemy's name only; when #3586 adds the field, a follow-up should append it to the label and tip via the existing `TIER_LABEL` pattern. No person is needed for this issue.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3587 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3587/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-11T03:00:03Z",
       "owner_why": "it plans it",
@@ -16162,9 +16154,9 @@
       "provider": "muse",
       "queued_at": "2026-11-10T01:03:24Z",
       "requested_by": "jgoetzmann",
-      "run_id": "42949774185",
+      "run_id": "pending:a9c54dbb-1794367875",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-11T03:00:03Z",
+      "started_at": "2026-11-11T03:31:43Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18636,9 +18628,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T03:31:01Z",
+    "at": "2026-11-11T03:31:43Z",
     "url": "",
-    "what": "build #3586 on claude-3"
+    "what": "build #3587 on muse"
   },
   "last_sweep": {
     "at": "2026-11-11T03:14:38Z",
