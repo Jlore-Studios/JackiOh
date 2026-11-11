@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 # Moves production, once a day by itself and whenever someone asks, never past a red super run.
 #
-# Production takes its commits from STAGING_BRANCH, `staging` (#3275, the owners' call of 2026-11-05):
+# Production takes its commits from STAGING_BRANCH, `_staging` (#3275, the owners' call of 2026-11-05):
 # promote-staging.yml (scripts/promote-staging.sh) fast-forwards it every two hours to main's newest
 # commit whose push-to-main CI passed, so every commit on it is a commit of main that passed CI, and it
 # holds still between moves, which gives the super run one commit to pass instead of a main that moves
 # many times an hour.
 #
-# The daily promotion. Every day super.yml runs on `staging` (its `schedule` starts the run there).
-# When a run on `staging` passes every job, the commit it tested goes to production: this script
+# The daily promotion. Every day super.yml runs on `_staging` (its `schedule` starts the run there).
+# When a run on `_staging` passes every job, the commit it tested goes to production: this script
 # opens a pull request of it into production and merges it at once, since the run that gates
 # production already passed on exactly that commit, and the workflow's `deploy` job then puts it on
 # jackioh.com, the site and its game server together (wrangler.jsonc). Each such run is acted on once
-# (the issue's `daily`). A red run on `staging` is the night bot's to fix, before anything else in
+# (the issue's `daily`). A red run on `_staging` is the night bot's to fix, before anything else in
 # its queue (super.yml's `report`), and production waits for the next run that passes; a promotion or
 # a deploy that fails is the night bot's too (promote-production.yml's `report`, #3676). The owners
 # asked for the daily promotion on 2026-11-03, after a day of production by hand only (#2750).
@@ -116,10 +116,13 @@ trap 'echo "::error::scripts/promote-production.sh line $LINENO: \`$BASH_COMMAND
 # red run on one opens for the night bot (super.yml's CANDIDATE_TITLE).
 : "${SUPER_WORKFLOW:=super.yml}"
 : "${SUPER_TITLE:=CI: super run failed on a production candidate}"
-# main, whose commits staging takes, and STAGING_BRANCH, the branch production takes its commits
-# from, whose passing super runs it follows (the daily promotion).
+# main, whose commits staging takes; STAGING_BRANCH, the branch production takes its commits
+# from, whose passing super runs it follows (the daily promotion); and PRODUCTION_BRANCH, the
+# branch the `jackioh` Worker serves. The long-lived branches start with `_`, so GitHub lists
+# them first (#3652).
 : "${MAIN_BRANCH:=main}"
-: "${STAGING_BRANCH:=staging}"
+: "${STAGING_BRANCH:=_staging}"
+: "${PRODUCTION_BRANCH:=_production}"
 : "${LISTED_COMMITS:=100}"
 # The GitHub environment deploy-staging.yml's job deploys to, and how many of its newest deployments
 # are looked through for the newest that succeeded.
@@ -161,7 +164,7 @@ run_link() { [ -n "${GITHUB_RUN_ID:-}" ] && echo "([run](${GITHUB_SERVER_URL:-ht
 catalog() {
   git show "$1:$PATCHES_JSON" 2>/dev/null | jq -r '.[-1].version // empty' 2>/dev/null || true
 }
-has_production() { git rev-parse --verify -q origin/production >/dev/null; }
+has_production() { git rev-parse --verify -q "origin/$PRODUCTION_BRANCH" >/dev/null; }
 # What moves production goes out as PROMOTE_TOKEN (the header says why); the git push uses the
 # checkout's credentials, which the workflow sets to the same token.
 promoter() { GH_TOKEN=$PROMOTE_TOKEN gh "$@"; }
@@ -177,7 +180,7 @@ moved() { echo "promoted=true" >> "${GITHUB_OUTPUT:-/dev/null}"; }
 # is opened or merged. $1 is the candidate.
 same_history() {
   local current base
-  current=$(git rev-parse origin/production)
+  current=$(git rev-parse "origin/$PRODUCTION_BRANCH")
   base=$(git merge-base "$current" "$1") || fail "production and $1 share no history."
   git diff --quiet "$base" "$current" || fail "production has diverged: it carries changes that are not on main (git diff ${base:0:12} ${current:0:12}). Not merging; see docs/deploy-cloudflare.md, 'production has diverged'."
 }
@@ -225,7 +228,7 @@ must_wait() {
 
 # The open promotion pull request into production, as "number branch head-sha", or nothing.
 pending() {
-  try gh pr list --base production --state open --limit 100 --json number,headRefName,headRefOid \
+  try gh pr list --base "$PRODUCTION_BRANCH" --state open --limit 100 --json number,headRefName,headRefOid \
     --jq '[.[] | select(.headRefName | startswith("promote/"))] | sort_by(.number) | last // empty | "\(.number) \(.headRefName) \(.headRefOid)"'
 }
 
@@ -237,7 +240,7 @@ open_candidate() {
   local cand=$CAND current p num head sha body url opener=promoter
   PR_NUMBER='' BRANCH='' COUNT=0 CATALOG=$(catalog "$cand")
   if ! has_production; then RESULT=noproduction; return 0; fi
-  current=$(git rev-parse origin/production)
+  current=$(git rev-parse "origin/$PRODUCTION_BRANCH")
   if git merge-base --is-ancestor "$cand" "$current"; then
     RESULT=uptodate
     echo "production already has ${cand:0:12}; nothing to merge."
@@ -263,7 +266,7 @@ open_candidate() {
   BRANCH="promote/$(date -u +%Y%m%d)-${cand:0:7}"
   body=$(mktemp)
   {
-    echo "Promotes \`$STAGING_BRANCH\` up to \`${cand:0:12}\`, a commit of \`main\`, into \`production\`, which is what players are served: the site and its server, together."
+    echo "Promotes \`$STAGING_BRANCH\` up to \`${cand:0:12}\`, a commit of \`main\`, into \`$PRODUCTION_BRANCH\`, which is what players are served: the site and its server, together."
     echo
     if [ -n "${TESTED:-}" ]; then
       echo "The daily promotion: the super run on \`$STAGING_BRANCH\` passed every job on this commit ($TESTED), so this merges at once, with no second super run, and \`promote-production.yml\` then deploys it."
@@ -287,7 +290,7 @@ open_candidate() {
   ensure_label
   push_ref "$cand:refs/heads/$BRANCH"
   [ -z "${TESTED:-}" ] || opener=gh
-  url=$(try "$opener" pr create --base production --head "$BRANCH" --label "$RELEASE_LABEL" \
+  url=$(try "$opener" pr create --base "$PRODUCTION_BRANCH" --head "$BRANCH" --label "$RELEASE_LABEL" \
     --label "$HUMAN_LABEL" --assignee "$ASSIGNEES" \
     --title "Promote main to production: $COUNT commit(s) up to ${cand:0:7}" --body-file "$body")
   rm -f "$body"
@@ -303,7 +306,7 @@ open_candidate() {
 merge_pr() {
   local num=$1 head=$2 cand=$3 current said attempt
   same_history "$cand"
-  current=$(git rev-parse origin/production)
+  current=$(git rev-parse "origin/$PRODUCTION_BRANCH")
   COUNT=$(git rev-list --count "$current..$cand") CATALOG=$(catalog "$cand")
   # GitHub works out whether a new pull request merges cleanly in the background, so the first
   # attempt right after `create` can be refused for a moment.
@@ -316,8 +319,8 @@ merge_pr() {
   rm -f "$said"
   promoter api -X DELETE "repos/$REPO/git/refs/heads/$head" --silent || true
 
-  git fetch -q origin production
-  git diff --quiet "$cand" origin/production \
+  git fetch -q origin "$PRODUCTION_BRANCH"
+  git diff --quiet "$cand" "origin/$PRODUCTION_BRANCH" \
     || fail "production's files differ from ${cand:0:12} after merging #$num. Someone changed production meanwhile; see docs/deploy-cloudflare.md, 'production has diverged'."
 
   RESULT=merged PR_NUMBER=$num
@@ -341,7 +344,7 @@ skip_super() {
     case $RESULT in
       uptodate | waiting) return 0 ;;
       noproduction)
-        push_ref "$CAND:refs/heads/production"
+        push_ref "$CAND:refs/heads/$PRODUCTION_BRANCH"
         RESULT=created CATALOG=$(catalog "$CAND")
         moved
         echo "production did not exist; it is now ${CAND:0:12}."
@@ -379,7 +382,7 @@ daily_promotion() {
   # A run on a commit production already has (the newest one that passed may be days old) is done
   # with, quietly: vetting it could only say why it is not promoted, about a commit that is live. The
   # first run after #2959 said so of 2026-10-29's run on 52bd29e11fb2, whose CI had aged out.
-  if has_production && git merge-base --is-ancestor "$sha" origin/production 2>/dev/null; then return 0; fi
+  if has_production && git merge-base --is-ancestor "$sha" "origin/$PRODUCTION_BRANCH" 2>/dev/null; then return 0; fi
   WHY="the daily promotion"
   if ! vet "$sha"; then
     say "The super run on \`$STAGING_BRANCH\` passed on \`${sha:0:12}\` ([run]($url)), but it is not promoted: $WHY_NOT"
@@ -400,7 +403,7 @@ daily_promotion() {
       say "Merged to production in #$PR_NUMBER, the daily promotion: the super run on \`$STAGING_BRANCH\` passed every job on \`${CAND:0:12}\` ([run]($url)). $COUNT commit(s), catalog $CATALOG; the deploy follows. $(run_link)"
       ;;
     waiting) daily=$((id - 1)) ;;
-    noproduction) say "The super run on \`$STAGING_BRANCH\` passed on \`${CAND:0:12}\` ([run]($url)), but \`production\` does not exist yet: \`/skip-super\` with a reason creates it." ;;
+    noproduction) say "The super run on \`$STAGING_BRANCH\` passed on \`${CAND:0:12}\` ([run]($url)), but \`$PRODUCTION_BRANCH\` does not exist yet: \`/skip-super\` with a reason creates it." ;;
   esac
 }
 
@@ -487,7 +490,7 @@ main_of() { git rev-parse --short "$(git rev-parse -q --verify "$1^2" || echo "$
 # length.
 refresh_queue() {
   local prod green stage branch c n=0 more=0 rows='' checks scell pcell behind onbranch
-  prod=$(git rev-parse -q --verify origin/production || true)
+  prod=$(git rev-parse -q --verify "origin/$PRODUCTION_BRANCH" || true)
   green=$(newest_green || true)
   stage=$(staging_sha || true)
   branch=$(staging_head)
@@ -536,7 +539,7 @@ refresh_queue() {
   [ "$n" != 0 ] || return 0
   QUEUE=$'\n### Not on production yet\n\nNewest first'
   [ "$more" = 0 ] || QUEUE+=" (and older ones)"
-  QUEUE+=$'. ✅ live there · 🚚 on `staging`, so its deploy is running, or the next promotion takes it · 🧪 in the open promotion, under test · 🕑 its checks passed, so the next move of `staging` (every two hours) takes it, and production after that · ⏳ ❌ its checks on `main` are running or failed (the next commit whose checks pass takes it along).\n\n'
+  QUEUE+=$'. ✅ live there · 🚚 on `_staging`, so its deploy is running, or the next promotion takes it · 🧪 in the open promotion, under test · 🕑 its checks passed, so the next move of `_staging` (every two hours) takes it, and production after that · ⏳ ❌ its checks on `main` are running or failed (the next commit whose checks pass takes it along).\n\n'
   QUEUE+=$'| Pull request | Staging | Production |\n| --- | --- | --- |\n'
   QUEUE+=$rows
 }
@@ -573,14 +576,14 @@ body_for() {
         "$PR_NUMBER" "${CAND:0:12}" "${SUPER_URL:+ ([run]($SUPER_URL))}"
       ;;
     failed)
-      printf '\n**Next for production:** the full test run (super) failed on `%s` ([run](%s)), so #%s waits. Its fix is the night bot'"'"'s ("%s"). Re-running the failed jobs merges #%s once they pass; the next daily run on `staging` that passes, or a `/promote` once the fix is on `staging`, takes a newer commit instead.\n' \
+      printf '\n**Next for production:** the full test run (super) failed on `%s` ([run](%s)), so #%s waits. Its fix is the night bot'"'"'s ("%s"). Re-running the failed jobs merges #%s once they pass; the next daily run on `_staging` that passes, or a `/promote` once the fix is on `_staging`, takes a newer commit instead.\n' \
         "${CAND:0:12}" "$SUPER_URL" "$PR_NUMBER" "$SUPER_TITLE" "$PR_NUMBER"
       ;;
     *)
       if [ "$WAITING" = 0 ]; then
         printf '\n**Next for production:** nothing to do: everything on `main` is live.\n'
       else
-        printf '\n**Next for production:** the next daily full test run (super) on `staging` that passes every job puts the commit it tested live. Comment `/promote` to test and promote staging'"'"'s commit now.\n'
+        printf '\n**Next for production:** the next daily full test run (super) on `_staging` that passes every job puts the commit it tested live. Comment `/promote` to test and promote staging'"'"'s commit now.\n'
       fi
       ;;
   esac
@@ -589,8 +592,8 @@ body_for() {
 
 ### How the sites move
 
-- **Staging** moves by itself every two hours: the `staging` branch takes `main`'s newest commit whose checks (`ci.yml`) passed, and the site deploys it. While the full test run on `staging` is red it holds still, until the night bot's fix closes "CI: daily super run failed"; then it takes `main`'s first green commit after that, and the full test run starts on it at once. *promote staging* in the Actions tab moves it now.
-- **Production** moves once a day by itself: the full test run (`super.yml`) runs on `staging` every day, and when it passes every job, the commit it tested goes live. `/promote` goes sooner, once the same test run passes on staging's commit.
+- **Staging** moves by itself every two hours: the `_staging` branch takes `main`'s newest commit whose checks (`ci.yml`) passed, and the site deploys it. While the full test run on `_staging` is red it holds still, until the night bot's fix closes "CI: daily super run failed"; then it takes `main`'s first green commit after that, and the full test run starts on it at once. *promote staging* in the Actions tab moves it now.
+- **Production** moves once a day by itself: the full test run (`super.yml`) runs on `_staging` every day, and when it passes every job, the commit it tested goes live. `/promote` goes sooner, once the same test run passes on staging's commit.
 
 ### Commands
 
@@ -598,9 +601,9 @@ Comment here. Only people with write access are heard; a command gets a 👍, or
 
 | Comment | Effect |
 | --- | --- |
-| `/promote` | Sooner than the daily promotion: opens a pull request of `staging`'s commit into `production`. The full test run (`super.yml`) tests it, and it merges and deploys once every job passes. A red run hands its fix to the night bot as `priority:high`, and the pull request waits. |
-| `/promote <sha>` | The same, for that commit of `staging`. |
-| `/skip-super <reason>` | The emergency way: merges the open pull request, or `staging`'s commit, now, without the full test run. The reason is required, and it is recorded here and on the pull request with who and which commit. |
+| `/promote` | Sooner than the daily promotion: opens a pull request of `_staging`'s commit into `_production`. The full test run (`super.yml`) tests it, and it merges and deploys once every job passes. A red run hands its fix to the night bot as `priority:high`, and the pull request waits. |
+| `/promote <sha>` | The same, for that commit of `_staging`. |
+| `/skip-super <reason>` | The emergency way: merges the open pull request, or `_staging`'s commit, now, without the full test run. The reason is required, and it is recorded here and on the pull request with who and which commit. |
 | `/cancel` | Closes the open pull request. Nothing merges. |
 
 A newer `/promote`, or the daily promotion of a newer commit, closes the open pull request as superseded. Running *promote production* from the Actions tab does the same as `/promote`, or as `/skip-super` with its reason box filled. A promotion or a deploy that fails opens "CI: production promotion failed" for the night bot (`promote-production.yml`'s `report`).
@@ -691,16 +694,16 @@ said_promote() {
   case $RESULT in
     opened) say "Opened #$PR_NUMBER ($1): $COUNT commit(s) of \`$STAGING_BRANCH\` up to \`${CAND:0:12}\`, catalog $CATALOG. The super run tests it now, and it merges and deploys once every job passes." ;;
     testing) say "#$PR_NUMBER already promotes \`${CAND:0:12}\`; the super run is on it." ;;
-    uptodate) say "Nothing to merge: \`production\` already has \`${CAND:0:12}\`." ;;
+    uptodate) say "Nothing to merge: \`$PRODUCTION_BRANCH\` already has \`${CAND:0:12}\`." ;;
     waiting) say "Not promoting \`${CAND:0:12}\` yet: \`main\` has changed \`.github/workflows\` since it, and GitHub refuses this workflow's token that push. Ask again once \`$STAGING_BRANCH\` has main's change (promote-staging.yml moves it every two hours), or give the workflow BOT_GITHUB_TOKEN." ;;
-    noproduction) say "\`production\` does not exist yet, so a pull request has nothing to merge into: \`/skip-super\` with a reason creates it at \`${CAND:0:12}\`." ;;
+    noproduction) say "\`$PRODUCTION_BRANCH\` does not exist yet, so a pull request has nothing to merge into: \`/skip-super\` with a reason creates it at \`${CAND:0:12}\`." ;;
   esac
 }
 # The same for /skip-super, asked by $1 for reason $2.
 said_skip() {
   case $RESULT in
     merged) say "Merged #$PR_NUMBER into production without the super run, at @$1's word: $2 ($COUNT commit(s) up to \`${CAND:0:12}\`, catalog $CATALOG). The deploy follows. $(run_link)" ;;
-    created) say "Created \`production\` at \`${CAND:0:12}\` without the super run, at @$1's word: $2. The deploy follows." ;;
+    created) say "Created \`$PRODUCTION_BRANCH\` at \`${CAND:0:12}\` without the super run, at @$1's word: $2. The deploy follows." ;;
     *) said_promote "@$1" ;;
   esac
 }

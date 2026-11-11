@@ -226,7 +226,7 @@ func TestUsageIssue_EachSectionDrawsFromTheHistorysRows(t *testing.T) {
 	assertIn(t, `| <a name="usage-suggestion-claude-6"></a>`+"`claude-6` | `limits.five_hour` | 70% | 80% | hit its cap "+
 		"with work queued in 4 of its 4 sessions over 14 days", section(15))
 	// 16: the raw links, and a spreadsheet's import.
-	raw := "https://raw.githubusercontent.com/jgoetzmann/JackiOh/bot-usage/usage/sessions-2026-11.csv"
+	raw := "https://raw.githubusercontent.com/jgoetzmann/JackiOh/_bot-usage/usage/sessions-2026-11.csv"
 	assertIn(t, "[raw]("+raw+")", section(16))
 	assertIn(t, `=IMPORTDATA("`+raw+`")`, section(16))
 	assertIn(t, "File → Import", section(16))
@@ -244,7 +244,7 @@ func TestUsageIssue_ASectionWithNothingYetSaysSo(t *testing.T) {
 	assertIn(t, "No tick recorded in the last 14 days yet.", usageIssueSection(t, body, 6))
 	assertIn(t, "No week of `agy`, `gpt`, `muse` read yet", usageIssueSection(t, body, 13))
 	assertIn(t, "No suggestion", usageIssueSection(t, body, 15))
-	assertIn(t, "Nothing is on `bot-usage` yet", usageIssueSection(t, body, 16))
+	assertIn(t, "Nothing is on `_bot-usage` yet", usageIssueSection(t, body, 16))
 	assertNotIn(t, "```mermaid", body)
 }
 
@@ -693,7 +693,7 @@ func TestUsageIssue_AMonthOfElevenSubscriptionsStaysUnderTheLimit(t *testing.T) 
 	for n := 1; n <= 16; n++ {
 		usageIssueSection(t, body, n)
 	}
-	assertIn(t, "[raw](https://raw.githubusercontent.com/jgoetzmann/JackiOh/bot-usage/usage/sessions-2026-11.csv)", body)
+	assertIn(t, "[raw](https://raw.githubusercontent.com/jgoetzmann/JackiOh/_bot-usage/usage/sessions-2026-11.csv)", body)
 	assertIn(t, "=IMPORTDATA(", body)
 }
 

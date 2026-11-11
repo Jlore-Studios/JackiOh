@@ -78,7 +78,7 @@ var Workflows = map[string]string{
 	"code-audit.yml":         "every three days: the code audit's issue for the night bot",
 	"cutover.yml":            "by hand: production's sign-in settings, email key, statistics logins and dev statistics",
 	"db-size.yml":            "twice a day: an issue once either Supabase database nears its plan's cap",
-	"deploy-staging.yml":     "deploys the staging branch to staging.jackioh.com each time it moves",
+	"deploy-staging.yml":     "deploys the _staging branch to staging.jackioh.com each time it moves",
 	"gather.yml":             "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
 	"hygiene-delete.yml":     "deletes the branches a person ticked in the hygiene issue",
 	"hygiene.yml":            "weekly: the hygiene issues for the night bot and Squishy",

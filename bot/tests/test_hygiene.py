@@ -38,7 +38,8 @@ def bucket(b, ahead=None):
 
 class RuleTests(unittest.TestCase):
     def test_infrastructure_is_never_swept(self):
-        for name in ("main", "release", "production", "bot-state", "squishy-journal", "ai/improve"):
+        for name in ("main", "release", "_production", "_staging", "_bot-state", "_bot-usage",
+                     "_squishy-journal", "ai/improve"):
             self.assertEqual(bucket(branch(name, prs=[(1, "MERGED")]), ahead=0), "keep", name)
 
     def test_anything_live_or_recent_stays(self):

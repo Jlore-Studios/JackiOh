@@ -1,23 +1,23 @@
 # Moves production once a day by itself, and sooner on request, never past a red super run (#2750;
-# daily since 2026-11-03, the owners' call), taking its commits from the `staging` branch (#3275, the
-# owners' call of 2026-11-05). promote-staging.yml moves `staging` every two hours to main's newest
-# green commit. The daily promotion: when super.yml's daily run on `staging` passes every job, the
+# daily since 2026-11-03, the owners' call), taking its commits from the `_staging` branch (#3275, the
+# owners' call of 2026-11-05). promote-staging.yml moves `_staging` every two hours to main's newest
+# green commit. The daily promotion: when super.yml's daily run on `_staging` passes every job, the
 # script merges the commit it tested into production (through a pull request super does not run on
 # again) and deploys it to jackioh.com, the site and its game server together. A red run on
-# `staging` is the night bot's to fix, before everything else it has queued (super.yml's `report`),
+# `_staging` is the night bot's to fix, before everything else it has queued (super.yml's `report`),
 # and production waits for the next run that passes. Sooner: someone comments `/promote` on the open
 # issue labeled `production merge` (or runs this from the Actions tab); the script opens a pull
 # request of staging's commit into production, super runs on it, and it merges once every one of that
 # run's jobs passed. A promotion or a deploy that fails is the night bot's (`report` below).
 # docs/deploy-cloudflare.md is the plan; scripts/promote-production.sh is the logic (read its header
 # first) and apps/web/src/net/promote-production.test.ts holds it. Staging's site is
-# deploy-staging.yml's, which deploys each move of `staging`.
+# deploy-staging.yml's, which deploys each move of `_staging`.
 #
-# The `jackioh` Worker serves what the `production` branch holds, and nothing else. This workflow is
+# The `jackioh` Worker serves what the `_production` branch holds, and nothing else. This workflow is
 # the only thing that moves it, and only by merging a pull request whose head is a commit of staging
 # (and so of main) whose push-to-main CI run passed and whose super run passed every job, or, the
 # emergency way, one a person merged with a written reason (`/skip-super <reason>`, or the
-# `skip_super_reason` input), which the issue records. It never force-pushes: a `production` that carries anything main does not fails
+# `skip_super_reason` input), which the issue records. It never force-pushes: a `_production` that carries anything main does not fails
 # the run, loudly, for a human to look at.
 #
 # Three ways in:
@@ -77,7 +77,7 @@ on:
   workflow_run:
     workflows: [CI, super]
     types: [completed]
-    branches: [main, staging, "promote/**"]
+    branches: [main, _staging, "promote/**"]
   workflow_dispatch:
     inputs:
       sha:
@@ -126,7 +126,7 @@ jobs:
           || (github.event.workflow_run.name == 'super' && github.event.workflow_run.event == 'pull_request'
             && startsWith(github.event.workflow_run.head_branch, 'promote/'))
           || (github.event.workflow_run.name == 'super' && github.event.workflow_run.event != 'pull_request'
-            && github.event.workflow_run.head_branch == 'staging' && github.event.workflow_run.conclusion == 'success')))
+            && github.event.workflow_run.head_branch == '_staging' && github.event.workflow_run.conclusion == 'success')))
       || (github.event_name == 'issue_comment' && !github.event.issue.pull_request
         && contains(github.event.issue.labels.*.name, 'production merge')
         && github.event.comment.user.type != 'Bot'
@@ -189,7 +189,7 @@ jobs:
         name: the commits that went live
         run: |
           set -euo pipefail
-          git fetch -q origin production
+          git fetch -q origin _production
           tip=$(git rev-parse FETCH_HEAD)
           new=$(git rev-parse --verify -q "$tip^2" || git rev-parse "$tip")
           old=$(git merge-base "$tip^1" "$new" || true)
@@ -283,7 +283,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: production
+          ref: _production
           # Its second parent, the promoted commit of main, names the CI run whose image it may use.
           fetch-depth: 2
 

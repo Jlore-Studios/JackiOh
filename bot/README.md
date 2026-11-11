@@ -165,7 +165,7 @@ the order is the usual one ([who takes what](#subscriptions)), and a forced item
 every tier. A priority label never makes work eligible or ineligible.
 
 **The production gate** goes before all three (#3275): the issue `super.yml`'s report opens when the
-super run production waits on is red, "CI: daily super run failed" (the daily run on the `staging`
+super run production waits on is red, "CI: daily super run failed" (the daily run on the `_staging`
 branch) or "CI: super run failed on a production candidate", found by its exact title
 (`GateTitles` in [`go/internal/queue`](go/internal/queue/candidates.go)), is built before any
 `priority:high` item, whatever its labels, since production moves only once that run passes. The
@@ -1301,7 +1301,7 @@ runner, and start in order, once there is room
   environment the repository variable `CI_GATE_ENVIRONMENT` names, `ci-runners`
   ([`infra/github.tf`](../infra/github.tf)), whose one required reviewer is the night bot's account.
   A job waiting for a reviewer holds no runner. Only a pull request into `main` and a merge-queue
-  build name it: `main`'s CI, a promotion's pull request (into `production`) and a dispatch never
+  build name it: `main`'s CI, a promotion's pull request (into `_production`) and a dispatch never
   wait, and with the variable unset nothing does.
 - **Who starts it.** The status loop, as that reviewer, every 30 seconds (`--gate-every`), and every
   sweep (bot-commands' scheduled one among them), so a stopped loop slows the gate to the sweep's
@@ -1481,7 +1481,7 @@ The split is by account because the load balancer spreads the same kind of items
 review's reviewer (Opus for every Claude lane) applies to both sides, so it cannot tell them apart.
 Only the Sonnet seat differs: Opus runs at `xhigh` everywhere, and fix passes at `high`.
 
-Compare the medium items each side built and approved (`bot-usage`'s `runs-*.csv`: `subscription`,
+Compare the medium items each side built and approved (`_bot-usage`'s `runs-*.csv`: `subscription`,
 `models`, `kind`, `item`, `outcome`, `model_minutes`, `usd_reported`; the journal's steps):
 revisions per item and the share with none, runs per item, model minutes and cost, the time to the
 first approval, and the share of runs a cap cut off. The baseline, all at `xhigh` (255 items to
@@ -1706,7 +1706,7 @@ finished by Codex the same hour.
 **A person's Claude session hands over too** (CLAUDE.md rule 14, #2748 section 10,
 [`.claude/skills/handoff/`](../.claude/skills/handoff/SKILL.md)). A Claude session outside the
 harness (Claude Code on the web, the desktop app, a cloud session a person started) cannot write
-`bot-journal`: it pushes only its own branch. So it leaves its handoff as one comment of its own on
+`_bot-journal`: it pushes only its own branch. So it leaves its handoff as one comment of its own on
 the issue (or its pull request), edited in place at the end of each turn that pushes or leaves the
 work unfinished, marked `<!-- jackioh-session:handoff -->` (`config.SessionHandoffMarker`), in the
 bots' shape: asked, done, left, tried and failed, and the checks still red. Before it starts, it
@@ -1739,7 +1739,7 @@ never leaves the job readable. A sealed session over `sessions.MaxBytes` (4,000,
 is not kept, and the run's log and journal say so. **The run's `work` artifact is the store**:
 the upload that already carries the result and the bundle carries `session.enc` too, for its
 retention (14 days in `bot-night.yml`), and nothing session-sized is ever committed to
-`bot-state`. Deliver, which cannot open it and checks only its shape, records a pointer in the
+`_bot-state`. Deliver, which cannot open it and checks only its shape, records a pointer in the
 item's state (`session`: the run and the artifact that hold it, found among the run's artifacts by
 name, and its id, subscription, model, kind, worktree, the commit it stopped at, size, when and
 how the run ended) while the item's own next run could take it up: a revision's or an own review
@@ -1752,7 +1752,7 @@ by itself. It is dropped when a run of the item on **another subscription** deli
 a model call (the work changed hands; a review run takes nothing over), when the item closes
 (deliver, a bot pull request's close or merge, which drops its issue's too, and the daily prune of
 the state file, which also deletes any `sessions/*.bin` an earlier draft of this left on
-`bot-state`; no run reads one), and when a newer session of the item could not be kept. State from
+`_bot-state`; no run reads one), and when a newer session of the item could not be kept. State from
 before has no pointer, and its items simply start fresh.
 
 The next run's plan carries the pointer; the work job downloads that run's `work` artifact
@@ -1793,7 +1793,7 @@ cut-off plan kept nothing: #37 lost 20 Opus minutes on `claude-1` and 4 more on 
 one morning, and every planner started from scratch.
 
 **The journal** (#342). The handoff is one slot, which the next run overwrites, so every run also
-leaves a section in its item's **journal**: `<issue>.md` on the unprotected, orphan `bot-journal`
+leaves a section in its item's **journal**: `<issue>.md` on the unprotected, orphan `_bot-journal`
 branch ([`go/internal/journal/`](go/internal/journal/)), where a pull request's runs join the issue it
 closes. Deliver appends it whatever the run did and however it ended: the run, its subscription
 and models, how it ended, a line per step the harness took (each model call, why it ran, its
@@ -1849,7 +1849,7 @@ Codex and Muse can also log in from a secret on GitHub's runners: set `"login": 
 `"runs_on": "ubuntu-latest"` and a `secret` (`CODEX_AUTH_JSON`: the whole of `~/.codex/auth.json`
 after `codex login`; `MUSE_AUTH`: `~/.config/muse/auth.json` after `muse login` on Linux, or a
 Meta API key, which Meta bills per token). Codex replaces its refresh token every time it
-refreshes, so after each such run the bot keeps the refreshed file encrypted on the `bot-state`
+refreshes, so after each such run the bot keeps the refreshed file encrypted on the `_bot-state`
 branch (**the vault**), under a key derived from that subscription's own secret; pasting a fresh
 login makes the old vault unreadable, so the fresh one wins.
 
@@ -2098,14 +2098,14 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
 - **Usage.** Claude and Codex report each subscription's 5-hour and 7-day usage; the bot counts
   minutes for the others. Past a subscription's caps no new call starts on it, and a refused call
   parks it until the limit resets while the item moves to another subscription.
-- **Refreshed logins** from a secret (Codex rotates its own) are kept on `bot-state` only
+- **Refreshed logins** from a secret (Codex rotates its own) are kept on `_bot-state` only
   encrypted (AES-256 with an HMAC, through `openssl`), under a key derived from that
   subscription's secret. A login on the machine never leaves it.
 - **A Claude run's own session** ([resumed sessions](#the-self-check-loop)) holds every tool
   output of the run. It is kept in that run's `work` artifact, which anyone who can read the
   repository's Actions can download, so it is redacted first and sealed with the subscription's
   vault key (the cipher and key of the refreshed logins); only a pointer to it goes on
-  `bot-state`. The model that wrote it could also have written what the next session reads, and
+  `_bot-state`. The model that wrote it could also have written what the next session reads, and
   that run is held to the same checks.
 
 **What it cannot rule out.** The model has a shell and its subscription's login, because it
@@ -2144,7 +2144,7 @@ days.
 
    ```sh
    cd bot
-   harness setup --repo-settings   # labels (created, or brought back to config.Labels), bot-state branch, auto-merge, branch protection
+   harness setup --repo-settings   # labels (created, or brought back to config.Labels), _bot-state branch, auto-merge, branch protection
    harness doctor                  # says what is still missing
    ```
 
@@ -2184,17 +2184,17 @@ days.
 | read what the model did | the `work` artifact of the run: `result.json` and the bundle (set `upload_transcripts` to keep the full sessions too) |
 | change the rounds, budgets or checks | edit `.harness/config.json` in a pull request |
 | let someone else command it | add a line to `.harness/trust.txt` |
-| see how each subscription's usage works out over time | the pinned issue **Night bot usage** ([The usage issue](#the-usage-issue)), which the same loop redraws every 30 minutes with its charts and tuning suggestions; under it, the CSV files on the `bot-usage` branch ([The usage history](#the-usage-history)), which any spreadsheet opens; `harness usage backfill` in `bot/` reads the journal into them again |
+| see how each subscription's usage works out over time | the pinned issue **Night bot usage** ([The usage issue](#the-usage-issue)), which the same loop redraws every 30 minutes with its charts and tuning suggestions; under it, the CSV files on the `_bot-usage` branch ([The usage history](#the-usage-history)), which any spreadsheet opens; `harness usage backfill` in `bot/` reads the journal into them again |
 
 ## The usage history
 
 The limits in `.harness/providers.json` (each subscription's caps, hours, lanes and headroom) were
 set by hand from a few readings, and the state file keeps only each subscription's newest one. So
 the status loop records every subscription's usage over time (#2749), as CSV files any
-spreadsheet opens, on the unprotected orphan branch **`bot-usage`**
+spreadsheet opens, on the unprotected orphan branch **`_bot-usage`**
 ([`go/internal/usage/`](go/internal/usage/)): the identity's `usage_branch`, turned on by
 `usage_history` in `.harness/config.json`. Squishy keeps none: its config leaves the key off and
-its identity names no usage branch. Like `bot-state` and `bot-journal`, the branch deploys
+its identity names no usage branch. Like `_bot-state` and `_bot-journal`, the branch deploys
 nowhere: Cloudflare's own Git builds are disconnected, and only `deploy-staging.yml` and
 `promote-production.yml` deploy ([docs/deploy-cloudflare.md](../docs/deploy-cloudflare.md)). A record, never a gate: a
 failed read or write is a warning, and the loop, the run and the delivery go on.
@@ -2246,7 +2246,7 @@ the last reading before the reset, the share of the whole window never spent, wh
 it; the share under the cap left unspent is `cap_max - util_last_read`.
 
 **The backfill.** The first flush that finds the branch without `usage/backfill.json` reads the
-journal by itself, from a shallow fetch of `bot-journal` (not file by file): a runs row for every
+journal by itself, from a shallow fetch of `_bot-journal` (not file by file): a runs row for every
 run whose section is dated 2026-10-06 or later (`BackfillSince`), and a readings row for each cut-off
 whose line names the reading and its reset (or a refusal and its end), then derives what it can.
 An older section lacks some lines (tokens, steps, the session): their cells stay empty. A run's
@@ -2353,7 +2353,7 @@ loop draws them, every 30 minutes, into a pinned issue of their own, **Night bot
 suggestions, so the limits in `.harness/providers.json` can be set from evidence rather than a few
 readings. It is drawn at each flush of the history (the loop's first tick and every
 `FlushEvery`, 30 minutes, with the statistics; never on the five-minute ticks between), from the
-clone of `bot-usage` the loop holds, with no Contents API read: after the rows are written and the
+clone of `_bot-usage` the loop holds, with no Contents API read: after the rows are written and the
 sessions and weeks derived, before the push. A failed drawing is a warning, and the history is
 pushed all the same.
 
@@ -2391,7 +2391,7 @@ then agy, gpt and Muse.
 | 13. Weekly walls | for each medium subscription (Muse, agy and gpt by `tier`), each of its last 4 closed weeks and this one: its peak, the day and time it reached its weekly cap, and the days it was refused | `weeks` (`first_capped_at`, `days_refused`), `readings` for this week |
 | 14. Holds and handoffs | the holds for each subscription (a stretch of ticks with an item held for it; one that lasted `hold_minutes`, less a tick, `HoldTick`, ran out), their median and longest; handoffs by reason with their median wait; resumed sessions against fresh ones, by model minutes | `ticks` (`held_for_it`), `runs` (`handed_off`, `queue_wait_min`, `session`) |
 | 15. Tuning suggestions | `subscription \| providers.json key \| now \| suggested \| the evidence` (below) | everything above |
-| 16. The raw data | this month's files, `weeks.csv` and `backfill.json`, each linked on the branch and raw, the branch's folder for older months, and how to open one: `=IMPORTDATA("https://raw.githubusercontent.com/<repo>/bot-usage/usage/sessions-YYYY-MM.csv")` in a Google Sheet if the repository is public (the loop does not read its visibility, so both lines are printed), else download it and use File → Import | the branch's files |
+| 16. The raw data | this month's files, `weeks.csv` and `backfill.json`, each linked on the branch and raw, the branch's folder for older months, and how to open one: `=IMPORTDATA("https://raw.githubusercontent.com/<repo>/_bot-usage/usage/sessions-YYYY-MM.csv")` in a Google Sheet if the repository is public (the loop does not read its visibility, so both lines are printed), else download it and use File → Import | the branch's files |
 
 A rise outside the bot's runs (sections 5, 12 and 15, `usage.RisesOutside`) is a rise of at least
 a point (`RisePoints`) between two of a subscription's readings in one session (or from 0 after a
@@ -2440,7 +2440,7 @@ build it has four modes.
 | Commands | `/harness <verb>`, `@jgoetzmann-bot <verb>` | `/squishy <verb>`, `@squishy-squooby <verb>` |
 | Labels | `bot:build`, `bot:building`, … | `squishy:build`, `squishy:building`, …: the same live labels (`squishy:resolving` among them), `squishy:merging`, `squishy:waiting` and `squishy:waiting-turn` (which its one-run flow, with no own review run and so no final check, never puts on, #2948), and a thread still labelled the retired `squishy:working` reads as held |
 | Lanes | a Claude account's by its 5-hour cap in force (`lanes_by_cap`) | its account's own `lanes` (2): its `providers.json` has no `lanes_by_cap` |
-| Branches, state, journal, usage | `bot/issue-<n>`, `bot-state`, `bot-journal`, `bot-usage` | `squishy/issue-<n>`, `squishy-state`, `squishy-journal`, and no usage history |
+| Branches, state, journal, usage | `bot/issue-<n>`, `_bot-state`, `_bot-journal`, `_bot-usage` | `squishy/issue-<n>`, `_squishy-state`, `_squishy-journal`, and no usage history |
 | Switches | `.harness/` (`config.json`, `providers.json`, `HALT`) | `.squishy/` (the same; the trust list is `.harness/trust.txt`) |
 | Workflows | `bot-night.yml`, `bot-commands.yml` | `squishy-run.yml`, `squishy-commands.yml` |
 | Subscriptions | the pool above | `claude-squishy` only (`CLAUDE_CODE_OAUTH_TOKEN_SQUISHY`): Opus for every role, always on GitHub's runners |
@@ -2524,7 +2524,7 @@ requests.
 **Setting it up.** The account `squishy-squooby` has write access and is on `.harness/trust.txt`.
 Two secrets: `SQUISHY_GITHUB_TOKEN`, a classic token of that account with `public_repo` and
 `workflow` (as the night bot's), and `CLAUDE_CODE_OAUTH_TOKEN_SQUISHY` from `claude setup-token`
-on its Max account. Its labels and `squishy-state` are made by its first sweep, or by
+on its Max account. Its labels and `_squishy-state` are made by its first sweep, or by
 `HARNESS_HOME=.squishy harness setup`. `HARNESS_HOME=.squishy harness doctor`
 checks the token belongs to `@squishy-squooby`.
 
@@ -2589,9 +2589,9 @@ started as Squishy (`go/tests/squishy_cases_test.go`, from `go/tests/squishy_tes
 | `go/internal/waiting/` | what the status issue says each queued item waits for (the tier its difficulty needs, and which subscription frees up first) and what each subscription can do now, from the planner's own rules (`plan.Pairs`) on the lanes held now |
 | `go/internal/stats/` | the status issue's statistics: the last 6 hours, day, week and all time, from the bot's comments, pull requests and state file, counted every 30 minutes and kept in the issue between counts |
 | `go/internal/cardsets/` | which set's cards win most, in the status issue's statistics: each set's pooled, mean and median card win rate over the last three patches with 1,000 games or more, read once a day from production's public `/api/stats/cards` and kept in the issue between reads |
-| `go/internal/state/`, `go/internal/status/`, `go/internal/clock/` | the state file on `bot-state`, the status report, time and windows |
-| `go/internal/journal/` | each item's journal on `bot-journal`: a section per run, read into the next run's plan (#342) |
-| `go/internal/usage/` | the usage history on `bot-usage` (#2749): its files and their rows, a run's readings in its result, the state file's spool deliver hands them on in, the loop's ticks, its clone of the branch and its flush, the sessions and weeks derived from them, and the backfill from `bot-journal` |
+| `go/internal/state/`, `go/internal/status/`, `go/internal/clock/` | the state file on `_bot-state`, the status report, time and windows |
+| `go/internal/journal/` | each item's journal on `_bot-journal`: a section per run, read into the next run's plan (#342) |
+| `go/internal/usage/` | the usage history on `_bot-usage` (#2749): its files and their rows, a run's readings in its result, the state file's spool deliver hands them on in, the loop's ticks, its clone of the branch and its flush, the sessions and weeks derived from them, and the backfill from `_bot-journal` |
 | `go/internal/cli/` | the command line (`go/cmd/harness/` is the binary, a few lines around it): every subcommand, the companion process, `$GITHUB_OUTPUT` and the step summary |
 | `go/internal/herr/` | the harness's errors (`GitHubError`, `ConfigError`, …), raised as typed panics and caught where the Python caught them |
 | `go/internal/pyjson/` | JSON as the Python held it: key order kept, written byte for byte as `json.dumps` writes it (the state file, the plans, `result.json`) |

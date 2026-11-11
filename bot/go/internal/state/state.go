@@ -1,6 +1,6 @@
 // Package state is bot/harness/state.py.
 //
-// Durable state: one JSON file on the unprotected `bot-state` branch.
+// Durable state: one JSON file on the unprotected `_bot-state` branch.
 //
 // Written through the Contents API with the blob sha as a compare-and-set, so the event workflow
 // and a night run can both update it without a shared lock: a write that lost the race re-reads

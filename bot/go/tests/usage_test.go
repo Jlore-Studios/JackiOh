@@ -1,7 +1,7 @@
 package tests
 
 // The usage history (#2749, internal/usage): every subscription's usage over time, as CSV files
-// on the `bot-usage` branch. A run's readings and its row reach it through its delivery and the
+// on the `_bot-usage` branch. A run's readings and its row reach it through its delivery and the
 // state file's spool; the status loop adds its ticks, derives sessions and weeks, backfills from
 // the journal once, and pushes every 30 minutes.
 
@@ -94,13 +94,13 @@ func usageJournalOn(t *testing.T, origin string, files map[string]string) {
 	}
 	fakes.Git(seed, "add", "-A")
 	fakes.Git(seed, "commit", "-q", "-m", "journal")
-	fakes.Git(seed, "push", "-q", "--force", origin, "HEAD:refs/heads/bot-journal")
+	fakes.Git(seed, "push", "-q", "--force", origin, "HEAD:refs/heads/_bot-journal")
 }
 
 // show is a file of origin's usage branch, "" when it has none.
 func (w *usageWorld) show(path string) string {
 	text := ""
-	if _, failed := herr.Catch[*fakes.PyError](func() { text = fakes.Git(w.origin, "show", "bot-usage:"+path) }); failed {
+	if _, failed := herr.Catch[*fakes.PyError](func() { text = fakes.Git(w.origin, "show", "_bot-usage:"+path) }); failed {
 		return ""
 	}
 	return text
@@ -123,7 +123,7 @@ func (w *usageWorld) rows(path string) []string {
 // clone is a fresh clone of origin's usage branch.
 func (w *usageWorld) clone() string {
 	dir := filepath.Join(w.t.TempDir(), "usage")
-	fakes.Git(w.root, "clone", "-q", "--branch", "bot-usage", "file://"+w.origin, dir)
+	fakes.Git(w.root, "clone", "-q", "--branch", "_bot-usage", "file://"+w.origin, dir)
 	return dir
 }
 
@@ -364,13 +364,13 @@ func TestUsage_ARunsReadingsReachTheReadingsFileThroughDeliverAndTheLoopsFlush(t
 	rec := usage.NewRecorder(nil)
 	rec.Tick(h.ctx, usage.TickFacts{State: h.ctx.Store.Load(), Live: pyjson.New()})
 	assertEqual(t, rec.Problem, "")
-	text := fakes.Git(h.origin, "show", "bot-usage:usage/readings-2026-09.csv")
+	text := fakes.Git(h.origin, "show", "_bot-usage:usage/readings-2026-09.csv")
 	lines := strings.Split(text, "\n")
 	assertEqual(t, len(lines), 4, text)
 	assertIn(t, ","+provider+",stream,call,777,20,"+usage.ISO(resets)+",,,allowed,", lines[1])
 	assertIn(t, ","+provider+",stream,call,777,35,", lines[2])
 	assertIn(t, ","+provider+",stream,call,777,42,", lines[3])
-	assertIn(t, "777,"+provider+",", fakes.Git(h.origin, "show", "bot-usage:usage/runs-2026-09.csv"))
+	assertIn(t, "777,"+provider+",", fakes.Git(h.origin, "show", "_bot-usage:usage/runs-2026-09.csv"))
 	assertFalse(t, h.ctx.Store.Load().Has(usage.SpoolKey))
 }
 
@@ -382,11 +382,11 @@ func TestUsage_TheBranchIsCreatedAsAnOrphan(t *testing.T) {
 	assertEqual(t, w.show("usage/ticks-2026-11.csv"), "")
 	w.tick()
 	assertEqual(t, w.rec.Problem, "")
-	assertIn(t, "`bot-usage` is not there yet: its first push makes it", strings.Join(w.logs, "\n"))
+	assertIn(t, "`_bot-usage` is not there yet: its first push makes it", strings.Join(w.logs, "\n"))
 	assertEqual(t, w.show("vercel.json"), "")
-	first := fakes.Git(w.origin, "rev-list", "--max-parents=0", "bot-usage")
+	first := fakes.Git(w.origin, "rev-list", "--max-parents=0", "_bot-usage")
 	assertEqual(t, fakes.Git(w.origin, "log", "-1", "--format=%s", first), "usage: start [skip ci]")
-	_, failed := herr.Catch[*fakes.PyError](func() { fakes.Git(w.origin, "merge-base", "main", "bot-usage") })
+	_, failed := herr.Catch[*fakes.PyError](func() { fakes.Git(w.origin, "merge-base", "main", "_bot-usage") })
 	assertTrue(t, failed, "an orphan: it shares no history with main")
 	assertTrue(t, len(w.rows("usage/ticks-2026-11.csv")) > 1)
 	assertTrue(t, usage.HasMarker(w.clone()), "the backfill ran once, by itself")
@@ -510,7 +510,7 @@ func TestUsage_AFailedPushIsLoggedAndTheLoopGoesOn(t *testing.T) {
 		usage.Spool(s, &usage.Run{EndedAt: usageAt.Add(20 * time.Minute), RunID: "901", Subscription: "agy"})
 	})
 	w.tick() // no panic: a warning
-	assertIn(t, "could not push `bot-usage` (try 1)", w.rec.Problem)
+	assertIn(t, "could not push `_bot-usage` (try 1)", w.rec.Problem)
 	assertIn(t, "::warning::", strings.Join(w.logs, "\n"))
 	assertEqual(t, len(usage.SpoolOf(w.ctx.Store.Load())), 1) // kept for the next push
 	assertTrue(t, os.Rename(gone, w.origin) == nil)
@@ -532,7 +532,7 @@ func TestUsage_APushTheBranchMovedUnderIsWrittenAgainOnItsNewTip(t *testing.T) {
 	writeText(t, filepath.Join(other, "usage", "note.txt"), "someone else's commit\n")
 	fakes.Git(other, "add", "-A")
 	fakes.Git(other, "commit", "-q", "-m", "elsewhere")
-	fakes.Git(other, "push", "-q", "origin", "bot-usage")
+	fakes.Git(other, "push", "-q", "origin", "_bot-usage")
 	w.at(usageAt.Add(30 * time.Minute))
 	w.state(func(s *pyjson.Object) {
 		usage.Spool(s, &usage.Run{EndedAt: usageAt.Add(20 * time.Minute), RunID: "902", Subscription: "muse"})
@@ -739,14 +739,14 @@ func TestUsage_TheBackfillRunsOnceByItselfAndItsRerunAddsNothing(t *testing.T) {
 	w.journal(map[string]string{"900.md": usageJournal, "901.md": "# Journal of #901\n"})
 	w.tick()
 	assertEqual(t, w.rec.Problem, "")
-	assertIn(t, "backfilled from `bot-journal` since 2026-10-06: 4 run(s) and 4 reading(s) in 2 file(s)",
+	assertIn(t, "backfilled from `_bot-journal` since 2026-10-06: 4 run(s) and 4 reading(s) in 2 file(s)",
 		strings.Join(w.logs, "\n"))
 	runs := w.rows("usage/runs-2026-10.csv")
 	assertEqual(t, len(runs), 4, runs) // the header, and runs 101, 102, 103: 103's second delivery adds nothing
 	assertEqual(t, len(w.rows("usage/readings-2026-10.csv")), 5)
 	marker := loadsObject(t, w.show(usage.MarkerPath))
 	assertEqual(t, []any{marker.Get("read"), marker.Get("since"), marker.Get("runs"), marker.Get("files")},
-		[]any{"bot-journal", "2026-10-06", 4, 2})
+		[]any{"_bot-journal", "2026-10-06", 4, 2})
 	// A later flush does not backfill again.
 	w.at(usageAt.Add(31 * time.Minute))
 	w.tick()
@@ -767,7 +767,7 @@ func TestUsage_TheBackfillRunsOnceByItselfAndItsRerunAddsNothing(t *testing.T) {
 // The night bot records; its identity names the branch. (Squishy's process checks that Squishy
 // records nothing: squishy_cases_test.go.)
 func TestUsage_TheNightBotRecordsOnItsOwnBranch(t *testing.T) {
-	assertEqual(t, config.Identity.UsageBranch, "bot-usage")
+	assertEqual(t, config.Identity.UsageBranch, "_bot-usage")
 	assertTrue(t, testsupport.MakeConfig().RecordsUsage())
 	off := testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("usage_history", false)})
 	assertFalse(t, off.RecordsUsage())

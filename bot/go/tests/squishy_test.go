@@ -76,7 +76,7 @@ func TestSquishy_SquishysOwnCasesPassAsSquishy(t *testing.T) {
 func TestSquishy_ThisProcessIsTheNightBot(t *testing.T) {
 	assertEqual(t, config.Home, ".harness")
 	assertEqual(t, []string{config.LabelBuild, config.Slash, config.StateBranch, config.Marker},
-		[]string{"bot:build", "/harness", "bot-state", "<!-- jackioh-bot -->"})
+		[]string{"bot:build", "/harness", "_bot-state", "<!-- jackioh-bot -->"})
 	assertEqual(t, config.Modes, []string{"fullsend"})
 	logins := []string{}
 	for _, o := range config.Others {
@@ -94,7 +94,7 @@ func TestSquishy_SquishysConfigSaysWhoItIs(t *testing.T) {
 	assertEqual(t, []string{found.Name, found.Command, found.LabelPrefix, found.BranchPrefix},
 		[]string{"Squishy", "squishy", "squishy:", "squishy/"})
 	assertEqual(t, []string{found.StateBranch, found.JournalBranch, found.Workflow},
-		[]string{"squishy-state", "squishy-journal", "squishy-run.yml"})
+		[]string{"_squishy-state", "_squishy-journal", "squishy-run.yml"})
 	assertEqual(t, found.Modes, []string{"oneshot", "split", "split-bot", "fullsend"})
 	assertFalse(t, found.Suggestions)
 	logins := []string{}

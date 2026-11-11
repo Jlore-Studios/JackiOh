@@ -92,7 +92,7 @@ var Convention = regexp.MustCompile(`^Patch(?: v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]*)
 // passes as they are (`pull_title_ok`): `patches ship: v0.3.1` (patches-ship.yml; several versions
 // joined by ", "), `patches log: abc1234..def5678` (promote-production.yml's technical log,
 // #1370), `Promote main to production: 28 commit(s) up to 6d44be2` (scripts/promote-production.sh,
-// into `production`) and a training lane's promotion, `AI gen 8 (improve): …`
+// into `_production`) and a training lane's promotion, `AI gen 8 (improve): …`
 // (training/improve.md, learn.yml and unban.md). The bots' own pull requests take a title that
 // follows the convention (`pull_title`).
 var AutomatedPull = regexp.MustCompile(

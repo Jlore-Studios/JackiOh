@@ -1,5 +1,5 @@
 # The daily super run (#306, docs/v0.3.0/README.md §7): everything too slow or too statistical to
-# hold every pull request to, once a day on `staging` (07:17 UTC, #3275) and on demand on any branch
+# hold every pull request to, once a day on `_staging` (07:17 UTC, #3275) and on demand on any branch
 # (`gh workflow run super.yml --ref <branch>`). CI (ci.yml) keeps the essential checks per pull
 # request; this keeps the rest from rotting.
 #
@@ -22,27 +22,27 @@
 # when it is already open, naming each failed job with a link to its log; a run that passes closes it
 # (V25). The run is long on purpose and ci-duration.yml does not watch it.
 #
-# It is also production's gate (#2750). The daily run tests `staging`, not main (#3275, the owners'
-# call of 2026-11-05): promote-staging.yml moves `staging` to a green commit of main every two hours,
+# It is also production's gate (#2750). The daily run tests `_staging`, not main (#3275, the owners'
+# call of 2026-11-05): promote-staging.yml moves `_staging` to a green commit of main every two hours,
 # so the run tests one commit that holds still instead of a main that moves many times an hour. A
 # schedule always runs on the default branch, so the scheduled run's one job, `daily`, starts this
-# workflow on `staging` and every other job skips; that dispatched run's `head_sha` is the commit it
-# tested. The daily promotion: when the run on `staging` passes every job, promote-production.yml,
-# woken by its completion, merges the commit it tested into `production` and deploys it. Sooner: a
-# `/promote` on the production issue opens a pull request of staging's commit into `production`,
+# workflow on `_staging` and every other job skips; that dispatched run's `head_sha` is the commit it
+# tested. The daily promotion: when the run on `_staging` passes every job, promote-production.yml,
+# woken by its completion, merges the commit it tested into `_production` and deploys it. Sooner: a
+# `/promote` on the production issue opens a pull request of staging's commit into `_production`,
 # this workflow runs on it (`pull_request` below), and
 # promote-production.yml merges it only once every job here passed. A red run on such a pull request
 # opens its own issue, CANDIDATE_TITLE, handed to the night bot as `priority:high` and
 # `difficulty:hard`, since production waits on it; the pull request stays open, and re-running the
 # failed jobs merges it once they pass. A run that passes on one closes that issue, never the daily one.
 #
-# A failed run on `staging` (or on the default branch, whose commits reach `staging` within two
+# A failed run on `_staging` (or on the default branch, whose commits reach `_staging` within two
 # hours) hands the issue to the night bot (.harness/config.json's bot_login), as ci-duration.yml hands
 # over its report: a new issue is assigned to it and queued with bot:build and `priority:high`
-# (production waits for the next run on `staging` that passes), and an open one nobody is assigned to
+# (production waits for the next run on `_staging` that passes), and an open one nobody is assigned to
 # is handed over the same way, so the red run is worked on without anyone asking. The bot takes this
 # issue, found by its title, before every other queued item, `priority:high` ones included
-# (bot/go/internal/queue `GateTitles`, #3275). Only a run on `staging`, on the default branch or on a
+# (bot/go/internal/queue `GateTitles`, #3275). Only a run on `_staging`, on the default branch or on a
 # promotion pull request closes it. A dispatched run on any other branch tests that branch's change,
 # so it is reported but never handed over, and its report says the branch's author owns it.
 #
@@ -52,14 +52,14 @@
 name: super
 
 on:
-  # The daily run, on `staging`: the `daily` job below starts it there.
+  # The daily run, on `_staging`: the `daily` job below starts it there.
   schedule:
     - cron: "17 7 * * *"
   workflow_dispatch:
   # A promotion pull request (promote-production.yml): its head is a commit of staging, so the run
   # tests exactly what production would get.
   pull_request:
-    branches: [production]
+    branches: [_production]
 
 # One run per branch at a time; a run is never cancelled for the next one, so every day reports.
 concurrency:
@@ -82,7 +82,7 @@ jobs:
   # builds, once per run
   # ------------------------------------------------------------------------------------------------
 
-  # The scheduled run starts the daily run on `staging` (the header says why) and does nothing else:
+  # The scheduled run starts the daily run on `_staging` (the header says why) and does nothing else:
   # every job below skips on `schedule`, those that need one through it. The Actions token may start a
   # workflow_dispatch. A commit a finished run already tested is not run again: while that run is red,
   # staging holds still for the night bot's fix (scripts/promote-staging.sh, the freeze, the owners'
@@ -96,21 +96,21 @@ jobs:
     permissions:
       actions: write
     steps:
-      - name: gh workflow run super.yml --ref staging
+      - name: gh workflow run super.yml --ref _staging
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          sha=$(gh api "repos/$GH_REPO/commits/staging" --jq .sha)
-          tested=$(gh run list --workflow super.yml --branch staging --commit "$sha" --status completed --limit 20 \
+          sha=$(gh api "repos/$GH_REPO/commits/_staging" --jq .sha)
+          tested=$(gh run list --workflow super.yml --branch _staging --commit "$sha" --status completed --limit 20 \
             --json conclusion --jq '[.[] | select(.conclusion != "cancelled" and .conclusion != "skipped")] | length')
           if [ "$tested" != 0 ]; then
-            echo "### \`staging\` (${sha:0:12}) has a finished super run already, so none starts today" >> "$GITHUB_STEP_SUMMARY"
+            echo "### \`_staging\` (${sha:0:12}) has a finished super run already, so none starts today" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          gh workflow run super.yml --ref staging
-          echo "### started the daily super run on \`staging\` (${sha:0:12})" >> "$GITHUB_STEP_SUMMARY"
+          gh workflow run super.yml --ref _staging
+          echo "### started the daily super run on \`_staging\` (${sha:0:12})" >> "$GITHUB_STEP_SUMMARY"
 
   rust-build:
     name: release build
@@ -472,7 +472,7 @@ jobs:
   # ------------------------------------------------------------------------------------------------
 
   # One issue, found by its exact title: opened (or commented on) when anything above did not pass,
-  # closed when everything did on `staging`, the default branch or a promotion, and handed to the
+  # closed when everything did on `_staging`, the default branch or a promotion, and handed to the
   # night bot when the red run is on one of those. It never checks out or runs code; the job names it quotes reach the shell through the
   # API's JSON and env, never through `${{ }}` in the script.
   report:
@@ -505,7 +505,7 @@ jobs:
           # Who fixes the red run: the night bot (.harness/config.json's bot_login).
           BOT_LOGIN: jgoetzmann-bot
           # The branch the daily run tests and production takes its commits from (#3275).
-          STAGING_BRANCH: staging
+          STAGING_BRANCH: _staging
         run: |
           set -euo pipefail
           red=false
@@ -518,13 +518,13 @@ jobs:
           # comments on, the daily one.
           candidate=false
           TITLE=$DAILY_TITLE
-          if [ "$EVENT" = pull_request ] && [ "$BASE" = production ]; then
+          if [ "$EVENT" = pull_request ] && [ "$BASE" = _production ]; then
             candidate=true
             TITLE=$CANDIDATE_TITLE
           fi
           export TITLE
-          # The runs the daily issue belongs to: on `staging` (the daily run, production's gate) and on
-          # the default branch, whose commits reach `staging` within two hours. Any other branch's run
+          # The runs the daily issue belongs to: on `_staging` (the daily run, production's gate) and on
+          # the default branch, whose commits reach `_staging` within two hours. Any other branch's run
           # tests that branch's change.
           gate=false
           if [ "$candidate" = false ] && { [ "$REF" = "$STAGING_BRANCH" ] || [ "$REF" = "$DEFAULT_BRANCH" ]; }; then
@@ -587,7 +587,7 @@ jobs:
             "_Posted by \`.github/workflows/super.yml\`._")
 
           # Hands the issue to the night bot: assigned to it and queued, as a person assigning it
-          # would, for a red run on `staging`, the default branch or a promotion pull request only, all
+          # would, for a red run on `_staging`, the default branch or a promotion pull request only, all
           # as high priority and hard since production waits on them (docs/issues-and-patches.md; the
           # daily one too since 2026-11-10, after a medium plan fixed part of a red run). A failure here
           # leaves the report standing for a person.
