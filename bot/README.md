@@ -2504,7 +2504,8 @@ no tool and adds no hook.
 **The code audit.** Every three days at 22:17 UTC, `.github/workflows/code-audit.yml` (#2142) opens
 `Patch: audit the codebase for dead code, duplicates and zombie routes, <date>` for the night bot
 (`bot:build`, `difficulty:hard`, `person merges`) through the same `branches.py issue`, unless the last
-one is still open: #900's three passes again, from `.github/hygiene/code.md`.
+one is still open: #900's three passes again, and a fourth that maps the states the code holds
+without naming them into `docs/implicit-states.md` and checks each, from `.github/hygiene/code.md`.
 
 **Status.** Squishy has a section of its own in the pinned **Night bot status** issue: the
 `bot-status` loop runs Squishy in a process of its own each tick (`harness dashboard --companions`),
