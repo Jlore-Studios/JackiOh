@@ -14360,7 +14360,8 @@
       "started_at": "2026-11-11T03:33:08Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 0,
+      "waiting_comment": 6786358713
     },
     "3514": {
       "action": "build",
