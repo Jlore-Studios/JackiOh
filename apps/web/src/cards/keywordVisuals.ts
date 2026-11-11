@@ -4,6 +4,8 @@
 // keywords.css. Four layers (frame, veil, glyph, stat) hold `LAYER_CAP` treatments each by `priority` (1 first); a keyword
 // past it keeps its chip; `AMBIENT_MAX` move at once. Charge's and Rush's streaks move while the view's `canAct` is true,
 // a mark of view state, never legality (CLAUDE.md rule 7). Treatments read the view alone (`animated`: a backrow card as a Unit, R383).
+// R3607000: a treatment loops only while its face holds a motion slot (MinionFace.tsx gates the plan on `useArtMotion`);
+// `AMBIENT_MAX` stays the per-unit cap inside a moving face, and every treatment keeps its still mark with it.
 
 import type { Keyword, KeywordKind, UnitView } from "@jackioh/shared";
 
@@ -430,6 +432,11 @@ export function keywordFxPlan(source: KeywordFxSource): KeywordFxPlan[] {
     plan.push(entry);
   }
   return plan;
+}
+
+/** R3607000: whether a unit's plan wants a face motion slot: any treatment looping under the per-unit rules. */
+export function planWantsMotion(plan: readonly KeywordFxPlan[]): boolean {
+  return plan.some((entry) => entry.motion === "on");
 }
 
 /** The attributes every treatment carries, so tests and e2e find it by kind. */
