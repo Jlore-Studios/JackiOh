@@ -15827,13 +15827,32 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-8",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/run/src/tests.rs"
+          ],
+          "from": "78d23e11db9d33415f16842bc02dbf2e50432f69",
+          "main": "bcc440bb3e4c2a6c2bc4d7c5dbce1ff980c78373"
+        },
         "rejections": [],
-        "reviews": [],
-        "sha": "78d23e11db9d33415f16842bc02dbf2e50432f69",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-8",
+            "run": "43065585968",
+            "tier": "strong"
+          }
+        ],
+        "sha": "ee8edd7fdb70bcd396e035cb7eb25dcc505620a4",
+        "tiers": {
+          "claude": "strong"
+        }
       },
       "waiting_comment": 6789960143
     },
