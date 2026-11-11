@@ -21,6 +21,7 @@
 import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type RefObject } from "react";
 
 import { CARD_GLARE_TRAVEL_PCT, CARD_TILT_MAX_DEG } from "./constants.ts";
+import { hearHostMove } from "./hostMove.ts";
 import { tiltShift, unitClamp, type ImmersiveShift } from "./immersive.ts";
 import { useCardSettings } from "./settings.ts";
 
@@ -251,6 +252,16 @@ function attach(
     startDevice();
     write(poseAt(event));
   };
+  // #3674: a move on the host reads its box with the face's live art's read of the same move and writes after it
+  // (hostMove.ts).
+  const readHostMove = (event: PointerEvent): (() => void) | undefined => {
+    if (touches(event) && !pressed) return undefined;
+    startDevice();
+    const pose = poseAt(event);
+    return () => {
+      write(pose);
+    };
+  };
   const onHostDown = (event: PointerEvent): void => {
     pressed = true;
     startDevice();
@@ -283,7 +294,7 @@ function attach(
 
   if (mode === "host") {
     on<PointerEvent>(host, "pointerenter", onHostMove);
-    on<PointerEvent>(host, "pointermove", onHostMove);
+    removers.push(hearHostMove(host, readHostMove));
     on<PointerEvent>(host, "pointerdown", onHostDown);
     on<PointerEvent>(host, "pointerup", onHostUp);
     on<PointerEvent>(host, "pointercancel", onHostUp);
