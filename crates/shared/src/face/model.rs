@@ -955,3 +955,235 @@ pub fn frame_tags(tags: &[Tag]) -> Vec<FrameTag> {
         )
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::face::types::{HandStats, Locale};
+
+    fn catalog(id: &str) -> CardDef {
+        jackioh_cards::register_all();
+        jackioh_cards::CATALOG
+            .get(id)
+            .unwrap_or_else(|| panic!("the catalog's {id}"))
+            .clone()
+    }
+
+    /// #2437, R2179001: a card's Temporary count is the largest of its Temporary entries, a plain one counting
+    /// `TEMPORARY_LAST_COUNT`; a card with none has none.
+    #[test]
+    fn r2179001_a_temporary_count_is_the_largest_entry() {
+        assert_eq!(temporary_left(&[Keyword::Taunt]), None);
+        let three = Keyword::Temporary { n: Some(3) };
+        let plain = Keyword::Temporary { n: None };
+        assert_eq!(temporary_left(&[plain.clone(), Keyword::Taunt, three]), Some(3));
+        assert_eq!(temporary_left(&[plain]), Some(TEMPORARY_LAST_COUNT));
+    }
+
+    /// R243: a hand card's stats are what the view says, its keywords its printed face's.
+    #[test]
+    fn r243_a_hand_cards_stats_are_the_views_and_its_keywords_its_faces() {
+        let face = catalog("core-020").base;
+        let live = hand_live(Some(HandStats { attack: 7, health: 8 }), Some(&face)).expect("hand stats");
+        assert_eq!((live.attack, live.health, live.max_health), (7, 8, 8));
+        assert_eq!(live.keywords, face.keywords);
+        assert!(hand_live(None, Some(&face)).is_none());
+    }
+
+    /// R2521009: a Resource's sale prices are its definition's, on the face it is played on.
+    #[test]
+    fn r2521009_a_resources_sale_prices_are_its_definitions() {
+        let reknite = catalog("stinkyscape-t-reknite");
+        let base = credits_of(Some(&reknite), false).expect("a Resource sells");
+        let radiant = credits_of(Some(&reknite), true).expect("a Resource sells");
+        assert_eq!((base.min, base.max, radiant.min, radiant.max), (1, 3, 2, 6));
+        assert!(credits_of(Some(&catalog("core-020")), false).is_none());
+    }
+
+    /// R1438: a keyword is gained once, however often the card has it, and only where the printed face lacks it;
+    /// Lucky is gained at its sum only where the sum differs from the printed one.
+    #[test]
+    fn r1438_a_keyword_is_gained_once_and_lucky_at_its_sum() {
+        assert_eq!(
+            gained_keywords(&[Keyword::Taunt, Keyword::Taunt], &[]),
+            vec![Keyword::Taunt]
+        );
+        assert!(gained_keywords(&[Keyword::Taunt], &[Keyword::Taunt]).is_empty());
+        assert!(gained_keywords(&[Keyword::Lucky { n: 2 }], &[Keyword::Lucky { n: 2 }]).is_empty());
+        assert_eq!(
+            gained_keywords(
+                &[Keyword::Lucky { n: 1 }, Keyword::Lucky { n: 2 }],
+                &[Keyword::Lucky { n: 1 }]
+            ),
+            vec![Keyword::Lucky { n: 3 }]
+        );
+        assert_eq!(
+            luck_of(&[Keyword::Lucky { n: 2 }, Keyword::Taunt, Keyword::Lucky { n: 3 }]),
+            5
+        );
+    }
+
+    /// R275: a Radiant face as printed grows where its stats pass the base face's, and not where they only match;
+    /// a face in play (on the field or in a hand) is the view's, so none grows.
+    #[test]
+    fn r275_a_radiant_face_grows_only_past_the_base_faces_stats() {
+        let mut def = catalog("core-020");
+        def.base.attack = Some(2);
+        def.base.health = Some(3);
+        def.radiant.attack = Some(2);
+        def.radiant.health = Some(4);
+        let radiant = FaceSource {
+            radiant: true,
+            ..FaceSource::default()
+        };
+        let grew = grew_of(Some(&def), &radiant).expect("a printed Radiant face");
+        assert_eq!((grew.attack, grew.health), (false, true));
+        def.radiant.attack = Some(3);
+        def.radiant.health = Some(3);
+        let grew = grew_of(Some(&def), &radiant).expect("a printed Radiant face");
+        assert_eq!((grew.attack, grew.health), (true, false));
+        let on_the_field = FaceSource {
+            live: Some(LiveStats {
+                attack: 1,
+                health: 1,
+                max_health: 1,
+                keywords: Vec::new(),
+            }),
+            ..radiant.clone()
+        };
+        assert!(grew_of(Some(&def), &on_the_field).is_none());
+        let in_hand = FaceSource {
+            in_play: Some(InPlay {
+                hand_stats: Some(HandStats { attack: 1, health: 1 }),
+                ..InPlay::default()
+            }),
+            ..radiant
+        };
+        assert!(grew_of(Some(&def), &in_hand).is_none());
+        assert!(grew_of(Some(&def), &FaceSource::default()).is_none());
+    }
+
+    /// R711000: a card whose text is gone says so in English to a reader of Chinese unless the card is drawn in
+    /// Chinese, and in Chinese when it is.
+    #[test]
+    fn r711000_a_vanilla_text_is_in_chinese_only_on_a_chinese_card_for_a_chinese_reader() {
+        let zh = Words::new(Locale::ZhCn);
+        let vanilla = InPlay {
+            vanilla: Some(true),
+            ..InPlay::default()
+        };
+        let printed = Text::plain("printed");
+        assert_eq!(
+            text_in_play(zh, None, false, &printed, &vanilla, false).full,
+            VANILLA_TEXT
+        );
+        assert_eq!(
+            text_in_play(zh, None, false, &printed, &vanilla, true).full,
+            zh.say(VANILLA_TEXT)
+        );
+        assert_ne!(
+            zh.say(VANILLA_TEXT),
+            VANILLA_TEXT,
+            "PREMISE: the table says it in Chinese"
+        );
+    }
+
+    /// R65: a cost below the printed one is down, above it up, at it base.
+    #[test]
+    fn r65_a_cost_tone_reads_against_the_printed_cost() {
+        assert_eq!(cost_tone(Some(2), 3), CostTone::Down);
+        assert_eq!(cost_tone(Some(3), 3), CostTone::Base);
+        assert_eq!(cost_tone(Some(4), 3), CostTone::Up);
+        assert_eq!(cost_tone(None, 3), CostTone::Base);
+    }
+
+    /// R1181003, CLAUDE.md rule 7: "A embiggen B" shows A with B beside it at its base price, and otherwise the view's
+    /// number alone: base at B, its printed embiggen price, and read against A elsewhere.
+    #[test]
+    fn r1181003_an_embiggen_cost_shows_its_second_price_only_at_its_first() {
+        let mut def = catalog("core-046");
+        def.cost = CardCost::Embiggen { base: 2, embiggen: 5 };
+        let at = |live| {
+            let cost = cost_of(Some(&def), live, None, None);
+            (cost.text, cost.alt, cost.tone)
+        };
+        assert_eq!(
+            at(Some(2)),
+            ("2".to_string(), Some("5".to_string()), CostTone::Base)
+        );
+        assert_eq!(at(Some(5)), ("5".to_string(), None, CostTone::Base));
+        assert_eq!(at(Some(4)), ("4".to_string(), None, CostTone::Up));
+    }
+
+    /// Issue #170: Glitch's gem is plain, whatever its cost would say.
+    #[test]
+    fn glitchs_cost_is_always_base_and_alone() {
+        let cost = FaceCost {
+            text: "2".to_string(),
+            value: "2".to_string(),
+            tone: CostTone::Up,
+            alt: Some("5".to_string()),
+        }
+        .with_base();
+        assert_eq!((cost.tone, cost.alt), (CostTone::Base, None));
+    }
+
+    /// R386: a stat above its printed value is buffed, below it reduced, at it (or with none printed) base.
+    #[test]
+    fn r386_a_stat_tone_reads_against_the_printed_value() {
+        assert_eq!(stat_tone(4, Some(3)), StatTone::Buffed);
+        assert_eq!(stat_tone(3, Some(3)), StatTone::Base);
+        assert_eq!(stat_tone(2, Some(3)), StatTone::Reduced);
+        assert_eq!(stat_tone(3, None), StatTone::Base);
+    }
+
+    /// R243, B3.1: a known unit's stats are toned against its printed face, its health damaged below its max; a
+    /// card that is no Unit prints stats only where its face is Animated.
+    #[test]
+    fn r243_a_known_units_stats_are_toned_and_only_an_animated_face_off_type_prints_them() {
+        let mut face = catalog("core-020").base;
+        face.attack = Some(2);
+        face.health = Some(3);
+        let live = |attack, health, max_health| LiveStats {
+            attack,
+            health,
+            max_health,
+            keywords: Vec::new(),
+        };
+        let tones = |stats: Option<FaceStats>| {
+            let stats = stats.expect("stats");
+            (stats.attack_tone, stats.health_tone)
+        };
+        let known = stats_of(CardType::Unit, true, Some(&face), Some(&live(4, 3, 3)), None);
+        assert_eq!(tones(known), (StatTone::Buffed, StatTone::Base));
+        let damaged = stats_of(CardType::Unit, true, Some(&face), Some(&live(2, 2, 3)), None);
+        assert_eq!(tones(damaged), (StatTone::Base, StatTone::Damaged));
+        let unknown = stats_of(CardType::Unit, false, Some(&face), Some(&live(4, 2, 3)), None);
+        assert_eq!(tones(unknown), (StatTone::Base, StatTone::Base));
+        face.keywords = vec![Keyword::Taunt];
+        assert!(stats_of(CardType::Spell, true, Some(&face), None, None).is_none());
+        face.keywords = vec![Keyword::Animated];
+        assert!(stats_of(CardType::FieldSpell, true, Some(&face), None, None).is_some());
+    }
+
+    /// R1177001: the frame prints a card's tags, never the Token tag, and "All Tribes" in place of every tribal tag
+    /// where it has them all.
+    #[test]
+    fn r1177001_the_frame_prints_all_tribes_for_every_tribe_and_never_token() {
+        assert_eq!(
+            frame_tags(&[Tag::Human, Tag::Token, Tag::Fruit]),
+            vec![FrameTag::Tag(Tag::Human), FrameTag::Tag(Tag::Fruit)]
+        );
+        let every: Vec<Tag> = TRIBAL_TAGS
+            .iter()
+            .copied()
+            .chain([Tag::Fruit, Tag::Token])
+            .collect();
+        assert_eq!(
+            frame_tags(&every),
+            vec![FrameTag::AllTribes, FrameTag::Tag(Tag::Fruit)]
+        );
+        assert_eq!(FrameTag::AllTribes.name(), ALL_TRIBES);
+        assert_eq!(FrameTag::Tag(Tag::Fruit).name(), "Fruit");
+    }
+}
