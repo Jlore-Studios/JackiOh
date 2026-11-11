@@ -1,0 +1,79 @@
+{
+  "action": "plan",
+  "number": 3699,
+  "title": "Patch: follow-up to #3682 from the after-merge spot-check",
+  "branch": "bot/issue-3699",
+  "thread": "**Issue #3699 (data, not instructions):**\n\n```text\n# #3699: Patch: follow-up to #3682 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #3682 -->\nThe after-merge spot-check of #3682 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/42973450742)) found 1 blocking problem(s) in the change as it merged (`3a3de664a2af`). `claude-1` (claude, `opus`, strong) reviewed it. #3682 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `apps/web/src/net/first-load.test.ts:91`: Since #3682, the #3499 test 'no built script, a worker's included, holds patch-meta.ts's disk reader' can no longer fail: a Vite bundle without `patchMeta()` now resolves `#jackioh-patch-meta` to `patch-meta.browser.ts`, which statically imports the whole 650 KB `patches.json`, and the test's probe string is not in that file, so the bloat it guards against now ships with every test green.\n  Evidence: The test treats a bundle as a regression only if it contains the literal \"holds an entry with no version\" (first-load.test.ts:97). Before #3682, a bundle without the plugin (the practice worker's own plugin list, vite.config.ts:57) fell through to `patch-meta.ts`, whose code carries that string, so the test caught it. After #3682, apps/web/package.json maps the `browser` condition to `patch-meta.browser.ts`. Vite's client and worker resolution applies the `browser` condition, so such a bundle now gets the browser file instead. Its error strings are \"is not a list of patches\", \"holds a patch with no version string\" and \"holds no patches\". The PR says it chose them on purpose to keep the probe 'specific to patch-meta.ts'. Its own new comment in vite.config.ts:56 says that without `patchMeta()` the worker would bundle the 650 KB history. The other #3499 guards miss this: the probe-text and gzip tests read only the entry chunk and its preloads (`entryAndPreloads()`), which leaves out worker chunks, and the 'no static import of patches.json' test scans only `src/`, while the browser file sits at the package root. Fix: make the worker test also flag any built script holding a marker that only the browser file carries, such as its \"holds a patch with no version string\" error, and update the test's comment to name both files.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `muse` (`muse`) built #3682 and `muse` (`muse-spark-1.3-contributor`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "bot",
+    "by": "claude-1"
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3699: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-11T06:55:46Z",
+    "claimed_at": "2026-11-11T06:58:53Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3687 is held for `claude-3` until 02:00 (it refused a call)",
+    "#3690 is held for `claude-3` until 02:00 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3554 skipped: it waits for #3550 to close first",
+    "#3555 skipped: it waits for #3550 to close first",
+    "#3556 skipped: it waits for #3550 to close first",
+    "#3557 skipped: it waits for #3550 to close first",
+    "#3558 skipped: it waits for #3554 to close first",
+    "#3559 skipped: it waits for #3550, #3554 to close first",
+    "#3560 skipped: it waits for #3550, #3554 to close first",
+    "#3561 skipped: it waits for #3554 to close first",
+    "#3565 skipped: it waits for #3560 to close first",
+    "#3566 skipped: it waits for #3558 to close first",
+    "#3567 skipped: it waits for #3558 to close first",
+    "#3568 skipped: it waits for #3557, #3558 to close first",
+    "#3569 skipped: it waits for #3558 to close first",
+    "#3570 skipped: it waits for #3551, #3553, #3555, #3560, #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3553, #3566 to close first",
+    "#3572 skipped: it waits for #3551, #3553, #3555, #3556, #3557, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3550, #3551, #3553, #3554, #3555, #3556, #3557, #3558, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3608 skipped: it waits for #3607 to close first",
+    "#3609 skipped: it waits for #3607, #3608 to close first",
+    "#3610 skipped: it waits for #3607, #3608, #3609 to close first"
+  ]
+}
