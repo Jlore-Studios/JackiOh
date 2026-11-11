@@ -15628,6 +15628,9 @@
       "strikes": 0,
       "verdict_rounds": 1
     },
+    "3700": {
+      "suggestion": true
+    },
     "3702": {
       "action": "review",
       "asks": [],
