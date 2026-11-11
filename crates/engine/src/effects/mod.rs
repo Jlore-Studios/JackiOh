@@ -63,6 +63,7 @@ pub mod reveal;
 pub mod rotate;
 pub mod rounds;
 pub mod secret;
+pub mod secret_pick;
 pub mod shuffle_card;
 pub mod shuffle_into;
 pub mod shuffle_random;
@@ -145,6 +146,7 @@ pub use reveal::*;
 pub use rotate::*;
 pub use rounds::*;
 pub use secret::*;
+pub use secret_pick::*;
 pub use shuffle_card::*;
 pub use shuffle_into::*;
 pub use shuffle_random::*;
@@ -174,5 +176,9 @@ pub use crate::config::{DISCOVER_OPTIONS, LAST_BOARD_CARD_COST};
 pub use crate::subsystems::perfect_hand::{ReplaceHandWithPerfectArgs, replace_hand_with_perfect};
 // B5 E29, R419: return the board, or one side of it, to a snapshot of the last few turns (C+ #35 Rollback).
 pub use crate::subsystems::board_history::{RollBackArgs, roll_back};
+// R3550007: a side snapshot and its restore (Stinkyscape+ #84 Bogos Binted).
+pub use crate::subsystems::board_history::{
+    RestoreSideArgs, SIDE_SNAPSHOT_KEY, restore_side_snapshot, snapshot_side,
+};
 // The Glitch Easter egg (issue #170, R676): Glitch's one effect, its four outcomes behind one rng draw.
 pub use crate::subsystems::glitch::glitch;

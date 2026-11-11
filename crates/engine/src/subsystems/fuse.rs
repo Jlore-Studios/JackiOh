@@ -1141,6 +1141,13 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 damage_burns: flags(|f| f.damage_burns),
                 damage_is_toxic: flags(|f| f.damage_is_toxic),
                 infinite_mana: flags(|f| f.infinite_mana),
+                // Stinkyscape+ E6 (issue #3550).
+                attacks_per_turn: numbers(|f| f.attacks_per_turn),
+                attacks_only_across: flags(|f| f.attacks_only_across),
+                freezes_damaged: flags(|f| f.freezes_damaged),
+                damage_pool: sum_defined(defined.iter().map(|f| f.damage_pool)),
+                counters_ranged: numbers(|f| f.counters_ranged),
+                counters_ranged_all: flags(|f| f.counters_ranged_all),
             })
         }
     }

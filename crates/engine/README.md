@@ -137,6 +137,14 @@ builds reads its own game's hold without the state (R2201001).
   (`refreshActivates`), `refresh_ability` and `is_refresh_ability`; infinite mana (R3548004) is
   `StaticFlags.infinite_mana`, `mana::has_infinite_mana` and `credit::can_pay`, which every refusal
   and listing reads.
+- `countering.rs` is counters (§4.2, §6.3, R3550005): `counter_declared_attack` and
+  `counter_activation`, read by `combat::declare_instead` and `activate::{activate_ability,
+  run_owed_activation}`; `effects/combat.rs` is the forced attack `forced_attack` (`forcedAttack`,
+  R3550000); `effects/delay.rs` is the kill deadline (R3550006): `kill_deadline` (`killDeadline`),
+  `meet_kill_deadlines` and the deadline mark; `effects/secret_pick.rs` is the secret pick (R3550008):
+  `secret_pick` and `keep_secret_pick`; `subsystems/board_history.rs` is the side snapshot and its
+  restore (R3550007): `side_snapshot_of`, `snapshot_side` (`snapshotSide`) and
+  `restore_side_snapshot` (`restoreSideSnapshot`).
 - `effects/anomaly.rs` is Stinkyscape's Anomalies and Scanning Probes (R1855000–R1855003):
   `replace_board` exiles what its card reaches of its caster's side, lays a preset as summons into
   their named zones with their riders in memory, then fires each laid Unit's Cry under R452's random

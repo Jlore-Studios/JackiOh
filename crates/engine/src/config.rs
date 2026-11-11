@@ -2256,6 +2256,9 @@ pub const TIER_C_FROM: f64 = (TIER_BAND_LOW + ADJUSTED_WIN_RATE_CENTER) / 2.0;
 /// after a use (`subsystems::activate`).
 pub const ACTIVATE_COOLDOWN_TURNS: i32 = 1;
 
+/// R3550003: a normal Activate's cooldown in the designer's count, usable again on its user's next turn.
+pub const ACTIVATE_BASE_COOLDOWN: i32 = 1;
+
 /// R1841001: "deals half damage to heroes": a hit on a hero is divided by this, rounded down, before
 /// Armor (§4.4 step 2).
 pub const HALF_DAMAGE_TO_HEROES_DIVISOR: i32 = 2;

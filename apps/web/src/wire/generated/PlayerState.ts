@@ -13,6 +13,7 @@ import type { ManaState } from "./ManaState";
 import type { PlayerModifier } from "./PlayerModifier";
 import type { RowFlags } from "./RowFlags";
 import type { StarscapeMap } from "./StarscapeMap";
+import type { TipsyCounter } from "./TipsyCounter";
 import type { TurnLog } from "./TurnLog";
 import type { VoteTally } from "./VoteTally";
 
@@ -199,4 +200,9 @@ heroBurn?: number,
 /**
  * R3540000: the Toxic on this player's hero, as `hero_burn`.
  */
-heroToxic?: number, };
+heroToxic?: number, 
+/**
+ * R3548000: this player's Tipsy counter, public on both seats. Absent at none, so a game
+ * without one hashes as it did before this field existed.
+ */
+tipsy?: TipsyCounter, };

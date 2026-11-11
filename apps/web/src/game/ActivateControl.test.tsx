@@ -13,7 +13,7 @@ import { closeInspect } from "../cards/index.ts";
 import { __resetSettingsForTests } from "../settings/index.ts";
 import { renderBoard } from "../test/board.tsx";
 import { baseView, card, emptySide, faceUpBackrow, heroPower, unit } from "../test/fixtures.ts";
-import { abilityLabel, usesText } from "./ActivateControl.tsx";
+import { abilityLabel, cooldownWords, usesText } from "./ActivateControl.tsx";
 import Game from "./Game.tsx";
 import { IDLE, highlightFor } from "./actions.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
@@ -234,6 +234,27 @@ describe("R510 the Activate control on the card", () => {
 });
 
 // Building an activation through the board
+
+describe("R3550003 a cooling-down ability shows its turns left", () => {
+  it("R3550003 a cooling-down ability shows its turns left", () => {
+    expect(cooldownWords(1)).toBe("cooling down: 1 more turn");
+    expect(cooldownWords(3)).toBe("cooling down: 3 more turns");
+    const cooling: ActivationView = {
+      ability: "zap",
+      label: "Zap",
+      usesLeft: 1,
+      usable: false,
+      reason: "that ability is cooling down this turn",
+      cooldownTurnsLeft: 2,
+    };
+    renderActivate([], { view: activateView({ fs1: [cooling] }) });
+    const control = el(testid.activate("fs1"));
+    expect(control).toHaveAttribute("data-cooldown", "2");
+    expect(el(testid.activateUses("fs1"))).toHaveTextContent("⏳2");
+    expect(control.getAttribute("title")).toContain("cooling down: 2 more turns");
+    expect(control.getAttribute("aria-label")).toContain("cooling down: 2 more turns");
+  });
+});
 
 describe("R384 an activation is built through the board as a play is", () => {
   it("R384 one listed activation: a press sends exactly that body", () => {

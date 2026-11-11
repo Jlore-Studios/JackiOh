@@ -846,6 +846,11 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 .get_or_insert_with(IndexMap::new)
                 .insert(card.unit.id.clone(), killer.clone());
         }
+        // R3550006: a kill credited to the killer meets its kill deadlines at once, before the
+        // event reports it.
+        if let Some(killer) = killer_id.as_ref() {
+            crate::effects::delay::meet_kill_deadlines(sink.state, killer);
+        }
         // R89: the event carries what the card was, since R78 resets the instance as it leaves.
         sink.events.push(GameEvent::Destroyed {
             instance_id: card.unit.id.clone(),

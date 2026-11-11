@@ -742,6 +742,31 @@ pub struct StaticFlags {
     /// R3540003: "Damage dealt is Toxic", as `damage_burns` but Toxic; a card with both burns.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub damage_is_toxic: Option<bool>,
+    // Stinkyscape+ E6 (issue #3550)
+    /// R3550001: "Can attack N times per turn": how many attacks the unit may declare a turn, read
+    /// through the card's declared number `attacks` where it declares one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attacks_per_turn: Option<i32>,
+    /// R3550001: "Can only attack the unit directly across from this": the unit attacks only the
+    /// enemy Unit standing across from it, never a hero. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attacks_only_across: Option<bool>,
+    /// R3550002: "Freeze any Unit damaged by this": a Unit dealt 1 or more by this card's hit is
+    /// Frozen (§4.4 step 7). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub freezes_damaged: Option<bool>,
+    /// R3550004: "The first N damage allies would take per turn is nullified": the pool of damage
+    /// this card soaks for its controller's side each turn, read through the declared number `pool`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub damage_pool: Option<i32>,
+    /// R3550005: "The first N enemy Ranged attacks or Activates per turn are countered": how many a
+    /// turn this card counters, read through the declared number `perTurn`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub counters_ranged: Option<i32>,
+    /// R3550005: "All enemy Ranged attacks or Activates are countered": no per-turn budget. Only
+    /// ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub counters_ranged_all: Option<bool>,
 }
 
 /// R1849004 (Stinkyscape #5 Masochism Unmasked): "Redirect all damage you take on your turn to your
@@ -1295,6 +1320,10 @@ pub struct ActivationCost {
     /// after a use. Absent: no cooldown.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extra_turn_cooldown: Option<bool>,
+    /// R3550003: an Activate usable once, then not again for N of its controller's turns (the
+    /// designer's count: N sits out N-1). Absent: no cooldown.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cooldown_turns: Option<i32>,
     /// The declared number (`params`) the mana price reads, so a Buffed price reaches the cost
     /// (B3.4). Skipped in serialization: data, never JSON. Absent: the price is `mana` as written.
     #[serde(skip)]

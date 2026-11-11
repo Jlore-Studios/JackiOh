@@ -12,6 +12,7 @@ import type { PreviewValue } from "./PreviewValue";
 import type { QuestView } from "./QuestView";
 import type { RevealAt } from "./RevealAt";
 import type { Tag } from "./Tag";
+import type { TipsyBlur } from "./TipsyBlur";
 import type { Tuning } from "./Tuning";
 import type { UnitView } from "./UnitView";
 
@@ -83,4 +84,9 @@ buried?: number,
  * Unit there is a Unit for every rule, so the client draws it as the minion it is. Units are
  * public in any zone, so this carries no hidden information; absent for every other backrow card.
  */
-unit?: UnitView, };
+unit?: UnitView, 
+/**
+ * R3548001: what of this card the owner's Tipsy stamp blurs on their view alone, or nothing.
+ * Never on a face-down card, and never on the opponent's view of it.
+ */
+tipsyBlur?: TipsyBlur, };
