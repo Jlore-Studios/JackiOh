@@ -16895,12 +16895,15 @@
     "what": "plan #3572 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-11T22:44:20Z",
+    "at": "2026-11-11T23:01:59Z",
     "notes": [
       "#3728 is held for `claude-3` until 18:20 (it refused a call)",
       "#3696 is held for `claude-3` until 18:20 (it refused a call)",
       "#3695 is held for `claude-3` until 18:20 (it refused a call)",
-      "#3693 is held for `claude-3` until 18:20 (it refused a call)"
+      "#3693 is held for `claude-3` until 18:20 (it refused a call)",
+      "delivered plan #3572 on claude-7 (run 43113397884): interrupted",
+      "delivered build #3727 on claude-8 (run 43113293137): interrupted",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17604,7 +17607,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T22:44:20Z",
+  "loop_tick": "2026-11-11T23:01:59Z",
   "machine_disk": {
     "issue": null,
     "reading": {
