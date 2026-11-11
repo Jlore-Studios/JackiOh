@@ -120,4 +120,13 @@ exclude_re = [
   # times the weights' total down by each card's weight, as `pick_by` does: `< 0.0` and `<= 0.0` part only
   # on a roll exactly at a running sum, one draw in 2^32 at a given bound.
   'cosmetic_pack\.rs:.*replace < with <= in pick_card',
+  # crates/shared (#3513): level_for_xp's closed-form guess only saves steps. The two loops after it walk
+  # any guess to the highest level whose total is at most the XP, so a mutant of the guess's arithmetic
+  # answers the same level, slower. So do the loop bounds that only add a step: the down loop's
+  # `level > 1` as `>= 1` and its total's `>` as `>=` (one step down, one back up), its `&&` as `||`
+  # (down to level 1, then all the way up), and the up loop's `< u32::MAX` as `<=` (at the top, the next
+  # level's total is past any XP). The up loop's own mutants are not equivalent; economy/math.rs's
+  # tests reach them with guesses one short.
+  'economy/math\.rs:.*replace (/|\+|\*) with (%|\*|-|\+|/) in level_for_xp',
+  'economy/math\.rs:.*replace (&& with \|\||> with >=|< with <=) in level_for_xp',
 ]

@@ -8,7 +8,7 @@ use jackioh_engine::wire::PrintedRarity;
 use jackioh_shared::config::{CARD_TOKEN_BAR_SIZE, CHASE_SHARD_PACKS, PACK_SLOTS, PITY_MYTHIC_PACKS};
 use jackioh_shared::cosmetics::{OwnedCosmetics, registry};
 use jackioh_shared::economy::boundary::{EconomyAnswer, EconomyCall, apply};
-use jackioh_shared::economy::cosmetic_pack::{CosmeticHoldings, roll_cosmetic_pack};
+use jackioh_shared::economy::cosmetic_pack::{CosmeticHoldings, CosmeticSlotGrant, roll_cosmetic_pack};
 use jackioh_shared::economy::ledger::{Cause, Counter, InventoryItem, LedgerGrant};
 use jackioh_shared::economy::math::PityCounters;
 use jackioh_shared::economy::open::{
@@ -236,6 +236,109 @@ fn r1306002_a_cosmetic_pack_gains_one_shard_and_a_full_bar_holds() {
             ..
         }
     )));
+}
+
+/// R1661001, R3015003: a card pack's duplicate is owned as its cosmetic on the card its slot drew, the levels
+/// below an out-of-order pull first, and the global roll's account cosmetic on no card. Every card here is
+/// owned at MAX_COPIES, so every slot is a duplicate.
+#[test]
+fn r1661001_a_duplicates_cosmetic_is_owned_on_its_card_and_an_account_one_on_none() {
+    let inputs = inputs(pool_of(60));
+    let full = PackRecords {
+        held: 1,
+        owned: inputs
+            .pool
+            .iter()
+            .map(|card| (card.id.clone(), i64::from(MAX_COPIES)))
+            .collect(),
+        ..PackRecords::default()
+    };
+    let (mut on_cards, mut on_the_account) = (0, 0);
+    for k in 0..400 {
+        let opening = open_card_pack(&full, &inputs, &format!("duplicates-{k}"), NOW).expect("an opening");
+        let mut expected: Vec<(Option<String>, String)> = Vec::new();
+        for slot in &opening.slots {
+            let SlotGrant::Cosmetic {
+                cosmetic_id, below, ..
+            } = &slot.grant
+            else {
+                continue;
+            };
+            let per_card = inputs
+                .registry
+                .iter()
+                .find(|cosmetic| cosmetic.id == *cosmetic_id)
+                .unwrap_or_else(|| panic!("{cosmetic_id} is registered"))
+                .kind
+                .is_per_card();
+            if per_card {
+                on_cards += 1;
+            } else {
+                on_the_account += 1;
+            }
+            for id in below.iter().chain([cosmetic_id]) {
+                expected.push((per_card.then(|| slot.card_id.clone()), id.clone()));
+            }
+        }
+        let owned: Vec<(Option<String>, String)> = opening
+            .grants
+            .iter()
+            .filter_map(|grant| match grant {
+                LedgerGrant::Cosmetic { card_id, cosmetic_id } => {
+                    Some((card_id.clone(), cosmetic_id.clone()))
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(owned, expected, "seed {k}");
+    }
+    assert!(
+        on_cards > 0 && on_the_account > 0,
+        "{on_cards} on cards, {on_the_account} on the account"
+    );
+}
+
+/// R1306000: a cosmetic pack's cosmetic for a card the account does not own grants the card with it, one
+/// copy each, in the opening's card row.
+#[test]
+fn r1306000_a_cosmetic_packs_cosmetic_on_an_unowned_card_grants_the_card() {
+    let inputs = CosmeticPackInputs {
+        pool: pool_of(40),
+        registry: registry().to_vec(),
+        catalog: "v-test".to_string(),
+    };
+    let mut granted_any = false;
+    for k in 0..20 {
+        let opening =
+            open_cosmetic_pack(&records(1), &inputs, &format!("unowned-{k}"), NOW).expect("an opening");
+        let mut granted: Vec<String> = opening
+            .slots
+            .iter()
+            .filter_map(|slot| match &slot.grant {
+                CosmeticSlotGrant::Cosmetic {
+                    card_id: Some(card_id),
+                    card_granted: true,
+                    ..
+                } => Some(card_id.clone()),
+                _ => None,
+            })
+            .collect();
+        granted.sort();
+        granted.dedup();
+        granted_any |= !granted.is_empty();
+        let mut rows: Vec<String> = opening
+            .grants
+            .iter()
+            .filter_map(|grant| match grant {
+                LedgerGrant::Cards { cards } => Some(cards.iter().map(|copies| copies.card_id.clone())),
+                _ => None,
+            })
+            .flatten()
+            .collect();
+        rows.sort();
+        assert_eq!(rows, granted, "seed {k}");
+    }
+    assert!(granted_any, "some seed grants a card");
 }
 
 /// R1305000, R1305001: a bar the opening fills pays its token and keeps the overflow, in the grants.

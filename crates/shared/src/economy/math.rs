@@ -446,4 +446,21 @@ mod tests {
         );
         assert_eq!(forced_slot(&[], &[], Epic), None);
     }
+
+    /// SPEC §14.7: at a level's first XP the track stands on that level, even where the closed form's float
+    /// guess lands one short (levels near 10^8, whose totals pass f64's 53 bits): the correction walks it up.
+    #[test]
+    fn level_for_xp_walks_a_guess_one_short_up_to_the_level() {
+        let step = f64::from(SET_TRACK_XP_PER_LEVEL);
+        for level in [107_629_345, 107_639_318, 107_699_156] {
+            let total = total_xp_for_level(level);
+            let guess = ((1.0 + (1.0 + 8.0 * total as f64 / step).sqrt()) / 2.0).floor();
+            assert!(
+                guess < f64::from(level),
+                "PREMISE: level {level}'s guess {guess} is short"
+            );
+            assert_eq!(level_for_xp(total), level, "{level}");
+            assert_eq!(level_for_xp(total - 1), level - 1, "{level}");
+        }
+    }
 }
