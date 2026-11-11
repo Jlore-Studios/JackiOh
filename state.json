@@ -19749,6 +19749,8 @@
       "waiting_comment": 6789960143
     },
     "3704": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-11T07:10:53Z",
@@ -19762,8 +19764,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #3682 from the after-merge spot-check\"} -->\n- Repaired the #3499 worker-bloat guard in [first-load.test.ts](apps/web/src/net/first-load.test.ts) so it fails again when a built worker bundles the patch history. The worker test (renamed to name both files) now flags any built script containing either `holds an entry with no version` (`patch-meta\u2026\n- How I tested it (commands I ran and what they printed):\n- - `pnpm --dir apps/web build` \u2014 succeeded (vite built in ~13.7s after the wasm prebuild).\n- - `pnpm --dir apps/web test src/net/first-load.test.ts` \u2014 4 passed, including the renamed worker test, actually run against `dist/` (not skipped).\n- - Negative direction: temporarily dropped `patchMeta()` from the worker `plugins` in `vite.config.ts` (scratch edit, never committed), rebuilt vite-only, and the worker test failed, flagging `practice.worker-*.js` and `raster.worker-*.js`. A grep of those chunks showed the matched probe is exactly \u2026\n- - `eslint src/net/first-load.test.ts` \u2014 clean. `git status` shows only the one test file modified.\n- Decisions the issue did not settle: none of substance \u2014 I followed the plan's title, comment, and filter pattern exactly, including keeping the surrounding lines and the other two `it` blocks untouched (I rejected `holds no patches` as a probe since it occurs in both files, as the plan notes). One \u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-3699 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-3699/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3699,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-11T08:17:49Z",
         "from_run": "42977614133",
         "gates": [
           {
@@ -19822,8 +19827,15 @@
         "source": "build",
         "until": "2026-11-11T08:46:43Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-11T08:16:43Z",
+      "run_id": "pending:b6495fde-1794385036",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-11T08:17:49Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -19837,9 +19849,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T08:03:03Z",
+    "at": "2026-11-11T08:17:49Z",
     "url": "",
-    "what": "build #3555 on muse"
+    "what": "review #3704 on muse"
   },
   "last_sweep": {
     "at": "2026-11-11T07:54:16Z",
