@@ -19868,14 +19868,14 @@
     "what": "plan #3558 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-11T11:09:48Z",
+    "at": "2026-11-11T11:21:05Z",
     "notes": [
-      "delivered revise #3688 on claude-1 (run 43001671369): approved",
-      "delivered review #3706 on claude-7 (run 42996691133): built",
-      "started plan #3561 on claude-7 (run 43010154435)",
-      "started review #3706 on muse (run 43010292548)",
+      "delivered review #3706 on muse (run 43010292548): reviewed",
+      "delivered plan #3558 on claude-1 (run 43007400704): failed",
+      "delivered revise #3692 on claude-7 (run 43001544346): approved",
+      "started plan #3558 on claude-1 (run 43011856391)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
+      "#3686: closed, so `bot:merging` is off",
       "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -20582,7 +20582,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T11:09:48Z",
+  "loop_tick": "2026-11-11T11:21:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
