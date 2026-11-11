@@ -19753,6 +19753,7 @@
     "3706": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
