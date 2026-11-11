@@ -19771,15 +19771,6 @@
       "failures": 0,
       "feedback_since": "2026-11-11T07:58:49Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-11T11:04:49Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\nPass 3: finding held; narrowed ruling/pending/test header to guarded props (option a). spec check + compositor-loops test pass.\n## Log\n- done\n",
-        "provider": "claude-7",
-        "reason": "used its 3 review rounds with this owner; the work is kept for its final audit, another subscription's when one is free",
-        "trail": "- Bash: {\"command\": \"cat spec/rulings/R3608000.md spec/pending/3608.md; sed -n 1,40p apps/web/src/compositor-loops.test.ts; git log --oneline -3 -- apps/web/src/compositor-loops.test.ts; grep -rn \\\"transform\u2026\n- Bash: {\"command\": \"python3 - <<'E'\\nimport re\\np='spec/rulings/R3608000.md'\\ns=open(p).read()\\ns=s.replace(\\\"title: Every infinite animation moves only transform and opacity\\\",\\\"title: No infinite animatio\u2026\n- Bash: {\"command\": \"printf '## State\\\\nPass 3: finding held; narrowed ruling/pending/test header to guarded props (option a). spec check + compositor-loops test pass.\\\\n## Log\\\\n- done\\\\n' > .bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch (part 4 of 6): loops that composite: every infinite animation moves only transform and opacity\"} --> Closes #3608 (part of #3604). ## What changed The glow, tint or sheen of each looping animation that animated a paint property is now drawn once on a pse\u2026"
-      },
       "interruptions": 0,
       "issue": 3608,
       "kind": "review",
