@@ -11,6 +11,34 @@
 # area's score, to a few points under the lowest score the area's shards have reached since. Each
 # week runs one shard of an area, so its score moves with the shard: hold it under the lowest, not
 # the mean. Never lower a line to get a run green; give a survivor its test, or its reason in
-# .cargo/mutants.toml. An area at 0 has no settled score yet; it gets a line once its shards have.
+# .cargo/mutants.toml. An area at 0 has no settled score yet; it gets its floor once its shards have one.
 #
 # Set from the scores of mutants.yml's runs on main up to 2026-11-11 (#3519's pull request lists them).
+
+engine 0
+cards-classic 0
+cards-classic_plus 0
+cards-core 0
+cards-meditative 0
+cards-meditative_plus 0
+cards-stinkyscape 0
+cards-training_grounds 0
+cards-lib 0
+ai 0
+run 100
+# 13 of its 21 shards scored, 25.9% to 100%, most before their audit; 8 never yet.
+shared 0
+server 0
+tools 0
+wasm 0
+web-animations 0
+web-effects 0
+web-audio 0
+web-cards 0
+web-drag 0
+web-settings 0
+web-wire 0
+web-wasm 0
+# The whole Worker is one shard (two files): 100.0%, 96 killed and none survived, in every run
+# since 2026-11-10.
+edge 90
