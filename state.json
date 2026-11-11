@@ -19506,20 +19506,22 @@
         "built_by": "claude-7",
         "carried": {
           "by": "`claude` (strong)",
-          "conflicts": [],
-          "from": "6d6167cf58b2bc62ce03ca2fc9f5e3a0f5c33d29",
-          "main": "f65478fb798bf6a388b9e5cbd6c254c34eed3b64"
+          "conflicts": [
+            "crates/tools/src/run_sim.rs"
+          ],
+          "from": "75c25e4cfa1ae75a92250e2aae86e96c77a13f2b",
+          "main": "7c02e07e6ea32decb0d17c7e0a7fe7260f80efd7"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-7",
-            "run": "42992397937",
+            "run": "43001544346",
             "tier": "strong"
           }
         ],
-        "sha": "75c25e4cfa1ae75a92250e2aae86e96c77a13f2b",
+        "sha": "f52e9a0e435d4dfcb63619524a6a5c305e9c8b24",
         "tiers": {
           "claude": "strong"
         }
