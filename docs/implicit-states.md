@@ -123,20 +123,23 @@ HP 0 and `Dead`); `Abandon` (`Dead`, from any phase, nothing else touched); the 
 answers (back to `Map`, or `Won` after the final boss's extraction; a max-HP change moves HP with it,
 `with_max_hp`, R3584001); `run_fold` (the same state again from the log, R3496000).
 
+Its rows are D1 to D9 (D for the dungeon), never `R<n>`: an R-id reads as a ruling, and `cargo jackioh
+spec check` treats one cited in `crates/` as a ruling's citation (CLAUDE.md rule 3).
+
 | # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
 |---|---|---|---|---|
-| R1 | row none, col 0, `Map`, HP the max | Reachable: `run_create` | Any node of the first row may be stepped onto (§15.5, R3583000) | `crates/run/src/tests.rs::r3583000_go_steps_only_onto_a_node_the_one_stood_on_leads_to` |
-| R2 | row none, col 0, `Dead`, HP the max | Reachable: `Abandon` before the first step | The run ends lost, is still scored, and refuses every action (§15.8) | `crates/run/src/tests.rs::abandoning_before_the_first_step_ends_the_run_off_the_map` (new; its one-action log folds back to it) |
-| R3 | row none with any other phase, or with col ≠ 0 | Unreachable: only `Go` leaves `Map`, and it sets `row` and `col` before the node's phase; `Won` follows the final boss | — | — |
-| R4 | row set, col in its row, a node's phase | Reachable: `Go`, then the node's tiles and fights | The node's own rules (§15.5 to §15.8) | `crates/run/src/walk_tests.rs::walks_play_whole_runs_in_bounds_start_every_fight_and_replay`, `crates/run/src/tests.rs::a_lost_fight_ends_the_run` |
-| R5 | col at or past its row's width | Unreachable: `Go` refuses it ("row {row} has no node {col}") | — | — |
-| R6 | `Dead`, HP 0 | Reachable: a lost fight | "Any other end drops HP to zero and ends the run" (§15.6) | `crates/run/src/walk_tests.rs::walks_play_whole_runs_in_bounds_start_every_fight_and_replay` (`WALK_LOSS_PERCENT` of its fights are lost), `crates/run/src/tests.rs::a_lost_fight_ends_the_run` |
-| R7 | `Dead`, HP above 0, row set | Reachable: `Abandon` in a fight (or on a tile) | Ends lost, scored, refusing every action (§15.8). The HP it keeps is **unspecified**: §15.6 drops HP to zero at "any other end" of a fight, §15.8 does not say what abandoning a fight leaves, and the run keeps the HP it held, where `walk_tests.rs`'s `check_state` holds a dead run to HP 0 (the walk never abandons) | `crates/run/src/tests.rs::abandoning_in_a_fight_ends_the_run_where_it_stands_with_its_hp_left` (new) |
-| R8 | alive with HP below 1 or above the max | Unreachable: HP reaches 0 only with `Dead`; a win refills it (R3584000); `with_max_hp` keeps it at the max as the max moves, and an event that would take the max below 1 is refused (R3584001), so outside `Dead` HP is always the max (R3584001: "always the max outside a fight"; a fight's own health lives in its game until the report) | — | the walk's `check_state` after every step; `walk_hp_zero_while_alive_fails` and `walk_hp_past_the_max_fails` prove the check |
-| R9 | `Won`, row set, HP the max | Reachable: play to the end | Extract and bank, then the run refuses every action (§15.7, §15.8) | `crates/run/src/tests.rs::a_run_played_to_the_end_wins_and_its_file_folds_back_to_the_same_state` (also its JSON round trip) |
+| D1 | row none, col 0, `Map`, HP the max | Reachable: `run_create` | Any node of the first row may be stepped onto (§15.5, R3583000) | `crates/run/src/tests.rs::r3583000_go_steps_only_onto_a_node_the_one_stood_on_leads_to` |
+| D2 | row none, col 0, `Dead`, HP the max | Reachable: `Abandon` before the first step | The run ends lost, is still scored, and refuses every action (§15.8) | `crates/run/src/tests.rs::abandoning_before_the_first_step_ends_the_run_off_the_map` (new; its one-action log folds back to it) |
+| D3 | row none with any other phase, or with col ≠ 0 | Unreachable: only `Go` leaves `Map`, and it sets `row` and `col` before the node's phase; `Won` follows the final boss | — | — |
+| D4 | row set, col in its row, a node's phase | Reachable: `Go`, then the node's tiles and fights | The node's own rules (§15.5 to §15.8) | `crates/run/src/walk_tests.rs::walks_play_whole_runs_in_bounds_start_every_fight_and_replay`, `crates/run/src/tests.rs::a_lost_fight_ends_the_run` |
+| D5 | col at or past its row's width | Unreachable: `Go` refuses it ("row {row} has no node {col}") | — | — |
+| D6 | `Dead`, HP 0 | Reachable: a lost fight | "Any other end drops HP to zero and ends the run" (§15.6) | `crates/run/src/walk_tests.rs::walks_play_whole_runs_in_bounds_start_every_fight_and_replay` (`WALK_LOSS_PERCENT` of its fights are lost), `crates/run/src/tests.rs::a_lost_fight_ends_the_run` |
+| D7 | `Dead`, HP above 0, row set | Reachable: `Abandon` in a fight (or on a tile) | Ends lost, scored, refusing every action (§15.8). The HP it keeps is **unspecified**: §15.6 drops HP to zero at "any other end" of a fight, §15.8 does not say what abandoning a fight leaves, and the run keeps the HP it held, where `walk_tests.rs`'s `check_state` holds a dead run to HP 0 (the walk never abandons) | `crates/run/src/tests.rs::abandoning_in_a_fight_ends_the_run_where_it_stands_with_its_hp_left` (new) |
+| D8 | alive with HP below 1 or above the max | Unreachable: HP reaches 0 only with `Dead`; a win refills it (R3584000); `with_max_hp` keeps it at the max as the max moves, and an event that would take the max below 1 is refused (R3584001), so outside `Dead` HP is always the max (R3584001: "always the max outside a fight"; a fight's own health lives in its game until the report) | — | the walk's `check_state` after every step; `walk_hp_zero_while_alive_fails` and `walk_hp_past_the_max_fails` prove the check |
+| D9 | `Won`, row set, HP the max | Reachable: play to the end | Extract and bank, then the run refuses every action (§15.7, §15.8) | `crates/run/src/tests.rs::a_run_played_to_the_end_wins_and_its_file_folds_back_to_the_same_state` (also its JSON round trip) |
 
-R3 and R5 are **representable when serialized**: a hand-written `RunState` could hold them, and
-`fight_won`'s `expect("a fight stands on a node")` would panic on R3's `Fight`, `run_node` on R5. The
+D3 and D5 are **representable when serialized**: a hand-written `RunState` could hold them, and
+`fight_won`'s `expect("a fight stands on a node")` would panic on D3's `Fight`, `run_node` on D5. The
 device never keeps a `RunState`, only the log it folds, so no run file reaches them.
 
 ## Not states (versions)
@@ -162,9 +165,9 @@ Each reads an older record; nothing is removed.
   R776000 ("the next socket … rebuild"), the README's drain line and the co-op actor's parity; if it reads
   as a decision instead, it needs a ruling in a pull request of its own.
 - **Unspecified:** S12 (two tabs of one account on one seat replace each other on every reconnect);
-  R7 (an abandoned run keeps its HP, while a lost fight drops it to 0).
+  D7 (an abandoned run keeps its HP, while a lost fight drops it to 0).
 - **Not shown:** E5′ (mulligans open with work owed).
-- **Representable when serialized:** E7 to E10 (`GameState`), R3 and R5 (`RunState`).
+- **Representable when serialized:** E7 to E10 (`GameState`), D3 and D5 (`RunState`).
 
 ### Not mapped yet
 

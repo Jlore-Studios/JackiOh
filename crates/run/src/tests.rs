@@ -1622,7 +1622,7 @@ fn a_pack_shows_its_size_plus_the_relics_and_only_cards_of_its_kind() {
     );
 }
 
-/// #3678 (`docs/implicit-states.md`, state 3, R2): §15.8's "abandoning at any time ends a run, lost"
+/// #3678 (`docs/implicit-states.md`, state 3, row D2): §15.8's "abandoning at any time ends a run, lost"
 /// before the first step leaves it off the map, HP at the max, scored, and refusing every action; its
 /// one-action log folds back to it.
 #[test]
@@ -1651,7 +1651,7 @@ fn abandoning_before_the_first_step_ends_the_run_off_the_map() {
     assert_eq!(run_fold(&file, &content), Ok(gone));
 }
 
-/// #3678 (`docs/implicit-states.md`, state 3, R7): abandoning in a fight ends the run on the node it
+/// #3678 (`docs/implicit-states.md`, state 3, row D7): abandoning in a fight ends the run on the node it
 /// stands on, and keeps the HP it held, where a lost fight drops it to zero (§15.6): which of the two
 /// an abandoned fight should leave is unspecified, so this pins what the run does.
 #[test]
