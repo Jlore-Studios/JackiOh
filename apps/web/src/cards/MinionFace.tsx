@@ -56,7 +56,7 @@ import { Icon } from "./icons.tsx";
 import { DormantSeal, dormantAttr } from "./DormantSeal.tsx";
 import { StarshipHull } from "./StarshipHull.tsx";
 import { KeywordFx } from "./KeywordFx.tsx";
-import { KEYWORD_VISUALS, keywordFxAttributes, keywordFxPlan, type KeywordFxPlan } from "./keywordVisuals.ts";
+import { KEYWORD_VISUALS, keywordFxAttributes, keywordFxPlan, planWantsMotion, type KeywordFxPlan } from "./keywordVisuals.ts";
 import { foilFor, frameRarity } from "./frame.ts";
 import type { FaceModel, StateBadgeKind } from "./model.ts";
 import { ProficiencyStamp } from "./ProficiencyStamp.tsx";
@@ -166,7 +166,7 @@ function MinionFace({ face, unit, className, worn = false, keywordsOffFace = fal
   const stamp = useCardStamp(face, worn);
   // R3335000: a launched Starship wears the viewer's own Starship picks, or its seat's below a `TheirCopy`.
   const starshipLook = useStarshipLook(worn);
-  const plan = keywordFxPlan(unit);
+  const rawPlan = keywordFxPlan(unit);
   // R3046000, R3339000: the look a full-art unit wears, still (null: the art up to the frame).
   const cardLook = useCardLook(face.defId, worn);
   const look = boardLookOf(face, cardLook);
@@ -190,17 +190,28 @@ function MinionFace({ face, unit, className, worn = false, keywordsOffFace = fal
   // R3334000, R3340000: the shipyard idle is another use of this face's one ranked, visible motion decision, not a
   // second unranked claim of its own. A populated Dormant Starship is Legendary, so it remains eligible at Fx Low.
   const shipyardIdle = face.starship !== null && !face.starship.launched && face.starship.list.length > 0;
-  const faceMotion = useArtMotion(
-    (artMoves || engaged || shipyardIdle || cosmeticAppearance.animates) && settings.animatedFoil && live.onScreen,
-    { hovered: engaged, rarity: slotRarityOf(rarity) },
-  );
-  const motion = faceMotion.moving && (artMoves || engaged) ? artMotionOf(face.defId) : null;
+  const artWanted =
+    (artMoves || engaged || shipyardIdle || cosmeticAppearance.animates) && settings.animatedFoil && live.onScreen;
+  // R3607000: a face whose plan loops wants a slot for its keyword loops too, stilling foils alone (`animatedFoil`
+  // off) never stills a keyword mark; `useArtMotion` stills the claim under every motion setting, a hidden tab and
+  // the shed ladder, and a face past the budget shows every looping treatment's still frame.
+  const kwWanted = planWantsMotion(rawPlan) && live.onScreen;
+  const faceMotion = useArtMotion(artWanted || kwWanted, { hovered: engaged, rarity: slotRarityOf(rarity) });
+  const plan = faceMotion.moving
+    ? rawPlan
+    : rawPlan.map((entry) => (entry.motion === "on" ? { ...entry, motion: "off" as const } : entry));
+  // R3607000: the slot is shared, the outputs are not: art, foil, the diorama, the pointer response and the
+  // shipyard idle still move only when the face wanted them for art (`artWanted`, which carries the
+  // `animatedFoil` gate), while the keyword plan above moves on the shared `faceMotion.moving` alone.
+  const artActive = faceMotion.moving && artWanted;
+  const artEnabled = faceMotion.enabled && artWanted;
+  const motion = artActive && (artMoves || engaged) ? artMotionOf(face.defId) : null;
   const picture = look !== null ? artPictureOf(look.version, face.set) : artFirst ? artPictureOf(cardLook.version, face.set) : "normal";
   const ship = shipArtOf(face.defId, unit);
   // R3350000: a moving Mythic with a diorama draws its slices, each on its own loop (and its art's motion where it has one, a
   // token printed Mythic having none), in place of its live layers.
-  const diorama = faceMotion.moving && (artMoves || engaged) && picture === "normal" && ship === null && dioramaOf(face.defId) !== null;
-  const cosmetics = cosmeticAttributes(cosmeticAppearance, faceMotion.moving);
+  const diorama = artActive && (artMoves || engaged) && picture === "normal" && ship === null && dioramaOf(face.defId) !== null;
+  const cosmetics = cosmeticAttributes(cosmeticAppearance, artActive);
   // R3340000: what its art wears: cracks for the health it is missing, a glow when buffed, frost when frozen (the view's own).
   const damage = damageLevel(unit.health, unit.maxHealth);
   const buffed = attackTone === "buffed" || healthTone === "buffed";
@@ -219,9 +230,9 @@ function MinionFace({ face, unit, className, worn = false, keywordsOffFace = fal
       data-full-art={look === null ? undefined : "true"}
       data-art-first={artFirst ? "true" : undefined}
       data-version={look?.version ?? undefined}
-      data-art-motion={artMoves || engaged ? (faceMotion.moving ? "animated" : "static") : undefined}
+      data-art-motion={artMoves || engaged ? (artActive ? "animated" : "static") : undefined}
       data-art-hover={live.hovered ? "true" : "false"}
-      data-art-response={faceMotion.enabled ? "true" : undefined}
+      data-art-response={artEnabled ? "true" : undefined}
       data-art-attacking={attacking ? "true" : undefined}
       data-taunt={hasKeyword(unit.keywords, "Taunt") ? "true" : undefined}
       data-flying={hasKeyword(unit.keywords, "Flying") && unit.position !== "DEF" ? "true" : undefined}
@@ -249,7 +260,7 @@ function MinionFace({ face, unit, className, worn = false, keywordsOffFace = fal
             wear={wear}
           />
           {/* R3334000, R3340000: the Dormant Starship's shipyard uses this face's one ranked, on-screen motion slot. */}
-          {face.starship != null && !face.starship.launched ? <ShipyardIdle list={face.starship.list} moving={faceMotion.moving} /> : null}
+          {face.starship != null && !face.starship.launched ? <ShipyardIdle list={face.starship.list} moving={artActive} /> : null}
         </span>
 
         <KeywordFx plan={plan} />

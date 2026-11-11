@@ -133,11 +133,12 @@ func Render(ctx *hctx.Context, extra []string /* = () */, statistics string /* =
 	}
 	lines = append(lines, "> "+Headline(ctx, live, explained), "",
 		fmt.Sprintf("<sub>`bot-status` rewrites this issue every "+
-			"%d minutes, and its runners every %d; the statistics "+
+			"%s, and its runners every %s; the statistics "+
 			"are counted every "+
-			"%d. Times are Central; hover one "+
+			"%s. Times are Central; hover one "+
 			"to see how long it ran. `%s status` gives the same facts on demand.</sub>",
-			EveryMinutes, RunnersMinutes, int(stats.StatsEvery/time.Minute), config.Slash), "")
+			minutes(EveryMinutes), minutes(RunnersMinutes), minutes(int(stats.StatsEvery/time.Minute)),
+			config.Slash), "")
 	// The excess compute first (#3659): whether people should open more issues. Then what waits
 	// for a person's decision (#2986), then what is handed to one (#3009): it is what a person can
 	// unblock.
@@ -342,7 +343,9 @@ var Looked func(ctx *hctx.Context, view *View)
 // With `stats`, the issue carries the statistics (`stats.block`): counted afresh when
 // `STATS_EVERY` has passed (or `force_stats`, or the issue has none yet, or the kept block no
 // longer fits), with `stats_extra` drawing the other bots' records then; otherwise the block
-// the issue holds is kept as it is, so a rewrite costs a few calls, not a count's hundreds.
+// the issue holds is kept as it is, so a rewrite costs a few calls, not a count's hundreds. In the
+// status loop (`Counts` set, #3675) a rewrite never counts: it draws the loop's newest count, or
+// keeps the block the issue holds until the first. A body that would not change is not written.
 // Without `stats` (bot-commands.yml's rewrite after a sweep) nothing is counted, and the block
 // the issue holds is kept too, while it fits. A count reads which set's cards win most from production through `read_cards` once a day
 // (`cardsets.section`), and keeps the section the issue holds between reads.
@@ -376,9 +379,22 @@ func update(ctx *hctx.Context, extra []string /* = () */, withStats bool /* = Fa
 		return counted(ctx, view, extra, statsExtra,
 			cardsets.Section(ctx, state, cardsets.Kept(bodyNow), readCards))
 	}
+	// In the status loop the statistics are counted on a goroutine of their own (`Counts`, #3675):
+	// the rewrite draws the newest count, or keeps the block the issue holds until there is one.
+	looped := withStats && Counts != nil
+	var held *Count
+	fresh := false
+	if looped {
+		held, fresh = Counts.Newest()
+	}
 	var body string
 	switch {
-	case withStats && (forceStats || kept == "" || stats.Due(ctx, state)):
+	case held != nil:
+		body = Fit(ctx, view, extra, func(shown int) string { return held.Blocks[shown] })
+		if fresh {
+			note = ", with the statistics counted afresh"
+		}
+	case withStats && !looped && (forceStats || kept == "" || stats.Due(ctx, state)):
 		body, note = count()
 	case kept != "":
 		body = Render(ctx, extra, kept, view, true)
@@ -389,7 +405,7 @@ func update(ctx *hctx.Context, extra []string /* = () */, withStats bool /* = Fa
 		}
 		body = room(ctx, view, body, func() string { return Render(ctx, extra, kept, view, false) })
 		if py.Len(body) > MaxBody {
-			if withStats {
+			if withStats && !looped {
 				body, note = count()
 			} else {
 				body, note = Render(ctx, extra, "", view, true), ""
@@ -412,8 +428,10 @@ func update(ctx *hctx.Context, extra []string /* = () */, withStats bool /* = Fa
 			done += " and pinned it"
 		}
 		Explain(ctx, number, state) // the next rewrite links it
+	} else if number = py.MustInt(issue.Get("number")); body == bodyNow {
+		// Nothing changed (its times are clock times, which stay true): no write (#3675).
+		done = fmt.Sprintf("#%d is as it was, so it was not rewritten", number)
 	} else {
-		number = py.MustInt(issue.Get("number"))
 		ctx.GH.UpdateIssue(number, pyjson.New("body", body))
 		done = fmt.Sprintf("rewrote #%d", number)
 	}
@@ -436,4 +454,12 @@ func counted(ctx *hctx.Context, view *View, extra []string, statsExtra func() []
 	})
 	stats.Counted(ctx)
 	return body, ", with the statistics counted afresh"
+}
+
+// minutes is "minute" for 1 and "N minutes" otherwise: how often, in the issue's line on it.
+func minutes(n int) string {
+	if n == 1 {
+		return "minute"
+	}
+	return fmt.Sprintf("%d minutes", n)
 }

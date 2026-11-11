@@ -13,13 +13,16 @@ package cli
 
 import (
 	"fmt"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gh"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/cardsets"
@@ -85,8 +88,20 @@ var Sweep = sweep.Sweep
 // it.
 var GithubEnv = config.GithubEnv
 
-func say(line string)    { fmt.Fprintln(Stdout, line) }
-func sayErr(line string) { fmt.Fprintln(Stderr, line) }
+// saying keeps one line whole: the status loop's goroutines say theirs at once (#3675).
+var saying sync.Mutex
+
+func say(line string) {
+	saying.Lock()
+	defer saying.Unlock()
+	fmt.Fprintln(Stdout, line)
+}
+
+func sayErr(line string) {
+	saying.Lock()
+	defer saying.Unlock()
+	fmt.Fprintln(Stderr, line)
+}
 
 // ---------------------------------------------------------------------------- arguments
 
@@ -121,6 +136,7 @@ type Args struct {
 
 	Every        int  // --every (dashboard)
 	RunnersEvery int  // --runners-every (dashboard)
+	RewriteEvery int  // --rewrite-every (dashboard)
 	GateEvery    int  // --gate-every (dashboard)
 	ForSeconds   int  // --for (dashboard)
 	Sweep        bool // --sweep (dashboard)
@@ -150,7 +166,7 @@ func argsOf(ns map[string]any) *Args {
 		Plan: s("plan"), WorkDir: s("work_dir"), Ref: s("ref"), Check: b("check"),
 		Action: s("action"), Number: s("number"), Provider: s("provider"),
 		Name: s("name"), Payload: s("payload"),
-		Every: n("every"), RunnersEvery: n("runners_every"), GateEvery: n("gate_every"), ForSeconds: n("for_seconds"),
+		Every: n("every"), RunnersEvery: n("runners_every"), RewriteEvery: n("rewrite_every"), GateEvery: n("gate_every"), ForSeconds: n("for_seconds"),
 		Sweep: b("sweep"), Stats: b("stats"), Companions: b("companions"), Controller: b("controller"),
 		SectionOnly: b("section_only"), Offline: b("offline"), Work: b("work"),
 		RepoSettings: b("repo_settings"), UsageCommand: s("usage_command"), Since: s("since"),
@@ -904,7 +920,7 @@ func companions(cfg *config.Config, doSweep bool, argv []string /* = ("dashboard
 // while the loop runs shows within a tick (or, when this checkout's code is too old to read it,
 // the loop ends and the next one shows it on newer code), and settles the issue about the
 // machine's disk (`disk.alert`). With `--stats` the issue carries the statistics, counted afresh
-// every 30 minutes and kept between (`dashboard.update`). A failure is only a warning: it never
+// every 10 minutes and kept between (`dashboard.update`). A failure is only a warning: it never
 // fails the sweep or the loop.
 //
 // With `--companions`, each other bot (Squishy, #60) is swept (with `--sweep`) and drawn by a
@@ -912,112 +928,337 @@ func companions(cfg *config.Config, doSweep bool, argv []string /* = ("dashboard
 // bot's. `--section-only` is that process: it prints this bot's section and writes nothing. With
 // `--runners-every`, the issue's runners section is redrawn alone that often between the rewrites
 // (`dashboard.refresh_runners`), so it is never older than that. With `--gate-every`, the runner
-// gate ticks that often between them too (`cigate.Tick`), so a CI run waiting in `ci-runners`
-// starts within that long of there being room for it.
+// gate ticks that often (`cigate.Tick`), so a CI run waiting in `ci-runners` starts within that
+// long of there being room for it.
+//
+// The loop keeps one clock for each kind of work (#3675), so slow work never holds up the issue.
+// A tick of the sweep (the config read afresh, the sweep with its deliveries, the other bots'
+// sweeps and sections, the disk issue) runs on a goroutine of its own, the next `--every` seconds
+// after the last ended, as before; so does the statistics count, every `stats.StatsEvery`, and the
+// runner gate, every `--gate-every` seconds. The loop's own thread writes the issue, and nothing
+// else does: a rewrite every `--rewrite-every` seconds (as often as `--every` when unset), with
+// the newest sections and count, and the runners redrawn between. Each of these keeps its pace
+// from when it started; one still going when the next is due skips that one. While the bot's
+// token has fewer than `RewriteRateFloor` calls left this hour, the rewrites come at the sweep's
+// pace. Once `--for` has passed, nothing new starts, and the loop ends when what is going ends.
 func CmdDashboard(cfg *config.Config, args *Args) int {
 	if args.SectionOnly {
 		say(dashboard.Section(Ctx(cfg, false)))
 		return 0
 	}
-	every := max(0, args.Every)
-	runners := max(0, args.RunnersEvery)
-	gate := max(0, args.GateEvery)
-	deadline := Monotonic() + float64(max(0, args.ForSeconds))
-	since := runCreated(cfg)
 	if args.Controller && cfg.Controller {
 		loop := *cfg
 		loop.ControllerLoop = true // this loop plans (#1455)
 		cfg = &loop
 	}
-	if every > 0 && cfg.RecordsUsage() {
-		// The usage history (#2749): each rewrite's view is a tick of it, and every 30 minutes
-		// its rows go to the usage branch; once more as the loop ends.
+	if args.Every <= 0 {
+		return dashboardOnce(cfg, args)
+	}
+	return dashboardLoop(cfg, args)
+}
+
+// Background runs `f` on a goroutine of its own: the status loop's sweep, its statistics count and
+// its runner gate (#3675). A variable so the tests run each in place, when the clock gives it.
+var Background = func(f func()) { go f() }
+
+// RewriteRateFloor is how many calls the bot's token must have left this hour for the status loop
+// to rewrite the issue every `--rewrite-every` seconds (#3675); below it, the loop rewrites at its
+// sweep's pace (`--every`) until the hour's calls come back, so the issue never spends what the
+// night runs need. GitHub gives a token 5,000 an hour.
+var RewriteRateFloor = 1500
+
+// OthersRecordEvery is how often the loop's count asks the other bots for their records (Squishy's
+// `stats --section-only`), in seconds: every 30 minutes, as before #3675, however often it counts
+// the night bot's.
+var OthersRecordEvery = 30 * 60.0
+
+// dashboardOnce is a single tick, as a `harness dashboard` with no `--every` makes it: the config
+// read afresh, the sweep, the other bots' sections, the rewrite, the disk issue.
+func dashboardOnce(cfg *config.Config, args *Args) int {
+	fresh := current(cfg, runCreated(cfg))
+	if fresh == nil {
+		return 0 // bot-status starts the next loop, on the default branch's code
+	}
+	cfg = fresh
+	if args.Sweep {
+		sweepTick(cfg)
+	}
+	var extra []string
+	if args.Companions {
+		extra = companions(cfg, args.Sweep, []string{"dashboard", "--section-only"}, "section")
+	}
+	rewriteTick(cfg, args, extra)
+	diskTick(cfg)
+	return 0
+}
+
+// loopJob is one kind of the status loop's work and its clock: due at `due`, then every `every`
+// seconds from when it started, or, with `rest`, `every` seconds after it ended (the sweep's pace,
+// and the count's). `away` runs it on a goroutine of its own (`Background`); `busy` is true while
+// it runs.
+type loopJob struct {
+	every float64
+	due   float64
+	rest  bool
+	away  bool
+	busy  bool
+	run   func(begun float64)
+}
+
+// onTheClock is the next time `every` seconds on from `due` that is past `now`: a tick that would
+// already be late is skipped, never queued.
+func onTheClock(due, every, now float64) float64 {
+	for due <= now {
+		due += every
+	}
+	return due
+}
+
+func dashboardLoop(cfg *config.Config, args *Args) int {
+	every := float64(args.Every)
+	rewriteEvery := float64(max(0, args.RewriteEvery))
+	if rewriteEvery == 0 {
+		rewriteEvery = every
+	}
+	start := Monotonic()
+	deadline := start + float64(max(0, args.ForSeconds))
+	since := runCreated(cfg)
+
+	var mu sync.Mutex // guards cfg, extra, stopped and every job's due and busy
+	var extra []string
+	stopped := false
+	shared := func() (*config.Config, []string) {
+		mu.Lock()
+		defer mu.Unlock()
+		return cfg, extra
+	}
+
+	if cfg.RecordsUsage() {
+		// The usage history (#2749): a rewrite's view is a tick of it, at most one each `--every`
+		// seconds, and every 30 minutes its rows go to the usage branch; once more as the loop ends.
 		recorder := usage.NewRecorder(say)
 		was := dashboard.Looked
+		last := math.Inf(-1)
 		dashboard.Looked = func(ctx *hctx.Context, view *dashboard.View) {
-			recorder.Tick(ctx, usage.TickFacts{State: view.State, Live: view.Live, Explained: view.Explained})
+			if now := Monotonic(); now-last >= every {
+				last = now
+				recorder.Tick(ctx, usage.TickFacts{State: view.State, Live: view.Live, Explained: view.Explained})
+			}
 		}
 		defer func() {
 			dashboard.Looked = was
 			recorder.Close(Ctx(cfg, true))
 		}()
 	}
-	for {
-		fresh := current(cfg, since)
+	if args.Stats {
+		counts, pulls := dashboard.Counts, stats.Pulls
+		dashboard.Counts, stats.Pulls = &dashboard.CountBox{}, stats.NewPullCache()
+		defer func() { dashboard.Counts, stats.Pulls = counts, pulls }()
+	}
+	if args.Companions {
+		// Until the other bots' processes draw them afresh, the rewrites carry the sections the
+		// issue holds now.
+		extra = dashboard.KeptSections(Ctx(cfg, true))
+	}
+
+	sweepJob := &loopJob{every: every, due: start, rest: true, away: true, run: func(float64) {
+		now, _ := shared()
+		fresh := current(now, since)
 		if fresh == nil {
-			return 0 // bot-status starts the next loop, on the default branch's code
+			mu.Lock()
+			stopped = true // bot-status starts the next loop, on the default branch's code
+			mu.Unlock()
+			return
 		}
+		mu.Lock()
 		cfg = fresh
+		mu.Unlock()
 		if args.Sweep {
-			if err := herr.Try(func() {
-				notes := Sweep(Ctx(cfg, true))
-				if len(notes) == 0 {
-					notes = []string{"nothing was left unanswered"}
-				}
-				for _, line := range notes {
-					say(redact.Redact("sweep: "+line, nil))
-				}
-			}); err != nil {
-				// one bad tick must not end the loop
-				say(redact.Redact("::warning::the sweep failed: "+herr.Str(err), nil))
-			}
+			sweepTick(fresh)
 		}
-		var extra []string
 		if args.Companions {
-			extra = companions(cfg, args.Sweep, []string{"dashboard", "--section-only"}, "section")
+			drawn := companions(fresh, args.Sweep, []string{"dashboard", "--section-only"}, "section")
+			mu.Lock()
+			extra = drawn
+			mu.Unlock()
 		}
-		if err := herr.Try(func() {
-			note := dashboard.Update(Ctx(cfg, true), extra, args.Stats, statsSections(cfg, args), false,
-				cardsets.FetchJSON)
-			say(redact.Redact("dashboard: "+note, nil))
-		}); err != nil {
-			say(redact.Redact("::warning::the status issue was not updated: "+herr.Str(err), nil))
+		diskTick(fresh)
+	}}
+	jobs := []*loopJob{sweepJob}
+	if args.Stats {
+		othersAt := math.Inf(-1)
+		var others []string
+		jobs = append(jobs, &loopJob{every: stats.StatsEvery.Seconds(), due: start, rest: true, away: true,
+			run: func(begun float64) {
+				now, _ := shared()
+				if begun-othersAt >= OthersRecordEvery {
+					others, othersAt = statsSections(now, args)(), begun
+				}
+				dashboard.Counts.Put(dashboard.CountNow(Ctx(now, true), others, cardsets.FetchJSON))
+				say("statistics: counted afresh")
+			}})
+	}
+	if gate := float64(max(0, args.GateEvery)); gate > 0 {
+		jobs = append(jobs, &loopJob{every: gate, due: start + gate, away: true, run: func(float64) {
+			now, _ := shared()
+			gateTick(now)
+		}})
+	}
+	var runnersJob *loopJob
+	rewriteJob := &loopJob{every: rewriteEvery, due: start}
+	rewriteJob.run = func(begun float64) {
+		now, sections := shared()
+		rewriteTick(now, args, sections)
+		low := rateNote(now, every)
+		mu.Lock()
+		if runnersJob != nil {
+			runnersJob.due = begun + runnersJob.every // the rewrite drew the runners too
 		}
-		if err := herr.Try(func() {
-			if note := disk.Alert(Ctx(cfg, true)); note != "" {
-				say(redact.Redact("disk: "+note, nil))
-			}
-		}); err != nil {
-			say(redact.Redact("::warning::the disk issue was not settled: "+herr.Str(err), nil))
+		if low {
+			rewriteJob.due = max(rewriteJob.due, begun+every)
 		}
-		if every == 0 || Monotonic()+float64(every) > deadline {
-			return 0
-		}
-		due := Monotonic() + float64(every)
-		redraw := func() {
+		mu.Unlock()
+	}
+	jobs = append(jobs, rewriteJob)
+	if runners := float64(max(0, args.RunnersEvery)); runners > 0 {
+		runnersJob = &loopJob{every: runners, due: start + runners, run: func(float64) {
+			now, _ := shared()
 			if err := herr.Try(func() {
-				say(redact.Redact("runners: "+dashboard.RefreshRunners(Ctx(cfg, true)), nil))
+				say(redact.Redact("runners: "+dashboard.RefreshRunners(Ctx(now, true)), nil))
 			}); err != nil {
 				say(redact.Redact("::warning::the runners were not redrawn: "+herr.Str(err), nil))
 			}
-		}
-		if gate == 0 {
-			for runners != 0 && Monotonic()+float64(runners) < due {
-				Sleep(float64(runners))
-				redraw()
-			}
-			Sleep(max(0.0, due-Monotonic()))
-			continue
-		}
-		// The gate's ticks and the runners' redraws, each at its own pace, until the next rewrite.
-		nextRunners := Monotonic() + float64(runners)
-		for {
-			now := Monotonic()
-			wake := min(due, now+float64(gate))
-			if runners != 0 && nextRunners < due {
-				wake = min(wake, nextRunners)
-			}
-			Sleep(max(0.0, wake-now))
-			if Monotonic() >= due {
-				break
-			}
-			gateTick(cfg)
-			if runners != 0 && nextRunners < due && Monotonic() >= nextRunners {
-				redraw()
-				nextRunners += float64(runners)
-			}
-		}
+		}}
+		jobs = append(jobs, runnersJob)
 	}
+	shortest := every
+	for _, job := range jobs {
+		shortest = min(shortest, job.every)
+	}
+
+	var going sync.WaitGroup
+	for {
+		for _, job := range jobs {
+			now := Monotonic()
+			mu.Lock()
+			ready := !stopped && !job.busy && job.due <= now && now <= deadline
+			if ready {
+				job.busy = true
+				if !job.rest {
+					job.due = onTheClock(job.due, job.every, now)
+				}
+			}
+			mu.Unlock()
+			if !ready {
+				continue
+			}
+			done := func() {
+				mu.Lock()
+				defer mu.Unlock()
+				job.busy = false
+				if job.rest {
+					job.due = Monotonic() + job.every
+				}
+			}
+			if !job.away {
+				job.run(now)
+				done()
+				continue
+			}
+			going.Add(1)
+			Background(func() {
+				defer going.Done()
+				defer done()
+				// A goroutine recovers its own (bot/go/README.md): one bad tick must not end the loop.
+				if err := herr.Try(func() { job.run(now) }); err != nil {
+					say(redact.Redact("::warning::the status loop's work failed: "+herr.Str(err), nil))
+				}
+			})
+		}
+		mu.Lock()
+		wake, busy, ended := math.Inf(1), false, stopped
+		for _, job := range jobs {
+			if job.busy {
+				busy = true
+			} else {
+				wake = min(wake, job.due)
+			}
+		}
+		mu.Unlock()
+		now := Monotonic()
+		if ended || (!busy && (wake > deadline || now > deadline)) {
+			break
+		}
+		if now > deadline {
+			wake = now + shortest // nothing new starts: wait for what is going to end
+		}
+		Sleep(max(0.0, min(wake, now+shortest)-now))
+	}
+	going.Wait()
+	return 0
+}
+
+// sweepTick is the sweep, said line by line; a failure is only a warning.
+func sweepTick(cfg *config.Config) {
+	if err := herr.Try(func() {
+		notes := Sweep(Ctx(cfg, true))
+		if len(notes) == 0 {
+			notes = []string{"nothing was left unanswered"}
+		}
+		for _, line := range notes {
+			say(redact.Redact("sweep: "+line, nil))
+		}
+	}); err != nil {
+		// one bad tick must not end the loop
+		say(redact.Redact("::warning::the sweep failed: "+herr.Str(err), nil))
+	}
+}
+
+// rewriteTick is a rewrite of the status issue with the other bots' sections `extra`; a failure is
+// only a warning.
+func rewriteTick(cfg *config.Config, args *Args, extra []string) {
+	if err := herr.Try(func() {
+		note := dashboard.Update(Ctx(cfg, true), extra, args.Stats, statsSections(cfg, args), false,
+			cardsets.FetchJSON)
+		say(redact.Redact("dashboard: "+note, nil))
+	}); err != nil {
+		say(redact.Redact("::warning::the status issue was not updated: "+herr.Str(err), nil))
+	}
+}
+
+// diskTick settles the issue about the machine's disk; a failure is only a warning.
+func diskTick(cfg *config.Config) {
+	if err := herr.Try(func() {
+		if note := disk.Alert(Ctx(cfg, true)); note != "" {
+			say(redact.Redact("disk: "+note, nil))
+		}
+	}); err != nil {
+		say(redact.Redact("::warning::the disk issue was not settled: "+herr.Str(err), nil))
+	}
+}
+
+// RateLeft is how many calls a token has left this hour, as GitHub's last answer to it gave them
+// (`gh.Rate`, #3675); a variable so the tests can replace it.
+var RateLeft = gh.Rate.Left
+
+// rateNote says how many calls the bot's token has left this hour (`RateLeft`), and whether that
+// is under `RewriteRateFloor`. Nothing is said before any answer gave them.
+func rateNote(cfg *config.Config, every float64) bool {
+	left, ok := RateLeft(cfg.WriteToken())
+	if !ok {
+		return false
+	}
+	low := left.Remaining < RewriteRateFloor
+	line := fmt.Sprintf("rate: the bot's token has %d of %d calls left this hour", left.Remaining, left.Limit)
+	if !left.Reset.IsZero() {
+		line += ", until " + dashboard.Local(Ctx(cfg, false), left.Reset).Format("15:04")
+	}
+	if low {
+		line += fmt.Sprintf(": under %d, so the issue is rewritten every %g seconds, the sweep's pace",
+			RewriteRateFloor, every)
+	}
+	say(line)
+	return low
 }
 
 // gateTick is a tick of the runner gate between the loop's rewrites (`cigate.Tick`), after the look
@@ -1496,16 +1737,20 @@ func Parser() *ArgumentParser {
 	sub.addParser(top, "sweep", "answer any request an event handler never answered")
 	sub.addParser(top, "status", "print the status report")
 	dash := sub.addParser(top, "dashboard", "rewrite the pinned status issue (bot-status "+
-		"runs it every five minutes, its runners every two)")
-	dash.option("--every", 0, "seconds between rewrites; 0 rewrites it once").isInt = true
+		"rewrites it every two minutes, its runners every minute)")
+	dash.option("--every", 0, "seconds from one tick of the sweep (the sweep, the other bots, "+
+		"the disk issue) to the next, and between rewrites unless --rewrite-every says; 0 "+
+		"rewrites it once").isInt = true
+	dash.option("--rewrite-every", 0, "seconds between rewrites, on a clock of their own; 0 "+
+		"rewrites as often as --every").isInt = true
 	dash.option("--runners-every", 0, "seconds between redraws of the runners section alone, between "+
 		"the rewrites; 0 draws it only with them").isInt = true
-	dash.option("--gate-every", 0, "seconds between ticks of the runner gate (cigate), between the "+
-		"rewrites; 0 ticks it only with the sweep").isInt = true
+	dash.option("--gate-every", 0, "seconds between ticks of the runner gate (cigate), on a clock "+
+		"of their own; 0 ticks it only with the sweep").isInt = true
 	forSeconds := dash.option("--for", 0, "how long to keep rewriting it, in seconds")
 	forSeconds.isInt, forSeconds.dest = true, "for_seconds"
-	dash.flag("--sweep", "sweep before each rewrite, as the ten-minute sweep does")
-	dash.flag("--stats", "carry the statistics in it, counted afresh every 30 minutes")
+	dash.flag("--sweep", "sweep at each tick (--every), as the ten-minute sweep does")
+	dash.flag("--stats", "carry the statistics in it, counted afresh every 10 minutes")
 	dash.flag("--companions", "also sweep and draw each other bot (Squishy) in a process of "+
 		"its own, and put its section in the issue")
 	dash.flag("--controller", "with the config's `controller` on, plan the work and start each "+
@@ -1513,7 +1758,7 @@ func Parser() *ArgumentParser {
 	dash.flag("--section-only", "print this bot's section of the status issue and write nothing "+
 		"(the night bot's loop runs this as Squishy)")
 	p = sub.addParser(top, "stats", "rewrite the pinned status issue now, with its statistics")
-	p.flag("--force", "count the statistics afresh even if they were counted under 30 minutes ago")
+	p.flag("--force", "count the statistics afresh even if they were counted under 10 minutes ago")
 	p.flag("--companions", "also put in each other bot's section and record (Squishy's), drawn by "+
 		"its own process")
 	p.flag("--section-only", "print this bot's record for the statistics and write nothing")
