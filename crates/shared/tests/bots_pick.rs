@@ -185,6 +185,49 @@ fn r641000_the_rule_takes_the_slowest_deck_on_the_draw_and_the_fastest_on_the_pl
     }
 }
 
+/// R641000: a deck's pace is the mean cost of its cards, however many it holds, and of two decks at one
+/// pace the rule takes the lower slot, on the draw (game 1) and on the play (game 2).
+#[test]
+fn r641000_the_rule_reads_a_decks_mean_cost_and_a_tie_goes_to_the_lower_slot() {
+    let (person, bot) = trios();
+    let (middle, slow, fast) = (bot.decks.0.cards, bot.decks.1.cards, bot.decks.2.cards);
+    let with = |decks: [&[String]; 3]| -> (FrozenTrio, FrozenTrio) {
+        let [first, second, third] = decks.map(<[String]>::to_vec);
+        let bot = FrozenTrio {
+            name: "Bot trio".to_string(),
+            decks: (
+                frozen("Bot one", first),
+                frozen("Bot two", second),
+                frozen("Bot three", third),
+            ),
+        };
+        (person.clone(), bot)
+    };
+
+    // On the draw, the slowest: slots 1 and 2 hold one deck.
+    let tied_slow = series(&with([&middle, &slow, &slow]), "tie");
+    assert_eq!(rule_slot(&tied_slow, BOT_SEAT, defs()), Some(1));
+    // On the play, the fastest: slots 0 and 1 hold one deck.
+    let tied_fast = play(
+        &series(&with([&fast, &fast, &slow]), "tie"),
+        0,
+        2,
+        Winner::Draw,
+        NOW,
+        "match-2",
+    );
+    assert_eq!(rule_slot(&tied_fast, BOT_SEAT, defs()), Some(0));
+
+    // The mean, not the total: the two dearest cards alone are slower than a whole deck of the middle.
+    let dearest_two = &slow[slow.len() - 2..];
+    assert!(
+        pace(dearest_two) > pace(&middle),
+        "PREMISE: the dearest two cost more than the middle deck's mean"
+    );
+    let short = series(&with([dearest_two, &middle, &fast]), "short");
+    assert_eq!(rule_slot(&short, BOT_SEAT, defs()), Some(0));
+}
+
 #[test]
 fn r641000_the_pick_follows_the_rule_about_as_often_as_its_share() {
     let trios = trios();

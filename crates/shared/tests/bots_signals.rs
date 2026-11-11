@@ -1,9 +1,9 @@
 //! Ladder bot signal generation (`src/bots/signals.rs`, SPEC §9.12, R639000, R1442).
 //! R2660000: a concession needs the caller's proof of an unstoppable lethal; R2660001: a draw offer.
 
-use jackioh_engine::PlayerId;
+use jackioh_engine::{PlayerId, Rng};
 use jackioh_shared::bots::signals::{
-    Standing, accepts_draw, aim_lead_ms, concedes, idles_turn, offers_draw, rematch_plan,
+    Standing, accepts_draw, aim_lead_ms, concedes, idles_turn, offers_draw, rematch_plan, standard_normal,
 };
 use jackioh_shared::config::{
     AIM_RELAY_INTERVAL_MS, BOT_AIM_LEAD_MAX_MS, BOT_AIM_LEAD_MIN_MS, BOT_REMATCH_DELAY_MAX_MS,
@@ -29,6 +29,25 @@ fn standing_at(deficit: f64, behind: f64) -> Standing {
 /// How many of `trials` came out true.
 fn share_of(trials: usize, mut trial: impl FnMut(usize) -> bool) -> f64 {
     (0..trials).filter(|at| trial(*at)).count() as f64 / trials as f64
+}
+
+/// R639000: the standard normal the think time's spread is drawn from (Box–Muller): over many draws
+/// its mean is 0, its variance 1, half of it falls below 0 and about 68.3% within 1 of 0.
+#[test]
+fn r639000_a_standard_normal_draw_has_mean_0_variance_1_and_half_of_it_below_0() {
+    const DRAWS: usize = 40_000;
+    let mut rng = Rng::new("standard-normal", 0);
+    let draws: Vec<f64> = (0..DRAWS).map(|_| standard_normal(&mut rng)).collect();
+    assert!(draws.iter().all(|z| z.is_finite()), "every draw is a number");
+    let n = DRAWS as f64;
+    let mean = draws.iter().sum::<f64>() / n;
+    let variance = draws.iter().map(|z| (z - mean).powi(2)).sum::<f64>() / n;
+    let below = draws.iter().filter(|z| **z < 0.0).count() as f64 / n;
+    let within_one = draws.iter().filter(|z| z.abs() < 1.0).count() as f64 / n;
+    assert!(mean.abs() < 0.025, "mean {mean}");
+    assert!((variance - 1.0).abs() < 0.05, "variance {variance}");
+    assert!((below - 0.5).abs() < 0.0125, "below 0: {below}");
+    assert!((within_one - 0.6827).abs() < 0.02, "within 1: {within_one}");
 }
 
 #[test]

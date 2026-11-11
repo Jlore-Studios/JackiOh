@@ -97,4 +97,23 @@ exclude_re = [
   # is left of one, none of them 0: as above, `<` and `<=` part only on a roll exactly equal to it. The
   # file's path keeps crates/run's own `weighted`, whose integer draw can equal its weight, out of it.
   'bots/names/mod\.rs:.*replace < with <= in (weighted|number)',
+  # crates/shared (#3513): the bots' end-of-game habits (concessions, draw offers and answers, idle
+  # turns, a rematch's offer and answer) compare a roll of the engine's Rng against a fitted share, as
+  # above.
+  'bots/signals\.rs:.*replace < with <= in (concedes|offers_draw|accepts_draw|idles_turn|rematch_plan)',
+  # crates/shared (#3513): the pool's size is the weekly people times BOT_POOL_PER_WEEKLY_ACTIVE, 1.0,
+  # and a count divided by 1.0 is the count times 1.0. Another share makes this mutant killable by
+  # tests/bots_pool.rs's size test, and then this line goes.
+  'replace \* with / in pool_target',
+  # crates/shared (#3513): at exactly the target, plan_pool's retiring path retires none and the other
+  # puts back and makes none, so `>` and `>=` plan the same empty change.
+  'replace > with >= in plan_pool',
+  # crates/shared (#3513): deal_bot_deck spells out AiDeckOptions' lean_set as None, its default, and
+  # gated_sets as no set, which the default (AI_DECK_GATED_SETS, crates/ai/src/config.rs) also is while
+  # it gates nothing: either field left to its default deals the same deck. A set gated there makes the
+  # second killable (a bot's deck is a player's random deal, R1453), and then it leaves this line.
+  'delete field (lean_set|gated_sets) from struct jackioh_ai::AiDeckOptions expression in deal_bot_deck',
+  # crates/shared (#3513): draw_trio's early None for fewer than TRIO_DECKS decks: validate_trio's L1
+  # refuses a trio of any other count, so the trio is None either way.
+  'replace < with > in draw_trio',
 ]
