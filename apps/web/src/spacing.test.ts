@@ -62,7 +62,7 @@ const UNMIGRATED: Record<string, number> = {
   "collection/tokenOffer.css": 1,
   "dungeon/dungeon.css": 14,
   "dungeon/fight/fight.css": 11,
-  "dungeon/map/run.css": 37,
+  "dungeon/map/run.css": 34,
   "dungeon/stats/dungeon-stats.css": 20,
   "duos/duos.css": 60,
   "economy/economy.css": 21,
