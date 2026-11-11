@@ -2428,7 +2428,11 @@ line under its title names them. A month of ticks for eleven subscriptions fits 
 `@squishy-squooby` is a second bot (#60): this harness again, run from `.squishy/` instead of
 `.harness/` (each of its workflows sets `HARNESS_HOME=.squishy`, `go/internal/identity/`). It works
 like the night bot, under its own names, on its own Claude Max account, and it makes no
-suggestions. On top of a plain build it has four modes.
+suggestions. It takes only what a person hands it (a `/squishy` command, a `squishy:*` label or an
+assignment to it): every workflow that opens an issue for a bot hands it to the night bot (the
+promotions', the releases' and the super run's reports, the code audit), but for the weekly agent
+instructions issue below, since Squishy alone may change `.claude/skills/` (#3676). On top of a plain
+build it has four modes.
 
 | | Night bot | Squishy |
 |---|---|---|
@@ -2487,16 +2491,17 @@ Squishy still reads everything from `@jgoetzmann-bot` as the night bot's, since 
 the promotions post as that account without the harness's marker.
 
 **The weekly hygiene run.** Every Tuesday at 22:07 UTC, just after Squishy's weekly reset,
-`.github/workflows/hygiene.yml` (#839, #888) opens two issues for Squishy (`squishy:build`,
-`difficulty:hard`, `person merges`), each unless its own last one is still open, so each cleanup
-is a pull request a person merges or closes on its own:
-`Architecture: weekly hygiene, dead files and archives, <date>` and `…, agent instructions, <date>`. The
-second carries a digest of Anthropic's current guidance that the workflow's model reads (on Squishy's
-subscription, with no GitHub token), since a builder has no web access. The first lists the stale
+`.github/workflows/hygiene.yml` (#839, #888) opens two issues (`difficulty:hard`, `person merges`),
+each unless its own last one is still open, so each cleanup is a pull request a person merges or
+closes on its own: `Architecture: weekly hygiene, dead files and archives, <date>` for the night bot
+(`bot:build`, #3676) and `…, agent instructions, <date>` for Squishy (`squishy:build`). The
+second carries a digest of Anthropic's current guidance that the workflow's model reads (on the night
+bot's first Claude account, `CLAUDE_CODE_OAUTH_TOKEN`, with no GitHub token), since a builder has no
+web access. The first lists the stale
 branches as checkboxes for a person: tick some and comment `/delete-branches`, and
 `hygiene-delete.yml` (an owner's, member's or collaborator's comment, no model) surveys again with the
 rule in `.github/hygiene/branches.py`, deletes the ticked ones it does not keep, strikes them and replies
-with each sha. For that, Squishy alone may change
+with each sha. For the second, Squishy alone may change
 `.claude/skills/` (`!.claude/skills/` in `.squishy/config.json`; `git.Matches` reads a leading `!` as
 an exception), and `go/tests/skills_test.go` holds every skill to Markdown and to frontmatter that grants
 no tool and adds no hook.
