@@ -24045,12 +24045,8 @@
       }
     },
     "claude-3": {
-      "refused_until": "2026-11-11T00:50:00Z",
+      "refused_until": "2026-11-11T08:00:00Z",
       "spent": [
-        {
-          "at": "2026-11-03T15:47:21Z",
-          "minutes": 14.1
-        },
         {
           "at": "2026-11-03T16:09:41Z",
           "minutes": 9.4
@@ -24846,16 +24842,13 @@
         {
           "at": "2026-11-11T05:50:58Z",
           "minutes": 73.3
+        },
+        {
+          "at": "2026-11-11T06:00:25Z",
+          "minutes": 2.2
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-03T01:41:55Z",
-          "cache": 1679328,
-          "cost": 8.0389,
-          "input": 22,
-          "output": 6127
-        },
         {
           "at": "2026-11-03T04:25:31Z",
           "cache": 14899236,
@@ -26248,15 +26241,23 @@
           "cost": 0.9095,
           "input": 19,
           "output": 6246
+        },
+        {
+          "at": "2026-11-11T06:00:25Z",
+          "cache": 102565,
+          "cost": 0.3371,
+          "input": 4,
+          "output": 1467
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-11T08:00:00Z",
-          "utilization": 0.41
+          "utilization": 1.01
         },
-        "observed_at": "2026-11-11T05:50:58Z",
-        "status": "allowed"
+        "observed_at": "2026-11-11T06:00:25Z",
+        "rejected_resets_at": "2026-11-11T08:00:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
@@ -38515,7 +38516,9 @@
       "2026-11-11T04:08:24Z,claude-3,stream,call,42953430620,37,2026-11-11T08:00:00Z,,,allowed,,,",
       "2026-11-11T04:10:54Z,claude-3,stream,call,42953430620,38,2026-11-11T08:00:00Z,,,allowed,,,",
       "2026-11-11T04:31:25Z,claude-3,stream,call,42953430620,41,2026-11-11T08:00:00Z,,,allowed,,,",
-      "2026-11-11T04:51:58Z,claude-3,stream,call,42953430620,41,2026-11-11T08:00:00Z,,,allowed,,,"
+      "2026-11-11T04:51:58Z,claude-3,stream,call,42953430620,41,2026-11-11T08:00:00Z,,,allowed,,,",
+      "2026-11-11T05:55:19Z,claude-3,stream,call,42968557598,93,2026-11-11T08:00:00Z,,,allowed_warning,,,",
+      "2026-11-11T05:57:04Z,claude-3,refusal,call,42968557598,101,2026-11-11T08:00:00Z,,,rejected,,,2026-11-11T08:00:00Z"
     ],
     "runs": [
       "2026-11-11T05:48:38Z,42953430620,claude-3,sonnet+opus,build,3666,medium,built,,73.3,19,6246,852524,0.9095,28,41,,,321.7,claude-3,fresh,,1"
