@@ -19900,15 +19900,18 @@
     "what": "build #3561 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-11T11:21:05Z",
+    "at": "2026-11-11T11:32:28Z",
     "notes": [
-      "delivered review #3706 on muse (run 43010292548): reviewed",
-      "delivered plan #3558 on claude-1 (run 43007400704): failed",
-      "delivered revise #3692 on claude-7 (run 43001544346): approved",
-      "started plan #3558 on claude-1 (run 43011856391)",
+      "delivered plan #3558 on claude-1 (run 43011856391): planned",
+      "delivered plan #3561 on claude-7 (run 43010154435): planned",
+      "delivered plan #3560 on claude-4 (run 43008699237): planned",
+      "delivered plan #3559 on claude-3 (run 43008598142): planned",
+      "started build #3558 on muse (run 43013505546)",
+      "started build #3559 on muse (run 43013609117)",
+      "started build #3560 on muse (run 43013707479)",
+      "started build #3561 on muse (run 43013805776)",
       "nothing more to start: nothing is queued",
-      "#3686: closed, so `bot:merging` is off",
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -20614,7 +20617,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T11:21:05Z",
+  "loop_tick": "2026-11-11T11:32:28Z",
   "machine_disk": {
     "issue": null,
     "reading": {
