@@ -12742,7 +12742,7 @@
       "taken_asks": []
     },
     "3567": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 1,
       "forced": false,
@@ -12757,11 +12757,11 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "onto": "bot/issue-3596",
-      "owner": "claude-7",
-      "owner_since": "2026-11-11T14:44:28Z",
-      "owner_why": "handed off from `claude-4`: it could not take it",
+      "owner": "muse",
+      "owner_since": "2026-11-11T15:07:54Z",
+      "owner_why": "handed off from `claude-7`: it could not take it",
       "part_of": 3596,
       "pending_request": false,
       "planned_at": "2026-11-11T15:02:43Z",
@@ -12769,13 +12769,13 @@
       "planned_by_id": "claude-7",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-7",
+      "provider": "muse",
       "queued_at": "2026-11-09T23:49:53Z",
       "requested_by": "squishy-squooby",
       "round_tier": "",
-      "run_id": "43041402386",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-11T14:44:28Z",
+      "run_id": "pending:b40d0958-1794409636",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-11T15:07:54Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -15788,9 +15788,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T15:07:01Z",
+    "at": "2026-11-11T15:07:54Z",
     "url": "",
-    "what": "build #3566 on muse"
+    "what": "build #3567 on muse"
   },
   "last_sweep": {
     "at": "2026-11-11T14:40:23Z",
