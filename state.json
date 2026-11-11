@@ -16850,6 +16850,7 @@
       "run_id": "43103493656",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 215,
       "started_at": "2026-11-11T21:29:27Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -35803,9 +35804,33 @@
         "title": "Patch: map the code's implicit states and check each behaves as expected",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-5",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-4"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "3f9355d1efe2b7ba3192782f71bbb7714dc9be3d",
+        "issue": 3701,
+        "merged_at": "2026-11-11T23:05:15Z",
+        "n": 215,
+        "pr": 3738,
+        "queued_at": "2026-11-11T23:05:15Z",
+        "sha": "a488aab6e05e58316fd5f8f024db8c0ddcf2aed9",
+        "status": "queued",
+        "title": "Patch: the effects tests share one cue-end helper and one planning setup in place of 59 local copies",
+        "tries": 0
       }
     ],
-    "count": 214
+    "count": 215
   },
   "statistics": {
     "at": "2026-11-11T23:02:51Z"
