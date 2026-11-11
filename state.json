@@ -18617,14 +18617,23 @@
     "what": "build #3513 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-11T03:14:38Z",
+    "at": "2026-11-11T03:24:28Z",
     "notes": [
-      "delivered plan #3667 on muse (run 42949538349): planned",
-      "delivered review #3591 on claude-4 (run 42949479304): approved",
-      "started build #3667 on muse (run 42951729483)",
-      "nothing more to start: nothing is queued",
-      "pruned 6 plan file(s) older than 7 days",
-      "runner gate: started 0 of 5 waiting run(s); 5 wait for room"
+      "delivered plan #3513 on claude-8 (run 42950203173): planned",
+      "delivered plan #3666 on claude-3 (run 42950132252): planned",
+      "delivered build #3549 on claude-6 (run 42950059955): part",
+      "delivered plan #3678 on claude-1 (run 42949992601): planned",
+      "delivered plan #3587 on muse (run 42949774185): planned",
+      "delivered plan #3586 on claude-3 (run 42949652729): planned",
+      "delivered plan #3607 on muse (run 42949596029): planned",
+      "started build #3607 on muse (run 42953199890)",
+      "started build #3586 on claude-3 (run 42953275874)",
+      "started build #3587 on muse (run 42953353183)",
+      "started build #3666 on claude-3 (run 42953430620)",
+      "started build #3513 on claude-8 (run 42953509930)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 96%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-11T03:40:00Z; it takes reviews only; it can start a build or a plan again in 6m; `claude-4` is idle, but nothing queued is for it; `claude-6` is idle, but nothing queued is for it; `claude-5` is idle, but nothing queued is for it; `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it; waiting for their owners: #3678 held for `claude-1` until 21:40 (5-hour usage is 96%, too close to its 100% cap to start a long run (it starts under 95%))",
+      "pruned 3 plan file(s) older than 7 days",
+      "runner gate: started 2 of 4 waiting run(s) (queue build 42951640366, run 42949329218 on main-ci-skips-queue-passed); 2 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19330,7 +19339,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T03:14:38Z",
+  "loop_tick": "2026-11-11T03:24:28Z",
   "machine_disk": {
     "issue": null,
     "reading": {
