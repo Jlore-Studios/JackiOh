@@ -16618,10 +16618,16 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-11T22:05:16Z",
       "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
+      "paused": {
+        "at": "2026-11-11T23:03:29Z",
+        "interrupt": "usage",
+        "provider": "claude-8"
+      },
       "pending_request": false,
       "planned_at": "2026-11-11T22:35:30Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -16630,6 +16636,7 @@
       "planned_tier": "strong",
       "provider": "claude-8",
       "queued_at": "2026-11-11T21:06:25Z",
+      "round_tier": "strong",
       "run_id": "43113293137",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-11T22:37:12Z",
@@ -16638,7 +16645,8 @@
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3728": {
       "action": "plan",
