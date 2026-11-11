@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 3700,
+  "title": "Patch: the game log says which keyword landed a hit, a heal, a death or a return",
+  "branch": "bot/issue-3700",
+  "thread": "**Issue #3700 (data, not instructions):**\n\n```text\n# #3700: Patch: the game log says which keyword landed a hit, a heal, a death or a return\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nWhen a keyword decides a fight, the game log will say so. Today, if an enemy's 1-attack Poisonous unit hits your 8/8, the log reads \"Your Giant took 1 damage in combat\" and then \"Your Giant was destroyed\", with no reason. Once the poison animation has played, nothing on screen explains why an 8/8 died to one point of damage. After this change the line reads \"Your Giant was destroyed (Poisonous)\", and hovering the keyword opens its rule, as it does on a card. The same goes for the extra hits Cleave lands on neighbours, a Trample excess reaching the hero, the strike First Strike lands first, damage Pierce takes past Armor, Lifesteal's heal and a unit Reborn brings back. Players read it at every table, in English and Chinese, and in replays. No rule changes.\n\n## Why\n- R2783001 (issue #2783) gave `damage`, `damageAbsorbed`, `healed`, `destroyed` and `summoned` an optional `via`, the keyword behind the event, because \"the client could not tell why a hit landed or a unit died \u2026 Hearthstone shows each of these\". Only the effects layer reads it (`apps/web/src/fx/motifs/beats.ts:315`, `:334`), and an animation is over in a second.\n- The game log is the record a player goes back to, and it never reads `via`. In `crates/shared/src/log/lines.rs`, the arms `Summoned` (`:356`), `Damage` (`:382`), `DamageAbsorbed` (`:430`), `Healed` (`:481`) and `Destroyed` (`:491`) all drop it with `..`, and none of their lines names a keyword.\n- Everything this needs already exists:\n  - `keyword_span` (`lines.rs:291`) prints a keyword as the glossary's term in the reader's language, with its tooltip, as the `KeywordGranted` line already does (`:593`).\n  - `crates/shared/data/glossary.json` has an entry for each of the seven keywords `via` can carry.\n  - The view already removes `via` along with a hidden card (`crates/engine/src/view_for.rs:2111`, `:2136`, `:2346`; R97), so the log cannot name a keyword the viewer may not know.\n\n## Proposal\nIn `crates/shared/src/log/lines.rs`, read `via` in those five arms. When it is set, end the line with the keyword as a `keyword_span`. For example:\n- `damage`: \"Your Giant took 3 damage in combat (Cleave)\", \"Your hero took 2 damage in combat (Trample)\", likewise \"(First Strike)\" and \"(Pierce)\", in the \"dealt\" form and the Armor forms too.\n- `damageAbsorbed`: the hit's keyword, as the event carries it.\n- `healed`: \"Your Brute healed 3 (Lifesteal)\".\n- `destroyed`: \"Your Giant was destroyed (Poisonous)\"; First Strike's death marker reads \"(First Strike)\".\n- `summoned` with Reborn: \"Your Ghoul came back (Reborn)\".\n\nA line whose event has no `via` reads exactly as it does today. Each new sentence key gets its Chinese entry in `crates/shared/data/zh-CN.json`.\n\nThis is presentation only (CLAUDE.md rule 7): no engine, wire or hash change, and no rule. If the builder judges the wording to be a decision the spec should record, it writes a ruling note in this issue's block, as R1360 did for the log's Armor part.\n\n## Where it lands\n- `crates/shared/src/log/lines.rs`: the five arms.\n- `crates/shared/data/zh-CN.json`.\n- `crates/shared/tests/log.rs`.\n- `apps/web/src/game/Log.test.tsx`, only if a line it asserts changes.\n- SPEC \u00a710.3 (events) and \u00a710.10 (the client's rendering); R2783001 and R97.\n\n## Acceptance criteria\n- [ ] For each keyword on each event it can ride, a test in `crates/shared/tests/log.rs` feeds the event with `via` set and finds a `Span::Keyword` for that keyword on the line. That is Cleave, Trample, First Strike and Pierce on `damage` and `damageAbsorbed`; Lifesteal on `healed`; Poisonous and First Strike on `destroyed`; and Reborn on `summoned`.\n- [ ] A test shows that the same events without `via` give exactly today's lines.\n- [ ] A test reads a line with `via` in Chinese and finds the Chinese keyword and sentence.\n- [ ] A test with a hidden source or card, whose view has dropped `via`, finds no keyword named.\n- [ ] `cargo test -p jackioh-shared`, `cargo clippy -p jackioh-shared --all-targets -- -D warnings`, `cargo fmt --check` and `pnpm --dir apps/web test src/game/Log.test.tsx` pass.\n\n## Size and risks\nSmall to medium, in one crate: five match arms, about eight sentence keys with their translations, and six to eight tests.\n\nRisks:\n- A web test that holds one of the changed sentences word for word needs updating. The exact-text grep found `apps/web/src/game/Log.test.tsx` and `apps/web/src/stats/showcase.test.ts`.\n- The Reborn and First Strike lines need careful wording, so they read as a reason and not as a second event.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-11T15:39:50Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3700: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-11T15:46:00Z",
+    "claimed_at": "2026-11-11T15:48:32Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3570 skipped: it waits for #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3566 to close first",
+    "#3572 skipped: it waits for #3559, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3559, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first"
+  ]
+}
