@@ -23876,10 +23876,6 @@
       "refused_until": "2026-11-11T00:50:00Z",
       "spent": [
         {
-          "at": "2026-11-03T14:31:24Z",
-          "minutes": 13.7
-        },
-        {
           "at": "2026-11-03T15:47:21Z",
           "minutes": 14.1
         },
@@ -24674,16 +24670,13 @@
         {
           "at": "2026-11-11T05:30:50Z",
           "minutes": 8.4
+        },
+        {
+          "at": "2026-11-11T05:50:58Z",
+          "minutes": 73.3
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-03T01:26:48Z",
-          "cache": 146772,
-          "cost": 3.2824,
-          "input": 4,
-          "output": 3018
-        },
         {
           "at": "2026-11-03T01:41:55Z",
           "cache": 1679328,
@@ -26076,14 +26069,21 @@
           "cost": 2.0698,
           "input": 52,
           "output": 14834
+        },
+        {
+          "at": "2026-11-11T05:50:58Z",
+          "cache": 852524,
+          "cost": 0.9095,
+          "input": 19,
+          "output": 6246
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-11T08:00:00Z",
-          "utilization": 0.45
+          "utilization": 0.41
         },
-        "observed_at": "2026-11-11T05:30:50Z",
+        "observed_at": "2026-11-11T05:50:58Z",
         "status": "allowed"
       }
     },
@@ -38333,6 +38333,18 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-11T03:38:53Z,claude-3,stream,call,42953430620,28,2026-11-11T08:00:00Z,,,allowed,,,",
+      "2026-11-11T03:42:53Z,claude-3,stream,call,42953430620,29,2026-11-11T08:00:00Z,,,allowed,,,",
+      "2026-11-11T03:54:24Z,claude-3,stream,call,42953430620,35,2026-11-11T08:00:00Z,,,allowed,,,",
+      "2026-11-11T04:04:09Z,claude-3,stream,call,42953430620,36,2026-11-11T08:00:00Z,,,allowed,,,",
+      "2026-11-11T04:08:24Z,claude-3,stream,call,42953430620,37,2026-11-11T08:00:00Z,,,allowed,,,",
+      "2026-11-11T04:10:54Z,claude-3,stream,call,42953430620,38,2026-11-11T08:00:00Z,,,allowed,,,",
+      "2026-11-11T04:31:25Z,claude-3,stream,call,42953430620,41,2026-11-11T08:00:00Z,,,allowed,,,",
+      "2026-11-11T04:51:58Z,claude-3,stream,call,42953430620,41,2026-11-11T08:00:00Z,,,allowed,,,"
+    ]
   },
   "version": 1
 }
