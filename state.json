@@ -15819,11 +15819,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-11T19:28:47Z",
+        "at": "2026-11-11T20:13:32Z",
         "difficulty": "hard",
         "provider": "claude-4",
-        "tier": "medium",
-        "why": "Rule 5 (big): about 58 files change: the 40 files with a local copy, 14 callers of envOf(intensity), 2 shared helpers, setPass.ts and 2 test files. A stricter endOf may also force a planner timing fix."
+        "tier": "strong",
+        "why": "Big: 58 files changed (57 edited, 1 new test), over the rule's ~40-file line"
       },
       "failures": 0,
       "forced": false,
