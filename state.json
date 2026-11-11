@@ -18650,7 +18650,16 @@
       "feedback_since": "2026-11-11T03:17:08Z",
       "issue": 3667,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "3076d75ff7cb0a068cfb394b871d4b6ae1326e78",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
