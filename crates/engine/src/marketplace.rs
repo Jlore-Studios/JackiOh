@@ -20,7 +20,7 @@
 //! Every roll and every price move draws from the match's rng, in the order this file draws them
 //! (§10.7); opening and rolling report nothing (R1853000).
 
-use crate::catalog::{def_of, find_def, made_by_a_rule, query_cost, registered_catalog};
+use crate::catalog::{def_of, find_def, made_by_a_rule, query_cost, registered_catalog, set_is_open};
 use crate::config::{
     HAND_SALE_PRICE, HAND_SALE_RADIANT_PRICE, MARKETPLACE_BOUGHT_COST, MARKETPLACE_BUFF_CHANCE,
     MARKETPLACE_BUFF_PRICE_PERCENT, MARKETPLACE_CREDITS_PER_MANA, MARKETPLACE_CREDITS_PER_MANA_PAST,
@@ -139,15 +139,21 @@ fn moved_price(rng: &mut Rng, base: i32) -> i32 {
     base - spread + rng.int(2 * spread + 1)
 }
 
-/// R1853001: the ids one lot draws from, in a fixed order: the named ids with a definition, or a set's
-/// non-token cards in catalog order, all or (R1881006) those printing a keyword on their base face,
-/// never a card only a rule makes (R1857001's Dormant Starship), as in no `catalog::query` pool.
+/// R1853001: the ids one lot draws from, in a fixed order: the named ids with a definition, or (R3571001)
+/// those of a set that is open, or a set's non-token cards in catalog order, all or (R1881006) those
+/// printing a keyword on their base face, never a card only a rule makes (R1857001's Dormant Starship),
+/// as in no `catalog::query` pool.
 fn pool_ids(state: &GameState, pool: MarketPool) -> Vec<String> {
     let in_set = |def: &CardDef, set| def.set == set && !def.token && !made_by_a_rule(def);
     match pool {
         MarketPool::Ids(ids) => ids
             .iter()
             .filter(|id| find_def(Some(state), id).is_some())
+            .map(|id| (*id).to_string())
+            .collect(),
+        MarketPool::OpenIds(ids) => ids
+            .iter()
+            .filter(|id| find_def(Some(state), id).is_some_and(|def| set_is_open(def.set)))
             .map(|id| (*id).to_string())
             .collect(),
         MarketPool::Set(set) => registered_catalog()

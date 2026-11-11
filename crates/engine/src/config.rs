@@ -1358,6 +1358,9 @@ pub const RESOURCE_RARITY_ODDS: &[(PrintedRarity, i32)] = &[
 pub enum MarketPool {
     /// The ids named, those the catalog holds.
     Ids(&'static [&'static str]),
+    /// R3571001: the ids named that the catalog holds and whose set is open (`catalog::set_is_open`,
+    /// R1420): the AI lot's, whose Stinkyscape+ cards wait for their set to ship.
+    OpenIds(&'static [&'static str]),
     /// Every card of the set that is no token, in catalog order.
     Set(SetName),
     /// R1881006: every card of the set that is no token and prints the keyword on its base face, in
@@ -1414,7 +1417,7 @@ pub const MARKETPLACE_LAUNCHERS: &[&str] = &[
     "stinkyscape-142",
     "stinkyscape-143",
 ];
-/// R1881006: the ten AI cards (Stinkyscape T-AI-1 to T-AI-10, ST15).
+/// R1881006, R3571001: the AI cards: Stinkyscape's ten (T-AI-1 to T-AI-10, ST15), then Stinkyscape+'s seven (T-AI-1 to T-AI-7, SP7), offered once their set ships.
 pub const MARKETPLACE_AI_CARDS: &[&str] = &[
     "stinkyscape-t-ai-01",
     "stinkyscape-t-ai-02",
@@ -1426,6 +1429,13 @@ pub const MARKETPLACE_AI_CARDS: &[&str] = &[
     "stinkyscape-t-ai-08",
     "stinkyscape-t-ai-09",
     "stinkyscape-t-ai-10",
+    "stinkyscapeplus-t-ai-01",
+    "stinkyscapeplus-t-ai-02",
+    "stinkyscapeplus-t-ai-03",
+    "stinkyscapeplus-t-ai-04",
+    "stinkyscapeplus-t-ai-05",
+    "stinkyscapeplus-t-ai-06",
+    "stinkyscapeplus-t-ai-07",
 ];
 /// R1881006: one of S21's lots of `count` cards of `pool`.
 const fn card_lot(pool: MarketPool, count: i32) -> MarketLot {
@@ -1448,7 +1458,7 @@ pub const MARKETPLACE_TABLE: &[MarketLot] = &[
         2,
     ),
     card_lot(MarketPool::Set(SetName::Stinkyscape), 2),
-    card_lot(MarketPool::Ids(MARKETPLACE_AI_CARDS), 1),
+    card_lot(MarketPool::OpenIds(MARKETPLACE_AI_CARDS), 1),
 ];
 /// R2250002, R3047000: the offers the Marketplace rolls a player at the start of each of their turns.
 pub const MARKETPLACE_OFFERS_PER_TURN: i32 = 4;
