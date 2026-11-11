@@ -18770,13 +18770,13 @@
     "what": "review #3682 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-11T04:01:29Z",
+    "at": "2026-11-11T04:10:12Z",
     "notes": [
-      "#3672: `claude-8` can start again, so its hold is lifted",
-      "#3513: `claude-8` can start again, so its hold is lifted",
-      "started plan #3672 on claude-8 (run 42956648122)",
-      "started build #3513 on claude-8 (run 42956715308)",
-      "nothing more to start: nothing is queued"
+      "delivered build #3667 on muse (run 42951729483): built",
+      "started review #3682 on muse (run 42957679571)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19482,7 +19482,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T04:01:29Z",
+  "loop_tick": "2026-11-11T04:10:12Z",
   "machine_disk": {
     "issue": null,
     "reading": {
