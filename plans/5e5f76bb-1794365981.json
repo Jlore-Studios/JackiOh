@@ -1,0 +1,80 @@
+{
+  "action": "plan",
+  "number": 3587,
+  "title": "Patch: the dungeon map drawn as a climbing path map",
+  "branch": "bot/issue-3587",
+  "thread": "**Issue #3587 (data, not instructions):**\n\n```text\n# #3587: Patch: the dungeon map drawn as a climbing path map\nOpened by @jgoetzmann.\n\n### What it does\n\nOnce #3583 lands, the run's map is a graph: 3 acts of rows on a grid, each node leading to 1 to 3 nodes of the next row, and every path meeting at the two mini-bosses and the final boss. Today's screen (`apps/web/src/dungeon/map/MapScreen.tsx`) draws rows of buttons with no lines between them. The owner wants a proper map graphic.\n\nThe owner's reference picture: a tall map read bottom to top. Round dark badges, each holding a small white icon of its kind, are joined by thin lines to the badges above. The paths split and merge, and every path meets at one large boss emblem at the top. Draw it in that spirit with our own icons and palette. Copy no art from any other game.\n\n**The screen (presentation only, CLAUDE.md rule 7):**\n\n- **One tall map, read bottom to top.** The starts sit at the bottom and the final boss at the top, with the two mini-bosses as single nodes where every path meets. It scrolls vertically, and on opening it scrolls to where the player stands.\n- **Placement.** Each node sits at its grid column and row, with a small jitter so the map does not look like a spreadsheet. The jitter comes from the node's row and column, not `Math.random`, so it holds still across renders.\n- **Lines.** An SVG line joins each node to each node of the next row it leads to. The path the player walked is drawn solid and bold. Lines no longer reachable are dimmed, and the lines from the current node to the nodes it can step onto are highlighted.\n- **Nodes.** Each node is a round badge holding its kind's icon (`NodeIcon.tsx`, our own glyphs), colored by kind as `run.css` does. Bosses are drawn larger, with the boss's name and its preseeded relic. A node keeps the labels the run gives it (the enemy's name, and its tier once the tiers part, #3586, lands).\n- **States.** Visited nodes are marked, and \"You are here\" is shown on the current one. Nodes the player can no longer reach are dimmed. The nodes the current one leads to are the only live buttons, and they pulse gently, with no pulse under reduced motion. The run decides what is reachable: the screen reads the node's edges and never judges a step itself.\n- **Details.** Hovering, focusing or tapping a node shows its kind, its enemy's name and a boss's relic (as the row buttons show today).\n- **Legend.** A small legend names the node kinds.\n- **Access.**\n  - Every node is a button with an `aria-label` (its kind, and its enemy and tier when it has them).\n  - The map has an accessible name.\n  - The keyboard reaches the live nodes in a sensible order, with a visible focus ring.\n- **Phone.** The map fits a 360 px wide screen, and tap targets are at least 44 px.\n- **Words.** Every word goes through `t()` at render, and `apps/web/src/i18n/zh-CN.json` gets the new strings. Test ids go in `map/testids.ts`.\n\n**Where:** `apps/web/src/dungeon/map/`: `MapScreen.tsx`, a new graph component if it helps, `run.css`, `NodeIcon.tsx` and the testids.\n\n### Acceptance\n\n- vitest: one line is drawn per edge of the run's map; only the nodes the current one leads to are enabled; the walked path is marked; the boss nodes show their relic; clicking a live node sends `go` with its column.\n- Under reduced motion nothing pulses.\n- The pull request carries screenshots at desktop and phone widths (the `ui-walkthrough` skill) of a fresh run, the middle of an act and the step just past a mini-boss.\n- `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/edge apps/web e2e` and `pnpm --dir apps/web test` pass.\n\n### Blocked by, part of\n\nBlocked by #3583\nPart of #3581\n\n### Difficulty (a guess)\n\nmedium\n\n### Priority\n\nmedium\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3587: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-10T01:03:24Z",
+    "claimed_at": "2026-11-11T03:00:03Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3550 skipped: it waits for #3548 to close first",
+    "#3551 skipped: it waits for #3548 to close first",
+    "#3552 skipped: it waits for #3548 to close first",
+    "#3553 skipped: it waits for #3548 to close first",
+    "#3554 skipped: it waits for #3550 to close first",
+    "#3555 skipped: it waits for #3550 to close first",
+    "#3556 skipped: it waits for #3550 to close first",
+    "#3557 skipped: it waits for #3550 to close first",
+    "#3558 skipped: it waits for #3554 to close first",
+    "#3559 skipped: it waits for #3550, #3554 to close first",
+    "#3560 skipped: it waits for #3550, #3554 to close first",
+    "#3561 skipped: it waits for #3554 to close first",
+    "#3565 skipped: it waits for #3560 to close first",
+    "#3566 skipped: it waits for #3558 to close first",
+    "#3567 skipped: it waits for #3558 to close first",
+    "#3568 skipped: it waits for #3557, #3558 to close first",
+    "#3569 skipped: it waits for #3558 to close first",
+    "#3570 skipped: it waits for #3551, #3553, #3555, #3560, #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3553, #3566 to close first",
+    "#3572 skipped: it waits for #3549, #3551, #3552, #3553, #3555, #3556, #3557, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3548, #3549, #3550, #3551, #3552, #3553, #3554, #3555, #3556, #3557, #3558, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3608 skipped: it waits for #3607 to close first",
+    "#3609 skipped: it waits for #3607, #3608 to close first",
+    "#3610 skipped: it waits for #3607, #3608, #3609 to close first"
+  ]
+}
