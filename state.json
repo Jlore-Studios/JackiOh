@@ -15961,23 +15961,25 @@
     },
     "3714": {
       "action": "plan",
+      "archived": {
+        "at": "2026-11-11T18:04:50Z",
+        "branch": "",
+        "head": "",
+        "pr": null,
+        "why": "Open run 43061066055 (Actions -> patches ship, run 43061066055) and note which step went red: `ship`, or a later step (`git push`, `gh pr create`, `gh pr merge --auto`). Then run **Actions -> patches ship -> Run workflow** on `main`. I could not reproduce a refusal, and the bot has no GitHub access, so it cannot read that log or start the workflow. Details are under Goal and Open questions."
+      },
       "asks": [],
-      "in_lane": true,
-      "kind": "build",
       "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-11T17:25:49Z",
-      "owner_why": "it plans it",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-11T18:04:39Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-3",
       "planned_tier": "medium",
       "provider": "claude-3",
+      "question": "Open run 43061066055 (Actions -> patches ship, run 43061066055) and note which step went red: `ship`, or a later step (`git push`, `gh pr create`, `gh pr merge --auto`). Then run **Actions -> patches ship -> Run workflow** on `main`. I could not reproduce a refusal, and the bot has no GitHub access, so it cannot read that log or start the workflow. Details are under Goal and Open questions.",
       "run_id": "43068098778",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-11T17:25:49Z",
-      "stop_requested": false,
       "taken_asks": []
     },
     "3715": {
