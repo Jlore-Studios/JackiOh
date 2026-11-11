@@ -7,7 +7,7 @@ import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
-import { resetShedForTests, setShedLevel } from "../fx/shed.ts";
+import { resetShedForTests, setShedLevel, setShedPointer } from "../fx/shed.ts";
 import { REST_RANK, allocate, resetMotionSlotsForTests, slotRarityOf, useMotionSlot, usePageVisible, type SlotRank } from "./motionSlots.ts";
 
 afterEach(() => {
@@ -174,6 +174,34 @@ describe("R3351000 at shed stage 3 only the face under the pointer keeps moving"
       setShedLevel(0);
     });
     expect(holders(container)).toEqual([0, 1, 2]);
+  });
+
+  it("R3351000 a shed to motes or far auras re-renders no face; the faces stage does", () => {
+    // #3674: a face reads only whether the stage stills faces, so the stages before it, and the pointer, cost no render.
+    let renders = 0;
+    function Counted({ id }: { id: number }): ReactElement {
+      renders += 1;
+      const holds = useMotionSlot(true, REST_RANK);
+      return createElement("span", { "data-id": id, "data-holds": holds ? "true" : "false" });
+    }
+    const { container } = render(createElement("div", null, [0, 1, 2].map((id) => createElement(Counted, { key: id, id }))));
+    expect(holders(container)).toEqual([0, 1, 2]);
+    const settled = renders;
+    act(() => {
+      setShedLevel(1);
+    });
+    act(() => {
+      setShedLevel(2);
+    });
+    act(() => {
+      setShedPointer({ x: 10, y: 10 });
+    });
+    expect(renders).toBe(settled);
+    act(() => {
+      setShedLevel(3);
+    });
+    expect(renders).toBeGreaterThan(settled);
+    expect(holders(container)).toEqual([]);
   });
 
   it("R3351000 below stage 3 shedding changes no slot", () => {
