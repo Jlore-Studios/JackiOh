@@ -1,0 +1,17 @@
+{
+  "title": "Patch: every infinite animation moves only transform and opacity",
+  "sources": "#3608",
+  "notes": "Issue #3608, part of #3604: every animation that repeats forever in the web client moves only transform and opacity, so the compositor runs it and nothing repaints each frame (R3608000). Under apps/web/src/cards/ the Mythic hand shimmer draws its three-colour rim once on the hand card's ::after and the loop fades that layer's opacity alone; the rim keeps its colours, conditions and reduced-motion rest state. How cards look and play is unchanged.",
+  "player": {
+    "title": "Smoother glows, pulses and shimmer",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "Hand glows, face-down cards, the Mythic shimmer, button pulses and marching arrows look the same but animate on the compositor, so busy boards hold their frame rate on slower devices."
+    ]
+  },
+  "cards": [],
+  "visual": true
+}
