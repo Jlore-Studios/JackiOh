@@ -16108,9 +16108,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-6",
-      "owner_since": "2026-11-11T21:02:52Z",
-      "owner_why": "its approval shipped `b3c350400d18`, and the last approver owns the merge, so it fixes what CI found",
+      "owner": "claude-5",
+      "owner_since": "2026-11-11T21:37:54Z",
+      "owner_why": "handed off from `claude-6`: `claude-6` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-11T21:56:25Z",
       "pending_request": false,
       "planned_at": "2026-11-11T18:26:23Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -16349,7 +16349,7 @@
       }
     },
     "3724": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": true,
       "ci_fixes": 1,
@@ -16376,13 +16376,13 @@
       "interruptions": 0,
       "issue": 3712,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "claude-6",
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-5",
       "queued_at": "2026-11-11T21:02:50Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "43087996345",
+      "run_id": "pending:d415d68f-1794433048",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16403,7 +16403,7 @@
         "run": "43078029123"
       },
       "source": "ci",
-      "started_at": "2026-11-11T19:31:25Z",
+      "started_at": "2026-11-11T21:37:54Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16686,9 +16686,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T21:29:27Z",
+    "at": "2026-11-11T21:37:54Z",
     "url": "",
-    "what": "review #3738 on claude-5"
+    "what": "revise #3724 on claude-5"
   },
   "last_sweep": {
     "at": "2026-11-11T21:26:02Z",
