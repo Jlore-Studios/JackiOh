@@ -188,6 +188,43 @@ fn infinite_reserves_scripts() -> CardScripts {
     }
 }
 
+/// R3553002 (S+ #30 Yeah I'm a War Hero, fixture): its controller's first draw each turn is a
+/// Warhero Token card instead.
+pub fn warhero_draws() -> CardDef {
+    def(json!({
+        "id": "fx-warhero-draws",
+        "index": "30",
+        "name": "War Hero (fixture)",
+        "type": "Field Spell",
+        "cost": 0,
+    }))
+}
+
+fn warhero_draws_scripts() -> CardScripts {
+    let script = || Script {
+        static_flags: flags(json!({ "warheroDraws": true })),
+        ..Script::default()
+    };
+    CardScripts {
+        base: script(),
+        radiant: script(),
+    }
+}
+
+/// R3553002: the token the fixture's first draw mints, reached by its §5 index like the real one.
+/// It carries the real token's id, so minting it starts the worth through `note_minted` as usual.
+pub fn warhero_token() -> CardDef {
+    def(json!({
+        "id": "stinkyscapeplus-t-warhero-token",
+        "index": "T-warhero-token",
+        "set": "Stinkyscape+",
+        "name": "Warhero Token (fixture)",
+        "type": "Spell",
+        "token": true,
+        "cost": 0,
+    }))
+}
+
 /// #73 Anti-oneshot Armor: your hero takes at most 5 damage per instance (3 radiant).
 pub fn anti_oneshot() -> CardDef {
     def(json!({
@@ -385,6 +422,8 @@ pub static FIXTURE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         gravedigger(),
         stockpile(),
         infinite_reserves(),
+        warhero_draws(),
+        warhero_token(),
         anti_oneshot(),
         mana_well(),
         going_long(),
@@ -402,6 +441,7 @@ pub static FIXTURE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::
     table.insert(gravedigger().id, gravedigger_scripts());
     table.insert(stockpile().id, stockpile_scripts());
     table.insert(infinite_reserves().id, infinite_reserves_scripts());
+    table.insert(warhero_draws().id, warhero_draws_scripts());
     table.insert(anti_oneshot().id, anti_oneshot_scripts());
     table.insert(mana_well().id, mana_well_scripts());
     table.insert(going_long().id, going_long_scripts());

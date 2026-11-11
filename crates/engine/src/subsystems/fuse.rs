@@ -1061,6 +1061,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 quickdraw: flags(|f| f.quickdraw),
                 hand_sale: flags(|f| f.hand_sale),
                 infinite_reserves: flags(|f| f.infinite_reserves),
+                warhero_draws: flags(|f| f.warhero_draws),
                 never_defense: flags(|f| f.never_defense),
                 echo: numbers(|f| f.echo),
                 echo_grant: sum_defined(defined.iter().map(|f| f.echo_grant)),

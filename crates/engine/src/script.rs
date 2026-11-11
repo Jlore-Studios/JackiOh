@@ -428,6 +428,9 @@ pub struct StaticFlags {
     /// Replaces an empty-library draw with a Rush Token card (#75).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub infinite_reserves: Option<bool>,
+    /// R3553002: replaces its controller's first draw each turn with a Warhero Token card (S+ #30).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub warhero_draws: Option<bool>,
     /// Cannot switch to Defense Position (#65.1).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub never_defense: Option<bool>,

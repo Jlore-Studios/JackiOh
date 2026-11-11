@@ -29828,7 +29828,7 @@
     "flavor": "Nerd",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 23,
     "base": {
       "attack": 12,
       "health": 16,
@@ -30011,7 +30011,7 @@
     "flavor": "Nerd",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "For the rest of the game, at the start of its owner's turn summon a Conscript."
@@ -30178,7 +30178,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 58,
     "base": {
       "attack": 5,
       "health": 5,
@@ -30224,7 +30224,7 @@
     "flavor": "Nature",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 15,
     "base": {
       "keywords": [],
       "text": "The first card you draw each turn is replaced with a Warhero Token."
@@ -35560,7 +35560,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 40,
     "base": {
       "attack": 2,
       "health": 3,

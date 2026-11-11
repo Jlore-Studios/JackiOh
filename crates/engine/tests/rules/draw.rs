@@ -357,3 +357,82 @@ mod r1061_named_draw_radiant_rider {
         state.players.p1.hand.push(card);
     }
 }
+
+mod r3553002_warhero_draws_m1_t7 {
+    use super::*;
+    use crate::rules::fixtures::scripts::{warhero_draws, warhero_token};
+    use jackioh_engine::draw::draws_this_turn;
+
+    /// The flag in p1's backrow, past setup: `state.turn` past `SETUP_TURN`.
+    fn warhero_board(seed: &str) -> GameState {
+        let mut state = new_game(seed, None);
+        put(
+            &mut state,
+            &warhero_draws().id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        state.turn = 1;
+        state
+    }
+
+    #[test]
+    fn r3553002_the_first_draw_is_a_warhero_token_and_the_second_is_the_library_top() {
+        let mut state = warhero_board("warhero-first");
+        let events = draw_from(&mut state, &strings(&["fx-1", "fx-2"]), 2);
+
+        assert_eq!(
+            def_ids(&state.players.p1.hand),
+            vec![warhero_token().id, "fx-1".to_string()]
+        );
+        assert_eq!(def_ids(&state.players.p1.library), strings(&["fx-2"]));
+        // Minting the token starts the game-wide worth at 0 (R3548002).
+        assert_eq!(state.warhero_worth, Some(0));
+        assert_eq!(draws_this_turn(&state, PlayerId::P1), 2);
+        let drawn = events_json(&events, GameEventType::Drawn);
+        assert_eq!(drawn.len(), 2);
+        assert_eq!(drawn[0]["defId"], json!(warhero_token().id));
+        assert_eq!(drawn[0]["turnDraw"], json!(1));
+        assert_eq!(drawn[1]["defId"], json!("fx-1"));
+        assert_eq!(drawn[1]["turnDraw"], json!(2));
+    }
+
+    #[test]
+    fn without_the_flag_draws_are_normal() {
+        let mut state = new_game("warhero-off", None);
+        state.turn = 1;
+        let events = draw_from(&mut state, &strings(&["fx-1", "fx-2"]), 2);
+
+        assert_eq!(def_ids(&state.players.p1.hand), strings(&["fx-1", "fx-2"]));
+        assert_eq!(state.warhero_worth, None);
+        assert_eq!(events_json(&events, GameEventType::Drawn).len(), 2);
+    }
+
+    #[test]
+    fn empty_library_first_draw_is_fatigue_with_no_token() {
+        let mut state = warhero_board("warhero-empty");
+        let events = draw_from(&mut state, &[], 1);
+
+        assert!(state.players.p1.hand.is_empty());
+        assert_eq!(state.players.p1.fatigue_count, 1);
+        assert_eq!(state.warhero_worth, None);
+        assert_eq!(events_json(&events, GameEventType::Fatigue).len(), 1);
+    }
+
+    #[test]
+    fn setup_draws_are_untouched() {
+        let mut state = new_game("warhero-setup", None);
+        assert_eq!(state.turn, SETUP_TURN);
+        put(
+            &mut state,
+            &warhero_draws().id,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let events = draw_from(&mut state, &strings(&["fx-1"]), 1);
+
+        assert_eq!(def_ids(&state.players.p1.hand), strings(&["fx-1"]));
+        assert_eq!(state.warhero_worth, None);
+        assert_eq!(events_json(&events, GameEventType::Drawn).len(), 1);
+    }
+}
