@@ -18643,6 +18643,14 @@
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6786156189
+    },
+    "3682": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-11T03:17:08Z",
+      "issue": 3667,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
