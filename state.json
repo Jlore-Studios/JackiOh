@@ -19551,7 +19551,11 @@
       "issue": 3672,
       "kind": "review",
       "live": "reviewing",
-      "merge_owner": "claude-7",
+      "merge_owner_gave_up": {
+        "at": "2026-11-11T07:55:09Z",
+        "provider": "claude-7",
+        "sha": "6d6167cf58b2bc62ce03ca2fc9f5e3a0f5c33d29"
+      },
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-11-11T06:32:29Z",
