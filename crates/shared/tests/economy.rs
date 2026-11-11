@@ -5,7 +5,10 @@
 use indexmap::IndexMap;
 use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::wire::PrintedRarity;
-use jackioh_shared::config::{CARD_TOKEN_BAR_SIZE, CHASE_SHARD_PACKS, PACK_SLOTS, PITY_MYTHIC_PACKS};
+use jackioh_shared::config::{
+    CARD_TOKEN_BAR_SIZE, CHASE_SHARD_PACKS, PACK_FLOOR_RARITY, PACK_FLOORED_SLOT, PACK_SLOTS,
+    PITY_MYTHIC_PACKS,
+};
 use jackioh_shared::cosmetics::{OwnedCosmetics, registry};
 use jackioh_shared::economy::boundary::{EconomyAnswer, EconomyCall, apply};
 use jackioh_shared::economy::cosmetic_pack::{CosmeticHoldings, CosmeticSlotGrant, roll_cosmetic_pack};
@@ -236,6 +239,33 @@ fn r1306002_a_cosmetic_pack_gains_one_shard_and_a_full_bar_holds() {
             ..
         }
     )));
+}
+
+/// R1339000: an opening's floored slot draws a card of PACK_FLOOR_RARITY or rarer, and only that slot: the
+/// others draw a Common in some opening.
+#[test]
+fn r1339000_only_the_floored_slot_draws_at_least_the_floor() {
+    let pool = pool_of(60);
+    let rarity_of = |id: &str| {
+        pool.iter()
+            .find(|card| card.id == id)
+            .map(|card| card.rarity)
+            .unwrap_or_else(|| panic!("{id} is in the pool"))
+    };
+    let mut another_common = false;
+    for k in 0..300 {
+        let opening =
+            roll_opening(&pool, &Holdings::default(), registry(), &format!("floor-{k}")).expect("an opening");
+        for (at, slot) in opening.slots.iter().enumerate() {
+            let rarity = rarity_of(&slot.card_id);
+            if at == PACK_FLOORED_SLOT {
+                assert!(rarity >= PACK_FLOOR_RARITY, "seed {k}: {rarity:?}");
+            } else {
+                another_common |= rarity == PrintedRarity::Common;
+            }
+        }
+    }
+    assert!(another_common, "another slot draws a Common");
 }
 
 /// R1661001, R3015003: a card pack's duplicate is owned as its cosmetic on the card its slot drew, the levels
