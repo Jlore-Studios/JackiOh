@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 3698,
+  "title": "Patch: a replay names the opponent as its row in the replays list does",
+  "branch": "bot/issue-3698",
+  "thread": "**Issue #3698 (data, not instructions):**\n\n```text\n# #3698: Patch: a replay names the opponent as its row in the replays list does\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe replays list says \"Win \u00b7 vs Bob\", but the replay it opens calls Bob only \"Opponent\", and a practice game's replay says \"Opponent\" though the live game said \"AI \u00b7 Easy\". Once this is built, a replay labels the other side as the list and the live game did: the opponent's name for an online game, the AI and its level for practice.\n\n## Why\n- The online row names the opponent (`apps/web/src/routes/replays.tsx:451-455`; \"a deleted account\" when the name is gone).\n- `ReplayPlayerProps` (`apps/web/src/replay/ReplayPlayer.tsx:33-43`) takes no label, so the opened board falls back to `Hero`'s default \"Opponent\" (`apps/web/src/game/Hero.tsx:210`), and the modifier list is handed \"Opponent\" (`ReplayPlayer.tsx:281`).\n- The live practice board passes its label through `Game`'s `enemyLabel` (`apps/web/src/routes/practice.tsx:1081`, `:1116`); the replay of the same game drops it.\n- The owner already wanted known seats named: a watched game and a friend's shared replay speak of the friend by name (#2019).\n\n## Proposal\n`ReplayPlayer` takes an optional `opponentLabel`, passed to `Game`'s `enemyLabel` and to `ModifierList`. Each caller fills it from what it already holds: the replays list from the row's opponent (the AI and its tier for a practice row), the practice result's replay from the live board's label, a match result's replay from the name the match screen already shows. A friend's shared-replay route keeps its own wording. A long name is cut with an ellipsis in `.hero-seat`. The shared GIF is unchanged, since it names no seat (R513000). Presentation only (CLAUDE.md rule 7).\n\n## Where it lands\n- `apps/web/src/replay/ReplayPlayer.tsx`, `apps/web/src/routes/replays.tsx`, `apps/web/src/routes/practice.tsx`, `apps/web/src/routes/match.tsx`, `apps/web/src/game/board.css`\n- `apps/web/src/replay/ReplayPlayer.test.tsx`, `apps/web/src/routes/replays.test.tsx`, `apps/web/src/i18n/zh-CN.json` for any new string\n- SPEC \u00a79.5; R513000\n\n## Acceptance criteria\n- [ ] `ReplayPlayer` given `opponentLabel` \"Bob#12\" shows it on the opponent hero's seat label and in the modifier list; without it, \"Opponent\" as today.\n- [ ] Opening an online row from the replays list labels the opponent with its username, \"a deleted account\" when it is empty; a practice row shows the AI's label.\n- [ ] A practice game's replay shows the live board's label.\n- [ ] A friend's shared replay and the shared GIF are unchanged.\n\n## Size and risks\nSmall to medium: about five files and their tests. A replay opened from a link with no list row behind it has no name to show and keeps \"Opponent\".\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-11T15:39:20Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3698: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-11T15:40:43Z",
+    "claimed_at": "2026-11-11T15:46:35Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3700 needs a plan",
+    "#3701 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3570 skipped: it waits for #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3566 to close first",
+    "#3572 skipped: it waits for #3559, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3559, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first"
+  ]
+}
