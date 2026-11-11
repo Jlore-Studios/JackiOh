@@ -51,17 +51,20 @@ the daily super run tests one commit, and the night bot fixes one commit, instea
    CI checks).
 2. CI runs again on the push to main, for every piece the queue's build of that same commit skipped:
    a piece it already passed there is not run twice (#3564, `.github/ci/main_scope.py`), and
-   anything it cannot tell runs everything. Every two hours `promote-staging.yml`
-   (`scripts/promote-staging.sh`) fast-forwards `staging` to main's newest commit whose push-to-main
-   CI run passed; it never moves it backwards. GitHub fires this repository's schedules late, so each
-   green push-to-main CI run wakes it as well, and it moves `staging` then once the last move is two
-   hours old (`STAGING_EVERY_MINUTES`). It pushes with `BOT_GITHUB_TOKEN`, whose push starts
-   `deploy-staging.yml`, which checks out that commit, builds the web with `apps/web/.env.staging`,
-   checks the bundle, and runs `wrangler deploy --env staging`, which deploys the Worker, the static files and the container together. The server's
-   image is `scripts/server-image.sh`'s: named by what it is built from, so it is pushed to
-   Cloudflare's registry once (from CI's `deploy-image`, or built on CI's layer cache) and a commit
-   that changes none of it reuses it; the WASM modules likewise come from GitHub's cache when
-   nothing under `crates/` changed. It then polls `https://staging.jackioh.com/api/catalog`
+   anything it cannot tell runs everything. The deploy rehearsal always runs again, since the
+   `deploy-image` artifact a deploy loads comes from this run alone. Every two hours
+   `promote-staging.yml` (`scripts/promote-staging.sh`) fast-forwards `staging` to main's newest
+   commit whose push-to-main CI run passed; it never moves it backwards. GitHub fires this
+   repository's schedules late, so each green push-to-main CI run wakes it as well, and it moves
+   `staging` then once the last move is two hours old (`STAGING_EVERY_MINUTES`). It pushes with
+   `BOT_GITHUB_TOKEN`, whose push starts `deploy-staging.yml`, which checks out that commit, builds
+   the web with `apps/web/.env.staging`, checks the bundle, and runs
+   `wrangler deploy --env staging`, which deploys the Worker, the static files and the container
+   together. The server's image is `scripts/server-image.sh`'s: named by what it is built from, so
+   it is pushed to Cloudflare's registry once (from CI's `deploy-image`, or built on CI's layer
+   cache) and a commit that changes none of it reuses it; the WASM modules likewise come from
+   GitHub's cache when nothing under `crates/` changed. It then polls
+   `https://staging.jackioh.com/api/catalog`
    (through Access, with a service token) until the server reports the commit in
    `x-deployed-commit`.
 3. Once a day the super run (`super.yml`, its `schedule`) runs on `staging`: a schedule always runs on

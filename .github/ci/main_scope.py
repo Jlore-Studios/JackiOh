@@ -19,9 +19,11 @@ this very tree. A piece it ran (`full` and the piece's own line exactly `true`) 
 again, it could only flake, and the flakes #3564 counted on main were mostly pieces the queue had just
 passed. Every other line stays `true`: main still runs what the queue's scope left out, which is
 how a scoping mistake is still caught (on 2026-11-06 the queue skipped `bot selftest` and main's run
-of it found the break). Then, so the scope is one a pull request could have: `db` is any of its
-suites' lines, `web_promote` is `false` once `web` is (its job needs `web`; super.yml runs both
-promotion tests daily), `full` is any line's, and `bot` is `false` only when the build ran it.
+of it found the break). A line in ALWAYS stays `true` even when the build ran it: `db_deploy`,
+whose `deploy-image` artifact a staging deploy loads from the push-to-main run alone. Then, so the
+scope is one a pull request could have: `db` is any of its suites' lines, `web_promote` is `false`
+once `web` is (its job needs `web`; super.yml runs both promotion tests daily), `full` is any
+line's, and `bot` is `false` only when the build ran it.
 
 Everything runs, every line `true`, when there is no such build, when anything is missing, or when
 a file in RUN_ALL changed: the Rust and pnpm caches are saved from main alone
@@ -45,6 +47,15 @@ RUN_ALL = (
     (".cargo/*", "it keys the Rust cache"),
     ("pnpm-lock.yaml", "it keys the pnpm cache"),
     (".github/*", "the CI itself changed"),
+)
+
+#: A line main runs even when the queue's build ran it, and why: what its jobs leave behind is
+#: kept only from main's runs, so the build's own run of it cannot stand in.
+ALWAYS = (
+    ("db_deploy", "the deploy rehearsal's `deploy-image` artifact is what a deploy loads "
+                  "(scripts/server-image.sh, step 2), from the push-to-main run alone, and only "
+                  "main and staging write the image's layer cache; without them a deploy builds "
+                  "the image from a cold cache"),
 )
 
 #: The lines worked out from the others, never from the queue's own.
@@ -95,10 +106,12 @@ def scope(every, queue, changed):
                 return everything(every, f"{path} changed since main's last run ({why}), so everything runs")
 
     built = queue.get("full") == "true"
+    always = {name for name, _ in ALWAYS}
     own = {}
     for name in every:
         if name not in DERIVED:
-            own[name] = "false" if built and queue.get(name) == "true" else "true"
+            ran = built and queue.get(name) == "true" and name not in always
+            own[name] = "false" if ran else "true"
     if own.get("web") == "false" and "web_promote" in own:
         own["web_promote"] = "false"
     db = any(value == "true" for name, value in own.items() if name.startswith("db_"))
@@ -115,9 +128,11 @@ def scope(every, queue, changed):
     lines["bot"] = "false" if queue.get("bot") == "true" else "true"
 
     ran = [name for name, value in lines.items() if value == "false" and name not in DERIVED]
-    left = [name for name, value in lines.items() if value == "true" and name not in DERIVED]
+    left = [name for name, value in lines.items()
+            if value == "true" and name not in DERIVED and name not in always]
     why = (f"the merge-queue build of this commit passed; what it ran is not run again "
-           f"({' '.join(ran) or 'nothing'}), what it skipped runs here ({' '.join(left) or 'nothing'})")
+           f"({' '.join(ran) or 'nothing'}), what it skipped runs here ({' '.join(left) or 'nothing'}), "
+           f"and so does what main always runs ({' '.join(sorted(always & set(lines)))})")
     return lines, why
 
 
