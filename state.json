@@ -19625,9 +19625,7 @@
       "source": "",
       "started_at": "2026-11-11T10:44:22Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6793581842"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
