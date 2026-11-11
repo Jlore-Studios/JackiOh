@@ -288,14 +288,7 @@ async fn github_get(http: &reqwest::Client, token: Option<&str>, path: &str) -> 
     if let Some(token) = token {
         request = request.bearer_auth(token);
     }
-    request
-        .send()
-        .await
-        .and_then(reqwest::Response::error_for_status)
-        .map_err(|error| error.to_string())?
-        .json()
-        .await
-        .map_err(|error| error.to_string())
+    crate::bug_reports::github_answer(request).await
 }
 
 /// GET /api/stats/ci (R1935000): read from GitHub once per `CI_RUNS_CACHE_TTL_SECONDS` however many

@@ -481,13 +481,6 @@ pub fn mana_due_now(state: &GameState, instance: &CardInstance, cost: i32) -> i3
     if health_priced(state, instance) { 0 } else { cost }
 }
 
-pub fn can_afford(state: &GameState, instance: &CardInstance) -> bool {
-    // R1223: affordability reads the one function — current mana plus the credit line's offer.
-    // R1180004: a play its health price reaches takes no mana.
-    let cost = effective_cost(state, instance, CostOptions::default());
-    mana_due_now(state, instance, cost) <= crate::credit::spendable_mana(state, instance.controller)
-}
-
 /// R396 (Classic #10, #18, #25, #32, #39): what a card costs wherever a rule or a card script compares
 /// or counts costs. An X-cost card costs the X it was played for on the field, else 0 (R65; a Recruit,
 /// a summon); an embiggen card outside a play its base price (R65); any other card R65's cost as it

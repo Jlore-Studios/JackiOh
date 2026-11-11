@@ -1,7 +1,8 @@
-// R3405001: what Meditative's signature tests (fx/cards/meditative/signatures*.test.ts) share: a card's play
-// or hook planned as the board's effects layer plans it, an entry each (remember, then plan through the
-// dispatch, cardFx.ts `planCardFx`); its own cast under a Mythic's takeover hold; its entrance as it lands,
-// after its entry's lead (R3405000); and a cue's end as R200 counts it.
+// R3405001: what Meditative's and Meditative+'s signature tests (fx/cards/meditative/signatures*.test.ts,
+// fx/cards/meditativeplus/signatures.test.ts) share: a card's play or hook planned as the board's effects
+// layer plans it, an entry each (remember, then plan through the dispatch, cardFx.ts `planCardFx`); its own
+// cast under a Mythic's takeover hold; its entrance as it lands, after its entry's lead (R3405000); and a
+// cue's end as R200 counts it.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 

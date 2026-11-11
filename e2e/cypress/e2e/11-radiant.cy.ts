@@ -6,6 +6,7 @@
 
 import { CARDS, CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import { seedFor } from "../../support/config.ts";
+import { ensureSeat } from "../../support/hotseat.ts";
 import { RADIANT, cardId, handCardId, ts } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId } from "../../support/types.ts";
 
@@ -69,14 +70,6 @@ function unitById(state: GameStateLike, player: PlayerId, instanceId: string): F
   const unit = unitsOf(state, player).find((candidate) => candidate.id === instanceId);
   expect(unit, `${instanceId} is on ${player}'s field`).to.not.eq(undefined);
   return unit ?? { id: instanceId, defId: "" };
-}
-
-/** BUILD M5-T3: hand the hotseat device to the acting seat. */
-function ensureSeat(player: PlayerId): void {
-  cy.jackioh().then((handle) => {
-    expect(handle.seat, "window.__jackioh.seat names the seat holding the device").to.not.eq(undefined);
-    if (handle.seat !== player) cy.handOver();
-  });
 }
 
 function passTurn(): void {

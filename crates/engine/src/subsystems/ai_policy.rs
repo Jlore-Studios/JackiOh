@@ -16,8 +16,9 @@ use crate::config::{AI_END_TURN_PROBABILITY, AI_PLAYOUT_STEP_CAP};
 use crate::reduce::ReduceResult;
 use crate::rng::Rng;
 use crate::script::EngineSink;
-use crate::state::{GameState, Resume, WorkItem};
+use crate::state::{GameState, WorkItem};
 use crate::wire::{Action, ActionBody, ActionType, Phase, PlayerId};
+use crate::work::engine_resume;
 
 /// Actions the policy does not take. `legal_actions` always offers `concede`, so §10.7's "ending the
 /// turn when it is the only option" reads on the set without these, and R44's AI plays the turn out
@@ -216,17 +217,7 @@ fn owe_ai_turn(sink: &mut EngineSink<'_>, player: PlayerId, turn: i32) {
     let mut data: IndexMap<String, Value> = IndexMap::new();
     data.insert("player".to_string(), json!(player));
     data.insert("turn".to_string(), json!(turn));
-    let _ = crate::work::owe(
-        sink,
-        Resume {
-            def_id: String::new(),
-            hook: AI_TURN_WORK.to_string(),
-            step: "turn".to_string(),
-            radiant: false,
-            instance_id: None,
-            data,
-        },
-    );
+    let _ = crate::work::owe(sink, engine_resume(AI_TURN_WORK, "turn", data));
 }
 
 /// `work.rs`'s handler for `AI_TURN_WORK`: the same AI turn, going on once the answer's events and

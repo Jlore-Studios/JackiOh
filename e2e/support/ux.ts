@@ -38,6 +38,16 @@ export const ROOT = "html";
 /** End-turn value: `"armed"` while confirmation is pending. */
 export const CONFIRM_ATTR = "data-confirm";
 
+/**
+ * Whether a toggle is already chosen. A4: the client marks a picked option with `aria-pressed` (`Prompt.tsx`), the
+ * board with `data-selected`; either counts, and it may sit on the clickable ancestor of an inner-label testid.
+ */
+export function isPicked($option: JQuery<HTMLElement>): boolean {
+  const marked = $option.closest("[aria-pressed], [data-selected]");
+  const element = marked.length > 0 ? marked : $option;
+  return element.attr("aria-pressed") === "true" || element.attr("data-selected") === "true";
+}
+
 // S8: Settings panel
 
 export const SETTINGS_OPEN_GAME = "settings-open-game";

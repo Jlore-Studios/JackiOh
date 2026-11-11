@@ -100,7 +100,7 @@ fn is_card_def(value: &Value) -> bool {
 /// collide with a configured one, and being derived from the bytes it cannot drift from them.
 pub fn version_of(json: &str) -> String {
     let digest = Sha256::digest(json.as_bytes());
-    let hex: String = digest.iter().map(|byte| format!("{byte:02x}")).collect();
+    let hex = crate::api::crypto::hex(&digest);
     format!("c1-{}", &hex[..12])
 }
 

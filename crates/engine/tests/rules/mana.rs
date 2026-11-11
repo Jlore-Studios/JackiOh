@@ -197,16 +197,6 @@ mod r65_cost_calculation_m1_t6 {
         assert_eq!(cost(&state, &power), 0);
     }
 
-    #[test]
-    fn can_afford_compares_against_current_mana_temporary_mana_included() {
-        let mut state = new_game("afford", None);
-        let id = hand_card(&mut state, "fx-1");
-        state.players.p1.mana.current = 0;
-        assert!(!mana::can_afford(&state, card(&state, &id)));
-        mana::gain_mana(&mut state.players.p1, 1);
-        assert!(mana::can_afford(&state, card(&state, &id)));
-    }
-
     /// "refreshes to min(turns started, 4) plus persistent modifiers, and the one-shot moves only
     /// current (§2.3)"
     #[test]

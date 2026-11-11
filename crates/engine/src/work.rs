@@ -373,6 +373,18 @@ fn place(state: &mut GameState, item: WorkItem) -> WorkItem {
     item
 }
 
+/// The Resume an engine sequence owes: no card's (empty def_id, not Radiant, no instance).
+pub(crate) fn engine_resume(hook: &str, step: &str, data: IndexMap<String, Value>) -> Resume {
+    Resume {
+        def_id: String::new(),
+        hook: hook.to_string(),
+        step: step.to_string(),
+        radiant: false,
+        instance_id: None,
+        data,
+    }
+}
+
 /// Park one owed continuation at the cursor and return the item. The id and `seq` come from
 /// `state.next_seq` (R68's creation order), so the queue a replay builds is the queue the live game
 /// had; `owner` defaults to the active player.

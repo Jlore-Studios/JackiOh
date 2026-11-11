@@ -74,6 +74,8 @@ const S2 = {
   FX_ADAPT_DISPLAY_MAX_MS: 34,
   FX_ADAPT_MIN_INTERVAL_MS: 4,
   FX_ADAPT_RECOVER_WINDOWS: 3,
+  // R3674000: a slow moment's run.
+  FX_ADAPT_MOMENT_WINDOW: 8,
   FX_DEFAULT_SEED: 0x5eed,
   FX_MEMORY_LIMIT: 64,
   // R502's cast on draw, #21 Hinder's crack and #27 Blood Ridden's drain; R437's brand; R436's Call to Chaos.
@@ -499,6 +501,17 @@ describe("S2 the effects constants", () => {
     // as a stall, not motion.
     expect(constants.FX_PHONE_FRAME_WORST_MS).toBeGreaterThan(constants.FX_PHONE_FRAME_BUDGET_MS);
     expect(constants.FX_PHONE_FRAME_WORST_MS).toBeLessThanOrEqual(250);
+  });
+
+  it("R3674000 a moment's run is eight frames", () => {
+    expect(constants.FX_ADAPT_MOMENT_WINDOW).toBe(8);
+    // A run inside a window, so a slow moment sheds before the window that would have shed it ends; and a run of frames,
+    // so one hitch alone never sheds.
+    expect(constants.FX_ADAPT_MOMENT_WINDOW).toBeLessThan(constants.FX_ADAPT_WINDOW);
+    expect(constants.FX_ADAPT_MOMENT_WINDOW).toBeGreaterThan(1);
+    // Its test is the phone budget, slower than the slowest refresh the window takes for a display's, so a 30 Hz display's
+    // healthy frames never shed by it.
+    expect(constants.FX_PHONE_FRAME_BUDGET_MS).toBeGreaterThan(constants.FX_ADAPT_DISPLAY_MAX_MS * constants.FX_ADAPT_SLOW_FACTOR);
   });
 
   it("R2803000 the audit's floors and phone budget hold the finished work", () => {

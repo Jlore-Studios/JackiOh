@@ -39,6 +39,7 @@ use crate::traps::{
 use crate::wire::{
     GameEvent, GameEventType, HookKind, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone, ZoneRef,
 };
+use crate::work::engine_resume;
 
 /// The zones a card can hold a trigger from (§10.3). `library`: B5 E26's deck triggers (R464).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -616,14 +617,7 @@ pub fn queue_turn_hook_rounds(sink: &mut EngineSink<'_>, player: PlayerId, round
         seq,
         instance_id: String::new(),
         hook: TURN_HOOKS_ROUND.to_string(),
-        resume: Resume {
-            def_id: String::new(),
-            hook: TURN_HOOKS_ROUND.to_string(),
-            step: TRIGGER_STEP.to_string(),
-            radiant: false,
-            instance_id: None,
-            data,
-        },
+        resume: engine_resume(TURN_HOOKS_ROUND, TRIGGER_STEP, data),
     });
 }
 
@@ -687,14 +681,7 @@ fn owed_to_traps(
         seq,
         instance_id: String::new(),
         hook: OWED_TO_TRAPS.to_string(),
-        resume: Resume {
-            def_id: String::new(),
-            hook: OWED_TO_TRAPS.to_string(),
-            step: TRIGGER_STEP.to_string(),
-            radiant: false,
-            instance_id: None,
-            data,
-        },
+        resume: engine_resume(OWED_TO_TRAPS, TRIGGER_STEP, data),
     };
     let queue = &mut sink.state.trigger_queue;
     match queue.iter().position(|queued| queued.hook != OWED_TO_TRAPS) {

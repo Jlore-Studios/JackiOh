@@ -25,6 +25,7 @@ import {
   zoneId,
 } from "./testids.ts";
 import type { Action, ActionBody, Lane, PlayerId, Row, Selection, Side } from "./types.ts";
+import { isPicked } from "./ux.ts";
 
 export const PRACTICE_PATH = "/practice";
 
@@ -308,13 +309,6 @@ const ANY_PROMPT_OPTION = `[data-testid^="${promptOptionId("")}"]`;
 
 function optionKey($option: JQuery<HTMLElement>): string {
   return ($option.attr("data-testid") ?? "").slice(promptOptionId("").length);
-}
-
-/** A4: a chosen option is `aria-pressed="true"` (or `data-selected`), on it or an ancestor. */
-function isPicked($option: JQuery<HTMLElement>): boolean {
-  const marked = $option.closest("[aria-pressed], [data-selected]");
-  const element = marked.length > 0 ? marked : $option;
-  return element.attr("aria-pressed") === "true" || element.attr("data-selected") === "true";
 }
 
 /** Matches `selectionKey` in apps/web/src/game/actions.ts. */

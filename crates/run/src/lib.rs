@@ -1372,24 +1372,50 @@ pub fn run_curse_points(state: &RunState, content: &RunContent) -> i32 {
         .sum()
 }
 
-/// DR9: the score so far. Rows reached, fights won by kind and what the fights' reports dealt, healed
-/// and drew; times `RUN_SCORE_MINI_BOSS_PERCENT` for each mini-boss beaten and
-/// `RUN_SCORE_FINAL_BOSS_PERCENT` for the final boss; plus `RUN_SCORE_CURSE_POINT_PERCENT` for each
-/// curse point.
-pub fn run_score(state: &RunState, content: &RunContent) -> i64 {
+/// DR9: the score's five sums before its percents, each times its weight: the rows reached, the fights
+/// won by kind, and what the fights' reports dealt, healed and drew.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct RunScoreTerms {
+    pub rows: i64,
+    pub wins: i64,
+    pub damage: i64,
+    pub healing: i64,
+    pub drawn: i64,
+}
+
+impl RunScoreTerms {
+    /// DR9: the five sums added up, the score the percents then scale.
+    pub fn sum(&self) -> i64 {
+        self.rows + self.wins + self.damage + self.healing + self.drawn
+    }
+}
+
+/// DR9: the run's score terms so far, before the percents (`run_score`'s sums).
+pub fn run_score_terms(state: &RunState) -> RunScoreTerms {
     let s = &state.stats;
     let won = |kind: RunNodeKind, n: i32| i64::from(RUN_SCORE_FIGHT.of(kind)) * i64::from(n);
     let normal = s.fights_won - s.elites_won - s.ghosts_won - s.mini_bosses_won - s.bosses_won;
     let rows = state.row.map_or(0, |r| r + 1);
-    let mut score = RUN_SCORE_ROW * i64::try_from(rows).unwrap_or(0)
-        + won(RunNodeKind::Fight, normal)
-        + won(RunNodeKind::Elite, s.elites_won)
-        + won(RunNodeKind::Ghost, s.ghosts_won)
-        + won(RunNodeKind::MiniBoss, s.mini_bosses_won)
-        + won(RunNodeKind::Boss, s.bosses_won)
-        + RUN_SCORE_DAMAGE * i64::from(s.damage_dealt)
-        + RUN_SCORE_HEALING * i64::from(s.healing_done)
-        + RUN_SCORE_CARD_DRAWN * i64::from(s.cards_drawn);
+    RunScoreTerms {
+        rows: RUN_SCORE_ROW * i64::try_from(rows).unwrap_or(0),
+        wins: won(RunNodeKind::Fight, normal)
+            + won(RunNodeKind::Elite, s.elites_won)
+            + won(RunNodeKind::Ghost, s.ghosts_won)
+            + won(RunNodeKind::MiniBoss, s.mini_bosses_won)
+            + won(RunNodeKind::Boss, s.bosses_won),
+        damage: RUN_SCORE_DAMAGE * i64::from(s.damage_dealt),
+        healing: RUN_SCORE_HEALING * i64::from(s.healing_done),
+        drawn: RUN_SCORE_CARD_DRAWN * i64::from(s.cards_drawn),
+    }
+}
+
+/// DR9: the score so far. Rows reached, fights won by kind and what the fights' reports dealt, healed
+/// and drew (`run_score_terms`); times `RUN_SCORE_MINI_BOSS_PERCENT` for each mini-boss beaten and
+/// `RUN_SCORE_FINAL_BOSS_PERCENT` for the final boss; plus `RUN_SCORE_CURSE_POINT_PERCENT` for each
+/// curse point.
+pub fn run_score(state: &RunState, content: &RunContent) -> i64 {
+    let s = &state.stats;
+    let mut score = run_score_terms(state).sum();
     let whole = i64::from(PERCENT);
     for _ in 0..s.mini_bosses_won {
         score = score * RUN_SCORE_MINI_BOSS_PERCENT / whole;

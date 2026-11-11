@@ -6,6 +6,7 @@
 import { CARDS, CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import type { PlayCardOptions } from "../../support/commands.ts";
 import { seedFor } from "../../support/config.ts";
+import { ensureSeat } from "../../support/hotseat.ts";
 import { BOARD, cardId, ts, zoneId } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId, Side, ZoneRef } from "../../support/types.ts";
 
@@ -89,14 +90,6 @@ function peek(state: GameStateLike, player: PlayerId): SidePeek {
 
 function handOf(state: GameStateLike, player: PlayerId): Held[] {
   return peek(state, player).hand ?? [];
-}
-
-/** BUILD M5-T3: hand the hotseat device to the actor. */
-function ensureSeat(player: PlayerId): void {
-  cy.jackioh().then((handle) => {
-    expect(handle.seat, "window.__jackioh.seat names the seat holding the device").to.not.eq(undefined);
-    if (handle.seat !== player) cy.handOver();
-  });
 }
 
 function passTurn(): void {

@@ -23,6 +23,7 @@ use crate::state::{
     handicap_of, takes_turn_draws,
 };
 use crate::wire::{GameEvent, GameOverReason, PLAYER_IDS, Phase, PlayerId, Winner, opponent_of};
+use crate::work::engine_resume;
 
 /// R846 (Meditative #19.1): the id owed extra turns travel under, one badge per player: `modifierChanged`
 /// names it as turns are owed and the last is taken, and the view lists it while any is owed (R169).
@@ -292,14 +293,7 @@ fn boundary_resume(hook: &str, player: PlayerId, step: &str, due_before: Option<
         };
         data.insert("dueBefore".to_string(), mark);
     }
-    Resume {
-        def_id: String::new(),
-        hook: hook.to_string(),
-        step: step.to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    }
+    engine_resume(hook, step, data)
 }
 
 /// The mark a parked delayed stage began at; a record without one owes every entry due (R68).
