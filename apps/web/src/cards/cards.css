@@ -913,16 +913,14 @@
 }
 
 /* R3345000: a Mythic's frame in hand carries a quiet mark that it can be held: a slow edge shimmer in its own
-   colours (the rarity's violet, sky and mint), not Radiant's gold. It runs in the motion gate below, still under Reduce motion. */
+   colours (the rarity's violet, sky and mint), not Radiant's gold. It runs in the motion gate below, still under Reduce motion.
+   R3608000: the rim is drawn once, on the hand card's `::after`, and the loop moves its opacity alone. */
 @keyframes cf-mythic-hand-shimmer {
   0% {
-    box-shadow: 0 0 4px 1px color-mix(in srgb, var(--pal-violet-300) 35%, transparent);
-  }
-  50% {
-    box-shadow: 0 0 6px 2px color-mix(in srgb, var(--pal-sky-300) 35%, transparent);
+    opacity: 0.5;
   }
   100% {
-    box-shadow: 0 0 4px 1px color-mix(in srgb, var(--pal-green-200) 35%, transparent);
+    opacity: 1;
   }
 }
 
@@ -2623,8 +2621,20 @@
     transition: transform var(--motion-slow) var(--ease-out);
   }
 
-  /* R3345000: a Mythic in hand carries its slow edge shimmer (the mark that it can be held). */
-  :root:not([data-reduce-motion="true"]) .card-hand .cf[data-rarity="Mythic"] {
+  /* R3345000: a Mythic in hand carries its slow edge shimmer (the mark that it can be held). It is the hand
+     card's `::after`, since the face's `::before` is its finish's and its `::after` its foil's (R3608000). */
+  :root:not([data-reduce-motion="true"]) .card-hand:has(.cf[data-rarity="Mythic"])::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: var(--z-raised);
+    border-radius: inherit;
+    box-shadow:
+      inset 0 0 6px 2px color-mix(in srgb, var(--pal-sky-300) 35%, transparent),
+      inset 0 0 4px 1px color-mix(in srgb, var(--pal-violet-300) 35%, transparent),
+      inset 0 0 3px 1px color-mix(in srgb, var(--pal-green-200) 35%, transparent);
+    opacity: 0.5;
+    pointer-events: none;
     animation: cf-mythic-hand-shimmer var(--motion-slow) var(--ease-in-out) infinite alternate;
   }
 }

@@ -31,8 +31,11 @@ const keyframes = (css: string, name: string): string =>
   new RegExp(String.raw`@keyframes ${name} \{((?: ?[^{}]*\{[^{}]*\})*) ?\}`).exec(css)?.[1] ?? "";
 const stop = (body: string, pct: number): string => new RegExp(String.raw`(?:^| )${String(pct)}% \{([^{}]*)\}`).exec(body)?.[1]?.trim() ?? "";
 
-/** The one rule that breathes: every face-down card, and nothing about a card in its selector. */
-const BREATHES = '.card.card-facedown, .card[data-unrevealed="true"]:not([data-animating]):not([data-glow])';
+/** The one rule that breathes: every face-down card, and nothing about a card in its selector. A card glowing ready plays its glow instead. */
+const BREATHES = '.card.card-facedown:not([data-glow]), .card[data-unrevealed="true"]:not([data-animating]):not([data-glow])';
+
+/** Its pale layer: the brightening rides the same breath as opacity, so the loop moves `scale` and `opacity` only. A card mid-animation keeps its own `::before`. */
+const LIFTS = '.card.card-facedown:not([data-glow]):not([data-animating])::before, .card[data-unrevealed="true"]:not([data-animating]):not([data-glow])::before';
 
 /** Two of your own face-down traps under their veils, and four of the opponent's backs, each different. */
 function waitingView(): PlayerView {
@@ -87,8 +90,19 @@ describe("R2111000 the wait", () => {
     expect(FACEDOWN.split("jk-facedown-breathe")).toHaveLength(3);
     expect(ANIM + FX).not.toContain("jk-facedown-breathe");
     const breath = keyframes(FACEDOWN, "jk-facedown-breathe");
-    expect(breath).toContain("0%, 100% { scale: 1; filter: brightness(1); }");
-    expect(breath).toContain("50% { scale: 0.985; filter: brightness(1.08); }");
+    expect(breath).toContain("0%, 100% { scale: 1; }");
+    expect(breath).toContain("50% { scale: 0.985; }");
+    expect(breath).not.toContain("filter");
+  });
+
+  it("R2111000 the brightening of the breath is a pale layer whose opacity rises and falls with it", () => {
+    expect(FACEDOWN).toContain(
+      `${LIFTS} { content: ""; position: absolute; inset: 0; z-index: var(--z-raised); border-radius: inherit; background: color-mix(in srgb, var(--pal-white) 6%, transparent); opacity: 0; pointer-events: none; animation: jk-facedown-lift calc(4.8s * var(--anim-scale, 1)) var(--ease-in-out) infinite; }`,
+    );
+    const lift = keyframes(FACEDOWN, "jk-facedown-lift");
+    expect(lift).toContain("0%, 100% { opacity: 0; }");
+    expect(lift).toContain("50% { opacity: 1; }");
+    expect(lift).not.toContain("filter");
   });
 
   it("R2111000 on the board every back and your own face-down trap is drawn alike for it", () => {
@@ -127,10 +141,9 @@ describe("R2111000 the flip", () => {
 
 describe("R2111000 reduced motion", () => {
   it("R2111000 reduced motion turns all three off", () => {
-    expect(FACEDOWN).toContain(`@media (prefers-reduced-motion: reduce) { ${BREATHES} { animation: none; } }`);
-    expect(FACEDOWN).toContain(
-      ':root[data-reduce-motion="true"] .card.card-facedown, :root[data-reduce-motion="true"] .card[data-unrevealed="true"]:not([data-animating]):not([data-glow]) { animation: none; }',
-    );
+    expect(FACEDOWN).toContain(`@media (prefers-reduced-motion: reduce) { ${BREATHES}, ${LIFTS} { animation: none; } }`);
+    const switched = [...BREATHES.split(", "), ...LIFTS.split(", ")].map((selector) => `:root[data-reduce-motion="true"] ${selector}`);
+    expect(FACEDOWN).toContain(`${switched.join(", ")} { animation: none; }`);
     for (const type of ["cardPlayed", "summoned", "trapFired"] as const) expect(durationFor(type, true), type).toBe(0);
     expect(ANIM).toContain(
       '[data-animating="trapFired"] { animation-name: jk-trap-flip; animation-duration: calc(700ms * var(--anim-scale) * var(--anim-squeeze, 1));',

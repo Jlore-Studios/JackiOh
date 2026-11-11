@@ -82,6 +82,8 @@ const ARROW_HEAD_NOTCH_PX = 9;
 const ARROW_BEND_SHARE = 0.22;
 const ARROW_BEND_MAX_PX = 90;
 const ARROW_GLOW_BLUR_PX = 4;
+/** The marching dots are this many copies of the shaft, each one quarter of a dash period on and shown for a quarter of the loop (drag.css; R3608000): a path moves by transform nowhere, so the march is steps of opacity. */
+const PULSE_PHASES = [0, 1, 2, 3] as const;
 const ARROW_GLOW_MARGIN_PX = 40;
 
 function round(n: number): number {
@@ -772,7 +774,9 @@ function DragArrow(props: {
       <g className="drag-arrow-lit" filter="url(#drag-arrow-glow)">
         <path className="drag-arrow-shaft" d={shaft} />
         <path className="drag-arrow-core" d={shaft} />
-        <path className="drag-arrow-pulse" d={shaft} />
+        {PULSE_PHASES.map((phase) => (
+          <path key={phase} className="drag-arrow-pulse" data-phase={phase} d={shaft} />
+        ))}
         {withHead ? <polygon className="drag-arrow-head" points={tip} /> : null}
       </g>
       <circle className="drag-arrow-origin" cx={round(from.x)} cy={round(from.y)} r={7} />

@@ -2399,7 +2399,16 @@ button.modifier-badge[data-open="true"] {
   box-shadow: var(--primary-shadow), 0 0 13px color-mix(in srgb, var(--pal-yellow-400) 36%, transparent);
 }
 
-.board .control.control-end-turn[data-turn-state="waiting"] {
+/* The waiting pulse is a yellow halo drawn once on the button's `::after`, whose opacity breathes
+   (R3608000): the button's own shadow never changes, so the loop repaints nothing. */
+.board .control.control-end-turn[data-turn-state="waiting"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--pal-yellow-400) 62%, transparent);
+  opacity: 0;
+  pointer-events: none;
   animation: end-turn-ready-pulse 1.2s var(--ease-in-out) infinite;
 }
 
@@ -2431,7 +2440,7 @@ button.modifier-badge[data-open="true"] {
 }
 
 @keyframes end-turn-ready-pulse {
-  50% { box-shadow: var(--primary-shadow), 0 0 18px color-mix(in srgb, var(--pal-yellow-400) 62%, transparent); }
+  50% { opacity: 1; }
 }
 
 /* "Confirm end turn" (B25): the first click armed it, the second ends the turn. */
