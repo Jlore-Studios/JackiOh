@@ -20052,8 +20052,17 @@
     "what": "review #3706 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-11T09:23:25Z",
-    "notes": [],
+    "at": "2026-11-11T09:31:05Z",
+    "notes": [
+      "delivered review #3687 on claude-3 (run 42993778371): approved",
+      "delivered revise #3691 on claude-5 (run 42983875604): built",
+      "delivered build #3608 on claude-7 (run 42983441842): built",
+      "started review #3691 on claude-5 (run 42996575313)",
+      "started review #3706 on claude-7 (run 42996691133)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -20758,7 +20767,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T09:23:25Z",
+  "loop_tick": "2026-11-11T09:31:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
