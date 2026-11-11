@@ -80,7 +80,7 @@
   "meditative-051": { bespoke: "devinBot", entrance: "cushionDrop", aura: { look: "incense", palette: "Tech/hologram", scope: "tile" }, signature: true }, // Devin Bot
   "meditative-052": { cast: { motif: "bless" }, aura: { look: "storm", palette: "Hustle/cash", scope: "board" } }, // Economic Anxiety
   "meditative-053": { cast: { motif: "seal" } }, // Prestige
-  "meditative-054": { cast: { motif: "deal", palette: "Hustle/cash" }, trigger: { motif: "deal", palette: "Hustle/cash" }, activate: { motif: "deal", palette: "Hustle/cash" }, aura: { look: "holy", palette: "Hustle/cash", scope: "zone" } }, // Money Machine
+  "meditative-054": { cast: { motif: "deal", palette: "Hustle/cash" }, trigger: { motif: "deal", palette: "Hustle/cash" }, aura: { look: "holy", palette: "Hustle/cash", scope: "zone" } }, // Money Machine
   "meditative-055": { cast: { motif: "deal" } }, // Dragon Fruit
   "meditative-056": { cast: { motif: "conjure" } }, // House Party
   "meditative-057": { cry: { motif: "deal" } }, // Clip-Farming Critikal

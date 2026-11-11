@@ -184,7 +184,10 @@ fn sourced_abilities_of(
     // R1852003: a Dormant Starship has the engine's launch, and nothing its text declares.
     // R3539000: a hull whose text names a `wakesBy` Activate offers that ability instead of the launch.
     if crate::starship::is_dormant_starship(card) && crate::slumber::wakes_by_of(state, card).is_none() {
-        return crate::starship::launch_decl(state, card).map(|decl| (decl, None)).into_iter().collect();
+        return crate::starship::launch_decl(state, card)
+            .map(|decl| (decl, None))
+            .into_iter()
+            .collect();
     }
     let wakes_by = if crate::slumber::is_slumbering(card) {
         match crate::slumber::wakes_by_of(state, card) {

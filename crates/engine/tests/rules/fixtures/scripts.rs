@@ -4,7 +4,9 @@
 use std::sync::LazyLock;
 
 use jackioh_engine::effects;
-use jackioh_engine::subsystems::hero_power::{POWER_RESUME, STEADY_SHOT_PARAM, hero_power, power_abilities};
+use jackioh_engine::subsystems::hero_power::{
+    POWER_RESUME, PowerEdition, STEADY_SHOT_PARAM, hero_power, power_abilities,
+};
 use jackioh_engine::testkit::*;
 
 use super::harness::spread;
@@ -261,7 +263,7 @@ fn going_long_scripts() -> CardScripts {
     }
 }
 
-pub use jackioh_engine::subsystems::hero_power::HERO_POWER_NAMES as HERO_POWERS;
+pub use jackioh_engine::subsystems::hero_power::THIRTEEN_POWER_NAMES as HERO_POWERS;
 
 /// #98 Heroic Power (R752): costs (0), rolls one of the thirteen powers at start of game, and each power
 /// is one of its Activate abilities. The generic `rememberRandom` rolls it (R103), all setup's tests need.
@@ -285,7 +287,7 @@ fn heroic_power_script(radiant: bool) -> Script {
                 json!({ "key": "power", "options": HERO_POWERS }),
             ))]
         })),
-        activations: power_abilities(radiant),
+        activations: power_abilities(radiant, PowerEdition::Thirteen),
         resume: IndexMap::from([(POWER_RESUME, hook(hero_power))]),
         ..Script::default()
     }

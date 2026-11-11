@@ -331,7 +331,7 @@
     {
       "id": "Combat keyword",
       "label": "Combat keyword",
-      "rule": "One of the keywords Units fight with: Taunt, Rush, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Deft, Lifesteal, Pierce, Trample",
+      "rule": "One of the keywords Units fight with: Taunt, Rush, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Deft, Lifesteal, Pierce, Trample, Frenzy",
       "section": "§6.1",
       "aliases": [
         "combat keywords",
@@ -712,6 +712,14 @@
       "rule": "Raise a card to its Radiant form. In hand or deck: cost unchanged, stats and text swap to the radiant form.",
       "section": "§5.2",
       "aliases": []
+    },
+    {
+      "id": "Replenish",
+      "label": "Replenish",
+      "rule": "Give back spent mana, never above max mana",
+      "section": "§6.3",
+      "aliases": [],
+      "row": "Replenish X"
     }
   ],
   "plain": [

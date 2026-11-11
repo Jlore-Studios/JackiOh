@@ -227,8 +227,7 @@ pub fn exile_board(args: ExileBoardArgs) -> Effect {
                 continue;
             }
             // A Dormant card goes too; only a card no effect reaches is spared (R940).
-            if !crate::slumber::is_slumbering(&card) && crate::restrictions::unaffected_by(ctx, &card)
-            {
+            if !crate::slumber::is_slumbering(&card) && crate::restrictions::unaffected_by(ctx, &card) {
                 continue;
             }
             exile_to_pile(ctx, card);

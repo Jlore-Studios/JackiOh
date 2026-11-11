@@ -1,5 +1,5 @@
-//! S #8.1 Rosemary Triscuit (SPEC §7 token; §6.3 Refresh X, R364): (0) Spell, Token (printed Rare).
-//!   Base and Radiant: "Refresh {refresh} mana." — 2, 4 on the Radiant face.
+//! S #8.1 Rosemary Triscuit (SPEC §7 token; §6.3 Replenish X, R364): (0) Spell, Token (printed Rare).
+//!   Base and Radiant: "Replenish {refresh} mana." — 2, 4 on the Radiant face.
 //!
 //! Engine: `refresh_mana` by the declared number (R364: the caster's current mana rises by up to
 //! that much, never above max mana; at or above max, nothing happens). Both faces run this one
@@ -37,7 +37,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn refreshes_2_spent_mana_never_above_max_mana() {
+        fn replenishes_2_spent_mana_never_above_max_mana() {
             let mut s = scenario(json!({
                 "p1": { "hand": [TRISCUIT, FILLER], "mana": 1 },
                 "p2": { "hand": [FILLER] },
@@ -64,7 +64,7 @@ mod tests {
         }
 
         #[test]
-        fn r386_an_upgrade_of_refresh_makes_it_refresh_more() {
+        fn r386_an_upgrade_of_replenish_makes_it_replenish_more() {
             let mut s = scenario(json!({
                 "p1": { "hand": [TRISCUIT, FILLER], "mana": 0 },
                 "p2": { "hand": [FILLER] },

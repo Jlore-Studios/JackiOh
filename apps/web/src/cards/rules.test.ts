@@ -113,7 +113,6 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Discard",
     "Heal X",
     "Mana / gain mana",
-    "Replenish X",
     // R3548003: Refresh gives back Activates, never mana.
     "Refresh",
     // R3548004: infinite mana spends nothing.
@@ -362,7 +361,7 @@ describe("B10: tokenizeRules and termsIn", () => {
     ]);
   });
 
-  it("R781005 R1025000 R1615000 combat keywords are a term the cards that draw them print, its entry listing the fourteen", () => {
+  it("R781005 R1025000 R1615000 R3551004 combat keywords are a term the cards that draw them print, its entry listing the fifteen", () => {
     expect(termsOf("Aura: Has 5 random combat keywords.")).toEqual([
       { text: "Aura:", term: "Aura" },
       { text: "combat keywords", term: "Combat keyword" },
@@ -372,7 +371,7 @@ describe("B10: tokenizeRules and termsIn", () => {
     ]);
     const entry = GLOSSARY["Combat keyword"];
     expect(entry.section).toBe("§6.1");
-    for (const word of ["Taunt", "Flying", "Ranged", "Deft", "Trample"]) {
+    for (const word of ["Taunt", "Flying", "Ranged", "Deft", "Trample", "Frenzy"]) {
       expect(entry.rule).toContain(word);
     }
     // R1025000: Armor and Spell Damage are not in the pool; R1615000: nor are Charge and Indestructible.

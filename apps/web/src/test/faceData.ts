@@ -99,7 +99,8 @@ export type GlossaryTermId =
   | "Exile"
   | "Hand size"
   | "Mark in a hand"
-  | "Radiant";
+  | "Radiant"
+  | "Replenish";
 export type GlossaryEntry = {
   readonly id: GlossaryTermId;
   readonly label: string;

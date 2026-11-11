@@ -1,8 +1,10 @@
 //! C+ #73.1 Classic Golem (SPEC §8.7 row 73.1, B7). (4) Unit, Token (printed Legendary). 10/10 → 20/20.
-//!   Base:    "Rush, First Strike, Trample / When this attacks a Unit, that Unit transforms into a random
-//!            Radiant Classic or Classic+ Unit. If it dies, this may attack again."
-//!   Radiant: "Rush, Trample, Divine Shield / When this attacks a Unit, that Unit transforms into a random
-//!            Classic or Classic+ Unit. If it dies, this may attack again."
+//!   Base:    "Rush, First Strike, Trample, Frenzy / When this attacks a Unit, that Unit transforms into a
+//!            random Radiant Classic or Classic+ Unit."
+//!   Radiant: "Rush, Trample, Divine Shield, Frenzy / When this attacks a Unit, that Unit transforms into a
+//!            random Classic or Classic+ Unit."
+//!   Through v0.5.13g: both faces ended "... If it dies, this may attack again" (`script_v0_5_13g`, kept,
+//!   R767000).
 //!
 //! R2285002 (the designer's note, back from R424's self-transform): "when this attacks" is its
 //! `when_attacks` hook, before any damage of each attack it makes on a Unit, declared or forced (R53,
@@ -42,8 +44,9 @@ fn when_it_attacks(radiant: bool) -> Hook {
     })
 }
 
-/// "If it dies, this may attack again." `lift_sick` is v0.5.9f's refresh, which lifted summoning
-/// sickness for the turn (R2657004).
+/// "If it dies, this may attack again" (through v0.5.13g; S01's Frenzy keyword since): `lift_sick`
+/// is v0.5.9f's refresh, which lifted summoning sickness for the turn (R2657004). `attack_again` is
+/// `None` on the new face — no `after_attack`, the keyword does it — and `Some` on the kept scripts.
 fn after_it_attacks(lift_sick: bool) -> Hook {
     hook(move |ctx| {
         let Some(combat) = after_attack_of(ctx) else {
@@ -60,17 +63,17 @@ fn after_it_attacks(lift_sick: bool) -> Hook {
     })
 }
 
-fn scripts(lift_sick: bool) -> CardScripts {
+fn scripts(attack_again: Option<bool>) -> CardScripts {
     let base = Script {
         when_attacks: Some(when_it_attacks(true)),
-        after_attack: Some(after_it_attacks(lift_sick)),
+        after_attack: attack_again.map(after_it_attacks),
         ..Script::default()
     };
 
     // The Radiant face transforms into a base-face Unit; its 20/20 and keywords are its catalog face.
     let radiant = Script {
         when_attacks: Some(when_it_attacks(false)),
-        after_attack: Some(after_it_attacks(lift_sick)),
+        after_attack: attack_again.map(after_it_attacks),
         ..Script::default()
     };
 
@@ -78,13 +81,19 @@ fn scripts(lift_sick: bool) -> CardScripts {
 }
 
 pub fn script() -> CardScripts {
-    scripts(false)
+    scripts(None)
+}
+
+/// R767000: through v0.5.13g killing a Unit ran `after_it_attacks` (B5 E35), keeping the summoning
+/// sickness (R2657004); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_13g() -> CardScripts {
+    scripts(Some(false))
 }
 
 /// R767000: through v0.5.9f its second attack lifted its summoning sickness, so a Golem played that
 /// turn could hit the hero after a kill, before R2657004; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_9f() -> CardScripts {
-    scripts(true)
+    scripts(Some(true))
 }
 
 // BUILD M9 Classic+ row C+ 73.1.
@@ -188,13 +197,37 @@ mod tests {
         assert_eq!(js(&def.printed_rarity), json!("Legendary"));
         assert_eq!(js(&def.cost), json!(4));
         assert_eq!([def.base.attack, def.base.health], [Some(10), Some(10)]);
-        assert_eq!(keyword_kinds(&def.base.keywords), vec![json!("Rush"), json!("First Strike"), json!("Trample")]);
+        assert_eq!(keyword_kinds(&def.base.keywords), vec![json!("Rush"), json!("First Strike"), json!("Trample"), json!("Frenzy")]);
         assert_eq!([def.radiant.attack, def.radiant.health], [Some(20), Some(20)]);
-        assert_eq!(keyword_kinds(&def.radiant.keywords), vec![json!("Rush"), json!("Trample"), json!("Divine Shield")]);
+        assert_eq!(keyword_kinds(&def.radiant.keywords), vec![json!("Rush"), json!("Trample"), json!("Divine Shield"), json!("Frenzy")]);
         let CardScripts { base, radiant } = script();
-        assert!(base.when_attacks.is_some() && base.after_attack.is_some());
-        assert!(radiant.when_attacks.is_some() && radiant.after_attack.is_some());
+        assert!(base.when_attacks.is_some() && base.after_attack.is_none());
+        assert!(radiant.when_attacks.is_some() && radiant.after_attack.is_none());
+        let kept = script_v0_5_13g();
+        assert!(kept.base.after_attack.is_some() && kept.radiant.after_attack.is_some());
         assert!(!Arc::ptr_eq(base.when_attacks.as_ref().unwrap(), radiant.when_attacks.as_ref().unwrap()));
+    }
+
+    #[test]
+    fn r3551004_frenzy_on_both_faces() {
+        crate::register_all();
+        let def = crate::card_def(ID);
+        for face in [&def.base, &def.radiant] {
+            assert!(keyword_kinds(&face.keywords).contains(&json!("Frenzy")));
+            assert!(!face.text.contains("If it dies"));
+            assert!(face.text.contains("Frenzy"));
+        }
+    }
+
+    #[test]
+    fn r3551004_kept_script_still_attacks_again() {
+        crate::under_kept(GOLEM, script_v0_5_13g(), || {
+            let seed = seed_where_the_golem_survives_and(true, false);
+            let mut s = golem(Some(json!(VANILLA)), false, &seed);
+            attack_with(&mut s);
+            let it = s.card(GOLEM).id.clone();
+            assert!(may_attack(&s, &it));
+        });
     }
 
     mod base {

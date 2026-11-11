@@ -539,6 +539,34 @@ mod r21_random_keywords_m3_t1 {
     use super::*;
 
     #[test]
+    fn r3551004_a_random_keyword_can_be_frenzy() {
+        // R3551004: Frenzy is the pool's fifteenth entry, so a full-pool grant lands it.
+        assert!(random_pool_keywords().contains(&Keyword::Frenzy));
+        let mut state = game("random-kw-frenzy");
+        let unit = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let mut b = Bench::new(&state);
+        run(
+            &mut b,
+            &mut state,
+            grant_random_keywords(json_as(json!({ "target": { "of": "chosen" }, "count": 15 }))),
+            None,
+            on_instance(&unit),
+        );
+        let kinds: Vec<KeywordKind> = live(&state, &unit.id)
+            .granted_keywords
+            .iter()
+            .map(Keyword::kind)
+            .collect();
+        assert_eq!(kinds.len(), 15);
+        assert!(kinds.contains(&KeywordKind::Frenzy));
+    }
+
+    #[test]
     fn r21_draws_from_the_pool_never_repeats_within_one_grant_and_is_seeded() {
         let mut state = game("random-kw");
         let unit = put(

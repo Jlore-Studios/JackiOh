@@ -9,9 +9,7 @@ use jackioh_engine::testkit::*;
 use serde_json::json;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{
-    apply_now, play_random_game, round_trip, setup_catalog,
-};
+use crate::rules::fixtures::harness::{apply_now, play_random_game, round_trip, setup_catalog};
 use crate::rules::fixtures::tipsy_warhero_refresh::*;
 
 use PlayerId::{P1, P2};
@@ -100,9 +98,9 @@ fn warhero_reports(s: &Scenario) -> Vec<(i32, Option<i32>)> {
 }
 
 fn lists_activate(state: &GameState, instance: &str) -> bool {
-    legal_actions(state, P1).iter().any(
-        |body| matches!(body, ActionBody::Activate { instance_id, .. } if instance_id == instance),
-    )
+    legal_actions(state, P1)
+        .iter()
+        .any(|body| matches!(body, ActionBody::Activate { instance_id, .. } if instance_id == instance))
 }
 
 fn lists_play(state: &GameState, instance: &str) -> bool {
@@ -208,10 +206,7 @@ fn r3548001_a_card_drawn_played_or_summoned_while_tipsy_is_stamped() {
             turn: turn + 2,
         })
     );
-    apply_now(
-        s.state_mut(),
-        effects::summon(json_as(json!({ "defId": PLAIN }))),
-    );
+    apply_now(s.state_mut(), effects::summon(json_as(json!({ "defId": PLAIN }))));
     let summoned = field_cards(s.state(), P1)
         .into_iter()
         .find(|card| card.def_id == PLAIN && card.id != sober_id && card.id != stamped_id)
@@ -407,10 +402,7 @@ fn r3548002_the_worth_grows_by_zero_to_ten_at_the_end_of_every_turn() {
         s.end_turn();
         let grown = s.state().warhero_worth.expect("the worth once minted");
         assert!((worth..=worth + 10).contains(&grown));
-        assert_eq!(
-            warhero_reports(&s).last(),
-            Some(&(grown, Some(grown - worth)))
-        );
+        assert_eq!(warhero_reports(&s).last(), Some(&(grown, Some(grown - worth))));
     }
 }
 
@@ -426,10 +418,7 @@ fn r3548002_playing_or_discarding_one_pays_its_worth_radiant_double() {
         );
         s.state_mut().warhero_worth = Some(7);
         s.play(WARHERO, json!({}));
-        assert_eq!(
-            market_credits_of(s.state(), P1),
-            if radiant { 14 } else { 7 }
-        );
+        assert_eq!(market_credits_of(s.state(), P1), if radiant { 14 } else { 7 });
     }
     let mut s = board(
         "r3548002-discards",
@@ -444,7 +433,9 @@ fn r3548002_playing_or_discarding_one_pays_its_worth_radiant_double() {
         .expect("the base token");
     apply_now(
         s.state_mut(),
-        effects::discard(json_as(json!({ "target": { "of": "instance", "instanceId": base.id } }))),
+        effects::discard(json_as(
+            json!({ "target": { "of": "instance", "instanceId": base.id } }),
+        )),
     );
     assert_eq!(market_credits_of(s.state(), P1), 7);
     apply_now(
@@ -463,11 +454,12 @@ fn r3548002_the_hand_card_quotes_its_worth_and_joins_no_resource_pool() {
     s.state_mut().warhero_worth = Some(7);
     let card = s.hand(P1).into_iter().next().expect("the token");
     assert_eq!(sell_quote(s.state(), &card), Some(7));
-    let preview =
-        preview_of(s.state(), &card, P1, ConditionZone::Hand).expect("a quoted hand card");
-    assert!(preview
-        .iter()
-        .any(|value| value.label == "Credits" && value.value == 7));
+    let preview = preview_of(s.state(), &card, P1, ConditionZone::Hand).expect("a quoted hand card");
+    assert!(
+        preview
+            .iter()
+            .any(|value| value.label == "Credits" && value.value == 7)
+    );
     assert!(!resource_def_ids().contains(&WARHERO_TOKEN_DEF_ID.to_string()));
 }
 
@@ -510,7 +502,10 @@ fn r3548003_refresh_keeps_cooldowns_and_names_fused_refreshes() {
     assert!(cooldowns.is_some());
     apply_now(s.state_mut(), effects::refresh_activates());
     assert_eq!(s.card(slow.as_str()).memory.get("cooldowns"), cooldowns.as_ref());
-    assert_eq!(ability_uses_this_turn(s.state(), &s.card(slow.as_str()), "slow"), 0);
+    assert_eq!(
+        ability_uses_this_turn(s.state(), &s.card(slow.as_str()), "slow"),
+        0
+    );
     assert!(is_refresh_ability(REFRESH_ABILITY_ID));
     assert!(is_refresh_ability("refresh#2"));
     assert!(!is_refresh_ability("zap"));
@@ -572,7 +567,9 @@ fn r3548004_it_ends_as_the_card_leaves_and_both_seats_see_it() {
     let reactor = field_id(&s, P1, REACTOR);
     apply_now(
         s.state_mut(),
-        effects::bounce(json_as(json!({ "target": { "of": "instance", "instanceId": reactor } }))),
+        effects::bounce(json_as(
+            json!({ "target": { "of": "instance", "instanceId": reactor } }),
+        )),
     );
     assert_eq!(s.view(P1).you.infinite_mana, None);
     assert_eq!(s.view(P2).opponent.infinite_mana, None);
@@ -587,8 +584,5 @@ fn r3548004_x_is_still_chosen_out_of_held_mana() {
         json!({}),
     );
     let spell = s.hand(P1).into_iter().next().expect("the X spell");
-    assert_eq!(
-        legal_x_values(s.state(), P1, &spell),
-        (1..=5).collect::<Vec<_>>()
-    );
+    assert_eq!(legal_x_values(s.state(), P1, &spell), (1..=5).collect::<Vec<_>>());
 }

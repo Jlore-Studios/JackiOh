@@ -493,8 +493,8 @@ mod r1430_r1431_the_numbers_a_change_reaches {
                 }
             }
         }
-        // Only #98 Heroic Power's numbers belong to a power, all nine of them.
-        assert_eq!(owned.len(), 9, "{owned:#?}");
+        // Only #98 Heroic Power's numbers belong to a power, all eleven of them (R3551002).
+        assert_eq!(owned.len(), 11, "{owned:#?}");
         assert!(
             owned.iter().all(|entry| entry.starts_with("core-098 ")),
             "{owned:#?}"
@@ -538,9 +538,11 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("classicplus-036-1", KEYWORD),
         ("classicplus-061", KEYWORD),
         ("classicplus-065", KEYWORD),
+        ("classicplus-065-1", KEYWORD),
         ("classicplus-066", KEYWORD),
         ("meditative-036", KEYWORD),
         ("meditative-036", EITHER_WAY),
+        ("meditative-054", KEYWORD),
         ("meditativeplus-006", KEYWORD),
         ("stinkyscape-004-2", KEYWORD),
         ("stinkyscape-004-3", KEYWORD),

@@ -165,9 +165,7 @@ fn yard_activate() -> ActivationDecl {
         cost: None,
         targets: Vec::new(),
         modes: Vec::new(),
-        can_activate: Some(condition_hook(|ctx| {
-            !starship_pieces_of(ctx.self_).is_empty()
-        })),
+        can_activate: Some(condition_hook(|ctx| !starship_pieces_of(ctx.self_).is_empty())),
         has: None,
         run: hook(|_ctx| vec![launch_as_starship()]),
     }

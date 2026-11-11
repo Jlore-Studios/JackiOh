@@ -99,12 +99,7 @@ pub fn summon_starships(args: SummonStarshipsArgs) -> Effect {
                 }
             }
             for piece in &blueprint.pieces {
-                crate::starship::fuse_fresh_piece_into(
-                    &mut ctx.sink,
-                    &id,
-                    piece,
-                    radiant == Some(true),
-                );
+                crate::starship::fuse_fresh_piece_into(&mut ctx.sink, &id, piece, radiant == Some(true));
             }
         }
     })
@@ -174,8 +169,7 @@ pub fn launch_as_starship() -> Effect {
         let Some(slot) = slot else {
             return;
         };
-        let Some(id) = summon_hull(ctx, DORMANT_STARSHIP_DEF_ID, player, slot, None, source_id)
-        else {
+        let Some(id) = summon_hull(ctx, DORMANT_STARSHIP_DEF_ID, player, slot, None, source_id) else {
             return;
         };
         for piece in &pieces {

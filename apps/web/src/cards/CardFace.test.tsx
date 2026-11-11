@@ -1231,14 +1231,14 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     }
 
     // A level means nothing off the Summit: Heroic Power prints its own short form, the header over
-    // its thirteen powers.
+    // its fourteen powers.
     const { container } = render(
       <CardFace face={faceModel({ defId: "core-098", def: def("core-098"), radiant: false })} ascentLevel={3} />,
     );
     flushFits();
     const heroic = one(container, ".card-text");
     expect(heroic.getAttribute("data-short")).toBe("true");
-    expect(heroic.textContent).toContain("Discover one of 13 powers");
+    expect(heroic.textContent).toContain("Discover one of 14 powers");
     expect(heroic.textContent).not.toContain("Expedition Map");
   });
 

@@ -47,7 +47,13 @@ fn board_with_backrow(
 
 /// A hull arriving onto p1's lane, Dormant with its memory, as a play or summon would bring it.
 fn moor(s: &mut Scenario, def_id: &str, lane: i32) -> String {
-    put(s.state_mut(), def_id, slot(P1, Row::Units, lane), Default::default()).id
+    put(
+        s.state_mut(),
+        def_id,
+        slot(P1, Row::Units, lane),
+        Default::default(),
+    )
+    .id
 }
 
 /// `moor`, on the card's Radiant face.
@@ -62,9 +68,9 @@ fn moor_radiant(s: &mut Scenario, def_id: &str, lane: i32) -> String {
 }
 
 fn offers_activate(s: &Scenario, player: PlayerId, id: &str) -> bool {
-    legal_actions(s.state(), player).iter().any(|action| {
-        matches!(action, ActionBody::Activate { instance_id, .. } if instance_id == id)
-    })
+    legal_actions(s.state(), player)
+        .iter()
+        .any(|action| matches!(action, ActionBody::Activate { instance_id, .. } if instance_id == id))
 }
 
 fn ship_of(s: &Scenario, player: PlayerId) -> CardInstance {
@@ -143,10 +149,12 @@ fn r3539000_a_priced_hull_launches_for_its_price_or_a_lower_launch_cost() {
     assert_eq!(s.state().players.p1.mana.current, mana - 1);
     assert!(is_launched_starship(s.card(&ship.id)));
     assert!(
-        !s.state().players.p1.mods.iter().any(|modifier| matches!(
-            modifier.kind,
-            ModifierKind::StarshipLaunchCost { .. }
-        )),
+        !s.state()
+            .players
+            .p1
+            .mods
+            .iter()
+            .any(|modifier| matches!(modifier.kind, ModifierKind::StarshipLaunchCost { .. })),
         "the launch spends the launch-cost modifier"
     );
 }
@@ -215,7 +223,14 @@ fn r3539001_no_open_zone_summons_nothing_and_draws_nothing() {
     let backrow: Vec<Value> = (1..=5)
         .map(|lane| json!({ "def": countdown.id, "lane": lane }))
         .collect();
-    let mut s = board_with_backrow("p1", json!([]), json!(units), json!(backrow), json!([]), json!([]));
+    let mut s = board_with_backrow(
+        "p1",
+        json!([]),
+        json!(units),
+        json!(backrow),
+        json!([]),
+        json!([]),
+    );
     let cursor = s.state().rng_cursor;
     apply(
         &mut s,
@@ -264,7 +279,10 @@ fn r3539002_launch_random_starship_launches_only_a_named_hull() {
         fuse_fresh_piece_into(&mut sink, &sealed_id, &cell_a.id, false);
     }
     s.play(voyage.id.as_str(), json!({}));
-    assert!(is_launched_starship(s.card(&sealed_id)), "the named hull launches");
+    assert!(
+        is_launched_starship(s.card(&sealed_id)),
+        "the named hull launches"
+    );
     assert!(
         is_dormant_starship(s.card(&hull_id)),
         "the other Dormant Starship stays Dormant"
@@ -293,7 +311,11 @@ fn r3539004_a_yard_fuses_one_random_piece_at_each_start_of_its_controllers_turn(
     assert_eq!(records[0].radiant, Some(true), "a Radiant yard fuses Radiant");
     s.end_turn();
     s.end_turn();
-    assert_eq!(piece_defs(s.card(&id)).len(), 2, "another at the next start of turn");
+    assert_eq!(
+        piece_defs(s.card(&id)).len(),
+        2,
+        "another at the next start of turn"
+    );
 }
 
 #[test]

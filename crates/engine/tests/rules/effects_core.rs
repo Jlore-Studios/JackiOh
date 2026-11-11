@@ -791,7 +791,7 @@ mod s6_3_mana_and_next_turn_mana_s2_3_m3_t1 {
     }
 
     #[test]
-    fn r364_refresh_gives_back_spent_mana_up_to_max_and_never_past_it_s6_3_refresh() {
+    fn r364_replenish_gives_back_spent_mana_up_to_max_and_never_past_it_s6_3_replenish() {
         let mut state = game("refresh-mana");
         state.players.p1.mana = ManaState {
             current: 0,

@@ -66,7 +66,7 @@ use crate::state::{
 use crate::subsystems::activate::activation_views_for;
 use crate::subsystems::combo_index::grade_name;
 use crate::subsystems::copied_text::{copied_text_of, text_face_of};
-use crate::subsystems::hero_power::{power_of, power_title_of, used_this_turn};
+use crate::subsystems::hero_power::{power_of, power_price, power_title_of, used_this_turn};
 use crate::subsystems::pareto::pareto_hint_ids;
 use crate::subsystems::quests::quest_view_of;
 use crate::turn::standing_draw_offer;
@@ -1097,7 +1097,7 @@ fn hero_powers_of(state: &GameState, player: PlayerId) -> Vec<HeroPowerView> {
                 def_id: card.def_id.clone(),
                 name: power.name.to_string(),
                 title: power_title_of(power, card.radiant).to_string(),
-                x: power.x,
+                x: power_price(state, card).unwrap_or(power.x),
                 used_this_turn: used_this_turn(state, card),
             });
         }
@@ -1519,10 +1519,7 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         // R961: public on both seats, and absent until it first rises (D14).
         jade: side.jade.filter(|value| *value > 0),
         // R3548000: public on both seats, and absent at none, as Jade is.
-        tipsy: side
-            .tipsy
-            .map(|counter| counter.count)
-            .filter(|count| *count > 0),
+        tipsy: side.tipsy.map(|counter| counter.count).filter(|count| *count > 0),
         // R3548004: public on both seats, while a card giving it acts on this seat's field.
         infinite_mana: crate::mana::has_infinite_mana(state, player).then_some(true),
         // R1840005: public on both seats, and absent until first gained.

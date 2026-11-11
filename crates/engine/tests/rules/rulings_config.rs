@@ -45,7 +45,7 @@ fn r14_rotates_two_independent_rings_into_a_locked_destination_and_carries_damag
 }
 
 #[test]
-fn r21_r781005_r1025000_r1615000_draws_random_keywords_from_the_fourteen_entry_pool_and_never_repeats_one_on_a_unit()
+fn r21_r781005_r1025000_r1615000_r3551004_draws_random_keywords_from_the_fifteen_entry_pool_and_never_repeats_one_on_a_unit()
  {
     let pool = json_of(config::RANDOM_KEYWORD_POOL);
     assert_eq!(
@@ -64,7 +64,8 @@ fn r21_r781005_r1025000_r1615000_draws_random_keywords_from_the_fourteen_entry_p
             "Deft",
             "Lifesteal",
             "Pierce",
-            "Trample"
+            "Trample",
+            "Frenzy"
         ])
     );
     let entries: BTreeSet<String> = pool
@@ -73,7 +74,7 @@ fn r21_r781005_r1025000_r1615000_draws_random_keywords_from_the_fourteen_entry_p
         .iter()
         .map(|entry| entry.as_str().expect("a keyword is a string").to_string())
         .collect();
-    assert_eq!(entries.len(), 14);
+    assert_eq!(entries.len(), 15);
 }
 
 #[test]

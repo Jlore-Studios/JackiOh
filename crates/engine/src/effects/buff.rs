@@ -48,6 +48,8 @@ const POOL_KEYWORDS: &[(&str, Keyword)] = &[
     ("Pierce", Keyword::Pierce),
     ("Windfury", Keyword::Windfury),
     ("Deft", Keyword::Deft),
+    // S01 (R3551004): Frenzy joins the pool as its fifteenth entry.
+    ("Frenzy", Keyword::Frenzy),
 ];
 
 /// R21's pool as keywords, in the pool's order: what a random keyword is drawn from (B3.4's Upgrade too).
