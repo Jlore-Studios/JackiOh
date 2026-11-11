@@ -14949,18 +14949,20 @@
       "planned_by_id": "claude-7",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "pr": 3691,
+      "pr": 3725,
       "provider": "claude-8",
       "question": "",
       "queued_at": "2026-11-11T17:18:42Z",
       "requested_by": "an assignment",
+      "round_tier": "strong",
       "run_id": "43067847851",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-11T17:24:17Z",
       "stop_requested": false,
       "strike_log": [],
       "strikes": 0,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3678": {
       "action": "build",
