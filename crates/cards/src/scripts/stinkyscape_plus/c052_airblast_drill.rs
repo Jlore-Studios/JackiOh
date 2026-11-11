@@ -1,9 +1,9 @@
 //! SPEC §8.12 S+ #52 Airblast Drill (§2.4, §5.1, §6.1 GIGA, §6.3 Tribute; R62, R101, R1420, R1840002, R3535000,
 //! R3546000, R3549001): (4) Field Spell, Mindustrial, Legendary, a card of the held Stinkyscape+ set.
 //!   Base:    "Tribute 1, GIGA
-//!            End of turn: Fill your hand with random Minerals (that cost 0) and Resources."
+//!            End of turn: Fill your hand with random Minerals (that cost (0)) and Resources."
 //!   Radiant: "Tribute 1, GIGA
-//!            End of turn: Fill your hand with random Radiant Minerals (that cost 0) and Radiant Resources."
+//!            End of turn: Fill your hand with random Radiant Minerals (that cost (0)) and Radiant Resources."
 //!
 //! Tribute 1 is the play validator's (§6.3, R101), read off `staticFlags.tribute`: one Unit of its player's
 //! is destroyed to pay it, and the zones it frees count for the GIGA anchor (R3546000). GIGA is catalog
@@ -23,7 +23,7 @@ pub const ID: &str = "stinkyscapeplus-052";
 const TRIBUTE: i32 = 1;
 /// R3549001: the chance that a find is a Mineral rather than a Resource.
 const MINERAL_CHANCE: f64 = 0.5;
-/// "Minerals (that cost 0)".
+/// "Minerals (that cost (0))".
 const MINERAL_COST: i32 = 0;
 
 /// R3549001: "a random Mineral": the held set's, tagged Mineral.

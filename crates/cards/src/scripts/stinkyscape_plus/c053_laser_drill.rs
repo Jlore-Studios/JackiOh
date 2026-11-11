@@ -1,15 +1,15 @@
 //! SPEC §8.12 S+ #53 Laser Drill (§2.4, §5.1, §6.1 GIGA, R62, R1420, R1840002, R3535000, R3546000, R3549001):
 //! (4) Field Spell, Mindustrial, Epic, a card of the held Stinkyscape+ set.
 //!   Base:    "GIGA
-//!            End of turn: Add three random Minerals (that cost 0) or Resources to your hand."
+//!            End of turn: Add three random Minerals (that cost (0)) or Resources to your hand."
 //!   Radiant: "GIGA
-//!            End of turn: Add three random Radiant Minerals (that cost 0) or Radiant Resources to your hand."
+//!            End of turn: Add three random Radiant Minerals (that cost (0)) or Radiant Resources to your hand."
 //!
 //! GIGA is catalog data, a keyword the engine reads (R3546000). At the end of its controller's turn (R62)
 //! it makes `DRILL_FINDS` finds (R3549001), each its own flip (`MINERAL_CHANCE`) between a Mineral and a
 //! Resource, as #54's: a Mineral is a random card of the Stinkyscape+ cards tagged Mineral (#44 to #50),
 //! the pool naming its set so that it reaches them while the set is held (R1420), and it costs (0)
-//! (`costOverride`, "that cost 0"); a Resource is `gainResources` (R1840002), which cost (0) already. The
+//! (`costOverride`, "that cost (0)"); a Resource is `gainResources` (R1840002), which cost (0) already. The
 //! Radiant face adds all Radiant. The list prints GIGA twice on the Radiant face; it is one keyword
 //! (R3549001). A full hand burns what does not fit (§2.4).
 
@@ -21,7 +21,7 @@ pub const ID: &str = "stinkyscapeplus-053";
 const DRILL_FINDS: i32 = 3;
 /// R3549001: the chance that a find is a Mineral rather than a Resource.
 const MINERAL_CHANCE: f64 = 0.5;
-/// "Minerals (that cost 0)".
+/// "Minerals (that cost (0))".
 const MINERAL_COST: i32 = 0;
 
 /// R3549001: "a random Mineral": the held set's, tagged Mineral.

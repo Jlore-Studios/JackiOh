@@ -31024,7 +31024,7 @@
           "kind": "GIGA"
         }
       ],
-      "text": "Tribute 1, GIGA\nEnd of turn: Fill your hand with random Minerals (that cost 0) and Resources."
+      "text": "Tribute 1, GIGA\nEnd of turn: Fill your hand with random Minerals (that cost (0)) and Resources."
     },
     "radiant": {
       "keywords": [
@@ -31032,7 +31032,7 @@
           "kind": "GIGA"
         }
       ],
-      "text": "Tribute 1, GIGA\nEnd of turn: Fill your hand with random Radiant Minerals (that cost 0) and Radiant Resources."
+      "text": "Tribute 1, GIGA\nEnd of turn: Fill your hand with random Radiant Minerals (that cost (0)) and Radiant Resources."
     }
   },
   "stinkyscapeplus-053": {
@@ -31055,7 +31055,7 @@
           "kind": "GIGA"
         }
       ],
-      "text": "GIGA\nEnd of turn: Add three random Minerals (that cost 0) or Resources to your hand."
+      "text": "GIGA\nEnd of turn: Add three random Minerals (that cost (0)) or Resources to your hand."
     },
     "radiant": {
       "keywords": [
@@ -31063,7 +31063,7 @@
           "kind": "GIGA"
         }
       ],
-      "text": "GIGA\nEnd of turn: Add three random Radiant Minerals (that cost 0) or Radiant Resources to your hand."
+      "text": "GIGA\nEnd of turn: Add three random Radiant Minerals (that cost (0)) or Radiant Resources to your hand."
     }
   },
   "stinkyscapeplus-054": {
