@@ -16666,6 +16666,13 @@
     "3737": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-11T22:24:54Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "No line of the rule holds: no engine, AI, migration, cross-crate design or 40 files; the one change is a CI workflow edit that only a person can make."
+      },
       "kind": "build",
       "live": "planning",
       "owner": "claude-3",
