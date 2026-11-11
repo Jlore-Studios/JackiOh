@@ -88,6 +88,7 @@ jobs:
       # `shell: bash` runs with pipefail, so a refused promotion fails the step through `tee`. Cargo's
       # own build output goes to stderr, so the log holds only what `patches ship` printed.
       - name: ship
+        id: ship
         shell: bash
         run: cargo jackioh patches ship | tee "$RUNNER_TEMP/ship.log"
 
@@ -133,25 +134,40 @@ jobs:
 
       # R1280000: a refused promotion leaves every pending patch unshipped and the catalog version where
       # it was, so it opens one issue (or comments on the one open) with the run, queued for the night
-      # bot as ci-duration.yml queues its own, instead of failing quietly on every push to main.
+      # bot as ci-duration.yml queues its own, instead of failing quietly on every push to main. A run
+      # that failed in any other step (`ship` passed or never ran) is no refusal: #3714's `ship` shipped
+      # and then the bot's token ran out of GitHub API calls at `gh api user`, yet its issue read as a
+      # refusal and went to the night bot, which can neither read a run's log nor start a workflow.
+      # That issue says so and goes to people (`human`, as cf-spend.yml's does).
       - name: report a refused promotion
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHIP: ${{ steps.ship.outcome }}
         run: |
           set -euo pipefail
-          title="patches ship refused to promote the pending patches"
-          body=$(printf '%s\n' \
-            "\`cargo jackioh patches ship\` refused on main at $GITHUB_SHA ([the run]($RUN_URL)), so no pending patch shipped and \`CATALOG_VERSION\` did not move (R646, R1280000)." \
-            "" \
-            "The run's \`ship\` step names the refusal. Fix the fragment or the tool on a branch whose \`cargo jackioh patches check\` passes; once it merges, run this workflow again (Actions -> patches ship -> Run workflow) if it touched nothing under \`crates/cards/patches/pending/\`.")
+          if [ "$SHIP" = failure ]; then
+            title="patches ship refused to promote the pending patches"
+            body=$(printf '%s\n' \
+              "\`cargo jackioh patches ship\` refused on main at $GITHUB_SHA ([the run]($RUN_URL)), so no pending patch shipped and \`CATALOG_VERSION\` did not move (R646, R1280000)." \
+              "" \
+              "The run's \`ship\` step names the refusal. Fix the fragment or the tool on a branch whose \`cargo jackioh patches check\` passes; once it merges, run this workflow again (Actions -> patches ship -> Run workflow) if it touched nothing under \`crates/cards/patches/pending/\`.")
+            labels=(--label "bot:build" --label "difficulty:medium" --label "priority:high")
+          else
+            title="patches ship could not open its promotion pull request"
+            body=$(printf '%s\n' \
+              "The patches ship run on main at $GITHUB_SHA ([the run]($RUN_URL)) failed outside \`cargo jackioh patches ship\`, whose step's outcome was \`$SHIP\`, so no promotion opened and \`CATALOG_VERSION\` did not move (R646). The fragments and the tool are not at fault: the failed step's log names the cause, as a GitHub API rate limit on the bot's token was #3714's." \
+              "" \
+              "Once that cause is gone, run this workflow again (Actions -> patches ship -> Run workflow) and close this issue. The night bot can neither read a run's log nor start a workflow, so this is a person's.")
+            labels=(--label "human" --label "priority:high")
+          fi
           open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
           if [ -n "$open" ]; then
             gh issue comment "$open" --repo "$REPO" --body "$body"
           else
-            gh issue create --repo "$REPO" --title "$title" --body "$body" --label "bot:build" --label "difficulty:medium" --label "priority:high"
+            gh issue create --repo "$REPO" --title "$title" --body "$body" "${labels[@]}"
           fi
 
   # The threads of the patches this push shipped, retitled with their versions. A push that shipped
