@@ -711,7 +711,7 @@ describe("R2706000 a dungeon run's fight through the controller", () => {
     humanMarks: [],
     enemyDeck: ["classic-090"],
     enemyHandicap: { deckSize: 1, manaBonus: 0, manaCap: 4, extraOpeningCards: 0, extraDrawsPerTurn: 0, heroHealth: 20 },
-    enemy: { id: "cave-troll", name: "Cave Troll", heroHealth: 20, deck: ["classic-090"], artifacts: [] },
+    enemy: { id: "cave-troll", name: "Cave Troll", tier: 1, deck: ["classic-090"], artifacts: [] },
   };
   const FIGHT: PracticeStartConfig = { ...CONFIG, seed: SETUP.seed, run: SETUP };
   const LOST: RunAction = { type: "fightOver", won: false, hp: 0, damageDealt: 3, healingDone: 0, cardsDrawn: 4, turns: 2 };
