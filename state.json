@@ -15619,6 +15619,13 @@
     "3698": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-11T16:05:48Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Web-only presentation change in five apps/web files and their tests: no engine rules, AI, migration or cross-crate contract (rules 1-5 do not hold), well under 40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
