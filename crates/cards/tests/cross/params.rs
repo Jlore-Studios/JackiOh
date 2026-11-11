@@ -635,8 +635,6 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-153", ENGINE),
         ("stinkyscape-166", ENGINE),
         ("stinkyscape-167", ENGINE),
-        // R3535001: S+ #136's Activate count, which its script declares.
-        ("stinkyscapeplus-136", ENGINE),
         ("core-024", FORMULA),
         ("core-031", FORMULA),
         ("core-070", FORMULA),

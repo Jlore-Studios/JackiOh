@@ -216,7 +216,7 @@ pub fn numbered_keywords_on(state: &GameState, card: &CardInstance) -> Vec<Numbe
     add(
         &mut out,
         NumberedKey::Tribute,
-        flags.tribute.unwrap_or(0),
+        crate::play_choices::tribute_set_on(card).unwrap_or(flags.tribute.unwrap_or(0)),
         ParamBetter::Down,
     );
     out

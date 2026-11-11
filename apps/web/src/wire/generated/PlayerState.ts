@@ -205,4 +205,9 @@ heroToxic?: number,
  * R3548000: this player's Tipsy counter, public on both seats. Absent at none, so a game
  * without one hashes as it did before this field existed.
  */
-tipsy?: TipsyCounter, };
+tipsy?: TipsyCounter, 
+/**
+ * R3560000: the once-a-game firsts this player has used, by key (S+ #120, #121). Absent until
+ * the first, so a game without one hashes as before.
+ */
+onceAGame?: Array<string>, };

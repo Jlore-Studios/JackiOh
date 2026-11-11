@@ -46,6 +46,8 @@ struct HandRiders {
     fixed_x: Option<i32>,
     /// R1878003: the card is given these keywords as it reaches the hand.
     keywords: Option<Vec<Keyword>>,
+    /// R3565000: the Tribute X the card has while it is in a hand or a deck (0: none).
+    tribute: Option<i32>,
 }
 
 /// `costMod` adds (R65 sums it); `costOverride` and `radiant` replace. The Radiant flag goes on first,
@@ -107,6 +109,14 @@ fn apply_cost_riders(card: &mut CardInstance, riders: &HandRiders) {
     // leaves the field, so it rides the card onto the field, where the layers read it (§10.4).
     for keyword in riders.keywords.iter().flatten() {
         card.granted_keywords.push(keyword.clone());
+    }
+    // R3565000: a Tribute set in place of the printed one is a price for the card in the hand, so it
+    // goes on with the other prices and a burned card takes none.
+    if let Some(tribute) = riders.tribute {
+        card.memory.insert(
+            crate::play_choices::TRIBUTE_SET_KEY.to_string(),
+            Value::from(tribute.max(0)),
+        );
     }
 }
 
@@ -262,6 +272,7 @@ impl AddToHandArgs {
             memory: self.memory.clone(),
             fixed_x: self.fixed_x,
             keywords: None,
+            tribute: None,
         }
     }
 }
@@ -357,6 +368,10 @@ pub struct AddRandomFromCatalogArgs {
     /// gains Starship Piece").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keywords: Option<Vec<Keyword>>,
+    /// R3565000 (Stinkyscape #129's "it has no Tribute condition", #138's "they have Tribute 1"): the
+    /// Tribute X each card added has while in a hand or a deck, in place of its printed one (0: none).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tribute: Option<i32>,
 }
 
 impl AddRandomFromCatalogArgs {
@@ -377,6 +392,7 @@ impl AddRandomFromCatalogArgs {
             memory: None,
             fixed_x: None,
             keywords: self.keywords.clone(),
+            tribute: self.tribute,
         }
     }
 }
