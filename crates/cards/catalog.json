@@ -29800,7 +29800,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Cast on draw: Flip a coin for the whole effect. Randomly either Buff or Nerf every card on the field and in both hands."
@@ -29938,7 +29938,7 @@
       "base": 1,
       "embiggen": 3
     },
-    "loc": 6,
+    "loc": 62,
     "base": {
       "keywords": [],
       "text": "Choose a non-fused card in your hand or field. Shuffle {copy|copy|copies} of it into your deck. It keeps no cost changes or buffs.\nEmbiggened (3): Shuffle {copy2|copy|copies} of it into your deck instead."
@@ -30269,7 +30269,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 24,
     "base": {
       "keywords": [
         {
@@ -30968,7 +30968,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 50,
     "base": {
       "keywords": [],
       "text": "Dormant a permanent for {count|turn|turns}. When it awakens, Buff it {times|time|times} if it's yours or Nerf it {times2|time|times} if it's an enemy's."
@@ -31742,7 +31742,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 39,
     "base": {
       "keywords": [],
       "text": "Discover a Spell in your deck; add a copy of it to your hand."
@@ -32115,7 +32115,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Summon a mix of {summons|Cloaked Ayy token|Cloaked Ayy tokens} or Cloaked Tiny Asteroids."
@@ -32463,7 +32463,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 39,
     "base": {
       "keywords": [],
       "text": "Transform a Unit into an Ayy in Defense Position."
@@ -32822,7 +32822,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Put a Unit on a performance enhancement plan, they have {count|turn|turns} to get a kill otherwise they are destroyed."
@@ -33148,7 +33148,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [],
       "text": "Transform your permanents into ones that cost (1) more."
@@ -33169,14 +33169,14 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 40,
     "base": {
       "keywords": [
         {
           "kind": "Temporary"
         }
       ],
-      "text": "Temporary\nTransform a permanent into one. It costs (1) more.\nEnd of turn: Return this to your hand."
+      "text": "Temporary\nTransform a permanent into one. It costs (1) more.\nEnd of turn: Return this to hand."
     },
     "radiant": {
       "keywords": [
@@ -33184,7 +33184,7 @@
           "kind": "Temporary"
         }
       ],
-      "text": "Temporary\nTransform a permanent into one. It costs (2) more.\nEnd of turn: Return this to your hand."
+      "text": "Temporary\nTransform a permanent into one. It costs (2) more.\nEnd of turn: Return this to hand."
     }
   },
   "stinkyscapeplus-105": {
@@ -33198,7 +33198,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 5,
       "health": 8,
@@ -36427,7 +36427,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 26,
     "base": {
       "keywords": [],
       "text": "Cast on draw: Cast a random Spell with random targets."

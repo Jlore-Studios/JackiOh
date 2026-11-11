@@ -90,6 +90,20 @@ fn listed_modes(g: &Scenario, card: &str) -> Option<Vec<String>> {
         .flatten()
 }
 
+/// The targets of the first play `legalActions` lists for p1's hand card, so a card that declares one
+/// (Stinkyscape+ #24 Forced Propagation's pick, R3557001) is played with a pick it is offered.
+fn listed_targets(g: &Scenario, card: &str) -> Option<Vec<Selection>> {
+    legal_actions(g.state(), P1)
+        .into_iter()
+        .find_map(|action| match action {
+            ActionBody::Play {
+                instance_id, targets, ..
+            } if instance_id == card => Some(targets),
+            _ => None,
+        })
+        .flatten()
+}
+
 fn play(g: &Scenario, card: &str, zone: Option<ZoneChoice>, embiggen: bool) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
     let body = ActionBody::Play {
@@ -99,7 +113,7 @@ fn play(g: &Scenario, card: &str, zone: Option<ZoneChoice>, embiggen: bool) -> R
         embiggen: Some(embiggen),
         equip: None,
         tributes: None,
-        targets: None,
+        targets: listed_targets(g, card),
         modes: listed_modes(g, card),
         plague: None,
         face_down: None,

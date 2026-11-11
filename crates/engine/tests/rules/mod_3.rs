@@ -28,6 +28,7 @@ pub mod start_of_opponent_turn;
 pub mod state;
 pub mod statecheck;
 pub mod stays;
+pub mod stinkyscape_plus_s18;
 pub mod stinkyscape_verbs;
 pub mod tallies;
 pub mod targeting;
