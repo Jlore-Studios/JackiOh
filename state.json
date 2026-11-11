@@ -19146,7 +19146,7 @@
       "started_at": "2026-11-11T09:04:05Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [],
         "builder": "muse",
