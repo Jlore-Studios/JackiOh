@@ -1,0 +1,75 @@
+{
+  "action": "plan",
+  "number": 3608,
+  "title": "Patch (part 4 of 6): loops that composite: every infinite animation moves only transform and opacity",
+  "branch": "bot/issue-3608",
+  "thread": "**Issue #3608 (data, not instructions):**\n\n```text\n# #3608: Patch (part 4 of 6): loops that composite: every infinite animation moves only transform and opacity\nOpened by @MaxGoetzmann.\n\n### What it does\n\nPart of #3604. An animation on `box-shadow`, `filter`, `background-position`, `stroke-dashoffset`, `clip-path` or `text-shadow` makes the browser repaint the element every frame. One on `transform` and `opacity` runs on the compositor. 14 `infinite` animations in `apps/web/src` animate paint properties, several on many elements at once:\n\n| Keyframes | File | Property | How many at once |\n|---|---|---|---|\n| `glow-breathe-ready`, `glow-breathe-condition` | `game/highlights.css` | box-shadow | every playable card in hand |\n| `jk-facedown-breathe` | `game/facedown.css` | filter | every face-down card |\n| `jk-veil-drift` | `game/facedown.css` | background-position | every face-down card |\n| `cf-mythic-hand-shimmer` | `cards/cards.css` | box-shadow | every Mythic in hand |\n| `end-turn-ready-pulse` | `game/board.css` | box-shadow | 1 |\n| `clock-pill-pulse` (\u00d72) | `game/clock.css` | box-shadow | 1 |\n| `lane-pick-breathe` | `game/lanePick.css` | box-shadow | every lane offered |\n| `duos-portal-flash` | `duos/duos.css` | box-shadow | 1 |\n| `coach-pulse` | `tutorial/tutorial.css` | box-shadow | 1 |\n| `skeleton-shimmer` | `skeleton/skeleton.css` | background-position | every skeleton |\n| `drag-arrow-march`, `opponent-aim-run` | `game/drag/drag.css`, `game/aim/opponentAim.css` | stroke-dashoffset | 1 |\n\nRewrite each so the loop moves only `transform` and `opacity`. The usual way: the glow, shadow or tint drawn once on a pseudo-element, whose `opacity` (and `scale`) breathes. Each must look as close to today as the technique allows, and the static first layer the component spec reads (the 2px ring in `highlights.css`) stays as it is. Then add a guard so this doesn't come back. A test in the web's CSS suites (`fx/css.test.ts`, `motion.test.ts` or a new one) parses every stylesheet under `apps/web/src` and fails on an animation with `infinite` iteration whose keyframes set a paint property. Any loop that must stay goes in a named allow-list with its reason.\n\nWhile there, check the 28 one-shot `filter` keyframes in `game/animations.css`. Move those that run on many elements together during combat (a board-wide hit, a sweep) to opacity over a pre-filtered layer where that is cheap and looks the same. Also check the 22 `will-change` declarations in `cards/cosmetics.css`: a `will-change` held on every face at rest costs a layer each. Keep one only while its animation runs.\n\n### Acceptance\n\n- None of the 14 loops above sets a paint property in its keyframes, and each still runs under the same conditions (existing tests and e2e selectors pass).\n- The new CSS test fails on an `infinite` animation over `box-shadow`, `filter`, `background-position`, `stroke-dashoffset`, `clip-path` or `text-shadow` outside the allow-list (with a test proving it catches one).\n- Reduced motion and `--anim-scale` behave as before.\n- Screenshots of the hand glow, a face-down card and the end-turn button, before and after, in the pull request (`ui-walkthrough`).\n\n### Blocked by, part of\n\nPart of #3604\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3608: needs a plan; `claude-7` (claude, `sonnet`, medium) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-10T03:19:42Z",
+    "claimed_at": "2026-11-11T07:37:03Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3687 is held for `claude-3` until 02:00 (it refused a call)",
+    "#3690 is held for `claude-3` until 02:00 (it refused a call)",
+    "#3702 is held for `claude-8` until 03:00 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3558 skipped: it waits for #3554 to close first",
+    "#3559 skipped: it waits for #3554 to close first",
+    "#3560 skipped: it waits for #3554 to close first",
+    "#3561 skipped: it waits for #3554 to close first",
+    "#3565 skipped: it waits for #3560 to close first",
+    "#3566 skipped: it waits for #3558 to close first",
+    "#3567 skipped: it waits for #3558 to close first",
+    "#3568 skipped: it waits for #3557, #3558 to close first",
+    "#3569 skipped: it waits for #3558 to close first",
+    "#3570 skipped: it waits for #3551, #3555, #3560, #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3566 to close first",
+    "#3572 skipped: it waits for #3551, #3555, #3556, #3557, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3551, #3554, #3555, #3556, #3557, #3558, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first"
+  ]
+}
