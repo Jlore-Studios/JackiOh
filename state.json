@@ -12604,6 +12604,11 @@
       "owner_since": "2026-11-11T15:45:05Z",
       "owner_why": "a person answered its question, so the lane that asked carries the answer out",
       "part_of": 3596,
+      "paused": {
+        "at": "2026-11-11T16:36:02Z",
+        "interrupt": "usage",
+        "provider": "muse"
+      },
       "pending_request": false,
       "planned_at": "2026-11-11T11:34:30Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -12614,11 +12619,13 @@
       "question": "How should #3561 proceed while E7 (#3554) is still parked?",
       "queued_at": "2026-11-11T15:45:05Z",
       "requested_by": "squishy-squooby",
+      "round_tier": "",
       "run_id": "43057253671",
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-11T16:19:51Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3563": {
       "action": "build",
