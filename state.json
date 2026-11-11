@@ -16468,6 +16468,14 @@
         "sha": "b3c350400d18e68a090741cca7e2ccaeec154ece",
         "tiers": {}
       }
+    },
+    "3725": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-11T17:24:17Z",
+      "issue": 3674,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
