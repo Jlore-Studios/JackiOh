@@ -15863,6 +15863,7 @@
         "question": "How should #3561 proceed while E7 (#3554) is still parked?",
         "why": "The plan's own step 0 says to stop and report blocked when E7 is missing, and the fullsend tree is designed so a later run reconciles the parts once each lands."
       },
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
