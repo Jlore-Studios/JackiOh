@@ -15921,15 +15921,17 @@
       "ci_sha": "8e10ea9d462aa7e75eb7937eaa196924af882b19",
       "cleared": {
         "approver": {
-          "family": "muse",
-          "model": "muse-spark-1.3-contributor",
-          "provider": "muse",
-          "tier": "medium"
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
         },
-        "at": "2026-11-11T14:43:07Z",
-        "built_by": "muse",
+        "at": "2026-11-11T18:37:33Z",
+        "built_by": "claude-3",
         "by": "`muse` (medium)",
-        "sha": "81ce52dce6686b5c65218a1eb4ad819d860f18a4"
+        "carried_from": "81ce52dce6686b5c65218a1eb4ad819d860f18a4",
+        "resolved_by": "`claude` (strong)",
+        "sha": "6ad3002b9e390f92a18bd4432c05f113394e972c"
       },
       "cross_rounds": 0,
       "died": 0,
@@ -15942,7 +15944,7 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
-      "merge_owner": "muse",
+      "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
