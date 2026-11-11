@@ -12820,12 +12820,18 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "onto": "bot/issue-3596",
       "owner": "muse",
       "owner_since": "2026-11-11T15:07:54Z",
       "owner_why": "handed off from `claude-7`: it could not take it",
       "part_of": 3596,
+      "paused": {
+        "at": "2026-11-11T16:36:45Z",
+        "interrupt": "usage",
+        "provider": "muse"
+      },
       "pending_request": false,
       "planned_at": "2026-11-11T15:02:43Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
