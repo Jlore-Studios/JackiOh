@@ -137,6 +137,10 @@ exclude_re = [
   # crates/shared (#3513): reward_for_level's arm for level 10 pays what its arm for every tenth level
   # does, so without it level 10 is paid the same.
   'delete match arm 10 in reward_for_level',
+  # crates/shared (#3513): spelled_ingredients walks one place past a fused id's last character, whose mark is
+  # '\0', neither parenthesis, so a test of `at < chars.len()` before either and one of `at <= chars.len()`
+  # take the same branch.
+  'face/fused\.rs:.*replace < with <= in spelled_ingredients',
   # crates/shared (#3513): reader_keyword keeps the longest term a text names. Two terms of one length a
   # text both names would be one id (each is the text or its start before a space), and no id is a
   # candidate twice (the glossary's are only those the keywords lack), so `>` and `>=` keep the same one.
