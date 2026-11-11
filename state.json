@@ -14340,11 +14340,6 @@
       "owner": "claude-8",
       "owner_since": "2026-11-11T03:03:46Z",
       "owner_why": "it plans it",
-      "paused": {
-        "at": "2026-11-11T03:41:24Z",
-        "interrupt": "usage",
-        "provider": "claude-8"
-      },
       "pending_request": false,
       "planned_at": "2026-11-11T03:25:16Z",
       "planned_by": "`claude-8` (claude, `sonnet`, medium)",
