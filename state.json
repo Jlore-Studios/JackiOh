@@ -15540,7 +15540,9 @@
     },
     "3695": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6800161899"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15584,9 +15586,7 @@
       "started_at": "2026-11-11T22:26:03Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6800161899"
-      ],
+      "taken_asks": [],
       "waiting_comment": 6804833062
     },
     "3696": {
