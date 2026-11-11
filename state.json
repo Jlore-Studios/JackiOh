@@ -18794,13 +18794,14 @@
       },
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-1",
       "queued_at": "2026-11-11T04:11:12Z",
-      "run_id": "42957679571",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:3ed92c0b-1794378871",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 205,
-      "started_at": "2026-11-11T04:12:08Z",
+      "started_at": "2026-11-11T06:34:59Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -19468,9 +19469,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T06:34:18Z",
+    "at": "2026-11-11T06:34:59Z",
     "url": "",
-    "what": "review #3691 on claude-4"
+    "what": "spot-check #3682 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-11T06:21:30Z",
@@ -38260,7 +38261,15 @@
         "n": 205,
         "pr": 3682,
         "queued_at": "2026-11-11T06:28:20Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:3ed92c0b-1794378871",
         "sha": "3a3de664a2af7671dffa0eea43e6384963564a3c",
+        "started_at": "2026-11-11T06:34:59Z",
         "status": "queued",
         "title": "Patch: daily super run failed",
         "tries": 0
