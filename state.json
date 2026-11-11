@@ -15946,7 +15946,7 @@
       "started_at": "2026-11-11T14:33:35Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [],
         "builder": "claude",
