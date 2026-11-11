@@ -15961,22 +15961,32 @@
       "verdict_rounds": 2,
       "votes": {
         "approvals": [
-          "muse"
+          "claude"
         ],
-        "builder": "muse",
-        "built_by": "muse",
+        "builder": "claude",
+        "built_by": "claude-3",
+        "carried": {
+          "by": "`muse` (medium)",
+          "conflicts": [
+            "apps/web/src/game/backrow-suspense.test.tsx",
+            "apps/web/src/game/facedown.css",
+            "apps/web/src/motion.test.ts"
+          ],
+          "from": "81ce52dce6686b5c65218a1eb4ad819d860f18a4",
+          "main": "bcc440bb3e4c2a6c2bc4d7c5dbce1ff980c78373"
+        },
         "rejections": [],
         "reviews": [
           {
-            "family": "muse",
-            "provider": "muse",
-            "run": "43037225978",
-            "tier": "medium"
+            "family": "claude",
+            "provider": "claude-3",
+            "run": "43067972639",
+            "tier": "strong"
           }
         ],
-        "sha": "81ce52dce6686b5c65218a1eb4ad819d860f18a4",
+        "sha": "6ad3002b9e390f92a18bd4432c05f113394e972c",
         "tiers": {
-          "muse": "medium"
+          "claude": "strong"
         }
       }
     },
