@@ -12552,15 +12552,6 @@
       "died": 0,
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-11-11T16:22:14Z",
-        "family": "muse",
-        "kind": "work",
-        "notes": "## State\n\nPlan: build S+ #77 Black Hole and S+ #78 Slashed Dream Cries in Red on E7 (#3554).\n\nStatus: BLOCKED \u2014 E7 is not on this branch. `crates/engine/src/geometry.rs` and\n`crates/engine/src/effects/geometry.rs` do not exist; repo-wide search for\n`BlackHole`, `slash_board`, `open_black_hole`, `SLASH_LANES`, `BLACK_HOLE`,\n`swallowed`, `slashed_lane` finds nothing. E7's build commit `e7048523b4` is not\nan ancestor of HEAD (`git merge-base --is-ancestor` says no); #3554 was\n\"parked for #3596\" (`0b969064c0`) and never landed. Per plan step 0, stopped and\nreported \"blocked by #3554\". No files changed; only stubs from #3535 exist.\n\nNext: when E7 lands, resume at plan step 1 (`geometry.rs` capacity field).\n\nDecisions: none made. Dead ends: none (stopped at the precondition check).\n\n## Log\n\n- 2026-11-11: checked E7 precondition (geometry files, repo-wide search for\n  BlackHole/slash_board/SLASH_LANES, ancestry of `e7048523b4`). All missing;\n  #3554 parked, never landed. Stopping per plan step 0.\n",
-        "provider": "muse",
-        "reason": "`muse` reached its usage limit",
-        "trail": "- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3561 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3561/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\n- agent loop failed: model failed: API error 429 [request_id=ad21f661-8c1a-42d7-9979-0947b6eab84a]: Subscription quota exhausted. Your usage window resets at 2026-11-16T00:00:00Z. (rate_limit_error)"
-      },
       "interruptions": 0,
       "kind": "build",
       "landed": "ba02f22b353fb9ee4e2f0291bea9230cabf23f0c",
