@@ -24,8 +24,13 @@ const SOURCE = join(SRC, "patches/source.ts");
  * The number was chosen as 120 × 8192 (983,040), about 23 KB (2.4%) over the 960,130 bytes the
  * merge queue measured on `main` at f811a74 with this branch merged in. A change that crosses it
  * raises it on purpose, with its measurement in the commit or the pull request.
+ *
+ * #3394 crossed it: its 48 Stinkyscape alt scene recipes are data in the preloaded art chunk, which
+ * a card's picture reads at once. `vite build --mode development`, as CI builds it, measured 980,369
+ * bytes on `main` at 62b8ed2e3d and 987,635 with #3394 merged in (7,266 more). The budget is now
+ * 123 × 8192 (1,007,616), about 20 KB (2.0%) over that: putting `patches.json` back would still cross it.
  */
-export const FIRST_LOAD_GZIP_BUDGET_BYTES = 983_040;
+export const FIRST_LOAD_GZIP_BUDGET_BYTES = 1_007_616;
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

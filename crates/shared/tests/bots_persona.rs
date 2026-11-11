@@ -412,6 +412,24 @@ fn r645_a_trigger_chance_is_a_hard_boundary_under_hits_at_or_over_misses() {
     }
 }
 
+/// A pick draw no pool entry answers, below 0 or not a number (a host's broken draws), picks nothing:
+/// the roll sends nothing and draws no delay.
+#[test]
+fn r645_a_pick_draw_below_0_or_not_a_number_sends_nothing() {
+    for (persona, trigger, row) in trigger_cells() {
+        if row.is_none() {
+            continue;
+        }
+        for pick in [-0.5, f64::NAN] {
+            assert_eq!(
+                roll_for_trigger(persona, trigger, &mut exact(&[0.0, pick]), EMOTE_IDS),
+                None,
+                "{persona:?} × {trigger:?}: the pick draw {pick}"
+            );
+        }
+    }
+}
+
 #[test]
 fn r645_silent_sends_nothing_ever_no_trigger_no_reply_whatever_the_draw() {
     for trigger in EMOTE_TRIGGERS {
@@ -1088,6 +1106,48 @@ fn r645_the_shared_rate_limit_judges_the_send_instant_a_fast_follow_up_is_droppe
         "delay {}",
         second.delay_ms
     );
+}
+
+/// R643: an emote goes out its delay after the moment it rolled, and the rate limit judges that
+/// instant. At one delay, a second emote rolled just under the cooldown after the first goes out just
+/// under the cooldown after it and is dropped; one rolled the cooldown after lands.
+#[test]
+fn r643_an_emote_goes_out_its_delay_after_the_moment_it_rolled() {
+    let ai_turn = turn_view(SEAT, 5);
+    let mut s = session(PersonaName::Bm, low());
+    let first = 1_000;
+    assert_eq!(
+        s.on_events(&[big_hit(FOE)], None, &ai_turn, first),
+        vec![at_min(EmoteId::Laugh)]
+    );
+    assert_eq!(
+        s.on_events(
+            &[big_hit(FOE)],
+            Some(&ai_turn),
+            &ai_turn,
+            first + EMOTE_COOLDOWN_MS - 1
+        ),
+        vec![]
+    );
+    assert_eq!(
+        s.on_events(
+            &[big_hit(FOE)],
+            Some(&ai_turn),
+            &ai_turn,
+            first + EMOTE_COOLDOWN_MS
+        ),
+        vec![at_min(EmoteId::Laugh)]
+    );
+}
+
+/// R677: a Glitch's swap moves the bot to the other engine seat, and its persona with it: from then on
+/// it is the persona of a bot dealt that seat.
+#[test]
+fn r677_a_seat_swap_makes_the_persona_the_other_seats() {
+    let mut swapped = EmotePersona::new(PersonaName::Bm, SEAT, None);
+    swapped.set_seat(FOE);
+    assert_eq!(swapped, EmotePersona::new(PersonaName::Bm, FOE, None));
+    assert_ne!(swapped, EmotePersona::new(PersonaName::Bm, SEAT, None));
 }
 
 // R1344: dealt-hand choices
