@@ -1141,6 +1141,8 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 damage_burns: flags(|f| f.damage_burns),
                 damage_is_toxic: flags(|f| f.damage_is_toxic),
                 infinite_mana: flags(|f| f.infinite_mana),
+                // Stinkyscape+ E8 (issue #3558).
+                starts_at_bottom: flags(|f| f.starts_at_bottom),
                 // Stinkyscape+ E6 (issue #3550).
                 attacks_per_turn: numbers(|f| f.attacks_per_turn),
                 attacks_only_across: flags(|f| f.attacks_only_across),
@@ -1275,6 +1277,10 @@ fn combine_objects(records: &[Script]) -> Script {
         radiant_at_keywords: records.iter().find_map(|s| s.radiant_at_keywords),
         // R1864004: the most Trades a turn any ingredient gives.
         trades_per_turn: largest_read(records.iter().map(|s| s.trades_per_turn.clone()).collect()),
+        // Stinkyscape+ E8 (#3558): a fusion lends each ingredient's hand aura (R3558001), and drops
+        // the deck-cast hook, as `evolvesWhen` (R3558007).
+        hand_aura: eager_read(records.iter().map(|s| s.hand_aura.clone()).collect()),
+        cast_from_deck_when: None,
     }
 }
 

@@ -211,6 +211,10 @@ pub const CAST_ON_DRAW_CHAIN_CAP: i32 = 20;
 /// library that refills as it is drawn (#33 Unstable Clone Machine) began chains without end. A whole
 /// library's worth, so an action that does not refill its library as it draws never reaches it.
 pub const CAST_ON_DRAW_ACTION_CAP: i32 = LIBRARY_CAP;
+/// R3558007: deck casts one action may queue over every settled check, held to the same whole-library
+/// bound as the cast-on-draw cap above, so a card that returns itself to its deck is cast no more
+/// than once per card it could hold.
+pub const DECK_CAST_ACTION_CAP: i32 = LIBRARY_CAP;
 
 /// `{ base, radiant }`: a number by the face that prints it.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]

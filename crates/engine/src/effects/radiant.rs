@@ -59,6 +59,8 @@ fn hidden_from_someone(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
 /// hand or #26's pick was Radiant already, the face R177 hides (random picks take non-Radiant cards
 /// only, R60). `card` is a snapshot; the card is read again by its id and written there.
 pub(crate) fn make_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
+    // R3558001: a card made Radiant on its own keeps it: its lend is no longer a lend.
+    crate::hand_order::forget_lend(&mut ctx.state, &card.id);
     let card = crate::zones::live_or(ctx.state, card);
     if card.radiant {
         if hidden_from_someone(ctx, &card) {

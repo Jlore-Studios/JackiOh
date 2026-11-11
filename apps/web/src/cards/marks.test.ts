@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { DEADLINE_MARK, DEADLINE_MARK_COLOR, END_OF_TURN_MARK, END_OF_TURN_MARK_COLOR, MARK_WORDS, UNKNOWN_MARK_WORDS, markColorOf, markWords } from "./marks.ts";
+import { DEADLINE_MARK, DEADLINE_MARK_COLOR, END_OF_TURN_MARK, END_OF_TURN_MARK_COLOR, MARK_WORDS, MEET_MARK, MEET_MARK_COLOR, UNKNOWN_MARK_WORDS, markColorOf, markWords } from "./marks.ts";
 
 describe("R2321001 the end-of-turn mark", () => {
   it("R2321001 names the engine's mark and color, and says the card goes at the end of this turn", () => {
@@ -24,6 +24,18 @@ describe("R3550006 the deadline mark", () => {
     expect(markWords(DEADLINE_MARK)).toEqual({
       name: "Deadline",
       text: "Marked: destroyed at the end of its controller's next turn unless it destroys a Unit first",
+    });
+  });
+});
+
+describe("R3558002 the meet mark", () => {
+  it("R3558002 the meet mark has its own words and color", () => {
+    expect(MEET_MARK).toBe("meet");
+    expect(markColorOf("gold")).toBe(MEET_MARK_COLOR);
+    expect(markWords(MEET_MARK)).not.toBe(UNKNOWN_MARK_WORDS);
+    expect(markWords(MEET_MARK)).toEqual({
+      name: "Meets",
+      text: "Marked: when it and its partner sit side by side in your hand, both become Radiant",
     });
   });
 });

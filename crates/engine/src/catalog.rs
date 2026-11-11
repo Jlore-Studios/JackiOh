@@ -526,6 +526,10 @@ pub struct CatalogQueryArgs {
     /// Start of turn or an End of turn effect". Read off the registered script, as `tribute` is.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub turn_hook: Option<TurnHookFilter>,
+    /// R3558005: only cards whose English name holds this, case-insensitively (a Grape is a card
+    /// whose name holds "Grape"). An ASCII match, as card names are.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name_contains: Option<String>,
 }
 
 /// R3134001: which turn hook `CatalogQueryArgs.turn_hook` asks a card for.
@@ -595,6 +599,7 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             deals_damage: None,
             keywords: None,
             turn_hook: None,
+            name_contains: None,
         }
     }
 }
@@ -770,6 +775,12 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     // R1878000: `keywords` reads the printed base face too.
     if let Some(kinds) = &args.keywords
         && !kinds.iter().all(|kind| has_keyword(&def.base.keywords, *kind))
+    {
+        return false;
+    }
+    // R3558005: `nameContains` reads the English name, case-insensitively.
+    if let Some(part) = &args.name_contains
+        && !def.name.to_ascii_lowercase().contains(&part.to_ascii_lowercase())
     {
         return false;
     }

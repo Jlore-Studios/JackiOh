@@ -2197,6 +2197,8 @@
   "Marked: an effect is waiting on this card": "已标记：有一个效果正等待作用于这张牌",
   "Marked: destroyed at the end of this turn": "已标记：在本回合结束时被消灭",
   "Marked: destroyed at the end of its controller's next turn unless it destroys a Unit first": "已标记：若未先消灭一个单位，则在其控制者的下个回合结束时被消灭",
+  "Marked: when it and its partner sit side by side in your hand, both become Radiant": "已标记：当它与其伙伴在你手牌中相邻时，两者都变为闪耀",
+  "Meets": "相遇",
   "Deadline": "最后期限",
   "Steal": "偷取",
   "Berserk": "狂暴",

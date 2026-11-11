@@ -588,6 +588,14 @@ fn hand_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> C
     if let Some(keywords) = keywords {
         view.keywords = Some(keywords);
     }
+    // R3558002: a card of a waiting pair wears the meet mark in its owner's view alone — never in
+    // `marks_on`, so R1141's marked-card count leaks nothing of it.
+    if crate::hand_order::meets_partner(state, &card.id).is_some() {
+        view.marks.get_or_insert_with(Vec::new).push(CardMark {
+            mark: crate::hand_order::MEET_MARK.to_string(),
+            color: crate::hand_order::MEET_MARK_COLOR.to_string(),
+        });
+    }
     view
 }
 
@@ -1519,10 +1527,7 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         // R961: public on both seats, and absent until it first rises (D14).
         jade: side.jade.filter(|value| *value > 0),
         // R3548000: public on both seats, and absent at none, as Jade is.
-        tipsy: side
-            .tipsy
-            .map(|counter| counter.count)
-            .filter(|count| *count > 0),
+        tipsy: side.tipsy.map(|counter| counter.count).filter(|count| *count > 0),
         // R3548004: public on both seats, while a card giving it acts on this seat's field.
         infinite_mana: crate::mana::has_infinite_mana(state, player).then_some(true),
         // R1840005: public on both seats, and absent until first gained.

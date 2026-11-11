@@ -24,8 +24,8 @@ use crate::state::{
 };
 use crate::subsystems::lethal::{falls_to_first_strike, is_lethal, projected_damage};
 use crate::wire::{
-    ActionBody, AttackHealth, CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, ZoneName,
-    has_keyword, opponent_of,
+    ActionBody, AttackHealth, CardType, GameEvent, KeywordKind, PLAYER_IDS, PlayerId, Row, Tag, Zone,
+    ZoneName, has_keyword, opponent_of,
 };
 use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of, stands_in_backrow};
 
@@ -153,6 +153,59 @@ pub fn resources_in_hand_of(state: &GameState, player: PlayerId) -> Vec<CardInst
         .filter(|card| crate::resources::is_resource_card(state, card))
         .cloned()
         .collect()
+}
+
+/// R3558000: which end of a hand an added card takes — the left end, or the right end every other
+/// arrival takes (§3). The player's own choice never moves a card: no player reorders a hand.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub enum HandSide {
+    Left,
+    #[default]
+    Right,
+}
+
+/// R3558000: where `id` sits in a hand — its owner and its index — or `None` when it is in no hand.
+/// Index 0 is the leftmost card (§3).
+pub fn hand_index(state: &GameState, id: &str) -> Option<(PlayerId, usize)> {
+    for player in PLAYER_IDS {
+        if let Some(at) = state.players[player].hand.iter().position(|card| card.id == id) {
+            return Some((player, at));
+        }
+    }
+    None
+}
+
+/// R3558000: the leftmost card of `player`'s hand (index 0), or `None` for an empty hand.
+pub fn hand_leftmost(state: &GameState, player: PlayerId) -> Option<&CardInstance> {
+    state.players[player].hand.first()
+}
+
+/// R3558000: the rightmost card of `player`'s hand, or `None` for an empty hand.
+pub fn hand_rightmost(state: &GameState, player: PlayerId) -> Option<&CardInstance> {
+    state.players[player].hand.last()
+}
+
+/// R3558000: the card beside `id` in its hand, on `side` of it, or `None` when `id` is in no hand
+/// or has no neighbour there.
+pub fn hand_neighbor<'a>(state: &'a GameState, id: &str, side: HandSide) -> Option<&'a CardInstance> {
+    let (player, at) = hand_index(state, id)?;
+    let hand = &state.players[player].hand;
+    match side {
+        HandSide::Left => at.checked_sub(1).and_then(|left| hand.get(left)),
+        HandSide::Right => hand.get(at + 1),
+    }
+}
+
+/// R3558000: whether `id` is the leftmost card of its hand.
+pub fn is_leftmost_in_hand(state: &GameState, id: &str) -> bool {
+    hand_index(state, id).is_some_and(|(_, at)| at == 0)
+}
+
+/// R3558000: whether `id` is the rightmost card of its hand.
+pub fn is_rightmost_in_hand(state: &GameState, id: &str) -> bool {
+    hand_index(state, id).is_some_and(|(player, at)| at + 1 == state.players[player].hand.len())
 }
 
 /// R1881007: whether a card of one of these definitions is mid-resolution (§10.5's `resolving`) for this

@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::config::{CAST_ON_DRAW_ACTION_CAP, CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, SETUP_TURN};
+use crate::query::HandSide;
 use crate::script::{DrawLimit, DrawLimitPlayer, EngineSink, HookArgs};
 use crate::state::{CardInstance, DrawCount, GameState, Resume, WorkItem, find_instance_mut, new_instance};
 use crate::wire::{
@@ -83,6 +84,16 @@ pub enum AddToHandOutcome {
 /// card that reaches a hand comes through here, so a caller reads where it went from the outcome
 /// rather than testing the hand again.
 pub fn add_to_hand(sink: &mut EngineSink, instance: &mut CardInstance) -> AddToHandOutcome {
+    add_to_hand_at(sink, instance, None)
+}
+
+/// R3558000: `add_to_hand` at the named end of the hand — the left end, or the right end every other
+/// arrival takes (§3). Absent is the right end.
+pub fn add_to_hand_at(
+    sink: &mut EngineSink,
+    instance: &mut CardInstance,
+    at: Option<HandSide>,
+) -> AddToHandOutcome {
     let full = crate::query::room_in(sink.state, instance.owner, crate::zones::OffFieldZone::Hand) == 0;
     if full {
         let landed = crate::zones::move_to_zone(
@@ -104,7 +115,10 @@ pub fn add_to_hand(sink: &mut EngineSink, instance: &mut CardInstance) -> AddToH
         sink.state,
         instance,
         crate::zones::OffFieldZone::Hand,
-        Default::default(),
+        crate::zones::MoveToZoneOptions {
+            hand_left: (at == Some(HandSide::Left)).then_some(true),
+            ..Default::default()
+        },
     );
     sink.events.push(GameEvent::AddedToHand {
         player: instance.owner,
