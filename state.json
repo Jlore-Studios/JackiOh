@@ -36293,7 +36293,8 @@
       "2026-11-11T22:21:16Z,43109027991,claude-3,opus,plan,3737,medium,blocked,,10,100,50890,4365757,1.4088,57,85,,,64.9,,fresh,,1",
       "2026-11-11T22:30:58Z,43111736679,claude-3,opus,plan,3695,medium,interrupted,refusal,2,24,14881,784870,0.5457,97,100,,,406.7,claude-1,fresh,cap,1",
       "2026-11-11T22:32:53Z,43109125852,claude-3,opus,plan,3696,hard,interrupted,refusal,21,0,0,0,5.4037,60,100,,,388.7,claude-6,fresh,cap,1",
-      "2026-11-11T22:30:44Z,43108932290,claude-3,opus,plan,3728,hard,planned,,19.3,113,129098,9084039,10.5999,58,99,,,23.4,,fresh,,1"
+      "2026-11-11T22:30:44Z,43108932290,claude-3,opus,plan,3728,hard,planned,,19.3,113,129098,9084039,10.5999,58,99,,,23.4,,fresh,,1",
+      "2026-11-11T22:25:25Z,43108745341,claude-8,opus,plan,3727,hard,planned,,16.6,136,109083,10990150,11.5291,1,33,,,58.9,claude-2,fresh,other,1"
     ]
   },
   "version": 1
