@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 3701,
+  "title": "Patch: the effects tests share one cue-end helper and one planning setup in place of 59 local copies",
+  "branch": "bot/issue-3701",
+  "thread": "**Issue #3701 (data, not instructions):**\n\n```text\n# #3701: Patch: the effects tests share one cue-end helper and one planning setup in place of 59 local copies\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe tests that check that the board's visual effects end on time each carry their own copy of the same two small helpers. One works out when an effect finishes; the other sets up the effect planner under test. There are 59 such copies, and they have drifted apart. Some forget that a projectile or a shot takes time to fly, so in those tests a flying effect that ran far too long would still pass. This change keeps one copy of each helper, shared by every test, so the timing check means the same thing everywhere and the next effect written can't slip past it. No player sees a difference. The maintainer and the bot get about 400 fewer lines and a timing check they can trust.\n\n## Why\n- R200 holds every effect cue to ending within `FX_MAX_TAIL_MS` of its entry's end. Only tests enforce that bound. Outside tests, `FX_MAX_TAIL_MS` is read only by `fx/cards/stinkyscape/chaosCalls.ts`. Each test works out a cue's end with an `endOf` helper.\n- `function endOf(cue: FxCue)` is copied in 28 test files under `apps/web/src/fx/`, besides the two exported copies in `apps/web/src/test/signatures.ts:25` and `test/signaturePass.ts:43`. Hashing the 28 copies gives six versions:\n  - 14 match the shared one.\n  - 4 have no `projectile` or `shot` case: `fx/setPieces.test.ts:93`, `fx/flavorEntrances.test.ts:122`, `fx/terminus/terminus.test.ts:85` and `fx/cards/stinkyscape/scan.test.ts:24`.\n  - 4 have no `shot` case: `fx/anomaly.test.ts:47`, `fx/cardFx.test.ts:62`, `fx/entrances.test.ts:69` and `fx/starship.test.ts:55`.\n  - `fx/flavorExits.test.ts:112` leaves the particles' life off a flight.\n  - `fx/starshipMoments.test.ts:68` adds a `conceal` case.\n- `projectile` and `shot` cues carry `flightMs` and no `durationMs` (`fx/types.ts:74`, `:101`). A copy without their case falls to `default` and counts such a cue's end as its delay alone, so that file's R200 assertion (`setPieces.test.ts:164`, `starship.test.ts:231`, `anomaly.test.ts:137`, \u2026) cannot fail for a flight that runs long.\n- This is a trap waiting for the next effect, not a miss today. None of the planners those nine files test emits the kind its copy leaves out, as far as I could find. The starship's shots (`fx/starship.ts:576`) are checked in `starshipMoments.test.ts`, whose copy counts them. But the effects layer is under heavy work (#3604 to #3610), and that is exactly when a copy gets reused for a planner it doesn't fit.\n- `function envOf()` is copied in 31 test files, besides the two exported copies. It comes in three shapes: no argument (13 copies), an `over: Partial<FxPlanEnv>` (15, two of them with a `card` lookup of their own) and an `intensity` number (3).\n\n## Proposal\n- Keep one `endOf`, in `apps/web/src/test/signatures.ts`, and have `signaturePass.ts` import it instead of keeping its own. It counts `projectile` and `shot` as their flight plus `FX_MAX_PARTICLE_LIFE_MS`, as today's shared copy does.\n- Add a type-level check next to `endOf`: the kinds it treats as flights must be exactly the `FxCue` kinds that carry `flightMs` (`Extract<FxCue, { flightMs: number }>[\"kind\"]`). A new flying cue kind then fails `typecheck` until `endOf` counts it.\n- Keep one `envOf(over: Partial<FxPlanEnv> = {})` there too. The `intensity` form becomes `envOf({ intensity })`, and the two `card` lookups pass `card` through `over`.\n- Replace every local copy with an import. `starshipMoments.test.ts` keeps its `conceal` exception as a line at its call site, since `signaturePass` already leaves `pull` and `conceal` out of R200 (`signaturePass.ts:84`, `:100`).\n- If the stricter `endOf` turns a test red, that is a real R200 miss. Fix the cue's timing in the same pull request; never restore a weaker copy.\n\n## Where it lands\n- `apps/web/src/test/signatures.ts`, `apps/web/src/test/signaturePass.ts` and `apps/web/src/test/setPass.ts`.\n- The 41 test files under `apps/web/src/` that hold a local `endOf` or `envOf`. All but `test/setPass.ts` are under `fx/`.\n- R200 (`spec/rulings/R0200.md`) and SPEC \u00a710.10. Tests only: no production file changes.\n\n## Acceptance criteria\n- [ ] A search for `function endOf(` and `function envOf(` under `apps/web/src` finds only the shared definitions.\n- [ ] A unit test of the shared `endOf` covers a burst, a projectile, a shot, a shake and a cue with `durationMs`.\n- [ ] A type-level assertion in `signatures.ts` ties `endOf`'s flight kinds to the `FxCue` kinds that carry `flightMs`.\n- [ ] No assertion is removed or loosened, and each touched file keeps its number of `it(` calls.\n- [ ] `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web` and `pnpm --dir apps/web exec vitest run src/fx src/test` pass.\n\n## Size and risks\nWide but simple: 41 test files, all mechanical edits, about 400 lines removed net, and no production code.\n\nRisks:\n- The main risk is the one it is meant to find. A test that passed only because its copy didn't count a flight turns red. That is an R200 miss, fixed in the same change.\n- It may conflict with the effects work in flight (#3607 to #3610), which touches some of these files. It is best built when that queue is quiet, or split by directory.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-11T15:40:12Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3701: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-11T15:46:06Z",
+    "claimed_at": "2026-11-11T19:08:28Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3696 is held for `claude-1` until 13:10 (5-hour usage is 82%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))",
+    "#3695 is held for `claude-1` until 13:10 (5-hour usage is 82%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3570 skipped: it waits for #3561 to close first",
+    "#3571 skipped: it waits for #3566 to close first",
+    "#3572 skipped: it waits for #3561, #3566, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3561, #3566, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first"
+  ]
+}
