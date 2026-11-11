@@ -353,4 +353,15 @@ mod tests {
             None
         );
     }
+
+    /// R1339000: a draw lands on the first tier whose running sum of weights passes it, so a draw at a tier's
+    /// edge is the next tier's, and one at the last edge the fallback's.
+    #[test]
+    fn r1339000_a_draw_at_a_tiers_edge_lands_on_the_next_tier() {
+        let set = [(Mythic, 10), (Legendary, 30)];
+        assert_eq!(roll_tier(&set, Common, None, 9), Some(Mythic));
+        assert_eq!(roll_tier(&set, Common, None, 10), Some(Legendary));
+        assert_eq!(roll_tier(&set, Common, None, 39), Some(Legendary));
+        assert_eq!(roll_tier(&set, Common, None, 40), Some(Common));
+    }
 }

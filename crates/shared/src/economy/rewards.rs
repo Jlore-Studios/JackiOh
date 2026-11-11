@@ -1340,4 +1340,50 @@ mod tests {
         let reached: Vec<i64> = gain.levels.iter().map(|reached| reached.level).collect();
         assert_eq!(reached, (start_level + 1..=after_quest).collect::<Vec<_>>());
     }
+
+    /// R1304001: a game moves a held quest by what it did but never past its target, and a held quest the
+    /// game did not move writes no row.
+    #[test]
+    fn r1304001_a_quest_moves_no_further_than_its_target_and_one_not_moved_writes_nothing() {
+        let attacks = pool()
+            .iter()
+            .find(|quest| quest.goal == QuestGoal::AttackWithUnits && quest.target > 1)
+            .expect("an attacks quest");
+        let wins = pool()
+            .iter()
+            .find(|quest| quest.goal == QuestGoal::WinGames)
+            .expect("a wins quest");
+        let held = |def: &QuestDef, progress: i64| HeldQuest {
+            quest_id: def.id.clone(),
+            progress,
+            arrived_at: AT - 1,
+        };
+        let book = QuestBook {
+            held: vec![held(attacks, attacks.target - 1), held(wins, 0)],
+            next_due_at: Some(AT + 1000 * quest_interval_ms()),
+        };
+        let mut lost = summary(GameMode::Ladder, Some(false), 0);
+        lost.tally.attacks = attacks.target + 5;
+        let paid = pay_game(&records(0, Vec::new(), book), &lost, "s");
+        let rows: Vec<(&str, QuestChange, i64)> = paid
+            .grants
+            .iter()
+            .filter_map(|grant| match grant {
+                LedgerGrant::Quest {
+                    quest_id,
+                    change,
+                    progress,
+                    ..
+                } => Some((quest_id.as_str(), *change, *progress)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            rows,
+            [
+                (attacks.id.as_str(), QuestChange::Progressed, 1),
+                (attacks.id.as_str(), QuestChange::Completed, 0)
+            ]
+        );
+    }
 }

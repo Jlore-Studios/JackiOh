@@ -1647,4 +1647,75 @@ mod tests {
         }
         assert!(animated > 0);
     }
+
+    /// §14, R1420: a pack's pool is the catalog's cards of the sets that ship, never a token, in catalog
+    /// order.
+    #[test]
+    fn r1420_a_packs_pool_is_the_shipped_sets_cards_and_never_a_token() {
+        jackioh_cards::register_all();
+        let defs: &CardDefs = &jackioh_cards::CATALOG;
+        assert!(
+            defs.values().any(|def| def.is_token() && set_ships(def.set)),
+            "PREMISE: a shipped set has a token"
+        );
+        let shipped: Vec<&str> = defs
+            .iter()
+            .filter(|(_, def)| !def.is_token() && set_ships(def.set))
+            .map(|(id, _)| id.as_str())
+            .collect();
+        let pool = pack_pool(defs, PackKind::Global);
+        let ids: Vec<&str> = pool.iter().map(|card| card.id.as_str()).collect();
+        assert_eq!(ids, shipped);
+    }
+
+    /// R3015003: a duplicate's skip draw is one integer below TIER_WEIGHT_TOTAL, and it pulls a level out of
+    /// order below LEVEL_SKIP_WEIGHT, never at it. A Mythic duplicate with only the signed level open, past its
+    /// next, pulls it on a first draw one under the weight; on a first draw of the weight it finds nothing in
+    /// order and is spent.
+    #[test]
+    fn r3015003_a_duplicate_skips_below_the_skip_weight_and_not_at_it() {
+        use crate::cosmetics::LevelAdds;
+        use crate::economy::test_support::level;
+        let signed = "version-a-signed";
+        let droppable = [
+            level("version-a", "a", 1, LevelAdds::Art, CosmeticRarity::Rare),
+            level(
+                "version-a-full-art",
+                "a",
+                2,
+                LevelAdds::FullArt,
+                CosmeticRarity::Epic,
+            ),
+            level(
+                "version-a-animated",
+                "a",
+                3,
+                LevelAdds::Animated,
+                CosmeticRarity::Legendary,
+            ),
+            level(signed, "a", 4, LevelAdds::Signed, CosmeticRarity::Mythic),
+        ];
+        let drawing = |wanted: u32| {
+            (0..100_000)
+                .find(|seed| tier_draw(&mut Rng::new("r3015003-duplicate", *seed)) == wanted)
+                .unwrap_or_else(|| panic!("no seed draws {wanted} first"))
+        };
+        let grant = |seed: u32| {
+            let mut rng = Rng::new("r3015003-duplicate", seed);
+            duplicate_grant("core-022", CosmeticRarity::Mythic, &droppable, &[], &mut rng)
+        };
+        assert!(
+            matches!(
+                grant(drawing(LEVEL_SKIP_WEIGHT - 1)),
+                SlotGrant::Cosmetic { ref cosmetic_id, .. } if cosmetic_id == signed
+            ),
+            "one under the weight pulls the signed level"
+        );
+        assert_eq!(
+            grant(drawing(LEVEL_SKIP_WEIGHT)),
+            SlotGrant::Bars {
+                cosmetic_rarity: CosmeticRarity::Mythic
+            }
+        );
+    }
 }
