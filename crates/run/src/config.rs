@@ -309,3 +309,8 @@ pub const WALK_TURNS_MAX: i32 = 12;
 /// Tests only: the seeds `map_tests` deals a map from on each content (R3583000, R3583001).
 #[cfg(test)]
 pub const MAP_SEEDS: usize = 200;
+/// Tests only: the seeds whose maps `map_tests` pins by checksum: the deal's rarer branches (a route's
+/// spread within the bounds, a row of one kind alone) come up once in some hundreds of seeds, so it deals
+/// 3,000 rather than `MAP_SEEDS`.
+#[cfg(test)]
+pub const MAP_PIN_SEEDS: usize = 3000;

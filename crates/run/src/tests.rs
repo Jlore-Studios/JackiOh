@@ -745,6 +745,25 @@ fn r3584001_an_event_refused_below_one_max_hp_leaves_the_state_unchanged() {
     assert_eq!(state, before, "a refused option leaves the state unchanged");
 }
 
+/// R3584001: the floor is max HP 1, not 2: an option that leaves exactly 1 is taken, one that would leave 0 is
+/// refused.
+#[test]
+fn an_event_option_may_leave_exactly_one_max_hp() {
+    let content = content();
+    let mut state = start(&content);
+    // The stranger's second option costs 5 max HP: from a max of 6 it leaves 1.
+    state.max_hp_bonus = 6 - RUN_MAX_HP;
+    state.hp = 6;
+    assert_eq!(run_max_hp(&state, &content), 6);
+    state.phase = RunPhase::Event {
+        id: "temp-event-stranger".into(),
+    };
+    let state = act(&state, &content, RunAction::Choose { index: 1 });
+    assert_eq!(run_max_hp(&state, &content), 1);
+    assert_eq!(state.hp, 1);
+    assert_eq!(state.phase, RunPhase::Map);
+}
+
 #[test]
 fn a_shop_refuses_what_the_run_cannot_pay() {
     let content = content();
