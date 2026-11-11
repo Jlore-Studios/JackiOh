@@ -1,0 +1,73 @@
+{
+  "action": "plan",
+  "number": 3558,
+  "title": "Patch: Stinkyscape+ E8, hand, deck and fuse verbs",
+  "branch": "bot/issue-3558",
+  "thread": "**Issue #3558 (data, not instructions):**\n\n````text\n# #3558: Patch: Stinkyscape+ E8, hand, deck and fuse verbs\nOpened by @squishy-squooby.\n\nPart of fullsend 1 of the Stinkyscape+ set (#3534, tracker #3533). It builds the set's **hand, deck and fuse verbs**: positions in the hand, a merged fused Spell, fusing until a cost, a card that fuses from the hand at End of Turn, a card that starts at the bottom of the deck and casts itself from there, and casting a card several times.\n\nThe plan: [`docs/stinkyscape-plus-set.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/docs/stinkyscape-plus-set.md) (SP2, SP3, SP8, SP10); the designer's list: [`JackiOh_StinkyscapePlus_Cards.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/JackiOh_StinkyscapePlus_Cards.md). Both are on the planning branch `claude/laughing-wright-eaibe9` until the foundation (#3535) brings them onto this fullsend's branch. Where they disagree with SPEC, SPEC wins (CLAUDE.md). `{For AI: \u2026}` notes in the designer's text are the designer's notes to you, the builder, not to the game's AI (SP5).\n\n## The designer's words (the cards that need these verbs)\n\n```text\n**(0) Sweet Essense, Spell, Epic, Jellybean, Stinkyscape+, #69.1**\nIf this is the left most card in your hand, the card to the right of this is **Radiant**\n~~~\nIf this is the left most card in your hand, the card to the right of this is **Radiant** and costs (1) less\nThe card to the left of this costs (1) less\n\n**(2) Doomed Ship, Spell, Legendary, Stinkyscape+, #98**\nAdd a **Kwzki** and **Shockwave447**, **Shadiris** and **xxFreshJack**, or **Tylannt** and **Siva 1** to the left and right most cards of your hand. When they meet both become Radiant.\n~~~\nAdd a **Kwzki** and **Shockwave447**, **Shadiris** and **xxFreshJack**, or **Tylannt** and **Siva 1** to the left and right most cards of your hand. When they meet both become Radiant and cost (0).\n\n**(3) Smoothie, Spell, Rare, Fruit, Stinkyscape+, #17**\nThere is X & Y inside the smoothie *{when added to your hand there select two random fruits to be added to the smoothie, their targets are merged together but essentially works like a fused card}*\n~~~\nThere is **Radiant** X & **Radiant** Y inside the smoothie\n\n**(2) Dingleberry Droat, Unit, Acclaimed, Human, Legendary, Stinkyscape+, #5**\n2/1\n**Cry: Fuse** Fruits together until you make one that costs at least (5). Add it to your hand. It costs (2).\n~~~\n4/2\n**Cry: Fuse** Radiant Fruits together until you make one that costs at least (5). Add it to your hand. It costs (2).\n\n**(1) Fine Fermented Grape, Spell, Fruit, Token, Epic, Stinkyscape+, #6.1**\n**Tipsy 2**\n**End of Turn**: Fuse a different Grape into this.\n~~~\n**Tipsy 2**\n**End of Turn**: Fuse a different Radiant Grape into this.\n\n**(2) Animosity, Spell, Terminus, Mythic, Stinkyscape+, #89**\n**Always starts on the bottom of your deck** *{if multiple cards have this order is random}*\nWhen your exile has 5 cards cast this *{wherever in your deck this is}*\nAdd a random **Terminus** card to your hand.\n~~~\n**Always starts on the bottom of your deck** *{if multiple cards have this order is random}*\nWhen your exile has 5 cards cast this *{wherever in your deck this is}*\nAdd a random **Radiant Terminus** card to your hand.\n\n**(3) Shadiris, Unit, Epic, Stinkyscape+, #102**\n3/13\n**Cry:** Cast **Shadiris Visions** twice & add three random **Stinkscape Resources** to your hand.\n~~~\n6/26\n**Cry:** Cast **Radiant Shadiris Visions** twice & add three random **Radiant Stinkscape Resources** to your hand.\n```\n\n## The build (defaults from SP3; change one only with a ruling note)\n\n- **Hand position**: the leftmost card, the rightmost card, the card to the right or left of this (#69.1 Sweet Essence), and adding a card at either end of the hand (#98 Doomed Ship). \"When they meet\" (Doomed Ship) means the moment the two cards become adjacent in the hand. The hand's order is already state, and the player may not reorder it.\n- **A merged fused Spell** (#17 Smoothie, #18 Large Smoothie): \"when added to your hand, select two (three) random fruits to be added to the smoothie, their targets are merged together but essentially works like a fused card\". The Fruit pool is every Fruit Spell of the shipped sets, excluding the Smoothies.\n- **Fuse until a cost** (#5 Dingleberry Droat), and **fusing a different card of a kind into this at End of Turn while it is in hand** (#6.1 Fine Fermented Grape; a Grape is a card whose name holds \"Grape\").\n- **Deck placement** (#89 Animosity), **the owner's call (2026-11-09):** after the opening shuffle, every card with \"Always starts on the bottom of your deck\" goes to the bottom of the deck. When several have it, they are shuffled among themselves there, in random order (from the game's `Rng`), below every other card. \"When your exile has 5 cards cast this (wherever in your deck this is)\" casts it from the deck the moment its owner's exile reaches 5 cards.\n- **Cast repeatedly** (#165 Shadiris: \"Cast Shadiris Visions twice\"): each cast is its own, with its own prompt.\n\n## The cards that will use it\n\nS15 (#5, #6.1, #17, #18, #69.1), S19 (#98 Doomed Ship), S20 (#165 Shadiris), S22 (#89 Animosity).\n\n## Done when\n\n- [ ] Each verb is written into the spec's sections it changes (\u00a72, \u00a73, \u00a76, \u00a710), with ruling notes numbered in this issue's block, tests named after them, and the paragraph in `spec/pending/<this issue>.md` (CLAUDE.md rule 3).\n- [ ] Each is proved on fixture scripts in `crates/engine/tests/rules*` (the `testkit` feature's `scenario()`), with no card yet: the cards come in their own parts. A test proves two bottom-of-deck cards end up below every other card in either order across seeds.\n- [ ] The view (`view_for`) and the wire carry what it shows (`docs/v0.3.0/SURFACE.md` for any boundary it adds; `cargo test \u2026 --features jackioh-engine/ts` rewrites `apps/web/src/wire/`), and the client renders it (a merged Smoothie shows what is inside it).\n- [ ] Every prompt it opens is answered by the AI, the random policy and the timeout. Every number is a named constant in `crates/engine/src/config.rs` (rule 9). The engine stays pure (rule 4).\n- [ ] `cargo test -p jackioh-engine --features testkit`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo jackioh spec check` and `cargo jackioh fuzz --seeds 200` pass.\n- [ ] Nothing changes for players: no shipped card reaches it.\n\nBlocked by #3554\n\nPart of #3534.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-3596",
+  "part_of": 3596,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3558: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T23:49:14Z",
+    "claimed_at": "2026-11-11T10:53:35Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3558 needs a plan",
+    "#3559 needs a plan",
+    "#3560 needs a plan",
+    "#3561 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3565 skipped: it waits for #3560 to close first",
+    "#3566 skipped: it waits for #3558 to close first",
+    "#3567 skipped: it waits for #3558 to close first",
+    "#3568 skipped: it waits for #3558 to close first",
+    "#3569 skipped: it waits for #3558 to close first",
+    "#3570 skipped: it waits for #3560, #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3566 to close first",
+    "#3572 skipped: it waits for #3556, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3556, #3558, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first"
+  ]
+}
