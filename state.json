@@ -12733,6 +12733,7 @@
         "question": "How should #3566 proceed while #3558's engine verbs are not on this branch?",
         "why": "the plan names E8 as a precondition and forbids re-implementing it, so waiting keeps the build exactly on-plan with zero rework"
       },
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
