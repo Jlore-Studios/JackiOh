@@ -15335,11 +15335,10 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
-      "merge_owner": "claude-7",
       "merge_owner_gave_up": {
-        "at": "2026-11-11T07:55:09Z",
+        "at": "2026-11-11T12:13:44Z",
         "provider": "claude-7",
-        "sha": "6d6167cf58b2bc62ce03ca2fc9f5e3a0f5c33d29"
+        "sha": "f52e9a0e435d4dfcb63619524a6a5c305e9c8b24"
       },
       "pending_request": false,
       "provider": "claude-7",
