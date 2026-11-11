@@ -15441,23 +15441,6 @@
       "round_tier": "",
       "run_id": "42950059955",
       "runs_on": "ubuntu-latest",
-      "session": {
-        "action": "build",
-        "artifact": 13803786799,
-        "artifact_bytes": 589353,
-        "artifact_name": "work",
-        "at": "2026-11-10T21:15:21Z",
-        "bytes": 738416,
-        "cwd": "/home/runner/work/_temp/work/item-3549",
-        "ended": "interrupted: `claude-3` reached its usage limit",
-        "head": "80bc7ee35d2ee1db082a1aca4097e6f9bbcadb82",
-        "id": "233d2f57-94be-43c0-abf3-4f2b4ac3f42e",
-        "kind": "build",
-        "model": "sonnet",
-        "project": "-home-runner-work--temp-work-item-3549",
-        "provider": "claude-3",
-        "run": "42894395397"
-      },
       "started_at": "2026-11-11T03:02:31Z",
       "stop_requested": false,
       "strike_log": [
