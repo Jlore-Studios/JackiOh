@@ -23,6 +23,9 @@ pub struct OpenBlackHoleArgs {
     /// The Radiant face pulls only the opponent's permanents, at the start of their turn.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub opponent_only: Option<bool>,
+    /// R3561000: the permanents it closes after (Black Hole's `permanents`); `None`: the engine's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub capacity: Option<i32>,
 }
 
 /// R3554000 (S+ #77 Black Hole): open a Black Hole in the middle lane. A new hole replaces an open
@@ -34,7 +37,10 @@ pub fn open_black_hole(args: OpenBlackHoleArgs) -> Effect {
         } else {
             None
         };
-        ctx.state.black_hole = Some(BlackHole::new(BLACK_HOLE_LANE, pulls));
+        ctx.state.black_hole = Some(BlackHole {
+            capacity: args.capacity,
+            ..BlackHole::new(BLACK_HOLE_LANE, pulls)
+        });
     })
 }
 

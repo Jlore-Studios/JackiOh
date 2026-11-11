@@ -42,9 +42,7 @@ use crate::announce::announced_face_down_to;
 use crate::catalog::{find_def, registered_catalog};
 use crate::combat::{ExertionKind, has_exertion_in, is_asleep, why_cannot_declare_in};
 use crate::condition::condition_active;
-use crate::config::{
-    BLACK_HOLE_CAPACITY, DRAW_OFFER_BLOCK_TURNS, PROMPT_CARD_OPTION_LIMIT, VIEW_EVENT_LIMIT,
-};
+use crate::config::{DRAW_OFFER_BLOCK_TURNS, PROMPT_CARD_OPTION_LIMIT, VIEW_EVENT_LIMIT};
 use crate::cost_rules::{cost_rule_text, enchant_next_spell_label};
 use crate::counter_warning::countered_hand_cards;
 use crate::damage::hero_armor_of;
@@ -2918,7 +2916,7 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
         black_hole: state
             .black_hole
             .as_ref()
-            .map(|hole| BlackHoleView::of(hole, BLACK_HOLE_CAPACITY)),
+            .map(|hole| BlackHoleView::of(hole, hole.closes_at())),
         slashed_lane: state.slashed_lane,
     };
     let defs = match_defs_in(state, &view);

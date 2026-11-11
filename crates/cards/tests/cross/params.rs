@@ -635,6 +635,8 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-153", ENGINE),
         ("stinkyscape-166", ENGINE),
         ("stinkyscape-167", ENGINE),
+        // R3554002: S+ #78's slash lanes 2, 3 and 4, the engine's SLASH_LANES.
+        ("stinkyscapeplus-078", ENGINE),
         ("core-024", FORMULA),
         ("core-031", FORMULA),
         ("core-070", FORMULA),

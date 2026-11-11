@@ -2234,6 +2234,11 @@ fn cast_half_chosen(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     if sink.state.slashed_lane.is_none() {
         return true;
     }
+    // R3561001: a Spell's half is settled as its resolution begins, so a board its own Cry slashes
+    // (S+ #78's Radiant face, which comes back here after its lane pick) asks none.
+    if run.resolve_at > 0 {
+        return true;
+    }
     let Some(card) = still_resolving(sink.state, run) else {
         return true;
     };

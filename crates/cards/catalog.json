@@ -32195,7 +32195,7 @@
     "flavor": "Dark",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Open a Black Hole in midlane. At the start of each player's turn, it draws their permanents one lane closer. It closes after swallowing {permanents} permanents."
@@ -32232,44 +32232,15 @@
     "flavor": "Dark",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Slash the board into two."
     },
     "radiant": {
       "keywords": [],
-      "text": "Slash the board into two. You have control over the slash: lane {or}, {or2} or {value}."
-    },
-    "params": [
-      {
-        "key": "or",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      },
-      {
-        "key": "or2",
-        "base": 3,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      },
-      {
-        "key": "value",
-        "base": 4,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ]
+      "text": "Slash the board into two. You have control over the slash: lane 2, 3 or 4."
+    }
   },
   "stinkyscapeplus-079": {
     "id": "stinkyscapeplus-079",
