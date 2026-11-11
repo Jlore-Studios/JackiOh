@@ -71,6 +71,8 @@ A co-op game ends at the first of these, judged after each step. The round's clo
 | The hard match ceiling ([[§9.5]]), `MATCH_CEILING_MS` after the match was made ([[R1047000]]) | Draw (`ceiling`) |
 | A Glitch voiding a duel ([[R679]]) | Draw (`voided`, [[R1168002]]) |
 
+The result panel names the duel behind a `duelResult` ending: the seat's own board when its duel has ended, else its teammate's, with the reason in the 1v1 result's words for that seat ([[R850]], [[R1843000]], [[R1843001]], [[R1843002]]); with neither duel ended it says only that a duel decided the game.
+
 A disconnect never ends a co-op game ([[§13.8]]).
 
 ### 13.5 Passing
