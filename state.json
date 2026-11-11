@@ -12765,7 +12765,7 @@
         "reason": "the builder needs a person to decide something",
         "trail": "- <!-- bot: {\"status\": \"blocked\", \"problem\": \"This issue builds on E8 (#3558): the Smoothies, Dingleberry Droat, Fine Fermented Grape and Sweet Essence all need E8's engine verbs (fuse-until-a-cost, unfused-only picks, name-filtered pools, hand auras). The plan's precondition grep for until_cost, unf\u2026\n- No code changed. Verification I ran:\n- - `grep -rn \"until_cost\\|unfused_only\\|name_contains\\|fn hand_aura_hook\" crates/engine/src` on this branch: no hits (only unrelated `cloak_hand_aura` / `tradable_hand_aura`).\n- - `git grep` of the same pattern on `origin/bot/issue-3558` confirms all four names exist there (`name_contains` in `catalog.rs`, `unfused_only` / `until_cost` in `effects/fuse.rs`, `hand_aura_hook` in `script.rs`).\n- The stubs for all twelve cards are in place, and `.bot-notes.md` records this state for the next run.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-3566 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-3566/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "interruptions": 0,
+      "interruptions": 1,
       "kind": "build",
       "last_findings": [],
       "live": "building",
