@@ -1,8 +1,9 @@
 // Package dashboard is bot/harness/dashboard.py.
 //
 // The pinned status issue (#148): one issue, pinned to the top of the issue list, that the
-// `bot-status` loop rewrites every five minutes with what the night bot is doing and what it has
-// done.
+// `bot-status` loop rewrites every two minutes with what the night bot is doing and what it has
+// done, on a clock of its own: the sweep, its deliveries, the statistics count and the runner gate
+// each run on a goroutine of their own (#3675), so none of them holds the issue up.
 //
 // It opens with its date, then a bar chart of how far the owner's PC's two local jobs have played (the
 // learn lane's export of `LEARN_GAMES` with its shard, and gather's games of its patch, from the PC's
@@ -17,7 +18,7 @@
 // waits for (`waiting.py`, the planner's own rules on the lanes held now: never "free" for a
 // subscription the planner would give no work, never "starts next" for an item it would not start);
 // each subscription's usage as bars and charts against its caps; the last runs; the statistics
-// (`stats.py`: the last six hours, day, week and all time, counted every 30 minutes and kept in the
+// (`stats.py`: the last six hours, day, week and all time, counted every 10 minutes and kept in the
 // issue between counts, with which set's cards win most, `cardsets.py`, read from production once a
 // day); and the full status text folded underneath (left out first when the issue would
 // pass GitHub's limit, `fit`: `/harness status` gives it). Times are clock times, which
@@ -31,7 +32,7 @@
 // the step it is on and what it is for, and the jobs queued for one, as boxes the way the
 // subscriptions are drawn and as a table, each folding away. The owner's PC's group carries its load
 // and the gather workflow, from a heartbeat its supervisor writes to a gist (`read_runners`). Between
-// rewrites the loop redraws that section and the progress chart alone every two minutes
+// rewrites the loop redraws that section and the progress chart alone every minute
 // (`refresh_runners`). What each runner
 // and each workflow is for changes only with the pool or the workflows, so it is a comment on the issue
 // (`explain`), which the section links.
@@ -78,9 +79,9 @@ var Marker = "<!-- jackioh-bot:dashboard -->"
 // queue path off it; `update` puts any it lacks on the issue it finds.
 var Labels = []string{"night bot", config.LabelTracking}
 
-// EveryMinutes is how often the `bot-status` loop rewrites the issue (`EVERY_SECONDS` in
-// bot-status.yml).
-var EveryMinutes = 5
+// EveryMinutes is how often the `bot-status` loop rewrites the issue (`REWRITE_EVERY_SECONDS` in
+// bot-status.yml, #3675; its sweep keeps `EVERY_SECONDS`, on a goroutine of its own).
+var EveryMinutes = 2
 
 // MaxBody is MAX_BODY: GitHub refuses an issue body over 65,536 characters; the issue keeps under
 // this (`fit`). A variable the tests replace.

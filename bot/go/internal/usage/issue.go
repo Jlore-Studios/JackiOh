@@ -11,7 +11,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/stats"
 )
 
 // The usage issue (#2749, section 2): **Night bot usage**, which the status loop draws from the
@@ -160,11 +159,11 @@ func Render(ctx *hctx.Context, f *Facts, detail Detail, cut int) string {
 	cfg := ctx.Cfg
 	lines := []string{"**Last drawn at " + dashboard.Local(ctx, f.Now).Format("2006-01-02 15:04 MST") + "**", "",
 		"# 📈 " + IssueTitle, "",
-		note(fmt.Sprintf("`bot-status` draws this issue every %d minutes, with the statistics, from the CSV files on "+
+		note(fmt.Sprintf("`bot-status` draws this issue every %d minutes from the CSV files on "+
 			"[`%s`](%s/%s/tree/%s/%s) ([the usage issue](%s-issue)): how each subscription's limits in "+
 			"`.harness/providers.json` work out over time, and what they suggest. Hours are the bot's time zone's "+
 			"(%s). Nothing here changes a limit: a person edits providers.json. #148, the status issue, has "+
-			"the usage now.", int(stats.StatsEvery.Minutes()), branchName(), cfg.ServerURL, cfg.Repo, branchName(), Dir,
+			"the usage now.", int(FlushEvery.Minutes()), branchName(), cfg.ServerURL, cfg.Repo, branchName(), Dir,
 			d.readme(), cfg.Timezone)), ""}
 	if i := slices.IndexFunc(Shrinks, func(x Detail) bool { return x.Name == detail.Name }); i > 0 {
 		var steps []string

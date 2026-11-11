@@ -27,7 +27,7 @@ import (
 
 // RunnersMinutes is RUNNERS_MINUTES: how often the `bot-status` loop redraws the runners section
 // alone, between its rewrites (`RUNNERS_EVERY_SECONDS` in bot-status.yml, `refresh_runners`).
-var RunnersMinutes = 2
+var RunnersMinutes = 1
 
 // RunnersStart and RunnersEnd are RUNNERS_START and RUNNERS_END.
 var (
@@ -1340,8 +1340,8 @@ func RunnersSection(ctx *hctx.Context, state *pyjson.Object, found *Found /* = N
 	head = append(head, fmt.Sprintf("🟢 **%d %s busy**: ", len(busy), runnersWord)+
 		strings.Join(counts, ", ")+fmt.Sprintf(" · ⏳ **%d ", len(queued))+jobsWord+
 		" queued** for a runner · read at "+read,
-		"", fmt.Sprintf("<sub>Redrawn every %d minutes from the runs going and queued, "+
-			"their jobs and the owner's PC's heartbeat. %s</sub>", RunnersMinutes, explained), "")
+		"", fmt.Sprintf("<sub>Redrawn every %s from the runs going and queued, "+
+			"their jobs and the owner's PC's heartbeat. %s</sub>", minutes(RunnersMinutes), explained), "")
 	items := nightItems(state)
 	var rows []string
 	for _, pair := range upTo(busy, RunnerRows) {
@@ -1493,6 +1493,9 @@ func redrawRunners(ctx *hctx.Context, read func(*Found)) string {
 	fresh := body[:start] + RunnersSection(ctx, state, found, MaxBody-rest) + body[end+len(RunnersEnd):]
 	if py.Len(fresh) > MaxBody {
 		return "#" + py.Str(number) + " would pass GitHub's limit: the next rewrite makes room"
+	}
+	if fresh == py.OrStr(issue.Get("body"), "") {
+		return "#" + py.Str(number) + "'s runners are as they were, so they were not redrawn" // #3675
 	}
 	ctx.GH.UpdateIssue(py.MustInt(number), pyjson.New("body", fresh))
 	return "redrew #" + py.Str(number) + "'s runners"

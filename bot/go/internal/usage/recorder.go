@@ -13,13 +13,13 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/redact"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/stats"
 )
 
 // FlushEvery is how often the loop writes its rows to its clone of the branch, derives what
-// closed, draws the usage issue (`Draw`) and pushes: the statistics count's cadence
-// (`stats.StatsEvery`), so the five-minute tick stays as fast as it was.
-var FlushEvery = stats.StatsEvery
+// closed, draws the usage issue (`Draw`) and pushes: every 30 minutes, the statistics count's
+// cadence until #3675 moved that count to every 10 on a goroutine of its own, so a rewrite stays
+// as fast as it was.
+var FlushEvery = 30 * time.Minute
 
 // PushAttempts is how many times one flush pushes, writing its rows again on the branch's new tip
 // after each push the branch's moving refused.

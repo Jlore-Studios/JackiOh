@@ -1,15 +1,28 @@
-# The pinned "Night bot status" issue (bot/go/internal/dashboard, #148), rewritten every five
-# minutes, with its statistics (bot/go/internal/stats) counted afresh every 30 minutes and kept in
+# The pinned "Night bot status" issue (bot/go/internal/dashboard, #148), rewritten every two
+# minutes, with its statistics (bot/go/internal/stats) counted afresh every 10 minutes and kept in
 # the issue between counts. (They had an issue of their own, #190, until they were folded in.)
+#
+# The loop keeps one clock for each kind of work (#3675), so slow work never holds up the issue.
+# A tick of the sweep (below: the sweep with its planning and deliveries, Squishy's process, the
+# disk issue) runs on a goroutine of its own, five minutes after the last one ended, as before; so
+# does the statistics count, every 10 minutes (a closed pull request is read once a loop), and the
+# runner gate, every 30 seconds. The loop's own thread alone writes the issue: a rewrite every two
+# minutes (`REWRITE_EVERY_SECONDS`), with the newest sections and count, and the runners redrawn
+# every minute between. Each keeps its pace from when it started, and one still going when the
+# next is due skips that one; a body that would not change is not written. While the bot's token
+# has fewer than 1,500 calls left this hour (`cli.RewriteRateFloor`, from the headers GitHub's
+# answers already carry), the rewrites come every five minutes. Run 42803770345 (2026-11-10) had
+# its rewrites 9 to 24 minutes apart, its statistics 38 to 48, and no runners redraw or gate tick
+# for the 4 to 18 minutes each serial tick took.
 #
 # GitHub fires this repository's schedules late and rarely (the ten-minute sweep has gone hours
 # between runs), so a schedule alone cannot keep the issue current. Instead one job loops: it
-# rewrites the issue every five minutes for five and a half hours, inside the six-hour cap, then
+# rewrites the issue every two minutes for five and a half hours, inside the six-hour cap, then
 # starts the next loop itself (a workflow_dispatch from the job's own token does start a run).
-# A tick costs a few dozen GitHub calls (a count of the statistics, a few hundred, comes only
-# every 30 minutes), and the loop's one runner is busy either way, so five minutes costs no
-# more runner time than ten.
-# Between the rewrites the loop redraws the issue's runners section alone every two minutes
+# A tick costs a few dozen GitHub calls (a count of the statistics, a few hundred at a loop's first
+# and a few dozen after, comes every 10 minutes), and the loop's one runner is busy either way, so
+# a shorter pace costs no more runner time.
+# Between the rewrites the loop redraws the issue's runners section alone every minute
 # (`dashboard.RefreshRunners`): what every runner is doing, read from the runs going and queued
 # and their jobs. It costs a few calls and one a run, and a run's jobs read again unchanged cost no
 # rate limit (a conditional request, `gh.Cached`).
@@ -37,12 +50,12 @@
 # delivery pushes the branch and opens or updates the pull request with the bot's.
 # With the config's `usage_history` on (#2749), the loop also records every subscription's usage
 # over time on the `bot-usage` branch (bot/go/internal/usage, bot/README.md "The usage history"):
-# each tick takes its rows from what the rewrite already read (no GitHub call of its own), and
-# every 30 minutes, with the statistics, and once more as the loop ends, it writes them to a clone
+# a rewrite at most every five minutes takes its rows from what it already read (no GitHub call of
+# its own), and every 30 minutes, and once more as the loop ends, it writes them to a clone
 # of the branch in RUNNER_TEMP, derives the sessions and weeks that closed and pushes it with the
 # job's own token (`contents: write`, whose pushes start no workflow). The first time it finds the
 # branch without its backfill marker, it reads bot-journal into it. No model call reads usage.
-# At the same 30-minute flush (never on the five-minute tick) it also rewrites the pinned "Night bot
+# At the same 30-minute flush (never on the two-minute rewrite) it also rewrites the pinned "Night bot
 # usage" issue from that clone (bot/README.md "The usage issue"): its charts and tuning suggestions.
 # Each tick also runs Squishy (#60) in a process of its own (`--companions`): its sweep, with
 # Squishy's token, and its section of the status issue, which sits apart from the night bot's.
@@ -75,7 +88,8 @@ concurrency:
 
 env:
   EVERY_SECONDS: "300"
-  RUNNERS_EVERY_SECONDS: "120"
+  REWRITE_EVERY_SECONDS: "120"
+  RUNNERS_EVERY_SECONDS: "60"
   GATE_EVERY_SECONDS: "30"
   LOOP_SECONDS: "19800"
 
@@ -98,7 +112,7 @@ jobs:
 
       - uses: ./.github/actions/harness
 
-      - name: Sweep and rewrite the status issue every five minutes, its runners every two
+      - name: Sweep every five minutes, and rewrite the status issue every two, its runners every one
         working-directory: bot
         env:
           BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
@@ -124,7 +138,8 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
         run: |
           harness dashboard --sweep --stats --companions --controller \
-            --every "${EVERY_SECONDS}" --runners-every "${RUNNERS_EVERY_SECONDS}" \
+            --every "${EVERY_SECONDS}" --rewrite-every "${REWRITE_EVERY_SECONDS}" \
+            --runners-every "${RUNNERS_EVERY_SECONDS}" \
             --gate-every "${GATE_EVERY_SECONDS}" --for "${LOOP_SECONDS}"
 
       # Not after a cancellation, so a person can stop the loop.

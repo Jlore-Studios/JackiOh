@@ -1,7 +1,7 @@
 // The statistics in the pinned status issue (bot/harness/stats.py, #148): what the bot's
 // comments, pull requests, commits and state file say it has done over the last six hours, the
 // last day, the last week and all time, who planned, built, revised and approved each pull
-// request, and the count every 30 minutes, kept in the issue between counts.
+// request, and the count every 10 minutes, kept in the issue between counts.
 //
 // bot/tests/test_stats.py, ported (#467).
 package tests

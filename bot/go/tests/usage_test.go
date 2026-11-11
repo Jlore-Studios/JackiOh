@@ -563,6 +563,7 @@ func TestUsage_TheStatusLoopRecordsEachRewritesView(t *testing.T) {
 	now := 0.0
 	patch(t, &cli.Monotonic, func() float64 { return now })
 	patch(t, &cli.Sleep, func(s float64) { now += s })
+	patch(t, &cli.Background, inPlace)
 	out, _ := capture(t, &cli.Stdout)
 	assertEqual(t, cli.CmdDashboard(w.cfg, &cli.Args{Every: 300, ForSeconds: 300}), 0)
 	assertTrue(t, dashboard.Looked == nil, "put back when the loop ends")

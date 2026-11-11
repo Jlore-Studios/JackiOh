@@ -171,13 +171,23 @@ func TestSpare_TheStatusIssueOpensWithTheExcessCompute(t *testing.T) {
 	assertIn(t, "> 🟢 **10 lanes spare**: free on subscriptions that may start work now, and nothing "+
 		"queued is for them. **Queue 10 more issues** to fill them: **5 hard or medium**, for "+
 		"`claude-3`, `claude-7`, `claude-1` (a strong model takes either), and **5 medium**, for "+
-		"`muse` (medium models only).", section)
-	assertIn(t, "| Subscription | Runs on | Spare lanes | Takes |\n|---|---|---|---|\n"+
-		"| `claude-3` | GitHub's runners | 2 | 🔴 hard or 🟡 medium |\n"+
-		"| `claude-7` | GitHub's runners | 2 | 🔴 hard or 🟡 medium |\n"+
-		"| `claude-1` | GitHub's runners | 1 | 🔴 hard or 🟡 medium |\n"+
-		"| `muse` | the night box and the Muse box | 5 | 🟡 medium |\n"+
-		"| **All** | | **10** | **5 hard or medium, 5 medium** |", section)
+		"`muse` (medium models only). Why: 📭 nothing is queued.", section)
+	// Every subscription with a lane free, spare or not, and why it is not working (#3675): the
+	// accounts past GitHub's room have none, claude-1's second lane among them, and gpt and agy are
+	// off.
+	assertIn(t, "| Subscription | Runs on | Free | Spare | Takes | Why it isn't working |\n"+
+		"|---|---|---|---|---|---|\n"+
+		"| `claude-3` | GitHub's runners | 2 | 2 | 🔴 hard or 🟡 medium | 📭 nothing queued |\n"+
+		"| `claude-7` | GitHub's runners | 2 | 2 | 🔴 hard or 🟡 medium | 📭 nothing queued |\n"+
+		"| `claude-1` | GitHub's runners | 2 | 1 | 🔴 hard or 🟡 medium | 📭 nothing queued; 🚫 no "+
+		"runner room for its other 1 |\n"+
+		"| `claude-4` | GitHub's runners | 2 | 0 | — | 🚫 no runner room: GitHub's runners have no room "+
+		"for it |\n", section)
+	assertIn(t, "| `muse` | the night box and the Muse box | 5 | 5 | 🟡 medium | 📭 nothing queued |\n"+
+		"| `agy` | the night box | 1 | 0 | — | ⚫ off: switched off |\n", section)
+	assertIn(t, "| **All** | | **20** | **10** | **5 hard or medium, 5 medium** | |", section)
+	assertIn(t, "<sub>Why it isn't working: on a spare lane, how the queued items fall for it: "+
+		"📭 nothing queued (the queue is empty); ✋ on hold", section)
 	assertIn(t, "a runner where it runs has room for it (GitHub's runners have 5 free, the AWS boxes "+
 		"5, once the planner has handed out every queued item it can start)", section)
 	assertIn(t, "(`start_headroom`, 5% under it as `.harness/providers.json` sets it)", section)
@@ -191,9 +201,70 @@ func TestSpare_TheStatusIssueOpensWithTheExcessCompute(t *testing.T) {
 		waiting.Explain(day, day.Store.Load(), pyjson.New(), nil, ""), nil, nil), "\n")
 	assertIn(t, "> ⚪ **No excess compute**: every lane that may start work now has queued work for "+
 		"it, or none may start a build or a plan", section)
-	assertNotIn(t, "| Subscription |", section)
+	// Their lanes are free all the same, and each says why it is not working.
+	assertIn(t, "| `claude-3` | GitHub's runners | 2 | 0 | — | 🌙 outside its hours: opens ", section)
+	assertNotIn(t, "| **All** |", section)
 	// Halted, nothing is spare.
 	section = strings.Join(dashboard.ExcessSection(ctx, ctx.Store.Load(),
 		waiting.Explain(ctx, ctx.Store.Load(), pyjson.New(), nil, "HALT is on main"), nil, nil), "\n")
 	assertIn(t, "> ⚪ **No excess compute**: the bot is halted.", section)
+}
+
+// #3675: a free lane that is not spare says why it may not start, as its subscription's box does:
+// near a cap, backing off after a run that could not work, off, or no runner room where it runs.
+func TestSpare_AFreeLaneThatIsNotSpareSaysWhyItMayNotStart(t *testing.T) {
+	ctx := spareNight(3, 6)
+	flowUpdate(ctx, func(s *pyjson.Object) {
+		s.Obj("providers").Set("claude-5", pyjson.New("usage", pyjson.New("five_hour",
+			pyjson.New("utilization", 0.36, "resets_at", clock.ISO(testsupport.Night.Add(90*time.Minute))))))
+		s.Obj("providers").Set("claude-7", pyjson.New("infra", pyjson.New(
+			"at", clock.ISO(testsupport.Night.Add(-10*time.Minute)), "reason", "401", "streak", 2)))
+	}, "seed")
+	state := ctx.Store.Load()
+	section := strings.Join(dashboard.ExcessSection(ctx, state,
+		waiting.Explain(ctx, state, pyjson.New(), nil, ""), nil, nil), "\n")
+	assertIn(t, "| `claude-5` | GitHub's runners | 1 | 0 | — | 🪫 near a cap: ", section)
+	assertIn(t, "| `claude-7` | GitHub's runners | 2 | 0 | — | ⛔ backing off: tries again ", section)
+	assertIn(t, "| `gpt` | the night box | 1 | 0 | — | ⚫ off: switched off |", section)
+	// GitHub's runners have room for 3: claude-3's two and claude-8's first, in the pool's order.
+	assertIn(t, "| `claude-8` | GitHub's runners | 2 | 1 | 🔴 hard or 🟡 medium | 📭 nothing queued; 🚫 no "+
+		"runner room for its other 1 |", section)
+	assertIn(t, "| `claude-4` | GitHub's runners | 2 | 0 | — | 🚫 no runner room: GitHub's runners have no "+
+		"room for it |", section)
+}
+
+// #3675: a spare lane's subscription counts how the queued items fall for it, each in the first
+// state that fits: held back from the planner, held for the subscription that owns it, starting at
+// the next run, too hard for its best seat, a step it has no role for, or waiting on something
+// else; a strong seat takes the hard item a medium one cannot.
+func TestSpare_ASpareLaneCountsHowTheQueueFallsForIt(t *testing.T) {
+	ctx := spareNight(20, 6, "muse")
+	state := ctx.Store.Load()
+	explained := waiting.Explain(ctx, state, pyjson.New(), nil, "")
+	pool := ctx.Cfg.Pool
+	muse, claude1 := pool.Get("muse"), pool.Get("claude-1")
+	explained.Rows = []*waiting.Row{
+		{Number: 1, Step: "build", Held: true},
+		{Number: 2, Step: "build", Tier: "medium", HeldFor: "claude-3", Able: []string{"muse", "claude-1", "claude-3"}},
+		{Number: 3, Step: "build", Tier: "medium", Starts: &plan.Assignment{Provider: pool.Get("claude-7")}},
+		{Number: 4, Step: "build", Tier: "strong", Able: []string{"claude-1", "claude-3"}},
+		{Number: 5, Step: "nap", Tier: "medium"},
+		{Number: 6, Step: "build", Tier: "medium", Able: []string{"muse", "claude-1", "claude-3"}},
+	}
+	why := map[string]string{}
+	for _, row := range dashboard.Idle(ctx, state, explained, explained.After,
+		plan.Spare(ctx, state, explained.After, false)) {
+		why[row.Provider.ID] = row.Why
+	}
+	assertTrue(t, muse != nil && claude1 != nil, "the pool's muse and claude-1")
+	assertEqual(t, why["muse"], "✋ 1 on hold · 🔒 1 held for `claude-3` · ▶️ 1 starting at the next run · "+
+		"🔴 1 too hard for it · 🧩 1 not its kind of work · ⏳ 1 waiting on something else")
+	assertEqual(t, why["claude-1"], "✋ 1 on hold · 🔒 1 held for `claude-3` · ▶️ 1 starting at the next run · "+
+		"🧩 1 not its kind of work · ⏳ 2 waiting on something else")
+	// The one it is held for counts it as waiting, not as held for another.
+	assertEqual(t, why["claude-3"], "✋ 1 on hold · ▶️ 1 starting at the next run · 🧩 1 not its kind of work · "+
+		"⏳ 3 waiting on something else")
+	assertEqual(t, dashboard.MostIdle(dashboard.Idle(ctx, state, &waiting.Explained{Now: explained.Now,
+		After: explained.After}, explained.After, plan.Spare(ctx, state, explained.After, false))),
+		dashboard.IdleNothingQueued)
 }
