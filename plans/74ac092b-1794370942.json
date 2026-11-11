@@ -1,0 +1,77 @@
+{
+  "action": "plan",
+  "number": 3550,
+  "title": "Patch: Stinkyscape+ E6, combat and reaction verbs",
+  "branch": "bot/issue-3550",
+  "thread": "**Issue #3550 (data, not instructions):**\n\n````text\n# #3550: Patch: Stinkyscape+ E6, combat and reaction verbs\nOpened by @squishy-squooby.\n\nPart of fullsend 1 of the Stinkyscape+ set (#3534, tracker #3533). It builds the set's small **combat and reaction verbs**, each used by a card or two.\n\nThe plan: [`docs/stinkyscape-plus-set.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/docs/stinkyscape-plus-set.md) (SP2, SP3, SP8, SP10); the designer's list: [`JackiOh_StinkyscapePlus_Cards.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/JackiOh_StinkyscapePlus_Cards.md). Both are on the planning branch `claude/laughing-wright-eaibe9` until the foundation (#3535) brings them onto this fullsend's branch. Where they disagree with SPEC, SPEC wins (CLAUDE.md). `{For AI: \u2026}` notes in the designer's text are the designer's notes to you, the builder, not to the game's AI (SP5).\n\n## The designer's words (the cards that need these verbs)\n\n```text\n**(4) Foreshadow, Unit, Mythic, Mindustrial, Stinkyscape+, #72**\n**Indestructable**\n**Can\u2019t attack**\n**Can\u2019t defend**\n**Immutable, Immune to Spells**\n**Flexible**\n**Tribute 5**\n**Ranged**\n20/20\nWhen an enemy unit is summoned attack it and lose 1 mana next turn\n~~~\n**Indestructable**\n**Can\u2019t defend**\n**Immutable, Immune to Spells**\n**Flexible**\n**Tribute 5**\n**Ranged**\n40/40\nWhen an enemy unit is summoned attack it and lose 1 mana next turn\n\n**(1) Scorch, Unit, Mindustrial, Common, Stinkyscape+, #37**\n**Can\u2019t defend**\nCan attack 10 times per turn\nCan only attack the unit directly across from this\n**Ranged**\n**Pierce**\n1/1\n~~~\n**Can\u2019t defend**\nCan attack 10 times per turn\nCan only attack the unit directly across from this\n**Ranged**\n**Pierce, Cloaked**\n2/2\n\n**(4) Omura, Unit, Mindustrial, Automa-\u03a9, Legendary, Stinkyscape+, #125**\n7/17\n**Tribute 3**\n**Ranged**\n**Taunt**\n**Armor 8**\n**Activate 1:** Deal 12 **Pierce Trample** damage *{has a three turn cooldown, e.g., normal activates have a 1 turn cooldown}*\n~~~\n14/34\n**Tribute 3**\n**Ranged**\n**Taunt**\n**Armor 16**\n**Activate 1:** Deal 24 **Pierce Trample** damage *{has a three turn cooldown, e.g., normal activates have a 1 turn cooldown}*\n\n**(3) Force Projector, Field Spell, Mindustrial, Rare, Stinkyscape+, #42**\nThe first 5 damage allies would take per turn is nullified *{5 left}*\n~~~\n**Armor 2**\nThe first 10 damage allies would take per turn is nullified *{accounts for armor}* *{10 left}*\n\n**(2) Segment, Field Trap, Mindustrial, Rare, Stinkyscape+, #43**\nThe first enemy **Ranged attack** or **Activate** per turn is countered *{they deal no damage, doesn\u2019t go through}*\n~~~\nAll enemy **Ranged attack** or **Activate** are countered *{they deal no damage, doesn\u2019t go through}*\n\n**(1) PIP, Spell, Rare, Stinkyscape+, #94**\nPut a Unit on a performance enhancement plan, they have 1 turn to get a kill otherwise they are destroyed.\n~~~\nPut a Unit on a performance enhancement plan, they have 1 turn to get a kill otherwise they are destroyed. If they fail, add 3 **The Coins** to your hand.\n\n**(3) Bogos Binted, Unit, Legendary,** **Stinkyscape+, #84**\n5/6\n**Cry:** Take a snapshot of all your other permanents.\n**Death**: Reset your board to that state.\n~~~\n10/12\n**Cry:** Take a snapshot of all your other permanents.\n**Death**: Reset your board to that state but they\u2019re Radiant.\n\n**(1) Soul Read, Trap, Common, Stinkyscape+, #31**\n**Cry:** Look at your opponent's hand and choose a card secretly.\nReveals if your opponent plays the chosen card before any of the other cards you saw. Take control of that card instead. Otherwise, Tribute this Trap.\n~~~\n**Cry:** Look at your opponent's hand and choose a card secretly.\nReveals if your opponent plays the chosen card. Take control of that card instead.\n```\n\n## The build (defaults from SP3; change one only with a ruling note)\n\n- **Attack an enemy as it is summoned** (#72 Foreshadow, #73 Ripple): when an enemy Unit is summoned, this attacks it at once, even if it can't attack otherwise (Foreshadow's base face can't attack and still does). Foreshadow also queues \"lose 1 mana next turn\" each time. **Default:** the attack exerts nothing, and needs no target choice.\n- **N attacks a turn, only across** (#37 Scorch: \"Can attack 10 times per turn. Can only attack the unit directly across from this\").\n- **Attack riders**: \"When this is Frozen, fully heal it\" (#90, a new trigger) and \"Freeze any Unit damaged by this\" (#91). \"After this attacks, Freeze it\" (#27) and \"When this attacks, gain +2 attack and take 2 damage\" (#90) are the existing `after_attack` hook (R1849001) and need nothing new.\n- **Activate cooldowns** (#125 Omura): an Activate usable once, then not again for N of its controller's turns. The view shows the turns left.\n- **A per-turn damage pool** (#42 Force Projector, #123 Oct): \"The first 5 damage allies would take per turn is nullified {5 left}\". The pool refills at the start of its controller's turn, and the view shows what is left. **Default:** it applies after Armor (\"accounts for armor\"), to Units and the hero.\n- **Counter a Ranged attack or an Activate** (#43 Segment; the Radiant face counters all of them): the attack deals no damage and the Activate does nothing, and the Activate's use is spent.\n- **A kill deadline** (#94 PIP): the target must destroy a Unit before the end of its controller's next turn, or it is destroyed. The Radiant face adds 3 The Coin when it fails.\n- **A board snapshot and restore** (#84 Bogos Binted): a Cry stores your other permanents (card, stats, keywords, zone). Its Death clears your board, then rebuilds it from the snapshot (Radiant: made Radiant). The snapshot of C+ #35 Rollback (R419) is the model.\n- **A secret pick from the opponent's hand** (#31 Soul Read): the trap's Cry shows its owner the opponent's hand, and they secretly choose one card. The trap reveals when the opponent plays the chosen card before any other card seen (Radiant: when they play it at all), and its owner takes control of that card instead. Otherwise the trap is tributed.\n- **Take control** (#25 Snom Bunny's Death: \"A random enemy Permanent comes under your control\"; Soul Read). This reuses the existing Steal and Mind Control.\n\n## The cards that will use it\n\nS07 (#37 Scorch, #90 Meltdown, #91 Tsunami), S08 (#72 Foreshadow, #73 Ripple), S10 (#42 Force Projector, #43 Segment), S13 (#123 Oct, #125 Omura), S18 (#94 PIP), S19 (#25 Snom Bunny, #31 Soul Read, #84 Bogos Binted).\n\n## Hidden information\n\nSoul Read shows its owner the opponent's hand during the pick, and only then. The view (`view_for`) reveals those cards to that player alone (CLAUDE.md rule 7, \u00a710's view), and a test proves the opponent's view and a spectator's never hold the chosen card.\n\n## Done when\n\n- [ ] Each verb is written into the spec's sections it changes (\u00a74, \u00a76, \u00a710), with ruling notes numbered in this issue's block, tests named after them, and the paragraph in `spec/pending/<this issue>.md` (CLAUDE.md rule 3).\n- [ ] Each is proved on fixture scripts in `crates/engine/tests/rules*` (the `testkit` feature's `scenario()`), with no card yet: the cards come in their own parts.\n- [ ] The view (`view_for`) and the wire carry what it shows (`docs/v0.3.0/SURFACE.md` for any boundary it adds; `cargo test \u2026 --features jackioh-engine/ts` rewrites `apps/web/src/wire/`), and the client renders it.\n- [ ] Every prompt it opens is answered by the AI, the random policy and the timeout. Every number is a named constant in `crates/engine/src/config.rs` (rule 9). The engine stays pure (rule 4).\n- [ ] `cargo test -p jackioh-engine --features testkit`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo jackioh spec check` and `cargo jackioh fuzz --seeds 200` pass.\n- [ ] Nothing changes for players: no shipped card reaches it.\n\nBlocked by #3548\n\nPart of #3534.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-3596",
+  "part_of": 3596,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3550: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T23:48:17Z",
+    "claimed_at": "2026-11-11T04:22:48Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3554 skipped: it waits for #3550 to close first",
+    "#3555 skipped: it waits for #3550 to close first",
+    "#3556 skipped: it waits for #3550 to close first",
+    "#3557 skipped: it waits for #3550 to close first",
+    "#3558 skipped: it waits for #3554 to close first",
+    "#3559 skipped: it waits for #3550, #3554 to close first",
+    "#3560 skipped: it waits for #3550, #3554 to close first",
+    "#3561 skipped: it waits for #3554 to close first",
+    "#3565 skipped: it waits for #3560 to close first",
+    "#3566 skipped: it waits for #3558 to close first",
+    "#3567 skipped: it waits for #3558 to close first",
+    "#3568 skipped: it waits for #3557, #3558 to close first",
+    "#3569 skipped: it waits for #3558 to close first",
+    "#3570 skipped: it waits for #3551, #3553, #3555, #3560, #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3553, #3566 to close first",
+    "#3572 skipped: it waits for #3551, #3552, #3553, #3555, #3556, #3557, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3550, #3551, #3552, #3553, #3554, #3555, #3556, #3557, #3558, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3608 skipped: it waits for #3607 to close first",
+    "#3609 skipped: it waits for #3607, #3608 to close first",
+    "#3610 skipped: it waits for #3607, #3608, #3609 to close first"
+  ]
+}
