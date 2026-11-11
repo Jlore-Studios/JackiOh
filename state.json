@@ -21542,12 +21542,8 @@
       }
     },
     "claude-3": {
-      "refused_until": "2026-11-11T08:00:00Z",
+      "refused_until": "2026-11-12T00:20:00Z",
       "spent": [
-        {
-          "at": "2026-11-04T18:44:40Z",
-          "minutes": 101.9
-        },
         {
           "at": "2026-11-04T21:00:13Z",
           "minutes": 28.0
@@ -22343,16 +22339,13 @@
         {
           "at": "2026-11-11T22:24:50Z",
           "minutes": 10.0
+        },
+        {
+          "at": "2026-11-11T22:33:36Z",
+          "minutes": 2.0
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-03T16:09:41Z",
-          "cache": 10067927,
-          "cost": 4.4301,
-          "input": 152,
-          "output": 53434
-        },
         {
           "at": "2026-11-03T18:45:37Z",
           "cache": 15636863,
@@ -23745,15 +23738,23 @@
           "cost": 1.4088,
           "input": 100,
           "output": 50890
+        },
+        {
+          "at": "2026-11-11T22:33:36Z",
+          "cache": 784870,
+          "cost": 0.5457,
+          "input": 24,
+          "output": 14881
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-12T00:20:00Z",
-          "utilization": 0.85
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-11T22:24:50Z",
-        "status": "allowed"
+        "observed_at": "2026-11-11T22:33:36Z",
+        "rejected_resets_at": "2026-11-12T00:20:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
@@ -36168,7 +36169,10 @@
       "2026-11-11T22:18:15Z,claude-3,stream,call,43109027991,81,2026-11-12T00:20:00Z,,,allowed,,,",
       "2026-11-11T22:20:15Z,claude-3,stream,call,43109027991,82,2026-11-12T00:20:00Z,,,allowed,,,",
       "2026-11-11T22:20:30Z,claude-3,stream,call,43109027991,84,2026-11-12T00:20:00Z,,,allowed,,,",
-      "2026-11-11T22:21:15Z,claude-3,stream,call,43109027991,85,2026-11-12T00:20:00Z,,,allowed,,,"
+      "2026-11-11T22:21:15Z,claude-3,stream,call,43109027991,85,2026-11-12T00:20:00Z,,,allowed,,,",
+      "2026-11-11T22:29:12Z,claude-3,stream,call,43111736679,97,2026-11-12T00:20:00Z,,,allowed_warning,,,",
+      "2026-11-11T22:29:27Z,claude-3,stream,call,43111736679,98,2026-11-12T00:20:00Z,,,allowed_warning,,,",
+      "2026-11-11T22:30:57Z,claude-3,refusal,call,43111736679,100,2026-11-12T00:20:00Z,,,rejected,,,2026-11-12T00:20:00Z"
     ],
     "runs": [
       "2026-11-11T22:05:57Z,43104756495,claude-5,opus,revise,3724,hard,built,,23,92,17398,3671916,1.6843,14,22,51,52,35.1,claude-6,fresh,other,1",
