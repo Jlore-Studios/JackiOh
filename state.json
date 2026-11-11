@@ -15440,7 +15440,9 @@
     },
     "3693": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6800145555"
+      ],
       "died": 1,
       "difficulty_by": {
         "at": "2026-11-11T19:16:20Z",
@@ -15486,9 +15488,7 @@
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [
-        "c:6800145555"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "3694": {
