@@ -61,6 +61,11 @@ pub struct BlackHole {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub pulls: Option<PlayerId>,
+    /// R3561000: the permanents it closes after, as its card resolved with them; `None`:
+    /// `BLACK_HOLE_CAPACITY`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub capacity: Option<i32>,
 }
 
 impl BlackHole {
@@ -70,12 +75,18 @@ impl BlackHole {
             lane,
             swallowed: None,
             pulls,
+            capacity: None,
         }
     }
 
     /// How many permanents the hole has swallowed.
     pub fn swallowed_count(&self) -> i32 {
         self.swallowed.unwrap_or(0)
+    }
+
+    /// R3561000: the permanents it closes after swallowing.
+    pub fn closes_at(&self) -> i32 {
+        self.capacity.unwrap_or(BLACK_HOLE_CAPACITY)
     }
 }
 
@@ -187,14 +198,14 @@ pub fn exile_zone(sink: &mut EngineSink<'_>, slot: ZoneSlot) -> bool {
     true
 }
 
-/// Count one swallowed permanent toward the hole's capacity, closing it at `BLACK_HOLE_CAPACITY`.
+/// Count one swallowed permanent toward the hole's capacity, closing it at its `closes_at`.
 /// False once the hole is closed.
 fn count_swallowed(state: &mut GameState) -> bool {
     let Some(mut hole) = state.black_hole else {
         return false;
     };
     let swallowed = hole.swallowed_count() + 1;
-    if swallowed >= BLACK_HOLE_CAPACITY {
+    if swallowed >= hole.closes_at() {
         state.black_hole = None;
     } else {
         hole.swallowed = Some(swallowed);
@@ -205,7 +216,7 @@ fn count_swallowed(state: &mut GameState) -> bool {
 
 /// R3554000: exile everything standing in the open hole's lane — each side's Units row, then its
 /// backrow — a pile counting once, a Dormant top passed by, a GIGA met once, in `active_first`
-/// order. Closes the hole at `BLACK_HOLE_CAPACITY`. True when it swallowed anything.
+/// order. Closes the hole at its `closes_at`. True when it swallowed anything.
 pub fn swallow_standing(sink: &mut EngineSink<'_>) -> bool {
     if sink.state.black_hole.is_none() {
         return false;

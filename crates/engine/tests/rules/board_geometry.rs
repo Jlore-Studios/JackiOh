@@ -217,6 +217,7 @@ mod r3554000_black_hole {
             lane: 3,
             swallowed: Some(9),
             pulls: None,
+            capacity: None,
         });
         let first = id_at(&s, P1, 3);
         let second = id_at(&s, P2, 3);
@@ -224,6 +225,35 @@ mod r3554000_black_hole {
         // At 9 swallowed with two cards in the lane, only one goes, and the hole closes.
         assert_eq!(where_is(s.state(), &first), "exile");
         assert_eq!(where_is(s.state(), &second), "p2 units 3");
+        assert_eq!(s.state().black_hole, None);
+    }
+
+    #[test]
+    fn r3561000_a_hole_opened_with_a_capacity_closes_there() {
+        let mut s = board("r3561000-capacity", json!({}), json!({}));
+        run_effect(s.state_mut(), effects::open_black_hole(json_as(json!({}))), P1);
+        assert_eq!(
+            s.state().black_hole.map(|hole| hole.closes_at()),
+            Some(BLACK_HOLE_CAPACITY),
+            "a hole opened with no number closes at the engine's"
+        );
+        run_effect(
+            s.state_mut(),
+            effects::open_black_hole(json_as(json!({ "capacity": 1 }))),
+            P1,
+        );
+        assert_eq!(s.state().black_hole.map(|hole| hole.closes_at()), Some(1));
+        assert_eq!(
+            s.view(P2).black_hole.map(|hole| hole.capacity),
+            Some(1),
+            "the view shows the number the hole closes at"
+        );
+        let mine = put(s.state_mut(), PLAIN, slot(P1, Row::Units, 3), json!({})).id;
+        let theirs = put(s.state_mut(), PLAIN, slot(P2, Row::Units, 3), json!({})).id;
+        run(s.state_mut(), state_check);
+        // One swallowed closes it: the second card in the lane stays.
+        assert_eq!(where_is(s.state(), &mine), "exile");
+        assert_eq!(where_is(s.state(), &theirs), "p2 units 3");
         assert_eq!(s.state().black_hole, None);
     }
 }
@@ -670,5 +700,23 @@ mod r3554004_spell_half {
         assert!(s.state().pending.is_none());
         assert_eq!(damage_on(s.state(), &right), 3);
         assert_eq!(damage_on(s.state(), &id_at(&s, P2, 1)), 0);
+    }
+
+    #[test]
+    fn r3561001_a_spell_that_slashes_the_board_asks_no_half() {
+        let mut s = board(
+            "r3561001-no-half",
+            json!({ "hand": [{ "def": SLASH, "radiant": true }] }),
+            json!({}),
+        );
+        s.play(SLASH, json!({}));
+        assert!(s.state().pending.is_some(), "the lane pick is open");
+        s.answer(json!(["4"]));
+        assert_eq!(s.state().slashed_lane, Some(4));
+        assert!(
+            s.state().pending.is_none(),
+            "the board it slashed asks no half: {:?}",
+            s.state().pending
+        );
     }
 }

@@ -5,4 +5,9 @@ import type { PlayerId } from "./PlayerId";
  * R3554000 (S+ #77 Black Hole): the open hole — its lane, what it has swallowed, and whose
  * permanents it pulls (`None`: each player at the start of their own turn; `Some(p)`: only `p`).
  */
-export type BlackHole = { lane: number, swallowed?: number, pulls?: PlayerId, };
+export type BlackHole = { lane: number, swallowed?: number, pulls?: PlayerId, 
+/**
+ * R3561000: the permanents it closes after, as its card resolved with them; `None`:
+ * `BLACK_HOLE_CAPACITY`.
+ */
+capacity?: number, };
