@@ -1261,12 +1261,14 @@ describe("the super run as production's gate", () => {
     expect(SUPER).toContain("    if: ${{ !cancelled() && github.event_name != 'schedule' }}");
   });
 
-  it("hands a failed promotion or deploy to Squishy, and closes it when a deploy passes", () => {
+  it("hands a failed promotion or deploy to the night bot, never Squishy, and closes it when a deploy passes", () => {
     expect(WORKFLOW).toMatch(/^ {2}report:\n {4}name: report\n {4}needs: \[promote, deploy\]\n/mu);
     expect(WORKFLOW).toContain('PROMOTION_TITLE: "CI: production promotion failed"');
-    expect(WORKFLOW).toContain("SQUISHY_LOGIN: squishy-squooby");
-    expect(WORKFLOW).toContain('SQUISHY_QUEUE: "squishy:build"');
-    expect(WORKFLOW).toContain('--add-assignee "$SQUISHY_LOGIN" --add-label "$SQUISHY_QUEUE"');
+    expect(WORKFLOW).toContain("BOT_LOGIN: jgoetzmann-bot");
+    expect(WORKFLOW).toContain('BOT_QUEUE: "bot:build"');
+    expect(WORKFLOW).toContain('--add-assignee "$BOT_LOGIN" --add-label "$BOT_QUEUE"');
+    // Squishy takes only what a person hands it (#3676).
+    expect(WORKFLOW).not.toMatch(/squishy-squooby|squishy:build/u);
     expect(WORKFLOW).toContain('if [ "$DEPLOY" = success ]; then');
   });
 

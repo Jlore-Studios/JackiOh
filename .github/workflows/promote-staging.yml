@@ -15,8 +15,8 @@
 #
 # It pushes with the bot's token (BOT_GITHUB_TOKEN): GitHub refuses the Actions token a push that
 # changes .github/workflows, and a push the Actions token makes starts no workflow, so staging would
-# move without deploying. A promotion that fails opens "CI: staging promotion failed" for Squishy
-# (`report`), as promote-production.yml's does; the next run that moves staging closes it.
+# move without deploying. A promotion that fails opens "CI: staging promotion failed" for the night
+# bot (`report`), as promote-production.yml's does; the next run that moves staging closes it.
 #
 # The freeze (the owners' call of 2026-11-10; the script's header has it all): while the newest
 # finished super run on staging failed, staging holds still until the night bot's fix closes its
@@ -80,7 +80,7 @@ jobs:
         run: bash scripts/promote-staging.sh
 
   # A promotion that failed: staging (and so production, which takes staging's commit) waits on it,
-  # so it goes to Squishy as `priority:high`, as promote-production.yml's report does. A run that
+  # so it goes to the night bot as `priority:high`, as promote-production.yml's report does. A run that
   # moved staging closes it. It never checks out or runs code.
   report:
     name: report
@@ -98,9 +98,9 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           PROMOTE: ${{ needs.promote.result }}
           TITLE: "CI: staging promotion failed"
-          # Who fixes it: Squishy (.squishy/config.json's bot_login) and its queue label.
-          SQUISHY_LOGIN: squishy-squooby
-          SQUISHY_QUEUE: "squishy:build"
+          # Who fixes it: the night bot (.harness/config.json's bot_login) and its queue label.
+          BOT_LOGIN: jgoetzmann-bot
+          BOT_QUEUE: "bot:build"
         run: |
           set -euo pipefail
           open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$TITLE\"" \
@@ -115,7 +115,7 @@ jobs:
           body=$(printf '%s\n' \
             "[promote-staging run]($RUN_URL) failed, so \`staging\` did not move to main's newest green commit (its annotation says why)." \
             "" \
-            "Squishy: staging, and production after it, waits on this, so it is yours and it comes first (\`priority:high\`). Read the failed job's log, find the cause and fix it in a pull request on \`main\`. A failure outside your reach (\`.github/\`, a secret such as BOT_GITHUB_TOKEN, the \`staging\` ruleset, GitHub's settings) is a person's: say exactly what they must do. The next run that moves staging closes this." \
+            "Night bot: staging, and production after it, waits on this, so it is yours and it comes first (\`priority:high\`). Read the failed job's log, find the cause and fix it in a pull request on \`main\`. A failure outside your reach (\`.github/\`, a secret such as BOT_GITHUB_TOKEN, the \`staging\` ruleset, GitHub's settings) is a person's: say exactly what they must do. The next run that moves staging closes this." \
             "" \
             "---" \
             "_Posted by \`.github/workflows/promote-staging.yml\`._")
@@ -129,7 +129,7 @@ jobs:
             echo "opened $url"
             number=${url##*/}
           fi
-          gh issue edit "$number" --repo "$REPO" --add-assignee "$SQUISHY_LOGIN" --add-label "$SQUISHY_QUEUE" \
+          gh issue edit "$number" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "$BOT_QUEUE" \
             --add-label "priority:high" \
-            && echo "handed #$number to @$SQUISHY_LOGIN, high priority" \
-            || echo "::warning::could not hand #$number to @$SQUISHY_LOGIN"
+            && echo "handed #$number to @$BOT_LOGIN, high priority" \
+            || echo "::warning::could not hand #$number to @$BOT_LOGIN"

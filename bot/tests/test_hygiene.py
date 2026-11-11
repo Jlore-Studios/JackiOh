@@ -125,11 +125,15 @@ class IssueTests(unittest.TestCase):
         self.assertIn("bot:build", out)
         self.assertNotIn("squishy:", out)
 
-    def test_the_weekly_two_stay_squishys(self):
-        for kind in ("files", "instructions"):
-            out = self.open(kind, [])
-            self.assertIn("squishy:build", out)
-            self.assertNotIn("bot:build", out)
+    def test_the_dead_files_go_to_the_night_bot_and_the_instructions_to_squishy(self):
+        # #3676: Squishy takes only what a person hands it, but for the agent instructions, since it
+        # alone may change .claude/skills/.
+        out = self.open("files", [])
+        self.assertIn("bot:build", out)
+        self.assertNotIn("squishy:", out)
+        out = self.open("instructions", [])
+        self.assertIn("squishy:build", out)
+        self.assertNotIn("bot:build", out)
 
     def test_none_while_the_last_of_its_kind_is_open(self):
         open_audit = [{"number": 7, "title": branches.KINDS["code"] + ", 2026-10-25"},

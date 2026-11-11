@@ -76,8 +76,9 @@ the daily super run tests one commit, and the night bot fixes one commit, instea
    bot takes before everything else it has queued (`GateTitles`, `bot/go/internal/queue`), and
    production waits for the next run on `staging` that passes. The fix lands on `main` and reaches
    `staging` within two hours. A promotion or a deploy that fails opens "CI: production promotion
-   failed" for Squishy, also `priority:high`; a staging move that fails opens "CI: staging promotion
-   failed" for Squishy.
+   failed" for the night bot, also `priority:high`; a staging move that fails opens "CI: staging
+   promotion failed" for it too. No workflow hands Squishy a failure: it takes only what a person
+   hands it (#3676).
 4. Sooner, by hand: a `/promote` on the open issue labeled `production merge` takes `staging`'s commit
    (or the commit of `staging` named) and opens the same pull request,
    with the bot's token, so the super run runs on it. When every job passed, `promote-production.yml`
@@ -326,7 +327,7 @@ later, so Render would stop billing:
 - **Normal day:** merge to main as usual. Staging takes it within two hours of its CI passing;
   production takes the commit of `staging` the daily super run passed, the same day (section 2.1). A red daily
   run goes to the night bot as `priority:high`, and production waits for the next one that passes; a
-  promotion or deploy that fails goes to Squishy.
+  promotion or deploy that fails goes to the night bot too.
 - **Ship to production sooner:** move `staging` (Actions -> promote staging -> Run workflow) if the
   change is not on it yet, then `/promote` on the production issue. The super run tests the pull
   request (an hour or so) and it merges and deploys once every job passed. A red job goes to the night

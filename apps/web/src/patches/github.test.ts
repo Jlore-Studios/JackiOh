@@ -278,9 +278,11 @@ describe("the workflow that publishes them (.github/workflows/releases.yml)", ()
     expect(workflow).not.toContain('rust: "false"');
   });
 
-  it("hands a failed run to Squishy, and closes it when a run publishes (#3632)", () => {
+  it("hands a failed run to the night bot, never Squishy, and closes it when a run publishes (#3632, #3676)", () => {
     expect(workflow).toContain('TITLE: "CI: GitHub releases failed"');
-    expect(workflow).toContain('--add-assignee "$SQUISHY_LOGIN" --add-label "$SQUISHY_QUEUE"');
+    expect(workflow).toContain("BOT_LOGIN: jgoetzmann-bot");
+    expect(workflow).toContain('--add-assignee "$BOT_LOGIN" --add-label "$BOT_QUEUE"');
+    expect(workflow).not.toMatch(/squishy-squooby|squishy:build/u);
     expect(workflow).toContain("needs.publish.result == 'failure' || needs.publish.result == 'success'");
   });
 });

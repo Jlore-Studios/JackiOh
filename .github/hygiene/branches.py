@@ -4,9 +4,9 @@ a person ticks (.github/workflows/hygiene.yml, code-audit.yml, hygiene-delete.ym
 
   survey                             every branch, its pull requests and what its bot name points at
   report SURVEY                      the stale branches as checkboxes, for a person to tick
-  issue KIND TEMPLATE REPORT GUIDE   open the week's `files` or `instructions` issue for Squishy,
-                                     or the `code` audit for the night bot, unless that kind's last
-                                     one is still open
+  issue KIND TEMPLATE REPORT GUIDE   open the week's `files` issue or the `code` audit for the night
+                                     bot, or the week's `instructions` issue for Squishy, unless that
+                                     kind's last one is still open
   delete ISSUE                       delete the branches ticked in that issue, after surveying again
 
 A branch is safe to delete when nothing live uses it and deleting it loses nothing that cannot come
@@ -44,10 +44,12 @@ KINDS = {"files": f"{TITLE}, dead files and archives", "instructions": f"{TITLE}
          "code": "Patch: audit the codebase for dead code, duplicates and zombie routes"}
 #: A ticked checkbox in the branch section, its branch the first code span; a struck one no longer matches.
 TICKED = re.compile(r"^\s*- \[[xX]\] `([^`]+)`", re.M)
-LABELS = ("architecture", "difficulty:hard", "squishy:build", "person merges")
-#: Each kind's labels: the weekly two queue for Squishy, the code audit for the night bot (`bot:build`).
-KIND_LABELS = {"files": LABELS, "instructions": LABELS,
-               "code": ("architecture", "difficulty:hard", "bot:build", "person merges")}
+LABELS = ("architecture", "difficulty:hard", "bot:build", "person merges")
+#: Each kind's labels: the night bot's queue (`bot:build`), but for the agent instructions, which go to
+#: Squishy (`squishy:build`), since it alone may change `.claude/skills/`; no other workflow queues
+#: for Squishy, which takes only what a person hands it (#3676).
+KIND_LABELS = {"files": LABELS, "code": LABELS,
+               "instructions": ("architecture", "difficulty:hard", "squishy:build", "person merges")}
 #: The issue body's limit is 65,536 characters; the report gives way first.
 REPORT_LIMIT = 30_000
 

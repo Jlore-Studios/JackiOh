@@ -14,8 +14,8 @@
 # jackioh.com, the site and its game server together (wrangler.jsonc). Each such run is acted on once
 # (the issue's `daily`). A red run on `staging` is the night bot's to fix, before anything else in
 # its queue (super.yml's `report`), and production waits for the next run that passes; a promotion or
-# a deploy that fails is Squishy's (promote-production.yml's `report`). The owners asked for the
-# daily promotion on 2026-11-03, after a day of production by hand only (#2750).
+# a deploy that fails is the night bot's too (promote-production.yml's `report`, #3676). The owners
+# asked for the daily promotion on 2026-11-03, after a day of production by hand only (#2750).
 #
 # By hand, sooner. A person comments `/promote` on the one issue labeled RELEASE_LABEL (or runs
 # promote-production.yml from the Actions tab); this opens a pull request of staging's commit into
@@ -603,7 +603,7 @@ Comment here. Only people with write access are heard; a command gets a 👍, or
 | `/skip-super <reason>` | The emergency way: merges the open pull request, or `staging`'s commit, now, without the full test run. The reason is required, and it is recorded here and on the pull request with who and which commit. |
 | `/cancel` | Closes the open pull request. Nothing merges. |
 
-A newer `/promote`, or the daily promotion of a newer commit, closes the open pull request as superseded. Running *promote production* from the Actions tab does the same as `/promote`, or as `/skip-super` with its reason box filled. A promotion or a deploy that fails opens "CI: production promotion failed" for Squishy (`promote-production.yml`'s `report`).
+A newer `/promote`, or the daily promotion of a newer commit, closes the open pull request as superseded. Running *promote production* from the Actions tab does the same as `/promote`, or as `/skip-super` with its reason box filled. A promotion or a deploy that fails opens "CI: production promotion failed" for the night bot (`promote-production.yml`'s `report`).
 TEXT
   printf '\nA fresh issue takes over from this one every %s days, carrying its state, so the thread stays short: [the closed ones](%s) are the history. Plan: `docs/deploy-cloudflare.md`. Written by `scripts/promote-production.sh`; the first line is its state, so leave it be.\n' \
     "$ROTATE_DAYS" "${GITHUB_SERVER_URL:-https://github.com}/$REPO/issues?q=is%3Aissue+is%3Aclosed+label%3A%22${RELEASE_LABEL// /+}%22"

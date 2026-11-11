@@ -81,7 +81,7 @@ var Workflows = map[string]string{
 	"deploy-staging.yml":     "deploys the staging branch to staging.jackioh.com each time it moves",
 	"gather.yml":             "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
 	"hygiene-delete.yml":     "deletes the branches a person ticked in the hygiene issue",
-	"hygiene.yml":            "weekly: the hygiene issues for Squishy",
+	"hygiene.yml":            "weekly: the hygiene issues for the night bot and Squishy",
 	"learn-set.yml":          "a new patch or set stops a learn export still early on the version before",
 	"learn.yml":              "the learn lane: self-play, retrain and gate of the learned evaluation, back to back",
 	"lock-conversations.yml": "locks every conversation to collaborators",
