@@ -38978,6 +38978,9 @@
   "usage_spool": {
     "readings": [
       "2026-11-11T07:27:51Z,claude-8,ping,before,42978859756,85,2026-11-11T10:00:00Z,,,allowed,85,,"
+    ],
+    "runs": [
+      "2026-11-11T07:27:51Z,42978859756,claude-8,sonnet+opus,review,3702,medium,interrupted,5-hour cap,0,0,0,0,,85,85,,,1.1,,none,,0"
     ]
   },
   "version": 1
