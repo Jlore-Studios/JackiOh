@@ -15710,15 +15710,12 @@
     "what": "revise #3706 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-11T11:57:46Z",
+    "at": "2026-11-11T12:12:43Z",
     "notes": [
-      "#3688: green and waiting for a person to merge it, so `claude-1` gives up its claim on it",
-      "delivered build #3561 on muse (run 43013805776): blocked",
-      "delivered build #3559 on muse (run 43013609117): blocked",
-      "delivered revise #3691 on claude-8 (run 43006130199): built",
-      "started review #3691 on claude-8 (run 43017417454)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "CI on #3706: #3706: queued a CI fix",
+      "#3692: green and waiting for a person to merge it, so `claude-7` gives up its claim on it",
+      "started revise #3706 on muse (run 43018692438)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16424,7 +16421,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T11:57:46Z",
+  "loop_tick": "2026-11-11T12:12:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
