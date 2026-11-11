@@ -4,7 +4,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  FX_ADAPT_DISPLAY_MAX_MS,
+  FX_ADAPT_MOMENT_WINDOW,
   FX_ADAPT_RECOVER_WINDOWS,
+  FX_ADAPT_SLOW_FACTOR,
   FX_ADAPT_SLOW_MS,
   FX_ADAPT_WINDOW,
   FX_MAX_DT_MS,
@@ -13,6 +16,7 @@ import {
   FX_PARTICLE_CAP,
   FX_PARTICLE_CAP_MIN,
   FX_PARTICLE_CAP_MOBILE,
+  FX_PHONE_FRAME_BUDGET_MS,
   FX_SHAKE_MAX_DEG,
   FX_SHAKE_MAX_PX,
 } from "./constants.ts";
@@ -932,6 +936,59 @@ describe("R3351000 the living game's shared shed order", () => {
     for (const kind of ["takeover", "setPiece", "launch", "rift", "anomalyTitle"]) {
       expect(h.root.querySelectorAll(`[data-fx="${kind}"]`)).toHaveLength(1);
     }
+  });
+});
+
+describe("R3674000 a slow moment sheds within it", () => {
+  /** A display learned at `ms` a frame (B34) through an ignored wake frame and one healthy window, the stage still full. */
+  function settledAt(h: ReturnType<typeof harness>, ms: number): void {
+    keepBusy(h.director);
+    h.frameEvery(ms, FX_ADAPT_WINDOW + 1);
+    expect(h.director.shedLevel()).toBe(0);
+  }
+
+  it("R3674000 FX_ADAPT_MOMENT_WINDOW frames over FX_PHONE_FRAME_BUDGET_MS shed one stage, the capacity left to the slow window", () => {
+    // On every viewport: a desktop's director and a phone's.
+    for (const capacity of [FX_PARTICLE_CAP, capacityFor(390)]) {
+      resetShedForTests();
+      const h = harness({ capacity });
+      settledAt(h, 16);
+      const slow = FX_PHONE_FRAME_BUDGET_MS + 10;
+      h.frameEvery(slow, FX_ADAPT_MOMENT_WINDOW - 1);
+      expect(h.director.shedLevel()).toBe(0);
+      h.frameEvery(slow, 1);
+      expect(h.director.shedLevel()).toBe(1);
+      expect(h.director.capacity()).toBe(capacity);
+      h.director.dispose();
+    }
+  });
+
+  it("R3674000 a run at exactly FX_PHONE_FRAME_BUDGET_MS sheds nothing; one millisecond more does", () => {
+    const h = harness();
+    // A 30 Hz display, whose slow window lets these frames by.
+    settledAt(h, FX_ADAPT_DISPLAY_MAX_MS);
+    h.frameEvery(FX_PHONE_FRAME_BUDGET_MS, FX_ADAPT_MOMENT_WINDOW);
+    expect(h.director.shedLevel()).toBe(0);
+    h.frameEvery(FX_PHONE_FRAME_BUDGET_MS, FX_ADAPT_MOMENT_WINDOW - 1);
+    h.frameEvery(FX_PHONE_FRAME_BUDGET_MS + 1, 1);
+    expect(h.director.shedLevel()).toBe(1);
+    expect(h.director.capacity()).toBe(FX_PARTICLE_CAP);
+  });
+
+  it("R3674000 a slow moment sheds before its slow window would, and a run and a window that end on one frame shed one stage", () => {
+    const h = harness();
+    settledAt(h, FX_ADAPT_DISPLAY_MAX_MS);
+    // Frames slow enough that the window trips on the second run's last frame.
+    const slow = Math.floor((FX_ADAPT_WINDOW * FX_ADAPT_DISPLAY_MAX_MS * FX_ADAPT_SLOW_FACTOR) / (2 * FX_ADAPT_MOMENT_WINDOW)) + 1;
+    h.frameEvery(slow, FX_ADAPT_MOMENT_WINDOW);
+    expect(h.director.shedLevel()).toBe(1);
+    expect(h.director.capacity()).toBe(FX_PARTICLE_CAP);
+    h.frameEvery(slow, FX_ADAPT_MOMENT_WINDOW);
+    expect(h.director.capacity()).toBe(halved(FX_PARTICLE_CAP));
+    expect(h.director.shedLevel()).toBe(2);
+    // Healthy windows still recover one stage at a time.
+    h.frameEvery(FX_ADAPT_DISPLAY_MAX_MS, FX_ADAPT_WINDOW * FX_ADAPT_RECOVER_WINDOWS);
+    expect(h.director.shedLevel()).toBe(1);
   });
 });
 

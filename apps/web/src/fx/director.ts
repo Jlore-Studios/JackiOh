@@ -5,6 +5,7 @@ import { createCanvasFx } from "./canvasFx.ts";
 import {
   FX_ADAPT_DISPLAY_MAX_MS,
   FX_ADAPT_MIN_INTERVAL_MS,
+  FX_ADAPT_MOMENT_WINDOW,
   FX_ADAPT_RECOVER_WINDOWS,
   FX_ADAPT_SLOW_FACTOR,
   FX_ADAPT_SLOW_MS,
@@ -17,6 +18,7 @@ import {
   FX_PARTICLE_CAP,
   FX_PARTICLE_CAP_MIN,
   FX_PARTICLE_CAP_MOBILE,
+  FX_PHONE_FRAME_BUDGET_MS,
   FX_STARSHIP_RAM_TURN_DEG,
 } from "./constants.ts";
 import { dropPointOfTestid } from "../game/drag/landing.ts";
@@ -196,10 +198,15 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
   let windowCount = 0;
   let windowSum = 0;
   let healthyWindows = 0;
+  // R3674000: a moment's run, FX_ADAPT_MOMENT_WINDOW frames at a time from the start of each window.
+  let momentCount = 0;
+  let momentSum = 0;
 
   const resetWindow = (): void => {
     windowCount = 0;
     windowSum = 0;
+    momentCount = 0;
+    momentSum = 0;
   };
 
   const setCap = (next: number): void => {
@@ -217,12 +224,29 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
     const slowMs = Math.max(FX_ADAPT_SLOW_MS, refresh * FX_ADAPT_SLOW_FACTOR);
     windowCount += 1;
     windowSum += raw;
+    // R3674000: a run of FX_ADAPT_MOMENT_WINDOW frames whose mean passes the phone budget sheds one
+    // stage deeper within the moment, on every viewport, in R3351000's order (a window of 30 against a
+    // refresh capped at 34 ms let a throttled phone play a second of 50–70 ms frames first); the
+    // particle cap is the slow window's alone, and a set piece's beats still never shed.
+    momentCount += 1;
+    momentSum += raw;
+    let momentShed = false;
+    if (momentCount >= FX_ADAPT_MOMENT_WINDOW) {
+      momentShed = momentSum > FX_ADAPT_MOMENT_WINDOW * FX_PHONE_FRAME_BUDGET_MS;
+      momentCount = 0;
+      momentSum = 0;
+      if (momentShed) {
+        setShedLevel(shedStage() + 1);
+        healthyWindows = 0;
+      }
+    }
     if (windowSum > FX_ADAPT_WINDOW * slowMs) {
       setCap(Math.max(FX_PARTICLE_CAP_MIN, Math.floor(cap / 2)));
       // R3606000: a slow window sheds one stage deeper — motes, then far auras, then
       // faces — on the same trip that lowers the cap, and a set piece's beats never shed (they
-      // are DOM cues with no particle counts, so emission scaling cannot touch them).
-      setShedLevel(shedStage() + 1);
+      // are DOM cues with no particle counts, so emission scaling cannot touch them). R3674000:
+      // one stage a frame, so not again when a moment's run shed on this one.
+      if (!momentShed) setShedLevel(shedStage() + 1);
       healthyWindows = 0;
       resetWindow();
       return;

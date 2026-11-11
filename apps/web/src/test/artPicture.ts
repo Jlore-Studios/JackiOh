@@ -11,10 +11,22 @@
 // flattened layers (`flatLayers`): each loop's wrapper replaced by what it holds, every element that is no group a layer of
 // its own inside every group it stands in (each group's attributes kept), and a loop's style left out, its slices' pieces
 // being the picture's whatever loop moves them. `layersOf` stays the picture's own top-level layers.
+//
+// #3674: a board face's lifted slice draws its still picture, the slice less its motion style, on its innermost lift layer
+// (art/dioramas/lift.ts), which is where `facePicture` reads it.
 
-/** A picture's CSS background, decoded to the SVG document it holds (or what is there when it is not one). */
+/**
+ * A picture's CSS background, decoded to the SVG document it holds (or what is there when it is not one). #3674: a lifted
+ * slice (CardArt `liftChain`) draws its still picture on the innermost of its lift layers.
+ */
 function decoded(art: HTMLElement | null | undefined): string {
-  return decodeURIComponent(art?.style.backgroundImage ?? "");
+  let drawn = art;
+  let lift = art?.querySelector<HTMLElement>(":scope > .cf-art-lift") ?? null;
+  while (lift !== null) {
+    drawn = lift;
+    lift = lift.querySelector<HTMLElement>(":scope > .cf-art-lift");
+  }
+  return decodeURIComponent(drawn?.style.backgroundImage ?? "");
 }
 
 /** The SVG of a decoded CSS background, between its first `<svg` and its last `</svg>`; null when there is none. */

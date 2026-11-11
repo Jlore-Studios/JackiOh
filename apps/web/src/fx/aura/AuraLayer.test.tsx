@@ -492,4 +492,66 @@ describe("R3351000 the living game's shared shed order", () => {
     expect(measures).toBe(measured);
     expect(m.layer()).toHaveAttribute("data-aura-motes", "48");
   });
+
+  it("R3351000 at the far-auras stage a pointer moving inside one aura re-renders nothing; crossing to another does", () => {
+    resetIds();
+    resetShedForTests();
+    // Two auras in different boxes: the zone aura near, the side aura far.
+    const near: FxBox = { x: 0, y: 0, width: 100, height: 100 };
+    const far: FxBox = { x: 500, y: 500, width: 100, height: 100 };
+    const fx = fakeSeams();
+    let measures = 0;
+    fx.seams.measure = (testids) => {
+      measures += 1;
+      return testids.length > 2 ? far : near;
+    };
+    const m = mount(board([field("p1", "core-014")], [field("p2", "classic-042")]), fx);
+    act(() => {
+      setShedLevel(2);
+      setShedPointer({ x: 50, y: 50 });
+    });
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "36");
+    // #3674: moves inside the near aura leave the auras under the pointer as they were: no re-render, no new measure.
+    const measured = measures;
+    act(() => {
+      setShedPointer({ x: 10, y: 10 });
+    });
+    act(() => {
+      setShedPointer({ x: 90, y: 90 });
+    });
+    expect(measures).toBe(measured);
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "36");
+    // Leaving it re-renders: every aura is far, and each halves.
+    act(() => {
+      setShedPointer({ x: 300, y: 300 });
+    });
+    expect(measures).toBeGreaterThan(measured);
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "24");
+    // Crossing into the other: it draws whole.
+    const left = measures;
+    act(() => {
+      setShedPointer({ x: 550, y: 550 });
+    });
+    expect(measures).toBeGreaterThan(left);
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "36");
+  });
+
+  it("R3351000 at the far-auras stage every aura whose box holds the pointer keeps its whole budget", () => {
+    resetIds();
+    resetShedForTests();
+    // Two auras over one box (a side's and a zone's overlap on the board): the pointer is over both.
+    const box: FxBox = { x: 0, y: 0, width: 100, height: 100 };
+    const fx = fakeSeams();
+    fx.seams.measure = () => box;
+    const m = mount(board([field("p1", "core-014")], [field("p2", "classic-042")]), fx);
+    act(() => {
+      setShedLevel(2);
+      setShedPointer({ x: 50, y: 50 });
+    });
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "48");
+    act(() => {
+      setShedPointer({ x: 300, y: 300 });
+    });
+    expect(m.layer()).toHaveAttribute("data-aura-motes", "24");
+  });
 });

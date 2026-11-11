@@ -100,9 +100,10 @@ export function useMotionSlot(wanted: boolean, rank: SlotRank): boolean {
   const [seq] = useState(nextSequence);
   // R3351000: at shed stage 3 every face past the pointer's own holds still: the hovered face is
   // the nearest to the pointer, so it alone keeps its claim. The token and its age stay, so the
-  // face reclaims its old rank when the frames recover (R3340000).
-  const shed = useSyncExternalStore(subscribeShed, shedLevel, () => 0);
-  const active = wanted && (!shedStillsFaces(shed) || rank.hovered);
+  // face reclaims its old rank when the frames recover (R3340000). #3674: it reads only whether the
+  // stage stills faces, so a shed to motes or far auras, or a pointer move, re-renders no face.
+  const stills = useSyncExternalStore(subscribeShed, () => shedStillsFaces(shedLevel()), () => false);
+  const active = wanted && (!stills || rank.hovered);
   const standing = useRef(rank);
   useEffect(() => {
     standing.current = rank;

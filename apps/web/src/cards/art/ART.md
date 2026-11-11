@@ -181,6 +181,18 @@ knowing its role, under the picture's own style, the nearest slice drawing the p
 reduced-motion gate, and no two cards' loops are alike. A new Mythic gets a file in its set's directory and a line in that
 directory's `index.ts`; until then the test fails, since `PENDING` is empty and only shrinks.
 
+A board face's slices are lifted where they can be (#3674, R3351000: `dioramas/lift.ts`). A slice over the farthest whose
+motion is one chain of loops around all it draws (its `<g class="dio">`, a role's `<g class="art-m-…">` inside it, or either
+alone), each by a move the page can name the origin of (`LIFTABLE_MOVES`: the picture-box moves and the opacity and
+translation moves about a piece's own box), draws its still picture, the slice less its motion style byte for byte, on one
+HTML layer a loop (`.cf-art-lift`, CardArt's `liftChain`), outermost first. Each layer is the picture as `cover` draws it, a
+square about the window's middle, so artLive.css's `cf-lift-*` keyframes are `ART_MOVES`' own with a picture unit as a
+percent (on their timing, an ease-in-out as motion.css's `--ease-in-out`), and the compositor moves them: a frame restyles none of the picture's groups. A staggered piece, a second animated
+group, the particles, a Stinkyscape subject in its placing transform and a spin or a flare stay inside the picture, as does
+the farthest slice (the window's background: in every diorama it holds the sky beside other roles). The depth planes of a
+face with depth, the full-screen view and the takeover draw their slices as before. `lift.test.ts` holds every lift to its
+slice and the keyframes to `ART_MOVES`.
+
 ## Pictures (R2940001)
 
 A look with a picture of its own, Alt art's today, draws the card's own painter re-seeded:
